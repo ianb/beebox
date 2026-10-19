@@ -10,7 +10,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { unitsRule } from "../../../../../src/dev/layout/check/rules/units.js";
-import { layout, summary } from "./fixture.js";
+import { layout } from "./fixture.js";
 
 // ## A flat utility directory where every file is imported from outside is clean
 //
@@ -26,7 +26,7 @@ void test("This is src/lib's shape:", async (t) => {
       "src/app.ts": { imports: ["src/lib/a.ts", "src/lib/b.ts"] },
     },
   });
-  await t.checkText(summary(unitsRule.check(libLayout)) === "", "true");
+  t.check(unitsRule.check(libLayout), []);
 });
 
 // ## A cluster beside another entry is one unit-directory finding
@@ -47,10 +47,13 @@ void test("wakeup.ts and init.ts are both entries (something outside commands/ i
     },
   });
   const clusterFindings = unitsRule.check(clusterLayout);
-  t.check(summary(clusterFindings), "unit-directory pkg/src/commands/wakeup.ts");
-
-  // doctest:L54
-  t.check(clusterFindings[0]?.message, "wakeup.ts and its helpers wakeup-outcome.ts, wakeup-steps.ts are one unit beside other units in pkg/src/commands; make pkg/src/commands/wakeup/ and move them in, dropping the wakeup- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through wakeup.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)");
+  t.check(clusterFindings, [
+    {
+      rule: "unit-directory",
+      path: "pkg/src/commands/wakeup.ts",
+      message: "wakeup.ts and its helpers wakeup-outcome.ts, wakeup-steps.ts are one unit beside other units in pkg/src/commands; make pkg/src/commands/wakeup/ and move them in, dropping the wakeup- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through wakeup.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+    },
+  ]);
 });
 
 // ## A helper reachable from two entries is infrastructure, not a unit
@@ -67,7 +70,7 @@ void test("shared.ts is reachable from both a.ts and b.ts, so it is owned by nei
       "src/cli2.ts": { imports: ["src/commands2/a.ts", "src/commands2/b.ts"] },
     },
   });
-  await t.checkText(summary(unitsRule.check(infraLayout)) === "", "true");
+  t.check(unitsRule.check(infraLayout), []);
 });
 
 // ## A directory with exactly one entry is that unit, whatever its size
@@ -85,7 +88,7 @@ void test("main.ts is the only entry in single/; h1.ts and h2.ts are its helpers
       "src/entrypoint.ts": { imports: ["src/single/main.ts"] },
     },
   });
-  await t.checkText(summary(unitsRule.check(singleLayout)) === "", "true");
+  t.check(unitsRule.check(singleLayout), []);
 });
 
 // ## A program root with no importers is an entry
@@ -103,7 +106,13 @@ void test("tool.ts and other.ts are each imported by nothing (a script run direc
       "src/scripts/other.ts": { imports: [] },
     },
   });
-  t.check(summary(unitsRule.check(rootLayout)), "unit-directory pkg/src/scripts/tool.ts");
+  t.check(unitsRule.check(rootLayout), [
+    {
+      rule: "unit-directory",
+      path: "pkg/src/scripts/tool.ts",
+      message: "tool.ts and its helpers tool-helpers.ts are one unit beside other units in pkg/src/scripts; make pkg/src/scripts/tool/ and move them in, dropping the tool- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through tool.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+    },
+  ]);
 });
 
 // ## A type-only internal edge still forms a unit
@@ -120,7 +129,13 @@ void test("main.ts reaches types-helper.ts only through a type-only import; that
       "src/entry2.ts": { imports: ["src/typed/main.ts", "src/typed/other.ts"] },
     },
   });
-  t.check(summary(unitsRule.check(typedLayout)), "unit-directory pkg/src/typed/main.ts");
+  t.check(unitsRule.check(typedLayout), [
+    {
+      rule: "unit-directory",
+      path: "pkg/src/typed/main.ts",
+      message: "main.ts and its helpers types-helper.ts are one unit beside other units in pkg/src/typed; make pkg/src/typed/main/ and move them in, dropping the main- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through main.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+    },
+  ]);
 });
 
 // ## A set directory is skipped; a member directory's own subdirectory is not, but its entry is fixed
@@ -155,10 +170,13 @@ void test("registry.ts declares src/setdir as a set (its directory), so setdir's
     },
   });
   const setFindings = unitsRule.check(setLayout);
-  t.check(summary(setFindings), "unit-directory pkg/src/setdir/memberA/second.ts");
-
-  // doctest:L167
-  t.check(setFindings[0]?.message, "second.ts and its helpers second-helper.ts are one unit beside other units in pkg/src/setdir/memberA; make pkg/src/setdir/memberA/second/ and move them in, dropping the second- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through second.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)");
+  t.check(setFindings, [
+    {
+      rule: "unit-directory",
+      path: "pkg/src/setdir/memberA/second.ts",
+      message: "second.ts and its helpers second-helper.ts are one unit beside other units in pkg/src/setdir/memberA; make pkg/src/setdir/memberA/second/ and move them in, dropping the second- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through second.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+    },
+  ]);
 });
 
 // ## A module used only under one subdirectory is shared-infrastructure
@@ -178,10 +196,13 @@ void test("util.ts sits at shared/; every one of its importers is under shared/f
     },
   });
   const sharedFindings = unitsRule.check(sharedLayout);
-  t.check(summary(sharedFindings), "shared-infrastructure pkg/src/shared/util.ts");
-
-  // doctest:L191
-  t.check(sharedFindings[0]?.message, "used only under pkg/src/shared/featureA; move it there");
+  t.check(sharedFindings, [
+    {
+      rule: "shared-infrastructure",
+      path: "pkg/src/shared/util.ts",
+      message: "used only under pkg/src/shared/featureA; move it there",
+    },
+  ]);
 });
 
 // ## A shared helper used only by set members directly is not shared-infrastructure
@@ -208,7 +229,7 @@ void test("registry.ts declares src/webapp/routes as a set (its directory).", as
       "src/webapp/routes/b.ts": { imports: ["src/webapp/util.ts"] },
     },
   });
-  await t.checkText(summary(unitsRule.check(setMembersLayout)) === "", "true");
+  t.check(unitsRule.check(setMembersLayout), []);
 });
 
 // ## A shared helper used only inside one set member directory descends past the set
@@ -235,10 +256,13 @@ void test("Same set, but util.ts is used only by files inside routes/chat/, a me
     },
   });
   const setMemberDirFindings = unitsRule.check(setMemberDirLayout);
-  t.check(summary(setMemberDirFindings), "shared-infrastructure pkg/src/webapp/util.ts");
-
-  // doctest:L250
-  t.check(setMemberDirFindings[0]?.message, "used only under pkg/src/webapp/routes/chat; move it there");
+  t.check(setMemberDirFindings, [
+    {
+      rule: "shared-infrastructure",
+      path: "pkg/src/webapp/util.ts",
+      message: "used only under pkg/src/webapp/routes/chat; move it there",
+    },
+  ]);
 });
 
 // ## A test importing a helper does not make it an entry
@@ -259,7 +283,13 @@ void test("helper.test.ts imports helper.ts directly (tests import internals fre
       "test/priv/helper.test.ts": { test: ["src/priv/helper.ts"] },
     },
   });
-  t.check(summary(unitsRule.check(testLayout)), "unit-directory pkg/src/priv/core.ts");
+  t.check(unitsRule.check(testLayout), [
+    {
+      rule: "unit-directory",
+      path: "pkg/src/priv/core.ts",
+      message: "core.ts and its helpers helper.ts are one unit beside other units in pkg/src/priv; make pkg/src/priv/core/ and move them in, dropping the core- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through core.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+    },
+  ]);
 });
 
 // ## A registry-declaring module is always its directory's entry
@@ -288,10 +318,13 @@ void test("reg.ts declares src/mod/schemas as a set.", async (t) => {
     },
   });
   const registryEntryFindings = unitsRule.check(registryEntryLayout);
-  t.check(summary(registryEntryFindings), "unit-directory pkg/src/mod/user.ts");
-
-  // doctest:L305
-  t.check(registryEntryFindings[0]?.message, "user.ts and its helpers user-helper.ts are one unit beside other units in pkg/src/mod; make pkg/src/mod/user/ and move them in, dropping the user- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through user.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)");
+  t.check(registryEntryFindings, [
+    {
+      rule: "unit-directory",
+      path: "pkg/src/mod/user.ts",
+      message: "user.ts and its helpers user-helper.ts are one unit beside other units in pkg/src/mod; make pkg/src/mod/user/ and move them in, dropping the user- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through user.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+    },
+  ]);
 });
 
 // ## A registry-declaring module is never shared-infrastructure
@@ -315,7 +348,7 @@ void test("registry.ts declares src/area/schemas as a set.", async (t) => {
       "src/area/child/consumer.ts": { imports: ["src/area/registry.ts"] },
     },
   });
-  await t.checkText(summary(unitsRule.check(registryFixedLayout)) === "", "true");
+  t.check(unitsRule.check(registryFixedLayout), []);
 });
 
 // ## `extraSourceRoots` directories are in scope the same as `src/`
@@ -334,5 +367,11 @@ void test("scripts/ is an extra source root (e.g.", async (t) => {
     },
     extraSourceRoots: ["scripts"],
   });
-  t.check(summary(unitsRule.check(extraLayout)), "unit-directory pkg/scripts/tool.ts");
+  t.check(unitsRule.check(extraLayout), [
+    {
+      rule: "unit-directory",
+      path: "pkg/scripts/tool.ts",
+      message: "tool.ts and its helpers tool-helper.ts are one unit beside other units in pkg/scripts; make pkg/scripts/tool/ and move them in, dropping the tool- prefix, and rename their mirrored tests to match. If a new import of one of these helpers made this a unit, importing through tool.ts instead may be the smaller fix (beebox/docs/implemented-plans/file-layout.md, rule 5)",
+    },
+  ]);
 });

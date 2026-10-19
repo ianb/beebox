@@ -13,6 +13,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -73,8 +74,8 @@ void test("A file that doesn't exist gets written and recorded:", async (t) => {
   // doctest:L74
   const box = await makeBox();
   const result = await install({ box, templateContent: "v1\n", relPath: "_config/calendar.guide.card" });
-  t.check(({ outcome: result.outcome, content: await get(box, "_config/calendar.guide.card"), recorded: Object.keys(await readVersions(box)) }), {
-    outcome: "fresh",
+  t.check({ result, content: await get(box, "_config/calendar.guide.card"), recorded: Object.keys(await readVersions(box)) }, {
+    result: { outcome: "fresh", writtenAt: "_config/calendar.guide.card" },
     content: `v1
 `,
     recorded: [
@@ -95,9 +96,9 @@ void test("Re-running with the same template content is a no-op (unchanged).", a
   await install({ box, templateContent: "v1\n" });
   const same = await install({ box, templateContent: "v1\n" });
   const next = await install({ box, templateContent: "v2\n" });
-  t.check({ same: same.outcome, next: next.outcome, content: await get(box, REL) }, {
-    same: "unchanged",
-    next: "overwritten",
+  t.check({ same, next, content: await get(box, REL) }, {
+    same: { outcome: "unchanged" },
+    next: { outcome: "overwritten", writtenAt: REL },
     content: `v2
 `,
   });
@@ -112,11 +113,10 @@ void test("When the local file differs from the recorded hash, we don't overwrit
   await install({ box, templateContent: "v1\n" });
   await put({ box, rel: REL, content: "user edit\n" });
   const result = await install({ box, templateContent: "v2\n" });
-  t.check(({ outcome: result.outcome, local: await get(box, REL), writtenAt: result.writtenAt, parked: await get(box, result.writtenAt ?? "") }), {
-    outcome: "parked",
+  t.check({ result, local: await get(box, REL), parked: await get(box, result.writtenAt ?? "") }, {
+    result: { outcome: "parked", writtenAt: "_config/_template-updates/_config/x.card" },
     local: `user edit
 `,
-    writtenAt: "_config/_template-updates/_config/x.card",
     parked: `v2
 `,
   });
@@ -124,12 +124,12 @@ void test("When the local file differs from the recorded hash, we don't overwrit
   // And the recorded hash is **not** updated (so if the user copies the parked version into place later, the next install can recognise it and overwrite cleanly):
 
   // doctest:L112
-  const hashBefore = (await readVersions(box))[REL]?.sha256;
-  t.check(hashBefore?.length, 64);
+  const entryBefore = (await readVersions(box))[REL];
+  t.check(entryBefore, { sha256: sha("v1\n"), "installed-at": isoDate(), stock: "v1\n", pending: sha("v2\n") });
 
   // doctest:L116
   await install({ box, templateContent: "v2\n" });
-  await t.checkText((await readVersions(box))[REL]?.sha256 === hashBefore, "true");
+  t.check((await readVersions(box))[REL], entryBefore);
 });
 
 // ## Listing parked updates — the drift signal
@@ -161,16 +161,16 @@ void test("A box that was installed before the version tracker existed has files
   const box = await makeBox();
   await put({ box, rel: REL, content: "v1\n" });
   const matching = await install({ box, templateContent: "v1\n" });
-  const adopted = (await readVersions(box))[REL]?.sha256?.length;
+  const adopted = (await readVersions(box))[REL];
 
   // doctest:L148
   const other = await makeBox();
   await put({ box: other, rel: REL, content: "mystery content\n" });
   const mystery = await install({ box: other, templateContent: "v2\n" });
-  t.check({ matching: matching.outcome, adoptedHashLength: adopted, mystery: mystery.outcome }, {
-    matching: "unchanged",
-    adoptedHashLength: 64,
-    mystery: "parked",
+  t.check({ matching, adopted, mystery }, {
+    matching: { outcome: "unchanged" },
+    adopted: { sha256: sha("v1\n"), "installed-at": isoDate(), stock: "v1\n" },
+    mystery: { outcome: "parked", writtenAt: "_config/_template-updates/_config/x.card" },
   });
 });
 
@@ -185,11 +185,11 @@ void test("priorStockHashes names stock content shipped before this file was tra
     const box = await makeBox();
     await put({ box, rel: REL, content: local });
     const result = await install({ box, templateContent: "v2\n", priorStockHashes: [sha("old stock\n")] });
-    return `${result.outcome}: ${(await get(box, REL)).trim()}`;
+    return { result, local: await get(box, REL) };
   };
   t.check([await run("old stock\n"), await run("someone's edit\n")], [
-    "overwritten: v2",
-    "parked: someone's edit",
+    { result: { outcome: "overwritten", writtenAt: REL }, local: "v2\n" },
+    { result: { outcome: "parked", writtenAt: "_config/_template-updates/_config/x.card" }, local: "someone's edit\n" },
   ]);
 });
 
@@ -213,11 +213,11 @@ void test("hasRecordedTemplateVersion is how a caller scopes that allowlist to t
   await put({ box, rel: REL, content: "old stock\n" });
   const tracked = await hasRecordedTemplateVersion(box, REL);
   const result = await install({ box, templateContent: "v2\n", ...(tracked ? {} : { priorStockHashes: [sha("old stock\n")] }) });
-  t.check(({ before, after, outcome: result.outcome, local: (await get(box, REL)).trim() }), {
+  t.check({ before, after, result, local: await get(box, REL) }, {
     before: false,
     after: true,
-    outcome: "parked",
-    local: "old stock",
+    result: { outcome: "parked", writtenAt: "_config/_template-updates/_config/x.card" },
+    local: "old stock\n",
   });
 });
 
@@ -230,7 +230,7 @@ void test("Guide templates regenerate their created-at timestamps every install.
   const normalize = (s: string) => s.replace(/ts="[^"]*"/g, "");
   await install({ box, templateContent: "<guide ts=\"2026-01-01\"/>\n", relPath: "_config/g.card", normalize });
   const result = await install({ box, templateContent: "<guide ts=\"2026-05-24\"/>\n", relPath: "_config/g.card", normalize });
-  t.check(result.outcome, "unchanged");
+  t.check(result, { outcome: "unchanged" });
 });
 
 // ## Box-owned fields — a toggle doesn't freeze the box on old content
@@ -249,7 +249,7 @@ void test("Some card templates have fields the box owns as per-box state rather 
     await install({ box, templateContent: card({ runs: "bbx sync", description: "v1" }), relPath: rel });
     await put({ box, rel, content: local });
     const result = await install({ box, templateContent: template, relPath: rel, boxOwnedFields: ["enabled"] });
-    return { outcome: result.outcome, content: await get(box, rel) };
+    return { result, content: await get(box, rel) };
   };
   t.check(
     ({
@@ -259,7 +259,7 @@ void test("Some card templates have fields the box owns as per-box state rather 
     }),
     {
     toggled: {
-      outcome: "overwritten",
+      result: { outcome: "overwritten", writtenAt: rel },
       content: `---
 runs: bbx sync
 description: v2
@@ -268,7 +268,7 @@ enabled: false
 `,
     },
     edited: {
-      outcome: "parked",
+      result: { outcome: "parked", writtenAt: `_config/_template-updates/${rel}` },
       content: `---
 runs: bbx sync --fast
 description: v1
@@ -277,7 +277,7 @@ enabled: false
 `,
     },
     current: {
-      outcome: "unchanged",
+      result: { outcome: "unchanged" },
       content: `---
 runs: bbx sync
 description: v1
@@ -374,18 +374,18 @@ void test("Once a divergent box comes back into line with the template — the b
   t.check(
     ({
       parkedBefore,
-      overwritten: overwritten.outcome,
+      overwritten,
       afterOverwrite: await listParkedTemplateUpdates(reverted),
-      unchanged: unchanged.outcome,
+      unchanged,
       afterUnchanged: await listParkedTemplateUpdates(matched),
     }),
     {
     parkedBefore: [
       "_config/x.card",
     ],
-    overwritten: "overwritten",
+    overwritten: { outcome: "overwritten", writtenAt: REL },
     afterOverwrite: [],
-    unchanged: "unchanged",
+    unchanged: { outcome: "unchanged" },
     afterUnchanged: [],
   },
   );

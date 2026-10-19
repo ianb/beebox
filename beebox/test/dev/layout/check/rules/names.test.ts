@@ -7,8 +7,9 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { unordered } from "agent-doctest/check";
 import { namesRule } from "../../../../../src/dev/layout/check/rules/names.js";
-import { layout, summary } from "./fixture.js";
+import { layout } from "./fixture.js";
 
 const check = (l: ReturnType<typeof layout>) => namesRule.check(l);
 
@@ -27,12 +28,12 @@ void test("A module, test, or declaration file named index is flagged regardless
       "src/foo/index.html": "data",
     },
   });
-  await t.checkText(summary(check(noIndex)), `no-index pkg/src/foo/index.d.ts
-no-index pkg/src/foo/index.tsx
-no-index pkg/src/index.ts`);
-
-  // doctest:L36
-  t.check(check(noIndex)[0]?.message, "name the module by what it does; index names nothing");
+  const message = "name the module by what it does; index names nothing";
+  t.check(check(noIndex), unordered([
+    { rule: "no-index", path: "pkg/src/foo/index.d.ts", message },
+    { rule: "no-index", path: "pkg/src/foo/index.tsx", message },
+    { rule: "no-index", path: "pkg/src/index.ts", message },
+  ]));
 });
 
 // ## Re-export modules live only in `<sourceRoot>/exports`
@@ -48,10 +49,13 @@ void test("A reexportOnly module inside src/exports/ is clean, including when it
     },
     publicSurfaces: [{ specifier: "./schema", target: "dist/schema.js", source: "src/exports/schema.ts" }],
   });
-  t.check(summary(check(reexport)), "reexport-surface pkg/src/cards.ts");
-
-  // doctest:L57
-  t.check(check(reexport)[0]?.message, "re-export modules exist only as public surfaces in pkg/src/exports; import from the defining modules instead");
+  t.check(check(reexport), [
+    {
+      rule: "reexport-surface",
+      path: "pkg/src/cards.ts",
+      message: "re-export modules exist only as public surfaces in pkg/src/exports; import from the defining modules instead",
+    },
+  ]);
 });
 
 // ## Public surfaces: build target, source location, and exports/ membership
@@ -82,18 +86,11 @@ void test("A code-target (.js/.mjs/.cjs) surface with no known source is flagged
       { specifier: "./view-widgets", target: "dist/view-widgets.js", source: "src/exports/view-widgets.tsx" },
     ],
   });
-  await t.checkText(summary(check(surfaces)), `public-surface pkg/dist/missing.js
-public-surface pkg/src/exports/orphan.ts
-public-surface pkg/src/legacy/cards.ts`);
-
-  // doctest:L95
-  t.check(check(surfaces).find((f) => f.path === "pkg/dist/missing.js")?.message, "cannot find the source the build produces pkg/dist/missing.js from");
-
-  // doctest:L98
-  t.check(check(surfaces).find((f) => f.path === "pkg/src/legacy/cards.ts")?.message, "public surface ./legacy is built from pkg/src/legacy/cards.ts; move it to pkg/src/exports/");
-
-  // doctest:L101
-  t.check(check(surfaces).find((f) => f.path === "pkg/src/exports/orphan.ts")?.message, "not a public surface; every module in pkg/src/exports is a package export's source");
+  t.check(check(surfaces), unordered([
+    { rule: "public-surface", path: "pkg/dist/missing.js", message: "cannot find the source the build produces pkg/dist/missing.js from" },
+    { rule: "public-surface", path: "pkg/src/legacy/cards.ts", message: "public surface ./legacy is built from pkg/src/legacy/cards.ts; move it to pkg/src/exports/" },
+    { rule: "public-surface", path: "pkg/src/exports/orphan.ts", message: "not a public surface; every module in pkg/src/exports is a package export's source" },
+  ]));
 });
 
 // Each message in full, above.
@@ -115,7 +112,7 @@ void test("Each message in full, above.", async (t) => {
       { specifier: "./view-widgets", target: "dist/view-widgets.js", source: "src/frontend/src/exports/view-widgets.tsx" },
     ],
   });
-  await t.checkText(summary(check(nestedSource)) === "", "true");
+  t.check(check(nestedSource), []);
 });
 
 // A source outside that nested package's `src/exports/` is still flagged,
@@ -131,7 +128,13 @@ void test("A source outside that nested package's src/exports/ is still flagged,
       { specifier: "./view-widgets", target: "dist/view-widgets.js", source: "src/frontend/src/widgets.tsx" },
     ],
   });
-  t.check(check(nestedMisplaced)[0]?.message, "public surface ./view-widgets is built from pkg/src/frontend/src/widgets.tsx; move it to pkg/src/frontend/src/exports/");
+  t.check(check(nestedMisplaced), [
+    {
+      rule: "public-surface",
+      path: "pkg/src/frontend/src/widgets.tsx",
+      message: "public surface ./view-widgets is built from pkg/src/frontend/src/widgets.tsx; move it to pkg/src/frontend/src/exports/",
+    },
+  ]);
 });
 
 // ## A module in `src/exports/` can be named by an enclosing package's surface
@@ -150,7 +153,7 @@ void test("frontend's own view-widgets.tsx (scanned as pkg here, standing in for
       { specifier: "./view-widgets", target: "../dist/view-widgets.js", source: "src/exports/view-widgets.tsx" },
     ],
   });
-  await t.checkText(summary(check(enclosingNamed)) === "", "true");
+  t.check(check(enclosingNamed), []);
 });
 
 // ## A data file in `src/exports/` is out of scope for public-surface membership
@@ -163,7 +166,7 @@ void test("A data file in `src/exports/` is out of scope for public-surface memb
     },
     publicSurfaces: [{ specifier: "./schema", target: "dist/schema.js", source: "src/exports/schema.ts" }],
   });
-  await t.checkText(summary(check(dataInExports)) === "", "true");
+  t.check(check(dataInExports), []);
 });
 
 // ## A file name never repeats its directory's name
@@ -183,15 +186,11 @@ void test("Equal (router/router.ts) and prefixed (router/router-core.ts) both co
       "test/router/router-core.test.ts": { test: [] },
     },
   });
-  await t.checkText(summary(check(repeated)), `repeated-name pkg/src/router/router-core.ts
-repeated-name pkg/src/router/router.ts
-repeated-name pkg/test/router/router-core.test.ts`);
-
-  // doctest:L202
-  t.check(check(repeated).find((f) => f.path === "pkg/src/router/router.ts")?.message, "name it by what it does; router/router repeats the directory");
-
-  // doctest:L205
-  t.check(check(repeated).find((f) => f.path === "pkg/src/router/router-core.ts")?.message, "drop the router- prefix: the directory already says it");
+  t.check(check(repeated), unordered([
+    { rule: "repeated-name", path: "pkg/src/router/router-core.ts", message: "drop the router- prefix: the directory already says it" },
+    { rule: "repeated-name", path: "pkg/src/router/router.ts", message: "name it by what it does; router/router repeats the directory" },
+    { rule: "repeated-name", path: "pkg/test/router/router-core.test.ts", message: "drop the router- prefix: the directory already says it" },
+  ]));
 });
 
 // Both message shapes shown above.
@@ -214,5 +213,11 @@ void test("Both message shapes shown above.", async (t) => {
       { specifier: "./beta", target: "dist/plugins/beta/plugin.js", source: "src/plugins/beta/plugin.ts" },
     ],
   });
-  t.check(summary(check(wildcard).filter((f) => f.rule === "public-surface")), "public-surface pkg/src/plugins/beta/plugin.ts");
+  t.check(check(wildcard).filter((f) => f.rule === "public-surface"), [
+    {
+      rule: "public-surface",
+      path: "pkg/src/plugins/beta/plugin.ts",
+      message: "public surface ./beta is built from pkg/src/plugins/beta/plugin.ts; move it to pkg/src/exports/",
+    },
+  ]);
 });

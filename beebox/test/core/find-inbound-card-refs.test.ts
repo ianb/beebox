@@ -28,16 +28,8 @@ void test("Read failures accompany the references that could be scanned", async 
       return fs.readFile(filePath, "utf-8");
     },
   });
-  t.check(result.referrers, [
-    {
-      path: "_content/box/notes/Readable.md",
-      refs: 1,
-    },
-  ]);
-
-  // doctest:L33
-  await t.checkText(result.errors.length, "1");
-
-  // doctest:L36
-  t.check(result.errors[0]?.includes("_content/box/notes/Unreadable.md: Error: fixture read failure"), true);
+  t.check(result, {
+    referrers: [{ path: "_content/box/notes/Readable.md", refs: 1 }],
+    errors: ["_content/box/notes/Unreadable.md: Error: fixture read failure"],
+  });
 });

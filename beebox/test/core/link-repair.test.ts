@@ -28,14 +28,27 @@ void test("A dossier links to the pre-move path of an image that now lives one d
 
   // doctest:L29
   const report = await repairBoxLinks(box.root, { dryRun: false });
-  t.check(report.fixed.map((r) => `${r.oldUrl} -> ${r.newUrl}`), [
-    "/store/notebook/valley/images/bram-face.attach/bram-face.webp -> /store/notebook/ashfield/valley/images/bram-face.attach/bram-face.webp",
-  ]);
+  t.check(report, {
+    fixed: [
+      {
+        file: "store/notebook/ashfield/valley/dossiers/bram.md",
+        lineNumber: 3,
+        oldUrl: "/store/notebook/valley/images/bram-face.attach/bram-face.webp",
+        status: "fixed",
+        newUrl: "/store/notebook/ashfield/valley/images/bram-face.attach/bram-face.webp",
+        candidates: [],
+      },
+    ],
+    ambiguous: [],
+    unresolvable: [],
+  });
 
   // The file on disk now points at the real image:
 
   // doctest:L40
-  await t.checkText((await readFile(join(box.root, "store/notebook/ashfield/valley/dossiers/bram.md"), "utf-8")).includes("/store/notebook/ashfield/valley/images/bram-face.attach/bram-face.webp"), "true");
+  await t.checkText(await readFile(join(box.root, "store/notebook/ashfield/valley/dossiers/bram.md"), "utf-8"), `# Bram
+«blankline»
+![face](/store/notebook/ashfield/valley/images/bram-face.attach/bram-face.webp)`);
 
   // doctest:L45
   await box.cleanup();
@@ -52,10 +65,20 @@ void test("When two files share the basename, the trailing-path overlap picks th
 
   // doctest:L57
   const report = await repairBoxLinks(box.root, { dryRun: true });
-  t.check([report.fixed[0]?.newUrl, report.ambiguous.length], [
-    "/store/notebook/ashfield/valley/images/face.webp",
-    0,
-  ]);
+  t.check(report, {
+    fixed: [
+      {
+        file: "store/notebook/ashfield/valley/dossiers/x.md",
+        lineNumber: 1,
+        oldUrl: "/store/notebook/valley/images/face.webp",
+        status: "fixed",
+        newUrl: "/store/notebook/ashfield/valley/images/face.webp",
+        candidates: [],
+      },
+    ],
+    ambiguous: [],
+    unresolvable: [],
+  });
 
   // doctest:L67
   await box.cleanup();
@@ -72,15 +95,19 @@ void test("A true tie (same basename, equal trailing overlap) is reported as amb
 
   // doctest:L79
   const report = await repairBoxLinks(box.root, { dryRun: true });
-  t.check([report.fixed.length, report.ambiguous.map((r) => r.candidates)], [
-    0,
-    [
-      [
-        "/store/a/shared.webp",
-        "/store/b/shared.webp",
-      ],
+  t.check(report, {
+    fixed: [],
+    ambiguous: [
+      {
+        file: "store/notes.md",
+        lineNumber: 1,
+        oldUrl: "/store/gone/shared.webp",
+        status: "ambiguous",
+        candidates: ["/store/a/shared.webp", "/store/b/shared.webp"],
+      },
     ],
-  ]);
+    unresolvable: [],
+  });
 
   // doctest:L94
   await box.cleanup();
@@ -92,13 +119,19 @@ void test("A link whose basename exists nowhere is unresolvable:", async (t) => 
   const box = await makeTmpBox();
   await write({ box, rel: "store/notes.md", content: "![x](/store/missing/ghost.webp)\n" });
   const report = await repairBoxLinks(box.root, { dryRun: true });
-  t.check([report.fixed.length, report.ambiguous.length, report.unresolvable.map((r) => r.oldUrl)], [
-    0,
-    0,
-    [
-      "/store/missing/ghost.webp",
+  t.check(report, {
+    fixed: [],
+    ambiguous: [],
+    unresolvable: [
+      {
+        file: "store/notes.md",
+        lineNumber: 1,
+        oldUrl: "/store/missing/ghost.webp",
+        status: "unresolvable",
+        candidates: [],
+      },
     ],
-  ]);
+  });
 
   // doctest:L115
   await box.cleanup();

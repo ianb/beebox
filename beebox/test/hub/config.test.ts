@@ -6,6 +6,7 @@
 // warnings. See `src/hub/config.ts`.
 
 import { test } from "tap";
+import { any, instanceOf, str } from "agent-doctest/check";
 import "agent-doctest/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -55,26 +56,33 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   await box.write("boxes/test1/.beebox/box.json", "");
   const configPath = await writeConfig(box.root, { boxes: { test1: { path: "./boxes/test1" } } });
   const config = await loadOk(configPath);
-  await t.checkText(config instanceof HubConfigError, "false");
 
   // doctest:L54
-  await t.checkText(config.boxes.test1?.path === path.join(box.root, "boxes/test1"), "true");
+  t.check(config, {
+    port: undefined,
+    host: undefined,
+    boxes: { test1: { path: path.join(box.root, "boxes/test1") } },
+    configPath,
+    lazy: false,
+    idleMs: 300_000,
+    keepRecent: 0,
+  });
 
   // ## An unknown top-level key is rejected (fail-closed, `z.strictObject`)
 
   // doctest:L61
   const badConfig = await writeConfig(box.root, { boxes: {}, extraKey: true });
   const err = await loadRejected(badConfig);
-  await t.checkText(err instanceof HubConfigError, "true");
-
-  // doctest:L66
-  await t.checkText(err.message.includes("extraKey"), "true");
+  t.check(err, instanceOf(HubConfigError));
+  t.check(err.message, `Hub config at ${badConfig} is invalid:\n  - (root): Unrecognized key: "extraKey"`);
 
   // ## An unknown key inside a box entry is rejected
 
   // doctest:L73
   const badEntry = await writeConfig(box.root, { boxes: { test1: { path: "./boxes/test1", port: 1234 } } });
-  await t.checkText((await tryLoad(badEntry)) instanceof HubConfigError, "true");
+  const badEntryErr = await loadRejected(badEntry);
+  t.check(badEntryErr, instanceOf(HubConfigError));
+  t.check(badEntryErr.message, `Hub config at ${badEntry} is invalid:\n  - boxes.test1: Unrecognized key: "port"`);
 
   // ## A reserved slug is rejected
   //
@@ -87,16 +95,19 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   // doctest:L87
   const reservedConfig = await writeConfig(box.root, { boxes: { webhook: { path: "./boxes/test1" } } });
   const err2 = await loadRejected(reservedConfig);
-  await t.checkText(err2 instanceof HubConfigError, "true");
-
-  // doctest:L92
-  await t.checkText(err2.message.includes("reserved"), "true");
+  t.check(err2, instanceOf(HubConfigError));
+  t.check(
+    err2.message,
+    `Hub config at ${reservedConfig}: slug "webhook" is reserved (the box server itself claims that URL prefix — see RESERVED_SLUGS in src/hub/config.ts). Pick a different slug.`,
+  );
 
   // ## A malformed slug (uppercase, leading hyphen, empty) is rejected
 
   // doctest:L99
   const badSlug = await writeConfig(box.root, { boxes: { "Test-1": { path: "./boxes/test1" } } });
-  await t.checkText((await tryLoad(badSlug)) instanceof HubConfigError, "true");
+  const badSlugErr = await loadRejected(badSlug);
+  t.check(badSlugErr, instanceOf(HubConfigError));
+  t.check(badSlugErr.message, `Hub config at ${badSlug} is invalid:\n  - boxes.Test-1: Invalid key in record`);
 
   // ## Two slugs claiming the same resolved box path is rejected
   //
@@ -112,10 +123,13 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
     },
   });
   const dupeErr = await loadRejected(dupeConfig);
-  await t.checkText(dupeErr instanceof HubConfigError, "true");
-
-  // doctest:L121
-  await t.checkText(dupeErr.message.includes("test1-again"), "true");
+  t.check(dupeErr, instanceOf(HubConfigError));
+  const test1Path = path.join(box.root, "boxes/test1");
+  t.check(
+    dupeErr.message,
+    `Hub config at ${dupeConfig}: the same box path is registered under more than one slug, which would start two engine processes against one box's on-disk state (two engines on one events.db is corrupting, not just wasteful):
+  - ${test1Path} is claimed by slugs: test1 (${test1Path}), test1-again (${test1Path})`,
+  );
 
   // ## A symlinked alias to the same box is caught (canonicalized before comparing)
   //
@@ -135,10 +149,12 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
     },
   });
   const symlinkErr = await loadRejected(symlinkConfig);
-  await t.checkText(symlinkErr instanceof HubConfigError, "true");
-
-  // doctest:L146
-  await t.checkText(symlinkErr.message.includes("test1-symlink"), "true");
+  t.check(symlinkErr, instanceOf(HubConfigError));
+  t.check(
+    symlinkErr.message,
+    `Hub config at ${symlinkConfig}: the same box path is registered under more than one slug, which would start two engine processes against one box's on-disk state (two engines on one events.db is corrupting, not just wasteful):
+  - ${test1Path} is claimed by slugs: test1 (${test1Path}), test1-symlink (${path.join(box.root, "boxes/test1-link")})`,
+  );
 
   // ## Legacy box state resolves, but config loading does not migrate it
   //
@@ -153,7 +169,15 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   await fs.writeFile(path.join(legacyState, "state.json"), "old\n");
   const legacyConfigPath = await writeConfig(box.root, { boxes: { legacy: { path: "./boxes/legacy" } } });
   const legacyConfig = await loadHubConfig(legacyConfigPath);
-  await t.checkText(legacyConfig.boxes.legacy?.path === path.join(box.root, "boxes/legacy"), "true");
+  t.check(legacyConfig, {
+    port: undefined,
+    host: undefined,
+    boxes: { legacy: { path: path.join(box.root, "boxes/legacy") } },
+    configPath: legacyConfigPath,
+    lazy: false,
+    idleMs: 300_000,
+    keepRecent: 0,
+  });
 
   // doctest:L166
   t.check(await fs.access(legacyState).then(() => true), true);
@@ -168,7 +192,15 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
 
   // doctest:L179
   const unresolvableConfig = await writeConfig(box.root, { boxes: { broken: { path: "./boxes/does-not-exist" } } });
-  await t.checkText((await tryLoad(unresolvableConfig)) instanceof HubConfigError, "false");
+  t.check(await loadOk(unresolvableConfig), {
+    port: undefined,
+    host: undefined,
+    boxes: { broken: { path: path.join(box.root, "boxes/does-not-exist") } },
+    configPath: unresolvableConfig,
+    lazy: false,
+    idleMs: 300_000,
+    keepRecent: 0,
+  });
 });
 
 // ## Missing config file, invalid JSON
@@ -181,14 +213,17 @@ void test("Missing config file, invalid JSON", async (t) => {
     }
   });
   // doctest:L191
-  const missing = await tryLoad("/nonexistent/hub.json");
-  await t.checkText(missing instanceof HubConfigError, "true");
+  const missing = await loadRejected("/nonexistent/hub.json");
+  t.check(missing, instanceOf(HubConfigError));
+  t.check(missing.message, "Cannot read hub config at /nonexistent/hub.json: ENOENT: no such file or directory, open '/nonexistent/hub.json'");
 
   // doctest:L197
   const box2 = await makeTmpBox();
   const notJson = path.join(box2.root, "hub.json");
   await fs.writeFile(notJson, "{ not json");
-  await t.checkText((await tryLoad(notJson)) instanceof HubConfigError, "true");
+  const notJsonErr = await loadRejected(notJson);
+  t.check(notJsonErr, instanceOf(HubConfigError));
+  t.check(notJsonErr.message, str`Hub config at ${notJson} is not valid JSON: ${any(String)}`);
 });
 
 // ## `lazy`/`idleMs` default off, and parse when set
@@ -252,10 +287,11 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
     keepRecent: 1,
   });
   const keepErr = await loadRejected(keepNoLazyPath);
-  await t.checkText(keepErr instanceof HubConfigError, "true");
-
-  // doctest:L265
-  await t.checkText(keepErr.message.includes("keepRecent") && keepErr.message.includes("lazy"), "true");
+  t.check(keepErr, instanceOf(HubConfigError));
+  t.check(
+    keepErr.message,
+    `Hub config at ${keepNoLazyPath}: keepRecent (1) requires lazy: true. It keeps the most-recently-used boxes alive in an otherwise idle-stopping lazy hub, which is meaningless for a resident (non-lazy) hub where every box already stays up. Set lazy: true, or remove keepRecent.`,
+  );
 
   // `keepRecent: 0` without `lazy` is fine (it's the default — nothing to keep):
 
@@ -264,7 +300,15 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
     boxes: { test1: { path: "./boxes/test1" } },
     keepRecent: 0,
   });
-  await t.checkText((await tryLoad(keepZeroPath)) instanceof HubConfigError, "false");
+  t.check(await loadOk(keepZeroPath), {
+    port: undefined,
+    host: undefined,
+    boxes: { test1: { path: path.join(box3.root, "boxes/test1") } },
+    configPath: keepZeroPath,
+    lazy: false,
+    idleMs: 300_000,
+    keepRecent: 0,
+  });
 
   // A negative or non-integer `keepRecent` is a schema error:
 
@@ -274,5 +318,7 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
     lazy: true,
     keepRecent: -1,
   });
-  await t.checkText((await tryLoad(keepNegPath)) instanceof HubConfigError, "true");
+  const keepNegPathErr = await loadRejected(keepNegPath);
+  t.check(keepNegPathErr, instanceOf(HubConfigError));
+  t.check(keepNegPathErr.message, `Hub config at ${keepNegPath} is invalid:\n  - keepRecent: Too small: expected number to be >=0`);
 });

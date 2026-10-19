@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, not, str } from "agent-doctest/check";
 import {
   planScanBatches,
   runScanBatches,
@@ -70,14 +70,12 @@ void test("The archive may contain a TIFF, WebP, AVIF, or a very large phone ori
       t.error(error);
     }
   });
-  // doctest:L66
   const normalizeBox = await makeTmpBox();
   const originalPath = join(normalizeBox.root, "oversized-original.tiff");
   await Sharp({
     create: { width: 3200, height: 1200, channels: 3, background: { r: 30, g: 80, b: 120 } },
   }).tiff({ compression: "none" }).toFile(originalPath);
 
-  // doctest:L72
   const expectedBytes = await Sharp(originalPath)
     .rotate()
     .resize({ width: 2000, height: 2000, fit: "inside", withoutEnlargement: true })
@@ -99,47 +97,29 @@ void test("The archive may contain a TIFF, WebP, AVIF, or a very large phone ori
     };
   }
 
-  // doctest:L93
   await runScanBatches({ vision: recordingVision("claude"), imagePaths: [originalPath] });
   await runScanBatches({ vision: recordingVision("gemini"), imagePaths: [originalPath] });
   const originalBytes = (await stat(originalPath)).size;
   t.check(
     {
-      originalOver8MB: originalBytes > 8 * 1024 * 1024,
+      originalBytes,
       backends: observations.map((item) => item.backend),
       extensions: observations.map((item) => extname(item.imagePath)),
       formats: observations.map((item) => item.metadata.format),
       dimensions: observations.map((item) => [item.metadata.width, item.metadata.height]),
-      exactClaudeRecipe: observations.every((item) => item.bytes.equals(expectedBytes)),
-      smallerThanOriginal: observations.every((item) => item.bytes.length < originalBytes),
+      // Buffers cannot be compared by value; byte equality with the recipe's output is the check.
+      bytesEqualRecipe: observations.map((item) => item.bytes.equals(expectedBytes)),
+      sizes: observations.map((item) => item.bytes.length),
     },
     {
-    originalOver8MB: true,
-    backends: [
-      "claude",
-      "gemini",
-    ],
-    extensions: [
-      ".jpg",
-      ".jpg",
-    ],
-    formats: [
-      "jpeg",
-      "jpeg",
-    ],
-    dimensions: [
-      [
-        2000,
-        750,
-      ],
-      [
-        2000,
-        750,
-      ],
-    ],
-    exactClaudeRecipe: true,
-    smallerThanOriginal: true,
-  },
+      originalBytes: any(Number).above(8 * 1024 * 1024),
+      backends: ["claude", "gemini"],
+      extensions: [".jpg", ".jpg"],
+      formats: ["jpeg", "jpeg"],
+      dimensions: [[2000, 750], [2000, 750]],
+      bytesEqualRecipe: [true, true],
+      sizes: [any(Number).below(originalBytes), any(Number).below(originalBytes)],
+    },
   );
 });
 
@@ -155,7 +135,6 @@ void test("The archive remains byte-for-byte intact; provider compatibility appl
       t.error(error);
     }
   });
-  // doctest:L118
   const formatBox = await makeTmpBox();
   const formatInputs = [];
   for (const format of ["webp", "avif"] as const) {
@@ -204,7 +183,6 @@ void test("The archive remains byte-for-byte intact; provider compatibility appl
 //
 // A larger PDF gets split with one-page overlap so any pair straddling a seam still appears in some batch together:
 void test("A larger PDF gets split with one-page overlap so any pair straddling a seam s...", async (t) => {
-  // doctest:L154
   t.check(planScanBatches(20, 8).map(p => p.globalIndices), [
     [
       0,
@@ -239,7 +217,6 @@ void test("A larger PDF gets split with one-page overlap so any pair straddling 
 
 // Exactly batch-size yields one batch:
 void test("Exactly batch-size yields one batch:", async (t) => {
-  // doctest:L161
   t.check(planScanBatches(8, 8).map(p => p.globalIndices), [
     [
       0,
@@ -256,7 +233,6 @@ void test("Exactly batch-size yields one batch:", async (t) => {
 
 // Empty PDF yields no batches:
 void test("Empty PDF yields no batches:", async (t) => {
-  // doctest:L168
   t.check(planScanBatches(0, 8), []);
 });
 
@@ -264,36 +240,39 @@ void test("Empty PDF yields no batches:", async (t) => {
 //
 // When both pages in a pair name each other, the pair is finalized:
 void test("When both pages in a pair name each other, the pair is finalized:", async (t) => {
-  // doctest:L177
   const pages = new Map<number, ScanPageAnalysis[]>();
   pages.set(0, [photo(0, 1)]);
   pages.set(1, [back(1, { paired: 0, text: "Mom, 1985" })]);
   const resolved = resolveScanPages(pages, 2);
-  t.check(resolved.map(r => `${r.index}:${r.analysis.kind} pair=${r.pairedWith}`).join(" | "), "0:photo pair=1 | 1:back pair=0");
+  t.check(resolved.map(r => ({ index: r.index, kind: r.analysis.kind, pairedWith: r.pairedWith })), [
+    { index: 0, kind: "photo", pairedWith: 1 },
+    { index: 1, kind: "back", pairedWith: 0 },
+  ]);
 });
 
 // When only one side names a partner, the pair does NOT survive — the partner has to reciprocate:
 void test("When only one side names a partner, the pair does NOT survive — the partner h...", async (t) => {
-  // doctest:L188
   const pages2 = new Map<number, ScanPageAnalysis[]>();
   pages2.set(0, [photo(0, 1)]);
   pages2.set(1, [back(1, { text: "Mom" })]);  // back didn't name page 0
   const resolved2 = resolveScanPages(pages2, 2);
-  t.check(resolved2.map(r => `${r.index}:pair=${r.pairedWith} conflict=${r.conflict}`).join(" | "), "0:pair=null conflict=true | 1:pair=null conflict=false");
+  t.check(resolved2.map(r => ({ index: r.index, pairedWith: r.pairedWith, conflict: r.conflict })), [
+    { index: 0, pairedWith: null, conflict: true },
+    { index: 1, pairedWith: null, conflict: false },
+  ]);
 });
 
 // ## Pair reconciliation: overlap dedup
 //
 // A page that appears in two batches with consistent claims gets the pair resolved cleanly:
 void test("A page that appears in two batches with consistent claims gets the pair resol...", async (t) => {
-  // doctest:L201
   const pages3 = new Map<number, ScanPageAnalysis[]>();
   // Page 7 appears in batch [0..7] paired with 6, AND in batch [7..14] paired with 6 (impossible — 6 not in second batch).
   // More realistic: batch A pairs 6↔7, batch B sees 7 as singleton (since its partner 6 is in batch A only).
   pages3.set(6, [photo(6, 7)]);
   pages3.set(7, [back(7, { paired: 6, text: "Beach" }), back(7, { text: "Beach" })]);
   const resolved3 = resolveScanPages(pages3, 8);
-  t.check(resolved3[7]?.pairedWith, 6);
+  t.check(resolved3[7], { index: 7, analysis: back(7, { paired: 6, text: "Beach" }), pairedWith: 6, conflict: true });
 });
 
 // The analyzer that named a partner wins over the one that didn't.
@@ -304,96 +283,119 @@ void test("A page that appears in two batches with consistent claims gets the pa
 // the partner actually reciprocates wins — even when it came from the first
 // batch (the old rule arbitrarily took the second):
 void test("The analyzer that named a partner wins over the one that didn't.", async (t) => {
-  // doctest:L220
   const pages4 = new Map<number, ScanPageAnalysis[]>();
   // Batch A saw 4↔5 mutually; batch B misread page 5 as paired forward with 6.
   pages4.set(4, [photo(4, 5)]);
   pages4.set(5, [back(5, { paired: 4, text: "Lake" }), back(5, { paired: 6, text: "Lake" })]);
   pages4.set(6, [photo(6, null)]);
   const resolved4 = resolveScanPages(pages4, 8);
-  t.check(`${resolved4[4]?.pairedWith}<->${resolved4[5]?.pairedWith} conflict=${resolved4[5]?.conflict}`, "5<->4 conflict=true");
+  t.check([resolved4[4], resolved4[5]], [
+    { index: 4, analysis: photo(4, 5), pairedWith: 5, conflict: false },
+    { index: 5, analysis: back(5, { paired: 4, text: "Lake" }), pairedWith: 4, conflict: true },
+  ]);
 });
 
 // ## Bundling: photo + back
 //
 // Photos with mutual back partners become bundles:
 void test("Photos with mutual back partners become bundles:", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L235
   const pages4 = new Map<number, ScanPageAnalysis[]>();
   pages4.set(0, [photo(0, 1)]);
   pages4.set(1, [back(1, { paired: 0, text: "Family reunion 1985" })]);
   const resolved4 = resolveScanPages(pages4, 2);
   const result = bundleResolvedPages(resolved4);
-  print(`bundles=${result.bundles.length} orphans=${result.orphanBacks.length} unsure=${result.unsurePages.length}`);
-  print(`bundle0: photo=${result.bundles[0]?.photoIndex} back=${result.bundles[0]?.backIndex}`);
-  await t.checkText(out.with(print(`back text: ${result.bundles[0]?.back?.text_blocks[0]?.text}`)), `bundles=1 orphans=0 unsure=0
-bundle0: photo=0 back=1
-back text: Family reunion 1985`);
+  t.check(result, {
+    bundles: [
+      {
+        photoIndex: 0,
+        backIndex: 1,
+        photo: photo(0, 1),
+        back: back(1, { paired: 0, text: "Family reunion 1985" }),
+        flagForReview: false,
+        flagReasons: [],
+      },
+    ],
+    orphanBacks: [],
+    unsurePages: [],
+    blankPages: [],
+  });
 });
 
 // ## Bundling: orphan back
 //
 // A text-bearing back page that nobody paired with becomes an orphan:
 void test("A text-bearing back page that nobody paired with becomes an orphan:", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L254
   const pages5 = new Map<number, ScanPageAnalysis[]>();
   pages5.set(0, [photo(0, null)]);
   pages5.set(1, [back(1, { text: "Cousin Bill" })]);
   const result5 = bundleResolvedPages(resolveScanPages(pages5, 2));
-  print(`bundles=${result5.bundles.length} orphans=${result5.orphanBacks.length}`);
-  await t.checkText(out.with(print(`orphan text: ${result5.orphanBacks[0]?.analysis.text_blocks[0]?.text}`)), `bundles=1 orphans=1
-orphan text: Cousin Bill`);
+  t.check(result5, {
+    bundles: [{ photoIndex: 0, backIndex: null, photo: photo(0, null), back: null, flagForReview: false, flagReasons: [] }],
+    orphanBacks: [{ index: 1, analysis: back(1, { text: "Cousin Bill" }) }],
+    unsurePages: [],
+    blankPages: [],
+  });
 });
 
 // The unpartnered photo still becomes a singleton bundle (no back).
 //
 // ## Bundling: blank pages dropped
 void test("The unpartnered photo still becomes a singleton bundle (no back).", async (t) => {
-  // doctest:L270
   const pages6 = new Map<number, ScanPageAnalysis[]>();
   pages6.set(0, [photo(0, null)]);
   pages6.set(1, [{ ...back(1), kind: "blank", has_text: false, text_blocks: [] }]);
   const result6 = bundleResolvedPages(resolveScanPages(pages6, 2));
-  t.check(`bundles=${result6.bundles.length} blanks=${result6.blankPages.length}`, "bundles=1 blanks=1");
+  t.check(result6, {
+    bundles: [{ photoIndex: 0, backIndex: null, photo: photo(0, null), back: null, flagForReview: false, flagReasons: [] }],
+    orphanBacks: [],
+    unsurePages: [],
+    blankPages: [1],
+  });
 });
 
 // ## Boxholder context wrapping
 //
 // With no context, the prompt is unchanged from the base instructions:
 void test("With no context, the prompt is unchanged from the base instructions:", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L283
   const base = buildScanPrompt(null);
   const withContext = buildScanPrompt("Tomas, Noor, Delia are recurring people. Photos from 1965-1985.");
-  print(`base contains user context: ${base.includes("boxholder")}`);
-  await t.checkText(out.with(print(`with-context contains people: ${withContext.includes("Tomas, Noor, Delia")}`)), `base contains user context: false
-with-context contains people: true`);
+  // `base` is the large generated instruction text; the check is that it has no boxholder section, and that the context wraps it.
+  t.check(base, not(any(String).includes("boxholder")));
+  t.check(withContext, str`# Context from the boxholder
+
+${any(String)}
+
+---
+
+Tomas, Noor, Delia are recurring people. Photos from 1965-1985.
+
+---
+
+${base}`);
 });
 
 // Empty/whitespace context is treated as no context:
 void test("Empty/whitespace context is treated as no context:", async (t) => {
-  // doctest:L295
   const blank = buildScanPrompt("   \n\n  ");
-  await t.checkText(blank === buildScanPrompt(null), "true");
+  t.check(blank, buildScanPrompt(null));
 });
 
 // ## Flag propagation
 //
 // A flagged photo or back surfaces in the bundle's flagReasons:
 void test("A flagged photo or back surfaces in the bundle's flagReasons:", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L305
   const pages7 = new Map<number, ScanPageAnalysis[]>();
   pages7.set(0, [photo(0, 1)]);
   pages7.set(1, [{ ...back(1, { paired: 0, text: "?? hard to read" }), flag_for_review: true, flag_reason: "Handwriting unclear" }]);
   const result7 = bundleResolvedPages(resolveScanPages(pages7, 2));
-  print(`flag=${result7.bundles[0]?.flagForReview}`);
-  await t.checkText(out.with(print(result7.bundles[0]?.flagReasons.join("; "))), `flag=true
-Back: Handwriting unclear`);
+  t.check(result7.bundles, [
+    {
+      photoIndex: 0,
+      backIndex: 1,
+      photo: photo(0, 1),
+      back: { ...back(1, { paired: 0, text: "?? hard to read" }), flag_for_review: true, flag_reason: "Handwriting unclear" },
+      flagForReview: true,
+      flagReasons: ["Back: Handwriting unclear"],
+    },
+  ]);
 });

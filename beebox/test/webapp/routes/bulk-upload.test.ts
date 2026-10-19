@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, not, str, uuid } from "agent-doctest/check";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";
@@ -66,6 +67,22 @@ async function bindSession({ ctx, sessionId, contextDir }: { ctx: TestServer; se
   throw new Error(`could not bind ${sessionId} in history`);
 }
 
+// The manifest keys every bulk session has; the timestamps come from the real clock.
+function bulkManifest(id: string) {
+  return {
+    id,
+    createdAt: isoDate(),
+    lastActivityAt: isoDate(),
+    createdBy: null,
+    kind: "bulk" as const,
+    segments: [],
+    photos: [],
+    state: "open" as const,
+    files: [],
+    totalBytes: 0,
+  };
+}
+
 function sha256(text: string) {
   return createHash("sha256").update(Buffer.from(text)).digest("hex");
 }
@@ -121,9 +138,9 @@ void test("A create with no targetSessionId is rejected loudly (400) — a bulk 
   // doctest:L115
   const ctx = await makeTestServer();
   const noTarget = await createBatch(ctx, { items: [] });
-  t.check({ status: noTarget.statusCode, error: noTarget.body.error }, {
-    status: 400,
-    error: "A bulk upload requires a target chat session id",
+  t.check(noTarget, {
+    statusCode: 400,
+    body: { error: "A bulk upload requires a target chat session id" },
   });
 
   // With a target chat + an initial registry, create returns the new session id and
@@ -140,43 +157,29 @@ void test("A create with no targetSessionId is rejected loudly (400) — a bulk 
     ],
   });
   const sessionId = sessionIdOf(created);
-  t.check(
-    {
-      status: created.statusCode,
-      hasId: typeof sessionId === "string",
-      caps: created.body.capabilities?.acceptedUploadEncodings,
+  t.check(created, {
+    statusCode: 200,
+    body: {
+      sessionId: uuid(),
+      capabilities: { acceptedUploadEncodings: ["raw-body-v1"] },
+      startedAt: isoDate(),
     },
-    {
-    status: 200,
-    hasId: true,
-    caps: [
-      "raw-body-v1",
-    ],
-  },
-  );
+  });
 
   // The staging manifest is a `kind: "bulk"` session carrying the registry + the
   // server-derived target context dir:
 
   // doctest:L147
   const manifest = await manifestOf(ctx, sessionId);
-  t.check(
-    {
-      kind: manifest.kind,
-      target: manifest.targetSessionId,
-      contextDir: manifest.contextDir,
-      registered: manifest.expectedItems?.map((i) => i.id),
-    },
-    {
-    kind: "bulk",
-    target: "chat-abc",
-    contextDir: "_content/photos",
-    registered: [
-      "a",
-      "b",
+  t.check(manifest, {
+    ...bulkManifest(sessionId),
+    targetSessionId: "chat-abc",
+    expectedItems: [
+      { id: "a", name: "report.pdf", size: 6, mimetype: "application/pdf" },
+      { id: "b", name: "photo.png", size: 5, mimetype: "image/png" },
     ],
-  },
-  );
+    contextDir: "_content/photos",
+  });
 
   // A client-supplied `contextDir` in the body is ignored (path-traversal defense):
   // a target with no recorded binding lands at the box root regardless of what the
@@ -188,9 +191,12 @@ void test("A create with no targetSessionId is rejected loudly (400) — a bulk 
     contextDir: "../../../etc",
     items: [{ id: "a", name: "x.pdf" }],
   });
-  const sneakyManifest = JSON.parse(await ctx.read(`_tmp/capture-staging/${sessionIdOf(sneaky)}/session.json`));
-  t.check({ status: sneaky.statusCode, contextDir: sneakyManifest.contextDir }, {
-    status: 200,
+  const sneakyManifest = await manifestOf(ctx, sessionIdOf(sneaky));
+  t.check(sneaky.statusCode, 200);
+  t.check(sneakyManifest, {
+    ...bulkManifest(sessionIdOf(sneaky)),
+    targetSessionId: "chat-unbound",
+    expectedItems: [{ id: "a", name: "x.pdf" }],
     contextDir: "",
   });
 });
@@ -214,10 +220,7 @@ void test("The registry is keyed by id, so a duplicate id in one request — or 
     targetSessionId: "chat-1",
     items: [{ id: "a", name: "x.pdf" }, { id: "a", name: "y.pdf" }],
   });
-  t.check({ status: dupeCreate.statusCode, error: dupeCreate.body.error }, {
-    status: 400,
-    error: "Duplicate item id in registry: a",
-  });
+  t.check(dupeCreate, { statusCode: 400, body: { error: "Duplicate item id in registry: a" } });
 
   // doctest:L193
   const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
@@ -225,10 +228,7 @@ void test("The registry is keyed by id, so a duplicate id in one request — or 
     method: "POST", url: `/api/bulk/sessions/${sessionIdOf(created)}/items`,
     payload: { items: [{ id: "a", name: "again.pdf" }, { id: "a", name: "again2.pdf" }] },
   });
-  t.check({ status: collide.statusCode, error: collide.body.error }, {
-    status: 400,
-    error: "Duplicate item id in registry: a",
-  });
+  t.check(collide, { statusCode: 400, body: { error: "Duplicate item id in registry: a" } });
 
   // Re-registering an EXISTING id (idempotent append while the picker streams) is
   // still fine:
@@ -238,10 +238,7 @@ void test("The registry is keyed by id, so a duplicate id in one request — or 
     method: "POST", url: `/api/bulk/sessions/${sessionIdOf(created)}/items`,
     payload: { items: [{ id: "a", name: "x.pdf" }] },
   });
-  t.check({ status: reAdd.statusCode, registered: reAdd.body.registered }, {
-    status: 200,
-    registered: 1,
-  });
+  t.check(reAdd, { statusCode: 200, body: { registered: 1 } });
 });
 
 // ## Streaming an upload records a server-computed size + sha256
@@ -269,43 +266,34 @@ void test("The bytes stream to disk; the manifest entry carries the server-compu
     sessionId, itemId: "a", filename: "staged-a.bin", originalName: "report.pdf",
     data: Buffer.from("PDFPDF"),
   });
-  t.check(
-    {
-      status: res.statusCode,
-      size: res.body.size,
-      hashMatches: res.body.sha256 === sha256("PDFPDF"),
-      itemId: res.body.itemId,
-    },
-    {
-    status: 200,
-    size: 6,
-    hashMatches: true,
-    itemId: "a",
-  },
-  );
+  t.check(res, {
+    statusCode: 200,
+    body: { success: true, size: 6, sha256: sha256("PDFPDF"), itemId: "a", filename: "staged-a.bin" },
+  });
 
   // The staged file entry on the manifest carries the same server-computed values
   // and links back to the registry item, and `totalBytes` accumulates:
 
   // doctest:L248
   const manifest = await manifestOf(ctx, sessionId);
-  t.check(
-    {
-      file: manifest.files.map((f) => ({ name: f.originalName, itemId: f.itemId, size: f.size, hashLen: f.sha256?.length })),
-      totalBytes: manifest.totalBytes,
-    },
-    {
-    file: [
+  t.check(manifest, {
+    ...bulkManifest(sessionId),
+    targetSessionId: "chat-1",
+    files: [
       {
-        name: "report.pdf",
+        filename: "staged-a.bin",
+        uploadedAt: isoDate(),
+        originalName: "report.pdf",
+        mimeType: "application/octet-stream",
         itemId: "a",
         size: 6,
-        hashLen: 64,
+        sha256: sha256("PDFPDF"),
       },
     ],
+    expectedItems: [{ id: "a", name: "report.pdf" }],
+    contextDir: "",
     totalBytes: 6,
-  },
-  );
+  });
 
   // An exact retry (same filename + bytes) is idempotent; the same filename with
   // different bytes is a 409 conflict:
@@ -317,9 +305,15 @@ void test("The bytes stream to disk; the manifest entry carries the server-compu
   const conflict = await uploadItem(ctx, {
     sessionId, itemId: "a", filename: "staged-a.bin", data: Buffer.from("DIFFERENT"),
   });
-  t.check({ replay: replay.statusCode, conflict: conflict.statusCode }, {
-    replay: 200,
-    conflict: 409,
+  t.check({ replay, conflict }, {
+    replay: {
+      statusCode: 200,
+      body: { success: true, size: 6, sha256: sha256("PDFPDF"), itemId: "a", filename: "staged-a.bin" },
+    },
+    conflict: {
+      statusCode: 409,
+      body: { error: "Capture filename is already staged with different bytes: staged-a.bin" },
+    },
   });
 });
 
@@ -344,10 +338,7 @@ void test("The item registry is the record of what was supposed to arrive, so an
   const res = await uploadItem(ctx, {
     sessionId, itemId: "ghost", filename: "staged.bin", data: Buffer.from("X"),
   });
-  t.check({ status: res.statusCode, error: res.body.error }, {
-    status: 400,
-    error: "No registered item ghost in this bulk batch",
-  });
+  t.check(res, { statusCode: 400, body: { error: "No registered item ghost in this bulk batch" } });
 
   // Registering it afterward (append while the picker streams) lets the upload land:
 
@@ -357,9 +348,12 @@ void test("The item registry is the record of what was supposed to arrive, so an
     payload: { items: [{ id: "ghost", name: "ghost.pdf" }] },
   });
   const ok = await uploadItem(ctx, { sessionId, itemId: "ghost", filename: "staged.bin", data: Buffer.from("X") });
-  t.check({ registered: reg.body.registered, upload: ok.statusCode }, {
-    registered: 2,
-    upload: 200,
+  t.check({ reg, ok }, {
+    reg: { statusCode: 200, body: { registered: 2 } },
+    ok: {
+      statusCode: 200,
+      body: { success: true, size: 1, sha256: sha256("X"), itemId: "ghost", filename: "staged.bin" },
+    },
   });
 });
 
@@ -397,9 +391,11 @@ void test("The staging filename (X-Upload-Filename) can't claim the session's ow
 
   // doctest:L329
   const manifest = await manifestOf(ctx, sessionId);
-  t.check({ kind: manifest.kind, files: manifest.files.length }, {
-    kind: "bulk",
-    files: 0,
+  t.check(manifest, {
+    ...bulkManifest(sessionId),
+    targetSessionId: "chat-1",
+    expectedItems: [{ id: "a", name: "x.pdf" }],
+    contextDir: "",
   });
 });
 
@@ -425,10 +421,7 @@ void test("Seeding the accumulated bytes to the cap makes a single-byte upload t
 
   // doctest:L351
   const res = await uploadItem(ctx, { sessionId, itemId: "a", filename: "big.bin", data: Buffer.from("X") });
-  t.check(res.statusCode, 413);
-
-  // doctest:L357
-  t.check(res.body.error, "Capture exceeds the staging byte limit");
+  t.check(res, { statusCode: 413, body: { error: "Capture exceeds the staging byte limit" } });
 });
 
 // ## Status/resume lists registered vs received items
@@ -454,26 +447,11 @@ void test("After a partial upload, the status endpoint reports what was register
 
   // doctest:L379
   const status = { body: StatusBody.parse((await ctx.request({ method: "GET", url: `/api/bulk/sessions/${sessionId}` })).body) };
-  t.check(
-    {
-      state: status.body.state,
-      registered: status.body.registered.map((i) => i.id),
-      received: status.body.received.map((r) => ({ itemId: r.itemId, size: r.size })),
-    },
-    {
+  t.check(status.body, {
     state: "open",
-    registered: [
-      "a",
-      "b",
-    ],
-    received: [
-      {
-        itemId: "a",
-        size: 4,
-      },
-    ],
-  },
-  );
+    registered: [{ id: "a", name: "a.pdf" }, { id: "b", name: "b.pdf" }],
+    received: [{ itemId: "a", size: 4, name: "a.pdf" }],
+  });
 });
 
 // ## Uploading to an unknown session returns 404
@@ -515,24 +493,23 @@ void test("Finalize returns immediately with staged:", async (t) => {
     method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
     payload: { failedItems: [] },
   });
-  t.check({ status: done.statusCode, staged: done.body.staged, sessionId: done.body.sessionId === sessionId }, {
-    status: 200,
-    staged: true,
-    sessionId: true,
-  });
+  t.check(done, { statusCode: 200, body: { sessionId, staged: true } });
 
   // The seal happens before the response, not later in the worker: read first
   // thing after the response, the batch is already out of `open`. The worker may
   // have moved it on to any later state, so the check is only that it is not open.
 
   // doctest:L429
-  await t.checkText((await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId }))?.state !== "open", "true");
+  t.check((await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId }))?.state, not("open"));
 
   // A further upload after finalize is refused — the session is no longer open:
 
   // doctest:L436
   const late = await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-late.bin", data: Buffer.from("X") });
-  t.check(late.statusCode, 409);
+  t.check(late, {
+    statusCode: 409,
+    body: { error: str`Session is ${any(String)}; uploads are only accepted while it is open` },
+  });
 });
 
 // ## Finalize records the batch's introduction inside the seal
@@ -564,10 +541,29 @@ void test("The composer text the boxholder submitted the batch with rides IN the
   // as `failed:deliver` — and the note is still there for the resume to use.
   const settled = await waitForWorkerToSettle(ctx, sessionId);
   const sealed = await manifestOf(ctx, sessionId);
-  t.check({ status: done.statusCode, state: settled, note: sealed.note }, {
-    status: 200,
-    state: "failed:deliver",
-    note: "Receipts from the Tokyo trip",
+  t.check({ done, settled, sealed }, {
+    done: { statusCode: 200, body: { sessionId, staged: true } },
+    settled: "failed:deliver",
+    sealed: {
+      ...bulkManifest(sessionId),
+      state: "failed:deliver",
+      targetSessionId: "chat-note",
+      files: [
+        {
+          filename: "s-a.bin",
+          uploadedAt: isoDate(),
+          originalName: "a.jpg",
+          mimeType: "application/octet-stream",
+          itemId: "a",
+          size: 4,
+          sha256: sha256("AAAA"),
+        },
+      ],
+      expectedItems: [{ id: "a", name: "a.jpg" }],
+      contextDir: "",
+      note: "Receipts from the Tokyo trip",
+      totalBytes: 4,
+    },
   });
 });
 
@@ -597,8 +593,24 @@ void test("An empty composer must produce a batch indistinguishable from one tha
   });
   await waitForWorkerToSettle(ctx, sessionId);
   const sealed = await manifestOf(ctx, sessionId);
-  t.check({ note: sealed.note ?? null }, {
-    note: null,
+  t.check(sealed, {
+    ...bulkManifest(sessionId),
+    state: "failed:deliver",
+    targetSessionId: "chat-blank",
+    files: [
+      {
+        filename: "s-a.bin",
+        uploadedAt: isoDate(),
+        originalName: "a.jpg",
+        mimeType: "application/octet-stream",
+        itemId: "a",
+        size: 4,
+        sha256: sha256("AAAA"),
+      },
+    ],
+    expectedItems: [{ id: "a", name: "a.jpg" }],
+    contextDir: "",
+    totalBytes: 4,
   });
 });
 
@@ -625,9 +637,14 @@ void test("The note is untrusted client prose, so it is length-capped where it e
     payload: { note: "x".repeat(10_001) },
   });
   const stillOpen = await manifestOf(ctx, sessionId);
-  t.check({ status: tooBig.statusCode, state: stillOpen.state }, {
-    status: 400,
-    state: "open",
+  t.check({ tooBig, stillOpen }, {
+    tooBig: { statusCode: 400, body: { error: "Invalid finalize body" } },
+    stillOpen: {
+      ...bulkManifest(sessionId),
+      targetSessionId: "chat-big",
+      expectedItems: [{ id: "a", name: "a.jpg" }],
+      contextDir: "",
+    },
   });
 });
 
@@ -676,8 +693,5 @@ void test("Cancel is the uploader's affordance for a batch it still owns.", asyn
   // doctest:L557
   const open = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "b", name: "b.jpg" }] });
   const cancelled = await send(ctx, { method: "DELETE", url: `/api/bulk/sessions/${sessionIdOf(open)}` });
-  t.check({ status: cancelled.statusCode, success: cancelled.body.success }, {
-    status: 200,
-    success: true,
-  });
+  t.check(cancelled, { statusCode: 200, body: { success: true } });
 });

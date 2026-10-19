@@ -22,27 +22,26 @@ const expand = async (boxRoot: string): Promise<string> =>
   expandInstructionIncludes({ instructionPath: join(boxRoot, await instructionFilePath(boxRoot, "")), boxRoot });
 
 void test("line 24", async (t) => {
-  // doctest:L25
-  await t.checkText((await expand(root)).includes("# Agent guide"), "true");
-
-  // doctest:L28
-  await t.checkText((await expand(root)).includes("# Briefing"), "true");
+  await t.checkText(await expand(root), `<!-- beebox include: .beebox/agent-guide.md -->
+# Agent guide
+«blankline»
+<!-- beebox include: briefing.md -->
+# Briefing`);
 });
 
 // A converted box's root `AGENTS.md` is expanded the same way:
 void test("A converted box's root AGENTS.md is expanded the same way:", async (t) => {
-  // doctest:L35
   const converted = await mkdtemp(join(tmpdir(), "bbx-agent-context-converted-"));
   await mkdir(join(converted, "_config"), { recursive: true });
   await writeFile(join(converted, "_config/migrations.jsonl"), `${JSON.stringify({ name: AGENTS_MD_MIGRATION, "applied-at": "2026-10-09T00:00:00Z" })}\n`);
   await writeFile(join(converted, "AGENTS.md"), "@briefing.md\n");
   await writeFile(join(converted, "briefing.md"), "# Converted briefing\n");
-  await t.checkText((await expand(converted)).includes("# Converted briefing"), "true");
+  await t.checkText(await expand(converted), `<!-- beebox include: briefing.md -->
+# Converted briefing`);
 });
 
 // Absolute and box-escaping includes fail visibly:
 void test("Absolute and box-escaping includes fail visibly:", async (t) => {
-  // doctest:L47
   await writeFile(join(root, "CLAUDE.md"), "@/tmp/private.md\n@../../private.md\n");
   await t.checkThrows(async () => (await expand(root)), "UnsafeAgentContextIncludeError: Agent context include must stay inside the box package");
 });

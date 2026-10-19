@@ -16,38 +16,51 @@ const base = { type: "personality", version: "1.0.0", body: "" } as const;
 
 // ## One boxholder — name and called
 void test("One boxholder — name and called", async (t) => {
-  // doctest:L20
   const md = compilePersonality({ ...base }, { boxholders: [{ name: "Priya Marlowe", called: "Priya" }] });
-  await t.checkText(md.includes("Your boxholder is **Priya Marlowe** (Priya)."), "true");
+  t.check(md, `## Personality
+
+<!-- Source: _config/main.personality.card — edit this file to change personality -->
+
+Your boxholder is **Priya Marlowe** (Priya).
+`);
 });
 
 // ## A boxholder with no alias omits the parenthetical
 void test("A boxholder with no alias omits the parenthetical", async (t) => {
-  // doctest:L28
   const md = compilePersonality({ ...base }, { boxholders: [{ name: "Priya Marlowe" }] });
-  await t.checkText(md.includes("Your boxholder is **Priya Marlowe**."), "true");
+  t.check(md, `## Personality
+
+<!-- Source: _config/main.personality.card — edit this file to change personality -->
+
+Your boxholder is **Priya Marlowe**.
+`);
 });
 
 // ## Several boxholders — an oxford-joined sentence
 void test("Several boxholders — an oxford-joined sentence", async (t) => {
-  // doctest:L36
   const md = compilePersonality({ ...base }, {
     boxholders: [{ name: "Priya", called: "A" }, { name: "Juniper" }, { name: "Odette" }],
   });
-  await t.checkText(md.includes("Your boxholders are **Priya** (A), **Juniper**, and **Odette**."), "true");
+  t.check(md, `## Personality
+
+<!-- Source: _config/main.personality.card — edit this file to change personality -->
+
+Your boxholders are **Priya** (A), **Juniper**, and **Odette**.
+`);
 });
 
 // ## No boxholders — no identity line, relationships still emit
 void test("No boxholders — no identity line, relationships still emit", async (t) => {
-  // doctest:L46
   const md = compilePersonality(
     { ...base, boxholder: { relationships: [{ text: "Prefers terse replies", confidence: "confirmed", basis: "user-stated" }] } },
     { boxholders: [] },
   );
-  t.check([md.includes("Your boxholder"), md.includes("Prefers terse replies")], [
-    false,
-    true,
-  ]);
+  t.check(md, `## Personality
+
+<!-- Source: _config/main.personality.card — edit this file to change personality -->
+
+Prefers terse replies
+`);
 });
 
 // ## `loadBoxholders` reads flagged, active person cards only
@@ -59,7 +72,6 @@ void test("`loadBoxholders` reads flagged, active person cards only", async (t) 
       t.error(error);
     }
   });
-  // doctest:L57
   const box = await makeTmpBox();
   await box.write("people/Priya_Marlowe.person.card", "---\nname: Priya Marlowe\naliases:\n  - Priya\nboxholder: true\n---\n");
   await box.write("people/Jo_Smith.person.card", "---\nname: Jo Smith\nboxholder: true\narchived: true\n---\n");

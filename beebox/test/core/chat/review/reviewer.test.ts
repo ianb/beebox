@@ -69,10 +69,10 @@ void test("The title pass gets an empty tool list and loads no filesystem settin
 void test("The full review writes contains and the account from the same prompt-only inp...", async (t) => {
   // doctest:L66
   t.check(
-    (await reviewer.review({
+    await reviewer.review({
       sessionId: "s2", currentTitle: null, currentAccount: null, span: "**User**\nHi", bootstrap: true,
-    })).contains,
-    "A chemistry lesson.",
+    }),
+    { title: "Balancing equations", contains: "A chemistry lesson.", notes: [] },
   );
 
   // doctest:L71
@@ -90,11 +90,20 @@ void test("The full review writes contains and the account from the same prompt-
 // carry no `tools` key.
 void test("A run that does not pass tools keeps the harness default:", async (t) => {
   // doctest:L82
-  await t.checkText(
-    "tools" in buildQueryOptions(
-      { boxRoot: "/box", systemPrompt: "", prompt: "hi" },
-      { env: {}, maxTurns: 4, binaryPath: null, appendedSystem: "" },
-    ),
-    "false",
+  const options = buildQueryOptions(
+    { boxRoot: "/box", systemPrompt: "", prompt: "hi" },
+    { env: {}, maxTurns: 4, binaryPath: null, appendedSystem: "" },
   );
+  t.check(Object.keys(options).toSorted(), [
+    "cwd",
+    "disallowedTools",
+    "env",
+    "hooks",
+    "maxTurns",
+    "permissionMode",
+    "plugins",
+    "settingSources",
+    "settings",
+    "verbatimPrompts",
+  ]);
 });

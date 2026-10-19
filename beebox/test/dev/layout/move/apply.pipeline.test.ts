@@ -88,20 +88,11 @@ void test("Applying moves the files and rewrites every collected specifier", asy
   moveFiles({ repoRoot, moves });
   applyRewrites({ repoRoot, byImporter });
 
-  // doctest:L89
-  await t.checkText((await read("pkg/src/sub/a.ts")).includes('from "../helper.js"'), "true");
-
-  // doctest:L92
-  await t.checkText((await read("pkg/src/other/importer.ts")).includes('from "../sub/a.js"'), "true");
-
-  // doctest:L95
-  await t.checkText((await read("pkg/src/webapp/user.ts")).includes('from "@shared/moved/thing"'), "true");
-
-  // doctest:L98
-  await t.checkText((await read("pkg/test/x.test.ts")).includes('from "../src/sub/a.js"'), "true");
-
-  // doctest:L101
-  await t.checkText((await read("schedules/x/run.ts")).includes('from "../../pkg/src/sub/a.js"'), "true");
+  await t.checkText(await read("pkg/src/sub/a.ts"), 'import { helper } from "../helper.js";\nexport const a = helper;');
+  await t.checkText(await read("pkg/src/other/importer.ts"), 'import { a } from "../sub/a.js";\nexport const value = a;');
+  await t.checkText(await read("pkg/src/webapp/user.ts"), 'import { thing } from "@shared/moved/thing";\nexport const value = thing;');
+  await t.checkText(await read("pkg/test/x.test.ts"), 'import { a } from "../src/sub/a.js";\nexport const value = a;');
+  await t.checkText(await read("schedules/x/run.ts"), 'import { a } from "../../pkg/src/sub/a.js";\nexport const value = a;');
 });
 
 // ## The unrelated file that only mentions the old path in prose is untouched, and shows up in the mention report
@@ -114,9 +105,20 @@ void test("The unrelated file that only mentions the old path in prose is untouc
     }
   });
   // doctest:L108
-  await t.checkText((await read("pkg/docs/note.md")).includes("pkg/src/a.ts"), "true");
+  await t.checkText(await read("pkg/docs/note.md"), "See pkg/src/a.ts for details.");
 
   // doctest:L111
   const mentions = reportMentions({ repoRoot, moves, roots, rewrittenFiles: new Set(byImporter.keys()) });
-  t.check(mentions.find((m) => m.movedPath === "pkg/src/a.ts")?.lines.some((line) => line.startsWith("pkg/docs/note.md:")), true);
+  t.check(mentions, [
+    {
+      movedPath: "pkg/src/shared/thing.ts",
+      lines: [],
+    },
+    {
+      movedPath: "pkg/src/a.ts",
+      lines: [
+        "pkg/docs/note.md:1:See pkg/src/a.ts for details.",
+      ],
+    },
+  ]);
 });

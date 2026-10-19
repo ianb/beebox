@@ -20,34 +20,35 @@ const sessions = [
   session({ id: "garden-latest", age: 20, dir: landmark.dir }),
   session({ id: "garden-old", age: 40, dir: landmark.dir }),
 ];
+/** The `lastActivity` a session of this age in days reports. */
+const active = (age: number) => new Date(now - age * 86400000).toISOString();
+const gardenLandmark = { path: "_content/Garden/Garden.landmark.card", label: "Garden" };
+const recentCandidate = { id: "c0", label: "recent", target: { kind: "existing-session", sessionId: "recent", contextDir: "" }, lastActivity: active(1) } as const;
 const base = { sessions, landmarks: [landmark], rubric: { destinations: [] }, now };
 
 // Recent web chats and the latest landmark chat remain distinct from starting a new chat there.
 void test("Recent web chats and the latest landmark chat remain distinct from starting a...", async (t) => {
   // doctest:L22
   const candidates = buildRoutingCandidates(base);
-  t.check(candidates.map((candidate) => [candidate.label, candidate.target.kind]), [
-    [
-      "recent",
-      "existing-session",
-    ],
-    [
-      "garden-latest",
-      "existing-session",
-    ],
-    [
-      "New chat in Garden",
-      "new-session",
-    ],
-    [
-      "New general chat",
-      "new-session",
-    ],
+  t.check(candidates, [
+    recentCandidate,
+    { id: "c1", label: "garden-latest", target: { kind: "existing-session", sessionId: "garden-latest", contextDir: "_content/Garden" }, lastActivity: active(20), landmark: gardenLandmark },
+    { id: "c2", label: "New chat in Garden", target: { kind: "new-session", contextDir: "_content/Garden" }, landmark: gardenLandmark },
+    { id: "c3", label: "New general chat", target: { kind: "new-session", contextDir: "" } },
   ]);
 
   // doctest:L26
   const kept = buildRoutingCandidates({ ...base, rubric: { destinations: [{ target: "/_content/old-root.chat.card", when: "Long-term planning", keepEligible: true }] } });
-  await t.checkText(kept.some((candidate) => candidate.label === "old-root"), "true");
+  t.check(kept, [
+    recentCandidate,
+    { id: "c1", label: "garden-latest", target: { kind: "existing-session", sessionId: "garden-latest", contextDir: "_content/Garden" }, lastActivity: active(20), landmark: gardenLandmark },
+    {
+      id: "c2", label: "old-root", target: { kind: "existing-session", sessionId: "old-root", contextDir: "" }, lastActivity: active(30),
+      rubric: [{ when: "Long-term planning", avoid: undefined, examples: undefined }],
+    },
+    { id: "c3", label: "New chat in Garden", target: { kind: "new-session", contextDir: "_content/Garden" }, landmark: gardenLandmark },
+    { id: "c4", label: "New general chat", target: { kind: "new-session", contextDir: "" } },
+  ]);
 
   // doctest:L30
   await t.checkThrows(async () => (buildRoutingCandidates({ ...base, rubric: { destinations: [{ target: "/_content/deleted.chat.card", when: "Old topic", keepEligible: true }] } })), "RoutingCatalogError: Chat routing rubric target is unavailable: /_content/deleted.chat.card");
@@ -60,13 +61,19 @@ void test("Recent web chats and the latest landmark chat remain distinct from st
 void test("Background landmarks are excluded unless the rubric explicitly opts in.", async (t) => {
   // doctest:L40
   const hidden = { ...landmark, prominence: "background" as const };
-  t.check(buildRoutingCandidates({ ...base, landmarks: [hidden] }).map((candidate) => candidate.label), [
-    "recent",
-    "New general chat",
+  t.check(buildRoutingCandidates({ ...base, landmarks: [hidden] }), [
+    recentCandidate,
+    { id: "c1", label: "New general chat", target: { kind: "new-session", contextDir: "" } },
   ]);
 
   // doctest:L44
-  await t.checkText(buildRoutingCandidates({ ...base, landmarks: [hidden], rubric: { destinations: [{ target: "/_content/Garden/Garden.landmark.card", when: "Garden discussion" }] } }).some((candidate) => candidate.label === "garden-latest"), "true");
+  const gardenRule = [{ when: "Garden discussion", avoid: undefined, examples: undefined }];
+  t.check(buildRoutingCandidates({ ...base, landmarks: [hidden], rubric: { destinations: [{ target: "/_content/Garden/Garden.landmark.card", when: "Garden discussion" }] } }), [
+    recentCandidate,
+    { id: "c1", label: "garden-latest", target: { kind: "existing-session", sessionId: "garden-latest", contextDir: "_content/Garden" }, lastActivity: active(20), landmark: gardenLandmark, rubric: gardenRule },
+    { id: "c2", label: "New chat in Garden", target: { kind: "new-session", contextDir: "_content/Garden" }, landmark: gardenLandmark, rubric: gardenRule },
+    { id: "c3", label: "New general chat", target: { kind: "new-session", contextDir: "" } },
+  ]);
 });
 
 // Near-ties favor continuing an existing chat, and the raw ranking remains visible. A margin of 0 leaves only exact ties to the existing chat.
@@ -74,14 +81,22 @@ void test("Near-ties favor continuing an existing chat, and the raw ranking rema
   // doctest:L51
   const candidates = buildRoutingCandidates(base);
   const near = selectRoutingDestination({ candidates, probabilities: { c0: 0.38, c1: 0.08, c2: 0.44, c3: 0.1 } });
-  t.check([near.selected.id, near.ranked[0]?.candidate.id, near.preferenceApplied], [
-    "c0",
-    "c2",
-    true,
-  ]);
+  const newGarden = { id: "c2", label: "New chat in Garden", target: { kind: "new-session", contextDir: "_content/Garden" }, landmark: gardenLandmark } as const;
+  const newGeneral = { id: "c3", label: "New general chat", target: { kind: "new-session", contextDir: "" } } as const;
+  const gardenLatest = { id: "c1", label: "garden-latest", target: { kind: "existing-session", sessionId: "garden-latest", contextDir: "_content/Garden" }, lastActivity: active(20), landmark: gardenLandmark } as const;
+  t.check(near, {
+    selected: recentCandidate,
+    ranked: [
+      { candidate: newGarden, probability: 0.44 },
+      { candidate: recentCandidate, probability: 0.38 },
+      { candidate: newGeneral, probability: 0.1 },
+      { candidate: gardenLatest, probability: 0.08 },
+    ],
+    preferenceApplied: true,
+  });
 
   // doctest:L56
-  t.check(selectRoutingDestination({ candidates, probabilities: { c0: 0.4, c1: 0.1, c2: 0.4, c3: 0.1 }, existingMargin: 0 }).selected.id, "c0");
+  t.check(selectRoutingDestination({ candidates, probabilities: { c0: 0.4, c1: 0.1, c2: 0.4, c3: 0.1 }, existingMargin: 0 }).selected, recentCandidate);
 });
 
 // Even an empty box has a routable root destination.
@@ -112,7 +127,9 @@ void test("An absent rubric is valid.", async (t) => {
   // doctest:L75
   await fs.mkdir(path.join(boxRoot, "_config"));
   await fs.writeFile(path.join(boxRoot, "_config/chat-routing.yaml"), "destinations:\n  - target: /_content/garden.chat.card\n    when: Garden decisions\n    keepEligible: true\n");
-  t.check((await loadRoutingRubric(boxRoot)).destinations[0]?.when, "Garden decisions");
+  t.check(await loadRoutingRubric(boxRoot), {
+    destinations: [{ target: "/_content/garden.chat.card", when: "Garden decisions", keepEligible: true }],
+  });
 
   // doctest:L80
   await fs.writeFile(path.join(boxRoot, "_config/chat-routing.yaml"), "destinations: wrong\n");
@@ -133,27 +150,23 @@ void test("All eligible destinations survive budgeting.", async (t) => {
   const many = buildRoutingCandidates({ ...base, sessions: Array.from({ length: 40 }, (_, i) => session({ id: String(i), age: 0 })) });
   const full = many.map(candidate => candidate.target.kind === "existing-session" ? { ...candidate, recentContext: "x".repeat(2000) } : candidate);
   const bounded = boundRoutingContexts(full);
-  t.check([bounded.length === full.length, bounded.reduce((sum, candidate) => sum + (candidate.recentContext?.length ?? 0), 0), bounded.filter(candidate => candidate.contextTruncated).length, full[0]?.recentContext?.length], [
-    true,
-    32000,
-    40,
-    2000,
-  ]);
+  t.check(bounded, full.map((candidate) => candidate.target.kind === "existing-session"
+    ? { ...candidate, recentContext: "x".repeat(800), contextTruncated: true }
+    : candidate));
+  t.check(full[0]?.recentContext, "x".repeat(2000));
 
   // doctest:L106
   const escaped = full.map(candidate => candidate.target.kind === "existing-session" ? { ...candidate, recentContext: "\u0001".repeat(2000) } : candidate);
   const encoded = boundRoutingContexts(escaped);
-  t.check([encoded.length === full.length, JSON.stringify(encoded).length <= 60000, encoded.every(candidate => (candidate.recentContext?.length ?? 0) <= 2000)], [
-    true,
-    true,
-    true,
-  ]);
+  t.check(encoded, full.map((candidate) => candidate.target.kind === "existing-session"
+    ? { ...candidate, recentContext: "\u0001".repeat(218), contextTruncated: true }
+    : candidate));
 
   // doctest:L111
   await t.checkThrows(async () => (boundRoutingContexts(full.map(candidate => ({ ...candidate, rubric: [{ when: "x".repeat(60001) }] })))), "RoutingCatalogError: Chat routing rules and destination details exceed the request budget. Shorten the rubric, or copy your text into a chat using Chats.");
 
   // doctest:L114
-  t.check(boundRoutingContexts([{ ...full[0]!, recentContext: "Short context", contextTruncated: true }])[0]?.contextTruncated, true);
+  t.check(boundRoutingContexts([{ ...full[0]!, recentContext: "Short context", contextTruncated: true }]), [{ ...full[0]!, recentContext: "Short context", contextTruncated: true }]);
 });
 
 // Recent excerpts preserve message roles and boundaries, with the latest user
@@ -169,18 +182,13 @@ void test("Recent excerpts preserve message roles and boundaries, with the lates
     { uuid: "5", type: "assistant" as const, timestamp: "2026-09-21T11:04:00Z", content: [] },
   ];
   const excerpt = formatRecentRoutingContext(transcript);
-  t.check([excerpt.length <= 2000, excerpt.includes("] user: Can we continue"), excerpt.includes("</typed>"), excerpt.includes("] assistant: B"), excerpt.includes("[truncated]"), excerpt.includes("Earlier request")], [
-    true,
-    true,
-    false,
-    true,
-    true,
-    false,
-  ]);
+  t.checkText(excerpt, `[«date»] user: Can we continue the established garden redesign and compare the soil notes?
+[«date»] assistant: ${"B".repeat(1848)} …[truncated]`);
 
   // doctest:L134
   const gapTranscript = [transcript[0]!, transcript[1]!, transcript[2]!, { ...transcript[3]!, content: [{ type: "text" as const, text: "B".repeat(1000) }] }];
-  await t.checkText(formatRecentRoutingContext(gapTranscript, 1300).includes("Earlier request"), "false");
+  t.checkText(formatRecentRoutingContext(gapTranscript, 1300), `[«date»] user: Can we continue the established garden redesign and compare the soil notes?
+[«date»] assistant: ${"B".repeat(1000)}`);
 
   // doctest:L138
   const legacyTranscript = [{ uuid: "legacy", type: "user" as const, timestamp: "2026-09-21T11:05:00Z", content: [{ type: "text" as const, text: "Legacy unwrapped question" }] }];
@@ -195,13 +203,13 @@ void test("Recent excerpts preserve message roles and boundaries, with the lates
   // doctest:L145
   const candidate = buildRoutingCandidates({ ...base, sessions: [session({ id: "one", age: 0 })] })[0]!;
   const secondBound = boundRoutingContexts([{ ...candidate, recentContext: excerpt, totalEntries: 42, lastMessageAt: "2026-09-21T11:03:00.000Z" }], 750)[0]!;
-  t.check([ (secondBound.recentContext?.length ?? 0) <= 750, secondBound.recentContext?.includes("] user: Can we continue"), secondBound.recentContext?.includes("] assistant: B"), secondBound.totalEntries, secondBound.lastMessageAt], [
-    true,
-    true,
-    true,
-    42,
-    "2026-09-21T11:03:00.000Z",
-  ]);
+  t.check(secondBound, {
+    ...candidate,
+    recentContext: `[2026-09-21T11:02:00Z] user: Can we continue the established garden redesign and compare the soil notes?\n[2026-09-21T11:03:00Z] assistant: ${"B".repeat(353)} …[truncated]`,
+    totalEntries: 42,
+    lastMessageAt: "2026-09-21T11:03:00.000Z",
+    contextTruncated: true,
+  });
 
   // doctest:L150
   t.check(routingCandidateSchema.parse({ id: "old", label: "Old chat", target: { kind: "existing-session", sessionId: "old", contextDir: "" } }), {

@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { generatePubId, pubIdSchema } from "../../src/publish/manifest.js";
 
 // ## `generatePubId` produces a value the schema accepts
@@ -15,19 +16,17 @@ import { generatePubId, pubIdSchema } from "../../src/publish/manifest.js";
 void test("The id is 26 base32 characters, and two calls differ (128 bits of entropy mak...", async (t) => {
   // doctest:L17
   const id = generatePubId();
-  await t.checkText(id.length, "26");
+  t.check(id, any(String).matches(/^[2-7a-z]{26}$/));
 
-  // doctest:L21
-  t.check(pubIdSchema.safeParse(id).success, true);
+  t.check(pubIdSchema.safeParse(id), { success: true, data: id });
 
-  // doctest:L24
-  await t.checkText(generatePubId() === generatePubId(), "false");
+  t.check(generatePubId(), not<string>(id));
 });
 
 // A malformed id is rejected: too short with uppercase and a hyphen, uppercase at
 // the right length, and the right length with `1`, which is outside the alphabet.
 void test("A malformed id is rejected:", async (t) => {
-  // doctest:L32
+  // The accept/reject flag is the contract; the zod issue text is not.
   t.check(["TOO-SHORT", "ABCDEFGHIJKLMNOP2345672345", "abcdefghijklmnop2345672341"].map((id) => pubIdSchema.safeParse(id).success), [
     false,
     false,

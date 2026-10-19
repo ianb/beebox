@@ -46,13 +46,13 @@ void test("Local Git children retain basic process discovery and locale settings
 // A present `PORT` is coerced to a number; an empty or absent one reads as unset.
 void test("A present PORT is coerced to a number; an empty or absent one reads as unset.", async (t) => {
   // doctest:L46
-  t.check(loadEnv(serverEnvSchema, { PORT: "8080" }).PORT, 8080);
+  t.check(loadEnv(serverEnvSchema, { PORT: "8080" }), { PORT: 8080 });
 
   // doctest:L49
-  t.check(loadEnv(serverEnvSchema, { PORT: "" }).PORT ?? null, null);
+  t.check(loadEnv(serverEnvSchema, { PORT: "" }), {});
 
   // doctest:L52
-  t.check(loadEnv(serverEnvSchema, {}).PORT ?? null, null);
+  t.check(loadEnv(serverEnvSchema, {}), {});
 });
 
 // ## All failures reported at once
@@ -62,22 +62,20 @@ void test("A present PORT is coerced to a number; an empty or absent one reads a
 void test("Three malformed vars in one source produce three problems in one error — not...", async (t) => {
   // doctest:L62
   const caught = loadErr(serverEnvSchema, { PORT: "notaport", PUBLIC_URL: "not a url", BBX_OWNER_EMAIL: "bad" });
-  t.check(caught?.problems.length, 3);
-
-  // The names of all three failing vars appear in the message:
-
-  // doctest:L70
-  const names = caught!.problems.map((p) => p.split(":")[0]).toSorted();
-  t.check(names, [
-    "BBX_OWNER_EMAIL",
-    "PORT",
-    "PUBLIC_URL",
-  ]);
-
-  // A non-secret var echoes its received value to aid debugging:
-
-  // doctest:L78
-  await t.checkText(caught!.problems.some((p) => p.includes('received: "notaport"')), "true");
+  // The message names all three failing vars; a non-secret var echoes its received
+  // value to aid debugging.
+  t.check(caught, {
+    name: "EnvValidationError",
+    message: `Invalid environment (3 problems):
+  - PUBLIC_URL: Invalid URL (received: "not a url")
+  - PORT: Invalid input: expected number, received NaN (received: "notaport")
+  - BBX_OWNER_EMAIL: Invalid email address (received: "bad")`,
+    problems: [
+      'PUBLIC_URL: Invalid URL (received: "not a url")',
+      'PORT: Invalid input: expected number, received NaN (received: "notaport")',
+      'BBX_OWNER_EMAIL: Invalid email address (received: "bad")',
+    ],
+  });
 });
 
 // ## Secret values are redacted, never echoed
@@ -88,21 +86,29 @@ void test("BBXSESSIONSECRET is in the secret set, so a validation failure on it 
   // doctest:L88
   const strictSecret = z.object({ BBX_SESSION_SECRET: z.string().min(32) });
   const secretErr = loadErr(strictSecret, { BBX_SESSION_SECRET: "hunter2-too-short" });
-  const redacted = secretErr!.message.includes("<redacted>");
-  const leaked = secretErr!.message.includes("hunter2-too-short");
-  t.check({ redacted, leaked }, {
-    redacted: true,
-    leaked: false,
+  t.check(secretErr, {
+    name: "EnvValidationError",
+    message: `Invalid environment (1 problem):
+  - BBX_SESSION_SECRET: invalid value (received: <redacted>)`,
+    problems: ["BBX_SESSION_SECRET: invalid value (received: <redacted>)"],
   });
 });
 
 // The secret-name set is the single source of truth for what gets redacted.
 void test("The secret-name set is the single source of truth for what gets redacted.", async (t) => {
   // doctest:L99
-  await t.checkText(SECRET_ENV_NAMES.has("BBX_SESSION_SECRET"), "true");
-
-  // doctest:L102
-  await t.checkText(SECRET_ENV_NAMES.has("PORT"), "false");
+  t.check(
+    SECRET_ENV_NAMES,
+    new Set([
+      "BBX_SESSION_SECRET",
+      "BBX_HUB_SECRET",
+      "BBX_DIAG_API_KEY",
+      "BBX_VAPID_PUBLIC_KEY",
+      "BBX_VAPID_PRIVATE_KEY",
+      "GOOGLE_OAUTH_CLIENT_ID",
+      "GOOGLE_OAUTH_CLIENT_SECRET",
+    ]),
+  );
 });
 
 // ## Per-entrypoint schemas keep the parsed object narrow
@@ -111,23 +117,23 @@ void test("The secret-name set is the single source of truth for what gets redac
 // entrypoints accept only literal `1`; unrelated CLI commands ignore the key.
 void test("Development surfaces are a positive, server-specific opt-in.", async (t) => {
   // doctest:L112
-  await t.checkText(loadEnv(serverEnvSchema, { BBX_DEV_SURFACES: "1" }).BBX_DEV_SURFACES, "1");
+  t.check(loadEnv(serverEnvSchema, { BBX_DEV_SURFACES: "1" }), { BBX_DEV_SURFACES: "1" });
 
   // doctest:L115
-  await t.checkText(loadEnv(hubEnvSchema, { BBX_DEV_SURFACES: "1" }).BBX_DEV_SURFACES, "1");
+  t.check(loadEnv(hubEnvSchema, { BBX_DEV_SURFACES: "1" }), { BBX_DEV_SURFACES: "1" });
 
   // doctest:L118
   t.check(
     {
-      serverRejects: loadErr(serverEnvSchema, { BBX_DEV_SURFACES: "true" }) !== null,
-      hubRejects: loadErr(hubEnvSchema, { BBX_DEV_SURFACES: "development" }) !== null,
-      cliIgnores: loadEnv(cliEnvSchema, { BBX_DEV_SURFACES: "not-for-this-command" }),
+      server: loadErr(serverEnvSchema, { BBX_DEV_SURFACES: "true" })?.problems,
+      hub: loadErr(hubEnvSchema, { BBX_DEV_SURFACES: "development" })?.problems,
+      cli: loadEnv(cliEnvSchema, { BBX_DEV_SURFACES: "not-for-this-command" }),
     },
     {
-    serverRejects: true,
-    hubRejects: true,
-    cliIgnores: {},
-  },
+      server: ['BBX_DEV_SURFACES: Invalid input: expected "1" (received: "true")'],
+      hub: ['BBX_DEV_SURFACES: Invalid input: expected "1" (received: "development")'],
+      cli: {},
+    },
   );
 });
 
@@ -143,7 +149,7 @@ void test("cliEnvSchema only knows its own keys, so a server-only secret in the 
 // `serverEnvSchema` does model that secret, so the same source keeps it:
 void test("serverEnvSchema does model that secret, so the same source keeps it:", async (t) => {
   // doctest:L137
-  t.check(loadEnv(serverEnvSchema, { BBX_SESSION_SECRET: "kept" }).BBX_SESSION_SECRET, "kept");
+  t.check(loadEnv(serverEnvSchema, { BBX_SESSION_SECRET: "kept" }), { BBX_SESSION_SECRET: "kept" });
 });
 
 // The global credential-store override is common to the hub, server, and CLI;
@@ -151,5 +157,5 @@ void test("serverEnvSchema does model that secret, so the same source keeps it:"
 // to its children.
 void test("The global credential-store override is common to the hub, server, and CLI; k...", async (t) => {
   // doctest:L146
-  t.check(loadEnv(cliEnvSchema, { BBX_AUTH_FILE: "/srv/beebox/auth.json" }).BBX_AUTH_FILE, "/srv/beebox/auth.json");
+  t.check(loadEnv(cliEnvSchema, { BBX_AUTH_FILE: "/srv/beebox/auth.json" }), { BBX_AUTH_FILE: "/srv/beebox/auth.json" });
 });

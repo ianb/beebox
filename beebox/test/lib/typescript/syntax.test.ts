@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { eventually } from "agent-doctest/check";
+import { any, eventually } from "agent-doctest/check";
 import { spawnSync } from "node:child_process";
 import { createParser, isIdentifier, SyntaxKind, type Node } from "../../../src/lib/typescript/syntax.js";
 
@@ -80,7 +80,7 @@ void test("When the TypeScript process dies, the next parse throws instead of re
     spawnSync("pgrep", ["-P", String(process.pid), "-f", "cwd /parse"], { encoding: "utf8" }).stdout.split("\n").filter(Boolean);
   const pids = parserPids();
   for (const pid of pids) process.kill(Number(pid), "SIGKILL");
-  await t.checkText(pids.length, "1");
+  t.check(pids, [any(String).matches(/^\d+$/)]);
 
   // doctest:L78
   t.check(await eventually(() => parserPids().length === 0, { label: "the TypeScript process exits" }), true);

@@ -18,6 +18,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import { execa } from "execa";
@@ -48,6 +49,19 @@ async function importPdf(box: TmpBox, bytes: Parameters<typeof writeFile>[1]) {
   return { result: { ...outcome, data: isRecord(outcome.data) ? outcome.data : {} }, docling };
 }
 
+/** A completed PDF import: the session paths vary (timestamp and random suffix). */
+const PDF_IMPORTED = {
+  success: true,
+  data: {
+    mode: "pdf",
+    sessionRelDir: str`_content/inbox/scan-${any(String)}.attach`,
+    sessionCardPath: str`_content/inbox/scan-${any(String)}.capture-session.card`,
+    pdfCardPath: str`_content/inbox/scan-${any(String)}.attach/source.pdf.card`,
+    extracted: true,
+    intakeJobPath: str`_bookkeeping/jobs/${any(String)}-inbox.intake.job.card`,
+  },
+};
+
 // ## A PDF with no text layer is still a document — and Docling is told to OCR it
 //
 // The card is a `pdf.card`, not a set of photo cards, and the extraction ran OCR
@@ -60,13 +74,13 @@ void test("The card is a pdf.card, not a set of photo cards, and the extraction 
       t.error(error);
     }
   });
-  // doctest:L57
   const box = await makeTmpBox({ git: true });
   const { result, docling } = await importPdf(box, textlessPdf());
-  t.check([result.success, result.data["mode"]].join(" "), "true pdf");
+  t.check(result, PDF_IMPORTED);
 
-  // doctest:L64
-  t.check(havePdftotext ? docling.calls[0]?.ocr : "regions", "regions");
+  if (havePdftotext) {
+    t.check(docling.calls, [{ sourcePath: str`${box.root}/_content/inbox/${any(String)}/source.attach/source.pdf`, ocr: "regions", languages: null }]);
+  }
 });
 
 // ## A PDF that already carries text is left alone
@@ -81,13 +95,13 @@ void test("A good text layer beats re-OCRing an image of itself.", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L78
   const box = await makeTmpBox({ git: true });
   const { result, docling } = await importPdf(box, textPdf());
-  t.check([result.success, result.data["mode"]].join(" "), "true pdf");
+  t.check(result, PDF_IMPORTED);
 
-  // doctest:L85
-  t.check(havePdftotext ? docling.calls[0]?.ocr : "off", "off");
+  if (havePdftotext) {
+    t.check(docling.calls, [{ sourcePath: str`${box.root}/_content/inbox/${any(String)}/source.attach/source.pdf`, ocr: "off", languages: null }]);
+  }
 });
 
 // ## Neither route raises a photo-taxonomy question for a document
@@ -102,8 +116,7 @@ void test("The concrete regression this guards:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L99
   const box = await makeTmpBox({ git: true });
   const { result } = await importPdf(box, textlessPdf());
-  await t.checkText(result.data["questions"] === undefined || (Array.isArray(result.data["questions"]) && result.data["questions"].length === 0), "true");
+  t.check(result, PDF_IMPORTED);
 });

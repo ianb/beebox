@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
 import type { Result } from "../../../src/shared/result.js";
@@ -17,6 +17,11 @@ import { createFakeAgent } from "../fake-agent.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
 import { procedureOutcome } from "../../../src/core/commands/procedure.js";
 import { formatInconclusiveLine } from "../../../src/shared/inconclusive.js";
+
+// The clock stamps, session id and git refs in a run card are minted per run.
+const stamps = { "started-at": isoDate(), "completed-at": isoDate() };
+const sessionId = any(String).startsWith("fake-");
+const gitRef = any(String).matches(/^[\da-f]{40}$/);
 
 /** The value of a successful result; fails the test on an error. */
 function valueOf<T, E>(result: Result<T, E>): T {
@@ -30,8 +35,6 @@ function valueOf<T, E>(result: Result<T, E>): T {
 // full `baseline..finalRef` range (both commits), not just the last one. The
 // verdict passes, so the step completes and the `review` reasoning is recorded.
 void test("The run agent makes two commits; the instruction judge must receive the full...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -81,33 +84,27 @@ steps:
     procedureNameOrPath: "instr",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-
-  // The judge's diff spans BOTH agent commits, not just the last.
-  print(`diff has commit 1: ${judgePrompt.includes("FIRST-CHANGE")}`);
-  print(`diff has commit 2: ${judgePrompt.includes("SECOND-CHANGE")}`);
+  // The judge's diff (a large generated prompt) spans BOTH agent commits, not just the last.
+  t.check(judgePrompt, any(String).includes("FIRST-CHANGE"));
+  t.check(judgePrompt, any(String).includes("SECOND-CHANGE"));
 
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find(f => f.includes("instr_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  print(`step status: ${run?.steps[0]?.status}`);
-  print(`validate status: ${run?.steps[0]?.validate?.status}`);
-  // doctest:L52
-  // doctest:L68
-  // doctest:L76
-  // doctest:L80
-  await t.checkText(out2.with(print(`review recorded: ${run?.steps[0]?.validate?.review}`)), `success: true
-diff has commit 1: true
-diff has commit 2: true
-step status: completed
-validate status: pass
-review recorded: Both files are present in the diff.`);
+  t.check({ result, step: run?.steps[0] }, {
+    result: { ok: true, value: { status: "completed", procedure: "instr", inconclusive: [] } },
+    step: {
+      id: "work",
+      status: "completed",
+      ...stamps,
+      run: { "session-id": sessionId, "git-ref": gitRef },
+      validate: { status: "pass", review: "Both files are present in the diff." },
+    },
+  });
 });
 
 // ## Failing instruction under `abort` fails the step and halts
 void test("Failing instruction under `abort` fails the step and halts", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -157,29 +154,31 @@ steps:
     procedureNameOrPath: "gate",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-
   const files = await box.list("_bookkeeping/output");
-  print(`nope.txt (second step) exists: ${files.includes("nope.txt")}`);
 
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find(f => f.includes("gate_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  print(`checked step: ${run?.steps[0]?.status}`);
-  // doctest:L127
-  // doctest:L137
-  // doctest:L145
-  // doctest:L148
-  await t.checkText(out2.with(print(`validate status: ${run?.steps[0]?.validate?.status}`)), `success: false
-nope.txt (second step) exists: false
-checked step: failed
-validate status: fail`);
+  // The second step ("never") did not run, so it left no nope.txt.
+  t.check({ result, files, steps: run?.steps }, {
+    result: { ok: false, error: { cause: "step-failed", message: "Procedure gate failed at step: checked" } },
+    files: `_bookkeeping/output/.gitkeep
+_bookkeeping/output/partial.txt`,
+    steps: [
+      {
+        id: "checked",
+        status: "failed",
+        ...stamps,
+        run: { "session-id": sessionId, "git-ref": gitRef },
+        validate: { status: "fail", review: "Work is incomplete." },
+      },
+      { id: "never", status: "pending" },
+    ],
+  });
 });
 
 // ## Failing instruction under `warn` continues
 void test("Failing instruction under `warn` continues", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -229,23 +228,27 @@ steps:
     procedureNameOrPath: "soft",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-
   const files = await box.list("_bookkeeping/output");
-  print(`after.txt exists: ${files.includes("after.txt")}`);
 
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find(f => f.includes("soft_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  print(`lax step: ${run?.steps[0]?.status}`);
-  // doctest:L192
-  // doctest:L202
-  // doctest:L210
-  // doctest:L213
-  await t.checkText(out2.with(print(`validate status: ${run?.steps[0]?.validate?.status}`)), `success: true
-after.txt exists: true
-lax step: completed
-validate status: warn`);
+  t.check({ result, files, steps: run?.steps }, {
+    result: { ok: true, value: { status: "completed", procedure: "soft", inconclusive: [] } },
+    files: `_bookkeeping/output/.gitkeep
+_bookkeeping/output/after.txt
+_bookkeeping/output/messy.txt`,
+    steps: [
+      {
+        id: "lax",
+        status: "completed",
+        ...stamps,
+        run: { "session-id": sessionId, "git-ref": gitRef },
+        validate: { status: "warn", review: "Not tidy, but non-blocking." },
+      },
+      { id: "after", status: "completed", ...stamps, run: { "git-ref": gitRef } },
+    ],
+  });
 });
 
 // ## An inconclusive judge under `abort` does NOT fail the step
@@ -256,8 +259,6 @@ validate status: warn`);
 // terminal status is `inconclusive`: honest about what is and isn't known, rather
 // than reporting a non-answer as a verdict in either direction.
 void test("The judge never reaches a verdict (it exhausts its turn cap on both attempts).", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -310,26 +311,43 @@ steps:
     procedureNameOrPath: "unjudged",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-  print(`run status: ${valueOf(result).status}`);
-  print(`inconclusive step: ${valueOf(result).inconclusive[0]?.stepId}`);
-  print(`reason: ${valueOf(result).inconclusive[0]?.reason}`);
-  print(`detail: ${valueOf(result).inconclusive[0]?.detail}`);
-
-  // The work agent ran once. Redoing finished work because the CHECKER ran out
-  // of budget is the exact confusion this state exists to end.
-  print(`work agent invocations: ${workAgentRuns}`);
-
   const files = await box.list("_bookkeeping/output");
-  print(`after.txt (second step) exists: ${files.includes("after.txt")}`);
 
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find(f => f.includes("unjudged_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  print(`card run outcome: ${run?.outcome}`);
-  print(`checked step: ${run?.steps[0]?.status}`);
-  print(`validate status: ${run?.steps[0]?.validate?.status}`);
-  print(`validate error: ${run?.steps[0]?.validate?.error}`);
+  // The work agent ran once. Redoing finished work because the CHECKER ran out
+  // of budget is the exact confusion this state exists to end.
+  t.check({ result, workAgentRuns, files, outcome: run?.outcome, steps: run?.steps }, {
+    result: {
+      ok: true,
+      value: {
+        status: "inconclusive",
+        procedure: "unjudged",
+        inconclusive: [{ stepId: "checked", reason: "max-turns", detail: "reached max turns (16)" }],
+      },
+    },
+    workAgentRuns: 1,
+    files: `_bookkeeping/output/.gitkeep
+_bookkeeping/output/after.txt
+_bookkeeping/output/done.txt`,
+    outcome: "inconclusive",
+    steps: [
+      {
+        id: "checked",
+        status: "completed",
+        ...stamps,
+        run: { "session-id": sessionId, "git-ref": gitRef },
+        validate: {
+          status: "inconclusive",
+          review: "Instruction validation was inconclusive: the review reached max turns (16). The work was not judged — it is neither approved nor rejected.",
+          error: "Review reached max turns (16) — the work was not judged.",
+          reason: "max-turns",
+        },
+      },
+      { id: "after", status: "completed", ...stamps, run: { "git-ref": gitRef } },
+    ],
+  });
 
   // The CLI re-validates the outcome across the untyped command-runner
   // boundary before keying its exit code on it.
@@ -337,29 +355,12 @@ steps:
   assert.ok(crossed);
   const crossedStep = crossed.inconclusive[0];
   assert.ok(crossedStep);
-  // doctest:L263
-  // doctest:L276
-  // doctest:L288
-  // doctest:L292
-  // doctest:L295
-  // doctest:L303
   await t.checkText(
-    out2.with(print(formatInconclusiveLine({
+    formatInconclusiveLine({
       procedure: crossed.procedure,
       stepId: crossedStep.stepId,
       detail: crossedStep.detail,
-    }))),
-    `success: true
-run status: inconclusive
-inconclusive step: checked
-reason: max-turns
-detail: reached max turns (16)
-work agent invocations: 1
-after.txt (second step) exists: true
-card run outcome: inconclusive
-checked step: completed
-validate status: inconclusive
-validate error: Review reached max turns (16) — the work was not judged.
-Inconclusive: procedure unjudged — review of step checked reached max turns (16); work completed`,
+    }),
+    "Inconclusive: procedure unjudged — review of step checked reached max turns (16); work completed",
   );
 });

@@ -74,6 +74,18 @@ const PROSE_OBSERVATION: SessionObservation = {
   sink: "personality",
 };
 
+const LEDGERED = {
+  kind: "correction" as const,
+  evidence: "Please stop using bullet lists in answers",
+  proposal: "The boxholder prefers prose over bullet lists in chat replies.",
+  sink: "personality" as const,
+  runId: "2026-06-09T12-00-00",
+  sessionId: "chat-a",
+  threadRef: null,
+  evidenceHash: "d1d0f05056e1e3aa83cae0c117722d1d8428bfe7b94f26f06ad4d7806bcc5fe8",
+  observedAt: NOW.toISOString(),
+};
+
 // ## A run: observe, ledger, state, report
 //
 // Two chat sessions; one yields an observation, one fails (and stays
@@ -108,15 +120,28 @@ void test("Two chat sessions; one yields an observation, one fails (and stays el
     maxSessions: 20,
     now: NOW,
   });
-  t.check([summary.runId, summary.observed, summary.observations, summary.observerFailures].join(" | "), "2026-06-09T12-00-00 | 1 | 1 | 1");
+  t.check(summary, {
+    runId: "2026-06-09T12-00-00",
+    observed: 1,
+    observations: 1,
+    duplicatesSkipped: 0,
+    observerFailures: 1,
+    reportPath: "_content/reviews/retro/2026-06-09T12-00-00.md",
+  });
 
   // doctest:L104
   const ledger = await loadLedgerEntries(box.root);
-  t.check(ledger.map((e) => `${e.kind} ${e.sessionId} ${e.runId}: ${e.proposal}`).join("\n"), "correction chat-a 2026-06-09T12-00-00: The boxholder prefers prose over bullet lists in chat replies.");
+  t.check(ledger, [LEDGERED]);
 
   // doctest:L108
   const state = await loadRetroState(box.root);
-  t.check(`${state.sessions["chat-a"]?.status} / ${state.sessions["chat-b"]?.status}:${state.sessions["chat-b"]?.attempts}`, "done / failed:1");
+  t.check(state, {
+    lastRunAt: NOW.toISOString(),
+    sessions: {
+      "chat-a": { status: "done", attempts: 1, at: NOW.toISOString() },
+      "chat-b": { status: "failed", attempts: 1, at: NOW.toISOString() },
+    },
+  });
 
   // doctest:L112
   await t.checkText(await box.read("_content/reviews/retro/2026-06-09T12-00-00.md"), `# Retrospective run 2026-06-09T12-00-00
@@ -158,13 +183,26 @@ _Pending integration._`);
     maxSessions: 20,
     now: NOW2,
   });
-  t.check([summary2.observed, summary2.observations, summary2.duplicatesSkipped].join(" | "), "1 | 0 | 1");
+  t.check(summary2, {
+    runId: "2026-06-09T13-00-00",
+    observed: 1,
+    observations: 0,
+    duplicatesSkipped: 1,
+    observerFailures: 0,
+    reportPath: "_content/reviews/retro/2026-06-09T13-00-00.md",
+  });
 
   // doctest:L156
-  await t.checkText((await loadLedgerEntries(box.root)).length, "1");
+  t.check(await loadLedgerEntries(box.root), [LEDGERED]);
 
   // doctest:L159
-  t.check((await loadRetroState(box.root)).sessions["chat-b"]?.status, "done");
+  t.check(await loadRetroState(box.root), {
+    lastRunAt: NOW2.toISOString(),
+    sessions: {
+      "chat-a": { status: "done", attempts: 1, at: NOW.toISOString() },
+      "chat-b": { status: "done", attempts: 1, at: NOW2.toISOString() },
+    },
+  });
 
   // ## Third run: nothing left — no report written
 
@@ -174,5 +212,12 @@ _Pending integration._`);
     maxSessions: 20,
     now: new Date("2026-06-09T14:00:00Z"),
   });
-  t.check(`${summary3.observed} observed, report: ${summary3.reportPath}`, "0 observed, report: null");
+  t.check(summary3, {
+    runId: "2026-06-09T14-00-00",
+    observed: 0,
+    observations: 0,
+    duplicatesSkipped: 0,
+    observerFailures: 0,
+    reportPath: null,
+  });
 });

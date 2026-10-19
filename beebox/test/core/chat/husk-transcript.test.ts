@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { huskTranscriptPath } from "../../../src/core/chat/husk-transcript.js";
 
@@ -37,11 +38,12 @@ void test("The escaping husk resolves exactly where an unbound husk does — the
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("projects");
 
   // doctest:L31
-  await t.checkText(huskTranscriptPath(box.root, husk("_content/recipes")) === huskTranscriptPath(box.root, husk(undefined)), "false");
+  const unbound = huskTranscriptPath(box.root, husk(undefined));
+  t.check(huskTranscriptPath(box.root, husk("_content/recipes")), not(unbound));
 
   // doctest:L34
-  await t.checkText(huskTranscriptPath(box.root, husk("../../elsewhere")) === huskTranscriptPath(box.root, husk(undefined)), "true");
+  t.check(huskTranscriptPath(box.root, husk("../../elsewhere")), unbound);
 
   // doctest:L37
-  await t.checkText(huskTranscriptPath(box.root, husk("")) === huskTranscriptPath(box.root, husk(undefined)), "true");
+  t.check(huskTranscriptPath(box.root, husk("")), unbound);
 });

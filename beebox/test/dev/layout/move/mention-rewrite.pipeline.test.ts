@@ -58,29 +58,10 @@ const result = computeMentionRewrite({ repoRoot, moves, roots, rewrittenFiles: n
 
 // ## Nothing is written to disk — `computeMentionRewrite` only returns in-memory edits
 void test("Nothing is written to disk — `computeMentionRewrite` only returns in-memory edits", async (t) => {
-  // doctest:L62
   await t.checkText(await read("docs/note.md"), "See pkg/src/a.ts for details.");
 });
 
-// ## The repo-relative form rewrites the doc outside the package
-void test("The repo-relative form rewrites the doc outside the package", async (t) => {
-  // doctest:L69
-  await t.checkText(result.fileEdits.get("docs/note.md"), "See pkg/src/sub/a.ts for details.");
-});
-
-// ## The package-relative form rewrites the in-scope file, but leaves the out-of-scope file for review
-void test("The package-relative form rewrites the in-scope file, but leaves the out-of-scope file for review", async (t) => {
-  // doctest:L76
-  await t.checkText(result.fileEdits.get("pkg/README.md"), "Implementation: src/sub/a.ts");
-
-  // doctest:L79
-  await t.checkText(result.fileEdits.has("other-pkg/README.md"), "false");
-});
-
-// ## `knip.ts`'s package-relative rewrite is scoped to the moved file's own workspace block, not the other package's identical-looking entry
-void test("`knip.ts`'s package-relative rewrite is scoped to the moved file's own workspace block, not the other package's identical-looking entry", async (t) => {
-  // doctest:L86
-  await t.checkText(result.fileEdits.get("knip.ts"), `export default {
+const knipRewritten = `export default {
   workspaces: {
     "pkg": {
       entry: ["src/sub/a.ts"],
@@ -89,39 +70,64 @@ void test("`knip.ts`'s package-relative rewrite is scoped to the moved file's ow
       entry: ["src/a.ts"],
     },
   },
-};`);
+};
+`;
+
+// ## The repo-relative form rewrites the doc outside the package
+void test("The repo-relative form rewrites the doc outside the package", async (t) => {
+  t.check(result.fileEdits.get("docs/note.md"), "See pkg/src/sub/a.ts for details.\n");
+});
+
+// ## The package-relative form rewrites the in-scope file, but leaves the out-of-scope file for review
+void test("The package-relative form rewrites the in-scope file, but leaves the out-of-scope file for review", async (t) => {
+  t.check(result.fileEdits.get("pkg/README.md"), "Implementation: src/sub/a.ts\n");
+
+  // Whole map: no entry for other-pkg/README.md.
+  t.check(result.fileEdits, new Map([
+    ["docs/note.md", "See pkg/src/sub/a.ts for details.\n"],
+    ["knip.ts", knipRewritten],
+    ["pkg/README.md", "Implementation: src/sub/a.ts\n"],
+    ["pkg/scripts/run.sh", "# see ../src/sub/a.ts\n"],
+  ]));
+});
+
+// ## `knip.ts`'s package-relative rewrite is scoped to the moved file's own workspace block, not the other package's identical-looking entry
+void test("`knip.ts`'s package-relative rewrite is scoped to the moved file's own workspace block, not the other package's identical-looking entry", async (t) => {
+  t.check(result.fileEdits.get("knip.ts"), knipRewritten);
 });
 
 // ## The relative form (form 4) rewrites the shell script's own-directory-relative mention
 void test("The relative form (form 4) rewrites the shell script's own-directory-relative mention", async (t) => {
-  // doctest:L102
-  await t.checkText(result.fileEdits.get("pkg/scripts/run.sh"), "# see ../src/sub/a.ts");
+  t.check(result.fileEdits.get("pkg/scripts/run.sh"), "# see ../src/sub/a.ts\n");
 });
 
 // ## History docs and `scratch/` keep the old path — excluded from rewrite AND from "needs review"
 void test("History docs and `scratch/` keep the old path — excluded from rewrite AND from \"needs review\"", async (t) => {
-  // doctest:L109
-  await t.checkText(result.fileEdits.has("beebox/docs/plans/old.md"), "false");
+  t.check([...result.fileEdits.keys()], ["docs/note.md", "knip.ts", "pkg/README.md", "pkg/scripts/run.sh"]);
 
-  // doctest:L112
-  await t.checkText(result.fileEdits.has("scratch/note.md"), "false");
-
-  // doctest:L115
-  t.check(result.needsReview.find((g) => g.movedPath === "pkg/src/a.ts")?.lines.some((l) => l.startsWith("beebox/docs/plans/old.md")), false);
-
-  // doctest:L118
-  t.check(result.needsReview.find((g) => g.movedPath === "pkg/src/a.ts")?.lines.some((l) => l.startsWith("scratch/note.md")), false);
+  // The out-of-scope package-relative mention (other-pkg/README.md) and the second knip.ts
+  // block surface in needsReview; the history doc and scratch/ do not.
+  t.check(result.needsReview, [
+    {
+      movedPath: "pkg/src/a.ts",
+      lines: [
+        "knip.ts:7:      entry: [\"src/a.ts\"],",
+        "other-pkg/README.md:1:Compare to src/a.ts in pkg.",
+      ],
+    },
+  ]);
 });
 
 // ## The out-of-scope package-relative mention surfaces in "needs review" instead of being silently dropped
 void test("The out-of-scope package-relative mention surfaces in \"needs review\" instead of being silently dropped", async (t) => {
-  // doctest:L125
-  t.check(result.needsReview.find((g) => g.movedPath === "pkg/src/a.ts")?.lines.some((l) => l.startsWith("other-pkg/README.md")), true);
+  t.check(result.needsReview.find((g) => g.movedPath === "pkg/src/a.ts")?.lines, [
+    "knip.ts:7:      entry: [\"src/a.ts\"],",
+    "other-pkg/README.md:1:Compare to src/a.ts in pkg.",
+  ]);
 });
 
 // ## Counts: one hit per form
 void test("Counts: one hit per form", async (t) => {
-  // doctest:L132
   t.check(Object.fromEntries(result.countsByForm), {
     "repo-relative": 1,
     "package-relative": 2,
@@ -131,33 +137,25 @@ void test("Counts: one hit per form", async (t) => {
 
 // ## A uniform directory rename is rewritten; a directory glob that shares its text is reported, not rewritten
 void test("A uniform directory rename is rewritten; a directory glob that shares its text is reported, not rewritten", async (t) => {
-  t.teardown(async () => {
-    try {
-      t.teardown(() => rm(repoRoot, { recursive: true, force: true }));
-    } catch (error) {
-      t.error(error);
-    }
-  });
-  // doctest:L139
+  t.teardown(() => rm(repoRoot, { recursive: true, force: true }));
   await write("pkg/src/legacy/one.ts", "");
   await write("pkg/src/legacy/two.ts", "");
   await write("pkg/docs/dir-note.md", "See pkg/src/legacy for the old layout.\n");
   await write("pkg/eslint.config.ts", 'export default [{ files: ["pkg/src/legacy/**/*.ts"] }];\n');
   await git(["add", "-A"]);
 
-  // doctest:L145
   const dirMoves = [
     { from: "pkg/src/legacy/one.ts", to: "pkg/src/modern/one.ts" },
     { from: "pkg/src/legacy/two.ts", to: "pkg/src/modern/two.ts" },
   ];
   const dirResult = computeMentionRewrite({ repoRoot, moves: dirMoves, roots, rewrittenFiles: new Set() });
 
-  // doctest:L151
-  await t.checkText(dirResult.fileEdits.get("pkg/docs/dir-note.md"), "See pkg/src/modern for the old layout.");
+  // The eslint config shares the directory text but is reported, not rewritten.
+  t.check(dirResult.fileEdits, new Map([["pkg/docs/dir-note.md", "See pkg/src/modern for the old layout.\n"]]));
 
-  // doctest:L154
-  await t.checkText(dirResult.fileEdits.has("pkg/eslint.config.ts"), "false");
-
-  // doctest:L157
-  t.check(dirResult.needsReview.find((g) => g.movedPath === "pkg/src/legacy/")?.lines.some((l) => l.includes("list-entry") || l.includes("**")), true);
+  t.check(dirResult.needsReview, [
+    { movedPath: "pkg/src/legacy/one.ts", lines: [] },
+    { movedPath: "pkg/src/legacy/two.ts", lines: [] },
+    { movedPath: "pkg/src/legacy/", lines: ['pkg/eslint.config.ts:1:export default [{ files: ["pkg/src/legacy/**/*.ts"] }];'] },
+  ]);
 });

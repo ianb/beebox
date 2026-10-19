@@ -10,11 +10,11 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { spawnSync } from "node:child_process";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { runUnignore } from "../../src/core/attachments-gitignore.js";
 import type { CommandContext } from "../../src/core/command-runner.js";
-import { isRecord } from "../../src/shared/is-record.js";
 import { assetGitignorePatterns } from "../../src/lib/asset-extensions.js";
 import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -62,33 +62,29 @@ void test("Starting from a box with the asset block installed, unignore removes 
       t.error(error);
     }
   });
-  // doctest:L59
   const box = await makeTmpBox({ git: true });
   await installLegacyAssetBlock(box.root);
-  await t.checkText((await box.read(".gitignore")).includes("**/*.attach/**/*.jpg"), "true");
+  // A large generated file: keep the narrow check.
+  t.check(await box.read(".gitignore"), any(String).includes("**/*.attach/**/*.jpg"));
 
-  // doctest:L67
   const c2 = ctxFor(box.root);
   const res = await runUnignore(c2);
-  t.check(res.success, true);
+  t.check(res, { success: true, data: { changed: true } });
 
   // The extension patterns are gone — every asset type, not just the common ones:
 
-  // doctest:L76
   const after = await box.read(".gitignore");
-  await t.checkText([".jpg", ".pdf", ".frozen"].some((e) => after.includes("**/*.attach/**/*" + e)), "false");
+  t.check(after, not(any(String).matches(/\*\*\/\*\.attach\/\*\*\/\*\.(jpg|pdf|frozen)/)));
 
   // But capture staging stays ignored, because a pre-triage capture must not be
   // annexed before an agent files it:
 
-  // doctest:L85
-  await t.checkText(after.includes("**/tmp-capture/**/*.attach/**"), "true");
+  t.check(after, any(String).includes("**/tmp-capture/**/*.attach/**"));
 
   // The broad staging rule must not swallow the committed metadata alongside the
   // media. The directory negation is load-bearing here: without it Git will not
   // re-include a manifest below a nested child `.attach/` directory.
 
-  // doctest:L94
   await box.write("tmp-capture/cap.attach/photo-001.image.card", "card");
   await box.write("tmp-capture/cap.attach/photo-001.attach/manifest.json", "{}");
   await box.write("tmp-capture/cap.attach/audio-001.attach/audio-001.timing.json", "{}");
@@ -124,7 +120,6 @@ void test("Starting from a box with the asset block installed, unignore removes 
   // the box root, so a root-anchored rule would miss real captures and annex them
   // on arrival:
 
-  // doctest:L129
   await box.write("landmarks/trip/tmp-capture/cap.attach/photo-002.jpg", "media");
   t.check(checkIgnore(box.root, "landmarks/trip/tmp-capture/cap.attach/photo-002.jpg"), {
     ignored: true,
@@ -133,34 +128,37 @@ void test("Starting from a box with the asset block installed, unignore removes 
 
   // Re-running is idempotent — it reports no change rather than stacking blocks:
 
-  // doctest:L140
   const c3 = ctxFor(box.root);
   await runUnignore(c3);
-  t.check(c3.lines.join(""), "Already converted for git-annex — no change.");
+  t.check(c3.lines, ["Already converted for git-annex — no change."]);
 
   // An asset rule sitting OUTSIDE the managed block is a hard failure, not a silent
   // pass. Marker-presence is the wrong test: a hand-edited `.gitignore` that still
   // ignores `.jpg` would leave those assets reaching neither git nor the annex, and
   // nothing else reports it.
 
-  // doctest:L152
   await box.write(".gitignore", "**/*.attach/**/*.jpg\nnode_modules/\n");
   const c4 = ctxFor(box.root);
   const stray = await runUnignore(c4);
-  t.check(`${stray.success} ${c4.lines.join(" ").includes("outside the managed block")}`, "false true");
+  t.check({ success: stray.success, lines: c4.lines }, {
+    success: false,
+    lines: [
+      `.gitignore still ignores assets outside the managed block:
+  **/*.attach/**/*.jpg
+Remove these by hand — while they are present those assets reach neither git nor the annex, and nothing else reports it.`,
+    ],
+  });
 });
 
 // On a box that never had the asset block (a fresh box, or one already
 // hand-edited), `unignore` still installs the capture-staging rule rather than
 // no-op'ing — the rule is required either way:
 void test("On a box that never had the asset block (a fresh box, or one already hand-edi...", async (t) => {
-  // doctest:L168
   const fresh = await makeTmpBox();
   const c = ctxFor(fresh.root);
   await runUnignore(c);
-  await t.checkText((await fresh.read(".gitignore")).includes("**/tmp-capture/**/*.attach/**"), "true");
+  t.check(await fresh.read(".gitignore"), any(String).includes("**/tmp-capture/**/*.attach/**"));
 
-  // doctest:L174
   await fresh.cleanup();
 });
 
@@ -174,7 +172,6 @@ void test("An existing annex box carrying the old managed block is refreshed in 
       t.error(error);
     }
   });
-  // doctest:L181
   const stale = await makeTmpBox({ git: true });
   await stale.write(
     ".gitignore",
@@ -182,15 +179,9 @@ void test("An existing annex box carrying the old managed block is refreshed in 
   );
   const c = ctxFor(stale.root);
   const refreshed = await runUnignore(c);
-  t.check(isRecord(refreshed.data) ? refreshed.data["changed"] : undefined, true);
-
-  // doctest:L191
-  t.check(c.lines.join(""), "Refreshed the git-annex block in .gitignore.");
-
-  // doctest:L194
-  await t.checkText((await stale.read(".gitignore")).includes("!**/tmp-capture/**/*.attach/**/manifest.json"), "true");
-
-  // doctest:L197
+  t.check(refreshed, { success: true, data: { changed: true } });
+  t.check(c.lines, ["Refreshed the git-annex block in .gitignore."]);
+  t.check(await stale.read(".gitignore"), any(String).includes("!**/tmp-capture/**/*.attach/**/manifest.json"));
   await stale.cleanup();
 
   // ## A path-anchored stray rule is still a stray rule
@@ -205,7 +196,6 @@ void test("An existing annex box carrying the old managed block is refreshed in 
   // asset stayed ignored — reaching neither git nor the annex, with the annex-shape
   // probe reporting the box as converted. One production box was in that state.
 
-  // doctest:L213
   const anchored = await makeTmpBox({ git: true });
   await installLegacyAssetBlock(anchored.root);
   await anchored.write(
@@ -220,12 +210,10 @@ void test("An existing annex box carrying the old managed block is refreshed in 
 
   // The rule really does hide an asset, which is what makes refusing correct:
 
-  // doctest:L227
-  t.check(checkIgnore(anchored.root, "_content/photos.attach/a.jpg").ignored, true);
+  t.check(checkIgnore(anchored.root, "_content/photos.attach/a.jpg"), { ignored: true, rule: "/_content/**/*.attach/**/*.jpg" });
 
   // Removing it by hand is what the message asks for, and then `unignore` proceeds:
 
-  // doctest:L234
   await anchored.write(
     ".gitignore",
     (await anchored.read(".gitignore")).split("\n").filter((l) => !l.includes("/_content/**/*.attach/")).join("\n"),
@@ -240,6 +228,5 @@ void test("An existing annex box carrying the old managed block is refreshed in 
   // they are negations, and the managed block would otherwise look like a pile of
   // unmanaged rules:
 
-  // doctest:L248
-  await t.checkText((await anchored.read(".gitignore")).includes("!**/tmp-capture/**/*.attach/**/*.card"), "true");
+  t.check(await anchored.read(".gitignore"), any(String).includes("!**/tmp-capture/**/*.attach/**/*.card"));
 });

@@ -8,7 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import { any, capture, isoDate } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import { loadScriptState } from "../../../src/core/schedule/state.js";
@@ -65,26 +65,30 @@ notify:
   // doctest:L50
   const [sent] = await readRecent(box.root, { days: 36500 });
   assert.ok(sent);
-  const { title, body, target, loudness, tag, source } = sent.intent;
-  t.check({ title, body, target, loudness, tag, source }, {
-    title: "Call the vet about Pepper's shots",
-    body: `Ask about the booster.
+  const id = capture(any(String));
+  t.check(sent.intent, {
+      kind: "intent",
+      id,
+      at: isoDate(),
+      title: "Call the vet about Pepper's shots",
+      body: `Ask about the booster.
 
 Context: _content/pets/pepper-shots.todo.card`,
-    target: "chat:new",
-    loudness: "loud",
-    tag: "remind-vet",
-    source: "schedule:remind-vet",
-  });
-
-  // doctest:L63
-  await t.checkText(sent.deliveries.some((d) => d.status === "sent" && d.detail === "fake"), "true");
+      target: "chat:new",
+      loudness: "loud",
+      tag: "remind-vet",
+      source: "schedule:remind-vet",
+    });
+  t.check(sent.deliveries, [
+      { kind: "delivery", notificationId: id.value, at: isoDate(), channel: "apns", status: "sent", detail: "fake" },
+      { kind: "delivery", notificationId: id.value, at: isoDate(), channel: "web-push", status: "sent", detail: "fake" },
+    ]);
 
   // doctest:L66
   t.check((await loadScriptState(box.root, "remind-vet")).lastResult, "success");
 
   // doctest:L69
-  await t.checkText((await scheduleCards(box)).length, "0");
+  t.check(await scheduleCards(box), "");
 
   // The deletion is committed like any other one-shot's:
 
@@ -117,7 +121,12 @@ notify:
   await runTick(box.root, { quiet: true });
   const [sent] = await readRecent(box.root, { days: 36500 });
   assert.ok(sent);
-  t.check(`${sent.intent.loudness} ${sent.intent.target} ${JSON.stringify(sent.intent.body)}`, "quiet dashboard \"\"");
+  const id = capture(any(String));
+  t.check(sent.intent, { kind: "intent", id, at: isoDate(), title: "Weekly review is ready", body: "", target: "dashboard", loudness: "quiet", tag: "weekly-note", source: "schedule:weekly-note" });
+  t.check(sent.deliveries, [
+      { kind: "delivery", notificationId: id.value, at: isoDate(), channel: "apns", status: "sent", detail: "fake" },
+      { kind: "delivery", notificationId: id.value, at: isoDate(), channel: "web-push", status: "sent", detail: "fake" },
+    ]);
 
   // doctest:L105
   t.check(await scheduleCards(box), "_config/schedules/weekly-note.scheduled-script.card");
@@ -149,11 +158,40 @@ notify:
 `);
   box.commitAll("add reminder");
   const result = await runTick(box.root, { quiet: true });
-  t.check(result.scripts[0]?.status, "error");
+  t.check(result, {
+    ranCount: 0,
+    skipCount: 0,
+    errorCount: 1,
+    inconclusiveCount: 0,
+    scripts: [
+      {
+        name: "remind-call",
+        status: "error",
+        command: "notify: Call back",
+        durationMs: any(Number).int(),
+        error: "Not delivered: apns skipped (no-audience), web-push skipped (no-audience)",
+      },
+    ],
+  });
 
   // doctest:L134
   const state = await loadScriptState(box.root, "remind-call");
-  t.check(`${state.lastResult}: ${state.lastError}`, str`failure: Not delivered: ${any(String)}`);
+  t.check(state, {
+    lastRun: isoDate(),
+    lastResult: "failure",
+    lastError: "Not delivered: apns skipped (no-audience), web-push skipped (no-audience)",
+    lastDurationMs: any(Number).int(),
+    lastSuccess: null,
+    consecutiveFailures: 1,
+    alertedAt: null,
+    alertedFor: null,
+    skipped: null,
+    runCount: 1,
+    lastCommit: null,
+    carry: null,
+    lastDeferReason: null,
+    recentRuns: [{ ts: isoDate(), durationMs: any(Number).int() }],
+  });
 
   // doctest:L138
   t.check(await scheduleCards(box), "_config/schedules/remind-call.scheduled-script.card");

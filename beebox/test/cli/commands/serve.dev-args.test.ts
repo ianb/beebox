@@ -31,7 +31,7 @@ void test("`--slug` overrides the default, and the dev-arg encoding carries it t
   // doctest:L25
   const box = await makeTmpBox();
   const boxes = await resolveBoxes([box.root], "my-custom-slug");
-  await t.checkText(toBoxArgs(boxes)[0] === `my-custom-slug=${box.root}`, "true");
+  t.check(toBoxArgs(boxes), [`my-custom-slug=${box.root}`]);
 });
 
 // ## Development surfaces require the exact positive opt-in
@@ -92,5 +92,5 @@ void test("The dev-arg slug defaults to the box root's own basename", async (t) 
   const args = toBoxArgs(boxes);
 
   // doctest:L70
-  await t.checkText(args[0] === `${path.basename(box.root)}=${box.root}`, "true");
+  t.check(args, [`${path.basename(box.root)}=${box.root}`]);
 });

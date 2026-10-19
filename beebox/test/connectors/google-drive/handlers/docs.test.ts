@@ -111,7 +111,11 @@ void test("A new doc card produces a .md file inside the card's attach scope.", 
     doc: { markdown: "# Notes\n\nFirst paragraph.\n" },
   });
   const result = await connector.sync();
-  t.check(result.success, true);
+  t.check(result, {
+    success: true,
+    created: ["_content/drive/Project_Notes.attach/Project_Notes.md"],
+    updated: [],
+  });
 
   // doctest:L117
   t.check(await box.read("_content/drive/Project_Notes.attach/Project_Notes.md"), `# Notes
@@ -123,13 +127,17 @@ First paragraph.
 
   // doctest:L124
   const card = await box.read("_content/drive/Project_Notes.gdoc.card");
-  await t.checkText(card.includes("drive:\n  id: doc-1"), "true");
-
-  // doctest:L128
-  await t.checkText(card.includes("conflict"), "false");
-
-  // doctest:L131
-  await t.checkText(card.includes("revision: rev-1"), "true");
+  t.checkText(card, `---
+drive:
+  id: doc-1
+  link: https://docs.google.com/document/d/doc-1/edit
+  owner: test@example.com
+  modified: «date»
+  revision: rev-1
+title: Project Notes
+content:
+  ref: attach/Project_Notes.md
+---`);
 
   // An agent-written `contains:` survives the next sync's card rebuild
   // (connector templates preserve agent-owned fields), and a sync that
@@ -142,11 +150,25 @@ First paragraph.
   );
   box.commitAll("agent adds contains");
   const resync = await connector.sync();
-  t.check(resync.success, true);
+  t.check(resync, { success: true, created: [], updated: ["_content/drive/Project_Notes.gdoc.card"] });
 
   // doctest:L149
   const resynced = await box.read("_content/drive/Project_Notes.gdoc.card");
-  await t.checkText(resynced.includes("contains: Planning notes for the project kickoff."), "true");
+  t.checkText(
+    resynced,
+    `---
+drive:
+  id: doc-1
+  link: https://docs.google.com/document/d/doc-1/edit
+  owner: test@example.com
+  modified: «date»
+  revision: rev-1
+title: Project Notes
+content:
+  ref: attach/Project_Notes.md
+contains: Planning notes for the project kickoff.
+---`,
+  );
 });
 
 // ## Pull — lossy content surfaces in the card
@@ -165,25 +187,36 @@ void test("Footnotes and inline objects appear as lossy entries.", async (t) => 
 
   // doctest:L168
   const card = await box.read("_content/drive/Reviewed_Doc.gdoc.card");
-  await t.checkText(card.includes("type: comments"), "false");
-
-  // doctest:L172
-  await t.checkText(card.includes("type: footnotes") && card.includes("count: 1"), "true");
-
-  // doctest:L175
-  await t.checkText(card.includes("type: images") && card.includes("count: 2"), "true");
+  t.checkText(
+    card,
+    `---
+drive:
+  id: doc-2
+  link: https://docs.google.com/document/d/doc-2/edit
+  owner: test@example.com
+  modified: «date»
+  revision: rev-1
+title: Reviewed Doc
+content:
+  ref: attach/Reviewed_Doc.md
+comments:
+  ref: attach/Reviewed_Doc.comments.json
+lossy:
+  - type: footnotes
+    count: 1
+  - type: images
+    count: 2
+---`,
+  );
 
   // The comments are written to a sidecar and referenced from the card:
 
   // doctest:L182
-  await t.checkText(card.includes("comments:") && card.includes("ref: attach/Reviewed_Doc.comments.json"), "true");
-
-  // doctest:L185
-  const sidecar = JSON.parse(await box.read("_content/drive/Reviewed_Doc.attach/Reviewed_Doc.comments.json"));
-  await t.checkText(sidecar.length, "3");
-
-  // doctest:L189
-  t.check(sidecar[0]?.content, "comment 0");
+  t.check(JSON.parse(await box.read("_content/drive/Reviewed_Doc.attach/Reviewed_Doc.comments.json")), [
+    { id: "c-0", content: "comment 0" },
+    { id: "c-1", content: "comment 1" },
+    { id: "c-2", content: "comment 2" },
+  ]);
 });
 
 // ## Push — local markdown edit pushes to Drive
@@ -208,13 +241,7 @@ void test("When the local .md (inside the doc's attach scope) differs from the l
   await connector.sync();
 
   // doctest:L212
-  await t.checkText(drive.contentUpdateLog.length, "1");
-
-  // doctest:L215
-  t.check(drive.contentUpdateLog[0]?.mimeType, "text/markdown");
-
-  // doctest:L218
-  await t.checkText(drive.contentUpdateLog[0]?.content, "Edited body.");
+  t.check(drive.contentUpdateLog, [{ fileId: "doc-3", mimeType: "text/markdown", content: "Edited body.\n" }]);
 });
 
 // ## Conflict — remote changed since last pull
@@ -261,16 +288,24 @@ void test("When both local and remote have changed, push refuses to overwrite.",
   );
 
   // doctest:L256
-  await t.checkText(
-    // No content was uploaded (push aborted).
-    drive.contentUpdateLog.length,
-    "0",
-  );
+  // No content was uploaded (push aborted).
+  t.check(drive.contentUpdateLog, []);
 
   // doctest:L260
   // Card marked in conflict.
   const card = await box.read("_content/drive/Contended.gdoc.card");
-  await t.checkText(card.includes("conflict: true"), "true");
+  t.checkText(card, `---
+drive:
+  id: doc-4
+  link: https://docs.google.com/document/d/doc-4/edit
+  owner: test@example.com
+  modified: «date»
+  revision: rev-2
+title: Contended
+content:
+  ref: attach/Contended.md
+conflict: true
+---`);
 
   // ## Conflict — push stays skipped until `.remote.md` is removed
   //
@@ -279,7 +314,7 @@ void test("When both local and remote have changed, push refuses to overwrite.",
   // doctest:L271
   // User does nothing — sync again.
   await connector.sync();
-  await t.checkText(drive.contentUpdateLog.length, "0");
+  t.check(drive.contentUpdateLog, []);
 
   // doctest:L276
   // User resolves: writes the merged version, deletes .remote.md, commits.
@@ -291,17 +326,21 @@ void test("When both local and remote have changed, push refuses to overwrite.",
   await connector.sync();
 
   // doctest:L283
-  await t.checkText(drive.contentUpdateLog.length, "1");
-
-  // doctest:L286
-  await t.checkText(drive.contentUpdateLog[0]?.content, "Merged.");
+  t.check(drive.contentUpdateLog, [{ fileId: "doc-4", mimeType: "text/markdown", content: "Merged.\n" }]);
 
   // doctest:L289
-  await t.checkText(
-    // With the `.remote.md` gone, the card no longer says conflict.
-    (await box.read("_content/drive/Contended.gdoc.card")).includes("conflict"),
-    "false",
-  );
+  // With the `.remote.md` gone, the card no longer says conflict.
+  t.checkText(await box.read("_content/drive/Contended.gdoc.card"), `---
+drive:
+  id: doc-4
+  link: https://docs.google.com/document/d/doc-4/edit
+  owner: test@example.com
+  modified: «date»
+  revision: rev-«int»-1
+title: Contended
+content:
+  ref: attach/Contended.md
+---`);
 });
 
 // ## Graceful degradation when Docs API is unavailable
@@ -330,7 +369,15 @@ void test("If getDocument fails (e.g.", async (t) => {
 
   // doctest:L316
   const result = await connector.sync();
-  t.check(result.success, true);
+  t.check(result, {
+    success: true,
+    created: [
+      "_content/drive/Degraded.attach/Degraded.md",
+      "_content/drive/Degraded.attach/Degraded.comments.json",
+      "_content/drive/Degraded.gdoc.card",
+    ],
+    updated: [],
+  });
 
   // doctest:L320
   await t.checkText(
@@ -342,23 +389,28 @@ void test("If getDocument fails (e.g.", async (t) => {
   // doctest:L324
   // Card still written, falls back to Drive metadata title.
   const card = await box.read("_content/drive/Degraded.gdoc.card");
-  t.check([card.includes("title: Degraded"), card.includes("Stale Title")], [
-    true,
-    false,
-  ]);
-
-  // doctest:L329
-  await t.checkText(
-    // Comments (Drive API) still captured in the sidecar; images (Docs API) absent.
-    card.includes("type: images"),
-    "false",
+  t.checkText(
+    card,
+    `---
+drive:
+  id: doc-5
+  link: https://docs.google.com/document/d/doc-5/edit
+  owner: test@example.com
+  modified: «date»
+title: Degraded
+content:
+  ref: attach/Degraded.md
+comments:
+  ref: attach/Degraded.comments.json
+---`,
   );
 
-  // doctest:L333
-  await t.checkText(card.includes("ref: attach/Degraded.comments.json"), "true");
-
+  // Comments (Drive API) still captured in the sidecar; images (Docs API) absent.
   // doctest:L336
-  await t.checkText(JSON.parse(await box.read("_content/drive/Degraded.attach/Degraded.comments.json")).length, "2");
+  t.check(JSON.parse(await box.read("_content/drive/Degraded.attach/Degraded.comments.json")), [
+    { id: "c-0", content: "comment 0" },
+    { id: "c-1", content: "comment 1" },
+  ]);
 });
 
 // ## Comments sidecar — full thread preserved, and removed when comments clear
@@ -406,16 +458,7 @@ void test("The sidecar holds the raw comment objects verbatim:", async (t) => {
 
   // doctest:L383
   const sidecar = JSON.parse(await box.read("_content/drive/Feedback.attach/Feedback.comments.json"));
-  t.check(sidecar[0]?.author?.displayName, "Jane Doe");
-
-  // doctest:L387
-  t.check(sidecar[0]?.resolved, true);
-
-  // doctest:L390
-  t.check(sidecar[0]?.quotedFileContent?.value, "the Q3 numbers");
-
-  // doctest:L393
-  t.check(sidecar[0]?.replies?.[0]?.content, "Fixed, thanks.");
+  t.check(sidecar, richDoc.comments);
 
   // When the upstream comments are all removed, the next sync deletes the
   // sidecar and drops the `comments:` ref from the card:
@@ -433,7 +476,17 @@ void test("The sidecar holds the raw comment objects verbatim:", async (t) => {
   t.check(await access(join(box.root, "_content/drive/Feedback.attach/Feedback.comments.json")).then(() => "exists", () => "gone"), "gone");
 
   // doctest:L411
-  await t.checkText((await box.read("_content/drive/Feedback.gdoc.card")).includes("comments:"), "false");
+  t.checkText(await box.read("_content/drive/Feedback.gdoc.card"), `---
+drive:
+  id: doc-6
+  link: https://docs.google.com/document/d/doc-6/edit
+  owner: test@example.com
+  modified: «date»
+  revision: rev-1
+title: Feedback
+content:
+  ref: attach/Feedback.md
+---`);
 
   // doctest:L414
   t.check(
@@ -443,12 +496,6 @@ void test("The sidecar holds the raw comment objects verbatim:", async (t) => {
     "",
   );
 });
-
-/** One lossy feature count from an inspect preview; the handler records each as a number. */
-function lossyCount(details: Record<string, unknown>, feature: string): unknown {
-  const lossy = details.lossy;
-  return typeof lossy === "object" && lossy !== null ? Reflect.get(lossy, feature) : undefined;
-}
 
 // ## Inspect — comments reported separately from lossy
 //
@@ -465,13 +512,11 @@ void test("The inspect() preview (used by bbx drive inspect) reports the comment
   // doctest:L432
   const file7 = await drive7.getFile("doc-7");
   const info7 = await docsHandler.inspect(file7, drive7);
-  t.check(info7.details.comments, 4);
-
-  // doctest:L437
-  t.check(lossyCount(info7.details, "comments"), 0);
-
-  // doctest:L440
-  t.check(lossyCount(info7.details, "footnotes"), 1);
+  t.check(info7.details, {
+    revisionId: "rev-1",
+    lossy: { comments: 0, footnotes: 1, images: 0, equations: 0, suggestions: 0, tables: 0 },
+    comments: 4,
+  });
 });
 
 // ## Stripped trailing whitespace — refused, not pushed
@@ -504,7 +549,7 @@ void test("Google's markdown export encodes a line break inside a nested list it
   await connector.sync();
 
   // doctest:L471
-  await t.checkText(drive.contentUpdateLog.length, "0");
+  t.check(drive.contentUpdateLog, []);
 
   // The upstream copy is parked for resolution and the card gets `conflict: true`:
 
@@ -514,7 +559,18 @@ void test("Google's markdown export encodes a line break inside a nested list it
 `);
 
   // doctest:L481
-  await t.checkText((await box.read("_content/drive/Checklist.gdoc.card")).includes("conflict: true"), "true");
+  t.checkText(await box.read("_content/drive/Checklist.gdoc.card"), `---
+drive:
+  id: doc-w
+  link: https://docs.google.com/document/d/doc-w/edit
+  owner: test@example.com
+  modified: «date»
+  revision: rev-1
+title: Checklist
+content:
+  ref: attach/Checklist.md
+conflict: true
+---`);
 
   // A real content edit bundled with the same whitespace strip is refused too — the
   // structural loss is identical, so the question is asked per line, not per file.
@@ -532,7 +588,7 @@ void test("Google's markdown export encodes a line break inside a nested list it
   await connector.sync();
 
   // doctest:L499
-  await t.checkText(drive.contentUpdateLog.length, "0");
+  t.check(drive.contentUpdateLog, []);
 
   // The same edit that leaves the export's trailing whitespace alone is a real edit
   // and pushes:
@@ -549,5 +605,7 @@ void test("Google's markdown export encodes a line break inside a nested list it
   await connector.sync();
 
   // doctest:L516
-  await t.checkText(drive.contentUpdateLog.length, "1");
+  t.check(drive.contentUpdateLog, [
+    { fileId: "doc-w", mimeType: "text/markdown", content: "- [ ] Parent  \n      - [x] Child  \n" },
+  ]);
 });

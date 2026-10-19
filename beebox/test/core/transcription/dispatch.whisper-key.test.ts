@@ -16,7 +16,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -37,8 +36,6 @@ async function useTempStore() {
 //
 // The message is the one the boxholder acts on, not the old bare env-var name.
 void test("The message is the one the boxholder acts on, not the old bare env-var name.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -64,9 +61,15 @@ void test("The message is the one the boxholder acts on, not the old bare env-va
     failure = e;
   }
   assert.ok(failure instanceof Error && "permanent" in failure && "code" in failure);
-  print(`${failure.name} permanent=${failure.permanent} code=${failure.code}`);
-  await t.checkText(out.with(print(failure.message)), `MissingWhisperKeyError permanent=true code=missing_api_key
-No OpenAI key for transcription — ask the boxholder to grant the "openai-thinking" secret to this box`);
+  t.check(
+    { name: failure.name, permanent: failure.permanent, code: failure.code, message: failure.message },
+    {
+      name: "MissingWhisperKeyError",
+      permanent: true,
+      code: "missing_api_key",
+      message: 'No OpenAI key for transcription — ask the boxholder to grant the "openai-thinking" secret to this box',
+    },
+  );
 
   // ## Only the grant resolves
   //
@@ -76,15 +79,16 @@ No OpenAI key for transcription — ask the boxholder to grant the "openai-think
   // doctest:L67
   const slug = await boxSlug(box.root);
   process.env.THINKING_OPENAI_API_KEY = "placeholder-whisper-env-key";
-  print(`ungranted: ${await getOpenAiThinkingKey(box.root, { observe: true })}`);
+  const ungranted = await getOpenAiThinkingKey(box.root, { observe: true });
 
   // doctest:L71
   await setSecret({ name: "openai-thinking", value: "placeholder-whisper-store-key" });
   await grantSecret({ slug, name: "openai-thinking", access: "server" });
-  print(`granted: ${await getOpenAiThinkingKey(box.root, { observe: true })}`);
+  const granted = await getOpenAiThinkingKey(box.root, { observe: true });
 
   // doctest:L75
-  await t.checkText(out.with(print(`no box: ${await getOpenAiThinkingKey(undefined, { observe: true })}`)), `ungranted: null
-granted: placeholder-whisper-store-key
-no box: null`);
+  t.check(
+    { ungranted, granted, noBox: await getOpenAiThinkingKey(undefined, { observe: true }) },
+    { ungranted: null, granted: "placeholder-whisper-store-key", noBox: null },
+  );
 });

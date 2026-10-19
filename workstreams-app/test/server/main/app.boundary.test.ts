@@ -86,7 +86,6 @@ function fakeServices(workstreams?: WorkstreamSummary[]): AppServices {
 // The service requests removed registry records as well as live worktrees. Its
 // public summary deliberately omits absolute worktree and box paths.
 void test("The service requests removed registry records as well as live worktrees.", async (t) => {
-  // doctest:L89
   let request: CommandRequest | undefined;
   const commandRunner: CommandRunner = async (nextRequest) => {
     request = nextRequest;
@@ -97,45 +96,26 @@ void test("The service requests removed registry records as well as live worktre
     commandRunner,
   });
   const result = await service.list();
-  const items = result.items;
-  t.check(
-    {
-      command: request?.command,
-      args: request?.args,
-      cwd: request?.cwd,
-      name: items[0]?.name,
-      hasPath: "path" in (items[0] ?? {}),
-      hasBox: "box" in (items[0] ?? {}),
-      warnings: result.warnings.length,
-    },
-    {
+  t.check(request, {
     command: "/repo/bin/workstreams",
-    args: [
-      "list",
-      "--json",
-      "--include-removed",
-    ],
+    args: ["list", "--json", "--include-removed"],
     cwd: "/repo",
-    name: "example",
-    hasPath: false,
-    hasBox: false,
-    warnings: 0,
-  },
-  );
+    timeoutMs: 30000,
+    maxBufferBytes: 4194304,
+  });
+  t.check(result, { items: [summary("example")], warnings: [] });
 });
 
 // Invalid JSON and schema drift fail at the boundary with command context. Schema
 // errors name only the bad field; they do not echo CLI output containing local
 // paths.
 void test("Invalid JSON and schema drift fail at the boundary with command context.", async (t) => {
-  // doctest:L117
   const invalidJson = createWorkstreamsCommandService({
     repoRoot: "/repo",
     commandRunner: async () => ({ stdout: "not-json", stderr: "" }),
   });
   await t.checkThrows(async () => (await invalidJson.list()), "InvalidWorkstreamsJsonError: bin/workstreams list --json --include-removed returned invalid JSON");
 
-  // doctest:L124
   const partlyInvalid = createWorkstreamsCommandService({
     repoRoot: "/repo",
     commandRunner: async () => ({
@@ -144,11 +124,9 @@ void test("Invalid JSON and schema drift fail at the boundary with command conte
     }),
   });
   const partial = await partlyInvalid.list();
-  t.check({ names: partial.items.map((item) => item.name), warning: partial.warnings[0] }, {
-    names: [
-      "good",
-    ],
-    warning: {
+  t.check(partial, {
+    items: [summary("good")],
+    warnings: [{
       row: 1,
       name: "bad",
       fields: [
@@ -158,33 +136,39 @@ void test("Invalid JSON and schema drift fail at the boundary with command conte
         "git.tip",
       ],
       message: "Invalid workstream row 1 (bad): git.ahead, git.dirty, git.merged, git.tip",
-    },
+    }],
   });
 
-  // doctest:L135
   const invalidTopLevel = createWorkstreamsCommandService({
     repoRoot: "/repo",
     commandRunner: async () => ({ stdout: JSON.stringify({ workstreams: [] }), stderr: "" }),
   });
   await t.checkThrows(async () => (await invalidTopLevel.list()), "InvalidWorkstreamsTopLevelError: bin/workstreams list --json --include-removed returned a non-array top-level value");
 
-  // doctest:L142
   const manyInvalid = createWorkstreamsCommandService({
     repoRoot: "/repo",
     commandRunner: async () => ({ stdout: JSON.stringify(Array.from({ length: 10 }, (_, index) => ({ ...cliRow(`bad-${index}`), branch: "" }))), stderr: "inventory anomaly" }),
   });
   const bounded = await manyInvalid.list();
-  t.check({ warnings: bounded.warnings.length, omitted: bounded.warnings.at(-2)?.message, stderr: bounded.warnings.at(-1)?.message }, {
-    warnings: 10,
-    omitted: "2 additional invalid workstream rows were omitted",
-    stderr: "inventory anomaly",
+  const invalidRow = (row: number) => ({
+    row,
+    name: `bad-${String(row)}`,
+    fields: ["branch"],
+    message: `Invalid workstream row ${String(row)} (bad-${String(row)}): branch`,
+  });
+  t.check(bounded, {
+    items: [],
+    warnings: [
+      ...Array.from({ length: 8 }, (_, row) => invalidRow(row)),
+      { row: null, name: null, fields: [], message: "2 additional invalid workstream rows were omitted" },
+      { row: null, name: null, fields: [], message: "inventory anomaly" },
+    ],
   });
 });
 
 // Execution failures contain a bounded, path-scrubbed detail instead of exposing
 // the checkout location.
 void test("Execution failures contain a bounded, path-scrubbed detail instead of exposin...", async (t) => {
-  // doctest:L155
   const failed = createWorkstreamsCommandService({
     repoRoot: "/Users/me/src/beebox",
     commandRunner: async () => {
@@ -210,7 +194,6 @@ void test("Every route, including health, requires the router-minted per-process
 });
 
 async function checkHealthCapability(t: Test): Promise<void> {
-  // doctest:L174
   const app = await buildApp({
     services: fakeServices(),
     routerCapability: "correct-capability",
@@ -256,7 +239,6 @@ async function checkTrpcList(t: Test): Promise<void> {
   // The tRPC query uses the same injected service and capability wall. Batching is
   // disabled so the outer router can classify each read or mutation independently.
 
-  // doctest:L201
   const row = cliRow("from-api");
   const apiApp = await buildApp({
     services: fakeServices([{
@@ -281,16 +263,14 @@ async function checkTrpcList(t: Test): Promise<void> {
     url: "/workstreams/api/trpc/workstreams.list",
     headers: { [ROUTER_CAPABILITY_HEADER]: "correct-capability" },
   });
-  t.check(
-    {
-      status: apiResponse.statusCode,
-      name: apiResponse.json().result.data.items[0].name,
-    },
-    {
+  t.check({ status: apiResponse.statusCode, data: apiResponse.json().result.data }, {
     status: 200,
-    name: "from-api",
-  },
-  );
+    data: {
+      items: [{ ...summary("from-api"), exhibits: [] }],
+      warnings: [],
+      exhibitsOrigin: "http://127.0.0.1:3230",
+    },
+  });
   await apiApp.close();
 }
 
@@ -300,7 +280,6 @@ async function checkExhibitJoin(t: Test): Promise<void> {
   // rows. A store the service could not read becomes a warning, so it never reads
   // as "no exhibits".
 
-  // doctest:L238
   const joinServices = fakeServices([summary("with-exhibits"), summary("without")]);
   joinServices.exhibits.inventory = async () => ({
     origin: "http://127.0.0.1:3230",
@@ -322,37 +301,28 @@ async function checkExhibitJoin(t: Test): Promise<void> {
   const joined = (await joinApp.inject({ method: "GET", url: "/workstreams/api/trpc/workstreams.list", headers: trpcHeaders })).json().result.data;
   const detailUrl = `/workstreams/api/trpc/workstreams.detail?input=${encodeURIComponent(JSON.stringify({ name: "with-exhibits" }))}`;
   const detail = (await joinApp.inject({ method: "GET", url: detailUrl, headers: trpcHeaders })).json().result.data;
-  t.check(
-    {
-      origin: joined.exhibitsOrigin,
-      withSlugs: joined.items[0].exhibits.map((exhibit: { slug: string }) => exhibit.slug),
-      withoutSlugs: joined.items[1].exhibits.map((exhibit: { slug: string }) => exhibit.slug),
-      warnings: joined.warnings.length,
-      detailSlugs: detail.exhibits.map((exhibit: { slug: string }) => exhibit.slug),
-      detailOrigin: detail.exhibitsOrigin,
+  const exhibits = [
+    { workstream: "with-exhibits", slug: "new", path: "/with-exhibits/new/", title: "New one", created: "2026-09-01T00:00:00Z", problem: null },
+    { workstream: "with-exhibits", slug: "old", path: "/with-exhibits/old/", title: "Old one", created: "2026-08-01T00:00:00Z", problem: null },
+    { workstream: "with-exhibits", slug: "broken", path: "/with-exhibits/broken/", title: null, created: null, problem: "broken manifest: created: Invalid input" },
+  ];
+  t.check({ joined, detail }, {
+    joined: {
+      items: [{ ...summary("with-exhibits"), exhibits }, { ...summary("without"), exhibits: [] }],
+      warnings: [],
+      exhibitsOrigin: "http://127.0.0.1:3230",
     },
-    {
-    origin: "http://127.0.0.1:3230",
-    withSlugs: [
-      "new",
-      "old",
-      "broken",
-    ],
-    withoutSlugs: [],
-    warnings: 0,
-    detailSlugs: [
-      "new",
-      "old",
-      "broken",
-    ],
-    detailOrigin: "http://127.0.0.1:3230",
-  },
-  );
+    detail: {
+      workstream: summary("with-exhibits"),
+      issues: [],
+      exhibits,
+      exhibitsOrigin: "http://127.0.0.1:3230",
+    },
+  });
   await joinApp.close();
 }
 
 async function checkProblemStore(t: Test): Promise<void> {
-  // doctest:L279
   const problemServices = fakeServices([summary("with-exhibits")]);
   problemServices.exhibits.inventory = async () => ({
     origin: "http://127.0.0.1:3230",
@@ -367,11 +337,12 @@ async function checkProblemStore(t: Test): Promise<void> {
     activeJobs: () => 0,
   });
   const problemList = (await problemApp.inject({ method: "GET", url: "/workstreams/api/trpc/workstreams.list", headers: trpcHeaders })).json().result.data;
-  t.check({ exhibits: problemList.items[0].exhibits.length, warnings: problemList.warnings.map((warning: { message: string }) => warning.message) }, {
-    exhibits: 0,
+  t.check(problemList, {
+    items: [{ ...summary("with-exhibits"), exhibits: [] }],
     warnings: [
-      "No exhibit store yet: /store has no marker file. Run bin/exhibits to create one.",
+      { row: null, name: null, fields: [], message: "No exhibit store yet: /store has no marker file. Run bin/exhibits to create one." },
     ],
+    exhibitsOrigin: "http://127.0.0.1:3230",
   });
   await problemApp.close();
 }
@@ -381,7 +352,6 @@ async function checkMutationActivity(t: Test): Promise<void> {
   // settles. This includes issue commits, not only long-running resume jobs, so the
   // supervisor cannot replace the backend during a write transaction.
 
-  // doctest:L302
   let saveStarted: (() => void) | undefined;
   let finishSave: (() => void) | undefined;
   const startedSaving = new Promise<void>((resolve) => { saveStarted = resolve; });
@@ -421,16 +391,10 @@ async function checkMutationActivity(t: Test): Promise<void> {
     url: "/workstreams/__internal/health",
     headers: { [ROUTER_CAPABILITY_HEADER]: "correct-capability" },
   });
-  t.check(
-    {
-      during: duringSave.json().activeJobs,
-      after: afterSave.json().activeJobs,
-    },
-    {
-    during: 3,
-    after: 2,
-  },
-  );
+  t.check({ during: duringSave.json(), after: afterSave.json() }, {
+    during: { status: "ready", activeJobs: 3, buildId: "build-42" },
+    after: { status: "ready", activeJobs: 2, buildId: "build-42" },
+  });
   await mutationApp.close();
 }
 

@@ -95,27 +95,21 @@ void test("Web-shaped input (no `source`) renders exactly as before, modulo cont
 
   // doctest:L87
   const lines = (await box.read(LOG_PATH)).trim().split("\n");
-  t.check(lines[0], str`${isoDate()} [error] Something broke`);
-
-  // doctest:L91
-  t.check(
+  t.check(lines, [
+    str`${isoDate()} [error] Something broke`,
     // CR/LF/tab all collapse to single spaces -- a crafted message can't forge
     // extra log lines.
-    lines[1],
     str`${isoDate()} [warn] multiline message with control chars`,
-  );
-
-  // doctest:L96
-  await t.checkText(lines.length, "2");
+  ]);
 
   // The in-memory ring buffer (`debugLog.get`) is untouched by the tagging
   // change when there's no `source`.
 
   // doctest:L104
   const got = await c.debugLog.get();
-  t.check(got.entries.map((e) => e.message), [
-    "Something broke",
-    "multiline message with control chars",
+  t.check(got.entries, [
+    { ts: isoDate(), level: "error", message: "Something broke" },
+    { ts: isoDate(), level: "warn", message: "multiline message with control chars" },
   ]);
 });
 
@@ -147,20 +141,20 @@ void test("iOS-shaped input: `source` tags every line; `at` only surfaces once i
 
   // doctest:L130
   const lines = (await box.read(LOG_PATH)).trim().split("\n");
-  t.check(lines[0], str`${isoDate()} [error] [ios] capture: upload failed`);
-
-  // doctest:L134
-  t.check(lines[1], str`${isoDate()} [warn] [ios@${isoDate()}] capture: retrying after failure`);
+  t.check(lines, [
+    str`${isoDate()} [error] [ios] capture: upload failed`,
+    str`${isoDate()} [warn] [ios@${staleAt}] capture: retrying after failure`,
+  ]);
 
   // The ring buffer entry's `message` carries the same `[source]`/`[source@<at>]`
   // tag baked in -- `debugLog.get` stays a flat `{ts,level,message}` shape.
 
   // doctest:L142
   const got = await c.debugLog.get();
-  await t.checkText(got.entries[0]?.message, "[ios] capture: upload failed");
-
-  // doctest:L146
-  t.check(got.entries[1]?.message.startsWith("[ios@"), true);
+  t.check(got.entries, [
+    { ts: isoDate(), level: "error", message: "[ios] capture: upload failed" },
+    { ts: isoDate(), level: "warn", message: `[ios@${staleAt}] capture: retrying after failure` },
+  ]);
 });
 
 // ## Caps and the closed level enum are enforced (`BAD_REQUEST`)
@@ -234,7 +228,7 @@ void test("A plain (non-strict) z.object -- old server against a newer client th
 
   // doctest:L205
   const lines = (await box.read(LOG_PATH)).trim().split("\n");
-  t.check(lines[0], str`${isoDate()} [error] [ios] still lands`);
+  t.check(lines, [str`${isoDate()} [error] [ios] still lands`]);
 });
 
 // ## A filesystem write failure makes the mutation reject (strict durability)
@@ -307,7 +301,7 @@ void test("Pins the non-batched tRPC HTTP-RPC shape a Swift URLSession POST actu
 
   // doctest:L267
   const line = (await server.read(LOG_PATH)).trim();
-  t.check(/^\S+ \[error] \[ios(@[^\]]+)?] capture: probe$/.test(line), true);
+  t.check(line, str`${isoDate()} [error] [ios@2026-08-03T12:00:00Z] capture: probe`);
 });
 
 // ## The shared golden fixtures POST verbatim and land
@@ -331,7 +325,7 @@ void test("test/mobile-contract/fixtures/debug-log-submit/ holds the same vector
   const fixtures = loadSubmitFixtures();
 
   // doctest:L289
-  await t.checkText(fixtures.length > 0, "true");
+  t.check(fixtures.map(({ file }) => file), ["capture-upload-failure.json", "mixed-level-batch.json"]);
 
   // doctest:L292
   await t.checkText(await postSubmitFixtures(server, fixtures), `capture-upload-failure.json 200 {"result":{"data":{"ok":true}}}
@@ -343,11 +337,5 @@ mixed-level-batch.json 200 {"result":{"data":{"ok":true}}}`);
   // doctest:L301
   const lines = (await server.read(LOG_PATH)).trim().split("\n");
   const expectedMessages = fixtures.flatMap(({ fixture }) => fixture.expected.entries);
-  await t.checkText(lines.length === expectedMessages.length, "true");
-
-  // doctest:L306
-  await t.checkText(lines.every((line, i) => line.endsWith(` ${expectedMessages[i].message}`)), "true");
-
-  // doctest:L309
-  await t.checkText(lines.every((line, i) => line.includes(`[${expectedMessages[i].level}] [ios@`)), "true");
+  t.check(lines, expectedMessages.map((entry) => str`${isoDate()} [${entry.level}] [ios@${entry.at}] ${entry.message}`));
 });

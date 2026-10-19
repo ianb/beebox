@@ -9,7 +9,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import {
   runHandle,
   formatHandlingLines,
@@ -82,7 +81,7 @@ void test("A bare procedure.ref resolves against the landmark's own directory; a
 
   // doctest:L74
   const { calls, results } = await handle(box);
-  t.check(({ calls, buckets: results.map((r) => ({ category: r.category, outcome: r.outcome })) }), {
+  t.check({ calls, results }, {
     calls: [
       {
         procedurePath: "_config/procedures/archive.procedure.card",
@@ -98,14 +97,18 @@ void test("A bare procedure.ref resolves against the landmark's own directory; a
         ],
       },
     ],
-    buckets: [
+    results: [
       {
         category: "receipts",
+        items: ["Lunch.doc.card"],
         outcome: "ran",
+        procedurePath: "_config/procedures/archive.procedure.card",
       },
       {
         category: "recipes",
+        items: ["Bread.doc.card", "Pasta.doc.card"],
         outcome: "ran",
+        procedurePath: "_content/recipes/archive.procedure.card",
       },
     ],
   });
@@ -134,17 +137,11 @@ void test("An empty bucket is reported as no-items, a category whose landmark na
 
   // doctest:L113
   const { calls, results } = await handle(box);
-  t.check(({ calls, buckets: results.map((r) => ({ category: r.category, outcome: r.outcome })) }), {
+  t.check({ calls, results }, {
     calls: [],
-    buckets: [
-      {
-        category: "notes",
-        outcome: "no-procedure",
-      },
-      {
-        category: "recipes",
-        outcome: "no-items",
-      },
+    results: [
+      { category: "notes", items: ["Item.doc.card"], outcome: "no-procedure" },
+      { category: "recipes", items: [], outcome: "no-items" },
     ],
   });
 });
@@ -166,10 +163,13 @@ void test("A handler whose work completed but whose review reached no verdict is
   // doctest:L131
   const box = await recipesBox();
   const { results } = await handle(box, { outcome: "inconclusive", detail: "review of step archive reached max turns (8)" });
-  t.check(({ buckets: results.map((r) => ({ outcome: r.outcome, detail: r.detail })), report: results.flatMap(formatHandlingLines) }), {
-    buckets: [
+  t.check({ results, report: results.flatMap(formatHandlingLines) }, {
+    results: [
       {
+        category: "recipes",
+        items: ["Bread.doc.card"],
         outcome: "procedure-inconclusive",
+        procedurePath: "_content/recipes/archive.procedure.card",
         detail: "review of step archive reached max turns (8)",
       },
     ],
@@ -195,27 +195,24 @@ void test("A handler whose work completed but whose review reached no verdict is
 // did neither — a wakeup script gating on it saw a green run in all three cases.
 // The verdict is the worst outcome present, in that order.
 void test("bbx handle used to exit 0 whether a handler failed, reached no verdict, or di...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L167
   const bucket = (category: string, outcome: CategoryHandling["outcome"]): CategoryHandling => ({ category, items: ["x"], outcome });
   const clean = [bucket("recipes", "ran"), bucket("receipts", "no-items")];
   const unjudged = [bucket("recipes", "ran"), { ...bucket("receipts", "procedure-inconclusive"), detail: "review of step file reached max turns (8)" }];
   const broken = [...unjudged, { ...bucket("notes", "procedure-failed"), detail: "step archive failed" }];
-  print(`${handleVerdict(clean)}, ${handleVerdict(unjudged)}, ${handleVerdict(broken)}`);
-  await t.checkText(out.with(print(describeHandleFailures(broken))), `ok, inconclusive, failed
-handler procedure failed for notes (step archive failed)`);
+  t.check([handleVerdict(clean), handleVerdict(unjudged), handleVerdict(broken)], ["ok", "inconclusive", "failed"]);
+  t.check(describeHandleFailures(broken), "handler procedure failed for notes (step archive failed)");
 
   // The stderr line an unjudged bucket prints is the scheduler's vocabulary, same
   // prefix and closing clause as a procedure run's:
 
   // doctest:L182
-  await t.checkText(out.with(print(formatHandleInconclusiveLine({ category: "receipts", detail: unjudged[1]?.detail ?? "" }))), "Inconclusive: handle receipts — review of step file reached max turns (8); work completed");
+  t.check(formatHandleInconclusiveLine({ category: "receipts", detail: unjudged[1]?.detail ?? "" }), "Inconclusive: handle receipts — review of step file reached max turns (8); work completed");
 
   // The CLI reads the results back across the untyped command boundary, so a
   // mis-shaped value can't become a silent clean exit — unknown outcomes are
   // dropped rather than trusted:
 
   // doctest:L191
-  await t.checkText(out.with(JSON.stringify(readHandlingResults([...unjudged, { category: "junk", outcome: "who-knows" }, "nope"]).map((r) => r.outcome))), "[\"ran\",\"procedure-inconclusive\"]");
+  t.check(readHandlingResults([...unjudged, { category: "junk", outcome: "who-knows" }, "nope"]), unjudged);
 });

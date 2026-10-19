@@ -12,13 +12,12 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str, printed } from "agent-doctest/check";
+import { any, str } from "agent-doctest/check";
 import { parseSessionLog, MAX_SESSION_LINE_BYTES } from "../../../src/cli/lib/session.js";
 import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
 import { writeGiantLineSessionLog } from "./session-log-fixture.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
-import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 
 // The threshold is far above any human-authored turn and far below the ~1.3 MB
@@ -39,8 +38,6 @@ void test("The threshold is far above any human-authored turn and far below the 
 // bounded parse and tsx together sit near 64 MB, and when a run near a cap dies
 // depends on GC timing — see `parse-under-heap-cap.ts`.)
 void test("40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64 inflati...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // Without the bound the same parse retained 30 MB, and under the old 64 MB cap
   // the child died:
   //
@@ -75,15 +72,14 @@ void test("40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64
 
   // doctest:L49
   const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 128 });
-  print(`entries: ${out.entries}`);
-  print(`total: ${out.total}`);
-  print(`stubs: ${out.stubs}`);
-  print(`stub sample: ${out.stubSample}`);
-  await t.checkText(out2.with(print(`retained under 8 MB: ${out.retainedMb < 8}`)), `entries: 120
-total: 120
-stubs: 20
-stub sample: [message too large to display: ~«int» KB]
-retained under 8 MB: true`);
+  t.check(out, {
+    entries: 120,
+    total: 120,
+    hasMore: false,
+    stubs: 20,
+    stubSample: str`[message too large to display: ~${any(String).matches(/^\d+$/)} KB]`,
+    retainedMb: any(Number).below(8),
+  });
 });
 
 // ## What a stub is, and what it is not
@@ -129,18 +125,14 @@ void test("A stub is a normal SessionEntry — there is no new SessionEntry.type
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 200 },
   });
-  t.check(result.entries.map((e) => ({ uuid: e.uuid, type: e.type, blocks: e.content.length })), [
-    {
-      uuid: "u1",
-      type: "user",
-      blocks: 1,
-    },
-    {
-      uuid: "a-huge",
-      type: "assistant",
-      blocks: 1,
-    },
-  ]);
+  t.check(result, {
+    entries: [
+    { uuid: "u1", type: "user", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "<typed>hello</typed>" }] },
+    { uuid: "a-huge", type: "assistant", timestamp: "2026-01-01T00:01:00Z", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] },
+  ],
+    total: 2,
+    hasMore: false,
+  });
 
   // `u-huge` is missing on purpose. It is a user turn whose only content is an
   // image, which `classifyUserEntry` drops as PDF-reading plumbing — and always
@@ -157,26 +149,11 @@ void test("A stub is a normal SessionEntry — there is no new SessionEntry.type
   // like the entry it stands for:
 
   // doctest:L142
-  t.check(result.entries[1], {
-    uuid: "a-huge",
-    type: "assistant",
-    timestamp: "2026-01-01T00:01:00Z",
-    content: [
-      {
-        type: "text",
-        text: str`[message too large to display: ~${any(String).matches(/^-?\d+$/)} KB]`,
-      },
-    ],
-  });
 
   // A stub counts as **one displayable entry** toward `total`, so `total`/`hasMore`
   // stay honest about how much transcript exists:
 
   // doctest:L150
-  t.check({ total: result.total, hasMore: result.hasMore }, {
-    total: 2,
-    hasMore: false,
-  });
 
   // A stub is **never** a real user message, even when the line it replaced was a
   // typed one — the tail-window floor (`minRealUserMessages`) stays anchored to
@@ -198,10 +175,11 @@ void test("A stub is a normal SessionEntry — there is no new SessionEntry.type
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 1, minRealUserMessages: 2 },
   });
-  t.check({ entries: widened.entries.length, real: widened.entries.filter(isRealUserMessage).length }, {
-    entries: 2,
-    real: 1,
-  });
+  t.check(widened.entries, [
+    { uuid: "u1", type: "user", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "<typed>hello</typed>" }] },
+    { uuid: "a-huge", type: "assistant", timestamp: "2026-01-01T00:01:00Z", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] },
+  ]);
+  t.check(widened.entries.map(isRealUserMessage), [true, false]);
 });
 
 // ## Oversize plumbing is dropped, not shown
@@ -263,12 +241,7 @@ void test("The length check runs before buildEntry, so without care an oversize 
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 200 },
   });
-  t.check({ uuids: result.entries.map((e) => e.uuid), total: result.total }, {
-    uuids: [
-      "u1",
-    ],
-    total: 1,
-  });
+  t.check(result, { entries: [{ uuid: "u1", type: "user", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "<typed>hello</typed>" }] }], total: 1, hasMore: false });
 
   // A shape the sniff does not recognize still becomes a stub. An unexplained gap in
   // the transcript is the worse failure, so the fallback is visible rather than
@@ -282,12 +255,7 @@ void test("The length check runs before buildEntry, so without care an oversize 
     logPath: box.path("mystery.jsonl"),
     slice: { mode: "tail", tail: 200 },
   });
-  t.check(mystery.entries.map((e) => ({ type: e.type, uuid: e.uuid })), [
-    {
-      type: "assistant",
-      uuid: "oversize-1",
-    },
-  ]);
+  t.check(mystery.entries, [{ uuid: "oversize-1", type: "assistant", timestamp: "", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] }]);
 
   // Two mystery lines in the same file get distinct fallback ids, so they don't
   // collide:
@@ -301,9 +269,9 @@ void test("The length check runs before buildEntry, so without care an oversize 
     logPath: box.path("mystery2.jsonl"),
     slice: { mode: "tail", tail: 200 },
   });
-  t.check(mystery2.entries.map((e) => e.uuid), [
-    "oversize-1",
-    "oversize-2",
+  t.check(mystery2.entries, [
+    { uuid: "oversize-1", type: "assistant", timestamp: "", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] },
+    { uuid: "oversize-2", type: "assistant", timestamp: "", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] },
   ]);
 
   // The threshold is UTF-8 bytes, not characters, so a payload of multi-byte
@@ -322,9 +290,7 @@ void test("The length check runs before buildEntry, so without care an oversize 
     logPath: box.path("cjk.jsonl"),
     slice: { mode: "tail", tail: 200 },
   });
-  t.check(wide.entries.map((e) => e.content[0]?.text), [
-    "[message too large to display: ~293 KB]",
-  ]);
+  t.check(wide.entries, [{ uuid: "cjk", type: "assistant", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "[message too large to display: ~293 KB]" }] }]);
 });
 
 // ## An oversize tool call loses its grafted result
@@ -368,11 +334,7 @@ void test("graftToolResults matches a toolresult to the tooluse block of a recen
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 200 },
   });
-  t.check(result.entries.map((e) => e.content.map((b) => b.type)), [
-    [
-      "text",
-    ],
-  ]);
+  t.check(result.entries, [{ uuid: "a1", type: "assistant", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] }]);
 });
 
 // ## Image payloads are dropped, not the turn
@@ -388,9 +350,6 @@ void test("graftToolResults matches a toolresult to the tooluse block of a recen
 // The bytes are the problem; the turn is not. So an oversize line has its base64
 // payloads removed and is then parsed like any other.
 void test("The byte bound was written for \"capture-image and tool payloads\" — pathologic...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L349
   const box2 = await makeTmpBox();
   const logPath2 = box2.path("photo-turn.jsonl");
 
@@ -414,20 +373,22 @@ void test("The byte bound was written for \"capture-image and tool payloads\" �
 
   // doctest:L369
   const parsed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
-  const entry = parsed.entries[0];
-  assert.ok(entry);
-  const text = entry.content.filter((b) => b.type === "text").map((b) => b.text).join(" | ");
-  print(`oversize: ${Buffer.byteLength(turn, "utf8") > MAX_SESSION_LINE_BYTES}`);
-  print(`entries: ${parsed.entries.length}`);
-  print(`stubbed: ${text.includes("too large to display")}`);
-  print(`keeps what they typed: ${text.includes("here is the drawer")}`);
-  print(`image bytes kept: ${entry.content.some((b) => b.type === "image" && b.dataBase64)}`);
-  await t.checkText(out2.with(print(`points at the image: ${JSON.stringify(entry.content.filter((b) => b.type === "image"))}`)), `oversize: true
-entries: 1
-stubbed: false
-keeps what they typed: true
-image bytes kept: false
-points at the image: [{"type":"image","imageRef":"photo-turn/uuid-1/0","mediaType":"image/jpeg"}]`);
+  t.check(Buffer.byteLength(turn, "utf8"), any(Number).between(MAX_SESSION_LINE_BYTES + 1, Infinity));
+  t.check(parsed, {
+    entries: [{
+      uuid: "uuid-1",
+      type: "user",
+      timestamp: "2026-08-22T21:12:00.000Z",
+      content: [
+        { type: "text", text: "<typed user=\"Rosa Okafor\" user-email=\"rosa@example.com\">here is the drawer</typed>" },
+        { type: "image", imageRef: "photo-turn/uuid-1/0", mediaType: "image/jpeg" },
+      ],
+      user: "Rosa Okafor",
+      userEmail: "rosa@example.com",
+    }],
+    total: 1,
+    hasMore: false,
+  });
 
   // A turn can carry both kinds of image at once — a photo that was stripped, and
   // one whose bytes never arrived. They are different facts and get different
@@ -455,7 +416,20 @@ points at the image: [{"type":"image","imageRef":"photo-turn/uuid-1/0","mediaTyp
 
   // doctest:L412
   const mixed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
-  await t.checkText(out2.with(JSON.stringify(mixed.entries[0]?.content.filter((b) => b.type !== "text" || b.text?.includes("image")))), "[{\"type\":\"image\",\"imageRef\":\"photo-turn/uuid-2/0\",\"mediaType\":\"image/jpeg\"},{\"type\":\"text\",\"text\":\"[image not displayed]\"}]");
+  t.check(mixed, {
+    entries: [{
+      uuid: "uuid-2",
+      type: "user",
+      timestamp: "2026-08-22T21:14:00.000Z",
+      content: [
+        { type: "text", text: "<typed>one of these did not upload</typed>" },
+        { type: "image", imageRef: "photo-turn/uuid-2/0", mediaType: "image/jpeg" },
+        { type: "text", text: "[image not displayed]" },
+      ],
+    }],
+    total: 1,
+    hasMore: false,
+  });
 });
 
 // The person's words survive, in order, in a real entry. The bytes still do not

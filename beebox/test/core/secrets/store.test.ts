@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate, str } from "agent-doctest/check";
 import { mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -38,8 +38,6 @@ async function useTempStore() {
 // Adding a secret and granting it are separate acts — adding makes the name
 // grantable machine-wide, granting is the per-box opt-in.
 void test("Adding a secret and granting it are separate acts — adding makes the name gra...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -52,34 +50,51 @@ void test("Adding a secret and granting it are separate acts — adding makes th
   await setSecret({ name: "mistral", value: "placeholder-value-1", note: "transcription" });
   await grantSecret({ slug: "demo-box", name: "mistral", access: "server" });
   const loaded = await loadSecretStore();
-  print(`loaded: ${loaded.ok}`);
-  print(`grant: ${loaded.ok ? loaded.value.grants["demo-box"]?.["mistral"] : "-"}`);
-  await t.checkText(out.with(print(`mode: ${((await stat(secretsFilePath())).mode & 0o777).toString(8)}`)), `loaded: true
-grant: server
-mode: 600`);
+  t.check(loaded, {
+    ok: true,
+    value: {
+      secrets: { mistral: { value: "placeholder-value-1", note: "transcription", updated: isoDate() } },
+      grants: { "demo-box": { mistral: "server" } },
+      cloudflarePublishConnections: {},
+      cloudflarePublishBindings: {},
+    },
+  });
+  t.check((await stat(secretsFilePath())).mode & 0o777, 0o600);
 
   // `list` returns metadata only — a value never leaves the store through it:
 
   // doctest:L57
   const listing = await listSecrets();
-  print(`name: ${listing[0]?.name}`);
-  print(`hasValue: ${listing[0]?.hasValue}`);
-  print(`note: ${listing[0]?.note}`);
-  print(`grants: ${JSON.stringify(listing[0]?.grants)}`);
-  await t.checkText(out.with(print(`leaks the value: ${JSON.stringify(listing).includes("placeholder-value-1")}`)), `name: mistral
-hasValue: true
-note: transcription
-grants: {"demo-box":"server"}
-leaks the value: false`);
+  t.check(listing, [
+    {
+      name: "mistral",
+      hasValue: true,
+      note: "transcription",
+      updated: isoDate(),
+      formatHint: undefined,
+      verified: undefined,
+      owningBox: undefined,
+      shareable: undefined,
+      declaredBy: undefined,
+      grants: { "demo-box": "server" },
+      lastUsed: undefined,
+      uses: {
+        builtin: [
+          "audio transcription (Voxtral — recordings and live chat dictation)",
+          "Mistral API calls from box views, through the server-side adapter",
+        ],
+        declared: [],
+        observed: [],
+      },
+    },
+  ]);
 
   // A missing store file is an EMPTY store, not an error — the first-run case:
 
   // doctest:L74
   await rm(secretsFilePath());
   const empty = await loadSecretStore();
-  print(`ok: ${empty.ok}`);
-  await t.checkText(out.with(print(`secrets: ${empty.ok ? Object.keys(empty.value.secrets).length : "-"}`)), `ok: true
-secrets: 0`);
+  t.check(empty, { ok: true, value: { secrets: {}, grants: {}, cloudflarePublishConnections: {}, cloudflarePublishBindings: {} } });
 });
 
 // ## A corrupt store fails closed
@@ -88,8 +103,6 @@ secrets: 0`);
 // the schema — makes the whole machine read as "no grants" rather than degrading
 // to a partial parse. Mutating operations refuse rather than overwrite it.
 void test("A hand-edit that leaves invalid JSON — or a file that parses but does not mat...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -101,15 +114,12 @@ void test("A hand-edit that leaves invalid JSON — or a file that parses but do
   const dir = await useTempStore();
   await writeFile(secretsFilePath(), "{ not json");
   const broken = await loadSecretStore();
-  print(`ok: ${broken.ok}`);
-  print(`detail starts: ${broken.ok ? "-" : broken.error.slice(0, 12)}`);
+  t.check(broken, { ok: false, error: str`invalid JSON (${any(String)})` });
 
   // doctest:L100
   await writeFile(secretsFilePath(), JSON.stringify({ secrets: { x: { value: 3 } } }));
   const invalid = await loadSecretStore();
-  await t.checkText(out.with(print(`schema ok: ${invalid.ok}`)), `ok: false
-detail starts: invalid JSON
-schema ok: false`);
+  t.check(invalid, { ok: false, error: str`does not match the store schema (${any(String)})` });
 
   // doctest:L110
   await t.checkThrows(async () => (await listSecrets()), "SecretStoreAccessError");
@@ -123,8 +133,6 @@ schema ok: false`);
 // `declare` is the agent's surface: it creates an empty, ungranted slot and can
 // neither supply a value nor grant it. `status` is scoped to one box.
 void test("declare is the agent's surface:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -134,23 +142,27 @@ void test("declare is the agent's surface:", async (t) => {
   });
   // doctest:L127
   const dir = await useTempStore();
-  print(`created: ${(await declareSecret({ name: "weatherapi", note: "for a trick" })).created}`);
-  print(`again: ${(await declareSecret({ name: "weatherapi" })).created}`);
+  t.check(await declareSecret({ name: "weatherapi", note: "for a trick" }), { created: true });
+  t.check(await declareSecret({ name: "weatherapi" }), { created: false });
   await grantSecret({ slug: "demo-box", name: "weatherapi", access: "agent" });
   await setSecret({ name: "mistral", value: "placeholder-value-3" });
   await grantSecret({ slug: "demo-box", name: "mistral", access: "server" });
   const status = await boxSecretStatus("demo-box");
-  await t.checkText(
-    out.with(// Each granted row also carries `uses` (why the secret exists) — that is
-    // `uses.doctest.md`'s subject, projected away here to keep this shape readable.
-    print(JSON.stringify({
-      ...status,
-      granted: status.granted.map((grant) => ({ name: grant.name, access: grant.access, hasValue: grant.hasValue })),
-    }))),
-    `created: true
-again: false
-{"slug":"demo-box","granted":[{"name":"mistral","access":"server","hasValue":true},{"name":"weatherapi","access":"agent","hasValue":false}],"emptySlots":["weatherapi"],"danglingGrants":[],"declaredHere":[]}`,
-  );
+  // Each granted row also carries `uses` (why the secret exists) — that is
+  // `uses.test.ts`'s subject, projected away here to keep this shape readable.
+  t.check({
+    ...status,
+    granted: status.granted.map((grant) => ({ name: grant.name, access: grant.access, hasValue: grant.hasValue })),
+  }, {
+    slug: "demo-box",
+    granted: [
+      { name: "mistral", access: "server", hasValue: true },
+      { name: "weatherapi", access: "agent", hasValue: false },
+    ],
+    emptySlots: ["weatherapi"],
+    danglingGrants: [],
+    declaredHere: [],
+  });
 
   // `declaredHere` is the other half of a box's view: slots that box declared and
   // holds no grant for yet — empty here because nothing recorded a `declaredBy`
@@ -161,10 +173,9 @@ again: false
 
   // doctest:L154
   await removeSecret("mistral");
-  print(JSON.stringify((await boxSecretStatus("demo-box")).danglingGrants));
+  t.check((await boxSecretStatus("demo-box")).danglingGrants, ["mistral"]);
   await revokeSecret({ slug: "demo-box", name: "mistral" });
-  await t.checkText(out.with(print(JSON.stringify((await boxSecretStatus("demo-box")).danglingGrants))), `["mistral"]
-[]`);
+  t.check((await boxSecretStatus("demo-box")).danglingGrants, []);
 
   // Revoking a grant the box does not hold is an error, not a silent no-op:
 
@@ -177,8 +188,6 @@ again: false
 // A bucket-scoped publish token works for one bucket only, so a second grant would not
 // merely be unwise — it would break the box that already uses it.
 void test("A bucket-scoped publish token works for one bucket only, so a second grant wo...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -195,7 +204,9 @@ void test("A bucket-scoped publish token works for one bucket only, so a second 
     shareable: false,
   });
   await grantSecret({ slug: "demo-box", name: "bucket-token/demo-box", access: "server" });
-  await t.checkText(out.with(print(`owner granted: ${(await boxSecretStatus("demo-box")).granted.length}`)), "owner granted: 1");
+  t.check((await boxSecretStatus("demo-box")).granted, [
+    { name: "bucket-token/demo-box", access: "server", hasValue: true, uses: { builtin: [], declared: [], observed: [] } },
+  ]);
 
   // doctest:L193
   await t.checkThrows(async () => (await grantSecret({ slug: "other-box", name: "bucket-token/demo-box", access: "server" })), "SecretNotShareableError: The secret \"bucket-token/demo-box\" is marked single-box (it belongs to \"demo-box\") and cannot also be granted to \"other-box\". Some credentials bind to one box structurally — a bucket-scoped publish token works for one bucket only — so sharing one would break the box already using it. Create a separate secret for this box.");
@@ -243,5 +254,5 @@ void test("A bucket-scoped publish token works for one bucket only, so a second 
     slug: "demo-box",
     access: "server",
   });
-  await t.checkText(out.with(JSON.stringify((await listSecrets()).map((entry) => [entry.name, entry.owningBox, Object.keys(entry.grants)]))), "[[\"bucket-token/demo-box\",\"demo-box\",[\"demo-box\"]]]");
+  t.check((await listSecrets()).map((entry) => [entry.name, entry.owningBox, Object.keys(entry.grants)]), [["bucket-token/demo-box", "demo-box", ["demo-box"]]]);
 });

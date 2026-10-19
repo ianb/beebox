@@ -144,17 +144,17 @@ void test("The object-URL revoke timing (thumbnail freed on the non-indicator pa
   let state: ScreenshotState = { queue: [], indicators: [] };
   state = screenshotReducer(state, { type: "enqueue", request: req("a") });
   state = screenshotReducer(state, { type: "enqueue", request: req("b") });
-  t.check(state.queue.map((r) => r.requestId).join(","), "a,b");
+  t.check(state, { queue: [{ requestId: "a", session: "s1", expiresAt: "2999-01-01T00:00:00Z" }, { requestId: "b", session: "s1", expiresAt: "2999-01-01T00:00:00Z" }], indicators: [] });
 
   // doctest:L127
   state = screenshotReducer(state, { type: "resolveHead", indicator: null });
-  t.check(state.queue.map((r) => r.requestId).join(","), "b");
+  t.check(state, { queue: [{ requestId: "b", session: "s1", expiresAt: "2999-01-01T00:00:00Z" }], indicators: [] });
 
   // A redelivered request (same `requestId`) never stacks a second popup.
 
   // doctest:L135
   state = screenshotReducer(state, { type: "enqueue", request: req("b") });
-  await t.checkText(state.queue.length, "1");
+  t.check(state, { queue: [{ requestId: "b", session: "s1", expiresAt: "2999-01-01T00:00:00Z" }], indicators: [] });
 });
 
 // ## Resolving with an indicator records the ephemeral row; dismiss removes it
@@ -166,18 +166,13 @@ void test("resolveHead with an indicator both pops the queue and appends the \"s
   // doctest:L147
   let s: ScreenshotState = { queue: [req("x")], indicators: [] };
   s = screenshotReducer(s, { type: "resolveHead", indicator: { requestId: "x", thumbnailUrl: "blob:x" } });
-  t.check({ queue: s.queue.length, indicators: s.indicators.map((i) => i.requestId) }, {
-    queue: 0,
-    indicators: [
-      "x",
-    ],
-  });
+  t.check(s, { queue: [], indicators: [{ requestId: "x", thumbnailUrl: "blob:x" }] });
 
   // doctest:L152
   s = screenshotReducer(s, { type: "addIndicator", indicator: { requestId: "y", thumbnailUrl: "blob:y" } });
-  t.check(s.indicators.map((i) => i.requestId).join(","), "x,y");
+  t.check(s, { queue: [], indicators: [{ requestId: "x", thumbnailUrl: "blob:x" }, { requestId: "y", thumbnailUrl: "blob:y" }] });
 
   // doctest:L156
   s = screenshotReducer(s, { type: "dismissIndicator", requestId: "x" });
-  t.check(s.indicators.map((i) => i.requestId).join(","), "y");
+  t.check(s, { queue: [], indicators: [{ requestId: "y", thumbnailUrl: "blob:y" }] });
 });

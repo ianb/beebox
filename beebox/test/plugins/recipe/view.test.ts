@@ -17,6 +17,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -94,30 +95,16 @@ void test("params.path names the card, and the view finds it in cards.", async (
   // doctest:L87
   const html = await renderRecipe(box, { path: CARD_PATH });
   const text = html.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, "");
-  t.check(
-    [
-      text.includes("4 servings"),
-      text.includes("2 cups"),
-      text.includes("1 tsp"),
-      text.includes("in."),
-      text.includes("Use whole wheat."),
-      text.includes("Sauce"),
-      text.includes("Marinara"),
-      html.includes("Marinara.recipe.card"),
-      html.includes("{%"),
-    ],
-    [
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    true,
-    false,
-  ],
-  );
+  // The page is generated HTML, so each check keeps the one fragment it names.
+  t.check(text, any(String).includes("4 servings"));
+  t.check(text, any(String).includes("2 cups"));
+  t.check(text, any(String).includes("1 tsp"));
+  t.check(text, any(String).includes("in."));
+  t.check(text, any(String).includes("Use whole wheat."));
+  t.check(text, any(String).includes("Sauce"));
+  t.check(text, any(String).includes("Marinara"));
+  t.check(html, any(String).includes("Marinara.recipe.card"));
+  t.check(html, not(any(String).includes("{%")));
 
   // ## A scaled range yield renders its numbers, not an object
   //
@@ -130,14 +117,12 @@ void test("params.path names the card, and the view finds it in cards.", async (
   const scaledYield = renderToString(createElement(RecipeScaleContext.Provider, { value: 2 },
     createElement(RecipeYield, { amount: "2-3" }, "2-3 servings")));
   const scaledText = scaledYield.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, "");
-  t.check([scaledText.includes("4–6 servings"), scaledText.includes("[object Object]")], [
-    true,
-    false,
-  ]);
+  t.check(scaledText, any(String).includes("4–6 servings"));
+  t.check(scaledText, not(any(String).includes("[object Object]")));
 
   // ## Without a matching card the view says so
 
   // doctest:L121
   const bare = await renderRecipe(box, {});
-  await t.checkText(bare.includes("This recipe card is not available."), "true");
+  t.check(bare, any(String).includes("This recipe card is not available."));
 });

@@ -84,20 +84,16 @@ void test("Box-root-absolute is canonical; so is a card's attach/ scope, an exte
   const from = { fromPath: "_content/store/notes/Meeting.doc.card", kind: "card" } as const;
 
   // doctest:L86
-  t.check(checkCanonicalRef({ ref: "/_content/store/notes/Plan.doc.card", ...from }).status, "canonical");
+  t.check(checkCanonicalRef({ ref: "/_content/store/notes/Plan.doc.card", ...from }), { status: "canonical" });
 
   // doctest:L89
-  t.check(checkCanonicalRef({ ref: "attach/photo.jpg", ...from }).status, "canonical");
+  t.check(checkCanonicalRef({ ref: "attach/photo.jpg", ...from }), { status: "canonical" });
 
   // doctest:L92
-  t.check(
-    checkCanonicalRef({ ref: "https://example.com/x", ...from }).status
-    ,
-    "canonical",
-  );
+  t.check(checkCanonicalRef({ ref: "https://example.com/x", ...from }), { status: "canonical" });
 
   // doctest:L95
-  t.check(checkCanonicalRef({ ref: "#risks", ...from }).status, "canonical");
+  t.check(checkCanonicalRef({ ref: "#risks", ...from }), { status: "canonical" });
 
   // doctest:L98
   t.check(checkCanonicalRef({ ref: "../people/Dana.person.card?view=card", ...from }), {
@@ -114,10 +110,13 @@ void test("Box-root-absolute is canonical; so is a card's attach/ scope, an exte
 // namespace fence, `docs/implemented-plans/one-root-box-layout.md`).
 void test("A .md dossier owns no attach scope, so attach/x there is a literal subdirecto...", async (t) => {
   // doctest:L110
-  t.check(checkCanonicalRef({ ref: "attach/photo.jpg", fromPath: "_content/docs/guide.md", kind: "markdown" }).status, "rewritable");
+  t.check(checkCanonicalRef({ ref: "attach/photo.jpg", fromPath: "_content/docs/guide.md", kind: "markdown" }), {
+    status: "rewritable",
+    canonical: "/_content/docs/attach/photo.jpg",
+  });
 
   // doctest:L113
-  t.check(checkCanonicalRef({ ref: "../../escape.md", fromPath: "_content/docs/guide.md", kind: "markdown" }).status, "escapes");
+  t.check(checkCanonicalRef({ ref: "../../escape.md", fromPath: "_content/docs/guide.md", kind: "markdown" }), { status: "escapes" });
 });
 
 // ## Report mode flags card refs with their rewrite
@@ -150,7 +149,18 @@ Non-canonical ref at refs[2]: ../people/Missing.person.card → /_content/store/
     [box.path("_content/store/notes/Meeting.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(quiet.results[0]!.warnings.map((w) => w.type).join(","), "canonical,reference");
+  t.check(quiet.results[0]!.warnings, [
+    {
+      type: "canonical",
+      severity: "warning",
+      message: "Non-canonical ref at body:1:link: Plan.doc.card?view=ledger → /_content/store/notes/Plan.doc.card?view=ledger",
+    },
+    {
+      type: "reference",
+      severity: "warning",
+      message: "Broken reference at refs[2]: ../people/Missing.person.card does not exist",
+    },
+  ]);
 
   // ## Report mode flags dossier links as their own bucket
   //
@@ -232,22 +242,21 @@ Also [missing](../store/notes/Gone.doc.card) and [outside](../../escape.md).`);
     { boxRoot: box.root, ctx, canonical: true },
   );
   const afterDossier = await collectDossierCanonicalWarnings([box.path("_content/docs/guide.md")], box.root);
-  await t.checkText(
-    JSON.stringify(
-      canonicalCounts({ cardSummary: after, viewWarnings: [], dossierWarnings: afterDossier }),
-    ),
-    "{\"refs\":1,\"dossierLinks\":2}",
-  );
+  t.check(canonicalCounts({ cardSummary: after, viewWarnings: [], dossierWarnings: afterDossier }), { refs: 1, dossierLinks: 2 });
 
   // Running `--fix` again is a no-op — nothing left that both resolves and is
   // relative:
 
   // doctest:L246
   const again = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
-  t.check({ refs: again.refsRewritten, links: again.dossierLinksRewritten, files: again.filesChanged }, {
-    refs: 0,
-    links: 0,
-    files: 0,
+  t.check(again, {
+    refsRewritten: 0,
+    dossierLinksRewritten: 0,
+    refsRepaired: 0,
+    dossierLinksRepaired: 0,
+    ambiguous: 0,
+    filesChanged: 0,
+    skipped: 3,
   });
 
   // doctest:L252
@@ -271,9 +280,13 @@ void test("inlineLinkPattern's label class matches newlines, so validate — whi
     "---\ntype: doc\ntitle: Wrapped\n---\nSee [the long-awaited\nplan](Plan.doc.card) for details.\n",
   );
   const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
-  t.check({ refs: fixed.refsRewritten, files: fixed.filesChanged, skipped: fixed.skipped }, {
-    refs: 1,
-    files: 1,
+  t.check(fixed, {
+    refsRewritten: 1,
+    dossierLinksRewritten: 0,
+    refsRepaired: 0,
+    dossierLinksRepaired: 0,
+    ambiguous: 0,
+    filesChanged: 1,
     skipped: 0,
   });
 
@@ -359,9 +372,11 @@ void test("ref:", async (t) => {
     [box.path("_content/store/notes/Empty.doc.card")],
     { boxRoot: box.root, ctx, canonical: true },
   );
-  await t.checkText(report.results[0]?.warnings.map((w) => `${w.type}: ${w.message}`).join("\n"), `reference: Broken reference at ref:  does not exist
-reference: Broken reference at refs[0]: #only does not exist
-reference: Broken reference at refs[1]: ?view=only does not exist`);
+  await t.check(report.results[0]?.warnings, [
+    { type: "reference", severity: "warning", message: "Broken reference at ref:  does not exist" },
+    { type: "reference", severity: "warning", message: "Broken reference at refs[0]: #only does not exist" },
+    { type: "reference", severity: "warning", message: "Broken reference at refs[1]: ?view=only does not exist" },
+  ]);
 
   // None of the three is canonical-rewritable — there is no target to re-express
   // from the box root, and `--fix` leaves the card untouched:
@@ -374,9 +389,13 @@ reference: Broken reference at refs[1]: ?view=only does not exist`);
 
   // doctest:L371
   const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
-  t.check({ refs: fixed.refsRewritten, files: fixed.filesChanged, skipped: fixed.skipped }, {
-    refs: 0,
-    files: 0,
+  t.check(fixed, {
+    refsRewritten: 0,
+    dossierLinksRewritten: 0,
+    refsRepaired: 0,
+    dossierLinksRepaired: 0,
+    ambiguous: 0,
+    filesChanged: 0,
     skipped: 0,
   });
 

@@ -87,11 +87,20 @@ void test("An empty box: no models, no key", async (t) => {
   clearBoxConfigCache(server.boxRoot);
   const listed = (await caller(server).admin.openrouterModels()).models[0];
   assert.ok(listed);
-  t.check([listed.id, listed.label, listed.catalog.ok && listed.catalog.found && listed.catalog.model.pricing.promptPerMTok], [
-    "moonshotai/kimi-k2-0905:exacto",
-    "Kimi K2",
-    0.6,
-  ]);
+  t.check(listed, {
+    id: "moonshotai/kimi-k2-0905:exacto",
+    label: "Kimi K2",
+    catalog: {
+      ok: true,
+      found: true,
+      model: {
+        name: "MoonshotAI: Kimi K2 0905",
+        contextLength: 262144,
+        supportsTools: true,
+        pricing: { promptPerMTok: 0.6, completionPerMTok: 2.5, cacheReadPerMTok: null },
+      },
+    },
+  });
 
   // ## The added model can be the box default, and then cannot be removed
 
@@ -126,7 +135,7 @@ void test("An empty box: no models, no key", async (t) => {
   clearBoxConfigCache(server.boxRoot);
   await caller(server).admin.removeOpenrouterModel({ id: "moonshotai/kimi-k2-0905:exacto" });
   clearBoxConfigCache(server.boxRoot);
-  await t.checkText((await caller(server).admin.openrouterModels()).models.length, "0");
+  t.check((await caller(server).admin.openrouterModels()).models, []);
 
   // ## With a key: the key's usage, and the picker sees added models
   //
@@ -136,7 +145,7 @@ void test("An empty box: no models, no key", async (t) => {
   // doctest:L136
   await caller(server).admin.addOpenrouterModel({ id: "qwen/qwen3-coder", label: "Qwen3 Coder" });
   clearBoxConfigCache(server.boxRoot);
-  await t.checkText((await caller(server).chat.status({})).addedModels.length, "0");
+  t.check((await caller(server).chat.status({})).addedModels, []);
 
   // doctest:L141
   await setSecret({ name: "openrouter", value: "placeholder-openrouter-key" });
@@ -150,9 +159,9 @@ void test("An empty box: no models, no key", async (t) => {
 
   // doctest:L146
   const withKey = await caller(server).admin.openrouterModels();
-  t.check([withKey.keyGranted, withKey.usage], [
-    true,
-    {
+  t.check(withKey, {
+    keyGranted: true,
+    usage: {
       ok: true,
       usage: {
         totalUsd: 4.753326683,
@@ -162,7 +171,23 @@ void test("An empty box: no models, no key", async (t) => {
         limitReset: "monthly",
       },
     },
-  ]);
+    models: [
+      {
+        id: "qwen/qwen3-coder",
+        label: "Qwen3 Coder",
+        catalog: {
+          ok: true,
+          found: true,
+          model: {
+            name: "Qwen: Qwen3 Coder 480B A35B",
+            contextLength: 262144,
+            supportsTools: true,
+            pricing: { promptPerMTok: 0.3, completionPerMTok: 1, cacheReadPerMTok: 0.1 },
+          },
+        },
+      },
+    ],
+  });
 
   // ## Owner only
 

@@ -29,14 +29,12 @@ async function rm(box: TmpBox, args: Record<string, unknown>) {
 
 // ## Dry run: reports, mutates nothing
 void test("Dry run: reports, mutates nothing", async (t) => {
-  // doctest:L33
   const box = await makeTmpBox();
   await box.write(
     "_content/box/notes/Engine.doc.card",
     "---\ntype: doc\ntitle: Engine\n---\nBody.\n",
   );
 
-  // doctest:L39
   const dry = await rm(box, { paths: ["_content/box/notes/Engine.doc.card"], dryRun: true });
   t.check(dry.data, {
     dryRun: true,
@@ -51,28 +49,23 @@ void test("Dry run: reports, mutates nothing", async (t) => {
 
   // The card is still in place:
 
-  // doctest:L47
   t.check(await box.list("_content/box/notes"), "_content/box/notes/Engine.doc.card");
 
   // A dry run against a missing card fails without creating anything:
 
-  // doctest:L54
   const missing = await rm(box, { paths: ["_content/box/notes/Nope.doc.card"], dryRun: true });
-  t.check(missing.success, false);
-
-  // doctest:L58
-  t.check(missing.error, "Card not found: _content/box/notes/Nope.doc.card");
+  t.check(missing, { success: false, error: "Card not found: _content/box/notes/Nope.doc.card" });
 
   // ## Real run: the card moves to trash
 
-  // doctest:L65
   const real = await rm(box, { paths: ["_content/box/notes/Engine.doc.card"] });
-  t.check(real.success, true);
+  t.check(real, {
+    success: true,
+    data: { sourcePath: "_content/box/notes/Engine.doc.card", destPath: "_bookkeeping/trash/Engine.doc.card", relatedFiles: [], inboundRefs: [] },
+  });
 
-  // doctest:L69
   t.check(await ls(box, "_bookkeeping/trash"), "_bookkeeping/trash/Engine.doc.card");
 
-  // doctest:L72
   t.check(await box.list("_content/box/notes"), "");
 
   // ## Round-8 hardening finding 4: a symlinked trash directory refuses, nothing moves
@@ -83,27 +76,23 @@ void test("Dry run: reports, mutates nothing", async (t) => {
   // destination is now resolved through the box-namespace fence's on-disk check
   // before any rename.
 
-  // doctest:L85
   const escapeBox = await makeTmpBox();
   await escapeBox.write("_content/box/notes/Escape.doc.card", "---\ntype: doc\ntitle: Escape\n---\nBody.\n");
   await fs.rm(path.join(escapeBox.root, "_bookkeeping", "trash"), { recursive: true, force: true });
   await fs.symlink("../src", path.join(escapeBox.root, "_bookkeeping", "trash"));
 
-  // doctest:L90
   const escapeResult = await rm(escapeBox, { paths: ["_content/box/notes/Escape.doc.card"] });
-  t.check(({ success: escapeResult.success, error: escapeResult.error }), {
+  t.check(escapeResult, {
     success: false,
     error: "Trash destination escapes the box's data namespace: _bookkeeping/trash/Escape.doc.card",
   });
 
   // The card never moved, and nothing landed in `src/`:
 
-  // doctest:L98
   t.check(await escapeBox.list("_content/box/notes"), "_content/box/notes/Escape.doc.card");
 
-  // doctest:L101
   const srcFiles = await fs.readdir(path.join(escapeBox.root, "src"));
-  await t.checkText(srcFiles.includes("Escape.doc.card"), "false");
+  t.check(srcFiles, ["schemas", "tricks", "views"]);
 });
 
 // ## Inbound refs are resolved from each referring document
@@ -111,7 +100,6 @@ void test("Dry run: reports, mutates nothing", async (t) => {
 // The report comes from the same scanner as `bbx mv`, so relative refs and refs
 // into the card's attach scope are included without changing the referrers.
 void test("The report comes from the same scanner as bbx mv, so relative refs and refs i...", async (t) => {
-  // doctest:L112
   const linked = await makeTmpBox();
   await linked.write("_content/box/notes/Target.doc.card", "---\ntype: doc\ntitle: Target\n---\n");
   await linked.write("_content/box/notes/Source.doc.card", "---\ntype: doc\nrefs:\n  - Target.doc.card\n---\n[attachment](Target.attach/photo.png)\n");
@@ -119,7 +107,6 @@ void test("The report comes from the same scanner as bbx mv, so relative refs an
   await linked.write("_bookkeeping/trash/Old.doc.card", "---\ntype: doc\n---\n[old](../../_content/box/notes/Target.doc.card)\n");
   await linked.write("_content/box/Fenced.md", "```md\n[example](notes/Target.doc.card)\n```\n");
 
-  // doctest:L119
   const report = await rm(linked, { paths: ["_content/box/notes/Target.doc.card"], dryRun: true });
   t.check(isRecord(report.data) ? report.data["inboundRefs"] : undefined, {
     "_content/box/notes/Target.doc.card": [
@@ -134,7 +121,6 @@ void test("The report comes from the same scanner as bbx mv, so relative refs an
     ],
   });
 
-  // doctest:L123
   await t.checkText(await linked.read("_content/box/notes/Source.doc.card"), `---
 type: doc
 refs:
@@ -148,7 +134,6 @@ refs:
 // The UI uses the receipt to restore both the card and its attach scope when its
 // git commit fails, rather than reporting total failure after a completed move.
 void test("The UI uses the receipt to restore both the card and its attach scope when it...", async (t) => {
-  // doctest:L139
   const rollback = await makeTmpBox({ git: true });
   await rollback.write("_content/inbox/Rollback.doc.card", "---\ntype: doc\n---\n");
   await rollback.write("_content/inbox/Rollback.attach/file.txt", "attached");
@@ -166,12 +151,14 @@ _content/inbox/Rollback.doc.card`,
 
 // ## A never-committed card can still be trashed and committed
 void test("A never-committed card can still be trashed and committed", async (t) => {
-  // doctest:L156
   const untracked = await makeTmpBox({ git: true });
   await untracked.write("_content/inbox/New.doc.card", "---\ntype: doc\n---\n");
   const trashed = await rm(untracked, { paths: ["_content/inbox/New.doc.card"], commit: true });
-  t.check(({ success: trashed.success, trash: await ls(untracked, "_bookkeeping/trash"), git: await import("simple-git").then(({ simpleGit }) => simpleGit(untracked.root).log().then((log) => log.latest?.message)) }), {
-    success: true,
+  t.check(({ result: trashed, trash: await ls(untracked, "_bookkeeping/trash"), git: await import("simple-git").then(({ simpleGit }) => simpleGit(untracked.root).log().then((log) => log.latest?.message)) }), {
+    result: {
+      success: true,
+      data: { sourcePath: "_content/inbox/New.doc.card", destPath: "_bookkeeping/trash/New.doc.card", relatedFiles: [], inboundRefs: [] },
+    },
     trash: "_bookkeeping/trash/New.doc.card",
     git: "Trash card: New.doc.card",
   });
@@ -184,7 +171,6 @@ void test("A never-committed card can still be trashed and committed", async (t)
 // failing to find) a relative file named `Config:box.json`
 // (`docs/plans/display-path-guard.subplan.md`):
 void test("Config:box.json (the boxholder's display vocabulary) is rejected with a messa...", async (t) => {
-  // doctest:L171
   const dbox = await makeTmpBox();
   const rejected = await rm(dbox, { paths: ["Config:box.json"] });
   t.check(rejected, {

@@ -8,16 +8,20 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, capture, not } from "agent-doctest/check";
 import { z } from "zod";
 import { makeTestServer, type InjectResult } from "../../../../helpers/test-route-server.js";
-import { bodyField } from "../../../../helpers/test-helpers.js";
 import { getStatus } from "../../../../../src/lib/git/core/operations.js";
 
 // The `/api/views/:id/cards` response: each file with its git status.
 const ViewCards = z.object({ files: z.array(z.looseObject({ path: z.string(), gitStatus: z.unknown().optional() })) });
 
-// The `paths` a commit response lists.
-const CommitBody = z.object({ paths: z.array(z.string()) });
+const HISTORY = "_content/playground/Playground.attach/sessions/history.jsonl";
+
+// The identity a write or conflict response reports for a file.
+function fileIdentity(size: number, etag: unknown) {
+  return { path: HISTORY, size, mtimeMs: any(Number).positive(), etag };
+}
 
 // The etag of the file a write response describes.
 function etagOf(res: InjectResult): string {
@@ -40,13 +44,7 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
     url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
     payload: { content: '{"summary":"first"}\n' },
   });
-  t.check(res.statusCode, 201);
-
-  // doctest:L39
-  t.check(bodyField(res.body, "file", "path"), "_content/playground/Playground.attach/sessions/history.jsonl");
-
-  // doctest:L42
-  t.check(bodyField(res.body, "file", "size"), 20);
+  t.check(res, { statusCode: 201, body: { ok: true, file: fileIdentity(20, any(String)) } });
 
   // ## POST appends; the returned identity moves
 
@@ -56,13 +54,9 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
     url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
     payload: { content: '{"summary":"second"}\n' },
   });
-  t.check(appended.statusCode, 200);
-
-  // doctest:L57
-  t.check(bodyField(appended.body, "file", "size"), 41);
-
-  // doctest:L60
-  await t.checkText(bodyField(appended.body, "file", "etag") !== bodyField(res.body, "file", "etag"), "true");
+  const appendedEtag = capture(any(String));
+  t.check(appended, { statusCode: 200, body: { ok: true, file: fileIdentity(41, appendedEtag) } });
+  t.check(appendedEtag.value, not(etagOf(res)));
 
   // ## A write asserting a stale version conflicts with 412 + current state
 
@@ -73,13 +67,10 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
     payload: { content: "clobber" },
     headers: { "if-match": etagOf(res) },
   });
-  t.check(stale.statusCode, 412);
-
-  // doctest:L76
-  t.check(bodyField(stale.body, "error"), "File changed since it was read");
-
-  // doctest:L79
-  await t.checkText(bodyField(stale.body, "current", "etag") === bodyField(appended.body, "file", "etag"), "true");
+  t.check(stale, {
+    statusCode: 412,
+    body: { error: "File changed since it was read", current: fileIdentity(41, appendedEtag.value) },
+  });
 
   // doctest:L82
   const fresh = await ctx.request({
@@ -88,7 +79,8 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
     payload: { content: "rewritten\n" },
     headers: { "if-match": etagOf(appended) },
   });
-  t.check(fresh.statusCode, 200);
+  const freshEtag = capture(any(String));
+  t.check(fresh, { statusCode: 200, body: { ok: true, file: fileIdentity(10, freshEtag) } });
 
   // ## Create-only (If-None-Match: *) conflicts when the file appeared
 
@@ -99,23 +91,26 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
     payload: { content: "x" },
     headers: { "if-none-match": "*" },
   });
-  t.check(createOnly.statusCode, 412);
-
-  // doctest:L104
-  t.check(bodyField(createOnly.body, "error"), "File already exists");
+  t.check(createOnly, {
+    statusCode: 412,
+    body: { error: "File already exists", current: fileIdentity(10, freshEtag.value) },
+  });
 
   // ## Cards and escapes are rejected
 
   // doctest:L111
-  t.check((await ctx.request({ method: "PUT", url: "/api/files/_content/notes/A.doc.card", payload: { content: "x" } })).statusCode, 403);
+  t.check(await ctx.request({ method: "PUT", url: "/api/files/_content/notes/A.doc.card", payload: { content: "x" } }), {
+    statusCode: 403,
+    body: { error: "Card writes go through the card API or bbx create (cards validate)" },
+  });
 
   // doctest:L114
   t.check(
     // Fastify resolves dot-segments before routing, so a traversal never even
     // reaches the handler (404); the handler's own resolve-guard (403) backstops
     // any encoded form that slips through routing.
-    (await ctx.request({ method: "PUT", url: "/api/files/_content/../../outside.txt", payload: { content: "x" } })).statusCode,
-    404,
+    await ctx.request({ method: "PUT", url: "/api/files/_content/../../outside.txt", payload: { content: "x" } }),
+    { statusCode: 404, body: { error: "Not found" } },
   );
 
   // A path outside the underscore areas — `src/`, `node_modules/`, or any other
@@ -123,7 +118,10 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
   // namespace fence):
 
   // doctest:L126
-  t.check((await ctx.request({ method: "PUT", url: "/api/files/src/tricks/scripts/x.ts", payload: { content: "x" } })).statusCode, 403);
+  t.check(await ctx.request({ method: "PUT", url: "/api/files/src/tricks/scripts/x.ts", payload: { content: "x" } }), {
+    statusCode: 403,
+    body: { error: "Access denied" },
+  });
 
   // ## files-commit sweeps the file's card + attach scope, nothing else
 
@@ -135,20 +133,14 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
     url: "/api/files-commit",
     payload: { path: "_content/playground/Playground.attach/sessions/history.jsonl", message: "Save session history" },
   });
-  t.check(commit.statusCode, 200);
-
-  // doctest:L143
-  t.check(bodyField(commit.body, "committed"), true);
-
-  // doctest:L146
-  t.check(CommitBody.parse(commit.body).paths.join(", "), "_content/playground/Playground.doc.card, _content/playground/Playground.attach");
+  t.check(commit, {
+    statusCode: 200,
+    body: { ok: true, committed: true, hash: any(String).matches(/^[\da-f]{40}$/), paths: ["_content/playground/Playground.doc.card", "_content/playground/Playground.attach"] },
+  });
 
   // doctest:L149
   const status = await getStatus(ctx.boxRoot);
-  await t.checkText(status.untracked.some((p) => p.includes("unrelated")), "true");
-
-  // doctest:L153
-  await t.checkText(status.untracked.some((p) => p.includes("Playground")), "false");
+  t.check(status, { staged: [], modified: [], untracked: ["_content/notes/unrelated.md"], clean: false });
 
   // Committing again with nothing changed is a no-op:
 
@@ -158,7 +150,7 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
     url: "/api/files-commit",
     payload: { path: "_content/playground/Playground.attach/sessions/history.jsonl", message: "noop" },
   });
-  t.check(bodyField(again.body, "committed"), false);
+  t.check(again, { statusCode: 200, body: { ok: true, committed: false, paths: ["_content/playground/Playground.doc.card", "_content/playground/Playground.attach"] } });
 
   // ## View metadata carries gitStatus until a commit clears it
 
@@ -172,8 +164,5 @@ export default function PG() { return null; }
 `);
   const data = await ctx.request({ method: "GET", url: "/api/views/pg/cards" });
   const byPath = Object.fromEntries(ViewCards.parse(data.body).files.map((f) => [f.path, f.gitStatus]));
-  t.check(byPath["_content/notes/unrelated.md"], "untracked");
-
-  // doctest:L184
-  t.check(byPath["_content/playground/Playground.attach/sessions/history.jsonl"], undefined);
+  t.check(byPath, { "_content/notes/unrelated.md": "untracked", [HISTORY]: undefined });
 });

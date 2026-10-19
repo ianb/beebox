@@ -5,7 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { instanceOf } from "agent-doctest/check";
 import { ChatSession, buildContentBlocks } from "../../../../src/core/chat/session/run/core.js";
 import { chatHistorySlice } from "../../../../src/core/chat/session/load-history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
@@ -17,8 +17,6 @@ import * as path from "node:path";
 //
 // A new ChatSession on an empty box has no session and is idle:
 void test("A new ChatSession on an empty box has no session and is idle:", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -29,11 +27,10 @@ void test("A new ChatSession on an empty box has no session and is idle:", async
   // doctest:L20
   const box = await makeTmpBox();
   const session = new ChatSession(box.root);
-  print(`sessionId: ${session.getSessionId()}`);
-  print(`running: ${session.isRunning()}`);
-  await t.checkText(out2.with(print(`busy: ${session.isBusy()}`)), `sessionId: null
-running: false
-busy: false`);
+  t.check(
+    { sessionId: session.getSessionId(), running: session.isRunning(), busy: session.isBusy() },
+    { sessionId: null, running: false, busy: false },
+  );
 });
 
 // ## Session ID persistence — save then load
@@ -132,8 +129,6 @@ void test("Reset on a session with no file doesn't throw:", async (t) => {
 //
 // With no session ID, getHistory returns empty:
 void test("With no session ID, getHistory returns empty:", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -145,17 +140,13 @@ void test("With no session ID, getHistory returns empty:", async (t) => {
   const box = await makeTmpBox();
   const session = new ChatSession(box.root);
   const history = await session.getHistory(chatHistorySlice());
-  print(`sessionId: ${history.sessionId}`);
-  await t.checkText(out2.with(print(`entries: ${history.entries.length}`)), `sessionId: null
-entries: 0`);
+  t.check(history, { sessionId: null, entries: [], total: 0 });
 });
 
 // ## getHistory — session but no log file
 //
 // With a session ID but no actual log file on disk, returns empty entries:
 void test("With a session ID but no actual log file on disk, returns empty entries:", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -173,9 +164,7 @@ void test("With a session ID but no actual log file on disk, returns empty entri
   );
   const session = new ChatSession(box.root);
   const history = await session.getHistory(chatHistorySlice());
-  print(`sessionId: ${history.sessionId}`);
-  await t.checkText(out2.with(print(`entries: ${history.entries.length}`)), `sessionId: orphan-session
-entries: 0`);
+  t.check(history, { sessionId: "orphan-session", entries: [], total: 0 });
 });
 
 // ## getHistory — an unreadable log throws, it does not read as empty
@@ -187,8 +176,6 @@ entries: 0`);
 //
 // Here the log path is a *directory*, so the read fails `EISDIR`:
 void test("A read error is NOT an empty transcript.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       if (previousProjects === undefined) delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
@@ -218,9 +205,14 @@ void test("A read error is NOT an empty transcript.", async (t) => {
   } catch (e) {
     thrown = e;
   }
-  print(`threw: ${thrown !== null}`);
-  await t.checkText(out2.with(print(`code: ${thrown instanceof Error && "code" in thrown ? thrown.code : undefined}`)), `threw: true
-code: EISDIR`);
+  t.check(thrown, instanceOf(Error));
+  t.check(thrown, {
+    name: "Error",
+    message: "EISDIR: illegal operation on a directory, read",
+    errno: -21,
+    code: "EISDIR",
+    syscall: "read",
+  });
 });
 
 // ## buildContentBlocks — text only (no images)
@@ -271,9 +263,9 @@ void test("Images without a matching [image#N] token get appended after the text
   // doctest:L230
   const imgs = [{ id: 1, mimeType: "image/jpeg", dataBase64: "QQ==" }];
   const blocks = buildContentBlocks({ text: "no token here", images: imgs });
-  t.check(blocks.map((b) => b.type), [
-    "text",
-    "image",
+  t.check(blocks, [
+    { type: "text", text: "no token here" },
+    { type: "image", source: { type: "base64", media_type: "image/jpeg", data: "QQ==" } },
   ]);
 });
 
@@ -318,11 +310,11 @@ void test("Two different images resolve to different blocks at their respective 
     { id: 2, mimeType: "image/png", dataBase64: "TWO" },
   ];
   const blocks = buildContentBlocks({ text: "dog [image2] cat [image1]", images: imgs });
-  t.check(blocks.map((b) => b.type === "image" ? b.source?.data : b.text), [
-    "dog ",
-    "TWO",
-    " cat ",
-    "ONE",
+  t.check(blocks, [
+    { type: "text", text: "dog " },
+    { type: "image", source: { type: "base64", media_type: "image/png", data: "TWO" } },
+    { type: "text", text: " cat " },
+    { type: "image", source: { type: "base64", media_type: "image/png", data: "ONE" } },
   ]);
 });
 
@@ -339,13 +331,16 @@ void test("An inline image whose original was uploaded is listed in the trailing
   const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "PX" }];
   const text = "<typed>why is this wrong? [image#1]</typed>\n<attachments>\n[image#1]: _tmp/2026-09-16T10-00-00.000Z_shot.png\n</attachments>";
   const blocks = buildContentBlocks({ text, images: imgs });
-  t.check(blocks.map((b) => b.type === "image" ? "<image PX>" : b.text), [
-    "<typed>why is this wrong? ",
-    "<image PX>",
-    `</typed>
+  t.check(blocks, [
+    { type: "text", text: "<typed>why is this wrong? " },
+    { type: "image", source: { type: "base64", media_type: "image/png", data: "PX" } },
+    {
+      type: "text",
+      text: `</typed>
 <attachments>
 [image#1]: _tmp/2026-09-16T10-00-00.000Z_shot.png
 </attachments>`,
+    },
   ]);
 });
 
@@ -355,8 +350,14 @@ void test("An image referenced ONLY in the block (its body token was edited out)
   // doctest:L286
   const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "PX" }];
   const text = "<typed>edited out</typed>\n<attachments>\n[image#1]: _tmp/x.png\n</attachments>";
-  t.check(buildContentBlocks({ text, images: imgs }).map((b) => b.type), [
-    "text",
-    "image",
+  t.check(buildContentBlocks({ text, images: imgs }), [
+    {
+      type: "text",
+      text: `<typed>edited out</typed>
+<attachments>
+[image#1]: _tmp/x.png
+</attachments>`,
+    },
+    { type: "image", source: { type: "base64", media_type: "image/png", data: "PX" } },
   ]);
 });

@@ -48,6 +48,14 @@ const gadgetSchema: CardSchema = cardSchema("gadget", {
       : [],
 });
 
+const warn = (message: string) => ({ type: "validation" as const, severity: "warning" as const, message });
+const markdocStatus = warn(
+  "Markdoc body issue at line 1 (todo): Attribute 'status' must match one of [\"open\",\"done\",\"dropped\",\"parked\"]. Got 'Done' instead.",
+);
+const leakMsg =
+  "Absolute machine path in card content: /Users/beebox/ — use a box ref (leading `/`) or a repo-relative form, never a real machine path";
+const home = (message: string) => ({ type: "absolute-path" as const, severity: "error" as const, message });
+
 const ctx: LoadCardContext = {
   cardSchemas: new Map<string, CardSchema>([
     ["email-thread", threadSchema],
@@ -81,13 +89,13 @@ void test("Every card with a markdown body is now parsed and run through Markdoc
     [box.path("_content/store/notes/Plan.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
-
-  // doctest:L87
-  t.check(result.totalWarnings, 1);
-
-  // doctest:L90
-  t.check(result.results[0]!.warnings[0]!.message, "Markdoc body issue at line 1 (todo): Attribute 'status' must match one of [\"open\",\"done\",\"dropped\",\"parked\"]. Got 'Done' instead.");
+  t.check(result, {
+    results: [{ path: `${box.root}/_content/store/notes/Plan.doc.card`, errors: [], warnings: [markdocStatus] }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 });
 
 // The same attribution holds for a **multi-line block** `{% todo %}` (opening
@@ -108,10 +116,13 @@ void test("The same attribution holds for a multi-line block {% todo %} (opening
     [box.path("_content/store/notes/Multiline.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalWarnings, 1);
-
-  // doctest:L115
-  t.check(result.results[0]!.warnings[0]!.message, "Markdoc body issue at line 1 (todo): Attribute 'status' must match one of [\"open\",\"done\",\"dropped\",\"parked\"]. Got 'Done' instead.");
+  t.check(result, {
+    results: [{ path: `${box.root}/_content/store/notes/Multiline.doc.card`, errors: [], warnings: [markdocStatus] }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 });
 
 // A body with a valid `{% todo %}` (or no tags at all) lints clean:
@@ -126,7 +137,13 @@ void test("A body with a valid {% todo %} (or no tags at all) lints clean:", asy
     [box.path("_content/store/notes/Plan2.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalWarnings, 0);
+  t.check(result, {
+    results: [{ path: `${box.root}/_content/store/notes/Plan2.doc.card`, errors: [], warnings: [] }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 0,
+  });
 });
 
 // ## Universal Markdoc body validation: a body that fails to parse warns, not silently
@@ -148,13 +165,22 @@ void test("Malformed tag syntax (an unquoted attribute value that breaks Markdoc
     [box.path("_content/store/notes/Broken.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
-
-  // doctest:L157
-  await t.checkText(result.totalWarnings > 0, "true");
-
-  // doctest:L160
-  await t.checkText(result.results[0]!.warnings.some(w => w.message.includes("Markdoc body issue")), "true");
+  t.check(result, {
+    results: [
+      {
+        path: `${box.root}/_content/store/notes/Broken.doc.card`,
+        errors: [],
+        warnings: [
+          warn("Markdoc body issue at line 1 (todo): Expected \"(\" but end of input found."),
+          warn("Markdoc body issue at line 1 (todo): Node 'tag' is missing opening"),
+        ],
+      },
+    ],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 2,
+  });
 });
 
 // ## Commentary cards don't double-report Markdoc violations
@@ -176,20 +202,34 @@ void test("Commentary already runs Markdoc.validate on its body at error severit
     [box.path("_content/store/review/Dup.attach/Dup.commentary.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 1);
-
-  // doctest:L186
-  t.check(result.totalWarnings, 1);
-
-  // doctest:L189
-  await t.checkText(result.results[0]!.errors[0]!.message, "{% source %} takes at most one of `ref` or `href`, not both");
-
   // The one warning is the relative-ref deprecation notice (Track B) — the
   // `{% source %}` tag's `ref="../a.doc.card"` is a document-relative body ref,
   // which now warns by default alongside the `ref`/`href` error:
-
-  // doctest:L198
-  t.check(result.results[0]!.warnings[0]!.message, "Non-canonical ref at body:1:source.ref: ../a.doc.card → /_content/store/review/a.doc.card");
+  t.check(result, {
+    results: [
+      {
+        path: `${box.root}/_content/store/review/Dup.attach/Dup.commentary.card`,
+        errors: [
+          {
+            type: "validation",
+            severity: "error",
+            message: "{% source %} takes at most one of `ref` or `href`, not both",
+          },
+        ],
+        warnings: [
+          {
+            type: "canonical",
+            severity: "warning",
+            message: "Non-canonical ref at body:1:source.ref: ../a.doc.card → /_content/store/review/a.doc.card",
+          },
+        ],
+      },
+    ],
+    filesChecked: 1,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 1,
+  });
 });
 
 // ## Path fields not named `ref` are checked too (`symbol.src`, `entry`)
@@ -224,16 +264,26 @@ void test("The generic broken-ref walk keys on frontmatter keys literally named 
     [box.path("_content/recipes/Recipes.landmark.card"), box.path("_content/recipes/Gone.landmark.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check([result.totalErrors, result.totalWarnings], [
-    0,
-    1,
-  ]);
-
-  // doctest:L230
-  t.check(result.results[1]!.warnings[0]!.type, "reference");
-
-  // doctest:L233
-  t.check(result.results[1]!.warnings[0]!.message, "Broken reference at symbol.src: images/vanished.webp does not exist");
+  t.check(result, {
+    results: [
+      { path: `${box.root}/_content/recipes/Recipes.landmark.card`, errors: [], warnings: [] },
+      {
+        path: `${box.root}/_content/recipes/Gone.landmark.card`,
+        errors: [],
+        warnings: [
+          {
+            type: "reference",
+            severity: "warning",
+            message: "Broken reference at symbol.src: images/vanished.webp does not exist",
+          },
+        ],
+      },
+    ],
+    filesChecked: 2,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 
   // A text/emoji symbol has no path to check, and a figure's `entry` resolves in
   // the card's own attach scope:
@@ -260,13 +310,27 @@ void test("The generic broken-ref walk keys on frontmatter keys literally named 
     ],
     { boxRoot: box.root, ctx },
   );
-  t.check([figures.totalErrors, figures.totalWarnings], [
-    0,
-    1,
-  ]);
-
-  // doctest:L265
-  t.check(figures.results[1]!.warnings[0]!.message, "Broken reference at entry: attach/missing.ts does not exist");
+  t.check(figures, {
+    results: [
+      { path: `${box.root}/_content/store/figures/Orbit.figure.card`, errors: [], warnings: [] },
+      {
+        path: `${box.root}/_content/store/figures/Dangling.figure.card`,
+        errors: [],
+        warnings: [
+          {
+            type: "reference",
+            severity: "warning",
+            message: "Broken reference at entry: attach/missing.ts does not exist",
+          },
+        ],
+      },
+      { path: `${box.root}/_content/recipes/Emoji.landmark.card`, errors: [], warnings: [] },
+    ],
+    filesChecked: 3,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 });
 
 // ## Media cards: `filename.ref` must be in `attach/` form
@@ -291,9 +355,26 @@ void test("An image, audio, file or pdf card keeps its file in its attach scope,
     "---\nfilename:\n  ref: /_content/cap/photo-004.jpg\n  via:\n    channel: scan\n    at: 2026-01-02T03:04:05Z\n---\n",
   );
   const media = await lintCardsDispatch([box.path("_content/cap/photo-004-Beach.image.card")], { boxRoot: box.root, ctx });
-  t.check(media.results[0]!.warnings.map((w) => w.message), [
-    "filename.ref must point into the card's attach scope: move photo-004.jpg into photo-004-Beach.attach/ and write `ref: attach/photo-004.jpg` (found `/_content/cap/photo-004.jpg`)",
-  ]);
+  t.check(media, {
+    results: [
+      {
+        path: `${box.root}/_content/cap/photo-004-Beach.image.card`,
+        errors: [],
+        warnings: [
+          {
+            type: "reference",
+            severity: "warning",
+            message:
+              "filename.ref must point into the card's attach scope: move photo-004.jpg into photo-004-Beach.attach/ and write `ref: attach/photo-004.jpg` (found `/_content/cap/photo-004.jpg`)",
+          },
+        ],
+      },
+    ],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 });
 
 // ## Chat husks: `session` must be a real engine session id
@@ -314,18 +395,26 @@ void test("A husk's session field is the only thing that identifies which chat t
     [box.path("_content/chat/web/2026-08-26_ok.chat.card"), box.path("_content/chat/web/2026-08-26_bad.chat.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(
-    {
-      ok: result.results[0]!.errors.length,
-      bad: result.results[1]!.errors.length,
-      says: result.results[1]!.errors[0]!.message.includes("session"),
-    },
-    {
-    ok: 0,
-    bad: 1,
-    says: true,
-  },
-  );
+  t.check(result, {
+    results: [
+      { path: `${box.root}/_content/chat/web/2026-08-26_ok.chat.card`, errors: [], warnings: [] },
+      {
+        path: `${box.root}/_content/chat/web/2026-08-26_bad.chat.card`,
+        errors: [
+          {
+            type: "validation",
+            severity: "error",
+            message: "invalid chat frontmatter:\n  - session: Invalid UUID",
+          },
+        ],
+        warnings: [],
+      },
+    ],
+    filesChecked: 2,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 0,
+  });
 });
 
 // ## Chat husks: two cards must never claim one chat
@@ -354,13 +443,22 @@ void test("The session field is the husk's identity, so a second card carrying i
     ],
     { boxRoot: box.root, ctx },
   );
-  t.check({ errors: result.totalErrors, unique: result.results[2]!.errors.length }, {
-    errors: 2,
-    unique: 0,
+  const dup = (a: string, b: string) => ({
+    type: "validation" as const,
+    severity: "error" as const,
+    message: `Duplicate chat session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869: ${a} and ${b} are husks for one chat. Keep whichever card you want the chat to be, and \`bbx trash\` the other.`,
   });
-
-  // doctest:L354
-  t.check(result.results[0]!.errors[0]!.message, "Duplicate chat session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869: _content/chat/web/2026-08-26_59fc20dd.chat.card and _content/chat/web/Copied.chat.card are husks for one chat. Keep whichever card you want the chat to be, and `bbx trash` the other.");
+  t.check(result, {
+    results: [
+      { path: `${box.root}/_content/chat/web/2026-08-26_59fc20dd.chat.card`, errors: [dup("_content/chat/web/2026-08-26_59fc20dd.chat.card", "_content/chat/web/Copied.chat.card")], warnings: [] },
+      { path: `${box.root}/_content/chat/web/Copied.chat.card`, errors: [dup("_content/chat/web/Copied.chat.card", "_content/chat/web/2026-08-26_59fc20dd.chat.card")], warnings: [] },
+      { path: `${box.root}/_content/chat/web/2026-08-26_aaaa9999.chat.card`, errors: [], warnings: [] },
+    ],
+    filesChecked: 3,
+    filesWithErrors: 2,
+    totalErrors: 2,
+    totalWarnings: 0,
+  });
 
   // A husk filed outside `_content/chat/web/` counts too — the index walks the whole
   // `_content/chat/**` tree, so moving one of the pair out of the picker's directory
@@ -376,7 +474,26 @@ void test("The session field is the husk's identity, so a second card carrying i
     [box2.path("_content/chat/web/2026-08-26_59fc20dd.chat.card")],
     { boxRoot: box2.root, ctx },
   );
-  await t.checkText(moved.results[0]!.errors[0]!.message.includes("_content/chat/archive/2026-01-01_59fc20dd.chat.card"), "true");
+  t.check(moved, {
+    results: [
+      {
+        path: `${box2.root}/_content/chat/web/2026-08-26_59fc20dd.chat.card`,
+        errors: [
+          {
+            type: "validation",
+            severity: "error",
+            message:
+              "Duplicate chat session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869: _content/chat/web/2026-08-26_59fc20dd.chat.card and _content/chat/archive/2026-01-01_59fc20dd.chat.card are husks for one chat. Keep whichever card you want the chat to be, and `bbx trash` the other.",
+          },
+        ],
+        warnings: [],
+      },
+    ],
+    filesChecked: 1,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 0,
+  });
 });
 
 // ## No absolute machine paths (Track B)
@@ -391,13 +508,19 @@ void test("A card whose content embeds a real developer home directory is an ERR
     "---\ntype: doc\ntitle: Leak\n---\nSee /Users/beebox/src/boxes/test1/content for the fixture.\n",
   );
   const leaked = await lintCardsDispatch([box3.path("_content/store/notes/Leak.doc.card")], { boxRoot: box3.root, ctx });
-  t.check([leaked.totalErrors, leaked.totalWarnings], [
-    1,
-    0,
-  ]);
-
-  // doctest:L391
-  t.check(leaked.results[0]!.errors[0]!.message, "Absolute machine path in card content: /Users/beebox/ — use a box ref (leading `/`) or a repo-relative form, never a real machine path");
+  t.check(leaked, {
+    results: [
+      {
+        path: `${box3.root}/_content/store/notes/Leak.doc.card`,
+        errors: [home(leakMsg)],
+        warnings: [],
+      },
+    ],
+    filesChecked: 1,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 0,
+  });
 
   // An extfile card is the one shape whose `href` is REQUIRED to be a `file:` URL,
   // so its absolute machine path is the card's purpose. Scanning it made every real
@@ -418,10 +541,16 @@ void test("A card whose content embeds a real developer home directory is an ERR
     [box5.path("_content/store/review/Live.extfile.card"), box5.path("_content/store/review/Both.extfile.card")],
     { boxRoot: box5.root, ctx },
   );
-  t.check([ext.results[0]!.errors.length, ext.results[1]!.errors.length], [
-    0,
-    1,
-  ]);
+  t.check(ext, {
+    results: [
+      { path: `${box5.root}/_content/store/review/Live.extfile.card`, errors: [], warnings: [] },
+      { path: `${box5.root}/_content/store/review/Both.extfile.card`, errors: [home(leakMsg)], warnings: [] },
+    ],
+    filesChecked: 2,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 0,
+  });
 
   // The `/Users/me`/`/Users/you` placeholder forms (used in `file:` URL examples)
   // are not flagged:
@@ -433,7 +562,13 @@ void test("A card whose content embeds a real developer home directory is an ERR
     "---\ntype: doc\ntitle: Fine\n---\nOpen file:///Users/me/Desktop/scan.pdf.\n",
   );
   const fine = await lintCardsDispatch([box4.path("_content/store/notes/Fine.doc.card")], { boxRoot: box4.root, ctx });
-  t.check(fine.totalErrors, 0);
+  t.check(fine, {
+    results: [{ path: `${box4.root}/_content/store/notes/Fine.doc.card`, errors: [], warnings: [] }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 0,
+  });
 });
 
 // ## A type's scoped Markdoc tags validate in that type's cards only
@@ -462,10 +597,20 @@ void test("A schema's markdocTags extend the core table for cards of that type."
     [scopedBox.path("_content/box/Soup.dish.card"), scopedBox.path("_content/box/Notes.doc.card")],
     { boxRoot: scopedBox.root, ctx: scopedCtx },
   );
-  t.check(scopedResult.results.map((r) => r.warnings.filter((w) => w.message.includes("Undefined tag")).length), [
-    0,
-    1,
-  ]);
+  t.check(scopedResult, {
+    results: [
+      { path: `${scopedBox.root}/_content/box/Soup.dish.card`, errors: [], warnings: [] },
+      {
+        path: `${scopedBox.root}/_content/box/Notes.doc.card`,
+        errors: [],
+        warnings: [warn("Markdoc body issue at line 1 (garnish): Undefined tag: 'garnish'")],
+      },
+    ],
+    filesChecked: 2,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 });
 
 // ## The retired type-specific tags are undefined everywhere
@@ -482,10 +627,27 @@ void test("purpose, correction, image, and silence were core tags owned by one c
     "---\ntype: doc\ntitle: Old\n---\n{% purpose %}\nP\n{% /purpose %}\n\n{% correction %}\nC\n{% /correction %}\n\n{% image ref=\"attach/a.image.card\" /%}\n\n{% silence duration=\"9s\" /%}\n",
   );
   const retired = await lintCardsDispatch([retiredBox.path("_content/box/Old.doc.card")], { boxRoot: retiredBox.root, ctx });
-  t.check(retired.results[0]?.warnings.filter((w) => w.message.includes("Undefined tag")).map((w) => w.message.match(/'([a-z]+)'/)?.[1]), [
-    "purpose",
-    "correction",
-    "image",
-    "silence",
-  ]);
+  t.check(retired, {
+    results: [
+      {
+        path: `${retiredBox.root}/_content/box/Old.doc.card`,
+        errors: [],
+        warnings: [
+          {
+            type: "reference",
+            severity: "warning",
+            message: "Broken reference at body:9:image.ref: attach/a.image.card does not exist",
+          },
+          warn("Markdoc body issue at line 1 (purpose): Undefined tag: 'purpose'"),
+          warn("Markdoc body issue at line 5 (correction): Undefined tag: 'correction'"),
+          warn("Markdoc body issue at line 9 (image): Undefined tag: 'image'"),
+          warn("Markdoc body issue at line 11 (silence): Undefined tag: 'silence'"),
+        ],
+      },
+    ],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 5,
+  });
 });

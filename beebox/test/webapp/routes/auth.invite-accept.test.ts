@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, not, str } from "agent-doctest/check";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -18,6 +19,27 @@ import { loginThrottle } from "../../../src/webapp/routes/auth/login-throttle.js
 process.env.BBX_AUTH_SCRYPT_N = "1024";
 process.env.BBX_SESSION_SECRET = "invite-route-test-secret";
 delete process.env.BBX_HUB_SECRET;
+
+/** The invite pages are large generated HTML; the title tells them apart. */
+function inviteTitle(title: string) {
+  return any(String).includes(`<title>Bee Box — ${title}</title>`);
+}
+
+/** A public user record as the credential store returns it. */
+function storedUser(fields: { email: string; name: string; role: "owner" | "member" }) {
+  return { ...fields, gen: 1, created: isoDate() };
+}
+
+/** The sanitized failure page, and the line the server logs for a corrupt credential store. */
+const UNAVAILABLE_PAGE = inviteTitle("Invite unavailable");
+function corruptStoreLog(authFile: string) {
+  return [
+    [
+      "[auth-invite] acceptance failed closed:",
+      { name: "AuthFileCorruptError", message: str`Auth file at ${authFile} is corrupt: ${any(String)}`, filePath: authFile },
+    ],
+  ];
+}
 
 function inviteForm(fields: Record<string, string>): InjectOptions {
   return {
@@ -71,7 +93,7 @@ void test("A pinned invite creates a member and grants only its target box", asy
     headers: { "content-type": "application/json" },
     payload: { token: minted.token },
   });
-  t.check(wrongType.statusCode, 400);
+  t.check({ status: wrongType.statusCode, payload: wrongType.payload }, { status: 400, payload: inviteTitle("Accept invite") });
 
   // A confirmation typo preserves the live token and pinned identity, so correcting
   // the form can still accept the same invitation.
@@ -101,7 +123,7 @@ void test("A pinned invite creates a member and grants only its target box", asy
     password: "member-password",
     confirmPassword: "member-password",
   }));
-  t.check(missingOwner.statusCode, 503);
+  t.check({ status: missingOwner.statusCode, payload: missingOwner.payload }, { status: 503, payload: UNAVAILABLE_PAGE });
 
   // doctest:L92
   process.env.BBX_OWNER_EMAIL = "Owner@Example.COM";
@@ -121,10 +143,10 @@ void test("A pinned invite creates a member and grants only its target box", asy
   });
 
   // doctest:L106
-  t.check(listUsers().map((user) => `${user.email}:${user.role}`).join(","), "member@example.com:member");
+  t.check(listUsers(), [storedUser({ email: "member@example.com", name: "Member", role: "member" })]);
 
   // doctest:L109
-  t.check(JSON.parse(await ctx.read("_config/box.json")).allowedEmails.join(","), "member@example.com");
+  t.check(JSON.parse(await ctx.read("_config/box.json")), { allowedEmails: ["member@example.com"] });
 
   // Replay has the same dead-link response as an expired or unknown token.
 
@@ -139,10 +161,14 @@ void test("A pinned invite creates a member and grants only its target box", asy
     confirmPassword: "member-password",
   }));
   console.warn = originalReplayWarn;
-  t.check({ status: replay.statusCode, category: String(replayWarnings[0]?.[0]).includes("dead-token") }, {
-    status: 410,
-    category: true,
-  });
+  t.check(
+    { status: replay.statusCode, payload: replay.payload, warned: replayWarnings },
+    {
+      status: 410,
+      payload: UNAVAILABLE_PAGE,
+      warned: [["[auth-invite] rejected: category=dead-token ip=127.0.0.1"]],
+    },
+  );
 
   // Malformed open-invite email input does not consume the bearer capability.
 
@@ -178,7 +204,7 @@ void test("A pinned invite creates a member and grants only its target box", asy
   await writeFile(process.env.BBX_AUTH_FILE, "not json", { mode: 0o600 });
   loginThrottle.reset();
   const originalConsoleError = console.error;
-  const acceptanceErrors = [];
+  const acceptanceErrors: unknown[][] = [];
   console.error = (...args) => acceptanceErrors.push(args);
   const corruptAuth = await ctx.server.inject(inviteForm({
     token: authFailureInvite.token,
@@ -188,10 +214,18 @@ void test("A pinned invite creates a member and grants only its target box", asy
     confirmPassword: "member-password",
   }));
   console.error = originalConsoleError;
+  const authFile = join(authDir, "auth.json");
   t.check(
-    { status: corruptAuth.statusCode, leaksPath: corruptAuth.payload.includes(process.env.BBX_AUTH_FILE), leaksCorruption: corruptAuth.payload.includes("corrupt"), logged: acceptanceErrors.length },
-    { status: 503, leaksPath: false, leaksCorruption: false, logged: 1 },
+    { status: corruptAuth.statusCode, payload: corruptAuth.payload, logged: acceptanceErrors },
+    {
+      status: 503,
+      payload: UNAVAILABLE_PAGE,
+      logged: corruptStoreLog(authFile),
+    },
   );
+  // The sanitized page names neither the store path nor the corruption.
+  t.check(corruptAuth.payload, not(any(String).includes(authFile)));
+  t.check(corruptAuth.payload, not(any(String).includes("corrupt")));
 
   // A corrupt capability store fails closed with an unavailable response rather
   // than exposing a generic server error or treating the token as valid.
@@ -199,7 +233,7 @@ void test("A pinned invite creates a member and grants only its target box", asy
   // doctest:L185
   await writeFile(`${process.env.BBX_AUTH_FILE}.invites.json`, "not json", { mode: 0o600 });
   const corruptStore = await ctx.server.inject({ method: "GET", url: `/auth/invite?token=${minted.token}` });
-  t.check(corruptStore.statusCode, 503);
+  t.check({ status: corruptStore.statusCode, payload: corruptStore.payload }, { status: 503, payload: UNAVAILABLE_PAGE });
 
   // doctest:L192
   loginThrottle.reset();
@@ -209,10 +243,9 @@ void test("A pinned invite creates a member and grants only its target box", asy
     password: "member-password",
     confirmPassword: "member-password",
   }));
-  t.check(
-    { status: corruptPost.statusCode, leaksPath: corruptPost.payload.includes(process.env.BBX_AUTH_FILE), leaksCorruption: corruptPost.payload.includes("corrupt") },
-    { status: 503, leaksPath: false, leaksCorruption: false },
-  );
+  t.check({ status: corruptPost.statusCode, payload: corruptPost.payload }, { status: 503, payload: UNAVAILABLE_PAGE });
+  t.check(corruptPost.payload, not(any(String).includes(authFile)));
+  t.check(corruptPost.payload, not(any(String).includes("corrupt")));
 });
 
 // ## A box-config failure leaves an explicit, signed-out partial account
@@ -241,7 +274,7 @@ void test("A box-config failure leaves an explicit, signed-out partial account",
     email: "partial@example.com",
   });
   const originalPartialError = console.error;
-  const partialErrors = [];
+  const partialErrors: unknown[][] = [];
   console.error = (...args) => partialErrors.push(args);
   const partial = await partialCtx.server.inject(inviteForm({
     token: partialInvite.token,
@@ -253,19 +286,28 @@ void test("A box-config failure leaves an explicit, signed-out partial account",
   t.check(
     {
       status: partial.statusCode,
-      namesEmail: partial.payload.includes("partial@example.com"),
       cookie: partial.headers["set-cookie"] ?? null,
-      account: listUsers().some((user) => user.email === "partial@example.com"),
-      logged: partialErrors.length,
+      users: listUsers(),
+      logged: partialErrors,
     },
     {
-    status: 503,
-    namesEmail: true,
-    cookie: null,
-    account: true,
-    logged: 1,
-  },
+      status: 503,
+      cookie: null,
+      users: [storedUser({ email: "owner@example.com", name: "Owner", role: "owner" }), storedUser({ email: "partial@example.com", name: "Partial", role: "member" })],
+      logged: [
+        [
+          "[auth-invite] account created but box config write failed for partial@example.com:",
+          {
+            name: "BoxConfigWriteError",
+            message: "Box configuration is unreadable; refusing to replace it.",
+            configPath: join(partialCtx.boxRoot, "_config", "box.json"),
+          },
+        ],
+      ],
+    },
   );
+  // The page is large generated HTML; it must name the account left behind.
+  t.check(partial.payload, any(String).includes("partial@example.com"));
 });
 
 // ## Open invites cannot claim an owner or an already-authorized identity
@@ -304,12 +346,10 @@ void test("Open invites cannot claim an owner or an already-authorized identity"
     confirmPassword: "attacker-password",
   }));
   console.warn = originalCollisionWarn;
-  t.check({ status: ownerClaim.statusCode, logged: collisionWarnings.length, category: String(collisionWarnings[0]?.[0]).includes("collision"), leakedToken: collisionWarnings.some((args) => args.some((value) => String(value).includes(openOwner.token))) }, {
-    status: 410,
-    logged: 1,
-    category: true,
-    leakedToken: false,
-  });
+  t.check(
+    { status: ownerClaim.statusCode, logged: collisionWarnings },
+    { status: 410, logged: [["[auth-invite] rejected: category=collision ip=127.0.0.1"]] },
+  );
 
   // The collision burns the capability, so it cannot be reused to probe another
   // address or claim a valid one.
@@ -326,7 +366,7 @@ void test("Open invites cannot claim an owner or an already-authorized identity"
     confirmPassword: "attacker-password",
   }));
   console.warn = originalReuseWarn;
-  t.check(reuseAfterCollision.statusCode, 410);
+  t.check({ status: reuseAfterCollision.statusCode, payload: reuseAfterCollision.payload }, { status: 410, payload: UNAVAILABLE_PAGE });
 
   // A separate capability rejects an already-authorized identity with the same
   // dead-link response and is likewise consumed.
@@ -344,8 +384,8 @@ void test("Open invites cannot claim an owner or an already-authorized identity"
     confirmPassword: "attacker-password",
   }));
   console.warn = originalAllowlistedWarn;
-  t.check(allowlistedClaim.statusCode, 410);
+  t.check({ status: allowlistedClaim.statusCode, payload: allowlistedClaim.payload }, { status: 410, payload: UNAVAILABLE_PAGE });
 
   // doctest:L321
-  await t.checkText(listUsers().length, "1");
+  t.check(listUsers(), [storedUser({ email: "owner@example.com", name: "Owner", role: "owner" })]);
 });

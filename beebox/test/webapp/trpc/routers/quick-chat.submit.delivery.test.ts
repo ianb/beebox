@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str, uuid } from "agent-doctest/check";
+import { any, isoDate, str, uuid } from "agent-doctest/check";
 import { mkdir, writeFile, rm, utimes } from "node:fs/promises";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -211,7 +211,8 @@ void test("With no OpenRouter key and no injected service, or when Jev fails or 
   const fake = judged({ c0: 1 });
   const api = caller(box.root, fake);
   const { result: stuck, lines: catalogLines } = await capturingLogs(() => api.submit({ id: randomUUID(), message: "Call the vet" }));
-  t.check([face(stuck), fake.calls.length, catalogLines], [
+  t.check(fake.calls, []);
+  t.check([face(stuck), catalogLines], [
     {
       state: "needs-choice",
       reason: "routing-unavailable",
@@ -222,7 +223,6 @@ void test("With no OpenRouter key and no injected service, or when Jev fails or 
         },
       ],
     },
-    0,
     [
       str`warn [quick-chat] routing catalog unavailable for ${uuid()}: Chat routing rubric is invalid. Check _config/chat-routing.yaml.`,
     ],
@@ -274,13 +274,57 @@ void test("If the server stops after writing sending and before delivering, the 
 
   // doctest:L189
   const runtime = scriptedRuntime(box.root);
-  t.check([(await api.submit({ id: request.id, message: request.message })).state, fake.calls.length, runtime.sends.length, runtime.sends[0]?.message, (await api.home()).open.length], [
-    "sent",
-    1,
-    1,
-    "<external-input source=\"apple-app-intents\">Renew the car registration</external-input>",
-    0,
+  const resent = await api.submit({ id: request.id, message: request.message });
+  t.check(face(resent), {
+    state: "sent",
+    destination: {
+      label: "“Plan the week”",
+      sessionId: str`${uuid()}`,
+    },
+  });
+  t.check(fake.calls, [
+    {
+      state: {
+        message: "Renew the car registration",
+        candidates: [
+          {
+            id: "c0",
+            label: "“Plan the week”",
+            target: { kind: "existing-session", sessionId: uuid(), contextDir: "" },
+            lastActivity: isoDate(),
+            recentContext: str`[${isoDate()}] user: Plan the week`,
+            contextTruncated: false,
+            totalEntries: 1,
+            lastMessageAt: isoDate(),
+          },
+          {
+            id: "c1",
+            label: "New chat in Garden",
+            target: { kind: "new-session", contextDir: "_content/Garden" },
+            landmark: { path: "_content/Garden/Garden.landmark.card", label: "Garden" },
+          },
+          {
+            id: "c2",
+            label: "New general chat",
+            target: { kind: "new-session", contextDir: "" },
+          },
+        ],
+      },
+      criteria: {
+        c0: "“Plan the week”: existing-session. Use the matching candidate in state for its context and rubric.",
+        c1: "New chat in Garden: new-session. Use the matching candidate in state for its context and rubric.",
+        c2: "New general chat: new-session. Use the matching candidate in state for its context and rubric.",
+      },
+    },
   ]);
+  t.check(runtime.sends, [
+    {
+      message: "<external-input source=\"apple-app-intents\">Renew the car registration</external-input>",
+      user: "ari@example.com",
+      channel: null,
+    },
+  ]);
+  t.check((await api.home()).open, []);
 
   // If the server stops after delivery and before writing `sent`, the second
   // delivery of the same message id is answered as a duplicate, with no outcome.
@@ -316,7 +360,8 @@ void test("If the server stops after writing sending and before delivering, the 
   });
 
   // doctest:L213
-  await t.checkText(crashing.sends.length, "2");
+  const waterBill = { message: "<typed source=\"box-screen\">Pay the water bill</typed>", user: "ari@example.com", channel: null };
+  t.check(crashing.sends, [waterBill, waterBill]);
 
   // The message-id claim lasts seven days. Six days after the first delivery
   // attempt, a retry is refused without sending: the row says the message may
@@ -331,7 +376,7 @@ void test("If the server stops after writing sending and before delivering, the 
   process.env["BBX_TIME"] = new Date(Date.now() + 7 * 86_400_000).toISOString();
   const refused = await api.submit(late);
   if (realTime === undefined) delete process.env["BBX_TIME"]; else process.env["BBX_TIME"] = realTime;
-  t.check([face(refused), lateRuntime.sends.length], [
+  t.check([face(refused)], [
     {
       state: "sending",
       destination: {
@@ -341,8 +386,8 @@ void test("If the server stops after writing sending and before delivering, the 
       lastError: "This may already be in “Plan the week”. Open the chat to check.",
       expired: true,
     },
-    0,
   ]);
+  t.check(lateRuntime.sends, []);
 });
 
 // ## A destination that is gone asks again
@@ -364,7 +409,7 @@ void test("A chat deleted between routing and delivery answers the send route's 
   const { box } = await gardenBox();
   const runtime = scriptedRuntime(box.root, { resolve: () => ({ ok: false, status: 410, error: "Conversation is not available on this machine", code: "CHAT_SESSION_UNAVAILABLE" }) });
   const api = caller(box.root, judged({ c0: 0.95, c1: 0.03, c2: 0.02 }));
-  t.check([face(await api.submit({ id: randomUUID(), message: "Order more mulch" })), runtime.sends.length], [
+  t.check([face(await api.submit({ id: randomUUID(), message: "Order more mulch" }))], [
     {
       state: "needs-choice",
       reason: "destination-gone",
@@ -379,8 +424,8 @@ void test("A chat deleted between routing and delivery answers the send route's 
         },
       ],
     },
-    0,
   ]);
+  t.check(runtime.sends, []);
 
   // doctest:L253
   scriptedRuntime(box.root);
@@ -390,10 +435,15 @@ void test("A chat deleted between routing and delivery answers the send route's 
   await gardenApi.submit(pending);
   await rm(box.path("_content/Garden/Garden.landmark.card"));
   const reservations = scriptedRuntime(box.root).reservations;
-  t.check([face(await gardenApi.submit(pending)).reason, reservations.length], [
-    "destination-gone",
-    0,
-  ]);
+  t.check(face(await gardenApi.submit(pending)), {
+    state: "needs-choice",
+    reason: "destination-gone",
+    choices: [
+      { candidateId: "c2", label: "New general chat" },
+      { candidateId: "c0", label: "“Plan the week”" },
+    ],
+  });
+  t.check(reservations, []);
 });
 
 // ## A new chat on an engine without reservations has no session id yet
@@ -452,11 +502,22 @@ void test("A thought that was not sent can be discarded.", async (t) => {
   scriptedRuntime(box.root);
   const api = caller(box.root, judged({ c0: 0.5, c1: 0.45, c2: 0.05 }));
   const unsure = await api.submit({ id: randomUUID(), message: "Maybe repaint the fence" });
-  t.check([(await api.home()).open.length, (await api.discard({ id: unsure.id })).state, (await api.home()).open.length], [
-    1,
-    "discarded",
-    0,
+  t.check((await api.home()).open, [
+    {
+      id: unsure.id,
+      message: "Maybe repaint the fence",
+      createdAt: isoDate(),
+      state: "needs-choice",
+      reason: "uncertain",
+      choices: [
+        { candidateId: "c0", label: "“Plan the week”" },
+        { candidateId: "c1", label: "New chat in Garden" },
+        { candidateId: "c2", label: "New general chat" },
+      ],
+    },
   ]);
+  t.check(face(await api.discard({ id: unsure.id })), { state: "discarded" });
+  t.check((await api.home()).open, []);
 
   // doctest:L303
   const sent = await api.choose({ id: (await api.submit({ id: randomUUID(), message: "Fix the gate" })).id, candidateId: "c0" });
@@ -491,7 +552,7 @@ void test("home lists unfinished thoughts, the ones sent in the last day, recent
   await api.submit({ id: randomUUID(), message: "Unsure thought" });
   await api.choose({ id: (await api.submit({ id: randomUUID(), message: "Sorted thought" })).id, candidateId: "c0" });
   const home = await api.home();
-  const rootChats = home.recentChats.map((chat) => [chat.sessionId === sessionId, chat.label, chat.landmark]);
+  const rootChats = home.recentChats.map((chat) => [chat.sessionId, chat.label, chat.landmark]);
   t.check([home.open.map((view) => [view.message, view.state]), home.recentlySent.map((view) => [view.message, view.state]), rootChats, home.shortcuts], [
     [
       [
@@ -507,7 +568,7 @@ void test("home lists unfinished thoughts, the ones sent in the last day, recent
     ],
     [
       [
-        true,
+        sessionId,
         "“Plan the week”",
         null,
       ],
@@ -559,18 +620,18 @@ void test("The recent chats are newest first.", async (t) => {
   await writeFile(gardenLog, JSON.stringify({ type: "user", uuid: randomUUID(), timestamp: new Date().toISOString(), message: { role: "user", content: [{ type: "text", text: "Order seeds" }] } }) + "\n");
   await box.write(`_content/chat/web/2026-09-22_${gardenChat}.chat.card`, `---\nsession: ${gardenChat}\ncontext-dir: _content/Garden\n---\n\n`);
   const api = caller(box.root, judged({ c0: 1 }));
-  const rows = async () => (await api.home()).recentChats.map((chat) => [chat.sessionId === rootChat ? "root chat" : "garden chat", chat.landmark?.label ?? null]);
+  const rows = async () => (await api.home()).recentChats.map((chat) => [chat.sessionId, chat.landmark?.label ?? null]);
 
   // doctest:L374
   const earlier = new Date(Date.now() - 60_000);
   await utimes(gardenLog, earlier, earlier);
   t.check(await rows(), [
     [
-      "root chat",
+      rootChat,
       null,
     ],
     [
-      "garden chat",
+      gardenChat,
       "Garden",
     ],
   ]);
@@ -581,7 +642,7 @@ void test("The recent chats are newest first.", async (t) => {
   await utimes(rootLog, earliest, earliest);
   t.check(await rows(), [
     [
-      "garden chat",
+      gardenChat,
       "Garden",
     ],
   ]);

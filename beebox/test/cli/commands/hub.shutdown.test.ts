@@ -14,6 +14,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import * as http from "node:http";
 import * as net from "node:net";
 import { closeServer } from "../../../src/cli/commands/hub.js";
@@ -41,9 +42,8 @@ void test("An open connection no longer blocks the close.", async (t) => {
   const started = Date.now();
   await closeServer(server);
   const elapsedMs = Date.now() - started;
-  t.check({ bounded: elapsedMs < 5_000, hitDeadline: elapsedMs >= 8_000, listening: server.listening }, {
-    bounded: true,
-    hitDeadline: false,
+  t.check({ elapsedMs, listening: server.listening }, {
+    elapsedMs: any(Number).between(0, 4_999),
     listening: false,
   });
 
@@ -58,5 +58,5 @@ void test("An open connection no longer blocks the close.", async (t) => {
   await new Promise<void>((resolve) => idle.listen(0, "127.0.0.1", () => resolve()));
   const idleStart = Date.now();
   await closeServer(idle);
-  await t.checkText(Date.now() - idleStart < 1_000, "true");
+  t.check(Date.now() - idleStart, any(Number).between(0, 999));
 });

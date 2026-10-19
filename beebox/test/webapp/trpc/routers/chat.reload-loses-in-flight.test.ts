@@ -21,13 +21,12 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { isoDate } from "agent-doctest/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { TestServer } from "../../../helpers/test-route-server.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
-import type { SessionEntry } from "../../../../src/cli/lib/session.js";
 import { createFakeChatBackend, type FakeChatBackendRun } from "../../../../src/services/claude-chat/core.js";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";
 import { readFile } from "node:fs/promises";
@@ -58,11 +57,14 @@ async function readDedupState(boxRoot: string) {
   }
 }
 
-function userText(entries: SessionEntry[]) {
-  return entries
-    .filter((e) => e.type === "user")
-    .map((e) => e.content.filter((b) => b.type === "text").map((b) => b.text).join(""));
-}
+// The pending row for the first send in the test; the server stamps it with the real clock.
+const DRAWER_KEY_ROW = {
+  uuid: "accepted-1",
+  type: "user",
+  timestamp: isoDate(),
+  content: [{ type: "text", text: "<typed>where did I put the drawer key?</typed>" }],
+  reconcileKnownUuids: [],
+} as const;
 
 // ## The send is accepted and recorded; the reload sees nothing
 //
@@ -70,8 +72,6 @@ function userText(entries: SessionEntry[]) {
 // no transcript of its own — the real subprocess writes one eventually, which is
 // precisely the lag being modelled here.
 void test("The fake backend stands in for the agent subprocess.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       // The send's run starts unawaited, behind a bootstrap git commit. Deleting
@@ -103,24 +103,21 @@ void test("The fake backend stands in for the agent subprocess.", async (t) => {
     url: "/api/chat/send",
     payload: { session: "new", message: "<typed>where did I put the drawer key?</typed>", messageId: "m-1" },
   });
-  print(`send accepted: ${sent.statusCode === 200}`);
-  print(`durably recorded on the bus: ${recorded.length === 1}`);
-  await t.checkText(out.with(print(`the box has it: ${recorded[0]?.includes("drawer key") === true}`)), `send accepted: true
-durably recorded on the bus: true
-the box has it: true`);
+  t.check(sent.statusCode, 200);
+  t.check(recorded, ["<typed>where did I put the drawer key?</typed>"]);
 
   // Now the reload. `chat.bootstrap` is the whole of what a fresh page knows:
 
   // doctest:L102
   const boot = await caller(ctx).chat.bootstrap({ slice: TAIL });
-  await t.checkText(out.with(JSON.stringify({ kind: boot.kind, entries: boot.history === null ? null : userText(boot.history.entries) })), "{\"kind\":\"empty\",\"entries\":null}");
+  t.check({ kind: boot.kind, history: boot.history }, { kind: "empty", history: null });
 
   // `kind: "empty"` with an empty history is still the honest answer about what is
   // **durable**, and that is what `history` means. What was missing is the other
   // record — so bootstrap now also reports what the box has *accepted*:
 
   // doctest:L112
-  await t.checkText(out.with(JSON.stringify({ pending: userText(boot.pending), uuid: boot.pending[0]?.uuid.startsWith("accepted-") })), "{\"pending\":[\"<typed>where did I put the drawer key?</typed>\"],\"uuid\":true}");
+  t.check(boot.pending, [DRAWER_KEY_ROW]);
 
   // `kind: "empty"` is the strongest form of the gap, and the one the field report
   // described. A message that opens a **new** chat is accepted before the engine has
@@ -131,7 +128,7 @@ the box has it: true`);
 
   // doctest:L124
   const dedup = await readDedupState(ctx.boxRoot);
-  await t.checkText(out.with(dedup.includes("m-1")), "true");
+  await t.checkText(dedup, "{\"m-1\":«int»}");
 
   // The question is gone from the only thing a reloading client reads, while the box
   // holds a durable record of having accepted it. That is the bug, stated exactly:
@@ -157,7 +154,7 @@ the box has it: true`);
 
   // doctest:L152
   const elsewhere = await caller(ctx).chat.bootstrap({ session: "some-other-session", slice: TAIL });
-  await t.checkText(out.with(JSON.stringify({ kind: elsewhere.kind, pending: elsewhere.pending.length })), "{\"kind\":\"unavailable\",\"pending\":0}");
+  t.check({ kind: elsewhere.kind, pending: elsewhere.pending }, { kind: "unavailable", pending: [] });
 
   // The send above carried no identity — an open box, nobody signed in — so there is
   // nobody to keep it from, and any reader of that box sees it:
@@ -173,7 +170,7 @@ the box has it: true`);
     return appRouter.createCaller(scoped);
   }
   const anyReader = await callerAs(ctx, "tomas@example.com").chat.bootstrap({ slice: TAIL });
-  await t.checkText(out.with(anyReader.pending.length), "1");
+  t.check(anyReader.pending, [DRAWER_KEY_ROW]);
 
   // A send that DOES name its sender is a different matter. An id-less row cannot be
   // told apart from another person's by session, so it is told apart by who sent it,
@@ -191,11 +188,18 @@ the box has it: true`);
   // doctest:L188
   const asTomas = await callerAs(ctx, "tomas@example.com").chat.bootstrap({ slice: TAIL });
   const asRosa = await callerAs(ctx, "rosa@example.com").chat.bootstrap({ slice: TAIL });
-  await t.checkText(
-    out.with(JSON.stringify({
-      tomas: userText(asTomas.pending).some((text) => text.includes("loft key")),
-      rosa: userText(asRosa.pending).some((text) => text.includes("loft key")),
-    })),
-    "{\"tomas\":false,\"rosa\":true}",
-  );
+  t.check({ tomas: asTomas.pending, rosa: asRosa.pending }, {
+    tomas: [DRAWER_KEY_ROW],
+    rosa: [
+      DRAWER_KEY_ROW,
+      {
+        uuid: "accepted-2",
+        type: "user",
+        timestamp: isoDate(),
+        content: [{ type: "text", text: "<typed user=\"Rosa Okafor\">is the loft key on the hook?</typed>" }],
+        user: "Rosa Okafor",
+        reconcileKnownUuids: [],
+      },
+    ],
+  });
 });

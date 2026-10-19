@@ -12,6 +12,7 @@
 // production budget is not what this file tests.
 
 import { test } from "tap";
+import { any, capture, isoDate, not } from "agent-doctest/check";
 import "agent-doctest/tap";
 import { statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
@@ -65,7 +66,19 @@ void test("line 26", async (t) => {
   t.check(supervisor.getStatuses()[0]?.status, "running");
 
   // doctest:L58
+  const firstPid = capture(any(Number).positive());
+  const firstPort = capture(any(Number).positive());
   const first = supervisor.getStatuses()[0];
+  t.check(first, {
+    slug: "fixture",
+    status: "running",
+    pid: firstPid,
+    port: firstPort,
+    restarts: 0,
+    consecutiveFailures: 0,
+    lastError: undefined,
+    lastStart: { at: isoDate(), spawnMs: any(Number), readyMs: any(Number) },
+  });
   const accepted = await acquireBoxWork(box.root, { reason: "test" });
   await writeFile(identityFile, "generation two is different");
   const deadline = Date.now() + 120_000;
@@ -73,7 +86,7 @@ void test("line 26", async (t) => {
   t.check((await boxMaintenanceStatus(box.root))?.phase, "draining");
 
   // doctest:L66
-  await t.checkText(children.length, "1");
+  t.check(children.map((child) => child.exitCode), [null]);
 
   // doctest:L69
   t.check(
@@ -86,7 +99,16 @@ void test("line 26", async (t) => {
   await accepted.release();
   while ((children.length < 2 || supervisor.getStatuses()[0]?.status !== "running" || (await boxMaintenanceStatus(box.root)) !== null) && Date.now() < deadline) await delay();
   const next = supervisor.getStatuses()[0];
-  await t.checkText(next?.status === "running" && next.pid !== first?.pid, "true");
+  t.check(next, {
+    slug: "fixture",
+    status: "running",
+    pid: not(firstPid.value),
+    port: any(Number).positive(),
+    restarts: 1,
+    consecutiveFailures: 0,
+    lastError: undefined,
+    lastStart: { at: isoDate(), spawnMs: any(Number), readyMs: any(Number) },
+  });
 
   // doctest:L78
   t.check(children[0]?.exitCode, 75);

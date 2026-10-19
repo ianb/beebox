@@ -10,7 +10,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { resolveEntryMessageId } from "../../src/components/chat/message-parsing.js";
 import { createAudioOverlayStore } from "../../src/components/chat/audio-overlay-store.js";
 import { matchesOwnSession } from "../../src/components/chat/everywhere/InteractiveChat/ws.js";
@@ -51,7 +50,7 @@ void test("The same logical message resolves to the same key before and after re
   // doctest:L53
   const beforeSwap = userEntry("msg-xyz789", "two eggs");
   const afterSwap = userEntry("sdk-uuid-2", '<speech message-id="msg-xyz789">two eggs</speech>');
-  await t.checkText(resolveEntryMessageId(beforeSwap) === resolveEntryMessageId(afterSwap), "true");
+  t.check(resolveEntryMessageId(beforeSwap), resolveEntryMessageId(afterSwap));
 });
 
 // ## A `message-id="…"` string TYPED into the message body does NOT resolve (fix, cross-model review)
@@ -98,18 +97,16 @@ void test("Overlay store: a later retranscription overwrites the earlier one", a
 
 // ## Overlay store: consults accumulate questions; identical re-asks dedupe
 void test("Overlay store: consults accumulate questions; identical re-asks dedupe", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L111
   const consultStore = createAudioOverlayStore();
   let notifyCount = 0;
   consultStore.subscribe("msg-2", () => { notifyCount += 1; });
   consultStore.applyConsulted("msg-2", "did I say can or cannot?");
   consultStore.applyConsulted("msg-2", "did I say can or cannot?");
   consultStore.applyConsulted("msg-2", "how did I pronounce Ostrowski?");
-  print(`entry: ${JSON.stringify(consultStore.getEntry("msg-2"))}`);
-  await t.checkText(out.with(print(`notified: ${notifyCount}`)), `entry: {"consulted":{"questions":["did I say can or cannot?","how did I pronounce Ostrowski?"]}}
-notified: 3`);
+  t.check(consultStore.getEntry("msg-2"), {
+    consulted: { questions: ["did I say can or cannot?", "how did I pronounce Ostrowski?"] },
+  });
+  t.check(notifyCount, 3);
 });
 
 // ## Overlay store: subscriptions are keyed — an unrelated message never notifies

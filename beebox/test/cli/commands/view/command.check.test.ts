@@ -10,8 +10,9 @@ import "agent-doctest/tap";
 import { mkdir, writeFile, symlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
+import { any, type Expected, str, unordered } from "agent-doctest/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
-import { checkViews } from "../../../../src/cli/commands/view/command.js";
+import { checkViews, type ViewCheckResult } from "../../../../src/cli/commands/view/command.js";
 import { PACKAGE_ROOT } from "../../../../src/lib/package-root.js";
 
 const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
@@ -83,16 +84,18 @@ void test("A mix of good and broken views fails, and names which", async (t) => 
 
   // doctest:L77
   const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
-  t.check(result.ok, false);
-
-  // doctest:L81
-  t.check(result.views.find((v) => v.slug === "good")?.ok, true);
-
-  // doctest:L84
-  t.check(result.views.find((v) => v.slug === "broken")?.ok, false);
-
-  // doctest:L87
-  await t.checkText((result.views.find((v) => v.slug === "broken")?.error ?? "").length > 0, "true");
+  t.check(result, {
+    ok: false,
+    views: unordered<Expected<ViewCheckResult>>([
+      { slug: "good", ok: true },
+      // The stack holds temp-dir paths, so only its head is fixed.
+      {
+        slug: "broken",
+        ok: false,
+        error: str`View render failed: TypeError: Cannot read properties of undefined (reading 'title')${any(String)}`,
+      },
+    ]),
+  });
 });
 
 // ## A box with no broken views passes
@@ -110,10 +113,7 @@ void test("A box with no broken views passes", async (t) => {
 
   // doctest:L101
   const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
-  t.check(result.ok, true);
-
-  // doctest:L105
-  await t.checkText(result.views.length, "1");
+  t.check(result, { ok: true, views: [{ slug: "good", ok: true }] });
 });
 
 // ## A box with no views at all is trivially OK

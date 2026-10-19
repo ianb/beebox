@@ -43,7 +43,11 @@ void test("The refresh records contains text and basis; fresh cards aren't stale
   await box.write("store/notes/Bare.doc.card", DOC("No contains here yet."));
   await openSearchIndex(box.root);
   const state = await loadContainsState(box.root);
-  t.check(state.cards["store/notes/Dentist.doc.card"]?.containsText, "Dentist moved to June 17.");
+  t.check(state.cards["store/notes/Dentist.doc.card"], {
+    containsText: "Dentist moved to June 17.",
+    basisAtWrite: "a1349de0673aa734",
+    currentBasis: "a1349de0673aa734",
+  });
 
   // doctest:L42
   t.check(listStale(state), []);
@@ -66,7 +70,7 @@ void test("The refresh records contains text and basis; fresh cards aren't stale
 
   // doctest:L61
   const warning = await staleContainsWarning(box.root, { relPath: "store/notes/Dentist.doc.card", ctx });
-  await t.checkText(warning !== null && warning.startsWith("store/notes/Dentist.doc.card: card content changed but contains: didn't"), "true");
+  t.check(warning, "store/notes/Dentist.doc.card: card content changed but contains: didn't — review it; if it still holds, confirm with `bbx contains update \"store/notes/Dentist.doc.card\" --text \"...same text...\"`");
 
   // doctest:L65
   t.check(await staleContainsWarning(box.root, { relPath: "store/notes/Bare.doc.card", ctx }), null);
@@ -111,7 +115,7 @@ void test("The refresh records contains text and basis; fresh cards aren't stale
     "---\nthread-id: t1\nstatus: read\nsubject: Pricing\nparticipants:\n  - a@x.example\ncontains: Metricly demo offer; no action needed.\ndate-range:\n  start: 2026-05-14T19:00:00Z\n  end: 2026-05-14T19:00:00Z\nmessages: []\n---\n"
   );
   await openSearchIndex(box.root);
-  t.check(listStale(await loadContainsState(box.root)).filter((p) => p.includes("email")), []);
+  t.check(listStale(await loadContainsState(box.root)), []);
 
   // ## A described image satisfies contains (role separation, no duplication)
   //
@@ -125,12 +129,12 @@ void test("The refresh records contains text and basis; fresh cards aren't stale
     "---\nfilename:\n  ref: attach/boiler.jpg\n  via:\n    channel: camera-user\n    at: 2026-05-01T10:00:00Z\ndescription: " + desc + "\n---\n";
   await box.write("_bookkeeping/archive/boiler.image.card", IMG("The boiler's serial-number plate (K-44210)"));
   await openSearchIndex(box.root);
-  t.check(listMissing(await loadContainsState(box.root)).filter((p) => p.includes("image")), []);
+  t.check(listMissing(await loadContainsState(box.root)), ["store/notes/Bare.doc.card"]);
 
   // doctest:L130
   await box.write("_bookkeeping/archive/boiler.image.card", IMG("A different plate entirely (Z-99)"));
   await openSearchIndex(box.root);
-  t.check(listStale(await loadContainsState(box.root)).filter((p) => p.includes("image")), []);
+  t.check(listStale(await loadContainsState(box.root)), []);
 
   // doctest:L135
   t.check(await staleContainsWarning(box.root, { relPath: "_bookkeeping/archive/boiler.image.card", ctx }), null);

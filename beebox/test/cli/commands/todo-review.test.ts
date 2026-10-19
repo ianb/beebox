@@ -15,6 +15,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, containing, not } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
@@ -230,7 +231,8 @@ escalated:
 
   // doctest:L220
   const freshBrief = (await run(fresh.root, ["check"])).out.join("\n");
-  await t.checkText(freshBrief.includes("actionable:") && freshBrief.includes("Review the delivery note"), "true");
+  t.check(freshBrief, any(String).includes("actionable:"));
+  t.check(freshBrief, any(String).includes("Review the delivery note"));
 
   // doctest:L224
   await fresh.cleanup();
@@ -345,7 +347,7 @@ void test("The stirring baseline moves only when verify passes.", async (t) => {
 
   // doctest:L329
   setTime("2026-09-26T12:00:00.000Z");
-  await t.checkText((await run(stir.root, ["check"])).out.join("\n").includes("stirring:"), "true");
+  t.check((await run(stir.root, ["check"])).out.join("\n"), any(String).includes("stirring:"));
 
   // doctest:L333
   await edit(stir.root, { from: 'due="2026-10-30" %}', to: 'due="2026-10-30" recheck="2026-09-27" %}' });
@@ -374,11 +376,11 @@ void test("Escalated first (oldest due first), then stirring, actionable, then s
 
   // doctest:L355
   const capped = (await run(many.root, ["check"])).out.join("\n");
-  await t.checkText(capped.includes("25 of 29 shown; the rest come in later runs."), "true");
+  t.check(capped, any(String).includes("25 of 29 shown; the rest come in later runs."));
 
   // doctest:L359
   const saved = JSON.parse(await fs.readFile(path.join(many.root, ".beebox/todo-review-sweep.json"), "utf-8")).review.items.map((i: { text: string }) => i.text);
-  t.check(`${String(saved.length)}: ${saved[0]} … ${saved[24]}`, "25: Task 01 … Task 25");
+  t.check(saved, Array.from({ length: 25 }, (_, i) => `Task ${String(i + 1).padStart(2, "0")}`));
 
   // The agent rechecks all 25 and the review passes. Because a stirring todo
   // was cut, the stirring baseline does not move: the next run still lists the
@@ -485,7 +487,8 @@ void test("never written by the review's own verify holds only while the todo is
   // doctest:L461
   await edit(back.root, { from: 'due="2026-09-01" recheck="never" %}Fix', to: 'due="2026-10-15" recheck="never" %}Fix' });
   const relisted = (await run(back.root, ["check"])).out.join("\n");
-  t.check([relisted.includes("Fix the gate"), relisted.includes("Old idea")].join(" "), "true false");
+  t.check(relisted, any(String).includes("Fix the gate"));
+  t.check(relisted, not(any(String).includes("Old idea")));
 
   // doctest:L466
   await edit(back.root, { from: 'recheck="never" %}Fix', to: 'recheck="2026-11-15" %}Fix' });
@@ -518,7 +521,7 @@ void test("Retired, then the boxholder removes never:", async (t) => {
 
   // doctest:L493
   setTime("2026-11-02T12:00:00.000Z");
-  await t.checkText((await run(sneaky.root, ["check"])).out.join("\n").includes("Fix the gate"), "true");
+  t.check((await run(sneaky.root, ["check"])).out.join("\n"), any(String).includes("Fix the gate"));
 });
 
 // ## The third unchanged recheck retires the todo, commits, and raises a health warning
@@ -544,14 +547,23 @@ void test("Each daily cycle:", async (t) => {
   t.check((await cycle(tired.root, { day: "2026-09-30", from: 'recheck="2026-09-30"', to: 'recheck="2026-10-10"' })).out[0], "Every todo review item is settled");
 
   // doctest:L517
-  t.check((await (unreviewedTodosCheck(tired.root))).ok, true);
+  t.check(await unreviewedTodosCheck(tired.root), {
+    name: "todos-unreviewed",
+    ok: true,
+    message: "every open todo is still reviewed",
+    severity: "warning",
+  });
 
   // doctest:L520
   const third = await cycle(tired.root, { day: "2026-10-10", from: 'recheck="2026-10-10"', to: 'recheck="2026-10-20"' });
   t.check(third.out[0], "Stopped reviewing store/Porch.doc.card:4: Fix the gate (third recheck with no change)");
 
   // doctest:L524
-  await t.checkText((await fs.readFile(path.join(tired.root, CARD), "utf-8")).split("\n")[3], "{% todo due=\"2026-09-01\" recheck=\"never\" %}Fix the gate{% /todo %}");
+  t.check(await fs.readFile(path.join(tired.root, CARD), "utf-8"), `---
+title: Porch
+---
+{% todo due="2026-09-01" recheck="never" %}Fix the gate{% /todo %}
+`);
 
   // doctest:L527
   t.check(execSync("git log -1 --format=%s", { cwd: tired.root, encoding: "utf-8" }).trim(), "Stop reviewing todo: Fix the gate");
@@ -580,12 +592,12 @@ void test("Each daily cycle:", async (t) => {
   // gone, the next check drops its entry.
 
   // doctest:L553
-  await t.checkText((await rechecks(tired.root)).length, "1");
+  t.check(await rechecks(tired.root), ["[\"store/Porch.doc.card\",\"Fix the gate\"]"]);
 
   // doctest:L556
   await fs.rm(path.join(tired.root, CARD));
   await run(tired.root, ["check"]);
-  await t.checkText((await rechecks(tired.root)).length, "0");
+  t.check(await rechecks(tired.root), []);
 });
 
 // ## Any change to status, `start`, or `due` restarts the count
@@ -612,7 +624,11 @@ void test("Two rechecks, then the boxholder moves the due date between reviews."
   t.check(afterEdit.out[0], "Every todo review item is settled");
 
   // doctest:L582
-  await t.checkText((await fs.readFile(path.join(tended.root, CARD), "utf-8")).includes('recheck="never"'), "false");
+  t.check(await fs.readFile(path.join(tended.root, CARD), "utf-8"), `---
+title: Porch
+---
+{% todo due="2026-10-01" recheck="2026-10-20" %}Call the roofer{% /todo %}
+`);
 
   // doctest:L585
   await edit(tended.root, { from: "Call the roofer", to: "Call the roofer again" });
@@ -680,10 +696,10 @@ void test("An absent enabled means enabled.", async (t) => {
   });
   // doctest:L638
   const fresh = await makeTmpBox({ git: true });
-  await t.checkText((await installProcedures(fresh.root)).includes("todo-review.procedure.card"), "true");
+  t.check(await installProcedures(fresh.root), containing(["todo-review.procedure.card"]));
 
   // doctest:L642
-  await t.checkText((await installSchedules(fresh.root)).includes("todo-review.scheduled-script.card"), "true");
+  t.check(await installSchedules(fresh.root), containing(["todo-review.scheduled-script.card"]));
 
   // doctest:L645
   const sched = await fs.readFile(path.join(fresh.root, "_config/schedules/todo-review.scheduled-script.card"), "utf-8");
@@ -709,5 +725,5 @@ runs: bbx procedure run todo-review`);
   ]);
 
   // doctest:L657
-  t.check(def.steps[0]?.run?.agents[0]?.prompt.includes("bbx finish"), false);
+  t.check(def.steps[0]?.run?.agents[0]?.prompt, not(any(String).includes("bbx finish")));
 });

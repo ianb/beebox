@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { str } from "agent-doctest/check";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import {
   listStagedMarkdown,
@@ -39,7 +40,26 @@ void test("A staged dossier with a valid and a broken box-root link is collected
 
   // doctest:L42
   const summary = await lintMarkdownFiles(staged, { boxRoot: box.root });
-  t.check(summary.totalErrors, 1);
+  t.check(summary, {
+    filesChecked: 1,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    errors: {
+      [doc]: [
+        {
+          lineNumber: 2,
+          ruleNames: ["BBX002", "no-broken-internal-links"],
+          ruleDescription: "Internal links (relative, or box-root absolute) must point to an existing file or directory inside the box",
+          ruleInformation: null,
+          errorDetail: "Broken link: /_content/images/missing.webp",
+          errorContext: null,
+          errorRange: [2, 39],
+          fixInfo: null,
+          severity: "error",
+        },
+      ],
+    },
+  });
 
   // doctest:L48
   await box.cleanup();
@@ -89,10 +109,9 @@ void test("boxWideLinkWarnings is the warn-only commit-time scan:", async (t) =>
   await writeFile(join(box3.root, "_content/note.md"), "![gone](/_content/gone.png)\n");
   const warn = await boxWideLinkWarnings(box3.root);
   await box3.cleanup();
-  t.check([warn?.includes("Broken link: /_content/gone.png"), warn?.includes("not blocking the commit")], [
-    true,
-    true,
-  ]);
+  t.check(warn, str`error  ${box3.root}/_content/note.md:1  [BBX002] Internal links (relative, or box-root absolute) must point to an existing file or directory inside the box (Broken link: /_content/gone.png)
+
+1 broken internal link(s) in 1 file (warning — not blocking the commit; fix with \`bbx mv\` or by correcting the link)`);
 });
 
 void test("line 105", async (t) => {
@@ -131,7 +150,9 @@ void test("The box-specific config/bbx-validate.ignore (the boxholder's gitignor
 
   // doctest:L140
   const beforeIgnore = await boxWideLinkWarnings(box7.root);
-  t.check(beforeIgnore?.includes("Broken link: /_content/nope.png"), true);
+  t.check(beforeIgnore, str`error  ${box7.root}/vendor/imported/sample.md:1  [BBX002] Internal links (relative, or box-root absolute) must point to an existing file or directory inside the box (Broken link: /_content/nope.png)
+
+1 broken internal link(s) in 1 file (warning — not blocking the commit; fix with \`bbx mv\` or by correcting the link)`);
 
   // doctest:L146
   await mkdir(join(box7.root, "_config"), { recursive: true });

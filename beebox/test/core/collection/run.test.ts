@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any } from "agent-doctest/check";
 import { runCollection } from "../../../src/core/collection/run/core.js";
 import { todoCollection, TodoParamsSchema, type DerivedTodo, type TodoParams, type TodoReduction } from "../../../src/core/todo/collection.js";
 import type { CollectionQuery, CollectionResult } from "../../../src/core/collection/types.js";
@@ -70,23 +70,19 @@ function params(raw: Record<string, unknown>): TodoParams {
   return TodoParamsSchema.parse(raw);
 }
 
-/** `group / card (via) reduction` then one line per item, indented, `*` for a matching item. */
-function render(result: CollectionResult<DerivedTodo, TodoReduction>): string {
-  const lines: string[] = [];
-  for (const group of result.groups) {
-    lines.push(`# ${group.key} "${group.label}" ${count(group.reduction)}`);
-    for (const row of group.rows) {
-      lines.push(`  ${row.card.path} (${row.via}) ${count(row.reduction)}`);
-      for (const item of row.items) {
-        lines.push(`    ${item.matching ? "*" : "-"} [${item.sectionPath.join("/")}] ${item.text}`);
-      }
-    }
-  }
-  return lines.join("\n");
-}
-
-function count(reduction: unknown): string {
-  return JSON.stringify(reduction);
+/** Each group with its rows and items reduced to the fields a reader sees; `*` marks a matching item. */
+function render(result: CollectionResult<DerivedTodo, TodoReduction>) {
+  return result.groups.map((group) => ({
+    key: group.key,
+    label: group.label,
+    reduction: group.reduction,
+    rows: group.rows.map((row) => ({
+      path: row.card.path,
+      via: row.via,
+      reduction: row.reduction,
+      items: row.items.map((item) => `${item.matching ? "*" : "-"} [${item.sectionPath.join("/")}] ${item.text}`),
+    })),
+  }));
 }
 
 async function run(query: CollectionQuery<TodoParams>): Promise<CollectionResult<DerivedTodo, TodoReduction>> {
@@ -99,26 +95,24 @@ async function run(query: CollectionQuery<TodoParams>): Promise<CollectionResult
 // scopes to that one card; the box turns the reference pass off, because nothing
 // is outside it to refer in.
 void test("A directory scopes to its subtree and turns the reference pass on; a card pat...", async (t) => {
-  const out = printed();
-  const print = out.print;
-  t.teardown(async () => {
-    try {
-      await box.cleanup();
-    } catch (error) {
-      t.error(error);
-    }
-  });
-  // doctest:L102
   const dirQuery = await run({ here: KITCHEN, params: params({}) });
-  await t.checkText(out.with(JSON.stringify(dirQuery.query)), "{\"here\":\"_content/projects/Kitchen\",\"glob\":\"_content/projects/Kitchen/**\",\"includeReferring\":true,\"group\":\"place\"}");
+  t.check(dirQuery.query, {
+    here: "_content/projects/Kitchen",
+    glob: "_content/projects/Kitchen/**",
+    includeReferring: true,
+    group: "place",
+  });
 
-  // doctest:L106
   const cardQuery = await run({ here: `${KITCHEN}/Plan.doc.card`, params: params({}) });
-  await t.checkText(out.with(JSON.stringify(cardQuery.query)), "{\"here\":\"_content/projects/Kitchen/Plan.doc.card\",\"glob\":\"_content/projects/Kitchen/Plan.doc.card\",\"includeReferring\":true,\"group\":\"place\"}");
+  t.check(cardQuery.query, {
+    here: "_content/projects/Kitchen/Plan.doc.card",
+    glob: "_content/projects/Kitchen/Plan.doc.card",
+    includeReferring: true,
+    group: "place",
+  });
 
-  // doctest:L110
   const boxQuery = await run({ here: "", params: params({}) });
-  await t.checkText(out.with(JSON.stringify(boxQuery.query)), "{\"here\":\"\",\"glob\":\"**/*.card\",\"includeReferring\":false,\"group\":\"place\"}");
+  t.check(boxQuery.query, { here: "", glob: "**/*.card", includeReferring: false, group: "place" });
 
   // The scope is a directory-vs-card decision about the path's SHAPE, not a
   // `stat` — a query resolves the same way whether or not the path exists.
@@ -130,13 +124,26 @@ void test("A directory scopes to its subtree and turns the reference pass on; a 
   // and a matching item whose parent is filtered out keeps that parent as marked
   // context rather than floating loose.
 
-  // doctest:L126
-  await t.checkText(out.with(render(await run({ here: `${KITCHEN}/Plan.doc.card`, includeReferring: false, params: params({}) }))), `# place "By place" {"open":2,"done":0,"dropped":0,"parked":1,"onPlate":2,"escalated":0,"next":null}
-  _content/projects/Kitchen/Plan.doc.card (scope) {"open":2,"done":2,"dropped":0,"parked":1,"onPlate":2,"escalated":0,"next":null}
-    - [Cabinets] Strip the doors
-    * [Cabinets] Sand the frames
-    * [Floor] Order tile
-    * [Floor] Replace the window`);
+  t.check(render(await run({ here: `${KITCHEN}/Plan.doc.card`, includeReferring: false, params: params({}) })), [
+    {
+      key: "place",
+      label: "By place",
+      reduction: { open: 2, done: 0, dropped: 0, parked: 1, onPlate: 2, escalated: 0, next: null },
+      rows: [
+        {
+          path: "_content/projects/Kitchen/Plan.doc.card",
+          via: "scope",
+          reduction: { open: 2, done: 2, dropped: 0, parked: 1, onPlate: 2, escalated: 0, next: null },
+          items: [
+            "- [Cabinets] Strip the doors",
+            "* [Cabinets] Sand the frames",
+            "* [Floor] Order tile",
+            "* [Floor] Replace the window",
+          ],
+        },
+      ],
+    },
+  ]);
 
   // "Strip the doors" is `done`: it is not in the group's reduction and is marked
   // `-`, but it is shown so its open child reads in context. The row's reduction
@@ -145,29 +152,38 @@ void test("A directory scopes to its subtree and turns the reference pass on; a 
   // Sections come back as data, one entry per distinct section path on the card,
   // each reduced over its own items.
 
-  // doctest:L144
   const planRow = (await run({ here: `${KITCHEN}/Plan.doc.card`, includeReferring: false, params: params({}) })).groups[0]?.rows[0];
-  await t.checkText(out.with(JSON.stringify(planRow?.sections.map((s) => [s.path.join("/"), s.reduction.open, s.reduction.done]))), "[[\"Cabinets\",1,1],[\"Floor\",1,1]]");
+  t.check(planRow?.sections.map((s) => [s.path.join("/"), s.reduction.open, s.reduction.done]), [["Cabinets", 1, 1], ["Floor", 1, 1]]);
 
-  // doctest:L148
-  await t.checkText(out.with(planRow?.card.title), "Cabinet plan");
+  t.check(planRow?.card.title, "Cabinet plan");
 
   // ## Params filter what matches, never what counts
 
-  // doctest:L155
-  await t.checkText(out.with(render(await run({ here: `${KITCHEN}/Plan.doc.card`, includeReferring: false, params: params({ status: ["done"] }) }))), `# place "By place" {"open":0,"done":2,"dropped":0,"parked":0,"onPlate":0,"escalated":0,"next":null}
-  _content/projects/Kitchen/Plan.doc.card (scope) {"open":2,"done":2,"dropped":0,"parked":1,"onPlate":2,"escalated":0,"next":null}
-    * [Cabinets] Strip the doors
-    * [Floor] Measure the room`);
+  t.check(render(await run({ here: `${KITCHEN}/Plan.doc.card`, includeReferring: false, params: params({ status: ["done"] }) })), [
+    {
+      key: "place",
+      label: "By place",
+      reduction: { open: 0, done: 2, dropped: 0, parked: 0, onPlate: 0, escalated: 0, next: null },
+      rows: [
+        {
+          path: "_content/projects/Kitchen/Plan.doc.card",
+          via: "scope",
+          reduction: { open: 2, done: 2, dropped: 0, parked: 1, onPlate: 2, escalated: 0, next: null },
+          items: ["* [Cabinets] Strip the doors", "* [Floor] Measure the room"],
+        },
+      ],
+    },
+  ]);
 
   // A card with no matching item has no row — `Inbox.doc.card` is read on a
   // box-wide scan and never appears.
 
-  // doctest:L167
   const boxWide = await run({ here: "", params: params({}) });
-  await t.checkText(out.with(boxWide.groups[0]?.rows.map((r) => r.card.path).join("\n")), `_content/projects/Garden/Notes.doc.card
-_content/projects/Kitchen/Plan.doc.card
-_content/projects/Kitchen/Supplies.doc.card`);
+  t.check(boxWide.groups[0]?.rows.map((r) => r.card.path), [
+    "_content/projects/Garden/Notes.doc.card",
+    "_content/projects/Kitchen/Plan.doc.card",
+    "_content/projects/Kitchen/Supplies.doc.card",
+  ]);
 
   // ## Groupings
   //
@@ -175,26 +191,20 @@ _content/projects/Kitchen/Supplies.doc.card`);
   // sections and parents inside each row. `plate` is the six plate states, in the
   // list's order, with rows formed again inside each group.
 
-  // doctest:L182
   const byPlate = await run({ here: KITCHEN, includeReferring: false, group: "plate", params: params({ status: ["open", "parked", "done", "dropped"] }) });
-  await t.checkText(out.with(byPlate.groups.map((g) => `${g.key} "${g.label}" ${String(g.reduction.open + g.reduction.done + g.reduction.dropped + g.reduction.parked)}`).join("\n")), `on-plate "On your plate" 3
-parked "Parked" 1
-done "Done" 2
-dropped "Dropped" 1`);
-
-  // doctest:L190
-  await t.checkText(out.with(byPlate.groups.map((g) => `${g.key}: ${g.rows.map((r) => r.card.title).join(", ")}`).join("\n")), `on-plate: Cabinet plan, Supplies
-parked: Cabinet plan
-done: Cabinet plan
-dropped: Supplies`);
+  t.check(byPlate.groups.map((g) => ({ key: g.key, label: g.label, reduction: g.reduction, cards: g.rows.map((r) => r.card.title) })), [
+    { key: "on-plate", label: "On your plate", reduction: { open: 3, done: 0, dropped: 0, parked: 0, onPlate: 3, escalated: 0, next: "2026-07-27" }, cards: ["Cabinet plan", "Supplies"] },
+    { key: "parked", label: "Parked", reduction: { open: 0, done: 0, dropped: 0, parked: 1, onPlate: 0, escalated: 0, next: null }, cards: ["Cabinet plan"] },
+    { key: "done", label: "Done", reduction: { open: 0, done: 2, dropped: 0, parked: 0, onPlate: 0, escalated: 0, next: null }, cards: ["Cabinet plan"] },
+    { key: "dropped", label: "Dropped", reduction: { open: 0, done: 0, dropped: 1, parked: 0, onPlate: 0, escalated: 0, next: null }, cards: ["Supplies"] },
+  ]);
 
   // An empty plate state is not an empty group: it is absent.
   //
   // ## `next` is the earliest date an open todo carries
 
-  // doctest:L203
   const supplies = await run({ here: `${KITCHEN}/Supplies.doc.card`, includeReferring: false, params: params({}) });
-  await t.checkText(out.with(JSON.stringify(supplies.reduction)), "{\"open\":1,\"done\":0,\"dropped\":1,\"parked\":0,\"onPlate\":1,\"escalated\":0,\"next\":\"2026-07-27\"}");
+  t.check(supplies.reduction, { open: 1, done: 0, dropped: 1, parked: 0, onPlate: 1, escalated: 0, next: "2026-07-27" });
 
   // `2026-07-27` is the resolved `start`, which lands before the `due`.
   //
@@ -203,16 +213,17 @@ dropped: Supplies`);
   // The review sweep keeps its own baseline file; everything else passes `null`,
   // and then nothing is stirring.
 
-  // doctest:L216
   const stirringQuery = { here: `${KITCHEN}/Supplies.doc.card`, includeReferring: false, params: params({}) };
   const quiet = await runCollection(box.root, { def: todoCollection, query: stirringQuery, deriveCtx: CTX });
-  await t.checkText(out.with(JSON.stringify(quiet.groups[0]?.rows[0]?.items.map((i) => [i.text, i.stirring]))), "[[\"Reorder the grout\",false]]");
+  t.check(quiet.groups[0]?.rows[0]?.items.map((i) => [i.text, i.stirring]), [["Reorder the grout", false]]);
 
-  // doctest:L221
   const since = Date.UTC(2026, 6, 20);
   const stirred = await runCollection(box.root, { def: todoCollection, query: stirringQuery, deriveCtx: { ...CTX, since } });
-  await t.checkText(out.with(JSON.stringify(stirred.groups[0]?.rows[0]?.items.map((i) => [i.text, i.stirring]))), "[[\"Reorder the grout\",true]]");
+  t.check(stirred.groups[0]?.rows[0]?.items.map((i) => [i.text, i.stirring]), [["Reorder the grout", true]]);
 
+});
+
+void test("Reference scope: todos elsewhere that point at this place", async (t) => {
   // ## Reference scope: todos elsewhere that point at this place
   //
   // A card inside the glob contributes ALL its items, `via: "scope"`. A card
@@ -225,20 +236,43 @@ dropped: Supplies`);
   // ahead of `Kitchen/Plan` in a query about the kitchen — would put somebody
   // else's list at the top of this one.
 
-  // doctest:L240
-  await t.checkText(out.with(render(await run({ here: KITCHEN, params: params({}) }))), `# place "By place" {"open":7,"done":0,"dropped":0,"parked":1,"onPlate":7,"escalated":0,"next":"2026-07-27"}
-  _content/projects/Kitchen/Plan.doc.card (scope) {"open":2,"done":2,"dropped":0,"parked":1,"onPlate":2,"escalated":0,"next":null}
-    - [Cabinets] Strip the doors
-    * [Cabinets] Sand the frames
-    * [Floor] Order tile
-    * [Floor] Replace the window
-  _content/projects/Kitchen/Supplies.doc.card (scope) {"open":1,"done":0,"dropped":1,"parked":0,"onPlate":1,"escalated":0,"next":"2026-07-27"}
-    * [] Reorder the grout
-  _content/projects/Garden/Notes.doc.card (reference) {"open":4,"done":0,"dropped":0,"parked":0,"onPlate":4,"escalated":0,"next":null}
-    * [Hardware] Hardware run
-    * [Hardware] Grab grout for the kitchen
-    * [Hardware] Ask about the cabinet plan
-    * [Hardware] Check the supplies list`);
+  t.check(render(await run({ here: KITCHEN, params: params({}) })), [
+    {
+      key: "place",
+      label: "By place",
+      reduction: { open: 7, done: 0, dropped: 0, parked: 1, onPlate: 7, escalated: 0, next: "2026-07-27" },
+      rows: [
+        {
+          path: "_content/projects/Kitchen/Plan.doc.card",
+          via: "scope",
+          reduction: { open: 2, done: 2, dropped: 0, parked: 1, onPlate: 2, escalated: 0, next: null },
+          items: [
+            "- [Cabinets] Strip the doors",
+            "* [Cabinets] Sand the frames",
+            "* [Floor] Order tile",
+            "* [Floor] Replace the window",
+          ],
+        },
+        {
+          path: "_content/projects/Kitchen/Supplies.doc.card",
+          via: "scope",
+          reduction: { open: 1, done: 0, dropped: 1, parked: 0, onPlate: 1, escalated: 0, next: "2026-07-27" },
+          items: ["* [] Reorder the grout"],
+        },
+        {
+          path: "_content/projects/Garden/Notes.doc.card",
+          via: "reference",
+          reduction: { open: 4, done: 0, dropped: 0, parked: 0, onPlate: 4, escalated: 0, next: null },
+          items: [
+            "* [Hardware] Hardware run",
+            "* [Hardware] Grab grout for the kitchen",
+            "* [Hardware] Ask about the cabinet plan",
+            "* [Hardware] Check the supplies list",
+          ],
+        },
+      ],
+    },
+  ]);
 
   // "Water the beans" is in the same card and points nowhere near the kitchen, so
   // it is not in scope at all — not even as a non-matching row entry. "Hardware
@@ -248,54 +282,63 @@ dropped: Supplies`);
   // A card path has no subtree: only the ref naming that exact card matches, and
   // a ref to its sibling does not.
 
-  // doctest:L266
   const toPlan = await run({ here: `${KITCHEN}/Plan.doc.card`, params: params({}) });
   const referring = toPlan.groups[0]?.rows.filter((r) => r.via === "reference") ?? [];
-  await t.checkText(out.with(JSON.stringify(referring.map((r) => r.items.map((i) => `${i.matching ? "*" : "-"}${i.text}`)))), "[[\"*Hardware run\",\"*Ask about the cabinet plan\"]]");
+  t.check(referring.map((r) => r.items.map((i) => `${i.matching ? "*" : "-"}${i.text}`)), [["*Hardware run", "*Ask about the cabinet plan"]]);
 
   // `includeReferring: false` restores the subtree-only scan — the escape hatch
   // for the cost below.
 
-  // doctest:L276
   const noRefs = await run({ here: KITCHEN, includeReferring: false, params: params({}) });
-  await t.checkText(out.with(noRefs.groups[0]?.rows.map((r) => `${r.card.path} (${r.via})`).join("\n")), `_content/projects/Kitchen/Plan.doc.card (scope)
-_content/projects/Kitchen/Supplies.doc.card (scope)`);
+  t.check(noRefs.groups[0]?.rows.map((r) => ({ path: r.card.path, via: r.via })), [
+    { path: "_content/projects/Kitchen/Plan.doc.card", via: "scope" },
+    { path: "_content/projects/Kitchen/Supplies.doc.card", via: "scope" },
+  ]);
 
   // A card inside the glob that ALSO refers into `here` stays `via: "scope"` and
   // keeps all of its items — the reference pass never sees it.
 
-  // doctest:L287
-  await t.checkText(
-    out.with(JSON.stringify(
-      (await run({ here: KITCHEN, params: params({}) })).groups[0]?.rows
-        .filter((r) => r.card.path.startsWith(`${KITCHEN}/`))
-        .map((r) => r.via)
-    )),
-    "[\"scope\",\"scope\"]",
+  t.check(
+    (await run({ here: KITCHEN, params: params({}) })).groups[0]?.rows
+      .filter((r) => r.card.path.startsWith(`${KITCHEN}/`))
+      .map((r) => r.via),
+    ["scope", "scope"],
   );
 
+});
+
+void test("Issues, duplicate ids, shared lines, unsafe globs and cost", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
   // ## Issues travel beside the result, never instead of it
   //
   // A card in scope that cannot be read contributes an issue and no items; the
   // rest of the query is unaffected.
 
-  // doctest:L301
   await box.write(`${KITCHEN}/Broken.doc.card`, "---\ntitle: 7\n---\n{% todo %}Lost{% /todo %}\n");
   const withIssue = await run({ here: KITCHEN, includeReferring: false, params: params({}) });
-  await t.checkText(out.with(JSON.stringify(withIssue.issues.map((i) => [i.kind, i.path]))), "[[\"load\",\"_content/projects/Kitchen/Broken.doc.card\"]]");
+  t.check(withIssue.issues.map((i) => [i.kind, i.path]), [["load", "_content/projects/Kitchen/Broken.doc.card"]]);
 
-  // doctest:L306
-  await t.checkText(out.with(withIssue.groups[0]?.rows.length), "2");
+  t.check(withIssue.groups[0]?.rows.map((r) => r.card.path), [
+    "_content/projects/Kitchen/Plan.doc.card",
+    "_content/projects/Kitchen/Supplies.doc.card",
+  ]);
 
   // Some problems only appear once every card has been read. A collection may
   // declare a `crossCardIssues` pass for those; todos use it for a duplicate `id`,
   // which hides nothing but does break the one handle an agent has for naming a
   // single todo.
 
-  // doctest:L316
   await box.write(`${KITCHEN}/Dup.doc.card`, doc("Dup", '{% todo id="grout" %}One{% /todo %}\n\n{% todo id="grout" %}Two{% /todo %}\n'));
   const dup = await run({ here: KITCHEN, includeReferring: false, params: params({}) });
-  await t.checkText(out.with(JSON.stringify(dup.issues.filter((i) => i.kind === "duplicate-id").map((i) => i.message))), "[\"duplicate todo id \\\"grout\\\" used at: _content/projects/Kitchen/Dup.doc.card:4, _content/projects/Kitchen/Dup.doc.card:6\"]");
+  t.check(dup.issues.filter((i) => i.kind === "duplicate-id").map((i) => i.message), [
+    'duplicate todo id "grout" used at: _content/projects/Kitchen/Dup.doc.card:4, _content/projects/Kitchen/Dup.doc.card:6',
+  ]);
 
   // The reference pass is deliberately quieter: a card outside the scope that
   // fails to parse is skipped without an issue, because an unparseable card cannot
@@ -309,7 +352,6 @@ _content/projects/Kitchen/Supplies.doc.card (scope)`);
   // `path:line`, the second carries `#2`, and the item nested under the line hangs
   // off the todo that owns it — the last one written before the nested list.
 
-  // doctest:L335
   await box.write(`${KITCHEN}/Move.doc.card`, doc("Move", [
     "- {% todo %}Appraise{% /todo %} — ask Marisol {% todo %}Insure{% /todo %} — before the move",
     "  - {% todo %}Get the policy number{% /todo %}",
@@ -317,20 +359,31 @@ _content/projects/Kitchen/Supplies.doc.card (scope)`);
   ].join("\n")));
   const move = await run({ here: `${KITCHEN}/Move.doc.card`, includeReferring: false, params: params({}) });
   const moveRow = move.groups[0]?.rows[0];
-  await t.checkText(out.with(moveRow?.items.map((i) => `${formatTodoLocation(i)} ${JSON.stringify(i.text)} parent=${i.parent === null ? "-" : formatTodoLocation({ path: i.path, locator: i.parent })}`).join("\n")), `_content/projects/Kitchen/Move.doc.card:4 "Appraise" parent=-
-_content/projects/Kitchen/Move.doc.card:4#2 "Insure" parent=-
-_content/projects/Kitchen/Move.doc.card:5 "Get the policy number" parent=_content/projects/Kitchen/Move.doc.card:4#2`);
+  t.check(
+    moveRow?.items.map((i) => ({
+      location: formatTodoLocation(i),
+      text: i.text,
+      parent: i.parent === null ? null : formatTodoLocation({ path: i.path, locator: i.parent }),
+    })),
+    [
+      { location: "_content/projects/Kitchen/Move.doc.card:4", text: "Appraise", parent: null },
+      { location: "_content/projects/Kitchen/Move.doc.card:4#2", text: "Insure", parent: null },
+      {
+        location: "_content/projects/Kitchen/Move.doc.card:5",
+        text: "Get the policy number",
+        parent: "_content/projects/Kitchen/Move.doc.card:4#2",
+      },
+    ],
+  );
 
   // The reduction counted all three before this fix too — it reads the flat item
   // list. It was the row that dropped one, which is what the web list, `bbx query`
   // and `bbx todos` all render.
 
-  // doctest:L354
-  await t.checkText(out.with(count(moveRow?.reduction)), "{\"open\":3,\"done\":0,\"dropped\":0,\"parked\":0,\"onPlate\":3,\"escalated\":0,\"next\":null}");
+  t.check(moveRow?.reduction, { open: 3, done: 0, dropped: 0, parked: 0, onPlate: 3, escalated: 0, next: null });
 
   // ## A glob that could leave the box is refused before anything is read
 
-  // doctest:L361
   await t.checkThrows(async () => (await run({ here: "", glob: "../**/*.card", params: params({}) })), "UnsafeGlobError");
 
   // ## Cost
@@ -346,16 +399,13 @@ _content/projects/Kitchen/Move.doc.card:5 "Get the policy number" parent=_conten
   // reference pass reads every card, so the ratio grows with the box and not with
   // the scope.
 
-  // doctest:L379
   const t0 = performance.now();
   await run({ here: KITCHEN, includeReferring: false, params: params({}) });
   const subtreeMs = performance.now() - t0;
   const t1 = performance.now();
   await run({ here: KITCHEN, params: params({}) });
   const referringMs = performance.now() - t1;
-  print(`subtree-only ${subtreeMs.toFixed(0)} ms, with referring ${referringMs.toFixed(0)} ms`);
-  await t.checkText(out.with([subtreeMs, referringMs].every((ms) => ms >= 0)), `«show»
-true`);
+  t.check({ subtreeMs, referringMs }, { subtreeMs: any(Number).between(0, Infinity), referringMs: any(Number).between(0, Infinity) });
 });
 
 // ## The scope prefilter: a card whose text can't hold a todo is skipped without a parse
@@ -374,10 +424,8 @@ void test("200 cards, three carrying real todos, one broken card that mentions \
       t.error(error);
     }
   });
-  // doctest:L405
   const prefilterBox = await makeTmpBox();
 
-  // doctest:L407
   for (let i = 0; i < 195; i++) {
     await prefilterBox.write(`_content/plain-${String(i)}.doc.card`, doc(`Plain ${String(i)}`, "Nothing to see here.\n"));
   }
@@ -391,23 +439,17 @@ void test("200 cards, three carrying real todos, one broken card that mentions \
   // parse that would have failed ever runs.
   await prefilterBox.write("_content/broken-without.doc.card", "---\ntitle: 7\n---\nNothing relevant here.\n");
 
-  // doctest:L420
   const prefiltered = await runCollection(prefilterBox.root, {
     def: todoCollection,
     query: { here: "", params: params({}) },
     deriveCtx: CTX,
   });
 
-  // doctest:L426
-  await t.checkText(prefiltered.groups[0]?.rows.map((r) => r.card.path).join("\n"), `_content/one.doc.card
-_content/three.doc.card
-_content/two.doc.card`);
-
-  // doctest:L432
-  t.check(prefiltered.issues.map((i) => [i.kind, i.path]), [
-    [
-      "load",
-      "_content/broken-with-todo.doc.card",
-    ],
+  t.check(prefiltered.groups[0]?.rows.map((r) => r.card.path), [
+    "_content/one.doc.card",
+    "_content/three.doc.card",
+    "_content/two.doc.card",
   ]);
+
+  t.check(prefiltered.issues.map((i) => [i.kind, i.path]), [["load", "_content/broken-with-todo.doc.card"]]);
 });

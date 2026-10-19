@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, str } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -40,14 +41,36 @@ void test("A recognized failure is classified, rewritten, and recorded", async (
     { success: false, output: "", error: CODEX_QUOTA_MESSAGE, exitCode: -1, sessionId: "s1" },
     { provider: "codex", boxRoot: box.root },
   );
-  await t.checkText(classified.success === false && classified.unavailability?.reason, "quota-exhausted");
+  // The reset date is long past, so the hold is a one-hour fallback from the current clock.
+  t.check(classified, {
+    success: false,
+    output: "",
+    error: str`Codex is out of usage quota until ${any(String)} (account-level: affects every box and task using this Codex account). Provider message: ${CODEX_QUOTA_MESSAGE}`,
+    exitCode: -1,
+    sessionId: "s1",
+    unavailability: {
+      provider: "codex",
+      reason: "quota-exhausted",
+      retryAt: isoDate(),
+      retryAtSource: "fallback",
+      detectedAt: isoDate(),
+      message: CODEX_QUOTA_MESSAGE,
+    },
+  });
 
   // doctest:L45
-  await t.checkText(!classified.success && classified.error.startsWith("Codex is out of usage quota until "), "true");
 
   // doctest:L48
   const live = await liveEngineUnavailability({ provider: "codex", now: new Date() });
-  t.check(live?.provider, "codex");
+  t.check(live, {
+    provider: "codex",
+    reason: "quota-exhausted",
+    retryAt: isoDate(),
+    retryAtSource: "fallback",
+    detectedAt: isoDate(),
+    message: CODEX_QUOTA_MESSAGE,
+    episodeStartedAt: isoDate(),
+  });
 
   // The episode is not announced: it is the `engine-quota` health check, and
   // nothing was written to the notification log.
@@ -62,15 +85,14 @@ void test("A recognized failure is classified, rewritten, and recorded", async (
     { success: false, output: "x", error: "exit code 1", exitCode: 1, sessionId: "s2" },
     { provider: "codex", boxRoot: box.root },
   );
-  await t.checkText(!ordinary.success && ordinary.error, "exit code 1");
+  t.check(ordinary, { success: false, output: "x", error: "exit code 1", exitCode: 1, sessionId: "s2" });
 
   // doctest:L71
-  await t.checkText("unavailability" in ordinary, "false");
 
   // doctest:L74
   const success = await applyEngineUnavailability(
     { success: true, output: "done", exitCode: 0, sessionId: "s3" },
     { provider: "codex", boxRoot: box.root },
   );
-  t.check(success.success, true);
+  t.check(success, { success: true, output: "done", exitCode: 0, sessionId: "s3" });
 });

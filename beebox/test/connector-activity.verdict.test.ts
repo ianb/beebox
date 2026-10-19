@@ -15,6 +15,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { is } from "agent-doctest/check";
 import { connectorVerdict, nextEpisode, describeVerdict } from "../src/connector-activity/verdict.js";
 import { addDays } from "../src/connector-activity/core.js";
 import type { ConnectorDay, ConnectorEpisode } from "../src/connector-activity/core.js";
@@ -38,10 +39,7 @@ function history(pattern: string, end?: string) {
 }
 
 function verdict(pattern: string, openEpisode?: ConnectorEpisode | null) {
-  const v = connectorVerdict({ days: history(pattern), today, openEpisode: openEpisode ?? null });
-  return v.kind === "quiet" ? `quiet since ${v.since}: ${v.quietDays} of ${v.allowedDays}`
-    : v.kind === "failing" ? `failing since ${v.since}: ${v.failingDays} days`
-    : v.kind;
+  return connectorVerdict({ days: history(pattern), today, openEpisode: openEpisode ?? null });
 }
 
 const daily = "P".repeat(35);
@@ -52,10 +50,10 @@ const daily = "P".repeat(35);
 // threads) with nothing new. Two quiet days are allowed; the third alerts.
 void test("Five weeks of new mail every day, then syncs keep succeeding (refreshing trac...", async (t) => {
   // doctest:L55
-  t.check(verdict(daily + "ZZ"), "healthy");
+  t.check(verdict(daily + "ZZ"), { kind: "healthy" });
 
   // doctest:L58
-  t.check(verdict(daily + "ZZZ"), "quiet since 2026-09-16: 3 of 2");
+  t.check(verdict(daily + "ZZZ"), { kind: "quiet", since: "2026-09-16", quietDays: 3, allowedDays: 2 });
 });
 
 // ## Days with no syncs count for nothing
@@ -64,10 +62,10 @@ void test("Five weeks of new mail every day, then syncs keep succeeding (refresh
 // breaks it. A week off followed by one quiet day is one quiet day:
 void test("A scheduler outage in the middle of a quiet stretch neither extends it nor br...", async (t) => {
   // doctest:L68
-  t.check(verdict(daily + ".......Z"), "healthy");
+  t.check(verdict(daily + ".......Z"), { kind: "healthy" });
 
   // doctest:L71
-  t.check(verdict(daily + "Z.......ZZ"), "quiet since 2026-09-09: 3 of 2");
+  t.check(verdict(daily + "Z.......ZZ"), { kind: "quiet", since: "2026-09-09", quietDays: 3, allowedDays: 2 });
 });
 
 // ## Sparse and irregular connectors are never watched
@@ -77,16 +75,16 @@ void test("A scheduler outage in the middle of a quiet stretch neither extends i
 // connector produces on at most 12 of 28 days, however regular it is:
 void test("New items on fewer than 60% of the 28 calendar days before the quiet stretch...", async (t) => {
   // doctest:L82
-  t.check(verdict("P.P.P..".repeat(5) + "Z.Z.Z..Z.Z.Z.."), "unwatched");
+  t.check(verdict("P.P.P..".repeat(5) + "Z.Z.Z..Z.Z.Z.."), { kind: "unwatched" });
 
   // doctest:L85
-  t.check(verdict("PZZZZZZ".repeat(5) + "ZZZZZZZZZZZZZZ"), "unwatched");
+  t.check(verdict("PZZZZZZ".repeat(5) + "ZZZZZZZZZZZZZZ"), { kind: "unwatched" });
 });
 
 // Nor is a connector with under 21 days of history:
 void test("Nor is a connector with under 21 days of history:", async (t) => {
   // doctest:L92
-  t.check(verdict("P".repeat(15) + "ZZZZZ"), "unwatched");
+  t.check(verdict("P".repeat(15) + "ZZZZZ"), { kind: "unwatched" });
 });
 
 // ## A connector with gaps gets a longer allowance
@@ -96,10 +94,10 @@ void test("Nor is a connector with under 21 days of history:", async (t) => {
 void test("The allowance is twice the longest quiet run in the baseline.", async (t) => {
   // doctest:L102
   const gappy = "ZZPPPPP".repeat(5);
-  t.check(verdict(gappy + "ZZZZ"), "healthy");
+  t.check(verdict(gappy + "ZZZZ"), { kind: "healthy" });
 
   // doctest:L106
-  t.check(verdict(gappy + "ZZZZZ"), "quiet since 2026-09-14: 5 of 4");
+  t.check(verdict(gappy + "ZZZZZ"), { kind: "quiet", since: "2026-09-14", quietDays: 5, allowedDays: 4 });
 });
 
 // ## Errors and skips are not quiet days
@@ -108,26 +106,26 @@ void test("The allowance is twice the longest quiet run in the baseline.", async
 // Errors have their own verdict; a skip already says why nothing ran.
 void test("A day whose syncs all errored or skipped is passed over by the quiet count.", async (t) => {
   // doctest:L116
-  t.check(verdict(daily + "ZSSSSZ"), "healthy");
+  t.check(verdict(daily + "ZSSSSZ"), { kind: "healthy" });
 
   // doctest:L119
-  t.check(verdict(daily + "ZE"), "healthy");
+  t.check(verdict(daily + "ZE"), { kind: "healthy" });
 
   // doctest:L122
-  t.check(verdict(daily + "ZEE"), "failing since 2026-09-17: 2 days");
+  t.check(verdict(daily + "ZEE"), { kind: "failing", since: "2026-09-17", failingDays: 2, lastError: "invalid_grant" });
 });
 
 // A connector that fails every sync for two run days is failing, whatever its
 // history, and an ok day ends it:
 void test("A connector that fails every sync for two run days is failing, whatever its h...", async (t) => {
   // doctest:L130
-  t.check(verdict("EE"), "failing since 2026-09-17: 2 days");
+  t.check(verdict("EE"), { kind: "failing", since: "2026-09-17", failingDays: 2, lastError: "invalid_grant" });
 
   // doctest:L133
-  t.check(verdict("E.....E"), "failing since 2026-09-12: 2 days");
+  t.check(verdict("E.....E"), { kind: "failing", since: "2026-09-12", failingDays: 2, lastError: "invalid_grant" });
 
   // doctest:L136
-  t.check(verdict("EEEP"), "healthy");
+  t.check(verdict("EEEP"), { kind: "healthy" });
 });
 
 // ## An open episode does not age out
@@ -138,13 +136,13 @@ void test("A connector that fails every sync for two run days is failing, whatev
 void test("Two months into a quiet stretch, the baseline has left the 60-day record.", async (t) => {
   // doctest:L147
   const longQuiet = "Z".repeat(60);
-  t.check(verdict(longQuiet), "unwatched");
+  t.check(verdict(longQuiet), { kind: "unwatched" });
 
   // doctest:L151
-  t.check(verdict(longQuiet, { kind: "quiet", since: "2026-06-01", notifiedAt: null, dismissedAt: null }), "quiet since 2026-06-01: 60 of null");
+  t.check(verdict(longQuiet, { kind: "quiet", since: "2026-06-01", notifiedAt: null, dismissedAt: null }), { kind: "quiet", since: "2026-06-01", quietDays: 60, allowedDays: null });
 
   // doctest:L154
-  t.check(verdict(longQuiet + "P", { kind: "quiet", since: "2026-06-01", notifiedAt: null, dismissedAt: null }), "healthy");
+  t.check(verdict(longQuiet + "P", { kind: "quiet", since: "2026-06-01", notifiedAt: null, dismissedAt: null }), { kind: "healthy" });
 });
 
 // ## Episodes persist their notification and dismissal
@@ -169,7 +167,7 @@ void test("nextEpisode keeps the stored episode while the same one continues, so
   // The next day: same history plus one more quiet day.
   const tomorrow = addDays(today, 1);
   const longer = connectorVerdict({ days: history(daily + "ZZZZ", tomorrow), today: tomorrow, openEpisode: dismissed });
-  await t.checkText(nextEpisode(dismissed, longer) === dismissed, "true");
+  t.check(nextEpisode(dismissed, longer), is(dismissed));
 
   // doctest:L178
   t.check(nextEpisode(dismissed, { kind: "healthy" }), null);

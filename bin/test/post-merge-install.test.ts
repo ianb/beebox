@@ -68,19 +68,19 @@ async function fixture() {
 
 // A changed lockfile runs from the invoking checkout and uses the frozen lockfile.
 void test("A changed lockfile runs from the invoking checkout and uses the frozen lockfile.", async (t) => {
-  // doctest:L68
   const data = await fixture();
   t.teardown(async () => await fs.rm(data.root, { recursive: true, force: true }));
   const result = await execFileAsync(helper, [data.repo, data.oldRef, data.newRef], {
     env: data.env,
   });
-  assert.match(result.stdout, /pnpm-lock\.yaml changed/);
-  t.check((await fs.readFile(data.marker, "utf8")) === `${data.repo}\ninstall --frozen-lockfile\n`, true);
+  t.check(result.stdout, `[post-merge] pnpm-lock.yaml changed; synchronizing this checkout...
+[post-merge] Dependencies synchronized.
+`);
+  t.check(await fs.readFile(data.marker, "utf8"), `${data.repo}\ninstall --frozen-lockfile\n`);
 });
 
 // An unchanged lockfile is a silent no-op.
 void test("An unchanged lockfile is a silent no-op.", async (t) => {
-  // doctest:L81
   const data = await fixture();
   t.teardown(async () => await fs.rm(data.root, { recursive: true, force: true }));
   const result = await execFileAsync(helper, [data.repo, data.newRef, data.newRef], {
@@ -88,14 +88,12 @@ void test("An unchanged lockfile is a silent no-op.", async (t) => {
   });
   t.check(result.stdout, "");
 
-  // doctest:L89
   await assert.rejects(fs.access(data.marker));
 });
 
 // Install failures remain visible and tell direct callers that local commands may
 // fail; the post-merge hook can separately decide whether deployment continues.
 void test("Install failures remain visible and tell direct callers that local commands m...", async (t) => {
-  // doctest:L96
   const data = await fixture();
   t.teardown(
     async () => await fs.rm(data.root, { recursive: true, force: true }),
@@ -104,25 +102,21 @@ void test("Install failures remain visible and tell direct callers that local co
     path.join(path.dirname(data.marker), "bin", "pnpm"),
     "#!/usr/bin/env bash\nexit 23\n",
   );
-  await assert.rejects(
-    execFileAsync(helper, [data.repo, data.oldRef, data.newRef], {
-      env: data.env,
-    }),
-    (error: unknown) => {
-      assert.equal(failureOf(error).code, 1);
-      assert.match(
-        failureOf(error).stderr ?? "",
-        /local commands may fail/,
-      );
-      return true;
-    },
+  const failure = await execFileAsync(helper, [data.repo, data.oldRef, data.newRef], {
+    env: data.env,
+  }).then(
+    () => { throw new Error("expected the helper to fail"); },
+    (error: unknown) => failureOf(error),
   );
+  t.check({ code: failure.code, stderr: failure.stderr }, {
+    code: 1,
+    stderr: "[post-merge] ⚠ pnpm install failed; the merge completed, but local commands may fail. Run pnpm install in this checkout after fixing the reported error.\n",
+  });
 });
 
 // Squash merges have no post-merge old tree, so the helper compares the worktree
 // against `HEAD` and still notices a changed lockfile.
 void test("Squash merges have no post-merge old tree, so the helper compares the worktre...", async (t) => {
-  // doctest:L123
   const data = await fixture();
   t.teardown(async () => await fs.rm(data.root, { recursive: true, force: true }));
   await fs.writeFile(
@@ -130,13 +124,12 @@ void test("Squash merges have no post-merge old tree, so the helper compares the
     "lockfileVersion: '9.0'\nsquashed: true\n",
   );
   await execFileAsync(helper, [data.repo, data.newRef, "WORKTREE"], { env: data.env });
-  t.check((await fs.readFile(data.marker, "utf8")) === `${data.repo}\ninstall --frozen-lockfile\n`, true);
+  t.check(await fs.readFile(data.marker, "utf8"), `${data.repo}\ninstall --frozen-lockfile\n`);
 });
 
 // A missing `pnpm` has a distinct remedy instead of looking like an ordinary
 // install failure.
 void test("A missing pnpm has a distinct remedy instead of looking like an ordinary inst...", async (t) => {
-  // doctest:L138
   const data = await fixture();
   t.teardown(
     async () => await fs.rm(data.root, { recursive: true, force: true }),
@@ -149,16 +142,11 @@ void test("A missing pnpm has a distinct remedy instead of looking like an ordin
   ]);
   await fs.symlink("/bin/bash", path.join(fakeBin, "bash"));
   await fs.symlink(gitPath.trim(), path.join(fakeBin, "git"));
-  await assert.rejects(
-    execFileAsync(helper, [data.repo, data.oldRef, data.newRef], {
-      env: { ...data.env, PATH: fakeBin },
-    }),
-    (error: unknown) => {
-      assert.match(
-        failureOf(error).stderr ?? "",
-        /pnpm is not available.*run pnpm install/,
-      );
-      return true;
-    },
+  const failure = await execFileAsync(helper, [data.repo, data.oldRef, data.newRef], {
+    env: { ...data.env, PATH: fakeBin },
+  }).then(
+    () => { throw new Error("expected the helper to fail"); },
+    (error: unknown) => failureOf(error),
   );
+  t.check(failure.stderr, "[post-merge] ⚠ pnpm is not available; install pnpm, then run pnpm install in this checkout.\n");
 });

@@ -6,6 +6,7 @@ import { eventually } from "../../src/exports/check.js";
 
 void test("a rejected non-Error object is named by its message", async (t) => {
   await t.checkThrows(
+    // eslint-disable-next-line prefer-promise-reject-errors -- the subject: eventually() must name a rejected non-Error by its message
     async () => eventually(() => Promise.reject({ message: "boom" }), { timeoutMs: 0 }),
     "EventuallyTimeout: condition was not true after 0ms; last error: boom",
   );

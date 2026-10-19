@@ -17,7 +17,7 @@ void test("a note has an id and a title", async (t) => {
 });
 ```
 
-Also on the test object: `t.checkText` (text with `«»` wildcards) and `t.checkThrows` (an error by name or message).
+Also on the test object: `t.checkText` (a string with `«»` wildcards) and `t.checkThrows` (an error by name or message).
 
 The full guide, with patterns and failure output, is [testing with t.check](../beebox/docs/testing/check.md).
 
@@ -46,7 +46,7 @@ Run with `npx tap`.
 | Import | Contents |
 |---|---|
 | `agent-doctest/tap` | Adds `t.check`, `t.checkText`, and `t.checkThrows` to tap (use in `.taprc`) |
-| `agent-doctest/check` | Patterns (`any`, `uuid`, `isoDate`, `oneOf`, `str`, `optional`, `unordered`, `containing`, `capture`, `others`, `anything`), `eventually`, `runCommand`, `printed`, and the text-comparison API |
+| `agent-doctest/check` | Patterns (`any`, `uuid`, `isoDate`, `oneOf`, `str`, `optional`, `unordered`, `containing`, `capture`, `others`, `anything`, `not`, `is`, `instanceOf`), `eventually`, `runCommand`, and `printed` |
 | `agent-doctest/eslint` | ESLint plugin: `check-whole-value`, `no-voided-check`, `no-tap-assert` |
 
 ## Lint rules
@@ -76,7 +76,7 @@ export default [
 ## Docs
 
 - [Getting started](docs/getting-started.md)
-- [Text comparison reference](docs/check-reference.md): `t.checkText`, wildcards, serializers.
+- [Text comparison reference](docs/check-reference.md): `t.checkText`, `t.checkThrows`, wildcards, failure output.
 
 ## Status
 

@@ -134,13 +134,9 @@ web-push skipped: no-audience`);
     },
     target: "chat:new",
     notificationId: str`${any(String)}`,
-    box: str`${any(String)}`,
+    // The payload names the sending box by its slug, the box directory's name.
+    box: path.basename(box.root),
   });
-
-  // The payload names the sending box by its slug, the box directory's name:
-
-  // doctest:L117
-  await t.checkText(apns.sent[1]?.payload.box === (await import("node:path")).basename(box.root), "true");
 });
 
 // ## A dead token is pruned, and the phone stays paired

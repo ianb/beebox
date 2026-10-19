@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import { execFileSync } from "node:child_process";
 import { chmod, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -54,22 +55,14 @@ void test("The commit throws, and HEAD is where it was:", async (t) => {
   await stageAll(box.root);
 
   // doctest:L48
-  t.check(
-    {
-      threw: await catchName(commit(box.root, { message: "should not land" })),
-      headMoved: git(box, "rev-parse", "HEAD") !== head,
-    },
-    {
-    threw: "CommitDidNotLandError",
-    headMoved: false,
-  },
-  );
+  t.check(await catchName(commit(box.root, { message: "should not land" })), "CommitDidNotLandError");
+  t.check(git(box, "rev-parse", "HEAD"), head);
 
   // The changes are still in the tree — a rejected commit loses no work, it just
   // must not be reported as done:
 
   // doctest:L59
-  await t.checkText(git(box, "status", "--porcelain").includes("Rejected.doc.card"), "true");
+  await t.checkText(git(box, "status", "--porcelain"), "A  _content/inbox/Rejected.doc.card");
 
   // With the hook passing again, the same commit lands and returns a new HEAD:
 
@@ -77,8 +70,6 @@ void test("The commit throws, and HEAD is where it was:", async (t) => {
   const hookPath = join(git(box, "rev-parse", "--absolute-git-dir"), "hooks", "pre-commit");
   await writeFile(hookPath, "#!/bin/sh\nexit 0\n");
   const sha = await commit(box.root, { message: "lands this time" });
-  t.check({ returnedHead: sha === git(box, "rev-parse", "HEAD"), moved: sha !== head }, {
-    returnedHead: true,
-    moved: true,
-  });
+  t.check(sha, git(box, "rev-parse", "HEAD"));
+  t.check(sha, not(head));
 });

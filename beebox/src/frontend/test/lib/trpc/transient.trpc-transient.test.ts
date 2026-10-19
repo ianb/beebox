@@ -19,7 +19,8 @@ import assert from "node:assert";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import { createTRPCClient, httpBatchStreamLink, retryLink } from "@trpc/client";
-import { fetchFromBox, unreachableCause, shouldRetryOperation, isBoxUnreachable, retryDelayMs, MAX_RETRIES } from "../../../src/lib/trpc/transient.js";
+import { any, anything, instanceOf } from "agent-doctest/check";
+import { BoxUnreachableError, fetchFromBox, unreachableCause, shouldRetryOperation, isBoxUnreachable, retryDelayMs, MAX_RETRIES } from "../../../src/lib/trpc/transient.js";
 
 const NGINX_502 = "<!DOCTYPE html>\n<html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center></body></html>";
 
@@ -86,10 +87,6 @@ async function settle(promise: Promise<unknown>): Promise<unknown> {
   }
 }
 
-function messageOf(value: unknown): string {
-  return value instanceof Error ? value.message : String(value);
-}
-
 // ## A query rides over a restart
 //
 // Three 502s, then the box is back. The caller sees only the answer.
@@ -106,9 +103,9 @@ void test("Three 502s, then the box is back.", async (t) => {
   t.check(await box.client.ping.query(), "pong");
 
   // doctest:L102
-  t.check({ refused: box.refused(), reached: box.reached.ping }, {
+  t.check({ refused: box.refused(), reached: box.reached }, {
     refused: 3,
-    reached: 1,
+    reached: { ping: 1, send: 0, broken: 0, slow: 0 },
   });
 });
 
@@ -134,7 +131,7 @@ void test("A batch answers 200 and streams each result as it resolves, so the st
   ]);
 
   // doctest:L122
-  t.check(box.reached.slow, 2);
+  t.check(box.reached, { ping: 1, send: 0, broken: 0, slow: 2 });
 });
 
 // ## When the outage outlasts the retries, the message says what happened
@@ -155,13 +152,29 @@ void test("After MAXRETRIES retries the query fails.", async (t) => {
   const error = await settle(box.client.ping.query());
 
   // doctest:L140
-  t.check(messageOf(error), "The box did not answer — it may be restarting. Try again in a moment.");
+  t.check(error, {
+    name: "TRPCClientError",
+    message: "The box did not answer — it may be restarting. Try again in a moment.",
+    cause: {
+      name: "BoxUnreachableError",
+      message: "The box did not answer — it may be restarting. Try again in a moment.",
+      status: 502,
+    },
+    shape: undefined,
+    data: undefined,
+    meta: undefined,
+  });
 
-  // doctest:L143
-  t.check(unreachableCause(error)?.detail, "HTTP 502 from the gateway");
+  // A projection, because `detail` is a getter and a whole check skips getters.
+  const cause = unreachableCause(error);
+  t.check(cause && { name: cause.name, message: cause.message, status: cause.status, detail: cause.detail }, {
+    name: "BoxUnreachableError",
+    message: "The box did not answer — it may be restarting. Try again in a moment.",
+    status: 502,
+    detail: "HTTP 502 from the gateway",
+  });
 
-  // doctest:L146
-  await t.checkText(box.refused() === MAX_RETRIES + 1, "true");
+  t.check(box.refused(), MAX_RETRIES + 1);
 });
 
 // ## A mutation is never replayed
@@ -179,12 +192,22 @@ void test("A 502 probably means the request never reached the app, but \"probabl
   });
   // doctest:L161
   const box = await boxBehindGateway(1);
-  t.check(messageOf(await settle(box.client.send.mutate())), "The box did not answer — it may be restarting. Try again in a moment.");
+  t.check(await settle(box.client.send.mutate()), {
+    name: "TRPCClientError",
+    message: "The box did not answer — it may be restarting. Try again in a moment.",
+    cause: {
+      name: "BoxUnreachableError",
+      message: "The box did not answer — it may be restarting. Try again in a moment.",
+      status: 502,
+    },
+    shape: undefined,
+    data: undefined,
+    meta: undefined,
+  });
 
-  // doctest:L165
-  t.check({ refused: box.refused(), reached: box.reached.send }, {
+  t.check({ refused: box.refused(), reached: box.reached }, {
     refused: 1,
-    reached: 0,
+    reached: { ping: 0, send: 0, broken: 0, slow: 0 },
   });
 
   // doctest:L168
@@ -207,12 +230,11 @@ void test("voiceRecording.claim/.fallBack pass { context:", async (t) => {
   });
   // doctest:L184
   const box = await boxBehindGateway(1);
-  t.check(messageOf(await box.client.send.mutate(undefined, { context: { idempotent: true } })), "sent");
+  t.check(await box.client.send.mutate(undefined, { context: { idempotent: true } }), "sent");
 
-  // doctest:L188
-  t.check({ refused: box.refused(), reached: box.reached.send }, {
+  t.check({ refused: box.refused(), reached: box.reached }, {
     refused: 1,
-    reached: 1,
+    reached: { ping: 0, send: 1, broken: 0, slow: 0 },
   });
 });
 
@@ -247,10 +269,22 @@ void test("The stream link's HTTP status is 200 once the server starts writing, 
   });
   // doctest:L219
   const box = await boxBehindGateway(0);
-  t.check(messageOf(await settle(box.client.broken.query())), "a bug in the procedure");
+  // The stack holds this machine's paths.
+  const procedureStack = any(String).startsWith("TRPCError: a bug in the procedure");
+  t.check(await settle(box.client.broken.query()), {
+    name: "TRPCClientError",
+    message: "a bug in the procedure",
+    cause: undefined,
+    shape: {
+      message: "a bug in the procedure",
+      code: -32603,
+      data: { code: "INTERNAL_SERVER_ERROR", httpStatus: 500, stack: procedureStack, path: "broken" },
+    },
+    data: { code: "INTERNAL_SERVER_ERROR", httpStatus: 500, stack: procedureStack, path: "broken" },
+    meta: { response: anything() },
+  });
 
-  // doctest:L223
-  t.check(box.reached.broken, 1);
+  t.check(box.reached, { ping: 0, send: 0, broken: 1, slow: 0 });
 
   // `fetchFromBox` passes every other status through as a response, for the caller
   // to handle — a 404 here, and a 401 in `trpcFetch`, which has its own
@@ -264,7 +298,8 @@ void test("The stream link's HTTP status is 200 once the server starts writing, 
 
   // doctest:L240
   const aborted = await settle(fetchFromBox(box.url, { signal: AbortSignal.abort() }));
-  t.check(aborted instanceof Error ? aborted.name : aborted, "AbortError");
+  t.check(aborted, instanceOf(Error));
+  t.check(aborted, { name: "AbortError", message: "This operation was aborted" });
 });
 
 // ## A request that never reached a server
@@ -277,13 +312,15 @@ void test("Nothing listening at all is the same failure, with no status to repor
   const error = await settle(fetchFromBox(box.url));
 
   // doctest:L258
-  t.check({ name: error instanceof Error ? error.name : null, status: unreachableCause(error)?.status }, {
+  t.check(error, instanceOf(BoxUnreachableError));
+  // A projection, because `detail` is a getter and a whole check skips getters.
+  const cause = unreachableCause(error);
+  t.check(cause && { name: cause.name, message: cause.message, status: cause.status, detail: cause.detail }, {
     name: "BoxUnreachableError",
+    message: "The box did not answer — it may be restarting. Try again in a moment.",
     status: null,
+    detail: "fetch failed",
   });
-
-  // doctest:L261
-  t.check(unreachableCause(error)?.detail, "fetch failed");
 });
 
 // ## The schedule is sized to a deploy restart

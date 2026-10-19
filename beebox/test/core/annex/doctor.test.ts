@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { createFakeGitAnnex } from "../../../src/services/git-annex.js";
 import {
@@ -16,6 +17,8 @@ import {
   formatAnnexDoctor,
   ANNEX_PRECOMMIT_LINE,
   ANNEX_SMUDGE_LINE,
+  type AnnexCheckResult,
+  type AnnexCheckStatus,
 } from "../../../src/core/annex/doctor/core.js";
 import { assetAnnexAttributes, assetLargefilesExpression } from "../../../src/lib/asset-extensions.js";
 import { writeAnnexInfoAttributes } from "../../../src/core/annex/info-attributes.js";
@@ -65,8 +68,32 @@ async function installHooks(box: { root: string }): Promise<void> {
   await fs.writeFile(path.join(dir, "pre-commit"), `#!/bin/bash\n${ANNEX_PRECOMMIT_LINE}\n`);
 }
 
-function statuses(result: { checks: { id: string; status: string }[] }): string {
-  return result.checks.map((c) => `${c.id}=${c.status}`).join(" ");
+const OK_CHECKS: AnnexCheckResult[] = [
+  { id: "binary", status: "ok", message: "git-annex 10.20260717" },
+  { id: "initialized", status: "ok", message: "repository is annex-initialized" },
+  { id: "gitignore-assets", status: "ok", message: ".gitignore leaves assets visible to git" },
+  { id: "thin", status: "ok", message: "annex.thin is false" },
+  { id: "largefiles", status: "ok", message: "annex.largefiles matches the asset classifier" },
+  { id: "annexed-coverage", status: "ok", message: "all 0 annexed path(s) are covered by the asset extensions" },
+  { id: "attributes", status: "ok", message: ".git/info/attributes is scoped to the asset extensions" },
+  { id: "content-present", status: "ok", message: "no missing asset content" },
+  { id: "journal", status: "ok", message: "git-annex journal is flushed" },
+  { id: "smudge-hooks", status: "ok", message: "post-checkout and post-merge hooks invoke git annex smudge --update" },
+  { id: "hook", status: "ok", message: "pre-commit hook invokes git annex pre-commit" },
+];
+
+const GITIGNORE_FAILED = ".gitignore still ignores assets. Run `bbx attachments unignore` to complete the annex conversion; if it reports unmanaged rules, remove those rules from .gitignore by hand.";
+const HOOK_FAILED = "the pre-commit hook does not invoke `git annex pre-commit`. If bbx manages this hook, `bbx engine init` regenerates it; if it is hand-written, add the line yourself.";
+
+/** The doctor's full report: every check ok, except the listed `[status, message]` overrides. */
+function report(healthy: boolean, overrides?: Record<string, [AnnexCheckStatus, string]>) {
+  return {
+    checks: OK_CHECKS.map((c) => {
+      const [status, message] = overrides?.[c.id] ?? [c.status, c.message];
+      return { id: c.id, status, message };
+    }),
+    healthy,
+  };
 }
 
 // A correctly configured repository reports every check clean and changes
@@ -85,13 +112,8 @@ void test("A correctly configured repository reports every check clean and chang
   await writeAnnexInfoAttributes(box.root);
   const annex = healthyFake();
   const result = await runAnnexDoctor(annex, { repoRoot: box.root, boxRoot: box.root });
-  t.check(statuses(result), "binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=ok annexed-coverage=ok attributes=ok content-present=ok journal=ok smudge-hooks=ok hook=ok");
-
-  // doctest:L84
-  t.check(result.healthy, true);
-
-  // doctest:L87
-  await t.checkText(annex.calls.length, "0");
+  t.check(result, report(true));
+  t.check(annex.calls, []);
 });
 
 // ## annex.thin — the check that fires in practice
@@ -117,15 +139,10 @@ void test("annex.thin is plain git config, so it does not propagate to clones:",
     annexConfig: { "annex.largefiles": assetLargefilesExpression() },
   });
   const result = await runAnnexDoctor(annex, { repoRoot: box.root, boxRoot: box.root });
-  t.check(annex.calls.join(" then "), "setGitConfig:annex.thin=false then fix");
+  t.check(annex.calls, ["setGitConfig:annex.thin=false", "fix"]);
 
   // The repair counts as healthy — a fixed problem is not a defect:
-
-  // doctest:L118
-  t.check(result.healthy, true);
-
-  // doctest:L121
-  t.check(result.checks.find((c) => c.id === "thin")?.status, "repaired");
+  t.check(result, report(true, { thin: ["repaired", "set annex.thin=false and ran `git annex fix` to break existing hardlinks"] }));
 
   // Under `check: true` nothing is touched and the failure names both commands:
 
@@ -134,10 +151,11 @@ void test("annex.thin is plain git config, so it does not propagate to clones:",
   const readOnly = await runAnnexDoctor(annex2, {
     repoRoot: box.root, boxRoot: box.root, options: { check: true },
   });
-  await t.checkText(annex2.calls.length, "0");
-
-  // doctest:L135
-  t.check(readOnly.checks.find((c) => c.id === "thin")?.message.includes("git config annex.thin false && git annex fix"), true);
+  t.check(annex2.calls, []);
+  t.check(readOnly, report(false, {
+    thin: ["failed", "annex.thin is true; it must be false or fsck cannot detect in-place corruption. Run `git config annex.thin false && git annex fix`."],
+    largefiles: ["failed", "annex.largefiles is unset. Run `git annex config --set annex.largefiles \"$(bbx attachments largefiles-expr)\"`."],
+  }));
 });
 
 // ## A box that is not annex-initialized is a defect, and is still not repaired here
@@ -166,16 +184,14 @@ void test("Every box is annex-shaped from its first commit, so an uninitialized 
   const result = await runAnnexDoctor(annex, {
     repoRoot: box.root, boxRoot: box.root, options: { description: "testbox" },
   });
-  t.check(statuses(result), "binary=ok initialized=failed");
-
-  // doctest:L165
-  await t.checkText(annex.calls.length, "0");
-
-  // doctest:L168
-  t.check(result.healthy, false);
-
-  // doctest:L171
-  t.check(result.checks[1]?.message.includes("Re-run `bbx init`"), true);
+  t.check(result, {
+    checks: [
+      { id: "binary", status: "ok", message: "git-annex 10.20260717" },
+      { id: "initialized", status: "failed", message: "not annex-initialized. Every box is annex-shaped from its first commit, so this box predates that or was created outside `bbx init`. Asset bytes written to it reach neither git nor the annex. Re-run `bbx init` on it." },
+    ],
+    healthy: false,
+  });
+  t.check(annex.calls, []);
 });
 
 // ## Annex initialization is not enough when `.gitignore` still hides assets
@@ -200,16 +216,7 @@ void test("The annex gate requires both halves of the migration:", async (t) => 
   const halfMigrated = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root, boxRoot: box.root, options: { check: true },
   });
-  t.check(halfMigrated.checks.find((c) => c.id === "gitignore-assets")?.status, "failed");
-
-  // doctest:L197
-  t.check(halfMigrated.checks.find((c) => c.id === "gitignore-assets")?.message.includes("bbx attachments unignore"), true);
-
-  // doctest:L200
-  t.check(halfMigrated.checks.find((c) => c.id === "gitignore-assets")?.message.includes("remove those rules"), true);
-
-  // doctest:L203
-  t.check(halfMigrated.healthy, false);
+  t.check(halfMigrated, report(false, { "gitignore-assets": ["failed", GITIGNORE_FAILED] }));
 
   // Repair mode also reports this state instead of rewriting `.gitignore` outside
   // the migration's load-bearing configuration sequence:
@@ -218,10 +225,8 @@ void test("The annex gate requires both halves of the migration:", async (t) => 
   const repairMode = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root, boxRoot: box.root,
   });
-  t.check(repairMode.checks.find((c) => c.id === "gitignore-assets")?.status, "failed");
-
-  // doctest:L217
-  await t.checkText(await box.read(".gitignore") === GITIGNORE_BLOCK, "true");
+  t.check(repairMode, report(false, { "gitignore-assets": ["failed", GITIGNORE_FAILED] }));
+  t.check(await box.read(".gitignore"), GITIGNORE_BLOCK);
 
   // Once the box has the post-annex unignore block, the same check passes:
 
@@ -230,10 +235,7 @@ void test("The annex gate requires both halves of the migration:", async (t) => 
   const converted = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root, boxRoot: box.root, options: { check: true },
   });
-  t.check(converted.checks.find((c) => c.id === "gitignore-assets")?.status, "ok");
-
-  // doctest:L231
-  t.check(converted.healthy, true);
+  t.check(converted, report(true));
 });
 
 // ## Stale largefiles and a dirty journal self-heal
@@ -258,17 +260,16 @@ void test("On a box that IS annexed:", async (t) => {
   const result = await runAnnexDoctor(annex, {
     repoRoot: box.root, boxRoot: box.root, options: { description: "testbox" },
   });
-  t.check(statuses(result), "binary=ok initialized=ok gitignore-assets=ok thin=ok largefiles=repaired annexed-coverage=ok attributes=ok content-present=ok journal=repaired smudge-hooks=ok hook=ok");
+  t.check(result, report(true, {
+    largefiles: ["repaired", "refreshed a stale annex.largefiles"],
+    journal: ["repaired", "flushed the git-annex journal"],
+  }));
 
   // A *stale* largefiles is repaired, not just an absent one. That matters: the
   // value seeded above is the rejected path-glob classifier, which would annex
   // committed cards — silently keeping it would be worse than having none.
 
-  // doctest:L263
-  t.check(result.checks.find((c) => c.id === "largefiles")?.message, "refreshed a stale annex.largefiles");
-
-  // doctest:L266
-  await t.checkText(await annex.getAnnexConfig(box.root, "annex.largefiles") === assetLargefilesExpression(), "true");
+  t.check(await annex.getAnnexConfig(box.root, "annex.largefiles"), assetLargefilesExpression());
 });
 
 // ## The annex filter is scoped to the asset extensions
@@ -295,17 +296,15 @@ void test("git annex init writes  filter=annex into .git/info/attributes, which 
   await fs.mkdir(path.dirname(attrPath), { recursive: true });
   await fs.writeFile(attrPath, "\n* filter=annex\n");
   const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
-  t.check(result.checks.find((c) => c.id === "attributes")?.message, "rescoped .git/info/attributes to the asset extensions");
-
-  // doctest:L294
-  await t.checkText(await fs.readFile(attrPath, "utf-8") === assetAnnexAttributes(), "true");
+  t.check(result, report(true, { attributes: ["repaired", "rescoped .git/info/attributes to the asset extensions"] }));
+  t.check(await fs.readFile(attrPath, "utf-8"), assetAnnexAttributes());
 
   // A second run is a no-op — the repair is idempotent, which matters because
   // `bbx init` runs the doctor every time:
 
   // doctest:L302
   const again = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
-  t.check(again.checks.find((c) => c.id === "attributes")?.status, "ok");
+  t.check(again, report(true));
 
   // Under `check: true` nothing is written and the message names both remedies:
 
@@ -314,10 +313,7 @@ void test("git annex init writes  filter=annex into .git/info/attributes, which 
   const readOnly = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root, boxRoot: box.root, options: { check: true },
   });
-  t.check(readOnly.checks.find((c) => c.id === "attributes")?.status, "failed");
-
-  // doctest:L317
-  t.check(readOnly.checks.find((c) => c.id === "attributes")?.message.includes("bbx attachments annex-attributes"), true);
+  t.check(readOnly, report(false, { attributes: ["failed", ".git/info/attributes is unscoped or stale. Run `bbx doctor annex` without `--check`, or `bbx attachments annex-attributes > .git/info/attributes`."] }));
 
   // doctest:L320
   await t.checkText(await fs.readFile(attrPath, "utf-8"), `«blankline»
@@ -349,15 +345,11 @@ void test("An annexed file whose extension the scoped list does not cover keeps 
     annexedFiles: ["content/trip.attach/photo.jpg", "content/scan.attach/page.psd"],
   });
   const result = await runAnnexDoctor(annex, { repoRoot: box.root, boxRoot: box.root });
-  t.check(result.checks.find((c) => c.id === "annexed-coverage")?.message, "1 annexed path(s) have an extension outside ASSET_EXTENSIONS: content/scan.attach/page.psd. They would read back as pointer text once the annex filter is scoped. Add the extension(s) to ASSET_EXTENSIONS (src/lib/asset-extensions.ts).");
-
-  // doctest:L350
-  t.check(result.healthy, false);
-
-  // Even in repair mode the attributes file is left untouched:
-
-  // doctest:L357
-  t.check(result.checks.find((c) => c.id === "attributes")?.status, "failed");
+  // Even in repair mode the attributes file is left untouched.
+  t.check(result, report(false, {
+    "annexed-coverage": ["failed", "1 annexed path(s) have an extension outside ASSET_EXTENSIONS: content/scan.attach/page.psd. They would read back as pointer text once the annex filter is scoped. Add the extension(s) to ASSET_EXTENSIONS (src/lib/asset-extensions.ts)."],
+    attributes: ["failed", ".git/info/attributes is left unscoped: scoping it would strand the annexed path(s) reported by annexed-coverage. Fix that first."],
+  }));
 
   // doctest:L360
   const fs2 = await import("node:fs/promises");
@@ -381,10 +373,12 @@ void test("A missing binary short-circuits:", async (t) => {
   const box = await makeTmpBox();
   const annex = createFakeGitAnnex({ version: null });
   const result = await runAnnexDoctor(annex, { repoRoot: box.root, boxRoot: box.root });
-  t.check(statuses(result), "binary=failed");
-
-  // doctest:L382
-  t.check(result.checks[0]?.message.includes("brew install git-annex"), true);
+  t.check(result, {
+    checks: [
+      { id: "binary", status: "failed", message: "git-annex is not installed. Assets will read as pointer text and commits will fail. Install it (`apt install git-annex` / `brew install git-annex`)." },
+    ],
+    healthy: false,
+  });
 });
 
 // A pointer with no content is data already lost. With no remote configured there
@@ -405,13 +399,10 @@ void test("A pointer with no content is data already lost.", async (t) => {
     "/annex/objects/SHA256E-s300000--" + "a".repeat(64) + ".jpg\n",
   );
   const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
-  t.check(result.checks.find((c) => c.id === "content-present")?.status, "failed");
-
-  // doctest:L404
-  t.check(result.checks.find((c) => c.id === "content-present")?.message.includes("nowhere to fetch from"), true);
-
-  // doctest:L407
-  t.check(result.healthy, false);
+  t.check(result, report(false, {
+    attributes: ["repaired", "wrote .git/info/attributes scoped to the asset extensions"],
+    "content-present": ["failed", "1 asset(s) hold a pointer with no content: notes.attach/photo.jpg. With no remote configured there is nowhere to fetch from — restore from backup."],
+  }));
 });
 
 // Absent content in a plain subdirectory of a scope is found too — a
@@ -433,7 +424,10 @@ void test("Absent content in a plain subdirectory of a scope is found too — a 
     "/annex/objects/SHA256E-s900--" + "b".repeat(64) + ".png\n",
   );
   const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
-  t.check(result.checks.find((c) => c.id === "content-present")?.message.includes("mail.attach/attachments/inline.png"), true);
+  t.check(result, report(false, {
+    attributes: ["repaired", "wrote .git/info/attributes scoped to the asset extensions"],
+    "content-present": ["failed", "1 asset(s) hold a pointer with no content: mail.attach/attachments/inline.png. With no remote configured there is nowhere to fetch from — restore from backup."],
+  }));
 });
 
 // ## Checkout and merge hook integration
@@ -475,10 +469,8 @@ void test("The annex smudge hooks are easy to lose without making git annex info
     boxRoot: box.root,
     options: { check: true },
   });
-  t.check(readOnly.checks.find((c) => c.id === "smudge-hooks")?.status, "failed");
-
-  // doctest:L470
-  await t.checkText(await fs.readFile(postCheckoutPath, "utf-8") === foreignCheckout, "true");
+  t.check(readOnly, report(false, { "smudge-hooks": ["failed", "post-checkout and post-merge do not invoke `git annex smudge --update`. Run `bbx doctor annex` without `--check` to reinstall the damaged annex hook(s)."] }));
+  t.check(await fs.readFile(postCheckoutPath, "utf-8"), foreignCheckout);
 
   // doctest:L473
   t.check(await fs.access(postMergePath).then(() => "exists", () => "missing"), "missing");
@@ -492,26 +484,18 @@ void test("The annex smudge hooks are easy to lose without making git annex info
     repoRoot: box.root,
     boxRoot: box.root,
   });
-  t.check(repaired.checks.find((c) => c.id === "smudge-hooks")?.status, "repaired");
-
-  // doctest:L489
-  await t.checkText((await fs.readFile(postCheckoutPath, "utf-8")).includes(ANNEX_SMUDGE_LINE), "true");
-
-  // doctest:L492
-  await t.checkText((await fs.readFile(postMergePath, "utf-8")).includes(ANNEX_SMUDGE_LINE), "true");
-
-  // doctest:L495
-  await t.checkText(((await fs.stat(postCheckoutPath)).mode & 0o111) !== 0, "true");
-
-  // doctest:L498
-  await t.checkText(await fs.readFile(postCommitPath, "utf-8") === compositePostCommit, "true");
+  t.check(repaired, report(true, { "smudge-hooks": ["repaired", "reinstalled annex post-checkout and post-merge hook(s)"] }));
+  t.check(await fs.readFile(postCheckoutPath, "utf-8"), `#!/bin/sh\n# automatically configured by git-annex\n${ANNEX_SMUDGE_LINE}\n`);
+  t.check(await fs.readFile(postMergePath, "utf-8"), `#!/bin/sh\n# automatically configured by git-annex\n${ANNEX_SMUDGE_LINE}\n`);
+  t.check((await fs.stat(postCheckoutPath)).mode & 0o111, not(0));
+  t.check(await fs.readFile(postCommitPath, "utf-8"), compositePostCommit);
 
   // doctest:L501
   const healthy = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root,
     boxRoot: box.root,
   });
-  t.check(healthy.checks.find((c) => c.id === "smudge-hooks")?.status, "ok");
+  t.check(healthy, report(true));
 
   // Merely mentioning the smudge command in a comment does not count as invoking
   // it:
@@ -523,7 +507,7 @@ void test("The annex smudge hooks are easy to lose without making git annex info
     boxRoot: box.root,
     options: { check: true },
   });
-  t.check(commentedSmudge.checks.find((c) => c.id === "smudge-hooks")?.status, "failed");
+  t.check(commentedSmudge, report(false, { "smudge-hooks": ["failed", "post-checkout does not invoke `git annex smudge --update`. Run `bbx doctor annex` without `--check` to reinstall the damaged annex hook(s)."] }));
 });
 
 // ## Pre-commit hook integration
@@ -548,10 +532,7 @@ void test("git annex init declines to install its own pre-commit hook when one a
   await installSmudgeHooks(box);
   await fs.writeFile(path.join(box.root, ".git", "hooks", "pre-commit"), "#!/bin/bash\necho hi\n");
   const result = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
-  t.check(result.checks.find((c) => c.id === "hook")?.status, "failed");
-
-  // doctest:L545
-  t.check(result.checks.find((c) => c.id === "hook")?.message.includes("hand-written"), true);
+  t.check(result, report(false, { hook: ["failed", HOOK_FAILED] }));
 
   // A hook that only *mentions* annex in a comment does not count. A substring test
   // would pass on `# TODO: add git annex pre-commit`, or on the real command
@@ -564,11 +545,11 @@ void test("git annex init declines to install its own pre-commit hook when one a
     "#!/bin/bash\n# TODO: add git annex pre-commit\n",
   );
   const commented = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
-  t.check(commented.checks.find((c) => c.id === "hook")?.status, "failed");
+  t.check(commented, report(false, { hook: ["failed", HOOK_FAILED] }));
 
   // The formatted output marks each outcome distinctly, so a repair is not mistaken
   // for a pre-existing pass:
 
   // doctest:L568
-  await t.checkText(formatAnnexDoctor(result).split("\n").filter((l) => l.startsWith("✗")).length, "1");
+  t.check(formatAnnexDoctor(result).split("\n").filter((l) => l.startsWith("✗")), [`✗ hook: ${HOOK_FAILED}`]);
 });

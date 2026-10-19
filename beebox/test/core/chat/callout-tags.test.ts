@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, capture, isoDate, type Pattern } from "agent-doctest/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -26,14 +27,38 @@ for (const name of ["BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE"]) delete process.env[name
 const SESSION = "5f0c2a9e-1111-4c1d-9e2b-000000000001";
 const SUB = { endpoint: "https://push.example/callouts", keys: { p256dh: "p", auth: "a" } };
 
-/** The newest logged intent and its deliveries. */
+/** The newest logged intent and its deliveries, or undefined when nothing was logged. */
 async function lastLogged(box: TmpBox) {
   const n = (await readRecent(box.root, { days: 1 })).at(-1);
-  if (n === undefined) return "nothing logged";
+  if (n === undefined) return;
   const { title, body, target, loudness, tag, source } = n.intent;
-  const deliveries = n.deliveries.map((d) => `${d.channel} ${d.status}${d.detail ? `: ${d.detail}` : ""}`);
-  return [`${loudness} | ${title} | ${target} | tag ${tag === SESSION} | ${source === `chat:${SESSION}`}`, body, ...deliveries].join("\n");
+  return { intent: { loudness, title, target, tag, source, body }, deliveries: n.deliveries };
 }
+
+const TARGET = `chat:${SESSION}`;
+
+/** The logged intent for a callout notification of this chat. */
+const intent = (fields: { loudness: "quiet" | "loud" | "dot"; title: string; body: string }) => ({
+  ...fields,
+  target: TARGET,
+  tag: SESSION,
+  source: TARGET,
+});
+
+/** One channel's logged delivery of a notification. */
+const delivery = (d: {
+  id: Pattern<string>;
+  channel: "apns" | "web-push";
+  status: "sent" | "skipped";
+  detail?: "no-audience" | "present";
+}) => ({
+  kind: "delivery" as const,
+  at: isoDate(),
+  notificationId: d.id,
+  channel: d.channel,
+  status: d.status,
+  ...(d.detail === undefined ? {} : { detail: d.detail }),
+});
 
 // ## Parsing
 //
@@ -72,7 +97,7 @@ Saturday: sunny, high of 72.
   );
 
   // doctest:L72
-  await t.checkText(parseCalloutTags("No tags here, and <speech>not a callout</speech>.").length, "0");
+  t.check(parseCalloutTags("No tags here, and <speech>not a callout</speech>."), []);
 });
 
 // ## A turn without callouts sends nothing
@@ -89,12 +114,13 @@ void test("A turn without callouts sends nothing", async (t) => {
   const box = await makeTmpBox({ git: true });
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: new Date() });
   const push = createFakePush();
+  const slug = await boxSlug(box.root);
 
   // doctest:L83
   t.check(await notifyTurnCallouts(box.root, { text: "All filed.", sessionId: SESSION, services: { push } }), null);
 
   // doctest:L86
-  t.check(await lastLogged(box), "nothing logged");
+  t.check(await lastLogged(box), undefined);
 
   // doctest:L89
   t.check(await notifyTurnCallouts(box.root, { text: "<callout loudness=\"loud\">No context.</callout>", sessionId: SESSION, services: { push } }), null);
@@ -108,14 +134,24 @@ void test("A turn without callouts sends nothing", async (t) => {
   const text = `<callout context="the field trip" loudness="quiet">The school moved the field trip to Thursday.
 Forms are due Wednesday.</callout> and <callout context="later">second</callout>`;
   await notifyTurnCallouts(box.root, { text, sessionId: SESSION, services: { push } });
-  await t.checkText(await lastLogged(box), `quiet | the field trip | chat:5f0c2a9e-1111-4c1d-9e2b-000000000001 | tag true | true
-The school moved the field trip to Thursday.
-Forms are due Wednesday.
-apns skipped: no-audience
-web-push sent`);
+  const fieldTrip = capture(any(String));
+  t.check(await lastLogged(box), {
+    intent: intent({ loudness: "quiet", title: "the field trip", body: "The school moved the field trip to Thursday.\nForms are due Wednesday." }),
+    deliveries: [delivery({ id: fieldTrip, channel: "apns", status: "skipped", detail: "no-audience" }), delivery({ id: fieldTrip, channel: "web-push", status: "sent" })],
+  });
 
   // doctest:L110
-  await t.checkText(push.sent[0]?.payload.url === `/${await boxSlug(box.root)}/chat?session=${SESSION}`, "true");
+  t.check(push.sent, [{
+    endpoint: SUB.endpoint,
+    payload: {
+      icon: `${slug}/icon-192.png`,
+      title: "the field trip",
+      body: "The school moved the field trip to Thursday.\nForms are due Wednesday.",
+      url: `/${slug}/chat?session=${SESSION}`,
+      tag: SESSION,
+      silent: true,
+    },
+  }]);
 
   // ## With someone present, a callout is not pushed, however loud
   //
@@ -125,41 +161,91 @@ web-push sent`);
   // doctest:L120
   await writePresence(box.root, { activeWeb: 1, now: new Date() });
   await notifyTurnCallouts(box.root, { text: "<callout context=\"you asked\" loudness=\"quiet\">Booked.</callout>", sessionId: SESSION, services: { push } });
-  await t.checkText(await lastLogged(box), `quiet | you asked | chat:5f0c2a9e-1111-4c1d-9e2b-000000000001 | tag true | true
-Booked.
-apns skipped: present
-web-push skipped: present`);
+  const booked = capture(any(String));
+  t.check(await lastLogged(box), {
+    intent: intent({ loudness: "quiet", title: "you asked", body: "Booked." }),
+    deliveries: [delivery({ id: booked, channel: "apns", status: "skipped", detail: "present" }), delivery({ id: booked, channel: "web-push", status: "skipped", detail: "present" })],
+  });
 
   // doctest:L129
-  await t.checkText(push.sent.length, "1");
+  t.check(push.sent, [{
+    endpoint: SUB.endpoint,
+    payload: {
+      icon: `${slug}/icon-192.png`,
+      title: "the field trip",
+      body: "The school moved the field trip to Thursday.\nForms are due Wednesday.",
+      url: `/${slug}/chat?session=${SESSION}`,
+      tag: SESSION,
+      silent: true,
+    },
+  }]);
 
   // Two callouts, one `loud`: still on screen, still not pushed.
 
   // doctest:L136
   const two = "<callout context=\"first\">Filed.</callout><callout context=\"the form\" loudness=\"loud\">Due Friday.</callout>";
   await notifyTurnCallouts(box.root, { text: two, sessionId: SESSION, services: { push } });
-  await t.checkText(await lastLogged(box), `loud | first | chat:5f0c2a9e-1111-4c1d-9e2b-000000000001 | tag true | true
-Filed.
-apns skipped: present
-web-push skipped: present`);
+  const filed = capture(any(String));
+  t.check(await lastLogged(box), {
+    intent: intent({ loudness: "loud", title: "first", body: "Filed." }),
+    deliveries: [delivery({ id: filed, channel: "apns", status: "skipped", detail: "present" }), delivery({ id: filed, channel: "web-push", status: "skipped", detail: "present" })],
+  });
 
   // doctest:L145
-  await t.checkText(push.sent.length, "1");
+  t.check(push.sent, [{
+    endpoint: SUB.endpoint,
+    payload: {
+      icon: `${slug}/icon-192.png`,
+      title: "the field trip",
+      body: "The school moved the field trip to Thursday.\nForms are due Wednesday.",
+      url: `/${slug}/chat?session=${SESSION}`,
+      tag: SESSION,
+      silent: true,
+    },
+  }]);
 
   // A callout with no `loudness` is a `dot`: a badge on paired phones only, sent
   // whatever the presence.
 
   // doctest:L153
   await notifyTurnCallouts(box.root, { text: "<callout context=\"note\">Filed the receipt.</callout>", sessionId: SESSION, services: { push } });
-  t.check((await lastLogged(box)).split("\n")[0]?.startsWith("dot | note"), true);
+  const dot = capture(any(String));
+  t.check(await lastLogged(box), {
+    intent: intent({ loudness: "dot", title: "note", body: "Filed the receipt." }),
+    deliveries: [delivery({ id: dot, channel: "apns", status: "skipped", detail: "no-audience" })],
+  });
 
   // With nobody present, the same `loud` pair is pushed.
 
   // doctest:L161
   await writePresence(box.root, { activeWeb: 0, now: new Date() });
   await notifyTurnCallouts(box.root, { text: two, sessionId: SESSION, services: { push } });
-  t.check((await lastLogged(box)).split("\n").filter((l) => l.startsWith("web-push")).join(","), "web-push sent");
+  const pushed = capture(any(String));
+  t.check(await lastLogged(box), {
+    intent: intent({ loudness: "loud", title: "first", body: "Filed." }),
+    deliveries: [delivery({ id: pushed, channel: "apns", status: "skipped", detail: "no-audience" }), delivery({ id: pushed, channel: "web-push", status: "sent" })],
+  });
 
   // doctest:L166
-  await t.checkText(push.sent.length, "2");
+  t.check(push.sent, [{
+    endpoint: SUB.endpoint,
+    payload: {
+      icon: `${slug}/icon-192.png`,
+      title: "the field trip",
+      body: "The school moved the field trip to Thursday.\nForms are due Wednesday.",
+      url: `/${slug}/chat?session=${SESSION}`,
+      tag: SESSION,
+      silent: true,
+    },
+  }, {
+    endpoint: SUB.endpoint,
+    payload: {
+      icon: `${slug}/icon-192.png`,
+      title: "first",
+      body: "Filed.",
+      url: `/${slug}/chat?session=${SESSION}`,
+      tag: SESSION,
+      silent: false,
+    },
+  }]);
 });

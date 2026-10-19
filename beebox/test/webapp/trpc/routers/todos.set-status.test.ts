@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -96,14 +97,10 @@ void test("Ticking the first todo on line 11 sets status=\"done\" on exactly tha
     expectedStatus: "open",
     status: "done",
   });
-  t.check([done.status, typeof done.commit, done.commitWarning], [
-    "done",
-    "string",
-    null,
-  ]);
+  t.check(done, { status: "done", commit: any(String), commitWarning: null });
 
   // doctest:L95
-  await t.checkText((await box.read(cardPath)).split("\n")[10], "{% todo status=\"done\" due=\"2026-09-15\" %}Order lumber{% /todo %} and {% todo %}book the [roofer](https://example.com){% /todo %}");
+  await t.checkText((await box.read(cardPath)).split("\n").slice(10, 11).join("\n"), "{% todo status=\"done\" due=\"2026-09-15\" %}Order lumber{% /todo %} and {% todo %}book the [roofer](https://example.com){% /todo %}");
 
   // doctest:L98
   await t.checkText(lastCommit(box.root), `Mark todo done: Order lumber
@@ -126,11 +123,11 @@ Endpoint: todos.setStatus`);
     expectedStatus: "done",
     status: "open",
   });
-  t.check([reopened.status, (await box.read(cardPath)) === original, lastCommit(box.root).split("\n")[0]], [
-    "open",
-    true,
-    "Reopen todo: Order lumber",
-  ]);
+  t.check(reopened, { status: "open", commit: any(String), commitWarning: null });
+  t.check(await box.read(cardPath), original);
+  t.checkText(lastCommit(box.root), `Reopen todo: Order lumber
+Source: webapp
+Endpoint: todos.setStatus`);
 
   // ## The second todo on a line
   //
@@ -145,7 +142,7 @@ Endpoint: todos.setStatus`);
     expectedStatus: "open",
     status: "done",
   });
-  await t.checkText((await box.read(cardPath)).split("\n")[10], "{% todo due=\"2026-09-15\" %}Order lumber{% /todo %} and {% todo status=\"done\" %}book the [roofer](https://example.com){% /todo %}");
+  await t.checkText((await box.read(cardPath)).split("\n").slice(10, 11).join("\n"), "{% todo due=\"2026-09-15\" %}Order lumber{% /todo %} and {% todo status=\"done\" %}book the [roofer](https://example.com){% /todo %}");
 
   // ## A frontmatter todo
   //
@@ -235,7 +232,7 @@ Endpoint: todos.setStatus`);
   );
 
   // doctest:L223
-  await t.checkText((await box.read(brokenPath)) === brokenBefore, "true");
+  t.check(await box.read(brokenPath), brokenBefore);
 
   // Anyone the box admits may tick a todo, not only the owner, just as they may
   // edit the card. A non-owner's call gets past access control to the ordinary
@@ -262,21 +259,19 @@ Endpoint: todos.setStatus`);
 
   // doctest:L247
   t.check(
-    (await outcome(caller(box.root).todos.setStatus({
+    await outcome(caller(box.root).todos.setStatus({
       path: "_content/../package.json", locator: { kind: "body", line: 1 }, text: "x", expectedStatus: "open", status: "done",
-    }))).split(":")[0],
-    "BAD_REQUEST",
+    })),
+    "BAD_REQUEST: Invalid card path",
   );
 
   // After all of that, nothing changed and nothing was announced (the broken
   // card's seed commit is the only new one):
 
   // doctest:L257
-  t.check([(await box.read(cardPath)) === before, Number(commitCount(box.root)) - Number(commitsBefore), events], [
-    true,
-    1,
-    [],
-  ]);
+  t.check(await box.read(cardPath), before);
+  t.check(Number(commitCount(box.root)), Number(commitsBefore) + 1);
+  t.check(events, []);
 
   // ## A failed commit is a warning, not a lost write
   //
@@ -293,9 +288,6 @@ Endpoint: todos.setStatus`);
   });
   console.error = originalError;
   await fs.rm(hook);
-  t.check([warned.commit, warned.commitWarning, (await box.read(cardPath)).split("\n")[11]?.startsWith('{% todo status="done"')], [
-    null,
-    "Saved, but the Git commit failed.",
-    true,
-  ]);
+  t.check(warned, { status: "done", commit: null, commitWarning: "Saved, but the Git commit failed." });
+  t.checkText((await box.read(cardPath)).split("\n").slice(11, 12).join("\n"), "{% todo status=\"done\" due=\"2026-09-15\" %}Order lumber{% /todo %} and {% todo status=\"done\" %}book the [roofer](https://example.com){% /todo %}");
 });

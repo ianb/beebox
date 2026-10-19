@@ -116,7 +116,7 @@
   {
     "path": "beebox/test/core/install-validation-hooks.test.ts",
     "occurrenceClass": "kebab-name",
-    "expectedCount": 6,
+    "expectedCount": 5,
     "reason": "The regression fixture proves repeated retired managed hooks are replaced."
   },
   {

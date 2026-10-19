@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -33,6 +34,20 @@ export const dependencies = ["_content/**/*.card"];
 export const modes = ["page"];
 export default function Raw({ cards }) { return cards.map((card) => <p key={card.path}>{card.body}</p>); }
 `;
+
+const MARKDOWN_RULE = `View renders Markdown by hand:
+  line LINE: reads \`card.body\` outside \`<Markdown>\`
+Render card text with \`Markdown\` from \`beebox/view-widgets\`. If it lacks something this view needs, say so in \`_config/feedback/\`.`;
+
+const SIZE_ADVICE = "Trim it, consolidate duplication, or move detail onto a lazier surface (a sibling doc, a nested instruction file, a .claude/rules/ glob, or a skill). See node_modules/beebox/box-docs/reducing-instruction-file.md for concrete strategies.";
+
+/** The shell hook's stdout for a 13000-character instruction file (soft tier). */
+const SOFT_STDOUT = `{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"warning  AGENTS.md  [instruction-file-size] 13000 chars (~13 KB) — getting large for a file loaded into context every turn; aim to stay under ~12000 chars (~200 lines). ${SIZE_ADVICE}"}}\n`;
+
+/** The same for a 21000-character file (firm tier). */
+const FIRM_STDOUT = `{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":"warning  AGENTS.md  [instruction-file-size] 21000 chars (~21 KB) — too large. This file loads into agent context every turn, and past ~20000 chars Claude reliably drops instructions. Fix it now: ${SIZE_ADVICE}"}}\n`;
+
+const QUIET = { code: 0, stdout: "", stderr: "" };
 
 async function makeViews() {
   const box = await makeTmpBox({ git: true });
@@ -96,8 +111,8 @@ void test("isViewFile matches a .tsx directly in a views/ directory, not other t
       isViewFile("/box/src/components/Foo.tsx"),
       isViewFile("/box/views/sub/nested.tsx"),
       isViewFile("/box/views/notes.md"),
-    ].join(","),
-    "true,true,false,false,false",
+    ],
+    [true, true, false, false, false],
   );
 });
 
@@ -112,8 +127,8 @@ void test("Helpers a view imports live beside it (views/lib/…).", async (t) =>
       isViewSourceFile("/box/src/views/lib/prose.tsx"),
       isViewSourceFile("/box/src/views/lib/strip.ts"),
       isViewSourceFile("/box/src/components/Foo.tsx"),
-    ].join(","),
-    "true,true,true,false",
+    ],
+    [true, true, true, false],
   );
 });
 
@@ -135,7 +150,8 @@ void test("lintViewFile returns null for a view that compiles, and an error mess
 
   // doctest:L128
   const err = await lintViewFile(join(viewsDir, "broken.tsx"));
-  await t.checkText(typeof err === "string" && err.length > 0, "true");
+  t.check(err, str`Build failed with 1 error:
+${any(String)}/src/views/broken.tsx:1:46: ERROR: Expected ">" but found end of file`);
 });
 
 // ## In-process hook (cardValidatorHook)
@@ -153,19 +169,21 @@ void test("The hook agent sessions actually run surfaces a broken view's compile
   // doctest:L143
   const viewsDir = await makeViews();
   const brokenOut = await runHook(join(viewsDir, "broken.tsx"), viewsDir);
-  t.check(contextOf(brokenOut)?.startsWith("View compile error"), true);
+  t.check(contextOf(brokenOut), str`View compile error for ${any(String)}/src/views/broken.tsx:
+Build failed with 1 error:
+${any(String)}/src/views/broken.tsx:1:46: ERROR: Expected ">" but found end of file`);
 
   // A view that compiles but renders a body as raw text gets the Markdown rule:
 
   // doctest:L152
   const rawOut = await runHook(join(viewsDir, "raw.tsx"), viewsDir);
-  t.check(contextOf(rawOut)?.includes("Render card text with `Markdown` from `beebox/view-widgets`"), true);
+  t.check(contextOf(rawOut), str`View error for ${any(String)}/src/views/raw.tsx:\n${MARKDOWN_RULE.replace("LINE", "5")}`);
 
   // Editing a helper under `views/` gets the same rule, naming the helper:
 
   // doctest:L160
   const helperOut = await runHook(join(viewsDir, "lib", "prose.tsx"), viewsDir);
-  t.check(contextOf(helperOut)?.includes("line 1: reads `card.body` outside `<Markdown>`"), true);
+  t.check(contextOf(helperOut), str`View error for ${any(String)}/src/views/lib/prose.tsx:\n${MARKDOWN_RULE.replace("LINE", "1")}`);
 
   // doctest:L166
   const goodOut = await runHook(join(viewsDir, "good.tsx"), viewsDir);
@@ -187,28 +205,32 @@ void test("A broken view through the installed shell hook exits 2 (the nudge con
   // doctest:L181
   const viewsDir = await makeViews();
   const broken = await runShellHook(join(viewsDir, "broken.tsx"));
-  t.check(broken.code, 2);
-
-  // doctest:L188
-  await t.checkText(broken.stderr.includes("View compile error"), "true");
+  t.check(broken, {
+    code: 2,
+    stdout: "",
+    stderr: str`View compile error for ${any(String)}/src/views/broken.tsx:
+Build failed with 1 error:
+${any(String)}/src/views/broken.tsx:1:46: ERROR: Expected ">" but found end of file
+`,
+  });
 
   // The Markdown rule fails the same way:
 
   // doctest:L195
   const raw = await runShellHook(join(viewsDir, "raw.tsx"));
-  t.check([raw.code, raw.stderr.includes("line 5: reads `card.body` outside `<Markdown>`")].join(" "), "2 true");
+  t.check(raw, { code: 2, stdout: "", stderr: str`View error for ${any(String)}/src/views/raw.tsx:\n${MARKDOWN_RULE.replace("LINE", "5")}\n` });
 
   // So does an edited helper:
 
   // doctest:L203
   const helper = await runShellHook(join(viewsDir, "lib", "prose.tsx"));
-  t.check([helper.code, helper.stderr.includes("View renders Markdown by hand")].join(" "), "2 true");
+  t.check(helper, { code: 2, stdout: "", stderr: str`View error for ${any(String)}/src/views/lib/prose.tsx:\n${MARKDOWN_RULE.replace("LINE", "1")}\n` });
 
   // A clean view exits 0:
 
   // doctest:L211
   const good = await runShellHook(join(viewsDir, "good.tsx"));
-  t.check(good.code, 0);
+  t.check(good, { code: 0, stdout: "", stderr: "" });
 });
 
 // A soft instruction-size warning exits 0 and reaches the agent through the
@@ -226,18 +248,7 @@ void test("A soft instruction-size warning exits 0 and reaches the agent through
   const instructions = join(warningBox.root, "AGENTS.md");
   await writeFile(instructions, "x".repeat(13000));
   const warning = await runShellHook(instructions);
-  t.check(
-    {
-      code: warning.code,
-      context: JSON.parse(warning.stdout).hookSpecificOutput.additionalContext.includes("instruction-file-size"),
-      stderr: warning.stderr,
-    },
-    {
-    code: 0,
-    context: true,
-    stderr: "",
-  },
-  );
+  t.check(warning, { code: 0, stdout: SOFT_STDOUT, stderr: "" });
 });
 
 // ## Repeated instruction-size warnings
@@ -278,68 +289,17 @@ void test("One session sees a size tier once for each file.", async (t) => {
   await rm(cacheFile);
   await mkdir(cacheFile);
   const unavailableCache = await runShellHook(repeatFile, "session-one");
-  t.check(
-    [first, repeated, firm, softAgain, firmAgain, clean, afterClean, newSession, corruptCache, recoveredCache, unavailableCache].map((result) => ({
-      code: result.code,
-      warning: result.stdout.includes("instruction-file-size"),
-      stderr: result.stderr,
-    })),
-    [
-    {
-      code: 0,
-      warning: true,
-      stderr: "",
-    },
-    {
-      code: 0,
-      warning: false,
-      stderr: "",
-    },
-    {
-      code: 0,
-      warning: true,
-      stderr: "",
-    },
-    {
-      code: 0,
-      warning: false,
-      stderr: "",
-    },
-    {
-      code: 0,
-      warning: false,
-      stderr: "",
-    },
-    {
-      code: 0,
-      warning: false,
-      stderr: "",
-    },
-    {
-      code: 0,
-      warning: true,
-      stderr: "",
-    },
-    {
-      code: 0,
-      warning: true,
-      stderr: "",
-    },
-    {
-      code: 0,
-      warning: true,
-      stderr: "",
-    },
-    {
-      code: 0,
-      warning: false,
-      stderr: "",
-    },
-    {
-      code: 0,
-      warning: true,
-      stderr: "",
-    },
-  ],
-  );
+  t.check([first, repeated, firm, softAgain, firmAgain, clean, afterClean, newSession, corruptCache, recoveredCache, unavailableCache], [
+    { code: 0, stdout: SOFT_STDOUT, stderr: "" },
+    QUIET,
+    { code: 0, stdout: FIRM_STDOUT, stderr: "" },
+    QUIET,
+    QUIET,
+    QUIET,
+    { code: 0, stdout: SOFT_STDOUT, stderr: "" },
+    { code: 0, stdout: SOFT_STDOUT, stderr: "" },
+    { code: 0, stdout: SOFT_STDOUT, stderr: "" },
+    QUIET,
+    { code: 0, stdout: SOFT_STDOUT, stderr: "" },
+  ]);
 });

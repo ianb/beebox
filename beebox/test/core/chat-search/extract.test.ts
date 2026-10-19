@@ -48,22 +48,16 @@ void test("One short exchange is one chunk anchored at its first entry", async (
   });
 
   // doctest:L45
-  await t.checkText(docs.length, "1");
-
-  // doctest:L48
-  t.check(docs[0]?.id, "11111111-1111-4111-8111-111111111111#aaa1");
-
-  // doctest:L51
-  t.check(docs[0]?.anchor, "aaa1");
-
-  // doctest:L54
-  t.check(docs[0]?.created, "2026-09-28T10:00:00Z");
-
-  // doctest:L57
-  t.check(docs[0]?.content.split("\n\n")[0], "Did the insurance claim go through?");
-
-  // doctest:L60
-  t.check(docs[0]?.content.split("\n\n")[1], "Yes — the adjuster approved the roof claim on Tuesday.");
+  t.check(docs, [
+    {
+      id: "11111111-1111-4111-8111-111111111111#aaa1",
+      sessionId: "11111111-1111-4111-8111-111111111111",
+      anchor: "aaa1",
+      title: "Insurance follow-up",
+      content: "Did the insurance claim go through?\n\nYes — the adjuster approved the roof claim on Tuesday.",
+      created: "2026-09-28T10:00:00Z",
+    },
+  ]);
 });
 
 // ## Tool traffic and non-dialogue entries contribute nothing
@@ -78,27 +72,23 @@ void test("Tool traffic and non-dialogue entries contribute nothing", async (t) 
   };
   const emptyText = entry({ uuid: "t3", type: "assistant", text: "" });
   const noisy: SessionEntry[] = [interrupted, toolUse, emptyText];
-  await t.checkText(entrySearchText(interrupted).length, "0");
-
-  // doctest:L79
-  await t.checkText(entrySearchText(toolUse).length, "0");
-
-  // doctest:L82
-  await t.checkText(entrySearchText(emptyText).length, "0");
+  t.check(entrySearchText(interrupted), "");
+  t.check(entrySearchText(toolUse), "");
+  t.check(entrySearchText(emptyText), "");
 
   // Continuing: an entry with no text block still counts toward the transcript
   // cursor (the manifest slices by parsed entry index), but adds nothing to a
   // chunk.
 
   // doctest:L91
-  await t.checkText(
+  t.check(
     chunkSessionEntries({
       sessionId: "s",
       title: "",
       entries: [...noisy, entry({ uuid: "t4", type: "user", text: "hello" })],
       fromIndex: 0,
-    }).length,
-    "1",
+    }),
+    [{ id: "s#t4", sessionId: "s", anchor: "t4", title: "", content: "hello", created: "2026-09-28T10:00:00Z" }],
   );
 });
 
@@ -139,13 +129,26 @@ void test("A chunk closes at the budget; the next entry anchors the next chunk",
   });
 
   // doctest:L131
-  await t.checkText(docs.length, "2");
-
-  // doctest:L134
-  t.check(docs.map((d) => d.anchor).join(","), "c1,c5");
-
-  // doctest:L137
-  t.check(docs[1]?.content, "the actual question");
+  // The shared normalizer splits each 400-char run of "x" into 64-char words.
+  const filler400 = [...Array.from({ length: 6 }, () => "x".repeat(64)), "x".repeat(16)].join(" ");
+  t.check(docs, [
+    {
+      id: "s#c1",
+      sessionId: "s",
+      anchor: "c1",
+      title: "",
+      content: [filler400, filler400, filler400, filler400].join("\n\n"),
+      created: "2026-09-28T10:00:00Z",
+    },
+    {
+      id: "s#c5",
+      sessionId: "s",
+      anchor: "c5",
+      title: "",
+      content: "the actual question",
+      created: "2026-09-28T10:00:00Z",
+    },
+  ]);
 });
 
 // Four 400-char entries joined stay just under the 1600-char budget, so they
@@ -164,13 +167,19 @@ void test("Four 400-char entries joined stay just under the 1600-char budget, so
   const tail = chunkSessionEntries({ sessionId: "s", title: "", entries, fromIndex: 2 });
 
   // doctest:L156
-  await t.checkText(full.length, "1");
-
-  // doctest:L159
-  await t.checkText(tail.length, "1");
-
-  // doctest:L162
-  t.check(tail[0]?.anchor, "d3");
+  t.check(full, [
+    {
+      id: "s#d1",
+      sessionId: "s",
+      anchor: "d1",
+      title: "",
+      content: "first turn\n\nfirst reply\n\nlater turn",
+      created: "2026-09-28T10:00:00Z",
+    },
+  ]);
+  t.check(tail, [
+    { id: "s#d3", sessionId: "s", anchor: "d3", title: "", content: "later turn", created: "2026-09-28T10:00:00Z" },
+  ]);
 });
 
 // ## An oversize entry becomes one whole chunk, not a split one
@@ -184,14 +193,16 @@ void test("An oversize entry becomes one whole chunk, not a split one", async (t
   });
 
   // doctest:L176
-  await t.checkText(docs.length, "1");
-
-  // doctest:L179
-  t.check(docs[0]?.content.startsWith("yyy"), true);
-
   // Unbroken 64+ char runs are split by the shared normalizer so the radix tree
   // stays shallow:
-
-  // doctest:L187
-  t.check(docs[0]?.content.includes(" y"), true);
+  t.check(docs, [
+    {
+      id: "s#e1",
+      sessionId: "s",
+      anchor: "e1",
+      title: "",
+      content: Array.from({ length: 75 }, () => "y".repeat(64)).join(" ") + " ",
+      created: "2026-09-28T10:00:00Z",
+    },
+  ]);
 });

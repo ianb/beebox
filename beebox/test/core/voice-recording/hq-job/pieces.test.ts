@@ -42,11 +42,9 @@ void test("10 minutes (600s) of audio at the default 300s piece length is exactl
 // A length that doesn't divide evenly leaves a shorter final piece — still
 // sample-aligned, since every full piece is already an even number of bytes:
 void test("A length that doesn't divide evenly leaves a shorter final piece — still samp...", async (t) => {
-  // doctest:L34
   // 420s = one 300s piece + a 120s remainder
   const sevenMinutes = PCM_BYTES_PER_SECOND * 420;
-  const pieces = planPieces(sevenMinutes, HQ_PIECE_SECONDS);
-  t.check(pieces, [
+  t.check(planPieces(sevenMinutes, HQ_PIECE_SECONDS), [
     {
       startByte: 0,
       endByte: 9600000,
@@ -56,15 +54,12 @@ void test("A length that doesn't divide evenly leaves a shorter final piece — 
       endByte: 13440000,
     },
   ]);
-
-  // doctest:L40
-  await t.checkText(pieces.every((p) => p.startByte % 2 === 0 && p.endByte % 2 === 0), "true");
 });
 
 // ## Zero bytes produces zero pieces
 void test("Zero bytes produces zero pieces", async (t) => {
   // doctest:L47
-  await t.checkText(planPieces(0, HQ_PIECE_SECONDS).length, "0");
+  t.check(planPieces(0, HQ_PIECE_SECONDS), []);
 });
 
 // ## `nextPieceSeconds` halves toward the floor, then returns null

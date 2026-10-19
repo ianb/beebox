@@ -16,6 +16,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { once } from "node:events";
 import assert from "node:assert/strict";
 import { mkdir, writeFile, appendFile, rm } from "node:fs/promises";
@@ -145,5 +146,5 @@ void test("Turns whose messages carry no uuid (the fake backend's plain helpers,
   await done;
 
   // doctest:L133
-  await t.checkText(Date.now() - t0 < 1000, "true");
+  t.check(Date.now() - t0, any(Number).below(1000));
 });

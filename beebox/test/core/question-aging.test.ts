@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, capture, isoDate, str } from "agent-doctest/check";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -112,10 +113,20 @@ void test("No nudge before the default 7-day threshold", async (t) => {
 
   // doctest:L99
   const [logged] = await readRecent(box.root, { days: 1 });
-  t.check([logged?.intent.target, logged?.intent.loudness, logged?.deliveries.find((d) => d.channel === "web-push")?.status], [
-    "question:_bookkeeping/questions/Color.question.card",
-    "quiet",
-    "sent",
+  const id = capture(any(String));
+  t.check(logged?.intent, {
+    kind: "intent",
+    at: isoDate(),
+    id,
+    title: "⏰ Reminder: a question is waiting",
+    body: "What color?",
+    target: "question:_bookkeeping/questions/Color.question.card",
+    loudness: "quiet",
+    source: "question-nudge",
+  });
+  t.check(logged?.deliveries, [
+    { kind: "delivery", at: isoDate(), notificationId: id.value, channel: "apns", status: "skipped", detail: "no-audience" },
+    { kind: "delivery", at: isoDate(), notificationId: id.value, channel: "web-push", status: "sent" },
   ]);
 
   // A second sweep at the same age (or later, still under expiry) does not
@@ -132,7 +143,7 @@ void test("No nudge before the default 7-day threshold", async (t) => {
 
   // doctest:L116
   const card = await box.read("_bookkeeping/questions/Color.question.card");
-  await t.checkText(card.includes("expired-at"), "false");
+  t.check(card, question({ prompt: "What color?", askedAt: ASKED_AT.toISOString() }));
 });
 
 // ## Expiry at the default 30-day window
@@ -169,22 +180,42 @@ void test("No push subscription exists here:", async (t) => {
 
   // doctest:L145
   const card = await box.read("_bookkeeping/questions/Stale.question.card");
-  await t.checkText(card.includes("expired-at:"), "true");
+  t.check(
+    card,
+    `---
+type: question
+prompt: Still relevant?
+input:
+  type: text
+asked-at: 2026-01-01T00:00:00.000Z
+expired-at: 2026-01-31T00:00:00.000Z
+---
+`,
+  );
 
   // The commit carries the `Expired-By` trailer:
 
   // doctest:L153
-  await t.checkText(headTrailers(box.root).includes("Expired-By: question-aging"), "true");
+  t.check(headTrailers(box.root), "Expire question: Stale.question\n\nExpired-By: question-aging");
 
   // Expired questions drop out of the pending count and pending-questions list:
 
   // doctest:L160
   const state = await getSystemState(box.root);
-  await t.checkText(state.questions.filter((q) => q.state === "pending").length, "0");
+  t.check(state.questions, [
+    {
+      path: str`${any(String)}/_bookkeeping/questions/Stale.question.card`,
+      relativePath: "_bookkeeping/questions/Stale.question.card",
+      name: "Stale",
+      type: "question",
+      subdir: undefined,
+      state: "expired",
+    },
+  ]);
 
   // doctest:L164
   const { pendingQuestions } = await generateContext(box.root);
-  await t.checkText(pendingQuestions.length, "0");
+  t.check(pendingQuestions, []);
 });
 
 // ## `expires-after` override: nudge at half, expire at the full window
@@ -269,7 +300,7 @@ void test("A pending question with no asked-at (shouldn't exist post-migration, 
 
   // doctest:L229
   const card = await box.read("_bookkeeping/questions/NoAskedAt.question.card");
-  await t.checkText(card.includes("expired-at"), "false");
+  t.check(card, "---\nprompt: When was this asked?\ninput:\n  type: text\n---\n");
 });
 
 // ## Race-loser: already-answered questions are simply not pending
@@ -312,5 +343,11 @@ void test("The shared withQuestionTransition primitive (question-transition.ts) 
 
   // doctest:L265
   const card = await box.read("_bookkeeping/questions/AlreadyAnswered.question.card");
-  await t.checkText(card.includes("expired-at"), "false");
+  t.check(
+    card,
+    question({ prompt: "Still open?", askedAt: ASKED_AT.toISOString() }).replace(
+      "---\n",
+      "---\nanswered-at: 2026-01-02T00:00:00Z\nanswer:\n  text: Yes\n",
+    ),
+  );
 });

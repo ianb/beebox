@@ -100,42 +100,58 @@ void test("Converts human-readable timespan strings into milliseconds.", async (
 void test("parseIcsContent", async (t) => {
   // doctest:L44
   const parsed = parseIcsContent(simpleIcs, { filename: "test.ics" });
-  await t.checkText(parsed.length, "1");
-
-  // doctest:L48
-  t.check(parsed[0]?.summary, "Team Standup");
-
-  // doctest:L51
-  t.check(parsed[0]?.uid, "test-123");
-
-  // doctest:L54
-  t.check(parsed[0]?.allDay, false);
+  t.check(parsed, [
+    {
+      uid: "test-123",
+      summary: "Team Standup",
+      start: new Date("2026-03-15T10:00:00Z"),
+      end: new Date("2026-03-15T10:30:00Z"),
+      allDay: false,
+      status: "CONFIRMED",
+      opaque: true,
+      filename: "test.ics",
+    },
+  ]);
 });
 
 void test("parseIcsContent (line 71)", async (t) => {
   // doctest:L72
-  const ev = parseIcsContent(allDayIcs, { filename: "holiday.ics" })[0];
-  t.check(ev?.allDay, true);
-
-  // doctest:L76
-  t.check(ev?.summary, "Company Holiday");
+  t.check(parseIcsContent(allDayIcs, { filename: "holiday.ics" }), [
+    {
+      uid: "allday-1",
+      summary: "Company Holiday",
+      start: new Date(2026, 2, 20),
+      end: new Date(2026, 2, 21),
+      allDay: true,
+      status: "CONFIRMED",
+      opaque: true,
+      filename: "holiday.ics",
+    },
+  ]);
 });
 
 void test("parseIcsContent (line 94)", async (t) => {
   // doctest:L95
-  await t.checkText(parseIcsContent(cancelledIcs, { filename: "cancelled.ics" }).length, "0");
+  t.check(parseIcsContent(cancelledIcs, { filename: "cancelled.ics" }), []);
 });
 
 void test("parseIcsContent (line 115)", async (t) => {
   // doctest:L116
-  const meta = parseIcsContent(metaIcs, { filename: "play.ics" })[0];
-  t.check(meta?.calendarId, "school-cal");
-
-  // doctest:L120
-  t.check(meta?.calendarName, "GRS School Calendar");
-
-  // doctest:L123
-  t.check(meta?.calendarRole, "reader");
+  t.check(parseIcsContent(metaIcs, { filename: "play.ics" }), [
+    {
+      uid: "meta-1",
+      summary: "School Play",
+      start: new Date("2026-03-20T19:00:00Z"),
+      end: new Date("2026-03-20T21:00:00Z"),
+      allDay: false,
+      status: "CONFIRMED",
+      opaque: true,
+      filename: "play.ics",
+      calendarId: "school-cal",
+      calendarName: "GRS School Calendar",
+      calendarRole: "reader",
+    },
+  ]);
 });
 
 // A standard timed event (date and time are locale-dependent):
@@ -174,8 +190,16 @@ void test("filterByDateRange", async (t) => {
     from: new Date("2026-03-15T00:00:00Z"),
     to: new Date("2026-03-16T00:00:00Z"),
   });
-  await t.checkText(filtered.length, "1");
-
-  // doctest:L202
-  t.check(filtered[0]?.uid, "b");
+  t.check(filtered, [
+    {
+      uid: "b",
+      summary: "Meeting",
+      start: new Date("2026-03-15T10:00:00Z"),
+      end: new Date("2026-03-15T11:00:00Z"),
+      allDay: false,
+      status: "CONFIRMED",
+      opaque: true,
+      filename: "test.ics",
+    },
+  ]);
 });

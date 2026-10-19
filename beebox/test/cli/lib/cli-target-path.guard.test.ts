@@ -66,5 +66,6 @@ void test("`bbx create` template argument help", async (t) => {
   let errorText = "";
   createCommand.configureOutput({ writeErr: (text) => { errorText += text; } }).exitOverride();
   try { createCommand.parse(["node", "bbx", "example.doc.card", "--title", "Example"]); } catch (_error) { /* Commander exitOverride throws after writing the expected error hint. */ }
-  await t.checkText(errorText.includes("positional key=value") && errorText.includes("--describe-template <name>"), "true");
+  t.checkText(errorText, `error: unknown option '--title'
+Template arguments use positional key=value pairs. Use --describe-template <name> to see a template's keys.`);
 });

@@ -28,45 +28,40 @@ const dir = await makeTmpDir("config-path");
 
 // ## When the cwd candidate exists, it wins over `~/.config`
 void test("When the cwd candidate exists, it wins over `~/.config`", async (t) => {
-  // doctest:L33
   const cwdDirA = join(dir, "cwd-wins");
   await mkdir(cwdDirA, { recursive: true });
   await writeFile(cwdConfigPath(cwdDirA), "{}");
   const homeDirA = join(dir, "home-unused");
   const resolvedA = await resolveConfigPath({ cwd: cwdDirA, homeDir: homeDirA });
-  t.check(resolvedA === cwdConfigPath(cwdDirA), true);
+  t.check(resolvedA, cwdConfigPath(cwdDirA));
 
   // The `~/.config` candidate is never even checked in this case — nothing was
   // created there:
 
-  // doctest:L46
   t.check(await pathExists(homeConfigPath(homeDirA)), false);
 });
 
 // ## When the cwd candidate doesn't exist, `~/.config/scan-uploader.json` is used — whether or not IT exists either
 void test("When the cwd candidate doesn't exist, `~/.config/scan-uploader.json` is used — whether or not IT exists either", async (t) => {
-  // doctest:L53
   const cwdDirB = join(dir, "cwd-empty");
   await mkdir(cwdDirB, { recursive: true });
   const homeDirB = join(dir, "home-b");
   const resolvedB = await resolveConfigPath({ cwd: cwdDirB, homeDir: homeDirB });
-  t.check(resolvedB === homeConfigPath(homeDirB), true);
+  t.check(resolvedB, homeConfigPath(homeDirB));
 
-  // doctest:L62
   t.check(await pathExists(resolvedB), false);
 
   // An existing `~/.config/scan-uploader.json` is used the same way (this is
   // the "update an existing default config" case — resolution doesn't care
   // whether the target exists, only the caller does):
 
-  // doctest:L71
   const homeDirC = join(dir, "home-c");
   await mkdir(join(homeDirC, ".config"), { recursive: true });
   await writeFile(homeConfigPath(homeDirC), "{}");
   const cwdDirC = join(dir, "cwd-empty-c");
   await mkdir(cwdDirC, { recursive: true });
   const resolvedC = await resolveConfigPath({ cwd: cwdDirC, homeDir: homeDirC });
-  t.check(resolvedC === homeConfigPath(homeDirC), true);
+  t.check(resolvedC, homeConfigPath(homeDirC));
 });
 
 // ## `configure` given the resolved default creates `~/.config/scan-uploader.json` from scratch
@@ -82,14 +77,12 @@ void test("Mirrors what configure-cli.ts actually does when --config is omitted:
       t.error(error);
     }
   });
-  // doctest:L88
   const cwdDirD = join(dir, "cwd-for-configure");
   await mkdir(cwdDirD, { recursive: true });
   const homeDirD = join(dir, "home-d");
   const resolvedForWrite = await resolveConfigPath({ cwd: cwdDirD, homeDir: homeDirD });
-  t.check(resolvedForWrite === homeConfigPath(homeDirD), true);
+  t.check(resolvedForWrite, homeConfigPath(homeDirD));
 
-  // doctest:L97
   const serverD: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
@@ -103,14 +96,27 @@ void test("Mirrors what configure-cli.ts actually does when --config is omitted:
     configPath: resolvedForWrite,
     homeDir: homeDirD,
   });
-  t.check(resultD.configPath === homeConfigPath(homeDirD), true);
+  t.check(resultD, {
+    configPath: homeConfigPath(homeDirD),
+    tokenPath: join(homeDirD, ".scan-tokens", "family.token"),
+    box: "family",
+    folder: "/scans/family",
+    name: "laptop",
+    warnings: [],
+  });
 
-  // doctest:L115
   const writtenD = JSON.parse(await readFile(homeConfigPath(homeDirD), "utf-8"));
-  t.check(writtenD.targets.length, 1);
-
-  // doctest:L121
-  t.check(writtenD.targets[0].box, "family");
+  t.check(writtenD, {
+    targets: [
+      {
+        folder: "/scans/family",
+        serverUrl: serverD.url,
+        box: "family",
+        tokenPath: join(homeDirD, ".scan-tokens", "family.token"),
+        disposition: "keep",
+      },
+    ],
+  });
 });
 
 // ## The friendly missing-config message
@@ -126,11 +132,9 @@ void test("Printed by the bare run when NEITHER resolution candidate exists (a c
       t.error(error);
     }
   });
-  // doctest:L136
-  t.check(MISSING_CONFIG_MESSAGE.length, 3);
-
-  // doctest:L141
-  await t.checkText(MISSING_CONFIG_MESSAGE.join("\n"), `No config found (looked for ./scan-uploader.json and ~/.config/scan-uploader.json).
-Set up a target with: scan-uploader configure <server-url-with-box> --folder <path>
-(mint a token first in the box's Settings -> Scan uploaders)`);
+  t.check(MISSING_CONFIG_MESSAGE, [
+    "No config found (looked for ./scan-uploader.json and ~/.config/scan-uploader.json).",
+    "Set up a target with: scan-uploader configure <server-url-with-box> --folder <path>",
+    "(mint a token first in the box's Settings -> Scan uploaders)",
+  ]);
 });

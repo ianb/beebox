@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import { any, isoDate, str } from "agent-doctest/check";
 import { runPhotoMode } from "../../../../src/core/commands/scan-import/command.js";
 import { createFakeScanVision } from "../../../../src/services/scan-vision.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
@@ -18,7 +18,6 @@ import assert from "node:assert/strict";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import Sharp from "sharp";
-import { z } from "zod";
 import type { ScanPageAnalysis } from "../../../../src/core/describe-images/gemini.js";
 import type { TmpBox } from "../../../helpers/test-helpers.js";
 import type { FakeScanVisionService } from "../../../../src/services/scan-vision.js";
@@ -49,6 +48,22 @@ async function importPhotos({ box, vision, count }: { box: TmpBox; vision: FakeS
   return { ...result, data: isRecord(result.data) ? result.data : {} };
 }
 
+/** A completed photo import: the session paths vary (timestamp and random suffix); the counts do not. */
+function imported(counts: { photoCount: number; pairedCount: number; unsureCount: number; reviewQuestions: number }) {
+  return {
+    success: true,
+    data: {
+      mode: "photo",
+      sessionRelDir: str`_content/inbox/scan-${any(String)}.attach`,
+      sessionCardPath: str`_content/inbox/scan-${any(String)}.capture-session.card`,
+      orphanBackCount: 0,
+      blankCount: 0,
+      intakeJobPath: str`_bookkeeping/jobs/${any(String)}-inbox.intake.job.card`,
+      ...counts,
+    },
+  };
+}
+
 async function sessionDir(box: TmpBox) {
   const entries = await readdir(join(box.root, "_content/inbox"));
   return entries.find((e) => e.endsWith(".attach"));
@@ -74,19 +89,13 @@ async function questionFiles(box: TmpBox) {
 // mutual-claim preference picks the batch-2 analysis whose pair claim page 3
 // reciprocates. Result: two photo bundles, each with its back.
 void test("Four pages through the fake's default alternation (photo, back, photo, back).", async (t) => {
-  // doctest:L77
   const box = await makeTmpBox({ git: true });
   const vision = createFakeScanVision();
   const result = await importPhotos({ box, vision, count: 4 });
-  t.check(result.success, true);
+  t.check(result, imported({ photoCount: 2, pairedCount: 2, unsureCount: 0, reviewQuestions: 1 }));
 
-  // doctest:L83
-  t.check(`photos=${result.data["photoCount"]} paired=${result.data["pairedCount"]} orphans=${result.data["orphanBackCount"]} unsure=${result.data["unsureCount"]}`, "photos=2 paired=2 orphans=0 unsure=0");
+  t.check(vision.calls.map((c) => c.imagePaths.length), [3, 2]);
 
-  // doctest:L86
-  t.check(vision.calls.map((c) => c.imagePaths.length).join(","), "3,2");
-
-  // doctest:L89
   await t.checkText(await sessionFiles(box), `photo-001.attach
 photo-001.attach/photo-001-back.jpg
 photo-001.attach/photo-001.jpg
@@ -98,17 +107,21 @@ photo-002.image.card`);
 
   // The image card carries the analysis: description and back text.
 
-  // doctest:L103
   const dir = await sessionDir(box);
   const cardText = await box.read(`_content/inbox/${dir}/photo-001.image.card`);
   const card = parseCardText(cardText, { source: "photo-001.image.card", schemas, type: "image" });
-  t.check(`${card.fields["description"]} | ${z.array(z.object({ content: z.string() })).parse(card.fields["text"])[0]?.content}`, "Fake photo 0 | Fake back caption 1");
+  t.check(card.fields, {
+    type: "image",
+    "has-text": true,
+    filename: { ref: "attach/photo-001.jpg", via: { channel: "gallery", at: isoDate() } },
+    description: "Fake photo 0",
+    text: [{ surface: "back", content: "Fake back caption 1" }],
+  });
 
   // The seam page's two analyses disagreed on pairing (the fake generates
   // batch-relative claims), so the overlap-conflict path flags photo 2 for
   // review — the designed behavior when overlapping batches disagree.
 
-  // doctest:L115
   t.check(await questionFiles(box), str`${any(String)}-photo-002.review.question.card`);
 });
 
@@ -117,14 +130,12 @@ photo-002.image.card`);
 // A page flagged for review (the Claude backend does this for any
 // partial/illegible slot) emits a review question card alongside the image card.
 void test("A page flagged for review (the Claude backend does this for any partial/illeg...", async (t) => {
-  // doctest:L125
   const flaggedPage = (i: number): ScanPageAnalysis => ({ index: i, kind: i === 0 ? "photo" : "back", paired_with_index: i === 0 ? 1 : 0, description: i === 0 ? "A flagged photo" : "", title: i === 0 ? "Flagged" : "", rotation: 0, subject_bbox: null, has_text: i !== 0, text_blocks: i === 0 ? [] : [{ source: "back", text: "M?" }], date_hint: null, flag_for_review: i !== 0, flag_reason: i !== 0 ? "Slots needing review: 2 (partial)" : null });
   const box2 = await makeTmpBox({ git: true });
   const vision2 = createFakeScanVision({ analyze: (paths) => paths.map((_, i) => flaggedPage(i)) });
   const result2 = await importPhotos({ box: box2, vision: vision2, count: 2 });
-  t.check(`${result2.success} questions=${result2.data["reviewQuestions"]}`, "true questions=1");
+  t.check(result2, imported({ photoCount: 1, pairedCount: 1, unsureCount: 0, reviewQuestions: 1 }));
 
-  // doctest:L132
   t.check(await questionFiles(box2), str`${any(String)}-photo-001.review.question.card`);
 });
 
@@ -134,14 +145,12 @@ void test("A page flagged for review (the Claude backend does this for any parti
 // fails with the classified message and stages nothing — no session dir, no
 // cards, no questions.
 void test("Broken provider/config (bad key, unauthed host, dead SDK binary):", async (t) => {
-  // doctest:L143
   const box3 = await makeTmpBox({ git: true });
   const vision3 = createFakeScanVision({ alwaysFailRetry: "fatal" });
   const result3 = await importPhotos({ box: box3, vision: vision3, count: 2 });
-  t.check(`${result3.success} | ${result3.error}`, "false | Scan analysis aborted: fake scan-vision failure (scripted)");
+  t.check(result3, { success: false, error: "Scan analysis aborted: fake scan-vision failure (scripted)", data: {} });
 
-  // doctest:L149
-  await t.checkText((await readdir(join(box3.root, "_content/inbox"))).filter((name) => name.startsWith("scan-")).length, "0");
+  t.check((await readdir(join(box3.root, "_content/inbox"))).filter((name) => name.startsWith("scan-")), []);
 });
 
 // ## A `batch` failure degrades to flagged placeholder pages
@@ -149,13 +158,11 @@ void test("Broken provider/config (bad key, unauthed host, dead SDK binary):", a
 // Non-fatal, non-splittable failures keep today's semantics: the batch's pages
 // become `unsure` placeholders with questions, and the import still completes.
 void test("Non-fatal, non-splittable failures keep today's semantics:", async (t) => {
-  // doctest:L159
   const box4 = await makeTmpBox({ git: true });
   const vision4 = createFakeScanVision({ alwaysFailRetry: "batch" });
   const result4 = await importPhotos({ box: box4, vision: vision4, count: 2 });
-  t.check(`${result4.success} unsure=${result4.data["unsureCount"]} photos=${result4.data["photoCount"]}`, "true unsure=2 photos=0");
+  t.check(result4, imported({ photoCount: 0, pairedCount: 0, unsureCount: 2, reviewQuestions: 2 }));
 
-  // doctest:L165
   await t.checkText(await questionFiles(box4), `«*»-unsure-001.question.card
 «*»-unsure-002.question.card`);
 });
@@ -166,9 +173,9 @@ void test("Non-fatal, non-splittable failures keep today's semantics:", async (t
 // same batch, and the import proceeds normally. The failed attempt's usage is
 // included in the run's accounting (visible in the command's token/cost lines).
 void test("One transient failure, then success:", async (t) => {
-  // doctest:L177
   const box5 = await makeTmpBox({ git: true });
   const vision5 = createFakeScanVision({ failTimes: 1, failRetry: "transient" });
   const result5 = await importPhotos({ box: box5, vision: vision5, count: 2 });
-  t.check(`${result5.success} photos=${result5.data["photoCount"]} calls=${vision5.calls.length}`, "true photos=1 calls=2");
+  t.check(result5, imported({ photoCount: 1, pairedCount: 1, unsureCount: 0, reviewQuestions: 0 }));
+  t.check(vision5.calls.map((c) => c.imagePaths.length), [2, 2]);
 });

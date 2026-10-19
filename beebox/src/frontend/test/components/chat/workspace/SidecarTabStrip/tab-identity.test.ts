@@ -11,11 +11,8 @@ import { abbreviateTitle, ambiguousMarks, pinnedFace } from "../../../../../src/
 
 type PinnedSymbol = Parameters<typeof pinnedFace>[0]["symbol"];
 
-/** A pinned tab's face as "mark|abbreviation", with "-" for an absent half. */
-function face(symbol: PinnedSymbol, { title, ambiguous }: { title: string; ambiguous: ReadonlySet<string> }): string {
-  const f = pinnedFace({ symbol, title, ambiguous });
-  const mark = f.mark?.glyph ?? (f.mark?.src === undefined ? "-" : "[image]");
-  return `${mark}|${f.abbreviation ?? "-"}`;
+function face(symbol: PinnedSymbol, { title, ambiguous }: { title: string; ambiguous: ReadonlySet<string> }) {
+  return pinnedFace({ symbol, title, ambiguous });
 }
 
 // ## Abbreviating a title
@@ -31,14 +28,14 @@ void test("Initials of the first two words; a single word gives its first two gr
       abbreviateTitle("Sourdough Bread"),
       abbreviateTitle("Bread"),
       abbreviateTitle("weekend errands"),
-    ].join(","),
-    "AB,SB,BR,WE",
+    ],
+    ["AB", "SB", "BR", "WE"],
   );
 
   // Whitespace and empties do not produce junk.
 
   // doctest:L38
-  t.check([abbreviateTitle("   "), abbreviateTitle(""), abbreviateTitle("  Spaced   Out  ")].join("|"), "||SO");
+  t.check([abbreviateTitle("   "), abbreviateTitle(""), abbreviateTitle("  Spaced   Out  ")], ["", "", "SO"]);
 
   // An emoji title abbreviates to the emoji itself rather than to half of one —
   // the same grapheme discipline as the glyph cap.
@@ -59,13 +56,13 @@ void test("A glyph worn by two pinned tabs no longer says which card it is.", as
     { symbol: { glyph: "🍞" } },
     { symbol: null },
   ];
-  t.check([...ambiguousMarks(pinned)].join(","), "glyph:🍳");
+  t.check([...ambiguousMarks(pinned)], ["glyph:🍳"]);
 
   // Whole glyphs are compared, not first characters: an author who wrote two
   // different marks meant them to differ.
 
   // doctest:L70
-  await t.checkText([...ambiguousMarks([{ symbol: { glyph: "🍞" } }, { symbol: { glyph: "🍞🥖" } }])].length, "0");
+  t.check([...ambiguousMarks([{ symbol: { glyph: "🍞" } }, { symbol: { glyph: "🍞🥖" } }])], []);
 });
 
 // ## The face a pinned tab draws
@@ -76,29 +73,29 @@ void test("An unambiguous mark stands alone — this is the browser pinned tab."
   const ambiguous = new Set(["glyph:🍳"]);
 
   // doctest:L81
-  t.check(face({ glyph: "🍞" }, { title: "Sourdough Bread", ambiguous }), "🍞|-");
+  t.check(face({ glyph: "🍞" }, { title: "Sourdough Bread", ambiguous }), { mark: { glyph: "🍞" }, abbreviation: null });
 
   // An ambiguous one keeps the mark and gains the discriminator, because dropping
   // the mark would be a worse answer than crowding it slightly.
 
   // doctest:L89
-  t.check(face({ glyph: "🍳" }, { title: "Weeknight Chili", ambiguous }), "🍳|WC");
+  t.check(face({ glyph: "🍳" }, { title: "Weeknight Chili", ambiguous }), { mark: { glyph: "🍳" }, abbreviation: "WC" });
 
   // A card with no mark shows the abbreviation alone.
 
   // doctest:L96
-  t.check(face(null, { title: "Weekend Errands", ambiguous }), "-|WE");
+  t.check(face(null, { title: "Weekend Errands", ambiguous }), { mark: null, abbreviation: "WE" });
 
   // doctest:L99
-  t.check(face({ foreground: "#333" }, { title: "Weekend Errands", ambiguous }), "-|WE");
+  t.check(face({ foreground: "#333" }, { title: "Weekend Errands", ambiguous }), { mark: null, abbreviation: "WE" });
 
   // An image mark stands alone when it is the only tab wearing that picture — but
   // `src` is only a path, so two cards CAN name the same image, and then it needs
   // the discriminator like any other repeated mark.
 
   // doctest:L108
-  await t.checkText(face({ src: "_content/marks/bread.webp" }, { title: "Sourdough Bread", ambiguous }), "[image]|-");
+  t.check(face({ src: "_content/marks/bread.webp" }, { title: "Sourdough Bread", ambiguous }), { mark: { src: "_content/marks/bread.webp" }, abbreviation: null });
 
   // doctest:L111
-  await t.checkText(face({ src: "_content/marks/bread.webp" }, { title: "Sourdough Bread", ambiguous: new Set(["src:_content/marks/bread.webp"]) }), "[image]|SB");
+  t.check(face({ src: "_content/marks/bread.webp" }, { title: "Sourdough Bread", ambiguous: new Set(["src:_content/marks/bread.webp"]) }), { mark: { src: "_content/marks/bread.webp" }, abbreviation: "SB" });
 });

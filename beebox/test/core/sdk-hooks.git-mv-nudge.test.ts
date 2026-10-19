@@ -33,13 +33,13 @@ async function nudge(command: string, event?: "PreToolUse" | "PostToolUse") {
 // `git mv` on a `store/` path nudges toward `bbx mv`:
 void test("git mv on a store/ path nudges toward bbx mv:", async (t) => {
   // doctest:L36
-  t.check((await nudge("git mv store/old/valley store/new/valley"))?.includes("bbx mv"), true);
+  t.check(await nudge("git mv store/old/valley store/new/valley"), "You're using `git mv` on box content. `git mv` relocates files but does NOT rewrite inbound references, so links/refs pointing at the moved content will dangle. Prefer `bbx mv` — it moves the files AND rewrites every reference, including inline links in `.md` dossiers. Use plain `git mv` only if you intentionally want to move without updating references.");
 });
 
 // So does a `.card` move outside `store/` (the wrapper still mishandles refs):
 void test("So does a .card move outside store/ (the wrapper still mishandles refs):", async (t) => {
   // doctest:L43
-  t.check((await nudge("cd box && git mv box/A.doc.card box/sub/A.doc.card"))?.includes("bbx mv"), true);
+  t.check(await nudge("cd box && git mv box/A.doc.card box/sub/A.doc.card"), "You're using `git mv` on box content. `git mv` relocates files but does NOT rewrite inbound references, so links/refs pointing at the moved content will dangle. Prefer `bbx mv` — it moves the files AND rewrites every reference, including inline links in `.md` dossiers. Use plain `git mv` only if you intentionally want to move without updating references.");
 });
 
 // It stays quiet for `bbx mv` (already the right tool), a non-box `git mv`, and a

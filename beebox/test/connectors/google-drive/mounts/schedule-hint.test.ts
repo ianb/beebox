@@ -65,7 +65,10 @@ void test("The three states are distinct:", async (t) => {
   t.check(await checkDriveScheduleState(box.root), "disabled");
 
   // doctest:L63
-  t.check((await checkDriveScheduleHint(box.root))?.includes("bbx force-wakeup --connector google-drive"), true);
+  t.check(
+    await checkDriveScheduleHint(box.root),
+    "Hourly Drive sync (check-drive) is off, so this mount only updates when something asks it to. Ask the boxholder whether to turn it on — they enable it under Schedules in box settings. Either way, `bbx force-wakeup --connector google-drive` syncs it now.",
+  );
 
   // Once it is on there is nothing to say, and the same is true of a card that never
   // spelled `enabled` out — the field is optional and defaults to on

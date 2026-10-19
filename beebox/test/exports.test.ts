@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, containing } from "agent-doctest/check";
 import { cardSchema, body, splitCardContent } from "beebox/cards";
 import { z, parseYaml, stringifyYaml } from "beebox/schema";
 import * as server from "beebox/server";
@@ -24,7 +25,7 @@ void test("A box-local schema file's whole toolkit:", async (t) => {
   t.check(demo.type, "demo");
 
   // doctest:L27
-  t.check(Object.keys(demo.fields).toSorted().join(","), "body,status");
+  t.check(Object.keys(demo.fields).toSorted(), ["body", "status"]);
 
   // doctest:L30
   t.check(splitCardContent("---\nstatus: new\n---\nHello.").body.trim(), "Hello.");
@@ -66,8 +67,8 @@ void test("Importing the module must not start anything; it only exposes the fun
 void test("view-widgets is React-flavored, so we import it dynamically and just verify t...", async (t) => {
   // doctest:L69
   const widgets = await import("beebox/view-widgets");
-  await t.checkText(["CardLink", "CardRef", "Markdown", "NodeViewHostProvider"].every((name) => Object.keys(widgets).includes(name)), "true");
+  t.check(Object.keys(widgets), containing(["CardLink", "CardRef", "Markdown", "NodeViewHostProvider"]));
 
   // doctest:L73
-  await t.checkText(import.meta.resolve("beebox/tsconfig.base.json").endsWith("/tsconfig.base.json"), "true");
+  t.check(import.meta.resolve("beebox/tsconfig.base.json"), any(String).endsWith("/tsconfig.base.json"));
 });

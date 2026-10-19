@@ -10,6 +10,8 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { instanceOf } from "agent-doctest/check";
+import assert from "node:assert";
 import { addSubscription, endpointsForBox, PushStoreCorruptError } from "../../src/core/push-subscriptions.js";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -40,40 +42,39 @@ void test("No store file yet: reads succeed as empty, no throw", async (t) => {
     }
   });
   // doctest:L36
-  const beforeAny = await endpointsForBox("some-box");
-  await t.checkText(beforeAny.length, "0");
+  t.check(await endpointsForBox("some-box"), []);
 
   // ## A valid store round-trips through addSubscription / endpointsForBox
 
   // doctest:L44
   await addSubscription({ boxSlug: "boxa", subscription: SUB, now: NOW });
-  const forBoxA = await endpointsForBox("boxa");
-  await t.checkText(forBoxA.length, "1");
+  t.check(await endpointsForBox("boxa"), [SUB]);
 
   // ## A corrupt (invalid JSON) store throws PushStoreCorruptError on read
 
   // doctest:L53
   await fs.writeFile(storeFile, "{ not valid json");
   const readResult = await tryCall(() => endpointsForBox("boxa"));
-  await t.checkText(readResult instanceof PushStoreCorruptError, "true");
+  t.check(readResult, instanceOf(PushStoreCorruptError));
 
   // doctest:L58
-  await t.checkText(readResult instanceof PushStoreCorruptError && readResult.storePath === storeFile, "true");
+  assert(readResult instanceof PushStoreCorruptError);
+  t.check(readResult.storePath, storeFile);
 
   // ## A corrupt store also aborts a write attempt — the file is left untouched
 
   // doctest:L65
   const beforeContent = await fs.readFile(storeFile, "utf-8");
   const writeResult = await tryCall(() => addSubscription({ boxSlug: "boxb", subscription: SUB, now: NOW }));
-  await t.checkText(writeResult instanceof PushStoreCorruptError, "true");
+  t.check(writeResult, instanceOf(PushStoreCorruptError));
 
   // doctest:L70
   const afterContent = await fs.readFile(storeFile, "utf-8");
-  await t.checkText(afterContent === beforeContent, "true");
+  t.check(afterContent, beforeContent);
 
   // ## A store that parses as JSON but fails the shape schema also throws
 
   // doctest:L78
   await fs.writeFile(storeFile, JSON.stringify({ "https://push.example/x": { keys: { p256dh: "p" } } }));
-  await t.checkText((await tryCall(() => endpointsForBox("boxa"))) instanceof PushStoreCorruptError, "true");
+  t.check(await tryCall(() => endpointsForBox("boxa")), instanceOf(PushStoreCorruptError));
 });

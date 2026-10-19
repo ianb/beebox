@@ -10,7 +10,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { createGoogleOAuthState } from "../../../../src/google/oauth-state.js";
 import { signSession, COOKIE_NAME } from "../../../../src/webapp/auth.js";
@@ -20,6 +19,9 @@ import * as path from "node:path";
 
 const tokensFile = path.join(os.tmpdir(), `oauth-bbx-tokens-${process.pid}-${Date.now()}.json`);
 process.env.BBX_GOOGLE_TOKENS_FILE = tokensFile;
+
+const NO_CODE_REDIRECT = { status: 302, location: "/test/admin?google=error&message=No+code+received", body: "" };
+const NOT_INITIATOR = { statusCode: 403, body: { error: "OAuth state does not belong to the current session" } };
 
 function bbx(query: string): { method: "GET"; url: string } {
   return { method: "GET", url: `/auth/google-services/callback?${query}` };
@@ -31,7 +33,7 @@ void test("An attacker-chosen `state` (with a `code`) is rejected — no tokens 
   const ctx = await makeTestServer();
   // A forged state naming the real box, plus a plausible auth code.
   const res = await ctx.rootRequest(bbx("state=test:forged-nonce&code=attacker-code"));
-  t.check(res.statusCode, 400);
+  t.check(res, { statusCode: 400, body: { error: "Invalid or expired OAuth state" } });
 
   // doctest:L36
   t.check(
@@ -44,12 +46,12 @@ void test("An attacker-chosen `state` (with a `code`) is rejected — no tokens 
 
   // doctest:L44
   const noState = await ctx.rootRequest(bbx("code=attacker-code"));
-  t.check(noState.statusCode, 400);
+  t.check(noState, { statusCode: 400, body: { error: "Invalid OAuth state" } });
 
   // doctest:L48
   // Legacy bare-slug and slug:returnPath shapes carry no minted nonce → rejected.
   const legacy = await ctx.rootRequest(bbx("state=test&code=x"));
-  t.check(legacy.statusCode, 400);
+  t.check(legacy, { statusCode: 400, body: { error: "Invalid OAuth state" } });
 
   // ## A genuine minted nonce passes the gate (and is single-use)
   //
@@ -64,12 +66,15 @@ void test("An attacker-chosen `state` (with a `code`) is rejected — no tokens 
   // doctest:L64
   // Use the raw Fastify inject (a 302 has no JSON body for rootRequest to parse).
   const accepted = await ctx.server.inject(bbx(`state=${encodeURIComponent(state)}`));
-  t.check(accepted.statusCode, 302);
+  t.check(
+    { status: accepted.statusCode, location: accepted.headers.location, body: accepted.body },
+    NO_CODE_REDIRECT,
+  );
 
   // doctest:L69
   // Replaying the now-consumed nonce is rejected.
   const replay = await ctx.rootRequest(bbx(`state=${encodeURIComponent(state)}&code=x`));
-  t.check(replay.statusCode, 400);
+  t.check(replay, { statusCode: 400, body: { error: "Invalid or expired OAuth state" } });
 
   // doctest:L74
   await ctx.cleanup();
@@ -82,8 +87,6 @@ void test("An attacker-chosen `state` (with a `code`) is rejected — no tokens 
 // — or by no session at all — is rejected (403) before any token exchange, closing
 // the owner-binding gap where hub mode checked only box access, not the initiator.
 void test("When the nonce was minted by an owner (createdBy set), the session completing...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       delete process.env.BBX_GOOGLE_TOKENS_FILE;
@@ -98,9 +101,8 @@ void test("When the nonce was minted by an owner (createdBy set), the session co
   // doctest:L88
   // Completed with NO session identity → mismatch → 403, no tokens written.
   const anon = await ctx2.rootRequest(bbx(`state=${encodeURIComponent(ownerState)}&code=x`));
-  print(`anon: ${anon.statusCode}`);
-  await t.checkText(out.with(print(`tokens written: ${existsSync(tokensFile)}`)), `anon: 403
-tokens written: false`);
+  t.check(anon, NOT_INITIATOR);
+  t.check(existsSync(tokensFile), false);
 
   // A different signed-in user is likewise rejected (the nonce is single-use, so mint
   // a fresh one).
@@ -113,7 +115,7 @@ tokens written: false`);
     url: `/auth/google-services/callback?state=${encodeURIComponent(strangerState)}&code=x`,
     headers: { cookie: `${COOKIE_NAME}=${strangerCookie}` },
   });
-  await t.checkText(out.with(stranger.statusCode), "403");
+  t.check(stranger, NOT_INITIATOR);
 
   // The initiating owner completing the callback clears the gate (no `code` → 302
   // back to the box, not a 403).
@@ -126,7 +128,10 @@ tokens written: false`);
     url: `/auth/google-services/callback?state=${encodeURIComponent(ownerState2)}`,
     headers: { cookie: `${COOKIE_NAME}=${ownerCookie}` },
   });
-  await t.checkText(out.with(owner.statusCode), "302");
+  t.check(
+    { status: owner.statusCode, location: owner.headers.location, body: owner.body },
+    NO_CODE_REDIRECT,
+  );
 
   // doctest:L126
   await ctx2.cleanup();

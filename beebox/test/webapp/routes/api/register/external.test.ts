@@ -6,8 +6,8 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { makeTestServer } from "../../../../helpers/test-route-server.js";
-import { bodyField } from "../../../../helpers/test-helpers.js";
 import { mkdtempSync, writeFileSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import * as os from "node:os";
@@ -55,16 +55,10 @@ void test("An allowed file returns a JSON envelope", async (t) => {
   const ctx = await makeExternalServer();
   await allowRoot(ctx);
   const res = await ctx.request({ method: "GET", url: extUrl(`file:${file}`) });
-  t.check(res.statusCode, 200);
-
-  // doctest:L56
-  await t.checkText(Buffer.from(String(bodyField(res.body, "contentBase64")), "base64").toString() === "hello\n", "true");
-
-  // doctest:L59
-  t.check(bodyField(res.body, "contentType"), "text/markdown");
-
-  // doctest:L62
-  await t.checkText(String(bodyField(res.body, "markers")).startsWith("sha256:"), "true");
+  t.check(res, {
+    statusCode: 200,
+    body: { contentBase64: "aGVsbG8K", contentType: "text/markdown", markers: str`sha256:5891b5b522d5 git:${any(String)}` },
+  });
 });
 
 // ## The box's own root is always allowed (no config needed)
@@ -80,7 +74,10 @@ void test("The box's own root is always allowed (no config needed)", async (t) =
   const ctx = await makeExternalServer();
   await ctx.seed("notes/inside.md", "in-box\n");
   const url = extUrl(`file:${path.join(ctx.boxRoot, "notes", "inside.md")}`);
-  t.check((await ctx.request({ method: "GET", url })).statusCode, 200);
+  t.check(await ctx.request({ method: "GET", url }), {
+    statusCode: 200,
+    body: { contentBase64: "aW4tYm94Cg==", contentType: "text/markdown", markers: "sha256:cd3de7b5c6e7" },
+  });
 });
 
 // ## A path outside the allowed roots is 404
@@ -95,7 +92,10 @@ void test("A path outside the allowed roots is 404", async (t) => {
   // doctest:L87
   const ctx = await makeExternalServer();
   await allowRoot(ctx);
-  t.check((await ctx.request({ method: "GET", url: extUrl(`file:${outside}`) })).statusCode, 404);
+  t.check(await ctx.request({ method: "GET", url: extUrl(`file:${outside}`) }), {
+    statusCode: 404,
+    body: { error: "Path is not under an allowed root" },
+  });
 });
 
 // ## A non-`file:` URL is 400
@@ -109,11 +109,10 @@ void test("A non-`file:` URL is 400", async (t) => {
   });
   // doctest:L100
   const ctx = await makeExternalServer();
-  t.check(
-    (await ctx.request({ method: "GET", url: extUrl("https://example.com/x") })).statusCode
-    ,
-    400,
-  );
+  t.check(await ctx.request({ method: "GET", url: extUrl("https://example.com/x") }), {
+    statusCode: 400,
+    body: { error: "Not a file: URL" },
+  });
 });
 
 // ## A missing href is 400
@@ -127,7 +126,10 @@ void test("A missing href is 400", async (t) => {
   });
   // doctest:L112
   const ctx = await makeExternalServer();
-  t.check((await ctx.request({ method: "GET", url: "/api/external" })).statusCode, 400);
+  t.check(await ctx.request({ method: "GET", url: "/api/external" }), {
+    statusCode: 400,
+    body: { error: "missing href query parameter" },
+  });
 });
 
 // ## Omission fails closed (404), regardless of `NODE_ENV`
@@ -143,8 +145,8 @@ void test("Omission fails closed (404), regardless of `NODE_ENV`", async (t) => 
   const previousNodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = "development";
   const ctx = await makeTestServer();
-  const code = (await ctx.request({ method: "GET", url: extUrl(`file:${file}`) })).statusCode;
+  const omitted = await ctx.request({ method: "GET", url: extUrl(`file:${file}`) });
   if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
   else process.env.NODE_ENV = previousNodeEnv;
-  t.check(code, 404);
+  t.check(omitted, { statusCode: 404, body: { error: "Not found" } });
 });

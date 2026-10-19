@@ -2,6 +2,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { once } from "node:events";
 import assert from "node:assert/strict";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
@@ -35,7 +36,12 @@ void test("line 13", async (t) => {
   // This is the permit baked into the subprocess at spawn, after the first send's lease ended.
   const tool = await acquireBoxWork(box.root, { reason: "test", inherited: run.startOptions.env.BBX_BOX_WORK });
   await tool.release();
-  await t.checkText(run.sent.length, "2");
+  t.check(run.sent, [
+    [{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>
+first` }],
+    [{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>
+second` }],
+  ]);
 
   // doctest:L31
   session.enqueue("third queued before closure");
@@ -45,11 +51,19 @@ void test("line 13", async (t) => {
   session.pauseForMaintenance();
   await maintenance.drain();
   await maintenance.beginChanges();
-  await t.checkText(run.sent.length, "2");
+  t.check(run.sent, [
+    [{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>
+first` }],
+    [{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>
+second` }],
+  ]);
 
   // doctest:L41
   await maintenance.complete();
   session.resumeAfterMaintenance();
   await waitForRuns(backend, { count: 2, timeoutMs: 3000 });
-  t.check(backend.lastRun()?.sent[0]?.some((block) => block.type === "text" && block.text.includes("third queued before closure")), true);
+  t.check(backend.lastRun()?.sent, [
+    [{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>
+third queued before closure` }],
+  ]);
 });

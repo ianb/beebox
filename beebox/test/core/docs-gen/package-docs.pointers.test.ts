@@ -11,6 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, containing } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
@@ -52,7 +53,8 @@ async function dangling(): Promise<string[]> {
 // A regex that matched nothing would pass the next check vacuously.
 void test("A regex that matched nothing would pass the next check vacuously.", async (t) => {
   // doctest:L55
-  await t.checkText((await pointers()).length > 10, "true");
+  // `containing` matches each item once, so eleven items mean more than ten pointers.
+  t.check(await pointers(), containing(Array.from({ length: 11 }, () => any(String).matches(/^src\/.+: .+\.md$/))));
 });
 
 // ## Every pointer resolves to a shipped doc

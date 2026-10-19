@@ -128,10 +128,13 @@ void test("nginx runs on the old callback site.", async (t) => {
   await runFile(p.nginxBin, { args: [], env: p.env });
   await writeFile(join(p.pageDir, "deploy-in-progress.html"), "<h1>updating</h1>");
   const first = await runFile(helper, { args: ["install", p.src], env: p.env });
-  await t.checkText([first.code, ...first.stdout.replace(/callback\.\d{8}T\d{6}Z/, "callback.STAMP").replaceAll(p.etc, "ETC").split("\n").map((line) => line.trim())].join("\n"), `0
-nginx: installed the repo site file
-nginx: disabled ETC/sites-enabled/callback (kept as ETC/pre-deploy-owned/callback.STAMP)
-nginx: reloaded`);
+  t.check(first, {
+    code: 0,
+    stdout: str`nginx: installed the repo site file
+  nginx: disabled ${p.etc}/sites-enabled/callback (kept as ${p.etc}/pre-deploy-owned/callback.${any(String).matches(/^\d{8}T\d{6}Z$/)})
+  nginx: reloaded`,
+    stderr: "",
+  });
 
   // doctest:L122
   t.check(await enabled(p.etc), str`beebox -> ${any(String)}/sites-available/beebox`);
@@ -144,7 +147,7 @@ nginx: reloaded`);
 
   // doctest:L133
   const again = await runFile(helper, { args: ["install", p.src], env: p.env });
-  t.check([again.code, again.stdout].join("|"), "0|");
+  t.check(again, { code: 0, stdout: "", stderr: any(String) });
 });
 
 // ## The state the first deploy left behind
@@ -165,11 +168,21 @@ void test("Production after the failed first deploy:", async (t) => {
   const q = await productionLike();
   await runFile("cp", { args: [q.src, join(q.etc, "sites-available/beebox")], env: q.env });
   await runFile("ln", { args: ["-s", join(q.etc, "sites-available/beebox"), join(q.etc, "sites-enabled/beebox")], env: q.env });
-  await t.checkText((await runFile(q.nginxBin, { args: ["-t", "-q"], env: q.env })).stderr.includes("duplicate default server"), "true");
+  t.check(await runFile(q.nginxBin, { args: ["-t", "-q"], env: q.env }), {
+    code: 1,
+    stdout: "",
+    stderr: `nginx: [emerg] a duplicate default server for 127.0.0.1:${String(q.port)} in ${q.etc}/sites-enabled/callback:1
+nginx: configuration file ${q.etc}/nginx.conf test failed`,
+  });
 
   // doctest:L157
   const repaired = await runFile(helper, { args: ["install", q.src], env: { ...q.env, BBX_NGINX_RELOAD: "true" } });
-  t.check([repaired.code, repaired.stdout.includes("disabled"), repaired.stdout.includes("installed")].join(" "), "0 true false");
+  t.check(repaired, {
+    code: 0,
+    stdout: str`nginx: disabled ${q.etc}/sites-enabled/callback (kept as ${q.etc}/pre-deploy-owned/callback.${any(String).matches(/^\d{8}T\d{6}Z$/)})
+  nginx: reloaded`,
+    stderr: "",
+  });
 
   // doctest:L161
   t.check(await enabled(q.etc), str`beebox -> ${any(String)}/sites-available/beebox`);
@@ -192,10 +205,30 @@ void test("When the new configuration fails nginx -t, both site directories come
   const r = await productionLike();
   await writeFile(r.src, "server { this is not nginx; }\n");
   const rejected = await runFile(helper, { args: ["install", r.src], env: r.env });
-  t.check([rejected.code, rejected.stderr.includes("restored the previous sites")].join(" "), "1 true");
+  t.check(rejected, {
+    code: 1,
+    stdout: str`nginx: installed the repo site file
+  nginx: disabled ${r.etc}/sites-enabled/callback (kept as ${r.etc}/pre-deploy-owned/callback.${any(String).matches(/^\d{8}T\d{6}Z$/)})`,
+    stderr: `nginx: [emerg] unknown directive "this" in ${r.etc}/sites-enabled/beebox:1
+nginx: configuration file ${r.etc}/nginx.conf test failed
+  FAILED: nginx -t rejects the configuration with the repo site; restored the previous sites.`,
+  });
 
   // doctest:L182
-  t.check([await enabled(r.etc), (await readdir(join(r.etc, "sites-available"))).join(","), (await readdir(r.etc)).includes("pre-deploy-owned") ? (await readdir(join(r.etc, "pre-deploy-owned"))).length : 0].join(" | "), "callback | callback | 0");
+  t.check(
+    {
+      enabled: await enabled(r.etc),
+      available: await readdir(join(r.etc, "sites-available")),
+      etc: await readdir(r.etc),
+      preDeployOwned: await readdir(join(r.etc, "pre-deploy-owned")),
+    },
+    {
+      enabled: "callback",
+      available: ["callback"],
+      etc: ["nginx.conf", "pre-deploy-owned", "sites-available", "sites-enabled"],
+      preDeployOwned: [],
+    },
+  );
 });
 
 // The deploy runs the helper by absolute path, and the helper names nginx by
@@ -205,5 +238,7 @@ void test("The deploy runs the helper by absolute path, and the helper names ngi
   // doctest:L195
   const deploySh = await readFile("deploy/deploy.sh", "utf8");
   const helperSh = await readFile(helper, "utf8");
-  t.check([deploySh.includes('/usr/local/sbin/bbx-nginx-site install "$stage_dir/beebox/deploy/nginx/beebox.conf"'), helperSh.includes('nginx_bin="${BBX_NGINX_BIN:-/usr/sbin/nginx}"')].join(" "), "true true");
+  // Both are whole shell scripts: a narrow check on the one line under test in each.
+  t.check(deploySh, any(String).includes('/usr/local/sbin/bbx-nginx-site install "$stage_dir/beebox/deploy/nginx/beebox.conf"'));
+  t.check(helperSh, any(String).includes('nginx_bin="${BBX_NGINX_BIN:-/usr/sbin/nginx}"'));
 });

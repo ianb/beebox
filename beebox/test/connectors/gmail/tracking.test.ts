@@ -76,12 +76,13 @@ void test("Card existence is authoritative", async (t) => {
 
   // doctest:L70
   const first = await findTrackedGmailThreads(box.root);
-  t.check([...first].map(([id, entry]) => [id, entry.relPath]), [
-    [
-      "thread-1",
-      "_content/inbox/email/First.email-thread.card",
-    ],
-  ]);
+  t.check(first, new Map([
+    ["thread-1", {
+      threadId: "thread-1",
+      absPath: join(box.root, "_content/inbox/email/First.email-thread.card"),
+      relPath: "_content/inbox/email/First.email-thread.card",
+    }],
+  ]));
 
   // doctest:L74
   await mkdir(join(box.root, "_bookkeeping/archive/done"), { recursive: true });
@@ -90,7 +91,13 @@ void test("Card existence is authoritative", async (t) => {
     join(box.root, "_bookkeeping/archive/done/First.email-thread.card"),
   );
   const moved = await findTrackedGmailThreads(box.root);
-  t.check(moved.get("thread-1")?.relPath, "_bookkeeping/archive/done/First.email-thread.card");
+  t.check(moved, new Map([
+    ["thread-1", {
+      threadId: "thread-1",
+      absPath: join(box.root, "_bookkeeping/archive/done/First.email-thread.card"),
+      relPath: "_bookkeeping/archive/done/First.email-thread.card",
+    }],
+  ]));
 
   // doctest:L83
   await mkdir(join(box.root, "_bookkeeping/trash"), { recursive: true });
@@ -98,7 +105,7 @@ void test("Card existence is authoritative", async (t) => {
     join(box.root, "_bookkeeping/archive/done/First.email-thread.card"),
     join(box.root, "_bookkeeping/trash/First.email-thread.card"),
   );
-  await t.checkText((await findTrackedGmailThreads(box.root)).size, "0");
+  t.check(await findTrackedGmailThreads(box.root), new Map());
 });
 
 // Deleting the card also removes it from the tracked set. A leftover attach
@@ -116,7 +123,7 @@ void test("Deleting the card also removes it from the tracked set.", async (t) =
   await writeThread({ root: box.root, relPath: "_content/inbox/email/Delete.email-thread.card", threadId: "thread-delete" });
   await mkdir(join(box.root, "_content/inbox/email/Delete.attach"), { recursive: true });
   await rm(join(box.root, "_content/inbox/email/Delete.email-thread.card"));
-  await t.checkText((await findTrackedGmailThreads(box.root)).size, "0");
+  t.check(await findTrackedGmailThreads(box.root), new Map());
 });
 
 // ## Invalid or duplicate identities fail clearly
@@ -136,7 +143,8 @@ void test("Invalid or duplicate identities fail clearly", async (t) => {
   );
   let broken = "";
   await findTrackedGmailThreads(box.root).catch((error: Error) => { broken = error.message; });
-  await t.checkText(broken.includes("Broken.email-thread.card"), "true");
+  t.check(broken, `_content/inbox/email/Broken.email-thread.card: invalid email-thread frontmatter:
+  - email.thread-id: required (expected string)`);
 });
 
 void test("Invalid or duplicate identities fail clearly (line 130)", async (t) => {
@@ -153,7 +161,7 @@ void test("Invalid or duplicate identities fail clearly (line 130)", async (t) =
   await writeThread({ root: box.root, relPath: "_bookkeeping/archive/done/Two.email-thread.card", threadId: "same-thread" });
   let duplicate = "";
   await findTrackedGmailThreads(box.root).catch((error: Error) => { duplicate = error.message; });
-  await t.checkText(duplicate.includes("same-thread") && duplicate.includes("One.email-thread.card") && duplicate.includes("Two.email-thread.card"), "true");
+  t.check(duplicate, "Gmail thread same-thread is tracked by more than one card: _bookkeeping/archive/done/Two.email-thread.card, _content/inbox/email/One.email-thread.card");
 });
 
 // ## Automatic tracking uses a rolling thread budget
@@ -189,8 +197,11 @@ void test("The budget returns only events still inside the rolling window.", asy
       budget: { threads: 5, windowMs: 7 * 24 * 60 * 60 * 1000 },
       events: result.events,
       now: new Date("2026-08-05T12:00:00.000Z"),
-    }).remaining,
-    2,
+    }),
+    {
+      remaining: 2,
+      events: ["2026-08-01T00:00:00.000Z", "2026-08-03T00:00:00.000Z", "2026-08-05T00:00:00.000Z"],
+    },
   );
 });
 
@@ -199,7 +210,7 @@ void test("The budget returns only events still inside the rolling window.", asy
 // No configuration means no rule can create a card.
 void test("No configuration means no rule can create a card.", async (t) => {
   // doctest:L180
-  t.check(parseGmailConnectorConfig({}).rules, []);
+  t.check(parseGmailConnectorConfig({}), { rules: [], gc: undefined, gcIntervalHours: undefined });
 });
 
 // Track and procedure actions form a closed, validated union.
@@ -219,27 +230,22 @@ void test("Track and procedure actions form a closed, validated union.", async (
       },
     ],
   });
-  t.check(config.rules, [
-    {
-      name: "send-to-agent",
-      query: "label:beebox",
-      action: {
-        type: "track",
-        budget: {
-          threads: 10,
-          windowMs: 1209600000,
-        },
+  t.check(config, {
+    rules: [
+      {
+        name: "send-to-agent",
+        query: "label:beebox",
+        action: { type: "track", budget: { threads: 10, windowMs: 1209600000 } },
       },
-    },
-    {
-      name: "review-inbox",
-      query: "label:inbox is:unread",
-      action: {
-        type: "procedure",
-        ref: "_config/procedures/review-email.procedure.card",
+      {
+        name: "review-inbox",
+        query: "label:inbox is:unread",
+        action: { type: "procedure", ref: "_config/procedures/review-email.procedure.card" },
       },
-    },
-  ]);
+    ],
+    gc: undefined,
+    gcIntervalHours: undefined,
+  });
 });
 
 // The `labels`/`query` shorthand expands to one rule carrying its own action, and
@@ -250,18 +256,16 @@ void test("The labels/query shorthand expands to one rule carrying its own actio
     labels: ["callback"],
     action: { type: "track" },
   });
-  t.check(shorthand.rules[0]?.name, "shorthand");
-
-  // doctest:L216
-  t.check(shorthand.rules[0]?.query, "label:callback");
-
-  // doctest:L219
-  t.check(shorthand.rules[0]?.action, {
-    type: "track",
-    budget: {
-      threads: 25,
-      windowMs: 604800000,
-    },
+  t.check(shorthand, {
+    rules: [
+      {
+        name: "shorthand",
+        query: "label:callback",
+        action: { type: "track", budget: { threads: 25, windowMs: 604800000 } },
+      },
+    ],
+    gc: undefined,
+    gcIntervalHours: undefined,
   });
 });
 
@@ -272,15 +276,11 @@ void test("stage is the third action:", async (t) => {
     labels: ["callback"],
     action: { type: "stage" },
   });
-  t.check(staged.rules, [
-    {
-      name: "shorthand",
-      query: "label:callback",
-      action: {
-        type: "stage",
-      },
-    },
-  ]);
+  t.check(staged, {
+    rules: [{ name: "shorthand", query: "label:callback", action: { type: "stage" } }],
+    gc: undefined,
+    gcIntervalHours: undefined,
+  });
 });
 
 // The shorthand can route to a procedure instead, which creates no cards.
@@ -290,16 +290,17 @@ void test("The shorthand can route to a procedure instead, which creates no card
     query: "label:inbox is:unread",
     action: { type: "procedure", ref: "_config/procedures/review-email.procedure.card" },
   });
-  t.check(routed.rules, [
-    {
-      name: "shorthand",
-      query: "label:inbox is:unread",
-      action: {
-        type: "procedure",
-        ref: "_config/procedures/review-email.procedure.card",
+  t.check(routed, {
+    rules: [
+      {
+        name: "shorthand",
+        query: "label:inbox is:unread",
+        action: { type: "procedure", ref: "_config/procedures/review-email.procedure.card" },
       },
-    },
-  ]);
+    ],
+    gc: undefined,
+    gcIntervalHours: undefined,
+  });
 });
 
 // The action is required, never implied. A shorthand without one is an error
@@ -339,7 +340,7 @@ void test("Invalid actions and duplicate rule names fail at the config boundary.
   } catch (error) {
     invalid = errorMessage(error);
   };
-  await t.checkText(invalid.includes("gmail.json"), "true");
+  t.check(invalid, "Invalid _config/connectors/gmail.json: Invalid discriminator value. Expected 'track' | 'procedure' | 'stage'");
 });
 
 void test("Gmail rules are validated and the shorthand becomes bounded (line 288)", async (t) => {
@@ -355,7 +356,7 @@ void test("Gmail rules are validated and the shorthand becomes bounded (line 288
   } catch (error) {
     duplicateRules = errorMessage(error);
   };
-  await t.checkText(duplicateRules.includes("duplicate Gmail rule name"), "true");
+  t.check(duplicateRules, "Invalid _config/connectors/gmail.json: duplicate Gmail rule name: same");
 });
 
 // ## Tracking one thread is explicit and idempotent
@@ -383,10 +384,24 @@ void test("Tracking one thread is explicit and idempotent", async (t) => {
     threadId: "thread-track",
     trackedBy: "explicit-command",
   });
-  await t.checkText(first.created.length, "3");
+  t.check(first, {
+    cardPath: "_content/inbox/email/thread-Track_me-ad-track.email-thread.card",
+    created: [
+      "_content/inbox/email/thread-Track_me-ad-track.attach/msg-001.email-message.card",
+      "_content/inbox/email/thread-Track_me-ad-track.attach/msg-001.attach/msg-001.body.txt",
+      "_content/inbox/email/thread-Track_me-ad-track.email-thread.card",
+    ],
+    updated: [],
+  });
 
   // doctest:L325
-  await t.checkText((await findTrackedGmailThreads(box.root)).size, "1");
+  t.check(await findTrackedGmailThreads(box.root), new Map([
+    ["thread-track", {
+      threadId: "thread-track",
+      absPath: join(box.root, "_content/inbox/email/thread-Track_me-ad-track.email-thread.card"),
+      relPath: "_content/inbox/email/thread-Track_me-ad-track.email-thread.card",
+    }],
+  ]));
 
   // doctest:L328
   const second = await trackGmailThread({
@@ -395,10 +410,7 @@ void test("Tracking one thread is explicit and idempotent", async (t) => {
     threadId: "thread-track",
     trackedBy: "explicit-command",
   });
-  t.check({ created: second.created.length, updated: second.updated.length }, {
-    created: 0,
-    updated: 0,
-  });
+  t.check(second, { cardPath: "_content/inbox/email/thread-Track_me-ad-track.email-thread.card", created: [], updated: [] });
 
   // doctest:L337
   gmail.addMessage(
@@ -410,11 +422,15 @@ void test("Tracking one thread is explicit and idempotent", async (t) => {
     threadId: "thread-track",
     trackedBy: "explicit-command",
   });
-  t.check({ created: refreshed.created.length, updated: refreshed.updated.length }, {
-    created: 2,
-    updated: 1,
+  t.check(refreshed, {
+    cardPath: "_content/inbox/email/thread-Track_me-ad-track.email-thread.card",
+    created: [
+      "_content/inbox/email/thread-Track_me-ad-track.attach/msg-002.email-message.card",
+      "_content/inbox/email/thread-Track_me-ad-track.attach/msg-002.attach/msg-002.body.txt",
+    ],
+    updated: ["_content/inbox/email/thread-Track_me-ad-track.email-thread.card"],
   });
 
   // doctest:L349
-  await t.checkText(gmail.drafts.length, "0");
+  t.check(gmail.drafts, []);
 });

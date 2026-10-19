@@ -22,14 +22,9 @@ import {
   PERSIST_BYTE_BUDGET,
   type KeyValueStorage,
 } from "../../src/input/emission-persist.js";
-import type { EmissionDraft, FileTransferState } from "../../src/input/emission-store.js";
+import type { EmissionDraft } from "../../src/input/emission-store.js";
 
 type PersistableDraft = Pick<EmissionDraft, "text" | "images" | "files" | "selections" | "uploadBatch">;
-
-/** The message of a failed transfer; undefined for any other state. */
-function failureMessage(state: FileTransferState): string | undefined {
-  return state.status === "failed" ? state.message : undefined;
-}
 
 function fakeStorage(): KeyValueStorage & { dump(): Record<string, string> } {
   const m = new Map<string, string>();
@@ -57,12 +52,24 @@ void test("Round-trip under the singleton key", async (t) => {
   const s = fakeStorage();
   savePersistedEmission(s, { boxSlug: "test1", scope: "", draft, updatedAt: 1000 });
   const loaded = loadPersistedEmission(s, { boxSlug: "test1", scope: "" });
-  t.check(loaded?.text, "half a thought [file1]");
-
-  // doctest:L63
-  t.check(loaded?.files[0]?.state, {
-    status: "uploaded",
-    path: "_tmp/2026-07-04_report.pdf",
+  t.check(loaded, {
+    version: 1,
+    text: "half a thought [file1]",
+    images: [],
+    files: [
+      {
+        id: 1,
+        originalName: "report.pdf",
+        size: 100,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploaded",
+          path: "_tmp/2026-07-04_report.pdf",
+        },
+      },
+    ],
+    selections: [],
+    updatedAt: 1000,
   });
 
   // doctest:L66
@@ -102,14 +109,48 @@ void test("The dev router serves every checkout from one origin at /<main|worktr
   savePersistedEmission(shared, { boxSlug: "test1", scope: "worktree-drafts/test1", draft: { ...draft, text: "from the worktree" }, updatedAt: 1001 });
   t.check(
     [
-      loadPersistedEmission(shared, { boxSlug: "test1", scope: "main/test1" })?.text,
-      loadPersistedEmission(shared, { boxSlug: "test1", scope: "worktree-drafts/test1" })?.text,
-    ],
-    [
-    "from main",
-    "from the worktree",
-  ],
-  );
+      loadPersistedEmission(shared, { boxSlug: "test1", scope: "main/test1" }),
+      loadPersistedEmission(shared, { boxSlug: "test1", scope: "worktree-drafts/test1" }),
+    ], [
+    {
+      version: 1,
+      text: "from main",
+      images: [],
+      files: [
+        {
+          id: 1,
+          originalName: "report.pdf",
+          size: 100,
+          mimetype: "application/pdf",
+          state: {
+            status: "uploaded",
+            path: "_tmp/2026-07-04_report.pdf",
+          },
+        },
+      ],
+      selections: [],
+      updatedAt: 1000,
+    },
+    {
+      version: 1,
+      text: "from the worktree",
+      images: [],
+      files: [
+        {
+          id: 1,
+          originalName: "report.pdf",
+          size: 100,
+          mimetype: "application/pdf",
+          state: {
+            status: "uploaded",
+            path: "_tmp/2026-07-04_report.pdf",
+          },
+        },
+      ],
+      selections: [],
+      updatedAt: 1001,
+    },
+  ]);
 
   // A legacy per-session draft carries the slug alone, so in a dev checkout it
   // cannot be attributed to one. Adoption there takes nothing — and, just as
@@ -149,24 +190,42 @@ void test("commitPersistedEmission is what the persistence hook runs on every st
   // doctest:L131
   // Dictating persists a draft…
   commitPersistedEmission(s, { boxSlug: "test1", scope: "", draft: { ...draft, text: "send this please" }, updatedAt: 1000 });
-  t.check(Object.keys(s.dump()).join(","), "bbx-input-emission:test1");
+  t.check(Object.keys(s.dump()), ["bbx-input-emission:test1"]);
 
   // doctest:L136
   // …and the send that empties the store takes the key with it. No window.
   commitPersistedEmission(s, { boxSlug: "test1", scope: "", draft: empty, updatedAt: 2000 });
-  t.check(Object.keys(s.dump()).length + " keys | recovery offers: " + JSON.stringify(loadPersistedEmission(s, { boxSlug: "test1", scope: "" })), "0 keys | recovery offers: null");
+  t.check({ keys: Object.keys(s.dump()), recoveryOffer: loadPersistedEmission(s, { boxSlug: "test1", scope: "" }) }, { keys: [], recoveryOffer: null });
 
   // doctest:L141
   t.check(
     // Emptiness is all four slices, not just the text.
-    isEmptyEmissionDraft(empty) + "," + isEmptyEmissionDraft({ ...empty, text: "x" }) + "," + isEmptyEmissionDraft(draft),
-    "true,false,false",
+    [isEmptyEmissionDraft(empty), isEmptyEmissionDraft({ ...empty, text: "x" }), isEmptyEmissionDraft(draft)],
+    [true, false, false],
   );
 
   // doctest:L145
   // A non-empty draft still saves normally (that's the debounced typing path).
   commitPersistedEmission(s, { boxSlug: "test1", scope: "", draft, updatedAt: 3000 });
-  t.check(loadPersistedEmission(s, { boxSlug: "test1", scope: "" })?.text, "half a thought [file1]");
+  t.check(loadPersistedEmission(s, { boxSlug: "test1", scope: "" }), {
+    version: 1,
+    text: "half a thought [file1]",
+    images: [],
+    files: [
+      {
+        id: 1,
+        originalName: "report.pdf",
+        size: 100,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploaded",
+          path: "_tmp/2026-07-04_report.pdf",
+        },
+      },
+    ],
+    selections: [],
+    updatedAt: 3000,
+  });
 });
 
 // ## Oversized images are dropped from persistence, not from memory
@@ -178,7 +237,25 @@ void test("Oversized images are dropped from persistence, not from memory", asyn
 
   // doctest:L159
   const restored = parsePersistedEmission(payload);
-  await t.checkText(restored !== null && restored.images.length === 0 && restored.text === draft.text, "true");
+  t.check(restored, {
+    version: 1,
+    text: "half a thought [file1]",
+    images: [],
+    files: [
+      {
+        id: 1,
+        originalName: "report.pdf",
+        size: 100,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploaded",
+          path: "_tmp/2026-07-04_report.pdf",
+        },
+      },
+    ],
+    selections: [],
+    updatedAt: 1,
+  });
 });
 
 // ## Corrupt or absent payloads read as empty, never throw
@@ -205,16 +282,13 @@ void test("The named behavior change:", async (t) => {
   s.setItem("bbx-composer-draft:test1:sess-c", JSON.stringify({ text: "   ", updatedAt: 900 }));
   s.setItem("bbx-composer-draft:otherbox:sess-z", JSON.stringify({ text: "not ours", updatedAt: 999 }));
   const result = adoptLegacyComposerDrafts(s, { boxSlug: "test1", scope: "" });
-  t.check(result.adoptedText, "newest draft");
-
-  // doctest:L192
-  t.check(result.discarded, 1);
+  t.check(result, { adoptedText: "newest draft", discarded: 1 });
 
   // doctest:L195
   t.check(
     // This box's legacy keys are gone; the other box's are untouched.
-    Object.keys(s.dump()).toSorted().join(","),
-    "bbx-composer-draft:otherbox:sess-z",
+    Object.keys(s.dump()).toSorted(),
+    ["bbx-composer-draft:otherbox:sess-z"],
   );
 });
 
@@ -233,28 +307,65 @@ void test("A file's [file#N] token enters the composer text the moment it is pic
   const midUpload: PersistableDraft = { ...draft, text: "half a thought [file#1] [file#2]", files: [...draft.files, uploading] };
   const s2 = fakeStorage();
   savePersistedEmission(s2, { boxSlug: "test1", scope: "", draft: midUpload, updatedAt: 2000 });
-  t.check(loadPersistedEmission(s2, { boxSlug: "test1", scope: "" })?.files.map((f) => [f.id, f.state.status]), [
-    [
-      1,
-      "uploaded",
+  t.check(loadPersistedEmission(s2, { boxSlug: "test1", scope: "" }), {
+    version: 1,
+    text: "half a thought [file#1] [file#2]",
+    images: [],
+    files: [
+      {
+        id: 1,
+        originalName: "report.pdf",
+        size: 100,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploaded",
+          path: "_tmp/2026-07-04_report.pdf",
+        },
+      },
+      {
+        id: 2,
+        originalName: "big.pdf",
+        size: 9,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploading",
+          progress: 0.4,
+        },
+      },
     ],
-    [
-      2,
-      "uploading",
-    ],
-  ]);
+    selections: [],
+    updatedAt: 2000,
+  });
 
   // doctest:L220
   const { live, dead } = partitionFiles(
     loadPersistedEmission(s2, { boxSlug: "test1", scope: "" })?.files ?? [],
     new Set(["_tmp/2026-07-04_report.pdf"]),
   );
-  t.check({ live: live.map((f) => f.id), dead: dead.map((f) => f.id) }, {
+  t.check({ live, dead }, {
     live: [
-      1,
+      {
+        id: 1,
+        originalName: "report.pdf",
+        size: 100,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploaded",
+          path: "_tmp/2026-07-04_report.pdf",
+        },
+      },
     ],
     dead: [
-      2,
+      {
+        id: 2,
+        originalName: "big.pdf",
+        size: 9,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploading",
+          progress: 0.4,
+        },
+      },
     ],
   });
 });
@@ -266,7 +377,32 @@ void test("Restored files partition into live and dead (_tmp/ sweeps)", async (t
     ({ id, originalName: "f", size: 1, mimetype: "x", state: { status: "uploaded", path } }) as const;
   const files = [uploaded(1, "_tmp/alive.pdf"), uploaded(2, "_tmp/swept.pdf")];
   const { live, dead } = partitionFiles(files, new Set(["_tmp/alive.pdf"]));
-  t.check(live.map((f) => f.id).join(",") + " | " + dead.map((f) => f.id).join(","), "1 | 2");
+  t.check({ live, dead }, {
+    live: [
+      {
+        id: 1,
+        originalName: "f",
+        size: 1,
+        mimetype: "x",
+        state: {
+          status: "uploaded",
+          path: "_tmp/alive.pdf",
+        },
+      },
+    ],
+    dead: [
+      {
+        id: 2,
+        originalName: "f",
+        size: 1,
+        mimetype: "x",
+        state: {
+          status: "uploaded",
+          path: "_tmp/swept.pdf",
+        },
+      },
+    ],
+  });
 });
 
 // ## An image's original comes back landed, or failed — never resumable
@@ -286,28 +422,35 @@ void test("The File behind an upload dies with the page, so a persisted uploadin
   });
 
   // doctest:L253
-  await t.checkText(failureMessage(restoredImageOriginal({ status: "uploaded", path: "_tmp/swept.png" }, { existingPaths: present })) === RESTORED_ORIGINAL_SWEPT, "true");
+  t.check(restoredImageOriginal({ status: "uploaded", path: "_tmp/swept.png" }, { existingPaths: present }), { status: "failed", message: RESTORED_ORIGINAL_SWEPT });
 
   // doctest:L256
-  await t.checkText(
+  t.check(
     // A same-tab restore (a rejected send handed back) skips the check.
-    JSON.stringify(restoredImageOriginal({ status: "uploaded", path: "_tmp/just-now.png" }, { existingPaths: null })),
-    "{\"status\":\"uploaded\",\"path\":\"_tmp/just-now.png\"}",
+    restoredImageOriginal({ status: "uploaded", path: "_tmp/just-now.png" }, { existingPaths: null }),
+    { status: "uploaded", path: "_tmp/just-now.png" },
   );
 
   // doctest:L260
   t.check(
     [
-      restoredImageOriginal({ status: "failed", message: "413" }, { existingPaths: present }).status,
-      restoredImageOriginal({ status: "uploading", progress: 0.7 }, { existingPaths: present }).status,
-      failureMessage(restoredImageOriginal(undefined, { existingPaths: present })) === RESTORED_ORIGINAL_LOST,
-    ],
-    [
-    "failed",
-    "failed",
-    true,
-  ],
-  );
+      restoredImageOriginal({ status: "failed", message: "413" }, { existingPaths: present }),
+      restoredImageOriginal({ status: "uploading", progress: 0.7 }, { existingPaths: present }),
+      restoredImageOriginal(undefined, { existingPaths: present }),
+    ], [
+    {
+      status: "failed",
+      message: RESTORED_ORIGINAL_LOST,
+    },
+    {
+      status: "failed",
+      message: RESTORED_ORIGINAL_LOST,
+    },
+    {
+      status: "failed",
+      message: RESTORED_ORIGINAL_LOST,
+    },
+  ]);
 });
 
 // The state itself rides through persistence with the image, so a landed path
@@ -316,9 +459,36 @@ void test("The state itself rides through persistence with the image, so a lande
   // doctest:L272
   const withOriginal: PersistableDraft = { ...draft, images: [{ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 3, original: { status: "uploaded", path: "_tmp/a.png" } }] };
   const { payload } = serializePersistedEmission(withOriginal, { updatedAt: 1 });
-  t.check(parsePersistedEmission(payload)?.images[0]?.original, {
-    status: "uploaded",
-    path: "_tmp/a.png",
+  t.check(parsePersistedEmission(payload), {
+    version: 1,
+    text: "half a thought [file1]",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+        objectUrl: "blob:1",
+        byteLength: 3,
+        original: {
+          status: "uploaded",
+          path: "_tmp/a.png",
+        },
+      },
+    ],
+    files: [
+      {
+        id: 1,
+        originalName: "report.pdf",
+        size: 100,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploaded",
+          path: "_tmp/2026-07-04_report.pdf",
+        },
+      },
+    ],
+    selections: [],
+    updatedAt: 1,
   });
 });
 
@@ -328,8 +498,45 @@ void test("The state itself rides through persistence with the image, so a lande
 void test("The draft's upload batch persists with it, so attachments added after a reloa...", async (t) => {
   // doctest:L283
   const batched: PersistableDraft = { ...draft, uploadBatch: "m1abcd-x9y8z7w6" };
-  t.check(parsePersistedEmission(serializePersistedEmission(batched, { updatedAt: 1 }).payload)?.uploadBatch, "m1abcd-x9y8z7w6");
+  t.check(parsePersistedEmission(serializePersistedEmission(batched, { updatedAt: 1 }).payload), {
+    version: 1,
+    text: "half a thought [file1]",
+    uploadBatch: "m1abcd-x9y8z7w6",
+    images: [],
+    files: [
+      {
+        id: 1,
+        originalName: "report.pdf",
+        size: 100,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploaded",
+          path: "_tmp/2026-07-04_report.pdf",
+        },
+      },
+    ],
+    selections: [],
+    updatedAt: 1,
+  });
 
   // doctest:L287
-  t.check(parsePersistedEmission(serializePersistedEmission({ ...draft, uploadBatch: null }, { updatedAt: 1 }).payload)?.uploadBatch, undefined);
+  t.check(parsePersistedEmission(serializePersistedEmission({ ...draft, uploadBatch: null }, { updatedAt: 1 }).payload), {
+    version: 1,
+    text: "half a thought [file1]",
+    images: [],
+    files: [
+      {
+        id: 1,
+        originalName: "report.pdf",
+        size: 100,
+        mimetype: "application/pdf",
+        state: {
+          status: "uploaded",
+          path: "_tmp/2026-07-04_report.pdf",
+        },
+      },
+    ],
+    selections: [],
+    updatedAt: 1,
+  });
 });

@@ -52,6 +52,11 @@ async function exists(path: string) {
   return stat(path).then(() => true, () => false);
 }
 
+const seconds = any(String).matches(/^-?\d+$/);
+const epoch = any(String).matches(/^\d{10}$/);
+const startedUtc = any(String).matches(/^\d{4}-\d\d-\d\d \d\d:\d\d UTC$/);
+const startedMs = any(String).matches(/^\d{13}$/);
+
 // ## Open, down, close
 //
 // `open` writes the filled page, readable by the nginx worker. With no history,
@@ -66,11 +71,11 @@ void test("open writes the filled page, readable by the nginx worker.", async (t
   });
   // doctest:L54
   const d = await tempDirs();
-  t.check((await run(d.env, "open", d.template)).code, 0);
+  t.check(await run(d.env, "open", d.template), { code: 0, stdout: "", stderr: "" });
 
   // doctest:L58
   const page = await readFile(d.page, "utf8");
-  t.check(/<p>\d{4}-\d\d-\d\d \d\d:\d\d UTC<\/p><script>{"startedMs":\d{13},"typicalSeconds":null}<\/script>/.test(page), true);
+  t.check(page, str`<p>${startedUtc}</p><script>{"startedMs":${startedMs},"typicalSeconds":null}</script>`);
 
   // doctest:L62
   await t.checkText(((await stat(d.page)).mode & 0o777).toString(8), "644");
@@ -79,27 +84,28 @@ void test("open writes the filled page, readable by the nginx worker.", async (t
   // line the laptop side reads back for its own record.
 
   // doctest:L70
-  t.check((await run(d.env, "down")).code, 0);
+  t.check(await run(d.env, "down"), { code: 0, stdout: "", stderr: "" });
 
   // doctest:L73
   const closed = await run(d.env, "close", "0");
-  t.check(closed.stdout, str`Deploy window: down ${any(String).matches(/^-?\d+$/)}s (ok)`);
+  t.check(closed, { code: 0, stdout: str`Deploy window: down ${seconds}s (ok)`, stderr: "" });
 
   // doctest:L77
   t.check(await exists(d.page), false);
 
   // doctest:L80
-  await t.checkText((await readFile(d.history, "utf8")).split("\t")[3], "ok");
+  t.check(await readFile(d.history, "utf8"), str`${epoch}\t${epoch}\t${epoch}\tok\n`);
 
   // A failed activation closes the window too, recorded as failed.
 
   // doctest:L87
   await run(d.env, "open", d.template);
   await run(d.env, "down");
-  t.check((await run(d.env, "close", "1")).stdout, str`Deploy window: down ${any(String).matches(/^-?\d+$/)}s (failed)`);
+  t.check(await run(d.env, "close", "1"), { code: 0, stdout: str`Deploy window: down ${seconds}s (failed)`, stderr: "" });
 
   // doctest:L92
-  t.check([await exists(d.page), (await readFile(d.history, "utf8")).trim().split("\n").map((line) => line.split("\t")[3]).join(",")].join(" "), "false ok,failed");
+  t.check(await exists(d.page), false);
+  t.check(await readFile(d.history, "utf8"), str`${epoch}\t${epoch}\t${epoch}\tok\n${epoch}\t${epoch}\t${epoch}\tfailed\n`);
 });
 
 // ## The estimate and a stranded window
@@ -124,24 +130,28 @@ void test("The estimate is the median of the last ten successful windows.", asyn
   ];
   await writeFile(e.history, lines.join("\n") + "\n");
   await run(e.env, "open", e.template);
-  await t.checkText((await readFile(e.page, "utf8")).includes('"typicalSeconds":220'), "true");
+  t.check(await readFile(e.page, "utf8"), str`<p>${startedUtc}</p><script>{"startedMs":${startedMs},"typicalSeconds":220}</script>`);
 
   // A deploy killed outright leaves its window open. The next `open` replaces the
   // page and records the lost window as abandoned instead of dropping it.
 
   // doctest:L123
   await run(e.env, "open", e.template);
-  t.check((await readFile(e.history, "utf8")).trim().split("\n").at(-1)!.split("\t").slice(1).join(" "), "- - abandoned");
+  t.check(await readFile(e.history, "utf8"), str`${lines.join("\n")}\n${epoch}\t-\t-\tabandoned\n`);
 
   // A trap that fires before any window was opened has nothing to record, and a
   // missing template fails loudly before anything stops.
 
   // doctest:L132
   await run(e.env, "close", "0");
-  t.check((await run(e.env, "close", "0")).code, 0);
+  t.check(await run(e.env, "close", "0"), { code: 0, stdout: "", stderr: "" });
 
   // doctest:L136
-  t.check((await run(e.env, "open", join(e.root, "missing.html"))).stderr, str`bbx-deploy-window: page template missing or empty: ${any(String)}missing.html`);
+  t.check(await run(e.env, "open", join(e.root, "missing.html")), {
+    code: 1,
+    stdout: "",
+    stderr: `bbx-deploy-window: page template missing or empty: ${join(e.root, "missing.html")}`,
+  });
 });
 
 // ## The activation script's trap
@@ -177,7 +187,8 @@ void test("deploy.sh writes an EXIT trap and signal traps at the top of the serv
 
   // doctest:L168
   const failedRun = await activation("false");
-  t.check([failedRun.code, failedRun.stdout.replace(/\d+s/, "Ns"), await exists(f.page)].join(" | "), "1 | Deploy window: down Ns (failed) | false");
+  t.check(failedRun, { code: 1, stdout: str`Deploy window: down ${seconds}s (failed)`, stderr: "" });
+  t.check(await exists(f.page), false);
 
   // A SIGTERM to the activation script is turned into an ordinary exit, so the
   // EXIT trap still runs and the page comes down. So is a SIGPIPE, which is what
@@ -185,13 +196,16 @@ void test("deploy.sh writes an EXIT trap and signal traps at the top of the serv
 
   // doctest:L178
   const signalled = await activation("kill -TERM $$; sleep 5");
-  t.check([signalled.code, signalled.stdout.replace(/\d+s/, "Ns"), await exists(f.page)].join(" | "), "143 | Deploy window: down Ns (failed) | false");
+  t.check(signalled, { code: 143, stdout: str`Deploy window: down ${seconds}s (failed)`, stderr: "" });
+  t.check(await exists(f.page), false);
 
   // doctest:L182
   const piped = await activation("kill -PIPE $$; sleep 5");
-  t.check([piped.code, await exists(f.page)].join(" | "), "141 | false");
+  t.check(piped, { code: 141, stdout: str`Deploy window: down ${seconds}s (failed)`, stderr: "" });
+  t.check(await exists(f.page), false);
 
   // doctest:L186
   const okRun = await activation("true");
-  t.check([okRun.code, okRun.stdout.replace(/\d+s/, "Ns"), await exists(f.page)].join(" | "), "0 | Deploy window: down Ns (ok) | false");
+  t.check(okRun, { code: 0, stdout: str`Deploy window: down ${seconds}s (ok)`, stderr: "" });
+  t.check(await exists(f.page), false);
 });

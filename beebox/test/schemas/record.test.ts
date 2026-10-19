@@ -30,34 +30,27 @@ const messageFor = (fm: string): string => {
 
 // ## An in-box source and a web source each validate
 void test("An in-box source and a web source each validate", async (t) => {
-  // doctest:L34
   const inBox = parse("status: draft\nname: Thing\nsources:\n  - ref: /_content/inbox/talk.capture-session.card\n    pos: at 1:23\n    note: named here\n");
   const web = parse("status: draft\nname: Thing\nsources:\n  - href: https://example.com/notice\n    retrieved: 2026-02-19\n");
-  t.check([inBox.fields["sources"], web.fields["sources"]], [
-    [
-      {
-        ref: "/_content/inbox/talk.capture-session.card",
-        pos: "at 1:23",
-        note: "named here",
-      },
-    ],
-    [
-      {
-        href: "https://example.com/notice",
-        retrieved: "2026-02-19",
-      },
-    ],
+  t.check([inBox.fields, web.fields], [
+    {
+      type: "record",
+      name: "Thing",
+      sources: [{ ref: "/_content/inbox/talk.capture-session.card", pos: "at 1:23", note: "named here" }],
+      body: "A thing the box recorded.\n",
+    },
+    {
+      type: "record",
+      name: "Thing",
+      sources: [{ href: "https://example.com/notice", retrieved: "2026-02-19" }],
+      body: "A thing the box recorded.\n",
+    },
   ]);
 
   // `pos` (where in the source) and `retrieved` (when a web page was read) are the
   // `{% source %}` tag's names. As on the tag, `retrieved` goes with an `href`:
 
-  // doctest:L44
-  await t.checkText(
-    messageFor("status: draft\nname: Thing\nsources:\n  - ref: /_content/inbox/scan.pdf.card\n    retrieved: 2026-02-19\n")
-      .includes("a `sources` entry's `retrieved` is only valid with an external `href`"),
-    "true",
-  );
+  t.check(messageFor("status: draft\nname: Thing\nsources:\n  - ref: /_content/inbox/scan.pdf.card\n    retrieved: 2026-02-19\n"), "_content/records/Thing.record.card: invalid record frontmatter:\n  - sources[0]: a `sources` entry's `retrieved` is only valid with an external `href`");
 
   // ## An entry with neither, or both, is a schema error
   //
@@ -65,10 +58,8 @@ void test("An in-box source and a web source each validate", async (t) => {
   // means to cite something, and "both" is the ambiguity that would make a reader
   // guess which target the note is really about.
 
-  // doctest:L56
   await t.checkThrows(async () => (parse("status: draft\nname: Thing\nsources:\n  - note: somewhere\n")), "CardIOError");
 
-  // doctest:L59
   await t.checkThrows(
     async () => (parse("status: draft\nname: Thing\nsources:\n  - ref: /_content/inbox/scan.pdf.card\n    href: https://example.com/notice\n"))
     ,
@@ -78,10 +69,5 @@ void test("An in-box source and a web source each validate", async (t) => {
   // The message names the rule, so the agent that wrote the card can fix it without
   // reading the schema:
 
-  // doctest:L67
-  await t.checkText(
-    messageFor("status: draft\nname: Thing\nsources:\n  - ref: /_content/inbox/scan.pdf.card\n    href: https://example.com/notice\n")
-      .includes("a `sources` entry takes exactly one of `ref` or `href`, not both"),
-    "true",
-  );
+  t.check(messageFor("status: draft\nname: Thing\nsources:\n  - ref: /_content/inbox/scan.pdf.card\n    href: https://example.com/notice\n"), "_content/records/Thing.record.card: invalid record frontmatter:\n  - sources[0]: a `sources` entry takes exactly one of `ref` or `href`, not both");
 });

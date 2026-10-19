@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, str } from "agent-doctest/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import type { TmpBox } from "../../../helpers/test-helpers.js";
 import type { StoredEngineUnavailability } from "../../../../src/core/agent/engine-availability-store.js";
@@ -49,8 +49,6 @@ runs: bbx wakeup --connector notes
 
 // ## A failing task is a dashboard check, and nothing is sent
 void test("A failing task is a dashboard check, and nothing is sent", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -65,21 +63,25 @@ void test("A failing task is a dashboard check, and nothing is sent", async (t) 
 
   // doctest:L56
   const check = scheduledTasksCheck(await loadScheduleHealth(box.root, NOW), NOW);
-  await t.checkText(out.with(`${check.name} | ${check.ok} | ${check.message}`), "scheduled-tasks | false | Scheduled tasks need attention: sync-notes: failing ×4 (last success 2d ago) — Agent invocation failed: Model gpt-retired is not supported");
+  t.check(check, {
+    name: "scheduled-tasks",
+    ok: false,
+    message: "Scheduled tasks need attention: sync-notes: failing ×4 (last success 2d ago) — Agent invocation failed: Model gpt-retired is not supported",
+    severity: "warning",
+  });
 
   // doctest:L60
-  await t.checkText(out.with(JSON.stringify(await recordScheduleEpisodes(box.root, { now: NOW }))), "{\"tasks\":[\"sync-notes\"]}");
+  t.check(await recordScheduleEpisodes(box.root, { now: NOW }), { tasks: ["sync-notes"] });
 
   // doctest:L63
-  await t.checkText(out.with((await readRecent(box.root, { days: 1, now: NOW })).length), "0");
+  t.check(await readRecent(box.root, { days: 1, now: NOW }), []);
 
   // The task is latched, so the next daemon cycle records nothing new:
 
   // doctest:L70
   const state = await loadScriptState(box.root, "sync-notes");
-  print(`alertedFor: ${state.alertedFor}`);
-  await t.checkText(out.with(print(`again: ${await recordScheduleEpisodes(box.root, { now: NOW })}`)), `alertedFor: failing
-again: null`);
+  t.check(state.alertedFor, "failing");
+  t.check(await recordScheduleEpisodes(box.root, { now: NOW }), null);
 
   // A successful run clears the latch and the check; a relapse is a new episode:
 
@@ -89,7 +91,12 @@ again: null`);
     windowMs: 86_400_000, now: new Date("2026-06-09T13:00:00Z"),
   });
   await saveScriptState({ boxRoot: box.root, scriptName: "sync-notes", state });
-  await t.checkText(out.with(scheduledTasksCheck(await loadScheduleHealth(box.root, NOW), NOW).ok), "true");
+  t.check(scheduledTasksCheck(await loadScheduleHealth(box.root, NOW), NOW), {
+    name: "scheduled-tasks",
+    ok: true,
+    message: "The scheduler has never run on this box",
+    severity: "warning",
+  });
 
   // doctest:L89
   recordOutcome(state, {
@@ -103,7 +110,7 @@ again: null`);
   await saveScriptState({ boxRoot: box.root, scriptName: "sync-notes", state });
 
   // doctest:L99
-  await t.checkText(out.with(JSON.stringify(await recordScheduleEpisodes(box.root, { now: new Date("2026-06-09T15:05:00Z") }))), "{\"tasks\":[\"sync-notes\"]}");
+  t.check(await recordScheduleEpisodes(box.root, { now: new Date("2026-06-09T15:05:00Z") }), { tasks: ["sync-notes"] });
 });
 
 // ## A stale scheduler is a warning, whatever the tasks say
@@ -118,17 +125,32 @@ void test("The daemon ran here and stopped:", async (t) => {
     engineWait: null,
   };
   const stale = scheduledTasksCheck(health, NOW);
-  t.check(`${stale.ok} | ${stale.severity} | ${stale.message}`, "false | warning | The scheduler is not running: last heartbeat 2026-06-09T09:00:00.000Z (3h ago)");
+  t.check(stale, {
+    name: "scheduled-tasks",
+    ok: false,
+    message: "The scheduler is not running: last heartbeat 2026-06-09T09:00:00.000Z (3h ago)",
+    severity: "warning",
+  });
 
   // doctest:L122
-  t.check(scheduledTasksCheck({ ...health, scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:00.000Z", ageMs: 60_000 } }, NOW).ok, true);
+  t.check(scheduledTasksCheck({ ...health, scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:00.000Z", ageMs: 60_000 } }, NOW), {
+    name: "scheduled-tasks",
+    ok: true,
+    message: "Scheduled tasks are running",
+    severity: "warning",
+  });
 
   // With no heartbeat ever (a dev box, where no daemon runs), the check passes and
   // says so, rather than claiming tasks are running:
 
   // doctest:L130
   const never = scheduledTasksCheck({ ...health, scheduler: { status: "never", lastTickAt: null, ageMs: null } }, NOW);
-  t.check(`${never.ok} | ${never.message}`, "true | The scheduler has never run on this box");
+  t.check(never, {
+    name: "scheduled-tasks",
+    ok: true,
+    message: "The scheduler has never run on this box",
+    severity: "warning",
+  });
 });
 
 // ## Engine quota is a check too
@@ -143,8 +165,14 @@ void test("An engine out of usage quota used to notify; it is now the engine-quo
   };
   const [quota] = engineQuotaChecks(live, NOW);
   invariant(quota, "a live episode yields the engine-quota check");
-  t.check(`${quota.name} | ${quota.ok} | ${quota.message.includes("(for 3h so far)")}`, "engine-quota | false | true");
+  // The retry time prints in the machine's timezone.
+  t.check(quota, {
+    name: "engine-quota",
+    ok: false,
+    message: str`The claude engine is out of usage quota until ${any(String)} (for 3h so far). Scheduled work waits until then; chat on this engine fails.`,
+    severity: "warning",
+  });
 
   // doctest:L150
-  await t.checkText(engineQuotaChecks(null, NOW).length, "0");
+  t.check(engineQuotaChecks(null, NOW), []);
 });

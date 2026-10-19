@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate, not } from "agent-doctest/check";
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -28,6 +28,22 @@ const storeFile = join(storeDir, "secrets.json");
 process.env.BBX_SECRETS_FILE = storeFile;
 const box = await makeTmpBox({ git: true });
 const verifier = createFakeCloudflarePublishTokenVerifier();
+const ACCOUNT_ID = "0123456789abcdef0123456789abcdef";
+const SAVED_CONNECTION = {
+  name: "studio",
+  accountId: ACCOUNT_ID,
+  credentialType: "account-api-token",
+  verifiedAt: isoDate(),
+  tokenId: "fake-cloudflare-token-id",
+  tokenStatus: "active",
+  capabilities: {
+    tokenForAccount: "verified",
+    r2ObjectWrite: "unverified",
+    workerDeploy: "unverified",
+    accessLive: "unverified",
+  },
+  grants: [],
+} as const;
 function caller(isAuthenticatedOwner: boolean) {
   return appRouter.createCaller(trpcContext({
     boxRoot: box.root,
@@ -37,6 +53,22 @@ function caller(isAuthenticatedOwner: boolean) {
     isAuthenticatedOwner,
   }));
 }
+const STORE_AFTER_SAVE = {
+  secrets: {},
+  grants: {},
+  cloudflarePublishConnections: {
+    studio: {
+      accountId: ACCOUNT_ID,
+      credentialType: "account-api-token",
+      apiToken: "placeholder-cloudflare-token",
+      tokenId: "fake-cloudflare-token-id",
+      verifiedAt: isoDate(),
+      capabilities: { tokenForAccountVerifiedAt: isoDate() },
+      grants: {},
+    },
+  },
+  cloudflarePublishBindings: {},
+};
 async function message(promise: Promise<unknown>) {
   try { await promise; return "allowed"; }
   catch (error) { return error instanceof TRPCError ? error.code : error instanceof Error ? error.message : String(error); }
@@ -44,10 +76,8 @@ async function message(promise: Promise<unknown>) {
 
 // Only a real authenticated owner may manage this machine-wide credential.
 void test("Only a real authenticated owner may manage this machine-wide credential.", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L47
-  await t.checkText(out.with(await message(caller(false).cloudflarePublishConnections.list())), "FORBIDDEN");
+  t.check(await message(caller(false).cloudflarePublishConnections.list()), "FORBIDDEN");
 
   // Saving verifies the token against the selected account and returns metadata,
   // never the token itself. Other write capabilities remain explicitly unverified
@@ -60,15 +90,10 @@ void test("Only a real authenticated owner may manage this machine-wide credenti
     accountId: "0123456789abcdef0123456789abcdef",
     apiToken: "placeholder-cloudflare-token",
   });
-  await t.checkText(
-    out.with(print(JSON.stringify({
-      status: saved.tokenStatus,
-      capabilities: saved.capabilities,
-      leaksToken: JSON.stringify(saved).includes("placeholder-cloudflare-token"),
-      verifiedAccount: verifier.verified[0]?.accountId,
-    }))),
-    "{\"status\":\"active\",\"capabilities\":{\"tokenForAccount\":\"verified\",\"r2ObjectWrite\":\"unverified\",\"workerDeploy\":\"unverified\",\"accessLive\":\"unverified\"},\"leaksToken\":false,\"verifiedAccount\":\"0123456789abcdef0123456789abcdef\"}",
-  );
+  t.check({ saved, verified: verifier.verified }, {
+    saved: SAVED_CONNECTION,
+    verified: [{ accountId: ACCOUNT_ID, apiToken: "placeholder-cloudflare-token" }],
+  });
 
   // The token has its own server-only connection slot, not a generic secret slot.
 
@@ -76,30 +101,35 @@ void test("Only a real authenticated owner may manage this machine-wide credenti
   const metadata = await owner.cloudflarePublishConnections.list();
   const generic = await listSecrets();
   const raw = JSON.parse(await readFile(storeFile, "utf-8"));
-  await t.checkText(
-    out.with(print(JSON.stringify({
-      connection: metadata[0]?.name,
-      genericNames: generic.map((entry) => entry.name),
-      stored: raw.cloudflarePublishConnections.studio.apiToken === "placeholder-cloudflare-token",
-    }))),
-    "{\"connection\":\"studio\",\"genericNames\":[],\"stored\":true}",
-  );
+  t.check({ metadata, genericNames: generic.map((entry) => entry.name), raw }, {
+    metadata: [SAVED_CONNECTION],
+    genericNames: [],
+    raw: STORE_AFTER_SAVE,
+  });
 
   // Only an authenticated owner may explicitly reveal the saved token. The audit
   // event identifies the credential without recording its value. Browser UI
   // refuses Show when `navigator.webdriver` is true; this is a client-side check.
 
   // doctest:L90
-  print(`non-owner refused: ${await message(caller(false).cloudflarePublishConnections.revealToken({ name: "studio" }))}`);
+  t.check(await message(caller(false).cloudflarePublishConnections.revealToken({ name: "studio" })), "FORBIDDEN");
   // A retired input field, passed through a variable so only the server-side schema rejects it.
   const legacyReveal = { name: "studio", webdriver: true };
-  print(`legacy webdriver claim refused: ${await message(owner.cloudflarePublishConnections.revealToken(legacyReveal))}`);
+  t.check(await message(owner.cloudflarePublishConnections.revealToken(legacyReveal)), "BAD_REQUEST");
   const revealed = await owner.cloudflarePublishConnections.revealToken({ name: "studio" });
   const log = await readFile(accessLogSegmentPath(getBoxTimeISO(box.root)), "utf8");
   const event = JSON.parse(log.trim().split("\n").at(-1) ?? "");
-  await t.checkText(out.with(print(JSON.stringify({ value: revealed.token, logged: event.event === "owner-read", logContainsValue: log.includes("placeholder-cloudflare-token") }))), `non-owner refused: FORBIDDEN
-legacy webdriver claim refused: BAD_REQUEST
-{"value":"placeholder-cloudflare-token","logged":true,"logContainsValue":false}`);
+  t.check({ revealed, event }, {
+    revealed: { token: "placeholder-cloudflare-token" },
+    event: {
+      ts: isoDate(),
+      box: "test-box",
+      secret: "cloudflare-publish/studio",
+      purpose: "owner revealed token in Admin",
+      event: "owner-read",
+    },
+  });
+  t.check(log, not(any(String).includes("placeholder-cloudflare-token")));
 
   // A grant is always `server`; there is no API input that can raise a publishing
   // token to agent access. The resolver refuses boxes without the grant.
@@ -113,12 +143,25 @@ legacy webdriver claim refused: BAD_REQUEST
     name: "studio", boxSlug: "other-box", purpose: "publish-prepare", at: new Date().toISOString(),
   }));
   const genericResolve = await resolveSecret({ boxRoot: box.root, name: "cloudflare-publish/studio", purpose: "publish-prepare", access: "agent" });
-  await t.checkText(out.with(print(JSON.stringify({ tokenAvailableToServer: credential.apiToken === "placeholder-cloudflare-token", notGranted, genericResolve: genericResolve.ok }))), "{\"tokenAvailableToServer\":true,\"notGranted\":\"Cloudflare publishing connection 'studio' has no server grant for box 'other-box'.\",\"genericResolve\":false}");
+  t.check({ credential, notGranted, genericResolve }, {
+    credential: { accountId: ACCOUNT_ID, apiToken: "placeholder-cloudflare-token" },
+    notGranted: "Cloudflare publishing connection 'studio' has no server grant for box 'other-box'.",
+    genericResolve: {
+      ok: false,
+      error: {
+        name: "UnknownSecretError",
+        message: "No secret named \"cloudflare-publish/studio\" exists on this machine. It can be declared (bbx secrets declare cloudflare-publish/studio), but only the boxholder can supply its value.",
+        secretName: "cloudflare-publish/studio",
+        kind: "unknown-secret",
+      },
+    },
+  });
 
   // Publication locators are box-owned, while sites in one box and connection share
   // the same isolated bucket. A copied PubId cannot be resolved by another box.
 
   // doctest:L124
+  const createdAt = new Date().toISOString();
   const bindingA = await reserveCloudflarePublishBinding({
     pubId: "abcdefghijklmnopqrstuvwxyz",
     boxSlug: "test-box",
@@ -126,7 +169,7 @@ legacy webdriver claim refused: BAD_REQUEST
     bucketName: "bbx-pub-first",
     workerName: "worker-a",
     hostHandle: "host-a",
-    createdAt: new Date().toISOString(),
+    createdAt,
   });
   const bindingB = await reserveCloudflarePublishBinding({
     pubId: "bcdefghijklmnopqrstuvwxyz2",
@@ -135,10 +178,34 @@ legacy webdriver claim refused: BAD_REQUEST
     bucketName: "bbx-pub-second",
     workerName: "worker-b",
     hostHandle: "host-b",
-    createdAt: new Date().toISOString(),
+    createdAt,
   });
-  const foreignBinding = await getCloudflarePublishBinding({ pubId: bindingA.pubId, boxSlug: "other-box" }).then(() => false, () => true);
-  await t.checkText(out.with(print(JSON.stringify({ sharesBoxBucket: bindingA.bucketName === bindingB.bucketName, foreignBinding }))), "{\"sharesBoxBucket\":true,\"foreignBinding\":true}");
+  t.check({ bindingA, bindingB }, {
+    bindingA: {
+      pubId: "abcdefghijklmnopqrstuvwxyz",
+      boxSlug: "test-box",
+      connectionName: "studio",
+      accountId: ACCOUNT_ID,
+      bucketName: "bbx-pub-first",
+      workerName: "worker-a",
+      hostHandle: "host-a",
+      createdAt,
+    },
+    bindingB: {
+      pubId: "bcdefghijklmnopqrstuvwxyz2",
+      boxSlug: "test-box",
+      connectionName: "studio",
+      accountId: ACCOUNT_ID,
+      bucketName: "bbx-pub-first",
+      workerName: "worker-b",
+      hostHandle: "host-b",
+      createdAt,
+    },
+  });
+  await t.checkThrows(
+    () => getCloudflarePublishBinding({ pubId: bindingA.pubId, boxSlug: "other-box" }),
+    "CloudflarePublishConnectionError: This publication id is already bound to a different box.",
+  );
 
   // A failed verification does not create or rotate a connection. Revocation drops
   // the credential while retaining routing metadata and grants for diagnosis.
@@ -160,5 +227,24 @@ legacy webdriver claim refused: BAD_REQUEST
   const unavailable = await message(resolveCloudflarePublishCredential({
     name: "studio", boxSlug: "test-box", purpose: "publish-disable", at: new Date().toISOString(),
   }));
-  await t.checkText(out.with(print(JSON.stringify({ failed, names: (await owner.cloudflarePublishConnections.list()).map((item) => item.name), status: after?.tokenStatus, unavailable }))), "{\"failed\":\"BAD_REQUEST\",\"names\":[\"studio\"],\"status\":\"revoked\",\"unavailable\":\"Cloudflare publishing connection 'studio' is revoked; server operations are unavailable.\"}");
+  t.check({ failed, names: (await owner.cloudflarePublishConnections.list()).map((item) => item.name), after, unavailable }, {
+    failed: "BAD_REQUEST",
+    names: ["studio"],
+    after: {
+      name: "studio",
+      accountId: ACCOUNT_ID,
+      credentialType: "account-api-token",
+      verifiedAt: null,
+      tokenId: null,
+      tokenStatus: "revoked",
+      capabilities: {
+        tokenForAccount: "unverified",
+        r2ObjectWrite: "unverified",
+        workerDeploy: "unverified",
+        accessLive: "unverified",
+      },
+      grants: [{ boxSlug: "test-box", access: "server" }],
+    },
+    unavailable: "Cloudflare publishing connection 'studio' is revoked; server operations are unavailable.",
+  });
 });

@@ -57,13 +57,9 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   // doctest:L50
   const healthy = await engineHealthChecks(boxRoot);
   const link = byName(healthy, "engine-link");
-  t.check(link?.ok, true);
+  t.check(link, { name: "engine-link", ok: true, message: "engine dependency resolves (beebox 9.9.9)", severity: "warning" });
 
-  // doctest:L55
-  t.check(link?.message, "engine dependency resolves (beebox 9.9.9)");
-
-  // doctest:L58
-  t.check(byName(healthy, "box-schemas")?.ok, true);
+  t.check(byName(healthy, "box-schemas"), { name: "box-schemas", ok: true, message: "box-local schemas load cleanly", severity: "error" });
 
   // ## Dead engine symlink: error naming the target and the repair
   //
@@ -76,16 +72,12 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   // doctest:L70
   const dead = await engineHealthChecks(boxRoot);
   const deadLink = byName(dead, "engine-link");
-  t.check(deadLink?.ok, false);
-
-  // doctest:L75
-  t.check(deadLink?.severity, "error");
-
-  // doctest:L78
-  t.check(deadLink?.message.includes("dead symlink"), true);
-
-  // doctest:L81
-  t.check(deadLink?.message.includes("nonexistent-checkout"), true);
+  t.check(deadLink, {
+    name: "engine-link",
+    ok: false,
+    message: `node_modules/beebox is a dead symlink (→ ${box.path("nonexistent-checkout/beebox")}) — box-local schemas and templates will not load. Repoint it: ln -sfn <engine-checkout>/beebox ${box.path("pkg/node_modules/beebox")}`,
+    severity: "error",
+  });
 
   // ## Worktree-pinned engine link: warning (it dies with the worktree)
   //
@@ -103,13 +95,12 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   // doctest:L98
   const pinned = await engineHealthChecks(boxRoot);
   const pinnedLink = byName(pinned, "engine-link");
-  t.check(pinnedLink?.ok, false);
-
-  // doctest:L103
-  t.check(pinnedLink?.severity, "warning");
-
-  // doctest:L106
-  t.check(pinnedLink?.message.includes("points into a worktree"), true);
+  t.check(pinnedLink, {
+    name: "engine-link",
+    ok: false,
+    message: `node_modules/beebox points into a worktree (→ ${box.path("beebox-worktrees/some-feature/beebox")}) — it will go dead when that worktree is removed. Repoint at the main checkout.`,
+    severity: "warning",
+  });
 
   // doctest:L109
   await unlink(box.path("pkg/node_modules/beebox"));
@@ -129,13 +120,12 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   invalidateBoxSchemas(boxRoot);
   const withBroken = await engineHealthChecks(boxRoot);
   const schemas = byName(withBroken, "box-schemas");
-  t.check(schemas?.ok, false);
-
-  // doctest:L130
-  t.check(schemas?.severity, "error");
-
-  // doctest:L133
-  t.check(schemas?.message.includes("widget.ts"), true);
+  t.check(schemas, {
+    name: "box-schemas",
+    ok: false,
+    message: "1 box-local schema file(s) failed to load — their card types are missing or stale: widget.ts: does not export a default cardSchema()",
+    severity: "error",
+  });
 
   // ## Box-local schema with a reserved field name: box-schema-fields warns
   //
@@ -151,13 +141,12 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
 
   // doctest:L149
   const fieldCheck = boxSchemaFieldsCheck([book, shelf]);
-  t.check(fieldCheck.ok, false);
-
-  // doctest:L153
-  t.check(fieldCheck.severity, "warning");
-
-  // doctest:L156
-  await t.checkText(fieldCheck.message.startsWith("1 reserved field name(s) in box-local schemas: book.status: `status` is a reserved field name"), "true");
+  t.check(fieldCheck, {
+    name: "box-schema-fields",
+    ok: false,
+    message: "1 reserved field name(s) in box-local schemas: book.status: `status` is a reserved field name: record the specific fact instead: a named boolean per state (`archived: true`), a specifically named enum (`operating: open | closed`), the presence of the result, or an error field",
+    severity: "warning",
+  });
 
   // doctest:L159
   t.check(boxSchemaFieldsCheck([shelf]).ok, true);

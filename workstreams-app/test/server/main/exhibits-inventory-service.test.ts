@@ -8,6 +8,7 @@
 
 import { test, type Test } from "tap";
 import "agent-doctest/tap";
+import { any, is, not } from "agent-doctest/check";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -124,7 +125,6 @@ void test("Access follows Jupyter's handshake.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L115
   const store = await makeStore();
   const assets = fakeAssets();
   const app = await makeApp(store, assets);
@@ -139,24 +139,15 @@ void test("Access follows Jupyter's handshake.", async (t) => {
 
 async function checkAnonymousAccess(t: Test, ctx: Ctx): Promise<void> {
   const { app } = ctx;
-  // doctest:L119
   const anonymous = await app.inject({ method: "GET", url: "/" });
-  t.check(
-    {
-      status: anonymous.statusCode,
-      type: anonymous.headers["content-type"],
-      title: anonymous.body.includes("<title>Exhibits need a token</title>"),
-      command: anonymous.body.includes("<code>bin/exhibits url &lt;workstream&gt;/&lt;exhibit&gt;</code>"),
-    },
-    {
+  t.check({ status: anonymous.statusCode, type: anonymous.headers["content-type"] }, {
     status: 401,
     type: "text/html; charset=utf-8",
-    title: true,
-    command: true,
-  },
-  );
+  });
+  // The refusal page is generated HTML: check the two parts a developer needs.
+  t.check(anonymous.body, any(String).includes("<title>Exhibits need a token</title>"));
+  t.check(anonymous.body, any(String).includes("<code>bin/exhibits url &lt;workstream&gt;/&lt;exhibit&gt;</code>"));
 
-  // doctest:L128
   const wrongToken = await app.inject({ method: "GET", url: "/?token=not-the-token" });
   const wrongCookie = await app.inject({ method: "GET", url: "/", headers: { cookie: `${EXHIBITS_COOKIE}=nope` } });
   t.check({ query: wrongToken.statusCode, cookie: wrongCookie.statusCode }, {
@@ -164,7 +155,6 @@ async function checkAnonymousAccess(t: Test, ctx: Ctx): Promise<void> {
     cookie: 401,
   });
 
-  // doctest:L133
   const exchanged = await app.inject({ method: "GET", url: `/demo-ws/?token=${TOKEN}&keep=1` });
   t.check(
     {
@@ -187,48 +177,27 @@ async function checkListings(t: Test, ctx: Ctx): Promise<void> {
   // The root lists workstreams; a workstream lists its exhibits and names the ones
   // whose manifest is unusable rather than hiding them.
 
-  // doctest:L148
   const root = await app.inject({ method: "GET", url: "/", headers: authorized });
-  t.check({ status: root.statusCode, hasWorkstream: root.body.includes('href="/demo-ws/"') }, {
-    status: 200,
-    hasWorkstream: true,
-  });
+  t.check(root.statusCode, 200);
+  t.check(root.body, any(String).includes('href="/demo-ws/"'));
 
-  // doctest:L152
   const listing = await app.inject({ method: "GET", url: "/demo-ws/", headers: authorized });
-  t.check(
-    {
-      status: listing.statusCode,
-      title: listing.body.includes("Six screenshots"),
-      malformed: listing.body.includes("created: Invalid input"),
-      noAskState: !listing.body.includes("waiting") && !listing.body.includes("answered"),
-    },
-    {
-    status: 200,
-    title: true,
-    malformed: true,
-    noAskState: true,
-  },
-  );
+  t.check(listing.statusCode, 200);
+  t.check(listing.body, any(String).includes("Six screenshots"));
+  t.check(listing.body, any(String).includes("created: Invalid input"));
+  t.check(listing.body, not(any(String).includes("waiting")));
+  t.check(listing.body, not(any(String).includes("answered")));
 
   // The `coding-feedback/` directory beside the exhibits holds retrospective notes
   // that are not exhibits: it is neither listed nor served.
 
-  // doctest:L166
   const feedbackPage = await app.inject({ method: "GET", url: "/demo-ws/coding-feedback/", headers: authorized });
   const feedbackFile = await app.inject({ method: "GET", url: "/demo-ws/coding-feedback/20261007T000000Z-landed.md", headers: authorized });
-  t.check(
-    {
-      listed: listing.body.includes("coding-feedback"),
-      page: feedbackPage.statusCode === 200 || feedbackPage.body.includes("retro note"),
-      file: feedbackFile.statusCode === 200 || feedbackFile.body.includes("retro note"),
-    },
-    {
-    listed: false,
-    page: false,
-    file: false,
-  },
-  );
+  t.check(listing.body, not(any(String).includes("coding-feedback")));
+  t.check(feedbackPage.statusCode, not(200));
+  t.check(feedbackPage.body, not(any(String).includes("retro note")));
+  t.check(feedbackFile.statusCode, not(200));
+  t.check(feedbackFile.body, not(any(String).includes("retro note")));
 }
 
 async function checkPageTiers(t: Test, ctx: Ctx): Promise<void> {
@@ -242,41 +211,18 @@ async function checkPageTiers(t: Test, ctx: Ctx): Promise<void> {
   // Tailwind CSS module, because nothing in the store is in Vite's module graph
   // until it is imported.
 
-  // doctest:L186
   const instrument = await app.inject({ method: "GET", url: "/demo-ws/instrument/", headers: authorized });
-  t.check(
-    {
-      status: instrument.statusCode,
-      module: instrument.body.includes(`"module":"/@fs${path.join(store, "demo-ws/instrument/index.tsx")}"`),
-      transformed: instrument.body.includes('data-vite="1"'),
-      noticed: assets.noticed.length,
-    },
-    {
-    status: 200,
-    module: true,
-    transformed: true,
-    noticed: 1,
-  },
-  );
+  t.check(instrument.statusCode, 200);
+  t.check(instrument.body, any(String).includes(`"module":"/@fs${path.join(store, "demo-ws/instrument/index.tsx")}"`));
+  t.check(instrument.body, any(String).includes('data-vite="1"'));
+  t.check(assets.noticed, [path.join(store, "demo-ws/instrument")]);
 
-  // doctest:L195
   const passive = await app.inject({ method: "GET", url: "/demo-ws/passive/", headers: authorized });
-  t.check(
-    {
-      status: passive.statusCode,
-      module: passive.body.includes('"module":null'),
-      doc: passive.body.includes("A1 is the wide one."),
-      scope: passive.body.includes('"scope":"demo-ws/passive"'),
-    },
-    {
-    status: 200,
-    module: true,
-    doc: true,
-    scope: true,
-  },
-  );
+  t.check(passive.statusCode, 200);
+  t.check(passive.body, any(String).includes('"module":null'));
+  t.check(passive.body, any(String).includes("A1 is the wide one."));
+  t.check(passive.body, any(String).includes('"scope":"demo-ws/passive"'));
 
-  // doctest:L204
   const plain = await app.inject({ method: "GET", url: "/demo-ws/plain/", headers: authorized });
   t.check({ status: plain.statusCode, body: plain.body.trim(), type: plain.headers["content-type"] }, {
     status: 200,
@@ -284,7 +230,6 @@ async function checkPageTiers(t: Test, ctx: Ctx): Promise<void> {
     type: "text/html; charset=utf-8",
   });
 
-  // doctest:L208
   const sibling = await app.inject({ method: "GET", url: "/demo-ws/plain/data.json", headers: authorized });
   t.check({ status: sibling.statusCode, type: sibling.headers["content-type"], body: sibling.body.trim() }, {
     status: 200,
@@ -296,14 +241,11 @@ async function checkPageTiers(t: Test, ctx: Ctx): Promise<void> {
   // logs transform errors and calls `next()` without them, so the shell route
   // preflights the module to get the error at all.
 
-  // doctest:L218
   assets.compileError = "Unexpected token (3:1)";
   const broken = await app.inject({ method: "GET", url: "/demo-ws/instrument/", headers: authorized });
   assets.compileError = null;
-  t.check({ status: broken.statusCode, named: broken.body.includes("Unexpected token (3:1)") }, {
-    status: 500,
-    named: true,
-  });
+  t.check(broken.statusCode, 500);
+  t.check(broken.body, any(String).includes("Unexpected token (3:1)"));
 }
 
 async function checkManifests(t: Test, ctx: Ctx): Promise<void> {
@@ -314,35 +256,15 @@ async function checkManifests(t: Test, ctx: Ctx): Promise<void> {
   // but no manifest is not served as an anonymous page. Neither ever renders as a
   // bare listing.
 
-  // doctest:L232
   const malformed = await app.inject({ method: "GET", url: "/demo-ws/malformed/", headers: authorized });
-  t.check(
-    {
-      status: malformed.statusCode,
-      file: malformed.body.includes("demo-ws/malformed/exhibit.json"),
-      issue: malformed.body.includes("created:"),
-      shape: malformed.body.includes("&quot;prose&quot;?") || malformed.body.includes('"prose"?'),
-    },
-    {
-    status: 500,
-    file: true,
-    issue: true,
-    shape: true,
-  },
-  );
+  t.check(malformed.statusCode, 500);
+  t.check(malformed.body, any(String).includes("demo-ws/malformed/exhibit.json"));
+  t.check(malformed.body, any(String).includes("created:"));
+  t.check(malformed.body, any(String).matches(/(&quot;|")prose(&quot;|")\?/));
 
-  // doctest:L241
   const unmanifested = await app.inject({ method: "GET", url: "/demo-ws/unmanifested/", headers: authorized });
-  t.check(
-    {
-      status: unmanifested.statusCode,
-      missing: unmanifested.body.includes("exhibit.json is missing"),
-    },
-    {
-    status: 404,
-    missing: true,
-  },
-  );
+  t.check(unmanifested.statusCode, 404);
+  t.check(unmanifested.body, any(String).includes("exhibit.json is missing"));
 }
 
 async function checkContainment(t: Test, ctx: Ctx): Promise<void> {
@@ -353,12 +275,10 @@ async function checkContainment(t: Test, ctx: Ctx): Promise<void> {
   // boundary. Source is a build input, not content — Vite already serves the
   // compiled form through `/@fs`.
 
-  // doctest:L256
   const secret = path.join(store, "..", `exhibits-secret-${process.pid}.txt`);
   await fs.writeFile(secret, "not yours");
   await fs.symlink(secret, path.join(store, "demo-ws/plain/escape.txt"));
 
-  // doctest:L260
   const traversal = await app.inject({
     method: "GET",
     url: "/demo-ws/plain/..%2f..%2f..%2fetc%2fpasswd",
@@ -372,19 +292,17 @@ async function checkContainment(t: Test, ctx: Ctx): Promise<void> {
       traversal: traversal.statusCode,
       escape: escape.statusCode,
       source: source.statusCode,
-      sourceBody: source.body.includes("Page source is not served as content."),
       dotfile: dotfile.statusCode,
     },
     {
     traversal: 404,
     escape: 404,
     source: 404,
-    sourceBody: true,
     dotfile: 404,
   },
   );
+  t.check(source.body, any(String).includes("Page source is not served as content."));
 
-  // doctest:L277
   await fs.rm(secret, { force: true });
 
   // A symlinked *entry* is refused the same way, and — this is the part a scan can
@@ -392,7 +310,6 @@ async function checkContainment(t: Test, ctx: Ctx): Promise<void> {
   // store and then read `exhibit.json` from the names they find, so following a link there would read (and advertise) a directory
   // outside the store that the direct routes already 404. `lstat`, not `stat`.
 
-  // doctest:L286
   const outside = path.join(store, "..", `exhibits-outside-${String(process.pid)}`);
   await writeFile(path.join(outside, "exhibit.json"), manifest({ title: "Planted from outside the store" }));
   // An exhibit-shaped link inside a workstream, and a whole workstream-shaped one.
@@ -402,48 +319,78 @@ async function checkContainment(t: Test, ctx: Ctx): Promise<void> {
   await fs.mkdir(path.join(store, "demo-ws/borrowed"));
   await fs.symlink(path.join(outside, "exhibit.json"), path.join(store, "demo-ws/borrowed/exhibit.json"));
 
-  // doctest:L295
   const { createExhibitsInventoryService } = await import("../../../src/server/main/exhibits-inventory-service.js");
   const queue = await createExhibitsInventoryService({
     storeRoot: store,
     origin: `http://127.0.0.1:${String(EXHIBITS_PORT)}`,
   }).inventory();
 
-  // doctest:L301
   const workstreams = await app.inject({ method: "GET", url: "/", headers: authorized });
   const exhibits = await app.inject({ method: "GET", url: "/demo-ws/", headers: authorized });
   const planted = await app.inject({ method: "GET", url: "/demo-ws/planted/", headers: authorized });
   const borrowed = await app.inject({ method: "GET", url: "/demo-ws/borrowed/", headers: authorized });
-  t.check(
-    {
-      workstreamListed: workstreams.body.includes("planted-ws"),
-      exhibitListed: exhibits.body.includes("planted"),
-      plantedRoute: planted.statusCode,
-      borrowedRoute: borrowed.statusCode,
-      borrowedRefusesTheLink: borrowed.body.includes("is a symlink"),
-      outsideTitleAnywhere: [workstreams.body, exhibits.body, planted.body, borrowed.body, JSON.stringify(queue)]
-        .some((body) => body.includes("Planted from outside the store")),
-      inventorySlugs: queue.entries.map((entry) => entry.slug),
-    },
-    {
-    workstreamListed: false,
-    exhibitListed: false,
-    plantedRoute: 404,
-    borrowedRoute: 500,
-    borrowedRefusesTheLink: true,
-    outsideTitleAnywhere: false,
-    inventorySlugs: [
-      "borrowed",
-      "instrument",
-      "malformed",
-      "passive",
-      "plain",
-      "unmanifested",
+  t.check(workstreams.body, not(any(String).includes("planted-ws")));
+  t.check(exhibits.body, not(any(String).includes("planted")));
+  t.check({ planted: planted.statusCode, borrowed: borrowed.statusCode }, { planted: 404, borrowed: 500 });
+  t.check(borrowed.body, any(String).includes("is a symlink"));
+  for (const body of [workstreams.body, exhibits.body, planted.body, borrowed.body]) {
+    t.check(body, not(any(String).includes("Planted from outside the store")));
+  }
+  t.check(queue, {
+    origin: "http://127.0.0.1:3230",
+    storeProblem: null,
+    entries: [
+      {
+        workstream: "demo-ws",
+        slug: "borrowed",
+        path: "/demo-ws/borrowed/",
+        title: null,
+        created: null,
+        problem: "broken manifest: exhibit.json is a symlink; it is refused rather than followed",
+      },
+      {
+        workstream: "demo-ws",
+        slug: "instrument",
+        path: "/demo-ws/instrument/",
+        title: "Threshold tuner",
+        created: "2026-08-15T00:00:00Z",
+        problem: null,
+      },
+      {
+        workstream: "demo-ws",
+        slug: "malformed",
+        path: "/demo-ws/malformed/",
+        title: null,
+        created: null,
+        problem: "broken manifest: created: Invalid input: expected string, received undefined",
+      },
+      {
+        workstream: "demo-ws",
+        slug: "passive",
+        path: "/demo-ws/passive/",
+        title: "Six screenshots",
+        created: "2026-08-17T00:00:00Z",
+        problem: null,
+      },
+      {
+        workstream: "demo-ws",
+        slug: "plain",
+        path: "/demo-ws/plain/",
+        title: "Vanilla page",
+        created: "2026-08-15T00:00:00Z",
+        problem: null,
+      },
+      {
+        workstream: "demo-ws",
+        slug: "unmanifested",
+        path: "/demo-ws/unmanifested/",
+        title: null,
+        created: null,
+        problem: "broken manifest: exhibit.json is missing",
+      },
     ],
-  },
-  );
+  });
 
-  // doctest:L317
   await fs.rm(outside, { recursive: true, force: true });
 }
 
@@ -456,7 +403,6 @@ async function checkContainment(t: Test, ctx: Ctx): Promise<void> {
 // incomplete inventory is never mistaken for a complete one. Committed apps belong
 // to no workstream and are not listed.
 void test("The dashboard's per-workstream exhibit list is a plain scan:", async (t) => {
-  // doctest:L334
   const { createExhibitsInventoryService } = await import("../../../src/server/main/exhibits-inventory-service.js");
   const invStore = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "exhibits-inventory-")));
   await writeFile(path.join(invStore, STORE_MARKER), "");
@@ -465,60 +411,51 @@ void test("The dashboard's per-workstream exhibit list is a plain scan:", async 
   await writeFile(path.join(invStore, "ws-a/bare/index.html"), "<p>no manifest</p>");
   await writeFile(path.join(invStore, "apps/an-app/exhibit.json"), JSON.stringify({ title: "An app", created: "2026-01-01T00:00:00Z" }));
 
-  // doctest:L342
   const inv = await createExhibitsInventoryService({ storeRoot: invStore, origin: "http://127.0.0.1:3230" }).inventory();
-  t.check(
-    {
-      origin: inv.origin,
-      storeProblem: inv.storeProblem,
-      entries: inv.entries.map((entry) => [entry.workstream, entry.slug, entry.path, entry.title, entry.created, entry.problem]),
-    },
-    {
+  t.check(inv, {
     origin: "http://127.0.0.1:3230",
     storeProblem: null,
     entries: [
-      [
-        "ws-a",
-        "bare",
-        "/ws-a/bare/",
-        null,
-        null,
-        "broken manifest: exhibit.json is missing",
-      ],
-      [
-        "ws-a",
-        "broken",
-        "/ws-a/broken/",
-        null,
-        null,
-        "broken manifest: created: Invalid input: expected string, received undefined",
-      ],
-      [
-        "ws-a",
-        "good",
-        "/ws-a/good/",
-        "Good one",
-        "2026-08-17T00:00:00Z",
-        null,
-      ],
+      {
+        workstream: "ws-a",
+        slug: "bare",
+        path: "/ws-a/bare/",
+        title: null,
+        created: null,
+        problem: "broken manifest: exhibit.json is missing",
+      },
+      {
+        workstream: "ws-a",
+        slug: "broken",
+        path: "/ws-a/broken/",
+        title: null,
+        created: null,
+        problem: "broken manifest: created: Invalid input: expected string, received undefined",
+      },
+      {
+        workstream: "ws-a",
+        slug: "good",
+        path: "/ws-a/good/",
+        title: "Good one",
+        created: "2026-08-17T00:00:00Z",
+        problem: null,
+      },
     ],
-  },
-  );
+  });
 
   // A store root with no marker is reported as a `storeProblem`, not as an empty
   // inventory.
 
-  // doctest:L355
   const missing = await createExhibitsInventoryService({
     storeRoot: path.join(invStore, "nowhere"),
     origin: "http://127.0.0.1:3230",
   }).inventory();
-  t.check({ entries: missing.entries.length, problem: missing.storeProblem?.startsWith("No exhibit store yet:") }, {
-    entries: 0,
-    problem: true,
+  t.check(missing, {
+    origin: "http://127.0.0.1:3230",
+    storeProblem: `No exhibit store yet: ${path.join(invStore, "nowhere")} has no marker file. Run bin/exhibits to create one.`,
+    entries: [],
   });
 
-  // doctest:L362
   await fs.rm(invStore, { recursive: true, force: true });
 });
 
@@ -528,7 +465,6 @@ void test("The dashboard's per-workstream exhibit list is a plain scan:", async 
 // `ask.prose` into a missing top-level `prose` and drops `ask` without ever
 // validating its contents; nothing writes `ask` any more.
 void test("Old manifests carry ask:", async (t) => {
-  // doctest:L372
   const { liftLegacyManifest, readManifest } = await import("../../../src/server/exhibits/store.js");
   const base = { title: "Old", created: "2026-08-01T00:00:00Z" };
   t.check(
@@ -569,7 +505,6 @@ void test("Old manifests carry ask:", async (t) => {
   // Through `readManifest`, a legacy file reads as the new shape, and a legacy
   // `ask: "garbage"` is stripped without an error.
 
-  // doctest:L388
   const legacyDir = await fs.mkdtemp(path.join(os.tmpdir(), "exhibits-legacy-"));
   await writeFile(path.join(legacyDir, "exhibit.json"), JSON.stringify({ ...base, ask: { type: "decide", prose: "Which layout?", options: ["A", "B"] } }));
   const lifted = await readManifest(legacyDir);
@@ -609,35 +544,21 @@ void test("The store root must carry the marker bin/lib/exhibits-store.sh writes
       t.error(error);
     }
   });
-  // doctest:L405
   const unmarked = await fs.mkdtemp(path.join(os.tmpdir(), "exhibits-unmarked-"));
   await fs.mkdir(path.join(unmarked, "demo-ws"), { recursive: true });
   const refusing = await makeApp(unmarked, fakeAssets());
 
-  // doctest:L409
   const refused = await refusing.inject({ method: "GET", url: "/", headers: authorized });
-  t.check(
-    {
-      status: refused.statusCode,
-      marker: refused.body.includes(STORE_MARKER),
-      root: refused.body.includes(unmarked),
-    },
-    {
-    status: 503,
-    marker: true,
-    root: true,
-  },
-  );
+  t.check(refused.statusCode, 503);
+  t.check(refused.body, any(String).includes(STORE_MARKER));
+  t.check(refused.body, any(String).includes(unmarked));
 
   // Committed apps are the other root on the same contract, and the tier is
   // legible from the URL. `dev/apps/` need not exist yet.
 
-  // doctest:L422
   const apps = await refusing.inject({ method: "GET", url: "/apps/", headers: authorized });
-  t.check({ status: apps.statusCode, empty: apps.body.includes("No exhibits here yet.") }, {
-    status: 200,
-    empty: true,
-  });
+  t.check(apps.statusCode, 200);
+  t.check(apps.body, any(String).includes("No exhibits here yet."));
 });
 
 // ## The dev server's two invisible settings
@@ -650,12 +571,10 @@ void test("The store root must carry the marker bin/lib/exhibits-store.sh writes
 // the inline Tailwind config. Neither is visible at runtime until a page breaks,
 // so both are asserted here.
 void test("Both Vite servers in this package would otherwise share nodemodules/.vite/dep...", async (t) => {
-  // doctest:L443
   const http = await import("node:http");
   const typography = (await import("@tailwindcss/typography")).default;
   const { exhibitsTailwindConfig, exhibitsViteConfig } = await import("../../../src/server/exhibits/vite-assets.js");
 
-  // doctest:L447
   const assetOptions = {
     server: http.createServer(),
     frontendRoot: "/pkg/src/frontend/exhibits",
@@ -667,18 +586,16 @@ void test("Both Vite servers in this package would otherwise share nodemodules/.
   t.check(
     {
       cacheDir: viteConfig.cacheDir,
-      sharedWithTheOtherServer: viteConfig.cacheDir === undefined || viteConfig.cacheDir.endsWith("node_modules/.vite"),
       dedupe: viteConfig.resolve?.dedupe,
-      typography: exhibitsTailwindConfig(assetOptions).plugins?.includes(typography),
+      plugins: exhibitsTailwindConfig(assetOptions).plugins,
     },
     {
     cacheDir: "/pkg/node_modules/.vite-exhibits",
-    sharedWithTheOtherServer: false,
     dedupe: [
       "react",
       "react-dom",
     ],
-    typography: true,
+    plugins: [is(typography)],
   },
   );
 });

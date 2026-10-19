@@ -73,7 +73,8 @@ void test("Outside text cannot turn processing back on with its own fence annota
 // Escaping twice changes nothing:
 void test("Escaping twice changes nothing:", async (t) => {
   // doctest:L65
-  await t.checkText(neutralizeIngestedMarkdown(neutralizeIngestedMarkdown(clipped + "\n\n" + code)) === neutralizeIngestedMarkdown(clipped + "\n\n" + code), "true");
+  const once = neutralizeIngestedMarkdown(clipped + "\n\n" + code);
+  t.check(neutralizeIngestedMarkdown(once), once);
 });
 
 // ## Plain-text values

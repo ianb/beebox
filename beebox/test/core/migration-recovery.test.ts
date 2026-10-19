@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { execFileSync } from "node:child_process";
 import { readFile, writeFile, chmod } from "node:fs/promises";
 import { join } from "node:path";
@@ -50,12 +51,13 @@ void test("line 22", async (t) => {
   await writeFile(hook, "#!/bin/sh\nexit 1\n");
   await chmod(hook, 0o755);
   const snapshot = await captureMigrationSnapshot(box.root, "fixture");
-  t.check({ head: head === git(box, "rev-parse", "HEAD"), index: indexBefore.equals(await readFile(join(gitDir, "index"))), working: git(box, "show", `${snapshot.ref}:tracked.txt`), staged: git(box, "show", `${snapshot.ref}^2:tracked.txt`), ignored: git(box, "ls-tree", "-r", "--name-only", snapshot.ref).includes(".beebox/private"), binary: git(box, "show", `${snapshot.ref}:input.bin`) }, {
-    head: true,
-    index: true,
+  t.check({ head: git(box, "rev-parse", "HEAD"), index: (await readFile(join(gitDir, "index"))).toString("hex"), working: git(box, "show", `${snapshot.ref}:tracked.txt`), staged: git(box, "show", `${snapshot.ref}^2:tracked.txt`), tree: git(box, "ls-tree", "-r", "--name-only", snapshot.ref), binary: git(box, "show", `${snapshot.ref}:input.bin`) }, {
+    head,
+    index: indexBefore.toString("hex"),
     working: "working only",
     staged: "staged only",
-    ignored: false,
+    // The tree lists the whole scaffolded box; only the ignored path matters.
+    tree: not(any(String).includes(".beebox/private")),
     binary: "binary input\u0000bytes",
   });
 
@@ -96,7 +98,7 @@ void test("line 22", async (t) => {
 
   // doctest:L73
   const again = await captureMigrationSnapshot(box.root, "fixture");
-  await t.checkText(again.ref !== snapshot.ref, "true");
+  t.check(again.ref, not(snapshot.ref));
 
   // doctest:L77
   // An unresolved merge must fail before a recovery ref claims usable input.

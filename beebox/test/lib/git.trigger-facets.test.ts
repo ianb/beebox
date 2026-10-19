@@ -50,16 +50,16 @@ void test("line 14", async (t) => {
 
   // doctest:L43
   const facets = await getTrailerFacets(box.root);
-  t.check(facets.triggers.map((trigger) => `${trigger.kind}: ${trigger.id}`).join(" | "), "procedure: procedure/refresh-maps | trick: trick/tidy-inbox | command: command/bbx wakeup");
-
-  // doctest:L47
-  t.check(facets.connectors.join(" | "), "google-calendar-connector");
-
   // The retired spelling does not become a second entry — `Workflow: refresh-maps`
   // and `Procedure: refresh-maps` are the same run under two names.
-
-  // doctest:L55
-  await t.checkText(facets.triggers.filter((trigger) => trigger.name === "refresh-maps").length, "1");
+  t.check(facets, {
+    connectors: ["google-calendar-connector"],
+    triggers: [
+      { id: "procedure/refresh-maps", kind: "procedure", name: "refresh-maps" },
+      { id: "trick/tidy-inbox", kind: "trick", name: "tidy-inbox" },
+      { id: "command/bbx wakeup", kind: "command", name: "bbx wakeup" },
+    ],
+  });
 
   // ## Selecting a procedure run finds its commits, pre-rename ones included
   //
@@ -71,7 +71,7 @@ void test("line 14", async (t) => {
     boxRoot: box.root,
     filter: { greps: buildGreps({ triggers: ["procedure/refresh-maps"] }) },
   });
-  await t.checkText(byProcedure.map((c) => c.subject).join(" | "), "[workflow] fetch the news | [procedure] triage the inbox | [procedure] refresh the map index");
+  t.check(byProcedure.map((c) => c.subject), ["[workflow] fetch the news", "[procedure] triage the inbox", "[procedure] refresh the map index"]);
 
   // A trick selection matches only the trick, and a command selection only the
   // command — the kinds do not bleed into each other.
@@ -85,7 +85,10 @@ void test("line 14", async (t) => {
     boxRoot: box.root,
     filter: { greps: buildGreps({ triggers: ["command/bbx wakeup"] }) },
   });
-  t.check(`${byTrick.map((c) => c.subject).join(",")} / ${byCommand.map((c) => c.subject).join(",")}`, "tidy the inbox / sync the calendar");
+  t.check({ trick: byTrick.map((c) => c.subject), command: byCommand.map((c) => c.subject) }, {
+    trick: ["tidy the inbox"],
+    command: ["sync the calendar"],
+  });
 
   // Selecting several triggers ORs within the axis, and the hand edit is in none of
   // them — which is the distinction the History page exists to make.
@@ -95,7 +98,7 @@ void test("line 14", async (t) => {
     boxRoot: box.root,
     filter: { greps: buildGreps({ triggers: ["trick/tidy-inbox", "command/bbx wakeup"] }) },
   });
-  t.check(several.map((c) => c.subject).join(" | "), "sync the calendar | tidy the inbox");
+  t.check(several.map((c) => c.subject), ["sync the calendar", "tidy the inbox"]);
 
   // Axes AND together: one trigger plus one connector selects the commit carrying
   // both.
@@ -110,5 +113,5 @@ void test("line 14", async (t) => {
       }),
     },
   });
-  t.check(both.map((c) => c.subject).join(" | "), "sync the calendar");
+  t.check(both.map((c) => c.subject), ["sync the calendar"]);
 });

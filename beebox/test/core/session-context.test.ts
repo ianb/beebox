@@ -219,5 +219,5 @@ void test("The local-time attribute is what the agent reasons about \"today\" an
   process.env.BBX_TIME = "2026-08-12T08:40:00Z";
   const snapshot = await composeSendSnapshot(tzBox.root, { features: {}, sessionStart: false });
   delete process.env.BBX_TIME;
-  await t.checkText(snapshot.includes('local-time="Wednesday 2026-08-12 08:40 UTC (morning)"'), "true");
+  t.check(snapshot, '<chat-app narration="off" prose="on" local-time="Wednesday 2026-08-12 08:40 UTC (morning)"/>');
 });

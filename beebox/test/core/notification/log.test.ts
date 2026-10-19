@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -56,11 +57,13 @@ void test("Each append is one line.", async (t) => {
   appendDelivery(box.root, { notificationId: "b2", delivery: { channel: "apns", status: "skipped", detail: "no-audience" }, now: NOW });
 
   // doctest:L51
-  await t.checkText(fs.readFileSync(notificationLogPath(box.root), "utf-8").split("\n")[0], "{\"kind\":\"intent\",\"at\":\"2026-09-26T09:00:00.000Z\",\"id\":\"a1\",\"title\":\"Vet at 3\",\"body\":\"\",\"target\":\"chat:new\",\"loudness\":\"loud\",\"tag\":\"vet\",\"source\":\"log-doctest\"}");
+  t.check(fs.readFileSync(notificationLogPath(box.root), "utf-8").split("\n")[0], "{\"kind\":\"intent\",\"at\":\"2026-09-26T09:00:00.000Z\",\"id\":\"a1\",\"title\":\"Vet at 3\",\"body\":\"\",\"target\":\"chat:new\",\"loudness\":\"loud\",\"tag\":\"vet\",\"source\":\"log-doctest\"}");
 
   // doctest:L54
-  await t.checkText((await readRecent(box.root, { days: 1, now: NOW })).map(summary).join("\n"), `a1 Vet at 3: web-push=sent apns=failed(BadDeviceToken)
-b2 Two questions: apns=skipped(no-audience)`);
+  t.check((await readRecent(box.root, { days: 1, now: NOW })).map(summary), [
+    "a1 Vet at 3: web-push=sent apns=failed(BadDeviceToken)",
+    "b2 Two questions: apns=skipped(no-audience)",
+  ]);
 
   // doctest:L59
   t.check(summary(await getIntent(box.root, "b2")), "b2 Two questions: apns=skipped(no-audience)");
@@ -71,7 +74,7 @@ b2 Two questions: apns=skipped(no-audience)`);
   // `readRecent` keeps only intents inside the window:
 
   // doctest:L69
-  await t.checkText((await readRecent(box.root, { days: 1, now: new Date(NOW.getTime() + 2 * DAY) })).length, "0");
+  t.check(await readRecent(box.root, { days: 1, now: new Date(NOW.getTime() + 2 * DAY) }), []);
 
   // An unparseable line (a crash mid-write, a hand edit) is skipped with a
   // warning; the lines around it still read:
@@ -79,7 +82,7 @@ b2 Two questions: apns=skipped(no-audience)`);
   // doctest:L77
   fs.appendFileSync(notificationLogPath(box.root), "{not json\n");
   appendIntent(box.root, { intent: intent("c3", "After the bad line"), now: NOW });
-  t.check((await readRecent(box.root, { days: 1, now: NOW })).map((n) => n.intent.id).join(" "), "a1 b2 c3");
+  t.check((await readRecent(box.root, { days: 1, now: NOW })).map((n) => n.intent.id), ["a1", "b2", "c3"]);
 });
 
 // ## A delivery on a retired channel is read, not skipped
@@ -99,13 +102,12 @@ void test("Telegram was a channel until it was removed.", async (t) => {
   const box = await makeTmpBox();
   appendIntent(box.root, { intent: intent("t1", "Sent before removal"), now: NOW });
   fs.appendFileSync(notificationLogPath(box.root), JSON.stringify({ kind: "delivery", at: NOW.toISOString(), notificationId: "t1", channel: "telegram", status: "sent" }) + "\n");
-  const warnings = [];
+  const warnings: string[] = [];
   const origWarn = console.warn;
   console.warn = (...args) => { warnings.push(args.join(" ")); };
-  const read = (await readRecent(box.root, { days: 1, now: NOW })).map(summary).join("\n");
+  const read = (await readRecent(box.root, { days: 1, now: NOW })).map(summary);
   console.warn = origWarn;
-  await t.checkText([read, warnings.length].join("\n"), `t1 Sent before removal: telegram=sent
-0`);
+  t.check({ read, warnings }, { read: ["t1 Sent before removal: telegram=sent"], warnings: [] });
 });
 
 // ## A long body is shortened so the line stays one atomic write
@@ -124,10 +126,7 @@ void test("Appends under 4 KB are atomic on the filesystems in use, so the logge
   const box = await makeTmpBox();
   appendIntent(box.root, { intent: { ...intent("long", "Long"), body: "x".repeat(20_000) }, now: NOW });
   const line = fs.readFileSync(notificationLogPath(box.root), "utf-8");
-  t.check([Buffer.byteLength(line) < 4000, JSON.parse(line).body.endsWith("…")], [
-    true,
-    true,
-  ]);
+  t.check({ bytes: Buffer.byteLength(line), body: JSON.parse(line).body }, { bytes: any(Number).below(4000), body: str`${any(String)}…` });
 });
 
 // ## The other fields are bounded, and a line that cannot fit is refused
@@ -147,17 +146,23 @@ void test("The tag and the source are cut to 200 characters.", async (t) => {
   const box = await makeTmpBox();
   appendIntent(box.root, { intent: { ...intent("tagged", "Tagged"), tag: "t".repeat(5000), source: "s".repeat(5000) }, now: NOW });
   const logged = JSON.parse(fs.readFileSync(notificationLogPath(box.root), "utf-8"));
-  t.check([logged.tag.length, logged.tag.endsWith("…"), logged.source.length], [
-    200,
-    true,
-    200,
-  ]);
+  t.check(logged, {
+    kind: "intent",
+    at: "2026-09-26T09:00:00.000Z",
+    id: "tagged",
+    title: "Tagged",
+    body: "",
+    target: "dashboard",
+    loudness: "loud",
+    tag: `${"t".repeat(199)}…`,
+    source: `${"s".repeat(199)}…`,
+  });
 
   // doctest:L142
   await t.checkThrows(async () => (appendIntent(box.root, { intent: { ...intent("x".repeat(5000), "Huge id"), body: "b".repeat(100) }, now: NOW })), "NotificationLogLineTooLongError");
 
   // doctest:L145
-  await t.checkText(fs.readFileSync(notificationLogPath(box.root), "utf-8").split("\n").filter(Boolean).length, "1");
+  t.check(fs.readFileSync(notificationLogPath(box.root), "utf-8").split("\n").filter(Boolean), [any(String).startsWith('{"kind":"intent"').includes('"id":"tagged"')]);
 });
 
 // ## Rotation
@@ -184,7 +189,7 @@ void test("The log rotates when its first line is older than 30 days, or when it
   t.check(await rotateIfNeeded(box.root, { now: NOW }), true);
 
   // doctest:L169
-  t.check(fs.readdirSync(path.join(box.root, ".beebox")).filter((f) => f.startsWith("notifications")).toSorted().join(" "), "notifications.1.jsonl");
+  t.check(fs.readdirSync(path.join(box.root, ".beebox")).filter((f) => f.startsWith("notifications")).toSorted(), ["notifications.1.jsonl"]);
 
   // A writer that opened the file before the rename still holds the old
   // descriptor, so its line lands in the rotated file. Readers read both files,
@@ -199,8 +204,10 @@ void test("The log rotates when its first line is older than 30 days, or when it
   appendIntent(box.root, { intent: intent("later", "After rotation"), now: NOW });
 
   // doctest:L185
-  await t.checkText((await readRecent(box.root, { days: 1, now: NOW })).map(summary).join("\n"), `new Fresh file: web-push=sent
-later After rotation: (no deliveries)`);
+  t.check((await readRecent(box.root, { days: 1, now: NOW })).map(summary), [
+    "new Fresh file: web-push=sent",
+    "later After rotation: (no deliveries)",
+  ]);
 
   // The second rotation replaced the first rotated file, so the month-old
   // intent is gone. A file over 8 MB rotates whatever its age:

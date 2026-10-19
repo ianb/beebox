@@ -79,17 +79,24 @@ void test("`knipWorkspaceBlockRange` finds the balanced-brace range of one packa
 };
 `;
   const range = knipWorkspaceBlockRange(knipText, "beebox")!;
-  await t.checkText(knipText.slice(range.start, range.end).includes("canvas-loop"), "false");
+  t.check(knipText.slice(range.start, range.end), "\n      entry: [\"src/cli/entry/run.ts\"],\n    }");
 
   // doctest:L78
-  const rewritten = replaceTokenInRange({ text: knipText, oldToken: "src/cli/entry/run.ts", newToken: "src/cli/entry/run.ts", range });
-  t.check(rewritten.count, 1);
-
-  // doctest:L82
-  await t.checkText(rewritten.text.includes('"beebox": {\n      entry: ["src/cli/entry/run.ts"],'), "true");
-
-  // doctest:L85
-  await t.checkText(rewritten.text.includes('"canvas-loop": {\n      entry: ["src/cli/entry/run.ts"],'), "true");
+  const rewritten = replaceTokenInRange({ text: knipText, oldToken: "src/cli/entry/run.ts", newToken: "src/cli/entry/main.ts", range });
+  t.check(rewritten, {
+    text: `export default {
+  workspaces: {
+    "beebox": {
+      entry: ["src/cli/entry/main.ts"],
+    },
+    "canvas-loop": {
+      entry: ["src/cli/entry/run.ts"],
+    },
+  },
+};
+`,
+    count: 1,
+  });
 
   // doctest:L88
   t.check(knipWorkspaceBlockRange(knipText, "no-such-package"), null);

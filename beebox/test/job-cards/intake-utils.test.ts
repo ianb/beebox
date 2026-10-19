@@ -4,6 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not, str, unordered } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { createOrAppendIntakeJob } from "../../src/job-cards/intake-utils.js";
@@ -27,7 +28,7 @@ void test("When no matching job exists, a new .intake.job.card file is created u
     items: ["_content/inbox/item1.doc.card"],
     description: "Triage 1 item",
   });
-  await t.checkText(path.startsWith("_bookkeeping/jobs/") && path.endsWith("-test-connector.intake.job.card"), "true");
+  t.check(path, str`_bookkeeping/jobs/${any(String)}-test-connector.intake.job.card`);
 
   // doctest:L28
   await t.checkText(await box.read(path), `---
@@ -64,7 +65,7 @@ void test("A second call with the same connector and priority appends to the exi
     items: ["_content/inbox/item2.doc.card"],
     description: "Triage 2 items",
   });
-  await t.checkText(path1 === path2, "true");
+  t.check(path1, path2);
 
   // The updated file contains both items with the new description:
 
@@ -150,15 +151,16 @@ void test("The find/read/append/write span is a read-modify-write of one card th
   const firstPath = paths[0];
   assert.ok(firstPath !== undefined);
   const card = await box.read(firstPath);
+  t.check(paths, Array.from({ length: 8 }, () => firstPath));
+  // Append order follows lock acquisition, so the eight item lines match in any order.
+  const lines = card.split("\n");
   t.check(
+    { head: lines.slice(0, 4), items: lines.slice(4, -2), tail: lines.slice(-2) },
     {
-      jobs: new Set(paths).size,
-      items: card.split("\n").filter((line) => line.startsWith("  - ref:")).length,
+      head: ["---", "priority: normal", "description: Concurrent scan batch", "items:"],
+      items: unordered<string>(Array.from({ length: 8 }, (_, i) => `  - ref: _content/inbox/scan-${String(i)}.capture-session.card`)),
+      tail: ["---", ""],
     },
-    {
-    jobs: 1,
-    items: 8,
-  },
   );
 });
 
@@ -180,16 +182,18 @@ void test("The lock is per batching key, so a gmail-scoped sync and a scan impor
     createOrAppendIntakeJob({ boxRoot: box.root, items: ["_content/inbox/a.doc.card"], description: "Scan" }),
     createOrAppendIntakeJob({ boxRoot: box.root, connector: "gmail", items: ["_content/inbox/b.doc.card"], description: "Mail" }),
   ]);
-  t.check(
-    {
-      distinct: scanJob !== gmailJob,
-      scan: (await box.read(scanJob)).includes("ref: _content/inbox/a.doc.card"),
-      gmail: (await box.read(gmailJob)).includes("ref: _content/inbox/b.doc.card"),
-    },
-    {
-    distinct: true,
-    scan: true,
-    gmail: true,
-  },
-  );
+  t.check(scanJob, not(gmailJob));
+  t.checkText(await box.read(scanJob), `---
+priority: normal
+description: Scan
+items:
+  - ref: _content/inbox/a.doc.card
+---`);
+  t.checkText(await box.read(gmailJob), `---
+connector: gmail
+priority: normal
+description: Mail
+items:
+  - ref: _content/inbox/b.doc.card
+---`);
 });

@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-18T23:46:20Z
-Total documents: 544
+Generated: 2026-10-19T01:20:18Z
+Total documents: 545
 
 ## Issues
 
@@ -68,6 +68,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
+- **docs/plans/bbx-remind.md** — "bbx remind: one command for check-ins and reminders" (290 lines) · proposal · draft
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines) · plan review
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (159 lines) · proposal · partial
@@ -85,7 +86,6 @@ These documents are not referenced by any other document.
 - **docs/plans/pdf-render-webp.review.md** — "Plan Engineering Review — PDF render WebP" (104 lines) · plan review
 - **docs/plans/publish-custom-domain-admin.review.md** — "Plan Engineering Review — custom hostname assignment" (91 lines) · plan review
 - **docs/plans/publish-sites-admin.review.md** — "Plan Engineering Review — publish-sites-admin" (156 lines) · plan review
-- **docs/plans/retire-doctest.md** — "Retire doctest: TypeScript tests with a typed check()" (1242 lines) · proposal · partial
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
 - **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines) · proposal · partial
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines) · plan review
@@ -225,6 +225,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-deletion.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/remove-cardworks-package.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/rest-to-trpc-consolidation.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/retire-doctest.md:108 (mention) — the boxholder (repo `AGENTS.md`, "Do not disable or weaken lint rules").
 - docs/implemented-plans/retire-type-specific-core-tags.md:110 (mention) — **Why.** The two tags exist only to be compiled into AGENTS.md and styled on the card page. A frontmatter string and a m
 - docs/implemented-plans/scanner-ingest.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/scheduled-workstreams.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -268,7 +269,6 @@ Referenced by:
 - docs/plans/public-site-story-extraction.subplan.md:59 (mention) — per AGENTS.md ("Sonnet 5 is good at subagent work"; extraction is
 - docs/plans/public-site.md:31 (mention) — - Root `AGENTS.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
 - docs/plans/publish-sites-admin.md:111 (mention) — AGENTS.md             # lazy pointer to installed box-docs/publishing.md
-- docs/plans/retire-doctest.md:108 (mention) — the boxholder (repo `AGENTS.md`, "Do not disable or weaken lint rules").
 - docs/plans/scan-vision-claude.md:494 (mention) — | Box AGENTS.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` —
 - docs/plans/source-available-release.md:394 (mention) — it now adds features beyond the task (`AGENTS.md` Behavioral Notes).
 - docs/plans/worktree-control-surface.md:144 (mention) — (`:236-242`), runs the workspace install (`:252`), generates the Codex AGENTS.md
@@ -345,6 +345,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-08-17-bbx-init-prints-a-screenful-on-every-run.md:13 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-08-25-mjs-files-should-be-typescript.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-09-26-generated-guidance-families-without-pruning.md:2 (mention) — title: "Two generated guidance families still leave orphans: guides-for-<type> rules and dangling AGENTS.md symlinks"
+- ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:14 (mention) — Doctests are this repository's default test form (`beebox/AGENTS.md`), and
 - ../issues/closed/code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md:65 (mention) — boxholder's approval (root `AGENTS.md` on lint changes).
 - ../issues/closed/decisions/2026-05-27-bin-browse-wrapper-future.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -375,7 +376,6 @@ Referenced by:
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:23 (mention) — Related: the noisy-output policy in the root AGENTS.md (routine-success
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:8 (mention) — it spawns an agent with a box cwd and box AGENTS.md context and checks
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:55 (mention) — `beebox/AGENTS.md`.
-- ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:11 (mention) — Doctests are this repository's default test form (`beebox/AGENTS.md`), and
 - ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:47 (mention) — needs the boxholder's approval (root `AGENTS.md`).
 - ../issues/decisions/2026-08-25-issue-relationship-fields.md:41 (mention) — context, which lives in AGENTS.md/docs here. Not needed.
 - ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:14 (mention) — `AGENTS.md`. The engine updates before a box's migration runs, and the
@@ -722,6 +722,7 @@ Referenced by:
 - docs/implemented-plans/private-issues-shadow-repo.md:160 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
 - docs/implemented-plans/refresh-maps-correctness.md:193 (mention) — - Every child that is an anchor file (`README.md`, `*.briefing.card`,
 - docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
+- docs/implemented-plans/retire-doctest.md:1056 (mention) — `CONTRIBUTING.md:28,56`, and `README.md:48`.
 - docs/implemented-plans/workstreams.md:758 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
 - docs/server/boxes.md:32 (link) — see the root [`README.md`](../../README.md) for that path. This doc is about
 - docs/testing/knowledge-audits.md:73 (mention) — - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card
@@ -1291,6 +1292,7 @@ Referenced by:
 - docs/implemented-plans/remove-telegram.md:87 (mention) — (`docs/engineering-principles.md:87`), and the file-layout rule that
 - docs/implemented-plans/resilient-voice-recording.md:119 (mention) — - `docs/engineering-principles.md`:
 - docs/implemented-plans/responsive-figures.md:34 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
+- docs/implemented-plans/retire-doctest.md:94 (mention) — - **Principle 8, "One way to do each thing"** (`beebox/docs/engineering-principles.md:95`).
 - docs/implemented-plans/retire-type-specific-core-tags.md:65 (mention) — Source plus tests about 830 changed lines. Authored docs and instructions about 120 lines (schema instruction strings, `
 - docs/implemented-plans/retranscription-in-chat.md:30 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: two precise
 - docs/implemented-plans/router-transient-failure-resilience.md:62 (mention) — - **Principle 4 — resilient AND never silent** (`beebox/docs/engineering-principles.md:49`):
@@ -1345,7 +1347,6 @@ Referenced by:
 - docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
 - docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Validate at boundaries.** Manifests, candidate destinations, slug pointers, and hostname configuration remain strict
 - docs/plans/publish-sites-admin.md:38 (mention) — - **One way to do each thing.** Engineering principle 8 says “Competing idioms are drift generators” and “Consolidate ov
-- docs/plans/retire-doctest.md:94 (mention) — - **Principle 8, "One way to do each thing"** (`beebox/docs/engineering-principles.md:95`).
 - docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
 - docs/plans/scan-retry-and-document-route.md:31 (mention) — (`docs/engineering-principles.md:49`): *"Degradation is allowed for failures
 - docs/plans/scan-vision-claude.md:25 (mention) — - `beebox/docs/engineering-principles.md` — especially
@@ -1434,7 +1435,6 @@ References:
 - → ../issues/decisions/2026-05-21-glossary-proper-nouns.md (link)
 - → docs/box-layout.md (mention)
 - → AGENTS.md (mention)
-- → docs/chat/schedules.md (mention)
 - → docs/cards/schemas.md (mention)
 - → docs/cards/format.md (mention)
 - → docs/media/assets.md (mention)
@@ -1608,7 +1608,7 @@ Referenced by:
 - docs/implemented-plans/scan-uploader-version-drift.md:193 (mention) — `docs/mobile-contract.md:1088-1105` states the server never branches on it —
 - docs/implemented-plans/secret-entry-guidance.md:533 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
 - docs/mobile-parity.md:5 (mention) — detail lives in `docs/mobile-contract.md`. Cell values: **done**,
-- docs/notifications.md:185 (link) — ([mobile contract §5.9](mobile-contract.md)).
+- docs/notifications.md:189 (link) — ([mobile contract §5.9](mobile-contract.md)).
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
 - docs/plans/agent-points-at-ui.md:75 (mention) — - `docs/mobile-contract.md` — the anchor-manifest discipline any bridge
 - docs/plans/android-companion-app.md:14 (mention) — implements **exactly** the contract in `docs/mobile-contract.md`; it adds no new
@@ -1766,7 +1766,7 @@ Referenced by:
 
 #### docs/notifications.md
 
-Title: "Notifications" | 240 lines | current reference
+Title: "Notifications" | 244 lines | current reference
 
 Referenced by:
 - docs/design/interaction-model.md:37 (link) — [`../notifications.md`](../notifications.md) are implementation, not design,
@@ -1774,6 +1774,7 @@ Referenced by:
 - docs/implemented-plans/notifications.md:20 (mention) — > walk"](../notifications.md#verification-walk) — has not run; it is gated
 - docs/implemented-plans/remove-telegram.md:38 (mention) — so I am told. The channel rule (`docs/notifications.md`, *Channels*) has
 - docs/implemented-plans/retire-type-specific-core-tags.md:148 (mention) — The sentences at `briefing.tsx:95-97` ("write their answer into `{% purpose %}`") and `:129-130` change to match. `docs/
+- docs/plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - docs/server/configuration.md:71 (link) — [notifications](../notifications.md).
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:25 (mention) — is present (`docs/notifications.md`, the root briefing's "Reaching me").
 - ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:46 (mention) — (`docs/notifications.md`).
@@ -1822,7 +1823,7 @@ Referenced by:
 - docs/implemented-plans/todos-ui.md:204 (mention) — `docs/procedure-implementation.md:110`), prechecks, and validate phases.
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/plans/email-tracking.md:63 (mention) — - `docs/procedure-implementation.md` remains the reference for shell prechecks,
-- docs/scheduler.md:41 (mention) — review runs out of turns — see `docs/procedure-implementation.md`; `bbx handle`
+- docs/scheduler.md:49 (mention) — review runs out of turns — see `docs/procedure-implementation.md`; `bbx handle`
 - docs/server/health-checks.md:40 (mention) — cases — see `docs/procedure-implementation.md` → Instructions.
 - docs/user-stories/catalog/2026-06-26.md:5746 (mention) — **Verifier (flagged):** The code implements multi-phase procedure definitions and execution with progress tracking, but
 - ../issues/closed/code-quality/2026-06-26-procedure-validation-completion-d5.md:8 (mention) — **Closed:** Done: model-judged instruction validation, `severity: review` auto-retry, and resumable runs (`bbx procedure
@@ -1954,7 +1955,7 @@ References:
 
 #### docs/scheduler.md
 
-Title: "Scheduler" | 118 lines | current reference
+Title: "Scheduler" | 126 lines | current reference
 
 Referenced by:
 - AGENTS.md:51 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
@@ -2012,7 +2013,7 @@ Referenced by:
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
-- docs/testing/check.md:219 (link) — ([secrets](../secrets.md)): `setSecret` and `grantSecret`
+- docs/testing/check.md:223 (link) — ([secrets](../secrets.md)): `setSecret` and `grantSecret`
 - docs/testing/real-models.md:31 (link) — the secret ([secrets](../secrets.md)). Grants are keyed by box slug, so a
 - ../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md:21 (mention) — > `setHqService`/`setBackend`). See `beebox/docs/secrets.md#picking-a-service-the-box-cannot-reach-yet`.
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:18 (mention) — > `beebox/docs/secrets.md` and
@@ -2201,6 +2202,7 @@ Referenced by:
 - docs/implemented-plans/remove-bbx-render.md:509 (mention) — than a deferral. `docs/testing.md` scopes tests to substantial codepaths, not
 - docs/implemented-plans/responsive-figures.md:404 (mention) — doctest tiers exercise (`docs/testing.md` posture: don't test for coverage's
 - docs/implemented-plans/rest-to-trpc-consolidation.md:392 (mention) — - **Test posture** (`docs/testing.md` — tests as design tool, not coverage): a
+- docs/implemented-plans/retire-doctest.md:418 (mention) — - `beebox/docs/testing.md`, replacing line 21;
 - docs/implemented-plans/router-transient-failure-resilience.md:893 (mention) — Tests first, per `beebox/docs/testing.md`. Done-when is the following passing:
 - docs/implemented-plans/scan-uploader-version-drift.md:567 (mention) — **Tests first**, per `docs/testing.md` and this contract's own clause that the
 - docs/implemented-plans/see-as-the-user.md:580 (mention) — - **Tests first as design tool** (`docs/testing.md`): B0's extraction is
@@ -2219,7 +2221,6 @@ Referenced by:
 - docs/plans/ios-companion-app.md:216 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
 - docs/plans/ios-input-plane-parity.md:38 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
 - docs/plans/ios-native-capture-mode.md:36 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
-- docs/plans/retire-doctest.md:418 (mention) — - `beebox/docs/testing.md`, replacing line 21;
 - docs/plans/scan-retry-and-document-route.md:417 (mention) — Tests first, per `docs/testing.md`. Done-when, by track:
 - docs/plans/tts-backend-selection.md:560 (mention) — Tests named while designing, per `docs/testing.md`:
 - docs/plans/workspace-pane-controls.md:476 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
@@ -2908,18 +2909,18 @@ References:
 
 #### docs/chat/schedules.md
 
-Title: "Chat schedules" | 82 lines | current reference
+Title: "Chat check-ins" | 102 lines | current reference
 
 Referenced by:
-- docs/chat.md:11 (link) — | [Schedules](chat/schedules.md) | Agent-set timers from a `<schedule>` tag: lifecycle, targeting, persistence. |
+- docs/chat.md:11 (link) — | [Check-ins](chat/schedules.md) | Agent-set timers that come back to one conversation (`bbx remind --here`): lifecycle,
 - docs/design/README.md:35 (link) — and [`../chat/schedules.md`](../chat/schedules.md).
 - docs/design/processing.md:26 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
-- docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
 - docs/implemented-plans/design-reconciliation.md:579 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 - docs/implemented-plans/doc-structure-chat.md:70 (mention) — | `chat-schedules.md` | `chat/schedules.md` | |
 - docs/implemented-plans/mvp-implementation-guide.md:248 (mention) — See `docs/scheduler.md` and `docs/chat/schedules.md` for scheduling examples.
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:103 (mention) — Approved destinations, now applied: `bin/docs/commit-guards.md`, `bin/docs/router-operations.md`, `bin/docs/worktree-lif
-- docs/notifications.md:91 (link) — within hours ([chat timers](chat/schedules.md)).
+- docs/notifications.md:95 (link) — ([chat check-ins](chat/schedules.md)).
+- docs/plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:64 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
 - ../research/fabric-review.md:73 (mention) — - **One agent per box, with the whole box.** The agent is Claude Code or Codex with a shell, procedures and schedules (`
 - ../research/lifeos-review.md:68 (mention) — | Weekly review that shows last week's "next step" and freezes a snapshot | **Adapt**, as a scheduled procedure that ope
@@ -4860,15 +4861,15 @@ References:
 Title: "Doctest usability" | 855 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/retire-doctest.md:111 (mention) — - `beebox/docs/implemented-plans/doctest-usability.md:95-97`: *"The doctest
+- docs/implemented-plans/retire-doctest.md:111 (mention) — - `beebox/docs/implemented-plans/doctest-usability.md:95-97`: *"The doctest
+- ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:52 (link) — The [doctest usability review](../../../beebox/docs/implemented-plans/doctest-usability.md)
 - ../issues/closed/exploration/2026-09-27-doctest-usability-review.md:13 (mention) — Closed: the review is done and its runner, guidance and test-runner changes land with the branch merge of `worktree-doct
-- ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:49 (link) — The [doctest usability review](../../beebox/docs/implemented-plans/doctest-usability.md)
 
 References:
 - → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (frontmatter)
 - → AGENTS.md (mention)
 - → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (link)
-- → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
+- → ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
 - → ../issues/closed/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
 - → ../issues/closed/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md (link)
 - → ../issues/closed/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md (link)
@@ -6376,6 +6377,27 @@ References:
 - → code-style.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/implemented-plans/retire-doctest.md
+
+Title: "Retire doctest: TypeScript tests with a typed check()" | 1286 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:12 (mention) — Superseded by the opposite decision: `beebox/docs/implemented-plans/retire-doctest.md` converted every doctest to a `.te
+- ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:52 (mention) — gone (`beebox/docs/implemented-plans/retire-doctest.md`, 2026-10-18): tests
+
+References:
+- → ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (frontmatter)
+- → ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md (frontmatter)
+- → docs/implemented-plans/typescript-7.md (mention)
+- → docs/engineering-principles.md (mention)
+- → AGENTS.md (mention)
+- → docs/implemented-plans/doctest-usability.md (mention)
+- → docs/testing.md (mention)
+- → docs/testing/check.md (mention)
+- → docs/testing/tap-tests.md (mention)
+- → src/services/AGENTS.md (mention)
+- → README.md (mention)
+
 #### docs/implemented-plans/retire-memo.md
 
 Title: "Retire the memo card type into doc" | 400 lines | shipped history | implemented
@@ -7027,7 +7049,7 @@ References:
 Title: "Move the repo to TypeScript 7, except typescript-eslint" | 407 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/retire-doctest.md:46 (mention) — move (`beebox/docs/implemented-plans/typescript-7.md`) left
+- docs/implemented-plans/retire-doctest.md:46 (mention) — move (`beebox/docs/implemented-plans/typescript-7.md`) left
 - ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md:12 (mention) — **Closed:** implemented on branch worktree-ts7 (plan `beebox/docs/implemented-plans/typescript-7.md`). The repo uses Typ
 - ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md:171 (link) — [TypeScript 7 plan](../../../beebox/docs/implemented-plans/typescript-7.md). The tools that
 - ../issues/watch/2026-10-17-move-typescript-eslint-to-typescript-7.md:11 (link) — The [TypeScript 7 plan](../../beebox/docs/implemented-plans/typescript-7.md) moves every
@@ -7520,6 +7542,19 @@ References:
 - → AGENTS.md (mention)
 - → docs/testing.md (mention)
 - → docs/cards/migrations.md (mention)
+
+#### docs/plans/bbx-remind.md **[ORPHAN]**
+
+Title: "bbx remind: one command for check-ins and reminders" | 290 lines | proposal | draft
+
+References:
+- → ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (frontmatter)
+- → ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
+- → ../issues/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
+- → src/core/agent-guide/guide.md (mention)
+- → src/hub/AGENTS.md (mention)
+- → docs/chat/schedules.md (mention)
+- → docs/notifications.md (mention)
 
 #### docs/plans/box-commentary-surface.md
 
@@ -8616,7 +8651,6 @@ Referenced by:
 - docs/plans/asset-annex.md:1080 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/container-first.md:322 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
-- docs/plans/retire-doctest.md:1012 (mention) — `CONTRIBUTING.md:28,56`, and `README.md:48`.
 - docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
 - docs/reports/plan-directory-migration-history-2026-09-13.md:5 (link) — locations. Use the [current plan conventions](../plans/README.md) when working
@@ -8630,23 +8664,6 @@ References:
 - → ../.claude/agents/finish.md (link)
 - → docs/README.md (link)
 - → docs/reports/plan-directory-migration-history-2026-09-13.md (link)
-
-#### docs/plans/retire-doctest.md **[ORPHAN]**
-
-Title: "Retire doctest: TypeScript tests with a typed check()" | 1242 lines | proposal | partial
-
-References:
-- → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (frontmatter)
-- → ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md (frontmatter)
-- → docs/implemented-plans/typescript-7.md (mention)
-- → docs/engineering-principles.md (mention)
-- → AGENTS.md (mention)
-- → docs/implemented-plans/doctest-usability.md (mention)
-- → docs/testing.md (mention)
-- → docs/testing/check.md (mention)
-- → docs/testing/tap-tests.md (mention)
-- → src/services/AGENTS.md (mention)
-- → docs/plans/README.md (mention)
 
 #### docs/plans/route-splitting.md
 
@@ -9231,7 +9248,7 @@ Title: "Server configuration" | 213 lines | current reference
 Referenced by:
 - docs/implemented-plans/doc-structure-connectors.md:87 (mention) — `server/configuration.md`'s Google OAuth env vars.
 - docs/implemented-plans/doc-structure-install-server.md:81 (mention) — | `deploy/README.md` Environment variables, Web Push, Authentication, Google OAuth, Per-box access control; `server-oper
-- docs/notifications.md:181 (link) — are in [server configuration](server/configuration.md#web-push-vapid-keys). The
+- docs/notifications.md:185 (link) — are in [server configuration](server/configuration.md#web-push-vapid-keys). The
 - docs/server.md:15 (link) — | [Configuration](server/configuration.md) | `/home/beebox/.env`, the service user's Claude and Codex logins, box login
 - docs/server/boxes.md:96 (link) — owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:33 (mention) — (`beebox/docs/server/configuration.md`), so its box agents likely see that
@@ -9345,12 +9362,12 @@ References:
 
 #### docs/testing/check.md
 
-Title: "Tests with `t.check`" | 284 lines | current reference
+Title: "Tests with `t.check`" | 288 lines | current reference
 
 Referenced by:
 - AGENTS.md:19 (link) — - Write tests as `.test.ts` files that use `t.check` ([reference](docs/testing/check.md)). The [testing guide](docs/test
 - docs/guides.md:55 (link) — | Test syntax (`t.check`) | [check](testing/check.md) |
-- docs/plans/retire-doctest.md:425 (mention) — - **New file:** `beebox/docs/testing/check.md`, the reference for
+- docs/implemented-plans/retire-doctest.md:425 (mention) — - **New file:** `beebox/docs/testing/check.md`, the reference for
 - docs/testing.md:21 (link) — - **`.test.ts` with `t.check` is the test form** ([reference](testing/check.md)). Each check compares a whole value, and
 - docs/testing/tap-tests.md:4 (mention) — `t.check`](check.md). This page covers how the runner is set up.
 - docs/testing/tours.md:35 (link) — [tests](check.md); "does the app boot at all" is the
@@ -9474,7 +9491,7 @@ Title: "The tap runner" | 45 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure.md:299 (mention) — tap-tests.md           what a doctest cannot test without circularity
-- docs/plans/retire-doctest.md:1009 (mention) — - `docs/testing/tap-tests.md`.
+- docs/implemented-plans/retire-doctest.md:1053 (mention) — - `docs/testing/tap-tests.md`.
 - docs/testing.md:44 (link) — | [The tap runner](testing/tap-tests.md) | How is the test runner set up, and why does it fail the way it does? | merge
 
 References:
@@ -9861,6 +9878,7 @@ Referenced by:
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
 - docs/implemented-plans/remove-telegram.md:152 (mention) — - **Agent-facing text:** `src/core/agent-guide/guide.md:309, 405`,
 - docs/implemented-plans/retire-memo.md:230 (mention) — memo mentions in `agent-guide/guide.md:79,285,406`, `capture-session.tsx:84`,
+- docs/plans/bbx-remind.md:60 (mention) — - No channel can reach the person at the chosen loudness: the command refuses and says how to turn a channel on. The age
 - docs/plans/prompt-surface-cleanup-evaluation.md:653 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
 - docs/prompts/review.md:67 (mention) — - **Elevate only the inviolable.** A truly inviolable rule moves into The Laws (the `## THE_LAWS` section of `src/core/a
 - docs/questions.md:294 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
@@ -9981,10 +9999,11 @@ Title: "Hub" | 70 lines
 
 Referenced by:
 - AGENTS.md:44 (link) — - Hub routing: `src/hub/`; read [hub guidance](src/hub/AGENTS.md). Tests mirror source paths under `test/` and use helpe
-- docs/chat/schedules.md:81 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
+- docs/chat/schedules.md:101 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
 - docs/implemented-plans/docs-reorg.md:320 (mention) — conventions documented at colocated homes (new `src/hub/AGENTS.md`,
 - docs/implemented-plans/file-layout.md:134 (mention) — `src/services/AGENTS.md`, `src/hub/AGENTS.md`, `src/dev/AGENTS.md`,
 - docs/implemented-plans/mobile-token-handshake.md:82 (mention) — unacceptable."* `src/hub/AGENTS.md` reinforces it: `CHILD_ENV_ALLOWLIST` deliberately
+- docs/plans/bbx-remind.md:85 (mention) — chat schedule is pending (`src/hub/AGENTS.md:55`, *"Chat schedules override
 - docs/server/boxes.md:30 (mention) — persisted to `hub-state.json` beside the config) — see `src/hub/AGENTS.md`.
 - ../issues/docs-and-chores/2026-07-04-box-registry-manifests.md:33 (mention) — `beebox/src/hub/AGENTS.md`,
 
@@ -10035,12 +10054,12 @@ Referenced by:
 - docs/implemented-plans/file-layout.md:134 (mention) — `src/services/AGENTS.md`, `src/hub/AGENTS.md`, `src/dev/AGENTS.md`,
 - docs/implemented-plans/remove-open-mode.md:57 (mention) — services convention, `src/services/AGENTS.md`.)
 - docs/implemented-plans/remove-telegram.md:161 (mention) — `src/connectors/AGENTS.md`, `src/services/AGENTS.md`,
+- docs/implemented-plans/retire-doctest.md:1055 (mention) — `scan-uploader/AGENTS.md`, `src/services/AGENTS.md:44,78,87`,
 - docs/implemented-plans/semantic-search.md:41 (mention) — - `src/services/AGENTS.md`: *"if a library or function touches external
 - docs/implemented-plans/web-push-notifications.md:203 (mention) — `src/services/AGENTS.md`): `sendNotification(subscription, payload)` →
 - docs/plans/asset-offbox-storage.md:255 (mention) — `src/services/AGENTS.md`.
-- docs/plans/retire-doctest.md:1011 (mention) — `scan-uploader/AGENTS.md`, `src/services/AGENTS.md:44,78,87`,
 - docs/plans/scan-vision-claude.md:361 (mention) — `src/services/AGENTS.md` named-params + describe rules.
-- docs/testing/check.md:196 (mention) — in-memory fakes. The service layer is documented in `src/services/AGENTS.md`.
+- docs/testing/check.md:200 (mention) — in-memory fakes. The service layer is documented in `src/services/AGENTS.md`.
 - src/connectors/AGENTS.md:15 (mention) — See `src/services/AGENTS.md` for the full service layer documentation: interfaces, fakes, call logging, and testing patt
 
 ### test/fixtures/theme-tour/

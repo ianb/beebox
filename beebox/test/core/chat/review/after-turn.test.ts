@@ -137,20 +137,29 @@ void test("Two chats have finished a substantial first turn.", async (t) => {
 
   // doctest:L118
   const state = await loadReviewState(box.root);
-  t.check(
-    ({
-      a: state.sessions[A]?.applied["title"]?.endUuid,
-      owner: state.sessions[A]?.titleOwner,
-      b: state.sessions[B] ?? null,
-      huskB: (await readFile(box.path(huskB), "utf8")).includes("title:"),
-    }),
-    {
-    a: "a2",
-    owner: "generated",
-    b: null,
-    huskB: false,
-  },
-  );
+  t.check(state, {
+    lastRunAt: null,
+    sessions: {
+      [A]: {
+        applied: {
+          title: {
+            spanId: "f13ea7698283a1c8",
+            endUuid: "a2",
+            endIndex: 1,
+            prefixHash: "7c7e9990cb2bbd03",
+            at: NOW.toISOString(),
+          },
+        },
+        titleOwner: "generated",
+        titleHash: "245ff8bea4776953",
+        attempts: 0,
+        titleAttempts: 0,
+      },
+    },
+  });
+  t.checkText(await readFile(box.path(huskB), "utf8"), `---
+session: ${B}
+---`);
 
   // The next turn finds the title journal and makes no call; refreshing the title
   // is the nightly run's job.
@@ -163,7 +172,7 @@ void test("Two chats have finished a substantial first turn.", async (t) => {
   });
 
   // doctest:L136
-  await t.checkText(again.titleCalls.length, "0");
+  t.check(again.titleCalls, []);
 
   // The nightly run does not redo it either. Session A has one user turn, below
   // the nightly two-turn minimum, and session B is still inside the quiescence
@@ -172,13 +181,33 @@ void test("Two chats have finished a substantial first turn.", async (t) => {
   // doctest:L145
   const nightly = fakeReviewer("Nightly title");
   const summary = await runChatReview(box.root, { reviewer: nightly, maxSessions: 10, now: NOW, ownerEmail: null });
-  t.check(({ titled: summary.titled, calls: nightly.titleCalls.length }), {
+  t.check(summary, {
+    reviewed: 0,
     titled: 0,
-    calls: 0,
+    titlesKept: 0,
+    alreadyApplied: 0,
+    bootstrapped: 0,
+    rewritten: 0,
+    reviewerFailures: 0,
+    sessionErrors: 0,
+    exhausted: 0,
+    rejected: [],
+    missingTranscripts: 0,
+    deferredActive: 2,
+    belowThreshold: 0,
+    belowTitleThreshold: 0,
+    tooFewTurns: 0,
+    foreignOrigin: 0,
+    overflow: 0,
   });
+  t.check(nightly.titleCalls, []);
 
   // doctest:L150
-  await t.checkText((await readFile(box.path(huskA), "utf8")).includes("title: Saturday birthday dinner for eight"), "true");
+  t.checkText(await readFile(box.path(huskA), "utf8"), `---
+session: ${A}
+title: Saturday birthday dinner for eight
+first-message: Help me plan a birthday dinner for Saturday, eight people, one vegetarian.
+---`);
 });
 
 // ## The title run commits its usage line
@@ -214,7 +243,10 @@ void test("A real title pass is a model session, and every model session appends
   };
 
   // doctest:L183
-  t.check((await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null })).kind, "titled");
+  t.check(await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null }), {
+    kind: "titled",
+    title: "Saturday birthday dinner for eight",
+  });
 
   // doctest:L186
   const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
@@ -265,7 +297,25 @@ void test("The nightly run calls the same title pass, so a chat it titles append
   };
 
   // doctest:L226
-  t.check((await runChatReview(box.root, { reviewer, maxSessions: 10, now: NOW, ownerEmail: null })).titled, 1);
+  t.check(await runChatReview(box.root, { reviewer, maxSessions: 10, now: NOW, ownerEmail: null }), {
+    reviewed: 0,
+    titled: 1,
+    titlesKept: 0,
+    alreadyApplied: 0,
+    bootstrapped: 0,
+    rewritten: 0,
+    reviewerFailures: 0,
+    sessionErrors: 0,
+    exhausted: 0,
+    rejected: [],
+    missingTranscripts: 0,
+    deferredActive: 0,
+    belowThreshold: 1,
+    belowTitleThreshold: 0,
+    tooFewTurns: 0,
+    foreignOrigin: 0,
+    overflow: 0,
+  });
 
   // doctest:L229
   const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
@@ -345,9 +395,26 @@ void test("The husk already carries a title nobody generated, so the pass record
   });
 
   // doctest:L286
-  t.check(({ calls: reviewer.titleCalls.length, owner: (await loadReviewState(box.root)).sessions[A]?.titleOwner }), {
-    calls: 0,
-    owner: "manual",
+  t.check(reviewer.titleCalls, []);
+  t.check(await loadReviewState(box.root), {
+    lastRunAt: null,
+    sessions: {
+      [A]: {
+        applied: {
+          title: {
+            spanId: "3b8a22e9394cc8e1",
+            endUuid: "m2",
+            endIndex: 1,
+            prefixHash: "1099de046fd3d6fc",
+            at: NOW.toISOString(),
+          },
+        },
+        titleOwner: "manual",
+        titleHash: null,
+        attempts: 0,
+        titleAttempts: 0,
+      },
+    },
   });
 });
 
@@ -402,10 +469,8 @@ void test("wireAfterTurnTitling listens for a chat session's done and titles tha
   ]);
 
   // doctest:L329
-  t.check(({ calls: reviewer.titleCalls, huskB: (await readFile(box.path(huskB), "utf8")).includes("title:") }), {
-    calls: [
-      "aaaaaaaa-1111-4111-8111-111111111111",
-    ],
-    huskB: false,
-  });
+  t.check(reviewer.titleCalls, [A]);
+  t.checkText(await readFile(box.path(huskB), "utf8"), `---
+session: ${B}
+---`);
 });

@@ -36,10 +36,10 @@ void test("A missing ledger reads as empty", async (t) => {
   });
   // doctest:L31
   const box = await makeTmpBox();
-  await t.checkText((await loadLedgerEntries(box.root)).length, "0");
+  t.check(await loadLedgerEntries(box.root), []);
 
   // doctest:L35
-  await t.checkText((await loadEvidenceHashes(box.root)).size, "0");
+  t.check(await loadEvidenceHashes(box.root), new Set());
 });
 
 // ## Entries round-trip, and hashes come back as a Set
@@ -62,8 +62,8 @@ void test("Blank and corrupt lines are skipped rather than poisoning the history
   await appendLedgerEntries(box.root, [entry(3)]);
 
   // doctest:L55
-  t.check((await loadLedgerEntries(box.root)).map((e) => e.proposal).join(","), "observation 1,observation 2,observation 3");
+  t.check(await loadLedgerEntries(box.root), [entry(1), entry(2), entry(3)]);
 
   // doctest:L60
-  t.check([...(await loadEvidenceHashes(box.root))].toSorted().join(","), "hash-1,hash-2,hash-3");
+  t.check(await loadEvidenceHashes(box.root), new Set(["hash-1", "hash-2", "hash-3"]));
 });

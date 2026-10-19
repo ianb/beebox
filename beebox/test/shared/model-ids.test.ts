@@ -74,5 +74,5 @@ void test("GPT-5.6 Luna moves to GPT-6 Luna; GPT-5.6 Sol and GPT-6 Sol move to G
 // ## Live IDs pass through unchanged
 void test("Live IDs pass through unchanged", async (t) => {
   // doctest:L73
-  await t.checkText(normalizeModelId(MODEL_ID.sonnet) === MODEL_ID.sonnet, "true");
+  t.check(normalizeModelId(MODEL_ID.sonnet), MODEL_ID.sonnet);
 });

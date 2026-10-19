@@ -34,22 +34,18 @@ void test("A short body stays a single document; the contains sentence rides alo
     "_content/inbox/Dentist_Call.doc.card",
     "---\ntitle: Dentist call\ncontains: Dentist moved to June 17; confirmation in this email.\n---\nThe dentist called — appointment moved to June 17.\n"
   );
-  await t.checkText(docs.length, "1");
-
-  // doctest:L41
-  t.check(docs[0]?.id, "_content/inbox/Dentist_Call.doc.card#");
-
-  // doctest:L44
-  t.check(docs[0]?.kind, "doc");
-
-  // doctest:L47
-  t.check(docs[0]?.title, "Dentist call");
-
-  // doctest:L50
-  t.check(docs[0]?.contains, "Dentist moved to June 17; confirmation in this email.");
-
-  // doctest:L53
-  t.check(docs[0]?.content, "The dentist called — appointment moved to June 17.");
+  t.check(docs, [
+    {
+      path: "_content/inbox/Dentist_Call.doc.card",
+      kind: "doc",
+      title: "Dentist call",
+      contains: "Dentist moved to June 17; confirmation in this email.",
+      contentHash: "hash0",
+      id: "_content/inbox/Dentist_Call.doc.card#",
+      fragment: "",
+      content: "The dentist called — appointment moved to June 17.",
+    },
+  ]);
 });
 
 // ## Email messages fold headers and snippet, never the body file
@@ -59,13 +55,18 @@ void test("Email messages fold headers and snippet, never the body file", async 
     "_content/inbox/email/t.attach/msg-001.email-message.card",
     "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: alice@example.com\n  to: bob@example.com\n  received: 2026-05-14T19:00:00Z\n  subject: Weekend plans\n  snippet: Hey, are you free Saturday...\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n"
   );
-  t.check(docs[0]?.title, "Weekend plans");
-
-  // doctest:L67
-  await t.checkText(docs[0]?.content, `Weekend plans
-alice@example.com
-bob@example.com
-Hey, are you free Saturday...`);
+  t.check(docs, [
+    {
+      path: "_content/inbox/email/t.attach/msg-001.email-message.card",
+      kind: "email-message",
+      title: "Weekend plans",
+      contains: "",
+      contentHash: "hash0",
+      id: "_content/inbox/email/t.attach/msg-001.email-message.card#",
+      fragment: "",
+      content: "Weekend plans\nalice@example.com\nbob@example.com\nHey, are you free Saturday...",
+    },
+  ]);
 
   // doctest:L73
   t.check(declareInputFiles({ path: "_content/inbox/email/t.attach/msg-001.email-message.card", card: await loadCardFromText({ content: "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: a@x.com\n  received: 2026-05-14T19:00:00Z\n  subject: s\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n", source: "_content/inbox/email/t.attach/msg-001.email-message.card", ctx }) }), []);
@@ -78,12 +79,18 @@ void test("Email threads fold subject, participants, labels, and date-range", as
     "_content/inbox/email/thread-x.email-thread.card",
     "---\nemail:\n  thread-id: t1\n  subject: Usage-based pricing demo\n  participants:\n    - hello@metricly.example\n  date-range:\n    start: 2026-05-14T19:00:00Z\n    end: 2026-05-14T19:00:00Z\n  labels:\n    - promotions\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n"
   );
-  t.check(docs[0]?.title, "Usage-based pricing demo");
-
-  // doctest:L87
-  await t.checkText(docs[0]?.content, `Usage-based pricing demo
-hello@metricly.example
-promotions`);
+  t.check(docs, [
+    {
+      path: "_content/inbox/email/thread-x.email-thread.card",
+      kind: "email-thread",
+      title: "Usage-based pricing demo",
+      contains: "",
+      contentHash: "hash0",
+      id: "_content/inbox/email/thread-x.email-thread.card#",
+      fragment: "",
+      content: "Usage-based pricing demo\nhello@metricly.example\npromotions",
+    },
+  ]);
 });
 
 // ## Gdocs declare their content snapshot and index it as the body
@@ -99,10 +106,18 @@ void test("Gdocs declare their content snapshot and index it as the body", async
   // doctest:L102
   const inputContents = new Map([["_content/drive/Project_Notes.attach/Project_Notes.md", "Quarterly planning notes for the project."]]);
   const docs = extractCardDocs({ path, card, contentHash: "h1", inputContents });
-  t.check(docs[0]?.title, "Project Notes");
-
-  // doctest:L107
-  t.check(docs[0]?.content, "Quarterly planning notes for the project.");
+  t.check(docs, [
+    {
+      path: "_content/drive/Project_Notes.gdoc.card",
+      kind: "gdoc",
+      title: "Project Notes",
+      contains: "",
+      contentHash: "h1",
+      id: "_content/drive/Project_Notes.gdoc.card#",
+      fragment: "",
+      content: "Quarterly planning notes for the project.",
+    },
+  ]);
 });
 
 // ## A briefing's purpose is folded in from frontmatter
@@ -116,7 +131,18 @@ void test("The purpose statement lives in the briefing's purpose: field, not its
     "_content/garden/briefing.briefing.card",
     "---\ntype: briefing\npurpose: Plans and records for the vegetable garden.\n---\n"
   );
-  t.check(docs[0]?.content.includes("vegetable garden"), true);
+  t.check(docs, [
+    {
+      path: "_content/garden/briefing.briefing.card",
+      kind: "briefing",
+      title: "briefing",
+      contains: "",
+      contentHash: "hash0",
+      id: "_content/garden/briefing.briefing.card#",
+      fragment: "",
+      content: "Plans and records for the vegetable garden.",
+    },
+  ]);
 });
 
 // ## An image's description doubles as its contains fallback; OCR text indexes
@@ -126,13 +152,18 @@ void test("An image's description doubles as its contains fallback; OCR text ind
     "_bookkeeping/archive/photo.image.card",
     "---\nfilename:\n  ref: attach/boiler.jpg\n  via:\n    channel: camera-user\n    at: 2026-05-01T10:00:00Z\ndescription: The boiler's serial-number plate (K-44210)\ntext:\n  - source: plate\n    content: Serial K-44210 Model HX-200 240V\n---\n"
   );
-  t.check(docs[0]?.contains, "The boiler's serial-number plate (K-44210)");
-
-  // doctest:L136
-  t.check(docs[0]?.title, "The boiler's serial-number plate (K-44210)");
-
-  // doctest:L139
-  t.check(docs[0]?.content.includes("Model HX-200 240V"), true);
+  t.check(docs, [
+    {
+      path: "_bookkeeping/archive/photo.image.card",
+      kind: "image",
+      title: "The boiler's serial-number plate (K-44210)",
+      contains: "The boiler's serial-number plate (K-44210)",
+      contentHash: "hash0",
+      id: "_bookkeeping/archive/photo.image.card#",
+      fragment: "",
+      content: "The boiler's serial-number plate (K-44210)\nSerial K-44210 Model HX-200 240V",
+    },
+  ]);
 });
 
 // ## Long bodies split into per-section documents; the preamble stays on the card
@@ -144,38 +175,50 @@ void test("Long bodies split into per-section documents; the preamble stays on t
     "box/examples/Engine.doc.card",
     `---\ntitle: The Analytical Engine\n---\n${bodyText}`
   );
-  t.check(docs.map((d) => d.fragment), [
-    "",
-    "/Mill",
-    "/Mill/Gears",
-    "/Store",
+  const engineDoc = (fragment: string, content: string) => ({
+    path: "box/examples/Engine.doc.card",
+    kind: "doc",
+    title: "The Analytical Engine",
+    contains: "",
+    contentHash: "hash0",
+    id: `box/examples/Engine.doc.card#${fragment}`,
+    fragment,
+    content,
+  });
+  t.check(docs, [
+    engineDoc("", "Intro before any heading."),
+    engineDoc("/Mill", section.trim()),
+    engineDoc("/Mill/Gears", section.trim()),
+    engineDoc("/Store", section.trim()),
   ]);
-
-  // doctest:L155
-  t.check(docs[0]?.content, "Intro before any heading.");
-
-  // doctest:L158
-  t.check(docs[1]?.id, "box/examples/Engine.doc.card#/Mill");
-
-  // doctest:L161
-  await t.checkText(docs.every((d) => d.kind === "doc" && d.title === "The Analytical Engine"), "true");
 });
 
 // ## Short bodies with headings stay one document
 void test("Short bodies with headings stay one document", async (t) => {
   // doctest:L168
   const split = splitMarkdownSections("Preamble.\n\n# One\nalpha\n\n# Two\nbeta\n");
-  t.check(split.preamble, "Preamble.");
-
-  // doctest:L172
-  t.check(split.sections.map((s) => s.fragment), [
-    "/One",
-    "/Two",
-  ]);
+  t.check(split, {
+    preamble: "Preamble.",
+    sections: [
+      { fragment: "/One", line: 2, text: "alpha" },
+      { fragment: "/Two", line: 5, text: "beta" },
+    ],
+  });
 
   // doctest:L175
   const docs = await docsFor("box/examples/Short.doc.card", "---\ntitle: Short\n---\nPreamble.\n\n# One\nalpha\n");
-  await t.checkText(docs.length, "1");
+  t.check(docs, [
+    {
+      path: "box/examples/Short.doc.card",
+      kind: "doc",
+      title: "Short",
+      contains: "",
+      contentHash: "hash0",
+      id: "box/examples/Short.doc.card#",
+      fragment: "",
+      content: "Preamble.\n\n# One\nalpha",
+    },
+  ]);
 });
 
 // ## Sheets index their tab titles
@@ -185,5 +228,16 @@ void test("Sheets index their tab titles", async (t) => {
     "_content/drive/Budget.gsheet.card",
     "---\ndrive:\n  id: d2\n  link: https://docs.google.com/spreadsheets/d/d2/edit\n  owner: o@example.com\n  modified: 2026-05-01\ntitle: Family Budget\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"
   );
-  t.check(docs[0]?.content, "Monthly Spending");
+  t.check(docs, [
+    {
+      path: "_content/drive/Budget.gsheet.card",
+      kind: "gsheet",
+      title: "Family Budget",
+      contains: "",
+      contentHash: "hash0",
+      id: "_content/drive/Budget.gsheet.card#",
+      fragment: "",
+      content: "Monthly Spending",
+    },
+  ]);
 });

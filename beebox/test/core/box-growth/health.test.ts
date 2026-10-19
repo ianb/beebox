@@ -6,7 +6,8 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, str } from "agent-doctest/check";
+import assert from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -31,8 +32,6 @@ const at = (iso: string) => new Date(iso);
 // against a baseline measured right after `makeTmpBox` — before this test adds
 // anything of its own.
 void test("A fresh v3 box already carries the scaffolded skeleton (every underscore area...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -40,11 +39,9 @@ void test("A fresh v3 box already carries the scaffolded skeleton (every undersc
       t.error(error);
     }
   });
-  // doctest:L33
   const box = await makeTmpBox({ git: true });
   const baseline = await measureBoxGrowth(box.root, { now: at("2026-08-05T11:00:00Z") });
 
-  // doctest:L36
   await box.write("_content/inbox/email/thread/message.txt", "mail");
   await box.write("_content/chat/session/transcript.md", "chat");
   await box.write("_content/drive/folder/deep/document.md", "drive");
@@ -60,46 +57,57 @@ void test("A fresh v3 box already carries the scaffolded skeleton (every undersc
   await fs.symlink(box.path("_content/inbox"), box.path("box-link"));
   box.commitAll("seed growth fixture");
 
-  // doctest:L51
   const measured = await measureBoxGrowth(box.root, { now: at("2026-08-05T12:00:00Z") });
 
-  // doctest:L53
   // Connector subtrees always float to the ranked top regardless of size, so
   // they reliably survive the size cap below. Every other entry —
   // `_content/chat/session`, `_content/tmp-upload`, `box-link` — is the same size as
   // many of the skeleton's own "unknown" entries and can lose a ranking tie
   // against them, so only the connector paths are asserted here.
-  print(`directories: ${measured.counts.directories - baseline.counts.directories}`);
-  print(`files: ${measured.counts.files - baseline.counts.files}`);
-  print(`complete: ${measured.complete}`);
-  print(`history: ${measured.history.status}`);
-  // Disk use: .beebox is measured on its own, never as box content.
-  const engineGrew = measured.bytes.status === "available" && baseline.bytes.status === "available"
-    && measured.bytes.engineBytes > baseline.bytes.engineBytes;
-  print(`bytes: ${measured.bytes.status} engine-grew: ${engineGrew}`);
+  assert(baseline.bytes.status === "available");
   const baselineFiles = new Map(baseline.largestSubtrees.map((item) => [item.path, item.files]));
-  const subtreeLabel = (p: string) => {
+  const connectorDelta = (p: string) => {
     const item = measured.largestSubtrees.find((i) => i.path === p);
-    const delta = item === undefined ? undefined : item.files - (baselineFiles.get(p) ?? 0);
-    return `${p}:${item?.source}:${delta}`;
+    return { path: p, source: item?.source, files: item === undefined ? undefined : item.files - (baselineFiles.get(p) ?? 0) };
   };
-  await t.checkText(out.with(print(["_content/drive", "_content/inbox/email"].map(subtreeLabel).join("\n"))), `directories: 7
-files: 6
-complete: true
-history: available
-bytes: available engine-grew: true
-_content/drive:connector:2
-_content/inbox/email:connector:1`);
-
-  // doctest:L82
-  await t.checkText(out.with(measured.largestSubtrees.length <= 20), "true");
+  // Git hash, object counts and disk sizes vary between runs; engine bytes must have grown.
+  // Git hash, object counts and disk sizes vary between runs; engine bytes must have grown.
+  t.check(
+    {
+      directories: measured.counts.directories - baseline.counts.directories,
+      files: measured.counts.files - baseline.counts.files,
+      complete: measured.complete,
+      history: measured.history,
+      bytes: measured.bytes,
+      connectors: ["_content/drive", "_content/inbox/email"].map(connectorDelta),
+    },
+    {
+      directories: 7,
+      files: 6,
+      complete: true,
+      history: {
+        status: "available",
+        gitHead: any(String),
+        commits: 2,
+        gitObjects: any(Number).positive(),
+        gitBytes: any(Number).positive(),
+      },
+      bytes: {
+        status: "available",
+        contentBytes: any(Number).positive(),
+        engineBytes: any(Number).between(baseline.bytes.engineBytes + 1, Infinity),
+      },
+      connectors: [
+        { path: "_content/drive", source: "connector", files: 2 },
+        { path: "_content/inbox/email", source: "connector", files: 1 },
+      ],
+    },
+  );
+  t.check(measured.largestSubtrees.slice(20), []);
 });
 
 // ## Hourly and connector-weighted policy; size alone is never a finding
 void test("Hourly and connector-weighted policy; size alone is never a finding", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L93
   const emailSubtree: SubtreeCounts = { path: "_content/inbox/email", directories: 20, files: 20, source: "connector", sourceLabel: "Gmail" };
   const base: GrowthMeasurement = {
     measuredAt: "2026-08-05T12:00:00.000Z",
@@ -119,40 +127,45 @@ void test("Hourly and connector-weighted policy; size alone is never a finding",
     largestSubtrees: [{ ...emailSubtree, directories: 121, files: 121 }],
   };
   const findings = evaluateBoxGrowth({ previous: base, current: fast });
-  await t.checkText(out.with(print(findings.map((finding) => `${finding.kind}:${finding.path ?? "box"}`).join("\n"))), `rate-directories:_content/inbox/email
-rate-files:_content/inbox/email
-rate-commits:box
-rate-connector-directories:_content/inbox/email
-rate-connector-files:_content/inbox/email`);
+  t.check(findings, [
+    { kind: "rate-directories", path: "_content/inbox/email", actual: 110, threshold: 10 },
+    { kind: "rate-files", path: "_content/inbox/email", actual: 110, threshold: 25 },
+    { kind: "rate-commits", actual: 101, threshold: 10 },
+    { kind: "rate-connector-directories", path: "_content/inbox/email", actual: 101, threshold: 5 },
+    { kind: "rate-connector-files", path: "_content/inbox/email", actual: 101, threshold: 10 },
+  ]);
 
   // Disk use warns on rate too, for box content and for `.beebox` separately.
   // A measurement without bytes (an old state file, a failed `du`) has no byte
   // finding:
 
-  // doctest:L126
   const MB = 1024 * 1024;
   const sized: GrowthMeasurement = { ...base, bytes: { status: "available", contentBytes: 400 * MB, engineBytes: 200 * MB } };
   const indexBlewUp: GrowthMeasurement = { ...sized, measuredAt: "2026-08-05T13:00:00.000Z", bytes: { status: "available", contentBytes: 402 * MB, engineBytes: 365 * MB } };
-  await t.checkText(out.with(evaluateBoxGrowth({ previous: sized, current: indexBlewUp }).map((f) => `${f.kind}:${Math.round(f.actual / MB)}`).join(",")), "rate-engine-bytes:165");
+  t.check(evaluateBoxGrowth({ previous: sized, current: indexBlewUp }), [
+    { kind: "rate-engine-bytes", actual: 165 * MB, threshold: 100 * MB },
+  ]);
 
-  // doctest:L132
-  await t.checkText(out.with(evaluateBoxGrowth({ previous: base, current: indexBlewUp }).length), "0");
+  t.check(evaluateBoxGrowth({ previous: base, current: indexBlewUp }), []);
 
   // A box is never warned about for being large. One Gmail account with a few
   // hundred archived threads holds thousands of files and directories, and a
   // fixed level warned about it permanently while saying nothing useful. A large
   // box growing slowly has no finding:
 
-  // doctest:L142
   const large: GrowthMeasurement = { ...base, counts: { directories: 1_800, files: 3_500 } };
   const slightlyLarger: GrowthMeasurement = { ...large, measuredAt: "2026-08-05T13:00:00.000Z", counts: { directories: 1_801, files: 3_502 } };
-  await t.checkText(out.with(evaluateBoxGrowth({ previous: large, current: slightlyLarger }).length), "0");
+  t.check(evaluateBoxGrowth({ previous: large, current: slightlyLarger }), []);
 
-  // doctest:L147
   const enteredTopTwenty: GrowthMeasurement = { ...fast, largestSubtrees: [{ ...emailSubtree, directories: 121, files: 121, path: "_content/drive" }] };
-  await t.checkText(out.with(evaluateBoxGrowth({ previous: base, current: enteredTopTwenty }).some((item) => item.kind.startsWith("rate-connector"))), "true");
+  t.check(evaluateBoxGrowth({ previous: base, current: enteredTopTwenty }), [
+    { kind: "rate-directories", path: "_content/drive", actual: 110, threshold: 10 },
+    { kind: "rate-files", path: "_content/drive", actual: 110, threshold: 25 },
+    { kind: "rate-commits", actual: 101, threshold: 10 },
+    { kind: "rate-connector-directories", path: "_content/drive", actual: 121, threshold: 5 },
+    { kind: "rate-connector-files", path: "_content/drive", actual: 121, threshold: 10 },
+  ]);
 
-  // doctest:L151
   const newImport: GrowthMeasurement = {
     ...fast,
     counts: { directories: 100, files: 600 },
@@ -164,25 +177,17 @@ rate-connector-files:_content/inbox/email`);
       sourceLabel: null,
     }],
   };
-  await t.checkText(
-    out.with(evaluateBoxGrowth({ previous: base, current: newImport })
-      .find((item) => item.kind === "rate-files")?.path),
-    "store/import-2026/batch1",
-  );
+  t.check(evaluateBoxGrowth({ previous: base, current: newImport }), [
+    { kind: "rate-files", path: "store/import-2026/batch1", actual: 500, threshold: 25 },
+    { kind: "rate-commits", actual: 101, threshold: 10 },
+  ]);
 
-  // doctest:L166
   const partial: GrowthMeasurement = { ...fast, complete: false };
-  await t.checkText(
-    out.with(evaluateBoxGrowth({ previous: base, current: partial })
-      .some((item) => item.kind.startsWith("rate-"))),
-    "false",
-  );
+  t.check(evaluateBoxGrowth({ previous: base, current: partial }), []);
 });
 
 // ## Box-shape failure degrades only Git history
 void test("Box-shape failure degrades only Git history", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await badShape.cleanup();
@@ -190,7 +195,6 @@ void test("Box-shape failure degrades only Git history", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L175
   const badShape = await makeTmpBox();
   const badShapeBaseline = await measureBoxGrowth(badShape.root, { now: at("2026-08-05T11:00:00Z") });
   await badShape.write("plain.txt", "content");
@@ -198,7 +202,14 @@ void test("Box-shape failure degrades only Git history", async (t) => {
   const badShapeMeasurement = await measureBoxGrowth(badShape.root, {
     now: at("2026-08-05T12:00:00Z"),
   });
-  await t.checkText(out.with(print(`${badShapeMeasurement.counts.files - badShapeBaseline.counts.files}:${badShapeMeasurement.history.status}`)), "1:unavailable");
+  t.check({ files: badShapeMeasurement.counts.files - badShapeBaseline.counts.files, history: badShapeMeasurement.history },
+    {
+      files: 1,
+      history: {
+        status: "unavailable",
+        error: str`Box at ${badShape.root} declares shapeVersion 1. This box predates the one-root layout (shapeVersion 3) and cannot be opened. The v2-to-v3 conversion has been removed — no box was left on that shape. See docs/box-layout.md.`,
+      },
+    });
 });
 
 // ## Persisted baseline, due interval, acknowledgement, and health
@@ -207,8 +218,6 @@ void test("Box-shape failure degrades only Git history", async (t) => {
 // after a growth warning, accepting the current size re-baselines all three
 // measurements and removes the action.
 void test("The first scan establishes a baseline.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -216,57 +225,65 @@ void test("The first scan establishes a baseline.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L197
   const box = await makeTmpBox({ git: true });
   const first = await measureBoxGrowthIfDue(box.root, { now: at("2026-08-05T12:00:00Z") });
-  print(first.status);
+  // The measurement state holds the scaffolded skeleton's counts, git hashes and
+  // disk sizes, so these check the outcome fields of each result.
   const skipped = await measureBoxGrowthIfDue(box.root, { now: at("2026-08-05T12:30:00Z") });
-  print(skipped.status);
+  t.check(
+    { first: first.status, skipped: skipped.status, skippedReason: skipped.status === "skipped" ? skipped.reason : undefined },
+    { first: "measured", skipped: "skipped", skippedReason: "not-due" },
+  );
 
-  // doctest:L203
   const state = await readBoxGrowthState(box.root);
-  print(state.status);
-  print(path.relative(box.root, boxGrowthStatePath(box.root)));
+  t.check(state.status, "measured");
+  t.check(path.relative(box.root, boxGrowthStatePath(box.root)), ".beebox/box-growth-health.json");
   await fs.unlink(boxGrowthStatePath(box.root));
   const missingBackoff = await measureBoxGrowthIfDue(box.root, {
     now: at("2026-08-05T12:31:00Z"),
     maxDurationMs: 0,
   });
-  await t.checkText(out.with(print(`${missingBackoff.status}:${missingBackoff.status === "skipped" ? missingBackoff.reason : "n/a"}`)), `measured
-skipped
-measured
-.beebox/box-growth-health.json
-skipped:not-due`);
+  t.check(missingBackoff, { status: "skipped", reason: "not-due", state: { status: "missing" } });
 
-  // doctest:L219
   await box.write("_content/inbox/email/new/message.txt", "mail");
   const replacement = await measureBoxGrowthIfDue(box.root, { now: at("2026-08-05T13:00:00Z") });
-  print(replacement.status === "measured" && replacement.notice !== null);
+  const NOTICE = "Box growth state disappeared after this scheduler previously measured the box; a new baseline was created";
+  t.check(
+    { status: replacement.status, notice: replacement.status === "measured" ? replacement.notice : undefined },
+    { status: "measured", notice: NOTICE },
+  );
   const followup = await measureBoxGrowthIfDue(box.root, { now: at("2026-08-05T14:00:00Z") });
-  print(followup.status === "measured" && followup.state.status === "measured" && followup.state.lastNotice !== null);
+  t.check(
+    {
+      status: followup.status,
+      notice: followup.status === "measured" ? followup.notice : undefined,
+      lastNotice: followup.status === "measured" && followup.state.status === "measured" ? followup.state.lastNotice : undefined,
+    },
+    { status: "measured", notice: null, lastNotice: NOTICE },
+  );
   const replacementHealth = await boxGrowthHealthCheck(box.root, {
     now: at("2026-08-05T14:00:00Z"),
     schedulerStatus: "running",
   });
-  print(`${replacementHealth.ok}:${replacementHealth.actions?.join(",")}`);
+  t.check(replacementHealth, {
+    name: "box-growth",
+    ok: false,
+    message: `Box growth warning: ${NOTICE}`,
+    severity: "warning",
+    actions: ["acknowledge-box-growth"],
+  });
   const accepted = await acknowledgeCurrentBoxGrowth(box.root);
-  print(accepted.status);
-  print(accepted.status === "measured" && accepted.previous.measuredAt === accepted.current.measuredAt);
-  print(accepted.status === "measured" ? accepted.rateExpectations.length : -1);
+  assert(accepted.status === "measured");
+  t.check(
+    { previousIsCurrent: accepted.previous, rateExpectations: accepted.rateExpectations },
+    { previousIsCurrent: accepted.current, rateExpectations: [] },
+  );
   const health = await boxGrowthHealthCheck(box.root, { now: at("2026-08-05T14:01:00Z"), schedulerStatus: "running" });
-  await t.checkText(out.with(print(`${health.name}:${health.ok}:${health.actions?.join(",") ?? "none"}`)), `true
-true
-false:acknowledge-box-growth
-measured
-true
-0
-box-growth:true:none`);
+  t.check(health, { name: "box-growth", ok: true, message: "Box growth is within accepted limits", severity: "warning" });
 });
 
 // ## Corrupt state and failed scan stay visible
 void test("Corrupt state and failed scan stay visible", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await corrupt.cleanup();
@@ -275,7 +292,6 @@ void test("Corrupt state and failed scan stay visible", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L252
   const corrupt = await makeTmpBox();
   await fs.mkdir(path.dirname(boxGrowthStatePath(corrupt.root)), { recursive: true });
   await fs.writeFile(boxGrowthStatePath(corrupt.root), "not json");
@@ -283,43 +299,61 @@ void test("Corrupt state and failed scan stay visible", async (t) => {
     now: at("2026-08-05T12:00:00Z"),
     schedulerStatus: "running",
   });
-  print(`${corruptHealth.ok}:${corruptHealth.message.includes("state")}`);
+  t.check(corruptHealth, {
+    name: "box-growth",
+    ok: false,
+    message: "Invalid growth state JSON: Unexpected token 'o', \"not json\" is not valid JSON",
+    severity: "warning",
+  });
 
-  // doctest:L261
   const invalidAttempt = await measureBoxGrowthIfDue(corrupt.root, {
     now: at("2026-08-05T13:00:00Z"),
   });
-  print(`${invalidAttempt.status}:${invalidAttempt.status === "skipped" ? invalidAttempt.reason : "n/a"}`);
+  t.check(invalidAttempt, {
+    status: "skipped",
+    reason: "invalid-state",
+    state: { status: "invalid", error: "Invalid growth state JSON: Unexpected token 'o', \"not json\" is not valid JSON" },
+  });
 
-  // doctest:L266
   const failedBox = await makeTmpBox();
   const failed = await measureBoxGrowthIfDue(failedBox.root, {
     now: at("2026-08-05T13:00:00Z"),
     maxDurationMs: 0,
   });
-  print(failed.status);
+  t.check(failed.status, "measured");
   const failedState = await readBoxGrowthState(failedBox.root);
-  print(`${failedState.status}:${failedState.status === "measured" && failedState.current.complete}`);
-  await t.checkText(out.with(print(failedState.status === "measured" ? failedState.current.filesystemError : "wrong state")), `false:true
-skipped:invalid-state
-measured
-measured:false
-Box growth scan exceeded its time budget`);
+  assert(failedState.status === "measured");
+  t.check(failedState.current, {
+    measuredAt: "2026-08-05T13:00:00.000Z",
+    complete: false,
+    filesystemError: "Box growth scan exceeded its time budget",
+    counts: { directories: 0, files: 0 },
+    skippedDirectories: 0,
+    largestSubtrees: [],
+    history: { status: "unavailable", error: "Git history was not measured because the filesystem scan was incomplete" },
+    bytes: { status: "unavailable", error: "Disk use was not measured because the filesystem scan was incomplete" },
+  });
 });
 
 // A traversal error also retains whatever the native walker reported instead of
 // discarding the sample.
 void test("A traversal error also retains whatever the native walker reported instead of...", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L292
   const vanished = await makeTmpBox();
   const vanishedRoot = vanished.root;
   await vanished.cleanup();
   const vanishedMeasurement = await measureBoxGrowth(vanishedRoot, {
     now: at("2026-08-05T13:00:00Z"),
   });
-  await t.checkText(out.with(print(`${vanishedMeasurement.complete}:${vanishedMeasurement.filesystemError !== null}`)), "false:true");
+  t.check(vanishedMeasurement, {
+    measuredAt: "2026-08-05T13:00:00.000Z",
+    complete: false,
+    filesystemError: str`find failed: find: ${vanishedRoot}: No such file or directory`,
+    counts: { directories: 0, files: 0 },
+    skippedDirectories: 0,
+    largestSubtrees: [],
+    history: { status: "unavailable", error: "Git history was not measured because the filesystem scan was incomplete" },
+    bytes: { status: "unavailable", error: "Disk use was not measured because the filesystem scan was incomplete" },
+  });
 });
 
 // ## Missing and stale scheduler state stay explicit
@@ -327,8 +361,6 @@ void test("A traversal error also retains whatever the native walker reported in
 // No scheduler heartbeat is normal for a local box. Once a scheduler is active,
 // missing state is a warning rather than a silent pass.
 void test("No scheduler heartbeat is normal for a local box.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await missing.cleanup();
@@ -336,7 +368,6 @@ void test("No scheduler heartbeat is normal for a local box.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L308
   const missing = await makeTmpBox();
   const localHealth = await boxGrowthHealthCheck(missing.root, {
     now: at("2026-08-05T12:00:00Z"),
@@ -346,15 +377,16 @@ void test("No scheduler heartbeat is normal for a local box.", async (t) => {
     now: at("2026-08-05T12:00:00Z"),
     schedulerStatus: "running",
   });
-  await t.checkText(out.with(print(`${localHealth.ok}:${scheduledHealth.ok}`)), "true:false");
+  t.check({ local: localHealth, scheduled: scheduledHealth }, {
+    local: { name: "box-growth", ok: true, message: "Box growth monitoring has never run", severity: "warning" },
+    scheduled: { name: "box-growth", ok: false, message: "Box growth monitoring has not published a measurement", severity: "warning" },
+  });
 });
 
 // A state file written before level findings were removed still carries
 // `accepted` and `acknowledgedAt: null`, which used to pin a permanent warning
 // on a large box. It now reads as healthy; the extra keys are dropped.
 void test("A state file written before level findings were removed still carries accepte...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // That state predates disk-use measurement, so the green result says bytes were
   // not checked rather than implying they were. The next hourly measurement
   // records them.
@@ -365,7 +397,6 @@ void test("A state file written before level findings were removed still carries
       t.error(error);
     }
   });
-  // doctest:L330
   const warningBox = await makeTmpBox();
   const warningMeasurement = {
     measuredAt: "2026-08-05T12:00:00.000Z",
@@ -389,18 +420,22 @@ void test("A state file written before level findings were removed still carries
     now: at("2026-08-05T12:01:00Z"),
     schedulerStatus: "running",
   });
-  print(`${warningHealth.ok}:${warningHealth.actions?.join(",") ?? "none"}`);
-  print(warningHealth.message);
+  t.check(warningHealth, {
+    name: "box-growth",
+    ok: true,
+    message: "Box growth is within accepted limits; not measured: disk use (not measured)",
+    severity: "warning",
+  });
   const rewritten = await readBoxGrowthState(warningBox.root);
-  await t.checkText(out.with(print(rewritten.status === "measured" && !("acknowledgedAt" in rewritten))), `true:none
-Box growth is within accepted limits; not measured: disk use (not measured)
-true`);
+  // The rewritten state holds the whole measurement; the contract here is that the stale key is gone.
+  t.check(
+    { status: rewritten.status, hasAcknowledgedAt: "acknowledgedAt" in rewritten },
+    { status: "measured", hasAcknowledgedAt: false },
+  );
 });
 
 // Independent connector growth never hides a larger box-wide producer.
 void test("Independent connector growth never hides a larger box-wide producer.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await mixedBox.cleanup();
@@ -408,7 +443,6 @@ void test("Independent connector growth never hides a larger box-wide producer."
       t.error(error);
     }
   });
-  // doctest:L374
   const mixedBox = await makeTmpBox();
   const mixedPrevious = {
     measuredAt: "2026-08-05T12:00:00.000Z",
@@ -442,13 +476,21 @@ void test("Independent connector growth never hides a larger box-wide producer."
     now: at("2026-08-05T13:01:00Z"),
     schedulerStatus: "running",
   });
-  print(`${mixedHealth.message.includes("store/junk")}:${mixedHealth.message.includes("_content/inbox/email")}`);
-  print(mixedHealth.actions?.join(","));
+  t.check(mixedHealth, {
+    name: "box-growth",
+    ok: false,
+    message: "Box growth warning: box grew by 600 files/hour (limit 25); fastest subtree: store/junk; _content/inbox/email grew by 100 files/hour (limit 10); disk use measurement failed: not measured",
+    severity: "warning",
+    actions: ["acknowledge-box-growth", "expect-box-growth-rates"],
+  });
   const expectedRates = await expectCurrentBoxGrowthRates(mixedBox.root, {
     now: at("2026-08-05T13:01:00Z"),
   });
-  if (expectedRates.status !== "measured") throw new Error("expected measured state");
-  print(expectedRates.rateExpectations.map((item) => `${item.kind}:${item.thresholdPerHour}`).toSorted().join("\n"));
+  assert(expectedRates.status === "measured");
+  t.check(expectedRates.rateExpectations, [
+    { kind: "rate-files", path: null, thresholdPerHour: 900, setAt: "2026-08-05T13:01:00.000Z" },
+    { kind: "rate-connector-files", path: "_content/inbox/email", thresholdPerHour: 150, setAt: "2026-08-05T13:01:00.000Z" },
+  ]);
   const repeatedCurrent: GrowthMeasurement = {
     ...expectedRates.current,
     measuredAt: "2026-08-05T14:00:00.000Z",
@@ -458,25 +500,16 @@ void test("Independent connector growth never hides a larger box-wide producer."
       { path: "store/junk", directories: 0, files: 1_000, source: "unknown", sourceLabel: null },
     ],
   };
-  await t.checkText(
-    out.with(print(evaluateBoxGrowth({
-      ...expectedRates,
-      previous: expectedRates.current,
-      current: repeatedCurrent,
-    }).some((item) => item.kind.startsWith("rate-")))),
-    `true:true
-acknowledge-box-growth,expect-box-growth-rates
-rate-connector-files:150
-rate-files:900
-false`,
-  );
+  t.check(evaluateBoxGrowth({
+    ...expectedRates,
+    previous: expectedRates.current,
+    current: repeatedCurrent,
+  }), []);
 });
 
 // Git history failure is reported as degraded measurement detail, not as box
 // growth, when the filesystem counters remain healthy.
 void test("Git history failure is reported as degraded measurement detail, not as box gr...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await noGitBox.cleanup();
@@ -484,7 +517,6 @@ void test("Git history failure is reported as degraded measurement detail, not a
       t.error(error);
     }
   });
-  // doctest:L444
   const noGitBox = await makeTmpBox({ git: "none" });
   const noGitMeasurement = {
     measuredAt: "2026-08-05T12:00:00.000Z",
@@ -507,5 +539,10 @@ void test("Git history failure is reported as degraded measurement detail, not a
     now: at("2026-08-05T12:01:00Z"),
     schedulerStatus: "running",
   });
-  await t.checkText(out.with(print(`${noGitHealth.ok}:${noGitHealth.message}`)), "true:Box growth is within accepted limits; not measured: Git history");
+  t.check(noGitHealth, {
+    name: "box-growth",
+    ok: true,
+    message: "Box growth is within accepted limits; not measured: Git history",
+    severity: "warning",
+  });
 });

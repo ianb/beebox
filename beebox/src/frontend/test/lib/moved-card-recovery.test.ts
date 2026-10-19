@@ -5,7 +5,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { cardLoadRecovery, fileChangeAffectsPath } from "../../src/lib/moved-card-recovery.js";
 import { resolveLoadState } from "../../src/lib/file-load-state.js";
 
@@ -32,8 +31,6 @@ void test("line 11", async (t) => {
 // A failed live refetch can retain cached content and still carry recovery. The
 // two decisions are intentionally independent.
 void test("A failed live refetch can retain cached content and still carry recovery.", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L29
   const movedError = {
     message: "Card not found: _content/Old.doc.card",
@@ -46,9 +43,10 @@ void test("A failed live refetch can retain cached content and still carry recov
     isRefetchError: true,
     error: movedError,
   });
-  print(cached.value);
-  await t.checkText(out.with(JSON.stringify(cardLoadRecovery(movedError))), `the old cached body
-{"kind":"moved","path":"_content/New.doc.card"}`);
+  t.check({ cached: cached.value, recovery: cardLoadRecovery(movedError) }, {
+    cached: "the old cached body",
+    recovery: { kind: "moved", path: "_content/New.doc.card" },
+  });
 });
 
 // An exact file event always refreshes the open file. An ancestor event matters

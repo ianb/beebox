@@ -71,15 +71,12 @@ void test("Session B is most-active, but the schedule was created in session A."
       t.error(error);
     }
   });
-  // doctest:L67
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box.root, backend);
   const eventBus = createEventBus(box.root);
   await setMostActive(box.root, SESSION_B);
   await makeTranscript(box.root, SESSION_A);
-
-  // doctest:L74
   const firePromise = fireChatSchedule(
     { boxRoot: box.root, registry, eventBus, wireSession: noopWire },
     makeSchedule({ sessionId: SESSION_A }),
@@ -87,17 +84,10 @@ void test("Session B is most-active, but the schedule was created in session A."
   await waitForRuns(backend, { count: 1, timeoutMs: 2000 });
   backend.runs[0]?.emitResult();
   await firePromise;
-
-  // doctest:L82
-  t.check({ runs: backend.runs.length, resumed: backend.runs[0]?.startOptions.resumeSessionId }, {
-    runs: 1,
-    resumed: "11111111-1111-4111-8111-111111111111",
-  });
+  t.check(backend.runs.map((run) => run.startOptions.resumeSessionId), [SESSION_A]);
 
   // The reminder is composed by beebox, not typed, so it goes out marked
   // client-composed.
-
-  // doctest:L90
   t.check(backend.runs[0]?.sentClientComposed, [
     true,
   ]);
@@ -163,7 +153,6 @@ void test("A chat that explicitly picked an OpenRouter model the owner has since
       t.error(error);
     }
   });
-  // doctest:L175
   const box4 = await makeTmpBox({ git: true });
   const backend4 = createFakeChatBackend();
   const registry4 = makeRegistry(box4.root, backend4);
@@ -171,11 +160,9 @@ void test("A chat that explicitly picked an OpenRouter model the owner has since
   await makeTranscript(box4.root, SESSION_A);
   // The chat's own pick; the box config has no openrouterModels, as after removal.
   registry4.getOrCreate(SESSION_A).setModel("moonshotai/kimi-k2-0905:exacto");
-
-  // doctest:L183
   await fireChatSchedule(
     { boxRoot: box4.root, registry: registry4, eventBus: eventBus4, wireSession: noopWire },
     makeSchedule({ sessionId: SESSION_A }),
   );
-  await t.checkText(backend4.runs.length, "0");
+  t.check(backend4.runs.map((run) => run.startOptions.resumeSessionId), []);
 });

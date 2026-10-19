@@ -9,7 +9,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import Fastify from "fastify";
 import { registerChromeExtensionCors } from "../../src/webapp/server-root/root-routes.js";
 
@@ -26,8 +25,6 @@ const EXT = "chrome-extension://abcdefghijklmnop";
 
 // ## Extension-origin preflight is answered with the origin reflected
 void test("Extension-origin preflight is answered with the origin reflected", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L29
   const app = await makeServer();
   const res = await app.inject({
@@ -35,15 +32,19 @@ void test("Extension-origin preflight is answered with the origin reflected", as
     url: "/api/trpc/clerk.commentary",
     headers: { origin: EXT, "access-control-request-method": "POST", "access-control-request-headers": "content-type" },
   });
-  print(`status: ${res.statusCode}`);
-  print(`allow-origin: ${res.headers["access-control-allow-origin"]}`);
-  print(`allow-credentials: ${res.headers["access-control-allow-credentials"]}`);
-  print(`methods include POST: ${String(res.headers["access-control-allow-methods"]).includes("POST")}`);
-  await t.checkText(out.with(print(`allow-headers: ${res.headers["access-control-allow-headers"]}`)), `status: 204
-allow-origin: chrome-extension://abcdefghijklmnop
-allow-credentials: true
-methods include POST: true
-allow-headers: Content-Type`);
+  t.check({
+    status: res.statusCode,
+    origin: res.headers["access-control-allow-origin"],
+    credentials: res.headers["access-control-allow-credentials"],
+    methods: res.headers["access-control-allow-methods"],
+    headers: res.headers["access-control-allow-headers"],
+  }, {
+    status: 204,
+    origin: "chrome-extension://abcdefghijklmnop",
+    credentials: "true",
+    methods: "GET,POST,OPTIONS",
+    headers: "Content-Type",
+  });
 
   // ## The real POST response also reflects the extension origin
 
@@ -54,9 +55,10 @@ allow-headers: Content-Type`);
     headers: { origin: EXT, "content-type": "application/json" },
     payload: {},
   });
-  print(`status: ${post.statusCode}`);
-  await t.checkText(out.with(print(`allow-origin: ${post.headers["access-control-allow-origin"]}`)), `status: 200
-allow-origin: chrome-extension://abcdefghijklmnop`);
+  t.check({ status: post.statusCode, origin: post.headers["access-control-allow-origin"] }, {
+    status: 200,
+    origin: "chrome-extension://abcdefghijklmnop",
+  });
 
   // ## A non-extension origin gets no CORS grant
   //
@@ -69,5 +71,5 @@ allow-origin: chrome-extension://abcdefghijklmnop`);
     url: "/api/trpc/clerk.commentary",
     headers: { origin: "https://evil.example", "access-control-request-method": "POST" },
   });
-  await t.checkText(out.with(print(`allow-origin: ${evil.headers["access-control-allow-origin"] ?? "(none)"}`)), "allow-origin: (none)");
+  t.check(evil.headers["access-control-allow-origin"], undefined);
 });

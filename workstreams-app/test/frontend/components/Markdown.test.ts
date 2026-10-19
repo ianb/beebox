@@ -11,55 +11,25 @@ import { Markdown } from "../../../src/frontend/components/Markdown.js";
 
 const render = (source: string): string => renderToStaticMarkup(createElement(Markdown, { source }));
 
-void test("line 14", async (t) => {
-  // doctest:L15
-  t.check(render("## Verify this\n\n- first\n- **second**\n\n`pnpm test`").includes("<h2>Verify this</h2>"), true);
-});
-
-void test("line 19", async (t) => {
-  // doctest:L20
-  t.check(render("## Verify this\n\n- first\n- **second**\n\n`pnpm test`").includes("<strong>second</strong>"), true);
-});
-
-void test("line 24", async (t) => {
-  // doctest:L25
-  t.check(
-    render("[safe](HTTPS://example.com) [relative](../plan.md) [unsafe](custom:payload)").includes('href="HTTPS://example.com"')
-    ,
-    true,
+void test("headings, lists, strong and inline code render as document markup", async (t) => {
+  t.checkText(
+    render("## Verify this\n\n- first\n- **second**\n\n`pnpm test`"),
+    '<div class="prose prose-sm max-w-none"><article><h2>Verify this</h2><ul><li>first</li><li><strong>second</strong></li></ul><p><code>pnpm test</code></p></article></div>',
   );
 });
 
-void test("line 29", async (t) => {
-  // doctest:L30
-  t.check(
-    render("[safe](HTTPS://example.com) [relative](../plan.md) [unsafe](custom:payload)").includes('href="../plan.md"')
-    ,
-    true,
-  );
-});
-
-void test("line 34", async (t) => {
-  // doctest:L35
-  t.check(
-    render("[safe](HTTPS://example.com) [relative](../plan.md) [unsafe](custom:payload)").includes('href="custom:')
-    ,
-    false,
-  );
-});
-
-void test("line 39", async (t) => {
-  // doctest:L40
-  t.check(
-    render("[safe](HTTPS://example.com) [relative](../plan.md) [unsafe](custom:payload)").includes("Unsupported link: custom:payload")
-    ,
-    true,
+void test("safe and relative links render; unsafe protocols do not", async (t) => {
+  t.checkText(
+    render("[safe](HTTPS://example.com) [relative](../plan.md) [unsafe](custom:payload)"),
+    '<div class="prose prose-sm max-w-none"><article><p><a href="HTTPS://example.com">safe</a> <a href="../plan.md">relative</a> <span class="cursor-help underline decoration-dotted" title="Unsupported link: custom:payload">unsafe</span></p></article></div>',
   );
 });
 
 // Unknown Markdoc tags follow Markdoc's normal behavior: their inner content is
 // preserved even though the tag wrapper itself has no issue-app meaning.
 void test("Unknown Markdoc tags follow Markdoc's normal behavior:", async (t) => {
-  // doctest:L48
-  t.check(render("before {% mystery %}inside{% /mystery %} after").includes("before inside after"), true);
+  t.checkText(
+    render("before {% mystery %}inside{% /mystery %} after"),
+    '<div class="prose prose-sm max-w-none"><article><p>before inside after</p></article></div>',
+  );
 });

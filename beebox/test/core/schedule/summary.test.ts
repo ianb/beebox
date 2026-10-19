@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { anything } from "agent-doctest/check";
+import { any, anything, str } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import {
@@ -273,8 +273,26 @@ void test("A scheduled bbx procedure run passes BBXSUMMARYFILE to its agent step
   const { buildContextBlock } = await import("../../../src/core/procedure/engine/phase.js");
   const box = await makeTmpBox();
   const base = { boxRoot: box.root, runCardPath: "run.card", stepId: "review", procedurePath: "p.procedure.card" };
-  t.check(buildContextBlock({ ...base, scheduleName: "todo-review" }).split("<scheduled-run>\n")[1]?.split("\n")[0]?.includes('"todo-review"'), true);
+  // The date is the wall clock.
+  const date = any(String).matches(/^\d{4}-\d{2}-\d{2}$/);
+  t.check(buildContextBlock({ ...base, scheduleName: "todo-review" }), str`# Context
+
+Current date: ${date}
+Procedure run: run.card
+Step: review
+
+<scheduled-run>
+This procedure is running as the scheduled task "todo-review". The boxholder sees each run's summary on the dashboard. Before you finish, write one:
+
+    bbx run-summary "<one line: what this run did>" --body "<a few Markdown lines: what changed, what was skipped and why>"
+
+Add \`--priority attention\` only when the boxholder should look at this run (something failed, needs a decision, or is unusual); a routine run is \`normal\`, the default. Longer detail goes in \`--notes\`. A later \`bbx run-summary\` in the same run replaces an earlier one.
+</scheduled-run>`);
 
   // doctest:L239
-  await t.checkText(buildContextBlock(base).includes("<scheduled-run>"), "false");
+  t.check(buildContextBlock(base), str`# Context
+
+Current date: ${date}
+Procedure run: run.card
+Step: review`);
 });

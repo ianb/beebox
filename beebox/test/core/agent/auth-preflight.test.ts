@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { instanceOf } from "agent-doctest/check";
 import {
   checkClaudeAuth,
   checkCodexAuth,
@@ -67,8 +67,7 @@ void test("checkClaudeAuth resolving (no throw) is the pass.", async (t) => {
   const loggedIn = createFakeClaudeCli({ loggedIn: true });
   await checkClaudeAuth({ claudeCli: loggedIn });
   const loggedOut = createFakeClaudeCli({ loggedIn: false });
-  await checkClaudeAuth({ claudeCli: loggedOut });
-  t.check("passed through (cached)", "passed through (cached)");
+  await t.check(checkClaudeAuth({ claudeCli: loggedOut }), undefined);
 });
 
 // ## `preflightChatBackend` gates on the real SDK and routes errors to the session
@@ -137,8 +136,8 @@ void test("Codex has its own preflight and remedy", async (t) => {
   // doctest:L129
   resetCodexAuthCache();
   const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
-  await checkCodexAuth({ codexCli }).catch((e) => e instanceof CodexAuthError);
-  await checkCodexAuth({ codexCli }).catch((e) => e instanceof CodexAuthError);
+  t.check(await checkCodexAuth({ codexCli }).then(() => "no throw", (e: unknown) => e), instanceOf(CodexAuthError));
+  t.check(await checkCodexAuth({ codexCli }).then(() => "no throw", (e: unknown) => e), instanceOf(CodexAuthError));
   t.check(codexCli.statusCalls, 2);
 });
 
@@ -206,13 +205,11 @@ void test("Status diagnostics preserve useful CLI context but redact credential-
 // runs and named a remedy (`claude auth login`) that wasn't the problem, so an
 // unusable probe is now its own state and gets one retry.
 void test("claude auth status intermittently comes back empty on a machine that is genui...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L194
   resetClaudeAuthCache();
   const cli = flakyCli(1, { loggedIn: true });
   await checkClaudeAuth({ claudeCli: cli });
-  await t.checkText(out2.with(print(`probes=${cli.calls()}`)), "probes=2");
+  t.check(cli.calls(), 2);
 });
 
 // When the retry also comes back empty we still don't know — and the preflight
@@ -220,28 +217,24 @@ void test("claude auth status intermittently comes back empty on a machine that 
 // aside and lets the agent invocation behind it report auth state itself. Failing
 // here would kill a run that was going to succeed.
 void test("When the retry also comes back empty we still don't know — and the preflight...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L208
   resetClaudeAuthCache();
   const cli = flakyCli(2, { loggedIn: true });
   const outcome = await checkClaudeAuth({ claudeCli: cli }).then(() => "proceeded").catch((e) => e.name);
-  await t.checkText(out2.with(print(`${outcome} after ${cli.calls()} probes`)), "proceeded after 2 probes");
+  t.check({ outcome, probes: cli.calls() }, { outcome: "proceeded", probes: 2 });
 
   // An inconclusive result is never cached as success — the next call probes again.
 
   // doctest:L219
   const after = await checkClaudeAuth({ claudeCli: cli }).then(() => "proceeded");
-  await t.checkText(out2.with(print(`${after}, total probes ${cli.calls()}`)), "proceeded, total probes 3");
+  t.check({ after, probes: cli.calls() }, { after: "proceeded", probes: 3 });
 });
 
 // A real logout still fails closed: the probe answered, and the answer was no.
 void test("A real logout still fails closed:", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   // doctest:L228
   resetClaudeAuthCache();
   const cli = flakyCli(1, { loggedIn: false });
   const thrown = await checkClaudeAuth({ claudeCli: cli }).then(() => "no throw").catch((e) => e.name);
-  await t.checkText(out2.with(print(`${thrown} after ${cli.calls()} probes`)), "ClaudeAuthError after 2 probes");
+  t.check({ thrown, probes: cli.calls() }, { thrown: "ClaudeAuthError", probes: 2 });
 });

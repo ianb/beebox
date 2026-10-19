@@ -51,7 +51,6 @@ void test("No hash, no check, no PUT — the settle gate runs before anything el
       t.error(error);
     }
   });
-  // doctest:L50
   const unsettledFolder = join(dir, "unsettled");
   await mkdir(unsettledFolder);
   await writeFile(join(unsettledFolder, "just-scanned.pdf"), "still writing");
@@ -60,10 +59,18 @@ void test("No hash, no check, no PUT — the settle gate runs before anything el
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
   });
   const summaryA = await runTarget(targetFor({ folder: unsettledFolder, serverUrl: serverA.url, disposition: "keep" }), { retryRejected: false });
-  await t.checkText(JSON.stringify(summaryA), "{\"uploaded\":0,\"duplicate\":0,\"rejected\":0,\"rejectedOnUpload\":0,\"skippedUnsettled\":1,\"skippedIdentityChanged\":0,\"errors\":0}");
+  t.check(summaryA, {
+    uploaded: 0,
+    duplicate: 0,
+    rejected: 0,
+    rejectedOnUpload: 0,
+    skippedUnsettled: 1,
+    skippedIdentityChanged: 0,
+    errors: 0,
+    contractVersion: undefined,
+  });
 
-  // doctest:L63
-  t.check(serverA.putRequests.length, 0);
+  t.check(serverA.putRequests, []);
 });
 
 // ## An unknown file uploads, then archives
@@ -78,7 +85,6 @@ void test("unknown on check → PUT → accepted → restat unchanged → archiv
       t.error(error);
     }
   });
-  // doctest:L77
   const archiveFolder = join(dir, "archive-target");
   await mkdir(archiveFolder);
   await writeSettledFile(join(archiveFolder, "scan1.pdf"), "brand new scan");
@@ -87,13 +93,20 @@ void test("unknown on check → PUT → accepted → restat unchanged → archiv
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
   });
   const summaryB = await runTarget(targetFor({ folder: archiveFolder, serverUrl: serverB.url, disposition: "archive" }), { retryRejected: false });
-  await t.checkText(JSON.stringify(summaryB), "{\"uploaded\":1,\"duplicate\":0,\"rejected\":0,\"rejectedOnUpload\":0,\"skippedUnsettled\":0,\"skippedIdentityChanged\":0,\"errors\":0}");
+  t.check(summaryB, {
+    uploaded: 1,
+    duplicate: 0,
+    rejected: 0,
+    rejectedOnUpload: 0,
+    skippedUnsettled: 0,
+    skippedIdentityChanged: 0,
+    errors: 0,
+    contractVersion: undefined,
+  });
 
-  // doctest:L90
-  t.check((await readdir(archiveFolder)).toSorted().join(","), "imported");
+  t.check(await readdir(archiveFolder), ["imported"]);
 
-  // doctest:L95
-  t.check((await readdir(join(archiveFolder, "imported"))).join(","), "scan1.pdf");
+  t.check(await readdir(join(archiveFolder, "imported")), ["scan1.pdf"]);
 });
 
 // ## A file already `imported` on the server is a no-op disposition
@@ -110,7 +123,6 @@ void test("pending/imported count as confirmed without a PUT at all — this is 
       t.error(error);
     }
   });
-  // doctest:L111
   const keepFolder = join(dir, "keep-target");
   await mkdir(keepFolder);
   await writeSettledFile(join(keepFolder, "already-imported.pdf"), "previously uploaded");
@@ -119,13 +131,20 @@ void test("pending/imported count as confirmed without a PUT at all — this is 
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
   });
   const summaryC = await runTarget(targetFor({ folder: keepFolder, serverUrl: serverC.url, disposition: "keep" }), { retryRejected: false });
-  await t.checkText(JSON.stringify(summaryC), "{\"uploaded\":0,\"duplicate\":1,\"rejected\":0,\"rejectedOnUpload\":0,\"skippedUnsettled\":0,\"skippedIdentityChanged\":0,\"errors\":0}");
+  t.check(summaryC, {
+    uploaded: 0,
+    duplicate: 1,
+    rejected: 0,
+    rejectedOnUpload: 0,
+    skippedUnsettled: 0,
+    skippedIdentityChanged: 0,
+    errors: 0,
+    contractVersion: undefined,
+  });
 
-  // doctest:L124
-  t.check(serverC.putRequests.length, 0);
+  t.check(serverC.putRequests, []);
 
-  // doctest:L129
-  t.check((await readdir(keepFolder)).join(","), "already-imported.pdf");
+  t.check(await readdir(keepFolder), ["already-imported.pdf"]);
 });
 
 // ## A rejected file is never dispositioned
@@ -142,7 +161,6 @@ void test("The server's rejection reason surfaces in the summary count; the file
       t.error(error);
     }
   });
-  // doctest:L144
   const rejectFolder = join(dir, "reject-target");
   await mkdir(rejectFolder);
   await writeSettledFile(join(rejectFolder, "smuggled.pdf"), "<html>not a pdf</html>");
@@ -151,23 +169,40 @@ void test("The server's rejection reason surfaces in the summary count; the file
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
   });
   const summaryD = await runTarget(targetFor({ folder: rejectFolder, serverUrl: serverD.url, disposition: "archive" }), { retryRejected: false });
-  await t.checkText(JSON.stringify(summaryD), "{\"uploaded\":0,\"duplicate\":0,\"rejected\":1,\"rejectedOnUpload\":0,\"skippedUnsettled\":0,\"skippedIdentityChanged\":0,\"errors\":0}");
+  t.check(summaryD, {
+    uploaded: 0,
+    duplicate: 0,
+    rejected: 1,
+    rejectedOnUpload: 0,
+    skippedUnsettled: 0,
+    skippedIdentityChanged: 0,
+    errors: 0,
+    contractVersion: undefined,
+  });
 
-  // doctest:L157
-  t.check((await readdir(rejectFolder)).join(","), "smuggled.pdf");
+  t.check(await readdir(rejectFolder), ["smuggled.pdf"]);
 
   // `--retry-rejected` re-PUTs it instead of trusting the cached check verdict:
 
-  // doctest:L164
   const serverD2: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "rejected", reason: "stale verdict, should not be trusted" }),
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
   });
   const summaryD2 = await runTarget(targetFor({ folder: rejectFolder, serverUrl: serverD2.url, disposition: "archive" }), { retryRejected: true });
-  await t.checkText(JSON.stringify(summaryD2), "{\"uploaded\":1,\"duplicate\":0,\"rejected\":0,\"rejectedOnUpload\":0,\"skippedUnsettled\":0,\"skippedIdentityChanged\":0,\"errors\":0}");
+  t.check(summaryD2, {
+    uploaded: 1,
+    duplicate: 0,
+    rejected: 0,
+    rejectedOnUpload: 0,
+    skippedUnsettled: 0,
+    skippedIdentityChanged: 0,
+    errors: 0,
+    contractVersion: undefined,
+  });
 
-  // doctest:L174
-  t.check(serverD2.putRequests.length, 1);
+  t.check(serverD2.putRequests.map((request) => ({ filename: request.filename, authorization: request.authorization, body: request.body.toString("utf-8") })), [
+    { filename: "smuggled.pdf", authorization: "Bearer test-token", body: "<html>not a pdf</html>" },
+  ]);
 });
 
 // ## `rejectedOnUpload` separates a new rejection from a remembered one
@@ -188,7 +223,6 @@ void test("summaryD above counted rejected:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L194
   const newRejectFolder = join(dir, "new-reject-target");
   await mkdir(newRejectFolder);
   await writeSettledFile(join(newRejectFolder, "first-sight.pdf"), "<html>not a pdf</html>");
@@ -197,26 +231,42 @@ void test("summaryD above counted rejected:", async (t) => {
     putOutcome: () => ({ status: 422, body: { status: "rejected", reason: "magic bytes say text/html" } }),
   });
   const summaryR = await runTarget(targetFor({ folder: newRejectFolder, serverUrl: serverR.url, disposition: "archive" }), { retryRejected: false });
-  await t.checkText(JSON.stringify(summaryR), "{\"uploaded\":0,\"duplicate\":0,\"rejected\":1,\"rejectedOnUpload\":1,\"skippedUnsettled\":0,\"skippedIdentityChanged\":0,\"errors\":0}");
+  t.check(summaryR, {
+    uploaded: 0,
+    duplicate: 0,
+    rejected: 1,
+    rejectedOnUpload: 1,
+    skippedUnsettled: 0,
+    skippedIdentityChanged: 0,
+    errors: 0,
+    contractVersion: undefined,
+  });
 
   // Still never dispositioned — a PUT-time rejection is the same "leave it in
   // place" outcome as a remembered one:
 
-  // doctest:L210
-  t.check((await readdir(newRejectFolder)).join(","), "first-sight.pdf");
+  t.check(await readdir(newRejectFolder), ["first-sight.pdf"]);
 
   // `--retry-rejected` re-PUTs a rejection the server already remembers, and that
   // refusal is the same fact a second time — so it counts in `rejected` but NOT in
   // `rejectedOnUpload`. Without this, a settle retry (which re-walks the whole
   // folder in the same sweep) would report one refused file as two:
 
-  // doctest:L220
   const serverR2: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "rejected", reason: "the server already knows" }),
     putOutcome: () => ({ status: 422, body: { status: "rejected", reason: "still not a pdf" } }),
   });
   const summaryR2 = await runTarget(targetFor({ folder: newRejectFolder, serverUrl: serverR2.url, disposition: "archive" }), { retryRejected: true });
-  await t.checkText(JSON.stringify(summaryR2), "{\"uploaded\":0,\"duplicate\":0,\"rejected\":1,\"rejectedOnUpload\":0,\"skippedUnsettled\":0,\"skippedIdentityChanged\":0,\"errors\":0}");
+  t.check(summaryR2, {
+    uploaded: 0,
+    duplicate: 0,
+    rejected: 1,
+    rejectedOnUpload: 0,
+    skippedUnsettled: 0,
+    skippedIdentityChanged: 0,
+    errors: 0,
+    contractVersion: undefined,
+  });
 });
 
 // ## A file that changes between hash and disposition is left alone
@@ -235,7 +285,6 @@ void test("This is the restat-before-disposition rule:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L244
   const raceFolder = join(dir, "race-target");
   await mkdir(raceFolder);
   const racePath = await writeSettledFile(join(raceFolder, "growing.pdf"), "first pass bytes");
@@ -247,10 +296,18 @@ void test("This is the restat-before-disposition rule:", async (t) => {
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
   });
   const summaryE = await runTarget(targetFor({ folder: raceFolder, serverUrl: serverE.url, disposition: "archive" }), { retryRejected: false });
-  await t.checkText(JSON.stringify(summaryE), "{\"uploaded\":1,\"duplicate\":0,\"rejected\":0,\"rejectedOnUpload\":0,\"skippedUnsettled\":0,\"skippedIdentityChanged\":1,\"errors\":0}");
+  t.check(summaryE, {
+    uploaded: 1,
+    duplicate: 0,
+    rejected: 0,
+    rejectedOnUpload: 0,
+    skippedUnsettled: 0,
+    skippedIdentityChanged: 1,
+    errors: 0,
+    contractVersion: undefined,
+  });
 
-  // doctest:L260
-  t.check((await readdir(raceFolder)).join(","), "growing.pdf");
+  t.check(await readdir(raceFolder), ["growing.pdf"]);
 });
 
 // ## A 429 is retried, not treated as a failure
@@ -266,7 +323,6 @@ void test("putFile reports rate-limited once; runTarget sleeps for the server's 
       t.error(error);
     }
   });
-  // doctest:L274
   const rateFolder = join(dir, "rate-target");
   await mkdir(rateFolder);
   await writeSettledFile(join(rateFolder, "throttled.pdf"), "scan under load");
@@ -280,8 +336,19 @@ void test("putFile reports rate-limited once; runTarget sleeps for the server's 
     },
   });
   const summaryF = await runTarget(targetFor({ folder: rateFolder, serverUrl: serverF.url, disposition: "keep" }), { retryRejected: false });
-  await t.checkText(JSON.stringify(summaryF), "{\"uploaded\":1,\"duplicate\":0,\"rejected\":0,\"rejectedOnUpload\":0,\"skippedUnsettled\":0,\"skippedIdentityChanged\":0,\"errors\":0}");
+  t.check(summaryF, {
+    uploaded: 1,
+    duplicate: 0,
+    rejected: 0,
+    rejectedOnUpload: 0,
+    skippedUnsettled: 0,
+    skippedIdentityChanged: 0,
+    errors: 0,
+    contractVersion: undefined,
+  });
 
-  // doctest:L292
-  t.check(serverF.putRequests.length, 2);
+  t.check(serverF.putRequests.map((request) => ({ filename: request.filename, authorization: request.authorization, body: request.body.toString("utf-8") })), [
+    { filename: "throttled.pdf", authorization: "Bearer test-token", body: "scan under load" },
+    { filename: "throttled.pdf", authorization: "Bearer test-token", body: "scan under load" },
+  ]);
 });

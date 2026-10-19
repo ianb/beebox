@@ -11,6 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, containing, str } from "agent-doctest/check";
 import {
   ensureBoxWatcher,
   closeBoxWatcher,
@@ -126,8 +127,8 @@ skeletonBus.close();
 await skeletonBox.cleanup();
 
 /** `watcher.watchedDirs()`, with the scaffolded skeleton filtered out. */
-function testDirs(watcher: { watchedDirs(): string[] }): string {
-  return watcher.watchedDirs().filter((d) => !SKELETON_DIRS.has(d)).join(" ");
+function testDirs(watcher: { watchedDirs(): string[] }): string[] {
+  return watcher.watchedDirs().filter((d) => !SKELETON_DIRS.has(d));
 }
 
 // ## One watch per directory — never one per file
@@ -145,17 +146,14 @@ void test("The watched set is exactly the box's directories.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L140
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await seedTree({ root: box.root, dirs: 4, perDir: 100 });
 
-  // doctest:L144
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
   await watcher.ready;
 
-  // doctest:L147
-  t.check(testDirs(watcher), "store store/dir0 store/dir1 store/dir2 store/dir3");
+  t.check(testDirs(watcher), ["store", "store/dir0", "store/dir1", "store/dir2", "store/dir3"]);
 });
 
 // ## Dependency trees and publication build output are not watched
@@ -173,7 +171,6 @@ void test("A publication project's dist/ is build output and nodemodules/ is a d
       t.error(error);
     }
   });
-  // doctest:L164
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   const project = "_content/trips/Site.attach/project";
@@ -182,18 +179,10 @@ void test("A publication project's dist/ is build output and nodemodules/ is a d
   await box.write(`${project}/node_modules/pkg/README.md`, "# pkg\n");
   await box.write(`${project}/src/readme.md`, "# Source\n");
 
-  // doctest:L172
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
   await watcher.ready;
   const dirs = watcher.watchedDirs();
-
-  // doctest:L176
-  t.check([`${project}/src`, `${project}/dist`, `${project}/node_modules`, `${project}/node_modules/pkg`].map((d) => dirs.includes(d)), [
-    true,
-    false,
-    false,
-    false,
-  ]);
+  t.check(dirs.filter((d) => d.startsWith(project)), [project, `${project}/src`]);
 });
 
 // ## An authored-code root outside the content box emits its package path
@@ -212,7 +201,6 @@ void test("Package-layout boxes serve cards from content/, but their authored vi
       t.error(error);
     }
   });
-  // doctest:L193
   const box = await makeTmpBox();
   const contentRoot = join(box.root, "content");
   const sourceDir = join(box.root, "src");
@@ -235,10 +223,9 @@ void test("Package-layout boxes serve cards from content/, but their authored vi
   });
   await watcher.ready;
 
-  // doctest:L215
   await writeFile(join(viewsDir, "catalog.tsx"), "export default function Catalog() { return null; }");
   fake.fire({ dir: viewsDir, event: "change", filename: "catalog.tsx" });
-  await t.checkText(seen.includes("src/views/catalog.tsx"), "true");
+  t.check(seen, ["src/views/catalog.tsx"]);
 });
 
 // ## Watching 400 files costs a handful of descriptors, not 400
@@ -257,27 +244,24 @@ void test("The direct statement of the bug.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L237
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await seedTree({ root: box.root, dirs: 4, perDir: 100 });
 
-  // doctest:L241
   const before = openFDs();
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
   await watcher.ready;
   const grew = openFDs() - before;
 
-  // doctest:L246
-  await t.checkText(grew < 20, "true");
+  t.check(grew, any(Number).between(-Infinity, 19));
 
   // Closing gives every one of them back. `close()` drops each directory's subtree
   // while iterating the same map, so a nested tree is where a skipped or repeated
   // entry would show up as a leaked watch.
 
-  // doctest:L255
   await closeBoxWatcher(box.root);
-  t.check(`watched: ${watcher.watchedDirs().length} | fds released: ${openFDs() - before <= 0}`, "watched: 0 | fds released: true");
+  t.check(watcher.watchedDirs(), []);
+  t.check(openFDs() - before, any(Number).between(-Infinity, 0));
 });
 
 // ## A write surfaces as a `file-change` carrying the box-relative path
@@ -299,26 +283,22 @@ void test("Consumers key on path alone, so that is what has to be right.", async
       t.error(error);
     }
   });
-  // doctest:L276
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await mkdir(join(box.root, "store"), { recursive: true });
 
-  // doctest:L280
   const seen: string[] = [];
   bus.subscribe({ listener: (e) => { const changed = fileChangePath(e); if (changed !== undefined) seen.push(changed); } });
 
-  // doctest:L283
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
   await watcher.ready;
   await waitForWatch({ root: box.root, bus, relativeDir: "store" });
 
-  // doctest:L287
   await writeFile(join(box.root, "store", "Note.doc.card"), "---\ntitle: Note\n---\nhi\n");
   await waitFor({ check: () => seen.includes("store/Note.doc.card"), ms: 60_000, label: "the card file-change event" });
 
-  // doctest:L290
-  await t.checkText(seen.includes("store/Note.doc.card"), "true");
+  // Real platform events may repeat or add the directory itself; the card path must be among them.
+  t.check(seen, containing(["store/Note.doc.card"]));
 });
 
 // ## Directories created after startup are picked up
@@ -335,23 +315,19 @@ void test("A card folder made by the agent mid-session must go live without a re
       t.error(error);
     }
   });
-  // doctest:L306
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await mkdir(join(box.root, "store"), { recursive: true });
 
-  // doctest:L310
   const fake = fakeWatch();
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
   await watcher.ready;
 
-  // doctest:L314
   await mkdir(join(box.root, "store", "Trip.attach"), { recursive: true });
   fake.fire({ dir: join(box.root, "store"), event: "rename", filename: "Trip.attach" });
   await watcher.settled();
 
-  // doctest:L318
-  await t.checkText(watcher.watchedDirs().includes("store/Trip.attach"), "true");
+  t.check(testDirs(watcher), ["store", "store/Trip.attach"]);
 });
 
 // ## A replaced directory is re-watched, subtree and all
@@ -370,17 +346,14 @@ void test("mv, git checkout, and an atomic \"write a new tree, swap it in\" all 
       t.error(error);
     }
   });
-  // doctest:L336
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await mkdir(join(box.root, "store", "Trip.attach", "old"), { recursive: true });
 
-  // doctest:L340
   const fake = fakeWatch();
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
   await watcher.ready;
 
-  // doctest:L344
   const { rm, rename } = await import("node:fs/promises");
   await rm(join(box.root, "store", "Trip.attach"), { recursive: true });
   await mkdir(join(box.root, "store", "Staging", "fresh"), { recursive: true });
@@ -391,8 +364,7 @@ void test("mv, git checkout, and an atomic \"write a new tree, swap it in\" all 
   fake.fire({ dir: join(box.root, "store"), event: "rename", filename: "Trip.attach" });
   await watcher.settled();
 
-  // doctest:L354
-  t.check(testDirs(watcher), "store store/Trip.attach store/Trip.attach/fresh");
+  t.check(testDirs(watcher), ["store", "store/Trip.attach", "store/Trip.attach/fresh"]);
 });
 
 // ## Files already inside a newly-appeared directory are announced
@@ -410,21 +382,17 @@ void test("A directory that arrives complete — an agent writing a card folder,
       t.error(error);
     }
   });
-  // doctest:L371
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await mkdir(join(box.root, "store"), { recursive: true });
 
-  // doctest:L375
   const seen: string[] = [];
   bus.subscribe({ listener: (e) => { const changed = fileChangePath(e); if (changed !== undefined) seen.push(changed); } });
 
-  // doctest:L378
   const fake = fakeWatch();
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
   await watcher.ready;
 
-  // doctest:L382
   // Build the tree out of sight, then swap it in whole — no watch can have seen
   // the file being written.
   const { rename } = await import("node:fs/promises");
@@ -434,8 +402,7 @@ void test("A directory that arrives complete — an agent writing a card folder,
   fake.fire({ dir: join(box.root, "store"), event: "rename", filename: "Trip.attach" });
   await watcher.settled();
 
-  // doctest:L391
-  await t.checkText(seen.includes("store/Trip.attach/Photo.md"), "true");
+  t.check(seen, ["store/Trip.attach", "store/Trip.attach/Photo.md"]);
 });
 
 // ## A directory symlink created at runtime is not followed
@@ -453,18 +420,15 @@ void test("The initial walk refuses symlinks (a box may link outside itself, or 
       t.error(error);
     }
   });
-  // doctest:L408
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await mkdir(join(box.root, "store"), { recursive: true });
   await mkdir(join(box.root, "junk", "sub", "noisy"), { recursive: true });
 
-  // doctest:L413
   const fake = fakeWatch();
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
   await watcher.ready;
 
-  // doctest:L417
   const { symlink } = await import("node:fs/promises");
   await symlink(join(box.root, "junk", "sub"), join(box.root, "store", "link"));
   // A real directory beside the link, reconciled the same way, shows the
@@ -474,8 +438,7 @@ void test("The initial walk refuses symlinks (a box may link outside itself, or 
   fake.fire({ dir: join(box.root, "store"), event: "rename", filename: "real" });
   await watcher.settled();
 
-  // doctest:L426
-  t.check(testDirs(watcher), "junk junk/sub junk/sub/noisy store store/real");
+  t.check(testDirs(watcher), ["junk", "junk/sub", "junk/sub/noisy", "store", "store/real"]);
 });
 
 // ## Rapid writes still produce a trailing event
@@ -499,20 +462,17 @@ void test("Repeats inside the 50 ms window collapse, but the last write still re
       t.error(error);
     }
   });
-  // doctest:L449
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await mkdir(join(box.root, "store"), { recursive: true });
   const card = join(box.root, "store", "Note.doc.card");
   await writeFile(card, "---\ntitle: Note\n---\nv1\n");
 
-  // doctest:L455
   const fake = fakeWatch();
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fake.watchDir });
   await watcher.ready;
   const store = join(box.root, "store");
 
-  // doctest:L460
   let events = 0;
   bus.subscribe({
     listener: (e) => {
@@ -520,7 +480,6 @@ void test("Repeats inside the 50 ms window collapse, but the last write still re
     },
   });
 
-  // doctest:L467
   for (let i = 0; i < 4; i++) fake.fire({ dir: store, event: "change", filename: "Note.doc.card" });
   t.check(
     // The leading event is synchronous; the other three are held in the window.
@@ -528,7 +487,6 @@ void test("Repeats inside the 50 ms window collapse, but the last write still re
     1,
   );
 
-  // doctest:L472
   // The trailing emission waits on the 50 ms timer, not the platform; the
   // deadline only bounds a hang.
   await waitFor({ check: () => events === 2, ms: 60_000, label: "the trailing event" });
@@ -556,7 +514,6 @@ void test("bookkeeping/procedure/runs and bookkeeping/trash are never live-rende
       t.error(error);
     }
   });
-  // doctest:L495
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await mkdir(join(box.root, "_bookkeeping", "procedure", "runs", "r1"), { recursive: true });
@@ -564,12 +521,10 @@ void test("bookkeeping/procedure/runs and bookkeeping/trash are never live-rende
   await mkdir(join(box.root, "_content", "inbox", "email", "thread.attach"), { recursive: true });
   await mkdir(join(box.root, "store", "keep"), { recursive: true });
 
-  // doctest:L502
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
   await watcher.ready;
 
-  // doctest:L505
-  t.check(testDirs(watcher), "_content/inbox/email _content/inbox/email/thread.attach store store/keep");
+  t.check(testDirs(watcher), ["_content/inbox/email", "_content/inbox/email/thread.attach", "store", "store/keep"]);
 });
 
 // ## Notification bookkeeping has a hard budget
@@ -592,7 +547,6 @@ void test("A directory can arrive already holding thousands of distinct files.",
       t.error(error);
     }
   });
-  // doctest:L527
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await mkdir(join(box.root, "store"), { recursive: true });
@@ -601,12 +555,10 @@ void test("A directory can arrive already holding thousands of distinct files.",
     await writeFile(join(box.root, ".incoming", `file-${i}.txt`), "x");
   }
 
-  // doctest:L535
   const fake = fakeWatch();
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus, maxNotificationWork: 16, watchDir: fake.watchDir });
   await watcher.ready;
 
-  // doctest:L539
   let events = 0;
   bus.subscribe({ listener: (e) => { if (e.event === "file-change") events++; } });
   const capLogs: string[] = [];
@@ -625,8 +577,13 @@ void test("A directory can arrive already holding thousands of distinct files.",
     console.error = originalConsoleError;
   }
 
-  // doctest:L557
-  t.check(`bounded: ${events <= 20} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("limit of 16 reached") === true}`, "bounded: true | logs: 1 | named-limit: true");
+  t.check(
+    { events, capLogs },
+    {
+      events: 16,
+      capLogs: [str`[box-watcher] notification work limit of 16 reached for ${box.root}; excess live-update hints are being dropped`],
+    },
+  );
 });
 
 // ## A dotted ancestor outside the box does not disable watching
@@ -643,18 +600,15 @@ void test("Dot paths inside a box are ignored.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L573
   const outer = await makeTmpBox();
   const nestedRoot = join(outer.root, ".container", "content");
   await mkdir(join(nestedRoot, "store"), { recursive: true });
   const bus = createEventBus(nestedRoot, { pollInterval: 60_000 });
 
-  // doctest:L578
   const watcher = ensureBoxWatcher(nestedRoot, { eventBus: bus });
   await watcher.ready;
 
-  // doctest:L581
-  t.check(watcher.watchedDirs().join(" "), ". store");
+  t.check(watcher.watchedDirs(), [".", "store"]);
 });
 
 // ## The watcher has a hard directory budget
@@ -676,7 +630,6 @@ void test("An unexpectedly large imported tree must degrade live updates instead
       t.error(error);
     }
   });
-  // doctest:L602
   const box = await makeTmpBox();
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await mkdir(join(box.root, "bulk"), { recursive: true });
@@ -684,7 +637,6 @@ void test("An unexpectedly large imported tree must degrade live updates instead
     await mkdir(join(box.root, "bulk", `dir-${i}`));
   }
 
-  // doctest:L609
   const capLogs: string[] = [];
   const originalConsoleError = console.error;
   console.error = (...args: unknown[]) => {
@@ -703,20 +655,36 @@ void test("An unexpectedly large imported tree must degrade live updates instead
     console.error = originalConsoleError;
   }
 
-  // doctest:L627
-  t.check(`watched: ${watcher.watchedDirs().length} | logs: ${capLogs.length} | named-limit: ${capLogs[0]?.includes("limit of 16 reached") === true}`, "watched: 16 | logs: 1 | named-limit: true");
+  // The first 16 directories of the breadth-first walk include the box's scaffolded skeleton,
+  // so only the root's position and the count are pinned.
+  t.check(
+    { watched: watcher.watchedDirs(), capLogs },
+    {
+      watched: [".", ...Array.from({ length: 15 }, () => any(String))],
+      capLogs: [str`[box-watcher] directory watch limit of 16 reached for ${box.root}; live updates below _bookkeeping are disabled`],
+    },
+  );
 
   // The limit is also kept for the dashboard's `box-watch-limit` health check, which
   // names where live updates stopped. Closing the watcher clears it:
 
-  // doctest:L635
   const limited = watchLimitStatus(box.root);
   const [check] = watchLimitHealthChecks(box.root);
-  t.check(`${limited?.maxWatchedDirs} | ${check?.name}:${check?.ok} | ${check?.message.startsWith("Live updates are off below ")}`, "16 | box-watch-limit:false | true");
+  t.check(
+    { limited, check },
+    {
+      limited: { maxWatchedDirs: 16, belowPath: "_bookkeeping" },
+      check: {
+        name: "box-watch-limit",
+        ok: false,
+        message: "Live updates are off below _bookkeeping: the box has more than 16 watched directories.",
+        severity: "warning",
+      },
+    },
+  );
 
-  // doctest:L640
   await closeBoxWatcher(box.root);
-  t.check(`${watchLimitStatus(box.root)} | ${watchLimitHealthChecks(box.root).length}`, "null | 0");
+  t.check({ status: watchLimitStatus(box.root), checks: watchLimitHealthChecks(box.root) }, { status: null, checks: [] });
 });
 
 // ## The production defaults are what the bounds tests scale down from
@@ -734,6 +702,5 @@ void test("An unexpectedly large imported tree must degrade live updates instead
 // so it is pinned here directly and the boundary logic is exercised where it is
 // cheap.
 void test("Both bounds above are proved at 16 because their production magnitude of 1,02...", async (t) => {
-  // doctest:L667
-  t.check(`dirs: ${MAX_WATCHED_DIRS} | notifications: ${MAX_NOTIFICATION_WORK} | coalesce: ${COALESCE_MS}`, "dirs: 1024 | notifications: 1024 | coalesce: 50");
+  t.check({ dirs: MAX_WATCHED_DIRS, notifications: MAX_NOTIFICATION_WORK, coalesce: COALESCE_MS }, { dirs: 1024, notifications: 1024, coalesce: 50 });
 });

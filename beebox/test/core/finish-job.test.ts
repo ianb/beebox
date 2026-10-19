@@ -36,25 +36,14 @@ void test("Reads the description from frontmatter into the commit message", asyn
   const msg = lastCommitMessage(box.root);
 
   // doctest:L36
-  await t.checkText(
-    // The frontmatter description drives the commit subject
-    msg.includes("Finish job: Triage 3 inbox items"),
-    "true",
-  );
+  // The frontmatter description drives the commit subject, and the job type
+  // (from the filename) is recorded as a trailer.
+  await t.checkText(msg, `Finish job: Triage 3 inbox items
 
-  // doctest:L40
-  await t.checkText(
-    // The job type (from the filename) is recorded as a trailer
-    msg.includes("Job-Type: intake"),
-    "true",
-  );
+Job-Type: intake`);
 
-  // doctest:L44
-  await t.checkText(
-    // The job card is gone
-    (await box.list("_bookkeeping/jobs")).includes("sweep.intake.job.card"),
-    "false",
-  );
+  // The job card is gone
+  t.check(await box.list("_bookkeeping/jobs"), "_bookkeeping/jobs/.gitkeep");
 
   // doctest:L48
   await box.cleanup();
@@ -72,7 +61,9 @@ void test("Missing description falls back to a type-only message", async (t) => 
   await finishJob({ boxRoot: box.root, jobRelPath: "_bookkeeping/jobs/bare.intake.job.card" });
 
   // doctest:L61
-  await t.checkText(lastCommitMessage(box.root).includes("Finish intake job"), "true");
+  await t.checkText(lastCommitMessage(box.root), `Finish intake job
+
+Job-Type: intake`);
 
   // doctest:L64
   await box.cleanup();

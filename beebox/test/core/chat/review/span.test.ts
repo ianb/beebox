@@ -11,6 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import {
   appliedSpanFor,
   computeSpanId,
@@ -45,13 +46,7 @@ const d = entry("u-d", "fourth");
 void test("A session nobody has reviewed reads from the top.", async (t) => {
   // doctest:L47
   const fresh = await resolveSpan({ readPage: pagesOf([a, b, c]), applied: null });
-  t.check(fresh.bootstrap, "no-journal");
-
-  // doctest:L51
-  t.check(fresh.entries.map((e) => e.uuid).join(","), "u-a,u-b,u-c");
-
-  // doctest:L54
-  t.check(fresh.endIndex, 2);
+  t.check(fresh, { entries: [a, b, c], endIndex: 2, endPrefixHash: prefixHash([a, b, c], 2), bootstrap: "no-journal", clipped: false });
 });
 
 // ## Normal advance: only what arrived since the boundary
@@ -60,24 +55,18 @@ void test("A session nobody has reviewed reads from the top.", async (t) => {
 void test("With a journal pointing at u-b, the span is everything after it.", async (t) => {
   // doctest:L63
   const applied = appliedSpanFor({ sessionId: "s1", span: await resolveSpan({ readPage: pagesOf([a, b]), applied: null }), now: NOW });
-  t.check(applied?.endUuid, "u-b");
+  t.check(applied, { spanId: computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: prefixHash([a, b], 1) }), endUuid: "u-b", endIndex: 1, prefixHash: prefixHash([a, b], 1), at: NOW.toISOString() });
 
   // doctest:L67
   const next = await resolveSpan({ readPage: pagesOf([a, b, c, d]), applied });
-  t.check(next.bootstrap, null);
-
-  // doctest:L71
-  t.check(next.entries.map((e) => e.uuid).join(","), "u-c,u-d");
+  t.check(next, { entries: [c, d], endIndex: 3, endPrefixHash: prefixHash([a, b, c, d], 3), bootstrap: null, clipped: false });
 
   // A transcript that hasn't grown yields an empty span, which the size gate then
   // rejects — nothing is re-read and no model is called.
 
   // doctest:L79
   const unchanged = await resolveSpan({ readPage: pagesOf([a, b]), applied });
-  t.check({ bootstrap: unchanged.bootstrap, entries: unchanged.entries.length }, {
-    bootstrap: null,
-    entries: 0,
-  });
+  t.check(unchanged, { entries: [], endIndex: -1, endPrefixHash: null, bootstrap: null, clipped: false });
 });
 
 // ## The boundary entry is gone: history was rewritten wholesale
@@ -88,7 +77,7 @@ void test("The boundary entry is gone: history was rewritten wholesale", async (
   // doctest:L89
   // The SDK replaced the transcript; `u-b` no longer exists.
   const rewritten = await resolveSpan({ readPage: pagesOf([entry("u-x", "summary"), entry("u-y", "later")]), applied });
-  t.check(rewritten.bootstrap, "boundary-missing");
+  t.check(rewritten, { entries: [entry("u-x", "summary"), entry("u-y", "later")], endIndex: 1, endPrefixHash: prefixHash([entry("u-x", "summary"), entry("u-y", "later")], 1), bootstrap: "boundary-missing", clipped: false });
 });
 
 // ## The boundary survives but its history changed — the case an index misses
@@ -103,13 +92,12 @@ void test("This is the important one.", async (t) => {
   // doctest:L104
   // `u-b` is still at index 1, total still 2 — but `u-a` was replaced.
   const mutated = [entry("u-z", "replaced"), b, c];
-  t.check((await resolveSpan({ readPage: pagesOf(mutated), applied })).bootstrap, "prefix-rewritten");
+  t.check(await resolveSpan({ readPage: pagesOf(mutated), applied }), {
+    entries: mutated, endIndex: 2, endPrefixHash: prefixHash(mutated, 2), bootstrap: "prefix-rewritten", clipped: false,
+  });
 
   // The whole transcript comes back as the span, so nothing is lost — the caller
   // keeps the existing account, which is now the only record of what was rewritten.
-
-  // doctest:L114
-  t.check((await resolveSpan({ readPage: pagesOf(mutated), applied })).entries.map((e) => e.uuid).join(","), "u-z,u-b,u-c");
 });
 
 // ## The content changed but every uuid stayed the same
@@ -124,7 +112,9 @@ void test("The subtler rewrite.", async (t) => {
   // doctest:L127
   // Same uuids, same positions, same count — different words.
   const edited = [entry("u-a", "first, REVISED"), b, c];
-  t.check((await resolveSpan({ readPage: pagesOf(edited), applied })).bootstrap, "prefix-rewritten");
+  t.check(await resolveSpan({ readPage: pagesOf(edited), applied }), {
+    entries: edited, endIndex: 2, endPrefixHash: prefixHash(edited, 2), bootstrap: "prefix-rewritten", clipped: false,
+  });
 });
 
 // ## An entry with no uuid can't anchor a journal
@@ -139,13 +129,13 @@ void test("parseSessionLog defaults a missing uuid to \"\", which is not an iden
 
   // doctest:L144
   t.check(
-    (await resolveSpan({
+    await resolveSpan({
       readPage: pagesOf([a, b]),
       applied: {
         spanId: "x", endUuid: "", endIndex: 0, prefixHash: "y", at: "2026-07-28T04:00:00Z",
       },
-    })).bootstrap,
-    "boundary-missing",
+    }),
+    { entries: [a, b], endIndex: 1, endPrefixHash: prefixHash([a, b], 1), bootstrap: "boundary-missing", clipped: false },
   );
 });
 
@@ -167,22 +157,7 @@ void test("limit is both the page size and the most entries a span may hold.", a
   // doctest:L168
   // Pages of two: the boundary `u-c` is on the second page.
   const paged = await resolveSpan({ readPage: pagesOf(all), applied, limit: 2 });
-  t.check(
-    {
-      bootstrap: paged.bootstrap,
-      entries: paged.entries.map((x) => x.uuid).join(","),
-      endIndex: paged.endIndex,
-      clipped: paged.clipped,
-      hashMatchesWholeArray: paged.endPrefixHash === prefixHash(all, paged.endIndex),
-    },
-    {
-    bootstrap: null,
-    entries: "u-d,u-e",
-    endIndex: 4,
-    clipped: true,
-    hashMatchesWholeArray: true,
-  },
-  );
+  t.check(paged, { entries: [d, e], endIndex: 4, endPrefixHash: prefixHash(all, 4), bootstrap: null, clipped: true });
 
   // Journalling that clipped span and resolving again continues from `u-e`; the
   // walk converges rather than re-reading anything.
@@ -190,22 +165,14 @@ void test("limit is both the page size and the most entries a span may hold.", a
   // doctest:L184
   const next = appliedSpanFor({ sessionId: "s1", span: paged, now: NOW });
   const rest = await resolveSpan({ readPage: pagesOf(all), applied: next, limit: 2 });
-  t.check({ entries: rest.entries.map((x) => x.uuid).join(","), endIndex: rest.endIndex, clipped: rest.clipped }, {
-    entries: "u-f,u-g",
-    endIndex: 6,
-    clipped: false,
-  });
+  t.check(rest, { entries: [f, g], endIndex: 6, endPrefixHash: prefixHash(all, 6), bootstrap: null, clipped: false });
 
   // A bootstrap is bounded the same way: the first-ever review of an over-long
   // transcript takes the first window and reports it as clipped.
 
   // doctest:L194
   const first = await resolveSpan({ readPage: pagesOf(all), applied: null, limit: 3 });
-  t.check({ bootstrap: first.bootstrap, entries: first.entries.length, clipped: first.clipped }, {
-    bootstrap: "no-journal",
-    entries: 3,
-    clipped: true,
-  });
+  t.check(first, { entries: [a, b, c], endIndex: 2, endPrefixHash: prefixHash(all, 2), bootstrap: "no-journal", clipped: true });
 
   // A boundary that IS present with a changed prefix is a real rewrite, whichever
   // page it sits on — that bootstraps over the first window.
@@ -216,9 +183,8 @@ void test("limit is both the page size and the most entries a span may hold.", a
     applied,
     limit: 2,
   });
-  t.check({ bootstrap: rewrittenPrefix.bootstrap, entries: rewrittenPrefix.entries.map((x) => x.uuid).join(",") }, {
-    bootstrap: "prefix-rewritten",
-    entries: "u-z,u-b",
+  t.check(rewrittenPrefix, {
+    entries: [entry("u-z", "replaced"), b], endIndex: 1, endPrefixHash: prefixHash([entry("u-z", "replaced"), b], 1), bootstrap: "prefix-rewritten", clipped: true,
   });
 });
 
@@ -230,26 +196,23 @@ void test("limit is both the page size and the most entries a span may hold.", a
 void test("The id is the idempotency key written to the husk, so identical inputs must p...", async (t) => {
   // doctest:L219
   const p = prefixHash([a, b], 1);
-  await t.checkText(
-    computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: p })
-      === computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: p }),
-    "true",
+  t.check(
+    computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: p }),
+    computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: p }),
   );
 
   // doctest:L224
-  await t.checkText(
-    // Different session, same boundary.
-    computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: p })
-      === computeSpanId({ sessionId: "s2", endUuid: "u-b", prefixHash: p }),
-    "false",
+  // Different session, same boundary.
+  t.check(
+    computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: p }),
+    not(computeSpanId({ sessionId: "s2", endUuid: "u-b", prefixHash: p })),
   );
 
   // doctest:L229
-  await t.checkText(
-    // Same boundary, rewritten history.
-    computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: p })
-      === computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: prefixHash([entry("u-z", "x"), b], 1) }),
-    "false",
+  // Same boundary, rewritten history.
+  t.check(
+    computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: p }),
+    not(computeSpanId({ sessionId: "s1", endUuid: "u-b", prefixHash: prefixHash([entry("u-z", "x"), b], 1) })),
   );
 
   // `appliedSpanFor` returns null for an empty transcript rather than inventing a
@@ -268,5 +231,5 @@ void test("The gate cannot use renderSessionCompact's output:", async (t) => {
   // doctest:L250
   const long = Array.from({ length: 500 }, (_, i) => entry(`u-${i}`, "x".repeat(200)));
   const size = spanSize(await resolveSpan({ readPage: pagesOf(long), applied: null }));
-  await t.checkText(size > 40_000, "true");
+  t.check(size, any(Number).above(40_000));
 });

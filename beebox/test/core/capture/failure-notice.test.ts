@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, capture, isoDate } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -62,22 +63,39 @@ void test("Nobody present: one `quiet` notice to the capture's chat", async (t) 
     boxRoot: box.root, id: staged.id, eventBus, services: { push },
     reason: "The capture was saved, but it could not be delivered to the chat.",
   });
-  t.check(emitted.join("\n"), "capture-status failed");
+  t.check(emitted, ["capture-status failed"]);
 
   // doctest:L59
   const [notice] = await readRecent(box.root, { days: 1 });
   assert.ok(notice);
-  const { title, body, target, loudness, source } = notice.intent;
-  t.check({ title, body, target, loudness, source }, {
+  const notificationId = capture(any(String));
+  const intent = {
+    kind: "intent",
+    id: notificationId,
     title: "A capture could not be finished",
     body: "The capture was saved, but it could not be delivered to the chat.",
     target: "chat:sess-1",
     loudness: "quiet",
+    tag: `capture:${staged.id}`,
     source: "capture",
-  });
+    at: isoDate(),
+  } as const;
+  t.check(notice.intent, intent);
 
   // doctest:L71
-  await t.checkText(push.sent.length, "1");
+  const slug = await boxSlug(box.root);
+  const sent = [{
+    endpoint: "https://push.example/capture",
+    payload: {
+      icon: `${slug}/icon-192.png`,
+      title: "A capture could not be finished",
+      body: "The capture was saved, but it could not be delivered to the chat.",
+      url: `/${slug}/chat?session=sess-1`,
+      tag: `capture:${staged.id}`,
+      silent: true,
+    },
+  }];
+  t.check(push.sent, sent);
 
   // ## Someone present: nothing is sent
   //
@@ -86,5 +104,12 @@ void test("Nobody present: one `quiet` notice to the capture's chat", async (t) 
   // doctest:L80
   await writePresence(box.root, { activeWeb: 1, now: new Date() });
   await markCapturePreparationFailed({ boxRoot: box.root, id: staged.id, eventBus, services: { push }, reason: "Again." });
-  t.check(`${(await readRecent(box.root, { days: 1 })).length} | ${push.sent.length}`, "1 | 1");
+  t.check(await readRecent(box.root, { days: 1 }), [{
+    intent,
+    deliveries: [
+      { kind: "delivery", notificationId: notificationId.value, channel: "apns", status: "skipped", detail: "no-audience", at: isoDate() },
+      { kind: "delivery", notificationId: notificationId.value, channel: "web-push", status: "sent", at: isoDate() },
+    ],
+  }]);
+  t.check(push.sent, sent);
 });

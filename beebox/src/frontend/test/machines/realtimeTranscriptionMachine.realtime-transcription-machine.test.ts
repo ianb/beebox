@@ -16,6 +16,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { is } from "agent-doctest/check";
 import { createActor, fromCallback } from "xstate";
 import {
   realtimeTranscriptionMachine,
@@ -82,6 +83,19 @@ function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean; c
   };
 }
 
+type Ctx = ReturnType<ReturnType<typeof segment>["context"]>;
+const contextWith = (over: Partial<Ctx>): Ctx => ({
+  finalTranscript: "",
+  interimTranscript: "",
+  finalWords: null,
+  error: null,
+  errorLevel: "error",
+  recording: null,
+  liveTextCue: "none",
+  targetSessionId: "chat-1",
+  ...over,
+});
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ## The mic goes live before any socket exists
@@ -90,18 +104,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // `connecting` to `recordingLocal`, and the first socket open moves it on to
 // `recording`.
 void test("START passes the chat's session id to the actor.", async (t) => {
-  // doctest:L94
   const s = segment();
   t.check(s.state(), "connecting");
 
-  // doctest:L98
-  t.check(s.log.join(","), "actor start target=chat-1");
+  t.check(s.log, ["actor start target=chat-1"]);
 
-  // doctest:L101
   s.emit({ type: "MIC_LIVE" });
   t.check(s.state(), "recordingLocal");
 
-  // doctest:L105
   s.emit({ type: "WS_CONNECTED" });
   t.check(s.state(), "recording");
 });
@@ -112,31 +122,25 @@ void test("START passes the chat's session id to the actor.", async (t) => {
 // startup). After that, a box that is down — or restarting for a minute —
 // keeps the segment in `recordingLocal` for as long as the user talks.
 void test("CONNECTTIMEOUT bounds only reaching MICLIVE (mic permission and worklet start...", async (t) => {
-  // doctest:L117
   const s = segment({ delays: { CONNECT_TIMEOUT: 10 } });
   s.emit({ type: "MIC_LIVE" });
   await sleep(40);
   t.check(s.state(), "recordingLocal");
 
-  // doctest:L123
-  t.check(s.context().error, null);
+  t.check(s.context(), contextWith({ error: null }));
 });
 
 // Without `MIC_LIVE` the start fails as before:
 void test("Without MICLIVE the start fails as before:", async (t) => {
-  // doctest:L130
   const s = segment({ delays: { CONNECT_TIMEOUT: 10 } });
   await sleep(40);
   t.check(s.state(), "idle");
 
-  // doctest:L135
-  t.check(s.context().error, "Recording didn't start. Please try again.");
 
   // Nothing was recorded, so the chat bar shows it as an error the person must act
   // on (issues/bugs/2026-08-25-one-pink-bar-three-severities.md):
 
-  // doctest:L143
-  t.check(s.context().errorLevel, "error");
+  t.check(s.context(), contextWith({ error: "Recording didn't start. Please try again.", errorLevel: "error" }));
 });
 
 // ## A network drop pauses live text, with no window
@@ -145,18 +149,15 @@ void test("Without MICLIVE the start fails as before:", async (t) => {
 // `recordingLocal`. The audio is still staging, so nothing bounds the drop:
 // `RECONNECT_WINDOW` passes and the segment is still recording.
 void test("CONNECTIONDEGRADED with cause network goes from recording to recordingLocal.", async (t) => {
-  // doctest:L154
   const s = segment({ delays: { RECONNECT_WINDOW: 10 } });
   s.emit({ type: "MIC_LIVE" });
   s.emit({ type: "WS_CONNECTED" });
   s.emit({ type: "CONNECTION_DEGRADED", cause: "network" });
   t.check(s.state(), "recordingLocal");
 
-  // doctest:L161
   await sleep(40);
   t.check(s.state(), "recordingLocal");
 
-  // doctest:L165
   s.emit({ type: "CONNECTION_RESTORED" });
   t.check(s.state(), "recording");
 });
@@ -167,41 +168,34 @@ void test("CONNECTIONDEGRADED with cause network goes from recording to recordin
 // applies. On expiry the machine STOPs the actor and waits in `finalizing` for
 // `TRANSCRIPTION_DONE`, which carries the recording.
 void test("Cause microphone goes to reconnecting:", async (t) => {
-  // doctest:L177
   const s = segment({ delays: { RECONNECT_WINDOW: 10 }, autoDone: false });
   s.emit({ type: "MIC_LIVE" });
   s.emit({ type: "WS_CONNECTED" });
   s.emit({ type: "CONNECTION_DEGRADED", cause: "microphone" });
   t.check(s.state(), "reconnecting");
 
-  // doctest:L184
-  t.check(s.context().error, "Microphone interrupted — recovering…");
+  t.check(s.context(), contextWith({ error: "Microphone interrupted — recovering…", errorLevel: "warning" }));
 
-  // doctest:L187
   await sleep(40);
   t.check(s.state(), "finalizing");
 
-  // doctest:L191
-  t.check(s.context().error, "Recording stopped — the microphone was taken away");
+  t.check(s.context(), contextWith({ error: "Recording stopped — the microphone was taken away", errorLevel: "warning" }));
 
-  // doctest:L194
   s.emit({ type: "TRANSCRIPTION_DONE", recording: s.recording });
   t.check(s.state(), "idle");
 
-  // doctest:L198
-  await t.checkText(s.context().recording === s.recording, "true");
+  t.check(s.context(), contextWith({ error: "Recording stopped — the microphone was taken away", errorLevel: "warning", recording: s.recording }));
+  t.check(s.context().recording, is(s.recording));
 });
 
 // When the mic comes back but the socket has not, the actor reports `MIC_LIVE`
 // and the segment resumes in `recordingLocal`:
 void test("When the mic comes back but the socket has not, the actor reports MICLIVE and...", async (t) => {
-  // doctest:L206
   const s = segment();
   s.emit({ type: "MIC_LIVE" });
   s.emit({ type: "CONNECTION_DEGRADED", cause: "microphone" });
   t.check(s.state(), "reconnecting");
 
-  // doctest:L212
   s.emit({ type: "MIC_LIVE" });
   t.check(s.state(), "recordingLocal");
 });
@@ -213,33 +207,27 @@ void test("When the mic comes back but the socket has not, the actor reports MIC
 // A service error and a bare close do the same. None of them reaches `idle`,
 // which would strand the audio.
 void test("A non-retryable close (1003/1008), reported as WSERROR, moves recording to re...", async (t) => {
-  // doctest:L225
   const s = segment();
   s.emit({ type: "MIC_LIVE" });
   s.emit({ type: "WS_CONNECTED" });
   s.emit({ type: "WS_ERROR", message: "Live transcription unavailable (code 1008) — still recording" });
   t.check(s.state(), "recordingLocal");
 
-  // doctest:L232
-  t.check(s.context().error, "Live transcription unavailable (code 1008) — still recording");
+  t.check(s.context(), contextWith({ error: "Live transcription unavailable (code 1008) — still recording", errorLevel: "warning", liveTextCue: "dropped" }));
 
   // The recording went on, so the chat bar shows this as a warning, not an error:
 
-  // doctest:L239
-  t.check(s.context().errorLevel, "warning");
+  t.check(s.context(), contextWith({ error: "Live transcription unavailable (code 1008) — still recording", errorLevel: "warning", liveTextCue: "dropped" }));
 
-  // doctest:L242
   s.emit({ type: "SERVER_ERROR", message: "upstream quota" });
   t.check(s.state(), "recordingLocal");
 
-  // doctest:L246
   const serverError = segment();
   serverError.emit({ type: "MIC_LIVE" });
   serverError.emit({ type: "WS_CONNECTED" });
   serverError.emit({ type: "SERVER_ERROR", message: "upstream quota" });
   t.check(serverError.state(), "recordingLocal");
 
-  // doctest:L253
   const bareClose = segment();
   bareClose.emit({ type: "MIC_LIVE" });
   bareClose.emit({ type: "WS_CONNECTED" });
@@ -252,75 +240,68 @@ void test("A non-retryable close (1003/1008), reported as WSERROR, moves recordi
 // A lost microphone means no audio is being recorded, so it plays the urgent
 // `MicLost` cue at once, and its return plays the go-live cue:
 void test("A lost microphone means no audio is being recorded, so it plays the urgent Mi...", async (t) => {
-  // doctest:L267
   const s = segment({ cues: true });
   s.emit({ type: "MIC_LIVE" });
   s.emit({ type: "WS_CONNECTED" });
   s.emit({ type: "CONNECTION_DEGRADED", cause: "microphone" });
   s.emit({ type: "CONNECTION_RESTORED" });
-  t.check(s.cues.join(","), "MicLost,RecordingResumed");
+  t.check(s.cues, ["MicLost", "RecordingResumed"]);
 });
 
 // Losing live text only pauses spoken keywords, and most drops heal within a
 // second or two. A drop that heals inside `LIVE_TEXT_CUE_DELAY` makes no sound
 // at all:
 void test("Losing live text only pauses spoken keywords, and most drops heal within a se...", async (t) => {
-  // doctest:L281
   const s = segment({ cues: true, delays: { LIVE_TEXT_CUE_DELAY: 30 } });
   s.emit({ type: "MIC_LIVE" });
   s.emit({ type: "WS_CONNECTED" });
   s.emit({ type: "CONNECTION_DEGRADED", cause: "network" });
   s.emit({ type: "CONNECTION_RESTORED" });
   await sleep(60);
-  t.check(s.cues.join(","), "");
+  t.check(s.cues, []);
 });
 
 // A drop that lasts plays the quiet pause cue once, and the return plays its
 // mirror. A socket that can't be fixed (`WS_ERROR`) is the same kind of loss and
 // gets the same quiet cue:
 void test("A drop that lasts plays the quiet pause cue once, and the return plays its mi...", async (t) => {
-  // doctest:L296
   const s = segment({ cues: true, delays: { LIVE_TEXT_CUE_DELAY: 10 } });
   s.emit({ type: "MIC_LIVE" });
   s.emit({ type: "WS_CONNECTED" });
   s.emit({ type: "CONNECTION_DEGRADED", cause: "network" });
   await sleep(40);
   s.emit({ type: "CONNECTION_RESTORED" });
-  t.check(s.cues.join(","), "LiveTextPaused,LiveTextResumed");
+  t.check(s.cues, ["LiveTextPaused", "LiveTextResumed"]);
 
-  // doctest:L305
   const fatal = segment({ cues: true, delays: { LIVE_TEXT_CUE_DELAY: 10 } });
   fatal.emit({ type: "MIC_LIVE" });
   fatal.emit({ type: "WS_CONNECTED" });
   fatal.emit({ type: "WS_ERROR", message: "Live transcription unavailable (code 1008) — still recording" });
   await sleep(40);
-  t.check(fatal.cues.join(","), "LiveTextPaused");
+  t.check(fatal.cues, ["LiveTextPaused"]);
 });
 
 // A segment whose first socket is slow to open never had live text, so waiting
 // in `recordingLocal` at the start is silent:
 void test("A segment whose first socket is slow to open never had live text, so waiting...", async (t) => {
-  // doctest:L318
   const s = segment({ cues: true, delays: { LIVE_TEXT_CUE_DELAY: 10 } });
   s.emit({ type: "MIC_LIVE" });
   await sleep(40);
   s.emit({ type: "WS_CONNECTED" });
-  t.check(s.cues.join(","), "");
+  t.check(s.cues, []);
 });
 
 // ## STOP from `recordingLocal` ends the segment with its recording
 void test("STOP from `recordingLocal` ends the segment with its recording", async (t) => {
-  // doctest:L329
   const s = segment();
   s.emit({ type: "MIC_LIVE" });
   s.actor.send({ type: "STOP" });
   t.check(s.state(), "idle");
 
-  // doctest:L335
-  await t.checkText(s.context().recording === s.recording, "true");
+  t.check(s.context(), contextWith({ recording: s.recording }));
+  t.check(s.context().recording, is(s.recording));
 
-  // doctest:L338
-  t.check(s.log.join(","), "actor start target=chat-1,STOP,actor stopped");
+  t.check(s.log, ["actor start target=chat-1", "STOP", "actor stopped"]);
 });
 
 // Nothing was sealed yet: sealing is the receiver's job (the hook, or the send
@@ -328,17 +309,14 @@ void test("STOP from `recordingLocal` ends the segment with its recording", asyn
 //
 // ## CANCEL discards the recording
 void test("Nothing was sealed yet:", async (t) => {
-  // doctest:L348
   const s = segment();
   s.emit({ type: "MIC_LIVE" });
   s.actor.send({ type: "CANCEL" });
   t.check(s.state(), "idle");
 
-  // doctest:L354
-  t.check(s.log.join(","), "actor start target=chat-1,CANCEL,discard,actor stopped");
+  t.check(s.log, ["actor start target=chat-1", "CANCEL", "discard", "actor stopped"]);
 
-  // doctest:L357
-  t.check(s.context().recording, null);
+  t.check(s.context(), contextWith({ recording: null }));
 });
 
 // ## No silence timeout while live text is paused
@@ -346,13 +324,11 @@ void test("Nothing was sealed yet:", async (t) => {
 // `SILENCE_TIMEOUT` lives on `recording`, where each live-text update resets it.
 // In `recordingLocal` no text arrives to reset it, so it does not run there.
 void test("SILENCETIMEOUT lives on recording, where each live-text update resets it.", async (t) => {
-  // doctest:L367
   const s = segment({ delays: { SILENCE_TIMEOUT: 10 } });
   s.emit({ type: "MIC_LIVE" });
   await sleep(40);
   t.check(s.state(), "recordingLocal");
 
-  // doctest:L373
   s.emit({ type: "WS_CONNECTED" });
   await sleep(40);
   t.check(s.state(), "idle");
@@ -364,18 +340,15 @@ void test("SILENCETIMEOUT lives on recording, where each live-text update resets
 // it, the same path as a spoken "send", and that send re-arms the mic), then
 // STOPs. The segment ends with its recording in context.
 void test("On expiry the machine emits maxDurationReached (the hook parks a submit on it...", async (t) => {
-  // doctest:L386
   const s = segment({ delays: { MAX_DURATION: 20 } });
   s.emit({ type: "MIC_LIVE" });
   await sleep(50);
-  t.check(s.emitted.join(","), "maxDurationReached");
+  t.check(s.emitted, ["maxDurationReached"]);
 
-  // doctest:L392
   t.check(s.state(), "idle");
 
-  // doctest:L395
-  await t.checkText(s.context().recording === s.recording, "true");
+  t.check(s.context(), contextWith({ recording: s.recording }));
+  t.check(s.context().recording, is(s.recording));
 
-  // doctest:L398
-  await t.checkText(s.log.includes("STOP"), "true");
+  t.check(s.log, ["actor start target=chat-1", "STOP", "actor stopped"]);
 });

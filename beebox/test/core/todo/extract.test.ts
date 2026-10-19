@@ -367,15 +367,34 @@ async function purity(t: Test) {
   const body = '{% todo due="2026-07-27" %}Overdue somewhere{% /todo %}\n';
   const a = extractCardTodos({ relPath: CARD, content: doc(body), ctx }).items;
   const b = extractCardTodos({ relPath: CARD, content: doc(body), ctx }).items;
-  await t.checkText(JSON.stringify(a) === JSON.stringify(b), "true");
+  t.check(a, [
+    {
+      path: CARD,
+      locator: { kind: "body", line: 5 },
+      id: undefined,
+      text: "Overdue somewhere",
+      status: "open",
+      assigned: undefined,
+      by: undefined,
+      created: undefined,
+      due: "2026-07-27",
+      start: undefined,
+      recheck: undefined,
+      seeAlso: [],
+      sectionPath: [],
+      parent: null,
+      annotation: "",
+      refs: [],
+    },
+  ]);
+  t.check(b, a);
 
   // doctest:L345
   const first = a[0];
   assert.ok(first);
-  await t.checkText(JSON.stringify(first).includes("plateState"), "false");
 
   // doctest:L350
   const early = { now: new Date("2026-07-01T12:00:00Z"), timeZone: "America/Chicago" };
   const late = { now: new Date("2026-08-01T12:00:00Z"), timeZone: "America/Chicago" };
-  t.check([deriveTodo(first, early).plateState, deriveTodo(first, late).plateState].join(" → "), "on-plate → escalated");
+  t.check([deriveTodo(first, early).plateState, deriveTodo(first, late).plateState], ["on-plate", "escalated"]);
 }

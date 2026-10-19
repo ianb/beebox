@@ -6,12 +6,10 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { verifyMapCoverage } from "../../../../src/core/maps/finalize/verify.js";
 
-function check(content: string, children: string[]): string {
-  const r = verifyMapCoverage({ dir: "_content/work", content, children });
-  return r.ok ? "ok" : r.problems.join("\n");
+function check(content: string, children: string[]) {
+  return verifyMapCoverage({ dir: "_content/work", content, children });
 }
 
 // ## A map in the prompt's format passes
@@ -19,11 +17,9 @@ function check(content: string, children: string[]): string {
 // Subdirectories and anchor files are listed; plain files may be left out; bare
 // and annotated bullets both count; nested bullets and prose are not checked.
 void test("Subdirectories and anchor files are listed; plain files may be left out; bare...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L22
-  await t.checkText(
-    out.with(print(check(
+  t.check(
+    check(
       [
         "# Map: _content/work",
         "",
@@ -36,8 +32,8 @@ void test("Subdirectories and anchor files are listed; plain files may be left o
         "- `work.briefing.card` — context for this area",
       ].join("\n"),
       ["2025/", "README.md", "acme/", "notes.md", "work.briefing.card"],
-    ))),
-    "ok",
+    ),
+    { ok: true },
   );
 });
 
@@ -46,45 +42,47 @@ void test("Subdirectories and anchor files are listed; plain files may be left o
 // A header left from an older layout fails, so the agent rewrites the map. Every
 // map on a box migrated to one root carried one of these.
 void test("A header left from an older layout fails, so the agent rewrites the map.", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L45
-  await t.checkText(out.with(print(check("# Map: store/work\n\n- `acme/`\n", ["acme/"]))), "header is \"# Map: store/work\", expected \"# Map: _content/work\"");
+  t.check(check("# Map: store/work\n\n- `acme/`\n", ["acme/"]), {
+    ok: false,
+    problems: ['header is "# Map: store/work", expected "# Map: _content/work"'],
+  });
 });
 
 // ## Every subdirectory and anchor must be listed
 void test("Every subdirectory and anchor must be listed", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L52
-  await t.checkText(out.with(print(check("# Map: _content/work\n\n- `acme/`\n", ["acme/", "beta/", "Work.landmark.card", "plain.md"]))), `does not list beta/
-does not list Work.landmark.card`);
+  t.check(check("# Map: _content/work\n\n- `acme/`\n", ["acme/", "beta/", "Work.landmark.card", "plain.md"]), {
+    ok: false,
+    problems: ["does not list beta/", "does not list Work.landmark.card"],
+  });
 });
 
 // A subdirectory written without its trailing slash is a different name:
 void test("A subdirectory written without its trailing slash is a different name:", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L61
-  await t.checkText(out.with(print(check("# Map: _content/work\n\n- `acme` — contracts\n", ["acme/"]))), `does not list acme/
-lists acme, which is not in the directory's listing`);
+  t.check(check("# Map: _content/work\n\n- `acme` — contracts\n", ["acme/"]), {
+    ok: false,
+    problems: ["does not list acme/", "lists acme, which is not in the directory's listing"],
+  });
 });
 
 // ## Every listed name must exist
 //
 // A deleted entry, or one the ignore policy hides, fails:
 void test("A deleted entry, or one the ignore policy hides, fails:", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L72
-  await t.checkText(out.with(print(check("# Map: _content/work\n\n- `acme/`\n- `old-client/` — gone\n", ["acme/"]))), "lists old-client/, which is not in the directory's listing");
+  t.check(check("# Map: _content/work\n\n- `acme/`\n- `old-client/` — gone\n", ["acme/"]), {
+    ok: false,
+    problems: ["lists old-client/, which is not in the directory's listing"],
+  });
 });
 
 // ## An empty map fails on every count
 void test("An empty map fails on every count", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L79
-  await t.checkText(out.with(print(check("", ["acme/"]))), `header is "", expected "# Map: _content/work"
-does not list acme/`);
+  t.check(check("", ["acme/"]), {
+    ok: false,
+    problems: ['header is "", expected "# Map: _content/work"', "does not list acme/"],
+  });
 });

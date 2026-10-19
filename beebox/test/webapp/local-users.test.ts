@@ -7,7 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { anything } from "agent-doctest/check";
+import { any, instanceOf, isoDate, not } from "agent-doctest/check";
 import { mkdtemp, rm, writeFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -26,6 +26,11 @@ import {
 } from "../../src/webapp/local-users.js";
 import { hashPassword } from "../../src/webapp/local-users-scrypt.js";
 import { AuthFileLockError, AuthStoreUnavailableError } from "../../src/webapp/local-users-errors.js";
+
+/** A public user record as the store returns it. */
+function publicUser(fields: { email: string; name: string; role: "owner" | "member"; gen: number }) {
+  return { ...fields, created: isoDate() };
+}
 
 // Small work factor keeps scrypt fast in tests (2^14 vs the 2^17 prod default).
 process.env.BBX_AUTH_SCRYPT_N = String(2 ** 14);
@@ -64,14 +69,15 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
     name: "Boxholder",
     role: "owner",
     gen: 1,
-    created: anything(),
+    created: isoDate(),
   });
 
   // Credential lock exhaustion is part of the store-unavailable contract, so every
   // route that already fails closed on an unavailable store also handles it.
 
   // doctest:L60
-  await t.checkText(new AuthFileLockError("/redacted/auth.lock") instanceof AuthStoreUnavailableError, "true");
+  const lockError: Error = new AuthFileLockError("/redacted/auth.lock");
+  t.check(lockError, instanceOf(AuthStoreUnavailableError));
 
   // The email is canonicalized (trim + lowercase); the owner email is discoverable.
 
@@ -82,11 +88,11 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
 
   // doctest:L74
   const info = await stat(AUTH_FILE);
-  await t.checkText((info.mode & 0o777).toString(8), "600");
+  t.check(info.mode & 0o777, 0o600);
 
   // doctest:L78
   const raw = await import("node:fs/promises").then((fs) => fs.readFile(AUTH_FILE, "utf-8"));
-  await t.checkText(raw.includes("correct horse"), "false");
+  t.check(raw, not(any(String).includes("correct horse")));
 
   // ## Verify: right password succeeds, wrong password returns null
   //
@@ -94,7 +100,7 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
 
   // doctest:L88
   const ok = await verifyPassword({ email: "  BOXHOLDER@example.com ", password: "correct horse" });
-  t.check(ok === null ? "null" : ok.email, "boxholder@example.com");
+  t.check(ok, publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }));
 
   // doctest:L92
   t.check(await verifyPassword({ email: "boxholder@example.com", password: "wrong" }), null);
@@ -113,13 +119,13 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
 
   // doctest:L113
   const member = await addUser({ email: "Member@Example.com", name: "Member", password: "s3cret", role: "member" });
-  t.check(member.role, "member");
+  t.check(member, publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }));
 
   // doctest:L117
-  t.check((await verifyPassword({ email: "member@example.com", password: "s3cret" }))?.role, "member");
+  t.check(await verifyPassword({ email: "member@example.com", password: "s3cret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }));
 
   // doctest:L120
-  t.check(listUsers().map((u) => `${u.email}:${u.role}`).join(","), "boxholder@example.com:owner,member@example.com:member");
+  t.check(listUsers(), [publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 })]);
 
   // Adding a duplicate, or a second owner, is refused.
 
@@ -132,9 +138,8 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
   // ## Set password bumps `gen` (revokes outstanding sessions)
 
   // doctest:L137
-  const before = getLocalUser("member@example.com")?.gen;
-  const after = (await setPassword({ email: "member@example.com", password: "n3wsecret" })).gen;
-  t.check(`${before} -> ${after}`, "1 -> 2");
+  t.check(getLocalUser("member@example.com"), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }));
+  t.check(await setPassword({ email: "member@example.com", password: "n3wsecret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 2 }));
 
   // The old password no longer verifies; the new one does.
 
@@ -142,7 +147,7 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
   t.check(await verifyPassword({ email: "member@example.com", password: "s3cret" }), null);
 
   // doctest:L149
-  t.check((await verifyPassword({ email: "member@example.com", password: "n3wsecret" }))?.gen, 2);
+  t.check(await verifyPassword({ email: "member@example.com", password: "n3wsecret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 2 }));
 
   // The reset flow can do expensive hashing before entering the credential-store
   // lock, while preserving the same generation bump and user metadata.
@@ -150,17 +155,13 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
   // doctest:L157
   const resetHash = await hashPassword("reset-secret");
   const resetUser = await setPasswordWithPasswordHash({ email: " MEMBER@example.com ", scrypt: resetHash });
-  t.check({ name: resetUser.name, role: resetUser.role, gen: resetUser.gen }, {
-    name: "Member",
-    role: "member",
-    gen: 3,
-  });
+  t.check(resetUser, publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 3 }));
 
   // doctest:L162
   t.check(await verifyPassword({ email: "member@example.com", password: "n3wsecret" }), null);
 
   // doctest:L165
-  t.check((await verifyPassword({ email: "member@example.com", password: "reset-secret" }))?.gen, 3);
+  t.check(await verifyPassword({ email: "member@example.com", password: "reset-secret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 3 }));
 
   // doctest:L170
   t.check(await rejectName(() => setPassword({ email: "ghost@example.com", password: "x" })), "NoSuchUserError");
@@ -169,7 +170,7 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
 
   // doctest:L177
   await removeUser({ email: "member@example.com" });
-  t.check(listUsers().map((u) => u.email).join(","), "boxholder@example.com");
+  t.check(listUsers(), [publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 })]);
 
   // doctest:L181
   t.check(await rejectName(() => removeUser({ email: "boxholder@example.com" })), "LastOwnerRemovalError");
@@ -183,20 +184,20 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
   // verify should rewrite the stored record with the new parameters.
 
   // doctest:L194
-  t.check(getLocalUser("boxholder@example.com") && JSON.parse(raw).users[0].scrypt.N, 16384);
+  t.check(JSON.parse(raw).users[0].scrypt, { N: 16384, r: 8, p: 1, salt: any(String), hash: any(String) });
 
   // doctest:L197
   process.env.BBX_AUTH_SCRYPT_N = String(2 ** 13);
-  t.check((await verifyPassword({ email: "boxholder@example.com", password: "correct horse" }))?.email, "boxholder@example.com");
+  t.check(await verifyPassword({ email: "boxholder@example.com", password: "correct horse" }), publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }));
 
   // doctest:L201
   const rehashed = await import("node:fs/promises").then((fs) => fs.readFile(AUTH_FILE, "utf-8"));
-  t.check(JSON.parse(rehashed).users[0].scrypt.N, 8192);
+  t.check(JSON.parse(rehashed).users[0].scrypt, { N: 8192, r: 8, p: 1, salt: any(String), hash: any(String) });
 
   // `gen` is unchanged by a rehash (it's not a credential change).
 
   // doctest:L209
-  t.check(getLocalUser("boxholder@example.com")?.gen, 1);
+  t.check(getLocalUser("boxholder@example.com"), publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }));
 });
 
 // ## A corrupt file is a hard failure — never a silent fall-open
@@ -240,7 +241,7 @@ void test("Missing file is the first-run state, not an error", async (t) => {
   process.env.BBX_AUTH_FILE = join(dir3, "auth.json");
 
   // doctest:L250
-  await t.checkText(listUsers().length, "0");
+  t.check(listUsers(), []);
 
   // doctest:L253
   t.check(getLocalOwnerEmail(), null);
@@ -290,7 +291,7 @@ void test("Google-authenticated owners do not need a local password.", async (t)
 
   // doctest:L291
   await removeUser({ email: "member@example.com" });
-  await t.checkText(listUsers().length, "0");
+  t.check(listUsers(), []);
 
   // doctest:L295
   t.check({ file: await stat(process.env.BBX_AUTH_FILE).then(() => "exists"), initialized: isLocalAuthStoreInitialized() }, {
@@ -303,10 +304,10 @@ void test("Google-authenticated owners do not need a local password.", async (t)
   // doctest:L302
   await addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" });
   const laterOwner = await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
-  t.check(laterOwner.role, "owner");
+  t.check(laterOwner, publicUser({ email: "owner@example.com", name: "Owner", role: "owner", gen: 1 }));
 
   // doctest:L307
-  t.check(listUsers().map((user) => user.role).toSorted().join(","), "member,owner");
+  t.check(listUsers(), [publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }), publicUser({ email: "owner@example.com", name: "Owner", role: "owner", gen: 1 })]);
 });
 
 // ## Concurrent first owner and first member creation preserve both accounts
@@ -372,5 +373,5 @@ void test("`BBX_OWNER_EMAIL` pins the first owner's identity", async (t) => {
 
   // doctest:L359
   const owner = await createFirstUser({ email: "Configured@Example.com", name: "Cfg", password: "p" });
-  t.check(owner.email, "configured@example.com");
+  t.check(owner, publicUser({ email: "configured@example.com", name: "Cfg", role: "owner", gen: 1 }));
 });

@@ -10,7 +10,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
 import { chmod, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { delimiter, join } from "node:path";
 import { applyDisposition } from "../../src/cli/disposition.js";
@@ -41,27 +40,23 @@ async function errorNameFrom(fn: () => Promise<unknown>): Promise<string> {
 
 // ## `archive` renames into `imported/`, deduping on a name collision
 void test("`archive` renames into `imported/`, deduping on a name collision", async (t) => {
-  // doctest:L45
   const archiveDir = join(dir, "archive-case");
   await mkdir(archiveDir);
   const filePath = join(archiveDir, "Doc.pdf");
   await writeFile(filePath, "first");
   await applyDisposition(filePath, "archive");
-  t.check((await readdir(join(archiveDir, "imported"))).join(","), "Doc.pdf");
+  t.check(await readdir(join(archiveDir, "imported")), ["Doc.pdf"]);
 
   // A second file with the same basename gets a numbered suffix instead of
   // clobbering the first:
 
-  // doctest:L58
   const filePath2 = join(archiveDir, "Doc.pdf");
   await writeFile(filePath2, "second");
   await applyDisposition(filePath2, "archive");
-  t.check((await readdir(join(archiveDir, "imported"))).toSorted().join(","), "Doc-2.pdf,Doc.pdf");
+  t.check((await readdir(join(archiveDir, "imported"))).toSorted(), ["Doc-2.pdf", "Doc.pdf"]);
 
-  // doctest:L66
   t.check(await readFile(join(archiveDir, "imported", "Doc.pdf"), "utf-8"), "first");
 
-  // doctest:L71
   t.check(await readFile(join(archiveDir, "imported", "Doc-2.pdf"), "utf-8"), "second");
 });
 
@@ -75,33 +70,29 @@ void test("`trash` invokes the `trash` CLI when it's on PATH", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L78
   const binDir = join(dir, "fake-bin");
   await mkdir(binDir);
   const logFile = join(binDir, "invocations.log");
   await writeFakeCommand({ binDir, name: "trash", logFile, exitCode: 0 });
   process.env.PATH = `${binDir}${delimiter}${originalPath}`;
 
-  // doctest:L84
   const trashDir = join(dir, "trash-case");
   await mkdir(trashDir);
   const trashedFile = join(trashDir, "scan.pdf");
   await writeFile(trashedFile, "bytes");
   await applyDisposition(trashedFile, "trash");
-  t.check((await readFile(logFile, "utf-8")).trim(), str`${any(String)}/trash-case/scan.pdf`);
+  t.check((await readFile(logFile, "utf-8")).trim(), trashedFile);
 
   // A nonzero exit from the `trash` CLI is a real failure, surfaced as
   // `TrashError` rather than silently falling back to Finder (a present-but-
   // failing `trash` is a different problem than an absent one):
 
-  // doctest:L98
   const failDir = join(dir, "fake-bin-fail");
   await mkdir(failDir);
   const failLog = join(failDir, "invocations.log");
   await writeFakeCommand({ binDir: failDir, name: "trash", logFile: failLog, exitCode: 1 });
   process.env.PATH = `${failDir}${delimiter}${originalPath}`;
 
-  // doctest:L104
   const failFile = join(trashDir, "broken.pdf");
   await writeFile(failFile, "bytes");
   t.check(await errorNameFrom(() => applyDisposition(failFile, "trash")), "TrashError");
@@ -112,16 +103,15 @@ void test("`trash` invokes the `trash` CLI when it's on PATH", async (t) => {
   // anywhere — so the ENOENT from the failed `trash` lookup must trigger the
   // Finder fallback rather than propagating as a generic spawn error.
 
-  // doctest:L117
   const fallbackDir = join(dir, "fake-bin-fallback");
   await mkdir(fallbackDir);
   const fallbackLog = join(fallbackDir, "invocations.log");
   await writeFakeCommand({ binDir: fallbackDir, name: "osascript", logFile: fallbackLog, exitCode: 0 });
   process.env.PATH = fallbackDir;
 
-  // doctest:L123
   const noTrashFile = join(trashDir, "no-trash-cli.pdf");
   await writeFile(noTrashFile, "bytes");
   await applyDisposition(noTrashFile, "trash");
-  t.check((await readFile(fallbackLog, "utf-8")).includes("no-trash-cli.pdf"), true);
+  t.check(await readFile(fallbackLog, "utf-8"), `-e tell application "Finder" to delete POSIX file "${noTrashFile}"
+`);
 });

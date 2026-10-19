@@ -92,6 +92,23 @@ function bulk(uuid: string) {
   return userEntry(uuid, "a".repeat(4000));
 }
 
+/** The husk as a review leaves it: fields in the order the writer emits them. */
+function huskText(fields: { session: string; titleFirst?: boolean; span: string }, title: string): string {
+  const body = `contains: Working through a repeated billing error and how to stop it.
+contains-evidence: |-
+  - decision: cancel the duplicate subscription
+  - follow-up: check next month's statement
+`;
+  const head = `---\nsession: ${fields.session}\n`;
+  const tail = `review-span: ${fields.span}\nfirst-message: ${"a".repeat(79)}…\n---`;
+  return fields.titleFirst === true ? `${head}title: ${title}\n${body}${tail}` : `${head}${body}title: ${title}\n${tail}`;
+}
+
+/** The rendered form of a `bulk` entry. */
+function bulkSpan(): string {
+  return `**User** (2026-07-28T03:00:00Z)\n${"a".repeat(4000)}`;
+}
+
 const OUTPUT: ReviewOutput = {
   title: "Sorting out a recurring billing problem",
   contains: "Working through a repeated billing error and how to stop it.",
@@ -126,9 +143,10 @@ void test("A qualifying session gets titled, summarized, and journalled", async 
   const summary = await runChatReview(box.root, {
     reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check({ reviewed: summary.reviewed, bootstrapped: summary.bootstrapped }, {
-    reviewed: 1,
-    bootstrapped: 1,
+  t.check(summary, {
+    reviewed: 1, titled: 0, titlesKept: 0, alreadyApplied: 0, bootstrapped: 1, rewritten: 0, reviewerFailures: 0,
+    sessionErrors: 0, exhausted: 0, rejected: [], missingTranscripts: 0, deferredActive: 0, belowThreshold: 0,
+    belowTitleThreshold: 0, tooFewTurns: 0, foreignOrigin: 0, overflow: 0,
   });
 
   // The husk carries all four fields, and the reviewer was told this was a bootstrap
@@ -136,21 +154,16 @@ void test("A qualifying session gets titled, summarized, and journalled", async 
 
   // doctest:L148
   const card = await readFile(box.path(huskPath), "utf8");
-  t.check(
-    [
-      card.includes("title: Sorting out a recurring billing problem"),
-      card.includes("contains: Working through a repeated billing error"),
-      card.includes("decision: cancel the duplicate subscription"),
-      card.includes("review-span:"),
-    ].join(","),
-    "true,true,true,true",
-  );
+  t.checkText(card, huskText({ session: sid("sess1234"), span: "6bf738fa00192a0e" }, "Sorting out a recurring billing problem"));
 
   // doctest:L157
-  t.check({ bootstrap: reviewer.calls[0]?.bootstrap, account: reviewer.calls[0]?.currentAccount }, {
+  t.check(reviewer.calls, [{
+    sessionId: sid("sess1234"),
+    currentTitle: null,
+    currentAccount: null,
+    span: `${bulkSpan()}\n\n---\n\n**User** (2026-07-28T03:00:00Z)\nand another thing\n\n---\n\n${bulkSpan()}`,
     bootstrap: true,
-    account: null,
-  });
+  }]);
 
   // ## Running again immediately does nothing
   //
@@ -162,9 +175,13 @@ void test("A qualifying session gets titled, summarized, and journalled", async 
   const again = await runChatReview(box.root, {
     reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check({ reviewed: again.reviewed, calls: second.calls.length }, {
-    reviewed: 0,
-    calls: 0,
+  t.check({ again, calls: second.calls }, {
+    again: {
+      reviewed: 0, titled: 0, titlesKept: 0, alreadyApplied: 0, bootstrapped: 0, rewritten: 0, reviewerFailures: 0,
+      sessionErrors: 0, exhausted: 0, rejected: [], missingTranscripts: 0, deferredActive: 0, belowThreshold: 0,
+      belowTitleThreshold: 1, tooFewTurns: 0, foreignOrigin: 0, overflow: 0,
+    },
+    calls: [],
   });
 
   // ## Growth is an increment, and the previous account is the input
@@ -181,22 +198,18 @@ void test("A qualifying session gets titled, summarized, and journalled", async 
   await runChatReview(box.root, { reviewer: third, maxSessions: 10, now: NOW, ownerEmail: null });
 
   // doctest:L187
-  await t.checkText(
-    // Only the new entry was sent, and the prior account came along.
-    // The whole transcript renders to >16k chars; the span sent is only the two
-    // new entries, so it is far smaller.
-    JSON.stringify({
-      bootstrap: third.calls[0]?.bootstrap,
-      spanIsIncrementOnly: (third.calls[0]?.span.length ?? Infinity) < 9000,
-      carriedAccount: third.calls[0]?.currentAccount?.includes("cancel the duplicate subscription"),
-    }),
-    "{\"bootstrap\":false,\"spanIsIncrementOnly\":true,\"carriedAccount\":true}",
-  );
+  t.check(third.calls[0], {
+    sessionId: sid("sess1234"),
+    currentTitle: "Sorting out a recurring billing problem",
+    currentAccount: "- decision: cancel the duplicate subscription\n- follow-up: check next month's statement",
+    span: `${bulkSpan()}\n\n---\n\n${bulkSpan()}`,
+    bootstrap: false,
+  });
 
   // An empty title means "keep the existing one", so it survives.
 
   // doctest:L201
-  await t.checkText((await readFile(box.path(huskPath), "utf8")).includes("title: Sorting out a recurring billing problem"), "true");
+  t.checkText(await readFile(box.path(huskPath), "utf8"), huskText({ session: sid("sess1234"), span: "64ffeea542992332" }, "Sorting out a recurring billing problem"));
 });
 
 // ## A hand-edited title is never overwritten again
@@ -245,7 +258,7 @@ void test("The review detects that the title no longer hashes to what it wrote, 
 
   // doctest:L242
   const after = await readFile(box.path(huskPath), "utf8");
-  t.check([after.includes("title: The Acme mess"), after.includes("A completely different title")].join(","), "true,false");
+  t.checkText(after, huskText({ session: sid("sess5678"), span: "1adea253dc56352d" }, "The Acme mess"));
 
   // The ownership flag is recorded, so the decision survives a restart. The
   // title journal advances with the metadata journal even though the model
@@ -255,10 +268,15 @@ void test("The review detects that the title no longer hashes to what it wrote, 
   // doctest:L253
   const state = await loadReviewState(box.root);
   const entry = state.sessions[sid("sess5678")];
-  t.check(({ owner: entry?.titleOwner, title: entry?.applied["title"]?.endUuid, metadata: entry?.applied["metadata"]?.endUuid }), {
-    owner: "manual",
-    title: "v4",
-    metadata: "v4",
+  t.check(entry, {
+    applied: {
+      metadata: { spanId: "1adea253dc56352d", endUuid: "v4", endIndex: 3, prefixHash: "60703c3af6c5065a", at: NOW.toISOString() },
+      title: { spanId: "1adea253dc56352d", endUuid: "v4", endIndex: 3, prefixHash: "60703c3af6c5065a", at: NOW.toISOString() },
+    },
+    titleOwner: "manual",
+    titleHash: null,
+    attempts: 0,
+    titleAttempts: 0,
   });
 });
 
@@ -288,15 +306,22 @@ void test("At first review there is no stored hash, but the husk may already car
     reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
   });
   const card = await readFile(box.path(huskPath), "utf8");
-  t.check([card.includes("title: Notes on the roof leak"), card.includes("Sorting out a recurring")].join(","), "true,false");
+  t.checkText(card, huskText({ session: sid("sesspre"), span: "9b5cd26becaf6b27", titleFirst: true }, "Notes on the roof leak"));
 
   // The rest of the review still lands, and the field is marked `manual` from here on.
 
   // doctest:L288
-  await t.checkText(card.includes("contains: Working through a repeated billing error"), "true");
-
   // doctest:L291
-  t.check((await loadReviewState(box.root)).sessions[sid("sesspre")]?.titleOwner, "manual");
+  t.check((await loadReviewState(box.root)).sessions[sid("sesspre")], {
+    applied: {
+      metadata: { spanId: "9b5cd26becaf6b27", endUuid: "p2", endIndex: 1, prefixHash: "0c87745b677be2fc", at: NOW.toISOString() },
+      title: { spanId: "9b5cd26becaf6b27", endUuid: "p2", endIndex: 1, prefixHash: "0c87745b677be2fc", at: NOW.toISOString() },
+    },
+    titleOwner: "manual",
+    titleHash: null,
+    attempts: 0,
+    titleAttempts: 0,
+  });
 
   // An auto-set snippet title, by contrast, is ours to replace — otherwise the
   // feature could never improve the titles it exists to improve.
@@ -320,7 +345,7 @@ void test("At first review there is no stored hash, but the husk may already car
   await runChatReview(box2.root, {
     reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  await t.checkText((await readFile(box2.path(husk2), "utf8")).includes("title: Sorting out a recurring billing problem"), "true");
+  t.checkText(await readFile(box2.path(husk2), "utf8"), huskText({ session: sid("sesssnip"), span: "0cd03e6cdee49df8", titleFirst: true }, "Sorting out a recurring billing problem"));
 
   // doctest:L319
   await box2.cleanup();

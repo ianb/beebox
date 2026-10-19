@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile, symlink } from "node:fs/promises";
@@ -83,11 +84,11 @@ export default function Count({ cards }) {
 ` });
 
   const r = await runViewTest(box.root, ["count"]);
-  // doctest:L78
-  t.check(r.code, 0);
-
-  // doctest:L84
-  await t.checkText(r.stdout.includes("cards: 2"), "true");
+  t.check(r, {
+    code: 0,
+    stdout: "<html><head></head><body><div>cards: 2</div></body></html>\n",
+    stderr: "",
+  });
 });
 
 // ## Card text through `Markdown`
@@ -119,8 +120,13 @@ export default function Prose({ cards }) {
 ` });
 
   const r = await runViewTest(box.root, ["prose"]);
-  // doctest:L113
-  t.check([r.code, r.stdout.includes("/views/_content/inbox/B.doc.card"), r.stdout.includes('data-todo-locator="7"')].join(" "), "0 true true");
+  // The box slug in the link is the temp box's random directory name.
+  t.check(r, {
+    code: 0,
+    stdout: str`<html><head></head><body><div><div class="prose prose-sm max-w-none bbx-theme-prose"><div class="bbx-paragraph">See <a class="bbx-theme-link" href="/${any(String)}/views/_content/inbox/B.doc.card">B</a>.</div><div class="bbx-paragraph"><span data-todo-status="open" data-todo-locator="7" class="group"><input type="checkbox" disabled="" readonly="" aria-label="Order lumber" class="accent-warm-500 mr-1 align-middle"><span class="text-warm-800">Order lumber</span></span></div></div></div></body></html>
+`,
+    stderr: "",
+  });
 });
 
 // ## Image variants are safe to construct during render
@@ -148,8 +154,11 @@ export default function Image({ imageUrl, fileUrl }) {
 ` });
 
   const r = await runViewTest(box.root, ["image"]);
-  // doctest:L139
-  t.check([r.code, r.stdout.includes("/api/images/store/Trip.attach/beach photo.jpg?width=480&amp;format=auto"), r.stdout.includes("/api/files/store/Trip.attach/beach photo.jpg")].join(" "), "0 true true");
+  t.check(r, {
+    code: 0,
+    stdout: '<html><head></head><body><a href="/api/files/store/Trip.attach/beach photo.jpg"><img src="/api/images/store/Trip.attach/beach photo.jpg?width=480&amp;format=auto"></a></body></html>\n',
+    stderr: "",
+  });
 });
 
 // ## Render failure — source-mapped stack
@@ -177,16 +186,15 @@ export default function Boom() {
 ` });
 
   const r = await runViewTest(box.root, ["boom"]);
-  // doctest:L165
-  t.check(r.code, 1);
-
-  // doctest:L171
-  await t.checkText(r.stderr.includes("View render failed"), "true");
-
-  // The stack names the view source file:
-
-  // doctest:L178
-  await t.checkText(r.stderr.includes("views/boom.tsx"), "true");
+  // The stack names the view source file; its other frames hold temp and install paths.
+  t.check(r, {
+    code: 1,
+    stdout: "",
+    stderr: str`View render failed: TypeError: Cannot read properties of undefined (reading 'map')
+TypeError: Cannot read properties of undefined (reading 'map')
+${any(String).includes("views/boom.tsx")}
+`,
+  });
 });
 
 // ## Top-level (module-eval) failure — also source-mapped
@@ -213,14 +221,14 @@ export default function TopThrow() { return <div>{boom}</div>; }
 ` });
 
   const r = await runViewTest(box.root, ["topthrow"]);
-  // doctest:L202
-  t.check(r.code, 1);
-
-  // doctest:L208
-  await t.checkText(r.stderr.includes("View render failed"), "true");
-
-  // doctest:L211
-  await t.checkText(r.stderr.includes("views/topthrow.tsx"), "true");
+  t.check(r, {
+    code: 1,
+    stdout: "",
+    stderr: str`View render failed: TypeError: Cannot read properties of undefined (reading 'value')
+TypeError: Cannot read properties of undefined (reading 'value')
+${any(String).includes("views/topthrow.tsx")}
+`,
+  });
 });
 
 // ## Async helper called during render throws
@@ -249,11 +257,14 @@ export default function Early({ readFile, fileUrl }) {
 ` });
 
   const r = await runViewTest(box.root, ["early"]);
-  // doctest:L237
-  t.check(r.code, 1);
-
-  // doctest:L243
-  await t.checkText(r.stderr.includes("readFile() was called during render"), "true");
+  t.check(r, {
+    code: 1,
+    stdout: "",
+    stderr: str`View render failed: ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, which 'bbx view test' does not execute (v1 renders the component body once).
+ViewHelperDuringRenderError: readFile() was called during render — async helpers only run in effects/handlers, which 'bbx view test' does not execute (v1 renders the component body once).
+${any(String)}
+`,
+  });
 });
 
 // ## Nonexistent view
@@ -268,10 +279,12 @@ void test("Nonexistent view", async (t) => {
   // doctest:L254
   const box = await makeViewBox();
   const r = await runViewTest(box.root, ["ghost"]);
-  t.check(r.code, 1);
-
-  // doctest:L261
-  await t.checkText(r.stderr.includes("View not found: ghost"), "true");
+  t.check(r, {
+    code: 1,
+    stdout: "",
+    stderr: str`Error: View not found: ghost (looked for ${any(String)}/src/views/ghost.tsx)
+`,
+  });
 });
 
 // ## --path warns when the card isn't selected
@@ -298,17 +311,11 @@ export default function Page({ params, viewHistory }) {
 ` });
 
   const r = await runViewTest(box.root, ["page", "--path", "_content/inbox/Nope.doc.card"]);
-  // doctest:L285
-  t.check(r.code, 0);
-
-  // doctest:L291
-  await t.checkText(r.stderr.includes("is not among"), "true");
-
-  // doctest:L294
-  await t.checkText(r.stdout.includes("path: _content/inbox/Nope.doc.card"), "true");
-
-  // doctest:L297
-  await t.checkText(r.stdout.includes("canPush: false"), "true");
+  t.check(r, {
+    code: 0,
+    stdout: "<html><head></head><body><div>path: _content/inbox/Nope.doc.card; canPush: false</div></body></html>\n",
+    stderr: "Warning: --path _content/inbox/Nope.doc.card is not among the 0 card(s) this view's dependencies select; the view will render without it.\n",
+  });
 });
 
 // ## Invalid selected card — diagnostics and non-zero exit
@@ -334,15 +341,24 @@ export default function List({ cards }) { return <div>n: {cards.length}</div>; }
 ` });
 
   const r = await runViewTest(box.root, ["list"]);
-  // doctest:L320
-  t.check(r.code, 1);
-
-  // doctest:L326
-  await t.checkText(r.stderr.includes("Bad.bogus.card"), "true");
+  const badCardStderr = str`
+1 card(s) selected by dependencies failed to load:
+  _content/inbox/Bad.bogus.card: ${any(String)}/_content/inbox/Bad.bogus.card: not a recognized card: no frontmatter block with a registered type
+`;
+  t.check(r, {
+    code: 1,
+    stdout: "<html><head></head><body><div>n: <!-- -->0</div></body></html>\n",
+    stderr: str`${badCardStderr}(pass --allow-invalid-cards to treat this as success)
+`,
+  });
 
   // With the flag it exits 0:
 
   // doctest:L333
   const ok = await runViewTest(box.root, ["list", "--allow-invalid-cards"]);
-  t.check(ok.code, 0);
+  t.check(ok, {
+    code: 0,
+    stdout: "<html><head></head><body><div>n: <!-- -->0</div></body></html>\n",
+    stderr: badCardStderr,
+  });
 });

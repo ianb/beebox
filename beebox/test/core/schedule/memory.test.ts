@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, capture, isoDate } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import { execSync } from "node:child_process";
 import { runTick } from "../../../src/cli/commands/tick.js";
@@ -17,7 +18,6 @@ import { cursorAdvances } from "../../../src/core/schedule/memory.js";
 import { runShell } from "../../../src/core/procedure/shell.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";
-import { invariant } from "../../../src/shared/invariant.js";
 
 process.env.BBX_ENGINE_AVAILABILITY_FILE = "/nonexistent/engine-availability.json";
 
@@ -77,7 +77,7 @@ void test("Before the first run the cursor is set to HEAD and saved, so the firs
   await box.write("_tmp/next-carry", "told them about old");
 
   // doctest:L72
-  t.check((await tick(box)).status, "ran");
+  t.check(await tick(box), { status: "ran", warnings: [] });
 
   // doctest:L75
   await t.checkText(await box.read("_tmp/seen.txt"), `since: setup
@@ -88,15 +88,30 @@ added: []`);
   // `BBX_SCHEDULE_NAME` is the card's stem, so a `bbx notify` in the pipeline
   // names the schedule as its source (`schedule:watch`).
 
-  // doctest:L86
-  t.check((await box.read("_tmp/schedule-name.txt")).trim(), "watch");
+  t.check(await box.read("_tmp/schedule-name.txt"), "watch\n");
 
   // The run succeeded, so the cursor moved to HEAD, and the carry is in state:
 
   // doctest:L93
   const first = await loadScriptState(box.root, "watch");
-  invariant(first.lastRun, "first run recorded its time");
-  t.check([first.lastCommit === head(box), first.carry].join(" "), "true told them about old");
+  const firstRun = capture(isoDate());
+  const duration = any(Number).between(0, Infinity);
+  t.check(first, {
+    lastRun: firstRun,
+    lastResult: "success",
+    lastError: null,
+    lastDurationMs: duration,
+    lastSuccess: firstRun,
+    consecutiveFailures: 0,
+    alertedAt: null,
+    alertedFor: null,
+    skipped: null,
+    runCount: 1,
+    lastCommit: head(box),
+    carry: "told them about old",
+    lastDeferReason: null,
+    recentRuns: [{ ts: firstRun, durationMs: duration }],
+  });
 
   // A card arrives. The second run sees it, the first run's time, and the carry.
   // It writes no carry file, so the carry is kept.
@@ -105,16 +120,34 @@ added: []`);
   await fs.rm(box.path("_tmp/next-carry"));
   await box.write("_content/notes/new.doc.card", "---\ntitle: New\n---\n");
   box.commitAll("add new");
-  t.check((await tick(box)).status, "ran");
+  t.check(await tick(box), { status: "ran", warnings: [] });
 
   // doctest:L109
-  await t.checkText((await box.read("_tmp/seen.txt")).replace(first.lastRun, "<first run>"), `since: setup
+  await t.checkText((await box.read("_tmp/seen.txt")).replace(firstRun.value, "<first run>"), `since: setup
 time: <first run>
 carry: told them about old
 added: [_content/notes/new.doc.card]`);
 
   // doctest:L115
-  t.check((await loadScriptState(box.root, "watch")).carry, "told them about old");
+  t.check(await loadScriptState(box.root, "watch"), {
+    lastRun: isoDate(),
+    lastResult: "success",
+    lastError: null,
+    lastDurationMs: duration,
+    lastSuccess: isoDate(),
+    consecutiveFailures: 0,
+    alertedAt: null,
+    alertedFor: null,
+    skipped: null,
+    runCount: 2,
+    lastCommit: head(box),
+    carry: "told them about old",
+    lastDeferReason: null,
+    recentRuns: [
+      { ts: firstRun, durationMs: duration },
+      { ts: isoDate(), durationMs: duration },
+    ],
+  });
 
   // The defer file is a fresh path each run, gone after it:
 
@@ -132,18 +165,40 @@ added: [_content/notes/new.doc.card]`);
   await box.write("_content/notes/third.doc.card", "---\ntitle: Third\n---\n");
   box.commitAll("add third");
   await box.write("_tmp/fail", "");
-  t.check((await tick(box)).status, "error");
+  t.check(await tick(box), { status: "error", warnings: [] });
 
   // doctest:L140
   const failed = await loadScriptState(box.root, "watch");
-  t.check(`${failed.lastResult} ${failed.lastCommit === beforeFailure}`, "failure true");
+  t.check(failed, {
+    lastRun: isoDate(),
+    lastResult: "failure",
+    lastError: "Command failed with exit code 1",
+    lastDurationMs: duration,
+    lastSuccess: isoDate(),
+    consecutiveFailures: 1,
+    alertedAt: null,
+    alertedFor: null,
+    skipped: null,
+    runCount: 3,
+    lastCommit: beforeFailure,
+    carry: "told them about old",
+    lastDeferReason: null,
+    recentRuns: [
+      { ts: firstRun, durationMs: duration },
+      { ts: isoDate(), durationMs: duration },
+      { ts: isoDate(), durationMs: duration },
+    ],
+  });
 
   // doctest:L144
   await fs.rm(box.path("_tmp/fail"));
-  t.check((await tick(box)).status, "ran");
+  t.check(await tick(box), { status: "ran", warnings: [] });
 
   // doctest:L148
-  t.check((await box.read("_tmp/seen.txt")).split("\n").find((l) => l.startsWith("added:")), "added: [_content/notes/third.doc.card]");
+  await t.checkText(await box.read("_tmp/seen.txt"), `since: add new
+time: «date»
+carry: told them about old
+added: [_content/notes/third.doc.card]`);
 
   // ## A carry over 4 KB is truncated, with a warning
 
@@ -155,7 +210,7 @@ added: [_content/notes/new.doc.card]`);
   ]);
 
   // doctest:L162
-  t.check((await loadScriptState(box.root, "watch")).carry?.length, 4096);
+  t.check((await loadScriptState(box.root, "watch")).carry, "x".repeat(4096));
 });
 
 // ## When the cursor advances
@@ -177,8 +232,8 @@ void test("success advances, and so does a deferral whose items were seen (no-ch
       cursorAdvances("deferred", null),
       cursorAdvances("failure", "no-change"),
       cursorAdvances("inconclusive", null),
-    ].join(" "),
-    "true true true false false false false false",
+    ],
+    [true, true, true, false, false, false, false, false],
   );
 });
 

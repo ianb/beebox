@@ -13,23 +13,17 @@ void test("Basic print", async (t) => {
   // doctest:L8
   print("hello");
   print("world");
-  await t.checkText(out.with("done"), `hello
-world
-done`);
+  t.check(out.with("done"), "hello\nworld\ndone");
 });
 
-// ## Print with no return value
-//
-// When the expression itself is `print(...)`, it returns undefined (excluded from output).
-void test("When the expression itself is print(...), it returns undefined (excluded from...", async (t) => {
+// ## Print then a final line
+void test("Print then a final line", async (t) => {
   const out = printed();
   const print = out.print;
   // doctest:L22
   print("line 1");
   print("line 2");
-  await t.checkText(out.with(print("line 3")), `line 1
-line 2
-line 3`);
+  t.check(out.with("line 3"), "line 1\nline 2\nline 3");
 });
 
 // ## Print drains after each check
@@ -40,26 +34,20 @@ void test("After an assertion, the print buffer resets.", async (t) => {
   const print = out.print;
   // doctest:L36
   print("first");
-  await t.checkText(out.with("a"), `first
-a`);
+  t.check(out.with("a"), "first\na");
 
   // doctest:L42
   print("second");
-  await t.checkText(out.with("b"), `second
-b`);
+  t.check(out.with("b"), "second\nb");
 });
 
 // ## Print with objects
 //
-// Print lines are plain strings; the expression result is serialized normally.
-void test("Print lines are plain strings; the expression result is serialized normally.", async (t) => {
+// Print lines are plain strings; serialize an object yourself to print it.
+void test("Print lines are plain strings; serialize an object yourself to print it.", async (t) => {
   const out = printed();
   const print = out.print;
   // doctest:L54
   print("result:");
-  await t.checkText(out.with(({ status: "ok", count: 2 })), `result:
-{
-  "status": "ok",
-  "count": 2
-}`);
+  t.check(out.with(JSON.stringify({ status: "ok", count: 2 }, null, 2)), "result:\n{\n  \"status\": \"ok\",\n  \"count\": 2\n}");
 });

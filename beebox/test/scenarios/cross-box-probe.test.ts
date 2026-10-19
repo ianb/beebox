@@ -36,7 +36,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any } from "agent-doctest/check";
 import { TRPCError } from "@trpc/server";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -81,8 +81,6 @@ async function attempt<T>(fn: () => Promise<T>): Promise<{ ok: true; value: T } 
 // feature flag) in a subdirectory, and a git commit so history/blob probes have
 // a real hash that exists only in B's repo.
 void test("A card with a unique marker string, a landmark card (with a distinctive featu...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -92,10 +90,8 @@ void test("A card with a unique marker string, a landmark card (with a distincti
       t.error(error);
     }
   });
-  // doctest:L84
   const ctx = await createTwoBoxTestServer();
 
-  // doctest:L86
   await fs.mkdir(path.join(ctx.b.boxRoot, "_content"), { recursive: true });
   await fs.writeFile(
     path.join(ctx.b.boxRoot, "_content", "Marker.doc.card"),
@@ -109,7 +105,6 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   await commitAll(ctx.b.boxRoot, "seed beta marker + landmark");
   const betaHash = execSync("git log -1 --format=%H", { cwd: ctx.b.boxRoot, encoding: "utf-8" }).trim();
 
-  // doctest:L99
   // A task-output file for beta, at the exact shape `isTaskOutputPathForBox`
   // expects (see task-output-route.doctest.md, which owns this surface — this
   // file includes one line so it stands as a complete anchor on its own).
@@ -120,7 +115,6 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   const betaTaskOutput = path.join(taskDir, "t1.output");
   await fs.writeFile(betaTaskOutput, BETA_MARKER);
 
-  // doctest:L109
   // A secret granted to beta only (isolated store — see BBX_SECRETS_FILE in
   // test/helpers/isolate-secret-store.ts; this file points it at its own dir
   // so it doesn't collide with any other doctest's grants).
@@ -129,7 +123,6 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   const betaSlug = await boxSlug(ctx.b.boxRoot);
   await setAndGrantSecret({ name: "beta-only-key", value: "placeholder-not-a-real-secret", slug: betaSlug, access: "agent" });
 
-  // doctest:L117
   // Relative path from alpha's box root into beta's, computed from the real
   // (randomly-suffixed) boxRoots — never hardcoded "../..". The one-root
   // layout makes alpha and beta direct siblings (each `boxRoot` is its own
@@ -137,31 +130,23 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   const relIntoBeta = path.relative(ctx.a.boxRoot, ctx.b.boxRoot);
   const relToBetaMarker = path.relative(ctx.a.boxRoot, path.join(ctx.b.boxRoot, "_content", "Marker.doc.card"));
 
-  // doctest:L124
-  await t.checkText(out.with(print("seeded")), "seeded");
-
   // ## 1. `GET /beta/api/files/*` and `GET /beta/api/browse/*` with A's bearer
   //
   // Alpha's bearer is unrecognized on beta's wall, and there is no session
   // cookie either — the same 401 `two-box-fixture.doctest.md` proves for
   // `/api/health`.
 
-  // doctest:L136
   const filesRes = await ctx.server.inject({
     method: "GET",
     url: "/beta/api/files/Marker.doc.card",
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  print(`beta/api/files with alpha's bearer: ${filesRes.statusCode}`);
-
-  // doctest:L143
   const browseRes = await ctx.server.inject({
     method: "GET",
     url: "/beta/api/browse/",
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`beta/api/browse with alpha's bearer: ${browseRes.statusCode}`)), `beta/api/files with alpha's bearer: 401
-beta/api/browse with alpha's bearer: 401`);
+  t.check({ files: filesRes.statusCode, browse: browseRes.statusCode }, { files: 401, browse: 401 });
 
   // ## 2. `GET /alpha/api/files/../../<into B>` and `?path=` on `/alpha/api/figure/module.js`
   //
@@ -176,19 +161,16 @@ beta/api/browse with alpha's bearer: 401`);
   // path landing outside `/api/*` would get. Either way B's content is never
   // read or returned.
 
-  // doctest:L168
   const filesTraversalUrl = `/alpha/api/files/${relToBetaMarker.split(path.sep).join("/")}`;
   const filesTraversal = await ctx.server.inject({
     method: "GET",
     url: filesTraversalUrl,
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  print(`files traversal: ${filesTraversal.statusCode}, contains marker: ${filesTraversal.payload.includes(BETA_MARKER)}`);
-  // The redirect's `returnTo` echoes the (harmless) normalized filename it
-  // bounced off of — that is not B's confidential content, only a path
-  // fragment, so the load-bearing check is the marker's absence above.
+  // The payload echoes the (harmless) normalized path it bounced off of, which is
+  // not B's confidential content; the marker's absence is the point.
+  t.check({ status: filesTraversal.statusCode, body: filesTraversal.json() }, { status: 404, body: { error: "Not found" } });
 
-  // doctest:L179
   // The `?path=` form (figure/module.js) reaches its own handler directly (no
   // wildcard-segment normalization to hide behind), and its own containment
   // check rejects it explicitly.
@@ -197,8 +179,7 @@ beta/api/browse with alpha's bearer: 401`);
     url: `/alpha/api/figure/module.js?path=${encodeURIComponent(relToBetaMarker)}`,
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`figure ?path= traversal: ${figureRes.statusCode} ${figureRes.payload}`)), `files traversal: 404, contains marker: false
-figure ?path= traversal: 400 {"error":"Path outside box"}`);
+  t.check({ status: figureRes.statusCode, body: figureRes.json() }, { status: 400, body: { error: "Path outside box" } });
 
   // ## 3. tRPC on alpha: paths climbing into B
   //
@@ -218,58 +199,42 @@ figure ?path= traversal: 400 {"error":"Path outside box"}`);
   // (`BAD_REQUEST`) same as the relative-`..` shape. Still fail-closed either way
   // — B's card is never read.
 
-  // doctest:L212
   const caller = callerFor(ctx.a.boxRoot, ctx.a.eventBus);
   const betaMarkerAbs = path.join(ctx.b.boxRoot, "_content", "Marker.doc.card");
 
-  // doctest:L215
   const cardGetRel = await attempt(() => caller.card.get({ path: relToBetaMarker }));
-  print(`card.get (relative ..): ${cardGetRel.ok ? "SUCCEEDED" : cardGetRel.code}`);
+  t.check(cardGetRel, { ok: false, code: "BAD_REQUEST" });
 
-  // doctest:L218
   const cardGetAbs = await attempt(() => caller.card.get({ path: betaMarkerAbs }));
-  print(`card.get (absolute): ${cardGetAbs.ok ? "SUCCEEDED" : cardGetAbs.code}`);
+  t.check(cardGetAbs, { ok: false, code: "BAD_REQUEST" });
 
-  // doctest:L221
   const browse = await caller.status.browse({ path: relIntoBeta });
-  print(`status.browse: dirs=${browse.dirs.length} cards=${browse.cards.length} files=${browse.files.length}`);
+  t.check(browse, { path: relIntoBeta, dirs: [], cards: [], files: [], background: false });
 
-  // doctest:L224
   const historyList = await attempt(() => caller.history.list({ filter: { path: relToBetaMarker } }));
-  print(`history.list (filter.path): ${historyList.ok ? "SUCCEEDED" : historyList.code}`);
+  t.check(historyList, { ok: false, code: "BAD_REQUEST" });
 
-  // doctest:L227
   const viewsRef = await caller.views.resolveRef({ ref: relToBetaMarker, basePath: "" });
-  print(`views.resolveRef: exists=${viewsRef.exists} title-is-filename-only=${viewsRef.title === "Marker"}`);
+  t.check(viewsRef, { path: relToBetaMarker, title: "Marker", type: "doc", exists: false });
 
-  // doctest:L230
   const landmarksForDir = await attempt(() => caller.landmarks.forDir({ dir: `${relIntoBeta}/_content/sub` }));
-  print(`landmarks.forDir: ${landmarksForDir.ok ? "SUCCEEDED" : landmarksForDir.code}`);
+  t.check(landmarksForDir, { ok: false, code: "BAD_REQUEST" });
 
-  // doctest:L233
   const collectionsQuery = await attempt(() =>
     caller.collections.query({ collection: "todos", query: { here: relIntoBeta, params: { status: ["open"] } } })
   );
-  await t.checkText(out.with(print(`collections.query (here): ${collectionsQuery.ok ? "SUCCEEDED" : collectionsQuery.code}`)), `card.get (relative ..): BAD_REQUEST
-card.get (absolute): BAD_REQUEST
-status.browse: dirs=0 cards=0 files=0
-history.list (filter.path): BAD_REQUEST
-views.resolveRef: exists=false title-is-filename-only=true
-landmarks.forDir: BAD_REQUEST
-collections.query (here): BAD_REQUEST`);
+  t.check(collectionsQuery, { ok: false, code: "BAD_REQUEST" });
 
   // ### `files.summarize`
   //
   // `summarizePath` in `src/webapp/trpc/routers/files/router.ts` once normalized only
   // absolute inputs; it now runs every input through
   // `resolveBoxNamespacePathOnDisk`, which fences both `..`-relative escapes and
-  // the box namespace. This step is the regression anchor and must keep printing
-  // `false`.
+  // the box namespace. This step is the regression anchor: the result must hold
+  // none of B's content.
 
-  // doctest:L256
   const summarized = await caller.files.summarize({ paths: [relToBetaMarker] });
-  const leaked = JSON.stringify(summarized).includes(BETA_MARKER) || JSON.stringify(summarized).includes("Beta marker title");
-  await t.checkText(out.with(print(`files.summarize leaks beta's card: ${leaked}`)), "files.summarize leaks beta's card: false");
+  t.check(summarized, [null]);
 
   // ### `files.kind`
   //
@@ -277,22 +242,18 @@ collections.query (here): BAD_REQUEST`);
   // sibling's path would still reveal that box's layout. The namespace guard
   // rejects the path before any `stat`.
 
-  // doctest:L270
   const kindProbe = await attempt(() => caller.files.kind({ path: relToBetaMarker }));
-  await t.checkText(out.with(print(`files.kind on beta's card: ${kindProbe.ok ? kindProbe.value.kind : kindProbe.code}`)), "files.kind on beta's card: BAD_REQUEST");
+  t.check(kindProbe, { ok: false, code: "BAD_REQUEST" });
 
   // ## 4. `chatControl.reserveSession`, `chat.newFeatures` — the Deliverable 1 fix
 
-  // doctest:L279
   const reserve = await attempt(() =>
     caller.chat.reserveSession({ sessionId: "11111111-1111-4111-8111-111111111111", contextDir: `${relIntoBeta}/_content/sub` }),
   );
-  print(`chatControl.reserveSession: ${reserve.ok ? "SUCCEEDED" : reserve.code}`);
+  t.check(reserve, { ok: false, code: "BAD_REQUEST" });
 
-  // doctest:L284
   const newFeatures = await attempt(() => caller.chat.newFeatures({ contextDir: `${relIntoBeta}/_content/sub` }));
-  await t.checkText(out.with(print(`chat.newFeatures: ${newFeatures.ok ? "SUCCEEDED" : newFeatures.code}`)), `chatControl.reserveSession: BAD_REQUEST
-chat.newFeatures: BAD_REQUEST`);
+  t.check(newFeatures, { ok: false, code: "BAD_REQUEST" });
 
   // ## 5. `GET /alpha/api/task-output?file=<B's task output>`
   //
@@ -300,13 +261,12 @@ chat.newFeatures: BAD_REQUEST`);
   // in `test/webapp/routes/commands.task-output.doctest.md`; one line here keeps
   // this file a complete anchor.
 
-  // doctest:L298
   const taskOutputRes = await ctx.server.inject({
     method: "GET",
     url: `/alpha/api/task-output?file=${encodeURIComponent(betaTaskOutput)}`,
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`task-output on beta's file, with alpha's bearer: ${taskOutputRes.statusCode}`)), "task-output on beta's file, with alpha's bearer: 403");
+  t.check(taskOutputRes.statusCode, 403);
 
   // ## 6. `GET /alpha/api/session-media/...` — the ref format cannot name another box
   //
@@ -321,13 +281,12 @@ chat.newFeatures: BAD_REQUEST`);
   // ref naming a session alpha doesn't know about 404s rather than falling back
   // to reading anything.
 
-  // doctest:L322
   const mediaRes = await ctx.server.inject({
     method: "GET",
     url: "/alpha/api/session-media/aaaaaaaa-1111-4111-8111-000000000000/some-entry-uuid/0",
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`session-media, unknown-to-alpha ref: ${mediaRes.statusCode}`)), "session-media, unknown-to-alpha ref: 404");
+  t.check(mediaRes.statusCode, 404);
 
   // ## 7. `POST /alpha/api/chat/send` with `contextDir` climbing into B
   //
@@ -340,20 +299,18 @@ chat.newFeatures: BAD_REQUEST`);
   // the only real exposure it opened was the landmark-feature seed, closed by
   // Deliverable 1's `readLandmarkFeaturesForDir` fix.)
 
-  // doctest:L344
   const backend = createFakeChatBackend();
   const ctx2 = await createTwoBoxTestServer({ chatBackend: backend });
   const relIntoBeta2 = path.relative(ctx2.a.boxRoot, ctx2.b.boxRoot);
 
-  // doctest:L348
   const sendRes = await ctx2.server.inject({
     method: "POST",
     url: "/alpha/api/chat/send",
     headers: { authorization: ctx2.a.agentBearerHeader(), "content-type": "application/json" },
     payload: { message: "hi", session: "new", contextDir: `${relIntoBeta2}/_content/sub` },
   });
-  print(`chat/send with escaping contextDir: ${sendRes.statusCode}`);
-  await t.checkText(out.with(await ctx2.cleanup()), "chat/send with escaping contextDir: 400");
+  t.check(sendRes.statusCode, 400);
+  await ctx2.cleanup();
 
   // ## 8. `history.diff` / `GET /alpha/api/history/blob/<hash>/...` with a hash that exists only in B
   //
@@ -361,47 +318,49 @@ chat.newFeatures: BAD_REQUEST`);
   // absent from it — B's blob hash reaches alpha's git the same as any unknown
   // hash.
 
-  // doctest:L367
   const diff = await caller.history.diff({ hash: betaHash });
-  print(`history.diff on alpha with beta's hash: diff empty=${diff.diff === ""}`);
+  t.check(diff, { hash: betaHash, diff: "" });
 
-  // doctest:L370
   const blobRes = await ctx.server.inject({
     method: "GET",
     url: `/alpha/api/history/blob/${betaHash}/_content/Marker.doc.card`,
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
-  await t.checkText(out.with(print(`history/blob on alpha with beta's hash: ${blobRes.statusCode}`)), `history.diff on alpha with beta's hash: diff empty=true
-history/blob on alpha with beta's hash: 404`);
+  t.check(blobRes.statusCode, 404);
 
   // ## 9. `POST /beta/api/secrets/resolve` with A's bearer; `secrets.boxStatus` never lists B's grant
 
-  // doctest:L384
   const resolveRes = await ctx.server.inject({
     method: "POST",
     url: "/beta/api/secrets/resolve",
     headers: { authorization: ctx.a.agentBearerHeader(), "content-type": "application/json" },
     payload: { name: "beta-only-key", purpose: "agent-self-note" },
   });
-  print(`beta/api/secrets/resolve with alpha's bearer: ${resolveRes.statusCode}`);
-
-  // doctest:L392
   const alphaBoxStatus = await caller.secrets.boxStatus();
-  await t.checkText(out.with(print(`alpha's secrets.boxStatus granted names: ${JSON.stringify(alphaBoxStatus.granted.map((g) => g.name))}`)), `beta/api/secrets/resolve with alpha's bearer: 401
-alpha's secrets.boxStatus granted names: []`);
+  t.check(resolveRes.statusCode, 401);
+  t.check(alphaBoxStatus, {
+    slug: await boxSlug(ctx.a.boxRoot),
+    granted: [],
+    emptySlots: [],
+    danglingGrants: [],
+    declaredHere: [],
+  });
 
   // ## 10. Events: alpha's subscriber never sees an event emitted on beta's bus
   //
   // Each box gets its own `EventBus` instance (`createTwoBoxTestServer`); an
   // emit on one never reaches a reader of the other.
 
-  // doctest:L405
-  ctx.b.eventBus.emit("file-change", { event: "created", path: "BETA-MARKER.card", timestamp: new Date().toISOString() });
-  const alphaEvents = ctx.a.eventBus.readSince(0);
-  print(`alpha sees beta's emit: ${alphaEvents.length > 0}`);
+  ctx.b.eventBus.emit("file-change", { event: "created", path: "BETA-MARKER.card", timestamp: "2026-10-18T00:00:00.000Z" });
+  t.check(ctx.a.eventBus.readSince(0), []);
 
-  // doctest:L409
-  const betaEvents = ctx.b.eventBus.readSince(0);
-  await t.checkText(out.with(print(`beta sees its own emit: ${betaEvents.length > 0}`)), `alpha sees beta's emit: false
-beta sees its own emit: true`);
+  // `createdAt` is stamped by the event store's clock.
+  t.check(ctx.b.eventBus.readSince(0), [
+    {
+      id: 1,
+      event: "file-change",
+      data: { event: "created", path: "BETA-MARKER.card", timestamp: "2026-10-18T00:00:00.000Z" },
+      createdAt: any(String).matches(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/),
+    },
+  ]);
 });

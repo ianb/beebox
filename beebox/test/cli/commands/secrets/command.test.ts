@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate, str } from "agent-doctest/check";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -43,7 +43,7 @@ async function runCaptured(fn: () => unknown) {
   const origLog = console.log;
   const origError = console.error;
   const origExit = process.exit;
-  let exitCode;
+  let exitCode: number | string | undefined;
   console.log = (...args) => { logs.push(args.join(" ")); };
   console.error = (...args) => { errors.push(args.join(" ")); };
   process.exit = (code) => {
@@ -62,14 +62,52 @@ async function runCaptured(fn: () => unknown) {
   return { logs, errors, exitCode };
 }
 
+/** A captured run, with a temp box's directory name replaced by `<box>`. */
+function seen(run: Awaited<ReturnType<typeof runCaptured>>, boxDir?: string) {
+  const hide = (lines: string[]) => (boxDir === undefined ? lines : lines.map((l) => l.replaceAll(basename(boxDir), "<box>")));
+  return { exitCode: run.exitCode, logs: hide(run.logs), errors: hide(run.errors) };
+}
+
+/** The refusal an agent session gets for a machine-level action; the store path varies. */
+const machineRefusal = (head: string) => str`${head}
+
+The secret store (${any(String)}) is MACHINE-LEVEL — one file behind every box
+on this machine, not just the box you are standing in. Granting a secret hands another
+box a live credential; setting one rotates the single copy every box shares.
+
+If the person you are working for explicitly asked you to do this, re-run with
+--agent-confirmed.
+
+If you need a secret for work you are doing: \`bbx secrets declare <name> --note ...\`
+names the slot, and the boxholder supplies and grants the value. Needing a credential
+you were not given is a question for a human, not an obstacle to work around.`;
+
+/** The uniform refusal of `describe` for a name outside the agent's own box. */
+const describeRefusal = ({ name, why, tail }: { name: string; why: string; tail: string }) => str`Refusing to describe "${name}": this looks like an agent session (CLAUDECODE is set in the environment), and
+${why}
+
+An agent may say why ITS OWN box spends a key. The rest of the machine's secrets are the
+boxholder's record, and this command deliberately answers the same way whether the name
+belongs to another box or does not exist at all — a reply that told them apart would let
+this command enumerate the machine's secrets one guess at a time.
+
+${tail}
+If the person you are working for explicitly asked for this edit, re-run with --agent-confirmed.`;
+
+/** The refusal `status` gives an agent for a box other than its own. */
+const statusRefusal = ({ head, why, tail }: { head: string; why: string; tail: string }) => str`${head}: this looks like an agent session (CLAUDECODE is set in the environment), and
+${why}
+
+An agent's view of the secret store is its own box's grants and declared slots. The
+machine's other boxes are the boxholder's business, not something to enumerate from here.
+${tail}`;
+
 // ## A value in argument position is refused
 //
 // `ps` and shell history see every argument, so the argv form is rejected before
 // anything else happens — including before the agent check, so the message an
 // operator sees names the real problem.
 void test("ps and shell history see every argument, so the argv form is rejected before...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -82,12 +120,17 @@ void test("ps and shell history see every argument, so the argv form is rejected
   const refused = await runCaptured(() =>
     runSetSecret({ name: "mistral", argvValue: "placeholder-value-1", agentConfirmed: true }),
   );
-  const message = refused.errors.join("\n");
-  print(`exit: ${refused.exitCode}`);
-  print(`names the leak: ${message.includes("visible to")} ${message.includes("shell history")}`);
-  await t.checkText(out.with(print(`shows the pipe form: ${message.includes("printf %s \"$VALUE\" | bbx secrets set mistral")}`)), `exit: 1
-names the leak: true true
-shows the pipe form: true`);
+  t.check(seen(refused), {
+    exitCode: 1,
+    logs: [],
+    errors: [
+      `Refusing to take a secret value from the command line: arguments are visible to
+every process on the machine (\`ps\`) and land in shell history.
+
+Pipe it instead:  printf %s "$VALUE" | bbx secrets set mistral
+or run the command with no value argument to be prompted (input hidden).`,
+    ],
+  });
 });
 
 // ## Mutations refuse in an agent session; `declare` does not
@@ -96,8 +139,6 @@ shows the pipe form: true`);
 // say-so. `declare` — name a slot you need — is the agent's own surface: it can
 // neither disclose nor empower anything, so it runs unguarded.
 void test("grant hands another box a live credential, so it needs a human's explicit say...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -115,21 +156,23 @@ void test("grant hands another box a live credential, so it needs a human's expl
 
   // doctest:L103
   const blocked = await runCaptured(() => runGrantSecret({ boxOrRoot: "demo-box", name: "mistral" }));
-  print(`exit: ${blocked.exitCode}`);
-  print(`named the session: ${blocked.errors.join("\n").includes("this looks like an agent session")}`);
-  print(`pointed at declare: ${blocked.errors.join("\n").includes("bbx secrets declare")}`);
+  t.check(seen(blocked), {
+    exitCode: 1,
+    logs: [],
+    errors: [machineRefusal("Refusing to grant a secret to a box: this looks like an agent session (CLAUDECODE is set in the environment).")],
+  });
   const after = await runCaptured(() => runSecretsStatus({ boxOrRoot: "demo-box", boxRoot: demoBox }));
-  print(`granted anything: ${!after.logs.join("\n").includes("granted: none")}`);
+  t.check(seen(after), { exitCode: undefined, logs: ["Box: demo-box", "  granted: none"], errors: [] });
 
   // doctest:L110
   const declared = await runCaptured(() => runDeclareSecret({ name: "weatherapi", note: "for a trick" }));
-  print(`declare exit: ${declared.exitCode}`);
-  await t.checkText(out.with(print(declared.logs.join("\n"))), `exit: 1
-named the session: true
-pointed at declare: true
-granted anything: false
-declare exit: undefined
-Declared "weatherapi" — an empty, ungranted slot. Ask the boxholder to supply the value and grant it.`);
+  t.check(seen(declared), {
+    exitCode: undefined,
+    logs: ["Declared \"weatherapi\" — an empty, ungranted slot. Ask the boxholder to supply the value and grant it."],
+    errors: [],
+  });
+
+  // With `--agent-confirmed``);
 
   // With `--agent-confirmed` — the flag that asserts a human asked — the same grant
   // goes through, and `status` reports it:
@@ -138,12 +181,19 @@ Declared "weatherapi" — an empty, ungranted slot. Ask the boxholder to supply 
   const granted = await runCaptured(() =>
     runGrantSecret({ boxOrRoot: "demo-box", name: "mistral", access: "agent", agentConfirmed: true }),
   );
-  print(granted.logs.join("\n"));
+  t.check(seen(granted), { exitCode: undefined, logs: ["Granted \"mistral\" to \"demo-box\" with agent access."], errors: [] });
   const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: "demo-box", boxRoot: demoBox }));
-  await t.checkText(out.with(print(status.logs.join("\n"))), `Granted "mistral" to "demo-box" with agent access.
-Box: demo-box
-  granted: mistral (agent)
-    used for: audio transcription (Voxtral — recordings and live chat dictation); Mistral API calls from box views, through the server-side adapter`);
+  t.check(seen(status), {
+    exitCode: undefined,
+    logs: [
+      "Box: demo-box",
+      "  granted: mistral (agent)",
+      "    used for: audio transcription (Voxtral — recordings and live chat dictation); Mistral API calls from box views, through the server-side adapter",
+    ],
+    errors: [],
+  });
+
+  // The `used for``);
 
   // The `used for` line is the built-in registry's (`src/core/secrets/uses.ts`) — the
   // boxholder sees what the engine will actually spend a key on without having to
@@ -155,15 +205,15 @@ Box: demo-box
   const bad = await runCaptured(() =>
     runGrantSecret({ boxOrRoot: "demo-box", name: "mistral", access: "root", agentConfirmed: true }),
   );
-  print(`exit: ${bad.exitCode}`);
-  await t.checkText(out.with(print(bad.errors.join("\n"))), `exit: 1
-Unknown access level "root" — use "server" (default) or "agent".`);
+  t.check(seen(bad), { exitCode: 1, logs: [], errors: ["Unknown access level \"root\" — use \"server\" (default) or \"agent\"."] });
+
+  // doctest:L157`);
 
   // doctest:L157
   const revoked = await runCaptured(() =>
     runRevokeSecret({ boxOrRoot: "demo-box", name: "mistral", agentConfirmed: true }),
   );
-  await t.checkText(out.with(print(revoked.logs.join("\n"))), "Revoked \"mistral\" from \"demo-box\".");
+  t.check(seen(revoked), { exitCode: undefined, logs: ["Revoked \"mistral\" from \"demo-box\"."], errors: [] });
 });
 
 // ## `declare` attributes the slot to the declaring box
@@ -174,8 +224,6 @@ Unknown access level "root" — use "server" (default) or "agent".`);
 // recorded from the box the command ran in (here passed explicitly; the CLI finds
 // it from the working directory), and `status` shows it back.
 void test("Declaring grants nothing, so without attribution the slot would vanish from t...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -192,15 +240,24 @@ void test("Declaring grants nothing, so without attribution the slot would vanis
   const declared = await runCaptured(() =>
     runDeclareSecret({ name: "weatherapi", note: "for the forecast trick", boxRoot: boxDir }),
   );
-  print(declared.logs.join("\n").replaceAll(basename(boxDir), "<box>"));
+  t.check(seen(declared, boxDir), {
+    exitCode: undefined,
+    logs: [
+      "Declared \"weatherapi\" — an empty, ungranted slot. Ask the boxholder to supply the value and grant it.",
+      "Attributed to box \"<box>\" — it shows up in `bbx secrets status <box>`.",
+    ],
+    errors: [],
+  });
 
   // doctest:L185
   const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir, boxRoot: boxDir }));
-  await t.checkText(out.with(print(status.logs.join("\n").replaceAll(basename(boxDir), "<box>"))), `Declared "weatherapi" — an empty, ungranted slot. Ask the boxholder to supply the value and grant it.
-Attributed to box "<box>" — it shows up in \`bbx secrets status <box>\`.
-Box: <box>
-  granted: none
-  declared here: weatherapi — no value yet, not granted to this box`);
+  t.check(seen(status, boxDir), {
+    exitCode: undefined,
+    logs: ["Box: <box>", "  granted: none", "  declared here: weatherapi — no value yet, not granted to this box"],
+    errors: [],
+  });
+
+  // Once`);
 
   // Once the boxholder supplies the value and grants it, it reports as a grant
   // instead — a declared slot is only news while it is still waiting:
@@ -211,8 +268,7 @@ Box: <box>
     runGrantSecret({ boxOrRoot: boxDir, name: "weatherapi", access: "agent", agentConfirmed: true }),
   );
   const after = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir, boxRoot: boxDir }));
-  await t.checkText(out.with(print(after.logs.join("\n").replaceAll(basename(boxDir), "<box>"))), `Box: <box>
-  granted: weatherapi (agent)`);
+  t.check(seen(after, boxDir), { exitCode: undefined, logs: ["Box: <box>", "  granted: weatherapi (agent)"], errors: [] });
 });
 
 // ## `declare --use` and `describe --add-use` say why a secret exists
@@ -222,8 +278,6 @@ Box: <box>
 // say why it now needs a key); removing one carries the agent guard, because
 // deleting the line that justified a grant is a human's decision.
 void test("Reasons are additive:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -243,17 +297,28 @@ void test("Reasons are additive:", async (t) => {
   const described = await runCaptured(() =>
     runDescribeSecret({ name: "weatherapi", addUses: ["the umbrella reminder trick"], boxRoot: boxDir }),
   );
-  print(described.logs.join("\n"));
+  t.check(seen(described, boxDir), {
+    exitCode: undefined,
+    logs: [`"weatherapi" is used for:
+  - forecasts in the morning brief
+  - the umbrella reminder trick`],
+    errors: [],
+  });
 
   // doctest:L234
   const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir, boxRoot: boxDir }));
-  await t.checkText(out.with(print(status.logs.join("\n").replaceAll(basename(boxDir), "<box>"))), `"weatherapi" is used for:
-  - forecasts in the morning brief
-  - the umbrella reminder trick
-Box: <box>
-  granted: none
-  declared here: weatherapi — no value yet, not granted to this box
-    also declared: forecasts in the morning brief; the umbrella reminder trick`);
+  t.check(seen(status, boxDir), {
+    exitCode: undefined,
+    logs: [
+      "Box: <box>",
+      "  granted: none",
+      "  declared here: weatherapi — no value yet, not granted to this box",
+      "    also declared: forecasts in the morning brief; the umbrella reminder trick",
+    ],
+    errors: [],
+  });
+
+  // Dropping`);
 
   // Dropping a reason in an agent session is refused without `--agent-confirmed`:
 
@@ -261,16 +326,17 @@ Box: <box>
   const blocked = await runCaptured(() =>
     runDescribeSecret({ name: "weatherapi", clearUses: true, boxRoot: boxDir }),
   );
-  print(`exit: ${blocked.exitCode}`);
-  print(`named the action: ${blocked.errors.join("\n").includes("remove a secret's stated uses")}`);
+  t.check(seen(blocked, boxDir), {
+    exitCode: 1,
+    logs: [],
+    errors: [machineRefusal("Refusing to remove a secret's stated uses: this looks like an agent session (CLAUDECODE is set in the environment).")],
+  });
 
   // doctest:L255
   const cleared = await runCaptured(() =>
     runDescribeSecret({ name: "weatherapi", clearUses: true, agentConfirmed: true }),
   );
-  await t.checkText(out.with(print(cleared.logs.join("\n"))), `exit: 1
-named the action: true
-"weatherapi" now states no uses of its own.`);
+  t.check(seen(cleared), { exitCode: undefined, logs: ["\"weatherapi\" now states no uses of its own."], errors: [] });
 });
 
 // ## `describe --add-use` is scoped to the agent's own box
@@ -282,8 +348,6 @@ named the action: true
 // So the refusal is uniform: another box's secret and a name that does not exist
 // get the same words.
 void test("Adding a reason is unguarded for the box the agent is standing in — its own g...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -303,10 +367,12 @@ void test("Adding a reason is unguarded for the box the agent is standing in —
   const mine = await runCaptured(() =>
     runDescribeSecret({ name: "weatherapi", addUses: ["the umbrella reminder trick"], boxRoot: ownBox }),
   );
-  print(`own-box exit: ${mine.exitCode}`);
-  await t.checkText(out.with(print(mine.logs.join("\n"))), `own-box exit: undefined
-"weatherapi" is used for:
-  - the umbrella reminder trick`);
+  t.check(seen(mine), {
+    exitCode: undefined,
+    logs: [`"weatherapi" is used for:
+  - the umbrella reminder trick`],
+    errors: [],
+  });
 
   // A secret this box holds no grant on, and a name nobody ever declared, are
   // answered identically — the only difference between the two messages is the name
@@ -319,11 +385,16 @@ void test("Adding a reason is unguarded for the box the agent is standing in —
   const unknown = await runCaptured(() =>
     runDescribeSecret({ name: "no-such-secret", addUses: ["curiosity"], boxRoot: ownBox }),
   );
-  print(`exits: ${foreign.exitCode} ${unknown.exitCode}`);
-  print(`same words: ${foreign.errors.join("\n").replaceAll("someone-elses", "X") === unknown.errors.join("\n").replaceAll("no-such-secret", "X")}`);
-  await t.checkText(out.with(print(`names the scoping: ${foreign.errors.join("\n").includes("the box you are working in (\"own-box\")")}`)), `exits: 1 1
-same words: true
-names the scoping: true`);
+  t.check(seen(foreign), {
+    exitCode: 1,
+    logs: [],
+    errors: [describeRefusal({ name: "someone-elses", why: "\"someone-elses\" is not granted to — or declared by — the box you are working in (\"own-box\").", tail: "To name a slot this box needs: bbx secrets declare someone-elses --note ..." })],
+  });
+  t.check(seen(unknown), {
+    exitCode: 1,
+    logs: [],
+    errors: [describeRefusal({ name: "no-such-secret", why: "\"no-such-secret\" is not granted to — or declared by — the box you are working in (\"own-box\").", tail: "To name a slot this box needs: bbx secrets declare no-such-secret --note ..." })],
+  });
 
   // `--agent-confirmed` — a human explicitly asked — carries it through, and outside
   // a box there is no own-box view at all:
@@ -332,23 +403,26 @@ names the scoping: true`);
   const confirmed = await runCaptured(() =>
     runDescribeSecret({ name: "someone-elses", addUses: ["the boxholder asked"], boxRoot: ownBox, agentConfirmed: true }),
   );
-  print(confirmed.logs.join("\n"));
+  t.check(seen(confirmed), {
+    exitCode: undefined,
+    logs: [`"someone-elses" is used for:
+  - the boxholder asked`],
+    errors: [],
+  });
 
   // doctest:L327
   const nowhere = await runCaptured(() =>
     runDescribeSecret({ name: "weatherapi", addUses: ["curiosity"], boxRoot: null }),
   );
-  print(`outside a box exit: ${nowhere.exitCode}`);
-  await t.checkText(out.with(print(`says why: ${nowhere.errors.join("\n").includes("not inside a box")}`)), `"someone-elses" is used for:
-  - the boxholder asked
-outside a box exit: 1
-says why: true`);
+  t.check(seen(nowhere), {
+    exitCode: 1,
+    logs: [],
+    errors: [describeRefusal({ name: "weatherapi", why: "the working directory is not inside a box, so there is no own-box secret this could be.", tail: "Run this from inside a box." })],
+  });
 });
 
 // ## `list` prints names and metadata, never values
 void test("`list` prints names and metadata, never values", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -360,9 +434,12 @@ void test("`list` prints names and metadata, never values", async (t) => {
   const dir = await useTempStore();
   await setSecret({ name: "mistral", value: "placeholder-value-3", note: "transcription" });
   const listed = await runCaptured(() => runListSecrets({ agentConfirmed: true }));
-  print(`leaks the value: ${listed.logs.join("\n").includes("placeholder-value-3")}`);
-  await t.checkText(out.with(print(listed.logs.join("\n"))), `leaks the value: false
-mistral	set	updated=«*»	grants=none	note=transcription	used for: audio transcription (Voxtral — recordings and live chat dictation); Mistral API calls from box views, through the server-side adapter`);
+  t.check(seen(listed), {
+    exitCode: undefined,
+    logs: [str`mistral\tset\tupdated=${isoDate()}\tgrants=none\tnote=transcription\tused for: audio transcription (Voxtral — recordings and live chat dictation); Mistral API calls from box views, through the server-side adapter`],
+    errors: [],
+  });
+
 
   // ## An agent sees its own box, not the machine
   //
@@ -373,8 +450,11 @@ mistral	set	updated=«*»	grants=none	note=transcription	used for: audio transcr
 
   // doctest:L364
   const listBlocked = await runCaptured(() => runListSecrets());
-  print(`list exit: ${listBlocked.exitCode}`);
-  print(`named the session: ${listBlocked.errors.join("\n").includes("list every secret on this machine")}`);
+  t.check(seen(listBlocked), {
+    exitCode: 1,
+    logs: [],
+    errors: [machineRefusal("Refusing to list every secret on this machine: this looks like an agent session (CLAUDECODE is set in the environment).")],
+  });
 
   // doctest:L368
   const ownBox = join(dir, "own-box");
@@ -384,24 +464,21 @@ mistral	set	updated=«*»	grants=none	note=transcription	used for: audio transcr
 
   // doctest:L373
   const own = await runCaptured(() => runSecretsStatus({ boxOrRoot: "own-box", boxRoot: ownBox }));
-  print(`own box exit: ${own.exitCode}`);
-  print(own.logs.join("\n"));
+  t.check(seen(own), { exitCode: undefined, logs: ["Box: own-box", "  granted: none"], errors: [] });
 
   // doctest:L377
   const other = await runCaptured(() => runSecretsStatus({ boxOrRoot: "other-box", boxRoot: ownBox }));
-  print(`other box exit: ${other.exitCode}`);
-  print(`says which box it is in: ${other.errors.join("\n").includes("the box you are working in is \"own-box\"")}`);
+  t.check(seen(other), {
+    exitCode: 1,
+    logs: [],
+    errors: [statusRefusal({ head: "Refusing to report on box \"other-box\"", why: "the box you are working in is \"own-box\".", tail: "Try: bbx secrets status own-box" })],
+  });
 
   // doctest:L381
   const nowhere = await runCaptured(() => runSecretsStatus({ boxOrRoot: "own-box", boxRoot: null }));
-  print(`outside a box exit: ${nowhere.exitCode}`);
-  await t.checkText(out.with(print(`says why: ${nowhere.errors.join("\n").includes("not inside a box")}`)), `list exit: 1
-named the session: true
-own box exit: undefined
-Box: own-box
-  granted: none
-other box exit: 1
-says which box it is in: true
-outside a box exit: 1
-says why: true`);
+  t.check(seen(nowhere), {
+    exitCode: 1,
+    logs: [],
+    errors: [statusRefusal({ head: "Refusing to report on box \"own-box\"", why: "the working directory is not inside a box, so there is no own-box view to show.", tail: "Run this from inside a box." })],
+  });
 });

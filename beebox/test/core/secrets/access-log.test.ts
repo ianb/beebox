@@ -17,7 +17,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate, str } from "agent-doctest/check";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -39,8 +39,6 @@ async function readLog(iso: string) {
 
 // ## A mint appends one line naming the box, the secret, and the purpose
 void test("A mint appends one line naming the box, the secret, and the purpose", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -58,19 +56,16 @@ void test("A mint appends one line naming the box, the secret, and the purpose",
   await recordSecretMint({ boxRoot: box.root, slug: "example-box", secret: "deepgram", purpose: "deepgram-temp-key" });
   await recordSecretMint({ boxRoot: box.root, slug: "example-box", secret: "openai-thinking", purpose: "openai-realtime-client-secret" });
 
-  // doctest:L49
-  const events = await readLog(getBoxTimeISO(box.root));
-  for (const e of events) print(`${e.event} ${e.box} ${e.secret} ${e.purpose}`);
-  await t.checkText(out.with(print(`each line is timestamped: ${events.every((e) => typeof e.ts === "string")}`)), `mint example-box deepgram deepgram-temp-key
-mint example-box openai-thinking openai-realtime-client-secret
-each line is timestamped: true`);
+  const deepgramMint = { ts: isoDate(), box: "example-box", secret: "deepgram", purpose: "deepgram-temp-key", event: "mint" };
+  const realtimeMint = { ts: isoDate(), box: "example-box", secret: "openai-thinking", purpose: "openai-realtime-client-secret", event: "mint" };
+  t.check(await readLog(getBoxTimeISO(box.root)), [deepgramMint, realtimeMint]);
 
   // Uncapped by design — ten mints in a row are ten log lines, not a refusal:
 
   // doctest:L61
   const mints = Array.from({ length: 10 }, () => recordSecretMint({ boxRoot: box.root, slug: "example-box", secret: "deepgram", purpose: "deepgram-temp-key" }));
   await Promise.all(mints);
-  await t.checkText(out.with((await readLog(getBoxTimeISO(box.root))).length), "12");
+  t.check(await readLog(getBoxTimeISO(box.root)), [deepgramMint, realtimeMint, ...Array.from({ length: 10 }, () => deepgramMint)]);
 
   // Without an authoritative slug the box's own is derived from disk, so a mint is
   // always attributable to some box:
@@ -78,7 +73,7 @@ each line is timestamped: true`);
   // doctest:L71
   await recordSecretMint({ boxRoot: box.root, secret: "deepgram", purpose: "deepgram-temp-key" });
   const derived = (await readLog(getBoxTimeISO(box.root))).at(-1);
-  await t.checkText(out.with(derived.box.startsWith("bbx-doctest-")), "true");
+  t.check(derived, { ...deepgramMint, box: str`bbx-doctest-${any(String)}` });
 
   // ## Segments older than twelve months are deleted
   //
@@ -99,21 +94,16 @@ each line is timestamped: true`);
     if (entry !== undefined) entry.lastUsed = { "example-box": "2025-08-15T12:00:00.000Z" };
   });
 
-  // doctest:L96
-  print(`retention: ${ACCESS_LOG_RETENTION_MONTHS} months`);
-  print(`pruned: ${(await pruneSecretAccessLog(new Date("2026-10-17T12:00:00Z"))).join(", ")}`);
-  print(`kept: ${(await readdir(logDir)).toSorted().join(", ")}`);
+  t.check(ACCESS_LOG_RETENTION_MONTHS, 12);
+  t.check(await pruneSecretAccessLog(new Date("2026-10-17T12:00:00Z")), ["2025-08.jsonl", "2025-09.jsonl"]);
+  t.check((await readdir(logDir)).toSorted(), ["2024-01.jsonl.bak", "2024-13.jsonl", "2025-10.jsonl", "2026-10.jsonl", "notes.txt"]);
   const store = await loadSecretStore();
-  print(`lastUsed survives: ${store.ok && store.value.secrets.deepgram?.lastUsed?.["example-box"]}`);
-  await t.checkText(out.with(print(`second sweep: ${(await pruneSecretAccessLog(new Date("2026-10-17T12:00:00Z"))).length}`)), `retention: 12 months
-pruned: 2025-08.jsonl, 2025-09.jsonl
-kept: 2024-01.jsonl.bak, 2024-13.jsonl, 2025-10.jsonl, 2026-10.jsonl, notes.txt
-lastUsed survives: 2025-08-15T12:00:00.000Z
-second sweep: 0`);
+  t.check(store.ok && store.value.secrets.deepgram?.lastUsed, { "example-box": "2025-08-15T12:00:00.000Z" });
+  t.check(await pruneSecretAccessLog(new Date("2026-10-17T12:00:00Z")), []);
 
   // A machine with no log yet has nothing to sweep:
 
   // doctest:L113
   process.env.BBX_SECRETS_FILE = join(dir, "never-used", "secrets.json");
-  await t.checkText(out.with((await pruneSecretAccessLog(new Date())).length), "0");
+  t.check(await pruneSecretAccessLog(new Date()), []);
 });

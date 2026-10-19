@@ -4,6 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import {
   imageTransformCacheKey,
   negotiateImageFormat,
@@ -19,13 +20,14 @@ function optionError(query: Record<string, unknown>): string {
 // Defaults match the public contract and `format=auto` negotiates from `Accept`:
 void test("Defaults match the public contract and format=auto negotiates from Accept:", async (t) => {
   // doctest:L22
-  await t.checkText(parseImageTransformOptions({ height: "240" }, "image/avif,image/webp").options, `{
-  "height": 240,
-  "fit": "scale-down",
-  "quality": 85,
-  "format": "avif",
-  "dpr": 1
-}`);
+  t.check(parseImageTransformOptions({ height: "240" }, "image/avif,image/webp").options, {
+    width: undefined,
+    height: 240,
+    fit: "scale-down",
+    quality: 85,
+    format: "avif",
+    dpr: 1,
+  });
 });
 
 // An AVIF type explicitly rejected with `q=0` falls through to WebP:
@@ -54,7 +56,9 @@ void test("Aliases produce the same disk-cache identity after normalization, whi
   const same = imageTransformCacheKey({ sourcePath: "store/photo.jpg", sourceVersion: "v1", options: equivalent });
   const sameRetry = imageTransformCacheKey({ sourcePath: "store/photo.jpg", sourceVersion: "v1", options: retried });
   const changed = imageTransformCacheKey({ sourcePath: "store/photo.jpg", sourceVersion: "v2", options });
-  t.check(`${first === same} ${first === sameRetry} ${first === changed}`, "true true false");
+  t.check(same, first);
+  t.check(sameRetry, first);
+  t.check(changed, not(first));
 });
 
 // The purge removes stale temporary and finished files, then the oldest live variants until the cache is at most 512 MiB:

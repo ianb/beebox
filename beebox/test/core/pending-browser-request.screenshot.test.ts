@@ -6,10 +6,9 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { isoDate } from "agent-doctest/check";
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { makeTestServer, type TestServer } from "../helpers/test-route-server.js";
-import { isRecord } from "../../src/shared/is-record.js";
 
 // An 8-byte PNG signature plus a trailing byte — enough to pass the route's
 // magic-byte check.
@@ -38,18 +37,6 @@ function captureRequestId(ctx: TestServer) {
   });
 }
 
-// A field of a JSON response body, `undefined` when the body is not an object.
-function field(body: unknown, key: string): unknown {
-  return isRecord(body) ? body[key] : undefined;
-}
-
-// A string field of a JSON response body; fails the test when it is not one.
-function stringField(body: unknown, key: string): string {
-  const value = field(body, key);
-  if (typeof value !== "string") throw new Error(`expected a string ${key} in ${JSON.stringify(body)}`);
-  return value;
-}
-
 // Build a multipart body with an optional file + text fields. Returns a Buffer
 // so binary PNG bytes survive intact.
 function multipart(opts: { boundary: string; file?: Buffer; fields?: Record<string, string> }): Buffer {
@@ -71,8 +58,6 @@ function multipart(opts: { boundary: string; file?: Buffer; fields?: Record<stri
 // Also the normal multi-tab outcome — a second tab answering after the first
 // already won, or a tab answering a request the CLI already abandoned.
 void test("Also the normal multi-tab outcome — a second tab answering after the first al...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -87,9 +72,7 @@ void test("Also the normal multi-tab outcome — a second tab answering after th
     url: `/api/chat/screenshot/${VALID_ID}`,
     payload: { declined: true },
   });
-  print(`status: ${res.statusCode}`);
-  await t.checkText(out.with(print(`error: ${field(res.body, "error")}`)), `status: 404
-error: unknown-request`);
+  t.check({ status: res.statusCode, body: res.body }, { status: 404, body: { error: "unknown-request" } });
 });
 
 // ## Route: a malformed request id is rejected before any lookup
@@ -98,8 +81,6 @@ error: unknown-request`);
 // (here a path-traversal attempt) is a 400 at the boundary — it never reaches the
 // registry or the filesystem.
 void test("A live pending id is always a server-minted UUID, so a param that isn't one (...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -114,15 +95,11 @@ void test("A live pending id is always a server-minted UUID, so a param that isn
     url: "/api/chat/screenshot/..%2F..%2Ftarget",
     payload: { declined: true },
   });
-  print(`status: ${res.statusCode}`);
-  await t.checkText(out.with(print(`error: ${field(res.body, "error")}`)), `status: 400
-error: bad-request-id`);
+  t.check({ status: res.statusCode, body: res.body }, { status: 400, body: { error: "bad-request-id" } });
 });
 
 // ## Route: a non-PNG multipart upload is rejected at the boundary
 void test("Route: a non-PNG multipart upload is rejected at the boundary", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -140,9 +117,7 @@ void test("Route: a non-PNG multipart upload is rejected at the boundary", async
     payload: body,
     headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
   });
-  print(`status: ${res.statusCode}`);
-  await t.checkText(out.with(print(`error: ${field(res.body, "error")}`)), `status: 400
-error: not-png`);
+  t.check({ status: res.statusCode, body: res.body }, { status: 400, body: { error: "not-png", message: "Upload is not a PNG" } });
 });
 
 // ## Route: an oversized PNG is rejected at the boundary
@@ -150,8 +125,6 @@ error: not-png`);
 // A valid PNG signature followed by >25 MB of bytes trips the size cap (checked
 // after the magic bytes, so the error is `too-large`, not `not-png`).
 void test("A valid PNG signature followed by >25 MB of bytes trips the size cap (checked...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -170,9 +143,7 @@ void test("A valid PNG signature followed by >25 MB of bytes trips the size cap 
     payload: body,
     headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
   });
-  print(`status: ${res.statusCode}`);
-  await t.checkText(out.with(print(`error: ${field(res.body, "error")}`)), `status: 400
-error: too-large`);
+  t.check({ status: res.statusCode, body: res.body }, { status: 400, body: { error: "too-large", message: "Image exceeds the size cap" } });
 });
 
 // ## Route: a plain user session (no agent bearer) is rejected 403
@@ -181,8 +152,6 @@ error: too-large`);
 // ordinary browser session would present — it is forbidden, so no user can start
 // a screenshot request.
 void test("The request route is agent-initiated.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -197,9 +166,7 @@ void test("The request route is agent-initiated.", async (t) => {
     url: "/api/chat/screenshot/request",
     payload: { session: "s1", timeoutMs: 3000 },
   });
-  print(`status: ${res.statusCode}`);
-  await t.checkText(out.with(print(`error: ${field(res.body, "error")}`)), `status: 403
-error: forbidden`);
+  t.check({ status: res.statusCode, body: res.body }, { status: 403, body: { error: "forbidden", message: "Screenshot requests are agent-initiated (loopback bearer required)" } });
 });
 
 // ## Route: a request nobody acks returns 504 no-client
@@ -208,8 +175,6 @@ error: forbidden`);
 // (distinct from `timeout`). `timeoutMs` is clamped to a 3s floor kept above the
 // ack window.
 void test("No tab acks within the 2s ack window, so the request resolves no-client (dist...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -225,9 +190,7 @@ void test("No tab acks within the 2s ack window, so the request resolves no-clie
     payload: { session: "s1", timeoutMs: 3000 },
     headers: agentAuth(ctx),
   });
-  print(`status: ${res.statusCode}`);
-  await t.checkText(out.with(print(`error: ${field(res.body, "error")}`)), `status: 504
-error: no-client`);
+  t.check({ status: res.statusCode, body: res.body }, { status: 504, body: { error: "no-client" } });
 });
 
 // ## Route: acked-then-silent returns 504 timeout
@@ -237,8 +200,6 @@ error: no-client`);
 // no image the overall 3s timeout then fires as `timeout` — distinct from
 // `no-client`.
 void test("The \"browser\" learns the server-minted id from the screenshot-request bus eve...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -261,18 +222,15 @@ void test("The \"browser\" learns the server-minted id from the screenshot-reque
     url: `/api/chat/screenshot/${requestId}`,
     payload: { ack: true },
   });
-  print(`ack ok: ${JSON.stringify(ackRes.body)}`);
   const res = await longPoll;
-  print(`status: ${res.statusCode}`);
-  await t.checkText(out.with(print(`error: ${field(res.body, "error")}`)), `ack ok: {"ok":true}
-status: 504
-error: timeout`);
+  t.check(
+    { ack: ackRes.body, status: res.statusCode, body: res.body },
+    { ack: { ok: true }, status: 504, body: { error: "timeout" } },
+  );
 });
 
 // ## Route: a decline answer returns 409
 void test("Route: a decline answer returns 409", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -295,12 +253,11 @@ void test("Route: a decline answer returns 409", async (t) => {
     url: `/api/chat/screenshot/${requestId}`,
     payload: { declined: true },
   });
-  print(`answer ok: ${JSON.stringify(answer.body)}`);
   const res = await longPoll;
-  print(`status: ${res.statusCode}`);
-  await t.checkText(out.with(print(`error: ${field(res.body, "error")}`)), `answer ok: {"ok":true}
-status: 409
-error: declined`);
+  t.check(
+    { answer: answer.body, status: res.statusCode, body: res.body },
+    { answer: { ok: true }, status: 409, body: { error: "declined" } },
+  );
 });
 
 // ## Route: full loop — long-poll answered by a multipart PNG upload
@@ -310,8 +267,6 @@ error: declined`);
 // image under `_tmp/screenshot-<requestId>.png` and returns its absolute path with
 // the metadata. The saved bytes match what was uploaded.
 void test("The long-poll is started; the \"browser\" reads the server-minted id off the bu...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -341,22 +296,22 @@ void test("The long-poll is started; the \"browser\" reads the server-minted id 
     payload: body,
     headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
   });
-  print(`answer ok: ${JSON.stringify(answer.body)}`);
   const res = await longPoll;
-  print(`status: ${res.statusCode}`);
-  print(`fidelity: ${field(res.body, "fidelity")}`);
-  print(`viewport: ${JSON.stringify(field(res.body, "viewport"))}`);
-  print(`path ends: ${stringField(res.body, "path").endsWith(`/_tmp/screenshot-${requestId}.png`)}`);
-  print(`path absolute: ${stringField(res.body, "path").startsWith("/")}`);
+  t.check(
+    { answer: answer.body, status: res.statusCode, body: res.body },
+    {
+      answer: { ok: true },
+      status: 200,
+      body: {
+        path: `${ctx.boxRoot}/_tmp/screenshot-${requestId}.png`,
+        fidelity: "extension",
+        capturedAt: isoDate(),
+        viewport: { cssWidth: 1440, cssHeight: 900, dpr: 2 },
+      },
+    },
+  );
   // The 200 is sent only after the PNG is written; the file therefore exists.
-  const saved = await ctx.read(`_tmp/screenshot-${requestId}.png`);
-  await t.checkText(out.with(print(`saved non-empty: ${saved.length > 0}`)), `answer ok: {"ok":true}
-status: 200
-fidelity: extension
-viewport: {"cssWidth":1440,"cssHeight":900,"dpr":2}
-path ends: true
-path absolute: true
-saved non-empty: true`);
+  t.check(await ctx.read(`_tmp/screenshot-${requestId}.png`), PNG.toString("utf-8"));
 });
 
 // ## Route: a genuine client abort cancels the pending entry
@@ -368,8 +323,6 @@ saved non-empty: true`);
 // settles nothing (404). A normal completed long-poll is never hijacked (the
 // `writableFinished` gate above), which the other full-loop cases confirm.
 void test("The plan's abort semantics, exercised over a REAL listening socket (Fastify's...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -399,7 +352,7 @@ void test("The plan's abort semantics, exercised over a REAL listening socket (F
   // client connection mid-poll.
   const requestId = await gotId;
   controller.abort();
-  print(`poll outcome: ${await poll}`);
+  const pollOutcome = await poll;
 
   // doctest:L365
   // Give the server a moment to observe the socket close and cancel the entry.
@@ -412,10 +365,10 @@ void test("The plan's abort semantics, exercised over a REAL listening socket (F
     url: `/api/chat/screenshot/${requestId}`,
     payload: { declined: true },
   });
-  print(`late status: ${late.statusCode}`);
-  await t.checkText(out.with(print(`late error: ${field(late.body, "error")}`)), `poll outcome: AbortError
-late status: 404
-late error: unknown-request`);
+  t.check(
+    { pollOutcome, lateStatus: late.statusCode, lateBody: late.body },
+    { pollOutcome: "AbortError", lateStatus: 404, lateBody: { error: "unknown-request" } },
+  );
 });
 
 // </content>

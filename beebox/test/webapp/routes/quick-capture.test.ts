@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate, uuid } from "agent-doctest/check";
 import { z } from "zod";
 import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/test-route-server.js";
 import type { QuickCaptureDeclaration } from "../../../src/shared/quick-capture.js";
@@ -22,18 +23,28 @@ const id="11111111-1111-4111-8111-111111111111";
 const declaration: QuickCaptureDeclaration={version:1,capturedAt:"2026-10-12T12:00:00Z",source:"apple-share-extension",material:{kind:"clipping",text:"Quoted evidence"}};
 const CaptureData=z.looseObject({material:z.looseObject({text:z.unknown()}).nullish(),delivery:z.looseObject({state:z.unknown()}).nullish()});
 const TrpcData=z.object({result:z.object({data:CaptureData})});
-const TrpcError=z.object({error:z.object({message:z.string()})});
 const Choices=z.object({delivery:z.object({choices:z.array(z.object({candidateId:z.string()}))})});
-// The `result.data` object of a successful tRPC response.
-function dataOf(res: InjectResult) { return TrpcData.parse(res.body).result.data; }
-// The `error.message` of a failed tRPC response.
-function errorMessageOf(res: InjectResult) { return TrpcError.parse(res.body).error.message; }
 // The first delivery choice offered on a capture's detail.
 function firstChoiceId(res: InjectResult) { return Choices.parse(TrpcData.parse(res.body).result.data).delivery.choices[0]?.candidateId; }
 // The text of a clipping capture's declared material.
 function clippingText(record: CaptureRecord | null) {
   const material=record?.declaration.material;
   return material?.kind==="clipping" ? material.text : undefined;
+}
+// The response of a successful tRPC call carrying `data`.
+function trpcOk<T>(data: T) { return { statusCode: 200, body: { result: { data } } }; }
+// The response of a failed tRPC call.
+function trpcFailure(opts: { statusCode: number; message: string; code: number; errorCode: string; path: string }) {
+  return {
+    statusCode: opts.statusCode,
+    body: {
+      error: {
+        message: opts.message,
+        code: opts.code,
+        data: { code: opts.errorCode, httpStatus: opts.statusCode, path: opts.path, recovery: null },
+      },
+    },
+  };
 }
 function declarationPart(value: QuickCaptureDeclaration): MultipartPart {
   return {kind:"field",field:{name:"declaration",value:JSON.stringify(value)}};
@@ -107,12 +118,16 @@ void test("line 72", async (t) => {
 
   // doctest:L84
   const detail=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id}))}`});
-  t.check([detail.statusCode,dataOf(detail).state,dataOf(detail).serverAccepted,dataOf(detail).material?.text], [
-    200,
-    "saved",
-    true,
-    "Quoted evidence",
-  ]);
+  t.check(detail, trpcOk({
+    id,
+    state: "saved",
+    capturedAt: "2026-10-12T12:00:00Z",
+    source: "apple-share-extension",
+    material: { kind: "clipping", text: "Quoted evidence" },
+    sourceRef: "_content/captures/11111111-1111-4111-8111-111111111111.doc.card",
+    attempts: 0,
+    serverAccepted: true,
+  }));
 
   // doctest:L88
   await ctx.cleanup();
@@ -179,23 +194,28 @@ void test("Owner identity is enforced equally for HTTP replay and tRPC read/writ
 
   // doctest:L126
   const hidden=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id}))}`,headers:b});
-  t.check([hidden.statusCode,errorMessageOf(hidden)], [
-    403,
-    "This capture belongs to another user.",
-  ]);
+  t.check(hidden, trpcFailure({
+    statusCode: 403,
+    message: "This capture belongs to another user.",
+    code: -32003,
+    errorCode: "FORBIDDEN",
+    path: "quickCapture.detail",
+  }));
 
   // doctest:L130
   const otherList=await ctx.request({method:"GET",url:"/api/trpc/quickCapture.list",headers:b});
-  t.check(dataOf(otherList), {
-    captures: [],
-  });
+  t.check(otherList, trpcOk({ captures: [] }));
 
   // doctest:L134
   const deleted=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{...a,"content-type":"application/json"},payload:{id}});
-  t.check([deleted.statusCode,dataOf(deleted).state], [
-    200,
-    "gone",
-  ]);
+  t.check(deleted, trpcOk({
+    id,
+    state: "gone",
+    capturedAt: "2026-10-12T12:00:00Z",
+    source: "apple-share-extension",
+    attempts: 0,
+    serverAccepted: true,
+  }));
 
   // doctest:L138
   t.check(await ownedUpload(ctx,{value:declaration,headers:a}), {
@@ -220,33 +240,76 @@ void test("Deleting an original removes its exposed source content but retains a
   await eventUpload(ctx,{id:eventId,value:{version:1,capturedAt:"2026-10-12T12:01:00Z",source:"apple-native-input",parentCaptureId:id,input:"My retained context"}});
   await settleEvent(ctx,eventId);
   const before=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id:eventId}))}`});
-  t.check([dataOf(before).state,dataOf(before).input,dataOf(before).delivery?.state], [
-    "blocked",
-    "My retained context",
-    "needs-choice",
-  ]);
+  t.check(before, trpcOk({
+    id: eventId,
+    state: "blocked",
+    capturedAt: "2026-10-12T12:01:00Z",
+    source: "apple-native-input",
+    input: "My retained context",
+    parentCaptureId: id,
+    sourceRef: "_content/incoming/11111111-1111-4111-8111-111111111111.doc.card",
+    error: "Choose a destination for the original capture before sending context.",
+    attempts: 0,
+    serverAccepted: true,
+    delivery: {
+      id: uuid(),
+      message: "Parent private words",
+      createdAt: isoDate(),
+      state: "needs-choice",
+      reason: "routing-unavailable",
+      choices: [{ candidateId: "c0", label: "New general chat" }],
+    },
+  }));
 
   // doctest:L159
   await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{"content-type":"application/json"},payload:{id}});
   const original=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id}))}`});
-  const gone=dataOf(original);
-  await t.checkText([gone.state,gone.input,gone.material,gone.sourceRef,gone.transcript,gone.delivery], "[\"gone\",null,null,null,null,null]");
+  t.check(original, trpcOk({
+    id,
+    state: "gone",
+    capturedAt: "2026-10-12T12:00:00Z",
+    source: "apple-share-extension",
+    attempts: 0,
+    serverAccepted: true,
+  }));
 
   // doctest:L165
   const tombstone=await readCapture(ctx.boxRoot,id);
-  await t.checkText([tombstone?.declaration.input,tombstone?.declaration.material,tombstone?.transcript], "[null,null,null]");
+  t.check(tombstone, {
+    id,
+    owner: null,
+    digest: "d5f883ff8a5324b716c46c0cf6f82841615d95571e60fc18793758a85850d90f",
+    declaration: { version: 1, capturedAt: "2026-10-12T12:00:00Z", source: "apple-share-extension" },
+    acceptedAt: isoDate(),
+    state: "gone",
+    sourceRef: "_content/incoming/11111111-1111-4111-8111-111111111111.doc.card",
+    sourceCommitted: true,
+    attempts: 0,
+  });
 
   // doctest:L169
   const after=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id:eventId}))}`});
-  const kept=dataOf(after);
-  await t.checkText([kept.state,kept.input,kept.sourceRef,kept.delivery], "[\"blocked\",\"My retained context\",null,null]");
+  t.check(after, trpcOk({
+    id: eventId,
+    state: "blocked",
+    capturedAt: "2026-10-12T12:01:00Z",
+    source: "apple-native-input",
+    input: "My retained context",
+    parentCaptureId: id,
+    error: "The original capture was deleted. Your context words are kept; copy them into a new capture if needed.",
+    attempts: 0,
+    serverAccepted: true,
+  }));
 
   // doctest:L174
   const late=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.choose",headers:{"content-type":"application/json"},payload:{id:eventId,candidateId:firstChoiceId(before)}});
-  t.check([late.statusCode,errorMessageOf(late)], [
-    404,
-    "The original capture was deleted.",
-  ]);
+  t.check(late, trpcFailure({
+    statusCode: 404,
+    message: "The original capture was deleted.",
+    code: -32004,
+    errorCode: "NOT_FOUND",
+    path: "quickCapture.choose",
+  }));
 
   // doctest:L178
   t.check(await eventUpload(ctx,{id:"33333333-3333-4333-8333-333333333333",value:{version:1,capturedAt:"2026-10-12T12:02:00Z",source:"apple-native-input",parentCaptureId:id,input:"Late words"}}), {
@@ -295,7 +358,7 @@ void test("The declaration limit accounts for UTF-8 and JSON escaping.", async (
   });
 
   // doctest:L209
-  t.check(clippingText(await readCapture(ctx.boxRoot,id))?.length, 100000);
+  t.check(clippingText(await readCapture(ctx.boxRoot,id)), quoted);
 
   // doctest:L212
   await settleEvent(ctx,id);
@@ -309,7 +372,7 @@ void test("The declaration limit accounts for UTF-8 and JSON escaping.", async (
   });
 
   // doctest:L217
-  t.check(clippingText(await readCapture(ctx.boxRoot,escapedId))?.length, 100000);
+  t.check(clippingText(await readCapture(ctx.boxRoot,escapedId)), "\u0000".repeat(100000));
 
   // doctest:L220
   await settleEvent(ctx,escapedId);
@@ -322,15 +385,7 @@ void test("Discarding an uncertain upload reserves its UUID under the requesting
   // doctest:L228
   const ctx=await makeTestServer();
   const deleted=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{"content-type":"application/json"},payload:{id}});
-  t.check([deleted.statusCode,dataOf(deleted)], [
-    200,
-    {
-      id: "11111111-1111-4111-8111-111111111111",
-      state: "gone",
-      attempts: 0,
-      serverAccepted: true,
-    },
-  ]);
+  t.check(deleted, trpcOk({ id, state: "gone", attempts: 0, serverAccepted: true }));
 
   // doctest:L233
   t.check(await upload(ctx,declaration), {

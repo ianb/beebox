@@ -14,13 +14,13 @@ import { formatOptions } from "../../../src/components/ui/FriendlyDate.js";
 // matches the written day in every runner timezone:
 void test("A date-only string formats in UTC regardless of mode, so the rendered day mat...", async (t) => {
   // doctest:L17
-  t.check(formatOptions({ iso: "2026-08-14", mode: "date" }).timeZone, "UTC");
+  t.check(formatOptions({ iso: "2026-08-14", mode: "date" }), { dateStyle: "medium", timeZone: "UTC" });
 
   // doctest:L20
   t.check(new Date("2026-08-14").toLocaleString("en-US", formatOptions({ iso: "2026-08-14", mode: "date" })), "Aug 14, 2026");
 
   // doctest:L23
-  await t.checkText(formatOptions({ iso: "2026-08-14" }).timeStyle === undefined, "true");
+  t.check(formatOptions({ iso: "2026-08-14" }), { dateStyle: "medium", timeZone: "UTC" });
 });
 
 // Full timestamps are instants and keep the viewer's local zone (no `timeZone`
@@ -28,8 +28,8 @@ void test("A date-only string formats in UTC regardless of mode, so the rendered
 void test("Full timestamps are instants and keep the viewer's local zone (no timeZone pi...", async (t) => {
   // doctest:L31
   const full = formatOptions({ iso: "2026-08-14T10:00:00Z" });
-  t.check([String(full.timeZone), String(full.timeStyle)].join(" "), "undefined short");
+  t.check(full, { dateStyle: "medium", timeStyle: "short" });
 
   // doctest:L35
-  await t.checkText(formatOptions({ iso: "2026-08-14T10:00:00Z", mode: "date" }).timeStyle === undefined, "true");
+  t.check(formatOptions({ iso: "2026-08-14T10:00:00Z", mode: "date" }), { dateStyle: "medium" });
 });

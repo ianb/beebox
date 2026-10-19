@@ -13,13 +13,10 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { createSingleFlightCache } from "../../src/lib/view-bindings.js";
 
 // ## `invalidate()` then `load()` in the same tick returns post-invalidation data
 void test("`invalidate()` then `load()` in the same tick returns post-invalidation data", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L21
   let fetchCount = 0;
   let value = "first";
@@ -30,20 +27,20 @@ void test("`invalidate()` then `load()` in the same tick returns post-invalidati
 
   // doctest:L28
   const before = await cache.load();
-  print(`before: ${before}, fetches: ${fetchCount}`);
+  const fetchesBefore = fetchCount;
 
   // doctest:L31
   value = "second";
   cache.invalidate();
   const after = await cache.load();
-  await t.checkText(out.with(print(`after: ${after}, fetches: ${fetchCount}`)), `before: first, fetches: 1
-after: second, fetches: 2`);
+  t.check(
+    { before, fetchesBefore, after, fetches: fetchCount },
+    { before: "first", fetchesBefore: 1, after: "second", fetches: 2 },
+  );
 });
 
 // ## Concurrent `load()` calls share one in-flight fetch
 void test("Concurrent `load()` calls share one in-flight fetch", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L43
   let fetchCount2 = 0;
   const cache2 = createSingleFlightCache(async () => {
@@ -53,9 +50,7 @@ void test("Concurrent `load()` calls share one in-flight fetch", async (t) => {
 
   // doctest:L49
   const [a, b, c] = await Promise.all([cache2.load(), cache2.load(), cache2.load()]);
-  print(`fetches: ${fetchCount2}`);
-  await t.checkText(out.with(print(`same: ${a === b && b === c}`)), `fetches: 1
-same: true`);
+  t.check({ fetches: fetchCount2, values: [a, b, c] }, { fetches: 1, values: ["value", "value", "value"] });
 });
 
 // ## Repeated `invalidate()` calls are idempotent — no coalescing needed

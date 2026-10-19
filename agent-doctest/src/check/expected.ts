@@ -46,7 +46,9 @@ type Primitive = string | number | bigint | boolean | symbol | null | undefined;
  * - A string position takes the literal (checked against literal unions) or
  *   any `Pattern<string>`; numbers and booleans likewise.
  * - A `Date` is written as its ISO string, a `Date`, or `isoDate()`.
- * - An optional key may be omitted, or written as `optional(...)`.
+ * - An optional key may be omitted, or written as `optional(...)`. A key
+ *   declared `k?: V | undefined` may also be written `k: undefined`, for an
+ *   actual value that holds the key with no value.
  * - An object may carry `[others]: pattern` for keys it does not list.
  */
 export type Expected<T> =
@@ -75,6 +77,6 @@ type ExpectedObject<T> = {
   // The `as` clause keeps each key's optional modifier.
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- a method-valued property is skipped whatever its signature
   readonly [K in keyof T as T[K] extends Function ? never : K]: Partial<Pick<T, K>> extends Pick<T, K>
-    ? Expected<Exclude<T[K], undefined>> | Optional<Exclude<T[K], undefined>>
+    ? Expected<T[K]> | Optional<Exclude<T[K], undefined>>
     : Expected<T[K]>;
 } & { readonly [others]?: Pattern<DataValues<T>> };

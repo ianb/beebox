@@ -87,12 +87,9 @@ void test("Only the provided keys are persisted (an omitted field stays absent),
   t.check(files, "_config/connectors/google-calendar.json");
 
   // doctest:L81
-  await t.checkText(
-    // `status` porcelain paths are repo-root-relative; under the one-root layout
-    // that's the same box root the decoy was written into.
-    JSON.stringify((await simpleGit(box.root).status()).not_added),
-    "[\"_content/decoy.md\"]",
-  );
+  // `status` porcelain paths are repo-root-relative; under the one-root layout
+  // that's the same box root the decoy was written into.
+  t.check((await simpleGit(box.root).status()).not_added, ["_content/decoy.md"]);
 });
 
 // ## drive has a config reader and no config writer
@@ -210,10 +207,11 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
     labels: ["INBOX", "  ", "Work"],
     action: { type: "track" },
   });
-  t.check(byLabel.labels, [
-    "INBOX",
-    "Work",
-  ]);
+  t.check(byLabel, {
+    query: "",
+    labels: ["INBOX", "Work"],
+    action: { type: "track" },
+  });
 
   // doctest:L176
   t.check(await readJson(box, "_config/connectors/gmail.json"), {
@@ -236,7 +234,10 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
   } catch (error) {
     refused = errorMessage(error);
   };
-  await t.checkText(refused.includes("needs an action"), "true");
+  t.check(
+    refused,
+    'Invalid _config/connectors/gmail.json: query or labels needs an action — add "action": {"type": "track"} to create a card per matching thread, or "action": {"type": "procedure", "ref": "_config/procedures/<name>.procedure.card"} to run a procedure instead',
+  );
 
   // A procedure action routes matches without creating any card.
 
@@ -246,9 +247,13 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
     labels: [],
     action: { type: "procedure", ref: "_config/procedures/review.procedure.card" },
   });
-  t.check(routed.action, {
-    type: "procedure",
-    ref: "_config/procedures/review.procedure.card",
+  t.check(routed, {
+    query: "is:unread",
+    labels: [],
+    action: {
+      type: "procedure",
+      ref: "_config/procedures/review.procedure.card",
+    },
   });
 
   // When nothing is left to match, the action is dropped too: an action with no
@@ -271,5 +276,5 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
   const before = (await lastCommit(box.root)).hash;
   await c.admin.updateGmailConfig({ query: "", labels: [] });
   const after = (await lastCommit(box.root)).hash;
-  await t.checkText(before === after, "true");
+  t.check(after, before);
 });

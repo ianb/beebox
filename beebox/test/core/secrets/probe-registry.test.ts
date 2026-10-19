@@ -19,7 +19,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { isoDate } from "agent-doctest/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -70,8 +70,6 @@ async function storedVerified(name: string) {
 // The Mistral probe lists models — a read-only call that creates nothing and
 // charges nothing. The key travels in the `Authorization` header, never in the URL.
 void test("The Mistral probe lists models — a read-only call that creates nothing and ch...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -87,23 +85,16 @@ void test("The Mistral probe lists models — a read-only call that creates noth
   const verified = await probeSecret({ name: "mistral", deps: { fetch: recordingFetch(200, calls) } });
 
   // doctest:L80
-  print(`verdict: ${verified.status}`);
-  print(`called: ${calls[0]?.url}`);
-  print(`key travelled in the header: ${calls[0]?.headers.get("Authorization") === "Bearer placeholder-mistral-key"}`);
-  await t.checkText(out.with(print(`recorded on the entry: ${(await storedVerified("mistral"))?.status}`)), `verdict: ok
-called: https://api.mistral.ai/v1/models
-key travelled in the header: true
-recorded on the entry: ok`);
+  t.check(verified, { status: "ok", at: isoDate() });
+  t.check(calls[0]?.url, "https://api.mistral.ai/v1/models");
+  t.check(calls[0]?.headers.get("Authorization"), "Bearer placeholder-mistral-key");
+  t.check(await storedVerified("mistral"), { status: "ok", at: isoDate() });
 
   // ## A rejected key: `failed`, and the reason never quotes the value
 
   // doctest:L94
   const rejected = await probeSecret({ name: "mistral", deps: { fetch: recordingFetch(401, []) } });
-  print(`verdict: ${rejected.status}`);
-  print(`reason: ${rejected.reason}`);
-  await t.checkText(out.with(print(`reason leaks the value: ${JSON.stringify(rejected).includes("placeholder-mistral-key")}`)), `verdict: failed
-reason: the provider rejected this credential (HTTP 401)
-reason leaks the value: false`);
+  t.check(rejected, { status: "failed", reason: "the provider rejected this credential (HTTP 401)", at: isoDate() });
 
   // ## A provider outage is inconclusive, not a bad key
   //
@@ -112,11 +103,8 @@ reason leaks the value: false`);
 
   // doctest:L110
   const blip = await probeSecret({ name: "mistral", deps: { fetch: recordingFetch(500, []) } });
-  print(`verdict: ${blip.status}`);
-  print(`reason: ${blip.reason}`);
-  await t.checkText(out.with(print(`401 counts as auth, 500 and 429 do not: ${[isAuthRejection(401), isAuthRejection(500), isAuthRejection(429)].join(" ")}`)), `verdict: unchecked
-reason: the check was inconclusive (HTTP 500)
-401 counts as auth, 500 and 429 do not: true false false`);
+  t.check(blip, { status: "unchecked", reason: "the check was inconclusive (HTTP 500)", at: isoDate() });
+  t.check([isAuthRejection(401), isAuthRejection(500), isAuthRejection(429)], [true, false, false]);
 
   // ## A name with no registry entry stays unchecked, and nothing is written
   //
@@ -125,15 +113,10 @@ reason: the check was inconclusive (HTTP 500)
   // doctest:L125
   await setSecret({ name: "weatherapi", value: "placeholder-weather-key" });
   const adhoc = await probeSecret({ name: "weatherapi", deps: { fetch: recordingFetch(200, []) } });
-  print(`verdict: ${adhoc.status}`);
-  print(`reason: ${adhoc.reason}`);
-  print(`entry left unverified: ${(await storedVerified("weatherapi")) === undefined}`);
-  print(`no probe described: ${describeSecretProbe({ name: "weatherapi" })}`);
-  await t.checkText(out.with(print(`mistral has one: ${describeSecretProbe({ name: "mistral" })}`)), `verdict: unchecked
-reason: no verification is available for this credential
-entry left unverified: true
-no probe described: null
-mistral has one: lists Mistral models`);
+  t.check(adhoc, { status: "unchecked", reason: "no verification is available for this credential", at: isoDate() });
+  t.check(await storedVerified("weatherapi"), undefined);
+  t.check(describeSecretProbe({ name: "weatherapi" }), null);
+  t.check(describeSecretProbe({ name: "mistral" }), "lists Mistral models");
 
   // ## A value that is not the shape the credential needs is `failed`
   //
@@ -144,7 +127,7 @@ mistral has one: lists Mistral models`);
   // doctest:L147
   await setSecret({ name: "deepgram", value: "not-json-at-all" });
   const malformed = await probeSecret({ name: "deepgram", deps: { fetch: recordingFetch(200, []) } });
-  await t.checkText(out.with(print(`verdict: ${malformed.status} — ${malformed.reason}`)), "verdict: failed — the stored value is not in the shape this credential needs");
+  t.check(malformed, { status: "failed", reason: "the stored value is not in the shape this credential needs", at: isoDate() });
 
   // ## A probe that outlives its value never stamps the new one
   //
@@ -161,9 +144,8 @@ mistral has one: lists Mistral models`);
   const slow = probeSecret({ name: "mistral", deps: { fetch: slowFetch } });
   await setSecret({ name: "mistral", value: "placeholder-mistral-key-2" });
   release();
-  print(`the stale probe still reports: ${(await slow).status}`);
-  await t.checkText(out.with(print(`but the rotated entry is untouched: ${(await storedVerified("mistral")) === undefined}`)), `the stale probe still reports: failed
-but the rotated entry is untouched: true`);
+  t.check(await slow, { status: "failed", reason: "the provider rejected this credential (HTTP 401)", at: isoDate() });
+  t.check(await storedVerified("mistral"), undefined);
 
   // ## Suspect round-trip: a real 401 makes every later resolve say so
   //
@@ -180,23 +162,19 @@ but the rotated entry is untouched: true`);
   // doctest:L188
   const before = await resolveSecret({ boxRoot: box.root, name: "weatherapi", purpose: "forecast", access: "agent" });
   invariant(before.ok, "the granted secret resolves");
-  print(`before: suspect=${before.value.suspect}`);
+  t.check(before.value, { value: "placeholder-weather-key", suspect: false });
 
   // doctest:L192
   await markSecretVerificationFailed("weatherapi", "a forecast request was rejected with HTTP 401");
   const after = await resolveSecret({ boxRoot: box.root, name: "weatherapi", purpose: "forecast", access: "agent" });
   invariant(after.ok, "the suspect secret still resolves");
-  print(`after: suspect=${after.value.suspect}`);
-  print(`the value still resolves: ${after.value.value === "placeholder-weather-key"}`);
-  await t.checkText(out.with(print(`reason on the entry: ${(await storedVerified("weatherapi"))?.reason}`)), `before: suspect=false
-after: suspect=true
-the value still resolves: true
-reason on the entry: a forecast request was rejected with HTTP 401`);
+  t.check(after.value, { value: "placeholder-weather-key", suspect: true });
+  t.check(await storedVerified("weatherapi"), { status: "failed", reason: "a forecast request was rejected with HTTP 401", at: isoDate() });
 
   // Storing a new value clears the old verdict — a rotated key has not been checked
   // yet, and carrying `failed` forward would leave a fresh key marked expired.
 
   // doctest:L209
   await setSecret({ name: "weatherapi", value: "placeholder-weather-key-2" });
-  await t.checkText(out.with(print(`after rotation: ${(await storedVerified("weatherapi")) === undefined}`)), "after rotation: true");
+  t.check(await storedVerified("weatherapi"), undefined);
 });

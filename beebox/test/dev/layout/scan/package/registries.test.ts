@@ -55,8 +55,7 @@ void test("A list form, an identifier member resolved to its import, ordered tru
     },
   ]);
 
-  // doctest:L39
-  await t.checkText(result.findings.length, "0");
+  t.check(result.findings, []);
 });
 
 // ## A record form, `entry` absent defaults to null, `ordered` absent defaults to false
@@ -95,7 +94,7 @@ void test("A non-literal `directory` is a scan finding, not a registry", async (
   // doctest:L58
   const source3 = `${registryImportLine}defineRegistry({\n  directory: computeDir(),\n  ordered: false,\n  members: [],\n});\n`;
   const result3 = registriesOf(source3, [registryEdge]);
-  await t.checkText(result3.registries.length, "0");
+  t.check(result3.registries, []);
 
   // doctest:L63
   t.check(result3.findings, [
@@ -109,40 +108,75 @@ void test("A non-literal `directory` is a scan finding, not a registry", async (
 
 // ## A first argument that is not an object literal is a scan finding
 void test("A first argument that is not an object literal is a scan finding", async (t) => {
-  // doctest:L70
-  t.check(registriesOf(`${registryImportLine}defineRegistry(members);\n`, [registryEdge]).findings[0]?.message, "defineRegistry argument is not an object literal");
+  t.check(registriesOf(`${registryImportLine}defineRegistry(members);\n`, [registryEdge]).findings, [{ rule: "scan", path: "pkg/src/mod.ts", message: "defineRegistry argument is not an object literal" }]);
 });
 
 // ## `members` that is neither an array nor an object literal is a scan finding
 void test("`members` that is neither an array nor an object literal is a scan finding", async (t) => {
   // doctest:L77
   const source4 = `${registryImportLine}defineRegistry({\n  directory: "./x",\n  ordered: false,\n  members: someCall(),\n});\n`;
-  t.check(registriesOf(source4, [registryEdge]).findings[0]?.message, "defineRegistry members is not an array or object literal");
+  t.check(registriesOf(source4, [registryEdge]).findings, [{ rule: "scan", path: "pkg/src/mod.ts", message: "defineRegistry members is not an array or object literal" }]);
 });
 
 // ## Parens, `satisfies`, and `as` around the first argument are unwrapped
 void test("Parens, `satisfies`, and `as` around the first argument are unwrapped", async (t) => {
   // doctest:L85
   const source5 = `${registryImportLine}defineRegistry(({\n  directory: "./z",\n  ordered: false,\n  members: [],\n} as SomeType));\n`;
-  t.check(registriesOf(source5, [registryEdge]).registries[0]?.directory, "pkg/src/z");
+  t.check(registriesOf(source5, [registryEdge]).registries, [
+    {
+      directory: "pkg/src/z",
+      entry: null,
+      ordered: false,
+      form: "list",
+      members: [],
+      line: 2,
+    },
+  ]);
 
   // doctest:L89
   const source6 = `${registryImportLine}defineRegistry({\n  directory: "./w",\n  ordered: false,\n  members: [],\n} satisfies unknown);\n`;
-  t.check(registriesOf(source6, [registryEdge]).registries[0]?.directory, "pkg/src/w");
+  t.check(registriesOf(source6, [registryEdge]).registries, [
+    {
+      directory: "pkg/src/w",
+      entry: null,
+      ordered: false,
+      form: "list",
+      members: [],
+      line: 2,
+    },
+  ]);
 });
 
 // ## A renamed import is recognized by its imported name, not its local text
 void test("A renamed import is recognized by its imported name, not its local text", async (t) => {
   // doctest:L97
   const source7 = "import { defineRegistry as reg } from \"../shared/registry.js\";\nreg({\n  directory: \"./renamed\",\n  ordered: false,\n  members: [],\n});\n";
-  t.check(registriesOf(source7, [edge({ specifier: "../shared/registry.js", names: ["reg"], target: "pkg/src/shared/registry.ts" })]).registries[0]?.directory, "pkg/src/renamed");
+  t.check(registriesOf(source7, [edge({ specifier: "../shared/registry.js", names: ["reg"], target: "pkg/src/shared/registry.ts" })]).registries, [
+    {
+      directory: "pkg/src/renamed",
+      entry: null,
+      ordered: false,
+      form: "list",
+      members: [],
+      line: 2,
+    },
+  ]);
 });
 
 // ## A namespace import is recognized via `<namespace>.defineRegistry(...)`
 void test("A namespace import is recognized via `<namespace>.defineRegistry(...)`", async (t) => {
   // doctest:L105
   const source8 = "import * as r from \"../shared/registry.js\";\nr.defineRegistry({\n  directory: \"./ns\",\n  ordered: false,\n  members: [],\n});\n";
-  t.check(registriesOf(source8, [edge({ specifier: "../shared/registry.js", names: ["r"], target: "pkg/src/shared/registry.ts" })]).registries[0]?.directory, "pkg/src/ns");
+  t.check(registriesOf(source8, [edge({ specifier: "../shared/registry.js", names: ["r"], target: "pkg/src/shared/registry.ts" })]).registries, [
+    {
+      directory: "pkg/src/ns",
+      entry: null,
+      ordered: false,
+      form: "list",
+      members: [],
+      line: 2,
+    },
+  ]);
 });
 
 // ## `members` bound by a same-file `const` to a literal is read as if inline
@@ -170,8 +204,7 @@ void test("`members` bound by a same-file `const` to a literal is read as if inl
     },
   ]);
 
-  // doctest:L121
-  await t.checkText(result10.findings.length, "0");
+  t.check(result10.findings, []);
 });
 
 // A record-form `const` wrapped in `satisfies` resolves the same way.
@@ -195,11 +228,11 @@ void test("A record-form const wrapped in satisfies resolves the same way.", asy
 void test("`members` bound to a non-`const`, or to a non-literal, stays a scan finding", async (t) => {
   // doctest:L140
   const source13 = `${registryImportLine}let commandList = [];\ndefineRegistry({\n  directory: "./x",\n  ordered: false,\n  members: commandList,\n});\n`;
-  t.check(registriesOf(source13, [registryEdge]).findings[0]?.message, "defineRegistry members is not an array or object literal");
+  t.check(registriesOf(source13, [registryEdge]).findings, [{ rule: "scan", path: "pkg/src/mod.ts", message: "defineRegistry members is not an array or object literal" }]);
 
   // doctest:L144
   const source14 = `${registryImportLine}const commandList = computeList();\ndefineRegistry({\n  directory: "./x",\n  ordered: false,\n  members: commandList,\n});\n`;
-  t.check(registriesOf(source14, [registryEdge]).findings[0]?.message, "defineRegistry members is not an array or object literal");
+  t.check(registriesOf(source14, [registryEdge]).findings, [{ rule: "scan", path: "pkg/src/mod.ts", message: "defineRegistry members is not an array or object literal" }]);
 });
 
 // ## A same-named function imported from elsewhere is not recognized
@@ -207,8 +240,5 @@ void test("A same-named function imported from elsewhere is not recognized", asy
   // doctest:L152
   const source9 = "import { defineRegistry } from \"./other.js\";\ndefineRegistry({\n  directory: \"./ignored\",\n  ordered: false,\n  members: [],\n});\n";
   const result9 = registriesOf(source9, [edge({ specifier: "./other.js", names: ["defineRegistry"], target: "pkg/src/other.ts" })]);
-  await t.checkText(result9.registries.length, "0");
-
-  // doctest:L157
-  await t.checkText(result9.findings.length, "0");
+  t.check(result9, { registries: [], findings: [] });
 });

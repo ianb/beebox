@@ -70,7 +70,7 @@ void test("A file moved twice across two commits composes into one old->new mapp
   // doctest:L67
   const roots = scanRoots(repoRoot);
   const result = computeMentionRewrite({ repoRoot, moves, roots, rewrittenFiles: new Set() });
-  await t.checkText(result.fileEdits.get("docs/note.md"), "See pkg/src/sub/renamed.ts for details.");
+  t.check(result.fileEdits.get("docs/note.md"), "See pkg/src/sub/renamed.ts for details.\n");
 
   // doctest:L72
   await t.checkText(await read("docs/note.md"), "See pkg/src/a.ts for details.");
@@ -93,10 +93,14 @@ void test("A detected rename is only trusted once the working tree agrees with i
 
   // doctest:L91
   const { moves: goneMoves, rejected: goneRejected } = computeRenamesFromGit({ repoRoot, base: goneBase });
-  await t.checkText(goneMoves.some((m) => m.from === "pkg/src/gone.ts"), "false");
-
-  // doctest:L95
-  t.check(goneRejected.find((r) => r.from === "pkg/src/gone.ts")?.reason, "new path does not exist in the working tree");
+  t.check(goneMoves, []);
+  t.check(goneRejected, [
+    {
+      from: "pkg/src/gone.ts",
+      to: "pkg/src/moved-gone.ts",
+      reason: "new path does not exist in the working tree",
+    },
+  ]);
 });
 
 // ## Rejected when the working tree contradicts it: old path still present
@@ -119,8 +123,12 @@ void test("Rejected when the working tree contradicts it: old path still present
 
   // doctest:L110
   const { moves: stillMoves, rejected: stillRejected } = computeRenamesFromGit({ repoRoot, base: stillBase });
-  await t.checkText(stillMoves.some((m) => m.from === "pkg/src/still.ts"), "false");
-
-  // doctest:L114
-  t.check(stillRejected.find((r) => r.from === "pkg/src/still.ts")?.reason, "old path still exists in the working tree");
+  t.check(stillMoves, []);
+  t.check(stillRejected, [
+    {
+      from: "pkg/src/still.ts",
+      to: "pkg/src/moved-still.ts",
+      reason: "old path still exists in the working tree",
+    },
+  ]);
 });

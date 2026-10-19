@@ -49,10 +49,10 @@ void test("line 15", async (t) => {
   await box.commitAll("record repair question");
   await finishMigrationRepair(box.root, "probe");
   const second = await repairMigration(opts);
-  t.check({ invocations, retries, sameQuestion: first.question === second.question, pending: (await migrationQuestions(box.root)).length }, {
+  t.check({ invocations, retries, sameQuestion: second.question, pending: (await migrationQuestions(box.root)).length }, {
     invocations: 1,
     retries: 1,
-    sameQuestion: true,
+    sameQuestion: first.question,
     pending: 1,
   });
 });
@@ -75,9 +75,9 @@ void test("line 52", async (t) => {
     retry: async () => 0,
     agent: createFakeAgent({ name: "repair", act: async () => ({}), structuredResult: () => { invoked = true; return null; } }),
   });
-  t.check({ invoked, question: Boolean(result.question), code: result.code }, {
+  t.check({ invoked, question: result.question, code: result.code }, {
     invoked: false,
-    question: true,
+    question: "_bookkeeping/questions/Migration_interrupted-0.question.card",
     code: 1,
   });
 });
@@ -103,5 +103,5 @@ void test("line 70", async (t) => {
   );
 
   // doctest:L80
-  await t.checkText(execFileSync("git", ["for-each-ref", "--format=%(refname)", "refs/bbx/migrations/unavailable/repair-started"], { cwd: box.root }).toString().trim() === "", "true");
+  t.check(execFileSync("git", ["for-each-ref", "--format=%(refname)", "refs/bbx/migrations/unavailable/repair-started"], { cwd: box.root }).toString().trim(), "");
 });

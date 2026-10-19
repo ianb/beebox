@@ -51,7 +51,7 @@ await writeFile(
 // so no record means no scan ran:
 void test("The place menu lists without a repair scan.", async (t) => {
   // doctest:L54
-  t.check((await caller(box.root).chat.placeMenu()).rootFreshCount, 0);
+  t.check(await caller(box.root).chat.placeMenu(), { landmarks: [], rootFreshCount: 0, problems: [] });
 
   // doctest:L57
   t.check(await exists(box.path(RECORD)), false);
@@ -61,9 +61,14 @@ void test("The place menu lists without a repair scan.", async (t) => {
   // find this thread, so the husk is dead, and its id is now on disk:
 
   // doctest:L66
-  t.check((await loadDeadHusks(box.root)).map((husk) => husk.sessionId), [
-    "33333333-3333-4333-8333-333333333333",
-  ]);
+  t.check(await loadDeadHusks(box.root), [{
+    sessionId: CODEX_CHAT,
+    huskPath: "_content/chat/web/2026-10-05_33333333.chat.card",
+    contextDir: undefined,
+    title: undefined,
+    firstMessage: undefined,
+    transcript: { state: "expired" },
+  }]);
 
   // doctest:L69
   t.check(JSON.parse(await readFile(box.path(RECORD), "utf-8")), {
@@ -82,7 +87,7 @@ void test("The place menu lists without a repair scan.", async (t) => {
     box.path("_content/chat/web/2026-10-05_33333333.chat.card"),
     `---\nsession: ${OTHER_CHAT}\nengine: codex\norigin: ${here.id}\norigin-name: ${here.name}\n---\n`,
   );
-  await t.checkText((await listSessionEntries(box.root)).length, "0");
+  t.check(await listSessionEntries(box.root), []);
 
   // doctest:L86
   t.check(JSON.parse(await readFile(box.path(RECORD), "utf-8")), {

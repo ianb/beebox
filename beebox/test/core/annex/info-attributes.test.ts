@@ -40,13 +40,13 @@ void test("The file is absent until something writes it, and an absent file read
   await fs.mkdir(path.dirname(annexInfoAttributesPath(box.root)), { recursive: true });
   await fs.writeFile(annexInfoAttributesPath(box.root), "\n* filter=annex\n");
   await writeAnnexInfoAttributes(box.root);
-  await t.checkText(await readAnnexInfoAttributes(box.root) === assetAnnexAttributes(), "true");
+  t.check(await readAnnexInfoAttributes(box.root), assetAnnexAttributes());
 
   // Idempotent, because `bbx init` runs the repair on every invocation:
 
   // doctest:L45
   await writeAnnexInfoAttributes(box.root);
-  await t.checkText(await readAnnexInfoAttributes(box.root) === assetAnnexAttributes(), "true");
+  t.check(await readAnnexInfoAttributes(box.root), assetAnnexAttributes());
 });
 
 // ## The coverage check that makes scoping safe

@@ -125,12 +125,8 @@ void test("The history file below has:", async (t) => {
 
   // ## findSessionLog — a landmark session resolves via history
 
-  // doctest:L120
   const found = await findSessionLog(box.root, bunkerNew);
-  t.check(found.ok, true);
-
-  // doctest:L124
-  await t.checkText(found.ok && found.value === getSessionLogPath(join(box.root, "_content/bunker"), bunkerNew), "true");
+  t.check(found, { ok: true, value: getSessionLogPath(join(box.root, "_content/bunker"), bunkerNew) });
 
   // A session missing from the history file is still found by probing every
   // root (the transcript exists; only the history entry is absent):
@@ -139,7 +135,7 @@ void test("The history file below has:", async (t) => {
   const orphan = "eeee5555-0000-0000-0000-000000000005";
   await seedLog(join(box.root, "_content/bunker"), { id: orphan, mtime: "2026-07-04T10:00:00Z" });
   const foundOrphan = await findSessionLog(box.root, orphan);
-  await t.checkText(foundOrphan.ok && foundOrphan.value === getSessionLogPath(join(box.root, "_content/bunker"), orphan), "true");
+  t.check(foundOrphan, { ok: true, value: getSessionLogPath(join(box.root, "_content/bunker"), orphan) });
 
   // ## findSessionLog miss — the error carries EVERY directory searched
   //
@@ -148,13 +144,10 @@ void test("The history file below has:", async (t) => {
 
   // doctest:L145
   const missing = await findSessionLog(box.root, "ffff6666-0000-0000-0000-000000000006");
-  t.check(missing.ok, false);
-
-  // doctest:L149
-  await t.checkText(!missing.ok && JSON.stringify(missing.error.map((d) => basename(d).slice(prefix.length)), null, 2), `[
-  "",
-  "--content-bunker"
-]`);
+  t.check(missing, {
+    ok: false,
+    error: [dirname(getSessionLogPath(box.root, "x")), dirname(getSessionLogPath(join(box.root, "_content/bunker"), "x"))],
+  });
 });
 
 // ## Collision labeling — bindings beat the root a file was found under
@@ -187,11 +180,10 @@ void test("The projects-dir encoding is lossy:", async (t) => {
   }));
 
   // doctest:L183
-  await t.checkText(
-    // The two contextDirs really do encode to the same projects dir.
-    getSessionLogPath(join(box2.root, "_content/a-b"), "x")
-      === getSessionLogPath(join(box2.root, "_content/a_b"), "x"),
-    "true",
+  // The two contextDirs really do encode to the same projects dir.
+  t.check(
+    getSessionLogPath(join(box2.root, "_content/a-b"), "x"),
+    getSessionLogPath(join(box2.root, "_content/a_b"), "x"),
   );
 
   // doctest:L188
@@ -291,10 +283,10 @@ void test("partitionByAffinity implements bbx session's cwd affinity:", async (t
     mk("exact-old", "_content/bunker"),
   ];
   const { peers, others } = partitionByAffinity(input, "_content/bunker");
-  t.check(peers.map((s) => s.id).join(", "), "exact-new, exact-old, anc");
+  t.check(peers, [mk("exact-new", "_content/bunker"), mk("exact-old", "_content/bunker"), mk("anc", "_content")]);  t.check(peers.map((s) => s.id).join(", "), "exact-new, exact-old, anc");
 
   // doctest:L289
-  t.check(others.map((s) => s.id).join(", "), "root-new, other");
+  t.check(others, [mk("root-new", ""), mk("other", "_content/other")]);
 
   // The list mode partitions BEFORE its 20-item cap, so a peer older than
   // the cap still lists first — modeled here with a cap of 3:
@@ -302,5 +294,5 @@ void test("partitionByAffinity implements bbx session's cwd affinity:", async (t
   // doctest:L297
   const many = [mk("a", ""), mk("b", ""), mk("c", ""), mk("old-peer", "_content/bunker")];
   const p2 = partitionByAffinity(many, "_content/bunker");
-  t.check([...p2.peers, ...p2.others].slice(0, 3).map((s) => s.id).join(", "), "old-peer, a, b");
+  t.check([...p2.peers, ...p2.others].slice(0, 3), [mk("old-peer", "_content/bunker"), mk("a", ""), mk("b", "")]);
 });

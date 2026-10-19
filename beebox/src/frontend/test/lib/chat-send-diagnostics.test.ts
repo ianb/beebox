@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import {
   beginChatSendDiagnostic,
@@ -20,9 +21,12 @@ import {
 
 /** The JSON a diagnostic warning carries after its prefix. */
 interface DiagnosticPayload {
-  trigger: string;
+  version: number;
   emissionId: string;
-  events: { event: string; detail: Record<string, unknown> }[];
+  trigger: string;
+  phase: string;
+  elapsedMs: number;
+  events: { event: string; tMs: number; visibility: string; detail: Record<string, unknown> }[];
 }
 
 /** Parse one captured warning line; a missing line fails the example. */
@@ -34,6 +38,9 @@ function parseWarning(line: string | undefined): DiagnosticPayload {
 resetChatSendDiagnostics();
 const warnings: string[] = [];
 const originalWarn = console.warn;
+const originalNow = Date.now;
+// A fixed clock makes every elapsed time in a timeline 0.
+Date.now = () => 1_000_000;
 console.warn = (value: unknown) => warnings.push(String(value));
 
 // ## A routine send stays silent and records hop ordering
@@ -52,11 +59,9 @@ void test("A routine send stays silent and records hop ordering", async (t) => {
   observeChatSendReceipt({ emissionId: "msg-ok", disposition: "sent" });
   observeChatSendHistory(["msg-ok"]);
 
-  // doctest:L55
-  await t.checkText(warnings.length, "0");
+  t.check(warnings, []);
 
-  // doctest:L58
-  t.check(inspectChatSendDiagnostic("msg-ok").map((entry) => entry.event).join(","), "dispatch,post-issued,post-response,receipt-observed,durable-history-observed");
+  t.check(inspectChatSendDiagnostic("msg-ok").map((entry) => entry.event), ["dispatch", "post-issued", "post-response", "receipt-observed", "durable-history-observed"]);
 });
 
 // ## A rejection flushes one content-free timeline
@@ -73,15 +78,20 @@ void test("A rejection flushes one content-free timeline", async (t) => {
   recordChatSendEvent("msg-timeout", { event: "post-issued", detail: { attempt: 1 } });
   observeChatSendReceipt({ emissionId: "msg-timeout", disposition: "rejected", reasonKind: "timeout" });
 
-  // doctest:L76
-  await t.checkText(warnings.length, "1");
-
-  // doctest:L79
-  const payload = parseWarning(warnings[0]);
-  t.check([payload.trigger, payload.emissionId, payload.events[0]?.detail.textLength].join("|"), "receipt-rejected|msg-timeout|321");
-
-  // doctest:L83
-  await t.checkText(JSON.stringify(payload).includes("diagnostic transport test"), "false");
+  t.check(warnings.map(parseWarning), [
+    {
+      version: 1,
+      emissionId: "msg-timeout",
+      trigger: "receipt-rejected",
+      phase: "terminal",
+      elapsedMs: 0,
+      events: [
+        { event: "dispatch", tMs: 0, visibility: "unavailable", detail: { origin: "voice", textLength: 321, imageCount: 1, fileCount: 2, selectionCount: 3 } },
+        { event: "post-issued", tMs: 0, visibility: "unavailable", detail: { attempt: 1 } },
+        { event: "receipt-observed", tMs: 0, visibility: "unavailable", detail: { disposition: "rejected", reasonKind: "timeout" } },
+      ],
+    },
+  ]);
 
   // doctest:L86
   t.check(
@@ -109,14 +119,23 @@ void test("A transport anomaly flushes even after a fast accepted receipt", asyn
   recordChatSendEvent("msg-stream", { event: "turn-stream-error", detail: { errorLength: 120 } });
 
   // doctest:L107
-  await t.checkText(warnings.length, "2");
+  t.check(warnings.slice(1).map(parseWarning), [
+    {
+      version: 1,
+      emissionId: "msg-stream",
+      trigger: "turn-stream-error",
+      phase: "terminal",
+      elapsedMs: 0,
+      events: [
+        { event: "dispatch", tMs: 0, visibility: "unavailable", detail: { origin: "typed", textLength: 10, imageCount: 0, fileCount: 0, selectionCount: 0 } },
+        { event: "receipt-observed", tMs: 0, visibility: "unavailable", detail: { disposition: "sent" } },
+        { event: "turn-stream-progress", tMs: 0, visibility: "unavailable", detail: { frameCount: 100, lastFrame: "msg", lastFrameAtMs: 0 } },
+        { event: "turn-stream-error", tMs: 0, visibility: "unavailable", detail: { errorLength: 120 } },
+      ],
+    },
+  ]);
 
-  // doctest:L110
-  const streamPayload = parseWarning(warnings[1]);
-  t.check([streamPayload.trigger, streamPayload.events.find((entry) => entry.event === "turn-stream-progress")?.detail.frameCount].join("|"), "turn-stream-error|100");
-
-  // doctest:L114
-  await t.checkText((warnings[1]?.length ?? Infinity) < 4000, "true");
+  t.check(warnings[1], any(String).matches(/^.{0,3999}$/s));
 });
 
 // ## A retry keeps a separate terminal snapshot and ring pressure preserves dispatch
@@ -135,12 +154,21 @@ void test("A retry keeps a separate terminal snapshot and ring pressure preserve
   recordChatSendEvent("msg-retry", { event: "post-error", detail: { reasonKind: "network" } });
 
   // doctest:L133
-  t.check(warnings.slice(2).map((warning) => parseWarning(warning).trigger).join(","), "post-retry-scheduled,post-error");
+  t.check(warnings.slice(2).map((warning) => parseWarning(warning).trigger), ["post-retry-scheduled", "post-error"]);
 
   // doctest:L136
-  t.check(inspectChatSendDiagnostic("msg-retry")[0]?.event, "dispatch");
+  // `online` is left out: Node's `navigator.onLine` is undefined, which the
+  // event's `boolean | null` type does not allow.
+  const first = inspectChatSendDiagnostic("msg-retry")[0];
+  t.check(first && { event: first.event, tMs: first.tMs, visibility: first.visibility, detail: first.detail }, {
+    event: "dispatch",
+    tMs: 0,
+    visibility: "unavailable",
+    detail: { origin: "typed", textLength: 42, imageCount: 0, fileCount: 0, selectionCount: 0 },
+  });
 
   // doctest:L139
   console.warn = originalWarn;
+  Date.now = originalNow;
   resetChatSendDiagnostics();
 });

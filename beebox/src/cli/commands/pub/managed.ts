@@ -125,8 +125,8 @@ export function publicationPreparedLines(candidate: PublicationCandidate, site: 
   if (servingUrl !== null) lines.push(`  publication URL: ${servingUrl}`);
   const legacyAlias = site === undefined ? null : legacyWorkersDestination(site);
   if (legacyAlias !== null) lines.push(`  legacy workers.dev URL: ${legacyAlias}`);
+  // Equal to the serving URL, the candidate's URL is already printed above.
   if (candidateUrl !== null && candidateUrl !== servingUrl) lines.push(`  candidate URL (awaiting member approval): ${candidateUrl}`);
-  else if (candidateUrl !== null) lines.push(`  publication URL: ${candidateUrl}`);
   lines.push(...approvalLinkLines(candidate.approvalUrl));
   for (const file of candidate.preview) lines.push(`    ${file.path}  ${file.bytes} bytes  sha256:${file.sha256.slice(0, 16)}…`);
   if (site?.remoteStatus.status === "unavailable") {

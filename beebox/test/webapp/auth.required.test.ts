@@ -11,19 +11,33 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { anything, containing } from "agent-doctest/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveRequestIdentity, isDiagnosticBypassRequest, type DiagRequest } from "../../src/webapp/auth.js";
 import { assertOpenAccessNotListening, startServer } from "../../src/webapp/server/app.js";
 import { makeTestServer } from "../helpers/test-route-server.js";
-import { bodyField } from "../helpers/test-helpers.js";
 
 const ORIGINAL_DIAG_KEY = process.env.BBX_DIAG_API_KEY;
 const ORIGINAL_HUB_SECRET = process.env.BBX_HUB_SECRET;
 // The resolver's cookie path (not hub mode) is what these gate cases exercise.
 delete process.env.BBX_HUB_SECRET;
+
+const NOT_AUTHENTICATED = { statusCode: 401, body: { error: "Not authenticated" } };
+
+/** The secret panel's refusal of a browse key on the machine-level store. */
+const SECRETS_NEED_OWNER_SESSION = {
+  statusCode: 403,
+  body: {
+    error: {
+      message:
+        "secrets management requires an authenticated owner session — open-access does not qualify (the store is machine-level, spanning every box on this host)",
+      code: -32003,
+      data: { code: "FORBIDDEN", httpStatus: 403, path: "secrets.formatHints", recovery: null },
+    },
+  },
+};
 
 /** The request fields the diagnostic-bypass check reads. */
 function fakeRequest({ method, url, headers }: { method?: string; url: string; headers?: Record<string, string> }): DiagRequest {
@@ -149,7 +163,7 @@ void test("An openAccess:", async (t) => {
 
   // doctest:L126
   const resubOpen = await openServer.rootRequest({ method: "POST", url: "/api/push/resubscribe", payload: {} });
-  t.check(resubOpen.statusCode, 400);
+  t.check(resubOpen, { statusCode: 400, body: { error: "missing subscription" } });
 
   // doctest:L130
   await openServer.cleanup();
@@ -162,17 +176,17 @@ void test("An auth-on server (openAccess:", async (t) => {
 
   // doctest:L138
   const meRequired = await authServer.rootRequest({ method: "GET", url: "/auth/me" });
-  t.check(meRequired.statusCode, 401);
+  t.check(meRequired, NOT_AUTHENTICATED);
 
   // doctest:L142
   const resubRequired = await authServer.rootRequest({ method: "POST", url: "/api/push/resubscribe", payload: {} });
-  t.check(resubRequired.statusCode, 401);
+  t.check(resubRequired, NOT_AUTHENTICATED);
 
   // doctest:L146
   // `files.kind` is a `publicProcedure`: the transport wall, not the procedure, is its auth.
   const kindUrl = `/api/trpc/files.kind?input=${encodeURIComponent(JSON.stringify({ path: "_content" }))}`;
   const kindRequired = await authServer.request({ method: "GET", url: kindUrl });
-  t.check(kindRequired.statusCode, 401);
+  t.check(kindRequired, NOT_AUTHENTICATED);
 
   // doctest:L152
   await authServer.cleanup();
@@ -190,8 +204,6 @@ void test("An auth-on server (openAccess:", async (t) => {
 // sections gave themselves a tmp store, so this block explicitly clears the
 // override to stand on the default, shared path — and puts it back after.
 void test("createContext (server-box-scope.ts) resolves identity through resolveBoxIdent...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await optedIn.cleanup();
@@ -237,9 +249,8 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
 
   // doctest:L185
   if (PRIOR_STORE !== undefined) process.env.BBX_SECRETS_FILE = PRIOR_STORE;
-  print(`ownerProcedure: ${asOwner.statusCode}`);
-  await t.checkText(out.with(print(`authenticatedOwnerProcedure: ${atSecrets.statusCode} ${bodyField(atSecrets.body, "error", "data", "code")}`)), `ownerProcedure: 200
-authenticatedOwnerProcedure: 403 FORBIDDEN`);
+  t.check(asOwner, { statusCode: 200, body: { result: { data: [] } } });
+  t.check(atSecrets, SECRETS_NEED_OWNER_SESSION);
 
   // On an ISOLATED store — what every worktree box under the dev router runs on —
   // there is nothing of the boxholder's to protect, and refusing browse there only
@@ -256,9 +267,9 @@ authenticatedOwnerProcedure: 403 FORBIDDEN`);
   const atIsolatedSecrets = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });
   delete process.env.BBX_SECRETS_STORE_ISOLATED;
   if (PRIOR_STORE === undefined) delete process.env.BBX_SECRETS_FILE; else process.env.BBX_SECRETS_FILE = PRIOR_STORE;
-  print(`authenticatedOwnerProcedure, override path only: ${overrideOnly.statusCode}`);
-  await t.checkText(out.with(print(`authenticatedOwnerProcedure, asserted isolated store: ${atIsolatedSecrets.statusCode}`)), `authenticatedOwnerProcedure, override path only: 403
-authenticatedOwnerProcedure, asserted isolated store: 200`);
+  t.check(overrideOnly, SECRETS_NEED_OWNER_SESSION);
+  // The hint list is generated from the secret registry, so only its presence is pinned.
+  t.check(atIsolatedSecrets, { statusCode: 200, body: { result: { data: containing([anything()]) } } });
 
   // On a box that never opted in, the key means what it always did: it clears the
   // wall and reaches an authenticated procedure, and nothing owner-gated.
@@ -276,9 +287,17 @@ authenticatedOwnerProcedure, asserted isolated store: 200`);
   const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/scanTokens.list", headers: browseHeaders });
 
   // doctest:L229
-  print(`authedProcedure: ${authedCall.statusCode}`);
-  print(`files.kind with a credential: ${kindCall.statusCode} ${bodyField(kindCall.body, "result", "data", "kind")}`);
-  await t.checkText(out.with(print(`ownerProcedure: ${ownerCall.statusCode} ${bodyField(ownerCall.body, "error", "data", "code")}`)), `authedProcedure: 200
-files.kind with a credential: 200 directory
-ownerProcedure: 403 FORBIDDEN`);
+  // The inventory summary is a large generated report; the status shows the call reached the procedure.
+  t.check(authedCall.statusCode, 200);
+  t.check(kindCall, { statusCode: 200, body: { result: { data: { kind: "directory" } } } });
+  t.check(ownerCall, {
+    statusCode: 403,
+    body: {
+      error: {
+        message: "Owner access required",
+        code: -32003,
+        data: { code: "FORBIDDEN", httpStatus: 403, path: "scanTokens.list", recovery: null },
+      },
+    },
+  });
 });

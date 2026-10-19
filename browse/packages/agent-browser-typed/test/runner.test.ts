@@ -21,7 +21,6 @@ async function refused(fn: () => Promise<unknown>): Promise<string> {
 
 // ## A child that ignores its own timeout is still killed
 void test("A child that ignores its own timeout is still killed", async (t) => {
-  // doctest:L25
   const killed = await refused(async () => run(["--version"], { timeoutMs: 1 }));
-  t.check(killed.includes("killed after 1ms"), true);
+  t.check(killed, "agent-browser exited -1: killed after 1ms");
 });

@@ -19,7 +19,7 @@ For patterns, matching rules, how to find the expected value, and how to read a 
 
 ## Text and errors
 
-- `t.checkText(actual, text)` compares the value's text. The text may hold `«»` wildcards. Use it for command output. Details: [check-reference.md](check-reference.md).
+- `t.checkText(actual, text)` compares a string (or a promise of one) with `text`, which may hold `«»` wildcards. Use it for command output. Details: [check-reference.md](check-reference.md).
 - `t.checkThrows(fn, "Name")` or `t.checkThrows(fn, "Name: message")` checks that `fn` throws or rejects. A rejection counts as the throw. `await` the call.
 
 ```ts

@@ -89,13 +89,13 @@ void test("Cards without attachments still move normally.", async (t) => {
   // doctest:L76
   const plain = await makeTmpBox();
   await fs.writeFile(plain.path("_content/inbox/intake/Plain.doc.card"), "card");
-  await t.checkText(
-    (await movePhase2CardFiles(
-      plain.path("_content/inbox/intake/Plain.doc.card"),
-      plain.path("_content/inbox/staged/Plain.doc.card"),
-    )).length,
-    "1",
-  );
+  t.check(await movePhase2CardFiles(
+    plain.path("_content/inbox/intake/Plain.doc.card"),
+    plain.path("_content/inbox/staged/Plain.doc.card"),
+  ), [{
+    from: plain.path("_content/inbox/intake/Plain.doc.card"),
+    to: plain.path("_content/inbox/staged/Plain.doc.card"),
+  }]);
 
   // doctest:L84
   t.check(

@@ -18,13 +18,15 @@ function line({ ts, directive, blocked }: { ts: string; directive: string; block
 void test("No violations → safe to flip Report-Only to enforcing (with a human in the lo...", async (t) => {
   // doctest:L20
   const clean = digestCspReports("");
-  t.check(clean.clean, true);
-
-  // doctest:L24
-  t.check(clean.total, 0);
-
-  // doctest:L27
-  await t.checkText(clean.summary.includes("Safe to harden"), "true");
+  t.check(clean, {
+    total: 0,
+    violations: [],
+    clean: true,
+    summary: `✅ No CSP violations recorded.
+Safe to harden: propose flipping Content-Security-Policy-Report-Only →
+Content-Security-Policy (keep script-src 'self'). Confirm with the boxholder
+before flipping — this tool proposes, it does not change the policy.`,
+  });
 });
 
 // ## Violations are deduped and counted
@@ -40,21 +42,31 @@ void test("Repeated violations of the same directive+origin collapse into one ro
     "",
   ].join("\n");
   const d = digestCspReports(log);
-  t.check(d.total, 3);
+  t.check(d, {
+    total: 3,
+    violations: [
+      {
+        directive: "frame-src",
+        blocked: "https://vimeo.com",
+        count: 2,
+        firstSeen: "2026-06-01T10:00:00.000Z",
+        lastSeen: "2026-06-01T11:00:00.000Z",
+      },
+      {
+        directive: "img-src",
+        blocked: "https://cdn.test/x.png",
+        count: 1,
+        firstSeen: "2026-06-02T09:00:00.000Z",
+        lastSeen: "2026-06-02T09:00:00.000Z",
+      },
+    ],
+    clean: false,
+    summary: `⚠️  3 CSP violation(s), 2 distinct. Do NOT harden until each is resolved.
+For each: is the blocked origin a legitimate consumer to allowlist, or a real bug?
 
-  // doctest:L47
-  t.check(d.clean, false);
-
-  // doctest:L50
-  await t.checkText(d.violations.length, "2");
-
-  // doctest:L55
-  const top = d.violations[0];
-  assert.ok(top, "expected a violation row");
-  t.check(`${top.directive} ${top.blocked} ${top.count} ${top.firstSeen} ${top.lastSeen}`, "frame-src https://vimeo.com 2 2026-06-01T10:00:00.000Z 2026-06-01T11:00:00.000Z");
-
-  // doctest:L60
-  await t.checkText(d.summary.includes("Do NOT harden"), "true");
+  frame-src  ←  https://vimeo.com  (2×, 2026-06-01T10:00:00.000Z … 2026-06-01T11:00:00.000Z)
+  img-src  ←  https://cdn.test/x.png  (1×, 2026-06-02T09:00:00.000Z … 2026-06-02T09:00:00.000Z)`,
+  });
 });
 
 // ## Incremental mode reports only what's new since the cursor
@@ -70,10 +82,14 @@ void test("entriesSince filters by the prior run's timestamp watermark (ISO-8601
   const entries = parseCspLog(incLog);
   const since = "2026-06-01T12:00:00.000Z"; // after both vimeo hits, before the img-src one
   const fresh = entriesSince(entries, since);
-  await t.checkText(fresh.length, "1");
-
-  // doctest:L80
-  t.check(fresh[0]?.directive, "img-src");
+  t.check(fresh, [
+    {
+      ts: "2026-06-02T09:00:00.000Z",
+      directive: "img-src",
+      blocked: "https://cdn.test/x.png",
+      doc: "https://app/x",
+    },
+  ]);
 
   // doctest:L83
   t.check(newestTs(entries), "2026-06-02T09:00:00.000Z");
@@ -82,10 +98,25 @@ void test("entriesSince filters by the prior run's timestamp watermark (ISO-8601
 
   // doctest:L90
   const delta = digestEntries(fresh, { incremental: true, since });
-  await t.checkText(delta.summary.includes("1 new CSP violation(s) since 2026-06-01T12:00:00.000Z"), "true");
+  t.check(delta, {
+    total: 1,
+    violations: [
+      {
+        directive: "img-src",
+        blocked: "https://cdn.test/x.png",
+        count: 1,
+        firstSeen: "2026-06-02T09:00:00.000Z",
+        lastSeen: "2026-06-02T09:00:00.000Z",
+      },
+    ],
+    clean: false,
+    summary: `⚠️  1 new CSP violation(s) since 2026-06-01T12:00:00.000Z, 1 distinct:
 
-  // doctest:L94
-  await t.checkText(delta.summary.includes("--all"), "true");
+  img-src  ←  https://cdn.test/x.png  (1×, 2026-06-02T09:00:00.000Z … 2026-06-02T09:00:00.000Z)
+
+Analyze each: a legitimate consumer to allowlist (src/lib/csp.ts) or a real bug?
+Run \`pnpm csp-digest --all\` for the full-log view before judging a harden.`,
+  });
 
   // When nothing is new since the cursor, the delta is clean — but it says so as "no *new* violations", not "safe to harden":
 
@@ -93,11 +124,10 @@ void test("entriesSince filters by the prior run's timestamp watermark (ISO-8601
   const newest = newestTs(entries);
   assert.ok(newest, "the log has entries");
   const none = digestEntries(entriesSince(entries, newest), { incremental: true, since: newest });
-  t.check(none.clean, true);
-
-  // doctest:L107
-  await t.checkText(none.summary.includes("No new CSP violations since"), "true");
-
-  // doctest:L110
-  await t.checkText(none.summary.includes("Safe to harden"), "false");
+  t.check(none, {
+    total: 0,
+    violations: [],
+    clean: true,
+    summary: "✅ No new CSP violations since 2026-06-02T09:00:00.000Z.",
+  });
 });

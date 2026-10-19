@@ -56,12 +56,14 @@ void test("`partial` and `transcription-failed` flags parse to booleans", async 
     transcriptionFailed: true,
   });
   const model = chipOf(wrapper);
-  t.check([model.partial, model.transcriptionFailed, model.images, model.audio], [
-    true,
-    true,
-    1,
-    "0:05",
-  ]);
+  t.check(model, {
+    doc: "tmp-capture/x.capture-session.card",
+    images: 1,
+    audio: "0:05",
+    summary: "hi",
+    partial: true,
+    transcriptionFailed: true,
+  });
 
   // doctest:L58
   t.check(captureChipLabel(model), "Capture — 1 photo, 0:05 audio");
@@ -77,10 +79,15 @@ void test("A photos-only capture drops the audio segment (0:00 → no audio labe
     summary: "2 photos",
   });
   const model = chipOf(wrapper);
-  t.check([model.audio, captureChipLabel(model)], [
-    "0:00",
-    "Capture — 2 photos",
-  ]);
+  t.check(model, {
+    doc: "tmp-capture/x.capture-session.card",
+    images: 2,
+    audio: "0:00",
+    summary: "2 photos",
+    partial: false,
+    transcriptionFailed: false,
+  });
+  t.check(captureChipLabel(model), "Capture — 2 photos");
 });
 
 // ## Non-capture text is not a capture
@@ -108,11 +115,8 @@ void test("The compatibility helper returns one model or null, so surrounding wh
   });
 
   // doctest:L101
-  await t.checkText(
-    // Surrounding whitespace still parses.
-    parseCaptureWrapper("\n\n" + wrapper + "\n") !== null,
-    "true",
-  );
+  // Surrounding whitespace still parses, to the same model.
+  t.check(parseCaptureWrapper("\n\n" + wrapper + "\n"), parseCaptureWrapper(wrapper));
 
   // doctest:L105
   t.check(

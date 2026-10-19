@@ -86,7 +86,13 @@ void test("A run finishes once.", async (t) => {
   t.check(await attempt(() => reopenRunCard(card)), "ok");
 
   // doctest:L83
-  await t.checkText((await readFile(card, "utf-8")).includes("outcome:"), "false");
+  await t.checkText(await readFile(card, "utf-8"), `---
+procedure: p.procedure.card
+started-at: 2026-09-01T00:00:00.000Z
+steps: []
+completed-at: 2026-09-01T00:05:00.000Z
+expires: never
+---`);
 
   // doctest:L86
   t.check(await attempt(() => finishRunCard({ runCardPath: card, outcome: "completed", completedAt: "2026-09-01T00:07:00.000Z", expires: "never" })), "ok");

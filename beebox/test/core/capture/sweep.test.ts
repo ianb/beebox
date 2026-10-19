@@ -8,7 +8,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { eventSchemas } from "../../../src/core/event-bus/schemas.js";
@@ -98,7 +97,7 @@ void test("An open session with media, untouched for over an hour, is CAS-sealed
   await tick();
 
   // doctest:L87
-  await t.checkText(result.sealed.includes(id), "true");
+  t.check(result, { sealed: [id], refired: [], discarded: [], staleFailed: [], staleTmpCaptureCards: [] });
 
   // The committed capture card is marked partial, and the delivered wrapper carries
   // `partial="1"`:
@@ -106,12 +105,30 @@ void test("An open session with media, untouched for over an hour, is CAS-sealed
   // doctest:L95
   const basename = sessionBasenameFor({ actualStartedAt: EARLY, id });
   const docRel = `_content/tmp-capture/${basename}.capture-session.card`;
-  await t.checkText((await box.read(docRel)).includes("partial: true"), "true");
+  t.checkText(await box.read(docRel), `---
+session-id: ${id}
+time:
+  start: 2026-07-09T13:00:00.000Z
+  end: 2026-07-09T13:00:00.000Z
+  duration: 0s
+images:
+  - attach/photo-001.image.card
+audio-clips:
+  - attach/audio-001.audio.card
+partial: true
+transcription-failed: true
+delivered: true
+---
+[photo-001](attach/photo-001.image.card)
+«blankline»
+[audio clip 1 not transcribed]`);
 
   // doctest:L100
   const sent = eventBus.readSince(0).find((e) => e.event === "chat-user-message");
   const msg = eventSchemas["chat-user-message"].parse(sent?.data).message;
-  await t.checkText(msg.includes("partial=\"1\""), "true");
+  t.checkText(msg, `<capture doc="${docRel}" images="1" audio="0:00" partial="1" transcription-failed="1">
+1 photo
+</capture>`);
 
   // The staging media was cleaned up once delivered:
 
@@ -155,15 +172,7 @@ void test("Empty orphans discarded, fresh sessions untouched, stale failures war
   const result = await sweepAbandonedCaptures({ boxRoot: box.root });
 
   // doctest:L143
-  t.check({ discarded: result.discarded, staleFailed: result.staleFailed, sealed: result.sealed }, {
-    discarded: [
-      str`${any(String)}`,
-    ],
-    staleFailed: [
-      str`${any(String)}`,
-    ],
-    sealed: [],
-  });
+  t.check(result, { sealed: [], refired: [], discarded: [empty.id], staleFailed: [failed.id], staleTmpCaptureCards: [] });
 
   // The empty orphan is gone; the fresh session is untouched (still open); the failed
   // session is left `failed:deliver`, not re-sealed:
@@ -177,13 +186,6 @@ void test("Empty orphans discarded, fresh sessions untouched, stale failures war
   // doctest:L157
   t.check((await readStagingSession({ boxRoot: box.root, id: failed.id }))?.state, "failed:deliver");
 
-  // The discarded/warned entries are exactly the abandoned ones:
-
-  // doctest:L164
-  await t.checkText(result.discarded[0] === empty.id, "true");
-
-  // doctest:L167
-  await t.checkText(result.staleFailed[0] === failed.id, "true");
 });
 
 // ## A server sweep re-fires a sealed session left by `bbx wakeup` (X2)
@@ -220,28 +222,17 @@ void test("bbx wakeup's seal-only sweep (no runtime) seals abandoned captures bu
   });
 
   // doctest:L199
-  t.check({ refired: result.refired, sealed: result.sealed }, {
-    refired: [
-      str`${any(String)}`,
-    ],
-    sealed: [],
-  });
+  t.check(result, { sealed: [], refired: [sealed.id], discarded: [], staleFailed: [], staleTmpCaptureCards: [] });
 
-  // The re-fired id is the sealed session, and `firePreparation` was actually called
-  // for it:
-
-  // doctest:L207
-  await t.checkText(result.refired[0] === sealed.id, "true");
-
-  // doctest:L210
-  await t.checkText(fired[0] === sealed.id, "true");
+  // `firePreparation` was actually called for the sealed session:
+  t.check(fired, [sealed.id]);
 
   // Without a runtime (the `bbx wakeup` seal-only path), a sealed session is left for
   // the next server startup — not re-fired here:
 
   // doctest:L218
   const result2 = await sweepAbandonedCaptures({ boxRoot: box.root });
-  await t.checkText(result2.refired.length, "0");
+  t.check(result2.refired, []);
 });
 
 // ## Voice sessions are invisible to the capture sweep

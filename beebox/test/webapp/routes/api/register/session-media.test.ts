@@ -7,7 +7,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import * as path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import { makeTestServer } from "../../../../helpers/test-route-server.js";
@@ -58,8 +57,6 @@ await writeTranscript([
 
 // ## The photograph comes back
 void test("The photograph comes back", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       if (previousProjects === undefined) delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
@@ -71,11 +68,10 @@ void test("The photograph comes back", async (t) => {
   });
   // doctest:L61
   const res = await fetchMedia(`${SESSION}/entry-1/0`);
-  print(`status: ${res.statusCode}`);
-  print(`content-type: ${res.headers["content-type"]}`);
-  await t.checkText(out.with(print(`bytes match what was sent: ${res.rawPayload.equals(photoBytes)}`)), `status: 200
-content-type: image/png
-bytes match what was sent: true`);
+  t.check(
+    { status: res.statusCode, contentType: res.headers["content-type"], bytesMatch: res.rawPayload.equals(photoBytes) },
+    { status: 200, contentType: "image/png", bytesMatch: true },
+  );
 
   // A transcript line is append-only and named by a uuid the writer never reuses, so
   // the bytes behind one reference cannot change — the response says so, which is
@@ -85,12 +81,9 @@ bytes match what was sent: true`);
   // a browser would execute:
 
   // doctest:L79
-  await t.checkText(
-    out.with(JSON.stringify({
-      cache: res.headers["cache-control"],
-      nosniff: res.headers["x-content-type-options"],
-    })),
-    "{\"cache\":\"private, max-age=31536000, immutable\",\"nosniff\":\"nosniff\"}",
+  t.check(
+    { cache: res.headers["cache-control"], nosniff: res.headers["x-content-type-options"] },
+    { cache: "private, max-age=31536000, immutable", nosniff: "nosniff" },
   );
 
   // ## References that name nothing, and references that try to leave
@@ -107,7 +100,7 @@ bytes match what was sent: true`);
     status(`${SESSION}/no-such-entry/0`),
     status(`${SESSION}/entry-1/3`),
   ]);
-  await t.checkText(out.with(JSON.stringify(misses)), "[404,404,404]");
+  t.check(misses, [404, 404, 404]);
 
   // Both ids land in a filesystem path, so a reference carrying path characters is
   // rejected at the parse boundary rather than resolved and then checked:
@@ -118,5 +111,5 @@ bytes match what was sent: true`);
     status(`${SESSION}/entry-1/notanumber`),
     status(`${SESSION}/entry-1`),
   ]);
-  await t.checkText(out.with(JSON.stringify(rejected)), "[400,400,400]");
+  t.check(rejected, [400, 400, 400]);
 });

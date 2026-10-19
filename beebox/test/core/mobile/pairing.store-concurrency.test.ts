@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, instanceOf, isoDate, optional } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -79,7 +79,16 @@ void test("Verification returns the device identity and no longer un-revokes any
 
   // doctest:L73
   const devices = listMobileDevices(box2.root);
-  await t.checkText(typeof devices[0]?.revokedAt === "string", "true");
+  // lastUsedAt is stamped only when the verify wins the lock before the revoke.
+  t.check(devices, [{
+    id: device2.deviceId,
+    label: "phone2",
+    createdAt: isoDate(),
+    createdBy: "tomas@example.com",
+    lastUsedAt: optional(isoDate()),
+    revokedAt: isoDate(),
+    push: null,
+  }]);
 
   // The device no longer authenticates, and never will again from this token.
 
@@ -93,13 +102,23 @@ void test("Verification returns the device identity and no longer un-revokes any
   // `mode 600` store and no `.tmp-*` litter.
 
   // doctest:L92
-  await t.checkText(JSON.parse(fs.readFileSync(path.join(box2.root, STORE), "utf-8")).devices.length, "1");
+  t.check(JSON.parse(fs.readFileSync(path.join(box2.root, STORE), "utf-8")), {
+    devices: [{
+      id: device2.deviceId,
+      label: "phone2",
+      tokenHash: any(String),
+      createdAt: isoDate(),
+      createdBy: "tomas@example.com",
+      lastUsedAt: optional(isoDate()),
+      revokedAt: isoDate(),
+    }],
+  });
 
   // doctest:L95
-  await t.checkText((fs.statSync(path.join(box2.root, STORE)).mode & 0o777).toString(8), "600");
+  t.check((fs.statSync(path.join(box2.root, STORE)).mode & 0o777).toString(8), "600");
 
   // doctest:L98
-  await t.checkText(fs.readdirSync(path.join(box2.root, ".beebox")).filter((f) => f.startsWith("mobile-devices.secret.json.tmp")).length, "0");
+  t.check(fs.readdirSync(path.join(box2.root, ".beebox")).filter((f) => f.startsWith("mobile-devices.secret.json.tmp")), []);
 });
 
 // ## An unreadable store fails closed — a write never clobbers it
@@ -109,8 +128,6 @@ void test("Verification returns the device identity and no longer un-revokes any
 // failed to load). `readDeviceStore` throws `DeviceStoreUnreadableError`, so the
 // redemption aborts and the file is left byte-for-byte intact.
 void test("If the store file exists but is corrupt (unparseable), a mutation must NOT ov...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box3.cleanup();
@@ -128,9 +145,8 @@ void test("If the store file exists but is corrupt (unparseable), a mutation mus
   const ticket3 = createMobilePairingTicket(box3.root, { createdBy: "carol@example.com" });
   const caught = await redeemMobilePairingTicket(box3.root, { pairingToken: ticket3.token, deviceLabel: "phone3" })
     .then(() => null, (e) => e);
-  print(`threw unreadable: ${caught instanceof DeviceStoreUnreadableError}`);
-  await t.checkText(out.with(print(`file untouched: ${fs.readFileSync(storeFile, "utf-8") === "{ this is not valid json "}`)), `threw unreadable: true
-file untouched: true`);
+  t.check(caught, instanceOf(DeviceStoreUnreadableError));
+  t.check(fs.readFileSync(storeFile, "utf-8"), "{ this is not valid json ");
 });
 
 // ## isMobileDeviceActive fails closed on an unreadable store
@@ -167,8 +183,6 @@ void test("The lock-free renewal check must deny (return false) rather than thro
 // A store far bigger than a single `writeSync` might return in one call must be
 // written completely — the write loops until every byte lands.
 void test("A store far bigger than a single writeSync might return in one call must be w...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box6.cleanup();
@@ -184,9 +198,8 @@ void test("A store far bigger than a single writeSync might return in one call m
     await redeemMobilePairingTicket(box6.root, { pairingToken: ticket6.token, deviceLabel: `device-${i}` });
   }
   const devices6 = listMobileDevices(box6.root);
-  print(`count: ${devices6.length}`);
-  print(`valid json: ${JSON.parse(fs.readFileSync(path.join(box6.root, STORE), "utf-8")).devices.length === 200}`);
-  await t.checkText(out.with(print(`no temp litter: ${fs.readdirSync(path.join(box6.root, ".beebox")).filter((f) => f.includes(".tmp-")).length === 0}`)), `count: 200
-valid json: true
-no temp litter: true`);
+  const expectedLabels = Array.from({ length: 200 }, (_, i) => `device-${i}`);
+  t.check(devices6.map((d) => d.label), expectedLabels);
+  t.check(JSON.parse(fs.readFileSync(path.join(box6.root, STORE), "utf-8")).devices.map((d: { label: string }) => d.label), expectedLabels);
+  t.check(fs.readdirSync(path.join(box6.root, ".beebox")).filter((f) => f.includes(".tmp-")), []);
 });

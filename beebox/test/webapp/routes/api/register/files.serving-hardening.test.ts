@@ -136,10 +136,10 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
   // doctest:L140
   const boxDirName = server.boxRoot.split("/").pop();
   const escapeImage = await rawHttpGet(`/${TEST_SLUG}/api/image/../${boxDirName}-other/secret.jpg`);
-  t.check(escapeImage.split("\r\n")[0], "HTTP/1.1 403 Forbidden");
-
-  // doctest:L147
-  await t.checkText(escapeImage.split("\r\n\r\n")[1], "{\"error\":\"Access denied\"}");
+  t.check(
+    { statusLine: escapeImage.split("\r\n")[0], body: escapeImage.split("\r\n\r\n")[1] },
+    { statusLine: "HTTP/1.1 403 Forbidden", body: '{"error":"Access denied"}' },
+  );
 
   // Same prefix-collision check, exercised directly against `status.browse`
   // (its tRPC input travels as a JSON string, never through URL parsing, so the
@@ -149,10 +149,10 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
   // doctest:L157
   const ctx = trpcContext({ boxRoot: server.boxRoot, boxSlug: "t", eventBus: server.eventBus, actor: "none" });
   const escapeBrowse = await statusRouter.createCaller(ctx).browse({ path: `../${boxDirName}-other` });
-  await t.checkText(
+  t.check(
     // The box root's own directory name varies per run (a temp dir), so compare
     // against the same computed sibling name rather than a fixed literal.
-    JSON.stringify(escapeBrowse) === JSON.stringify({ path: `../${boxDirName}-other`, dirs: [], cards: [], files: [], background: false }),
-    "true",
+    escapeBrowse,
+    { path: `../${boxDirName}-other`, dirs: [], cards: [], files: [], background: false },
   );
 });

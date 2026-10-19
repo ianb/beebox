@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any } from "agent-doctest/check";
 import {
   parseSessionLog,
   MAX_RETAINED_BYTES,
@@ -19,6 +19,21 @@ import {
 import { writeBigSessionLog } from "./session-log-fixture.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
+
+/** The uuids the fixture's real entries carry between `from` and `to`; the `i % 4 === 2` lines are tool results grafted onto their call. */
+function uuids(from: number, to: number): string[] {
+  return Array.from({ length: to - from + 1 }, (_, k) => from + k).filter((i) => i % 4 !== 2).map((i) => `uuid-${i}`);
+}
+
+/** The entry the tail test writes for message `i`. */
+function typed(i: number) {
+  return {
+    uuid: `u${i}`,
+    type: "user" as const,
+    timestamp: `2026-01-01T00:0${i}:00Z`,
+    content: [{ type: "text" as const, text: `<typed>Message ${i}</typed>` }],
+  };
+}
 
 // ## A big transcript, parsed under a 128 MB heap cap
 //
@@ -35,8 +50,6 @@ import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
 // the regression it guards; at 64 MB the bounded parse died on GC timing. A
 // bigger file moves only the unbounded side.
 void test("The fixture is ~2 400 lines carrying ~60 KB of payload each — a 120 MB transc...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -51,11 +64,8 @@ void test("The fixture is ~2 400 lines carrying ~60 KB of payload each — a 120
 
   // doctest:L42
   const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 128 });
-  print(`entries: ${out.entries}`);
-  print(`total: ${out.total}`);
-  await t.checkText(out2.with(print(`hasMore: ${out.hasMore}`)), `entries: 200
-total: 1800
-hasMore: true`);
+  // `retainedMb` is a heap measurement.
+  t.check(out, { entries: 200, total: 1800, hasMore: true, stubs: 0, stubSample: null, retainedMb: any(Number) });
 
   // Before the bound, this same child (parsing the whole file, then slicing a tail
   // of 200 off it) died at the cap:
@@ -69,11 +79,7 @@ hasMore: true`);
 
   // doctest:L63
   const pageOut = await parseUnderHeapCap({ logPath, slice: { mode: "page", offset: 10, limit: 40 }, heapMb: 128 });
-  print(`entries: ${pageOut.entries}`);
-  print(`total: ${pageOut.total}`);
-  await t.checkText(out2.with(print(`hasMore: ${pageOut.hasMore}`)), `entries: 40
-total: 1800
-hasMore: true`);
+  t.check(pageOut, { entries: 40, total: 1800, hasMore: true, stubs: 0, stubSample: null, retainedMb: any(Number) });
 });
 
 // ## Serialized bytes co-limit the retained tail
@@ -85,8 +91,6 @@ hasMore: true`);
 // chat window, but the byte budget keeps only a shorter suffix while the exact
 // `total` and `hasMore` still describe the whole transcript.
 void test("The parser separately stubs any single raw line over 256 KiB.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -104,13 +108,12 @@ void test("The parser separately stubs any single raw line over 256 KiB.", async
     logPath,
     slice: { mode: "tail", tail: 200 },
   });
-  print(`budget MiB: ${MAX_RETAINED_BYTES / (1024 * 1024)}`);
-  print(`entries below tail: ${result.entries.length < 200}`);
-  print(`total: ${result.total}`);
-  await t.checkText(out2.with(print(`hasMore: ${result.hasMore}`)), `budget MiB: 32
-entries below tail: true
-total: 240
-hasMore: true`);
+  t.check(MAX_RETAINED_BYTES, 32 * 1024 * 1024);
+  t.check({ ...result, entries: result.entries.map((e) => e.uuid) }, {
+    entries: uuids(97, 319),
+    total: 240,
+    hasMore: true,
+  });
 
   // Page mode stops before the first entry that would cross the same budget. Its
   // short page reports `hasMore`, so callers advance by the number actually
@@ -121,17 +124,15 @@ hasMore: true`);
     logPath,
     slice: { mode: "page", offset: 0, limit: 200 },
   });
-  print(`entries below limit: ${page.entries.length < 200}`);
-  print(`total: ${page.total}`);
-  await t.checkText(out2.with(print(`hasMore: ${page.hasMore}`)), `entries below limit: true
-total: 240
-hasMore: true`);
+  t.check({ ...page, entries: page.entries.map((e) => e.uuid) }, {
+    entries: uuids(0, 221),
+    total: 240,
+    hasMore: true,
+  });
 });
 
 // ## Tail mode keeps the last N entries, and the count stays exact
 void test("Tail mode keeps the last N entries, and the count stays exact", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -157,11 +158,7 @@ void test("Tail mode keeps the last N entries, and the count stays exact", async
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 2 },
   });
-  print(`entries: ${result.entries.map((e) => e.content[0]?.text).join(", ")}`);
-  print(`total: ${result.total}`);
-  await t.checkText(out2.with(print(`hasMore: ${result.hasMore}`)), `entries: <typed>Message 4</typed>, <typed>Message 5</typed>
-total: 6
-hasMore: true`);
+  t.check(result, { entries: [typed(4), typed(5)], total: 6, hasMore: true });
 
   // `minRealUserMessages` widens the window until it covers that many real
   // (typed/spoken) user turns — the floor that keeps the chat page from opening on
@@ -172,7 +169,7 @@ hasMore: true`);
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 1, minRealUserMessages: 4 },
   });
-  await t.checkText(out2.with(widened.entries.length), "4");
+  t.check(widened, { entries: [typed(2), typed(3), typed(4), typed(5)], total: 6, hasMore: true });
 
   // Asking for more real user messages than the transcript holds keeps everything
   // it has — up to the hard ceiling, never more:
@@ -182,16 +179,16 @@ hasMore: true`);
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 1, minRealUserMessages: 99 },
   });
-  await t.checkText(out2.with(all.entries.length), "6");
+  t.check(all, { entries: [0, 1, 2, 3, 4, 5].map(typed), total: 6, hasMore: false });
 
   // A slice past the ceiling is a programming error, not a bigger read:
 
   // doctest:L184
-  await t.checkText(
-    out2.with(await parseSessionLog({
+  await t.checkThrows(
+    () => parseSessionLog({
       logPath: box.path("log.jsonl"),
       slice: { mode: "tail", tail: MAX_SESSION_ENTRIES + 1 },
-    }).then(() => "no error", (e) => e.name)),
+        }),
     "InvariantError",
   );
 });
@@ -203,8 +200,6 @@ hasMore: true`);
 // call is still in view lands; one whose call was already evicted is invisible
 // either way, because the evicted entry isn't returned.
 void test("A toolresult rides on its tooluse block rather than appearing as its own mess...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -237,9 +232,27 @@ void test("A toolresult rides on its tooluse block rather than appearing as its 
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 200 },
   });
-  print(`entries: ${result.entries.length}`);
-  await t.checkText(out2.with(print(`grafted: ${result.entries[0]?.content[0]?.resultSummary}`)), `entries: 1
-grafted: file body`);
+  t.check(result, {
+    entries: [
+      {
+        uuid: "a1",
+        type: "assistant",
+        timestamp: "2026-01-01T00:00:00Z",
+        content: [
+          {
+            type: "tool_use",
+            toolName: "Read",
+            toolId: "toolu_1",
+            input: { file_path: "/box/a.md" },
+            inputSummary: "/box/a.md",
+            resultSummary: "file body",
+          },
+        ],
+      },
+    ],
+    total: 1,
+    hasMore: false,
+  });
 });
 
 // The graft window is the trailing assistant run and nothing more, capped at 256
@@ -249,8 +262,6 @@ grafted: file body`);
 // The result is still not lost from view: it stays a `tool_result` block on its
 // own entry.
 void test("The graft window is the trailing assistant run and nothing more, capped at 25...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -291,9 +302,10 @@ void test("The graft window is the trailing assistant run and nothing more, capp
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 400 },
   });
-  print(`entries: ${result.entries.length}`);
-  print(`oldest grafted: ${result.entries[0]?.content[0]?.resultSummary}`);
-  await t.checkText(out2.with(print(`newest grafted: ${result.entries[299]?.content[0]?.resultSummary}`)), `entries: 300
-oldest grafted: undefined
-newest grafted: newest body`);
+  // 300 entries with a tool_use block each; only the call still in the window is grafted.
+  t.check({ ...result, entries: result.entries.map((e) => [e.uuid, e.content[0]?.resultSummary]) }, {
+    entries: Array.from({ length: 300 }, (_, i) => [`a${i}`, i === 299 ? "newest body" : undefined]),
+    total: 300,
+    hasMore: false,
+  });
 });

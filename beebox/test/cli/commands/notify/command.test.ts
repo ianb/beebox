@@ -228,7 +228,7 @@ exit 1`);
 // ## Bad flags and bad targets exit 2 before anything is sent
 void test("Bad flags and bad targets exit 2 before anything is sent", async (t) => {
   // doctest:L236
-  const before = (await readRecent(box.root, { days: 1 })).length;
+  const before = await readRecent(box.root, { days: 1 });
   await t.checkText(
     [
       await run({ title: "x", options: {} }),
@@ -256,7 +256,7 @@ exit 2`,
   );
 
   // doctest:L262
-  await t.checkText((await readRecent(box.root, { days: 1 })).length === before, "true");
+  t.check(await readRecent(box.root, { days: 1 }), before);
 });
 
 // ## `--dry-run` shows what a send would do, and sends nothing
@@ -269,8 +269,8 @@ void test("It prints the intent, who each channel would reach (and whether the s
   // doctest:L274
   await pairFakePushDevice(box.root, { label: "test phone" });
   await writePresence(box.root, { activeWeb: 0, now: new Date() });
-  const sentBefore = [push.sent.length];
-  const loggedBefore = (await readRecent(box.root, { days: 1 })).length;
+  const sentBefore = [...push.sent];
+  const loggedBefore = await readRecent(box.root, { days: 1 });
   await t.checkText(await run({ title: "Pick up Sam", options: { target: "chat:new", loudness: "loud", body: "At 3.", tag: "pickup", dryRun: true } }), `intent: loud "Pick up Sam" -> chat:new (tag pickup)
 body: At 3.
 presence: 0 active web sessions (live reading)
@@ -283,10 +283,7 @@ dry run: nothing sent, nothing logged
 exit 0`);
 
   // doctest:L291
-  t.check([push.sent.length === sentBefore[0], (await readRecent(box.root, { days: 1 })).length === loggedBefore], [
-    true,
-    true,
-  ]);
+  t.check([push.sent, await readRecent(box.root, { days: 1 })], [sentBefore, loggedBefore]);
 
   // The dry run applies the same rule a send does, so it shows the effect of the
   // live presence reading and of `--channel`. `--presence <n>` substitutes a
@@ -428,11 +425,11 @@ exit 0`);
 
   // doctest:L432
   await server.cleanup();
-  const beforeDown = [localApns.sent.length, push.sent.length].join(",");
+  const beforeDown = [[...localApns.sent], [...push.sent]];
   const down = await run({ title: "Pick up Sam", options: { target: "dashboard", loudness: "loud" }, services: local, root: server.boxRoot }).catch((e) => `threw: ${e.name}: ${e.message.split(":")[0]}`);
-  t.check([down, [localApns.sent.length, push.sent.length].join(",") === beforeDown], [
+  t.check([down, [localApns.sent, push.sent]], [
     "threw: NotifyServerError: The box's server could not be reached",
-    true,
+    beforeDown,
   ]);
 
   // With no box environment it delivers in this process again, and `--verbose`

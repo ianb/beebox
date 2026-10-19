@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, str } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { scanBoxInventory } from "../../src/core/box-inventory/core.js";
@@ -48,7 +48,14 @@ await fs.writeFile(box.path("node_modules/pkg/index.js"), "ignored");
 // linked storage split. Machines without Git-annex use the expected contract,
 // matching the repository's other annex doctests.
 let annexBox: Awaited<ReturnType<typeof makeTmpBox>> | undefined;
-let annexResult = '{"enabled":true,"available":true,"all":{"files":1,"bytes":11},"linked":{"files":1,"bytes":11},"regular":0}';
+interface AnnexResult {
+  enabled: boolean;
+  available: boolean;
+  all: { files: number; bytes: number };
+  linked: { files: number; bytes: number };
+  regular: number;
+}
+let annexResult: AnnexResult = { enabled: true, available: true, all: { files: 1, bytes: 11 }, linked: { files: 1, bytes: 11 }, regular: 0 };
 if (hasAnnex()) {
   annexBox = await makeTmpBox({ git: true });
   const repo = annexBox.root;
@@ -58,57 +65,65 @@ if (hasAnnex()) {
   const stats = await scanBoxRepositoryStats(annexBox.root, [
     { relativePath: "sample.bin", bytes: 11, linkStatus: "linked" },
   ]);
-  annexResult = JSON.stringify({ enabled: stats.annexed, available: stats.annexQueryAvailable, all: stats.storage.all.annexed, linked: stats.storage.linked.annexed, regular: stats.storage.all.regular.files });
+  annexResult = ({ enabled: stats.annexed, available: stats.annexQueryAvailable, all: stats.storage.all.annexed, linked: stats.storage.linked.annexed, regular: stats.storage.all.regular.files });
 }
 
 // Direct accounting sees each physical file. Grouped accounting counts the image
 // card once and includes its attachment bytes; the orphan directory is one item,
 // including when empty.
 void test("Direct accounting sees each physical file.", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L52
   const inventory = await scanBoxInventory(box.root, { now: new Date("2026-08-12T12:00:00Z") });
   const direct = Object.fromEntries(inventory.direct.map((item) => [item.type, [item.count, item.bytes]]));
   const grouped = Object.fromEntries(inventory.grouped.map((item) => [item.type, [item.count, item.bytes]]));
   const linkedDirect = Object.fromEntries(inventory.byLinkStatus.linked.direct.map((item) => [item.type, [item.count, item.bytes]]));
   const linkedGrouped = Object.fromEntries(inventory.byLinkStatus.linked.grouped.map((item) => [item.type, [item.count, item.bytes]]));
   const unlinkedGrouped = Object.fromEntries(inventory.byLinkStatus.unlinked.grouped.map((item) => [item.type, [item.count, item.bytes]]));
-  await t.checkText(
-    out.with(print(JSON.stringify({
-      direct: { card: direct[".image.card"], nestedCard: direct[".doc.card"], webp: direct[".webp"], markdown: direct[".md"] },
+  t.check(
+    {
+      direct: { card: direct[".image.card"], nestedCard: direct[".doc.card"], webp: direct[".webp"], markdown: direct[".md"], javascript: direct[".js"] },
       grouped: { card: grouped[".image.card"], markdown: grouped[".md"], orphan: grouped["Orphaned .attach/"] },
       ambiguous: grouped["Ambiguous card basename"],
       linked: { grouped: linkedGrouped[".image.card"], ambiguous: linkedGrouped["Ambiguous card basename"], card: linkedDirect[".image.card"], nestedCard: linkedDirect[".doc.card"], attachment: linkedDirect[".webp"] },
       unlinked: unlinkedGrouped[".recipe.card"],
       repository: {
-        hasCheckoutSize: inventory.repository.checkoutDiskBytes >= inventory.totals.bytes,
-        gitSizeIsRepository: inventory.repository.gitDiskBytes > 0,
+        checkoutDiskBytes: inventory.repository.checkoutDiskBytes,
+        gitDiskBytes: inventory.repository.gitDiskBytes,
         annexed: inventory.repository.annexed,
         allRegularFiles: inventory.repository.storage.all.regular.files,
         linkedRegularFiles: inventory.repository.storage.linked.regular.files,
         unlinkedRegularFiles: inventory.repository.storage.unlinked.regular.files,
       },
       orphanDirectories: inventory.orphanAttachmentDirectories,
-      hasJavaScript: direct[".js"] !== undefined,
-    }))),
-    "{\"direct\":{\"card\":[2,7],\"nestedCard\":[2,9],\"webp\":[1,6],\"markdown\":[5,2798]},\"grouped\":{\"card\":[1,20],\"markdown\":[5,2798],\"orphan\":[2,4]},\"ambiguous\":[1,11],\"linked\":{\"grouped\":[1,20],\"ambiguous\":[1,11],\"card\":[2,7],\"nestedCard\":[2,9],\"attachment\":[1,6]},\"unlinked\":[1,4],\"repository\":{\"hasCheckoutSize\":true,\"gitSizeIsRepository\":true,\"annexed\":false,\"allRegularFiles\":66,\"linkedRegularFiles\":7,\"unlinkedRegularFiles\":1},\"orphanDirectories\":2,\"hasJavaScript\":false}",
+    },
+    {
+      direct: { card: [2, 7], nestedCard: [2, 9], webp: [1, 6], markdown: [5, 2798], javascript: undefined },
+      grouped: { card: [1, 20], markdown: [5, 2798], orphan: [2, 4] },
+      ambiguous: [1, 11],
+      linked: { grouped: [1, 20], ambiguous: [1, 11], card: [2, 7], nestedCard: [2, 9], attachment: [1, 6] },
+      unlinked: [1, 4],
+      repository: {
+        checkoutDiskBytes: any(Number).between(inventory.totals.bytes, Infinity),
+        gitDiskBytes: any(Number).positive(),
+        annexed: false,
+        allRegularFiles: 66,
+        linkedRegularFiles: 7,
+        unlinkedRegularFiles: 1,
+      },
+      orphanDirectories: 2,
+    },
   );
 });
 
 // A disappearing or unreadable subtree produces labeled lower-bound totals instead
 // of failing the entire scan.
 void test("A disappearing or unreadable subtree produces labeled lower-bound totals inst...", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L83
   const locked = box.path("locked");
   await fs.mkdir(locked);
   await fs.writeFile(box.path("locked/hidden.txt"), "hidden");
   await fs.chmod(locked, 0o000);
   const partial = await scanBoxInventory(box.root);
   await fs.chmod(locked, 0o700);
-  await t.checkText(out.with(print(`${String(partial.complete)}:${String(partial.filesystemErrors.length > 0)}`)), "false:true");
+  t.check({ complete: partial.complete, filesystemErrors: partial.filesystemErrors }, { complete: false, filesystemErrors: [str`locked: EACCES: permission denied, scandir '${box.root}/locked'`] });
 });
 
 void test("line 114", async (t) => {
@@ -123,8 +138,7 @@ void test("line 114", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L115
-  await t.checkText(annexResult, "{\"enabled\":true,\"available\":true,\"all\":{\"files\":1,\"bytes\":11},\"linked\":{\"files\":1,\"bytes\":11},\"regular\":0}");
+  t.check(annexResult, { enabled: true, available: true, all: { files: 1, bytes: 11 }, linked: { files: 1, bytes: 11 }, regular: 0 });
 });
 
 // ## Publication build output and dependency trees are not inventoried
@@ -132,9 +146,6 @@ void test("line 114", async (t) => {
 // A box with a publication project's `dist/` and `node_modules/` inventories the
 // same as one holding only the project's `src/` file.
 void test("A box with a publication project's dist/ and nodemodules/ inventories the sam...", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L134
   const project = "_content/trips/Site.attach/project";
   const onlySource = await makeTmpBox();
   await onlySource.write(`${project}/src/readme.md`, "# Source\n");
@@ -143,12 +154,13 @@ void test("A box with a publication project's dist/ and nodemodules/ inventories
   await withBuild.write(`${project}/dist/page.md`, "# Built\n");
   await withBuild.write(`${project}/dist/stray.note.card`, "---\n---\n");
   await withBuild.write(`${project}/node_modules/pkg/README.md`, "# pkg\n");
-  const counts = async (root: string): Promise<string> => {
+  const counts = async (root: string) => {
     const inv = await scanBoxInventory(root, { now: new Date("2026-08-12T12:00:00Z") });
-    return JSON.stringify([inv.direct, inv.grouped].map((items) => items.map((item) => [item.type, item.count])));
+    return [inv.direct, inv.grouped].map((items) => items.map((item) => [item.type, item.count]));
   };
-  const same = (await counts(onlySource.root)) === (await counts(withBuild.root));
+  const onlySourceCounts = await counts(onlySource.root);
+  const withBuildCounts = await counts(withBuild.root);
   await onlySource.cleanup();
   await withBuild.cleanup();
-  await t.checkText(out.with(print(String(same))), "true");
+  t.check(withBuildCounts, onlySourceCounts);
 });

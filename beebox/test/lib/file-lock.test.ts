@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, anything, capture, instanceOf, isoDate, str, unordered } from "agent-doctest/check";
 import {
   acquireLock,
   releaseLock,
@@ -26,6 +26,20 @@ import { spawn } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import { join } from "node:path";
+
+// The holder record `acquireLock` returns and `inspectLock` reads back.
+function heldBy(metadata: Record<string, unknown>) {
+  return { pid: process.pid, hostname: os.hostname(), acquiredAt: isoDate(), metadata };
+}
+
+// What `acquireLock` throws when `holder` holds the lock.
+function heldError(pid: number, metadata: Record<string, unknown>) {
+  return {
+    name: "LockHeldError",
+    message: str`Lock held by pid ${String(pid)} on ${os.hostname()} (acquired ${any(String)})`,
+    holder: { pid, hostname: os.hostname(), acquiredAt: isoDate(), metadata },
+  };
+}
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -70,8 +84,6 @@ function foreignSidecar(who: string, pid: number) {
 //
 // ### Acquire creates the guard dir + diagnostic sidecar with our metadata
 void test("Acquire creates the guard dir + diagnostic sidecar with our metadata", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await releaseLock(path);
@@ -84,21 +96,18 @@ void test("Acquire creates the guard dir + diagnostic sidecar with our metadata"
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   const holder = await acquireLock(path, { triggeredBy: "manual" });
-  print(`pid: ${holder.pid === process.pid}`);
-  print(`hostname: ${holder.hostname === os.hostname()}`);
-  print(`triggeredBy: ${holder.metadata.triggeredBy}`);
-  print(`guard dir: ${await fs.stat(path + ".guard").then((s) => s.isDirectory()).catch(() => false)}`);
-  await t.checkText(out.with(print(`sidecar file: ${await fs.access(path).then(() => true).catch(() => false)}`)), `pid: true
-hostname: true
-triggeredBy: manual
-guard dir: true
-sidecar file: true`);
+  t.check(holder, heldBy({ triggeredBy: "manual" }));
+  t.check(
+    {
+      guardDir: await fs.stat(path + ".guard").then((s) => s.isDirectory()).catch(() => false),
+      sidecarFile: await fs.access(path).then(() => true).catch(() => false),
+    },
+    { guardDir: true, sidecarFile: true },
+  );
 });
 
 // ### Release removes both the guard dir and the sidecar
 void test("Release removes both the guard dir and the sidecar", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -111,9 +120,13 @@ void test("Release removes both the guard dir and the sidecar", async (t) => {
   const path = join(box.root, "test.lock");
   await acquireLock(path, {});
   await releaseLock(path);
-  print(`guard: ${await fs.access(path + ".guard").then(() => "exists").catch(() => "gone")}`);
-  await t.checkText(out.with(print(`sidecar: ${await fs.access(path).then(() => "exists").catch(() => "gone")}`)), `guard: gone
-sidecar: gone`);
+  t.check(
+    {
+      guard: await fs.access(path + ".guard").then(() => "exists").catch(() => "gone"),
+      sidecar: await fs.access(path).then(() => "exists").catch(() => "gone"),
+    },
+    { guard: "gone", sidecar: "gone" },
+  );
 });
 
 // ### Release is idempotent
@@ -141,8 +154,6 @@ void test("Releasing when not held, releasing twice — both fine.", async (t) =
 //
 // ### Acquiring a held lock throws LockHeldError
 void test("Acquiring a held lock throws LockHeldError", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await releaseLock(path);
@@ -156,9 +167,8 @@ void test("Acquiring a held lock throws LockHeldError", async (t) => {
   const path = join(box.root, "test.lock");
   await acquireLock(path, { who: "first" });
   const caught = await acquireLock(path, { who: "second" }).then(() => null, (e) => e);
-  print(`error type: ${caught instanceof LockHeldError}`);
-  await t.checkText(out.with(print(`who: ${caught.holder.metadata.who}`)), `error type: true
-who: first`);
+  t.check(caught, instanceOf(LockHeldError));
+  t.check(caught, heldError(process.pid, { who: "first" }));
 });
 
 // ### A live foreign holder (guard dir owned by another process) is not stolen
@@ -166,8 +176,6 @@ who: first`);
 // A fresh guard directory with no in-process release is exactly what another live
 // process's `proper-lockfile` would leave. We must see it as held.
 void test("A fresh guard directory with no in-process release is exactly what another li...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -183,11 +191,8 @@ void test("A fresh guard directory with no in-process release is exactly what an
 
   // doctest:L163
   const caught = await acquireLock(path, { who: "us" }).then(() => null, (e) => e);
-  print(`held: ${caught instanceof LockHeldError}`);
-  print(`holder pid: ${caught.holder.pid}`);
-  await t.checkText(out.with(print(`holder who: ${caught.holder.metadata.who}`)), `held: true
-holder pid: 4242
-holder who: other-proc`);
+  t.check(caught, instanceOf(LockHeldError));
+  t.check(caught, heldError(4242, { who: "other-proc" }));
 });
 
 // ### Many parallel acquisitions: exactly one wins, the rest see LockHeldError
@@ -196,8 +201,6 @@ holder who: other-proc`);
 // double-acquire. The winner stays alive holding the lock; every other attempt
 // rejects with `LockHeldError`.
 void test("The guard-dir mkdir is atomic, so contention on one path can never double-acq...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await releaseLock(path);
@@ -212,13 +215,26 @@ void test("The guard-dir mkdir is atomic, so contention on one path can never do
   const results = await Promise.allSettled(
     Array.from({ length: 40 }, (_unused, i) => acquireLock(path, { who: i })),
   );
-  const winners = results.filter((r) => r.status === "fulfilled");
-  const losers = results.filter((r) => r.status === "rejected");
-  print(`winners: ${winners.length}`);
-  print(`losers: ${losers.length}`);
-  await t.checkText(out.with(print(`all losers LockHeldError: ${losers.every((r) => r.reason instanceof LockHeldError)}`)), `winners: 1
-losers: 39
-all losers LockHeldError: true`);
+  // A loser can read the winner's holder before its sidecar is written (pid -1,
+  // no metadata) or after, so its holder varies.
+  const winner = capture(any(Number).int().between(0, 39));
+  const loser = {
+    status: "rejected" as const,
+    reason: {
+      name: "LockHeldError",
+      message: str`Lock held by pid ${any(String).matches(/^-?\d+$/)} on ${os.hostname()} (acquired ${any(String)})`,
+      holder: anything(),
+    },
+  };
+  t.check(
+    results,
+    unordered([{ status: "fulfilled", value: heldBy({ who: winner }) }, ...Array.from({ length: 39 }, () => loser)]),
+  );
+  // The losers' reasons are real LockHeldError instances, not look-alikes.
+  t.check(
+    results.flatMap((result) => (result.status === "rejected" ? [result.reason] : [])),
+    Array.from({ length: 39 }, () => instanceOf(LockHeldError)),
+  );
 });
 
 // ### The reclaim/release handoff yields exactly one holder (the race the old code lost)
@@ -292,7 +308,7 @@ void test("A SIGKILL'd process leaves its guard directory behind with a frozen m
 
   // doctest:L262
   const holder = await acquireLock(path, { who: "us" });
-  t.check(holder.metadata.who, "us");
+  t.check(holder, heldBy({ who: "us" }));
 });
 
 // ## Stale profiles
@@ -314,8 +330,6 @@ void test("A SIGKILL'd process leaves its guard directory behind with a frozen m
 // profiles: the default profile (5 min) still sees a live holder, the request
 // profile reclaims.
 void test("Request-scoped locks (mobile device store, local users, connector token store...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await releaseLock(lockPath);
@@ -331,7 +345,7 @@ void test("Request-scoped locks (mobile device store, local users, connector tok
 
   // doctest:L296
   const justAfter = await acquireLock(requestScopedLock(lockPath), { who: "b" }).then(() => "acquired", (e) => e.name);
-  print(`immediately after crash: ${justAfter}`);
+  t.check(justAfter, "LockHeldError");
 
   // doctest:L299
   const aged = new Date(Date.now() - LOCK_STALE_MS.request - 1000);
@@ -339,11 +353,9 @@ void test("Request-scoped locks (mobile device store, local users, connector tok
 
   // doctest:L302
   const asDefault = await acquireLock(lockPath, { who: "d" }).then(() => "acquired", (e) => e.name);
-  print(`default profile at +16s: ${asDefault}`);
+  t.check(asDefault, "LockHeldError");
   const holder = await acquireLock(requestScopedLock(lockPath), { who: "recovered" });
-  await t.checkText(out.with(print(`request profile at +16s: ${holder.metadata.who}`)), `immediately after crash: LockHeldError
-default profile at +16s: LockHeldError
-request profile at +16s: recovered`);
+  t.check(holder, heldBy({ who: "recovered" }));
 });
 
 // ### Diagnostics use the same profile as acquisition
@@ -352,8 +364,6 @@ request profile at +16s: recovered`);
 // same dead holder reads as gone through the request profile and as live through
 // the default one.
 void test("inspectLock must not disagree with acquireLock about staleness:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -369,9 +379,9 @@ void test("inspectLock must not disagree with acquireLock about staleness:", asy
   await fs.utimes(lockPath + ".guard", aged, aged);
 
   // doctest:L330
-  print(`request profile: ${await inspectLock(requestScopedLock(lockPath))}`);
-  await t.checkText(out.with(print(`default profile: ${(await inspectLock(lockPath))?.metadata.purpose}`)), `request profile: null
-default profile: file-lock-doctest-child`);
+  t.check(await inspectLock(requestScopedLock(lockPath)), null);
+  // The holder is the killed child process, so its pid is not ours.
+  t.check(await inspectLock(lockPath), { ...heldBy({ purpose: "file-lock-doctest-child" }), pid: any(Number).int() });
 });
 
 // ### releaseLock never deletes a foreign holder's lock
@@ -379,8 +389,6 @@ default profile: file-lock-doctest-child`);
 // Releasing a path this process never acquired (no recorded release) is a no-op —
 // it can never remove another process's guard directory.
 void test("Releasing a path this process never acquired (no recorded release) is a no-op...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -396,9 +404,13 @@ void test("Releasing a path this process never acquired (no recorded release) is
 
   // doctest:L352
   await releaseLock(path);
-  print(`guard survives: ${await fs.access(path + ".guard").then(() => true).catch(() => false)}`);
-  await t.checkText(out.with(print(`sidecar survives: ${await fs.access(path).then(() => true).catch(() => false)}`)), `guard survives: true
-sidecar survives: true`);
+  t.check(
+    {
+      guardSurvives: await fs.access(path + ".guard").then(() => true).catch(() => false),
+      sidecarSurvives: await fs.access(path).then(() => true).catch(() => false),
+    },
+    { guardSurvives: true, sidecarSurvives: true },
+  );
 });
 
 // ## inspectLock
@@ -433,7 +445,7 @@ void test("Returns the holder when held", async (t) => {
   const path = join(box.root, "test.lock");
   await acquireLock(path, { tag: "abc" });
   const info = await inspectLock(path);
-  t.check(info?.metadata.tag, "abc");
+  t.check(info, heldBy({ tag: "abc" }));
 });
 
 // ### A stale (crashed) holder reads as not held
@@ -481,7 +493,7 @@ void test("Steals a held lock", async (t) => {
 
   // doctest:L427
   const stolen = await forceAcquireLock(path, { from: "thief" });
-  t.check(stolen.metadata.from, "thief");
+  t.check(stolen, heldBy({ from: "thief" }));
 });
 
 // ## scanLocks
@@ -498,13 +510,11 @@ void test("Returns empty map when directory missing", async (t) => {
   // doctest:L442
   const box = await makeTmpBox();
   const map = await scanLocks(join(box.root, "nope"), { suffix: ".lock", profile: "default" });
-  await t.checkText(map.size, "0");
+  t.check(map, new Map());
 });
 
 // ### Returns live locks keyed by name (suffix stripped)
 void test("Returns live locks keyed by name (suffix stripped)", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await releaseLock(join(dir, "alpha.lock"));
@@ -523,11 +533,13 @@ void test("Returns live locks keyed by name (suffix stripped)", async (t) => {
 
   // doctest:L461
   const map = await scanLocks(dir, { suffix: ".lock", profile: "default" });
-  print(`size: ${map.size}`);
-  print(`alpha: ${map.get("alpha")?.metadata.who}`);
-  await t.checkText(out.with(print(`beta: ${map.get("beta")?.metadata.who}`)), `size: 2
-alpha: a
-beta: b`);
+  t.check(
+    map,
+    new Map([
+      ["alpha", heldBy({ who: "a" })],
+      ["beta", heldBy({ who: "b" })],
+    ]),
+  );
 });
 
 // ### Reclaims dead (stale) locks during scan
@@ -537,8 +549,6 @@ beta: b`);
 // happens while atomically holding the lock, so it can never delete a live
 // holder's guard.
 void test("A live lock is reported; a crashed lock (stale guard mtime) is reclaimed — it...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await releaseLock(join(dir, "alive.lock"));
@@ -564,13 +574,8 @@ void test("A live lock is reported; a crashed lock (stale guard mtime) is reclai
   const map = await scanLocks(dir, { suffix: ".lock", profile: "default" });
   const deadGuardGone = await fs.access(deadPath + ".guard").then(() => false).catch(() => true);
   const deadSidecarGone = await fs.access(deadPath).then(() => false).catch(() => true);
-  print(`size: ${map.size}`);
-  print(`alive present: ${map.has("alive")}`);
-  print(`dead guard: ${deadGuardGone ? "gone" : "exists"}`);
-  await t.checkText(out.with(print(`dead sidecar: ${deadSidecarGone ? "gone" : "exists"}`)), `size: 1
-alive present: true
-dead guard: gone
-dead sidecar: gone`);
+  t.check(map, new Map([["alive", heldBy({ who: "alive" })]]));
+  t.check({ deadGuard: deadGuardGone ? "gone" : "exists", deadSidecar: deadSidecarGone ? "gone" : "exists" }, { deadGuard: "gone", deadSidecar: "gone" });
 });
 
 // ### Ignores files without the suffix
@@ -592,7 +597,7 @@ void test("Ignores files without the suffix", async (t) => {
 
   // doctest:L524
   const map = await scanLocks(dir, { suffix: ".lock", profile: "default" });
-  await t.checkText(map.size, "1");
+  t.check(map, new Map([["real", heldBy({})]]));
 });
 
 // ## withFileLock preserves a request-scoped target
@@ -601,8 +606,6 @@ void test("Ignores files without the suffix", async (t) => {
 // operations, so short request-bound state updates retain their crash-recovery
 // window.
 void test("The blocking wrapper accepts the same profiled target as the lower-level lock...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -617,7 +620,6 @@ void test("The blocking wrapper accepts the same profiled target as the lower-le
     { lockPath: requestScopedLock(path), metadata: { who: "wrapper" }, waitMs: 100 },
     async () => (await inspectLock(requestScopedLock(path)))?.metadata.who,
   );
-  print(result);
-  await t.checkText(out.with(print(await inspectLock(requestScopedLock(path)))), `wrapper
-null`);
+  t.check(result, "wrapper");
+  t.check(await inspectLock(requestScopedLock(path)), null);
 });

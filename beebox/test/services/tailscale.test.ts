@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str, printed } from "agent-doctest/check";
+import { any, str } from "agent-doctest/check";
 import {
   parseStatusJson,
   parseServeConfig,
@@ -105,13 +105,6 @@ const report = (deps: TailscaleDeps) => runTailscaleStatus(deps, { target: { por
 //   `posture-ambiguous`. None of these is `ready`.
 void test("Each input below scripts the fake tailscale CLI and lands in exactly one stat...", async (t) => {
   // doctest:L107
-  const wrongServe = {
-    Web: { "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:9999" } } } },
-  };
-  const foregroundFunnel = {
-    ...correctServe,
-    Foreground: { "sess-1": { AllowFunnel: { "box.tail1234.ts.net:443": true } } },
-  };
   const rows: Array<[string, TailscaleDeps]> = [
     ["status exits nonzero", createFakeTailscaleDeps({ status: "", statusCode: 1 })],
     ["serve exits nonzero", createFakeTailscaleDeps({ status: runningStatus, serve: "", serveCode: 1 })],
@@ -125,6 +118,108 @@ void test("Each input below scripts the fake tailscale CLI and lands in exactly 
     ["InUseOtherUser", withStatus(bs("InUseOtherUser"))],
     ["no CertDomains", withStatus({ ...runningStatus, CertDomains: [] })],
     ["empty DNSName", withStatus({ BackendState: "Running", Self: { DNSName: "", TailscaleIPs: null }, CertDomains: ["x"] })],
+  ];
+  const reports = Object.fromEntries(await Promise.all(rows.map(async ([label, deps]) => [label, await report(deps)] as const)));
+
+  // doctest:L140
+  t.check(reports, {
+    "status exits nonzero": {
+      state: "cli-error",
+      ok: false,
+      command: "tailscale status --json",
+      code: 1,
+      detail: "(no stderr)",
+      nextStep: "`tailscale status --json` exited 1: (no stderr). Fix the Tailscale daemon/permissions, then re-run.",
+      docLink: null,
+    },
+    "serve exits nonzero": {
+      state: "cli-error",
+      ok: false,
+      command: "tailscale serve status --json",
+      code: 1,
+      detail: "(no stderr)",
+      nextStep: "`tailscale serve status --json` exited 1: (no stderr). Fix the Tailscale daemon/permissions, then re-run.",
+      docLink: null,
+    },
+    "status is not JSON": {
+      state: "unrecognized-status-output",
+      ok: false,
+      detail: "not valid JSON: Unexpected token 'o', \"not json at all\" is not valid JSON",
+      nextStep: "`tailscale status --json` did not match the expected shape — check your Tailscale version.",
+      docLink: null,
+    },
+    "status lacks BackendState": {
+      state: "unrecognized-status-output",
+      ok: false,
+      detail: "BackendState: Invalid input: expected string, received undefined; Self.TailscaleIPs: Invalid input: expected array, received undefined; CertDomains: Invalid input: expected array, received undefined",
+      nextStep: "`tailscale status --json` did not match the expected shape — check your Tailscale version.",
+      docLink: null,
+    },
+    "unknown BackendState": {
+      state: "unknown-backend-state",
+      ok: false,
+      backendState: "TeleportingSideways",
+      nextStep: "Unrecognized BackendState 'TeleportingSideways' — refusing to assume a working state. Check your Tailscale version.",
+      docLink: null,
+    },
+    NoState: {
+      state: "needs-login",
+      ok: false,
+      backendState: "NoState",
+      nextStep: "Interactive: run `tailscale up`. Headless: run `tailscale up --auth-key=<key>` with a single-use key from the admin console.",
+      docLink: "https://tailscale.com/kb/1085/auth-keys",
+    },
+    NeedsMachineAuth: {
+      state: "needs-machine-auth",
+      ok: false,
+      nextStep: "This machine is waiting for admin approval — approve it in the Tailscale admin console.",
+      docLink: "https://tailscale.com/kb/1080/cli",
+    },
+    Stopped: {
+      state: "stopped",
+      ok: false,
+      nextStep: "Tailscale is installed but stopped — run `tailscale up` to bring it up.",
+      docLink: "https://tailscale.com/kb/1080/cli",
+    },
+    Starting: {
+      state: "starting",
+      ok: false,
+      nextStep: "Tailscale is still starting — wait a moment and re-run `bbx tailscale status`.",
+      docLink: null,
+    },
+    InUseOtherUser: {
+      state: "in-use-other-user",
+      ok: false,
+      nextStep: "The tailscaled daemon is owned by another OS user — switch to that user, or run `tailscale up` as the intended user to take it over.",
+      docLink: "https://tailscale.com/kb/1080/cli",
+    },
+    "no CertDomains": {
+      state: "https-disabled",
+      ok: false,
+      dnsName: "box.tail1234.ts.net",
+      nextStep: "Enable HTTPS certificates for your tailnet in the admin console (https://login.tailscale.com/admin/dns), then re-run.",
+      docLink: "https://tailscale.com/kb/1153/enabling-https",
+    },
+    "empty DNSName": {
+      state: "unrecognized-status-output",
+      ok: false,
+      detail: "BackendState is Running but Self.DNSName is empty — cannot resolve the tailnet hostname.",
+      nextStep: "`tailscale status --json` reported Running without a Self.DNSName — check your Tailscale version/state.",
+      docLink: null,
+    },
+  });
+});
+
+// The serve and probe states, once the node itself is up.
+void test("Serve and probe states", async (t) => {
+  const wrongServe = {
+    Web: { "box.tail1234.ts.net:443": { Handlers: { "/": { Proxy: "http://127.0.0.1:9999" } } } },
+  };
+  const foregroundFunnel = {
+    ...correctServe,
+    Foreground: { "sess-1": { AllowFunnel: { "box.tail1234.ts.net:443": true } } },
+  };
+  const rows: Array<[string, TailscaleDeps]> = [
     ["serve empty", createFakeTailscaleDeps({ status: runningStatus, serve: {} })],
     ["serve on another port", createFakeTailscaleDeps({ status: runningStatus, serve: wrongServe })],
     ["serve output garbage", createFakeTailscaleDeps({ status: runningStatus, serve: "<garbage>" })],
@@ -133,31 +228,68 @@ void test("Each input below scripts the fake tailscale CLI and lands in exactly 
     ["probe says open", withProbe({ reachable: true, status: 200, body: JSON.stringify({ open: true }) })],
     ["probe not a beebox shape", withProbe({ reachable: true, status: 200, body: JSON.stringify({ hello: "world" }) })],
   ];
-  const lines = [];
-  for (const [label, deps] of rows) {
-    lines.push(`${label}: ${(await report(deps)).state}`);
-  }
+  const reports = Object.fromEntries(await Promise.all(rows.map(async ([label, deps]) => [label, await report(deps)] as const)));
 
-  // doctest:L140
-  await t.checkText(lines.join("\n"), `status exits nonzero: cli-error
-serve exits nonzero: cli-error
-status is not JSON: unrecognized-status-output
-status lacks BackendState: unrecognized-status-output
-unknown BackendState: unknown-backend-state
-NoState: needs-login
-NeedsMachineAuth: needs-machine-auth
-Stopped: stopped
-Starting: starting
-InUseOtherUser: in-use-other-user
-no CertDomains: https-disabled
-empty DNSName: unrecognized-status-output
-serve empty: serve-unconfigured
-serve on another port: serve-drift
-serve output garbage: unrecognized-serve-output
-foreground Funnel: funnel-enabled
-probe unreachable: probe-failed
-probe says open: exposed-unauthenticated
-probe not a beebox shape: posture-ambiguous`);
+  t.check(reports, {
+    "serve empty": {
+      state: "serve-unconfigured",
+      ok: false,
+      dnsName: "box.tail1234.ts.net",
+      target: {
+        port: 3210,
+      },
+      nextStep: "Serve is not fronting box.tail1234.ts.net:443 yet — run `bbx tailscale setup --target 3210` to configure it.",
+      docLink: "https://tailscale.com/kb/1242/tailscale-serve",
+    },
+    "serve on another port": {
+      state: "serve-drift",
+      ok: false,
+      dnsName: "box.tail1234.ts.net",
+      target: {
+        port: 3210,
+      },
+      pointsAt: "http://127.0.0.1:9999",
+      nextStep: "Serve at box.tail1234.ts.net:443 points at http://127.0.0.1:9999, not loopback:3210 — re-run `bbx tailscale setup --target 3210`.",
+      docLink: "https://tailscale.com/kb/1242/tailscale-serve",
+    },
+    "serve output garbage": {
+      state: "unrecognized-serve-output",
+      ok: false,
+      detail: "not valid JSON: Unexpected token '<', \"<garbage>\" is not valid JSON",
+      nextStep: "`tailscale serve status --json` did not match the expected shape — check your Tailscale version.",
+      docLink: null,
+    },
+    "foreground Funnel": {
+      state: "funnel-enabled",
+      ok: false,
+      hostPort: "box.tail1234.ts.net:443",
+      nextStep: "Funnel is enabled for box.tail1234.ts.net:443 — this target is PUBLIC. Disable it with `tailscale funnel --https=443 off`.",
+      docLink: "https://tailscale.com/kb/1223/funnel",
+    },
+    "probe unreachable": {
+      state: "probe-failed",
+      ok: false,
+      url: "https://box.tail1234.ts.net/",
+      status: null,
+      nextStep: "Serve is configured for box.tail1234.ts.net:443 but https://box.tail1234.ts.net/auth/me did not respond — check that the box server on loopback:3210 is running.",
+      docLink: null,
+    },
+    "probe says open": {
+      state: "exposed-unauthenticated",
+      ok: false,
+      url: "https://box.tail1234.ts.net/",
+      nextStep: "https://box.tail1234.ts.net/ is served to the tailnet but reports open (UNAUTHENTICATED) mode — Serve is live in front of an unprotected box. Run `bbx tailscale stop`, or give the box real authentication, immediately.",
+      docLink: null,
+    },
+    "probe not a beebox shape": {
+      state: "posture-ambiguous",
+      ok: false,
+      url: "https://box.tail1234.ts.net/",
+      detail: "https://box.tail1234.ts.net/auth/me did not report a recognizable beebox auth posture (status 200).",
+      nextStep: "https://box.tail1234.ts.net/auth/me responded but not with a beebox auth shape — refusing to call this ready. Confirm the loopback target is the auth-gated bbx server.",
+      docLink: null,
+    },
+  });
 });
 
 // ## Reports carry more than the state
@@ -177,25 +309,56 @@ probe not a beebox shape: posture-ambiguous`);
 void test("Some states also carry fields a caller acts on.", async (t) => {
   // doctest:L179
   const funnelServe = { ...correctServe, AllowFunnel: { "box.tail1234.ts.net:443": true } };
-  const rows: Array<[TailscaleDeps, string[]]> = [
-    [createFakeTailscaleDeps({ binaryPresent: false }), ["state", "ok", "docLink"]],
-    [withStatus(bs("NeedsLogin")), ["state", "docLink"]],
-    [createFakeTailscaleDeps({ status: runningStatus, serve: funnelServe, probe: enforced401 }), ["state", "ok"]],
-    [withProbe(enforced401), ["state", "ok", "url"]],
-    [createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, routerProbe: guardedRouterProbe }), ["state", "ok", "guarded", "url"]],
+  const rows: TailscaleDeps[] = [
+    createFakeTailscaleDeps({ binaryPresent: false }),
+    withStatus(bs("NeedsLogin")),
+    createFakeTailscaleDeps({ status: runningStatus, serve: funnelServe, probe: enforced401 }),
+    withProbe(enforced401),
+    createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, routerProbe: guardedRouterProbe }),
   ];
-  const lines = [];
-  for (const [deps, keys] of rows) {
-    const fields: Record<string, unknown> = { ...(await report(deps)) };
-    lines.push(JSON.stringify(Object.fromEntries(keys.map((k) => [k, fields[k] ?? null]))));
-  }
+  const reports = await Promise.all(rows.map((deps) => report(deps)));
 
   // doctest:L193
-  await t.checkText(lines.join("\n"), `{"state":"binary-absent","ok":false,"docLink":"https://tailscale.com/download"}
-{"state":"needs-login","docLink":"https://tailscale.com/kb/1085/auth-keys"}
-{"state":"funnel-enabled","ok":false}
-{"state":"ready","ok":true,"url":"https://box.tail1234.ts.net/"}
-{"state":"ready","ok":true,"guarded":true,"url":"https://box.tail1234.ts.net/"}`);
+  t.check(reports, [
+    {
+      state: "binary-absent",
+      ok: false,
+      nextStep: "Install Tailscale for this platform, then run `tailscale up`.",
+      docLink: "https://tailscale.com/download",
+    },
+    {
+      state: "needs-login",
+      ok: false,
+      backendState: "NeedsLogin",
+      nextStep: "Interactive: run `tailscale up`. Headless: run `tailscale up --auth-key=<key>` with a single-use key from the admin console.",
+      docLink: "https://tailscale.com/kb/1085/auth-keys",
+    },
+    {
+      state: "funnel-enabled",
+      ok: false,
+      hostPort: "box.tail1234.ts.net:443",
+      nextStep: "Funnel is enabled for box.tail1234.ts.net:443 — this target is PUBLIC. Disable it with `tailscale funnel --https=443 off`.",
+      docLink: "https://tailscale.com/kb/1223/funnel",
+    },
+    {
+      state: "ready",
+      ok: true,
+      url: "https://box.tail1234.ts.net/",
+      status: 401,
+      guarded: false,
+      nextStep: "Reachable at https://box.tail1234.ts.net/ (proves the local serve path only; live acceptance comes from a second device on the tailnet).",
+      docLink: null,
+    },
+    {
+      state: "ready",
+      ok: true,
+      url: "https://box.tail1234.ts.net/",
+      status: 401,
+      guarded: true,
+      nextStep: "The guarded dev router is reachable at https://box.tail1234.ts.net/ and denies anonymous `/__router/status` (401) over Serve (proves the local serve path only; live acceptance comes from a second device on the tailnet).",
+      docLink: null,
+    },
+  ]);
 });
 
 // ## Pure parsers
@@ -205,18 +368,29 @@ void test("Some states also carry fields a caller acts on.", async (t) => {
 // doesn't read passes through (only a renamed/absent required field is drift):
 void test("The zod schema rejects the drifted shape at the boundary — including a missin...", async (t) => {
   // doctest:L209
-  t.check(
-    [
-      parseStatusJson(JSON.stringify({ Self: {} })).ok,
-      parseStatusJson(JSON.stringify({ BackendState: "Running", CertDomains: null })).ok,
-      parseStatusJson(JSON.stringify({ BackendState: "Running", Self: null, CertDomains: null, BrandNewField: 1 })).ok,
-    ],
-    [
-    false,
-    false,
-    true,
-  ],
-  );
+  t.check([
+    parseStatusJson(JSON.stringify({ Self: {} })),
+    parseStatusJson(JSON.stringify({ BackendState: "Running", CertDomains: null })),
+    parseStatusJson(JSON.stringify({ BackendState: "Running", Self: null, CertDomains: null, BrandNewField: 1 })),
+  ], [
+    {
+      ok: false,
+      message: "BackendState: Invalid input: expected string, received undefined; Self.DNSName: Invalid input: expected string, received undefined; Self.TailscaleIPs: Invalid input: expected array, received undefined; CertDomains: Invalid input: expected array, received undefined",
+    },
+    {
+      ok: false,
+      message: "Self: Invalid input: expected object, received undefined",
+    },
+    {
+      ok: true,
+      value: {
+        BackendState: "Running",
+        Self: null,
+        CertDomains: null,
+        BrandNewField: 1,
+      },
+    },
+  ]);
 });
 
 // `toBackendState` maps only the seven known `ipn.State` values; everything else
@@ -271,10 +445,19 @@ void test("loopbackProxyPort accepts a bare port or a loopback URL, and rejects 
 // serve is unconfigured):
 void test("An empty serve config parses to {} (Tailscale prints {} or null when serve is...", async (t) => {
   // doctest:L270
-  t.check([parseServeConfig("").ok, parseServeConfig("null").ok, parseServeConfig("{}").ok], [
-    true,
-    true,
-    true,
+  t.check([parseServeConfig(""), parseServeConfig("null"), parseServeConfig("{}")], [
+    {
+      ok: true,
+      value: {},
+    },
+    {
+      ok: true,
+      value: {},
+    },
+    {
+      ok: true,
+      value: {},
+    },
   ]);
 });
 
@@ -300,18 +483,18 @@ void test("reportToJson returns the structured report agents consume:", async (t
 // Only `ready` gets the `✓` glyph. The guarded-router summary names the router
 // and the anonymous-denied probe.
 void test("Only ready gets the ✓ glyph.", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L303
-  print(formatReportHuman(await report(createFakeTailscaleDeps({ binaryPresent: false }))));
-  print(formatReportHuman(await report(withProbe(enforced401))).split("\n")[0]);
-  const guarded = createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, routerProbe: guardedRouterProbe });
-  await t.checkText(out.with(formatReportHuman(await report(guarded)).split("\n")[1]), `✗ tailscale: binary-absent
+  t.checkText(formatReportHuman(await report(createFakeTailscaleDeps({ binaryPresent: false }))), `✗ tailscale: binary-absent
   the \`tailscale\` CLI is not on PATH
   next: Install Tailscale for this platform, then run \`tailscale up\`.
-  docs: https://tailscale.com/download
-✓ tailscale: ready
-  serve is fronting the guarded dev router; anonymous https://box.tail1234.ts.net/__router/status was denied (401)`);
+  docs: https://tailscale.com/download`);
+  t.checkText(formatReportHuman(await report(withProbe(enforced401))), `✓ tailscale: ready
+  serve is fronting the target; https://box.tail1234.ts.net/auth/me responded (401)
+  next: Reachable at https://box.tail1234.ts.net/ (proves the local serve path only; live acceptance comes from a second device on the tailnet).`);
+  const guarded = createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, routerProbe: guardedRouterProbe });
+  t.checkText(formatReportHuman(await report(guarded)), `✓ tailscale: ready
+  serve is fronting the guarded dev router; anonymous https://box.tail1234.ts.net/__router/status was denied (401)
+  next: The guarded dev router is reachable at https://box.tail1234.ts.net/ and denies anonymous \`/__router/status\` (401) over Serve (proves the local serve path only; live acceptance comes from a second device on the tailnet).`);
 });
 
 // ## Track C: router-guarded target classification
@@ -338,20 +521,26 @@ void test("classifyTargetPosture reads the loopback /router/status FIRST.", asyn
     })],
     ["plain serve", createFakeTailscaleDeps({ probe: enforced401 })],
   ];
-  const lines = [];
-  for (const [label, deps] of cases) {
-    lines.push(`${label}: ${(await classifyTargetPosture(deps, 3210)).kind}`);
-  }
+  const postures = Object.fromEntries(await Promise.all(cases.map(async ([label, deps]) => [label, await classifyTargetPosture(deps, 3210)] as const)));
   const ungated = await classifyTargetPosture(createFakeTailscaleDeps({ routerProbe: ungatedRouterProbe }), 3210);
   if (ungated.kind === "enforced" || ungated.kind === "router-guarded") throw new Error(`expected a refusal, got ${ungated.kind}`);
-  lines.push(`refusal says update: ${describeRefusal(ungated, 3210).includes("Update/rebuild the router")}`);
 
   // doctest:L348
-  await t.checkText(lines.join("\n"), `guarded router: router-guarded
-ungated router: router
-401 without header: enforced
-plain serve: enforced
-refusal says update: true`);
+  t.check(postures, {
+    "guarded router": {
+      kind: "router-guarded",
+    },
+    "ungated router": {
+      kind: "router",
+    },
+    "401 without header": {
+      kind: "enforced",
+    },
+    "plain serve": {
+      kind: "enforced",
+    },
+  });
+  t.checkText(describeRefusal(ungated, 3210), "REFUSING to expose loopback:3210 — it answers `/__router/status` 200 with the dev router's own status JSON, which means this router is NOT running the Track-B auth gate (a pre-Track-B build). Update/rebuild the router so its gate denies anonymous access (a guarded router answers `/__router/status` with 401), then re-run `bbx tailscale setup` — a guarded dev router is exposable, an ungated one is not.");
 });
 
 // ## `deriveTailscaleBaseUrl`: the admin settings page's Tailscale URL
@@ -378,8 +567,10 @@ void test("Pure helper behind the admin.tailscaleBaseUrl tRPC query — turns a 
   ];
 
   // doctest:L380
-  await t.checkText(inputs.map(([label, serve]) => `${label}: ${deriveTailscaleBaseUrl(serve)}`).join("\n"), `no Web section: null
-single HTTPS host: https://box.tail1234.ts.net
-loopback host preferred: https://box.tail1234.ts.net
-no Handlers: https://box.tail1234.ts.net`);
+  t.check(Object.fromEntries(inputs.map(([label, serve]) => [label, deriveTailscaleBaseUrl(serve)])), {
+    "no Web section": null,
+    "single HTTPS host": "https://box.tail1234.ts.net",
+    "loopback host preferred": "https://box.tail1234.ts.net",
+    "no Handlers": "https://box.tail1234.ts.net",
+  });
 });

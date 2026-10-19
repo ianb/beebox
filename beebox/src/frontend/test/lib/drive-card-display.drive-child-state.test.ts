@@ -38,7 +38,11 @@ void test("The whole reason the column exists (plan failure mode:", async (t) =>
   t.check(column({ type: "gdoc", conflict: true }), "conflict");
 
   // doctest:L42
-  t.check(DRIVE_CHILD_BADGES[driveChildState({ type: "gsheet", conflict: true })].tone, "danger");
+  t.check(DRIVE_CHILD_BADGES[driveChildState({ type: "gsheet", conflict: true })], {
+    label: "conflict",
+    tone: "danger",
+    title: "The last sync could not reconcile the box and Drive copies.",
+  });
 });
 
 // ## Pointers and nested mounts are distinct kinds, not degraded files
@@ -71,8 +75,11 @@ void test("Someone can write a doc into a mirrored directory.", async (t) => {
 // entry would render `undefined` at runtime. Pin the coverage.
 void test("The column renders DRIVECHILDBADGES[state], so a state added without an entry...", async (t) => {
   // doctest:L79
-  t.check(Object.keys(DRIVE_CHILD_BADGES).toSorted().join(","), "conflict,not-drive,pointer,subfolder,synced");
-
-  // doctest:L82
-  await t.checkText(Object.values(DRIVE_CHILD_BADGES).every((badge) => badge.label !== "" && badge.title !== ""), "true");
+  t.check(DRIVE_CHILD_BADGES, {
+    synced: { label: "synced", tone: "success", title: "Content is mirrored two-way with Drive." },
+    conflict: { label: "conflict", tone: "danger", title: "The last sync could not reconcile the box and Drive copies." },
+    pointer: { label: "pointer", tone: "info", title: "Nothing is copied — the card records where the item lives." },
+    subfolder: { label: "subfolder mount", tone: "accent", title: "A mirrored Drive folder of its own." },
+    "not-drive": { label: "not a Drive card", tone: "neutral", title: "The mirror leaves this card alone." },
+  });
 });

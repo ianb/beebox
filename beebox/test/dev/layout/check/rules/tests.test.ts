@@ -3,13 +3,12 @@
 // `testsRule` enforces one source root with a test root that mirrors it
 // directory-for-directory (`docs/plans/file-layout.md` rule 8). A test is
 // placed by the subject it NAMES, not by what it imports for setup.
-// `summary()` only prints `rule path`, so most checks here read `.message`
-// directly to pin the exact wording a boxholder sees.
+// Each check states the findings in full, so the wording a boxholder sees is pinned.
 
 import { test } from "tap";
 import "agent-doctest/tap";
 import { testsRule } from "../../../../../src/dev/layout/check/rules/tests.js";
-import { layout, summary } from "./fixture.js";
+import { layout } from "./fixture.js";
 
 // ## Clean: a single module named by two facets
 void test("Clean: a single module named by two facets", async (t) => {
@@ -21,7 +20,7 @@ void test("Clean: a single module named by two facets", async (t) => {
       "test/core/chat/session/history.archive.test.ts": { test: ["src/core/chat/session/history.ts"] },
     },
   });
-  await t.checkText(summary(testsRule.check(clean1)) === "", "true");
+  t.check(testsRule.check(clean1), []);
 });
 
 // ## Clean: a test named for a subdirectory, not a module
@@ -33,7 +32,7 @@ void test("Clean: a test named for a subdirectory, not a module", async (t) => {
       "test/core/chat/session.lifecycle.test.ts": { test: [] },
     },
   });
-  await t.checkText(summary(testsRule.check(clean2)) === "", "true");
+  t.check(testsRule.check(clean2), []);
 });
 
 // ## Clean: a named test importing collaborators from elsewhere and a type
@@ -53,7 +52,7 @@ void test("Naming no longer counts imports:", async (t) => {
       },
     },
   });
-  await t.checkText(summary(testsRule.check(clean3)) === "", "true");
+  t.check(testsRule.check(clean3), []);
 });
 
 // ## Finding: `source-roots` — an extra source root
@@ -64,10 +63,13 @@ void test("Finding: `source-roots` — an extra source root", async (t) => {
     extraSourceRoots: ["scripts"],
   });
   const extraRootFindings = testsRule.check(extraRoot);
-  await t.checkText(extraRootFindings.length, "1");
-
-  // doctest:L73
-  t.check(extraRootFindings[0]?.message, "second source root; fold it into pkg/src so tests have one tree to mirror");
+  t.check(extraRootFindings, [
+    {
+      rule: "source-roots",
+      path: "pkg/scripts",
+      message: "second source root; fold it into pkg/src so tests have one tree to mirror",
+    },
+  ]);
 });
 
 // ## Finding: `test-placement` — a test outside the test root
@@ -80,10 +82,13 @@ void test("Finding: `test-placement` — a test outside the test root", async (t
     },
   });
   const outsideRootFindings = testsRule.check(outsideRoot);
-  await t.checkText(outsideRootFindings.length, "1");
-
-  // doctest:L90
-  t.check(outsideRootFindings[0]?.message, "tests live under pkg/test, mirroring the source path");
+  t.check(outsideRootFindings, [
+    {
+      rule: "test-placement",
+      path: "pkg/core/loose.test.ts",
+      message: "tests live under pkg/test, mirroring the source path",
+    },
+  ]);
 });
 
 // ## Finding: `test-naming` — a flattened prefix name
@@ -96,13 +101,13 @@ void test("Finding: `test-naming` — a flattened prefix name", async (t) => {
     },
   });
   const flattenedFindings = testsRule.check(flattened);
-  await t.checkText(flattenedFindings.length, "1");
-
-  // doctest:L107
-  t.check(flattenedFindings[0]?.rule, "test-naming");
-
-  // doctest:L110
-  t.check(flattenedFindings[0]?.message, "chat-session-archive.test.ts names no module or directory in pkg/src/core; name it subject.facet.ext after the module or directory it tests");
+  t.check(flattenedFindings, [
+    {
+      rule: "test-naming",
+      path: "pkg/test/core/chat-session-archive.test.ts",
+      message: "chat-session-archive.test.ts names no module or directory in pkg/src/core; name it subject.facet.ext after the module or directory it tests",
+    },
+  ]);
 });
 
 // ## Finding: `test-structure` — the group's top directory has a source counterpart
@@ -119,13 +124,13 @@ void test("test/core/misc is not an exact mirror, and its top segment below test
     },
   });
   const misplacedGroupFindings = testsRule.check(misplacedGroup);
-  await t.checkText(misplacedGroupFindings.length, "1");
-
-  // doctest:L131
-  t.check(misplacedGroupFindings[0]?.rule, "test-structure");
-
-  // doctest:L134
-  t.check(misplacedGroupFindings[0]?.message, "pkg/test/core/misc has no source counterpart; move this test to the mirror of the module it tests");
+  t.check(misplacedGroupFindings, [
+    {
+      rule: "test-structure",
+      path: "pkg/test/core/misc/x.test.ts",
+      message: "pkg/test/core/misc has no source counterpart; move this test to the mirror of the module it tests",
+    },
+  ]);
 });
 
 // ## Clean: a scenario group may import source modules
@@ -141,7 +146,7 @@ void test("test/tours has no source counterpart, so it is a scenario group.", as
       "test/tours/y.tour.ts": { test: ["src/core/x.ts"] },
     },
   });
-  await t.checkText(testsRule.check(scenarioTour).length, "0");
+  t.check(testsRule.check(scenarioTour), []);
 });
 
 // ## Finding: a non-mirror group named after a nested package
@@ -160,10 +165,13 @@ void test("test/frontend has no source counterpart (src/frontend is a nested pac
     nestedPackages: ["src/frontend"],
   });
   const nestedNonMirrorFindings = testsRule.check(nestedNonMirror);
-  t.check(summary(nestedNonMirrorFindings), "test-structure pkg/test/frontend/lib/x.test.ts");
-
-  // doctest:L174
-  t.check(nestedNonMirrorFindings[0]?.message, "pkg/test/frontend mirrors the nested package pkg/src/frontend; its tests belong in pkg/src/frontend/test");
+  t.check(nestedNonMirrorFindings, [
+    {
+      rule: "test-structure",
+      path: "pkg/test/frontend/lib/x.test.ts",
+      message: "pkg/test/frontend mirrors the nested package pkg/src/frontend; its tests belong in pkg/src/frontend/test",
+    },
+  ]);
 });
 
 void test("Finding: a non-mirror group named after a nested package", async (t) => {
@@ -175,8 +183,18 @@ void test("Finding: a non-mirror group named after a nested package", async (t) 
     },
     extraSourceRoots: ["scripts"],
   });
-  await t.checkText(testsRule.check(extraRootGroup).map((f) => f.message).join("\n"), `second source root; fold it into pkg/src so tests have one tree to mirror
-pkg/test/scripts mirrors the second source root pkg/scripts; fold that root into pkg/src and mirror it there`);
+  t.check(testsRule.check(extraRootGroup), [
+    {
+      rule: "source-roots",
+      path: "pkg/scripts",
+      message: "second source root; fold it into pkg/src so tests have one tree to mirror",
+    },
+    {
+      rule: "test-structure",
+      path: "pkg/test/scripts/migrate/file.test.ts",
+      message: "pkg/test/scripts mirrors the second source root pkg/scripts; fold that root into pkg/src and mirror it there",
+    },
+  ]);
 });
 
 // ## Finding: `support-placement` — a helper placed above its only users
@@ -192,11 +210,11 @@ void test("Finding: `support-placement` — a helper placed above its only users
     },
   });
   const misplacedHelperFindings = testsRule.check(misplacedHelper);
-  await t.checkText(misplacedHelperFindings.length, "1");
-
-  // doctest:L208
-  t.check(misplacedHelperFindings[0]?.rule, "support-placement");
-
-  // doctest:L211
-  t.check(misplacedHelperFindings[0]?.message, "used by tests under pkg/test/core/agent; move it to pkg/test/core/agent/ (or a support directory directly under it)");
+  t.check(misplacedHelperFindings, [
+    {
+      rule: "support-placement",
+      path: "pkg/test/core/helper.ts",
+      message: "used by tests under pkg/test/core/agent; move it to pkg/test/core/agent/ (or a support directory directly under it)",
+    },
+  ]);
 });

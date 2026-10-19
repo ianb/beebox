@@ -27,13 +27,13 @@ void test("Pre-minted id reaches the first (fresh) run as create-with-id", async
 
   // doctest:L28
   const first = await agent.invoke({ boxRoot: box.root, prompt: "hi", dryRun: true });
-  await t.checkText(first.sessionId === MINTED, "true");
+  t.check(first, { success: true, output: "[DRY RUN] Would run Claude via SDK with prompt:\nhi", exitCode: 0, sessionId: MINTED });
 
   // The second invoke on the same agent resumes that same id:
 
   // doctest:L36
   const second = await agent.invoke({ boxRoot: box.root, prompt: "again", dryRun: true });
-  await t.checkText(second.sessionId === MINTED, "true");
+  t.check(second, { success: true, output: "[DRY RUN] Would run Claude via SDK with prompt:\nagain", exitCode: 0, sessionId: MINTED });
 
   // doctest:L40
   await box.cleanup();
@@ -47,7 +47,7 @@ void test("resume: true resumes the given id from the first invoke", async (t) =
 
   // doctest:L49
   const run = await agent.invoke({ boxRoot: box.root, prompt: "hi", dryRun: true });
-  await t.checkText(run.sessionId === MINTED, "true");
+  t.check(run, { success: true, output: "[DRY RUN] Would run Claude via SDK with prompt:\nhi", exitCode: 0, sessionId: MINTED });
 
   // doctest:L53
   await box.cleanup();
@@ -61,10 +61,10 @@ void test("Without a pre-minted id the SDK assigns one (unknown before the run)"
 
   // doctest:L62
   const run = await agent.invoke({ boxRoot: box.root, prompt: "hi", dryRun: true });
-  await t.checkText(run.sessionId === "", "true");
+  t.check(run, { success: true, output: "[DRY RUN] Would run Claude via SDK with prompt:\nhi", exitCode: 0, sessionId: "" });
 
   // doctest:L66
-  await t.checkText(agent.sessionId === null, "true");
+  t.check(agent.sessionId, null);
 
   // doctest:L69
   await box.cleanup();

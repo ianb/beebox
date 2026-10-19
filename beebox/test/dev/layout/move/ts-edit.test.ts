@@ -39,5 +39,5 @@ void test("The original quote character is preserved", async (t) => {
 void test("Nothing to rewrite returns the text unchanged", async (t) => {
   // doctest:L46
   const source4 = "import { a } from \"./keep.js\";\n";
-  await t.checkText(rewriteTsFile({ path: "pkg/src/a.ts", text: source4, rewrites: new Map([["./old.js", "./new.js"]]) }) === source4, "true");
+  t.check(rewriteTsFile({ path: "pkg/src/a.ts", text: source4, rewrites: new Map([["./old.js", "./new.js"]]) }), source4);
 });

@@ -8,7 +8,6 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { makeTestServer } from "../../helpers/test-route-server.js";
-import { bodyField } from "../../helpers/test-helpers.js";
 
 // ## Creating a card
 //
@@ -32,19 +31,13 @@ void test("POST /api/actions/create creates a card from a template:", async (t) 
       args: { title: "From the API", body: "Hello from the API" },
     },
   });
-  t.check(res.statusCode, 200);
-
-  // doctest:L33
-  t.check(bodyField(res.body, "success"), true);
-
-  // doctest:L36
-  t.check(bodyField(res.body, "path"), "_content/inbox/new.doc.card");
+  t.check(res, { statusCode: 200, body: { success: true, path: "_content/inbox/new.doc.card" } });
 
   // The card exists on disk:
 
   // doctest:L43
   const content = await ctx.read("_content/inbox/new.doc.card");
-  await t.checkText(content.includes("Hello from the API"), "true");
+  t.check(content, "---\ntitle: From the API\n---\nHello from the API\n");
 });
 
 // Missing path returns 400:
@@ -63,7 +56,7 @@ void test("Missing path returns 400:", async (t) => {
     url: "/api/actions/create",
     payload: { template: "doc" },
   });
-  t.check(res.statusCode, 400);
+  t.check(res, { statusCode: 400, body: { error: "path is required" } });
 });
 
 // Missing template returns 400:
@@ -82,5 +75,5 @@ void test("Missing template returns 400:", async (t) => {
     url: "/api/actions/create",
     payload: { path: "_content/inbox/test.doc.card" },
   });
-  t.check(res.statusCode, 400);
+  t.check(res, { statusCode: 400, body: { error: "template is required" } });
 });

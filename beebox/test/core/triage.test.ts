@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate, str } from "agent-doctest/check";
 import { compileTriageInstructions } from "../../src/core/triage/instructions.js";
 import { runTriage } from "../../src/core/triage/run/core.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
@@ -257,19 +258,33 @@ destinations:
 
   // doctest:L240
   const yaml = await box.read(result.applications[0]?.questionPath ?? "");
-  await t.checkText(yaml.includes("id: recipes"), "true");
+  t.check(
+    yaml,
+    str`---
+memo: |-
+  The triage agent wasn't sure where this item belongs.
 
-  // doctest:L244
-  await t.checkText(yaml.includes("id: todos"), "true");
+  Agent reasoning: Could be either.
 
-  // doctest:L247
-  await t.checkText(yaml.includes("id: _other"), "true");
-
-  // doctest:L250
-  await t.checkText(yaml.includes("learning:"), "true");
-
-  // doctest:L253
-  await t.checkText(yaml.includes("sink: guide"), "true");
+  Held at: _content/inbox/triaged/_unsure/Mystery.doc.card
+prompt: Which category does Mystery.doc.card belong in?
+input:
+  type: select
+  options:
+    - id: recipes
+      label: recipes
+    - id: todos
+      label: todos
+    - id: _other
+      label: None of these — write a directive
+learning:
+  sink: guide
+  proposal: Items like "Mystery.doc.card" (Could be either.) belong in whichever category the boxholder picks — record that placement as a triage rule so similar items route without asking again.
+directive: Move _content/inbox/triaged/_unsure/Mystery.doc.card from inbox/triaged/_unsure/ into inbox/triaged/<chosen-category>/. If "_other" was selected, follow the user's free-text directive instead.
+asked-at: ${isoDate()}
+---
+`,
+  );
 });
 
 // ## Empty staged is a no-op
@@ -284,8 +299,8 @@ void test("Empty staged is a no-op", async (t) => {
   // doctest:L264
   const box = await makeTmpBox();
   const result = await runTriage({ boxRoot: box.root, decide: async () => ({ decisions: [] }) });
-  t.check({ empty: result.empty, decisions: result.decisions.length }, {
+  t.check({ empty: result.empty, decisions: result.decisions }, {
     empty: true,
-    decisions: 0,
+    decisions: [],
   });
 });

@@ -13,6 +13,9 @@ import { initBox } from "../../../../src/core/box/structure/core.js";
 import { createIntakeJobsForUnjobbed, cleanupStaleJobs } from "../../../../src/cli/commands/wakeup/command.js";
 import type { Connector } from "../../../../src/connector.js";
 
+// A fixed box clock makes the job filenames (stamped in box time) stable.
+process.env.BBX_TIME = "2026-03-04T05:06:07Z";
+
 // ## createIntakeJobsForUnjobbed
 //
 // ### Creates intake jobs for unjobbed inbox items
@@ -38,16 +41,20 @@ void test("When there are card files in content/inbox/ that aren't referenced by
   // doctest:L37
   // A job was created in _bookkeeping/jobs/
   const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
-  const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card"));
-  await t.checkText(jobFiles.length, "1");
+  const jobFile = allFiles.find(f => f.endsWith(".intake.job.card"));
+  t.check(allFiles, [".gitkeep", "2026-03-04T05-06-07-inbox.intake.job.card"]);
 
   // doctest:L43
   // The job references both items
-  const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0] ?? ""), "utf-8");
-  await t.checkText(content.includes("ref: _content/inbox/note1.doc.card"), "true");
-
-  // doctest:L48
-  await t.checkText(content.includes("ref: _content/inbox/note2.task.card"), "true");
+  const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFile ?? ""), "utf-8");
+  t.check(content, `---
+priority: normal
+description: Triage 2 inbox items
+items:
+  - ref: _content/inbox/note1.doc.card
+  - ref: _content/inbox/note2.task.card
+---
+`);
 
   // Running the scan again is a no-op: the YAML `- ref:` lines in the job
   // created above are collected, so the same items aren't re-jobbed (this
@@ -105,17 +112,27 @@ void test("Capture sessions, images, and audio cards get their own low-priority 
   // doctest:L103
   const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
   const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card")).toSorted();
-  await t.checkText(jobFiles.length, "2");
+  t.check(allFiles, [".gitkeep", "2026-03-04T05-06-07-inbox-low.intake.job.card", "2026-03-04T05-06-07-inbox.intake.job.card"]);
 
   // doctest:L108
   // One normal-priority job with the doc, one low-priority with captures
   const job0 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0] ?? ""), "utf-8");
   const job1 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[1] ?? ""), "utf-8");
-  const allContent = job0 + job1;
-  await t.checkText(allContent.includes("note.doc.card"), "true");
-
-  // doctest:L115
-  await t.checkText(allContent.includes("snap.capture-session.card"), "true");
+  t.check(job0, `---
+priority: low
+description: Triage 2 capture items
+items:
+  - ref: _content/inbox/pic.image.card
+  - ref: _content/inbox/snap.capture-session.card
+---
+`);
+  t.check(job1, `---
+priority: normal
+description: Triage 1 inbox item
+items:
+  - ref: _content/inbox/note.doc.card
+---
+`);
 });
 
 // ### Skips excluded subdirectories (feedback)
@@ -163,7 +180,13 @@ void test("An email-outbound card is a draft the agent wrote, waiting for the Gm
   // doctest:L159
   const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
   const content = await readFile(join(box.root, "_bookkeeping/jobs", allFiles.find(f => f.endsWith(".intake.job.card")) ?? ""), "utf-8");
-  await t.checkText(content.includes("email-outbound"), "false");
+  t.check(content, `---
+priority: normal
+description: Triage 1 inbox item
+items:
+  - ref: _content/inbox/email/thread-1/msg-001.email-message.card
+---
+`);
 });
 
 // ### Returns 0 for empty inbox
@@ -211,10 +234,14 @@ void test("Under bbx wakeup --connector X, only items in the connector's declare
   const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
   const jobFile = allFiles.find(f => f.endsWith(".intake.job.card"));
   const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFile ?? ""), "utf-8");
-  await t.checkText(content.includes("connector: gmail"), "true");
-
-  // doctest:L207
-  await t.checkText(content.includes("pages-saved"), "false");
+  t.check(content, `---
+connector: gmail
+priority: normal
+description: Triage 1 inbox item
+items:
+  - ref: _content/inbox/email/thread-1/msg-001.email-message.card
+---
+`);
 });
 
 // ### A scoped scan takes items from jobs its reactor would skip
@@ -240,7 +267,7 @@ void test("A full wakeup's intake job has no connector, and the scoped reactor p
   const jobsDir = join(box.root, "_bookkeeping/jobs");
   const intakeJobs = async () => (await readdir(jobsDir)).filter((f) => f.endsWith(".intake.job.card")).toSorted();
   const [unscoped] = await intakeJobs();
-  t.check(unscoped?.endsWith("-inbox.intake.job.card"), true);
+  t.check(unscoped, "2026-03-04T05-06-07-inbox.intake.job.card");
 
   // The gmail-scoped scan takes both email items. The unscoped job keeps the doc,
   // and its description counts what remains:
@@ -252,30 +279,30 @@ void test("A full wakeup's intake job has no connector, and the scoped reactor p
   // doctest:L244
   const gmailJob = (await intakeJobs()).find((f) => f.endsWith("-gmail.intake.job.card"));
   const gmailContent = await readFile(join(jobsDir, gmailJob ?? ""), "utf-8");
-  t.check(
-    [
-      gmailContent.includes("connector: gmail"),
-      gmailContent.includes("ref: _content/inbox/email/x.email-thread.card"),
-      gmailContent.includes("ref: _content/inbox/email/y.email-thread.card"),
-    ].join(" "),
-    "true true true",
-  );
+  t.check(gmailContent, `---
+connector: gmail
+priority: normal
+description: Triage 2 inbox items
+items:
+  - ref: _content/inbox/email/x.email-thread.card
+  - ref: _content/inbox/email/y.email-thread.card
+---
+`);
 
   // doctest:L253
   const unscopedContent = await readFile(join(jobsDir, unscoped ?? ""), "utf-8");
-  t.check(
-    [
-      unscopedContent.includes("email-thread"),
-      unscopedContent.includes("ref: _content/inbox/note.doc.card"),
-      unscopedContent.includes("description: Triage 1 inbox item\n"),
-    ].join(" "),
-    "false true true",
-  );
+  t.check(unscopedContent, `---
+priority: normal
+description: Triage 1 inbox item
+items:
+  - ref: _content/inbox/note.doc.card
+---
+`);
 
   // The move is committed with the new job:
 
   // doctest:L265
-  await t.checkText(execSync("git status --porcelain", { cwd: box.root }).toString().trim() === "", "true");
+  t.checkText(execSync("git status --porcelain", { cwd: box.root }).toString().trim(), "");
 });
 
 // A job that the move empties is deleted. Here the unscoped job holds only an
@@ -298,10 +325,10 @@ void test("A job that the move empties is deleted.", async (t) => {
 
   // doctest:L287
   const jobs = (await readdir(join(box.root, "_bookkeeping/jobs"))).filter((f) => f.endsWith(".intake.job.card"));
-  t.check([jobs.includes("full.intake.job.card"), jobs.some((f) => f.endsWith("-gmail.intake.job.card"))].join(" "), "false true");
+  t.check(jobs, ["2026-03-04T05-06-07-gmail.intake.job.card"]);
 
   // doctest:L291
-  await t.checkText(execSync("git status --porcelain", { cwd: box.root }).toString().trim() === "", "true");
+  t.checkText(execSync("git status --porcelain", { cwd: box.root }).toString().trim(), "");
 
   // A scoped scan does not take an item from a job it will process — a second gmail
   // scan is a no-op:
@@ -331,7 +358,7 @@ void test("Stale-job cleanup reads the job's frontmatter status: and refs.", asy
   t.check(cleaned, 1);
 
   // doctest:L323
-  await t.checkText((await readdir(join(box.root, "_bookkeeping/jobs"))).includes("dead.intake.job.card"), "false");
+  t.check(await readdir(join(box.root, "_bookkeeping/jobs")), [".gitkeep"]);
 });
 
 // ### Keeps a pending job that still has a live ref

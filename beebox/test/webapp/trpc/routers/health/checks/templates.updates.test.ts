@@ -8,7 +8,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { templateUpdatesCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/templates.js";
 import { loadScheduleHealth, summarizeScheduleHealth } from "../../../../../../src/core/schedule/health-box.js";
 import { saveScriptState, normalizeScriptState } from "../../../../../../src/core/schedule/state.js";
@@ -40,12 +39,7 @@ void test("The quiet case says so rather than staying silent — the check is en
   // doctest:L33
   const clean = await makeTmpBox({ git: true });
   const ok = await templateUpdatesCheck(clean.root);
-  t.check({ name: ok.name, ok: ok.ok, severity: ok.severity, message: ok.message }, {
-    name: "template-updates",
-    ok: true,
-    severity: "warning",
-    message: "No template updates parked for review",
-  });
+  t.check(ok, { name: "template-updates", ok: true, message: "No template updates parked for review", severity: "warning" });
 });
 
 // ## Parked updates with no failing task: `warning`, listing paths and the way out
@@ -66,13 +60,7 @@ void test("Drift is a pending choice, not a defect, so it must not fail a deploy
   await drifted.write("_config/_template-updates/_config/briefing.guide.card", "---\n---\nstock\n");
   await drifted.write("_config/_template-updates/_config/procedures/refresh-maps.procedure.card", procedureCard);
   const warn = await templateUpdatesCheck(drifted.root);
-  t.check({ ok: warn.ok, severity: warn.severity }, {
-    ok: false,
-    severity: "warning",
-  });
-
-  // doctest:L57
-  t.check(warn.message, "2 template updates parked for review: _config/briefing.guide.card, _config/procedures/refresh-maps.procedure.card. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.");
+  t.check(warn, { name: "template-updates", ok: false, message: "2 template updates parked for review: _config/briefing.guide.card, _config/procedures/refresh-maps.procedure.card. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.", severity: "warning" });
 });
 
 // ## A parked update behind a failing task escalates to `error`
@@ -112,19 +100,13 @@ void test("The trap:", async (t) => {
 
   // doctest:L88
   const err = await templateUpdatesCheck(stuck.root, health);
-  t.check({ ok: err.ok, severity: err.severity }, {
-    ok: false,
-    severity: "error",
-  });
-
-  // doctest:L92
-  t.check(err.message, "1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task that is failing: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.");
+  t.check(err, { name: "template-updates", ok: false, message: "1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task that is failing: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.", severity: "error" });
 
   // Without the schedule health (the dashboard and `/api/health` have none loaded)
   // the same box reports the un-escalated, drift-only verdict rather than guessing:
 
   // doctest:L100
-  t.check((await templateUpdatesCheck(stuck.root)).severity, "warning");
+  t.check(await templateUpdatesCheck(stuck.root), { name: "template-updates", ok: false, message: "1 template update parked for review: _config/procedures/refresh-maps.procedure.card. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.", severity: "warning" });
 
   // The failing task's own line carries the note wherever a task speaks — the
   // session-start summary and proactive alerts both build on
@@ -141,8 +123,6 @@ void test("The trap:", async (t) => {
 // which. "A task that is not working" covered both, which is exactly the collapse
 // this area exists to undo: an inconclusive task is unknown, not broken.
 void test("failing and inconclusive both escalate — a parked fix that nobody has read ma...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await unjudged.cleanup();
@@ -166,9 +146,7 @@ void test("failing and inconclusive both escalate — a parked fix that nobody h
   });
   const unjudgedHealth = await loadScheduleHealth(unjudged.root, NOW);
   const unjudgedCheck = await templateUpdatesCheck(unjudged.root, unjudgedHealth);
-  print(unjudgedCheck.severity);
-  await t.checkText(out.with(print(unjudgedCheck.message)), `error
-1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task whose last check reached no verdict: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.`);
+  t.check(unjudgedCheck, { name: "template-updates", ok: false, message: "1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task whose last check reached no verdict: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.", severity: "error" });
 });
 
 // ## A task whose own card is parked, and one with no relation

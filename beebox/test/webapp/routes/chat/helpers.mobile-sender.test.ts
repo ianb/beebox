@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, capture, uuid } from "agent-doctest/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -48,10 +49,11 @@ void test("Pair a device whose createdBy is the owner, then resolve a request th
   // doctest:L38
   const ticket = createMobilePairingTicket(box.root, { createdBy: "rosa@example.com" });
   const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "iPhone" });
-  await t.checkText(device !== null, "true");
+  const deviceToken = capture(any(String));
+  t.check(device, { deviceId: uuid(), deviceToken, label: "iPhone" });
 
   // doctest:L43
-  const sender = await resolveMobileSender(box.root, { authorization: `Bearer ${device?.deviceToken}` });
+  const sender = await resolveMobileSender(box.root, { authorization: `Bearer ${deviceToken.value}` });
   t.check(sender, {
     email: "rosa@example.com",
     name: "Rosa Okafor",

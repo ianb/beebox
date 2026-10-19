@@ -13,6 +13,7 @@ import "agent-doctest/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
+import { any, isoDate, str } from "agent-doctest/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { trpcContext } from "../../helpers/trpc-context.js";
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
@@ -54,24 +55,50 @@ async function attempt(fn: () => Promise<unknown>) {
 //
 // The box has no channel configured, so each channel is logged `no-audience`.
 void test("The box has no channel configured, so each channel is logged no-audience.", async (t) => {
-  t.teardown(async () => {
-    try {
-      await box.cleanup();
-      await fs.rm(storeDir, { recursive: true, force: true });
-    } catch (error) {
-      t.error(error);
-    }
-  });
   // doctest:L58
-  await notifyBoxholder(box.root, {
+  const first = await notifyBoxholder(box.root, {
     intent: { title: "Field trip form due", body: "Sign by Friday.", target: { kind: "dashboard" }, loudness: "loud", source: "doctest" },
   });
   const second = await notifyBoxholder(box.root, {
     intent: { title: "Talk about the trip?", body: "", target: { kind: "chat-new" }, loudness: "quiet", source: "doctest" },
   });
   const recent = await caller({}).notifications.recent({ days: 3 });
-  await t.checkText(recent.map((n) => `${n.intent.title}: ${n.deliveries.map((d) => `${d.channel} ${d.status} ${d.detail}`).join(", ")}`).join("\n"), `Talk about the trip?: apns skipped no-audience, web-push skipped no-audience
-Field trip form due: apns skipped no-audience, web-push skipped no-audience`);
+  const skipped = (notificationId: string, channel: "apns" | "web-push") => ({
+    kind: "delivery" as const,
+    at: isoDate(),
+    notificationId,
+    channel,
+    status: "skipped" as const,
+    detail: "no-audience",
+  });
+  t.check(recent, [
+    {
+      intent: {
+        kind: "intent",
+        at: isoDate(),
+        id: second.id,
+        title: "Talk about the trip?",
+        body: "",
+        target: "chat:new",
+        loudness: "quiet",
+        source: "doctest",
+      },
+      deliveries: [skipped(second.id, "apns"), skipped(second.id, "web-push")],
+    },
+    {
+      intent: {
+        kind: "intent",
+        at: isoDate(),
+        id: first.id,
+        title: "Field trip form due",
+        body: "Sign by Friday.",
+        target: "dashboard",
+        loudness: "loud",
+        source: "doctest",
+      },
+      deliveries: [skipped(first.id, "apns"), skipped(first.id, "web-push")],
+    },
+  ]);
 
   // ## get: one intent by id; null for an unknown id
   //
@@ -80,10 +107,19 @@ Field trip form due: apns skipped no-audience, web-push skipped no-audience`);
 
   // doctest:L77
   const got = await caller({}).notifications.get({ id: second.id });
-  t.check([got?.intent.title, got?.intent.target], [
-    "Talk about the trip?",
-    "chat:new",
-  ]);
+  t.check(got, {
+    intent: {
+      kind: "intent",
+      at: isoDate(),
+      id: second.id,
+      title: "Talk about the trip?",
+      body: "",
+      target: "chat:new",
+      loudness: "quiet",
+      source: "doctest",
+    },
+    deliveries: [skipped(second.id, "apns"), skipped(second.id, "web-push")],
+  });
 
   // doctest:L81
   t.check(await caller({}).notifications.get({ id: "no-such-id" }), null);
@@ -110,9 +146,18 @@ Field trip form due: apns skipped no-audience, web-push skipped no-audience`);
 
   // doctest:L108
   t.check(await attempt(() => caller({}).presence.heartbeat({ sessionId: "x" })), "THREW:BAD_REQUEST");
+});
 
-  // ## send and channels: the box's agent or its owner, on the server's services
-  //
+// ## send and channels: the box's agent or its owner, on the server's services
+void test("send and channels: the box's agent or its owner, on the server's services", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+      await fs.rm(storeDir, { recursive: true, force: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
   // The server's channel services arrive through the context's `services.notify`
   // (production leaves it unset and builds them from the server's keys). This box
   // now has a paired phone and a subscribed browser, and the server holds fakes for
@@ -147,23 +192,69 @@ Field trip form due: apns skipped no-audience, web-push skipped no-audience`);
   const sent = await agent.notifications.send({
     intent: { title: "Pick up Sam", body: "At 3.", target: "chat:new", loudness: "loud", source: "bbx notify" },
   });
-  t.check([sent.deliveries, notify.apns.sent.length, notify.push.sent.length], [
-    [
-      {
-        channel: "apns",
-        status: "sent",
+  const slug = await boxSlug(box.root);
+  t.check(
+    { sent, apns: notify.apns.sent, push: notify.push.sent },
+    {
+      sent: {
+        id: sent.id,
+        deliveries: [
+          { channel: "apns", status: "sent" },
+          { channel: "web-push", status: "sent" },
+        ],
       },
-      {
-        channel: "web-push",
-        status: "sent",
-      },
-    ],
-    1,
-    1,
-  ]);
+      apns: [
+        {
+          token: str`fake-${any(String)}`,
+          environment: "sandbox",
+          payload: {
+            aps: {
+              alert: { title: "Pick up Sam", body: "At 3." },
+              "interruption-level": "active",
+              badge: 1,
+              sound: "default",
+            },
+            target: "chat:new",
+            loudness: "loud",
+            notificationId: sent.id,
+            box: slug,
+          },
+          headers: { "apns-push-type": "alert", "apns-topic": "app.beebox.fake" },
+        },
+      ],
+      push: [
+        {
+          endpoint: "https://push.example/phone",
+          payload: {
+            icon: `${slug}/icon-192.png`,
+            title: "Pick up Sam",
+            body: "At 3.",
+            url: `/${slug}/chat?new=1&notification=${sent.id}`,
+            tag: undefined,
+            silent: false,
+          },
+        },
+      ],
+    },
+  );
 
   // doctest:L143
-  t.check((await caller({}).notifications.get({ id: sent.id }))?.intent.source, "bbx notify");
+  t.check(await caller({}).notifications.get({ id: sent.id }), {
+    intent: {
+      kind: "intent",
+      at: isoDate(),
+      id: sent.id,
+      title: "Pick up Sam",
+      body: "At 3.",
+      target: "chat:new",
+      loudness: "loud",
+      source: "bbx notify",
+    },
+    deliveries: [
+      { kind: "delivery", at: isoDate(), notificationId: sent.id, channel: "apns", status: "sent" },
+      { kind: "delivery", at: isoDate(), notificationId: sent.id, channel: "web-push", status: "sent" },
+    ],
+  });
 
   // `channel` restricts the send to one channel, as `bbx notify --channel` does:
 
@@ -172,12 +263,7 @@ Field trip form due: apns skipped no-audience, web-push skipped no-audience`);
     intent: { title: "Only the phone", body: "", target: "dashboard", loudness: "loud", source: "bbx notify" },
     channel: "apns",
   });
-  t.check(one.deliveries, [
-    {
-      channel: "apns",
-      status: "sent",
-    },
-  ]);
+  t.check(one, { id: any(String), deliveries: [{ channel: "apns", status: "sent" }] });
 
   // The signed-in owner may send too. A member who is not the owner, a paired
   // device acting for nobody, and an open-access request are refused: reaching the
@@ -186,7 +272,13 @@ Field trip form due: apns skipped no-audience, web-push skipped no-audience`);
 
   // doctest:L164
   const intent = { title: "x", body: "", target: "dashboard", loudness: "loud", source: "doctest" } as const;
-  await t.checkText((await caller({ services: { notify } }).notifications.send({ intent })).deliveries.length, "2");
+  t.check(await caller({ services: { notify } }).notifications.send({ intent }), {
+    id: any(String),
+    deliveries: [
+      { channel: "apns", status: "sent" },
+      { channel: "web-push", status: "sent" },
+    ],
+  });
 
   // doctest:L168
   t.check(
@@ -196,8 +288,8 @@ Field trip form due: apns skipped no-audience, web-push skipped no-audience`);
       await attempt(() => caller({ actor: "open", isAuthenticatedOwner: false }).notifications.send({ intent })),
       await attempt(() => caller({ actor: "none", authed: false, isOwner: false, isAuthenticatedOwner: false }).notifications.send({ intent })),
       await attempt(() => caller({ actor: "none", authed: false, isOwner: false, isAuthenticatedOwner: false }).notifications.channels()),
-    ].join(" "),
-    "THREW:FORBIDDEN THREW:FORBIDDEN THREW:FORBIDDEN THREW:UNAUTHORIZED THREW:UNAUTHORIZED",
+    ],
+    ["THREW:FORBIDDEN", "THREW:FORBIDDEN", "THREW:FORBIDDEN", "THREW:UNAUTHORIZED", "THREW:UNAUTHORIZED"],
   );
 
   // A target the log could not hold is refused at the boundary, before anything is
