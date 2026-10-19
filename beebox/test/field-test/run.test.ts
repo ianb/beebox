@@ -299,7 +299,10 @@ void test("A scenario that involves email starts with the connector already conf
 // One run covers the cases worth a real server: a normal item with a passing and a
 // failing check, an activity whose session errors (no debrief), an item whose
 // `reset` cleanup rewinds the box and restarts the server, and an item whose `pre`
-// action fails before the operator is ever asked.
+// action fails before the operator is ever asked. A failed `pre` skips the
+// activity and the checks: the world is not what the brief assumes, so an
+// activity would spend a real operator on a question the harness already broke,
+// and the report would read as a product failure.
 void test("One run covers the cases worth a real server:", async (t) => {
   t.teardown(async () => {
     try {
