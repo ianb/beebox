@@ -56,4 +56,4 @@ re-checks during the run.
 - Consider a host-wide lock so that two full suites (the schedule and a
   worktree's own run) do not run at once.
 
-Related: [fixed timeout budgets fail under host load](../../bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md).
+Related: [fixed timeout budgets fail under host load](2026-09-02-fixed-timeout-budgets-fail-under-host-load.md).

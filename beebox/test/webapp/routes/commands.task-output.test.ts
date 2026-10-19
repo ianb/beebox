@@ -23,9 +23,10 @@ async function makeClaudeTmpRoot() {
 }
 
 /** Write a task output file at the exact shape the route expects, returning
- *  its absolute path. */
+ *  its absolute path. The CLI encodes its own cwd, which the OS reports with
+ *  symlinks resolved (on macOS a tmp box's `/var` is `/private/var`). */
 async function writeTaskOutput({ tmpRoot, cwd, session, file, content }: { tmpRoot: string; cwd: string; session?: string; file?: string; content?: string }) {
-  const dir = path.join(tmpRoot, encodeProjectDir(cwd), session ?? "sess-1", "tasks");
+  const dir = path.join(tmpRoot, encodeProjectDir(await fs.realpath(cwd)), session ?? "sess-1", "tasks");
   await fs.mkdir(dir, { recursive: true });
   const filePath = path.join(dir, file ?? "t1.output");
   await fs.writeFile(filePath, content ?? "task output content");
@@ -77,7 +78,7 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
 
-  const foreignCwdPath = path.join(tmpRoot, encodeProjectDir(ctx.b.boxRoot), "sess-1", "tasks", "t1.output");
+  const foreignCwdPath = path.join(tmpRoot, encodeProjectDir(await fs.realpath(ctx.b.boxRoot)), "sess-1", "tasks", "t1.output");
   const foreignCwdRes = await ctx.server.inject({
     method: "GET",
     url: `/alpha/api/task-output?file=${encodeURIComponent(foreignCwdPath)}`,

@@ -1,15 +1,18 @@
 /**
- * Runs `parseSessionLog` in a child process (`parse-session-log-child.ts`)
- * under a hard V8 heap cap, for the session-retention and oversize-lines
- * tests.
+ * Runs `parseSessionLog` in a child process (`parse-session-log-child.ts`) and
+ * reports the heap the parse kept alive, for the session-retention and
+ * oversize-lines tests.
  *
- * A cap only discriminates when the bounded and unbounded parses sit far
- * apart next to it: when a run near the cap dies depends on GC timing, and
- * tsx alone holds ~25-45 MB. The oversize-lines fixture's bounded parse
- * flaked at 64 MB under load while its unbounded parse survived 96 MB, so
- * that test uses a backstop cap and asserts on `retainedMb` instead: the
- * heap held after a forced GC with the parse result still live, minus the
- * same measurement before the parse. That number is deterministic.
+ * Both numbers are live-heap measurements after a forced GC, relative to the
+ * same measurement before the parse: `retainedMb` with the result still held,
+ * and `peakLiveMb` as the largest of samples taken while the parse runs. GC
+ * timing and host load cannot move a live-set measurement, so the tests assert
+ * on these numbers.
+ *
+ * The tests used to assert that the child survived a `--max-old-space-size`
+ * cap instead. That flaked: a cap mixes the parse's bound with tsx and the
+ * module graph (~75 MB live on 2026-10-18) and with when V8 gets to collect,
+ * so a correct parse died under load at both 64 MB and 128 MB.
  */
 
 import { spawn } from "node:child_process";
@@ -27,25 +30,25 @@ class ParseChildFailedError extends Error {
 }
 
 /** What the child prints on stdout. */
-export interface HeapCappedParse {
+export interface ChildParse {
   entries: number;
   total: number;
   hasMore: boolean;
   stubs: number;
   stubSample: string | null;
   retainedMb: number;
+  peakLiveMb: number;
 }
 
 /**
- * Parse `logPath` with `slice` under a `heapMb` cap. Rejects, with the child's
- * exit code and stderr tail, when the child dies or prints nothing — so a heap
- * death reports as one instead of as a JSON syntax error.
+ * Parse `logPath` with `slice` in a child. Rejects, with the child's exit code
+ * and stderr tail, when the child dies or prints nothing.
  */
-export function parseUnderHeapCap({ logPath, slice, heapMb }: { logPath: string; slice: SessionLogSlice; heapMb: number }): Promise<HeapCappedParse> {
+export function parseInChild({ logPath, slice }: { logPath: string; slice: SessionLogSlice }): Promise<ChildParse> {
   return new Promise((resolve, reject) => {
     const child = spawn(
       process.execPath,
-      [`--max-old-space-size=${heapMb}`, "--expose-gc", "--import", "tsx", CHILD_SCRIPT, logPath, JSON.stringify(slice)],
+      ["--expose-gc", "--import", "tsx", CHILD_SCRIPT, logPath, JSON.stringify(slice)],
       { cwd: PACKAGE_ROOT, stdio: ["ignore", "pipe", "pipe"] },
     );
     let stdout = "";
@@ -59,7 +62,7 @@ export function parseUnderHeapCap({ logPath, slice, heapMb }: { logPath: string;
         return;
       }
       // eslint-disable-next-line no-restricted-syntax -- parse boundary: the only producer is parse-session-log-child.ts
-      resolve(JSON.parse(stdout) as HeapCappedParse);
+      resolve(JSON.parse(stdout) as ChildParse);
     });
   });
 }

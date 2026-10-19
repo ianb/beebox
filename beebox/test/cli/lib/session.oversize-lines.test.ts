@@ -17,7 +17,7 @@ import { parseSessionLog, MAX_SESSION_LINE_BYTES } from "../../../src/cli/lib/se
 import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
 import { writeGiantLineSessionLog } from "./session-log-fixture.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
-import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
+import { parseInChild } from "./parse-in-child.js";
 import fs from "node:fs/promises";
 
 // The threshold is far above any human-authored turn and far below the ~1.3 MB
@@ -31,17 +31,13 @@ void test("The threshold is far above any human-authored turn and far below the 
 // 40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64 inflation
 // is counted), interleaved with normal-sized turns. `tail: 200` covers the whole
 // file, so retention bounds nothing here — only the per-line byte bound keeps the
-// giant payloads out of the result. The child measures the heap the parse result
-// holds after a forced GC (`retainedMb`); a 128 MB cap backs it up against a parse
-// that allocates the world. (A tight cap was the assertion once, and flaked: the
-// bounded parse and tsx together sit near 64 MB, and when a run near a cap dies
-// depends on GC timing — see `parse-under-heap-cap.ts`.)
+// giant payloads out of the result. The child measures the live heap after a
+// forced GC: what the parse result holds (`retainedMb`) and the largest sample
+// taken while the parse runs (`peakLiveMb`). Measured on 2026-10-18: 0 and 3 MB
+// bounded, 31 and 33 MB with the byte bound removed. (A heap cap on the child was
+// the assertion once, and flaked under load — see `parse-in-child.ts`.)
 void test("40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64 inflati...", async (t) => {
-  // Without the bound the same parse retained 30 MB, and under the old 64 MB cap
-  // the child died:
-  //
-  //     FATAL ERROR: Ineffective mark-compacts near heap limit
-  //     Allocation failed - JavaScript heap out of memory
+  // Without the bound the same parse retained 30 MB.
   //
   // Twenty of the forty giant lines are stubs, not all forty. The fixture alternates
   // two kinds: giant *assistant* turns, whose bulk is one enormous text block, and
@@ -68,7 +64,7 @@ void test("40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64
   const logPath = box.path("giant.jsonl");
   await writeGiantLineSessionLog({ logPath, giantLines: 40, giantBytes: 1_200_000, normalLinesBetween: 3 });
 
-  const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 128 });
+  const out = await parseInChild({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 } });
   t.check(out, {
     entries: 120,
     total: 120,
@@ -76,6 +72,7 @@ void test("40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64
     stubs: 20,
     stubSample: str`[message too large to display: ~${any(String).matches(/^\d+$/)} KB]`,
     retainedMb: any(Number).below(8),
+    peakLiveMb: any(Number).below(8),
   });
 });
 

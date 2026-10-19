@@ -18,7 +18,7 @@ import {
 } from "../../../src/cli/lib/session.js";
 import { writeBigSessionLog } from "./session-log-fixture.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
-import { parseUnderHeapCap } from "./parse-under-heap-cap.js";
+import { parseInChild } from "./parse-in-child.js";
 
 /** The uuids the fixture's real entries carry between `from` and `to`; the `i % 4 === 2` lines are tool results grafted onto their call. */
 function uuids(from: number, to: number): string[] {
@@ -35,20 +35,17 @@ function typed(i: number) {
   };
 }
 
-// ## A big transcript, parsed under a 128 MB heap cap
+// ## A big transcript, parsed with bounded live heap
 //
 // The fixture is ~2 400 lines carrying ~60 KB of payload each — a 120 MB
-// transcript, which is small next to a real long-running session but more than
-// a 128 MB heap can hold once every entry is retained. Asking for `tail: 200`
-// retains 200 entries and the child finishes well under the cap.
-//
-// The cap only means something when the bounded and unbounded parses sit far
-// from it on both sides. Measured on 2026-10-12: the bounded parse finishes under
-// an 80 MB cap (its peak is tsx, the module graph and one window, whatever the
-// file size), while a parse that retains every line dies under 160 MB. At the old
-// 30 KB payload the unbounded parse survived 128 MB, so the test passed against
-// the regression it guards; at 64 MB the bounded parse died on GC timing. A
-// bigger file moves only the unbounded side.
+// transcript, which is small next to a real long-running session. Asking for
+// `tail: 200` retains 200 entries. The child samples the live heap (after a
+// forced GC) while the parse runs; `peakLiveMb` is the largest sample above the
+// pre-parse baseline. Every retained byte counts against `MAX_RETAINED_BYTES`
+// (32 MiB), so a bounded parse stays under 40 MB at every moment, whatever the
+// file size. Measured on 2026-10-18: 13 MB here, against 114 MB for a parse that
+// holds every entry and slices the tail at the end — the regression this guards,
+// which leaves `retainedMb` unchanged because only the peak shows it.
 void test("The fixture is ~2 400 lines carrying ~60 KB of payload each — a 120 MB transc...", async (t) => {
   t.teardown(async () => {
     try {
@@ -61,22 +58,31 @@ void test("The fixture is ~2 400 lines carrying ~60 KB of payload each — a 120
   const logPath = box.path("big.jsonl");
   await writeBigSessionLog({ logPath, lines: 2400, payloadBytes: 60_000 });
 
-  const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 128 });
-  // `retainedMb` is a heap measurement.
-  t.check(out, { entries: 200, total: 1800, hasMore: true, stubs: 0, stubSample: null, retainedMb: any(Number) });
+  const out = await parseInChild({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 } });
+  // Heap figures vary by a megabyte with V8 version; the bound is the retained-byte budget plus slack.
+  t.check(out, {
+    entries: 200,
+    total: 1800,
+    hasMore: true,
+    stubs: 0,
+    stubSample: null,
+    retainedMb: any(Number).below(40),
+    peakLiveMb: any(Number).below(40),
+  });
 
-  // Before the bound, this same child (parsing the whole file, then slicing a tail
-  // of 200 off it) died at the cap:
-  //
-  //     FATAL ERROR: Ineffective mark-compacts near heap limit
-  //     Allocation failed - JavaScript heap out of memory
-  //     exit=134
-  //
   // A page request of the same transcript is bounded the same way — retention is
-  // the window, not the file:
+  // the window, not the file (3 MB measured):
 
-  const pageOut = await parseUnderHeapCap({ logPath, slice: { mode: "page", offset: 10, limit: 40 }, heapMb: 128 });
-  t.check(pageOut, { entries: 40, total: 1800, hasMore: true, stubs: 0, stubSample: null, retainedMb: any(Number) });
+  const pageOut = await parseInChild({ logPath, slice: { mode: "page", offset: 10, limit: 40 } });
+  t.check(pageOut, {
+    entries: 40,
+    total: 1800,
+    hasMore: true,
+    stubs: 0,
+    stubSample: null,
+    retainedMb: any(Number).below(40),
+    peakLiveMb: any(Number).below(40),
+  });
 });
 
 // ## Serialized bytes co-limit the retained tail

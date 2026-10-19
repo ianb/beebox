@@ -71,20 +71,39 @@ export function containedSessionCwd(boxRoot: string, contextDir: string | undefi
 }
 
 /**
+ * The cwd as the Claude CLI records it. The CLI keys a transcript by its own
+ * `process.cwd()`, which the OS reports with symlinks resolved: a box under
+ * macOS's `/var/folders` (a link to `/private/var/folders`) has its
+ * transcripts under `-private-var-folders-...`. When the cwd does not exist
+ * (a deleted landmark), its nearest existing ancestor is resolved and the
+ * rest re-appended, so it keeps the same prefix as its box root.
+ */
+function cliCwd(cwd: string): string {
+  const absolute = path.resolve(cwd);
+  try {
+    return fs.realpathSync(absolute);
+  } catch (e) {
+    const code = errnoCode(e);
+    if (code !== "ENOENT" && code !== "ENOTDIR") throw e;
+    const parent = path.dirname(absolute);
+    return parent === absolute ? absolute : path.join(cliCwd(parent), path.basename(absolute));
+  }
+}
+
+/**
  * Get the path to a Claude Code session log file. `cwd` is whatever
  * was passed as the SDK's `cwd` for the run — usually the box root,
  * but a landmark-bound chat or audit uses a subdirectory.
  */
 export function getSessionLogPath(cwd: string, sessionId: string): string {
-  const claudeDir = path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
-  return path.join(claudeDir, `${sessionId}.jsonl`);
+  return path.join(getSessionDir(cwd), `${sessionId}.jsonl`);
 }
 
 /**
  * Get the Claude Code projects directory for a given SDK cwd.
  */
 export function getSessionDir(cwd: string): string {
-  return path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
+  return path.join(claudeProjectsRoot(), encodeProjectDir(cliCwd(cwd)));
 }
 
 /**
@@ -108,8 +127,9 @@ export function getSessionDir(cwd: string): string {
  * accept an unrelated box whose encoded root happens to start with the
  * same characters.
  *
- * Pure path-string logic only — no filesystem access, so it's safe to call
- * before any `stat`/`realpath` (and the caller re-checks it AFTER
+ * Path-string logic on `filePath` — the only filesystem access resolves the
+ * trusted `boxRoot` the way the CLI does — so it's safe to call before any
+ * `stat`/`realpath` of `filePath` (and the caller re-checks it AFTER
  * `realpath`, so a symlink inside an otherwise-valid path can't point the
  * read at another box's task output).
  */
@@ -128,7 +148,8 @@ export function isTaskOutputPathForBox({ boxRoot, filePath }: { boxRoot: string;
   // Exactly one segment after `tasks/` — a plain output file, not a nested path.
   if (fileSegments.length !== 1 || fileSegments[0] === "") return false;
 
-  const encodedBoxRoot = encodeProjectDir(boxRoot);
+  // The CLI names this segment after its own cwd, symlinks resolved.
+  const encodedBoxRoot = encodeProjectDir(cliCwd(boxRoot));
   return encodedCwd === encodedBoxRoot || encodedCwd.startsWith(`${encodedBoxRoot}-`);
 }
 

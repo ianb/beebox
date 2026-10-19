@@ -13,7 +13,7 @@ import { BOX_DIRS, BOX_MARKER, boxPath } from "../../../lib/paths/core.js";
 import { initRepo, isRepo } from "../../../lib/git/core/operations.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
-import { claudeProjectsRoot, encodeProjectDir } from "../../chat/session/transcript-paths.js";
+import { getSessionDir } from "../../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../../migrations.js";
 import { UNIGNORE_BLOCK } from "../../attachments-gitignore.js";
 import { installTricksPackageJson } from "../templates.js";
@@ -387,15 +387,14 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   const resolvedRoot = path.resolve(boxRoot);
   const shape = await getBoxShape(resolvedRoot);
   const localMemoryDir = path.join(shape.boxRoot, ".claude", "memory");
-  // `claudeProjectsRoot()` and `encodeProjectDir()` (src/core/chat/session/
-  // transcript-paths.ts) are the one shared resolver + encoder for
-  // `~/.claude/projects/<dir>`. The encoder collapses EVERY non-alphanumeric
-  // character (not only `/`) — a box path with `_` or `.` in it, linked under a
-  // `/`-only translation, lands in a directory Claude Code never reads, so its
-  // auto-memory silently stays global. The root also honors
-  // `BBX_CLAUDE_PROJECTS_DIR`, so tests and the box-packageify smoke test
-  // can point this at a fixture directory instead of the real global one.
-  const globalMemoryDir = path.join(claudeProjectsRoot(), encodeProjectDir(resolvedRoot), "memory");
+  // `getSessionDir()` (src/core/chat/session/transcript-paths.ts) is the one
+  // shared resolver + encoder for `~/.claude/projects/<dir>`. It encodes the
+  // cwd as Claude Code sees it — symlinks resolved, EVERY non-alphanumeric
+  // character (not only `/`) collapsed to `-` — so a box path with `_`, `.`,
+  // or a symlink in it is linked where Claude Code reads its memory. The root
+  // honors `BBX_CLAUDE_PROJECTS_DIR`, so tests and the box-packageify smoke
+  // test can point this at a fixture directory instead of the real global one.
+  const globalMemoryDir = path.join(getSessionDir(resolvedRoot), "memory");
 
   // Check if the global path is already a symlink pointing here
   try {
@@ -415,39 +414,66 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   // Ensure local .claude/memory/ exists
   await fs.mkdir(localMemoryDir, { recursive: true });
 
-  // Move any existing memory files from global to local
-  try {
-    const stat = await fs.lstat(globalMemoryDir);
-    if (stat.isDirectory() && !stat.isSymbolicLink()) {
-      const files = await fs.readdir(globalMemoryDir);
-      for (const file of files) {
-        const src = path.join(globalMemoryDir, file);
-        const dest = path.join(localMemoryDir, file);
-        try {
-          await fs.access(dest);
-          // Local file already exists — skip (don't overwrite)
-        } catch (_e) {
-          // fs.access throws ENOENT when dest is absent — the normal case
-          // for moving a file in. The error carries no actionable info.
-          await fs.rename(src, dest);
-        }
+  // Move any existing memory files from global to local. A file that cannot
+  // move (the box already has one by that name, or the rename fails, e.g.
+  // EXDEV across filesystems) stays where it is, and so does its directory:
+  // both copies are memory someone wrote, and which one wins is the
+  // boxholder's call.
+  const globalStat = await fs.lstat(globalMemoryDir).catch((e: unknown) => {
+    if (errnoCode(e) === "ENOENT") return null; // first-time case: nothing to move
+    throw e;
+  });
+  if (globalStat?.isDirectory() && !globalStat.isSymbolicLink()) {
+    const kept: string[] = [];
+    for (const file of await fs.readdir(globalMemoryDir)) {
+      const src = path.join(globalMemoryDir, file);
+      const dest = path.join(localMemoryDir, file);
+      const destExists = await fs.access(dest).then(
+        () => true,
+        (e: unknown) => errnoCode(e) !== "ENOENT",
+      );
+      if (destExists) {
+        kept.push(`${file} (the box has one)`);
+        continue;
       }
-      await fs.rm(globalMemoryDir, { recursive: true });
+      try {
+        await fs.rename(src, dest);
+      } catch (e) {
+        kept.push(`${file} (${errnoCode(e) ?? String(e)})`);
+      }
     }
-  } catch (_e) {
-    // lstat throws ENOENT when the global dir doesn't exist — nothing to
-    // move. The error carries no actionable info; absence is expected.
+    if (kept.length > 0) {
+      console.warn(
+        `Not linking ${globalMemoryDir} to ${localMemoryDir}; kept ${kept.join(", ")}. Merge them into the box copy and remove the global directory, then re-run init.`,
+      );
+      return false;
+    }
+    // Not recursive: a file written after the readdir above makes this fail
+    // (ENOTEMPTY) instead of deleting it.
+    try {
+      await fs.rmdir(globalMemoryDir);
+    } catch (e) {
+      console.warn(`Not linking ${globalMemoryDir} to ${localMemoryDir}; it was not empty after the move (${errnoCode(e) ?? String(e)}). Re-run init.`);
+      return false;
+    }
   }
 
   // Ensure parent directory for symlink exists
   await fs.mkdir(path.dirname(globalMemoryDir), { recursive: true });
 
-  // Remove whatever's at the global path (stale symlink, empty dir, etc.)
+  // Remove whatever's at the global path (stale symlink, stray file, empty
+  // dir). `force` makes absence fine; a directory needs `rmdir`, which is not
+  // recursive, so one that filled up since the move above is left alone.
   try {
-    await fs.rm(globalMemoryDir, { recursive: true });
+    await fs.rm(globalMemoryDir, { force: true });
   } catch (_e) {
-    // Nothing at the global path to clear before symlinking. The error
-    // carries no actionable info; absence is the expected, fine case.
+    // `rm` without `recursive` refuses a directory.
+    try {
+      await fs.rmdir(globalMemoryDir);
+    } catch (e) {
+      console.warn(`Not linking ${globalMemoryDir} to ${localMemoryDir}; could not clear it (${errnoCode(e) ?? String(e)}). Re-run init.`);
+      return false;
+    }
   }
 
   // Create symlink: global → local
