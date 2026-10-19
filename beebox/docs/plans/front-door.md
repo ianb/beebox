@@ -52,6 +52,32 @@ ground since the October 9 walks and are cited below:
 [root-onboarding-openers-outlive-the-purpose](../../../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md)
 (the briefing rule that removes stock openers).
 
+## Revision of 2026-10-19 (after the first implementation)
+
+The first implementation of this plan shipped on the branch (Tracks A–F,
+commits `917676083`..`d7dd709e7`). The boxholder then read the stock
+summary and gave three decisions that replace Track A:
+
+- The first words are "a bit tool-centered". A box should not describe what
+  it can do before it has heard what the person cares about. "A good
+  starting conversation is 'what kind of things do you want to do here?'"
+  (boxholder, 2026-10-19). Ideas come after hearing.
+- "I'll keep it here and bring it back when you ask" is "bad language, very
+  unclear. Really it's starting a conversation." The first screen is the
+  start of a conversation, not a description.
+- Every box can open with that as an active question, so "make the question
+  system work for what we're doing. The box should start with questions, and
+  the way those questions are presented in the beginning is how we do this
+  onboarding" (boxholder, 2026-10-19, verbatim).
+
+Also: "the voice interaction is non-obvious, and a walkthrough there could be
+nice"; "maybe a 'Tell me about voice/talking' is a good addition".
+
+Track A below is rewritten for that direction. Tracks B–F stand as shipped.
+The parts of the shipped Track A that the new Track A removes are listed in
+its "What comes out" bullet. The rest of this document is updated where the
+old Track A reached it; the first-round text is kept where it still holds.
+
 ## What the walks found, against the code on `main` today
 
 Verified on 2026-10-19 against this worktree and its test box
@@ -81,9 +107,15 @@ front door to that card.
 
 ### Situations
 
-- When Juni opens her new box for the first time, I want the first page to
-  say what this is and three things I could do now, so I can start without
-  asking the chat what the chat is for.
+- When Juni opens her new box for the first time, I want the box to ask me
+  what I want to keep track of here, with the cursor ready for my answer, so
+  the first thing that happens is a conversation about my life and not a
+  description of the software.
+- When Juni has just answered, I want the agent to hear her out and then
+  offer two or three things the box could do for that, so the ideas are
+  about her and not a menu.
+- When Juni would rather talk than type, I want one line that says talking
+  is possible and shows her how, so the microphone is not a mystery button.
 - When Juni comes back the next morning, I want the page to show what she
   saved and what is on her plate, so she knows the box kept it and what is
   next.
@@ -100,56 +132,86 @@ front door to that card.
 - When Priya returns to a chat where she had cards open, she does not want a
   front page pushed over them. (Quiet; arrival already stays quiet here.)
 - When Tomas has written the root summary in his own words, he does not want
-  the box to replace it with stock text. (Quiet; the stock text is written
-  once, at init.)
+  the box to replace it with stock text. (Quiet; the engine never writes a
+  root body over a written one, and it no longer writes a stock one.)
+- When Tomas opens a chat on a box that has been running for a year, he does
+  not want its first screen to interrogate him. (Quiet unless something is
+  waiting: the chat shows a question only when one is pending, and one at a
+  time.)
 
 ### Right place, right time
 
 | Situation | Act, show, or quiet | Surface and card | Attention |
 |---|---|---|---|
-| Juni, first open | Show | Root place page: stock summary at the top, then "Nothing saved here yet" | Waits to be found; the chat beside it shows the openers |
+| Juni, first open | Show | The empty root chat: the box's pending question, "What do you want to keep track of here?", with the composer focused on it; the Box page beside it is empty but for "1 question waiting" | The chat is where she is looking; nothing pushes |
+| Juni, just answered | Act | The agent's reply in chat: what it heard back in a sentence, then two or three offers for that | The conversation she started |
+| Juni, would rather talk | Show on request | The opener "Tell me about talking instead of typing."; the agent's reply walks through the mic and answers aloud | Found by choice |
 | Juni, next morning | Show | Root place page: the agent's summary, the count line, "Also here" | Waits to be found |
 | Tomas, Sunday evening | Show | Root place page: count line; the Lending place's summary says what is out | Waits to be found |
 | Priya, Browse | Show | Browse opens on her content; empty template folders fold behind "N more" | Waits to be found |
 | Idris, schedules | Show on request | Browse's Raw switch shows the box root and its five areas | Found by choice |
-| Juni, a dozen lines | Show | The stock summary's last sentence and a third opener; later, the agent's offer in chat | Waits to be found; the agent offers when a list grows |
+| Juni, a dozen lines | Show | The agent's offer in chat when a kind of card grows (Track F) | The agent offers when a list grows |
 | Priya, saved cards | Quiet | Her saved arrangement | Nothing new |
 | Tomas's own words | Quiet | His summary stays | Nothing new |
-| Juni, first open on the phone | Show | The empty chat: the stock summary's first two sentences above the openers (Track A, phone) | Waits to be found; no card opens |
+| Juni, first open on the phone | Show | The same empty chat: the question, the composer, the voice opener | The first screen is the chat; no card opens |
+| Tomas, year-old box, a question pending from a triage run | Show | The empty chat shows that question the same way, with "and 3 more" to the Questions page and "Not now" | One question, not the queue |
 
-The stock summary is written once, at `bbx init`, like the stock openers. The
-agent replaces it when it records the box's purpose, which is the moment it
-learns what the box is for; the same briefing rule already removes the stock
-openers then (`briefing.tsx:101-104`).
+The onboarding question is written once, at `bbx init`, as a pending
+question card in `_bookkeeping/questions/`, the only place the system looks
+for questions (`docs/questions.md`, "Where questions live"). It is answered
+the way the person answers anything: by talking in the chat. The agent, once
+it has heard enough, marks the card answered and does what the card's
+`directive:` says, in the same conversation. The stock openers retire at the
+same moment (`briefing.tsx:101-104`, the rule as shipped).
 
 ### Spirit
 
-- **Serves:** "It should feel like a place": the first page says whose place
-  this is and what is in it, and "tell the story of how it got there" is the
-  summary's job once the agent writes it.
-- **Serves:** "It should feel possible": "oh, I could make it do *that*?" is
-  the sentence about asking for a page.
-- **Risks:** "The best stuff comes from the people": stock prose is nobody's
-  words. Guard: it is short, it is replaced at the first real conversation,
-  and a hand-edited root landmark is never rewritten by the engine
-  (`defaults.ts:255`: "a real landmark — leave the user's content alone").
+- **Serves:** "The best stuff comes from the people": the first words on the
+  screen are a question to the person, and the first words written into the
+  box are theirs. The agent's ideas follow what it heard.
+- **Serves:** "It should feel like a place": the Box page fills with the
+  person's words once they have answered; "tell the story of how it got
+  there" is the summary's job once the agent writes it.
+- **Serves:** "It should feel possible": the offers after the answer, and
+  the voice walkthrough, are "oh, I could do *that*?" moments tied to what
+  the person said.
+- **Risks:** a question on the first screen can read as a form. Guard: it
+  is one line in the agent's voice, answered in the composer like any
+  message, with no field, no submit, and a quiet "Not now".
 - **Risks:** "You should be able to see the gears": hiding the layout from
   Browse hides where things live. Guard: the Raw switch shows the whole box
   root; nothing is removed, only led with content.
 
 ### Trust
 
-Shows only, takes no action. The stock summary is template content installed
-once. The agent's later rewrite follows the place-summary rule already
-decided: keep any sentence the person wrote, ask before removing it
-(`place-shows-cards.md`, "Trust").
+Shows a question and takes no action until the person answers. The
+question card is template content installed once, pending, with no
+notification: `checkPendingQuestionsAndNotify` runs from wakeup
+(`question-alert.ts`), and a fresh box has no wakeup schedule enabled
+(`defaults.ts:329-412`: only `refresh-maps`, `gc-procedure-runs`, and
+`process-retrospective` are `enabled: true`), so the box does not push "you
+have a question" at someone who has not opened it. The agent marks the card
+answered only after hearing the person; the answer it records is their
+words. The agent's later rewrite of the Box page follows the place-summary
+rule already decided: keep any sentence the person wrote, ask before
+removing it (`place-shows-cards.md`, "Trust").
 
 ### When it goes wrong or does nothing
 
-- **The agent records the purpose somewhere other than the briefing** (the
-  residual risk the openers fix recorded): the stock summary and openers
-  stay. The person sees onboarding text on a box that has a purpose. They can
-  say "update the front page" in chat; the agent edits the landmark body.
+- **The agent hears the answer but never marks the card answered:** the
+  question is still pending, so the next empty chat asks it again. The
+  chat-prompt rule tells the agent that a pending question whose answer the
+  briefing already holds is answered from the briefing, not re-asked
+  (`guide.md:301-306`, "check existing", extended). The person can also say
+  "you asked me that" and the agent answers the card.
+- **The person does not want to answer:** "Not now" dismisses the card
+  (`actions.dismiss`); a dismissed question leaves the chat's empty state
+  and stays answerable on the Questions page (`docs/questions.md`,
+  "Lifecycle"). Nothing nags: the aging nudge needs a wakeup.
+- **An existing box has a long pending backlog** (the test box has 39): the
+  chat shows one question, the newest pending, with "and 38 more" to the
+  Questions page. Question 10 below is whether existing boxes take part at
+  all.
 - **The root has one marked entry point** (the test box): today arrival
   opens that card. With Track B the root page opens and lists the card first
   under "Start here".
@@ -163,10 +225,9 @@ decided: keep any sentence the person wrote, ask before removing it
   it; Raw does, and `bbx validate` already reports it (`box-layout.md`, "The
   closed root vocabulary").
 - **Phone layout:** arrival opens no card (landmark-arrival decision c). The
-  front door there is the chat with openers, so Track A also shows the stock
-  summary's first two sentences above the openers in the empty root chat on
-  the phone layout. The agent's later summary is not shown there: the Box
-  tab is one tap away, and the chat stays the priority (decision c).
+  front door there is the chat, which is where the question is, so the phone
+  and the desktop show the same first screen. The agent's later summary is
+  not shown in the chat: the Box tab is one tap away (decision c).
 
 ### Walkthrough
 
@@ -175,16 +236,18 @@ Juni, a new box, desktop layout.
 1. She opens the box. The index redirects to `/chat`, a fresh chat; arrival
    finds no saved arrangement and opens the root arrival target, which is now
    always the root place page (Track B).
-2. The page shows the root label, then the stock summary (Track A): what the
-   box is, three things to try, and that she can ask for a page. Below it,
-   "Nothing saved here yet. Tell me about something in the chat and I'll
-   keep it here." (Track E). "Start something" is hidden because the chat
-   beside it shows the same three openers (decision a of landmark arrival).
-3. She clicks "Let me tell you what this box is for." and says it is for
-   keeping track of what she lends and what she owes. The agent writes the
-   purpose into the briefing; the briefing rule (extended in Track A) has it
-   replace the stock summary with two sentences in her words and replace the
-   stock openers with ones for lending.
+2. The page shows the root label, "1 question waiting" (Track C), and
+   "Nothing to show here yet" (Track E). The chat beside it shows one line
+   in the agent's voice, "What do you want to keep track of here?", the
+   composer focused with that question as its placeholder, and one opener
+   under it, "Tell me about talking instead of typing." (Track A).
+3. She types "mostly what I lend people and what I owe". The message goes to
+   the agent with the snapshot saying which question it answers. The agent
+   asks one thing back ("Just things, or money too?"), hears "both", then
+   marks the card answered with her words, writes the purpose into the
+   briefing, writes two sentences on the Box page in her words, swaps the
+   stock openers for lending ones, and offers two things: a place for loans
+   as they happen, and a page of what is out when the list grows.
 4. She lends a ladder and a book. The agent makes two cards in `lending/`.
    The root page's "Also here" lists them; the agent updates the root
    summary in the same turn (the place-shows-cards rule).
@@ -198,16 +261,20 @@ Juni, a new box, desktop layout.
 
 ## Smallest fix and budget
 
-**Smallest fix.** Give the root landmark a stock body at init and change the
-empty-state copy. About 60 source and 40 test lines. It fixes "says nothing
-about what this is" for new boxes and nothing else in the table.
+**Smallest fix.** Seed one pending question at init and show the newest
+pending question in the empty root chat as text with the composer focused,
+no select or confirm rendering, no voice opener. About 120 source and 80
+test lines. It gives a new box its first question and nothing else in the
+table.
 
-**Chosen design.** Six tracks, about 1,100 changed lines (additions plus
-deletions), not a BIG CHANGE.
+**Chosen design.** Six tracks. Tracks B–F are shipped (about 700 lines).
+The revised Track A is about 520 lines of change, of which about 150 remove
+the shipped stock summary; total for the plan about 1,200 changed lines
+(additions plus deletions), not a BIG CHANGE.
 
 | Track | Source | Tests | What it buys |
 |---|---|---|---|
-| A. Stock root summary and the replace rule | 170 | 110 | A new box says what it is, on the desktop page and in the phone's empty chat; the agent takes over the words at the first real conversation |
+| A. The box starts with questions; the empty chat asks them | 330 (incl. 150 removal) | 190 | A new box opens as a conversation about the person; every pending question has a place to be answered where the person already is |
 | B. Root arrival always opens the root page | 20 | 30 | One marked card cannot take the front door |
 | C. Todo and question counts on the root page | 110 | 70 | Day two says what is due and waiting, where the person looks |
 | D. Browse opens on content; seeded empty folders fold | 220 | 140 | Browse reads as the person's folders; the whole box stays one link away |
@@ -223,6 +290,25 @@ deletions), not a BIG CHANGE.
   front-door element that points at the machinery areas.
 - **No plate metaphor (boxholder, 2026-10-19):** user-facing words this
   plan adds do not say "plate". Track C's line follows this.
+- **Person first, ideas after hearing (boxholder, 2026-10-19):** the first
+  screen asks what the person wants to keep track of; the box offers what it
+  can do only after it has heard. The revised Track A and Track F's new
+  skill rule follow this. It sharpens the 2026-07-21 "no menu" direction:
+  not even a short menu, until the person has spoken.
+- **The question system is the onboarding (boxholder, 2026-10-19):** "the
+  box should start with questions, and the way those questions are
+  presented in the beginning is how we do this onboarding." Track A builds
+  the presentation on `_bookkeeping/questions/` rather than on a stock body
+  and a text-equality flag.
+- **In-chat question tag, rejected 2026-07-10** (`issues/closed/features/2026-06-09-in-chat-interactive-questions.md`,
+  wontfix: "synchronous chat is a different situation from the async
+  question queue — in chat the agent just asks in prose"). This plan does
+  not reopen it: the agent still asks in prose in chat and creates no card
+  for it. What changes is where a *pending card* can be answered: the chat's
+  empty state becomes a surface for the queue, which `docs/questions.md`
+  ("Surfacing") already names as the intended replacement for the retired
+  header badge ("inline questions in chat (not built)"). The two statements
+  in that doc disagree today; Track A's docs item reconciles them.
 
 - **Boxholder, 2026-07-20/21** (first-run-experience issue): "a firm menu of
   a few complete flows, each with a real payoff ... NOT an open 'feed me
@@ -304,6 +390,39 @@ deletions), not a BIG CHANGE.
   (`defaults.ts:234-238`: "Named for the box, not the literal word 'Box'").
   Unchanged.
 
+- The question system (`docs/questions.md`; `src/schemas/question.ts`):
+  text, select, and confirm questions; `createTextQuestionTemplate` and
+  siblings (`question.ts:201-252`) with `memo`, `prompt`, `directive`,
+  `learning`, `askedAt`; state derived from timestamps (`questionState`,
+  `question.ts:97`); `answer` allowed from pending, expired, or dismissed
+  (`answer.ts`), always writing a follow-up job (`answer.ts:252-260`);
+  `answered-via` is `web | cli` (`question.ts:150`); the tRPC
+  `actions.answer` and `actions.dismiss` (`routers/actions.ts:22-48`);
+  `status.questions` returning every card with `state`, `prompt`, `memo`,
+  `inputType`, `options`, `answer` (`status.ts:225-249`, `state.ts:154-157`);
+  `QuestionForm` dispatching on input type (`QuestionForm.tsx:252-266`);
+  `QuestionCardView` as the card renderer; the nav count `pendingQuestions`
+  (Track C's line already shows it). Follow-up jobs run in the reactor cycle
+  from `bbx wakeup` (`reactor/engine/cycle.ts`, `wakeup/job-refs.ts`), which
+  a fresh box has no schedule for (`defaults.ts:329-412`), or from the web's
+  `wakeup.force` mutation (`routers/wakeup.ts:63-80`), which nothing in the
+  front door calls.
+- The `<chat-app>` snapshot (`chat/session/prompts.ts:120-143`): each user
+  message is prepended with situational attributes the frontend declares on
+  send (`openCard`, `cardActivity`, `cardState`, `channel`;
+  `chat/session/messages.ts:86-112`); the send payload is part of the mobile
+  contract (`docs/mobile-contract.md:993`), where an optional field is an
+  additive change.
+- The chat's empty state (`InteractiveChat/messages.tsx:148-162`,
+  `EmptyChat`): openers as buttons (`ChatOpeners`), "Start a conversation.",
+  and, as shipped in round one, the stock summary's lead sentence. The
+  composer placeholder is "Type a message..." (`InteractiveChat-composer/view.tsx:123`,
+  `InteractiveChat-mobile-row.tsx:66`).
+- Agent-side: `bbx answer` and `bbx dismiss` exist as agent-audience
+  commands (`surface-data.ts:75`); the guide's QUESTIONS section
+  (`guide.md:290-317`) tells the agent to ask in prose in chat and to check
+  existing cards before asking.
+
 ## Prior art (external)
 
 No decision here depends on an external premise. The one pattern borrowed is
@@ -316,10 +435,22 @@ filesystem root. Evaluated-only; no acknowledgement entry.
   `_content/<Name>.landmark.card` (`root-dir.ts`). Its label is the box slug.
 - **Place summary** (exists, `place-shows-cards.md`): the landmark card's
   body, agent-written markdown.
-- **Stock summary** (new term, no new field): the body `installRootLandmark`
-  writes at init, `STOCK_ROOT_SUMMARY` beside `STOCK_ROOT_OPENERS` in
-  `schemas/landmark.ts`. Identified by text equality with the constant; the
-  briefing rule and a test refer to it. It is not a new card and not a flag.
+- **Onboarding question** (new term, no new field or type): a pending
+  question card `bbx init` writes to `_bookkeeping/questions/`, like any
+  other question. It is "onboarding" only by being the first pending
+  question a new box has; nothing marks it. The shipped **stock summary**
+  (`STOCK_ROOT_SUMMARY`, the text-equality flag `stockSummary`, the
+  compiled `**Front page:**` line) comes out.
+- **The chat's open question** (new presentation, no new noun in the UI):
+  the newest pending question, rendered in the empty root chat as the
+  agent's line, with its answer taken from the composer (text), from option
+  buttons (select), or Yes/No buttons (confirm). The person sees a question
+  and a place to answer; "question card" is never said.
+- **Answering in chat** (new `answered-via` value `chat`): the agent marks
+  the card answered from the conversation with `bbx answer --via chat`,
+  which records the answer and writes no follow-up job, because the agent
+  applies the directive and learning in the same conversation (question 9
+  below).
 - **Count line** (exists as `TodoSummaryLine` on cards and directories): on
   the root page it reads the nav counts, so it is `onPlateTodos` and
   `escalatedTodos` only (no "later", "parked", or "done": the nav counts do
@@ -337,60 +468,123 @@ filesystem root. Evaluated-only; no acknowledgement entry.
 
 ## Tracks / scope
 
-### Track A — Stock root summary and the replace rule
+### Track A — The box starts with questions; the empty chat asks them
 
-- **What.** `installRootLandmark` writes a body after the frontmatter. The
-  briefing rule that removes stock openers also replaces the stock summary.
-- **Why.** The first page says nothing about what the box is (table, row 3).
+- **What.** `bbx init` writes one pending question card. The empty root chat
+  shows the newest pending question as the agent's opening line and takes
+  the answer from the composer or from option buttons. The agent, having
+  heard the person, marks the card answered from the conversation and acts
+  on it there. The shipped stock summary comes out.
+- **Why.** The first screen says nothing about what this is (table, row 3),
+  and the boxholder's decisions of 2026-10-19 (Revision, above): the first
+  screen is the start of a conversation, person first, and the question
+  system is the onboarding.
 - **Direction.**
-  - `schemas/landmark.ts`: `export const STOCK_ROOT_SUMMARY: string`, the
-    text below. `createLandmarkTemplate` gains `body?: string`, appended
-    after the frontmatter block with one blank line.
-  - `defaults.ts:241`: pass `body: STOCK_ROOT_SUMMARY` for the fresh
-    install only. The repair branch (`:256-258`) writes
-    `templateContent + body` today; with a body in the template it would
-    prepend stock prose to a person's summary. It builds its template
-    without `body` and keeps the existing body as today; when that body is
-    empty it uses the stock one.
-  - `briefing.tsx:101-104`: extend to "remove its stock onboarding openers
-    ... and replace its stock summary (the body) with two or three sentences
-    in the person's words about what this box is for and what is in it; keep
-    any sentence they wrote." The landmark schema instructions
-    (`landmark.ts:221`, "remove them once the person knows what the box is
-    for") say the same from the landmark's side.
-  - The compiled briefing already emits the root place's openers for the
-    agent (`briefing.tsx:14-15`; `readRootOpeners`, `compile/core.ts:77-82`,
-    reads the root landmark's frontmatter). That reader also returns the
-    body; `compileBriefing` emits `**Front page:** still the stock text.`
-    when the trimmed body equals `STOCK_ROOT_SUMMARY`, so the agent sees the
-    stock state on every turn, the way it sees the openers.
-  - Phone layout: the empty root chat (`messages.tsx:293-299`) shows the
-    stock summary's first two sentences above the openers when the chat's
-    `contextDir` is `""` and the root landmark body is stock. The body
-    arrives on the chat's openers source, `landmarks.forDir`
-    (`InteractiveChat/shell.tsx:63`), as `LandmarkPayload.stockSummary: boolean`,
-    computed in `loadLandmarkPayload` from the body it already reads. Not
-    shown on the desktop layout, where the page shows the whole text; not
-    shown once the body is the agent's.
-  - The stock text, first person, the register the agent will continue in.
-    It orients; it is not the first-run menu of flows (boxholder, 2026-07-20/21),
-    and its examples are examples of what to say, not promised flows:
-
-    > This is your box. Tell me about things you want to keep track of and
-    > I'll keep them here, in your words, and bring them back when you ask.
-    > You could photograph something and tell me about it, talk through a
-    > plan, or name a kind of thing to keep, like what you've lent out or
-    > what's due. When a list gets long, ask me for a page that shows it the
-    > way you want.
-
-- **Vocabulary lock-ins.** `STOCK_ROOT_SUMMARY`; `createLandmarkTemplate({ body })`;
-  the compiled line `**Front page:**`; the openers payload field `stockSummary`.
-- **First implementation chunk.** The constant, the template option, the
-  install call, the root-landmark reader returning the body, and `t.check`
-  tests on a fresh box: the root landmark's body equals the constant; the
-  repair branch leaves an existing body alone and adds the stock body only
-  to an empty one; the compiled briefing carries the front-page line while
-  the body is stock and drops it after a one-word edit.
+  - **Seed.** `installRootQuestion` in `defaults.ts`, beside
+    `installRootLandmark`, writes
+    `_bookkeeping/questions/<stamp>-what-to-keep-track-of.question.card` with
+    `createTextQuestionTemplate` (`question.ts:227`): `prompt` "What do you
+    want to keep track of here?"; `memo`, in the agent's voice, one sentence
+    ("I'd like to know what this box is for before I suggest anything.");
+    `learning: { sink: briefing, proposal: "This box is for <what the person
+    said>." }`; `directive`: "Write the purpose into the briefing in the
+    person's words, write two or three sentences on the Box page (the root
+    landmark's body) in their words, and replace the stock openers with ones
+    for what they said." `expires-after` is left to the default 30 days: an
+    unanswered onboarding question leaves the active view like any other and
+    stays answerable. Fresh install only; the repair path does not seed, and
+    a box that already has questions is untouched. The install is
+    idempotent by filename stamp like the other seeded files.
+  - **Which question the chat shows.** `status.questions` already returns
+    every card with `state` (`status.ts:225-249`); the chat's shell
+    (`InteractiveChat/shell.tsx`, which already queries `landmarks.forDir`
+    for the openers) adds `trpc.status.questions.useQuery` and picks the
+    newest pending by `asked-at`, then by path. One question at a time; the
+    count of other pending ones shows as "and N more", a link to the
+    Questions card (`SYSTEM_CARD_PATHS.questions`) through `useOpenBeside`.
+    Only the root chat (`contextDir === ""`) shows a question; a place's
+    chat shows its openers as today. Only an unstarted chat shows it: once
+    a message exists, the empty state is gone.
+  - **How it looks.** `EmptyChat` (`messages.tsx:148-162`) gains
+    `openQuestion?: OpenQuestion | null`. It renders the `prompt` as one
+    line in the agent's voice where the stock lead was; for `text`, the
+    composer's placeholder becomes the prompt and the composer is focused
+    (the composer already takes a placeholder, `InteractiveChat-composer/view.tsx:123`,
+    and the mobile row the same, `InteractiveChat-mobile-row.tsx:66`); for
+    `select`, the options render as `ChatOpeners` buttons (the existing
+    control, `messages.tsx:158`); for `confirm`, two buttons, Yes and No.
+    A quiet "Not now" calls `actions.dismiss`. Clicking the line focuses the
+    composer. The openers render beneath, then "Start a conversation." as
+    today.
+  - **How the answer travels.** The person's message is an ordinary chat
+    message. The send payload gains an optional `answeringQuestion?: string`
+    (box-relative card path), declared by the client when the message is
+    typed or tapped from the open question, surfacing on the `<chat-app>`
+    snapshot as `answering-question="…"` (`messages.ts:86-112`, next to
+    `openCard`). Option taps send the option label as the message text with
+    the same attribute. The server does not mark the card answered on send:
+    the agent does, after hearing. Additive change to the mobile contract
+    (`mobile-contract.md:993`); the iOS app sends nothing and is unaffected
+    (bbx-ios-overlap).
+  - **How the agent answers.** `bbx answer` gains `--via chat`
+    (`answered-via` enum gains `chat`, `question.ts:150`). With `via: "chat"`
+    the command records the answer and writes no follow-up job
+    (`answer.ts:252-260` becomes conditional), because the agent applies the
+    `directive` and records the `learning` in the same conversation. The
+    chat system prompt (`chat/session/prompts.ts`) gains a short section,
+    "Answering a question in chat": when the snapshot names
+    `answering-question`, read the card, hear the person out (one follow-up
+    at most before acting), then `bbx answer <path> --via chat "<their
+    answer in their words>"`, do what its `directive:` says now, and record
+    its `learning:` as a `user-stated` fact; if the briefing already holds
+    the answer, answer the card from the briefing without asking again
+    (`guide.md:301-306`); never create a question card for something asked
+    in chat (`guide.md:294-296`, unchanged).
+  - **The agent's first reply.** The same prompt section says: after the
+    answer, reflect it back in a sentence and offer two or three things the
+    box could do for *that*, in the person's terms; no capabilities before
+    hearing (Track F's skill rule carries the same rule for later turns).
+  - **Voice walkthrough.** `STOCK_ROOT_OPENERS` (`landmark.ts:111-114`)
+    becomes one opener, "Tell me about talking instead of typing." "Let me
+    tell you what this box is for." goes: it is the question's answer in
+    another form. "What can you do?" goes: tool-centered. The
+    `what-can-you-do` skill (Track F) gains the walkthrough rule: tap the
+    mic, say a sentence, tap again; the agent answers the first spoken
+    message aloud (`<speech>`); on a desktop with no microphone permission
+    yet, say what the browser will ask.
+  - **What comes out** (shipped in round one): `STOCK_ROOT_SUMMARY`,
+    `STOCK_ROOT_SUMMARY_LEAD`, `isStockRootSummary`
+    (`src/shared/stock-root-summary.ts`); the body on fresh install
+    (`defaults.ts`, both `createLandmarkTemplate({ ...template, body })`
+    calls; the repair path keeps a written body as fixed in round one);
+    `LandmarkPayload.stockSummary`; `FRONT_PAGE_STOCK_LINE` and
+    `compileBriefing`'s `stockSummary` option; `readRootPlace` returns to
+    openers only; `EmptyChat`'s `stockSummaryLead`; the briefing rule text
+    about "replace its stock summary" becomes "when the root question is
+    answered, write the purpose and the Box page in the person's words and
+    retire the stock openers". `createLandmarkTemplate({ body })` stays: it
+    is correct and tested, and the agent's templates may use it.
+  - **Docs.** `docs/questions.md` "Surfacing" gains the chat's empty state
+    as a surface and its "NOT in scope" item is reworded to say what stays
+    rejected (an in-chat question *tag*) and what this adds (answering a
+    *pending card* from the chat); `docs/landmarks.md` loses the stock
+    summary paragraph and gains the opener change; the glossary gains a
+    "question" entry in the user-facing register ("something the box is
+    waiting to hear from you"; never "question card" to the person);
+    `box-docs/card-question.md` gains `--via chat`.
+- **Vocabulary lock-ins.** `installRootQuestion`; the send-payload field
+  `answeringQuestion` and snapshot attribute `answering-question`;
+  `answered-via: chat`; `EmptyChat.openQuestion`; the labels "and N more",
+  "Not now", and the opener "Tell me about talking instead of typing."
+- **First implementation chunk.** The seed with a `t.check` test (fresh box
+  has one pending text question with the prompt, learning sink `briefing`,
+  and a directive; repair seeds nothing; a box with questions is untouched);
+  `answered-via: chat` with the no-job branch and a test (a chat answer
+  records the answer and leaves `_bookkeeping/jobs/` empty; a web answer
+  still writes the job); the `<chat-app>` attribute with a snapshot test;
+  then the chat empty state with a DOM test for text, select, confirm, the
+  "and N more" count, and the place-chat quiet case. The removal of the
+  stock summary is the first commit, so the tree never carries both.
 
 ### Track B — Root arrival always opens the root page
 
@@ -524,6 +718,13 @@ filesystem root. Evaluated-only; no acknowledgement entry.
   walked through, which the 2026-07-21 direction warns against.
 - **Why.** Table row 11.
 - **Direction.**
+  - `content-what-can-you-do.ts`: two more rules. "Ideas after hearing: do
+    not list what the box can do until the person has said what they care
+    about; when they ask what the box can do on a box whose purpose is
+    blank, ask the open question first." And the voice walkthrough (Track
+    A): tap the mic, say a sentence, tap again; answer the first spoken
+    message aloud; on a desktop without microphone permission, say what the
+    browser will ask.
   - `content-what-can-you-do.ts`: one more bullet: "Say once that the person
     can ask for a page: 'When a list grows, ask me for a page that shows it
     the way you want.' When the box already holds a dozen cards of one kind
@@ -537,9 +738,17 @@ filesystem root. Evaluated-only; no acknowledgement entry.
 
 ## Could this be simpler?
 
-The simplest version is Track A alone: a stock body and new empty copy, about
-100 lines. It fails on three cases the walks reported, each traced to a
-preference:
+The simplest version is the round-one Track A: a stock body and new empty
+copy, about 100 lines. It shipped, and the boxholder rejected it on the
+2026-10-19 preferences above (tool-centered, not a conversation). The
+revised Track A's own simplest form is the "Smallest fix" above: one seeded
+question shown as text in the empty chat. The fuller track adds select and
+confirm rendering (so every pending question can be answered there, not
+only the onboarding one, which is what "the question system is the
+onboarding" asks for), the snapshot attribute (so the agent knows what it is
+hearing), and `--via chat` (so a chat answer does not leave a job that no
+fresh box runs). It still fails on three cases the walks reported, each
+traced to a preference:
 
 - Day two still says nothing about what is due (journey A's closing ask,
   "what's out, what I owe, what's due"). Track C is the cheapest answer: one
@@ -569,6 +778,9 @@ none
 | The agent records the purpose outside the briefing; stock summary and openers stay | No (the openers fix recorded this as residual) | The compiled `**Front page:**` line shows the agent the stock state every turn (Track A) | Clear to the agent; the person sees stale onboarding text until they say so |
 | An existing box never gets the stock body (install is once; "a real landmark" is untouched) | Track A test for the repair branch | By design: an existing box's agent owns its body; the briefing rule still applies when the purpose is recorded | Silent and accepted: existing boxes have agents and cards already |
 | Root arrival opens the page over a deliberately marked entry point | Track B test | The card leads under "Start here" | Clear |
+| A chat answer leaves a follow-up job no fresh box ever runs | Track A test: chat answer writes no job | `--via chat` skips the job; the agent applies the directive in the conversation | Cannot happen; a web or CLI answer keeps its job |
+| The agent answers the card before hearing enough | Chat-prompt rule: one follow-up at most, then answer | An answered card is terminal (`docs/questions.md`, "Lifecycle": "A new question is asked instead of reopening one"); the briefing and the Box page stay editable in the same conversation, so a correction is one more sentence from the person | Visible in the agent's reflected-back sentence |
+| A select question's option labels are long or many | DOM test with six options | `ChatOpeners` wraps buttons as today; above eight options the chat shows the first eight and "Answer on the Questions page" | Visible: the link |
 | The count line and the nav badge disagree | No | Same query (`status.navStatus`), same invalidation | Cannot happen while both read it |
 | `status.navStatus` fails | Track C DOM test | "Counts unavailable" with retry; distinct from zero | Clear |
 | An inert root landmark with a person-written body is repaired | Track A test | Repair keeps the body and adds no stock text | Clear |
@@ -601,6 +813,17 @@ are accepted with the reason beside them.
   agent's "is it stock?" check fails and treats it as theirs. ADDRESSED and
   intended: an edited body is the person's.
 - **Fabricated value:** none introduced; the counts are computed.
+- **Two people share the chat** (`user` attribute on messages): the first
+  to answer answers; the agent records whose words they were in the answer
+  text.
+- **The person answers a different question than the one shown** (types
+  about something else): the agent reads the message, not the attribute, as
+  the truth; if it is not an answer, it does not mark the card and replies
+  to what was said. The question shows again next time.
+- **Narration on** (`narration="on"`): the open question is still shown, but
+  the agent's reply follows the narration rule (silent by default,
+  `prompts.ts:200`); it marks the card when the narration clearly answers
+  it, else leaves it.
 - **Validation error UX:** `createLandmarkTemplate({ body })` produces a card
   the landmark schema already accepts (body is free markdown). ADDRESSED.
 - **Transition state:** boxes created before this plan have no stock body
@@ -627,6 +850,17 @@ are accepted with the reason beside them.
 - **Phone-layout arrival**: decision c of landmark arrival.
 - **Course landmarks**: courses are a plugin.
 - **Existing boxes' root bodies**: their agents own them.
+- **An in-chat question tag** (the agent asks mid-conversation with
+  structured options): rejected 2026-07-10; the agent asks in prose. This
+  plan surfaces pending *cards*, nothing more.
+- **Seeding the onboarding question on existing boxes**: question 10's
+  alternative; not done unless chosen.
+- **A second onboarding question** ("who are you", "what should I call
+  you"): one question is the conversation's start; more would be a form.
+  The agent asks the rest in prose as it comes up.
+- **Running the follow-up job from the web after a web answer** (the
+  `wakeup.force` mutation): the Questions page's existing gap, not the front
+  door's.
 
 ## Open design questions
 
@@ -652,6 +886,16 @@ alternatives.
   nothing on the front door should send a person there.
 - **Question 5b:** keep the slug; fix the glossary.
 - Questions 5, 6, and 7 were not discussed; their leans stand.
+
+Later the same day, after seeing the shipped stock summary (Revision, above):
+
+- **Question 1, reopened:** the stock summary is withdrawn. The first screen
+  is a question the box asks and the person answers in the chat, built on
+  the question system (Track A, revised). Questions 8–12 below are the
+  choices inside that.
+- **Question 6, amended:** the voice walkthrough is a stock opener, "Tell
+  me about talking instead of typing."; "What can you do?" and "Let me tell
+  you what this box is for." go.
 
 1. **What the first page says on an empty box.** A "stock summary" is a
    short paragraph the box ships with in the root place's body; the agent
@@ -734,6 +978,53 @@ alternatives.
      opener. A new control for one sentence.
    - **Lean:** the two mentions.
 
+8. **Who marks the card answered.** The person types in the chat either way.
+   - *The agent, after hearing (Track A).* The conversation can go one more
+     turn before the card is answered; the recorded answer is the person's
+     words as the agent heard them. The agent must remember to do it; the
+     "answer from the briefing" rule covers a miss.
+   - *The UI, on send.* The first message is written to the card as the
+     answer, immediately, with the web path's follow-up job. Simple and
+     certain, but "mostly lending… wait, also money" is two messages and one
+     answer, and the job runs only at a wakeup a fresh box does not have.
+   - **Lean:** the agent.
+
+9. **Whether a chat answer writes a follow-up job.**
+   - *No job for `--via chat` (Track A).* The agent applies the directive in
+     the conversation. A miss is caught by the retrospective, which already
+     mines chats for learning (`glossary.md`, "retrospective").
+   - *Always a job.* One path for every answer; on a fresh box the job sits
+     in `_bookkeeping/jobs/` until a wakeup, and the stalled-jobs health
+     check (`health/checks/stale.ts:62`) reports it after its threshold.
+   - **Lean:** no job for chat.
+
+10. **Whether existing boxes take part.** "Every box can open with that as
+    an active question" (boxholder).
+    - *Every box shows its newest pending question in the empty root chat
+      (Track A).* The test box would open with the newest of its 39. A
+      year-old box with nothing pending shows openers as today.
+    - *Also seed the onboarding question on existing boxes whose briefing
+      has no purpose.* Every current box asks it once. A migration, and a
+      box whose purpose is simply unrecorded gets asked by surprise.
+    - *New boxes only.* Existing boxes' queues stay on the Questions page.
+    - **Lean:** the first. Showing is cheap and reversible ("Not now"); seeding
+      is a migration and is not.
+
+11. **Which pending question shows when several are pending.**
+    - *Newest pending.* The freshest thing the box wanted to know; old ones
+      are aging toward expiry anyway.
+    - *Oldest pending.* Queue order; on a backlog box the first screen is
+      the stalest question.
+    - **Lean:** newest.
+
+12. **Where the agent learns that a message answers a question.**
+    - *The `<chat-app>` snapshot (Track A).* The attribute travels with the
+      message, like `open-card`; one additive field in the send payload.
+    - *The compiled briefing lists pending questions.* No payload change,
+      but the agent has to guess which message answers which, and the
+      briefing compiles at session start, not per message.
+    - **Lean:** the snapshot.
+
 7. **The agent's later summary on the phone.** Track A shows the stock text
    in the phone's empty chat; once the agent has written the real summary,
    the phone's first screen is chat and openers again, and the summary is on
@@ -745,20 +1036,27 @@ alternatives.
 Two new agent-facing rules get `knows_directly` entries in
 `src/dev/knowledge-audits.yaml`:
 
-- `front-door-stock-summary`: "You just recorded the box's purpose in the
-  briefing. What else do you change, and where?" Correct: the root landmark's
-  openers and its body (the stock summary), in the person's words.
+- `front-door-answer-in-chat` (replaces `front-door-stock-summary`, which
+  audited the withdrawn stock summary): a chat-mode prompt whose
+  `<chat-app>` snapshot names `answering-question` and whose message is
+  "mostly what I lend people and what I owe". Correct: hears them out (at
+  most one follow-up), then `bbx answer … --via chat` in their words, writes
+  the briefing purpose and the Box page, retires the stock openers, and
+  offers two or three things for lending; does not list capabilities first
+  and does not create a question card.
 - `front-door-offer-a-page`: "The box holds fourteen loan cards and no view
   over them. The person asks whether the stove is back. What do you offer
   after answering?" Correct: a page or view that shows what is out and what
   is due, offered, not built.
 
 Both run against the worktree's test box clone before the plan is called
-done; the status comment is recorded here. Run 2026-10-19 (Claude, a
-disposable copy of the clone): both pass with no file reads. The offer-a-page
+done; the status comment is recorded here. Round one, 2026-10-19 (Claude, a
+disposable copy of the clone): `front-door-stock-summary` and
+`front-door-offer-a-page` both passed with no file reads. The offer-a-page
 run answered first, then offered "a page that shows what's out" in one
 sentence and said it would ask, not build; its first run failed only on a
 too-narrow "does not build" pattern, loosened after reading the transcript.
+`front-door-answer-in-chat` has not run yet.
 
 ## What will hold this after it ships
 
@@ -768,35 +1066,46 @@ too-narrow "does not build" pattern, loosened after reading the transcript.
   (`frontend-dom-harness.md`), one per surface; they are the regression
   anchor for the copy and the line's presence on the root only.
 - The briefing and landmark instruction text: the `schemas.briefing-compile`
-  test pins the opener list and gains the front-page line; the two knowledge
-  audits check that an agent acts on the rule.
+  test pins the opener list; the chat prompt's "Answering a question in
+  chat" section is pinned by the prompt test that exists for its siblings;
+  the two knowledge audits check that an agent acts on the rules.
+- The seed, the no-job answer branch, and the snapshot attribute: unit tests
+  in `defaults.landmark.test.ts`, `answer` tests, and the snapshot test.
 - The journey walks (`docs/plans/user-story-journeys.md`) are the tour; they
   are not the regression test.
 
 ## Implementation order
 
-1. Track B (one condition, unblocks seeing Track A on the test box).
-2. Track A: constant, template option, install and repair, briefing and
-   landmark rules, compiled line, the phone's empty-chat sentences, tests.
-3. Track E: copy and gloss, with Track A's text reviewed together on the
-   exhibit.
-4. Track C: `rootLineParts`, page wiring, DOM test.
-5. Track D: fold change and tests; then Browse's start directory, crumb
-   root, and "Whole box" row.
-6. Track F: skill and package doc; knowledge audits run.
-7. Docs: `landmarks.md` (place page, arrival), `box-layout.md` (Browse's
-   view of the root), glossary note under "landmark", `what-you-could-do.md`.
+Tracks B–F are shipped on the branch. The revised Track A, in order:
+
+1. Remove the stock summary (one commit): the constant and its module, the
+   install body, the payload field, the compiled line, the chat's lead
+   sentence, and their tests; `createLandmarkTemplate({ body })` and the
+   repair fix stay.
+2. Seed: `installRootQuestion` and its tests.
+3. `answered-via: chat` and the no-job branch; `bbx answer --via chat`.
+4. The send-payload field and the `<chat-app>` attribute, with the mobile
+   contract note.
+5. The chat empty state: `openQuestion`, text/select/confirm, "and N more",
+   "Not now", composer placeholder and focus; DOM tests.
+6. Openers: one stock opener; the briefing and landmark rule text.
+7. The chat prompt section and the skill rules (ideas after hearing; voice
+   walkthrough); the knowledge audit `front-door-answer-in-chat` run.
+8. Docs: `questions.md` (surfacing, NOT in scope wording), `landmarks.md`,
+   glossary "question", `card-question.md`.
 
 ## Rollout shape
 
-Tests first: Track B's `forDir` case; Track A's fresh-box and repair cases
-and the compiled line; Track C's `rootLineParts` cases; Track D's three
-fold fixtures; Track E's two DOM assertions. Done when those pass, the two
-knowledge audits pass against the test box clone, and the exhibit shows a
-fresh throwaway box's first page and Browse beside the test box's. No data
-shape changes; no migration. Existing boxes change behavior only in Browse's
-compact root, the root arrival rule, the root page's count line, and the
-empty copy.
+Tests first: Track B's `forDir` case; Track A's seed, no-job answer, and
+snapshot cases and its empty-chat DOM cases; Track C's `rootLineParts`
+cases; Track D's three fold fixtures; Track E's two DOM assertions. Done
+when those pass, the two knowledge audits pass against the test box clone,
+and the exhibit shows a fresh box's first screen on desktop and phone, the
+agent's first reply after an answer, and Browse. Data shape: `answered-via`
+gains a value and the send payload an optional field; no migration.
+Existing boxes change behavior in Browse's root, the root arrival rule, the
+root page's count line, the empty copy, and, per question 10, the empty
+root chat showing their newest pending question.
 
 ## Scenario walks
 
