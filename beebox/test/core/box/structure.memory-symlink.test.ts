@@ -96,6 +96,6 @@ void test("A memory file in both places is kept in both, and nothing is linked",
       local: (await fs.readdir(box.path(".claude/memory"))).toSorted(),
       localMemory: await fs.readFile(box.path(".claude/memory/MEMORY.md"), "utf8"),
     },
-    { linked: false, warnings: [[any(String).matches(/both hold MEMORY\.md\. Merge/)]], global: ["MEMORY.md"], globalMemory: "global\n", local: ["MEMORY.md", "only-global.md"], localMemory: "local\n" },
+    { linked: false, warnings: [[any(String).matches(/kept MEMORY\.md \(the box has one\)\. Merge/)]], global: ["MEMORY.md"], globalMemory: "global\n", local: ["MEMORY.md", "only-global.md"], localMemory: "local\n" },
   );
 });

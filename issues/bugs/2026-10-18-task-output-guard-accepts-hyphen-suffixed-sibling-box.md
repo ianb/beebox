@@ -23,8 +23,10 @@ The doc comment says the `-` rule rejects "an unrelated box whose encoded
 root happens to start with the same characters"; that holds only when the
 next character in the sibling's name is not punctuation.
 
-This predates the 2026-10-18 symlink fix (that fix only changed which root is
-encoded). Reach: a host with two boxes where one box's path is another's plus
+The collision predates the 2026-10-18 symlink fix, which only changed which
+root is encoded. That fix adds one new reach: a box served at an alias path
+(`/aliases/alpha` linking to `/srv/boxes/alpha`) now encodes the resolved root,
+so `/srv/boxes/alpha-other` collides where the alias encoding did not. Reach: a host with two boxes where one box's path is another's plus
 a hyphen, dot, or underscore suffix, and a request to one box's server naming
 the other's task file.
 

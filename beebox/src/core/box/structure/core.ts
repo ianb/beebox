@@ -414,38 +414,41 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   // Ensure local .claude/memory/ exists
   await fs.mkdir(localMemoryDir, { recursive: true });
 
-  // Move any existing memory files from global to local
-  try {
-    const stat = await fs.lstat(globalMemoryDir);
-    if (stat.isDirectory() && !stat.isSymbolicLink()) {
-      const files = await fs.readdir(globalMemoryDir);
-      const conflicts: string[] = [];
-      for (const file of files) {
-        const src = path.join(globalMemoryDir, file);
-        const dest = path.join(localMemoryDir, file);
-        try {
-          await fs.access(dest);
-          // Local file already exists — don't overwrite, and don't delete it below.
-          conflicts.push(file);
-        } catch (_e) {
-          // fs.access throws ENOENT when dest is absent — the normal case
-          // for moving a file in. The error carries no actionable info.
-          await fs.rename(src, dest);
-        }
+  // Move any existing memory files from global to local. A file that cannot
+  // move (the box already has one by that name, or the rename fails, e.g.
+  // EXDEV across filesystems) stays where it is, and so does its directory:
+  // both copies are memory someone wrote, and which one wins is the
+  // boxholder's call.
+  const globalStat = await fs.lstat(globalMemoryDir).catch((e: unknown) => {
+    if (errnoCode(e) === "ENOENT") return null; // first-time case: nothing to move
+    throw e;
+  });
+  if (globalStat?.isDirectory() && !globalStat.isSymbolicLink()) {
+    const kept: string[] = [];
+    for (const file of await fs.readdir(globalMemoryDir)) {
+      const src = path.join(globalMemoryDir, file);
+      const dest = path.join(localMemoryDir, file);
+      const destExists = await fs.access(dest).then(
+        () => true,
+        (e: unknown) => errnoCode(e) !== "ENOENT",
+      );
+      if (destExists) {
+        kept.push(`${file} (the box has one)`);
+        continue;
       }
-      // Both copies of a file are memory someone wrote; which one wins is the
-      // boxholder's call. Leave the global directory unlinked until they merge.
-      if (conflicts.length > 0) {
-        console.warn(
-          `Not linking ${globalMemoryDir} to ${localMemoryDir}: both hold ${conflicts.join(", ")}. Merge them into the box copy and remove the global directory, then re-run init.`,
-        );
-        return false;
+      try {
+        await fs.rename(src, dest);
+      } catch (e) {
+        kept.push(`${file} (${errnoCode(e) ?? String(e)})`);
       }
-      await fs.rm(globalMemoryDir, { recursive: true });
     }
-  } catch (_e) {
-    // lstat throws ENOENT when the global dir doesn't exist — nothing to
-    // move. The error carries no actionable info; absence is expected.
+    if (kept.length > 0) {
+      console.warn(
+        `Not linking ${globalMemoryDir} to ${localMemoryDir}; kept ${kept.join(", ")}. Merge them into the box copy and remove the global directory, then re-run init.`,
+      );
+      return false;
+    }
+    await fs.rm(globalMemoryDir, { recursive: true });
   }
 
   // Ensure parent directory for symlink exists
