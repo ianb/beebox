@@ -96,8 +96,8 @@ reconcile each plan in `plan.docs` this branch introduced or modified:
   README's disposition table.
 - Set frontmatter `status:` (`implemented`/`partial`/`superseded`/`parked`), no
   duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
-  `pnpm --dir beebox doc-check --fix` and `pnpm --dir beebox doc-graph`. `--fix` only
-  repairs `.md` links and closed-issue backticks: grep the old path; check moved files' links.
+  `pnpm --dir beebox doc-check --fix` and `pnpm --dir beebox doc-graph`. `--fix` rewrites
+  links, moved files' own links, and plan/issue paths in docs, code, and YAML; it skips tests.
 
 ## 6. Close resolved issues
 Start with the sheet's `issues`, the plan's frontmatter `issues:`, the briefing,

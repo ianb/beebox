@@ -13,7 +13,10 @@
  * unique repo-wide it rewrites the path to the file's current location
  * (auto-healing issue-move decay and any other unique-basename doc). Links
  * with no basename match (a true rename/delete) or an ambiguous one are
- * reported, never guessed. It also reports repo-wide duplicate basenames as a
+ * reported, never guessed. Links to non-.md files are re-depthed by their path
+ * below the leading `../` (a moved file's own links), and backticked or code
+ * and YAML mentions of a plan or issue that moved are rewritten too
+ * (file-paths.ts). It also reports repo-wide duplicate basenames as a
  * non-fatal warning (the gap toward making basenames globally unique).
  *
  * Naming/placement conventions: docs/README.md.
@@ -24,10 +27,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { engineDocEntries } from "../../core/docs-gen/package-docs/core.js";
 import { buildGraphExtended, ROOT } from "../doc-graph-data/data.js";
-import { duplicateBasenames, buildBasenameLookup, repairFrontmatterPaths, repairLinks, type UnfixableLink } from "./link-repair.js";
+import { duplicateBasenames, buildBasenameLookup, buildSuffixMatcher, repairFrontmatterPaths, repairLinks, type UnfixableLink } from "./link-repair.js";
 import { findPrivateLinkViolations, PRIVATE_LINK_REASON } from "./private-link.js";
 import { frontmatterProblems } from "./frontmatter.js";
-import { describeFilePathProblem, findFilePathProblems, repairFilePaths, type FilePathProblem } from "./file-paths.js";
+import { describeFilePathProblem, findFilePathProblems, findMovedPathMentions, repairFilePaths, type BasenameLookup, type FilePathProblem } from "./file-paths.js";
 import { findSiteReferenceLinkProblems, referencePublishPath, SITE_DOCS_PREFIX } from "./site-reference-links.js";
 
 const MONO_ROOT = path.dirname(ROOT);
@@ -85,6 +88,21 @@ function allMarkdownFiles(): string[] {
 // validates them. Scanning them here reports phantom breaks, and `--fix` once
 // rewrote them into repo paths (2026-09-12).
 const AGENT_DOCS_PREFIX = SITE_DOCS_PREFIX;
+
+// Every tracked file (repo-relative POSIX paths).
+function trackedFiles(): string[] {
+  const stdout = execFileSync("git", ["ls-files", "-z"], { cwd: MONO_ROOT, encoding: "utf8" });
+  return stdout.split("\0").filter((p) => p.length > 0 && fs.existsSync(path.join(MONO_ROOT, p)));
+}
+
+// Code and YAML files whose plan and issue mentions (source comments,
+// schedule configs, knowledge-audits.yaml) follow moves. Tests are skipped:
+// their fixtures name paths that must stay as written.
+const MENTION_SOURCE_RE = /\.(?:ts|tsx|mts|yaml|yml)$/;
+
+function mentionSourceFiles(tracked: string[]): string[] {
+  return tracked.filter((p) => MENTION_SOURCE_RE.test(p) && !p.endsWith(".test.ts") && !p.startsWith(AGENT_DOCS_PREFIX));
+}
 
 function markdownFiles(): string[] {
   return allMarkdownFiles().filter((p) => !p.startsWith(AGENT_DOCS_PREFIX));
@@ -222,19 +240,27 @@ const ALLOWED_MISSING_PATHS = new Set([
 
 // Plans and open issues name files they propose to create, and quote code
 // locations as of when they were filed, so a missing path there is not
-// decay. Only the deterministic moved-to-closed finding applies to them.
+// decay. Only the deterministic moved and ambiguous findings apply to them.
 const FILE_PATH_FORWARD_LOOKING_PREFIXES = ["beebox/docs/plans/", "issues/"];
 
 // Backticked repo paths in prose (`beebox/src/foo.ts`) that resolve nowhere —
 // see src/dev/doc-check/file-paths.ts.
-function filePathProblemsByFile(files: string[]): Map<string, FilePathProblem[]> {
+// `mentionSources` are code and YAML files, scanned for bare mentions too.
+function filePathProblemsByFile({ files, mentionSources, basenameLookup }: {
+  files: string[]; mentionSources: string[]; basenameLookup: BasenameLookup;
+}): Map<string, FilePathProblem[]> {
   const fileExists = (rel: string): boolean => fs.existsSync(path.join(MONO_ROOT, rel));
   const byFile = new Map<string, FilePathProblem[]>();
   for (const rel of files) {
     if (isFilePathExempt(rel)) continue;
     const content = fs.readFileSync(path.join(MONO_ROOT, rel), "utf8");
     const forwardLooking = FILE_PATH_FORWARD_LOOKING_PREFIXES.some((p) => rel.startsWith(p));
-    const problems = findFilePathProblems({ docRel: rel, content, fileExists }).filter((p) => (!forwardLooking || p.kind === "moved-to-closed") && !ALLOWED_MISSING_PATHS.has(`${rel} -> ${p.token}`));
+    const problems = findFilePathProblems({ docRel: rel, content, fileExists, basenameLookup }).filter((p) => (!forwardLooking || p.kind !== "missing") && !ALLOWED_MISSING_PATHS.has(`${rel} -> ${p.token}`));
+    if (problems.length > 0) byFile.set(rel, problems);
+  }
+  for (const rel of mentionSources) {
+    if (isFilePathExempt(rel)) continue;
+    const problems = findMovedPathMentions({ docRel: rel, content: fs.readFileSync(path.join(MONO_ROOT, rel), "utf8"), fileExists, basenameLookup });
     if (problems.length > 0) byFile.set(rel, problems);
   }
   // A gitignored path (deploy/target.env, a build output) legitimately need
@@ -249,7 +275,9 @@ function filePathProblemsByFile(files: string[]): Map<string, FilePathProblem[]>
 }
 
 function filePathProblems(files: string[]): string[] {
-  return [...filePathProblemsByFile(files)].flatMap(([rel, problems]) => problems.map((p) => describeFilePathProblem(rel, p)));
+  const tracked = trackedFiles();
+  const basenameLookup = buildBasenameLookup(tracked.filter((p) => p.endsWith(".md")));
+  return [...filePathProblemsByFile({ files, mentionSources: mentionSourceFiles(tracked), basenameLookup })].flatMap(([rel, problems]) => problems.map((p) => describeFilePathProblem(rel, p)));
 }
 
 function schemaProblems(tracked: string[]): string[] {
@@ -292,23 +320,25 @@ function runDefaultCheck(): void {
   reportAndExit(problems);
 }
 
-// --fix half of the backticked-path check: rewrite issues that moved to
-// closed/ in place; every other finding is returned for manual handling.
-function fixFilePaths(files: string[]): { rewrites: number; filesChanged: number; missing: string[] } {
+// --fix half of the file-path check: rewrite plan and issue paths that moved
+// in place; every other finding is returned for manual handling.
+function fixFilePaths(params: { files: string[]; mentionSources: string[]; basenameLookup: BasenameLookup }): { rewrites: number; filesChanged: number; missing: string[] } {
   let rewrites = 0;
   let filesChanged = 0;
   const missing: string[] = [];
-  for (const [rel, problems] of filePathProblemsByFile(files)) {
+  const mentionSources = new Set(params.mentionSources);
+  for (const [rel, problems] of filePathProblemsByFile(params)) {
     const abs = path.join(MONO_ROOT, rel);
-    const moved = problems.filter((p) => p.kind === "moved-to-closed");
+    const moved = problems.filter((p) => p.kind === "moved");
     if (moved.length > 0) {
-      fs.writeFileSync(abs, repairFilePaths(fs.readFileSync(abs, "utf8"), moved), "utf8");
+      const content = fs.readFileSync(abs, "utf8");
+      fs.writeFileSync(abs, repairFilePaths({ content, problems: moved, bare: mentionSources.has(rel) }), "utf8");
       rewrites += moved.length;
       filesChanged++;
       console.log(`fixed ${rel}:`);
       for (const p of moved) console.log(`  L${p.line}: \`${p.token}\` -> \`${p.suggestion ?? ""}\``);
     }
-    for (const p of problems) if (p.kind === "missing") missing.push(describeFilePathProblem(rel, p));
+    for (const p of problems) if (p.kind !== "moved") missing.push(describeFilePathProblem(rel, p));
   }
   return { rewrites, filesChanged, missing };
 }
@@ -318,6 +348,8 @@ function runFix(): void {
   const all = markdownFiles();
   const basenameLookup = buildBasenameLookup(tracked);
   const fileExists = (repoRel: string): boolean => fs.existsSync(path.join(MONO_ROOT, repoRel));
+  const everyTracked = trackedFiles();
+  const suffixMatches = buildSuffixMatcher(everyTracked);
 
   const scanSources = all.filter((p) =>
     !GENERATED_NO_SCAN.has(p) && !FROZEN_SCAN_PREFIXES.some((prefix) => p.startsWith(prefix)),
@@ -331,7 +363,7 @@ function runFix(): void {
     const abs = path.join(MONO_ROOT, rel);
     const content = fs.readFileSync(abs, "utf8");
     const frontmatterResult = repairFrontmatterPaths({ fromRel: rel, content, fileExists, basenameLookup });
-    const markdownResult = repairLinks({ fromRel: rel, content: frontmatterResult.content, fileExists, basenameLookup });
+    const markdownResult = repairLinks({ fromRel: rel, content: frontmatterResult.content, fileExists, basenameLookup, suffixMatches });
     const result = {
       content: markdownResult.content,
       rewrites: [...frontmatterResult.rewrites, ...markdownResult.rewrites],
@@ -347,7 +379,7 @@ function runFix(): void {
     if (result.unfixable.length > 0) unfixableByFile.set(rel, result.unfixable);
   }
 
-  const pathFix = fixFilePaths(scanSources);
+  const pathFix = fixFilePaths({ files: scanSources, mentionSources: mentionSourceFiles(everyTracked), basenameLookup });
   totalRewrites += pathFix.rewrites;
   filesChanged += pathFix.filesChanged;
   const missingPaths = pathFix.missing;
@@ -384,7 +416,7 @@ function runFix(): void {
   }
 
   if (missingPaths.length > 0) {
-    console.error("\nmissing backticked file paths (manual — find the current path or drop the reference):");
+    console.error("\nmissing or ambiguous file paths (manual — find the current path or drop the reference):");
     for (const p of missingPaths) console.error(`  ${p}`);
   }
 

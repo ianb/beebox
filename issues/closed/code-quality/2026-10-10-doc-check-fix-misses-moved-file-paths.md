@@ -6,6 +6,7 @@ labels: [doc-check]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261010-224248
+resolution: implemented
 ---
 
 `beebox/src/dev/doc-check/link-repair.ts` rewrites Markdown links to `.md`
@@ -21,3 +22,22 @@ journey-walks-oct/20261009T001800Z-review-adjudicated.md,
 user-facing-language/20261009T124943Z-landed.md. The finish agent now says to
 grep (`.claude/agents/finish.md` step 5); a move-aware rewrite would remove
 that step.
+
+## Resolution
+
+2026-10-19, bug-burndown-3. `doc-check` now follows plan and issue moves.
+
+- A backticked plan or issue path is relocated when exactly one plan or issue
+  file has its basename. The rewrite keeps the token's form and any `:line`
+  suffix. Two or more matches are reported (`file-paths.ts`).
+- Code and YAML files (`.ts`, `.tsx`, `.mts`, `.yaml`, `.yml`, not
+  `*.test.ts`) are scanned for bare or backticked plan and issue mentions.
+  This covers source comments, schedule configs, and `knowledge-audits.yaml`.
+- A broken link to a non-`.md` file is matched against tracked files by its
+  path below the leading `../`. This re-depths a moved file's own links.
+- Frontmatter `design:`, `superseded-by:`, and `issues:` were already
+  repaired by `repairFrontmatterPaths`.
+
+The default check reports these findings, and `--fix` rewrites them. The
+finish agent's grep step (`.claude/agents/finish.md` step 5) now covers test
+fixtures only.

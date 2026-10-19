@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { repairFrontmatterPaths, repairLinks, duplicateBasenames, buildBasenameLookup } from "../../../src/dev/doc-check/link-repair.js";
+import { repairFrontmatterPaths, repairLinks, duplicateBasenames, buildBasenameLookup, buildSuffixMatcher } from "../../../src/dev/doc-check/link-repair.js";
 
 // A tiny fake tree: bugs/foo.md has moved to closed/bugs/foo.md.
 const files = ["issues/closed/bugs/foo.md", "issues/features/bar.md", "beebox/docs/guide.md"];
@@ -130,4 +130,30 @@ void test("duplicateBasenames flags shared basenames, excluding the whitelist", 
 
   // README.md / AGENTS.md are intentionally one-per-dir — never counted as duplicates.
   t.check(duplicateBasenames(["a/README.md", "b/README.md", "c/dup.md", "d/dup.md"]), new Map([["dup.md", ["c/dup.md", "d/dup.md"]]]));
+});
+
+// ## A moved file's own links to non-.md files are re-depthed by their path below ../
+void test("A moved file's own links to non-.md files are re-depthed by their path below ../", async (t) => {
+  // The issue moved from issues/bugs/ to issues/closed/bugs/, one level deeper.
+  const tree = ["beebox/src/core/x.ts", "beebox/src/core/y.ts", "workstreams-app/src/core/y.ts", "issues/closed/bugs/moved.md"];
+  const suffixMatches = buildSuffixMatcher(tree);
+  const fix = (content: string) => repairLinks({ fromRel: "issues/closed/bugs/moved.md", content, fileExists: (p) => tree.includes(p), basenameLookup: buildBasenameLookup(tree), suffixMatches });
+
+  t.check(fix("[x](../../beebox/src/core/x.ts#L4)"), {
+    content: "[x](../../../beebox/src/core/x.ts#L4)",
+    rewrites: [{ line: 1, from: "../../beebox/src/core/x.ts#L4", to: "../../../beebox/src/core/x.ts#L4" }],
+    unfixable: [],
+  });
+
+  t.check(
+    // Two files end with the suffix: reported, not guessed.
+    fix("[y](../../src/core/y.ts)"),
+    { content: "[y](../../src/core/y.ts)", rewrites: [], unfixable: [{ line: 1, target: "../../src/core/y.ts", reason: "ambiguous-basename" }] },
+  );
+
+  t.check(
+    // Without a suffix matcher, non-.md links are out of scope.
+    repairLinks({ fromRel: "issues/closed/bugs/moved.md", content: "[x](../../beebox/src/core/x.ts)", fileExists: () => false, basenameLookup: new Map() }),
+    { content: "[x](../../beebox/src/core/x.ts)", rewrites: [], unfixable: [] },
+  );
 });
