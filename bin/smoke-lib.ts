@@ -9,7 +9,7 @@
  * snapshot readers in bin/smoke-snapshot.ts, and the failures in
  * bin/smoke-errors.ts.
  *
- * See issues/exploration/2026-08-26-merge-time-smoke-tier.md.
+ * See issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md.
  */
 
 /**
@@ -53,12 +53,6 @@ export interface SmokeRunRecord {
   steps: SmokeStepRecord[];
 }
 
-/**
- * The log lives beside the test ledger, in the shared git dir, for the same
- * reasons: every worktree on the machine is answering questions about the same
- * tier, and a worktree cull must not take the history with it. Append-only, so
- * two runs in different worktrees cannot lose each other's entries.
- */
 /**
  * One log line as a record, or null if it is not one.
  *
@@ -109,8 +103,62 @@ function isStepRecord(value: unknown): value is SmokeStepRecord {
   );
 }
 
+/** The log's file name in the shared git dir. Runs append here and only here. */
+const SMOKE_LOG_NAME = "beebox-smoke-log.jsonl";
+
+/**
+ * Names the log had before a product rename, still read and never written.
+ *
+ * The name follows the product, so the 2026-08-30 rename to Bee Box started a
+ * new file and left the tier's first week of history in the old one. A report
+ * that read only the new file printed the remainder as the whole record
+ * (issues/closed/bugs/2026-09-02-smoke-report-lost-its-history-at-the-rename.md).
+ */
+const RETIRED_SMOKE_LOG_NAMES = ["callback-smoke-log.jsonl"] as const;
+
+/**
+ * The log lives beside the test ledger, in the shared git dir, for the same
+ * reasons: every worktree on the machine is answering questions about the same
+ * tier, and a worktree cull must not take the history with it. Append-only, so
+ * two runs in different worktrees cannot lose each other's entries.
+ */
 export function smokeLogPath(gitCommonDir: string): string {
-  return `${gitCommonDir}/beebox-smoke-log.jsonl`;
+  return `${gitCommonDir}/${SMOKE_LOG_NAME}`;
+}
+
+/**
+ * Every file that holds smoke history, retired names first. Readers fold all
+ * of them through {@link mergeSmokeLogs}; a missing one is not an error.
+ */
+export function smokeLogReadPaths(gitCommonDir: string): string[] {
+  return [
+    ...RETIRED_SMOKE_LOG_NAMES.map((name) => `${gitCommonDir}/${name}`),
+    smokeLogPath(gitCommonDir),
+  ];
+}
+
+/**
+ * The runs from several log files as one log, in time order, each run once.
+ *
+ * A run copied by hand from a retired file into the current one appears in
+ * both; it is the same run, so it counts once. Two runs are the same run when
+ * they share start time, worktree, branch, and commit. Lines that are not
+ * records are dropped here, as {@link summarizeSmokeLog} would drop them.
+ */
+export function mergeSmokeLogs(texts: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const runs: { ts: string; line: string }[] = [];
+  for (const text of texts) {
+    for (const line of text.split("\n")) {
+      const record = parseRunRecord(line);
+      if (record === null) continue;
+      const key = JSON.stringify([record.ts, record.worktree, record.branch, record.commit]);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      runs.push({ ts: record.ts, line });
+    }
+  }
+  return runs.toSorted((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0)).map((run) => run.line);
 }
 
 export interface StepStats {
@@ -141,6 +189,9 @@ export interface SmokeSummary {
   red: number;
   /** Deliberately broken runs, excluded from every rate above. */
   injectedRuns: number;
+  /** Earliest and latest run start in the log, injected runs included; null when empty. */
+  firstTs: string | null;
+  lastTs: string | null;
   steps: StepStats[];
 }
 
@@ -170,10 +221,14 @@ export function summarizeSmokeLog(lines: readonly string[]): SmokeSummary {
   let runs = 0;
   let red = 0;
   let injectedRuns = 0;
+  let firstTs: string | null = null;
+  let lastTs: string | null = null;
 
   for (const line of lines) {
     const record = parseRunRecord(line);
     if (record === null) continue;
+    if (firstTs === null || record.ts < firstTs) firstTs = record.ts;
+    if (lastTs === null || record.ts > lastTs) lastTs = record.ts;
     // A deliberately broken run measures the tier, not the app. It is counted,
     // and then kept out of every rate — its duration is a timeout, its failure
     // was ordered, and its later steps never ran for a reason that says nothing
@@ -206,6 +261,8 @@ export function summarizeSmokeLog(lines: readonly string[]): SmokeSummary {
     runs,
     red,
     injectedRuns,
+    firstTs,
+    lastTs,
     steps: order.map((id) => ({
       id,
       ran: ran.get(id)?.length ?? 0,
@@ -258,8 +315,14 @@ export function formatSmokeReport(summary: SmokeSummary): string {
       ? ""
       : ` ${String(summary.injectedRuns)} fault-injected run${summary.injectedRuns === 1 ? "" : "s"}` +
         " excluded from every count below.";
+  // The dated range is what makes a short history visible as short: "21 runs"
+  // alone reads as the tier's whole record whether or not it is.
+  const range =
+    summary.firstTs === null || summary.lastTs === null
+      ? ""
+      : ` ${summary.firstTs.slice(0, 10)} → ${summary.lastTs.slice(0, 10)},`;
   const lines = [
-    `smoke: ${String(summary.runs)} run${summary.runs === 1 ? "" : "s"} logged,` +
+    `smoke: ${String(summary.runs)} run${summary.runs === 1 ? "" : "s"} logged,${range}` +
       ` ${String(summary.red)} red.${forced}`,
     "",
     `${"step".padEnd(14)}${"ran".padStart(6)}${"failed".padStart(8)}${"forced".padStart(8)}` +
