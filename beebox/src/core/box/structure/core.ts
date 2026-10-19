@@ -448,18 +448,32 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
       );
       return false;
     }
-    await fs.rm(globalMemoryDir, { recursive: true });
+    // Not recursive: a file written after the readdir above makes this fail
+    // (ENOTEMPTY) instead of deleting it.
+    try {
+      await fs.rmdir(globalMemoryDir);
+    } catch (e) {
+      console.warn(`Not linking ${globalMemoryDir} to ${localMemoryDir}; it was not empty after the move (${errnoCode(e) ?? String(e)}). Re-run init.`);
+      return false;
+    }
   }
 
   // Ensure parent directory for symlink exists
   await fs.mkdir(path.dirname(globalMemoryDir), { recursive: true });
 
-  // Remove whatever's at the global path (stale symlink, empty dir, etc.)
+  // Remove whatever's at the global path (stale symlink, stray file, empty
+  // dir). `force` makes absence fine; a directory needs `rmdir`, which is not
+  // recursive, so one that filled up since the move above is left alone.
   try {
-    await fs.rm(globalMemoryDir, { recursive: true });
+    await fs.rm(globalMemoryDir, { force: true });
   } catch (_e) {
-    // Nothing at the global path to clear before symlinking. The error
-    // carries no actionable info; absence is the expected, fine case.
+    // `rm` without `recursive` refuses a directory.
+    try {
+      await fs.rmdir(globalMemoryDir);
+    } catch (e) {
+      console.warn(`Not linking ${globalMemoryDir} to ${localMemoryDir}; could not clear it (${errnoCode(e) ?? String(e)}). Re-run init.`);
+      return false;
+    }
   }
 
   // Create symlink: global → local
