@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { mkdir, writeFile, utimes } from "node:fs/promises";
+import { mkdir, realpath, writeFile, utimes } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { findSessionLog, listSessions } from "../../../src/cli/lib/session.js";
@@ -75,9 +75,9 @@ void test("The history file below has:", async (t) => {
   await seedLog(join(box.root, "_content/bunker"), { id: bunkerOld, mtime: "2026-07-01T10:00:00Z" });
   await seedLog(join(box.root, "_content/bunker"), { id: bunkerNew, mtime: "2026-07-03T10:00:00Z" });
 
-  // Encoded dir names start with the encoded (random) tmp box root —
+  // Encoded dir names start with the encoded (random) real tmp box root —
   // strip that prefix so expected output stays deterministic.
-  const prefix = encodeProjectDir(box.root);
+  const prefix = encodeProjectDir(await realpath(box.root));
   const roots = await listSessionRoots(box.root);
   t.check(
     roots.map((r) => ({

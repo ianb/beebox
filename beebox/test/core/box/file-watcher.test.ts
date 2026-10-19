@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any, containing, str } from "@ianbicking/tap-check/check";
+import { any, containing, eventually, str } from "@ianbicking/tap-check/check";
 import {
   ensureBoxWatcher,
   closeBoxWatcher,
@@ -22,7 +22,7 @@ import {
 } from "../../../src/core/box/file-watcher.js";
 import { watchLimitStatus } from "../../../src/core/box/watch-limit.js";
 import { watchLimitHealthChecks } from "../../../src/webapp/trpc/routers/health/checks/watch-limit.js";
-import { createEventBus, type BusEvent, type EventBus } from "../../../src/core/event-bus/core.js";
+import { createEventBus, type BusEvent } from "../../../src/core/event-bus/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { readdirSync } from "node:fs";
@@ -37,52 +37,17 @@ function fileChangePath(event: BusEvent): string | undefined {
 const openFDs = () => readdirSync("/dev/fd").length;
 
 /**
- * Poll until `check` passes, up to `ms`. Filesystem notifications have no
- * latency guarantee — a fixed sleep either flakes under load or wastes time —
- * so every timing-sensitive assertion below waits for its condition.
- */
-async function waitFor({ check, ms, label }: { check: () => boolean; ms: number; label: string }): Promise<void> {
-  const deadline = Date.now() + ms;
-  while (Date.now() < deadline && !check()) {
-    await new Promise((r) => setTimeout(r, 20));
-  }
-  if (!check()) throw new Error(`Timed out waiting for ${label}`);
-}
-
-/**
- * Prove that one directory's fs watcher is delivering before testing it.
- * Constructing `fs.watch()` has no readiness event on macOS; without this
- * handshake, an immediate write can beat FSEvents registration.
- */
-async function waitForWatch({ root, bus, relativeDir }: { root: string; bus: EventBus; relativeDir: string }): Promise<void> {
-  const markerRel = join(relativeDir, `watch-ready-${process.pid}.tmp`);
-  const marker = join(root, markerRel);
-  let seen = false;
-  const subscription = bus.subscribe({
-    listener: (event) => {
-      if (fileChangePath(event) === markerRel) seen = true;
-    },
-  });
-  try {
-    const deadline = Date.now() + 60_000;
-    let attempt = 0;
-    while (!seen && Date.now() < deadline) {
-      await writeFile(marker, String(attempt++));
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
-    if (!seen) throw new Error(`Timed out waiting for fs.watch delivery in ${relativeDir}`);
-  } finally {
-    subscription.unsubscribe();
-  }
-}
-
-/**
  * A `watchDir` the test drives. Real notifications arrive whenever the
  * platform gets to them — seconds late on a loaded host — so a test of what
  * the watcher *does* with an event fires that event itself, then awaits
  * `watcher.settled()` for the reconcile it queued. `fire` throws for a
  * directory with no live watch: the platform would deliver nothing there, so
  * a test that fires one has a wrong premise.
+ *
+ * Tests that only read the watched set use it too. Which directories get
+ * watched is this module's walk and filters; a real handle adds nothing there,
+ * and on macOS each one costs a round-trip to the shared FSEvents thread to
+ * open and again to close, which a loaded host stretches to seconds.
  */
 function fakeWatch(): { watchDir: WatchDir; fire(args: { dir: string; event: string; filename: string }): void } {
   const live = new Map<string, (event: string, filename: string | null) => void>();
@@ -119,7 +84,7 @@ async function seedTree({ root, dirs, perDir }: { root: string; dirs: number; pe
  */
 const skeletonBox = await makeTmpBox();
 const skeletonBus = createEventBus(skeletonBox.root, { pollInterval: 60_000 });
-const skeletonWatcher = ensureBoxWatcher(skeletonBox.root, { eventBus: skeletonBus });
+const skeletonWatcher = ensureBoxWatcher(skeletonBox.root, { eventBus: skeletonBus, watchDir: fakeWatch().watchDir });
 await skeletonWatcher.ready;
 const SKELETON_DIRS = new Set(skeletonWatcher.watchedDirs());
 await closeBoxWatcher(skeletonBox.root);
@@ -150,7 +115,7 @@ void test("The watched set is exactly the box's directories.", async (t) => {
   const bus = createEventBus(box.root, { pollInterval: 60_000 });
   await seedTree({ root: box.root, dirs: 4, perDir: 100 });
 
-  const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
+  const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fakeWatch().watchDir });
   await watcher.ready;
 
   t.check(testDirs(watcher), ["store", "store/dir0", "store/dir1", "store/dir2", "store/dir3"]);
@@ -179,7 +144,7 @@ void test("A publication project's dist/ is build output and nodemodules/ is a d
   await box.write(`${project}/node_modules/pkg/README.md`, "# pkg\n");
   await box.write(`${project}/src/readme.md`, "# Source\n");
 
-  const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
+  const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fakeWatch().watchDir });
   await watcher.ready;
   const dirs = watcher.watchedDirs();
   t.check(dirs.filter((d) => d.startsWith(project)), [project, `${project}/src`]);
@@ -269,10 +234,16 @@ void test("The direct statement of the bug.", async (t) => {
 // Consumers key on `path` alone, so that is what has to be right.
 //
 // This is the one test that takes delivery from the real platform watcher, so
-// it is the one that would catch `fs.watch` wiring breaking. Delivery has no
-// latency bound — seconds on a loaded host — so its deadlines are generous;
-// they cost nothing when the event arrives. Every later event-driven test uses
+// it is the one that would catch `fs.watch` wiring or the platform's
+// `(event, filename)` shape breaking. Every later event-driven test uses
 // `fakeWatch` instead.
+//
+// Real delivery has no latency bound and no delivery guarantee. `fs.watch()`
+// has no readiness event on macOS, so a write right after it can beat FSEvents
+// registration; and under load the kernel drops events, which libuv discards
+// silently. So the test rewrites the card until its event arrives: any one
+// write may be lost, and the next write is a fresh event. The deadline only
+// bounds a hang.
 void test("Consumers key on path alone, so that is what has to be right.", async (t) => {
   t.teardown(async () => {
     try {
@@ -292,10 +263,17 @@ void test("Consumers key on path alone, so that is what has to be right.", async
 
   const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
   await watcher.ready;
-  await waitForWatch({ root: box.root, bus, relativeDir: "store" });
 
-  await writeFile(join(box.root, "store", "Note.doc.card"), "---\ntitle: Note\n---\nhi\n");
-  await waitFor({ check: () => seen.includes("store/Note.doc.card"), ms: 60_000, label: "the card file-change event" });
+  const card = join(box.root, "store", "Note.doc.card");
+  let attempt = 0;
+  await eventually(
+    async () => {
+      if (seen.includes("store/Note.doc.card")) return true;
+      await writeFile(card, `---\ntitle: Note\n---\n${attempt++}\n`);
+      return false;
+    },
+    { label: "the card file-change event", timeoutMs: 60_000, intervalMs: 20 },
+  );
 
   // Real platform events may repeat or add the directory itself; the card path must be among them.
   t.check(seen, containing(["store/Note.doc.card"]));
@@ -489,7 +467,7 @@ void test("Repeats inside the 50 ms window collapse, but the last write still re
 
   // The trailing emission waits on the 50 ms timer, not the platform; the
   // deadline only bounds a hang.
-  await waitFor({ check: () => events === 2, ms: 60_000, label: "the trailing event" });
+  await eventually(() => events === 2, { label: "the trailing event", timeoutMs: 60_000 });
   t.check(
     // One trailing event for three collapsed changes, not one each.
     events,
@@ -521,7 +499,7 @@ void test("bookkeeping/procedure/runs and bookkeeping/trash are never live-rende
   await mkdir(join(box.root, "_content", "inbox", "email", "thread.attach"), { recursive: true });
   await mkdir(join(box.root, "store", "keep"), { recursive: true });
 
-  const watcher = ensureBoxWatcher(box.root, { eventBus: bus });
+  const watcher = ensureBoxWatcher(box.root, { eventBus: bus, watchDir: fakeWatch().watchDir });
   await watcher.ready;
 
   t.check(testDirs(watcher), ["_content/inbox/email", "_content/inbox/email/thread.attach", "store", "store/keep"]);
@@ -605,7 +583,7 @@ void test("Dot paths inside a box are ignored.", async (t) => {
   await mkdir(join(nestedRoot, "store"), { recursive: true });
   const bus = createEventBus(nestedRoot, { pollInterval: 60_000 });
 
-  const watcher = ensureBoxWatcher(nestedRoot, { eventBus: bus });
+  const watcher = ensureBoxWatcher(nestedRoot, { eventBus: bus, watchDir: fakeWatch().watchDir });
   await watcher.ready;
 
   t.check(watcher.watchedDirs(), [".", "store"]);
@@ -649,7 +627,7 @@ void test("An unexpectedly large imported tree must degrade live updates instead
   };
   let watcher: ReturnType<typeof ensureBoxWatcher>;
   try {
-    watcher = ensureBoxWatcher(box.root, { eventBus: bus, maxWatchedDirs: 16 });
+    watcher = ensureBoxWatcher(box.root, { eventBus: bus, maxWatchedDirs: 16, watchDir: fakeWatch().watchDir });
     await watcher.ready;
   } finally {
     console.error = originalConsoleError;

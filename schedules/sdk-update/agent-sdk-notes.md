@@ -482,7 +482,7 @@ background processes and sandboxed commands. Nothing for beebox.
 - **The change the steering probe gates on:** *"Changed a person's priority
   `now` message to move running shell commands, agents and MCP calls to the
   background and join the running turn instead of stopping it."* beebox's chat
-  steering sends priority `now` messages, and `beebox/src/scripts/sdk-steering-probe.ts`
+  steering sends priority `now` messages, and `beebox/src/scripts/sdk-steering-probe/run.ts`
   has a "priority now (soft interrupt, not lost)" scenario that today expects the
   message answered in its own turn after the interrupt. Read literally, `0.3.286`
   answers it inside the running turn instead, which is the kind of shift the

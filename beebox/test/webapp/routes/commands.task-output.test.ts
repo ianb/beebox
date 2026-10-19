@@ -14,6 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createTwoBoxTestServer } from "../../helpers/test-server.js";
 import { encodeProjectDir } from "../../../src/core/chat/session/transcript-paths.js";
+import { appendHistory } from "../../../src/core/chat/session/history.js";
 
 /** A fresh `/tmp/claude-<something>-XXXXXX` tmp-task root — a real directory
  *  directly under `/tmp` (not `os.tmpdir()`, which on macOS is a per-process
@@ -23,9 +24,10 @@ async function makeClaudeTmpRoot() {
 }
 
 /** Write a task output file at the exact shape the route expects, returning
- *  its absolute path. */
+ *  its absolute path. The CLI encodes its own cwd, which the OS reports with
+ *  symlinks resolved (on macOS a tmp box's `/var` is `/private/var`). */
 async function writeTaskOutput({ tmpRoot, cwd, session, file, content }: { tmpRoot: string; cwd: string; session?: string; file?: string; content?: string }) {
-  const dir = path.join(tmpRoot, encodeProjectDir(cwd), session ?? "sess-1", "tasks");
+  const dir = path.join(tmpRoot, encodeProjectDir(await fs.realpath(cwd)), session ?? "sess-1", "tasks");
   await fs.mkdir(dir, { recursive: true });
   const filePath = path.join(dir, file ?? "t1.output");
   await fs.writeFile(filePath, content ?? "task output content");
@@ -77,7 +79,7 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
 
-  const foreignCwdPath = path.join(tmpRoot, encodeProjectDir(ctx.b.boxRoot), "sess-1", "tasks", "t1.output");
+  const foreignCwdPath = path.join(tmpRoot, encodeProjectDir(await fs.realpath(ctx.b.boxRoot)), "sess-1", "tasks", "t1.output");
   const foreignCwdRes = await ctx.server.inject({
     method: "GET",
     url: `/alpha/api/task-output?file=${encodeURIComponent(foreignCwdPath)}`,
@@ -124,4 +126,52 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
     missing: { statusCode: 404, payload: "{\"error\":\"Output file not found\"}" },
     noFile: { statusCode: 400, payload: "{\"error\":\"Missing file parameter\"}" },
   });
+});
+
+// ## Alpha reads a landmark chat's task output only once its history binds that landmark
+//
+// The guard accepts exactly the box root and the landmark directories in the
+// chat history, so a landmark cwd the history never recorded is refused. The
+// route reads the history on each request.
+void test("Alpha reads a landmark chat's task output only once its history binds that landmark", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+      await fs.rm(tmpRoot, { recursive: true, force: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await createTwoBoxTestServer();
+  const tmpRoot = await makeClaudeTmpRoot();
+  await fs.mkdir(path.join(ctx.a.boxRoot, "_content", "kitchen"), { recursive: true });
+  const landmarkFile = await writeTaskOutput({ tmpRoot, cwd: path.join(ctx.a.boxRoot, "_content", "kitchen"), session: "sess-2", content: "kitchen output" });
+  const read = async () =>
+    reply(await ctx.server.inject({
+      method: "GET",
+      url: `/alpha/api/task-output?file=${encodeURIComponent(landmarkFile)}`,
+      headers: { authorization: ctx.a.agentBearerHeader() },
+    }));
+
+  const beforeHistory = await read();
+  await appendHistory(ctx.a.boxRoot, { sessionId: "sess-2", contextDir: "_content/kitchen", engine: "claude" });
+  t.check({ beforeHistory, afterHistory: await read() }, {
+    beforeHistory: { statusCode: 403, payload: "{\"error\":\"Access denied\"}" },
+    afterHistory: { statusCode: 200, payload: "kitchen output" },
+  });
+
+  // ## A recorded landmark that is a symlink into beta does not authorize beta's output
+  //
+  // The CLI resolves symlinks, so a chat run there would be keyed under beta's
+  // root. A history row naming that link must not make beta's file readable.
+
+  await fs.symlink(ctx.b.boxRoot, path.join(ctx.a.boxRoot, "_content", "to-beta"));
+  await appendHistory(ctx.a.boxRoot, { sessionId: "sess-3", contextDir: "_content/to-beta", engine: "claude" });
+  const betaFile = await writeTaskOutput({ tmpRoot, cwd: ctx.b.boxRoot, content: "beta's output" });
+  const viaLink = await ctx.server.inject({
+    method: "GET",
+    url: `/alpha/api/task-output?file=${encodeURIComponent(betaFile)}`,
+    headers: { authorization: ctx.a.agentBearerHeader() },
+  });
+  t.check(reply(viaLink), { statusCode: 403, payload: "{\"error\":\"Access denied\"}" });
 });

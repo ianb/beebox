@@ -49,7 +49,7 @@ SDK backend, so nothing else in this run was affected by it.
 
 The open tension: `chat-queue-real.doctest.md` is explicitly the doctest that
 proves real-SDK behavior (see its neighbor
-[transcript-flush-wait-full-timeout-real-sdk](../../bugs/2026-08-09-transcript-flush-wait-full-timeout-real-sdk.md),
+[transcript-flush-wait-full-timeout-real-sdk](2026-08-09-transcript-flush-wait-full-timeout-real-sdk.md),
 which tracks a warning from this same test), and it can only ever run when
 this machine happens to be logged in at the moment the weekly schedule fires.
 Right now a lapsed login turns into a full suite failure (exit 1, every other

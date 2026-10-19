@@ -6,7 +6,10 @@ priority: normal
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — verifying the 0.3.258 bump
+resolution: implemented
 ---
+
+Fixed by the commit that carries this issue's `Issue:` trailer. The probe retries a timed-out scenario once; two timeouts report `INCONCLUSIVE` and exit 2, and a lost or wrong-turn steer answer still reports the behavior change and exits 1 (a change outranks an inconclusive scenario). The classification lives in `beebox/src/scripts/sdk-steering-probe/verdict.ts` with a unit test. `schedules/sdk-update/prompt.md` step 9 names the exit codes and says to re-run once on exit 2. The 120 s budget stays: on 2026-10-18 all four scenarios together took 68 s at a load average of 77, so one scenario has wide margin and the retry covers the rare slow turn.
 
 `beebox/src/scripts/sdk-steering-probe.ts` is the gate the `sdk-update` monitor runs
 after every pin bump. On 2026-09-03 it failed on the first scenario:

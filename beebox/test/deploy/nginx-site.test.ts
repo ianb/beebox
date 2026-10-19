@@ -12,9 +12,10 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any, str } from "@ianbicking/tap-check/check";
+import { any, eventually, str } from "@ianbicking/tap-check/check";
 import { execFile } from "node:child_process";
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, writeFile } from "node:fs/promises";
+import { get as httpGet } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -89,24 +90,34 @@ async function enabled(etc: string): Promise<string> {
   return described.join(", ");
 }
 
-/** Poll until the reloaded configuration serves the deploy page. A reload
- *  retires the old workers, and one retiring can reset a connection it had
- *  already accepted (ECONNRESET, 2026-10-09); that is the reload still in
- *  progress, so it counts as "not yet" like an old-config response. */
-async function statusWithPage(port: number): Promise<number> {
-  for (let attempt = 0; attempt < 40; attempt += 1) {
-    const response = await fetch(`http://127.0.0.1:${port}/any/path`).catch((error: unknown) => {
-      const cause = error instanceof TypeError ? error.cause : undefined;
-      if (cause instanceof Error && "code" in cause && cause.code === "ECONNRESET") return null;
-      throw error;
+/** One GET on a connection of its own (`agent: false`), resolving to the
+ *  status and the deploy-page header. A pooled keep-alive connection is what
+ *  failed here: fetch reused an idle socket held by a worker the reload was
+ *  retiring, and the worker closed it under the next request (ECONNRESET on
+ *  2026-10-09, UND_ERR_SOCKET "other side closed" on 2026-10-17). A fresh
+ *  connection is accepted by whichever workers hold the listener now; a reset
+ *  that still lands mid-reload is one more poll, not a failure. */
+async function getOnce(port: number): Promise<{ status: number; deployPage: string | undefined }> {
+  return new Promise((done, fail) => {
+    const req = httpGet({ host: "127.0.0.1", port, path: "/any/path", agent: false }, (res) => {
+      res.resume();
+      res.on("end", () => {
+        const header = res.headers["x-beebox-deploy"];
+        done({ status: res.statusCode ?? -1, deployPage: typeof header === "string" ? header : undefined });
+      });
+      res.on("error", fail);
     });
-    if (response !== null) {
-      await response.text();
-      if (response.headers.get("x-beebox-deploy") === "in-progress") return response.status;
-    }
-    await new Promise((done) => setTimeout(done, 50));
-  }
-  return -1;
+    req.on("error", fail);
+  });
+}
+
+/** Poll until the reloaded configuration serves the deploy page; until then
+ *  the old configuration answers. The timeout only bounds a failed reload. */
+async function statusWithPage(port: number): Promise<number> {
+  return eventually(async () => {
+    const response = await getOnce(port);
+    return response.deployPage === "in-progress" && response.status;
+  }, { label: "the reloaded site serves the deploy page", timeoutMs: 30_000, intervalMs: 50 });
 }
 
 // ## From the old layout to the repo site

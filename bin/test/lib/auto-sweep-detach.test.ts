@@ -17,7 +17,6 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { any } from "@ianbicking/tap-check/check";
 import { execFile, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chmod, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -49,6 +48,17 @@ async function fakeSweep(seconds: number) {
   await chmod(p, 0o755);
 }
 
+/**
+ * Stand-in for `bin/workstreams sweep` that cannot finish until the test
+ * creates `gate`. A caller that waited for the sweep cannot return before the
+ * gate opens, so a return while it is closed proves the caller did not wait.
+ */
+async function gatedSweep(gate: string) {
+  const p = join(fakeRepo, "bin/workstreams");
+  await writeFile(p, `#!/bin/sh\necho "sweeping"\nwhile [ ! -e '${gate}' ]; do sleep 0.05; done\n`);
+  await chmod(p, 0o755);
+}
+
 const hook = join(fakeRepo, ".claude/hooks/auto-sweep.sh");
 const env = { ...process.env, HOME: home };
 
@@ -77,13 +87,26 @@ void test("The caller returns immediately, and the sweep runs on its own", async
       t.error(error);
     }
   });
-  await fakeSweep(2);
-  const started = Date.now();
+  const gate = join(root, "release-sweep");
+  await gatedSweep(gate);
+  const order: string[] = [];
+  // Only a broken (blocking) hook ever needs this: it opens the gate so the
+  // caller can return and the order check below fails instead of hanging.
+  const fallback = setTimeout(() => {
+    order.push("gate opened");
+    void writeFile(gate, "");
+  }, 60_000);
   await execFileAsync(hook, ["session-end"], { env });
-  const callerMs = Date.now() - started;
+  order.push("caller returned");
+  if (!order.includes("gate opened")) {
+    clearTimeout(fallback);
+    order.push("gate opened");
+    await writeFile(gate, "");
+  }
 
   const finished = await until((s) => s.includes("END"));
-  t.check(callerMs, any(Number).below(1500));
+  // The hook returned while its sweep was still held at the gate: it does not wait.
+  t.check(order, ["caller returned", "gate opened"]);
   t.checkText(finished, `«date» auto-sweep trigger=session-end START
   sweeping
 «date» auto-sweep trigger=session-end END`);

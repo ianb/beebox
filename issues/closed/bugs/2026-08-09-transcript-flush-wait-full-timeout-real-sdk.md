@@ -6,7 +6,10 @@ filed-by: agent
 discovered-in: weekly manual-test triage — 2026-08-09T151705Z run, repo 508f42cc
 labels: [manual-tests]
 priority: normal
+resolution: implemented
 ---
+
+Closed 2026-10-18: the gate polled the lexical tmp-box path while the CLI writes under the symlink-resolved path. Fixed in `bb68a237f` (transcript paths) and the follow-up that applies the same encoding to the memory link and the task-output check.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 
@@ -44,7 +47,7 @@ Candidates worth checking when this recurs:
   the `uuid` key differently than the fixture-built ones in
   `chat-session-transcript-sync.doctest.md` assume).
 - Whether this machine's load (concurrent Claude/Codex processes — see
-  [run less of the test suite](../closed/exploration/2026-08-08-run-less-of-the-test-suite.md)
+  [run less of the test suite](../exploration/2026-08-08-run-less-of-the-test-suite.md)
   for the same environment's contention profile) is inflating the real CLI's
   flush latency well past 150ms, in which case the fix is a larger timeout or
   a different gating strategy, not a code bug.
@@ -86,3 +89,41 @@ Session `59226045-43e6-470a-b59a-72aaf19f95ea`, entries
 `47f8e82a-bbd8-473b-827f-74017ced05e9` and
 `e77e9251-a8f4-4739-addf-f965c238a3db`. Still a standing condition; still
 unconfirmed which of the two candidate explanations above applies.
+
+## 2026-10-18 root cause found: wrong transcript path for a symlinked box root
+
+Instrumented `waitForTranscriptEntry` and ran `chat-queue-real.test.ts` against
+the real CLI. The wait polled
+`~/.claude/projects/-var-folders-...-T-bbx-test-XXXX/<session>.jsonl`, a file
+that never existed; the CLI wrote the transcript to
+`~/.claude/projects/-private-var-folders-...-T-bbx-test-XXXX/<session>.jsonl`.
+The CLI names the directory after its own `process.cwd()`, which the OS
+reports with symlinks resolved, and on macOS `/var` links to `/private/var`.
+beebox encoded the lexical box path. Neither slow flush nor uuid formatting
+was involved.
+
+Scope: the gate has never worked for a box whose root path passes through a
+symlink (every macOS tmp test box). The same mismatch hit every transcript
+lookup built on `getSessionDir`/`getSessionLogPath` (history reads, session
+roots), not only the gate. Real boxes under `~/src/boxes/` and the worktree
+test boxes resolve to themselves, so the gate has been working for them.
+
+Fix: `getSessionDir`/`getSessionLogPath` in
+`beebox/src/core/chat/session/transcript-paths.ts` now encode the realpath
+of the cwd (a missing cwd resolves its nearest existing ancestor), as
+`session/delete/apply/storage.ts` and the test runner already did. After the
+fix the real-SDK test logs no warning and runs in ~6s instead of ~27s. New
+test in `test/core/chat/session/run.transcript-sync.test.ts` seeds the
+fixture at the encoded realpath of a box reached through a symlink (fails
+without the fix). The old fixtures passed because they wrote through the
+same helper the gate reads through.
+
+Follow-up (same day): `symlinkClaudeMemory` (`core/box/structure/core.ts`)
+now uses `getSessionDir`, and `isTaskOutputPathForBox` encodes the resolved
+box root through the same private helper. The memory-symlink and task-output
+route tests now build their fixtures at the resolved path; both fail without
+the fix. The stray `-var-folders-*` directories in the real
+`~/.claude/projects` are filed separately:
+[stray test directories in the real Claude projects store](../code-quality/2026-10-18-stray-test-dirs-in-real-claude-projects.md).
+A closed issue with the same root cause, fixed locally at the time:
+[knowledge audit symlink cwd](2026-09-29-knowledge-audit-symlink-cwd-misses-claude-transcript.md).

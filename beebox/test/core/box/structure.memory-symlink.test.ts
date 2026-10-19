@@ -19,16 +19,51 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 
-// A box reached through a path containing `_` and `.` (a symlink beside the real
-// box, so `path.resolve` keeps the odd characters) links under the fully collapsed
-// name — the `_` and `.` become `-`:
-void test("A box reached through a path containing  and . (a symlink beside the real box...", async (t) => {
+// A box whose real path holds `_` and `.`, reached through a plain-named
+// symlink, links under its *real* path, fully collapsed. Claude Code keys the
+// directory by its own cwd, which the OS reports with symlinks resolved; the
+// `_` and `.` become `-`:
+void test("A box whose real path holds _ and ., reached through a symlink, links under its real path", async (t) => {
   t.teardown(async () => {
     try {
       if (previousProjects === undefined) delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
       else process.env["BBX_CLAUDE_PROJECTS_DIR"] = previousProjects;
       await fs.rm(projects, { recursive: true, force: true });
-      await fs.unlink(oddRoot);
+      await fs.unlink(plainLink);
+      await fs.rename(oddRoot, originalRoot);
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const originalRoot = box.root;
+  const previousProjects = process.env["BBX_CLAUDE_PROJECTS_DIR"];
+  const projects = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-projects-"));
+  process.env["BBX_CLAUDE_PROJECTS_DIR"] = projects;
+  const oddRoot = path.join(path.dirname(box.root), `odd_name.v2-${path.basename(box.root)}`);
+  await fs.rename(box.root, oddRoot);
+  const plainLink = path.join(path.dirname(box.root), `plain-${path.basename(box.root)}`);
+  await fs.symlink(oddRoot, plainLink);
+
+  const linked = await symlinkClaudeMemory(plainLink);
+  const entries = await fs.readdir(projects);
+  t.check(linked, true);
+  t.check(entries, [encodeProjectDir(await fs.realpath(plainLink))]);
+  t.check(entries, [not(any(String).matches(/[._]/))]);
+  t.check(path.basename(path.dirname(await fs.readlink(path.join(projects, entries[0] ?? "", "memory")))), ".claude");
+});
+
+// When the global directory and the box both hold a file of the same name, both
+// are memory someone wrote. The linker used to skip the global copy and then
+// remove its directory, deleting it. It now moves what it can, keeps the
+// conflicting global file, and leaves the link for the boxholder to finish.
+void test("A memory file in both places is kept in both, and nothing is linked", async (t) => {
+  t.teardown(async () => {
+    try {
+      if (previousProjects === undefined) delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
+      else process.env["BBX_CLAUDE_PROJECTS_DIR"] = previousProjects;
+      await fs.rm(projects, { recursive: true, force: true });
       await box.cleanup();
     } catch (error) {
       t.error(error);
@@ -38,13 +73,29 @@ void test("A box reached through a path containing  and . (a symlink beside the 
   const previousProjects = process.env["BBX_CLAUDE_PROJECTS_DIR"];
   const projects = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-projects-"));
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = projects;
-  const oddRoot = path.join(path.dirname(box.root), `odd_name.v2-${path.basename(box.root)}`);
-  await fs.symlink(box.root, oddRoot);
+  const globalMemory = path.join(projects, encodeProjectDir(await fs.realpath(box.root)), "memory");
+  await fs.mkdir(globalMemory, { recursive: true });
+  await fs.writeFile(path.join(globalMemory, "MEMORY.md"), "global\n");
+  await fs.writeFile(path.join(globalMemory, "only-global.md"), "moved\n");
+  await fs.mkdir(box.path(".claude/memory"), { recursive: true });
+  await fs.writeFile(box.path(".claude/memory/MEMORY.md"), "local\n");
 
-  const linked = await symlinkClaudeMemory(oddRoot);
-  const entries = await fs.readdir(projects);
-  t.check(linked, true);
-  t.check(entries, [encodeProjectDir(oddRoot)]);
-  t.check(entries, [not(any(String).matches(/[._]/))]);
-  t.check(path.basename(path.dirname(await fs.readlink(path.join(projects, entries[0] ?? "", "memory")))), ".claude");
+  const warnings: unknown[][] = [];
+  const warn = console.warn;
+  console.warn = (...args: unknown[]) => warnings.push(args);
+  const linked = await symlinkClaudeMemory(box.root).finally(() => {
+    console.warn = warn;
+  });
+
+  t.check(
+    {
+      linked,
+      warnings,
+      global: await fs.readdir(globalMemory),
+      globalMemory: await fs.readFile(path.join(globalMemory, "MEMORY.md"), "utf8"),
+      local: (await fs.readdir(box.path(".claude/memory"))).toSorted(),
+      localMemory: await fs.readFile(box.path(".claude/memory/MEMORY.md"), "utf8"),
+    },
+    { linked: false, warnings: [[any(String).matches(/kept MEMORY\.md \(the box has one\)\. Merge/)]], global: ["MEMORY.md"], globalMemory: "global\n", local: ["MEMORY.md", "only-global.md"], localMemory: "local\n" },
+  );
 });

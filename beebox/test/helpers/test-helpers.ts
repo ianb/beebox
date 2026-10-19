@@ -8,6 +8,7 @@
 
 import type { Dirent } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { removeTempCwdTranscripts } from "../../src/core/chat/session/transcript-paths.js";
 import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
@@ -144,6 +145,9 @@ export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean
         /* best-effort: the rm below reports anything that actually matters */
       }
       await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      // The manual tier keeps the real HOME, so a real CLI run left its
+      // transcripts in the developer's `~/.claude/projects`.
+      await removeTempCwdTranscripts(root);
     },
   };
 
