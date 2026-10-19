@@ -49,6 +49,8 @@ import { ErrorText } from "../../../ui/ErrorText";
 import { useFirstLoadMark } from "../../../../lib/first-load-marks";
 import { SelectedTranscriptRegion } from "../../ambient/selected-transcript";
 import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
+import { STOCK_ROOT_SUMMARY_LEAD } from "@shared/stock-root-summary";
+import { useMobileChatViewport } from "../use-mobile-card-navigation";
 
 function sendDisabledReasonFor(selection: ConversationSelection | undefined): string | undefined {
   return selection === undefined || selection.kind === "ready" ? undefined : selection.kind === "resolving" ? "Choosing conversation…" : selection.reason;
@@ -66,12 +68,18 @@ function sendDisabledReasonFor(selection: ConversationSelection | undefined): st
  * only for an unstarted conversation (one this tab created and nobody has
  * written in): an existing session with no messages is a different state, and
  * offering openers there would read as an invitation to start over.
+ *
+ * `stockSummaryLead` is the first two sentences of the root's stock summary,
+ * for the phone layout's unstarted root chat while the root body is still
+ * stock (`stockSummary`). The phone opens no card on arrival, so this is where
+ * a new box says what it is; the desktop layout shows the whole text on the
+ * root page instead.
  */
 function useChatBinding(params: {
   sessionId: string | null;
   unstarted: boolean;
   contextDir: string | undefined;
-}): { contextDir: string | null; openers: string[] } {
+}): { contextDir: string | null; openers: string[]; stockSummaryLead: string | null } {
   const query = trpc.chat.directoryFor.useQuery(
     { sessionId: params.sessionId ?? "" },
     { enabled: Boolean(params.sessionId) },
@@ -79,7 +87,10 @@ function useChatBinding(params: {
   const queried = query.data ? query.data.contextDir : undefined;
   const contextDir = params.contextDir ?? queried ?? null;
   const placeQuery = trpc.landmarks.forDir.useQuery({ dir: contextDir ?? "" }, { enabled: params.unstarted && contextDir !== null });
-  return { contextDir, openers: params.unstarted ? placeQuery.data?.landmark?.openers ?? [] : [] };
+  const mobile = useMobileChatViewport();
+  const landmark = params.unstarted ? placeQuery.data?.landmark ?? null : null;
+  const stockSummaryLead = mobile && contextDir === "" && landmark?.stockSummary === true ? STOCK_ROOT_SUMMARY_LEAD : null;
+  return { contextDir, openers: landmark?.openers ?? [], stockSummaryLead };
 }
 
 interface InteractiveChatProps {
@@ -197,7 +208,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     input: { sessionInput, contextDir, startEngine, startModel, initial }, onSessionAssignment,
   });
   const { messages, pendingMessages, streamText, streamTools, error, replyLost, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
-  const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, unstarted, contextDir });
+  const { contextDir: effectiveContextDir, openers, stockSummaryLead } = useChatBinding({ sessionId, unstarted, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   // First-load milestones: the conversation chosen, then its history shown (not the placeholder's).
   useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, conversationSelection?.kind === "ready");
@@ -366,7 +377,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
       audioOverlayStore={audioOverlayStore}
-      openers={openers} unstarted={unstarted}
+      openers={openers} stockSummaryLead={stockSummaryLead} unstarted={unstarted}
       />
       <ChatModeOverlays captureMode={captureMode} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={exitCapture} />
     </InputStoreProvider>

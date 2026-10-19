@@ -24,6 +24,7 @@ const landmark: LandmarkPayload = {
   features: {},
   openers: [],
   arrival: "Box.landmark.card",
+  stockSummary: false,
   links: [
     { ref: "_content/Welcome.doc.card", label: "Welcome", title: "Welcome", exists: true, source: "listed" },
     { ref: "https://example.com/guide", label: "Guide", title: "Guide", exists: false, source: "listed" },

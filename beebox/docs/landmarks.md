@@ -31,7 +31,7 @@ Both can coexist in the same directory. Chat openers belong to the landmark (`na
 
 ## Card schema
 
-A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a few agent-written lines on where things stand, shown first on the place page. The agent writes it when it makes a place and updates it when it changes the place's cards (`landmarks.summary-on-change` in the agent guide). The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/triage.md` for the destination role.
+A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a few agent-written lines on where things stand, shown first on the place page. The agent writes it when it makes a place and updates it when it changes the place's cards (`landmarks.summary-on-change` in the agent guide). The root landmark of a new box ships with a stock summary (`STOCK_ROOT_SUMMARY` in `src/schemas/landmark.ts`): a short first-person paragraph that says what the box is and the kind of thing to say. The briefing rule that removes the stock openers also replaces it with the person's own words; while it is stock, the compiled briefing tells the agent so with a `**Front page:**` line, and the phone's empty root chat shows its first two sentences above the openers. The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/triage.md` for the destination role.
 
 ```yaml
 ---
@@ -146,6 +146,11 @@ A landmark card renders as the place page (renderer `Place`,
 `src/frontend/src/renderers/landmark.tsx`, `components/PlaceView/`). It shows
 what the place holds, not its configuration:
 
+- **The place summary** — the landmark's body, first.
+- **Counts** — on the root place only, one line from the nav's own counts:
+  "3 to do · 1 overdue · 2 questions waiting", each opening its surface
+  beside the chat. Zero shows nothing; a failed count query shows "Counts
+  unavailable" with a retry.
 - **Start something** — the place's openers, shown only beside a chat in the
   same place that does not already show them. Beside an unstarted chat in the
   same place the group is hidden, because the chat shows the same openers.
@@ -161,8 +166,8 @@ what the place holds, not its configuration:
   or other group shows, the 10 most recently changed, then a "+N more" link
   that opens the folder in Browse. Background cards (chat logs, capture and
   upload staging) are not listed.
-- **An empty place** says "No cards to show here yet." and links to its
-  folder in Browse. The folder may still hold background cards or cards of
+- **An empty place** says "Nothing to show here yet. Tell me about something
+  in the chat and I'll keep it here." and links to its folder in Browse. The folder may still hold background cards or cards of
   unknown types.
 
 The page reads `landmarks.forDir` with `expandsAsGroups: true`; the menus
@@ -274,7 +279,9 @@ when a person chooses a place in the landmark menu, or opens a chat in this
 tab for the first time. The card that opens is the **arrival target**
 (`arrival` on the `landmarks.forDir` payload): the single `entry-point` card
 in the place's pruned subtree when there is exactly one, else the landmark
-card, which shows the place page. The rule applies to the box root too.
+card, which shows the place page. The box root is the exception: arrival at
+the root always opens the root place page, and a single entry point there
+leads the page under "Start here" (`docs/plans/front-door.md`, Track B).
 
 On the phone layout, arrival opens no card. One card or the chat fits on the
 screen, and the chat has priority.

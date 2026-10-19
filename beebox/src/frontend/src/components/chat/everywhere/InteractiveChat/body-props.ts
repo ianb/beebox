@@ -106,6 +106,8 @@ export interface ChatBodyProps {
    * a resumed session and for a place that lists none.
    */
   openers: string[];
+  /** The root's stock summary lead, shown above the openers on the phone's unstarted root chat; null elsewhere. */
+  stockSummaryLead: string | null;
   /** The conversation was created for this tab and has no committed turn (`ResolvedConversation.unstarted`). */
   unstarted: boolean;
 }

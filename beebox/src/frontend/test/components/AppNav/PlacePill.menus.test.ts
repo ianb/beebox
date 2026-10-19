@@ -52,7 +52,9 @@ const noop = () => {};
 // ## Landmark menu
 //
 // The box row opens the box screen. It is a plain document navigation, so the
-// native shell can intercept it; "Find a landmark" opens the Landmarks page.
+// native shell can intercept it; "Find a landmark" opens the Landmarks page,
+// and the line under it glosses the word: "the places you jump to most"
+// (docs/plans/front-door.md, Track E; the row text below runs the two lines together).
 // There is no box panel, no Recent files row, and no shortcut rows: those moved
 // to the box screen and the folder menu.
 void test("The box row opens the box screen.", async (t) => {
@@ -63,7 +65,7 @@ void test("The box row opens the box screen.", async (t) => {
     }))),
     [
     "bbx-switch-menu-box: Box: Test box → /test1/box",
-    "bbx-switch-menu-landmarks: Find a landmark → /test1/views/_config/interface/landmarks.card",
+    "bbx-switch-menu-landmarks: Find a landmarkthe places you jump to most → /test1/views/_config/interface/landmarks.card",
     "bbx-switch-menu-landmark-first: 🏠Box root",
     "-: 📍Garden✓(current)2",
     "bbx-switch-menu-problems: ⚠ 1 landmark card didn’t parse → /test1/views/_config/interface/landmarks.card",

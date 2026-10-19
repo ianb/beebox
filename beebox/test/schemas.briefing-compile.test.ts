@@ -113,6 +113,37 @@ void test("compileBriefings reads them from the root landmark under content/, so
 `);
 });
 
+// ## The root's stock summary compiles to a Front page line
+//
+// While the root landmark's body is still the stock summary a new box ships
+// with, the compiled briefing says so on every turn, the way it shows the
+// openers, so the agent that learns the box's purpose sees the page it still
+// has to write (docs/plans/front-door.md, Track A). A one-word edit makes the
+// body the person's, and the line goes.
+void test("While the root landmark's body is still the stock summary a new box ships wit...", async (t) => {
+  const { createLandmarkTemplate, STOCK_ROOT_SUMMARY } = await import("../src/schemas/landmark.js");
+  const box = await makeTmpBox();
+  await box.write("_content/briefing.briefing.card", "---\ntype: briefing\npurpose: What this box is for.\n---\n");
+  const compiled = async (body: string) => {
+    await box.write("_content/Box.landmark.card", createLandmarkTemplate({ label: "test", body }));
+    await compileBoxBriefings(box.root);
+    const md = await readFile(`${box.root}/_content/briefing.md`, "utf-8");
+    return md.slice(md.indexOf("## Box Briefing"));
+  };
+  t.check({ stock: await compiled(STOCK_ROOT_SUMMARY), edited: await compiled(STOCK_ROOT_SUMMARY.replace("your box", "our box")) }, {
+    stock: `## Box Briefing
+
+**Purpose:** What this box is for.
+
+**Front page:** still the stock text.
+`,
+    edited: `## Box Briefing
+
+**Purpose:** What this box is for.
+`,
+  });
+});
+
 // ## An empty briefing is just the header
 void test("An empty briefing is just the header", async (t) => {
   t.check(compileBriefing({ type: "briefing", body: "" }), `## Box Briefing

@@ -9,22 +9,29 @@ import "@ianbicking/tap-check/tap";
 import { foldListing, type Listing, type FoldEntry } from "../../src/shared/browse-fold.js";
 
 interface Card { name: string; prominence: "entry-point" | "primary" | "background" | "ordinary" }
-interface Dir { name: string; summary: { hasEntryPoint: boolean; primaryCount: number; background: boolean }; landmark?: { label: string; symbol: null } | undefined }
+interface Dir { name: string; summary: { hasEntryPoint: boolean; primaryCount: number; background: boolean; cardCount: number | null }; landmark?: { label: string; symbol: null } | undefined; seeded: boolean }
 interface File { name: string }
 
 function card(name: string, prominence: Card["prominence"]): Card {
   return { name, prominence };
 }
 
-function dir(name: string, opts?: { hasEntryPoint?: boolean; primaryCount?: number; background?: boolean; landmark?: { label: string } }): Dir {
+function dir(name: string, opts?: { hasEntryPoint?: boolean; primaryCount?: number; background?: boolean; landmark?: { label: string }; seeded?: boolean; cardCount?: number | null }): Dir {
   const summary = {
     hasEntryPoint: opts?.hasEntryPoint ?? false,
     primaryCount: opts?.primaryCount ?? 0,
     background: opts?.background ?? false,
+    cardCount: opts?.cardCount === undefined ? 1 : opts.cardCount,
   };
+  const seeded = opts?.seeded ?? false;
   return opts?.landmark
-    ? { name, summary, landmark: { label: opts.landmark.label, symbol: null } }
-    : { name, summary };
+    ? { name, summary, landmark: { label: opts.landmark.label, symbol: null }, seeded }
+    : { name, summary, seeded };
+}
+
+/** A box-layout template folder with nothing below it. */
+function seededEmpty(name: string): Dir {
+  return dir(name, { seeded: true, cardCount: 0 });
 }
 
 function file(name: string): File {
@@ -129,4 +136,54 @@ void test("Sorting is natural order within every tier", async (t) => {
     cards: [card("Item-10", "primary"), card("Item-2", "primary"), card("Item-1", "primary")],
   });
   t.check(fmtAll(foldListing(nat).lead), "card:Item-1 card:Item-2 card:Item-10");
+});
+
+// ## Seeded empty folders fold behind "N more"
+//
+// `docs/plans/front-door.md`, Track D. A new box's `_content` holds the box
+// layout's template folders, all empty, and the person's first cards. The
+// cards lead in today's order; the empty template folders fold, not dimmed.
+const TEMPLATE_FOLDERS = ["inbox", "incoming", "recipes", "todos", "drive", "calendar", "chat", "reviews", "people", "places"];
+
+void test("A new box's content listing leads with its cards and folds the empty template folders", async (t) => {
+  const fresh = listing({
+    cards: [card("Welcome", "ordinary"), card("Notes", "ordinary")],
+    dirs: TEMPLATE_FOLDERS.map(seededEmpty),
+  });
+  const result = foldListing(fresh);
+  t.check(`${result.folded} | ${fmtAll(result.lead)} | ${fmtAll(result.more)}`,
+    "true | card:Notes card:Welcome | dir:calendar dir:chat dir:drive dir:inbox dir:incoming dir:people dir:places dir:recipes dir:reviews dir:todos");
+});
+
+// With something prominent, seeded empty folders come after the plain
+// folders and before the dimmed background tiers.
+void test("With something prominent, seeded empty folders follow plain folders, not dimmed", async (t) => {
+  const result = foldListing(listing({
+    cards: [card("Entry", "entry-point"), card("Log", "background")],
+    dirs: [seededEmpty("drive"), dir("projects"), dir("Logs", { background: true })],
+  }));
+  t.check(`${fmtAll(result.lead)} | ${fmtAll(result.more)}`, "card:Entry | dir:projects dir:drive card:Log* dir:Logs*");
+});
+
+// A seeded folder with a card below it stays where it is today; so do a
+// person's own empty `taxes/`, a seeded folder whose count failed, and a
+// seeded folder that carries its own landmark. None of these fold.
+void test("A seeded folder with a card below, a person's empty folder, a failed count, and a landmark do not fold", async (t) => {
+  const result = foldListing(listing({
+    cards: [card("Notes", "ordinary")],
+    dirs: [
+      dir("recipes", { seeded: true, cardCount: 1 }),
+      dir("taxes", { cardCount: 0 }),
+      dir("drive", { seeded: true, cardCount: null }),
+      dir("people", { seeded: true, cardCount: 0, landmark: { label: "People" } }),
+    ],
+  }));
+  t.check(`${result.folded} | ${fmtAll(result.lead)} | ${fmtAll(result.more)}`, "false |  | dir:drive dir:people dir:recipes dir:taxes card:Notes");
+});
+
+// The box root listing (the five areas) is unchanged: areas are never seeded.
+void test("The box root listing is unchanged", async (t) => {
+  const root = listing({ dirs: ["_tmp", "_content", "_config", "_publish", "_bookkeeping"].map((name) => dir(name, { cardCount: 0 })) });
+  const result = foldListing(root);
+  t.check(`${result.folded} | ${fmtAll(result.lead)} | ${fmtAll(result.more)}`, "false |  | dir:_bookkeeping dir:_config dir:_content dir:_publish dir:_tmp");
 });

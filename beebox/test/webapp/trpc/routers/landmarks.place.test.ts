@@ -171,19 +171,25 @@ void test("With two entry points arrival does not guess; with none there is noth
   );
 });
 
-// ## The root place follows the same rule
+// ## The root place always opens its page
 //
 // The root is the logical directory `""`; its landmark lives under `_content/`.
-// An entry point inside a nested place belongs to that place, not the root.
-void test("The root is the logical directory \"\"; its landmark lives under content/.", async (t) => {
+// The front door is the root's page, so a root with exactly one entry point
+// still arrives on its landmark card; the entry point leads the page instead
+// (docs/plans/front-door.md, Track B). A nested place with one entry point
+// keeps the rule and opens that card.
+void test("The front door is the root's page, so a root with exactly one entry point sti...", async (t) => {
   const box = await makeTmpBox();
   await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: test\n---\n");
+  await box.write("_content/Welcome.doc.card", "---\ntitle: Welcome\nprominence: entry-point\n---\n");
   await box.write("_content/lending/Lending.landmark.card", "---\nnavigation:\n  label: Lending\n---\n");
   await box.write("_content/lending/List.doc.card", "---\ntitle: List\nprominence: entry-point\n---\n");
   const root = await payload(box.root, { dir: "" });
-  t.check(({ dir: root.dir, arrival: root.arrival }), {
+  t.check(({ dir: root.dir, arrival: root.arrival, first: root.links[0]?.ref, lending: (await payload(box.root, { dir: "_content/lending" })).arrival }), {
     dir: "",
     arrival: "_content/Box.landmark.card",
+    first: "_content/Welcome.doc.card",
+    lending: "_content/lending/List.doc.card",
   });
 });
 

@@ -46,10 +46,17 @@ function parseDetail(value: unknown): ViewTarget | null {
   return { path, viewer, params: strings, viewState };
 }
 
+/**
+ * Where Browse opens with no directory given: the content root, where a
+ * person spends their time. The box root (`""`) stays reachable by an
+ * explicit `""` (`docs/plans/front-door.md`, Track D).
+ */
+export const BROWSE_DEFAULT_DIRECTORY = "_content";
+
 export function parseBrowseState(input: { viewState?: ViewState | null; params?: Record<string, string> }): BrowseStateResult {
   const raw = input.viewState;
-  const directory = canonicalPath(raw ? raw["directory"] : input.params?.["dir"] ?? "");
-  if (directory === null) return { ok: false, error: `Invalid Browse directory: ${String(raw?.["directory"] ?? input.params?.["dir"] ?? "")}` };
+  const directory = canonicalPath(raw ? raw["directory"] : input.params?.["dir"] ?? BROWSE_DEFAULT_DIRECTORY);
+  if (directory === null) return { ok: false, error: `Invalid Browse directory: ${String(raw?.["directory"] ?? input.params?.["dir"] ?? BROWSE_DEFAULT_DIRECTORY)}` };
   if (raw?.["detail"] === undefined) return { ok: true, state: { directory } };
   const detail = parseDetail(raw["detail"]);
   if (!detail || browseParent(detail.path) !== directory) return { ok: false, error: "Invalid Browse detail: expected a file target inside the current directory." };

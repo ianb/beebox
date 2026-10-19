@@ -12,13 +12,20 @@
  *   whose summary has an entry point or a primary (carrying their landmark
  *   identity when they have one).
  * - **more**: ordinary cards, then plain files, then subdirectories with
- *   nothing prominent, then background cards, then background directories
- *   — the last two dimmed.
+ *   nothing prominent, then seeded empty folders, then background cards,
+ *   then background directories — the last two dimmed.
+ * - A *seeded empty folder* is a subdirectory the box layout created
+ *   (`seeded`), with no landmark of its own and no `.card` anywhere below
+ *   it (`summary.cardCount === 0`; `null`, a failed count, never folds).
+ *   It is not dimmed. A person's own folder is never seeded
+ *   (`docs/plans/front-door.md`, Track D).
  * - A listing with nothing prominent anywhere (no lead candidates, and the
  *   listing's own directory isn't itself background) returns `lead: []`
  *   and `more` in TODAY'S order — dirs, then cards, then files, each
  *   natural-sorted — with `folded: false`: the page renders exactly as it
- *   does today, no disclosure.
+ *   does today, no disclosure. When that listing holds seeded empty
+ *   folders, everything else leads in today's order and the seeded empty
+ *   folders alone fold, `folded: true`.
  * - A `background` directory (its own landmark, or a cascaded ancestor's)
  *   folds EVERYTHING into `more`, every item dimmed, `folded: true` — the
  *   whole directory is housekeeping, so even an otherwise-ordinary card
@@ -41,6 +48,8 @@ export interface ListingDirSummary {
   hasEntryPoint: boolean;
   primaryCount: number;
   background: boolean;
+  /** Recursive `.card` count below the directory; `null` when the count failed. */
+  cardCount: number | null;
 }
 
 export interface ListingDirLandmark {
@@ -53,6 +62,8 @@ export interface ListingDir {
   summary: ListingDirSummary;
   /** The subdirectory's own landmark identity, when it has one. */
   landmark?: ListingDirLandmark | undefined;
+  /** The path is one of the box layout's `_content` template folders. */
+  seeded: boolean;
 }
 
 export interface ListingFile {
@@ -99,6 +110,10 @@ function dirHasSomethingProminent(summary: ListingDirSummary): boolean {
   return summary.hasEntryPoint || summary.primaryCount > 0;
 }
 
+function isSeededEmpty(dir: ListingDir): boolean {
+  return dir.seeded && dir.landmark === undefined && dir.summary.cardCount === 0;
+}
+
 /**
  * The raw, unsorted-tier listing — today's Browse order: dirs, then cards,
  * then files, each natural-sorted, nothing dimmed, nothing folded.
@@ -138,12 +153,16 @@ export function foldListing<
   const backgroundCards = listing.cards.filter((c) => c.prominence === "background").toSorted(byName);
 
   const prominentDirs = listing.dirs.filter((d) => !d.summary.background && dirHasSomethingProminent(d.summary)).toSorted(byName);
-  const plainDirs = listing.dirs.filter((d) => !d.summary.background && !dirHasSomethingProminent(d.summary)).toSorted(byName);
+  const seededEmptyDirs = listing.dirs.filter((d) => !d.summary.background && !dirHasSomethingProminent(d.summary) && isSeededEmpty(d)).toSorted(byName);
+  const plainDirs = listing.dirs.filter((d) => !d.summary.background && !dirHasSomethingProminent(d.summary) && !isSeededEmpty(d)).toSorted(byName);
   const backgroundDirs = listing.dirs.filter((d) => d.summary.background).toSorted(byName);
+  const seededEntries = seededEmptyDirs.map((dir): FoldEntry<Card, Dir, File> => ({ kind: "dir", dir, dimmed: false }));
 
   const nothingProminent = entryPointCards.length === 0 && primaryCards.length === 0 && prominentDirs.length === 0;
   if (nothingProminent) {
-    return { folded: false, lead: [], more: rawOrder(listing) };
+    if (seededEmptyDirs.length === 0) return { folded: false, lead: [], more: rawOrder(listing) };
+    const rest = { ...listing, dirs: listing.dirs.filter((d) => !seededEmptyDirs.includes(d)) };
+    return { folded: true, lead: rawOrder(rest), more: seededEntries };
   }
 
   const lead: FoldEntry<Card, Dir, File>[] = [
@@ -157,6 +176,7 @@ export function foldListing<
     ...ordinaryCards.map((card): FoldEntry<Card, Dir, File> => ({ kind: "card", card, dimmed: false })),
     ...files.map((file): FoldEntry<Card, Dir, File> => ({ kind: "file", file, dimmed: false })),
     ...plainDirs.map((dir): FoldEntry<Card, Dir, File> => ({ kind: "dir", dir, dimmed: false })),
+    ...seededEntries,
     ...backgroundCards.map((card): FoldEntry<Card, Dir, File> => ({ kind: "card", card, dimmed: true })),
     ...backgroundDirs.map((dir): FoldEntry<Card, Dir, File> => ({ kind: "dir", dir, dimmed: true })),
   ];

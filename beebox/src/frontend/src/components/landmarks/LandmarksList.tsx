@@ -116,6 +116,7 @@ export function LandmarksList() {
   const shown = filterLandmarks(landmarks, filter);
   return (
     <Stack gap="md">
+      <Text as="p" size="sm" tone="subtle">The places you jump to most.</Text>
       <TextField
         id="bbx-landmarks-filter"
         label="Find a landmark"

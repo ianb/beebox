@@ -18,7 +18,7 @@ import { createInitialPersonalityTemplate } from "../../../schemas/personality/s
 import { createBriefingTemplate } from "../../../schemas/briefing.js";
 import { createTodoViewTemplate } from "../../../schemas/todo-view.js";
 import { PLATE_CARD_PATH } from "../../../shared/todo-model.js";
-import { createLandmarkTemplate, parseLandmarkFields, STOCK_ROOT_OPENERS } from "../../../schemas/landmark.js";
+import { createLandmarkTemplate, parseLandmarkFields, STOCK_ROOT_OPENERS, STOCK_ROOT_SUMMARY } from "../../../schemas/landmark.js";
 import {
   hasRecordedTemplateVersion,
   installTemplateFile,
@@ -237,8 +237,9 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
   // is a fleet whose boxes all look alike in a tab strip. The boxholder
   // renames it by editing the card, like any other box fact.
   // The root place carries the box's onboarding openers; the agent fades them
-  // as the box comes into use (docs/implemented-plans/landmark-arrival.md, Track B).
-  const templateContent = createLandmarkTemplate({ label: await boxSlug(boxRoot), symbol: "📦", openers: STOCK_ROOT_OPENERS });
+  // as the box comes into use (docs/implemented-plans/landmark-arrival.md, Track B),
+  // and its body starts as the stock summary (docs/plans/front-door.md, Track A).
+  const template = { label: await boxSlug(boxRoot), symbol: "📦", openers: STOCK_ROOT_OPENERS };
   const existing = entries.find((name) => name.endsWith(".landmark.card"));
   if (existing !== undefined) {
     const existingRelPath = path.join("_content", existing);
@@ -253,16 +254,17 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
       return null;
     }
     if (hasRole) return null; // a real landmark — leave the user's content alone
-    // Inert/unparseable — repair in place, keeping the filename and any place summary (not legacy XML).
+    // Inert/unparseable — repair in place, keeping the filename and any place summary
+    // (not legacy XML); the stock summary goes only where none is kept.
     const { body, hasFrontmatter } = splitCardContent(content);
-    await fs.writeFile(path.join(contentDir, existing), templateContent + (hasFrontmatter && !/^\s*(<landmark|$)/.test(body) ? body : ""));
+    await fs.writeFile(path.join(contentDir, existing), hasFrontmatter && !/^\s*(<landmark|$)/.test(body) ? createLandmarkTemplate(template) + body : createLandmarkTemplate({ ...template, body: STOCK_ROOT_SUMMARY }));
     return existingRelPath;
   }
 
   const result = await installTemplateFile({
     boxRoot,
     relPath: "_content/Box.landmark.card",
-    templateContent,
+    templateContent: createLandmarkTemplate({ ...template, body: STOCK_ROOT_SUMMARY }),
   });
   return result.outcome === "fresh" ? "_content/Box.landmark.card" : null;
 }

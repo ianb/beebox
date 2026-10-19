@@ -34,6 +34,8 @@ import { CardSymbol } from "../shared/card-symbol.js";
 import { Prominence } from "../shared/prominence.js";
 import { SystemThemeChoiceSchema } from "../shared/card-theme/core.js";
 
+export { STOCK_ROOT_SUMMARY } from "../shared/stock-root-summary.js";
+
 /** Sort order for `expand` fan-out results. */
 const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);
 export type LandmarkOrderType = z.infer<typeof LandmarkOrder>;
@@ -218,7 +220,7 @@ navigation:
     - What can I cook tonight?
 \`\`\`
 
-**Openers.** \`navigation.openers\` are one-line first moves, phrased from the person's side, shown as buttons on an unstarted chat in this place (and on the place's page); clicking one sends it as their message. Each is a single non-blank line of at most 120 characters. A place with no \`openers\` shows none; it does not inherit the root's. When you build a place for a recurring job, you may add up to three for its standing first moves ("Log a new loan"). The root landmark's onboarding openers fade as the box is used: remove them once the person knows what the box is for. Openers never go on a briefing card.
+**Openers.** \`navigation.openers\` are one-line first moves, phrased from the person's side, shown as buttons on an unstarted chat in this place (and on the place's page); clicking one sends it as their message. Each is a single non-blank line of at most 120 characters. A place with no \`openers\` shows none; it does not inherit the root's. When you build a place for a recurring job, you may add up to three for its standing first moves ("Log a new loan"). The root landmark's onboarding openers fade as the box is used: remove them once the person knows what the box is for, and in the same edit replace its stock summary (the body) with two or three sentences in the person's words about what the box is for and what is in it. Openers never go on a briefing card.
 
 \`ref\` and \`symbol.src\` are **box paths — write them with a leading \`/\`, from the box root**. A path relative to the landmark's directory still resolves (older landmarks are written that way), but new ones use the box path. \`expand\` \`query\` globs are the exception: they are queries, not refs, and always run relative to the landmark's directory.
 
@@ -304,13 +306,16 @@ export function parseLandmarkFields(content: string): LandmarkFields | null {
  *
  * Pass `symbol` for an emoji/text mark, or `symbolSrc` for an image box path
  * (leading `/`; a landmark-dir-relative path also resolves). `openers` become
- * `navigation.openers` (the root landmark gets `STOCK_ROOT_OPENERS`).
+ * `navigation.openers` (the root landmark gets `STOCK_ROOT_OPENERS`). `body`
+ * is the place summary, written after the frontmatter block with one blank
+ * line (the root landmark gets `STOCK_ROOT_SUMMARY`).
  */
 export function createLandmarkTemplate(options: {
   label: string;
   symbol?: string;
   symbolSrc?: string;
   openers?: readonly string[];
+  body?: string;
 }): string {
   const navigation: Record<string, unknown> = { label: options.label };
   if (options.openers !== undefined) navigation["openers"] = [...options.openers];
@@ -320,5 +325,5 @@ export function createLandmarkTemplate(options: {
   } else if (typeof options.symbol === "string" && options.symbol !== "") {
     fields["symbol"] = { glyph: options.symbol };
   }
-  return renderFrontmatterBlock(fields);
+  return renderFrontmatterBlock(fields, options.body === undefined ? undefined : `\n${options.body}\n`);
 }

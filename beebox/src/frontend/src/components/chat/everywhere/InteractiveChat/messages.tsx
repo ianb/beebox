@@ -141,11 +141,31 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
   );
 }
 
+/**
+ * An empty chat: the openers, under the root's stock summary lead when the
+ * phone's root chat has one, then the plain empty-state line.
+ */
+function EmptyChat({ openers, stockSummaryLead, onSendOpener }: {
+  openers: string[];
+  stockSummaryLead: string | null;
+  onSendOpener: (text: string) => OpenerSendOutcome;
+}) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
+      {stockSummaryLead === null ? null : (
+        <p id="bbx-chat-stock-summary" className="max-w-sm text-center text-warm-700">{stockSummaryLead}</p>
+      )}
+      <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
+      <div className="bbx-chat-empty-label text-warm-500 text-sm">Start a conversation.</div>
+    </div>
+  );
+}
+
 function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools,
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, sendSignal, captureSignal, liveTurnId, proseEnabled, pendingHq, onHqSendLive,
-  captureBubbles, captureVerbs, audioOverlayStore, openers, onSendOpener,
+  captureBubbles, captureVerbs, audioOverlayStore, openers, stockSummaryLead, onSendOpener,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -183,6 +203,8 @@ function MessageListInner({
    * for a resumed session.
    */
   openers: string[];
+  /** The root's stock summary lead, above the openers (phone, unstarted root chat only). */
+  stockSummaryLead: string | null;
   /** Send an opener as the person's message — the typed-and-entered path. */
   onSendOpener: (text: string) => OpenerSendOutcome;
 }) {
@@ -290,12 +312,7 @@ function MessageListInner({
 
   // A first capture into an empty chat still shows its pending bubble.
   if (messages.length === 0 && !isStreaming && captureBubbles.length === 0) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
-        <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
-        <div className="bbx-chat-empty-label text-warm-500 text-sm">Start a conversation.</div>
-      </div>
-    );
+    return <EmptyChat openers={openers} stockSummaryLead={stockSummaryLead} onSendOpener={onSendOpener} />;
   }
 
   // Newest assistant group's index, for the now-playing speech-highlight match.

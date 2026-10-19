@@ -21,7 +21,9 @@ import { pruneGuideRules } from "./guide-rules-prune.js";
 import { readConfigGuides, readPersonality, type GuideSummary } from "../config-cards/core.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { rootLandmarkRelPath } from "../../landmark/box-identity.js";
-import { readLandmarkCard } from "../../landmark/card-cache.js";
+import { parseLandmarkFields } from "../../../schemas/landmark.js";
+import { splitCardContent } from "../../../cards/frontmatter.js";
+import { isStockRootSummary } from "../../../shared/stock-root-summary.js";
 import { getBoxDir, BOX_DIRS } from "../../../lib/paths/core.js";
 
 /**
@@ -70,15 +72,19 @@ export async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[
 }
 
 /**
- * The root place's openers (`navigation.openers` on the root landmark), so the
- * compiled briefing names what the root chat suggests. No root landmark, or one
- * that does not parse (the Landmarks page reports that), compiles none.
+ * What the compiled briefing says about the root place: its openers
+ * (`navigation.openers` on the root landmark), so the briefing names what the
+ * root chat suggests, and whether its body is still `STOCK_ROOT_SUMMARY`. No
+ * root landmark, or one that does not parse (the Landmarks page reports that),
+ * compiles neither.
  */
-async function readRootOpeners(boxRoot: string): Promise<string[]> {
+async function readRootPlace(boxRoot: string): Promise<{ openers: string[]; stockSummary: boolean }> {
   const relPath = await rootLandmarkRelPath(boxRoot);
-  if (relPath === null) return [];
-  const fields = await readLandmarkCard(join(boxRoot, relPath));
-  return fields?.navigation?.openers ?? [];
+  if (relPath === null) return { openers: [], stockSummary: false };
+  const content = await readFile(join(boxRoot, relPath), "utf-8");
+  const fields = parseLandmarkFields(content);
+  if (fields === null) return { openers: [], stockSummary: false };
+  return { openers: fields.navigation?.openers ?? [], stockSummary: isStockRootSummary(splitCardContent(content).body) };
 }
 
 /**
@@ -99,7 +105,7 @@ export async function compileBriefings(boxRoot: string): Promise<string[]> {
       source: "_content/briefing.briefing.card",
       schemas: await createCardSchemaMap(boxRoot),
     });
-    const compiled = compileBriefing(cardFields(parsed, BriefingSchema), { openers: await readRootOpeners(boxRoot) });
+    const compiled = compileBriefing(cardFields(parsed, BriefingSchema), await readRootPlace(boxRoot));
     const mdPath = join(boxRoot, "_content/briefing.md");
     await writeFile(
       mdPath,

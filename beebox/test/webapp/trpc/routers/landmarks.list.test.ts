@@ -37,6 +37,7 @@ function bareRow(fields: { path: string; label: string; glyph?: string; dir?: st
     features: {},
     openers: [],
     arrival: fields.path,
+    stockSummary: false,
   };
 }
 
@@ -146,13 +147,14 @@ void test("list resolves every landmark in one request, several at once, and wal
   // Home lists its one entry point, then a row per nested place. Garden's row
   // opens Garden's entry point, Start; Shed has no entry point, so its row opens
   // its landmark card. Herbs gets no row here: Garden's walk stops it. Home's
-  // arrival is Welcome, its only entry point. Depth is 0 for top-level places
-  // (the root does not count as a parent).
+  // arrival is its own page: the root always opens its landmark card, with
+  // Welcome leading it. Depth is 0 for top-level places (the root does not
+  // count as a parent).
 
   t.check(view(landmarks[0]), {
     label: "Home",
     depth: 0,
-    arrival: "_content/Welcome.doc.card",
+    arrival: "_content/Box.landmark.card",
     links: [
       "derived _content/Welcome.doc.card",
       "place _content/Garden/Start.doc.card",

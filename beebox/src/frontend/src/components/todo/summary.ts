@@ -7,6 +7,7 @@
  * (`core/collection/types.ts`).
  */
 
+import type { NavCounts } from "@core/nav-counts";
 import { PLATE_CARD_PATH } from "@shared/todo-model";
 
 export interface SummaryReduction {
@@ -17,8 +18,8 @@ export interface SummaryReduction {
   escalated: number;
 }
 
-interface SummaryPart {
-  key: "open" | "later" | "overdue" | "parked" | "done";
+export interface SummaryPart {
+  key: "open" | "later" | "overdue" | "parked" | "done" | "questions";
   count: number;
   text: string;
   /** This count is the control that goes to the todos (`OpenAction`). */
@@ -46,6 +47,28 @@ export function summaryParts(reduction: SummaryReduction): SummaryPart[] | null 
   if (parked > 0) parts.push({ key: "parked", count: parked, text: `${String(parked)} parked`, action: false });
   if (done > 0) parts.push({ key: "done", count: done, text: `${String(done)} done`, action: false });
   return parts;
+}
+
+/**
+ * The root place page's line (`docs/plans/front-door.md`, Track C): "3 to do ·
+ * 1 overdue · 2 questions waiting", from the nav's own counts, so the page and
+ * the nav badge agree. `null` when every count is zero. Questions show on
+ * their own when nothing is to do. It does not use the word "plate" (decision,
+ * 2026-10-19), and it does not call `summaryParts`: the nav counts carry no
+ * `open`, `done`, or `parked`.
+ */
+export function rootLineParts(counts: NavCounts): SummaryPart[] | null {
+  const { onPlateTodos, escalatedTodos, pendingQuestions } = counts;
+  const parts: SummaryPart[] = [];
+  if (onPlateTodos > 0) {
+    parts.push({ key: "open", count: onPlateTodos, text: `${String(onPlateTodos)} to do`, action: true });
+    if (escalatedTodos > 0) parts.push({ key: "overdue", count: escalatedTodos, text: `${String(escalatedTodos)} overdue`, action: false });
+  }
+  if (pendingQuestions > 0) {
+    const noun = pendingQuestions === 1 ? "question" : "questions";
+    parts.push({ key: "questions", count: pendingQuestions, text: `${String(pendingQuestions)} ${noun} waiting`, action: true });
+  }
+  return parts.length === 0 ? null : parts;
 }
 
 /**

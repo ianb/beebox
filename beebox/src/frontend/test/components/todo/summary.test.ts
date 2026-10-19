@@ -11,8 +11,8 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { TodoSummaryLine } from "../../../src/components/todo/TodoSummaryLine.js";
-import { controlTargetSelector, directoryListPath, type SummaryReduction } from "../../../src/components/todo/summary.js";
+import { CountsLine, TodoSummaryLine } from "../../../src/components/todo/TodoSummaryLine.js";
+import { controlTargetSelector, directoryListPath, rootLineParts, type SummaryReduction } from "../../../src/components/todo/summary.js";
 
 globalThis.React = React;
 
@@ -105,4 +105,44 @@ void test("A directory's browse page shows the same line for every card under it
   );
 
   t.check(directoryListPath([{ relativePath: "_content/projects/porch-rebuild/budget.doc.card", type: "doc" }]), "_content/plate.todo-view.card");
+});
+
+// ## The root place's line
+//
+// The root place page shows one line from the nav badge's own counts
+// (`docs/plans/front-door.md`, Track C): "3 to do · 1 overdue · 2 questions
+// waiting". It never says "plate". `rootLineParts` builds it; `CountsLine`
+// draws it, with the todo count and the questions count as controls that open
+// their surfaces beside the chat.
+function rootLine(counts: { onPlateTodos?: number; escalatedTodos?: number; pendingQuestions?: number }) {
+  const parts = rootLineParts({ onPlateTodos: 0, escalatedTodos: 0, pendingQuestions: 0, ...counts });
+  if (parts === null) return null;
+  const action = { onClick: noop, title: "Open" };
+  return text(renderToStaticMarkup(React.createElement(CountsLine, { parts, actions: { open: action, questions: action } })));
+}
+
+// Nothing to do and nothing asked: no line at all.
+void test("Nothing to do and nothing asked: no line at all.", async (t) => {
+  t.check(rootLine({}), null);
+});
+
+// Todos only. The overdue count is named when there is one, and is plain text.
+void test("Todos only. The overdue count is named when there is one, and is plain text.", async (t) => {
+  t.check([rootLine({ onPlateTodos: 3, escalatedTodos: 1 }), rootLine({ onPlateTodos: 2 })], [
+    "[3 to do] · 1 overdue",
+    "[2 to do]",
+  ]);
+});
+
+// Questions only: the line does not vanish when nothing is to do.
+void test("Questions only: the line does not vanish when nothing is to do.", async (t) => {
+  t.check([rootLine({ pendingQuestions: 2 }), rootLine({ pendingQuestions: 1 })], [
+    "[2 questions waiting]",
+    "[1 question waiting]",
+  ]);
+});
+
+// Both:
+void test("Both:", async (t) => {
+  t.check(rootLine({ onPlateTodos: 3, escalatedTodos: 1, pendingQuestions: 2 }), "[3 to do] · 1 overdue · [2 questions waiting]");
 });

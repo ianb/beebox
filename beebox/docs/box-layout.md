@@ -286,7 +286,13 @@ missing step.
 `_config/interface/browse.card` are the required interface anchors. Their bare
 filenames infer their types. Frontmatter title and markdown notes are editable;
 live instrument state is not stored in the cards. Browse keeps its directory
-and selected detail in view state.
+and selected detail in view state. With no directory in its state, Browse
+opens on `_content/`, where a person's time goes; the box root with its five
+areas is one step away through the "Whole box" row at the bottom of the
+content listing, or a direct link to directory `""`. In the content listing,
+a seeded template folder that holds no cards folds behind "N more" until it
+does; a folder the person made never folds (`docs/plans/front-door.md`,
+Track D).
 
 Fresh initialization seeds these files before recording migrations; every
 existing box already has them (the seeding migrations are retired). After completion, full validation checks
