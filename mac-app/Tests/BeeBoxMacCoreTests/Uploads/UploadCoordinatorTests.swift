@@ -88,7 +88,7 @@ final class UploadCoordinatorTests: XCTestCase {
 
         let problem = await rig.coordinator.addFolder(path: directory.path, box: rig.box, disposition: .keep)
 
-        XCTAssertEqual(problem, .notOwner)
+        XCTAssertEqual(problem, .pairedByNobody)
         XCTAssertTrue(rig.folders.folders.isEmpty)
     }
 

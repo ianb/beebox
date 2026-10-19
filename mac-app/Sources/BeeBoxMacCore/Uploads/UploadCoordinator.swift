@@ -28,7 +28,7 @@ public enum FolderProblem: Error, Equatable, Sendable {
     case boxMissing
     case boxNotPaired
     case deviceRefused
-    case notOwner
+    case pairedByNobody
     case scanTokenUnavailable(String)
     case credentialNotSaved
     case oldUploaderWatching
@@ -44,7 +44,7 @@ public enum FolderProblem: Error, Equatable, Sendable {
         case .boxMissing: "Its box is no longer paired."
         case .boxNotPaired: "Pair this Mac with the box first."
         case .deviceRefused: "The box no longer accepts this Mac. Pair again."
-        case .notOwner: "This Mac was paired while signed in as someone other than the box's owner, and only the owner can send it files from a watched folder. To fix it, remove the box, sign in to it as the owner, and pair again."
+        case .pairedByNobody: "The box does not know who paired this Mac. Remove the box, then pair again."
         case .scanTokenUnavailable(let detail): "Could not set up the scanner credential: \(detail)"
         case .credentialNotSaved: "Could not save the scanner credential in the Keychain."
         case .oldUploaderWatching: "The command-line uploader already watches this folder. Remove it with `bin/scan-uploader schedule uninstall` first."
@@ -368,8 +368,8 @@ public final class UploadCoordinator: ObservableObject {
     private func problem(for error: ScanTokenError, box: PairedBox) -> FolderProblem {
         log.warning("scan token request failed host=\(box.displayHost) error=\(error)")
         switch error {
-        case .notOwner:
-            return .notOwner
+        case .pairedByNobody:
+            return .pairedByNobody
         case .deviceRefused:
             boxes.markCredentialRefused(box)
             return .deviceRefused

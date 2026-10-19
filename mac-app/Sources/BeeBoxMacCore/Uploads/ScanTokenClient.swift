@@ -2,9 +2,9 @@ import BeeBoxShared
 import Foundation
 
 public enum ScanTokenError: Error, Equatable, Sendable {
-    /// 403: the device was paired by someone who is not the box's owner, and
-    /// only the owner may mint scan tokens.
-    case notOwner
+    /// 403: the box has no person recorded for this device (a pairing older
+    /// than that record), and a scan token must belong to someone.
+    case pairedByNobody
     /// 401: the box no longer accepts this Mac's device token.
     case deviceRefused
     case rejected(status: Int, message: String?)
@@ -13,8 +13,8 @@ public enum ScanTokenError: Error, Equatable, Sendable {
 }
 
 /// Mints and revokes this Mac's scan token on a box, over its device token
-/// (`scanTokens.create` / `scanTokens.revoke`, owner procedures; a device paired
-/// by the owner is the owner on tRPC).
+/// (`scanTokens.create` / `scanTokens.revoke`; a paired device acts as the
+/// person who paired it, and anyone with access to the box may mint one).
 public struct ScanTokenClient: Sendable {
     private let transport: any HTTPTransport
     private let userAgent: String
@@ -83,7 +83,7 @@ public struct ScanTokenClient: Sendable {
         case 401:
             throw .deviceRefused
         case 403:
-            throw .notOwner
+            throw .pairedByNobody
         default:
             let message = (try? JSONDecoder().decode(ErrorEnvelope.self, from: data))?.error.message
             throw .rejected(status: http.statusCode, message: message)
