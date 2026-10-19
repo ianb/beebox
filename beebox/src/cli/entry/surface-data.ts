@@ -115,6 +115,8 @@ export const SURFACE: readonly SurfaceEntry[] = [
   // ---- Talking to the boxholder ----------------------------------------
   { name: "chat", audience: "agent", smoke: { run: ["chat", "whats-changed"] } },
   { name: "notify", audience: "agent", smoke: { skip: "sends a notification; `--check` exits 1 on a box with no channel" } },
+  // Sets a check-in or writes a reminder card; `--help` is the read-only form.
+  { name: "remind", audience: "agent", smoke: { run: ["remind", "--help"] } },
   { name: "pairing", audience: "agent", smoke: MUTATES },
 
   // ---- Credentialed: these delegate to the box's server under the agent

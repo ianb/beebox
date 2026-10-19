@@ -3,7 +3,8 @@ import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 /**
  * ChatScheduleManager — manages timed schedules created by the chat agent.
  *
- * The agent creates schedules via <schedule> tags in its responses.
+ * The agent sets check-ins with `bbx remind --here` (the `chat.addCheckIn`
+ * procedure) or, from older habits, a `<schedule>` tag in its response.
  * When a schedule fires, the manager invokes a callback so the caller
  * can inject a message back into the chat session.
  *
@@ -17,6 +18,7 @@ import { z } from "zod";
 import { CHECK_IN_MAX_MS, CheckInNotSavedError, CheckInTooLongError, MAX_TIMEOUT_MS, ScheduleForDeletingSessionError } from "./check-in.js";
 
 export { parseCancelScheduleTags, parseScheduleTags } from "./tags.js";
+export { CHECK_IN_MAX_MS, CheckInNotSavedError, CheckInTooLongError, ScheduleForDeletingSessionError } from "./check-in.js";
 
 // Zod schema per entry, mirroring location-store.ts's pattern (Track D.6):
 // the persisted shape is validated on load, an unparseable `firesAt` never
@@ -225,9 +227,10 @@ export class ChatScheduleManager {
     return this.blockedSessionIds.has(sessionId);
   }
 
-  cancelByLabel(label: string): boolean {
+  /** Cancel the first schedule with `label`; with `sessionId`, only that conversation's. */
+  cancelByLabel(label: string, options?: { sessionId: string }): boolean {
     for (const [id, schedule] of this.schedules) {
-      if (schedule.label === label) {
+      if (schedule.label === label && (options === undefined || schedule.sessionId === options.sessionId)) {
         this.clearTimer(id);
         this.schedules.delete(id);
         this.saveToDisk();
@@ -274,7 +277,7 @@ export class ChatScheduleManager {
       return `- "${s.label}" fires in ${timeStr}${s.alarm ? " (alarm)" : ""}`;
     });
 
-    return `Active schedules:\n${lines.join("\n")}`;
+    return `Active check-ins:\n${lines.join("\n")}`;
   }
 
   stopAll(): void {

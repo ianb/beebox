@@ -9,6 +9,7 @@ import { z } from "zod";
 import { router, publicProcedure } from "../../procedures.js";
 import { chatSessionProcedures } from "./session-procedures.js";
 import { chatControlProcedures } from "./control-procedures.js";
+import { chatCheckInProcedures } from "./check-in-procedures.js";
 import { chatBootstrapProcedure, sessionContextDir } from "./bootstrap-procedure.js";
 import { chatPlaceMenuProcedure } from "./place-menu-procedure.js";
 import { chatSearchProcedures } from "./search.js";
@@ -109,6 +110,7 @@ function reservedSessionForDirectory(boxRoot: string, contextDir: string): strin
 export const chatRouter = router({
   ...chatSessionProcedures,
   ...chatControlProcedures,
+  ...chatCheckInProcedures,
   ...chatBootstrapProcedure,
   ...chatPlaceMenuProcedure,
   ...chatSearchProcedures,

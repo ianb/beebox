@@ -75,6 +75,7 @@ import { locationCommand } from "./commands/location.js";
 import { tailscaleCommand } from "./commands/tailscale.js";
 import { todosCommand } from "./commands/todos.js";
 import { notifyCommand } from "./commands/notify/command.js";
+import { remindCommand } from "./commands/remind/command.js";
 import { changesCommand } from "./commands/changes.js";
 import { runSummaryCommand } from "./commands/run-summary.js";
 import { judgeCommand } from "./commands/judge/command.js";
@@ -147,6 +148,7 @@ const ALL: readonly Command[] = [
   tailscaleCommand,
   todosCommand,
   notifyCommand,
+  remindCommand,
   changesCommand,
   runSummaryCommand,
   judgeCommand,

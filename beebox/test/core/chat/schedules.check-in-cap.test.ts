@@ -12,7 +12,7 @@ import "agent-doctest/tap";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ChatScheduleManager, parseScheduleTags } from "../../../src/core/chat/schedules/core.js";
-import { CHECK_IN_MAX_MS } from "../../../src/core/chat/schedules/check-in.js";
+import { CHECK_IN_MAX_MS } from "../../../src/core/chat/schedules/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 const base = { alarm: false, announce: null, content: "x" };

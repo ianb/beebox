@@ -200,8 +200,12 @@ export const chatControlProcedures = {
    */
   archive: ownerProcedure.input(z.object({ sessionId: sdkSessionIdSchema })).mutation(async ({ input, ctx }) => {
     try {
-      const { registry } = requireRuntime(ctx.boxRoot);
-      return await archiveChatSession({ boxRoot: ctx.boxRoot, sessionId: input.sessionId, registry });
+      const { registry, scheduleManager } = requireRuntime(ctx.boxRoot);
+      const result = await archiveChatSession({ boxRoot: ctx.boxRoot, sessionId: input.sessionId, registry });
+      // An archived chat has ended, so its check-ins end with it. A leftover
+      // entry would stay silent anyway: the fire refuses a chat it cannot resume.
+      if (result.status === "archived") await scheduleManager.detachForSession(input.sessionId);
+      return result;
     } catch (error) {
       if (error instanceof LockHeldError) {
         throw new TRPCError({ code: "CONFLICT", message: "Chat review is running; try again in a moment" });

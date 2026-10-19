@@ -1,11 +1,11 @@
 // # Firing a chat schedule into its originating session
 //
 // `fireChatSchedule` (`src/webapp/routes/chat/schedule-fire.ts`) injects a fired
-// `<schedule>` reminder back into the session that created it — not whatever chat
-// was last active. It resolves the target from `schedule.sessionId`, falls back to
-// the most-active session for a legacy entry that has none, and re-sends into a
-// brand-new session once when the target's turn errors instantly (the unresumable
-// pre-v2 case), so a fired schedule's response is never silently lost.
+// check-in back into the session that created it — not whatever chat was last
+// active. A check-in belongs to one conversation (boxholder, 2026-10-18: if the
+// conversation ends, the check-in ends), so it never moves to another one: a
+// legacy entry with no session, a session that cannot be resumed, and a turn
+// that errors all drop the fire, and a dropped fire sends no alarm.
 //
 // The fake `ChatBackend` records each spawned run's `startOptions.resumeSessionId`,
 // so a run's resume id is how we assert which session a fire landed in. The
@@ -103,90 +103,49 @@ void test("Session B is most-active, but the schedule was created in session A."
   ]);
 });
 
-// ## Legacy entry without a session id fires into the most-active session
+// ## A check-in goes nowhere but its own conversation
 //
-// An entry persisted before `sessionId` existed keeps the old behavior: it
-// resolves the target from the most-active pointer.
-void test("An entry persisted before sessionId existed keeps the old behavior:", async (t) => {
-  t.teardown(async () => {
-    try {
-      registry2.shutdown();
-      eventBus2.close();
-    } catch (error) {
-      t.error(error);
-    }
-  });
-  // doctest:L105
+// A legacy entry (no `sessionId`) is not sent to the most-active chat; a chat
+// with no transcript to resume (deleted, archived, never written) is not
+// replaced by a fresh one. Neither starts a run, and neither broadcasts the
+// alarm, because the target is checked first.
+void test("A legacy entry and an unresumable chat both drop the fire silently", async (t) => {
   const box2 = await makeTmpBox({ git: true });
   const backend2 = createFakeChatBackend();
   const registry2 = makeRegistry(box2.root, backend2);
   const eventBus2 = createEventBus(box2.root);
+  t.teardown(() => { registry2.shutdown(); eventBus2.close(); });
   await setMostActive(box2.root, SESSION_MOST_ACTIVE);
   await makeTranscript(box2.root, SESSION_MOST_ACTIVE);
+  const deps = { boxRoot: box2.root, registry: registry2, eventBus: eventBus2, wireSession: noopWire };
 
-  // doctest:L112
-  const firePromise2 = fireChatSchedule(
-    { boxRoot: box2.root, registry: registry2, eventBus: eventBus2, wireSession: noopWire },
-    makeSchedule({}),
-  );
-  await waitForRuns(backend2, { count: 1, timeoutMs: 2000 });
-  backend2.runs[0]?.emitResult();
-  await firePromise2;
-
-  // doctest:L120
-  t.check({ runs: backend2.runs.length, resumed: backend2.runs[0]?.startOptions.resumeSessionId }, {
-    runs: 1,
-    resumed: "33333333-3333-4333-8333-333333333333",
-  });
+  await fireChatSchedule(deps, makeSchedule({}));
+  await fireChatSchedule(deps, makeSchedule({ sessionId: SESSION_DEAD }));
+  const fired = eventBus2.readSince(0).filter((event) => event.event === "schedule-fired");
+  t.check({ runs: backend2.runs, fired }, { runs: [], fired: [] });
 });
 
-// ## Target's turn errors → re-sent into a fresh session
+// ## A failed turn is not retried in a fresh session
 //
-// When the targeted session's turn ends with `is_error` (the unresumable case),
-// the reminder is re-sent once into a brand-new session — a second run with no
-// resume id.
-void test("When the targeted session's turn ends with iserror (the unresumable case), th...", async (t) => {
-  t.teardown(async () => {
-    try {
-      registry3.shutdown();
-      eventBus3.close();
-    } catch (error) {
-      t.error(error);
-    }
-  });
-  // doctest:L136
+// When the targeted session's turn ends with `is_error`, the check-in is
+// dropped: a second run in a new chat would be a conversation the person never
+// had.
+void test("A check-in whose turn errors is not re-sent into a fresh session", async (t) => {
   const box3 = await makeTmpBox({ git: true });
   const backend3 = createFakeChatBackend();
   const registry3 = makeRegistry(box3.root, backend3);
   const eventBus3 = createEventBus(box3.root);
+  t.teardown(() => { registry3.shutdown(); eventBus3.close(); });
   await makeTranscript(box3.root, SESSION_DEAD);
 
-  // doctest:L142
   const firePromise3 = fireChatSchedule(
     { boxRoot: box3.root, registry: registry3, eventBus: eventBus3, wireSession: noopWire },
     makeSchedule({ sessionId: SESSION_DEAD }),
   );
-  // First run targets the dead session and errors instantly.
   await waitForRuns(backend3, { count: 1, timeoutMs: 2000 });
   backend3.runs[0]?.emitResult({ isError: true });
-  // Fallback spawns a second run in a fresh session; complete it successfully.
-  await waitForRuns(backend3, { count: 2, timeoutMs: 2000 });
-  backend3.runs[1]?.emitResult();
   await firePromise3;
-
-  // doctest:L154
-  t.check(
-    {
-      runs: backend3.runs.length,
-      first: backend3.runs[0]?.startOptions.resumeSessionId ?? null,
-      second: backend3.runs[1]?.startOptions.resumeSessionId ?? null,
-    },
-    {
-    runs: 2,
-    first: "44444444-4444-4444-8444-444444444444",
-    second: null,
-  },
-  );
+  t.check(backend3.runs.map((run) => run.startOptions.resumeSessionId ?? null), [SESSION_DEAD]);
 });
 
 // ## A chat whose model was removed drops the schedule
