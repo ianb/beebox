@@ -2,7 +2,7 @@
  * Every directory that holds tests or the tap tests converted from them,
  * the package that runs them, and the typecheck script whose program covers
  * them. The test conversion driver and its checks read this list
- * (beebox/docs/plans/retire-doctest.md, track 2). Other test runners
+ * (beebox/docs/implemented-plans/retire-doctest.md, track 2). Other test runners
  * (node:test files, beebox-clerk) are not listed.
  *
  *   node --import tsx bin/test-roots.ts           # print the list
