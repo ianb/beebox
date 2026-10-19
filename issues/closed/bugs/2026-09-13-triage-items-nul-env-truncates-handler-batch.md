@@ -6,6 +6,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-prompt-calibration — verifying the current triage documentation
 priority: backlog
+resolution: implemented
 ---
 
 `bbx handle` can pass only the first item in a multi-item category bucket to a
@@ -38,3 +39,16 @@ with at least two paths, including a path with spaces. Update
 `beebox/src/core/docs-gen/package-docs/triage.ts`, which currently advertises the broken
 NUL-delimited shell recipe, together with the runtime contract. Keep
 `beebox/docs/triage.md` aligned with the corrected transport.
+
+## Resolution
+
+2026-10-19, bug-burndown-3: `liveRunProcedure` in `beebox/src/core/handle.ts`
+now joins the bucket's box-relative paths with newlines. An item path that
+contains a newline fails that bucket instead of splitting into two items. The
+generated triage guide (`beebox/src/core/docs-gen/package-docs/triage.ts`),
+`beebox/docs/triage.md`, and the `triage-handler-env` knowledge-audit
+expectation document the `while IFS= read -r item` recipe in place of
+`xargs -0`. A new test in `beebox/test/core/handle.test.ts` runs the live
+procedure engine on a two-item bucket, one path with spaces. Its shell step
+uses the documented recipe and records both paths. The test fails with the old
+NUL join.
