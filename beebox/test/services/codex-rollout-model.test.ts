@@ -8,7 +8,7 @@
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   codexHomeDir,
@@ -70,6 +70,17 @@ void test("The latest turn's model wins", async (t) => {
   t.check(await readCodexRolloutModel({ codexHome: home, threadId: THREAD }), "gpt-6-astra");
 });
 
+// ## A turn_context line longer than a read chunk is read whole
+//
+// Instructions ride in the turn_context record, so its line can outgrow one
+// 256 KiB read.
+void test("A turn_context line longer than a read chunk is read whole", async (t) => {
+  const home = await codexHome(t);
+  const long = JSON.stringify({ timestamp: "t", type: "turn_context", payload: { instructions: "z".repeat(600_000), model: "gpt-6-astra" } });
+  await writeRollout(home, { dayMs: CREATED, lines: [turnContext("gpt-6-sol"), long, JSON.stringify({ type: "response_item" })] });
+  t.check(await readCodexRolloutModel({ codexHome: home, threadId: THREAD }), "gpt-6-astra");
+});
+
 // ## The file is found near its creation day
 //
 // The directory is the thread's local creation date. A Codex process in
@@ -100,5 +111,7 @@ void test("A missing rollout is null; an unreadable one throws", async (t) => {
 // ## The Codex home follows the session's environment
 void test("The Codex home follows the session's environment", async (t) => {
   t.check(codexHomeDir({ CODEX_HOME: "/session/codex" }), "/session/codex");
-  t.check(codexHomeDir(undefined), process.env.CODEX_HOME);
+  // A supplied environment replaces ours in the child, so a missing key means
+  // Codex's default home, not this process's CODEX_HOME.
+  t.check(codexHomeDir({ PATH: "/bin" }), join(homedir(), ".codex"));
 });

@@ -32,9 +32,14 @@ class CodexRolloutParseError extends Error {
   }
 }
 
-/** The Codex home a session with this environment uses. */
+/**
+ * The Codex home a session with this environment uses. A supplied environment
+ * is the child's whole environment (the SDK does not merge it with ours), so
+ * only an omitted one inherits this process's `CODEX_HOME`.
+ */
 export function codexHomeDir(env: Record<string, string | undefined> | undefined): string {
-  return env?.CODEX_HOME ?? process.env.CODEX_HOME ?? path.join(os.homedir(), ".codex");
+  const home = env === undefined ? process.env.CODEX_HOME : env.CODEX_HOME;
+  return home ?? path.join(os.homedir(), ".codex");
 }
 
 function threadCreatedAt(threadId: string): Date | null {
@@ -70,33 +75,62 @@ export async function findCodexRollout(codexHome: string, threadId: string): Pro
 }
 
 /**
- * The last complete line holding a `turn_context` record, read backward in
- * chunks so a long thread's rollout is not read whole.
+ * The last line holding a `turn_context` record. The file is scanned backward
+ * in chunks for the marker; the marker sits near the start of its line, so a
+ * small overlap between chunks is enough to catch one split across them. Only
+ * the matching line is then read whole, so each byte is read about once.
  */
 async function lastTurnContextLine(file: string): Promise<string | null> {
   const handle = await fs.open(file, "r");
   try {
-    let position = (await handle.stat()).size;
-    let tail = "";
-    while (position > 0) {
-      const length = Math.min(CHUNK_BYTES, position);
-      position -= length;
-      const chunk = Buffer.alloc(length);
-      await handle.read(chunk, 0, length, position);
-      // Joining at a byte offset can split a multibyte character; the marker
-      // and the JSON structure around it are ASCII, so only free text suffers.
-      tail = chunk.toString("utf8") + tail;
-      const at = tail.lastIndexOf(TURN_CONTEXT_MARKER);
-      if (at === -1) continue;
-      const start = tail.lastIndexOf("\n", at) + 1;
-      if (start === 0 && position > 0) continue;
-      const end = tail.indexOf("\n", at);
-      return tail.slice(start, end === -1 ? undefined : end);
-    }
-    return null;
+    const at = await lastMarkerOffset(handle, (await handle.stat()).size);
+    if (at === null) return null;
+    return await lineAround(handle, at);
   } finally {
     await handle.close();
   }
+}
+
+async function readAt(handle: fs.FileHandle, { position, length }: { position: number; length: number }): Promise<Buffer> {
+  const buffer = Buffer.alloc(length);
+  const { bytesRead } = await handle.read(buffer, 0, length, position);
+  return buffer.subarray(0, bytesRead);
+}
+
+async function lastMarkerOffset(handle: fs.FileHandle, size: number): Promise<number | null> {
+  let end = size;
+  while (end > 0) {
+    const start = Math.max(0, end - CHUNK_BYTES);
+    // Read past `end` by the marker's length so a marker split at the chunk
+    // boundary is found in this window.
+    const window = await readAt(handle, { position: start, length: Math.min(size, end + TURN_CONTEXT_MARKER.length) - start });
+    const index = window.lastIndexOf(TURN_CONTEXT_MARKER);
+    if (index !== -1) return start + index;
+    end = start;
+  }
+  return null;
+}
+
+/** The whole line containing byte `at`, without its newline. */
+async function lineAround(handle: fs.FileHandle, at: number): Promise<string> {
+  let lineStart = 0;
+  for (let end = at; end > 0; ) {
+    const start = Math.max(0, end - CHUNK_BYTES);
+    const newline = (await readAt(handle, { position: start, length: end - start })).lastIndexOf(0x0a);
+    if (newline !== -1) {
+      lineStart = start + newline + 1;
+      break;
+    }
+    end = start;
+  }
+  const parts: Buffer[] = [];
+  for (let position = lineStart; ; position += CHUNK_BYTES) {
+    const chunk = await readAt(handle, { position, length: CHUNK_BYTES });
+    const newline = chunk.indexOf(0x0a);
+    parts.push(newline === -1 ? chunk : chunk.subarray(0, newline));
+    if (newline !== -1 || chunk.length < CHUNK_BYTES) break;
+  }
+  return Buffer.concat(parts).toString("utf8");
 }
 
 /**
