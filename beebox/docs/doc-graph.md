@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-19T01:06:23Z
-Total documents: 544
+Generated: 2026-10-19T01:32:37Z
+Total documents: 545
 
 ## Issues
 
@@ -12,6 +12,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/acknowledgements-backfill.md** — "Acknowledgements backfill: credit adopted external ideas" (319 lines) · shipped history · implemented
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines) · implementation review
 - **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines) · shipped history · implemented
+- **docs/implemented-plans/bbx-remind.md** — "bbx remind: one command for check-ins and reminders" (290 lines) · shipped history · implemented
 - **docs/implemented-plans/bloom-theme.md** — "Bloom system and card theme" (213 lines) · shipped history · implemented
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (679 lines) · shipped history · implemented
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
@@ -616,8 +617,8 @@ Referenced by:
 - ../dev/devprocess-talk/slides/06d-no-disable-rule.md:8 (mention) — rule in the preset is a deliberate choice, and several restate code-style.md.
 - ../dev/devprocess-talk/slides/15a-false-starts-table.md:14 (mention) — | bbx-codehealth | Jul 4 | Oct 7 | "promoted index.ts barrels against code-style.md"; its probes already ran weekly |
 - ../dev/skills-review-2026-10.md:45 (mention) — 1. **bbx-codehealth contradicts a boxholder decision.** Lines 27-35, 154 and 204 call an `index.ts` re-export surface "t
-- ../issues/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md:67 (mention) — Related: code-style.md defensiveness rule 5 is this exact rule at the UI layer
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:94 (mention) — standing `code-style.md`/CLAUDE.md decision ("don't roll your own with
+- ../issues/closed/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md:81 (mention) — Related: code-style.md defensiveness rule 5 is this exact rule at the UI layer
 - ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:35 (mention) — per the no-barrels decision. `code-style.md` now states that a missing `export`
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:18 (mention) — helpers. See `code-style.md`'s "Type Checking and Linting" section for the
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:38 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
@@ -1434,7 +1435,6 @@ References:
 - → ../issues/decisions/2026-05-21-glossary-proper-nouns.md (link)
 - → docs/box-layout.md (mention)
 - → AGENTS.md (mention)
-- → docs/chat/schedules.md (mention)
 - → docs/cards/schemas.md (mention)
 - → docs/cards/format.md (mention)
 - → docs/media/assets.md (mention)
@@ -1608,7 +1608,7 @@ Referenced by:
 - docs/implemented-plans/scan-uploader-version-drift.md:193 (mention) — `docs/mobile-contract.md:1088-1105` states the server never branches on it —
 - docs/implemented-plans/secret-entry-guidance.md:533 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
 - docs/mobile-parity.md:5 (mention) — detail lives in `docs/mobile-contract.md`. Cell values: **done**,
-- docs/notifications.md:185 (link) — ([mobile contract §5.9](mobile-contract.md)).
+- docs/notifications.md:189 (link) — ([mobile contract §5.9](mobile-contract.md)).
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
 - docs/plans/agent-points-at-ui.md:75 (mention) — - `docs/mobile-contract.md` — the anchor-manifest discipline any bridge
 - docs/plans/android-companion-app.md:14 (mention) — implements **exactly** the contract in `docs/mobile-contract.md`; it adds no new
@@ -1766,11 +1766,12 @@ Referenced by:
 
 #### docs/notifications.md
 
-Title: "Notifications" | 240 lines | current reference
+Title: "Notifications" | 244 lines | current reference
 
 Referenced by:
 - docs/design/interaction-model.md:37 (link) — [`../notifications.md`](../notifications.md) are implementation, not design,
 - docs/guides.md:40 (link) — | Notifications, reminders, and watches (`bbx notify`, `notify:` schedules, `bbx changes`, `bbx judge`) | [notifications
+- docs/implemented-plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - docs/implemented-plans/notifications.md:20 (mention) — > walk"](../notifications.md#verification-walk) — has not run; it is gated
 - docs/implemented-plans/remove-telegram.md:38 (mention) — so I am told. The channel rule (`docs/notifications.md`, *Channels*) has
 - docs/implemented-plans/retire-type-specific-core-tags.md:148 (mention) — The sentences at `briefing.tsx:95-97` ("write their answer into `{% purpose %}`") and `:129-130` change to match. `docs/
@@ -1822,7 +1823,7 @@ Referenced by:
 - docs/implemented-plans/todos-ui.md:204 (mention) — `docs/procedure-implementation.md:110`), prechecks, and validate phases.
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/plans/email-tracking.md:63 (mention) — - `docs/procedure-implementation.md` remains the reference for shell prechecks,
-- docs/scheduler.md:41 (mention) — review runs out of turns — see `docs/procedure-implementation.md`; `bbx handle`
+- docs/scheduler.md:49 (mention) — review runs out of turns — see `docs/procedure-implementation.md`; `bbx handle`
 - docs/server/health-checks.md:40 (mention) — cases — see `docs/procedure-implementation.md` → Instructions.
 - docs/user-stories/catalog/2026-06-26.md:5746 (mention) — **Verifier (flagged):** The code implements multi-phase procedure definitions and execution with progress tracking, but
 - ../issues/closed/code-quality/2026-06-26-procedure-validation-completion-d5.md:8 (mention) — **Closed:** Done: model-judged instruction validation, `severity: review` auto-retry, and resumable runs (`bbx procedure
@@ -1954,7 +1955,7 @@ References:
 
 #### docs/scheduler.md
 
-Title: "Scheduler" | 118 lines | current reference
+Title: "Scheduler" | 126 lines | current reference
 
 Referenced by:
 - AGENTS.md:51 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
@@ -2908,19 +2909,19 @@ References:
 
 #### docs/chat/schedules.md
 
-Title: "Chat schedules" | 82 lines | current reference
+Title: "Chat check-ins" | 102 lines | current reference
 
 Referenced by:
-- docs/chat.md:11 (link) — | [Schedules](chat/schedules.md) | Agent-set timers from a `<schedule>` tag: lifecycle, targeting, persistence. |
+- docs/chat.md:11 (link) — | [Check-ins](chat/schedules.md) | Agent-set timers that come back to one conversation (`bbx remind --here`): lifecycle,
 - docs/design/README.md:35 (link) — and [`../chat/schedules.md`](../chat/schedules.md).
 - docs/design/processing.md:26 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
-- docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
+- docs/implemented-plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - docs/implemented-plans/design-reconciliation.md:579 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 - docs/implemented-plans/doc-structure-chat.md:70 (mention) — | `chat-schedules.md` | `chat/schedules.md` | |
 - docs/implemented-plans/mvp-implementation-guide.md:248 (mention) — See `docs/scheduler.md` and `docs/chat/schedules.md` for scheduling examples.
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:103 (mention) — Approved destinations, now applied: `bin/docs/commit-guards.md`, `bin/docs/router-operations.md`, `bin/docs/worktree-lif
-- docs/notifications.md:91 (link) — within hours ([chat timers](chat/schedules.md)).
-- ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:64 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
+- docs/notifications.md:95 (link) — ([chat check-ins](chat/schedules.md)).
+- ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:67 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
 - ../research/fabric-review.md:73 (mention) — - **One agent per box, with the whole box.** The agent is Claude Code or Codex with a shell, procedures and schedules (`
 - ../research/lifeos-review.md:68 (mention) — | Weekly review that shows last week's "next step" and freezes a snapshot | **Adapt**, as a scheduled procedure that ope
 
@@ -3664,6 +3665,19 @@ References:
 - → README.md (mention)
 - → docs/implemented-plans/agent-field-tests.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
+
+#### docs/implemented-plans/bbx-remind.md **[ORPHAN]**
+
+Title: "bbx remind: one command for check-ins and reminders" | 290 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
+- → ../issues/closed/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
+- → src/core/agent-guide/guide.md (mention)
+- → src/hub/AGENTS.md (mention)
+- → docs/chat/schedules.md (mention)
+- → docs/notifications.md (mention)
 
 #### docs/implemented-plans/bloom-theme.md **[ORPHAN]**
 
@@ -9234,7 +9248,7 @@ Title: "Server configuration" | 213 lines | current reference
 Referenced by:
 - docs/implemented-plans/doc-structure-connectors.md:87 (mention) — `server/configuration.md`'s Google OAuth env vars.
 - docs/implemented-plans/doc-structure-install-server.md:81 (mention) — | `deploy/README.md` Environment variables, Web Push, Authentication, Google OAuth, Per-box access control; `server-oper
-- docs/notifications.md:181 (link) — are in [server configuration](server/configuration.md#web-push-vapid-keys). The
+- docs/notifications.md:185 (link) — are in [server configuration](server/configuration.md#web-push-vapid-keys). The
 - docs/server.md:15 (link) — | [Configuration](server/configuration.md) | `/home/beebox/.env`, the service user's Claude and Codex logins, box login
 - docs/server/boxes.md:96 (link) — owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:33 (mention) — (`beebox/docs/server/configuration.md`), so its box agents likely see that
@@ -9858,6 +9872,7 @@ Referenced by:
 - docs/design/README.md:30 (mention) — The Laws (Saving, Cards, Checking, and Quoting, with its tiebreak: when unsure whether a change is a fix or a reword, it
 - docs/glossary.md:20 (mention) — Language" section (SPEAKING in `src/core/agent-guide/guide.md`) defer to these lines;
 - docs/implemented-plans/agent-guide-spec.md:171 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
+- docs/implemented-plans/bbx-remind.md:60 (mention) — - No channel can reach the person at the chosen loudness: the command refuses and says how to turn a channel on. The age
 - docs/implemented-plans/box-agents-md.md:157 (mention) — - **Agent-facing text naming `CLAUDE.md`** — `agent-guide/guide.md:372`
 - docs/implemented-plans/place-shows-cards.md:184 (mention) — when the agent edits a landmark (`src/core/agent-guide/guide.md:393`).
 - docs/implemented-plans/place-shows-cards.review.md:32 (mention) — Additional files opened beyond the first-hop list: `beebox/src/core/lint-prominence/core.ts`, `beebox/src/shared/browse-
@@ -9984,7 +9999,8 @@ Title: "Hub" | 70 lines
 
 Referenced by:
 - AGENTS.md:44 (link) — - Hub routing: `src/hub/`; read [hub guidance](src/hub/AGENTS.md). Tests mirror source paths under `test/` and use helpe
-- docs/chat/schedules.md:81 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
+- docs/chat/schedules.md:101 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
+- docs/implemented-plans/bbx-remind.md:85 (mention) — chat schedule is pending (`src/hub/AGENTS.md:55`, *"Chat schedules override
 - docs/implemented-plans/docs-reorg.md:320 (mention) — conventions documented at colocated homes (new `src/hub/AGENTS.md`,
 - docs/implemented-plans/file-layout.md:134 (mention) — `src/services/AGENTS.md`, `src/hub/AGENTS.md`, `src/dev/AGENTS.md`,
 - docs/implemented-plans/mobile-token-handshake.md:82 (mention) — unacceptable."* `src/hub/AGENTS.md` reinforces it: `CHILD_ENV_ALLOWLIST` deliberately
@@ -10361,9 +10377,9 @@ References:
 - → test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md (link)
 - → ../issues/code-quality/2026-08-25-router-failure-page-addresses-nobody.md (link)
 - → ../issues/closed/bugs/2026-08-23-auth-preflight-blocks-new-chats-when-claude-not-on-path.md (link)
-- → ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
-- → ../issues/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
-- → ../issues/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md (link)
+- → ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
+- → ../issues/closed/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
+- → ../issues/closed/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md (link)
 - → ../issues/bugs/2026-08-25-one-pink-bar-three-severities.md (link)
 - → ../issues/closed/bugs/2026-08-25-mic-misfire-wipes-the-composer-draft.md (link)
 - → ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md (link)
@@ -10371,7 +10387,7 @@ References:
 - → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
 - → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-- → ../issues/bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md (link)
+- → ../issues/closed/bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md (link)
 
 #### test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md
 

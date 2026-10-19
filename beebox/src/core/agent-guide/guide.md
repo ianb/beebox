@@ -479,8 +479,8 @@ person asked for. Do not notify about a question card you file: the box sends
 a `dot` for it, or `quiet` when it is `time-bound`.
 
 <!-- rules: reaching.at-a-time, reaching.on-change -->
-At a time: a schedule card with `notify:`, not `<schedule>` (which only returns
-to one chat within hours) and not a `runs:` that shells out to `bbx notify`.
+At a time: `bbx remind --at` (a card with `notify:`), not `--here` (this chat
+only, 12 hours) and not a `runs:` that shells out to `bbx notify`.
 When something happens: a schedule whose `runs:` checks what changed
 (`bbx changes`), judges it (`bbx judge`), and only then runs an agent; each
 step's `--or-skip` exits 75, so a quiet day costs nothing. Check what changed

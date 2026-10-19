@@ -1,6 +1,7 @@
 ---
 title: "A chat timer past ~25 days fires instantly — and a malformed one silently never fires"
-workstream: unattached
+resolution: implemented
+workstream: turn-feedback
 area: beebox
 labels: [journey-findings]
 filed-by: agent
@@ -8,6 +9,8 @@ discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey A, 2026-08-25 walk; mechanism traced by a verifier agent
 priority: backlog
 ---
+
+Resolved by the bbx-remind plan (5aa703c02, d7e55e8a4, 1e580f3c4, 7b438b8f1, 1094327b5). Check-ins are capped at 12h, saved before armed, and the timer cannot overflow; longer waits use `bbx remind` reminder cards.
 
 ## Recovery assessment (2026-09-21)
 

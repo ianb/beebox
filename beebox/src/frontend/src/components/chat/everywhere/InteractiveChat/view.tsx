@@ -287,7 +287,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
       ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice} failedRegion={props.failedRegion}
       // Native input replaces only the composer; landmark and settings menus remain web-owned.
       barChrome={<BarChromeRegion {...props} />}
-      workspace={<PlaceChatContext.Provider value={placeChat}><WorkspaceCanvas onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
+      workspace={<PlaceChatContext.Provider value={placeChat}><WorkspaceCanvas turnActive={props.isStreaming} turnTools={props.streamTools} onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
         <MessageListRegion key={props.conversationKey} {...props} />
       </WorkspaceCanvas></PlaceChatContext.Provider>}
       statusBanners={

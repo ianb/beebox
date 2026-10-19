@@ -27,6 +27,7 @@ import { classifyScheduleFailure, type ScheduleOutcomeResult } from "./engine-wa
 import { finishRunMemory, prepareRunMemory, readDeferMarker, type RunMemory } from "./memory.js";
 import { DEFER_REASON_TEXT, type DeferReason } from "./defer-reason.js";
 import { appendRunHistory, historyEntry, readRunSummary, type RunSummary } from "./summary.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 class ScheduledNotificationUndeliveredError extends Error {
   constructor(detail: string) {
@@ -107,6 +108,20 @@ export type RecordedRun = (
 };
 
 /**
+ * Classify a failed action. A `notify:` send that failed is a `failure`: it
+ * runs no agent, so an engine-wait record written during it (a chat's quota
+ * episode) says nothing about it, and `deferred` would hide a send that did
+ * not get through. A command goes through the engine-wait classifier.
+ */
+export async function classifyActionFailure(
+  parsed: ParsedScheduledScript,
+  options: { boxRoot: string; runStartedAt: Date; error: unknown },
+): Promise<{ result: ScheduleOutcomeResult; error: string }> {
+  if (parsed.action.kind === "notify") return { result: "failure", error: errorMessage(options.error) };
+  return classifyScheduleFailure(options);
+}
+
+/**
  * Classify a failed run. A command that exited 75 (`CHECK_SKIP_CODE`) after
  * writing a defer marker deferred on purpose: `deferred`, with the marker's
  * reason. Exit 75 alone is not evidence (any command may exit 75, and the
@@ -114,16 +129,16 @@ export type RecordedRun = (
  * ordinary classification, where it is a failure.
  */
 async function classifyRun(
-  args: { boxRoot: string; runStartedAt: Date; error: unknown; memory: RunMemory | null },
+  args: { parsed: ParsedScheduledScript; boxRoot: string; runStartedAt: Date; error: unknown; memory: RunMemory | null },
 ): Promise<{ result: ScheduleOutcomeResult; error: string; deferReason?: DeferReason | undefined }> {
-  const { boxRoot, runStartedAt, error, memory } = args;
+  const { parsed, boxRoot, runStartedAt, error, memory } = args;
   if (memory !== null && error instanceof CommandFailedError && error.exitCode === CHECK_SKIP_CODE) {
     const deferReason = await readDeferMarker(memory.deferFilePath);
     if (deferReason !== null) {
       return { result: "deferred", error: `${deferReason}: ${DEFER_REASON_TEXT[deferReason]}`, deferReason };
     }
   }
-  return classifyScheduleFailure({ boxRoot, runStartedAt, error });
+  return classifyActionFailure(parsed, { boxRoot, runStartedAt, error });
 }
 
 /**
@@ -147,7 +162,7 @@ export async function runAndRecord(
       run = { result: "success", durationMs: timing.durationMs, summary: null };
     } catch (err) {
       timing = fallbackTiming(err);
-      const outcome = await classifyRun({ boxRoot, runStartedAt, error: err, memory });
+      const outcome = await classifyRun({ parsed, boxRoot, runStartedAt, error: err, memory });
       run = { ...outcome, durationMs: timing.durationMs, summary: null };
     }
     const error = run.result === "success" ? null : run.error;
@@ -158,7 +173,18 @@ export async function runAndRecord(
       run.summary = await readRunSummary(memory.summaryFilePath);
     }
     await saveScriptState({ boxRoot, scriptName, state });
-    await appendRunHistory(boxRoot, { scriptName, entry: historyEntry(state, { triggeredBy: args.triggeredBy, summary: run.summary }) });
+    const entry = historyEntry(state, { triggeredBy: args.triggeredBy, summary: run.summary });
+    if (run.result === "success" && parsed.action.kind === "notify") {
+      // The send got through and its state is saved: a history write that
+      // fails must not turn it into a failure, which a reminder would retry.
+      try {
+        await appendRunHistory(boxRoot, { scriptName, entry });
+      } catch (err) {
+        console.error(`Schedule ${scriptName}: notification sent, but its run history was not written:`, err);
+      }
+    } else {
+      await appendRunHistory(boxRoot, { scriptName, entry });
+    }
     return run;
   } finally {
     await memory?.dispose();

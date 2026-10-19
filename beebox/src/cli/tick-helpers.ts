@@ -21,17 +21,16 @@ import type {
   loadScriptState,
   loadRunningScripts,
 } from "../core/schedule/state.js";
-import { fallbackTiming, runAndRecord } from "../core/schedule/run-action.js";
+import { classifyActionFailure, fallbackTiming, runAndRecord } from "../core/schedule/run-action.js";
 import { appendRunHistory, historyEntry } from "../core/schedule/summary.js";
 import { loadRunningProcedures } from "../core/schedule/running-procedures.js";
-import { cardMtimeMs, deleteOnceCard, handleCreateAfterSuccess } from "./tick-utils.js";
+import { cardMtimeMs, deleteOnceCard, handleCreateAfterSuccess, keepDeliveredSend } from "./tick-utils.js";
 import { stageAll, commit, getStatus, withBoxGitLock } from "../lib/git/core/operations.js";
 import type { TickOptions, ScriptResult } from "./commands/tick.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { scheduleOutcomeLine } from "../shared/schedule-error.js";
 import {
   boxEngineUnavailability,
-  classifyScheduleFailure,
   engineWaitReason,
   type ScheduleOutcomeResult,
 } from "../core/schedule/engine-wait.js";
@@ -75,7 +74,14 @@ export function effectiveBusyBlockers(
   { force }: { force: boolean },
 ): string[] {
   if (!force) return blockers;
-  return blockers.filter((b) => !b.startsWith("chat:"));
+  return blockers.filter((b) => !isChatBlocker(b));
+}
+
+/** Blockers that a `notify:` card does not wait for: an active chat. A
+ * reminder runs no agent and no shell, so it cannot race the chat's writes
+ * (the housekeeping commit re-checks for chats itself, see handlePostSuccess). */
+export function isChatBlocker(blocker: string): boolean {
+  return blocker.startsWith("chat:");
 }
 
 /** Detect other in-flight work (scripts, procedures, chats). Tick's
@@ -96,6 +102,29 @@ export async function findBusyBlockers(
       (c) => `chat:${c.sessionId ?? "(unassigned)"}`
     ),
   ];
+}
+
+/**
+ * What in-flight work holds this tick back, printing the deferral line:
+ * `defer-all` when a script or procedure is running; `chat` when only chats
+ * are active, which defers every card except `notify:` ones; `none`. Under
+ * --force, active chats don't defer (see effectiveBusyBlockers); the
+ * housekeeping-commit hazard they guarded is handled at the commit site.
+ */
+export async function tickBusyState(
+  boxRoot: string,
+  { running, options }: { running: RunningScripts; options: TickOptions },
+): Promise<"defer-all" | "chat" | "none"> {
+  const blockers = effectiveBusyBlockers(await findBusyBlockers(boxRoot, running), { force: options.force === true });
+  if (blockers.length === 0) return "none";
+  const chatOnly = blockers.every(isChatBlocker);
+  if (!options.quiet) {
+    const hint = chatOnly
+      ? "; notify: cards still run (bbx tick --script <name> --force runs despite an active chat)"
+      : "";
+    console.log(`Tick deferred — system busy: ${blockers.join(", ")}${hint}`);
+  }
+  return chatOnly ? "chat" : "defer-all";
 }
 
 interface SkipContext {
@@ -127,15 +156,16 @@ export async function evaluateSkip(ctx: SkipContext): Promise<SkipDecision | nul
 
   if (options.force) {
     if (!parsed.enabled) return say("disabled (enabled: false)");
-  } else if (!isDue(parsed, { lastRun: state.lastRun, now })) {
+  } else if (!isDue(parsed, { lastRun: state.lastRun, lastResult: state.lastResult, consecutiveFailures: state.consecutiveFailures, now })) {
     return { line: "" };
   }
 
   // Engine unavailable (e.g. quota-exhausted): running would burn an attempt
   // that cannot succeed. `lastRun` stays untouched, so the script remains due
   // and runs on the first tick after the reset. `--force` bypasses this like
-  // the other schedule gates.
-  if (!options.force) {
+  // the other schedule gates. A `notify:` card runs no agent, so the engine
+  // cannot hold it back.
+  if (!options.force && parsed.action.kind !== "notify") {
     const engineWait = await boxEngineUnavailability(boxRoot);
     if (engineWait !== null) return say(engineWaitReason(engineWait), { reason: "engine-quota", live: engineWait });
   }
@@ -267,13 +297,14 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
       if (!options.quiet) console.error(`  ${scheduleOutcomeLine(run)}`);
       return outcomeResult({ scriptName, command, outcome: run });
     }
-    await handlePostSuccess({ boxRoot, parsed, scriptName, cardPath, file, preRunMtimeMs, options });
+    await keepDeliveredSend({ parsed, scriptName }, () => handlePostSuccess({ boxRoot, parsed, scriptName, cardPath, file, preRunMtimeMs, options }));
     return { name: scriptName, status: "ran", command, durationMs: run.durationMs };
   } catch (err) {
-    // Post-success housekeeping failed: the run is recorded again as its outcome.
+    // The run threw before recording, or a command's post-success housekeeping
+    // failed: the run is recorded again as its outcome.
     const { durationMs, sleepAffected } = fallbackTiming(err);
     const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
-    const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
+    const outcome = await classifyActionFailure(parsed, { boxRoot, runStartedAt: scriptStartedAt, error: err });
     recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
     await appendRunHistory(boxRoot, { scriptName, entry: historyEntry(state, { triggeredBy: "schedule", summary: null }) });

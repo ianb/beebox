@@ -25,7 +25,7 @@ import {
   DEFAULT_RUN_WINDOW_MS,
 } from "../core/schedule/state.js";
 import { checkRequiredConnectors, noteTickSkip, promoteDeferredRun } from "../core/schedule/promotion.js";
-import { fallbackTiming, runAndRecord } from "../core/schedule/run-action.js";
+import { classifyActionFailure, fallbackTiming, runAndRecord } from "../core/schedule/run-action.js";
 import { appendRunHistory, historyEntry } from "../core/schedule/summary.js";
 import { parseCardName, getBoxDir } from "../lib/paths/core.js";
 import { resolveRefPath } from "../shared/ref-path/core.js";
@@ -33,7 +33,6 @@ import { scheduleOutcomeLine } from "../shared/schedule-error.js";
 import { getDefaultTemplate } from "../templates-registry.js";
 import {
   boxEngineUnavailability,
-  classifyScheduleFailure,
   engineWaitReason,
 } from "../core/schedule/engine-wait.js";
 import { getBoxTime } from "../lib/time.js";
@@ -85,7 +84,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     // reset.
     // The promotion rule, as in `bbx tick`: a requested schedule that cannot run says so once.
     const promotion = { boxRoot, scriptName, parsed, state, now };
-    const engineWait = await boxEngineUnavailability(boxRoot);
+    const engineWait = parsed.action.kind === "notify" ? null : await boxEngineUnavailability(boxRoot);
     if (engineWait !== null) {
       console.log(`  Skipping ${scriptName}: ${engineWaitReason(engineWait)}`);
       await noteTickSkip(promotion, { reason: "engine-quota", live: engineWait });
@@ -137,15 +136,17 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       });
       if (run.result === "success") {
         ranCount++;
-        await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
-        if (parsed.once && (await deleteOnceCard(cardPath, { file, preRunMtimeMs, quiet: false }))) {
-          // Only the card's own path: the wakeup must not sweep other work into this commit.
-          await stageAndCommitPaths(boxRoot, {
-            paths: [path.relative(boxRoot, cardPath)],
-            message: `Wakeup: remove one-shot ${scriptName}`,
-            trailers: { "Triggered-By": "bbx wakeup" },
-          });
-        }
+        await keepDeliveredSend({ parsed, scriptName }, async () => {
+          await handleCreateAfterSuccess({ boxRoot, parsed, scriptName });
+          if (parsed.once && (await deleteOnceCard(cardPath, { file, preRunMtimeMs, quiet: false }))) {
+            // Only the card's own path: the wakeup must not sweep other work into this commit.
+            await stageAndCommitPaths(boxRoot, {
+              paths: [path.relative(boxRoot, cardPath)],
+              message: `Wakeup: remove one-shot ${scriptName}`,
+              trailers: { "Triggered-By": "bbx wakeup" },
+            });
+          }
+        });
       } else if (run.deferReason !== undefined) {
         console.log(`  ${scheduleOutcomeLine(run)}`);
         await promoteDeferredRun(promotion);
@@ -156,7 +157,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       // Post-success housekeeping failed: the run is recorded again as its outcome.
       const { durationMs, sleepAffected } = fallbackTiming(err);
       const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
-      const outcome = await classifyScheduleFailure({ boxRoot, runStartedAt: scriptStartedAt, error: err });
+      const outcome = await classifyActionFailure(parsed, { boxRoot, runStartedAt: scriptStartedAt, error: err });
       recordOutcome(state, { result: outcome.result, error: outcome.error, durationMs, sleepAffected, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
       await appendRunHistory(boxRoot, { scriptName, entry: historyEntry(state, { triggeredBy: "wakeup", summary: null }) });
@@ -167,6 +168,28 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
   }
 
   return ranCount;
+}
+
+/**
+ * Run a successful run's housekeeping (chain cards, `once` deletion, commit).
+ * For a `notify:` card the send already got through, so a housekeeping error
+ * is logged and the run stays `success`: recording it as a failure would make
+ * the reminder retry and send again. A command's housekeeping error throws, and
+ * the caller records it as the run's outcome.
+ */
+export async function keepDeliveredSend(
+  { parsed, scriptName }: { parsed: ParsedScheduledScript; scriptName: string },
+  housekeeping: () => Promise<void>,
+): Promise<void> {
+  if (parsed.action.kind !== "notify") {
+    await housekeeping();
+    return;
+  }
+  try {
+    await housekeeping();
+  } catch (err) {
+    console.error(`Schedule ${scriptName}: notification sent, but its housekeeping failed:`, err);
+  }
 }
 
 /** A card's mtime before its run, so `deleteOnceCard` can tell a card the run rewrote; 0 when it is gone. */
