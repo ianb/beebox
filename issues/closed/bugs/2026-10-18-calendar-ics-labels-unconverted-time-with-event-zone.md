@@ -1,12 +1,13 @@
 ---
 title: "A pulled calendar event can land at the wrong local time in its .ics file"
-workstream: unattached
+workstream: bug-burndown-3
 area: connectors
 priority: normal
 labels: [connectors, google-calendar]
 filed-by: agent
 discovered-by: agent
 discovered-in: doctest-typecheck — retire-doctest track 5, strengthening beebox/test/connectors/google-calendar.test.ts
+resolution: implemented
 ---
 
 `eventToIcs` writes a timed event's `DTSTART`/`DTEND` with the event's
@@ -40,3 +41,20 @@ Fix direction: when `timeZone` is set, convert the instant
 `timeZone`) before building the ICAL time; keep the digit slice only when no
 zone is given. Then pin the Lunch test's `DTSTART`/`DTEND` (12:00 and 13:00
 New York) and add a case whose offset differs from its zone.
+
+## Resolution
+
+2026-10-19, bug-burndown-3: `setDateTimeWithTz` in
+`beebox/src/connectors/google-calendar/ics.ts` now converts a `dateTime` that
+has a `Z` or `±hh:mm` suffix to its instant's wall time in `timeZone`
+(`Intl.DateTimeFormat`, `hourCycle: "h23"`). A `dateTime` without a suffix
+keeps its digits. All-day dates and events without `timeZone` are unchanged.
+`beebox/test/connectors/google-calendar.test.ts` now pins the Lunch push
+case's `DTSTART`/`DTEND` (12:00 and 13:00 New York) and adds a case with
+`-07:00` and `Z` offsets on an America/New_York event.
+
+Files already on disk are not corrected by this fix. The connector rewrites a
+file only when Google returns its event again: on a remote change, or on a
+full-window resync (a 410, or cleared sync tokens in the gitignored transient
+state). A full resync rewrites every in-window event that has no local edit.
+Events outside the sync window keep their old times.
