@@ -135,7 +135,7 @@ void test("duplicateBasenames flags shared basenames, excluding the whitelist", 
 // ## A moved file's own links to non-.md files are re-depthed by their path below ../
 void test("A moved file's own links to non-.md files are re-depthed by their path below ../", async (t) => {
   // The issue moved from issues/bugs/ to issues/closed/bugs/, one level deeper.
-  const tree = ["beebox/src/core/x.ts", "beebox/src/core/y.ts", "workstreams-app/src/core/y.ts", "issues/closed/bugs/moved.md"];
+  const tree = ["beebox/src/core/x.ts", "core/y.ts", "issues/core/y.ts", "workstreams-app/src/shared/z.ts", "issues/closed/bugs/moved.md"];
   const suffixMatches = buildSuffixMatcher(tree);
   const fix = (content: string) => repairLinks({ fromRel: "issues/closed/bugs/moved.md", content, fileExists: (p) => tree.includes(p), basenameLookup: buildBasenameLookup(tree), suffixMatches });
 
@@ -146,9 +146,16 @@ void test("A moved file's own links to non-.md files are re-depthed by their pat
   });
 
   t.check(
-    // Two files end with the suffix: reported, not guessed.
-    fix("[y](../../src/core/y.ts)"),
-    { content: "[y](../../src/core/y.ts)", rewrites: [], unfixable: [{ line: 1, target: "../../src/core/y.ts", reason: "ambiguous-basename" }] },
+    // Two re-depthings of the link resolve: reported, not guessed.
+    fix("[y](../core/y.ts)"),
+    { content: "[y](../core/y.ts)", rewrites: [], unfixable: [{ line: 1, target: "../core/y.ts", reason: "ambiguous-basename" }] },
+  );
+
+  t.check(
+    // A file with the same suffix in another package is a different file: only
+    // the number of leading ../ may change.
+    fix("[z](../../src/shared/z.ts)"),
+    { content: "[z](../../src/shared/z.ts)", rewrites: [], unfixable: [{ line: 1, target: "../../src/shared/z.ts", reason: "no-basename-match" }] },
   );
 
   t.check(

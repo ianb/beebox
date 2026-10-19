@@ -106,6 +106,15 @@ type LinkDecision =
   | { kind: "rewrite"; to: string }
   | { kind: "unfixable"; reason: UnfixableReason };
 
+// Re-depthing changes only the number of leading `../`, so a candidate's path
+// above the suffix must be one of the source directory's ancestors. A file
+// with the same suffix in another package is a different file.
+function redepthCandidates(pathPart: string, ctx: DecideContext): readonly string[] | undefined {
+  const suffix = path.posix.normalize(pathPart).replace(/^(?:\.\.\/)+/, "");
+  const fromDir = `${ctx.fromDir}/`;
+  return ctx.suffixMatches?.(suffix).filter((c) => fromDir.startsWith(c.slice(0, c.length - suffix.length)));
+}
+
 // Decide the fate of one link target, given the source file's directory and
 // the lookup context. `leave` covers non-file, external, absolute, anchor-only,
 // repo-escaping, and already-resolving targets.
@@ -124,9 +133,7 @@ function decideLink(target: string, ctx: DecideContext): LinkDecision {
 
   const base = path.posix.basename(pathPart);
   if (NON_UNIQUE_BASENAMES.has(base)) return { kind: "unfixable", reason: "non-unique-basename" };
-  const candidates = markdown
-    ? ctx.basenameLookup.get(base)
-    : ctx.suffixMatches?.(path.posix.normalize(pathPart).replace(/^(?:\.\.\/)+/, ""));
+  const candidates = markdown ? ctx.basenameLookup.get(base) : redepthCandidates(pathPart, ctx);
   if (!candidates || candidates.length === 0) return { kind: "unfixable", reason: "no-basename-match" };
   if (candidates.length >= 2) return { kind: "unfixable", reason: "ambiguous-basename" };
 

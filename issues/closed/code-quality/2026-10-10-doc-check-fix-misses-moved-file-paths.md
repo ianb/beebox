@@ -34,10 +34,13 @@ that step.
   `*.test.ts`) are scanned for bare or backticked plan and issue mentions.
   This covers source comments, schedule configs, and `knowledge-audits.yaml`.
 - A broken link to a non-`.md` file is matched against tracked files by its
-  path below the leading `../`. This re-depths a moved file's own links.
+  path below the leading `../`, keeping only candidates reached by changing
+  the number of `../`. This re-depths a moved file's own links.
 - Frontmatter `design:`, `superseded-by:`, and `issues:` were already
   repaired by `repairFrontmatterPaths`.
 
-The default check reports these findings, and `--fix` rewrites them. The
+The default check reports the backticked and code/YAML findings, and `--fix`
+rewrites them. Broken non-`.md` links are repaired by `--fix` only; the
+default check still does not report them, as before this change. The
 finish agent's grep step (`.claude/agents/finish.md` step 5) now covers test
 fixtures only.
