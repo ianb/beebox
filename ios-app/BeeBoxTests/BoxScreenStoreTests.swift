@@ -389,7 +389,10 @@ final class BoxScreenStoreTests: XCTestCase {
         await store.start()
         store.setShownBox(box.id)
         _ = await store.submitThought("Ask Dana about the 14th", origin: .typed, boxID: box.id)
-        try await waitUntil { store.followUp != nil }
+        // The reveal is published before the failed attempt is saved and
+        // leaves `inFlight`; a retry before then is ignored. The row shows
+        // "Sending" with no Retry button for that window.
+        try await waitUntil { store.followUp != nil && store.outbox.inFlight.isEmpty }
         store.consumeFollowUp(try XCTUnwrap(store.followUp))
         let entry = try XCTUnwrap(store.outbox.entries.first)
 
@@ -438,7 +441,9 @@ final class BoxScreenStoreTests: XCTestCase {
             client.duringSubmit = { leave(store) }
 
             _ = await store.submitThought("A thought", origin: .typed, boxID: box.id)
-            try await waitUntil { store.outbox.entries.isEmpty }
+            // The id leaves `inFlight` only after the emptied outbox is saved;
+            // the next iteration's store loads the same directory.
+            try await waitUntil { store.outbox.entries.isEmpty && store.outbox.inFlight.isEmpty }
 
             XCTAssertEqual(store.sent(boxID: box.id).map(\.message), ["A thought"], name)
             XCTAssertNil(store.followUp, name)
