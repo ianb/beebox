@@ -96,7 +96,7 @@ const BACKEND_LIB_BAN_MESSAGE =
 const SHARED_ALIAS_PATTERN = {
   group: ["**/shared/**"],
   message:
-    "Import shared modules via the @shared/* alias, not a raw relative path. (Raw relative is reserved for the few modules that run outside Vite — doctests and the view-widgets bundle — where @shared can't resolve; those are exempted in eslint.config.ts.)",
+    "Import shared modules via the @shared/* alias, not a raw relative path. (Raw relative is reserved for the few modules that run outside Vite — tests and the view-widgets bundle — where @shared can't resolve; those are exempted in eslint.config.ts.)",
 };
 // Modules exercised outside the Vite bundler that legitimately import src/shared/
 // by raw relative path (@shared unresolvable there — see SHARED_ALIAS_PATTERN).

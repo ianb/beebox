@@ -6,6 +6,8 @@ issues: []
 ---
 # Source-available release of beebox
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Make the `beebox` monorepo publishable as a public, source-available
 GPLv3 project on GitHub: readable and cloneable by strangers, buildable by
 contributors, free of personal secrets/PII, and with its personal-infrastructure

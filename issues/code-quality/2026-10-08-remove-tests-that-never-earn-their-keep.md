@@ -8,6 +8,8 @@ discovered-by: Ian
 discovered-in: skills-review — "I trust the agents to generally write correct logic" (2026-10-08)
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 About 440 of 795 doctest files have never failed in 855 hourly full-suite
 runs since 2026-08-25, and the suite grows at 0.53 test lines per src
 line. The boxholder's position: agents generally write correct logic, so a

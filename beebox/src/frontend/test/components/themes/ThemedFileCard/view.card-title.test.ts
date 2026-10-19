@@ -1,6 +1,6 @@
 // # The card header
 //
-// The header shows the card's title (`cardTitle`, `test/lib/card-title.doctest.md`)
+// The header shows the card's title (`cardTitle`, `src/frontend/test/lib/card-title.test.ts`)
 // and, under it, the type's summary line.
 //
 // ## The card type's summary line sits under the title

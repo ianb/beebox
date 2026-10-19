@@ -32,7 +32,7 @@ function portOf(server: http.Server): number {
   return address.port;
 }
 delete process.env.BBX_HUB_SECRET;
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-login-redirect-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-login-redirect-test";
 
 // ## The prefix validator fails safe to "" for anything that isn't a single path segment
 //
@@ -160,7 +160,7 @@ void test("The hub serves login at its own root and forwards /<slug>/... to the 
   const hub = await createHubServer({
     endpoints,
     getHealth: () => ({ status: "ok", boxes: [] }),
-    hubSecret: "test-hub-secret-for-login-redirect-doctest",
+    hubSecret: "test-hub-secret-for-login-redirect-test",
     baseUrl: "http://127.0.0.1",
     boxes: [{ slug: "test1", boxRoot: childBox.root }],
   });

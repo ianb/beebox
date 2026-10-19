@@ -208,7 +208,7 @@ export default function Hangs() { return null; }
 // runner kills its own process at a deadline, even while the import spins. Start a lister on the hanging view, wait for its
 // metadata runner, kill the lister with SIGKILL, and the runner is gone within
 // seconds:
-// The doctest gave each example 60s before a still-running notice.
+// Each example gets 60s before a still-running notice.
 void test("The timeout above is the parent's.", async (t) => {
   t.teardown(async () => {
     try {

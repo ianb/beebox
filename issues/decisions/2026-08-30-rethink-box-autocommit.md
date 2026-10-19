@@ -10,6 +10,8 @@ discovered-in: main session — "autocommit causes a lot of issues; we should th
 priority: important
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The box commits its own content automatically (after agent turns, procedures,
 capture delivery, generated-docs refreshes, migrations — every writer path
 ends in a commit). The boxholder's verdict: **autocommit causes a lot of

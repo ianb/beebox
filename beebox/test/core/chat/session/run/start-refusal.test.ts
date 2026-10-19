@@ -1,7 +1,7 @@
 // # Send readiness — refused before the turn is taken
 //
 // `sendReadiness` decides, before a send takes the turn, whether its run can
-// proceed (see `send-run.refused-start.doctest.md` for the route). A refusal
+// proceed (see `test/webapp/routes/chat/send-run.refused-start.test.ts` for the route). A refusal
 // reaches the sender through `onRefused`, and the session's "error" listeners
 // when it has any. A queued drain sends with no listener attached: an "error"
 // emitted then would throw instead of returning false, and the queued input

@@ -21,7 +21,7 @@ them.
   `<topic>.design.md`. Reviews: `<topic>.review.md`.
 - **`docs/implemented-plans/<topic>.md`** — plans whose work has shipped. Moved
   here (not deleted) on merge, so the detailed reasoning behind past work stays
-  findable without masquerading as current docs. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; they are `AGENTS.md` now. Older documents here keep the old name and carry a naming note.
+  findable without masquerading as current docs. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; they are `AGENTS.md` now. Older documents here keep the old name and carry a naming note. Tests were Markdown doctests (`*.doctest.md`, run by the `agent-doctest` package) until 2026-10-18; they are `.test.ts` files with `t.check` now, in the same directory under the same base name, and the package is `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 - **`docs/<anything-else>.md`** — reference documentation: how the system works
   *now*. Kept current. Not a graveyard for finished proposals.
 

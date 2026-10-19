@@ -6,7 +6,7 @@
 //
 // The operator here is the fake chat backend — a fully scripted persona, no SDK
 // and no cost — but the box and the server are REAL, for the same reason the
-// lifecycle doctest uses a real one: the failures this loop exists to catch (a
+// lifecycle test uses a real one: the failures this loop exists to catch (a
 // checkpoint that doesn't rewind, a server that keeps serving reset state, a
 // debrief asked of a dead session) are invisible against a mocked box.
 

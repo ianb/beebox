@@ -4,7 +4,7 @@
 // localStorage so a screen sleep / tab eviction / reload can't erase an
 // in-progress narration transcript. The hook owns the storage I/O; these own the
 // key shape and the parse/serialize boundary. The age label moved to
-// `relative-time.doctest.md`, where the capture chip shares it.
+// `src/frontend/test/lib/relative-time.test.ts`, where the capture chip shares it.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

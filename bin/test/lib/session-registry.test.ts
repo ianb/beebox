@@ -30,7 +30,7 @@ void test("Missing and merged records", async (t) => {
       t.error(error);
     }
   });
-  const stateDir = await mkdtemp(join(tmpdir(), "session-registry-doctest-"));
+  const stateDir = await mkdtemp(join(tmpdir(), "session-registry-test-"));
   const missing = await registryShell(stateDir, 'session_registry_read "seam" || printf missing');
   t.check(missing.stdout, "missing");
 

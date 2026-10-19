@@ -5,7 +5,7 @@
 // isn't THIS box's own file under the exact tmp-task shape
 // `/private/tmp/claude-<uid>/<encoded box cwd>/<session-id>/tasks/<id>.output`
 // — see `isTaskOutputPathForBox` (`src/core/chat/session/transcript-paths.ts`,
-// covered on its own in `test/core/chat/session/transcript-paths.doctest.md`).
+// covered on its own in `test/core/chat/session/transcript-paths.test.ts`).
 // This file drives the route end to end with two real, independent boxes.
 
 import { test } from "tap";
@@ -19,7 +19,7 @@ import { encodeProjectDir } from "../../../src/core/chat/session/transcript-path
  *  directly under `/tmp` (not `os.tmpdir()`, which on macOS is a per-process
  *  `/var/folders/...` path outside the shape the route accepts). */
 async function makeClaudeTmpRoot() {
-  return fs.mkdtemp("/tmp/claude-task-output-doctest-");
+  return fs.mkdtemp("/tmp/claude-task-output-test-");
 }
 
 /** Write a task output file at the exact shape the route expects, returning

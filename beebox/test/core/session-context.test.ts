@@ -4,7 +4,7 @@
 // server stamps into the per-turn `<chat-app>` snapshot: a human-oriented
 // `local-time` (named weekday + phase of day in the box timezone) on every
 // message, plus `last-activity` and `calendar` on the first message of a
-// brand-new session. See `test/chat-features.doctest.md` for how the
+// brand-new session. See `test/core/chat/features.test.ts` for how the
 // attributes serialize into the tag.
 
 import { test } from "tap";

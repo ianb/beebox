@@ -265,7 +265,7 @@ void test("Finalize runs as a procedure run-phase shell, before the engine commi
 // A map with no state entry is a `create` task, and a correct one needs no
 // rewrite. Finalize used to stamp only rewritten maps, so such a map came back
 // as `create` in every run. It now stamps any map that passes the coverage
-// check (`maps-verify.doctest.md`). The same holds for an update whose only
+// check (`test/core/maps/finalize/verify.test.ts`). The same holds for an update whose only
 // addition is a plain file, which the map should not list.
 void test("A map with no state entry is a create task, and a correct one needs no rewrite.", async (t) => {
   t.teardown(async () => {

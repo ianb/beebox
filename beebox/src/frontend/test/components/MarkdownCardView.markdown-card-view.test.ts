@@ -54,12 +54,12 @@ const plate = indexPlateStates(cardPath, [
 ]);
 
 // Which fields the card front passes to this table is decided by
-// `splitCardFields` (`test/lib/card-field-faces.doctest.md`).
+// `splitCardFields` (`src/frontend/test/lib/card-field-faces.test.ts`).
 //
 // ## Fields read as a person reads them
 //
 // A label is the key in sentence case, with no colon
-// (`test/lib/readable-fields.doctest.md`). A small object reads as one value: a
+// (`src/frontend/test/lib/readable-fields.test.ts`). A small object reads as one value: a
 // person's name links to their card with the role beside it in parentheses,
 // and a measure reads as its value with its note.
 /** The visible text of each `<dt>`/`<dd>` cell, in order, "|"-separated. */
@@ -72,7 +72,7 @@ function cells(markup: string): string {
 // The card page shows the title from `title:`. A body that opens with the same
 // `# heading` would show it twice, so the view leaves that line out. It uses
 // `leadingTitleHeading`, the predicate lint warns with
-// (`test/shared/leading-title-heading.doctest.md`). The line is blanked rather
+// (`test/shared/leading-title-heading.test.ts`). The line is blanked rather
 // than removed, so a todo further down keeps the locator the collector gives it:
 // body line 5 after a three-line frontmatter is file line 8.
 /** Render a doc card's view inside a router and a query client that never answers. */

@@ -108,4 +108,4 @@ void test("A row whose worktree exists but whose agent is not live cannot be foc
 // A dormant row gained `archive` on 2026-09-12 — the verb existed in the CLI and
 // the shared list but had no button. `removed` here carries `merged: false`, work
 // that never landed, and the CLI refuses to archive that so no button is offered
-// for it either (see `workstream-archive-actions.doctest.md`).
+// for it either (see `WorkstreamActions.archive.test.ts`).

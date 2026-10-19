@@ -2,7 +2,7 @@
 //
 // `POST /api/chat/send` and `quickChat` deliver a person's message through the
 // same sender, which `routes/chat/register.ts` creates once per box and exposes
-// on the chat runtime as `sendUserMessage`. The send-route doctests cover the
+// on the chat runtime as `sendUserMessage`. The send-route tests cover the
 // route; they cannot show that the two paths share state. Here one message id
 // goes through two paths against one runtime, in each order, and the box records
 // one chat message: first the route and the runtime's sender, then the route and

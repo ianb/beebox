@@ -2,7 +2,7 @@
 //
 // The trash command moves cards (plus their `.attach/` directories) into the
 // box's trash. `--dry-run` reports what would move without touching anything —
-// this doctest pins that contract, because the flag was once advertised by the
+// this test pins that contract, because the flag was once advertised by the
 // CLI while the command silently ignored it and trashed the files anyway.
 
 import { test } from "tap";

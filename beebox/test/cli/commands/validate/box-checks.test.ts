@@ -2,8 +2,8 @@
 //
 // `checkRootStrayErrors` (Track C, `docs/implemented-plans/one-root-box-layout.md`) formats
 // `checkBoxRoot`'s findings as the error lines `bbx validate` prints and counts
-// toward its exit code. The check itself (`checkBoxRoot`) is doctested in
-// `test/lib/box-root-check.doctest.md`; this covers only the formatting.
+// toward its exit code. The check itself (`checkBoxRoot`) is tested in
+// `test/lib/box-root-check.test.ts`; this covers only the formatting.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -5,7 +5,7 @@
 // over SSH/CI. Each subcommand's body is an exported plain function
 // (`runCreateUser`, `runAddUser`, `runSetPassword`, `runList`, `runRemoveUser`),
 // called directly here rather than spawning the CLI as a subprocess — the same
-// approach `test/cli/commands/upgrade.doctest.md` and `view-check.doctest.md`
+// approach `test/cli/commands/upgrade.test.ts` and `test/cli/commands/view/command.check.test.ts`
 // use for exercising command logic. Every case drives `--password-file` so the
 // run is non-interactive; the interactive no-echo prompt path isn't exercised
 // by this tier (there's no TTY in the test harness to drive it against).
@@ -24,7 +24,7 @@ import {
   runRemoveUser,
 } from "../../../src/cli/commands/auth.js";
 
-// Small work factor keeps scrypt fast in tests (same seam local-users.doctest.md uses).
+// Small work factor keeps scrypt fast in tests (same seam test/webapp/local-users.test.ts uses).
 process.env.BBX_AUTH_SCRYPT_N = String(2 ** 14);
 // Keep the agent-safety guard deterministic when the suite itself runs in a TTY.
 process.stdin.isTTY = false;
@@ -71,12 +71,12 @@ async function runCaptured(fn: () => unknown) {
   console.error = (...args) => { errors.push(args.join(" ")); };
   process.exit = (code?: number | string | null) => {
     exitCode = Number(code ?? 0);
-    throw new Error("__doctest_process_exit__");
+    throw new Error("__test_process_exit__");
   };
   try {
     await fn();
   } catch (e) {
-    if (!(e instanceof Error) || e.message !== "__doctest_process_exit__") throw e;
+    if (!(e instanceof Error) || e.message !== "__test_process_exit__") throw e;
   } finally {
     console.log = origLog;
     console.error = origError;
@@ -143,7 +143,7 @@ void test("Create the first (owner) user, then list", async (t) => {
 
   // ## Credential changes refuse to run unsupervised in an agent session
   //
-  // Every case above passes `agentConfirmed: true`, because a doctest is exactly the
+  // Every case above passes `agentConfirmed: true`, because a test is exactly the
   // sanctioned non-interactive automation the flag exists to declare. Without it, a
   // caller that looks like an agent is refused.
   //
@@ -157,7 +157,7 @@ void test("Create the first (owner) user, then list", async (t) => {
     email: "owner@example.com",
     passwordFile: guardPw,
   }));
-  t.check(blocked, { logs: [], errors: [refusal("change a password"), "__doctest_process_exit__"], exitCode: 1 });
+  t.check(blocked, { logs: [], errors: [refusal("change a password"), "__test_process_exit__"], exitCode: 1 });
 
   // The refusal names the blast radius the caller probably has not checked, and
   // points at asking a human rather than working around the missing credential:
@@ -170,7 +170,7 @@ void test("Create the first (owner) user, then list", async (t) => {
   // Removal is guarded the same way — it is the other irreversible one:
 
   const blockedRemove = await runCaptured(() => runRemoveUser({ email: "owner@example.com" }));
-  t.check(blockedRemove, { logs: [], errors: [refusal("remove an account"), "__doctest_process_exit__"], exitCode: 1 });
+  t.check(blockedRemove, { logs: [], errors: [refusal("remove an account"), "__test_process_exit__"], exitCode: 1 });
 
   // Read-only `list` is never gated — inspecting who exists is not a credential change:
 

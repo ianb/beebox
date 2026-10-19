@@ -1,6 +1,6 @@
 // # Google Calendar connector: stranded edits and recovery
 //
-// Continues [google-calendar.doctest.md](google-calendar.doctest.md). This part covers local edits Google will never accept, the week of retries before an edit is stranded, recurring masters surviving a resync, and the cases where a push succeeded but the local rewrite failed.
+// Continues [google-calendar.test.ts](google-calendar.test.ts). This part covers local edits Google will never accept, the week of retries before an edit is stranded, recurring masters surviving a resync, and the cases where a push succeeded but the local rewrite failed.
 
 import { after, test } from "tap";
 import "@ianbicking/tap-check/tap";

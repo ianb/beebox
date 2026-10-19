@@ -6,6 +6,8 @@ issues: []
 ---
 # Workspace panes, focus, and conversation
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 When a conversation points to a card, inspect it without losing the conversation.
 When two cards need comparison, give them both space. On a phone, read one surface
 at a time and return to the transcript without losing the cards.

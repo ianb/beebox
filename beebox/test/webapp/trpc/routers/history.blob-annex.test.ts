@@ -8,7 +8,7 @@
 // bytes elsewhere — the same shape `/api/files/` uses), never a 200 serving
 // pointer text as an image.
 //
-// Like `to-annex.doctest.md` this exercises a **real** git-annex repository;
+// Like `test/core/bulk-upload/prepare.annex.test.ts` this exercises a **real** git-annex repository;
 // where git-annex is not installed the assertions degrade to a recorded skip.
 
 import { test } from "tap";
@@ -37,7 +37,7 @@ function repoGit(args: string[]): string {
 }
 
 if (ANNEX) {
-  repoGit(["annex", "init", "--quiet", "doctest"]);
+  repoGit(["annex", "init", "--quiet", "test"]);
   repoGit(["config", "annex.addunlocked", "true"]);
   await server.seed("_content/photo.png", "fake png bytes, annexed");
   repoGit(["annex", "add", "--quiet", "_content/photo.png"]);

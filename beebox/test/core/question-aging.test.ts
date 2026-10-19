@@ -288,9 +288,9 @@ void test("A pending question with no asked-at (shouldn't exist post-migration, 
 // The shared `withQuestionTransition` primitive (`question-transition.ts`)
 // re-checks state after acquiring both locks and skips silently when it's no
 // longer in the allowed set — that's exercised directly by the `answer`/
-// `dismiss` doctests' "already answered" cases. A true cross-process race
+// `dismiss` tests' "already answered" cases. A true cross-process race
 // between the sweep and a simultaneous answer can't be manufactured in a
-// single-process sequential doctest without invasive mocking of the transition
+// single-process sequential test without invasive mocking of the transition
 // internals; the observable case here is the simpler one: a question answered
 // before the sweep runs never appears in its pending scan at all, so it's
 // untouched.

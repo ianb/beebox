@@ -27,7 +27,7 @@ const ENV = ["BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_
 for (const name of ENV) delete process.env[name];
 
 const NOW = new Date("2026-09-26T12:00:00Z");
-const intent = (loudness: Loudness): NotificationInput => ({ title: "Fake-mode check", body: "", target: { kind: "dashboard" }, loudness, source: "fake-doctest" });
+const intent = (loudness: Loudness): NotificationInput => ({ title: "Fake-mode check", body: "", target: { kind: "dashboard" }, loudness, source: "fake-test" });
 
 async function logged(box: TmpBox) {
   const [n] = (await readRecent(box.root, { days: 1, now: NOW })).toReversed();

@@ -636,7 +636,7 @@ void test("These routes are registered in a sibling scope outside the box's gene
   // resolves to nothing here, because the scan gate reads the scan store and only
   // the scan store:
 
-  process.env.BBX_HUB_SECRET = "scan-upload-doctest-secret";
+  process.env.BBX_HUB_SECRET = "scan-upload-test-secret";
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
   const asOwner = await check(ctx, [sha256(png)]);
   const asOwnerHub = await ctx.request({
@@ -644,7 +644,7 @@ void test("These routes are registered in a sibling scope outside the box's gene
     url: "/api/scan/check",
     payload: { hashes: [sha256(png)] },
     headers: {
-      "x-bbx-hub-secret": "scan-upload-doctest-secret",
+      "x-bbx-hub-secret": "scan-upload-test-secret",
       "x-bbx-authenticated-email": "owner@example.com",
     },
   });

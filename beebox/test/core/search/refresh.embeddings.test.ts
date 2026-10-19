@@ -160,7 +160,7 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
   await box3.write("_content/inbox/Contended.doc.card", DOC("A card.", "Fully embedded already."));
   await openSearchIndex(box3.root, { embeddings: createFakeEmbeddings() });
 
-  await acquireLock(searchLockPath(box3.root), { purpose: "doctest-contender" });
+  await acquireLock(searchLockPath(box3.root), { purpose: "test-contender" });
   const contended = await openSearchIndex(box3.root, {
     embeddings: createFakeEmbeddings(),
     lockRetries: 1,

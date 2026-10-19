@@ -7,7 +7,7 @@
 // other in-progress user work untouched.
 //
 // shapeVersion 3 has one root, so every git-status path `getStatus` reports is
-// already box-root-relative — no prefix normalization needed. This doctest
+// already box-root-relative — no prefix normalization needed. This test
 // exercises the sync commit directly against a minimal fixture, without also
 // going through the full `generateDocs` pipeline (which would also install a
 // real, executable `.git/hooks/pre-commit` that shells out to a `bbx` binary —

@@ -31,7 +31,7 @@ const intakeJob = (description: string, opts?: { priority?: "normal" | "low" }) 
   createIntakeJobTemplate({ description, items: [], ...(opts ?? {}) });
 
 // Base cycle params: fast fakes for the subprocess/doc stages (same rationale
-// as reactor-integration.doctest.md), no filters, sync off.
+// as test/core/reactor/engine.integration.test.ts), no filters, sync off.
 function cycleParams(boxRoot: string, agentFactory: RunCycleParams["agentFactory"]): RunCycleParams {
   return {
     boxRoot,

@@ -23,7 +23,7 @@ void test("The CLI and SDK versions are one lockstep contract.", async (t) => {
   t.check(packageJson.dependencies["@openai/codex"], packageJson.dependencies["@openai/codex-sdk"]);
 
   // The resolver reaches an executable whose reported version is the package pin.
-  // The doctest harness already supplies an isolated `CODEX_HOME`, so this cannot
+  // The test harness already supplies an isolated `CODEX_HOME`, so this cannot
   // read or mutate the developer's plugin or authentication state.
 
   const result = await execFileAsync(codexBinaryPath(), ["--version"]);

@@ -1,6 +1,6 @@
 // # `bbx query <collection>` — the agent's read surface over a collection
 //
-// CLI-tier doctests for `docs/plans/todo-collection.md` Track 4. `bbx query`
+// CLI-tier tests for `docs/plans/todo-collection.md` Track 4. `bbx query`
 // and the web list run the same query through the same runner, so what the
 // agent is told matches what the boxholder sees.
 //
@@ -9,7 +9,7 @@
 // card, a `§` line names the section when it changes, indentation follows the
 // parent chain, and an annotation gets its own `—` line.
 // `runQueryForBox(boxRoot, { collection, options })` is exercised directly,
-// same approach as `test/cli/commands/todos.doctest.md`.
+// same approach as `test/cli/commands/todos.test.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

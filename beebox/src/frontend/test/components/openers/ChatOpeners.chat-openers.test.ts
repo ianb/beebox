@@ -4,7 +4,7 @@
 // conversation" line: `ChatOpeners` renders the place's openers, and clicking one
 // sends it as the person's message.
 //
-// The frontend doctests run under plain Node with no DOM, so what a click does
+// The frontend tests run under plain Node with no DOM, so what a click does
 // lives in `clickOpener` — a plain function the button's `onClick` calls — and is
 // tested directly. The contracts that matter: the sent text is the opener
 // verbatim; one accepted click is all there is (the buttons disable on send, so

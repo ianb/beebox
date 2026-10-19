@@ -1,6 +1,6 @@
 // # Chat Review: failures, caps, and races in a run
 //
-// Continues [run.doctest.md](run.doctest.md). This part covers credentials dropped from generated text, repair after a crash between the husk and journal writes, reviewer failures, the per-run cap, transcripts that vanish or come back to life mid-run, and the untouched husk body.
+// Continues [run.test.ts](run.test.ts). This part covers credentials dropped from generated text, repair after a crash between the husk and journal writes, reviewer failures, the per-run cap, transcripts that vanish or come back to life mid-run, and the untouched husk body.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

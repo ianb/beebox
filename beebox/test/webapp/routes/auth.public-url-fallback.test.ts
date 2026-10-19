@@ -18,8 +18,8 @@ import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { registerAuthSurface, type AuthRoutesOptions } from "../../../src/webapp/routes/auth/register.js";
 
-process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-public-url-fallback-doctest";
-process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-public-url-fallback-doctest";
+process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-public-url-fallback-test";
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-public-url-fallback-test";
 delete process.env.BBX_PUBLIC_URL;
 delete process.env.PUBLIC_URL;
 

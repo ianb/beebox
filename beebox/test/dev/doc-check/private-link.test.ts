@@ -110,25 +110,25 @@ void test("Angle-bracket inline link destinations are unwrapped (CommonMark form
   ]);
 });
 
-// ## Doctest fixtures are covered: prose errors, fenced code stays exempt
+// ## Markdown test files are covered: prose errors, fenced code stays exempt
 //
-// Doctest files (`.doctest.md`) are public tracked markdown — doc-check now
-// scans them too — but they legitimately contain link syntax inside fenced
-// code blocks (the code under test). A private-issues link in doctest prose
+// Test files written in Markdown are public tracked markdown — doc-check scans
+// them too — but they legitimately contain link syntax inside fenced
+// code blocks (the code under test). A private-issues link in such prose
 // must still error; the same text inside a fenced block must not.
-void test("Doctest files (.doctest.md) are public tracked markdown — doc-check now scans...", async (t) => {
-  const doctestProse = findPrivateLinkViolations("test/example.doctest.md", "See [the private thread](../private-issues/thread.md) for background before running this doctest.");
-  t.check(doctestProse, [
+void test("Prose links error in Markdown test files; fenced code stays exempt", async (t) => {
+  const prose = findPrivateLinkViolations("test/example.md", "See [the private thread](../private-issues/thread.md) for background before running this test.");
+  t.check(prose, [
     {
-      path: "test/example.doctest.md",
+      path: "test/example.md",
       line: 1,
       target: "../private-issues/thread.md",
     },
   ]);
 
   const fence = "```ts\nconst x = \"[t](private-issues/thread.md)\";\n```";
-  const doctestFenced = findPrivateLinkViolations("test/example.doctest.md", fence);
-  t.check(doctestFenced, []);
+  const fenced = findPrivateLinkViolations("test/example.md", fence);
+  t.check(fenced, []);
 });
 
 // ## The reason string names the rule and the fix

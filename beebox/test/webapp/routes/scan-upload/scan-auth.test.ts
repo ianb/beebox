@@ -111,10 +111,10 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
   // answer. Here it arrives the way a hub-fronted request does; a box member who
   // isn't the owner is not enough.
 
-  process.env.BBX_HUB_SECRET = "scan-auth-doctest-hub-secret";
+  process.env.BBX_HUB_SECRET = "scan-auth-test-hub-secret";
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
   const hubHeaders = (email: string) => ({
-    "x-bbx-hub-secret": "scan-auth-doctest-hub-secret",
+    "x-bbx-hub-secret": "scan-auth-test-hub-secret",
     "x-bbx-authenticated-email": email,
   });
 

@@ -1,6 +1,6 @@
 // # `todo-model.ts` — status enum, date parsing, plate-state derivation
 //
-// Pure-function doctests for the shared todo vocabulary
+// Pure-function tests for the shared todo vocabulary
 // (`docs/implemented-plans/todo-annotation.md`, Track 1 chunk 1): the closed status enum,
 // absolute/relative date parsing, attribute validation, and the box-local
 // plate-state truth table.

@@ -9,6 +9,8 @@ discovered-in: main session — "look through what went on and how we can improv
 priority: important
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Boxholder's framing (2026-08-26): the new speed is great; improve, don't revert.
 
 ## Incidents (2026-08-25/26)

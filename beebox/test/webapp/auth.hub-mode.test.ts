@@ -15,7 +15,7 @@ import { makeTestServer } from "../helpers/test-route-server.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 
 process.env.BBX_HUB_SECRET = "test-hub-secret-xyz";
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-mode-auth-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-mode-auth-test";
 
 const server = await makeTestServer();
 await server.seed("_config/box.json", JSON.stringify({ allowedEmails: [" Allowed@Example.COM "] }));

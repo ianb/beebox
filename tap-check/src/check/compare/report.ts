@@ -10,7 +10,7 @@ import { view } from "./data.js";
 import { Pattern } from "../patterns.js";
 import { render } from "./render.js";
 
-// The doctest-to-ts converter prints expected values with this renderer (src/convert/upgrade.ts).
+// Other tools print expected values with this renderer.
 export { Source, render } from "./render.js";
 
 /** Passed for `expected` when the caller gave none. */

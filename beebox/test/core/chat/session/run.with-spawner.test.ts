@@ -2,15 +2,12 @@
 //
 // `ChatSession` accepts a `ChatSessionOptions` bag that lets tests
 // inject a fake `ChatBackend` and override the system prompt, session
-// file, MCP config, env vars, and session-id callback. This doctest
+// file, MCP config, env vars, and session-id callback. This test
 // exercises the full round-trip without spawning a real Claude
 // subprocess.
 //
-// See `service-claude-chat.doctest.md` for the fake backend API.
 // Most of the helpers used below live in
-// `test/helpers/chat-session-spawner-helpers.ts` — the doctest loader
-// has trouble with top-level function declarations whose bodies return
-// inline object literals, so the helpers are in a regular `.ts` file.
+// `test/helpers/chat-session-spawner-helpers.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -296,7 +293,5 @@ void test("stop() is used for intentional shutdown (including resetSession).", a
 //   needed — those paths don't start a run.
 // - `tick()` lets the event loop drain after pushing messages into the
 //   fake. Use `once(session, "done")` to wait for a turn to complete.
-// - Avoid arrow-function expressions with `=>` on the same line as other
-//   code in example blocks — the doctest loader confuses the arrow with
-//   its expectation marker. Put lambdas in the setup block or a helper
-//   file.
+// - Put lambdas in the setup block or a helper file rather than inline in
+//   example blocks.

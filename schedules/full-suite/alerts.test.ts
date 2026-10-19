@@ -14,7 +14,7 @@ test("the red alert names culprits, flakes and what it did not bisect", () => {
     baseCommit: "2".repeat(40),
     landings: [landing],
     culprits: [{ landing, files: ["test/a.test.ts"], excerpt: "" }],
-    flakes: ["test/hub/hub-e2e.doctest.md"],
+    flakes: ["test/hub/hub-e2e.test.ts"],
     unattributed: ["test/b.test.ts"],
   });
   assert.match(message, /^\*\*2 test files fail on main\*\*, bisected to 1 landing\./u);
@@ -29,12 +29,12 @@ test("a flakes-only red alert leads with 'nothing is broken', not with 'red'", (
     baseCommit: "2".repeat(40),
     landings: [landing, landing],
     culprits: [],
-    flakes: ["test/dev/auto-sweep-detach.doctest.md"],
+    flakes: ["test/dev/auto-sweep-detach.test.ts"],
     unattributed: [],
   });
   assert.match(message, /^\*\*Nothing is broken\.\*\* 1 test file failed in the batched run and passed/u);
   assert.match(message, /- \*\*Tested:\*\* main at `11111111` \(2 landings since `22222222`\)/u);
-  assert.match(message, /- \*\*Flaky\*\* \(failed in the batch, passed on re-run; in the flake ledger, no issue\): `test\/dev\/auto-sweep-detach\.doctest\.md`/u);
+  assert.match(message, /- \*\*Flaky\*\* \(failed in the batch, passed on re-run; in the flake ledger, no issue\): `test\/dev\/auto-sweep-detach\.test\.ts`/u);
   assert.doesNotMatch(message, /red/iu);
 });
 

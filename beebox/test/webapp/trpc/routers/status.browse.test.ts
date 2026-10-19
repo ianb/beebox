@@ -3,10 +3,10 @@
 // Track C of `docs/implemented-plans/card-prominence.md`: `status.browse` adds each
 // card's effective `prominence`, each subdirectory's pruned-subtree
 // `DirectorySummary` (plus its own landmark identity when it has one), and
-// the listed directory's own `background` cascade. No doctest previously
+// the listed directory's own `background` cascade. No test previously
 // exercised `status.browse`'s general listing shape (only the namespace-fence
-// suite in `box-namespace-fence-traversal.doctest.md` calls it, for security);
-// this is that doctest.
+// suite in `test/webapp/trpc/routers.namespace-fence-traversal.test.ts` calls it, for security);
+// this is that test.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

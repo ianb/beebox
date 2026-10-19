@@ -5,7 +5,7 @@
 // live accessible name, the enclosing landmark, and what the control does.
 // `resolveControl` runs the other way, from an address back to the element.
 //
-// The frontend doctests run under plain Node with no jsdom, so the walk is written
+// The frontend tests run under plain Node with no jsdom, so the walk is written
 // against `ScanElement` — a structural view of an element — rather than `Element`.
 // `live-dom.ts` adapts the real document to that view; the fixture helper here
 // parses HTML and supplies the two things a parser cannot know, because in the

@@ -19,7 +19,7 @@ import { maybeArmFirstRunSetup } from "../../src/webapp/setup-token.js";
 
 // Point the credential store at a path that does not exist, so there are zero
 // local users in every case below — isolating the owner check as the variable.
-const AUTH_FILE = path.join(os.tmpdir(), "bbx-first-run-setup-doctest-absent.json");
+const AUTH_FILE = path.join(os.tmpdir(), "bbx-first-run-setup-test-absent.json");
 process.env.BBX_AUTH_FILE = AUTH_FILE;
 
 function printedLines({ owner, openAccess }: { owner: string | null; openAccess: boolean }) {

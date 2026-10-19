@@ -198,7 +198,7 @@ void test("The same rule pinned at the registry it lives in.", async (t) => {
 // `deduplicated: true`: the id stays claimed, because a redelivery must not
 // append the message twice. The
 // failure reaches the client on the turn stream it is already subscribed to —
-// covered by `chat-send-run-start-failure.doctest.md`.
+// covered by `test/webapp/routes/chat/send-run.start-failure.test.ts`.
 void test("This section used to assert a shared 500, and a freed id:", async (t) => {
   t.teardown(async () => {
     try {

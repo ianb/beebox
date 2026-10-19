@@ -124,6 +124,15 @@ No prior art: a rename inside this monorepo.
    before `pnpm install --frozen-lockfile`), so a missed rename aborts with the
    site still up.
 
+5. **The word in live code (added during implementation).** After tracks
+   1–4, about 437 mentions of "doctest" remained in `.ts`/`.sh` files: comments
+   naming deleted `.doctest.md` files, "this doctest" for a test, and
+   test-only strings (`"…-for-router-doctest"` fake secrets, the
+   `__doctest_process_exit__` sentinel, TAP fixture paths). Two workers repoint
+   file references to the converted `.test.ts` path (or drop them when no
+   clear match exists), reword the noun, and rename test-only strings; source
+   strings that match real input stay. `dev/` recorded history is excluded.
+
 ## Could this be simpler?
 
 The simplest version is track 1 alone, without deleting the markers or
@@ -214,3 +223,30 @@ The `dev-test-check-value` knowledge audit (renamed in retire-doctest track
 One landing. The deploy that follows is the first with the new package name;
 check `beebox/deploy/.last-deploy.log` for the frozen install and the health
 checks.
+
+## Progress
+
+- **Done (2026-10-18).** Tracks 1–5 are implemented in three commits (the
+  rename with docs and the deploy guard; the leftovers; the word sweep with
+  notes and the skill review).
+  - The word sweep left two mentions on purpose: the `bbx-doctest-` entry in
+    the temp-directory sweep (it cleans directories from earlier runs) and the
+    `doctests?` alternative in `bin/lib/skill-usage-patterns.ts`, which matches
+    the word in historical session prompts. Two comments in `bin/lib/session-registry.sh` and
+    `bin/lib/session-workstream.sh` also keep it: editing those sourced libraries makes the hook
+    shellcheck them, which surfaces pre-existing SC2034 warnings for variables their callers read.
+  - Plans and issues: a general naming note in `issues/AGENTS.md` and
+    `beebox/docs/plans/README.md`, and a dated note in each live plan and open
+    issue (112) that refers to the doctest format or the package. Implemented
+    plans and closed issues keep the old names under the general note.
+  - Skills: every skill and the finish agent reviewed against the repo; five
+    stale claims fixed (a removed Telegram provider, a principle count, a
+    broken citation, a deleted migration harness, a grammar slip).
+  - Cross-model review (codex `gpt-6-sol`) of the plan and of the hand edits;
+    accepted findings are in the commits.
+  - Verification: every package typechecks; tests pass in tap-check (245),
+    scan-uploader (182), workstreams-app (223 tap, 190 router), browse (33),
+    root bin (656); the full beebox suite had 12,001 of 12,004 passing, the
+    one failure the known heap-cap flake in `session.oversize-lines.test.ts`
+    (passes alone; issue reopened:
+    `issues/bugs/2026-10-02-session-oversize-lines-flakes-under-load.md`).

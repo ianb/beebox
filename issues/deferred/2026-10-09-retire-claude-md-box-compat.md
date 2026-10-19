@@ -10,6 +10,8 @@ discovered-by: agent
 discovered-in: worktree-agents-md — registering the agents-md-2026-10 migration (plan Track E)
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The `agents-md-2026-10` migration renames every box `CLAUDE.md` to
 `AGENTS.md`. The engine updates before a box's migration runs, and the
 framework reopens a box whose migration stopped partway. So the engine keeps

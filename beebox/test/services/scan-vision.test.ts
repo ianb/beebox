@@ -1,7 +1,7 @@
 // # ScanVision service — backend selection
 //
 // The `ScanVision` service is the photo-analysis backend behind `bbx scan-import`'s
-// photo flow (design: `docs/plans/scan-vision-claude.md`). This doctest covers the
+// photo flow (design: `docs/plans/scan-vision-claude.md`). This test covers the
 // backend selection rules.
 
 import { test } from "tap";

@@ -57,7 +57,7 @@ void test("The mint endpoint trades a device token for a cookie", async (t) => {
   registerPairingRoutes(server, { boxRoot: box.root, boxSlug: "test" });
 
   const ticket = createMobilePairingTicket(box.root);
-  const redeemed = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "doctest" });
+  const redeemed = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "test" });
   if (!redeemed) throw new Error("pairing failed");
 
   const minted = await server.inject({
@@ -134,7 +134,7 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
   });
   const box2 = await makeTmpBox();
   const ticket2 = createMobilePairingTicket(box2.root, { createdBy: "rosa@example.com" });
-  const device = await redeemMobilePairingTicket(box2.root, { pairingToken: ticket2.token, deviceLabel: "doctest" });
+  const device = await redeemMobilePairingTicket(box2.root, { pairingToken: ticket2.token, deviceLabel: "test" });
   if (!device) throw new Error("pairing failed");
 
   const viaBearer = await resolveMobileRequestAuth(box2.root, { authorization: `Bearer ${device.deviceToken}` });

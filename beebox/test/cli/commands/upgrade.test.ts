@@ -4,12 +4,12 @@
 // `bbx migrate`/`bbx init`/`tsc`) behind a single `runCommand` injection point —
 // see the module doc comment in `src/cli/commands/upgrade.ts`. Everything else
 // (the git snapshot, the working tree, `package.json`, `node_modules/`) is
-// real: these doctests exercise a real git repo in a temp dir with a fake
+// real: these tests exercise a real git repo in a temp dir with a fake
 // `runCommand` standing in for pnpm/the new engine's subprocesses, so the
 // revert path's real effect (working tree back to the snapshot, previous
 // engine "reinstalled") can be observed directly rather than asserted about a
 // mock. All the fake-runner logic lives here in setup (module scope) — example
-// blocks stay to single calls + assertions, per `.claude/rules/doctest.md`.
+// blocks stay to single calls + assertions.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -17,8 +17,8 @@ import {
 
 // Only the system-card members, not the full registry (`installRenderers()`):
 // other renderers pull in `lib/markdoc-parse.ts`, whose `@markdoc/markdoc`
-// named import does not resolve under this doctest runtime (see
-// WorkspaceCanvas.pdf-frame.doctest.md).
+// named import does not resolve under this test runtime (see
+// src/frontend/test/components/chat/workspace/WorkspaceCanvas.pdf-frame.test.ts).
 for (const entry of [dashboardRenderer, settingsRenderer, questionsRenderer, landmarksRenderer, historyCardRenderer, inventoryRenderer, adminRenderer]) {
   registerFileType(entry.selector, { renderer: entry.renderer });
 }

@@ -77,7 +77,7 @@ void test("Build: searchable cards index, operational kinds don't", async (t) =>
 
   // ## Lock contention serves the last persisted index, flagged stale
 
-  await acquireLock(searchLockPath(box.root), { purpose: "doctest" });
+  await acquireLock(searchLockPath(box.root), { purpose: "test" });
   const blocked = await openSearchIndex(box.root, { lockRetries: 2, lockRetryMs: 10 });
   t.check(blocked.stale, true);
 

@@ -17,7 +17,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 const cli = join(repoRoot, "bin/comments");
-const store = await mkdtemp(join(tmpdir(), "comments-exhibit-doctest-"));
+const store = await mkdtemp(join(tmpdir(), "comments-exhibit-test-"));
 
 interface ExecFailure { code?: number; stdout?: string; stderr?: string }
 function isExecFailure(value: unknown): value is ExecFailure {

@@ -8,7 +8,7 @@
 //
 // These examples call the walk and the generators directly. The full
 // `generateDocs` would also install a real pre-commit hook that shells out to a
-// `bbx` binary (see `generate-docs.doctest.md`).
+// `bbx` binary (see `test/core/docs-gen/generate.test.ts`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

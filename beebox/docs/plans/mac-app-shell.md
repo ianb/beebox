@@ -8,6 +8,8 @@ issues:
 ---
 # Bee Box for Mac as a shell around a box
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan grows `mac-app/` from a menu-bar launcher for one local VM box into
 a shell around any box. The shell has no window of its own: it opens a box's
 web app in the default browser, pairs with a remote box through a pasted link

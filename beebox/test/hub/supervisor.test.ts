@@ -369,7 +369,7 @@ void test("Stopping after the reload acknowledgment leaves a stopped box open", 
 // lazy/idle semantics `workstreams-app/src/router/server/listener.ts` already has for whole worktrees. No real
 // process is spawned here either -- `spawnChild`/`checkReady` are faked the
 // same way as above, and the idle timer is driven by a tiny `idleMs` so the
-// doctest doesn't wait out a real 5-minute default.
+// test doesn't wait out a real 5-minute default.
 void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on first call, idle collection returns it to stopped", async (t) => {
   t.teardown(async () => {
     try {
@@ -452,7 +452,7 @@ void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on 
 // Boxholder directive (2026-07-11): with `keepRecent: 1` a lazy hub keeps the
 // single most-recently-used box alive instead of idle-stopping it, so a burst of
 // use leaves one box warm ("basically free"). The idle-fire decision is exposed
-// as `evaluateIdle(slug)` (the real `setTimeout` just calls it) so the doctest
+// as `evaluateIdle(slug)` (the real `setTimeout` just calls it) so the test
 // drives it deterministically via an injected clock, with a large `idleMs` so no
 // real timer fires mid-test.
 void test("`keepRecent`: the most-recently-used running box is exempt from idle-stop, and is displaced when another box becomes more recent", async (t) => {

@@ -4,7 +4,7 @@
 // sent, then its links in tiers and each `expand` as a
 // labeled group (docs/implemented-plans/landmark-arrival.md, Track C). These examples render
 // `PlacePage` with a loaded `landmarks.forDir` payload, the way the
-// `PersonView` doctest renders a person's front.
+// `PersonView` test renders a person's front.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

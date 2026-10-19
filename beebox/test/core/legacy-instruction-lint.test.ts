@@ -6,7 +6,7 @@
 // so `bbx validate` reports each `CLAUDE.md`, `CLAUDE.local.md`, and
 // `.claude/CLAUDE.md` as an error. A box not yet converted still authors
 // `CLAUDE.md` and gets no finding. The validate hook makes the same check on one
-// written file (`test/cli/validate-hook/command.input.doctest.md`).
+// written file (`test/cli/validate-hook/command.input.test.ts`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -5,7 +5,7 @@
 // writes a partial update; `getFeaturesForSession` reads what's there.
 // Pre-existing sessions without a `features` field continue working —
 // missing means "all defaults," resolved at read time by `resolveFeatures`
-// (covered in `chat-features.doctest.md`).
+// (covered in `test/core/chat/features.test.ts`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -231,7 +231,7 @@ void test("FeatureStore.persist is the other way a row gets created, and it is n
 // write returned. The atomic write fsyncs the directory after the new file is
 // visible, so a toggle in that window folded into a seed that had already been
 // written, and the chat came back with the seed value. The full suite hit this
-// under load in what is now `chat.reserved-features.doctest.md`. Toggling the moment the seed is
+// under load in what is now `test/webapp/trpc/routers/chat.reserved-features.test.ts`. Toggling the moment the seed is
 // visible lost the toggle every time.
 //
 // The poll below checks on every event-loop turn rather than with `eventually`,

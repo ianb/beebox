@@ -1,6 +1,6 @@
 /**
  * The load gate and alert condition keys, on the shape of the real incident:
- * the 2026-08-30..09-01 event where `file-watcher.doctest.md` ran at 16–195×
+ * the 2026-08-30..09-01 event where `file-watcher.test.ts` ran at 16–195×
  * its healthy median and eight identical hourly alerts went unacknowledged.
  */
 
@@ -158,15 +158,15 @@ test("a run's tiers are judged together, so the careful tier's few files ride th
   // The careful record shares its run's commit with the ordinary record.
   const healthy = Array.from({ length: 5 }, (_unused, run) => [
     ...healthyRecords(1, SLOWDOWN_MIN_SAMPLES).map((record) => ({ ...record, commit: commitFor(run) })),
-    tierRecord({ "test/careful.doctest.md": 1500 }, { commit: commitFor(run) }),
+    tierRecord({ "test/careful.test.ts": 1500 }, { commit: commitFor(run) }),
   ]).flat();
   const records = [
     ...healthy,
     tierRecord(ordinarySlow, { commit }),
-    tierRecord({ "test/careful.doctest.md": 60000 }, { commit }),
+    tierRecord({ "test/careful.test.ts": 60000 }, { commit }),
   ];
   const histories = durationHistories({ records });
-  assert.deepEqual(histories.get("test/careful.doctest.md"), [1500, 1500, 1500, 1500, 1500]);
+  assert.deepEqual(histories.get("test/careful.test.ts"), [1500, 1500, 1500, 1500, 1500]);
 });
 
 // ─── alert conditions ─────────────────────────────────────────────────────
@@ -187,7 +187,7 @@ test("the deferred alert says why no verdict was reached", () => {
     testedCommit: "1".repeat(40),
     factor: 12.3,
     samples: 200,
-    failures: ["test/core/box/file-watcher.doctest.md"],
+    failures: ["test/core/box/file-watcher.test.ts"],
     pendingSince: "2026-08-31T02:24:44.666Z",
   });
   assert.match(message, /12\.3× its usual per-file durations/u);

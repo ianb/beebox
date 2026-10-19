@@ -9,6 +9,8 @@ discovered-by: Ian
 discovered-in: main session — "where is memory going?"
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The box post-commit hook (`src/core/install-validation-hooks.ts`,
 `postCommitBlock`) launches `bbx validate --urls --urls-since HEAD~1`
 detached in the background on every commit, unbounded. On 2026-09-05 the

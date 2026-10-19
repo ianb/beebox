@@ -2,7 +2,7 @@
 //
 // `src/plugins/recipe/README.md` (Setup) lists what a box writes to use the
 // plugin: `"plugins": ["recipe"]` in `_config/box.json`, a schema stub, and a view
-// stub. This doctest writes those stubs (each labelled `<box>/<path>` in the
+// stub. This test writes those stubs (each labelled `<box>/<path>` in the
 // README), character for character, into a temp box and validates a recipe card
 // that uses every tag, so the README cannot drift from what loads.
 //

@@ -8,6 +8,8 @@ discovered-by: Ian
 discovered-in: main session — boxholder re-reading deslop, 2026-10-13
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 [ai-deslop](https://github.com/maharshi365/deslop) is a set of oxlint rules
 against patterns that AI agents write. Its generic rules come from
 [dmmulroy/anti-slop](https://github.com/dmmulroy/anti-slop). The boxholder

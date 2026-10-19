@@ -1,10 +1,8 @@
 // # Markdoc emit-nodes: graceful degradation
 //
 // `emitNode`'s dispatch table (`src/core/markdoc/emit/nodes.ts`) enumerates all
-// 28 members of Markdoc's vendor `NodeType` union. Most of this module's
-// coverage comes indirectly through the other `markdoc-*.doctest.md` files and
-// `briefing-compile.doctest.md`, which exercise the handled types (headings,
-// lists, tags, …). This file targets the *degrading* groups specifically —
+// 28 members of Markdoc's vendor `NodeType` union. This file targets the
+// *degrading* groups specifically —
 // node types the emitter doesn't have bespoke handling for, where the
 // contract is "emit the children, never crash."
 
@@ -45,7 +43,7 @@ bar
 //
 // `todo` (`markdoc/emit-tags.ts`'s universal group) is a *handled* tag, unlike
 // the degrading groups above — this section pins its markdown shape since no
-// other doctest exercises the backend emitter's tag dispatch for it. Absence
+// other test exercises the backend emitter's tag dispatch for it. Absence
 // of `status` is `open` (`☐`); `done`/`dropped` also strike the text.
 void test("todo (markdoc/emit-tags.ts's universal group) is a handled tag, unlike the de...", async (t) => {
   t.check(emitBodyAsMarkdown("{% todo %}\n\nCall the vet\n\n{% /todo %}"), `☐ Call the vet

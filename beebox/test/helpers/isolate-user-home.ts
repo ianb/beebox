@@ -77,7 +77,7 @@ process.env["BBX_NO_URLCHECK"] = "1";
  * compounds: ~10k orphans filled the disk on 2026-09-04, and on 2026-09-12
  * there were **519,712** `bbx-*` entries, 514,972 of them older than two hours.
  * Half a million directories is slow to even enumerate, which is its own tax on
- * every later sweep (issues/bugs/2026-09-04-doctest-tmp-dirs-leak-until-disk-full.md).
+ * every later sweep (closed issue 2026-09-04, test temp dirs leak until the disk is full).
  *
  * Three things keep this from being a cure worse than the disease:
  *

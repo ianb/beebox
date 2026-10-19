@@ -3,7 +3,7 @@
 // Two independent defenses against a scanner writing a file out from under the
 // uploader: the **settle gate** (skip files touched too recently) before the
 // first hash, and **identity snapshot + restat-before-disposition** (see
-// run-target.doctest.md) after it.
+// run-target.test.ts) after it.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

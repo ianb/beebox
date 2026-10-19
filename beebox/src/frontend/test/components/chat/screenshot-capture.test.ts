@@ -5,7 +5,7 @@
 // path is named so callers (the composer "Send screenshot…" item, and later the
 // `bbx chat screenshot` consent popup) branch honestly. The DOM-heavy grab itself
 // (getDisplayMedia → hidden `<video>` → canvas → PNG) can't run under the Node
-// doctest tier, but the two pure decision points can: the getDisplayMedia
+// test tier, but the two pure decision points can: the getDisplayMedia
 // rejection mapping and the feature-detect.
 
 import { test } from "tap";

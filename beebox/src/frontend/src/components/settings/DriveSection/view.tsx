@@ -43,7 +43,7 @@ export function DriveSection() {
           {error}
         </div>
         {/* Distinct id from the not-connected branch below: ids are authored
-            once (ui-scan annotations doctest counts source literals), even
+            once (ui-scan annotations test counts source literals), even
             when the branches are mutually exclusive at runtime. */}
         <GoogleConnectLink id="bbx-settings-drive-connect-google-error" />
       </DriveShell>

@@ -2,7 +2,7 @@
 //
 // Tests for `bbx chat screenshot`'s server side: the two HTTP routes that
 // connect the CLI long-poll to the browser tab holding the session. The
-// registry behind them is covered by `pending-browser-request.doctest.md`.
+// registry behind them is covered by `test/core/pending-browser-request.test.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

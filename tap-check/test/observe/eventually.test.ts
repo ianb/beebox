@@ -1,5 +1,5 @@
-// eventually(): the timeout message names the last error the way the doctest
-// runtime's built-in did, since converted tests check that text.
+// eventually(): the timeout message names the last error the way the old
+// Markdown-test runtime's built-in did, since converted tests check that text.
 
 import { test } from "tap";
 import { eventually } from "../../src/exports/check.js";

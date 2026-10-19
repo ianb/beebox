@@ -1,3 +1,5 @@
+
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 **Status:** cross-model review, 2026-08-08 — findings folded in, then the plan's
 mechanism was flipped
 

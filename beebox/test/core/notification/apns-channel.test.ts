@@ -56,7 +56,7 @@ function intent(loudness: Loudness): NotificationInput {
     target: { kind: "chat-new" },
     loudness,
     tag: "pickup",
-    source: "apns-doctest",
+    source: "apns-test",
   };
 }
 

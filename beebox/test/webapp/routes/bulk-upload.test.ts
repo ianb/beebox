@@ -5,7 +5,7 @@
 // computed server-side as the body streams), and a status/resume endpoint lists
 // registered vs received items. Finalize returns immediately after sealing; the
 // full prepare→deliver worker (retry, at-most-once, reconciliation) is covered in
-// `test/core/bulk-upload/worker.doctest.md`.
+// `test/core/bulk-upload/worker.test.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

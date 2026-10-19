@@ -46,7 +46,7 @@ await fs.writeFile(box.path("node_modules/pkg/index.js"), "ignored");
 
 // A real Git-annex repository verifies path mapping, logical key size, and the
 // linked storage split. Machines without Git-annex use the expected contract,
-// matching the repository's other annex doctests.
+// matching the repository's other annex tests.
 let annexBox: Awaited<ReturnType<typeof makeTmpBox>> | undefined;
 interface AnnexResult {
   enabled: boolean;

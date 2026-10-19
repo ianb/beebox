@@ -44,7 +44,7 @@ void test("Interactive ancestor wins over main cwd", async (t) => {
       t.error(error);
     }
   });
-  const root = await mkdtemp(join(tmpdir(), "session-start-registry-doctest-"));
+  const root = await mkdtemp(join(tmpdir(), "session-start-registry-test-"));
   const stateDir = join(root, "state");
   const worktreeRoot = join(root, "worktrees");
   await mkdir(join(worktreeRoot, "foo"), { recursive: true });

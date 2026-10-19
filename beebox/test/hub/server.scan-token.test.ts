@@ -21,11 +21,11 @@ import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { createScanToken, revokeScanToken } from "../../src/core/scan/tokens.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
-const HUB_SECRET = "test-hub-secret-for-scan-token-doctest";
+const HUB_SECRET = "test-hub-secret-for-scan-token-test";
 
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-scan-token-doctest";
-process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-scan-token-doctest";
-process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-scan-token-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-scan-token-test";
+process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-scan-token-test";
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-scan-token-test";
 
 const authDir = await mkdtemp(path.join(os.tmpdir(), "bbx-hub-scan-auth-"));
 process.env.BBX_AUTH_FILE = path.join(authDir, "auth.json");

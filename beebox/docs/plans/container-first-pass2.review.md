@@ -1,5 +1,7 @@
 # Plan Engineering Review 2 — container-first
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Second pass, deliberately narrow. It checks only the mechanisms the revision
 added or changed, and states for each first-pass finding whether the revision
 resolves it. Findings the revision resolves are not re-litigated.

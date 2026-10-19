@@ -80,7 +80,7 @@ async function stageBulk(
 // Two registered items, both uploaded. The batch lands as a card + attach scope;
 // the card records each blob's server-computed size; the card and the blobs both
 // commit. Whether the blobs land as annex pointers
-// rather than bytes is what `prepare-annex.doctest.md` covers — this tier runs on
+// rather than bytes is what `prepare.annex.test.ts` covers — this tier runs on
 // a plain git box and cannot tell the two apart.
 void test("Two registered items, both uploaded.", async (t) => {
   t.teardown(async () => {

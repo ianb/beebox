@@ -45,7 +45,7 @@ const upTo = (script: string, text: string) => script.slice(0, script.indexOf(te
 const repoRoot = resolve(process.cwd(), "..");
 const launchLib = join(repoRoot, "bin/lib/launch-session.sh");
 const registryLib = join(repoRoot, "bin/lib/session-registry.sh");
-const root = await mkdtemp(join(tmpdir(), "launch-session-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "launch-session-test-"));
 
 async function beginLaunch({ stateDir, name, token }: { stateDir: string; name: string; token: string }) {
   await execFileAsync("bash", ["-c", '. "$1"; session_registry_begin_launch "$2" "$3"', "registry-test", registryLib, name, token], {

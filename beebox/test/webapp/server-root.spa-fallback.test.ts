@@ -40,7 +40,7 @@ registerSpaFallback(server, {
 const ticket = createMobilePairingTicket(box.root);
 const redeemed = await redeemMobilePairingTicket(box.root, {
   pairingToken: ticket.token,
-  deviceLabel: "doctest mobile",
+  deviceLabel: "test mobile",
 });
 if (!redeemed) throw new Error("mobile pairing failed");
 

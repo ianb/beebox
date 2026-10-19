@@ -20,7 +20,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 const lib = join(repoRoot, "bin/lib/comments-store.sh");
-const root = await mkdtemp(join(tmpdir(), "comments-mount-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "comments-mount-test-"));
 const store = join(root, "dev-comments");
 const wt = join(root, "beebox-worktrees/demo");
 await mkdir(wt, { recursive: true });

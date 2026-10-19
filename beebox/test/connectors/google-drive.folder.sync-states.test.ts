@@ -1,6 +1,6 @@
 // # Google Drive Connector: mirrored folders, subfolders and removal states
 //
-// Continues [google-drive.folder.doctest.md](google-drive.folder.doctest.md). This part covers end-to-end mirrored-folder syncs: subdirectories, followed shortcuts, trashed, moved-out and unreadable children, safe-name collisions, restore from the Drive trash, `bbx rm` tombstones, and the mount's own folder in the Drive trash.
+// Continues [google-drive.folder.test.ts](google-drive.folder.test.ts). This part covers end-to-end mirrored-folder syncs: subdirectories, followed shortcuts, trashed, moved-out and unreadable children, safe-name collisions, restore from the Drive trash, `bbx rm` tombstones, and the mount's own folder in the Drive trash.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -1,12 +1,12 @@
 // # The todo-review sweep (`core/todo/review-sweep.ts`)
 //
-// Filesystem-tier doctests for `docs/implemented-plans/todo-annotation.md` Track 5b:
+// Filesystem-tier tests for `docs/implemented-plans/todo-annotation.md` Track 5b:
 // `computeTodoReviewSets` computes four sets of open todos (escalated /
 // stirring / actionable / stale). Only `stirring` needs a baseline (the day of the last
 // review); escalated and stale are recomputed fresh every pass. Since
 // `docs/plans/todos-ui.md` Track 7 the sweep writes nothing: `bbx engine
 // todo-review check` owns the baseline and the brief
-// (`test/cli/commands/todo-review.doctest.md`).
+// (`test/cli/commands/todo-review.test.ts`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -26,7 +26,7 @@ function setTime(iso: string): void {
 }
 
 // America/Chicago is UTC-5 in July (CDT) — 2026-07-28T12:00Z is 07:00 local,
-// still July 28th locally (same setup as todo-collect.doctest.md).
+// still July 28th locally (same setup as `test/core/collection/run.test.ts`).
 async function seedBox() {
   const box = await makeTmpBox({ git: true });
   await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));

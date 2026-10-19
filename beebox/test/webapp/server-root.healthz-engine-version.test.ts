@@ -5,7 +5,7 @@
 // way it already rolls up parked template updates and schema load failures.
 // The comparison itself lives in `getEngineVersionReport`
 // (`src/core/engine-version.js`), covered directly by
-// `test/core/engine-version.doctest.md` — this doctest only checks the field
+// `test/core/engine-version.test.ts` — this test only checks the field
 // is wired into the route.
 //
 // A test box with no separately-installed engine — what `makeTestServer`

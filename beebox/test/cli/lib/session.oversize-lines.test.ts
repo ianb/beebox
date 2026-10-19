@@ -1,6 +1,6 @@
 // # Oversize transcript lines are stubbed, not parsed
 //
-// Bounded *retention* (`session-retention.doctest.md`) does not bound *allocation*:
+// Bounded *retention* (`test/cli/lib/session-retention.test.ts`) does not bound *allocation*:
 // `parseSessionLog` still `JSON.parse`d every line to decide what to keep. A production
 // box's session was 15.5 MB across 1 587 lines with **14 lines over 1 MB**
 // each (capture-image and tool payloads), so one `chat.history` request cost

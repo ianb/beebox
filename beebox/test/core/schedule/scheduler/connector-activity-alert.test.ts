@@ -6,7 +6,7 @@
 // dashboard shows a warning until the condition clears or the owner dismisses
 // it. Nothing is sent: health never notifies on its own
 // (docs/implemented-plans/notifications.md, Track E). See `connectors/activity-verdict.ts` for the rule and
-// `connector-activity-verdict.doctest.md` for its cases.
+// `test/connector-activity.verdict.test.ts` for its cases.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

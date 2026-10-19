@@ -363,7 +363,7 @@ void test("inspectLock must not disagree with acquireLock about staleness:", asy
 
   t.check(await inspectLock(requestScopedLock(lockPath)), null);
   // The holder is the killed child process, so its pid is not ours.
-  t.check(await inspectLock(lockPath), { ...heldBy({ purpose: "file-lock-doctest-child" }), pid: any(Number).int() });
+  t.check(await inspectLock(lockPath), { ...heldBy({ purpose: "file-lock-test-child" }), pid: any(Number).int() });
 });
 
 // ### releaseLock never deletes a foreign holder's lock

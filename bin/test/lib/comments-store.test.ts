@@ -32,7 +32,7 @@ import {
   type Subject,
 } from "../../lib/comments-store.js";
 
-const root = await mkdtemp(join(tmpdir(), "comments-store-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "comments-store-test-"));
 const store = join(root, "dev-comments");
 await initStore(store);
 

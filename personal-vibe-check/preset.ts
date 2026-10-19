@@ -779,7 +779,7 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
         // Burned down 2026-07-10: 190 sites converted to real narrowing
         // (optional chaining, explicit guards, or a typed assertion helper)
         // across beebox (backend + frontend), beebox-clerk, and
-        // tap-check (then named agent-doctest).
+        // tap-check.
         "@typescript-eslint/no-non-null-assertion": "error",
         // Flags conditions/optional-chains/binary-expressions that TypeScript's
         // types prove can never be false (or never true) — usually a stale

@@ -158,7 +158,7 @@ void test("declare is the agent's surface:", async (t) => {
 
   // `declaredHere` is the other half of a box's view: slots that box declared and
   // holds no grant for yet — empty here because nothing recorded a `declaredBy`
-  // (`bbx secrets declare` does; see the CLI doctest).
+  // (`bbx secrets declare` does; see the CLI test).
   //
   // Removing a secret deliberately leaves its grants behind, so the resolver can
   // report a *stale grant* rather than the misleading "no such secret":

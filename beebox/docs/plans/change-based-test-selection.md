@@ -7,6 +7,10 @@ issues:
 ---
 # Test failure ledger, and change-based selection on the iteration loop
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+>
+> The doctest esbuild hooks this plan builds on (`agent-doctest/hooks`, `doctest-hooks.ts`) were deleted with the format. The test graph now resolves `.test.ts` imports directly in `bin/test-graph.ts`, with shared rules in `bin/lib/resolve-rules.ts`; read the sections that cite the hooks as history, and the scope paths `agent-doctest/` as `tap-check/`.
+
 Two things, in this order of importance:
 
 1. **A ledger of test runs**, one appended line each, green ones included —

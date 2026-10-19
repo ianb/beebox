@@ -3,8 +3,8 @@
 // A quick chat record lives at `.beebox/quick-chat/<id>.json`, so the id the
 // caller sends becomes part of a file path. Every procedure that takes an id
 // accepts only a UUID: a path string is refused before any file is read or
-// written. The behavior of each procedure is in `quick-chat.submit.doctest.md` and
-// `quick-chat.submit.delivery.doctest.md`.
+// written. The behavior of each procedure is in `quick-chat.submit.test.ts` and
+// `quick-chat.submit.delivery.test.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

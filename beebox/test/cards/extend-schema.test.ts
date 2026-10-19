@@ -69,7 +69,7 @@ const sampleBase = { title: "T" };
 
 // ## Compile-time checks
 //
-// Doctest fences are not type-checked, so the type-level claims are verified by
+// The test runtime does not type-check, so the type-level claims are verified by
 // compiling a fixture with the package's own `tsconfig.json` options (the same
 // strictness as `pnpm typecheck`), as a virtual file under `test/cards/`.
 const FIXTURE_HEAD = `
@@ -286,7 +286,7 @@ void test("`cardSchema` rejects a tag the core table has, and carries the rest",
 // `card.mood` and `card.score` both type-check in the delta's `summarize`; a
 // field neither side declares does not. `InferCardFields` on the completed
 // schema carries the added field too.
-// The doctest gave each example 120s before a still-running notice.
+// Each example gets 120s before a still-running notice.
 void test("card.mood and card.score both type-check in the delta's summarize; a field ne...", async (t) => {
   t.check(
     typecheckFixture(`${FIXTURE_HEAD}
@@ -310,7 +310,7 @@ void typed;
 });
 
 // ### A duplicate field key fails type checking
-// The doctest gave each example 120s before a still-running notice.
+// Each example gets 120s before a still-running notice.
 void test("A duplicate field key fails type checking", async (t) => {
   t.check(
     typecheckFixture(`${FIXTURE_HEAD}

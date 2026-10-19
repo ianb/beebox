@@ -4,7 +4,7 @@
 // the real `launchctl` process spawn live in `src/cli/schedule-cli.ts` /
 // `src/cli/launchctl.ts` and aren't exercised here. `launchctl` is faked
 // (`FakeLaunchctlRunner` below, defined in this file — it records every
-// invocation so tests can assert on it) so no doctest here ever spawns a real
+// invocation so tests can assert on it) so no test here ever spawns a real
 // process or touches a real LaunchAgent.
 
 import { test } from "tap";
@@ -668,7 +668,7 @@ void test("`uninstall` — bootout (tolerated whether loaded or not), removes th
 // `installSchedule` as an explicit `configPath` — `installSchedule` itself
 // does no resolution of its own, so this proves the two modules compose
 // correctly rather than re-testing resolution logic already covered in
-// `config-path.doctest.md`.
+// `config-path.test.ts`.
 void test("Mirrors schedule-cli.ts's actual wiring:", async (t) => {
   t.teardown(async () => {
     try {

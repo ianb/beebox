@@ -56,10 +56,10 @@ async function attempt(fn: () => Promise<unknown>) {
 // The box has no channel configured, so each channel is logged `no-audience`.
 void test("The box has no channel configured, so each channel is logged no-audience.", async (t) => {
   const first = await notifyBoxholder(box.root, {
-    intent: { title: "Field trip form due", body: "Sign by Friday.", target: { kind: "dashboard" }, loudness: "loud", source: "doctest" },
+    intent: { title: "Field trip form due", body: "Sign by Friday.", target: { kind: "dashboard" }, loudness: "loud", source: "test" },
   });
   const second = await notifyBoxholder(box.root, {
-    intent: { title: "Talk about the trip?", body: "", target: { kind: "chat-new" }, loudness: "quiet", source: "doctest" },
+    intent: { title: "Talk about the trip?", body: "", target: { kind: "chat-new" }, loudness: "quiet", source: "test" },
   });
   const recent = await caller({}).notifications.recent({ days: 3 });
   const skipped = (notificationId: string, channel: "apns" | "web-push") => ({
@@ -80,7 +80,7 @@ void test("The box has no channel configured, so each channel is logged no-audie
         body: "",
         target: "chat:new",
         loudness: "quiet",
-        source: "doctest",
+        source: "test",
       },
       deliveries: [skipped(second.id, "apns"), skipped(second.id, "web-push")],
     },
@@ -93,7 +93,7 @@ void test("The box has no channel configured, so each channel is logged no-audie
         body: "Sign by Friday.",
         target: "dashboard",
         loudness: "loud",
-        source: "doctest",
+        source: "test",
       },
       deliveries: [skipped(first.id, "apns"), skipped(first.id, "web-push")],
     },
@@ -114,7 +114,7 @@ void test("The box has no channel configured, so each channel is logged no-audie
       body: "",
       target: "chat:new",
       loudness: "quiet",
-      source: "doctest",
+      source: "test",
     },
     deliveries: [skipped(second.id, "apns"), skipped(second.id, "web-push")],
   });
@@ -258,7 +258,7 @@ void test("send and channels: the box's agent or its owner, on the server's serv
   // boxholder's phone is the box's voice. An unauthenticated request never gets
   // that far.
 
-  const intent = { title: "x", body: "", target: "dashboard", loudness: "loud", source: "doctest" } as const;
+  const intent = { title: "x", body: "", target: "dashboard", loudness: "loud", source: "test" } as const;
   t.check(await caller({ services: { notify } }).notifications.send({ intent }), {
     id: any(String),
     deliveries: [

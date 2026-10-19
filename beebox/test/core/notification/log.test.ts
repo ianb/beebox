@@ -27,7 +27,7 @@ const NOW = new Date("2026-09-26T09:00:00Z");
 const DAY = 24 * 60 * 60 * 1000;
 
 function intent(id: string, title: string): NotificationIntent {
-  return { id, title, body: "", target: { kind: "dashboard" }, loudness: "loud", source: "log-doctest" };
+  return { id, title, body: "", target: { kind: "dashboard" }, loudness: "loud", source: "log-test" };
 }
 
 function summary(n: LoggedNotification | null) {
@@ -55,7 +55,7 @@ void test("Each append is one line.", async (t) => {
   appendIntent(box.root, { intent: intent("b2", "Two questions"), now: NOW });
   appendDelivery(box.root, { notificationId: "b2", delivery: { channel: "apns", status: "skipped", detail: "no-audience" }, now: NOW });
 
-  t.check(fs.readFileSync(notificationLogPath(box.root), "utf-8").split("\n")[0], "{\"kind\":\"intent\",\"at\":\"2026-09-26T09:00:00.000Z\",\"id\":\"a1\",\"title\":\"Vet at 3\",\"body\":\"\",\"target\":\"chat:new\",\"loudness\":\"loud\",\"tag\":\"vet\",\"source\":\"log-doctest\"}");
+  t.check(fs.readFileSync(notificationLogPath(box.root), "utf-8").split("\n")[0], "{\"kind\":\"intent\",\"at\":\"2026-09-26T09:00:00.000Z\",\"id\":\"a1\",\"title\":\"Vet at 3\",\"body\":\"\",\"target\":\"chat:new\",\"loudness\":\"loud\",\"tag\":\"vet\",\"source\":\"log-test\"}");
 
   t.check((await readRecent(box.root, { days: 1, now: NOW })).map(summary), [
     "a1 Vet at 3: web-push=sent apns=failed(BadDeviceToken)",

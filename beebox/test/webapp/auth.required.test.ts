@@ -4,7 +4,7 @@
 // opt-out anymore: the only unauthenticated servers that can exist are
 // test-constructed ones, via the `openAccess` construction option (decorated onto
 // the fastify instance and consulted by `resolveRequestIdentity` — `src/webapp/auth.ts`).
-// No CLI path sets it. This doctest covers the gate's semantics (a server without
+// No CLI path sets it. This test covers the gate's semantics (a server without
 // `openAccess` requires auth; `openAccess: true` resolves to `source: "open"`), the
 // diagnostic-bypass batch-URL fix, and the two root-route edges (`/auth/me` open
 // shape, `/api/push/resubscribe` behind the wall).
@@ -73,8 +73,8 @@ void test("Outside hub mode, a cookieless request is unauthenticated (source:", 
 // non-whitelisted procedure (e.g. `history.list`) does NOT — the fix for the old
 // substring match that let a diag-key holder read past the two allowed endpoints.
 void test("A single whitelisted procedure passes; a tRPC batch URL that also carries a n...", async (t) => {
-  process.env.BBX_DIAG_API_KEY = "diag-key-for-auth-required-doctest";
-  const bearer = { authorization: "Bearer diag-key-for-auth-required-doctest" };
+  process.env.BBX_DIAG_API_KEY = "diag-key-for-auth-required-test";
+  const bearer = { authorization: "Bearer diag-key-for-auth-required-test" };
 
   t.check(isDiagnosticBypassRequest(fakeRequest({ url: "/test/api/trpc/health.check", headers: bearer })), true);
 
@@ -205,7 +205,7 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
       t.error(error);
     }
   });
-  const BROWSE_KEY = "browse-key-for-auth-required-doctest";
+  const BROWSE_KEY = "browse-key-for-auth-required-test";
   const ORIGINAL_OWNER = process.env.BBX_OWNER_EMAIL;
   process.env.BBX_BROWSE_API_KEY = BROWSE_KEY;
   process.env.BBX_OWNER_EMAIL = "owner@example.com";

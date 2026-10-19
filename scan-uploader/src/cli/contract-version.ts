@@ -13,7 +13,7 @@
  * Trash. This integer is what makes that observable.
  *
  * The comparison is deliberately a pure function over two numbers: it is the
- * part that has to be right, so it is the part that is doctest-reachable
+ * part that has to be right, so it is the part that is testable
  * without a server.
  */
 

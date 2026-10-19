@@ -16,7 +16,7 @@
 // posture itself — a box agent's shell/filesystem tools are not sandboxed away
 // from other boxes on the same host, and that is accepted, out of scope here.
 // It also does not cover the hub's child-process isolation (`bbx hub` spawning
-// per-box `bbx serve` children) — that is `test/hub/supervisor.doctest.md`'s
+// per-box `bbx serve` children) — that is `test/hub/supervisor.test.ts`'s
 // job. This file is entirely about ONE server process holding two boxes at
 // once, which is exactly `createTwoBoxTestServer`'s shape.
 //
@@ -25,13 +25,13 @@
 // authenticated-owner context for `alpha` — and tries to reach box B
 // (`beta`)'s seeded confidential content through `alpha`'s own scope or by
 // addressing `beta` directly. tRPC procedures are called the way every other
-// router doctest calls them, via `appRouter.createCaller(ctx)` with a `ctx`
+// router test calls them, via `appRouter.createCaller(ctx)` with a `ctx`
 // shaped like what the real per-box auth wall would hand a request already
-// authenticated to `alpha` (see `test/webapp/trpc/procedures.doctest.md`,
-// `test/webapp/trpc/routers/secrets.doctest.md`) — this exercises the SAME procedure
+// authenticated to `alpha` (see `test/webapp/trpc/procedures.test.ts`,
+// `test/webapp/trpc/routers/secrets.test.ts`) — this exercises the SAME procedure
 // code the real HTTP/tRPC transport would call after auth admits the request;
 // what differs is skipping the transport's own auth-header parsing, which is
-// `two-box-fixture.doctest.md`'s job, not this file's. Raw Fastify routes go
+// `test/scenarios/two-box-fixture.test.ts`'s job, not this file's. Raw Fastify routes go
 // through real `server.inject()` with `alpha`'s actual bearer header.
 
 import { test } from "tap";
@@ -106,7 +106,7 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   const betaHash = execSync("git log -1 --format=%H", { cwd: ctx.b.boxRoot, encoding: "utf-8" }).trim();
 
   // A task-output file for beta, at the exact shape `isTaskOutputPathForBox`
-  // expects (see task-output-route.doctest.md, which owns this surface — this
+  // expects (see test/webapp/routes/commands.task-output.test.ts, which owns this surface — this
   // file includes one line so it stands as a complete anchor on its own).
   const { encodeProjectDir } = await import("../../src/core/chat/session/transcript-paths.js");
   const tmpRoot = await mkdtemp(join(tmpdir(), "claude-cross-box-probe-"));
@@ -117,7 +117,7 @@ void test("A card with a unique marker string, a landmark card (with a distincti
 
   // A secret granted to beta only (isolated store — see BBX_SECRETS_FILE in
   // test/helpers/isolate-secret-store.ts; this file points it at its own dir
-  // so it doesn't collide with any other doctest's grants).
+  // so it doesn't collide with any other test's grants).
   const secretsDir = await mkdtemp(join(tmpdir(), "bbx-cross-box-secrets-"));
   process.env["BBX_SECRETS_FILE"] = join(secretsDir, "secrets.json");
   const betaSlug = await boxSlug(ctx.b.boxRoot);
@@ -133,7 +133,7 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   // ## 1. `GET /beta/api/files/*` and `GET /beta/api/browse/*` with A's bearer
   //
   // Alpha's bearer is unrecognized on beta's wall, and there is no session
-  // cookie either — the same 401 `two-box-fixture.doctest.md` proves for
+  // cookie either — the same 401 `test/scenarios/two-box-fixture.test.ts` proves for
   // `/api/health`.
 
   const filesRes = await ctx.server.inject({
@@ -258,7 +258,7 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   // ## 5. `GET /alpha/api/task-output?file=<B's task output>`
   //
   // Full coverage (including the `..`-in-path and symlink-escape variants) lives
-  // in `test/webapp/routes/commands.task-output.doctest.md`; one line here keeps
+  // in `test/webapp/routes/commands.task-output.test.ts`; one line here keeps
   // this file a complete anchor.
 
   const taskOutputRes = await ctx.server.inject({

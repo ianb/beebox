@@ -12,7 +12,7 @@
 // build step and imported through the package `exports` map, given the cards the
 // real loader selects, and rendered to a string inside `NodeViewHostProvider`.
 // The stub-to-render path through the view compiler is
-// `test/webapp/views/compiler.plugin-view.doctest.md`.
+// `test/webapp/views/compiler.plugin-view.test.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

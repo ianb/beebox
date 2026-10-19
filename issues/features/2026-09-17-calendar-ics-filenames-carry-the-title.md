@@ -9,6 +9,8 @@ discovered-by: Ian
 discovered-in: main — comparing against caldir, which names files by date and title
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 An event file is named `{YYYY-MM-DD}_{shortId}.ics`, where `shortId` is the
 last eight characters of the Google event id (`eventFilename`,
 `beebox/src/connectors/google-calendar/ics.ts:323-330`). So a directory of

@@ -161,7 +161,7 @@ void test("Frontmatter-only schemas reject body content", async (t) => {
 // The frontmatter schema is lenient: a key the schema doesn't declare is dropped
 // from the parsed fields rather than failing the parse, so a card that has drifted
 // past its schema still loads and stays usable. (The unknown key is surfaced as a
-// lint *warning* — see `card-lint.doctest.md` — so it gets cleaned off disk.)
+// lint *warning* — see `test/core/card-lint.test.ts` — so it gets cleaned off disk.)
 void test("The frontmatter schema is lenient:", async (t) => {
   const drifted = parseCardText("---\ntype: doc\ndrive-id: d1\ntitle: T\nbogus-field: oops\n---\n", { source: "typo.doc.card", schemas });
   t.check(drifted.fields, {

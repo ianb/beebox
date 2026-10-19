@@ -30,7 +30,7 @@ import { resetLocalUserCache } from "../../src/webapp/local-users-cache.js";
 process.env.BBX_AUTH_SCRYPT_N = "1024";
 delete process.env.BBX_HUB_SECRET; // standalone (non-hub)
 delete process.env.BBX_OWNER_EMAIL;
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-ws-auth-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-ws-auth-test";
 
 const authDir = await mkdtemp(path.join(os.tmpdir(), "bbx-ws-auth-"));
 process.env.BBX_AUTH_FILE = path.join(authDir, "auth.json");

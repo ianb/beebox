@@ -351,7 +351,7 @@ void test("The reconciliation fingerprint ignores frontend sources (Vite owns th
   assert.equal(shouldRestartWorkstreamsBackend("src/router/server/listener.ts"), false);
   assert.equal(shouldRestartWorkstreamsBackend("src/shared/workstreams.ts"), true);
   assert.equal(shouldRestartWorkstreamsBackend("package.json"), true);
-  assert.equal(shouldRestartWorkstreamsBackend("test/server.doctest.md"), false);
+  assert.equal(shouldRestartWorkstreamsBackend("test/server.test.ts"), false);
   assert.equal(shouldRestartWorkstreamsBackend("dist/frontend/index.html"), false);
   assert.equal(shouldRestartWorkstreamsBackend("node_modules/.modules.yaml"), false);
   assert.equal(shouldRestartWorkstreamsBackend("node_modules/.vite/deps/_metadata.json"), false);

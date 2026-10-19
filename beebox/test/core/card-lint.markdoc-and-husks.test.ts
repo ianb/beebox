@@ -1,6 +1,6 @@
 // # card-lint: Markdoc validation, path fields, and chat husks
 //
-// Continues [card-lint.doctest.md](card-lint.doctest.md). This part covers universal Markdoc body validation, non-`ref` path fields, media and chat husk fields, absolute machine paths, and type-scoped Markdoc tags.
+// Continues [card-lint.test.ts](card-lint.test.ts). This part covers universal Markdoc body validation, non-`ref` path fields, media and chat husk fields, absolute machine paths, and type-scoped Markdoc tags.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

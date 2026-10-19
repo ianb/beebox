@@ -142,7 +142,7 @@ void test("openSearchIndex degrades under contention:", async (t) => {
   box4.commitAll("seed");
 
   // Hold the search lock, as a concurrent query or a second wakeup would.
-  await acquireLock(searchLockPath(box4.root), { purpose: "doctest" });
+  await acquireLock(searchLockPath(box4.root), { purpose: "test" });
   t.check(await refreshSearchIndex(box4.root), false);
 
   // Released, the same call reconciles and reports success.

@@ -3,7 +3,7 @@
 // `src/cli/commands/notify/command.ts` parses the flags, reads the body, and calls
 // `notifyBoxholder`, in this process or, from a box-spawned shell, in the box
 // server's (last section). `runNotify(boxRoot, run)` is driven directly and returns the
-// exit code (same approach as `test/cli/commands/todos.doctest.md`): 0 when the
+// exit code (same approach as `test/cli/commands/todos.test.ts`): 0 when the
 // notification reached the person, 1 when it reached nobody, 2 on a bad flag or
 // target.
 
@@ -60,7 +60,7 @@ async function run({ title, options, stdin, services, root }: {
       title,
       options,
       readStdin: stdin === undefined ? null : async () => stdin,
-      source: "doctest",
+      source: "test",
       services: services ?? { push },
     });
   } finally {
@@ -126,7 +126,7 @@ void test("An agent's shell or a schedule's pipeline can hold stdin open with no
   const counted = async () => { stdinReads += 1; return "never read"; };
   const quietLog = console.log;
   console.log = () => {};
-  const unasked = await runNotify(box.root, { title: "Unasked", options: { target: "dashboard", channel: "web-push" }, readStdin: counted, source: "doctest", services: { push } });
+  const unasked = await runNotify(box.root, { title: "Unasked", options: { target: "dashboard", channel: "web-push" }, readStdin: counted, source: "test", services: { push } });
   console.log = quietLog;
   t.check([unasked, (await lastIntent()).body, stdinReads], [
     0,
@@ -141,7 +141,7 @@ exit 0`);
   t.check([summary.body, summary.loudness, summary.source], [
     "Three cards changed.",
     "quiet",
-    "doctest",
+    "test",
   ]);
 
   await t.checkText(await run({ title: "From stdin", options: { target: "dashboard", bodyFile: "-", channel: "web-push" }, stdin: "Via --body-file -\n" }), `<id>: web-push sent
@@ -366,7 +366,7 @@ exit 0`);
 
   // The server logged it, with this shell's source:
 
-  t.check((await readRecent(server.boxRoot, { days: 1 })).at(-1)?.intent.source, "doctest");
+  t.check((await readRecent(server.boxRoot, { days: 1 })).at(-1)?.intent.source, "test");
 
   // `--check` reports what the server can reach, so an agent never hears "no" for
   // a channel only the server has keys for. `--verbose` names the path, on stderr;

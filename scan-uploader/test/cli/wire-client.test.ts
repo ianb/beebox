@@ -2,7 +2,7 @@
 //
 // Exercises `checkHashes`/`putFile` against a real HTTP server (the fake in
 // `test/cli/fake-scan-server.ts`), covering the parts of
-// `docs/scan-upload-contract.md` that `run-target.doctest.md`'s higher-level
+// `docs/scan-upload-contract.md` that `run-target.test.ts`'s higher-level
 // flow doesn't isolate on its own: the batch check response shapes, and a PUT
 // retrying through a 429 before succeeding.
 
@@ -189,7 +189,7 @@ void test("putFile gets the same treatment for a status it has no specific case 
 // optional: the box records these and never refuses on them.
 //
 // `x-scan-contract` is the version that gets compared; `x-scan-client-build`
-// reads `source` here because the doctest runs from a checkout through tsx,
+// reads `source` here because the test runs from a checkout through tsx,
 // which is the honest answer — a checkout tracks current source and cannot
 // drift, so there is no build date to report. A copied bundle sends its revision
 // and `x-scan-client-built-at` instead (`build.ts` bakes both in).

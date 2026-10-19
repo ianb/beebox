@@ -343,7 +343,7 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
 
   // ## Setup failure stays failed and retryable
   //
-  // The doctest uses the production errexit shell. A failing pnpm exits with its
+  // The test uses the production errexit shell. A failing pnpm exits with its
   // status, leaves setup incomplete, and a later same-name call repairs it before
   // recording readiness.
 

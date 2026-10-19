@@ -7,6 +7,8 @@ issues:
 ---
 # Reliable box maintenance and migration with Git recovery
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Bring configured boxes onto the shipped migrations automatically, including
 boxes with unfinished edits. Use Git for recovery, the box's agent for bounded
 repair, and existing questions and alerts for decisions that need a person.

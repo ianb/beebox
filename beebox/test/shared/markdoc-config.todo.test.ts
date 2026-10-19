@@ -3,10 +3,10 @@
 // `todo` is the universal capture-in-place annotation
 // (`docs/implemented-plans/todo-annotation.md`); `see-also` nests inside it and points at
 // supporting context. Both delegate attribute validation to
-// `todo-model.ts`'s `validateTodoAttributes` — this doctest exercises the
+// `todo-model.ts`'s `validateTodoAttributes` — this test exercises the
 // Markdoc-level wiring (schema `matches`, `validate()`, and the transform's
 // tag names / `ref` → `sourceRef` rename), not the date-math rules themselves
-// (covered by `todo-model.doctest.md`).
+// (covered by `test/shared/todo-model.test.ts`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

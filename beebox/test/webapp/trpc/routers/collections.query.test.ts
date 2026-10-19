@@ -1,6 +1,6 @@
 // # `collections.query` — the `todo-view` card's data source
 //
-// Route-tier doctests for `docs/plans/todo-collection.md` Track 4.
+// Route-tier tests for `docs/plans/todo-collection.md` Track 4.
 // `collections.query` names a collection and hands it a `CollectionQuery`; the
 // runner (`core/collection/run.ts`) owns what a scope, a reference pass, and a
 // grouping mean, so the router's own job is small: validate the input, refuse a

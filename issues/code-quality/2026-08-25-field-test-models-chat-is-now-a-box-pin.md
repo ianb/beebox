@@ -8,6 +8,8 @@ labels: [field-test, naming]
 priority: backlog
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 A field-test scenario's `models.chat` used to write `.beebox/chat-model.json`
 and so pin chat alone. It now writes the box's model policy (`agentModel` in
 `config/box.json`), which chat **and the reactor** read — that was the point, and

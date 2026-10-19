@@ -3,8 +3,6 @@
  * or undefined, and return it. Errors thrown by `fn` count as "not yet".
  * After `timeoutMs` it throws an `EventuallyTimeout` error naming the last
  * value or error.
- *
- * The same helper doctests get as a built-in (doctest-runtime.ts EVENTUALLY).
  */
 
 export interface EventuallyOptions {

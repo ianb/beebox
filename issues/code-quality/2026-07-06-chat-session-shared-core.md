@@ -7,6 +7,8 @@ filed-by: agent
 discovered-in: worktree-architectural-review — while doing Track J.1 (chat-session lifecycle union)
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Track J.1 replaced the `busy`/`intentionalStop`/nullable-`run` cluster in both
 `ChatSession` and `ChatThreadSession` with the shared discriminated union in
 `chat-session-lifecycle.ts`, and both now drive their SDK stream through the

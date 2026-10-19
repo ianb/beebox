@@ -3,7 +3,7 @@
 // With `GOOGLE_OAUTH_CLIENT_ID` set, the hub is the ONE process that verifies
 // the session cookie (it's the only process that may hold the signing
 // secret — see `src/webapp/auth.ts`'s `resolveRequestIdentity` doc comment
-// for why). This doctest exercises the hub's proxy path with hub auth
+// for why). This test exercises the hub's proxy path with hub auth
 // **enabled**: unauthenticated HTML navigation redirects to `/auth/login`,
 // unauthenticated API/WS gets a bare 401, an authenticated cookie becomes an
 // `x-bbx-authenticated-email` header on the proxied request, and
@@ -28,13 +28,13 @@ import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "..
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
-const HUB_SECRET = "test-hub-secret-for-auth-doctest";
+const HUB_SECRET = "test-hub-secret-for-auth-test";
 
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-server-auth-doctest";
-process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-hub-server-auth-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-server-auth-test";
+process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-hub-server-auth-test";
 // registerAuthRoutes now fails loudly on an ID-without-secret half-config
 // (MissingOAuthClientSecretError), so the fake credentials must be a pair.
-process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-hub-server-auth-doctest";
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-hub-server-auth-test";
 
 // A per-test credential store (empty until the gen-revocation section creates an
 // owner) with a fast test-only scrypt work factor. Pointing BBX_AUTH_FILE at a
@@ -85,9 +85,9 @@ const mobileBox = await makeTmpBox();
 const mobileTicket = createMobilePairingTicket(mobileBox.root);
 const mobileRedeemed = await redeemMobilePairingTicket(mobileBox.root, {
   pairingToken: mobileTicket.token,
-  deviceLabel: "doctest mobile",
+  deviceLabel: "test mobile",
 });
-if (!mobileRedeemed) throw new Error("doctest mobile pairing failed");
+if (!mobileRedeemed) throw new Error("test mobile pairing failed");
 const mobileToken = mobileRedeemed.deviceToken;
 const mobileDeviceId = mobileRedeemed.deviceId;
 const endpoints = staticEndpointProvider([{ slug: "test1", origin: box.origin }]);
@@ -295,7 +295,7 @@ async function discovery(t: Test) {
   const authedBody = BoxEcho.parse(await authedResponse.json());
   t.check({ email: authedBody.xBbxAuthenticatedEmail, secret: authedBody.xBbxHubSecret }, {
     email: "person@example.com",
-    secret: "test-hub-secret-for-auth-doctest",
+    secret: "test-hub-secret-for-auth-test",
   });
 
 }
@@ -309,12 +309,12 @@ async function healthzAndWebhooks(t: Test) {
   // gets a 401 from the gate, NOT a 302 to `/auth/login`. With the diag bearer key
   // it returns the verdict.
 
-  process.env.BBX_DIAG_API_KEY = "test-diag-key-for-auth-doctest";
+  process.env.BBX_DIAG_API_KEY = "test-diag-key-for-auth-test";
 
   const healthzNoKey = await fetch(`${hubBase}/healthz`, { redirect: "manual" });
   t.check(healthzNoKey.status, 401);
 
-  const healthzWithKey = await fetch(`${hubBase}/healthz`, { headers: { authorization: "Bearer test-diag-key-for-auth-doctest" } });
+  const healthzWithKey = await fetch(`${hubBase}/healthz`, { headers: { authorization: "Bearer test-diag-key-for-auth-test" } });
   t.check(healthzWithKey.status, 200);
 
   delete process.env.BBX_DIAG_API_KEY;
@@ -327,7 +327,7 @@ async function healthzAndWebhooks(t: Test) {
 
   t.check({ email: webhookBody.xBbxAuthenticatedEmail, secret: webhookBody.xBbxHubSecret }, {
     email: null,
-    secret: "test-hub-secret-for-auth-doctest",
+    secret: "test-hub-secret-for-auth-test",
   });
 
   // ## An unauthenticated WebSocket upgrade is rejected with a raw 401 (no cookie fallback either)

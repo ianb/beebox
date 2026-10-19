@@ -47,7 +47,7 @@ function summary(html: string) {
 // ## The four statuses
 //
 // Only `done` is checked. Rendered with no `TodoActionsContext` (as here) every
-// checkbox is disabled; `todo-actions.doctest.md` covers the live one. These
+// checkbox is disabled; `src/frontend/test/components/todo/actions.test.ts` covers the live one. These
 // todos carry no known words (`text: null`), so each checkbox falls back to its
 // status name.
 void test("Only done is checked.", async (t) => {

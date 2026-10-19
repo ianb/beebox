@@ -6,6 +6,8 @@ issues: []
 ---
 # Chat Session Delete — Plan
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 **Issues:**
 [chat thread management](../../../issues/closed/features/2026-07-20-chat-thread-management.md)
 (implements delete only) and

@@ -12,7 +12,7 @@
 // subprocesses. Unattended runtime is ~4 minutes and it costs one agent session's
 // API credit. The in-process half of the same pipeline (the gate, the state
 // format, `sync()` producing cards) is covered for free in
-// `test/field-test/fake-gmail-gate.doctest.md`; what only this can prove is that a
+// `test/field-test/fake-gmail-gate.test.ts`; what only this can prove is that a
 // SUBPROCESS sees the fake mailbox at all.
 //
 // Assertions are on shape — files present, counts — never on what the agent

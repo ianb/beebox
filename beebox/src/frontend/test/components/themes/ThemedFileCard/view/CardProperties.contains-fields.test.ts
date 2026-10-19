@@ -74,7 +74,7 @@ void test("A doc with no declared prominence shows its type's default and says s
 });
 
 // The fields table reads its keys as labels and small objects as one value
-// (`test/lib/readable-fields.doctest.md`). A record is headed by its `name:`
+// (`src/frontend/test/lib/readable-fields.test.ts`). A record is headed by its `name:`
 // (`cardTitle`), so the table leaves out the `name` row that would repeat the
 // header:
 void test("The fields table reads its keys as labels and small objects as one value (tes...", async (t) => {
@@ -159,7 +159,7 @@ void test("Other body-less types keep their fields on the front.", async (t) => 
 // ## An empty body leaves the type fields on the front
 //
 // With no body text, the front shows the type fields
-// (`test/lib/card-field-faces.doctest.md`), so Properties lists no Fields
+// (`src/frontend/test/lib/card-field-faces.test.ts`), so Properties lists no Fields
 // section and nothing shows twice. A body that only repeats the title counts as
 // empty, the same test the front uses.
 void test("With no body text, the front shows the type fields (test/lib/card-field-faces...", async (t) => {

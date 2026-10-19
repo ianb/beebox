@@ -5,7 +5,7 @@
 // is the pure half of what happens when a dispatched emission comes back
 // `rejected` — putting it back into the composer rather than losing it to
 // the error banner. Both are framework-free (no React/DOM), so they're
-// doctestable headlessly; `applyRestorePlan` runs against a real (also
+// testable headlessly; `applyRestorePlan` runs against a real (also
 // framework-free) emission store below; `acceptEmission` threads a `send`
 // function and is covered by typecheck + manual verification instead.
 

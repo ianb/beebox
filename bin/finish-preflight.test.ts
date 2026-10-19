@@ -1,7 +1,7 @@
 // Tests for the /finish decision sheet's rules — the classification, the
 // verification map, the typecheck/lint skip, and trailer parsing.
 //
-// A `.test.ts` rather than the doctest bin/AGENTS.md asks for, for the same
+// A node:test file rather than the t.check test bin/AGENTS.md asks for, for the same
 // reason bin/test-select.test.ts is one: the thing under test decides which
 // tests a landing runs, so exercising it from inside that suite is circular.
 //

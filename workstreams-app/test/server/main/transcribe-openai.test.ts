@@ -100,9 +100,9 @@ void test("Three different things went wrong and three different things should h
 
 // ## The service is a seam, so the route is testable without a key
 //
-// The fake is the reason a doctest can drive this at all — there is no way to
+// The fake is the reason a test can drive this at all — there is no way to
 // force a canned transcript through a real HTTP call.
-void test("The fake is the reason a doctest can drive this at all — there is no way to f...", async (t) => {
+void test("The fake is the reason a test can drive this at all — there is no way to forc...", async (t) => {
   const fake = createFakeTranscribeService("the router does not restart here");
   const result = await fake.transcribe({ audio: Buffer.from([1, 2, 3]), mimeType: "audio/webm" });
   assert.equal(result.text, "the router does not restart here");

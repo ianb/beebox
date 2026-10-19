@@ -75,7 +75,7 @@ function roundTrippedFixtures(): Record<string, string | undefined> {
 //
 // The fixture record documents one canonical example per current kind. Source
 // typechecking enforces the codec registry, serializer, and renderer dispatch;
-// this doctest pins their runtime wire behavior. Canonical wire models preserve
+// this test pins their runtime wire behavior. Canonical wire models preserve
 // values such as `audio="0:00"`; the chip decides whether that value is visually
 // omitted.
 void test("The fixture record documents one canonical example per current kind.", async (t) => {

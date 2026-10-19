@@ -19,7 +19,7 @@ function intent(loudness: Loudness, extra?: { tag?: string }): NotificationInten
     body: "The school emailed the form.",
     target: { kind: "card", path: "_content/inbox/field-trip.email.card" },
     loudness,
-    source: "doctest",
+    source: "test",
     ...extra,
   };
 }

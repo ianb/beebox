@@ -1,6 +1,6 @@
 // # The collection runner (`core/collection/run.ts`)
 //
-// Filesystem-tier doctests for `docs/plans/todo-collection.md` Track 3.
+// Filesystem-tier tests for `docs/plans/todo-collection.md` Track 3.
 // `runCollection` does the five stages in order — scope, extract, derive,
 // reference scope, then match/reduce/group — over a fixture box, against the
 // one collection that exists today (`core/todo/collection.ts`).

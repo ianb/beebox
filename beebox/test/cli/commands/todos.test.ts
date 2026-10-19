@@ -5,7 +5,7 @@
 // web list use): filters (`--status`, `--assigned`, `--glob`,
 // `--on-plate`), a human listing grouped by plate-state, and `--json` for the
 // full structured records. `runTodosForBox(boxRoot, options)` is exercised
-// directly (same approach as `test/cli/commands/auth.doctest.md`) rather than
+// directly (same approach as `test/cli/commands/auth.test.ts`) rather than
 // spawning the CLI as a subprocess.
 
 import { test } from "tap";
@@ -126,12 +126,12 @@ ON YOUR PLATE (1)
     console.error = (...args) => { errors.push(args.join(" ")); };
     process.exit = (code?: number | string | null) => {
       exitCode = Number(code ?? 0);
-      throw new Error("__doctest_process_exit__");
+      throw new Error("__test_process_exit__");
     };
     try {
       await runTodosForBox(box.root, options);
     } catch (e) {
-      if (!(e instanceof Error) || e.message !== "__doctest_process_exit__") throw e;
+      if (!(e instanceof Error) || e.message !== "__test_process_exit__") throw e;
     } finally {
       console.error = origError;
       process.exit = origExit;

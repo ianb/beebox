@@ -20,7 +20,7 @@ const job = (description: string) =>
   createIntakeJobTemplate({ description, items: [] });
 
 // Matches the `YYYY-MM-DDTHH-MM-SS` stamp every job-card writer uses, built
-// relative to "now" so the doctest never goes stale as the calendar moves.
+// relative to "now" so the test never goes stale as the calendar moves.
 const stampFromNow = (msAgo: number) =>
   new Date(Date.now() - msAgo).toISOString().replace(/:/g, "-").replace(/\.\d+Z$/, "");
 

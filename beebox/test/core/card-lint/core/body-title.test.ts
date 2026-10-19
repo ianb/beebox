@@ -2,7 +2,7 @@
 //
 // The card page shows the title from `title:`. A body that opens with the same
 // text as an H1 reads the title twice, so `lintCardsDispatch` warns on it. The
-// check uses `leadingTitleHeading` (`test/shared/leading-title-heading.doctest.md`),
+// check uses `leadingTitleHeading` (`test/shared/leading-title-heading.test.ts`),
 // the same predicate the card view uses to hide that line.
 
 import { test } from "tap";

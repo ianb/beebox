@@ -3,7 +3,7 @@
 // The local login surface (`src/webapp/routes/auth/register.ts`): `POST /auth/login` verifies
 // credentials and mints the session cookie; `POST /auth/setup` claims the owner
 // account with a live setup token. These are ROOT routes (not box-scoped), so the
-// doctest injects against the bare Fastify instance rather than the slug-prefixing
+// test injects against the bare Fastify instance rather than the slug-prefixing
 // helpers. `BBX_AUTH_SCRYPT_N` is lowered so scrypt is fast, and the server is
 // constructed with `openAccess: false` so real auth is exercised.
 
@@ -17,7 +17,7 @@ import { armSetupToken, clearSetupToken } from "../../../src/webapp/setup-token.
 import { loginThrottle } from "../../../src/webapp/routes/auth/login-throttle.js";
 import { createFirstUser, getLocalOwnerEmail } from "../../../src/webapp/local-users.js";
 
-// Fast scrypt for the doctest (test-only work-factor seam).
+// Fast scrypt for the test (test-only work-factor seam).
 process.env.BBX_AUTH_SCRYPT_N = "1024";
 // Exercise REAL auth: clear any configured owner email that would constrain the
 // first account (the server itself is constructed with openAccess: false below).

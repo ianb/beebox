@@ -1,5 +1,7 @@
 # Plan Engineering Review — Native iOS capture mode
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Review of `docs/plans/ios-native-capture-mode.md`, performed against the shipped
 capture implementation and the current iOS code. Every citation below was
 re-read from source; the plan's own citations were checked line-by-line rather

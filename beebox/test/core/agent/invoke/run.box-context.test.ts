@@ -70,7 +70,7 @@ void test("The server's Claude login can carry claude.ai connectors (Gmail, Cale
 });
 
 // The same host-account built-ins a chat may not use (scheduling, push, the
-// account's projects and artifacts; `test/services/claude-chat.doctest.md` lists
+// account's projects and artifacts; `test/services/claude-chat.test.ts` lists
 // them) are off for agent runs too, including runs without box context.
 void test("The same host-account built-ins a chat may not use (scheduling, push, the acc...", async (t) => {
   t.check(optionsFor({ loadBoxContext: false }).disallowedTools, [

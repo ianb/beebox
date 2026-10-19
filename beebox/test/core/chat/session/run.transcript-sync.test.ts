@@ -11,7 +11,7 @@
 // message `uuid` (which is verbatim the transcript line's `uuid`).
 //
 // Transcript files live under `~/.claude/projects/<munged box path>/`, so like
-// `chat-session-history.doctest.md` these tests seed JSONLs at the resolved
+// `test/core/chat/session/history.test.ts` these tests seed JSONLs at the resolved
 // path and remove that directory afterwards.
 
 import { test } from "tap";

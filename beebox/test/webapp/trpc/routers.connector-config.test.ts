@@ -8,7 +8,7 @@
 // Drive has no such mutation, on purpose — a Drive mount is a card, so there is no
 // config for a settings page to write. The Drive section here pins that; the
 // mount-writing procedures that DO exist are covered in
-// `trpc-drive-mounts.doctest.md`.
+// `test/webapp/trpc/routers/drive.mounts.test.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

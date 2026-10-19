@@ -1,9 +1,9 @@
 // The pure half of bin/lint-changed.ts: which changed paths each eslint config
 // owns, and which packages the root fan-out has anything to do for.
 //
-// A `.test.ts` rather than a doctest, matching its neighbours (test-select,
+// A node:test file rather than a t.check test, matching its neighbours (test-select,
 // finish-preflight) and because root `pnpm test` is what runs bin/ tooling
-// tests. See bin/AGENTS.md's note on the doctest-first rule.
+// tests. See bin/AGENTS.md's note on t.check tests.
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -28,7 +28,7 @@ test("frontend source goes to the frontend config, everything else to the root o
     "beebox/src/core/box.ts",
     "beebox/src/frontend/src/pages/ChatPage.tsx",
     "beebox/src/frontend/test/pages/ChatPage.test.ts",
-    "beebox/test/core/box.doctest.md",
+    "beebox/test/core/notes.md",
     "beebox/src/scripts/build-cli/build/entry.ts",
     "beebox/test/core/fake-agent.ts",
   ]);

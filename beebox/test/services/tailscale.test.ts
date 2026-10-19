@@ -60,7 +60,7 @@ const authed200 = {
 
 // `runTailscaleStatus` receives an already-resolved concrete target (the CLI
 // turns `--target`/auto-discovery into a `{ port }` via `resolveTargetOrDiscover`
-// — see tailscale-discovery.doctest.md). This helper mirrors that boundary.
+// — see test/services/tailscale-discovery.test.ts). This helper mirrors that boundary.
 // Deps with a correct serve config and the given `/auth/me` probe, or with only
 // a status payload.
 const withProbe = (probe: ProbeResult) => createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe });

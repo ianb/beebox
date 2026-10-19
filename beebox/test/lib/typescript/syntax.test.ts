@@ -65,7 +65,7 @@ void test("A name that is not a TypeScript or JavaScript file is refused before 
 
 // When the TypeScript process dies, the next parse throws instead of returning
 // a tree, and `close` is still safe. The Markdown check turns that throw into a
-// message for the agent (`test/core/views/markdown-check.doctest.md`). The
+// message for the agent (`test/core/views/markdown-check.test.ts`). The
 // parser's process is the child started with `--cwd /parse`; the test process
 // has other children (tsx's esbuild service).
 void test("When the TypeScript process dies, the next parse throws instead of returning...", async (t) => {

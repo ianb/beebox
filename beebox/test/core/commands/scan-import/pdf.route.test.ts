@@ -86,7 +86,7 @@ void test("The card is a pdf.card, not a set of photo cards, and the extraction 
 // ## A PDF that already carries text is left alone
 //
 // A good text layer beats re-OCRing an image of itself. (A layer that is present
-// but junk is a third case — see `pdf-probe.doctest.md`.)
+// but junk is a third case — see `test/core/pdf/probe.test.ts`.)
 void test("A good text layer beats re-OCRing an image of itself.", async (t) => {
   t.teardown(async () => {
     try {

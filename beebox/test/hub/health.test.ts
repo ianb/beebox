@@ -8,7 +8,7 @@
 //
 // The verdict is a pure function over `BoxRuntimeStatus[]`, so it's tested here
 // directly — no server, no child. The route that serves it as 200/503 is covered
-// in `hub-router.doctest.md`.
+// in `test/hub/server.router.test.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

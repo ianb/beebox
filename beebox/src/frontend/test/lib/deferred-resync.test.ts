@@ -6,7 +6,7 @@
 // exactly once — no matter how many triggers accumulated — the moment the tab
 // becomes visible.
 //
-// A fake `VisibilityAdapter` stands in for `document`: the frontend doctests run
+// A fake `VisibilityAdapter` stands in for `document`: the frontend tests run
 // under plain Node (no jsdom), so there's no real `document.hidden` to flip.
 
 import { test } from "tap";

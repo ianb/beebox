@@ -196,7 +196,7 @@ void test("This is the property that keeps the lock from ever wedging a box.", a
   // record of it so `withBoxGitLock` sees a foreign holder.
   const gitDir = join(box.root, ".git");
   const lockPath = join(gitDir, "beebox-index.lock");
-  await acquireLock(lockPath, { purpose: "doctest-foreign-holder" });
+  await acquireLock(lockPath, { purpose: "test-foreign-holder" });
 
   const result = await withBoxGitLock(box.root, async () => "ran unserialized");
   console.error = realError;

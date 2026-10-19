@@ -51,11 +51,11 @@ async function runCaptured(fn: () => Promise<unknown>) {
   let exitCode: number | string | undefined;
   console.log = (...args) => { logs.push(args.join(" ")); };
   console.error = (...args) => { errors.push(args.join(" ")); };
-  process.exit = (code?: number | string | null) => { exitCode = code ?? 0; throw new Error("__doctest_process_exit__"); };
+  process.exit = (code?: number | string | null) => { exitCode = code ?? 0; throw new Error("__test_process_exit__"); };
   try {
     await fn();
   } catch (e) {
-    if (!(e instanceof Error) || e.message !== "__doctest_process_exit__") throw e;
+    if (!(e instanceof Error) || e.message !== "__test_process_exit__") throw e;
   } finally {
     console.log = origLog;
     console.error = origError;

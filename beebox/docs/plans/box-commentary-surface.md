@@ -6,6 +6,8 @@ issues: []
 ---
 # In-box Commentary Surface for Out-of-Box Files
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 A Bee Box capability for viewing, selecting, and commenting on files
 that live **outside** the box — repo docs and source, including the same
 logical file across multiple git worktrees — from inside a dedicated box.

@@ -21,7 +21,7 @@ const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 const cli = join(repoRoot, "bin/exhibits");
 
-const root = await mkdtemp(join(tmpdir(), "exhibits-cli-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "exhibits-cli-test-"));
 const store = join(root, "workstream-exhibits");
 const state = join(root, "state");
 const mono = join(root, "beebox");

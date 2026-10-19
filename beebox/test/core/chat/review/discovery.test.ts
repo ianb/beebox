@@ -27,7 +27,7 @@ import { loadReviewState, saveReviewState } from "../../../../src/core/chat/revi
 import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../../src/cli/lib/session.js";
 import { prefixHash } from "../../../../src/core/chat/review/span.js";
 
-// Pin this machine's origin id to a file under the tmp box, so a doctest run
+// Pin this machine's origin id to a file under the tmp box, so a test run
 // neither reads nor mints the real `~/.local/share/beebox/origin-id`.
 const LOCAL_ORIGIN = "11111111-2222-4333-8444-555555555555";
 const FOREIGN_ORIGIN = "99999999-8888-4777-8666-555555555555";

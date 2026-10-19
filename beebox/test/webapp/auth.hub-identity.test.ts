@@ -21,12 +21,12 @@ function fakeRequest({ headers, cookies }: Partial<IdentityRequest>): IdentityRe
 const ORIGINAL_HUB_SECRET = process.env.BBX_HUB_SECRET;
 const ORIGINAL_SESSION_SECRET = process.env.BBX_SESSION_SECRET;
 const ORIGINAL_AUTH_FILE = process.env.BBX_AUTH_FILE;
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-identity-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-identity-test";
 // Track D: signSession + the resolver now consult the local credential store, so
 // pin BBX_AUTH_FILE at a nonexistent tmp path — none of these example emails have
 // a record, keeping them gen-less (source "cookie"), independent of any real
 // ~/.bbx-auth.json on the host.
-process.env.BBX_AUTH_FILE = "/nonexistent/bbx-auth-hub-identity-doctest.json";
+process.env.BBX_AUTH_FILE = "/nonexistent/bbx-auth-hub-identity-test.json";
 
 // ## Outside hub mode, headers are ignored entirely — the cookie is the only source
 void test("Outside hub mode, headers are ignored entirely — the cookie is the only source", async (t) => {

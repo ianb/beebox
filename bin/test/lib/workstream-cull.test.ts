@@ -44,7 +44,7 @@ void test("A merged removal records a recreatable final SHA", async (t) => {
       t.error(error);
     }
   });
-  const root = await mkdtemp(join(tmpdir(), "workstream-cull-doctest-"));
+  const root = await mkdtemp(join(tmpdir(), "workstream-cull-test-"));
   const mono = join(root, "mono");
   const worktreeRoot = join(root, "worktrees");
   const worktree = join(worktreeRoot, "cull-fixture");
@@ -138,7 +138,7 @@ void test("The managed --name <workstream> argument is a second signal in front 
   // an active registry lease reports `launching`; expired leases stop blocking and
   // malformed leases fail closed.
 
-  const leaseStateDir = await mkdtemp(join(tmpdir(), "workstream-launch-lease-doctest-"));
+  const leaseStateDir = await mkdtemp(join(tmpdir(), "workstream-launch-lease-test-"));
   await execFileAsync("bash", ["-c", '. "$1"; session_registry_begin_launch seam token-a', "lease", join(repoRoot, "bin/lib/session-registry.sh")], {
     env: { ...process.env, BBX_STATE_DIR: leaseStateDir },
   });
@@ -203,7 +203,7 @@ void test("Removal stops immediately when the worktree directory cannot move int
       t.error(error);
     }
   });
-  const failureRoot = await mkdtemp(join(tmpdir(), "workstream-cull-failure-doctest-"));
+  const failureRoot = await mkdtemp(join(tmpdir(), "workstream-cull-failure-test-"));
   const failureMono = join(failureRoot, "mono");
   const failureWorktree = join(failureRoot, "worktrees/failure-fixture");
   const failureState = join(failureRoot, "state");

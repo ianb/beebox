@@ -1,10 +1,10 @@
 /**
  * Paste-ready expected values and hints for failed check() assertions.
  *
- * Agents fix a failing doctest by pasting the actual value. The suggestion
+ * Agents fix a failing test by pasting the actual value. The suggestion
  * is that value with volatile parts (dates, UUIDs, temp paths, pid,
  * hostname, long hex ids, epoch timestamps) replaced by wildcards, and
- * blank lines written as `«blankline»` so the value survives in a doctest.
+ * blank lines written as `«blankline»` so the value survives in a test.
  */
 
 import { realpathSync } from "node:fs";

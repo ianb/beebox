@@ -9,7 +9,7 @@
 //
 // Markdoc does not run `validate` during normal `parse`/`transform` rendering —
 // `card-lint` invokes `Markdoc.validate` on commentary card bodies so the rule
-// actually fires (see the commentary card schema). This doctest exercises the
+// actually fires (see the commentary card schema). This test exercises the
 // rule directly.
 
 import { test } from "tap";

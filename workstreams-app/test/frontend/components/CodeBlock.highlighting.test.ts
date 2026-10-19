@@ -18,9 +18,9 @@ import {
 } from "../../../src/frontend/components/CodeBlock.js";
 import { Markdown } from "../../../src/frontend/components/Markdown.js";
 
-// The doctests run through the backend tsconfig, which has no `jsx` setting, so
+// These tests run through the backend tsconfig, which has no `jsx` setting, so
 // tsx emits classic `React.createElement` calls that need React in scope — the
-// same setup `front-page.doctest.md` does.
+// same setup `pages.landing.test.ts` does.
 Object.assign(globalThis, { React });
 
 

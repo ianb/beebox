@@ -6,7 +6,7 @@
 // `docs/implemented-plans/questions-end-to-end.md`). This covers the `input` cross-field
 // refinement, the lifecycle state, the learning/expiry vocabulary, and the three template
 // builders. Round-trip answer behavior lives in
-// `test/core/commands/answer.doctest.md`.
+// `test/core/commands/answer.test.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

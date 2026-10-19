@@ -6,7 +6,7 @@
 //
 // Every call below writes `<M>` explicitly. Omitting it is a compile error
 // (`defineRegistry({...})` with no type argument fails to typecheck, since `M`
-// defaults to `never`), which a doctest cannot express — verified by hand with
+// defaults to `never`), which a test cannot express — verified by hand with
 // `pnpm exec tsc --noEmit -p tsconfig.json` in `beebox/`.
 
 import { test } from "tap";

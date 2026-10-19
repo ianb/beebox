@@ -96,7 +96,7 @@ void test("GET /api/capture/sessions/resumable resolves its owner through resolv
       t.error(error);
     }
   });
-  const KEY = "browse-key-for-capture-doctest";
+  const KEY = "browse-key-for-capture-test";
   const ORIGINAL_OWNER = process.env.BBX_OWNER_EMAIL;
   process.env.BBX_BROWSE_API_KEY = KEY;
   process.env.BBX_OWNER_EMAIL = "owner@example.com";

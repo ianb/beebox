@@ -6,6 +6,8 @@ issues: []
 ---
 # Story extraction: rubric, prompts, and the A/B review loop
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Develop the extraction rubric and prompts that let subagents pull *story
 nuggets* out of repo documents, prove them on a small varied corpus, and give
 the boxholder an A/B review surface for judging prompt variants against each

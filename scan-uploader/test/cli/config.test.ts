@@ -19,7 +19,7 @@ async function writeConfig(contents: unknown): Promise<string> {
 }
 
 // checkThrows only catches synchronous throws; loadConfig rejects, so
-// doctests assert on the rejected error's name via this helper instead.
+// tests assert on the rejected error's name via this helper instead.
 async function rejectedErrorName(promise: Promise<unknown>): Promise<string> {
   try {
     await promise;

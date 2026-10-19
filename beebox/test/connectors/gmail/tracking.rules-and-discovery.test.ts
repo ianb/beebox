@@ -1,6 +1,6 @@
 // # Gmail tracked working set: rules, discovery, and gws
 //
-// Continues [tracking.doctest.md](tracking.doctest.md). This part covers the rules baseline and its bounds, resumable history discovery, the shared tracking lock, and the read-only `gws` passthrough with its bounded capture.
+// Continues [tracking.test.ts](tracking.test.ts). This part covers the rules baseline and its bounds, resumable history discovery, the shared tracking lock, and the read-only `gws` passthrough with its bounded capture.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -2,7 +2,7 @@
 //
 // Exercises `configure()` (`src/cli/configure.ts`) directly — argv parsing and
 // interactive TTY prompting live in `src/cli/configure-cli.ts` and aren't
-// exercised here (the TTY-prompt path isn't practical to doctest: it needs a
+// exercised here (the TTY-prompt path isn't practical to test: it needs a
 // real TTY; the non-TTY `requireFolderFlag` fail-closed path below covers the
 // same logic `configure-cli.ts` actually depends on).
 
@@ -346,13 +346,13 @@ void test("The album flag is parsed as one argument, including spaces:", async (
 
 // ## The hidden token prompt's exact wording
 //
-// The interactive TTY prompt itself isn't practical to doctest (it needs a
+// The interactive TTY prompt itself isn't practical to test (it needs a
 // real TTY — verified manually with `script -q /dev/null`; see the comment on
 // `promptToken`), but the exact text it writes is exported as plain
 // constants precisely so a typo, or a regression back to the invisible-prompt
 // bug (the prompt used to be written through the same muted stream as the
 // input echo, so it silently never appeared at all), stays test-guarded:
-void test("The interactive TTY prompt itself isn't practical to doctest (it needs a real...", async (t) => {
+void test("The interactive TTY prompt itself isn't practical to test (it needs a real...", async (t) => {
   t.check(TOKEN_PROMPT_TEXT, "Paste the scan token (input is hidden): ");
 
   t.check(TOKEN_RECEIVED_ACK, "token received");

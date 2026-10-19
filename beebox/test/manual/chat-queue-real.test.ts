@@ -3,7 +3,7 @@
 // Diagnoses: when a second user message is enqueued while a turn is in
 // flight, does the backend actually drain it into a second turn?
 //
-// The fake-backend equivalent (`chat-session-with-spawner.doctest.md` →
+// The fake-backend equivalent (`test/core/chat/session/run.with-spawner.test.ts` →
 // "Close handler drains queued messages into a fresh run") proves the
 // in-process logic is correct. This file proves it against the real SDK,
 // because user-visible bug reports (UI shows "Agent is busy — your
@@ -84,5 +84,5 @@ void test("The flow:", async (t) => {
 // processed my second message" should then be hunted in the layers
 // *above* the session: the HTTP route's enqueue path, the frontend's
 // optimistic state, or the reconcile that drops pending messages once
-// the server catches up. (`test/reconcile-pending.doctest.md` covers
+// the server catches up. (`src/frontend/test/machines/chatMachine.reconcile-pending.test.ts` covers
 // the reconcile in isolation.)

@@ -7,10 +7,10 @@
 // live there together. shapeVersion 3 is the only box shape.
 //
 // This mirrors what `src/cli/commands/init.ts`'s action does, without going
-// through Commander — same style as `test/core/box/structure.init.doctest.md`'s `fullInit`
+// through Commander — same style as `test/core/box/structure.init.test.ts`'s `fullInit`
 // helper. It deliberately skips `symlinkClaudeMemory` (the one installer with a
 // REAL global side effect — it touches `~/.claude/projects/`), since a
-// filesystem doctest shouldn't leave litter outside its own tmpdir.
+// filesystem test shouldn't leave litter outside its own tmpdir.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -55,7 +55,7 @@ async function makeTmpDir() {
 // `bbx init`: the hook would run a full `bbx` process (the box's own engine,
 // via the `node_modules/beebox` link `scaffoldBoxRoot` creates — see
 // `resolveBbxBin` in `install-validation-hooks.ts`), which is the hook's
-// behaviour, not this doctest's subject. The hook's CONTENT is verified
+// behaviour, not this test's subject. The hook's CONTENT is verified
 // statically instead of executing it.
 async function fullInit(targetPath: string) {
   const { mode, boxRoot } = await detectBoxTarget(targetPath);
@@ -258,7 +258,7 @@ void test("Fresh init produces the v3 one-root layout", async (t) => {
   // A merged root `.gitignore` (covering both the npm namespace and the
   // operational rules) exists — `fullInit` here doesn't call `generateDocs`, so
   // it doesn't produce a root `AGENTS.md` (that's `ensureAgentContext`'s job,
-  // covered by `test/core/agent-context-mirrors.doctest.md`):
+  // covered by `test/core/agent-context-mirrors.test.ts`):
 
   const gitignore = await fs.readFile(path.join(boxRoot, ".gitignore"), "utf-8");
   // A large generated file: the two entries named above are the contract.

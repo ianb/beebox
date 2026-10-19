@@ -6,6 +6,8 @@ issues: []
 ---
 # iOS Share Extension Capture
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan defines a native iOS Share Extension for the Bee Box companion app. Its shipped first slice lets a person send one shared URL or text item to a recent landmark chat or save it in Inbox or a landmark that advertises itself as a share destination.
 
 ## Implemented first slice

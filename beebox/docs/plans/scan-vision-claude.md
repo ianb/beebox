@@ -6,6 +6,8 @@ issues: []
 ---
 # Scan vision: Claude Sonnet default, Gemini opt-in
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Switch `bbx scan-import`'s photo-analysis backend from Gemini Flash (required
 `GEMINI_KEY`) to Claude Sonnet 5 via the Claude Agent SDK, behind a
 `ScanVision` service interface. The decision driver is operational

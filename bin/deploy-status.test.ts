@@ -1,7 +1,7 @@
 // Unit tests for the pure half of bin/deploy-status: parsers over fixture git,
 // marker-file, and SSH-transcript text; lock rendering; the JSON shape; and
 // degraded sections. No network, no subprocess, no filesystem. A traditional
-// test rather than a doctest because the subject is the root `bin/` TS module
+// node:test file rather than a t.check test because the subject is the root `bin/` TS module
 // itself and the caller asked for this form. Run with:
 //   node --import tsx --test bin/deploy-status.test.ts
 

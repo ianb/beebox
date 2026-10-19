@@ -21,7 +21,7 @@ export const HUMAN_PATTERNS: Pattern[] = [
   { label: "cross-model / Codex review", re: /cross[ -]model|\bcodex\b[^\n!.?]{0,40}\breview|\breview\b[^\n!.?]{0,40}\bcodex\b|second opinion/i },
   { label: "delegate: subagent / parallel / spin off a session", re: /\b(sub-?agents?|delegat\w*|in parallel|spin (it |this )?(off|up)|launch (a |another )?(new )?(session|worktree)|new worktree)\b/i },
   { label: "look in the browser / screenshot / dev URL", re: /\bscreenshots?\b|\bin the browser\b|localhost:3210|\bbrowse\b|\blook at (it|the page)\b/i },
-  { label: "tests: run / add tests, doctests", re: /\bdoctests?\b|\brun (the )?tests?\b|\btest (it|this|that)\b|\b(add|write) (a |some )?tests?\b/i },
+  { label: "tests: run / add tests", re: /\bdoctests?\b|\brun (the )?tests?\b|\btest (it|this|that)\b|\b(add|write) (a |some )?tests?\b/i },
   { label: "commit", re: /\bcommit\b/i },
   { label: "keep going / continue / resume", re: /\b(keep going|continue|carry on|resume)\b/i },
   { label: "restart / rebuild / reload / refresh", re: /\b(restart|rebuild|reload|refresh|reinstall)\b/i },

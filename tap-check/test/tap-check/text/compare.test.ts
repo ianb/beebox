@@ -254,7 +254,7 @@ test("checkText awaits promises", async (t) => {
 test("suggested: wildcards volatile parts and marks blank lines", async (t) => {
   const actual = [
     "created 2026-09-28T10:00:00.000Z by 550e8400-e29b-41d4-a716-446655440000",
-    `path: ${os.tmpdir()}/doctest-abc123/box/card.md`,
+    `path: ${os.tmpdir()}/tap-check-abc123/box/card.md`,
     "commit 3f2a9c1d8e7b6a5f on 2020-01-02",
     "",
     "done",

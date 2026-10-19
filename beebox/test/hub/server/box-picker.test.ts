@@ -21,7 +21,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-box-picker-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-box-picker-test";
 
 const boxA = await makeTmpBox();
 await boxA.write("_config/box.json", JSON.stringify({ allowedEmails: ["alice@example.com"] }));
@@ -35,7 +35,7 @@ const boxes = [
 
 // A path with no index.html forces the minimal-list fallback, which is where the
 // ACL filtering lives; the SPA-served case gets a real index.html below.
-const NO_FRONTEND = path.join(os.tmpdir(), "box-picker-no-frontend-doctest");
+const NO_FRONTEND = path.join(os.tmpdir(), "box-picker-no-frontend-test");
 
 /** The fallback page: a fixed template around one `<li>` per listed box. */
 function pickerPage(slugs: string[]): string {
@@ -128,10 +128,10 @@ void test("Hub auth on, no session: redirected to login", async (t) => {
     }
   });
   // Auth is required by default now (openAccess is false for this picker).
-  process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-box-picker-doctest";
+  process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-box-picker-test";
   // Paired secret: an ID-without-secret half-config is now a loud
   // MissingOAuthClientSecretError wherever auth routes register.
-  process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-box-picker-doctest";
+  process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-box-picker-test";
   const gatedApp = await startPicker(NO_FRONTEND, false);
   const noSessionRes = await gatedApp.inject({ method: "GET", url: "/" });
   t.check(noSessionRes.statusCode, 302);

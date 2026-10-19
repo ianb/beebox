@@ -20,7 +20,7 @@ import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { sanitizeReturnTo } from "../../../../src/webapp/routes/auth/login-page.js";
 import { escapeHtml } from "../../../../src/lib/escape-html.js";
 
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-login-page-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-login-page-test";
 
 // ## `sanitizeReturnTo` accepts only a same-origin path, failing safe to `<prefix>/`
 void test("`sanitizeReturnTo` accepts only a same-origin path, failing safe to `<prefix>/`", async (t) => {

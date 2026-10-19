@@ -6,6 +6,8 @@ area: beebox
 priority: important
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > **Checked 2026-08-14 — not closeable; the remainder is a real-device pass.**
 > Tagged `fixed`; removed. Tracks 1-5 and most of 6 are implemented (the
 > progress list below is current), but the plan is still

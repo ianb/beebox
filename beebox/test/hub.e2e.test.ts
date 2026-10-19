@@ -1,6 +1,6 @@
 // # `bbx hub` end-to-end: real child process, `/healthz`, clean teardown (Track D, chunk D1)
 //
-// The seam tests (`hub-router.doctest.md`, `hub-config.doctest.md`) carry the
+// The seam tests (`test/hub/server.router.test.ts`, `test/hub/config.test.ts`) carry the
 // real coverage — this one is deliberately lean: build one real fixture box
 // (the same symlink trick `scaffoldPackageRoot` uses to make a fixture box
 // loadable without a real `pnpm install`; the supervisor's "spawn the box's own
@@ -49,12 +49,12 @@ const STARTUP_TIMEOUT_MS = 120_000;
 // at a nonexistent path so the hub's cookie resolution reads no real local store
 // (a gen-less cookie for an email with no record is a valid Google-only-style
 // identity — source "cookie").
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-e2e-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-e2e-test";
 process.env.BBX_OWNER_EMAIL = "owner@example.com";
 process.env.BBX_AUTH_FILE = path.join(os.tmpdir(), "bbx-hub-e2e-nonexistent-auth.json");
 const ownerCookie = `bbx_session=${signSession({ email: "owner@example.com", name: "Owner" })}`;
 // The hub's /healthz is diag-key-gated; the spawned hub inherits this env.
-const DIAG_KEY = "test-diag-key-for-e2e-doctest";
+const DIAG_KEY = "test-diag-key-for-e2e-test";
 process.env.BBX_DIAG_API_KEY = DIAG_KEY;
 const diagAuth = { headers: { authorization: `Bearer ${DIAG_KEY}` } };
 

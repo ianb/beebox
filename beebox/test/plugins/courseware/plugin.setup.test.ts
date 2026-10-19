@@ -2,7 +2,7 @@
 //
 // `src/plugins/courseware/README.md` (Setup) lists what a box writes to use the
 // plugin: `"plugins": ["courseware"]` in `_config/box.json`, one schema stub per
-// type under `src/schemas/`, and a view stub. This doctest writes those stubs
+// type under `src/schemas/`, and a view stub. This test writes those stubs
 // (each labelled `<box>/<path>` in the README), character for character, into a temp box and runs `bbx validate` over one card
 // of each type, so the README cannot drift from what loads.
 //

@@ -3,7 +3,7 @@
 // A copied `scan-uploader.mjs` never updates itself, so an old copy keeps sweeping
 // against a box that has moved on. It might *work* and still be missing features.
 // The box records what each uploader says it is (see
-// `test/core/scan/tokens.doctest.md`) and this check is where a person sees that
+// `test/core/scan/tokens.test.ts`) and this check is where a person sees that
 // one is behind.
 //
 // Health rather than a notification, on purpose: a push alert reaches nobody

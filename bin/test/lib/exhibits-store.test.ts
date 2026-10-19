@@ -18,7 +18,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 const lib = join(repoRoot, "bin/lib/exhibits-store.sh");
-const root = await mkdtemp(join(tmpdir(), "exhibits-store-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "exhibits-store-test-"));
 const store = join(root, "workstream-exhibits");
 const wt = join(root, "beebox-worktrees/demo");
 await mkdir(wt, { recursive: true });

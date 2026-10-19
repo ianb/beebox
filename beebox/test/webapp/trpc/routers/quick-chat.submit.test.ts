@@ -6,7 +6,7 @@
 // Nothing is lost when a step fails: the record holds the message, and a repeat
 // `submit` with the same id finishes the job (docs/plans/box-screen.md, track 1).
 //
-// These doctests use a synthetic box, the fake Jev service, and a scripted chat
+// These tests use a synthetic box, the fake Jev service, and a scripted chat
 // runtime. The runtime stands in for the send route's target resolution and its
 // sender: it claims each message id the way `send-dedup.ts` does, so a second
 // delivery of one id is answered as a duplicate.

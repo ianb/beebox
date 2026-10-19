@@ -1,7 +1,7 @@
 // # `bbx hub` routing: the endpoint seam, plus the D2 auth split (Track D, chunks D1-D2)
 //
 // `src/hub/server/core.ts` never talks to a child process directly — it only
-// consumes `EndpointProvider` (`src/hub/endpoints.ts`). This doctest proves
+// consumes `EndpointProvider` (`src/hub/endpoints.ts`). This test proves
 // the router/proxy layer against a **fake endpoint**: a trivial `http.Server`
 // standing in for "a box the hub supervises," fed in via
 // `staticEndpointProvider` instead of a real `Supervisor`. That's the whole
@@ -37,7 +37,7 @@ import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-m
 import { renderUnavailablePage } from "../../src/hub/server/box-unavailable.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-const HUB_SECRET = "test-hub-secret-for-router-doctest";
+const HUB_SECRET = "test-hub-secret-for-router-test";
 // The default box has a real, empty content root, as a new box does. A missing
 // root is a broken box, and reading its name logs a warning.
 const defaultBoxRoot = await mkdtemp(join(tmpdir(), "bbx-router-"));
@@ -49,12 +49,12 @@ await mkdir(join(defaultBoxRoot, "_content"));
 // passes `openAccess: true` by default. The ONE section that needs hub auth
 // actually ON constructs its hub with `openAccess: false`.
 // Both hub health routes require this bearer key (mirroring the box server's
-// own /healthz). Set it for the whole doctest; the auth header helper below
+// own /healthz). Set it for the whole test; the auth header helper below
 // sends it.
-const DIAG_KEY = "test-diag-key-for-router-doctest";
+const DIAG_KEY = "test-diag-key-for-router-test";
 process.env.BBX_DIAG_API_KEY = DIAG_KEY;
 const diagAuth = { headers: { authorization: `Bearer ${DIAG_KEY}` } };
-const BROWSE_KEY = "test-browse-key-for-router-doctest";
+const BROWSE_KEY = "test-browse-key-for-router-test";
 
 /** The JSON the fake box and the hub's own routes answer with; every field a
  *  check below reads is optional because each route answers with its own subset. */
@@ -113,7 +113,7 @@ async function startFakeBox() {
       "Connection: Upgrade\r\n" +
       `Sec-WebSocket-Accept: ${accept}\r\n\r\n`
     );
-    // No frame handling needed -- the doctest only checks the handshake made it through.
+    // No frame handling needed -- the test only checks the handshake made it through.
   });
   await listen(server);
   const port = portOf(server);
@@ -192,11 +192,11 @@ async function getJson(hub: { base: string }, request: RequestInit & { path: str
 // Hub auth ON needs a (fake) OAuth client pair and a session secret.
 function setOAuthEnv(on: boolean) {
   const vars = {
-    GOOGLE_OAUTH_CLIENT_ID: "test-client-id-for-router-doctest",
+    GOOGLE_OAUTH_CLIENT_ID: "test-client-id-for-router-test",
     // registerAuthRoutes fails loudly on an ID-without-secret half-config
     // (MissingOAuthClientSecretError), so the fake credentials must be a pair.
-    GOOGLE_OAUTH_CLIENT_SECRET: "test-client-secret-for-router-doctest",
-    BBX_SESSION_SECRET: "test-session-secret-for-router-doctest",
+    GOOGLE_OAUTH_CLIENT_SECRET: "test-client-secret-for-router-test",
+    BBX_SESSION_SECRET: "test-session-secret-for-router-test",
   };
   for (const [name, value] of Object.entries(vars)) {
     if (on) process.env[name] = value;
@@ -241,7 +241,7 @@ root.teardown(async () => {
 // An unconfigured slug 404s without touching any endpoint. `/` routes to the
 // hub's box-picker handler, which serves the SPA when the frontend bundle is built
 // and a minimal box list otherwise — either way a 200 with an HTML body (the
-// picker-content behavior itself is covered in `box-picker.doctest.md`; this just
+// picker-content behavior itself is covered in `test/hub/server/box-picker.test.ts`; this just
 // asserts the routing):
 void test("An unconfigured slug 404s without touching any endpoint.", async (t) => {
   t.teardown(async () => {
@@ -300,7 +300,7 @@ void test("Identity headers: client-supplied ones are stripped, the hub's own ar
   });
   t.check(spoofed.body.headers, {
     xBbxAuthenticatedEmail: null,
-    xBbxHubSecret: "test-hub-secret-for-router-doctest",
+    xBbxHubSecret: "test-hub-secret-for-router-test",
     xBbxHubAuth: "off",
   });
 
@@ -311,7 +311,7 @@ void test("Identity headers: client-supplied ones are stripped, the hub's own ar
     200,
     {
       xBbxAuthenticatedEmail: null,
-      xBbxHubSecret: "test-hub-secret-for-router-doctest",
+      xBbxHubSecret: "test-hub-secret-for-router-test",
       xBbxHubAuth: null,
     },
   ]);
@@ -334,7 +334,7 @@ void test("Identity headers: client-supplied ones are stripped, the hub's own ar
     200,
     {
       xBbxAuthenticatedEmail: null,
-      xBbxHubSecret: "test-hub-secret-for-router-doctest",
+      xBbxHubSecret: "test-hub-secret-for-router-test",
       xBbxHubAuth: "off",
     },
   ]);
@@ -372,7 +372,7 @@ void test("WebSocket upgrades and a lazy provider cold-start HTTP requests only"
   // The lazy provider (`makeLazyProvider`, in setup) mirrors a lazy `Supervisor`
   // (`src/hub/supervisor/core.ts`) without spawning a real process. This proves
   // `hub-server.ts`'s contract, not `Supervisor`'s own cold-start mechanics
-  // (covered separately in `supervisor.doctest.md`).
+  // (covered separately in `test/hub/supervisor.test.ts`).
   //
   // An HTTP request to the stopped box cold-starts it via `ensureRunning` and
   // still gets proxied through on the SAME request (no separate retry needed):
@@ -449,7 +449,7 @@ void test("The Google-services OAuth callback routes to the box named in state",
     "/auth/google-services/callback?code=abc123&state=test1:admin",
     {
       xBbxAuthenticatedEmail: null,
-      xBbxHubSecret: "test-hub-secret-for-router-doctest",
+      xBbxHubSecret: "test-hub-secret-for-router-test",
       xBbxHubAuth: "off",
     },
   ]);
@@ -583,7 +583,7 @@ void test("The hub owns /api/boxes and gates /healthz by diag key", async (t) =>
 
   // ## `/api/boxes` is hub-owned, matching the standalone server's shape
   //
-  // With hub auth off (this doctest's default), every configured box is listed
+  // With hub auth off (this test's default), every configured box is listed
   // -- same "open" semantics as `/` and a standalone box outside auth mode.
 
   const apiBoxes = await getJson(hub, { path: "/api/boxes" });
@@ -623,7 +623,7 @@ void test("The hub owns /api/boxes and gates /healthz by diag key", async (t) =>
   // The status code carries the verdict so a monitor reading only the code alarms;
   // the body names the crash-looping box. Here `getHealth` is injected to report a
   // box latched `unhealthy` (the shape `hubVerdict` produces from supervisor state
-  // — see `hub-health.doctest.md` for the derivation itself).
+  // — see `test/hub/health.test.ts` for the derivation itself).
 
   const brokenHealth = (): HubHealth => ({
     status: "unhealthy",

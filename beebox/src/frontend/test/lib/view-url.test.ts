@@ -183,7 +183,7 @@ void test("basePath is treated like a containing file (its last segment is strip
 // agent's *working directory* for its file tools, not a link base. So in a chat
 // bound to `notes`, a bare `sibling.card` link and a bare `Foo.doc.card` embed
 // both name the box-root file, identically to the leading-`/` form (this is the
-// resolution seam; the wiring itself is React rendering, which has no doctest
+// resolution seam; the wiring itself is React rendering, which has no test
 // tier):
 void test("Chat message markdown (chat/markdown-rendering.tsx) renders with basePath:", async (t) => {
   t.check(

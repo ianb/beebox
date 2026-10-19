@@ -697,7 +697,7 @@ void test("An unexpectedly large imported tree must degrade live updates instead
 // super-linear in the count, against a fraction of a second idle. That is what
 // made this file take 8 seconds alone and expire past tap's 300-second per-file
 // limit under parallel suite load
-// (`issues/bugs/2026-08-06-file-watcher-doctest-suite-timeout.md`). The number
+// (closed issue 2026-08-06, file-watcher suite timeout). The number
 // 1,024 is a capacity decision about a real server, not a behavior of this module,
 // so it is pinned here directly and the boundary logic is exercised where it is
 // cheap.

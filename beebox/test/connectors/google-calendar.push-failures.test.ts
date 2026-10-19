@@ -1,6 +1,6 @@
 // # Google Calendar connector: failed pushes and resyncs
 //
-// Continues [google-calendar.doctest.md](google-calendar.doctest.md). This part covers a rejected `X-BBX-DELETE`, failed and retried patches, a full resync after a 410 removing vanished events, and a local edit pushed when Google returns nothing.
+// Continues [google-calendar.test.ts](google-calendar.test.ts). This part covers a rejected `X-BBX-DELETE`, failed and retried patches, a full resync after a 410 removing vanished events, and a local edit pushed when Google returns nothing.
 
 import { after, test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -243,7 +243,7 @@ void test("A full-window list is the whole truth for that window and does not re
   // than deleted behind the boxholder's back — the edit is still on disk, under
   // `stranded/`, and the run reports it once. Nothing tracks it any more, so no
   // later run patches, reports, or re-inserts it (index keys are
-  // `<eventId> <calendarId>` — see `google-calendar-event-index.doctest.md`):
+  // `<eventId> <calendarId>` — see `test/connectors/google-calendar/event-index.test.ts`):
 
   let editedFile = "";
   for (const name of await icsNames(box)) {

@@ -26,7 +26,7 @@ const cliTs = join(repoRoot, "bin/coding-feedback.ts");
 // from its cwd; load tsx from this repository instead.
 const tsxLoader = pathToFileURL(join(repoRoot, "node_modules/tsx/dist/loader.mjs")).href;
 
-const root = await realpath(await mkdtemp(join(tmpdir(), "coding-feedback-doctest-")));
+const root = await realpath(await mkdtemp(join(tmpdir(), "coding-feedback-test-")));
 const store = join(root, "workstream-exhibits");
 const home = join(root, "home");
 const mono = join(root, "beebox");

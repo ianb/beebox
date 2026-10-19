@@ -33,7 +33,7 @@
     // will execute a value import through @core/@schemas/@backend that the Vite
     // build rejects — so tsx is not a guard, the eslint rule is (it bans value
     // imports through these aliases via allowTypeImports). Only the tap/tsx
-    // DOCTEST runner uses the ROOT tsconfig
+    // test runner uses the ROOT tsconfig
     // (no paths), where @core/@schemas/@shared are unresolvable; frontend
     // modules exercised there import cross-boundary code by raw relative path,
     // not by alias (see the lint-rule exemptions).

@@ -1,6 +1,6 @@
 // # Scanning a box for todos (`core/todo/query.ts`)
 //
-// Filesystem-tier doctests for `docs/implemented-plans/todo-annotation.md`
+// Filesystem-tier tests for `docs/implemented-plans/todo-annotation.md`
 // Track 3, carried forward onto the collection runner
 // (`docs/plans/todo-collection.md`, Track 4). A box-wide query globs every card,
 // parses each body once against the shared Markdoc vocabulary, and merges both
@@ -9,7 +9,7 @@
 // duplicate `id`s as visible issues rather than silently dropping a card's
 // todos.
 //
-// `collection-run.doctest.md` covers the scope, grouping, and reduction rules;
+// `test/core/collection/run.test.ts` covers the scope, grouping, and reduction rules;
 // this file covers what one card contributes and what a card that cannot
 // contribute reports.
 
@@ -47,7 +47,7 @@ process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 const box = await makeTmpBox();
 // America/Chicago is UTC-5 in July (CDT) — the frozen time above is
 // 2026-07-28T07:00 local, still July 28th locally, which is what the
-// plate-state doctests below assume.
+// plate-state tests below assume.
 await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
 
 // ## Both capture forms are collected

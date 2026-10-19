@@ -6,7 +6,7 @@
 // `.claude/settings.json`) and the in-process `cardValidatorHook()` that agent chat
 // and agent-run sessions use. Both call the shared `lintViewFile`, and then, for a
 // view that compiles, `lintViewMarkdown`: rendering card text other than through
-// `Markdown` is an error of the same weight (`test/core/views/markdown-check.doctest.md`).
+// `Markdown` is an error of the same weight (`test/core/views/markdown-check.test.ts`).
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -68,8 +68,8 @@ async function runHook(filePath: string, cwd: string): Promise<HookJSONOutput> {
   if (hook === undefined) throw new Error("cardValidatorHook registered no hook");
   return hook(
     {
-      hook_event_name: "PostToolUse", session_id: "doctest", transcript_path: "", cwd,
-      tool_name: "Write", tool_input: { file_path: filePath }, tool_response: null, tool_use_id: "doctest-tool-use",
+      hook_event_name: "PostToolUse", session_id: "test", transcript_path: "", cwd,
+      tool_name: "Write", tool_input: { file_path: filePath }, tool_response: null, tool_use_id: "test-tool-use",
     },
     undefined,
     { signal: new AbortController().signal },

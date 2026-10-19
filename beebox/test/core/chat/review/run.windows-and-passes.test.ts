@@ -1,6 +1,6 @@
 // # Chat Review: windows, title pass, and metadata pass
 //
-// Continues [run.doctest.md](run.doctest.md). This part covers reviewing a long backlog in windows, short chats titled by the title pass, the metadata pass advancing both journals, empty "keep" failures, filling a missing `first-message`, hand-owned titles, and saving each session's journal before the next.
+// Continues [run.test.ts](run.test.ts). This part covers reviewing a long backlog in windows, short chats titled by the title pass, the metadata pass advancing both journals, empty "keep" failures, filling a missing `first-message`, hand-owned titles, and saving each session's journal before the next.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

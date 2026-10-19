@@ -317,7 +317,7 @@ void test("The wakeup still runs:", async (t) => {
 // wakeup is indefinite rather than late. The marker is written before the run and
 // survives a restart; every later pass retries it — but only a bounded number of
 // times, and the outcome carries how long the caller should wait before the next
-// attempt (`core/scan/wakeup-retry.doctest.md` pins the budget itself).
+// attempt (`test/core/scan/promote/wakeup.retry.test.ts` pins the budget itself).
 void test("Connector-scoped scheduled wakeups never drain a scan intake job (it has no c...", async (t) => {
   t.teardown(async () => {
     try {

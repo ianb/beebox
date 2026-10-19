@@ -84,7 +84,7 @@ void test("Loading, and the genuinely-empty result", async (t) => {
 // ## Describing a failure
 //
 // Which failures are retried, and for how long, is decided in the transport
-// (`trpc-transient.doctest.md`); by the time a failure reaches this function the
+// (`src/frontend/test/lib/trpc/transient.trpc-transient.test.ts`); by the time a failure reaches this function the
 // retries are over. It recognizes the unreachable box by its class, whether it
 // arrives bare (the text loader) or as the `cause` of a tRPC client error. A
 // network failure reports that nothing answered at all.

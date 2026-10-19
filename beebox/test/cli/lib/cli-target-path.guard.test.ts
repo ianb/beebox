@@ -5,8 +5,8 @@
 // DISPLAY-FORM path (`Config:box.json`) is rejected with a message naming the
 // canonical form, rather than being silently treated as (and failing to find)
 // a relative file of that literal name
-// (`docs/plans/display-path-guard.subplan.md`). `mv`/`rm`'s own doctests
-// (`move-command.doctest.md`, `trash-command.doctest.md`) cover those two
+// (`docs/plans/display-path-guard.subplan.md`). `mv`/`rm`'s own tests
+// (`test/core/commands/move/command.test.ts`, `test/core/commands/trash/command.test.ts`) cover those two
 // directly; this file covers `ls` and `create`, which are reached only through
 // `runCommand` (its catch-all converts the guard's thrown error into the same
 // `CommandResult` failure shape).

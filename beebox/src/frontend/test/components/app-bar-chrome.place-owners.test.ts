@@ -9,7 +9,7 @@
 // version cleared the entry in the effect cleanup and published it again as a
 // new owner, so a chat whose label changed under a focused Browse card rose
 // above it and the pill named the chat (fixed in `e22c56ead`). Only effect
-// ordering shows this bug, so this is a DOM doctest.
+// ordering shows this bug, so this is a DOM test.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

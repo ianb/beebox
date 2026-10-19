@@ -2,7 +2,7 @@
 //
 // The actions API handles one raw-Fastify mutation — creating a card from a
 // template. (Answering and dismissing questions moved to the tRPC
-// `actions.answer`/`actions.dismiss` mutations — see `trpc-actions.doctest.md`;
+// `actions.answer`/`actions.dismiss` mutations — see `test/webapp/trpc/routers/actions.test.ts`;
 // the raw `/api/actions/answer` duplicate was removed.)
 
 import { test } from "tap";

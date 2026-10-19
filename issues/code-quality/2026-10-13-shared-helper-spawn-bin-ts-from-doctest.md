@@ -8,6 +8,8 @@ discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261013-224557
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 bin/ tests (doctests when filed; `bin/test/*.test.ts` since 2026-10-18, e.g. `finish-preflight.test.ts`, `finish-verify.test.ts`) that run a `bin/*.ts` CLI from a fixture repo each hand-roll
 the spawn: tsx resolution (`import.meta.resolve("tsx")`), cwd and env. A bare
 `--import tsx` resolves relative to cwd, so it fails when cwd is a fixture

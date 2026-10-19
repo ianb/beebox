@@ -4,7 +4,7 @@
 // root. Each file default-exports a frontmatter `cardSchema()`. `loadBoxSchemas`
 // discovers them and they become first-class in the same parse/validate path as
 // built-in ones. This file exercises card load/validate, hot-reload after
-// invalidation, and owner-scoped templates; `test/schemas/box-schemas-v2.doctest.md`
+// invalidation, and owner-scoped templates; `test/schemas.native-resolution.test.ts`
 // covers native resolution and stray-file detection.
 
 import { test } from "tap";

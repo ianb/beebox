@@ -14,8 +14,8 @@
     "lint:backend": "eslint src/ test/",
     "lint:frontend": "eslint --config eslint.frontend.config.ts src/frontend/",
     "lint:router": "pnpm --dir .. exec eslint workstreams-app/src/router/",
-    "test": "pnpm run test:doctests && pnpm run test:router",
-    "test:doctests": "tap",
+    "test": "pnpm run test:tap && pnpm run test:router",
+    "test:tap": "tap",
     "test:router": "node --import tsx --test \"test/router/**/*.test.ts\" \"test/scenarios/**/*.test.ts\""
   },
   "dependencies": {

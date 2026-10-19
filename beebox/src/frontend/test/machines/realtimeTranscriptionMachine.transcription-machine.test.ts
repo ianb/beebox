@@ -6,7 +6,7 @@
 // cannot resolve, so the module failed to load and the machine, its actor and
 // `useRealtimeTranscription` were all untestable
 // (`issues/code-quality/2026-08-15-transcription-machine-untestable-worklet-import.md`).
-// That import is now deferred to mic start, so a doctest that never opens a
+// That import is now deferred to mic start, so a test that never opens a
 // microphone never resolves it — and the reducers below are exercised as
 // transitions rather than as pure functions called by hand.
 //

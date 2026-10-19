@@ -2,7 +2,7 @@
  * tap-check's ESLint plugin: rules that keep `t.check` tests strong.
  * Enable on test files:
  *
- *     import agentDoctest from "@ianbicking/tap-check/eslint";
+ *     import tapCheck from "@ianbicking/tap-check/eslint";
  *     { files: ["test/**\/*.ts"], plugins: { "tap-check": tapCheck },
  *       rules: { "tap-check/check-whole-value": "error", "tap-check/no-voided-check": "error",
  *                "tap-check/no-tap-assert": "error" } }

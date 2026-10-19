@@ -38,8 +38,8 @@ async function pathExists(p: string) {
   try { await access(p); return true; } catch (_e) { return false; }
 }
 
-// Arrow-free-at-call-site git inspection (keeps inline `=>` out of example
-// blocks, where the doctest tracker confuses arrows with assertion markers).
+// Arrow-free-at-call-site git inspection (keeps inline `=>` out of the
+// example blocks).
 function commitReport(boxRoot: string, { baseA, baseB }: { baseA: string; baseB: string }) {
   const rows = execFileSync("git", ["log", "--format=%H%x09%s"], { cwd: boxRoot })
     .toString().trim().split("\n").map((l) => l.split("\t"));

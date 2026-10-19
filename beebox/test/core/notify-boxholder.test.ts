@@ -46,7 +46,7 @@ function intent(loudness: Loudness): NotificationInput {
     body: "The school emailed: the form is due Friday.",
     target: { kind: "card", path: "_content/inbox/field-trip.email.card" },
     loudness,
-    source: "notify-doctest",
+    source: "notify-test",
   };
 }
 
@@ -106,7 +106,7 @@ web-push sent`);
     body: "The school emailed: the form is due Friday.",
     target: "card:_content/inbox/field-trip.email.card",
     loudness: "loud",
-    source: "notify-doctest",
+    source: "notify-test",
   });
 
   const bus = createEventBus(box.root);
@@ -118,7 +118,7 @@ web-push sent`);
     body: "The school emailed: the form is due Friday.",
     target: "card:_content/inbox/field-trip.email.card",
     loudness: "loud",
-    source: "notify-doctest",
+    source: "notify-test",
     url: `/${slug}/browse/_content/inbox/field-trip.email.card`,
   }]);
 

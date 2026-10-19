@@ -24,7 +24,7 @@ import { isWorkspacePdf } from "../../../../src/components/chat/workspace/Worksp
 // Only these two members, not the full registry (`installRenderers()`):
 // several other renderers (markdown, markdown-card, ...) pull in
 // `lib/markdoc-parse.ts`, whose `@markdoc/markdoc` import doesn't resolve
-// under the plain tsx/root-tsconfig runtime this doctest runs under.
+// under the plain tsx/root-tsconfig runtime this test runs under.
 for (const entry of [pdfRenderer, binaryRenderer]) registerFileType(entry.selector, { renderer: entry.renderer });
 globalThis.React = React;
 

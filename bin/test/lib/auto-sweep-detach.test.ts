@@ -28,7 +28,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 
-const root = await mkdtemp(join(tmpdir(), "auto-sweep-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "auto-sweep-test-"));
 const home = join(root, "home");
 const fakeRepo = join(root, "repo");
 const log = join(home, ".cache/beebox/worktree-cleanup.log");

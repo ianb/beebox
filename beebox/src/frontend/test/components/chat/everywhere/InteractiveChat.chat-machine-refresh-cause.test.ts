@@ -111,7 +111,7 @@ void test("Every edge out of `streaming` is a turn refresh", async (t) => {
 // ## A later resync does not inherit the turn's cause
 //
 // `chat-complete` lands a beat after STREAM_RESULT and is ignored inside
-// `refreshing` (see chat-machine-finalize.doctest.md), so the turn's cause holds
+// `refreshing` (see src/frontend/test/machines/chatMachine/machine.chat-machine-finalize.test.ts), so the turn's cause holds
 // through its own fetch; the *next* REFRESH, once idle, is a resync again.
 void test("(An interrupted turn takes the STREAMERROR/STREAMFAILED interrupting branches...", async (t) => {
   const actor = await idleActor();

@@ -14,7 +14,7 @@ import {
 } from "../../../src/lib/audio/context.js";
 
 Object.defineProperty(globalThis, "navigator", {
-  value: { userAgent: "doctest browser" },
+  value: { userAgent: "test browser" },
   configurable: true,
 });
 

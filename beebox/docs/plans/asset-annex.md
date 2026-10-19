@@ -6,6 +6,8 @@ issues: []
 ---
 # Assets on git-annex
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > **⚠ Implemented, then superseded — read as history** (full-embrace-annex,
 > 2026-09-14). This plan moved assets *from* the manifest scheme *to* git-annex,
 > so it describes a two-scheme world with a migration between them. Neither half

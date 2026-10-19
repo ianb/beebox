@@ -7,7 +7,7 @@
 // file is scoped to the asset extensions. `BULK_BATCH_ATTACH_PATTERN` is the line
 // that puts a batch scope on the filter's path.
 //
-// This runs a **real** git-annex repository. The sibling `prepare.doctest.md` can
+// This runs a **real** git-annex repository. The sibling `prepare.test.ts` can
 // only prove a blob was *tracked*, which is equally true when its raw bytes were
 // committed — the exact failure this file exists to catch. Between 2026-08-04 and
 // 2026-08-18 a batch's `.zip` committed as a raw blob while its photos annexed,

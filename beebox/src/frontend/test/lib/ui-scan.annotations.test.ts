@@ -1,6 +1,6 @@
 // # The annotations themselves: ids, `data-bbx-reveal`, `data-bbx-does`
 //
-// `scan.doctest.md` checks what the walk does with the attributes. This one checks
+// `src/frontend/test/lib/ui-scan/live-dom/scan.test.ts` checks what the walk does with the attributes. This one checks
 // the attributes we actually wrote — over the frontend source, not a rendered
 // page, because these are claims about the code:
 //

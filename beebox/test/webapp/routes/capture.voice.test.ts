@@ -1,6 +1,6 @@
 // # Capture routes: voice sessions
 //
-// Continues [capture.doctest.md](capture.doctest.md). This part covers voice sessions: idempotent client-generated create with an owner and kind fence, staging of `pcm-s16le-16k` chunks, finalize contiguity checks, idempotent finalize, and finalize with `hq` set.
+// Continues [capture.test.ts](capture.test.ts). This part covers voice sessions: idempotent client-generated create with an owner and kind fence, staging of `pcm-s16le-16k` chunks, finalize contiguity checks, idempotent finalize, and finalize with `hq` set.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -1,9 +1,9 @@
 // # `POST /api/cards/submit` — multipart submission intake
 //
 // The route is a thin multipart shell around `acceptSubmission`
-// (`src/core/cards/accept-submission.ts`, covered by its own doctest): stream
+// (`src/core/cards/accept-submission.ts`, covered by its own test): stream
 // every part to a temp dir, parse the `records` manifest, then hand off. This
-// doctest exercises the HTTP boundary — field wiring, JSON parsing, and
+// test exercises the HTTP boundary — field wiring, JSON parsing, and
 // filename rejection — not the acceptance rules themselves.
 
 import { test } from "tap";
@@ -30,7 +30,7 @@ const RECORD_SCHEMA = {
   required: ["permalink", "text"],
 };
 
-const BOUNDARY = "----doctestBoundary1234567890";
+const BOUNDARY = "----testBoundary1234567890";
 
 interface MultipartPart {
   name: string;

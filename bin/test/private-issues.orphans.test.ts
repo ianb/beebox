@@ -15,7 +15,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 const privateIssues = join(repoRoot, "bin/private-issues");
-const root = await mkdtemp(join(tmpdir(), "private-issues-orphans-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "private-issues-orphans-test-"));
 const mono = join(root, "beebox");
 const customWorktrees = join(root, "custom-worktrees");
 const worktree = join(customWorktrees, "custom-root");

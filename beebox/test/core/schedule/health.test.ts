@@ -161,7 +161,7 @@ void test("A timeout without a precise stderr diagnostic keeps its actionable he
 //
 // (Cron expressions evaluate in server-local time, same as `isDue` — the
 // examples here use hourly crons, which mean the same thing in every
-// timezone, so the doctest passes on any machine.)
+// timezone, so the test passes on any machine.)
 //
 // An hourly task last attempted two days ago has missed dozens of
 // occurrences; pending time is measured from the earliest one:

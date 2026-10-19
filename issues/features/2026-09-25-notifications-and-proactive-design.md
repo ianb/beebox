@@ -10,6 +10,8 @@ discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-25
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > **⏳ Awaiting manual testing** — Tracks A–F landed on `main` in `0352baad8`.
 > Automated coverage: doctests, `pnpm test:changed`,
 > 11 rounds of cross-model review, a `BBX_NOTIFY_FAKE=1` / `BBX_JEV_FAKE=1`

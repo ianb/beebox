@@ -1,6 +1,6 @@
 // # card-lint: body refs, links, and per-type rules
 //
-// Continues [card-lint.doctest.md](card-lint.doctest.md). This part covers broken refs and inline links in card bodies, `attach/` scope, cards of types without a schema, commentary and extfile cards, and a schema's `validate` hook.
+// Continues [card-lint.test.ts](card-lint.test.ts). This part covers broken refs and inline links in card bodies, `attach/` scope, cards of types without a schema, commentary and extfile cards, and a schema's `validate` hook.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

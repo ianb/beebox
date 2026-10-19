@@ -15,8 +15,7 @@
 // retires the old hash into `superseded[]` (keeping `priorStockHashes` complete) and
 // records the new `current`.
 //
-// (All logic lives in the setup block so the assertion lines carry no `=>` arrow
-// that the doctest separator would trip over.)
+// (All logic lives in the setup block so the assertion lines carry no `=>` arrow.)
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

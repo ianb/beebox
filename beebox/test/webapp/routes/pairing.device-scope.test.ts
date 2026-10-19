@@ -5,7 +5,7 @@
 // `authedProcedure` and decide scope themselves rather than offering the UI a
 // choice of two procedures: the owner reaches every device on the box, and a
 // member reaches the devices they paired. The rule itself is pinned in
-// `test/core/mobile/pairing.device-visibility.doctest.md`; this is the gate over HTTP.
+// `test/core/mobile/pairing.device-visibility.test.ts`; this is the gate over HTTP.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -99,12 +99,12 @@ void test("The owner sees the whole box", async (t) => {
   // forever: it could pair a phone it could never unpair. `createTicket` refuses
   // instead, so the rule holds in both directions.
 
-  process.env.BBX_BROWSE_API_KEY = "browse-key-for-pairing-scope-doctest";
+  process.env.BBX_BROWSE_API_KEY = "browse-key-for-pairing-scope-test";
   const plain = await makeTestServer({ openAccess: false });
   const asMachine = await plain.request({
     method: "POST",
     url: "/api/trpc/pairing.createTicket",
-    headers: { authorization: "Bearer browse-key-for-pairing-scope-doctest" },
+    headers: { authorization: "Bearer browse-key-for-pairing-scope-test" },
     payload: {},
   });
   delete process.env.BBX_BROWSE_API_KEY;

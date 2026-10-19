@@ -3,7 +3,7 @@
 // `createEmissionStore` (docs/plans/input-extraction.md, chunk 2) holds the
 // whole in-progress emission — text, images, pending-image count, files,
 // selections — behind one editor. Framework-free (no React/DOM), so it's
-// doctestable headlessly; the React bindings
+// testable headlessly; the React bindings
 // (`useChatAttachments`/`useChatSelections`) are thin wrappers covered
 // elsewhere by typecheck + manual verification.
 

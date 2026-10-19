@@ -31,8 +31,8 @@ async function tryCall(fn: () => Promise<unknown>): Promise<unknown> {
 }
 
 // A yield inside the critical section widens the window a lost-update bug would
-// exploit — serialization must still hold across it. Kept in setup because the
-// doctest tracker splits multi-line `;`-terminated bodies in example blocks.
+// exploit — serialization must still hold across it. Kept in setup so multi-line
+// `;`-terminated bodies stay out of example blocks.
 function bumpCount(boxRoot: string, connectorName: string): Promise<{ count: number }> {
   return updateTransientState<{ count: number }>({
     boxRoot,

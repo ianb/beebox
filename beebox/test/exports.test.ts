@@ -1,7 +1,7 @@
 // # Package exports — the public library surface
 //
 // The `exports` map in package.json is the API boundary: box-authored code
-// (schemas, views, tricks) may import only these specifiers. This doctest
+// (schemas, views, tricks) may import only these specifiers. This test
 // imports each one **the way box code does** — via the bare `beebox/…`
 // specifier (package self-reference), not relative paths — so a broken export
 // target fails here before it fails in a real box.

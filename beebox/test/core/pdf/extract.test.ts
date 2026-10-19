@@ -10,7 +10,7 @@
 // is exactly what this flow did before Docling existed.
 //
 // Docling itself is faked here (the services pattern); the real binary is
-// exercised by `pdf-extract-integration.doctest.md`.
+// exercised by `test/core/pdf/extract.integration.test.ts`.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -39,7 +39,7 @@ const schemas = await createCardSchemaMap();
 
 // The raw text layer comes from poppler, which is a deployed-server given but
 // not a developer-machine one — so assertions about it are
-// availability-appropriate, like `pdf-probe.doctest.md`.
+// availability-appropriate, like `test/core/pdf/probe.test.ts`.
 const havePdftotext = await execa("pdftotext", ["-v"], { reject: false }).then((r) => r.exitCode === 0, () => false);
 
 // The fields these examples read from a parsed pdf card, validated rather than assumed.

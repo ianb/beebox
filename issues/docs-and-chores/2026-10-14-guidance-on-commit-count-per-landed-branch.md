@@ -8,6 +8,8 @@ discovered-by: Ian
 discovered-in: main session — 2026-10-14
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Nothing says how many commits a workstream should land on `main`. Root
 `AGENTS.md` says only "Commit verified work at good checkpoints without
 asking". The finish skill (`.claude/skills/finish/SKILL.md`) and the finish

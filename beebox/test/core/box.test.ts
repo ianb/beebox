@@ -44,7 +44,7 @@ async function listDirs(root: string) {
 // A fresh v3 box's operational tree lives right at `boxRoot` (which is also
 // the npm-package root). We filter to just the operational (underscore) areas
 // here — `src/`, `.claude/`, `.beebox/`, and `node_modules/` are the code/agent
-// side, covered by their own doctests:
+// side, covered by their own tests:
 void test("A fresh v3 box's operational tree lives right at boxRoot (which is also the n...", async (t) => {
   const tmp = await makeTmpDir();
   const { boxRoot } = await scaffoldBoxRoot(tmp);

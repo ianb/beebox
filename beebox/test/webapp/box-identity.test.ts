@@ -21,7 +21,7 @@ import { COOKIE_NAME, signSession } from "../../src/webapp/auth.js";
 import { createFirstUser } from "../../src/webapp/local-users.js";
 import { resetLocalUserCache } from "../../src/webapp/local-users-cache.js";
 
-const KEY = "browse-key-for-box-identity-doctest";
+const KEY = "browse-key-for-box-identity-test";
 
 // Snapshot every variable this test writes, so it neither inherits an ambient
 // value nor leaks one into whatever runs next in this process.
@@ -38,7 +38,7 @@ function restoreEnv() {
 process.env.BBX_BROWSE_API_KEY = KEY;
 process.env.BBX_OWNER_EMAIL = "owner@example.com";
 process.env.BBX_AUTH_SCRYPT_N = "1024";
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-box-identity-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-box-identity-test";
 delete process.env.BBX_HUB_SECRET; // standalone (non-hub)
 
 // The local user store is GLOBAL (~/.bbx-auth.json) — point it somewhere

@@ -5,7 +5,7 @@
 // `FileView` provides it around a card; Markdown rendered anywhere else has no
 // provider, and then the checkbox is read-only and there is no "+".
 //
-// The doctests run under plain Node with no DOM, so a click is exercised
+// The tests run under plain Node with no DOM, so a click is exercised
 // through the same functions the checkbox calls (`tickInput`, `runTick`,
 // `todoSelection`), and the rendered controls through static markup.
 
@@ -103,7 +103,7 @@ void test("A surface with no chat composer provides addToChat:", async (t) => {
 //
 // Ticking an open todo asks for `done` and says it saw `open`; unticking is the
 // reverse. The server refuses the write unless both the text and the status
-// still match (`trpc-todos-set-status.doctest.md`).
+// still match (`test/webapp/trpc/routers/todos.set-status.test.ts`).
 void test("Ticking an open todo asks for done and says it saw open; unticking is the rev...", async (t) => {
   t.check(tickInput(address, "open"), {
     path: "_content/Porch.doc.card",

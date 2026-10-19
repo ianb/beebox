@@ -8,6 +8,8 @@ discovered-in: main session — boxholder; got much worse recently
 priority: normal
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > `reconfirm?` checked 2026-09-05: the code side holds — `reconcilePendingWithDiagnostics` (chatMachine.ts) keeps a pending message until its own durable echo (`4ceb0de6`), and `test/frontend/reconcile-pending.doctest.md` passes 18/18. The manual-testing gate stays; the one step that settles it: send a message while a long turn is running and watch it through the next history refresh.
 
 > **⏳ Awaiting manual testing** — fix landed in `4ceb0de6`; send typed, capture,

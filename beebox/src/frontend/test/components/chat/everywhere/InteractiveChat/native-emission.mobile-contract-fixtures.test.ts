@@ -1,7 +1,7 @@
 // # Cross-platform mobile-contract golden fixtures
 //
 // The JSON files under `test/mobile-contract/fixtures/` are the shared golden
-// vectors every mobile client is checked against — the web-side doctests here, the
+// vectors every mobile client is checked against — the web-side tests here, the
 // iOS `SpeechKeywordsTests` XCTest suite, and (later) an Android JUnit suite all
 // load the **same files**. A contract change edits a fixture once and every
 // platform's suite fails for the cases the fixtures represent until it catches up.
@@ -17,13 +17,13 @@
 // Fixtures test the two wire directions differently (contract §2 of the plan):
 // canonical **encoders** are shape-exact, while **decoders** are asserted per the
 // documented compatibility policy — lenient exactly where the contract says so
-// (e.g. `nativeEmissionFromDetail`, contract §4.1). This doctest runs the families
+// (e.g. `nativeEmissionFromDetail`, contract §4.1). This test runs the families
 // that have real web-side code (`emission`, `receipt`, `speech-keywords`) through
 // that code, and structurally validates the families that are consumed only by the
 // native clients (`location`, `pairing-url`, `redeem`) against their documented
 // shapes. `push-token` and `apns-payload` run through the server's own body
 // schema and payload builder. One family lives elsewhere on the web side: `debug-log-submit` is POSTed
-// verbatim at the real route by `test/webapp/trpc/routers/debug-log.submit.doctest.md`, because
+// verbatim at the real route by `test/webapp/trpc/routers/debug-log.submit.test.ts`, because
 // its server-side consumer is an HTTP endpoint rather than a parser.
 
 import { test } from "tap";
@@ -43,9 +43,9 @@ import { LOUDNESS } from "../../../../../../core/notification/intent.js";
 import { z } from "zod";
 
 // Shared cross-platform golden fixtures (also loaded by
-// test/core/notification/apns-channel/payload.doctest.md and
-// test/webapp/trpc/routers/debug-log.submit.doctest.md); stays at the package root per
-// rule 3 (multiple areas' tests are users), even though this doctest itself
+// test/core/notification/apns-channel/payload.test.ts and
+// test/webapp/trpc/routers/debug-log.submit.test.ts); stays at the package root per
+// rule 3 (multiple areas' tests are users), even though this test itself
 // moved into the frontend's own test tree.
 const FIXTURES_DIR = join(import.meta.dirname, "../../../../../../../test/mobile-contract/fixtures");
 
@@ -488,7 +488,7 @@ void test("POST /api/pairing/redeem request body, the 200 response (with the fie
 // `POST /api/pairing/push-token` bodies run through the route's own schema: a
 // sandbox and a production registration (an uppercase token is stored
 // lowercase), two bodies it refuses with 400, and the 401 error body.
-// `test/webapp/routes/pairing.push-token.doctest.md` posts the same request
+// `test/webapp/routes/pairing.push-token.test.ts` posts the same request
 // fixtures at the real route.
 void test("POST /api/pairing/push-token bodies run through the route's own schema:", async (t) => {
   await t.checkText(runFamily("push-token", validatePushToken), "{\"family\":\"push-token\",\"cases\":5,\"pass\":5}");

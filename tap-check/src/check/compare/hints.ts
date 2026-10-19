@@ -1,7 +1,7 @@
 /**
  * Mismatch wording that names the likely fix, for mistakes seen in the
- * mistake corpus (plan retire-doctest.md, track V item 3): a misspelled key,
- * a Date compared with a short date, doctest `«»` wildcards inside a
+ * mistake corpus (from the plan that retired the Markdown test format, track V
+ * item 3): a misspelled key, a Date compared with a short date, old Markdown-test `«»` wildcards inside a
  * `t.check` string, and an array whose items are right but out of order.
  */
 

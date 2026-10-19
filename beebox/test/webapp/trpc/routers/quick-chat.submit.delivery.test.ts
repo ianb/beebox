@@ -1,6 +1,6 @@
 // # Quick chat submit: delivery, discard, and home
 //
-// Continues [quick-chat.submit.doctest.md](quick-chat.submit.doctest.md). This part covers thoughts kept when routing cannot run, finishing an interrupted delivery on the next submit, a missing destination, new chats without a session id, discarding a stored thought, and the home screen's recent chats.
+// Continues [quick-chat.submit.test.ts](quick-chat.submit.test.ts). This part covers thoughts kept when routing cannot run, finishing an interrupted delivery on the next submit, a missing destination, new chats without a session id, discarding a stored thought, and the home screen's recent chats.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

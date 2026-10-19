@@ -6,6 +6,8 @@ issues: []
 ---
 # Display-form path guard
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The boxholder-facing display vocabulary (`recipes/Soup.recipe.card` for
 content, `Config:box.json` / `Bookkeeping:jobs/...` for machinery — settled
 2026-09-05) will leak into places that expect canonical paths: an agent

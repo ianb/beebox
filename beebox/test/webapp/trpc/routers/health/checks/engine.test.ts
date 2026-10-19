@@ -107,7 +107,7 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
 
   await box.write("pkg/src/schemas/widget.ts", "import { nope } from \"./does-not-exist.js\";\n");
   // The registry caches per-box schema snapshots; in the server a change
-  // trigger invalidates on schema edits, so the doctest does the same.
+  // trigger invalidates on schema edits, so the test does the same.
   invalidateBoxSchemas(boxRoot);
   const withBroken = await engineHealthChecks(boxRoot);
   const schemas = byName(withBroken, "box-schemas");

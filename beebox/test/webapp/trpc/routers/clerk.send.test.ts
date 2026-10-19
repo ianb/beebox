@@ -6,7 +6,7 @@
 // empty, and a reference to the card. Page text never becomes the message; the
 // page's title, site, and URL go to Jev as routing data.
 //
-// These doctests use a synthetic box with git, the fake Jev service, and a
+// These tests use a synthetic box with git, the fake Jev service, and a
 // scripted chat runtime that claims message ids the way `send-dedup.ts` does.
 
 import { test } from "tap";

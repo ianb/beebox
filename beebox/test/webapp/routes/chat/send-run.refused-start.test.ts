@@ -1,7 +1,7 @@
 // # `POST /api/chat/send` — a run that cannot start is refused, not accepted
 //
 // A send is acknowledged once the session takes the turn; the run starts after
-// (see `send-run.start-failure.doctest.md`). A run that is certain to be refused —
+// (see `send-run.start-failure.test.ts`). A run that is certain to be refused —
 // no Claude login, or a third-party model with no provider setup — used to be
 // acknowledged too. The web composer then showed the error on the turn stream,
 // but a sender that never subscribes to that stream, such as quick chat, stored

@@ -4,7 +4,7 @@
 // and kicks off the background preparation worker (Track 3), returning immediately.
 // Uploads are multipart with `X-Capture-*` headers; audio chunks carry a segment id
 // so preparation can concatenate within a segment. (The full prepare → transcribe →
-// assemble → deliver pipeline is covered by `test/core/capture/prepare.doctest.md`;
+// assemble → deliver pipeline is covered by `test/core/capture/prepare.test.ts`;
 // here we test the route boundary only.)
 
 import { test } from "tap";
