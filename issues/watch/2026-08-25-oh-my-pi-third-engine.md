@@ -34,3 +34,9 @@ feedback (findings reaching the model inside the turn) was lost when Claude
 validation moved to plugin PostToolUse hooks; that belongs in
 [chat-backend-port-hygiene](../code-quality/2026-07-18-chat-backend-port-hygiene.md)
 as an engine-contract requirement.
+
+**Superseded as the candidate (2026-10-18):** plain pi now meets the same
+bar on Node, with caller-chosen session ids and fewer open issues. See
+[pi third-engine watch](2026-10-18-pi-third-engine.md). Keep this issue
+only for an oh-my-pi-specific trigger, such as its `yield` structured
+output proving out while pi still lacks one.
