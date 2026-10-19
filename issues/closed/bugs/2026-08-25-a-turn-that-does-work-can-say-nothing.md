@@ -1,13 +1,27 @@
 ---
 title: "A turn can do the work and say nothing — and the system prompt is what teaches it to"
-workstream: unattached
+workstream: turn-feedback
 area: beebox
 labels: [journey-findings, prompt-surface]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey A, 2026-08-25 walk; mechanism traced by a verifier agent
 priority: normal
+resolution: implemented
 ---
+
+Resolved by ed3d5ecd4 (2026-09-25). That commit found the same signature on a
+production box: a turn on a Claude 5-family model rendered only "ran 2
+commands" because the model wrote its answer as a progress update, and the
+chat UI hid progress updates under the collapsed thinking row. Progress
+updates now render as visible lines, a `no-response` ack no longer hides a
+turn that has one, and `core/chat/session/prompts.ts` tells the agent to put
+its answer in final reply text. A statement such as "Saoirse borrowed my
+stepladder" is covered by the `<ack>` badge on the user's message, which the
+prompt already requires for discrete edits. The 2026-08-25 walk's model and
+transcript are not available, so this close rests on the matching signature,
+not a replay. See
+[chat-hides-progress-update-thinking-blocks](2026-09-25-chat-hides-progress-update-thinking-blocks.md).
 
 ## Recovery assessment (2026-09-21)
 
@@ -18,7 +32,7 @@ but also teach bare acknowledgments; the explicit narration-silence rule at
 `core/chat/session/prompts.ts:190-192` is scoped to narration mode. Do not treat
 that rule as proof that ordinary interactive turns are instructed to say nothing.
 No new empty-turn reproduction was attempted. Related background-outcome work:
-[agent outcomes need a voice](../closed/features/2026-08-09-agent-outcomes-need-a-voice.md).
+[agent outcomes need a voice](../features/2026-08-09-agent-outcomes-need-a-voice.md).
 
 
 > Recovered 2026-09-21 from `worktree-user-stories-refresh` at `f914fcb4e`.

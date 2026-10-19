@@ -1,17 +1,10 @@
 /**
- * Firing a chat `<schedule>` back into the session that created it.
+ * Firing a chat check-in (`ChatSchedule`) back into the session that created it.
  *
- * A schedule records the id of the session whose turn emitted it
+ * A check-in records the id of the session whose turn set it
  * (`schedule.sessionId`); when the timer fires we resume THAT session and
- * inject the reminder, so the reply lands in the originating conversation
- * rather than whatever chat was last active. Legacy entries persisted before
- * this field existed have no `sessionId` and fall back to the most-active
- * session.
- *
- * If the targeted session can't run its turn — a pre-v2 session id the SDK
- * refuses to resume errors instantly (`is_error=true`, `num_turns=0`) — the
- * reminder is re-sent once into a brand-new session, so a fired schedule's
- * response is never silently lost.
+ * inject the reminder. A check-in never moves to another conversation: see
+ * `fireChatSchedule`.
  *
  * The failed-turn signal is the session's existing `done` event: its payload
  * is the terminal `ChatMessageResult`, whose `is_error` distinguishes a
@@ -24,12 +17,10 @@ import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import type { ChatSession } from "../../../core/chat/session/run/core.js";
 import type { ChatMessageResult } from "../../../core/chat/session/messages.js";
 import type { ChatSessionRegistry } from "../../../core/chat/session/registry/core.js";
-import { getMostActive } from "../../../core/chat/session/history.js";
 import { chatHistorySlice } from "../../../core/chat/session/load-history.js";
 import type { EventBus } from "../../../core/event-bus/core.js";
 import type { ChatSchedule } from "../../../core/chat/schedules/core.js";
 import { resolveSessionAvailability } from "../../../core/chat/session/availability.js";
-import { resolveChatTarget } from "../../../core/chat/session/target.js";
 
 export interface ScheduleFireDeps {
   boxRoot: string;
@@ -56,7 +47,7 @@ function buildFiredMessage(schedule: ChatSchedule): string {
  * the refreshed history so the originating tab updates. Resolves true when the
  * turn completed without error; false when the send was rejected, the turn
  * ended with `is_error` (the unresumable case), or the run closed/errored
- * before a result — a false is the caller's cue to try a fresh session.
+ * before a result.
  */
 /**
  * How a fired turn ended. `refused` means the chat's model cannot run on this
@@ -116,16 +107,23 @@ function sendFiredTurn(deps: { session: ChatSession; eventBus: EventBus; firedMe
 }
 
 /**
- * Fire a chat schedule: broadcast the alarm/TTS event, then inject the reminder
- * into the originating session (or the most-active one for a legacy entry),
- * with a one-shot fresh-session fallback when the target can't run its turn.
+ * Fire a chat check-in into the conversation that set it, and only there. A
+ * check-in belongs to one conversation (boxholder, 2026-10-18: if the
+ * conversation ends, the check-in ends), so it is dropped, with a warning,
+ * when it has no owner (a legacy entry), when that chat is being deleted or
+ * can no longer be resumed (an archived chat cannot), or when its turn fails.
+ * The target is checked before the alarm/TTS broadcast, so a dropped check-in
+ * stays silent.
  */
 export async function fireChatSchedule(deps: ScheduleFireDeps, schedule: ChatSchedule): Promise<void> {
   const { boxRoot, registry, eventBus, wireSession } = deps;
+  const drop = (why: string): void => { console.warn(`[schedule] Dropping check-in "${schedule.label}": ${why}`); };
+  const targetId = schedule.sessionId;
+  if (targetId === undefined) return drop("it predates per-conversation check-ins and has no conversation");
+  if (registry.deletion.isBlocked(targetId)) return;
+  const availability = await resolveSessionAvailability({ boxRoot, sessionId: targetId, registry });
+  if (availability.kind === "unavailable") return drop(`conversation ${targetId} cannot be resumed (${availability.reason})`);
 
-  if (schedule.sessionId !== undefined && registry.deletion.isBlocked(schedule.sessionId)) return;
-
-  // Alarm/TTS broadcast stays first, before any session work.
   eventBus.emit("schedule-fired", {
     id: schedule.id,
     label: schedule.label,
@@ -133,60 +131,11 @@ export async function fireChatSchedule(deps: ScheduleFireDeps, schedule: ChatSch
     announce: schedule.announce,
   });
 
-  const firedMessage = buildFiredMessage(schedule);
-
-  // Target the originating session; legacy entries (no sessionId) fall back to
-  // the most-active session, preserving the old behavior.
-  let targetId = schedule.sessionId ?? null;
-  if (targetId === null) {
-    targetId = await getMostActive(boxRoot);
-    if (targetId === null) {
-      console.warn("[schedule] No most-active session, dropping fire");
-      return;
-    }
-  }
-
-  const availability = await resolveSessionAvailability({
-    boxRoot,
-    sessionId: targetId,
-    registry,
-  });
-  if (availability.kind === "unavailable") {
-    console.warn(`[schedule] Session ${targetId} is unavailable locally; using a fresh session`);
-    const { session: fresh } = await resolveChatTarget({ boxRoot, registry }, { kind: "fresh" });
-    wireSession(fresh);
-    await sendFiredTurn({ session: fresh, eventBus, firedMessage });
-    return;
-  }
-
   const target = registry.getOrCreate(targetId);
   wireSession(target);
   registry.enforceLiveCap(targetId);
   registry.touch(targetId, { subprocessUse: true });
-  const outcome = await sendFiredTurn({
-    session: target,
-    eventBus,
-    firedMessage,
-  });
-  if (outcome === "delivered") return;
-  if (outcome === "refused") {
-    console.warn(`[schedule] Session ${targetId}'s model cannot run on this box; dropping schedule "${schedule.label}"`);
-    return;
-  }
-  if (registry.deletion.isBlocked(targetId)) return;
-
-  // Fresh-session fallback: the target couldn't run its turn (e.g. an
-  // unresumable pre-v2 session). Re-send once into a brand-new session so the
-  // fired schedule's response is never silently lost.
-  console.warn(`[schedule] Fired turn failed for session ${targetId}; retrying in a fresh session`);
-  const { session: fresh } = await resolveChatTarget({ boxRoot, registry }, { kind: "fresh" });
-  wireSession(fresh);
-  const retried = await sendFiredTurn({
-    session: fresh,
-    eventBus,
-    firedMessage,
-  });
-  if (retried !== "delivered") {
-    console.error(`[schedule] Fresh-session retry also failed for schedule "${schedule.label}"; giving up`);
-  }
+  const outcome = await sendFiredTurn({ session: target, eventBus, firedMessage: buildFiredMessage(schedule) });
+  if (outcome === "refused") drop(`conversation ${targetId}'s model cannot run on this box`);
+  else if (outcome === "failed" && !registry.deletion.isBlocked(targetId)) drop(`the turn in conversation ${targetId} failed`);
 }

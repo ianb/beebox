@@ -28,7 +28,7 @@ Three fixes pull different ways:
 
 The developer should pick which of these, or a combination, the product
 promises. Related:
-[companion doc shows no sign it is being edited](../bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md).
+[companion doc shows no sign it is being edited](../closed/bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md).
 
 Report: [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 20).
 

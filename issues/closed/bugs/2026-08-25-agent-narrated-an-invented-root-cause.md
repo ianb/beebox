@@ -1,6 +1,7 @@
 ---
 title: "Under failure, the agent narrated a confident, specific, wrong root cause — and repaired an unrelated file"
-workstream: unattached
+resolution: implemented
+workstream: turn-feedback
 area: beebox
 labels: [journey-findings, prompt-surface]
 filed-by: agent
@@ -8,6 +9,8 @@ discovered-by: agent
 discovered-in: worktree-user-stories-refresh — journey A, 2026-08-25 walk; disproven by a verifier agent
 priority: normal
 ---
+
+Resolved by 9b238136c, a chat prompt rule to report what failed instead of a guessed cause. This is a prompt-surface fix; the original failure was not replayed.
 
 ## Recovery assessment (2026-09-21)
 

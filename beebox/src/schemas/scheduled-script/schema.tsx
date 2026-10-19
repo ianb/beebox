@@ -199,7 +199,12 @@ export interface ScheduledScriptTemplateOptions {
   onWakeup?: boolean;
   once?: boolean;
   enabled?: boolean;
-  runs: string;
+  /** The command to run. A card has exactly one of `runs` and `notify`. */
+  runs?: string;
+  /** The notification to send in place of a command (a reminder). */
+  notify?: ScheduleNotify;
+  /** `boxholder` when the boxholder asked for this schedule. */
+  requestedBy?: "boxholder";
   description?: string;
   /** Why the schedule exists. */
   reason?: string;
@@ -234,12 +239,13 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
   if (options.notBefore !== undefined) fields["not-before"] = options.notBefore;
   if (options.onWakeup === true) fields["on-wakeup"] = true;
   if (options.once === true) fields["once"] = true;
+  if (options.requestedBy !== undefined) fields["requested-by"] = options.requestedBy;
   if (options.enabled === false) fields["enabled"] = false;
   if (options.budget !== undefined) fields["budget"] = options.budget;
   if (options.lockGroup !== undefined) fields["lock-group"] = options.lockGroup;
   if (options.timeout !== undefined) fields["timeout"] = options.timeout;
   if (options.description !== undefined) fields["description"] = options.description;
-  fields["runs"] = options.runs;
+  if (options.runs !== undefined) fields["runs"] = options.runs;
   if (options.reasonRef !== undefined) {
     fields["reason"] = {
       ...(options.reason !== undefined && { text: options.reason }),
@@ -248,6 +254,7 @@ export function createScheduledScriptTemplate(options: ScheduledScriptTemplateOp
   } else if (options.reason !== undefined) {
     fields["reason"] = options.reason;
   }
+  if (options.notify !== undefined) fields["notify"] = options.notify;
   if (options.createAfterSuccess !== undefined && options.createAfterSuccess.length > 0) {
     fields["create-after-success"] = options.createAfterSuccess.map((e) => ({
       path: e.path,

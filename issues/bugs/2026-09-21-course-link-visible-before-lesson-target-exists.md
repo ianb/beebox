@@ -32,7 +32,7 @@ identify the writes. No product change was made.
 
 A safer authoring order or a visible in-progress state could address this.
 This evidence does not establish a need for transactional filesystem machinery.
-Related: [no visible in-progress document edit state](2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md).
+Related: [no visible in-progress document edit state](../closed/bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md).
 
 ## 2026-10-17: courseware plugin scope
 

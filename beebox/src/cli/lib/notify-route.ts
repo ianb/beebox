@@ -12,9 +12,10 @@
  */
 
 import type { TRPCClient } from "@trpc/client";
-import { boxClient } from "../../lib/box-client.js";
-import { refusalFor } from "../../lib/credentialed-verb.js";
-import type { AppRouter } from "../../../webapp/trpc/routers.js";
+import { boxClient } from "./box-client.js";
+import { refusalFor } from "./credentialed-verb.js";
+import type { AppRouter } from "../../webapp/trpc/routers.js";
+import { notifyChannels, type ChannelFlags, type NotifyServices } from "../../core/notify-boxholder.js";
 
 export type NotifyRoute =
   | { kind: "server"; client: TRPCClient<AppRouter> }
@@ -48,4 +49,16 @@ export async function onServer<T>(call: () => Promise<T>): Promise<T> {
   } catch (e) {
     throw new NotifyServerError(e);
   }
+}
+
+/**
+ * Which channels can reach the person, as the delivering process sees it: the
+ * box server from a box-spawned shell, else this one. `bbx notify --check`
+ * prints it; `bbx remind` refuses a reminder no channel would carry.
+ */
+export async function channelReach(boxRoot: string, opts: { route: NotifyRoute; services: NotifyServices | undefined }): Promise<ChannelFlags> {
+  const { route, services } = opts;
+  return route.kind === "server"
+    ? (await onServer(() => route.client.notifications.channels.query())).reach
+    : notifyChannels(boxRoot, { services });
 }

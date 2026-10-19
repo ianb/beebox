@@ -170,7 +170,7 @@ description: Have the box do something later or on a cadence — a reminder, a r
 
 # Schedules
 
-A scheduled script — a \`.scheduled-script.card\` in \`_config/schedules/\` — runs a \`bbx\` command on a recurring schedule, or once at a future time. The built-in ones are mechanical (connector syncs, maintenance); the ones **you** create serve the user: checking something on a cadence, revisiting a decision at intervals, or a one-off further out than a chat \`<schedule>\` can reach. Keep them practical, not dramatic.
+A scheduled script — a \`.scheduled-script.card\` in \`_config/schedules/\` — runs a \`bbx\` command on a recurring schedule, or once at a future time. The built-in ones are mechanical (connector syncs, maintenance); the ones **you** create serve the user: checking something on a cadence, revisiting a decision at intervals, or a one-off command at a future time. Keep them practical, not dramatic.
 
 \`\`\`
 ---
@@ -184,7 +184,7 @@ reason: Boxholder wanted a summary to start the week
 
 They run in the background automatically; \`bbx scheduled\` lists them. A job you write ends with \`bbx run-summary "<what this run did>"\` so the boxholder sees the run's result on the dashboard (an agent step in a scheduled procedure is told this too). Use \`at:\` (a future timestamp) with \`once: true\` instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`${BOX_PACKAGE_DOCS}/card-scheduled-script.md\`.
 
-(This is for durable, box-level schedules. A quick in-session follow-up while chatting — "remind me in 20 minutes" — is the chat \`<schedule>\` tag, not a card.)
+(This is for scheduled work. A reminder for the person — "remind me Tuesday" — is \`bbx remind --at\`, which writes the card for you; a follow-up in this chat — "remind me in 20 minutes" — is \`bbx remind --here\`.)
 `;
 
 /**

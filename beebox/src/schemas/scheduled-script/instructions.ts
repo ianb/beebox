@@ -40,11 +40,11 @@ Scheduled scripts define a command to run, or a notification to send, on a sched
 
 ## Example: a reminder
 
-A reminder is a scheduled-script card with \`at\`, \`once: true\`, and \`notify:\`:
+Set one with \`bbx remind --at 2026-10-02T08:30 "Call the vet about Pepper's shots" --context _content/pets/pepper-shots.todo.card\` (or \`--in 30d\`). It checks that a notification can reach the person, prints the scheduled time, and writes and commits a scheduled-script card with \`at\`, \`once: true\`, and \`notify:\`:
 
 \`\`\`yaml
-# _config/schedules/remind-pepper-vet.scheduled-script.card
-at: 2026-10-02T08:30
+# _config/schedules/remind-call-the-vet-about-peppers-shots-k3x9qa.scheduled-script.card
+at: 2026-10-02T08:30:00-05:00
 once: true
 requested-by: boxholder
 reason: Asked for in chat on 2026-09-26
@@ -55,7 +55,7 @@ notify:
   context: _content/pets/pepper-shots.todo.card
 \`\`\`
 
-The scheduler sends it at that time and then deletes the card. Tapping it opens a new chat with the reminder and its context.
+The scheduler sends it on its first tick at or after that time, even while a chat is active, and then deletes the card. A send that fails is retried with backoff for 24 hours; after that the card stays, marked failing in health. Tapping it opens a new chat with the reminder and its context.
 
 ## Run summaries: say what the run did
 The boxholder sees each run's summary in the dashboard's run history; a run with none shows only how it ended. A \`runs:\` command ends with \`bbx run-summary "<one-line headline>" --body "<short Markdown>"\`, written by the task about its own work (what it changed, what it skipped and why). \`--priority attention\` marks a run the boxholder should look at (failed items, a decision, something unusual), and the dashboard shows its headline without a click; leave routine runs \`normal\`. \`--notes\` holds longer detail, shown collapsed. Limits: headline 120 characters, body 1 KB, notes 4 KB. The command writes to \`$BBX_SUMMARY_FILE\`, which the scheduler sets and \`bbx procedure run\` passes on, and its agent steps are told to end with it. A later call in the same run replaces an earlier one. A summary is not a notification: when the boxholder must hear about it now, use \`bbx notify\`.

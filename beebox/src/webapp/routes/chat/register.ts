@@ -33,6 +33,8 @@ import type { EventBus } from "../../../core/event-bus/core.js";
 import type { TtsService } from "../../../services/tts.js";
 import { ChatScheduleManager, parseScheduleTags, parseCancelScheduleTags } from "../../../core/chat/schedules/core.js";
 import { fireChatSchedule } from "./schedule-fire.js";
+import { escapeXmlAttr } from "./helpers.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { notifyTurnCallouts } from "../../../core/chat/callout-tags.js";
 import { registerChatUploadRoutes } from "./uploads.js";
 import type { ChatRoutesContext } from "./context.js";
@@ -131,14 +133,25 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
 
     // Parse schedule tags out of completed turns.
     session.on("turn-text", (text: string) => {
-      const newSchedules = parseScheduleTags(text);
+      const rejected: string[] = [];
+      const reject = (label: string, reason: string): void => { rejected.push(`<schedule label="${escapeXmlAttr(label)}">: ${reason}`); };
+      const newSchedules = parseScheduleTags(text, { onRejected: reject });
       // Stamp each schedule with the emitting session's id so its fire lands
       // back in this conversation. The id is assigned by the time a turn
       // completes; if it's somehow still null, omit it (falls back to the
       // most-active session, like a legacy entry).
       const sessionId = session.getSessionId();
       for (const s of newSchedules) {
-        scheduleManager.addSchedule(sessionId !== null ? { ...s, sessionId } : s);
+        try {
+          scheduleManager.addSchedule(sessionId !== null ? { ...s, sessionId } : s);
+        } catch (error) {
+          console.warn(`[chat] <schedule label="${s.label}"> was not set:`, errorMessage(error));
+          reject(s.label, errorMessage(error));
+        }
+      }
+      // The turn has already told the user; the next one must correct it.
+      if (rejected.length > 0) {
+        session.enqueue({ text: `<self-note>\nNot set, so tell the user: ${rejected.join("; ")}. Use bbx remind.\n</self-note>`, clientComposed: true });
       }
       const cancels = parseCancelScheduleTags(text);
       for (const label of cancels) {

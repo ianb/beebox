@@ -72,8 +72,9 @@ export function useChatSchedules(opts: {
   // uuid, not the array: `messages` gets a fresh identity on every history
   // fetch (initial load, refresh, server push), which refired this on every one
   // of them — a duplicate request moments after mount. Schedules are set by
-  // `<schedule>` tags the agent writes, which can only reach the transcript as
-  // a new entry, so a re-read that ends on the same entry can't change them.
+  // the agent during a turn (`bbx remind --here` or a `<schedule>` tag), and a
+  // turn always ends with a new transcript entry, so a re-read that ends on
+  // the same entry can't change them.
   // (The count would miss the case that matters most for a long chat: at the
   // HISTORY_TAIL cap, a new turn pushes the oldest entry out and the length
   // never moves.)

@@ -8,14 +8,40 @@ import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
 import { parseDuration } from "../../scheduled-script-duration.js";
 import type { ParsedScheduledScript } from "./schema.js";
+import type { ScriptState } from "../../core/schedule/state.js";
 
 const { rrulestr } = rrulePkg;
 
 // --- Schedule evaluation ---
 
-export interface ScheduleCheckContext {
+/** The run state `isDueForWakeup` reads. */
+export interface WakeupCheckContext {
   lastRun: string | null;
   now: Date;
+}
+
+/** The run state `isDue` reads: the last run, and for a reminder's retry, how it ended. */
+export interface ScheduleCheckContext extends WakeupCheckContext {
+  lastResult: ScriptState["lastResult"];
+  consecutiveFailures: number;
+}
+
+/** How long after its `at` a failed `notify:` one-shot keeps retrying. */
+export const REMINDER_RETRY_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+const MINUTE_MS = 60 * 1000;
+const MAX_REMINDER_BACKOFF_MINUTES = 60;
+
+/** Wait after the `n`th consecutive failed send before the next try: 1, 2, 4 … minutes, capped at 60. */
+export function reminderRetryBackoffMs(consecutiveFailures: number): number {
+  const exponent = Math.max(consecutiveFailures, 1) - 1;
+  return Math.min(2 ** exponent, MAX_REMINDER_BACKOFF_MINUTES) * MINUTE_MS;
+}
+
+/** When a `notify:` one-shot stops retrying, or null for any other card. */
+export function reminderRetryEndsAt(script: ParsedScheduledScript): Date | null {
+  if (script.at === undefined || script.action.kind !== "notify") return null;
+  return new Date(new Date(script.at).getTime() + REMINDER_RETRY_WINDOW_MS);
 }
 
 /**
@@ -40,8 +66,7 @@ export function isDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext):
   }
 
   if (script.at) {
-    const atDate = new Date(script.at);
-    return ctx.now >= atDate && !ctx.lastRun;
+    return isAtDue(script, ctx);
   }
 
   if (script.rrule) {
@@ -55,7 +80,7 @@ export function isDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext):
  * Check if a script should run during wakeup (on-wakeup check).
  * Only checks not-before constraint, not the cron/at/rrule schedule.
  */
-export function isDueForWakeup(script: ParsedScheduledScript, ctx: ScheduleCheckContext): boolean {
+export function isDueForWakeup(script: ParsedScheduledScript, ctx: WakeupCheckContext): boolean {
   if (!script.enabled) return false;
   if (!script.onWakeup) return false;
 
@@ -93,6 +118,22 @@ export function isWithinBudget(
     }
   }
   return { allowed: usedMs < budget.limitMs, usedMs };
+}
+
+/**
+ * A one-shot is due once, at `at`. A `notify:` one-shot whose send did not get
+ * through (`failure`, or `deferred` as recorded before sends skipped the engine
+ * classifier) stays due with backoff until its retry window ends. A `runs:`
+ * one-shot gets one attempt: its command may have side effects.
+ */
+function isAtDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext): boolean {
+  const now = ctx.now.getTime();
+  if (script.at === undefined || now < new Date(script.at).getTime()) return false;
+  if (!ctx.lastRun) return true;
+  const retryEndsAt = reminderRetryEndsAt(script);
+  if (retryEndsAt === null || now >= retryEndsAt.getTime()) return false;
+  if (ctx.lastResult !== "failure" && ctx.lastResult !== "deferred") return false;
+  return now >= new Date(ctx.lastRun).getTime() + reminderRetryBackoffMs(ctx.consecutiveFailures);
 }
 
 function isCronDue(cronExpr: string, ctx: ScheduleCheckContext): boolean {
