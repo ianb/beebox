@@ -33,21 +33,19 @@ updates Codex on the server, so a model upstream adds is invisible to boxes
 until the pin moves. Its releases are read from `openai/codex` on GitHub.
 Codex entries here are labeled as such; they carry their own pin.
 
-- **Current pins:** Agent SDK `0.3.301`, Codex `0.163.0` (both `@openai/codex`
+- **Current pins:** Agent SDK `0.3.302`, Codex `0.163.0` (both `@openai/codex`
   and `@openai/codex-sdk`), all in `beebox/package.json`. The monorepo root
   still carries a second, unmanaged Agent SDK pin at `0.3.226` —
   `issues/code-quality/2026-09-01-agent-sdk-split-pin-root-copy.md`, **partly
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.302` (SDK), `2.1.302` (Claude Code), `0.163.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.303` (SDK), `2.1.303` (Claude Code), `0.163.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
-- **Current recommendation:** Both families moved on 2026-10-17 — Agent SDK
-  to `0.3.301`, Codex to `0.163.0`. This was the first run started by the
-  runner's settled-bump check (`4cdf22c5d`), which fixes
-  `issues/bugs/2026-10-13-sdk-update-skips-settled-bumps-with-no-new-release.md`.
-  Next: `0.3.302` (settles 2026-10-18T16:47Z; check fork subagents, see its
-  entry). Open:
+- **Current recommendation:** Agent SDK moved to `0.3.302` on 2026-10-18
+  after its fork-subagent check. The 2026-10-17 landing (`0.3.301`, Codex
+  `0.163.0`) reached production on 2026-10-19 once the deploy breakage from the
+  ts7 merge was fixed. Next: `0.3.303` (settles 2026-10-20T21:15Z). Open:
   `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
@@ -75,7 +73,12 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
 
 ## Release ledger
 
-### 0.3.302 / Claude Code 2.1.302 — pending (published 2026-10-16T16:47Z, ~11h at this turn)
+### 0.3.303 / Claude Code 2.1.303 — pending, unitemized (published 2026-10-18T21:15Z)
+
+SDK parity-only; Claude Code 2.1.303 says only "Bug fixes and reliability
+improvements". Nothing to assess. Settled path; takeable 2026-10-20T21:15Z.
+
+### 0.3.302 / Claude Code 2.1.302 — APPLIED 2026-10-18 (published 2026-10-16T16:47Z); fork check passed
 
 - **RUNTIME behavior changes, check when taken:**
   - Fork subagents (`subagent_type: "fork"`) are now on by default in SDK
@@ -97,7 +100,12 @@ settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.m
   directory; `claude plugin` subcommands no longer exit before a queued
   settings write finishes; prompt/agent hooks run at most 12 at a time;
   `/config` gains an Idle compaction row.
-- **Action:** Settled path; takeable 2026-10-18T16:47Z.
+- **Fork check (2026-10-18):** a `bypassPermissions` SDK session asked to use
+  a fork made one `Agent` call with `subagent_type: "fork"` and emitted
+  `task_started`, `task_updated` and `task_notification`. Every message went
+  through `adaptSdkMessage` (`core/chat/session/messages.ts`) without error;
+  beebox's task handling does not branch on `subagent_type`.
+- **Action:** Applied 2026-10-18. Verified: typecheck, steering probe (4/4) on bundled CLI 2.1.302, `pnpm -C beebox test` (12,087 pass, 2 skip; lower than 10-17 because main converted the doctests, with more test files run).
 - **Sources:** [SDK 0.3.302](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03302), [Claude Code 2.1.302](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21302)
 
 ### Codex 0.163.0 — APPLIED 2026-10-17 (published 2026-10-15T21:30Z)
