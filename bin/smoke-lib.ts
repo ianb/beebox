@@ -283,7 +283,7 @@ const USUAL_MIN_RUNS = 5;
  * The walk has one wall-clock budget. When it runs out, the reader has to
  * tell load from a regression. A cold start or another worktree's finish on
  * the shared dev router makes every step slower than usual. A broken step is
- * slow, or fails, alone (issues/bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md).
+ * slow, or fails, alone (issues/closed/bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md).
  */
 export function formatStepTime(ms: number, usual: StepStats | undefined): string {
   const own = `${(ms / 1000).toFixed(1)}s`;
