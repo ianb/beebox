@@ -13,6 +13,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { createClaudeScanVision } from "../../src/services/scan-vision-claude.js";
 import { resolveClaudeCodeBinary } from "../../src/core/sdk-binary-path.js";
 import { checkClaudeAuth } from "../../src/core/agent/auth-preflight.js";
@@ -58,22 +59,20 @@ void test("We assert structure, not semantics:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L55
   const dir = skipReason ? null : await mkdtemp(join(tmpdir(), "scan-vision-int-"));
   const result = dir === null
-    ? { analyses: [{ index: 0, subject_bbox: null }], usage: { prompt: 1 }, costUsd: 0 }
+    ? { analyses: [{ index: 0, subject_bbox: null }], usage: { prompt: 5000, output: 100, thinking: 0 }, costUsd: 0.05 }
     : await createClaudeScanVision({ boxRoot: dir }).analyzeBatch({ imagePaths: [await makeTestPage(dir)], boxholderContext: null });
-  await t.checkText(result.analyses.length, "1");
-
-  // doctest:L63
-  t.check(result.analyses[0]?.index, 0);
-
-  // doctest:L66
-  t.check(result.analyses[0]?.subject_bbox, null);
-
-  // doctest:L69
-  await t.checkText(result.usage !== null && (skipReason ? true : result.usage.prompt > 1000), "true");
-
-  // doctest:L72
-  t.check(skipReason ? true : typeof result.costUsd === "number" && result.costUsd > 0, true);
+  t.check(
+    {
+      analyses: result.analyses.map((a) => ({ index: a.index, subject_bbox: a.subject_bbox })),
+      usage: result.usage,
+      costUsd: result.costUsd,
+    },
+    {
+      analyses: [{ index: 0, subject_bbox: null }],
+      usage: { prompt: any(Number).above(1000), output: any(Number).between(0, Infinity), thinking: any(Number).between(0, Infinity) },
+      costUsd: any(Number).above(0),
+    },
+  );
 });

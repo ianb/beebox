@@ -31,7 +31,6 @@ const health: BoxScheduleHealth = {
 };
 
 void test("line 33", async (t) => {
-  // doctest:L34
   const boxChecks: HealthCheck[] = [
     scheduledTasksCheck(health, now),
     { name: "inbox-writable", ok: true, message: "ok", severity: "error" },
@@ -48,10 +47,10 @@ Box checks:
   (1 other checks pass)`);
 
   // The check is still there for the dashboard, naming the same task.
-
-  // doctest:L55
-  t.check(boxChecks[0]?.ok, false);
-
-  // doctest:L58
-  t.check(boxChecks[0]?.message.includes("sync-notes"), true);
+  t.check(boxChecks[0], {
+    name: "scheduled-tasks",
+    ok: false,
+    message: "Scheduled tasks need attention: sync-notes: failing ×3 (never succeeded) — Agent invocation failed: model retired",
+    severity: "warning",
+  });
 });

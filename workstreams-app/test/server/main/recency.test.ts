@@ -13,11 +13,12 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, unordered, type Expected } from "agent-doctest/check";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { execa } from "execa";
-import { collectRecentFiles } from "../../../src/server/main/recency.js";
+import { collectRecentFiles, type RecentFeed, type RecentFile } from "../../../src/server/main/recency.js";
 
 async function git(cwd: string, args: string[]) {
   return execa("git", args, { cwd });
@@ -56,26 +57,27 @@ void test("A file changed in a worktree appears beside one changed on main, each
       t.error(error);
     }
   });
-  // doctest:L51
   await fs.writeFile(path.join(wtRoot, "feature.ts"), "export const a = 1;\n");
   await git(wtRoot, ["add", "-A"]);
   await git(wtRoot, ["commit", "-qm", "alpha adds a feature"]);
 
-  // doctest:L55
   const feed = await feedFor(new Map([["alpha", wtRoot]]));
-  const byPath = new Map(feed.files.map((f) => [`${f.workstream ?? "main"}:${f.relPath}`, f]));
-  const spans = {
-    fromWorktree: byPath.has("alpha:feature.ts"),
-    fromMain: byPath.has("main:old.md"),
-    newestFirst: feed.files.every((f, i) => i === 0 || feed.files[i - 1]!.at >= f.at),
-    carriesNow: feed.now === 1_800_000_000,
-  };
-  t.check(spans, {
-    fromWorktree: true,
-    fromMain: true,
-    newestFirst: true,
-    carriesNow: true,
+  // `at` is real commit or file time; the feed's `now` is the injected clock.
+  t.check(feed, {
+    now: 1_800_000_000,
+    files: unordered<Expected<RecentFile>>([
+      { relPath: "feature.ts", kind: "code", at: any(Number).int(), workstream: "alpha", inProgress: false },
+      { relPath: "old.md", kind: "markdown", at: any(Number).int(), workstream: null, inProgress: false },
+    ]),
+    distribution: unordered<Expected<RecentFeed["distribution"][number]>>([
+      { workstream: null, count: 1 },
+      { workstream: "alpha", count: 1 },
+    ]),
+    unavailable: new Map(),
+    truncated: false,
   });
+  const ats = feed.files.map((f) => f.at);
+  t.check(ats, ats.toSorted((a, b) => b - a));
 
   // ## A branch reports its OWN commits, not the history it inherited
   //
@@ -85,46 +87,34 @@ void test("A file changed in a worktree appears beside one changed on main, each
   // workstream did identical work. A branch is asked for `main..HEAD`; main is asked
   // for the window.
 
-  // doctest:L76
   const inherited = feed.files.filter((f) => f.workstream === "alpha" && f.relPath === "old.md");
   const own = feed.files.filter((f) => f.workstream === "alpha" && f.relPath === "feature.ts");
-  t.check({ reportsInheritedHistory: inherited.length > 0, reportsOwnCommit: own.length === 1 }, {
-    reportsInheritedHistory: false,
-    reportsOwnCommit: true,
-  });
+  t.check(inherited, []);
+  t.check(own, [
+    { relPath: "feature.ts", kind: "code", at: any(Number).int(), workstream: "alpha", inProgress: false },
+  ]);
 
   // ## In-progress work is marked, and outranks its own committed history
   //
   // An uncommitted edit to a file that was also committed appears once, with the
   // working-tree time, because that is the newer fact about it.
 
-  // doctest:L88
   await fs.writeFile(path.join(wtRoot, "feature.ts"), "export const a = 2;\n");
   await fs.writeFile(path.join(wtRoot, "scratchpad.md"), "# thinking\n");
 
-  // doctest:L91
   const withEdits = await feedFor(new Map([["alpha", wtRoot]]));
   const feature = withEdits.files.filter((f) => f.relPath === "feature.ts");
   const scratch = withEdits.files.find((f) => f.relPath === "scratchpad.md");
-  const progress = {
-    featureListedOnce: feature.length === 1,
-    featureInProgress: feature[0]?.inProgress,
-    untrackedIncluded: scratch !== undefined,
-    untrackedInProgress: scratch?.inProgress,
-  };
-  t.check(progress, {
-    featureListedOnce: true,
-    featureInProgress: true,
-    untrackedIncluded: true,
-    untrackedInProgress: true,
-  });
+  t.check(feature, [
+    { relPath: "feature.ts", kind: "code", at: any(Number).int(), workstream: "alpha", inProgress: true },
+  ]);
+  t.check(scratch, { relPath: "scratchpad.md", kind: "markdown", at: any(Number).int(), workstream: "alpha", inProgress: true });
 
   // ## The same path on two branches is two entries, not one
   //
   // Collapsing them would hide the second — and "two workstreams are editing this"
   // is exactly what the feed exists to surface.
 
-  // doctest:L110
   const otherRoot = await fs.mkdtemp(path.join(os.tmpdir(), "recency-other-"));
   await git(otherRoot, ["clone", "-q", mainRoot, "."]);
   await git(otherRoot, ["config", "user.email", "t@example.com"]);
@@ -132,7 +122,6 @@ void test("A file changed in a worktree appears beside one changed on main, each
   await git(otherRoot, ["checkout", "-q", "-b", "worktree-beta"]);
   await fs.writeFile(path.join(otherRoot, "feature.ts"), "export const a = 3;\n");
 
-  // doctest:L117
   const both = await feedFor(new Map([["alpha", wtRoot], ["beta", otherRoot]]));
   const owners = both.files.filter((f) => f.relPath === "feature.ts").map((f) => f.workstream).toSorted();
   t.check(owners, [
@@ -145,57 +134,44 @@ void test("A file changed in a worktree appears beside one changed on main, each
   // The third view over one dataset, and the reason the feed does not need a
   // separate stats query.
 
-  // doctest:L129
-  const named = both.distribution.map((entry) => entry.workstream ?? "main").toSorted();
-  const counted = both.distribution.every((entry) => entry.count > 0);
-  t.check({ named, counted, total: both.distribution.length }, {
-    named: [
-      "alpha",
-      "beta",
-      "main",
-    ],
-    counted: true,
-    total: 3,
-  });
+  t.check(both.distribution, unordered([
+    { workstream: "alpha", count: 2 },
+    { workstream: null, count: 1 },
+    { workstream: "beta", count: 1 },
+  ]));
 
   // ## A checkout that cannot be scanned is named, not counted as quiet
   //
   // An incomplete feed that looks complete would tell you nothing is happening in a
   // workstream that is busy.
 
-  // doctest:L141
   const brokenRoot = await fs.mkdtemp(path.join(os.tmpdir(), "recency-broken-"));
   const withBroken = await feedFor(new Map([["alpha", wtRoot], ["broken", brokenRoot]]));
-  const reported = {
-    named: [...withBroken.unavailable.keys()],
-    hasReason: (withBroken.unavailable.get("broken")?.length ?? 0) > 0,
-    othersStillScanned: withBroken.files.some((f) => f.workstream === "alpha"),
-  };
   await Promise.all([
     fs.rm(brokenRoot, { recursive: true, force: true }),
     fs.rm(otherRoot, { recursive: true, force: true }),
   ]);
-  t.check(reported, {
-    named: [
-      "broken",
-    ],
-    hasReason: true,
-    othersStillScanned: true,
-  });
+  t.check(
+    withBroken.unavailable,
+    new Map([["broken", any(String).startsWith("Command failed with exit code 128: git log main..HEAD")]]),
+  );
+  t.check(withBroken.files.filter((f) => f.workstream === "alpha"), unordered<Expected<RecentFile>>([
+    { relPath: "feature.ts", kind: "code", at: any(Number).int(), workstream: "alpha", inProgress: true },
+    { relPath: "scratchpad.md", kind: "markdown", at: any(Number).int(), workstream: "alpha", inProgress: true },
+  ]));
 
   // ## Truncation says so
   //
   // A feed silently cut at a limit reads as "that is everything".
 
-  // doctest:L161
   const limited = await collectRecentFiles({
     mainRoot,
     worktreeRoots: new Map([["alpha", wtRoot]]),
     limit: 1,
     now: frozen,
   });
-  t.check({ files: limited.files.length, truncated: limited.truncated }, {
-    files: 1,
+  t.check({ files: limited.files, truncated: limited.truncated }, {
+    files: [{ relPath: any(String), kind: any(String), at: any(Number).int(), workstream: any(String), inProgress: any(Boolean) }],
     truncated: true,
   });
 });

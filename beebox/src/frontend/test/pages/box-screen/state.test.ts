@@ -176,7 +176,7 @@ void test("A failed request keeps the thought.", async (t) => {
   t.check(unsentStatus(state), "Not sent: Failed to fetch");
 
   // doctest:L134
-  t.check(submission(state, OTHER_ID)?.id, "11111111-2222-4333-8444-555555555555");
+  t.check(submission(state, OTHER_ID), { id: "11111111-2222-4333-8444-555555555555", message: "Call the plumber" });
 
   // doctest:L137
   t.check(submission(run(state, [{ type: "edit", text: "Call the electrician" }]), OTHER_ID), {
@@ -297,7 +297,7 @@ void test("The page stored the thought and closed before submit answered.", asyn
 
   // doctest:L215
   const home: Home = { open: [{ id: ID, message: "Book the vet", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "uncertain", choices: [] }], recentlySent: [] };
-  await t.checkText(boxScreenRows(home, state).needsYou.length, "0");
+  t.check(boxScreenRows(home, state).needsYou, []);
 });
 
 // A malformed stored value is dropped with a warning rather than breaking the
@@ -331,8 +331,8 @@ void test("An answer replaces home's copy of the same record.", async (t) => {
     { type: "row-answered", view: { ...notDelivered, state: "discarded", destination: undefined, lastError: undefined } },
   ]);
   const rows = boxScreenRows(home, state);
-  t.check([rows.needsYou.length, rows.sent.map((view) => title(view)), state.busy], [
-    0,
+  t.check([rows.needsYou, rows.sent.map((view) => title(view)), state.busy], [
+    [],
     [
       "Sent to Trip planning",
       "Queued in Household",
@@ -451,9 +451,9 @@ void test("A send the person just made that comes back sent with a chat opens th
     { type: "submit-started", unsent: present(pendingRetry(reloaded)), origin: "reload" },
     { type: "submit-answered", view: sent },
   ]);
-  t.check([state.followUp, boxScreenRows(undefined, state).sent.length], [
+  t.check([state.followUp, boxScreenRows(undefined, state).sent], [
     null,
-    1,
+    [sent],
   ]);
 
   // A discard is the person's action, but it has no chat and no row to show:

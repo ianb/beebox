@@ -96,10 +96,13 @@ Patterns are imported from `agent-doctest/check`. Each pattern is typed:
 |---|---|
 | `any(String)`, `any(Number)`, `any(Boolean)` | any value of that type |
 | `.startsWith(s)`, `.endsWith(s)`, `.includes(s)`, `.matches(re)` | refine a string pattern |
-| `.int()`, `.between(min, max)`, `.positive()`, `.closeTo(n, tolerance)` | refine a number pattern |
+| `.int()`, `.between(min, max)` (inclusive), `.below(n)`, `.above(n)` (strict), `.positive()`, `.closeTo(n, tolerance)` | refine a number pattern |
 | `uuid()` | a UUID string |
 | `isoDate()` | an ISO date or timestamp string, or a valid `Date` |
 | `oneOf("a", "b")` | one of the listed values |
+| `not(x)`, `not(p)` | any value except `x`, or any value `p` does not match: a new id that must differ from the old one, or text that must not hold a string |
+| `is(x)` | exactly `x`: for an object, the same instance, not an equal copy |
+| `instanceOf(C)` | an instance of class `C`, such as an error's class |
 | `` str`/box/${any(String)}/notes` `` | a string with patterns inside |
 | `optional(p)` | a key that may be absent; when present it matches `p`. Accepted only on a property that is optional in the actual value's type |
 | `unordered([...])` | an array in any order, each item matched once |
@@ -136,9 +139,9 @@ await revokeDevice(deviceId.value);
 
 ## Text and errors
 
-`t.checkText(actual, text)` compares the value's text. The text may hold
-`«»` wildcards (`«int»`, `«uuid»`, `«date»`, `«*»`). Use it for command
-output and other text, not for values.
+`t.checkText(actual, text)` compares a string, or a promise of one, with
+`text`. The text may hold `«»` wildcards (`«int»`, `«uuid»`, `«date»`,
+`«*»`). Use it for command output and other text; use `t.check` for values.
 
 ```ts
 t.checkText(runStatus(), `ready: «int» cards
@@ -157,7 +160,8 @@ await t.checkThrows(() => parseCard("no frontmatter"), "CardParseError: missing 
 - Check the whole value. A test that checks `result.items.length` passes when
   the items are wrong. A test that checks `result.items` does not.
 - Do not compare `JSON.stringify(x)`; check `x`.
-- Do not check `a === b` against `true`; check `a` against `b`.
+- Do not check `a === b` against `true`; check `a` against `b`, or
+  `t.check(a, is(b))` when `a` must be the same object as `b`.
 - Check one field only when that field is the whole contract.
 - Make the value deterministic before you reach for a pattern: pass a fixed
   clock, a fixed id, a fixed seed.

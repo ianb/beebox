@@ -89,10 +89,7 @@ void test("Session B is most-active, but the schedule was created in session A."
   await firePromise;
 
   // doctest:L82
-  t.check({ runs: backend.runs.length, resumed: backend.runs[0]?.startOptions.resumeSessionId }, {
-    runs: 1,
-    resumed: "11111111-1111-4111-8111-111111111111",
-  });
+  t.check(backend.runs.map((run) => run.startOptions.resumeSessionId), [SESSION_A]);
 
   // The reminder is composed by beebox, not typed, so it goes out marked
   // client-composed.
@@ -134,10 +131,7 @@ void test("An entry persisted before sessionId existed keeps the old behavior:",
   await firePromise2;
 
   // doctest:L120
-  t.check({ runs: backend2.runs.length, resumed: backend2.runs[0]?.startOptions.resumeSessionId }, {
-    runs: 1,
-    resumed: "33333333-3333-4333-8333-333333333333",
-  });
+  t.check(backend2.runs.map((run) => run.startOptions.resumeSessionId), [SESSION_MOST_ACTIVE]);
 });
 
 // ## Target's turn errors → re-sent into a fresh session
@@ -175,18 +169,7 @@ void test("When the targeted session's turn ends with iserror (the unresumable c
   await firePromise3;
 
   // doctest:L154
-  t.check(
-    {
-      runs: backend3.runs.length,
-      first: backend3.runs[0]?.startOptions.resumeSessionId ?? null,
-      second: backend3.runs[1]?.startOptions.resumeSessionId ?? null,
-    },
-    {
-    runs: 2,
-    first: "44444444-4444-4444-8444-444444444444",
-    second: null,
-  },
-  );
+  t.check(backend3.runs.map((run) => run.startOptions.resumeSessionId ?? null), [SESSION_DEAD, null]);
 });
 
 // ## A chat whose model was removed drops the schedule
@@ -218,5 +201,5 @@ void test("A chat that explicitly picked an OpenRouter model the owner has since
     { boxRoot: box4.root, registry: registry4, eventBus: eventBus4, wireSession: noopWire },
     makeSchedule({ sessionId: SESSION_A }),
   );
-  await t.checkText(backend4.runs.length, "0");
+  t.check(backend4.runs.map((run) => run.startOptions.resumeSessionId), []);
 });

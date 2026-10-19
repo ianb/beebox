@@ -19,7 +19,6 @@ const rows = [
   { dir: "garden-tools", label: "Tools", depth: 0 },
   { dir: "travel", label: "Trip planning", depth: 0 },
 ];
-const show = (text: string) => filterLandmarks(rows, text).map((row) => `${"  ".repeat(row.depth)}${row.label}`).join("\n");
 
 // | Text | Kept | Why |
 // |---|---|---|
@@ -32,32 +31,37 @@ const show = (text: string) => filterLandmarks(rows, text).map((row) => `${"  ".
 // | `zebra` | nothing | |
 void test("| Text | Kept | Why | |---|---|---| | empty or spaces | every row | the page...", async (t) => {
   // doctest:L35
-  await t.checkText(show("  ") === show(""), "true");
+  t.check(filterLandmarks(rows, "  "), rows);
 
-  // doctest:L38
-  await t.checkText(filterLandmarks(rows, "").length, "6");
+  t.check(filterLandmarks(rows, ""), rows);
 
   // doctest:L41
-  await t.checkText(show("tomato"), `Garden
-  Raised beds
-    Tomatoes`);
+  t.check(filterLandmarks(rows, "tomato"), [
+    { dir: "garden", label: "Garden", depth: 0 },
+    { dir: "garden/beds", label: "Raised beds", depth: 1 },
+    { dir: "garden/beds/tomatoes", label: "Tomatoes", depth: 2 },
+  ]);
 
   // doctest:L46
-  await t.checkText(show("BEDS"), `Garden
-  Raised beds
-    Tomatoes`);
+  t.check(filterLandmarks(rows, "BEDS"), [
+    { dir: "garden", label: "Garden", depth: 0 },
+    { dir: "garden/beds", label: "Raised beds", depth: 1 },
+    { dir: "garden/beds/tomatoes", label: "Tomatoes", depth: 2 },
+  ]);
 
   // doctest:L51
-  t.check(show("trip"), "Trip planning");
+  t.check(filterLandmarks(rows, "trip"), [{ dir: "travel", label: "Trip planning", depth: 0 }]);
 
   // doctest:L54
-  await t.checkText(show("garden"), `Garden
-  Raised beds
-    Tomatoes
-Tools`);
+  t.check(filterLandmarks(rows, "garden"), [
+    { dir: "garden", label: "Garden", depth: 0 },
+    { dir: "garden/beds", label: "Raised beds", depth: 1 },
+    { dir: "garden/beds/tomatoes", label: "Tomatoes", depth: 2 },
+    { dir: "garden-tools", label: "Tools", depth: 0 },
+  ]);
 
   // doctest:L60
-  t.check(show("kitchen"), "Kitchen");
+  t.check(filterLandmarks(rows, "kitchen"), [{ dir: "", label: "Kitchen", depth: 0 }]);
 
   // doctest:L63
   t.check(filterLandmarks(rows, "zebra"), []);

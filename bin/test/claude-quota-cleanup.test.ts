@@ -59,5 +59,5 @@ void test("An unrelated status line is user-owned configuration and is refused u
     }),
     /refusing to remove unrelated statusLine command/,
   );
-  t.check((await fs.readFile(settings, "utf8")) === original, true);
+  t.check(await fs.readFile(settings, "utf8"), original);
 });

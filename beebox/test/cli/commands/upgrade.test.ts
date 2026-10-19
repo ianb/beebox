@@ -13,6 +13,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, instanceOf } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -297,7 +298,7 @@ void test("bbx-migrate fails partway through, after scaffolding a new, never-tra
   const calls: string[] = [];
   const runCommand = makeFakeRunner({ boxRoot, calls, failLabel: "bbx-migrate", failOutput: "boom: migration blew up", junkFile: "untracked-scaffold.txt" });
   const thrown = await upgradeError(boxRoot, runCommand);
-  await t.checkText(thrown instanceof UpgradeStepFailedError, "true");
+  t.check(thrown, instanceOf(UpgradeStepFailedError));
 
   // doctest:L266
   t.check(calls, [
@@ -322,19 +323,19 @@ void test("bbx-migrate fails partway through, after scaffolding a new, never-tra
   // genuinely restored:
 
   // doctest:L287
-  await t.checkText((await getHead(boxRoot)) === snapshotSha, "true");
+  t.check(await getHead(boxRoot), snapshotSha);
 
   // doctest:L290
   t.check(await fs.access(path.join(boxRoot, "untracked-scaffold.txt")).then(() => true, () => false), false);
 
   // doctest:L293
-  t.check((await getStatus(boxRoot)).clean, true);
+  t.check(await getStatus(boxRoot), { staged: [], modified: [], untracked: [], clean: true });
 
   // The failure is logged to `.beebox/logs/upgrade.log`:
 
   // doctest:L300
   const logText = await fs.readFile(path.join(boxRoot, ".beebox/logs/upgrade.log"), "utf-8");
-  await t.checkText(logText.includes("boom: migration blew up"), "true");
+  t.check(logText, any(String).includes("boom: migration blew up"));
 });
 
 // ## Refusals before anything runs
@@ -401,7 +402,7 @@ void test("The fake installer checks the real gate while the dependency has chan
   };
   const upgrading = upgrade(boxRoot, runCommand);
   await waitForClosed(boxRoot);
-  await t.checkText(calls.length, "0");
+  t.check(calls, []);
 
   // doctest:L361
   await active.release();
@@ -430,8 +431,8 @@ void test("The existing rollback restores tracked code and data and reinstalls t
   // doctest:L378
   const boxRoot = await makeV3Fixture();
   const result = await upgradeError(boxRoot, makeFakeRunner({ boxRoot, calls: [], failLabel: "tsc", failOutput: "bad types" }));
-  t.check(({ failed: result instanceof UpgradeStepFailedError, phase: (await boxMaintenanceStatus(boxRoot))?.phase, version: await readPinnedSpec(boxRoot) }), {
-    failed: true,
+  t.check(result, instanceOf(UpgradeStepFailedError));
+  t.check(({ phase: (await boxMaintenanceStatus(boxRoot))?.phase, version: await readPinnedSpec(boxRoot) }), {
     phase: "exclusive",
     version: "0.1.0",
   });

@@ -5,7 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { isoDate } from "agent-doctest/check";
 import {
   pruneRecentRuns,
   recordRun,
@@ -81,10 +81,7 @@ void test("Old records are pruned during recording:", async (t) => {
     windowMs: 3_600_000,
     now: new Date("2026-03-01T12:00:00Z"),
   });
-  await t.checkText(state2.recentRuns.length, "1");
-
-  // doctest:L81
-  t.check(state2.recentRuns[0]?.ts, "2026-03-01T12:00:00Z");
+  t.check(state2.recentRuns, [{ ts: "2026-03-01T12:00:00Z", durationMs: 2000 }]);
 });
 
 // ## recordOutcome
@@ -94,9 +91,6 @@ void test("Old records are pruned during recording:", async (t) => {
 // a success resets the failure count, stamps `lastSuccess`, and clears the
 // health-alert latch.
 void test("The single outcome-recording path for all triggers (tick, wakeup, webapp).", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L93
   const st = normalizeScriptState({});
   recordOutcome(st, {
     result: "failure", error: "boom", durationMs: 100, sleepAffected: false,
@@ -108,24 +102,50 @@ void test("The single outcome-recording path for all triggers (tick, wakeup, web
   });
   st.alertedAt = "2026-03-01T13:01:00Z";
   st.alertedFor = "failing";
-  print(`consecutiveFailures: ${st.consecutiveFailures}`);
-  print(`lastResult: ${st.lastResult}, lastError: ${st.lastError}`);
-  await t.checkText(out.with(print(`lastSuccess: ${st.lastSuccess}`)), `consecutiveFailures: 2
-lastResult: failure, lastError: boom again
-lastSuccess: null`);
+  t.check(st, {
+    lastRun: "2026-03-01T13:00:00.000Z",
+    lastResult: "failure",
+    lastError: "boom again",
+    lastDurationMs: 100,
+    lastSuccess: null,
+    consecutiveFailures: 2,
+    alertedAt: "2026-03-01T13:01:00Z",
+    alertedFor: "failing",
+    skipped: null,
+    runCount: 2,
+    lastCommit: null,
+    carry: null,
+    lastDeferReason: null,
+    recentRuns: [
+      { ts: "2026-03-01T12:00:00.000Z", durationMs: 100 },
+      { ts: "2026-03-01T13:00:00.000Z", durationMs: 100 },
+    ],
+  });
 
   // doctest:L112
   recordOutcome(st, {
     result: "success", error: null, durationMs: 200, sleepAffected: false,
     windowMs: 3_600_000, now: new Date("2026-03-01T14:00:00Z"),
   });
-  print(`consecutiveFailures: ${st.consecutiveFailures}`);
-  print(`lastSuccess: ${st.lastSuccess}`);
-  print(`latch: ${st.alertedAt}, ${st.alertedFor}`);
-  await t.checkText(out.with(print(`runCount: ${st.runCount}, recentRuns: ${st.recentRuns?.length}`)), `consecutiveFailures: 0
-lastSuccess: 2026-03-01T14:00:00.000Z
-latch: null, null
-runCount: 3, recentRuns: 2`);
+  t.check(st, {
+    lastRun: "2026-03-01T14:00:00.000Z",
+    lastResult: "success",
+    lastError: null,
+    lastDurationMs: 200,
+    lastSuccess: "2026-03-01T14:00:00.000Z",
+    consecutiveFailures: 0,
+    alertedAt: null,
+    alertedFor: null,
+    skipped: null,
+    runCount: 3,
+    lastCommit: null,
+    carry: null,
+    lastDeferReason: null,
+    recentRuns: [
+      { ts: "2026-03-01T13:00:00.000Z", durationMs: 100 },
+      { ts: "2026-03-01T14:00:00.000Z", durationMs: 200 },
+    ],
+  });
 });
 
 // (The 12:00 failure has aged out of the one-hour run window by 14:00 —
@@ -137,22 +157,46 @@ runCount: 3, recentRuns: 2`);
 // backfill: a last-succeeded state inherits `lastSuccess` from `lastRun`,
 // a last-failed state counts as one failure.
 void test("(The 12:00 failure has aged out of the one-hour run window by 14:00 — runCoun...", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L137
   const oldSuccess = normalizeScriptState({ lastRun: "2026-03-01T06:00:00Z", lastResult: "success" });
-  print(`lastSuccess: ${oldSuccess.lastSuccess}, consecutiveFailures: ${oldSuccess.consecutiveFailures}`);
   const oldFailure = normalizeScriptState({ lastRun: "2026-03-01T06:00:00Z", lastResult: "failure" });
-  await t.checkText(out.with(print(`lastSuccess: ${oldFailure.lastSuccess}, consecutiveFailures: ${oldFailure.consecutiveFailures}`)), `lastSuccess: 2026-03-01T06:00:00Z, consecutiveFailures: 0
-lastSuccess: null, consecutiveFailures: 1`);
+  t.check({ oldSuccess, oldFailure }, {
+    oldSuccess: {
+      lastRun: "2026-03-01T06:00:00Z",
+      lastResult: "success",
+      lastError: null,
+      lastDurationMs: null,
+      lastSuccess: "2026-03-01T06:00:00Z",
+      consecutiveFailures: 0,
+      alertedAt: null,
+      alertedFor: null,
+      skipped: null,
+      runCount: 0,
+      lastCommit: null,
+      carry: null,
+      lastDeferReason: null,
+    },
+    oldFailure: {
+      lastRun: "2026-03-01T06:00:00Z",
+      lastResult: "failure",
+      lastError: null,
+      lastDurationMs: null,
+      lastSuccess: null,
+      consecutiveFailures: 1,
+      alertedAt: null,
+      alertedFor: null,
+      skipped: null,
+      runCount: 0,
+      lastCommit: null,
+      carry: null,
+      lastDeferReason: null,
+    },
+  });
 });
 
 // ## loadScriptState / saveScriptState
 //
 // ### Loading nonexistent state returns empty
 void test("Loading nonexistent state returns empty", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -160,22 +204,26 @@ void test("Loading nonexistent state returns empty", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L151
   const box = await makeTmpBox();
-  const state = await loadScriptState(box.root, "nonexistent");
-  print(`lastRun: ${state.lastRun}`);
-  print(`lastResult: ${state.lastResult}`);
-  print(`lastDurationMs: ${state.lastDurationMs}`);
-  await t.checkText(out.with(print(`runCount: ${state.runCount}`)), `lastRun: null
-lastResult: null
-lastDurationMs: null
-runCount: 0`);
+  await t.check(loadScriptState(box.root, "nonexistent"), {
+    lastRun: null,
+    lastResult: null,
+    lastError: null,
+    lastDurationMs: null,
+    lastSuccess: null,
+    consecutiveFailures: 0,
+    alertedAt: null,
+    alertedFor: null,
+    skipped: null,
+    runCount: 0,
+    lastCommit: null,
+    carry: null,
+    lastDeferReason: null,
+  });
 });
 
 // ### Save then load round-trips
 void test("Save then load round-trips", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -183,7 +231,6 @@ void test("Save then load round-trips", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L171
   const box = await makeTmpBox();
   const saved = normalizeScriptState({
     lastRun: "2025-01-15T06:00:00Z",
@@ -194,24 +241,30 @@ void test("Save then load round-trips", async (t) => {
     recentRuns: [{ ts: "2025-01-15T06:00:00Z", durationMs: 8300 }],
   });
   await saveScriptState({ boxRoot: box.root, scriptName: "test-script", state: saved });
-  const loaded = await loadScriptState(box.root, "test-script");
-  print(`lastRun: ${loaded.lastRun}`);
-  print(`lastResult: ${loaded.lastResult}`);
-  print(`lastDurationMs: ${loaded.lastDurationMs}`);
-  print(`runCount: ${loaded.runCount}`);
-  await t.checkText(out.with(print(`recentRuns: ${loaded.recentRuns?.length}`)), `lastRun: 2025-01-15T06:00:00Z
-lastResult: success
-lastDurationMs: 8300
-runCount: 3
-recentRuns: 1`);
+  await t.check(loadScriptState(box.root, "test-script"), {
+    lastRun: "2025-01-15T06:00:00Z",
+    lastResult: "success",
+    lastError: null,
+    lastDurationMs: 8300,
+    lastSuccess: "2025-01-15T06:00:00Z",
+    consecutiveFailures: 0,
+    alertedAt: null,
+    alertedFor: null,
+    skipped: null,
+    runCount: 3,
+    lastCommit: null,
+    carry: null,
+    lastDeferReason: null,
+    recentRuns: [
+      { ts: "2025-01-15T06:00:00Z", durationMs: 8300 },
+    ],
+  });
 });
 
 // ## Lock files
 //
 // ### Acquire and load shows running script
 void test("Acquire and load shows running script", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await releaseScriptLock({ boxRoot: box.root, scriptName: "my-script" });
@@ -224,12 +277,7 @@ void test("Acquire and load shows running script", async (t) => {
   const box = await makeTmpBox();
   await acquireScriptLock({ boxRoot: box.root, scriptName: "my-script", triggeredBy: "schedule" });
   const running = await loadRunningScripts(box.root);
-  print(`running: ${running.size}`);
-  print(`has my-script: ${running.has("my-script")}`);
-  const lock = running.get("my-script");
-  await t.checkText(out.with(print(`triggeredBy: ${lock?.triggeredBy}`)), `running: 1
-has my-script: true
-triggeredBy: schedule`);
+  t.check([...running], [["my-script", { pid: process.pid, startedAt: isoDate(), triggeredBy: "schedule" }]]);
 });
 
 // ### Release removes from running
@@ -246,13 +294,11 @@ void test("Release removes from running", async (t) => {
   await acquireScriptLock({ boxRoot: box.root, scriptName: "temp", triggeredBy: "test" });
   await releaseScriptLock({ boxRoot: box.root, scriptName: "temp" });
   const running = await loadRunningScripts(box.root);
-  await t.checkText(running.size, "0");
+  t.check([...running], []);
 });
 
 // ### Lock with lock-group
 void test("Lock with lock-group", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await releaseScriptLock({ boxRoot: box.root, scriptName: "grouped" });
@@ -265,8 +311,7 @@ void test("Lock with lock-group", async (t) => {
   const box = await makeTmpBox();
   await acquireScriptLock({ boxRoot: box.root, scriptName: "grouped", triggeredBy: "schedule", lockGroup: "agents" });
   const running = await loadRunningScripts(box.root);
-  const lock = running.get("grouped");
-  await t.checkText(out.with(print(`lockGroup: ${lock?.lockGroup}`)), "lockGroup: agents");
+  t.check(running.get("grouped"), { pid: process.pid, startedAt: isoDate(), triggeredBy: "schedule", lockGroup: "agents" });
 });
 
 // ### Stale lock (dead PID) is cleaned up
@@ -290,7 +335,7 @@ void test("Stale lock (dead PID) is cleaned up", async (t) => {
 
   // doctest:L266
   const running = await loadRunningScripts(box.root);
-  await t.checkText(running.size, "0");
+  t.check([...running], []);
 });
 
 // ### No state directory returns empty map
@@ -305,7 +350,7 @@ void test("No state directory returns empty map", async (t) => {
   // doctest:L278
   const box = await makeTmpBox();
   const running = await loadRunningScripts(box.root);
-  await t.checkText(running.size, "0");
+  t.check([...running], []);
 });
 
 // ## loadRunningProcedures

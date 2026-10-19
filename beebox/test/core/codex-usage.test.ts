@@ -43,7 +43,24 @@ void test("line 18", async (t) => {
   });
 
   // doctest:L44
-  await t.checkText((await readCodexTurnUsage(box.root)).length, "2");
+  t.check(await readCodexTurnUsage(box.root), [
+    {
+      sessionId: "codex-session",
+      turnId: "turn-1",
+      task: "web-chat",
+      timestamp: "2026-08-13T12:00:00.000Z",
+      model: "gpt-test",
+      usage,
+    },
+    {
+      sessionId: "codex-session",
+      turnId: "turn-2",
+      task: "web-chat",
+      timestamp: "2026-08-13T12:05:00.000Z",
+      model: "gpt-test",
+      usage,
+    },
+  ]);
 
   // doctest:L47
   t.check(await totalCodexSessionUsage(box.root, "codex-session"), {

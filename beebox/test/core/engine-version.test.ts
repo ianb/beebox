@@ -28,7 +28,7 @@ async function realEngineVersion() {
 void test("`getServingEngineVersion` reads the running engine's own package.json", async (t) => {
   // doctest:L30
   const engineVersion = await realEngineVersion();
-  await t.checkText((await getServingEngineVersion()) === engineVersion, "true");
+  t.check(await getServingEngineVersion(), engineVersion);
 });
 
 // ## A box with no installed engine reports `installed: null`
@@ -50,10 +50,7 @@ void test("getInstalledEngineVersion reads <box.root>/nodemodules/beebox/package
 
   // doctest:L48
   const report = await getEngineVersionReport(box.root);
-  t.check({ installed: report.installed, mismatch: report.mismatch }, {
-    installed: null,
-    mismatch: false,
-  });
+  t.check(report, { serving: await realEngineVersion(), installed: null, mismatch: false });
 });
 
 // ## A box whose installed engine differs from the serving engine reports a mismatch
@@ -76,10 +73,7 @@ void test("The pinned/installed engine lives at <box.root>/nodemodules/beebox/."
 
   // doctest:L68
   const report = await getEngineVersionReport(box.root);
-  t.check({ installed: report.installed, mismatch: report.mismatch }, {
-    installed: "0.0.1",
-    mismatch: true,
-  });
+  t.check(report, { serving: await realEngineVersion(), installed: "0.0.1", mismatch: true });
 });
 
 // ## A box whose installed engine matches the serving engine reports no mismatch
@@ -99,5 +93,5 @@ void test("A box whose installed engine matches the serving engine reports no mi
 
   // doctest:L85
   const report = await getEngineVersionReport(box.root);
-  t.check(report.mismatch, false);
+  t.check(report, { serving: engineVersion, installed: engineVersion, mismatch: false });
 });

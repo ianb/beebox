@@ -16,13 +16,13 @@ console.warn = () => {};
 void test("A single tag with content:", async (t) => {
   // doctest:L18
   const tags = parseTags("<greeting>Hello world</greeting>");
-  await t.checkText(tags.length, "1");
-
-  // doctest:L24
-  t.check(tags[0]?.type, "greeting");
-
-  // doctest:L27
-  t.check(tags[0]?.content, "Hello world");
+  t.check(tags, [
+    {
+      type: "greeting",
+      attrs: {},
+      content: "Hello world",
+    },
+  ]);
 });
 
 // ## Attributes
@@ -31,23 +31,31 @@ void test("A single tag with content:", async (t) => {
 void test("Attributes are extracted as key-value pairs:", async (t) => {
   // doctest:L36
   const tags = parseTags('<task status="open" priority="high">Do thing</task>');
-  t.check(tags[0]?.attrs.status, "open");
-
-  // doctest:L40
-  t.check(tags[0]?.attrs.priority, "high");
+  t.check(tags, [
+    {
+      type: "task",
+      attrs: {
+        status: "open",
+        priority: "high",
+      },
+      content: "Do thing",
+    },
+  ]);
 });
 
 // ## Self-closing tags
 void test("Self-closing tags", async (t) => {
   // doctest:L47
   const tags = parseTags('<item ref="test.card" />');
-  t.check(tags[0]?.type, "item");
-
-  // doctest:L51
-  t.check(tags[0]?.attrs.ref, "test.card");
-
-  // doctest:L54
-  t.check(tags[0]?.content, "");
+  t.check(tags, [
+    {
+      type: "item",
+      attrs: {
+        ref: "test.card",
+      },
+      content: "",
+    },
+  ]);
 });
 
 // ## Nested tags
@@ -56,13 +64,22 @@ void test("Self-closing tags", async (t) => {
 void test("Inner tags appear as subTags:", async (t) => {
   // doctest:L63
   const tags = parseTags("<outer><inner>nested</inner></outer>");
-  t.check(tags[0]?.type, "outer");
+  t.check(tags, [
+    {
+      type: "outer",
+      attrs: {},
+      content: "<inner>nested</inner>",
+      subTags: [
+        {
+          type: "inner",
+          attrs: {},
+          content: "nested",
+        },
+      ],
+    },
+  ]);
 
-  // doctest:L69
-  t.check(tags[0]?.subTags?.[0]?.type, "inner");
 
-  // doctest:L72
-  t.check(tags[0]?.subTags?.[0]?.content, "nested");
 });
 
 // ## Filtering with allowTags
@@ -71,17 +88,36 @@ void test("Inner tags appear as subTags:", async (t) => {
 void test("Only specified tags are parsed — others are ignored:", async (t) => {
   // doctest:L81
   const tags = parseTags("<speech>Hello <b>world</b></speech>", ["speech"]);
-  await t.checkText(tags.length, "1");
-
-  // doctest:L85
-  t.check(tags[0]?.type, "speech");
+  t.check(tags, [
+    {
+      type: "speech",
+      attrs: {},
+      content: "Hello <b>world</b>",
+    },
+  ]);
 });
 
 // ## Text between tags becomes comments
 void test("Text between tags becomes comments", async (t) => {
   // doctest:L92
   const tags = parseTags("Some text <tag>inside</tag> more text");
-  await t.checkText(tags.some(tag => tag.type === "comment"), "true");
+  t.check(tags, [
+    {
+      type: "comment",
+      attrs: {},
+      content: "Some text",
+    },
+    {
+      type: "tag",
+      attrs: {},
+      content: "inside",
+    },
+    {
+      type: "comment",
+      attrs: {},
+      content: "more text",
+    },
+  ]);
 });
 
 // ## Strips surrounding backticks
@@ -90,19 +126,22 @@ void test("Text between tags becomes comments", async (t) => {
 void test("Backticks wrapping the input are removed (common in LLM output):", async (t) => {
   // doctest:L102
   const tags = parseTags("`<tag>content</tag>`");
-  t.check(tags[0]?.type, "tag");
-
-  // doctest:L106
-  t.check(tags[0]?.content, "content");
+  t.check(tags, [
+    {
+      type: "tag",
+      attrs: {},
+      content: "content",
+    },
+  ]);
 });
 
 // ## Empty input
 void test("Empty input", async (t) => {
   // doctest:L113
-  await t.checkText(parseTags("").length, "0");
+  t.check(parseTags(""), []);
 
   // doctest:L116
-  await t.checkText(parseTags("   ").length, "0");
+  t.check(parseTags("   "), []);
 });
 
 // ## Paired non-allowed tags don't warn (their closers are skipped like their openers)
@@ -123,7 +162,18 @@ void test("With an allowTags filter active, an opener outside the allowlist is s
   t.check(warned, 0);
 
   // doctest:L137
-  await t.checkText(tags.filter(tag => tag.type === "speech").length, "1");
+  t.check(tags, [
+    {
+      type: "speech",
+      attrs: {},
+      content: "hi",
+    },
+    {
+      type: "comment",
+      attrs: {},
+      content: "a note",
+    },
+  ]);
 });
 
 // An unmatched closer of an ALLOWED tag still warns — that's real

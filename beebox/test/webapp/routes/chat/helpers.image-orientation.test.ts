@@ -41,12 +41,12 @@ void test("A rotated JPEG warns; a normalized one is silent", async (t) => {
   const rotated = warnings(() =>
     warnOnUnnormalizedImageOrientation([{ id: 3, mimeType: "image/jpeg", dataBase64: exifJpegBase64(6) }]),
   );
-  t.check(`${rotated.length} :: ${rotated[0]}`, "1 :: [chat] inbound image #3 carries EXIF orientation 6 (expected 1); a client transcode path skipped orientation normalization — the model may see it rotated");
+  t.check(rotated, ["[chat] inbound image #3 carries EXIF orientation 6 (expected 1); a client transcode path skipped orientation normalization — the model may see it rotated"]);
 
   // An orientation-1 (upright) JPEG is already normalized, so nothing is logged.
 
   // doctest:L51
-  await t.checkText(warnings(() => warnOnUnnormalizedImageOrientation([{ id: 1, mimeType: "image/jpeg", dataBase64: exifJpegBase64(1) }])).length, "0");
+  t.check(warnings(() => warnOnUnnormalizedImageOrientation([{ id: 1, mimeType: "image/jpeg", dataBase64: exifJpegBase64(1) }])), []);
 
   // ## Non-JPEG attachments are never flagged
   //
@@ -54,5 +54,5 @@ void test("A rotated JPEG warns; a normalized one is silent", async (t) => {
   // without even decoding — only JPEG can carry the tag.
 
   // doctest:L61
-  await t.checkText(warnings(() => warnOnUnnormalizedImageOrientation([{ id: 2, mimeType: "image/webp", dataBase64: exifJpegBase64(6) }])).length, "0");
+  t.check(warnings(() => warnOnUnnormalizedImageOrientation([{ id: 2, mimeType: "image/webp", dataBase64: exifJpegBase64(6) }])), []);
 });

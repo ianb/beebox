@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import { readFile, utimes, writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { parse as parseYaml } from "yaml";
@@ -31,14 +32,17 @@ void test("A fresh card gets stamped with version/size/mtime", async (t) => {
   const cardPath = box.path("store/review/Foo.extfile.card");
   await box.write("store/review/Foo.extfile.card", `---\ntype: extfile\nhref: file:${box.path("store/src/foo.ts")}\n---\n`);
   const r1 = await syncExtfile({ boxRoot: box.root, paths: [cardPath] });
-  t.check(r1[0]!.status, "stamped");
+  t.check(r1, [{ path: cardPath, status: "stamped" }]);
 
   // doctest:L33
   const fm = await readFm(cardPath);
-  await t.checkText(typeof fm.version === "string" && fm.version.startsWith("sha256:"), "true");
-
-  // doctest:L37
-  await t.checkText(typeof fm.size === "number" && typeof fm.mtime === "string", "true");
+  t.check(fm, {
+    type: "extfile",
+    href: `file:${box.path("store/src/foo.ts")}`,
+    version: "sha256:b603d946eb2b",
+    size: 16,
+    mtime: isoDate(),
+  });
 });
 
 // ## A bumped mtime with unchanged content is "unchanged" (no rewrite)
@@ -53,11 +57,11 @@ void test("A bumped mtime with unchanged content is \"unchanged\" (no rewrite)",
   // Bump only the file's mtime; the bytes are identical.
   await utimes(box.path("store/src/foo.ts"), new Date("2031-01-01T00:00:00Z"), new Date("2031-01-01T00:00:00Z"));
   const r2 = await syncExtfile({ boxRoot: box.root, paths: [cardPath] });
-  t.check(r2[0]!.status, "unchanged");
+  t.check(r2, [{ path: cardPath, status: "unchanged" }]);
 
   // doctest:L56
   const after = await readFm(cardPath);
-  await t.checkText(after.mtime === before.mtime, "true");
+  t.check(after, before);
 });
 
 // ## Changed content re-stamps with a new version
@@ -68,14 +72,25 @@ void test("Changed content re-stamps with a new version", async (t) => {
   const cardPath = box.path("store/review/Foo.extfile.card");
   await box.write("store/review/Foo.extfile.card", `---\ntype: extfile\nhref: file:${box.path("store/src/foo.ts")}\n---\n`);
   await syncExtfile({ boxRoot: box.root, paths: [cardPath] });
-  const v1 = (await readFm(cardPath)).version;
+  t.check(await readFm(cardPath), {
+    type: "extfile",
+    href: `file:${box.path("store/src/foo.ts")}`,
+    version: "sha256:b603d946eb2b",
+    size: 16,
+    mtime: isoDate(),
+  });
   await writeFile(box.path("store/src/foo.ts"), "console.log(2);\nconsole.log(3);\n");
   const r3 = await syncExtfile({ boxRoot: box.root, paths: [cardPath] });
-  t.check(r3[0]!.status, "stamped");
+  t.check(r3, [{ path: cardPath, status: "stamped" }]);
 
   // doctest:L75
-  const v2 = (await readFm(cardPath)).version;
-  await t.checkText(v2 !== v1, "true");
+  t.check(await readFm(cardPath), {
+    type: "extfile",
+    href: `file:${box.path("store/src/foo.ts")}`,
+    version: "sha256:efbba5d3dd49",
+    size: 32,
+    mtime: isoDate(),
+  });
 });
 
 // ## An unresolvable href is reported, not thrown
@@ -85,5 +100,5 @@ void test("An unresolvable href is reported, not thrown", async (t) => {
   const cardPath = box.path("store/review/Gone.extfile.card");
   await box.write("store/review/Gone.extfile.card", "---\ntype: extfile\nhref: file:/nonexistent/nope.ts\n---\n");
   const r = await syncExtfile({ boxRoot: box.root, paths: [cardPath] });
-  t.check(r[0]!.status, "unresolved");
+  t.check(r, [{ path: cardPath, status: "unresolved", detail: "Target not found" }]);
 });

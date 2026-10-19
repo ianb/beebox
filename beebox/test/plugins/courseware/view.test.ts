@@ -16,6 +16,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -91,9 +92,9 @@ void test("parseConcepts reads the card's concepts frontmatter into typed nodes,
     { id: "b", name: "B", kind: "weird" },
     { name: "no id" },
   ]);
-  t.check(parsed.map((c) => `${c.id}:${c.kind}:${String(c.related.length)}`), [
-    "a:principle:1",
-    "b:concept:0",
+  t.check(parsed, [
+    { id: "a", name: "A", kind: "principle", gloss: null, depth: null, misconceptions: [], related: [{ to: "b", kind: "prerequisite" }] },
+    { id: "b", name: "B", kind: "concept", gloss: null, depth: null, misconceptions: [], related: [] },
   ]);
 
   // `buildGraph` lays the nodes out top-down with dagre; a prerequisite's target
@@ -104,11 +105,17 @@ void test("parseConcepts reads the card's concepts frontmatter into typed nodes,
   const { nodes, edges } = buildGraph(parsed);
   const a = nodes.find((n) => n.id === "a");
   const b = nodes.find((n) => n.id === "b");
-  t.check([edges.map((e) => e.id).join(","), (b?.position.y ?? 0) > (a?.position.y ?? 0), a?.data.concept.name], [
-    "a__prerequisite__b",
-    true,
-    "A",
+  t.check(edges, [
+    {
+      id: "a__prerequisite__b",
+      source: "a",
+      target: "b",
+      className: "bbx-cm-edge-prerequisite",
+      style: { stroke: "currentColor", strokeWidth: 1.5 },
+    },
   ]);
+  t.check(a?.data.concept, parsed[0]);
+  t.check(b?.position.y, any(Number).above(a?.position.y ?? 0));
 });
 
 // ## Rendering the built view
@@ -131,25 +138,22 @@ void test("The rendered page has the intro prose (through Markdown) and every co
 
   // doctest:L121
   const html = await renderConceptMap(box, { path: CARD_PATH });
-  t.check(["this map orders what to learn first", "Part-whole meaning", "Equivalent fractions", "Adding unlike denominators"].map((s) => html.includes(s)), [
-    true,
-    true,
-    true,
-    true,
-  ]);
+  // The page is generated HTML, so each check keeps the one fragment it names.
+  t.check(html, any(String).includes("this map orders what to learn first"));
+  t.check(html, any(String).includes("Part-whole meaning"));
+  t.check(html, any(String).includes("Equivalent fractions"));
+  t.check(html, any(String).includes("Adding unlike denominators"));
 
   // The misconception count shows on its node, and the legend is present:
 
   // doctest:L129
-  t.check([html.includes("1 common misconception"), html.includes("Concept kinds")], [
-    true,
-    true,
-  ]);
+  t.check(html, any(String).includes("1 common misconception"));
+  t.check(html, any(String).includes("Concept kinds"));
 
   // Without `params.path` the view has no anchor card and says so instead of
   // rendering an empty graph:
 
   // doctest:L137
   const bare = await renderConceptMap(box, {});
-  await t.checkText(bare.includes("This concept-map card is not available."), "true");
+  t.check(bare, any(String).includes("This concept-map card is not available."));
 });

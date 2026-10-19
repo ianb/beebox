@@ -9,7 +9,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -63,10 +62,10 @@ void test("A correct password sets the session cookie and returns 204", async (t
 
   // doctest:L63
   const ok = await postAuth("/auth/login", { email: "owner@example.com", password: "correct-horse-battery" });
-  t.check(ok.statusCode, 204);
-
-  // doctest:L67
-  t.check(ok.cookies.map((c) => c.name).join(","), "bbx_session");
+  t.check(
+    { status: ok.statusCode, body: ok.body, cookies: ok.cookies.map((c) => c.name) },
+    { status: 204, body: "", cookies: ["bbx_session"] },
+  );
 });
 
 // ## Wrong password and unknown user both answer an identical 401 (no enumeration)
@@ -97,10 +96,10 @@ void test("Wrong password and unknown user both answer an identical 401 (no enum
   });
 
   // doctest:L88
-  await t.checkText(
+  t.check(
     // Byte-for-byte identical responses.
-    JSON.stringify(wrongPass.json()) === JSON.stringify(unknownUser.json()),
-    "true",
+    unknownUser.json(),
+    wrongPass.json(),
   );
 
   // doctest:L92
@@ -110,7 +109,7 @@ void test("Wrong password and unknown user both answer an identical 401 (no enum
   // `request.body !== undefined` body-detect fix.
   loginThrottle.reset();
   const arrayBody = await server.server.inject({ method: "POST", url: "/auth/login", payload: [] });
-  t.check(arrayBody.statusCode, 400);
+  t.check({ status: arrayBody.statusCode, body: arrayBody.json() }, { status: 400, body: { error: "Invalid request" } });
 });
 
 // ## Setup happy path: a live token creates the owner and mints a session
@@ -126,10 +125,10 @@ void test("Setup happy path: a live token creates the owner and mints a session"
     password: "hunter2hunter2",
     token,
   });
-  t.check(setupOk.statusCode, 204);
-
-  // doctest:L117
-  t.check(setupOk.cookies.map((c) => c.name).join(","), "bbx_session");
+  t.check(
+    { status: setupOk.statusCode, body: setupOk.body, cookies: setupOk.cookies.map((c) => c.name) },
+    { status: 204, body: "", cookies: ["bbx_session"] },
+  );
 
   // doctest:L120
   t.check(
@@ -152,9 +151,9 @@ void test("Setup rejects a wrong token (403) and an expired one (410)", async (t
     password: "hunter2hunter2",
     token: "not-the-real-token",
   });
-  t.check({ status: wrongToken.statusCode, error: wrongToken.json().error }, {
+  t.check({ status: wrongToken.statusCode, body: wrongToken.json() }, {
     status: 403,
-    error: "Invalid setup token",
+    body: { error: "Invalid setup token" },
   });
 
   // doctest:L140
@@ -167,7 +166,13 @@ void test("Setup rejects a wrong token (403) and an expired one (410)", async (t
     password: "hunter2hunter2",
     token: staleToken,
   });
-  t.check(expired.statusCode, 410);
+  t.check({ status: expired.statusCode, body: expired.json() }, {
+    status: 410,
+    body: {
+      error: "Setup token expired",
+      message: "Restart the server to print a fresh setup link, or run `bbx engine auth create-user` on the host.",
+    },
+  });
 });
 
 // ## Setup answers 410 once an account exists
@@ -184,7 +189,13 @@ void test("Setup answers 410 once an account exists", async (t) => {
     password: "password1234",
     token: lateToken,
   });
-  t.check(claimed.statusCode, 410);
+  t.check({ status: claimed.statusCode, body: claimed.json() }, {
+    status: 410,
+    body: {
+      error: "Setup already complete",
+      message: "An account already exists; sign in at /auth/login.",
+    },
+  });
 });
 
 // An empty initialized store is a durable setup tombstone after the last member is
@@ -200,7 +211,13 @@ void test("An empty initialized store is a durable setup tombstone after the las
     password: "password1234",
     token: tombstoneToken,
   });
-  t.check(tombstoneSetup.statusCode, 410);
+  t.check({ status: tombstoneSetup.statusCode, body: tombstoneSetup.json() }, {
+    status: 410,
+    body: {
+      error: "Setup already complete",
+      message: "An account already exists; sign in at /auth/login.",
+    },
+  });
 });
 
 // ## Two concurrent setups race on the store lock — one wins (204), one loses (409)
@@ -212,7 +229,7 @@ void test("Two concurrent setups race on the store lock — one wins (204), one 
 
   // doctest:L194
   const [a, b] = await Promise.all([postAuth("/auth/setup", body), postAuth("/auth/setup", body)]);
-  t.check([a.statusCode, b.statusCode].toSorted((x, y) => x - y).join(","), "204,409");
+  t.check([a, b].map((res) => res.statusCode).toSorted((x, y) => x - y), [204, 409]);
 });
 
 // ## A form login redirects (302) to the sanitized returnTo and sets the cookie
@@ -227,10 +244,10 @@ void test("A form login redirects (302) to the sanitized returnTo and sets the c
     password: "correct-horse-battery",
     returnTo: "/test/home",
   });
-  t.check({ status: ok.statusCode, location: ok.headers.location, cookie: ok.cookies.map((c) => c.name).join(",") }, {
+  t.check({ status: ok.statusCode, location: ok.headers.location, cookies: ok.cookies.map((c) => c.name) }, {
     status: 302,
     location: "/test/home",
-    cookie: "bbx_session",
+    cookies: ["bbx_session"],
   });
 
   // doctest:L213
@@ -273,17 +290,15 @@ void test("A form setup creates the owner, redirects to the root, and sets the c
     confirmPassword: "hunter2hunter2",
     token,
   });
-  t.check({ status: setup.statusCode, location: setup.headers.location, cookie: setup.cookies.map((c) => c.name).join(",") }, {
+  t.check({ status: setup.statusCode, location: setup.headers.location, cookies: setup.cookies.map((c) => c.name) }, {
     status: 302,
     location: "/",
-    cookie: "bbx_session",
+    cookies: ["bbx_session"],
   });
 });
 
 // ## A form setup with mismatched passwords redirects back with error=mismatch, no account created
 void test("A form setup with mismatched passwords redirects back with error=mismatch, no account created", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L255
   await resetAuth();
   const mismatchToken = armSetupToken({ now: Date.now() });
@@ -296,15 +311,10 @@ void test("A form setup with mismatched passwords redirects back with error=mism
     confirmPassword: "different-pw-123",
     token: mismatchToken,
   });
-  print(`status: ${mm.statusCode}`);
-  print(`error=mismatch: ${mm.headers.location?.includes("error=mismatch")}`);
-  print(`no cookie: ${mm.cookies.length === 0}`);
-  print(`no owner created: ${getLocalOwnerEmail() === null}`);
-  await t.checkText(out.with("done"), `status: 302
-error=mismatch: true
-no cookie: true
-no owner created: true
-done`);
+  t.check(
+    { status: mm.statusCode, location: mm.headers.location, cookies: mm.cookies, owner: getLocalOwnerEmail() },
+    { status: 302, location: `/auth/setup?token=${mismatchToken}&error=mismatch`, cookies: [], owner: null },
+  );
 });
 
 // ## A decoy content-type whose essence is JSON takes the JSON path (no form double-read)
@@ -337,9 +347,9 @@ void test("isFormRequest compares the exact MIME essence, not a substring — so
     headers: { "content-type": "application/json; x=application/x-www-form-urlencoded" },
     payload: JSON.stringify({ email: "owner@example.com", password: "wrong" }),
   });
-  await t.checkText(
+  t.check(
     // A JSON 401 (not a 302 redirect) proves the JSON path was taken.
-    JSON.stringify({ status: decoy.statusCode, body: decoy.json() }),
-    "{\"status\":401,\"body\":{\"error\":\"Invalid credentials\"}}",
+    { status: decoy.statusCode, body: decoy.json() },
+    { status: 401, body: { error: "Invalid credentials" } },
   );
 });

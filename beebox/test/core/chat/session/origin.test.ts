@@ -10,6 +10,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import * as os from "node:os";
 import { readFile, writeFile } from "node:fs/promises";
+import { any } from "agent-doctest/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { localOrigin, readOrCreateOriginId } from "../../../../src/core/chat/session/origin.js";
 
@@ -32,18 +33,15 @@ void test("BBXORIGINIDFILE points the helper somewhere other than the real per-u
 
   // doctest:L25
   const first = await localOrigin();
-  t.check(/^[\da-f-]{36}$/.test(first.id), true);
-
-  // doctest:L29
-  await t.checkText(first.name === os.hostname(), "true");
+  t.check(first, { id: any(String).matches(/^[\da-f-]{36}$/), name: os.hostname() });
 
   // doctest:L32
   const onDisk = (await readFile(box.path("origin-id"), "utf-8")).trim();
-  await t.checkText(onDisk === first.id, "true");
+  t.check(onDisk, first.id);
 
   // doctest:L36
   const second = await localOrigin();
-  await t.checkText(second.id === first.id, "true");
+  t.check(second, first);
 });
 
 // ## two first runs at once converge on one id
@@ -69,10 +67,10 @@ void test("Nothing serializes the very first read:", async (t) => {
   const [a, b] = await Promise.all([readOrCreateOriginId(idFile), readOrCreateOriginId(idFile)]);
 
   // doctest:L61
-  await t.checkText(a === b, "true");
+  t.check(a, b);
 
   // doctest:L64
-  await t.checkText(a === (await readFile(idFile, "utf-8")).trim(), "true");
+  t.check(a, (await readFile(idFile, "utf-8")).trim());
 });
 
 // ## an existing id is read, never replaced

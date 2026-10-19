@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import {
   elideMiddle,
   MAX_RENDERED_CHARS,
@@ -84,14 +85,12 @@ void test("spanSize gates on this, so it must keep growing past the elision cap.
   // doctest:L93
   const many = Array.from({ length: 400 }, (_, i) => userEntry(`u${i}`, "y".repeat(200)));
   const rendered = renderEntries(many);
-  await t.checkText(rendered.length > MAX_RENDERED_CHARS * 2, "true");
+  // A 400 x 200-char transcript is far too large to write out; text past twice the cap exists.
+  t.check(rendered.slice(MAX_RENDERED_CHARS * 2), not(""));
 
   // doctest:L98
-  await t.checkText(
-    // No elision marker — nothing was dropped.
-    rendered.includes("chars of conversation elided"),
-    "false",
-  );
+  // No elision marker — nothing was dropped.
+  t.check(rendered, not(any(String).includes("chars of conversation elided")));
 });
 
 // ## `elideMiddle` keeps both ends
@@ -104,16 +103,7 @@ void test("Corrections and decisions show up at the start and end of long conver
 
   // doctest:L112
   const elided = elideMiddle("x".repeat(50) + "MIDDLE" + "y".repeat(50), 20);
-  await t.checkText(elided.startsWith("xxxxxxxxxx"), "true");
-
-  // doctest:L116
-  await t.checkText(elided.endsWith("yyyyyyyyyy"), "true");
-
-  // doctest:L119
-  await t.checkText(elided.includes("MIDDLE"), "false");
-
-  // doctest:L122
-  await t.checkText(elided.includes("(86 chars of conversation elided)"), "true");
+  t.check(elided, "xxxxxxxxxx\n\n… (86 chars of conversation elided) …\n\nyyyyyyyyyy");
 });
 
 // ## `renderSessionCompact` is exactly the composition of the two
@@ -150,27 +140,25 @@ void test("This is the regression anchor for the retrospective observer, whose b
   const shortPath = await seed("short", [raw("u1", "hello"), raw("u2", "again")]);
   let shortOut = "";
   const shortWarnings = await captureWarnings(async () => { shortOut = await renderSessionCompact(shortPath); });
-  await t.checkText(shortOut === elideMiddle(shortOut, MAX_RENDERED_CHARS), "true");
-
-  // doctest:L153
-  await t.checkText(shortOut.includes("elided"), "false");
+  t.checkText(shortOut, `**User** (2026-07-28T03:00:00Z)
+hello
+«blankline»
+---
+«blankline»
+**User** (2026-07-28T03:00:00Z)
+again`);
 
   // doctest:L156
-  await t.checkText(shortWarnings.length, "0");
+  t.check(shortWarnings, []);
 
   // doctest:L161
   const bigPath = await seed("big", Array.from({ length: 400 }, (_, i) => raw(`u${i}`, "z".repeat(200))));
   const bigOut = await renderSessionCompact(bigPath);
 
-  // doctest:L164
-  await t.checkText(
-    // Clamped — this is why the size gate cannot use it.
-    bigOut.length <= MAX_RENDERED_CHARS + 100,
-    "true",
-  );
+  // Clamped — this is why the size gate cannot use it.
+  t.check(bigOut.slice(MAX_RENDERED_CHARS + 101), "");
 
-  // doctest:L168
-  await t.checkText(bigOut.includes("chars of conversation elided"), "true");
+  t.check(bigOut, any(String).includes("chars of conversation elided"));
 
   // An entry-count cap is a separate limit from character elision. A transcript
   // past that cap still renders the same first page, but it now announces the
@@ -182,8 +170,8 @@ void test("This is the regression anchor for the retrospective observer, whose b
     Array.from({ length: MAX_SESSION_ENTRIES + 1 }, (_, i) => raw(`cap-${i}`, "x")),
   );
   const capWarnings = await captureWarnings(async () => { await renderSessionCompact(overCapPath); });
-  await t.checkText(capWarnings.length, "1");
+  t.check(capWarnings, [
+    `renderSessionCompact: transcript ${overCapPath} has ${String(MAX_SESSION_ENTRIES + 1)} entries; rendering the first ${String(MAX_SESSION_ENTRIES)}.`,
+  ]);
 
-  // doctest:L185
-  t.check(capWarnings[0]?.includes(`has ${String(MAX_SESSION_ENTRIES + 1)} entries; rendering the first ${String(MAX_SESSION_ENTRIES)}.`), true);
 });

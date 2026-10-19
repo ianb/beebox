@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
@@ -85,10 +86,20 @@ async function staleReferrers(): Promise<string[]> {
 // field.
 void test("loadLedger validates ledger.yaml with zod at the parse boundary.", async (t) => {
   // doctest:L88
-  await t.checkText(ledger.registry.length > 20, "true");
+  t.check(ledger.registry.map((e) => e.handle), [
+    "THE_LAWS", "THE_LAW_OF_QUOTING", "THE_LAW_OF_SAVING", "THE_LAW_OF_CARDS", "THE_LAW_OF_CHECKING", "DOCS", "SPEAKING",
+    "ABOUT_CARDS", "CARD_TYPES", "QUESTIONS", "TODOS", "DIRECTORY_LAYOUT", "BOX_CODE", "LANDMARKS", "INTAKE", "COMMANDS",
+    "REACHING_THE_BOXHOLDER", "SEARCHING", "PROCEDURES", "GUIDES", "SECRETS", "TOOLS", "PROVENANCE", "HISTORY", "RECORDING",
+    "PERSONALITY",
+  ]);
 
   // doctest:L91
-  t.check(Number.isInteger(ledger.budget.guide_words) && Number.isInteger(ledger.budget.always_loaded_words), true);
+  // The word budgets are tuned as the guide grows, so only their shape is fixed.
+  t.check(ledger.budget, {
+    guide_words: any(Number).int(),
+    always_loaded_words: any(Number).int(),
+    uncited_words_per_section: any(Number).int(),
+  });
 
   // doctest:L94
   t.check(thrown(() => parseLedger("budget: {}\nlint: {covered_sections: []}\nregistry: []\nrows: []\n")), "ZodError");
@@ -111,13 +122,14 @@ void test("A row's audits: names the knowledge audits that guard its rule.", asy
 // and `section()` accepts exactly the registry.
 void test("Every section heading of the rendered guide is a handle, in registry order, a...", async (t) => {
   // doctest:L116
-  await t.checkText(JSON.stringify(headings.map((h) => h.handle)) === JSON.stringify(ledger.registry.map((e) => e.handle)), "true");
+  t.check(headings.map((h) => h.handle), ledger.registry.map((e) => e.handle));
 
   // doctest:L119
-  await t.checkText(JSON.stringify(sectionHandles()) === JSON.stringify(ledger.registry.map((e) => e.handle)), "true");
+  t.check(sectionHandles(), ledger.registry.map((e) => e.handle));
 
   // doctest:L122
-  await t.checkText(ledger.registry.every((e) => HANDLE_PATTERN.test(e.handle) && section(e.handle) === e.handle), "true");
+  t.check(ledger.registry.filter((e) => !HANDLE_PATTERN.test(e.handle)).map((e) => e.handle), []);
+  t.check(ledger.registry.map((e) => section(e.handle)), ledger.registry.map((e) => e.handle));
 
   // doctest:L125
   t.check(xref("TODOS"), "**TODOS**");

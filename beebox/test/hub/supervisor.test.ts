@@ -19,6 +19,7 @@
 //    restarted) twice, and two children end up running for one box slot.
 
 import { test } from "tap";
+import { any, isoDate, uuid } from "agent-doctest/check";
 import "agent-doctest/tap";
 import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
 import type { ChildProc } from "../../src/hub/supervisor/child-spawn.js";
@@ -109,57 +110,19 @@ void test("`buildChildEnv` allowlists, never spreads", async (t) => {
   const env = buildChildEnv({ sourceEnv, hubExtras: { BBX_HUB_SECRET: "per-boot-hub-secret" } });
 
   // doctest:L108
-  t.check(
-    {
-      path: env.PATH,
-      home: env.HOME,
-      devSurfaces: env.BBX_DEV_SURFACES,
-      publicUrl: env.PUBLIC_URL,
-      authFile: env.BBX_AUTH_FILE,
-      diagKey: env.BBX_DIAG_API_KEY,
-      tokensFile: env.BBX_GOOGLE_TOKENS_FILE,
-      secretsFile: env.BBX_SECRETS_FILE,
-      hubSecret: env.BBX_HUB_SECRET,
-    },
-    {
-    path: "/usr/bin:/bin",
-    home: "/home/beebox",
-    devSurfaces: "1",
-    publicUrl: "https://bbx.example.org",
-    authFile: "/home/beebox/.bbx-auth.json",
-    diagKey: "diag-key-value",
-    tokensFile: "/home/beebox/.google-tokens.json",
-    secretsFile: "/home/beebox/.config/beebox/secrets.json",
-    hubSecret: "per-boot-hub-secret",
-  },
-  );
-
-  // doctest:L123
-  await t.checkText("BBX_SESSION_SECRET" in env, "false");
-
-  // doctest:L126
-  await t.checkText("NODE_ENV" in env, "false");
-
-  // doctest:L129
-  await t.checkText("GOOGLE_OAUTH_CLIENT_ID" in env, "false");
-
-  // doctest:L132
-  await t.checkText("GOOGLE_OAUTH_CLIENT_SECRET" in env, "false");
-
-  // doctest:L135
-  await t.checkText("THINKING_OPENAI_API_KEY" in env, "false");
-
-  // doctest:L138
-  await t.checkText("BBX_DEEPGRAM_API_KEY" in env, "false");
-
-  // doctest:L141
-  await t.checkText("GEMINI_KEY" in env, "false");
-
-  // doctest:L144
-  await t.checkText("SOME_UNRELATED_VAR" in env, "false");
-
-  // doctest:L147
-  await t.checkText("BBX_DEEPGRAM" in env, "false");
+  // Whole-env equality also proves every withheld name (BBX_SESSION_SECRET, NODE_ENV,
+  // the connector credentials, unlisted names) is absent.
+  t.check(env, {
+    PATH: "/usr/bin:/bin",
+    HOME: "/home/beebox",
+    BBX_DEV_SURFACES: "1",
+    PUBLIC_URL: "https://bbx.example.org",
+    BBX_AUTH_FILE: "/home/beebox/.bbx-auth.json",
+    BBX_DIAG_API_KEY: "diag-key-value",
+    BBX_GOOGLE_TOKENS_FILE: "/home/beebox/.google-tokens.json",
+    BBX_SECRETS_FILE: "/home/beebox/.config/beebox/secrets.json",
+    BBX_HUB_SECRET: "per-boot-hub-secret",
+  });
 
   // A source env with nothing set produces an env containing ONLY the hub
   // extras -- confirms the allowlist filters, it doesn't just fail to strip:
@@ -305,7 +268,7 @@ void test("A development reload exit restarts cleanly without consuming crash bu
   const acceptedReloadWork = await acquireBoxWork(reloadFixture.root, { reason: "test" });
   reloadChildren[0]?.fireMessage({ type: "reload-request" });
   while ((await boxMaintenanceStatus(reloadFixture.root)) === null) await new Promise((resolve) => setImmediate(resolve));
-  await t.checkText(reloadChildren.length, "1");
+  t.check(reloadChildren.map((child) => child.pid), [905000]);
 
   // doctest:L275
   await t.checkThrows(async () => (await acquireBoxWork(reloadFixture.root, { reason: "test" })), "BoxMaintenanceError");
@@ -316,11 +279,15 @@ void test("A development reload exit restarts cleanly without consuming crash bu
     await new Promise((resolve) => setImmediate(resolve));
   }
   const reloadStatus = reloadSupervisor.getStatuses()[0];
-  t.check({ status: reloadStatus?.status, pid: reloadStatus?.pid, restarts: reloadStatus?.restarts, failures: reloadStatus?.consecutiveFailures }, {
+  t.check(reloadStatus, {
+    slug: "fixture",
     status: "running",
     pid: 905001,
+    port: any(Number).positive(),
     restarts: 1,
-    failures: 0,
+    consecutiveFailures: 0,
+    lastError: undefined,
+    lastStart: { at: isoDate(), spawnMs: any(Number), readyMs: any(Number) },
   });
 
   // doctest:L286
@@ -338,11 +305,15 @@ void test("A development reload exit restarts cleanly without consuming crash bu
   // doctest:L299
   while (reloadSupervisor.getStatuses()[0]?.status !== "unhealthy" || (await boxMaintenanceStatus(reloadFixture.root))?.owner !== null) await new Promise((resolve) => setImmediate(resolve));
   const failedReload = await boxMaintenanceStatus(reloadFixture.root);
-  await t.checkText(
-    // The record says changes began and did not complete: exclusive, unowned.
-    JSON.stringify({ phase: failedReload?.phase, owner: failedReload?.owner }),
-    "{\"phase\":\"exclusive\",\"owner\":null}",
-  );
+  // The record says changes began and did not complete: exclusive, unowned.
+  t.check(failedReload, {
+    id: uuid(),
+    reason: "development reload",
+    phase: "exclusive",
+    since: isoDate(),
+    owner: null,
+    step: undefined,
+  });
 
   // doctest:L305
   const afterFailedReload = await acquireBoxWork(reloadFixture.root, { reason: "test" });
@@ -404,7 +375,7 @@ void test("Stopping after the reload acknowledgment leaves a stopped box open", 
   t.check(stopReloadSupervisor.getStatuses()[0]?.status, "stopped");
 
   // doctest:L353
-  await t.checkText(stopReloadChildren.length, "1");
+  t.check(stopReloadChildren.map((child) => child.pid), [907000]);
 
   // doctest:L356
   const afterStopWork = await acquireBoxWork(stopReloadFixture.root, { reason: "test" });
@@ -463,7 +434,7 @@ void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on 
   t.check(lazySupervisor.getStatuses()[0]?.status, "stopped");
 
   // doctest:L409
-  await t.checkText(lazyChildren.length, "0");
+  t.check(lazyChildren.map((child) => child.pid), []);
 
   // doctest:L412
   t.check(lazySupervisor.get("fixture"), undefined);
@@ -478,7 +449,7 @@ void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on 
   t.check(lazySupervisor.getStatuses()[0]?.status, "running");
 
   // doctest:L426
-  await t.checkText(lazyChildren.length, "1");
+  t.check(lazyChildren.map((child) => child.pid), [910000]);
 
   // After `idleMs` with no further `ensureRunning` calls, the box is SIGTERM'd
   // and reported "stopped" again -- `getStatuses()`/`/healthz` surface it, and a
@@ -496,7 +467,7 @@ void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on 
   t.check(revived?.slug, "fixture");
 
   // doctest:L446
-  await t.checkText(lazyChildren.length, "2");
+  t.check(lazyChildren.map((child) => child.pid), [910000, 910001]);
 
   // doctest:L449
   t.check(lazySupervisor.getStatuses()[0]?.status, "running");
@@ -504,10 +475,10 @@ void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on 
   // An unconfigured slug's `ensureRunning` just resolves `undefined` -- no spawn attempt:
 
   // doctest:L456
-  await t.checkText((await lazySupervisor.ensureRunning("nope")) === undefined, "true");
+  t.check(await lazySupervisor.ensureRunning("nope"), undefined);
 
   // doctest:L459
-  await t.checkText(lazyChildren.length, "2");
+  t.check(lazyChildren.map((child) => child.pid), [910000, 910001]);
 });
 
 // ## `keepRecent`: the most-recently-used running box is exempt from idle-stop, and is displaced when another box becomes more recent
@@ -692,7 +663,7 @@ void test("`keepRecent`: recency persists across a hub restart — `startAll` pr
   ]);
 
   // doctest:L622
-  await t.checkText(second.children.length, "1");
+  t.check(second.children.map((child) => child.pid), [930000]);
 });
 
 // ## Chat schedules keep a lazy box running, and pre-start it at boot
@@ -821,7 +792,7 @@ void test("chat schedules pre-start a lazy box at boot", async (t) => {
   t.check(bootSupervisor.getStatuses()[0]?.status, "running");
 
   // doctest:L748
-  await t.checkText(bootChildren.length, "1");
+  t.check(bootChildren.map((child) => child.pid), [950000]);
 
   // A box with no schedule file is left stopped by the same `startAll` (the scan
   // only starts boxes that actually hold pending schedules):
@@ -855,5 +826,5 @@ void test("chat schedules pre-start a lazy box at boot", async (t) => {
   t.check(idleSupervisor.getStatuses()[0]?.status, "stopped");
 
   // doctest:L783
-  await t.checkText(idleChildren.length, "0");
+  t.check(idleChildren.map((child) => child.pid), []);
 });

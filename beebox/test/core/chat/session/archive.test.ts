@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
@@ -69,23 +70,18 @@ void test("A dead husk is filed away, and leaves every list", async (t) => {
   // feed the chat UI no longer see it, dead list included.
 
   // doctest:L57
-  t.check(
-    {
-      web: (await listChatHusks(box.root)).map((h) => h.path),
-      archive: (await listChatHusksUnder(box.root, "_content/chat/archive")).map((h) => h.path),
-      dead: (await loadDeadHusks(box.root)).map((h) => h.sessionId),
-    },
-    {
+  t.check({
+    web: await listChatHusks(box.root),
+    archive: await listChatHusksUnder(box.root, "_content/chat/archive"),
+    dead: await loadDeadHusks(box.root),
+  }, {
     web: [],
-    archive: [
-      "_content/chat/archive/2026-08-19_22222222.chat.card",
-    ],
+    archive: [{ path: "_content/chat/archive/2026-08-19_22222222.chat.card", session: DEAD, title: "Sourdough attempt", origin: here.id, originName: here.name }],
     dead: [],
-  },
-  );
+  });
 
   // doctest:L64
-  await t.checkText((await box.read("_content/chat/archive/2026-08-19_22222222.chat.card")).includes("Notes from the chat."), "true");
+  t.checkText(await box.read("_content/chat/archive/2026-08-19_22222222.chat.card"), `---\nsession: ${DEAD}\ntitle: Sourdough attempt\norigin: ${here.id}\norigin-name: ${here.name}\n---\n\nNotes from the chat.`);
 
   // ## Archiving twice is the same as archiving once
   //
@@ -135,9 +131,16 @@ void test("Refusal is a result, not an exception:", async (t) => {
   });
 
   // doctest:L104
-  t.check((await listSessionEntries(box.root)).map((e) => e.sessionId), [
-    "11111111-1111-4111-8111-111111111111",
-  ]);
+  t.check(await listSessionEntries(box.root), [{
+    sessionId: LIVE,
+    engine: "claude",
+    contextDir: undefined,
+    mtime: isoDate(),
+    huskPath: "_content/chat/web/2026-08-20_11111111.chat.card",
+    logPath,
+    title: undefined,
+    done: false,
+  }]);
 
   // A session with no card at all is neither archived nor refused.
 
@@ -174,12 +177,16 @@ void test("A chat is resumable from the moment its id is assigned, which is befo
   const registry = idleRegistry(box);
 
   // doctest:L137
-  await t.checkText(
-    // Nothing holds the session yet: with no transcript either, the husk is dead
-    // and archiving is allowed.
-    JSON.stringify((await loadDeadHusks(box.root)).map((h) => h.sessionId)),
-    "[\"11111111-1111-4111-8111-111111111111\"]",
-  );
+  // Nothing holds the session yet: with no transcript either, the husk is dead
+  // and archiving is allowed.
+  t.check(await loadDeadHusks(box.root), [{
+    sessionId: LIVE,
+    huskPath: "_content/chat/web/2026-08-26_11111111.chat.card",
+    contextDir: undefined,
+    title: undefined,
+    firstMessage: undefined,
+    transcript: { state: "expired" },
+  }]);
 
   // doctest:L144
   // The chat page opens it: the registry now has the session, and the same husk
@@ -195,7 +202,5 @@ void test("A chat is resumable from the moment its id is assigned, which is befo
   });
 
   // doctest:L151
-  t.check((await listChatHusks(box.root)).map((h) => h.path), [
-    "_content/chat/web/2026-08-26_11111111.chat.card",
-  ]);
+  t.check(await listChatHusks(box.root), [{ path: "_content/chat/web/2026-08-26_11111111.chat.card", session: LIVE, origin: here.id }]);
 });

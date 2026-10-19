@@ -72,21 +72,20 @@ function render(element: React.ReactElement) {
 // nested `filename:`/`metadata:` entries included, and a missing entry is `null`
 // rather than a crash in a renderer.
 void test("Everything the header shows comes from one tolerant read of the frontmatter —...", async (t) => {
-  // doctest:L76
-  const fields = readCard(ANALYZED);
-  t.check([fields.title, fields.author, String(fields.pages), fields.format].join(" | "), "Employee Handbook | Wren Aldana | 12 | pdf");
-
-  // doctest:L80
-  t.check([fields.originalRef, fields.originalName, fields.channel, fields.acquired].join(" | "), "attach/source.pdf | handbook-2026.pdf | scanner | 2026-08-20T14:00:00Z");
-
-  // doctest:L83
-  t.check([String(fields.error), String(fields.unusable), fields.description].join(" | "), "null | false | The 2026 handbook, scanned.");
-
-  // The `docling:` ref is read too — it is what the view needs to label page
-  // boundaries in the extracted text (`lib/docling-match.ts`):
-
-  // doctest:L91
-  t.check(fields.doclingRef, "attach/docling.json.gz");
+  t.check(readCard(ANALYZED), {
+    format: "pdf",
+    originalRef: "attach/source.pdf",
+    doclingRef: "attach/docling.json.gz",
+    originalName: "handbook-2026.pdf",
+    acquired: "2026-08-20T14:00:00Z",
+    channel: "scanner",
+    title: "Employee Handbook",
+    author: "Wren Aldana",
+    pages: 12,
+    error: null,
+    unusable: false,
+    description: "The 2026 handbook, scanned.",
+  });
 });
 
 // A card with nothing optional filled in reads as nulls, not as `undefined`
@@ -102,10 +101,20 @@ filename:
     at: 2026-08-20T14:00:00Z
 ---
 `);
-  t.check([String(bare.title), String(bare.author), String(bare.pages), String(bare.description)].join(" "), "null null null null");
-
-  // doctest:L111
-  await t.checkText(String(bare.doclingRef), "null");
+  t.check(bare, {
+    format: "pdf",
+    originalRef: "attach/source.pdf",
+    doclingRef: null,
+    originalName: null,
+    acquired: "2026-08-20T14:00:00Z",
+    channel: "scanner",
+    title: null,
+    author: null,
+    pages: null,
+    error: null,
+    unusable: false,
+    description: null,
+  });
 });
 
 // ## Page renders come out of the attach listing
@@ -127,31 +136,39 @@ void test("Page images aren't referenced from the body — only the extractor's 
     ],
   };
   const pages = pageRendersFrom(listing.files, (p) => `/test/api/image/${p}`);
-  t.check(pages.map((p) => p.page).join(","), "1,2,10,1000");
+  t.check(pages, [
+    {
+      page: 1,
+      src: "/test/api/image/inbox/Handbook.attach/page-001.avif",
+    },
+    {
+      page: 2,
+      src: "/test/api/image/inbox/Handbook.attach/page-002.webp",
+    },
+    {
+      page: 10,
+      src: "/test/api/image/inbox/Handbook.attach/page-010.avif",
+    },
+    {
+      page: 1000,
+      src: "/test/api/image/inbox/Handbook.attach/page-1000.webp",
+    },
+  ]);
 
-  // doctest:L137
-  t.check(pages[0]?.src, "/test/api/image/inbox/Handbook.attach/page-001.avif");
-
-  // doctest:L140
-  t.check(pages[1]?.src, "/test/api/image/inbox/Handbook.attach/page-002.webp");
-
-  // doctest:L143
-  await t.checkText(
+  t.check(
     pageRendersFrom([
       { name: "page-01.webp", relativePath: "page-01.webp" },
       { name: "page-003.png", relativePath: "page-003.png" },
-    ], (p) => p).length,
-    "0",
+    ], (p) => p),
+    [],
   );
 });
 
 // A card whose extraction never produced page renders yields an empty list, and
 // the strip renders nothing at all rather than an empty scroller:
 void test("A card whose extraction never produced page renders yields an empty list, and...", async (t) => {
-  // doctest:L154
-  await t.checkText(pageRendersFrom([{ name: "source.pdf", relativePath: "inbox/Handbook.attach/source.pdf" }], (p) => p).length, "0");
+  t.check(pageRendersFrom([{ name: "source.pdf", relativePath: "inbox/Handbook.attach/source.pdf" }], (p) => p), []);
 
-  // doctest:L157
   t.check(render(React.createElement(PdfPageStrip, { pages: [], activePage: null })), "");
 });
 
@@ -206,7 +223,7 @@ void test("A card that never claimed to have pages — metadata.pages absent, or
 // ## `?page=3` highlights and anchors that page
 void test("`?page=3` highlights and anchors that page", async (t) => {
   // doctest:L214
-  t.check([String(requestedPage({ page: "3" })), String(requestedPage({})), String(requestedPage({ page: "later" }))].join(" "), "3 null null");
+  t.check([requestedPage({ page: "3" }), requestedPage({}), requestedPage({ page: "later" })], [3, null, null]);
 });
 
 // The requested page gets a ring; the others don't. Each thumbnail also carries a
@@ -217,17 +234,7 @@ void test("The requested page gets a ring; the others don't.", async (t) => {
   const html = render(React.createElement(PdfPageStrip, { pages, activePage: 3 }));
 
   // doctest:L225
-  t.check(html.split("ring-2 ring-accent").length - 1, 1);
-
-  // doctest:L228
-  t.check(/id="page-3" data-page="3" class="[^"]*ring-2 ring-accent"/.test(html), true);
-
-  // doctest:L231
-  t.check(
-    // Every page is present, alt-texted, and captioned.
-    [html.includes('alt="Page 1"'), html.includes('alt="Page 3"'), html.includes("Page 2</span>")].join(" "),
-    "true true true",
-  );
+  t.check(html, "<div class=\"flex gap-3 overflow-x-auto pb-2\"><figure id=\"page-1\" data-page=\"1\" class=\"flex-shrink-0 flex flex-col items-center gap-1 p-1 rounded\"><button type=\"button\" aria-label=\"Page 1 (click to zoom)\" class=\"block border-0 bg-transparent p-0 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-accent\"><img src=\"/test/api/image/page-001.avif\" alt=\"Page 1\" loading=\"lazy\" class=\"max-w-xs max-h-64 rounded border border-warm-300 m-0\" data-image-src=\"/test/api/image/page-001.avif\" data-image-alt=\"Page 1\"/></button><figcaption><span class=\"text-warm-500 text-xs\">Page 1</span></figcaption></figure><figure id=\"page-2\" data-page=\"2\" class=\"flex-shrink-0 flex flex-col items-center gap-1 p-1 rounded\"><button type=\"button\" aria-label=\"Page 2 (click to zoom)\" class=\"block border-0 bg-transparent p-0 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-accent\"><img src=\"/test/api/image/page-002.avif\" alt=\"Page 2\" loading=\"lazy\" class=\"max-w-xs max-h-64 rounded border border-warm-300 m-0\" data-image-src=\"/test/api/image/page-002.avif\" data-image-alt=\"Page 2\"/></button><figcaption><span class=\"text-warm-500 text-xs\">Page 2</span></figcaption></figure><figure id=\"page-3\" data-page=\"3\" class=\"flex-shrink-0 flex flex-col items-center gap-1 p-1 rounded ring-2 ring-accent\"><button type=\"button\" aria-label=\"Page 3 (click to zoom)\" class=\"block border-0 bg-transparent p-0 cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-accent\"><img src=\"/test/api/image/page-003.avif\" alt=\"Page 3\" loading=\"lazy\" class=\"max-w-xs max-h-64 rounded border border-warm-300 m-0\" data-image-src=\"/test/api/image/page-003.avif\" data-image-alt=\"Page 3\"/></button><figcaption><span class=\"text-warm-500 text-xs\">Page 3</span></figcaption></figure></div>");
 });
 
 // ## Status notices
@@ -256,13 +263,7 @@ error: docling exited 1 — no text layer found
   }));
 
   // doctest:L261
-  await t.checkText(html.includes("Text extraction failed"), "true");
-
-  // doctest:L264
-  await t.checkText(html.includes("docling exited 1 — no text layer found"), "true");
-
-  // doctest:L267
-  await t.checkText(html.includes(`bbx pdf reanalyze ${CARD_PATH}`), "true");
+  t.check(html, "<div class=\"p-3 bg-warning-50 border border-warning-100 rounded\" role=\"status\"><p class=\"text-sm font-medium text-warning-dark\">Text extraction failed — the original file is still attached.</p><div class=\"mt-2\"><pre class=\"font-mono whitespace-pre-wrap break-words text-sm text-warm-800\">docling exited 1 — no text layer found</pre></div><p class=\"text-sm mt-2 text-warning-dark\">Re-run it with <code>bbx pdf reanalyze inbox/Handbook.pdf.card</code>.</p></div>");
 });
 
 // `unusable: true` is a judgement someone made, and it outranks a failed
@@ -277,13 +278,8 @@ void test("unusable:", async (t) => {
   }
 
   // doctest:L282
-  await t.checkText(notice({ extracted: false, unusable: true, error: "docling exited 1", hasBody: false }).includes("marked unusable"), "true");
-
-  // doctest:L285
-  await t.checkText(notice({ extracted: false, unusable: true, error: "docling exited 1", hasBody: false }).includes("Text extraction failed"), "false");
-
-  // doctest:L288
-  await t.checkText(notice({ extracted: true, hasBody: false }).includes("No readable text"), "true");
+  t.check(notice({ extracted: false, unusable: true, error: "docling exited 1", hasBody: false }), "<div class=\"p-3 bg-warm-100 border border-warm-200 rounded\" role=\"status\"><p class=\"text-warm-600 text-sm\">This document was marked unusable (corrupt, junk, or an empty scan).</p></div>");
+  t.check(notice({ extracted: true, hasBody: false }), "<div class=\"p-3 bg-warm-100 border border-warm-200 rounded\" role=\"status\"><p class=\"text-warm-600 text-sm\">No readable text in this document — see the original or the page renders.</p></div>");
 
   // doctest:L291
   t.check(notice({ extracted: true, hasBody: true }), "");

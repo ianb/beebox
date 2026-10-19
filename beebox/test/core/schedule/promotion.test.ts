@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate } from "agent-doctest/check";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import { loadScriptState } from "../../../src/core/schedule/state.js";
 import { readRecent } from "../../../src/core/notification/log.js";
@@ -37,12 +38,18 @@ function card({ requested, requires }: { requested: boolean; requires: boolean }
   ].join("\n");
 }
 
-/** Each logged notification: loudness, title, target, then the body. */
+/** Each logged notification: loudness, title, target, and body. */
 async function sent(box: TmpBox) {
   return (await readRecent(box.root, { days: 36500 }))
-    .map(({ intent }) => `${intent.loudness} | ${intent.title} | ${intent.target}\n${intent.body}`)
-    .join("\n") || "nothing sent";
+    .map(({ intent }) => ({ loudness: intent.loudness, title: intent.title, target: intent.target, body: intent.body }));
 }
+
+const FIELD_TRIP_NOTICE = {
+  loudness: "loud" as const,
+  title: "Your field trip watch could not run",
+  target: "admin:google-services",
+  body: "It needs gmail. Google is not connected or its access expired; open Admin › Google Services.",
+};
 
 /** A forced tick of one card: the schedule gate is bypassed, the connector gate is not. */
 async function tick(box: TmpBox, script: string) {
@@ -67,22 +74,35 @@ void test("A missing Google connector promotes once, with the Admin section as t
   t.check(await tick(box, "watch"), "skipped");
 
   // doctest:L62
-  await t.checkText(await sent(box), `loud | Your field trip watch could not run | admin:google-services
-It needs gmail. Google is not connected or its access expired; open Admin › Google Services.`);
+  t.check(await sent(box), [FIELD_TRIP_NOTICE]);
 
   // doctest:L67
   const state = await loadScriptState(box.root, "watch");
   invariant(state.skipped, "skipped episode is recorded");
-  t.check(`${state.skipped.reason} | ${state.alertedFor}`, "missing-connectors | skipped:missing-connectors");
+  t.check(state, {
+    lastRun: null,
+    lastResult: null,
+    lastError: null,
+    lastDurationMs: null,
+    lastSuccess: null,
+    consecutiveFailures: 0,
+    alertedAt: isoDate(),
+    alertedFor: "skipped:missing-connectors",
+    skipped: { reason: "missing-connectors", since: isoDate() },
+    runCount: 0,
+    lastCommit: null,
+    carry: null,
+    lastDeferReason: null,
+  });
 
   // Later ticks in the same episode keep its `since` and send nothing:
 
   // doctest:L76
   await tick(box, "watch");
-  await t.checkText((await loadScriptState(box.root, "watch")).skipped?.since === state.skipped.since, "true");
+  t.check((await loadScriptState(box.root, "watch")).skipped, state.skipped);
 
   // doctest:L80
-  await t.checkText((await readRecent(box.root, { days: 36500 })).length, "1");
+  t.check(await sent(box), [FIELD_TRIP_NOTICE]);
 
   // A run clears both the episode and the latch, so the next episode promotes
   // again:
@@ -93,12 +113,27 @@ It needs gmail. Google is not connected or its access expired; open Admin › Go
 
   // doctest:L92
   const cleared = await loadScriptState(box.root, "watch");
-  t.check(`${cleared.skipped} | ${cleared.alertedFor}`, "null | null");
+  t.check(cleared, {
+    lastRun: isoDate(),
+    lastResult: "success",
+    lastError: null,
+    lastDurationMs: any(Number).between(0, Infinity),
+    lastSuccess: isoDate(),
+    consecutiveFailures: 0,
+    alertedAt: null,
+    alertedFor: null,
+    skipped: null,
+    runCount: 1,
+    lastCommit: any(String).matches(/^[\da-f]{40}$/),
+    carry: null,
+    lastDeferReason: null,
+    recentRuns: [{ ts: isoDate(), durationMs: any(Number).between(0, Infinity) }],
+  });
 
   // doctest:L96
   await box.write("_config/schedules/watch.scheduled-script.card", card({ requested: true, requires: true }));
   await tick(box, "watch");
-  await t.checkText((await readRecent(box.root, { days: 36500 })).length, "2");
+  t.check(await sent(box), [FIELD_TRIP_NOTICE, FIELD_TRIP_NOTICE]);
 });
 
 // ## A schedule the system set up never promotes
@@ -121,10 +156,10 @@ void test("The episode is still recorded; nothing is sent.", async (t) => {
   t.check(await tick(box, "sync"), "skipped");
 
   // doctest:L118
-  t.check((await loadScriptState(box.root, "sync")).skipped?.reason, "missing-connectors");
+  t.check((await loadScriptState(box.root, "sync")).skipped, { reason: "missing-connectors", since: isoDate() });
 
   // doctest:L121
-  t.check(await sent(box), "nothing sent");
+  t.check(await sent(box), []);
 });
 
 // ## A run deferred for want of the Jev key promotes once
@@ -152,8 +187,14 @@ runs: printf '{"reason":"unconfigured"}' > "$BBX_DEFER_FILE"; exit 75
   await tick(box, "judge");
   await tick(box, "judge");
   // doctest:L144
-  await t.checkText(await sent(box), `loud | Your judge could not run | dashboard
-Its judgment step needs Jev, and the box has no OpenRouter key for Jev. Grant the "openrouter" secret to this box.`);
+  t.check(await sent(box), [
+    {
+      loudness: "loud",
+      title: "Your judge could not run",
+      target: "dashboard",
+      body: 'Its judgment step needs Jev, and the box has no OpenRouter key for Jev. Grant the "openrouter" secret to this box.',
+    },
+  ]);
 
   // doctest:L151
   t.check((await loadScriptState(box.root, "judge")).alertedFor, "skipped:unconfigured");
@@ -185,9 +226,15 @@ void test("The card itself can run; the tick checks the connectors it requires j
   const ctx = { boxRoot: box.root, scriptName: "watch", parsed, state, now: new Date("2026-09-21T16:00:00Z") };
   await checkRequiredConnectors(ctx);
   await checkRequiredConnectors(ctx);
-  await t.checkText(await sent(box), `loud | Your watch could not run | admin:google-services
-It depends on gmail. gmail has failed every sync on its last 2 days of running, since 2026-09-20: invalid_grant
-Reconnect Google in Admin, in the Google Services section.`);
+  t.check(await sent(box), [
+    {
+      loudness: "loud",
+      title: "Your watch could not run",
+      target: "admin:google-services",
+      body: `It depends on gmail. gmail has failed every sync on its last 2 days of running, since 2026-09-20: invalid_grant
+Reconnect Google in Admin, in the Google Services section.`,
+    },
+  ]);
 
   // When the episode ends, the latch clears so the next episode is new:
 

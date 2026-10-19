@@ -41,32 +41,27 @@ void test("A large unlisted file sitting in an attach scope is invisible to this
   // doctest:L35
   const box = await makeTmpBox({ git: true });
   await put({ root: box.root, relPath: "notes.attach/export.parquet", size: BIG });
-  await t.checkText((await findStagedUnlistedBinaries(box.root)).length, "0");
+  t.check(await findStagedUnlistedBinaries(box.root), []);
 
   // Staging it makes it a blocking finding:
 
   // doctest:L44
   execSync("git add -A", { cwd: box.root });
   const found = await findStagedUnlistedBinaries(box.root);
-  t.check(found.map((f) => `${f.relPath} .${f.extension} allowlisted=${String(f.allowlisted)}`), [
-    "notes.attach/export.parquet .parquet allowlisted=false",
-  ]);
+  t.check(found, [{ relPath: "notes.attach/export.parquet", size: BIG, extension: "parquet", allowlisted: false }]);
 
   // The report names both remedies, since which one is right is a judgment the
   // reader has to make:
 
   // doctest:L57
   const report = describeStagedUnlistedBinaries(found);
-  t.check(
-    [
-      report.includes("Either add the extension to ASSET_EXTENSIONS"),
-      report.includes("or confirm the file belongs in git"),
-    ],
-    [
-    true,
-    true,
-  ],
-  );
+  t.checkText(report, `1 staged file(s) in attach scopes have an extension git-annex is not
+configured to annex, so their bytes would be committed into git history:
+  notes.attach/export.parquet (1024 KB, .parquet)
+
+Either add the extension to ASSET_EXTENSIONS (src/lib/asset-extensions.ts) so it
+is annexed, or confirm the file belongs in git. This is the check that would have
+caught 41 MB .frozen pages before they entered history.`);
 
   // Small files, control files (a card, a manifest), and files outside any attach
   // scope are never flagged — attach scopes legitimately hold committed text, and
@@ -124,24 +119,16 @@ void test("Sizing the staged blob rather than the working file catches a case th
   await put({ root: box.root, relPath: "trip.attach/beach.jpg", size: BIG });
   execSync("git add -A", { cwd: box.root });
   const found = await findStagedUnlistedBinaries(box.root);
-  t.check(found.map((f) => `${f.relPath} allowlisted=${String(f.allowlisted)}`), [
-    "trip.attach/beach.jpg allowlisted=true",
-  ]);
+  t.check(found, [{ relPath: "trip.attach/beach.jpg", size: BIG, extension: "jpg", allowlisted: true }]);
 
   // It is reported as the misconfiguration it is, not as a missing allowlist entry:
 
   // doctest:L136
   const report = describeStagedUnlistedBinaries(found);
-  t.check(
-    [
-      report.includes("staged as RAW BYTES"),
-      report.includes("bbx doctor annex"),
-      report.includes("Either add the extension to ASSET_EXTENSIONS"),
-    ],
-    [
-    true,
-    true,
-    false,
-  ],
-  );
+  t.checkText(report, `1 staged file(s) have an annexed extension but were staged as RAW BYTES,
+not as an annex pointer — git-annex is not filtering them:
+  trip.attach/beach.jpg (1024 KB, .jpg)
+
+That is a misconfiguration, not a missing allowlist entry. Run \`bbx doctor annex\`
+to restore the annex filter, then unstage and re-add the file(s).`);
 });

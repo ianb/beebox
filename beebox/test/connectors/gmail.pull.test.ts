@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { initBox } from "../../src/core/box/structure/core.js";
@@ -62,13 +63,12 @@ void test("Gmail is enabled for the box but nothing says what to collect.", asyn
   await initBox(box.root);
   box.commitAll("initialize box");
   const result = await createGmailConnector(box.root, createFakeGoogleGmail()).sync();
-  t.check({ success: result.success, created: result.created.length }, {
+  t.check(result, {
     success: false,
-    created: 0,
+    created: [],
+    updated: [],
+    error: "Gmail sync failed: Invalid _config/connectors/gmail.json: file not found — Gmail is enabled for this box but has no configuration",
   });
-
-  // doctest:L61
-  t.check(result.error?.includes("no configuration"), true);
 });
 
 // ## An empty config means no automatic cards
@@ -93,17 +93,17 @@ void test("An explicit {} is the way to say \"connected, nothing automatic\".", 
     messages: [message({ id: "old", subject: "Existing mail" })],
   });
   const connector = createGmailConnector(box.root, gmail);
-  await t.checkText((await connector.sync()).created.length, "0");
+  t.check(await connector.sync(), { success: true, created: [], updated: [], procedures: [] });
 
   // doctest:L87
   gmail.addMessage(message({ id: "new", subject: "New mail" }));
-  await t.checkText((await connector.sync()).created.length, "0");
+  t.check(await connector.sync(), { success: true, created: [], updated: [], procedures: [] });
 
   // doctest:L91
-  await t.checkText((await findTrackedGmailThreads(box.root)).size, "0");
+  t.check(await findTrackedGmailThreads(box.root), new Map());
 
   // doctest:L94
-  await t.checkText((await transientState(box.root)).historyId, "2");
+  t.check(await transientState(box.root), { historyId: "2" });
 });
 
 // ## Procedure rules return post-sync requests
@@ -139,18 +139,41 @@ void test("A procedure action records a bounded summary and returns one coalesce
   await connector.sync();
   gmail.addMessage(message({ id: "review", subject: "Review", labelIds: ["Label_7"] }));
   const result = await connector.sync();
-  await t.checkText(result.created.length, "0");
-
-  // doctest:L131
-  t.check(result.procedures, [
-    {
-      procedureRef: "_config/procedures/review-mail.procedure.card",
-      directive: "Gmail rule review-mail has new matching mail. Inspect with: bbx connector gmail pending review-mail",
-    },
-  ]);
+  t.check(result, {
+    success: true,
+    created: [],
+    updated: [],
+    procedures: [
+      {
+        procedureRef: "_config/procedures/review-mail.procedure.card",
+        directive: "Gmail rule review-mail has new matching mail. Inspect with: bbx connector gmail pending review-mail",
+      },
+    ],
+  });
 
   // doctest:L134
-  t.check((await transientState(box.root)).rules["review-mail"].pending[0].threadId, "t-review");
+  t.check(await transientState(box.root), {
+    historyId: "2",
+    rules: {
+      "review-mail": {
+        baselineAt: isoDate(),
+        baselineMatches: 0,
+        pending: [
+          {
+            messageId: "review",
+            threadId: "t-review",
+            from: "sender@example.com",
+            subject: "Review",
+            date: "2026-08-01T15:00:00.000Z",
+            snippet: "Snippet review",
+            labels: ["callback"],
+            discoveredAt: isoDate(),
+          },
+        ],
+        additionalMatches: 0,
+      },
+    },
+  });
 });
 
 // ## Legacy transient state migrates on sync
@@ -176,7 +199,7 @@ void test("The obsolete GC timestamp is ignored and removed on the next successf
   box.commitAll("initialize box");
   const gmail = createFakeGoogleGmail();
   const result = await createGmailConnector(box.root, gmail).sync();
-  t.check(result.success, true);
+  t.check(result, { success: true, created: [], updated: [], procedures: [] });
 
   // doctest:L161
   t.check(await transientState(box.root), {
@@ -225,18 +248,27 @@ void test("Once explicitly tracked, a thread is refreshed on regular connector s
   gmail.addMessage(message({ id: "m2", threadId: "tracked", subject: "Working thread" }));
   gmail.addMessage(message({ id: "other", threadId: "untracked", subject: "Other thread" }));
   const result = await connector.sync();
-  t.check({ created: result.created.length, updated: result.updated.length }, {
-    created: 2,
-    updated: 1,
+  t.check(result, {
+    success: true,
+    created: [
+      "_content/inbox/email/thread-Working_thread-tracked.attach/msg-002.email-message.card",
+      "_content/inbox/email/thread-Working_thread-tracked.attach/msg-002.attach/msg-002.body.txt",
+    ],
+    updated: ["_content/inbox/email/thread-Working_thread-tracked.email-thread.card"],
+    procedures: [],
   });
 
   // doctest:L206
   t.check(fetchedThreads, 1);
 
   // doctest:L209
-  t.check([...await findTrackedGmailThreads(box.root)].map(([id]) => id), [
-    "tracked",
-  ]);
+  t.check(await findTrackedGmailThreads(box.root), new Map([
+    ["tracked", {
+      threadId: "tracked",
+      absPath: join(box.root, "_content/inbox/email/thread-Working_thread-tracked.email-thread.card"),
+      relPath: "_content/inbox/email/thread-Working_thread-tracked.email-thread.card",
+    }],
+  ]));
 });
 
 // ## Automatic rules baseline and cap thread creation
@@ -268,26 +300,63 @@ void test("Enabling a rule reports its existing match count without importing ba
     messages: [message({ id: "old", subject: "Old labeled", labelIds: ["Label_7"] })],
   });
   const connector = createGmailConnector(box.root, gmail);
-  await t.checkText((await connector.sync()).created.length, "0");
+  t.check(await connector.sync(), { success: true, created: [], updated: [], procedures: [] });
 
   // doctest:L242
-  t.check((await transientState(box.root)).rules["agent-label"].baselineMatches, 1);
+  t.check(await transientState(box.root), {
+    rules: { "agent-label": { baselineAt: isoDate(), baselineMatches: 1 } },
+    historyId: "1",
+  });
 
   // doctest:L245
   gmail.addMessage(message({ id: "first", subject: "First new", labelIds: ["Label_7"] }));
   gmail.addMessage(message({ id: "second", subject: "Second new", labelIds: ["Label_7"] }));
   const result = await connector.sync();
-  await t.checkText(result.created.length, "3");
+  t.check(result, {
+    success: true,
+    created: [
+      "_content/inbox/email/thread-First_new-t-first.attach/msg-001.email-message.card",
+      "_content/inbox/email/thread-First_new-t-first.attach/msg-001.attach/msg-001.body.txt",
+      "_content/inbox/email/thread-First_new-t-first.email-thread.card",
+    ],
+    updated: [],
+    procedures: [],
+  });
 
   // doctest:L251
-  await t.checkText((await findTrackedGmailThreads(box.root)).size, "1");
+  t.check(await findTrackedGmailThreads(box.root), new Map([
+    ["t-first", {
+      threadId: "t-first",
+      absPath: join(box.root, "_content/inbox/email/thread-First_new-t-first.email-thread.card"),
+      relPath: "_content/inbox/email/thread-First_new-t-first.email-thread.card",
+    }],
+  ]));
 
   // doctest:L254
   const state = await transientState(box.root);
-  t.check(state.rules["agent-label"].pending[0].threadId, "t-second");
-
-  // doctest:L258
-  t.check(state.rules["agent-label"].additionalMatches, 0);
+  t.check(state, {
+    historyId: "3",
+    rules: {
+      "agent-label": {
+        baselineAt: isoDate(),
+        baselineMatches: 1,
+        automaticTrackingEvents: [isoDate()],
+        pending: [
+          {
+            messageId: "second",
+            threadId: "t-second",
+            from: "sender@example.com",
+            subject: "Second new",
+            date: "2026-08-01T15:00:00.000Z",
+            snippet: "Snippet second",
+            labels: ["callback"],
+            discoveredAt: isoDate(),
+          },
+        ],
+        additionalMatches: 0,
+      },
+    },
+  });
 });
 
 // ## Expired history never causes backlog materialization
@@ -316,10 +385,13 @@ void test("An expired cursor establishes a new checkpoint, leaves tracked cards 
   gmail.expireHistory();
   gmail.addMessage(message({ id: "gap", subject: "During gap", labelIds: ["Label_7"] }));
   const result = await connector.sync();
-  await t.checkText(result.created.length, "0");
+  t.check(result, { success: true, created: [], updated: [], procedures: [] });
 
   // doctest:L288
-  t.check((await transientState(box.root)).rules["shorthand"].baselineMatches, 2);
+  t.check(await transientState(box.root), {
+    historyId: "3",
+    rules: { shorthand: { baselineAt: isoDate(), baselineMatches: 2 } },
+  });
 });
 
 // ## Deleting a card during refresh does not retrack it
@@ -359,11 +431,8 @@ void test("Only an explicit rule selection may create a card.", async (t) => {
     return originalGetThread(id);
   };
   const result = await connector.sync();
-  t.check({ created: result.created.length, updated: result.updated.length }, {
-    created: 0,
-    updated: 0,
-  });
+  t.check(result, { success: true, created: [], updated: [], procedures: [] });
 
   // doctest:L329
-  await t.checkText((await findTrackedGmailThreads(box.root)).size, "0");
+  t.check(await findTrackedGmailThreads(box.root), new Map());
 });

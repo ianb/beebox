@@ -35,35 +35,33 @@ void test("A dependency glob selecting a card returns it as a ViewCard, with non
   const box = await makeTmpBox();
   await box.write("_content/inbox/Test.doc.card", DOC_CARD);
   await box.write("_content/inbox/Test.attach/notes.txt", "hello");
+  await fs.utimes(box.path("_content/inbox/Test.attach/notes.txt"), 1_700_000_000, 1_700_000_000);
 
-  // doctest:L32
   const result = await loadViewCards(box.root, ["_content/**/*.card", "_content/**/*.txt"]);
-  await t.checkText(result.cards.length, "1");
-
-  // doctest:L36
-  t.check(result.cards[0]?.type, "doc");
-
-  // doctest:L39
-  t.check(result.cards[0]?.path, "_content/inbox/Test.doc.card");
-
-  // doctest:L42
-  t.check(result.cards[0]?.frontmatter?.title, "Test");
-
-  // doctest:L45
-  await t.checkText(result.cards[0]?.body, "Test doc content");
-
+  const notes = {
+    path: "_content/inbox/Test.attach/notes.txt",
+    size: 5,
+    mtimeMs: 1_700_000_000_000,
+    etag: 'W/"loyw3v28-5"',
+    gitStatus: "untracked",
+  } as const;
   // `bodyLineOffset` counts the file lines before the body, from the same split
   // the todo collector uses, so a todo a view renders through `Markdown` gets the
-  // collector's locator. The doc's frontmatter block is three lines:
-
-  // doctest:L54
-  t.check(result.cards[0]?.bodyLineOffset, 3);
-
-  // doctest:L57
-  t.check(result.files.map((f) => f.path).join(", "), "_content/inbox/Test.attach/notes.txt");
-
-  // doctest:L60
-  t.check(result.skipped, []);
+  // collector's locator. The doc's frontmatter block is three lines.
+  t.check(result, {
+    cards: [
+      {
+        path: "_content/inbox/Test.doc.card",
+        type: "doc",
+        frontmatter: { title: "Test" },
+        bodyLineOffset: 3,
+        body: "Test doc content\n",
+        attachments: [notes],
+      },
+    ],
+    files: [notes],
+    skipped: [],
+  });
 });
 
 // ## No dependencies
@@ -108,13 +106,15 @@ void test("A card that matches a glob but fails to load (here:", async (t) => {
 
   // doctest:L95
   const result = await loadViewCards(box.root, ["_content/**/*.card"]);
-  t.check(result.cards.map((c) => c.path).join(", "), "_content/inbox/Good.doc.card");
-
-  // doctest:L99
-  t.check(result.skipped.map((s) => s.path).join(", "), "_content/inbox/Bad.bogus.card");
-
-  // doctest:L102
-  await t.checkText((result.skipped[0]?.error.length ?? 0) > 0, "true");
+  t.check({ paths: result.cards.map((c) => c.path), skipped: result.skipped }, {
+    paths: ["_content/inbox/Good.doc.card"],
+    skipped: [
+      {
+        path: "_content/inbox/Bad.bogus.card",
+        error: `${box.root}/_content/inbox/Bad.bogus.card: not a recognized card: no frontmatter block with a registered type`,
+      },
+    ],
+  });
 });
 
 // ## Round-7 hardening finding 2: a box-wide glob never reaches package internals
@@ -138,7 +138,7 @@ void test("/.doc.card from the unified root would otherwise reach a package-inte
 
   // doctest:L122
   const result = await loadViewCards(box.root, ["**/*.doc.card"]);
-  t.check(result.cards.map((c) => c.path).join(", "), "_content/inbox/Real.doc.card");
+  t.check(result.cards.map((c) => c.path), ["_content/inbox/Real.doc.card"]);
 });
 
 // ## An escaping leaf symlink is dropped, not served
@@ -165,5 +165,5 @@ void test("A dependency glob matching INSIDE an underscore area can still name a
 
   // doctest:L145
   const result = await loadViewCards(box.root, ["_content/**/*.card"]);
-  t.check(result.cards.map((c) => c.path).join(", "), "_content/inbox/Real.doc.card");
+  t.check(result.cards.map((c) => c.path), ["_content/inbox/Real.doc.card"]);
 });

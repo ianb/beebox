@@ -6,7 +6,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import {
   buildRetranscriptionReport,
@@ -15,8 +14,6 @@ import {
 
 // ## Route: a valid retranscription body emits `chat-retranscription`
 void test("Route: a valid retranscription body emits `chat-retranscription`", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -24,7 +21,6 @@ void test("Route: a valid retranscription body emits `chat-retranscription`", as
       t.error(error);
     }
   });
-  // doctest:L18
   const ctx = await makeTestServer();
   const gotEvent = new Promise((resolve) => {
     ctx.eventBus.subscribe({ listener: (e) => {
@@ -44,17 +40,19 @@ void test("Route: a valid retranscription body emits `chat-retranscription`", as
       recordedAt: "2026-06-11T12:00:00Z",
     },
   });
-  print(`status: ${res.statusCode}`);
-  print(`body: ${JSON.stringify(res.body)}`);
-  await t.checkText(out.with(print(`event: ${JSON.stringify(await gotEvent)}`)), `status: 200
-body: {"ok":true}
-event: {"sessionId":"sess-1","messageId":"msg-1","newText":"remember to water the plants","service":"whisper","diarized":false,"recordedAt":"2026-06-11T12:00:00Z"}`);
+  t.check(res, { statusCode: 200, body: { ok: true } });
+  t.check(await gotEvent, {
+    sessionId: "sess-1",
+    messageId: "msg-1",
+    newText: "remember to water the plants",
+    service: "whisper",
+    diarized: false,
+    recordedAt: "2026-06-11T12:00:00Z",
+  });
 });
 
 // ## Route: a valid consulted body emits `chat-audio-consulted`
 void test("Route: a valid consulted body emits `chat-audio-consulted`", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await ctx.cleanup();
@@ -62,7 +60,6 @@ void test("Route: a valid consulted body emits `chat-audio-consulted`", async (t
       t.error(error);
     }
   });
-  // doctest:L53
   const ctx = await makeTestServer();
   const gotEvent = new Promise((resolve) => {
     ctx.eventBus.subscribe({ listener: (e) => {
@@ -80,11 +77,13 @@ void test("Route: a valid consulted body emits `chat-audio-consulted`", async (t
       question: "did I say can or cannot?",
     },
   });
-  print(`status: ${res.statusCode}`);
-  print(`body: ${JSON.stringify(res.body)}`);
-  await t.checkText(out.with(print(`event: ${JSON.stringify(await gotEvent)}`)), `status: 200
-body: {"ok":true}
-event: {"sessionId":"sess-2","messageId":"msg-2","command":"ask-about-audio","question":"did I say can or cannot?"}`);
+  t.check(res, { statusCode: 200, body: { ok: true } });
+  t.check(await gotEvent, {
+    sessionId: "sess-2",
+    messageId: "msg-2",
+    command: "ask-about-audio",
+    question: "did I say can or cannot?",
+  });
 });
 
 // ## Route: a missing sessionId is rejected with 400
@@ -96,7 +95,6 @@ void test("Route: a missing sessionId is rejected with 400", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L86
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -109,7 +107,7 @@ void test("Route: a missing sessionId is rejected with 400", async (t) => {
       diarized: false,
     },
   });
-  t.check(res.statusCode, 400);
+  t.check(res, { statusCode: 400, body: { error: "bad-request", message: "Too small: expected string to have >=1 characters" } });
 });
 
 // ## Route: an unknown `kind` is rejected with 400
@@ -121,7 +119,6 @@ void test("Route: an unknown `kind` is rejected with 400", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L109
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -132,12 +129,11 @@ void test("Route: an unknown `kind` is rejected with 400", async (t) => {
       messageId: "msg-1",
     },
   });
-  t.check(res.statusCode, 400);
+  t.check(res, { statusCode: 400, body: { error: "bad-request", message: "Invalid discriminator value. Expected 'retranscription' | 'consulted'" } });
 });
 
 // ## `buildRetranscriptionReport`: full payload
 void test("`buildRetranscriptionReport`: full payload", async (t) => {
-  // doctest:L130
   t.check(
     buildRetranscriptionReport({
       sessionId: "sess-1",
@@ -161,7 +157,6 @@ void test("`buildRetranscriptionReport`: full payload", async (t) => {
 
 // ## `buildRetranscriptionReport`: unknown service and no recordedAt omit those fields
 void test("`buildRetranscriptionReport`: unknown service and no recordedAt omit those fields", async (t) => {
-  // doctest:L144
   t.check(
     buildRetranscriptionReport({
       sessionId: "sess-1",
@@ -186,22 +181,19 @@ void test("`buildRetranscriptionReport`: unknown service and no recordedAt omit 
 // `--file` runs and old browser tabs that answered without echoing an id both
 // land here — no report is attempted.
 void test("--file runs and old browser tabs that answered without echoing an id both lan...", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L161
-  print(`null session: ${buildRetranscriptionReport({ sessionId: null, messageId: "msg-1", newText: "t", service: undefined, diarized: false, recordedAt: null })}`);
-  await t.checkText(out.with(print(`null message: ${buildRetranscriptionReport({ sessionId: "sess-1", messageId: null, newText: "t", service: undefined, diarized: false, recordedAt: null })}`)), `null session: null
-null message: null`);
+  t.check(buildRetranscriptionReport({ sessionId: null, messageId: "msg-1", newText: "t", service: undefined, diarized: false, recordedAt: null }), null);
+  t.check(buildRetranscriptionReport({ sessionId: "sess-1", messageId: null, newText: "t", service: undefined, diarized: false, recordedAt: null }), null);
 });
 
 // ## `buildConsultedReport`: present ids build the report; absent ones skip
 void test("`buildConsultedReport`: present ids build the report; absent ones skip", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L171
-  print(JSON.stringify(buildConsultedReport({ sessionId: "sess-1", messageId: "msg-1", question: "was I whispering?" })));
-  print(`${buildConsultedReport({ sessionId: null, messageId: "msg-1", question: "q" })}`);
-  await t.checkText(out.with(print(`${buildConsultedReport({ sessionId: "sess-1", messageId: null, question: "q" })}`)), `{"kind":"consulted","sessionId":"sess-1","messageId":"msg-1","command":"ask-about-audio","question":"was I whispering?"}
-null
-null`);
+  t.check(buildConsultedReport({ sessionId: "sess-1", messageId: "msg-1", question: "was I whispering?" }), {
+    kind: "consulted",
+    sessionId: "sess-1",
+    messageId: "msg-1",
+    command: "ask-about-audio",
+    question: "was I whispering?",
+  });
+  t.check(buildConsultedReport({ sessionId: null, messageId: "msg-1", question: "q" }), null);
+  t.check(buildConsultedReport({ sessionId: "sess-1", messageId: null, question: "q" }), null);
 });

@@ -12,11 +12,6 @@ import { readConversation, saveConversation } from "../../../../src/components/c
 import { readTrackedSessions, writeTrackedSessions } from "../../../../src/components/chat/ambient/tracked-sessions.js";
 import { readActiveSessions, writeActiveSessions } from "../../../../src/components/chat/ambient/AmbientReplies/active-sessions.js";
 
-// Only a ready selection is ever stored or restored, so only it has a label.
-function labelOf(selection: ReturnType<typeof readConversation>): string | undefined {
-  return selection?.kind === "ready" ? selection.label : undefined;
-}
-
 void test("line 20", async (t) => {
   t.teardown(async () => {
     try {
@@ -49,12 +44,10 @@ void test("line 20", async (t) => {
   t.check(readActiveSessions(second), []);
 
   // doctest:L43
-  t.check(labelOf(readConversation(first)), "First clone");
+  t.check(readConversation(first), { kind: "ready", label: "First clone", target: { kind: "session", sessionId: "first-chat", contextDir: "" } });
 
   // doctest:L46
-  t.check(readTrackedSessions(first).map((session) => session.sessionId), [
-    "first-chat",
-  ]);
+  t.check(readTrackedSessions(first), [{ sessionId: "first-chat", label: "First clone" }]);
 
   // doctest:L49
   t.check(readActiveSessions(first), [
@@ -62,8 +55,8 @@ void test("line 20", async (t) => {
   ]);
 
   // doctest:L52
-  t.check(labelOf(readConversation(production)), "Old selection");
+  t.check(readConversation(production), { kind: "ready", label: "Old selection", target: { kind: "session", sessionId: "old-chat", contextDir: "" } });
 
   // doctest:L55
-  await t.checkText(values.has("bbx-conversation:test1"), "true");
+  t.check([...values.keys()], ["bbx-conversation:test1", "bbx-conversation:chat-everywhere/test1", "bbx-ambient-sessions:chat-everywhere/test1", "bbx-ambient-active:chat-everywhere/test1"]);
 });

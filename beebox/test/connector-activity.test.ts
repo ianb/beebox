@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { instanceOf, str } from "agent-doctest/check";
 import { makeTmpBox } from "./helpers/test-helpers.js";
 import {
   syncConnector,
@@ -96,10 +97,16 @@ void test("Each attempt lands in its box-local day", async (t) => {
   // doctest:L86
   const day = gmailOf(file).days["2026-09-18"];
   assert.ok(day);
-  t.check(`runs=${day.runs} ok=${day.ok} newItems=${day.newItems} created=${day.created} updated=${day.updated} errored=${day.errored} skipped=${day.skipped}`, "runs=5 ok=2 newItems=1 created=3 updated=1 errored=2 skipped=1");
-
-  // doctest:L91
-  t.check(day.lastError, "network down");
+  t.check(day, {
+    runs: 5,
+    ok: 2,
+    newItems: 1,
+    created: 3,
+    updated: 1,
+    errored: 2,
+    skipped: 1,
+    lastError: "network down",
+  });
 
   // The thrown sync is counted as a run: a day where every sync throws must read as
   // an all-error day, not as a day with no runs.
@@ -115,7 +122,7 @@ void test("Each attempt lands in its box-local day", async (t) => {
   ]);
 
   // doctest:L107
-  await t.checkText(addDays("2026-11-30", -(ACTIVITY_RETENTION_DAYS - 1)) > "2026-09-18", "true");
+  t.check(addDays("2026-11-30", -(ACTIVITY_RETENTION_DAYS - 1)), "2026-10-02");
 });
 
 // ## A damaged record is reported, and the sync still returns
@@ -139,7 +146,7 @@ void test("A record that fails its schema is not reset:", async (t) => {
 
   // doctest:L127
   const readError = await loadConnectorActivity(box.root).catch((e) => e);
-  await t.checkText(readError instanceof ConnectorActivityInvalidError, "true");
+  t.check(readError, instanceOf(ConnectorActivityInvalidError));
 
   // doctest:L131
   const logged: string[] = [];
@@ -156,5 +163,25 @@ void test("A record that fails its schema is not reset:", async (t) => {
   }
 
   // doctest:L144
-  t.check(`${result.created.length} | ${logged.length} | ${logged[0]?.includes("could not record gmail sync")}`, "1 | 1 | true");
+  t.check(result.created, ["_content/inbox/email/C.email-thread.card"]);
+  t.check(logged, [
+    str`[connector-activity] could not record gmail sync for ${box.root}: Connector activity record at ${statePath} is invalid: ✖ Invalid input: expected object, received undefined
+  → at connectors.gmail.episode
+✖ Too small: expected number to be >=0
+  → at connectors.gmail.days["2026-09-18"].runs
+✖ Invalid input: expected number, received undefined
+  → at connectors.gmail.days["2026-09-18"].ok
+✖ Invalid input: expected number, received undefined
+  → at connectors.gmail.days["2026-09-18"].newItems
+✖ Invalid input: expected number, received undefined
+  → at connectors.gmail.days["2026-09-18"].created
+✖ Invalid input: expected number, received undefined
+  → at connectors.gmail.days["2026-09-18"].updated
+✖ Invalid input: expected number, received undefined
+  → at connectors.gmail.days["2026-09-18"].errored
+✖ Invalid input: expected number, received undefined
+  → at connectors.gmail.days["2026-09-18"].skipped
+✖ Invalid input: expected string, received undefined
+  → at connectors.gmail.days["2026-09-18"].lastError`,
+  ]);
 });

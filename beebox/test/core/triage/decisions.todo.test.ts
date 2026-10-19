@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { uuid } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import { simpleGit } from "simple-git";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -22,6 +23,68 @@ import { movePathPreservingAnnexSymlink } from "../../../src/core/card-files/mov
 import { getTriageTodoDate, planTriageTodoAnnotation } from "../../../src/core/triage/todo.js";
 import type { TodoStatus } from "../../../src/shared/todo-model.js";
 import { invariant } from "../../../src/shared/invariant.js";
+
+const TODO_ID = "triage-8d406452c222";
+const TODO_TEXT = "Review this item and follow up as needed: “Does this need follow-up?”";
+
+// The `todos:` entry triage adds for a positive answer, as the file writes it.
+function todoEntry(created: string, extra: string): string {
+  return `  - text: "${TODO_TEXT}"
+    id: ${TODO_ID}
+    assigned: agent
+    by: agent
+    created: ${created}
+    see-also:
+      - ref: /_content/bills/Bills.landmark.card
+${extra}`;
+}
+
+const NO_TODO_TEXT = `---
+# preserve this note
+title: Paper
+undeclared: keep-me
+---
+A bill requiring review.`;
+
+const OPTION = "destination_be9e1e5dd37949b9372eb527e3c1a5f9884211a2a477aa69db28c28011fea4ae";
+const SUMMARY = "Classifier summary: /_content/bills/Bills.landmark.card; leading probability 1.000, confidence 1.000; instructions: /_config/intake.guide.card, /_content/bills/Bills.landmark.card.";
+
+// The replay result for a recorded decision judged with todo probability `recorded`,
+// re-judged with the fake classifier (which answers every question yes).
+function replayResult(recorded: number) {
+  return {
+    id: uuid(),
+    repetition: 1,
+    historical: {
+      todoAnswers: { [OPTION]: recorded },
+      outcome: "destination",
+      destinationRef: "/_content/bills/Bills.landmark.card",
+      requestHash: "a".repeat(64),
+      requestedModel: "fake-jev",
+      returnedModel: "fake-jev",
+      answer: { type: "choice", choice: OPTION, confidence: 0.9, probabilities: { [OPTION]: 0.9, "no-match": 0.05, unclear: 0.05 } },
+      reason: { kind: "summary", text: "Bill", evidenceRefs: ["/_content/inbox/staged/Paper.doc.card"] },
+    },
+    model: "fake-jev",
+    modelDrift: false,
+    assertions: [],
+    status: "evaluated",
+    preparationChanged: false,
+    candidate: {
+      todoAnswers: { [OPTION]: 1 },
+      outcome: "destination",
+      destinationRef: "/_content/bills/Bills.landmark.card",
+      requestHash: "8c8534b159375c598c79b3a3f07d713ee0700788d5fbe8a85224499592d2c18c",
+      requestedModel: "fake-jev",
+      returnedModel: "fake-jev",
+      answer: { type: "choice", choice: OPTION, confidence: 1, probabilities: { [OPTION]: 1, "no-match": 0, unclear: 0 } },
+      reason: { kind: "summary", text: SUMMARY, evidenceRefs: ["/_content/inbox/staged/Paper.doc.card"] },
+    },
+    outcomeChanged: false,
+    todoOutcomeChanged: false,
+    probabilityDeltas: { [OPTION]: 0.09999999999999998, "no-match": -0.05, unclear: -0.05 },
+  } as const;
+}
 
 async function receiptFixture(options?: { question?: string | null; tracked?: boolean }) {
   const question = options?.question === null ? null : options?.question ?? "Does this need follow-up?";
@@ -70,38 +133,41 @@ void test("line 64", async (t) => {
   // doctest:L71
   const target = box.path("_content/inbox/triaged/bills/Paper.doc.card");
   const annotated = await fs.readFile(target, "utf8");
-  await t.checkText(annotated.includes("assigned: agent") && annotated.includes("by: agent") && annotated.includes("Does this need follow-up?"), "true");
-
-  // doctest:L76
-  await t.checkText(annotated.includes("# preserve this note") && annotated.includes("undeclared: keep-me") && annotated.includes("A bill requiring review."), "true");
+  const created = await getTriageTodoDate(box.root);
+  t.check(annotated, `---
+# preserve this note
+title: Paper
+undeclared: keep-me
+todos:
+${todoEntry(created, "")}---
+A bill requiring review.`);
 
   // doctest:L79
   const appliedAgain = await applyDecision({ boxRoot: box.root, decision: receipt.id });
-  await t.checkText(appliedAgain.application.todoAnnotation?.todoId === applied.application.todoAnnotation?.todoId, "true");
+  t.check(appliedAgain.application.todoAnnotation, applied.application.todoAnnotation);
 
   // doctest:L83
   const parsedAfterRepeat = await fs.readFile(target, "utf8");
-  await t.checkText(parsedAfterRepeat === annotated, "true");
+  t.check(parsedAfterRepeat, annotated);
 
   // doctest:L87
   // Completion state and later notes survive a retry unchanged.
   await setTodoStatus(box.root, { file: target, status: "done" });
   const completed = await fs.readFile(target, "utf8");
+  t.check(completed, `---
+title: Paper
+todos:
+${todoEntry(created, "    status: done\n")}---
+A bill requiring review.`);
   const afterCompletionRetry = await applyDecision({ boxRoot: box.root, decision: receipt.id });
   t.check(afterCompletionRetry.application.todoAnnotation?.state, "applied");
 
   // doctest:L94
-  await t.checkText((await fs.readFile(target, "utf8")) === completed, "true");
+  t.check(await fs.readFile(target, "utf8"), completed);
 
   // doctest:L97
   const reprepared = await replayDecisions({ boxRoot: box.root, ids: [receipt.id], instructions, maxCalls: 1, prepareAgain: true, env: { BBX_JEV_FAKE: "1" } });
-  t.check(reprepared.results[0]?.status, "evaluated");
-
-  // doctest:L101
-  await t.checkText(reprepared.results[0]?.error === undefined, "true");
-
-  // doctest:L104
-  t.check(reprepared.results[0]?.preparationChanged, false);
+  t.check(reprepared.results[0], replayResult(0.8));
 
   // doctest:L107
   await box.cleanup();
@@ -112,7 +178,7 @@ void test("line 110", async (t) => {
   const { box, evidence, instructions, baseJudgment } = await receiptFixture({ question: null });
   const withoutQuestion = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: baseJudgment });
   await applyDecision({ boxRoot: box.root, decision: withoutQuestion });
-  await t.checkText((await fs.readFile(box.path("_content/inbox/triaged/bills/Paper.doc.card"), "utf8")).includes("todos:"), "false");
+  t.check(await fs.readFile(box.path("_content/inbox/triaged/bills/Paper.doc.card"), "utf8"), NO_TODO_TEXT);
 
   // doctest:L117
   await box.cleanup();
@@ -126,7 +192,7 @@ void test("line 120", async (t) => {
   const raw = createDecisionReceipt({ boxRoot: box.root, evidence: rawEvidence, instructions, judgment: { ...baseJudgment, reason: { ...baseJudgment.reason, evidenceRefs: rawEvidence.parts.map((part) => part.ref) }, todoAnswers: { [destination.optionId]: 0.9 } } });
   let rawError = "";
   rawError = await capturedError(() => applyDecision({ boxRoot: box.root, decision: raw }));
-  await t.checkText(rawError.includes("positive follow-up requires a card with frontmatter"), "true");
+  t.check(rawError, `TriageReceiptError: Triage receipt: Incomplete decision ${raw.id}: Cannot annotate triage target ${box.path("_content/inbox/staged/Paper.txt")}: positive follow-up requires a card with frontmatter`);
 
   // doctest:L130
   const rawStillStaged = await fs.access(box.path("_content/inbox/staged/Paper.txt")).then(() => true, () => false);
@@ -159,14 +225,7 @@ void test("line 137", async (t) => {
 
   // doctest:L157
   const exactReplay = await replayDecisions({ boxRoot: box.root, ids: [receipt.id], instructions, maxCalls: 1, prepareAgain: true, env: { BBX_JEV_FAKE: "1" } });
-  t.check(exactReplay.results[0]?.status, "evaluated");
-
-  // doctest:L161
-  await t.checkText(exactReplay.results[0]?.error === undefined, "true");
-
-  // doctest:L164
-  await t.checkText(exactReplay.results[0]?.preparationChanged === false, "true");
-
+  t.check(exactReplay.results[0], replayResult(0.95));
   // doctest:L167
   await box.cleanup();
 });
@@ -178,12 +237,12 @@ void test("line 170", async (t) => {
   const missing = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...baseJudgment, todoAnswers: undefined } });
   let missingError = "";
   missingError = await capturedError(() => applyDecision({ boxRoot: box.root, decision: missing }));
-  await t.checkText(missingError.includes("Missing recorded todo answer") && missingError.includes("judge a new decision") && !missingError.includes("retry apply:"), "true");
+  t.check(missingError, `TriageReceiptError: Triage receipt: Incomplete decision ${missing.id}: Triage receipt: Missing recorded todo answer for configured destination /_content/bills/Bills.landmark.card; make the evidence readable, then prepare and judge a new decision for the held item. Retrying this correction cannot supply the missing answer`);
 
   // doctest:L179
   await applyDecision({ boxRoot: box.root, decision: negative });
   const negativeText = await fs.readFile(box.path("_content/inbox/triaged/bills/Paper.doc.card"), "utf8");
-  await t.checkText(negativeText.includes("todos:"), "false");
+  t.check(negativeText, NO_TODO_TEXT);
 
   // doctest:L184
   await box.cleanup();
@@ -195,7 +254,7 @@ void test("line 187", async (t) => {
   const held = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...baseJudgment, outcome: "unclear", destinationRef: null, answer: { ...baseJudgment.answer, choice: "unclear", probabilities: { [destination.optionId]: 0.1, "no-match": 0.1, unclear: 0.8 } } } });
   await applyDecision({ boxRoot: box.root, decision: held });
   const heldText = await fs.readFile(box.path("_content/inbox/triaged/_unsure/Paper.doc.card"), "utf8");
-  await t.checkText(heldText.includes("todos:"), "false");
+  t.check(heldText, NO_TODO_TEXT);
 
   // doctest:L195
   const corrected = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...baseJudgment, todoAnswers: { [destination.optionId]: 0.9 } }, originalDecisionId: held.id });
@@ -220,12 +279,16 @@ void test("line 207", async (t) => {
   invariant(category, "Fixture needs its category");
   const response = (todo: boolean) => applyTriage({ boxRoot: box.root, categories: compiled.categories, decisions: [{ file: "Legacy.doc.card", category: category.name, confidence: "confident", reason: "Bill", todo }] });
   await response(true);
-  await t.checkText((await fs.readFile(box.path("_content/inbox/triaged/bills/Legacy.doc.card"), "utf8")).includes("assigned: agent"), "true");
+  t.check(await fs.readFile(box.path("_content/inbox/triaged/bills/Legacy.doc.card"), "utf8"), `---
+title: Legacy
+todos:
+${todoEntry(await getTriageTodoDate(box.root), "")}---
+Bill.`);
 
   // doctest:L219
   await box.write("_content/inbox/staged/No.doc.card", "---\ntitle: No\n---\nBill.");
   await applyTriage({ boxRoot: box.root, categories: compiled.categories, decisions: [{ file: "No.doc.card", category: category.name, confidence: "confident", reason: "Bill", todo: false }] });
-  await t.checkText((await fs.readFile(box.path("_content/inbox/triaged/bills/No.doc.card"), "utf8")).includes("todos:"), "false");
+  t.check(await fs.readFile(box.path("_content/inbox/triaged/bills/No.doc.card"), "utf8"), "---\ntitle: No\n---\nBill.");
 
   // doctest:L224
   await box.cleanup();
@@ -239,7 +302,18 @@ void test("line 227", async (t) => {
   await fs.writeFile(file, original.replace("title: Paper", "title: Paper\ntodos:\n  - id: existing\n    text: Keep this task\n    status: done\n    recheck: never\n    unknown: keep-this-too # task note"));
   invariant(destination.todoQuestion, "Fixture destination has a todo question");
   const addition = await planTriageTodoAnnotation({ file, boxRoot: box.root, destinationRef: destination.ref, question: destination.todoQuestion, created: await getTriageTodoDate(box.root) });
-  await t.checkText(addition.after.includes("unknown: keep-this-too # task note") && addition.after.includes("status: done") && addition.after.includes("recheck: never") && addition.after.includes(addition.todoId), "true");
+  t.check(addition.after, `---
+# preserve this note
+title: Paper
+todos:
+  - id: existing
+    text: Keep this task
+    status: done
+    recheck: never
+    unknown: keep-this-too # task note
+${todoEntry(await getTriageTodoDate(box.root), "")}undeclared: keep-me
+---
+A bill requiring review.`);
 
   // doctest:L237
   await box.cleanup();

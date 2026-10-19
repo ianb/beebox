@@ -17,6 +17,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { execFile, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chmod, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -84,18 +85,10 @@ void test("The caller returns immediately, and the sweep runs on its own", async
 
   // doctest:L78
   const finished = await until((s) => s.includes("END"));
-  t.check(
-    {
-      callerReturnedFast: callerMs < 1500,
-      ran: finished.includes("auto-sweep trigger=session-end START"),
-      finished: finished.includes("auto-sweep trigger=session-end END"),
-    },
-    {
-    callerReturnedFast: true,
-    ran: true,
-    finished: true,
-  },
-  );
+  t.check(callerMs, any(Number).below(1500));
+  t.checkText(finished, `«date» auto-sweep trigger=session-end START
+  sweeping
+«date» auto-sweep trigger=session-end END`);
 
   // ## Killing the caller's process group does not kill the sweep
   //
@@ -113,7 +106,9 @@ void test("The caller returns immediately, and the sweep runs on its own", async
 
   // doctest:L101
   const afterKill = await until((s) => s.includes("END"));
-  t.check(afterKill.includes("auto-sweep trigger=session-end END"), true);
+  t.checkText(afterKill, `«date» auto-sweep trigger=session-end START
+  sweeping
+«date» auto-sweep trigger=session-end END`);
 
   // ## One sweep at a time
   //
@@ -130,16 +125,8 @@ void test("The caller returns immediately, and the sweep runs on its own", async
 
   // doctest:L119
   const both = await until((s) => s.includes("SKIPPED"));
-  t.check(
-    {
-      skipped: /auto-sweep trigger=session-start SKIPPED \(sweep \d+ already running\)/.test(both),
-      onlyOneStart: (both.match(/START/g) ?? []).length === 1,
-    },
-    {
-    skipped: true,
-    onlyOneStart: true,
-  },
-  );
+  t.checkText(both, `«date» auto-sweep trigger=session-end START
+«date» auto-sweep trigger=session-start SKIPPED (sweep «int» already running)`);
 
   // A lock left behind by a killed sweep is reclaimed rather than wedging every
   // later run — the failure this whole file is about is a sweep being killed, so the
@@ -166,16 +153,10 @@ void test("The caller returns immediately, and the sweep runs on its own", async
   // sweep runs (auto-sweep.sh), so any log containing END must already contain
   // it. Waiting for them separately let a stale END satisfy the first wait.
   const reclaimed = await until((s) => s.includes("END") && s.includes("reclaiming stale lock"));
-  t.check(
-    {
-      noticed: reclaimed.includes("reclaiming stale lock"),
-      ranAnyway: reclaimed.includes("auto-sweep trigger=session-end END"),
-    },
-    {
-    noticed: true,
-    ranAnyway: true,
-  },
-  );
+  t.checkText(reclaimed, `«date» auto-sweep trigger=session-end reclaiming stale lock (holder='999999')
+«date» auto-sweep trigger=session-end START
+  sweeping
+«date» auto-sweep trigger=session-end END`);
 
   // ## An interrupted sweep says so
   //
@@ -194,7 +175,9 @@ void test("The caller returns immediately, and the sweep runs on its own", async
 
   // doctest:L173
   const interrupted = await until((s) => s.includes("INTERRUPTED"));
-  t.check(interrupted.includes("auto-sweep trigger=session-end INTERRUPTED sig=TERM"), true);
+  t.checkText(interrupted, `«date» auto-sweep trigger=session-end START
+  sweeping
+«date» auto-sweep trigger=session-end INTERRUPTED sig=TERM`);
 
   // ## The SessionEnd hook triggers it from every exit path
   //
@@ -234,14 +217,9 @@ void test("The caller returns immediately, and the sweep runs on its own", async
 
   // doctest:L213
   const fromEarlyExit = await until((s) => s.includes("END"));
-  t.check(
-    {
-      tookTheEarlyExit: fromEarlyExit.includes("decision=skip:not-a-worktree-session"),
-      sweptAnyway: fromEarlyExit.includes("auto-sweep trigger=session-end END"),
-    },
-    {
-    tookTheEarlyExit: true,
-    sweptAnyway: true,
-  },
-  );
+  t.checkText(fromEarlyExit, `«date» pid=«int» SessionEnd event: session=no-worktree reason=prompt_input_exit cwd=«*»/mono
+«date» pid=«int» SessionEnd decision=skip:not-a-worktree-session resolved=''
+«date» auto-sweep trigger=session-end START
+  sweeping
+«date» auto-sweep trigger=session-end END`);
 });

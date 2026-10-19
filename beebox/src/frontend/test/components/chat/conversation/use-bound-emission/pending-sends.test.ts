@@ -48,6 +48,8 @@ const open = (storage: ReturnType<typeof memoryStorage>, scope?: { boxSlug: stri
 
 const chatBinding: SendBinding = { boxSlug: "test", target: { kind: "session", sessionId: "chat", contextDir: "" }, attention: { surface: "chat", transcript: "visible" } };
 const typed = (id: string, text: string): Emission => ({ id, origin: "typed", text, images: [], files: [], selections: [], diarized: false });
+const INTERRUPTED = "Delivery was interrupted. Review before retrying.";
+const ACCEPTED_UNCLEARED = "Sent. The saved recovery copy could not be cleared.";
 const voice = (id: string): Emission => ({ id, origin: "voice", text: "live words", images: [], files: [], selections: [], diarized: false, spokenStart: 0 });
 
 // ## Staging and recovery
@@ -73,10 +75,7 @@ void test("A voice send with an image, a file, a selection and word timings is s
   await t.checkThrows(async () => (store.stage(emission, binding)), "Error: quota");
 
   // doctest:L67
-  t.check(({ staged: store.getSnapshot().length, notices }), {
-    staged: 0,
-    notices: 0,
-  });
+  t.check({ snapshot: store.getSnapshot(), notices }, { snapshot: [], notices: 0 });
 
   // Once storage works, the staged send is recovered by a fresh store with its
   // full content (image bytes, words, selections) and its original destination,
@@ -85,38 +84,9 @@ void test("A voice send with an image, a file, a selection and word timings is s
   // doctest:L76
   storage.writeError = null;
   store.stage(emission, binding);
-  const row = open(storage).getSnapshot()[0];
   t.check(
-    ({
-      status: row?.status,
-      imageBytes: row?.emission.images[0]?.dataBase64.length,
-      words: row?.emission.words,
-      selections: row?.emission.selections,
-      sessionId: row?.binding.target.kind === "session" && row.binding.target.sessionId,
-      otherBox: open(storage, { boxSlug: "other", storageScope: "other" }).getSnapshot().length,
-    }),
-    {
-    status: "recovered",
-    imageBytes: 600000,
-    words: [
-      {
-        word: "Check",
-        confidence: 0.9,
-      },
-    ],
-    selections: [
-      {
-        id: 3,
-        ref: "/_content/house/Report.doc.card",
-        text: "Quoted evidence",
-        position: "p2",
-        anchor: "check",
-        spokenWords: 1,
-      },
-    ],
-    sessionId: "kitchen",
-    otherBox: 0,
-  },
+    { rows: open(storage).getSnapshot(), otherBox: open(storage, { boxSlug: "other", storageScope: "other" }).getSnapshot() },
+    { rows: [{ emission, binding, status: "recovered", reason: INTERRUPTED }], otherBox: [] },
   );
 
   // Same-ID retries must preserve content and binding. Late receipts remove only the
@@ -124,27 +94,28 @@ void test("A voice send with an image, a file, a selection and word timings is s
 
   // doctest:L101
   store.rejected(emission.id, "Offline");
-  t.check(store.getSnapshot()[0]?.reason, "Offline");
+  t.check(store.getSnapshot(), [{ emission, binding, status: "rejected", reason: "Offline" }]);
 
   // doctest:L105
   await t.checkThrows(async () => (store.stage(emission, { ...binding, target: { kind: "session", sessionId: "garden", contextDir: "_content/garden" } })), "PendingSendChangedError: A saved message cannot change its destination or content");
 
   // doctest:L108
   store.stage(emission, binding);
-  t.check(store.getSnapshot()[0]?.status, "pending");
+  t.check(store.getSnapshot(), [{ emission, binding, status: "pending" }]);
 
   // doctest:L112
+  const { words: _words, ...withoutWords } = emission;
+  void _words;
   store.stage({ ...emission, id: "hq-2", hqText: true, hqService: "openai", words: undefined }, binding);
   store.accepted("voice-1");
-  await t.checkText(store.getSnapshot().length, "1");
+  t.check(store.getSnapshot(), [{ emission: { ...withoutWords, id: "hq-2", hqText: true, hqService: "openai" }, binding, status: "pending" }]);
 
   // doctest:L117
-  const hq = open(storage).getSnapshot()[0]?.emission;
-  t.check(`${hq?.hqText} ${hq?.hqService}`, "true openai");
+  t.check(open(storage).getSnapshot(), [{ emission: { ...withoutWords, id: "hq-2", hqText: true, hqService: "openai" }, binding, status: "recovered", reason: INTERRUPTED }]);
 
   // doctest:L121
   store.restored("hq-2");
-  await t.checkText(store.getSnapshot().length, "0");
+  t.check(store.getSnapshot(), []);
 
   // doctest:L125
   unsubscribe();
@@ -154,11 +125,11 @@ void test("A voice send with an image, a file, a selection and word timings is s
 
   // doctest:L132
   store.prepare({ ...emission, id: "hq-work" }, { binding });
-  t.check(store.getSnapshot()[0]?.status, "preparing");
+  t.check(store.getSnapshot(), [{ emission: { ...emission, id: "hq-work" }, binding, status: "preparing" }]);
 
   // doctest:L136
   store.stage({ ...emission, id: "hq-work", text: "Corrected HQ text", hqText: true, hqService: "hq" }, binding);
-  t.check(store.getSnapshot()[0]?.emission.text, "Corrected HQ text");
+  t.check(store.getSnapshot(), [{ emission: { ...emission, id: "hq-work", text: "Corrected HQ text", hqText: true, hqService: "hq" }, binding, status: "pending" }]);
 
   // doctest:L140
   await t.checkThrows(async () => (store.stage({ ...emission, id: "hq-work", text: "different" }, binding)), "PendingSendChangedError: A saved message cannot change its destination or content");
@@ -180,7 +151,10 @@ void test("prepare with a recordingId marks a voice send that is waiting for its
   const live = open(storage);
   live.prepare(voice("waiting"), { binding: chatBinding, recordingId: "rec-1" });
   live.prepare(voice("plain"), { binding: chatBinding });
-  t.check(open(storage).getSnapshot().map((row) => `${row.emission.id}:${row.status}:${row.recordingId ?? "-"}`).join(" "), "waiting:awaitingHq:rec-1 plain:recovered:-");
+  t.check(open(storage).getSnapshot(), [
+    { emission: voice("waiting"), binding: chatBinding, status: "awaitingHq", recordingId: "rec-1", reason: "Waiting for the HQ transcript. Nothing is sent until you choose." },
+    { emission: voice("plain"), binding: chatBinding, status: "recovered", reason: INTERRUPTED },
+  ]);
 
   // The user's choice may still replace the realtime snapshot once — here with the
   // HQ text — and the provenance survives storage:
@@ -188,11 +162,10 @@ void test("prepare with a recordingId marks a voice send that is waiting for its
   // doctest:L167
   const reloaded = open(storage);
   reloaded.stage({ ...voice("waiting"), hqText: true, hqService: "whisper" }, chatBinding);
-  const staged = open(storage).getSnapshot().find((row) => row.emission.id === "waiting")?.emission;
-  t.check({ hqText: staged?.hqText, hqService: staged?.hqService }, {
-    hqText: true,
-    hqService: "whisper",
-  });
+  t.check(open(storage).getSnapshot(), [
+    { emission: { ...voice("waiting"), hqText: true, hqService: "whisper" }, binding: chatBinding, status: "recovered", reason: INTERRUPTED },
+    { emission: voice("plain"), binding: chatBinding, status: "recovered", reason: INTERRUPTED },
+  ]);
 
   // A row saved before every send got the HQ pass (docs/plans/hq-always.md) may
   // still hold an `hqFallback` marker on disk, `true` or the older
@@ -204,11 +177,7 @@ void test("prepare with a recordingId marks a voice send that is waiting for its
     version: 1,
     rows: [{ emission: { ...voice("legacy"), hqFallback: "pending" }, binding: chatBinding, status: "pending" }],
   }));
-  const legacy = open(storage).getSnapshot().find((row) => row.emission.id === "legacy");
-  t.check({ status: legacy?.status, keptMarker: "hqFallback" in (legacy?.emission ?? {}) }, {
-    status: "recovered",
-    keptMarker: false,
-  });
+  t.check(open(storage).getSnapshot(), [{ emission: voice("legacy"), binding: chatBinding, status: "recovered", reason: INTERRUPTED }]);
 });
 
 // Dismissing an `awaitingHq` item removes it; its recording stays on the box:
@@ -218,7 +187,7 @@ void test("Dismissing an awaitingHq item removes it; its recording stays on the 
   open(storage).prepare(voice("gone"), { binding: chatBinding, recordingId: "rec-2" });
   const reloaded = open(storage);
   reloaded.dismissed("gone");
-  await t.checkText(reloaded.getSnapshot().length, "0");
+  t.check(reloaded.getSnapshot(), []);
 });
 
 // ## Pending recovery is isolated by API base when worktrees share a box slug
@@ -236,24 +205,16 @@ void test("The dev router serves every worktree from one origin.", async (t) => 
   scoped(paperScope).stage(typed("paper", "Paper message"), test1Binding);
   scoped(chatScope).stage(typed("chat", "Chat message"), test1Binding);
   t.check(
-    ({
-      scopes: [paperScope, chatScope, storageScopeFor("/test1/api")],
-      paper: scoped(paperScope).getSnapshot().map((row) => row.emission.text),
-      chat: scoped(chatScope).getSnapshot().map((row) => row.emission.text),
-    }),
     {
-    scopes: [
-      "paper-cards/test1",
-      "chat-everywhere/test1",
-      "test1",
-    ],
-    paper: [
-      "Paper message",
-    ],
-    chat: [
-      "Chat message",
-    ],
-  },
+      scopes: [paperScope, chatScope, storageScopeFor("/test1/api")],
+      paper: scoped(paperScope).getSnapshot(),
+      chat: scoped(chatScope).getSnapshot(),
+    },
+    {
+      scopes: ["paper-cards/test1", "chat-everywhere/test1", "test1"],
+      paper: [{ emission: typed("paper", "Paper message"), binding: test1Binding, status: "recovered", reason: INTERRUPTED }],
+      chat: [{ emission: typed("chat", "Chat message"), binding: test1Binding, status: "recovered", reason: INTERRUPTED }],
+    },
   );
 });
 
@@ -268,15 +229,15 @@ void test("An acceptance remains authoritative when storage cleanup fails.", asy
   const store = open(storage);
   store.stage(emission, chatBinding);
   store.accepted(emission.id);
-  t.check(store.getSnapshot()[0]?.status, "accepted");
+  t.check(store.getSnapshot(), [{ emission, binding: chatBinding, status: "accepted", reason: ACCEPTED_UNCLEARED }]);
 
   // doctest:L236
-  t.check(open(storage).getSnapshot()[0]?.status, "accepted");
+  t.check(open(storage).getSnapshot(), [{ emission, binding: chatBinding, status: "accepted", reason: ACCEPTED_UNCLEARED }]);
 
   // doctest:L239
   storage.writeError = "storage disabled";
   store.rejected(emission.id, "late error");
-  t.check(store.getSnapshot()[0]?.status, "accepted");
+  t.check(store.getSnapshot(), [{ emission, binding: chatBinding, status: "accepted", reason: ACCEPTED_UNCLEARED }]);
 
   // doctest:L244
   await t.checkThrows(async () => (store.stage(emission, chatBinding)), "PendingSendChangedError: A saved message cannot change its destination or content");
@@ -295,32 +256,35 @@ void test("Unreadable state has an explicit escape:", async (t) => {
   await t.checkThrows(async () => (quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" })), "Error: quota");
 
   // doctest:L261
-  await t.checkText(storage.getItem(key) === raw, "true");
+  t.check(storage.getItem(key), raw);
 
   // doctest:L264
   storage.writeError = null;
   const fresh = quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" });
-  t.check(({ snapshot: fresh.getSnapshot().length, original: storage.getItem(key), copyKeepsRaw: pendingSendRecoveryCopies(storage, "test")[0]?.raw === raw }), {
-    snapshot: 0,
-    original: null,
-    copyKeepsRaw: true,
-  });
+  t.check(
+    { snapshot: fresh.getSnapshot(), original: storage.getItem(key), copies: pendingSendRecoveryCopies(storage, "test") },
+    { snapshot: [], original: null, copies: [{ key: "bbx-pending-web-sends-quarantine:test:0", raw }] },
+  );
 
   // doctest:L269
   const emission = typed("new", "A new message");
   fresh.stage(emission, chatBinding);
-  t.check(quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot()[0]?.emission.text, "A new message");
+  t.check(quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot(), [{ emission, binding: chatBinding, status: "recovered", reason: INTERRUPTED }]);
 
   // doctest:L274
-  await t.checkText(pendingSendRecoveryCopies(storage, "test").length, "1");
+  t.check(pendingSendRecoveryCopies(storage, "test"), [{ key: "bbx-pending-web-sends-quarantine:test:0", raw }]);
 
   // doctest:L277
   // Wrong-box envelopes are also preserved intact, never routed to this box.
-  storage.data.set(key, JSON.stringify({ version: 1, rows: [{ emission, binding: { ...chatBinding, boxSlug: "other" }, status: "pending" }] }));
-  await t.checkText(quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot().length, "0");
+  const wrongBox = JSON.stringify({ version: 1, rows: [{ emission, binding: { ...chatBinding, boxSlug: "other" }, status: "pending" }] });
+  storage.data.set(key, wrongBox);
+  t.check(quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot(), []);
 
   // doctest:L282
-  await t.checkText(pendingSendRecoveryCopies(storage, "test").length, "2");
+  t.check(pendingSendRecoveryCopies(storage, "test"), [
+    { key: "bbx-pending-web-sends-quarantine:test:0", raw },
+    { key: "bbx-pending-web-sends-quarantine:test:1", raw: wrongBox },
+  ]);
 });
 
 // A storage backend silently refusing the preservation write cannot trick recovery
@@ -352,21 +316,13 @@ void test("The session-storage quota is about 5 MB, so two large photos can exce
   storage.setItem = () => { throw new DOMException("The quota has been exceeded.", "QuotaExceededError"); };
   const store = open(storage);
   store.stage(typed("big-1", "two large photos"), chatBinding);
-  t.check(({ live: store.getSnapshot().map((row) => [row.emission.id, row.status]), saved: storage.data.size }), {
-    live: [
-      [
-        "big-1",
-        "pending",
-      ],
-    ],
-    saved: 0,
-  });
+  t.check({ live: store.getSnapshot(), saved: [...storage.data.keys()] }, { live: [{ emission: typed("big-1", "two large photos"), binding: chatBinding, status: "pending" }], saved: [] });
 
   // Its acceptance then clears it like any other send:
 
   // doctest:L323
   store.accepted("big-1");
-  await t.checkText(store.getSnapshot().length, "0");
+  t.check(store.getSnapshot(), []);
 });
 
 // ## An image's original path survives the recovery copy
@@ -380,5 +336,5 @@ void test("The recovery envelope is what a rejected send is retried from, so it 
   const withPath: Emission = { ...typed("img-1", "receipt [image#1]"),
     images: [{ id: 1, mimeType: "image/jpeg", dataBase64: "AA", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" }] };
   open(storage).stage(withPath, chatBinding);
-  t.check(open(storage).getSnapshot()[0]?.emission.images[0]?.path, "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg");
+  t.check(open(storage).getSnapshot(), [{ emission: withPath, binding: chatBinding, status: "recovered", reason: INTERRUPTED }]);
 });

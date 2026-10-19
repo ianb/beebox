@@ -39,7 +39,7 @@ function clicker(onSendOpener: (text: string) => "accepted" | "rejected") {
 // falls back to its plain empty-state line. This is the normal end state.
 void test("The agent removes the openers once the box is in regular use, and the chat fa...", async (t) => {
   // doctest:L42
-  await t.checkText(markup([]) === "", "true");
+  t.check(markup([]), "");
 });
 
 // ## Clicking an opener sends that opener's text, verbatim

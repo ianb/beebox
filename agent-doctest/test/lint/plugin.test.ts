@@ -34,6 +34,10 @@ void test("check-whole-value flags lossy actual values", async (t) => {
       { code: "t.check(Boolean(x), true);", errors: [{ messageId: "boolean" }] },
       { code: "t.check(names.includes('a'), true);", errors: [{ messageId: "predicate" }] },
       { code: "tap.check(set.has(1), true);", errors: [{ messageId: "predicate" }] },
+      // Optional chaining and await wrap the same lossy value.
+      { code: "t.check(errors[0]?.message.includes('Foo'), true);", errors: [{ messageId: "predicate" }] },
+      { code: "t.check(result?.items.length, 2);", errors: [{ messageId: "size" }] },
+      { code: "t.check(await store.has('k'), true);", errors: [{ messageId: "predicate" }] },
     ],
   });
 });

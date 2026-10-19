@@ -8,7 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, capture as captureValue, str } from "agent-doctest/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
@@ -24,8 +24,6 @@ function caller(boxRoot: string) {
 
 // ## commentary captures a page into the inbox and returns the companion URL
 void test("commentary captures a page into the inbox and returns the companion URL", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L27
   const box = await makeTmpBox({ git: true });
   const res = await caller(box.root).clerk.commentary({
@@ -33,16 +31,14 @@ void test("commentary captures a page into the inbox and returns the companion U
     title: "An Example Article",
     readableMarkdown: "# Heading\n\nBody text.",
   });
-  // Two cards created: the webpage card and its sibling commentary card.
-  print(`created: ${res.created.length}`);
-  print(`webpage: ${res.created.some((p) => p.endsWith(".webpage.card"))}`);
-  print(`commentary: ${res.created.some((p) => p.endsWith(".commentary.card"))}`);
-  print(`filed in inbox: ${res.created[0]?.startsWith("_content/inbox/")}`);
-  await t.checkText(out.with(print(`open startsWith chat: ${res.open.startsWith("chat?session=new")}`)), `created: 2
-webpage: true
-commentary: true
-filed in inbox: true
-open startsWith chat: true`);
+  const stamp = captureValue(any(String));
+  t.check(res, {
+    created: [
+      str`_content/inbox/An_Example_Article_${stamp}.webpage.card`,
+      str`_content/inbox/An_Example_Article_${stamp}.attach/An_Example_Article_${stamp}.commentary.card`,
+    ],
+    open: str`chat?session=new&contextDir=_content%2Finbox&companion=view%3A_content%2Finbox%2FAn_Example_Article_${stamp}.webpage.card`,
+  });
 
   // ## the webpage card holds the readable body + source provenance
 
@@ -50,9 +46,15 @@ open startsWith chat: true`);
   const webpageRel = res.created.find((p) => p.endsWith(".webpage.card"));
   assert.ok(webpageRel);
   const body = await readFile(path.join(box.root, webpageRel), "utf-8");
-  print(body.includes("https://example.com/article"));
-  await t.checkText(out.with(print(body.includes("Body text."))), `true
-true`);
+  await t.checkText(body, `---
+title: An Example Article
+sources:
+  - href: https://example.com/article
+    retrieved: «date»
+---
+# Heading
+
+Body text.`);
 
   // ## an unknown destination is rejected
 
@@ -63,7 +65,7 @@ true`);
     readableMarkdown: "body",
     destinationDir: "_content/does-not-exist",
   }).then(() => "no-error", (e) => e.code);
-  await t.checkText(out.with(print(err)), "BAD_REQUEST");
+  t.check(err, "BAD_REQUEST");
 
   // ## invalid input (bad url) is rejected by Zod
 
@@ -73,7 +75,7 @@ true`);
     title: "X",
     readableMarkdown: "body",
   }).then(() => "no-error", (e) => e.code);
-  await t.checkText(out.with(print(err2)), "BAD_REQUEST");
+  t.check(err2, "BAD_REQUEST");
 
   // ## a retried capture replays the first result instead of writing again
   //
@@ -85,7 +87,7 @@ true`);
   // doctest:L95
   const { execFileSync } = await import("node:child_process");
   const commits = () => execFileSync("git", ["rev-list", "--count", "HEAD"], { cwd: box.root, encoding: "utf-8" }).trim();
-  const webpages = async () => (await readdir(path.join(box.root, "_content/inbox"))).filter((n) => n.endsWith(".webpage.card")).length;
+  const webpages = async () => (await readdir(path.join(box.root, "_content/inbox"))).filter((n) => n.endsWith(".webpage.card"));
   const capture = {
     url: "https://example.com/retry",
     title: "Retry Me",
@@ -102,15 +104,25 @@ true`);
   const firstPath = firstCapture.created[0];
   assert.ok(firstPath);
   const card = await readFile(path.join(box.root, firstPath), "utf-8");
-  print(`paths: ${firstCapture.created.map((p) => path.basename(p).replace(/_[\d-]+T[\dT-]+/u, "_<ts>")).join(", ")}`);
-  print(`replayed: ${JSON.stringify(retryA) === JSON.stringify(firstCapture) && JSON.stringify(retryB) === JSON.stringify(firstCapture)}`);
-  print(`stores capture-id: ${card.includes(`capture-id: ${capture.captureId}`)}`);
-  print(`new webpage cards: ${(await webpages()) - before.webpages}`);
-  await t.checkText(out.with(print(`new commits: ${Number(commits()) - Number(before.commits)}`)), `paths: Retry_Me_<ts>.webpage.card, page.frozen, Retry_Me_<ts>.commentary.card
-replayed: true
-stores capture-id: true
-new webpage cards: 1
-new commits: 1`);
+  t.check(firstCapture.created.map((p) => path.basename(p).replace(/_[\d-]+T[\dT-]+/u, "_<ts>")), [
+    "Retry_Me_<ts>.webpage.card",
+    "page.frozen",
+    "Retry_Me_<ts>.commentary.card",
+  ]);
+  t.check(retryA, firstCapture);
+  t.check(retryB, firstCapture);
+  await t.checkText(card, `---
+title: Retry Me
+sources:
+  - href: https://example.com/retry
+    retrieved: «date»
+frozen:
+  ref: attach/page.frozen
+capture-id: 30000000-0000-4000-8000-000000000000
+---
+Retry body.`);
+  t.check(await webpages(), [...before.webpages, str`Retry_Me_${any(String)}.webpage.card`]);
+  t.check(Number(commits()) - Number(before.commits), 1);
 
   // ## a retry after a crash between the write and its commit commits the capture
   //
@@ -131,18 +143,19 @@ new commits: 1`);
   );
   const uncommittedBefore = commits();
   const recovered = await caller(box.root).clerk.commentary(crashed);
-  print(`acknowledged: ${recovered.created.length > 0}`);
-  print(`new commits: ${Number(commits()) - Number(uncommittedBefore)}`);
-  await t.checkText(out.with(print(`webpage cards for it: ${(await readdir(path.join(box.root, "_content/inbox"))).filter((n) => n.startsWith("Crashed_Once")).length}`)), `acknowledged: true
-new commits: 1
-webpage cards for it: 1`);
+  t.check(recovered, {
+    created: ["_content/inbox/Crashed_Once_2026-09-30T00-00-00.webpage.card"],
+    open: "chat?session=new&contextDir=_content%2Finbox&companion=view%3A_content%2Finbox%2FCrashed_Once_2026-09-30T00-00-00.webpage.card",
+  });
+  t.check(Number(commits()) - Number(uncommittedBefore), 1);
+  t.check((await readdir(path.join(box.root, "_content/inbox"))).filter((n) => n.startsWith("Crashed_Once")), ["Crashed_Once_2026-09-30T00-00-00.webpage.card"]);
 
   // ## a capture ID reused for a different page is a conflict
 
   // doctest:L158
   const reused = await caller(box.root).clerk.commentary({ ...capture, url: "https://example.com/other" })
     .then(() => "no-error", (e) => e.code);
-  await t.checkText(out.with(print(reused)), "CONFLICT");
+  t.check(reused, "CONFLICT");
 
   // ## tab arrangements are created once and retries are idempotent
 
@@ -160,13 +173,33 @@ webpage cards for it: 1`);
   const first = await caller(box.root).clerk.tabArrangement(arrangement);
   const retry = await caller(box.root).clerk.tabArrangement(arrangement);
   const saved = await readFile(path.join(box.root, first.card), "utf-8");
-  print(`same card: ${first.card === retry.card}`);
-  print(`in inbox: ${first.card.startsWith("_content/inbox/")}`);
-  print(`opens organizer: ${first.open.includes("companion=")}`);
-  await t.checkText(out.with(print(`draft (not ready): ${!saved.includes("ready:")}`)), `same card: true
-in inbox: true
-opens organizer: true
-draft (not ready): true`);
+  t.check(retry, first);
+  t.check(first, {
+    card: `_content/inbox/Tabs_${transferId}.tab-arrangement.card`,
+    open: `chat?session=new&contextDir=_content%2Finbox&companion=view%3A_content%2Finbox%2FTabs_${transferId}.tab-arrangement.card`,
+    transferId,
+  });
+  await t.checkText(saved, `---
+transfer-id: ${transferId}
+scope: current-window
+captured-at: 2026-08-04T12:00:00.000Z
+captured-tabs:
+  windows:
+    - id: ${windowId}
+      tabs:
+        - id: ${tabId}
+          title: Example
+          url: https://example.com
+          pinned: false
+proposal:
+  windows:
+    - id: ${windowId}
+      tabs:
+        - ${tabId}
+  close: []
+---
+
+Captured by Bee Box Clerk. Revise the proposal with the boxholder before applying.`);
 
   // ## a transfer ID cannot be retried with a different source snapshot
 
@@ -175,7 +208,7 @@ draft (not ready): true`);
     ...arrangement,
     source: { windows: [{ id: windowId, tabs: [{ id: tabId, title: "Changed", url: "https://changed.example", pinned: false }] }] },
   }).then(() => "no-error", (e) => e.code);
-  await t.checkText(out.with(print(conflict)), "CONFLICT");
+  t.check(conflict, "CONFLICT");
 });
 
 // ## commentaryDestinations lists commentary spots and passes the output schema
@@ -185,8 +218,6 @@ draft (not ready): true`);
 // throws before returning. Seed one landmark with a symbol and one without, then
 // list.
 void test("The query carries a Zod .output(commentaryDestinationsOutput) — a real box re...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await dbox.cleanup();
@@ -219,18 +250,10 @@ destinations:
 ---
 `);
   const dest = await caller(dbox.root).clerk.commentaryDestinations();
-  await t.checkText(out.with(print(JSON.stringify(dest, null, 2))), `{
-  "destinations": [
-    {
-      "dir": "_content/notes",
-      "label": "Notes",
-      "symbol": null
-    },
-    {
-      "dir": "_content/reading",
-      "label": "Reading",
-      "symbol": "📚"
-    }
-  ]
-}`);
+  t.check(dest, {
+    destinations: [
+      { dir: "_content/notes", label: "Notes", symbol: null },
+      { dir: "_content/reading", label: "Reading", symbol: "📚" },
+    ],
+  });
 });

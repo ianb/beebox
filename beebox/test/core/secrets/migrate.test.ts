@@ -12,7 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed as printed2 } from "agent-doctest/check";
+import { any, not } from "agent-doctest/check";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -107,8 +107,6 @@ async function makeMachine() {
 // store fails closed on a refusal (`src/core/secrets/legacy-fallback.ts`), which
 // is what makes a revoked grant actually revoke.
 void test("--dry-run writes nothing, so it needs no --agent-confirmed.", async (t) => {
-  const out = printed2();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(dir, { recursive: true, force: true });
@@ -119,7 +117,7 @@ void test("--dry-run writes nothing, so it needs no --agent-confirmed.", async (
   // doctest:L101
   const { dir, boxes } = await makeMachine();
   const planned = await runCaptured(() => runMigrateSecrets({ root: boxes, dryRun: true }));
-  await t.checkText(out.with(print(planned.logs.filter((line) => line !== "").join("\n").replaceAll(boxes, "<boxes>"))), `Boxes examined: alpha, beta, gamma
+  t.checkText(planned.logs.filter((line) => line !== "").join("\n").replaceAll(boxes, "<boxes>"), `Boxes examined: alpha, beta, gamma
   deepgram — new entry; grants: beta
   mistral — new entry; grants: alpha, beta
   mistral/gamma — new entry, single-box; grants: gamma
@@ -136,7 +134,7 @@ Dry run — nothing was written.`);
   // doctest:L121
   const secretsFile = process.env.BBX_SECRETS_FILE;
   invariant(secretsFile, "makeMachine points BBX_SECRETS_FILE at a temp store");
-  await t.checkText(out.with(print(`store file exists: ${existsSync(secretsFile)}`)), "store file exists: false");
+  t.check(existsSync(secretsFile), false);
 
   // Not merely "an empty store" — the file itself must not appear. Planning reads
   // lock-free rather than going through `mutateSecretStore`, which always writes
@@ -150,35 +148,27 @@ Dry run — nothing was written.`);
 
   // doctest:L138
   const applied = await runCaptured(() => runMigrateSecrets({ root: boxes, agentConfirmed: true }));
-  await t.checkText(out.with(print(applied.logs.slice(-4).join("\n"))), `Created 3 entries, wrote 4 grants, left 0 existing entries untouched.
+  t.checkText(applied.logs.slice(-4).join("\n"), `Created 3 entries, wrote 4 grants, left 0 existing entries untouched.
 1 box/name pair(s) held a conflicting value and were parked — see the CONFLICT lines above.
 The original files are LEFT IN PLACE — readers still fall back to them during the transition.
 Check each box with \`bbx secrets status <box>\`, then delete the files in a separate pass.`);
 
   // doctest:L148
   const after = await secretStore();
-  print(JSON.stringify(after.grants, null, 2));
-  print(`deepgram value: ${after.secrets["deepgram"]?.value}`);
-  await t.checkText(out.with(print(`single-box flags: ${after.secrets["mistral/gamma"]?.shareable} ${after.secrets["mistral"]?.shareable}`)), `{
-  "beta": {
-    "deepgram": "server",
-    "mistral": "server"
-  },
-  "alpha": {
-    "mistral": "server"
-  },
-  "gamma": {
-    "mistral/gamma": "server"
-  }
-}
-deepgram value: {"apiKey":"placeholder-deepgram","projectId":"placeholder-project"}
-single-box flags: false undefined`);
+  t.check(after.grants, {
+    beta: { deepgram: "server", mistral: "server" },
+    alpha: { mistral: "server" },
+    gamma: { "mistral/gamma": "server" },
+  });
+  t.check(after.secrets["deepgram"]?.value, '{"apiKey":"placeholder-deepgram","projectId":"placeholder-project"}');
+  t.check({ gamma: after.secrets["mistral/gamma"]?.shareable, mistral: after.secrets["mistral"]?.shareable }, { gamma: false, mistral: undefined });
 
   // Nothing the migration printed carried a value:
 
   // doctest:L172
-  const printed = [...planned.logs, ...applied.logs].join("\n");
-  await t.checkText(out.with(print(`leaked a key: ${printed.includes("placeholder-shared-mistral") || printed.includes("placeholder-deepgram")}`)), "leaked a key: false");
+  const output = [...planned.logs, ...applied.logs].join("\n");
+  t.check(output, not(any(String).includes("placeholder-shared-mistral")));
+  t.check(output, not(any(String).includes("placeholder-deepgram")));
 
   // ## Re-running is a no-op
   //
@@ -188,7 +178,7 @@ single-box flags: false undefined`);
 
   // doctest:L184
   const again = await runCaptured(() => runMigrateSecrets({ root: boxes, agentConfirmed: true }));
-  await t.checkText(out.with(print(again.logs.find((line) => line.startsWith("Created")))), "Created 0 entries, wrote 0 grants, left 3 existing entries untouched.");
+  t.check(again.logs.find((line) => line.startsWith("Created")), "Created 0 entries, wrote 0 grants, left 3 existing entries untouched.");
 
   // ## `copy-grants`: provisioning a new box
   //
@@ -199,10 +189,11 @@ single-box flags: false undefined`);
   // doctest:L196
   await setAndGrantSecret({ name: "bucket-token/alpha", value: "placeholder-bucket-token", slug: "alpha", access: "server", owningBox: "alpha", shareable: false });
   const copied = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "alpha", toBoxOrRoot: "delta", agentConfirmed: true }));
-  print(copied.logs.join("\n"));
-  await t.checkText(out.with(print(`delta now: ${JSON.stringify((await secretStore()).grants["delta"])}`)), `Granted "mistral" to "delta" with server access (from "alpha").
-Skipped "bucket-token/alpha" — single-box secret (belongs to "alpha") — set this box up with its own.
-delta now: {"mistral":"server"}`);
+  t.check(copied.logs, [
+    'Granted "mistral" to "delta" with server access (from "alpha").',
+    'Skipped "bucket-token/alpha" — single-box secret (belongs to "alpha") — set this box up with its own.',
+  ]);
+  t.check((await secretStore()).grants["delta"], { mistral: "server" });
 
   // Two ways to copy nothing are deliberately worded differently, because
   // `deploy/add-box.sh` reads them: a source with **no grants at all** is a machine
@@ -213,19 +204,20 @@ delta now: {"mistral":"server"}`);
   // doctest:L213
   const noGrants = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "zeta", toBoxOrRoot: "delta", agentConfirmed: true }));
   const onlySingle = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "gamma", toBoxOrRoot: "delta", agentConfirmed: true }));
-  print(noGrants.logs[0]);
-  await t.checkText(out.with(print(onlySingle.logs[0])), `Nothing copied: "zeta" has no grants at all.
-Nothing copied: every grant "gamma" holds is single-box.`);
+  t.check(noGrants.logs[0], 'Nothing copied: "zeta" has no grants at all.');
+  t.check(onlySingle.logs[0], 'Nothing copied: every grant "gamma" holds is single-box.');
 
   // And the store still holds one copy of the shared key, now granted to three
   // boxes — which is the whole point of the exercise:
 
   // doctest:L226
   const listing = await listSecrets();
-  await t.checkText(out.with(print(listing.map((entry) => `${entry.name}: ${Object.keys(entry.grants).join(",")}`).join("\n"))), `bucket-token/alpha: alpha
-deepgram: beta
-mistral: beta,alpha,delta
-mistral/gamma: gamma`);
+  t.check(listing.map((entry) => ({ name: entry.name, grants: Object.keys(entry.grants) })), [
+    { name: "bucket-token/alpha", grants: ["alpha"] },
+    { name: "deepgram", grants: ["beta"] },
+    { name: "mistral", grants: ["beta", "alpha", "delta"] },
+    { name: "mistral/gamma", grants: ["gamma"] },
+  ]);
 });
 
 // ## A value already in the store wins its name
@@ -238,8 +230,6 @@ mistral/gamma: gamma`);
 // ONE entry per distinct value, not one per box, so two boxes that agree with each
 // other still share an entry.
 void test("The dangerous case:", async (t) => {
-  const out = printed2();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await rm(machine.dir, { recursive: true, force: true });
@@ -253,7 +243,7 @@ void test("The dangerous case:", async (t) => {
 
   // doctest:L253
   const planned = await runCaptured(() => runMigrateSecrets({ root: machine.boxes, dryRun: true }));
-  await t.checkText(out.with(print(planned.logs.filter((line) => line.includes("mistral")).join("\n"))), `  mistral — already in the store (left as it is); grants: 
+  t.checkText(planned.logs.filter((line) => line.includes("mistral")).join("\n"), `  mistral — already in the store (left as it is); grants: 
   mistral/alpha — new entry, single-box; grants: alpha, beta
   mistral/gamma — new entry, single-box; grants: gamma
   CONFLICT: "alpha" holds a different value for "mistral" than the box that kept that name. Its value is parked as "mistral/alpha".
@@ -267,11 +257,10 @@ void test("The dangerous case:", async (t) => {
 
   // doctest:L270
   const applied = await runCaptured(() => runMigrateSecrets({ root: machine.boxes, agentConfirmed: true }));
-  print(applied.logs.slice(-4).join("\n"));
-  const grants = (await secretStore()).grants;
-  await t.checkText(out.with(print(`alpha: ${JSON.stringify(grants["alpha"])}`)), `Created 3 entries, wrote 4 grants, left 1 existing entry untouched.
+  t.checkText(applied.logs.slice(-4).join("\n"), `Created 3 entries, wrote 4 grants, left 1 existing entry untouched.
 3 box/name pair(s) held a conflicting value and were parked — see the CONFLICT lines above.
 The original files are LEFT IN PLACE — readers still fall back to them during the transition.
-Check each box with \`bbx secrets status <box>\`, then delete the files in a separate pass.
-alpha: {"mistral/alpha":"server"}`);
+Check each box with \`bbx secrets status <box>\`, then delete the files in a separate pass.`);
+  const grants = (await secretStore()).grants;
+  t.check(grants["alpha"], { "mistral/alpha": "server" });
 });

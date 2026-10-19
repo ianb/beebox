@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import { acceptQuickCapture } from "../../../src/core/quick-capture/acceptance.js";
@@ -21,6 +22,9 @@ const imageId = "22222222-2222-4222-8222-222222222222";
 const declaration = {version:1 as const,capturedAt:"2026-10-12T12:00:00Z",source:"apple-app-intents" as const,input:"Keep exact words"};
 const image = {version:1 as const,capturedAt:"2026-10-12T12:00:00Z",source:"apple-share-extension" as const,input:"Find the problem",material:{kind:"image" as const,id:imageId,mimeType:"image/png" as const,byteLength:3,sha256:createHash("sha256").update("abc").digest("hex"),fileName:"screenshot.png"}};
 function present<T>(value: T | null | undefined): T { invariant(value !== null && value !== undefined, "expected a value"); return value; }
+const IMAGE_DIGEST = "4777f936fe33f26922e50895abb93bf8e055802e002499b214cec7699a68a1cb";
+const CLIPPING_DIGEST = "df5d61f9fda8eb816d4e8167fc9f87b0a9850551714c43364af4969dcc88685f";
+const clipping = {version:1 as const,capturedAt:"2026-10-12T12:00:00Z",source:"apple-app-intents" as const,material:{kind:"clipping" as const,text:"Quoted evidence"}};
 async function staged(box: TmpBox) {
   const path = box.path("_tmp/upload"); await writeFile(path,"abc");
   return {path,size:3,sha256:image.material.sha256};
@@ -48,7 +52,15 @@ void test("line 28", async (t) => {
 
   // doctest:L42
   const raw = present(await readCapture(box.root,id));
-  await t.checkText([raw.state,raw.declaration.input,raw.sourceRef], "[\"accepted\",\"Keep exact words\",null]");
+  t.check(raw, {
+    id,
+    owner: "owner@example.test",
+    digest: "50eceea771fd4f29dd2a7a439793f272cf46e2e69b3f29fd441a0f15e9fa0d34",
+    declaration,
+    acceptedAt: isoDate(),
+    state: "accepted",
+    attempts: 0,
+  });
 
   // doctest:L46
   await box.cleanup();
@@ -76,11 +88,17 @@ void test("Incomplete declarations never seal.", async (t) => {
 
   // doctest:L67
   const record = present(await processCapture({boxRoot:box.root,jev:undefined,chat:undefined},id));
-  t.check([record.state,record.sourceRef,record.sourceCommitted], [
-    "needs-choice",
-    "_content/incoming/11111111-1111-4111-8111-111111111111.doc.card",
-    true,
-  ]);
+  t.check(record, {
+    id,
+    owner: null,
+    digest: IMAGE_DIGEST,
+    declaration: image,
+    acceptedAt: isoDate(),
+    state: "needs-choice",
+    attempts: 0,
+    sourceRef: "_content/incoming/11111111-1111-4111-8111-111111111111.doc.card",
+    sourceCommitted: true,
+  });
 
   // A capture with words is routed to a chat, which files it, so its source waits
   // in the git-ignored incoming folder: written, and not in git yet.
@@ -93,10 +111,17 @@ void test("Incomplete declarations never seal.", async (t) => {
 
   // doctest:L82
   const replay = present(await processCapture({boxRoot:box.root,jev:undefined,chat:undefined},id));
-  t.check([replay.state,replay.sourceRef], [
-    "needs-choice",
-    "_content/incoming/11111111-1111-4111-8111-111111111111.doc.card",
-  ]);
+  t.check(replay, {
+    id,
+    owner: null,
+    digest: IMAGE_DIGEST,
+    declaration: image,
+    acceptedAt: isoDate(),
+    state: "needs-choice",
+    attempts: 0,
+    sourceRef: "_content/incoming/11111111-1111-4111-8111-111111111111.doc.card",
+    sourceCommitted: true,
+  });
 
   // doctest:L86
   await box.cleanup();
@@ -107,10 +132,21 @@ void test("Incomplete declarations never seal.", async (t) => {
 void test("Identity follows a filed doc.", async (t) => {
   // doctest:L93
   const box = await makeTmpBox({git:true});
-  const saved = {...declaration,input:undefined,material:{kind:"clipping" as const,text:"Quoted evidence"}};
+  const saved = {...declaration,input:undefined,material:clipping.material};
   await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:saved});
   const first = present(await processCapture({boxRoot:box.root,jev:undefined,chat:undefined},id));
-  t.check(first.state, "saved");
+  t.check(first, {
+    id,
+    owner: null,
+    digest: CLIPPING_DIGEST,
+    declaration: clipping,
+    acceptedAt: isoDate(),
+    state: "saved",
+    attempts: 0,
+    sourceRef: "_content/captures/11111111-1111-4111-8111-111111111111.doc.card",
+    sourceCommitted: true,
+    filingRequested: true,
+  });
 
   // doctest:L100
   await writeCapture(box.root,{...first,sourceRef:"../../etc/passwd"});
@@ -123,19 +159,49 @@ void test("Identity follows a filed doc.", async (t) => {
   await mkdir(box.path("_content/filed"),{recursive:true});
   await rename(box.path(present(first.sourceRef)),box.path("_content/filed/source.doc.card"));
   const filed = present(await reconcileCaptureSource(box.root,id));
-  t.check([filed.sourceRef,filed.state], [
-    "_content/filed/source.doc.card",
-    "saved",
-  ]);
+  t.check(filed, {
+    id,
+    owner: null,
+    digest: CLIPPING_DIGEST,
+    declaration: clipping,
+    acceptedAt: isoDate(),
+    state: "saved",
+    attempts: 0,
+    sourceRef: "_content/filed/source.doc.card",
+    sourceCommitted: true,
+    filingRequested: true,
+  });
 
   // doctest:L111
-  t.check((present(await readCapture(box.root,id))).sourceRef, "_content/filed/source.doc.card");
+  t.check(present(await readCapture(box.root,id)), {
+    id,
+    owner: null,
+    digest: CLIPPING_DIGEST,
+    declaration: clipping,
+    acceptedAt: isoDate(),
+    state: "saved",
+    attempts: 0,
+    sourceRef: "_content/filed/source.doc.card",
+    sourceCommitted: true,
+    filingRequested: true,
+  });
 
   // doctest:L114
   // A duplicate elsewhere must not trigger a scan when the stored reference is valid.
   const sourceText=await readFile(box.path(present(filed.sourceRef)),"utf8");
   await writeFile(box.path("_content/filed/copy.doc.card"),sourceText);
-  t.check(present(await reconcileCaptureSource(box.root,id)).sourceRef, "_content/filed/source.doc.card");
+  t.check(present(await reconcileCaptureSource(box.root,id)), {
+    id,
+    owner: null,
+    digest: CLIPPING_DIGEST,
+    declaration: clipping,
+    acceptedAt: isoDate(),
+    state: "saved",
+    attempts: 0,
+    sourceRef: "_content/filed/source.doc.card",
+    sourceCommitted: true,
+    filingRequested: true,
+  });
 
   // doctest:L120
   await rm(box.path("_content/filed/copy.doc.card"));
@@ -143,12 +209,36 @@ void test("Identity follows a filed doc.", async (t) => {
   await t.checkThrows(async () => (await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:saved})), "QuickCaptureError: This capture was deleted. It cannot be recreated by retrying.");
 
   // doctest:L125
-  t.check((present(await readCapture(box.root,id))).state, "gone");
+  t.check(present(await readCapture(box.root,id)), {
+    id,
+    owner: null,
+    digest: CLIPPING_DIGEST,
+    declaration: { version: 1, capturedAt: "2026-10-12T12:00:00Z", source: "apple-app-intents" },
+    acceptedAt: isoDate(),
+    state: "gone",
+    sourceRef: "_content/filed/source.doc.card",
+    sourceCommitted: true,
+    error: "The saved source was deleted.",
+    attempts: 0,
+    filingRequested: true,
+  });
 
   // doctest:L128
   await writeFile(box.path("_content/filed/copy.doc.card"),sourceText);
   const terminal=present(await reconcileCaptureSource(box.root,id));
-  await t.checkText([terminal.state,terminal.declaration.material], "[\"gone\",null]");
+  t.check(terminal, {
+    id,
+    owner: null,
+    digest: CLIPPING_DIGEST,
+    declaration: { version: 1, capturedAt: "2026-10-12T12:00:00Z", source: "apple-app-intents" },
+    acceptedAt: isoDate(),
+    state: "gone",
+    sourceRef: "_content/filed/source.doc.card",
+    sourceCommitted: true,
+    error: "The saved source was deleted.",
+    attempts: 0,
+    filingRequested: true,
+  });
 
   // doctest:L133
   await box.cleanup();

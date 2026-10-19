@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { haversineMeters, matchPlace } from "../../src/core/geo.js";
 
 const A = { name: "A", lat: 45, lng: -122, radius: 200 };
@@ -16,7 +17,7 @@ const BIG_A = { name: "A", lat: 45, lng: -122, radius: 5000 };
 void test("haversine: one degree of latitude is ~111.2 km", async (t) => {
   // doctest:L18
   const d = haversineMeters({ lat: 0, lng: 0 }, { lat: 1, lng: 0 });
-  await t.checkText(d > 111_000 && d < 111_400, "true");
+  t.check(d, any(Number).above(111_000).below(111_400));
 });
 
 // ## haversine is zero for identical points
@@ -38,7 +39,7 @@ void test("match: a far-away fix matches nothing", async (t) => {
 void test("BIGA (center exactly at the fix) and B (~111 m away) both contain the fix; th...", async (t) => {
   // doctest:L43
   const m = matchPlace({ lat: 45, lng: -122 }, [B, BIG_A]);
-  t.check(m ? m.name : null, "A");
+  t.check(m, BIG_A);
 });
 
 // ## match: strict radius — a fix just outside the radius does not match

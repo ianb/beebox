@@ -15,7 +15,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, not } from "agent-doctest/check";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { sanitizeReturnTo } from "../../../../src/webapp/routes/auth/login-page.js";
 import { escapeHtml } from "../../../../src/lib/escape-html.js";
@@ -24,43 +24,30 @@ process.env.BBX_SESSION_SECRET = "test-session-secret-for-login-page-doctest";
 
 // ## `sanitizeReturnTo` accepts only a same-origin path, failing safe to `<prefix>/`
 void test("`sanitizeReturnTo` accepts only a same-origin path, failing safe to `<prefix>/`", async (t) => {
-  // doctest:L27
-  t.check(
-    // A single leading-slash path passes through.
-    sanitizeReturnTo({ raw: "/test/browse/card", prefix: "" }),
-    "/test/browse/card",
-  );
+  // A single leading-slash path passes through.
+  t.check(sanitizeReturnTo({ raw: "/test/browse/card", prefix: "" }), "/test/browse/card");
 
-  // doctest:L31
-  t.check(
-    // Absent → the prefix root.
-    sanitizeReturnTo({ raw: undefined, prefix: "/main" }),
-    "/main/",
-  );
+  // Absent → the prefix root.
+  t.check(sanitizeReturnTo({ raw: undefined, prefix: "/main" }), "/main/");
 
-  // doctest:L35
-  await t.checkText(
-    // Escapes / traversal-shaped values collapse to the safe root:
-    JSON.stringify([
-      sanitizeReturnTo({ raw: "//evil.com/x", prefix: "" }),   // protocol-relative
-      sanitizeReturnTo({ raw: "/\\evil.com", prefix: "" }),    // backslash escape
-      sanitizeReturnTo({ raw: "http://evil/x", prefix: "" }),  // no leading slash
-      sanitizeReturnTo({ raw: "/a\nb", prefix: "" }),          // CR/LF (header injection)
-    ]),
-    "[\"/\",\"/\",\"/\",\"/\"]",
-  );
+  // Escapes / traversal-shaped values collapse to the safe root:
+  t.check([
+    sanitizeReturnTo({ raw: "//evil.com/x", prefix: "" }),   // protocol-relative
+    sanitizeReturnTo({ raw: "/\\evil.com", prefix: "" }),    // backslash escape
+    sanitizeReturnTo({ raw: "http://evil/x", prefix: "" }),  // no leading slash
+    sanitizeReturnTo({ raw: "/a\nb", prefix: "" }),          // CR/LF (header injection)
+  ], ["/", "/", "/", "/"]);
 });
 
 // `escapeHtml` neutralizes the injection characters.
 void test("escapeHtml neutralizes the injection characters.", async (t) => {
-  // doctest:L48
   t.check(escapeHtml("/\"><script>alert(1)</script>"), "/&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;");
 });
 
+// The pages are generated HTML, so the checks below look for the parts that matter
+// rather than comparing a whole page.
 // ## The bare login page renders with no gated/external resources
 void test("The bare login page renders with no gated/external resources", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -68,76 +55,52 @@ void test("The bare login page renders with no gated/external resources", async 
       t.error(error);
     }
   });
-  // doctest:L55
   const box = await makeTestServer();
 
-  // doctest:L57
   const res = await box.server.inject({ method: "GET", url: "/auth/login" });
-  print(`status: ${res.statusCode}`);
-  print(`content-type: ${res.headers["content-type"]}`);
-  print(`has form POST to /auth/login: ${res.payload.includes("<form method=\"POST\" action=\"/auth/login\">")}`);
-  print(`has email + password inputs: ${res.payload.includes("name=\"email\"") && res.payload.includes("name=\"password\"")}`);
+  t.check({ status: res.statusCode, contentType: res.headers["content-type"] }, {
+    status: 200,
+    contentType: "text/html",
+  });
+  t.check(res.payload, any(String).includes("<form method=\"POST\" action=\"/auth/login\">"));
+  t.check(res.payload, any(String).includes("name=\"email\""));
+  t.check(res.payload, any(String).includes("name=\"password\""));
   // None of the SPA/asset references a gated router would 401:
-  print(`no <script: ${!res.payload.includes("<script")}`);
-  print(`no <link: ${!res.payload.includes("<link")}`);
-  print(`no /assets/: ${!res.payload.includes("/assets/")}`);
-  print(`no /@vite/ or /src/: ${!res.payload.includes("/@vite/") && !res.payload.includes("/src/")}`);
-  await t.checkText(out.with("done"), `status: 200
-content-type: text/html
-has form POST to /auth/login: true
-has email + password inputs: true
-no <script: true
-no <link: true
-no /assets/: true
-no /@vite/ or /src/: true
-done`);
+  t.check(res.payload, not(any(String).includes("<script")));
+  t.check(res.payload, not(any(String).includes("<link")));
+  t.check(res.payload, not(any(String).includes("/assets/")));
+  t.check(res.payload, not(any(String).includes("/@vite/")));
+  t.check(res.payload, not(any(String).includes("/src/")));
 
   // ## `?error=1` renders the generic error banner; a returnTo is preserved + escaped
 
-  // doctest:L83
   const withError = await box.server.inject({
     method: "GET",
     url: "/auth/login?error=1&returnTo=%2F%22%3E%3Cscript%3E",
   });
   // The banner text, and the injection attempt escaped (never a live <script>).
-  print(`banner: ${withError.payload.includes("Incorrect email or password.")}`);
-  print(`returnTo escaped: ${withError.payload.includes("value=\"/&quot;&gt;&lt;script&gt;\"")}`);
-  print(`no live script tag: ${!withError.payload.includes("<script")}`);
-  await t.checkText(out.with("done"), `banner: true
-returnTo escaped: true
-no live script tag: true
-done`);
+  t.check(withError.payload, any(String).includes("Incorrect email or password."));
+  t.check(withError.payload, any(String).includes("value=\"/&quot;&gt;&lt;script&gt;\""));
+  t.check(withError.payload, not(any(String).includes("<script")));
 
   // ## Behind a base prefix, the form action and returnTo carry it
 
-  // doctest:L102
   const prefixed = await box.server.inject({
     method: "GET",
     url: "/auth/login",
     headers: { "x-bbx-base-prefix": "/main" },
   });
-  print(`action: ${prefixed.payload.includes("action=\"/main/auth/login\"")}`);
-  print(`returnTo default: ${prefixed.payload.includes("name=\"returnTo\" value=\"/main/\"")}`);
-  await t.checkText(out.with("done"), `action: true
-returnTo default: true
-done`);
+  t.check(prefixed.payload, any(String).includes("action=\"/main/auth/login\""));
+  t.check(prefixed.payload, any(String).includes("name=\"returnTo\" value=\"/main/\""));
 
   // ## The setup page: guidance without a token, a form with one
 
-  // doctest:L119
   const noToken = await box.server.inject({ method: "GET", url: "/auth/setup" });
-  print(`guidance heading: ${noToken.payload.includes("First-run setup")}`);
-  print(`no form without a token: ${!noToken.payload.includes("<form")}`);
+  t.check(noToken.payload, any(String).includes("First-run setup"));
+  t.check(noToken.payload, not(any(String).includes("<form")));
 
-  // doctest:L123
   const withToken = await box.server.inject({ method: "GET", url: "/auth/setup?token=abc123" });
-  print(`form action: ${withToken.payload.includes("action=\"/auth/setup\"")}`);
-  print(`hidden token: ${withToken.payload.includes("name=\"token\" value=\"abc123\"")}`);
-  print(`confirm field: ${withToken.payload.includes("name=\"confirmPassword\"")}`);
-  await t.checkText(out.with("done"), `guidance heading: true
-no form without a token: true
-form action: true
-hidden token: true
-confirm field: true
-done`);
+  t.check(withToken.payload, any(String).includes("action=\"/auth/setup\""));
+  t.check(withToken.payload, any(String).includes("name=\"token\" value=\"abc123\""));
+  t.check(withToken.payload, any(String).includes("name=\"confirmPassword\""));
 });

@@ -24,10 +24,12 @@ void test("contains carries over from the existing card", async (t) => {
   const box = await makeTmpBox();
   await box.write("_content/inbox/email/t.email-thread.card", "---\nthread-id: t1\nsubject: Pricing\ncontains: Metricly demo offer; no action needed.\n---\n");
   const preserved = await preserveAgentFields(TEMPLATED, { existingPath: box.path("_content/inbox/email/t.email-thread.card") });
-  await t.checkText(preserved.includes("contains: Metricly demo offer; no action needed."), "true");
-
-  // doctest:L23
-  await t.checkText(preserved.includes("status: new"), "true");
+  t.checkText(preserved, `---
+thread-id: t1
+subject: Pricing
+status: new
+contains: Metricly demo offer; no action needed.
+---`);
 
   // ## No existing card (first sync): template passes through untouched
 
@@ -43,11 +45,14 @@ status: new
   // doctest:L42
   const withOwn = "---\nthread-id: t1\ncontains: from-template\n---\n";
   const result = await preserveAgentFields(withOwn, { existingPath: box.path("_content/inbox/email/t.email-thread.card") });
-  await t.checkText(result.includes("contains: from-template"), "true");
+  t.checkText(result, `---
+thread-id: t1
+contains: from-template
+---`);
 
   // ## A hand-mangled existing card contributes nothing (sync never breaks)
 
   // doctest:L51
   await box.write("_content/inbox/email/broken.email-thread.card", "no frontmatter here");
-  await t.checkText(await preserveAgentFields(TEMPLATED, { existingPath: box.path("_content/inbox/email/broken.email-thread.card") }) === TEMPLATED, "true");
+  t.check(await preserveAgentFields(TEMPLATED, { existingPath: box.path("_content/inbox/email/broken.email-thread.card") }), TEMPLATED);
 });

@@ -1,6 +1,6 @@
 ---
 title: "Retire doctest: TypeScript tests with a typed check()"
-status: partial
+status: implemented
 workstream: doctest-typecheck
 issues:
   - ../../../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md
@@ -944,6 +944,50 @@ Decided with the boxholder on 2026-10-18, after the generative review:
   strength result.
 - **First implementation chunk:** the phase 3 worker brief and its review
   rule, on the lossy checks in `beebox/test/lib/`.
+- **Progress (2026-10-18): done.**
+  - **The gate is the type, not a lint rule.** `t.checkText(actual: string |
+    PromiseLike<string>, expected: string)`: every non-string actual became a
+    type error (2,390 sites in 555 files), which was the work list. Lint
+    without type information could not see the actual's type; the signature
+    can. `check-whole-value` now also sees through `?.`, `await`, `!`, `as`,
+    `satisfies` and `<T>x`, which added 112 findings.
+  - **Workers:** Sonnet subagents, one batch of 7–18 files each, 41 batches
+    in six waves, with one brief (check the whole value; the new check must
+    fail wherever the old one failed; a self-check over every removed
+    `===`, `instanceof`, `indexOf` and bound). The driver from track 3 was
+    gone, so batches went through the Agent tool in this worktree, and each
+    wave was committed between waves (the commit hook typechecks the working
+    tree).
+  - **Review:** codex `gpt-6-luna` reviewed the pilot and each wave against
+    the fidelity rule. Its regressions were all of three kinds, and each
+    became a tool or a brief rule: identity (`a === b` on objects became a
+    value check), class (`instanceof` became a name check), and strict
+    bounds (`< n` became an inclusive `between`). codex `gpt-6-sol` reviewed
+    the tool changes; its accepted findings are fixed.
+  - **Tools added to `agent-doctest/check`:** `not(x)` / `not(pattern)`,
+    `is(x)` (identity), `instanceOf(C)`, `.below(n)` / `.above(n)`; an
+    optional key typed `k?: V | undefined` takes `k: undefined`.
+  - **Text comparison is text only.** The comparer lost its value paths
+    (serializers, JS-literal expected text, function-with-print actuals,
+    labels, returned extractions, `«show»`); `agent-doctest/src` went from
+    about 2,800 to 2,170 lines. `checkThrows` now fails when nothing throws
+    even against a wildcard, and a rejected checked promise is a failed
+    check.
+  - **Result:** `checkText` calls 3,078 → 709 (all on text); `t.check`
+    9,465 → 11,619; one `check-whole-value` disable, with its reason.
+  - **Gains measured.** Round 1, four small pure modules whose old checks
+    already compared concrete text: 32 mutants, old and new both caught 25.
+    Round 2, four modules whose old checks read a predicate or length of a
+    larger result, with mutants aimed at the parts those checks skipped:
+    old caught 8 of 32, new 19, none lost.
+  - **Found by stronger checks:** `bbx pub` printed "publication URL" twice
+    (fixed); the Google Calendar `.ics` time-zone bug
+    (`issues/bugs/2026-10-18-calendar-ics-labels-unconverted-time-with-event-zone.md`);
+    a no-op test in `mention-apply.test.ts` (fixed).
+  - **Left as is:** large generated text (pages, prompts, scripts) keeps
+    narrow `any(String).includes(...)` checks; `test/manual/` files were
+    typechecked and linted but not run; `// doctest:L` markers remain where
+    their checks were not merged (12,154).
 
 ### Track 6 — remove doctest
 

@@ -13,7 +13,10 @@ import {
   checkValue,
   containing,
   NO_EXPECTED,
+  instanceOf,
+  is,
   isoDate,
+  not,
   notAllowed,
   oneOf,
   optional,
@@ -193,7 +196,22 @@ void test("patterns: any, refinements, uuid, isoDate, oneOf", async (t) => {
   t.ok(passes("/box/notes/today", any(String).startsWith("/box/").endsWith("/today").includes("notes")));
   t.ok(passes("abc-123", any(String).matches(/^[a-z]+-\d+$/)));
   t.ok(passes(0.1 + 0.2, any(Number).closeTo(0.3, 1e-9)));
+  t.ok(passes(7.9, any(Number).below(8)));
+  t.notOk(passes(8, any(Number).below(8)), "below is strict");
+  t.notOk(passes(1000, any(Number).above(1000)), "above is strict");
   t.ok(passes("open", oneOf("open", "closed")));
+  t.ok(passes("b2", not("a1")));
+  t.notOk(passes("a1", not("a1")));
+  t.ok(passes("<p>ok</p>", not(any(String).includes("<script"))));
+  t.notOk(passes("<script>x</script>", not(any(String).includes("<script"))));
+  const first = { n: 1 };
+  t.ok(passes(first, is(first)));
+  t.notOk(passes({ n: 1 }, is(first)), "an equal copy is not the same object");
+  t.ok(passes({ n: 1 }, not(is(first))), "a different object");
+  t.notOk(passes(first, not(is(first))));
+  t.check([is(-0).source, is(1n).source, not(Number.NaN).source, not(Infinity).source, is(first).source], ["is(-0)", "is(1n)", "not(NaN)", "not(Infinity)", "is(<reference>)"]);
+  t.ok(passes(new RangeError("x"), instanceOf(Error)));
+  t.notOk(passes(new Error("x"), instanceOf(RangeError)));
   t.checkText(report({ n: 7 }, { n: any(Number).int().between(1, 5) }), `check failed: 1 mismatch
 mismatches:
 $.n: does not match .between(1, 5)
@@ -369,7 +387,7 @@ suggested:
 void test("the diff shows only real differences", async (t) => {
   const outcome = checkValue({ id: ID, n: 2, title: "x" }, { id: uuid(), n: any(Number), title: "y" });
   t.equal(outcome.pass, false);
-  if (!outcome.pass) t.checkText(outcome.diff, `- expected
+  if (!outcome.pass && outcome.diff !== undefined) t.checkText(outcome.diff, `- expected
 + actual
 
   {

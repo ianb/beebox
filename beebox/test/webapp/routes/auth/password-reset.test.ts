@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, not } from "agent-doctest/check";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -72,18 +73,16 @@ void test("A live link resets the pinned member and returns to ordinary login", 
   for (let index = 1; index < 12; index += 1) {
     page = await ctx.server.inject({ method: "GET", url: `/auth/reset-password?token=${reset.token}` });
   }
-  const pageResult = {
+  t.check({
     status: page.statusCode,
     noStore: page.headers["cache-control"],
     referrer: page.headers["referrer-policy"],
-    namesEmail: page.payload.includes("member@example.com"),
-  };
-  t.check(pageResult, {
+  }, {
     status: 200,
     noStore: "no-store",
     referrer: "no-referrer",
-    namesEmail: true,
   });
+  t.check(page.payload, any(String).includes("member@example.com"));
 
   // Wrong content types and invite-kind capabilities cannot enter the reset flow.
 
@@ -98,7 +97,7 @@ void test("A live link resets the pinned member and returns to ordinary login", 
     confirmPassword: "new-password",
   }));
   console.warn = originalKindWarn;
-  t.check(`${wrongType.statusCode},${wrongKind.statusCode}`, "400,410");
+  t.check({ wrongType: wrongType.statusCode, wrongKind: wrongKind.statusCode }, { wrongType: 400, wrongKind: 410 });
 
   // doctest:L88
   passwordResetThrottle.reset();
@@ -112,10 +111,8 @@ void test("A live link resets the pinned member and returns to ordinary login", 
     password: "new-password",
     confirmPassword: "new-password-typo",
   }));
-  t.check({ status: mismatch.statusCode, token: mismatch.payload.includes(`value="${reset.token}"`) }, {
-    status: 400,
-    token: true,
-  });
+  t.check(mismatch.statusCode, 400);
+  t.check(mismatch.payload, any(String).includes(`value="${reset.token}"`));
 
   // doctest:L105
   t.check(loginThrottle.acquireHashSlot(), true);
@@ -131,27 +128,24 @@ void test("A live link resets the pinned member and returns to ordinary login", 
   }));
   loginThrottle.releaseHashSlot();
   loginThrottle.releaseHashSlot();
-  t.check({ status: atCapacity.statusCode, retained: atCapacity.payload.includes(`value="${reset.token}"`) }, {
-    status: 429,
-    retained: true,
-  });
+  t.check(atCapacity.statusCode, 429);
+  t.check(atCapacity.payload, any(String).includes(`value="${reset.token}"`));
 
   // doctest:L123
   const beforeGen = getLocalUser("member@example.com")?.gen;
   const acceptedRequest = resetForm({ token: reset.token, password: "new-password", confirmPassword: "new-password" });
   acceptedRequest.headers["x-bbx-base-prefix"] = "/worktree";
   const accepted = await ctx.server.inject(acceptedRequest);
-  const acceptedResult = {
+  t.check({
     status: accepted.statusCode,
     location: accepted.headers.location,
     cookie: accepted.headers["set-cookie"] ?? null,
-    gen: `${beforeGen}->${getLocalUser("member@example.com")?.gen}`,
-  };
-  t.check(acceptedResult, {
+    gen: { before: beforeGen, after: getLocalUser("member@example.com")?.gen },
+  }, {
     status: 302,
     location: "/worktree/auth/login?returnTo=%2Fworktree%2Ftest%2F&passwordReset=1",
     cookie: null,
-    gen: "1->2",
+    gen: { before: 1, after: 2 },
   });
 
   // doctest:L136
@@ -166,14 +160,20 @@ void test("A live link resets the pinned member and returns to ordinary login", 
   t.check(await verifyPassword({ email: "member@example.com", password: "old-password" }), null);
 
   // doctest:L147
-  t.check((await verifyPassword({ email: "member@example.com", password: "new-password" }))?.email, "member@example.com");
+  t.check(await verifyPassword({ email: "member@example.com", password: "new-password" }), {
+    email: "member@example.com",
+    name: "Member",
+    role: "member",
+    gen: 2,
+    created: isoDate(),
+  });
 
   // The login page confirms the update without signing the member in, and replay is
   // the same generic dead-link response as any unknown token.
 
   // doctest:L155
   const loginPage = await ctx.server.inject({ method: "GET", url: "/auth/login?passwordReset=1" });
-  await t.checkText(loginPage.payload.includes("Password reset. Sign in with your new password."), "true");
+  t.check(loginPage.payload, any(String).includes("Password reset. Sign in with your new password."));
 
   // doctest:L159
   const originalWarn = console.warn;
@@ -251,8 +251,6 @@ void test("Access removal and store failures fail closed", async (t) => {
   // doctest:L228
   await writeFile(`${process.env.BBX_AUTH_FILE}.invites.json`, "not json", { mode: 0o600 });
   const unavailable = await staleCtx.server.inject({ method: "GET", url: `/auth/reset-password?token=${staleReset.token}` });
-  t.check({ status: unavailable.statusCode, leaksPath: unavailable.payload.includes(process.env.BBX_AUTH_FILE) }, {
-    status: 503,
-    leaksPath: false,
-  });
+  t.check(unavailable.statusCode, 503);
+  t.check(unavailable.payload, not(any(String).includes(process.env.BBX_AUTH_FILE)));
 });

@@ -7,8 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
-import assert from "node:assert/strict";
+import { any, isoDate, str } from "agent-doctest/check";
 import { executeAnswer } from "../../../src/core/commands/answer.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -17,22 +16,21 @@ import { execSync } from "node:child_process";
 
 const QUESTIONS = "_bookkeeping/questions";
 
-// Files touched by the HEAD commit, one path per line, sorted.
+// Files touched by the HEAD commit, sorted.
 function headFiles(root: string) {
   return execSync("git diff-tree --no-commit-id --name-only -r --relative HEAD", { cwd: root, stdio: "pipe" })
     .toString()
     .trim()
     .split("\n")
-    .toSorted()
-    .join("\n");
+    .toSorted();
 }
 
 /**
  * Answer a question on a throwaway box. `content` (optional) is written to
  * `_bookkeeping/questions/<name>`; `args` may be a function of the box. Returns the
  * command's `success`/`error` plus the card text afterwards (null when absent), the
- * follow-up job text (null when there is none), the HEAD commit's files (git boxes
- * only) and the raw jobs listing.
+ * follow-up job text (null when there is none), the job files left behind and the
+ * HEAD commit's files (git boxes only).
  */
 async function answerOn({ name, content, args, git }: {
   name: string;
@@ -46,15 +44,14 @@ async function answerOn({ name, content, args, git }: {
     if (content !== undefined) await box.write(rel, content);
     const { ctx } = createCollectorContext(box.root);
     const res = await executeAnswer(ctx, { question: rel, ...(typeof args === "function" ? args(box) : args) });
-    const jobsListing = await box.list("_bookkeeping/jobs");
-    const jobFiles = jobsListing.split("\n").filter((f) => f.endsWith(".card"));
+    const jobFiles = (await box.list("_bookkeeping/jobs")).split("\n").filter((f) => f.endsWith(".card"));
     const [jobFile] = jobFiles;
     return {
       success: res.success,
       error: res.error,
       card: content === undefined ? null : await box.read(rel),
       job: jobFiles.length === 1 && jobFile !== undefined ? await box.read(jobFile) : null,
-      jobsListing,
+      jobFiles,
       committed: git === "none" ? null : headFiles(box.root),
     };
   } finally {
@@ -62,17 +59,24 @@ async function answerOn({ name, content, args, git }: {
   }
 }
 
-/** Which of `needles` appear in `text`, as { needle: boolean }. */
-const contains = (text: string | null, ...needles: string[]) => {
-  assert.ok(text !== null);
-  return Object.fromEntries(needles.map((n) => [n, text.includes(n)]));
-};
+const JOB_FILE = str`_bookkeeping/jobs/${any(String)}.question-followup.job.card`;
 
-/** The `selected` id and answer `text` recorded on an answered card. */
-const recorded = (card: string | null) => {
-  assert.ok(card !== null);
-  return { selected: card.match(/selected: (.*)/)?.[1], text: card.match(/text: (.*)/)?.[1] };
-};
+/** What a successful answer leaves: the answered card, one follow-up job, and one commit holding both. */
+function answered({ question, card, job }: { question: string; card: ReturnType<typeof str>; job: string }) {
+  return {
+    success: true,
+    error: undefined,
+    card,
+    job,
+    jobFiles: [JOB_FILE],
+    committed: [JOB_FILE, `${QUESTIONS}/${question}`],
+  };
+}
+
+/** What a rejected answer leaves: the card as it was, and no job or commit. */
+function rejected(error: string, card: string | null) {
+  return { success: false, error, card, job: null, jobFiles: [], committed: [""] };
+}
 
 const SELECT = `---
 prompt: Where does this receipt go?
@@ -114,41 +118,90 @@ directive: Use the picked option
 ---
 `;
 
+
+const SELECT_HEAD = `type: question
+prompt: Where does this receipt go?
+input:
+  type: select
+  options:
+    - id: finance
+      label: Finance
+    - id: personal
+      label: Personal
+learning:
+  sink: guide
+  proposal: Receipts like this belong in finance/.
+directive: File the receipt
+`;
+
+/** The answered card text: `head` and the `answer:` lines, then the stamp. */
+const answeredCard = (head: string, answerLines: string) => str`---
+${head}answer:
+${answerLines}answered-at: ${isoDate()}
+answered-via: cli
+---
+`;
+
+const receiptJob = (answer: string) => `---
+description: "Follow up on answered question: Where does this receipt go?"
+question-ref:
+  ref: _bookkeeping/questions/Receipt.question.card
+directive: File the receipt
+answer: ${answer}
+learning:
+  sink: guide
+  proposal: Receipts like this belong in finance/.
+---
+`;
+
+const ARCHIVE_HEAD = `type: question
+prompt: Archive this thread?
+input:
+  type: confirm
+directive: Archive if yes
+`;
+
+const archiveJob = (answer: string) => `---
+description: "Follow up on answered question: Archive this thread?"
+question-ref:
+  ref: _bookkeeping/questions/Archive.question.card
+directive: Archive if yes
+answer: ${answer}
+---
+`;
+
+const NAME_HEAD = `type: question
+prompt: What should I name the project?
+input:
+  type: text
+`;
+
+const nameJob = (question: string) => `---
+description: "Follow up on answered question: What should I name the project?"
+question-ref:
+  ref: _bookkeeping/questions/${question}
+directive: Process the answer to this question
+answer: Phoenix
+---
+`;
+
 // ## Select — by letter, by label, by selectedId
 //
 // Answering `a` picks the first option; the card records the label as text and the
-// option id as `selected`, and stamps `answered-at`:
+// option id as `selected`, and stamps `answered-at`. The follow-up job carries the
+// directive AND the declared `learning:` passthrough:
 void test("Answering a picks the first option; the card records the label as text and th...", async (t) => {
-  // doctest:L122
   const r = await answerOn({ name: "Receipt.question.card", content: SELECT, args: { answer: "a" } });
-  await t.checkText(({ success: r.success, ...recorded(r.card), ...contains(r.card, "answered-at:") }), "{ success: true, selected: \"finance\", text: \"Finance\", \"answered-at:\": true }");
-
-  // The follow-up job carries the directive AND the declared `learning:` passthrough:
-
-  // doctest:L130
-  t.check(contains(r.job, "directive: File the receipt", "answer: Finance", "Receipts like this belong in finance/."), {
-    "directive: File the receipt": true,
-    "answer: Finance": true,
-    "Receipts like this belong in finance/.": true,
-  });
+  t.check(r, answered({ question: "Receipt.question.card", card: answeredCard(SELECT_HEAD, "  text: Finance\n  selected: finance\n"), job: receiptJob("Finance") }));
 });
 
 // Answering by the option's label resolves the same id, and answering by
 // `selectedId` alone (a direct API path) resolves the id to its label:
 void test("Answering by the option's label resolves the same id, and answering by select...", async (t) => {
-  // doctest:L138
   const byLabel = await answerOn({ name: "Receipt.question.card", content: SELECT, args: { answer: "Personal" } });
   const byId = await answerOn({ name: "Receipt.question.card", content: SELECT, args: { selectedId: "finance" } });
-  t.check(({ byLabel: [byLabel.success, recorded(byLabel.card).selected], byId: [byId.success, recorded(byId.card).text] }), {
-    byLabel: [
-      true,
-      "personal",
-    ],
-    byId: [
-      true,
-      "Finance",
-    ],
-  });
+  t.check(byLabel, answered({ question: "Receipt.question.card", card: answeredCard(SELECT_HEAD, "  text: Personal\n  selected: personal\n"), job: receiptJob("Personal") }));
+  t.check(byId, answered({ question: "Receipt.question.card", card: answeredCard(SELECT_HEAD, "  text: Finance\n  selected: finance\n"), job: receiptJob("Finance") }));
 });
 
 // ## Select — label match wins over the letter-index shortcut
@@ -158,12 +211,32 @@ void test("Answering by the option's label resolves the same id, and answering b
 // shortcut, so typing that letter picks the matching label, not whatever
 // option sits at that letter's position:
 void test("An option can be labelled with a letter (e.g.", async (t) => {
-  // doctest:L152
   const r = await answerOn({ name: "Letters.question.card", content: LETTER_LABELS, args: { answer: "b" } });
-  t.check(({ success: r.success, selected: recorded(r.card).selected }), {
-    success: true,
-    selected: "first",
-  });
+  t.check(r, answered({ question: "Letters.question.card", card: str`---
+type: question
+prompt: Pick one
+input:
+  type: select
+  options:
+    - id: first
+      label: b
+    - id: second
+      label: Second
+directive: Use the picked option
+answer:
+  text: b
+  selected: first
+answered-at: ${isoDate()}
+answered-via: cli
+---
+`, job: `---
+description: "Follow up on answered question: Pick one"
+question-ref:
+  ref: _bookkeeping/questions/Letters.question.card
+directive: Use the picked option
+answer: b
+---
+` }));
 });
 
 // ## Confirm — by selectedId with a note, by typed yes/no, junk rejected
@@ -172,49 +245,29 @@ void test("An option can be labelled with a letter (e.g.", async (t) => {
 // rides along as a note into `answer.text`. The follow-up job's answer folds the
 // decision and the note together:
 void test("The new UI path sends selectedId:", async (t) => {
-  // doctest:L164
   const r = await answerOn({ name: "Archive.question.card", content: CONFIRM, args: { selectedId: "yes", answer: "looks safe to archive" } });
-  await t.checkText(({ success: r.success, selected: recorded(r.card).selected, ...contains(r.card, "looks safe to archive"), ...contains(r.job, "yes (looks safe to archive)") }), "{ success: true, selected: \"yes\", \"looks safe to archive\": true, \"yes (looks safe to archive)\": true }");
+  t.check(r, answered({ question: "Archive.question.card", card: answeredCard(ARCHIVE_HEAD, "  text: looks safe to archive\n  selected: yes\n"), job: archiveJob("yes (looks safe to archive)") }));
 });
 
 // A typed free-text `y` still normalizes to `yes`:
 void test("A typed free-text y still normalizes to yes:", async (t) => {
-  // doctest:L172
   const r = await answerOn({ name: "Archive.question.card", content: CONFIRM, args: { answer: "y" } });
-  t.check(({ success: r.success, selected: recorded(r.card).selected }), {
-    success: true,
-    selected: "yes",
-  });
+  t.check(r, answered({ question: "Archive.question.card", card: answeredCard(ARCHIVE_HEAD, "  text: yes\n  selected: yes\n"), job: archiveJob("yes") }));
 });
 
 // Junk is rejected — both a junk free-text answer and a junk `selectedId` — and
 // the card stays pending after a rejected answer:
 void test("Junk is rejected — both a junk free-text answer and a junk selectedId — and t...", async (t) => {
-  // doctest:L181
   const typedJunk = await answerOn({ name: "Archive.question.card", content: CONFIRM, args: { answer: "maybe" } });
   const idJunk = await answerOn({ name: "Archive.question.card", content: CONFIRM, args: { selectedId: "maybe" } });
-  t.check(
-    ({
-      typed: typedJunk.error,
-      selectedId: idJunk.error,
-      pending: [typedJunk, idJunk].every((r) => !r.card?.includes("answered-at")),
-    }),
-    {
-    typed: "Confirm questions require a yes/no answer",
-    selectedId: "Confirm answer must be \"yes\" or \"no\" (got \"maybe\")",
-    pending: true,
-  },
-  );
+  t.check(typedJunk, rejected("Confirm questions require a yes/no answer", CONFIRM));
+  t.check(idJunk, rejected('Confirm answer must be "yes" or "no" (got "maybe")', CONFIRM));
 });
 
 // ## Text
 void test("Text", async (t) => {
-  // doctest:L198
   const r = await answerOn({ name: "Name.question.card", content: TEXT, args: { answer: "Phoenix" } });
-  t.check(({ success: r.success, text: recorded(r.card).text }), {
-    success: true,
-    text: "Phoenix",
-  });
+  t.check(r, answered({ question: "Name.question.card", card: answeredCard(NAME_HEAD, "  text: Phoenix\n"), job: nameJob("Name.question.card") }));
 });
 
 // ## Expired and dismissed are answerable; answered is terminal
@@ -225,32 +278,19 @@ void test("Text", async (t) => {
 // does a dismissed one (an un-dismissal is the boxholder's prerogative); its
 // `dismissed-at` is likewise cleared:
 void test("An expired question still accepts an answer (expiry demotes visibility, it do...", async (t) => {
-  // doctest:L212
   const stamp = (field: string) => TEXT.replace("---\n", `---\n${field}: 2026-01-01T00:00:00-07:00\n`);
   const expired = await answerOn({ name: "Old.question.card", content: stamp("expired-at"), args: { answer: "Phoenix" } });
   const dismissed = await answerOn({ name: "Skipped.question.card", content: stamp("dismissed-at"), args: { answer: "Phoenix" } });
-  await t.checkText(
-    ({
-      expired: { success: expired.success, ...contains(expired.card, "answered-at:", "expired-at") },
-      dismissed: { success: dismissed.success, ...contains(dismissed.card, "answered-at:", "dismissed-at") },
-    }),
-    `{
-  expired: { success: true, "answered-at:": true, "expired-at": false },
-  dismissed: { success: true, "answered-at:": true, "dismissed-at": false }
-}`,
-  );
+  t.check(expired, answered({ question: "Old.question.card", card: answeredCard(NAME_HEAD, "  text: Phoenix\n"), job: nameJob("Old.question.card") }));
+  t.check(dismissed, answered({ question: "Skipped.question.card", card: answeredCard(NAME_HEAD, "  text: Phoenix\n"), job: nameJob("Skipped.question.card") }));
 });
 
 // An already-answered question is rejected (a coherent answered card carries its
 // `answer` + `answered-at`):
 void test("An already-answered question is rejected (a coherent answered card carries it...", async (t) => {
-  // doctest:L229
   const ANSWERED = TEXT.replace("---\n", "---\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Done\n");
   const r = await answerOn({ name: "Done.question.card", content: ANSWERED, args: { answer: "Phoenix" } });
-  t.check(({ success: r.success, error: r.error }), {
-    success: false,
-    error: "Question is already answered; an answered question is terminal",
-  });
+  t.check(r, rejected("Question is already answered; an answered question is terminal", ANSWERED));
 });
 
 // ## Path containment — absolute and traversal paths are rejected fail-closed
@@ -258,36 +298,20 @@ void test("An already-answered question is rejected (a coherent answered card ca
 // A relative path that escapes the box via `../`, or an absolute path pointing
 // outside it, is rejected before any transition runs (the card never loads):
 void test("A relative path that escapes the box via ../, or an absolute path pointing ou...", async (t) => {
-  // doctest:L241
   const traversal = await answerOn({ name: "x", args: { question: "../../etc/passwd.card", answer: "x" } });
   const outside = await answerOn({ name: "x", args: { question: "/etc/passwd.card", answer: "x" } });
-  t.check(
-    ({
-      traversal: [traversal.success, traversal.error?.startsWith("Question path escapes the box:")],
-      outside: [outside.success, outside.error?.startsWith("Question path escapes the box:")],
-    }),
-    {
-    traversal: [
-      false,
-      true,
-    ],
-    outside: [
-      false,
-      true,
-    ],
-  },
-  );
+  t.check(traversal, rejected("Question path escapes the box: ../../etc/passwd.card", null));
+  t.check(outside, rejected("Question path escapes the box: /etc/passwd.card", null));
 });
 
 // An absolute path that resolves INSIDE the box is accepted (the CLI may pass one):
 void test("An absolute path that resolves INSIDE the box is accepted (the CLI may pass o...", async (t) => {
-  // doctest:L253
   const r = await answerOn({
     name: "Name.question.card",
     content: TEXT,
     args: (box) => ({ question: `${box.root}/_bookkeeping/questions/Name.question.card`, answer: "Phoenix" }),
   });
-  t.check(r.success, true);
+  t.check(r, answered({ question: "Name.question.card", card: answeredCard(NAME_HEAD, "  text: Phoenix\n"), job: nameJob("Name.question.card") }));
 });
 
 // ## Single commit — card and job land together
@@ -295,12 +319,8 @@ void test("An absolute path that resolves INSIDE the box is accepted (the CLI ma
 // The answered card and its follow-up job are committed in ONE commit, so a
 // failure can never strand an answered card without its job:
 void test("The answered card and its follow-up job are committed in ONE commit, so a fai...", async (t) => {
-  // doctest:L268
   const r = await answerOn({ name: "Receipt.question.card", content: SELECT, args: { answer: "a" } });
-  t.check(r.committed?.split("\n").map((f) => f.replace(/jobs\/.*\.card$/, "jobs/«job»")), [
-    str`_bookkeeping/jobs/${any(String)}`,
-    "_bookkeeping/questions/Receipt.question.card",
-  ]);
+  t.check(r.committed, [JOB_FILE, "_bookkeeping/questions/Receipt.question.card"]);
 });
 
 // ## Rollback — a failed commit leaves the question pending and retryable
@@ -310,20 +330,13 @@ void test("The answered card and its follow-up job are committed in ONE commit, 
 // restores the original card and deletes the job before returning the error. The
 // card is untouched (still pending) and no job file was left behind:
 void test("Because the filesystem writes are not atomic with the commit, a commit failur...", async (t) => {
-  // doctest:L281
   const r = await answerOn({ name: "Receipt.question.card", content: SELECT, args: { answer: "a" }, git: "none" });
-  t.check(
-    ({
-      success: r.success,
-      failedToCommit: r.error?.startsWith("Failed to commit transition:"),
-      cardAnswered: r.card?.includes("answered-at"),
-      jobLeft: r.jobsListing.includes(".card"),
-    }),
-    {
+  t.check(r, {
     success: false,
-    failedToCommit: true,
-    cardAnswered: false,
-    jobLeft: false,
-  },
-  );
+    error: str`Failed to commit transition: ${any(String)}`,
+    card: SELECT,
+    job: null,
+    jobFiles: [],
+    committed: null,
+  });
 });

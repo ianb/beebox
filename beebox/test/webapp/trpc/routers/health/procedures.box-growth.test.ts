@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import { appRouter } from "../../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../../src/webapp/trpc/context.js";
@@ -50,8 +50,6 @@ await fs.writeFile(boxGrowthStatePath(box.root), `${JSON.stringify(warningState,
 
 // ## A non-owner cannot acknowledge or change expectations
 void test("A non-owner cannot acknowledge or change expectations", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L53
   const deniedAcknowledge = await caller(box.root, false).health.acknowledgeBoxGrowth().then(
     () => "allowed",
@@ -61,44 +59,40 @@ void test("A non-owner cannot acknowledge or change expectations", async (t) => 
     () => "allowed",
     (error) => error.code,
   );
-  print(`${deniedAcknowledge}:${deniedExpectation}`);
+  t.check([deniedAcknowledge, deniedExpectation], ["FORBIDDEN", "FORBIDDEN"]);
   // State is unchanged after the rejected call.
   const afterDenied = await readBoxGrowthState(box.root);
-  await t.checkText(out.with(print(afterDenied.status === "measured" ? afterDenied.previous.measuredAt : "missing")), `FORBIDDEN:FORBIDDEN
-2026-08-05T10:00:00.000Z`);
+  if (afterDenied.status !== "measured") throw new Error("expected measured state");
+  t.check(afterDenied.previous.measuredAt, "2026-08-05T10:00:00.000Z");
 });
 
 // ## Acknowledgement preserves rate sensitivity
 void test("Acknowledgement preserves rate sensitivity", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L73
   const result = await caller(box.root, true).health.acknowledgeBoxGrowth();
   const accepted = await readBoxGrowthState(box.root);
-  print(result.success);
   if (accepted.status !== "measured") throw new Error("expected measured state");
-  print(accepted.previous.counts.directories);
-  print(accepted.lastNotice);
-  await t.checkText(out.with(print(accepted.rateExpectations.length)), `true
-20000
-null
-0`);
+  // The whole state is a large generated snapshot of the tmp box (git hash, byte sizes),
+  // so the checks cover the fields the acknowledgement changes.
+  t.check(result, { success: true });
+  t.check({ directories: accepted.previous.counts.directories, lastNotice: accepted.lastNotice, rateExpectations: accepted.rateExpectations }, {
+    directories: 20000,
+    lastNotice: null,
+    rateExpectations: [],
+  });
 });
 
 // ## Expecting current rates stores durable headroom
 void test("Expecting current rates stores durable headroom", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L90
   await fs.writeFile(boxGrowthStatePath(box.root), `${JSON.stringify(warningState, null, 2)}\n`);
   const expectedResult = await caller(box.root, true).health.expectBoxGrowthRates();
   const expected = await readBoxGrowthState(box.root);
-  print(expectedResult.success);
   if (expected.status !== "measured") throw new Error("expected measured state");
-  print(expected.rateExpectations.some((item) => item.kind === "rate-directories"));
-  print(expected.rateExpectations.some((item) => item.kind === "rate-connector-directories"));
-  await t.checkText(out.with(print(expected.previous.counts.directories)), `true
-true
-false
-20000`);
+  t.check(expectedResult, { success: true });
+  t.check({ directories: expected.previous.counts.directories, rateExpectations: expected.rateExpectations }, {
+    directories: 20000,
+    // The threshold derives from the tmp box's directory count, which the box template sets.
+    rateExpectations: [{ kind: "rate-directories", path: null, thresholdPerHour: any(Number).positive(), setAt: isoDate() }],
+  });
 });

@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate } from "agent-doctest/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,7 +34,7 @@ void test("Lifecycle, chat matching, and owner isolation", async (t) => {
   await addPhotoTo(box.root, owned.id);
   const standalone = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: "owner@example.com" });
   await addPhotoTo(box.root, standalone.id);
-  const empty = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: "owner@example.com" });
+  await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: "owner@example.com" });
   const sealed = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: "owner@example.com" });
   await addPhotoTo(box.root, sealed.id);
   await setStagingState({ boxRoot: box.root, id: sealed.id, state: "sealed" });
@@ -44,14 +45,7 @@ void test("Lifecycle, chat matching, and owner isolation", async (t) => {
     clientSessionId: null,
     requestingUser: "owner@example.com",
   });
-  t.check({ idsMatch: byChat.length === 1 && byChat[0]?.id === owned.id, counts: byChat[0]?.counts }, {
-    idsMatch: true,
-    counts: {
-      photos: 1,
-      files: 0,
-      audioSegments: 0,
-    },
-  });
+  t.check(byChat, [{ id: owned.id, counts: { photos: 1, files: 0, audioSegments: 0 }, startedAt: isoDate() }]);
 
   // An exact client-held id finds a standalone capture:
 
@@ -62,7 +56,7 @@ void test("Lifecycle, chat matching, and owner isolation", async (t) => {
     clientSessionId: standalone.id,
     requestingUser: "owner@example.com",
   });
-  await t.checkText(byId[0]?.id === standalone.id, "true");
+  t.check(byId, [{ id: standalone.id, counts: { photos: 1, files: 0, audioSegments: 0 }, startedAt: isoDate() }]);
 
   // The same chat and ids reveal nothing to another user; empty and sealed sessions
   // are absent for the owner too:
@@ -80,11 +74,7 @@ void test("Lifecycle, chat matching, and owner isolation", async (t) => {
     clientSessionId: sealed.id,
     requestingUser: "owner@example.com",
   });
-  t.check({ other: otherUser.length, hasEmpty: ownerAll.some((item) => item.id === empty.id), hasSealed: ownerAll.some((item) => item.id === sealed.id) }, {
-    other: 0,
-    hasEmpty: false,
-    hasSealed: false,
-  });
+  t.check({ otherUser, ownerAll }, { otherUser: [], ownerAll: [{ id: owned.id, counts: { photos: 1, files: 0, audioSegments: 0 }, startedAt: isoDate() }] });
 });
 
 // ## The route: who the browse key is depends on the box

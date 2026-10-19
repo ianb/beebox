@@ -14,6 +14,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { is } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { createToastStore } from "../../../src/components/ui/toast-store.js";
 
@@ -53,10 +54,7 @@ void test("A single error toast carries message + cause detail", async (t) => {
 
   // doctest:L50
   store.error("Failed to load earlier messages");
-  await t.checkText(store.getSnapshot().length, "2");
-
-  // doctest:L54
-  t.check(store.getSnapshot()[1]?.detail, undefined);
+  t.check(store.getSnapshot(), [{ id: 1, message: "Failed to restart the agent process", detail: "HTTP 500", count: 1 }, { id: 2, message: "Failed to load earlier messages", detail: undefined, count: 1 }]);
 });
 
 // ## Duplicate messages collapse into one toast with a counter
@@ -106,11 +104,11 @@ void test("Firing the armed timer (what the real 10s setTimeout does) drops the 
   const clock = makeFakeSchedule();
   const store = createToastStore({ schedule: clock.schedule });
   store.error("Failed to cancel the schedule");
-  await t.checkText(store.getSnapshot().length, "1");
+  t.check(store.getSnapshot(), [{ id: 1, message: "Failed to cancel the schedule", detail: undefined, count: 1 }]);
 
   // doctest:L99
   clock.fireAll();
-  await t.checkText(store.getSnapshot().length, "0");
+  t.check(store.getSnapshot(), []);
 });
 
 // ## Dismiss removes a specific toast and notifies subscribers
@@ -122,13 +120,13 @@ void test("Dismiss removes a specific toast and notifies subscribers", async (t)
   store.subscribe(() => { notifications += 1; });
   store.error("Failed to restart the agent process");
   store.error("Failed to load earlier messages");
-  t.check(store.getSnapshot().map((toast) => toast.id).join(","), "1,2");
+  t.check(store.getSnapshot(), [{ id: 1, message: "Failed to restart the agent process", detail: undefined, count: 1 }, { id: 2, message: "Failed to load earlier messages", detail: undefined, count: 1 }]);
 
   // Dismissing by id leaves the sibling and fires one notification:
 
   // doctest:L120
   store.dismiss(1);
-  t.check(store.getSnapshot().map((toast) => toast.message).join(","), "Failed to load earlier messages");
+  t.check(store.getSnapshot(), [{ id: 2, message: "Failed to load earlier messages", detail: undefined, count: 1 }]);
 
   // doctest:L124
   t.check(notifications, 3);
@@ -145,7 +143,7 @@ void test("Dismiss removes a specific toast and notifies subscribers", async (t)
   // nothing changed, or React re-renders forever:
 
   // doctest:L142
-  await t.checkText(store.getSnapshot() === store.getSnapshot(), "true");
+  t.check(store.getSnapshot(), is(store.getSnapshot()));
 });
 
 // ## A condition that is still true in ten seconds does not expire
@@ -166,20 +164,13 @@ void test("Most errors are moments — a restart that failed, a fetch that did n
     persist: true,
     action: { label: "Sign in", href: "/auth/login?returnTo=%2Fchat" },
   });
-  t.check({ pending: clock.pending(), toasts: store.getSnapshot().length }, {
-    pending: 0,
-    toasts: 1,
-  });
+  t.check({ pending: clock.pending(), toasts: store.getSnapshot() }, { pending: 0, toasts: [{ id: 1, message: "Your session has ended, so the box stopped answering.", detail: undefined, count: 1, action: { label: "Sign in", href: "/auth/login?returnTo=%2Fchat" }, persist: true }] });
 
   // It carries the way out with it. An href rather than a handler, because the
   // destination is a URL and an anchor gets middle-click and keyboard activation
   // for free:
 
   // doctest:L173
-  t.check(store.getSnapshot()[0]?.action, {
-    label: "Sign in",
-    href: "/auth/login?returnTo=%2Fchat",
-  });
 
   // Firing every timer the store armed leaves it standing, and an ordinary error
   // raised alongside it still expires normally:
@@ -187,17 +178,14 @@ void test("Most errors are moments — a restart that failed, a fetch that did n
   // doctest:L181
   store.error("Failed to restart the agent process");
   clock.fireAll();
-  t.check(store.getSnapshot().map((toast) => toast.message).join(","), "Your session has ended, so the box stopped answering.");
+  t.check(store.getSnapshot(), [{ id: 1, message: "Your session has ended, so the box stopped answering.", detail: undefined, count: 1, action: { label: "Sign in", href: "/auth/login?returnTo=%2Fchat" }, persist: true }]);
 
   // A repeat collapses into it as usual — but must not hand it a timer on the way
   // in. The second 401 is more of the same condition, not evidence it is ending:
 
   // doctest:L191
   store.error("Your session has ended, so the box stopped answering.", { persist: true });
-  t.check({ pending: clock.pending(), count: store.getSnapshot()[0]?.count }, {
-    pending: 0,
-    count: 2,
-  });
+  t.check({ pending: clock.pending(), toasts: store.getSnapshot() }, { pending: 0, toasts: [{ id: 1, message: "Your session has ended, so the box stopped answering.", detail: undefined, count: 2, action: { label: "Sign in", href: "/auth/login?returnTo=%2Fchat" }, persist: true }] });
 
   // Dismissing still works — the person can put it away once they have read it:
 
@@ -205,5 +193,5 @@ void test("Most errors are moments — a restart that failed, a fetch that did n
   const [persistent] = store.getSnapshot();
   assert.ok(persistent);
   store.dismiss(persistent.id);
-  await t.checkText(store.getSnapshot().length, "0");
+  t.check(store.getSnapshot(), []);
 });

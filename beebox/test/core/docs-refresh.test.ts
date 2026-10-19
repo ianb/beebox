@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, containing, not } from "agent-doctest/check";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { rm, writeFile, mkdir, chmod, access } from "node:fs/promises";
@@ -60,17 +61,17 @@ void test("The first run on a box that has never generated:", async (t) => {
   const result = await refreshGeneratedDocs({ boxRoot: box.root });
   t.check(
     {
-      status: result.status,
-      rules: git(box, "ls-files", ".claude/rules").includes("card-pdf.md"),
-      skills: git(box, "ls-files", ".claude/skills").includes("skills/views/SKILL.md"),
-      clean: git(box, "status", "--porcelain") === "",
+      result,
+      rules: git(box, "ls-files", ".claude/rules").split("\n"),
+      skills: git(box, "ls-files", ".claude/skills").split("\n"),
+      status: git(box, "status", "--porcelain"),
     },
     {
-    status: "refreshed",
-    rules: true,
-    skills: true,
-    clean: true,
-  },
+      result: { status: "refreshed" },
+      rules: containing<string>([".claude/rules/card-pdf.md"]),
+      skills: containing<string>([".claude/skills/views/SKILL.md"]),
+      status: "",
+    },
   );
 
   // One measured output commit carries the refresh attribution.
@@ -101,14 +102,8 @@ void test("This runs against every box on every deploy, so the quiet path has to
   // doctest:L85
   const result = await refreshGeneratedDocs({ boxRoot: box.root });
   t.check(
-    {
-      status: result.status,
-      newCommits: Number(git(box, "rev-list", "--count", "HEAD")) - before,
-    },
-    {
-    status: "current",
-    newCommits: 0,
-  },
+    { result, commits: Number(git(box, "rev-list", "--count", "HEAD")) },
+    { result: { status: "current" }, commits: before },
   );
 
   // Quiet also means the gate never closed. With live work admitted, a refresh that
@@ -160,18 +155,13 @@ void test("What the deploy step exists for:", async (t) => {
   const rule = await box.read(".claude/rules/card-pdf.md");
   const skill = await box.read(".claude/skills/views/SKILL.md");
   t.check(
+    { result, rule, skill, status: git(box, "status", "--porcelain") },
     {
-      status: result.status,
-      rule: rule.startsWith("stale"),
-      skill: skill.includes("stale skill"),
-      clean: git(box, "status", "--porcelain") === "",
+      result: { status: "refreshed" },
+      rule: not(any(String).startsWith("stale")),
+      skill: not(any(String).includes("stale skill")),
+      status: "",
     },
-    {
-    status: "refreshed",
-    rule: false,
-    skill: false,
-    clean: true,
-  },
   );
 });
 
@@ -189,8 +179,8 @@ void test("Dirty input remains outside the generated-output commit", async (t) =
   await box.write("_content/notes.md", "work in progress\n");
   git(box, "add", "_content/notes.md");
   const result = await refreshGeneratedDocs({ boxRoot: box.root });
-  t.check({ status: result.status, staged: git(box, "diff", "--cached", "--name-only"), committed: git(box, "ls-tree", "--name-only", "HEAD", "_content/notes.md") }, {
-    status: "refreshed",
+  t.check({ result, staged: git(box, "diff", "--cached", "--name-only"), committed: git(box, "ls-tree", "--name-only", "HEAD", "_content/notes.md") }, {
+    result: { status: "refreshed" },
     staged: "_content/notes.md",
     committed: "",
   });
@@ -222,15 +212,15 @@ void test("The failed generation has already written files.", async (t) => {
 
   // doctest:L182
   const pending = git(box, "rev-parse", "refs/bbx/migrations/docs-refresh/pending");
-  await t.checkText(pending.length > 0, "true");
+  t.check(pending, any(String).matches(/^[\da-f]{40,64}$/));
 
   // doctest:L186
   git(box, "config", "--unset", "core.hooksPath");
   const result = await refreshGeneratedDocs({ boxRoot: box.root });
-  t.check({ status: result.status, rules: git(box, "ls-files", ".claude/rules").includes("card-pdf.md"), pending: git(box, "for-each-ref", "--format=%(objectname)", "refs/bbx/migrations/docs-refresh/pending"), clean: git(box, "status", "--porcelain") === "" }, {
-    status: "refreshed",
-    rules: true,
+  t.check({ result, rules: git(box, "ls-files", ".claude/rules").split("\n"), pending: git(box, "for-each-ref", "--format=%(objectname)", "refs/bbx/migrations/docs-refresh/pending"), status: git(box, "status", "--porcelain") }, {
+    result: { status: "refreshed" },
+    rules: containing<string>([".claude/rules/card-pdf.md"]),
     pending: "",
-    clean: true,
+    status: "",
   });
 });

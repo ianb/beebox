@@ -13,7 +13,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -22,15 +21,16 @@ import { createGoogleCalendarConnector } from "../../src/connectors/google-calen
 import { createGoogleDriveConnector } from "../../src/connectors/google-drive/connector.js";
 import { clearBoxConfigCache } from "../../src/core/box/config.js";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
-import type { SyncResult } from "../../src/connector.js";
 
-/** One line per connector: success, then how it skipped. */
-function describe(name: string, result: SyncResult) {
-  const skip = result.skipped
-    ? `${result.skipped.reason}: ${result.skipped.detail.slice(0, 40)}`
-    : "(not skipped)";
-  return `${name}: success=${result.success} created=${result.created.length} ${skip}`;
+/** A sync that was not attempted: success, nothing created or updated, and why. */
+function skipped(reason: "not-allowed" | "not-configured", detail: string) {
+  return { success: true, created: [], updated: [], skipped: { reason, detail } };
 }
+
+const NO_CLIENT_ID = skipped(
+  "not-configured",
+  'Google auth unavailable: No secret named "google-oauth-client-id" exists on this machine. It can be declared (bbx secrets declare google-oauth-client-id), but only the boxholder can supply its value.',
+);
 
 /** Rewrite the box's Google policy and drop the mtime-keyed config cache. */
 async function setPolicy(box: TmpBox, googleServices: Record<string, boolean>) {
@@ -44,8 +44,6 @@ async function setPolicy(box: TmpBox, googleServices: Record<string, boolean>) {
 // the setting rather than sending anyone to `bbx google-auth`. All three connectors
 // answer the same way.
 void test("A box with the service off has no credential problem at all, so the detail na...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -53,23 +51,16 @@ void test("A box with the service off has no credential problem at all, so the d
       t.error(error);
     }
   });
-  // doctest:L47
   const box = await makeTmpBox();
   await setPolicy(box, { gmail: false, calendar: false, drive: false });
 
-  // doctest:L50
-  print(describe("gmail", await createGmailConnector(box.root).sync()));
-  print(describe("calendar", await createGoogleCalendarConnector(box.root).sync()));
-  await t.checkText(out.with(print(describe("drive", await createGoogleDriveConnector(box.root).sync()))), `gmail: success=true created=0 not-allowed: Enable it in box settings (\`googleServic
-calendar: success=true created=0 not-allowed: Enable it in box settings (\`googleServic
-drive: success=true created=0 not-allowed: Enable it in box settings (\`googleServic`);
-
   // The detail names the service that is off, so a boxholder reading it out of a
-  // wakeup log knows which switch to flip:
+  // wakeup log knows which switch to flip.
+  const off = (service: string) => skipped("not-allowed", `Enable it in box settings (\`googleServices.${service}\` in \`_config/box.json\`)`);
+  t.check(await createGmailConnector(box.root).sync(), off("gmail"));
+  t.check(await createGoogleCalendarConnector(box.root).sync(), off("calendar"));
+  t.check(await createGoogleDriveConnector(box.root).sync(), off("drive"));
 
-  // doctest:L63
-  const off = await createGoogleDriveConnector(box.root).sync();
-  await t.checkText(out.with(off.skipped?.detail), "Enable it in box settings (`googleServices.drive` in `_config/box.json`)");
 
   // ## The missing credential: `not-configured`
   //
@@ -82,21 +73,16 @@ drive: success=true created=0 not-allowed: Enable it in box settings (\`googleSe
   // Drive is the one that changed shape here: this was a `success: false` sync
   // error, which made it the only connector reporting a skip as a failure.
 
-  // doctest:L80
   process.env.BBX_SECRETS_FILE = join(await mkdtemp(join(tmpdir(), "bbx-secrets-")), "secrets.json");
   delete process.env.BBX_GOOGLE_TOKENS_FILE;
   await setPolicy(box, { gmail: true, calendar: true, drive: true });
 
-  // doctest:L84
   const gmail = await createGmailConnector(box.root).sync();
   const calendar = await createGoogleCalendarConnector(box.root).sync();
   const drive = await createGoogleDriveConnector(box.root).sync();
 
-  // doctest:L88
-  await t.checkText(out.with([gmail, calendar, drive].map((r) => `${r.success}/${r.skipped?.reason}`).join(" ")), "true/not-configured true/not-configured true/not-configured");
-
-  // Every detail is a relay-ready sentence, not the old one-size "not configured":
-
-  // doctest:L95
-  await t.checkText(out.with(drive.skipped?.detail.startsWith("Google auth unavailable:")), "true");
+  // Every detail is a relay-ready sentence, not the old one-size "not configured".
+  t.check(gmail, NO_CLIENT_ID);
+  t.check(calendar, NO_CLIENT_ID);
+  t.check(drive, NO_CLIENT_ID);
 });

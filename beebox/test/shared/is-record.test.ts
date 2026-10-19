@@ -12,7 +12,7 @@ import { isRecord } from "../../src/shared/is-record.js";
 void test("A plain object narrows to a record, so string-key access needs no cast:", async (t) => {
   // doctest:L14
   const value: unknown = { pid: 42, host: "a" };
-  await t.checkText(isRecord(value) && typeof value["pid"] === "number", "true");
+  t.check(isRecord(value) && typeof value["pid"] === "number" ? value : null, { pid: 42, host: "a" });
 });
 
 // `null`, arrays, and non-objects are rejected — the cases a bare

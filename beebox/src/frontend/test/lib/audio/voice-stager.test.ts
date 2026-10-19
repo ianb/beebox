@@ -42,15 +42,13 @@ function recordingSink() {
 
 // ## Fifty 300 ms frames fill exactly one 15 s chunk
 void test("Fifty 300 ms frames fill exactly one 15 s chunk", async (t) => {
-  // doctest:L46
   const emitted: number[] = [];
   const stager = new VoiceStager({ emit: (bytes) => emitted.push(bytes.byteLength) });
   for (let i = 0; i < 49; i++) stager.push(frame(1));
-  await t.checkText(emitted.length, "0");
+  t.check(emitted, []);
 
-  // doctest:L52
   stager.push(frame(1));
-  await t.checkText(emitted.join(","), "480000");
+  t.check(emitted, [480000]);
 });
 
 // ## `flush` emits the partial batch once
@@ -58,15 +56,13 @@ void test("Fifty 300 ms frames fill exactly one 15 s chunk", async (t) => {
 // Seventy-five frames are one full chunk plus 7.5 s left over; `flush` sends the
 // remainder, and a second `flush` has nothing left to send.
 void test("Seventy-five frames are one full chunk plus 7.5 s left over; flush sends the...", async (t) => {
-  // doctest:L63
   const sizes: number[] = [];
   const stager = new VoiceStager({ emit: (bytes) => sizes.push(bytes.byteLength) });
   for (let i = 0; i < 75; i++) stager.push(frame(2));
   stager.flush();
   stager.flush();
-  t.check(sizes.join(","), "480000,240000");
+  t.check(sizes, [480000, 240000]);
 
-  // doctest:L71
   t.check(stager.bytesSeen(), 720000);
 });
 
@@ -75,7 +71,6 @@ void test("Seventy-five frames are one full chunk plus 7.5 s left over; flush se
 // Frames of an odd size split across chunks: the concatenated chunks equal the
 // concatenated frames, byte for byte, in order.
 void test("Frames of an odd size split across chunks:", async (t) => {
-  // doctest:L81
   const out: Uint8Array[] = [];
   const stager = new VoiceStager({ emit: (bytes) => out.push(new Uint8Array(bytes)) });
   const input: Uint8Array[] = [];
@@ -85,18 +80,15 @@ void test("Frames of an odd size split across chunks:", async (t) => {
     stager.push(f.buffer);
   }
   stager.flush();
-  t.check(out.map((c) => c.byteLength).join(","), "480000,10070");
+  t.check(out.map((c) => c.byteLength), [480000, 10070]);
 
-  // doctest:L93
   const joined = (parts: Uint8Array[]) => {
     const all = new Uint8Array(parts.reduce((n, p) => n + p.byteLength, 0));
     let at = 0;
     for (const p of parts) { all.set(p, at); at += p.byteLength; }
     return all;
   };
-  const a = joined(input);
-  const b = joined(out);
-  await t.checkText(a.byteLength === b.byteLength && a.every((v, i) => v === b[i]), "true");
+  t.check(Array.from(joined(out)), Array.from(joined(input)));
 });
 
 // ## A recording enqueues create, its chunks, then one finalize
@@ -105,43 +97,33 @@ void test("Frames of an odd size split across chunks:", async (t) => {
 // count (which `enqueueFinalize` snapshots) covers every byte. A second `seal`
 // is a no-op.
 void test("seal flushes the partial batch before finalize, so the queue's own chunk coun...", async (t) => {
-  // doctest:L112
   const { sink, ops, chunks } = recordingSink();
   const rec = startStagedRecording({ recordingId: "r1", targetSessionId: null, sink });
   for (let i = 0; i < 51; i++) rec.push(frame(3));
   t.check(rec.hasAudio(), true);
 
-  // doctest:L118
   rec.seal({ emissionId: "e1", hq: { emissionId: "e1", sessionId: "s1" } });
   rec.seal({ emissionId: null, hq: null });
-  await t.checkText(ops.join("\n"), `create r1 target=null
-chunk r1 480000
-chunk r1 9600
-finalize r1 emission=e1 hq=e1`);
+  t.check(ops, ["create r1 target=null", "chunk r1 480000", "chunk r1 9600", "finalize r1 emission=e1 hq=e1"]);
 
-  // doctest:L127
-  await t.checkText(chunks.every((c) => c.every((v) => v === 3)), "true");
+  t.check(chunks.map((c) => [c.byteLength, [...new Set(c)]]), [[480000, [3]], [9600, [3]]]);
 
   // Frames that arrive after the seal (a late worklet message) are not part of the
   // recording, and a `discard` after a `seal` changes nothing:
 
-  // doctest:L135
   rec.push(frame(3));
   rec.discard();
-  await t.checkText(ops.length, "4");
+  t.check(ops, ["create r1 target=null", "chunk r1 480000", "chunk r1 9600", "finalize r1 emission=e1 hq=e1"]);
 });
 
 // ## Discard is terminal too
 void test("Discard is terminal too", async (t) => {
-  // doctest:L144
   const { sink, ops } = recordingSink();
   const rec = startStagedRecording({ recordingId: "r2", targetSessionId: "chat-1", sink });
   t.check(rec.hasAudio(), false);
 
-  // doctest:L149
   rec.discard();
   rec.discard();
   rec.seal({ emissionId: null, hq: null });
-  await t.checkText(ops.join("\n"), `create r2 target=chat-1
-discard r2`);
+  t.check(ops, ["create r2 target=chat-1", "discard r2"]);
 });

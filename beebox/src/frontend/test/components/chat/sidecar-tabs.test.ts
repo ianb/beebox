@@ -19,6 +19,11 @@ function open(state: SidecarState, { path, at }: { path: string; at: number }): 
   return sidecarReducer(state, { type: "open", target: target(path), label: path, at });
 }
 
+/** Paths of the open tabs, in strip order. */
+function paths(state: SidecarState): string[] {
+  return state.tabs.map((tab) => tab.target.path);
+}
+
 /** The strip as the person sees it: labels in order, the active one in [brackets]. */
 function strip(state: SidecarState): string {
   return state.tabs
@@ -48,10 +53,13 @@ void test("An open appends and activates.", async (t) => {
     label: "a as markdown",
     at: 4,
   });
-  await t.checkText(strip(withViewer), "[a as markdown] b");
-
-  // doctest:L56
-  await t.checkText(withViewer.tabs.length, "2");
+  t.check(withViewer, {
+    tabs: [
+      { target: { path: "a", viewer: "markdown", params: {}, viewState: null }, label: "a as markdown", pinned: false, lastActiveAt: 4 },
+      { target: { path: "b", viewer: null, params: {}, viewState: null }, label: "b", pinned: false, lastActiveAt: 2 },
+    ],
+    activePath: "a",
+  });
 });
 
 // ## Closing falls back to the neighbour
@@ -97,17 +105,11 @@ void test("a was opened first and never returned to, so it is what an over-cap o
   // doctest:L104
   let state = EMPTY_SIDECAR;
   for (let i = 0; i < MAX_UNPINNED_TABS; i++) state = open(state, { path: `t${i}`, at: i + 1 });
-  await t.checkText(state.tabs.length, "12");
+  t.check(paths(state), ["t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11"]);
 
   // doctest:L109
   state = open(state, { path: "one-more", at: 100 });
-  await t.checkText(state.tabs.length, "12");
-
-  // doctest:L113
-  await t.checkText(state.tabs.some((tab) => tab.target.path === "t0"), "false");
-
-  // doctest:L116
-  await t.checkText(state.tabs.some((tab) => tab.target.path === "t1"), "true");
+  t.check(paths(state), ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "one-more"]);
 
   // Selecting a tab makes it recently-active, which takes it out of the firing
   // line: the next-oldest goes instead.
@@ -115,10 +117,7 @@ void test("a was opened first and never returned to, so it is what an over-cap o
   // doctest:L124
   state = sidecarReducer(state, { type: "select", path: "t1", at: 101 });
   state = open(state, { path: "another", at: 102 });
-  await t.checkText(state.tabs.some((tab) => tab.target.path === "t1"), "true");
-
-  // doctest:L129
-  await t.checkText(state.tabs.some((tab) => tab.target.path === "t2"), "false");
+  t.check(paths(state), ["t1", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "one-more", "another"]);
 });
 
 // ## Pinned tabs are outside the cap, and the active tab is never evicted
@@ -133,11 +132,14 @@ void test("Twelve pinned tabs plus twelve unpinned is twenty-four open tabs:", a
     state = sidecarReducer(state, { type: "togglePin", path: `p${i}`, at: i + 1 });
   }
   for (let i = 0; i < MAX_UNPINNED_TABS; i++) state = open(state, { path: `u${i}`, at: 100 + i });
-  await t.checkText(state.tabs.length, "24");
+  t.check(paths(state), ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10", "p11", "u0", "u1", "u2", "u3", "u4", "u5", "u6", "u7", "u8", "u9", "u10", "u11"]);
 
   // doctest:L148
   state = open(state, { path: "one-more", at: 200 });
-  await t.checkText(state.tabs.filter((tab) => tab.pinned).length, "12");
+  t.check(
+    { pinned: state.tabs.filter((tab) => tab.pinned).map((tab) => tab.target.path), unpinned: state.tabs.filter((tab) => !tab.pinned).map((tab) => tab.target.path) },
+    { pinned: ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10", "p11"], unpinned: ["u1", "u2", "u3", "u4", "u5", "u6", "u7", "u8", "u9", "u10", "u11", "one-more"] },
+  );
 
   // Unpinning is the other way over the cap: a pinned tab rejoining a full unpinned
   // group puts the count at thirteen. Two tabs are protected there — the one on
@@ -156,13 +158,7 @@ void test("Twelve pinned tabs plus twelve unpinned is twenty-four open tabs:", a
     activePath: "u0",
   };
   const unpinned = sidecarReducer(full, { type: "togglePin", path: "kept", at: 50 });
-  await t.checkText(unpinned.tabs.some((tab) => tab.target.path === "u0"), "true");
-
-  // doctest:L173
-  await t.checkText(unpinned.tabs.some((tab) => tab.target.path === "u1"), "false");
-
-  // doctest:L176
-  await t.checkText(unpinned.tabs.length, "12");
+  t.check({ paths: paths(unpinned), activePath: unpinned.activePath }, { paths: ["kept", "u0", "u2", "u3", "u4", "u5", "u6", "u7", "u8", "u9", "u10", "u11"], activePath: "u0" });
 });
 
 // ## Restore puts a stored strip back, pinned-first

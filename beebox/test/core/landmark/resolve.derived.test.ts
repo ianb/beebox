@@ -183,7 +183,7 @@ void test("Omitting derived (the identity-only callers, and any resolver call th
   ]);
 
   // doctest:L155
-  await t.checkText(derivedProblems.length, "0");
+  t.check(derivedProblems, []);
 });
 
 // ## A link's title is the card's `title:` field

@@ -15,7 +15,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { ChatSession } from "../../src/core/chat/session/run/core.js";
 import { createChatBackend } from "../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
@@ -43,8 +42,6 @@ async function waitFor({ pred, timeoutMs, label }: { pred: () => boolean; timeou
 // 4. drainQueue calls send → second turn starts → completes
 // 5. Two `done` events fire; messageQueue is empty; session is idle
 void test("The flow:", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
   t.teardown(async () => {
     try {
       session.stop();
@@ -64,38 +61,22 @@ void test("The flow:", async (t) => {
 
   // doctest:L54
   const doneCount = { value: 0 };
-  const lastResults: string[] = [];
   session.on("done", () => { doneCount.value += 1; });
-  session.on("turn-text", (text: string) => { lastResults.push(text); });
 
-  // doctest:L59
-  print(`busy before send: ${session.isBusy()}`);
+  const busyBeforeSend = session.isBusy();
   await session.send("Say only the single word 'alpha' and nothing else.");
-  print(`busy after send: ${session.isBusy()}`);
+  const busyAfterSend = session.isBusy();
 
-  // doctest:L63
   // Enqueue immediately — the first turn is in flight, so this should sit
   // in messageQueue until drainQueue picks it up.
   session.enqueue("Say only the single word 'beta' and nothing else.");
-  print("queued (1 expected): «*»");
 
-  // doctest:L68
   await waitFor({ pred: () => doneCount.value >= 2, timeoutMs: 60_000, label: "two turns to complete" });
 
-  // doctest:L70
-  print(`done events: ${doneCount.value}`);
-  print(`busy after both: ${session.isBusy()}`);
-
-  // doctest:L73
-  // Show the agent's two replies for the human reader. We assert on
-  // counts/shape, not on the text.
-  const replies = lastResults.map((r) => `  reply: ${r.trim().slice(0, 80)}`).join("\n");
-  await t.checkText(out2.with(print(replies)), `busy before send: false
-busy after send: true
-queued (1 expected): «*»
-done events: 2
-busy after both: false
-«*»`);
+  t.check(
+    { busyBeforeSend, busyAfterSend, done: doneCount.value, busyAfterBoth: session.isBusy() },
+    { busyBeforeSend: false, busyAfterSend: true, done: 2, busyAfterBoth: false },
+  );
 });
 
 // ## What the first test proves

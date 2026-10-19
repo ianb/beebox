@@ -21,41 +21,17 @@ function render(state: SpeechSegmentState): string {
 
 // ## Waiting for generated audio
 void test("Waiting for generated audio", async (t) => {
-  // doctest:L25
-  const waiting = render("waiting");
-  await t.checkText(waiting.includes('data-speech-state="waiting"'), "true");
-
-  // doctest:L29
-  await t.checkText(waiting.includes("border-dashed"), "true");
-
-  // doctest:L32
-  await t.checkText(waiting.includes("Speech audio is being prepared."), "true");
+  t.check(render("waiting"), "<div data-speech-state=\"waiting\" class=\"border-l-2 pl-3 pr-2 py-1 rounded-r-md transition-colors duration-500 ease-out border-warning border-dashed bg-warning/5\"><span class=\"sr-only\">Speech audio is being prepared.</span>Spoken words</div>");
 });
 
 // ## Playing audio
 void test("Playing audio", async (t) => {
-  // doctest:L39
-  const playing = render("playing");
-  await t.checkText(playing.includes('data-speech-state="playing"'), "true");
-
-  // doctest:L43
-  await t.checkText(playing.includes("border-primary"), "true");
-
-  // doctest:L46
-  await t.checkText(playing.includes("Speech audio is playing."), "true");
+  t.check(render("playing"), "<div data-speech-state=\"playing\" class=\"border-l-2 pl-3 pr-2 py-1 rounded-r-md transition-colors duration-500 ease-out border-primary border-solid bg-white/25\"><span class=\"sr-only\">Speech audio is playing.</span>Spoken words</div>");
 });
 
 // ## Sticky failure
 void test("Sticky failure", async (t) => {
-  // doctest:L53
-  const failed = render("failed");
-  await t.checkText(failed.includes('data-speech-state="failed"'), "true");
-
-  // doctest:L57
-  await t.checkText(failed.includes("border-double"), "true");
-
-  // doctest:L60
-  await t.checkText(failed.includes("Speech audio failed."), "true");
+  t.check(render("failed"), "<div data-speech-state=\"failed\" class=\"pl-3 pr-2 py-1 rounded-r-md transition-colors duration-500 ease-out border-l-4 border-danger border-double bg-danger/5\"><span class=\"sr-only\">Speech audio failed.</span>Spoken words</div>");
 });
 
 // ## A failure says why
@@ -65,12 +41,8 @@ void test("Sticky failure", async (t) => {
 // missing key where they noticed the silence. The reason shows only while the
 // chunk is failed.
 void test("A failed chunk shows the reason the playback machine recorded — for a rate li...", async (t) => {
-  // doctest:L72
   const why = "TTS backend answered 429 Too Many Requests: Rate limit exceeded (limit: 10 requests per day on Free Tier)";
-  const explained = renderToStaticMarkup(React.createElement(SpeechChunk, { state: "failed", failureReason: why, children: "Spoken words" }));
-  await t.checkText(explained.includes(`Speech failed: ${why}`), "true");
+  t.check(renderToStaticMarkup(React.createElement(SpeechChunk, { state: "failed", failureReason: why, children: "Spoken words" })), "<div data-speech-state=\"failed\" class=\"pl-3 pr-2 py-1 rounded-r-md transition-colors duration-500 ease-out border-l-4 border-danger border-double bg-danger/5\"><span class=\"sr-only\">Speech audio failed.</span>Spoken words<p class=\"mt-1 text-xs text-danger\">Speech failed: TTS backend answered 429 Too Many Requests: Rate limit exceeded (limit: 10 requests per day on Free Tier)</p></div>");
 
-  // doctest:L77
-  const recovered = renderToStaticMarkup(React.createElement(SpeechChunk, { state: "playing", failureReason: why, children: "Spoken words" }));
-  await t.checkText(recovered.includes("Speech failed"), "false");
+  t.check(renderToStaticMarkup(React.createElement(SpeechChunk, { state: "playing", failureReason: why, children: "Spoken words" })), "<div data-speech-state=\"playing\" class=\"border-l-2 pl-3 pr-2 py-1 rounded-r-md transition-colors duration-500 ease-out border-primary border-solid bg-white/25\"><span class=\"sr-only\">Speech audio is playing.</span>Spoken words</div>");
 });

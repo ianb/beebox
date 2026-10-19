@@ -18,7 +18,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import assert from "node:assert/strict";
@@ -32,6 +31,11 @@ import { localOrigin } from "../../../../src/core/chat/session/origin.js";
 function caller(boxRoot: string) {
   const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
   return appRouter.createCaller(ctx);
+}
+
+/** The ids and bindings of a bucket's session rows. */
+function rows(sessions: { sessionId: string; contextDir: string }[]) {
+  return sessions.map((s) => ({ sessionId: s.sessionId, contextDir: s.contextDir }));
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -69,8 +73,6 @@ async function seedSession(
 // unassigned row says which directory it belongs to — the bucket spans
 // directories, so the binding can't live on the bucket.
 void test("The box has one landmark (content/recipes) and no root landmark, so both the...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -93,9 +95,16 @@ void test("The box has one landmark (content/recipes) and no root landmark, so b
 
   // doctest:L82
   const { landmarks, unassigned } = await caller(box.root).chat.byLandmark();
-  print(`landmarks: ${landmarks.map((l) => `${l.label}=${l.sessions.map((s) => s.sessionId).join(",")}`).join(" | ")}`);
-  await t.checkText(out.with(print(`unassigned: ${unassigned.sessions.map((s) => `${s.sessionId} [${s.contextDir}]`).join(" | ")}`)), `landmarks: Recipes=inrecipe1
-unassigned: rootchat1 [] | orphaned1 [_content/orphan]`);
+  t.check(
+    { landmarks: landmarks.map((l) => ({ label: l.label, sessions: l.sessions.map((s) => s.sessionId) })), unassigned: rows(unassigned.sessions) },
+    {
+      landmarks: [{ label: "Recipes", sessions: ["inrecipe1"] }],
+      unassigned: [
+        { sessionId: "rootchat1", contextDir: "" },
+        { sessionId: "orphaned1", contextDir: "_content/orphan" },
+      ],
+    },
+  );
 
   // A root landmark card takes the root chats back — `unassigned` is what's left
   // over, not a second home for the root.
@@ -105,9 +114,10 @@ unassigned: rootchat1 [] | orphaned1 [_content/orphan]`);
 
   // doctest:L96
   const withRoot = await caller(box.root).chat.byLandmark();
-  print(`root tile: ${withRoot.landmarks.find((l) => l.dir === "")?.sessions.map((s) => s.sessionId).join(",")}`);
-  await t.checkText(out.with(print(`unassigned: ${withRoot.unassigned.sessions.map((s) => `${s.sessionId} [${s.contextDir}]`).join(" | ")}`)), `root tile: rootchat1
-unassigned: orphaned1 [_content/orphan]`);
+  t.check(
+    { rootTile: withRoot.landmarks.find((l) => l.dir === "")?.sessions.map((s) => s.sessionId), unassigned: rows(withRoot.unassigned.sessions) },
+    { rootTile: ["rootchat1"], unassigned: [{ sessionId: "orphaned1", contextDir: "_content/orphan" }] },
+  );
 });
 
 // ## `freshCount` and `latestActivity` describe the bucket, not the visible rows
@@ -117,8 +127,6 @@ unassigned: orphaned1 [_content/orphan]`);
 // window joins them there. `freshCount` says three anyway, and `latestActivity` is
 // the newest session's mtime whether or not it's fresh.
 void test("Three fresh chats under one non-root landmark still render as one inline row...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -143,13 +151,23 @@ void test("Three fresh chats under one non-root landmark still render as one inl
   // doctest:L127
   const recipes = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l.dir === "_content/recipes");
   assert.ok(recipes);
-  print(`visible: ${recipes.sessions.map((s) => s.sessionId).join(",")}`);
-  print(`older: ${recipes.olderSessions.map((s) => s.sessionId).join(",")}`);
-  print(`freshCount: ${recipes.freshCount}`);
-  await t.checkText(out.with(print(`latest is the newest session: ${recipes.latestActivity === recipes.sessions[0]?.lastActivity}`)), `visible: fresh001
-older: fresh002,fresh003,stale001
-freshCount: 3
-latest is the newest session: true`);
+  const newest = recipes.sessions[0];
+  assert.ok(newest);
+  t.check(
+    {
+      visible: recipes.sessions.map((s) => s.sessionId),
+      older: recipes.olderSessions.map((s) => s.sessionId),
+      freshCount: recipes.freshCount,
+      latestActivity: recipes.latestActivity,
+    },
+    {
+      visible: ["fresh001"],
+      older: ["fresh002", "fresh003", "stale001"],
+      freshCount: 3,
+      // The newest session's activity time.
+      latestActivity: newest.lastActivity,
+    },
+  );
 
   // An empty bucket reports zero and null rather than inventing an activity time.
 
@@ -160,7 +178,7 @@ latest is the newest session: true`);
   // doctest:L146
   const trips = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l.dir === "_content/trips");
   assert.ok(trips);
-  await t.checkText(out.with(`${trips.freshCount} / ${trips.latestActivity}`), "0 / null");
+  t.check({ freshCount: trips.freshCount, latestActivity: trips.latestActivity }, { freshCount: 0, latestActivity: null });
 });
 
 // ## Ordering follows `latestActivity`, not just the visible rows
@@ -192,7 +210,7 @@ void test("A landmark whose only chats fell out of the fresh window renders no i
 
   // doctest:L174
   const ordered = await caller(box.root).chat.byLandmark();
-  t.check(ordered.landmarks.map((l) => l.label).join(" > "), "Fresh > Stale > Never");
+  t.check(ordered.landmarks.map((l) => l.label), ["Fresh", "Stale", "Never"]);
 });
 
 // ## A landmark card that doesn't parse is reported, not swallowed
@@ -201,8 +219,6 @@ void test("A landmark whose only chats fell out of the fresh window renders no i
 // UI can show a warning row — once a landmark is the only way to reach its chats,
 // a hand-edit that breaks the frontmatter must not make them vanish silently.
 void test("The good landmarks still load.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -224,11 +240,18 @@ void test("The good landmarks still load.", async (t) => {
 
   // doctest:L199
   const broken = await caller(box.root).chat.byLandmark();
-  print(`landmarks: ${broken.landmarks.map((l) => l.label).join(",")}`);
-  print(`problems: ${broken.problems.map((p) => p.path).join(",")}`);
-  await t.checkText(out.with(print(`its chats: ${broken.unassigned.sessions.map((s) => `${s.sessionId} [${s.contextDir}]`).join(" | ")}`)), `landmarks: Recipes
-problems: _content/trips/Trips.landmark.card
-its chats: intrips01 [_content/trips]`);
+  t.check(
+    {
+      landmarks: broken.landmarks.map((l) => l.label),
+      problems: broken.problems.map((p) => p.path),
+      itsChats: rows(broken.unassigned.sessions),
+    },
+    {
+      landmarks: ["Recipes"],
+      problems: ["_content/trips/Trips.landmark.card"],
+      itsChats: [{ sessionId: "intrips01", contextDir: "_content/trips" }],
+    },
+  );
 });
 
 // ## Dead chats ride in their own bucket, under the landmark they were bound to
@@ -238,8 +261,6 @@ its chats: intrips01 [_content/trips]`);
 // instead, carrying the husk path the UI links to and the state that names its
 // section ("Expired", "On prod", "Unavailable").
 void test("A chat whose transcript is gone can't be resumed, so it can't be a sessions r...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
@@ -266,7 +287,17 @@ void test("A chat whose transcript is gone can't be resumed, so it can't be a se
   const picked = await caller(box.root).chat.byLandmark();
   const recipes = picked.landmarks.find((l) => l.label === "Recipes");
   assert.ok(recipes);
-  print(`live: ${recipes.sessions.map((s) => s.sessionId).join(",")}`);
-  await t.checkText(out.with(print(`dead: ${recipes.dead.map((d) => `${d.label} [${d.transcript.state}] -> ${d.huskPath}`).join(" | ")}`)), `live: livechat1
-dead: Sourdough attempt [expired] -> _content/chat/web/2026-07-20_gone.chat.card | elsewher [elsewhere] -> _content/chat/web/2026-07-19_prod.chat.card`);
+  t.check(
+    {
+      live: recipes.sessions.map((s) => s.sessionId),
+      dead: recipes.dead.map((d) => ({ label: d.label, state: d.transcript.state, huskPath: d.huskPath })),
+    },
+    {
+      live: ["livechat1"],
+      dead: [
+        { label: "Sourdough attempt", state: "expired", huskPath: "_content/chat/web/2026-07-20_gone.chat.card" },
+        { label: "elsewher", state: "elsewhere", huskPath: "_content/chat/web/2026-07-19_prod.chat.card" },
+      ],
+    },
+  );
 });

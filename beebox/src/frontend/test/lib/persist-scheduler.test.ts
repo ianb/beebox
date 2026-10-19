@@ -52,16 +52,14 @@ void test("A debounced write fires once, after the delay", async (t) => {
   // doctest:L52
   s.schedule(() => written.push("a"));
   timers.tick(399);
-  await t.checkText(written.length, "0");
+  t.check(written, []);
 
-  // doctest:L57
   timers.tick(1);
-  t.check(written.join(","), "a");
+  t.check(written, ["a"]);
 
-  // doctest:L61
   // The timer is spent — later ticks add nothing.
   timers.tick(1000);
-  t.check(written.join(",") + " | pending timers: " + timers.count(), "a | pending timers: 0");
+  t.check({ written, pendingTimers: timers.count() }, { written: ["a"], pendingTimers: 0 });
 });
 
 // ## A newer scheduled write supersedes an older un-fired one
@@ -82,15 +80,12 @@ void test("Typing schedules a write per keystroke; only the last one should reac
   s.schedule(() => written.push("hello"));
 
   // doctest:L83
-  t.check(
-    // Still nothing: each keystroke restarted the window.
-    written.length + " written | pending timers: " + timers.count(),
-    "0 written | pending timers: 1",
-  );
+  // Still nothing: each keystroke restarted the window.
+  t.check({ written, pendingTimers: timers.count() }, { written: [], pendingTimers: 1 });
 
   // doctest:L87
   timers.tick(400);
-  t.check(written.join(","), "hello");
+  t.check(written, ["hello"]);
 });
 
 // ## Flush on unmount runs the latest pending write — and only that one
@@ -104,14 +99,14 @@ void test("Flush on unmount runs the latest pending write — and only that one"
   s.schedule(() => written.push("stale"));
   s.schedule(() => written.push("latest"));
   s.flush();
-  t.check(written.join(","), "latest");
+  t.check(written, ["latest"]);
 
   // doctest:L105
   // Flushing consumed the pending write: the abandoned timer can't replay it,
   // and a second flush is a no-op.
   timers.tick(1000);
   s.flush();
-  t.check(written.join(","), "latest");
+  t.check(written, ["latest"]);
 });
 
 // A flush with nothing pending does nothing at all — the common unmount.
@@ -144,7 +139,7 @@ void test("onHide receives cancel and does its own synchronous write — the pat
   s.schedule(() => written.push("debounced"));
   s.cancel();
   timers.tick(1000);
-  await t.checkText(written.length, "0");
+  t.check(written, []);
 
   // doctest:L145
   // The tab-hide path: cancel, then persist the current value now.
@@ -152,5 +147,5 @@ void test("onHide receives cancel and does its own synchronous write — the pat
   s.cancel();
   written.push("hidden-flush");
   timers.tick(1000);
-  t.check(written.join(","), "hidden-flush");
+  t.check(written, ["hidden-flush"]);
 });

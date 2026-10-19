@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import { readFile, mkdir, writeFile, rm } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { dirname, join } from "node:path";
@@ -141,8 +142,8 @@ void test("Removal is idempotent, preserves unrelated rows and the migration mar
   const savedAt = await getMostActiveSavedAt(box.root);
   const removed = await removeSessionFromHistory(box.root, "gone");
   await clearMostActiveIfMatches(box.root, "gone");
-  t.check({ removed: removed.length, ids: await loadHistory(box.root), active: await getMostActive(box.root) }, {
-    removed: 2,
+  t.check({ removed, ids: await loadHistory(box.root), active: await getMostActive(box.root) }, {
+    removed: [{ id: "gone", engine: "claude" }, { id: "gone", engine: "claude", contextDir: "_content/x" }],
     ids: [
       "keep",
     ],
@@ -150,7 +151,7 @@ void test("Removal is idempotent, preserves unrelated rows and the migration mar
   });
 
   // doctest:L134
-  await t.checkText((await getMostActiveSavedAt(box.root))?.toISOString() === savedAt?.toISOString(), "true");
+  t.check(await getMostActiveSavedAt(box.root), savedAt);
 
   // A newer pointer wins the compare-and-clear race:
 
@@ -253,7 +254,7 @@ void test("A second call with the same id is a no-op.", async (t) => {
   await appendHistory(box.root, { sessionId: "abc" });
 
   // doctest:L232
-  await t.checkText((await loadHistory(box.root)).length, "1");
+  t.check(await loadHistory(box.root), ["abc"]);
 });
 
 // ## appendHistory backfills a missing contextDir
@@ -389,9 +390,10 @@ void test("resolveSessionLogPath re-reads the whole history file to find the ent
   const entries = await loadHistoryEntries(box.root);
 
   // doctest:L347
-  const same = await Promise.all(entries.map(async (entry) =>
-    sessionLogPathFor(box.root, entry) === (await resolveSessionLogPath(box.root, entry.id))));
-  t.check(same.join(","), "true,true");
+  t.check(
+    entries.map((entry) => sessionLogPathFor(box.root, entry)),
+    await Promise.all(entries.map((entry) => resolveSessionLogPath(box.root, entry.id))),
+  );
 
   // A bound entry's log lives under its context dir's encoded projects directory,
   // not the box root's:
@@ -399,10 +401,10 @@ void test("resolveSessionLogPath re-reads the whole history file to find the ent
   // doctest:L357
   const [bound, unbound] = entries;
   assert.ok(bound && unbound);
-  await t.checkText(sessionLogPathFor(box.root, bound) === sessionLogPathFor(box.root, { id: bound.id, engine: bound.engine }), "false");
+  t.check(sessionLogPathFor(box.root, bound), not(sessionLogPathFor(box.root, { id: bound.id, engine: bound.engine })));
 
   // doctest:L362
-  await t.checkText(sessionLogPathFor(box.root, unbound) === getSessionLogPath(box.root, "unbound"), "true");
+  t.check(sessionLogPathFor(box.root, unbound), getSessionLogPath(box.root, "unbound"));
 });
 
 // ## getLastSessionForDirectory returns the most recently appended match

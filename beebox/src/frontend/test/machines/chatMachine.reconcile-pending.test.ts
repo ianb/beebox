@@ -8,7 +8,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { reconcilePending, mergeAcceptedIntoPending, holdInjectedMessage } from "../../src/machines/chatMachine/chat-shared.js";
 import type { PendingSessionEntry, SessionEntry } from "../../src/api.js";
 
@@ -27,17 +26,10 @@ function pendingEntry(uuid: string, text: string): PendingSessionEntry {
 
 // ## Pending message not yet on the server → re-appended, kept pending
 void test("Pending message not yet on the server → re-appended, kept pending", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L30
   const server = [userEntry("s1", "<typed>old</typed>")];
   const pending = [pendingEntry("p1", "<typed>new</typed>")];
   const result = reconcilePending({ serverMessages: server, pendingMessages: pending });
-  print(`messages: ${result.messages.length}`);
-  print(`last message uuid: ${result.messages[result.messages.length - 1]?.uuid}`);
-  await t.checkText(out2.with(print(`pending: ${result.pendingMessages.length}`)), `messages: 2
-last message uuid: p1
-pending: 1`);
+  t.check(result, { messages: [...server, ...pending], pendingMessages: pending });
 });
 
 // ## Server-injected user attribution → reconcile MUST still drop the pending entry
@@ -51,9 +43,6 @@ pending: 1`);
 // This is the regression behind the "Agent is busy — your message is
 // queued" indicator that never clears.
 void test("When the server stores a user message, it calls injectUserAttr to add user=\"N...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L54
   const server = [userEntry(
     "s1",
     '<typed user="Ian" user-email="ian@example.com" local-time="9:00 AM">hello world</typed>',
@@ -63,9 +52,7 @@ void test("When the server stores a user message, it calls injectUserAttr to add
     '<typed local-time="9:00 AM">hello world</typed>',
   )];
   const result = reconcilePending({ serverMessages: server, pendingMessages: pending });
-  print(`messages: ${result.messages.length}`);
-  await t.checkText(out2.with(print(`pending (0 expected): ${result.pendingMessages.length}`)), `messages: 1
-pending (0 expected): 0`);
+  t.check(result, { messages: server, pendingMessages: [] });
 });
 
 // ## Two queued duplicates of one message → both drop after server has the merged turn
@@ -75,9 +62,6 @@ pending (0 expected): 0`);
 // the resulting server entry contains the text twice. Both pending
 // entries should drop.
 void test("The backend's drainQueue joins multiple queued texts with \\n\\n into a single...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L78
   const server = [userEntry(
     "s1",
     '<typed local-time="9:00 AM">say hi</typed>\n\n<typed local-time="9:00 AM">say hi</typed>',
@@ -87,7 +71,7 @@ void test("The backend's drainQueue joins multiple queued texts with \\n\\n into
     pendingEntry("p2", '<typed local-time="9:00 AM">say hi</typed>'),
   ];
   const result = reconcilePending({ serverMessages: server, pendingMessages: pending });
-  await t.checkText(out2.with(print(`pending (0 expected): ${result.pendingMessages.length}`)), "pending (0 expected): 0");
+  t.check(result, { messages: server, pendingMessages: [] });
 });
 
 // ## An older identical message cannot confirm the new send
@@ -96,29 +80,20 @@ void test("The backend's drainQueue joins multiple queued texts with \\n\\n into
 // visible older `"yes"` must keep the new optimistic `"yes"`; only a new server
 // UUID can confirm it.
 void test("Short repeated replies are common.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L99
   const oldYes = userEntry("s-old", "<typed>yes</typed>");
   const pending = [{ ...pendingEntry("p-new", "<typed>yes</typed>"), reconcileKnownUuids: [oldYes.uuid] }];
   const stale = reconcilePending({
     serverMessages: [oldYes],
     pendingMessages: pending,
   });
-  print(`messages after stale snapshot: ${stale.messages.length}`);
-  print(`pending after stale snapshot: ${stale.pendingMessages.length}`);
+  t.check(stale, { messages: [oldYes, ...pending], pendingMessages: pending });
 
-  // doctest:L108
   const durableYes = userEntry("s-new", "<typed>yes</typed>");
   const caughtUp = reconcilePending({
     serverMessages: [oldYes, durableYes],
     pendingMessages: stale.pendingMessages,
   });
-  print(`messages after durable snapshot: ${caughtUp.messages.length}`);
-  await t.checkText(out2.with(print(`pending after durable snapshot: ${caughtUp.pendingMessages.length}`)), `messages after stale snapshot: 2
-pending after stale snapshot: 1
-messages after durable snapshot: 2
-pending after durable snapshot: 0`);
+  t.check(caughtUp, { messages: [oldYes, durableYes], pendingMessages: [] });
 });
 
 // ## One durable occurrence confirms only one identical pending send
@@ -126,18 +101,11 @@ pending after durable snapshot: 0`);
 // Two client sends need two server occurrences. A snapshot containing only the
 // first durable `"yes"` keeps the second optimistic copy visible.
 void test("Two client sends need two server occurrences.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L128
   const durable = userEntry("s-one", "<typed>yes</typed>");
-  const pending = [
-    pendingEntry("p-one", "<typed>yes</typed>"),
-    pendingEntry("p-two", "<typed>yes</typed>"),
-  ];
-  const result = reconcilePending({ serverMessages: [durable], pendingMessages: pending });
-  print(`messages: ${result.messages.length}`);
-  await t.checkText(out2.with(print(`remaining uuid: ${result.pendingMessages[0]?.uuid}`)), `messages: 2
-remaining uuid: p-two`);
+  const first = pendingEntry("p-one", "<typed>yes</typed>");
+  const second = pendingEntry("p-two", "<typed>yes</typed>");
+  const result = reconcilePending({ serverMessages: [durable], pendingMessages: [first, second] });
+  t.check(result, { messages: [durable, second], pendingMessages: [second] });
 });
 
 // ## Chronological matching respects each send's baseline
@@ -147,7 +115,6 @@ remaining uuid: p-two`);
 // newest-first would consume the second echo incorrectly and strand the newer
 // pending entry behind its baseline.
 void test("When the second identical send was created after the first durable UUID was a...", async (t) => {
-  // doctest:L149
   const firstEcho = userEntry("s-first", "<typed>yes</typed>");
   const secondEcho = userEntry("s-second", "<typed>yes</typed>");
   const pending = [
@@ -158,7 +125,7 @@ void test("When the second identical send was created after the first durable UU
     serverMessages: [firstEcho, secondEcho],
     pendingMessages: pending,
   });
-  await t.checkText(result.pendingMessages.length, "0");
+  t.check(result, { messages: [firstEcho, secondEcho], pendingMessages: [] });
 });
 
 // ## A turn whose images were stripped still retires its pending copy
@@ -174,7 +141,6 @@ void test("When the second identical send was created after the first durable UU
 // A journey walker hit exactly that on 2026-08-24 and reported the app as
 // duplicating their message.
 void test("The client's optimistic entry keeps the user's photos as image blocks, which...", async (t) => {
-  // doctest:L177
   const optimistic: PendingSessionEntry = {
     uuid: "m1", type: "user", timestamp: "2026-01-01T00:00:00Z", pending: true,
     reconcileKnownUuids: [],
@@ -195,20 +161,13 @@ void test("The client's optimistic entry keeps the user's photos as image blocks
     ],
   };
   const out = reconcilePending({ serverMessages: [stripped], pendingMessages: [optimistic] });
-  t.check({ rendered: out.messages.length, stillPending: out.pendingMessages.length }, {
-    rendered: 1,
-    stillPending: 0,
-  });
+  t.check(out, { messages: [stripped], pendingMessages: [] });
 
   // A turn that genuinely has not reached the server yet is still kept, placeholders
   // or not — the fix must not retire an entry the server has never seen.
 
-  // doctest:L205
   const unsent = reconcilePending({ serverMessages: [], pendingMessages: [optimistic] });
-  t.check({ rendered: unsent.messages.length, stillPending: unsent.pendingMessages.length }, {
-    rendered: 1,
-    stillPending: 1,
-  });
+  t.check(unsent, { messages: [optimistic], pendingMessages: [optimistic] });
 });
 
 // ## mergeAcceptedIntoPending — the box's record and this page's, without doubling
@@ -218,9 +177,8 @@ void test("The client's optimistic entry keeps the user's photos as image blocks
 // between a reload mid-turn and a conversation missing the question the box
 // already promised to have — the optimistic copies died with the previous page.
 void test("chat.bootstrap reports what the box has accepted but not yet written into the...", async (t) => {
-  // doctest:L218
   const accepted = [pendingEntry("accepted-7", "<typed>where is the drawer key?</typed>")];
-  t.check(mergeAcceptedIntoPending({ pendingMessages: [], accepted }).map((e) => e.uuid).join(","), "accepted-7");
+  t.check(mergeAcceptedIntoPending({ pendingMessages: [], accepted }), accepted);
 
   // The two lists describe the same events from different sides, so in the window
   // where a send lands while the initial fetch is still in flight they overlap. The
@@ -228,24 +186,17 @@ void test("chat.bootstrap reports what the box has accepted but not yet written 
   // carried, so the comparison runs through the same normalizer reconciliation uses
   // — otherwise the message renders twice, once from each side:
 
-  // doctest:L230
   const mine = pendingEntry("local-1", "<typed>where is the drawer key?</typed>");
   const server = pendingEntry("accepted-7", "<typed user=\"Sam Rivera\" user-email=\"sam@example.com\">where is the drawer key?</typed>");
-  t.check(mergeAcceptedIntoPending({ pendingMessages: [mine], accepted: [server] }).map((e) => e.uuid).join(","), "local-1");
+  t.check(mergeAcceptedIntoPending({ pendingMessages: [mine], accepted: [server] }), [mine]);
 
   // A match is consumed, so a person who really did send the same words twice keeps
   // both — one optimistic copy cannot answer for two acceptances:
 
-  // doctest:L240
-  const twice = [
-    pendingEntry("accepted-8", "<typed>yes</typed>"),
-    pendingEntry("accepted-9", "<typed>yes</typed>"),
-  ];
-  t.check(
-    mergeAcceptedIntoPending({ pendingMessages: [pendingEntry("local-2", "<typed>yes</typed>")], accepted: twice })
-      .map((e) => e.uuid).join(","),
-    "local-2,accepted-9",
-  );
+  const acceptedFirst = pendingEntry("accepted-8", "<typed>yes</typed>");
+  const acceptedSecond = pendingEntry("accepted-9", "<typed>yes</typed>");
+  const local = pendingEntry("local-2", "<typed>yes</typed>");
+  t.check(mergeAcceptedIntoPending({ pendingMessages: [local], accepted: [acceptedFirst, acceptedSecond] }), [local, acceptedSecond]);
 
   // An image send is the asymmetric case. The transcript and the optimistic copy
   // both consume `[image#N]` into image blocks, so their text no longer holds the
@@ -253,10 +204,9 @@ void test("chat.bootstrap reports what the box has accepted but not yet written 
   // reached the bus. Compared naively those are different messages and the send
   // renders twice:
 
-  // doctest:L256
   const withImage = pendingEntry("local-3", "<typed>here is the drawer</typed>");
   const acceptedImage = pendingEntry("accepted-11", "<typed>[image#1]here is the drawer</typed>");
-  t.check(mergeAcceptedIntoPending({ pendingMessages: [withImage], accepted: [acceptedImage] }).map((e) => e.uuid).join(","), "local-3");
+  t.check(mergeAcceptedIntoPending({ pendingMessages: [withImage], accepted: [acceptedImage] }), [withImage]);
 
   // The token form is not necessarily the same on both sides — the three copies of
   // one message can come from different eras — so the pre-2026-08-25 spelling has
@@ -264,30 +214,25 @@ void test("chat.bootstrap reports what the box has accepted but not yet written 
   // on one side and keep it on the other, which is exactly the mismatch this guards
   // against:
 
-  // doctest:L269
   const withImage2 = pendingEntry("local-4", "<typed>here is the drawer</typed>");
   const acceptedLegacy = pendingEntry("accepted-12", "<typed>[image1]here is the drawer</typed>");
-  t.check(mergeAcceptedIntoPending({ pendingMessages: [withImage2], accepted: [acceptedLegacy] }).map((e) => e.uuid).join(","), "local-4");
+  t.check(mergeAcceptedIntoPending({ pendingMessages: [withImage2], accepted: [acceptedLegacy] }), [withImage2]);
 
   // And a repeated load cannot stack copies of one bus row, because the uuid it is
   // minted from is stable:
 
-  // doctest:L279
   const once = mergeAcceptedIntoPending({ pendingMessages: [], accepted });
-  t.check(mergeAcceptedIntoPending({ pendingMessages: once, accepted }).map((e) => e.uuid).join(","), "accepted-7");
+  t.check(mergeAcceptedIntoPending({ pendingMessages: once, accepted }), accepted);
 
   // Once the transcript catches up, reconciliation retires an accepted entry exactly
   // as it does a locally-minted one — the point of carrying them in this shape:
 
-  // doctest:L288
+  const echo = userEntry("real-1", "<typed user=\"Sam Rivera\">where is the drawer key?</typed>");
   const echoed = reconcilePending({
-    serverMessages: [userEntry("real-1", "<typed user=\"Sam Rivera\">where is the drawer key?</typed>")],
+    serverMessages: [echo],
     pendingMessages: once,
   });
-  t.check({ messages: echoed.messages.length, pending: echoed.pendingMessages.length }, {
-    messages: 1,
-    pending: 0,
-  });
+  t.check(echoed, { messages: [echo], pendingMessages: [] });
 });
 
 // ## A message the box injected stays on screen until the transcript has it
@@ -296,23 +241,24 @@ void test("chat.bootstrap reports what the box has accepted but not yet written 
 // transcript. A refresh in that gap must keep it, and the refresh after the
 // write must retire it without a duplicate.
 void test("A delivered capture is announced before the agent writes it to the transcript.", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L303
   const capture = '<capture doc="captures/a.md">2 photos</capture>';
   const shown = [userEntry("s1", "<typed>hi</typed>")];
   const held = holdInjectedMessage({ messages: shown, pendingMessages: [], message: capture, timestamp: "2026-10-16T12:00:00Z" });
-  print(`held: ${held.messages.map((m) => m.uuid).join(", ")}`);
   const early = reconcilePending({ serverMessages: shown, pendingMessages: held.pendingMessages });
-  print(`refresh before the write: ${early.messages.map((m) => m.uuid).join(", ")}`);
   const late = reconcilePending({ serverMessages: [...shown, userEntry("s2", capture)], pendingMessages: early.pendingMessages });
-  print(`refresh after the write: ${late.messages.map((m) => m.uuid).join(", ")}`);
   const again = holdInjectedMessage({ messages: held.messages, pendingMessages: held.pendingMessages, message: capture, timestamp: "2026-10-16T12:00:00Z" });
-  print(`announced twice: ${again.messages.length}`);
   const already = holdInjectedMessage({ messages: late.messages, pendingMessages: [], message: capture, timestamp: "2026-10-16T12:00:00Z" });
-  await t.checkText(out2.with(print(`already in the transcript: ${already.messages.length}`)), `held: s1, injected-2026-10-16T12:00:00Z
-refresh before the write: s1, injected-2026-10-16T12:00:00Z
-refresh after the write: s1, s2
-announced twice: 2
-already in the transcript: 2`);
+  const injected = {
+    uuid: "injected-2026-10-16T12:00:00Z",
+    type: "user" as const,
+    timestamp: "2026-10-16T12:00:00Z",
+    content: [{ type: "text" as const, text: capture }],
+    reconcileKnownUuids: ["s1"],
+  };
+  const written = userEntry("s2", capture);
+  t.check(held, { messages: [...shown, injected], pendingMessages: [injected] });
+  t.check(early, { messages: [...shown, injected], pendingMessages: [injected] });
+  t.check(late, { messages: [...shown, written], pendingMessages: [] });
+  t.check(again, { messages: [...shown, injected], pendingMessages: [injected] });
+  t.check(already, { messages: [...shown, written], pendingMessages: [] });
 });

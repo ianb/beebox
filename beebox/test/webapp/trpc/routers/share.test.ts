@@ -6,7 +6,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
@@ -24,13 +23,24 @@ function caller(boxRoot: string) {
 void test("The TypeScript contract accepts the same non-batched tRPC envelope fixture th...", async (t) => {
   // doctest:L25
   const fixture = JSON.parse(await readFile("test/mobile-contract/fixtures/share-destinations.json", "utf-8"));
-  t.check(shareDestinationsOutput.parse(fixture.result.data).chats[0]?.sessionId, "session-reading");
+  t.check(shareDestinationsOutput.parse(fixture.result.data), {
+    chats: [
+      {
+        sessionId: "session-reading",
+        label: "Article ideas",
+        lastActivity: "2026-08-07T12:00:00.000Z",
+        landmark: { dir: "_content/reading", label: "Reading", symbol: "📚" },
+      },
+    ],
+    saves: [
+      { destination: { kind: "inbox" }, label: "Inbox", symbol: null },
+      { destination: { kind: "landmark", dir: "_content/reading" }, label: "Reading", symbol: "📚" },
+    ],
+  });
 });
 
 // ## Destinations include Inbox and only landmarks advertising share
 void test("Destinations include Inbox and only landmarks advertising share", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -59,9 +69,11 @@ destinations:
 ---
 `, "utf-8");
   const destinations = await caller(box.root).share.destinations();
-  print(JSON.stringify(destinations.saves));
-  await t.checkText(out.with(destinations.chats.length), `[{"destination":{"kind":"inbox"},"label":"Inbox","symbol":null},{"destination":{"kind":"landmark","dir":"_content/reading"},"label":"Reading","symbol":"📚"}]
-0`);
+  t.check(destinations.saves, [
+    { destination: { kind: "inbox" }, label: "Inbox", symbol: null },
+    { destination: { kind: "landmark", dir: "_content/reading" }, label: "Reading", symbol: "📚" },
+  ]);
+  t.check(destinations.chats, []);
 
   // ## URL saves are Clerk-compatible and idempotent after a move
 
@@ -78,20 +90,22 @@ destinations:
   const [firstCreated] = first.created;
   assert.ok(firstCreated, "the save created a card");
   const saved = await readFile(path.join(box.root, firstCreated), "utf-8");
-  print(saved.includes("sources:\n  - href: https://example.com/article\n    retrieved: 2026-08-07T12:00:00.000Z\n"));
-  print(saved.includes("share-id: 00000000-0000-4000-8000-000000000001"));
-  print(saved.includes("[An Example](https://example.com/article)"));
-  await t.checkText(out.with(firstCreated.endsWith(".webpage.card")), `true
-true
-true
-true`);
+  t.check(first, { created: ["_content/reading/An_Example_00000000-0000-4000-8000-000000000001.webpage.card"] });
+  t.checkText(saved, `---
+title: An Example
+sources:
+  - href: https://example.com/article
+    retrieved: 2026-08-07T12:00:00.000Z
+share-id: 00000000-0000-4000-8000-000000000001
+---
+[An Example](https://example.com/article)`);
 
   // doctest:L87
   const moved = path.join("_content/inbox", path.basename(firstCreated));
   await mkdir(path.join(box.root, "_content/inbox"), { recursive: true });
   await rename(path.join(box.root, firstCreated), path.join(box.root, moved));
   const replay = await caller(box.root).share.saveTextual(request);
-  await t.checkText(out.with(replay.created.at(0)), "_content/inbox/An_Example_00000000-0000-4000-8000-000000000001.webpage.card");
+  t.check(replay, { created: ["_content/inbox/An_Example_00000000-0000-4000-8000-000000000001.webpage.card"] });
 
   // ## A retry finds a card written in the migrated `sources` shape
   //
@@ -115,7 +129,7 @@ true`);
     "",
   ].join("\n");
   await writeFile(path.join(box.root, oldRel), migratedCard, "utf-8");
-  await t.checkText(out.with((await caller(box.root).share.saveTextual(oldRequest)).created[0] === oldRel), "true");
+  t.check(await caller(box.root).share.saveTextual(oldRequest), { created: [oldRel] });
 
   // ## A reused share id with different immutable content conflicts
 
@@ -124,7 +138,7 @@ true`);
     ...request,
     url: "https://different.example/",
   }).then(() => "no-error", (error) => error.code);
-  await t.checkText(out.with(conflict), "CONFLICT");
+  t.check(conflict, "CONFLICT");
 
   // ## A stale landmark selection is rejected instead of becoming Inbox
 
@@ -136,5 +150,5 @@ true`);
     capturedAt: "2026-08-07T12:00:00.000Z",
     destination: { kind: "landmark", dir: "_content/missing" },
   }).then(() => "no-error", (error) => error.code);
-  await t.checkText(out.with(stale), "BAD_REQUEST");
+  t.check(stale, "BAD_REQUEST");
 });

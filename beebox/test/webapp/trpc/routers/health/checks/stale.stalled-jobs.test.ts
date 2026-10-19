@@ -11,6 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { stalledJobsCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/stale.js";
 import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 import { createIntakeJobTemplate } from "../../../../../../src/schemas/intake-job.js";
@@ -38,14 +39,11 @@ void test("Age is read from the filename's timestamp prefix, which every job-car
   // doctest:L32
   const box = await makeTmpBox({ git: true });
   const empty = await stalledJobsCheck(box.root);
-  t.check({ ok: empty.ok, severity: empty.severity }, {
-    ok: true,
-    severity: "warning",
-  });
+  t.check(empty, { name: "stalled-jobs", ok: true, message: "no job pending longer than the reactor should take", severity: "warning" });
 
   // doctest:L37
   await box.write(`_bookkeeping/jobs/${stampFromNow(0)}-fresh.intake.job.card`, job("Today's work"));
-  t.check((await stalledJobsCheck(box.root)).ok, true);
+  t.check(await stalledJobsCheck(box.root), { name: "stalled-jobs", ok: true, message: "no job pending longer than the reactor should take", severity: "warning" });
 });
 
 // ## A job pending past a week is reported, oldest first
@@ -65,13 +63,12 @@ void test("warning, never error:", async (t) => {
   await boxOld.write("_bookkeeping/jobs/2020-03-01T00-00-00-b.intake.job.card", job("Second oldest"));
   await boxOld.write("_bookkeeping/jobs/2020-01-01T00-00-00-a.intake.job.card", job("Oldest"));
   const check = await stalledJobsCheck(boxOld.root);
-  t.check({ ok: check.ok, severity: check.severity }, {
+  t.check(check, {
+    name: "stalled-jobs",
     ok: false,
+    message: str`2 job(s) pending over 7 days: 2020-01-01T00-00-00-a.intake.job.card (${any(String).matches(/^\d+$/u)}d), 2020-03-01T00-00-00-b.intake.job.card (${any(String).matches(/^\d+$/u)}d). The reactor is not draining them — check bbx wakeup's log for why.`,
     severity: "warning",
   });
-
-  // doctest:L59
-  await t.checkText(check.message.startsWith("2 job(s) pending over 7 days: 2020-01-01T00-00-00-a.intake.job.card"), "true");
 });
 
 // ## An unstamped filename reads as young, not as stalled
@@ -91,5 +88,5 @@ void test("A hand-written or legacy job name has no timestamp; its age falls bac
   // doctest:L75
   const boxPlain = await makeTmpBox({ git: true });
   await boxPlain.write("_bookkeeping/jobs/handwritten.intake.job.card", job("No stamp"));
-  t.check((await stalledJobsCheck(boxPlain.root)).ok, true);
+  t.check(await stalledJobsCheck(boxPlain.root), { name: "stalled-jobs", ok: true, message: "no job pending longer than the reactor should take", severity: "warning" });
 });

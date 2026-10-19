@@ -13,7 +13,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { validateBasePrefix, readBasePrefix } from "../../src/webapp/base-prefix.js";
 import { makeTestServer } from "../helpers/test-route-server.js";
 import http from "node:http";
@@ -53,9 +52,9 @@ void test("An absent, empty, multi-segment, traversal, or whitespace-bearing val
   t.check(validateBasePrefix("/my-worktree_2.0"), "/my-worktree_2.0");
 
   // doctest:L55
-  await t.checkText(
+  t.check(
     // Rejected -> "" (fail-safe):
-    JSON.stringify([
+    [
       validateBasePrefix(undefined),   // absent
       validateBasePrefix(""),          // empty
       validateBasePrefix("main"),      // no leading slash
@@ -64,8 +63,8 @@ void test("An absent, empty, multi-segment, traversal, or whitespace-bearing val
       validateBasePrefix("/.."),       // bare traversal (regex alone would pass)
       validateBasePrefix("/a b"),      // whitespace
       validateBasePrefix("//evil.com"),// protocol-relative escape attempt
-    ]),
-    "[\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\"]",
+    ],
+    ["", "", "", "", "", "", "", ""],
   );
 });
 
@@ -89,8 +88,6 @@ void test("readBasePrefix pulls the header (taking the first if duplicated) and 
 // the login path and the `returnTo`. (`makeTestServer` mounts the box under
 // `/test`, so `request.url` is `/test/browse/some-card`.)
 void test("With auth on and no cookie, a page navigation redirects to login.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -107,18 +104,17 @@ void test("With auth on and no cookie, a page navigation redirects to login.", a
     url: "/browse/some-card",
     headers: { "x-bbx-base-prefix": "/main" },
   });
-  print(`status: ${prefixed.statusCode}`);
-  print(`location: ${prefixed.headers.location}`);
-  await t.checkText(out.with("done"), `status: 302
-location: /main/auth/login?returnTo=%2Fmain%2Ftest%2Fbrowse%2Fsome-card
-done`);
+  t.check(
+    { status: prefixed.statusCode, location: prefixed.headers.location },
+    { status: 302, location: "/main/auth/login?returnTo=%2Fmain%2Ftest%2Fbrowse%2Fsome-card" },
+  );
 
   // With NO header the redirect stays exactly as it was before Track A: bare
   // `/auth/login` and an un-prefixed `returnTo`.
 
   // doctest:L111
   const bare = await box.rawRequest({ method: "GET", url: "/browse/some-card" });
-  await t.checkText(out.with(bare.headers.location), "/auth/login?returnTo=%2Ftest%2Fbrowse%2Fsome-card");
+  t.check(bare.headers.location, "/auth/login?returnTo=%2Ftest%2Fbrowse%2Fsome-card");
 
   // A malicious prefix (traversal or whitespace) is rejected by the validator and
   // treated as empty — the redirect degrades to the bare form, never escaping the
@@ -130,7 +126,7 @@ done`);
     url: "/browse/some-card",
     headers: { "x-bbx-base-prefix": "/../etc" },
   });
-  await t.checkText(out.with(traversal.headers.location), "/auth/login?returnTo=%2Ftest%2Fbrowse%2Fsome-card");
+  t.check(traversal.headers.location, "/auth/login?returnTo=%2Ftest%2Fbrowse%2Fsome-card");
 
   // doctest:L129
   const whitespace = await box.rawRequest({
@@ -138,7 +134,7 @@ done`);
     url: "/browse/some-card",
     headers: { "x-bbx-base-prefix": "/a b" },
   });
-  await t.checkText(out.with(whitespace.headers.location), "/auth/login?returnTo=%2Ftest%2Fbrowse%2Fsome-card");
+  t.check(whitespace.headers.location, "/auth/login?returnTo=%2Ftest%2Fbrowse%2Fsome-card");
 });
 
 // ## The hub's own login redirect ignores a client-supplied prefix (spoof wall)
@@ -150,8 +146,6 @@ done`);
 // can't rewrite the login `Location`. The `/<slug>` the hub injects goes onto the
 // outgoing child request, not its own redirect.
 void test("The hub serves login at its own root and forwards /<slug>/... to the child un...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       for (const s of hubSockets) s.destroy();
@@ -190,8 +184,6 @@ void test("The hub serves login at its own root and forwards /<slug>/... to the 
   // doctest:L173
   // Unauthenticated navigation: bare redirect, returnTo already carries /test1.
   const nav = await fetch(`${hubBase}/test1/browse/some-card`, { redirect: "manual" });
-  print(`status: ${nav.status}`);
-  print(`location: ${nav.headers.get("location")}`);
 
   // doctest:L178
   // A spoofed x-bbx-base-prefix is stripped -> identical redirect, not /evil/....
@@ -199,9 +191,18 @@ void test("The hub serves login at its own root and forwards /<slug>/... to the 
     redirect: "manual",
     headers: { "x-bbx-base-prefix": "/evil" },
   });
-  print(`spoofed: ${spoofed.headers.get("location")}`);
-  await t.checkText(out.with("done"), `status: 302
-location: /auth/login?returnTo=%2Ftest1%2Fbrowse%2Fsome-card
-spoofed: /auth/login?returnTo=%2Ftest1%2Fbrowse%2Fsome-card
-done`);
+  t.check(
+    {
+      status: nav.status,
+      location: nav.headers.get("location"),
+      spoofedStatus: spoofed.status,
+      spoofedLocation: spoofed.headers.get("location"),
+    },
+    {
+      status: 302,
+      location: "/auth/login?returnTo=%2Ftest1%2Fbrowse%2Fsome-card",
+      spoofedStatus: 302,
+      spoofedLocation: "/auth/login?returnTo=%2Ftest1%2Fbrowse%2Fsome-card",
+    },
+  );
 });

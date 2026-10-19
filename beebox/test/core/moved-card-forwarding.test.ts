@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, str } from "agent-doctest/check";
 import { mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
@@ -275,8 +275,6 @@ void test("The NUL-delimited parser is exercised through Git as well as directly
 // also keeps the ordinary not-found result and reports the recovery failure to
 // the supplied warning boundary.
 void test("An incomplete or unsafe record is not enough to navigate.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await plain.cleanup();
@@ -292,9 +290,9 @@ void test("An incomplete or unsafe record is not enough to navigate.", async (t)
     missingPath: "_content/Gone.doc.card",
     warn: message => warnings.push(message),
   });
-  print(JSON.stringify(result));
-  await t.checkText(out.with(warnings.length), `{"kind":"not-moved"}
-1`);
+  t.check(result, { kind: "not-moved" });
+  // The tail is git's own error text, which varies by git version.
+  t.check(warnings, [str`Could not inspect uncommitted moved cards for _content/Gone.doc.card: ${any(String)}`]);
 });
 
 // A committed rename whose destination was later deleted or replaced by any

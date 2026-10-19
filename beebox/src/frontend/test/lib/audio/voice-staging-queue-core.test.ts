@@ -7,8 +7,8 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import assert from "node:assert/strict";
-import { nextDrainStep, type VoiceOp, type LastOutcome, type DrainStep } from "../../../src/lib/audio/voice-staging-queue-core.js";
+import { anything } from "agent-doctest/check";
+import { nextDrainStep, type VoiceOp, type LastOutcome } from "../../../src/lib/audio/voice-staging-queue-core.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BOUND_MS = 7 * DAY_MS;
@@ -24,16 +24,10 @@ function op(overrides: Partial<VoiceOp> & Pick<VoiceOp, "recordingId" | "seq">):
   };
 }
 
-/** The op a step sends or terminates; fails the example when the step is idle or a wait. */
-function opOf(drain: DrainStep<VoiceOp>): VoiceOp {
-  assert.ok(drain.type === "send" || drain.type === "terminal", `no op in a ${drain.type} step`);
-  return drain.op;
-}
-
-/** Why a step dropped a recording; fails the example when the step is not terminal. */
-function reasonOf(drain: DrainStep<VoiceOp>): string {
-  assert.ok(drain.type === "terminal", `not terminal: ${drain.type}`);
-  return drain.reason;
+/** The op as `step` reports it. An ArrayBuffer cannot be compared, so its slot is `anything()`. */
+function sentOp(fields: { recordingId: string; seq: number; createdAt: number; attempts: number }) {
+  const { recordingId, seq, createdAt, attempts } = fields;
+  return { recordingId, seq, payload: { kind: "chunk" as const, chunkIndex: seq, bytes: anything() }, createdAt, attempts };
 }
 
 function step(ops: VoiceOp[], opts: { now: number; lastOutcome?: LastOutcome | null }) {
@@ -58,27 +52,14 @@ void test("Ordered ops: the lowest `seq` goes first, and stays first until it's 
     op({ recordingId: "r1", seq: 1, createdAt: 200 }),
     op({ recordingId: "r1", seq: 2, createdAt: 300 }),
   ];
-  await t.checkText(step(ops, { now: 1000 }), `{
-  "type": "send",
-  "op": {
-    "recordingId": "r1",
-    "seq": 0,
-    "payload": {
-      "kind": "chunk",
-      "chunkIndex": 0,
-      "bytes": {}
-    },
-    "createdAt": 100,
-    "attempts": 0
-  }
-}`);
+  t.check(step(ops, { now: 1000 }), { type: "send", op: sentOp({ recordingId: "r1", seq: 0, createdAt: 100, attempts: 0 }) });
 
   // Once seq 0 is removed (the shell deletes an op on success), seq 1 is next —
   // never seq 2 out of order:
 
   // doctest:L83
   const afterFirstSucceeds = ops.slice(1);
-  t.check(opOf(step(afterFirstSucceeds, { now: 1000 })).seq, 1);
+  t.check(step(afterFirstSucceeds, { now: 1000 }), { type: "send", op: sentOp({ recordingId: "r1", seq: 1, createdAt: 200, attempts: 0 }) });
 });
 
 // ## Recordings drain oldest-first
@@ -92,11 +73,11 @@ void test("Two recordings interleave; the one whose earliest pending op is older
     op({ recordingId: "older", seq: 0, createdAt: 100 }),
     op({ recordingId: "newer", seq: 1, createdAt: 600 }),
   ];
-  t.check(opOf(step(interleaved, { now: 1000 })).recordingId, "older");
+  t.check(step(interleaved, { now: 1000 }), { type: "send", op: sentOp({ recordingId: "older", seq: 0, createdAt: 100, attempts: 0 }) });
 
   // doctest:L104
   const olderDone = interleaved.filter((o) => o.recordingId !== "older");
-  t.check(opOf(step(olderDone, { now: 1000 })).recordingId, "newer");
+  t.check(step(olderDone, { now: 1000 }), { type: "send", op: sentOp({ recordingId: "newer", seq: 0, createdAt: 500, attempts: 0 }) });
 });
 
 // ## A transient failure waits, then retries
@@ -116,20 +97,7 @@ void test("A 502 (or any transient error) on attempt 1 waits retryDelayMs(1) = 1
   });
 
   // doctest:L125
-  await t.checkText(step([failedOnce], { now: 6000, lastOutcome }), `{
-  "type": "send",
-  "op": {
-    "recordingId": "r1",
-    "seq": 0,
-    "payload": {
-      "kind": "chunk",
-      "chunkIndex": 0,
-      "bytes": {}
-    },
-    "createdAt": 100,
-    "attempts": 1
-  }
-}`);
+  t.check(step([failedOnce], { now: 6000, lastOutcome }), { type: "send", op: sentOp({ recordingId: "r1", seq: 0, createdAt: 100, attempts: 1 }) });
 });
 
 // ## Steady-state delay once the backoff schedule runs out
@@ -148,7 +116,7 @@ void test("MAXRETRIES is 11; past that, the wait is a steady 30s rather than the
   });
 
   // doctest:L157
-  t.check(step([exhausted], { now: 35_000, lastOutcome: justFailed }).type, "send");
+  t.check(step([exhausted], { now: 35_000, lastOutcome: justFailed }), { type: "send", op: sentOp({ recordingId: "r1", seq: 0, createdAt: 100, attempts: 12 }) });
 });
 
 // ## A terminal failure (a 4xx) drops the whole recording
@@ -158,22 +126,12 @@ void test("A terminal failure (a 4xx) drops the whole recording", async (t) => {
   const conflict: LastOutcome = { recordingId: "r1", seq: 0, at: 5000, kind: "terminal" };
 
   // doctest:L167
-  await t.checkText(step([rejected], { now: 5001, lastOutcome: conflict }), `{
-  "type": "terminal",
-  "recordingId": "r1",
-  "op": {
-    "recordingId": "r1",
-    "seq": 0,
-    "payload": {
-      "kind": "chunk",
-      "chunkIndex": 0,
-      "bytes": {}
-    },
-    "createdAt": 100,
-    "attempts": 0
-  },
-  "reason": "rejected"
-}`);
+  t.check(step([rejected], { now: 5001, lastOutcome: conflict }), {
+    type: "terminal",
+    recordingId: "r1",
+    op: sentOp({ recordingId: "r1", seq: 0, createdAt: 100, attempts: 0 }),
+    reason: "rejected",
+  });
 });
 
 // ## An op older than the 7-day bound is terminal regardless of its own history
@@ -183,10 +141,15 @@ void test("A terminal failure (a 4xx) drops the whole recording", async (t) => {
 void test("Even an op that has never failed goes terminal once it's too old — the bound...", async (t) => {
   // doctest:L192
   const ancient = op({ recordingId: "r1", seq: 0, createdAt: 0 });
-  t.check(reasonOf(step([ancient], { now: BOUND_MS })), "expired");
+  t.check(step([ancient], { now: BOUND_MS }), {
+    type: "terminal",
+    recordingId: "r1",
+    op: sentOp({ recordingId: "r1", seq: 0, createdAt: 0, attempts: 0 }),
+    reason: "expired",
+  });
 
   // doctest:L196
-  t.check(step([ancient], { now: BOUND_MS - 1 }).type, "send");
+  t.check(step([ancient], { now: BOUND_MS - 1 }), { type: "send", op: sentOp({ recordingId: "r1", seq: 0, createdAt: 0, attempts: 0 }) });
 });
 
 // ## A `lastOutcome` for a different op doesn't apply
@@ -197,7 +160,7 @@ void test("If the recording's earliest op changed (the prior one succeeded and w
   // doctest:L206
   const next = op({ recordingId: "r1", seq: 1, createdAt: 100 });
   const staleOutcome: LastOutcome = { recordingId: "r1", seq: 0, at: 5000, kind: "terminal" };
-  t.check(step([next], { now: 5001, lastOutcome: staleOutcome }).type, "send");
+  t.check(step([next], { now: 5001, lastOutcome: staleOutcome }), { type: "send", op: sentOp({ recordingId: "r1", seq: 1, createdAt: 100, attempts: 0 }) });
 });
 
 // ## Two recordings backing off at once don't clobber each other's wait
@@ -226,8 +189,8 @@ void test("lastOutcomes is keyed by recordingId precisely so one recording's out
   // next, with `older`'s backoff entry left untouched in the map:
 
   // doctest:L239
-  t.check(opOf(nextDrainStep([newerOp], { now: 5100, lastOutcomes, boundMs: BOUND_MS })).recordingId, "newer");
+  t.check(nextDrainStep([newerOp], { now: 5100, lastOutcomes, boundMs: BOUND_MS }), { type: "send", op: sentOp({ recordingId: "newer", seq: 0, createdAt: 50, attempts: 0 }) });
 
   // doctest:L242
-  t.check(lastOutcomes.get("older")?.at, 5000);
+  t.check(lastOutcomes.get("older"), { recordingId: "older", seq: 0, at: 5000, kind: "transient" });
 });

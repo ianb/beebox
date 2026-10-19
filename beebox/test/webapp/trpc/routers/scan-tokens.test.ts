@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate } from "agent-doctest/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
@@ -32,24 +33,26 @@ void test("create returns the secret once, and it really authenticates", async (
   const box = await makeTmpBox({ git: true });
   const owner = caller(box.root, { isOwner: true });
   const created = await owner.scanTokens.create({ name: "laptop-scansnap" });
+  t.check(created, { name: "laptop-scansnap", token: any(String), createdAt: isoDate() });
 
   // doctest:L29
-  t.check((await verifyScanToken(box.root, created.token))?.name, "laptop-scansnap");
+  t.check(await verifyScanToken(box.root, created.token), {
+    name: "laptop-scansnap",
+    tokenHash: any(String).matches(/^[\da-f]{64}$/),
+    createdAt: isoDate(),
+    createdBy: "owner@example.com",
+    lastUsedAt: isoDate(),
+  });
 
   // ## list never carries a secret or a hash
 
   // doctest:L36
   const listed = await owner.scanTokens.list();
-  t.check(listed.map((token) => [token.name, token.createdBy, token.revoked]), [
-    [
-      "laptop-scansnap",
-      "owner@example.com",
-      false,
-    ],
+  t.check(listed, [
+    { name: "laptop-scansnap", createdAt: isoDate(), createdBy: "owner@example.com", lastUsedAt: isoDate(), revoked: false, lastClient: null },
   ]);
 
   // doctest:L40
-  await t.checkText(JSON.stringify(listed).includes(created.token), "false");
 
   // ## revoke kills the credential; a second revoke reports NOT_FOUND
 

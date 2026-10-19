@@ -14,6 +14,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, str } from "agent-doctest/check";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -32,6 +33,11 @@ import {
 import { readFile } from "node:fs/promises";
 import { once } from "node:events";
 import assert from "node:assert/strict";
+
+/** One user message as the fake backend records it: the chat-app header, then the text. */
+function sentText(body: string) {
+  return [{ type: "text" as const, text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>\n${body}` }];
+}
 
 // ## Backend sees the right options
 //
@@ -60,13 +66,14 @@ void test("ChatSession builds system prompt + env + resume id and hands them to 
   // doctest:L51
   const run = backend.lastRun();
   assert.ok(run);
-  await t.checkText(run !== null && run.startOptions.systemPrompt, "TEST PROMPT");
-
-  // doctest:L56
-  await t.checkText(run !== null && run.startOptions.env.BBX_TEST_FOO, "foo");
-
-  // doctest:L59
-  await t.checkText(run !== null && run.startOptions.resumeSessionId, "undefined");
+  t.check(
+    {
+      systemPrompt: run.startOptions.systemPrompt,
+      foo: run.startOptions.env.BBX_TEST_FOO,
+      resumeSessionId: run.startOptions.resumeSessionId,
+    },
+    { systemPrompt: "TEST PROMPT", foo: "foo", resumeSessionId: undefined },
+  );
 });
 
 // ## Session ID gets assigned and persisted
@@ -111,7 +118,7 @@ void test("When the fake emits the init system message with a sessionid, ChatSes
   t.check(session.getSessionId(), "sess-xyz");
 
   // doctest:L99
-  t.check(observed.join(","), "sess-xyz");
+  t.check(observed, ["sess-xyz"]);
 
   // A new ChatSession in the same box picks up the persisted id:
 
@@ -141,7 +148,7 @@ void test("A session with a custom sessionFile writes its id to that file; a ses
 
   // doctest:L127
   const raw = await readFile(box.path(SETUP_FILE), "utf-8");
-  t.check(JSON.parse(raw).sessionId, "sess-setup-1");
+  t.check(JSON.parse(raw), { sessionId: "sess-setup-1", savedAt: isoDate() });
 
   // Reopening with the same `sessionFile` recovers the saved id; a
   // different `sessionFile` has none:
@@ -175,8 +182,8 @@ void test("A full turn with an assistant text block + result event emits turn-te
   const session = new ChatSession(box.root, opts);
 
   // doctest:L161
-  let turnText = null;
-  session.on("turn-text", (text) => { turnText = text; });
+  const turnTexts: string[] = [];
+  session.on("turn-text", (text) => { turnTexts.push(text); });
 
   // doctest:L164
   await session.send("what is 2+2?");
@@ -191,15 +198,11 @@ void test("A full turn with an assistant text block + result event emits turn-te
   await done;
 
   // doctest:L175
-  await t.checkText(turnText, "2+2 equals 4.");
+  t.check(turnTexts, ["2+2 equals 4."]);
 
   // And the backend received a user turn (one content array per send call):
 
-  // doctest:L182
-  await t.checkText(run.sent.length, "1");
-
-  // doctest:L185
-  t.check(run.sent[0]?.[0]?.type, "text");
+  t.check(run.sent, [sentText("what is 2+2?")]);
 });
 
 // ## Close handler drains queued messages into a fresh run
@@ -241,17 +244,9 @@ void test("If the run ends while a turn is in progress and messages are queued b
   await waitForRuns(backend, { count: 2, timeoutMs: 1000 });
 
   // doctest:L221
-  await t.checkText(
-    // A second run got started and received the combined queued text
-    backend.runs.length,
-    "2",
-  );
+  // A second run got started and received the combined queued text
+  t.check(backend.runs.map((r) => r.sent), [[sentText("first")], [sentText("second\n\nthird")]]);
 
-  // doctest:L227
-  const run2 = backend.runs[1];
-  const block = run2?.sent[0]?.[0];
-  const text = block?.type === "text" ? block.text : "";
-  await t.checkText(text.includes("second") && text.includes("third"), "true");
 });
 
 // ## restart() closes the current run and drains queue into a fresh one
@@ -284,12 +279,8 @@ void test("Calling restart() ends the current run; the close handler then drains
   await waitForRuns(backend, { count: 2, timeoutMs: 1000 });
 
   // doctest:L258
-  await t.checkText(backend.runs.length, "2");
+  t.check(backend.runs.map((r) => r.sent), [[sentText("hello")], [sentText("queued after restart")]]);
 
-  // doctest:L263
-  const run2 = backend.runs[1];
-  const block = run2?.sent[0]?.[0];
-  await t.checkText(block?.type === "text" && block.text.includes("queued after restart"), "true");
 });
 
 // ## stop() clears queued messages — no auto-drain
@@ -322,7 +313,7 @@ void test("stop() is used for intentional shutdown (including resetSession).", a
   await tick();
 
   // doctest:L294
-  await t.checkText(backend.runs.length, "1");
+  t.check(backend.runs.map((r) => r.sent), [[sentText("hi")]]);
 });
 
 // ## Notes

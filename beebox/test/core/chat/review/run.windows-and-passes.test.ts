@@ -4,6 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, anything, not } from "agent-doctest/check";
 import { appendFile, mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";
@@ -92,6 +93,16 @@ function smallTalk(uuid: string) {
   return userEntry(uuid, "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. ".repeat(4));
 }
 
+/** A run summary with every counter zero except `over`. */
+function summaryOf(over: Partial<Awaited<ReturnType<typeof runChatReview>>>): Awaited<ReturnType<typeof runChatReview>> {
+  return {
+    reviewed: 0, titled: 0, titlesKept: 0, alreadyApplied: 0, bootstrapped: 0, rewritten: 0, reviewerFailures: 0,
+    sessionErrors: 0, exhausted: 0, rejected: [], missingTranscripts: 0, deferredActive: 0, belowThreshold: 0,
+    belowTitleThreshold: 0, tooFewTurns: 0, foreignOrigin: 0, overflow: 0,
+    ...over,
+  };
+}
+
 const OUTPUT: ReviewOutput = {
   title: "Sorting out a recurring billing problem",
   contains: "Working through a repeated billing error and how to stop it.",
@@ -130,10 +141,7 @@ void test("Nothing before the journal boundary is retained — the span walk str
     reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
   });
   const journalled = (await loadReviewState(box.root)).sessions[sid("sesscap")]?.applied["metadata"];
-  t.check({ endUuid: journalled?.endUuid, endIndex: journalled?.endIndex }, {
-    endUuid: "cap-1",
-    endIndex: 1,
-  });
+  t.check(journalled, { spanId: "70635d195d2e82f2", endUuid: "cap-1", endIndex: 1, prefixHash: "a40308cc011e9448", at: NOW.toISOString() });
 
   // Then the transcript grows by more than a whole read window.
 
@@ -152,26 +160,18 @@ void test("Nothing before the journal boundary is retained — the span walk str
     reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
   });
   const advanced = (await loadReviewState(box.root)).sessions[sid("sesscap")]?.applied["metadata"];
-  t.check(
-    {
-      reviewed: summary.reviewed,
-      bootstrapped: summary.bootstrapped,
-      endUuid: advanced?.endUuid,
-      endIndex: advanced?.endIndex,
-    },
-    {
-    reviewed: 1,
-    bootstrapped: 0,
-    endUuid: "cap-5001",
-    endIndex: 5001,
-  },
-  );
+  t.check({ summary, advanced }, {
+    summary: summaryOf({ reviewed: 1 }),
+    advanced: { spanId: "6b43c80f6e94e649", endUuid: "cap-5001", endIndex: 5001, prefixHash: "a84b325c64a34730", at: NOW.toISOString() },
+  });
 
   // The reviewer saw only the new material, and the remaining ten entries are the
   // next run's span — which in turn continues from `cap-5001`, not from the top.
 
   // doctest:L178
-  await t.checkText(second.calls[0]?.span.includes("line 0") && !second.calls[0]?.span.includes("aaaa"), "true");
+  // The span is 5,000 generated lines plus a tail; the two narrow checks keep it readable.
+  t.check(second.calls[0]?.span, any(String).includes("line 0"));
+  t.check(second.calls[0]?.span, not(any(String).includes("aaaa")));
 
   // doctest:L181
   const third = fakeReviewer([OUTPUT]);
@@ -179,10 +179,9 @@ void test("Nothing before the journal boundary is retained — the span walk str
     reviewer: third, maxSessions: 10, now: NOW, ownerEmail: null,
   });
   const final = (await loadReviewState(box.root)).sessions[sid("sesscap")]?.applied["metadata"];
-  t.check({ bootstrapped: again.bootstrapped, endUuid: final?.endUuid, endIndex: final?.endIndex }, {
-    bootstrapped: 0,
-    endUuid: "cap-5011",
-    endIndex: 5011,
+  t.check({ again, final }, {
+    again: summaryOf({ reviewed: 1 }),
+    final: { spanId: "7d31fb73a3315f37", endUuid: "cap-5011", endIndex: 5011, prefixHash: "d2a5b92180da74d3", at: NOW.toISOString() },
   });
 });
 
@@ -220,34 +219,24 @@ void test("\\n Two exchanges clear the 400-char title gate but not the 6,000-cha
   const summary = await runChatReview(box.root, {
     reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check(
-    {
-      titled: summary.titled,
-      reviewed: summary.reviewed,
-      reviewCalls: reviewer.calls.length,
-      titleCalls: reviewer.titleCalls.length,
-    },
-    {
-    titled: 1,
-    reviewed: 0,
-    reviewCalls: 0,
-    titleCalls: 1,
-  },
-  );
+  t.check({ summary, reviewCalls: reviewer.calls, titleCalls: reviewer.titleCalls }, {
+    summary: summaryOf({ titled: 1, belowThreshold: 1 }),
+    reviewCalls: [],
+    titleCalls: [{ sessionId: sid("sessshort"), currentTitle: null, span: any(String) }],
+  });
 
   // doctest:L226
   const card = await readFile(box.path(huskPath), "utf8");
-  t.check([card.includes("title: Planning a small birthday dinner"), card.includes("contains:"), card.includes("contains-evidence:"), card.includes("review-span:")].join(","), "true,false,false,false");
+  t.checkText(card, `---
+session: ${sid("sessshort")}
+title: Planning a small birthday dinner
+first-message: please help me plan a small birthday dinner for saturday, eight people, one veg…
+---`);
 
   // doctest:L230
   const state = await loadReviewState(box.root);
   const entry = state.sessions[sid("sessshort")]?.applied;
-  t.check({ consumers: Object.keys(entry ?? {}).toSorted(), end: entry?.["title"]?.endUuid }, {
-    consumers: [
-      "title",
-    ],
-    end: "h2",
-  });
+  t.check(entry, { title: { spanId: "87c445c3e179cdce", endUuid: "h2", endIndex: 1, prefixHash: "b4cc4988165ea963", at: NOW.toISOString() } });
 
   // The same span asks nothing the second night — the title journal has advanced.
 
@@ -256,10 +245,7 @@ void test("\\n Two exchanges clear the 400-char title gate but not the 6,000-cha
   const again = await runChatReview(box.root, {
     reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check({ titled: again.titled, calls: second.titleCalls.length }, {
-    titled: 0,
-    calls: 0,
-  });
+  t.check({ again, calls: second.titleCalls }, { again: summaryOf({ belowTitleThreshold: 1 }), calls: [] });
 });
 
 // ## A metadata pass advances both journals
@@ -294,19 +280,8 @@ void test("Summary-sized growth runs the full review, and its title decision cov
   // doctest:L271
   const state = await loadReviewState(box.root);
   const applied = state.sessions[sid("sessboth")]?.applied;
-  t.check(
-    {
-      consumers: Object.keys(applied ?? {}).toSorted(),
-      sameBoundary: applied?.["metadata"]?.endUuid === applied?.["title"]?.endUuid,
-    },
-    {
-    consumers: [
-      "metadata",
-      "title",
-    ],
-    sameBoundary: true,
-  },
-  );
+  const boundary = { spanId: "765ceb0227a4a499", endUuid: "k3", endIndex: 2, prefixHash: "93cf99a7230ded9f", at: NOW.toISOString() };
+  t.check(applied, { metadata: boundary, title: boundary });
 
   // Short growth afterwards goes to the TITLE pass only — the summary journal is
   // ahead of it now.
@@ -326,14 +301,14 @@ void test("Summary-sized growth runs the full review, and its title decision cov
   await runChatReview(box.root, {
     reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check({ reviewCalls: reviewer.calls.length, titleCalls: reviewer.titleCalls.length }, {
-    reviewCalls: 0,
-    titleCalls: 1,
+  t.check({ reviewCalls: reviewer.calls, titleCalls: reviewer.titleCalls }, {
+    reviewCalls: [],
+    titleCalls: [anything()],
   });
 
   // doctest:L300
   const after = await loadReviewState(box.root);
-  t.check(after.sessions[sid("sessboth")]?.applied["title"]?.endUuid, "k5");
+  t.check(after.sessions[sid("sessboth")]?.applied["title"], { spanId: any(String), endUuid: "k5", endIndex: 4, prefixHash: any(String), at: NOW.toISOString() });
 });
 
 // ## "Keep" with nothing to keep is a failure
@@ -365,27 +340,17 @@ void test("A title pass that answers empty against a chat with NO title reconcil
   const summary = await runChatReview(box.root, {
     reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check(summary.reviewerFailures, 1);
+  t.check(summary, summaryOf({ reviewerFailures: 1, belowThreshold: 1 }));
 
   // doctest:L332
   const state = await loadReviewState(box.root);
-  t.check(
-    {
-      applied: Object.keys(state.sessions[sid("sessempty")]?.applied ?? {}),
-      titleAttempts: state.sessions[sid("sessempty")]?.titleAttempts,
-    },
-    {
-    applied: [],
-    titleAttempts: 1,
-  },
-  );
+  t.check(state.sessions[sid("sessempty")], {
+    applied: {}, titleOwner: "unmanaged", titleHash: null, attempts: 0, titleAttempts: 1, titleFailedSpanId: "e76fa8c3a941634e",
+  });
 
   // doctest:L339
-  await t.checkText(
-    // Nothing was written to the card.
-    (await readFile(box.path(huskPath), "utf8")).includes("title:"),
-    "false",
-  );
+  // Nothing was written to the card.
+  t.checkText(await readFile(box.path(huskPath), "utf8"), `---\nsession: ${sid("sessempty")}\n---`);
 });
 
 // ## A pass fills a missing `first-message`
@@ -420,7 +385,11 @@ void test("A coined-id chat's husk is created before its transcript exists, so c
   });
 
   // doctest:L370
-  await t.checkText((await readFile(box.path(huskPath), "utf8")).includes("first-message: please help me plan a small birthday dinner"), "true");
+  t.checkText(await readFile(box.path(huskPath), "utf8"), `---
+session: ${sid("sessfill")}
+title: Planning a small birthday dinner
+first-message: please help me plan a small birthday dinner for saturday, eight people, one veg…
+---`);
 });
 
 // ## A hand-owned title costs nothing on the title pass
@@ -451,17 +420,14 @@ void test("titleOwner:", async (t) => {
   const summary = await runChatReview(box.root, {
     reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
   });
-  t.check({ titled: summary.titled, calls: reviewer.titleCalls.length }, {
-    titled: 0,
-    calls: 0,
-  });
+  t.check({ summary, calls: reviewer.titleCalls }, { summary: summaryOf({ belowThreshold: 1 }), calls: [] });
 
   // doctest:L400
   const state = await loadReviewState(box.root);
-  t.check(state.sessions[sid("sesshand")]?.applied["title"]?.endUuid, "m2");
+  t.check(state.sessions[sid("sesshand")]?.applied["title"], { spanId: "9f14db44b15ae759", endUuid: "m2", endIndex: 1, prefixHash: "fc5024188147b92e", at: NOW.toISOString() });
 
   // doctest:L404
-  await t.checkText((await readFile(box.path(huskPath), "utf8")).includes("title: Notes on the roof leak"), "true");
+  t.checkText(await readFile(box.path(huskPath), "utf8"), `---\nsession: ${sid("sesshand")}\ntitle: Notes on the roof leak\n---`);
 });
 
 // ## Each session's journal is saved before the next one starts
@@ -491,18 +457,18 @@ void test("A run spans many model calls, and a process killed mid-run (a deploy 
   await seed(box, { sessionId: "sesssecond", husk: "", entries: [smallTalk("q1"), smallTalk("q2")] });
 
   // doctest:L430
-  let seenOnDisk = null;
+  const seen: { onDisk?: { owner: unknown; title: unknown } } = {};
   const reviewer = {
     async review() { throw new Error("must not run"); },
     async title(args: TitleArgs) {
       if (args.sessionId === sid("sesssecond")) {
         const onDisk = JSON.parse(await readFile(box.path(".beebox/chat-review/state.json"), "utf8"));
         const first = onDisk.sessions[sid("sessfirst")];
-        seenOnDisk = { owner: first?.titleOwner, title: first?.applied?.["title"]?.endUuid };
+        seen.onDisk = { owner: first?.titleOwner, title: first?.applied?.["title"]?.endUuid };
       }
       return { title: args.sessionId === sid("sessfirst") ? "Planning a small birthday dinner" : "Another small plan" };
     },
   };
   await runChatReview(box.root, { reviewer, maxSessions: 10, now: NOW, ownerEmail: null });
-  await t.checkText(seenOnDisk, "{ owner: \"generated\", title: \"p2\" }");
+  t.check(seen, { onDisk: { owner: "generated", title: "p2" } });
 });

@@ -37,7 +37,7 @@ void test("recordTurnMarker writes one file per session; loadTurnMarker reads it
   });
 
   // doctest:L30
-  await t.checkText(loadTurnMarker(box.root, "never-recorded") === null, "true");
+  t.check(loadTurnMarker(box.root, "never-recorded"), null);
 });
 
 // ## Report: commits since the marker, plus the uncommitted tree
@@ -63,34 +63,29 @@ void test("After recording the marker, a later commit shows up as \"since your l
   box.commitAll("expand trip card");
   await box.write("_content/Notes.doc.card", "scratch");
   const report = await summarizeWhatsChanged(box.root, { sessionId: "sess-1" });
+  t.checkText(report, `Commits since your last reply («*»..HEAD):
+«*» expand trip card
 
-  // doctest:L55
-  await t.checkText(report.includes("Commits since your last reply"), "true");
+_content/Trip.doc.card | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
 
-  // doctest:L58
-  await t.checkText(report.includes("expand trip card"), "true");
-
-  // doctest:L61
-  await t.checkText(report.includes("add trip card"), "false");
-
-  // doctest:L64
-  await t.checkText(report.includes("Uncommitted working tree"), "true");
-
-  // doctest:L67
-  await t.checkText(report.includes("Untracked: _content/Notes.doc.card"), "true");
+Uncommitted working tree:
+Untracked: _content/Notes.doc.card`);
 
   // Scoping to a card path narrows every section to that path: the Trip card's
   // commit stays, the out-of-scope Notes file drops out.
 
-  // doctest:L75
   const scoped = await summarizeWhatsChanged(box.root, { sessionId: "sess-1", card: "_content/Trip.doc.card" });
-  await t.checkText(scoped.includes("Scope: _content/Trip.doc.card"), "true");
+  t.checkText(scoped, `Scope: _content/Trip.doc.card
 
-  // doctest:L79
-  await t.checkText(scoped.includes("expand trip card"), "true");
+Commits since your last reply («*»..HEAD):
+«*» expand trip card
 
-  // doctest:L82
-  await t.checkText(scoped.includes("Notes"), "false");
+_content/Trip.doc.card | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+Working tree clean (no uncommitted changes).`);
+
 });
 
 // ## Marker-absent fallback (first turn)
@@ -110,10 +105,11 @@ void test("With no marker yet, the report falls back to the last few commits, la
   await box.write("_content/Trip.doc.card", "first");
   box.commitAll("add trip card");
   const report = await summarizeWhatsChanged(box.root, { sessionId: "no-marker-session" });
+  t.checkText(report, `No turn marker yet (first turn this session) — last 5 commits:
+«*» add trip card
+«*» init
 
-  // doctest:L101
-  await t.checkText(report.includes("No turn marker yet"), "true");
+Working tree clean (no uncommitted changes).`);
 
-  // doctest:L104
-  await t.checkText(report.includes("add trip card"), "true");
+
 });

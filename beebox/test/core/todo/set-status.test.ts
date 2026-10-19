@@ -15,6 +15,24 @@ const box = await makeTmpBox();
 const ctx = await buildLoadContext(box.root);
 const CARD = "_content/Kitchen.doc.card";
 
+const BASE_ITEM = {
+  path: CARD,
+  locator: { kind: "body", line: 5 },
+  id: undefined,
+  status: "open",
+  assigned: undefined,
+  by: undefined,
+  created: undefined,
+  due: undefined,
+  start: undefined,
+  recheck: undefined,
+  seeAlso: [],
+  sectionPath: [],
+  parent: null,
+  annotation: "",
+  refs: [],
+} as const;
+
 // Four-line frontmatter block (`title` plus `contains`), so
 // body line 1 is file line 5.
 function doc(body: string): string {
@@ -133,16 +151,10 @@ void test("Frontmatter entry: set and removal, body left byte-identical", async 
 
   // doctest:L131
   const fmDone = setTodoStatus(fm, { locator: { kind: "frontmatter", index: 0 }, status: "done" });
-  await t.checkText(fmDone, `---
-title: Kitchen
-todos:
-  - text: "Renew the permit"
-    status: done
----
-Some body prose, unrelated to the todo.`);
-
-  // doctest:L144
-  await t.checkText(fmDone.endsWith("Some body prose, unrelated to the todo.\n"), "true");
+  t.check(
+    fmDone,
+    '---\ntitle: Kitchen\ntodos:\n  - text: "Renew the permit"\n    status: done\n---\nSome body prose, unrelated to the todo.\n',
+  );
 
   // doctest:L147
   await t.checkText(setTodoStatus(fmDone, { locator: { kind: "frontmatter", index: 0 }, status: "open" }), `---
@@ -179,11 +191,11 @@ void test("An unresolved locator throws, rather than silently editing nothing", 
 
   // doctest:L177
   const before = extractCardTodos({ relPath: CARD, content: doc("{% todo %}Buy milk{% /todo %}\n"), ctx }).items[0]!;
-  t.check(before.status, "open");
+  t.check(before, { ...BASE_ITEM, text: "Buy milk" });
 
   // doctest:L181
   const updated = setTodoStatus(doc("{% todo %}Buy milk{% /todo %}\n"), { locator: before.locator, status: "done" });
-  t.check(extractCardTodos({ relPath: CARD, content: updated, ctx }).items[0]!.status, "done");
+  t.check(extractCardTodos({ relPath: CARD, content: updated, ctx }).items, [{ ...BASE_ITEM, text: "Buy milk", status: "done" }]);
 
   // ## `setTodoAttribute`: the same surgery for `recheck`
   //
@@ -196,18 +208,20 @@ void test("An unresolved locator throws, rather than silently editing nothing", 
   // doctest:L195
   const dated = doc('Order lumber {% todo due="2026-07-01" recheck="2026-08-15" %}for the deck{% /todo %} — waiting on a quote\n');
   const retired = setTodoAttribute(dated, { locator: { kind: "body", line: 5 }, name: "recheck", value: "never" });
-  t.check(retired.split("\n")[4], "Order lumber {% todo due=\"2026-07-01\" recheck=\"never\" %}for the deck{% /todo %} — waiting on a quote");
+  t.check(
+    retired,
+    doc('Order lumber {% todo due="2026-07-01" recheck="never" %}for the deck{% /todo %} — waiting on a quote\n'),
+  );
 
   // doctest:L200
-  await t.checkText(setTodoAttribute(doc("{% todo %}Buy milk{% /todo %}\n"), { locator: { kind: "body", line: 5 }, name: "recheck", value: "2026-10-01" }).split("\n")[4], "{% todo recheck=\"2026-10-01\" %}Buy milk{% /todo %}");
+  t.check(
+    setTodoAttribute(doc("{% todo %}Buy milk{% /todo %}\n"), { locator: { kind: "body", line: 5 }, name: "recheck", value: "2026-10-01" }),
+    doc('{% todo recheck="2026-10-01" %}Buy milk{% /todo %}\n'),
+  );
 
   // doctest:L203
-  t.check(extractCardTodos({ relPath: CARD, content: retired, ctx }).items.map((todo) => [todo.text, todo.recheck, todo.annotation]), [
-    [
-      "for the deck",
-      "never",
-      "waiting on a quote",
-    ],
+  t.check(extractCardTodos({ relPath: CARD, content: retired, ctx }).items, [
+    { ...BASE_ITEM, text: "for the deck", due: "2026-07-01", recheck: "never", annotation: "waiting on a quote" },
   ]);
 
   // A frontmatter entry gets the key; `null` removes it.
@@ -224,5 +238,8 @@ todos:
 Body.`);
 
   // doctest:L222
-  await t.checkText(setTodoAttribute(fm, { locator: { kind: "frontmatter", index: 0 }, name: "recheck", value: null }).includes("recheck"), "false");
+  t.check(
+    setTodoAttribute(fm, { locator: { kind: "frontmatter", index: 0 }, name: "recheck", value: null }),
+    "---\ntitle: Kitchen\ncontains: Notes on the kitchen remodel.\ntodos:\n  - text: Renew permit\n---\nBody.\n",
+  );
 });

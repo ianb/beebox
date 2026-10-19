@@ -4,7 +4,11 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { buildCspPolicy, reportingEndpointsHeader, PROD_CSP_REPORT_PATH } from "../../src/lib/csp.js";
+import {
+  buildCspPolicy,
+  reportingEndpointsHeader,
+  PROD_CSP_REPORT_PATH,
+} from "../../src/lib/csp.js";
 
 const prod = buildCspPolicy({ mode: "prod", reportPath: PROD_CSP_REPORT_PATH });
 const dev = buildCspPolicy({ mode: "dev", reportPath: "/wt/api/csp-report" });
@@ -13,59 +17,81 @@ const dev = buildCspPolicy({ mode: "dev", reportPath: "/wt/api/csp-report" });
 //
 // `script-src` is exactly `'self'` — no `'unsafe-eval'` (p5's lazy eval features are isolated, not blanket-permitted) and no `'unsafe-inline'`:
 void test("script-src is exactly 'self' — no 'unsafe-eval' (p5's lazy eval features are...", async (t) => {
-  // doctest:L16
-  await t.checkText(prod.includes("script-src 'self';"), "true");
-
-  // doctest:L19
-  await t.checkText(prod.includes("script-src 'self' 'unsafe"), "false");
+  t.check(prod.split("; "), [
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline'",
+    "default-src 'self'",
+    "connect-src 'self' https://api.deepgram.com wss://api.deepgram.com https://api.openai.com wss://api.openai.com",
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' blob:",
+    "worker-src 'self'",
+    "frame-src 'self' https://www.youtube-nocookie.com",
+    "font-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'self'",
+    "report-uri /api/csp-report",
+    "report-to csp-endpoint",
+  ]);
 });
 
 // `style-src` keeps `'unsafe-inline'` (React inline `style={{…}}` props compile to governed `style=""` attributes):
 void test("style-src keeps 'unsafe-inline' (React inline style={{…}} props compile to go...", async (t) => {
-  // doctest:L26
-  await t.checkText(prod.includes("style-src 'self' 'unsafe-inline'"), "true");
+  t.check(prod.split("; ")[1], "style-src 'self' 'unsafe-inline'");
 });
 
 // ## Dev relaxes script/style
 //
 // Dev `script-src` adds `'unsafe-inline' 'unsafe-eval'` for Vite's injected react-refresh preamble and eval-backed HMR:
 void test("Dev script-src adds 'unsafe-inline' 'unsafe-eval' for Vite's injected react-r...", async (t) => {
-  // doctest:L35
-  await t.checkText(dev.includes("script-src 'self' 'unsafe-inline' 'unsafe-eval'"), "true");
+  t.check(dev.split("; "), [
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "default-src 'self'",
+    "connect-src 'self' https://api.deepgram.com wss://api.deepgram.com https://api.openai.com wss://api.openai.com",
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' blob:",
+    "worker-src 'self'",
+    "frame-src 'self' https://www.youtube-nocookie.com",
+    "font-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'self'",
+    "report-uri /wt/api/csp-report",
+    "report-to csp-endpoint",
+  ]);
 });
 
 // ## Shared directives (both modes)
 //
 // The external-origin allowlist, the YouTube embed frame, and the report directives are identical across modes — only the report path differs:
 void test("The external-origin allowlist, the YouTube embed frame, and the report direct...", async (t) => {
-  // doctest:L44
-  await t.checkText(
-    [prod, dev].every((p) => p.includes("frame-src 'self' https://www.youtube-nocookie.com"))
-    ,
-    "true",
-  );
-
-  // doctest:L47
-  await t.checkText(
-    [prod, dev].every((p) => p.includes("connect-src 'self' https://api.deepgram.com wss://api.deepgram.com https://api.openai.com wss://api.openai.com"))
-    ,
-    "true",
-  );
-
-  // doctest:L50
-  await t.checkText([prod, dev].every((p) => p.includes("img-src 'self' data: blob: https:")), "true");
-
-  // doctest:L53
-  await t.checkText([prod, dev].every((p) => p.includes("object-src 'none'") && p.includes("frame-ancestors 'self'") && p.includes("base-uri 'self'")), "true");
+  const shared = [
+    "default-src 'self'",
+    "connect-src 'self' https://api.deepgram.com wss://api.deepgram.com https://api.openai.com wss://api.openai.com",
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' blob:",
+    "worker-src 'self'",
+    "frame-src 'self' https://www.youtube-nocookie.com",
+    "font-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'self'",
+  ];
+  t.check(prod.split("; ").slice(2, -2), shared);
+  t.check(dev.split("; ").slice(2, -2), shared);
 });
 
 // The report directives must be present (without them Report-Only has no server-side sink), pointing at the given path:
 void test("The report directives must be present (without them Report-Only has no server...", async (t) => {
-  // doctest:L60
-  await t.checkText(prod.includes("report-uri /api/csp-report") && prod.includes("report-to csp-endpoint"), "true");
-
-  // doctest:L63
-  await t.checkText(dev.includes("report-uri /wt/api/csp-report"), "true");
+  t.check(prod.split("; ").slice(-2), [
+    "report-uri /api/csp-report",
+    "report-to csp-endpoint",
+  ]);
+  t.check(dev.split("; ").slice(-2), [
+    "report-uri /wt/api/csp-report",
+    "report-to csp-endpoint",
+  ]);
 });
 
 // ## Reporting-Endpoints companion header
@@ -73,5 +99,8 @@ void test("The report directives must be present (without them Report-Only has n
 // `report-to` only works if the response also carries a `Reporting-Endpoints` header naming the same endpoint and path:
 void test("report-to only works if the response also carries a Reporting-Endpoints heade...", async (t) => {
   // doctest:L72
-  t.check(reportingEndpointsHeader({ reportPath: PROD_CSP_REPORT_PATH }), "csp-endpoint=\"/api/csp-report\"");
+  t.check(
+    reportingEndpointsHeader({ reportPath: PROD_CSP_REPORT_PATH }),
+    'csp-endpoint="/api/csp-report"',
+  );
 });

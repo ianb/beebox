@@ -11,7 +11,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { notifySweep } from "../../src/cli/notify.js";
@@ -61,39 +60,37 @@ async function logLines(logFile: string): Promise<string[]> {
 // is spawned at all — duplicates, unsettled skips and identity-change skips are
 // all routine, not news.
 void test("Most sweeps upload nothing:", async (t) => {
-  // doctest:L69
   const quietLog = await fakeBin({ case: "quiet", name: "terminal-notifier", exitCode: 0 });
   await notifySweep([box("family", { duplicate: 2, skippedUnsettled: 1, skippedIdentityChanged: 1 })], { platform: "darwin" });
-  t.check((await logLines(quietLog)).length, 0);
+  t.check(await logLines(quietLog), []);
 
   // An empty sweep — no target produced a summary — is likewise silent:
 
-  // doctest:L78
   await notifySweep([], { platform: "darwin" });
-  t.check((await logLines(quietLog)).length, 0);
+  t.check(await logLines(quietLog), []);
 });
 
 // Newly exported Apple Photos items use the same notifier and stay silent when
 // no files were exported:
 void test("Newly exported Apple Photos items use the same notifier and stay silent when...", async (t) => {
-  // doctest:L87
   const photosLog = await fakeBin({ case: "photos", name: "terminal-notifier", exitCode: 0 });
   await notifySweep([], { platform: "darwin", photosFound: [{ album: "Bee Box", count: 2 }] });
-  t.check((await logLines(photosLog))[0], "-title Photos queued -message 2 photos from 'Bee Box' queued for upload -group org.beebox.scan-uploader.photos.Bee Box");
+  t.check(await logLines(photosLog), ["-title Photos queued -message 2 photos from 'Bee Box' queued for upload -group org.beebox.scan-uploader.photos.Bee Box"]);
 });
 
 // ## An upload posts one banner naming the boxes
 void test("An upload posts one banner naming the boxes", async (t) => {
-  // doctest:L96
   const uploadLog = await fakeBin({ case: "upload", name: "terminal-notifier", exitCode: 0 });
   await notifySweep([box("family", { uploaded: 2 }), box("receipts", { uploaded: 1 })], { platform: "darwin" });
-  t.check((await logLines(uploadLog)).join("\n"), "-title Scan uploaded -message 3 files uploaded to family, receipts -group org.beebox.scan-uploader.uploaded");
+  t.check(await logLines(uploadLog), ["-title Scan uploaded -message 3 files uploaded to family, receipts -group org.beebox.scan-uploader.uploaded"]);
 
   // A box that uploaded nothing is not named, and one file is singular:
 
-  // doctest:L105
   await notifySweep([box("family", { uploaded: 1 }), box("receipts", { duplicate: 4 })], { platform: "darwin" });
-  t.check((await logLines(uploadLog))[1], "-title Scan uploaded -message 1 file uploaded to family -group org.beebox.scan-uploader.uploaded");
+  t.check(await logLines(uploadLog), [
+    "-title Scan uploaded -message 3 files uploaded to family, receipts -group org.beebox.scan-uploader.uploaded",
+    "-title Scan uploaded -message 1 file uploaded to family -group org.beebox.scan-uploader.uploaded",
+  ]);
 });
 
 // ## Only a *newly* refused file is worth a banner
@@ -104,33 +101,29 @@ void test("An upload posts one banner naming the boxes", async (t) => {
 // same failure as notifying on a quiet run. So the remembered rejection is
 // silent:
 void test("A rejected file is left in place on purpose and the server remembers its hash...", async (t) => {
-  // doctest:L119
   const refuseLog = await fakeBin({ case: "refuse", name: "terminal-notifier", exitCode: 0 });
   await notifySweep([box("family", { rejected: 1 })], { platform: "darwin" });
-  t.check((await logLines(refuseLog)).length, 0);
+  t.check(await logLines(refuseLog), []);
 
   // `rejectedOnUpload` is the sweep that actually learned it — the PUT the server
   // refused — and that one gets a banner, in its own notification group so a
   // routine "Scan uploaded" cannot replace an unread refusal:
 
-  // doctest:L130
   await notifySweep([box("family", { rejected: 1, rejectedOnUpload: 1 })], { platform: "darwin" });
-  t.check((await logLines(refuseLog))[0], str`${any(String)}-group org.beebox.scan-uploader.refused`);
-
-  // doctest:L136
-  t.check((await logLines(refuseLog))[0], str`-title Scan refused -message 1 file rejected by family — left in place.${any(String)}`);
+  t.check(await logLines(refuseLog), [
+    "-title Scan refused -message 1 file rejected by family — left in place. See ~/Library/Logs/scan-uploader.log for the reason. -group org.beebox.scan-uploader.refused",
+  ]);
 });
 
 // A sweep that both uploaded and was refused posts both, so neither hides the
 // other:
 void test("A sweep that both uploaded and was refused posts both, so neither hides the o...", async (t) => {
-  // doctest:L144
   const bothLog = await fakeBin({ case: "both", name: "terminal-notifier", exitCode: 0 });
   await notifySweep([box("family", { uploaded: 1 }), box("receipts", { rejected: 1, rejectedOnUpload: 2 })], { platform: "darwin" });
-  t.check((await logLines(bothLog)).map((line) => line.split(" ")[1]).join(","), "Scan,Scan");
-
-  // doctest:L151
-  t.check((await logLines(bothLog)).length, 2);
+  t.check(await logLines(bothLog), [
+    "-title Scan uploaded -message 1 file uploaded to family -group org.beebox.scan-uploader.uploaded",
+    "-title Scan refused -message 2 files rejected by receipts — left in place. See ~/Library/Logs/scan-uploader.log for the reason. -group org.beebox.scan-uploader.refused",
+  ]);
 });
 
 // ## `osascript` is the fallback when `terminal-notifier` is absent
@@ -139,10 +132,9 @@ void test("A sweep that both uploaded and was refused posts both, so neither hid
 // running from a single copied file on a machine with no checkout — so the
 // notifier cannot depend on it. `PATH` here holds only a fake `osascript`.
 void test("terminal-notifier is a Homebrew install, and this package's whole story is ru...", async (t) => {
-  // doctest:L162
   const fallbackLog = await fakeBin({ case: "fallback", name: "osascript", exitCode: 0 });
   await notifySweep([box("family", { uploaded: 1 })], { platform: "darwin" });
-  t.check((await logLines(fallbackLog))[0], "-e display notification \"1 file uploaded to family\" with title \"Scan uploaded\"");
+  t.check(await logLines(fallbackLog), ["-e display notification \"1 file uploaded to family\" with title \"Scan uploaded\""]);
 });
 
 // ## The notifier can never fail the sweep it reports on
@@ -151,17 +143,14 @@ void test("terminal-notifier is a Homebrew install, and this package's whole sto
 // still resolves. A sweep that uploaded a scan has done its job whether or not
 // anyone got told about it.
 void test("Both tools absent (an empty PATH), or present and failing — notifySweep still...", async (t) => {
-  // doctest:L175
   process.env.PATH = "";
-  await notifySweep([box("family", { uploaded: 1 })], { platform: "darwin" });
-  t.check("resolved", "resolved");
+  t.check(await notifySweep([box("family", { uploaded: 1 })], { platform: "darwin" }), undefined);
 });
 
 void test("The notifier can never fail the sweep it reports on", async (t) => {
-  // doctest:L182
   const failLog = await fakeBin({ case: "failing", name: "terminal-notifier", exitCode: 1 });
   await notifySweep([box("family", { uploaded: 1 })], { platform: "darwin" });
-  t.check((await logLines(failLog)).length, 1);
+  t.check(await logLines(failLog), ["-title Scan uploaded -message 1 file uploaded to family -group org.beebox.scan-uploader.uploaded"]);
 });
 
 // ## Non-macOS is a no-op
@@ -178,8 +167,7 @@ void test("Same posture as the trash disposition:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L195
   const linuxLog = await fakeBin({ case: "linux", name: "terminal-notifier", exitCode: 0 });
   await notifySweep([box("family", { uploaded: 1, rejectedOnUpload: 1 })], { platform: "linux" });
-  t.check((await logLines(linuxLog)).length, 0);
+  t.check(await logLines(linuxLog), []);
 });

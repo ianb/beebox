@@ -24,25 +24,15 @@ import { join } from "node:path";
 // The ref value and a `view:<line>:<index>` path are returned.
 void test("The ref value and a view:<line>:<index> path are returned.", async (t) => {
   // doctest:L27
-  await t.checkText(
-    JSON.stringify(
-      extractViewRefs('<CardLink cardRef="/_content/Foo.doc.card">Foo</CardLink>'),
-      null,
-      2,
-    ),
-    `[
-  {
-    "path": "view:1:0",
-    "ref": "/_content/Foo.doc.card"
-  }
-]`,
-  );
+  t.check(extractViewRefs('<CardLink cardRef="/_content/Foo.doc.card">Foo</CardLink>'), [
+    { path: "view:1:0", ref: "/_content/Foo.doc.card" },
+  ]);
 });
 
 // Single quotes work too.
 void test("Single quotes work too.", async (t) => {
   // doctest:L44
-  await t.checkText(extractViewRefs("<CardRef cardRef='/_content/Bar.card' />").length, "1");
+  t.check(extractViewRefs("<CardRef cardRef='/_content/Bar.card' />"), [{ path: "view:1:0", ref: "/_content/Bar.card" }]);
 });
 
 // ## Line and index across multiple refs
@@ -75,13 +65,13 @@ void test("Lines are 1-indexed; the index increments per match.", async (t) => {
 // card ref.
 void test("Only literal quoted cardRef attributes are tracked.", async (t) => {
   // doctest:L80
-  await t.checkText(extractViewRefs("<CardLink cardRef={someVar} />").length, "0");
+  t.check(extractViewRefs("<CardLink cardRef={someVar} />"), []);
 
   // doctest:L83
-  await t.checkText(extractViewRefs('<input ref="x" />').length, "0");
+  t.check(extractViewRefs('<input ref="x" />'), []);
 
   // doctest:L86
-  await t.checkText(extractViewRefs("plain source, no widgets").length, "0");
+  t.check(extractViewRefs("plain source, no widgets"), []);
 });
 
 // ## lintViewRefs flags broken refs, passes existing ones
@@ -94,7 +84,7 @@ void test("lintViewRefs flags broken refs, passes existing ones", async (t) => {
     '<CardLink cardRef="/_content/Real.doc.card" /><CardRef cardRef="/_content/Missing.doc.card" />',
   );
   const warnings = await lintViewRefs(`${box.root}/views/v.tsx`, box.root);
-  t.check(warnings.join("\n"), "Broken reference at view:1:1: /_content/Missing.doc.card does not exist");
+  t.check(warnings, ["Broken reference at view:1:1: /_content/Missing.doc.card does not exist"]);
 });
 
 // ## listBoxViewFiles resolves a box's views under `src/views/`
@@ -109,16 +99,14 @@ void test("shapeVersion 3 has one root — boxCodePaths' viewsDir is always <box
   await mkdir(join(viewsBox.root, "src/views"), { recursive: true });
   await writeFile(join(viewsBox.root, "src/views/dashboard.tsx"), "export default function Dashboard() { return null; }");
   const found = await listBoxViewFiles(viewsBox.root);
-  t.check(found.map((p) => p.endsWith("src/views/dashboard.tsx")), [
-    true,
-  ]);
+  t.check(found, [join(viewsBox.root, "src/views/dashboard.tsx")]);
 
   // doctest:L121
   await writeFile(join(viewsBox.root, "_content/people/alice.person.card"), "---\ntype: person\n---\nAlice\n");
   const view = join(viewsBox.root, "src/views/dashboard.tsx");
   await writeFile(view, '<CardLink cardRef="_content/people/alice.person.card" />');
   const canonicalWarnings = await collectViewCanonicalWarnings([view], viewsBox.root);
-  t.check(canonicalWarnings.join("\n"), "src/views/dashboard.tsx: Non-canonical ref at view:1:0: _content/people/alice.person.card → /_content/people/alice.person.card");
+  t.check(canonicalWarnings, ["src/views/dashboard.tsx: Non-canonical ref at view:1:0: _content/people/alice.person.card → /_content/people/alice.person.card"]);
 
   // doctest:L128
   const fixed = await canonicalizeBox(viewsBox.root, {

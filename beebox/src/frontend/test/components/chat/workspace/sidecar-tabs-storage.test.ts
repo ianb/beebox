@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { is } from "agent-doctest/check";
 import { serializeSidecarState, parseSidecarState, sidecarTabsKey, selectSidecarSession, persistSidecarTransition, loadSidecarState, saveSidecarState } from "../../../../src/components/chat/workspace/sidecar-tabs-storage.js";
 
 function target(path: string) {
@@ -43,13 +44,7 @@ void test("Two conversations in two browser tabs must not fight over one slot, a
 void test("The target is stored as the same view: string the ?card= param carries — one...", async (t) => {
   // doctest:L46
   const back = parseSidecarState(serializeSidecarState(strip))!;
-  t.check(back.tabs.map((tab) => `${tab.pinned ? "📌" : ""}${tab.label}`).join(" "), "📌Kept Loose");
-
-  // doctest:L50
-  t.check(back.activePath, "_content/Loose.md");
-
-  // doctest:L53
-  t.check(back.tabs[0]!.target.path, "_content/Kept.card");
+  t.check(back, strip);
 
   // A viewer and its params ride along, so a reload does not silently switch which
   // lens a document was open in.
@@ -60,11 +55,9 @@ void test("The target is stored as the same view: string the ?card= param carrie
     activePath: "_content/Data.card",
   });
   const parsed = parseSidecarState(withViewer)!;
-  t.check(parsed.tabs[0]!.target.viewer, "sheet");
-
-  // doctest:L69
-  t.check(parsed.tabs[0]!.target.params, {
-    tab: "2",
+  t.check(parsed, {
+    tabs: [{ target: { path: "_content/Data.card", viewer: "sheet", params: { tab: "2" }, viewState: null }, label: "Data", pinned: false, lastActiveAt: 1 }],
+    activePath: "_content/Data.card",
   });
 });
 
@@ -101,10 +94,10 @@ void test("An entry with no url, or a url that parses to no path, is the case a 
       { url: "_content/Good.card", label: "Good", pinned: false, lastActiveAt: 3 },
     ],
   }))!;
-  await t.checkText(mixed.tabs.length, "1");
-
-  // doctest:L110
-  t.check(mixed.tabs[0]!.label, "Good");
+  t.check(mixed, {
+    tabs: [{ target: target("_content/Good.card"), label: "Good", pinned: false, lastActiveAt: 3 }],
+    activePath: "_content/Good.card",
+  });
 
   // A missing label falls back to the path, and a missing or nonsense `pinned` /
   // `lastActiveAt` takes the quiet default rather than rejecting the tab.
@@ -115,13 +108,10 @@ void test("An entry with no url, or a url that parses to no path, is the case a 
     activePath: null,
     tabs: [{ url: "_content/Sparse.card" }],
   }))!;
-  t.check(sparse.tabs[0]!.label, "_content/Sparse.card");
-
-  // doctest:L126
-  t.check([sparse.tabs[0]!.pinned, sparse.tabs[0]!.lastActiveAt], [
-    false,
-    0,
-  ]);
+  t.check(sparse, {
+    tabs: [{ target: target("_content/Sparse.card"), label: "_content/Sparse.card", pinned: false, lastActiveAt: 0 }],
+    activePath: "_content/Sparse.card",
+  });
 });
 
 // ## The same path twice collapses to one tab
@@ -139,10 +129,10 @@ void test("One tab per path is an invariant the reducer and the React keys both 
       { url: "_content/Twice.card", label: "second", pinned: true, lastActiveAt: 2 },
     ],
   }))!;
-  await t.checkText(duped.tabs.length, "1");
-
-  // doctest:L148
-  t.check(duped.tabs[0]!.label, "second");
+  t.check(duped, {
+    tabs: [{ target: target("_content/Twice.card"), label: "second", pinned: true, lastActiveAt: 2 }],
+    activePath: "_content/Twice.card",
+  });
 });
 
 // ## An active path naming a tab that did not survive falls back
@@ -155,7 +145,10 @@ void test("Otherwise the pane would restore a strip and render nothing in it.", 
     activePath: "_content/Gone.card",
     tabs: [{ url: "_content/Here.card", label: "Here", pinned: false, lastActiveAt: 1 }],
   }))!;
-  t.check(orphaned.activePath, "_content/Here.card");
+  t.check(orphaned, {
+    tabs: [{ target: target("_content/Here.card"), label: "Here", pinned: false, lastActiveAt: 1 }],
+    activePath: "_content/Here.card",
+  });
 });
 
 // ## Explicit conversation changes restore; assignment only renames
@@ -182,19 +175,20 @@ void test("Explicit conversation changes restore; assignment only renames", asyn
   const garden = selectSidecarSession(kitchen, { storageKey: "garden", logicalKey: "garden" });
   persistSidecarTransition(kitchen, garden);
   const returned = selectSidecarSession(garden, kitchen);
-  t.check({ garden: garden.panel.activePath, kitchen: returned.panel.activePath, kitchenStillStored: loadSidecarState("kitchen") !== null }, {
-    garden: "_content/Kept.card",
-    kitchen: "_content/Loose.md",
-    kitchenStillStored: true,
+  t.check({ garden: garden.panel, kitchen: returned.panel, kitchenStored: loadSidecarState("kitchen") }, {
+    garden: gardenStrip,
+    kitchen: strip,
+    kitchenStored: strip,
   });
 
   // doctest:L185
   const provisional = { storageKey: "start-one", logicalKey: "logical-one", panel: strip };
   const assigned = selectSidecarSession(provisional, { storageKey: "assigned-one", logicalKey: "logical-one" });
   persistSidecarTransition(provisional, assigned);
-  t.check({ samePanel: assigned.panel === strip, oldRemoved: !values.has("start-one"), newStored: values.has("assigned-one") }, {
-    samePanel: true,
-    oldRemoved: true,
-    newStored: true,
+  t.check(assigned.panel, is(strip));
+  t.check({ panel: assigned.panel, oldStored: loadSidecarState("start-one"), newStored: loadSidecarState("assigned-one") }, {
+    panel: strip,
+    oldStored: null,
+    newStored: strip,
   });
 });

@@ -14,26 +14,14 @@
 
 export interface Printed {
   print(this: void, line: unknown): void;
-  /** The printed lines plus `value`, as one text; the lines are consumed. */
-  with(this: void, value: unknown): unknown;
+  /** The printed lines plus `value`, joined with newlines; the lines are consumed. */
+  with(this: void, value: string): string;
 }
 
 export function printed(): Printed {
   const lines: string[] = [];
   return {
     print: (line) => void lines.push(String(line)),
-    with: (value) => {
-      if (lines.length === 0) return value;
-      const out = lines.splice(0);
-      if (typeof value === "string") out.push(value.replace(/\n+$/, ""));
-      else if (value !== undefined && value !== null) {
-        try {
-          out.push(JSON.stringify(value, null, 2));
-        } catch {
-          out.push(String(value));
-        }
-      }
-      return out.join("\n");
-    },
+    with: (value) => [...lines.splice(0), value.replace(/\n+$/, "")].join("\n"),
   };
 }

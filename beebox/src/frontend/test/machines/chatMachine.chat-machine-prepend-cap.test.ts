@@ -25,7 +25,6 @@ const page = (from: number, count: number): SessionEntry[] =>
     timestamp: "2026-08-25T00:00:00Z",
     content: [],
   }));
-const uuids = (messages: SessionEntry[] | undefined) => (messages ?? []).map((m) => m.uuid);
 const prepend = (context: { messages: SessionEntry[] }, messages: SessionEntry[]) =>
   prependOlderMessages({
     context: { ...initialChatContext({ sessionInput: "new" }), messages: context.messages },
@@ -34,9 +33,8 @@ const prepend = (context: { messages: SessionEntry[] }, messages: SessionEntry[]
 
 // ## A page that fits is prepended whole
 void test("A page that fits is prepended whole", async (t) => {
-  // doctest:L38
   const result = prepend({ messages: page(10, 3) }, page(0, 3));
-  t.check(uuids(result.messages).join(","), "e0,e1,e2,e10,e11,e12");
+  t.check(result.messages, [...page(0, 3), ...page(10, 3)]);
 });
 
 // ## A page that overflows keeps its newest entries
@@ -44,13 +42,9 @@ void test("A page that fits is prepended whole", async (t) => {
 // The tab already holds all but two of its budget, so only the last two entries of
 // the incoming page survive — the two immediately older than what is on screen.
 void test("The tab already holds all but two of its budget, so only the last two entries...", async (t) => {
-  // doctest:L49
   const context = { messages: page(0, MAX_RETAINED_MESSAGES - 2) };
   const result = prepend(context, page(900, 5));
-  t.check(result.messages?.length, 600);
-
-  // doctest:L54
-  t.check(uuids(result.messages).slice(0, 3).join(","), "e903,e904,e0");
+  t.check(result.messages, [...page(903, 2), ...page(0, MAX_RETAINED_MESSAGES - 2)]);
 });
 
 // ## At the ceiling, a further page is dropped
@@ -59,7 +53,6 @@ void test("The tab already holds all but two of its budget, so only the last two
 // left untouched rather than rewritten. (The load-older affordance hides at the
 // same threshold, so this is the backstop, not the user-visible stop.)
 void test("The reducer returns no messages assignment at all, so the existing window is...", async (t) => {
-  // doctest:L65
   const result = prepend({ messages: page(0, MAX_RETAINED_MESSAGES) }, page(900, 5));
   t.check(result, {});
 });

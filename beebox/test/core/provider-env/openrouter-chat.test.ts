@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { SDKResultSuccess } from "@anthropic-ai/claude-agent-sdk";
@@ -139,8 +140,8 @@ void test("An added model has no tier.", async (t) => {
   // doctest:L120
   const deepseek = { id: "deepseek/deepseek-v3.2", label: "DeepSeek" };
   const added = [kimi, deepseek];
-  const tiers = (small: string) => JSON.stringify((["efficient", "balanced", "strong", "strongest", "haiku"] as const)
-    .map((name) => named(resolveTierModel({ engine: "claude", name, boxDefault: kimi.id, small }))));
+  const tiers = (small: string) => (["efficient", "balanced", "strong", "strongest", "haiku"] as const)
+    .map((name) => named(resolveTierModel({ engine: "claude", name, boxDefault: kimi.id, small })));
 
   // doctest:L125
   t.check(resolveSmallModelForEngine({ engine: "claude", pinned: null, added, boxDefault: kimi.id }), "moonshotai/kimi-k2-0905:exacto");
@@ -149,13 +150,25 @@ void test("An added model has no tier.", async (t) => {
   t.check(resolveSmallModelForEngine({ engine: "claude", pinned: deepseek.id, added, boxDefault: kimi.id }), "deepseek/deepseek-v3.2");
 
   // doctest:L131
-  await t.checkText(tiers(deepseek.id), "[\"deepseek/deepseek-v3.2\",\"deepseek/deepseek-v3.2\",\"moonshotai/kimi-k2-0905:exacto\",\"moonshotai/kimi-k2-0905:exacto\",\"deepseek/deepseek-v3.2\"]");
+  t.check(tiers(deepseek.id), [
+    "deepseek/deepseek-v3.2",
+    "deepseek/deepseek-v3.2",
+    "moonshotai/kimi-k2-0905:exacto",
+    "moonshotai/kimi-k2-0905:exacto",
+    "deepseek/deepseek-v3.2",
+  ]);
 
   // A small slot pinned to a Claude model is the owner's choice: the lower tiers
   // follow it, and those runs need a Claude login.
 
   // doctest:L139
-  await t.checkText(tiers(haiku), "[\"claude efficient\",\"claude efficient\",\"moonshotai/kimi-k2-0905:exacto\",\"moonshotai/kimi-k2-0905:exacto\",\"claude efficient\"]");
+  t.check(tiers(haiku), [
+    "claude efficient",
+    "claude efficient",
+    "moonshotai/kimi-k2-0905:exacto",
+    "moonshotai/kimi-k2-0905:exacto",
+    "claude efficient",
+  ]);
 
   // Other boxes keep the tier table. A Codex box cannot run an added model, so an
   // OpenRouter small pin falls through to its own efficient tier.
@@ -165,16 +178,16 @@ void test("An added model has no tier.", async (t) => {
     [
       named(resolveTierModel({ engine: "claude", name: "strong", boxDefault: null, small: haiku })),
       named(resolveTierModel({ engine: "claude", name: "strong", boxDefault: sonnet, small: haiku })),
-      resolveTierModel({ engine: "claude", name: "strong", boxDefault: glm, small: haiku }) === glm,
-      resolveTierModel({ engine: "codex", name: "strong", boxDefault: sol, small: haiku }) === sol,
-      resolveSmallModelForEngine({ engine: "codex", pinned: deepseek.id, added, boxDefault: sol }) === resolveProcedureModel({ engine: "codex", model: "efficient" }),
+      resolveTierModel({ engine: "claude", name: "strong", boxDefault: glm, small: haiku }),
+      resolveTierModel({ engine: "codex", name: "strong", boxDefault: sol, small: haiku }),
+      resolveSmallModelForEngine({ engine: "codex", pinned: deepseek.id, added, boxDefault: sol }),
     ],
     [
     "claude strong",
     "claude strong",
-    true,
-    true,
-    true,
+    glm,
+    sol,
+    resolveProcedureModel({ engine: "codex", model: "efficient" }),
   ],
   );
 });
@@ -259,7 +272,10 @@ void test("A key alone runs nothing.", async (t) => {
 void test("An added model without a key refuses too, naming the key setup.", async (t) => {
   // doctest:L223
   const box = await boxWith({ openrouterModels: [kimi] });
-  await t.checkText((await refusal(() => providerEnvAdditions({ boxRoot: box.root, model: kimi.id, purpose: "test" }))).startsWith("OpenRouterSetupError: This run uses the OpenRouter model moonshotai/kimi-k2-0905:exacto, but no usable OpenRouter key"), "true");
+  t.check(
+    await refusal(() => providerEnvAdditions({ boxRoot: box.root, model: kimi.id, purpose: "test" })),
+    'OpenRouterSetupError: This run uses the OpenRouter model moonshotai/kimi-k2-0905:exacto, but no usable OpenRouter key is available for this box (No secret named "openrouter" exists on this machine. It can be declared (bbx secrets declare openrouter), but only the boxholder can supply its value.). Add one in Admin → Secrets and grant it to this box.',
+  );
 
   // doctest:L227
   await box.cleanup();
@@ -315,11 +331,11 @@ void test("Claude Code treats a custom ANTHROPICBASEURL as the Claude API, so it
       seen.push(flags.map((f) => additions?.[f] ?? "-").join(","));
     }
     await box.cleanup();
-    return JSON.stringify(seen);
+    return seen;
   }
 
   // doctest:L273
-  await t.checkText(await flagsByModel({}), "[\"1,1,1\",\"1,1,1\",\"-,-,-\",\"-,-,-\"]");
+  t.check(await flagsByModel({}), ["1,1,1", "1,1,1", "-,-,-", "-,-,-"]);
 
   // Turned off, a first-party run gets the two telemetry flags but not
   // `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`: the setting covers telemetry, and
@@ -327,10 +343,10 @@ void test("Claude Code treats a custom ANTHROPICBASEURL as the Claude API, so it
   // loader does not recognize reads as off.
 
   // doctest:L283
-  await t.checkText(await flagsByModel({ claudeCodeTelemetry: "off" }), "[\"1,1,1\",\"1,1,1\",\"1,1,-\",\"1,1,-\"]");
+  t.check(await flagsByModel({ claudeCodeTelemetry: "off" }), ["1,1,1", "1,1,1", "1,1,-", "1,1,-"]);
 
   // doctest:L286
-  await t.checkText(await flagsByModel({ claudeCodeTelemetry: "maybe" }), "[\"1,1,1\",\"1,1,1\",\"1,1,-\",\"1,1,-\"]");
+  t.check(await flagsByModel({ claudeCodeTelemetry: "maybe" }), ["1,1,1", "1,1,1", "1,1,-", "1,1,-"]);
 });
 
 // ## No cost figure for third-party runs
@@ -400,9 +416,8 @@ void test("The spawn gate alone is not enough:", async (t) => {
   backend.lastRun()?.emitResult();
   await tick();
   const run = backend.lastRun();
-  t.check([backend.runs.length, run?.startOptions.model, run?.startOptions.env?.ANTHROPIC_BASE_URL], [
-    1,
-    "moonshotai/kimi-k2-0905:exacto",
+  t.check([backend.runs.map((r) => r.startOptions.model), run?.startOptions.env?.ANTHROPIC_BASE_URL], [
+    ["moonshotai/kimi-k2-0905:exacto"],
     "https://openrouter.ai/api",
   ]);
 
@@ -411,14 +426,13 @@ void test("The spawn gate alone is not enough:", async (t) => {
   clearBoxConfigCache(box.root);
   const sent = await session.send("second");
   await tick();
-  t.check([sent, errors, run?.sent.length, run?.closed, backend.runs.length], [
+  t.check([sent, errors, run?.sent, run?.closed, backend.runs.map((r) => r.startOptions.model)], [
     false,
-    [
-      "OpenRouterSetupError",
-    ],
-    1,
+    ["OpenRouterSetupError"],
+    // The turn's header carries the local time.
+    [[{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>\nfirst` }]],
     true,
-    1,
+    ["moonshotai/kimi-k2-0905:exacto"],
   ]);
 
   // The next attempt cold-starts into the same refusal. It does not fall back to
@@ -427,9 +441,9 @@ void test("The spawn gate alone is not enough:", async (t) => {
   // doctest:L359
   const again = await session.send("third");
   await tick();
-  t.check([again, errors.length, backend.runs.length], [
+  t.check([again, errors, backend.runs.map((r) => r.startOptions.model)], [
     false,
-    2,
-    1,
+    ["OpenRouterSetupError", "OpenRouterSetupError"],
+    ["moonshotai/kimi-k2-0905:exacto"],
   ]);
 });

@@ -21,6 +21,14 @@ import { controlAddress, resolveControl, resolveVisibleControl } from "../../../
 import type { ControlEntry, ScanResult } from "../../../../src/lib/ui-scan/types.js";
 import { fixtureLookup, fixtureRoot, type VisibleFixtureLookup } from "../../../../../../test/frontend/lib/ui-scan/fixture.js";
 
+/** An expected entry: a control that points and focuses, unless a field says otherwise. */
+function entry(fields: Pick<ControlEntry, "role" | "name"> & Partial<ControlEntry>): ControlEntry {
+  return {
+    kind: "control", id: null, container: null, does: null, actions: ["point", "focus"],
+    disabled: false, offscreen: false, ...fields,
+  };
+}
+
 /** The default scope: everything on the page, which is what a driver reads. */
 function scan(html: string): ScanResult {
   return scanControls(fixtureRoot(html), { viewport: { width: 1024, height: 768 }, scope: "document" });
@@ -31,26 +39,10 @@ function scanChrome(html: string): ScanResult {
   return scanControls(fixtureRoot(html), { viewport: { width: 1024, height: 768 }, scope: "chrome" });
 }
 
-/** One line per entry, in the tours' `role "name"` idiom the dump also uses. */
-function lines(result: ScanResult): string {
-  return result.entries.map(describe).join("\n");
-}
-
 /** One line per address resolved against a fixture document: visible, or why not. */
 function outcome(id: string, lookup: VisibleFixtureLookup): string {
   const resolved = resolveVisibleControl(id, lookup);
   return `${id}: ${resolved.ok ? "visible" : resolved.error}`;
-}
-
-function describe(entry: ControlEntry): string {
-  const address = entry.id === null ? "(no address)" : entry.id;
-  const marks = [
-    entry.actions.includes("reveal") ? "[reveal]" : "",
-    entry.disabled ? "[disabled]" : "",
-    entry.offscreen ? "[offscreen]" : "",
-    entry.does === null ? "" : `— ${entry.does}`,
-  ].filter((mark) => mark !== "");
-  return [`${entry.container ?? "-"} / ${entry.role} "${entry.name}" ${address}`, ...marks].join(" ");
 }
 
 // ## The composer, as the agent would see it
@@ -81,25 +73,25 @@ void test("The composer is a named region (<section aria-label=\"Compose message
     </button>
   </section>
 `);
-  await t.checkText(lines(composer), `- / region "Compose message" (no address)
-Compose message / button "Add" bbx-composer-add [reveal] — opens the attach menu — capture, attach file, upload files, screenshot, share location
-Compose message / button "Capture" (no address)
-Compose message / textbox "Type a message..." bbx-composer-input
-Compose message / button "Send" bbx-composer-send [disabled]
-Compose message / button "Stop recording" bbx-composer-mic — tap to stop dictating and send; say "cancel message" to discard`);
-
   // `reveal` comes from the attribute and from nothing else. `aria-haspopup` and
   // `aria-expanded` are on the Add trigger too, but inferring from them would be a
   // guess dressed as a guarantee — `role="tab"` fires real state changes in this app
-  // — so the author's opt-in is the only source:
-
-  // doctest:L100
-  await t.checkText(composer.entries.map((entry) => `${entry.name}: ${entry.actions.join("+")}`).join("\n"), `Compose message: point+focus
-Add: point+focus+reveal
-Capture: point+focus
-Type a message...: point+focus
-Send: point+focus
-Stop recording: point+focus`);
+  // — so the author's opt-in is the only source.
+  t.check(composer, {
+    entries: [
+      entry({ kind: "landmark", role: "region", name: "Compose message" }),
+      entry({ id: "bbx-composer-add", role: "button", name: "Add", container: "Compose message", does: "opens the attach menu — capture, attach file, upload files, screenshot, share location", actions: ["point", "focus", "reveal"] }),
+      entry({ role: "button", name: "Capture", container: "Compose message" }),
+      entry({ id: "bbx-composer-input", role: "textbox", name: "Type a message...", container: "Compose message" }),
+      entry({ id: "bbx-composer-send", role: "button", name: "Send", container: "Compose message", disabled: true }),
+      entry({ id: "bbx-composer-mic", role: "button", name: "Stop recording", container: "Compose message", does: "tap to stop dictating and send; say \"cancel message\" to discard" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
+  );
 });
 
 // An id only becomes an address when it is in the `bbx-` namespace and kebab-case.
@@ -107,15 +99,22 @@ Stop recording: point+focus`);
 // a11y plumbing, not promises, so they report no address:
 void test("An id only becomes an address when it is in the bbx- namespace and kebab-case.", async (t) => {
   // doctest:L115
-  await t.checkText(
-    lines(scan(`
+  t.check(
+    scan(`
   <button id="trash-card-title" title="Delete"><svg viewBox="0 0 24 24"></svg></button>
   <button id="bbx-Composer-Send" title="Send"><svg viewBox="0 0 24 24"></svg></button>
   <button id="bbx-nav-place" title="Where you are: test1"><svg viewBox="0 0 24 24"></svg></button>
-`)),
-    `- / button "Delete" (no address)
-- / button "Send" (no address)
-- / button "Where you are: test1" bbx-nav-place`,
+`), {
+    entries: [
+      entry({ role: "button", name: "Delete" }),
+      entry({ role: "button", name: "Send" }),
+      entry({ id: "bbx-nav-place", role: "button", name: "Where you are: test1" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
   );
 });
 
@@ -126,8 +125,8 @@ void test("An id only becomes an address when it is in the bbx- namespace and ke
 // measures zero — and so is everything inside it.
 void test("An element is out of the scan when it is display:none, visibility:hidden, ful...", async (t) => {
   // doctest:L133
-  await t.checkText(
-    lines(scan(`
+  t.check(
+    scan(`
   <nav aria-label="Primary">
     <button title="Visible"><svg viewBox="0 0 24 24"></svg></button>
     <button title="Display none" data-test-style="display:none"><svg viewBox="0 0 24 24"></svg></button>
@@ -138,9 +137,16 @@ void test("An element is out of the scan when it is display:none, visibility:hid
     <div inert><button title="Inside inert"><svg viewBox="0 0 24 24"></svg></button></div>
     <div aria-hidden="true"><button title="Inside aria-hidden"><svg viewBox="0 0 24 24"></svg></button></div>
   </nav>
-`)),
-    `- / navigation "Primary" (no address)
-Primary / button "Visible" (no address)`,
+`), {
+    entries: [
+      entry({ kind: "landmark", role: "navigation", name: "Primary" }),
+      entry({ role: "button", name: "Visible", container: "Primary" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
   );
 });
 
@@ -155,10 +161,16 @@ void test("None of those count as omitted-unnamed:", async (t) => {
     <button><svg viewBox="0 0 24 24"></svg></button>
   </main>
 `);
-  t.check({ entries: lines(unnamed), omittedUnnamed: unnamed.omittedUnnamed }, {
-    entries: "- / button \"Named\" (no address)",
+  t.check(unnamed, {
+    entries: [
+      entry({ role: "button", name: "Named" }),
+    ],
     omittedUnnamed: 3,
-  });
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
+  );
 });
 
 // The unnamed `<main>` is in that count: a landmark with no name is a real a11y
@@ -167,7 +179,16 @@ void test("None of those count as omitted-unnamed:", async (t) => {
 // so an unnamed one is just a box:
 void test("The unnamed <main> is in that count:", async (t) => {
   // doctest:L171
-  t.check(scan("<section><button title=\"Send\">x</button></section>").omittedUnnamed, 0);
+  t.check(scan("<section><button title=\"Send\">x</button></section>"), {
+    entries: [
+      entry({ role: "button", name: "x" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
+  );
 });
 
 // ## An id outside the grammar is not an address
@@ -181,18 +202,25 @@ void test("The unnamed <main> is in that count:", async (t) => {
 // still listed.
 void test("The scan reports an id only when it is a well-formed address (shared/control-...", async (t) => {
   // doctest:L186
-  await t.checkText(
-    lines(scan(`
+  t.check(
+    scan(`
   <nav aria-label="Open files">
     <button role="tab" id="bbx-workspace-tab-_config%2Finterface%2Fbrowse.card" title="Browse"></button>
     <button id="bbx-card-properties-:r0:" title="Properties"></button>
     <button id="${controlAddress("bbx-workspace-tab", "_config/interface/browse.card")}" role="tab" title="Notes"></button>
   </nav>
-`)),
-    `- / navigation "Open files" (no address)
-Open files / tab "Browse" (no address)
-Open files / button "Properties" (no address)
-Open files / tab "Notes" bbx-workspace-tab-l5rw63tgnfts62loorsxeztbmnss6ytsn53xgzjomnqxeza`,
+`), {
+    entries: [
+      entry({ kind: "landmark", role: "navigation", name: "Open files" }),
+      entry({ role: "tab", name: "Browse", container: "Open files" }),
+      entry({ role: "button", name: "Properties", container: "Open files" }),
+      entry({ id: "bbx-workspace-tab-l5rw63tgnfts62loorsxeztbmnss6ytsn53xgzjomnqxeza", role: "tab", name: "Notes", container: "Open files" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
   );
 
   // A `bbx-` id that is not an address is not reported as a duplicate either, even
@@ -206,8 +234,16 @@ Open files / tab "Notes" bbx-workspace-tab-l5rw63tgnfts62loorsxeztbmnss6ytsn53xg
     scan(`
   <button id="bbx-card-properties-:r0:" title="Properties"></button>
   <button id="bbx-card-properties-:r0:" title="Properties"></button>
-`).duplicateIds,
-    [],
+`), {
+    entries: [
+      entry({ role: "button", name: "Properties" }),
+      entry({ role: "button", name: "Properties" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
   );
 });
 
@@ -232,19 +268,21 @@ void test("scope decides how much of the page one scan covers.", async (t) => {
     <button id="bbx-panel-close" title="Close companion view"></button>
   </main>
 `);
-  await t.checkText(lines(boundary), `- / main "Chat" (no address)
-Chat / button "Show earlier messages" (no address)
-Chat / button "Close companion view" bbx-panel-close`);
-
   // Nothing inside the boundary is counted, either. An omission the dump reports is
   // one the agent might otherwise be misled by; "3 controls you may not see" would
-  // invite exactly the guessing a narrowed list exists to prevent:
-
-  // doctest:L247
-  t.check({ omittedUnnamed: boundary.omittedUnnamed, omittedUnknownRole: boundary.omittedUnknownRole }, {
+  // invite exactly the guessing a narrowed list exists to prevent.
+  t.check(boundary, {
+    entries: [
+      entry({ kind: "landmark", role: "main", name: "Chat" }),
+      entry({ role: "button", name: "Show earlier messages", container: "Chat" }),
+      entry({ id: "bbx-panel-close", role: "button", name: "Close companion view", container: "Chat" }),
+    ],
     omittedUnnamed: 0,
     omittedUnknownRole: 0,
-  });
+    duplicateIds: [],
+    truncated: false,
+  },
+  );
 
   // The default scope reads the same page whole. A driver needs this: the controls
   // inside a card are the ones it is there to click, and a scan that skipped them
@@ -252,8 +290,8 @@ Chat / button "Close companion view" bbx-panel-close`);
   // annotated this" rather than "you asked for the other scope".
 
   // doctest:L257
-  await t.checkText(
-    lines(scan(`
+  t.check(
+    scan(`
   <main aria-label="Chat">
     <button title="Show earlier messages"></button>
     <div data-bbx-scan="exclude">
@@ -263,13 +301,20 @@ Chat / button "Close companion view" bbx-panel-close`);
     </div>
     <button id="bbx-panel-close" title="Close companion view"></button>
   </main>
-`)),
-    `- / main "Chat" (no address)
-Chat / button "Show earlier messages" (no address)
-Chat / link "Rent" (no address)
-Chat / button "Retry this turn" (no address)
-Chat / button "Buried three levels down" bbx-nested-deep
-Chat / button "Close companion view" bbx-panel-close`,
+`), {
+    entries: [
+      entry({ kind: "landmark", role: "main", name: "Chat" }),
+      entry({ role: "button", name: "Show earlier messages", container: "Chat" }),
+      entry({ role: "link", name: "Rent", container: "Chat" }),
+      entry({ role: "button", name: "Retry this turn", container: "Chat" }),
+      entry({ id: "bbx-nested-deep", role: "button", name: "Buried three levels down", container: "Chat" }),
+      entry({ id: "bbx-panel-close", role: "button", name: "Close companion view", container: "Chat" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
   );
 });
 
@@ -282,10 +327,17 @@ void test("Duplicate detection ignores the scope:", async (t) => {
     scanChrome(`
   <button id="bbx-panel-close" title="Close companion view"></button>
   <div data-bbx-scan="exclude"><button id="bbx-panel-close" title="Close"></button></div>
-`).duplicateIds,
-    [
-    "bbx-panel-close",
-  ],
+`), {
+    entries: [
+      entry({ id: "bbx-panel-close", role: "button", name: "Close companion view" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [
+      "bbx-panel-close",
+    ],
+    truncated: false,
+  },
   );
 });
 
@@ -304,10 +356,16 @@ void test("ARIA does not let a region take its name from what is inside it, and 
     <button title="Retry"><svg viewBox="0 0 24 24"></svg></button>
   </main>
 `);
-  t.check({ entries: lines(transcript), omittedUnnamed: transcript.omittedUnnamed }, {
-    entries: "- / button \"Retry\" (no address)",
+  t.check(transcript, {
+    entries: [
+      entry({ role: "button", name: "Retry" }),
+    ],
     omittedUnnamed: 1,
-  });
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
+  );
 });
 
 // ## An unrecognised explicit role is counted too
@@ -327,16 +385,30 @@ void test("Every omission gets a number.", async (t) => {
     <div role="presentation">…</div>
   </main>
 `);
-  t.check({ entries: roles.entries.length, omittedUnknownRole: roles.omittedUnknownRole }, {
-    entries: 2,
+  t.check(roles, {
+    entries: [
+      entry({ kind: "landmark", role: "main", name: "Everything" }),
+      entry({ role: "button", name: "x", container: "Everything" }),
+    ],
+    omittedUnnamed: 0,
     omittedUnknownRole: 2,
-  });
+    duplicateIds: [],
+    truncated: false,
+  },
+  );
 
   // A zero-sized element with an unknown role is not on screen in any sense the user
   // would recognise, so it is not counted either:
 
   // doctest:L333
-  t.check(scan("<div role=\"dialog\" data-test-rect=\"0,0,0,0\">…</div>").omittedUnknownRole, 0);
+  t.check(scan("<div role=\"dialog\" data-test-rect=\"0,0,0,0\">…</div>"), {
+    entries: [],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
+  );
 });
 
 // ## Off-screen but mounted is included, and marked
@@ -345,18 +417,25 @@ void test("Every omission gets a number.", async (t) => {
 // it stays in the list with a flag rather than disappearing from it.
 void test("A control scrolled out of view is exactly what point exists to scroll to, so...", async (t) => {
   // doctest:L343
-  await t.checkText(
-    lines(scan(`
+  t.check(
+    scan(`
   <nav aria-label="Primary">
     <button title="In view" data-test-rect="10,10,120,32"><svg viewBox="0 0 24 24"></svg></button>
     <button title="Below the fold" data-test-rect="10,900,120,32"><svg viewBox="0 0 24 24"></svg></button>
     <button title="Scrolled off the left" data-test-rect="-300,10,120,32"><svg viewBox="0 0 24 24"></svg></button>
   </nav>
-`)),
-    `- / navigation "Primary" (no address)
-Primary / button "In view" (no address)
-Primary / button "Below the fold" (no address) [offscreen]
-Primary / button "Scrolled off the left" (no address) [offscreen]`,
+`), {
+    entries: [
+      entry({ kind: "landmark", role: "navigation", name: "Primary" }),
+      entry({ role: "button", name: "In view", container: "Primary" }),
+      entry({ role: "button", name: "Below the fold", container: "Primary", offscreen: true }),
+      entry({ role: "button", name: "Scrolled off the left", container: "Primary", offscreen: true }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
   );
 });
 
@@ -379,12 +458,19 @@ void test("DesktopComposerRow (hidden sm:flex) and the mobile row (sm:hidden) re
     </div>
   </section>
 `);
-  t.check({ duplicateIds: rows.duplicateIds, entries: rows.entries.length }, {
+  t.check(rows, {
+    entries: [
+      entry({ kind: "landmark", role: "region", name: "Compose message" }),
+      entry({ id: "bbx-composer-send", role: "button", name: "mobile", container: "Compose message" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
     duplicateIds: [
       "bbx-composer-send",
     ],
-    entries: 2,
-  });
+    truncated: false,
+  },
+  );
 });
 
 // Resolution cannot see it — `getElementById` returns the first in document order
@@ -400,8 +486,8 @@ void test("Resolution cannot see it — getElementById returns the first in docu
   // doctest:L391
   const many = Array.from({ length: MAX_ENTRIES + 50 }, (_, i) => `<button title="Item ${i}">x</button>`).join("");
   const capped = scan(`<main aria-label="Everything">${many}</main>`);
-  t.check({ entries: capped.entries.length, truncated: capped.truncated, cap: MAX_ENTRIES }, {
-    entries: 200,
+  t.check({ entries: capped.entries.map((found) => found.name), truncated: capped.truncated, cap: MAX_ENTRIES }, {
+    entries: ["Everything", ...Array.from({ length: 199 }, () => "x")],
     truncated: true,
     cap: 200,
   });
@@ -409,7 +495,16 @@ void test("Resolution cannot see it — getElementById returns the first in docu
   // A document that fits reports `truncated: false`:
 
   // doctest:L400
-  t.check(scan("<button title=\"Send\">x</button>").truncated, false);
+  t.check(scan("<button title=\"Send\">x</button>"), {
+    entries: [
+      entry({ role: "button", name: "x" }),
+    ],
+    omittedUnnamed: 0,
+    omittedUnknownRole: 0,
+    duplicateIds: [],
+    truncated: false,
+  },
+  );
 });
 
 // ## Resolving an address back to an element
@@ -490,13 +585,15 @@ void test("bad-id and not-found stay distinct because the two read differently t
     </div>
   </section>
 `);
-  await t.checkText(
+  t.check(
     ["bbx-composer-send", "bbx-composer-send-mobile", "bbx-composer-gone", "bbx-Composer-Send"]
-      .map((id) => outcome(id, mobileViewport)).join("\n"),
-    `bbx-composer-send: hidden
-bbx-composer-send-mobile: visible
-bbx-composer-gone: not-found
-bbx-Composer-Send: bad-id`,
+      .map((id) => outcome(id, mobileViewport)),
+    [
+      "bbx-composer-send: hidden",
+      "bbx-composer-send-mobile: visible",
+      "bbx-composer-gone: not-found",
+      "bbx-Composer-Send: bad-id",
+    ],
   );
 
   // `hidden` stays distinct from `not-found` because the two are different answers:
@@ -513,13 +610,15 @@ bbx-Composer-Send: bad-id`,
   <button id="bbx-nav-place" title="Place" data-test-style="visibility:hidden"></button>
   <button id="bbx-nav-voice" title="Voice" data-test-rect="10,900,120,32"></button>
 `);
-  await t.checkText(
+  t.check(
     ["bbx-nav-todo", "bbx-nav-errors", "bbx-nav-place", "bbx-nav-voice"]
-      .map((id) => outcome(id, kinds)).join("\n"),
-    `bbx-nav-todo: hidden
-bbx-nav-errors: hidden
-bbx-nav-place: hidden
-bbx-nav-voice: visible`,
+      .map((id) => outcome(id, kinds)),
+    [
+      "bbx-nav-todo: hidden",
+      "bbx-nav-errors: hidden",
+      "bbx-nav-place: hidden",
+      "bbx-nav-voice: visible",
+    ],
   );
 });
 

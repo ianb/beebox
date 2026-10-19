@@ -154,11 +154,11 @@ void test("YAML's stringify defaults to wrapping long scalars at ~80 columns; th
   };
   const text = serializeCardText({ schema: docSchema, fields });
   const frontmatter = text.slice(0, text.indexOf("Body."));
-  await t.checkText(frontmatter.split("\n").length, "5");
+  t.check(frontmatter, `---\ndrive-id: drv-long\ntitle: ${longTitle}\n---\n`);
 
   // doctest:L133
   const parsed = parseCardText(text, { source: "long.doc.card", schemas });
-  await t.checkText(parsed.fields["title"] === longTitle, "true");
+  t.check(parsed.fields["title"], longTitle);
 });
 
 void test("Frontmatter-only schemas reject body content", async (t) => {
@@ -252,7 +252,7 @@ void test("The landmark type declares a markdown body (docs/implemented-plans/pl
     const loaded = await loadCardFromText({ content, source: "Lending.landmark.card", ctx: lmCtx });
     return loaded.kind === "frontmatter" ? loaded.fields["body"] : "?";
   };
-  await t.checkText(await bodyOf("---\nnavigation:\n  label: Lending\n---\nThe stove is with Idris until Friday.\n"), "The stove is with Idris until Friday.");
+  t.check(await bodyOf("---\nnavigation:\n  label: Lending\n---\nThe stove is with Idris until Friday.\n"), "The stove is with Idris until Friday.\n");
 
   // doctest:L244
   t.check(({ body: await bodyOf("---\nnavigation:\n  label: Lending\n---\n") }), {

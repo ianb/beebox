@@ -32,7 +32,6 @@ const client = createCloudflareProvisioningClient(
 // Zone pagination follows the documented `total_pages` field and caps each
 // request at 50 results.
 void test("Zone pagination follows the documented totalpages field and caps each request...", async (t) => {
-  // doctest:L36
   const zones = await client.listZones();
   t.check({ names: zones.map((zone) => zone.name), pages: calls.filter((call) => call.url.pathname === "/client/v4/zones").map((call) => call.url.searchParams.get("page")), perPage: calls[0]?.url.searchParams.get("per_page"), account: calls[0]?.url.searchParams.get("account.id") }, {
     names: [
@@ -52,7 +51,6 @@ void test("Zone pagination follows the documented totalpages field and caps each
 // case response fields. Attach sends only the documented tuple and parses its
 // readback.
 void test("Worker Domain list uses its exact-hostname filter and maps Cloudflare's snake...", async (t) => {
-  // doctest:L46
   const found = await client.listWorkerDomains("site.example.com");
   const attached = await client.attachWorkerDomain({ hostname: "site.example.com", service: "bbx-site", zoneId: "zone-1", zoneName: "example.com" });
   const getCall = calls.find((call) => call.url.pathname.endsWith("/workers/domains") && call.init?.method === "GET");
@@ -86,18 +84,16 @@ void test("Worker Domain list uses its exact-hostname filter and maps Cloudflare
   // The API's informational `messages` value is not part of the adapter's consumed
   // contract, so unexpected non-null shapes remain ignored.
 
-  // doctest:L58
   const informationalMessages = createCloudflareProvisioningClient(
     { accountId: "0123456789abcdef0123456789abcdef", bearer: staticBearer("test-token") },
     { fetch: async () => new Response(JSON.stringify({ success: true, errors: null, messages: { notice: true }, result: [] }), { status: 200 }) },
   );
-  await t.checkText((await informationalMessages.listWorkerDomains("site.example.com")).length, "0");
+  t.check(await informationalMessages.listWorkerDomains("site.example.com"), []);
 
   // HTTP 200 error envelopes preserve only bounded, control-character-free Cloudflare
   // error codes and messages, so permission failures are diagnosable without dumping
   // an arbitrary response body.
 
-  // doctest:L71
   const rejected = createCloudflareProvisioningClient(
     { accountId: "0123456789abcdef0123456789abcdef", bearer: staticBearer("test-token") },
     { fetch: async () => new Response(JSON.stringify({ success: false, errors: [{ code: 10000, message: "missing permission\nplease check" }, { code: 2, message: "ignored" }], result: [] }), { status: 200 }) },

@@ -9,7 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, not } from "agent-doctest/check";
 import {
   BBX_CHAT_SESSION_ID_ENV,
   BBX_CHAT_SESSION_ID_FILE_ENV,
@@ -26,14 +26,11 @@ import * as fs from "node:fs";
 // `allocateSessionIdFilePath` returns a fresh path each call and touches no disk —
 // an unconsumed spawn leaves nothing behind:
 void test("allocateSessionIdFilePath returns a fresh path each call and touches no disk...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L29
   const a = allocateSessionIdFilePath();
   const b = allocateSessionIdFilePath();
-  print(`distinct: ${a !== b}`);
-  await t.checkText(out.with(print(`exists: ${fs.existsSync(a)}`)), `distinct: true
-exists: false`);
+  t.check(a, not(b));
+  t.check(fs.existsSync(a), false);
 });
 
 // ## Write then read round-trips the id
@@ -59,7 +56,7 @@ void test("Write then read round-trips the id", async (t) => {
 // ## Reading an absent or empty file yields null
 void test("Reading an absent or empty file yields null", async (t) => {
   // doctest:L61
-  await t.checkText(readSessionIdFile(allocateSessionIdFilePath()) === null, "true");
+  t.check(readSessionIdFile(allocateSessionIdFilePath()), null);
 });
 
 void test("Reading an absent or empty file yields null (line 65)", async (t) => {
@@ -68,7 +65,7 @@ void test("Reading an absent or empty file yields null (line 65)", async (t) => 
   fs.writeFileSync(p, "   \n");
   const r = readSessionIdFile(p);
   fs.rmSync(p);
-  await t.checkText(r === null, "true");
+  t.check(r, null);
 });
 
 // ## cleanup removes the file and is idempotent
@@ -125,8 +122,6 @@ void test("resolveChatSessionId falls back to the file when no direct env var", 
 // With the file path set but never written, a short `waitMs` elapses and the
 // command degrades to "no session" rather than hanging:
 void test("With the file path set but never written, a short waitMs elapses and the comm...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L129
   const p = allocateSessionIdFilePath();
   const savedId = process.env[BBX_CHAT_SESSION_ID_ENV];
@@ -139,9 +134,7 @@ void test("With the file path set but never written, a short waitMs elapses and 
   if (savedId !== undefined) process.env[BBX_CHAT_SESSION_ID_ENV] = savedId;
   if (savedFile === undefined) delete process.env[BBX_CHAT_SESSION_ID_FILE_ENV];
   else process.env[BBX_CHAT_SESSION_ID_FILE_ENV] = savedFile;
-  print(`id: ${id}`);
-  await t.checkText(out.with(print(`waited-at-least-250ms: ${waited >= 250}`)), `id: null
-waited-at-least-250ms: true`);
+  t.check({ id, waited }, { id: null, waited: any(Number).between(250, Infinity) });
 });
 
 // ## resolveChatSessionId returns null with no session context at all
@@ -154,5 +147,5 @@ void test("resolveChatSessionId returns null with no session context at all", as
   const id = await resolveChatSessionId();
   if (savedId !== undefined) process.env[BBX_CHAT_SESSION_ID_ENV] = savedId;
   if (savedFile !== undefined) process.env[BBX_CHAT_SESSION_ID_FILE_ENV] = savedFile;
-  await t.checkText(id === null, "true");
+  t.check(id, null);
 });

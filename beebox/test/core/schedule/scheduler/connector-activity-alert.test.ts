@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
@@ -80,10 +81,16 @@ void test("Thirty days of new mail, then three days of successful syncs that onl
 
   // doctest:L71
   const [warning] = await connectorActivityHealthChecks(box.root, { now: at(day3) });
-  t.check(warning?.message, "gmail has brought in nothing new on its last 3 days of syncing since 2026-09-14 (more than 2 days without something new is unusual for it). Syncs are still succeeding, so check whether a filter, permission or upstream change stopped it.");
+  t.check(warning, {
+    name: "connector-activity:gmail",
+    ok: false,
+    message: "gmail has brought in nothing new on its last 3 days of syncing since 2026-09-14 (more than 2 days without something new is unusual for it). Syncs are still succeeding, so check whether a filter, permission or upstream change stopped it.",
+    severity: "warning",
+    actions: ["dismiss-connector-episode"],
+  });
 
   // doctest:L75
-  await t.checkText((await readRecent(box.root, { days: 1, now: at(day3) })).length, "0");
+  t.check(await readRecent(box.root, { days: 1, now: at(day3) }), []);
 
   // The episode is stamped, so later ticks, including on later quiet days, record
   // nothing new:
@@ -100,7 +107,13 @@ void test("Thirty days of new mail, then three days of successful syncs that onl
   // doctest:L94
   const [check] = await connectorActivityHealthChecks(box.root, { now: at(day4) });
   invariant(check, "the quiet connector raises a warning");
-  t.check(`${check.name} | ${check.ok} | ${check.actions}`, "connector-activity:gmail | false | dismiss-connector-episode");
+  t.check(check, {
+    name: "connector-activity:gmail",
+    ok: false,
+    message: "gmail has brought in nothing new on its last 4 days of syncing since 2026-09-14 (more than 2 days without something new is unusual for it). Syncs are still succeeding, so check whether a filter, permission or upstream change stopped it.",
+    severity: "warning",
+    actions: ["dismiss-connector-episode"],
+  });
 
   // doctest:L99
   t.check(await caller(box.root, false).health.dismissConnectorEpisode({ check: check.name }).then(() => "allowed", (e) => e.code), "FORBIDDEN");
@@ -111,7 +124,7 @@ void test("Thirty days of new mail, then three days of successful syncs that onl
   });
 
   // doctest:L105
-  await t.checkText((await connectorActivityHealthChecks(box.root, { now: at(day4) })).length, "0");
+  t.check(await connectorActivityHealthChecks(box.root, { now: at(day4) }), []);
 
   // Dismissing when nothing is open is an error, not a silent success:
 
@@ -136,7 +149,15 @@ void test("Thirty days of new mail, then three days of successful syncs that onl
   });
 
   // doctest:L130
-  t.check((await connectorActivityHealthChecks(box.root, { now: at(failing) }))[0]?.message.includes("gmail has failed every sync on its last 2 days of running"), true);
+  t.check(await connectorActivityHealthChecks(box.root, { now: at(failing) }), [
+    {
+      name: "connector-activity:gmail",
+      ok: false,
+      message: "gmail has failed every sync on its last 2 days of running, since 2026-09-19: invalid_grant",
+      severity: "warning",
+      actions: ["dismiss-connector-episode"],
+    },
+  ]);
 });
 
 // ## A damaged record is a warning, not a reset
@@ -153,5 +174,10 @@ void test("A damaged record is a warning, not a reset", async (t) => {
   await box.seed("_bookkeeping/connectors/connector-activity.state.json", "{\"version\":2}");
   const [check] = await connectorActivityHealthChecks(box.root, { now: at(FIRST_DAY) });
   invariant(check, "a damaged record raises a warning");
-  t.check(`${check.name} | ${check.ok} | ${check.message.includes("is invalid")}`, "connector-activity | false | true");
+  t.check(check, {
+    name: "connector-activity",
+    ok: false,
+    message: str`Connector activity record at ${box.root}/_bookkeeping/connectors/connector-activity.state.json is invalid: ${any(String)}`,
+    severity: "warning",
+  });
 });

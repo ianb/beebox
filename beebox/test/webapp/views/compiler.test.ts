@@ -4,6 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, not } from "agent-doctest/check";
 import { mkdir, writeFile, utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { mkdtemp } from "node:fs/promises";
@@ -36,33 +37,16 @@ export default function Test() {
 
   // doctest:L36
   const { meta } = await compileView(join(viewsDir, "test.tsx"));
-  t.check(meta.name, "Test View");
-
-  // doctest:L42
-  t.check(meta.slug, "test");
-
-  // doctest:L45
-  t.check(meta.description, "A simple test");
-
-  // doctest:L48
-  t.check(meta.dependencies, [
-    "_content/**/*.card",
-    "_content/**/*.card",
-  ]);
-
-  // doctest:L51
-  t.check(meta.rendersCardTypes, [
-    "sandbox",
-  ]);
-
-  // doctest:L54
-  t.check(meta.modes, [
-    "page",
-    "chat",
-  ]);
-
-  // doctest:L57
-  t.check(meta.layout, "full-bleed");
+  t.check(meta, {
+    name: "Test View",
+    slug: "test",
+    description: "A simple test",
+    dependencies: ["_content/**/*.card", "_content/**/*.card"],
+    modes: ["page", "chat"],
+    layout: "full-bleed",
+    rendersCardTypes: ["sandbox"],
+    lastModified: isoDate(),
+  });
 
   // ## Compilation output
   //
@@ -70,7 +54,7 @@ export default function Test() {
 
   // doctest:L66
   const { output } = await compileView(join(viewsDir, "test.tsx"));
-  await t.checkText(output.includes("window.__bbxReact"), "true");
+  t.check(output, any(String).includes("window.__bbxReact"));
 
   // ## Caching
   //
@@ -85,17 +69,15 @@ export default function Test() {
   await writeFile(viewFile, source.replace('"hello"', '"HELLO"'));
   await utimes(viewFile, pinned, pinned);
   const { output: output2 } = await compileView(viewFile);
-  await t.checkText(output2 === pinnedOutput, "true");
+  t.check(output2, pinnedOutput);
 
   // After invalidation, a fresh compile reads the rewritten source:
 
   // doctest:L91
   invalidateView(viewFile);
   const { output: output3 } = await compileView(viewFile);
-  t.check([output3.includes("HELLO"), output3.includes("hello")], [
-    true,
-    false,
-  ]);
+  t.check(output3, any(String).includes("HELLO"));
+  t.check(output3, not(any(String).includes("hello")));
 });
 
 // ## jsx-runtime shim translates the automatic runtime
@@ -120,12 +102,12 @@ export default function Multi() {
 }
 `);
   const { output: jsxOut } = await compileView(join(jviews, "multi.tsx"));
-  await t.checkText(jsxOut.includes("Array.isArray(children)"), "true");
+  t.check(jsxOut, any(String).includes("Array.isArray(children)"));
 
   // The naive alias that dropped `key` and passed array children whole is gone:
 
   // doctest:L126
-  await t.checkText(jsxOut.includes("jsx = React.createElement"), "false");
+  t.check(jsxOut, not(any(String).includes("jsx = React.createElement")));
 });
 
 // ## Compile targets
@@ -151,31 +133,31 @@ export default function JsxView() {
 
   const browserBuild = await compileView(viewPathT, { target: "browser" });
   // doctest:L151
-  await t.checkText(browserBuild.output.includes("window.__bbxReact"), "true");
+  t.check(browserBuild.output, any(String).includes("window.__bbxReact"));
 
   // The browser build never emits a bare `react/jsx-runtime` import; the node build
   // does (esbuild's automatic JSX import, left external):
 
   // doctest:L160
-  t.check(/from\s*"react\/jsx-runtime"/.test(browserBuild.output), false);
+  t.check(browserBuild.output, not(any(String).matches(/from\s*"react\/jsx-runtime"/)));
 
   // doctest:L165
   const nodeBuild = await compileView(viewPathT, { target: "node" });
-  t.check(/from\s*"react\/jsx-runtime"/.test(nodeBuild.output), true);
+  t.check(nodeBuild.output, any(String).matches(/from\s*"react\/jsx-runtime"/));
 
   // doctest:L171
-  await t.checkText(nodeBuild.output.includes("window.__bbxReact"), "false");
+  t.check(nodeBuild.output, not(any(String).includes("window.__bbxReact")));
 
   // The node build carries an inline source map for stack mapping:
 
   // doctest:L178
-  await t.checkText(nodeBuild.output.includes("sourceMappingURL=data:application/json"), "true");
+  t.check(nodeBuild.output, any(String).includes("sourceMappingURL=data:application/json"));
 
   // The two targets are cached independently — compiling one never returns the
   // other's output (no cross-contamination):
 
   // doctest:L186
-  await t.checkText(nodeBuild.output === browserBuild.output, "false");
+  t.check(nodeBuild.output, not(browserBuild.output));
 });
 
 // ## Missing metadata defaults
@@ -197,19 +179,16 @@ export default function Minimal() {
 
   // doctest:L206
   const { meta } = await compileView(join(viewsDir2, "minimal.tsx"));
-  t.check(meta.name, "minimal");
-
-  // doctest:L212
-  t.check(meta.slug, "minimal");
-
-  // doctest:L215
-  t.check(meta.description, "");
-
-  // doctest:L218
-  t.check(meta.dependencies, []);
-
-  // doctest:L221
-  t.check(meta.layout, "inset");
+  t.check(meta, {
+    name: "minimal",
+    slug: "minimal",
+    description: "",
+    dependencies: [],
+    modes: ["page"],
+    layout: "inset",
+    rendersCardTypes: [],
+    lastModified: isoDate(),
+  });
 
   // An unknown `layout` fails validation. The view degrades like a broken one,
   // and the marker names the export, so the author can see what to fix:
@@ -223,13 +202,16 @@ export default function Wide() {
 }
 `);
   const wide = (await compileView(join(viewsDir2, "wide.tsx"))).meta;
-  t.check([wide.rendersCardTypes, wide.layout], [
-    [],
-    "inset",
-  ]);
-
-  // doctest:L240
-  await t.checkText(wide.description.startsWith("Invalid metadata export layout:"), "true");
+  t.check(wide, {
+    name: "wide",
+    slug: "wide",
+    description: "Invalid metadata export layout: Invalid option: expected one of \"inset\"|\"full-bleed\"",
+    dependencies: [],
+    modes: ["page"],
+    layout: "inset",
+    rendersCardTypes: [],
+    lastModified: isoDate(),
+  });
 });
 
 // ## Error module
@@ -238,10 +220,13 @@ export default function Wide() {
 void test("When compilation fails, buildErrorModule creates a valid JS module that rende...", async (t) => {
   // doctest:L249
   const errorJs = buildErrorModule("Unexpected token at line 5");
-  await t.checkText(errorJs.includes("Compile error"), "false");
-
-  // doctest:L253
-  await t.checkText(errorJs.includes("Unexpected token at line 5"), "true");
+  t.checkText(errorJs, `export default function ErrorView() {
+  return window.__bbxReact.createElement("pre", {style:{color:"red",whiteSpace:"pre-wrap",padding:"1rem"}}, \`Unexpected token at line 5\`);
+}
+export const name = "Error";
+export const description = "Failed to compile";
+export const dependencies = [];
+export const modes = ["page", "chat"];`);
 });
 
 // ## Listing views
@@ -257,7 +242,7 @@ void test("listViews resolves the views directory from the box's shape (via getB
   // doctest:L267
   // No views/ directory — returns empty
   const empty = await listViews(tmp3);
-  await t.checkText(empty.length, "0");
+  t.check(empty, []);
 
   // doctest:L274
   const viewsDir3 = join(box3.root, "src/views");
@@ -287,13 +272,27 @@ export default function Summary() {
   const views = await listViews(tmp3);
   // doctest:L287
   // doctest:L297
-  await t.checkText(views.length, "2");
-
-  // doctest:L303
-  const names = views.map(v => v.name).toSorted();
-  t.check(names, [
-    "Dashboard",
-    "Summary",
+  t.check(views.toSorted((a, b) => a.name.localeCompare(b.name)), [
+    {
+      name: "Dashboard",
+      slug: "dashboard",
+      description: "Overview dashboard",
+      dependencies: ["_content/**/*.card"],
+      modes: ["page"],
+      layout: "inset",
+      rendersCardTypes: [],
+      lastModified: isoDate(),
+    },
+    {
+      name: "Summary",
+      slug: "summary",
+      description: "Quick summary",
+      dependencies: [],
+      modes: ["chat"],
+      layout: "inset",
+      rendersCardTypes: [],
+      lastModified: isoDate(),
+    },
   ]);
 
   // A view that fails to compile still appears in the listing — degraded to its
@@ -315,9 +314,14 @@ export default function Broken() {
   const withBroken = await listViews(tmp3);
   const broken = withBroken.find(v => v.slug === "broken");
   // doctest:L324
-  t.check([broken?.name, broken?.rendersCardTypes, broken?.description], [
-    "broken",
-    [],
-    "Failed to compile",
-  ]);
+  t.check(broken, {
+    name: "broken",
+    slug: "broken",
+    description: "Failed to compile",
+    dependencies: [],
+    modes: ["page"],
+    layout: "inset",
+    rendersCardTypes: [],
+    lastModified: isoDate(),
+  });
 });

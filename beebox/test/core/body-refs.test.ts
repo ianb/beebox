@@ -15,19 +15,9 @@ import { rewriteReferrerRefs } from "../../src/core/rewrite-card-refs/core.js";
 //
 // The ref value and a `body:<line>:<tag>.<attr>` path are returned.
 void test("The ref value and a body:<line>:<tag>.<attr> path are returned.", async (t) => {
-  // doctest:L19
-  await t.checkText(
-    JSON.stringify(
-      extractBodyRefs('Dana said: {% source ref="/box/people/dana.person.card" usage="verbatim" %}ship Friday{% /source %}'),
-      null,
-      2,
-    ),
-    `[
-  {
-    "path": "body:1:source.ref",
-    "ref": "/box/people/dana.person.card"
-  }
-]`,
+  t.check(
+    extractBodyRefs('Dana said: {% source ref="/box/people/dana.person.card" usage="verbatim" %}ship Friday{% /source %}'),
+    [{ path: "body:1:source.ref", ref: "/box/people/dana.person.card" }],
   );
 });
 
@@ -35,7 +25,6 @@ void test("The ref value and a body:<line>:<tag>.<attr> path are returned.", asy
 //
 // Line numbers are 1-indexed and track each tag's start line.
 void test("Line numbers are 1-indexed and track each tag's start line.", async (t) => {
-  // doctest:L38
   const body = [
     "Intro paragraph.",
     "",
@@ -60,19 +49,9 @@ void test("Line numbers are 1-indexed and track each tag's start line.", async (
 // A `ref` on the outer tag is found; the inner tag without a ref contributes
 // nothing.
 void test("A ref on the outer tag is found; the inner tag without a ref contributes noth...", async (t) => {
-  // doctest:L65
-  await t.checkText(
-    JSON.stringify(
-      extractBodyRefs('{% source ref="/box/m.doc.card" usage="verbatim" %}{% quote %}exact words{% /quote %}{% /source %}'),
-      null,
-      2,
-    ),
-    `[
-  {
-    "path": "body:1:source.ref",
-    "ref": "/box/m.doc.card"
-  }
-]`,
+  t.check(
+    extractBodyRefs('{% source ref="/box/m.doc.card" usage="verbatim" %}{% quote %}exact words{% /quote %}{% /source %}'),
+    [{ path: "body:1:source.ref", ref: "/box/m.doc.card" }],
   );
 });
 
@@ -81,17 +60,14 @@ void test("A ref on the outer tag is found; the inner tag without a ref contribu
 // Plain markdown (including inline markdown links, which are not Markdoc tags)
 // yields nothing — link rewriting is handled elsewhere, not here.
 void test("Plain markdown (including inline markdown links, which are not Markdoc tags)...", async (t) => {
-  // doctest:L85
-  await t.checkText(extractBodyRefs("Just prose with a [link](people/Priya.person.card) and **bold**.").length, "0");
+  t.check(extractBodyRefs("Just prose with a [link](people/Priya.person.card) and **bold**."), []);
 
-  // doctest:L88
-  await t.checkText(extractBodyRefs("").length, "0");
+  t.check(extractBodyRefs(""), []);
 });
 
 // A tag with no `ref` attribute is ignored.
 void test("A tag with no ref attribute is ignored.", async (t) => {
-  // doctest:L95
-  await t.checkText(extractBodyRefs("{% callout type=\"note\" %}heads up{% /callout %}").length, "0");
+  t.check(extractBodyRefs("{% callout type=\"note\" %}heads up{% /callout %}"), []);
 });
 
 // ## Reference-style link definitions: continuation-line and angle-bracket destinations
@@ -101,7 +77,6 @@ void test("A tag with no ref attribute is ignored.", async (t) => {
 // written bare. The Markdoc parser this codebase renders/lints with already
 // resolves both forms as real links, so the extractor needs to see them too.
 void test("CommonMark allows a link reference definition's destination to be on the line...", async (t) => {
-  // doctest:L107
   const body = [
     "[s]:",
     "  /store/recipes/Soup.recipe.card",
@@ -117,7 +92,6 @@ void test("CommonMark allows a link reference definition's destination to be on 
 });
 
 void test("Reference-style link definitions: continuation-line and angle-bracket destinations", async (t) => {
-  // doctest:L124
   t.check(extractReferenceDefinitions("[t]: </store/x.card>\n\nSee [thing][t]."), [
     {
       path: "body:1:ref-def",
@@ -130,8 +104,7 @@ void test("Reference-style link definitions: continuation-line and angle-bracket
 // the definition — no destination is found (matching CommonMark and this
 // codebase's Markdoc parser).
 void test("A blank line between the label and a would-be continuation destination ends t...", async (t) => {
-  // doctest:L139
-  await t.checkText(extractReferenceDefinitions("[s]:\n\n  /store/x.card").length, "0");
+  t.check(extractReferenceDefinitions("[s]:\n\n  /store/x.card"), []);
 });
 
 // ## CRLF line endings don't hide a reference definition (finding 7, round 3 hardening)
@@ -142,7 +115,6 @@ void test("A blank line between the label and a would-be continuation destinatio
 // match at all, so a CRLF body's reference definitions were invisible to both
 // extraction and the migration's rewriter (they share this one matcher).
 void test("JS regex . excludes every line-terminator character, \\r included — a Windows-...", async (t) => {
-  // doctest:L152
   const crlfBody = "[s]: /store/recipes/Soup.recipe.card\r\n\r\nSee [soup][s].\r\n";
   t.check(extractReferenceDefinitions(crlfBody), [
     {
@@ -154,7 +126,6 @@ void test("JS regex . excludes every line-terminator character, \\r included —
 
 // The continuation-line form works under CRLF too:
 void test("The continuation-line form works under CRLF too:", async (t) => {
-  // doctest:L166
   const crlfContinuation = "[s]:\r\n  /store/recipes/Soup.recipe.card\r\n\r\nSee [soup][s].\r\n";
   t.check(extractReferenceDefinitions(crlfContinuation), [
     {
@@ -170,7 +141,6 @@ void test("The continuation-line form works under CRLF too:", async (t) => {
 // container — `> [id]: /path` — and this codebase's Markdoc parser already
 // resolves it into a real link.
 void test("CommonMark allows a link reference definition inside a blockquote container —...", async (t) => {
-  // doctest:L184
   const quoted = "> [s]: /store/recipes/Soup.recipe.card\n\nSee [soup][s].\n";
   t.check(extractReferenceDefinitions(quoted), [
     {
@@ -182,7 +152,6 @@ void test("CommonMark allows a link reference definition inside a blockquote con
 
 // A nested blockquote (`> > [id]: /path`) is recognized too:
 void test("A nested blockquote (> > [id]:", async (t) => {
-  // doctest:L198
   const nestedQuoted = "> > [s]: /store/recipes/Soup.recipe.card\n\nSee [soup][s].\n";
   t.check(extractReferenceDefinitions(nestedQuoted), [
     {
@@ -200,7 +169,6 @@ void test("A nested blockquote (> > [id]:", async (t) => {
 // stripped, so a list-contained definition was invisible to extraction (and to
 // the migration's rewriter and the hard link gate, which share this matcher).
 void test("CommonMark allows a link reference definition to be the first block inside a...", async (t) => {
-  // doctest:L218
   const bulleted = "- [id]: /people/X.person.card\n\nSee [x][id].\n";
   t.check(extractReferenceDefinitions(bulleted), [
     {
@@ -212,36 +180,16 @@ void test("CommonMark allows a link reference definition to be the first block i
 
 // `*` and `+` bullets, and an ordered marker (`1.` / `2)`), all work:
 void test(" and + bullets, and an ordered marker (1. / 2)), all work:", async (t) => {
-  // doctest:L232
-  t.check(
-    {
-      star: extractReferenceDefinitions("* [id]: /a.card").map((r) => r.ref),
-      plus: extractReferenceDefinitions("+ [id]: /a.card").map((r) => r.ref),
-      ordered: extractReferenceDefinitions("1. [id]: /a.card").map((r) => r.ref),
-      orderedParen: extractReferenceDefinitions("2) [id]: /a.card").map((r) => r.ref),
-    },
-    {
-    star: [
-      "/a.card",
-    ],
-    plus: [
-      "/a.card",
-    ],
-    ordered: [
-      "/a.card",
-    ],
-    orderedParen: [
-      "/a.card",
-    ],
-  },
-  );
+  t.check(extractReferenceDefinitions("* [id]: /a.card"), [{ path: "body:1:ref-def", ref: "/a.card" }]);
+  t.check(extractReferenceDefinitions("+ [id]: /a.card"), [{ path: "body:1:ref-def", ref: "/a.card" }]);
+  t.check(extractReferenceDefinitions("1. [id]: /a.card"), [{ path: "body:1:ref-def", ref: "/a.card" }]);
+  t.check(extractReferenceDefinitions("2) [id]: /a.card"), [{ path: "body:1:ref-def", ref: "/a.card" }]);
 });
 
 // A quoted list item (blockquote containing a list) strips both prefixes:
 void test("A quoted list item (blockquote containing a list) strips both prefixes:", async (t) => {
-  // doctest:L244
-  t.check(extractReferenceDefinitions("> - [id]: /people/X.person.card").map((r) => r.ref), [
-    "/people/X.person.card",
+  t.check(extractReferenceDefinitions("> - [id]: /people/X.person.card"), [
+    { path: "body:1:ref-def", ref: "/people/X.person.card" },
   ]);
 });
 
@@ -252,7 +200,6 @@ void test("A quoted list item (blockquote containing a list) strips both prefixe
 // and `bbx mv` rewrites them, exactly like `[text](path)`. External URLs are
 // skipped.
 void test("A body may link with raw HTML:", async (t) => {
-  // doctest:L256
   const html = 'See <a href="/_content/people/Ana.person.card">Ana</a>,\n<img src="attach/plan.png" width="200"> and <a href="https://example.com">x</a>.';
   t.check(extractBodyLinks(html), [
     {
@@ -265,7 +212,6 @@ void test("A body may link with raw HTML:", async (t) => {
     },
   ]);
 
-  // doctest:L260
   t.check(
     rewriteReferrerRefs({
       boxRoot: "/box",
@@ -283,7 +229,6 @@ void test("A body may link with raw HTML:", async (t) => {
 
 // Unquoted attribute values count too:
 void test("Unquoted attribute values count too:", async (t) => {
-  // doctest:L272
   t.check(extractBodyLinks("<a href=/_content/x.doc.card>x</a> <img src=attach/p.png>"), [
     {
       path: "body:1:link",
@@ -301,8 +246,7 @@ void test("Unquoted attribute values count too:", async (t) => {
 // A body that throws on parse is treated as "no refs" rather than crashing the
 // caller (validation/move would rather miss a warning than fail the card).
 void test("A body that throws on parse is treated as \"no refs\" rather than crashing the...", async (t) => {
-  // doctest:L282
-  t.check(Array.isArray(extractBodyRefs("{% source ref=unclosed")), true);
+  t.check(extractBodyRefs("{% source ref=unclosed"), []);
 });
 
 // ## A footnote definition is not a reference definition
@@ -310,7 +254,6 @@ void test("A body that throws on parse is treated as \"no refs\" rather than cra
 // `[^label]: text` defines a footnote. Its text is not a link destination, so it
 // is not checked as a ref:
 void test("[^label]:", async (t) => {
-  // doctest:L292
   t.check(extractReferenceDefinitions("A claim.[^1]\n\n[^1]: The footnote text.\n[r]: /_content/x.card"), [
     {
       path: "body:4:ref-def",

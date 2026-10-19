@@ -8,6 +8,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { configure } from "../../src/cli/configure.js";
@@ -68,7 +69,6 @@ void test("No scan-uploader.json exists yet at this path, so the writer starts f
       t.error(error);
     }
   });
-  // doctest:L66
   const homeDir1 = join(dir, "home1");
   const configPath1 = join(dir, "fresh", "scan-uploader.json");
   const server1: FakeScanServer = await startFakeScanServer({
@@ -84,50 +84,44 @@ void test("No scan-uploader.json exists yet at this path, so the writer starts f
     configPath: configPath1,
     homeDir: homeDir1,
   });
-  t.check(result1.box, "family");
-
-  // doctest:L86
-  t.check(result1.name, "laptop-1");
-
-  // doctest:L91
-  t.check(result1.tokenPath === join(homeDir1, ".scan-tokens", "family.token"), true);
+  t.check(result1, {
+    configPath: configPath1,
+    tokenPath: join(homeDir1, ".scan-tokens", "family.token"),
+    box: "family",
+    folder: "/scans/family",
+    name: "laptop-1",
+    warnings: [],
+  });
 
   // The config file was created with exactly the real values — no placeholders:
 
-  // doctest:L98
   const configContents1 = JSON.parse(await readFile(configPath1, "utf-8"));
-  t.check(configContents1.targets.length, 1);
-
-  // doctest:L104
-  t.check(configContents1.targets[0].folder, "/scans/family");
-
-  // doctest:L109
-  t.check(configContents1.targets[0].disposition, "archive");
-
-  // doctest:L114
-  t.check(configContents1.targets[0].serverUrl === server1.url, true);
-
-  // doctest:L119
-  t.check(configContents1.targets[0].tokenPath === result1.tokenPath, true);
+  t.check(configContents1, {
+    targets: [
+      {
+        folder: "/scans/family",
+        serverUrl: server1.url,
+        box: "family",
+        tokenPath: result1.tokenPath,
+        disposition: "archive",
+      },
+    ],
+  });
 
   // The token file is 0600, its parent directory 0700, and the token content is
   // exactly what was passed in (trimmed):
 
-  // doctest:L127
   const tokenStat1 = await stat(result1.tokenPath);
-  await t.checkText(permOctal(tokenStat1.mode), "600");
+  t.check(permOctal(tokenStat1.mode), "600");
 
-  // doctest:L133
   const tokenDirStat1 = await stat(join(homeDir1, ".scan-tokens"));
-  await t.checkText(permOctal(tokenDirStat1.mode), "700");
+  t.check(permOctal(tokenDirStat1.mode), "700");
 
-  // doctest:L139
   t.check((await readFile(result1.tokenPath, "utf-8")).trim(), "secret-token-1");
 
   // Verification only ever hits `check` — no PUT is sent:
 
-  // doctest:L146
-  t.check(server1.putRequests.length, 0);
+  t.check(server1.putRequests, []);
 });
 
 // ## Unknown keys survive — update-in-place and append both preserve them
@@ -144,7 +138,6 @@ void test("Pre-seed a config with a top-level unknown key and a per-target unkno
       t.error(error);
     }
   });
-  // doctest:L162
   const server2: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
@@ -181,29 +174,23 @@ void test("Pre-seed a config with a top-level unknown key and a per-target unkno
     homeDir: join(dir, "home2"),
   });
   const configContents2 = JSON.parse(await readFile(configPath2, "utf-8"));
-  t.check(configContents2.targets.length, 1);
-
-  // doctest:L203
-  t.check(configContents2.targets[0].folder, "/scans/updated");
-
-  // doctest:L208
-  t.check(configContents2.targets[0].disposition, "archive");
-
-  // doctest:L213
-  t.check(configContents2.targets[0].note, "hand-added per-target field");
-
-  // doctest:L218
-  t.check(configContents2.futureFeature, {
-    nested: true,
+  t.check(configContents2, {
+    targets: [
+      {
+        folder: "/scans/updated",
+        serverUrl: server2.url,
+        box: "family",
+        tokenPath: result2.tokenPath,
+        disposition: "archive",
+        note: "hand-added per-target field",
+      },
+    ],
+    futureFeature: { nested: true },
   });
-
-  // doctest:L223
-  t.check(configContents2.targets[0].tokenPath === result2.tokenPath, true);
 
   // A second `configure` call for a different box appends rather than
   // overwriting, and the first target (with its unknown key) is untouched:
 
-  // doctest:L231
   await configure({
     serverUrlWithBox: `${server2.url}/second`,
     folder: "/scans/second",
@@ -214,16 +201,26 @@ void test("Pre-seed a config with a top-level unknown key and a per-target unkno
     homeDir: join(dir, "home2b"),
   });
   const configContents2b = JSON.parse(await readFile(configPath2, "utf-8"));
-  t.check(configContents2b.targets.length, 2);
-
-  // doctest:L246
-  t.check(configContents2b.targets[0].note, "hand-added per-target field");
-
-  // doctest:L251
-  t.check(configContents2b.targets[1].box, "second");
-
-  // doctest:L256
-  t.check(configContents2b.targets[1].folder, "/scans/second");
+  t.check(configContents2b, {
+    targets: [
+      {
+        folder: "/scans/updated",
+        serverUrl: server2.url,
+        box: "family",
+        tokenPath: result2.tokenPath,
+        disposition: "archive",
+        note: "hand-added per-target field",
+      },
+      {
+        folder: "/scans/second",
+        serverUrl: server2.url,
+        box: "second",
+        tokenPath: join(dir, "home2b", ".scan-tokens", "second.token"),
+        disposition: "keep",
+      },
+    ],
+    futureFeature: { nested: true },
+  });
 });
 
 // ## An unparseable existing config is refused, untouched
@@ -235,7 +232,6 @@ void test("An unparseable existing config is refused, untouched", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L267
   const server3: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
@@ -254,12 +250,15 @@ void test("An unparseable existing config is refused, untouched", async (t) => {
       homeDir: join(dir, "home3"),
     }),
   );
-  t.check(failure3.name, "ConfigError");
+  // The JSON parser's own wording varies between Node versions.
+  t.check(failure3, {
+    name: "ConfigError",
+    message: str`Invalid config at ${badConfigPath}: not valid JSON, refusing to modify: ${any(String)}`,
+  });
 
   // The file is byte-for-byte untouched:
 
-  // doctest:L292
-  await t.checkText(await readFile(badConfigPath, "utf-8"), "{ not json");
+  t.check(await readFile(badConfigPath, "utf-8"), "{ not json");
 });
 
 // ## Slug validation rejects path tricks before any filesystem use
@@ -269,29 +268,25 @@ void test("An unparseable existing config is refused, untouched", async (t) => {
 // pattern before it becomes a filename component. An encoded-slash traversal
 // attempt in the URL path never matches the pattern:
 void test("The token path is derived only from the box slug parsed out of <server-url-wi...", async (t) => {
-  // doctest:L308
   const badSlug = await syncRejected(() => parseServerUrlWithBox("https://beebox.run/..%2f..%2fetc%2fpasswd"));
-  t.check(badSlug.name, "ConfigureError");
-
-  // doctest:L314
-  t.check(badSlug.message, "box slug \"..%2f..%2fetc%2fpasswd\" is invalid — must match ^[\\da-z][\\da-z-]{0,63}$");
+  t.check(badSlug, {
+    name: "ConfigureError",
+    message: "box slug \"..%2f..%2fetc%2fpasswd\" is invalid — must match ^[\\da-z][\\da-z-]{0,63}$",
+  });
 
   // The box is the LAST path segment; a mount prefix before it (the dev
   // router's `/<worktree>/<box>` shape) stays part of the server URL rather
   // than being silently dropped:
 
-  // doctest:L323
   const nested = parseServerUrlWithBox("http://localhost:3210/my-worktree/test1");
-  t.check([nested.serverUrl, nested.box].join(" "), "http://localhost:3210/my-worktree test1");
+  t.check(nested, { serverUrl: "http://localhost:3210/my-worktree", box: "test1" });
 
-  // doctest:L329
   const bare = parseServerUrlWithBox("https://beebox.run/family");
-  t.check([bare.serverUrl, bare.box].join(" "), "https://beebox.run family");
+  t.check(bare, { serverUrl: "https://beebox.run", box: "family" });
 
   // And `configure()` itself refuses before writing anything — the bad slug is
   // rejected during URL parsing, ahead of any config or token write:
 
-  // doctest:L338
   const configPath4 = join(dir, "slug-test", "scan-uploader.json");
   const failure4 = await rejected(
     configure({
@@ -304,52 +299,49 @@ void test("The token path is derived only from the box slug parsed out of <serve
       homeDir: join(dir, "home4"),
     }),
   );
-  t.check(failure4.name, "ConfigureError");
+  t.check(failure4, {
+    name: "ConfigureError",
+    message: "box slug \"..%2f..%2fetc%2fpasswd\" is invalid — must match ^[\\da-z][\\da-z-]{0,63}$",
+  });
 
-  // doctest:L355
   t.check(await exists(configPath4), false);
 });
 
 // ## Non-TTY with a missing `--folder` fails closed, naming the flag
 void test("Non-TTY with a missing `--folder` fails closed, naming the flag", async (t) => {
-  // doctest:L362
   const missingFolder = await syncRejected(() => requireFolderFlag(undefined));
-  t.check(missingFolder.name, "ConfigureError");
-
-  // doctest:L368
-  t.check(missingFolder.message, "missing required flag: --folder");
+  t.check(missingFolder, { name: "ConfigureError", message: "missing required flag: --folder" });
 
   // A folder that IS present just passes through:
 
-  // doctest:L375
   t.check(requireFolderFlag("/scans/present"), "/scans/present");
 
   // An empty `--folder ""` is rejected the same way — not silently accepted as
   // a placeholder:
 
-  // doctest:L383
   const emptyFolder = await syncRejected(() => requireFolderFlag(""));
-  t.check(emptyFolder.message, "--folder must not be empty");
+  t.check(emptyFolder, { name: "ConfigureError", message: "--folder must not be empty" });
 
   // A flag with a missing value that happens to be followed by another flag is
   // never silently treated as that flag's value — `--folder --config x` must
   // fail closed on `--folder`, not quietly write to the wrong config path:
 
-  // doctest:L393
   const looksLikeAFlag = await syncRejected(() =>
     parseConfigureArgs(["https://beebox.run/family", "--folder", "--config", "/tmp/x.json"]),
   );
-  t.check(looksLikeAFlag.message, "--folder requires a value");
+  t.check(looksLikeAFlag, { name: "ConfigureError", message: "--folder requires a value" });
 });
 
 // The album flag is parsed as one argument, including spaces:
 void test("The album flag is parsed as one argument, including spaces:", async (t) => {
-  // doctest:L403
-  t.check(
-    parseConfigureArgs(["https://beebox.run/family", "--folder", "/photos", "--photos-album", "Bee Box"]).photosAlbum
-    ,
-    "Bee Box",
-  );
+  t.check(parseConfigureArgs(["https://beebox.run/family", "--folder", "/photos", "--photos-album", "Bee Box"]), {
+    serverUrlWithBox: "https://beebox.run/family",
+    folder: "/photos",
+    disposition: undefined,
+    photosAlbum: "Bee Box",
+    name: undefined,
+    configPath: undefined,
+  });
 });
 
 // ## The hidden token prompt's exact wording
@@ -361,13 +353,8 @@ void test("The album flag is parsed as one argument, including spaces:", async (
 // bug (the prompt used to be written through the same muted stream as the
 // input echo, so it silently never appeared at all), stays test-guarded:
 void test("The interactive TTY prompt itself isn't practical to doctest (it needs a real...", async (t) => {
-  // doctest:L417
-  t.check(TOKEN_PROMPT_TEXT.startsWith("Paste the scan token (input is hidden):"), true);
+  t.check(TOKEN_PROMPT_TEXT, "Paste the scan token (input is hidden): ");
 
-  // doctest:L422
-  t.check(TOKEN_PROMPT_TEXT.endsWith(" "), true);
-
-  // doctest:L427
   t.check(TOKEN_RECEIVED_ACK, "token received");
 });
 
@@ -387,7 +374,6 @@ void test("configure() itself doesn't pre-check folder (that's configure-cli.ts'
       t.error(error);
     }
   });
-  // doctest:L441
   const configPath5 = join(dir, "corruption-guard", "scan-uploader.json");
   await mkdir(join(dir, "corruption-guard"), { recursive: true });
   const goodConfig5 = { targets: [{ folder: "/scans/good", serverUrl: "https://good.example.org", box: "good", tokenPath: "/t", disposition: "keep" }] };
@@ -407,13 +393,12 @@ void test("configure() itself doesn't pre-check folder (that's configure-cli.ts'
       homeDir: join(dir, "home5"),
     }),
   );
-  t.check(failure5.name, "ConfigError");
+  t.check(failure5, {
+    name: "ConfigError",
+    message: `Invalid config at ${configPath5}: targets[1].folder must be a non-empty string`,
+  });
 
-  // doctest:L465
-  t.check(JSON.parse(await readFile(configPath5, "utf-8")).targets.length, 1);
-
-  // doctest:L470
-  t.check(JSON.parse(await readFile(configPath5, "utf-8")).targets[0].box, "good");
+  t.check(JSON.parse(await readFile(configPath5, "utf-8")), goodConfig5);
 });
 
 // ## A bad token fails verification — files are left in place, both paths named
@@ -425,7 +410,6 @@ void test("A bad token fails verification — files are left in place, both path
       t.error(error);
     }
   });
-  // doctest:L481
   const server6: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
@@ -433,6 +417,7 @@ void test("A bad token fails verification — files are left in place, both path
   });
   const configPath6 = join(dir, "verify-fail", "scan-uploader.json");
   const homeDir6 = join(dir, "home6");
+  const tokenPath6 = join(homeDir6, ".scan-tokens", "family.token");
   const failure6 = await rejected(
     configure({
       serverUrlWithBox: `${server6.url}/family`,
@@ -444,27 +429,18 @@ void test("A bad token fails verification — files are left in place, both path
       homeDir: homeDir6,
     }),
   );
-  t.check(failure6.name, "ConfigureError");
+  t.check(failure6, {
+    name: "ConfigureError",
+    message: `server verification failed for box "family": Unexpected response from ${server6.url}/family/api/scan/check: check returned HTTP 401 — server says: unauthorized — the config (${configPath6}) and token file (${tokenPath6}) were still written; fix the token and re-run configure with the same URL`,
+  });
 
-  // doctest:L504
-  t.check(failure6.message.includes("HTTP 401"), true);
-
-  // doctest:L509
-  t.check(failure6.message.includes(configPath6), true);
-
-  // doctest:L514
-  const tokenPath6 = join(homeDir6, ".scan-tokens", "family.token");
-  t.check(failure6.message.includes(tokenPath6), true);
 
   // Both files were actually written, not just named in the message:
 
-  // doctest:L522
   t.check(await exists(configPath6), true);
 
-  // doctest:L527
   t.check(await exists(tokenPath6), true);
 
-  // doctest:L532
   t.check((await readFile(tokenPath6, "utf-8")).trim(), "wrong-token");
 });
 
@@ -484,7 +460,6 @@ void test("When the server's error body carries a reason (e.g.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L549
   const server7: FakeScanServer = await startFakeScanServer({
     checkState: () => ({ state: "unknown" }),
     putOutcome: () => ({ status: 200, body: { status: "accepted" } }),
@@ -506,5 +481,8 @@ void test("When the server's error body carries a reason (e.g.", async (t) => {
       homeDir: homeDir7,
     }),
   );
-  t.check(failure7.message.includes("server says: box is not annex-converted; scan upload disabled"), true);
+  t.check(failure7, {
+    name: "ConfigureError",
+    message: `server verification failed for box "family": Unexpected response from ${server7.url}/family/api/scan/check: check returned HTTP 503 — server says: box is not annex-converted; scan upload disabled — the config (${configPath7}) and token file (${join(homeDir7, ".scan-tokens", "family.token")}) were still written; fix the token and re-run configure with the same URL`,
+  });
 });

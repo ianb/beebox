@@ -67,7 +67,7 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   await write("docs/note.md", "See `pkg/src/a.ts:200-211` for the old code.\n");
   await git(["add", "-A"]);
   let { result } = computeMentionAnnotate({ repoRoot, base, roots });
-  await t.checkText(result.fileEdits.get("docs/note.md"), "See `pkg/src/a.ts:200-211` (moved to `pkg/src/sub/a.ts`) for the old code.");
+  t.check(result.fileEdits.get("docs/note.md"), "See `pkg/src/a.ts:200-211` (moved to `pkg/src/sub/a.ts`) for the old code.\n");
 
   // doctest:L66
   await t.checkText(await read("docs/note.md"), "See `pkg/src/a.ts:200-211` for the old code.");
@@ -78,7 +78,7 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   await write("docs/link.md", "See [the old file](pkg/src/a.ts) for context.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
-  await t.checkText(result.fileEdits.get("docs/link.md"), "See [the old file](pkg/src/a.ts) (moved to `pkg/src/sub/a.ts`) for context.");
+  t.check(result.fileEdits.get("docs/link.md"), "See [the old file](pkg/src/a.ts) (moved to `pkg/src/sub/a.ts`) for context.\n");
 
   // ## A table cell keeps the note in the cell
 
@@ -86,9 +86,7 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   await write("docs/table.md", "| path | note |\n| --- | --- |\n| pkg/src/a.ts | legacy |\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
-  await t.checkText(result.fileEdits.get("docs/table.md"), `| path | note |
-| --- | --- |
-| pkg/src/a.ts (moved to \`pkg/src/sub/a.ts\`) | legacy |`);
+  t.check(result.fileEdits.get("docs/table.md"), "| path | note |\n| --- | --- |\n| pkg/src/a.ts (moved to `pkg/src/sub/a.ts`) | legacy |\n");
 
   // ## A fenced code block is skipped entirely, so the runnable example stays intact
   //
@@ -99,10 +97,7 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   await write("docs/fenced.md", "Prose mentions pkg/src/a.ts here.\n~~~ts\nimport x from \"pkg/src/a.ts\";\n~~~\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
-  await t.checkText(result.fileEdits.get("docs/fenced.md"), `Prose mentions pkg/src/a.ts (moved to \`pkg/src/sub/a.ts\`) here.
-~~~ts
-import x from "pkg/src/a.ts";
-~~~`);
+  t.check(result.fileEdits.get("docs/fenced.md"), "Prose mentions pkg/src/a.ts (moved to `pkg/src/sub/a.ts`) here.\n~~~ts\nimport x from \"pkg/src/a.ts\";\n~~~\n");
 
   // ## Idempotent: a mention already annotated is left alone
 
@@ -110,7 +105,12 @@ import x from "pkg/src/a.ts";
   await write("docs/already.md", "See pkg/src/a.ts (moved to `pkg/src/sub/a.ts`) already.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
-  await t.checkText(result.fileEdits.has("docs/already.md"), "false");
+  t.check([...result.fileEdits.keys()], [
+    "docs/fenced.md",
+    "docs/link.md",
+    "docs/note.md",
+    "docs/table.md",
+  ]);
 
   // ## A frozen prefix (`beebox/docs/reports/`) is never annotated
 
@@ -118,7 +118,12 @@ import x from "pkg/src/a.ts";
   await write("beebox/docs/reports/old.md", "See pkg/src/a.ts in the snapshot.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
-  await t.checkText(result.fileEdits.has("beebox/docs/reports/old.md"), "false");
+  t.check([...result.fileEdits.keys()], [
+    "docs/fenced.md",
+    "docs/link.md",
+    "docs/note.md",
+    "docs/table.md",
+  ]);
 
   // ## A package-relative mention is scoped to files inside that package
 
@@ -127,10 +132,16 @@ import x from "pkg/src/a.ts";
   await write("other-pkg/README.md", "Compare to src/a.ts in pkg.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
-  await t.checkText(result.fileEdits.get("pkg/README.md"), "Implementation: src/a.ts (moved to `pkg/src/sub/a.ts`)");
+  t.check(result.fileEdits.get("pkg/README.md"), "Implementation: src/a.ts (moved to `pkg/src/sub/a.ts`)\n");
 
   // doctest:L138
-  await t.checkText(result.fileEdits.has("other-pkg/README.md"), "false");
+  t.check([...result.fileEdits.keys()], [
+    "docs/fenced.md",
+    "docs/link.md",
+    "docs/note.md",
+    "docs/table.md",
+    "pkg/README.md",
+  ]);
 
   // ## A package-relative mention outside any package is annotated when exactly one package's mapping produces it
   //
@@ -143,7 +154,7 @@ import x from "pkg/src/a.ts";
   await write("issues/bugs/example.md", "See lib/util.ts for the old helper.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
-  await t.checkText(result.fileEdits.get("issues/bugs/example.md"), "See lib/util.ts (moved to `pkg/lib/sub/util.ts`) for the old helper.");
+  t.check(result.fileEdits.get("issues/bugs/example.md"), "See lib/util.ts (moved to `pkg/lib/sub/util.ts`) for the old helper.\n");
 
   // ## A token shared by two packages' old paths is skipped as ambiguous
   //
@@ -158,7 +169,14 @@ import x from "pkg/src/a.ts";
   await write("issues/bugs/ambiguous.md", "See src/a.ts for the old shared helper.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
-  await t.checkText(result.fileEdits.has("issues/bugs/ambiguous.md"), "false");
+  t.check([...result.fileEdits.keys()], [
+    "docs/fenced.md",
+    "docs/link.md",
+    "docs/note.md",
+    "docs/table.md",
+    "issues/bugs/example.md",
+    "pkg/README.md",
+  ]);
 
   // ## A real package with no `src/` dir (so it's not a `roots` entry) is still "a package" for the cross-package fallback
   //
@@ -173,7 +191,14 @@ import x from "pkg/src/a.ts";
   await write("toolkit/README.md", "Default entry: lib/util.ts\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
-  await t.checkText(result.fileEdits.has("toolkit/README.md"), "false");
+  t.check([...result.fileEdits.keys()], [
+    "docs/fenced.md",
+    "docs/link.md",
+    "docs/note.md",
+    "docs/table.md",
+    "issues/bugs/example.md",
+    "pkg/README.md",
+  ]);
 
   // ## A uniform directory rename is derived from the mapping alone (no tracked file is left under the old directory to survey)
 
@@ -195,7 +220,7 @@ import x from "pkg/src/a.ts";
   await write("docs/dir-note.md", "See pkg/src/legacy for the old layout.\n");
   await git(["add", "-A"]);
   const dirResult = computeMentionAnnotate({ repoRoot, base: dirBase, roots }).result;
-  await t.checkText(dirResult.fileEdits.get("docs/dir-note.md"), "See pkg/src/legacy (moved to `pkg/src/modern`) for the old layout.");
+  t.check(dirResult.fileEdits.get("docs/dir-note.md"), "See pkg/src/legacy (moved to `pkg/src/modern`) for the old layout.\n");
 
   // ## A directory mention with its own trailing `/` inside a backtick span keeps the note outside the span, not wedged before the slash
   //
@@ -208,14 +233,17 @@ import x from "pkg/src/a.ts";
   await write("docs/dir-span.md", "See `pkg/src/legacy/` for the old layout.\n");
   await git(["add", "-A"]);
   const dirSpanResult = computeMentionAnnotate({ repoRoot, base: dirBase, roots }).result;
-  await t.checkText(dirSpanResult.fileEdits.get("docs/dir-span.md"), "See `pkg/src/legacy/` (moved to `pkg/src/modern`) for the old layout.");
+  t.check(dirSpanResult.fileEdits.get("docs/dir-span.md"), "See `pkg/src/legacy/` (moved to `pkg/src/modern`) for the old layout.\n");
 
   // ## Counts: per-area totals
 
   // doctest:L231
   const areaResult = computeMentionAnnotate({ repoRoot, base, roots }).result;
-  await t.checkText(areaResult.total >= 1, "true");
-
-  // doctest:L235
-  await t.checkText([...areaResult.countsByArea.keys()].every((k) => ["plans", "implemented-plans", "issues-closed", "issues-open", "research", "other"].includes(k)), "true");
+  t.check({ total: areaResult.total, countsByArea: [...areaResult.countsByArea] }, {
+    total: 6,
+    countsByArea: [
+      ["other", 5],
+      ["issues-open", 1],
+    ],
+  });
 });

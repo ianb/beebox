@@ -83,13 +83,20 @@ void test("Refs carried by Markdoc tag attributes inside a card body (e.g.", asy
     [box.path("_content/box/notes/Meeting.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
+  t.check(result, {
+    results: [{
+      path: box.path("_content/box/notes/Meeting.doc.card"),
+      errors: [],
+      warnings: [
+        { type: "reference", severity: "warning", message: "Broken reference at body:1:source.ref: /_content/box/people/missing.person.card does not exist" },
+      ],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 
-  // doctest:L89
-  t.check(result.totalWarnings, 1);
-
-  // doctest:L92
-  t.check(result.results[0]!.warnings[0]!.message, "Broken reference at body:1:source.ref: /_content/box/people/missing.person.card does not exist");
 });
 
 // ## A display-form path in a body Markdoc tag `ref` is a lint ERROR
@@ -104,13 +111,20 @@ void test("A display-form path in a body Markdoc tag `ref` is a lint ERROR", asy
     [box.path("_content/box/notes/Meeting.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalWarnings, 0);
+  t.check(result, {
+    results: [{
+      path: box.path("_content/box/notes/Meeting.doc.card"),
+      errors: [
+        { type: "display-path", severity: "error", message: "Display-form path at body:1:source.ref: `Config:box.json` is the boxholder's display form; write `/_config/box.json`" },
+      ],
+      warnings: [],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 0,
+  });
 
-  // doctest:L111
-  t.check(result.totalErrors, 1);
-
-  // doctest:L114
-  t.check(result.results[0]!.errors[0]!.message, "Display-form path at body:1:source.ref: `Config:box.json` is the boxholder's display form; write `/_config/box.json`");
 });
 
 // ## Inline markdown links in a card body are checked too
@@ -130,16 +144,20 @@ void test("bbx mv has always rewritten [text](path) / ![alt](path) inside card b
     [box.path("_content/box/notes/Plan.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check([result.totalErrors, result.totalWarnings], [
-    0,
-    1,
-  ]);
+  t.check(result, {
+    results: [{
+      path: box.path("_content/box/notes/Plan.doc.card"),
+      errors: [],
+      warnings: [
+        { type: "reference", severity: "warning", message: "Broken reference at body:1:link: /_content/box/notes/missing.doc.card does not exist" },
+      ],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 
-  // doctest:L138
-  t.check(result.results[0]!.warnings[0]!.type, "reference");
-
-  // doctest:L141
-  t.check(result.results[0]!.warnings[0]!.message, "Broken reference at body:1:link: /_content/box/notes/missing.doc.card does not exist");
 });
 
 // A display-form path written into an inline link, or a reference-style link
@@ -158,10 +176,19 @@ void test("A display-form path written into an inline link, or a reference-style
     [box.path("_content/box/notes/Inline.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check([inlineResult.totalErrors, inlineResult.totalWarnings], [
-    1,
-    0,
-  ]);
+  t.check(inlineResult, {
+    results: [{
+      path: box.path("_content/box/notes/Inline.doc.card"),
+      errors: [
+        { type: "display-path", severity: "error", message: "Display-form path at body:1:link: `Config:box.json` is the boxholder's display form; write `/_config/box.json`" },
+      ],
+      warnings: [],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 0,
+  });
 
   // doctest:L164
   t.check(inlineResult.results[0]!.errors[0]!.message, "Display-form path at body:1:link: `Config:box.json` is the boxholder's display form; write `/_config/box.json`");
@@ -176,7 +203,20 @@ void test("A display-form path written into an inline link, or a reference-style
     [box2.path("_content/box/notes/RefDef.doc.card")],
     { boxRoot: box2.root, ctx },
   );
-  t.check(refDefResult.results[0]!.errors[0]!.message, "Display-form path at body:3:ref-def: `Bookkeeping:jobs/x.job.card` is the boxholder's display form; write `/_bookkeeping/jobs/x.job.card`");
+  t.check(refDefResult, {
+    results: [{
+      path: box2.path("_content/box/notes/RefDef.doc.card"),
+      errors: [
+        { type: "display-path", severity: "error", message: "Display-form path at body:3:ref-def: `Bookkeeping:jobs/x.job.card` is the boxholder's display form; write `/_bookkeeping/jobs/x.job.card`" },
+      ],
+      warnings: [],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 0,
+  });
+
 });
 
 // Links that resolve are clean, and links that name nothing in the box —
@@ -199,13 +239,20 @@ void test("Links that resolve are clean, and links that name nothing in the box 
     [box.path("_content/box/notes/Plan.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check([result.totalErrors, result.totalWarnings], [
-    0,
-    1,
-  ]);
+  t.check(result, {
+    results: [{
+      path: box.path("_content/box/notes/Plan.doc.card"),
+      errors: [],
+      warnings: [
+        { type: "canonical", severity: "warning", message: "Non-canonical ref at body:1:link: Brief.doc.card → /_content/box/notes/Brief.doc.card" },
+      ],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 
-  // doctest:L205
-  t.check(result.results[0]!.warnings[0]!.message, "Non-canonical ref at body:1:link: Brief.doc.card → /_content/box/notes/Brief.doc.card");
 });
 
 // The one warning is the relative-ref deprecation notice (Track B) for the
@@ -230,10 +277,20 @@ void test("The one warning is the relative-ref deprecation notice (Track B) for 
     [box.path("_content/box/notes/Note.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalWarnings, 1);
+  t.check(result, {
+    results: [{
+      path: box.path("_content/box/notes/Note.doc.card"),
+      errors: [],
+      warnings: [
+        { type: "reference", severity: "warning", message: "Broken reference at body:1:source.ref: attach/missing.jpg does not exist" },
+      ],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 
-  // doctest:L234
-  await t.checkText(result.results[0]!.warnings[0]!.message.includes("attach/missing.jpg does not exist"), "true");
 });
 
 // ## A card whose type has no registered schema warns, never errors
@@ -252,10 +309,20 @@ void test("There's no XML loader fallback anymore:", async (t) => {
     [box.path("_content/inbox/Note.unknowntype.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
+  t.check(result, {
+    results: [{
+      path: box.path("_content/inbox/Note.unknowntype.card"),
+      errors: [],
+      warnings: [
+        { type: "schema", severity: "warning", message: "no schema registered for card type \"unknowntype\" — card not validated" },
+      ],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 
-  // doctest:L257
-  t.check(result.results[0]!.warnings[0]!.message, "no schema registered for card type \"unknowntype\" — card not validated");
 });
 
 // A `.card` with no frontmatter block at all is malformed (every card is
@@ -269,13 +336,20 @@ void test("A .card with no frontmatter block at all is malformed (every card is 
     [box.path("_content/inbox/Broken.doc.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
+  t.check(result, {
+    results: [{
+      path: box.path("_content/inbox/Broken.doc.card"),
+      errors: [],
+      warnings: [
+        { type: "schema", severity: "warning", message: "card has no frontmatter block" },
+      ],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 
-  // doctest:L275
-  t.check(result.totalWarnings, 1);
-
-  // doctest:L278
-  t.check(result.results[0]!.warnings[0]!.message, "card has no frontmatter block");
 });
 
 // ## An attach-only commentary card with valid anchors lints clean
@@ -293,7 +367,18 @@ void test("Commentary is attach-only — it carries no target field; bare {% sou
     [box.path("_content/store/review/Plan.attach/Plan.commentary.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
+  t.check(result, {
+    results: [{
+      path: box.path("_content/store/review/Plan.attach/Plan.commentary.card"),
+      errors: [],
+      warnings: [],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 0,
+  });
+
 });
 
 // ## A leftover target field on a commentary card is a warning, not an error
@@ -312,10 +397,20 @@ void test("Commentary no longer has defaultHref/defaultRef/targets.", async (t) 
     [box.path("_content/store/review/Stale.commentary.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
+  t.check(result, {
+    results: [{
+      path: box.path("_content/store/review/Stale.commentary.card"),
+      errors: [],
+      warnings: [
+        { type: "schema", severity: "warning", message: "Unknown frontmatter key \"defaultHref\" — not declared by the commentary schema; it is ignored on load and should be removed" },
+      ],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 1,
+  });
 
-  // doctest:L320
-  await t.checkText(result.results[0]!.warnings.some(w => w.message.includes('Unknown frontmatter key "defaultHref"')), "true");
 });
 
 // ## Extfile cards validate their href and stamped version
@@ -335,7 +430,18 @@ void test("An extfile card's href must be a file: URL, and a present version mus
     [box.path("_content/store/review/Good.extfile.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 0);
+  t.check(result, {
+    results: [{
+      path: box.path("_content/store/review/Good.extfile.card"),
+      errors: [],
+      warnings: [],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 0,
+    totalErrors: 0,
+    totalWarnings: 0,
+  });
+
 });
 
 // A non-`file:` href is an error:
@@ -350,7 +456,20 @@ void test("A non-file: href is an error:", async (t) => {
     [box.path("_content/store/review/BadHref.extfile.card")],
     { boxRoot: box.root, ctx },
   );
-  await t.checkText(result.results[0]!.errors[0]!.message.includes("must be a file: URL"), "true");
+  t.check(result, {
+    results: [{
+      path: box.path("_content/store/review/BadHref.extfile.card"),
+      errors: [
+        { type: "validation", severity: "error", message: "extfile href must be a file: URL (got \"https://example.com/foo.ts\")" },
+      ],
+      warnings: [],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 0,
+  });
+
 });
 
 // A malformed `version` (no `sha256:` marker) is an error:
@@ -365,7 +484,20 @@ void test("A malformed version (no sha256: marker) is an error:", async (t) => {
     [box.path("_content/store/review/BadVer.extfile.card")],
     { boxRoot: box.root, ctx },
   );
-  await t.checkText(result.results[0]!.errors[0]!.message.includes("sha256:<hex> marker"), "true");
+  t.check(result, {
+    results: [{
+      path: box.path("_content/store/review/BadVer.extfile.card"),
+      errors: [
+        { type: "validation", severity: "error", message: "extfile version must contain a sha256:<hex> marker (got \"not-a-hash\")" },
+      ],
+      warnings: [],
+    }],
+    filesChecked: 1,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 0,
+  });
+
 });
 
 // ## A schema's `validate` hook is dispatched generically by type
@@ -389,11 +521,19 @@ void test("card-lint no longer hardcodes which types get extra validation — it
     [box.path("_content/store/Bad.gadget.card"), box.path("_content/store/Ok.gadget.card")],
     { boxRoot: box.root, ctx },
   );
-  t.check(result.totalErrors, 1);
+  t.check(result, {
+    results: [
+      {
+        path: box.path("_content/store/Bad.gadget.card"),
+        errors: [{ type: "validation", severity: "error", message: "gadget mode must not be \"forbidden\"" }],
+        warnings: [],
+      },
+      { path: box.path("_content/store/Ok.gadget.card"), errors: [], warnings: [] },
+    ],
+    filesChecked: 2,
+    filesWithErrors: 1,
+    totalErrors: 1,
+    totalWarnings: 0,
+  });
 
-  // doctest:L401
-  t.check(result.results[0]!.errors[0]!.message, "gadget mode must not be \"forbidden\"");
-
-  // doctest:L404
-  await t.checkText(result.results[1]!.errors.length, "0");
 });

@@ -36,7 +36,6 @@ async function waitUntilIdle(actor: { getSnapshot(): { matches(state: "idle"): b
 // the queue finishes, with the error's message kept as the reason the chunk
 // shows.
 void test("The middle segment rejects from the real machine's ttsClient.speak boundary.", async (t) => {
-  // doctest:L40
   const ttsClient: SpeechClient = {
     async speak(text, options) {
       options?.onPlaybackStarted?.();
@@ -65,13 +64,11 @@ void test("The middle segment rejects from the real machine's ttsClient.speak bo
     "1": "failed",
   });
 
-  // doctest:L67
   t.check(actor.getSnapshot().context.segmentFailures, {
     "1": "media playback rejected",
   });
 
-  // doctest:L70
-  await t.checkText(playbackErrors.length, "1");
+  t.check(playbackErrors, [["[speech] segment failed, skipping:", new Error("media playback rejected")]]);
 });
 
 // ## Waiting is distinct from actual playback
@@ -79,7 +76,6 @@ void test("The middle segment rejects from the real machine's ttsClient.speak bo
 // Generation can take time. The border must stay in `waiting` until the media
 // element's playback callback fires, then change to `playing`.
 void test("Generation can take time.", async (t) => {
-  // doctest:L80
   let playbackStarted: (() => void) | undefined;
   let finishPlayback = () => {};
   const ttsClient: SpeechClient = {
@@ -104,13 +100,11 @@ void test("Generation can take time.", async (t) => {
     ttsClient,
   });
   await Promise.resolve();
-  t.check(actor.getSnapshot().context.segmentStates[0], "waiting");
+  t.check(actor.getSnapshot().context.segmentStates, { "0": "waiting" });
 
-  // doctest:L107
   playbackStarted?.();
-  t.check(actor.getSnapshot().context.segmentStates[0], "playing");
+  t.check(actor.getSnapshot().context.segmentStates, { "0": "playing" });
 
-  // doctest:L111
   finishPlayback();
   await waitUntilIdle(actor);
   t.check(actor.getSnapshot().context.segmentStates, {});

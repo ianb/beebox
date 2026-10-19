@@ -6,7 +6,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import { scanBoxGrowth } from "../../src/core/box-growth/scan.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
@@ -14,8 +13,6 @@ import { makeTmpBox } from "../helpers/test-helpers.js";
 // A native traversal that times out retains every complete type/path pair it
 // already streamed.
 void test("A native traversal that times out retains every complete type/path pair it al...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await partialBox.cleanup();
@@ -39,7 +36,20 @@ void test("A native traversal that times out retains every complete type/path pa
     maxDurationMs: 500,
     findCommand: fakeFind,
   });
-  print(`${partialMeasurement.complete}:${partialMeasurement.counts.directories}:${partialMeasurement.counts.files}`);
-  await t.checkText(out.with(print(`${partialMeasurement.largestSubtrees[0]?.path}:${partialMeasurement.filesystemError}`)), `false:2:1
-box/inbox/email:Box growth scan exceeded its time budget`);
+  t.check(
+    {
+      complete: partialMeasurement.complete,
+      directories: partialMeasurement.counts.directories,
+      files: partialMeasurement.counts.files,
+      largest: partialMeasurement.largestSubtrees[0]?.path,
+      filesystemError: partialMeasurement.filesystemError,
+    },
+    {
+      complete: false,
+      directories: 2,
+      files: 1,
+      largest: "box/inbox/email",
+      filesystemError: "Box growth scan exceeded its time budget",
+    },
+  );
 });

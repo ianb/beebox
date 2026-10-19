@@ -3,9 +3,9 @@
 // Helpers for the `upload` command: content-hash dedup ledger and streaming
 // SHA-256.
 
+import * as path from "node:path";
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import {
   emptyLedger,
   findEntry,
@@ -19,7 +19,6 @@ import {
   type UploadLedgerEntry,
 } from "../../src/core/upload-helpers.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
-import { toError } from "../../src/shared/error-guards.js";
 
 function entry(hash: string, opts?: Partial<UploadLedgerEntry>): UploadLedgerEntry {
   return {
@@ -32,28 +31,26 @@ function entry(hash: string, opts?: Partial<UploadLedgerEntry>): UploadLedgerEnt
   };
 }
 
-async function caught<T>(fn: () => Promise<T>): Promise<Error | null> {
+async function caught<T>(fn: () => Promise<T>): Promise<unknown> {
   try {
     await fn();
     return null;
   } catch (e) {
-    return toError(e);
+    return e;
   }
 }
 
 // ## addEntry and findEntry
 void test("addEntry and findEntry", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L45
   const l = emptyLedger();
   addEntry(l, entry("aaa"));
   addEntry(l, entry("bbb", { sessionRelDir: "_content/inbox/scan-x" }));
-  print(`count=${l.entries.length}`);
-  print(`found bbb session: ${findEntry(l, "bbb")!.sessionRelDir}`);
-  await t.checkText(out.with(print(`found ccc: ${findEntry(l, "ccc") === undefined}`)), `count=2
-found bbb session: _content/inbox/scan-x
-found ccc: true`);
+  t.check(l.entries, [
+    entry("aaa"),
+    entry("bbb", { sessionRelDir: "_content/inbox/scan-x" }),
+  ]);
+  t.check(findEntry(l, "bbb"), entry("bbb", { sessionRelDir: "_content/inbox/scan-x" }));
+  t.check(findEntry(l, "ccc"), undefined);
 });
 
 // ## loadLedger returns empty when the file is absent
@@ -76,8 +73,6 @@ void test("loadLedger returns empty when the file is absent", async (t) => {
 
 // ## Roundtrip save then load
 void test("Roundtrip save then load", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box2.cleanup();
@@ -85,17 +80,14 @@ void test("Roundtrip save then load", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L73
   const box2 = await makeTmpBox();
   const l2 = emptyLedger();
   addEntry(l2, entry("deadbeef", { kind: "scan", sessionRelDir: "_content/inbox/scan-y" }));
   await saveLedger(box2.root, l2);
-  const reloaded = await loadLedger(box2.root);
-  print(`entries=${reloaded.entries.length}`);
-  print(`hash=${reloaded.entries[0]?.hash}`);
-  await t.checkText(out.with(print(`session=${reloaded.entries[0]?.sessionRelDir}`)), `entries=1
-hash=deadbeef
-session=_content/inbox/scan-y`);
+  t.check(await loadLedger(box2.root), {
+    version: 1,
+    entries: [entry("deadbeef", { kind: "scan", sessionRelDir: "_content/inbox/scan-y" })],
+  });
 });
 
 // ## Bad ledger format is rejected loudly
@@ -115,7 +107,12 @@ void test("If somebody hand-edits the file into something other than the expecte
   const box3 = await makeTmpBox();
   await box3.write(LEDGER_REL_PATH, JSON.stringify({ version: 999, entries: [] }));
   const err = await caught(() => loadLedger(box3.root));
-  await t.checkText(err !== null && err.message.includes("not in the expected format"), "true");
+  const ledgerPath = path.join(box3.root, LEDGER_REL_PATH);
+  t.check(err, {
+    name: "MalformedLedgerError",
+    message: `Ledger at ${ledgerPath} is not in the expected format (version: 1, entries: [...])`,
+    ledgerPath,
+  });
 });
 
 // ## sha256File computes a known digest
@@ -150,7 +147,10 @@ void test("JPEGs from a flatbed scanner come out as <prefix>NNN.jpg.", async (t)
     "/in/Scan2026-04-29_154704_001.jpg",
     "/in/Scan2026-04-29_154704_002.jpg",
   ]);
-  t.check(groups.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | "), "image-batch:Scan2026-04-29_153807=4 | image-batch:Scan2026-04-29_154704=3");
+  t.check(groups, [
+    { kind: "image-batch", files: ["/in/Scan2026-04-29_153807_000.jpg", "/in/Scan2026-04-29_153807_001.jpg", "/in/Scan2026-04-29_153807_002.webp", "/in/Scan2026-04-29_153807_003.avif"], label: "Scan2026-04-29_153807" },
+    { kind: "image-batch", files: ["/in/Scan2026-04-29_154704_000.jpg", "/in/Scan2026-04-29_154704_001.jpg", "/in/Scan2026-04-29_154704_002.jpg"], label: "Scan2026-04-29_154704" },
+  ]);
 });
 
 // ## groupScanFiles: each PDF is its own group
@@ -162,7 +162,11 @@ void test("groupScanFiles: each PDF is its own group", async (t) => {
     "/in/photos_000.jpg",
     "/in/photos_001.jpg",
   ]);
-  t.check(groups2.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | "), "pdf:letter=1 | pdf:will=1 | image-batch:photos=2");
+  t.check(groups2, [
+    { kind: "pdf", files: ["/in/letter.pdf"], label: "letter" },
+    { kind: "pdf", files: ["/in/will.pdf"], label: "will" },
+    { kind: "image-batch", files: ["/in/photos_000.jpg", "/in/photos_001.jpg"], label: "photos" },
+  ]);
 });
 
 // ## groupScanFiles: unmatched images bundle together
@@ -177,7 +181,10 @@ void test("Image filenames without a NNN.ext tail (no underscore-digits suffix) 
     "/in/Scan2026-04-29_154947_000.jpg",
     "/in/Scan2026-04-29_154947_001.jpg",
   ]);
-  t.check(groups3.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | "), "image-batch:Scan2026-04-29_154947=2 | image-batch:(loose images)=2");
+  t.check(groups3, [
+    { kind: "image-batch", files: ["/in/Scan2026-04-29_154947_000.jpg", "/in/Scan2026-04-29_154947_001.jpg"], label: "Scan2026-04-29_154947" },
+    { kind: "image-batch", files: ["/in/holiday.jpg", "/in/random.png"], label: "(loose images)" },
+  ]);
 });
 
 // The separator before the digit suffix can be either `_` or `-` —
@@ -190,14 +197,20 @@ void test("The separator before the digit suffix can be either  or - — photo-0
     "/in/photo-0002.jpg",
     "/in/photo-0003.jpg",
   ]);
-  t.check(groups5.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | "), "image-batch:photo=3");
+  t.check(groups5, [
+    { kind: "image-batch", files: ["/in/photo-0001.jpg", "/in/photo-0002.jpg", "/in/photo-0003.jpg"], label: "photo" },
+  ]);
 });
 
 // ## groupScanFiles: rejects unsupported types
 void test("groupScanFiles: rejects unsupported types", async (t) => {
   // doctest:L189
   const err = await caught(async () => groupScanFiles(["/in/notes.txt"]));
-  await t.checkText(err !== null && err.message.startsWith("Unsupported file type(s):"), "true");
+  t.check(err, {
+    name: "UnsupportedFileTypeError",
+    message: "Unsupported file type(s): notes.txt. Supported: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif",
+    names: "notes.txt",
+  });
 });
 
 // ## Concurrent ledger writers don't lose each other's entries
@@ -223,10 +236,9 @@ void test("The ledger is a read-modify-write, and two writers genuinely race:", 
     )
   );
   const after = await loadLedger(boxL.root);
-  t.check({ count: after.entries.length, sample: findEntry(after, "hash-7")?.hash }, {
-    count: 10,
-    sample: "hash-7",
-  });
+  // Order depends on lock acquisition, so compare the sorted hashes.
+  t.check(after.entries.map((e) => e.hash).toSorted(), Array.from({ length: 10 }, (_, i) => `hash-${String(i)}`));
+  t.check(findEntry(after, "hash-7"), entry("hash-7"));
 
   // The mutation runs against the ledger as it is on disk *now*, never a caller's
   // stale copy — so a dedup check inside the mutation sees the other writers' work:
@@ -235,5 +247,5 @@ void test("The ledger is a read-modify-write, and two writers genuinely race:", 
   await updateLedger(boxL.root, (ledger) => {
     if (findEntry(ledger, "hash-3") === undefined) addEntry(ledger, entry("hash-3"));
   });
-  await t.checkText((await loadLedger(boxL.root)).entries.length, "10");
+  t.check((await loadLedger(boxL.root)).entries.map((e) => e.hash).toSorted(), Array.from({ length: 10 }, (_, i) => `hash-${String(i)}`));
 });

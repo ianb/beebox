@@ -91,18 +91,9 @@ void test("An entry with no usable string word is skipped, not fatal", async (t)
 
 // ## Malformed shape at any level returns an empty list
 void test("Malformed shape at any level returns an empty list", async (t) => {
-  // doctest:L76
-  await t.checkText(extractFinalWords(null).length, "0");
-
-  // doctest:L79
-  await t.checkText(extractFinalWords({}).length, "0");
-
-  // doctest:L82
-  await t.checkText(extractFinalWords({ channel: {} }).length, "0");
-
-  // doctest:L85
-  await t.checkText(extractFinalWords({ channel: { alternatives: [] } }).length, "0");
-
-  // doctest:L88
-  await t.checkText(extractFinalWords({ channel: { alternatives: [{ words: "not-an-array" }] } }).length, "0");
+  t.check(extractFinalWords(null), []);
+  t.check(extractFinalWords({}), []);
+  t.check(extractFinalWords({ channel: {} }), []);
+  t.check(extractFinalWords({ channel: { alternatives: [] } }), []);
+  t.check(extractFinalWords({ channel: { alternatives: [{ words: "not-an-array" }] } }), []);
 });

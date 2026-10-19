@@ -60,7 +60,7 @@ void test("line 20", async (t) => {
     codexEnv = options.env ?? {};
     return { id: null, run: async () => ({ sessionId: "fake-session", output: "done", resultText: "done", durationMs: 1, status: "completed", error: null, usage: null, items: [] }) };
   });
-  t.check(result.success, true);
+  t.check(result, { output: "done", resultText: "done", exitCode: 0, sessionId: "fake-session", structuredOutput: undefined, success: true });
 
   // doctest:L50
   t.check([codexEnv.BBX_TRIAGE_RUN_ID, codexEnv.BBX_TRIAGE_RESEARCH, codexEnv.BBX_SPAWN_PROFILE, codexEnv.BBX_HUB_SECRET ?? null, process.env.BBX_TRIAGE_RUN_ID], [
@@ -72,7 +72,7 @@ void test("line 20", async (t) => {
   ]);
 
   // doctest:L53
-  await t.checkText(codexEnv.CODEX_HOME === process.env.CODEX_HOME, "true");
+  t.check(codexEnv.CODEX_HOME, process.env.CODEX_HOME);
 
   // doctest:L56
   let defaultEnv: unknown = "unset";
@@ -80,7 +80,7 @@ void test("line 20", async (t) => {
     defaultEnv = options.env;
     return { id: null, run: async () => ({ sessionId: "fake-default", output: "done", resultText: "done", durationMs: 1, status: "completed", error: null, usage: null, items: [] }) };
   });
-  await t.checkText(defaultEnv === undefined, "true");
+  t.check(defaultEnv, undefined);
 
   // doctest:L64
   const next = await buildScriptEnv(box.root);

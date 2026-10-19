@@ -30,19 +30,9 @@ void test("Two fragments that embed the same 16-word passage (in different surro
     { name: "frag-a", text: `Alpha beta ${shared}, gamma!` },
     { name: "frag-b", text: `Delta epsilon ${shared}; zeta.` },
   ]);
-  await t.checkText(findings.length, "1");
-
-  // doctest:L37
-  t.check(findings[0]?.a, "frag-a");
-
-  // doctest:L40
-  t.check(findings[0]?.b, "frag-b");
-
-  // doctest:L43
-  t.check(findings[0]?.words, 16);
-
-  // doctest:L46
-  t.check(findings[0]?.text, "the quick brown fox jumps over the lazy dog and then runs away very fast indeed");
+  t.check(findings, [
+    { a: "frag-a", b: "frag-b", words: 16, text: "the quick brown fox jumps over the lazy dog and then runs away very fast indeed" },
+  ]);
 });
 
 // ## An overlap shorter than 12 words is not reported
@@ -76,10 +66,7 @@ void test("A run of A's shingles only counts as one span when it is a single con
     { name: "a", text: `alpha ${passage} omega` },
     { name: "b", text: `beta ${passage} psi` },
   ]);
-  await t.checkText(contiguous.length, "1");
-
-  // doctest:L81
-  t.check(contiguous[0]?.words, 12);
+  t.check(contiguous, [{ a: "a", b: "b", words: 12, text: passage }]);
 
   // doctest:L84
   // (b) b contains each of a's five shingles, but as isolated passages separated

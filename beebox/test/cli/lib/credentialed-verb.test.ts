@@ -13,7 +13,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer, TEST_SLUG } from "../../helpers/test-route-server.js";
@@ -33,7 +32,7 @@ import {
 import { trackGmailThread, type TrackGmailThreadResult } from "../../../src/connectors/gmail/track.js";
 import { localCalendarService } from "../../../src/cli/commands/calendar.js";
 import { localGmailService } from "../../../src/cli/commands/connector.js";
-import { dispatchCredentialed, refusalFor, type VerbRefusal } from "../../../src/cli/lib/credentialed-verb.js";
+import { dispatchCredentialed, refusalFor, } from "../../../src/cli/lib/credentialed-verb.js";
 
 const SHELL_VARS = ["BBX_SPAWN_PROFILE", "BBX_SERVER_URL", "BBX_BOX_NAME", "BBX_AGENT_TOKEN"];
 const savedShell = Object.fromEntries(SHELL_VARS.map((name) => [name, process.env[name]]));
@@ -123,22 +122,18 @@ function gwsVerb(args: string[]) {
   });
 }
 
-/** "KIND | fix | message" — the three things a relayed refusal has to carry. */
-function refusalLine(result: { ok: boolean; error?: VerbRefusal }): string {
-  if (result.ok || result.error === undefined) return "no refusal";
-  return `${result.error.kind} | ${result.error.fix} | ${result.error.message}`;
-}
-
 // ## A transport failure is not a grant refusal
 //
 // The server being down is a machine problem. An HTTP refusal still preserves
 // the server's typed code and boxholder attribution.
 void test("The server being down is a machine problem.", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L137
   const transport = refusalFor(new TypeError("fetch failed"), { remote: true });
-  await t.checkText(out.with(print(`${transport.kind} | ${transport.fix} | ${transport.message}`)), "BOX_UNREACHABLE | machine | The box's server could not be reached: fetch failed");
+  t.check(transport, {
+    kind: "BOX_UNREACHABLE",
+    message: "The box's server could not be reached: fetch failed",
+    fix: "machine",
+  });
 });
 
 // ## An agent's shell reaches all three verbs through its own box's server
@@ -174,21 +169,20 @@ void test("No token file is involved:", async (t) => {
 
   // doctest:L166
   const calendars = await calendarsVerb(ctx.boxRoot);
-  t.check(
-    calendars.ok
-      ? calendars.value.map((cal) => ({ id: cal.id, syncing: cal.syncing }))
-      : calendars.error,
-    [
-    {
-      id: "avery@example.com",
-      syncing: true,
-    },
-    {
-      id: "team@example.com",
-      syncing: false,
-    },
-  ],
-  );
+  t.check(calendars, {
+    ok: true,
+    value: [
+      {
+        id: "avery@example.com",
+        summary: "Avery",
+        accessRole: "owner",
+        primary: true,
+        syncing: true,
+        resolvedId: "avery@example.com",
+      },
+      { id: "team@example.com", summary: "Team", accessRole: "reader", syncing: false },
+    ],
+  });
 
   // The primary calendar reads as syncing because an unconfigured box syncs
   // `primary`, and the listing resolves that alias rather than showing the box as
@@ -196,32 +190,56 @@ void test("No token file is involved:", async (t) => {
 
   // doctest:L178
   const tracked = await trackVerb(ctx.boxRoot, "thread-1");
-  t.check(tracked.ok ? { cardPath: tracked.value.cardPath } : tracked.error, {
-    cardPath: "_content/inbox/email/thread-The_roof-thread-1.email-thread.card",
+  t.check(tracked, {
+    ok: true,
+    value: {
+      cardPath: "_content/inbox/email/thread-The_roof-thread-1.email-thread.card",
+      created: [
+        "_content/inbox/email/thread-The_roof-thread-1.attach/msg-001.email-message.card",
+        "_content/inbox/email/thread-The_roof-thread-1.attach/msg-001.attach/msg-001.body.txt",
+        "_content/inbox/email/thread-The_roof-thread-1.email-thread.card",
+      ],
+      updated: [],
+    },
   });
 
   // The card is a real card in the box, written and committed by the server.
 
   // doctest:L186
-  await t.checkText((await ctx.read("_content/inbox/email/thread-The_roof-thread-1.email-thread.card")).includes("thread-id: thread-1"), "true");
+  t.checkText(await ctx.read("_content/inbox/email/thread-The_roof-thread-1.email-thread.card"), `---
+email:
+  thread-id: thread-1
+  subject: The roof
+  participants:
+    - sender@example.com
+    - box@example.com
+  date-range:
+    start: 2026-08-01T15:00:00.000Z
+    end: 2026-08-01T15:00:00.000Z
+  labels:
+    - INBOX
+messages:
+  - ref: attach/msg-001.email-message.card
+---`);
 
   // `gws` hands back the child's own streams and exit code rather than a rendered
   // sentence, so the caller reads exactly what the upstream CLI said.
 
   // doctest:L194
   const ran = await gwsVerb(["gmail", "messages", "list"]);
-  t.check(ran.ok ? ran.value : ran.error, {
-    exitCode: 0,
-    stdout: `{"ran":"gmail messages list"}
-`,
-    stderr: "",
+  t.check(ran, {
+    ok: true,
+    value: { exitCode: 0, stdout: "{\"ran\":\"gmail messages list\"}\n", stderr: "" },
   });
 
   // A command outside the read-only vocabulary is refused before anything is minted,
   // and the refusal is the caller's to fix — not the box's state.
 
   // doctest:L203
-  t.check(refusalLine(await gwsVerb(["gmail", "messages", "delete"])), "BAD_REQUEST | caller | Rejected non-read-only gws command: gmail messages delete");
+  t.check(await gwsVerb(["gmail", "messages", "delete"]), {
+    ok: false,
+    error: { kind: "BAD_REQUEST", message: "Rejected non-read-only gws command: gmail messages delete", fix: "caller" },
+  });
 });
 
 // ## With nothing injected, each family refuses in the boxholder's two places
@@ -249,10 +267,24 @@ void test("This box has no fakes, so the server meets the same two gates a produ
   });
 
   // doctest:L227
-  t.check(refusalLine(await calendarsVerb(ctx.boxRoot)), "FORBIDDEN | boxholder | Calendar is not enabled for this box. Set `googleServices.calendar: true` in `_config/box.json` (you may do this when the boxholder asks for Calendar), or enable it in box settings.");
+  t.check(await calendarsVerb(ctx.boxRoot), {
+    ok: false,
+    error: {
+      kind: "FORBIDDEN",
+      message: "Calendar is not enabled for this box. Set `googleServices.calendar: true` in `_config/box.json` (you may do this when the boxholder asks for Calendar), or enable it in box settings.",
+      fix: "boxholder",
+    },
+  });
 
   // doctest:L232
-  t.check(refusalLine(await trackVerb(ctx.boxRoot, "thread-1")), "FORBIDDEN | boxholder | Gmail is not enabled for this box. Set `googleServices.gmail: true` in `_config/box.json` (you may do this when the boxholder asks for Gmail), or enable it in box settings.");
+  t.check(await trackVerb(ctx.boxRoot, "thread-1"), {
+    ok: false,
+    error: {
+      kind: "FORBIDDEN",
+      message: "Gmail is not enabled for this box. Set `googleServices.gmail: true` in `_config/box.json` (you may do this when the boxholder asks for Gmail), or enable it in box settings.",
+      fix: "boxholder",
+    },
+  });
 
   // With both switched on and no token record on this host, it is the auth gap — a
   // different sentence, still the boxholder's, and the one the agent needs to relay
@@ -264,16 +296,20 @@ void test("This box has no fakes, so the server meets the same two gates a produ
     join(ctx.boxRoot, "_config/box.json"),
     JSON.stringify({ googleServices: { calendar: true, gmail: true } }),
   );
+  const gap = {
+    ok: false,
+    error: {
+      kind: "PRECONDITION_FAILED",
+      message: "Google auth unavailable: No secret named \"google-oauth-client-id\" exists on this machine. It can be declared (bbx secrets declare google-oauth-client-id), but only the boxholder can supply its value.",
+      fix: "boxholder",
+    },
+  } as const;
   const gaps = [
     await calendarsVerb(ctx.boxRoot),
     await trackVerb(ctx.boxRoot, "thread-1"),
     await gwsVerb(["gmail", "messages", "list"]),
   ];
-  t.check(gaps.map((r) => (r.ok ? "unexpectedly succeeded" : `${r.error.kind}/${r.error.fix}`)), [
-    "PRECONDITION_FAILED/boxholder",
-    "PRECONDITION_FAILED/boxholder",
-    "PRECONDITION_FAILED/boxholder",
-  ]);
+  t.check(gaps, [gap, gap, gap]);
 
   // The `tooling` profile takes the in-process path instead, and meets the same
   // gates in this process — the marker decides where the work runs, never what the
@@ -282,8 +318,5 @@ void test("This box has no fakes, so the server meets the same two gates a produ
   // doctest:L260
   setEnv({ BBX_SPAWN_PROFILE: "tooling" });
   const local = await calendarsVerb(ctx.boxRoot);
-  t.check(local.ok ? "unexpectedly succeeded" : { kind: local.error.kind, fix: local.error.fix }, {
-    kind: "PRECONDITION_FAILED",
-    fix: "boxholder",
-  });
+  t.check(local, gap);
 });

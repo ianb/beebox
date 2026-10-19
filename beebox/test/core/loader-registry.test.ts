@@ -28,10 +28,13 @@ const NO_SCHEMAS = new Map<string, CardSchema>();
 void test("A file with no card type gets the filename, cleaned up.", async (t) => {
   // doctest:L30
   resetLoaderRegistry();
-  t.check(summarize({ path: "_content/inbox/Meeting_Notes.doc.card" }, NO_SCHEMAS).title, "Meeting Notes");
+  t.check(summarize({ path: "_content/inbox/Meeting_Notes.doc.card" }, NO_SCHEMAS), {
+    path: "_content/inbox/Meeting_Notes.doc.card",
+    title: "Meeting Notes",
+  });
 
   // doctest:L34
-  t.check(summarize({ path: "photo-001.jpg" }, NO_SCHEMAS).title, "photo 001");
+  t.check(summarize({ path: "photo-001.jpg" }, NO_SCHEMAS), { path: "photo-001.jpg", title: "photo 001" });
 
   // `title`, `contains` and `symbol` belong to every card, so the registry reads
   // them rather than each card type remembering to.
@@ -42,7 +45,14 @@ void test("A file with no card type gets the filename, cleaned up.", async (t) =
     type: "figure",
     fields: { title: "Rotating Cube Demo", contains: "A spinning cube.", symbol: { glyph: "🧊" }, theme: { name: "paper", stock: "blue" } },
   }, NO_SCHEMAS);
-  t.check([s.type, s.title, s.contains, s.symbol?.glyph, s.cardTheme?.name, s.cardTheme?.stock].join("|"), "figure|Rotating Cube Demo|A spinning cube.|🧊|paper|blue");
+  t.check(s, {
+    path: "_content/figures/Cube.figure.card",
+    title: "Rotating Cube Demo",
+    type: "figure",
+    cardTheme: { name: "paper", stock: "blue" },
+    contains: "A spinning cube.",
+    symbol: { glyph: "🧊" },
+  });
 
   // An authored theme is carried through as authored. Theme names are an open set,
   // so a name the engine ships no palette for is still the card's explicit choice
@@ -52,33 +62,42 @@ void test("A file with no card type gets the filename, cleaned up.", async (t) =
 
   // doctest:L58
   const unknownTheme = summarize({ path: "_content/x.doc.card", type: "doc", fields: { theme: { name: "velvet" } } }, NO_SCHEMAS);
-  t.check([unknownTheme.type, unknownTheme.cardTheme], [
-    "doc",
-    {
-      name: "velvet",
-      stock: "neutral",
-    },
-  ]);
+  t.check(unknownTheme, {
+    path: "_content/x.doc.card",
+    title: "x",
+    type: "doc",
+    cardTheme: { name: "velvet", stock: "neutral" },
+  });
 
   // doctest:L62
   const malformedTheme = summarize({ path: "_content/y.doc.card", type: "doc", fields: { theme: "paper" } }, NO_SCHEMAS);
-  t.check(malformedTheme.cardTheme, {
-    name: "plain",
-    stock: "neutral",
+  t.check(malformedTheme, {
+    path: "_content/y.doc.card",
+    title: "y",
+    type: "doc",
+    cardTheme: { name: "plain", stock: "neutral" },
   });
 
   // doctest:L66
   const raw = summarize({ path: "_content/x.txt" }, NO_SCHEMAS);
-  await t.checkText(JSON.stringify([raw.type, raw.cardTheme]), "[null,null]");
+  t.check(raw, { path: "_content/x.txt", title: "x" });
 
   // A malformed symbol is dropped rather than shipped — `readCardSymbol` validates
   // before it resolves.
 
   // doctest:L75
-  t.check(summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: "🧊" } }, NO_SCHEMAS).symbol, undefined);
+  t.check(summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: "🧊" } }, NO_SCHEMAS), {
+    path: "_content/x.doc.card",
+    title: "x",
+    type: "doc",
+  });
 
   // doctest:L78
-  t.check(summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: { glyph: "  " } } }, NO_SCHEMAS).symbol, undefined);
+  t.check(summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: { glyph: "  " } } }, NO_SCHEMAS), {
+    path: "_content/x.doc.card",
+    title: "x",
+    type: "doc",
+  });
 });
 
 // ## A card type with no `summarize` gets the base
@@ -151,7 +170,13 @@ void test("A type whose title is not its filename replaces it, and hands its lis
     { path: "_content/Q.quote.card", type: "quote", fields: { type: "quote", said: "Kaito Ishikawa", body: "Measure twice." } },
     schemaMap(QuoteSchema),
   );
-  t.check([s.title, s.detail, JSON.stringify(s.attrs)].join("|"), "Kaito Ishikawa|14 characters|{\"length\":14}");
+  t.check(s, {
+    path: "_content/Q.quote.card",
+    title: "Kaito Ishikawa",
+    type: "quote",
+    detail: "14 characters",
+    attrs: { length: 14 },
+  });
 
   // ## A card that failed validation keeps the base from its filename
   //
@@ -190,18 +215,23 @@ void test("A summarize hook is typed as receiving this type's validated fields, 
   console.warn = (msg: string) => { warnings.push(msg); };
   const s = summarize({ path: "_content/Kite.image.card", type: "image", fields: { type: "image", status: 7 } }, schemaMap(ImageSchema));
   console.warn = original;
-  await t.checkText(JSON.stringify([s.title, s.detail, calls.length]), "[\"Kite\",null,0]");
+  t.check([s, calls], [{ path: "_content/Kite.image.card", title: "Kite", type: "image" }, []]);
 
   // The fall back is visible, not silent: whoever called `summarize` that way gets
   // told which field was wrong.
 
   // doctest:L193
-  t.check(warnings[0], "summarize() was handed unvalidated \"image\" fields for _content/Kite.image.card; using the base summary:");
+  t.check(warnings, ["summarize() was handed unvalidated \"image\" fields for _content/Kite.image.card; using the base summary:"]);
 
   // Validated fields reach the hook exactly as before.
 
   // doctest:L200
-  t.check(summarize({ path: "_content/Kite.image.card", type: "image", fields: { type: "image", status: "draft" } }, schemaMap(ImageSchema)).detail, "DRAFT");
+  t.check(summarize({ path: "_content/Kite.image.card", type: "image", fields: { type: "image", status: "draft" } }, schemaMap(ImageSchema)), {
+    path: "_content/Kite.image.card",
+    title: "Kite",
+    type: "image",
+    detail: "DRAFT",
+  });
 
   // The hook reads what the schema parsed, so a field the caller left out arrives
   // with its default, and the body (which the frontmatter schema does not know)
@@ -212,7 +242,12 @@ void test("A summarize hook is typed as receiving this type's validated fields, 
     fields: { state: z.enum(["new", "kept"]).default("new"), body: body(z.string()) },
     summarize: (card, base) => ({ ...base, detail: `${card.state}: ${card.body}` }),
   });
-  t.check(summarize({ path: "_content/Kite.note.card", type: "note", fields: { type: "note", body: "string is frayed" } }, schemaMap(NoteSchema)).detail, "new: string is frayed");
+  t.check(summarize({ path: "_content/Kite.note.card", type: "note", fields: { type: "note", body: "string is frayed" } }, schemaMap(NoteSchema)), {
+    path: "_content/Kite.note.card",
+    title: "Kite",
+    type: "note",
+    detail: "new: string is frayed",
+  });
 });
 
 // ## A `summarize` that throws is a bug in that schema, not a lost row
@@ -228,13 +263,10 @@ void test("A `summarize` that throws is a bug in that schema, not a lost row", a
   console.warn = (msg: string) => { warnings.push(msg); };
   const s = summarize({ path: "_content/Thing.bad.card", type: "bad", fields: { type: "bad", n: 1 } }, schemaMap(BadSchema));
   console.warn = original;
-  t.check(s.title, "Thing");
-
-  // doctest:L233
-  await t.checkText(warnings.length, "1");
+  t.check(s, { path: "_content/Thing.bad.card", title: "Thing", type: "bad" });
 
   // doctest:L238
-  t.check(warnings[0], "summarize() for card type \"bad\" failed on _content/Thing.bad.card; using the base summary:");
+  t.check(warnings, ["summarize() for card type \"bad\" failed on _content/Thing.bad.card; using the base summary:"]);
 });
 
 // ## An empty title falls back to the base title
@@ -248,7 +280,12 @@ void test("A blank title renders a blank row; the base title always says somethi
     summarize: (_card, base) => ({ ...base, title: "   ", detail: "still here" }),
   });
   const s = summarize({ path: "_content/Some_Card.empty.card", type: "empty", fields: { type: "empty", n: 1 } }, schemaMap(EmptySchema));
-  t.check([s.title, s.detail].join("|"), "Some Card|still here");
+  t.check(s, {
+    path: "_content/Some_Card.empty.card",
+    title: "Some Card",
+    type: "empty",
+    detail: "still here",
+  });
 });
 
 // ## Path loaders still answer for non-card files
@@ -261,7 +298,7 @@ void test("Cards never reach these — their type's schema answers for them.", a
     (p: string) => p.endsWith(".md"),
     (raw) => ({ path: raw.path, title: `md:${raw.path}`, attrs: {} }),
   );
-  t.check(summarize({ path: "store/notes/todo.md" }, NO_SCHEMAS).title, "md:store/notes/todo.md");
+  t.check(summarize({ path: "store/notes/todo.md" }, NO_SCHEMAS), { path: "store/notes/todo.md", title: "md:store/notes/todo.md", attrs: {} });
 
   // A path loader's own title wins over the filename — it computed it on purpose.
   // Two matching loaders is a registration mistake: the first wins, loudly.
@@ -274,7 +311,10 @@ void test("Cards never reach these — their type's schema answers for them.", a
   registerPathLoader((p: string) => p.endsWith(".md"), second);
   const s = summarize({ path: "store/notes/todo.md" }, NO_SCHEMAS);
   console.warn = original;
-  t.check([s.title, String(warnings.length)].join("|"), "md:store/notes/todo.md|1");
+  t.check([s, warnings], [
+    { path: "store/notes/todo.md", title: "md:store/notes/todo.md", attrs: {} },
+    ['Path loader collision for "store/notes/todo.md": 2 matches; using first registered'],
+  ]);
 });
 
 // ## A landmark is listed under its place's name
@@ -294,14 +334,11 @@ void test("A landmark card stands for its place, so its summary title is the nav
   // doctest:L294
   const { LandmarkSchema } = await import("../../src/schemas/landmark.js");
   const landmarks = schemaMap(LandmarkSchema);
-  t.check(
-    [
-      summarize({ path: "_content/chem/Intro_Chemistry.landmark.card", type: "landmark", fields: { type: "landmark", navigation: { label: "Chemistry" } } }, landmarks).title,
-      summarize({ path: "_content/inbox/Inbox.landmark.card", type: "landmark", fields: { type: "landmark" } }, landmarks).title,
-    ],
-    [
-    "Chemistry",
-    "Inbox",
-  ],
-  );
+  t.check([
+    summarize({ path: "_content/chem/Intro_Chemistry.landmark.card", type: "landmark", fields: { type: "landmark", navigation: { label: "Chemistry" } } }, landmarks),
+    summarize({ path: "_content/inbox/Inbox.landmark.card", type: "landmark", fields: { type: "landmark" } }, landmarks),
+  ], [
+    { path: "_content/chem/Intro_Chemistry.landmark.card", title: "Chemistry", type: "landmark" },
+    { path: "_content/inbox/Inbox.landmark.card", title: "Inbox", type: "landmark" },
+  ]);
 });

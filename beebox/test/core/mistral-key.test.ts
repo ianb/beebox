@@ -12,7 +12,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -32,8 +31,6 @@ async function useTempStore() {
 // Neither of the retired sources produces a key. The env var and the stray file
 // are both set here precisely to show they do nothing; only the grant does.
 void test("Neither of the retired sources produces a key.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       delete process.env.BBX_MISTRAL_API_KEY;
@@ -51,17 +48,15 @@ void test("Neither of the retired sources produces a key.", async (t) => {
   await box.write("_config/connectors/mistral.secret.json", JSON.stringify({ apiKey: "placeholder-file-key" }));
 
   // doctest:L41
-  print(`env var and stray file: ${await getMistralApiKey(box.root, { observe: true })}`);
+  t.check(await getMistralApiKey(box.root, { observe: true }), null);
 
   // doctest:L43
   await setSecret({ name: "mistral", value: "placeholder-store-key" });
-  print(`entry exists, box not granted: ${await getMistralApiKey(box.root, { observe: true })}`);
+  t.check(await getMistralApiKey(box.root, { observe: true }), null);
 
   // doctest:L46
   await grantSecret({ slug, name: "mistral", access: "server" });
-  await t.checkText(out.with(print(`store granted: ${await getMistralApiKey(box.root, { observe: true })}`)), `env var and stray file: null
-entry exists, box not granted: null
-store granted: placeholder-store-key`);
+  t.check(await getMistralApiKey(box.root, { observe: true }), "placeholder-store-key");
 
   // ## Revoking a grant actually stops the key
   //
@@ -71,7 +66,7 @@ store granted: placeholder-store-key`);
 
   // doctest:L61
   await revokeSecret({ slug, name: "mistral" });
-  await t.checkText(out.with(await getMistralApiKey(box.root, { observe: true })), "null");
+  t.check(await getMistralApiKey(box.root, { observe: true }), null);
 
   // ## No box root is no answer
   //
@@ -79,5 +74,5 @@ store granted: placeholder-store-key`);
   // is optional — has nothing to resolve against.
 
   // doctest:L72
-  await t.checkText(out.with(await getMistralApiKey(undefined, { observe: true })), "null");
+  t.check(await getMistralApiKey(undefined, { observe: true }), null);
 });

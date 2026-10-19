@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -54,7 +55,7 @@ void test("line 14", async (t) => {
   t.check(await fs.readdir(path.join(box, ".beebox/triage-runs")), []);
 
   // doctest:L32
-  await t.checkText(process.env.BBX_TRIAGE_RUN_ID === runId, "false");
+  t.check(process.env.BBX_TRIAGE_RUN_ID, not(runId));
 });
 
 void test("Cross-process reservation, expiry, and cleanup", async (t) => {
@@ -93,7 +94,7 @@ void test("Cross-process reservation, expiry, and cleanup", async (t) => {
   t.check(await childReserve(box, { env: inherited, count: 1 }), "Error");
 
   // doctest:L76
-  await t.checkText(process.env.BBX_TRIAGE_RUN_ID === before, "true");
+  t.check(process.env.BBX_TRIAGE_RUN_ID, before);
 
   // doctest:L79
   t.check(await fs.readdir(path.join(box, ".beebox/triage-runs")), []);

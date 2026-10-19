@@ -8,28 +8,22 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
-import assert from "node:assert/strict";
+import { any, isoDate } from "agent-doctest/check";
 import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
-import type { Result } from "../../../src/shared/result.js";
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { createFakeAgent } from "../fake-agent.js";
 import { parseProcedureRun } from "../../../src/schemas/procedure-run.js";
 
-/** The value of a successful result; fails the test on an error. */
-function valueOf<T, E>(result: Result<T, E>): T {
-  assert.ok(result.ok);
-  return result.value;
-}
+// Session ids and git refs in a run card are minted per run.
+const sessionId = any(String).startsWith("fake-");
+const gitRef = any(String).matches(/^[\da-f]{40}$/);
 
 // ## Retry then pass
 //
 // The judge fails the first time and passes after the agent re-runs. The step
 // completes; the retry invocation carried the `<validation-failure>` context.
 void test("The judge fails the first time and passes after the agent re-runs.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -83,24 +77,38 @@ steps:
     procedureNameOrPath: "heal",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-  print(`agent runs: ${runCount}`);
-  print(`validate calls: ${validateCount}`);
-  print(`retry got failure context: ${retryPrompt.includes("<validation-failure>")}`);
+  // The retry invocation's prompt (a large generated text) carries the failure context.
+  t.check(retryPrompt, any(String).includes("<validation-failure>"));
 
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find(f => f.includes("heal_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  print(`step status: ${run?.steps[0]?.status}`);
-  // doctest:L50
-  // doctest:L70
-  // doctest:L81
-  await t.checkText(out.with(print(`validate status: ${run?.steps[0]?.validate?.status}`)), `success: true
-agent runs: 2
-validate calls: 2
-retry got failure context: true
-step status: completed
-validate status: pass`);
+  t.check({ result, runCount, validateCount, step: run?.steps[0] }, {
+    result: {
+      ok: true,
+      value: {
+        status: "completed",
+        procedure: "heal",
+        inconclusive: [],
+      },
+    },
+    runCount: 2,
+    validateCount: 2,
+    step: {
+      id: "fixme",
+      status: "completed",
+      "started-at": isoDate(),
+      "completed-at": isoDate(),
+      run: {
+        "session-id": sessionId,
+        "git-ref": gitRef,
+      },
+      validate: {
+        status: "pass",
+        review: "Now complete.",
+      },
+    },
+  });
 });
 
 // ## Exhaust retries then fail (review gates)
@@ -108,8 +116,6 @@ validate status: pass`);
 // The judge never passes. After `MAX_REVIEW_RETRIES` retries the step fails and the
 // procedure halts.
 void test("The judge never passes.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -161,26 +167,44 @@ steps:
     procedureNameOrPath: "stuck",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-  // Initial run + MAX_REVIEW_RETRIES (1) retry = 2 agent runs.
-  print(`agent runs: ${runCount}`);
-
   const files = await box.list("_bookkeeping/output");
-  print(`after.txt (next step) exists: ${files.includes("after.txt")}`);
 
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find(f => f.includes("stuck_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  print(`broken step: ${run?.steps[0]?.status}`);
-  // doctest:L130
-  // doctest:L142
-  // doctest:L152
-  // doctest:L155
-  await t.checkText(out.with(print(`validate status: ${run?.steps[0]?.validate?.status}`)), `success: false
-agent runs: 2
-after.txt (next step) exists: false
-broken step: failed
-validate status: fail`);
+  // Initial run + MAX_REVIEW_RETRIES (1) retry = 2 agent runs; the next step never ran.
+  t.check({ result, runCount, files, steps: run?.steps }, {
+    result: {
+      ok: false,
+      error: {
+        cause: "step-failed",
+        message: "Procedure stuck failed at step: broken",
+      },
+    },
+    runCount: 2,
+    files: `_bookkeeping/output/.gitkeep
+_bookkeeping/output/try.txt`,
+    steps: [
+      {
+        id: "broken",
+        status: "failed",
+        "started-at": isoDate(),
+        "completed-at": isoDate(),
+        run: {
+          "session-id": sessionId,
+          "git-ref": gitRef,
+        },
+        validate: {
+          status: "fail",
+          review: "Never satisfied.",
+        },
+      },
+      {
+        id: "after",
+        status: "pending",
+      },
+    ],
+  });
 });
 
 // ## Review with no run agent fails (can't retry)
@@ -188,8 +212,6 @@ validate status: fail`);
 // `severity: review` on a run phase with no agent has no session to resume, so it
 // fails terminally rather than silently warning.
 void test("severity:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -234,19 +256,34 @@ steps:
     procedureNameOrPath: "noagent",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-  // Judged once; no retry attempted (nothing to resume).
-  print(`validate calls: ${validateCount}`);
 
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find(f => f.includes("noagent_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  // doctest:L198
-  // doctest:L208
-  // doctest:L218
-  await t.checkText(out.with(print(`step status: ${run?.steps[0]?.status}`)), `success: false
-validate calls: 1
-step status: failed`);
+  // Judged once; no retry attempted (nothing to resume).
+  t.check({ result, validateCount, step: run?.steps[0] }, {
+    result: {
+      ok: false,
+      error: {
+        cause: "step-failed",
+        message: "Procedure noagent failed at step: shellonly",
+      },
+    },
+    validateCount: 1,
+    step: {
+      id: "shellonly",
+      status: "failed",
+      "started-at": isoDate(),
+      "completed-at": isoDate(),
+      run: {
+        "git-ref": gitRef,
+      },
+      validate: {
+        status: "fail",
+        review: "Not met.",
+      },
+    },
+  });
 });
 
 // ## Run shells run once across retries
@@ -254,8 +291,6 @@ step status: failed`);
 // The run phase has an agent and a shell. On a review-retry only the agent re-runs;
 // the shell (which appends a line) runs exactly once.
 void test("The run phase has an agent and a shell.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -308,16 +343,18 @@ steps:
     procedureNameOrPath: "once",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-
   // The shell appended exactly one line despite the retry.
-  const count = await box.read("_bookkeeping/output/count.txt");
-  const lines = count.trim().split("\n").filter(Boolean);
-  // doctest:L260
-  // doctest:L276
-  // doctest:L284
-  await t.checkText(out.with(print(`shell ran ${lines.length} time(s)`)), `success: true
-shell ran 1 time(s)`);
+  t.check({ result, count: await box.read("_bookkeeping/output/count.txt") }, {
+    result: {
+      ok: true,
+      value: {
+        status: "completed",
+        procedure: "once",
+        inconclusive: [],
+      },
+    },
+    count: "shell-ran\n",
+  });
 });
 
 // ## An inconclusive judge never re-runs the work agent
@@ -328,8 +365,6 @@ shell ran 1 time(s)`);
 // So the self-heal does not fire, the agent runs exactly once, and the run ends
 // `inconclusive` — the check is retried, the work is not.
 void test("severity: (line 305)", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -376,20 +411,41 @@ steps:
     procedureNameOrPath: "nodecide",
     options: { createAgent },
   });
-  print(`success: ${result.ok}`);
-  print(`run status: ${valueOf(result).status}`);
-  print(`agent runs: ${runCount}`);
 
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find(f => f.includes("nodecide_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  print(`work step: ${run?.steps[0]?.status}`);
-  // doctest:L325
-  // doctest:L338
-  // doctest:L348
-  await t.checkText(out.with(print(`validate status: ${run?.steps[0]?.validate?.status}`)), `success: true
-run status: inconclusive
-agent runs: 1
-work step: completed
-validate status: inconclusive`);
+  t.check({ result, runCount, step: run?.steps[0] }, {
+    result: {
+      ok: true,
+      value: {
+        status: "inconclusive",
+        procedure: "nodecide",
+        inconclusive: [
+          {
+            stepId: "work",
+            reason: "max-turns",
+            detail: "reached max turns (16)",
+          },
+        ],
+      },
+    },
+    runCount: 1,
+    step: {
+      id: "work",
+      status: "completed",
+      "started-at": isoDate(),
+      "completed-at": isoDate(),
+      run: {
+        "session-id": sessionId,
+        "git-ref": gitRef,
+      },
+      validate: {
+        status: "inconclusive",
+        review: "Instruction validation was inconclusive: the review reached max turns (16). The work was not judged — it is neither approved nor rejected.",
+        error: "Review reached max turns (16) — the work was not judged.",
+        reason: "max-turns",
+      },
+    },
+  });
 });

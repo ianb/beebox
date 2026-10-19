@@ -30,7 +30,7 @@ void test("The dry-run banner identifies the selected harness without starting e
   const result = await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true });
 
   // doctest:L32
-  await t.checkText(result.output.startsWith("[DRY RUN] Would run Claude"), "true");
+  t.check(result, { success: true, output: "[DRY RUN] Would run Claude via SDK with prompt:\nhello", exitCode: 0, sessionId: "" });
 
   // doctest:L35
   await box.cleanup();
@@ -45,7 +45,7 @@ void test("A box can select Codex", async (t) => {
   const result = await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true });
 
   // doctest:L46
-  await t.checkText(result.output.startsWith("[DRY RUN] Would run Codex SDK"), "true");
+  t.check(result, { success: true, output: "[DRY RUN] Would run Codex SDK with prompt:\nhello", exitCode: 0, sessionId: "" });
 
   // doctest:L49
   await box.cleanup();

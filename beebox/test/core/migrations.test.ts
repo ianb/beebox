@@ -32,7 +32,7 @@ async function missingScripts(): Promise<string[]> {
 // Every script-kind entry resolves to a file:
 void test("Every script-kind entry resolves to a file:", async (t) => {
   // doctest:L35
-  t.check((await missingScripts()).join("\n"), "");
+  t.check(await missingScripts(), []);
 });
 
 // The `name` is the manifest key, so a duplicate would make one entry
@@ -40,7 +40,8 @@ void test("Every script-kind entry resolves to a file:", async (t) => {
 // forever:
 void test("The name is the manifest key, so a duplicate would make one entry unrunnable...", async (t) => {
   // doctest:L44
-  await t.checkText(MIGRATIONS.length === new Set(MIGRATIONS.map((m) => m.name)).size, "true");
+  const names = MIGRATIONS.map((m) => m.name);
+  t.check(names, [...new Set(names)]);
 });
 
 // The list is append-only: a box's `config/migrations.jsonl` records names, so

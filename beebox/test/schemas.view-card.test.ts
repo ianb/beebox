@@ -19,30 +19,30 @@ const schemas = await createCardSchemaMap();
 // The card is positional-or-nominal like any card; `title` is the label nav
 // refs fall back to, and the body is the notes margin for the surface.
 void test("The card is positional-or-nominal like any card; title is the label nav refs...", async (t) => {
-  // doctest:L21
   const card = parseCardText(`---
 title: Chats
 view: chat-picker
 ---
 The picker groups by landmark; watch whether the 7-day window feels right.
 `, { source: "Chats.view.card", schemas });
-  t.check(card.fields["view"], "chat-picker");
-
-  // doctest:L30
-  t.check(card.fields["title"], "Chats");
+  t.check(card.fields, {
+    type: "view",
+    title: "Chats",
+    view: "chat-picker",
+    body: "The picker groups by landmark; watch whether the 7-day window feels right.\n",
+  });
 });
 
 // ## An unknown view name fails with the valid set enumerated
 void test("An unknown view name fails with the valid set enumerated", async (t) => {
-  // doctest:L37
   const tryParse = (text: string, source: string): string => {
     try { parseCardText(text, { source, schemas }); return "did not throw"; }
     catch (e) { return errorMessage(e); }
   };
-  await t.checkText(tryParse("---\nview: dashbord\n---\n", "Oops.view.card").includes("view must be one of: landmarks, chat-picker, questions, history"), "true");
+  t.check(tryParse("---\nview: dashbord\n---\n", "Oops.view.card"), `Oops.view.card: invalid view frontmatter:
+  - view: view must be one of: landmarks, chat-picker, questions, history`);
 
-  // doctest:L44
-  await t.checkText(tryParse("---\n---\n", "Empty.view.card").includes("view"), "true");
+  t.check(tryParse("---\n---\n", "Empty.view.card"), "Empty.view.card: missing frontmatter block");
 });
 
 // ## `params` configure the view — validated against the view's declared shape
@@ -51,28 +51,22 @@ void test("An unknown view name fails with the valid set enumerated", async (t) 
 // against the named view's param schema. A `view: history` card with params
 // is a saved filter over the commit timeline.
 void test("The self-contained validate hook (run by bbx validate) checks params against...", async (t) => {
-  // doctest:L55
   const issues = (fields: Record<string, unknown>) =>
     (ViewSchema.validate?.({ fields }) ?? []).map((i) => i.message);
 
-  // doctest:L58
   t.check(issues({ view: "history", params: { feedback: true, connectors: ["gmail"] } }), []);
 
-  // doctest:L61
   t.check(issues({ view: "history", params: { feedbck: true } }), [
     "params: Unrecognized key: \"feedbck\"",
   ]);
 
-  // doctest:L64
   t.check(issues({ view: "history", params: { feedback: "yes" } }), [
     str`params.feedback: ${any(String)}`,
   ]);
 
-  // doctest:L67
   t.check(issues({ view: "landmarks", params: { anything: 1 } }), [
     "view \"landmarks\" takes no params",
   ]);
 
-  // doctest:L70
   t.check(issues({ view: "landmarks" }), []);
 });

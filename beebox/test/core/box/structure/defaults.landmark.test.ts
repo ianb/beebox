@@ -50,8 +50,7 @@ void test("A box with no landmark gets one installed under content/ (returns its
   t.check(rA, "_content/Box.landmark.card");
 
   // doctest:L53
-  const lA = await rootLabel(A);
-  await t.checkText(lA === basename(A), "true");
+  t.check(await rootLabel(A), basename(A));
 
   // The root place carries the box's two onboarding openers, so a new box's first
   // chat offers them (they moved here from the briefing seed).
@@ -74,8 +73,7 @@ void test("An inert root landmark — here the legacy XML-body shape, which the 
   t.check(rB, "_content/Box.landmark.card");
 
   // doctest:L77
-  const lB = await rootLabel(B);
-  await t.checkText(lB === basename(B), "true");
+  t.check(await rootLabel(B), basename(B));
 });
 
 // A repair keeps the place summary. An inert landmark whose body the agent
@@ -86,10 +84,26 @@ void test("A repair keeps the place summary.", async (t) => {
   await writeFile(join(S, "_content", "Box.landmark.card"), "---\nsymbol:\n  glyph: 📦\n---\nTwo lists so far: groceries and the landlord.\n");
   await installRootLandmark(S);
   const repaired = await readFile(join(S, "_content", "Box.landmark.card"), "utf8");
-  await t.checkText(repaired.endsWith("---\nTwo lists so far: groceries and the landlord.\n"), "true");
+  t.check(repaired, `---
+navigation:
+  label: ${basename(S)}
+  openers:
+    - Let me tell you what this box is for.
+    - What can you do?
+symbol:
+  glyph: 📦
+---
+Two lists so far: groceries and the landlord.
+`);
 
   // doctest:L95
-  await t.checkText(parseLandmarkFields(repaired)?.navigation?.label === basename(S), "true");
+  t.check(parseLandmarkFields(repaired), {
+    navigation: {
+      label: basename(S),
+      openers: ["Let me tell you what this box is for.", "What can you do?"],
+    },
+    symbol: { glyph: "📦" },
+  });
 });
 
 // A real landmark (it has a navigation role) is left untouched — returns null, the
@@ -102,8 +116,7 @@ void test("A real landmark (it has a navigation role) is left untouched — retu
   t.check(rC, null);
 
   // doctest:L109
-  const lC = await rootLabel(C);
-  t.check(lC, "Home");
+  t.check(await rootLabel(C), "Home");
 });
 
 // The returned path is what the wakeup commits, so a refilled landmark persists

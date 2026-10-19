@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { str, uuid } from "agent-doctest/check";
+import { isoDate, uuid } from "agent-doctest/check";
 import { readFile, readdir, rm, unlink } from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -95,6 +95,18 @@ function page(id: string, overrides?: Partial<z.infer<typeof sendInput>>) {
     readableMarkdown: "# Raised beds\n\nTerrace them.", frozenHtml: "<html><body>frozen</body></html>", ...overrides };
 }
 
+/** The card path for a send: the card name carries the send's id. */
+function cardPath(id: string) {
+  return `_content/incoming/Raised_beds_on_a_slope-${id}.webpage.card`;
+}
+
+const GARDEN_CHOICES = [
+  { candidateId: "c0", label: "New chat in Garden" },
+  { candidateId: "c1", label: "New general chat" },
+];
+
+const PAGE_VIEW = { title: "Raised beds on a slope", url: "https://example.com/beds" };
+
 async function incoming(box: TmpBox) {
   return (await readdir(path.join(box.root, "_content/incoming"))).toSorted();
 }
@@ -120,6 +132,8 @@ void test("The card is written to content/incoming/ with its frozen snapshot, an
   const sends = scriptedRuntime(box.root);
   const jev = clear();
   const id = randomUUID();
+  const base = `Raised_beds_on_a_slope-${id}`;
+  const delivered = `<external-input source="browser-clerk" source-ref="_content/incoming/${base}.webpage.card">for the slope out back</external-input>`;
   const result = await caller(box.root, jev).clerk.send(page(id, { note: "for the slope out back" }));
   const card = result.card;
   t.check(
@@ -127,23 +141,21 @@ void test("The card is written to content/incoming/ with its frozen snapshot, an
       jevState: decisionState(jev) }),
     {
     result: {
-      card: str`_content/incoming/Raised_beds_on_a_slope-${uuid()}.webpage.card`,
+      card: `_content/incoming/${base}.webpage.card`,
       state: "sent",
       destination: {
         label: "New chat in Garden",
-        sessionId: str`${uuid()}`,
+        sessionId: uuid(),
       },
     },
     incoming: [
       ".gitignore",
       ".gitkeep",
-      str`Raised_beds_on_a_slope-${uuid()}.attach`,
-      str`Raised_beds_on_a_slope-${uuid()}.webpage.card`,
+      `${base}.attach`,
+      `${base}.webpage.card`,
     ],
     gitStatus: "",
-    sends: [
-      str`<external-input source="browser-clerk" source-ref="_content/incoming/Raised_beds_on_a_slope-${uuid()}.webpage.card">for the slope out back</external-input>`,
-    ],
+    sends: [delivered],
     jevState: {
       message: "for the slope out back",
       page: {
@@ -179,11 +191,10 @@ Terrace them.`,
 
   // doctest:L141
   const again = await caller(box.root, jev).clerk.send(page(id, { note: "for the slope out back" }));
-  t.check(({ state: again.state, sameCard: again.card === card, cards: (await incoming(box)).filter((name) => name.endsWith(".webpage.card")).length, deliveries: sends.length }), {
-    state: "sent",
-    sameCard: true,
-    cards: 1,
-    deliveries: 1,
+  t.check({ again, cards: (await incoming(box)).filter((name) => name.endsWith(".webpage.card")), sends }, {
+    again: result,
+    cards: [`${base}.webpage.card`],
+    sends: [delivered],
   });
 
   // ## Filing the card with `bbx mv --commit`, then a late repeat
@@ -198,14 +209,31 @@ Terrace them.`,
   const moved = await executeMove(ctx, { from: card, to: "_content/Garden/", commit: true });
   const committed = execFileSync("git", ["show", "--name-only", "--format=", "HEAD"], { cwd: box.root, encoding: "utf8" }).trim().split("\n");
   const late = await caller(box.root, jev).clerk.send(page(id, { note: "for the slope out back" }));
-  t.check(({ moved: moved.success, committed, gitStatus: gitStatus(box), lateCard: late.card === card, incomingCards: (await incoming(box)).filter((name) => name.endsWith(".webpage.card")) }), {
-    moved: true,
+  t.check(({ moved, committed, gitStatus: gitStatus(box), late, incomingCards: (await incoming(box)).filter((name) => name.endsWith(".webpage.card")) }), {
+    moved: {
+      success: true,
+      data: {
+        from: `_content/incoming/${base}.webpage.card`,
+        to: `_content/Garden/${base}.webpage.card`,
+        movedFiles: [
+          { from: `_content/incoming/${base}.webpage.card`, to: `_content/Garden/${base}.webpage.card` },
+          { from: `_content/incoming/${base}.attach`, to: `_content/Garden/${base}.attach` },
+        ],
+        updatedCards: [],
+        filesToStage: [
+          `_content/incoming/${base}.webpage.card`,
+          `_content/Garden/${base}.webpage.card`,
+          `_content/incoming/${base}.attach`,
+          `_content/Garden/${base}.attach`,
+        ],
+      },
+    },
     committed: [
-      str`_content/Garden/Raised_beds_on_a_slope-${uuid()}.attach/page.frozen`,
-      str`_content/Garden/Raised_beds_on_a_slope-${uuid()}.webpage.card`,
+      `_content/Garden/${base}.attach/page.frozen`,
+      `_content/Garden/${base}.webpage.card`,
     ],
     gitStatus: "",
-    lateCard: true,
+    late: result,
     incomingCards: [],
   });
 
@@ -217,11 +245,28 @@ Terrace them.`,
   const filed = `_content/Garden/${card.split("/").at(-1)}`;
   const again2 = await executeMove(createCollectorContext(box.root).ctx, { from: filed, to: "_content/Reading/", commit: true });
   const changed = execFileSync("git", ["show", "--name-status", "--format=", "HEAD"], { cwd: box.root, encoding: "utf8" }).trim().split("\n");
-  t.check(({ moved: again2.success, changed, gitStatus: gitStatus(box) }), {
-    moved: true,
+  t.check(({ moved: again2, changed, gitStatus: gitStatus(box) }), {
+    moved: {
+      success: true,
+      data: {
+        from: `_content/Garden/${base}.webpage.card`,
+        to: `_content/Reading/${base}.webpage.card`,
+        movedFiles: [
+          { from: `_content/Garden/${base}.webpage.card`, to: `_content/Reading/${base}.webpage.card` },
+          { from: `_content/Garden/${base}.attach`, to: `_content/Reading/${base}.attach` },
+        ],
+        updatedCards: [],
+        filesToStage: [
+          `_content/Garden/${base}.webpage.card`,
+          `_content/Reading/${base}.webpage.card`,
+          `_content/Garden/${base}.attach`,
+          `_content/Reading/${base}.attach`,
+        ],
+      },
+    },
     changed: [
-      str`R100	_content/Garden/Raised_beds_on_a_slope-${uuid()}.attach/page.frozen	_content/Reading/Raised_beds_on_a_slope-${uuid()}.attach/page.frozen`,
-      str`R100	_content/Garden/Raised_beds_on_a_slope-${uuid()}.webpage.card	_content/Reading/Raised_beds_on_a_slope-${uuid()}.webpage.card`,
+      `R100\t_content/Garden/${base}.attach/page.frozen\t_content/Reading/${base}.attach/page.frozen`,
+      `R100\t_content/Garden/${base}.webpage.card\t_content/Reading/${base}.webpage.card`,
     ],
     gitStatus: "",
   });
@@ -250,20 +295,9 @@ void test("The view carries the page so the box screen can label the row; the me
   const id = randomUUID();
   const result = await caller(box.root, unsure()).clerk.send(page(id));
   const row = (await caller(box.root, unsure()).quickChat.home()).open[0];
-  t.check(({ state: result.state, reason: result.reason, choices: (result.choices ?? []).map((choice) => choice.label), row: { message: row?.message, page: row?.page } }), {
-    state: "needs-choice",
-    reason: "uncertain",
-    choices: [
-      "New chat in Garden",
-      "New general chat",
-    ],
-    row: {
-      message: "",
-      page: {
-        title: "Raised beds on a slope",
-        url: "https://example.com/beds",
-      },
-    },
+  t.check({ result, row }, {
+    result: { card: cardPath(id), state: "needs-choice", reason: "uncertain", choices: GARDEN_CHOICES },
+    row: { id, message: "", createdAt: isoDate(), state: "needs-choice", reason: "uncertain", choices: GARDEN_CHOICES, page: PAGE_VIEW },
   });
 
   // ## A card filed before the choice is delivered from where it is now
@@ -276,8 +310,15 @@ void test("The view carries the page so the box screen can label the row; the me
   const { ctx } = createCollectorContext(box.root);
   await executeMove(ctx, { from: result.card, to: "_content/Garden/Beds.webpage.card", commit: true });
   const chosen = await caller(box.root, unsure()).quickChat.choose({ id, candidateId: "c0" });
-  t.check(({ state: chosen.state, sends }), {
-    state: "sent",
+  t.check({ chosen, sends }, {
+    chosen: {
+      id,
+      message: "",
+      createdAt: isoDate(),
+      state: "sent",
+      destination: { label: "New chat in Garden", sessionId: uuid() },
+      page: PAGE_VIEW,
+    },
     sends: [
       "<external-input source=\"browser-clerk\" source-ref=\"_content/Garden/Beds.webpage.card\"></external-input>",
     ],
@@ -293,9 +334,16 @@ void test("A card removed before the choice is not delivered", async (t) => {
   const result = await caller(box.root, unsure()).clerk.send(page(id));
   await unlink(path.join(box.root, result.card));
   const chosen = await caller(box.root, unsure()).quickChat.choose({ id, candidateId: "c0" });
-  t.check(({ state: chosen.state, lastError: chosen.lastError, sends }), {
-    state: "sending",
-    lastError: "The sent page was removed.",
+  t.check({ chosen, sends }, {
+    chosen: {
+      id,
+      message: "",
+      createdAt: isoDate(),
+      state: "sending",
+      destination: { label: "New chat in Garden", sessionId: uuid() },
+      lastError: "The sent page was removed.",
+      page: PAGE_VIEW,
+    },
     sends: [],
   });
 });
@@ -308,7 +356,10 @@ void test("Two sends with the same title get two cards", async (t) => {
   const [first, second] = [randomUUID(), randomUUID()];
   await caller(box.root, clear()).clerk.send(page(first));
   await caller(box.root, clear()).clerk.send(page(second));
-  await t.checkText((await incoming(box)).filter((name) => name.endsWith(".webpage.card")).length, "2");
+  t.check((await incoming(box)).filter((name) => name.endsWith(".webpage.card")), [
+    `Raised_beds_on_a_slope-${first}.webpage.card`,
+    `Raised_beds_on_a_slope-${second}.webpage.card`,
+  ].toSorted());
 });
 
 // ## A card saved before the box stopped is routed on the next attempt
@@ -324,9 +375,9 @@ void test("The box can stop after writing the card and before storing the send."
   await rm(path.join(box.root, ".beebox/quick-chat", `${id}.json`), { force: true });
   sends.length = 0;
   const result = await caller(box.root, clear()).clerk.send(page(id, { note: "keep" }));
-  t.check(({ state: result.state, cards: (await incoming(box)).filter((name) => name.endsWith(".webpage.card")).length }), {
-    state: "sent",
-    cards: 1,
+  t.check({ result, cards: (await incoming(box)).filter((name) => name.endsWith(".webpage.card")) }, {
+    result: { card: cardPath(id), state: "sent", destination: { label: "New chat in Garden", sessionId: uuid() } },
+    cards: [`Raised_beds_on_a_slope-${id}.webpage.card`],
   });
 });
 
@@ -335,9 +386,12 @@ void test("Without a routing key, the page waits with recent chats to choose fro
   // doctest:L273
   const box = await gardenBox();
   scriptedRuntime(box.root);
-  const result = await caller(box.root, undefined).clerk.send(page(randomUUID(), { note: "later" }));
-  t.check(({ state: result.state, reason: result.reason }), {
+  const id = randomUUID();
+  const result = await caller(box.root, undefined).clerk.send(page(id, { note: "later" }));
+  t.check(result, {
+    card: cardPath(id),
     state: "needs-choice",
     reason: "routing-unavailable",
+    choices: [{ candidateId: "c1", label: "New general chat" }],
   });
 });

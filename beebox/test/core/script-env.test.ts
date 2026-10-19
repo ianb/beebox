@@ -6,7 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, str } from "agent-doctest/check";
 import { buildScriptEnv, buildToolingScriptEnv, parsePublicUrl, prependBbxBinToPath, registerBoxPublicUrl, unregisterBoxPublicUrl } from "../../src/core/script-env/core.js";
 import { serveEndpointPath, writeServeEndpoint } from "../../src/core/serve-endpoint.js";
 import { spawnProfile } from "../../src/lib/spawn-profile.js";
@@ -26,22 +26,22 @@ void test("A public URL splits into the server origin and the box slug.", async 
   const warnings: unknown[][] = [];
   const originalWarn = console.warn;
   console.warn = (...args: unknown[]) => warnings.push(args);
-  const lines: string[] = [];
+  const results: Array<{ input: string; parsed: ReturnType<typeof parsePublicUrl>; warnings: number }> = [];
   try {
     for (const input of ["https://bbx.example.org/test1", "https://bbx.example.org/test1/", "http://localhost:3210", "", "not a url"]) {
-      const r = parsePublicUrl(input);
-      lines.push(`${JSON.stringify(input)}: serverUrl=${r.serverUrl} boxName=${r.boxName} warnings=${warnings.length}`);
+      results.push({ input, parsed: parsePublicUrl(input), warnings: warnings.length });
     }
   } finally {
     console.warn = originalWarn;
   }
 
-  // doctest:L38
-  await t.checkText(lines.join("\n"), `"https://bbx.example.org/test1": serverUrl=https://bbx.example.org boxName=test1 warnings=0
-"https://bbx.example.org/test1/": serverUrl=https://bbx.example.org boxName=test1 warnings=0
-"http://localhost:3210": serverUrl=http://localhost:3210 boxName=null warnings=0
-"": serverUrl=null boxName=null warnings=0
-"not a url": serverUrl=null boxName=null warnings=1`);
+  t.check(results, [
+    { input: "https://bbx.example.org/test1", parsed: { serverUrl: "https://bbx.example.org", boxName: "test1" }, warnings: 0 },
+    { input: "https://bbx.example.org/test1/", parsed: { serverUrl: "https://bbx.example.org", boxName: "test1" }, warnings: 0 },
+    { input: "http://localhost:3210", parsed: { serverUrl: "http://localhost:3210", boxName: null }, warnings: 0 },
+    { input: "", parsed: { serverUrl: null, boxName: null }, warnings: 0 },
+    { input: "not a url", parsed: { serverUrl: null, boxName: null }, warnings: 1 },
+  ]);
 });
 
 // ## buildScriptEnv — where the box name and server URL come from
@@ -86,19 +86,20 @@ void test("BBXBOXNAME and BBXSERVERURL come from, in priority order:", async (t)
       return buildScriptEnv(box.root);
     }],
   ];
-  const lines: string[] = [];
+  const results: Array<{ label: string; BBX_BOX_NAME: string | undefined; BBX_SERVER_URL: string | undefined }> = [];
   for (const [label, build] of cases) {
     const box = await makeTmpBox();
     const env = await build(box);
-    lines.push(`${label}: BBX_BOX_NAME=${env.BBX_BOX_NAME ?? "(unset)"} BBX_SERVER_URL=${env.BBX_SERVER_URL ?? "(unset)"}`);
+    results.push({ label, BBX_BOX_NAME: env.BBX_BOX_NAME, BBX_SERVER_URL: env.BBX_SERVER_URL });
     await box.cleanup();
   }
 
-  // doctest:L97
-  await t.checkText(lines.join("\n"), `box.json publicUrl: BBX_BOX_NAME=my-box BBX_SERVER_URL=https://bbx.example.org
-ambient registration beats box.json: BBX_BOX_NAME=live-name BBX_SERVER_URL=http://localhost:3210
-nothing configured: BBX_BOX_NAME=(unset) BBX_SERVER_URL=(unset)
-malformed serve endpoint file: BBX_BOX_NAME=(unset) BBX_SERVER_URL=(unset)`);
+  t.check(results, [
+    { label: "box.json publicUrl", BBX_BOX_NAME: "my-box", BBX_SERVER_URL: "https://bbx.example.org" },
+    { label: "ambient registration beats box.json", BBX_BOX_NAME: "live-name", BBX_SERVER_URL: "http://localhost:3210" },
+    { label: "nothing configured", BBX_BOX_NAME: undefined, BBX_SERVER_URL: undefined },
+    { label: "malformed serve endpoint file", BBX_BOX_NAME: undefined, BBX_SERVER_URL: undefined },
+  ]);
 });
 
 // ## buildScriptEnv — disk registration crosses a process boundary
@@ -106,8 +107,6 @@ malformed serve endpoint file: BBX_BOX_NAME=(unset) BBX_SERVER_URL=(unset)`);
 // The server writes the registration after binding. A fresh CLI process has no
 // ambient map, but it can read the machine-owned registration:
 void test("The server writes the registration after binding.", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -115,15 +114,14 @@ void test("The server writes the registration after binding.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L111
   const box = await makeTmpBox();
   await writeServeEndpoint(box.root, { pid: 123, publicUrl: "http://127.0.0.1:60157/ephemeral-box" });
   const env = await buildScriptEnv(box.root);
-  print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME}`);
-  print(`BBX_SERVER_URL: ${env.BBX_SERVER_URL}`);
-  await t.checkText(out.with(print(`file: ${(await fs.readFile(serveEndpointPath(box.root), "utf8")).trim()}`)), `BBX_BOX_NAME: ephemeral-box
-BBX_SERVER_URL: http://127.0.0.1:60157
-file: {"pid":123,"publicUrl":"http://127.0.0.1:60157/ephemeral-box"}`);
+  t.check({ BBX_BOX_NAME: env.BBX_BOX_NAME, BBX_SERVER_URL: env.BBX_SERVER_URL }, {
+    BBX_BOX_NAME: "ephemeral-box",
+    BBX_SERVER_URL: "http://127.0.0.1:60157",
+  });
+  t.checkText((await fs.readFile(serveEndpointPath(box.root), "utf8")).trim(), "{\"pid\":123,\"publicUrl\":\"http://127.0.0.1:60157/ephemeral-box\"}");
 });
 
 // ## buildScriptEnv — additions merged in
@@ -131,8 +129,6 @@ file: {"pid":123,"publicUrl":"http://127.0.0.1:60157/ephemeral-box"}`);
 // Caller additions override / extend the env, and passing `undefined` deletes a
 // key:
 void test("Caller additions override / extend the env, and passing undefined deletes a key:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -154,13 +150,17 @@ void test("Caller additions override / extend the env, and passing undefined del
     SHOULD_VANISH: undefined,
   });
   delete process.env.SHOULD_VANISH;
-  print(`BBX_BOX_NAME: ${env.BBX_BOX_NAME}`);
-  print(`BBX_TRIGGERED_BY: ${env.BBX_TRIGGERED_BY}`);
-  print(`CUSTOM_KEY: ${env.CUSTOM_KEY}`);
-  await t.checkText(out.with(print(`SHOULD_VANISH deleted: ${env.SHOULD_VANISH === undefined}`)), `BBX_BOX_NAME: my-box
-BBX_TRIGGERED_BY: schedule
-CUSTOM_KEY: value
-SHOULD_VANISH deleted: true`);
+  t.check({
+    BBX_BOX_NAME: env.BBX_BOX_NAME,
+    BBX_TRIGGERED_BY: env.BBX_TRIGGERED_BY,
+    CUSTOM_KEY: env.CUSTOM_KEY,
+    SHOULD_VANISH: env.SHOULD_VANISH,
+  }, {
+    BBX_BOX_NAME: "my-box",
+    BBX_TRIGGERED_BY: "schedule",
+    CUSTOM_KEY: "value",
+    SHOULD_VANISH: undefined,
+  });
 });
 
 // ## buildScriptEnv — inherits only allowlisted names
@@ -217,16 +217,8 @@ void test("The subprocess env is a fail-closed allowlist, not a process.env spre
   // doctest:L208
   const bbxBin = path.join(PACKAGE_ROOT, "bin");
   t.check(
-    [
-      env.PATH!.startsWith(`${bbxBin}:`),
-      env.HOME === process.env.HOME,
-      typeof env.BBX_AGENT_TOKEN === "string" && env.BBX_AGENT_TOKEN.length > 0,
-    ],
-    [
-    true,
-    true,
-    true,
-  ],
+    { PATH: env.PATH, HOME: env.HOME, BBX_AGENT_TOKEN: env.BBX_AGENT_TOKEN },
+    { PATH: str`${bbxBin}:${any(String)}`, HOME: process.env.HOME, BBX_AGENT_TOKEN: any(String).matches(/./) },
   );
 
   // `additions` are applied after the allowlist, so a caller can still hand a
@@ -242,21 +234,17 @@ void test("The subprocess env is a fail-closed allowlist, not a process.env spre
 // The package bin comes first for both child profiles, and a missing launcher is
 // an immediate error rather than a later "command not found" from a scenario.
 void test("The package bin comes first for both child profiles, and a missing launcher i...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L240
   const foreignBin = await fs.mkdtemp(path.join("/tmp", "bbx-foreign-bin-"));
   const inherited = `${foreignBin}:/usr/bin`;
   const agentPath = await prependBbxBinToPath(inherited);
   const toolingBox = await makeTmpBox();
   const toolingPath = (await buildToolingScriptEnv(toolingBox.root, {})).PATH!;
-  print(JSON.stringify({
-    agent: agentPath.split(":")[0] === path.join(PACKAGE_ROOT, "bin"),
-    tooling: toolingPath.split(":")[0] === path.join(PACKAGE_ROOT, "bin"),
-    foreignAfter: agentPath.indexOf(foreignBin) > agentPath.indexOf(path.join(PACKAGE_ROOT, "bin")),
-  }));
   await fs.rm(foreignBin, { recursive: true, force: true });
-  await t.checkText(out.with(await toolingBox.cleanup()), "{\"agent\":true,\"tooling\":true,\"foreignAfter\":true}");
+  await toolingBox.cleanup();
+  const bbxBin = path.join(PACKAGE_ROOT, "bin");
+  t.check(agentPath.split(":"), [bbxBin, foreignBin, "/usr/bin"]);
+  t.check(toolingPath, str`${bbxBin}:${any(String)}`);
 });
 
 void test("PATH launcher contract", async (t) => {
@@ -269,7 +257,7 @@ void test("PATH launcher contract", async (t) => {
     message = error instanceof Error ? error.message : String(error);
   }
   await fs.rm(missingBin, { recursive: true, force: true });
-  await t.checkText(message.includes("Bee Box CLI launcher is missing"), "true");
+  t.check(message, `Bee Box CLI launcher is missing or not executable: ${missingBin}/bbx`);
 });
 
 // ## buildToolingScriptEnv — the `bbx`-tooling profile adds the store's path
@@ -281,8 +269,6 @@ void test("PATH launcher contract", async (t) => {
 // profile withholds stays withheld, and connector keys that happen to be exported
 // are not inherited by either profile.
 void test("Spawning the box's own tooling (bbx wakeup, bbx finalize, scheduled runs: com...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -303,17 +289,21 @@ void test("Spawning the box's own tooling (bbx wakeup, bbx finalize, scheduled r
   Object.assign(process.env, vars);
   const env = await buildToolingScriptEnv(box.root);
   for (const key of Object.keys(vars)) delete process.env[key];
-  print(`secret store path: ${env.BBX_SECRETS_FILE}`);
-  print(`google tokens path: ${env.BBX_GOOGLE_TOKENS_FILE}`);
-  print(`mistral: ${env.BBX_MISTRAL_API_KEY ?? "(unset)"}`);
-  print(`google client secret: ${env.GOOGLE_OAUTH_CLIENT_SECRET ?? "(unset)"}`);
-  print(`hub secret: ${env.BBX_HUB_SECRET ?? "(unset)"}`);
-  await t.checkText(out.with(print(`random: ${env.SOME_RANDOM_SECRET ?? "(unset)"}`)), `secret store path: /placeholder/secrets.json
-google tokens path: /placeholder/google-tokens.json
-mistral: (unset)
-google client secret: (unset)
-hub secret: (unset)
-random: (unset)`);
+  t.check({
+    secretStorePath: env.BBX_SECRETS_FILE,
+    googleTokensPath: env.BBX_GOOGLE_TOKENS_FILE,
+    mistral: env.BBX_MISTRAL_API_KEY,
+    googleClientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
+    hubSecret: env.BBX_HUB_SECRET,
+    random: env.SOME_RANDOM_SECRET,
+  }, {
+    secretStorePath: "/placeholder/secrets.json",
+    googleTokensPath: "/placeholder/google-tokens.json",
+    mistral: undefined,
+    googleClientSecret: undefined,
+    hubSecret: undefined,
+    random: undefined,
+  });
 });
 
 // ## The spawn-profile marker

@@ -6,7 +6,7 @@ import { test } from "tap";
 import "agent-doctest/tap";
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
-import { makeTmpBox, bodyField } from "../../helpers/test-helpers.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
 import { executeCommandStreaming, type OutputLine } from "../../../src/webapp/routes/commands.js";
 
@@ -41,25 +41,15 @@ void test("The ls command writes output lines via ctx.writeLine(), which become 
     emit: (line) => messages.push(line),
   });
 
-  // doctest:L35
-  t.check(result.type, "result");
+  const lsResult = {
+    type: "result" as const,
+    success: true,
+    data: { count: 1, lines: ["_content/inbox/test.task.card"] },
+  };
+  t.check(result, lsResult);
 
-  // doctest:L38
-  t.check(result.success, true);
-
-  // Output lines were emitted before the result:
-
-  // doctest:L45
-  const outputLines = messages.filter(m => m.type === "output");
-  await t.checkText(outputLines.length > 0, "true");
-
-  // doctest:L49
-  t.check(outputLines[0]?.text?.includes("test.task.card"), true);
-
-  // The result includes structured data:
-
-  // doctest:L56
-  t.check(bodyField(result.data, "count"), 1);
+  // Output lines were emitted before the result, which is the last message:
+  t.check(messages, [{ type: "output", text: "_content/inbox/test.task.card" }, lsResult]);
 });
 
 // ## Unknown command returns error result
@@ -73,11 +63,7 @@ void test("Unknown command returns error result", async (t) => {
     emit: (line) => messages.push(line),
   });
 
-  // doctest:L75
-  t.check(result.success, false);
-
-  // doctest:L78
-  t.check(result.error?.includes("nonexistent"), true);
+  t.check(result, { type: "result", success: false, data: undefined, error: "Unknown command: nonexistent-command" });
 });
 
 // ## Command failure emits error in result
@@ -104,8 +90,12 @@ void test("When a command returns { success:", async (t) => {
     emit: (line) => messages.push(line),
   });
 
-  // doctest:L98
-  t.check(result.success, false);
+  t.check(result, {
+    type: "result",
+    success: false,
+    data: undefined,
+    error: "At least one path or glob pattern is required",
+  });
 });
 
 // ## Multiple output lines from a command
@@ -138,14 +128,17 @@ void test("Commands that list multiple items emit one output line per item:", as
     emit: (line) => messages.push(line),
   });
 
-  // doctest:L127
-  const outputLines = messages.filter(m => m.type === "output");
-  await t.checkText(outputLines.length, "3");
-
-  // doctest:L131
-  const resultLines = messages.filter(m => m.type === "result");
-  await t.checkText(resultLines.length, "1");
-
-  // doctest:L135
-  t.check(bodyField(resultLines[0]?.data, "count"), 3);
+  t.check(messages, [
+    { type: "output", text: "_content/inbox/a.task.card" },
+    { type: "output", text: "_content/inbox/b.task.card" },
+    { type: "output", text: "_content/inbox/c.task.card" },
+    {
+      type: "result",
+      success: true,
+      data: {
+        count: 3,
+        lines: ["_content/inbox/a.task.card", "_content/inbox/b.task.card", "_content/inbox/c.task.card"],
+      },
+    },
+  ]);
 });

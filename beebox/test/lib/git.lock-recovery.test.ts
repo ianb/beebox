@@ -13,6 +13,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -82,23 +83,25 @@ void test("The killed process leaves its guard directory on disk, and it stays t
   delete process.env["BBX_BOX_GIT_LOCK_WAIT_MS"];
 
   // doctest:L78
-  await t.checkText(typeof hash === "string" && hash.length > 0, "true");
+  t.check(hash, any(String).matches(/^[\da-f]{40}$/));
 
   // The degradation was announced, not swallowed — it names the dead holder so a
   // reader can tell "a process died holding this" from "the index is genuinely
   // busy":
 
   // doctest:L87
-  await t.checkText(warnings.length === 1 && warnings[0]?.includes("Proceeding WITHOUT the lock"), "true");
+  t.check(warnings, [
+    str`[box-git-lock] could not acquire ${any(String)}/.git/beebox-index.lock within 300ms (held by pid ${any(String)} on ${any(String)} since ${any(String)}). Proceeding WITHOUT the lock: this git operation is not serialized against other writers, and may fail on .git/index.lock or co-commit another writer's staged files. A holder this old is either crashed (its lock clears at the stale window) or is not one of ours — investigate what is holding the box's git index.`,
+  ]);
 
   // It landed, and the tree is clean:
 
   // doctest:L94
-  t.check((await getStatus(box.root)).clean, true);
+  t.check(await getStatus(box.root), { staged: [], modified: [], untracked: [], clean: true });
 
   // And it landed *well* inside the stale window rather than after it. This is the
   // assertion that fails if the lock ever goes back to failing hard on expiry:
 
   // doctest:L102
-  await t.checkText(elapsed < LOCK_STALE_MS.default, "true");
+  t.check(elapsed, any(Number).between(0, LOCK_STALE_MS.default));
 });

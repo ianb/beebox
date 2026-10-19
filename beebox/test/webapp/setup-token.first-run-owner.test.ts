@@ -11,6 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { rm, writeFile } from "node:fs/promises";
@@ -49,27 +50,20 @@ void test("This is the deployed configuration, and the regression this test exis
     }
   });
   // doctest:L43
-  await t.checkText(printedLines({ owner: "owner@example.com", openAccess: false }).length, "0");
+  t.check(printedLines({ owner: "owner@example.com", openAccess: false }), []);
 
   // ## A genuinely unclaimed server still prints its claim link
 
   // doctest:L50
   const lines = printedLines({ owner: null, openAccess: false });
-  t.check(
-    [lines.length, lines[0]?.startsWith("First-run setup: https://box.example.com/auth/setup?token=")]
-    ,
-    [
-    1,
-    true,
-  ],
-  );
+  t.check(lines, [str`First-run setup: https://box.example.com/auth/setup?token=${any(String)}`]);
 
   // ## Open access never prints, owner or not
   //
   // There is no auth wall to claim past.
 
   // doctest:L63
-  await t.checkText(printedLines({ owner: null, openAccess: true }).length, "0");
+  t.check(printedLines({ owner: null, openAccess: true }), []);
 
   // ## Removing the last local member does not reopen first-run setup
   //
@@ -77,5 +71,5 @@ void test("This is the deployed configuration, and the regression this test exis
 
   // doctest:L72
   await writeFile(AUTH_FILE, JSON.stringify({ version: 1, users: [] }), { mode: 0o600 });
-  await t.checkText(printedLines({ owner: null, openAccess: false }).length, "0");
+  t.check(printedLines({ owner: null, openAccess: false }), []);
 });

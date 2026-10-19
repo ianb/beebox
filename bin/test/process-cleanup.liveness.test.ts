@@ -95,13 +95,11 @@ async function sweep(env?: Record<string, string>) {
 // Claude Code reports its version as the accounting name, so the `pgrep -x claude`
 // this module used to rely on saw neither). `dead-wt` has nothing at all.
 void test("Four daemons across three worktrees, swept in one pass.", async (t) => {
-  // doctest:L100
   await mkdir(join(worktreeRoot, "codex-wt"), { recursive: true });
   await mkdir(join(worktreeRoot, "claude-wt"), { recursive: true });
   await fakeProcess(join(fakeBin, "codex"), join(worktreeRoot, "codex-wt"));
   await fakeProcess(join(fakeBin, "claude"), join(worktreeRoot, "claude-wt"));
 
-  // doctest:L105
   const codexCurrent = await browserFor("codex-wt");
   const codexSuperseded = await browserFor("codex-wt");
   const claudeCurrent = await browserFor("claude-wt");
@@ -109,7 +107,6 @@ void test("Four daemons across three worktrees, swept in one pass.", async (t) =
   await vouchFor("codex-wt", codexCurrent);
   await vouchFor("claude-wt", claudeCurrent);
 
-  // doctest:L112
   const log = await sweep();
   t.check(
     {
@@ -126,16 +123,15 @@ void test("Four daemons across three worktrees, swept in one pass.", async (t) =
   },
   );
 
-  // doctest:L121
-  t.check(log.includes(`spare agent-browser pid ${codexCurrent} (codex-wt, current daemon)`), true);
-
-  // doctest:L124
-  t.check(log.includes(`reclaim agent-browser pid ${deadDaemon} (dead-wt, no live session)`), true);
+  await t.checkText(log, `[cleanup] spare agent-browser pid ${codexCurrent} (codex-wt, current daemon)
+[cleanup] reclaim agent-browser pid ${codexSuperseded} (codex-wt, superseded orphan)
+[cleanup] spare agent-browser pid ${claudeCurrent} (claude-wt, current daemon)
+[cleanup] reclaim agent-browser pid ${deadDaemon} (dead-wt, no live session)
+[cleanup] reclaimed 2, spared 2`);
 });
 
 // Once that session exits, its daemon is an orphan like any other.
 void test("Once that session exits, its daemon is an orphan like any other.", async (t) => {
-  // doctest:L131
   for (const pid of spawned) { try { process.kill(pid, "SIGKILL"); } catch (_error) { /* already reaped */ } }
   const orphan = await browserFor("codex-wt");
   await vouchFor("codex-wt", orphan);
@@ -151,7 +147,6 @@ void test("Once that session exits, its daemon is an orphan like any other.", as
 // agent boundary there is not yet a trustworthy current-daemon signal, and after
 // an oracle failure there is no second signal left to be wrong about.
 void test("The guard answers none / launching / live / unknown, and a caller standing in...", async (t) => {
-  // doctest:L148
   const old = 3600;
   t.check(
     [
@@ -209,7 +204,6 @@ void test("The guard answers none / launching / live / unknown, and a caller sta
 // kill an unvouched process — including a worktree with no session at all, where
 // something still spawned that daemon a moment ago.
 void test("The socket dir's .pid files are the only thing that vouches for a daemon, and...", async (t) => {
-  // doctest:L175
   const young = 5;
   t.check(
     [
@@ -244,7 +238,6 @@ void test("The socket dir's .pid files are the only thing that vouches for a dae
 // becoming `NaN`, which would lose every comparison and quietly turn the guard
 // off — the failure it exists to prevent.
 void test("The threshold is overridable only so a test can reach the reaping half of the...", async (t) => {
-  // doctest:L191
   const starting = await browserFor("dead-wt");
   await sweep({ BBX_CLEANUP_MIN_ORPHAN_AGE_SEC: "not-a-number" });
   t.check(alive(starting), true);
@@ -254,20 +247,18 @@ void test("The threshold is overridable only so a test can reach the reaping hal
 // one reads as infinitely old rather than newborn: the guard must not hand out
 // "too young to judge" on the strength of a field it failed to read.
 void test("Age arrives from ps etime, whose field is [[dd-]hh:]mm:ss.", async (t) => {
-  // doctest:L202
-  await t.checkText(
-    JSON.stringify([
+  t.check(
+    [
       etimeToSeconds("00:07"), etimeToSeconds("01:30"), etimeToSeconds("2:03:04"),
       etimeToSeconds("1-00:00:00"), etimeToSeconds("garbage"),
-    ]),
-    "[7,90,7384,86400,null]",
+    ],
+    [7, 90, 7384, 86400, Infinity],
   );
 });
 
 // End to end: an unvouched daemon in a worktree with no session at all — the case
 // the sweep is most eager to reclaim — survives while it is still young.
 void test("End to end:", async (t) => {
-  // doctest:L213
   const stillStarting = await browserFor("dead-wt");
   await sweep({ BBX_CLEANUP_MIN_ORPHAN_AGE_SEC: "60" });
   t.check(alive(stillStarting), true);
@@ -286,13 +277,15 @@ void test("That holds end to end, not just in the classifier.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L225
   await mkdir(join(home, "brokenbin"), { recursive: true });
   await symlink("/usr/bin/false", join(home, "brokenbin/jq"));
   const unknowable = await browserFor("dead-wt");
   const brokenLog = await sweep({ PATH: `${join(home, "brokenbin")}:${process.env.PATH}` });
-  t.check({ alive: alive(unknowable), warned: brokenLog.includes("liveness unknown for dead-wt") }, {
-    alive: true,
-    warned: true,
-  });
+  t.check(alive(unknowable), true);
+  // The two earlier spared dead-wt daemons are still running, so their pids appear too.
+  await t.checkText(brokenLog, `[cleanup] liveness unknown for dead-wt (liveness-oracle-unavailable) — sparing its daemons
+[cleanup] spare agent-browser pid «int» (dead-wt, session liveness unknown)
+[cleanup] spare agent-browser pid «int» (dead-wt, session liveness unknown)
+[cleanup] spare agent-browser pid «int» (dead-wt, session liveness unknown)
+[cleanup] reclaimed 0, spared 3`);
 });

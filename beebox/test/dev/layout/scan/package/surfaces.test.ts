@@ -158,8 +158,7 @@ void test("./plugins/ stands for every src/plugins/<name>/plugin.ts; ./plugins//
 
 // ## No `package.json`
 void test("No `package.json`", async (t) => {
-  // doctest:L145
-  await t.checkText(scanPublicSurfaces({ repoRoot, packageRoot: "pkg/nope", buildEntries: new Map() }).length, "0");
+  t.check(scanPublicSurfaces({ repoRoot, packageRoot: "pkg/nope", buildEntries: new Map() }), []);
 });
 
 // ## `scanEnclosingSurfaces` walks up to every enclosing `package.json`

@@ -18,10 +18,10 @@ void test("Bare filenames infer the type.", async (t) => {
   t.check(systemCardLocationError("dashboard", "/_config/interface/./dashboard.card"), null);
 
   // doctest:L18
-  t.check(systemCardLocationError("dashboard", "_content/Copy.dashboard.card")?.includes("_config/interface/dashboard.card"), true);
+  t.check(systemCardLocationError("dashboard", "_content/Copy.dashboard.card"), "The dashboard card at _content/Copy.dashboard.card must be at _config/interface/dashboard.card. Open or restore the canonical card; do not create another instance.");
 
   // doctest:L21
-  await t.checkText(systemCardLocationError("dashboard", "../_config/interface/dashboard.card") !== null, "true");
+  t.check(systemCardLocationError("dashboard", "../_config/interface/dashboard.card"), "The dashboard card at ../_config/interface/dashboard.card must be at _config/interface/dashboard.card. Open or restore the canonical card; do not create another instance.");
 
   // doctest:L24
   t.check(SYSTEM_CARD_COHORTS[SYSTEM_CARD_MIGRATION], [
@@ -46,7 +46,7 @@ void test("Bare filenames infer the type.", async (t) => {
   t.check(systemCardLocationError("admin", SYSTEM_CARD_PATHS.admin), null);
 
   // doctest:L33
-  t.check(systemCardLocationError("history", "_content/Saved.history.card")?.includes(SYSTEM_CARD_PATHS.history), true);
+  t.check(systemCardLocationError("history", "_content/Saved.history.card"), "The history card at _content/Saved.history.card must be at _config/interface/history.card. Open or restore the canonical card; do not create another instance.");
 
   // doctest:L36
   t.check(systemCardLocationError("search", "_content/Focused.search.card"), null);

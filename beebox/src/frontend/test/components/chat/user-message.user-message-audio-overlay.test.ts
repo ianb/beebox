@@ -11,7 +11,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { UserMessage } from "../../../src/components/chat/user-message/view.js";
@@ -61,6 +60,35 @@ function renderAsOtherViewer(entries: SessionEntry[], audioOverlayStore?: Return
   }));
 }
 
+const BADGE_CLASS = "inline-flex items-center justify-center w-[18px] h-[18px] rounded-full bg-info text-white leading-none ring-1 ring-warm-50 cursor-pointer";
+const RETRANSCRIBED_ICON = '<svg class="w-[13px] h-[13px]" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9a6 6 0 1 1 12 0c0 4.5-4 5-4 8.5a3 3 0 1 1-6 0"></path><path stroke-linecap="round" stroke-linejoin="round" d="M14.5 9a2.5 2.5 0 0 0-5 0"></path></svg>';
+const CONSULTED_ICON = '<svg class="w-[13px] h-[13px]" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2.8"><path stroke-linecap="round" stroke-linejoin="round" d="M4 11a5.5 5.5 0 1 1 11 0c0 4-3.5 4.5-3.5 7.5a2.8 2.8 0 1 1-5.6 0"></path></g><path fill="currentColor" d="M18.5 2l1.3 3.2L23 6.5l-3.2 1.3L18.5 11l-1.3-3.2L14 6.5l3.2-1.3z"></path></svg>';
+
+/** The badge cluster `UserMessage` renders: empty, or one popover button. */
+function badgeCluster(badge: { label: string; icon: string } | null): string {
+  const button = badge === null
+    ? ""
+    : `<span class="inline-flex items-center gap-0.5"><span class="relative inline-flex"><button type="button" aria-label="${badge.label}" aria-haspopup="dialog" aria-expanded="false" class="${BADGE_CLASS}"><span aria-hidden="true" class="inline-flex">${badge.icon}</span></button></span></span>`;
+  return `<span class="absolute -top-1 -left-1 inline-flex items-center gap-0.5">${button}</span>`;
+}
+
+const RETRANSCRIBED = { label: "Retranscribed — deepgram-hq", icon: RETRANSCRIBED_ICON };
+const CONSULTED = { label: "This recording was analyzed", icon: CONSULTED_ICON };
+
+/** The viewer's own bubble. `hq` is the HQ marker, `status` the live-text line. */
+function ownBubble(parts: { badge: { label: string; icon: string } | null; hq: string; text: string; status: string }): string {
+  return `<div class="flex justify-end pl-12 sm:pl-24 py-1"><div class="relative min-w-0">${badgeCluster(parts.badge)}<span class="absolute top-px right-px z-10">${parts.hq}</span><div class="bbx-chat-user-paper rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words"><div class="text-sm whitespace-pre-wrap">${parts.text}</div>${parts.status}</div></div></div>`;
+}
+
+/** Bob's bubble as Alice sees it. */
+function bobBubble(parts: { badge: { label: string; icon: string } | null; text: string }): string {
+  return `<div class="pr-12 sm:pr-24 py-1"><div class="bbx-chat-meta-material text-xs text-warm-500 ml-3 sm:ml-6 mb-0.5">Bob</div><div class="relative ml-3 sm:ml-6 w-fit">${badgeCluster(parts.badge)}<span class="absolute top-px right-px z-10"></span><div class="rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words"><div class="text-sm whitespace-pre-wrap">${parts.text}</div></div></div></div>`;
+}
+
+const hqMarker = (service: string): string =>
+  `<span role="img" aria-label="HQ transcript — ${service}" title="HQ transcript — ${service}" class="text-white/40 text-[9px] font-medium leading-none tracking-wide">HQ</span>`;
+const LIVE_STATUS = '<div role="status" class="bbx-chat-user-status text-xs text-white/70 mt-1 italic">Live text — HQ transcript unavailable</div>';
+
 // ## Retranscription: label includes the resolved service
 void test("Retranscription: label includes the resolved service", async (t) => {
   // doctest:L66
@@ -68,21 +96,10 @@ void test("Retranscription: label includes the resolved service", async (t) => {
     { retranscription: { newText: "two large eggs", service: "deepgram-hq", diarized: false } },
     "two large legs",
   );
-  t.check(specs.map((s) => s.label).join(", "), "Retranscribed — deepgram-hq");
+  t.check(specs.map((s) => s.label), ["Retranscribed — deepgram-hq"]);
 
-  // ## Retranscription popover content: the ORIGINAL bubble text, never the overlay
-  //
-  // Chained (`continue`) onto the previous block so `specs` is still in scope.
-
-  // doctest:L79
-  const popover = renderToStaticMarkup(specs[0]?.detail);
-  await t.checkText(popover.includes("two large legs"), "true");
-
-  // doctest:L83
-  await t.checkText(popover.includes("two large eggs"), "false");
-
-  // doctest:L86
-  await t.checkText(popover.includes("realtime transcript"), "true");
+  // The popover shows the ORIGINAL bubble text, never the overlay.
+  t.check(renderToStaticMarkup(specs[0]?.detail), '<div class="text-warm-500 text-[10px] uppercase tracking-wide mt-1.5">realtime transcript</div><div class="mt-0.5 whitespace-pre-wrap">two large legs</div>');
 });
 
 // ## Retranscription: no service known → label omits the placeholder
@@ -92,26 +109,18 @@ void test("Retranscription: no service known → label omits the placeholder", a
     { retranscription: { newText: "two large eggs", diarized: false } },
     "two large legs",
   );
-  t.check(noServiceSpecs.map((s) => s.label).join(", "), "Retranscribed");
+  t.check(noServiceSpecs.map((s) => s.label), ["Retranscribed"]);
 });
 
 // ## Consulted: fixed label; detail carries the question(s) asked
 void test("Consulted: fixed label; detail carries the question(s) asked", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L104
   const consultedSpecs = buildAudioBadgeSpecs({ consulted: { questions: ["did I sound annoyed?"] } }, "irrelevant");
-  await t.checkText(out.with(consultedSpecs.map((s) => s.label).join(", ")), "This recording was analyzed");
+  t.check(consultedSpecs.map((s) => s.label), ["This recording was analyzed"]);
 
-  // doctest:L108
-  const detailHtml = renderToStaticMarkup(consultedSpecs[0]?.detail);
-  print(`heading: ${detailHtml.includes("question asked")}`);
-  await t.checkText(out.with(print(`question: ${detailHtml.includes("did I sound annoyed?")}`)), `heading: true
-question: true`);
+  t.check(renderToStaticMarkup(consultedSpecs[0]?.detail), '<div class="text-warm-500 text-[10px] uppercase tracking-wide mt-1.5">question asked</div><div class="mt-0.5 whitespace-pre-wrap">did I sound annoyed?</div>');
 
-  // doctest:L115
   const multi = buildAudioBadgeSpecs({ consulted: { questions: ["q one?", "q two?"] } }, "x");
-  await t.checkText(out.with(renderToStaticMarkup(multi[0]?.detail).includes("questions asked")), "true");
+  t.check(renderToStaticMarkup(multi[0]?.detail), '<div class="text-warm-500 text-[10px] uppercase tracking-wide mt-1.5">questions asked</div><div class="mt-0.5 whitespace-pre-wrap">q one?</div><div class="mt-0.5 whitespace-pre-wrap">q two?</div>');
 });
 
 // ## Both present: retranscription badge first, consulted appended after
@@ -121,17 +130,14 @@ void test("Both present: retranscription badge first, consulted appended after",
     { retranscription: { newText: "x", diarized: false }, consulted: { questions: ["did I sound annoyed?"] } },
     "y",
   );
-  t.check(bothSpecs.map((s) => s.kind).join(", "), "retranscribed, consulted");
+  t.check(bothSpecs.map((s) => s.kind), ["retranscribed", "consulted"]);
 });
 
 // ## Full render: no overlay store → no badge, original text shown
 void test("Full render: no overlay store → no badge, original text shown", async (t) => {
   // doctest:L134
   const plainOut = render([voiceEntry("msg-1", "two large legs")]);
-  await t.checkText(plainOut.includes("two large legs"), "true");
-
-  // doctest:L138
-  await t.checkText(plainOut.includes("aria-haspopup"), "false");
+  t.check(plainOut, ownBubble({ badge: null, hq: "", text: "two large legs", status: "" }));
 });
 
 // ## Durable HQ provenance renders a subtle badge from history
@@ -152,10 +158,10 @@ void test("The service comes from the persisted speech wrapper, which the client
 
   // doctest:L156
   const hqOut = render([hqEntry]);
-  await t.checkText(hqOut.includes('aria-label="HQ transcript — whisper-llm"'), "true");
+  t.check(hqOut, ownBubble({ badge: null, hq: hqMarker("whisper-llm"), text: "server corrected words", status: "" }));
 
   // doctest:L160
-  await t.checkText(render([voiceEntry("msg-realtime", "fast words")]).includes('aria-label="HQ transcript'), "false");
+  t.check(render([voiceEntry("msg-realtime", "fast words")]), ownBubble({ badge: null, hq: "", text: "fast words", status: "" }));
 });
 
 // Current messages mark the exception instead (docs/plans/hq-always.md): HQ
@@ -180,10 +186,10 @@ void test("Current messages mark the exception instead (docs/plans/hq-always.md)
   ]);
 
   // doctest:L178
-  await t.checkText(render([currentLive]).includes("Live text — HQ transcript unavailable"), "true");
+  t.check(render([currentLive]), ownBubble({ badge: null, hq: "", text: "words", status: LIVE_STATUS }));
 
   // doctest:L181
-  await t.checkText(render([currentHq]).includes("Live text — HQ transcript unavailable"), "false");
+  t.check(render([currentHq]), ownBubble({ badge: null, hq: hqMarker("apple-speech-transcriber"), text: "words", status: "" }));
 });
 
 // ## Full render: a matching retranscription swaps the displayed text and shows a badge
@@ -192,10 +198,7 @@ void test("Full render: a matching retranscription swaps the displayed text and 
   const store = createAudioOverlayStore();
   store.applyRetranscription("msg-2", { newText: "two large eggs", service: "deepgram-hq", diarized: false });
   const swappedOut = render([voiceEntry("msg-2", "two large legs")], store);
-  await t.checkText(swappedOut.includes("two large eggs"), "true");
-
-  // doctest:L194
-  await t.checkText(swappedOut.includes('aria-label="Retranscribed — deepgram-hq"'), "true");
+  t.check(swappedOut, ownBubble({ badge: RETRANSCRIBED, hq: "", text: "two large eggs", status: "" }));
 });
 
 // ## Full render: no matching overlay entry for this message → original text, no badge
@@ -207,13 +210,7 @@ void test("An overlay for a DIFFERENT message id sitting in the same store must 
   const otherStore = createAudioOverlayStore();
   otherStore.applyRetranscription("msg-other", { newText: "not this bubble", diarized: false });
   const untouchedOut = render([voiceEntry("msg-3", "two large legs")], otherStore);
-  await t.checkText(untouchedOut.includes("two large legs"), "true");
-
-  // doctest:L210
-  await t.checkText(untouchedOut.includes("not this bubble"), "false");
-
-  // doctest:L213
-  await t.checkText(untouchedOut.includes("aria-haspopup"), "false");
+  t.check(untouchedOut, ownBubble({ badge: null, hq: "", text: "two large legs", status: "" }));
 });
 
 // ## Full render: consulted-only overlay → badge present, text unchanged
@@ -222,10 +219,7 @@ void test("Full render: consulted-only overlay → badge present, text unchanged
   const consultedStore = createAudioOverlayStore();
   consultedStore.applyConsulted("msg-4", "did I sound annoyed?");
   const consultedOut = render([voiceEntry("msg-4", "two large legs")], consultedStore);
-  await t.checkText(consultedOut.includes("two large legs"), "true");
-
-  // doctest:L226
-  await t.checkText(consultedOut.includes('aria-label="This recording was analyzed"'), "true");
+  t.check(consultedOut, ownBubble({ badge: CONSULTED, hq: "", text: "two large legs", status: "" }));
 });
 
 // ## Fix (cross-model review): another user's bubble ALSO overlays — not just the sender's own
@@ -237,13 +231,7 @@ void test("In a shared session, Bob's retranscribed message must update on a dif
   const otherStore = createAudioOverlayStore();
   otherStore.applyRetranscription("msg-bob-1", { newText: "corrected bob text", service: "deepgram-hq", diarized: false });
   const otherOut = renderAsOtherViewer([otherUserVoiceEntry("msg-bob-1", "original bob text")], otherStore);
-  await t.checkText(otherOut.includes("corrected bob text"), "true");
-
-  // doctest:L242
-  await t.checkText(otherOut.includes("original bob text"), "false");
-
-  // doctest:L245
-  await t.checkText(otherOut.includes('aria-label="Retranscribed — deepgram-hq"'), "true");
+  t.check(otherOut, bobBubble({ badge: RETRANSCRIBED, text: "corrected bob text" }));
 });
 
 // ## Fix (cross-model review): another user's bubble also shows the consulted badge
@@ -252,10 +240,7 @@ void test("Fix (cross-model review): another user's bubble also shows the consul
   const otherConsultedStore = createAudioOverlayStore();
   otherConsultedStore.applyConsulted("msg-bob-2", "was that sarcasm?");
   const otherConsultedOut = renderAsOtherViewer([otherUserVoiceEntry("msg-bob-2", "bob asked something")], otherConsultedStore);
-  await t.checkText(otherConsultedOut.includes("bob asked something"), "true");
-
-  // doctest:L258
-  await t.checkText(otherConsultedOut.includes('aria-label="This recording was analyzed"'), "true");
+  t.check(otherConsultedOut, bobBubble({ badge: CONSULTED, text: "bob asked something" }));
 });
 
 // ## Fix (P4): `originalDisplayText` unwraps `<unsure>` marks to plain words
@@ -274,24 +259,13 @@ void test("originalDisplayText (user-entry-content.tsx) feeds the popover's \"re
   };
   t.check(originalDisplayText(unsureEntry), "they're all cloud code in different ways");
 
-  // The popover content itself renders the clean, unwrapped text — never the raw tag:
-
+  // The popover content itself renders the clean, unwrapped text, never the raw tag.
   // doctest:L283
   const unsureSpecs = buildAudioBadgeSpecs(
     { retranscription: { newText: "two large eggs", service: "deepgram-hq", diarized: false } },
     originalDisplayText(unsureEntry),
   );
   const unsurePopover = renderToStaticMarkup(unsureSpecs[0]?.detail);
-  await t.checkText(
-    // React-escapes the apostrophe in static markup, so match the unwrapped
-    // word's surroundings rather than the raw contraction.
-    unsurePopover.includes("all cloud code in different ways"),
-    "true",
-  );
-
-  // doctest:L293
-  await t.checkText(unsurePopover.includes("<unsure"), "false");
-
-  // doctest:L296
-  await t.checkText(unsurePopover.includes("</unsure>"), "false");
+  // React escapes the apostrophe in static markup.
+  t.check(unsurePopover, '<div class="text-warm-500 text-[10px] uppercase tracking-wide mt-1.5">realtime transcript</div><div class="mt-0.5 whitespace-pre-wrap">they&#x27;re all cloud code in different ways</div>');
 });

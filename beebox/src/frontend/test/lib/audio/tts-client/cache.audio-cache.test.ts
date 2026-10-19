@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { not } from "agent-doctest/check";
 import { AudioCache, cacheKey } from "../../../../src/lib/audio/tts-client/cache.js";
 
 // ## Cache keys
@@ -14,21 +15,18 @@ import { AudioCache, cacheKey } from "../../../../src/lib/audio/tts-client/cache
 // that can't appear in any input, so distinct triples can't collide). It is
 // deterministic and contains each part:
 void test("A key is derived from backend + voice + instructions + text (joined with a NU...", async (t) => {
-  // doctest:L18
-  const k = cacheKey({ text: "hello", voice: "marin", instructions: "calm", backend: "openai" });
-  t.check([k.includes("marin"), k.includes("calm"), k.includes("hello")].join(","), "true,true,true");
+  t.check(cacheKey({ text: "hello", voice: "marin", instructions: "calm", backend: "openai" }), "openai\0marin\0calm\0hello");
 
-  // doctest:L24
-  await t.checkText(cacheKey({ text: "hi", voice: "marin", instructions: "x", backend: "openai" }) === cacheKey({ text: "hi", voice: "marin", instructions: "x", backend: "openai" }), "true");
+  const same = cacheKey({ text: "hi", voice: "marin", instructions: "x", backend: "openai" });
+  t.check(cacheKey({ text: "hi", voice: "marin", instructions: "x", backend: "openai" }), same);
 });
 
 // Distinct inputs produce distinct keys (so a re-voiced generation is its own
 // entry):
 void test("Distinct inputs produce distinct keys (so a re-voiced generation is its own e...", async (t) => {
-  // doctest:L32
   const a = cacheKey({ text: "hi", voice: "marin", instructions: "calm", backend: "openai" });
   const b = cacheKey({ text: "hi", voice: "coral", instructions: "calm", backend: "openai" });
-  await t.checkText(a === b, "false");
+  t.check(a, not(b));
 });
 
 // ## Store and retrieve
@@ -59,10 +57,7 @@ void test("Adding past the budget evicts the least-recently-used entry:", async 
   cache.set("a", new ArrayBuffer(40));
   cache.set("b", new ArrayBuffer(40));
   cache.set("c", new ArrayBuffer(40));
-  await t.checkText(cache.has("a"), "false");
-
-  // doctest:L72
-  await t.checkText(cache.has("c"), "true");
+  t.check(["a", "b", "c"].map((k) => cache.has(k)), [false, true, true]);
 
   // doctest:L75
   t.check(cache.byteLength, 80);
@@ -79,10 +74,7 @@ void test("Reading an entry makes it most-recently-used, so a later insertion ev
   cache.set("b", new ArrayBuffer(40));
   cache.get("a");
   cache.set("c", new ArrayBuffer(40));
-  await t.checkText(cache.has("a"), "true");
-
-  // doctest:L93
-  await t.checkText(cache.has("b"), "false");
+  t.check(["a", "b", "c"].map((k) => cache.has(k)), [true, false, true]);
 });
 
 // ## Oversized buffers are not cached
@@ -93,8 +85,5 @@ void test("A single buffer larger than the whole budget is dropped rather than c
   // doctest:L103
   const cache = new AudioCache({ maxBytes: 100 });
   cache.set("big", new ArrayBuffer(200));
-  await t.checkText(cache.has("big"), "false");
-
-  // doctest:L108
   t.check(cache.count, 0);
 });

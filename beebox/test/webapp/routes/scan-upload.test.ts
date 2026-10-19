@@ -16,14 +16,15 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate } from "agent-doctest/check";
 import { createHash } from "node:crypto";
 import Sharp from "sharp";
-import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/test-route-server.js";
-import { bodyField } from "../../helpers/test-helpers.js";
+import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";
 import type { TestServerOptions } from "../../helpers/test-server.js";
 import { textlessPdf } from "../../helpers/pdf-fixtures.js";
 import { resetScanRateLimits, SCAN_RATE_LIMIT } from "../../../src/webapp/routes/scan-upload/rate-limit.js";
 import { qpdfAvailable } from "../../../src/core/scan/validate.js";
+import { SCAN_CONTRACT_VERSION } from "../../../src/core/scan/contract-version.js";
 import { createScanToken } from "../../../src/core/scan/tokens.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../src/core/mobile/pairing.js";
 
@@ -86,22 +87,26 @@ async function check(ctx: TestServer, hashes: string[]) {
   return ctx.request({ method: "POST", url: "/api/scan/check", payload: { hashes } });
 }
 
-/**
- * Collapse a PDF response to "ok" when it matches what THIS host should do.
- * With qpdf the route returns a real verdict; without it the route must refuse
- * with a retryable 503 rather than accept unvalidated bytes or blame the file.
- */
-function pdfOutcome(opts: { hasQpdf: boolean; res: InjectResult; status: number; body: string }) {
-  const { hasQpdf, res, status, body } = opts;
-  if (!hasQpdf) {
-    return res.statusCode === 503 && bodyField(res.body, "status") === "server-error"
-      ? "ok"
-      : `unexpected without qpdf: ${res.statusCode} ${JSON.stringify(res.body)}`;
-  }
-  return res.statusCode === status && bodyField(res.body, "status") === body
-    ? "ok"
-    : `unexpected with qpdf: ${res.statusCode} ${JSON.stringify(res.body)}`;
+/** The `check` response for the given per-hash states. */
+function checked(states: Record<string, object>) {
+  return { statusCode: 200, body: { states, contractVersion: SCAN_CONTRACT_VERSION } };
 }
+
+/** The quarantine sidecar of one received file. */
+function sidecarOf(opts: { hash: string; state: string; ext: string; name: string; tokenName?: string }) {
+  return {
+    sha256: opts.hash,
+    state: opts.state,
+    storedFilename: `${opts.hash}${opts.ext}`,
+    originalFilename: opts.name,
+    tokenName: opts.tokenName ?? null,
+    receivedAt: isoDate(),
+  };
+}
+
+const TOO_BIG = { statusCode: 413, body: { error: "File exceeds the 52428800-byte scan upload limit" } };
+const ACCEPTED = { statusCode: 200, body: { status: "accepted" } };
+const QPDF_MISSING = { statusCode: 503, body: { status: "server-error", reason: "qpdf is not installed on this server" } };
 
 // ## The full walk: unknown → accepted → pending → duplicate
 //
@@ -125,15 +130,15 @@ void test("An uploader's first move is check, which answers unknown for a hash t
 
   // doctest:L119
   const first = await check(ctx, [hash]);
-  await t.checkText(JSON.stringify({ status: first.statusCode, states: bodyField(first.body, "states") }), "{\"status\":200,\"states\":{\"«*»\":{\"state\":\"unknown\"}}}");
+  t.check(first, {
+    statusCode: 200,
+    body: { states: { [hash]: { state: "unknown" } }, contractVersion: SCAN_CONTRACT_VERSION },
+  });
 
-  // The same response carries the box's contract version, which is how a copied
+  // The same response carries the box's contract version (above), which is how a copied
   // uploader bundle notices it has fallen behind this box. It is a sibling of
   // `states`, so an uploader that predates it reads the response exactly as
   // before — see the contract doc's "Client identity".
-
-  // doctest:L130
-  t.check(typeof bodyField(first.body, "contractVersion"), "number");
 
   // The PUT streams the bytes into quarantine, re-hashes them, sniffs the magic
   // bytes against the claimed extension, and decodes the image — all before the 200:
@@ -154,23 +159,7 @@ void test("An uploader's first move is check, which answers unknown for a hash t
 
   // doctest:L149
   const sidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${hash}.json`));
-  const expectedStored = `${hash}.png`;
-  t.check(
-    {
-      state: sidecar.state,
-      storedFilename: sidecar.storedFilename === expectedStored,
-      originalFilename: sidecar.originalFilename,
-      profile: sidecar.profile ?? null,
-      reason: sidecar.reason ?? null,
-    },
-    {
-    state: "pending",
-    storedFilename: true,
-    originalFilename: "Receipts_001.png",
-    profile: null,
-    reason: null,
-  },
-  );
+    t.check(sidecar, sidecarOf({ hash, state: "pending", ext: ".png", name: "Receipts_001.png" }));
 
   // `check` now reports `pending` — confirmed, so the client may archive its copy —
   // and a re-PUT of the same hash is a `duplicate` no-op rather than a re-store:
@@ -178,25 +167,16 @@ void test("An uploader's first move is check, which answers unknown for a hash t
   // doctest:L165
   const second = await check(ctx, [hash]);
   const duplicate = await put(ctx, { bytes: png, filename: "Receipts_001.png" });
-  t.check(
-    {
-      state: bodyField(second.body, "states", hash, "state"),
-      duplicate: [duplicate.statusCode, bodyField(duplicate.body, "status")],
-    },
-    {
-    state: "pending",
-    duplicate: [
-      200,
-      "duplicate",
-    ],
-  },
-  );
+    t.check({ second, duplicate }, {
+    second: checked({ [hash]: { state: "pending" } }),
+    duplicate: { statusCode: 200, body: { status: "duplicate" } },
+  });
 
   // The lifecycle invoked the injected startup pass for this exact annex-shaped
   // box before the route assertions ran:
 
   // doctest:L178
-  await t.checkText(ctx.promotionRoots[0] === ctx.boxRoot, "true");
+  t.check(ctx.promotionRoots, [ctx.boxRoot]);
 
   // `X-Scan-Profile` rides along as free-text provenance when the scanner sends one:
 
@@ -207,9 +187,12 @@ void test("An uploader's first move is check, which answers unknown for a hash t
     headers: { "x-scan-profile": "ScanSnap Colour Duplex" },
   });
   const profiled = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${sha256(Buffer.concat([png, Buffer.from("\n")]))}.json`));
-  t.check({ status: withProfile.statusCode, profile: profiled.profile }, {
-    status: 200,
-    profile: "ScanSnap Colour Duplex",
+  t.check({ withProfile, profiled }, {
+    withProfile: ACCEPTED,
+    profiled: {
+      ...sidecarOf({ hash: sha256(Buffer.concat([png, Buffer.from("\n")])), state: "pending", ext: ".png", name: "Receipts_002.png" }),
+      profile: "ScanSnap Colour Duplex",
+    },
   });
 });
 
@@ -238,33 +221,19 @@ void test("The extension allowlist is intentionally relaxed for these formats, b
   const validAvif = await put(ctx, { bytes: avif, filename: "Receipts_002.avif" });
   const wrongExtension = await put(ctx, { bytes: wrongWebp, filename: "Receipts_003.avif" });
   const truncated = await put(ctx, { bytes: avif.subarray(0, avif.length - 12), filename: "Receipts_004.avif" });
-  t.check(
-    [
-      [validWebp.statusCode, bodyField(validWebp.body, "status")],
-      [validAvif.statusCode, bodyField(validAvif.body, "status")],
-      [wrongExtension.statusCode, bodyField(wrongExtension.body, "reason")],
-      [truncated.statusCode, bodyField(truncated.body, "status"), String(bodyField(truncated.body, "reason")).startsWith("the image could not be decoded")],
-    ],
-    [
-    [
-      200,
-      "accepted",
-    ],
-    [
-      200,
-      "accepted",
-    ],
-    [
-      422,
-      "magic bytes say image/webp but the extension is .avif",
-    ],
-    [
-      422,
-      "rejected",
-      true,
-    ],
-  ],
-  );
+    t.check({ validWebp, validAvif, wrongExtension, truncated }, {
+    validWebp: ACCEPTED,
+    validAvif: ACCEPTED,
+    wrongExtension: {
+      statusCode: 422,
+      body: { status: "rejected", reason: "magic bytes say image/webp but the extension is .avif" },
+    },
+    // The decoder's message carries a temp path and a truncated library error.
+    truncated: {
+      statusCode: 422,
+      body: { status: "rejected", reason: any(String).startsWith("the image could not be decoded") },
+    },
+  });
 
   // Changing a valid AVIF's major brand to `mif1` makes file-type report HEIF. The
   // same valid AV1 image remains accepted through full pixel decode.
@@ -273,7 +242,7 @@ void test("The extension allowlist is intentionally relaxed for these formats, b
   const mif1 = Buffer.from(avif);
   mif1.write("mif1", 8);
   const branded = await put(ctx, { bytes: mif1, filename: "Receipts_005.avif" });
-  await t.checkText(JSON.stringify([branded.statusCode, bodyField(branded.body, "status"), bodyField(branded.body, "reason")]), "[200,\"accepted\",null]");
+  t.check(branded, ACCEPTED);
 });
 
 // ## A hash that already imported answers `imported`, and a PUT of it is a duplicate
@@ -307,12 +276,9 @@ void test("imported comes from the box's upload ledger, not from quarantine — 
   // doctest:L262
   const states = await check(ctx, [hash]);
   const reput = await put(ctx, { bytes: png, filename: "Receipts_001.png" });
-  t.check({ state: bodyField(states.body, "states", hash, "state"), reput: [reput.statusCode, bodyField(reput.body, "status")] }, {
-    state: "imported",
-    reput: [
-      200,
-      "duplicate",
-    ],
+  t.check({ states, reput }, {
+    states: checked({ [hash]: { state: "imported" } }),
+    reput: { statusCode: 200, body: { status: "duplicate" } },
   });
 });
 
@@ -347,10 +313,7 @@ void test("Truncation and corruption defense.", async (t) => {
 
   // doctest:L291
   const after = await check(ctx, [wrongHash, sha256(png)]);
-  t.check([bodyField(after.body, "states", wrongHash, "state"), bodyField(after.body, "states", sha256(png), "state")], [
-    "unknown",
-    "unknown",
-  ]);
+  t.check(after, checked({ [wrongHash]: { state: "unknown" }, [sha256(png)]: { state: "unknown" } }));
 });
 
 // ## A smuggled extension is rejected with a reason a human can act on
@@ -389,9 +352,9 @@ void test("The magic-byte sniff is the type-smuggling gate:", async (t) => {
   // doctest:L322
   const html = Buffer.from("<!DOCTYPE html>\n<html><body>Not found</body></html>\n");
   const htmlRes = await put(ctx, { bytes: html, filename: "Statement.pdf" });
-  t.check({ status: htmlRes.statusCode, reason: bodyField(htmlRes.body, "reason") }, {
-    status: 422,
-    reason: "the magic bytes match no known file type, but the filename claims .pdf",
+  t.check(htmlRes, {
+    statusCode: 422,
+    body: { status: "rejected", reason: "the magic bytes match no known file type, but the filename claims .pdf" },
   });
 
   // An extension outside the accepted set never gets as far as a sniff:
@@ -399,9 +362,12 @@ void test("The magic-byte sniff is the type-smuggling gate:", async (t) => {
   // doctest:L331
   const otherBytes = Buffer.concat([png, Buffer.from("tail")]);
   const zip = await put(ctx, { bytes: otherBytes, filename: "Scans.zip" });
-  t.check({ status: zip.statusCode, reason: bodyField(zip.body, "reason") }, {
-    status: 422,
-    reason: "extension .zip is not accepted (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif)",
+  t.check(zip, {
+    statusCode: 422,
+    body: {
+      status: "rejected",
+      reason: "extension .zip is not accepted (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif)",
+    },
   });
 
   // A rejected hash is *kept* — the file stays in quarantine for the question card,
@@ -411,13 +377,14 @@ void test("The magic-byte sniff is the type-smuggling gate:", async (t) => {
   // doctest:L342
   const states = await check(ctx, [hash]);
   const sidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${hash}.json`));
-  const heldAsPdf = sidecar.storedFilename === `${hash}.pdf`;
-  t.check({ check: bodyField(states.body, "states", hash), stored: heldAsPdf }, {
-    check: {
-      state: "rejected",
+  t.check({ states, sidecar }, {
+    states: checked({
+      [hash]: { state: "rejected", reason: "magic bytes say image/png but the extension is .pdf" },
+    }),
+    sidecar: {
+      ...sidecarOf({ hash, state: "rejected", ext: ".pdf", name: "Statement.pdf" }),
       reason: "magic bytes say image/png but the extension is .pdf",
     },
-    stored: true,
   });
 
   // Re-PUT of a rejected hash re-runs validation rather than replaying the cached
@@ -427,12 +394,9 @@ void test("The magic-byte sniff is the type-smuggling gate:", async (t) => {
   // doctest:L354
   const retry = await put(ctx, { bytes: png, filename: "Statement.png" });
   const recheck = await check(ctx, [hash]);
-  t.check({ retry: [retry.statusCode, bodyField(retry.body, "status")], state: bodyField(recheck.body, "states", hash, "state") }, {
-    retry: [
-      200,
-      "accepted",
-    ],
-    state: "pending",
+  t.check({ retry, recheck }, {
+    retry: ACCEPTED,
+    recheck: checked({ [hash]: { state: "pending" } }),
   });
 });
 
@@ -453,7 +417,9 @@ void test("PDFs: a valid one is accepted, a corrupt one is rejected — or 503 w
 
   // doctest:L372
   const good = await put(ctx, { bytes: pdf, filename: "Invoice.pdf" });
-  t.check(pdfOutcome({ hasQpdf, res: good, status: 200, body: "accepted" }), "ok");
+  // Where qpdf is missing the route refuses with a retryable 503 (rather than
+  // accepting unvalidated bytes or blaming the file); with qpdf it gives a real verdict.
+  t.check(good, hasQpdf ? ACCEPTED : QPDF_MISSING);
 
   // A corrupt PDF sniffs correctly (`%PDF-` is still there) and fails only at the
   // structural check. Note the fixture is unparseable garbage, not a truncation:
@@ -465,7 +431,14 @@ void test("PDFs: a valid one is accepted, a corrupt one is rejected — or 503 w
   // doctest:L385
   const corrupt = Buffer.from("%PDF-1.4\n<<garbage");
   const bad = await put(ctx, { bytes: corrupt, filename: "Invoice.pdf" });
-  t.check(pdfOutcome({ hasQpdf, res: bad, status: 422, body: "rejected" }), "ok");
+  // The structural verdict quotes qpdf's output, which carries a temp path.
+  t.check(bad, hasQpdf ? {
+    statusCode: 422,
+    body: {
+      status: "rejected",
+      reason: any(String).startsWith("the PDF is structurally broken — qpdf --check said:"),
+    },
+  } : QPDF_MISSING);
 
   // Where qpdf is missing the 503 records nothing at all: the file stays `unknown`,
   // so the uploader retries later instead of treating a server misconfiguration as a
@@ -473,8 +446,16 @@ void test("PDFs: a valid one is accepted, a corrupt one is rejected — or 503 w
 
   // doctest:L396
   const states = await check(ctx, [sha256(pdf), sha256(corrupt)]);
-  const expected = hasQpdf ? ["pending", "rejected"] : ["unknown", "unknown"];
-  await t.checkText(JSON.stringify([bodyField(states.body, "states", sha256(pdf), "state"), bodyField(states.body, "states", sha256(corrupt), "state")]) === JSON.stringify(expected), "true");
+  t.check(states, checked(hasQpdf ? {
+    [sha256(pdf)]: { state: "pending" },
+    [sha256(corrupt)]: {
+      state: "rejected",
+      reason: any(String).startsWith("the PDF is structurally broken — qpdf --check said:"),
+    },
+  } : {
+    [sha256(pdf)]: { state: "unknown" },
+    [sha256(corrupt)]: { state: "unknown" },
+  }));
 });
 
 // ## Size limits are enforced twice: on the declared length and on the real stream
@@ -499,7 +480,7 @@ void test("A Content-Length over the 50 MB cap is refused before a byte is trans
     filename: "Huge.png",
     headers: { "content-length": String(50 * 1024 * 1024 + 1) },
   });
-  t.check(declared.statusCode, 413);
+  t.check(declared, TOO_BIG);
 
   // ...and a client that *lies* about its length is caught mid-stream, because
   // Fastify's `bodyLimit` does not meter a passthrough parser — the route counts the
@@ -512,15 +493,13 @@ void test("A Content-Length over the 50 MB cap is refused before a byte is trans
     filename: "Huge.png",
     headers: { "content-length": "12" },
   });
-  t.check(lied.statusCode, 413);
+  t.check(lied, TOO_BIG);
 
   // No partial file survives either refusal — quarantine holds nothing:
 
   // doctest:L442
   const states = await check(ctx, [sha256(oversize)]);
-  t.check(bodyField(states.body, "states", sha256(oversize)), {
-    state: "unknown",
-  });
+  t.check(states, checked({ [sha256(oversize)]: { state: "unknown" } }));
 
   // A body with no `Content-Length` at all is refused too: the contract requires it,
   // and a length-less stream is exactly the shape a runaway upload arrives in.
@@ -531,7 +510,7 @@ void test("A Content-Length over the 50 MB cap is refused before a byte is trans
     url: `/api/scan/files/${sha256(png)}`,
     headers: { "content-type": "application/octet-stream", "x-upload-filename": "a.png" },
   });
-  t.check(noLength.statusCode, 411);
+  t.check(noLength, { statusCode: 411, body: { error: "Content-Length required" } });
 });
 
 // ## Malformed requests are refused before anything is stored
@@ -572,24 +551,17 @@ void test("The hash in the path is the idempotency key for everything downstream
   const missing = await put(ctx, { bytes: png, filename: null });
   const blank = await put(ctx, { bytes: png, filename: "   " });
   const traversal = await put(ctx, { bytes: png, filename: "../../etc/passwd" });
-  t.check(
-    {
-      missing: [missing.statusCode, bodyField(missing.body, "error")],
-      blank: blank.statusCode,
-      traversal: [traversal.statusCode, bodyField(traversal.body, "reason")],
+  t.check({ missing, blank, traversal }, {
+    missing: { statusCode: 400, body: { error: "X-Upload-Filename header required" } },
+    blank: { statusCode: 400, body: { error: "X-Upload-Filename header required" } },
+    traversal: {
+      statusCode: 422,
+      body: {
+        status: "rejected",
+        reason: "the file has no extension (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif)",
+      },
     },
-    {
-    missing: [
-      400,
-      "X-Upload-Filename header required",
-    ],
-    blank: 400,
-    traversal: [
-      422,
-      "the file has no extension (accepted: .pdf, .jpg, .jpeg, .png, .tif, .tiff, .webp, .avif)",
-    ],
-  },
-  );
+  });
 
   // `check` validates its batch the same way — a malformed hash or an over-cap batch
   // is a 400 rather than a map full of `unknown`:
@@ -598,20 +570,17 @@ void test("The hash in the path is the idempotency key for everything downstream
   const malformed = await check(ctx, ["nope"]);
   const overCap = await check(ctx, Array.from({ length: 501 }, (_v, i) => sha256(Buffer.from(String(i)))));
   const notAnArray = await ctx.request({ method: "POST", url: "/api/scan/check", payload: { hashes: "abc" } });
-  t.check([malformed.statusCode, overCap.statusCode, notAnArray.statusCode], [
-    400,
-    400,
-    400,
-  ]);
+  const badHashes = {
+    statusCode: 400,
+    body: { error: "hashes must be an array of at most 500 lowercase 64-character hex SHA-256 digests" },
+  };
+  t.check({ malformed, overCap, notAnArray }, { malformed: badHashes, overCap: badHashes, notAnArray: badHashes });
 
   // An empty batch is legal — a folder with nothing new in it is a normal run:
 
   // doctest:L514
   const empty = await check(ctx, []);
-  t.check({ status: empty.statusCode, states: bodyField(empty.body, "states") }, {
-    status: 200,
-    states: {},
-  });
+  t.check(empty, checked({}));
 });
 
 // ## Past 60 requests a minute the credential is throttled with a `Retry-After`
@@ -633,7 +602,7 @@ void test("A bound on a runaway or looping uploader, an order of magnitude above
   // doctest:L532
   let last = await check(ctx, []);
   for (let i = 1; i < SCAN_RATE_LIMIT + 1; i++) last = await check(ctx, []);
-  t.check(last.statusCode, 429);
+  t.check(last, { statusCode: 429, body: { error: "Too many scan requests; retry after the interval in Retry-After" } });
 
   // The response carries the seconds until the window rolls over, which is what the
   // contract tells the client to honor:
@@ -641,16 +610,16 @@ void test("A bound on a runaway or looping uploader, an order of magnitude above
   // doctest:L542
   const throttled = await ctx.rawRequest({ method: "POST", url: "/api/scan/check", payload: { hashes: [] } });
   const retryAfter = Number(throttled.headers["retry-after"]);
-  t.check({ status: throttled.statusCode, sane: retryAfter >= 1 && retryAfter <= 60 }, {
-    status: 429,
-    sane: true,
+  t.check({ statusCode: throttled.statusCode, retryAfter }, {
+    statusCode: 429,
+    retryAfter: any(Number).between(1, 60),
   });
 
   // Clearing the window lets the same credential straight back in:
 
   // doctest:L551
   resetScanRateLimits();
-  t.check((await check(ctx, [])).statusCode, 200);
+  t.check(await check(ctx, []), checked({}));
 });
 
 // ## Auth: a scan token and the owner both reach these routes; a phone does not
@@ -701,7 +670,7 @@ void test("These routes are registered in a sibling scope outside the box's gene
 
   // doctest:L592
   const tokenSidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${sha256(png)}.json`));
-  t.check(tokenSidecar.tokenName, "laptop-scansnap");
+  t.check(tokenSidecar, sidecarOf({ hash: sha256(png), state: "pending", ext: ".png", name: "Receipts_001.png", tokenName: "laptop-scansnap" }));
 
   // The boxholder's own identity works too, so these routes can be driven by hand;
   // a paired phone's device token — a full-access credential everywhere else —
@@ -729,21 +698,12 @@ void test("These routes are registered in a sibling scope outside the box's gene
     payload: { hashes: [sha256(png)] },
     headers: { authorization: `Bearer ${device?.deviceToken}` },
   });
-  t.check(
-    {
-      anonymous: asOwner.statusCode,
-      owner: [asOwnerHub.statusCode, bodyField(asOwnerHub.body, "states", sha256(png), "state")],
-      phone: asPhone.statusCode,
-    },
-    {
-    anonymous: 401,
-    owner: [
-      200,
-      "pending",
-    ],
-    phone: 401,
-  },
-  );
+  const notAuthenticated = { statusCode: 401, body: { error: "Not authenticated" } };
+  t.check({ anonymous: asOwner, owner: asOwnerHub, phone: asPhone }, {
+    anonymous: notAuthenticated,
+    owner: checked({ [sha256(png)]: { state: "pending" } }),
+    phone: notAuthenticated,
+  });
 });
 
 // ## A box that is not annex-converted refuses everything with a 503
@@ -782,8 +742,8 @@ void test("Every section above runs on an annex-converted box (annexBox:", async
   const png = await pngBytes();
 
   // doctest:L667
-  const checked = await check(ctx, [sha256(png)]);
-  t.check({ status: checked.statusCode, body: checked.body }, {
+  const refused = await check(ctx, [sha256(png)]);
+  t.check({ status: refused.statusCode, body: refused.body }, {
     status: 503,
     body: {
       status: "server-error",

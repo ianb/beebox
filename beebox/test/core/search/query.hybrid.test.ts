@@ -13,6 +13,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { anything } from "agent-doctest/check";
 import { searchBox } from "../../../src/core/search/query/core.js";
 import { createFakeEmbeddings, EmbeddingsError, type EmbeddingsService } from "../../../src/services/openai-embeddings.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -59,28 +60,51 @@ void test("auto + service: hybrid ranks the semantically-matched card top", asyn
   await box.write("_content/inbox/Bill.doc.card", DOC("The electric bill is due.", "Electric bill due Friday."));
   const fake = createFakeEmbeddings();
   const res = await searchBox(box.root, { query: "Dentist moved to June 17.", embeddings: fake });
-  t.check(res.searchMode, "hybrid");
-
-  // doctest:L57
-  t.check(res.embeddingsReady, true);
-
-  // doctest:L60
-  t.check(res.results[0]?.path, "_content/inbox/Dentist.doc.card");
-
-  // doctest:L63
-  t.check(res.warnings, []);
+  // The second hit is box scaffolding that also matches; only the top hit is the contract.
+  t.check(res, {
+    results: [
+      {
+        path: "_content/inbox/Dentist.doc.card",
+        fragment: "",
+        kind: "doc",
+        title: "Note",
+        contains: "Dentist moved to June 17.",
+        excerpt: "Dentist moved to June 17.",
+        score: 1,
+      },
+      anything(),
+    ],
+    total: 2,
+    truncated: false,
+    warnings: [],
+    stale: false,
+    searchMode: "hybrid",
+    embeddingsReady: true,
+  });
 
   // ## auto + no service: text mode, no warning (the designed not-configured state)
 
   // doctest:L70
   const res2 = await searchBox(box.root, { query: "dentist" });
-  t.check(res2.searchMode, "text");
-
-  // doctest:L74
-  t.check(res2.embeddingsReady, false);
-
-  // doctest:L77
-  t.check(res2.warnings, []);
+  t.check(res2, {
+    results: [
+      {
+        path: "_content/inbox/Dentist.doc.card",
+        fragment: "",
+        kind: "doc",
+        title: "Note",
+        contains: "Dentist moved to June 17.",
+        excerpt: "Dentist moved to June 17.",
+        score: 2.984376793889005,
+      },
+    ],
+    total: 1,
+    truncated: false,
+    warnings: [],
+    stale: false,
+    searchMode: "text",
+    embeddingsReady: false,
+  });
 
   // ## kind filter composes with hybrid
   //
@@ -91,10 +115,25 @@ void test("auto + service: hybrid ranks the semantically-matched card top", asyn
   await box.write("_content/notes/Dentist.md", "# Dentist\nA plain markdown note about the dentist appointment.\n");
   const fakeK = createFakeEmbeddings();
   const resK = await searchBox(box.root, { query: "dentist appointment", embeddings: fakeK, kinds: ["doc"] });
-  t.check(resK.searchMode, "hybrid");
-
-  // doctest:L93
-  await t.checkText(resK.results.every((h) => h.kind === "doc"), "true");
+  t.check(resK, {
+    results: [
+      {
+        path: "_content/inbox/Dentist.doc.card",
+        fragment: "",
+        kind: "doc",
+        title: "Note",
+        contains: "Dentist moved to June 17.",
+        excerpt: "Dentist moved to June 17.",
+        score: 0.5,
+      },
+    ],
+    total: 1,
+    truncated: false,
+    warnings: [],
+    stale: false,
+    searchMode: "hybrid",
+    embeddingsReady: true,
+  });
 });
 
 // ## mode "text" is fully offline: zero embed calls, works with a broken secret
@@ -114,14 +153,29 @@ void test("--mode text skips key resolution entirely and passes no service into 
   await boxT.write("_content/inbox/Dentist.doc.card", DOC("The dentist appointment moved.", "Dentist moved to June 17."));
   const fakeT = createFakeEmbeddings();
   const resT = await searchBox(boxT.root, { query: "dentist", embeddings: fakeT, mode: "text" });
-  t.check(resT.searchMode, "text");
+  t.check(resT, {
+    results: [
+      {
+        path: "_content/inbox/Dentist.doc.card",
+        fragment: "",
+        kind: "doc",
+        title: "Note",
+        contains: "Dentist moved to June 17.",
+        excerpt: "Dentist moved to June 17.",
+        score: 2.033540825375197,
+      },
+    ],
+    total: 1,
+    truncated: false,
+    warnings: [],
+    stale: false,
+    searchMode: "text",
+    embeddingsReady: false,
+  });
 
   // doctest:L114
-  await t.checkText(
-    // Zero calls: no corpus embed, no query embed.
-    fakeT.calls.length,
-    "0",
-  );
+  // Zero calls: no corpus embed, no query embed.
+  t.check(fakeT.calls, []);
 });
 
 // ## ready corpus + query-embed failure: auto degrades with a warning
@@ -149,19 +203,27 @@ void test("The corpus embeds fine at refresh (call 1); the query-stage embed (ca
     },
   };
   const resQ = await searchBox(boxQ.root, { query: "electric", embeddings: queryStageFails });
-  t.check(resQ.searchMode, "text");
-
-  // doctest:L144
-  t.check(resQ.embeddingsReady, true);
-
-  // doctest:L147
-  await t.checkText(resQ.warnings.length, "1");
-
-  // doctest:L150
-  t.check(resQ.warnings[0]?.startsWith("query embedding failed"), true);
-
-  // doctest:L153
-  t.check(resQ.results[0]?.path, "_content/inbox/Bill.doc.card");
+  t.check(resQ, {
+    results: [
+      {
+        path: "_content/inbox/Bill.doc.card",
+        fragment: "",
+        kind: "doc",
+        title: "Note",
+        contains: "Electric bill due Friday.",
+        excerpt: "Electric bill due Friday.",
+        score: 2.051797334648928,
+      },
+    ],
+    total: 1,
+    truncated: false,
+    warnings: [
+      "query embedding failed (Embeddings error: scripted query-stage failure) — results are text-ranked",
+    ],
+    stale: false,
+    searchMode: "text",
+    embeddingsReady: true,
+  });
 });
 
 // ## auto + failing service: not ready → text mode with a warning
@@ -182,23 +244,28 @@ void test("failTimes large enough that the refresh's embed pass fails, leaving t
   await boxF.write("_content/inbox/Bill.doc.card", DOC("The electric bill is due.", "Electric bill due Friday."));
   const flaky = createFakeEmbeddings({ failTimes: 10 });
   const resF = await searchBox(boxF.root, { query: "electric", embeddings: flaky });
-  t.check(resF.searchMode, "text");
-
-  // doctest:L175
-  t.check(resF.embeddingsReady, false);
-
-  // doctest:L178
-  await t.checkText(resF.warnings.length, "1");
-
-  // doctest:L181
-  t.check(resF.warnings[0]?.startsWith("embeddings unavailable"), true);
-
-  // doctest:L184
-  t.check(
-    // Text search still answers.
-    resF.results[0]?.path,
-    "_content/inbox/Bill.doc.card",
-  );
+  // Text search still answers.
+  t.check(resF, {
+    results: [
+      {
+        path: "_content/inbox/Bill.doc.card",
+        fragment: "",
+        kind: "doc",
+        title: "Note",
+        contains: "Electric bill due Friday.",
+        excerpt: "Electric bill due Friday.",
+        score: 2.051797334648928,
+      },
+    ],
+    total: 1,
+    truncated: false,
+    warnings: [
+      "embeddings unavailable (Embeddings error: scripted failure (attempt 1 of 10)) — semantic ranking degraded; ask the boxholder to grant the \"openai\" secret to this box",
+    ],
+    stale: false,
+    searchMode: "text",
+    embeddingsReady: false,
+  });
 });
 
 // ## mode "hybrid" with no service throws a typed, actionable error
@@ -223,8 +290,5 @@ void test("mode \"hybrid\" with no service throws a typed, actionable error", as
   // doctest:L208
   const flakyH = createFakeEmbeddings({ failTimes: 10 });
   const msg = await throwMessage(() => searchBox(boxH.root, { query: "dentist", mode: "hybrid", embeddings: flakyH }));
-  await t.checkText(msg.includes("semantic index not ready"), "true");
-
-  // doctest:L213
-  await t.checkText(msg.includes("embeddings unavailable"), "true");
+  t.check(msg, "hybrid search unavailable: semantic index not ready (embeddings unavailable (Embeddings error: scripted failure (attempt 1 of 10)) — semantic ranking degraded; ask the boxholder to grant the \"openai\" secret to this box); retry, or search with --mode text");
 });

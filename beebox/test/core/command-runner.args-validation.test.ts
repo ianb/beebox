@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { unordered } from "agent-doctest/check";
 import { runCommand, createCollectorContext, getCommand, listCommands } from "../../src/core/command-runner.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
@@ -19,11 +20,31 @@ import { makeTmpBox } from "../helpers/test-helpers.js";
 // lookup above (with no side-effect `import "../../src/core/commands.js"`
 // alongside it) is sufficient to have every command registered:
 void test("getCommand/listCommands read commands.ts's registry directly, and command-run...", async (t) => {
-  // doctest:L23
   t.check(getCommand("search")?.name, "search");
 
-  // doctest:L26
-  await t.checkText(listCommands().length > 15, "true");
+  t.check(listCommands().map((c) => c.name), unordered([
+    "create",
+    "connector-sync",
+    "answer",
+    "dismiss",
+    "trash",
+    "move",
+    "procedure-run",
+    "procedure-resume",
+    "procedure-list",
+    "procedure-gc",
+    "procedure-status",
+    "scan-import",
+    "pdf-reanalyze",
+    "upload",
+    "attachments",
+    "ls",
+    "search",
+    "wakeup",
+    "intake",
+    "triage",
+    "handle",
+  ]));
 });
 
 // ## Wrong-typed fields fail loudly, naming the field
@@ -35,38 +56,29 @@ void test("Wrong-typed fields fail loudly, naming the field", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L33
   const box = await makeTmpBox();
   const badLimit = await runCommand({
     name: "search",
     args: { query: "dentist", limit: "5" },
     ctx: createCollectorContext(box.root).ctx,
   });
-  t.check(badLimit.success, false);
-
-  // doctest:L42
-  t.check(badLimit.error, "invalid command arguments: limit: Invalid input: expected number, received string");
+  t.check(badLimit, { success: false, error: "invalid command arguments: limit: Invalid input: expected number, received string" });
 
   // ## Enum fields enumerate their valid values in the error
 
-  // doctest:L49
   const badMode = await runCommand({
     name: "search",
     args: { query: "dentist", mode: "fuzzy" },
     ctx: createCollectorContext(box.root).ctx,
   });
-  t.check(badMode.success, false);
-
-  // doctest:L57
-  t.check(badMode.error, "invalid command arguments: mode: Invalid option: expected one of \"text\"|\"hybrid\"");
+  t.check(badMode, { success: false, error: "invalid command arguments: mode: Invalid option: expected one of \"text\"|\"hybrid\"" });
 
   // ## Presence checks keep the command's own friendlier error
 
-  // doctest:L64
   const noQuery = await runCommand({
     name: "search",
     args: {},
     ctx: createCollectorContext(box.root).ctx,
   });
-  t.check(noQuery.error, "a search query is required — e.g. bbx search \"dentist appointment\"");
+  t.check(noQuery, { success: false, error: "a search query is required — e.g. bbx search \"dentist appointment\"" });
 });

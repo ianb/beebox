@@ -29,32 +29,13 @@ void test("A top-level card in content/inbox/ gets pulled into content/inbox/int
       t.error(error);
     }
   });
-  // doctest:L26
   const box = await makeTmpBox();
   await box.write("_content/inbox/Note.doc.card", "<doc/>");
 
-  // doctest:L29
   const result = await runIntake({ boxRoot: box.root });
 
-  // doctest:L31
-  t.check(
-    {
-      routed: result.routed,
-      applied: result.applied,
-      staged: result.staged,
-    },
-    {
-    routed: [
-      "Note.doc.card",
-    ],
-    applied: [],
-    staged: [
-      "Note.doc.card",
-    ],
-  },
-  );
+  t.check(result, { routed: ["Note.doc.card"], applied: [], staged: ["Note.doc.card"] });
 
-  // doctest:L47
   await t.checkText(await box.list("_content/inbox"), `_content/inbox/.gitkeep
 _content/inbox/intake
 _content/inbox/intake/.gitkeep
@@ -68,7 +49,6 @@ _content/inbox/triaged/_unsure/.gitkeep
 _content/inbox/unhandled
 _content/inbox/unhandled/.gitkeep`);
 
-  // doctest:L62
   await t.checkText(await box.list("_content/inbox/staged"), `_content/inbox/staged/.gitkeep
 _content/inbox/staged/Note.doc.card`);
 });
@@ -85,32 +65,16 @@ void test("A card with whitespace or shell-unsafe characters gets renamed; the r
       t.error(error);
     }
   });
-  // doctest:L78
   const box = await makeTmpBox();
   await box.write("_content/inbox/Voice Note (raw).doc.card", "<doc/>");
 
-  // doctest:L81
   const result = await runIntake({ boxRoot: box.root });
 
-  // doctest:L83
-  t.check(
-    {
-      applied: result.applied,
-      staged: result.staged,
-    },
-    {
-    applied: [
-      {
-        step: "filename-normalization",
-        file: "Voice Note (raw).doc.card",
-        newName: "Voice_Note_raw.doc.card",
-      },
-    ],
-    staged: [
-      "Voice_Note_raw.doc.card",
-    ],
-  },
-  );
+  t.check(result, {
+    routed: ["Voice Note (raw).doc.card"],
+    applied: [{ step: "filename-normalization", file: "Voice Note (raw).doc.card", newName: "Voice_Note_raw.doc.card" }],
+    staged: ["Voice_Note_raw.doc.card"],
+  });
 });
 
 // ## Reserved subdirs are skipped
@@ -125,35 +89,17 @@ void test("Items already sitting in intake/, staged/, or triaged/ aren't re-rout
       t.error(error);
     }
   });
-  // doctest:L112
   const box = await makeTmpBox();
   await box.write("_content/inbox/Fresh.doc.card", "<doc/>");
   await box.write("_content/inbox/oldbucket/Legacy.doc.card", "<doc/>");
   await box.write("_content/inbox/staged/Already.doc.card", "<doc/>");
 
-  // doctest:L117
   const result = await runIntake({ boxRoot: box.root });
 
-  // doctest:L119
-  t.check(
-    {
-      routed: result.routed,
-      staged: result.staged,
-    },
-    {
-    routed: [
-      "Fresh.doc.card",
-    ],
-    staged: [
-      "Fresh.doc.card",
-    ],
-  },
-  );
+  t.check(result, { routed: ["Fresh.doc.card"], applied: [], staged: ["Fresh.doc.card"] });
 
-  // doctest:L133
   t.check(await box.read("_content/inbox/oldbucket/Legacy.doc.card"), "<doc/>");
 
-  // doctest:L136
   t.check(await box.read("_content/inbox/staged/Already.doc.card"), "<doc/>");
 });
 
@@ -169,29 +115,17 @@ void test("content/inbox/AGENTS.md, MAP.md, README files, and similar agent-faci
       t.error(error);
     }
   });
-  // doctest:L150
   const box = await makeTmpBox();
   await box.write("_content/inbox/AGENTS.md", "# Inbox context");
   await box.write("_content/inbox/MAP.md", "# Inbox map");
   await box.write("_content/inbox/Note.doc.card", "<doc/>");
 
-  // doctest:L155
   const result = await runIntake({ boxRoot: box.root });
 
-  // doctest:L157
-  t.check({ routed: result.routed, staged: result.staged }, {
-    routed: [
-      "Note.doc.card",
-    ],
-    staged: [
-      "Note.doc.card",
-    ],
-  });
+  t.check(result, { routed: ["Note.doc.card"], applied: [], staged: ["Note.doc.card"] });
 
-  // doctest:L160
   t.check(await box.read("_content/inbox/AGENTS.md"), "# Inbox context");
 
-  // doctest:L163
   t.check(await box.read("_content/inbox/MAP.md"), "# Inbox map");
 });
 
@@ -204,13 +138,10 @@ void test("Empty inbox is a no-op", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L174
   const box = await makeTmpBox();
 
-  // doctest:L176
   const result = await runIntake({ boxRoot: box.root });
 
-  // doctest:L178
   t.check(result, {
     routed: [],
     applied: [],
@@ -230,25 +161,46 @@ void test("Arrival, filename normalization, and advancement move the owned scope
       t.error(error);
     }
   });
-  // doctest:L192
   const box = await makeTmpBox();
   await box.write("_content/inbox/House Notice.doc.card", "Household notice");
   await box.write("_content/inbox/House Notice.attach/nested/notice.txt", "Attachment evidence");
   const moved = await runIntake({ boxRoot: box.root });
-  t.check(moved.staged, [
-    "House_Notice.doc.card",
-  ]);
+  t.check(moved, {
+    routed: ["House Notice.doc.card"],
+    applied: [{ step: "filename-normalization", file: "House Notice.doc.card", newName: "House_Notice.doc.card" }],
+    staged: ["House_Notice.doc.card"],
+  });
 
-  // doctest:L199
-  await t.checkText((await box.list("_content/inbox/staged")).includes("_content/inbox/staged/House_Notice.attach/nested/notice.txt"), "true");
+  await t.checkText(await box.list("_content/inbox/staged"), `_content/inbox/staged/.gitkeep
+_content/inbox/staged/House_Notice.attach
+_content/inbox/staged/House_Notice.attach/nested
+_content/inbox/staged/House_Notice.attach/nested/notice.txt
+_content/inbox/staged/House_Notice.doc.card`);
 
-  // doctest:L202
   await box.write("_content/inbox/Blocked.doc.card", "Do not move");
   await box.write("_content/inbox/Blocked.attach/original.txt", "Original");
   await box.write("_content/inbox/intake/Blocked.attach/other.txt", "Existing target");
   const blocked = await runIntake({ boxRoot: box.root });
-  t.check(blocked.routed, []);
+  t.check(blocked, { routed: [], applied: [], staged: [] });
 
-  // doctest:L209
-  await t.checkText((await box.list("_content/inbox")).includes("_content/inbox/Blocked.doc.card"), "true");
+  await t.checkText(await box.list("_content/inbox"), `_content/inbox/.gitkeep
+_content/inbox/Blocked.attach
+_content/inbox/Blocked.attach/original.txt
+_content/inbox/Blocked.doc.card
+_content/inbox/intake
+_content/inbox/intake/.gitkeep
+_content/inbox/intake/Blocked.attach
+_content/inbox/intake/Blocked.attach/other.txt
+_content/inbox/staged
+_content/inbox/staged/.gitkeep
+_content/inbox/staged/House_Notice.attach
+_content/inbox/staged/House_Notice.attach/nested
+_content/inbox/staged/House_Notice.attach/nested/notice.txt
+_content/inbox/staged/House_Notice.doc.card
+_content/inbox/triaged
+_content/inbox/triaged/.gitkeep
+_content/inbox/triaged/_unsure
+_content/inbox/triaged/_unsure/.gitkeep
+_content/inbox/unhandled
+_content/inbox/unhandled/.gitkeep`);
 });

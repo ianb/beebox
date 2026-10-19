@@ -238,5 +238,5 @@ entries:
   - { href: /chat, ref: _content/x.doc.card }
 ---
 `);
-  await t.checkText(bad.fields === null, "true");
+  t.check(bad.fields, null);
 });

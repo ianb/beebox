@@ -21,11 +21,65 @@ import {
 // un-annexed (or the reverse) — the drift that let 41 MB `.frozen` pages into box
 // history came from exactly that kind of split:
 void test("Both renderers walk the same list, so an extension can never be ignored but u...", async (t) => {
-  // doctest:L25
-  await t.checkText(assetGitignorePatterns().split("\n").length === ASSET_EXTENSIONS.length, "true");
+  t.check(ASSET_EXTENSIONS, [
+    "jpg",
+    "jpeg",
+    "png",
+    "webp",
+    "avif",
+    "heic",
+    "tif",
+    "tiff",
+    "gif",
+    "webm",
+    "mp3",
+    "m4a",
+    "wav",
+    "pdf",
+    "mp4",
+    "mov",
+    "frozen",
+  ]);
 
-  // doctest:L28
-  await t.checkText(assetLargefilesExpression().split(" or ").length === ASSET_EXTENSIONS.length, "true");
+  t.check(assetGitignorePatterns().split("\n"), [
+    "**/*.attach/**/*.jpg",
+    "**/*.attach/**/*.jpeg",
+    "**/*.attach/**/*.png",
+    "**/*.attach/**/*.webp",
+    "**/*.attach/**/*.avif",
+    "**/*.attach/**/*.heic",
+    "**/*.attach/**/*.tif",
+    "**/*.attach/**/*.tiff",
+    "**/*.attach/**/*.gif",
+    "**/*.attach/**/*.webm",
+    "**/*.attach/**/*.mp3",
+    "**/*.attach/**/*.m4a",
+    "**/*.attach/**/*.wav",
+    "**/*.attach/**/*.pdf",
+    "**/*.attach/**/*.mp4",
+    "**/*.attach/**/*.mov",
+    "**/*.attach/**/*.frozen",
+  ]);
+
+  t.check(assetLargefilesExpression().split(" or "), [
+    "include=*.[jJ][pP][gG]",
+    "include=*.[jJ][pP][eE][gG]",
+    "include=*.[pP][nN][gG]",
+    "include=*.[wW][eE][bB][pP]",
+    "include=*.[aA][vV][iI][fF]",
+    "include=*.[hH][eE][iI][cC]",
+    "include=*.[tT][iI][fF]",
+    "include=*.[tT][iI][fF][fF]",
+    "include=*.[gG][iI][fF]",
+    "include=*.[wW][eE][bB][mM]",
+    "include=*.[mM][pP]3",
+    "include=*.[mM]4[aA]",
+    "include=*.[wW][aA][vV]",
+    "include=*.[pP][dD][fF]",
+    "include=*.[mM][pP]4",
+    "include=*.[mM][oO][vV]",
+    "include=*.[fF][rR][oO][zZ][eE][nN]",
+  ]);
 });
 
 // The expression is an extension allowlist, **unscoped** — it matches a binary
@@ -33,14 +87,12 @@ void test("Both renderers walk the same list, so an extension can never be ignor
 // LFS, which was itself unscoped, and anchoring to `.attach/` would strand LFS's
 // content (legacy captures under `_content/inbox/`) with no mechanism at all.
 void test("The expression is an extension allowlist, unscoped — it matches a binary anyw...", async (t) => {
-  // doctest:L38
-  await t.checkText(assetLargefilesExpression().startsWith("include=*.[jJ][pP][gG] or include=*.[jJ][pP][eE][gG]"), "true");
-
-  // doctest:L41
-  await t.checkText(assetLargefilesExpression().includes("include=*.[fF][rR][oO][zZ][eE][nN]"), "true");
-
-  // doctest:L44
-  await t.checkText(assetLargefilesExpression().includes(".attach/"), "false");
+  const terms = assetLargefilesExpression().split(" or ");
+  t.check(terms.slice(0, 2), ["include=*.[jJ][pP][gG]", "include=*.[jJ][pP][eE][gG]"]);
+  t.check(terms.filter((term) => term.includes("frozen") || term.includes("[fF][rR][oO][zZ][eE][nN]")), [
+    "include=*.[fF][rR][oO][zZ][eE][nN]",
+  ]);
+  t.check(terms.filter((term) => term.includes(".attach/")), []);
 });
 
 // git-annex's globs are case-sensitive, and cameras produce all-uppercase
@@ -55,11 +107,9 @@ void test("The expression is an extension allowlist, unscoped — it matches a b
 // a real annex box — `Mixed.Jpg` landed as a 1.5 MB blob beside 102-byte pointers
 // for `lower.jpg` and `upper.JPG`.
 void test("git-annex's globs are case-sensitive, and cameras produce all-uppercase exten...", async (t) => {
-  // doctest:L61
-  await t.checkText(assetLargefilesExpression().includes("include=*.[hH][eE][iI][cC]"), "true");
-
-  // doctest:L64
-  await t.checkText(["include=*.heic", "include=*.HEIC"].some((s) => assetLargefilesExpression().includes(s)), "false");
+  const terms = assetLargefilesExpression().split(" or ");
+  t.check(terms.filter((term) => term.includes("[hH][eE][iI][cC]")), ["include=*.[hH][eE][iI][cC]"]);
+  t.check(terms.filter((term) => term === "include=*.heic" || term === "include=*.HEIC"), []);
 });
 
 // **It must not become a bare path glob.** A `.attach/` scope holds committed
@@ -71,8 +121,8 @@ void test("git-annex's globs are case-sensitive, and cameras produce all-upperca
 // Unscoped is safe precisely because it is an *extension* allowlist: cards,
 // manifests, and email bodies never match, wherever they live.
 void test("It must not become a bare path glob. A .attach/ scope holds committed non-ass...", async (t) => {
-  // doctest:L78
-  await t.checkText(["card", "json", "md", "txt"].some((e) => assetLargefilesExpression().includes(`include=*.${e}`)), "false");
+  const terms = assetLargefilesExpression().split(" or ");
+  t.check(terms.filter((term) => /\.(card|json|md|txt)$/i.test(term)), []);
 });
 
 // ## `.git/info/attributes` — which paths reach the annex filter
@@ -129,15 +179,14 @@ void test("The third rendering:", async (t) => {
 // when `bbx rm` or `bbx mv` moves it. The second covers scopes written before
 // 2026-10 under the old fixed name, which survive in trash and rescued batches.
 void test("The character classes are deliberate.", async (t) => {
-  // doctest:L138
-  await t.checkText(
-    assetAnnexAttributes().includes(`${BULK_BATCH_ATTACH_PATTERN} filter=annex`) &&
-      assetAnnexAttributes().includes(`${LEGACY_BULK_BATCH_ATTACH_PATTERN} filter=annex`),
-    "true",
+  t.check(
+    assetAnnexAttributes()
+      .split("\n")
+      .filter((line) => line.startsWith("**/")),
+    [`${BULK_BATCH_ATTACH_PATTERN} filter=annex`, `${LEGACY_BULK_BATCH_ATTACH_PATTERN} filter=annex`],
   );
 
-  // doctest:L142
-  await t.checkText(BULK_BATCH_ATTACH_PATTERN.startsWith("**/"), "true");
+  t.check(BULK_BATCH_ATTACH_PATTERN, "**/upload-*.attach/**");
 });
 
 // Capture staging stays gitignored so pre-triage captures are never annexed. The
@@ -145,9 +194,5 @@ void test("The character classes are deliberate.", async (t) => {
 // only the box root — an anchored rule would miss real captures and annex them on
 // arrival:
 void test("Capture staging stays gitignored so pre-triage captures are never annexed.", async (t) => {
-  // doctest:L152
-  await t.checkText(CAPTURE_STAGING_IGNORE_PATTERN.startsWith("**/"), "true");
-
-  // doctest:L155
-  await t.checkText(CAPTURE_STAGING_IGNORE_PATTERN.startsWith("content/"), "false");
+  t.check(CAPTURE_STAGING_IGNORE_PATTERN, "**/tmp-capture/**/*.attach/**");
 });

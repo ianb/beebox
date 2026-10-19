@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, not } from "agent-doctest/check";
 import { symlinkClaudeMemory } from "../../../src/core/box/structure/core.js";
 import { encodeProjectDir } from "../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -23,8 +23,6 @@ import * as os from "node:os";
 // box, so `path.resolve` keeps the odd characters) links under the fully collapsed
 // name — the `_` and `.` become `-`:
 void test("A box reached through a path containing  and . (a symlink beside the real box...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       if (previousProjects === undefined) delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
@@ -47,11 +45,8 @@ void test("A box reached through a path containing  and . (a symlink beside the 
   // doctest:L33
   const linked = await symlinkClaudeMemory(oddRoot);
   const entries = await fs.readdir(projects);
-  print(`linked: ${linked}`);
-  print(`entry matches encoder: ${entries[0] === encodeProjectDir(oddRoot)}`);
-  print(`odd chars collapsed: ${!/[._]/.test(entries[0] ?? "")}`);
-  await t.checkText(out.with(print(`target: ${path.basename(path.dirname(await fs.readlink(path.join(projects, entries[0] ?? "", "memory"))))}`)), `linked: true
-entry matches encoder: true
-odd chars collapsed: true
-target: .claude`);
+  t.check(linked, true);
+  t.check(entries, [encodeProjectDir(oddRoot)]);
+  t.check(entries, [not(any(String).matches(/[._]/))]);
+  t.check(path.basename(path.dirname(await fs.readlink(path.join(projects, entries[0] ?? "", "memory")))), ".claude");
 });

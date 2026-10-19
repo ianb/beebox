@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { generateAgentGuide } from "../../../../src/core/agent-guide/guide/core.js";
 import { reachingDefaultQuote } from "../../../../src/core/agent-guide/guide/reaching.js";
 import { createBriefingTemplate, REACHING_ME_DEFAULT } from "../../../../src/schemas/briefing.js";
@@ -18,7 +19,7 @@ const section = guide.slice(start, guide.indexOf("\n## ", start + 1));
 // ## The section is in the guide, after the commands
 void test("The section is in the guide, after the commands", async (t) => {
   // doctest:L21
-  await t.checkText(start > guide.indexOf("## COMMANDS"), "true");
+  t.check(start, any(Number).between(guide.indexOf("## COMMANDS") + 1, Infinity));
 
   // doctest:L24
   t.check(section.split("\n")[0], "## REACHING_THE_BOXHOLDER — Notifications, reminders, and watches");
@@ -27,12 +28,15 @@ void test("The section is in the guide, after the commands", async (t) => {
 // ## The default briefing text is the template's, quoted
 void test("The default briefing text is the template's, quoted", async (t) => {
   // doctest:L31
-  await t.checkText(createBriefingTemplate().endsWith(`---\n${REACHING_ME_DEFAULT}\n`), "true");
+  // The template is a large generated document; only its tail is the constant.
+  t.check(createBriefingTemplate(), any(String).endsWith(`---\n${REACHING_ME_DEFAULT}\n`));
 
   // doctest:L34
   const bodyLines = REACHING_ME_DEFAULT.split("\n").slice(2);
-  await t.checkText(bodyLines.every((line) => section.includes(line === "" ? ">" : `> ${line}`)), "true");
+  // The section is large generated text; each quoted line is checked against it.
+  for (const line of bodyLines) t.check(section, any(String).includes(line === "" ? ">" : `> ${line}`));
 
   // doctest:L38
-  await t.checkText(section.includes("> **Reaching me.**") && section.includes(reachingDefaultQuote()), "true");
+  t.check(section, any(String).includes("> **Reaching me.**"));
+  t.check(section, any(String).includes(reachingDefaultQuote()));
 });

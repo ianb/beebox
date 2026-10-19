@@ -9,7 +9,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import {
   conciseScheduleError,
   evaluateTaskHealth,
@@ -51,6 +50,9 @@ function evaluate({ fields, state, now, cardMtime, missingConnectors, engineWait
   });
 }
 
+/** The fields every health record in these tests shares. */
+const BASE = { name: "demo", description: undefined, alertedAt: null, alertedFor: null };
+
 const statusOf = (args: EvaluateOptions) => evaluate(args).status;
 
 /** State of a task whose last attempt, at `when`, ended `result` ("success" also sets lastSuccess). */
@@ -84,11 +86,14 @@ void test("A daily 5am cron that last ran (and succeeded) this morning:", async 
 // Any consecutive failure marks the task failing; the count and the
 // last-success divergence ride along:
 void test("Any consecutive failure marks the task failing; the count and the last-succes...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L86
-  const h = evaluate({ fields: dailyAt5, state: failingState });
-  await t.checkText(out2.with(print(`${h.status}, failures: ${h.consecutiveFailures}, lastSuccess: ${h.lastSuccess}`)), "failing, failures: 3, lastSuccess: 2026-06-06T05:00:10Z");
+  t.check(evaluate({ fields: dailyAt5, state: failingState }), {
+    ...BASE,
+    status: "failing",
+    consecutiveFailures: 3,
+    lastRun: "2026-06-09T05:00:10Z",
+    lastSuccess: "2026-06-06T05:00:10Z",
+    lastError: "boom",
+  });
 });
 
 // A task that lost a race for the box's git index never got to run its own work.
@@ -96,7 +101,6 @@ void test("Any consecutive failure marks the task failing; the count and the las
 // reason says what actually happened, so nobody debugs a task that is fine. An
 // ordinary failure carries no such reason — the distinction is the point:
 void test("A task that lost a race for the box's git index never got to run its own work.", async (t) => {
-  // doctest:L97
   const contended = evaluate({
     fields: dailyAt5,
     state: {
@@ -108,9 +112,22 @@ void test("A task that lost a race for the box's git index never got to run its 
     fields: dailyAt5,
     state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom", consecutiveFailures: 1 },
   });
-  t.check(({ contended: contended.reason, ordinary: ordinary.reason ?? null }), {
-    contended: "contended — another process held the box's git index",
-    ordinary: null,
+  t.check(contended, {
+    ...BASE,
+    status: "failing",
+    reason: "contended — another process held the box's git index",
+    consecutiveFailures: 4,
+    lastRun: "2026-06-09T05:00:10Z",
+    lastSuccess: null,
+    lastError: "Command failed with exit code 1\nstderr:\nError: fatal: Unable to create '/box/.git/index.lock': File exists.",
+  });
+  t.check(ordinary, {
+    ...BASE,
+    status: "failing",
+    consecutiveFailures: 1,
+    lastRun: "2026-06-09T05:00:10Z",
+    lastSuccess: null,
+    lastError: "boom",
   });
 });
 
@@ -152,11 +169,17 @@ void test("A timeout without a precise stderr diagnostic keeps its actionable he
 // An hourly task last attempted two days ago has missed dozens of
 // occurrences; pending time is measured from the earliest one:
 void test("(Cron expressions evaluate in server-local time, same as isDue — the examples...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L147
   const h = evaluate({ fields: hourly, state: ran("2026-06-07T05:00:10Z") });
-  await t.checkText(out2.with(print(`${h.status}, pending: ${formatDurationShort(h.pendingMs ?? 0)}`)), "overdue, pending: 2d");
+  t.check(h, {
+    ...BASE,
+    status: "overdue",
+    pendingMs: 194_400_000,
+    consecutiveFailures: 0,
+    lastRun: "2026-06-07T05:00:10Z",
+    lastSuccess: "2026-06-07T05:00:10Z",
+    lastError: null,
+  });
+  t.check(formatDurationShort(h.pendingMs ?? 0), "2d");
 });
 
 // But a task only a little past its occurrence is still within its allowance — an
@@ -206,36 +229,43 @@ void test("A one-shot at task unserved an hour past its time is overdue; once at
 // missing-connector tasks are blocked (with the reason), not overdue —
 // even when occurrences have gone unserved:
 void test("Disabled and expired tasks are excluded; budget-exhausted and missing-connect...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L205
   const overBudget = [{ ts: "2026-06-09T05:00:00Z", durationMs: 700_000 }];
-  await t.checkText(out2.with(statusOf({ fields: { ...dailyAt5, enabled: false } })), "disabled");
+  t.check(statusOf({ fields: { ...dailyAt5, enabled: false } }), "disabled");
 
-  // doctest:L209
-  await t.checkText(out2.with(statusOf({ fields: { ...dailyAt5, until: "2026-06-01T00:00:00Z" } })), "disabled");
+  t.check(statusOf({ fields: { ...dailyAt5, until: "2026-06-01T00:00:00Z" } }), "disabled");
 
-  // doctest:L212
   const blocked = evaluate({
     fields: { ...dailyAt5, budget: "10m/24h" },
     state: { ...ran("2026-06-07T05:00:10Z"), recentRuns: overBudget },
   });
-  await t.checkText(out2.with(print(`${blocked.status}: ${blocked.reason}`)), "blocked: budget exhausted (700s used)");
+  t.check(blocked, {
+    ...BASE,
+    status: "blocked",
+    reason: "budget exhausted (700s used)",
+    consecutiveFailures: 0,
+    lastRun: "2026-06-07T05:00:10Z",
+    lastSuccess: "2026-06-07T05:00:10Z",
+    lastError: null,
+  });
 
-  // doctest:L219
   const noConn = evaluate({
     fields: { ...dailyAt5, requires: { connectors: ["gmail"] } },
     missingConnectors: ["gmail"],
   });
-  await t.checkText(out2.with(print(`${noConn.status}: ${noConn.reason}`)), "blocked: missing connectors: gmail");
+  t.check(noConn, {
+    ...BASE,
+    status: "blocked",
+    reason: "missing connectors: gmail",
+    consecutiveFailures: 0,
+    lastRun: null,
+    lastSuccess: null,
+    lastError: null,
+  });
 });
 
 // A failing task whose failures exhausted the budget reports as failing
 // (the cause), with the blockage as the reason:
 void test("A failing task whose failures exhausted the budget reports as failing (the ca...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L231
   const h = evaluate({
     fields: { ...dailyAt5, budget: "10m/24h" },
     state: {
@@ -244,7 +274,15 @@ void test("A failing task whose failures exhausted the budget reports as failing
       recentRuns: [{ ts: "2026-06-09T05:00:00Z", durationMs: 700_000 }],
     },
   });
-  await t.checkText(out2.with(print(`${h.status}: ${h.reason}`)), "failing: budget exhausted (700s used)");
+  t.check(h, {
+    ...BASE,
+    status: "failing",
+    reason: "budget exhausted (700s used)",
+    consecutiveFailures: 2,
+    lastRun: "2026-06-09T05:00:10Z",
+    lastSuccess: null,
+    lastError: "timeout",
+  });
 });
 
 // ## Summaries and alert selection
@@ -253,54 +291,46 @@ void test("A failing task whose failures exhausted the budget reports as failing
 // findings into a scheduler-down finding when the daemon's heartbeat is
 // stale (suppressing them entirely when no daemon ever ran — dev boxes):
 void test("The summary speaks only when something is wrong, and folds overdue findings i...", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L250
   const failing = evaluate({ fields: dailyAt5, state: failingState });
   const overdue = evaluate({ fields: hourly, state: ran("2026-06-07T05:00:10Z") });
   const ok = evaluate({ fields: dailyAt5, state: ran("2026-06-09T05:00:10Z") });
 
-  // doctest:L254
-  await t.checkText(out2.with(summarizeScheduleHealth({ tasks: [ok], scheduler, engineWait: null }, NOW)), "null");
+  t.check(summarizeScheduleHealth({ tasks: [ok], scheduler, engineWait: null }, NOW), null);
 
-  // doctest:L257
-  await t.checkText(out2.with(summarizeScheduleHealth({ tasks: [failing, overdue, ok], scheduler, engineWait: null }, NOW)), "demo: failing ×3 (last success 3d ago); demo: overdue 2d");
+  t.check(
+    summarizeScheduleHealth({ tasks: [failing, overdue, ok], scheduler, engineWait: null }, NOW),
+    "demo: failing ×3 (last success 3d ago); demo: overdue 2d",
+  );
 
-  // doctest:L260
-  await t.checkText(
-    out2.with(summarizeScheduleHealth({
+  t.check(
+    summarizeScheduleHealth({
       tasks: [failing, overdue, ok],
       scheduler: { status: "stale", lastTickAt: "2026-06-09T04:00:00Z", ageMs: 28_800_000 },
       engineWait: null,
-    }, NOW)),
+    }, NOW),
     "scheduler not running (last tick 8h ago); demo: failing ×3 (last success 3d ago)",
   );
 
-  // doctest:L267
-  await t.checkText(
-    out2.with(summarizeScheduleHealth({
+  t.check(
+    summarizeScheduleHealth({
       tasks: [overdue, ok],
       scheduler: { status: "never", lastTickAt: null, ageMs: null },
       engineWait: null,
-    }, NOW)),
-    "null",
+    }, NOW),
+    null,
   );
 
   // Proactive alerts need two consecutive failures (one transient failure
   // self-heals at the next occurrence); overdue and invalid alert directly:
 
-  // doctest:L279
   const oneFailure = evaluate({
     fields: dailyAt5,
     state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom", consecutiveFailures: 1 },
   });
-  print(`one failure: ${selectAlertableTasks({ tasks: [oneFailure], scheduler, engineWait: null }).length}`);
-  print(`three failures: ${selectAlertableTasks({ tasks: [failing], scheduler, engineWait: null }).length}`);
-  print(`overdue: ${selectAlertableTasks({ tasks: [overdue], scheduler, engineWait: null }).length}`);
-  await t.checkText(out2.with(print(`ok: ${selectAlertableTasks({ tasks: [ok], scheduler, engineWait: null }).length}`)), `one failure: 0
-three failures: 1
-overdue: 1
-ok: 0`);
+  t.check(selectAlertableTasks({ tasks: [oneFailure], scheduler, engineWait: null }), []);
+  t.check(selectAlertableTasks({ tasks: [failing], scheduler, engineWait: null }), [failing]);
+  t.check(selectAlertableTasks({ tasks: [overdue], scheduler, engineWait: null }), [overdue]);
+  t.check(selectAlertableTasks({ tasks: [ok], scheduler, engineWait: null }), []);
 });
 
 // ## Waiting — engine unavailable is deferred, not unhealthy
@@ -311,12 +341,16 @@ ok: 0`);
 // broken, and the trust rule says never to mislabel a deliberate skip.
 // `disabled` still wins: an off task is off, whatever the engine's state.
 void test("When the box's engine is out of quota (deferred-recoverable), every enabled t...", async (t) => {
-  // doctest:L303
   const reason = "waiting on codex quota until Aug 19, 11:34 PM";
   const waitingFailing = evaluate({ fields: dailyAt5, state: failingState, engineWaitReason: reason });
-  t.check(({ status: waitingFailing.status, reason: waitingFailing.reason }), {
+  t.check(waitingFailing, {
+    ...BASE,
     status: "waiting",
     reason: "waiting on codex quota until Aug 19, 11:34 PM",
+    consecutiveFailures: 3,
+    lastRun: "2026-06-09T05:00:10Z",
+    lastSuccess: "2026-06-06T05:00:10Z",
+    lastError: "boom",
   });
 
   // doctest:L308
@@ -328,8 +362,7 @@ void test("When the box's engine is out of quota (deferred-recoverable), every e
   // doctest:L316
   t.check(summarizeScheduleHealth({ tasks: [waitingFailing], scheduler, engineWait: reason }, NOW), "waiting on codex quota until Aug 19, 11:34 PM");
 
-  // doctest:L319
-  await t.checkText(selectAlertableTasks({ tasks: [waitingFailing], scheduler, engineWait: reason }).length, "0");
+  t.check(selectAlertableTasks({ tasks: [waitingFailing], scheduler, engineWait: reason }), []);
 });
 
 // ## Inconclusive — the work ran, the check never decided
@@ -340,9 +373,6 @@ void test("When the box's engine is out of quota (deferred-recoverable), every e
 // either — `lastSuccess` is untouched, because an unjudged run is not a
 // confirmed one.
 void test("A run that exits with the inconclusive marker records lastResult:", async (t) => {
-  const out2 = printed();
-  const print = out2.print;
-  // doctest:L332
   const h = evaluate({
     fields: dailyAt5,
     state: {
@@ -355,39 +385,47 @@ void test("A run that exits with the inconclusive marker records lastResult:", a
       consecutiveFailures: 0,
     },
   });
-  print(`status: ${h.status}`);
-  print(`failures: ${h.consecutiveFailures}`);
-  await t.checkText(out2.with(print(`reason: ${h.reason}`)), `status: inconclusive
-failures: 0
-reason: last run's check reached no verdict; the work itself completed`);
+  t.check(h, {
+    ...BASE,
+    status: "inconclusive",
+    reason: "last run's check reached no verdict; the work itself completed",
+    consecutiveFailures: 0,
+    lastRun: "2026-06-09T05:00:10Z",
+    lastSuccess: "2026-06-06T05:00:10Z",
+    lastError:
+      "Command failed with exit code 2\nstderr:\n" +
+      "Inconclusive: procedure refresh-maps — review of step maps reached max turns (16); work completed",
+  });
 
   // A live problem outranks the stale non-answer: a task that has failed since, or
   // gone overdue, or is out of budget, reports that instead.
 
-  // doctest:L357
-  print(statusOf({
-    fields: dailyAt5,
-    state: {
-      lastRun: "2026-06-09T05:00:10Z", lastResult: "inconclusive",
-      lastSuccess: "2026-06-06T05:00:10Z", consecutiveFailures: 2,
-    },
-  }));
-  await t.checkText(
-    out2.with(print(statusOf({
+  t.check(
+    statusOf({
+      fields: dailyAt5,
+      state: {
+        lastRun: "2026-06-09T05:00:10Z", lastResult: "inconclusive",
+        lastSuccess: "2026-06-06T05:00:10Z", consecutiveFailures: 2,
+      },
+    }),
+    "failing",
+  );
+  t.check(
+    statusOf({
       fields: { ...dailyAt5, enabled: false },
       state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "inconclusive" },
-    }))),
-    `failing
-disabled`,
+    }),
+    "disabled",
   );
 
   // It speaks in the session-start summary but never pages the boxholder — nothing
   // is wrong yet:
 
-  // doctest:L377
-  print(summarizeScheduleHealth({ tasks: [h], scheduler, engineWait: null }, NOW));
-  await t.checkText(out2.with(print(`alertable: ${selectAlertableTasks({ tasks: [h], scheduler, engineWait: null }).length}`)), `demo: review inconclusive (work completed, unjudged)
-alertable: 0`);
+  t.check(
+    summarizeScheduleHealth({ tasks: [h], scheduler, engineWait: null }, NOW),
+    "demo: review inconclusive (work completed, unjudged)",
+  );
+  t.check(selectAlertableTasks({ tasks: [h], scheduler, engineWait: null }), []);
 });
 
 // The inconclusive line is the headline `bbx health` prints for that error — it is

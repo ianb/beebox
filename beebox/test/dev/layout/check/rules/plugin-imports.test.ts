@@ -16,7 +16,6 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { scanPackage } from "../../../../../src/dev/layout/scan/package/scan.js";
 import { pluginImportsRule } from "../../../../../src/dev/layout/check/rules/plugin-imports.js";
-import { summary } from "./fixture.js";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = await mkdtemp(join(tmpdir(), "layout-plugin-imports-"));
@@ -68,7 +67,7 @@ void test("The compliant plugin has no finding; a file outside src/plugins/ is n
     }
   });
   // doctest:L64
-  await t.checkText(findings.filter((f) => f.path.includes("/good/")).length, "0");
+  t.check(findings.filter((f) => f.path.includes("/good/")), []);
 });
 
 // The engine import, the type-only engine import, and the sibling plugin are
@@ -76,23 +75,31 @@ void test("The compliant plugin has no finding; a file outside src/plugins/ is n
 // flagged for their builtins, spelled `node:fs` or bare `fs` alike; `health.ts`
 // imports Node but is not in the view graph, so it is clean.
 void test("The engine import, the type-only engine import, and the sibling plugin are ea...", async (t) => {
-  // doctest:L74
-  await t.checkText(summary(findings), `plugin-imports pkg/src/plugins/bad/helper.ts
-plugin-imports pkg/src/plugins/bad/plugin.ts
-plugin-imports pkg/src/plugins/bad/plugin.ts
-plugin-imports pkg/src/plugins/bad/plugin.ts
-plugin-imports pkg/src/plugins/bad/view.tsx`);
-
-  // doctest:L82
-  t.check(findings.filter((f) => f.path.endsWith("/plugin.ts")).map((f) => f.message), [
-    "imports pkg/src/core/thing.ts from plugin \"bad\"; a plugin file imports only pkg/src/exports/*, pkg/src/cards/plugin-definition.ts, its own directory, and packages",
-    "imports pkg/src/lib/x.ts from plugin \"bad\"; a plugin file imports only pkg/src/exports/*, pkg/src/cards/plugin-definition.ts, its own directory, and packages",
-    "imports pkg/src/plugins/good/plugin.ts from plugin \"bad\"; a plugin file imports only pkg/src/exports/*, pkg/src/cards/plugin-definition.ts, its own directory, and packages",
-  ]);
-
-  // doctest:L90
-  t.check(findings.filter((f) => !f.path.endsWith("/plugin.ts")).map((f) => f.message), [
-    "imports the Node builtin fs in plugin \"bad\"'s view graph; view.tsx and what it reaches are bundled for the browser",
-    "imports the Node builtin node:fs in plugin \"bad\"'s view graph; view.tsx and what it reaches are bundled for the browser",
+  t.check(findings, [
+    {
+      rule: "plugin-imports",
+      path: "pkg/src/plugins/bad/helper.ts",
+      message: "imports the Node builtin fs in plugin \"bad\"'s view graph; view.tsx and what it reaches are bundled for the browser",
+    },
+    {
+      rule: "plugin-imports",
+      path: "pkg/src/plugins/bad/plugin.ts",
+      message: "imports pkg/src/core/thing.ts from plugin \"bad\"; a plugin file imports only pkg/src/exports/*, pkg/src/cards/plugin-definition.ts, its own directory, and packages",
+    },
+    {
+      rule: "plugin-imports",
+      path: "pkg/src/plugins/bad/plugin.ts",
+      message: "imports pkg/src/lib/x.ts from plugin \"bad\"; a plugin file imports only pkg/src/exports/*, pkg/src/cards/plugin-definition.ts, its own directory, and packages",
+    },
+    {
+      rule: "plugin-imports",
+      path: "pkg/src/plugins/bad/plugin.ts",
+      message: "imports pkg/src/plugins/good/plugin.ts from plugin \"bad\"; a plugin file imports only pkg/src/exports/*, pkg/src/cards/plugin-definition.ts, its own directory, and packages",
+    },
+    {
+      rule: "plugin-imports",
+      path: "pkg/src/plugins/bad/view.tsx",
+      message: "imports the Node builtin node:fs in plugin \"bad\"'s view graph; view.tsx and what it reaches are bundled for the browser",
+    },
   ]);
 });

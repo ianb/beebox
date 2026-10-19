@@ -12,32 +12,20 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any } from "agent-doctest/check";
 import assert from "node:assert/strict";
 import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
-import type { InstructionEvaluation } from "../../../src/core/procedure/engine-validate-model.js";
 import { evaluateInstructions } from "../../../src/core/procedure/engine-validate-model.js";
 import { createFakeAgent } from "../fake-agent.js";
 import type { FakeAgent } from "../fake-agent.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { modelTier, providerOf } from "../../../src/shared/agent-models.js";
 
-/** Narrows an evaluation to one outcome so its fields can be read. */
-function isOutcome<K extends InstructionEvaluation["outcome"]>(
-  evaluation: InstructionEvaluation,
-  outcome: K,
-): evaluation is Extract<InstructionEvaluation, { outcome: K }> {
-  return evaluation.outcome === outcome;
-}
-
-
 // ## A passing verdict
 //
 // The model judges the diff satisfies the instruction → `passed: true`, and the
 // reasoning is surfaced as the `review` string.
 void test("The model judges the diff satisfies the instruction → passed:", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L45
   let captured = "";
   const createAgent: AgentFactory = (opts) => createFakeAgent({
@@ -58,27 +46,18 @@ void test("The model judges the diff satisfies the instruction → passed:", asy
     createAgent,
     name: "judge",
   });
-  print(`outcome: ${result.outcome}`);
-  assert.ok(isOutcome(result, "verdict"));
-  print(`passed: ${result.passed}`);
-  print(`review: ${result.review}`);
+  t.check(result, { outcome: "verdict", passed: true, review: "The diff adds the transcription block." });
 
   // doctest:L68
-  // The judge prompt carries the instruction, why, and diff.
-  print(`prompt has instruction: ${captured.includes("Every audio clip")}`);
-  print(`prompt has why: ${captured.includes("can't be searched")}`);
-  await t.checkText(out.with(print(`prompt has diff: ${captured.includes("hello world")}`)), `outcome: verdict
-passed: true
-review: The diff adds the transcription block.
-prompt has instruction: true
-prompt has why: true
-prompt has diff: true`);
+  // The judge prompt is a large generated text; the check is that it carries the
+  // instruction, the why, and the diff.
+  t.check(captured, any(String).includes("Every audio clip"));
+  t.check(captured, any(String).includes("can't be searched"));
+  t.check(captured, any(String).includes("hello world"));
 });
 
 // ## A failing verdict
 void test("A failing verdict", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L84
   const createAgent: AgentFactory = (opts) => createFakeAgent({
     name: opts.name,
@@ -95,12 +74,7 @@ void test("A failing verdict", async (t) => {
     createAgent,
     name: "judge",
   });
-  print(`outcome: ${result.outcome}`);
-  assert.ok(isOutcome(result, "verdict"));
-  print(`passed: ${result.passed}`);
-  await t.checkText(out.with(print(`review: ${result.review}`)), `outcome: verdict
-passed: false
-review: No transcription block in the diff.`);
+  t.check(result, { outcome: "verdict", passed: false, review: "No transcription block in the diff." });
 });
 
 // ## No verdict is inconclusive — never a failing verdict
@@ -114,8 +88,6 @@ review: No transcription block in the diff.`);
 // one would inherit whatever wandering ate the first budget). The *work* agent is
 // never retried — its work is already done and committed.
 void test("When the judge hits its turn cap, the check has produced a non-answer.", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L120
   const turnCaps: number[] = [];
   const createAgent: AgentFactory = (opts) => createFakeAgent({
@@ -142,24 +114,21 @@ void test("When the judge hits its turn cap, the check has produced a non-answer
     },
     name: "judge",
   });
-  print(`outcome: ${result.outcome}`);
-  assert.ok(isOutcome(result, "inconclusive"));
-  print(`reason: ${result.reason}`);
-  print(`detail: ${result.detail}`);
-  print(`review: ${result.review}`);
-  await t.checkText(out.with(print(`turn caps: ${turnCaps.join(", ")}`)), `outcome: inconclusive
-reason: max-turns
-detail: reached max turns (16)
-review: Instruction validation was inconclusive: the review reached max turns (16). The work was not judged — it is neither approved nor rejected.
-turn caps: 8, 16`);
+  t.check({ result, turnCaps }, {
+    result: {
+      outcome: "inconclusive",
+      reason: "max-turns",
+      detail: "reached max turns (16)",
+      review: "Instruction validation was inconclusive: the review reached max turns (16). The work was not judged — it is neither approved nor rejected.",
+    },
+    turnCaps: [8, 16],
+  });
 });
 
 // Unparseable output is inconclusive too, under its own reason — a different
 // problem (the model answered, just not in the shape asked for) with a different
 // fix:
 void test("Unparseable output is inconclusive too, under its own reason — a different pr...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L163
   const createAgent: AgentFactory = (opts) => createFakeAgent({
     name: opts.name,
@@ -179,12 +148,12 @@ void test("Unparseable output is inconclusive too, under its own reason — a di
     createAgent,
     name: "judge",
   });
-  print(`outcome: ${result.outcome}`);
-  assert.ok(isOutcome(result, "inconclusive"));
-  print(`reason: ${result.reason}`);
-  await t.checkText(out.with(print(`detail: ${result.detail}`)), `outcome: inconclusive
-reason: no-structured-output
-detail: returned no parseable verdict`);
+  t.check(result, {
+    outcome: "inconclusive",
+    reason: "no-structured-output",
+    detail: "returned no parseable verdict",
+    review: "Instruction validation was inconclusive: the review returned no parseable verdict. The work was not judged — it is neither approved nor rejected.",
+  });
 });
 
 // ## A harness that never answered still gates
@@ -193,8 +162,6 @@ detail: returned no parseable verdict`);
 // at all (auth/model rejection, transport). It keeps gating the step, and it is
 // not retried.
 void test("An invocationFailure is not an inconclusive verdict — validation did not run...", async (t) => {
-  const out = printed();
-  const print = out.print;
   // doctest:L197
   let attempts = 0;
   const createAgent: AgentFactory = (opts) => {
@@ -216,12 +183,14 @@ void test("An invocationFailure is not an inconclusive verdict — validation di
     createAgent,
     name: "judge",
   });
-  print(`outcome: ${result.outcome}`);
-  assert.ok(isOutcome(result, "invocation-failure"));
-  print(`error: ${result.error}`);
-  await t.checkText(out.with(print(`judge attempts: ${attempts}`)), `outcome: invocation-failure
-error: No conversation found
-judge attempts: 1`);
+  t.check({ result, attempts }, {
+    result: {
+      outcome: "invocation-failure",
+      review: "Instruction validation could not run: No conversation found",
+      error: "No conversation found",
+    },
+    attempts: 1,
+  });
 });
 
 // ## Default judge tier follows the box engine

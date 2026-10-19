@@ -109,8 +109,5 @@ void test("No `tsconfig.json`: `baseDir` defaults to the package root, no aliase
   });
   // doctest:L91
   const noConfig = loadAliases({ repoRoot, packageRoot: "pkg/dir" });
-  t.check(noConfig.baseDir, "pkg/dir");
-
-  // doctest:L95
-  await t.checkText(noConfig.entries.length, "0");
+  t.check(noConfig, { baseDir: "pkg/dir", entries: [] });
 });

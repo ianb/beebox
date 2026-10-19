@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import { chmod, readFile, rm, writeFile } from "node:fs/promises";
@@ -356,15 +357,16 @@ void test("The recovery ref preserves input while the path-scoped output commit 
 
   // doctest:L282
   const result = await sweepMigrations({ boxRoot: box.root });
-  t.check({ status: result.status, untracked: git(box, "ls-files", "--others", "--exclude-standard").includes("Half_Written.doc.card") }, {
+  t.check({ status: result.status, untracked: git(box, "ls-files", "--others", "--exclude-standard") }, {
     status: "applied",
-    untracked: true,
+    untracked: "_content/inbox/Half_Written.doc.card",
   });
 
   // The migration was recorded despite the unrelated dirty file:
 
   // doctest:L290
-  await t.checkText((await box.read(MANIFEST_PATH)).includes(PROBE), "true");
+  // The manifest lists every shipped migration; only this entry is the contract.
+  t.check(await box.read(MANIFEST_PATH), any(String).includes(PROBE));
 });
 
 // ## A commit that fails rolls the manifest entry back

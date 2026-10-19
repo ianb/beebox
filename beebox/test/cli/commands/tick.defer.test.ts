@@ -91,7 +91,7 @@ void test("A deferral is recorded with its reason, and `once` waits for success"
   t.check(await tick(box), "skipped | deferred no-pass failures=0 | card kept");
 
   // doctest:L91
-  await t.checkText((await loadScriptState(box.root, "watch")).lastCommit === head(box), "true");
+  t.check((await loadScriptState(box.root, "watch")).lastCommit, head(box));
 
   // doctest:L94
   const held = head(box);
@@ -107,7 +107,7 @@ void test("A deferral is recorded with its reason, and `once` waits for success"
   t.check(await tick(box), "error | failure null failures=1 | card kept");
 
   // doctest:L109
-  await t.checkText((await loadScriptState(box.root, "watch")).lastCommit === held, "true");
+  t.check((await loadScriptState(box.root, "watch")).lastCommit, held);
 
   // ## Success records `success`, advances the cursor, and deletes the card
 

@@ -64,7 +64,7 @@ void test("A card in the person's area that says \"the user confirmed\" gets the
 // new text:
 void test("\"The boxholder\" and its possessive count too, and an Edit is checked by its n...", async (t) => {
   // doctest:L68
-  await t.checkText((await afterWrite("_content/Tools.doc.card", { old_string: "x", new_string: "Listed from the boxholder's memory." }))?.match(/calls them ([^.]*)\./)?.[1], "\"the boxholder's\"");
+  t.check(await afterWrite("_content/Tools.doc.card", { old_string: "x", new_string: "Listed from the boxholder's memory." }), "_content/Tools.doc.card is shown to the person whose box this is, and the text you just wrote calls them \"the boxholder's\". Write \"you\" (in a briefing, their own \"I\": \"I'm cataloguing my tools\"), unless the words quote someone else.");
 });
 
 // Text that says "you" gets no reminder, and neither does agent-facing text

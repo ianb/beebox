@@ -6,6 +6,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { mkdir, realpath, stat, symlink, writeFile } from "node:fs/promises";
 import { PACKAGE_ROOT } from "../../../../../src/lib/package-root.js";
 import { dirname, join } from "node:path";
@@ -61,7 +62,7 @@ void test("line 45", async (t) => {
   const canonicalBox = await realpath(box.root);
   await writeLog(getSessionLogPath(canonicalBox, shortId), 2);
   const shortWarnings = await captureWarnings(async () => { await extractBehavior(box.root, shortId); });
-  await t.checkText(shortWarnings.length, "0");
+  t.check(shortWarnings, []);
 
   // doctest:L56
   const longId = "long-audit";
@@ -72,10 +73,14 @@ void test("line 45", async (t) => {
 
   // doctest:L62
   const longWarnings = await captureWarnings(async () => { await extractBehavior(box.root, longId); });
-  await t.checkText(longWarnings.length, "2");
+  const pageSize = String(MAX_SESSION_ENTRIES);
+  t.check(longWarnings, [
+    str`[test-runner] Behavior extraction from ${any(String).endsWith("/long-audit.jsonl")} has ${String(MAX_SESSION_ENTRIES + 1)} entries; using the first ${pageSize}.`,
+    str`[test-runner] Behavior extraction from ${any(String).endsWith("/long-audit/subagents/agent-a.jsonl")} has ${String(MAX_SESSION_ENTRIES + 1)} entries; using the first ${pageSize}.`,
+  ]);
 
   // doctest:L66
-  await t.checkText(longWarnings.every((warning) => warning.includes(`has ${String(MAX_SESSION_ENTRIES + 1)} entries; using the first ${String(MAX_SESSION_ENTRIES)}.`)), "true");
+
 
   // Claude stores transcripts under the physical directory. A symbolic-link cwd
   // must find that transcript, including its response, instead of the lexical path.
@@ -107,8 +112,8 @@ void test("line 45", async (t) => {
   const linkedFixtureRejected = await assertFixturePathInBox(
     box.root,
     "node_modules/beebox/box-docs/README.md",
-  ).then(() => false, (error: Error) => error.message.includes("symbolic link"));
-  t.check(linkedFixtureRejected, true);
+  ).then(() => "accepted", (error: Error) => error.message);
+  t.check(linkedFixtureRejected, "Knowledge-audit fixture path crosses a symbolic link: node_modules/beebox/box-docs/README.md");
 
   // doctest:L105
   const linkedPackageDocsRejected = await ensureAuditPackageDocs(box.root, {
@@ -117,13 +122,13 @@ void test("line 45", async (t) => {
     expected_level: "knows_about",
     watch_for: "photos docs",
     should_read: ["node_modules/beebox/box-docs/phone-photos.md"],
-  }).then(() => false, (error: Error) => error.message.includes("symbolic link"));
-  t.check(linkedPackageDocsRejected, true);
+  }).then(() => "accepted", (error: Error) => error.message);
+  t.check(linkedPackageDocsRejected, "Knowledge-audit fixture path crosses a symbolic link: node_modules/beebox/box-docs/README.md");
 
   // doctest:L117
   const escapingFixtureRejected = await assertFixturePathInBox(box.root, "../outside.txt")
-    .then(() => false, (error: Error) => error.message.includes("escapes the box"));
-  t.check(escapingFixtureRejected, true);
+    .then(() => "accepted", (error: Error) => error.message);
+  t.check(escapingFixtureRejected, "Knowledge-audit fixture path escapes the box: ../outside.txt");
 
   // doctest:L124
   const photosAudit = (await loadTests("src/dev/knowledge-audits.yaml")).tests

@@ -22,13 +22,18 @@ console.warn = () => {};
 void test("A simple speech tag extracts its text:", async (t) => {
   // doctest:L18
   const segments = parseAllSpeechTags("<speech>Hello there!</speech>");
-  await t.checkText(segments.length, "1");
-
-  // doctest:L24
-  t.check(segments[0]?.text, "Hello there!");
-
-  // doctest:L27
-  t.check(segments[0]?.hasTextBefore, false);
+  t.check(segments, [
+    {
+      text: "Hello there!",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Hello there!",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // ## Speech with instructions
@@ -38,10 +43,18 @@ void test("A simple speech tag extracts its text:", async (t) => {
 void test("Delivery instructions ride on the instructions attribute; the tag's content i...", async (t) => {
   // doctest:L37
   const segments = parseAllSpeechTags('<speech instructions="Gentle, not urgent">I found three overdue items.</speech>');
-  t.check(segments[0]?.text, "I found three overdue items.");
-
-  // doctest:L41
-  t.check(segments[0]?.instructions, "Gentle, not urgent");
+  t.check(segments, [
+    {
+      text: "I found three overdue items.",
+      instructions: "Gentle, not urgent",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "I found three overdue items.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // The value is entity-decoded the same way `name` is, so an agent can write a
@@ -49,7 +62,18 @@ void test("Delivery instructions ride on the instructions attribute; the tag's c
 void test("The value is entity-decoded the same way name is, so an agent can write a dou...", async (t) => {
   // doctest:L49
   const segments = parseAllSpeechTags('<speech instructions="Say &quot;ta-da&quot; slowly &amp; warmly">Ta-da.</speech>');
-  t.check(segments[0]?.instructions, "Say \"ta-da\" slowly & warmly");
+  t.check(segments, [
+    {
+      text: "Ta-da.",
+      instructions: "Say \"ta-da\" slowly & warmly",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Ta-da.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // The older form nests an `<instructions>` child. Saved transcripts and agents
@@ -60,10 +84,18 @@ void test("The older form nests an <instructions> child.", async (t) => {
   const segments = parseAllSpeechTags(`<speech>Good morning!
 <instructions>Warm and cheerful</instructions>
 </speech>`);
-  t.check(segments[0]?.text, "Good morning!");
-
-  // doctest:L65
-  t.check(segments[0]?.instructions, "Warm and cheerful");
+  t.check(segments, [
+    {
+      text: "Good morning!",
+      instructions: "Warm and cheerful",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Good morning!",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // When both forms appear, the attribute wins and the child's text is still
@@ -71,10 +103,18 @@ void test("The older form nests an <instructions> child.", async (t) => {
 void test("When both forms appear, the attribute wins and the child's text is still kept...", async (t) => {
   // doctest:L73
   const segments = parseAllSpeechTags('<speech instructions="From the attribute">Hello.<instructions>From the child</instructions></speech>');
-  t.check(segments[0]?.instructions, "From the attribute");
-
-  // doctest:L77
-  t.check(segments[0]?.text, "Hello.");
+  t.check(segments, [
+    {
+      text: "Hello.",
+      instructions: "From the attribute",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Hello.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // A child that carries its own attributes is still a child; its text is not
@@ -82,24 +122,54 @@ void test("When both forms appear, the attribute wins and the child's text is st
 void test("A child that carries its own attributes is still a child; its text is not spo...", async (t) => {
   // doctest:L85
   const segments = parseAllSpeechTags('<speech>Hello.<instructions pace="slow">Gentle</instructions></speech>');
-  t.check(segments[0]?.text, "Hello.");
-
-  // doctest:L89
-  t.check(segments[0]?.instructions, "Gentle");
+  t.check(segments, [
+    {
+      text: "Hello.",
+      instructions: "Gentle",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Hello.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // An empty attribute falls back to the child:
 void test("An empty attribute falls back to the child:", async (t) => {
   // doctest:L96
   const segments = parseAllSpeechTags('<speech instructions=" "><instructions>From the child</instructions>Hello.</speech>');
-  t.check(segments[0]?.instructions, "From the child");
+  t.check(segments, [
+    {
+      text: "Hello.",
+      instructions: "From the child",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Hello.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // ## Emotion attribute
 void test("Emotion attribute", async (t) => {
   // doctest:L104
   const segments = parseAllSpeechTags('<speech emotion="happy">Great news!</speech>');
-  t.check(segments[0]?.emotion, "happy");
+  t.check(segments, [
+    {
+      text: "Great news!",
+      instructions: undefined,
+      emotion: "happy",
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Great news!",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // ## Voice attribute
@@ -108,36 +178,64 @@ void test("Emotion attribute", async (t) => {
 void test("Valid voices are accepted:", async (t) => {
   // doctest:L114
   const segments = parseAllSpeechTags('<speech voice="coral">Hello</speech>');
-  t.check(segments[0]?.voice, "coral");
+  t.check(segments, [
+    {
+      text: "Hello",
+      instructions: undefined,
+      emotion: undefined,
+      voice: "coral",
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Hello",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // Invalid voices are silently ignored:
 void test("Invalid voices are silently ignored:", async (t) => {
   // doctest:L122
   const segments = parseAllSpeechTags('<speech voice="unknown">Hello</speech>');
-  await t.checkText(segments.length, "1");
-
-  // doctest:L126
-  t.check(segments[0]?.voice, undefined);
+  t.check(segments, [
+    {
+      text: "Hello",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Hello",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // ## Multiple speech segments
 void test("Multiple speech segments", async (t) => {
   // doctest:L133
   const segments = parseAllSpeechTags("Some text\n<speech>First</speech>\nMore text\n<speech>Second</speech>");
-  await t.checkText(segments.length, "2");
-
-  // doctest:L139
-  t.check(segments[0]?.text, "First");
-
-  // doctest:L142
-  t.check(segments[0]?.hasTextBefore, true);
-
-  // doctest:L145
-  t.check(segments[1]?.text, "Second");
-
-  // doctest:L148
-  t.check(segments[1]?.hasTextBefore, true);
+  t.check(segments, [
+    {
+      text: "First",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "First",
+      hasTextBefore: true,
+    },
+    {
+      text: "Second",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Second",
+      hasTextBefore: true,
+    },
+  ]);
 });
 
 // ## hasAssistantSpeech
@@ -168,13 +266,18 @@ void test("Real-world failure:", async (t) => {
   const segs = parseAllSpeechTags(
     "<speech><instructions>Speak warmly</instructions></instructions>Hello there.</speech>"
   );
-  await t.checkText(segs.length, "1");
-
-  // doctest:L184
-  t.check(segs[0]?.text, "Hello there.");
-
-  // doctest:L187
-  t.check(segs[0]?.instructions, "Speak warmly");
+  t.check(segs, [
+    {
+      text: "Hello there.",
+      instructions: "Speak warmly",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Hello there.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // ### Typo'd close followed by correct close
@@ -187,13 +290,18 @@ void test("The agent sometimes misspells the instructions tag (intructions, miss
   const segs = parseAllSpeechTags(
     "<speech><instructions>Slow and clipped</intructions></instructions>The alarm fired.</speech>"
   );
-  await t.checkText(segs.length, "1");
-
-  // doctest:L204
-  t.check(segs[0]?.text, "The alarm fired.");
-
-  // doctest:L207
-  t.check(segs[0]?.instructions, "Slow and clipped");
+  t.check(segs, [
+    {
+      text: "The alarm fired.",
+      instructions: "Slow and clipped",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "The alarm fired.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // ### Typo'd open tag (both ends misspelled)
@@ -206,16 +314,18 @@ void test("When both the open and close are typo'd, the whole block still normal
   const segs = parseAllSpeechTags(
     "<speech name=\"Honey\" override-instructions=\"1\">What a thing to name it.\n<intructions>Quiet, dry, each word careful.</intructions></speech>"
   );
-  await t.checkText(segs.length, "1");
-
-  // doctest:L224
-  t.check(segs[0]?.text, "What a thing to name it.");
-
-  // doctest:L227
-  t.check(segs[0]?.instructions, "Quiet, dry, each word careful.");
-
-  // doctest:L230
-  t.check(segs[0]?.overrideInstructions, true);
+  t.check(segs, [
+    {
+      text: "What a thing to name it.",
+      instructions: "Quiet, dry, each word careful.",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: true,
+      name: "Honey",
+      displayText: "What a thing to name it.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // ### Multiple `<instructions>` blocks in one `<speech>`
@@ -227,13 +337,18 @@ void test("When the agent emits two instructions blocks inside one speech tag, k
   const segs = parseAllSpeechTags(
     "<speech><instructions>First note.</instructions>Hello there.<instructions>Second, more specific note.</instructions></speech>"
   );
-  await t.checkText(segs.length, "1");
-
-  // doctest:L246
-  t.check(segs[0]?.text, "Hello there.");
-
-  // doctest:L249
-  t.check(segs[0]?.instructions, "Second, more specific note.");
+  t.check(segs, [
+    {
+      text: "Hello there.",
+      instructions: "Second, more specific note.",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Hello there.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // Empty instructions blocks are ignored when picking the last one.
@@ -242,7 +357,18 @@ void test("Empty instructions blocks are ignored when picking the last one.", as
   const segs = parseAllSpeechTags(
     "<speech><instructions>Real note.</instructions>Body.<instructions>   </instructions></speech>"
   );
-  t.check(segs[0]?.instructions, "Real note.");
+  t.check(segs, [
+    {
+      text: "Body.",
+      instructions: "Real note.",
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Body.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // ## Redacted content is never spoken
@@ -255,10 +381,18 @@ void test("Markdoc {% redacted %}…{% /redacted %} spans render as hidden-until
   const segs = parseAllSpeechTags(
     "<speech>The answer is {% redacted %}42{% /redacted %} — try it first.</speech>"
   );
-  t.check(segs[0]?.text, "The answer is  — try it first.");
-
-  // doctest:L276
-  t.check(segs[0]?.displayText, "The answer is {% redacted %}42{% /redacted %} — try it first.");
+  t.check(segs, [
+    {
+      text: "The answer is  — try it first.",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "The answer is {% redacted %}42{% /redacted %} — try it first.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // Multiple redacted spans in one speech tag are all dropped:
@@ -267,7 +401,18 @@ void test("Multiple redacted spans in one speech tag are all dropped:", async (t
   const segs = parseAllSpeechTags(
     "<speech>{% redacted %}one{% /redacted %} and {% redacted %}two{% /redacted %} stay hidden.</speech>"
   );
-  t.check(segs[0]?.text, "and  stay hidden.");
+  t.check(segs, [
+    {
+      text: "and  stay hidden.",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "{% redacted %}one{% /redacted %} and {% redacted %}two{% /redacted %} stay hidden.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // An unclosed `{% redacted %}` hides everything through the end of the speech —
@@ -277,7 +422,18 @@ void test("An unclosed {% redacted %} hides everything through the end of the sp
   const segs = parseAllSpeechTags(
     "<speech>Before. {% redacted %}secret with no close tag</speech>"
   );
-  t.check(segs[0]?.text, "Before.");
+  t.check(segs, [
+    {
+      text: "Before.",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Before. {% redacted %}secret with no close tag",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // A stray close marker is stripped rather than spoken as literal markup:
@@ -286,7 +442,18 @@ void test("A stray close marker is stripped rather than spoken as literal markup
   const segs = parseAllSpeechTags(
     "<speech>Oops {% /redacted %} extra close.</speech>"
   );
-  t.check(segs[0]?.text, "Oops  extra close.");
+  t.check(segs, [
+    {
+      text: "Oops  extra close.",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "Oops {% /redacted %} extra close.",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // A speech tag that is entirely redacted yields empty spoken text (the playback
@@ -296,10 +463,18 @@ void test("A speech tag that is entirely redacted yields empty spoken text (the 
   const segs = parseAllSpeechTags(
     "<speech>{% redacted %}all hidden{% /redacted %}</speech>"
   );
-  t.check(segs[0]?.text, "");
-
-  // doctest:L321
-  await t.checkText(segs[0]?.displayText, "{% redacted %}all hidden{% /redacted %}");
+  t.check(segs, [
+    {
+      text: "",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "{% redacted %}all hidden{% /redacted %}",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // ## Name attribute
@@ -308,41 +483,89 @@ void test("A speech tag that is entirely redacted yields empty spoken text (the 
 void test("An optional name attribute labels the speaker of a chunk:", async (t) => {
   // doctest:L330
   const segs = parseAllSpeechTags('<speech name="Bob">hi, I am bob!</speech>');
-  t.check(segs[0]?.name, "Bob");
-
-  // doctest:L334
-  t.check(segs[0]?.text, "hi, I am bob!");
+  t.check(segs, [
+    {
+      text: "hi, I am bob!",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: "Bob",
+      displayText: "hi, I am bob!",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 // No `name` attribute leaves it undefined:
 void test("No name attribute leaves it undefined:", async (t) => {
   // doctest:L341
   const segs = parseAllSpeechTags("<speech>plain</speech>");
-  await t.checkText(segs.length, "1");
-
-  // doctest:L345
-  t.check(segs[0]?.name, undefined);
+  t.check(segs, [
+    {
+      text: "plain",
+      instructions: undefined,
+      emotion: undefined,
+      voice: undefined,
+      overrideInstructions: undefined,
+      name: undefined,
+      displayText: "plain",
+      hasTextBefore: false,
+    },
+  ]);
 });
 
 void test("Splitting into ordered parts", async (t) => {
   // doctest:L359
   const parts = splitSpeechParts("Intro text <speech>one</speech> mid <speech name=\"Q\">two</speech>");
-  t.check(parts.map(p => p.type).join(","), "text,speech,text,speech");
-
-  // doctest:L363
-  t.check(parts.filter(p => p.type === "speech").map(p => p.index).join(","), "0,1");
-
-  // doctest:L368
-  const speechParts = parts.filter(p => p.type === "speech");
-  t.check(speechParts[1]?.type === "speech" ? speechParts[1].segment.name : "?", "Q");
+  t.check(parts, [
+    {
+      type: "text",
+      text: "Intro text ",
+    },
+    {
+      type: "speech",
+      segment: {
+        text: "one",
+        instructions: undefined,
+        emotion: undefined,
+        voice: undefined,
+        overrideInstructions: undefined,
+        name: undefined,
+        displayText: "one",
+        hasTextBefore: true,
+      },
+      index: 0,
+    },
+    {
+      type: "text",
+      text: " mid ",
+    },
+    {
+      type: "speech",
+      segment: {
+        text: "two",
+        instructions: undefined,
+        emotion: undefined,
+        voice: undefined,
+        overrideInstructions: undefined,
+        name: "Q",
+        displayText: "two",
+        hasTextBefore: true,
+      },
+      index: 1,
+    },
+  ]);
 });
 
 // Content with no speech is a single text part:
 void test("Content with no speech is a single text part:", async (t) => {
   // doctest:L376
   const parts = splitSpeechParts("just prose, nothing spoken");
-  await t.checkText(parts.length, "1");
-
-  // doctest:L380
-  t.check(parts[0]?.type, "text");
+  t.check(parts, [
+    {
+      type: "text",
+      text: "just prose, nothing spoken",
+    },
+  ]);
 });

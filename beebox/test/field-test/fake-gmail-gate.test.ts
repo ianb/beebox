@@ -104,7 +104,7 @@ void test("BBXFAKEGMAIL against a box with no config/test-box marker throws at s
   box.commitAll("mark as a field-test box");
 
   // doctest:L101
-  await t.checkText((await createGmailConnector(box.root).sync()).created.length, "0");
+  t.check(await createGmailConnector(box.root).sync(), { success: true, created: [], updated: [], procedures: [] });
 
   // doctest:L104
   await saveFakeGmailState(statePath, appendMessageToState({
@@ -112,16 +112,33 @@ void test("BBXFAKEGMAIL against a box with no config/test-box marker throws at s
     message: message({ id: "arrived", subject: "Arrived" }),
   }));
   const result = await createGmailConnector(box.root).sync();
-  t.check(result.created.map((p) => p.split(".").slice(-2).join(".")).toSorted(), [
-    "body.txt",
-    "email-message.card",
-    "email-thread.card",
-  ]);
+  t.check(result, {
+    success: true,
+    created: [
+      "_content/inbox/email/thread-Arrived--arrived.attach/msg-001.email-message.card",
+      "_content/inbox/email/thread-Arrived--arrived.attach/msg-001.attach/msg-001.body.txt",
+      "_content/inbox/email/thread-Arrived--arrived.email-thread.card",
+    ],
+    updated: [],
+    procedures: [],
+  });
 
   // doctest:L112
   const messageCard = result.created.find((p) => p.endsWith(".email-message.card")) ?? "";
   const card = await readFile(join(box.root, messageCard), "utf-8");
-  await t.checkText(card.includes("Arrived"), "true");
+  t.check(card, `---
+email:
+  message-id: <arrived@example.com>
+  thread-id: t-arrived
+  from: sender@example.com
+  to: box@example.com
+  received: 2026-08-01T15:00:00.000Z
+  subject: Arrived
+  snippet: Body arrived
+body-file:
+  ref: attach/msg-001.body.txt
+---
+`);
 });
 
 // ## An unset env var leaves the real path alone

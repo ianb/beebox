@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import type { ChatBackend } from "../../../../src/services/claude-chat/core.js";
 import type { FakeChatBackendRun } from "../../../../src/services/claude-chat/fake.js";
@@ -19,6 +20,9 @@ import { appendHistory, setMostActive } from "../../../../src/core/chat/session/
 import { deliverCaptureMessage, buildCaptureWrapper, resolveCaptureDeliveryTarget } from "../../../../src/core/capture/prepare/deliver.js";
 
 const W = buildCaptureWrapper({ docPath: "tmp-capture/x.capture-session.card", imageCount: 1, audioSeconds: 7, summary: "hi" });
+
+// The chat-app prelude carries the local time, which varies between runs.
+const SENT_WRAPPER = str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>\n${W}`;
 
 function makeRegistry(box: TmpBox, backend: ChatBackend) {
   return new ChatSessionRegistry(box.root, {
@@ -56,10 +60,10 @@ void test("No live/most-active session → a fresh session is created and sent t
   await tick();
 
   // doctest:L48
-  t.check(res.queued, false);
+  t.check(res, { sessionId: null, queued: false });
 
   // doctest:L51
-  await t.checkText(sentText(backend.lastRun()).includes(W), "true");
+  t.check(sentText(backend.lastRun()), SENT_WRAPPER);
 
   // The wrapper is composed by beebox, so the turn goes out marked client-composed.
 
@@ -101,12 +105,12 @@ void test("Target chat is busy → the message is enqueued, not sent", async (t)
   });
 
   // doctest:L88
-  t.check(res.queued, true);
+  t.check(res, { sessionId: "s-busy", queued: true });
 
   // The wrapper did not reach the backend — only the in-flight turn's message did:
 
   // doctest:L95
-  t.check(backend.lastRun()?.sent.length, 1);
+  t.check(backend.lastRun()?.sent, [[{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>\nfirst turn` }]]);
 });
 
 // ## Explicit targetSessionId (known to the box) → delivered to it
@@ -136,10 +140,10 @@ void test("Explicit targetSessionId (known to the box) → delivered to it", asy
   await tick();
 
   // doctest:L120
-  t.check(res.sessionId, "s-target");
+  t.check(res, { sessionId: "s-target", queued: false });
 
   // doctest:L123
-  await t.checkText(sentText(backend.lastRun()).includes(W), "true");
+  t.check(sentText(backend.lastRun()), SENT_WRAPPER);
 });
 
 // ## A failed (non-busy) send throws CaptureDeliveryError

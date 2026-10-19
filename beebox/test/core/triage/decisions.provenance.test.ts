@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, uuid } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execa } from "execa";
@@ -23,6 +24,28 @@ import { createFakeJev } from "../../../src/services/jev.js";
 import { getSessionLogPath } from "../../../src/core/chat/session/transcript-paths.js";
 import { movePathPreservingAnnexSymlink } from "../../../src/core/card-files/move-phase2.js";
 import { parseAnnexPointer } from "../../../src/lib/annex-pointer.js";
+
+// requestHash covers the box path, so it differs between runs.
+const requestHash = any(String).matches(/^[\da-f]{64}$/);
+const DESTINATION_OPTION = "destination_1e77219a5bb8541eee4d1ba3c67aa6ad35e4a5a8d4444cda711b6a2717ea1a37";
+
+function appliedMessage(id: string, tail: string): string {
+  return `Triage Paper.doc.card
+
+Triage-Decision: ${id}
+Triage-Instructions: /_config/intake.guide.card, /_content/home/Home.landmark.card
+Triage-Classifier: fake-jev
+Triage-Outcome: /_content/home/Home.landmark.card
+Triage-Probabilities: {"${DESTINATION_OPTION}":1,"no-match":0,"unclear":0}
+Triage-Confidence: 1
+Triage-Todo: unasked
+Triage-Todo-Question: unasked
+Triage-Todo-Probability: unavailable
+Triage-Todo-Source: unasked
+Triage-Todo-Annotation: none
+
+${tail}`;
+}
 
 async function fixture() {
   const box = await makeTmpBox();
@@ -58,7 +81,7 @@ void test("line 39", async (t) => {
 
   // doctest:L51
   const message = await simpleGit(box.root).raw(["log", "-1", "--format=%B"]);
-  await t.checkText(message.includes(`Triage-Decision: ${receipt.id}`) && message.includes("Triage-Probabilities:"), "true");
+  t.check(message, appliedMessage(receipt.id, ""));
 
   // doctest:L55
   t.check((await simpleGit(box.root).raw(["diff", "--cached", "--name-only"])).trim(), "_content/unrelated.md");
@@ -99,7 +122,53 @@ void test("line 39", async (t) => {
   t.check(drift.results[0]?.status, "unavailable");
 
   // doctest:L93
-  t.check(drift.results[0]?.error?.includes("substituted"), true);
+  t.check(drift.results[0], {
+    id: uuid(),
+    repetition: 1,
+    historical: {
+      outcome: "destination",
+      destinationRef: "/_content/home/Home.landmark.card",
+      requestHash,
+      requestedModel: "typesafe/jev-1.13",
+      returnedModel: "fake-jev",
+      answer: {
+        type: "choice",
+        choice: DESTINATION_OPTION,
+        confidence: 1,
+        probabilities: { [DESTINATION_OPTION]: 1, "no-match": 0, unclear: 0 },
+      },
+      reason: {
+        kind: "summary",
+        text: "Classifier summary: /_content/home/Home.landmark.card; leading probability 1.000, confidence 1.000; instructions: /_config/intake.guide.card, /_content/home/Home.landmark.card.",
+        evidenceRefs: ["/_content/inbox/staged/Paper.doc.card", "/_content/inbox/staged/Paper.attach/detail.txt"],
+      },
+    },
+    model: "fake-jev",
+    modelDrift: false,
+    assertions: [],
+    status: "unavailable",
+    preparationChanged: false,
+    candidate: {
+      todoAnswers: undefined,
+      outcome: "unclear",
+      destinationRef: null,
+      requestHash,
+      requestedModel: "fake-jev",
+      returnedModel: "provider-substitute",
+      answer: {
+        type: "choice",
+        choice: DESTINATION_OPTION,
+        confidence: 0,
+        probabilities: { [DESTINATION_OPTION]: 1 / 3, "no-match": 1 / 3, unclear: 1 / 3 },
+      },
+      reason: {
+        kind: "summary",
+        text: "Classifier summary: unclear (tied leading options); leading probability 0.333, confidence 0.000; instructions: /_config/intake.guide.card, /_content/home/Home.landmark.card.",
+        evidenceRefs: ["/_content/inbox/staged/Paper.doc.card", "/_content/inbox/staged/Paper.attach/detail.txt"],
+      },
+    },
+    error: "Triage receipt: Pinned model fake-jev was substituted by the provider",
+  });
 
   // doctest:L96
   const noModelReceipt = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...judgment, outcome: "unclear", destinationRef: null, requestHash: null, requestedModel: null, returnedModel: null, answer: null } });
@@ -114,7 +183,7 @@ void test("line 39", async (t) => {
   ]);
 
   // doctest:L105
-  await t.checkText(await fs.readFile(path.join(box.root, `_bookkeeping/triage/decisions/${receipt.id}.json`), "utf8") === before, "true");
+  t.check(await fs.readFile(path.join(box.root, `_bookkeeping/triage/decisions/${receipt.id}.json`), "utf8"), before);
 
   // doctest:L108
   await t.checkThrows(async () => (await replayDecisions({ boxRoot: box.root, ids: [receipt.id], instructions, compareOriginal: true, maxCalls: 1, env: { BBX_JEV_FAKE: "1" } })), "TriageReceiptError");
@@ -149,7 +218,12 @@ void test("Fixed evidence remains replayable when a Git-annex object is absent, 
   await saveDecisionReceipt(annexBox.root, annexReceipt);
   await applyDecision({ boxRoot: annexBox.root, decision: annexReceipt.id });
   const applicationCommit = (await simpleGit(annexBox.root).raw(["rev-parse", "HEAD"])).trim();
-  await t.checkText(Boolean(parseAnnexPointer(await simpleGit(annexBox.root).binaryCatFile(["blob", `${applicationCommit}:_content/inbox/triaged/_unsure/Paper.attach/photo.png`]))), "true");
+  t.check(parseAnnexPointer(await simpleGit(annexBox.root).binaryCatFile(["blob", `${applicationCommit}:_content/inbox/triaged/_unsure/Paper.attach/photo.png`])), {
+    key: "SHA256E-s21--9d714b0153c5204b5503770a41d5800ed8ba4e24da1a9429b6654397075031b6.png",
+    backend: "SHA256E",
+    size: 21,
+    sha256: "9d714b0153c5204b5503770a41d5800ed8ba4e24da1a9429b6654397075031b6",
+  });
 
   // doctest:L140
   const heldPath = annexBox.path("_content/inbox/triaged/_unsure/Paper.doc.card");
@@ -178,7 +252,40 @@ void test("Fixed evidence remains replayable when a Git-annex object is absent, 
   t.check(missingObjectReplay.results[0]?.status, "unavailable");
 
   // doctest:L166
-  t.check(missingObjectReplay.results[0]?.error?.includes("local Git-annex object is missing"), true);
+  t.check(missingObjectReplay.results[0], {
+    id: uuid(),
+    repetition: 1,
+    historical: {
+      outcome: "unclear",
+      destinationRef: null,
+      requestHash,
+      requestedModel: "typesafe/jev-1.13",
+      returnedModel: "fake-jev",
+      answer: {
+        type: "choice",
+        choice: DESTINATION_OPTION,
+        confidence: 1,
+        probabilities: { [DESTINATION_OPTION]: 1, "no-match": 0, unclear: 0 },
+      },
+      reason: {
+        kind: "summary",
+        text: "Classifier summary: /_content/home/Home.landmark.card; leading probability 1.000, confidence 1.000; instructions: /_config/intake.guide.card, /_content/home/Home.landmark.card.",
+        evidenceRefs: ["/_content/inbox/staged/Paper.doc.card", "/_content/inbox/staged/Paper.attach/photo.png"],
+      },
+    },
+    model: "fake-jev",
+    modelDrift: false,
+    assertions: [
+      {
+        label: "/_content/home/Home.landmark.card",
+        actor: "user",
+        sourceRef: "/_bookkeeping/questions/AnnexConfirm.question.card",
+        at: isoDate(),
+      },
+    ],
+    status: "unavailable",
+    error: "Triage receipt: prepare-again unavailable: could not recover /_content/inbox/staged/Paper.attach/photo.png: Triage receipt: local Git-annex object is missing for _content/inbox/triaged/_unsure/Paper.attach/photo.png",
+  });
 });
 
 // Prepare-again can recover an admitted card from its application commit when it
@@ -233,7 +340,7 @@ void test("Changed attachments cannot be silently admitted by an old receipt.", 
   await t.checkThrows(async () => (await applyDecision({ boxRoot: box.root, decision: receipt })), "InvariantError");
 
   // doctest:L217
-  await t.checkText(await fs.readFile(path.join(box.root, "_content/inbox/staged/Paper.doc.card"), "utf8") === evidence.parts[0]?.text, "true");
+  t.check(await fs.readFile(path.join(box.root, "_content/inbox/staged/Paper.doc.card"), "utf8"), evidence.parts[0]?.text);
 });
 
 // An answered CLI question is an agent assertion. Missing legacy channel is unknown;
@@ -259,16 +366,16 @@ void test("An answered CLI question is an agent assertion.", async (t) => {
   t.check(corrected.outcomes[0]?.actor, "agent");
 
   // doctest:L241
-  await t.checkText((await correctDecision({ boxRoot: box.root, id: held.id, questionRef })).id === corrected.id, "true");
+  t.check((await correctDecision({ boxRoot: box.root, id: held.id, questionRef })).id, corrected.id);
 
   // doctest:L244
   t.check(corrected.judgment.outcome, "unclear");
 
   // doctest:L247
-  await t.checkText(corrected.resolution?.destinationRef === destination.ref, "true");
+  t.check(corrected.resolution?.destinationRef, destination.ref);
 
   // doctest:L250
-  await t.checkText((await listDecisionReceipts(box.root, { outcome: "user-confirmed" })).length, "0");
+  t.check(await listDecisionReceipts(box.root, { outcome: "user-confirmed" }), []);
 
   // doctest:L253
   await box.write("_bookkeeping/questions/Legacy.question.card", `---\nanswered-at: '2026-09-28T12:00:00Z'\nanswer:\n  text: Home\n  selected: ${destination.optionId}\n---\n`);
@@ -282,7 +389,7 @@ void test("An answered CLI question is an agent assertion.", async (t) => {
 
   // doctest:L262
   await confirmDecision({ boxRoot: box.root, id: corrected.id, sourceRef: "/_bookkeeping/questions/Web.question.card", label: destination.ref });
-  await t.checkText((await listDecisionReceipts(box.root, { outcome: "user-confirmed" })).length, "1");
+  t.check((await listDecisionReceipts(box.root, { outcome: "user-confirmed" })).map((receipt) => receipt.id), [corrected.id]);
 
   // doctest:L266
   const previousProjectsDir = process.env["BBX_CLAUDE_PROJECTS_DIR"];
@@ -368,11 +475,12 @@ void test("Interrupted attachment moves and failed commits are explicit and retr
 
   // doctest:L343
   await simpleGit(box.root).raw(["commit", "--amend", "-m", "Raw sweep without provenance"]);
+  const head = (await simpleGit(box.root).raw(["rev-parse", "HEAD"])).trim();
   await applyDecision({ boxRoot: box.root, decision: receipt.id });
-  await t.checkText(Boolean((await readDecisionReceipt(box.root, receipt.id)).provenanceRepair), "true");
+  t.check((await readDecisionReceipt(box.root, receipt.id)).provenanceRepair, { observedCommit: head, at: isoDate() });
 
   // doctest:L348
-  await t.checkText((await simpleGit(box.root).raw(["log", "-1", "--format=%B"])).includes(`Triage-Decision: ${receipt.id}`), "true");
+  t.check(await simpleGit(box.root).raw(["log", "-1", "--format=%B"]), appliedMessage(receipt.id, ""));
 });
 
 // Independent processes applying the same decision serialize on the item lock,
@@ -399,5 +507,5 @@ void test("Independent processes applying the same decision serialize on the ite
 
   // doctest:L369
   const messages = await simpleGit(box.root).raw(["log", "--format=%B"]);
-  t.check(messages.split(`Triage-Decision: ${receipt.id}`).length - 1, 1);
+  t.check(messages, appliedMessage(receipt.id, "Initial admitted paper\n\n"));
 });

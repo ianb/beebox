@@ -43,10 +43,10 @@ void test("The enclosing Browse card supplies its visibility-scoped sink explici
   // doctest:L35
   const hiddenDetail = visibleCardSelectionSink(false, browseContext);
   hiddenDetail?.({ ref: "/_content/recipes/Soup.recipe.card", text: "Hidden text", position: "paragraph 4" });
-  await t.checkText(selections.length, "1");
+  t.check(selections, [{ ref: "/_content/recipes/Soup.recipe.card", text: "Two carrots", position: "paragraph 3" }]);
 
   // doctest:L40
-  await t.checkText(hiddenDetail === undefined, "true");
+  t.check(hiddenDetail, undefined);
 
   // doctest:L43
   unregister();

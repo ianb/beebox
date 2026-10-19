@@ -12,7 +12,7 @@ import { attachmentsBlockStart, composerToken, composerTokenIn, normalizeCompose
 // ## The writer emits one form
 void test("The writer emits one form", async (t) => {
   // doctest:L15
-  await t.checkText([composerToken("image", 1), composerToken("file", 12), composerToken("selection", 3)].join(" "), "[image#1] [file#12] [selection#3]");
+  t.check([composerToken("image", 1), composerToken("file", 12), composerToken("selection", 3)], ["[image#1]", "[file#12]", "[selection#3]"]);
 });
 
 // ## `composerTokenIn` reports the spelling the text actually uses
@@ -22,28 +22,21 @@ void test("The writer emits one form", async (t) => {
 // came from.
 void test("This is what keeps one message internally consistent:", async (t) => {
   // doctest:L26
-  await t.checkText(composerTokenIn("compare [file#1] against the notes", { kind: "file", id: 1 }), "[file#1]");
+  t.check(composerTokenIn("compare [file#1] against the notes", { kind: "file", id: 1 }), "[file#1]");
 
   // doctest:L29
-  await t.checkText(composerTokenIn("compare [file1] against the notes", { kind: "file", id: 1 }), "[file1]");
+  t.check(composerTokenIn("compare [file1] against the notes", { kind: "file", id: 1 }), "[file1]");
 });
 
 // Null when the text does not anchor that attachment — including the near
 // misses, so a two-digit id is never read as its one-digit prefix.
 void test("Null when the text does not anchor that attachment — including the near misse...", async (t) => {
   // doctest:L37
-  t.check(
-    [
-      composerTokenIn("no tokens here", { kind: "file", id: 1 }),
-      composerTokenIn("see [file#12]", { kind: "file", id: 1 }),
-      composerTokenIn("see [image#1]", { kind: "file", id: 1 }),
-    ],
-    [
-    null,
-    null,
-    null,
-  ],
-  );
+  t.check([
+    composerTokenIn("no tokens here", { kind: "file", id: 1 }),
+    composerTokenIn("see [file#12]", { kind: "file", id: 1 }),
+    composerTokenIn("see [image#1]", { kind: "file", id: 1 }),
+  ], [null, null, null]);
 });
 
 // ## `normalizeComposerTokens` upgrades a restored draft
@@ -84,25 +77,16 @@ void test("The <attachments> block re-spells the tokens it resolves — [file#1]
 </attachments>`);
 
   // doctest:L86
-  await t.checkText(
-    // Trailing whitespace after the close tag is tolerated.
-    attachmentsBlockStart(msg + "\n") === msg.indexOf("<attachments>"),
-    "true",
-  );
+  // Trailing whitespace after the close tag is tolerated.
+  t.check(attachmentsBlockStart(msg + "\n"), msg.indexOf("<attachments>"));
 
   // doctest:L90
-  t.check(
-    // No block: the whole text is body.
-    attachmentsBlockStart("<typed>plain</typed>"),
-    20,
-  );
+  // No block: the whole text is body.
+  t.check(attachmentsBlockStart("<typed>plain</typed>"), 20);
 
   // doctest:L94
-  t.check(
-    // A block that does not end the message is body text.
-    attachmentsBlockStart("<typed>I typed <attachments>x</attachments> by hand</typed>"),
-    59,
-  );
+  // A block that does not end the message is body text.
+  t.check(attachmentsBlockStart("<typed>I typed <attachments>x</attachments> by hand</typed>"), 59);
 
   // doctest:L98
   // Two blocks (the assembler never writes two, but a body can quote one): the

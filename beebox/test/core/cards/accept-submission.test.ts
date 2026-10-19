@@ -8,7 +8,7 @@
 
 import { test, type TestBase } from "tap";
 import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import { any, capture, not, str, unordered } from "agent-doctest/check";
 import { mkdtemp, writeFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -54,6 +54,8 @@ await box.write(
 await box.write("_content/tasks/Task.attach/schema.json", JSON.stringify(RECORD_SCHEMA, null, 2));
 box.commitAll("seed task");
 
+const firstBatch = capture(str`20260912-100000-${any(String)}`);
+
 // ## A well-formed batch is accepted, filed, and committed
 void test("A well-formed batch is accepted, filed, and committed", async (t) => {
   t.teardown(async () => {
@@ -83,10 +85,12 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
     eventBus,
     now: () => new Date("2026-09-12T10:00:00.000Z"),
   });
-  t.check({ ok: accepted.ok, count: accepted.ok ? accepted.count : null, dir: accepted.ok ? accepted.dir : null }, {
+  t.check(accepted, { ok: true, batch: firstBatch, count: 1, dir: any(String) });
+  t.check(accepted, {
     ok: true,
+    batch: firstBatch.value,
     count: 1,
-    dir: str`_content/tasks/Task.attach/inbox/20260912-100000-${any(String)}`,
+    dir: `_content/tasks/Task.attach/inbox/${firstBatch.value}`,
   });
 
   // The batch dir holds the uploaded file and a `records.json` with a sniffed
@@ -94,41 +98,40 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
 
   // doctest:L84
   const batchDir = accepted.ok ? accepted.dir : "";
-  t.check((await readdir(box.path(batchDir))).toSorted().join(", "), "photo.png, records.json");
+  t.check((await readdir(box.path(batchDir))).toSorted(), ["photo.png", "records.json"]);
 
   // doctest:L88
   const recordsOut = JSON.parse(await box.read(join(batchDir, "records.json")));
-  t.check(recordsOut.files, [
-    {
-      name: "photo.png",
-      size: any(Number).int(),
-      mimetype: "image/png",
-    },
-  ]);
-
-  // doctest:L92
-  t.check(recordsOut.coverage.reason, "end-of-feed");
+  t.check(recordsOut, {
+    coverage: { scanned: 1, stoppedAt: "https://example.com/feed/post-1", reason: "end-of-feed" },
+    records: [{ permalink: "https://example.com/feed/post-1", text: "Show announcement", photo: "photo.png" }],
+    files: [{ name: "photo.png", size: 68, mimetype: "image/png" }],
+  });
 
   // Only the validated shape is persisted, plus the server's `files`; a stray
   // top-level key in the request manifest does not reach disk:
 
   // doctest:L100
-  t.check(Object.keys(recordsOut).toSorted(), [
-    "coverage",
-    "files",
-    "records",
-  ]);
 
   // The card's `last-upload` is set, and the commit carries both paths under
   // the `card-submission` trailer:
 
   // doctest:L108
   const cardText = await box.read("_content/tasks/Task.browser-task.card");
-  await t.checkText(cardText.includes("last-upload: 2026-09-12T10:00:00.000Z"), "true");
+  t.checkText(cardText, `---
+type: browser-task
+title: Pottery Scan
+start:
+  href: https://example.com/feed
+last-upload: 2026-09-12T10:00:00.000Z
+---
+Scan the feed for show announcements.`);
 
   // doctest:L112
   const commitBody = execSync("git log -1 --format=%B", { cwd: box.root }).toString();
-  await t.checkText(commitBody.includes("Created-By: card-submission"), "true");
+  t.checkText(commitBody, `Accept submission ${firstBatch.value} for _content/tasks/Task.browser-task.card
+
+Created-By: card-submission`);
 
   // ## A schema-invalid batch is refused as a unit; nothing is filed
 
@@ -149,13 +152,12 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
     eventBus,
     now: () => new Date("2026-09-12T10:05:00.000Z"),
   });
-  t.check(invalid.ok, false);
-
-  // doctest:L138
-  await t.checkText(!invalid.ok && invalid.status, "400");
-
-  // doctest:L141
-  await t.checkText(!invalid.ok && (invalid.issues ?? []).some((i) => i.path.includes("text")), "true");
+  t.check(invalid, {
+    ok: false,
+    status: 400,
+    message: "submission failed validation",
+    issues: [{ path: "records[0].text", message: "Invalid input: expected string, received undefined" }],
+  });
 
   // The temp dir is gone, and the inbox still holds only the one batch from the
   // valid submission above:
@@ -164,7 +166,7 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
   t.check(await readdir(invalidTemp).catch((e) => e.code), "ENOENT");
 
   // doctest:L152
-  await t.checkText((await readdir(box.path("_content/tasks/Task.attach/inbox"))).length, "1");
+  t.check(await readdir(box.path("_content/tasks/Task.attach/inbox")), [firstBatch.value]);
 
   // ## An uploaded file no record references is also refused
 
@@ -185,12 +187,11 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
     eventBus,
     now: () => new Date("2026-09-12T10:10:00.000Z"),
   });
-  t.check({ ok: stray.ok, status: !stray.ok ? stray.status : null, kinds: !stray.ok ? (stray.issues ?? []).map((i) => i.message) : null }, {
+  t.check(stray, {
     ok: false,
     status: 400,
-    kinds: [
-      "\"stray.png\" is not referenced by any record",
-    ],
+    message: "submission failed validation",
+    issues: [{ path: "files/stray.png", message: "\"stray.png\" is not referenced by any record" }],
   });
 
   await closedTaskRefused(t);
@@ -215,11 +216,7 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
     eventBus,
     now: () => new Date("2026-09-12T10:20:00.000Z"),
   });
-  t.check({ ok: docResult.ok, status: !docResult.ok ? docResult.status : null, message: !docResult.ok ? docResult.message : null }, {
-    ok: false,
-    status: 404,
-    message: "this card type does not accept submissions",
-  });
+  t.check(docResult, { ok: false, status: 404, message: "this card type does not accept submissions" });
 
   // A path that leaves the box, or that is not a card, is refused as 404 before any
   // lock is taken, and the temp dir is removed:
@@ -235,10 +232,8 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
     eventBus,
     now: () => new Date("2026-09-12T10:00:00Z"),
   });
-  t.check([escaped.ok ? null : escaped.status, await readdir(escapeTemp).catch((e) => e.code)], [
-    404,
-    "ENOENT",
-  ]);
+  t.check(escaped, { ok: false, status: 404, message: "card not found: ../../etc/passwd.browser-task.card" });
+  t.check(await readdir(escapeTemp).catch((e) => e.code), "ENOENT");
 
   // A missing card is also a 404:
 
@@ -253,7 +248,7 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
     eventBus,
     now: () => new Date("2026-09-12T10:21:00.000Z"),
   });
-  await t.checkText(!missing.ok && missing.status, "404");
+  t.check(missing, { ok: false, status: 404, message: "card not found: _content/tasks/Nope.browser-task.card" });
 
   await concurrentSubmissionsLand(t);
 });
@@ -278,11 +273,7 @@ async function closedTaskRefused(t: TestBase) {
     eventBus,
     now: () => new Date("2026-09-12T10:15:00.000Z"),
   });
-  t.check({ ok: closed.ok, status: !closed.ok ? closed.status : null, message: !closed.ok ? closed.message : null }, {
-    ok: false,
-    status: 409,
-    message: "this task is closed and no longer accepts submissions",
-  });
+  t.check(closed, { ok: false, status: 409, message: "this task is closed and no longer accepts submissions" });
 }
 
 // ## Two concurrent submissions to the same card both land, with distinct batch ids
@@ -321,11 +312,19 @@ async function concurrentSubmissionsLand(t: TestBase) {
   ]);
 
   // doctest:L293
-  t.check(resultA.ok && resultB.ok, true);
-
-  // doctest:L296
-  await t.checkText(resultA.ok && resultB.ok && resultA.batch !== resultB.batch, "true");
-
-  // doctest:L299
-  await t.checkText((await readdir(box.path("_content/tasks/Task.attach/inbox"))).length, "3");
+  const batchA = capture(str`20260912-110000-${any(String)}`);
+  const batchB = capture(str`20260912-110000-${any(String)}`);
+  t.check([resultA, resultB], [
+    { ok: true, batch: batchA, count: 1, dir: any(String) },
+    { ok: true, batch: batchB, count: 1, dir: any(String) },
+  ]);
+  t.check(batchB.value, not(batchA.value));
+  t.check([resultA, resultB], [
+    { ok: true, batch: batchA.value, count: 1, dir: `_content/tasks/Task.attach/inbox/${batchA.value}` },
+    { ok: true, batch: batchB.value, count: 1, dir: `_content/tasks/Task.attach/inbox/${batchB.value}` },
+  ]);
+  t.check(
+    await readdir(box.path("_content/tasks/Task.attach/inbox")),
+    unordered([firstBatch.value, batchA.value, batchB.value]),
+  );
 }

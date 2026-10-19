@@ -28,7 +28,10 @@ void test("A box's full generated guide includes the section, positioned after t
   // doctest:L30
   const guide3 = generateAgentGuide({ procedures: [], shape: v3Shape, instructionFile: "AGENTS.md" });
   const guideLines = guide3.split("\n");
-  await t.checkText(guideLines.findIndex((l) => l === "## DIRECTORY_LAYOUT — Directory Layout") < guideLines.findIndex((l) => l === "## BOX_CODE — Box-Owned Code"), "true");
+  t.check(
+    guideLines.filter((l) => l === "## DIRECTORY_LAYOUT — Directory Layout" || l === "## BOX_CODE — Box-Owned Code"),
+    ["## DIRECTORY_LAYOUT — Directory Layout", "## BOX_CODE — Box-Owned Code"],
+  );
 });
 
 // ## The section names the box's instruction file

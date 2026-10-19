@@ -65,9 +65,10 @@ void test("The dev router uses the same identity matcher as Vite's proxy.", asyn
 void test("The service worker needs push events, but no fetch listener:", async (t) => {
   // doctest:L49
   const source = await readFile(new URL("../../src/frontend/public/sw.js", import.meta.url), "utf8");
+  interface ShownOptions { body?: string; data?: { url: string }; tag?: string | undefined; icon?: string; badge?: string; silent?: boolean }
   interface PushEventLike { data: { json: () => unknown }; waitUntil: (promise: Promise<unknown>) => Promise<unknown> }
   const listeners = new Map<string, (event: PushEventLike) => unknown>();
-  const notifications: { title: string; options: { icon?: string; badge?: string } }[] = [];
+  const notifications: { title: string; options: ShownOptions }[] = [];
   const scope = "http://localhost:3210/main/";
   const self = {
     addEventListener(type: string, listener: (event: PushEventLike) => unknown) { listeners.set(type, listener); },
@@ -75,13 +76,19 @@ void test("The service worker needs push events, but no fetch listener:", async 
     clients: { claim() {}, matchAll: async () => [], openWindow() {} },
     registration: {
       scope,
-      showNotification: async (title: string, options: { icon?: string; badge?: string }) => { notifications.push({ title, options }); },
+      showNotification: async (title: string, options: ShownOptions) => { notifications.push({ title, options }); },
     },
   };
   vm.runInNewContext(source, { self, URL, fetch });
 
   // doctest:L65
-  await t.checkText(listeners.has("fetch"), "false");
+  t.check([...listeners.keys()], [
+    "install",
+    "activate",
+    "push",
+    "notificationclick",
+    "pushsubscriptionchange",
+  ]);
 
   // doctest:L68
   listeners.get("push")?.({
@@ -89,8 +96,19 @@ void test("The service worker needs push events, but no fetch listener:", async 
     waitUntil: (promise: Promise<unknown>) => promise,
   });
   await new Promise((resolve) => setImmediate(resolve));
-  t.check([notifications[0]?.options.icon, notifications[0]?.options.badge], [
-    "http://localhost:3210/main/icons/icon-192.png",
-    "http://localhost:3210/main/icons/icon-192.png",
+  t.check(notifications, [
+    {
+      title: "Hello",
+      options: {
+        body: "world",
+        data: {
+          url: "/main/test1/",
+        },
+        tag: undefined,
+        icon: "http://localhost:3210/main/icons/icon-192.png",
+        badge: "http://localhost:3210/main/icons/icon-192.png",
+        silent: false,
+      },
+    },
   ]);
 });

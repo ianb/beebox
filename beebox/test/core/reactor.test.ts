@@ -5,6 +5,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, not, str } from "agent-doctest/check";
 import {
   buildReactorSystemPrompt,
   buildReactorUserPrompt,
@@ -24,11 +25,8 @@ import * as path from "node:path";
 // text stays box-relative (`docs/implemented-plans/one-root-box-layout.md`, criterion 4).
 void test("The system prompt must never embed the box's absolute path — agent-visible te...", async (t) => {
   // doctest:L27
-  t.check(
-    /\/(Users|home|tmp|private)\//.test(buildReactorSystemPrompt())
-    ,
-    false,
-  );
+  // The prompt is large generated text, so the check is on what it must not hold.
+  t.check(buildReactorSystemPrompt(), not(any(String).matches(/\/(Users|home|tmp|private)\//)));
 });
 
 // ## buildReactorUserPrompt
@@ -41,13 +39,22 @@ void test("Formats job list with descriptions", async (t) => {
     { jobDescriptions: ["### _bookkeeping/jobs/task1.job.card\n```\ndo thing 1\n```",
      "### _bookkeeping/jobs/task2.job.card\n```\ndo thing 2\n```"] },
   );
-  await t.checkText(prompt.includes("2 job(s)"), "true");
+  t.check(
+    prompt,
+    `Please process the following 2 job(s):
 
-  // doctest:L44
-  await t.checkText(prompt.includes("do thing 1"), "true");
+### _bookkeeping/jobs/task1.job.card
+\`\`\`
+do thing 1
+\`\`\`
 
-  // doctest:L47
-  await t.checkText(prompt.includes("do thing 2"), "true");
+### _bookkeeping/jobs/task2.job.card
+\`\`\`
+do thing 2
+\`\`\`
+
+Process each job according to its type's instructions, then call \`bbx finish\` for each one when done.`,
+  );
 });
 
 // ### Ambient todo line, when given, leads the prompt
@@ -60,7 +67,19 @@ void test("Ambient todo line, when given, leads the prompt", async (t) => {
       ambientLine: "3 open todos on the plate (1 escalated) — `bbx query todos`",
     },
   );
-  await t.checkText(promptWithAmbient.startsWith("3 open todos on the plate (1 escalated)"), "true");
+  t.check(
+    promptWithAmbient,
+    `3 open todos on the plate (1 escalated) — \`bbx query todos\`
+
+Please process the following 1 job(s):
+
+### _bookkeeping/jobs/only.job.card
+\`\`\`
+solo task
+\`\`\`
+
+Process each job according to its type's instructions, then call \`bbx finish\` for each one when done.`,
+  );
 });
 
 // ### No ambient line, when omitted or null
@@ -70,7 +89,17 @@ void test("No ambient line, when omitted or null", async (t) => {
     ["_bookkeeping/jobs/only.job.card"],
     { jobDescriptions: ["### _bookkeeping/jobs/only.job.card\n```\nsolo task\n```"], ambientLine: null },
   );
-  await t.checkText(promptNoAmbient.startsWith("Please process"), "true");
+  t.check(
+    promptNoAmbient,
+    `Please process the following 1 job(s):
+
+### _bookkeeping/jobs/only.job.card
+\`\`\`
+solo task
+\`\`\`
+
+Process each job according to its type's instructions, then call \`bbx finish\` for each one when done.`,
+  );
 });
 
 // ## findJobCards
@@ -86,20 +115,11 @@ void test("Finds job cards and sorts by priority", async (t) => {
 
   // doctest:L87
   const cards = await findJobCards(jobsDir);
-  await t.checkText(cards.length, "3");
-
-  // doctest:L91
-  t.check(
-    // Normal priority comes first
-    cards[0]?.priority,
-    "normal",
-  );
-
-  // doctest:L95
-  t.check(cards[1]?.priority, "low");
-
-  // doctest:L98
-  t.check(cards[2]?.priority, "low");
+  t.check(cards, [
+    { file: "task-b.job.card", priority: "normal", createdAt: isoDate() },
+    { file: "task-a.job.card", priority: "low", createdAt: isoDate() },
+    { file: "task-c.job.card", priority: "low", createdAt: isoDate() },
+  ]);
 
   // doctest:L101
   await box.cleanup();
@@ -123,17 +143,26 @@ void test("createdAt is what the reactor's low-priority deadline and the stalled
 
   // doctest:L120
   const byFile = new Map((await findJobCards(jobsDir)).map((c) => [c.file, c.createdAt]));
-  t.check(byFile.get("2026-08-18T09-30-00-gmail.intake.job.card")?.toISOString(), "2026-08-18T09:30:00.000Z");
+  t.check(Object.fromEntries(byFile), {
+    "2026-08-18T09-30-00-gmail.intake.job.card": new Date("2026-08-18T09:30:00.000Z"),
+    "2026-08-18T09-30.contains-backfill.job.card": new Date("2026-08-18T09:30:00.000Z"),
+    "2026-99-99T99-99-bad.intake.job.card": isoDate(),
+    "handwritten.job.card": isoDate(),
+  });
 
-  // doctest:L124
-  t.check(byFile.get("2026-08-18T09-30.contains-backfill.job.card")?.toISOString(), "2026-08-18T09:30:00.000Z");
+  // The two that carry no usable stamp fall back to the mtime, so they read as
+  // newly written rather than as ancient or as unknown.
+  const fallbacks = ["2026-99-99T99-99-bad.intake.job.card", "handwritten.job.card"];
+  t.check(
+    fallbacks.map((f) => Date.now() - (byFile.get(f)?.getTime() ?? 0)),
+    [any(Number).below(60_000), any(Number).below(60_000)],
+  );
 
   // The two that carry no usable stamp fall back to the mtime, so they read as
   // newly written rather than as ancient or as unknown.
 
   // doctest:L132
-  const fallbacks = ["2026-99-99T99-99-bad.intake.job.card", "handwritten.job.card"];
-  await t.checkText(fallbacks.every((f) => Date.now() - (byFile.get(f)?.getTime() ?? 0) < 60_000), "true");
+
 
   // doctest:L136
   await box.cleanup();
@@ -149,14 +178,14 @@ void test("Type filter only matches typed suffix", async (t) => {
 
   // doctest:L147
   const digestOnly = await findJobCards(jobsDir, { typeFilter: "digest" });
-  await t.checkText(digestOnly.length, "1");
-
-  // doctest:L151
-  t.check(digestOnly[0]?.file, "msg1.digest.job.card");
+  t.check(digestOnly, [{ file: "msg1.digest.job.card", priority: "normal", createdAt: isoDate() }]);
 
   // doctest:L154
   const all = await findJobCards(jobsDir);
-  await t.checkText(all.length, "2");
+  t.check(all, [
+    { file: "msg1.digest.job.card", priority: "normal", createdAt: isoDate() },
+    { file: "sweep.intake.job.card", priority: "normal", createdAt: isoDate() },
+  ]);
 
   // doctest:L158
   await box.cleanup();
@@ -189,7 +218,11 @@ void test("A job no connector made (here, a full wakeup's inbox triage) matches 
   // doctest:L181
   // Other jobs stay put for a future run that does match them
   const noFilter = await findJobCards(jobsDir);
-  await t.checkText(noFilter.length, "3");
+  t.check(noFilter, [
+    { file: "email.intake.job.card", priority: "normal", createdAt: isoDate() },
+    { file: "feed.digest.job.card", priority: "normal", createdAt: isoDate() },
+    { file: "inbox.intake.job.card", priority: "normal", createdAt: isoDate() },
+  ]);
 
   // doctest:L186
   await box.cleanup();
@@ -210,12 +243,7 @@ void test("Current job cards are YAML frontmatter, not XML — discovery reads t
 
   // doctest:L202
   const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });
-  t.check(gmailOnly.map((c) => c.file), [
-    "y1.intake.job.card",
-  ]);
-
-  // doctest:L206
-  t.check(gmailOnly[0]?.priority, "low");
+  t.check(gmailOnly, [{ file: "y1.intake.job.card", priority: "low", createdAt: isoDate() }]);
 
   // doctest:L209
   await box.cleanup();
@@ -227,7 +255,7 @@ void test("Empty directory returns empty array", async (t) => {
   const box = await makeTmpBox({ git: true });
   await fs.mkdir(path.join(box.root, "_bookkeeping/jobs"), { recursive: true });
   const cards = await findJobCards(path.join(box.root, "_bookkeeping/jobs"));
-  await t.checkText(cards.length, "0");
+  t.check(cards, []);
 
   // doctest:L221
   await box.cleanup();
@@ -237,7 +265,7 @@ void test("Empty directory returns empty array", async (t) => {
 void test("Non-existent directory returns empty array", async (t) => {
   // doctest:L227
   const cards = await findJobCards("/tmp/nonexistent-reactor-test-dir");
-  await t.checkText(cards.length, "0");
+  t.check(cards, []);
 });
 
 // ## buildJobDescription
@@ -258,16 +286,24 @@ void test("Includes the job card and priority label (no xml fence)", async (t) =
     },
     "/tmp/fake-box",
   );
-  await t.checkText(desc.includes("*(low priority)*"), "true");
-
-  // doctest:L253
-  await t.checkText(desc.includes("Do something"), "true");
-
-  // doctest:L256
-  await t.checkText(
-    // The card body is fenced plainly — the misleading ```xml label is gone
-    desc.includes("```xml"),
-    "false",
+  // The schema instructions after the heading are large generated text, so only
+  // their heading is checked; the card section above them is exact.
+  t.check(
+    desc,
+    str`${[
+      "### _bookkeeping/jobs/task.intake.job.card *(low priority)*",
+      "```",
+      "---",
+      "connector: rss",
+      "priority: low",
+      "description: Do something",
+      "items: []",
+      "---",
+      "```",
+      "",
+      "#### Instructions for intake-job",
+      "# Processing Intake Jobs",
+    ].join("\n")}${any(String)}`,
   );
 });
 
@@ -296,20 +332,31 @@ void test("The core purge fix:", async (t) => {
   );
 
   // doctest:L284
-  await t.checkText(
-    // Referenced item card is inlined
-    desc.includes("Hello from item one"),
-    "true",
-  );
-
-  // doctest:L288
-  await t.checkText(desc.includes("#### store/inbox/item1.card"), "true");
-
-  // doctest:L291
-  await t.checkText(
-    // Intake-job schema instructions are injected
-    desc.includes("Processing Intake Jobs"),
-    "true",
+  t.check(
+    desc,
+    str`${[
+      "### _bookkeeping/jobs/x.intake.job.card",
+      "```",
+      "---",
+      "connector: rss",
+      "priority: normal",
+      "description: New items to triage",
+      "items:",
+      "  - ref: store/inbox/item1.card",
+      "---",
+      "```",
+      "",
+      "#### store/inbox/item1.card",
+      "```",
+      "---",
+      "status: new",
+      "---",
+      "Hello from item one",
+      "```",
+      "",
+      "#### Instructions for intake-job",
+      "# Processing Intake Jobs",
+    ].join("\n")}${any(String)}`,
   );
 
   // doctest:L295
@@ -331,17 +378,23 @@ void test("Handles missing refs gracefully", async (t) => {
     },
     "/tmp/fake-box",
   );
-  await t.checkText(
-    // Should not crash, just omit the missing ref
-    desc.includes("Process this"),
-    "true",
-  );
-
-  // doctest:L317
-  await t.checkText(
-    // The ref section header should not appear (file doesn't exist)
-    desc.includes("#### store/items/missing.card"),
-    "false",
+  t.check(
+    desc,
+    str`${[
+      "### _bookkeeping/jobs/task.intake.job.card",
+      "```",
+      "---",
+      "connector: rss",
+      "priority: normal",
+      "description: Process this",
+      "items:",
+      "  - ref: store/items/missing.card",
+      "---",
+      "```",
+      "",
+      "#### Instructions for intake-job",
+      "# Processing Intake Jobs",
+    ].join("\n")}${any(String)}`,
   );
 });
 
@@ -359,12 +412,12 @@ void test("A job that isn't a recognized frontmatter card (legacy XML, hand-edit
     },
     "/tmp/fake-box",
   );
-  await t.checkText(desc.includes("Could not parse this job as a card"), "true");
-
-  // doctest:L339
-  await t.checkText(
-    // Raw content is still shown so the agent can act
-    desc.includes("Old XML job"),
-    "true",
+  t.check(
+    desc,
+    `### _bookkeeping/jobs/legacy.job.card
+_⚠️ Could not parse this job as a card (missing frontmatter block); showing raw content._
+\`\`\`
+<job><description>Old XML job</description></job>
+\`\`\``,
   );
 });

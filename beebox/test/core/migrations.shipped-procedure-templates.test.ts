@@ -12,6 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { containing } from "agent-doctest/check";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseProcedureDefinition } from "../../src/schemas/procedure.js";
@@ -48,7 +49,7 @@ void test("Every shipped template is valid frontmatter that satisfies the proced
 // by vacuum:
 void test("At least one template exists, so an empty directory cannot pass the check abo...", async (t) => {
   // doctest:L52
-  await t.checkText(names.length > 0, "true");
+  t.check(names, containing(["refresh-maps.procedure.card"]));
 });
 
 // Every procedure named by the migration registry ships a template, and every one

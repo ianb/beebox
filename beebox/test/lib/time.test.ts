@@ -4,7 +4,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any } from "agent-doctest/check";
 import { getBoxTime, getBoxTimeISO, clearTimeCache } from "../../src/lib/time.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import * as fs from "node:fs";
@@ -16,8 +16,7 @@ import * as path from "node:path";
 void test("Without any stubs, getBoxTime() returns approximately now:", async (t) => {
   // doctest:L17
   const now = Date.now();
-  const boxTime = getBoxTime();
-  await t.checkText(Math.abs(boxTime.getTime() - now) < 1000, "true");
+  t.check(getBoxTime().getTime(), any(Number).between(now - 999, now + 999));
 });
 
 // ## BBX_TIME environment variable
@@ -95,16 +94,13 @@ void test("Missing stubs.yaml falls back to real time", async (t) => {
   const box = await makeTmpBox();
   clearTimeCache();
   const now = Date.now();
-  const boxTime = getBoxTime(box.root);
-  await t.checkText(Math.abs(boxTime.getTime() - now) < 1000, "true");
+  t.check(getBoxTime(box.root).getTime(), any(Number).between(now - 999, now + 999));
 });
 
 // ## Cache persists across calls
 //
 // The stubs.yaml result is cached per box root:
 void test("The stubs.yaml result is cached per box root:", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       fs.unlinkSync(stubsPath);
@@ -119,16 +115,13 @@ void test("The stubs.yaml result is cached per box root:", async (t) => {
   const stubsPath = path.join(box.root, "../stubs.yaml");
   fs.writeFileSync(stubsPath, "time: 2025-03-01T00:00:00Z\n");
   clearTimeCache();
-  print(getBoxTimeISO(box.root));
+  const first = getBoxTimeISO(box.root);
   fs.writeFileSync(stubsPath, "time: 2025-09-01T00:00:00Z\n");
-  await t.checkText(out.with(print(getBoxTimeISO(box.root))), `2025-03-01T00:00:00.000Z
-2025-03-01T00:00:00.000Z`);
+  t.check([first, getBoxTimeISO(box.root)], ["2025-03-01T00:00:00.000Z", "2025-03-01T00:00:00.000Z"]);
 });
 
 // ## clearTimeCache resets the cache
 void test("clearTimeCache resets the cache", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       fs.unlinkSync(stubsPath);
@@ -143,9 +136,8 @@ void test("clearTimeCache resets the cache", async (t) => {
   const stubsPath = path.join(box.root, "../stubs.yaml");
   fs.writeFileSync(stubsPath, "time: 2025-03-01T00:00:00Z\n");
   clearTimeCache();
-  print(getBoxTimeISO(box.root));
+  const first = getBoxTimeISO(box.root);
   fs.writeFileSync(stubsPath, "time: 2025-09-01T00:00:00Z\n");
   clearTimeCache();
-  await t.checkText(out.with(print(getBoxTimeISO(box.root))), `2025-03-01T00:00:00.000Z
-2025-09-01T00:00:00.000Z`);
+  t.check([first, getBoxTimeISO(box.root)], ["2025-03-01T00:00:00.000Z", "2025-09-01T00:00:00.000Z"]);
 });

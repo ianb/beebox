@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { capture, isoDate } from "agent-doctest/check";
 import { execa } from "execa";
 
 const repoRoot = path.resolve(process.cwd(), "..");
@@ -28,7 +29,6 @@ async function registryRecord(file: string): Promise<Record<string, unknown>> {
 // Archive is idempotent: repeating it preserves the first archive time. An
 // unarchive writes the explicit `null` state expected by registry consumers.
 void test("Archive is idempotent:", async (t) => {
-  // doctest:L32
   const state = await fs.mkdtemp(path.join(os.tmpdir(), "workstreams-archive-"));
   t.teardown(async () => await fs.rm(state, { recursive: true, force: true }));
   const worktreeRoot = path.join(state, "worktrees");
@@ -40,21 +40,16 @@ void test("Archive is idempotent:", async (t) => {
     BBX_WORKTREE_ROOT: worktreeRoot,
   };
 
-  // doctest:L43
   await execa(workstreams, ["archive", workstream], { cwd: repoRoot, env });
   const registryFile = path.join(state, "workstreams", `${workstream}.json`);
   const archived = await registryRecord(registryFile);
-  assert.ok(isRecord(archived.archived));
-  assert.equal(typeof archived.archived.at, "string");
-  const firstArchivedAt = archived.archived.at;
+  const firstArchivedAt = capture(isoDate());
+  t.check(archived.archived, { at: firstArchivedAt });
 
-  // doctest:L50
   await execa(workstreams, ["archive", workstream], { cwd: repoRoot, env });
   const rearchived = await registryRecord(registryFile);
-  assert.ok(isRecord(rearchived.archived));
-  t.check(rearchived.archived.at === firstArchivedAt, true);
+  t.check(rearchived.archived, { at: firstArchivedAt.value });
 
-  // doctest:L56
   await execa(workstreams, ["unarchive", workstream], { cwd: repoRoot, env });
   t.check((await registryRecord(registryFile)).archived, null);
 });
@@ -62,7 +57,6 @@ void test("Archive is idempotent:", async (t) => {
 // Recovery state must remain conspicuous. A workstream removed with unmerged work
 // cannot be archived, nor can a name absent from both registry and worktree root.
 void test("Recovery state must remain conspicuous.", async (t) => {
-  // doctest:L65
   const state = await fs.mkdtemp(path.join(os.tmpdir(), "workstreams-archive-"));
   t.teardown(async () => await fs.rm(state, { recursive: true, force: true }));
   const worktreeRoot = path.join(state, "worktrees");
@@ -86,7 +80,6 @@ void test("Recovery state must remain conspicuous.", async (t) => {
     /refusing to hide recovery state/,
   );
 
-  // doctest:L88
   await assert.rejects(
     execa(workstreams, ["archive", "definitely-not-a-workstream"], {
       cwd: repoRoot,

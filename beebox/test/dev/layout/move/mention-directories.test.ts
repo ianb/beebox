@@ -37,10 +37,12 @@ void test("A directory whose every tracked file moves to the same new directory 
     { from: "scripts/migrate/sub/two.ts", to: "scripts/migrations/sub/two.ts" },
   ];
   const renames = detectDirectoryRenames({ repoRoot, moves: uniform });
-  t.check(renames.find((r) => r.from === "scripts/migrate"), {
-    from: "scripts/migrate",
-    to: "scripts/migrations",
-  });
+  t.check(renames, [
+    {
+      from: "scripts/migrate",
+      to: "scripts/migrations",
+    },
+  ]);
 });
 
 // ## A directory with only some files moving is NOT reported as a rename (the leftover file breaks uniformity)
@@ -55,5 +57,5 @@ void test("A directory with only some files moving is NOT reported as a rename (
   // doctest:L47
   const partial = [{ from: "scripts/keep/a.ts", to: "scripts/kept/a.ts" }];
   const partialRenames = detectDirectoryRenames({ repoRoot, moves: partial });
-  await t.checkText(partialRenames.some((r) => r.from === "scripts/keep"), "false");
+  t.check(partialRenames, []);
 });

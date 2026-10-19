@@ -34,8 +34,12 @@ function tab(state: WorkspaceState, path: string): SidecarTab {
   assert.ok(found);
   return found;
 }
-const returnPath = (state: WorkspaceState) => (state.mobileView.kind === "chat" ? state.mobileView.returnPath : "card");
-const panes = (state: WorkspaceState) => `${state.panes.left.paths.join(",")}|${state.panes.right.paths.join(",")}`;
+type Pane = WorkspaceState["panes"]["left"];
+const cards = (paths: string[], activePath: string): Pane => ({ paths, activePath, display: "cards" });
+const CHAT_PANE: Pane = { paths: [], activePath: null, display: "chat" };
+type Projection = ReturnType<typeof projectWorkspace>;
+const fullChat = (restorePane: PaneId): Projection => ({ visiblePanes: [], visiblePaths: {}, transcript: "full", foregroundPath: null, restorePane });
+const cardOnly = (pane: PaneId, path: string): Projection => ({ visiblePanes: [{ pane, path }], visiblePaths: { [pane]: path }, transcript: null, foregroundPath: path, restorePane: null });
 
 // ## The first card opens opposite the chat anchor
 //
@@ -44,7 +48,7 @@ const panes = (state: WorkspaceState) => `${state.panes.left.paths.join(",")}|${
 void test("Fresh state anchors chat on the right, so a desktop open reveals the card on...", async (t) => {
   // doctest:L37
   let state = open(createEmptyWorkspaceState(), { path: "a", at: 1 });
-  t.check(panes(state), "a|");
+  t.check(state.panes, { left: cards(["a"], "a"), right: CHAT_PANE });
 
   // doctest:L41
   t.check(projectWorkspace(state, "desktop"), {
@@ -64,10 +68,7 @@ void test("Fresh state anchors chat on the right, so a desktop open reveals the 
 
   // doctest:L44
   state = reduceWorkspace(state, { type: "showChat", pane: "left", viewport: "desktop" }).state;
-  t.check(projectWorkspace(state, "desktop").transcript, "full");
-
-  // doctest:L48
-  await t.checkText(projectWorkspace(state, "desktop").visiblePanes.length, "0");
+  t.check(projectWorkspace(state, "desktop"), fullChat("left"));
 });
 
 // ## A fresh open moves an existing hidden tab opposite visible chat
@@ -84,10 +85,16 @@ void test("The same path is never duplicated.", async (t) => {
     type: "openCard", target: target("a", "markdown"), label: "a markdown", at: 3,
     viewport: "desktop", originatingPane: "left",
   }).state;
-  t.check(panes(state), "b|a");
-
-  // doctest:L69
-  t.check([Object.keys(state.tabs).length, tab(state, "a").target.viewer, state.panes.right.activePath].join("|"), "2|markdown|a");
+  t.check({ panes: state.panes, tabs: state.tabs }, {
+    panes: {
+      left: { paths: ["b"], activePath: "b", display: "chat" },
+      right: cards(["a"], "a"),
+    },
+    tabs: {
+      b: { target: target("b", null), label: "b", pinned: false, lastActiveAt: 2 },
+      a: { target: target("a", "markdown"), label: "a markdown", pinned: false, lastActiveAt: 3 },
+    },
+  });
 });
 
 // ## Two card panes respect origin, move, focus, and the focus ladder
@@ -102,19 +109,19 @@ void test("With no visible chat, a new card uses the originating pane.", async (
   state = open(state, { path: "right-a", at: 2, originatingPane: "right" });
   state = reduceWorkspace(state, { type: "restoreCards", viewport: "desktop", pane: "left" }).state;
   state = open(state, { path: "left-b", at: 3, originatingPane: "left" });
-  t.check(panes(state), "left-a,left-b|right-a");
+  t.check(state.panes, { left: cards(["left-a", "left-b"], "left-b"), right: cards(["right-a"], "right-a") });
 
   // doctest:L88
   state = reduceWorkspace(state, { type: "moveActive", pane: "left" }).state;
-  t.check([panes(state), state.panes.left.activePath, state.panes.right.activePath].join("|"), "left-a|right-a,left-b|left-a|left-b");
+  t.check(state.panes, { left: cards(["left-a"], "left-a"), right: cards(["right-a", "left-b"], "left-b") });
 
   // doctest:L92
   state = reduceWorkspace(state, { type: "focusPane", pane: "right" }).state;
-  t.check(state.layout.kind, "focus");
+  t.check(state.layout, { kind: "focus", pane: "right" });
 
   // doctest:L96
   state = reduceWorkspace(state, { type: "backToSplit", pane: "right" }).state;
-  t.check(state.layout.kind, "split");
+  t.check(state.layout, { kind: "split" });
 });
 
 // ## An explicit desktop destination can reveal a card beside a focused source
@@ -129,16 +136,19 @@ void test("Browse uses this hint for files:", async (t) => {
   let state = open(createEmptyWorkspaceState(), { path: "browse", at: 1 });
   state = reduceWorkspace(state, { type: "focusPane", pane: "left" }).state;
   state = open(state, { path: "file-a", at: 2, originatingPane: "left", destinationPane: "right" });
-  t.check([panes(state), state.layout.kind].join("|"), "browse|file-a|split");
+  t.check({ panes: state.panes, layout: state.layout }, {
+    panes: { left: cards(["browse"], "browse"), right: cards(["file-a"], "file-a") },
+    layout: { kind: "split" },
+  });
 
   // doctest:L116
   state = open(state, { path: "browse-right", at: 3, originatingPane: "right" });
   state = open(state, { path: "file-b", at: 4, originatingPane: "right", destinationPane: "right" });
-  t.check(panes(state), "browse|file-a,browse-right,file-b");
+  t.check(state.panes, { left: cards(["browse"], "browse"), right: cards(["file-a", "browse-right", "file-b"], "file-b") });
 
   // doctest:L121
   const mobile = open(createEmptyWorkspaceState(), { path: "mobile-file", at: 1, viewport: "mobile", destinationPane: "right" });
-  t.check(panes(mobile), "mobile-file|");
+  t.check(mobile.panes, { left: cards(["mobile-file"], "mobile-file"), right: CHAT_PANE });
 });
 
 // An explicit desktop destination also relocates an existing card. Without that
@@ -149,7 +159,7 @@ void test("An explicit desktop destination also relocates an existing card.", as
   let relocation = open(createEmptyWorkspaceState(), { path: "file", at: 1 });
   relocation = open(relocation, { path: "browse", at: 2, originatingPane: "left" });
   relocation = open(relocation, { path: "file", at: 3, originatingPane: "left", destinationPane: "right" });
-  t.check(panes(relocation), "browse|file");
+  t.check(relocation.panes, { left: cards(["browse"], "browse"), right: cards(["file"], "file") });
 
   // doctest:L137
   let focused = open(createEmptyWorkspaceState(), { path: "left", at: 1 });
@@ -158,8 +168,8 @@ void test("An explicit desktop destination also relocates an existing card.", as
   focused = reduceWorkspace(focused, { type: "restoreCards", pane: "left", viewport: "desktop" }).state;
   focused = reduceWorkspace(focused, { type: "focusPane", pane: "left" }).state;
   focused = open(focused, { path: "right", at: 3 });
-  t.check({ panes: panes(focused), layout: focused.layout }, {
-    panes: "left|right",
+  t.check({ panes: focused.panes, layout: focused.layout }, {
+    panes: { left: cards(["left"], "left"), right: cards(["right"], "right") },
     layout: {
       kind: "focus",
       pane: "right",
@@ -178,19 +188,23 @@ void test("Entering mobile chooses the last explicitly interacted-with card.", a
   let state = open(createEmptyWorkspaceState(), { path: "a", at: 1 });
   state = open(state, { path: "b", at: 2, originatingPane: "right" });
   state = reduceWorkspace(state, { type: "setViewport", viewport: "mobile" }).state;
-  t.check(projectWorkspace(state, "mobile").foregroundPath, "b");
+  t.check(projectWorkspace(state, "mobile"), cardOnly("left", "b"));
 
   // doctest:L161
-  const desktopBefore = JSON.stringify({ layout: state.layout, panes: state.panes });
+  const desktopBefore = structuredClone({ layout: state.layout, panes: state.panes });
   state = reduceWorkspace(state, { type: "showChat", pane: "right", viewport: "mobile" }).state;
-  t.check(projectWorkspace(state, "mobile").transcript, "full");
+  t.check(projectWorkspace(state, "mobile"), fullChat("left"));
 
   // doctest:L166
-  await t.checkText(JSON.stringify({ layout: state.layout, panes: state.panes }) === desktopBefore, "true");
+  t.check({ layout: state.layout, panes: state.panes }, desktopBefore);
+  t.check(desktopBefore, {
+    layout: { kind: "split" },
+    panes: { left: cards(["a", "b"], "b"), right: CHAT_PANE },
+  });
 
   // doctest:L169
   state = reduceWorkspace(state, { type: "restoreCards", viewport: "mobile" }).state;
-  t.check(projectWorkspace(state, "mobile").foregroundPath, "b");
+  t.check(projectWorkspace(state, "mobile"), cardOnly("left", "b"));
 });
 
 // Mobile Show conversation restores the card just put aside, even when the chat
@@ -204,11 +218,15 @@ void test("Mobile Show conversation restores the card just put aside, even when 
   state = reduceWorkspace(state, { type: "setViewport", viewport: "mobile" }).state;
   state = reduceWorkspace(state, { type: "selectTab", path: "right", at: 3, viewport: "mobile" }).state;
   state = reduceWorkspace(state, { type: "showChat", pane: "right", viewport: "mobile" }).state;
-  t.check([state.chatAnchor, returnPath(state), projectWorkspace(state, "mobile").restorePane].join("|"), "left|right|right");
+  t.check({ chatAnchor: state.chatAnchor, mobileView: state.mobileView, projection: projectWorkspace(state, "mobile") }, {
+    chatAnchor: "left",
+    mobileView: { kind: "chat", returnPath: "right" },
+    projection: fullChat("right"),
+  });
 
   // doctest:L188
   state = reduceWorkspace(state, { type: "restoreCards", viewport: "mobile" }).state;
-  t.check(projectWorkspace(state, "mobile").foregroundPath, "right");
+  t.check(projectWorkspace(state, "mobile"), cardOnly("right", "right"));
 });
 
 // ## Desktop foreground follows the last activated visible pane
@@ -222,11 +240,23 @@ void test("Both panes remain visible, but attention follows selection rather tha
   state = open(state, { path: "right", at: 2 });
   state = reduceWorkspace(state, { type: "restoreCards", pane: "left", viewport: "desktop" }).state;
   state = reduceWorkspace(state, { type: "selectTab", path: "right", at: 3, viewport: "desktop" }).state;
-  t.check(projectWorkspace(state, "desktop").foregroundPath, "right");
+  t.check(projectWorkspace(state, "desktop"), {
+    visiblePanes: [{ pane: "left", path: "left" }, { pane: "right", path: "right" }],
+    visiblePaths: { left: "left", right: "right" },
+    transcript: null,
+    foregroundPath: "right",
+    restorePane: null,
+  });
 
   // doctest:L207
   state = reduceWorkspace(state, { type: "selectTab", path: "left", at: 4, viewport: "desktop" }).state;
-  t.check(projectWorkspace(state, "desktop").foregroundPath, "left");
+  t.check(projectWorkspace(state, "desktop"), {
+    visiblePanes: [{ pane: "left", path: "left" }, { pane: "right", path: "right" }],
+    visiblePaths: { left: "left", right: "right" },
+    transcript: null,
+    foregroundPath: "left",
+    restorePane: null,
+  });
 });
 
 // ## Closing repairs selections, mobile return, and focused empty panes
@@ -237,10 +267,11 @@ void test("Closing repairs selections, mobile return, and focused empty panes", 
   state = reduceWorkspace(state, { type: "setViewport", viewport: "mobile" }).state;
   state = reduceWorkspace(state, { type: "showChat", pane: "left", viewport: "mobile" }).state;
   state = reduceWorkspace(state, { type: "closeTab", path: "a", viewport: "mobile" }).state;
-  t.check([state.layout.kind, state.mobileView.kind, state.panes.left.activePath].join("|"), "split|chat|");
-
-  // doctest:L223
-  t.check(returnPath(state), null);
+  t.check({ layout: state.layout, mobileView: state.mobileView, panes: state.panes }, {
+    layout: { kind: "split" },
+    mobileView: { kind: "chat", returnPath: null },
+    panes: { left: CHAT_PANE, right: CHAT_PANE },
+  });
 });
 
 // Closing the active foreground tab in the left pane keeps attention on its left
@@ -256,7 +287,16 @@ void test("Closing the active foreground tab in the left pane keeps attention on
   state = reduceWorkspace(state, { type: "setViewport", viewport: "mobile" }).state;
   state = reduceWorkspace(state, { type: "setViewport", viewport: "desktop" }).state;
   state = reduceWorkspace(state, { type: "closeTab", path: "left-b", viewport: "desktop" }).state;
-  t.check([state.panes.left.activePath, projectWorkspace(state, "desktop").foregroundPath].join("|"), "left-a|left-a");
+  t.check({ panes: state.panes, projection: projectWorkspace(state, "desktop") }, {
+    panes: { left: cards(["left-a"], "left-a"), right: cards(["right"], "right") },
+    projection: {
+      visiblePanes: [{ pane: "left", path: "left-a" }, { pane: "right", path: "right" }],
+      visiblePaths: { left: "left-a", right: "right" },
+      transcript: null,
+      foregroundPath: "left-a",
+      restorePane: null,
+    },
+  });
 });
 
 // ## Plain reopen preserves an authored target
@@ -349,7 +389,9 @@ void test("The move keeps the pane, renderer parameters, pin, and active-card id
     fromPath: "old",
     target: { ...tab(pathLabeled, "old").target, path: "archive/new" },
   }).state;
-  t.check(tab(pathLabeled, "archive/new").label, "archive/new");
+  t.check(pathLabeled.tabs, {
+    "archive/new": { target: target("archive/new", null), label: "archive/new", pinned: false, lastActiveAt: 1 },
+  });
 });
 
 // When the destination is already open, its richer tab state wins and the stale
@@ -445,10 +487,16 @@ void test("Duplicates keep their first owner, missing registry paths disappear, 
     mobileView: { kind: "card", path: "missing" },
     lastInteraction: { kind: "card", path: "missing" },
   });
-  t.check([panes(repaired), repaired.panes.left.activePath, repaired.panes.right.display, repaired.layout.kind].join("|"), "a||a|chat|split");
-
-  // doctest:L367
-  t.check([repaired.mobileView.kind, repaired.lastInteraction.kind].join("|"), "card|chat");
+  t.check(repaired, {
+    version: 2,
+    tabs: { a: seed },
+    panes: { left: cards(["a"], "a"), right: CHAT_PANE },
+    layout: { kind: "split" },
+    lastCardPane: "right",
+    chatAnchor: "right",
+    mobileView: { kind: "card", path: "a" },
+    lastInteraction: { kind: "chat" },
+  });
 });
 
 // ## The unpinned cap is global and protects both pane selections
@@ -457,11 +505,14 @@ void test("The unpinned cap is global and protects both pane selections", async 
   let state = createEmptyWorkspaceState();
   for (let i = 0; i < 12; i++) state = open(state, { path: `l${i}`, at: i + 1, originatingPane: "left" });
   state = open(state, { path: "right-active", at: 20, originatingPane: "right" });
-  await t.checkText(Object.values(state.tabs).filter((candidate) => !candidate.pinned).length, "12");
+  t.check(
+    Object.entries(state.tabs).filter(([, candidate]) => !candidate.pinned).map(([path]) => path),
+    ["l1", "l2", "l3", "l4", "l5", "l6", "l7", "l8", "l9", "l10", "l11", "right-active"],
+  );
 
   // doctest:L380
-  await t.checkText(state.tabs["right-active"] !== undefined, "true");
-
-  // doctest:L383
-  await t.checkText(state.tabs.l11 !== undefined, "true");
+  t.check(state.panes, {
+    left: cards(["l1", "l2", "l3", "l4", "l5", "l6", "l7", "l8", "l9", "l10", "l11", "right-active"], "right-active"),
+    right: CHAT_PANE,
+  });
 });

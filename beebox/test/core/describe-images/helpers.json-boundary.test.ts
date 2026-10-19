@@ -22,7 +22,6 @@ const log = function (line: string): void { logged.push(line); };
 
 // An element that fails the schema is dropped and logged; the rest still load:
 void test("An element that fails the schema is dropped and logged; the rest still load:", async (t) => {
-  // doctest:L29
   logged.length = 0;
   const mixed = parseGeminiJsonArray(JSON.stringify([{ index: 0, label: "a" }, { index: "not-a-number", label: "b" }]), { itemSchema, log });
   t.check(mixed, [
@@ -32,18 +31,15 @@ void test("An element that fails the schema is dropped and logged; the rest stil
     },
   ]);
 
-  // doctest:L34
-  await t.checkText(logged.length, "1");
+  t.check(logged, ["Gemini response entry 1 failed validation, dropping: Invalid input: expected number, received string"]);
 
   // Invalid JSON is a whole-response failure, distinct from a Gemini API failure
   // (`GeminiEmptyResponseError`, a separate class for when Gemini itself declined
   // to answer):
 
-  // doctest:L43
   await t.checkThrows(async () => (parseGeminiJsonArray("not json", { itemSchema })), "GeminiResponseShapeError");
 
   // A validly-parsed but non-array top level is the same distinct failure:
 
-  // doctest:L50
   await t.checkThrows(async () => (parseGeminiJsonArray(JSON.stringify({ index: 0 }), { itemSchema })), "GeminiResponseShapeError");
 });

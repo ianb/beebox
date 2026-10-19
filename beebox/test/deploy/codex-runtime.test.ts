@@ -7,6 +7,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, not } from "agent-doctest/check";
 import { readFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -19,31 +20,26 @@ const execFileAsync = promisify(execFile);
 
 // The CLI and SDK versions are one lockstep contract.
 void test("The CLI and SDK versions are one lockstep contract.", async (t) => {
-  // doctest:L23
-  await t.checkText(packageJson.dependencies["@openai/codex"] === packageJson.dependencies["@openai/codex-sdk"], "true");
+  t.check(packageJson.dependencies["@openai/codex"], packageJson.dependencies["@openai/codex-sdk"]);
 
   // The resolver reaches an executable whose reported version is the package pin.
   // The doctest harness already supplies an isolated `CODEX_HOME`, so this cannot
   // read or mutate the developer's plugin or authentication state.
 
-  // doctest:L32
   const result = await execFileAsync(codexBinaryPath(), ["--version"]);
-  await t.checkText(result.stdout.trim() === `codex-cli ${packageJson.dependencies["@openai/codex"]}`, "true");
+  t.check(result.stdout.trim(), `codex-cli ${packageJson.dependencies["@openai/codex"]}`);
 
   // Both provisioning paths refresh the operator command from that dependency.
 
-  // doctest:L40
-  await t.checkText(setup.includes('ln -sf "$INSTALL_DIR/beebox/node_modules/.bin/codex" /usr/local/bin/codex'), "true");
+  // `setup` and `deploy` are whole shell scripts: a narrow check on the one line under test.
+  t.check(setup, any(String).includes('ln -sf "$INSTALL_DIR/beebox/node_modules/.bin/codex" /usr/local/bin/codex'));
 
-  // doctest:L43
-  await t.checkText(deploy.includes("ln -sf /opt/beebox/node_modules/.bin/codex /usr/local/bin/codex"), "true");
+  t.check(deploy, any(String).includes("ln -sf /opt/beebox/node_modules/.bin/codex /usr/local/bin/codex"));
 
   // The deployment gate uses a scratch home and checks plugin-command
   // compatibility. It does not run `plugin list` against repairable global state.
 
-  // doctest:L51
-  await t.checkText(deploy.includes('CODEX_HOME="$codex_check_home" codex plugin --help'), "true");
+  t.check(deploy, any(String).includes('CODEX_HOME="$codex_check_home" codex plugin --help'));
 
-  // doctest:L54
-  await t.checkText(deploy.includes('CODEX_HOME="$codex_check_home" codex plugin list'), "false");
+  t.check(deploy, not(any(String).includes('CODEX_HOME="$codex_check_home" codex plugin list')));
 });

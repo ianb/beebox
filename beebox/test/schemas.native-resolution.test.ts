@@ -17,6 +17,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, isoDate, str } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -91,13 +92,11 @@ void test("A box's `src/schemas/*.ts` loads via native resolution", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L88
   const { root, boxRoot } = await makeV3Box();
   await writeSchema({ root, relPath: "src/schemas/widget.ts", content: V2_WIDGET_SCHEMA });
 
-  // doctest:L91
   const loaded = await loadBoxSchemas(boxRoot);
-  t.check([loaded.cardSchemas.length, loaded.cardSchemas[0]?.type].join("|"), "1|widget");
+  t.check(loaded.cardSchemas.map((s) => s.type), ["widget"]);
 });
 
 // ## Keep-last-good still applies to a broken save
@@ -109,26 +108,24 @@ void test("Keep-last-good still applies to a broken save", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L103
   const { root, boxRoot } = await makeV3Box();
   const schemaPath = path.join(root, "src/schemas/widget.ts");
   await writeSchema({ root, relPath: "src/schemas/widget.ts", content: V2_WIDGET_SCHEMA });
   const good = await loadBoxSchemas(boxRoot);
-  t.check(good.cardSchemas.map(s => s.type).join(","), "widget");
+  t.check(good.cardSchemas.map((s) => s.type), ["widget"]);
 
-  // doctest:L110
   await fs.writeFile(schemaPath, V2_WIDGET_SCHEMA_BROKEN);
   invalidateBoxSchemas(boxRoot);
   const kept = await loadBoxSchemas(boxRoot);
-  t.check(kept.cardSchemas.map(s => s.type).join(","), "widget");
+  t.check(kept.cardSchemas.map((s) => s.type), ["widget"]);
 
   // The failure is no longer silent — `bbx status`/`/healthz`'s
   // `listSchemaLoadFailures` reports it even though the type kept serving its
   // last-good version:
 
-  // doctest:L122
   const failures = listSchemaLoadFailures(boxRoot);
-  t.check([failures.length, failures[0]?.file].join("|"), "1|widget.ts");
+  t.check(failures, [{ file: "widget.ts", message: str`Transform failed with 1 error:
+${any(String)}:2:26: ERROR: Unexpected end of file`, at: isoDate() }]);
 });
 
 // ## A bare `zod`/`yaml` import fails — only `beebox/*` specifiers resolve
@@ -140,14 +137,13 @@ void test("A bare `zod`/`yaml` import fails — only `beebox/*` specifiers resol
       t.error(error);
     }
   });
-  // doctest:L134
   const { root, boxRoot } = await makeV3Box();
   await writeSchema({ root, relPath: "src/schemas/widget.ts", content: V2_SCHEMA_WITH_BARE_ZOD });
 
-  // doctest:L137
   const loaded = await loadBoxSchemas(boxRoot);
   const failures = listSchemaLoadFailures(boxRoot);
-  t.check([loaded.cardSchemas.length, failures.length > 0].join("|"), "0|true");
+  t.check(loaded.cardSchemas, []);
+  t.check(failures, [{ file: "widget.ts", message: str`Cannot find package 'zod' imported from ${any(String)}`, at: isoDate() }]);
 });
 
 // ## A schema left in the legacy `_config/schemas/` location is flagged
@@ -165,15 +161,12 @@ void test("config/schemas/ is the legacy schema location — the loader never re
       t.error(error);
     }
   });
-  // doctest:L156
   const { root, boxRoot } = await makeV3Box();
   await writeSchema({ root: boxRoot, relPath: "_config/schemas/stray.ts", content: V2_WIDGET_SCHEMA });
 
-  // doctest:L159
   const shape = await getBoxShape(boxRoot);
   const legacyFiles = await findLegacySchemaFiles(shape);
-  t.check(legacyFiles.join(","), "stray.ts");
+  t.check(legacyFiles, ["stray.ts"]);
 
-  // doctest:L166
-  await t.checkText(describeLegacySchemaFiles(shape, legacyFiles).includes("src/schemas/"), "true");
+  t.check(describeLegacySchemaFiles(shape, legacyFiles), any(String).includes("src/schemas/"));
 });

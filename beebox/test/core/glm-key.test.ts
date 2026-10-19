@@ -32,9 +32,6 @@ void test("A GLM run without a usable key refuses with the two setup commands â€
   t.check(error.name, "GlmKeyError");
 
   // doctest:L32
-  await t.checkText(
-    // the error names both setup commands:
-    error.message.includes("bbx secrets set glm") && error.message.includes("bbx secrets grant <box-slug> glm"),
-    "true",
-  );
+  // the error names both setup commands:
+  t.check(error.message, "This run selected a GLM model, but no usable GLM key is available for this box (No secret named \"glm\" exists on this machine. It can be declared (bbx secrets declare glm), but only the boxholder can supply its value.) â€” set one up with `bbx secrets set glm` and grant it with `bbx secrets grant <box-slug> glm`.");
 });

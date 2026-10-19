@@ -23,11 +23,6 @@ function plate(input: TodoPlateInput, { now, timeZone }: { now: string; timeZone
   return deriveTodoPlateState(input, { now: new Date(now), timeZone });
 }
 
-function errIds(attrs: Parameters<typeof validateTodoAttributes>[0]): string {
-  const errors = validateTodoAttributes(attrs);
-  return errors.length === 0 ? "valid" : errors.map((e) => e.id).join(", ");
-}
-
 function noAttrs(overrides: Partial<Parameters<typeof validateTodoAttributes>[0]>) {
   return { by: undefined, created: undefined, due: undefined, start: undefined, recheck: undefined, ...overrides };
 }
@@ -95,10 +90,10 @@ void test("Resolving `start` (absolute or relative) against `due`", async (t) =>
   t.check(resolveStartEpoch("2026-08-01", undefined), 1785542400000);
 
   // doctest:L97
-  await t.checkText(resolveStartEpoch("-3d", "2026-08-01") === parseIsoDate("2026-07-29"), "true");
+  t.check(resolveStartEpoch("-3d", "2026-08-01"), parseIsoDate("2026-07-29"));
 
   // doctest:L100
-  await t.checkText(resolveStartEpoch("-2w", "2026-08-01") === parseIsoDate("2026-07-18"), "true");
+  t.check(resolveStartEpoch("-2w", "2026-08-01"), parseIsoDate("2026-07-18"));
 
   // doctest:L103
   t.check(resolveStartEpoch("-3d", undefined), null);
@@ -110,34 +105,59 @@ void test("Resolving `start` (absolute or relative) against `due`", async (t) =>
 // ## Attribute validation
 void test("Attribute validation", async (t) => {
   // doctest:L113
-  t.check(errIds(noAttrs({})), "valid");
+  t.check(validateTodoAttributes(noAttrs({})), []);
 
   // doctest:L117
-  t.check(errIds(noAttrs({ created: "2026-07-28", due: "2026-08-01", start: "-3d" })), "valid");
+  t.check(validateTodoAttributes(noAttrs({ created: "2026-07-28", due: "2026-08-01", start: "-3d" })), []);
 });
 
 // ### Invalid dates
 void test("Invalid dates", async (t) => {
   // doctest:L125
-  t.check(errIds(noAttrs({ created: "2026-02-30" })), "todo-invalid-created");
+  t.check(validateTodoAttributes(noAttrs({ created: "2026-02-30" })), [
+    {
+      id: "todo-invalid-created",
+      message: "{% todo %} `created` is not a valid ISO date: \"2026-02-30\"",
+    },
+  ]);
 
   // doctest:L129
-  t.check(errIds(noAttrs({ due: "not-a-date" })), "todo-invalid-due");
+  t.check(validateTodoAttributes(noAttrs({ due: "not-a-date" })), [
+    {
+      id: "todo-invalid-due",
+      message: "{% todo %} `due` is not a valid ISO date: \"not-a-date\"",
+    },
+  ]);
 
   // doctest:L133
-  t.check(errIds(noAttrs({ start: "next tuesday" })), "todo-invalid-start");
+  t.check(validateTodoAttributes(noAttrs({ start: "next tuesday" })), [
+    {
+      id: "todo-invalid-start",
+      message: "{% todo %} `start` is not a valid ISO date or relative interval (e.g. \"-3d\"): \"next tuesday\"",
+    },
+  ]);
 });
 
 // ### Relative `start` requires `due`
 void test("Relative `start` requires `due`", async (t) => {
   // doctest:L141
-  t.check(errIds(noAttrs({ start: "-3d" })), "todo-relative-start-requires-due");
+  t.check(validateTodoAttributes(noAttrs({ start: "-3d" })), [
+    {
+      id: "todo-relative-start-requires-due",
+      message: "{% todo %} a relative `start` (\"-3d\") requires `due` to be set",
+    },
+  ]);
 });
 
 // ### `start` after `due` (both absolute) is an error
 void test("`start` after `due` (both absolute) is an error", async (t) => {
   // doctest:L149
-  t.check(errIds(noAttrs({ due: "2026-08-01", start: "2026-08-05" })), "todo-start-after-due");
+  t.check(validateTodoAttributes(noAttrs({ due: "2026-08-01", start: "2026-08-05" })), [
+    {
+      id: "todo-start-after-due",
+      message: "{% todo %} `start` (\"2026-08-05\") is after `due` (\"2026-08-01\")",
+    },
+  ]);
 });
 
 // A relative `start` can never land after `due` by construction (it's always
@@ -147,13 +167,18 @@ void test("`start` after `due` (both absolute) is an error", async (t) => {
 // ### `created` required when `by="agent"`
 void test("A relative start can never land after due by construction (it's always due mi...", async (t) => {
   // doctest:L161
-  t.check(errIds(noAttrs({ by: "agent" })), "todo-agent-requires-created");
+  t.check(validateTodoAttributes(noAttrs({ by: "agent" })), [
+    {
+      id: "todo-agent-requires-created",
+      message: "{% todo %} `created` is required when `by=\"agent\"`",
+    },
+  ]);
 
   // doctest:L165
-  t.check(errIds(noAttrs({ by: "agent", created: "2026-07-28" })), "valid");
+  t.check(validateTodoAttributes(noAttrs({ by: "agent", created: "2026-07-28" })), []);
 
   // doctest:L169
-  t.check(errIds(noAttrs({ by: "Dana" })), "valid");
+  t.check(validateTodoAttributes(noAttrs({ by: "Dana" })), []);
 });
 
 // ### `recheck` is a date or `never`
@@ -163,16 +188,26 @@ void test("A relative start can never land after due by construction (it's alway
 // a validation error that says both accepted forms.
 void test("recheck is the todo-review's bookkeeping (docs/plans/todos-ui.md, Track 7):", async (t) => {
   // doctest:L181
-  t.check(errIds(noAttrs({ recheck: "2026-10-15" })), "valid");
+  t.check(validateTodoAttributes(noAttrs({ recheck: "2026-10-15" })), []);
 
   // doctest:L185
-  t.check(errIds(noAttrs({ recheck: "never" })), "valid");
+  t.check(validateTodoAttributes(noAttrs({ recheck: "never" })), []);
 
   // doctest:L189
-  t.check(errIds(noAttrs({ recheck: "next month" })), "todo-invalid-recheck");
+  t.check(validateTodoAttributes(noAttrs({ recheck: "next month" })), [
+    {
+      id: "todo-invalid-recheck",
+      message: "{% todo %} `recheck` must be an ISO date (YYYY-MM-DD) or \"never\": \"next month\"",
+    },
+  ]);
 
   // doctest:L193
-  await t.checkText(validateTodoAttributes(noAttrs({ recheck: "Never" }))[0]?.message, "{% todo %} `recheck` must be an ISO date (YYYY-MM-DD) or \"never\": \"Never\"");
+  t.check(validateTodoAttributes(noAttrs({ recheck: "Never" })), [
+    {
+      id: "todo-invalid-recheck",
+      message: "{% todo %} `recheck` must be an ISO date (YYYY-MM-DD) or \"never\": \"Never\"",
+    },
+  ]);
 });
 
 // The sweep skips a todo whose `recheck` is `never` or still ahead of today;

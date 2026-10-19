@@ -10,6 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { isoDate, str } from "agent-doctest/check";
 import {
   QuestionSchema,
   questionState,
@@ -17,7 +18,6 @@ import {
   createTextQuestionTemplate,
   createConfirmQuestionTemplate,
 } from "../../src/schemas/question.js";
-import { isRecord } from "../../src/shared/is-record.js";
 import { getTemplate } from "../../src/templates-registry.js";
 
 const ASKED_AT = "2026-07-10T09:00:00-07:00";
@@ -47,10 +47,8 @@ function renderTemplate(name: string, rawArgs: unknown) {
 
 // ## `input` refinement: select requires at least two options
 void test("`input` refinement: select requires at least two options", async (t) => {
-  // doctest:L36
   t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ input: { type: "select" } })).success, false);
 
-  // doctest:L39
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({ input: { type: "select", options: [{ id: "a", label: "A" }] } })
@@ -58,7 +56,6 @@ void test("`input` refinement: select requires at least two options", async (t) 
     false,
   );
 
-  // doctest:L44
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({
@@ -71,7 +68,6 @@ void test("`input` refinement: select requires at least two options", async (t) 
 
 // ## `input` refinement: confirm and text must not carry options
 void test("`input` refinement: confirm and text must not carry options", async (t) => {
-  // doctest:L55
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({ input: { type: "confirm", options: [{ id: "yes", label: "Yes" }] } })
@@ -79,7 +75,6 @@ void test("`input` refinement: confirm and text must not carry options", async (
     false,
   );
 
-  // doctest:L60
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({ input: { type: "text", options: [{ id: "a", label: "A" }] } })
@@ -87,7 +82,6 @@ void test("`input` refinement: confirm and text must not carry options", async (
     false,
   );
 
-  // doctest:L65
   t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ input: { type: "confirm" } })).success, true);
 });
 
@@ -96,33 +90,29 @@ void test("`input` refinement: confirm and text must not carry options", async (
 // `questionState` is the one place a question's state is derived. It also takes
 // loose frontmatter, which the nav count reads without a full load.
 void test("questionState is the one place a question's state is derived.", async (t) => {
-  // doctest:L75
   t.check(
     [
       baseFields(),
       baseFields({ answer: { text: "Blue" }, "answered-at": ASKED_AT }),
       baseFields({ "dismissed-at": ASKED_AT }),
       baseFields({ "expired-at": ASKED_AT }),
-    ].map(questionState).join(", "),
-    "pending, answered, dismissed, expired",
+    ].map(questionState),
+    ["pending", "answered", "dismissed", "expired"],
   );
 });
 
 // ## `answered-by` is gone — an unknown key is stripped, not rejected
 void test("`answered-by` is gone — an unknown key is stripped, not rejected", async (t) => {
-  // doctest:L87
   const parsedWithAnsweredBy = QuestionSchema.frontmatterSchema.safeParse(
     baseFields({ "answered-by": "triage-agent" })
   );
   t.check(parsedWithAnsweredBy.success, true);
 
-  // doctest:L93
-  await t.checkText(isRecord(parsedWithAnsweredBy.data) && "answered-by" in parsedWithAnsweredBy.data, "false");
+  t.check(parsedWithAnsweredBy.data, { type: "question", prompt: "What color?", input: { type: "text" } });
 });
 
 // ## `learning`: sink/ref/proposal — proposal is required, sink is the retro vocabulary minus `question`
 void test("`learning`: sink/ref/proposal — proposal is required, sink is the retro vocabulary minus `question`", async (t) => {
-  // doctest:L100
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({ learning: { sink: "guide", proposal: "Receipts go in finance/." } })
@@ -130,7 +120,6 @@ void test("`learning`: sink/ref/proposal — proposal is required, sink is the r
     true,
   );
 
-  // doctest:L105
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({
@@ -140,10 +129,8 @@ void test("`learning`: sink/ref/proposal — proposal is required, sink is the r
     true,
   );
 
-  // doctest:L112
   t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ learning: { sink: "guide" } })).success, false);
 
-  // doctest:L115
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({ learning: { sink: "question", proposal: "x" } })
@@ -156,7 +143,6 @@ void test("`learning`: sink/ref/proposal — proposal is required, sink is the r
 //
 // Our duration pattern accepts day and time parts and refuses the bare designators:
 void test("Our duration pattern accepts day and time parts and refuses the bare designat...", async (t) => {
-  // doctest:L126
   const expiresAfter = (value: string) => QuestionSchema.frontmatterSchema.safeParse(baseFields({ "expires-after": value })).success;
   t.check(Object.fromEntries(["P30D", "PT12H", "P1DT12H", "30d", "P", "PT"].map((value) => [value, expiresAfter(value)])), {
     P30D: true,
@@ -170,16 +156,13 @@ void test("Our duration pattern accepts day and time parts and refuses the bare 
 
 // ## `asked-at`: ISO datetime with offset
 void test("`asked-at`: ISO datetime with offset", async (t) => {
-  // doctest:L134
   t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ "asked-at": ASKED_AT })).success, true);
 
-  // doctest:L137
   t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ "asked-at": "2026-07-10" })).success, false);
 });
 
 // ## Select template: sets `asked-at`, carries `learning`
 void test("Select template: sets `asked-at`, carries `learning`", async (t) => {
-  // doctest:L144
   await t.checkText(
     createSelectQuestionTemplate({
       memo: "Context here",
@@ -211,7 +194,6 @@ asked-at: 2026-07-10T09:00:00-07:00
 
 // ## Text template: `asked-at` required, `learning`/`directive`/`expires-after` optional
 void test("Text template: `asked-at` required, `learning`/`directive`/`expires-after` optional", async (t) => {
-  // doctest:L176
   await t.checkText(
     createTextQuestionTemplate({
       memo: "Context",
@@ -237,7 +219,6 @@ expires-after: P7D
 // Answer resolution matches typed answers against option labels with
 // `toLowerCase()`, so two options differing only in case would be ambiguous:
 void test("Answer resolution matches typed answers against option labels with toLowerCas...", async (t) => {
-  // doctest:L202
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({
@@ -247,7 +228,6 @@ void test("Answer resolution matches typed answers against option labels with to
     false,
   );
 
-  // doctest:L209
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({
@@ -257,7 +237,6 @@ void test("Answer resolution matches typed answers against option labels with to
     false,
   );
 
-  // doctest:L216
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({
@@ -274,10 +253,8 @@ void test("Answer resolution matches typed answers against option labels with to
 // `answered-at`; a card carries at most one of `answered-at`, `dismissed-at`,
 // `expired-at`.
 void test("answered-at requires answer; answer and answered-via require answered-at; a c...", async (t) => {
-  // doctest:L231
   t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ "answered-at": ASKED_AT })).success, false);
 
-  // doctest:L234
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({ answer: { text: "Blue" }, "answered-at": ASKED_AT, "answered-via": "web" })
@@ -285,13 +262,10 @@ void test("answered-at requires answer; answer and answered-via require answered
     true,
   );
 
-  // doctest:L239
   t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ answer: { text: "x" } })).success, false);
 
-  // doctest:L242
   t.check(QuestionSchema.frontmatterSchema.safeParse(baseFields({ "answered-via": "cli" })).success, false);
 
-  // doctest:L245
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({ answer: { text: "Blue" }, "answered-at": ASKED_AT, "dismissed-at": ASKED_AT })
@@ -299,18 +273,16 @@ void test("answered-at requires answer; answer and answered-via require answered
     false,
   );
 
-  // doctest:L250
   t.check(
     QuestionSchema.frontmatterSchema.safeParse(
       baseFields({ "dismissed-at": ASKED_AT, "expired-at": ASKED_AT })
-    ).error?.issues.map((issue) => issue.message).join("; "),
-    "\"expired-at\" must not appear with \"dismissed-at\"",
+    ).error?.issues.map((issue) => issue.message),
+    ["\"expired-at\" must not appear with \"dismissed-at\""],
   );
 });
 
 // ## Confirm template: no options, `asked-at` still set
 void test("Confirm template: no options, `asked-at` still set", async (t) => {
-  // doctest:L259
   await t.checkText(
     createConfirmQuestionTemplate({
       memo: "Context",
@@ -329,7 +301,6 @@ asked-at: 2026-07-10T09:00:00-07:00
 
 // The text template carries `directive`, a `learning` block, and `expires-after`:
 void test("The text template carries directive, a learning block, and expires-after:", async (t) => {
-  // doctest:L297
   const card = renderTemplate("question-text", {
     memo: "Why",
     prompt: "What is this?",
@@ -337,36 +308,49 @@ void test("The text template carries directive, a learning block, and expires-af
     learning: { sink: "guide", proposal: "Items like this belong in category A." },
     "expires-after": "P7D",
   });
-  await t.checkText(card.includes("directive: File it."), "true");
-
-  // doctest:L307
-  await t.checkText(card.includes("Items like this belong in category A."), "true");
-
-  // doctest:L310
-  await t.checkText(card.includes("expires-after: P7D"), "true");
+  t.check(card, str`---
+memo: Why
+prompt: What is this?
+input:
+  type: text
+learning:
+  sink: guide
+  proposal: Items like this belong in category A.
+directive: File it.
+asked-at: ${isoDate()}
+expires-after: P7D
+---
+`);
 });
 
 // The select template threads the same fields alongside its options:
 void test("The select template threads the same fields alongside its options:", async (t) => {
-  // doctest:L317
   const card = renderTemplate("question", {
     memo: "Why",
     prompt: "Pick one",
     options: ["Finance", "Personal"],
     directive: "File the receipt",
   });
-  await t.checkText(card.includes("directive: File the receipt"), "true");
-
-  // doctest:L326
-  await t.checkText(card.includes("label: Finance"), "true");
+  t.check(card, str`---
+memo: Why
+prompt: Pick one
+input:
+  type: select
+  options:
+    - id: a
+      label: Finance
+    - id: b
+      label: Personal
+directive: File the receipt
+asked-at: ${isoDate()}
+---
+`);
 });
 
 // Strict arg validation — a malformed `expires-after` and a `learning` without a
 // `proposal` are both rejected at the args boundary (a `ZodError`):
 void test("Strict arg validation — a malformed expires-after and a learning without a pr...", async (t) => {
-  // doctest:L334
   await t.checkThrows(async () => (renderTemplate("question-confirm", { memo: "m", prompt: "p", "expires-after": "7 days" })), "ZodError");
 
-  // doctest:L337
   await t.checkThrows(async () => (renderTemplate("question-text", { memo: "m", prompt: "p", learning: { sink: "guide" } })), "ZodError");
 });

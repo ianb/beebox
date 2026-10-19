@@ -8,11 +8,11 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, capture } from "agent-doctest/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import assert from "node:assert/strict";
 import {
   createGoogleOAuthState,
   consumeGoogleOAuthState,
@@ -30,65 +30,49 @@ void test("`state` is `<boxSlug>:<nonce>`, and the nonce round-trips", async (t)
       t.error(error);
     }
   });
-  // doctest:L27
   const state = createGoogleOAuthState({ boxRoot, boxSlug: "ledger", returnPath: "admin", createdBy: "owner@example.com" });
-  const parsed = parseOAuthState(state);
-  assert.ok(parsed, "the minted state parses");
-  t.check({ boxSlug: parsed.boxSlug, hasNonce: parsed.nonce.length > 0 }, {
-    boxSlug: "ledger",
-    hasNonce: true,
-  });
+  const nonce = capture(any(String).matches(/./));
+  t.check(parseOAuthState(state), { boxSlug: "ledger", nonce });
+  t.check(state, `ledger:${nonce.value}`);
 
   // ## A valid nonce consumes exactly once (one-time use closes replay)
 
-  // doctest:L37
-  const first = consumeGoogleOAuthState({ boxRoot, nonce: parsed.nonce });
+  const first = consumeGoogleOAuthState({ boxRoot, nonce: nonce.value });
   t.check(first, {
     returnPath: "admin",
     createdBy: "owner@example.com",
   });
 
-  // doctest:L41
   t.check(
     // Replaying the same nonce fails — it was consumed.
-    consumeGoogleOAuthState({ boxRoot, nonce: parsed.nonce }),
+    consumeGoogleOAuthState({ boxRoot, nonce: nonce.value }),
     null,
   );
 
   // ## An unknown / attacker-chosen nonce is rejected
 
-  // doctest:L49
   t.check(consumeGoogleOAuthState({ boxRoot, nonce: "not-a-real-nonce" }), null);
 
-  // doctest:L52
   t.check(consumeGoogleOAuthState({ boxRoot, nonce: "" }), null);
 
   // ## Legacy stateless shapes carry no nonce, so they no longer authorize
 
-  // doctest:L59
   t.check(parseOAuthState("ledger"), null);
-
-  // doctest:L62
-  await t.checkText(parseOAuthState("ledger:admin") === null, "false");
 
   // `parseOAuthState` treats everything after the first colon as the nonce, so the
   // legacy `boxSlug:returnPath` shape parses to a nonce of `"admin"` — which is not a
   // real minted nonce, so `consumeGoogleOAuthState` rejects it:
 
-  // doctest:L71
-  const legacy = parseOAuthState("ledger:admin");
-  assert.ok(legacy, "the legacy state parses");
-  t.check(consumeGoogleOAuthState({ boxRoot, nonce: legacy.nonce }), null);
+  t.check(parseOAuthState("ledger:admin"), { boxSlug: "ledger", nonce: "admin" });
+  t.check(consumeGoogleOAuthState({ boxRoot, nonce: "admin" }), null);
 
   // ## An expired nonce is pruned and rejected
 
-  // doctest:L80
   const storePath = path.join(boxRoot, ".beebox", "google-oauth-state.secret.json");
   await mkdir(path.dirname(storePath), { recursive: true });
   // Hand-write an already-expired record (nonceHash is sha256 of "stale-nonce").
   const staleHash = createHash("sha256").update("stale-nonce").digest("hex");
   await writeFile(storePath, JSON.stringify({ pending: [{ nonceHash: staleHash, returnPath: "admin", createdBy: null, createdAt: 1, expiresAt: 2 }] }));
 
-  // doctest:L86
   t.check(consumeGoogleOAuthState({ boxRoot, nonce: "stale-nonce" }), null);
 });

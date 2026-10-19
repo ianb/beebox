@@ -37,6 +37,30 @@ const boxes = [
 // ACL filtering lives; the SPA-served case gets a real index.html below.
 const NO_FRONTEND = path.join(os.tmpdir(), "box-picker-no-frontend-doctest");
 
+/** The fallback page: a fixed template around one `<li>` per listed box. */
+function pickerPage(slugs: string[]): string {
+  const items = slugs.length === 0 ? ["<li>No boxes available.</li>"] : slugs.map((slug) => `<li><a href="/${slug}/">${slug}</a></li>`);
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <title>Bee Box Hub</title>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { color: #333; }
+    ul { padding-left: 1.25rem; }
+    li { margin: 0.25rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Boxes</h1>
+  <ul>
+${items.map((item) => `    ${item}`).join("\n")}
+  </ul>
+</body>
+</html>`;
+}
+
 async function startPicker(frontendDist: string, openAccess: boolean) {
   const app = Fastify({ logger: false });
   // The box picker reads `request.server.openAccess` (the in-process seam that
@@ -70,7 +94,7 @@ void test("Frontend built: `/` serves the SPA (box list comes from /api/boxes, n
   t.check(spaRes.statusCode, 200);
 
   // doctest:L65
-  await t.checkText(spaRes.body.includes("id=\"root\""), "true");
+  t.checkText(spaRes.body, "<!doctype html><html><body><div id=\"root\"></div></body></html>");
 });
 
 // ## Hub auth off, no frontend build: every configured box is listed, no session needed
@@ -90,7 +114,7 @@ void test("Hub auth off, no frontend build: every configured box is listed, no s
   t.check(openRes.statusCode, 200);
 
   // doctest:L84
-  await t.checkText(openRes.body.includes("href=\"/box-a/\"") && openRes.body.includes("href=\"/box-b/\""), "true");
+  t.checkText(openRes.body, pickerPage(["box-a", "box-b"]));
 });
 
 // ## Hub auth on, no session: redirected to login
@@ -128,10 +152,8 @@ void test("Hub auth on, no session: redirected to login", async (t) => {
   t.check(aliceRes.statusCode, 200);
 
   // doctest:L117
-  await t.checkText(aliceRes.body.includes("href=\"/box-a/\""), "true");
-
-  // doctest:L120
-  await t.checkText(aliceRes.body.includes("href=\"/box-b/\""), "false");
+  // Only box-a is listed; box-b is absent.
+  t.checkText(aliceRes.body, pickerPage(["box-a"]));
 
   // ## A session for an email on neither box's allowedEmails sees an empty list
 
@@ -141,8 +163,5 @@ void test("Hub auth on, no session: redirected to login", async (t) => {
   t.check(strangerRes.statusCode, 200);
 
   // doctest:L132
-  await t.checkText(strangerRes.body.includes("href=\"/box-a/\"") || strangerRes.body.includes("href=\"/box-b/\""), "false");
-
-  // doctest:L135
-  await t.checkText(strangerRes.body.includes("No boxes available"), "true");
+  t.checkText(strangerRes.body, pickerPage([]));
 });

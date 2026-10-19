@@ -11,8 +11,8 @@
  *
  * Comparison rules:
  * - An object matches by its own enumerable data, whatever its class.
- *   Keys whose value is `undefined` or a function are not compared, on
- *   either side.
+ *   Function-valued keys are not compared, on either side. A key whose
+ *   value is `undefined` is compared: list it as `k: undefined`.
  * - An `Error` compares `name`, `message`, and its own enumerable data.
  * - An unlisted key fails unless the expected object has `[others]`.
  * - Arrays, `Map`s (entry order) and `Set`s (member order) compare by

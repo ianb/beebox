@@ -61,7 +61,6 @@ async function readQuestionFields(boxRoot: string, questionRelPath: string | und
 
 // ## A flagged bundle emits a review question with a scan-guide learning block
 void test("A flagged bundle emits a review question with a scan-guide learning block", async (t) => {
-  // doctest:L65
   const session = await makeSession();
   const filesToStage: string[] = [];
   const imageRefs: string[] = [];
@@ -90,20 +89,28 @@ void test("A flagged bundle emits a review question with a scan-guide learning b
     "_bookkeeping/questions/scan-20260801T0900-abcd1234-photo-001.review.question.card",
   ]);
 
-  // doctest:L92
   const fields = await readQuestionFields(session.boxRoot, questionPaths[0]);
-  t.check(fields.learning.sink, "guide");
+  t.check(fields, {
+    memo: `Photo 001 (page 1) needs review:
+- Name on back is ambiguous`,
+    prompt: "Review photo-001: confirm description and back-of-photo text are accurate.",
+    input: { type: "text" },
+    learning: {
+      sink: "guide",
+      ref: "_config/scan.guide.card",
+      proposal:
+        "If the answer settles a DURABLE identification or pattern (a recurring person, place, vendor, or handwriting convention — not a one-off fix to this photo), record it as a triage-rule belief in the scan guide, creating the guide first via `bbx create guide --name scan` if it does not exist. Skip recording for one-off corrections.",
+    },
+    directive: "Open _content/inbox/scan-20260801T0900-abcd1234.attach/photo-001.image.card and adjust description or text blocks.",
+    context: [{ ref: "_content/inbox/scan-20260801T0900-abcd1234.attach/photo-001.image.card" }],
+    "asked-at": "2026-08-01T09:00:00Z",
+  });
 
-  // doctest:L96
-  t.check(fields.learning.ref, "_config/scan.guide.card");
-
-  // doctest:L99
   await fs.rm(session.boxRoot, { recursive: true, force: true });
 });
 
 // ## Orphan-back questions carry no learning block
 void test("Orphan-back questions carry no learning block", async (t) => {
-  // doctest:L105
   const session = await makeSession();
   const filesToStage: string[] = [];
   const questionPaths: string[] = [];
@@ -121,8 +128,18 @@ void test("Orphan-back questions carry no learning block", async (t) => {
     }
   );
   const fields = await readQuestionFields(session.boxRoot, questionPaths[0]);
-  await t.checkText("learning" in fields, "false");
+  t.check(fields, {
+    memo: `Found a back-of-photo with no matching photo (page 2).
 
-  // doctest:L125
+Transcribed text:
+May 72`,
+    prompt: "Which photo does orphan-back-001.jpg belong with, or should it be discarded?",
+    input: { type: "text" },
+    directive:
+      "If it belongs with a photo in this session, attach by appending text blocks to that image card. Otherwise delete _content/inbox/scan-20260801T0900-abcd1234.attach/orphan-back-001.jpg.",
+    context: [{ ref: "_content/inbox/scan-20260801T0900-abcd1234.attach/orphan-back-001.jpg" }],
+    "asked-at": "2026-08-01T09:00:00Z",
+  });
+
   await fs.rm(session.boxRoot, { recursive: true, force: true });
 });

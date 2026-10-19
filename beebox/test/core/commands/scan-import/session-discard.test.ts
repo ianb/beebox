@@ -15,6 +15,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, str } from "agent-doctest/check";
 import { join } from "node:path";
 import { chmod, readdir, rm, writeFile } from "node:fs/promises";
 import { execa } from "execa";
@@ -46,18 +47,21 @@ async function importPdf(box: TmpBox) {
 
 async function sessions(box: TmpBox) {
   const entries = await readdir(join(box.root, "_content/inbox")).catch(() => []);
-  return entries.filter((e) => e.startsWith("scan-")).length;
+  return entries.filter((e) => e.startsWith("scan-")).toSorted();
 }
 
 async function questions(box: TmpBox) {
   const entries = await readdir(join(box.root, "_bookkeeping/questions")).catch(() => []);
-  return entries.filter((e) => e.endsWith(".question.card")).length;
+  return entries.filter((e) => e.endsWith(".question.card"));
 }
 
 async function staged(box: TmpBox) {
   const { stdout } = await execa("git", ["diff", "--cached", "--name-only"], { cwd: box.root });
-  return stdout === "" ? "nothing staged" : stdout;
+  return stdout === "" ? [] : stdout.split("\n");
 }
+
+/** The session card and its attach scope: one import's whole footprint. */
+const ONE_SESSION = [str`scan-${any(String)}.attach`, str`scan-${any(String)}.capture-session.card`];
 
 // ## A refused PDF commit is discarded, and the retry imports once
 void test("A refused PDF commit is discarded, and the retry imports once", async (t) => {
@@ -68,27 +72,22 @@ void test("A refused PDF commit is discarded, and the retry imports once", async
       t.error(error);
     }
   });
-  // doctest:L65
   const box = await makeTmpBox({ git: true });
   const allowCommits = await refuseCommits(box);
-  await t.checkText((await importPdf(box)).includes("Work permission has expired"), "true");
+  t.check(await importPdf(box), "threw: Work permission has expired");
 
-  // doctest:L70
-  t.check(`${await sessions(box)} sessions, ${await staged(box)}`, "0 sessions, nothing staged");
+  t.check({ sessions: await sessions(box), staged: await staged(box) }, { sessions: [], staged: [] });
 
   // A second refused attempt still leaves nothing. Once commits work again, the
   // import produces one session card and its attach scope.
 
-  // doctest:L78
   await importPdf(box);
-  t.check(await sessions(box), 0);
+  t.check(await sessions(box), []);
 
-  // doctest:L82
   await allowCommits();
   t.check(await importPdf(box), "imported true");
 
-  // doctest:L86
-  t.check(`${await sessions(box)} entries, ${await staged(box)}`, "2 entries, nothing staged");
+  t.check({ sessions: await sessions(box), staged: await staged(box) }, { sessions: ONE_SESSION, staged: [] });
 });
 
 // ## Question cards written outside the session go too
@@ -103,7 +102,6 @@ void test("A photo import whose analysis fails raises one question per page.", a
       t.error(error);
     }
   });
-  // doctest:L100
   const box = await makeTmpBox({ git: true });
   await refuseCommits(box);
   const imagePaths = [];
@@ -122,8 +120,10 @@ void test("A photo import whose analysis fails raises one question per page.", a
     "refused",
   );
 
-  // doctest:L116
-  t.check(`${await sessions(box)} sessions, ${await questions(box)} questions, ${await staged(box)}`, "0 sessions, 0 questions, nothing staged");
+  t.check(
+    { sessions: await sessions(box), questions: await questions(box), staged: await staged(box) },
+    { sessions: [], questions: [], staged: [] },
+  );
 });
 
 // ## A session another writer already committed stays
@@ -140,7 +140,6 @@ void test("A wakeup sweep commits the whole tree, and it can land while an impor
       t.error(error);
     }
   });
-  // doctest:L132
   const box = await makeTmpBox({ git: true });
   const pdfPath = join(box.root, "incoming.pdf");
   await writeFile(pdfPath, textPdf());
@@ -156,10 +155,18 @@ void test("A wakeup sweep commits the whole tree, and it can land while an impor
   const { ctx } = createCollectorContext(box.root);
   t.check(await runPdfMode(ctx, { pdfPath, docling: sweepThenFail }).then(() => "imported", (e) => e.message), "extraction crashed");
 
-  // doctest:L148
   const tracked = (await execa("git", ["ls-files", "_content/inbox"], { cwd: box.root })).stdout;
   const status = (await execa("git", ["status", "--porcelain", "_content/inbox"], { cwd: box.root })).stdout;
-  t.check(`${tracked.includes("/source.attach/source.pdf")} status=[${status}]`, "true status=[]");
+  t.check({ tracked, status }, {
+    tracked: str`_content/inbox/.gitkeep
+_content/inbox/intake/.gitkeep
+_content/inbox/scan-${any(String)}.attach/source.attach/source.pdf
+_content/inbox/staged/.gitkeep
+_content/inbox/triaged/.gitkeep
+_content/inbox/triaged/_unsure/.gitkeep
+_content/inbox/unhandled/.gitkeep`,
+    status: "",
+  });
 });
 
 // ## After the commit, a triage-queue failure does not fail the import
@@ -176,12 +183,10 @@ void test("The ledger records the hash only for an import that succeeded, so fai
       t.error(error);
     }
   });
-  // doctest:L166
   const box = await makeTmpBox({ git: true });
   await rm(join(box.root, ".beebox/intake-job-locks"), { recursive: true, force: true });
   await writeFile(join(box.root, ".beebox/intake-job-locks"), "not a directory");
   t.check(await importPdf(box), "imported true");
 
-  // doctest:L172
-  t.check(`${await sessions(box)} entries, ${await staged(box)}`, "2 entries, nothing staged");
+  t.check({ sessions: await sessions(box), staged: await staged(box) }, { sessions: ONE_SESSION, staged: [] });
 });

@@ -12,7 +12,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, isoDate, not } from "agent-doctest/check";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -38,6 +38,155 @@ function caller(boxRoot: string, opts?: { isOwner?: boolean; isAuthenticatedOwne
 }
 
 type Caller = ReturnType<typeof caller>;
+
+const OPENAI_USES = {
+  builtin: [
+    "embeddings for semantic and hybrid card search",
+    "OpenAI API calls from box views, through the server-side adapter",
+  ],
+  declared: [],
+  observed: [],
+};
+
+/** The boxStatus row for the openai secret granted at `access`. */
+function openaiGranted(access: "agent" | "server") {
+  return {
+    name: "openai",
+    access,
+    hasValue: true,
+    uses: OPENAI_USES,
+    note: "embeddings",
+    updated: isoDate(),
+    verified: undefined,
+    suspect: false,
+    lastUsed: undefined,
+    shareable: undefined,
+    owningBox: undefined,
+    probe: "lists OpenAI models",
+  };
+}
+
+const OPENROUTER_GRANTED = {
+  name: "openrouter",
+  access: "server" as const,
+  hasValue: true,
+  uses: {
+    builtin: [
+      "chat and agent turns on OpenRouter models the owner added in admin (never without that step) — the full conversation, sent to hosts your OpenRouter privacy settings allow",
+      "choosing a conversation for Quick chat with TypeSafe Jev",
+      "embeddings for semantic and hybrid card search, when the box has no OpenAI key",
+      "answering questions about recordings, and describing scanned images when the Gemini scan backend is selected, when the box has no Gemini key",
+      "the Whisper high-quality transcription pass, when the box has no OpenAI key",
+      "the MAI-Transcribe-2 high-quality transcription pass, which is reachable no other way",
+      "OpenRouter API calls from box views, through the server-side adapter",
+    ],
+    declared: [],
+    observed: [],
+  },
+  note: undefined,
+  updated: isoDate(),
+  verified: undefined,
+  suspect: false,
+  lastUsed: undefined,
+  shareable: undefined,
+  owningBox: undefined,
+  probe: "reads the OpenRouter key's own limits",
+};
+
+const MISTRAL_USES = {
+  builtin: [
+    "audio transcription (Voxtral — recordings and live chat dictation)",
+    "Mistral API calls from box views, through the server-side adapter",
+  ],
+  declared: [],
+  observed: [],
+};
+
+const MISTRAL_GRANTED = {
+  name: "mistral",
+  access: "server" as const,
+  hasValue: true,
+  uses: MISTRAL_USES,
+  note: undefined,
+  updated: isoDate(),
+  verified: undefined,
+  suspect: false,
+  lastUsed: undefined,
+  shareable: undefined,
+  owningBox: undefined,
+  probe: "lists Mistral models",
+};
+
+const WEATHER_GRANTED = {
+  name: "weatherapi",
+  access: "agent" as const,
+  hasValue: true,
+  uses: { builtin: [], declared: ["forecasts in the morning brief"], observed: [] },
+  note: undefined,
+  updated: isoDate(),
+  verified: undefined,
+  suspect: false,
+  lastUsed: undefined,
+  shareable: undefined,
+  owningBox: undefined,
+  probe: null,
+};
+
+/** The machineView rows; every field not listed is absent. */
+const NO_EXTRAS = {
+  note: undefined,
+  formatHint: undefined,
+  verified: undefined,
+  owningBox: undefined,
+  shareable: undefined,
+  declaredBy: undefined,
+  lastUsed: undefined,
+};
+
+function openaiRow(slug: string) {
+  return {
+    name: "openai",
+    hasValue: true,
+    ...NO_EXTRAS,
+    note: "embeddings",
+    updated: isoDate(),
+    grants: { [slug]: "server" as const },
+    uses: OPENAI_USES,
+    probe: "lists OpenAI models",
+  };
+}
+
+function mistralRow(slug: string) {
+  return { name: "mistral", hasValue: true, ...NO_EXTRAS, updated: isoDate(), grants: { [slug]: "server" as const }, uses: MISTRAL_USES, probe: "lists Mistral models" };
+}
+
+function weatherRow(slug: string) {
+  return {
+    name: "weatherapi",
+    hasValue: true,
+    ...NO_EXTRAS,
+    updated: isoDate(),
+    grants: { [slug]: "agent" as const },
+    uses: { builtin: [], declared: ["forecasts in the morning brief", "tide times"], observed: [] },
+    probe: null,
+  };
+}
+
+const OTHERBOX_ROW = {
+  name: "publish-token/otherbox",
+  hasValue: true,
+  ...NO_EXTRAS,
+  updated: isoDate(),
+  owningBox: "otherbox",
+  shareable: false,
+  grants: { otherbox: "server" as const },
+  uses: { builtin: [], declared: [], observed: [] },
+  probe: null,
+};
+
+
+const UNCHECKED = { status: "unchecked" as const, reason: "verification is turned off on this machine", at: isoDate() };
+
 
 /** The refusal code, or "allowed" — how the gating checks below read. */
 async function attempt(promise: Promise<unknown>): Promise<string> {
@@ -73,8 +222,6 @@ async function explain(promise: Promise<unknown>): Promise<string> {
 // opt-out. Otherwise a single box served openly would become a grant surface for
 // its neighbours' credentials.
 void test("A box member who is not the owner gets nothing, not even the list of names, w...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -117,26 +264,33 @@ void test("A box member who is not the owner gets nothing, not even the list of 
       },
     },
   };
-  const lines: string[] = [];
+  const refusals: Record<string, Record<string, string>> = {};
   for (const [kind, { who, calls }] of Object.entries(gated)) {
+    refusals[kind] = {};
     for (const [procedure, call] of Object.entries(calls)) {
-      lines.push(`${kind} ${procedure} → ${await attempt(call(who))}`);
+      refusals[kind][procedure] = await attempt(call(who));
     }
   }
-  await t.checkText(out.with(lines.join("\n")), `member boxStatus → FORBIDDEN
-member machineView → FORBIDDEN
-member setValue → FORBIDDEN
-member grant → FORBIDDEN
-member remove → FORBIDDEN
-open boxStatus → FORBIDDEN
-open machineView → FORBIDDEN
-open revealValue → FORBIDDEN
-open formatHints → FORBIDDEN
-open setValue → FORBIDDEN
-open grant → FORBIDDEN
-open setAccess → FORBIDDEN
-open revoke → FORBIDDEN
-open remove → FORBIDDEN`);
+  t.check(refusals, {
+    member: {
+      boxStatus: "FORBIDDEN",
+      machineView: "FORBIDDEN",
+      setValue: "FORBIDDEN",
+      grant: "FORBIDDEN",
+      remove: "FORBIDDEN",
+    },
+    open: {
+      boxStatus: "FORBIDDEN",
+      machineView: "FORBIDDEN",
+      revealValue: "FORBIDDEN",
+      formatHints: "FORBIDDEN",
+      setValue: "FORBIDDEN",
+      grant: "FORBIDDEN",
+      setAccess: "FORBIDDEN",
+      revoke: "FORBIDDEN",
+      remove: "FORBIDDEN",
+    },
+  });
 
   // ## Setting a value: warnings advise, they never block
   //
@@ -150,28 +304,29 @@ open remove → FORBIDDEN`);
 
   // doctest:L142
   const saved = await owner.secrets.setValue({ name: "openai", value: "placeholder-openai-key", note: "embeddings" });
-  print(`warnings: ${JSON.stringify(saved.warnings)}`);
-  print(`verified: ${saved.verified.status}`);
-  await t.checkText(out.with(print(`the response carries no value: ${!JSON.stringify(saved).includes("placeholder-openai-key")}`)), `warnings: ["Keys for this service usually start with \\"sk-\\"."]
-verified: unchecked
-the response carries no value: true`);
+  t.check(saved, {
+    warnings: ["Keys for this service usually start with \"sk-\"."],
+    verified: UNCHECKED,
+    granted: null,
+  });
 
   // Adding is not granting: the name exists machine-wide and this box still cannot
   // resolve it until the boxholder says so.
 
   // doctest:L156
   const beforeGrant = await owner.secrets.boxStatus();
-  print(`granted here: ${JSON.stringify(beforeGrant.granted)}`);
+  t.check(beforeGrant.granted, []);
 
   // doctest:L159
   await owner.secrets.grant({ box: slug, name: "openai", access: "server" });
   const afterGrant = await owner.secrets.boxStatus();
-  print(`granted here: ${afterGrant.granted.map((s) => `${s.name}:${s.access}`).join(", ")}`);
-  print(`has a value, suspect: ${afterGrant.granted[0]?.hasValue} ${afterGrant.granted[0]?.suspect}`);
-  await t.checkText(out.with(print(`status carries no value: ${!JSON.stringify(afterGrant).includes("placeholder-openai-key")}`)), `granted here: []
-granted here: openai:server
-has a value, suspect: true false
-status carries no value: true`);
+  t.check(afterGrant, {
+    slug,
+    granted: [openaiGranted("server")],
+    emptySlots: [],
+    danglingGrants: [],
+    declaredHere: [],
+  });
 
   // ## Raising and lowering access
   //
@@ -181,12 +336,10 @@ status carries no value: true`);
 
   // doctest:L178
   await owner.secrets.setAccess({ box: slug, name: "openai", access: "agent" });
-  print(`raised: ${(await owner.secrets.boxStatus()).granted[0]?.access}`);
+  t.check((await owner.secrets.boxStatus()).granted, [openaiGranted("agent")]);
   await owner.secrets.setAccess({ box: slug, name: "openai", access: "server" });
-  print(`lowered: ${(await owner.secrets.boxStatus()).granted[0]?.access}`);
-  await t.checkText(out.with(print(`ungranted name: ${await attempt(owner.secrets.setAccess({ box: slug, name: "mistral", access: "agent" }))}`)), `raised: agent
-lowered: server
-ungranted name: BAD_REQUEST`);
+  t.check((await owner.secrets.boxStatus()).granted, [openaiGranted("server")]);
+  t.check(await attempt(owner.secrets.setAccess({ box: slug, name: "mistral", access: "agent" })), "BAD_REQUEST");
 
   // ## The machine-wide view, and the single-box refusal
   //
@@ -207,18 +360,11 @@ ungranted name: BAD_REQUEST`);
 
   // doctest:L206
   const machine = await owner.secrets.machineView();
-  print(`names: ${machine.secrets.map((s) => s.name).join(", ")}`);
-  print(`grants: ${JSON.stringify(machine.secrets.map((s) => s.grants))}`);
-  print(`probe described: ${machine.secrets.map((s) => s.probe ?? "none").join(" | ")}`);
-  await t.checkText(out.with(print(`no values anywhere: ${!JSON.stringify(machine).includes("placeholder")}`)), `names: openai, publish-token/otherbox
-grants: [{"«*»":"server"},{"otherbox":"server"}]
-probe described: lists OpenAI models | none
-no values anywhere: true`);
+  t.check(machine, { thisBox: slug, boxes: [slug, "otherbox"], secrets: [openaiRow(slug), OTHERBOX_ROW] });
 
   // doctest:L219
-  print(await attempt(owner.secrets.grant({ box: slug, name: "publish-token/otherbox", access: "server" })));
-  await t.checkText(out.with(print(await explain(owner.secrets.grant({ box: slug, name: "publish-token/otherbox", access: "server" })))), `BAD_REQUEST
-The secret "publish-token/otherbox" is marked single-box (it belongs to "otherbox") and cannot also be granted to "«*»". Some credentials bind to one box structurally — a bucket-scoped publish token works for one bucket only — so sharing one would break the box already using it. Create a separate secret for this box.`);
+  t.check(await attempt(owner.secrets.grant({ box: slug, name: "publish-token/otherbox", access: "server" })), "BAD_REQUEST");
+  t.checkText(await explain(owner.secrets.grant({ box: slug, name: "publish-token/otherbox", access: "server" })), "The secret \"publish-token/otherbox\" is marked single-box (it belongs to \"otherbox\") and cannot also be granted to \"«*»\". Some credentials bind to one box structurally — a bucket-scoped publish token works for one bucket only — so sharing one would break the box already using it. Create a separate secret for this box.");
 
   // ## Revoking, and removing machine-wide
   //
@@ -228,16 +374,12 @@ The secret "publish-token/otherbox" is marked single-box (it belongs to "otherbo
   // doctest:L232
   await owner.secrets.remove({ name: "openai" });
   const stale = await owner.secrets.boxStatus();
-  print(`granted: ${JSON.stringify(stale.granted)}`);
-  print(`dangling: ${JSON.stringify(stale.danglingGrants)}`);
+  t.check({ granted: stale.granted, danglingGrants: stale.danglingGrants }, { granted: [], danglingGrants: ["openai"] });
 
   // doctest:L237
   await owner.secrets.revoke({ box: slug, name: "openai" });
-  print(`after revoking the stale grant: ${JSON.stringify((await owner.secrets.boxStatus()).danglingGrants)}`);
-  await t.checkText(out.with(print(`revoking again: ${await attempt(owner.secrets.revoke({ box: slug, name: "openai" }))}`)), `granted: []
-dangling: ["openai"]
-after revoking the stale grant: []
-revoking again: BAD_REQUEST`);
+  t.check((await owner.secrets.boxStatus()).danglingGrants, []);
+  t.check(await attempt(owner.secrets.revoke({ box: slug, name: "openai" })), "BAD_REQUEST");
 
   // ## Every view carries what a secret is used for
   //
@@ -257,11 +399,8 @@ revoking again: BAD_REQUEST`);
   await owner.secrets.grant({ box: slug, name: "weatherapi", access: "agent" });
   await owner.secrets.grant({ box: slug, name: "mistral", access: "server" });
   const granted = (await owner.secrets.boxStatus()).granted;
-  print(`mistral built-in: ${granted.find((s) => s.name === "mistral")?.uses.builtin.join(" | ")}`);
-  print(`weatherapi: ${JSON.stringify(granted.find((s) => s.name === "weatherapi")?.uses)}`);
-  await t.checkText(out.with(print(`saving one carries no value back: ${!JSON.stringify(withUse).includes("placeholder-weather-key")}`)), `mistral built-in: audio transcription (Voxtral — recordings and live chat dictation) | Mistral API calls from box views, through the server-side adapter
-weatherapi: {"builtin":[],"declared":["forecasts in the morning brief"],"observed":[]}
-saving one carries no value back: true`);
+  t.check(granted, [MISTRAL_GRANTED, WEATHER_GRANTED]);
+  t.check(withUse, { warnings: [], verified: UNCHECKED, granted: null });
 
   // A rotation appends rather than replaces — the reasons outlive the key, which is
   // the point of writing them down:
@@ -269,9 +408,7 @@ saving one carries no value back: true`);
   // doctest:L278
   await owner.secrets.setValue({ name: "weatherapi", value: "placeholder-weather-key-2", uses: ["tide times"] });
   const machine2 = await owner.secrets.machineView();
-  print(JSON.stringify(machine2.secrets.find((s) => s.name === "weatherapi")?.uses.declared));
-  await t.checkText(out.with(print(`still no values: ${!JSON.stringify(machine2).includes("placeholder-weather-key")}`)), `["forecasts in the morning brief","tide times"]
-still no values: true`);
+  t.check(machine2, { thisBox: slug, boxes: [slug, "otherbox"], secrets: [mistralRow(slug), OTHERBOX_ROW, weatherRow(slug)] });
 
   // ## Open access: the refusal and the surfaces it still reaches
   //
@@ -279,14 +416,14 @@ still no values: true`);
   // why an admin page they can reach refuses one section of itself:
 
   // doctest:L293
-  await t.checkText(out.with(print(await explain(open.secrets.boxStatus()))), "secrets management requires an authenticated owner session — open-access does not qualify (the store is machine-level, spanning every box on this host)");
+  t.checkText(await explain(open.secrets.boxStatus()), "secrets management requires an authenticated owner session — open-access does not qualify (the store is machine-level, spanning every box on this host)");
 
   // Other owner surfaces are unchanged — the same open-access context still reaches
   // them:
 
   // doctest:L301
   const account = await open.admin.localAccountStatus({ email: "nobody@example.com" });
-  await t.checkText(out.with(print(`localAccountStatus: ${JSON.stringify(account.exists)}`)), "localAccountStatus: false");
+  t.check(account, { exists: false });
 });
 
 // ## Adding from a box's own page makes it that box's in the same write
@@ -298,8 +435,6 @@ still no values: true`);
 // and the response's `granted` comes from the committed write. Its own store, so
 // the enumerations above stay exact.
 void test("The boxholder's failure on 2026-09-09 was a verified key granted to nothing,...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box2.cleanup();
@@ -318,29 +453,20 @@ void test("The boxholder's failure on 2026-09-09 was a verified key granted to n
   // doctest:L327
   const addInput = { name: "openrouter", value: "sk-or-v1-placeholder-placeholder-placeholder-placeholder-key", grant: { box: slug2, access: "server" as const } };
   const added = await owner2.secrets.setValue(addInput);
-  print(`granted to this box: ${added.granted?.box === slug2} at ${added.granted?.access}`);
-  print(`warnings: ${JSON.stringify(added.warnings)}`);
-  const nowGranted = (await owner2.secrets.boxStatus()).granted.map((g) => `${g.name}:${g.access}`);
-  print(`granted here: ${nowGranted.join(", ")}`);
-  await t.checkText(out.with(print(`response carries no value: ${!JSON.stringify(added).includes("placeholder-key")}`)), `granted to this box: true at server
-warnings: []
-granted here: openrouter:server
-response carries no value: true`);
+  t.check(added, { warnings: [], verified: UNCHECKED, granted: { box: slug2, access: "server" } });
+  t.check((await owner2.secrets.boxStatus()).granted, [OPENROUTER_GRANTED]);
 
   // Without `grant` — the machine-wide view — nothing changes about who may use
   // it, and the response says so plainly.
 
   // doctest:L345
   const machineOnly = await owner2.secrets.setValue({ name: "replicate", value: "placeholder-replicate-token" });
-  print(`granted: ${JSON.stringify(machineOnly.granted)}`);
-  await t.checkText(out.with(print(`still not here: ${!(await owner2.secrets.boxStatus()).granted.some((g) => g.name === "replicate")}`)), `granted: null
-still not here: true`);
+  t.check(machineOnly, { warnings: [], verified: UNCHECKED, granted: null });
+  t.check((await owner2.secrets.boxStatus()).granted, [OPENROUTER_GRANTED]);
 });
 
 // ## Explicit reveal is owner-gated and audited
 void test("Explicit reveal is owner-gated and audited", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await revealBox.cleanup();
@@ -355,25 +481,19 @@ void test("Explicit reveal is owner-gated and audited", async (t) => {
   const revealBox = await makeTmpBox({ git: true });
   const ownerForReveal = caller(revealBox.root);
   await ownerForReveal.secrets.setValue({ name: "z-reveal-test", value: "reveal-value-fixture" });
-  print(`non-owner refused: ${await attempt(caller(revealBox.root, { isOwner: false }).secrets.revealValue({ name: "z-reveal-test" }))}`);
+  t.check(await attempt(caller(revealBox.root, { isOwner: false }).secrets.revealValue({ name: "z-reveal-test" })), "FORBIDDEN");
   // A named variable skips the excess-property check: the unknown `webdriver` key is the point.
   const legacyClaim = { name: "z-reveal-test", webdriver: true };
-  print(`legacy webdriver claim refused: ${await attempt(ownerForReveal.secrets.revealValue(legacyClaim))}`);
+  t.check(await attempt(ownerForReveal.secrets.revealValue(legacyClaim)), "BAD_REQUEST");
   const shown = await ownerForReveal.secrets.revealValue({ name: "z-reveal-test" });
   const log = await (await import("node:fs/promises")).readFile(accessLogSegmentPath(getBoxTimeISO(revealBox.root)), "utf8");
   const event = JSON.parse(log.trim().split("\n").at(-1) ?? "");
-  print(`value returned: ${shown.value}`);
-  print(`owner-read logged: ${event.event === "owner-read" && event.secret === "z-reveal-test"}`);
-  print(`value excluded from log: ${!log.includes("reveal-value-fixture")}`);
-  print(`webdriver UI policy: ${mayRevealSecretInBrowser(true)} ${mayRevealSecretInBrowser(false)}`);
+  t.check(shown, { value: "reveal-value-fixture" });
+  t.check(event, { ts: isoDate(), box: "test", secret: "z-reveal-test", purpose: "owner revealed value in Admin", event: "owner-read" });
+  t.check(log, not(any(String).includes("reveal-value-fixture")));
+  t.check([mayRevealSecretInBrowser(true), mayRevealSecretInBrowser(false)], [false, true]);
   const logPath = join(revealDir, "secrets-log");
   await rm(logPath, { recursive: true, force: true });
   await writeFile(logPath, "not a directory");
-  await t.checkText(out.with(print(`audit write failure refuses value: ${await attempt(ownerForReveal.secrets.revealValue({ name: "z-reveal-test" }))}`)), `non-owner refused: FORBIDDEN
-legacy webdriver claim refused: BAD_REQUEST
-value returned: reveal-value-fixture
-owner-read logged: true
-value excluded from log: true
-webdriver UI policy: false true
-audit write failure refuses value: INTERNAL_SERVER_ERROR`);
+  t.check(await attempt(ownerForReveal.secrets.revealValue({ name: "z-reveal-test" })), "INTERNAL_SERVER_ERROR");
 });

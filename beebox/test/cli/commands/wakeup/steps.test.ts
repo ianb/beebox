@@ -40,13 +40,14 @@ void test("Missing-contains cards produce one pending job card", async (t) => {
   // doctest:L43
   const jobFile = (await box.list("_bookkeeping/jobs")).split("\n").find((f) => f.includes("contains-backfill.job.card"));
   const job = await box.read(jobFile ?? "");
-  await t.checkText(job.includes("priority: low"), "true");
-
-  // doctest:L48
-  await t.checkText(job.includes("Write the contains: field for 2 cards missing it."), "true");
-
-  // doctest:L51
-  await t.checkText(job.includes("ref: _content/notes/A.doc.card"), "true");
+  t.check(job, `---
+priority: low
+description: "Write the contains: field for 2 cards missing it."
+items:
+  - ref: _content/notes/A.doc.card
+  - ref: _content/notes/B.doc.card
+---
+`);
 
   // ## A pending backfill job blocks queueing another
 
@@ -105,7 +106,25 @@ void test("refreshSearchIndex is the box's only scheduled reconciliation of the 
 
   // doctest:L102
   const hits = await searchBox(box3.root, { query: "kumquat", mode: "text" });
-  await t.checkText(hits.results.some((r) => r.path === "_content/notes/Later.doc.card"), "true");
+  t.check(hits, {
+    results: [
+      {
+        path: "_content/notes/Later.doc.card",
+        fragment: "",
+        kind: "doc",
+        title: "Later",
+        contains: "",
+        excerpt: "distinctive kumquat filing",
+        score: 1.7142793861158137,
+      },
+    ],
+    total: 1,
+    truncated: false,
+    warnings: [],
+    stale: false,
+    searchMode: "text",
+    embeddingsReady: false,
+  });
 });
 
 // ## A refresh that lost the search lock is not a refresh

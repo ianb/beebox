@@ -8,10 +8,10 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any, capture, str } from "agent-doctest/check";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer } from "../../helpers/test-route-server.js";
-import { bodyField } from "../../helpers/test-helpers.js";
 import { createBrowserTaskTemplate } from "../../../src/schemas/browser-task.js";
 
 const PNG_BYTES = Buffer.from(
@@ -100,15 +100,21 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
   });
 
   // doctest:L94
-  t.check({ statusCode: validRes.statusCode, ok: bodyField(validRes.body, "ok"), count: bodyField(validRes.body, "count") }, {
+  // The batch name is a timestamp plus random hex.
+  const batch = capture(any(String).matches(/^\d{8}-\d{6}-[\da-f]{4}$/));
+  t.check(validRes, {
     statusCode: 200,
-    ok: true,
-    count: 1,
+    body: {
+      ok: true,
+      batch,
+      count: 1,
+      dir: str`_content/tasks/Task.attach/inbox/${batch}`,
+    },
   });
 
   // doctest:L99
-  const batchDir = String(bodyField(validRes.body, "dir"));
-  t.check((await readdir(join(server.boxRoot, batchDir))).toSorted().join(", "), "photo.png, records.json");
+  const batchDir = `_content/tasks/Task.attach/inbox/${batch.value}`;
+  t.check((await readdir(join(server.boxRoot, batchDir))).toSorted(), ["photo.png", "records.json"]);
 
   // ## A `records` part that isn't valid JSON is refused
 
@@ -127,11 +133,7 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
   });
 
   // doctest:L119
-  t.check({ statusCode: badJsonRes.statusCode, ok: bodyField(badJsonRes.body, "ok"), message: bodyField(badJsonRes.body, "message") }, {
-    statusCode: 400,
-    ok: false,
-    message: "records must be valid JSON",
-  });
+  t.check(badJsonRes, { statusCode: 400, body: { ok: false, message: "records must be valid JSON" } });
 
   // ## A file part whose name is a path, not a bare filename, is refused before anything is written
 
@@ -157,16 +159,20 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
   });
 
   // doctest:L145
-  t.check({ statusCode: pathyRes.statusCode, ok: bodyField(pathyRes.body, "ok") }, {
+  t.check(pathyRes, {
     statusCode: 400,
-    ok: false,
+    body: {
+      ok: false,
+      message: "submission failed validation",
+      issues: [{ path: "files/escape.png", message: "\"escape.png\" is not referenced by any record" }],
+    },
   });
 
   // Only the one accepted batch from the first case exists under the inbox — the
   // rejected requests never landed a batch:
 
   // doctest:L153
-  await t.checkText((await readdir(join(server.boxRoot, "_content/tasks/Task.attach/inbox"))).length, "1");
+  t.check(await readdir(join(server.boxRoot, "_content/tasks/Task.attach/inbox")), [batch.value]);
 
   // ## Two file parts with the same name are refused
 
@@ -178,8 +184,5 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
     { name: "photo.png", filename: "photo.png", contentType: "image/png", value: PNG_BYTES },
   ]);
   const dup = await server.request({ method: "POST", url: "/api/cards/submit", payload: dupBody, headers: MULTIPART_HEADERS });
-  t.check([dup.statusCode, bodyField(dup.body, "message")], [
-    400,
-    "duplicate file name: photo.png",
-  ]);
+  t.check(dup, { statusCode: 400, body: { ok: false, message: "duplicate file name: photo.png" } });
 });

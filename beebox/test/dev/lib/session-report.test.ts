@@ -83,44 +83,23 @@ void test("The callback receives multiple bounded chunks rather than one materia
       chunks.push(chunk);
     },
   });
-  const report = chunks.join("");
 
-  // doctest:L81
-  await t.checkText(chunks.length > 4, "true");
-
-  // doctest:L84
-  await t.checkText(
-    report.indexOf("## User") < report.indexOf("## Assistant") &&
-      report.indexOf("Working") < report.indexOf("Done"),
-    "true",
-  );
-
-  // doctest:L88
-  await t.checkText(
-    report.includes("**Turns:** 1 user, 2 assistant") &&
-      report.includes("**Tool calls:** 1 Bash, 0 Read, 3 total"),
-    "true",
-  );
-
-  // doctest:L92
-  await t.checkText(
-    report.includes("Write `/tmp/large.txt` (12000 chars)") &&
-      report.includes("(4000 chars omitted)"),
-    "true",
-  );
-
-  // ## Any per-tool abbreviation is disclosed at the end
-  //
-  // Streaming does not drop report entries. The pre-existing Bash and Grep
-  // summaries can still abbreviate an individual result, so the final note points
-  // to the raw transcript instead of implying that a nonexistent report page can
-  // recover it.
-
-  // doctest:L105
-  await t.checkText(
-    report.endsWith(
-      "---\n\nNote: Some tool output was abbreviated. Run `bbx session session-123 --raw --allow-huge` to inspect the full transcript.\n",
-    ),
-    "true",
-  );
+  // Bash output of 7000 chars keeps 1500 at each end and discloses the 4000 omitted.
+  t.check(chunks, [
+    "# Session Report\n\n**Turns:** 1 user, 2 assistant\n**Tool calls:** 1 Bash, 0 Read, 3 total\n\n---\n\n",
+    "## User\n\nStart\n",
+    "\n",
+    "## Assistant\n\nWorking\n\n- Write `/tmp/large.txt` (12000 chars)\n### Bash\n```\n$ make noisy\n```\nOutput:\n```\n" +
+      "O".repeat(1500) +
+      "\n\n... (4000 chars omitted) ...\n\n" +
+      "O".repeat(1500) +
+      "\n```\n\n- Grep \"needle\" in .\n  ```\n  one\ntwo\nthree\nfour\nfive\n  ```\n",
+    "\n",
+    "## Assistant\n\nDone\n\n",
+    // Streaming does not drop report entries. The pre-existing Bash and Grep
+    // summaries can still abbreviate an individual result, so the final note points
+    // to the raw transcript instead of implying that a nonexistent report page can
+    // recover it.
+    "\n---\n\nNote: Some tool output was abbreviated. Run `bbx session session-123 --raw --allow-huge` to inspect the full transcript.\n",
+  ]);
 });

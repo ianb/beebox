@@ -14,6 +14,7 @@ interface Session {
   exp: number;
   status: "open" | "closed";
   note?: string;
+  closedAt?: string | undefined;
 }
 
 const session: Session = { deviceId: ID, createdBy: null, exp: 1, status: "open" };
@@ -26,6 +27,8 @@ void test("expected values that compile", async (t) => {
   t.check([session], containing([{ deviceId: ID, createdBy: null, exp: 1, status: "open" }]));
   t.check({ at: new Date(0) }, { at: isoDate() });
   t.check({ at: new Date(0) }, { at: "1970-01-01T00:00:00.000Z" });
+  // A key that is present with no value.
+  t.check({ ...session, closedAt: undefined }, { deviceId: ID, createdBy: null, exp: 1, status: "open", closedAt: undefined });
 });
 
 // Type-only: these checks would fail at run time, so the test is skipped.
@@ -58,6 +61,9 @@ void test("expected values that must not compile", { skip: "type errors only" },
   // optional() on a required key.
   // @ts-expect-error Optional is accepted only on an optional property
   t.check(session, { deviceId: optional(any(String)), createdBy: null, exp: 1, status: "open" });
+  // `undefined` on an optional key whose type does not include it.
+  // @ts-expect-error undefined is not string
+  t.check(session, { deviceId: ID, createdBy: null, exp: 1, status: "open", note: undefined });
   // A tuple keeps its length.
   // @ts-expect-error readonly [1] is not readonly [1, 2]
   t.check([1, 2] as const, [1]);

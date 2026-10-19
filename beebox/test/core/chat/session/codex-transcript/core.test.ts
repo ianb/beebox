@@ -44,66 +44,32 @@ const response = {
   },
 };
 
+const T1 = "1970-01-01T00:01:40.000Z";
+const T2 = "1970-01-01T00:03:20.000Z";
+const text = (fields: { uuid: string; type: "user" | "assistant"; timestamp: string; body: string }) => ({
+  uuid: fields.uuid, type: fields.type, timestamp: fields.timestamp, content: [{ type: "text" as const, text: fields.body }],
+});
+const bash = { uuid: "command-1", type: "assistant" as const, timestamp: T1, content: [{ type: "tool_use" as const, toolId: "command-1", toolName: "Bash", input: { command: "bbx search hello" }, inputSummary: "Bash" }] };
+const edit = { uuid: "file-1", type: "assistant" as const, timestamp: T1, content: [{ type: "tool_use" as const, toolId: "file-1", toolName: "Edit", input: { file_path: "store/Hello.doc.card", status: "completed" }, inputSummary: "Edit" }] };
+const user1 = text({ uuid: "user-1", type: "user", timestamp: T1, body: "Hello" });
+const compact = { uuid: "compact-1", type: "compaction" as const, timestamp: T2, content: [] };
+const agent2 = text({ uuid: "agent-2", type: "assistant", timestamp: T2, body: "Done" });
+
 // Provider activity is normalized into the same tool-call blocks the existing chat
 // UI renders for Claude, while compaction remains visible:
 void test("Provider activity is normalized into the same tool-call blocks the existing c...", async (t) => {
   // doctest:L51
   const adapted = adaptCodexThreadHistory(response, { mode: "tail", tail: 20 });
-  t.check(
-    {
-      total: adapted.total,
-      entries: adapted.entries.map((entry) => ({
-        type: entry.type,
-        tools: entry.content.filter((block) => block.type === "tool_use").map((block) => block.toolName),
-      })),
-    },
-    {
+  t.check(adapted, {
+    entries: [user1, bash, edit, text({ uuid: "agent-1", type: "assistant", timestamp: T1, body: "Hi" }), text({ uuid: "user-2", type: "user", timestamp: T2, body: "Again" }), compact, agent2],
     total: 7,
-    entries: [
-      {
-        type: "user",
-        tools: [],
-      },
-      {
-        type: "assistant",
-        tools: [
-          "Bash",
-        ],
-      },
-      {
-        type: "assistant",
-        tools: [
-          "Edit",
-        ],
-      },
-      {
-        type: "assistant",
-        tools: [],
-      },
-      {
-        type: "user",
-        tools: [],
-      },
-      {
-        type: "compaction",
-        tools: [],
-      },
-      {
-        type: "assistant",
-        tools: [],
-      },
-    ],
-  },
-  );
+  });
 });
 
 // Page slicing uses the normalized entry sequence:
 void test("Page slicing uses the normalized entry sequence:", async (t) => {
   // doctest:L65
-  t.check(adaptCodexThreadHistory(response, { mode: "page", offset: 1, limit: 2 }).entries.map((entry) => entry.uuid), [
-    "command-1",
-    "file-1",
-  ]);
+  t.check(adaptCodexThreadHistory(response, { mode: "page", offset: 1, limit: 2 }), { entries: [bash, edit], total: 7 });
 });
 
 // A tail slice returns the newest entries, a page from offset 0 the oldest. The
@@ -112,16 +78,10 @@ void test("Page slicing uses the normalized entry sequence:", async (t) => {
 // cap, a page from 0 would never reach that message.
 void test("A tail slice returns the newest entries, a page from offset 0 the oldest.", async (t) => {
   // doctest:L75
-  t.check(adaptCodexThreadHistory(response, { mode: "tail", tail: 2 }).entries.map((entry) => entry.uuid), [
-    "compact-1",
-    "agent-2",
-  ]);
+  t.check(adaptCodexThreadHistory(response, { mode: "tail", tail: 2 }), { entries: [compact, agent2], total: 7 });
 
   // doctest:L78
-  t.check(adaptCodexThreadHistory(response, { mode: "page", offset: 0, limit: 2 }).entries.map((entry) => entry.uuid), [
-    "user-1",
-    "command-1",
-  ]);
+  t.check(adaptCodexThreadHistory(response, { mode: "page", offset: 0, limit: 2 }), { entries: [user1, bash], total: 7 });
 });
 
 // The same provider adapter feeds live chat. It gives every supported Codex
@@ -137,50 +97,15 @@ void test("The same provider adapter feeds live chat.", async (t) => {
       normalizeCodexToolItem({ type: "mcpToolCall", id: "m", server: "calendar", tool: "list", arguments: '{"days":7}' }),
       normalizeCodexToolItem({ type: "subAgentActivity", id: "a", kind: "started", agentPath: "/root/review", agentThreadId: "thread-1" }),
       normalizeCodexToolItem({ type: "collab_tool_call", id: "c", tool: "wait", receiver_thread_ids: [], status: "completed" }),
-    ].map((block) => ({ name: block?.name, input: block?.input })),
+    ],
     [
-    {
-      name: "Bash",
-      input: {
-        command: "bbx status",
-      },
-    },
-    {
-      name: "Edit",
-      input: {
-        file_path: "store/A.card",
-        status: "completed",
-      },
-    },
-    {
-      name: "WebSearch",
-      input: {
-        query: "Bee Box",
-      },
-    },
-    {
-      name: "calendar.list",
-      input: {
-        days: 7,
-      },
-    },
-    {
-      name: "Agent",
-      input: {
-        description: "/root/review",
-        kind: "started",
-        thread_id: "thread-1",
-      },
-    },
-    {
-      name: "Agent",
-      input: {
-        action: "wait",
-        status: "completed",
-        thread_ids: [],
-      },
-    },
-  ],
+      { type: "tool_use", id: "c", name: "Bash", input: { command: "bbx status" } },
+      { type: "tool_use", id: "f", name: "Edit", input: { file_path: "store/A.card", status: "completed" } },
+      { type: "tool_use", id: "w", name: "WebSearch", input: { query: "Bee Box" } },
+      { type: "tool_use", id: "m", name: "calendar.list", input: { days: 7 } },
+      { type: "tool_use", id: "a", name: "Agent", input: { description: "/root/review", kind: "started", thread_id: "thread-1" } },
+      { type: "tool_use", id: "c", name: "Agent", input: { action: "wait", status: "completed", thread_ids: [] } },
+    ],
   );
 });
 
@@ -188,9 +113,7 @@ void test("The same provider adapter feeds live chat.", async (t) => {
 // the command inside a `bash -lc` wrapper, as Claude's activity does:
 void test("Codex reports a command as the shell invocation it ran.", async (t) => {
   // doctest:L102
-  t.check(normalizeCodexToolItem({ type: "commandExecution", id: "c", command: "/bin/bash -lc 'cat AGENTS.md'" })?.input, {
-    command: "cat AGENTS.md",
-  });
+  t.check(normalizeCodexToolItem({ type: "commandExecution", id: "c", command: "/bin/bash -lc 'cat AGENTS.md'" }), { type: "tool_use", id: "c", name: "Bash", input: { command: "cat AGENTS.md" } });
 });
 
 // Codex double-quotes an argument that holds a single quote:
@@ -232,8 +155,8 @@ void test("The live SDK vocabulary maps through a separate typed entry point whi
       tool: "find",
       arguments: {},
       result: { content: [], structured_content: {} },
-    })?.name,
-    "drive.find",
+    }),
+    { type: "tool_use", id: "mcp-1", name: "drive.find", input: {} },
   );
 });
 
@@ -264,7 +187,15 @@ void test("SDK threads are created by codex exec.", async (t) => {
 // A repair listing is the same request with the scan allowed:
 void test("A repair listing is the same request with the scan allowed:", async (t) => {
   // doctest:L160
-  await t.checkText(JSON.stringify(codexHistoryListParams({ cwds: ["/boxes/example"], cursor: null, repair: true })).includes('"useStateDbOnly":false'), "true");
+  t.check(codexHistoryListParams({ cwds: ["/boxes/example"], cursor: null, repair: true }), {
+    cursor: null,
+    limit: 100,
+    sortKey: "updated_at",
+    sortDirection: "desc",
+    cwd: ["/boxes/example"],
+    sourceKinds: ["cli", "vscode", "exec", "appServer"],
+    useStateDbOnly: false,
+  });
 });
 
 // User identity carried by beebox's message wrapper is normalized just as
@@ -291,9 +222,16 @@ void test("User identity carried by beebox's message wrapper is normalized just 
       }],
     },
   }, { mode: "tail", tail: 20 });
-  t.check({ user: attributed.entries[0]?.user, userEmail: attributed.entries[0]?.userEmail }, {
-    user: "Ian Bicking",
-    userEmail: "ian@example.com",
+  t.check(attributed, {
+    entries: [{
+      uuid: "user-attributed",
+      type: "user",
+      timestamp: "1970-01-01T00:05:00.000Z",
+      content: [{ type: "text", text: '<typed user="Ian Bicking" user-email="ian@example.com">Hello</typed>' }],
+      user: "Ian Bicking",
+      userEmail: "ian@example.com",
+    }],
+    total: 1,
   });
 });
 
@@ -363,9 +301,14 @@ void test("A Codex thread recorded before a box ran the one-root migration carri
 
   // doctest:L248
   const err = (() => { try { assertCodexThreadCwd(boxRoot, path.join(boxRoot, "content", "nonexistent-nonsense")); return null; } catch (e) { return e; } })();
-  t.check({ isCodexSessionOutsideBoxError: err instanceof Error && err.name === "CodexSessionOutsideBoxError", code: err instanceof Error && "code" in err ? err.code : undefined }, {
-    isCodexSessionOutsideBoxError: false,
+  const missing = path.join(fs.realpathSync(root), "box", "_content", "nonexistent-nonsense");
+  t.check(err, {
+    name: "Error",
+    message: `ENOENT: no such file or directory, lstat '${missing}'`,
+    errno: -2,
     code: "ENOENT",
+    syscall: "lstat",
+    path: missing,
   });
 });
 
@@ -379,21 +322,13 @@ void test("A Codex thread recorded before a box ran the one-root migration carri
 // the v2 `content/` root, and a cwd outside the box has none.
 void test("Reading one thread translates its old cwd forward (above).", async (t) => {
   // doctest:L267
-  t.check(
-    {
-      root: retiredV2ContentCwds("/boxes/b", "/boxes/b"),
-      recipes: retiredV2ContentCwds("/boxes/b", "/boxes/b/_content/recipes"),
-      outside: retiredV2ContentCwds("/boxes/b", "/boxes/other/_content/recipes"),
-    },
-    {
-    root: [
-      "/boxes/b/content",
-    ],
-    recipes: [
-      "/boxes/b/content/recipes",
-      "/boxes/b/content/store/recipes",
-    ],
+  t.check({
+    root: retiredV2ContentCwds("/boxes/b", "/boxes/b"),
+    recipes: retiredV2ContentCwds("/boxes/b", "/boxes/b/_content/recipes"),
+    outside: retiredV2ContentCwds("/boxes/b", "/boxes/other/_content/recipes"),
+  }, {
+    root: ["/boxes/b/content"],
+    recipes: ["/boxes/b/content/recipes", "/boxes/b/content/store/recipes"],
     outside: [],
-  },
-  );
+  });
 });

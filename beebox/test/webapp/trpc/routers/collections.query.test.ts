@@ -72,7 +72,7 @@ void test("A todo under content/projects/kitchen/ and one at the box root both e
   });
 
   // doctest:L66
-  t.check(res.query.glob, "_content/projects/kitchen/**");
+  t.check(res.query, { here: "_content/projects/kitchen", glob: "_content/projects/kitchen/**", includeReferring: true, group: "place" });
 
   // doctest:L69
   t.check(texts(res), [
@@ -103,10 +103,7 @@ void test("A todo under content/projects/kitchen/ and one at the box root both e
   });
 
   // doctest:L95
-  t.check([boxWide.query.glob, boxWide.query.includeReferring], [
-    "**/*.card",
-    false,
-  ]);
+  t.check(boxWide.query, { here: "", glob: "**/*.card", includeReferring: false, group: "place" });
 
   // doctest:L98
   t.check(texts(boxWide), [
@@ -148,10 +145,7 @@ void test("A card's todo summary (docs/plans/todos-ui.md, Track 4) asks about th
   ]);
 
   // doctest:L127
-  t.check([one.reduction.open, one.reduction.done], [
-    1,
-    1,
-  ]);
+  t.check(one.reduction, { open: 1, done: 1, dropped: 0, parked: 0, onPlate: 1, escalated: 0, next: null });
 });
 
 // ## Referring scope: a todo elsewhere that links into `here`
@@ -193,11 +187,8 @@ void test("A card outside the glob contributes only the items that point into he
   ]);
 
   // doctest:L162
-  await t.checkText(
-    // "Water the beans" points nowhere near the kitchen, so it stays out.
-    JSON.stringify(texts(withRefs)),
-    "[\"Hardware run\",\"Pick a countertop\"]",
-  );
+  // "Water the beans" points nowhere near the kitchen, so it stays out.
+  t.check(texts(withRefs), ["Hardware run", "Pick a countertop"]);
 
   // doctest:L166
   const scopeOnly = await c.collections.query({
@@ -252,11 +243,7 @@ void test("params is the collection's own zod schema (TodoParamsSchema), so the 
   ]);
 
   // doctest:L208
-  t.check([openOnly.reduction.open, openOnly.reduction.done, openOnly.reduction.escalated], [
-    2,
-    1,
-    1,
-  ]);
+  t.check(openOnly.reduction, { open: 2, done: 1, dropped: 0, parked: 0, onPlate: 1, escalated: 1, next: "2026-07-01" });
 
   // doctest:L211
   // `onPlate` narrows further, excluding the quiet one.
@@ -335,7 +322,7 @@ void test("An agent-assigned todo never reaches a reduction or a row under the d
   ]);
 
   // doctest:L273
-  t.check(defaultScope.reduction.open, 1);
+  t.check(defaultScope.reduction, { open: 1, done: 0, dropped: 0, parked: 0, onPlate: 1, escalated: 0, next: null });
 
   // doctest:L276
   const allScope = await c.collections.query({
@@ -350,7 +337,7 @@ void test("An agent-assigned todo never reaches a reduction or a row under the d
   ]);
 
   // doctest:L284
-  t.check(allScope.reduction.open, 2);
+  t.check(allScope.reduction, { open: 2, done: 0, dropped: 0, parked: 0, onPlate: 2, escalated: 0, next: null });
 });
 
 // ## Guards: a scope that leaves the box is refused at the input boundary
@@ -439,8 +426,11 @@ void test("A card that fails to parse still contributes a visible issue alongsid
   ]);
 
   // doctest:L364
-  await t.checkText(res.issues.length > 0, "true");
-
-  // doctest:L367
-  t.check(res.issues[0]?.path, "_content/bad.doc.card");
+  t.check(res.issues, [
+    {
+      kind: "validate",
+      path: "_content/bad.doc.card",
+      message: "line 1: Node 'paragraph' is missing closing; line 1: Node 'inline' is missing closing; line 1: Node 'paragraph' is missing opening",
+    },
+  ]);
 });

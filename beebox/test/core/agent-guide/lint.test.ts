@@ -10,7 +10,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import { any, not } from "agent-doctest/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -72,8 +72,6 @@ void test("A box as bbx init leaves it:", async (t) => {
 // annotations, so per-box content adds no uncited words. The budget is
 // reported, not asserted: a real box's size depends on its content.
 void test("A box-local schema, an extra guide card, an extra procedure, and an edited pe...", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -103,16 +101,21 @@ export default cardSchema("widget", {
 
   const report = await lintBoxGuide(box.root, { checkBudget: false });
   // doctest:L92
-  await t.checkText(out.with(report.failures), "[]");
+  t.check(report.failures, []);
 
   // doctest:L96
   const rendered = await box.read(".beebox/agent-guide.md");
-  await t.checkText(out.with(["- **widget** — A widget the boxholder tracks", "- **cooking**", "- **extra** — An extra procedure for the fixture.", "You are **Wren**."].map((s) => rendered.includes(s)).join(",")), "true,true,true,true");
+  // The rendered guide is a large generated text; each fixture line is checked inside it.
+  for (const line of ["- **widget** — A widget the boxholder tracks", "- **cooking**", "- **extra** — An extra procedure for the fixture.", "You are **Wren**."]) {
+    t.check(rendered, any(String).includes(line));
+  }
 
   // doctest:L100
-  print(`rich box: ${String(report.guideWords)} guide words, ${String(report.alwaysLoadedWords)} always-loaded`);
-  await t.checkText(out.with(report.uncitedWords["THE_LAWS"]), `rich box: «int» guide words, «int» always-loaded
-0`);
+  t.check({ guideWords: report.guideWords, alwaysLoadedWords: report.alwaysLoadedWords, uncitedLaws: report.uncitedWords["THE_LAWS"] }, {
+    guideWords: any(Number).int(),
+    alwaysLoadedWords: any(Number).int(),
+    uncitedLaws: 0,
+  });
 });
 
 // ## The source's package paths match the engine's constants
@@ -122,7 +125,10 @@ export default cardSchema("widget", {
 void test("guide.md spells the package-docs and compiled-docs directories out; if the co...", async (t) => {
   // doctest:L116
   const source = await fs.readFile(GUIDE_SOURCE_PATH, "utf-8");
-  t.check([source.includes(`${BOX_PACKAGE_DOCS}/`), source.includes(`${DOCS_DIR}/`), path.relative(PACKAGE_ROOT, GUIDE_SOURCE_PATH)].join(" "), "true true src/core/agent-guide/guide.md");
+  // guide.md is a large source text; the narrow check is whether it spells each directory.
+  t.check(source, any(String).includes(`${BOX_PACKAGE_DOCS}/`));
+  t.check(source, any(String).includes(`${DOCS_DIR}/`));
+  t.check(path.relative(PACKAGE_ROOT, GUIDE_SOURCE_PATH), "src/core/agent-guide/guide.md");
 });
 
 // ## Stripping drops the header and citations and keeps the text
@@ -142,7 +148,7 @@ Text.
 - b`);
 
   // doctest:L138
-  t.check(annotatedText(lines).split("\n").filter((l) => l.startsWith("<!--")).join(" | "), "<!-- | <!-- rules: alpha.one -->");
+  t.check(annotatedText(lines).split("\n").filter((l) => l.startsWith("<!--")), ["<!--", "<!-- rules: alpha.one -->"]);
 });
 
 // ## A fenced example is one passage, and a rules line inside it is text
@@ -156,7 +162,17 @@ void test("A blank line inside a fence does not end the citation (a blank line b
   // doctest:L151
   const fenced = "# T\n\n## ALPHA\n\n<!-- rules: alpha.ex -->\nExample:\n~~~\nfirst\n\n<!-- rules: shown -->\n## not a heading\nlast\n~~~\n";
   const fencedLines = renderGuideLines({ source: fenced, fillers: {} });
-  t.check(fencedLines.filter((l) => !l.comment && l.text !== "").map((l) => `${l.section}:${l.rules.join(",")}:${l.text}`).join(" | "), "null::# T | ALPHA::## ALPHA | ALPHA:alpha.ex:Example: | ALPHA:alpha.ex:~~~ | ALPHA:alpha.ex:first | ALPHA:alpha.ex:<!-- rules: shown --> | ALPHA:alpha.ex:## not a heading | ALPHA:alpha.ex:last | ALPHA:alpha.ex:~~~");
+  t.check(fencedLines.filter((l) => !l.comment && l.text !== "").map((l) => ({ section: l.section, rules: l.rules, text: l.text })), [
+    { section: null, rules: [], text: "# T" },
+    { section: "ALPHA", rules: [], text: "## ALPHA" },
+    { section: "ALPHA", rules: ["alpha.ex"], text: "Example:" },
+    { section: "ALPHA", rules: ["alpha.ex"], text: "~~~" },
+    { section: "ALPHA", rules: ["alpha.ex"], text: "first" },
+    { section: "ALPHA", rules: ["alpha.ex"], text: "<!-- rules: shown -->" },
+    { section: "ALPHA", rules: ["alpha.ex"], text: "## not a heading" },
+    { section: "ALPHA", rules: ["alpha.ex"], text: "last" },
+    { section: "ALPHA", rules: ["alpha.ex"], text: "~~~" },
+  ]);
 });
 
 // ## A null filler omits its section; an empty one leaves no gap
@@ -203,5 +219,8 @@ void test("Failures name the section, the row, or the leaked line", async (t) =>
 void test("generateAgentGuide is the stripped render of the shipped guide.md.", async (t) => {
   // doctest:L202
   const guide = generateAgentGuide({ procedures: [], shape: { shapeVersion: 3, boxRoot: "/tmp/box" }, instructionFile: "AGENTS.md" });
-  t.check([guide.startsWith("# Bee Box Agent Guide\n"), guide.includes("<!--"), guide.includes("{{")].join(","), "true,false,false");
+  // The guide is a large generated text; the narrow checks are its title and no leftover markup.
+  t.check(guide, any(String).startsWith("# Bee Box Agent Guide\n"));
+  t.check(guide, not(any(String).includes("<!--")));
+  t.check(guide, not(any(String).includes("{{")));
 });

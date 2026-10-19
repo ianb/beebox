@@ -15,6 +15,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { any } from "agent-doctest/check";
 import { rm } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { commitTemplateSyncChanges, generateDocs } from "../../../src/core/docs-gen/generate/core.js";
@@ -167,11 +168,11 @@ void test("In a converted box AGENTS.md is the box's own instruction file.", asy
   authoredBox.commitAll("trim the root instructions");
   await generateDocs(authoredBox.root, { force: true });
 
-  // doctest:L147
-  await t.checkText((await authoredBox.read("AGENTS.md")).includes("@.beebox/agent-guide.md"), "true");
+  await t.checkText(authoredBox.read("AGENTS.md"), `@.beebox/agent-guide.md
+@_content/briefing.md
+House rules.`);
 
-  // doctest:L150
-  await t.checkText((await getStatus(authoredBox.root)).modified.includes("AGENTS.md"), "true");
+  t.check((await getStatus(authoredBox.root)).modified, ["AGENTS.md"]);
 
   // A tracked guide is engine output, not the box's own file: when generation
   // reinstalls `src/schemas/AGENTS.md`, the same commit takes it.
@@ -181,10 +182,9 @@ void test("In a converted box AGENTS.md is the box's own instruction file.", asy
   authoredBox.commitAll("drop the schemas guide");
   await generateDocs(authoredBox.root, { force: true });
 
-  // doctest:L162
-  await t.checkText((await authoredBox.read("src/schemas/AGENTS.md")).startsWith("# Writing Box-Local Schemas"), "true");
+  // The reinstalled guide is a large generated file; its heading is the narrow check.
+  t.check(await authoredBox.read("src/schemas/AGENTS.md"), any(String).startsWith("# Writing Box-Local Schemas"));
 
-  // doctest:L165
   const afterGuide = await getStatus(authoredBox.root);
-  await t.checkText([...afterGuide.staged, ...afterGuide.modified, ...afterGuide.untracked].includes("src/schemas/AGENTS.md"), "false");
+  t.check([...afterGuide.staged, ...afterGuide.modified, ...afterGuide.untracked], []);
 });

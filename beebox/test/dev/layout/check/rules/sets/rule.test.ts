@@ -7,7 +7,7 @@
 import { test } from "tap";
 import "agent-doctest/tap";
 import { setsRule } from "../../../../../../src/dev/layout/check/rules/sets/rule.js";
-import { layout, summary } from "../fixture.js";
+import { layout } from "../fixture.js";
 
 // Every fixture below that expects a clean (or unrelated-finding) result gives
 // its registry a consumer (`src/entry.ts` importing it), since the
@@ -17,7 +17,7 @@ import { layout, summary } from "../fixture.js";
 void test("Every fixture below that expects a clean (or unrelated-finding) result gives...", async (t) => {
   // doctest:L19
   const plainLayout = layout({ files: { "src/util.ts": {} } });
-  await t.checkText(summary(setsRule.check(plainLayout)) === "", "true");
+  t.check(setsRule.check(plainLayout), []);
 });
 
 // ## A clean list-form set: file members, one directory member, a type-only cross-member import
@@ -48,7 +48,7 @@ void test("entry:", async (t) => {
       "src/entry.ts": { imports: ["src/commands.ts"] },
     },
   });
-  await t.checkText(summary(setsRule.check(commandsLayout)) === "", "true");
+  t.check(setsRule.check(commandsLayout), []);
 });
 
 // ## A set directory holding a data file is clean; a stray module is still a finding
@@ -76,7 +76,13 @@ void test("Data files (a directory's AGENTS.md, fixtures, assets) are opaque to 
       "src/entry.ts": { imports: ["src/assets.ts"] },
     },
   });
-  t.check(summary(setsRule.check(assetsLayout)), "set-members pkg/src/assets/stray.ts");
+  t.check(setsRule.check(assetsLayout), [
+    {
+      rule: "set-members",
+      path: "pkg/src/assets/stray.ts",
+      message: "not a member of pkg/src/assets.ts; register it or move it out of the set",
+    },
+  ]);
 });
 
 // ## Two registries declare the same set directory
@@ -97,12 +103,23 @@ void test("other.ts is also misnamed for the directory it declares (rule 2), so 
     },
   });
   const dupFindings = setsRule.check(dupLayout);
-  await t.checkText(summary(dupFindings), `registry pkg/src/dup.ts
-registry pkg/src/other.ts
-registry pkg/src/other.ts`);
-
-  // doctest:L109
-  t.check(dupFindings.find((f) => f.path === "pkg/src/dup.ts")?.message, "set directory pkg/src/dup is also declared by pkg/src/other.ts; keep exactly one defineRegistry call per set directory");
+  t.check(dupFindings, [
+    {
+      rule: "registry",
+      path: "pkg/src/dup.ts",
+      message: "set directory pkg/src/dup is also declared by pkg/src/other.ts; keep exactly one defineRegistry call per set directory",
+    },
+    {
+      rule: "registry",
+      path: "pkg/src/other.ts",
+      message: "registry for set directory pkg/src/dup must be pkg/src/dup.ts (the set directory's parent, named for the set); move or rename it",
+    },
+    {
+      rule: "registry",
+      path: "pkg/src/other.ts",
+      message: "set directory pkg/src/dup is also declared by pkg/src/dup.ts; keep exactly one defineRegistry call per set directory",
+    },
+  ]);
 });
 
 // ## A registry misnamed for its set directory
@@ -119,10 +136,13 @@ void test("trpc/router.ts declares trpc/routers:", async (t) => {
     },
   });
   const trpcFindings = setsRule.check(trpcLayout);
-  t.check(summary(trpcFindings), "registry pkg/trpc/router.ts");
-
-  // doctest:L130
-  t.check(trpcFindings[0]?.message, "registry for set directory pkg/trpc/routers must be pkg/trpc/routers.ts (the set directory's parent, named for the set); move or rename it");
+  t.check(trpcFindings, [
+    {
+      rule: "registry",
+      path: "pkg/trpc/router.ts",
+      message: "registry for set directory pkg/trpc/routers must be pkg/trpc/routers.ts (the set directory's parent, named for the set); move or rename it",
+    },
+  ]);
 });
 
 // ## Completeness both ways: unclaimed children, a null-source member, a member imported from outside the set
@@ -154,10 +174,28 @@ void test("legacy.ts is an unclaimed file, migrate/ is an unclaimed subdirectory
       "src/entry.ts": { imports: ["src/verbs.ts"] },
     },
   });
-  await t.checkText(summary(setsRule.check(verbsLayout)), `set-members pkg/src/lib/shared-helper.ts
-set-members pkg/src/verbs.ts
-set-members pkg/src/verbs/legacy.ts
-set-members pkg/src/verbs/migrate`);
+  t.check(setsRule.check(verbsLayout), [
+    {
+      rule: "set-members",
+      path: "pkg/src/lib/shared-helper.ts",
+      message: "member src/lib/shared-helper.ts's source pkg/src/lib/shared-helper.ts is not a valid location in set directory pkg/src/verbs (must be pkg/src/verbs/<name>.ts, or with an entry, pkg/src/verbs/<name>/<entry>.ts); move it or fix the registry",
+    },
+    {
+      rule: "set-members",
+      path: "pkg/src/verbs.ts",
+      message: "member customVerb is not imported from the set directory",
+    },
+    {
+      rule: "set-members",
+      path: "pkg/src/verbs/legacy.ts",
+      message: "not a member of pkg/src/verbs.ts; register it or move it out of the set",
+    },
+    {
+      rule: "set-members",
+      path: "pkg/src/verbs/migrate",
+      message: "not a member of pkg/src/verbs.ts; register it or move it out of the set",
+    },
+  ]);
 });
 
 // ## Record-form keys that do not match their member name (file member and directory member)
@@ -192,13 +230,17 @@ void test("The key equals the member name converted from kebab-case to camelCase
     },
   });
   const exportsFindings = setsRule.check(exportsLayout);
-  await t.checkText(summary(exportsFindings), `registry pkg/src/exports.ts
-registry pkg/src/exports.ts`);
-
-  // doctest:L208
-  t.check(exportsFindings.map((f) => f.message), [
-    "record key \"old\" does not match expected key \"legacy\" for member \"legacy\" (pkg/src/exports/legacy/handler.ts); rename the key or the member to match",
-    "record key \"wrongkey\" does not match expected key \"cards\" for member \"cards\" (pkg/src/exports/cards.ts); rename the key or the member to match",
+  t.check(exportsFindings, [
+    {
+      rule: "registry",
+      path: "pkg/src/exports.ts",
+      message: "record key \"old\" does not match expected key \"legacy\" for member \"legacy\" (pkg/src/exports/legacy/handler.ts); rename the key or the member to match",
+    },
+    {
+      rule: "registry",
+      path: "pkg/src/exports.ts",
+      message: "record key \"wrongkey\" does not match expected key \"cards\" for member \"cards\" (pkg/src/exports/cards.ts); rename the key or the member to match",
+    },
   ]);
 });
 
@@ -224,11 +266,18 @@ void test("health.ts imports chat.ts's value (rule 2 / member-imports); chat.ts 
     },
   });
   const routesFindings = setsRule.check(routesLayout);
-  await t.checkText(summary(routesFindings), `member-imports pkg/src/routes/health.ts
-registry pkg/src/routes/chat.ts`);
-
-  // doctest:L240
-  t.check(routesFindings.find((f) => f.rule === "member-imports")?.message, "imports pkg/src/routes/chat.ts (member \"chat\") from member \"health\" of the same set; move the shared thing to infrastructure outside the set, or merge the two members");
+  t.check(routesFindings, [
+    {
+      rule: "registry",
+      path: "pkg/src/routes/chat.ts",
+      message: "imports its own registry pkg/src/routes.ts; members must not import their registry",
+    },
+    {
+      rule: "member-imports",
+      path: "pkg/src/routes/health.ts",
+      message: "imports pkg/src/routes/chat.ts (member \"chat\") from member \"health\" of the same set; move the shared thing to infrastructure outside the set, or merge the two members",
+    },
+  ]);
 });
 
 // ## Side-effect registration only fires for an internal cross-module registration import
@@ -285,7 +334,13 @@ void test("other.ts calls registerish:", async (t) => {
   ns.imports = [
     { specifier: "some-external-lib", target: null, external: true, typeOnly: false, names: ["ns"], dynamic: false },
   ];
-  t.check(summary(setsRule.check(registrationSourcesLayout)), "side-effect-registration pkg/src/schemas/builtins.ts");
+  t.check(setsRule.check(registrationSourcesLayout), [
+    {
+      rule: "side-effect-registration",
+      path: "pkg/src/schemas/builtins.ts",
+      message: "registers at import; list it in a defineRegistry registry instead",
+    },
+  ]);
 });
 
 // ## A module reads a set directory by path instead of importing the registry
@@ -309,7 +364,13 @@ void test("../schemas resolves to the set directory; ../other resolves elsewhere
       "src/entry.ts": { imports: ["src/schemas.ts"] },
     },
   });
-  t.check(summary(setsRule.check(pathReadLayout)), "registry pkg/src/scripts/loader.ts");
+  t.check(setsRule.check(pathReadLayout), [
+    {
+      rule: "registry",
+      path: "pkg/src/scripts/loader.ts",
+      message: "reads set directory pkg/src/schemas by path; only its registry enumerates the set",
+    },
+  ]);
 });
 
 // ## A registry nothing imports
@@ -337,10 +398,13 @@ void test("commands.ts declares completeness over src/commands/, but no module v
     },
   });
   const unimportedFindings = setsRule.check(unimportedLayout);
-  t.check(summary(unimportedFindings), "registry pkg/src/commands.ts");
-
-  // doctest:L355
-  t.check(unimportedFindings[0]?.message, "pkg/src/commands.ts declares pkg/src/commands but nothing imports it; the set's consumers must enumerate it through the registry, or the directory is not a set (delete the registry)");
+  t.check(unimportedFindings, [
+    {
+      rule: "registry",
+      path: "pkg/src/commands.ts",
+      message: "pkg/src/commands.ts declares pkg/src/commands but nothing imports it; the set's consumers must enumerate it through the registry, or the directory is not a set (delete the registry)",
+    },
+  ]);
 });
 
 // ## An empty registry is not yet held to the import check
@@ -358,7 +422,7 @@ void test("members:", async (t) => {
       "src/plugins/README.md": "data",
     },
   });
-  await t.checkText(summary(setsRule.check(emptyLayout)) === "", "true");
+  t.check(setsRule.check(emptyLayout), []);
 });
 
 // ## A type-only import of a registry does not count
@@ -382,5 +446,11 @@ void test("entry.ts imports commands.ts for its type only, same as no importer a
       "src/entry.ts": { imports: ["type:src/commands.ts"] },
     },
   });
-  t.check(summary(setsRule.check(typeOnlyLayout)), "registry pkg/src/commands.ts");
+  t.check(setsRule.check(typeOnlyLayout), [
+    {
+      rule: "registry",
+      path: "pkg/src/commands.ts",
+      message: "pkg/src/commands.ts declares pkg/src/commands but nothing imports it; the set's consumers must enumerate it through the registry, or the directory is not a set (delete the registry)",
+    },
+  ]);
 });

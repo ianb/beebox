@@ -9,7 +9,6 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -20,39 +19,27 @@ const target = path.join(dir, "store.json");
 
 // ## Replaces content atomically and leaves no temp siblings
 void test("Replaces content atomically and leaves no temp siblings", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L23
   await writeFileAtomic(target, { content: '{"v":1}\n' });
   await writeFileAtomic(target, { content: '{"v":2}\n' });
-  print(fs.readFileSync(target, "utf-8").trim());
-  await t.checkText(out.with(print(`siblings: ${fs.readdirSync(dir).join(",")}`)), `{"v":2}
-siblings: store.json`);
+  t.check(fs.readFileSync(target, "utf-8").trim(), '{"v":2}');
+  t.check(fs.readdirSync(dir), ["store.json"]);
 });
 
 // ## An existing target's mode survives a rewrite without an explicit `mode`
 void test("An existing target's mode survives a rewrite without an explicit `mode`", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L34
   fs.chmodSync(target, 0o600);
   await writeFileAtomic(target, { content: '{"v":3}\n' });
-  await t.checkText(out.with(print((fs.statSync(target).mode & 0o777).toString(8))), "600");
+  t.check(fs.statSync(target).mode & 0o777, 0o600);
 });
 
 // ## An explicit `mode` wins
 void test("An explicit `mode` wins", async (t) => {
-  const out = printed();
-  const print = out.print;
-  // doctest:L43
   await writeFileAtomic(target, { content: '{"v":4}\n', mode: 0o640 });
-  await t.checkText(out.with(print((fs.statSync(target).mode & 0o777).toString(8))), "640");
+  t.check(fs.statSync(target).mode & 0o777, 0o640);
 });
 
 // ## A brand-new file gets the platform default (not a stat failure)
 void test("A brand-new file gets the platform default (not a stat failure)", async (t) => {
-  const out = printed();
-  const print = out.print;
   t.teardown(async () => {
     try {
       fs.rmSync(dir, { recursive: true, force: true });
@@ -60,8 +47,7 @@ void test("A brand-new file gets the platform default (not a stat failure)", asy
       t.error(error);
     }
   });
-  // doctest:L51
   const fresh = path.join(dir, "brand-new.json");
   await writeFileAtomic(fresh, { content: "x\n" });
-  await t.checkText(out.with(print(fs.existsSync(fresh))), "true");
+  t.check(fs.existsSync(fresh), true);
 });
