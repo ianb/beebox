@@ -19,17 +19,31 @@ import { SwitchMenuBody } from "../../../src/components/AppNav/PlacePill-panels.
 
 globalThis.React = React;
 
-/** Render a menu body inside a router and a tRPC client that never answers. */
+/**
+ * Render a menu body inside a router and a tRPC client that never answers.
+ * React reports render problems through `console.error` (for example a
+ * `useLayoutEffect` call during server rendering); any such report fails the
+ * test instead of scrolling past.
+ */
 async function render(element: React.ReactElement): Promise<string> {
   const root = createRootRoute({ staticData: { title: null }, component: () => element });
   const router = createRouter({ routeTree: root, history: createMemoryHistory({ initialEntries: ["/"] }) });
   await router.load();
   const queryClient = new QueryClient();
   const client = createTRPCClient<AppRouter>({ links: [() => () => observable(() => () => {})] });
-  return renderToString(React.createElement(trpc.Provider, {
-    client, queryClient,
-    children: React.createElement(QueryClientProvider, { client: queryClient, children: React.createElement(RouterProvider, { router }) }),
-  }));
+  const reports: string[] = [];
+  const consoleError = console.error;
+  console.error = (...args: unknown[]) => { reports.push(args.map(String).join(" ")); };
+  try {
+    const html = renderToString(React.createElement(trpc.Provider, {
+      client, queryClient,
+      children: React.createElement(QueryClientProvider, { client: queryClient, children: React.createElement(RouterProvider, { router }) }),
+    }));
+    if (reports.length > 0) throw new Error(`React reported during render:\n${reports.join("\n")}`);
+    return html;
+  } finally {
+    console.error = consoleError;
+  }
 }
 
 /** Each menu row as `id: text → href`, in order. */
