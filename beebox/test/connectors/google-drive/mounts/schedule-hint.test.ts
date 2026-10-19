@@ -49,22 +49,18 @@ void test("The three states are distinct:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L46
   const box = await makeTmpBox();
   t.check(await checkDriveScheduleState(box.root), "absent");
 
-  // doctest:L50
   t.check(await checkDriveScheduleHint(box.root), null);
 
   // The seeded card is disabled, which is the state the hint exists for. It names
   // what is off, who turns it on, and the one command that syncs the mount now
   // regardless.
 
-  // doctest:L59
   await seedSchedule(box.root, false);
   t.check(await checkDriveScheduleState(box.root), "disabled");
 
-  // doctest:L63
   t.check(
     await checkDriveScheduleHint(box.root),
     "Hourly Drive sync (check-drive) is off, so this mount only updates when something asks it to. Ask the boxholder whether to turn it on — they enable it under Schedules in box settings. Either way, `bbx force-wakeup --connector google-drive` syncs it now.",
@@ -74,14 +70,12 @@ void test("The three states are distinct:", async (t) => {
   // spelled `enabled` out — the field is optional and defaults to on
   // (`schemas/scheduled-script.tsx`), so absence must not read as off.
 
-  // doctest:L72
   await seedSchedule(box.root, true);
   t.check([await checkDriveScheduleState(box.root), await checkDriveScheduleHint(box.root)], [
     "enabled",
     null,
   ]);
 
-  // doctest:L76
   await seedSchedule(box.root, null);
   t.check(await checkDriveScheduleState(box.root), "enabled");
 });

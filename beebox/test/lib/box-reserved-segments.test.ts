@@ -12,22 +12,16 @@ import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../s
 
 // ## Nested area names are violations; the first segment never is
 void test("Nested area names are violations; the first segment never is", async (t) => {
-  // doctest:L16
   t.check(findReservedNestedSegment("_content/recipes/_config/x.card"), "_config");
 
-  // doctest:L19
   t.check(findReservedNestedSegment("_content/_content"), "_content");
 
-  // doctest:L22
   t.check(findReservedNestedSegment("_bookkeeping/jobs/_publish"), "_publish");
 
-  // doctest:L25
   t.check(findReservedNestedSegment("_content/recipes/Bread.recipe.card"), null);
 
-  // doctest:L28
   t.check(findReservedNestedSegment("_config/schemas/foo.ts"), null);
 
-  // doctest:L31
   t.check(findReservedNestedSegment(""), null);
 });
 
@@ -36,27 +30,22 @@ void test("Nested area names are violations; the first segment never is", async 
 // An ad hoc underscore name below the root (`_unsure` is real triage data) is
 // legal — only the four area names are reserved words:
 void test("An ad hoc underscore name below the root (unsure is real triage data) is lega...", async (t) => {
-  // doctest:L41
   t.check(findReservedNestedSegment("_content/scratch/_tmp/x.txt"), null);
 
-  // doctest:L44
   t.check(findReservedNestedSegment("_content/inbox/triaged/_unsure/y.doc.card"), null);
 });
 
 // ## The template-updates mirror is exempt
 void test("The template-updates mirror is exempt", async (t) => {
-  // doctest:L51
   t.check(findReservedNestedSegment("_config/_template-updates/_content/briefing.md"), null);
 });
 
 // But only as that exact subtree — a sibling spelling is not:
 void test("But only as that exact subtree — a sibling spelling is not:", async (t) => {
-  // doctest:L58
   t.check(findReservedNestedSegment("_config/_template-updates-old/_content/briefing.md"), "_content");
 });
 
 // ## The message names the reserved word and the exception
 void test("The message names the reserved word and the exception", async (t) => {
-  // doctest:L65
   t.check(reservedNestedSegmentMessage("_content/recipes/_config/x.card", "_config"), "_content/recipes/_config/x.card: \"_config\" is a reserved box-area name, legal only at the box root (a nested _tmp is the one exception) — rename this entry");
 });

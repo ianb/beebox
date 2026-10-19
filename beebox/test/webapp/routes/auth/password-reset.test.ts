@@ -45,7 +45,6 @@ void test("A live link resets the pinned member and returns to ordinary login", 
       t.error(error);
     }
   });
-  // doctest:L36
   const authDir = await mkdtemp(join(tmpdir(), "bbx-password-reset-route-"));
   process.env.BBX_AUTH_FILE = join(authDir, "auth.json");
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
@@ -59,7 +58,6 @@ void test("A live link resets the pinned member and returns to ordinary login", 
     email: "member@example.com",
   });
 
-  // doctest:L49
   const login = await ctx.server.inject({
     method: "POST",
     url: "/auth/login",
@@ -68,7 +66,6 @@ void test("A live link resets the pinned member and returns to ordinary login", 
   const oldCookie = String(login.headers["set-cookie"]).split(";", 1)[0];
   t.check(login.statusCode, 204);
 
-  // doctest:L58
   let page = await ctx.server.inject({ method: "GET", url: `/auth/reset-password?token=${reset.token}` });
   for (let index = 1; index < 12; index += 1) {
     page = await ctx.server.inject({ method: "GET", url: `/auth/reset-password?token=${reset.token}` });
@@ -86,7 +83,6 @@ void test("A live link resets the pinned member and returns to ordinary login", 
 
   // Wrong content types and invite-kind capabilities cannot enter the reset flow.
 
-  // doctest:L75
   const wrongType = await ctx.server.inject({ method: "POST", url: "/auth/reset-password", payload: {} });
   const invite = await mintAuthInvite({ boxRoot: ctx.boxRoot, createdBy: "owner@example.com" });
   const originalKindWarn = console.warn;
@@ -99,13 +95,11 @@ void test("A live link resets the pinned member and returns to ordinary login", 
   console.warn = originalKindWarn;
   t.check({ wrongType: wrongType.statusCode, wrongKind: wrongKind.statusCode }, { wrongType: 400, wrongKind: 410 });
 
-  // doctest:L88
   passwordResetThrottle.reset();
 
   // A validation error keeps the live token, allowing the member to correct the
   // form without asking the operator for another link.
 
-  // doctest:L95
   const mismatch = await ctx.server.inject(resetForm({
     token: reset.token,
     password: "new-password",
@@ -114,13 +108,10 @@ void test("A live link resets the pinned member and returns to ordinary login", 
   t.check(mismatch.statusCode, 400);
   t.check(mismatch.payload, any(String).includes(`value="${reset.token}"`));
 
-  // doctest:L105
   t.check(loginThrottle.acquireHashSlot(), true);
 
-  // doctest:L108
   t.check(loginThrottle.acquireHashSlot(), true);
 
-  // doctest:L111
   const atCapacity = await ctx.server.inject(resetForm({
     token: reset.token,
     password: "new-password",
@@ -131,7 +122,6 @@ void test("A live link resets the pinned member and returns to ordinary login", 
   t.check(atCapacity.statusCode, 429);
   t.check(atCapacity.payload, any(String).includes(`value="${reset.token}"`));
 
-  // doctest:L123
   const beforeGen = getLocalUser("member@example.com")?.gen;
   const acceptedRequest = resetForm({ token: reset.token, password: "new-password", confirmPassword: "new-password" });
   acceptedRequest.headers["x-bbx-base-prefix"] = "/worktree";
@@ -148,7 +138,6 @@ void test("A live link resets the pinned member and returns to ordinary login", 
     gen: { before: 1, after: 2 },
   });
 
-  // doctest:L136
   const oldSession = await ctx.server.inject({
     method: "GET",
     url: "/auth/me",
@@ -156,10 +145,8 @@ void test("A live link resets the pinned member and returns to ordinary login", 
   });
   t.check(oldSession.statusCode, 401);
 
-  // doctest:L144
   t.check(await verifyPassword({ email: "member@example.com", password: "old-password" }), null);
 
-  // doctest:L147
   t.check(await verifyPassword({ email: "member@example.com", password: "new-password" }), {
     email: "member@example.com",
     name: "Member",
@@ -171,11 +158,9 @@ void test("A live link resets the pinned member and returns to ordinary login", 
   // The login page confirms the update without signing the member in, and replay is
   // the same generic dead-link response as any unknown token.
 
-  // doctest:L155
   const loginPage = await ctx.server.inject({ method: "GET", url: "/auth/login?passwordReset=1" });
   t.check(loginPage.payload, any(String).includes("Password reset. Sign in with your new password."));
 
-  // doctest:L159
   const originalWarn = console.warn;
   console.warn = () => {};
   const replay = await ctx.server.inject(resetForm({
@@ -189,7 +174,6 @@ void test("A live link resets the pinned member and returns to ordinary login", 
   // Reset-specific token/IP backoff rejects an immediate repeated dead-token POST
   // without coupling the attempt to ordinary login state.
 
-  // doctest:L175
   passwordResetThrottle.reset();
   const deadForm = resetForm({ token: "unknown-token", password: "new-password", confirmPassword: "new-password" });
   console.warn = () => {};
@@ -218,7 +202,6 @@ void test("Access removal and store failures fail closed", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L197
   const staleDir = await mkdtemp(join(tmpdir(), "bbx-password-reset-stale-"));
   process.env.BBX_AUTH_FILE = join(staleDir, "auth.json");
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
@@ -234,7 +217,6 @@ void test("Access removal and store failures fail closed", async (t) => {
   const stale = await staleCtx.server.inject({ method: "GET", url: `/auth/reset-password?token=${staleReset.token}` });
   t.check(stale.statusCode, 410);
 
-  // doctest:L215
   await staleCtx.seed("_config/box.json", JSON.stringify({ allowedEmails: ["member@example.com"] }));
   const savedAuth = await readFile(process.env.BBX_AUTH_FILE, "utf8");
   await writeFile(process.env.BBX_AUTH_FILE, "not json", { mode: 0o600 });
@@ -248,7 +230,6 @@ void test("Access removal and store failures fail closed", async (t) => {
     html: "text/html",
   });
 
-  // doctest:L228
   await writeFile(`${process.env.BBX_AUTH_FILE}.invites.json`, "not json", { mode: 0o600 });
   const unavailable = await staleCtx.server.inject({ method: "GET", url: `/auth/reset-password?token=${staleReset.token}` });
   t.check(unavailable.statusCode, 503);

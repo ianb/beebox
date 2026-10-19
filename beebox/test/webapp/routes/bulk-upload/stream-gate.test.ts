@@ -18,7 +18,6 @@ void test("A second concurrent stream for the same item is refused", async (t) =
       t.error(error);
     }
   });
-  // doctest:L15
   const first = beginStream("s1", "item-a");
   const again = beginStream("s1", "item-a");
   t.check({ first, again }, {
@@ -29,7 +28,6 @@ void test("A second concurrent stream for the same item is refused", async (t) =
   // Releasing the slot lets the same item stream again (a genuine retry after the
   // first finished):
 
-  // doctest:L25
   endStream("s1", "item-a");
   t.check(beginStream("s1", "item-a"), "ok");
 });
@@ -45,7 +43,6 @@ void test("Eight distinct items can stream at once; a ninth is refused until one
       t.error(error);
     }
   });
-  // doctest:L39
   const codes = [];
   for (let i = 0; i < 9; i++) codes.push(beginStream("s2", `item-${String(i)}`));
   t.check({ firstEight: codes.slice(0, 8), ninth: codes[8] }, {
@@ -64,7 +61,6 @@ void test("Eight distinct items can stream at once; a ninth is refused until one
 
   // Releasing one frees exactly one slot:
 
-  // doctest:L48
   endStream("s2", "item-0");
   const afterRelease = beginStream("s2", "item-8");
   t.check({ afterRelease }, {
@@ -85,7 +81,6 @@ void test("A second session has its own budget — one session's in-flight strea
       t.error(error);
     }
   });
-  // doctest:L64
   beginStream("s3", "x");
   const otherSession = beginStream("s4", "x");
   t.check({ otherSession }, {

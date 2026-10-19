@@ -41,19 +41,15 @@ const prior = (initial: number): ContextHistoryEntry[] => [{ date: "d", boxCommi
 
 // ## The delta clause compares a baseline to the prior run
 void test("The delta clause compares a baseline to the prior run", async (t) => {
-  // doctest:L45
   t.check(formatBaselineDelta(38000, 41000), "; -3k from last run");
 
-  // doctest:L48
   t.check(formatBaselineDelta(41000, 38000), "; +3k from last run");
 
   // Sub-1k drift is noise at the report's 1k resolution, and a first run has no
   // prior to compare against.
 
-  // doctest:L56
   t.check(formatBaselineDelta(41200, 41000), "; ~same as last run");
 
-  // doctest:L59
   t.check(formatBaselineDelta(41000, undefined), "");
 });
 
@@ -62,7 +58,6 @@ void test("The delta clause compares a baseline to the prior run", async (t) => 
 // `alpha` shrank 3k since its last run; `beta` has no prior entry, so its delta is
 // blank. Rows are ordered by baseline, biggest first.
 void test("alpha shrank 3k since its last run; beta has no prior entry, so its delta is...", async (t) => {
-  // doctest:L69
   const out = renderContextSummary([res("beta", 38000), res("alpha", 41000)], { alpha: prior(44000) });
   // The lowest baseline is called out as the cleanest estimate of the pure
   // always-on tier.

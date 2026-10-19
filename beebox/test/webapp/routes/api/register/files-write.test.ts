@@ -37,7 +37,6 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
       t.error(error);
     }
   });
-  // doctest:L30
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "PUT",
@@ -48,7 +47,6 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
 
   // ## POST appends; the returned identity moves
 
-  // doctest:L49
   const appended = await ctx.request({
     method: "POST",
     url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
@@ -60,7 +58,6 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
 
   // ## A write asserting a stale version conflicts with 412 + current state
 
-  // doctest:L67
   const stale = await ctx.request({
     method: "PUT",
     url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
@@ -72,7 +69,6 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
     body: { error: "File changed since it was read", current: fileIdentity(41, appendedEtag.value) },
   });
 
-  // doctest:L82
   const fresh = await ctx.request({
     method: "PUT",
     url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
@@ -84,7 +80,6 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
 
   // ## Create-only (If-None-Match: *) conflicts when the file appeared
 
-  // doctest:L95
   const createOnly = await ctx.request({
     method: "PUT",
     url: "/api/files/_content/playground/Playground.attach/sessions/history.jsonl",
@@ -98,13 +93,11 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
 
   // ## Cards and escapes are rejected
 
-  // doctest:L111
   t.check(await ctx.request({ method: "PUT", url: "/api/files/_content/notes/A.doc.card", payload: { content: "x" } }), {
     statusCode: 403,
     body: { error: "Card writes go through the card API or bbx create (cards validate)" },
   });
 
-  // doctest:L114
   t.check(
     // Fastify resolves dot-segments before routing, so a traversal never even
     // reaches the handler (404); the handler's own resolve-guard (403) backstops
@@ -117,7 +110,6 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
   // root entry — is rejected too, even though it stays inside the box (Track B's
   // namespace fence):
 
-  // doctest:L126
   t.check(await ctx.request({ method: "PUT", url: "/api/files/src/tricks/scripts/x.ts", payload: { content: "x" } }), {
     statusCode: 403,
     body: { error: "Access denied" },
@@ -125,7 +117,6 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
 
   // ## files-commit sweeps the file's card + attach scope, nothing else
 
-  // doctest:L133
   await ctx.seed("_content/playground/Playground.doc.card", "---\ntitle: Playground\n---\nbody\n");
   await ctx.seed("_content/notes/unrelated.md", "left dirty on purpose\n");
   const commit = await ctx.request({
@@ -138,13 +129,11 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
     body: { ok: true, committed: true, hash: any(String).matches(/^[\da-f]{40}$/), paths: ["_content/playground/Playground.doc.card", "_content/playground/Playground.attach"] },
   });
 
-  // doctest:L149
   const status = await getStatus(ctx.boxRoot);
   t.check(status, { staged: [], modified: [], untracked: ["_content/notes/unrelated.md"], clean: false });
 
   // Committing again with nothing changed is a no-op:
 
-  // doctest:L160
   const again = await ctx.request({
     method: "POST",
     url: "/api/files-commit",
@@ -154,7 +143,6 @@ void test("PUT creates (with parent dirs) and returns the file's identity", asyn
 
   // ## View metadata carries gitStatus until a commit clears it
 
-  // doctest:L172
   await ctx.seedView("pg.tsx", `
 export const name = "PG";
 export const description = "pg";

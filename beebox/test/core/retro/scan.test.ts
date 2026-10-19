@@ -100,11 +100,9 @@ void test("Two chat sessions; one yields an observation, one fails (and stays el
       t.error(error);
     }
   });
-  // doctest:L84
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L87
   await seedSession(box.root, { sessionId: "chat-a", age: 5 * HOUR, entries: [
     typedEntry("Please stop using bullet lists in answers", "2026-06-09T07:00:00Z"),
     agentEntry("Got it.", "2026-06-09T07:00:10Z"),
@@ -114,7 +112,6 @@ void test("Two chat sessions; one yields an observation, one fails (and stays el
     agentEntry("Pasta tonight.", "2026-06-09T09:00:05Z"),
   ] });
 
-  // doctest:L96
   const summary = await runRetroScan(box.root, {
     observer: fakeObserver({ "chat-a": [PROSE_OBSERVATION], "chat-b": "fail" }),
     maxSessions: 20,
@@ -129,11 +126,9 @@ void test("Two chat sessions; one yields an observation, one fails (and stays el
     reportPath: "_content/reviews/retro/2026-06-09T12-00-00.md",
   });
 
-  // doctest:L104
   const ledger = await loadLedgerEntries(box.root);
   t.check(ledger, [LEDGERED]);
 
-  // doctest:L108
   const state = await loadRetroState(box.root);
   t.check(state, {
     lastRunAt: NOW.toISOString(),
@@ -143,7 +138,6 @@ void test("Two chat sessions; one yields an observation, one fails (and stays el
     },
   });
 
-  // doctest:L112
   await t.checkText(await box.read("_content/reviews/retro/2026-06-09T12-00-00.md"), `# Retrospective run 2026-06-09T12-00-00
 «blankline»
 Generated 2026-06-09T12:00:00.000Z.
@@ -176,7 +170,6 @@ _Pending integration._`);
   // turns), so it's skipped as a duplicate — recurrence can't be inflated by
   // one conversation.
 
-  // doctest:L147
   const NOW2 = new Date("2026-06-09T13:00:00Z");
   const summary2 = await runRetroScan(box.root, {
     observer: fakeObserver({ "chat-b": [PROSE_OBSERVATION] }),
@@ -192,10 +185,8 @@ _Pending integration._`);
     reportPath: "_content/reviews/retro/2026-06-09T13-00-00.md",
   });
 
-  // doctest:L156
   t.check(await loadLedgerEntries(box.root), [LEDGERED]);
 
-  // doctest:L159
   t.check(await loadRetroState(box.root), {
     lastRunAt: NOW2.toISOString(),
     sessions: {
@@ -206,7 +197,6 @@ _Pending integration._`);
 
   // ## Third run: nothing left — no report written
 
-  // doctest:L166
   const summary3 = await runRetroScan(box.root, {
     observer: fakeObserver({}),
     maxSessions: 20,

@@ -26,7 +26,6 @@ import { modelTier, providerOf } from "../../../src/shared/agent-models.js";
 // The model judges the diff satisfies the instruction → `passed: true`, and the
 // reasoning is surfaced as the `review` string.
 void test("The model judges the diff satisfies the instruction → passed:", async (t) => {
-  // doctest:L45
   let captured = "";
   const createAgent: AgentFactory = (opts) => createFakeAgent({
     name: opts.name,
@@ -37,7 +36,6 @@ void test("The model judges the diff satisfies the instruction → passed:", asy
     },
   });
 
-  // doctest:L55
   const result = await evaluateInstructions({
     boxRoot: "/tmp/box",
     instructions: ["Every audio clip has a transcription block."],
@@ -48,7 +46,6 @@ void test("The model judges the diff satisfies the instruction → passed:", asy
   });
   t.check(result, { outcome: "verdict", passed: true, review: "The diff adds the transcription block." });
 
-  // doctest:L68
   // The judge prompt is a large generated text; the check is that it carries the
   // instruction, the why, and the diff.
   t.check(captured, any(String).includes("Every audio clip"));
@@ -58,14 +55,12 @@ void test("The model judges the diff satisfies the instruction → passed:", asy
 
 // ## A failing verdict
 void test("A failing verdict", async (t) => {
-  // doctest:L84
   const createAgent: AgentFactory = (opts) => createFakeAgent({
     name: opts.name,
     act: async () => ({ success: true }),
     structuredResult: () => ({ passed: false, reasoning: "No transcription block in the diff." }),
   });
 
-  // doctest:L90
   const result = await evaluateInstructions({
     boxRoot: "/tmp/box",
     instructions: ["Every audio clip has a transcription block."],
@@ -88,7 +83,6 @@ void test("A failing verdict", async (t) => {
 // one would inherit whatever wandering ate the first budget). The *work* agent is
 // never retried — its work is already done and committed.
 void test("When the judge hits its turn cap, the check has produced a non-answer.", async (t) => {
-  // doctest:L120
   const turnCaps: number[] = [];
   const createAgent: AgentFactory = (opts) => createFakeAgent({
     name: opts.name,
@@ -97,7 +91,6 @@ void test("When the judge hits its turn cap, the check has produced a non-answer
     structuredFailure: { error: "error_max_turns" },
   });
 
-  // doctest:L128
   const result = await evaluateInstructions({
     boxRoot: "/tmp/box",
     instructions: ["Every audio clip has a transcription block."],
@@ -129,7 +122,6 @@ void test("When the judge hits its turn cap, the check has produced a non-answer
 // problem (the model answered, just not in the shape asked for) with a different
 // fix:
 void test("Unparseable output is inconclusive too, under its own reason — a different pr...", async (t) => {
-  // doctest:L163
   const createAgent: AgentFactory = (opts) => createFakeAgent({
     name: opts.name,
     act: async () => ({ success: true }),
@@ -139,7 +131,6 @@ void test("Unparseable output is inconclusive too, under its own reason — a di
     structuredFailure: { error: "Structured output: no JSON found in result" },
   });
 
-  // doctest:L172
   const result = await evaluateInstructions({
     boxRoot: "/tmp/box",
     instructions: ["Every audio clip has a transcription block."],
@@ -162,7 +153,6 @@ void test("Unparseable output is inconclusive too, under its own reason — a di
 // at all (auth/model rejection, transport). It keeps gating the step, and it is
 // not retried.
 void test("An invocationFailure is not an inconclusive verdict — validation did not run...", async (t) => {
-  // doctest:L197
   let attempts = 0;
   const createAgent: AgentFactory = (opts) => {
     attempts++;
@@ -174,7 +164,6 @@ void test("An invocationFailure is not an inconclusive verdict — validation di
     });
   };
 
-  // doctest:L208
   const result = await evaluateInstructions({
     boxRoot: "/tmp/box",
     instructions: ["Every audio clip has a transcription block."],
@@ -205,12 +194,10 @@ void test("An unpinned instruction judge must not inherit a Claude-only default 
       t.error(error);
     }
   });
-  // doctest:L232
   const box = await makeTmpBox({ git: true });
   await box.write("_config/box.json", JSON.stringify({ agentEngine: "codex" }));
   box.commitAll("Configure Codex");
 
-  // doctest:L236
   const fakeAgents: FakeAgent[] = [];
   const createAgent: AgentFactory = (opts) => {
     const agent = createFakeAgent({
@@ -222,7 +209,6 @@ void test("An unpinned instruction judge must not inherit a Claude-only default 
     return agent;
   };
 
-  // doctest:L247
   await evaluateInstructions({
     boxRoot: box.root,
     instructions: ["The change is complete."],

@@ -36,7 +36,6 @@ async function box(converted: boolean): Promise<string> {
 // With neither file in the directory, an unconverted box gets `CLAUDE.md` and a
 // converted one `AGENTS.md`. `dirRel` `""` is the box root.
 void test("With neither file in the directory, an unconverted box gets CLAUDE.md and a c...", async (t) => {
-  // doctest:L40
   const legacy = await box(false);
   const converted = await box(true);
   t.check(
@@ -61,7 +60,6 @@ void test("With neither file in the directory, an unconverted box gets CLAUDE.md
 
 // A box with no manifest at all is unconverted:
 void test("A box with no manifest at all is unconverted:", async (t) => {
-  // doctest:L63
   const bare = await mkdtemp(join(tmpdir(), "bbx-instruction-files-bare-"));
   t.check(await instructionFilePath(bare, ""), "CLAUDE.md");
 });
@@ -71,7 +69,6 @@ void test("A box with no manifest at all is unconverted:", async (t) => {
 // A legacy `CLAUDE.md` wins in a converted box too: the writer edits it instead
 // of creating an `AGENTS.md` beside it that Claude Code would ignore.
 void test("A legacy CLAUDE.md wins in a converted box too:", async (t) => {
-  // doctest:L74
   const root = await box(true);
   await writeFile(join(root, "dir/CLAUDE.md"), "# Legacy\n");
   t.check(await instructionFilePath(root, "dir"), "dir/CLAUDE.md");
@@ -80,7 +77,6 @@ void test("A legacy CLAUDE.md wins in a converted box too:", async (t) => {
 // A real `AGENTS.md` wins in an unconverted box (the boxholder or a partly-run
 // migration already made one):
 void test("A real AGENTS.md wins in an unconverted box (the boxholder or a partly-run mi...", async (t) => {
-  // doctest:L84
   const root = await box(false);
   await writeFile(join(root, "dir/AGENTS.md"), "# New\n");
   t.check(await instructionFilePath(root, "dir"), "dir/AGENTS.md");
@@ -89,7 +85,6 @@ void test("A real AGENTS.md wins in an unconverted box (the boxholder or a partl
 // An `AGENTS.md` symlink beside a `CLAUDE.md` is the old Codex mirror, not an
 // authored file. The `CLAUDE.md` is the file to write:
 void test("An AGENTS.md symlink beside a CLAUDE.md is the old Codex mirror, not an autho...", async (t) => {
-  // doctest:L94
   const root = await box(true);
   await writeFile(join(root, "dir/CLAUDE.md"), "# Legacy\n");
   await symlink("CLAUDE.md", join(root, "dir/AGENTS.md"));
@@ -99,7 +94,6 @@ void test("An AGENTS.md symlink beside a CLAUDE.md is the old Codex mirror, not 
 // A dangling mirror symlink with no `CLAUDE.md` counts as no file, so an
 // unconverted box gets `CLAUDE.md` again (and the symlink resolves):
 void test("A dangling mirror symlink with no CLAUDE.md counts as no file, so an unconver...", async (t) => {
-  // doctest:L105
   const root = await box(false);
   await symlink("CLAUDE.md", join(root, "dir/AGENTS.md"));
   t.check(await instructionFilePath(root, "dir"), "dir/CLAUDE.md");
@@ -109,7 +103,6 @@ void test("A dangling mirror symlink with no CLAUDE.md counts as no file, so an 
 // person resolves it, writers keep using the `CLAUDE.md`, which is the file
 // Claude Code loads:
 void test("Two real files in one directory is a conflict the migration reports.", async (t) => {
-  // doctest:L116
   const root = await box(true);
   await writeFile(join(root, "dir/CLAUDE.md"), "# Legacy\n");
   await writeFile(join(root, "dir/AGENTS.md"), "# New\n");
@@ -121,7 +114,6 @@ void test("Two real files in one directory is a conflict the migration reports."
 // `instructionSiblingPath` gives the other spelling of an instruction-file path,
 // which the template ledger uses as one key; other paths have none.
 void test("instructionSiblingPath gives the other spelling of an instruction-file path,...", async (t) => {
-  // doctest:L129
   t.check(
     ({
       nested: instructionSiblingPath("src/schemas/CLAUDE.md"),
@@ -143,7 +135,6 @@ void test("instructionSiblingPath gives the other spelling of an instruction-fil
 // `isAgentInstructionsFile` recognizes every instruction-file name, including
 // Claude Code's personal `CLAUDE.local.md`:
 void test("isAgentInstructionsFile recognizes every instruction-file name, including Cla...", async (t) => {
-  // doctest:L143
   t.check(["a/CLAUDE.md", "a/AGENTS.md", "a/CLAUDE.local.md", "a/README.md"].map(isAgentInstructionsFile), [
     true,
     true,

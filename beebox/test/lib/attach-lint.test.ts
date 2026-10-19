@@ -24,7 +24,6 @@ void test("macOS (and Windows) filesystems are case-insensitive, so Foo.doc.card
       t.error(error);
     }
   });
-  // doctest:L21
   const box2 = await makeTmpBox();
   await box2.write("Foo.doc.card", "---\ntitle: Note\n---\n");
   await box2.write("foo.record.card", "---\nname: x\n---\n");
@@ -49,7 +48,6 @@ void test("The rule is already extension-insensitive by design (comparing basena
       t.error(error);
     }
   });
-  // doctest:L45
   const box3 = await makeTmpBox();
   await box3.write("Alpha.doc.card", "---\ntitle: Note\n---\n");
   await box3.write("Beta.doc.card", "---\ntitle: Note\n---\n");
@@ -66,7 +64,6 @@ void test("The literal `attach` name is reserved outside an attach scope", async
       t.error(error);
     }
   });
-  // doctest:L60
   const box4 = await makeTmpBox();
   await box4.write("attach/placeholder.txt", "x");
   const errors4 = await lintAttachLayout(box4.root);

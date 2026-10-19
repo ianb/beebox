@@ -15,12 +15,10 @@ import { draftAttachments } from "../../src/input/emission.js";
 
 // ## setText: updater + no-op on an equal value (no notify)
 void test("setText: updater + no-op on an equal value (no notify)", async (t) => {
-  // doctest:L18
   const store = createEmissionStore();
   let notifications = 0;
   store.subscribe(() => { notifications += 1; });
 
-  // doctest:L22
   store.editor.setText("hello");
   t.check(store.get(), {
     text: "hello",
@@ -31,19 +29,16 @@ void test("setText: updater + no-op on an equal value (no notify)", async (t) =>
     uploadBatch: null,
   });
 
-  // doctest:L26
   t.check(notifications, 1);
 
   // Setting the same value again does not notify — the same guard `input-store.ts`
   // always had, now living in the shared editor:
 
-  // doctest:L34
   store.editor.setText("hello");
   t.check(notifications, 1);
 
   // An updater function works too, and does notify (the resolved value differs):
 
-  // doctest:L42
   store.editor.setText((prev) => prev + " world");
   t.check(store.get(), {
     text: "hello world",
@@ -54,13 +49,11 @@ void test("setText: updater + no-op on an equal value (no notify)", async (t) =>
     uploadBatch: null,
   });
 
-  // doctest:L46
   t.check(notifications, 2);
 });
 
 // ## Images: pendingImages accounting, addImage decrements, floor at 0
 void test("Images: pendingImages accounting, addImage decrements, floor at 0", async (t) => {
-  // doctest:L53
   const store = createEmissionStore();
   store.editor.setText("check [image#1] and [image#2] out");
   store.editor.bumpPendingImages(2);
@@ -73,7 +66,6 @@ void test("Images: pendingImages accounting, addImage decrements, floor at 0", a
     uploadBatch: null,
   });
 
-  // doctest:L59
   const id1 = store.editor.nextImageId();
   store.editor.addImage({ id: id1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 100, original: { status: "uploading", progress: 0 } });
   t.check(store.get(), {
@@ -97,7 +89,6 @@ void test("Images: pendingImages accounting, addImage decrements, floor at 0", a
     uploadBatch: null,
   });
 
-  // doctest:L64
   const id2 = store.editor.nextImageId();
   store.editor.addImage({ id: id2, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:2", byteLength: 100, original: { status: "uploading", progress: 0 } });
   t.check(store.get(), {
@@ -132,7 +123,6 @@ void test("Images: pendingImages accounting, addImage decrements, floor at 0", a
     uploadBatch: null,
   });
 
-  // doctest:L69
   t.check(store.get(), {
     text: "check [image#1] and [image#2] out",
     images: [
@@ -169,7 +159,6 @@ void test("Images: pendingImages accounting, addImage decrements, floor at 0", a
   // decrement directly; the editor still floors at 0 rather than going negative
   // on an unmatched decrement:
 
-  // doctest:L78
   store.editor.bumpPendingImages(-5);
   t.check(store.get(), {
     text: "check [image#1] and [image#2] out",
@@ -217,7 +206,6 @@ void test("removeImage strips only the matching id's token", async (t) => {
   const id2 = store.editor.nextImageId();
   store.editor.addImage({ id: id2, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:2", byteLength: 100, original: { status: "uploading", progress: 0 } });
 
-  // doctest:L90
   store.editor.removeImage(id1);
   t.check(store.get(), {
     text: "check and [image#2] out",
@@ -240,7 +228,6 @@ void test("removeImage strips only the matching id's token", async (t) => {
     uploadBatch: null,
   });
 
-  // doctest:L94
   t.check(store.get(), {
     text: "check and [image#2] out",
     images: [
@@ -265,7 +252,6 @@ void test("removeImage strips only the matching id's token", async (t) => {
 
 // ## Files: same token-strip shape, independent id sequence
 void test("Files: same token-strip shape, independent id sequence", async (t) => {
-  // doctest:L101
   const store = createEmissionStore();
   store.editor.setText("see [file#1] please");
   const fid = store.editor.nextFileId();
@@ -290,7 +276,6 @@ void test("Files: same token-strip shape, independent id sequence", async (t) =>
     uploadBatch: null,
   });
 
-  // doctest:L108
   store.editor.removeFile(fid);
   t.check(store.get(), {
     text: "see please",
@@ -301,7 +286,6 @@ void test("Files: same token-strip shape, independent id sequence", async (t) =>
     uploadBatch: null,
   });
 
-  // doctest:L112
   t.check(store.get(), {
     text: "see please",
     images: [],
@@ -314,7 +298,6 @@ void test("Files: same token-strip shape, independent id sequence", async (t) =>
 
 // ## Selections: same token-strip shape
 void test("Selections: same token-strip shape", async (t) => {
-  // doctest:L119
   const store = createEmissionStore();
   store.editor.setText("compare [selection#1] with the doc");
   const sid = store.editor.nextSelectionId();
@@ -335,7 +318,6 @@ void test("Selections: same token-strip shape", async (t) => {
     uploadBatch: null,
   });
 
-  // doctest:L126
   store.editor.removeSelection(sid);
   t.check(store.get(), {
     text: "compare with the doc",
@@ -346,7 +328,6 @@ void test("Selections: same token-strip shape", async (t) => {
     uploadBatch: null,
   });
 
-  // doctest:L130
   t.check(store.get(), {
     text: "compare with the doc",
     images: [],
@@ -363,7 +344,6 @@ void test("Selections: same token-strip shape", async (t) => {
 // `handleSend` does `resetAttachments(); resetSelections(); inputStore.set("")`
 // as three separate calls):
 void test("Text is untouched by reset — the send site clears it itself (today's handleSe...", async (t) => {
-  // doctest:L141
   const store = createEmissionStore();
   store.editor.setText("two photos");
   store.editor.bumpPendingImages(1);
@@ -374,14 +354,12 @@ void test("Text is untouched by reset — the send site clears it itself (today'
   const f = store.editor.nextFileId();
   store.editor.addFile({ id: f, originalName: "x.txt", size: 1, mimetype: "text/plain", state: { status: "uploaded", path: "_tmp/x.txt" } });
 
-  // doctest:L151
   const result = store.editor.reset("attachments");
   t.check(result.removedImageObjectUrls, [
     "blob:a",
     "blob:b",
   ]);
 
-  // doctest:L155
   t.check(store.get(), {
     text: "two photos",
     images: [],
@@ -395,10 +373,8 @@ void test("Text is untouched by reset — the send site clears it itself (today'
   // both id refs (`nextAttachmentIdRef.current = 1`,
   // `nextFileAttachmentIdRef.current = 1`):
 
-  // doctest:L173
   t.check(store.editor.nextImageId(), 1);
 
-  // doctest:L176
   t.check(store.editor.nextFileId(), 1);
 });
 
@@ -406,14 +382,12 @@ void test("Text is untouched by reset — the send site clears it itself (today'
 // images/files/pendingImages, and hands back no object URLs (there's nothing
 // to revoke):
 void test("reset(\"selections\") is the independent counterpart — it never touches images/...", async (t) => {
-  // doctest:L185
   const store = createEmissionStore();
   const s1 = store.editor.nextSelectionId();
   store.editor.addSelection({ id: s1, ref: "/a", text: "one", position: "" });
   const result = store.editor.reset("selections");
   t.check(result.removedImageObjectUrls, []);
 
-  // doctest:L192
   t.check(store.get(), {
     text: "",
     images: [],
@@ -423,20 +397,16 @@ void test("reset(\"selections\") is the independent counterpart — it never tou
     uploadBatch: null,
   });
 
-  // doctest:L195
   t.check(store.editor.nextSelectionId(), 1);
 });
 
 // ## Id counters are monotonic within a session — never reused except across a reset
 void test("Id counters are monotonic within a session — never reused except across a reset", async (t) => {
-  // doctest:L202
   const store = createEmissionStore();
   t.check(store.editor.nextImageId(), 1);
 
-  // doctest:L206
   t.check(store.editor.nextImageId(), 2);
 
-  // doctest:L209
   store.editor.addImage({ id: 1, mimeType: "image/png", dataBase64: "x", objectUrl: "blob:1", byteLength: 1, original: { status: "uploading", progress: 0 } });
   store.editor.removeImage(1);
   t.check(store.editor.nextImageId(), 3);
@@ -450,7 +420,6 @@ void test("Id counters are monotonic within a session — never reused except ac
 // `nextImageId()`/`nextFileId()`/`nextSelectionId()` entirely. `reserveIds`
 // is how the store is told those ids are taken, so a later mint can't collide:
 void test("Restoring a persisted emission (docs/plans/input-extraction.md, chunk 4) re-a...", async (t) => {
-  // doctest:L224
   const store = createEmissionStore();
   store.editor.addImage({ id: 5, mimeType: "image/png", dataBase64: "x", objectUrl: "data:x", byteLength: 1, original: { status: "uploading", progress: 0 } });
   store.editor.reserveIds({ image: 5 });
@@ -458,7 +427,6 @@ void test("Restoring a persisted emission (docs/plans/input-extraction.md, chunk
 
   // A lower reservation than the current counter is a no-op — it never rewinds:
 
-  // doctest:L234
   store.editor.reserveIds({ image: 2 });
   t.check(store.editor.nextImageId(), 7);
 });
@@ -466,15 +434,12 @@ void test("Restoring a persisted emission (docs/plans/input-extraction.md, chunk
 // Files and selections reserve independently, and an absent field in the input
 // leaves that counter untouched:
 void test("Files and selections reserve independently, and an absent field in the input...", async (t) => {
-  // doctest:L243
   const store = createEmissionStore();
   store.editor.reserveIds({ file: 3, selection: 10 });
   t.check(store.editor.nextFileId(), 4);
 
-  // doctest:L248
   t.check(store.editor.nextSelectionId(), 11);
 
-  // doctest:L251
   t.check(store.editor.nextImageId(), 1);
 });
 
@@ -485,14 +450,12 @@ void test("Files and selections reserve independently, and an absent field in th
 // change; that only works if unrelated fields keep the same reference across
 // a `patch`:
 void test("The keystroke-isolation invariant (components/chat/AGENTS.md) depends on a se...", async (t) => {
-  // doctest:L263
   const store = createEmissionStore();
   const imagesBefore = store.get().images;
   const filesBefore = store.get().files;
   store.editor.setText("hi");
   t.check(store.get().images, is(imagesBefore));
 
-  // doctest:L270
   t.check(store.get().files, is(filesBefore));
 });
 
@@ -502,7 +465,6 @@ void test("The keystroke-isolation invariant (components/chat/AGENTS.md) depends
 // that attachment out has to strip the token the text actually holds, or the
 // message ships a reference to a photo that is no longer attached.
 void test("A composition persisted before 2026-08-25 comes back saying [image1].", async (t) => {
-  // doctest:L281
   const store = createEmissionStore();
   store.editor.setText("look at [image1] here");
   store.editor.addImage({ id: 1, mimeType: "image/png", dataBase64: "aGk=", objectUrl: "blob:1", byteLength: 100, original: { status: "uploading", progress: 0 } });
@@ -524,7 +486,6 @@ void test("A composition persisted before 2026-08-25 comes back saying [image1].
 // follows `setFileState`'s rule: a result for an image that was removed is a
 // no-op, never a resurrection.
 void test("The inline copy is what the agent sees; the original goes up beside it and it...", async (t) => {
-  // doctest:L297
   const store = createEmissionStore();
   store.editor.bumpPendingImages(1);
   const id = store.editor.nextImageId();
@@ -551,7 +512,6 @@ void test("The inline copy is what the agent sees; the original goes up beside i
     uploadBatch: null,
   });
 
-  // doctest:L305
   store.editor.setImageOriginal({ id, state: { status: "uploaded", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" } });
   t.check(store.get(), {
     text: "",
@@ -574,7 +534,6 @@ void test("The inline copy is what the agent sees; the original goes up beside i
     uploadBatch: null,
   });
 
-  // doctest:L309
   store.editor.removeImage(id);
   store.editor.setImageOriginal({ id, state: { status: "failed", message: "late" } });
   t.check(store.get(), {
@@ -590,7 +549,6 @@ void test("The inline copy is what the agent sees; the original goes up beside i
 // The emission projection carries the path only once the original landed — a
 // failed or in-flight original is an image with pixels and no file.
 void test("The emission projection carries the path only once the original landed — a fa...", async (t) => {
-  // doctest:L319
   const store = createEmissionStore();
   store.editor.bumpPendingImages(2);
   store.editor.addImage({ id: 1, mimeType: "image/png", dataBase64: "a", objectUrl: "blob:1", byteLength: 1, original: { status: "uploaded", path: "_tmp/a.png" } });
@@ -618,7 +576,6 @@ void test("The emission projection carries the path only once the original lande
 // the next message gets its own directory. The message id itself is minted at
 // send, too late to name the directory.
 void test("Every attachment of one message uploads into the same tmp/chat/<batch>/ direc...", async (t) => {
-  // doctest:L336
   const store = createEmissionStore();
   t.check(store.get(), {
     text: "",
@@ -629,13 +586,11 @@ void test("Every attachment of one message uploads into the same tmp/chat/<batch
     uploadBatch: null,
   });
 
-  // doctest:L340
   const first = store.editor.uploadBatch();
   t.check(first, any(String).matches(/^[\w-]{8,64}$/));
   t.check(store.editor.uploadBatch(), first);
   t.check(store.get().uploadBatch, first);
 
-  // doctest:L344
   store.editor.reset("attachments");
   t.check(store.get(), {
     text: "",
@@ -646,10 +601,8 @@ void test("Every attachment of one message uploads into the same tmp/chat/<batch
     uploadBatch: null,
   });
 
-  // doctest:L348
   t.check(store.editor.uploadBatch(), not(first));
 
-  // doctest:L351
   // A restored draft brings its batch back so later uploads join it.
   store.editor.restoreUploadBatch("restored-batch-01");
   t.check(store.editor.uploadBatch(), "restored-batch-01");
@@ -663,7 +616,6 @@ void test("Every attachment of one message uploads into the same tmp/chat/<batch
 // their tokens went into the text, so the thumbnails and the sent
 // `<attachments>` block agree with "the first photo":
 void test("Photos picked together encode at the same time and can finish in any order; a...", async (t) => {
-  // doctest:L366
   const store = createEmissionStore();
   const first = store.editor.nextImageId();
   const second = store.editor.nextImageId();

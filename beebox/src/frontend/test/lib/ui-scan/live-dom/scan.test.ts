@@ -53,7 +53,6 @@ function outcome(id: string, lookup: VisibleFixtureLookup): string {
 // and `data-bbx-reveal` — while the capture button beside it is not, and degrades to
 // its accessible name with a null address.
 void test("The composer is a named region (<section aria-label=\"Compose message\">), so e...", async (t) => {
-  // doctest:L65
   const composer = scan(`
   <section aria-label="Compose message">
     <button type="button" id="bbx-composer-add" title="Add" aria-label="Add"
@@ -98,7 +97,6 @@ void test("The composer is a named region (<section aria-label=\"Compose message
 // The frontend's own authored ids — `trash-card-title`, `delete-chat-title` — are
 // a11y plumbing, not promises, so they report no address:
 void test("An id only becomes an address when it is in the bbx- namespace and kebab-case.", async (t) => {
-  // doctest:L115
   t.check(
     scan(`
   <button id="trash-card-title" title="Delete"><svg viewBox="0 0 24 24"></svg></button>
@@ -124,7 +122,6 @@ void test("An id only becomes an address when it is in the bbx- namespace and ke
 // fully transparent, `hidden`, `inert`, inside an `aria-hidden` subtree, or
 // measures zero — and so is everything inside it.
 void test("An element is out of the scan when it is display:none, visibility:hidden, ful...", async (t) => {
-  // doctest:L133
   t.check(
     scan(`
   <nav aria-label="Primary">
@@ -153,7 +150,6 @@ void test("An element is out of the scan when it is display:none, visibility:hid
 // None of those count as omitted-unnamed: they are not on screen at all, which is
 // a different fact from "on screen with no name".
 void test("None of those count as omitted-unnamed:", async (t) => {
-  // doctest:L154
   const unnamed = scan(`
   <main>
     <button title="Named"><svg viewBox="0 0 24 24"></svg></button>
@@ -178,7 +174,6 @@ void test("None of those count as omitted-unnamed:", async (t) => {
 // silent. A bare `<section>` is not — it only becomes a landmark once it is named,
 // so an unnamed one is just a box:
 void test("The unnamed <main> is in that count:", async (t) => {
-  // doctest:L171
   t.check(scan("<section><button title=\"Send\">x</button></section>"), {
     entries: [
       entry({ role: "button", name: "x" }),
@@ -201,7 +196,6 @@ void test("The unnamed <main> is in that count:", async (t) => {
 // grammar, both reported here with no address at all while the control itself was
 // still listed.
 void test("The scan reports an id only when it is a well-formed address (shared/control-...", async (t) => {
-  // doctest:L186
   t.check(
     scan(`
   <nav aria-label="Open files">
@@ -229,7 +223,6 @@ void test("The scan reports an id only when it is a well-formed address (shared/
   // can be addressed by — and a non-address in that list is a string the wire schema
   // rejects, which would fail the whole dump over internal a11y wiring.
 
-  // doctest:L207
   t.check(
     scan(`
   <button id="bbx-card-properties-:r0:" title="Properties"></button>
@@ -256,7 +249,6 @@ void test("The scan reports an id only when it is a well-formed address (shared/
 // that content directly. It is editorial — the dump answers "what controls does
 // the app offer", and a rendered card's own links would bury the answer.
 void test("scope decides how much of the page one scan covers.", async (t) => {
-  // doctest:L224
   const boundary = scanChrome(`
   <main aria-label="Chat">
     <button title="Show earlier messages"></button>
@@ -289,7 +281,6 @@ void test("scope decides how much of the page one scan covers.", async (t) => {
   // would print their snapshot lines with no id, which reads as "the app never
   // annotated this" rather than "you asked for the other scope".
 
-  // doctest:L257
   t.check(
     scan(`
   <main aria-label="Chat">
@@ -322,7 +313,6 @@ void test("scope decides how much of the page one scan covers.", async (t) => {
 // because a repeated `bbx-` id anywhere is a repeated id `getElementById` will
 // resolve to the wrong one of.
 void test("Duplicate detection ignores the scope:", async (t) => {
-  // doctest:L282
   t.check(
     scanChrome(`
   <button id="bbx-panel-close" title="Close companion view"></button>
@@ -349,7 +339,6 @@ void test("Duplicate detection ignores the scope:", async (t) => {
 // chrome only. An unnamed `<main>` is a real a11y gap, so it lands in the
 // omitted-unnamed count instead.
 void test("ARIA does not let a region take its name from what is inside it, and the scan...", async (t) => {
-  // doctest:L298
   const transcript = scan(`
   <main>
     <p>Please reply with just the word ok.</p>
@@ -376,7 +365,6 @@ void test("ARIA does not let a region take its name from what is inside it, and 
 // is not everything. `presentation`/`none` are excluded: those are the author
 // saying "this is not a control", which is a decision, not an omission.
 void test("Every omission gets a number.", async (t) => {
-  // doctest:L317
   const roles = scan(`
   <main aria-label="Everything">
     <button title="Send">x</button>
@@ -400,7 +388,6 @@ void test("Every omission gets a number.", async (t) => {
   // A zero-sized element with an unknown role is not on screen in any sense the user
   // would recognise, so it is not counted either:
 
-  // doctest:L333
   t.check(scan("<div role=\"dialog\" data-test-rect=\"0,0,0,0\">…</div>"), {
     entries: [],
     omittedUnnamed: 0,
@@ -416,7 +403,6 @@ void test("Every omission gets a number.", async (t) => {
 // A control scrolled out of view is exactly what `point` exists to scroll to, so
 // it stays in the list with a flag rather than disappearing from it.
 void test("A control scrolled out of view is exactly what point exists to scroll to, so...", async (t) => {
-  // doctest:L343
   t.check(
     scan(`
   <nav aria-label="Primary">
@@ -447,7 +433,6 @@ void test("A control scrolled out of view is exactly what point exists to scroll
 // `aria-*` reference, so the duplicate pass covers the whole document rather than
 // only the visible part, and reports what a visibility-limited walk would miss.
 void test("DesktopComposerRow (hidden sm:flex) and the mobile row (sm:hidden) render the...", async (t) => {
-  // doctest:L366
   const rows = scan(`
   <section aria-label="Compose message">
     <div data-test-style="display:none">
@@ -483,7 +468,6 @@ void test("DesktopComposerRow (hidden sm:flex) and the mobile row (sm:hidden) re
 // alternative is a payload that quietly costs more context than the answer is
 // worth.
 void test("Resolution cannot see it — getElementById returns the first in document order...", async (t) => {
-  // doctest:L391
   const many = Array.from({ length: MAX_ENTRIES + 50 }, (_, i) => `<button title="Item ${i}">x</button>`).join("");
   const capped = scan(`<main aria-label="Everything">${many}</main>`);
   t.check({ entries: capped.entries.map((found) => found.name), truncated: capped.truncated, cap: MAX_ENTRIES }, {
@@ -494,7 +478,6 @@ void test("Resolution cannot see it — getElementById returns the first in docu
 
   // A document that fits reports `truncated: false`:
 
-  // doctest:L400
   t.check(scan("<button title=\"Send\">x</button>"), {
     entries: [
       entry({ role: "button", name: "x" }),
@@ -513,7 +496,6 @@ void test("Resolution cannot see it — getElementById returns the first in docu
 // well-formed `bbx-` address is rejected without touching the document at all, so a
 // malformed address can never reach `getElementById`.
 void test("resolveControl fails closed, like resolveRefPath:", async (t) => {
-  // doctest:L411
   const document = {
     getElementById: (id: string) => (id === "bbx-composer-mic" ? { name: "the mic" } : null),
   };
@@ -571,7 +553,6 @@ void test("resolveControl fails closed, like resolveRefPath:", async (t) => {
 // scan walks with (`visibility.ts`, shared by both so they cannot disagree) and
 // reports a found-but-hidden element as its own failure.
 void test("bad-id and not-found stay distinct because the two read differently to the user:", async (t) => {
-  // doctest:L441
   /** The document at a phone width: the desktop row is the CSS-hidden one. */
   const mobileViewport = fixtureLookup(`
   <section aria-label="Compose message">
@@ -603,7 +584,6 @@ void test("bad-id and not-found stay distinct because the two read differently t
   // Hiding is inherited, and a zero-sized element is not on screen either — the same
   // two rules the walk descends with:
 
-  // doctest:L471
   const kinds = fixtureLookup(`
   <div aria-hidden="true"><button id="bbx-nav-todo" title="To do"></button></div>
   <button id="bbx-nav-errors" title="Errors" data-test-rect="0,0,0,0"></button>

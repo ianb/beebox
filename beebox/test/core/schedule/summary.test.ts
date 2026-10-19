@@ -61,7 +61,6 @@ void test("The first run writes a summary; the history entry carries it with the
       t.error(error);
     }
   });
-  // doctest:L57
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/report.scheduled-script.card", REPORT);
   box.commitAll("setup");
@@ -72,7 +71,6 @@ void test("The first run writes a summary; the history entry carries it with the
   }));
   t.check(await tick(box), "ran");
 
-  // doctest:L68
   t.check((await loadRunHistory(box.root, "report")).map(masked), [
     {
       result: "success",
@@ -86,12 +84,10 @@ void test("The first run writes a summary; the history entry carries it with the
     },
   ]);
 
-  // doctest:L79
   await fs.rm(box.path("_tmp/summary.json"));
   await box.write("_tmp/fail", "");
   t.check(await tick(box), "error");
 
-  // doctest:L84
   t.check(masked((await loadRunHistory(box.root, "report")).at(-1)), {
     result: "failure",
     triggeredBy: "schedule",
@@ -101,7 +97,6 @@ void test("The first run writes a summary; the history entry carries it with the
   // A run that stops because it found nothing to do records why, so the
   // dashboard can say "nothing to do" instead of showing a wait:
 
-  // doctest:L92
   await fs.rm(box.path("_tmp/fail"));
   await box.write("_config/schedules/report.scheduled-script.card", `---
 cron: "0 0 1 1 *"
@@ -112,7 +107,6 @@ runs: >-
   box.commitAll("defer");
   t.check(await tick(box), "skipped");
 
-  // doctest:L103
   t.check(masked((await loadRunHistory(box.root, "report")).at(-1)), {
     result: "deferred",
     triggeredBy: "schedule",
@@ -130,7 +124,6 @@ void test("The history keeps the last 20 runs", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L114
   const box = await makeTmpBox();
   for (let i = 1; i <= 22; i++) {
     await appendRunHistory(box.root, {
@@ -149,7 +142,6 @@ void test("The history keeps the last 20 runs", async (t) => {
   // failure when post-success housekeeping throws) replaces its entry and keeps
   // the summary it wrote:
 
-  // doctest:L131
   await appendRunHistory(box.root, {
     scriptName: "busy",
     entry: { ts: "2026-10-07T00:00:22Z", result: "success", durationMs: 1, triggeredBy: "schedule", summary: { headline: "Done", priority: "normal" } },
@@ -177,7 +169,6 @@ void test("The history keeps the last 20 runs", async (t) => {
   // Entries written before the history recorded `deferReason` still name it as
   // the error's prefix, and reading the history recovers it:
 
-  // doctest:L148
   await fs.appendFile(
     box.path("_config/schedules/.state/busy.runs.jsonl"),
     JSON.stringify({ ts: "2026-10-07T00:00:23Z", result: "deferred", durationMs: 1, triggeredBy: "schedule", error: "no-change: nothing to do" }) + "\n",
@@ -191,7 +182,6 @@ void test("The history keeps the last 20 runs", async (t) => {
 // and the notes 4 KB. The writer reports what it cut, so `bbx run-summary` can
 // warn the task.
 void test("The headline is one line of at most 120 characters; the body is at most 1 KB...", async (t) => {
-  // doctest:L167
   const { summary, cut } = normalizeRunSummary({
     headline: `Line one\nline two ${"x".repeat(200)}`,
     body: "b".repeat(2000),
@@ -213,7 +203,6 @@ void test("The headline is one line of at most 120 characters; the body is at mo
 // With no `BBX_SUMMARY_FILE` in the environment, reporting returns null and
 // writes nothing; `bbx run-summary` prints the summary instead.
 void test("With no BBXSUMMARYFILE in the environment, reporting returns null and writes...", async (t) => {
-  // doctest:L182
   t.check(await reportRunSummary({}, { headline: "Done", priority: "normal" }), null);
 });
 
@@ -223,7 +212,6 @@ void test("With no BBXSUMMARYFILE in the environment, reporting returns null and
 // reviewed, titled, and skipped; the body lists the skips by reason; the
 // bookkeeping goes in the notes. A quiet night is `normal`.
 void test("Chat review is the first task to write one.", async (t) => {
-  // doctest:L193
   const counts = {
     reviewed: 2, titled: 3, titlesKept: 1, alreadyApplied: 0, bootstrapped: 0, rewritten: 0,
     reviewerFailures: 0, sessionErrors: 0, exhausted: 0, rejected: [],
@@ -242,7 +230,6 @@ void test("Chat review is the first task to write one.", async (t) => {
 
   // A reviewer failure makes the run `attention` and leads the body:
 
-  // doctest:L211
   t.check(chatReviewRunSummary({ ...counts, reviewerFailures: 1, belowTitleThreshold: 0, tooFewTurns: 0, missingTranscripts: 0, titlesKept: 0 }), {
     headline: "Reviewed 2 chats, titled 3",
     priority: "attention",
@@ -252,7 +239,6 @@ void test("Chat review is the first task to write one.", async (t) => {
 
   // A run with nothing to do says so:
 
-  // doctest:L222
   t.check(chatReviewRunSummary({ ...counts, reviewed: 0, titled: 0, titlesKept: 0, belowTitleThreshold: 0, tooFewTurns: 0, missingTranscripts: 0 }).headline, "No chats to review");
 });
 
@@ -269,7 +255,6 @@ void test("A scheduled bbx procedure run passes BBXSUMMARYFILE to its agent step
       t.error(error);
     }
   });
-  // doctest:L233
   const { buildContextBlock } = await import("../../../src/core/procedure/engine/phase.js");
   const box = await makeTmpBox();
   const base = { boxRoot: box.root, runCardPath: "run.card", stepId: "review", procedurePath: "p.procedure.card" };
@@ -289,7 +274,6 @@ This procedure is running as the scheduled task "todo-review". The boxholder see
 Add \`--priority attention\` only when the boxholder should look at this run (something failed, needs a decision, or is unusual); a routine run is \`normal\`, the default. Longer detail goes in \`--notes\`. A later \`bbx run-summary\` in the same run replaces an earlier one.
 </scheduled-run>`);
 
-  // doctest:L239
   t.check(buildContextBlock(base), str`# Context
 
 Current date: ${date}

@@ -135,7 +135,6 @@ void test("A synced spreadsheet card gets its Drive metadata in the card and one
       t.error(error);
     }
   });
-  // doctest:L132
   const box = await newBox();
   box.commitAll("init box");
   const fx = sheetFixture({
@@ -149,7 +148,6 @@ void test("A synced spreadsheet card gets its Drive metadata in the card and one
   await box.seed("_content/drive/Budget.gsheet.card", stale.card.replace("2026-03-29T10:00:00Z", "2026-01-01T00:00:00Z"));
   box.commitAll("add drive sheet");
 
-  // doctest:L145
   const result = await createGoogleDriveConnector(box.root, fakeDrive([fx])).sync();
   t.check(result, {
     success: true,
@@ -159,7 +157,6 @@ void test("A synced spreadsheet card gets its Drive metadata in the card and one
 
   // The card now carries the remote spreadsheet metadata:
 
-  // doctest:L153
   const card = await box.read("_content/drive/Budget.gsheet.card");
   t.checkText(
     card,
@@ -179,7 +176,6 @@ sheets:
 
   // The tab file is created from the remote cell values:
 
-  // doctest:L161
   await t.checkText(await box.read("_content/drive/Budget.attach/Sheet1.json"), `[
 ["Name","Age"],
 ["Alice",30]
@@ -196,7 +192,6 @@ void test("When a user edits a JSON file locally, the next sync pushes the chang
       t.error(error);
     }
   });
-  // doctest:L176
   const box = await newBox();
   box.commitAll("init box");
   const fx = sheetFixture({
@@ -210,16 +205,13 @@ void test("When a user edits a JSON file locally, the next sync pushes the chang
   await box.seed("_content/drive/Expenses.attach/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","5"]\n]\n');
   box.commitAll("add expenses");
 
-  // doctest:L189
   const connector = createGoogleDriveConnector(box.root, drive);
   await connector.sync();
 
-  // doctest:L192
   // Edit the JSON locally — change Coffee price and add Tea
   await box.seed("_content/drive/Expenses.attach/Sheet1.json", '[\n["Item","Cost"],\n["Coffee","6"],\n["Tea","3"]\n]\n');
   box.commitAll("edit expenses");
 
-  // doctest:L196
   const result = await connector.sync();
   t.check(result, {
     success: true,
@@ -228,7 +220,6 @@ void test("When a user edits a JSON file locally, the next sync pushes the chang
     pushed: ["_content/drive/Expenses.attach/Sheet1.json"],
   });
 
-  // doctest:L200
   t.check(drive.updateLog, [
     { fileId: "sheet-push1", sheetTitle: "Sheet1", values: [["Item", "Cost"], ["Coffee", "6"], ["Tea", "3"]] },
   ]);
@@ -243,7 +234,6 @@ void test("Spreadsheets with multiple sheet tabs get separate JSON files:", asyn
       t.error(error);
     }
   });
-  // doctest:L217
   const box = await newBox();
   box.commitAll("init box");
   const fx = sheetFixture({
@@ -260,7 +250,6 @@ void test("Spreadsheets with multiple sheet tabs get separate JSON files:", asyn
   await box.seed("_content/drive/Multi/Expenses.json", '[\n["Item","Cost"],\n["Coffee","5"]\n]\n');
   box.commitAll("add multi");
 
-  // doctest:L233
   const result = await createGoogleDriveConnector(box.root, fakeDrive([fx])).sync();
   t.check(result, {
     success: true,
@@ -272,7 +261,6 @@ void test("Spreadsheets with multiple sheet tabs get separate JSON files:", asyn
     updated: [],
   });
 
-  // doctest:L237
   const files = await readdir(join(box.root, "_content/drive/Multi"));
   files.sort();
   t.check(files, [
@@ -295,7 +283,6 @@ void test("A spreadsheet with comments gets a {basename}.comments.json sidecar (
       t.error(error);
     }
   });
-  // doctest:L258
   const box = await newBox();
   box.commitAll("init box");
   const fx = sheetFixture({ id: "sheet-comm", name: "Reviewed" });
@@ -317,7 +304,6 @@ void test("A spreadsheet with comments gets a {basename}.comments.json sidecar (
   await box.seed("_content/drive/Reviewed.gsheet.card", fx.card);
   box.commitAll("add reviewed sheet");
 
-  // doctest:L279
   const result = await createGoogleDriveConnector(box.root, drive).sync();
   t.check(result, {
     success: true,
@@ -329,7 +315,6 @@ void test("A spreadsheet with comments gets a {basename}.comments.json sidecar (
     updated: [],
   });
 
-  // doctest:L283
   const card = await box.read("_content/drive/Reviewed.gsheet.card");
   t.checkText(
     card,
@@ -349,7 +334,6 @@ comments:
 ---`,
   );
 
-  // doctest:L287
   const sidecar = JSON.parse(await box.read("_content/drive/Reviewed.attach/Reviewed.comments.json"));
   t.check(sidecar, [
     {
@@ -375,14 +359,12 @@ void test("bbx rm moves both the card and its attachment scope into bookkeeping/
       t.error(error);
     }
   });
-  // doctest:L306
   const box = await newBox();
   const fixture = sheetFixture({ id: "sheet-trash", name: "Trash Me" });
   await box.seed("_content/drive/Trash-Me.gsheet.card", fixture.card);
   await box.seed("_content/drive/Trash-Me.attach/Sheet1.json", '[["Name"],["Alice"]]\n');
   box.commitAll("add drive card");
 
-  // doctest:L312
   const { drive, calls } = countGetFile(
     fakeDrive([fixture], { folders: [folderFixture({ id: "folder-1", name: "Folder" })] }),
   );
@@ -392,7 +374,6 @@ void test("bbx rm moves both the card and its attachment scope into bookkeeping/
 
   // After the real trash move, another sync makes no request for that Drive file.
 
-  // doctest:L324
   const receipt = await moveCardsToTrash(
     createCliContext(box.root),
     ["_content/drive/Trash-Me.gsheet.card"],
@@ -415,7 +396,6 @@ void test("bbx rm moves both the card and its attachment scope into bookkeeping/
 
   // Restoring the exact card and attachment paths makes it live again.
 
-  // doctest:L341
   for (const move of receipt.moves[0]?.fileMoves ?? []) {
     await rename(join(box.root, move.destPath), join(box.root, move.sourcePath));
   }
@@ -438,7 +418,6 @@ void test("Folder mounts still list their remote children, but the Drive IDs ret
       t.error(error);
     }
   });
-  // doctest:L362
   const { box, initial, liveCard, calls, connector, fixture } = await syncedFolderChild("sheet-folder-trash");
   t.check(initial, {
     success: true,
@@ -461,7 +440,6 @@ void test("Folder mounts still list their remote children, but the Drive IDs ret
   // hashes and a durable tombstone. It must neither sync nor rediscover the child.
   // (The one `getFile` is the mount reading its own Drive folder, not the child.)
 
-  // doctest:L375
   const receipt = await moveCardsToTrash(
     createCliContext(box.root),
     [liveCard],
@@ -484,7 +462,6 @@ void test("Folder mounts still list their remote children, but the Drive IDs ret
   // recreate both the card and its attachment data, despite retained transient
   // hashes from the original mount.
 
-  // doctest:L398
   for (const move of receipt.moves[0]?.fileMoves ?? []) {
     await rm(join(box.root, move.destPath), { recursive: true, force: true });
   }

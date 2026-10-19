@@ -137,7 +137,6 @@ void test("Creating a session records the chat targetSessionId it was started fr
       t.error(error);
     }
   });
-  // doctest:L127
   const ctx = await makeTestServer();
   const created = await createSession(ctx, { targetSessionId: "chat-abc" });
   t.check([created.statusCode, created.body.capabilities], [
@@ -153,7 +152,6 @@ void test("Creating a session records the chat targetSessionId it was started fr
     },
   ]);
 
-  // doctest:L132
   const sessionId = sessionIdOf(created);
   const segment = ({ id, filename, startedAt }: { id: string; filename: string; startedAt: string }) =>
     upload(ctx, {
@@ -173,7 +171,6 @@ void test("Creating a session records the chat targetSessionId it was started fr
     200,
   ]);
 
-  // doctest:L149
   const manifest = await manifestOf(ctx, sessionId);
   t.check(manifest.segments.map((s) => ({ id: s.id, chunks: s.chunks, format: s.format })), [
     {
@@ -206,7 +203,6 @@ void test("The native transport sends application/octet-stream; Fastify must par
       t.error(error);
     }
   });
-  // doctest:L165
   const ctx = await makeTestServer();
   const created = await createSession(ctx, { targetSessionId: "chat-native" });
   const sessionId = sessionIdOf(created);
@@ -214,7 +210,6 @@ void test("The native transport sends application/octet-stream; Fastify must par
   const sendPhoto = (data: string) => uploadRaw(ctx, { sessionId, filename: "ios-photo-a.jpg", kind: "photo", data: Buffer.from(data) });
   const sendAudio = () => uploadRaw(ctx, { sessionId, filename: "ios-audio-a.m4a", kind: "audio", data: Buffer.from("M4A-BYTES"), headers: m4a });
 
-  // doctest:L172
   const photo = await sendPhoto("JPEG-BYTES");
   const audio = await sendAudio();
   t.check([photo.statusCode, audio.statusCode], [
@@ -225,7 +220,6 @@ void test("The native transport sends application/octet-stream; Fastify must par
   // Exact background-upload retries are idempotent. Reusing the same filename for
   // different bytes remains a conflict, as does a second M4A file in the segment:
 
-  // doctest:L182
   const photoReplay = await sendPhoto("JPEG-BYTES");
   const audioReplay = await sendAudio();
   t.check([photoReplay.statusCode, audioReplay.statusCode], [
@@ -233,11 +227,9 @@ void test("The native transport sends application/octet-stream; Fastify must par
     200,
   ]);
 
-  // doctest:L187
   const conflictingReplay = await sendPhoto("DIFFERENT");
   t.check(conflictingReplay.statusCode, 409);
 
-  // doctest:L191
   const duplicate = await uploadRaw(ctx, {
     sessionId, filename: "ios-audio-b.m4a", kind: "audio", data: Buffer.from("SECOND"),
     headers: { "x-capture-segment-id": "native-segment", "x-capture-audio-format": "m4a-aac" },
@@ -246,7 +238,6 @@ void test("The native transport sends application/octet-stream; Fastify must par
 
   // The rejected body never lands on disk or in the manifest:
 
-  // doctest:L202
   const manifest = await manifestOf(ctx, sessionId);
   t.check(
     ({
@@ -283,7 +274,6 @@ void test("The user who created the pairing QR is persisted onto the device and 
       t.error(error);
     }
   });
-  // doctest:L221
   const ctx = await makeTestServer();
   const auth = await pairedAuth(ctx, { createdBy: "owner@example.com", deviceLabel: "Owner's phone" });
   const created = await createSessionWithHeaders(ctx, { payload: { targetSessionId: "chat-owner" }, headers: auth });
@@ -301,13 +291,11 @@ void test("The user who created the pairing QR is persisted onto the device and 
     matches: true,
   });
 
-  // doctest:L236
   t.check((await manifestOf(ctx, sessionId)).createdBy, "owner@example.com");
 
   // A different paired identity cannot upload to, finalize, or cancel the owner's
   // session, and the session is left open and unchanged:
 
-  // doctest:L244
   const otherAuth = await pairedAuth(ctx, { createdBy: "other@example.com", deviceLabel: "Other phone" });
   const forbiddenUpload = await uploadRaw(ctx, {
     sessionId, filename: "other.jpg", kind: "photo", data: Buffer.from("OTHER"), headers: otherAuth,
@@ -320,7 +308,6 @@ void test("The user who created the pairing QR is persisted onto the device and 
     403,
   ]);
 
-  // doctest:L253
   const stillOpen = await manifestOf(ctx, sessionId);
   t.check(({ state: stillOpen.state, photos: stillOpen.photos.map((item) => item.filename) }), {
     state: "open",
@@ -343,7 +330,6 @@ void test("Old device records decode with createdBy:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L269
   // "Auth enabled" is now the always-on default; makeTestServer opens the wall by
   // default, so construct with openAccess: false to exercise the authenticated path.
   const ctx = await makeTestServer({ openAccess: false });
@@ -376,7 +362,6 @@ void test("Finalize returns immediately with staged:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L294
   const ctx = await makeTestServer();
   const created = await createSession(ctx, { targetSessionId: null });
   const done = await finalize(ctx, { sessionId: sessionIdOf(created) });
@@ -404,13 +389,11 @@ void test("Each refusal has its own status and error.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L316
   const ctx = await makeTestServer();
   const photo = (sessionId: string, filename: string) =>
     upload(ctx, { sessionId, filename, data: Buffer.from("X"), headers: { "x-capture-kind": "photo" } });
   const fresh = async () => sessionIdOf(await createSession(ctx, { targetSessionId: null }));
 
-  // doctest:L321
   const traversalId = await fresh();
   const traversal = await upload(ctx, {
     sessionId: traversalId, filename: "../../evil.webm", data: Buffer.from("PWN"),
@@ -421,7 +404,6 @@ void test("Each refusal has its own status and error.", async (t) => {
     "Invalid filename",
   ]);
 
-  // doctest:L329
   const sealedId = await fresh();
   await setStagingState({ boxRoot: ctx.boxRoot, id: sealedId, state: "sealed" });
   const sealed = await photo(sealedId, "photo-001.jpg");
@@ -430,7 +412,6 @@ void test("Each refusal has its own status and error.", async (t) => {
     "Session is sealed; uploads are only accepted while it is open",
   ]);
 
-  // doctest:L335
   const fullId = await fresh();
   const session = await manifestOf(ctx, fullId);
   session.totalBytes = MAX_STAGED_BYTES;
@@ -441,7 +422,6 @@ void test("Each refusal has its own status and error.", async (t) => {
     "Capture exceeds the staging byte limit",
   ]);
 
-  // doctest:L343
   t.check((await photo("no-such-session", "photo-001.jpg")).statusCode, 404);
 });
 
@@ -463,7 +443,6 @@ void test("DELETE is both the overlay's cancel and the chat chip's discard.", as
       t.error(error);
     }
   });
-  // doctest:L363
   const ctx = await makeTestServer();
   const withPhoto = async (filename: string) => {
     const created = await createSession(ctx, { targetSessionId: "chat-discard" });
@@ -473,7 +452,6 @@ void test("DELETE is both the overlay's cancel and the chat chip's discard.", as
   const discard = (id: string) => respond(ctx.request({ method: "DELETE", url: `${SESSIONS}/${id}` }));
   const gone = (id: string) => readStagingSession({ boxRoot: ctx.boxRoot, id });
 
-  // doctest:L372
   const sessionId = await withPhoto("shot.jpg");
   const cancelled = await discard(sessionId);
   t.check([cancelled.statusCode, await gone(sessionId)], [
@@ -483,7 +461,6 @@ void test("DELETE is both the overlay's cancel and the chat chip's discard.", as
 
   // A session the worker owns is refused, and survives:
 
-  // doctest:L381
   const busyId = await withPhoto("busy.jpg");
   await setStagingState({ boxRoot: ctx.boxRoot, id: busyId, state: "preparing" });
   const refused = await discard(busyId);
@@ -492,13 +469,11 @@ void test("DELETE is both the overlay's cancel and the chat chip's discard.", as
     "Capture is already preparing and can no longer be discarded",
   ]);
 
-  // doctest:L387
   t.check((await gone(busyId))?.state, "preparing");
 
   // A dead `failed:*` session is discardable — this is the verb the chat chip
   // needed, and the one the boxholder had no way to reach for sixteen days:
 
-  // doctest:L395
   await setStagingState({ boxRoot: ctx.boxRoot, id: busyId, state: "failed:prepare" });
   const discarded = await discard(busyId);
   t.check([discarded.statusCode, await gone(busyId)], [
@@ -509,6 +484,5 @@ void test("DELETE is both the overlay's cancel and the chat chip's discard.", as
   // Discarding one that is already gone is a 404, as it was before: there is no
   // session to authorize the caller against.
 
-  // doctest:L405
   t.check((await discard(busyId)).statusCode, 404);
 });

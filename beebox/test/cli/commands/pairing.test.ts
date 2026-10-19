@@ -48,7 +48,6 @@ void test("On a dev box it pairs a fake phone", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L45
   const box = await makeTmpBox();
   await t.checkText(await run(box, "dev phone"), `Paired fake device "dev phone" (<id>) with a sandbox APNs token. Unpair it from Settings like any phone.
 exit 0`);
@@ -56,7 +55,6 @@ exit 0`);
   // The device is paired to nobody, so only the owner sees and unpairs it, and it
   // is in the `apns` audience with a token that says what it is:
 
-  // doctest:L56
   const [device] = listMobileDevices(box.root);
   const [registration] = devicePushRegistrations(box.root);
   t.check([device?.label, device?.createdBy, device?.push?.environment, registration?.token.startsWith("fake-")], [
@@ -79,7 +77,6 @@ void test("With real APNs keys and no fake mode, a push to the fake token would 
       t.error(error);
     }
   });
-  // doctest:L72
   const box = await makeTmpBox();
   Object.assign(process.env, KEYS);
   const withKeys = await run(box, "dev phone");
@@ -93,7 +90,6 @@ exit 0`);
 
   // A box where a phone registered for production APNs is a real box:
 
-  // doctest:L89
   const ticket = createMobilePairingTicket(box.root, { createdBy: "owner@example.com" });
   const phone = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "Jamie's iPhone" });
   assert.ok(phone);

@@ -28,7 +28,6 @@ void test("`--slug` overrides the default, and the dev-arg encoding carries it t
       t.error(error);
     }
   });
-  // doctest:L25
   const box = await makeTmpBox();
   const boxes = await resolveBoxes([box.root], "my-custom-slug");
   t.check(toBoxArgs(boxes), [`my-custom-slug=${box.root}`]);
@@ -40,7 +39,6 @@ void test("`--slug` overrides the default, and the dev-arg encoding carries it t
 // other than the validated literal. The watched `--dev` child always overwrites
 // an inherited value with that literal.
 void test("The normal serve path is safe when the variable is absent, empty, or any valu...", async (t) => {
-  // doctest:L42
   t.check(
     {
       absent: devSurfacesEnabled({}),
@@ -56,7 +54,6 @@ void test("The normal serve path is safe when the variable is absent, empty, or 
   },
   );
 
-  // doctest:L50
   const childEnv = devServerEnvironment(
     { BBX_DEV_SURFACES: "0", UNRELATED: "kept" },
     { port: 4321, host: "127.0.0.1" },
@@ -86,11 +83,9 @@ void test("The dev-arg slug defaults to the box root's own basename", async (t) 
       t.error(error);
     }
   });
-  // doctest:L66
   const box = await makeTmpBox();
   const boxes = await resolveBoxes([box.root], undefined);
   const args = toBoxArgs(boxes);
 
-  // doctest:L70
   t.check(args, [`${path.basename(box.root)}=${box.root}`]);
 });

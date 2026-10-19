@@ -28,7 +28,6 @@ async function bbx(box: TmpBox, args: string[]) {
 //
 // A new box activates nothing, so each in-repo plugin lists as inactive:
 void test("A new box activates nothing, so each in-repo plugin lists as inactive:", async (t) => {
-  // doctest:L32
   const box = await makeTmpBox({ git: true });
   t.check(await bbx(box, ["plugins", "list"]), [
     "courseware  inactive  Courses, lesson plans, learner progress  docs: node_modules/beebox/src/plugins/courseware/README.md",
@@ -43,7 +42,6 @@ void test("A new box activates nothing, so each in-repo plugin lists as inactive
 // exactly which files are still missing, and a placeholder file (here a comment
 // with no export) is on disk but defines no schema:
 void test("Activation is the agent listing the name and writing the README's stubs.", async (t) => {
-  // doctest:L48
   const box = await makeTmpBox({ git: true });
   await box.write("_config/box.json", JSON.stringify({ plugins: ["courseware"] }));
   await box.write("src/schemas/course.ts", "// stub\n");
@@ -66,7 +64,6 @@ void test("Activation is the agent listing the name and writing the README's stu
 // `progress` schema, and the line says so. (`deps: true` gives the box the
 // `node_modules/beebox` link the stub's `beebox/cards` import resolves through.)
 void test("The listing reads the effective schema map, not the directory:", async (t) => {
-  // doctest:L72
   const box = await makeTmpBox({ git: true, deps: true });
   await box.write("_config/box.json", JSON.stringify({ plugins: ["courseware"] }));
   await box.write("src/schemas/progress.ts", 'import { cardSchema } from "beebox/cards";\nimport { z } from "beebox/schema";\n\nexport default cardSchema("other", { fields: { size: z.number() } });\n');
@@ -74,7 +71,6 @@ void test("The listing reads the effective schema map, not the directory:", asyn
     "  schema progress: src/schemas/progress.ts present, defines no progress schema",
   ]);
 
-  // doctest:L80
   const json: { plugins: PluginListing[]; problems: string[] } = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).join("\n"));
   t.check(json.plugins[0]?.stubs.filter((s) => s.name === "progress").map((s) => `${s.present}/${s.effective}`), [
     "true/false",
@@ -86,12 +82,10 @@ void test("The listing reads the effective schema map, not the directory:", asyn
 // An unknown name is reported after the listing. `--json` emits the plugins and
 // the problems as one object for a script to read:
 void test("An unknown name is reported after the listing.", async (t) => {
-  // doctest:L91
   const box = await makeTmpBox({ git: true });
   await box.write("_config/box.json", JSON.stringify({ plugins: ["coursware"] }));
   t.check((await bbx(box, ["plugins", "list"])).at(-1), "box.json names an unknown plugin: coursware");
 
-  // doctest:L98
   const json: { plugins: PluginListing[]; problems: string[] } = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).join("\n"));
   t.check(({ names: json.plugins.map((p) => `${p.name}:${p.active}`), problems: json.problems }), {
     names: [
@@ -106,7 +100,6 @@ void test("An unknown name is reported after the listing.", async (t) => {
 
 // ## `bbx status` shows the same problems
 void test("`bbx status` shows the same problems", async (t) => {
-  // doctest:L106
   const box = await makeTmpBox({ git: true });
   await box.write("_config/box.json", JSON.stringify({ plugins: "courseware" }));
   t.check((await bbx(box, ["status"])).filter((line) => line.startsWith("box.json")), [

@@ -42,7 +42,6 @@ void test("The run agent makes two commits; the instruction judge must receive t
       t.error(error);
     }
   });
-  // doctest:L33
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/instr.procedure.card", `---
 name: instr
@@ -112,7 +111,6 @@ void test("Failing instruction under `abort` fails the step and halts", async (t
       t.error(error);
     }
   });
-  // doctest:L102
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/gate.procedure.card", `---
 name: gate
@@ -186,7 +184,6 @@ void test("Failing instruction under `warn` continues", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L167
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/soft.procedure.card", `---
 name: soft
@@ -266,7 +263,6 @@ void test("The judge never reaches a verdict (it exhausts its turn cap on both a
       t.error(error);
     }
   });
-  // doctest:L238
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/unjudged.procedure.card", `---
 name: unjudged

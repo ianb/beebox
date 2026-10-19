@@ -18,7 +18,6 @@ import { LandmarkSchema } from "../../src/schemas/landmark.js";
 
 // ## It is a global field
 void test("It is a global field", async (t) => {
-  // doctest:L21
   t.check(Object.keys(GLOBAL_CARD_FIELDS).join(","), "title,contains,contains-evidence,todos,symbol,prominence,theme");
 });
 
@@ -28,11 +27,9 @@ void test("It is a global field", async (t) => {
 // field, like every other enum field in the tree — and the message names what
 // it does accept, so the author can fix it without hunting for the vocabulary.
 void test("A wrong value is a hard error at parse time — the closed enum on a global fie...", async (t) => {
-  // doctest:L32
   const result = Prominence.safeParse("headline");
   t.check(result.success, false);
 
-  // doctest:L36
   t.check(result.error?.issues[0]?.message, str`${any(String)}"entry-point"|"primary"|"background"`);
 });
 
@@ -42,18 +39,14 @@ void test("A wrong value is a hard error at parse time — the closed enum on a 
 // follow-up job) defaults to `background` with nothing declared per schema — the
 // category is the declaration.
 void test("A category:", async (t) => {
-  // doctest:L47
   t.check(QuestionFollowupJobSchema.category, "system");
 
-  // doctest:L50
   t.check(QuestionFollowupJobSchema.defaultProminence, "background");
 
   // An ordinary authored schema defaults to `ordinary`.
 
-  // doctest:L57
   t.check(DocSchema.category, "authored");
 
-  // doctest:L60
   t.check(DocSchema.defaultProminence, "ordinary");
 
   // The landmark schema is `authored`, not `system` — but it declares its own
@@ -61,18 +54,14 @@ void test("A category:", async (t) => {
   // of its cards: Browse folds it into the folder header, and opening it shows the
   // place page.
 
-  // doctest:L70
   t.check(LandmarkSchema.category, "authored");
 
-  // doctest:L73
   t.check(LandmarkSchema.defaultProminence, "background");
 });
 
 // ## `effectiveLevel`: a declared value always wins over the type default
 void test("`effectiveLevel`: a declared value always wins over the type default", async (t) => {
-  // doctest:L80
   t.check(effectiveLevel({ declared: "primary", typeDefault: QuestionFollowupJobSchema.defaultProminence }), "primary");
 
-  // doctest:L83
   t.check(effectiveLevel({ declared: undefined, typeDefault: QuestionFollowupJobSchema.defaultProminence }), "background");
 });

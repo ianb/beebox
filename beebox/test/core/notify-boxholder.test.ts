@@ -72,18 +72,15 @@ void test("APNs has no audience until paired phones register, so it is a skip.",
       t.error(error);
     }
   });
-  // doctest:L68
   const box = await reachableBox();
   const push = createFakePush();
   const result = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push } });
 
-  // doctest:L72
   await t.checkText(await logged(box), `apns skipped: no-audience
 web-push sent`);
 
   // The push carries the rendered deep link and makes a sound:
 
-  // doctest:L81
   const slug = await boxSlug(box.root);
   t.check(push.sent, [{
     endpoint: "https://push.example/phone",
@@ -100,7 +97,6 @@ web-push sent`);
   // The intent line is in the log under the id the result returns, and open apps
   // got the live bus event with the same id and url:
 
-  // doctest:L93
   const [n] = await readRecent(box.root, { days: 1, now: NOW });
   t.check(n?.intent, {
     kind: "intent",
@@ -113,7 +109,6 @@ web-push sent`);
     source: "notify-doctest",
   });
 
-  // doctest:L97
   const bus = createEventBus(box.root);
   const events = bus.readSince(0).filter((e) => e.event === "notification").map((e) => eventSchemas.notification.parse(e.data));
   bus.close();
@@ -127,7 +122,6 @@ web-push sent`);
     url: `/${slug}/browse/_content/inbox/field-trip.email.card`,
   }]);
 
-  // doctest:L103
   t.check(await failing(box), "all ok");
 });
 
@@ -144,20 +138,16 @@ void test("An open app with a person active shows a quiet notification itself, s
       t.error(error);
     }
   });
-  // doctest:L118
   const box = await reachableBox();
   const push = createFakePush();
   await writePresence(box.root, { activeWeb: 1, now: new Date(NOW.getTime() - 30_000) });
   await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW, services: { push } });
 
-  // doctest:L123
   await t.checkText(await logged(box), `apns skipped: present
 web-push skipped: present`);
 
-  // doctest:L128
   t.check(push.sent, []);
 
-  // doctest:L131
   await writePresence(box.root, { activeWeb: 1, now: new Date(NOW.getTime() - 120_000) });
   await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW, services: { push } });
   const quietSlug = await boxSlug(box.root);
@@ -176,10 +166,8 @@ web-push skipped: present`);
   // A `quiet` push carries `silent`, which the service worker passes to
   // `showNotification`, so it makes no sound:
 
-  // doctest:L141
   t.check(push.sent[0]?.payload.silent, true);
 
-  // doctest:L144
   t.check(await failing(box), "all ok");
 });
 
@@ -195,19 +183,16 @@ void test("Nothing can reach the person.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L158
   const box = await makeTmpBox({ git: true });
   t.check(await notifyChannels(box.root), {
     apns: false,
     webPush: false,
   });
 
-  // doctest:L162
   await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW });
   await t.checkText(await logged(box), `apns skipped: no-audience
 web-push skipped: no-audience`);
 
-  // doctest:L168
   t.check(await failing(box), "notifications-no-channel: 1 notification(s) in the last 24 hours had no channel to reach the boxholder (open the paired iPhone app or subscribe a browser to push): \"Field trip form due Friday\"");
 });
 
@@ -224,20 +209,17 @@ void test("notifyChannels needs someone to send to and what the send needs:", as
       t.error(error);
     }
   });
-  // doctest:L183
   const box = await reachableBox();
   t.check(await notifyChannels(box.root), {
     apns: false,
     webPush: false,
   });
 
-  // doctest:L187
   t.check(await notifyChannels(box.root, { services: { push: createFakePush() } }), {
     apns: false,
     webPush: true,
   });
 
-  // doctest:L190
   process.env.BBX_VAPID_PUBLIC_KEY = "public";
   process.env.BBX_VAPID_PRIVATE_KEY = "private";
   const withKeys = await notifyChannels(box.root);
@@ -258,7 +240,6 @@ void test("A URL search parser reads an all-digit value as a number, so an id is
       t.error(error);
     }
   });
-  // doctest:L209
   const box = await reachableBox();
   const ids: string[] = [];
   for (let i = 0; i < 5; i++) ids.push((await notifyBoxholder(box.root, { intent: intent("dot"), now: NOW })).id);
@@ -277,15 +258,12 @@ void test("bbx notify --channel uses this to test one channel.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L226
   const box = await reachableBox();
   const push = createFakePush();
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push }, channel: "web-push" });
 
-  // doctest:L230
   t.check(await logged(box), "web-push sent");
 
-  // doctest:L233
   const channelSlug = await boxSlug(box.root);
   t.check(push.sent, [{
     endpoint: "https://push.example/phone",
@@ -311,21 +289,17 @@ void test("The push failure is recorded with its reason and reported for 24 hour
       t.error(error);
     }
   });
-  // doctest:L246
   const box = await reachableBox();
   const push = createFakePush({ failEndpoints: [SUB.endpoint] });
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push } });
 
-  // doctest:L250
   await t.checkText(await logged(box), `apns skipped: no-audience
 web-push failed: no device received the push (sent 0, pruned 0, failed 1)`);
 
-  // doctest:L255
   t.check(await failing(box), "notifications-undelivered: 1 notification(s) could not be delivered in the last 24 hours: \"Field trip form due Friday\" (web-push: no device received the push (sent 0, pruned 0, failed 1))");
 
   // A day later the failure has aged out of the check:
 
-  // doctest:L262
   t.check(await notificationHealthChecks(box.root, { now: new Date(NOW.getTime() + 25 * 60 * 60 * 1000) }), [
     { name: "notifications-undelivered", ok: true, message: "No notification failed to deliver in the last 24 hours", severity: "warning" },
     { name: "notifications-no-channel", ok: true, message: "Every notification in the last 24 hours had a channel to reach the boxholder", severity: "warning" },
@@ -348,15 +322,12 @@ void test("The log is the record, not the delivery path.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L277
   const box = await reachableBox();
   await fs.mkdir(notificationLogPath(box.root), { recursive: true });
   const result = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { push: createFakePush() } });
 
-  // doctest:L281
   t.check(result.deliveries.map((d) => `${d.channel} ${d.status}`), ["apns skipped", "web-push sent"]);
 
-  // doctest:L284
   t.check((await notificationHealthChecks(box.root, { now: NOW })).find((c) => c.name === "notification-log-writable"), {
     name: "notification-log-writable",
     ok: false,

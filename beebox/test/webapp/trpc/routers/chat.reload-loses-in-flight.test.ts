@@ -83,7 +83,6 @@ void test("The fake backend stands in for the agent subprocess.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L73
   const backend = createFakeChatBackend();
   const realStart = backend.start.bind(backend);
   const runStarted = new Promise<FakeChatBackendRun>((resolve) => {
@@ -91,13 +90,11 @@ void test("The fake backend stands in for the agent subprocess.", async (t) => {
   });
   const ctx = await makeTestServer({ chatBackend: backend });
 
-  // doctest:L80
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(String(messageOf(e.data))); },
   });
 
-  // doctest:L85
   const sent = await ctx.request({
     method: "POST",
     url: "/api/chat/send",
@@ -108,7 +105,6 @@ void test("The fake backend stands in for the agent subprocess.", async (t) => {
 
   // Now the reload. `chat.bootstrap` is the whole of what a fresh page knows:
 
-  // doctest:L102
   const boot = await caller(ctx).chat.bootstrap({ slice: TAIL });
   t.check({ kind: boot.kind, history: boot.history }, { kind: "empty", history: null });
 
@@ -116,7 +112,6 @@ void test("The fake backend stands in for the agent subprocess.", async (t) => {
   // **durable**, and that is what `history` means. What was missing is the other
   // record — so bootstrap now also reports what the box has *accepted*:
 
-  // doctest:L112
   t.check(boot.pending, [DRAWER_KEY_ROW]);
 
   // `kind: "empty"` is the strongest form of the gap, and the one the field report
@@ -126,7 +121,6 @@ void test("The fake backend stands in for the agent subprocess.", async (t) => {
   // message was ever sent — while `.beebox/message-dedup.json` on that same
   // box records the box having durably accepted it.
 
-  // doctest:L124
   const dedup = await readDedupState(ctx.boxRoot);
   await t.checkText(dedup, "{\"m-1\":«int»}");
 
@@ -152,14 +146,12 @@ void test("The fake backend stands in for the agent subprocess.", async (t) => {
   // a brand-new chat's unsent question inside whatever conversation happened to be
   // open. An id-less acceptance matches only an id-less bootstrap:
 
-  // doctest:L152
   const elsewhere = await caller(ctx).chat.bootstrap({ session: "some-other-session", slice: TAIL });
   t.check({ kind: elsewhere.kind, pending: elsewhere.pending }, { kind: "unavailable", pending: [] });
 
   // The send above carried no identity — an open box, nobody signed in — so there is
   // nobody to keep it from, and any reader of that box sees it:
 
-  // doctest:L161
   function callerAs(server: TestServer, email: string) {
     const scoped: TrpcContext = trpcContext({
       boxRoot: server.boxRoot,
@@ -177,7 +169,6 @@ void test("The fake backend stands in for the agent subprocess.", async (t) => {
   // and it fails closed — a box where several people are each starting a chat does
   // not show them each other's unsent questions:
 
-  // doctest:L181
   ctx.eventBus.emit("chat-user-message", {
     sessionId: null,
     message: "<typed user=\"Rosa Okafor\">is the loft key on the hook?</typed>",
@@ -185,7 +176,6 @@ void test("The fake backend stands in for the agent subprocess.", async (t) => {
     timestamp: new Date().toISOString(),
   });
 
-  // doctest:L188
   const asTomas = await callerAs(ctx, "tomas@example.com").chat.bootstrap({ slice: TAIL });
   const asRosa = await callerAs(ctx, "rosa@example.com").chat.bootstrap({ slice: TAIL });
   t.check({ tomas: asTomas.pending, rosa: asRosa.pending }, {

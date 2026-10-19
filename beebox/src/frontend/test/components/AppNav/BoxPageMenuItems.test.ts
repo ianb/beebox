@@ -34,7 +34,6 @@ async function rows(path: string) {
 // Each row opens its system card under `/<box>/views/`. On a chat page none is
 // highlighted.
 void test("Each row opens its system card under /<box>/views/.", async (t) => {
-  // doctest:L38
   t.check(await rows("/test1/chat"), [
     "bbx-box-menu-dashboard: Dashboard → /test1/views/_config/interface/dashboard.card",
     "bbx-box-menu-browse: Browse → /test1/views/_config/interface/browse.card",
@@ -46,7 +45,6 @@ void test("Each row opens its system card under /<box>/views/.", async (t) => {
 // On one of the pages, its row is highlighted, as the Settings and Admin rows
 // are on theirs.
 void test("On one of the pages, its row is highlighted, as the Settings and Admin rows a...", async (t) => {
-  // doctest:L51
   t.check((await rows("/test1/views/_config/interface/history.card")).filter((row) => row.endsWith("(active)")), [
     "bbx-box-menu-history: History → /test1/views/_config/interface/history.card (active)",
   ]);

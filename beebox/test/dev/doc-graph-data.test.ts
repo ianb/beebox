@@ -17,19 +17,16 @@ const context: ExternalResolveContext = {
 };
 
 void test("line 19", async (t) => {
-  // doctest:L20
   t.check(resolveExternalRef("beebox-clerk/AGENTS.md", context), [
     "../beebox-clerk/AGENTS.md",
     true,
   ]);
 
-  // doctest:L23
   t.check(resolveExternalRef("missing-package/AGENTS.md", context), [
     "missing-package/AGENTS.md",
     false,
   ]);
 
-  // doctest:L26
   t.check(resolveExternalRef("../outside-the-monorepo.md", context), [
     "../outside-the-monorepo.md",
     false,
@@ -44,7 +41,6 @@ void test("line 19", async (t) => {
 // run of the same name (2026-10-11). Ambiguous in either pool, or across both,
 // stays unresolved:
 void test("A target that does not exist at its relative path falls back to its basename,...", async (t) => {
-  // doctest:L39
   const ambiguous: ExternalResolveContext = {
     fromFile: "issues/closed/bugs/x.md",
     internalFiles: ["test/journeys/A/reports/2026-10-09.md", "test/journeys/B/reports/2026-10-09.md", "docs/unique.md"],
@@ -57,7 +53,6 @@ void test("A target that does not exist at its relative path falls back to its b
     false,
   ]);
 
-  // doctest:L49
   t.check(resolveExternalRef("../../beebox/docs/unique.md", ambiguous), [
     "docs/unique.md",
     true,

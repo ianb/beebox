@@ -53,7 +53,6 @@ function gmailOf(file: ActivityFile) {
 // would let replies on tracked threads hide a connector that stopped importing
 // new threads.
 void test("Gmail's created lists new message files too, including replies added to threa...", async (t) => {
-  // doctest:L56
   t.check(
     countNewItems([
       "_content/inbox/email/Hello.email-thread.card",
@@ -74,7 +73,6 @@ void test("Each attempt lands in its box-local day", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L68
   const box = await makeTmpBox();
   const gmail = scripted("gmail", [
     ok(["_content/inbox/email/A.email-thread.card", "_content/inbox/email/A.attach/msg-001.email-message.card"]),
@@ -88,13 +86,11 @@ void test("Each attempt lands in its box-local day", async (t) => {
   const thrown = await syncConnector(gmail, { boxRoot: box.root, now }).catch((e) => e.message);
   t.check(thrown, "network down");
 
-  // doctest:L82
   const file = await loadConnectorActivity(box.root);
   t.check(Object.keys(gmailOf(file).days), [
     "2026-09-18",
   ]);
 
-  // doctest:L86
   const day = gmailOf(file).days["2026-09-18"];
   assert.ok(day);
   t.check(day, {
@@ -113,7 +109,6 @@ void test("Each attempt lands in its box-local day", async (t) => {
   //
   // ## Old days are pruned
 
-  // doctest:L101
   const later = new Date("2026-11-30T15:00:00Z");
   await syncConnector(scripted("gmail", [ok([])]), { boxRoot: box.root, now: later });
   const pruned = await loadConnectorActivity(box.root);
@@ -121,7 +116,6 @@ void test("Each attempt lands in its box-local day", async (t) => {
     "2026-11-30",
   ]);
 
-  // doctest:L107
   t.check(addDays("2026-11-30", -(ACTIVITY_RETENTION_DAYS - 1)), "2026-10-02");
 });
 
@@ -138,17 +132,14 @@ void test("A record that fails its schema is not reset:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L122
   const box = await makeTmpBox();
   const statePath = transientStatePath(box.root, "connector-activity");
   await mkdir(dirname(statePath), { recursive: true });
   await writeFile(statePath, JSON.stringify({ version: 1, connectors: { gmail: { days: { "2026-09-18": { runs: -1 } } } } }));
 
-  // doctest:L127
   const readError = await loadConnectorActivity(box.root).catch((e) => e);
   t.check(readError, instanceOf(ConnectorActivityInvalidError));
 
-  // doctest:L131
   const logged: string[] = [];
   const originalError = console.error;
   console.error = (...args: unknown[]) => { logged.push(args.map(String).join(" ")); };
@@ -162,7 +153,6 @@ void test("A record that fails its schema is not reset:", async (t) => {
     console.error = originalError;
   }
 
-  // doctest:L144
   t.check(result.created, ["_content/inbox/email/C.email-thread.card"]);
   t.check(logged, [
     str`[connector-activity] could not record gmail sync for ${box.root}: Connector activity record at ${statePath} is invalid: ✖ Invalid input: expected object, received undefined

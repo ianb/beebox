@@ -93,7 +93,6 @@ function heldBody(first: string | Uint8Array) {
 // asks Google not to store the request. The streamed PCM comes back as MP3,
 // encoded on the way, starting with an MPEG audio frame.
 void test("The request sends the key in Google's own header, puts style in the speechmet...", async (t) => {
-  // doctest:L96
   const direct = recordingFetch(() => interactionStream(pcm));
   const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: direct.fetch });
   const audio = await tts.streamSpeech("The delivery is late.", { voice: "Kore", instructions: "Speak warmly." });
@@ -118,7 +117,6 @@ void test("The request sends the key in Google's own header, puts style in the s
 // audio — events of a shape we do not know, or a completed interaction with
 // nothing in it — is the same silent-200 failure and throws the same error.
 void test("Gemini has been observed answering HTTP 200 with a zero-length body.", async (t) => {
-  // doctest:L138
   const empty = recordingFetch(() => new Response("event: done\ndata: [DONE]\n\n"));
   const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: empty.fetch });
   await t.checkThrows(async () => (await tts.streamSpeech("Hello there.")), "EmptyTtsResponseError: TTS backend \"gemini\" returned 0 bytes — too short to be speech");
@@ -132,7 +130,6 @@ void test("Gemini has been observed answering HTTP 200 with a zero-length body."
 // more than two seconds fails at once, after one request, with the provider's
 // status for the route to report.
 void test("ky honors Retry-After in full.", async (t) => {
-  // doctest:L153
   const quota = recordingFetch(() =>
     Response.json({ error: { message: "Rate limit exceeded (limit: 10 requests per day on Free Tier)" } }, {
       status: 429,
@@ -152,7 +149,6 @@ void test("ky honors Retry-After in full.", async (t) => {
 
 // A short wait is still worth it: the retry speaks the clip.
 void test("A short wait is still worth it:", async (t) => {
-  // doctest:L169
   let answered = 0;
   const brief = recordingFetch(() => {
     answered += 1;
@@ -175,7 +171,6 @@ void test("A short wait is still worth it:", async (t) => {
 // is held back from the rest until the test releases it; the head is already in
 // hand by then.
 void test("The point of streaming:", async (t) => {
-  // doctest:L190
   const held = heldBody(delta(pcm));
   const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: async () => new Response(held.body) });
   const audio = await tts.streamSpeech("The delivery is late.");
@@ -189,7 +184,6 @@ void test("The point of streaming:", async (t) => {
 // OpenAI already answers MP3, so its body passes through unchanged, and its head
 // also arrives before the body ends.
 void test("OpenAI already answers MP3, so its body passes through unchanged, and its hea...", async (t) => {
-  // doctest:L204
   const first = mp3Head(604);
   const held = heldBody(first);
   const tts = createTtsService({ backend: "openai", apiKey: "sk-test", fetch: async () => new Response(held.body) });
@@ -206,7 +200,6 @@ void test("OpenAI already answers MP3, so its body passes through unchanged, and
 // error after that cannot reject `streamSpeech`; it surfaces while reading
 // `rest`, for the route to end the response with.
 void test("Once the head is handed over, the route has started its response.", async (t) => {
-  // doctest:L221
   const held = heldBody(delta(pcm));
   const tts = createTtsService({ backend: "gemini", apiKey: "AIza-test", fetch: async () => new Response(held.body) });
   const audio = await tts.streamSpeech("The delivery is late.");
@@ -219,7 +212,6 @@ void test("Once the head is handed over, the route has started its response.", a
 // A consumer that stops reading (the route, when the browser leaves) stops the
 // provider's response, so no audio is generated for nobody.
 void test("A consumer that stops reading (the route, when the browser leaves) stops the...", async (t) => {
-  // doctest:L235
   const held = heldBody(mp3Head(700));
   const tts = createTtsService({ backend: "openai", apiKey: "sk-test", fetch: async () => new Response(held.body) });
   const audio = await tts.streamSpeech("The delivery is late.");

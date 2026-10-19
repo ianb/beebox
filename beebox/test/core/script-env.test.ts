@@ -22,7 +22,6 @@ import * as path from "node:path";
 // empty input has neither. Unparseable input returns nulls (no throw) and logs
 // one warning.
 void test("A public URL splits into the server origin and the box slug.", async (t) => {
-  // doctest:L25
   const warnings: unknown[][] = [];
   const originalWarn = console.warn;
   console.warn = (...args: unknown[]) => warnings.push(args);
@@ -58,7 +57,6 @@ void test("A public URL splits into the server origin and the box slug.", async 
 // (a garbled serve-endpoint file) is ignored rather than becoming a guessed
 // endpoint.
 void test("BBXBOXNAME and BBXSERVERURL come from, in priority order:", async (t) => {
-  // doctest:L62
   async function writeBoxJson(box: TmpBox, publicUrl: string) {
     await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
     await fs.writeFile(path.join(box.root, "_config", "box.json"), JSON.stringify({ publicUrl }));
@@ -136,7 +134,6 @@ void test("Caller additions override / extend the env, and passing undefined del
       t.error(error);
     }
   });
-  // doctest:L133
   const box = await makeTmpBox();
   await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
   await fs.writeFile(
@@ -187,7 +184,6 @@ void test("The subprocess env is a fail-closed allowlist, not a process.env spre
       t.error(error);
     }
   });
-  // doctest:L179
   const box = await makeTmpBox();
   const poisoned = {
     BBX_HUB_SECRET: "hub-secret-should-not-leak",
@@ -214,7 +210,6 @@ void test("The subprocess env is a fail-closed allowlist, not a process.env spre
   // Bee Box's own `bin/` prepended so `bbx` resolves), `HOME`, and the
   // loopback `BBX_AGENT_TOKEN` provisioned for this box.
 
-  // doctest:L208
   const bbxBin = path.join(PACKAGE_ROOT, "bin");
   t.check(
     { PATH: env.PATH, HOME: env.HOME, BBX_AGENT_TOKEN: env.BBX_AGENT_TOKEN },
@@ -224,7 +219,6 @@ void test("The subprocess env is a fail-closed allowlist, not a process.env spre
   // `additions` are applied after the allowlist, so a caller can still hand a
   // subprocess a value the allowlist would have withheld:
 
-  // doctest:L225
   const withAddition = await buildScriptEnv(box.root, { SOME_RANDOM_SECRET: "explicitly passed" });
   t.check(withAddition.SOME_RANDOM_SECRET, "explicitly passed");
 });
@@ -234,7 +228,6 @@ void test("The subprocess env is a fail-closed allowlist, not a process.env spre
 // The package bin comes first for both child profiles, and a missing launcher is
 // an immediate error rather than a later "command not found" from a scenario.
 void test("The package bin comes first for both child profiles, and a missing launcher i...", async (t) => {
-  // doctest:L240
   const foreignBin = await fs.mkdtemp(path.join("/tmp", "bbx-foreign-bin-"));
   const inherited = `${foreignBin}:/usr/bin`;
   const agentPath = await prependBbxBinToPath(inherited);
@@ -248,7 +241,6 @@ void test("The package bin comes first for both child profiles, and a missing la
 });
 
 void test("PATH launcher contract", async (t) => {
-  // doctest:L256
   const missingBin = await fs.mkdtemp(path.join("/tmp", "bbx-missing-bin-"));
   let message = "";
   try {
@@ -276,7 +268,6 @@ void test("Spawning the box's own tooling (bbx wakeup, bbx finalize, scheduled r
       t.error(error);
     }
   });
-  // doctest:L278
   const box = await makeTmpBox();
   const vars = {
     BBX_SECRETS_FILE: "/placeholder/secrets.json",
@@ -320,7 +311,6 @@ void test("Each profile stamps BBXSPAWNPROFILE, so a credentialed bbx verb branc
       t.error(error);
     }
   });
-  // doctest:L317
   const box = await makeTmpBox();
   process.env.BBX_SPAWN_PROFILE = "tooling";
   const agentEnv = await buildScriptEnv(box.root);
@@ -336,7 +326,6 @@ void test("Each profile stamps BBXSPAWNPROFILE, so a credentialed bbx verb branc
   // treat exactly like `agent`. Fail-closed: the only value that unlocks in-process
   // credential use is the one spelled `tooling`.
 
-  // doctest:L332
   const readBack = (value: string | undefined) => {
     const saved = process.env.BBX_SPAWN_PROFILE;
     if (value === undefined) delete process.env.BBX_SPAWN_PROFILE;
@@ -358,6 +347,5 @@ void test("Each profile stamps BBXSPAWNPROFILE, so a credentialed bbx verb branc
   // A caller that means it can still override the marker through `additions` — the
   // same escape hatch every other derived name has.
 
-  // doctest:L350
   t.check((await buildScriptEnv(box.root, { BBX_SPAWN_PROFILE: "tooling" })).BBX_SPAWN_PROFILE, "tooling");
 });

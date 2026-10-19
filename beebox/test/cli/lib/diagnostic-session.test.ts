@@ -16,16 +16,12 @@ import {
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 void test("line 18", async (t) => {
-  // doctest:L19
   t.check(parseDiagnosticEngine("codex"), "codex");
 
-  // doctest:L22
   await t.checkThrows(async () => (parseDiagnosticEngine("other")), "InvalidDiagnosticEngineError: Unknown session engine \"other\". Expected claude or codex.");
 
-  // doctest:L25
   await t.checkThrows(async () => (validateCodexSessionMode({ raw: true, toolReport: false, full: false })), "UnsupportedCodexSessionModeError: Codex sessions support readable dialogue only; --raw, --tool-report, and --full require native rollout detail that app-server does not expose.");
 
-  // doctest:L28
   t.check(validateCodexSessionMode({ raw: false, toolReport: false, full: false }), undefined);
 });
 
@@ -38,7 +34,6 @@ void test("Resolution precedence", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L35
   const box = await makeTmpBox();
   await fs.mkdir(path.join(box.root, ".beebox"), { recursive: true });
   await fs.writeFile(
@@ -52,7 +47,6 @@ void test("Resolution precedence", async (t) => {
     }),
   );
 
-  // doctest:L48
   t.check(
     await resolveDiagnosticEngine({
       boxRoot: box.root,
@@ -63,7 +57,6 @@ void test("Resolution precedence", async (t) => {
     "codex",
   );
 
-  // doctest:L56
   t.check(
     await resolveDiagnosticEngine({
       boxRoot: box.root,
@@ -74,7 +67,6 @@ void test("Resolution precedence", async (t) => {
     "codex",
   );
 
-  // doctest:L64
   t.check(
     await resolveDiagnosticEngine({
       boxRoot: box.root,
@@ -85,7 +77,6 @@ void test("Resolution precedence", async (t) => {
     "claude",
   );
 
-  // doctest:L72
   t.check(
     await resolveDiagnosticEngine({
       boxRoot: box.root,

@@ -37,7 +37,6 @@ async function collect(chunks: AsyncIterable<Buffer>) {
 // before the provider finishes. The first bytes are an MPEG audio frame, with no
 // ID3 tag in front, so a `SourceBuffer` sees audio first.
 void test("The source sends one second of audio, then waits.", async (t) => {
-  // doctest:L41
   const held = gate();
   let sourceFinished = false;
   async function* source() {
@@ -71,7 +70,6 @@ function providerBroke(message: string): Error {
 }
 
 void test("When the PCM source fails — the provider's stream broke — that error reaches...", async (t) => {
-  // doctest:L65
   async function* breaking() {
     yield tone(0.5);
     throw providerBroke("stream reset");
@@ -81,7 +79,6 @@ void test("When the PCM source fails — the provider's stream broke — that er
 
 // ## A missing ffmpeg says so
 void test("A missing ffmpeg says so", async (t) => {
-  // doctest:L79
   await t.checkThrows(async () => (await collect(pcmToMp3((async function* () { yield tone(0.5); })(), { command: "ffmpeg-not-installed-here" }))), "Mp3EncoderError: MP3 encoder (ffmpeg) could not start: spawn ffmpeg-not-installed-here ENOENT");
 });
 
@@ -90,7 +87,6 @@ void test("A missing ffmpeg says so", async (t) => {
 // The route aborts when the browser goes away. The encoder is killed, and the
 // iteration ends with the abort's reason rather than waiting for the source.
 void test("The route aborts when the browser goes away.", async (t) => {
-  // doctest:L89
   const never = gate();
   async function* stalls() {
     yield tone(0.5);

@@ -44,11 +44,9 @@ void test("A file outside src/lib/typescript/ that imports typescript or a subpa
       t.error(error);
     }
   });
-  // doctest:L42
   await t.checkText(summary(findings), `typescript-imports beebox/src/dev/native.ts
 typescript-imports beebox/src/dev/old.ts`);
 
-  // doctest:L47
   t.check(findings.map((f) => f.message), [
     "imports @typescript/native/unstable/ast; use beebox/src/lib/typescript/ (the one TypeScript 7 boundary; see docs/implemented-plans/typescript-7.md)",
     "imports typescript; use beebox/src/lib/typescript/ (the one TypeScript 7 boundary; see docs/implemented-plans/typescript-7.md)",

@@ -88,7 +88,6 @@ void test("Ticking the first todo on line 11 sets status=\"done\" on exactly tha
       t.error(error);
     }
   });
-  // doctest:L84
   events.length = 0;
   const done = await caller(box.root).todos.setStatus({
     path: cardPath,
@@ -99,15 +98,12 @@ void test("Ticking the first todo on line 11 sets status=\"done\" on exactly tha
   });
   t.check(done, { status: "done", commit: any(String), commitWarning: null });
 
-  // doctest:L95
   await t.checkText((await box.read(cardPath)).split("\n").slice(10, 11).join("\n"), "{% todo status=\"done\" due=\"2026-09-15\" %}Order lumber{% /todo %} and {% todo %}book the [roofer](https://example.com){% /todo %}");
 
-  // doctest:L98
   await t.checkText(lastCommit(box.root), `Mark todo done: Order lumber
 Source: webapp
 Endpoint: todos.setStatus`);
 
-  // doctest:L103
   t.check(events, [
     "file-change _content/Porch.doc.card",
   ]);
@@ -115,7 +111,6 @@ Endpoint: todos.setStatus`);
   // Reopening removes the attribute (absence means open), and the file is back
   // to what it was.
 
-  // doctest:L111
   const reopened = await caller(box.root).todos.setStatus({
     path: cardPath,
     locator: { kind: "body", line: 11 },
@@ -134,7 +129,6 @@ Endpoint: todos.setStatus`);
   // The locator's `nth` picks the second tag on line 11. Its text is what the
   // collector flattens: the link's label, not its target.
 
-  // doctest:L128
   await caller(box.root).todos.setStatus({
     path: cardPath,
     locator: { kind: "body", line: 11, nth: 2 },
@@ -149,7 +143,6 @@ Endpoint: todos.setStatus`);
   // Frontmatter todos go through format-preserving YAML: only the entry's
   // `status` changes.
 
-  // doctest:L145
   await caller(box.root).todos.setStatus({
     path: cardPath,
     locator: { kind: "frontmatter", index: 0 },
@@ -170,7 +163,6 @@ Endpoint: todos.setStatus`);
   //
   // Each refusal below leaves the file and the history as they were.
 
-  // doctest:L168
   const before = await box.read(cardPath);
   const commitsBefore = commitCount(box.root);
   events.length = 0;
@@ -178,7 +170,6 @@ Endpoint: todos.setStatus`);
   // The text the reader saw is not the text at that line (a line was inserted
   // above it, or it was reworded):
 
-  // doctest:L177
   t.check(
     await outcome(caller(box.root).todos.setStatus({
       path: cardPath, locator: { kind: "body", line: 12 }, text: "Order timber", expectedStatus: "open", status: "done",
@@ -188,7 +179,6 @@ Endpoint: todos.setStatus`);
 
   // The text matches, but its status is no longer the one the reader saw:
 
-  // doctest:L186
   t.check(
     await outcome(caller(box.root).todos.setStatus({
       path: cardPath, locator: { kind: "body", line: 12, nth: 2 }, text: "book the roofer", expectedStatus: "open", status: "done",
@@ -198,7 +188,6 @@ Endpoint: todos.setStatus`);
 
   // A parked todo is always refused: the checkbox cannot express `parked`.
 
-  // doctest:L195
   t.check(
     await outcome(caller(box.root).todos.setStatus({
       path: cardPath, locator: { kind: "body", line: 14 }, text: "Paint the rail", expectedStatus: "open", status: "done",
@@ -209,7 +198,6 @@ Endpoint: todos.setStatus`);
   // No todo at that address any more — the stale line from before the
   // frontmatter grew:
 
-  // doctest:L205
   t.check(
     await outcome(caller(box.root).todos.setStatus({
       path: cardPath, locator: { kind: "body", line: 11 }, text: "Order lumber", expectedStatus: "open", status: "done",
@@ -219,7 +207,6 @@ Endpoint: todos.setStatus`);
 
   // A card whose frontmatter no longer parses has no todos to address:
 
-  // doctest:L214
   const brokenPath = "_content/Broken.doc.card";
   await box.write(brokenPath, "---\ntitle: [not, a, title]\ntodos:\n  - text: Fix it\n---\n{% todo %}Fix it{% /todo %}\n");
   box.commitAll("broken");
@@ -231,7 +218,6 @@ Endpoint: todos.setStatus`);
     "CONFLICT: This card changed since it was shown — it has been reloaded",
   );
 
-  // doctest:L223
   t.check(await box.read(brokenPath), brokenBefore);
 
   // Anyone the box admits may tick a todo, not only the owner, just as they may
@@ -239,7 +225,6 @@ Endpoint: todos.setStatus`);
   // stale check (here it names text that is not there, so nothing is written); an
   // unauthenticated caller is refused:
 
-  // doctest:L233
   t.check(
     await outcome(caller(box.root, { isOwner: false }).todos.setStatus({
       path: cardPath, locator: { kind: "body", line: 12 }, text: "no such todo text", expectedStatus: "open", status: "done",
@@ -247,7 +232,6 @@ Endpoint: todos.setStatus`);
     "CONFLICT: This card changed since it was shown — it has been reloaded",
   );
 
-  // doctest:L238
   t.check(
     await outcome(caller(box.root, { authed: false, isOwner: false }).todos.setStatus({
       path: cardPath, locator: { kind: "body", line: 12 }, text: "Order lumber", expectedStatus: "open", status: "done",
@@ -257,7 +241,6 @@ Endpoint: todos.setStatus`);
 
   // A path outside the box is refused before anything is read:
 
-  // doctest:L247
   t.check(
     await outcome(caller(box.root).todos.setStatus({
       path: "_content/../package.json", locator: { kind: "body", line: 1 }, text: "x", expectedStatus: "open", status: "done",
@@ -268,7 +251,6 @@ Endpoint: todos.setStatus`);
   // After all of that, nothing changed and nothing was announced (the broken
   // card's seed commit is the only new one):
 
-  // doctest:L257
   t.check(await box.read(cardPath), before);
   t.check(Number(commitCount(box.root)), Number(commitsBefore) + 1);
   t.check(events, []);
@@ -278,7 +260,6 @@ Endpoint: todos.setStatus`);
   // The file is written first; if the commit then fails, the write stands and
   // the result says the commit did not happen.
 
-  // doctest:L267
   const hook = path.join(box.root, ".git", "hooks", "pre-commit");
   await fs.writeFile(hook, "#!/bin/sh\nexit 1\n", { mode: 0o755 });
   const originalError = console.error;

@@ -44,7 +44,6 @@ void test("The hub's own base URL is used when `publicUrlFallback` is passed", a
       t.error(error);
     }
   });
-  // doctest:L39
   t.check(
     await loginRedirectUri({ boxes: [], publicUrlFallback: "http://127.0.0.1:4310" })
     ,
@@ -53,12 +52,10 @@ void test("The hub's own base URL is used when `publicUrlFallback` is passed", a
 
   // ## Without it, standalone behavior is unchanged (box server's own default)
 
-  // doctest:L46
   t.check(await loginRedirectUri({ boxes: [] }), "http://localhost:3210/auth/callback");
 
   // ## `BBX_PUBLIC_URL`, when set, still wins over either fallback
 
-  // doctest:L53
   process.env.BBX_PUBLIC_URL = "https://bbx.example.org";
   t.check(
     await loginRedirectUri({ boxes: [], publicUrlFallback: "http://127.0.0.1:4310" })

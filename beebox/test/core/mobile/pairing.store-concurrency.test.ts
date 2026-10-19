@@ -40,22 +40,18 @@ void test("Verification returns the device identity and no longer un-revokes any
       t.error(error);
     }
   });
-  // doctest:L35
   const box = await makeTmpBox();
   const ticket = createMobilePairingTicket(box.root, { createdBy: "rosa@example.com" });
   const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "phone" });
   assert.ok(device);
 
-  // doctest:L40
   const identity = await resolveMobileBearerIdentity(box.root, `Bearer ${device.deviceToken}`);
   t.check(identity?.createdBy, "rosa@example.com");
 
   // A revoked device stops verifying, and stays revoked on the next verify attempt.
 
-  // doctest:L48
   t.check(await revokeMobileDevice(box.root, device.deviceId), true);
 
-  // doctest:L51
   t.check(await resolveMobileBearerIdentity(box.root, `Bearer ${device.deviceToken}`), null);
 
   // ## A verify concurrent with a revoke cannot un-revoke the device
@@ -64,20 +60,17 @@ void test("Verification returns the device identity and no longer un-revokes any
   // wins the lock, the device must end up revoked — the lock makes the verify read
   // the post-revoke record instead of clobbering it with a stale one.
 
-  // doctest:L62
   const box2 = await makeTmpBox();
   const ticket2 = createMobilePairingTicket(box2.root, { createdBy: "tomas@example.com" });
   const device2 = await redeemMobilePairingTicket(box2.root, { pairingToken: ticket2.token, deviceLabel: "phone2" });
   assert.ok(device2);
 
-  // doctest:L67
   // Verify (RMW: stamps lastUsedAt) racing revoke (RMW: sets revokedAt).
   await Promise.all([
     resolveMobileBearerIdentity(box2.root, `Bearer ${device2.deviceToken}`),
     revokeMobileDevice(box2.root, device2.deviceId),
   ]);
 
-  // doctest:L73
   const devices = listMobileDevices(box2.root);
   // lastUsedAt is stamped only when the verify wins the lock before the revoke.
   t.check(devices, [{
@@ -92,7 +85,6 @@ void test("Verification returns the device identity and no longer un-revokes any
 
   // The device no longer authenticates, and never will again from this token.
 
-  // doctest:L81
   t.check(await resolveMobileBearerIdentity(box2.root, `Bearer ${device2.deviceToken}`), null);
 
   // ## The store stays valid JSON and 0600, with no temp files left behind
@@ -101,7 +93,6 @@ void test("Verification returns the device identity and no longer un-revokes any
   // temp sibling is always renamed away — a concurrent burst leaves exactly one
   // `mode 600` store and no `.tmp-*` litter.
 
-  // doctest:L92
   t.check(JSON.parse(fs.readFileSync(path.join(box2.root, STORE), "utf-8")), {
     devices: [{
       id: device2.deviceId,
@@ -114,10 +105,8 @@ void test("Verification returns the device identity and no longer un-revokes any
     }],
   });
 
-  // doctest:L95
   t.check((fs.statSync(path.join(box2.root, STORE)).mode & 0o777).toString(8), "600");
 
-  // doctest:L98
   t.check(fs.readdirSync(path.join(box2.root, ".beebox")).filter((f) => f.startsWith("mobile-devices.secret.json.tmp")), []);
 });
 
@@ -135,13 +124,11 @@ void test("If the store file exists but is corrupt (unparseable), a mutation mus
       t.error(error);
     }
   });
-  // doctest:L115
   const box3 = await makeTmpBox();
   const storeFile = path.join(box3.root, STORE);
   fs.mkdirSync(path.dirname(storeFile), { recursive: true });
   fs.writeFileSync(storeFile, "{ this is not valid json ", "utf-8");
 
-  // doctest:L120
   const ticket3 = createMobilePairingTicket(box3.root, { createdBy: "carol@example.com" });
   const caught = await redeemMobilePairingTicket(box3.root, { pairingToken: ticket3.token, deviceLabel: "phone3" })
     .then(() => null, (e) => e);
@@ -162,18 +149,15 @@ void test("The lock-free renewal check must deny (return false) rather than thro
       t.error(error);
     }
   });
-  // doctest:L140
   const box4 = await makeTmpBox();
   const storeFile4 = path.join(box4.root, STORE);
   fs.mkdirSync(path.dirname(storeFile4), { recursive: true });
   fs.writeFileSync(storeFile4, "corrupt", "utf-8");
 
-  // doctest:L145
   t.check(isMobileDeviceActive(box4.root, "any-device-id"), false);
 
   // An absent store is genuinely empty (not unreadable) — no throw, just inactive.
 
-  // doctest:L152
   const box5 = await makeTmpBox();
   t.check(isMobileDeviceActive(box5.root, "any-device-id"), false);
 });
@@ -190,7 +174,6 @@ void test("A store far bigger than a single writeSync might return in one call m
       t.error(error);
     }
   });
-  // doctest:L168
   const box6 = await makeTmpBox();
   let ticket6;
   for (let i = 0; i < 200; i++) {

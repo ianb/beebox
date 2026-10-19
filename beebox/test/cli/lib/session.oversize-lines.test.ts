@@ -23,7 +23,6 @@ import fs from "node:fs/promises";
 // The threshold is far above any human-authored turn and far below the ~1.3 MB
 // capture payloads that caused the incident:
 void test("The threshold is far above any human-authored turn and far below the ~1.3 MB...", async (t) => {
-  // doctest:L29
   t.check(MAX_SESSION_LINE_BYTES, 262144);
 });
 
@@ -65,12 +64,10 @@ void test("40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64
       t.error(error);
     }
   });
-  // doctest:L45
   const box = await makeTmpBox();
   const logPath = box.path("giant.jsonl");
   await writeGiantLineSessionLog({ logPath, giantLines: 40, giantBytes: 1_200_000, normalLinesBetween: 3 });
 
-  // doctest:L49
   const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 128 });
   t.check(out, {
     entries: 120,
@@ -96,7 +93,6 @@ void test("A stub is a normal SessionEntry — there is no new SessionEntry.type
       t.error(error);
     }
   });
-  // doctest:L96
   const box = await makeTmpBox();
   const fat = "z".repeat(MAX_SESSION_LINE_BYTES);
   await box.write("log.jsonl", [
@@ -120,7 +116,6 @@ void test("A stub is a normal SessionEntry — there is no new SessionEntry.type
     }),
   ].join("\n"));
 
-  // doctest:L119
   const result = await parseSessionLog({
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 200 },
@@ -148,19 +143,14 @@ void test("A stub is a normal SessionEntry — there is no new SessionEntry.type
   // The uuid and timestamp are sniffed too, so a stub still sorts and identifies
   // like the entry it stands for:
 
-  // doctest:L142
-
   // A stub counts as **one displayable entry** toward `total`, so `total`/`hasMore`
   // stay honest about how much transcript exists:
-
-  // doctest:L150
 
   // A stub is **never** a real user message, even when the line it replaced was a
   // typed one — the tail-window floor (`minRealUserMessages`) stays anchored to
   // genuinely-parsed user text rather than to a placeholder that shows the human
   // nothing:
 
-  // doctest:L160
   t.check(result.entries.map(isRealUserMessage), [
     true,
     false,
@@ -170,7 +160,6 @@ void test("A stub is a normal SessionEntry — there is no new SessionEntry.type
   // message this transcript has, and the ceiling stops the widening rather than the
   // stubs satisfying it:
 
-  // doctest:L169
   const widened = await parseSessionLog({
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 1, minRealUserMessages: 2 },
@@ -198,7 +187,6 @@ void test("The length check runs before buildEntry, so without care an oversize 
       t.error(error);
     }
   });
-  // doctest:L191
   const box = await makeTmpBox();
   const fat = "z".repeat(MAX_SESSION_LINE_BYTES);
   await box.write("log.jsonl", [
@@ -236,7 +224,6 @@ void test("The length check runs before buildEntry, so without care an oversize 
     }),
   ].join("\n"));
 
-  // doctest:L228
   const result = await parseSessionLog({
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 200 },
@@ -249,7 +236,6 @@ void test("The length check runs before buildEntry, so without care an oversize 
   // per-line identity (`oversize-<line number>`) rather than an empty string —
   // several empty-uuid stubs in one scan would otherwise collide as React keys:
 
-  // doctest:L243
   await box.write("mystery.jsonl", JSON.stringify({ payload: fat }));
   const mystery = await parseSessionLog({
     logPath: box.path("mystery.jsonl"),
@@ -260,7 +246,6 @@ void test("The length check runs before buildEntry, so without care an oversize 
   // Two mystery lines in the same file get distinct fallback ids, so they don't
   // collide:
 
-  // doctest:L256
   await box.write("mystery2.jsonl", [
     JSON.stringify({ payload: fat }),
     JSON.stringify({ payload: fat }),
@@ -278,7 +263,6 @@ void test("The length check runs before buildEntry, so without care an oversize 
   // characters can't slip under it. This line is 100 000 characters — well under the
   // 262 144 threshold as a code-unit count — but 300 KB encoded:
 
-  // doctest:L273
   const cjk = "漢".repeat(100_000);
   await box.write("cjk.jsonl", JSON.stringify({
     type: "assistant",
@@ -311,7 +295,6 @@ void test("graftToolResults matches a toolresult to the tooluse block of a recen
       t.error(error);
     }
   });
-  // doctest:L301
   const box = await makeTmpBox();
   const fat = "z".repeat(MAX_SESSION_LINE_BYTES);
   await box.write("log.jsonl", [
@@ -329,7 +312,6 @@ void test("graftToolResults matches a toolresult to the tooluse block of a recen
     }),
   ].join("\n"));
 
-  // doctest:L318
   const result = await parseSessionLog({
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 200 },
@@ -353,7 +335,6 @@ void test("The byte bound was written for \"capture-image and tool payloads\" �
   const box2 = await makeTmpBox();
   const logPath2 = box2.path("photo-turn.jsonl");
 
-  // doctest:L352
   // One turn: what the person typed, plus a photo far past the bound.
   const photo = Buffer.from("p".repeat(900_000)).toString("base64");
   const turn = JSON.stringify({
@@ -371,7 +352,6 @@ void test("The byte bound was written for \"capture-image and tool payloads\" �
   });
   await fs.writeFile(logPath2, `${turn}\n`, "utf-8");
 
-  // doctest:L369
   const parsed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
   t.check(Buffer.byteLength(turn, "utf8"), any(Number).between(MAX_SESSION_LINE_BYTES + 1, Infinity));
   t.check(parsed, {
@@ -397,7 +377,6 @@ void test("The byte bound was written for \"capture-image and tool payloads\" �
   // only 404, so the guard marks each payload it removes and the reader keys on the
   // mark:
 
-  // doctest:L396
   const failed = JSON.stringify({
     parentUuid: null,
     type: "user",
@@ -414,7 +393,6 @@ void test("The byte bound was written for \"capture-image and tool payloads\" �
   });
   await fs.writeFile(logPath2, `${failed}\n`, "utf-8");
 
-  // doctest:L412
   const mixed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
   t.check(mixed, {
     entries: [{

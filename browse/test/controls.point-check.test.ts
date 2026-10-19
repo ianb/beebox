@@ -120,21 +120,18 @@ const DESK_BOX = { x: 0, y: 400, width: 1280, height: 400 };
 // The reported case: the checkbox's snapshot name is "Open", and the layer over
 // it contains the word "Open". The old substring match passed this click.
 void test("The reported case:", async (t) => {
-  // doctest:L124
   const box = el("li", { box: { x: 30, y: 510, width: 600, height: 36 } });
   const checkbox = input({ box: CHECKBOX_BOX, attrs: { role: "checkbox", "aria-label": "Open" } });
   box.append(checkbox);
   const desk = el("div", { box: DESK_BOX, text: "Open the conversation to reply" });
   const paint = [desk, checkbox, box];
 
-  // doctest:L130
   t.check(check(paint, { box: CHECKBOX_BOX, expectName: "Open" }), {
     ok: false,
     reason: "covered",
     detail: "the ref's element input[role=checkbox] \"Open\" is under div \"Open the conversation to reply\"",
   });
 
-  // doctest:L133
   t.check(check(paint, { box: CHECKBOX_BOX, expectName: null }), {
     ok: false,
     reason: "covered",
@@ -144,10 +141,8 @@ void test("The reported case:", async (t) => {
 
 // With the layer gone the same click passes.
 void test("With the layer gone the same click passes.", async (t) => {
-  // doctest:L140
   const checkbox = input({ box: CHECKBOX_BOX, attrs: { role: "checkbox", "aria-label": "Open" } });
 
-  // doctest:L142
   t.check(check([checkbox], { box: CHECKBOX_BOX, expectName: "Open" }), {
     ok: true,
     scrolled: false,
@@ -161,11 +156,9 @@ void test("With the layer gone the same click passes.", async (t) => {
 // than report success on whichever is topmost. A wrapper and the control inside
 // it share a box too; that pair is related and still passes.
 void test("Two unrelated elements with the same box and the same name cannot be told apa...", async (t) => {
-  // doctest:L154
   const checkbox = input({ box: CHECKBOX_BOX, attrs: { role: "checkbox", "aria-label": "Open" } });
   const cover = el("div", { box: CHECKBOX_BOX, attrs: { "aria-label": "Open" } });
 
-  // doctest:L157
   t.check(check([cover, checkbox], { box: CHECKBOX_BOX, expectName: "Open" }), {
     ok: false,
     reason: "covered",
@@ -174,12 +167,10 @@ void test("Two unrelated elements with the same box and the same name cannot be 
 });
 
 void test("A cover with the control's own box and name is refused", async (t) => {
-  // doctest:L162
   const wrap = el("span", { box: CHECKBOX_BOX });
   const checkbox = input({ box: CHECKBOX_BOX, attrs: { role: "checkbox", "aria-label": "Open" } });
   wrap.append(checkbox);
 
-  // doctest:L166
   t.check(check([checkbox, wrap], { box: CHECKBOX_BOX, expectName: "Open" }), {
     ok: true,
     scrolled: false,
@@ -192,13 +183,11 @@ void test("A cover with the control's own box and name is refused", async (t) =>
 // hits. A custom checkbox draws a `<span>` over its input inside a wrapping
 // `<label>`; the span belongs to the input's own label. Neither is covered.
 void test("A button's visible text is a child <span>, so the span is what the point hits.", async (t) => {
-  // doctest:L177
   const BUTTON_BOX = { x: 100, y: 100, width: 80, height: 30 };
   const button = el("button", { box: BUTTON_BOX });
   const caption = el("span", { box: { x: 110, y: 105, width: 60, height: 20 }, text: "Send" });
   button.append(caption);
 
-  // doctest:L182
   t.check(check([caption, button], { box: BUTTON_BOX, expectName: "Send" }), {
     ok: true,
     scrolled: false,
@@ -206,7 +195,6 @@ void test("A button's visible text is a child <span>, so the span is what the po
 });
 
 void test("The topmost element may be inside the control or its label", async (t) => {
-  // doctest:L187
   const label = el("label", { box: { x: 30, y: 510, width: 300, height: 36 } });
   const box = input({ box: CHECKBOX_BOX, attrs: { type: "checkbox" } });
   const mark = el("span", { box: { x: 38, y: 518, width: 20, height: 20 } });
@@ -214,7 +202,6 @@ void test("The topmost element may be inside the control or its label", async (t
   label.append(box, mark, words);
   box.labels = [label];
 
-  // doctest:L194
   t.check(check([mark, box, label], { box: CHECKBOX_BOX, expectName: "Return the drill" }), {
     ok: true,
     scrolled: false,
@@ -223,12 +210,10 @@ void test("The topmost element may be inside the control or its label", async (t
 
 // A `<label>` that belongs to another control is not an exception.
 void test("A <label> that belongs to another control is not an exception.", async (t) => {
-  // doctest:L201
   const other = el("label", { box: DESK_BOX, text: "Return the drill" });
   const box = input({ box: CHECKBOX_BOX, attrs: { type: "checkbox" } });
   box.labels = [];
 
-  // doctest:L205
   t.check(refusal(check([other, box], { box: CHECKBOX_BOX, expectName: "Return the drill" })), "covered");
 });
 
@@ -237,17 +222,14 @@ void test("A <label> that belongs to another control is not an exception.", asyn
 // When no element at the point has the ref's box, the element cannot be found
 // there, so the topmost element must carry the snapshot's name, as before.
 void test("When no element at the point has the ref's box, the element cannot be found t...", async (t) => {
-  // doctest:L215
   const label = el("label", { box: { x: 30, y: 510, width: 300, height: 36 }, text: "Return the drill" });
   const hidden = input({ box: CHECKBOX_BOX, pointerEvents: "none" });
   label.append(hidden);
 
-  // doctest:L219
   t.check(check([hidden, label], { box: CHECKBOX_BOX, expectName: "Return the drill" }), {
     ok: true,
     scrolled: false,
   });
 
-  // doctest:L222
   t.check(refusal(check([hidden, label], { box: CHECKBOX_BOX, expectName: "Buy milk" })), "covered");
 });

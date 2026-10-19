@@ -20,7 +20,6 @@ void test("When no matching job exists, a new .intake.job.card file is created u
       t.error(error);
     }
   });
-  // doctest:L16
   const box = await makeTmpBox();
   const path = await createOrAppendIntakeJob({
     boxRoot: box.root,
@@ -30,7 +29,6 @@ void test("When no matching job exists, a new .intake.job.card file is created u
   });
   t.check(path, str`_bookkeeping/jobs/${any(String)}-test-connector.intake.job.card`);
 
-  // doctest:L28
   await t.checkText(await box.read(path), `---
 connector: test-connector
 priority: normal
@@ -51,7 +49,6 @@ void test("A second call with the same connector and priority appends to the exi
       t.error(error);
     }
   });
-  // doctest:L48
   const box = await makeTmpBox();
   const path1 = await createOrAppendIntakeJob({
     boxRoot: box.root,
@@ -69,7 +66,6 @@ void test("A second call with the same connector and priority appends to the exi
 
   // The updated file contains both items with the new description:
 
-  // doctest:L68
   await t.checkText(await box.read(path2), `---
 connector: test-connector
 priority: normal
@@ -94,7 +90,6 @@ void test("Calls with a different connector, no connector, or a different priori
       t.error(error);
     }
   });
-  // doctest:L92
   const box = await makeTmpBox();
   const created = [
     await createOrAppendIntakeJob({ boxRoot: box.root, connector: "connector-a", items: ["_content/inbox/a.doc.card"], description: "From A" }),
@@ -109,7 +104,6 @@ void test("Calls with a different connector, no connector, or a different priori
     "inbox-low.intake.job.card",
   ]);
 
-  // doctest:L104
   const lowJob = created[3];
   assert.ok(lowJob !== undefined);
   await t.checkText(await box.read(lowJob), `---
@@ -137,7 +131,6 @@ void test("The find/read/append/write span is a read-modify-write of one card th
       t.error(error);
     }
   });
-  // doctest:L130
   const box = await makeTmpBox();
   const paths = await Promise.all(
     Array.from({ length: 8 }, (_, i) =>
@@ -176,7 +169,6 @@ void test("The lock is per batching key, so a gmail-scoped sync and a scan impor
       t.error(error);
     }
   });
-  // doctest:L160
   const box = await makeTmpBox();
   const [scanJob, gmailJob] = await Promise.all([
     createOrAppendIntakeJob({ boxRoot: box.root, items: ["_content/inbox/a.doc.card"], description: "Scan" }),

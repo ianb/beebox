@@ -33,7 +33,6 @@ async function validate(box: TmpBox, paths: string[]): Promise<{ code: number; r
 
 // ## The README names five schema stubs, one view stub, and the config
 void test("The README names five schema stubs, one view stub, and the config", async (t) => {
-  // doctest:L37
   t.check([...(await readmeStubs()).keys()], [
     "_config/box.json",
     "src/schemas/course.ts",
@@ -52,7 +51,6 @@ void test("The README names five schema stubs, one view stub, and the config", a
 // `ref` resolves, every segment names a real node, so `bbx validate` reports no
 // errors and no warnings.
 void test("One card of each type, laid out as the skill describes:", async (t) => {
-  // doctest:L57
   const box = await stubbedBox();
   await box.write("_content/courses/Acids.course.card", [
     "---",
@@ -139,7 +137,6 @@ void test("One card of each type, laid out as the skill describes:", async (t) =
 // schema error. The plugin's cross-card lint runs too: a segment naming a node the
 // map lacks is a warning.
 void test("The base's Zod fields apply through the stub:", async (t) => {
-  // doctest:L137
   const box = await stubbedBox();
   await box.write("_content/courses/Learner.progress.card", "---\nentries:\n  - node: n\n    level: solid\n    basis: observed\n---\nNo evidence.\n");
   await box.write("_content/courses/Acids.attach/Acids_Concept_Map.concept-map.card", "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n---\nMap.\n");
@@ -162,7 +159,6 @@ void test("The base's Zod fields apply through the stub:", async (t) => {
 // `loadBoxSchemas` is what `bbx validate` used above; read directly, it shows the
 // five types the stubs register, and the load-failure ledger stays empty.
 void test("loadBoxSchemas is what bbx validate used above; read directly, it shows the f...", async (t) => {
-  // doctest:L161
   const box = await stubbedBox();
   const loaded = await loadBoxSchemas(box.root);
   t.check(({ types: loaded.cardSchemas.map((s) => s.type).toSorted(), failures: listSchemaLoadFailures(box.root) }), {

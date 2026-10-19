@@ -57,7 +57,6 @@ function comment(over: Partial<Comment>): Comment {
 // untracked one is not — two worktrees routinely hold different `scratch/notes.md`
 // — so those are keyed by worktree and never merge.
 void test("A tracked file is the same file in every checkout, so its comments follow it.", async (t) => {
-  // doctest:L63
   const keys = { tracked: subjectKey(tracked), scratch: subjectKey(scratch) };
   t.check(keys, {
     tracked: "tracked/beebox/docs/plans/foo.md.comments.yaml",
@@ -72,7 +71,6 @@ void test("A tracked file is the same file in every checkout, so its comments fo
 // `bin/exhibits add`'s rule, dots included; a leading dot is refused so no
 // traversal or hidden file can be spelled.
 void test("An exhibit page lives in the exhibits store outside every checkout, so its su...", async (t) => {
-  // doctest:L76
   const page: Subject = { scope: "exhibit", workstream: "exhibits-rethink", exhibit: "review.v2" };
   const refused = (subject: Subject): string => {
     try {
@@ -105,7 +103,6 @@ void test("An exhibit page lives in the exhibits store outside every checkout, s
 // guard is ever loosened. A path that merely needs normalizing is refused too,
 // rather than silently rewritten — the caller passed something it did not mean.
 void test("Every shape below is a write outside the store if the guard is missing.", async (t) => {
-  // doctest:L102
   const escapes = [
     { scope: "tracked", relPath: "../../etc/passwd" },
     { scope: "tracked", relPath: "/etc/passwd" },
@@ -116,7 +113,6 @@ void test("Every shape below is a write outside the store if the guard is missin
     { scope: "worktree", worktree: "has/slash", relPath: "notes.md" },
   ] satisfies Subject[];
 
-  // doctest:L112
   function refusalName(subject: Subject): string {
     try {
       commentsFilePath(store, subject);
@@ -142,20 +138,17 @@ void test("Every shape below is a write outside the store if the guard is missin
 // store and every delete deletes someone else's file. Each component from the root
 // down is checked, so this is refused on read, on append, and on clear.
 void test("A symlinked ancestor is the escape a lexical check cannot see:", async (t) => {
-  // doctest:L131
   const outside = join(root, "outside");
   await mkdir(outside, { recursive: true });
   const linked = join(store, "linked");
   await symlink(outside, linked);
   const viaLink: Subject = { scope: "tracked", relPath: "x.md" };
 
-  // doctest:L137
   // Point the `tracked` namespace itself at somewhere else.
   const trackedDir = join(store, "tracked");
   await rm(trackedDir, { recursive: true, force: true });
   await symlink(outside, trackedDir);
 
-  // doctest:L142
   const readRefusal = await readComments(store, viaLink);
   const appendRefusal = await appendComment(store, { subject: viaLink, comment: comment({}) })
     .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
@@ -163,7 +156,6 @@ void test("A symlinked ancestor is the escape a lexical check cannot see:", asyn
     .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
   const escaped = await readdir(outside);
 
-  // doctest:L149
   await rm(trackedDir);
   await rm(linked);
   const symlinkGuard = {
@@ -183,20 +175,17 @@ void test("A symlinked ancestor is the escape a lexical check cannot see:", asyn
 // A `..` **segment** is an escape; a filename that merely starts with `..` is a
 // legal document and must not be refused.
 void test("A .. segment is an escape; a filename that merely starts with .. is a legal d...", async (t) => {
-  // doctest:L165
   t.check(subjectKey({ scope: "tracked", relPath: "..notes.md" }), "tracked/..notes.md.comments.yaml");
 });
 
 // ## Appending, and reading back newest-first
 void test("Appending, and reading back newest-first", async (t) => {
-  // doctest:L172
   await appendComment(store, { subject: tracked, comment: comment({}) });
   await appendComment(store, {
     subject: tracked,
     comment: comment({ id: "c-0002", at: "2026-08-22T15:00:00Z", origin: "voice", body: "Second." }),
   });
 
-  // doctest:L178
   const read = await readComments(store, tracked);
   const summary = { problem: read.problem, count: read.comments.length, newest: byNewest(read.comments)[0]?.id };
   t.check(summary, {
@@ -209,7 +198,6 @@ void test("Appending, and reading back newest-first", async (t) => {
 // The file on disk is plain YAML an agent can `cat` — the quoted text carries the
 // meaning whether or not anything ever re-resolves the anchor.
 void test("The file on disk is plain YAML an agent can cat — the quoted text carries the...", async (t) => {
-  // doctest:L188
   const onDisk = await readFile(commentsFilePath(store, tracked), "utf8");
   t.check(onDisk.split("\n").slice(0, 3).join(" | "), "version: 1 | comments: |   - id: c-0001");
 });
@@ -220,19 +208,15 @@ void test("The file on disk is plain YAML an agent can cat — the quoted text c
 // A file that is valid YAML but not a comments file is refused the same way, with
 // the schema issue named.
 void test("This is the property that keeps a corrupted store from looking like a quiet one.", async (t) => {
-  // doctest:L200
   const broken: Subject = { scope: "tracked", relPath: "broken.md" };
   await mkdir(join(store, "tracked"), { recursive: true });
 
-  // doctest:L203
   await writeFile(commentsFilePath(store, broken), "version: 1\ncomments: [oops\n", "utf8");
   const badYaml = await readComments(store, broken);
 
-  // doctest:L206
   await writeFile(commentsFilePath(store, broken), "version: 99\ncomments: []\n", "utf8");
   const badShape = await readComments(store, broken);
 
-  // doctest:L209
   const problems = {
     yamlEmpty: badYaml.comments.length === 0,
     yamlNamed: badYaml.problem?.includes("not valid YAML") ?? false,
@@ -247,7 +231,6 @@ void test("This is the property that keeps a corrupted store from looking like a
   // Appending over a file we could not read is refused rather than overwriting it —
   // the remarks are still on disk and a human can still recover them.
 
-  // doctest:L222
   const refusal = await appendComment(store, { subject: broken, comment: comment({}) })
     .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.message : "unknown"));
   await rm(commentsFilePath(store, broken));
@@ -260,7 +243,6 @@ void test("This is the property that keeps a corrupted store from looking like a
 // Two browser tabs commenting on one document land in the same process, where a
 // lost update is invisible to any file lock.
 void test("Two browser tabs commenting on one document land in the same process, where a...", async (t) => {
-  // doctest:L236
   const many: Subject = { scope: "tracked", relPath: "busy.md" };
   await Promise.all(
     Array.from({ length: 8 }, (_unused, i) =>
@@ -281,13 +263,11 @@ void test("Two browser tabs commenting on one document land in the same process,
   // closes it — this is the only failure in the design that destroys the
   // boxholder's words rather than misplacing them.
 
-  // doctest:L259
   const { execFile } = await import("node:child_process");
   const { promisify } = await import("node:util");
   const run = promisify(execFile);
   const repoRoot = join(process.cwd(), "..");
 
-  // doctest:L264
   // `--worktree probe` names the namespace explicitly: these paths are not
   // tracked, so they land in the worktree namespace, and pinning the name keeps
   // the test independent of which checkout it runs in.
@@ -307,7 +287,6 @@ void test("Two browser tabs commenting on one document land in the same process,
   // A body that begins with `--` is the boxholder's words, not a flag. A parser that
   // skipped it would drop the comment on the floor.
 
-  // doctest:L286
   await run(join(repoRoot, "bin/comments"), [
     "add", "flagged.md", "--worktree", "probe", "--body", "-- actually, no",
   ], {
@@ -322,27 +301,23 @@ void test("Two browser tabs commenting on one document land in the same process,
 // A mistyped `BBX_COMMENTS_ROOT` would otherwise scatter comment files
 // through an unrelated tree.
 void test("A mistyped BBXCOMMENTSROOT would otherwise scatter comment files through an u...", async (t) => {
-  // doctest:L302
   const unmarked = join(root, "not-a-store");
   await mkdir(unmarked, { recursive: true });
   const refused = await appendComment(unmarked, { subject: tracked, comment: comment({}) })
     .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
 
-  // doctest:L307
   // Listing must refuse it too. Walking an unmarked root would let
   // BBX_COMMENTS_ROOT=$HOME recurse an unrelated tree and report whatever
   // `.comments.yaml` files it found there as waiting comments.
   const listRefused = await listAll(unmarked)
     .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
 
-  // doctest:L313
   // A DIRECTORY named .dev-comments is not a marker.
   const fakeMarker = join(root, "fake-store");
   await mkdir(join(fakeMarker, STORE_MARKER), { recursive: true });
   const fakeRefused = await appendComment(fakeMarker, { subject: tracked, comment: comment({}) })
     .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
 
-  // doctest:L319
   const guard = { refused, listRefused, fakeRefused, marker: STORE_MARKER, suffix: COMMENTS_SUFFIX };
   t.check(guard, {
     refused: "UninitializedCommentStoreError",
@@ -356,7 +331,6 @@ void test("A mistyped BBXCOMMENTSROOT would otherwise scatter comment files thro
 // A store root that does not exist at all is genuinely empty — that is the state
 // before anyone has commented, and it is not an error.
 void test("A store root that does not exist at all is genuinely empty — that is the stat...", async (t) => {
-  // doctest:L328
   t.check((await listAll(join(root, "never-created"))).length, 0);
 });
 
@@ -366,27 +340,23 @@ void test("A store root that does not exist at all is genuinely empty — that i
 // addressed to this workstream" is a filter over the listing. One store, two
 // readings, no second index.
 void test("The store is file-keyed, so \"what is on this document\" is a read and \"what is...", async (t) => {
-  // doctest:L339
   await appendComment(store, {
     subject: scratch,
     comment: comment({ id: "c-ws", workstream: "scanner-ingest", body: "For scanner." }),
   });
 
-  // doctest:L344
   // An exhibit comment is listed by its named subject, round-tripped from its path.
   await appendComment(store, {
     subject: { scope: "exhibit", workstream: "exhibits-rethink", exhibit: "after" },
     comment: comment({ id: "c-ex", workstream: "exhibits-rethink", body: "The caption is wrong." }),
   });
 
-  // doctest:L350
   // A hand-created file whose path is not a valid subject is REPORTED and skipped,
   // not allowed to take the whole listing down with it. Two such files: a tracked
   // one with no path, and an exhibit one with no workstream segment.
   await writeFile(join(store, "tracked", COMMENTS_SUFFIX), "version: 1\ncomments: []\n");
   await writeFile(join(store, "exhibit", `stray${COMMENTS_SUFFIX}`), "version: 1\ncomments: []\n");
 
-  // doctest:L356
   const entries = await listAll(store);
   const forScanner = entries.flatMap((entry) =>
     entry.comments.filter((c) => c.workstream === "scanner-ingest").map((c) => c.body),
@@ -421,7 +391,6 @@ void test("The store is file-keyed, so \"what is on this document\" is a read an
 // listing shows nothing rather than an empty husk. Clearing an id that is not
 // there reports zero rather than pretending.
 void test("Nothing expires on its own.", async (t) => {
-  // doctest:L380
   const removedOne = await clearComments(store, { subject: tracked, id: "c-0001" });
   const afterOne = (await readComments(store, tracked)).comments.length;
   const removedRest = await clearComments(store, { subject: tracked });
@@ -450,7 +419,6 @@ void test("Derived, never hardcoded — and overridable for tests and non-standa
       t.error(error);
     }
   });
-  // doctest:L397
   const previous = process.env["BBX_COMMENTS_ROOT"];
   delete process.env["BBX_COMMENTS_ROOT"];
   const derived = defaultStoreRoot("/checkouts/beebox");

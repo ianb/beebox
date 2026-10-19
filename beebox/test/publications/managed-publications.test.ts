@@ -126,7 +126,6 @@ function publicationConnectionsCaller(actor: TrpcActor) {
   }));
 }
 
-// doctest:L476
 function setupScenario(base: ManagedPublicationRuntime, scenario: { boxSlug: string; provisioning: FakeProvisioningClient }) {
   const { boxSlug, provisioning: scenarioProvisioning } = scenario;
   let mapping: CloudflarePublishBoxHost | null = null;
@@ -171,7 +170,6 @@ after(async () => {
 
 // A first prepare writes a pending candidate and disabled edge authority.
 void test("A first prepare writes a pending candidate and disabled edge authority.", async (t) => {
-  // doctest:L126
   candidate = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
   const firstManifest = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
   t.check({ status: firstManifest.status, candidate: candidate.revision.length, release: firstManifest.activeRelease.id === candidate.releaseId }, {
@@ -183,7 +181,6 @@ void test("A first prepare writes a pending candidate and disabled edge authorit
   // A stale revision is refused. The current revision approves and publishes the
   // candidate, and disable/enable only changes the authoritative status.
 
-  // doctest:L136
   const stale = await Promise.resolve()
     .then(() => approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: "0".repeat(64) }, runtime))
     .then(() => false, () => true);
@@ -203,7 +200,6 @@ void test("A first prepare writes a pending candidate and disabled edge authorit
 
 // Listing names the card that claims each pubId.
 void test("listing names the claiming card", async (t) => {
-  // doctest:L151
   await box.write(HOME_CARD, createPublicationCardTemplate({ pubId, connection: "main", title: "Home", tier: "public", slug: "demo" }));
   const listedHome = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime)).sites.find((site) => site.pubId === pubId);
   t.check(({ cardPath: listedHome?.cardPath, duplicateCardPaths: listedHome?.duplicateCardPaths }), {
@@ -214,7 +210,6 @@ void test("listing names the claiming card", async (t) => {
   // Two cards that claim the same pubId leave the site without a card and list
   // both claimants.
 
-  // doctest:L162
   await box.write("_content/Copy.publication.card", createPublicationCardTemplate({ pubId, connection: "main", title: "Copy", tier: "public", slug: "demo" }));
   const listedDuplicate = (await listManagedPublications({ boxRoot, boxSlug: "box-a" }, runtime)).sites.find((site) => site.pubId === pubId);
   await rm(box.path("_content/Copy.publication.card"));
@@ -228,7 +223,6 @@ void test("listing names the claiming card", async (t) => {
 
   // A binding whose pubId no card claims is an orphan: no card and no duplicates.
 
-  // doctest:L172
   const orphanPubId = "qrstuvwxyzabcdefghijklmnop";
   assert.ok(binding !== null);
   const orphanBinding: CloudflarePublishBinding = { ...binding, pubId: orphanPubId };
@@ -245,7 +239,6 @@ void test("listing names the claiming card", async (t) => {
 
 // API prepare and member-only actions.
 void test("the API prepares and restricts serving changes to members", async (t) => {
-  // doctest:L185
   const prepared = await publicationCaller("user").publications.prepare({ card: HOME_CARD });
   t.check(({ cardPath: prepared.cardPath, approvalUrl: prepared.approvalUrl }), {
     cardPath: "_content/Home.publication.card",
@@ -254,7 +247,6 @@ void test("the API prepares and restricts serving changes to members", async (t)
 
   // Agent and open contexts cannot change serving state; a signed-in member can.
 
-  // doctest:L193
   const actorResult = (actor: TrpcActor) => Promise.resolve()
     .then(() => publicationCaller(actor).publications.disable({ pubId }))
     .then(() => ({ code: "allowed", message: "" }), (error) => ({ code: error.code, message: error.message }));
@@ -286,7 +278,6 @@ void test("the API prepares and restricts serving changes to members", async (t)
 
   // Agent discovery returns only active connection names granted to this box.
 
-  // doctest:L213
   connectionRows = [
     { name: "for-this-box", accountId: "1".repeat(32), credentialType: "account-api-token", verifiedAt: null, tokenId: "private-token-id", tokenStatus: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "unverified", workerDeploy: "unverified", accessLive: "unverified" }, grants: [{ boxSlug: "box-a", access: "server" }] },
     { name: "other-box", accountId: "2".repeat(32), credentialType: "account-api-token", verifiedAt: null, tokenId: "private-token-id-2", tokenStatus: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "unverified", workerDeploy: "unverified", accessLive: "unverified" }, grants: [{ boxSlug: "box-b", access: "server" }] },
@@ -298,7 +289,6 @@ void test("the API prepares and restricts serving changes to members", async (t)
     ],
   });
 
-  // doctest:L221
   const openConnectionDiscovery = await Promise.resolve()
     .then(() => publicationConnectionsCaller("open").connections())
     .then(() => "allowed", (error) => error.code);
@@ -312,7 +302,6 @@ void test("the API prepares and restricts serving changes to members", async (t)
 
 // Pending audience changes and release refresh.
 void test("changed audience stays pending and refresh keeps the previous release", async (t) => {
-  // doctest:L232
   tier = "secret";
   connectionRows = [{ name: "main", accountId: "0123456789abcdef0123456789abcdef", credentialType: "account-api-token", verifiedAt: null, tokenId: "private-token-id", tokenStatus: "active", capabilities: { tokenForAccount: "verified", r2ObjectWrite: "unverified", workerDeploy: "unverified", accessLive: "unverified" }, grants: [{ boxSlug: "box-a", access: "server" }] }];
   const changed = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
@@ -326,7 +315,6 @@ void test("changed audience stays pending and refresh keeps the previous release
   // Enabling follows the active manifest's approved route even while a pending
   // candidate requests a different tier and path.
 
-  // doctest:L244
   await enableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, runtime);
   const activeWithOtherCandidate = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
   const activeMarker = JSON.parse(new TextDecoder().decode(await store.get(`shared-routes/${pubId}/route.json`)));
@@ -344,7 +332,6 @@ void test("changed audience stays pending and refresh keeps the previous release
 
   // Account approval fails closed until Access is actually verified.
 
-  // doctest:L255
   tier = "accounts";
   const accountCandidate = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
   const accessBlocked = await Promise.resolve()
@@ -354,13 +341,11 @@ void test("changed audience stays pending and refresh keeps the previous release
     accessBlocked: true,
   });
 
-  // doctest:L265
   await enableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, runtime);
 
   // Same-scope content refresh is atomic: the new release becomes active and the
   // previous inventory remains available for the bounded overlap window.
 
-  // doctest:L272
   tier = "public";
   source = "<h1>Second</h1>";
   refreshed = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
@@ -385,7 +370,6 @@ void test("changed audience stays pending and refresh keeps the previous release
 
 // Disable during preparation, release file reads.
 void test("disable during preparation and release file reads", async (t) => {
-  // doctest:L289
   const originalBundle = runtime.workerBundle;
   let disableDuringDeploy = true;
   runtime.workerBundle = async () => {
@@ -408,7 +392,6 @@ void test("disable during preparation and release file reads", async (t) => {
   // They read inventory-listed text and reject traversal paths, unknown paths,
   // retired releases, and another box's publication.
 
-  // doctest:L310
   const scopedRuntime: ManagedPublicationRuntime = { ...runtime, getBinding: async (query) => (query.boxSlug === "box-a" && query.pubId === pubId ? binding : null) };
   const read = (overrides: { releaseId?: string; path?: string; boxSlug?: string }) => readManagedPublicationReleaseFile({ boxRoot, boxSlug: "box-a", pubId, releaseId: afterDisable.releaseId, path: "index.html", ...overrides }, scopedRuntime);
   const rejection = (overrides: { releaseId?: string; path?: string; boxSlug?: string }) => read(overrides).then(() => "accepted", (error) => error.message);
@@ -440,7 +423,6 @@ void test("disable during preparation and release file reads", async (t) => {
   // The box agent may read release files through `releaseFile`, but it still
   // cannot approve, enable, or disable.
 
-  // doctest:L341
   const agent = publicationCaller("agent").publications;
   const agentRead = await agent.releaseFile({ pubId, releaseId: afterDisable.releaseId, path: "index.html" });
   const refused = (call: () => Promise<unknown>) => Promise.resolve().then(call).then(() => "accepted", (error) => error.code);
@@ -464,7 +446,6 @@ void test("disable during preparation and release file reads", async (t) => {
 
 // Remote write failures, routes, and slug moves.
 void test("shared routes survive disable and slug moves", async (t) => {
-  // doctest:L356
   await enableManagedPublication({ boxRoot, boxSlug: "box-a", pubId }, runtime);
   const originalPut = store.put.bind(store);
   store.put = async (key, input) => {
@@ -484,7 +465,6 @@ void test("shared routes survive disable and slug moves", async (t) => {
   // Shared-host approval enrolls the publication with an exact route marker and, for
   // public sites, a slug pointer. Every refresh remains gated by the approved marker.
 
-  // doctest:L375
   const marker = JSON.parse(new TextDecoder().decode(await store.get(`shared-routes/${pubId}/route.json`)));
   const slugPointer = new TextDecoder().decode(await store.get("slugs/demo"));
   t.check({ markerVersion: marker.schemaVersion, markerPub: marker.pubId, markerHost: marker.hostname, markerPath: marker.path, markerManifestHost: marker.manifestHostHandle, slugPointer }, {
@@ -500,7 +480,6 @@ void test("shared routes survive disable and slug moves", async (t) => {
   // keeps the routing marker and pointer; the live manifest controls whether they
   // serve.
 
-  // doctest:L386
   const beforeCollision = siteEdgeManifestSchema.parse(JSON.parse(new TextDecoder().decode(await store.get(`pubs/${pubId}/manifest.json`))));
   await store.put("pubs/zyxwvutsrqponmlkjihgfedcba/manifest.json", { body: JSON.stringify({ ...beforeCollision, hostHandle: "bbx-other-host", status: "live" }) });
   await store.put("slugs/demo", { body: "zyxwvutsrqponmlkjihgfedcba" });
@@ -522,7 +501,6 @@ void test("shared routes survive disable and slug moves", async (t) => {
   // After an approved slug changes, its old pointer is harmless because the live
   // manifest no longer claims that path. A second publication can then claim it.
 
-  // doctest:L404
   slug = "moved";
   const moved = await prepareManagedPublication({ boxRoot, boxSlug: "box-a", card: "_content/Home.publication.card", ownerEmail: null }, runtime);
   await approveManagedPublication({ boxRoot, boxSlug: "box-a", pubId, expectedRevision: moved.revision }, runtime);
@@ -551,7 +529,6 @@ void test("shared routes survive disable and slug moves", async (t) => {
 
 // Shared-host setup.
 void test("shared-host setup is owner-only and fails closed", async (t) => {
-  // doctest:L428
   const adminProvisioning = createFakeProvisioningClient({ zones: [{ id: "config-zone", name: "example.org", status: "active", accountId: "0123456789abcdef0123456789abcdef" }] });
   let adminMapping: CloudflarePublishBoxHost | null = null;
   let adminDeploys = 0;
@@ -615,7 +592,6 @@ void test("shared-host setup is owner-only and fails closed", async (t) => {
     .then(() => conflictSetup.caller().publications.configureSharedHost({ connectionName: "main", hostname: "conflict.example.org" }))
     .then(() => "allowed", (error) => error.message);
 
-  // doctest:L514
   const missingReadbackProvisioning = createFakeProvisioningClient({ zones });
   missingReadbackProvisioning.listWorkerDomains = async () => [];
   missingReadbackProvisioning.attachWorkerDomain = async (input) => ({ id: "not-readable", ...input, environment: "production" });
@@ -624,7 +600,6 @@ void test("shared-host setup is owner-only and fails closed", async (t) => {
     .then(() => missingReadback.caller().publications.configureSharedHost({ connectionName: "main", hostname: "readback.example.org" }))
     .then(() => "allowed", (error) => error.message);
 
-  // doctest:L522
   const lostResponseProvisioning = createFakeProvisioningClient({ zones });
   const attachDomain = lostResponseProvisioning.attachWorkerDomain.bind(lostResponseProvisioning);
   let loseResponse = true;
@@ -639,7 +614,6 @@ void test("shared-host setup is owner-only and fails closed", async (t) => {
     .then(() => "attached", () => "pending");
   const secondAttempt = await lostResponse.caller().publications.configureSharedHost({ connectionName: "main", hostname: "lost-response.example.org" });
 
-  // doctest:L536
   const legacyScript = { bindings: [{ type: "plain_text", name: "PUB_ID", text: "legacy-publication" }] };
   adminProvisioning.scripts.set("legacy-worker-sentinel", legacyScript);
   const beforeRepairAttachments = adminProvisioning.ops.filter((op) => op.startsWith("attach-domain:")).length;
@@ -674,7 +648,6 @@ void test("shared-host setup is owner-only and fails closed", async (t) => {
 
 // Legacy publications.
 void test("a legacy publication without a slug keeps its Worker URL", async (t) => {
-  // doctest:L556
   const legacyPubId = "234567abcdefghijklmnopqrst";
   pubId = legacyPubId;
   includeSlug = false;

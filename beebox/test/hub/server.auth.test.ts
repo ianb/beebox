@@ -130,16 +130,13 @@ void test("Unauthenticated HTML navigation redirects to `/auth/login`", async (t
 });
 
 async function loginAndProxy(t: Test) {
-  // doctest:L108
   const navResponse = await fetch(`${hubBase}/test1/browse/some-card`, { redirect: "manual" });
   t.check(navResponse.status, 302);
 
-  // doctest:L112
   t.check(navResponse.headers.get("location"), "/auth/login?returnTo=%2Ftest1%2Fbrowse%2Fsome-card");
 
   // ## A mobile bearer token proxies without a browser session
 
-  // doctest:L119
   const mobileResponse = await fetch(`${hubBase}/test1/chat?nativeComposer=1`, {
     headers: { authorization: `Bearer ${mobileToken}` },
   });
@@ -165,7 +162,6 @@ async function loginAndProxy(t: Test) {
   // checks it against that box's token file and proxies it with no identity
   // attached; the box child checks it again. A different token is a bare 401.
 
-  // doctest:L139
   const agentToken = getOrCreateAgentToken(mobileBox.root);
   const agentResponse = await fetch(`${hubBase}/test1/api/chat/ui/request`, {
     method: "POST",
@@ -203,7 +199,6 @@ async function bogusCredentials(t: Test) {
   // attacker learns nothing about which slugs are real, and pays no box-wake for
   // the guess.
 
-  // doctest:L171
   const trpcPath = "/api/trpc/health.check";
   const refused: Array<[string, string, Record<string, string>]> = [
     ["no credential, real slug", "test1", {}],
@@ -227,7 +222,6 @@ no credential, unknown slug → 401`);
   // A real `bbx_mobile` cookie does pass — this is the credential a WebSocket
   // upgrade carries, since the browser API cannot set headers on one.
 
-  // doctest:L198
   const mobileCookie = signMobileSession(mobileBox.root, {
     deviceId: mobileDeviceId,
     createdBy: null,
@@ -243,14 +237,12 @@ no credential, unknown slug → 401`);
 async function discovery(t: Test) {
   // ## A mobile bearer token can discover its paired box
 
-  // doctest:L213
   const boxesWithoutMobileAuth = await fetch(`${hubBase}/api/boxes`);
   t.check(await boxesWithoutMobileAuth.json(), {
     boxes: [],
     authRequired: true,
   });
 
-  // doctest:L217
   const boxesWithMobileAuth = await fetch(`${hubBase}/api/boxes`, {
     headers: { authorization: `Bearer ${mobileToken}` },
   });
@@ -271,7 +263,6 @@ async function discovery(t: Test) {
   // device bearer token. The hub should pass the request through without injecting a
   // browser identity.
 
-  // doctest:L232
   const pairingResponse = await fetch(`${hubBase}/test1/api/pairing/redeem`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -295,14 +286,12 @@ async function discovery(t: Test) {
 
   // ## A valid session cookie becomes `x-bbx-authenticated-email` on the proxied request
 
-  // doctest:L250
   const cookieValue = signSession({ email: "person@example.com", name: "Person" });
   const authedResponse = await fetch(`${hubBase}/test1/browse/some-card`, {
     headers: { cookie: `${COOKIE_NAME}=${cookieValue}` },
   });
   t.check(authedResponse.status, 200);
 
-  // doctest:L257
   const authedBody = BoxEcho.parse(await authedResponse.json());
   t.check({ email: authedBody.xBbxAuthenticatedEmail, secret: authedBody.xBbxHubSecret }, {
     email: "person@example.com",
@@ -320,28 +309,22 @@ async function healthzAndWebhooks(t: Test) {
   // gets a 401 from the gate, NOT a 302 to `/auth/login`. With the diag bearer key
   // it returns the verdict.
 
-  // doctest:L271
   process.env.BBX_DIAG_API_KEY = "test-diag-key-for-auth-doctest";
 
-  // doctest:L273
   const healthzNoKey = await fetch(`${hubBase}/healthz`, { redirect: "manual" });
   t.check(healthzNoKey.status, 401);
 
-  // doctest:L277
   const healthzWithKey = await fetch(`${hubBase}/healthz`, { headers: { authorization: "Bearer test-diag-key-for-auth-doctest" } });
   t.check(healthzWithKey.status, 200);
 
-  // doctest:L281
   delete process.env.BBX_DIAG_API_KEY;
 
   // ## A webhook path proxies through with NO session required, and no email attached
 
-  // doctest:L287
   const webhookResponse = await fetch(`${hubBase}/webhook/test1/incoming`);
   const webhookBody = BoxEcho.parse(await webhookResponse.json());
   t.check(webhookResponse.status, 200);
 
-  // doctest:L292
   t.check({ email: webhookBody.xBbxAuthenticatedEmail, secret: webhookBody.xBbxHubSecret }, {
     email: null,
     secret: "test-hub-secret-for-auth-doctest",
@@ -349,7 +332,6 @@ async function healthzAndWebhooks(t: Test) {
 
   // ## An unauthenticated WebSocket upgrade is rejected with a raw 401 (no cookie fallback either)
 
-  // doctest:L299
   function rawUpgradeRequest({ port, path: reqPath, headers }: { port: number; path: string; headers?: Record<string, string> }): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const socket = net.connect(port, "127.0.0.1", () => {
@@ -377,7 +359,6 @@ async function healthzAndWebhooks(t: Test) {
     });
   }
 
-  // doctest:L326
   const unauthedUpgrade = await rawUpgradeRequest({ port: portOf(hubServer), path: "/test1/ws" });
   t.check(unauthedUpgrade, "HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
 
@@ -390,17 +371,14 @@ async function revocation(t: Test) {
   // so a cookie minted before a password change (stale `gen`) is rejected at the hub —
   // `decideHubAuth` no longer trusts an HMAC-valid-but-revoked cookie.
 
-  // doctest:L338
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "pw-original" });
   resetLocalUserCache();
 
-  // doctest:L341
   // A cookie minted now carries the record's current gen (1) and proxies through.
   const genCookie = signSession({ email: "owner@example.com", name: "Owner" });
   const authedGen = await fetch(`${hubBase}/test1/browse/x`, { headers: { cookie: `${COOKIE_NAME}=${genCookie}` } });
   t.check(authedGen.status, 200);
 
-  // doctest:L347
   // Change the password → gen bumps to 2 → the old cookie is now revoked.
   await setPassword({ email: "owner@example.com", password: "pw-rotated" });
   resetLocalUserCache();
@@ -410,6 +388,5 @@ async function revocation(t: Test) {
   });
   t.check(revoked.status, 302);
 
-  // doctest:L357
   t.check(revoked.headers.get("location"), "/auth/login?returnTo=%2Ftest1%2Fbrowse%2Fx");
 }

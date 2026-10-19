@@ -50,14 +50,12 @@ void test("Before the window, the box holds an old email and a note.", async (t)
       t.error(error);
     }
   });
-  // doctest:L45
   const box = await makeTmpBox({ git: true });
   await box.write("_content/inbox/old.email-message.card", card("Old"));
   await box.write("_content/notes/plan.doc.card", card("Plan"));
   box.commitAll("before the window");
   const since = execSync("git rev-parse HEAD", { cwd: box.root }).toString().trim();
 
-  // doctest:L51
   await box.write("_content/inbox/trip.email-message.card", card("Field trip"));
   box.commitAll("Intake: trip email");
   await box.write("_content/inbox/receipt.email-message.card", card("Receipt"));
@@ -69,7 +67,6 @@ void test("Before the window, the box holds an old email and a note.", async (t)
   // By default it lists the paths added since the commit. The moved email appears
   // once, at its final path; the old email, which only moved, does not.
 
-  // doctest:L64
   await t.checkText(await changes(box, { since }), `_content/inbox/receipt.email-message.card
 _content/notes/groceries.doc.card
 _content/school/trip.email-message.card
@@ -78,21 +75,17 @@ exit 0`);
   // `--match` selects by box-relative glob, and may repeat. `--kind modified`
   // lists edited cards, and `--kind any` everything, the old email's move included.
 
-  // doctest:L75
   await t.checkText(await changes(box, { since, match: ["_content/**/*.email-message.card"] }), `_content/inbox/receipt.email-message.card
 _content/school/trip.email-message.card
 exit 0`);
 
-  // doctest:L80
   await t.checkText(await changes(box, { since, match: ["_content/notes/*", "_content/school/*"] }), `_content/notes/groceries.doc.card
 _content/school/trip.email-message.card
 exit 0`);
 
-  // doctest:L85
   await t.checkText(await changes(box, { since, kind: "modified" }), `_content/notes/plan.doc.card
 exit 0`);
 
-  // doctest:L89
   await t.checkText(await changes(box, { since, kind: "any", match: ["_content/school/*"] }), `_content/school/old.email-message.card
 _content/school/trip.email-message.card
 exit 0`);
@@ -101,7 +94,6 @@ exit 0`);
   // output keeps the path with the text. `--cat --all` prints every card matching
   // the globs, changed or not.
 
-  // doctest:L100
   await t.checkText(await changes(box, { since, match: ["_content/**/*.email-message.card"], cat: true }), `=== _content/inbox/receipt.email-message.card
 ---
 title: Receipt
@@ -114,13 +106,11 @@ title: Field trip
 Field trip body
 exit 0`);
 
-  // doctest:L113
   await t.checkText((await changes(box, { since, match: ["_content/school/*"], cat: true, all: true })).split("\n").filter((l) => l.startsWith("===")).join("\n"), `=== _content/school/old.email-message.card
 === _content/school/trip.email-message.card`);
 
   // `--log` prints the commit subjects in the window, oldest first.
 
-  // doctest:L121
   await t.checkText(await changes(box, { since, log: true }), `Intake: trip email
 Intake: receipt; groceries note
 Triage: file school mail
@@ -130,7 +120,6 @@ exit 0`);
   // never match a real card, so it warns on stderr. The Gmail connector writes
   // `email-thread` and `email-message` cards; there is no `email` type.
 
-  // doctest:L133
   await t.checkText(await changes(box, { since, match: ["_content/**/*.email.card"] }), `stderr: bbx changes: warning: --match _content/**/*.email.card names card type "email", which this box has no schema for; it matches no cards
 exit 0`);
 
@@ -139,23 +128,18 @@ exit 0`);
   // Inside a scheduled script the tick sets `BBX_SINCE_COMMIT`; outside one, a
   // missing `--since` exits 2 rather than guessing.
 
-  // doctest:L144
   await t.checkText(await changes(box, { match: ["_content/notes/*"], env: { BBX_SINCE_COMMIT: since } }), `_content/notes/groceries.doc.card
 exit 0`);
 
-  // doctest:L148
   await t.checkText(await changes(box, {}), `stderr: Error: no since: pass --since or run from a schedule
 exit 2`);
 
-  // doctest:L152
   await t.checkText(await changes(box, { since: "0000000000000000000000000000000000000000" }), `stderr: Error: could not compare 0000000000000000000000000000000000000000 with HEAD: «*»
 exit 1`);
 
-  // doctest:L156
   await t.checkText(await changes(box, { since, kind: "renamed" }), `stderr: Error: --kind must be one of added, modified, any (got "renamed")
 exit 2`);
 
-  // doctest:L160
   await t.checkText(await changes(box, { since, all: true }), `stderr: Error: --all applies only with --cat
 exit 2`);
 
@@ -165,22 +149,17 @@ exit 2`);
   // to `$BBX_DEFER_FILE` and exits 75, the procedure skip code. With `--cat --all`
   // it still keys on whether anything changed, not on what it would print.
 
-  // doctest:L172
   const deferDir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-changes-"));
   const BBX_DEFER_FILE = path.join(deferDir, "defer.json");
   t.check(await changes(box, { match: ["_content/photos/**"], orSkip: true, env: { BBX_SINCE_COMMIT: since, BBX_DEFER_FILE } }), "exit 75");
 
-  // doctest:L177
   await t.checkText(await fs.readFile(BBX_DEFER_FILE, "utf-8"), "{\"reason\":\"no-change\"}");
 
-  // doctest:L180
   t.check(await changes(box, { since: "HEAD", match: ["_content/school/*"], cat: true, all: true, orSkip: true }), "exit 75");
 
-  // doctest:L183
   await t.checkText(await changes(box, { since, match: ["_content/notes/*"], orSkip: true, env: { BBX_DEFER_FILE: path.join(deferDir, "second.json") } }), `_content/notes/groceries.doc.card
 exit 0`);
 
-  // doctest:L187
   t.check(await fs.access(path.join(deferDir, "second.json")).then(() => "written", () => "absent"), "absent");
 });
 
@@ -198,7 +177,6 @@ void test("An email-message card keeps its body in a body-file sidecar in its at
       t.error(error);
     }
   });
-  // doctest:L204
   const mail = await makeTmpBox({ git: true });
   const thread = "_content/inbox/email/Field-trip.email-thread.attach";
   const message = (n: number) => `---\ntype: email-message\nemail:\n  subject: Trip ${n}\nbody-file:\n  ref: attach/msg-00${n}.body.txt\n---\n`;
@@ -210,7 +188,6 @@ void test("An email-message card keeps its body in a body-file sidecar in its at
   await mail.write(`${thread}/msg-003.email-message.card`, message(3));
   mail.commitAll("Intake: field trip thread");
 
-  // doctest:L215
   await t.checkText((await changes(mail, { since: start, match: ["_content/inbox/**/*.email-message.card"], cat: true })).replace(/x{4000}/, "x…x"), `=== _content/inbox/email/Field-trip.email-thread.attach/msg-001.email-message.card
 ---
 type: email-message

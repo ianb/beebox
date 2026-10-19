@@ -54,7 +54,6 @@ void test("A fresh session starts open and empty:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L50
   const box = await makeTmpBox();
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-123", createdBy: null });
   t.check(session, {
@@ -71,13 +70,11 @@ void test("A fresh session starts open and empty:", async (t) => {
     totalBytes: 0,
   });
 
-  // doctest:L55
   t.check(stagingSessionIsEmpty(session), true);
 
   // Two recording segments, each with two chunks, group under their segment id in
   // upload order:
 
-  // doctest:L63
   await addAudioChunk({
     boxRoot: box.root, id: session.id,
     segmentId: "seg-a", segmentStartedAt: "2026-07-09T14:00:00.000Z",
@@ -104,7 +101,6 @@ void test("A fresh session starts open and empty:", async (t) => {
   // Photos and files land in their own collections (photos keep `source`; files
   // keep `originalName`/`mimeType`):
 
-  // doctest:L91
   await addPhoto({
     boxRoot: box.root, id: session.id,
     filename: "photo-001.jpg", capturedAt: "2026-07-09T14:01:00.000Z",
@@ -125,7 +121,6 @@ void test("A fresh session starts open and empty:", async (t) => {
     },
   ]);
 
-  // doctest:L106
   t.check(staged.files, [
     {
       filename: "file-001-report.pdf",
@@ -135,15 +130,12 @@ void test("A fresh session starts open and empty:", async (t) => {
     },
   ]);
 
-  // doctest:L109
   t.check(stagingSessionIsEmpty(staged), false);
 
   // The raw bytes are on disk, and sealing advances the lifecycle state:
 
-  // doctest:L116
   t.check(await box.read(`_tmp/capture-staging/${session.id}/audio-0-001.webm`), "A0");
 
-  // doctest:L119
   await setStagingState({ boxRoot: box.root, id: session.id, state: "sealed" });
   t.check(await readStagingSession({ boxRoot: box.root, id: session.id }), {
     id: session.id,
@@ -161,7 +153,6 @@ void test("A fresh session starts open and empty:", async (t) => {
 
   // Cleanup removes the whole session directory:
 
-  // doctest:L127
   await cleanupStagingSession({ boxRoot: box.root, id: session.id });
   t.check(await readStagingSession({ boxRoot: box.root, id: session.id }), null);
 });
@@ -178,7 +169,6 @@ void test("Native audio declares m4a-aac; a second file or a WebM chunk under th
       t.error(error);
     }
   });
-  // doctest:L142
   const box = await makeTmpBox();
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
   await addAudioChunk({
@@ -230,7 +220,6 @@ void test("Ten chunks fired at once on a single segment read-modify-write sessio
       t.error(error);
     }
   });
-  // doctest:L184
   const box = await makeTmpBox();
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
   await Promise.all(
@@ -264,7 +253,6 @@ void test("Two concurrent finalize POSTs both call the CAS; exactly one wins the
       t.error(error);
     }
   });
-  // doctest:L214
   const box = await makeTmpBox();
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
   const [a, b] = await Promise.all([
@@ -273,17 +261,14 @@ void test("Two concurrent finalize POSTs both call the CAS; exactly one wins the
   ]);
   t.check([a, b], unordered([{ sealed: true, alreadySealed: false }, { sealed: false, alreadySealed: true }]));
 
-  // doctest:L226
   t.check((await readStagingSession({ boxRoot: box.root, id: session.id }))?.state, "sealed");
 
   // A `failed:*` session is fire-eligible again (the retry affordance), while an
   // in-flight `preparing`/`delivering`/`delivered` one is not:
 
-  // doctest:L234
   await setStagingState({ boxRoot: box.root, id: session.id, state: "failed:deliver" });
   t.check(await sealStagingSession({ boxRoot: box.root, id: session.id }), { sealed: true, alreadySealed: false });
 
-  // doctest:L238
   await setStagingState({ boxRoot: box.root, id: session.id, state: "delivering" });
   t.check(await sealStagingSession({ boxRoot: box.root, id: session.id }), { sealed: false, alreadySealed: true });
 
@@ -291,7 +276,6 @@ void test("Two concurrent finalize POSTs both call the CAS; exactly one wins the
   // session seals to `sealed` and records `failedItems` in one mutation (no window
   // where a sealed batch lacks its failed list):
 
-  // doctest:L248
   const withFailed = await createStagingSession({
     boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk",
     contextDir: "", expectedItems: [{ id: "a", name: "a.bin" }],
@@ -326,14 +310,12 @@ void test("A streamed upload re-checks the session state AND item registration u
       t.error(error);
     }
   });
-  // doctest:L272
   const box = await makeTmpBox();
   const session = await createStagingSession({
     boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk",
     contextDir: "", expectedItems: [{ id: "a", name: "x.bin" }],
   });
 
-  // doctest:L278
   // Seal (as a concurrent finalize would), then attempt the commit.
   await setStagingState({ boxRoot: box.root, id: session.id, state: "sealed" });
   const sealedResult = await streamOrThrow(box.root, { id: session.id, filename: "s-a.bin", itemId: "a" });
@@ -346,7 +328,6 @@ void test("A streamed upload re-checks the session state AND item registration u
   // An unregistered `itemId` is likewise rejected under the lock (registration is
   // the record of what may arrive):
 
-  // doctest:L294
   const openBox = await createStagingSession({
     boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk",
     contextDir: "", expectedItems: [{ id: "a", name: "x.bin" }],
@@ -357,7 +338,6 @@ void test("A streamed upload re-checks the session state AND item registration u
   // Registration itself is frozen by the seal — appending an item to a sealed
   // session throws rather than mutating the frozen registry:
 
-  // doctest:L307
   let registerResult = "ok";
   try {
     await registerBulkItems({ boxRoot: box.root, id: session.id, items: [{ id: "late", name: "late.bin" }] });
@@ -379,12 +359,10 @@ void test("Missing (ENOENT) is a silently-absent session — no quarantine, no l
       t.error(error);
     }
   });
-  // doctest:L327
   const box = await makeTmpBox();
   const missing = await readStagingSession({ boxRoot: box.root, id: "does-not-exist" });
   t.check(missing, null);
 
-  // doctest:L332
   t.check(await box.list("_tmp/capture-staging").catch(() => ""), "");
 });
 
@@ -400,7 +378,6 @@ void test("A write never leaves a bare session.json.tmp- file behind — only th
       t.error(error);
     }
   });
-  // doctest:L346
   const box = await makeTmpBox();
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
   const entries = await box.list(`_tmp/capture-staging/${session.id}`);
@@ -421,7 +398,6 @@ void test("Invalid JSON in session.json is not indistinguishable from an absent 
       t.error(error);
     }
   });
-  // doctest:L368
   const box = await makeTmpBox();
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
   await box.write(`_tmp/capture-staging/${session.id}/session.json`, "{ not valid json");
@@ -432,17 +408,14 @@ void test("Invalid JSON in session.json is not indistinguishable from an absent 
   console.error = originalError;
   t.check(result, null);
 
-  // doctest:L379
   t.check(errors, [str`[capture] Corrupt staging manifest for session ${session.id} in box ${box.root}: ${any(String)}`]);
 
-  // doctest:L385
   t.check(await box.list(`_tmp/capture-staging/${session.id}`), `_tmp/capture-staging/${session.id}/session.json.corrupt`);
 
   // A schema-invalid manifest (valid JSON, wrong shape) quarantines the same way,
   // and a repeated read against the already-quarantined session doesn't blow up
   // on a missing file — it's ENOENT again, silent:
 
-  // doctest:L398
   await box.write(`_tmp/capture-staging/${session.id}/session.json.corrupt`, "");
   await box.write(`_tmp/capture-staging/${session.id}/session.json`, JSON.stringify({ not: "a session" }));
   console.error = (...args: unknown[]) => { errors.push(args.join(" ")); };
@@ -450,18 +423,14 @@ void test("Invalid JSON in session.json is not indistinguishable from an absent 
   console.error = originalError;
   t.check(schemaResult, null);
 
-  // doctest:L406
   const corruptNotice = str`[capture] Corrupt staging manifest for session ${session.id} in box ${box.root}: ${any(String)}`;
   t.check(errors, [corruptNotice, corruptNotice]);
 
-  // doctest:L409
   t.check(await box.list(`_tmp/capture-staging/${session.id}`), `_tmp/capture-staging/${session.id}/session.json.corrupt`);
 
-  // doctest:L413
   const secondRead = await readStagingSession({ boxRoot: box.root, id: session.id });
   t.check(secondRead, null);
 
-  // doctest:L417
   t.check(errors, [corruptNotice, corruptNotice]);
 });
 
@@ -483,7 +452,6 @@ void test("The upload route checks state === \"open\" before it reads the reques
       t.error(error);
     }
   });
-  // doctest:L437
   const box = await makeTmpBox();
   const session = await createStagingSession({
     boxRoot: box.root, targetSessionId: "chat-1", createdBy: null,
@@ -495,12 +463,10 @@ void test("The upload route checks state === \"open\" before it reads the reques
   });
   await sealStagingSession({ boxRoot: box.root, id: session.id });
 
-  // doctest:L450
   async function addOrFail(fn: () => Promise<void>) {
     try { await fn(); return "accepted"; } catch (error) { return errorName(error); }
   }
 
-  // doctest:L454
   const photo = await addOrFail(() => addPhoto({
     boxRoot: box.root, id: session.id, filename: "photo-002.jpg",
     capturedAt: "2026-07-29T12:00:01.000Z", source: "camera-user",
@@ -521,7 +487,6 @@ void test("The upload route checks state === \"open\" before it reads the reques
   // The manifest is untouched by the rejected adds — it still holds only the photo
   // that landed while the session was open, and no stray bytes were written:
 
-  // doctest:L477
   const after = await readStagingSession({ boxRoot: box.root, id: session.id });
   assert.ok(after);
   t.check({ photos: after.photos, segments: after.segments, files: after.files }, {
@@ -530,14 +495,12 @@ void test("The upload route checks state === \"open\" before it reads the reques
     files: [],
   });
 
-  // doctest:L484
   t.checkText(await box.list(`_tmp/capture-staging/${session.id}`), `_tmp/capture-staging/${session.id}/photo-001.jpg
 _tmp/capture-staging/${session.id}/session.json`);
 
   // Lifecycle transitions themselves still work on a sealed session — the barrier is
   // specific to *media*, so preparation can keep moving the state forward:
 
-  // doctest:L493
   await setStagingState({ boxRoot: box.root, id: session.id, state: "delivered" });
   const delivered = await readStagingSession({ boxRoot: box.root, id: session.id });
   t.check(delivered?.state, "delivered");

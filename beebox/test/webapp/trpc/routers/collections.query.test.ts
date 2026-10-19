@@ -59,22 +59,18 @@ void test("A todo under content/projects/kitchen/ and one at the box root both e
       t.error(error);
     }
   });
-  // doctest:L56
   const box = await makeTmpBox({ git: true });
   await box.write("_content/root.doc.card", doc("{% todo %}Root-level todo{% /todo %}\n"));
   await box.write("_content/projects/kitchen/notes.doc.card", doc("{% todo %}Pick a countertop{% /todo %}\n"));
   box.commitAll("seed");
 
-  // doctest:L61
   const res = await caller(box.root).collections.query({
     collection: "todos",
     query: { here: "_content/projects/kitchen", params: OPEN },
   });
 
-  // doctest:L66
   t.check(res.query, { here: "_content/projects/kitchen", glob: "_content/projects/kitchen/**", includeReferring: true, group: "place" });
 
-  // doctest:L69
   t.check(texts(res), [
     "Pick a countertop",
   ]);
@@ -82,13 +78,11 @@ void test("A todo under content/projects/kitchen/ and one at the box root both e
   // An explicit `glob` overrides the one `here` implies, while `here` keeps
   // deciding what a *reference* points into.
 
-  // doctest:L77
   const explicit = await caller(box.root).collections.query({
     collection: "todos",
     query: { here: "_content/projects/kitchen", glob: "_content/root.doc.card", params: OPEN },
   });
 
-  // doctest:L82
   t.check(texts(explicit), [
     "Root-level todo",
   ]);
@@ -96,16 +90,13 @@ void test("A todo under content/projects/kitchen/ and one at the box root both e
   // `here: ""` is the box. Nothing is outside it, so the reference pass does not
   // run and does not have to be turned off.
 
-  // doctest:L90
   const boxWide = await caller(box.root).collections.query({
     collection: "todos",
     query: { here: "", params: OPEN },
   });
 
-  // doctest:L95
   t.check(boxWide.query, { here: "", glob: "**/*.card", includeReferring: false, group: "place" });
 
-  // doctest:L98
   t.check(texts(boxWide), [
     "Pick a countertop",
     "Root-level todo",
@@ -126,25 +117,21 @@ void test("A card's todo summary (docs/plans/todos-ui.md, Track 4) asks about th
       t.error(error);
     }
   });
-  // doctest:L114
   const box = await makeTmpBox({ git: true });
   await box.write("_content/porch/Draft [2].doc.card", doc('{% todo %}Sand the rail{% /todo %}\n{% todo status="done" %}Buy primer{% /todo %}\n'));
   await box.write("_content/porch/Draft 2.doc.card", doc("{% todo %}Sibling todo{% /todo %}\n"));
   box.commitAll("seed");
 
-  // doctest:L119
   const one = await caller(box.root).collections.query({
     collection: "todos",
     query: { here: "_content/porch/Draft [2].doc.card", includeReferring: false, params: { status: ["open", "parked", "done", "dropped"] } },
   });
 
-  // doctest:L124
   t.check(texts(one), [
     "Buy primer",
     "Sand the rail",
   ]);
 
-  // doctest:L127
   t.check(one.reduction, { open: 1, done: 1, dropped: 0, parked: 0, onPlate: 1, escalated: 0, next: null });
 });
 
@@ -161,7 +148,6 @@ void test("A card outside the glob contributes only the items that point into he
       t.error(error);
     }
   });
-  // doctest:L142
   const box = await makeTmpBox({ git: true });
   await box.write("_content/projects/kitchen/notes.doc.card", doc("{% todo %}Pick a countertop{% /todo %}\n"));
   await box.write(
@@ -174,29 +160,24 @@ void test("A card outside the glob contributes only the items that point into he
   box.commitAll("seed");
   const c = caller(box.root);
 
-  // doctest:L154
   const withRefs = await c.collections.query({
     collection: "todos",
     query: { here: "_content/projects/kitchen", params: OPEN },
   });
 
-  // doctest:L159
   t.check(rows(withRefs), [
     "_content/errands.doc.card (reference)",
     "_content/projects/kitchen/notes.doc.card (scope)",
   ]);
 
-  // doctest:L162
   // "Water the beans" points nowhere near the kitchen, so it stays out.
   t.check(texts(withRefs), ["Hardware run", "Pick a countertop"]);
 
-  // doctest:L166
   const scopeOnly = await c.collections.query({
     collection: "todos",
     query: { here: "_content/projects/kitchen", includeReferring: false, params: OPEN },
   });
 
-  // doctest:L171
   t.check(rows(scopeOnly), [
     "_content/projects/kitchen/notes.doc.card (scope)",
   ]);
@@ -216,7 +197,6 @@ void test("params is the collection's own zod schema (TodoParamsSchema), so the 
       t.error(error);
     }
   });
-  // doctest:L187
   const box = await makeTmpBox({ git: true });
   await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
   await box.write(
@@ -230,29 +210,24 @@ void test("params is the collection's own zod schema (TodoParamsSchema), so the 
   box.commitAll("seed");
   const c = caller(box.root);
 
-  // doctest:L200
   const openOnly = await c.collections.query({
     collection: "todos",
     query: { here: "_content/a.doc.card", params: { status: ["open"] } },
   });
 
-  // doctest:L205
   t.check(openOnly.groups.flatMap((g) => g.rows.flatMap((r) => r.items.map((i) => i.id))).toSorted(), [
     "t-escalated",
     "t-quiet",
   ]);
 
-  // doctest:L208
   t.check(openOnly.reduction, { open: 2, done: 1, dropped: 0, parked: 0, onPlate: 1, escalated: 1, next: "2026-07-01" });
 
-  // doctest:L211
   // `onPlate` narrows further, excluding the quiet one.
   const onPlate = await c.collections.query({
     collection: "todos",
     query: { here: "_content/a.doc.card", params: { status: ["open"], onPlate: true } },
   });
 
-  // doctest:L217
   t.check(onPlate.groups.flatMap((g) => g.rows.flatMap((r) => r.items.map((i) => i.id))), [
     "t-escalated",
   ]);
@@ -261,24 +236,20 @@ void test("params is the collection's own zod schema (TodoParamsSchema), so the 
   // sections and parents inside each row. `plate` splits the same rows across the
   // plate states, and a state with no items is absent rather than empty.
 
-  // doctest:L226
   const place = await c.collections.query({
     collection: "todos",
     query: { here: "_content/a.doc.card", group: "place", params: { status: ["open"] } },
   });
 
-  // doctest:L231
   t.check(place.groups.map((g) => `${g.key}:${g.label}`), [
     "place:By place",
   ]);
 
-  // doctest:L234
   const plate = await c.collections.query({
     collection: "todos",
     query: { here: "_content/a.doc.card", group: "plate", params: { status: ["open"] } },
   });
 
-  // doctest:L239
   t.check(plate.groups.map((g) => `${g.key}=${String(g.reduction.open)}`), [
     "escalated=1",
     "quiet=1",
@@ -298,7 +269,6 @@ void test("An agent-assigned todo never reaches a reduction or a row under the d
       t.error(error);
     }
   });
-  // doctest:L254
   const box = await makeTmpBox({ git: true });
   await box.write(
     "_content/a.doc.card",
@@ -310,33 +280,27 @@ void test("An agent-assigned todo never reaches a reduction or a row under the d
   box.commitAll("seed");
   const c = caller(box.root);
 
-  // doctest:L265
   const defaultScope = await c.collections.query({
     collection: "todos",
     query: { here: "_content/a.doc.card", params: { status: ["open"] } },
   });
 
-  // doctest:L270
   t.check(texts(defaultScope), [
     "Boxholder",
   ]);
 
-  // doctest:L273
   t.check(defaultScope.reduction, { open: 1, done: 0, dropped: 0, parked: 0, onPlate: 1, escalated: 0, next: null });
 
-  // doctest:L276
   const allScope = await c.collections.query({
     collection: "todos",
     query: { here: "_content/a.doc.card", params: { status: ["open"], scope: "all" } },
   });
 
-  // doctest:L281
   t.check(texts(allScope).toSorted(), [
     "Agent follow-up",
     "Boxholder",
   ]);
 
-  // doctest:L284
   t.check(allScope.reduction, { open: 2, done: 0, dropped: 0, parked: 0, onPlate: 2, escalated: 0, next: null });
 });
 
@@ -353,11 +317,9 @@ void test("here and glob both fail closed, rather than reaching the glob package
       t.error(error);
     }
   });
-  // doctest:L299
   const box = await makeTmpBox({ git: true });
   const c = caller(box.root);
 
-  // doctest:L302
   async function refused(query: QueryInput) {
     try {
       await c.collections.query({ collection: "todos", query });
@@ -367,19 +329,15 @@ void test("here and glob both fail closed, rather than reaching the glob package
     }
   }
 
-  // doctest:L311
   t.check(await refused({ here: "../elsewhere", params: OPEN }), "BAD_REQUEST");
 
-  // doctest:L314
   t.check(await refused({ here: "", glob: "/etc/**", params: OPEN }), "BAD_REQUEST");
 
-  // doctest:L317
   t.check(await refused({ here: "", glob: "../**/*.card", params: OPEN }), "BAD_REQUEST");
 
   // An unknown collection name is refused the same way — it never reaches a
   // server-side lookup.
 
-  // doctest:L325
   async function refusedCollection(collection: string) {
     try {
       // A name outside the declared collections, as an untrusted client could send it; the server must refuse it.
@@ -391,7 +349,6 @@ void test("here and glob both fail closed, rather than reaching the glob package
     }
   }
 
-  // doctest:L336
   t.check(await refusedCollection("questions"), "BAD_REQUEST");
 });
 
@@ -407,25 +364,21 @@ void test("A card that fails to parse still contributes a visible issue alongsid
       t.error(error);
     }
   });
-  // doctest:L350
   const box = await makeTmpBox({ git: true });
   await box.write("_content/good.doc.card", doc("{% todo %}A fine todo{% /todo %}\n"));
   // An unterminated tag fails Markdoc parse outright.
   await box.write("_content/bad.doc.card", doc("{% todo %}Unterminated tag\n"));
   box.commitAll("seed");
 
-  // doctest:L356
   const res = await caller(box.root).collections.query({
     collection: "todos",
     query: { here: "", params: OPEN },
   });
 
-  // doctest:L361
   t.check(texts(res), [
     "A fine todo",
   ]);
 
-  // doctest:L364
   t.check(res.issues, [
     {
       kind: "validate",

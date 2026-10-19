@@ -28,7 +28,6 @@ void test("No `.git/objects` at the box root fails", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L24
   const box = await makeTmpBox({ git: "none" });
   const checks = await runHealthChecks(box.root, { claudeCli });
   t.check(gitWritableCheck(checks), {
@@ -46,7 +45,6 @@ void test("No `.git/objects` at the box root fails", async (t) => {
 // reports that ambiguity instead of prescribing a destructive ownership change
 // it cannot justify.
 void test("Missing paths are distinguishable from other failures, but an execution sandb...", async (t) => {
-  // doctest:L42
   t.check(
     [
       failedWritability(Object.assign(new Error("missing"), { code: "ENOENT" })),
@@ -70,7 +68,6 @@ void test("`.git/objects` present at the box root passes", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L53
   const box = await makeTmpBox();
   await fs.mkdir(join(box.root, ".git/objects"), { recursive: true });
   const checks = await runHealthChecks(box.root, { claudeCli });

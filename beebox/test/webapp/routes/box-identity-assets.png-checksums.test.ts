@@ -47,11 +47,9 @@ function pngProblem(bytes: Buffer): string | null {
 // An intact icon passes. Changing one byte inside its first image-data (`IDAT`)
 // chunk fails it.
 void test("An intact icon passes.", async (t) => {
-  // doctest:L50
   const good = readFileSync(join(BEEBOX, "src/frontend/public/icons/icon-192.png"));
   t.check(pngProblem(good), null);
 
-  // doctest:L56
   const bad = Buffer.from(good);
   const flipAt = good.indexOf("IDAT") + 10;
   bad[flipAt] = (bad[flipAt] ?? 0) ^ 0x01;
@@ -62,7 +60,6 @@ void test("An intact icon passes.", async (t) => {
 //
 // The list of problems is empty, and the scan did find files to check.
 void test("The list of problems is empty, and the scan did find files to check.", async (t) => {
-  // doctest:L68
   const files = execFileSync("git", ["ls-files", "-z", "--", "*.png"], { cwd: BEEBOX, encoding: "utf8" })
     .split("\0")
     .filter((f) => f !== "");

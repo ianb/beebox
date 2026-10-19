@@ -16,7 +16,6 @@ import type { NativeShellWindow } from "../../../src/components/chat/native-post
 // When the shell defines the neutral function, it receives the channel name and
 // a JSON string of the payload:
 void test("When the shell defines the neutral function, it receives the channel name and...", async (t) => {
-  // doctest:L20
   const neutralCalls: { channel: string; payload: string }[] = [];
   const neutralShell: NativeShellWindow = {
     beeboxNativePost: (channel, payload) => neutralCalls.push({ channel, payload }),
@@ -35,7 +34,6 @@ void test("When the shell defines the neutral function, it receives the channel 
   // A payload that is already a string (the session href) is passed through
   // unwrapped, not double-encoded:
 
-  // doctest:L36
   neutralCalls.length = 0;
   postNativeMessage(neutralShell, {
     channel: "beeboxSession",
@@ -51,7 +49,6 @@ void test("When the shell defines the neutral function, it receives the channel 
   // Without the neutral function, the legacy webkit handler for that channel gets
   // the original object — and the neutral form is preferred when both exist:
 
-  // doctest:L49
   neutralCalls.length = 0;
   const legacyCalls: unknown[] = [];
   const legacyShell: NativeShellWindow = {
@@ -91,7 +88,6 @@ void test("When the shell defines the neutral function, it receives the channel 
   // the bridges are only enabled under `nativeComposer=1`, so there is nothing to
   // deliver to:
 
-  // doctest:L79
   postNativeMessage({}, { channel: "beeboxSession", payload: "https://box.example/chat" });
   t.check("no throw", "no throw");
 });

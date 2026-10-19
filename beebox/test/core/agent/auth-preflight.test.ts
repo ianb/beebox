@@ -49,7 +49,6 @@ function flakyCli(inconclusiveTimes: number, then: Record<string, unknown>): Cla
 
 // ## Logged out → the check fails fast with the actionable message
 void test("Logged out → the check fails fast with the actionable message", async (t) => {
-  // doctest:L53
   resetClaudeAuthCache();
   const claudeCli = createFakeClaudeCli({ loggedIn: false });
   const thrown = await checkClaudeAuth({ claudeCli }).then(() => "no throw").catch((e) => `${e.name}: ${e.message}`);
@@ -62,7 +61,6 @@ void test("Logged out → the check fails fast with the actionable message", asy
 // cached: a second call with a fake that would report logged-out still passes,
 // because the positive result short-circuits the probe.
 void test("checkClaudeAuth resolving (no throw) is the pass.", async (t) => {
-  // doctest:L67
   resetClaudeAuthCache();
   const loggedIn = createFakeClaudeCli({ loggedIn: true });
   await checkClaudeAuth({ claudeCli: loggedIn });
@@ -78,19 +76,16 @@ void test("checkClaudeAuth resolving (no throw) is the pass.", async (t) => {
 // aborts. The reason is also logged: a sender with no listener on the session,
 // such as quick chat, would otherwise leave no trace of why the run did not start.
 void test("A fake chat backend leaves requiresClaudeAuth unset, so it always proceeds —...", async (t) => {
-  // doctest:L85
   resetClaudeAuthCache();
   const events: Array<[string, string]> = [];
   const session = { emit: (event: "error", err: Error) => { events.push([event, err.message]); return true; } };
 
-  // doctest:L89
   const proceedFake = await preflightChatBackend({ backend: {}, session });
   t.check({ proceedFake, events }, {
     proceedFake: true,
     events: [],
   });
 
-  // doctest:L95
   resetClaudeAuthCache();
   const claudeCli = createFakeClaudeCli({ loggedIn: false });
   const { result: proceedReal, logged } = await capturingErrors(() => preflightChatBackend({ backend: { requiresClaudeAuth: true }, session, claudeCli }));
@@ -114,7 +109,6 @@ void test("A fake chat backend leaves requiresClaudeAuth unset, so it always pro
 // fails before plugin mutation or SDK startup and says which service identity
 // must log in.
 void test("Codex does not reuse Claude's status shape or credentials.", async (t) => {
-  // doctest:L109
   resetCodexAuthCache();
   const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
   const thrown = await checkCodexAuth({ codexCli }).then(() => "no throw").catch((e) => `${e.name}: ${e.message}`);
@@ -124,7 +118,6 @@ void test("Codex does not reuse Claude's status shape or credentials.", async (t
 // A positive result is cached for the wakeup/chat burst. Logout and
 // inconclusive results are not cached.
 void test("A positive result is cached for the wakeup/chat burst.", async (t) => {
-  // doctest:L120
   resetCodexAuthCache();
   const codexCli = createFakeCodexCli({ status: { kind: "logged-in" } });
   await checkCodexAuth({ codexCli });
@@ -133,7 +126,6 @@ void test("A positive result is cached for the wakeup/chat burst.", async (t) =>
 });
 
 void test("Codex has its own preflight and remedy", async (t) => {
-  // doctest:L129
   resetCodexAuthCache();
   const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
   t.check(await checkCodexAuth({ codexCli }).then(() => "no throw", (e: unknown) => e), instanceOf(CodexAuthError));
@@ -144,7 +136,6 @@ void test("Codex has its own preflight and remedy", async (t) => {
 // An inconclusive process answer does not block a run the SDK may still complete,
 // and it is probed again next time rather than cached.
 void test("An inconclusive process answer does not block a run the SDK may still complet...", async (t) => {
-  // doctest:L141
   resetCodexAuthCache();
   const codexCli = createFakeCodexCli({ status: { kind: "inconclusive", detail: "timed out" } });
   await checkCodexAuth({ codexCli });
@@ -155,7 +146,6 @@ void test("An inconclusive process answer does not block a run the SDK may still
 // The chat dispatch selects the provider preflight. A Codex engine does not
 // silently bypass auth and never calls the Claude fake.
 void test("The chat dispatch selects the provider preflight.", async (t) => {
-  // doctest:L153
   resetCodexAuthCache();
   const codexEvents: Array<[string, string]> = [];
   const codexSession = { emit: (event: "error", err: Error) => { codexEvents.push([event, err.message]); return true; } };
@@ -183,7 +173,6 @@ void test("The chat dispatch selects the provider preflight.", async (t) => {
 // The production composite backend carries both provider requirements. This is
 // the object the chat registry actually passes to the preflight.
 void test("The production composite backend carries both provider requirements.", async (t) => {
-  // doctest:L173
   const backend = createChatBackend();
   t.check({ claude: backend.requiresClaudeAuth, codex: backend.requiresCodexAuth }, {
     claude: true,
@@ -194,7 +183,6 @@ void test("The production composite backend carries both provider requirements."
 // Status diagnostics preserve useful CLI context but redact credential-shaped
 // content before it becomes an error cause or log value.
 void test("Status diagnostics preserve useful CLI context but redact credential-shaped c...", async (t) => {
-  // doctest:L182
   t.check(redactCodexAuthDetail("warning for API key - sk-secret_123 and access token - abc123"), "warning for API key - <redacted> and access token - <redacted>");
 });
 
@@ -205,7 +193,6 @@ void test("Status diagnostics preserve useful CLI context but redact credential-
 // runs and named a remedy (`claude auth login`) that wasn't the problem, so an
 // unusable probe is now its own state and gets one retry.
 void test("claude auth status intermittently comes back empty on a machine that is genui...", async (t) => {
-  // doctest:L194
   resetClaudeAuthCache();
   const cli = flakyCli(1, { loggedIn: true });
   await checkClaudeAuth({ claudeCli: cli });
@@ -217,7 +204,6 @@ void test("claude auth status intermittently comes back empty on a machine that 
 // aside and lets the agent invocation behind it report auth state itself. Failing
 // here would kill a run that was going to succeed.
 void test("When the retry also comes back empty we still don't know — and the preflight...", async (t) => {
-  // doctest:L208
   resetClaudeAuthCache();
   const cli = flakyCli(2, { loggedIn: true });
   const outcome = await checkClaudeAuth({ claudeCli: cli }).then(() => "proceeded").catch((e) => e.name);
@@ -225,14 +211,12 @@ void test("When the retry also comes back empty we still don't know — and the 
 
   // An inconclusive result is never cached as success — the next call probes again.
 
-  // doctest:L219
   const after = await checkClaudeAuth({ claudeCli: cli }).then(() => "proceeded");
   t.check({ after, probes: cli.calls() }, { after: "proceeded", probes: 3 });
 });
 
 // A real logout still fails closed: the probe answered, and the answer was no.
 void test("A real logout still fails closed:", async (t) => {
-  // doctest:L228
   resetClaudeAuthCache();
   const cli = flakyCli(1, { loggedIn: false });
   const thrown = await checkClaudeAuth({ claudeCli: cli }).then(() => "no throw").catch((e) => e.name);

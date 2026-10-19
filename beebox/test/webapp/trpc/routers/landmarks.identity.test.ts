@@ -29,7 +29,6 @@ void test("`identity` returns label/symbol/dir/prominence, no links", async (t) 
       t.error(error);
     }
   });
-  // doctest:L26
   const box = await makeTmpBox();
   await box.write(
     "_content/recipes/Recipes.landmark.card",
@@ -37,7 +36,6 @@ void test("`identity` returns label/symbol/dir/prominence, no links", async (t) 
   );
   await box.write("_content/recipes/Bread.doc.card", "---\ntitle: Bread\nprominence: primary\n---\n");
 
-  // doctest:L33
   const { identity } = await caller(box.root).landmarks.identity({ dir: "_content/recipes" });
   t.check(identity, {
     path: "_content/recipes/Recipes.landmark.card",
@@ -51,7 +49,6 @@ void test("`identity` returns label/symbol/dir/prominence, no links", async (t) 
 
   // A directory with no landmark card returns null, same as `forDir`.
 
-  // doctest:L41
   const { identity: none } = await caller(box.root).landmarks.identity({ dir: "_content/nowhere" });
   t.check(none, null);
 });
@@ -65,14 +62,12 @@ void test("`forDir` splices derived entry-point and primary cards into `links`",
       t.error(error);
     }
   });
-  // doctest:L53
   const box2 = await makeTmpBox();
   await box2.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n");
   await box2.write("_content/recipes/Index.doc.card", "---\ntitle: Index\nprominence: entry-point\n---\n");
   await box2.write("_content/recipes/Bread.doc.card", "---\ntitle: Bread\nprominence: primary\n---\n");
   await box2.write("_content/recipes/Notes.doc.card", "---\ntitle: Notes\n---\n");
 
-  // doctest:L59
   const { landmark } = await caller(box2.root).landmarks.forDir({ dir: "_content/recipes" });
   assert.ok(landmark);
   t.check(landmark.links.map((l) => ({ ref: l.ref, source: l.source, prominence: l.prominence ?? null })), [
@@ -91,7 +86,6 @@ void test("`forDir` splices derived entry-point and primary cards into `links`",
   // `landmarks.list` carries the same derived entries for every landmark in the
   // box, in `links`.
 
-  // doctest:L69
   const { landmarks } = await caller(box2.root).landmarks.list();
   const recipes = landmarks.find((l) => l.dir === "_content/recipes");
   assert.ok(recipes);

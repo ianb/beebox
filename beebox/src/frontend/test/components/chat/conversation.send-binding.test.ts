@@ -24,7 +24,6 @@ function dispatchOf(send: (emission: Emission) => Promise<Receipt>, release: () 
 
 // ## Navigate while uploading, then type a new draft before the late receipt
 void test("Navigate while uploading, then type a new draft before the late receipt", async (t) => {
-  // doctest:L25
   const store = createEmissionStore();
   store.editor.setText("Compare this quote");
   let selected = "kitchen";
@@ -64,7 +63,6 @@ void test("Navigate while uploading, then type a new draft before the late recei
 
 // ## Storage refusal preserves the whole draft and releases the pinned controller
 void test("Storage refusal preserves the whole draft and releases the pinned controller", async (t) => {
-  // doctest:L62
   const store = createEmissionStore();
   store.editor.setText("Keep this text");
   let released = false;
@@ -90,7 +88,6 @@ void test("Storage refusal preserves the whole draft and releases the pinned con
 // Existing targets request exact delivery; fresh Codex targets retain their
 // engine and directory without pretending they have a reserved ID.
 void test("The same projection is applied last by the streaming and queued POST sites.", async (t) => {
-  // doctest:L84
   const attention: AttentionSnapshot = { surface: "card", transcript: "hidden", focusedRef: "/house/report.doc.card" };
   t.check(boundTurnFields({ boxSlug: "test1", target: { kind: "session", sessionId: "kitchen", contextDir: "kitchen" }, attention }), {
     session: "kitchen",
@@ -102,7 +99,6 @@ void test("The same projection is applied last by the streaming and queued POST 
     },
   });
 
-  // doctest:L88
   t.check(boundTurnFields({ boxSlug: "test1", target: { kind: "start", clientConversationId: "client-start", contextDir: "garden", engine: "codex", model: "model-test" }, attention }), {
     session: "new",
     exactSession: false,
@@ -118,7 +114,6 @@ void test("The same projection is applied last by the streaming and queued POST 
 });
 
 void test("Voice capture refusal preserves the utterance and settles the mic path", async (t) => {
-  // doctest:L99
   const store = createEmissionStore();
   store.editor.setText("Earlier draft");
   let micSettled = false;
@@ -137,7 +132,6 @@ void test("Voice capture refusal preserves the utterance and settles the mic pat
 
 // ## An upload failure releases the voice capture before keeping its text
 void test("An upload failure releases the voice capture before keeping its text", async (t) => {
-  // doctest:L115
   const store = createEmissionStore();
   let released = false;
   let refused = false;

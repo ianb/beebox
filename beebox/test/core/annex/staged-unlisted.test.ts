@@ -38,14 +38,12 @@ void test("A large unlisted file sitting in an attach scope is invisible to this
       t.error(error);
     }
   });
-  // doctest:L35
   const box = await makeTmpBox({ git: true });
   await put({ root: box.root, relPath: "notes.attach/export.parquet", size: BIG });
   t.check(await findStagedUnlistedBinaries(box.root), []);
 
   // Staging it makes it a blocking finding:
 
-  // doctest:L44
   execSync("git add -A", { cwd: box.root });
   const found = await findStagedUnlistedBinaries(box.root);
   t.check(found, [{ relPath: "notes.attach/export.parquet", size: BIG, extension: "parquet", allowlisted: false }]);
@@ -53,7 +51,6 @@ void test("A large unlisted file sitting in an attach scope is invisible to this
   // The report names both remedies, since which one is right is a judgment the
   // reader has to make:
 
-  // doctest:L57
   const report = describeStagedUnlistedBinaries(found);
   t.checkText(report, `1 staged file(s) in attach scopes have an extension git-annex is not
 configured to annex, so their bytes would be committed into git history:
@@ -67,7 +64,6 @@ caught 41 MB .frozen pages before they entered history.`);
   // scope are never flagged — attach scopes legitimately hold committed text, and
   // flagging it would train everyone to ignore the check:
 
-  // doctest:L73
   await put({ root: box.root, relPath: "notes.attach/accounts.csv", size: 58 * 1024 });
   await put({ root: box.root, relPath: "notes.attach/photo-001.image.card", size: BIG });
   await put({ root: box.root, relPath: "notes.attach/manifest.json", size: BIG });
@@ -83,7 +79,6 @@ caught 41 MB .frozen pages before they entered history.`);
   // a large binary with a unicode name would slip through a guard that exists to
   // fail closed:
 
-  // doctest:L92
   await put({ root: box.root, relPath: "notes.attach/日記スキャン.parquet", size: BIG });
   execSync("git add -A", { cwd: box.root });
   t.check((await findStagedUnlistedBinaries(box.root)).map((f) => f.relPath).toSorted(), [
@@ -113,7 +108,6 @@ void test("Sizing the staged blob rather than the working file catches a case th
       t.error(error);
     }
   });
-  // doctest:L121
   const box = await makeTmpBox({ git: true });
   execSync("git config annex.largefiles nothing", { cwd: box.root });
   await put({ root: box.root, relPath: "trip.attach/beach.jpg", size: BIG });
@@ -123,7 +117,6 @@ void test("Sizing the staged blob rather than the working file catches a case th
 
   // It is reported as the misconfiguration it is, not as a missing allowlist entry:
 
-  // doctest:L136
   const report = describeStagedUnlistedBinaries(found);
   t.checkText(report, `1 staged file(s) have an annexed extension but were staged as RAW BYTES,
 not as an annex pointer — git-annex is not filtering them:

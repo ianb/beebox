@@ -88,11 +88,9 @@ void test("A webapp chat session (typed user messages, quiet for hours) qualifie
       t.error(error);
     }
   });
-  // doctest:L84
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L87
   await seedSession(box.root, { sessionId: "chat-old", age: 5 * HOUR, entries: [
     typedEntry("Please stop using bullet lists in answers", "2026-06-09T07:00:00Z"),
     agentEntry("Got it — prose from here on.", "2026-06-09T07:00:10Z"),
@@ -112,42 +110,33 @@ void test("A webapp chat session (typed user messages, quiet for hours) qualifie
     "_content/chat/messaging/Ian/thread.chat-thread.card": { sessionId: "chat-threaded" },
   }));
 
-  // doctest:L106
   const state = emptyRetroState();
   state.sessions["chat-done-before"] = { status: "done", attempts: 1, at: "2026-06-01T00:00:00Z" };
   await seedSession(box.root, { sessionId: "chat-done-before", age: 9 * HOUR, entries: [
     typedEntry("Older conversation", "2026-06-09T03:00:00Z"),
   ] });
 
-  // doctest:L112
   const result = await discoverSessions(box.root, { now: NOW, quiescenceMs: QUIET, state });
   await t.checkText(result.qualified.map((s) => `${s.sessionId} (${s.userMessages} msg, thread: ${s.threadRef})`).join("\n"), `chat-old (1 msg, thread: null)
 chat-threaded (1 msg, thread: _content/chat/messaging/Ian/thread.chat-thread.card)`);
 
-  // doctest:L117
   t.check([result.nonChat, result.alreadyProcessed, result.missingTranscripts].join(","), "1,1,0");
 
-  // doctest:L120
   t.check(result.deferredActive.join(","), "chat-live");
 
-  // doctest:L123
   t.check(result.registriesFound.join(","), ".beebox/chat-thread-sessions.json");
 
   // State round-trips through `.beebox/retro/state.json`, and a failed
   // session stays eligible until it exhausts its attempts.
 
-  // doctest:L131
   state.sessions["chat-old"] = { status: "failed", attempts: 1, at: NOW.toISOString() };
   await saveRetroState(box.root, state);
   const reloaded = await loadRetroState(box.root);
 
-  // doctest:L135
   t.check(isSessionSettled(reloaded, "chat-old"), false);
 
-  // doctest:L138
   t.check(reloaded.sessions["chat-old"]?.attempts, 1);
 
-  // doctest:L141
   t.check(isSessionSettled(reloaded, "chat-done-before"), true);
 
   // ## Compact rendering
@@ -155,7 +144,6 @@ chat-threaded (1 msg, thread: _content/chat/messaging/Ian/thread.chat-thread.car
   // The observer sees dialogue plus tool one-liners — `<typed>` wrappers
   // stripped, tool results omitted.
 
-  // doctest:L151
   await seedSession(box.root, { sessionId: "chat-tools", age: 4 * HOUR, entries: [
     typedEntry("Add milk to the shopping list", "2026-06-09T08:00:00Z"),
     {
@@ -182,7 +170,6 @@ Adding it now.
   // The report records what was examined and every category of skip — caps
   // and deferrals are named, never silent.
 
-  // doctest:L180
   const report = renderRunReport({
     runId: "2026-06-09T12-00-00",
     generatedAt: "2026-06-09T12:00:00Z",
@@ -201,7 +188,6 @@ Adding it now.
     observerFailures: 0,
   });
 
-  // doctest:L198
   await t.checkText(
     // Template prose is not the claim; keep every examined-session list line and the skip lines.
     report.split("\n").filter((line) => /^(- `|Skipped|Chat registries)/.test(line)).join("\n"),
@@ -230,7 +216,6 @@ void test("Discovery reads one page of MAXSESSIONENTRIES and counts user message
       t.error(error);
     }
   });
-  // doctest:L222
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   await seedSession(box.root, { sessionId: "chat-long", age: 5 * HOUR, entries: [
@@ -242,14 +227,12 @@ void test("Discovery reads one page of MAXSESSIONENTRIES and counts user message
   ] });
   const logPath = getSessionLogPath(box.root, "chat-long");
 
-  // doctest:L233
   t.check(await countUserMessages({ logPath, limit: 2 }), {
     userEntries: 1,
     tagged: 1,
     truncated: true,
   });
 
-  // doctest:L236
   t.check(await countUserMessages({ logPath, limit: 500 }), {
     userEntries: 3,
     tagged: 3,
@@ -259,6 +242,5 @@ void test("Discovery reads one page of MAXSESSIONENTRIES and counts user message
   // A transcript that vanished between listing and reading is still `null`, not a
   // throw — the retro walker counts it rather than failing the run.
 
-  // doctest:L244
   t.check(await countUserMessages({ logPath: box.path("claude-projects/nope.jsonl"), limit: 10 }), null);
 });

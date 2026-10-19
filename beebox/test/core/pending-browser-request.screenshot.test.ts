@@ -65,7 +65,6 @@ void test("Also the normal multi-tab outcome — a second tab answering after th
       t.error(error);
     }
   });
-  // doctest:L74
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -88,7 +87,6 @@ void test("A live pending id is always a server-minted UUID, so a param that isn
       t.error(error);
     }
   });
-  // doctest:L98
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -107,7 +105,6 @@ void test("Route: a non-PNG multipart upload is rejected at the boundary", async
       t.error(error);
     }
   });
-  // doctest:L118
   const ctx = await makeTestServer();
   const boundary = "----cbshot";
   const body = multipart({ boundary, file: Buffer.from("not a png"), fields: { fidelity: "displaymedia" } });
@@ -132,7 +129,6 @@ void test("A valid PNG signature followed by >25 MB of bytes trips the size cap 
       t.error(error);
     }
   });
-  // doctest:L144
   const ctx = await makeTestServer();
   const boundary = "----cbbig";
   const oversized = Buffer.concat([PNG, Buffer.alloc(26 * 1024 * 1024)]);
@@ -159,7 +155,6 @@ void test("The request route is agent-initiated.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L172
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -182,7 +177,6 @@ void test("No tab acks within the 2s ack window, so the request resolves no-clie
       t.error(error);
     }
   });
-  // doctest:L196
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -207,7 +201,6 @@ void test("The \"browser\" learns the server-minted id from the screenshot-reque
       t.error(error);
     }
   });
-  // doctest:L222
   const ctx = await makeTestServer();
   const gotId = captureRequestId(ctx);
   const longPoll = ctx.request({
@@ -238,7 +231,6 @@ void test("Route: a decline answer returns 409", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L253
   const ctx = await makeTestServer();
   const gotId = captureRequestId(ctx);
   const longPoll = ctx.request({
@@ -274,7 +266,6 @@ void test("The long-poll is started; the \"browser\" reads the server-minted id 
       t.error(error);
     }
   });
-  // doctest:L289
   const ctx = await makeTestServer();
   const gotId = captureRequestId(ctx);
   const longPoll = ctx.request({
@@ -330,14 +321,12 @@ void test("The plan's abort semantics, exercised over a REAL listening socket (F
       t.error(error);
     }
   });
-  // doctest:L344
   const ctx = await makeTestServer();
   await ctx.server.listen({ port: 0, host: "127.0.0.1" });
   const addr = ctx.server.server.address();
   const port = typeof addr === "object" && addr !== null ? addr.port : 0;
   const token = getOrCreateAgentToken(ctx.boxRoot);
 
-  // doctest:L350
   const gotId = captureRequestId(ctx);
   const controller = new AbortController();
   const poll = fetch(`http://127.0.0.1:${port}/test/api/chat/screenshot/request`, {
@@ -347,18 +336,15 @@ void test("The plan's abort semantics, exercised over a REAL listening socket (F
     signal: controller.signal,
   }).then(() => "resolved", (e) => (e instanceof Error ? e.name : String(e)));
 
-  // doctest:L359
   // Wait until the request has parked (its id is on the bus), then sever the
   // client connection mid-poll.
   const requestId = await gotId;
   controller.abort();
   const pollOutcome = await poll;
 
-  // doctest:L365
   // Give the server a moment to observe the socket close and cancel the entry.
   await new Promise((resolve) => setTimeout(resolve, 250));
 
-  // doctest:L368
   // A late answer to the now-cancelled request settles nothing → 404.
   const late = await ctx.request({
     method: "POST",

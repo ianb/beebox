@@ -28,13 +28,11 @@ fs.truncateSync(hugePath, HUGE_TRANSCRIPT_BYTES + 1);
 
 // ## An ordinary transcript prints
 void test("An ordinary transcript prints", async (t) => {
-  // doctest:L32
   t.check(transcriptPrintable({ logPath: smallPath, sessionId: "s1", allowHuge: false }), true);
 });
 
 // ## A huge transcript is refused (loudly, on stderr)
 void test("A huge transcript is refused (loudly, on stderr)", async (t) => {
-  // doctest:L39
   t.check(transcriptPrintable({ logPath: hugePath, sessionId: "s2", allowHuge: false }), false);
 });
 
@@ -43,7 +41,6 @@ void test("A huge transcript is refused (loudly, on stderr)", async (t) => {
 // The override never even stats the file — an explicit assertion prints
 // whatever is there.
 void test("The override never even stats the file — an explicit assertion prints whateve...", async (t) => {
-  // doctest:L49
   t.check(transcriptPrintable({ logPath: hugePath, sessionId: "s3", allowHuge: true }), true);
 });
 
@@ -57,7 +54,6 @@ void test("Supported-API transcripts have no native file to stat, so the guard m
       t.error(error);
     }
   });
-  // doctest:L57
   const hugeEntries = [{
     uuid: "u1",
     type: "assistant" as const,
@@ -66,6 +62,5 @@ void test("Supported-API transcripts have no native file to stat, so the guard m
   }];
   t.check(sessionEntriesPrintable({ entries: hugeEntries, sessionId: "codex-1", allowHuge: false }), false);
 
-  // doctest:L66
   t.check(sessionEntriesPrintable({ entries: hugeEntries, sessionId: "codex-1", allowHuge: true }), true);
 });

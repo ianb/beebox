@@ -20,15 +20,12 @@ void test("The frontend's visible-tab heartbeat uses a cheap box-scoped HEAD req
       t.error(error);
     }
   });
-  // doctest:L17
   const ctx = await makeTestServer();
   const response = await ctx.rawRequest({ method: "HEAD", url: "/api/keepalive" });
   t.check(response.statusCode, 204);
 
-  // doctest:L22
   t.check(response.headers["cache-control"], "no-store");
 
-  // doctest:L25
   t.check(response.payload, "");
 });
 
@@ -43,7 +40,6 @@ void test("GET /api/browse/ lists directory contents with parsed card metadata:"
       t.error(error);
     }
   });
-  // doctest:L38
   const ctx = await makeTestServer();
   await ctx.seed(
     "_content/inbox/browse-test.doc.card",
@@ -75,7 +71,6 @@ void test("The root listing shows ONLY the underscore areas — not src/, nodemo
       t.error(error);
     }
   });
-  // doctest:L69
   const nsCtx = await makeTestServer();
   await nsCtx.seed("src/tricks/scripts/helper.ts", "export {};\n");
   await nsCtx.seed("node_modules/pkg/index.js", "module.exports = {};\n");
@@ -94,7 +89,6 @@ void test("The root listing shows ONLY the underscore areas — not src/, nodemo
 
   // A request path outside the namespace 403s rather than listing it:
 
-  // doctest:L91
   await t.checkText(await nsCtx.inject({ method: "GET", url: "/api/browse/src/tricks/scripts" }), `403
 {
   "error": "Access denied"
@@ -114,25 +108,20 @@ void test("GET /api/files/ serves the file body, includes ETag and Last-Modified
       t.error(error);
     }
   });
-  // doctest:L110
   const ctx = await makeTestServer();
   await ctx.seed("_content/notes/hello.md", "# Hello");
   const res = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/notes/hello.md" });
   t.check(res.statusCode, 200);
 
-  // doctest:L116
   t.check(res.headers["cache-control"], "no-cache");
 
-  // doctest:L119
   t.check(res.payload, "# Hello");
 
-  // doctest:L124
   t.check(typeof res.headers["last-modified"], "string");
 
   // A second request that echoes the ETag back in `If-None-Match` gets a 304 with
   // no body:
 
-  // doctest:L132
   const etag = String(res.headers["etag"]);
   const revalidate = await ctx.rawRequest({
     method: "GET",
@@ -141,13 +130,11 @@ void test("GET /api/files/ serves the file body, includes ETag and Last-Modified
   });
   t.check(revalidate.statusCode, 304);
 
-  // doctest:L141
   t.check(revalidate.payload, "");
 
   // After the file changes on disk, the ETag changes and the client gets a fresh
   // 200 even when it sends the old ETag:
 
-  // doctest:L149
   await ctx.seed("_content/notes/hello.md", "# Hello, world");
   const fresh = await ctx.rawRequest({
     method: "GET",
@@ -156,18 +143,15 @@ void test("GET /api/files/ serves the file body, includes ETag and Last-Modified
   });
   t.check(fresh.statusCode, 200);
 
-  // doctest:L158
   t.check(fresh.payload, "# Hello, world");
 
   // `.card` files are served as text here too — the card Source view fetches the
   // verbatim file this way (card.get returns only the parsed form):
 
-  // doctest:L166
   await ctx.seed("_bookkeeping/archive/Note.doc.card", "---\ntitle: Note\n---\nBody\n");
   const card = await ctx.rawRequest({ method: "GET", url: "/api/files/_bookkeeping/archive/Note.doc.card" });
   t.check(card.statusCode, 200);
 
-  // doctest:L171
   await t.checkText(card.payload, `---
 title: Note
 ---
@@ -179,13 +163,11 @@ Body`);
 // A path outside the underscore areas — even one that exists on disk — 403s
 // rather than serving it:
 void test("A path outside the underscore areas — even one that exists on disk — 403s rat...", async (t) => {
-  // doctest:L188
   const nsCtx2 = await makeTestServer();
   await nsCtx2.seed("AGENTS.md", "# Box\n");
   const agentsMd = await nsCtx2.rawRequest({ method: "GET", url: "/api/files/AGENTS.md" });
   t.check(agentsMd.statusCode, 403);
 
-  // doctest:L194
   await nsCtx2.cleanup();
 });
 
@@ -200,17 +182,14 @@ void test("DELETE /api/files/ removes a non-card file and commits the deletion:"
       t.error(error);
     }
   });
-  // doctest:L202
   const ctx = await makeTestServer();
   await ctx.seed("_content/images/delete-me.webp", "not really an image");
   ctx.commitAll("seed image");
   const res = await ctx.request({ method: "DELETE", url: "/api/files/_content/images/delete-me.webp" });
   t.check(res.statusCode, 200);
 
-  // doctest:L211
   t.check(execSync("git log -1 --pretty=%s", { cwd: ctx.boxRoot, encoding: "utf-8" }).trim(), "Deleted by user: _content/images/delete-me.webp");
 
-  // doctest:L216
   await t.checkText(await ctx.inject({ method: "GET", url: "/api/files/_content/images/delete-me.webp" }), `404
 «*»"error": "Not found"«*»`);
 });
@@ -232,7 +211,6 @@ void test("Dirty files get preserved in their own commit before the delete commi
       t.error(error);
     }
   });
-  // doctest:L237
   const ctx = await makeTestServer();
   await ctx.seed("_content/images/dirty-delete.webp", "version 1");
   ctx.commitAll("seed dirty image");
@@ -240,7 +218,6 @@ void test("Dirty files get preserved in their own commit before the delete commi
   const res = await ctx.request({ method: "DELETE", url: "/api/files/_content/images/dirty-delete.webp" });
   t.check(res.statusCode, 200);
 
-  // doctest:L247
   await t.checkText(execSync("git log -2 --pretty=%s", { cwd: ctx.boxRoot, encoding: "utf-8" }).trim(), `Deleted by user: _content/images/dirty-delete.webp
 Saved before user delete: _content/images/dirty-delete.webp`);
 });

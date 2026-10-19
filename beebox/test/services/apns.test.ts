@@ -22,7 +22,6 @@ function show(failure: unknown) {
 // the production host) are `gone`; anything else is an `ApnsSendError`, whose
 // message names the status and reason but never the token.
 void test("@parse/node-apn resolves a failed send with { device, status, response:", async (t) => {
-  // doctest:L26
   await t.checkText(
     [
       show({ device: "aa11", status: 410, response: { reason: "Unregistered" } }),

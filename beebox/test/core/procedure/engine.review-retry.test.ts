@@ -31,7 +31,6 @@ void test("The judge fails the first time and passes after the agent re-runs.", 
       t.error(error);
     }
   });
-  // doctest:L31
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/heal.procedure.card", `---
 name: heal
@@ -123,7 +122,6 @@ void test("The judge never passes.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L105
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/stuck.procedure.card", `---
 name: stuck
@@ -219,7 +217,6 @@ void test("severity:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L178
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/noagent.procedure.card", `---
 name: noagent
@@ -298,7 +295,6 @@ void test("The run phase has an agent and a shell.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L238
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/once.procedure.card", `---
 name: once
@@ -372,7 +368,6 @@ void test("severity: (line 305)", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L306
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/nodecide.procedure.card", `---
 name: nodecide

@@ -12,7 +12,6 @@ const check = (rel: string, source: string) => frontmatterProblems({ rel, source
 
 // ## A complete plan validates
 void test("A complete plan validates", async (t) => {
-  // doctest:L15
   t.check(
     check("beebox/docs/plans/current.md", `---
 title: Current
@@ -28,7 +27,6 @@ issues:
 
 // ## Directory status and paths are enforced
 void test("Directory status and paths are enforced", async (t) => {
-  // doctest:L29
   t.check(
     check("beebox/docs/implemented-plans/current.md", `---
 title: Current
@@ -47,7 +45,6 @@ issues: [missing.md]
 // Every plan directory accepts only its lifecycle states. README files and
 // companion review documents remain exempt.
 void test("Every plan directory accepts only its lifecycle states.", async (t) => {
-  // doctest:L44
   t.check(
     check("beebox/docs/plans/done.md", `---
 title: Done
@@ -58,7 +55,6 @@ issues: []
     ["beebox/docs/plans/done.md: status implemented is not allowed in plans; plans requires draft, active, partial"],
   );
 
-  // doctest:L52
   t.check(
     check("beebox/docs/unimplemented-plans/later.md", `---
 title: Later
@@ -69,13 +65,10 @@ issues: []
     [],
   );
 
-  // doctest:L60
   t.check(check("beebox/docs/plans/README.md", "No frontmatter"), []);
 
-  // doctest:L63
   t.check(check("beebox/docs/implemented-plans/current.review.md", "No frontmatter"), []);
 
-  // doctest:L66
   t.check(
     check("beebox/docs/implemented-plans/current.gap-analysis.md", `---
 title: Historical review
@@ -83,10 +76,8 @@ title: Historical review
     [],
   );
 
-  // doctest:L71
   t.check(check("beebox/docs/plans/missing.md", "# Missing"), ["beebox/docs/plans/missing.md: YAML frontmatter is required"]);
 
-  // doctest:L74
   t.check(
     check("beebox/docs/plans/malformed.md", `---
 title: [
@@ -97,7 +88,6 @@ title: [
 
 // ## Closed issues require a resolution
 void test("Closed issues require a resolution", async (t) => {
-  // doctest:L83
   t.check(
     check("issues/closed/bugs/x.md", `---
 title: X
@@ -110,7 +100,6 @@ Body`),
 
 // ## Manual-testing flags require an addressable procedure section
 void test("Manual-testing flags require an addressable procedure section", async (t) => {
-  // doctest:L94
   t.check(
     check("issues/bugs/x.md", `---
 title: X
@@ -126,7 +115,6 @@ Try it.`),
 //
 // Omission means normal, while an authored value must be exact.
 void test("Omission means normal, while an authored value must be exact.", async (t) => {
-  // doctest:L108
   t.check(
     check("issues/features/x.md", `---
 title: X
@@ -136,7 +124,6 @@ Body`),
     [],
   );
 
-  // doctest:L115
   t.check(
     check("issues/features/x.md", `---
 title: X
@@ -150,7 +137,6 @@ Body`),
 
 // ## Deferred issues require their activation metadata
 void test("Deferred issues require their activation metadata", async (t) => {
-  // doctest:L127
   t.check(
     check("issues/deferred/x.md", `---
 title: X
@@ -162,7 +148,6 @@ Body`),
     [],
   );
 
-  // doctest:L136
   t.check(
     check("issues/deferred/x.md", `---
 title: X
@@ -180,7 +165,6 @@ Body`),
 
 // The fields do not survive the move into the active queue.
 void test("The fields do not survive the move into the active queue.", async (t) => {
-  // doctest:L150
   t.check(
     check("issues/features/x.md", `---
 title: X

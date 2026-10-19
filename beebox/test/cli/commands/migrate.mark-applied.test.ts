@@ -44,14 +44,12 @@ void test("Marks a pending migration as applied and appends the entry", async (t
       t.error(error);
     }
   });
-  // doctest:L41
   const box = await makeBox(["attachments", "card-frontmatter"]);
   const result = await markMigrationApplied({ boxRoot: box, name: "bill" });
   t.check(result, {
     status: "marked",
   });
 
-  // doctest:L46
   t.check((await readManifestNames(box)).join(","), "attachments,card-frontmatter,bill");
 });
 
@@ -64,14 +62,12 @@ void test("A second mark is an idempotent no-op", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L57
   const box = await makeBox(["bill"]);
   const result = await markMigrationApplied({ boxRoot: box, name: "bill" });
   t.check(result, {
     status: "already-applied",
   });
 
-  // doctest:L62
   t.check((await readManifestNames(box)).join(","), "bill");
 });
 
@@ -84,14 +80,12 @@ void test("Refuses an unknown migration name (no manifest write)", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L73
   const box = await makeBox(["attachments"]);
   const result = await markMigrationApplied({ boxRoot: box, name: "not-a-real-migration" });
   t.check(result, {
     status: "unknown-migration",
   });
 
-  // doctest:L78
   t.check((await readManifestNames(box)).join(","), "attachments");
 });
 
@@ -104,7 +98,6 @@ void test("Refuses a box with no manifest (use `--mark-all-applied` first)", asy
       t.error(error);
     }
   });
-  // doctest:L89
   const box = await makeBox(null);
   const result = await markMigrationApplied({ boxRoot: box, name: "bill" });
   t.check(result, {

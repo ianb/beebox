@@ -20,18 +20,15 @@ const emptyDraft: EmissionDraft = { text: "", images: [], pendingImages: 0, file
 
 // ## chatTargetStatus: idle -> ready, streaming or backend-busy -> busy
 void test("chatTargetStatus: idle -> ready, streaming or backend-busy -> busy", async (t) => {
-  // doctest:L24
   t.check(chatTargetStatus({ isStreaming: false, processBusy: false }), {
     state: "ready",
   });
 
-  // doctest:L27
   t.check(chatTargetStatus({ isStreaming: true, processBusy: false }), {
     state: "busy",
     disposition: "will-queue",
   });
 
-  // doctest:L30
   t.check(chatTargetStatus({ isStreaming: false, processBusy: true }), {
     state: "busy",
     disposition: "will-queue",
@@ -48,7 +45,6 @@ void test("chatTargetStatus: idle -> ready, streaming or backend-busy -> busy", 
 // tokens, so an empty composer's restore is just "put the text back" — no
 // re-insertion.
 void test("Note:", async (t) => {
-  // doctest:L45
   const e = createTypedEmission({
     text: "look at [image1]",
     images: [{ id: 1, mimeType: "image/png", dataBase64: "aGk=" }],
@@ -77,7 +73,6 @@ void test("Note:", async (t) => {
   // every action's tag, which is also what keeps this pattern in sync with
   // `ACTION_TAG_NAMES` in `speech-keywords.ts`.
 
-  // doctest:L68
   const tagged = createVoiceEmission({
     text: 'remember the milk <send-message phrase="Send message" />',
     selections: [],
@@ -90,7 +85,6 @@ void test("Note:", async (t) => {
     selections: [],
   });
 
-  // doctest:L76
   const allTags = [
     '<send-message phrase="Send message" />',
     '<send-close-message phrase="Send and close" />',
@@ -111,7 +105,6 @@ void test("Note:", async (t) => {
   // puts a tag into voice text. A TYPED message restores verbatim, so someone
   // literally typing a tag (discussing the markup) keeps their text:
 
-  // doctest:L94
   const typed = createTypedEmission({
     text: 'the composer leaked <erase-message phrase="Clear message" /> today',
     images: [],
@@ -128,7 +121,6 @@ void test("Note:", async (t) => {
 
 // ## planRestore: text already typed appends after a newline instead of clobbering it
 void test("planRestore: text already typed appends after a newline instead of clobbering it", async (t) => {
-  // doctest:L107
   const typedOverDraft = { ...emptyDraft, text: "meanwhile" };
   const voice = createVoiceEmission({ text: "add milk to the list", selections: [], diarized: false });
   const plan2 = planRestore(typedOverDraft, voice);
@@ -141,7 +133,6 @@ void test("planRestore: text already typed appends after a newline instead of cl
 
   // ## planRestore: attachments/selections always re-added regardless of composer text
 
-  // doctest:L118
   const sel = [{ id: 1, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body" }];
   const e2 = createTypedEmission({ text: "note: [selection1]", images: [], files: [{ id: 1, path: "_tmp/report.pdf" }], selections: sel });
   const plan3 = planRestore(typedOverDraft, e2);
@@ -172,7 +163,6 @@ void test("planRestore: text already typed appends after a newline instead of cl
 // still carries the matching tokens), so the counters must advance past
 // them — otherwise the next pasted image would mint a duplicate `[image1]`.
 void test("The send that got rejected already reset() the store, dropping the id counter...", async (t) => {
-  // doctest:L136
   const store = createEmissionStore();
   store.editor.setText("was typing"); // simulates typing after the failed send
   const failed = createTypedEmission({
@@ -237,7 +227,6 @@ void test("The send that got rejected already reset() the store, dropping the id
     uploadBatch: null,
   });
 
-  // doctest:L155
   t.check(
     // Fresh ids start past the restored ones — no [image1]/[file1]/[selection3] duplicates.
     [store.editor.nextImageId(), store.editor.nextFileId(), store.editor.nextSelectionId()],
@@ -253,7 +242,6 @@ void test("The send that got rejected already reset() the store, dropping the id
 // to retry from, so it comes back `failed` and the message goes out with the
 // pixels only.
 void test("A rejected send hands its images back through the emission, which carries a p...", async (t) => {
-  // doctest:L169
   const store = createEmissionStore();
   const e = createTypedEmission({
     text: "receipt [image#1] and [image#2]",

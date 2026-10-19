@@ -36,7 +36,6 @@ const EMPTY: Loaded = { entries: [], total: 0, sessionId: "s1", running: false, 
 // entry rides `pendingMessages` across `onDone`'s messages overwrite, so it
 // stays visible until history reconciliation owns it.
 void test("fetchInitial is held open so loading stays observable, then released; the ent...", async (t) => {
-  // doctest:L40
   let releaseInitial = () => {};
   const initialGate = new Promise<Loaded>((resolve) => { releaseInitial = () => resolve(EMPTY); });
   const actor = createActor(
@@ -73,7 +72,6 @@ void test("fetchInitial is held open so loading stays observable, then released;
   // history predates the mid-load send, so the entry must stay in `messages`
   // (a plain overwrite blanked the row until the next refresh).
 
-  // doctest:L68
   releaseInitial();
   await new Promise((resolve) => setTimeout(resolve, 0));
   const settled = actor.getSnapshot();

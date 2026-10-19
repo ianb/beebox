@@ -54,7 +54,6 @@ void test("auto + service: hybrid ranks the semantically-matched card top", asyn
       t.error(error);
     }
   });
-  // doctest:L49
   const box = await makeTmpBox();
   await box.write("_content/inbox/Dentist.doc.card", DOC("The dentist appointment moved.", "Dentist moved to June 17."));
   await box.write("_content/inbox/Bill.doc.card", DOC("The electric bill is due.", "Electric bill due Friday."));
@@ -84,7 +83,6 @@ void test("auto + service: hybrid ranks the semantically-matched card top", asyn
 
   // ## auto + no service: text mode, no warning (the designed not-configured state)
 
-  // doctest:L70
   const res2 = await searchBox(box.root, { query: "dentist" });
   t.check(res2, {
     results: [
@@ -111,7 +109,6 @@ void test("auto + service: hybrid ranks the semantically-matched card top", asyn
   // A `--kind`-restricted hybrid search returns only that kind; the `where` filter
   // applies to both the text and vector halves.
 
-  // doctest:L87
   await box.write("_content/notes/Dentist.md", "# Dentist\nA plain markdown note about the dentist appointment.\n");
   const fakeK = createFakeEmbeddings();
   const resK = await searchBox(box.root, { query: "dentist appointment", embeddings: fakeK, kinds: ["doc"] });
@@ -148,7 +145,6 @@ void test("--mode text skips key resolution entirely and passes no service into 
       t.error(error);
     }
   });
-  // doctest:L107
   const boxT = await makeTmpBox();
   await boxT.write("_content/inbox/Dentist.doc.card", DOC("The dentist appointment moved.", "Dentist moved to June 17."));
   const fakeT = createFakeEmbeddings();
@@ -173,7 +169,6 @@ void test("--mode text skips key resolution entirely and passes no service into 
     embeddingsReady: false,
   });
 
-  // doctest:L114
   // Zero calls: no corpus embed, no query embed.
   t.check(fakeT.calls, []);
 });
@@ -190,7 +185,6 @@ void test("The corpus embeds fine at refresh (call 1); the query-stage embed (ca
       t.error(error);
     }
   });
-  // doctest:L129
   const boxQ = await makeTmpBox();
   await boxQ.write("_content/inbox/Bill.doc.card", DOC("The electric bill is due.", "Electric bill due Friday."));
   const innerQ = createFakeEmbeddings();
@@ -239,7 +233,6 @@ void test("failTimes large enough that the refresh's embed pass fails, leaving t
       t.error(error);
     }
   });
-  // doctest:L168
   const boxF = await makeTmpBox();
   await boxF.write("_content/inbox/Bill.doc.card", DOC("The electric bill is due.", "Electric bill due Friday."));
   const flaky = createFakeEmbeddings({ failTimes: 10 });
@@ -277,7 +270,6 @@ void test("mode \"hybrid\" with no service throws a typed, actionable error", as
       t.error(error);
     }
   });
-  // doctest:L196
   const boxH = await makeTmpBox();
   await boxH.write("_content/inbox/Dentist.doc.card", DOC("The dentist appointment moved.", "Dentist moved to June 17."));
   t.check(await throwName(() => searchBox(boxH.root, { query: "dentist", mode: "hybrid" })), "HybridUnavailableError");
@@ -287,7 +279,6 @@ void test("mode \"hybrid\" with no service throws a typed, actionable error", as
   // The forced-hybrid error must not swallow the actionable warning (401,
   // timeout, …) the refresh pushed when corpus embedding failed.
 
-  // doctest:L208
   const flakyH = createFakeEmbeddings({ failTimes: 10 });
   const msg = await throwMessage(() => searchBox(boxH.root, { query: "dentist", mode: "hybrid", embeddings: flakyH }));
   t.check(msg, "hybrid search unavailable: semantic index not ready (embeddings unavailable (Embeddings error: scripted failure (attempt 1 of 10)) — semantic ranking degraded; ask the boxholder to grant the \"openai\" secret to this box); retry, or search with --mode text");

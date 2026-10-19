@@ -55,13 +55,11 @@ async function makeServer(dist: string) {
 
 // ## Hashed assets are immutable for a year
 void test("Hashed assets are immutable for a year", async (t) => {
-  // doctest:L59
   const dist = await makeDist();
   const app = await makeServer(dist);
   const asset = await app.inject({ method: "GET", url: "/assets/index-a1b2c3d4.js" });
   t.check(asset.statusCode, 200);
 
-  // doctest:L65
   t.check(asset.headers["cache-control"], "public, max-age=31536000, immutable");
 
   // ## index.html, sw.js, and icons keep revalidating
@@ -69,15 +67,12 @@ void test("Hashed assets are immutable for a year", async (t) => {
   // A stale `sw.js` is the dangerous one — a year-long cache there would pin the
   // browser to a dead service worker with no way to ship a fix.
 
-  // doctest:L75
   const sw = await app.inject({ method: "GET", url: "/sw.js" });
   t.check(sw.headers["cache-control"], "public, max-age=0");
 
-  // doctest:L79
   const html = await app.inject({ method: "GET", url: "/index.html" });
   t.check(html.headers["cache-control"], "public, max-age=0");
 
-  // doctest:L83
   const icon = await app.inject({ method: "GET", url: "/icons/icon-192.png" });
   t.check(icon.headers["cache-control"], "public, max-age=0");
 
@@ -87,7 +82,6 @@ void test("Hashed assets are immutable for a year", async (t) => {
   // brotli gets those bytes with `content-encoding: br`; every response says it
   // varies by `Accept-Encoding`, so a shared cache keeps the two apart.
 
-  // doctest:L95
   const br = await app.inject({ method: "GET", url: "/assets/index-a1b2c3d4.js", headers: { "accept-encoding": "gzip, br" } });
   t.check(({ encoding: br.headers["content-encoding"], type: br.headers["content-type"], vary: br.headers["vary"], cache: br.headers["cache-control"], body: brotliDecompressSync(br.rawPayload).toString() }), {
     encoding: "br",
@@ -99,7 +93,6 @@ void test("Hashed assets are immutable for a year", async (t) => {
 
   // A client without brotli, and a file with no `.br` beside it, get the plain bytes:
 
-  // doctest:L103
   const plain = await app.inject({ method: "GET", url: "/assets/index-a1b2c3d4.js", headers: { "accept-encoding": "gzip" } });
   t.check(({ encoding: plain.headers["content-encoding"] ?? null, vary: plain.headers["vary"], body: plain.body }), {
     encoding: null,
@@ -107,7 +100,6 @@ void test("Hashed assets are immutable for a year", async (t) => {
     body: "console.log(1)",
   });
 
-  // doctest:L107
   const map = await app.inject({ method: "GET", url: "/assets/index-a1b2c3d4.js.map", headers: { "accept-encoding": "br" } });
   t.check(({ status: map.statusCode, encoding: map.headers["content-encoding"] ?? null, body: map.body }), {
     status: 200,

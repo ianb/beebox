@@ -123,7 +123,6 @@ void test("nginx runs on the old callback site.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L112
   const p = await productionLike();
   await runFile(p.nginxBin, { args: [], env: p.env });
   await writeFile(join(p.pageDir, "deploy-in-progress.html"), "<h1>updating</h1>");
@@ -136,16 +135,13 @@ void test("nginx runs on the old callback site.", async (t) => {
     stderr: "",
   });
 
-  // doctest:L122
   t.check(await enabled(p.etc), str`beebox -> ${any(String)}/sites-available/beebox`);
 
-  // doctest:L125
   t.check(await statusWithPage(p.port), 503);
 
   // A second deploy with nothing to change still tests the configuration, prints
   // nothing, and does not reload.
 
-  // doctest:L133
   const again = await runFile(helper, { args: ["install", p.src], env: p.env });
   t.check(again, { code: 0, stdout: "", stderr: any(String) });
 });
@@ -164,7 +160,6 @@ void test("Production after the failed first deploy:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L151
   const q = await productionLike();
   await runFile("cp", { args: [q.src, join(q.etc, "sites-available/beebox")], env: q.env });
   await runFile("ln", { args: ["-s", join(q.etc, "sites-available/beebox"), join(q.etc, "sites-enabled/beebox")], env: q.env });
@@ -175,7 +170,6 @@ void test("Production after the failed first deploy:", async (t) => {
 nginx: configuration file ${q.etc}/nginx.conf test failed`,
   });
 
-  // doctest:L157
   const repaired = await runFile(helper, { args: ["install", q.src], env: { ...q.env, BBX_NGINX_RELOAD: "true" } });
   t.check(repaired, {
     code: 0,
@@ -184,7 +178,6 @@ nginx: configuration file ${q.etc}/nginx.conf test failed`,
     stderr: "",
   });
 
-  // doctest:L161
   t.check(await enabled(q.etc), str`beebox -> ${any(String)}/sites-available/beebox`);
 });
 
@@ -201,7 +194,6 @@ void test("When the new configuration fails nginx -t, both site directories come
       t.error(error);
     }
   });
-  // doctest:L176
   const r = await productionLike();
   await writeFile(r.src, "server { this is not nginx; }\n");
   const rejected = await runFile(helper, { args: ["install", r.src], env: r.env });
@@ -214,7 +206,6 @@ nginx: configuration file ${r.etc}/nginx.conf test failed
   FAILED: nginx -t rejects the configuration with the repo site; restored the previous sites.`,
   });
 
-  // doctest:L182
   t.check(
     {
       enabled: await enabled(r.etc),
@@ -235,7 +226,6 @@ nginx: configuration file ${r.etc}/nginx.conf test failed
 // absolute path: the activation script has the box user's PATH, which omits
 // `/usr/sbin`.
 void test("The deploy runs the helper by absolute path, and the helper names nginx by ab...", async (t) => {
-  // doctest:L195
   const deploySh = await readFile("deploy/deploy.sh", "utf8");
   const helperSh = await readFile(helper, "utf8");
   // Both are whole shell scripts: a narrow check on the one line under test in each.

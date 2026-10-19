@@ -71,10 +71,8 @@ void test("Idempotence is the whole reason the client mints and the box accepts,
       t.error(error);
     }
   });
-  // doctest:L68
   const chat = await makeChat();
 
-  // doctest:L70
   const first = await chat.reserve({});
   const again = await chat.reserve({ contextDir: "_content/recipes" });
   t.check([first, again], [
@@ -88,7 +86,6 @@ void test("Idempotence is the whole reason the client mints and the box accepts,
     },
   ]);
 
-  // doctest:L75
   t.check(chat.registry.getReservation(COINED)?.contextDir, null);
 });
 
@@ -101,11 +98,9 @@ void test("An id that already names a chat is refused, and a non-UUID never rese
       t.error(error);
     }
   });
-  // doctest:L86
   const chat = await makeChat();
   await appendHistory(chat.box.root, { sessionId: OTHER });
 
-  // doctest:L89
   const taken = await chat.reserve({ sessionId: OTHER });
   const malformed = await chat.reserve({ sessionId: "not-a-uuid" });
   t.check([taken.kind, malformed.kind], [
@@ -128,15 +123,12 @@ void test("The distinction is load-bearing:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L107
   const chat = await makeChat();
   await chat.reserve({});
 
-  // doctest:L110
   await chat.registry.getOrCreate(COINED).send("hello");
   await tick();
 
-  // doctest:L113
   const run = chat.backend.lastRun();
   assert.ok(run);
   const opts = run.startOptions;
@@ -145,7 +137,6 @@ void test("The distinction is load-bearing:", async (t) => {
     resume: null,
   });
 
-  // doctest:L119
   t.check([opts.env.BBX_CHAT_SESSION_ID, opts.env.BBX_CHAT_SESSION_ID_FILE ?? null], [
     "11111111-2222-4333-8444-555555555555",
     null,
@@ -168,12 +159,10 @@ void test("A coined session already knows its id, so captureAssignedSessionId re
       t.error(error);
     }
   });
-  // doctest:L137
   const chat = await makeChat();
   await chat.reserve({ contextDir: "_content/recipes", seedFeatures: { narration: "on" } });
   await chat.firstRun();
 
-  // doctest:L141
   t.check((await loadHistoryEntries(chat.box.root)).map((e) => ({ id: e.id, features: e.features ?? null, engine: e.engine, contextDir: e.contextDir })), [
     {
       id: "11111111-2222-4333-8444-555555555555",
@@ -185,7 +174,6 @@ void test("A coined session already knows its id, so captureAssignedSessionId re
     },
   ]);
 
-  // doctest:L144
   t.check(await getMostActive(chat.box.root), "11111111-2222-4333-8444-555555555555");
 
   // The handoff from reservation to history loses nothing: the reservation is
@@ -194,7 +182,6 @@ void test("A coined session already knows its id, so captureAssignedSessionId re
   // permanent state — in which the chat was bound to a landmark and nothing could
   // say which. Once the chat is real, the reservation has nothing left to answer for:
 
-  // doctest:L155
   t.check([chat.registry.getReservation(COINED), chat.registry.reservationForDirectory("_content/recipes")], [
     null,
     null,
@@ -216,20 +203,16 @@ void test("The registry drops idle entries after ten minutes.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L172
   let clock = 1_000;
   const chat = await makeChat({ now: () => clock, idleTimeoutMs: 60_000 });
   await chat.reserve({});
   chat.registry.getOrCreate(COINED);
 
-  // doctest:L177
   clock += 120_000;
   chat.registry.sweepIdle();
 
-  // doctest:L180
   t.check(chat.registry.isKnownSession(COINED), true);
 
-  // doctest:L183
   t.check(chat.registry.getReservation(COINED)?.sessionId, "11111111-2222-4333-8444-555555555555");
 });
 
@@ -245,15 +228,12 @@ void test("An expired reservation is no longer a known session and is not somewh
       t.error(error);
     }
   });
-  // doctest:L197
   let clock = 1_000;
   const chat = await makeChat({ now: () => clock });
   await chat.reserve({ contextDir: "_content/recipes" });
 
-  // doctest:L201
   clock += HOURS_7;
 
-  // doctest:L203
   t.check([chat.registry.isKnownSession(COINED), chat.registry.reservationForDirectory("_content/recipes")], [
     false,
     null,
@@ -272,16 +252,13 @@ void test("A warm slot is warmed for one chat and can serve no other, so a chat 
       t.error(error);
     }
   });
-  // doctest:L217
   let clock = 1_000;
   const chat = await makeChat({ now: () => clock });
   await chat.reserve({});
 
-  // doctest:L221
   clock += HOURS_7;
   chat.registry.sweepIdle();
 
-  // doctest:L224
   t.check(chat.backend.closedWarmFor.join(","), "11111111-2222-4333-8444-555555555555");
 });
 
@@ -300,11 +277,9 @@ void test("getLastSessionForDirectory reads the history file, which has no row f
       t.error(error);
     }
   });
-  // doctest:L241
   const chat = await makeChat();
   await chat.reserve({ contextDir: "_content/recipes" });
 
-  // doctest:L244
   t.check(
     ({
       here: chat.registry.reservationForDirectory("_content/recipes"),
@@ -320,10 +295,8 @@ void test("getLastSessionForDirectory reads the history file, which has no row f
   // distinct from `null`, which means a chat opened from nowhere. Collapsing the two
   // left a chat opened from the Box row unlabelled until its first turn.
 
-  // doctest:L256
   await chat.reserve({ sessionId: OTHER, contextDir: "" });
 
-  // doctest:L258
   t.check(
     ({
       root: chat.registry.reservationForDirectory(""),

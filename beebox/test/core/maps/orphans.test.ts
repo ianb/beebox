@@ -33,7 +33,6 @@ void test("content/chat/ is a skeleton-hidden path.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L30
   const box = await makeTmpBox({ git: true });
   await box.write("_content/chat/MAP.md", "# Map: store/chat\n");
   await box.write("_content/chat/AGENTS.md", "@MAP.md\n");
@@ -45,14 +44,12 @@ void test("content/chat/ is a skeleton-hidden path.", async (t) => {
   await box.write("MAP.md", "# Map: (root)\n");
   box.commitAll("seed");
 
-  // doctest:L41
   const scan = await findOrphanMaps(box.root);
   t.check(scan, { ok: true, dirs: ["_content/chat", "solo"] });
 
   // A box with uncommitted user work is left alone, as the refresh precheck
   // leaves it:
 
-  // doctest:L50
   await box.write("work/draft.md", "wip");
   const busy = await findOrphanMaps(box.root);
   t.check(busy, { ok: false, skippedReason: "uncommitted_work" });
@@ -65,7 +62,6 @@ void test("content/chat/ is a skeleton-hidden path.", async (t) => {
 // AGENTS.md, or a symlink to anything other than `CLAUDE.md`, is never deleted.
 // The box is one made before `agents-md-2026-10` (`legacyInstructions`).
 void test("A CLAUDE.md that held only the import is deleted with its AGENTS.md mirror sy...", async (t) => {
-  // doctest:L68
   const box = await makeTmpBox({ git: true, legacyInstructions: true });
   await box.write("_content/chat/MAP.md", "# Map: store/chat\n");
   await box.write("_content/chat/CLAUDE.md", "@MAP.md\n");
@@ -89,11 +85,9 @@ void test("A CLAUDE.md that held only the import is deleted with its AGENTS.md m
   } } });
   box.commitAll("state");
 
-  // doctest:L91
   const scan = await findOrphanMaps(box.root);
   await pruneOrphanMaps(box.root, scan.ok ? scan.dirs : []);
 
-  // doctest:L94
   t.check(
     {
       chat: [await exists(box, "_content/chat/MAP.md"), await exists(box, "_content/chat/CLAUDE.md"), await exists(box, "_content/chat/AGENTS.md")],
@@ -122,7 +116,6 @@ void test("In a converted box the instruction file is AGENTS.md, pruned the same
       t.error(error);
     }
   });
-  // doctest:L111
   const box = await makeTmpBox({ git: true });
   await box.write("_content/chat/MAP.md", "# Map: store/chat\n");
   await box.write("_content/chat/AGENTS.md", "@MAP.md\n");
@@ -137,11 +130,9 @@ void test("In a converted box the instruction file is AGENTS.md, pruned the same
   } } });
   box.commitAll("state");
 
-  // doctest:L125
   const scan = await findOrphanMaps(box.root);
   await pruneOrphanMaps(box.root, scan.ok ? scan.dirs : []);
 
-  // doctest:L128
   t.check(
     {
       chat: [await exists(box, "_content/chat/MAP.md"), await exists(box, "_content/chat/AGENTS.md")],
@@ -155,7 +146,6 @@ void test("In a converted box the instruction file is AGENTS.md, pruned the same
 
   // After the engine commits the step, nothing is left to prune:
 
-  // doctest:L138
   box.commitAll("prune");
   const again = await findOrphanMaps(box.root);
   t.check(again, { ok: true, dirs: [] });
@@ -174,7 +164,6 @@ void test("In a box converted to AGENTS.md (agents-md-2026-10 in its manifest, a
       t.error(error);
     }
   });
-  // doctest:L155
   const box = await makeTmpBox({ git: "none" });
   await box.write("_content/empty/MAP.md", "# Map\n");
   await box.write("_content/empty/AGENTS.md", "@MAP.md\n");

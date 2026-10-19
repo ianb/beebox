@@ -74,7 +74,6 @@ void test("A deeper heading extends the path; a shallower one resets everything 
 });
 
 async function headingPaths(t: Test) {
-  // doctest:L64
   await t.checkText(
     show(CARD, [
       "# House",
@@ -100,7 +99,6 @@ async function headingPaths(t: Test) {
   // document that starts deep simply has fewer entries — skipped levels compact
   // out rather than leaving holes.
 
-  // doctest:L90
   await t.checkText(
     show(CARD, [
       "{% todo %}No heading yet{% /todo %}",
@@ -119,7 +117,6 @@ async function headingPaths(t: Test) {
   // everything that follows — flattened the same way any heading is, with the
   // todo's own words left out and the annotation's kept.
 
-  // doctest:L109
   await t.checkText(
     show(CARD, [
       "# House",
@@ -141,7 +138,6 @@ async function nesting(t: Test) {
   // `item`, not a child of the todo tag — so the parent's text stops where it
   // should, and the relationship has to be read from item ancestry.
 
-  // doctest:L128
   await t.checkText(
     show(CARD, [
       "- {% todo %}Sell the piano{% /todo %}",
@@ -157,7 +153,6 @@ async function nesting(t: Test) {
   // chain: a plain organizing bullet does not become a parent, and its children
   // keep whatever todo was above it.
 
-  // doctest:L144
   await t.checkText(
     show(CARD, [
       "- {% todo %}Kitchen{% /todo %}",
@@ -178,7 +173,6 @@ async function nesting(t: Test) {
   // is in a later one. The owner is the last todo written before the nested list,
   // which is what makes that shape work.
 
-  // doctest:L165
   await t.checkText(
     show(CARD, [
       "- Some context about the move.",
@@ -196,7 +190,6 @@ async function nesting(t: Test) {
   // This is the one shape where the old flat walk merged a child's words into its
   // parent's text.
 
-  // doctest:L183
   await t.checkText(
     show(CARD, [
       "{% todo %}",
@@ -215,7 +208,6 @@ async function nesting(t: Test) {
   // the note — is trimmed, so the annotation reads as its own phrase. A block-form
   // todo has no same-paragraph siblings, so its annotation is `""` (above).
 
-  // doctest:L202
   await t.checkText(
     show(CARD, [
       "- {% todo %}Sell the piano{% /todo %} — Tomas thinks it needs tuning first",
@@ -231,7 +223,6 @@ async function nesting(t: Test) {
   // second begins — it never swallows the next todo's note. By the owner rule the
   // LAST of them owns the item, so the nested todo hangs off it.
 
-  // doctest:L218
   await t.checkText(
     show(CARD, [
       "- {% todo %}Appraise{% /todo %} — ask Marisol {% todo %}Insure{% /todo %} — before the move",
@@ -248,7 +239,6 @@ async function nesting(t: Test) {
   // along the line. It is OMITTED for the first, so the address a human or an
   // agent writes for a line — `path:5` — still means the todo they meant.
 
-  // doctest:L235
   const twoOnALine = extractCardTodos({
     relPath: CARD,
     content: doc("- {% todo %}Appraise{% /todo %} — ask Marisol {% todo %}Insure{% /todo %}"),
@@ -259,7 +249,6 @@ async function nesting(t: Test) {
   // A third on the same line keeps counting, and a todo on a line of its own never
   // grows a suffix.
 
-  // doctest:L248
   await t.checkText(
     show(CARD, [
       "- {% todo %}One{% /todo %} {% todo %}Two{% /todo %} {% todo %}Three{% /todo %}",
@@ -281,7 +270,6 @@ async function references(t: Test) {
   // the href away. Links inside the todo's own text and links in the annotation
   // both count, in order of appearance.
 
-  // doctest:L267
   await t.checkText(
     show(CARD, [
       "- {% todo %}Sell [the piano](../Piano.doc.card){% /todo %} — see [the appraisal](/_content/Appraisal.doc.card)",
@@ -299,7 +287,6 @@ async function references(t: Test) {
   // External targets and refs that leave the box namespace drop out — reporting a
   // broken link is `bbx validate`'s job, not extraction's.
 
-  // doctest:L285
   await t.checkText(
     show(CARD, [
       "- {% todo %}Read [the manual](https://example.com/manual){% /todo %} and [this anchor](#later)",
@@ -313,7 +300,6 @@ async function references(t: Test) {
 
   // Refs are deduped in order of first appearance.
 
-  // doctest:L299
   t.check(
     show(CARD, [
       "- {% todo %}Two links to [one card](Piano.doc.card){% /todo %} — and [again](./Piano.doc.card)",
@@ -326,7 +312,6 @@ async function references(t: Test) {
   // They carry `sectionPath: []`, `parent: null`, `annotation: ""`, and take their
   // refs from their own `see-also` entries.
 
-  // doctest:L312
   const fm = extractCardTodos({
     relPath: CARD,
     content: [
@@ -363,7 +348,6 @@ async function purity(t: Test) {
   // nowhere in `extractCardTodos`' input to put a `now`. Only `deriveTodo` sees
   // one, and that is where plate-state comes from.
 
-  // doctest:L339
   const body = '{% todo due="2026-07-27" %}Overdue somewhere{% /todo %}\n';
   const a = extractCardTodos({ relPath: CARD, content: doc(body), ctx }).items;
   const b = extractCardTodos({ relPath: CARD, content: doc(body), ctx }).items;
@@ -389,11 +373,9 @@ async function purity(t: Test) {
   ]);
   t.check(b, a);
 
-  // doctest:L345
   const first = a[0];
   assert.ok(first);
 
-  // doctest:L350
   const early = { now: new Date("2026-07-01T12:00:00Z"), timeZone: "America/Chicago" };
   const late = { now: new Date("2026-08-01T12:00:00Z"), timeZone: "America/Chicago" };
   t.check([deriveTodo(first, early).plateState, deriveTodo(first, late).plateState], ["on-plate", "escalated"]);

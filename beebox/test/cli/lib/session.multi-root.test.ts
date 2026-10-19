@@ -54,7 +54,6 @@ void test("The history file below has:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L50
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("projects");
   const rootSession = "aaaa1111-0000-0000-0000-000000000001";
@@ -76,7 +75,6 @@ void test("The history file below has:", async (t) => {
   await seedLog(join(box.root, "_content/bunker"), { id: bunkerOld, mtime: "2026-07-01T10:00:00Z" });
   await seedLog(join(box.root, "_content/bunker"), { id: bunkerNew, mtime: "2026-07-03T10:00:00Z" });
 
-  // doctest:L71
   // Encoded dir names start with the encoded (random) tmp box root —
   // strip that prefix so expected output stays deterministic.
   const prefix = encodeProjectDir(box.root);
@@ -100,7 +98,6 @@ void test("The history file below has:", async (t) => {
 
   // ## listSessions — aggregated across roots, newest first, contextDir tagged
 
-  // doctest:L95
   const sessions = await listSessions(box.root);
   t.check(
     sessions.map((s) => ({
@@ -131,7 +128,6 @@ void test("The history file below has:", async (t) => {
   // A session missing from the history file is still found by probing every
   // root (the transcript exists; only the history entry is absent):
 
-  // doctest:L132
   const orphan = "eeee5555-0000-0000-0000-000000000005";
   await seedLog(join(box.root, "_content/bunker"), { id: orphan, mtime: "2026-07-04T10:00:00Z" });
   const foundOrphan = await findSessionLog(box.root, orphan);
@@ -142,7 +138,6 @@ void test("The history file below has:", async (t) => {
   // The command prints these one per line, so a user (or agent) sees the
   // full sweep rather than a single misleading path.
 
-  // doctest:L145
   const missing = await findSessionLog(box.root, "ffff6666-0000-0000-0000-000000000006");
   t.check(missing, {
     ok: false,
@@ -166,7 +161,6 @@ void test("The projects-dir encoding is lossy:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L171
   const box2 = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box2.path("projects");
   const dashId = "1111aaaa-0000-0000-0000-000000000001";
@@ -179,14 +173,12 @@ void test("The projects-dir encoding is lossy:", async (t) => {
     migrated: true,
   }));
 
-  // doctest:L183
   // The two contextDirs really do encode to the same projects dir.
   t.check(
     getSessionLogPath(join(box2.root, "_content/a-b"), "x"),
     getSessionLogPath(join(box2.root, "_content/a_b"), "x"),
   );
 
-  // doctest:L188
   await seedLog(join(box2.root, "_content/a-b"), { id: dashId, mtime: "2026-07-01T10:00:00Z" });
   await seedLog(join(box2.root, "_content/a_b"), { id: underId, mtime: "2026-07-02T10:00:00Z" });
   const collided = await listSessions(box2.root);
@@ -224,7 +216,6 @@ void test("A landmark transcript found by the backfill scan is appended WITH its
       t.error(error);
     }
   });
-  // doctest:L222
   const box3 = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box3.path("projects");
   const knownId = "aaaa0000-0000-0000-0000-000000000001";
@@ -245,7 +236,6 @@ void test("A landmark transcript found by the backfill scan is appended WITH its
   await mkdir(dirname(landmarkLog), { recursive: true });
   await writeFile(landmarkLog, chatLine);
 
-  // doctest:L242
   await runBackfillIfNeeded(box3.root);
   t.check(await loadHistoryEntries(box3.root), [
     {
@@ -273,7 +263,6 @@ void test("A landmark transcript found by the backfill scan is appended WITH its
 // the input's newest-first order within a depth; root-bound sessions are
 // never peers of a subdirectory.
 void test("partitionByAffinity implements bbx session's cwd affinity:", async (t) => {
-  // doctest:L277
   const mk = (id: string, contextDir: string) => ({ id, contextDir });
   const input = [
     mk("root-new", ""),
@@ -285,13 +274,11 @@ void test("partitionByAffinity implements bbx session's cwd affinity:", async (t
   const { peers, others } = partitionByAffinity(input, "_content/bunker");
   t.check(peers, [mk("exact-new", "_content/bunker"), mk("exact-old", "_content/bunker"), mk("anc", "_content")]);  t.check(peers.map((s) => s.id).join(", "), "exact-new, exact-old, anc");
 
-  // doctest:L289
   t.check(others, [mk("root-new", ""), mk("other", "_content/other")]);
 
   // The list mode partitions BEFORE its 20-item cap, so a peer older than
   // the cap still lists first — modeled here with a cap of 3:
 
-  // doctest:L297
   const many = [mk("a", ""), mk("b", ""), mk("c", ""), mk("old-peer", "_content/bunker")];
   const p2 = partitionByAffinity(many, "_content/bunker");
   t.check([...p2.peers, ...p2.others].slice(0, 3), [mk("old-peer", "_content/bunker"), mk("a", ""), mk("b", "")]);

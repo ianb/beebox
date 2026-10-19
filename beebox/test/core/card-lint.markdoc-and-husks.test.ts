@@ -79,7 +79,6 @@ const ctx: LoadCardContext = {
 // until an existing-box survey justifies flipping it to error), naming the
 // line, the tag, and the Markdoc message:
 void test("Every card with a markdown body is now parsed and run through Markdoc.validat...", async (t) => {
-  // doctest:L75
   const box = await makeTmpBox();
   await box.write(
     "_content/store/notes/Plan.doc.card",
@@ -106,7 +105,6 @@ void test("Every card with a markdown body is now parsed and run through Markdoc
 // only correct for a one-line span, so a multi-line block tag's error fell back
 // to attribution `(body)` and the collector below never flagged the card):
 void test("The same attribution holds for a multi-line block {% todo %} (opening tag, bo...", async (t) => {
-  // doctest:L103
   const box = await makeTmpBox();
   await box.write(
     "_content/store/notes/Multiline.doc.card",
@@ -127,7 +125,6 @@ void test("The same attribution holds for a multi-line block {% todo %} (opening
 
 // A body with a valid `{% todo %}` (or no tags at all) lints clean:
 void test("A body with a valid {% todo %} (or no tags at all) lints clean:", async (t) => {
-  // doctest:L122
   const box = await makeTmpBox();
   await box.write(
     "_content/store/notes/Plan2.doc.card",
@@ -155,7 +152,6 @@ void test("A body with a valid {% todo %} (or no tags at all) lints clean:", asy
 // rare parse failure precisely because this pass is the backstop that still
 // reports it):
 void test("Malformed tag syntax (an unquoted attribute value that breaks Markdoc's own t...", async (t) => {
-  // doctest:L145
   const box = await makeTmpBox();
   await box.write(
     "_content/store/notes/Broken.doc.card",
@@ -191,7 +187,6 @@ void test("Malformed tag syntax (an unquoted attribute value that breaks Markdoc
 // shared vocabulary (here, `{% source %}`'s ref-xor-href rule) is reported
 // exactly once — as the schema's own error — not again as a generic warning:
 void test("Commentary already runs Markdoc.validate on its body at error severity, via i...", async (t) => {
-  // doctest:L173
   const box = await makeTmpBox();
   await box.write("_content/store/review/a.doc.card", "---\ntype: doc\ntitle: A\n---\nA.\n");
   await box.write(
@@ -249,7 +244,6 @@ void test("The generic broken-ref walk keys on frontmatter keys literally named 
       t.error(error);
     }
   });
-  // doctest:L213
   const box = await makeTmpBox();
   await box.write("_content/recipes/images/portrait.webp", "WEBP");
   await box.write(
@@ -288,7 +282,6 @@ void test("The generic broken-ref walk keys on frontmatter keys literally named 
   // A text/emoji symbol has no path to check, and a figure's `entry` resolves in
   // the card's own attach scope:
 
-  // doctest:L241
   await box.write("_content/store/figures/Orbit.attach/sketch.ts", "export default () => {};\n");
   await box.write(
     "_content/store/figures/Orbit.figure.card",
@@ -347,7 +340,6 @@ void test("An image, audio, file or pdf card keeps its file in its attach scope,
       t.error(error);
     }
   });
-  // doctest:L281
   const box = await makeTmpBox();
   await box.write("_content/cap/photo-004.jpg", "JPG");
   await box.write(
@@ -385,7 +377,6 @@ void test("An image, audio, file or pdf card keeps its file in its attach scope,
 // UUID before anything keys on it or joins it into a path: Claude Agent SDK ids
 // are UUIDv4, Codex thread ids UUIDv7, and one check covers both.
 void test("A husk's session field is the only thing that identifies which chat the card...", async (t) => {
-  // doctest:L308
   const box = await makeTmpBox();
   await box.write("_content/chat/web/2026-08-26_ok.chat.card",
     "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\n---\n");
@@ -427,7 +418,6 @@ void test("A husk's session field is the only thing that identifies which chat t
 // card. Repair is editorial — which title and body do you keep? — so the rule
 // names both paths and stops there.
 void test("The session field is the husk's identity, so a second card carrying it means...", async (t) => {
-  // doctest:L336
   const box = await makeTmpBox();
   await box.write("_content/chat/web/2026-08-26_59fc20dd.chat.card",
     "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\ntitle: The Acme mess\n---\n");
@@ -464,7 +454,6 @@ void test("The session field is the husk's identity, so a second card carrying i
   // `_content/chat/**` tree, so moving one of the pair out of the picker's directory
   // doesn't make the collision go away.
 
-  // doctest:L363
   const box2 = await makeTmpBox();
   await box2.write("_content/chat/web/2026-08-26_59fc20dd.chat.card",
     "---\nsession: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869\n---\n");
@@ -501,7 +490,6 @@ void test("The session field is the husk's identity, so a second card carrying i
 // A card whose content embeds a real developer home directory is an ERROR, not
 // a warning — a leak, not routine data drift:
 void test("A card whose content embeds a real developer home directory is an ERROR, not...", async (t) => {
-  // doctest:L382
   const box3 = await makeTmpBox();
   await box3.write(
     "_content/store/notes/Leak.doc.card",
@@ -527,7 +515,6 @@ void test("A card whose content embeds a real developer home directory is an ERR
   // extfile card unfixably invalid — the schema demanded exactly what the leak guard
   // rejected. The href is exempt; a leak anywhere else in the same card still errors:
 
-  // doctest:L401
   const box5 = await makeTmpBox();
   await box5.write(
     "_content/store/review/Live.extfile.card",
@@ -555,7 +542,6 @@ void test("A card whose content embeds a real developer home directory is an ERR
   // The `/Users/me`/`/Users/you` placeholder forms (used in `file:` URL examples)
   // are not flagged:
 
-  // doctest:L422
   const box4 = await makeTmpBox();
   await box4.write(
     "_content/store/notes/Fine.doc.card",
@@ -576,7 +562,6 @@ void test("A card whose content embeds a real developer home directory is an ERR
 // A schema's `markdocTags` extend the core table for cards of that type. The
 // same tag in a card of another type is still `Undefined tag`.
 void test("A schema's markdocTags extend the core table for cards of that type.", async (t) => {
-  // doctest:L438
   const dishSchema: CardSchema = cardSchema("dish", {
     fields: { title: z.string(), body: body(z.string()) },
     markdocTags: { garnish: { render: "Garnish", attributes: { amount: { type: String } } } },
@@ -620,7 +605,6 @@ void test("A schema's markdocTags extend the core table for cards of that type."
 // rewrote them into frontmatter, a section, a link, and plain text, and the
 // table no longer has them, so each is reported as an undefined tag in any card.
 void test("purpose, correction, image, and silence were core tags owned by one card type...", async (t) => {
-  // doctest:L470
   const retiredBox = await makeTmpBox();
   await retiredBox.write(
     "_content/box/Old.doc.card",

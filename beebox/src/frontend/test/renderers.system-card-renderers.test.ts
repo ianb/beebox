@@ -29,27 +29,22 @@ function rendererNames(type: string): string[] {
 }
 
 void test("line 31", async (t) => {
-  // doctest:L32
   t.check(rendererNames("questions"), [
     "Questions",
   ]);
 
-  // doctest:L35
   t.check(rendererNames("landmarks"), [
     "Landmarks",
   ]);
 
-  // doctest:L38
   t.check(rendererNames("history"), [
     "History",
   ]);
 
-  // doctest:L41
   t.check(rendererNames("inventory"), [
     "Inventory",
   ]);
 
-  // doctest:L44
   t.check(rendererNames("admin"), [
     "Admin",
   ]);

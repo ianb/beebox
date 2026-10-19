@@ -52,21 +52,17 @@ void test("A secret merely present on the machine changes nothing for a box.", a
       t.error(error);
     }
   });
-  // doctest:L44
   const dir = await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
 
-  // doctest:L48
   process.env.GEMINI_KEY = "placeholder-env-key";
   process.env.SKE_GEMINI_API_KEY = "placeholder-legacy-env-key";
   t.check(await getGeminiApiKey(box.root, { purpose: "gemini-vision", observe: true }), null);
 
-  // doctest:L52
   await setSecret({ name: "gemini", value: "placeholder-store-key" });
   t.check(await getGeminiApiKey(box.root, { purpose: "gemini-vision", observe: true }), null);
 
-  // doctest:L55
   await grantSecret({ slug, name: "gemini", access: "server" });
   t.check(await getGeminiApiKey(box.root, { purpose: "gemini-vision", observe: true }), "placeholder-store-key");
 
@@ -74,13 +70,11 @@ void test("A secret merely present on the machine changes nothing for a box.", a
   //
   // Granting `openai` does not configure `openai-thinking`, and vice versa.
 
-  // doctest:L68
   process.env.THINKING_OPENAI_API_KEY = "placeholder-thinking-env-key";
   await setSecret({ name: "openai", value: "placeholder-embeddings-store-key" });
   await grantSecret({ slug, name: "openai", access: "server" });
   t.check(await getOpenAiThinkingKey(box.root, { observe: true }), null);
 
-  // doctest:L73
   await setSecret({ name: "openai-thinking", value: "placeholder-thinking-store-key" });
   await grantSecret({ slug, name: "openai-thinking", access: "server" });
   t.check(await getOpenAiThinkingKey(box.root, { observe: true }), "placeholder-thinking-store-key");
@@ -92,13 +86,11 @@ void test("A secret merely present on the machine changes nothing for a box.", a
   // `openai.secret.json` and an exported `BBX_OPENAI_API_KEY` are both put in place
   // first, so what the revoke has to survive is explicit.
 
-  // doctest:L90
   await box.write("_config/connectors/openai.secret.json", JSON.stringify({ apiKey: "placeholder-file-key" }));
   process.env.BBX_OPENAI_API_KEY = "placeholder-fallback-env-key";
   await revokeSecret({ slug, name: "openai" });
   t.check(await getOpenAiEmbeddingsKey(box.root), null);
 
-  // doctest:L95
   // A store that cannot be read at all is a machine fault, and reads as not
   // configured rather than as licence to use the credentials it superseded.
   const corruptStore = join(dir, "corrupt-store.json");
@@ -106,7 +98,6 @@ void test("A secret merely present on the machine changes nothing for a box.", a
   process.env.BBX_SECRETS_FILE = corruptStore;
   t.check(await getOpenAiEmbeddingsKey(box.root), null);
 
-  // doctest:L102
   // No store on the machine at all — the case the fallbacks used to serve.
   process.env.BBX_SECRETS_FILE = join(dir, "no-store-here.json");
   t.check(await getOpenAiEmbeddingsKey(box.root), null);
@@ -114,7 +105,6 @@ void test("A secret merely present on the machine changes nothing for a box.", a
   // Nothing configured is `null` for all three — the callers' existing "not
   // configured" path, never a throw:
 
-  // doctest:L115
   t.check(
     [
       await getGeminiApiKey(box.root, { purpose: "gemini-vision", observe: true }),

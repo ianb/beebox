@@ -28,7 +28,6 @@ void test("line 22", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L23
   const server = await makeTestServer();
   const headers = { authorization: "Bearer test-diag-key" };
   const response = await server.rootRequest({ method: "GET", url: "/healthz", headers });

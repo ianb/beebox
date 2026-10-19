@@ -35,14 +35,11 @@ void test("Nothing about \"which cards exist\" is cached — only the parse of a
       t.error(error);
     }
   });
-  // doctest:L32
   const box = await makeTmpBox();
   await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n");
 
-  // doctest:L35
   t.check(await labels(box.root), ["Home"]);
 
-  // doctest:L38
   await box.write("recipes/R.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n");
   t.check(await labels(box.root), ["Home", "Recipes"]);
 });
@@ -60,21 +57,17 @@ void test("The hazard case.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L54
   const box = await makeTmpBox();
   await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n");
 
-  // doctest:L57
   t.check(await labels(box.root), ["Home"]);
 
-  // doctest:L60
   await box.write("Box.landmark.card", "---\nnavigation:\n  label: Away\n---\n");
   t.check(await labels(box.root), ["Away"]);
 
   // A card edited from valid to unparseable moves into `problems` rather than
   // lingering as its last good parse.
 
-  // doctest:L69
   await box.write("Box.landmark.card", "not a frontmatter card at all\n");
   const after = await loadLandmarkSummaries(box.root);
   t.check(after, {
@@ -97,16 +90,13 @@ void test("An atomic write (writeFileAtomic, git checkout, most editors) replace
       t.error(error);
     }
   });
-  // doctest:L87
   const box = await makeTmpBox();
   const cardPath = box.path("Box.landmark.card");
   await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n");
   const stamped = (await fs.stat(cardPath)).mtime;
 
-  // doctest:L92
   t.check(await labels(box.root), ["Home"]);
 
-  // doctest:L95
   // Replace by rename, then forge the original mtime back onto the new inode.
   await fs.writeFile(box.path("staging.tmp"), "---\nnavigation:\n  label: Away\n---\n");
   await fs.rename(box.path("staging.tmp"), cardPath);
@@ -123,15 +113,12 @@ void test("A deleted card leaves the scan", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L110
   const box = await makeTmpBox();
   await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n");
   await box.write("recipes/R.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n");
 
-  // doctest:L114
   t.check(await labels(box.root), ["Home", "Recipes"]);
 
-  // doctest:L117
   await fs.rm(box.path("recipes/R.landmark.card"));
   t.check(await labels(box.root), ["Home"]);
 });
@@ -169,13 +156,10 @@ void test("readLandmarkCard brackets its read with two fstats of the same handle
       t.error(error);
     }
   });
-  // doctest:L153
   const box = await makeTmpBox();
   await box.write("Bad.landmark.card", "not a frontmatter card at all\n");
 
-  // doctest:L156
   t.check(await readLandmarkCard(box.path("Bad.landmark.card")), null);
 
-  // doctest:L159
   t.check(await readLandmarkCard(box.path("Nope.landmark.card")).catch((e) => e.code), "ENOENT");
 });

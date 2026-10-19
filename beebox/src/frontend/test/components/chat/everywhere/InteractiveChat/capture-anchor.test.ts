@@ -12,27 +12,23 @@ import { startCaptureWait, stepCaptureWait } from "../../../../../src/components
 // The bubble appears first and is anchored once; the message arrives later,
 // is anchored, and ends the wait:
 void test("The bubble appears first and is anchored once; the message arrives later, is...", async (t) => {
-  // doctest:L16
   const wait = startCaptureWait({ newestCapture: "u-earlier-capture", bubbleIds: [] });
   let r = stepCaptureWait(wait, { newestCapture: "u-earlier-capture", bubbleIds: [], readerScrolled: false });
   t.check(r.step, {
     anchor: "none",
   });
 
-  // doctest:L21
   r = stepCaptureWait(r.wait!, { newestCapture: "u-earlier-capture", bubbleIds: ["cap-1"], readerScrolled: false });
   t.check(r.step, {
     anchor: "bubble",
     index: 0,
   });
 
-  // doctest:L25
   r = stepCaptureWait(r.wait!, { newestCapture: "u-earlier-capture", bubbleIds: ["cap-1"], readerScrolled: false });
   t.check(r.step, {
     anchor: "none",
   });
 
-  // doctest:L29
   r = stepCaptureWait(r.wait!, { newestCapture: "u-capture", bubbleIds: [], readerScrolled: false });
   t.check([r.step, r.wait], [
     {
@@ -45,7 +41,6 @@ void test("The bubble appears first and is anchored once; the message arrives la
 // A bubble already on screen from an earlier capture is not this capture's;
 // the new one is found by id at its own index:
 void test("A bubble already on screen from an earlier capture is not this capture's; the...", async (t) => {
-  // doctest:L38
   const wait = startCaptureWait({ newestCapture: "u-1", bubbleIds: ["cap-old"] });
   t.check(stepCaptureWait(wait, { newestCapture: "u-1", bubbleIds: ["cap-old", "cap-new"], readerScrolled: false }).step, {
     anchor: "bubble",
@@ -58,7 +53,6 @@ void test("A bubble already on screen from an earlier capture is not this captur
 // holds for a typed message from another tab: it is not a capture message, so
 // the newest capture message is unchanged:
 void test("Loading older history adds messages above the newest capture message.", async (t) => {
-  // doctest:L49
   const wait = startCaptureWait({ newestCapture: "u-5", bubbleIds: [] });
   const r = stepCaptureWait(wait, { newestCapture: "u-5", bubbleIds: [], readerScrolled: false });
   t.check([r.step, r.wait === wait], [
@@ -71,7 +65,6 @@ void test("Loading older history adds messages above the newest capture message.
 
 // A chat with no user message yet still recognizes the first one:
 void test("A chat with no user message yet still recognizes the first one:", async (t) => {
-  // doctest:L58
   const wait = startCaptureWait({ newestCapture: null, bubbleIds: [] });
   t.check(stepCaptureWait(wait, { newestCapture: "u-capture", bubbleIds: [], readerScrolled: false }).step, {
     anchor: "user",
@@ -82,7 +75,6 @@ void test("A chat with no user message yet still recognizes the first one:", asy
 // where they are when the message arrives, and the wait ends. Scrolling before
 // the bubble anchor does not count; the anchor moved them anyway:
 void test("A reader who scrolled the chat themselves after the bubble was anchored stays...", async (t) => {
-  // doctest:L68
   const anchored = stepCaptureWait(startCaptureWait({ newestCapture: null, bubbleIds: [] }), { newestCapture: null, bubbleIds: ["cap-1"], readerScrolled: false }).wait!;
   const scrolled = stepCaptureWait(anchored, { newestCapture: "u-capture", bubbleIds: [], readerScrolled: true });
   const unanchored = stepCaptureWait(startCaptureWait({ newestCapture: null, bubbleIds: [] }), { newestCapture: "u-capture", bubbleIds: [], readerScrolled: true });

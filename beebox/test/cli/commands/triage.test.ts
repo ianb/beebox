@@ -53,7 +53,6 @@ async function rejectedApply(args: string[]): Promise<{ actions: number; error: 
 }
 
 void test("line 55", async (t) => {
-  // doctest:L56
   const childNames = triageCommand.commands.map((command) => command.name()).toSorted();
   t.check(childNames, [
     "apply",
@@ -66,7 +65,6 @@ void test("line 55", async (t) => {
     "replay",
   ]);
 
-  // doctest:L60
   t.check({ legacyEngineDefault: engineTriageCommand.args[0]?.default, cliEngineFlag: triageCommand.options.find((option) => option.long === "--engine")?.defaultValue }, {
     legacyEngineDefault: "agent",
     cliEngineFlag: "agent",
@@ -79,7 +77,6 @@ void test("line 55", async (t) => {
 // Replacing the actions with spies proves options following a child name reach
 // that child, even when the parent also defines `--json`.
 void test("The real command factory preserves the registered parent and child structure.", async (t) => {
-  // doctest:L71
   t.check(await dispatchProbe(), {
     parentCalls: 0,
     childCalls: 1,
@@ -91,7 +88,6 @@ void test("The real command factory preserves the registered parent and child st
 // Parent-only automatic-run flags cannot be mistaken for harmless options on an
 // applying subcommand. Leaf-only parsing also rejects `--dry-run` after `apply`.
 void test("Parent-only automatic-run flags cannot be mistaken for harmless options on an...", async (t) => {
-  // doctest:L79
   const parentDryRun = await rejectedApply(["--dry-run", "apply", "decision.json"]);
   const parentEngine = await rejectedApply(["--engine", "jev", "apply", "decision.json"]);
   const leafDryRun = await rejectedApply(["apply", "decision.json", "--dry-run"]);
@@ -121,7 +117,6 @@ void test("Parent-only automatic-run flags cannot be mistaken for harmless optio
 // Output files are new by default. JSON stdout remains complete, and a second
 // write cannot replace the first file unless `--overwrite` was supplied.
 void test("Output files are new by default.", async (t) => {
-  // doctest:L94
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "triage-cli-"));
   const file = path.join(directory, "evidence.json");
   const value = { status: "ready", text: "prepared content" };
@@ -136,15 +131,12 @@ void test("Output files are new by default.", async (t) => {
     },
   });
 
-  // doctest:L100
   t.check(await output({ status: "blocked" }, { out: file, summary: "must not replace" }).then(() => "unexpected", (error: NodeJS.ErrnoException) => error.code), "EEXIST");
 
-  // doctest:L103
   await quietly(() => output({ status: "replaced" }, { out: file, overwrite: true, summary: "updated" }));
   t.check(JSON.parse(await fs.readFile(file, "utf8")), {
     status: "replaced",
   });
 
-  // doctest:L107
   await fs.rm(directory, { recursive: true, force: true });
 });

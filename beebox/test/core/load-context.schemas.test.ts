@@ -117,11 +117,9 @@ void test("Loading discovers box frontmatter schemas", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L107
   const box = await makeSchemaBox();
   await writeSchema({ box: box, name: "widget.ts", content: WIDGET_SCHEMA });
 
-  // doctest:L110
   const loaded = await loadBoxSchemas(box.root);
   t.check(loaded.cardSchemas.map((s) => s.type), ["widget"]);
 
@@ -130,7 +128,6 @@ void test("Loading discovers box frontmatter schemas", async (t) => {
   // `buildLoadContext` merges box frontmatter schemas into the same map built-in cards use, so a
   // `widget` card parses as the new format with its YAML fields and markdown body:
 
-  // doctest:L121
   const ctx = await buildLoadContext(box.root);
   const card = await loadCardFromText({ content: WIDGET_CARD, source: "My.widget.card", ctx });
   t.check({ kind: card.kind, type: card.schema.type, fields: card.fields }, {
@@ -141,7 +138,6 @@ void test("Loading discovers box frontmatter schemas", async (t) => {
 
   // Validation rejects a malformed card — `size` must be a number:
 
-  // doctest:L130
   const bad = "---\nsize: not-a-number\n---\n";
   t.check(await loadErrorName({ content: bad, source: "X.widget.card", ctx: ctx }), "CardIOError");
 
@@ -149,7 +145,6 @@ void test("Loading discovers box frontmatter schemas", async (t) => {
   //
   // `createCardSchemaMap(boxRoot)` includes box frontmatter types alongside the built-ins:
 
-  // doctest:L140
   const map = await createCardSchemaMap(box.root);
   t.check([...map.keys()], containing(["widget"]));
 });
@@ -167,7 +162,6 @@ void test("A long-lived server caches the assembled schema set (and Node permane
       t.error(error);
     }
   });
-  // doctest:L156
   const rbox = await makeSchemaBox();
   const wpath = await writeSchema({ box: rbox, name: "widget.ts", content: WIDGET_SCHEMA });
   const v1 = await loadBoxSchemas(rbox.root);
@@ -184,10 +178,8 @@ void test("A long-lived server caches the assembled schema set (and Node permane
     "theme",
   ]);
 
-  // doctest:L162
   await fs.writeFile(wpath, WIDGET_SCHEMA_V2);
 
-  // doctest:L164
   // Without invalidation: the cached set is returned — edit not yet visible.
   const stale = await loadBoxSchemas(rbox.root);
   t.check(fieldNames(stale.cardSchemas[0]?.frontmatterSchema), [
@@ -203,7 +195,6 @@ void test("A long-lived server caches the assembled schema set (and Node permane
     "theme",
   ]);
 
-  // doctest:L169
   // After invalidation: the changed file is re-imported, edit visible.
   invalidateBoxSchemas(rbox.root);
   const fresh = await loadBoxSchemas(rbox.root);
@@ -226,13 +217,11 @@ void test("A long-lived server caches the assembled schema set (and Node permane
   // If a re-import fails (an incomplete mid-edit save), the loader keeps the file's
   // last good schema rather than dropping the type. A real deletion does drop it.
 
-  // doctest:L182
   await fs.writeFile(wpath, WIDGET_SCHEMA_BROKEN);
   invalidateBoxSchemas(rbox.root);
   const kept = await loadBoxSchemas(rbox.root);
   t.check(kept.cardSchemas.map(s => s.type), ["widget"]);
 
-  // doctest:L188
   await fs.rm(wpath);
   invalidateBoxSchemas(rbox.root);
   const dropped = await loadBoxSchemas(rbox.root);
@@ -254,7 +243,6 @@ void test("The template registry is process-global, but registrations are tagged
       t.error(error);
     }
   });
-  // doctest:L207
   const boxA = await makeSchemaBox();
   const boxB = await makeSchemaBox();
   await writeSchema({ box: boxA, name: "trip.ts", content: TRIP_WITH_TEMPLATE });
@@ -263,14 +251,12 @@ void test("The template registry is process-global, but registrations are tagged
   await loadBoxSchemas(boxB.root);
   t.check(tripTemplate(), { name: "trip-template", description: "A trip", cardTypes: ["trip"] });
 
-  // doctest:L216
   // boxA drops its template (reload without it); boxB still owns it.
   await writeSchema({ box: boxA, name: "trip.ts", content: TRIP_NO_TEMPLATE });
   invalidateBoxSchemas(boxA.root);
   await loadBoxSchemas(boxA.root);
   t.check(tripTemplate(), { name: "trip-template", description: "A trip", cardTypes: ["trip"] });
 
-  // doctest:L223
   // boxB drops it too — now the name is gone.
   await writeSchema({ box: boxB, name: "trip.ts", content: TRIP_NO_TEMPLATE });
   invalidateBoxSchemas(boxB.root);
@@ -280,13 +266,11 @@ void test("The template registry is process-global, but registrations are tagged
   // Deleting a box's last schema file (so the dir scan is empty) must drop its
   // templates too, not just its card types:
 
-  // doctest:L235
   await writeSchema({ box: boxA, name: "trip.ts", content: TRIP_WITH_TEMPLATE });
   invalidateBoxSchemas(boxA.root);
   await loadBoxSchemas(boxA.root);
   t.check(tripTemplate(), { name: "trip-template", description: "A trip", cardTypes: ["trip"] });
 
-  // doctest:L241
   await fs.rm(path.join(boxA.root, "src/schemas", "trip.ts"));
   invalidateBoxSchemas(boxA.root);
   const after = await loadBoxSchemas(boxA.root);

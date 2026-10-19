@@ -14,7 +14,6 @@ import type { NativeShellWindow } from "../../../../src/components/chat/native-p
 // `enabled` is always true — every dictated message gets the HQ pass
 // (docs/plans/hq-always.md) — and is still sent for native builds that read it:
 void test("The HQ state channel carries diarized:", async (t) => {
-  // doctest:L18
   const calls: Array<{ channel: string; payload: string }> = [];
   const shell: NativeShellWindow = {
     beeboxNativePost: (channel, payload) => calls.push({ channel, payload }),
@@ -35,7 +34,6 @@ void test("The HQ state channel carries diarized:", async (t) => {
 
 // The neutral bridge receives the current state as a JSON payload:
 void test("The neutral bridge receives the current state as a JSON payload:", async (t) => {
-  // doctest:L31
   const calls: Array<{ channel: string; payload: string }> = [];
   const shell: NativeShellWindow = {
     beeboxNativePost: (channel, payload) => calls.push({ channel, payload }),

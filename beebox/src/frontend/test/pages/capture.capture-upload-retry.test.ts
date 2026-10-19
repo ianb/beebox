@@ -29,7 +29,6 @@ const status = (code: number) => new UploadResponseError({ status: code, detail:
 // The user pressed "Skip them" on a pending Done, or cancelled capture outright.
 // Retrying would defeat the very cancel it came from:
 void test("The user pressed \"Skip them\" on a pending Done, or cancelled capture outright.", async (t) => {
-  // doctest:L33
   t.check(classifyUploadFailure(new UploadAbortedError()), "abort");
 });
 
@@ -38,17 +37,14 @@ void test("The user pressed \"Skip them\" on a pending Done, or cancelled captur
 // A stalled transfer means no bytes moved for the stall window — the link may
 // well recover, so try again:
 void test("A stalled transfer means no bytes moved for the stall window — the link may w...", async (t) => {
-  // doctest:L43
   t.check(classifyUploadFailure(new UploadStalledError(20_000)), "retry");
 
-  // doctest:L46
   t.check(classifyUploadFailure(new UploadNetworkError()), "retry");
 });
 
 // An unrecognized error is treated as transient rather than fatal: a spurious
 // extra attempt costs one upload, while wrongly giving up loses a photo:
 void test("An unrecognized error is treated as transient rather than fatal:", async (t) => {
-  // doctest:L54
   t.check(classifyUploadFailure(new Error("something unexpected")), "retry");
 });
 
@@ -57,7 +53,6 @@ void test("An unrecognized error is treated as transient rather than fatal:", as
 // 5xx is the server having a bad moment, and 408/429 are it explicitly asking us
 // to come back:
 void test("5xx is the server having a bad moment, and 408/429 are it explicitly asking u...", async (t) => {
-  // doctest:L64
   t.check([500, 502, 503, 408, 429].map((c) => classifyUploadFailure(status(c))).join(","), "retry,retry,retry,retry,retry");
 });
 
@@ -65,7 +60,6 @@ void test("5xx is the server having a bad moment, and 408/429 are it explicitly 
 // session that is no longer open, a size cap. Retrying repeats it verbatim, so
 // the upload is failed immediately and surfaces to the user:
 void test("Every other 4xx is this request being wrong on its merits — a bad filename, a...", async (t) => {
-  // doctest:L73
   t.check([400, 401, 403, 404, 409, 413].map((c) => classifyUploadFailure(status(c))).join(","), "fatal,fatal,fatal,fatal,fatal,fatal");
 });
 

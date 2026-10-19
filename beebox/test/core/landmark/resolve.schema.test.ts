@@ -50,7 +50,6 @@ async function resolveIn({ files, navigation, backdated }: { files: Record<strin
 // `parseLandmarkFields` reads a landmark file's frontmatter into a typed
 // object:
 void test("parseLandmarkFields reads a landmark file's frontmatter into a typed object:", async (t) => {
-  // doctest:L52
   t.check(
     parseLandmarkFields(`---
 navigation:
@@ -88,7 +87,6 @@ destinations:
 // `prominence` is admitted the same way `symbol` is (`landmark.ts`): a written
 // value describes the place, not the file, so a reader must still see it.
 void test("prominence is admitted the same way symbol is (landmark.ts):", async (t) => {
-  // doctest:L74
   t.check(parseLandmarkFields("---\nnavigation:\n  label: Logs\nprominence: background\n---\n"), {
     navigation: { label: "Logs" },
     prominence: "background",
@@ -100,7 +98,6 @@ void test("prominence is admitted the same way symbol is (landmark.ts):", async 
 // and root installation — a theme is decoration, and the roles are how the box is
 // navigated.
 void test("Presentation metadata is validated by the presentation reader.", async (t) => {
-  // doctest:L84
   const badPrimitiveTheme = parseLandmarkFields("---\nnavigation:\n  label: Still here\ndestinations:\n  - for: [triage]\nsystem-theme: bogus\n---\n");
   t.check(badPrimitiveTheme, {
     navigation: { label: "Still here" },
@@ -113,7 +110,6 @@ void test("Presentation metadata is validated by the presentation reader.", asyn
 // allowlist, so an unknown stock reaches the renderer as authored and falls back
 // there.
 void test("Malformed means the wrong SHAPE.", async (t) => {
-  // doctest:L95
   const unknownStock = parseLandmarkFields("---\nnavigation:\n  label: Also here\nsystem-theme:\n  name: paper\n  stock: purple\n---\n");
   t.check(unknownStock, {
     navigation: { label: "Also here" },
@@ -127,7 +123,6 @@ void test("Malformed means the wrong SHAPE.", async (t) => {
 // the label and the card's own `symbol` group for the mark. The mark is never nested
 // under `navigation`.
 void test("createLandmarkTemplate produces a starter card with a navigation role for the...", async (t) => {
-  // doctest:L107
   await t.checkText(createLandmarkTemplate({ label: "Recipes", symbol: "🍳" }), `---
 navigation:
   label: Recipes
@@ -138,7 +133,6 @@ symbol:
 
 // An image symbol becomes a `{ src }` mapping under the same key:
 void test("An image symbol becomes a { src } mapping under the same key:", async (t) => {
-  // doctest:L120
   await t.checkText(createLandmarkTemplate({ label: "Character", symbolSrc: "images/portrait.webp" }), `---
 navigation:
   label: Character
@@ -157,7 +151,6 @@ symbol:
 // such link missing). A ref that climbs out of the box resolves to nothing and is
 // reported `exists: false`, never clamped to some other file.
 void test("A link to a file that doesn't exist still appears, with exists:", async (t) => {
-  // doctest:L141
   const { links } = await resolveIn({
     files: { "_content/recipes/Bread.recipe.card": "Bread", "_content/docs/About.doc.card": "About", "_content/docs/Index.doc.card": "Index" },
     navigation: {
@@ -186,7 +179,6 @@ void test("A link to a file that doesn't exist still appears, with exists:", asy
 // Without a template, `expand` emits one bare link per match, sorted
 // alphabetically by default.
 void test("Without a template, expand emits one bare link per match, sorted alphabetical...", async (t) => {
-  // doctest:L172
   const { links } = await resolveIn({
     files: { "_content/recipes/Carrot.recipe.card": "Carrot", "_content/recipes/Apple.recipe.card": "Apple", "_content/recipes/Bread.recipe.card": "Bread" },
     navigation: { expand: [{ query: "*.recipe.card" }] },
@@ -206,7 +198,6 @@ void test("Without a template, expand emits one bare link per match, sorted alph
 // frontmatter (title, template fields) would otherwise leak into the rendered
 // label. The match is silently dropped, not surfaced as a broken link.
 void test("An expand query glob is evaluated with the landmark's own directory as cwd —...", async (t) => {
-  // doctest:L189
   const { links } = await resolveIn({
     files: { "_content/recipes/Bread.recipe.card": "Bread", "src/private.doc.card": "Secret Doc" },
     navigation: { expand: [{ query: "../../src/private.doc.card", "template-label": "${title}" }] },
@@ -223,7 +214,6 @@ void test("An expand query glob is evaluated with the landmark's own directory a
 // landmark's own attach scope (the `attach/` virtual prefix is for *authored*
 // refs). An authored `template-ref` keeps `${path}` dir-relative.
 void test("The default (no template-ref) emits the match's box path — the canonical lead...", async (t) => {
-  // doctest:L207
   const { links } = await resolveIn({
     files: { "_content/recipes/attach/Filed.recipe.card": "Filed", "_content/recipes/Recipes.attach/Trap.recipe.card": "Trap" },
     navigation: { expand: [{ query: "attach/*.recipe.card" }] },
@@ -240,7 +230,6 @@ void test("The default (no template-ref) emits the match's box path — the cano
 // reads that field from the matched card's frontmatter (replacing the old
 // XPath-over-XML evaluation).
 void test("Template placeholders interpolate per match.", async (t) => {
-  // doctest:L223
   const { links } = await resolveIn({
     files: { "_content/recipes/Bread.recipe.card": "Crusty Bread", "_content/recipes/Pasta.recipe.card": "Cacio e Pepe" },
     navigation: { expand: [{ query: "*.recipe.card", "template-ref": "${path}", "template-label": "${title}" }] },
@@ -256,7 +245,6 @@ void test("Template placeholders interpolate per match.", async (t) => {
 // A card appearing in both a hand-listed link and an `expand` result shows
 // once — hand-listed links come first and keep their label.
 void test("A card appearing in both a hand-listed link and an expand result shows once —...", async (t) => {
-  // doctest:L241
   const { links } = await resolveIn({
     files: { "_content/recipes/Bread.recipe.card": "Bread", "_content/recipes/Pasta.recipe.card": "Pasta" },
     navigation: { links: [{ ref: "Bread.recipe.card", label: "the bread" }], expand: [{ query: "*.recipe.card" }] },
@@ -273,7 +261,6 @@ void test("A card appearing in both a hand-listed link and an expand result show
 // into the flat `links`. The group reports a `count` and resolved
 // `children`; the flat list holds only the static link.
 void test("An expand carrying a group title stays grouped instead of flattening into the...", async (t) => {
-  // doctest:L260
   const resolved = await resolveIn({
     files: {
       "_content/recipes/Bread.recipe.card": "Bread",
@@ -304,7 +291,6 @@ void test("An expand carrying a group title stays grouped instead of flattening 
 //
 // `order: modified-desc` sorts matches by mtime, newest first.
 void test("order:", async (t) => {
-  // doctest:L284
   const { links } = await resolveIn({
     files: { "_content/recipes/A.recipe.card": "A", "_content/recipes/B.recipe.card": "B" },
     navigation: { expand: [{ query: "*.recipe.card", order: "modified-desc" }] },
@@ -321,7 +307,6 @@ void test("order:", async (t) => {
 // `findDestination` locates the destination advertising a given kind among
 // a landmark's `destinations`.
 void test("findDestination locates the destination advertising a given kind among a land...", async (t) => {
-  // doctest:L299
   const fields = parseLandmarkFields(`---
 navigation:
   label: Reading
@@ -337,12 +322,10 @@ destinations:
     rules: "Articles saved for close reading and commentary.",
   });
 
-  // doctest:L312
   t.check(findDestination(fields.destinations, "triage"), is(dest));
 
   // A landmark without a matching destination returns null:
 
-  // doctest:L319
   const navOnly = parseLandmarkFields("---\nnavigation:\n  label: Just a bookmark\n---\n");
   assert.ok(navOnly);
   t.check(findDestination(navOnly.destinations, "triage"), null);

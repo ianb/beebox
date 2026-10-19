@@ -70,7 +70,6 @@ void test("A bare procedure.ref resolves against the landmark's own directory; a
       t.error(error);
     }
   });
-  // doctest:L66
   const box = await makeTmpBox();
   await box.write("_content/recipes/Recipes.landmark.card", landmark("Recipes", procedureRef("archive.procedure.card")));
   await box.write("_content/receipts/Receipts.landmark.card", landmark("Receipts", procedureRef("/_config/procedures/archive.procedure.card")));
@@ -79,7 +78,6 @@ void test("A bare procedure.ref resolves against the landmark's own directory; a
   await box.write("_content/inbox/triaged/recipes/Pasta.doc.card.probable.txt", "Reason: judgment call.");
   await box.write("_content/inbox/triaged/receipts/Lunch.doc.card", "<doc>lunch</doc>");
 
-  // doctest:L74
   const { calls, results } = await handle(box);
   t.check({ calls, results }, {
     calls: [
@@ -127,7 +125,6 @@ void test("An empty bucket is reported as no-items, a category whose landmark na
       t.error(error);
     }
   });
-  // doctest:L106
   const box = await makeTmpBox();
   await box.write("_content/recipes/Recipes.landmark.card", landmark("Recipes", procedureRef("archive.procedure.card")));
   await box.write("_content/inbox/triaged/recipes/.gitkeep", ""); // bucket directory, no items
@@ -135,7 +132,6 @@ void test("An empty bucket is reported as no-items, a category whose landmark na
   await box.write("_content/inbox/triaged/notes/Item.doc.card", "<doc/>");
   await box.write("_content/inbox/triaged/_unsure/Mystery.doc.card", "<doc/>");
 
-  // doctest:L113
   const { calls, results } = await handle(box);
   t.check({ calls, results }, {
     calls: [],
@@ -160,7 +156,6 @@ void test("A handler whose work completed but whose review reached no verdict is
       t.error(error);
     }
   });
-  // doctest:L131
   const box = await recipesBox();
   const { results } = await handle(box, { outcome: "inconclusive", detail: "review of step archive reached max turns (8)" });
   t.check({ results, report: results.flatMap(formatHandlingLines) }, {
@@ -181,7 +176,6 @@ void test("A handler whose work completed but whose review reached no verdict is
 
   // A failed handler run still reports its error:
 
-  // doctest:L147
   const failed = await handle(box, { outcome: "failed", detail: "step archive failed" });
   t.check(failed.results.flatMap(formatHandlingLines), [
     "  procedure-failed\trecipes (1 item) [_content/recipes/archive.procedure.card]",
@@ -195,7 +189,6 @@ void test("A handler whose work completed but whose review reached no verdict is
 // did neither — a wakeup script gating on it saw a green run in all three cases.
 // The verdict is the worst outcome present, in that order.
 void test("bbx handle used to exit 0 whether a handler failed, reached no verdict, or di...", async (t) => {
-  // doctest:L167
   const bucket = (category: string, outcome: CategoryHandling["outcome"]): CategoryHandling => ({ category, items: ["x"], outcome });
   const clean = [bucket("recipes", "ran"), bucket("receipts", "no-items")];
   const unjudged = [bucket("recipes", "ran"), { ...bucket("receipts", "procedure-inconclusive"), detail: "review of step file reached max turns (8)" }];
@@ -206,13 +199,11 @@ void test("bbx handle used to exit 0 whether a handler failed, reached no verdic
   // The stderr line an unjudged bucket prints is the scheduler's vocabulary, same
   // prefix and closing clause as a procedure run's:
 
-  // doctest:L182
   t.check(formatHandleInconclusiveLine({ category: "receipts", detail: unjudged[1]?.detail ?? "" }), "Inconclusive: handle receipts — review of step file reached max turns (8); work completed");
 
   // The CLI reads the results back across the untyped command boundary, so a
   // mis-shaped value can't become a silent clean exit — unknown outcomes are
   // dropped rather than trusted:
 
-  // doctest:L191
   t.check(readHandlingResults([...unjudged, { category: "junk", outcome: "who-knows" }, "nope"]), unjudged);
 });

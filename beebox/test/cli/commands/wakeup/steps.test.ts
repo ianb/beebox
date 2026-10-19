@@ -26,7 +26,6 @@ const DOC = (title: string, text: string) =>
 
 // ## Missing-contains cards produce one pending job card
 void test("Missing-contains cards produce one pending job card", async (t) => {
-  // doctest:L30
   const box = await makeTmpBox({ git: true });
   await box.write("_content/notes/A.doc.card", DOC("A", "alpha notes"));
   await box.write("_content/notes/B.doc.card", DOC("B", "beta notes"));
@@ -37,7 +36,6 @@ void test("Missing-contains cards produce one pending job card", async (t) => {
 
   // The job card carries its priority, a description, and the item refs:
 
-  // doctest:L43
   const jobFile = (await box.list("_bookkeeping/jobs")).split("\n").find((f) => f.includes("contains-backfill.job.card"));
   const job = await box.read(jobFile ?? "");
   t.check(job, `---
@@ -51,7 +49,6 @@ items:
 
   // ## A pending backfill job blocks queueing another
 
-  // doctest:L58
   t.check(await createContainsBackfillJob(box.root), 0);
 });
 
@@ -64,7 +61,6 @@ void test("Nothing missing → nothing queued", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L65
   const box2 = await makeTmpBox({ git: true });
   await box2.write(
     "_content/notes/Done.doc.card",
@@ -90,21 +86,18 @@ void test("refreshSearchIndex is the box's only scheduled reconciliation of the 
       t.error(error);
     }
   });
-  // doctest:L89
   const box3 = await makeTmpBox({ git: true });
   await box3.write("_content/notes/A.doc.card", DOC("A", "alpha notes"));
   box3.commitAll("seed");
   await refreshSearchIndex(box3.root);
   await createContainsBackfillJob(box3.root);
 
-  // doctest:L95
   // With the backfill job still pending, the refresh still indexes a new card.
   await createContainsBackfillJob(box3.root);
   await box3.write("_content/notes/Later.doc.card", DOC("Later", "distinctive kumquat filing"));
   box3.commitAll("add a card");
   t.check(await refreshSearchIndex(box3.root), true);
 
-  // doctest:L102
   const hits = await searchBox(box3.root, { query: "kumquat", mode: "text" });
   t.check(hits, {
     results: [
@@ -144,17 +137,14 @@ void test("openSearchIndex degrades under contention:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L122
   const box4 = await makeTmpBox({ git: true });
   await box4.write("_content/notes/A.doc.card", DOC("A", "alpha notes"));
   box4.commitAll("seed");
 
-  // doctest:L126
   // Hold the search lock, as a concurrent query or a second wakeup would.
   await acquireLock(searchLockPath(box4.root), { purpose: "doctest" });
   t.check(await refreshSearchIndex(box4.root), false);
 
-  // doctest:L131
   // Released, the same call reconciles and reports success.
   await releaseLock(searchLockPath(box4.root));
   t.check(await refreshSearchIndex(box4.root), true);
@@ -177,7 +167,6 @@ void test("The stamp is not decoration:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L151
   process.env.BBX_TIME = "2026-03-04T05:06:07Z";
   const box5 = await makeTmpBox({ git: true });
   await box5.write("_content/notes/A.doc.card", DOC("A", "alpha notes"));
@@ -185,7 +174,6 @@ void test("The stamp is not decoration:", async (t) => {
   await refreshSearchIndex(box5.root);
   await createContainsBackfillJob(box5.root);
 
-  // doctest:L158
   const queuedName = (await box5.list("_bookkeeping/jobs")).split("\n").find((f) => f.includes("contains-backfill"));
   t.check(queuedName, "_bookkeeping/jobs/2026-03-04T05-06.contains-backfill.job.card");
 });

@@ -14,7 +14,6 @@ import {
 
 // The hook's drop path uses the same decision and clears a short persisted draft:
 void test("The hook's drop path uses the same decision and clears a short persisted draft:", async (t) => {
-  // doctest:L18
   let clearedDrafts = 0;
   const dropped = dropSmallRecoveredDictation("just mumbling", () => { clearedDrafts += 1; });
   t.check(({ dropped, clearedDrafts }), {
@@ -26,16 +25,13 @@ void test("The hook's drop path uses the same decision and clears a short persis
 // Whitespace does not inflate the recovered draft's size, and exactly 20
 // characters is still below the strict threshold:
 void test("Whitespace does not inflate the recovered draft's size, and exactly 20 charac...", async (t) => {
-  // doctest:L32
   t.check(shouldSurfaceRecoveredDictation(`  ${"x".repeat(RECOVERED_DICTATION_MIN_CHARACTERS)}  `), false);
 });
 
 // A longer recovery is surfaced:
 void test("A longer recovery is surfaced:", async (t) => {
-  // doctest:L39
   t.check(shouldSurfaceRecoveredDictation("This recovered draft is useful."), true);
 
-  // doctest:L42
   let clearedDrafts = 0;
   const dropped = dropSmallRecoveredDictation(
     "This recovered draft is useful.",

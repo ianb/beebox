@@ -10,7 +10,6 @@ import { detectVideoEmbed } from "../../src/lib/video-url.js";
 //
 // The common forms all resolve to the same `youtube-nocookie.com/embed/ID` URL:
 void test("The common forms all resolve to the same youtube-nocookie.com/embed/ID URL:", async (t) => {
-  // doctest:L14
   t.check(
     detectVideoEmbed("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
     ,
@@ -20,7 +19,6 @@ void test("The common forms all resolve to the same youtube-nocookie.com/embed/I
   },
   );
 
-  // doctest:L17
   t.check(
     detectVideoEmbed("https://youtu.be/dQw4w9WgXcQ")
     ,
@@ -30,7 +28,6 @@ void test("The common forms all resolve to the same youtube-nocookie.com/embed/I
   },
   );
 
-  // doctest:L20
   t.check(
     detectVideoEmbed("https://www.youtube.com/embed/dQw4w9WgXcQ")
     ,
@@ -40,7 +37,6 @@ void test("The common forms all resolve to the same youtube-nocookie.com/embed/I
   },
   );
 
-  // doctest:L23
   t.check(
     detectVideoEmbed("https://www.youtube.com/shorts/dQw4w9WgXcQ")
     ,
@@ -53,7 +49,6 @@ void test("The common forms all resolve to the same youtube-nocookie.com/embed/I
 
 // Extra query params (timestamps, playlists) on a watch URL don't break extraction:
 void test("Extra query params (timestamps, playlists) on a watch URL don't break extract...", async (t) => {
-  // doctest:L30
   t.check(
     detectVideoEmbed("https://m.youtube.com/watch?v=dQw4w9WgXcQ&t=42s")
     ,
@@ -66,7 +61,6 @@ void test("Extra query params (timestamps, playlists) on a watch URL don't break
 
 // The `/live/` path and the `music.` subdomain are also recognized:
 void test("The /live/ path and the music. subdomain are also recognized:", async (t) => {
-  // doctest:L37
   t.check(
     detectVideoEmbed("https://www.youtube.com/live/dQw4w9WgXcQ")
     ,
@@ -76,7 +70,6 @@ void test("The /live/ path and the music. subdomain are also recognized:", async
   },
   );
 
-  // doctest:L40
   t.check(
     detectVideoEmbed("https://music.youtube.com/watch?v=dQw4w9WgXcQ")
     ,
@@ -91,14 +84,12 @@ void test("The /live/ path and the music. subdomain are also recognized:", async
 //
 // A YouTube-looking URL with no extractable (or malformed) id returns `null`, so the caller renders the normal image/link instead of a broken embed:
 void test("A YouTube-looking URL with no extractable (or malformed) id returns null, so...", async (t) => {
-  // doctest:L49
   t.check(
     detectVideoEmbed("https://www.youtube.com/watch?v=tooshort")
     ,
     null,
   );
 
-  // doctest:L52
   t.check(
     detectVideoEmbed("https://www.youtube.com/feed/subscriptions")
     ,
@@ -108,13 +99,11 @@ void test("A YouTube-looking URL with no extractable (or malformed) id returns n
 
 // Non-video and non-absolute URLs are never videos:
 void test("Non-video and non-absolute URLs are never videos:", async (t) => {
-  // doctest:L59
   t.check(
     detectVideoEmbed("https://example.com/cat.png")
     ,
     null,
   );
 
-  // doctest:L62
   t.check(detectVideoEmbed("attach/photo.jpg"), null);
 });

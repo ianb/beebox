@@ -18,20 +18,17 @@ import { LoginThrottle, CONCURRENCY_RETRY_MS } from "../../../../src/webapp/rout
 // `min(1s · 2^(failures-1), 60s)`: one failure → 1s, two → 2s. A success wipes the
 // counters so the legitimate user is never throttled by their own earlier typos.
 void test("min(1s · 2^(failures-1), 60s):", async (t) => {
-  // doctest:L22
   const throttle = new LoginThrottle();
   const ip = "10.0.0.1";
   const email = "user@example.com";
   const t0 = 1_000_000;
 
-  // doctest:L27
   t.check(
     // No history → allowed.
     throttle.check({ ip, email, now: t0 }).allowed,
     true,
   );
 
-  // doctest:L31
   // One failure → blocked for 1s.
   throttle.recordFailure({ ip, email, now: t0 });
   t.check(throttle.check({ ip, email, now: t0 }), {
@@ -39,19 +36,16 @@ void test("min(1s · 2^(failures-1), 60s):", async (t) => {
     retryAfterMs: 1000,
   });
 
-  // doctest:L36
   // Two failures → 2s.
   throttle.recordFailure({ ip, email, now: t0 });
   t.check(throttle.check({ ip, email, now: t0 }).retryAfterMs, 2000);
 
-  // doctest:L41
   t.check(
     // Past the window → allowed again.
     throttle.check({ ip, email, now: t0 + 2000 }).allowed,
     true,
   );
 
-  // doctest:L45
   // Success clears the backoff — allowed immediately.
   throttle.recordSuccess({ ip, email });
   t.check(throttle.check({ ip, email, now: t0 }).allowed, true);
@@ -59,18 +53,15 @@ void test("min(1s · 2^(failures-1), 60s):", async (t) => {
 
 // ## The per-IP bucket is independent of the email (varying email doesn't reset the clock)
 void test("The per-IP bucket is independent of the email (varying email doesn't reset the clock)", async (t) => {
-  // doctest:L54
   const throttle = new LoginThrottle();
   const ip = "10.0.0.9";
   const t0 = 5_000_000;
 
-  // doctest:L58
   // Fail against three DIFFERENT emails from the same IP.
   throttle.recordFailure({ ip, email: "a@example.com", now: t0 });
   throttle.recordFailure({ ip, email: "b@example.com", now: t0 });
   throttle.recordFailure({ ip, email: "c@example.com", now: t0 });
 
-  // doctest:L63
   await t.checkText(
     // A brand-new email from that IP is already throttled — the per-IP bucket
     // escalated to 3 failures (→ 4s) regardless of which email was tried.
@@ -78,7 +69,6 @@ void test("The per-IP bucket is independent of the email (varying email doesn't 
     "{\"allowed\":false,\"retryAfterMs\":4000}",
   );
 
-  // doctest:L68
   t.check(
     // A different IP is untouched.
     throttle.check({ ip: "10.0.0.10", email: "fresh@example.com", now: t0 }).allowed,
@@ -92,18 +82,15 @@ void test("The per-IP bucket is independent of the email (varying email doesn't 
 // IP-only throttle is bypassable by rotating the forged IP. The per-email bucket
 // throttles a targeted account regardless of source IP.
 void test("trustProxy makes request.ip attacker-controllable, so an (ip,email)- or IP-on...", async (t) => {
-  // doctest:L80
   const throttle = new LoginThrottle();
   const email = "target@example.com";
   const t0 = 7_000_000;
 
-  // doctest:L84
   // Fail against the SAME email from three DIFFERENT (spoofed) IPs.
   throttle.recordFailure({ ip: "10.0.0.1", email, now: t0 });
   throttle.recordFailure({ ip: "10.0.0.2", email, now: t0 });
   throttle.recordFailure({ ip: "10.0.0.3", email, now: t0 });
 
-  // doctest:L89
   await t.checkText(
     // A brand-new IP targeting that email is already throttled — the per-email
     // bucket escalated to 3 failures (→ 4s) regardless of source IP.
@@ -111,7 +98,6 @@ void test("trustProxy makes request.ip attacker-controllable, so an (ip,email)- 
     "{\"allowed\":false,\"retryAfterMs\":4000}",
   );
 
-  // doctest:L94
   t.check(
     // A different email from that fresh IP is untouched (neither its per-IP nor its
     // per-email bucket has any history).
@@ -119,7 +105,6 @@ void test("trustProxy makes request.ip attacker-controllable, so an (ip,email)- 
     true,
   );
 
-  // doctest:L99
   // A success for the targeted email clears its per-email bucket too, so the real
   // user isn't locked out by an attacker's failures against their address.
   throttle.recordSuccess({ ip: "10.0.0.99", email });
@@ -131,28 +116,22 @@ void test("trustProxy makes request.ip attacker-controllable, so an (ip,email)- 
 // At most two verifications run at once; the excess caller is told to retry
 // BEFORE any hashing (each scrypt costs ~128MB / ~100ms).
 void test("At most two verifications run at once; the excess caller is told to retry BEF...", async (t) => {
-  // doctest:L112
   const throttle = new LoginThrottle();
 
-  // doctest:L114
   t.check(throttle.acquireHashSlot(), true);
 
-  // doctest:L117
   t.check(throttle.acquireHashSlot(), true);
 
-  // doctest:L120
   t.check(
     // Third concurrent verification is refused.
     throttle.acquireHashSlot(),
     false,
   );
 
-  // doctest:L124
   // Releasing one frees a slot.
   throttle.releaseHashSlot();
   t.check(throttle.acquireHashSlot(), true);
 
-  // doctest:L129
   t.check(CONCURRENCY_RETRY_MS, 500);
 });
 
@@ -161,7 +140,6 @@ void test("At most two verifications run at once; the excess caller is told to r
 // A spray of distinct `(ip,email)` keys can't grow the maps without bound — past
 // the cap the oldest entry is evicted (logged via `console.warn`, suppressed here).
 void test("A spray of distinct (ip,email) keys can't grow the maps without bound — past...", async (t) => {
-  // doctest:L139
   const throttle = new LoginThrottle();
   const origWarn = console.warn;
   console.warn = function suppressed() { /* silence eviction warnings */ };
@@ -173,7 +151,6 @@ void test("A spray of distinct (ip,email) keys can't grow the maps without bound
     console.warn = origWarn;
   }
 
-  // doctest:L150
   t.check(
     // 4100 distinct keys inserted, capped at 4000.
     throttle.stats().keyEntries,

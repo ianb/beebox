@@ -72,7 +72,6 @@ void test("The request route is agent-initiated, exactly like the screenshot req
       t.error(error);
     }
   });
-  // doctest:L70
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -100,7 +99,6 @@ void test("No client acks within the 2 s ack window.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L93
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -124,7 +122,6 @@ void test("The \"browser\" reads the server-minted id off the bus and acks.", as
       t.error(error);
     }
   });
-  // doctest:L118
   const ctx = await makeTestServer();
   const gotId = captureRequestId(ctx);
   const longPoll = ctx.request({
@@ -158,7 +155,6 @@ void test("failed is an ordinary fulfillment, so the agent hears a reason instea
       t.error(error);
     }
   });
-  // doctest:L152
   const ctx = await makeTestServer();
   const gotId = captureRequestId(ctx);
   const longPoll = ctx.request({
@@ -190,7 +186,6 @@ void test("The long-poll is started, the \"browser\" posts the inventory, and th
       t.error(error);
     }
   });
-  // doctest:L187
   const ctx = await makeTestServer();
   const gotId = captureRequestId(ctx);
   const longPoll = ctx.request({
@@ -225,7 +220,6 @@ void test("A scan from inside the iOS shell that could not reach the native half
       t.error(error);
     }
   });
-  // doctest:L228
   const ctx = await makeTestServer();
   const gotId = captureRequestId(ctx);
   const longPoll = ctx.request({
@@ -261,7 +255,6 @@ void test("The schema is strict(), so a compromised or outdated client cannot sm
       t.error(error);
     }
   });
-  // doctest:L262
   const ctx = await makeTestServer();
   const post = (payload: Record<string, unknown>) =>
     ctx.request({ method: "POST", url: `/api/chat/ui/${VALID_ID}`, payload });
@@ -298,7 +291,6 @@ void test("The normal multi-tab outcome (another tab's scan already won) and the
       t.error(error);
     }
   });
-  // doctest:L297
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",

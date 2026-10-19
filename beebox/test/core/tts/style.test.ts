@@ -16,13 +16,11 @@ import { deliverStyle } from "../../../src/core/tts/style.js";
 // text, never inside it: Gemini 3.8 reads direction placed in the text aloud
 // (measured 2026-10-04), which is why Gemini speech has no OpenRouter route.
 void test("OpenAI's speech request has instructions; Google's Interactions API has a spe...", async (t) => {
-  // doctest:L20
   t.check(deliverStyle({ backend: "openai", instructions: "Speak warmly." }), {
     kind: "field",
     instructions: "Speak warmly.",
   });
 
-  // doctest:L23
   t.check(deliverStyle({ backend: "gemini", instructions: "  Speak warmly.  " }), {
     kind: "field",
     instructions: "Speak warmly.",
@@ -34,12 +32,10 @@ void test("OpenAI's speech request has instructions; Google's Interactions API h
 // With nothing to place, nothing is reported as dropped — an empty
 // `instructions` must not be logged as a lost setting.
 void test("With nothing to place, nothing is reported as dropped — an empty instructions...", async (t) => {
-  // doctest:L33
   t.check(deliverStyle({ backend: "gemini", instructions: undefined }), {
     kind: "none",
   });
 
-  // doctest:L36
   t.check(deliverStyle({ backend: "openai", instructions: "   " }), {
     kind: "none",
   });

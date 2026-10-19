@@ -17,29 +17,23 @@ import { mediaTypeOf } from "../../../../src/lib/audio/tts-client/playable.js";
 // `MediaSource.isTypeSupported` accepts a `codecs` parameter and rejects a header
 // carrying anything else, so only `codecs` is kept.
 void test("MediaSource.isTypeSupported accepts a codecs parameter and rejects a header c...", async (t) => {
-  // doctest:L21
   t.check(mediaTypeOf("audio/mpeg"), "audio/mpeg");
 
-  // doctest:L24
   t.check(mediaTypeOf("audio/wav"), "audio/wav");
 
-  // doctest:L27
   t.check(
     // A charset would make an otherwise-supported type fail the check.
     mediaTypeOf("audio/mpeg; charset=utf-8"),
     "audio/mpeg",
   );
 
-  // doctest:L31
   t.check(mediaTypeOf('audio/mp4; codecs="mp4a.40.2"'), "audio/mp4; codecs=\"mp4a.40.2\"");
 
-  // doctest:L34
   t.check(
     // A response with no Content-Type cannot claim to be streamable.
     mediaTypeOf(null),
     null,
   );
 
-  // doctest:L38
   t.check(mediaTypeOf(""), null);
 });

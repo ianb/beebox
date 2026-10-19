@@ -60,12 +60,10 @@ void test("The bound is 10 minutes in production — a cold engine spawn legitim
       t.error(error);
     }
   });
-  // doctest:L55
   const box = await makeTmpBox();
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
-  // doctest:L59
   let pinned = true;
   const capture = captureTurn(session, { turnId: "wedged-turn", releasePin: () => { pinned = false; } });
   startAckedRun({ send: () => new Promise<boolean>(() => { /* never settles */ }) }, {
@@ -74,7 +72,6 @@ void test("The bound is 10 minutes in production — a cold engine spawn legitim
     watchdog: { timeoutMs: 40, periodMs: 5 },
   });
 
-  // doctest:L67
   const { errored, complete } = await awaitTurnEnd("wedged-turn");
   t.check(`${errored} | pinned=${pinned} | complete=${complete}`, "The run did not start within 40ms | pinned=false | complete=true");
 });
@@ -94,12 +91,10 @@ void test("The route waits for the session to take the turn before it answers.",
       t.error(error);
     }
   });
-  // doctest:L85
   const box = await makeTmpBox();
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
-  // doctest:L89
   let admitLate: (() => void) | undefined;
   let recorded = 0;
   const capture = captureTurn(session, { turnId: "late-turn", releasePin: () => {} });
@@ -137,12 +132,10 @@ void test("The watchdog is cleared the moment send() settles either way, so a tu
       t.error(error);
     }
   });
-  // doctest:L118
   const box = await makeTmpBox();
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
-  // doctest:L122
   const capture = captureTurn(session, { turnId: "live-turn", releasePin: () => {} });
   startAckedRun({ send: async () => true }, {
     input: { text: "water the plants" },
@@ -150,7 +143,6 @@ void test("The watchdog is cleared the moment send() settles either way, so a tu
     watchdog: { timeoutMs: 20, periodMs: 5 },
   });
 
-  // doctest:L129
   await new Promise((resolve) => { setTimeout(resolve, 120); });
   t.check(`errored=${getTurnBuffer("live-turn")?.errored} | complete=${getTurnBuffer("live-turn")?.complete}`, "errored=null | complete=false");
 });
@@ -167,7 +159,6 @@ void test("The event bus stands in for \"anything between the claim and the ack\
       t.error(error);
     }
   });
-  // doctest:L145
   const backend = createFakeChatBackend();
   const realStart = backend.start.bind(backend);
   const runStarted = new Promise<FakeChatBackendRun>((resolve) => {
@@ -180,17 +171,14 @@ void test("The event bus stands in for \"anything between the claim and the ack\
   });
   const ctx = await makeTestServer({ chatBackend: backend });
 
-  // doctest:L157
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L162
   const realEmit = ctx.eventBus.emit;
   ctx.eventBus.emit = () => { throw new Error("bus wedged"); };
 
-  // doctest:L165
   const failed = await ctx.request({
     method: "POST",
     url: "/api/chat/send",
@@ -201,7 +189,6 @@ void test("The event bus stands in for \"anything between the claim and the ack\
   // A second POST of the same id answers instead of parking on the dead claim —
   // without the settle it would wait for an outcome that never comes.
 
-  // doctest:L178
   const duplicate = await promptly(ctx.request({
     method: "POST",
     url: "/api/chat/send",
@@ -212,7 +199,6 @@ void test("The event bus stands in for \"anything between the claim and the ack\
   // Nothing was recorded and no durable claim was taken, so once the bus recovers
   // the client's retry runs the message exactly once.
 
-  // doctest:L191
   ctx.eventBus.emit = realEmit;
   const retry = await ctx.request({
     method: "POST",
@@ -220,7 +206,6 @@ void test("The event bus stands in for \"anything between the claim and the ack\
     payload: { session: "new", message: "did you water the plants", messageId: "m1" },
   });
 
-  // doctest:L198
   t.check(`${retry.statusCode} | turn=${typeof bodyField(retry.body, "turnId")} | recorded=${recorded.length} | ${recorded[0]}`, "200 | turn=string | recorded=1 | did you water the plants");
 
   // The retried run reaches the backend and finishes once the backend answers.
@@ -228,7 +213,6 @@ void test("The event bus stands in for \"anything between the claim and the ack\
   // still committing: on 2026-10-11 its bootstrap git commit outlived cleanup
   // and held the process open until the file timed out.
 
-  // doctest:L208
   (await runStarted).emitResult();
   const ended = await awaitTurnEnd(String(bodyField(retry.body, "turnId")));
   t.check(`errored=${ended.errored} | complete=${ended.complete}`, "errored=null | complete=true");

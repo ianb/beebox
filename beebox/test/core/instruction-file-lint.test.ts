@@ -33,25 +33,21 @@ function warningLead(relPath: string, chars: number): string {
 
 // ## Just under the soft tier stays silent
 void test("Just under the soft tier stays silent", async (t) => {
-  // doctest:L37
   t.check(tier(INSTRUCTION_FILE_WARN_CHARS - 1), "ok");
 });
 
 // ## At the soft tier — a gentle nudge
 void test("At the soft tier — a gentle nudge", async (t) => {
-  // doctest:L45
   t.check(tier(INSTRUCTION_FILE_WARN_CHARS), "soft");
 });
 
 // ## Still soft just below the firm tier
 void test("Still soft just below the firm tier", async (t) => {
-  // doctest:L53
   t.check(tier(INSTRUCTION_FILE_FIRM_CHARS - 1), "soft");
 });
 
 // ## At the firm tier — firmer language
 void test("At the firm tier — firmer language", async (t) => {
-  // doctest:L61
   t.check(tier(INSTRUCTION_FILE_FIRM_CHARS), "firm");
 });
 
@@ -60,7 +56,6 @@ void test("At the firm tier — firmer language", async (t) => {
 // The message is a lint-style `warning <path> [instruction-file-size] …` line carrying
 // the character count, so the agent (or boxholder) sees which file and how big.
 void test("The message is a lint-style warning <path> [instruction-file-size] … line car...", async (t) => {
-  // doctest:L72
   t.check(warningLead("config/AGENTS.md", 25000), "warning  config/AGENTS.md  [instruction-file-size] 25000 chars");
 });
 
@@ -70,7 +65,6 @@ void test("The message is a lint-style warning <path> [instruction-file-size] �
 // converted box, `CLAUDE.md` in one not yet converted. The `AGENTS.md` symlink
 // beside a legacy `CLAUDE.md` is the same content and is not reported twice.
 void test("bbx validate walks the box for every real instruction file:", async (t) => {
-  // doctest:L84
   const root = await mkdtemp(join(tmpdir(), "bbx-instruction-size-"));
   await mkdir(join(root, "legacy"), { recursive: true });
   await mkdir(join(root, "converted"), { recursive: true });

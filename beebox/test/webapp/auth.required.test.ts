@@ -52,17 +52,14 @@ function fakeRequest({ method, url, headers }: { method?: string; url: string; h
 // the openness-recomputing call sites read as `identity.source` rather than
 // re-derive.
 void test("Outside hub mode, a cookieless request is unauthenticated (source:", async (t) => {
-  // doctest:L41
   const cookieless = { headers: {}, cookies: {} };
 
-  // doctest:L43
   t.check(resolveRequestIdentity(cookieless, { openAccess: false }), {
     email: null,
     name: null,
     source: null,
   });
 
-  // doctest:L46
   t.check(resolveRequestIdentity(cookieless, { openAccess: true }), {
     email: null,
     name: null,
@@ -76,31 +73,25 @@ void test("Outside hub mode, a cookieless request is unauthenticated (source:", 
 // non-whitelisted procedure (e.g. `history.list`) does NOT — the fix for the old
 // substring match that let a diag-key holder read past the two allowed endpoints.
 void test("A single whitelisted procedure passes; a tRPC batch URL that also carries a n...", async (t) => {
-  // doctest:L57
   process.env.BBX_DIAG_API_KEY = "diag-key-for-auth-required-doctest";
   const bearer = { authorization: "Bearer diag-key-for-auth-required-doctest" };
 
-  // doctest:L60
   t.check(isDiagnosticBypassRequest(fakeRequest({ url: "/test/api/trpc/health.check", headers: bearer })), true);
 
-  // doctest:L63
   t.check(isDiagnosticBypassRequest(fakeRequest({ url: "/test/api/trpc/debugLog.get?batch=1", headers: bearer })), true);
 
-  // doctest:L66
   t.check(
     // The batch-URL privilege-widening, now closed:
     isDiagnosticBypassRequest(fakeRequest({ url: "/test/api/trpc/health.check,history.list?batch=1", headers: bearer })),
     false,
   );
 
-  // doctest:L70
   t.check(
     // A whitelisted procedure but the wrong (or missing) key never bypasses:
     isDiagnosticBypassRequest(fakeRequest({ url: "/test/api/trpc/health.check", headers: { authorization: "Bearer wrong" } })),
     false,
   );
 
-  // doctest:L74
   t.check(
     // A POST is never a bypass, even for a whitelisted read procedure:
     isDiagnosticBypassRequest(fakeRequest({ method: "POST", url: "/test/api/trpc/health.check", headers: bearer })),
@@ -118,10 +109,8 @@ void test("A single whitelisted procedure passes; a tRPC batch URL that also car
 // open-access servers are unaffected: `.inject()` never goes through listen (the
 // `{ open: true }` server above answered fine).
 void test("Open access bypasses the auth wall, so it must never bind a listening socket...", async (t) => {
-  // doctest:L90
   await t.checkThrows(async () => (assertOpenAccessNotListening({ openAccess: true })), "OpenAccessListenError");
 
-  // doctest:L93
   t.check(
     // The guard is a no-op for the production shape (no openAccess) and for an
     // explicit false; nothing throws so these return undefined.
@@ -129,14 +118,12 @@ void test("Open access bypasses the auth wall, so it must never bind a listening
     undefined,
   );
 
-  // doctest:L98
   t.check(assertOpenAccessNotListening({ openAccess: false }), undefined);
 });
 
 // The public entry point fails closed too, before touching disk or the network.
 // `startServer` is async, so read the rejection's error name.
 void test("The public entry point fails closed too, before touching disk or the network.", async (t) => {
-  // doctest:L106
   const listenName = await startServer({ openAccess: true }).then(() => "did not throw", (e) => e.name);
   t.check(listenName, "OpenAccessListenError");
 });
@@ -148,11 +135,9 @@ void test("The public entry point fails closed too, before touching disk or the 
 // `/api/push/resubscribe` through the wall (then 400s on the empty body — proof it
 // reached the handler rather than being blanket-blocked).
 void test("An openAccess:", async (t) => {
-  // doctest:L119
   delete process.env.BBX_DIAG_API_KEY;
   const openServer = await makeTestServer({ openAccess: true });
 
-  // doctest:L122
   const meOpen = await openServer.rootRequest({ method: "GET", url: "/auth/me" });
   t.check(meOpen, {
     statusCode: 200,
@@ -161,34 +146,27 @@ void test("An openAccess:", async (t) => {
     },
   });
 
-  // doctest:L126
   const resubOpen = await openServer.rootRequest({ method: "POST", url: "/api/push/resubscribe", payload: {} });
   t.check(resubOpen, { statusCode: 400, body: { error: "missing subscription" } });
 
-  // doctest:L130
   await openServer.cleanup();
 });
 
 // An auth-on server (`openAccess: false`, the production default) 401s both.
 void test("An auth-on server (openAccess:", async (t) => {
-  // doctest:L136
   const authServer = await makeTestServer({ openAccess: false });
 
-  // doctest:L138
   const meRequired = await authServer.rootRequest({ method: "GET", url: "/auth/me" });
   t.check(meRequired, NOT_AUTHENTICATED);
 
-  // doctest:L142
   const resubRequired = await authServer.rootRequest({ method: "POST", url: "/api/push/resubscribe", payload: {} });
   t.check(resubRequired, NOT_AUTHENTICATED);
 
-  // doctest:L146
   // `files.kind` is a `publicProcedure`: the transport wall, not the procedure, is its auth.
   const kindUrl = `/api/trpc/files.kind?input=${encodeURIComponent(JSON.stringify({ path: "_content" }))}`;
   const kindRequired = await authServer.request({ method: "GET", url: kindUrl });
   t.check(kindRequired, NOT_AUTHENTICATED);
 
-  // doctest:L152
   await authServer.cleanup();
 });
 
@@ -227,7 +205,6 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
       t.error(error);
     }
   });
-  // doctest:L168
   const BROWSE_KEY = "browse-key-for-auth-required-doctest";
   const ORIGINAL_OWNER = process.env.BBX_OWNER_EMAIL;
   process.env.BBX_BROWSE_API_KEY = BROWSE_KEY;
@@ -239,15 +216,12 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
   const PRIOR_STORE = process.env.BBX_SECRETS_FILE;
   delete process.env.BBX_SECRETS_FILE;
 
-  // doctest:L179
   const optedIn = await makeTestServer({ openAccess: false });
   await optedIn.seed("_config/box.json", JSON.stringify({ agentBrowsing: "owner" }));
 
-  // doctest:L182
   const asOwner = await optedIn.request({ method: "GET", url: "/api/trpc/scanTokens.list", headers: browseHeaders });
   const atSecrets = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });
 
-  // doctest:L185
   if (PRIOR_STORE !== undefined) process.env.BBX_SECRETS_FILE = PRIOR_STORE;
   t.check(asOwner, { statusCode: 200, body: { result: { data: [] } } });
   t.check(atSecrets, SECRETS_NEED_OWNER_SESSION);
@@ -259,7 +233,6 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
   // inherits from any shell or `.env`) still refuses; the router's
   // `BBX_SECRETS_STORE_ISOLATED=1` beside a non-default path opens the panel.
 
-  // doctest:L201
   const isolatedStore = await mkdtemp(join(tmpdir(), "bbx-isolated-secrets-"));
   process.env.BBX_SECRETS_FILE = join(isolatedStore, "secrets.json");
   const overrideOnly = await optedIn.request({ method: "GET", url: "/api/trpc/secrets.formatHints", headers: browseHeaders });
@@ -274,10 +247,8 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
   // On a box that never opted in, the key means what it always did: it clears the
   // wall and reaches an authenticated procedure, and nothing owner-gated.
 
-  // doctest:L219
   const plain = await makeTestServer({ openAccess: false });
 
-  // doctest:L221
   const authedCall = await plain.request({ method: "GET", url: "/api/trpc/inventory.summary", headers: browseHeaders });
   const kindCall = await plain.request({
     method: "GET",
@@ -286,7 +257,6 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
   });
   const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/scanTokens.list", headers: browseHeaders });
 
-  // doctest:L229
   // The inventory summary is a large generated report; the status shows the call reached the procedure.
   t.check(authedCall.statusCode, 200);
   t.check(kindCall, { statusCode: 200, body: { result: { data: { kind: "directory" } } } });

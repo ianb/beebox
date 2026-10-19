@@ -75,24 +75,20 @@ void test("sealed/preparing batches are always re-fired.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L71
   const box = await makeTmpBox();
   const sealed = await makeBulk(box.root, { state: "sealed" });
   const preparing = await makeBulk(box.root, { state: "preparing" });
 
-  // doctest:L75
   // A delivering batch whose <upload> already landed in the target transcript.
   const landedTarget = "s-landed";
   const delivering1 = await makeBulk(box.root, { state: "delivering", target: landedTarget });
   const doc = (await resolveBulkBatchPaths({ boxRoot: box.root, startedAt: delivering1.createdAt, id: delivering1.id, contextDir: "" })).cardRelPath;
   await seedTranscript({ boxRoot: box.root, sessionId: landedTarget, text: JSON.stringify({ type: "user", text: `<upload doc="${doc}">` }) + "\n" });
 
-  // doctest:L81
   // A delivering batch whose message never landed (empty transcript).
   await makeBulk(box.root, { state: "delivering", target: "s-lost" });
   await seedTranscript({ boxRoot: box.root, sessionId: "s-lost", text: "" });
 
-  // doctest:L85
   const fired: string[] = [];
   await sweepBulkBatches({ boxRoot: box.root, firePreparation: (id) => fired.push(id) });
   // The re-fired set is exactly {sealed, preparing, delivering-landed}:
@@ -116,13 +112,11 @@ void test("An open batch idle past the window is surfaced (never auto-finalized)
       t.error(error);
     }
   });
-  // doctest:L121
   const box = await makeTmpBox();
   const emptyOld = await makeBulk(box.root, { state: "open", aged: true });
   const nonEmptyOld = await makeBulk(box.root, { state: "open", aged: true, withFile: true });
   const recent = await makeBulk(box.root, { state: "open", withFile: true });
 
-  // doctest:L126
   const result = await sweepBulkBatches({ boxRoot: box.root });
   t.check(result.discarded, []);
   t.check(result.abandoned, unordered([emptyOld.id, nonEmptyOld.id]));
@@ -131,7 +125,6 @@ void test("An open batch idle past the window is surfaced (never auto-finalized)
   // Both aged batches are surfaced, and both are still on disk — the sweep reports
   // them for the uploader to finish, it never finalizes or deletes them:
 
-  // doctest:L140
   t.check(await readStagingSession({ boxRoot: box.root, id: emptyOld.id }), not(null));
   t.check(await readStagingSession({ boxRoot: box.root, id: nonEmptyOld.id }), not(null));
 });
@@ -149,11 +142,9 @@ void test("Delivery cleans up staging, but if that teardown was swallowed the se
       t.error(error);
     }
   });
-  // doctest:L159
   const box = await makeTmpBox();
   const delivered = await makeBulk(box.root, { state: "delivered", withFile: true });
 
-  // doctest:L162
   const result = await sweepBulkBatches({ boxRoot: box.root });
   t.check(result.cleaned, [delivered.id]);
   t.check(await readStagingSession({ boxRoot: box.root, id: delivered.id }), null);
@@ -173,10 +164,8 @@ void test("A delivered upload-batch card still under a tmp-upload/ past the stal
       t.error(error);
     }
   });
-  // doctest:L187
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L189
   async function writeBatchCard(relDir: string, startedAt: string) {
     const card = createUploadBatchTemplate({
       batchId: "upload-x", targetSessionId: "s-target", startedAt, registered: 1, totalBytes: 6,
@@ -186,14 +175,12 @@ void test("A delivered upload-batch card still under a tmp-upload/ past the stal
     await writeFile(box.path(`${relDir}/Batch.upload-batch.card`), card);
   }
 
-  // doctest:L198
   await writeBatchCard("store/x/tmp-upload/upload-old", OLD);
   // Recent = 1 day ago on the sweep's own clock — a hardcoded "recent" date
   // here is a time bomb that crosses the ≥7-day threshold as real time passes.
   const RECENT = new Date(getBoxTime(box.root).getTime() - 24 * 60 * 60 * 1000).toISOString();
   await writeBatchCard("store/x/tmp-upload/upload-new", RECENT);
 
-  // doctest:L204
   const notified: UnfiledBatch[] = [];
   await sweepBulkBatches({ boxRoot: box.root, notifyUnfiled: (b) => notified.push(b) });
   t.check(notified, [{
@@ -205,7 +192,6 @@ void test("A delivered upload-batch card still under a tmp-upload/ past the stal
   // The batch is marked `sweep-notified` (committed), so a SECOND sweep does not
   // re-fire the self-note — it notifies at most once ever, not every cycle:
 
-  // doctest:L219
   const notified2: UnfiledBatch[] = [];
   await sweepBulkBatches({ boxRoot: box.root, notifyUnfiled: (b) => notified2.push(b) });
   t.check(notified2, []);
@@ -248,7 +234,6 @@ void test("A batch that registered items but committed no bytes is not empty —
       t.error(error);
     }
   });
-  // doctest:L244
   const box = await makeTmpBox();
   const registered = await makeBulk(box.root, { state: "open", aged: true });
   const result = await sweepBulkBatches({ boxRoot: box.root });
@@ -257,7 +242,6 @@ void test("A batch that registered items but committed no bytes is not empty —
 
   // A batch with a note is kept too — the boxholder typed it and pressed send:
 
-  // doctest:L257
   const noted = await createStagingSession({
     boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk", expectedItems: [],
   });
@@ -267,14 +251,12 @@ void test("A batch that registered items but committed no bytes is not empty —
   session.lastActivityAt = OLD;
   await writeStagingSession({ boxRoot: box.root, session });
 
-  // doctest:L266
   const second = await sweepBulkBatches({ boxRoot: box.root });
   t.check(second.discarded, []);
 
   // A genuinely empty batch — nothing registered, nothing uploaded, nothing said — is
   // still discarded:
 
-  // doctest:L275
   const empty = await createStagingSession({
     boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk", expectedItems: [],
   });
@@ -283,14 +265,12 @@ void test("A batch that registered items but committed no bytes is not empty —
   emptySession.lastActivityAt = OLD;
   await writeStagingSession({ boxRoot: box.root, session: emptySession });
 
-  // doctest:L283
   const third = await sweepBulkBatches({ boxRoot: box.root });
   t.check(third.discarded, [empty.id]);
 
   // A sealed batch is never discarded by the sweep, even if it looks empty — the
   // worker owns it, and the locked discard refuses:
 
-  // doctest:L292
   const sealed = await createStagingSession({
     boxRoot: box.root, targetSessionId: null, createdBy: null, kind: "bulk", expectedItems: [],
   });
@@ -300,7 +280,6 @@ void test("A batch that registered items but committed no bytes is not empty —
   await writeStagingSession({ boxRoot: box.root, session: sealedSession });
   await setStagingState({ boxRoot: box.root, id: sealed.id, state: "sealed" });
 
-  // doctest:L301
   const fourth = await sweepBulkBatches({ boxRoot: box.root });
   t.check(fourth.discarded, []);
   t.check(await readStagingSession({ boxRoot: box.root, id: sealed.id }), not(null));
@@ -321,7 +300,6 @@ void test("Once a batch is sealed the box holds the bytes AND the boxholder's in
       t.error(error);
     }
   });
-  // doctest:L322
   const box = await makeTmpBox();
   const stranded = await createStagingSession({
     boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk",
@@ -333,7 +311,6 @@ void test("Once a batch is sealed the box holds the bytes AND the boxholder's in
   await writeStagingSession({ boxRoot: box.root, session });
   await setStagingState({ boxRoot: box.root, id: stranded.id, state: "failed:deliver" });
 
-  // doctest:L333
   const seen: StrandedBatch[] = [];
   const result = await sweepBulkBatches({ boxRoot: box.root, notifyStranded: (b) => seen.push(b) });
   t.check(result.stranded, [stranded.id]);
@@ -349,12 +326,10 @@ void test("Once a batch is sealed the box holds the bytes AND the boxholder's in
 
   // The staging is NOT deleted — the agent may still need the bytes:
 
-  // doctest:L347
   t.check(await readStagingSession({ boxRoot: box.root, id: stranded.id }), not(null));
 
   // It fires exactly once, not every sweep cycle:
 
-  // doctest:L354
   const again: StrandedBatch[] = [];
   const second = await sweepBulkBatches({ boxRoot: box.root, notifyStranded: (b) => again.push(b) });
   t.check(second.stranded, []);
@@ -375,7 +350,6 @@ void test("The discard decision is made on a snapshot, then re-made against the 
       t.error(error);
     }
   });
-  // doctest:L372
   const box = await makeTmpBox();
   const revived = await makeBulk(box.root, { state: "open", aged: true });
   // Simulate the user returning: the batch is no longer idle when the lock is taken.
@@ -384,7 +358,6 @@ void test("The discard decision is made on a snapshot, then re-made against the 
   fresh.lastActivityAt = new Date().toISOString();
   await writeStagingSession({ boxRoot: box.root, session: fresh });
 
-  // doctest:L380
   const result = await sweepBulkBatches({ boxRoot: box.root });
   t.check(result.discarded, []);
   t.check(await readStagingSession({ boxRoot: box.root, id: revived.id }), not(null));

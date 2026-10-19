@@ -54,19 +54,16 @@ void test("The mark is one frontmatter field.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L51
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   await seedChat(box, { sessionId: SESSION, husk: "title: Planning a small birthday dinner\n" });
   await seedChat(box, { sessionId: OTHER, husk: "" });
 
-  // doctest:L56
   t.check(await caller(box.root).chat.markDone({ sessionId: SESSION, done: true }), {
     huskPath: "_content/chat/web/2026-07-28_aaaa1111.chat.card",
     done: true,
   });
 
-  // doctest:L59
   await t.checkText(await box.read("_content/chat/web/2026-07-28_aaaa1111.chat.card"), `---
 session: aaaa1111-2222-4333-8444-555566667777
 title: Planning a small birthday dinner
@@ -75,7 +72,6 @@ done: true
 «blankline»
 Notes the boxholder wrote.`);
 
-  // doctest:L68
   t.check(await listed(box.root), [
     "aaaa1111 done",
     "bbbb1111 live",
@@ -84,7 +80,6 @@ Notes the boxholder wrote.`);
   // The session menu reads the mark for the current chat through `chat.label`, so
   // its toggle can say "Mark active" instead of "Mark done".
 
-  // doctest:L76
   t.check(await caller(box.root).chat.label({ session: SESSION }), {
     label: "Planning a small birthday dinner",
     done: true,
@@ -94,7 +89,6 @@ Notes the boxholder wrote.`);
   //
   // The field is removed rather than set to `false`: its absence means active.
 
-  // doctest:L85
   await caller(box.root).chat.markDone({ sessionId: SESSION, done: false });
   await t.checkText(await box.read("_content/chat/web/2026-07-28_aaaa1111.chat.card"), `---
 session: aaaa1111-2222-4333-8444-555566667777
@@ -103,7 +97,6 @@ title: Planning a small birthday dinner
 «blankline»
 Notes the boxholder wrote.`);
 
-  // doctest:L95
   t.check(await listed(box.root), [
     "aaaa1111 live",
     "bbbb1111 live",
@@ -122,7 +115,6 @@ void test("A brand-new chat has no husk yet, so there is nothing to mark.", asyn
       t.error(error);
     }
   });
-  // doctest:L109
   const box = await makeTmpBox();
   t.check(await caller(box.root).chat.label({ session: SESSION }), {
     label: null,
@@ -131,7 +123,6 @@ void test("A brand-new chat has no husk yet, so there is nothing to mark.", asyn
 
   // Calling the mutation anyway is refused, rather than inventing a card.
 
-  // doctest:L117
   t.check(await caller(box.root).chat.markDone({ sessionId: SESSION, done: true }).catch((e) => e.message), "This chat has no card to mark");
 });
 
@@ -148,24 +139,20 @@ void test("done is a named boolean.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L132
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   await seedChat(box, { sessionId: SESSION, husk: "done: finished\n" });
 
-  // doctest:L136
   const warnings: string[] = [];
   const warn = console.warn;
   console.warn = (...args) => { warnings.push(args.join(" ")); };
   const rows = await listed(box.root);
   console.warn = warn;
 
-  // doctest:L142
   t.check(rows, [
     "aaaa1111 live",
   ]);
 
-  // doctest:L145
   t.check(warnings.filter((w) => w.includes("non-boolean done")), [
     "chat-husk: _content/chat/web/2026-07-28_aaaa1111.chat.card has a non-boolean done \"finished\"; ignoring it",
   ]);

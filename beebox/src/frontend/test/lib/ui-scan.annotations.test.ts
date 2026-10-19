@@ -157,7 +157,6 @@ function tagsWhere(predicate: (tag: string) => boolean): { site: string; tag: st
 // trigger the ARIA through `ariaProps` rather than literal attributes — so a
 // spread of that object counts, and the next section pins down what it contains.
 void test("reveal is the one action that dispatches a synthetic click, and the attribute...", async (t) => {
-  // doctest:L161
   const reveals = tagsWhere((tag) => tag.includes("data-bbx-reveal"));
   t.check(reveals.map((r) => r.site).toSorted(), [
     "components/AppNav/nav.tsx:button",
@@ -166,7 +165,6 @@ void test("reveal is the one action that dispatches a synthetic click, and the a
     "components/chat/everywhere/InteractiveChat/SessionChip.tsx:button",
   ]);
 
-  // doctest:L168
   const DISCLOSURE = /aria-expanded|aria-haspopup|role="tab"|{\.{3}ariaProps}/;
   t.check(reveals.filter((r) => !DISCLOSURE.test(r.tag)).map((r) => r.site), []);
 });
@@ -177,7 +175,6 @@ void test("reveal is the one action that dispatches a synthetic click, and the a
 // does, and the type says so, so a rename breaks this test rather than silently
 // hollowing out the check.
 void test("The spread above is only evidence if Dropdown puts the attributes in it.", async (t) => {
-  // doctest:L180
   const dropdown = SOURCES.find((f) => f.path === "components/ui/Dropdown.tsx")!;
   const ariaPropsType = /ariaProps: {[^}]*}/.exec(dropdown.text)![0];
   t.check(ariaPropsType, 'ariaProps: { "aria-haspopup": "menu"; "aria-expanded": boolean }');
@@ -190,7 +187,6 @@ void test("The spread above is only evidence if Dropdown puts the attributes in 
 // rather than restating it. A `—` in the web column means the platform has no
 // counterpart and is skipped here; the iOS column is Track 5's to check.
 void test("The table in docs/plans/agent-points-at-ui.md (Track 4) is the contract — the...", async (t) => {
-  // doctest:L194
   t.check(TABLE_IDS, [
     "bbx-nav-place",
     "bbx-nav-session",
@@ -211,7 +207,6 @@ void test("The table in docs/plans/agent-points-at-ui.md (Track 4) is the contra
     "bbx-panel-tabs",
   ]);
 
-  // doctest:L215
   t.check(TABLE_IDS.filter((id) => countInSource(id) !== 1).map((id) => id + ": " + countInSource(id)), []);
 });
 
@@ -235,10 +230,8 @@ void test("The table in docs/plans/agent-points-at-ui.md (Track 4) is the contra
 // string are two elements answering one `getElementById`, and the runtime
 // duplicate check (axe in the tours) only sees the pages a tour visits.
 void test("Note what \"exactly once\" is buying:", async (t) => {
-  // doctest:L240
   t.check(SOURCE_IDS.filter((id) => !/^bbx-[\da-z]+(-[\da-z]+)*$/.test(id)), []);
 
-  // doctest:L243
   t.check(SOURCE_IDS.filter((id) => countInSource(id) !== 1).map((id) => id + ": " + countInSource(id)), []);
 });
 
@@ -249,7 +242,6 @@ void test("Note what \"exactly once\" is buying:", async (t) => {
 // there; the single-state composer remains a faithful app component with its
 // normal `bbx-` addresses.
 void test("The exploded composer gallery and capture-mode gallery render reusable compon...", async (t) => {
-  // doctest:L255
   const { TargetStrip } = await import("../../src/components/chat/TargetStrip.js");
   const { CaptureControls } = await import("../../src/components/capture/CaptureControls.js");
   function renderedIds(markup: string) {

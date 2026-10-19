@@ -24,7 +24,6 @@ void test("An empty rules, a missing one, a non-array value and malformed frontm
       t.error(error);
     }
   });
-  // doctest:L21
   const box = await makeTmpBox();
   await box.write("content/Acids.attach/plan.exposition-plan.card", "---\nrules:\n  - Start from a kitchen example\n  - Name the pH scale only after the first contrast\n---\nPlan.\n");
   await box.write("content/Bases.attach/plan.exposition-plan.card", "---\nrules: []\n---\nPlan.\n");
@@ -52,7 +51,6 @@ void test("Quiet when nothing carries one", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L45
   const clean = await makeTmpBox();
   t.check(await legacyExpositionRulesChecks(clean.root), [
     {

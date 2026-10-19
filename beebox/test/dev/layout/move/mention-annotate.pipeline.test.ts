@@ -63,18 +63,15 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
       t.error(error);
     }
   });
-  // doctest:L60
   await write("docs/note.md", "See `pkg/src/a.ts:200-211` for the old code.\n");
   await git(["add", "-A"]);
   let { result } = computeMentionAnnotate({ repoRoot, base, roots });
   t.check(result.fileEdits.get("docs/note.md"), "See `pkg/src/a.ts:200-211` (moved to `pkg/src/sub/a.ts`) for the old code.\n");
 
-  // doctest:L66
   await t.checkText(await read("docs/note.md"), "See `pkg/src/a.ts:200-211` for the old code.");
 
   // ## A Markdown link is annotated after the closing `)`
 
-  // doctest:L73
   await write("docs/link.md", "See [the old file](pkg/src/a.ts) for context.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
@@ -82,7 +79,6 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
 
   // ## A table cell keeps the note in the cell
 
-  // doctest:L83
   await write("docs/table.md", "| path | note |\n| --- | --- |\n| pkg/src/a.ts | legacy |\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
@@ -93,7 +89,6 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   // Uses a `~~~` fence for the fixture's own inner block so it doesn't collide
   // with this test's own ` ``` ` delimiters.
 
-  // doctest:L98
   await write("docs/fenced.md", "Prose mentions pkg/src/a.ts here.\n~~~ts\nimport x from \"pkg/src/a.ts\";\n~~~\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
@@ -101,7 +96,6 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
 
   // ## Idempotent: a mention already annotated is left alone
 
-  // doctest:L111
   await write("docs/already.md", "See pkg/src/a.ts (moved to `pkg/src/sub/a.ts`) already.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
@@ -114,7 +108,6 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
 
   // ## A frozen prefix (`beebox/docs/reports/`) is never annotated
 
-  // doctest:L121
   await write("beebox/docs/reports/old.md", "See pkg/src/a.ts in the snapshot.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
@@ -127,14 +120,12 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
 
   // ## A package-relative mention is scoped to files inside that package
 
-  // doctest:L131
   await write("pkg/README.md", "Implementation: src/a.ts\n");
   await write("other-pkg/README.md", "Compare to src/a.ts in pkg.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
   t.check(result.fileEdits.get("pkg/README.md"), "Implementation: src/a.ts (moved to `pkg/src/sub/a.ts`)\n");
 
-  // doctest:L138
   t.check([...result.fileEdits.keys()], [
     "docs/fenced.md",
     "docs/link.md",
@@ -150,7 +141,6 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   // only package whose move mapping produces that literal token, and no package
   // currently has a real file at `<root>/lib/util.ts`.
 
-  // doctest:L150
   await write("issues/bugs/example.md", "See lib/util.ts for the old helper.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
@@ -165,7 +155,6 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   // same case (it stays unannotated for this reason too, not just because it's
   // outside `pkg`'s own scope).
 
-  // doctest:L167
   await write("issues/bugs/ambiguous.md", "See src/a.ts for the old shared helper.\n");
   await git(["add", "-A"]);
   ({ result } = computeMentionAnnotate({ repoRoot, base, roots }));
@@ -186,7 +175,6 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   // other package's moved file, and cross-package matching must not treat it as
   // fair game just because it's outside `roots`.
 
-  // doctest:L183
   await write("toolkit/package.json", JSON.stringify({ name: "toolkit" }));
   await write("toolkit/README.md", "Default entry: lib/util.ts\n");
   await git(["add", "-A"]);
@@ -202,7 +190,6 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
 
   // ## A uniform directory rename is derived from the mapping alone (no tracked file is left under the old directory to survey)
 
-  // doctest:L194
   await mkdir(join(repoRoot, "pkg/src/legacy"), { recursive: true });
   await write("pkg/src/legacy/one.ts", "");
   await write("pkg/src/legacy/two.ts", "");
@@ -210,13 +197,11 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   await git(["commit", "-q", "-m", "add legacy dir"]);
   const dirBase = (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoRoot })).stdout.trim();
 
-  // doctest:L201
   await mkdir(join(repoRoot, "pkg/src/modern"), { recursive: true });
   await git(["mv", "pkg/src/legacy/one.ts", "pkg/src/modern/one.ts"]);
   await git(["mv", "pkg/src/legacy/two.ts", "pkg/src/modern/two.ts"]);
   await git(["commit", "-q", "-m", "rename legacy to modern"]);
 
-  // doctest:L206
   await write("docs/dir-note.md", "See pkg/src/legacy for the old layout.\n");
   await git(["add", "-A"]);
   const dirResult = computeMentionAnnotate({ repoRoot, base: dirBase, roots }).result;
@@ -229,7 +214,6 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
   // boundary rule), so naively inserting right there splits the closing
   // backtick — corrupting the code span with a nested, unbalanced backtick.
 
-  // doctest:L221
   await write("docs/dir-span.md", "See `pkg/src/legacy/` for the old layout.\n");
   await git(["add", "-A"]);
   const dirSpanResult = computeMentionAnnotate({ repoRoot, base: dirBase, roots }).result;
@@ -237,7 +221,6 @@ void test("A backtick span with a `:line-line` suffix is annotated after the clo
 
   // ## Counts: per-area totals
 
-  // doctest:L231
   const areaResult = computeMentionAnnotate({ repoRoot, base, roots }).result;
   t.check({ total: areaResult.total, countsByArea: [...areaResult.countsByArea] }, {
     total: 6,

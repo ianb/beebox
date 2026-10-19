@@ -34,7 +34,6 @@ function quotaAt(options: { detectedAt: Date; retryAt: Date; source?: "parsed" |
 
 // ## Record → live until retryAt, gone after
 void test("Record → live until retryAt, gone after", async (t) => {
-  // doctest:L38
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "engine-availability-"));
   t.teardown(async () => {
     delete process.env.BBX_ENGINE_AVAILABILITY_FILE;
@@ -42,26 +41,21 @@ void test("Record → live until retryAt, gone after", async (t) => {
   });
   process.env.BBX_ENGINE_AVAILABILITY_FILE = path.join(dir, "engine-availability.json");
 
-  // doctest:L45
   const t0 = new Date(2026, 7, 18, 12, 0);
   const reset = new Date(2026, 7, 19, 23, 34);
   const first = await recordEngineUnavailability(quotaAt({ detectedAt: t0, retryAt: reset }));
   t.check(first, { ...quotaAt({ detectedAt: t0, retryAt: reset }), episodeStartedAt: t0.toISOString() });
 
-  // doctest:L51
   const live = await liveEngineUnavailability({ provider: "codex", now: new Date(t0.getTime() + HOUR) });
   t.check(live, { ...quotaAt({ detectedAt: t0, retryAt: reset }), episodeStartedAt: t0.toISOString() });
 
-  // doctest:L55
   t.check(await liveEngineUnavailability({ provider: "codex", now: new Date(reset.getTime() + 1) }), null);
 
-  // doctest:L58
   t.check(await liveEngineUnavailability({ provider: "claude", now: t0 }), null);
 
   // A run during the episode re-detects and re-records. The episode is extended:
   // `episodeStartedAt` survives, which the `engine-quota` health check reports.
 
-  // doctest:L66
   const t1 = new Date(t0.getTime() + 2 * HOUR);
   const second = await recordEngineUnavailability(quotaAt({ detectedAt: t1, retryAt: reset }));
   t.check(second, { ...quotaAt({ detectedAt: t1, retryAt: reset }), episodeStartedAt: t0.toISOString() });
@@ -69,7 +63,6 @@ void test("Record → live until retryAt, gone after", async (t) => {
   // A detection well past the previous record's `retryAt` (plus slack) is a new
   // episode, with a fresh `episodeStartedAt`.
 
-  // doctest:L76
   const t2 = new Date(reset.getTime() + 8 * HOUR);
   const relapse = await recordEngineUnavailability(
     quotaAt({ detectedAt: t2, retryAt: new Date(t2.getTime() + 12 * HOUR) }),
@@ -82,7 +75,6 @@ void test("Record → live until retryAt, gone after", async (t) => {
   // broken store cannot hide anything. (The warning below is the store reporting
   // the corruption.)
 
-  // doctest:L91
   await fs.writeFile(engineAvailabilityFilePath(), "{not json");
   t.check(await liveEngineUnavailability({ provider: "codex", now: t2 }), null);
 });

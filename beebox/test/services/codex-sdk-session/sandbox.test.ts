@@ -12,10 +12,8 @@ import { codexSdkThreadOptions } from "../../../src/services/codex-sdk-session/c
 // The shared SDK adapter composes one policy for batch and interactive sessions.
 // It preserves model, cwd, and additional-directory settings.
 void test("The shared SDK adapter composes one policy for batch and interactive sessions.", async (t) => {
-  // doctest:L16
   t.check(CODEX_BOX_SANDBOX, "danger-full-access");
 
-  // doctest:L19
   t.check(
     codexSdkThreadOptions({
       cwd: "/box/content",

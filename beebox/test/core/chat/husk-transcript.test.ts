@@ -33,17 +33,13 @@ void test("The escaping husk resolves exactly where an unbound husk does — the
       t.error(error);
     }
   });
-  // doctest:L28
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("projects");
 
-  // doctest:L31
   const unbound = huskTranscriptPath(box.root, husk(undefined));
   t.check(huskTranscriptPath(box.root, husk("_content/recipes")), not(unbound));
 
-  // doctest:L34
   t.check(huskTranscriptPath(box.root, husk("../../elsewhere")), unbound);
 
-  // doctest:L37
   t.check(huskTranscriptPath(box.root, husk("")), unbound);
 });

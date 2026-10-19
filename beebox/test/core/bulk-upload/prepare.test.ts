@@ -41,7 +41,6 @@ function blobNames(listing: string): string[] {
     .toSorted();
 }
 
-
 async function pathExists(p: string) {
   try { await access(p); return true; } catch (_e) { return false; }
 }
@@ -91,7 +90,6 @@ void test("Two registered items, both uploaded.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L86
   const box = await makeTmpBox({ git: true });
   const id = await stageBulk(box.root, {
     expectedItems: [
@@ -104,7 +102,6 @@ void test("Two registered items, both uploaded.", async (t) => {
     ],
   });
 
-  // doctest:L98
   const batch = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
   assert.ok(batch);
   t.check(batch.counts, {
@@ -172,7 +169,6 @@ ${batch.attachRelDir}/report.pdf`);
 
   // Staging is retained (not deleted at prepare time):
 
-  // doctest:L159
   t.check(await readStagingSession({ boxRoot: box.root, id }), {
     id,
     createdAt: isoDate(),
@@ -210,13 +206,11 @@ void test("A chat scoped to a landmark lands its batch under that landmark's dir
       t.error(error);
     }
   });
-  // doctest:L176
   const box = await makeTmpBox({ git: true });
   const file = { filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "a.jpg", mimeType: "image/jpeg", itemId: "a", content: "JPG" };
   const rootId = await stageBulk(box.root, { expectedItems: [{ id: "a", name: "a.jpg" }], files: [file] });
   const scopedId = await stageBulk(box.root, { expectedItems: [{ id: "a", name: "a.jpg" }], files: [file] });
 
-  // doctest:L181
   const atRoot = await prepareBulkBatch({ boxRoot: box.root, id: rootId, contextDir: "" });
   assert.ok(atRoot);
   const scoped = await prepareBulkBatch({ boxRoot: box.root, id: scopedId, contextDir: "_content/projects/garden" });
@@ -231,13 +225,11 @@ void test("A chat scoped to a landmark lands its batch under that landmark's dir
   // `bbx mv` carry the files with the card; the former fixed name,
   // `Batch.upload-batch.attach`, matched no tool and was left behind.
 
-  // doctest:L196
   t.check(atRoot.attachRelDir, `_content/tmp-upload/${atRoot.batchSlug}/${atRoot.batchSlug}.attach`);
   t.check(attachDirFor(atRoot.cardRelPath), `_content/tmp-upload/${atRoot.batchSlug}/${atRoot.batchSlug}.attach`);
 
   // Neither batch leaves anything at the box root for the root check to refuse:
 
-  // doctest:L203
   t.check(await checkBoxRoot(box.root), []);
 });
 
@@ -256,7 +248,6 @@ void test("Before 2026-10 every batch was Batch.upload-batch.card beside Batch.u
       t.error(error);
     }
   });
-  // doctest:L220
   const box = await makeTmpBox({ git: true });
   const id = await stageBulk(box.root, {
     expectedItems: [{ id: "a", name: "a.jpg" }],
@@ -270,7 +261,6 @@ void test("Before 2026-10 every batch was Batch.upload-batch.card beside Batch.u
   execFileSync("git", ["mv", fresh.attachRelDir, `${dir}/Batch.upload-batch.attach`], { cwd: box.root });
   execFileSync("git", ["commit", "-qm", "old names"], { cwd: box.root });
 
-  // doctest:L233
   const resumed = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
   assert.ok(resumed);
   t.check(
@@ -306,7 +296,6 @@ void test("The uploader's failed list is its claim; the staged bytes are the fac
       t.error(error);
     }
   });
-  // doctest:L256
   const box = await makeTmpBox({ git: true });
   const id = await stageBulk(box.root, {
     expectedItems: [{ id: "a", name: "photo-009.jpg" }, { id: "b", name: "photo-010.jpg" }],
@@ -335,7 +324,6 @@ void test("The uploader's failed list is its claim; the staged bytes are the fac
 
   // Only `photo-010.jpg`, whose bytes never arrived, stays in `failed`:
 
-  // doctest:L279
   const fm = parseUploadBatch(card)?.frontmatter;
   t.check(fm?.failed, [{ name: "photo-010.jpg", reason: "The request timed out" }]);
   t.check(fm?.received, [{ name: "photo-009.jpg", size: 4, mimetype: "image/jpeg" }]);
@@ -353,7 +341,6 @@ void test("A registered item whose bytes never arrived is missing; an item the c
       t.error(error);
     }
   });
-  // doctest:L294
   const box = await makeTmpBox({ git: true });
   // Register the first item up front, then append the rest (as the picker would
   // stream them in) via registerBulkItems.
@@ -365,7 +352,6 @@ void test("A registered item whose bytes never arrived is missing; an item the c
   });
   await registerBulkItems({ boxRoot: box.root, id, items: [{ id: "b", name: "never.pdf" }, { id: "c", name: "broke.mov" }] });
 
-  // doctest:L305
   const batch = await prepareBulkBatch({
     boxRoot: box.root, id, contextDir: "",
     failedItems: [{ id: "c", name: "broke.mov", reason: "upload timed out" }],
@@ -381,7 +367,6 @@ void test("A registered item whose bytes never arrived is missing; an item the c
   // The card names the missing item (registered but never arrived) and the failed
   // item with its reason:
 
-  // doctest:L318
   const card = await box.read(batch.cardRelPath);
   t.checkText(card, `---
 batch-id: ${batch.batchSlug}
@@ -419,7 +404,6 @@ void test("Two uploads with the same original name land as distinct files; the c
       t.error(error);
     }
   });
-  // doctest:L338
   const box = await makeTmpBox({ git: true });
   const id = await stageBulk(box.root, {
     expectedItems: [{ id: "a", name: "IMG_1234.jpg" }, { id: "b", name: "IMG_1234.jpg" }],
@@ -429,7 +413,6 @@ void test("Two uploads with the same original name land as distinct files; the c
     ],
   });
 
-  // doctest:L347
   const batch = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
   assert.ok(batch);
   t.check(blobNames(await box.list(batch.attachRelDir)), [
@@ -439,7 +422,6 @@ void test("Two uploads with the same original name land as distinct files; the c
 
   // Both stored names appear in the card's received list:
 
-  // doctest:L356
   const card = await box.read(batch.cardRelPath);
   t.checkText(card, `---
 batch-id: ${batch.batchSlug}
@@ -466,7 +448,6 @@ received:
   // An unsafe original name is sanitized (path parts stripped, spaces/odd chars
   // collapsed), keeping the extension:
 
-  // doctest:L368
   const box2 = await makeTmpBox({ git: true });
   const id2 = await stageBulk(box2.root, {
     expectedItems: [{ id: "a", name: "../../etc/My Report (final).pdf" }],
@@ -492,14 +473,12 @@ void test("A crash after prepare committed leaves the batch in place; re-running
       t.error(error);
     }
   });
-  // doctest:L390
   const box = await makeTmpBox({ git: true });
   const id = await stageBulk(box.root, {
     expectedItems: [{ id: "a", name: "doc.pdf" }],
     files: [{ filename: "s0.bin", uploadedAt: "2026-07-27T14:00:00.000Z", originalName: "doc.pdf", mimeType: "application/pdf", itemId: "a", content: "DOC" }],
   });
 
-  // doctest:L396
   const first = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
   assert.ok(first);
   const cardAfterFirst = await box.read(first.cardRelPath);
@@ -528,17 +507,14 @@ void test("prepareBulkBatch refuses a capture (non-bulk) session, and the captur
       t.error(error);
     }
   });
-  // doctest:L429
   const box = await makeTmpBox({ git: true });
   const capture = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
   const bulk = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "bulk", expectedItems: [] });
 
-  // doctest:L433
   t.check(capture.kind, "capture");
 
   // An old manifest predating the field parses as `capture` (additive default):
 
-  // doctest:L440
   const legacy = {
     id: "legacy-1", createdAt: "2026-07-27T14:00:00.000Z", lastActivityAt: "2026-07-27T14:00:00.000Z",
     targetSessionId: "chat-1", state: "open", segments: [], photos: [], files: [],
@@ -549,14 +525,12 @@ void test("prepareBulkBatch refuses a capture (non-bulk) session, and the captur
 
   // `prepareBulkBatch` throws on the capture session:
 
-  // doctest:L453
   t.check(await catchName(prepareBulkBatch({ boxRoot: box.root, id: capture.id, contextDir: "" })), "NotABulkSessionError");
 
   // Both capture selectors exclude the bulk session — a pending (sealed) capture is
   // surfaced but the bulk one isn't; a resumable (open, non-empty) capture is
   // surfaced but the bulk one isn't:
 
-  // doctest:L462
   const nonEmpty = [{ filename: "x", uploadedAt: "t", originalName: "x", mimeType: "" }];
   const pending = selectPendingCaptures({
     sessions: [{ ...capture, state: "sealed" }, { ...bulk, state: "sealed" }],
@@ -584,7 +558,6 @@ void test("The boxholder's composer text is recorded on the sealed session, and 
       t.error(error);
     }
   });
-  // doctest:L490
   const box = await makeTmpBox({ git: true });
   const id = await stageBulk(box.root, {
     expectedItems: [{ id: "a", name: "IMG_0001.jpg", size: 4, mimetype: "image/jpeg" }],
@@ -599,7 +572,6 @@ void test("The boxholder's composer text is recorded on the sealed session, and 
   session.note = "Receipts from the Tokyo trip";
   await writeStagingSession({ boxRoot: box.root, session });
 
-  // doctest:L504
   const prepared = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
   assert.ok(prepared);
   t.check(prepared.note, "Receipts from the Tokyo trip");
@@ -607,7 +579,6 @@ void test("The boxholder's composer text is recorded on the sealed session, and 
   // The card records it as frontmatter, labelled as the boxholder's own words rather
   // than anything server-computed or client-guessed:
 
-  // doctest:L514
   const card = await readFile(join(box.root, prepared.cardRelPath), "utf-8");
   t.checkText(splitCardContent(card).frontmatterText, `batch-id: ${prepared.batchSlug}
 time:
@@ -629,7 +600,6 @@ note: Receipts from the Tokyo trip`);
   // note — is recovered from it rather than rebuilt, and the `<upload>` message a
   // resumed delivery builds is identical to the first one's.
 
-  // doctest:L524
   const rerun = await prepareBulkBatch({ boxRoot: box.root, id, contextDir: "" });
   assert.ok(rerun);
   t.check(rerun.note, "Receipts from the Tokyo trip");
@@ -638,7 +608,6 @@ note: Receipts from the Tokyo trip`);
   // A batch with no introduction reports none — the case the agent's "ask first"
   // duty exists for:
 
-  // doctest:L534
   const plainId = await stageBulk(box.root, {
     expectedItems: [{ id: "z", name: "IMG_9999.jpg", size: 4, mimetype: "image/jpeg" }],
     files: [
@@ -670,7 +639,6 @@ void test("Failures are keyed by registry id when the uploader knows it, and by 
       t.error(error);
     }
   });
-  // doctest:L562
   const box = await makeTmpBox({ git: true });
   const id = await stageBulk(box.root, {
     expectedItems: [

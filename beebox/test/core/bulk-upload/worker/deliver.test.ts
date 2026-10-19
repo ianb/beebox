@@ -15,7 +15,6 @@ async function catchName(fn: () => unknown) {
 
 // ## A clean batch: no `failed` attribute
 void test("A clean batch: no `failed` attribute", async (t) => {
-  // doctest:L19
   await t.checkText(
     buildUploadWrapper({
       docPath: "store/photos/tmp-upload/upload-20260727T1400-abcd1234/Batch.upload-batch.card",
@@ -32,7 +31,6 @@ void test("A clean batch: no `failed` attribute", async (t) => {
 
 // ## A batch with failures carries `failed="N"`
 void test("A batch with failures carries `failed=\"N\"`", async (t) => {
-  // doctest:L34
   await t.checkText(
     buildUploadWrapper({
       docPath: "tmp-upload/b/Batch.upload-batch.card",
@@ -49,7 +47,6 @@ void test("A batch with failures carries `failed=\"N\"`", async (t) => {
 
 // ## Small sizes render in bytes; the summary is trimmed
 void test("Small sizes render in bytes; the summary is trimmed", async (t) => {
-  // doctest:L49
   await t.checkText(
     buildUploadWrapper({
       docPath: "tmp-upload/c/Batch.upload-batch.card",
@@ -74,7 +71,6 @@ void test("Small sizes render in bytes; the summary is trimmed", async (t) => {
 // JSON-escaped string — the newlines stay visible instead of being swallowed by
 // the expected-block parser.
 void test("When the batch was submitted with composer text, that text is the body's firs...", async (t) => {
-  // doctest:L72
   t.check(
     buildUploadWrapper({
       docPath: "chats/2026-07-30/tmp-upload/upload-20260730T1912-9f3c1e00/Batch.upload-batch.card",
@@ -98,7 +94,6 @@ Receipts from the Tokyo trip — file them under the 2026 travel folder.
 // quotes and ordinary newlines cannot break attribute parsing. The pseudo-XML
 // closing tag remains a reserved body delimiter.
 void test("Unlike doc, the note is free-form user prose rather than an attribute, so quo...", async (t) => {
-  // doctest:L90
   t.check(
     buildUploadWrapper({
       docPath: "tmp-upload/d/Batch.upload-batch.card",
@@ -122,7 +117,6 @@ The after ones come later.
 // A batch submitted from an empty composer must be byte-identical to the
 // pre-note wrapper — that compatibility is what lets the note be purely additive.
 void test("A batch submitted from an empty composer must be byte-identical to the pre-no...", async (t) => {
-  // doctest:L107
   const withoutNote = buildUploadWrapper({
     docPath: "tmp-upload/e/Batch.upload-batch.card",
     fileCount: 5, totalBytes: 500, failedCount: 0, summary: "5 files uploaded (500 B).",
@@ -131,7 +125,6 @@ void test("A batch submitted from an empty composer must be byte-identical to th
 5 files uploaded (500 B).
 </upload>`);
 
-  // doctest:L118
   const blankNote = buildUploadWrapper({
     docPath: "tmp-upload/e/Batch.upload-batch.card",
     fileCount: 5, totalBytes: 500, failedCount: 0, summary: "5 files uploaded (500 B).",
@@ -145,7 +138,6 @@ void test("A batch submitted from an empty composer must be byte-identical to th
 // The `doc` path is server-generated; a quote, newline, or `>` would break tag
 // parsing, so it fails loudly rather than emitting an unparseable message.
 void test("The doc path is server-generated; a quote, newline, or > would break tag pars...", async (t) => {
-  // doctest:L133
   t.check(
     await catchName(() => buildUploadWrapper({
       docPath: 'tmp-upload/"evil".card',
@@ -154,7 +146,6 @@ void test("The doc path is server-generated; a quote, newline, or > would break 
     "InvariantError",
   );
 
-  // doctest:L141
   t.check(
     await catchName(() => buildUploadWrapper({
       docPath: "tmp-upload/a\nb.card",
@@ -163,7 +154,6 @@ void test("The doc path is server-generated; a quote, newline, or > would break 
     "InvariantError",
   );
 
-  // doctest:L149
   t.check(
     await catchName(() => buildUploadWrapper({
       docPath: "tmp-upload/a>b.card",

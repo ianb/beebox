@@ -112,7 +112,6 @@ void test("The routes are registered on the exhibits instance, so the same cooki
 });
 
 async function checkAuthenticationAndOrigin(t: Test): Promise<void> {
-  // doctest:L92
   const anonymous = await app.inject({
     method: "PUT",
     url: `${scope}/data/settings`,
@@ -133,7 +132,6 @@ async function checkAuthenticationAndOrigin(t: Test): Promise<void> {
   // a non-browser client (curl, an agent) and is allowed: browsers always send it on
   // a cross-origin write.
 
-  // doctest:L112
   const foreign = await app.inject({
     method: "PUT",
     url: `${scope}/data/settings`,
@@ -202,7 +200,6 @@ async function checkFocusSession(t: Test): Promise<void> {
   // committed-app namespace and `main` have no session row: they are refused with
   // 409 before the runner is called. A foreign `Origin` is refused like any write.
 
-  // doctest:L170
   const focused = await app.inject({ method: "POST", url: `${scope}/focus`, headers: authorized });
   focusFailure = "workstreams focus: no live session for demo-ws — use resume";
   const noSession = await app.inject({ method: "POST", url: `${scope}/focus`, headers: authorized });
@@ -271,7 +268,6 @@ async function checkComments(t: Test): Promise<void> {
   // touched, so no directory appears; a missing exhibit is 404; a writer failure is
   // 409 with the CLI's last line.
 
-  // doctest:L210
   const remark = await app.inject({
     method: "POST",
     url: `${scope}/comments`,
@@ -375,7 +371,6 @@ async function checkTranscription(t: Test): Promise<void> {
   // over the cap is 413 before the service is called, a service with no key is 412,
   // and the message is the contract's own wording so the page can show it as is.
 
-  // doctest:L254
   const audio = Buffer.from("not really audio").toString("base64");
   const heard = await app.inject({ method: "POST", url: "/api/transcribe", headers: json, payload: { audio } });
   const tooBig = await app.inject({
@@ -419,7 +414,6 @@ async function checkInheritedWorkstreamName(t: Test): Promise<void> {
   // A workstream named like an `Object.prototype` member is an ordinary workstream:
   // it reaches the runner rather than hitting an inherited property.
 
-  // doctest:L279
   await fs.mkdir(path.join(store, "constructor/page"), { recursive: true });
   const inherited = await app.inject({ method: "POST", url: "/api/constructor/page/focus", headers: authorized });
   t.check({ status: inherited.statusCode, called: focusCalls.at(-1) }, {
@@ -435,7 +429,6 @@ async function checkDocumentRoundTrip(t: Test): Promise<void> {
   // document and the server owns the extension, so a page cannot choose what kind of
   // file it writes.
 
-  // doctest:L292
   const saved = await app.inject({ method: "PUT", url: `${scope}/data/settings`, headers: json, payload: '{"threshold":0.4}' });
   const loaded = await app.inject({ method: "GET", url: `${scope}/data/settings`, headers: authorized });
   const onDisk = await fs.readFile(path.join(store, "demo-ws/instrument/data/settings.json"), "utf8");
@@ -462,7 +455,6 @@ async function checkMissingDocument(t: Test): Promise<void> {
   // can return `null` without guessing; a body that is not JSON is refused before
   // anything is written.
 
-  // doctest:L310
   const missing = await app.inject({ method: "GET", url: `${scope}/data/nothing-here`, headers: authorized });
   const malformed = await app.inject({ method: "PUT", url: `${scope}/data/settings`, headers: json, payload: "{oops" });
   const unchanged = await fs.readFile(path.join(store, "demo-ws/instrument/data/settings.json"), "utf8");
@@ -491,7 +483,6 @@ async function checkConcurrentWrites(t: Test): Promise<void> {
   // the new one. Twenty interleaved writes of two different documents leave a file
   // that parses, and no temp files behind.
 
-  // doctest:L330
   const bodyA = JSON.stringify({ who: "a".repeat(20_000) });
   const bodyB = JSON.stringify({ who: "b".repeat(20_000) });
   const bodies = [bodyA, bodyB];
@@ -525,7 +516,6 @@ async function checkEvents(t: Test): Promise<void> {
   // decide the order of a log. The server never reads the file back — agents do,
   // from disk.
 
-  // doctest:L354
   await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "ratings", data: { figure: "A1" } }) });
   await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "choices", data: { choice: "A" } }) });
   await Promise.all(
@@ -570,7 +560,6 @@ async function checkEventEnvelope(t: Test): Promise<void> {
   // An envelope that is not `{ log, data }` is refused with the Zod issues, not
   // silently appended.
 
-  // doctest:L376
   const bad = await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ data: 1 }) });
   t.check({ status: bad.statusCode, body: JSON.parse(bad.body) }, {
     status: 400,
@@ -590,7 +579,6 @@ async function checkCaptures(t: Test): Promise<void> {
   // rather than a silent replacement, the extension is allowlisted, and the cap is
   // the capture cap (25 MB) rather than the document cap.
 
-  // doctest:L388
   const first = await app.inject({
     method: "POST",
     url: `${scope}/captures/take-01.png`,
@@ -632,7 +620,6 @@ async function checkCaptureKinds(t: Test): Promise<void> {
   // Anything the origin might execute is refused by omission from the allowlist, and
   // so is anything that is not one path segment.
 
-  // doctest:L421
   const source = await app.inject({ method: "POST", url: `${scope}/captures/page.tsx`, headers: authorized, payload: "export default 1" });
   const page = await app.inject({ method: "POST", url: `${scope}/captures/evil.html`, headers: authorized, payload: "<script>" });
   const traversal = await app.inject({ method: "POST", url: `${scope}/captures/..%2f..%2fescape.png`, headers: authorized, payload: "x" });
@@ -668,7 +655,6 @@ async function checkSizeCaps(t: Test): Promise<void> {
   // A document over 1 MB is refused with the cap in the message, so a page that
   // outgrew the primitive learns which one it hit.
 
-  // doctest:L445
   const oversize = await app.inject({
     method: "PUT",
     url: `${scope}/data/huge`,
@@ -690,7 +676,6 @@ async function checkCommittedAppData(t: Test): Promise<void> {
   // in the reserved `apps/` store namespace — created on first write, since nothing
   // else creates it. Using an app never dirties a checkout.
 
-  // doctest:L462
   const appWrite = await app.inject({
     method: "PUT",
     url: "/api/apps/story-eval/data/state",
@@ -715,7 +700,6 @@ async function checkCommittedAppData(t: Test): Promise<void> {
   );
 }
 
-
 // ## An unmarked directory is not a store
 //
 // The API fails closed on the marker for the same reason the page routes do: an
@@ -729,7 +713,6 @@ void test("The API fails closed on the marker for the same reason the page route
       t.error(error);
     }
   });
-  // doctest:L490
   const unmarked = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "exhibits-api-unmarked-")));
   const refusing = await makeApp(unmarked);
   const refused = await refusing.inject({ method: "PUT", url: "/api/demo-ws/x/data/y", headers: json, payload: "{}" });

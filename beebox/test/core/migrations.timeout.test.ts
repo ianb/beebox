@@ -76,7 +76,6 @@ void test("Script descendants cannot continue after expiry", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L71
   const box = await preparedBox();
   const pidFile = join(box.root, "child.pid");
   const childCode = "process.on('SIGTERM',()=>{});setInterval(()=>{},1000)";
@@ -89,7 +88,6 @@ void test("Script descendants cannot continue after expiry", async (t) => {
   };
   await t.checkThrows(async () => (await sweepMigrations({ boxRoot: box.root, signal: expiry.signal, runScript })), "Expired");
 
-  // doctest:L84
   const pid = Number(await readFile(pidFile, "utf8"));
   t.check({ childAlive: !(await stopped(pid)), phase: (await boxMaintenanceStatus(box.root))?.phase, recorded: (await box.read(MANIFEST_PATH)).includes(PROBE), snapshot: refs(box, `refs/bbx/migrations/${PROBE}/snapshots/`).length > 0 }, {
     childAlive: false,
@@ -108,7 +106,6 @@ void test("Repair cancellation leaves its receipt and does not retry", async (t)
       t.error(error);
     }
   });
-  // doctest:L96
   const box = await preparedBox();
   let runs = 0;
   let invoked = 0;
@@ -132,7 +129,6 @@ void test("Repair cancellation leaves its receipt and does not retry", async (t)
     "Expired",
   );
 
-  // doctest:L117
   t.check({ runs, invoked, phase: (await boxMaintenanceStatus(box.root))?.phase, receipt: refs(box, `refs/bbx/migrations/${PROBE}/repair-started`).length > 0 }, {
     runs: 1,
     invoked: 1,
@@ -151,7 +147,6 @@ void test("Draining does not consume the execution budget", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L128
   const box = await preparedBox();
   const active = await acquireBoxWork(box.root, { reason: "test" });
   let settled = false;
@@ -161,14 +156,12 @@ void test("Draining does not consume the execution budget", async (t) => {
   await new Promise((resolve) => setTimeout(resolve, 150));
   t.check(settled, false);
 
-  // doctest:L138
   await active.release();
   t.check(await attempt, "MigrationExecutionTimeoutError");
 });
 
 // ## Both configured harnesses reject cancellation before loading or launching
 void test("Both configured harnesses reject cancellation before loading or launching", async (t) => {
-  // doctest:L151
   const signal = AbortSignal.abort();
   const options = { boxRoot: "/nonexistent-test-box", prompt: "cancelled", signal };
   const agents = [createClaudeAgent, createCodexAgent].map((create) => create({ name: "cancelled" }));

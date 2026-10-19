@@ -20,7 +20,6 @@ void test("A native traversal that times out retains every complete type/path pa
       t.error(error);
     }
   });
-  // doctest:L17
   const partialBox = await makeTmpBox();
   const fakeFind = partialBox.path("fake-find.sh");
   await fs.writeFile(fakeFind, [

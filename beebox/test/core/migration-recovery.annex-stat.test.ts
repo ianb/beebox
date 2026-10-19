@@ -41,7 +41,6 @@ void test("Three annexed photos are committed, then backdated so Git trusts thei
       t.error(error);
     }
   });
-  // doctest:L37
   const box = await makeTmpBox({ git: true });
   for (const name of ["a", "b", "c"]) await box.write(`_assets/${name}.jpg`, `photo ${name}\n`);
   box.commitAll("photos");
@@ -50,7 +49,6 @@ void test("Three annexed photos are committed, then backdated so Git trusts thei
   git(box, "update-index", "--refresh");
   t.check(git(box, "check-attr", "filter", "_assets/a.jpg"), "_assets/a.jpg: filter: annex");
 
-  // doctest:L46
   const snapshot = await captureMigrationSnapshot(box.root, "fixture");
   await box.write("_assets/b.jpg", "photo b, migrated\n");
   await box.write("note.md", "new note\n");
@@ -68,7 +66,6 @@ void test("Three annexed photos are committed, then backdated so Git trusts thei
   // photo counts as changed. A file that was untracked in the snapshot and is now
   // ignored stays in the comparison, so it does not read as deleted.
 
-  // doctest:L58
   await box.write("scratch.txt", "draft\n");
   const second = await captureMigrationSnapshot(box.root, "fixture");
   await box.write(".gitignore", `${await box.read(".gitignore")}scratch.txt\n`);
@@ -82,7 +79,6 @@ void test("Three annexed photos are committed, then backdated so Git trusts thei
   // An unmerged index cannot keep stat data, so the comparison falls back to a
   // full re-read rather than failing.
 
-  // doctest:L71
   const blob = git(box, "rev-parse", "HEAD:_assets/a.jpg");
   execFileSync("git", ["update-index", "--index-info"], { cwd: box.root, input: `0 ${"0".repeat(40)}\t_assets/a.jpg\n100644 ${blob} 1\t_assets/a.jpg\n100644 ${blob} 2\t_assets/a.jpg\n` });
   t.check((await changedMigrationPaths(box.root, second)).toSorted(), [
@@ -94,7 +90,6 @@ void test("Three annexed photos are committed, then backdated so Git trusts thei
   // read and be skipped, so a flagged index also reads fresh and the migrated
   // file is reported. The merge is resolved first, so only the flag differs.
 
-  // doctest:L82
   git(box, "reset", "--quiet", "--", "_assets/a.jpg");
   git(box, "update-index", "--assume-unchanged", "_assets/a.jpg");
   await box.write("_assets/a.jpg", "photo a, migrated\n");

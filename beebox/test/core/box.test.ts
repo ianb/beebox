@@ -19,7 +19,7 @@ import { scaffoldBoxRoot } from "../../src/core/box/package.js";
 import { findBoxRoot, BOX_MARKER } from "../../src/lib/paths/core.js";
 
 async function makeTmpDir() {
-  return fs.mkdtemp(path.join(os.tmpdir(), "bbx-doctest-"));
+  return fs.mkdtemp(path.join(os.tmpdir(), "bbx-test-"));
 }
 
 async function listDirs(root: string) {

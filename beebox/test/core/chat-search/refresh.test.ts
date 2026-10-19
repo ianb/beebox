@@ -99,11 +99,9 @@ void test("First query builds the index and finds the chat that said it", async 
       t.error(error);
     }
   });
-  // doctest:L56
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L59
   await seed(box, {
     sessionId: "sess-roof",
     entries: [
@@ -114,21 +112,18 @@ void test("First query builds the index and finds the chat that said it", async 
     title: "Insurance follow-up",
   });
 
-  // doctest:L69
   const result = await searchChats(box.root, { query: "roof claim" });
 
   t.check(result, { results: [ROOF_U1], total: 1, truncated: false, warnings: [], stale: false });
 
   // The manifest recorded the cursor the next refresh diffs against.
 
-  // doctest:L93
   const manifest = await loadChatManifest(box.root);
 
   t.check(manifest, { schemaVersion: 1, sessions: { "sess-roof": roofRecord({ mtimeMs: 1790596800000, entryCount: 2, docIds: ["sess-roof#u1"] }) } });
 
   // ## An appended turn is findable immediately, and only the new tail is chunked
 
-  // doctest:L103
   await writeTranscript(box, {
     sessionId: "sess-roof",
     entries: [
@@ -140,7 +135,6 @@ void test("First query builds the index and finds the chat that said it", async 
     mtime: new Date("2026-09-28T12:05:00Z"),
   });
 
-  // doctest:L115
   const updated = await searchChats(box.root, { query: "deductible panels" });
 
   // The first chunk is untouched — its doc id is stable across the append, so
@@ -159,7 +153,6 @@ void test("First query builds the index and finds the chat that said it", async 
 
   // ## Two chats match: one row each, better score first
 
-  // doctest:L147
   await seed(box, {
     sessionId: "sess-other",
     entries: [
@@ -168,7 +161,6 @@ void test("First query builds the index and finds the chat that said it", async 
     mtime: new Date("2026-09-20T10:00:00Z"),
   });
 
-  // doctest:L155
   const both = await searchChats(box.root, { query: "panels" });
 
   t.check(both, {
@@ -184,14 +176,12 @@ void test("First query builds the index and finds the chat that said it", async 
 
   // ## A rewritten (shortened) transcript rebuilds its session's docs
 
-  // doctest:L170
   await writeTranscript(box, {
     sessionId: "sess-roof",
     entries: [userEntry({ uuid: "w1", text: "Fresh start: piano tuning.", at: "2026-09-28T12:00:00Z" })],
     mtime: new Date("2026-09-28T12:10:00Z"),
   });
 
-  // doctest:L177
   const rebuilt = await searchChats(box.root, { query: "piano tuning" });
 
   t.check(rebuilt, {
@@ -218,10 +208,8 @@ void test("First query builds the index and finds the chat that said it", async 
   // The pre-rewrite material is gone from the index — old chunks pointed at a
   // transcript that no longer says it:
 
-  // doctest:L192
   const gone = await searchChats(box.root, { query: "roof claim deductible" });
 
-  // doctest:L194
   t.check(gone, {
     results: [{ ...OTHER_V1, score: 0.29605608390018 }],
     total: 1,
@@ -232,13 +220,10 @@ void test("First query builds the index and finds the chat that said it", async 
 
   // ## Deleting the husk drops the session's docs
 
-  // doctest:L201
   await rm(box.path("_content/chat/web/2026-09-28_sess-other.chat.card"));
 
-  // doctest:L203
   const afterDelete = await searchChats(box.root, { query: "panels" });
 
-  // doctest:L205
   t.check(afterDelete, NO_HITS);
   t.check(await loadChatManifest(box.root), {
     schemaVersion: 1,
@@ -247,15 +232,12 @@ void test("First query builds the index and finds the chat that said it", async 
 
   // ## A blank query matches nothing without touching the index
 
-  // doctest:L217
   const blank = await searchChats(box.root, { query: "   " });
 
-  // doctest:L219
   t.check(blank, NO_HITS);
 
   // The index is a disposable cache beside the manifest:
 
-  // doctest:L226
   t.check(await chatSearchStore.restore(box.root), not(null));
 
   // ## A crash between index and manifest persist re-converges (remove-before-insert)
@@ -267,7 +249,6 @@ void test("First query builds the index and finds the chat that said it", async 
   // insert would throw "already exists" and wedge the session's cursor forever
   // (the card index engineers the same convergence; `search/refresh/file.ts`).
 
-  // doctest:L240
   await writeTranscript(box, {
     sessionId: "sess-roof",
     entries: [
@@ -278,7 +259,6 @@ void test("First query builds the index and finds the chat that said it", async 
   });
   await searchChats(box.root, { query: "garage door estimate" });
 
-  // doctest:L251
   const stale = await loadChatManifest(box.root);
   stale.sessions["sess-roof"] = {
     engine: "claude",
@@ -289,10 +269,8 @@ void test("First query builds the index and finds the chat that said it", async 
   };
   await saveChatManifest(box.root, { manifest: stale, indexProof: indexPersistedFor(box.root) });
 
-  // doctest:L261
   const converged = await searchChats(box.root, { query: "garage door estimate" });
 
-  // doctest:L263
   t.check(converged, {
     results: [{ sessionId: "sess-roof", anchor: "w2", title: "Insurance follow-up", snippet: "Also get a garage door estimate.", created: "2026-09-28T13:00:00Z", score: 1.165204312148184 }],
     total: 1,

@@ -12,13 +12,11 @@ import { resolveVoice } from "../../../src/core/tts/voices.js";
 
 // ## A voice the backend serves is used as asked
 void test("A voice the backend serves is used as asked", async (t) => {
-  // doctest:L16
   t.check(resolveVoice({ backend: "openai", requested: "coral" }), {
     kind: "as-requested",
     voice: "coral",
   });
 
-  // doctest:L19
   t.check(resolveVoice({ backend: "gemini", requested: "Puck" }), {
     kind: "as-requested",
     voice: "Puck",
@@ -32,7 +30,6 @@ void test("A voice the backend serves is used as asked", async (t) => {
 // card needs migrating. `marin` maps to Achernar because the boxholder re-picked
 // it by ear on 2026-10-12, replacing Vindemiatrix; `shimmer` shares it.
 void test("Every VOICEMODELS name has a Gemini equivalent, chosen by ear rather than by...", async (t) => {
-  // doctest:L31
   t.check(resolveVoice({ backend: "gemini", requested: "marin" }), {
     kind: "mapped",
     voice: "Achernar",
@@ -44,7 +41,6 @@ void test("Every VOICEMODELS name has a Gemini equivalent, chosen by ear rather 
 // the boxholder picked these, so nothing was lost and nothing is warned about.
 // The distinction is what keeps the warning meaningful for cases nobody chose.
 void test("mapped is deliberately its own outcome rather than a kind of substitution:", async (t) => {
-  // doctest:L40
   const all = ["alloy","ash","ballad","cedar","coral","echo","fable","marin","onyx","nova","sage","shimmer","verse"];
   const kinds = new Set(all.map((v) => resolveVoice({ backend: "gemini", requested: v }).kind));
   t.check([...kinds].join(","), "mapped");
@@ -55,14 +51,12 @@ void test("mapped is deliberately its own outcome rather than a kind of substitu
 // There is no reverse mapping, so a Gemini voice name asked of OpenAI falls back
 // and warns — the case where the boxholder really did lose their choice.
 void test("There is no reverse mapping, so a Gemini voice name asked of OpenAI falls bac...", async (t) => {
-  // doctest:L52
   t.check(resolveVoice({ backend: "openai", requested: "Zephyr" }), {
     kind: "substituted",
     voice: "marin",
     requested: "Zephyr",
   });
 
-  // doctest:L55
   t.check(resolveVoice({ backend: "gemini", requested: "not-a-voice" }), {
     kind: "substituted",
     voice: "Zephyr",
@@ -75,13 +69,11 @@ void test("There is no reverse mapping, so a Gemini voice name asked of OpenAI f
 // There is no choice to report as overridden, so the default is returned plainly
 // and nothing is warned about.
 void test("There is no choice to report as overridden, so the default is returned plainl...", async (t) => {
-  // doctest:L65
   t.check(resolveVoice({ backend: "gemini", requested: undefined }), {
     kind: "as-requested",
     voice: "Zephyr",
   });
 
-  // doctest:L68
   t.check(resolveVoice({ backend: "openai", requested: "  " }), {
     kind: "as-requested",
     voice: "marin",

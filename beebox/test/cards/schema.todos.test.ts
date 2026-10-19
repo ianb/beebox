@@ -39,7 +39,6 @@ function loadErr(frontmatter: string): string {
 
 // ## A valid `todos:` list loads
 void test("A valid `todos:` list loads", async (t) => {
-  // doctest:L43
   const fields = load(
     "todos:\n  - text: Renew the parking permit\n    due: 2026-08-15\n  - text: Ask Marcus about the quote\n    assigned: agent\n    status: parked\n"
   );
@@ -58,28 +57,24 @@ void test("A valid `todos:` list loads", async (t) => {
 
 // ## A card with no `todos:` key loads fine (it's optional)
 void test("A card with no `todos:` key loads fine (it's optional)", async (t) => {
-  // doctest:L53
   const fields = load("status: new");
   t.check(fields["todos"], undefined);
 });
 
 // ## Bad `status` value is rejected
 void test("Bad `status` value is rejected", async (t) => {
-  // doctest:L61
   await t.checkText(loadErr("todos:\n  - text: Bogus\n    status: wontfix\n"), `x.memo-fixture.card: invalid memo-fixture frontmatter:
   - todos[0].status: Invalid option: expected one of "open"|"done"|"dropped"|"parked"`);
 });
 
 // ## Relative `start` without `due` is rejected
 void test("Relative `start` without `due` is rejected", async (t) => {
-  // doctest:L70
   await t.checkText(loadErr("todos:\n  - text: Bogus\n    start: -3d\n"), `x.memo-fixture.card: invalid memo-fixture frontmatter:
   - todos[0]: {% todo %} a relative \`start\` ("-3d") requires \`due\` to be set`);
 });
 
 // ## `start` after `due` is rejected
 void test("`start` after `due` is rejected", async (t) => {
-  // doctest:L79
   await t.checkText(loadErr("todos:\n  - text: Bogus\n    start: 2026-08-05\n    due: 2026-08-01\n"), `x.memo-fixture.card: invalid memo-fixture frontmatter:
   - todos[0]: {% todo %} \`start\` ("2026-08-05") is after \`due\` ("2026-08-01")`);
 });
@@ -91,14 +86,12 @@ void test("`start` after `due` is rejected", async (t) => {
 // restated) — a minor wording mismatch for a frontmatter-authored entry, noted
 // as a spec friction rather than fixed unilaterally.
 void test("The validation message names the tag ({% todo %}) because it's the same valid...", async (t) => {
-  // doctest:L93
   await t.checkText(loadErr("todos:\n  - text: Bogus\n    assigned: agent\n    by: agent\n"), `x.memo-fixture.card: invalid memo-fixture frontmatter:
   - todos[0]: {% todo %} \`created\` is required when \`by="agent"\``);
 });
 
 // ## `recheck` takes a date or `never`, nothing else
 void test("`recheck` takes a date or `never`, nothing else", async (t) => {
-  // doctest:L102
   t.check(load("todos:\n  - text: Renew the permit\n    recheck: 2026-10-15\n  - text: Old idea\n    recheck: never\n")["todos"], [
     {
       text: "Renew the permit",
@@ -110,14 +103,12 @@ void test("`recheck` takes a date or `never`, nothing else", async (t) => {
     },
   ]);
 
-  // doctest:L105
   await t.checkText(loadErr("todos:\n  - text: Bogus\n    recheck: later\n"), `x.memo-fixture.card: invalid memo-fixture frontmatter:
   - todos[0]: {% todo %} \`recheck\` must be an ISO date (YYYY-MM-DD) or "never": "later"`);
 });
 
 // ## `by: agent` with `created` is valid
 void test("`by: agent` with `created` is valid", async (t) => {
-  // doctest:L114
   const fields = load(
     "todos:\n  - text: Bogus\n    by: agent\n    created: 2026-07-28\n"
   );
@@ -132,14 +123,12 @@ void test("`by: agent` with `created` is valid", async (t) => {
 
 // ## `see-also` with neither `ref` nor `href` is rejected
 void test("`see-also` with neither `ref` nor `href` is rejected", async (t) => {
-  // doctest:L124
   await t.checkText(loadErr("todos:\n  - text: Bogus\n    see-also:\n      - note: missing a target\n"), `x.memo-fixture.card: invalid memo-fixture frontmatter:
   - todos[0].see-also[0]: todos \`see-also\` entry requires exactly one of \`ref\` or \`href\``);
 });
 
 // ## `see-also` with both `ref` and `href` is rejected
 void test("`see-also` with both `ref` and `href` is rejected", async (t) => {
-  // doctest:L133
   await t.checkText(
     loadErr(
       "todos:\n  - text: Bogus\n    see-also:\n      - ref: store/people/dana.person.card\n        href: https://example.com\n        note: too many\n"
@@ -151,7 +140,6 @@ void test("`see-also` with both `ref` and `href` is rejected", async (t) => {
 
 // ## A valid `see-also` entry round-trips
 void test("A valid `see-also` entry round-trips", async (t) => {
-  // doctest:L144
   const fields = load(
     "todos:\n  - text: Call the vet\n    see-also:\n      - ref: people/Dana_Whitfield.person.card\n        note: Dana offered to pick it up\n"
   );
@@ -175,7 +163,6 @@ void test("A valid `see-also` entry round-trips", async (t) => {
 // injected global one — here, a schema that requires `todos` to be a plain
 // string rather than the universal list shape.
 void test("Same precedence rule as title/contains (GLOBALCARDFIELDS doc comment, src/car...", async (t) => {
-  // doctest:L159
   const ownTodosSchema: CardSchema = cardSchema("own-todos-fixture", {
     fields: {
       todos: z.string(),
@@ -184,7 +171,6 @@ void test("Same precedence rule as title/contains (GLOBALCARDFIELDS doc comment,
   });
   const ownSchemas = new Map<string, CardSchema>([["own-todos-fixture", ownTodosSchema]]);
 
-  // doctest:L167
   const text = "---\ntodos: just one plain string\n---\nBody.\n";
   const card = parseCardText(text, { source: "y.own-todos-fixture.card", schemas: ownSchemas });
   t.check(card.fields["todos"], "just one plain string");
@@ -192,7 +178,6 @@ void test("Same precedence rule as title/contains (GLOBALCARDFIELDS doc comment,
   // The universal list shape is rejected by this schema's override (it wants a
   // string, not an array):
 
-  // doctest:L177
   function classifyError(fn: () => unknown): string {
     try {
       fn();
@@ -202,7 +187,6 @@ void test("Same precedence rule as title/contains (GLOBALCARDFIELDS doc comment,
     }
   }
 
-  // doctest:L186
   t.check(
     classifyError(() =>
       parseCardText("---\ntodos:\n  - text: Should not validate here\n---\nBody.\n", {

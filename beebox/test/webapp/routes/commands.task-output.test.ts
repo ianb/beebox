@@ -47,21 +47,17 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
       t.error(error);
     }
   });
-  // doctest:L38
   const ctx = await createTwoBoxTestServer();
   const tmpRoot = await makeClaudeTmpRoot();
 
-  // doctest:L41
   const alphaFile = await writeTaskOutput({ tmpRoot, cwd: ctx.a.boxRoot, content: "alpha's output" });
 
-  // doctest:L43
   const alphaReadsOwn = await ctx.server.inject({
     method: "GET",
     url: `/alpha/api/task-output?file=${encodeURIComponent(alphaFile)}`,
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
 
-  // doctest:L50
   const betaReadsAlpha = await ctx.server.inject({
     method: "GET",
     url: `/beta/api/task-output?file=${encodeURIComponent(alphaFile)}`,
@@ -74,7 +70,6 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
 
   // ## A `..` traversal and a foreign encoded-cwd are both refused without touching disk
 
-  // doctest:L64
   const traversal = `${tmpRoot}/${encodeProjectDir(ctx.a.boxRoot)}/sess-1/tasks/../../../../etc/passwd`;
   const traversalRes = await ctx.server.inject({
     method: "GET",
@@ -82,7 +77,6 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
 
-  // doctest:L72
   const foreignCwdPath = path.join(tmpRoot, encodeProjectDir(ctx.b.boxRoot), "sess-1", "tasks", "t1.output");
   const foreignCwdRes = await ctx.server.inject({
     method: "GET",
@@ -100,13 +94,11 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
   // but its target — beta's real output file — does not, so the post-`realpath`
   // re-check must catch it.
 
-  // doctest:L91
   const betaFile = await writeTaskOutput({ tmpRoot, cwd: ctx.b.boxRoot, content: "beta's output" });
   const alphaTasksDir = path.dirname(alphaFile);
   const symlinkPath = path.join(alphaTasksDir, "escape.output");
   await fs.symlink(betaFile, symlinkPath);
 
-  // doctest:L96
   const symlinkRes = await ctx.server.inject({
     method: "GET",
     url: `/alpha/api/task-output?file=${encodeURIComponent(symlinkPath)}`,
@@ -116,7 +108,6 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
 
   // ## A missing file under alpha's own directory 404s; a request with no `file` 400s
 
-  // doctest:L109
   const missingPath = path.join(alphaTasksDir, "never-written.output");
   const missingRes = await ctx.server.inject({
     method: "GET",
@@ -124,7 +115,6 @@ void test("Alpha reads its own task output; beta cannot read it through beta's o
     headers: { authorization: ctx.a.agentBearerHeader() },
   });
 
-  // doctest:L117
   const noFileRes = await ctx.server.inject({
     method: "GET",
     url: "/alpha/api/task-output",

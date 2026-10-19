@@ -27,21 +27,18 @@ async function makeServer() {
 
 // ## HTML documents get Report-Only + Reporting-Endpoints
 void test("HTML documents get Report-Only + Reporting-Endpoints", async (t) => {
-  // doctest:L30
   const app = await makeServer();
   const html = await app.inject({ method: "GET", url: "/page" });
   t.check(
     html.headers["content-security-policy-report-only"]?.toString(),
     "script-src 'self'; style-src 'self' 'unsafe-inline'; default-src 'self'; connect-src 'self' https://api.deepgram.com wss://api.deepgram.com https://api.openai.com wss://api.openai.com; img-src 'self' data: blob: https:; media-src 'self' blob:; worker-src 'self'; frame-src 'self' https://www.youtube-nocookie.com; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; report-uri /api/csp-report; report-to csp-endpoint");
 
-  // doctest:L35
   t.check(html.headers["reporting-endpoints"], "csp-endpoint=\"/api/csp-report\"");
 
   // ## Non-HTML responses get no CSP
   //
   // A JSON API response is not a document — it must not carry the policy:
 
-  // doctest:L44
   const data = await app.inject({ method: "GET", url: "/data" });
   t.check(data.headers["content-security-policy-report-only"], undefined);
 
@@ -49,11 +46,9 @@ void test("HTML documents get Report-Only + Reporting-Endpoints", async (t) => {
   //
   // When a response already set a CSP, the hook leaves it and adds no Report-Only header — so the frozen-page `sandbox` policy stays authoritative:
 
-  // doctest:L54
   const frozen = await app.inject({ method: "GET", url: "/frozen" });
   t.check(frozen.headers["content-security-policy"], "sandbox allow-scripts");
 
-  // doctest:L58
   t.check(frozen.headers["content-security-policy-report-only"], undefined);
 });
 
@@ -61,7 +56,6 @@ void test("HTML documents get Report-Only + Reporting-Endpoints", async (t) => {
 //
 // Both the legacy `application/csp-report` object and the Reporting-API `application/reports+json` array are normalized and appended:
 void test("Both the legacy application/csp-report object and the Reporting-API applicati...", async (t) => {
-  // doctest:L67
   const dir = await mkdtemp(join(tmpdir(), "csp-sink-"));
   const sink = Fastify();
   registerCspReportRoute({ server: sink, logDir: dir });
@@ -73,7 +67,6 @@ void test("Both the legacy application/csp-report object and the Reporting-API a
   });
   t.check(legacy.statusCode, 204);
 
-  // doctest:L81
   const reportsApi = await sink.inject({
     method: "POST",
     url: "/api/csp-report",
@@ -82,7 +75,6 @@ void test("Both the legacy application/csp-report object and the Reporting-API a
   });
   t.check(reportsApi.statusCode, 204);
 
-  // doctest:L90
   const log = await readFile(join(dir, ".beebox", "csp-reports.log"), "utf-8");
   const lines = log.trim().split("\n").map((l) => JSON.parse(l));
   t.check(lines, [
@@ -106,7 +98,6 @@ void test("This pins createServer itself rather than rebuilding the CSP hook in 
       t.error(error);
     }
   });
-  // doctest:L116
   const real = await createTestServer();
   real.server.get("/__csp-built-document", async (_request, reply) =>
     reply.type("text/html").send("<!doctype html><p>built"),

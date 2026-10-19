@@ -47,27 +47,22 @@ void test("No live/most-active session → a fresh session is created and sent t
       t.error(error);
     }
   });
-  // doctest:L38
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box, backend);
   const eventBus = createEventBus(box.root);
 
-  // doctest:L43
   const res = await deliverCaptureMessage({
     boxRoot: box.root, registry, eventBus, target: { sessionId: null, contextDir: null }, message: W,
   });
   await tick();
 
-  // doctest:L48
   t.check(res, { sessionId: null, queued: false });
 
-  // doctest:L51
   t.check(sentText(backend.lastRun()), SENT_WRAPPER);
 
   // The wrapper is composed by beebox, so the turn goes out marked client-composed.
 
-  // doctest:L58
   t.check(backend.lastRun()?.sentClientComposed, [
     true,
   ]);
@@ -84,32 +79,27 @@ void test("Target chat is busy → the message is enqueued, not sent", async (t)
       t.error(error);
     }
   });
-  // doctest:L71
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box, backend);
   const eventBus = createEventBus(box.root);
 
-  // doctest:L76
   // A live, busy most-active session.
   const busy = registry.getOrCreate("s-busy");
   await busy.send("first turn");
   await tick();
   await setMostActive(box.root, "s-busy");
 
-  // doctest:L82
   // The caller resolves the target (→ the busy most-active session) first.
   const target = await resolveCaptureDeliveryTarget({ boxRoot: box.root, targetSessionId: null });
   const res = await deliverCaptureMessage({
     boxRoot: box.root, registry, eventBus, target, message: W,
   });
 
-  // doctest:L88
   t.check(res, { sessionId: "s-busy", queued: true });
 
   // The wrapper did not reach the backend — only the in-flight turn's message did:
 
-  // doctest:L95
   t.check(backend.lastRun()?.sent, [[{ type: "text", text: str`<chat-app narration="off" prose="on" local-time="${any(String)}"/>\nfirst turn` }]]);
 });
 
@@ -124,25 +114,20 @@ void test("Explicit targetSessionId (known to the box) → delivered to it", asy
       t.error(error);
     }
   });
-  // doctest:L108
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box, backend);
   const eventBus = createEventBus(box.root);
 
-  // doctest:L113
   await appendHistory(box.root, { sessionId: "s-target" });
 
-  // doctest:L115
   const res = await deliverCaptureMessage({
     boxRoot: box.root, registry, eventBus, target: { sessionId: "s-target", contextDir: null }, message: W,
   });
   await tick();
 
-  // doctest:L120
   t.check(res, { sessionId: "s-target", queued: false });
 
-  // doctest:L123
   t.check(sentText(backend.lastRun()), SENT_WRAPPER);
 });
 
@@ -157,16 +142,13 @@ void test("A failed (non-busy) send throws CaptureDeliveryError", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L136
   const box = await makeTmpBox({ git: true });
   const registry = makeRegistry(box, createFakeChatBackend());
   const eventBus = createEventBus(box.root);
 
-  // doctest:L140
   // The fresh session's send is refused, as a failed non-busy send would be.
   const refuseSend = (session: ChatSession) => { session.send = async () => false; };
 
-  // doctest:L143
   const caught = await deliverCaptureMessage({ boxRoot: box.root, registry, eventBus, wireSession: refuseSend, target: { sessionId: null, contextDir: null }, message: W }).then(() => "no throw", (e: unknown) => (e instanceof Error ? e.name : String(e)));
   t.check(caught, "CaptureDeliveryError");
 });

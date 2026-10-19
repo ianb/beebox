@@ -7,7 +7,6 @@ import "@ianbicking/tap-check/tap";
 import { createCardContextStore, visibleCardSelectionSink } from "../../../../../src/components/chat/everywhere/card-context/selection-context-store.js";
 
 void test("line 9", async (t) => {
-  // doctest:L10
   const context = createCardContextStore();
   const captured: (string | null)[] = [];
   const releaseSink = context.registerSelection((selection) => captured.push(selection.ref));
@@ -16,7 +15,6 @@ void test("line 9", async (t) => {
     "/house/pantry.doc.card",
   ]);
 
-  // doctest:L17
   releaseSink();
 });
 
@@ -26,7 +24,6 @@ void test("line 9", async (t) => {
 // its detail FileView. Detail focus stays suppressed, while FileView attaches the
 // selected file's ref to its captured text. Hidden Browse supplies no receiver.
 void test("The enclosing Browse card supplies its visibility-scoped sink explicitly to i...", async (t) => {
-  // doctest:L27
   const browseContext = createCardContextStore();
   const selections: unknown[] = [];
   const unregister = browseContext.registerSelection((selection) => selections.push(selection));
@@ -40,14 +37,11 @@ void test("The enclosing Browse card supplies its visibility-scoped sink explici
     },
   ]);
 
-  // doctest:L35
   const hiddenDetail = visibleCardSelectionSink(false, browseContext);
   hiddenDetail?.({ ref: "/_content/recipes/Soup.recipe.card", text: "Hidden text", position: "paragraph 4" });
   t.check(selections, [{ ref: "/_content/recipes/Soup.recipe.card", text: "Two carrots", position: "paragraph 3" }]);
 
-  // doctest:L40
   t.check(hiddenDetail, undefined);
 
-  // doctest:L43
   unregister();
 });

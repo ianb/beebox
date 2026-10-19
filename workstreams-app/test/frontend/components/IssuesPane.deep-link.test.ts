@@ -22,7 +22,6 @@ function issueAt(relPath: string): Issue {
 }
 
 void test("line 24", async (t) => {
-  // doctest:L25
   t.check(
     {
       selectedClosedDeepLink: issuePassesStatusFilter({ closed: true }, { status: undefined, selected: true }),
@@ -47,7 +46,6 @@ void test("line 24", async (t) => {
 // row at the old path. That is reported as a miss rather than falling through to
 // the "select an issue" prompt, which would read as an empty queue.
 void test("A deep link can also name an issue the queue does not hold — the recency feed...", async (t) => {
-  // doctest:L42
   t.check(
     {
       requestedAndFound: missingIssueRelPath({ requested: "bugs/a.md", selected: issueAt("bugs/a.md") }),

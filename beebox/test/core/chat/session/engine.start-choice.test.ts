@@ -32,11 +32,9 @@ async function configure(boxRoot: string, config: Record<string, unknown>): Prom
 // A chat with no id takes the requested engine; the box default answers when
 // nothing was requested.
 void test("A chat with no id takes the requested engine; the box default answers when no...", async (t) => {
-  // doctest:L36
   const box = await makeTmpBox();
   await configure(box.root, { agentEngine: "claude", engines: { claude: true, codex: true } });
 
-  // doctest:L39
   t.check(
     [
       await resolveStartEngine(box.root, { sessionId: null, requested: null }),
@@ -54,11 +52,9 @@ void test("A chat with no id takes the requested engine; the box default answers
   // change it. This is the "fixed at birth" rule, enforced where it is read rather
   // than trusted to the UI.
 
-  // doctest:L52
   const sessionId = randomUUID();
   await recordSessionStart(box.root, { sessionId, engine: "codex" });
 
-  // doctest:L55
   t.check(
     [
       await resolveChatEngine(box.root, { sessionId }),
@@ -77,7 +73,6 @@ void test("A chat with no id takes the requested engine; the box default answers
   // 2026-08-27). Recorded > requested > box default. (This box's default is
   // claude, so the second entry below is the default answering.)
 
-  // doctest:L70
   const coinedFresh = randomUUID();
   t.check(
     [
@@ -94,7 +89,6 @@ void test("A chat with no id takes the requested engine; the box default answers
   // `unsupported`, not an error, because the client's answer to it is to send
   // `"new"` instead.
 
-  // doctest:L83
   const store = new ChatReservationStore(() => Date.now());
   const coined = randomUUID();
   const chosenModel = "claude-fable-5-1";
@@ -107,14 +101,12 @@ void test("A chat with no id takes the requested engine; the box default answers
     model: chosenModel,
   });
 
-  // doctest:L95
   t.check([reserved.kind, store.get(coined)?.model === chosenModel, store.get(coined)?.engine], [
     "reserved",
     true,
     "claude",
   ]);
 
-  // doctest:L98
   const codexReserved = await reserveChatSession({
     boxRoot: box.root,
     store,
@@ -125,7 +117,6 @@ void test("A chat with no id takes the requested engine; the box default answers
   });
   t.check(codexReserved.kind, "unsupported");
 
-  // doctest:L109
   await box.cleanup();
 });
 
@@ -141,12 +132,10 @@ void test("A reservation on a Codex-default box still answers unsupported — on
       t.error(error);
     }
   });
-  // doctest:L118
   const codexBox = await makeTmpBox();
   await configure(codexBox.root, { agentEngine: "codex", engines: { claude: true, codex: true } });
   const codexStore = new ChatReservationStore(() => Date.now());
 
-  // doctest:L122
   const asked = await reserveChatSession({
     boxRoot: codexBox.root,
     store: codexStore,
@@ -163,7 +152,6 @@ void test("A reservation on a Codex-default box still answers unsupported — on
     seedFeatures: {},
   });
 
-  // doctest:L138
   t.check([asked.kind, unasked.kind], [
     "reserved",
     "unsupported",
@@ -173,7 +161,6 @@ void test("A reservation on a Codex-default box still answers unsupported — on
   // reservation's choice to the read resolver. The reservation remains the sole
   // pre-start authority; release removes that answer:
 
-  // doctest:L147
   const codexCoined = asked.kind === "reserved" ? asked.sessionId : "";
   const during = await resolveChatEngine(codexBox.root, { sessionId: codexCoined });
   codexStore.release(codexCoined);
@@ -196,7 +183,6 @@ void test("A reservation on a Codex-default box still answers unsupported — on
   // `resolveRecordedChatEngine` is the same lookup without the fallback, so those
   // callers can tell the two cases apart:
 
-  // doctest:L169
   const unrecorded = randomUUID();
   t.check(
     [
@@ -213,7 +199,6 @@ void test("A reservation on a Codex-default box still answers unsupported — on
 
   // A record — of any of the three kinds — makes it answer:
 
-  // doctest:L181
   const recordedId = randomUUID();
   await recordSessionStart(codexBox.root, { sessionId: recordedId, engine: "claude" });
   t.check(await resolveRecordedChatEngine(codexBox.root, { sessionId: recordedId }), "claude");

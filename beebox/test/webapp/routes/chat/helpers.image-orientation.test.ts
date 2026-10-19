@@ -37,7 +37,6 @@ function warnings(fn: () => void) {
 
 // ## A rotated JPEG warns; a normalized one is silent
 void test("A rotated JPEG warns; a normalized one is silent", async (t) => {
-  // doctest:L41
   const rotated = warnings(() =>
     warnOnUnnormalizedImageOrientation([{ id: 3, mimeType: "image/jpeg", dataBase64: exifJpegBase64(6) }]),
   );
@@ -45,7 +44,6 @@ void test("A rotated JPEG warns; a normalized one is silent", async (t) => {
 
   // An orientation-1 (upright) JPEG is already normalized, so nothing is logged.
 
-  // doctest:L51
   t.check(warnings(() => warnOnUnnormalizedImageOrientation([{ id: 1, mimeType: "image/jpeg", dataBase64: exifJpegBase64(1) }])), []);
 
   // ## Non-JPEG attachments are never flagged
@@ -53,6 +51,5 @@ void test("A rotated JPEG warns; a normalized one is silent", async (t) => {
   // Canvas WebP/PNG output carries no EXIF orientation, so those types are skipped
   // without even decoding — only JPEG can carry the tag.
 
-  // doctest:L61
   t.check(warnings(() => warnOnUnnormalizedImageOrientation([{ id: 2, mimeType: "image/webp", dataBase64: exifJpegBase64(6) }])), []);
 });

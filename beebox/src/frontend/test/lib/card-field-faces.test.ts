@@ -27,7 +27,6 @@ const memo = {
 // title is the header and `theme` is the Appearance row, so neither appears.
 // The type fields `status` and `created` go to Properties' table.
 void test("On a page, for a type with a body field, the front keeps only todos:", async (t) => {
-  // doctest:L31
   t.check(splitCardFields(memo, { hasBodyField: true, bodyEmpty: false, mode: "page" }), {
     front: {
       todos: [
@@ -56,7 +55,6 @@ void test("On a page, for a type with a body field, the front keeps only todos:"
 // `card.get` returned `schema: null`) has no field classification, and its
 // fields stay on the front rather than being hidden:
 void test("A bodiless type has nothing else to show on its front, so its type fields sta...", async (t) => {
-  // doctest:L50
   t.check(splitCardFields(memo, { hasBodyField: false, bodyEmpty: false, mode: "page" }).front, {
     todos: [
       {
@@ -67,7 +65,6 @@ void test("A bodiless type has nothing else to show on its front, so its type fi
     created: "2026-07-01T10:00:00Z",
   });
 
-  // doctest:L53
   t.check(splitCardFields(memo, { hasBodyField: null, bodyEmpty: false, mode: "chat" }).front, {
     todos: [
       {
@@ -82,7 +79,6 @@ void test("A bodiless type has nothing else to show on its front, so its type fi
 // An embedded card has no header and no Properties face, so its title and type
 // fields show on the front; the "found by" fields and `theme` stay off it:
 void test("An embedded card has no header and no Properties face, so its title and type...", async (t) => {
-  // doctest:L61
   t.check(splitCardFields(memo, { hasBodyField: true, bodyEmpty: false, mode: "embed" }), {
     front: {
       title: "Porch",
@@ -113,7 +109,6 @@ void test("An embedded card has no header and no Properties face, so its title a
 // (docs/implemented-plans/place-shows-cards.md, Track B). The common fields keep their
 // places, and Properties' table is empty, so no field shows twice:
 void test("A bodied type whose body is empty would show only \"No body content\" while its...", async (t) => {
-  // doctest:L82
   t.check(splitCardFields(memo, { hasBodyField: true, bodyEmpty: true, mode: "page" }), {
     front: {
       todos: [
@@ -138,7 +133,6 @@ void test("A bodied type whose body is empty would show only \"No body content\"
 
 // The same bodied type with a body keeps them in Properties:
 void test("The same bodied type with a body keeps them in Properties:", async (t) => {
-  // doctest:L98
   t.check(splitCardFields(memo, { hasBodyField: true, bodyEmpty: false, mode: "page" }).properties, {
     status: "new",
     created: "2026-07-01T10:00:00Z",
@@ -147,7 +141,6 @@ void test("The same bodied type with a body keeps them in Properties:", async (t
 
 // An embed puts them on the front either way:
 void test("An embed puts them on the front either way:", async (t) => {
-  // doctest:L105
   const embedEmpty = splitCardFields(memo, { hasBodyField: true, bodyEmpty: true, mode: "embed" });
   const embedFull = splitCardFields(memo, { hasBodyField: true, bodyEmpty: false, mode: "embed" });
   t.check([JSON.stringify(embedEmpty) === JSON.stringify(embedFull), Object.keys(embedFull.front)], [
@@ -165,7 +158,6 @@ void test("An embed puts them on the front either way:", async (t) => {
 // `CardBody` uses before it says "No body content". A body is empty when it is
 // absent, only whitespace, or only a heading that repeats the title:
 void test("isCardBodyEmpty is the test every caller passes as bodyEmpty, and the one Car...", async (t) => {
-  // doctest:L116
   t.check(
     [
       isCardBodyEmpty(undefined, "Porch"),
@@ -188,7 +180,6 @@ void test("isCardBodyEmpty is the test every caller passes as bodyEmpty, and the
 // (`GLOBAL_CARD_FIELDS`), so a new global field fails here until
 // `splitCardFields` gives it a place:
 void test("COMMONFIELDS names exactly the schema layer's global fields (GLOBALCARDFIELDS...", async (t) => {
-  // doctest:L131
   t.check(Object.keys(GLOBAL_CARD_FIELDS).toSorted(), [
     "contains",
     "contains-evidence",
@@ -199,7 +190,6 @@ void test("COMMONFIELDS names exactly the schema layer's global fields (GLOBALCA
     "todos",
   ]);
 
-  // doctest:L134
   t.check([...COMMON_FIELDS].toSorted(), [
     "contains",
     "contains-evidence",

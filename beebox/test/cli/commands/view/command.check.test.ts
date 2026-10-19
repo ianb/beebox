@@ -76,13 +76,11 @@ void test("A mix of good and broken views fails, and names which", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L72
   const box = await makeViewBox();
   await writeView(box, { rel: "good.tsx", content: GOOD_VIEW });
   await writeView(box, { rel: "broken.tsx", content: BROKEN_VIEW });
   await box.write("_content/inbox/Test.doc.card", DOC_CARD);
 
-  // doctest:L77
   const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
   t.check(result, {
     ok: false,
@@ -107,11 +105,9 @@ void test("A box with no broken views passes", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L98
   const box = await makeViewBox();
   await writeView(box, { rel: "good.tsx", content: GOOD_VIEW });
 
-  // doctest:L101
   const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
   t.check(result, { ok: true, views: [{ slug: "good", ok: true }] });
 });
@@ -125,7 +121,6 @@ void test("A box with no views at all is trivially OK", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L116
   const box = await makeTmpBox();
   const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
   t.check(result, {

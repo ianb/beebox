@@ -61,7 +61,6 @@ void test("The escaping entry is skipped with an error naming the script and the
       t.error(error);
     }
   });
-  // doctest:L58
   const box = await makeTmpBox();
   const { errors } = await runChain(box, [
     { path: "../outside/Evil.doc.card", args: { title: "Evil", body: "escaped" } },
@@ -73,15 +72,12 @@ void test("The escaping entry is skipped with an error naming the script and the
 
   // Nothing was written above the box root:
 
-  // doctest:L72
   t.check(existsSync(join(box.root, "outside")), false);
 
   // The normal entry created its card from the `doc` default template:
 
-  // doctest:L79
   t.check(await box.list("_content/notes"), "_content/notes/Daily.doc.card");
 
-  // doctest:L83
   await t.checkText(await box.read("_content/notes/Daily.doc.card"), "---\ntitle: Daily\n---\nok");
 
   // ## A leading `/` addresses the box root, not the OS root
@@ -89,18 +85,15 @@ void test("The escaping entry is skipped with an error naming the script and the
   // `/_content/kept/Weekly.doc.card` is the canonical box-root form, so it lands
   // inside the box like any other in-box path.
 
-  // doctest:L93
   const second = await runChain(box, [
     { path: "/_content/kept/Weekly.doc.card", args: { title: "Weekly", body: "weekly" } },
   ]);
   t.check(second.errors, []);
 
-  // doctest:L99
   t.check(await box.list("_content/kept"), "_content/kept/Weekly.doc.card");
 
   // Re-running the same chain is idempotent — an existing target is left alone:
 
-  // doctest:L107
   const third = await runChain(box, [
     { path: "/_content/kept/Weekly.doc.card", args: { title: "Weekly", body: "changed" } },
   ]);

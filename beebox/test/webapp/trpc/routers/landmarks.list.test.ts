@@ -57,15 +57,12 @@ void test("The good landmarks load; the broken one is named", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L32
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L34
   await box.write("_content/recipes/Recipes.landmark.card",
     "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n\n");
   await box.write("_content/trips/Trips.landmark.card", "no frontmatter here at all\n");
 
-  // doctest:L38
   t.check(await caller(box.root).landmarks.list(), {
     landmarks: [RECIPES],
     problems: [{ kind: "landmark-parse", path: "_content/trips/Trips.landmark.card" }],
@@ -74,11 +71,9 @@ void test("The good landmarks load; the broken one is named", async (t) => {
   // Fixing the card empties `problems` — the report tracks the file, it isn't
   // sticky.
 
-  // doctest:L50
   await box.write("_content/trips/Trips.landmark.card",
     "---\nnavigation:\n  label: Trips\n---\n\n");
 
-  // doctest:L53
   const fixed = await caller(box.root).landmarks.list();
   t.check(fixed, { landmarks: [RECIPES, TRIPS], problems: [] });
 
@@ -86,11 +81,9 @@ void test("The good landmarks load; the broken one is named", async (t) => {
   // its filename basename — the label is never empty, so the app bar's pill
   // face always has something to render.
 
-  // doctest:L66
   await box.write("_bookkeeping/archive/Old_Mail.landmark.card",
     "---\ndestinations:\n  - for: [triage]\n    rules: \"Old mail.\"\n---\n\n");
 
-  // doctest:L69
   const withArchive = await caller(box.root).landmarks.list();
   t.check(withArchive.landmarks, [bareRow({ path: "_bookkeeping/archive/Old_Mail.landmark.card", label: "Old_Mail" }), RECIPES, TRIPS]);
 });
@@ -104,7 +97,6 @@ void test("A box with nothing broken reports an empty list", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L81
   const box = await makeTmpBox({ git: true });
   // The v3 root landmark lives at `_content/Box.landmark.card`, not at the
   // literal box root (`root-dir.ts`) — a card sitting directly at the box
@@ -112,7 +104,6 @@ void test("A box with nothing broken reports an empty list", async (t) => {
   // findings (round 4 hardening), correctly excluded from the scan.
   await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n\n");
 
-  // doctest:L88
   t.check(await caller(box.root).landmarks.list(), {
     landmarks: [bareRow({ path: "_content/Box.landmark.card", label: "Home", dir: "" })],
     problems: [],
@@ -133,7 +124,6 @@ void test("list resolves every landmark in one request, several at once, and wal
       t.error(error);
     }
   });
-  // doctest:L105
   const box = await makeTmpBox({ git: true });
   await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n");
   await box.write("_content/Welcome.doc.card", "---\ntitle: Welcome\nprominence: entry-point\n---\n");
@@ -147,7 +137,6 @@ void test("list resolves every landmark in one request, several at once, and wal
   await box.write("_content/Shed/Shed.landmark.card", "---\nnavigation:\n  label: Shed\n---\n");
   await box.write("_content/Shed/Tools.doc.card", "---\ntitle: Tools\n---\n");
 
-  // doctest:L118
   const { landmarks } = await caller(box.root).landmarks.list();
   const view = (l: (typeof landmarks)[number] | undefined) => {
     assert.ok(l);
@@ -160,7 +149,6 @@ void test("list resolves every landmark in one request, several at once, and wal
   // arrival is Welcome, its only entry point. Depth is 0 for top-level places
   // (the root does not count as a parent).
 
-  // doctest:L132
   t.check(view(landmarks[0]), {
     label: "Home",
     depth: 0,
@@ -176,7 +164,6 @@ void test("list resolves every landmark in one request, several at once, and wal
   // entry point, so its row opens its landmark card. Soil is ordinary and is not
   // listed. Garden's own Start card is its arrival.
 
-  // doctest:L141
   t.check(view(landmarks[1]), {
     label: "Garden",
     depth: 0,
@@ -192,7 +179,6 @@ void test("list resolves every landmark in one request, several at once, and wal
   // ordinary. With no entry point, arrival is the landmark card. Shed lists
   // nothing: its one card is ordinary.
 
-  // doctest:L150
   t.check([view(landmarks[2]), view(landmarks[3])], [
     {
       label: "Herbs",
@@ -213,7 +199,6 @@ void test("list resolves every landmark in one request, several at once, and wal
   // `forDir` resolves one landmark alone, with no shared walk. Each `list`
   // payload matches it in everything but depth, which only `list` computes.
 
-  // doctest:L158
   for (const lm of landmarks) {
     const { landmark } = await caller(box.root).landmarks.forDir({ dir: lm.dir });
     t.check({ ...landmark, depth: lm.depth }, lm);
@@ -234,11 +219,9 @@ void test("The one-root layout put the ROOT landmark card at content/Box.landmar
       t.error(error);
     }
   });
-  // doctest:L179
   const box = await makeTmpBox({ git: true });
   await box.write("_content/Box.landmark.card", "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Kitchen\n---\n");
 
-  // doctest:L182
   const { landmark } = await caller(box.root).landmarks.forDir({ dir: "" });
   t.check(landmark, bareRow({ path: "_content/Box.landmark.card", label: "Kitchen", glyph: "🍳", dir: "" }));
 });
@@ -259,12 +242,10 @@ void test("Finding 3 (Track E hardening review, round 3):", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L201
   const box = await makeTmpBox({ git: true });
   await mkdir(box.path("src/templates"), { recursive: true });
   await box.write("src/templates/Private.landmark.card", "---\nnavigation:\n  label: Private\n---\n");
 
-  // doctest:L205
   const refused = await caller(box.root).landmarks.forDir({ dir: "src/templates" }).then(() => null, (e: unknown) => e);
   t.check(refused, instanceOf(TRPCError));
   t.check(refused, { name: "TRPCError", message: "dir is outside the box namespace: src/templates", cause: undefined, code: "BAD_REQUEST" });
@@ -285,14 +266,12 @@ void test("Finding 2 (round 4 hardening):", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L231
   const box = await makeTmpBox({ git: true });
   await box.write("src/private.landmark.card", "---\nnavigation:\n  label: Private\n---\n");
   await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n");
   await mkdir(box.path("_content/escape"), { recursive: true });
   await symlink(box.path("src/private.landmark.card"), box.path("_content/escape/A.landmark.card"));
 
-  // doctest:L237
   const { landmarks, problems } = await caller(box.root).landmarks.list();
   t.check({ labels: landmarks.map((l) => l.label).toSorted(), problems }, {
     labels: ["Recipes"],
@@ -303,7 +282,6 @@ void test("Finding 2 (round 4 hardening):", async (t) => {
   // other unreadable card — no landmark to render), while the normal landmark's
   // directory still resolves:
 
-  // doctest:L247
   const { landmark: escaped } = await caller(box.root).landmarks.forDir({ dir: "_content/escape" });
   const { landmark: recipes } = await caller(box.root).landmarks.forDir({ dir: "_content/recipes" });
   t.check({ escaped, recipes }, { escaped: null, recipes: bareRow({ path: "_content/recipes/Recipes.landmark.card", label: "Recipes" }) });
@@ -322,11 +300,9 @@ void test("The here menu asks for one directory's landmark.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L264
   const box = await makeTmpBox({ git: true });
   await box.write("_content/trips/Trips.landmark.card", "not a card\n");
 
-  // doctest:L267
   const { landmark } = await caller(box.root).landmarks.forDir({ dir: "_content/trips" });
   t.check(landmark, null);
 });

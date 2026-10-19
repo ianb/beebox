@@ -28,7 +28,6 @@ const lines = [
 const trace = devBehaviorFromStreamJson([...lines, ""], "/repo");
 
 void test("line 30", async (t) => {
-  // doctest:L31
   t.check(
     {
       reads: trace.behavior.filesRead,
@@ -67,14 +66,12 @@ void test("line 30", async (t) => {
 // A session stopped at the turn limit reports its result subtype, which the
 // runner turns into an error instead of grading a partial answer:
 void test("A session stopped at the turn limit reports its result subtype, which the run...", async (t) => {
-  // doctest:L47
   t.check(devBehaviorFromStreamJson([JSON.stringify({ type: "result", subtype: "error_max_turns" })], "/repo").resultSubtype, "error_max_turns");
 });
 
 // The session is read-only, loads project settings and skills with hooks off,
 // drops user MCP servers, and cannot read the audit answer key:
 void test("The session is read-only, loads project settings and skills with hooks off, d...", async (t) => {
-  // doctest:L55
   const args = devClaudeArgs({ model: "claude-sonnet-4-6", maxTurns: 10 });
   const settings: unknown = JSON.parse(args[args.indexOf("--settings") + 1] ?? "");
   t.check([args.includes("--strict-mcp-config"), args[args.indexOf("--tools") + 1], args[args.indexOf("--setting-sources") + 1], settings], [
@@ -97,7 +94,6 @@ void test("The session is read-only, loads project settings and skills with hook
 
 // Box-only fields are refused on a dev audit at load time:
 void test("Box-only fields are refused on a dev audit at load time:", async (t) => {
-  // doctest:L64
   const parsed = auditTestSchema.safeParse({
     id: "x", surface: "dev", prompt: "?", expected_level: "knows_about", watch_for: "-", cards_contain: ["a"],
   });

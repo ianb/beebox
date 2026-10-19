@@ -38,23 +38,18 @@ await generateAgentContextMirrors(root);
 
 // The editable files are symlinked, including nested context:
 void test("The editable files are symlinked, including nested context:", async (t) => {
-  // doctest:L42
   t.check(await readlink(join(root, "AGENTS.md")), "CLAUDE.md");
 
-  // doctest:L45
   t.check(await readlink(join(root, "nested/AGENTS.md")), "CLAUDE.md");
 
   // A parked template copy gets no mirror — it is not guidance this box has
   // adopted, and the mirror would dangle once the parked copy is accepted or
   // discarded:
 
-  // doctest:L54
   t.check(await readlink(join(root, "_config/_template-updates/_config/AGENTS.md")).then(() => "mirrored", () => "skipped"), "skipped");
 
-  // doctest:L59
   t.check(await readlink(join(root, ".agents/skills/calendar")), "../../.claude/skills/calendar");
 
-  // doctest:L62
   const hooks = await readFile(join(root, ".codex/hooks.json"), "utf8");
   t.checkText(
     hooks,
@@ -92,7 +87,6 @@ void test("The editable files are symlinked, including nested context:", async (
 
 // Rules are copied into provider-valid skills:
 void test("Rules are copied into provider-valid skills:", async (t) => {
-  // doctest:L73
   t.checkText(
     await readFile(join(root, ".agents/skills/beebox-rule-card-doc/SKILL.md"), "utf8"),
     `---
@@ -106,6 +100,5 @@ Applies to: **/*.doc.card
 # Doc rules`,
   );
 
-  // doctest:L79
   t.check(await readFile(join(root, ".agents/skills/callback-box-rule-card-doc/SKILL.md"), "utf8").then(() => false, () => true), true);
 });

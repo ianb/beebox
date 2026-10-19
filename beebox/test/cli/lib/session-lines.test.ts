@@ -94,7 +94,6 @@ void test("An ordinary line passes through untouched.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L91
   const box = await makeTmpBox();
   await box.write("mixed.jsonl", [
     turn({ uuid: "u-1", text: "just words" }),
@@ -102,7 +101,6 @@ void test("An ordinary line passes through untouched.", async (t) => {
     turn({ uuid: "u-3", text: hugeText }),
   ].join("\n"));
 
-  // doctest:L98
   t.check(await kinds(box.path("mixed.jsonl")), "1:parseable 2:parseable+stripped 3:oversize");
 
   // `mediaStripped` is not cosmetic: it is how a reader tells an image whose bytes
@@ -110,13 +108,11 @@ void test("An ordinary line passes through untouched.", async (t) => {
   // arrived (`shared/session-media.ts`). And a stripped line is real JSON, so the
   // turn's own text survives:
 
-  // doctest:L108
   t.check(await parseableTexts(box.path("mixed.jsonl")), "just words | here is the drawer");
 
   // The line number counts every line, including the ones handed over as oversize,
   // so it stays a stable identity across re-scans of the same file:
 
-  // doctest:L116
   t.check(await oversizeLineNumbers(box.path("mixed.jsonl")), [
     3,
   ]);
@@ -137,7 +133,6 @@ void test("readFirstUserSnippet reads until the first real user message and then
       t.error(error);
     }
   });
-  // doctest:L133
   const box = await makeTmpBox();
   await box.write("long.jsonl", [
     turn({ uuid: "u-1", text: "first" }),
@@ -145,7 +140,6 @@ void test("readFirstUserSnippet reads until the first real user message and then
     turn({ uuid: "u-3", text: "third" }),
   ].join("\n"));
 
-  // doctest:L140
   t.check(await readUntil(box.path("long.jsonl"), "first"), 1);
 
   // A transcript that is not there raises the underlying fs error rather than
@@ -155,7 +149,6 @@ void test("readFirstUserSnippet reads until the first real user message and then
   // `ENOENT` and treat it as "no transcript yet". Swallowing it here would take that
   // choice away from all three:
 
-  // doctest:L152
   t.check(await readErrno(box.path("never-written.jsonl")), "ENOENT");
 });
 
@@ -173,13 +166,11 @@ void test("JSON allows U+2028 and U+2029 raw inside a string, and pasted text ca
       t.error(error);
     }
   });
-  // doctest:L168
   const box = await makeTmpBox();
   await box.write("separators.jsonl", [
     turn({ uuid: "u-1", text: "8:00 arrival\u2028Load the kiln by 11:00\u2029Unload" }),
     turn({ uuid: "u-2", text: "next" }),
   ].join("\n"));
 
-  // doctest:L174
   t.check(await kinds(box.path("separators.jsonl")), "1:parseable 2:parseable");
 });

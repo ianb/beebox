@@ -74,7 +74,6 @@ const HANDBOOK = {
 // The raw-file route serves `.gz` bytes verbatim — no `Content-Encoding` — so the
 // decode belongs to the reader. `gunzipToText` takes the fetched `ArrayBuffer`.
 void test("The raw-file route serves .gz bytes verbatim — no Content-Encoding — so the d...", async (t) => {
-  // doctest:L82
   const gz = gzipSync(Buffer.from(JSON.stringify(HANDBOOK)));
   const text = await gunzipToText(gz.buffer.slice(gz.byteOffset, gz.byteOffset + gz.byteLength));
   t.check(JSON.parse(text), HANDBOOK);
@@ -135,7 +134,6 @@ void test("Items come back in body.children order — text, table, and picture i
 // Docling records cells with half-open row/column offsets; the reader places each
 // cell at its start offset and carries spans as `colSpan`/`rowSpan`.
 void test("Docling records cells with half-open row/column offsets; the reader places ea...", async (t) => {
-  // doctest:L139
   const table = tableOf(readDoclingDocument(HANDBOOK).items.find((item) => item.kind === "table"));
   t.check(table.rows, [
     [
@@ -152,7 +150,6 @@ void test("Docling records cells with half-open row/column offsets; the reader p
 // A table docling recorded no cell data for yields no rows — the view says so
 // rather than drawing an empty grid:
 void test("A table docling recorded no cell data for yields no rows — the view says so r...", async (t) => {
-  // doctest:L151
   t.check(readDoclingDocument({ tables: [{ label: "table", data: {} }] }).items, [
     { kind: "table", ref: "#/tables/0", label: "table", page: null, caption: null, rows: [] },
   ]);
@@ -163,7 +160,6 @@ void test("A table docling recorded no cell data for yields no rows — the view
 // `itemsByPage` groups the reading order into consecutive runs, which is what the
 // viewer draws as page sections.
 void test("itemsByPage groups the reading order into consecutive runs, which is what the...", async (t) => {
-  // doctest:L161
   t.check(itemsByPage(readDoclingDocument(HANDBOOK)).map((section) => ({ page: section.page, refs: section.items.map((item) => item.ref) })), [
     { page: 1, refs: ["#/texts/0", "#/texts/1"] },
     { page: 2, refs: ["#/tables/0", "#/pictures/0", "#/texts/3"] },
@@ -175,7 +171,6 @@ void test("itemsByPage groups the reading order into consecutive runs, which is 
 // Every one of these is a real possibility: a version we've never seen, a
 // truncated file, a JSON document that isn't a DoclingDocument at all.
 void test("Every one of these is a real possibility:", async (t) => {
-  // doctest:L171
   t.check([
     readDoclingDocument(null),
     readDoclingDocument(42),
@@ -192,7 +187,6 @@ void test("Every one of these is a real possibility:", async (t) => {
 // A document with no usable `body` tree still renders: the item arrays are read
 // flat, which loses interleaving but keeps every item.
 void test("A document with no usable body tree still renders:", async (t) => {
-  // doctest:L184
   const flat = readDoclingDocument({
     texts: [{ label: "paragraph", text: "Only item", prov: [{ page_no: 4 }] }],
   });
@@ -210,7 +204,6 @@ void test("A document with no usable body tree still renders:", async (t) => {
 
 // A cyclic group can't loop the walk:
 void test("A cyclic group can't loop the walk:", async (t) => {
-  // doctest:L194
   t.check(readDoclingDocument({
     body: { children: [{ $ref: "#/groups/0" }] },
     groups: [{ children: [{ $ref: "#/groups/0" }, { $ref: "#/texts/0" }] }],
@@ -222,10 +215,8 @@ void test("A cyclic group can't loop the walk:", async (t) => {
 //
 // `parseDoclingJson` has exactly one fatal arm — the bytes aren't JSON.
 void test("parseDoclingJson has exactly one fatal arm — the bytes aren't JSON.", async (t) => {
-  // doctest:L207
   t.check(parseDoclingJson(JSON.stringify(HANDBOOK)), { ok: true, document: readDoclingDocument(HANDBOOK) });
 
-  // doctest:L210
   t.check(parseDoclingJson("{ not json"), { ok: false, error: any(String) });
 });
 
@@ -234,7 +225,6 @@ void test("parseDoclingJson has exactly one fatal arm — the bytes aren't JSON.
 // `bbx pdf extract` writes exactly `docling.json.gz` into the attach scope; a
 // prefixed form is accepted too, for a box keeping more than one extraction.
 void test("bbx pdf extract writes exactly docling.json.gz into the attach scope; a prefi...", async (t) => {
-  // doctest:L220
   t.check(
     [
       "inbox/Handbook.attach/docling.json.gz",

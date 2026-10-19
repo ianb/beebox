@@ -7,13 +7,10 @@ import "@ianbicking/tap-check/tap";
 import { colorLevel, fmt, stripAnsi } from "../../src/lib/format.js";
 
 void test("line 9", async (t) => {
-  // doctest:L10
   t.check(stripAnsi("\u001B[32m✓ done\u001B[39m"), "✓ done");
 
-  // doctest:L13
   t.check(stripAnsi("\u001B[1m\u001B[36mHeader\u001B[39m\u001B[22m"), "Header");
 
-  // doctest:L16
   t.check(stripAnsi("no codes here"), "no codes here");
 });
 
@@ -22,7 +19,6 @@ void test("line 9", async (t) => {
 // it off even on a terminal. This test's stdout is not a terminal, so `fmt`
 // emits no escape codes.
 void test("Color is for a terminal.", async (t) => {
-  // doctest:L26
   t.check(
     [
       colorLevel({ isTTY: true, env: {} }),
@@ -34,6 +30,5 @@ void test("Color is for a terminal.", async (t) => {
     "2 0 0 0 2",
   );
 
-  // doctest:L35
   t.check(fmt.dim("  Skipped: precheck exit 75"), "  Skipped: precheck exit 75");
 });

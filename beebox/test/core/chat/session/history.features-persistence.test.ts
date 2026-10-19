@@ -35,7 +35,6 @@ void test("Reading from an unknown session", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L32
   const box = await makeTmpBox();
   t.check(await getFeaturesForSession(box.root, "sess-1"), null);
 });
@@ -57,7 +56,6 @@ void test("updateFeaturesForSession creates the entry if it doesn't exist yet.",
       t.error(error);
     }
   });
-  // doctest:L52
   const box = await makeTmpBox();
   await updateFeaturesForSession(box.root, {
     sessionId: "sess-1",
@@ -81,7 +79,6 @@ void test("Only the keys passed to updateFeaturesForSession change; existing key
       t.error(error);
     }
   });
-  // doctest:L72
   const box = await makeTmpBox();
   await updateFeaturesForSession(box.root, {
     sessionId: "sess-1",
@@ -111,7 +108,6 @@ void test("Existing sessions added via appendHistory keep their contextDir — u
       t.error(error);
     }
   });
-  // doctest:L97
   const box = await makeTmpBox();
   await appendHistory(box.root, { sessionId: "sess-1", contextDir: "_content/recipes" });
   await updateFeaturesForSession(box.root, {
@@ -150,13 +146,11 @@ void test("Creating an entry writes an engine, and this function cannot know whi
       t.error(error);
     }
   });
-  // doctest:L127
   const box = await makeTmpBox();
   await mkdir(join(box.root, "_config"), { recursive: true });
   await writeFile(join(box.root, "_config/box.json"), JSON.stringify({ agentEngine: "codex", engines: { claude: true, codex: true } }));
   clearBoxConfigCache(box.root);
 
-  // doctest:L132
   const store = new ChatReservationStore(() => Date.now());
   const coined = randomUUID();
   const reserved = await reserveChatSession({
@@ -171,12 +165,10 @@ void test("Creating an entry writes an engine, and this function cannot know whi
   // The caller resolves the engine the way every reader does and passes it in, so
   // the reservation's answer survives:
 
-  // doctest:L149
   const engine = (await resolveRecordedChatEngine(box.root, { sessionId: coined }))
     ?? (await loadAgentEngine(box.root));
   await updateFeaturesForSession(box.root, { sessionId: coined, updates: { narration: "on" }, engine });
 
-  // doctest:L153
   t.check(
     { recordedAfter: await resolveRecordedChatEngine(box.root, { sessionId: coined }), featuresKept: await getFeaturesForSession(box.root, coined) },
     { recordedAfter: "claude", featuresKept: { narration: "on" } },
@@ -202,7 +194,6 @@ void test("FeatureStore.persist is the other way a row gets created, and it is n
       t.error(error);
     }
   });
-  // doctest:L177
   const box = await makeTmpBox();
   const store = new FeatureStore({
     boxRoot: box.root,
@@ -210,7 +201,6 @@ void test("FeatureStore.persist is the other way a row gets created, and it is n
     onChange: () => {},
   });
 
-  // doctest:L184
   await store.set("narration", "on");
   t.check(
     { inMemory: store.get(), written: await getFeaturesForSession(box.root, "77777777-7777-4777-8777-777777777777") },
@@ -219,7 +209,6 @@ void test("FeatureStore.persist is the other way a row gets created, and it is n
 
   // A recorded session persists as it always did:
 
-  // doctest:L195
   const recorded = "66666666-6666-4666-8666-666666666666";
   await appendHistory(box.root, { sessionId: recorded, engine: "codex" });
   const recordedStore = new FeatureStore({
@@ -255,7 +244,6 @@ void test("A reserved chat's pre-start toggles fold into its feature seed, and t
       t.error(error);
     }
   });
-  // doctest:L229
   const box = await makeTmpBox();
   const sessionId = "55555555-5555-4555-8555-555555555555";
   const seed = { narration: "on" };
@@ -269,7 +257,6 @@ void test("A reserved chat's pre-start toggles fold into its feature seed, and t
   });
   await store.ensureLoaded();
 
-  // doctest:L242
   const started = recordSessionStart(box.root, { sessionId, seedFeatures: seed, engine: "claude", onSeedTaken: handoff.close });
   while ((await getFeaturesForSession(box.root, sessionId))?.narration !== "on") {
     await new Promise((resolve) => setImmediate(resolve));

@@ -15,7 +15,6 @@ import {
 import type { NativeShellWindow } from "../../../src/components/chat/native-post.js";
 
 void test("line 17", async (t) => {
-  // doctest:L18
   const calls: Array<{ channel: string; payload: string }> = [];
   const shell: NativeShellWindow = {
     beeboxNativePost: (channel, payload) => calls.push({ channel, payload }),
@@ -34,7 +33,6 @@ void test("line 17", async (t) => {
 });
 
 void test("line 36", async (t) => {
-  // doctest:L37
   t.check(nativeComposerCommandAcknowledgementFromDetail({ version: 1, id: "command-1", accepted: true }), {
     version: 1,
     id: "command-1",
@@ -43,7 +41,6 @@ void test("line 36", async (t) => {
 });
 
 void test("line 45", async (t) => {
-  // doctest:L46
   t.check(nativeComposerCommandAcknowledgementFromDetail({ version: 1, id: "command-1", accepted: false }), null);
 
   // ## The V2 envelope
@@ -53,14 +50,12 @@ void test("line 45", async (t) => {
   // payload, and a command that carries no payload (`scan-controls`) is expressible
   // at all — which V1 is not, since its `selection` is decoded unconditionally.
 
-  // doctest:L58
   t.check(nativeComposerCommandFromDetail({ version: 2, id: "c-2", kind: "scan-controls" }), {
     version: 2,
     id: "c-2",
     kind: "scan-controls",
   });
 
-  // doctest:L63
   t.check(
     nativeComposerCommandFromDetail({
       version: 2,
@@ -83,7 +78,6 @@ void test("line 45", async (t) => {
   // `point-at-control` names a control and an action. The payload's `id` is the
   // control's `bbx-` address; the envelope's own `id` is the command id.
 
-  // doctest:L76
   t.check(
     nativeComposerCommandFromDetail({
       version: 2,
@@ -110,7 +104,6 @@ void test("line 45", async (t) => {
   // value here is a bundle skew, and acting on the interface on a guess is the one
   // thing a pointer must not do.
 
-  // doctest:L94
   t.check(
     [
       nativeComposerCommandFromDetail({ version: 2, id: "c-5", kind: "dismiss-keyboard" }),
@@ -133,7 +126,6 @@ void test("line 45", async (t) => {
   // lets an old build's failed decode answer with a rejection rather than returning
   // silently.
 
-  // doctest:L116
   t.check(nativeComposerCommandFromDetail({ version: 2, id: "  ", kind: "scan-controls" }), null);
 
   // ## The result channel
@@ -141,7 +133,6 @@ void test("line 45", async (t) => {
   // The acknowledgement stays `accepted`/`rejected`; the result is separate, so a
   // refusal with a reason and a successful *empty* inventory cannot be confused.
 
-  // doctest:L126
   t.check(
     nativeCommandResultFromDetail({
       version: 2,
@@ -167,7 +158,6 @@ void test("line 45", async (t) => {
   // cannot act on one, so the dump must print it without a link rather than hand out
   // a pointer that would break on click.
 
-  // doctest:L145
   const scanned = nativeCommandResultFromDetail({
     version: 2,
     id: "c-2",
@@ -180,7 +170,6 @@ void test("line 45", async (t) => {
   // A successful `point-at-control` carries nothing beyond the fact that it
   // happened: the ring is already drawn on the phone.
 
-  // doctest:L160
   t.check(
     [
       nativeCommandResultFromDetail({ version: 2, id: "c-4", kind: "point-at-control", ok: true }),
@@ -198,7 +187,6 @@ void test("line 45", async (t) => {
     ],
   );
 
-  // doctest:L174
   t.check(
     nativeCommandResultFromDetail({
       version: 2,
@@ -214,7 +202,6 @@ void test("line 45", async (t) => {
   // `controls` array are all malformed — the web reads a malformed result as no
   // answer at all.
 
-  // doctest:L189
   t.check(
     [
       nativeCommandResultFromDetail({ version: 2, id: "c", kind: "scan-controls", ok: false }),

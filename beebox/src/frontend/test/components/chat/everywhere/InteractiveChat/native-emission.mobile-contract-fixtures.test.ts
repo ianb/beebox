@@ -380,7 +380,6 @@ function validateSpeechKeyword(fx: Fixture): Verdict {
 // rejects the whole payload, and an unknown version gets a version-specific
 // reason. Payloads without `version` retain the documented legacy leniency.
 void test("V2 is strict:", async (t) => {
-  // doctest:L389
   await t.checkText(runFamily("emission", validateEmission), "{\"family\":\"emission\",\"cases\":15,\"pass\":15}");
 });
 
@@ -388,7 +387,6 @@ void test("V2 is strict:", async (t) => {
 //
 // The web-to-native selection command uses one versioned, strict shape.
 void test("The web-to-native selection command uses one versioned, strict shape.", async (t) => {
-  // doctest:L398
   await t.checkText(runFamily("composer-command", validateComposerCommand), "{\"family\":\"composer-command\",\"cases\":9,\"pass\":9}");
 });
 
@@ -404,14 +402,12 @@ void test("The web-to-native selection command uses one versioned, strict shape.
 // such a build can list a control and cannot act on one, so the dump prints it
 // without a link rather than promising a pointer that would break on click.
 void test("V2 adds kind-discriminated payloads without disturbing V1, which installed iO...", async (t) => {
-  // doctest:L415
   await t.checkText(runFamily("composer-command-result", validateCommandResult), "{\"family\":\"composer-command-result\",\"cases\":7,\"pass\":7}");
 });
 
 // The acknowledgement is emitted only after the native draft mutation is
 // durable; rejection always carries a user-visible reason.
 void test("The acknowledgement is emitted only after the native draft mutation is durabl...", async (t) => {
-  // doctest:L423
   await t.checkText(runFamily("composer-command-ack", validateComposerCommandAcknowledgement), "{\"family\":\"composer-command-ack\",\"cases\":3,\"pass\":3}");
 });
 
@@ -423,7 +419,6 @@ void test("The acknowledgement is emitted only after the native draft mutation i
 // either one missing is a rejection rather than a best-effort send. `sessionId` is
 // the relaying tab's own, and is null before the tab has been assigned one.
 void test("The relay that lets the phone answer an agent's retranscription request.", async (t) => {
-  // doctest:L436
   await t.checkText(runFamily("last-audio-request", validateLastAudioRequest), "{\"family\":\"last-audio-request\",\"cases\":5,\"pass\":5}");
 });
 
@@ -435,7 +430,6 @@ void test("The relay that lets the phone answer an agent's retranscription reque
 // report a guess through, so a dropped command stays dropped rather than stopping
 // speech the sender did not ask to stop.
 void test("The native record button's barge-in.", async (t) => {
-  // doctest:L449
   await t.checkText(runFamily("speech-command", validateSpeechCommand), "{\"family\":\"speech-command\",\"cases\":4,\"pass\":4}");
 });
 
@@ -444,7 +438,6 @@ void test("The native record button's barge-in.", async (t) => {
 // The three dispositions with their per-disposition fields. Each `input` is a
 // valid `Receipt`; the native decoder projects away `deduplicated` on `sent`.
 void test("The three dispositions with their per-disposition fields.", async (t) => {
-  // doctest:L459
   await t.checkText(runFamily("receipt", validateReceipt), "{\"family\":\"receipt\",\"cases\":4,\"pass\":4}");
 });
 
@@ -453,7 +446,6 @@ void test("The three dispositions with their per-disposition fields.", async (t)
 // Toggle request `{id,action}`, result `{id,success,enabled,message}`, and the
 // unsolicited current-state payload.
 void test("Toggle request {id,action}, result {id,success,enabled,message}, and the unso...", async (t) => {
-  // doctest:L469
   await t.checkText(runFamily("location", validateLocation), "{\"family\":\"location\",\"cases\":5,\"pass\":5}");
 });
 
@@ -461,7 +453,6 @@ void test("Toggle request {id,action}, result {id,success,enabled,message}, and 
 //
 // The current session's narration flag is mirrored to native without ambiguity:
 void test("The current session's narration flag is mirrored to native without ambiguity:", async (t) => {
-  // doctest:L478
   await t.checkText(runFamily("narration-state", validateNarrationState), "{\"family\":\"narration-state\",\"cases\":2,\"pass\":2}");
 });
 
@@ -473,7 +464,6 @@ void test("The current session's narration flag is mirrored to native without am
 // (docs/plans/hq-always.md), and web still sends `enabled: true` only for native
 // builds from before that change:
 void test("Whether the box's HQ service labels speakers.", async (t) => {
-  // doctest:L491
   await t.checkText(runFamily("hq-dictation-state", validateHqDictationState), "{\"family\":\"hq-dictation-state\",\"cases\":7,\"pass\":7}");
 });
 
@@ -482,7 +472,6 @@ void test("Whether the box's HQ service labels speakers.", async (t) => {
 // `beebox://pair` parse cases: full params, `url`/`token` aliases, missing and
 // scheme-less `baseURL` rejection, a `session` param, and the DEBUG-only `authToken`.
 void test("beebox://pair parse cases:", async (t) => {
-  // doctest:L501
   await t.checkText(runFamily("pairing-url", validatePairingURL), "{\"family\":\"pairing-url\",\"cases\":7,\"pass\":7}");
 });
 
@@ -491,7 +480,6 @@ void test("beebox://pair parse cases:", async (t) => {
 // `POST /api/pairing/redeem` request body, the 200 response (with the fields the
 // client ignores), and the 401 error body.
 void test("POST /api/pairing/redeem request body, the 200 response (with the fields the...", async (t) => {
-  // doctest:L511
   await t.checkText(runFamily("redeem", validateRedeem), "{\"family\":\"redeem\",\"cases\":3,\"pass\":3}");
 });
 
@@ -503,7 +491,6 @@ void test("POST /api/pairing/redeem request body, the 200 response (with the fie
 // `test/webapp/routes/pairing.push-token.doctest.md` posts the same request
 // fixtures at the real route.
 void test("POST /api/pairing/push-token bodies run through the route's own schema:", async (t) => {
-  // doctest:L524
   await t.checkText(runFamily("push-token", validatePushToken), "{\"family\":\"push-token\",\"cases\":5,\"pass\":5}");
 });
 
@@ -512,7 +499,6 @@ void test("POST /api/pairing/push-token bodies run through the route's own schem
 // The APNs body and headers for each loudness, built by the box's own builder.
 // The iOS client reads `target`, `loudness`, and `notificationId` beside `aps`.
 void test("The APNs body and headers for each loudness, built by the box's own builder.", async (t) => {
-  // doctest:L534
   await t.checkText(runFamily("apns-payload", validateApnsPayload), "{\"family\":\"apns-payload\",\"cases\":3,\"pass\":3}");
 });
 
@@ -523,13 +509,11 @@ void test("The APNs body and headers for each loudness, built by the box's own b
 // commands, no-match cases, `atStart` gating, and `appendSendKeywordTag`
 // re-injection (including XML-escaped phrases).
 void test("The voice keyword vectors that used to be transcribed by hand into SpeechKeyw...", async (t) => {
-  // doctest:L546
   await t.checkText(runFamily("speech-keywords", validateSpeechKeyword), "{\"family\":\"speech-keywords\",\"cases\":52,\"pass\":52}");
 });
 
 // ## Conversation binding publication
 void test("Conversation binding publication", async () => {
-  // doctest:L553
   runFamily("composer-binding", (fixture) => ({
     ok: composerBindingPublicationSchema.safeParse(fixture.input).success === fixture.expectedValid,
   }));
@@ -537,7 +521,6 @@ void test("Conversation binding publication", async () => {
 });
 
 void test("Conversation binding publication (line 559)", async () => {
-  // doctest:L560
   runFamily("native-emission-v3", (fixture) => ({
     ok: parseNativeEmissionDetail(fixture.input).ok === fixture.expectedValid,
   }));

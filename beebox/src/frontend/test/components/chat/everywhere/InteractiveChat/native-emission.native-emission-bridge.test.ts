@@ -9,7 +9,6 @@ import "@ianbicking/tap-check/tap";
 import { nativeEmissionFromDetail, parseNativeEmissionDetail } from "../../../../../src/components/chat/everywhere/InteractiveChat/native-emission.js";
 
 void test("line 11", async (t) => {
-  // doctest:L12
   const typed = nativeEmissionFromDetail({
     id: "ios-typed-1",
     text: " hello ",
@@ -34,7 +33,6 @@ void test("line 11", async (t) => {
   },
   );
 
-  // doctest:L30
   const voice = nativeEmissionFromDetail({
     id: "ios-voice-1",
     text: " dictated ",
@@ -57,13 +55,11 @@ void test("line 11", async (t) => {
   },
   );
 
-  // doctest:L47
   t.check(nativeEmissionFromDetail({ text: "   ", images: [] }), null);
 
   // V2 carries the complete emission. Unlike legacy payloads, every field and item
   // is strict so files or selections cannot disappear silently:
 
-  // doctest:L55
   const complete = nativeEmissionFromDetail({
     version: 2,
     id: "ios-v2-1",
@@ -99,7 +95,6 @@ void test("line 11", async (t) => {
   // HQ provenance from native survives the bridge so chat history can render the
   // same persistent marker as a web-composer HQ send:
 
-  // doctest:L73
   const hqVoice = nativeEmissionFromDetail({
     version: 2,
     id: "ios-hq-1",
@@ -119,7 +114,6 @@ void test("line 11", async (t) => {
 
   // Unknown versions and malformed V2 items reject with a receipt-ready reason:
 
-  // doctest:L92
   const unknown = parseNativeEmissionDetail({ version: 9, id: "future-1" });
   t.check(unknown.ok ? null : { id: unknown.emissionId, reason: unknown.reason }, {
     id: "future-1",
@@ -134,7 +128,6 @@ void test("line 11", async (t) => {
 // sends it — but when present it must be a string; anything else is a
 // malformed image and rejects the payload like any other V2 shape error.
 void test("The native composer uploads each inline image's original and sends its box pa...", async (t) => {
-  // doctest:L105
   const withPath = nativeEmissionFromDetail({
     version: 2, id: "ios-img-path", origin: "typed", text: "receipt [image#1]", diarized: false,
     images: [{ id: 1, mimeType: "image/jpeg", dataBase64: "abc", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" }],
@@ -149,7 +142,6 @@ void test("The native composer uploads each inline image's original and sends it
     },
   ]);
 
-  // doctest:L113
   const badPath = parseNativeEmissionDetail({
     version: 2, id: "ios-img-bad-path", origin: "typed", text: "x", diarized: false,
     images: [{ id: 1, mimeType: "image/jpeg", dataBase64: "abc", path: 7 }],

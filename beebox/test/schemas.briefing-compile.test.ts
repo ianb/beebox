@@ -19,7 +19,6 @@ import { readFile } from "node:fs/promises";
 // `called` supplies the display name; `ref` is preserved as a `[→ …]`
 // citation, and `notes` trails after an em dash.
 void test("called supplies the display name; ref is preserved as a [→ …] citation, and n...", async (t) => {
-  // doctest:L23
   const md = compileBriefing({
     type: "briefing",
     "key-people": [
@@ -38,7 +37,6 @@ void test("called supplies the display name; ref is preserved as a [→ …] cit
 
 // ## A `ref` with no `called` derives the display name from the ref
 void test("A `ref` with no `called` derives the display name from the ref", async (t) => {
-  // doctest:L38
   t.check(compileBriefing({ type: "briefing", "key-people": [{ ref: "people/Dana_Lee" }], body: "" }), `## Box Briefing
 
 **Key Person:** **Dana Lee** [→ people/Dana_Lee]
@@ -47,7 +45,6 @@ void test("A `ref` with no `called` derives the display name from the ref", asyn
 
 // ## `properties` compile to Property lines, honoring `address-uncertain`
 void test("`properties` compile to Property lines, honoring `address-uncertain`", async (t) => {
-  // doctest:L45
   const md = compileBriefing({
     type: "briefing",
     properties: [{ name: "The lake house", address: "12 Shore Rd", "address-uncertain": true, notes: "In probate." }],
@@ -61,7 +58,6 @@ void test("`properties` compile to Property lines, honoring `address-uncertain`"
 
 // ## Body and records combine: body first, then records
 void test("Body and records combine: body first, then records", async (t) => {
-  // doctest:L57
   const md = compileBriefing({
     type: "briefing",
     purpose: "Learn AI together.",
@@ -83,7 +79,6 @@ void test("Body and records combine: body first, then records", async (t) => {
 // currently suggesting on every turn (which is what lets it curate them). The
 // caller passes them in.
 void test("Openers live on the root landmark (navigation.openers), not on the briefing,...", async (t) => {
-  // doctest:L75
   const md = compileBriefing({ type: "briefing", body: "" },
     { openers: ["Let me tell you what this box is for.", "What can you do?"] });
   t.check(md, `## Box Briefing
@@ -97,7 +92,6 @@ void test("Openers live on the root landmark (navigation.openers), not on the br
 // Blank openers are dropped and each is trimmed, so a stray empty entry never
 // emits a bare `**Opener:**` line.
 void test("Blank openers are dropped and each is trimmed, so a stray empty entry never e...", async (t) => {
-  // doctest:L85
   t.check(compileBriefing({ type: "briefing", body: "" }, { openers: ["  What can you do?  ", "", "   "] }), `## Box Briefing
 
 **Opener:** What can you do?
@@ -107,7 +101,6 @@ void test("Blank openers are dropped and each is trimmed, so a stray empty entry
 // `compileBriefings` reads them from the root landmark under `_content/`, so
 // the compiled `_content/briefing.md` names the openers the root chat shows.
 void test("compileBriefings reads them from the root landmark under content/, so the com...", async (t) => {
-  // doctest:L93
   const box = await makeTmpBox();
   await box.write("_content/briefing.briefing.card", "---\ntype: briefing\npurpose: Lend things.\n---\n");
   await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: Lending\n  openers:\n    - Who has what right now?\n---\n");
@@ -122,14 +115,12 @@ void test("compileBriefings reads them from the root landmark under content/, so
 
 // ## An empty briefing is just the header
 void test("An empty briefing is just the header", async (t) => {
-  // doctest:L104
   t.check(compileBriefing({ type: "briefing", body: "" }), `## Box Briefing
 `);
 });
 
 // ## A directory label changes the header
 void test("A directory label changes the header", async (t) => {
-  // doctest:L111
   t.check(compileBriefing({ type: "briefing", body: "" }, { directoryLabel: "_bookkeeping/archive/financial" }), `## Briefing: _bookkeeping/archive/financial
 `);
 });
@@ -141,7 +132,6 @@ void test("A directory label changes the header", async (t) => {
 // stock onboarding openers, quoting them; the schemas cannot import each other,
 // so this check keeps the quoted text equal to `STOCK_ROOT_OPENERS`.
 void test("When the agent records the box's purpose it edits the briefing, and only the...", async (t) => {
-  // doctest:L123
   const { BriefingSchema } = await import("../src/schemas/briefing.js");
   const { STOCK_ROOT_OPENERS } = await import("../src/schemas/landmark.js");
   t.check(STOCK_ROOT_OPENERS.filter((opener) => !(BriefingSchema.instructions ?? "").includes(`"${opener}"`)), []);

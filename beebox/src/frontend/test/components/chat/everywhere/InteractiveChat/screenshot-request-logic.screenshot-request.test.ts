@@ -30,13 +30,10 @@ const req = (requestId: string, extra?: Partial<ScreenshotRequest>): ScreenshotR
 // session. An idle `?session=new` tab (`viewSession === null`) must NOT answer an
 // established session's request.
 void test("Unlike the forSession chat helper (null on either side = wildcard), a capture...", async (t) => {
-  // doctest:L34
   t.check(matchesRequestSession("s1", "s1"), true);
 
-  // doctest:L37
   t.check(matchesRequestSession("s1", "s2"), false);
 
-  // doctest:L40
   t.check(matchesRequestSession("s1", null), false);
 });
 
@@ -46,13 +43,10 @@ void test("Unlike the forSession chat helper (null on either side = wildcard), a
 // deadline is treated as not-expired rather than silently discarding the request
 // on a bad hint.
 void test("A request past its ISO deadline is dropped; before it, kept.", async (t) => {
-  // doctest:L51
   t.check(isRequestExpired("2000-01-01T00:00:00Z", Date.parse("2020-01-01T00:00:00Z")), true);
 
-  // doctest:L54
   t.check(isRequestExpired("2999-01-01T00:00:00Z", Date.parse("2020-01-01T00:00:00Z")), false);
 
-  // doctest:L57
   t.check(isRequestExpired("not-a-date", Date.now()), false);
 });
 
@@ -62,7 +56,6 @@ void test("A request past its ISO deadline is dropped; before it, kept.", async 
 // client the plan's named `unsupported-client` failure; any other error carries
 // its own message. Every degraded path is named — never a silent blank.
 void test("An image becomes an upload; a dismissed picker a declined; an unsupported cli...", async (t) => {
-  // doctest:L68
   const image = captureOutcomeToAnswer({ kind: "image", blob: new Blob([]), viewport: { cssWidth: 800, cssHeight: 600, dpr: 2 } });
   assert.ok(image.kind === "upload");
   t.check({ kind: image.kind, viewport: image.viewport }, {
@@ -74,18 +67,15 @@ void test("An image becomes an upload; a dismissed picker a declined; an unsuppo
     },
   });
 
-  // doctest:L73
   t.check(captureOutcomeToAnswer({ kind: "declined" }), {
     kind: "declined",
   });
 
-  // doctest:L76
   t.check(captureOutcomeToAnswer({ kind: "unsupported" }), {
     kind: "failed",
     reason: "unsupported-client",
   });
 
-  // doctest:L79
   t.check(captureOutcomeToAnswer({ kind: "error", message: "canvas 2D context unavailable" }), {
     kind: "failed",
     reason: "canvas 2D context unavailable",
@@ -103,29 +93,24 @@ void test("An image becomes an upload; a dismissed picker a declined; an unsuppo
 // thrown fetch means the channel is down — nothing can be posted, so toast locally
 // rather than falsely claim it was shared.
 void test("The PNG POST to the answer route settles four ways (finding 2).", async (t) => {
-  // doctest:L95
   t.check(classifyUploadResponse({ kind: "ok" }), {
     kind: "indicator",
   });
 
-  // doctest:L98
   t.check(classifyUploadResponse({ kind: "http", status: 404, errorField: null }), {
     kind: "quiet",
   });
 
-  // doctest:L101
   t.check(classifyUploadResponse({ kind: "http", status: 400, errorField: "bad-viewport" }), {
     kind: "failed",
     reason: "bad-viewport",
   });
 
-  // doctest:L104
   t.check(classifyUploadResponse({ kind: "http", status: 502, errorField: null }), {
     kind: "failed",
     reason: "upload-rejected",
   });
 
-  // doctest:L107
   t.check(classifyUploadResponse({ kind: "network" }), {
     kind: "toast",
   });
@@ -140,19 +125,16 @@ void test("The PNG POST to the answer route settles four ways (finding 2).", asy
 // Two requests enqueue in order; the head is the active popup. Resolving the head
 // pops it so the next promotes — never two popups stacked.
 void test("The object-URL revoke timing (thumbnail freed on the non-indicator paths and...", async (t) => {
-  // doctest:L121
   let state: ScreenshotState = { queue: [], indicators: [] };
   state = screenshotReducer(state, { type: "enqueue", request: req("a") });
   state = screenshotReducer(state, { type: "enqueue", request: req("b") });
   t.check(state, { queue: [{ requestId: "a", session: "s1", expiresAt: "2999-01-01T00:00:00Z" }, { requestId: "b", session: "s1", expiresAt: "2999-01-01T00:00:00Z" }], indicators: [] });
 
-  // doctest:L127
   state = screenshotReducer(state, { type: "resolveHead", indicator: null });
   t.check(state, { queue: [{ requestId: "b", session: "s1", expiresAt: "2999-01-01T00:00:00Z" }], indicators: [] });
 
   // A redelivered request (same `requestId`) never stacks a second popup.
 
-  // doctest:L135
   state = screenshotReducer(state, { type: "enqueue", request: req("b") });
   t.check(state, { queue: [{ requestId: "b", session: "s1", expiresAt: "2999-01-01T00:00:00Z" }], indicators: [] });
 });
@@ -163,16 +145,13 @@ void test("The object-URL revoke timing (thumbnail freed on the non-indicator pa
 // the agent" row; the relay path adds one without ever queuing a popup; dismiss
 // ages it out.
 void test("resolveHead with an indicator both pops the queue and appends the \"shared wit...", async (t) => {
-  // doctest:L147
   let s: ScreenshotState = { queue: [req("x")], indicators: [] };
   s = screenshotReducer(s, { type: "resolveHead", indicator: { requestId: "x", thumbnailUrl: "blob:x" } });
   t.check(s, { queue: [], indicators: [{ requestId: "x", thumbnailUrl: "blob:x" }] });
 
-  // doctest:L152
   s = screenshotReducer(s, { type: "addIndicator", indicator: { requestId: "y", thumbnailUrl: "blob:y" } });
   t.check(s, { queue: [], indicators: [{ requestId: "x", thumbnailUrl: "blob:x" }, { requestId: "y", thumbnailUrl: "blob:y" }] });
 
-  // doctest:L156
   s = screenshotReducer(s, { type: "dismissIndicator", requestId: "x" });
   t.check(s, { queue: [], indicators: [{ requestId: "y", thumbnailUrl: "blob:y" }] });
 });

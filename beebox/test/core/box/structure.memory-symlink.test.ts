@@ -34,7 +34,6 @@ void test("A box reached through a path containing  and . (a symlink beside the 
       t.error(error);
     }
   });
-  // doctest:L26
   const box = await makeTmpBox();
   const previousProjects = process.env["BBX_CLAUDE_PROJECTS_DIR"];
   const projects = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-projects-"));
@@ -42,7 +41,6 @@ void test("A box reached through a path containing  and . (a symlink beside the 
   const oddRoot = path.join(path.dirname(box.root), `odd_name.v2-${path.basename(box.root)}`);
   await fs.symlink(box.root, oddRoot);
 
-  // doctest:L33
   const linked = await symlinkClaudeMemory(oddRoot);
   const entries = await fs.readdir(projects);
   t.check(linked, true);

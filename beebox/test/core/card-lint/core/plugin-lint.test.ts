@@ -27,7 +27,6 @@ const card = { path: box.path("_content/store/Bonds.concept-map.card"), type: "c
 
 // ## A throwing hook is one warning, not an exception
 void test("A throwing hook is one warning, not an exception", async (t) => {
-  // doctest:L31
   const broken = fixturePlugin(async () => { throw new Error("concept map index unreadable"); });
   t.check(await pluginLintIssues({ ...card, plugins: [broken] }), [
     {
@@ -47,7 +46,6 @@ void test("A hook that returns normally passes its issues through unchanged:", a
       t.error(error);
     }
   });
-  // doctest:L43
   const quiet = fixturePlugin(async () => [{ type: "schema", severity: "warning", message: "fixture says hello" }]);
   t.check((await pluginLintIssues({ ...card, plugins: [quiet] })).map((issue) => issue.message), [
     "fixture says hello",

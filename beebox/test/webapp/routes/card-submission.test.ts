@@ -78,7 +78,6 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L75
   const validBody = buildMultipart([
     { name: "card", value: "_content/tasks/Task.browser-task.card" },
     {
@@ -91,7 +90,6 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
     { name: "photo.png", filename: "photo.png", contentType: "image/png", value: PNG_BYTES },
   ]);
 
-  // doctest:L87
   const validRes = await server.request({
     method: "POST",
     url: "/api/cards/submit",
@@ -99,7 +97,6 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
     headers: MULTIPART_HEADERS,
   });
 
-  // doctest:L94
   // The batch name is a timestamp plus random hex.
   const batch = capture(any(String).matches(/^\d{8}-\d{6}-[\da-f]{4}$/));
   t.check(validRes, {
@@ -112,19 +109,16 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
     },
   });
 
-  // doctest:L99
   const batchDir = `_content/tasks/Task.attach/inbox/${batch.value}`;
   t.check((await readdir(join(server.boxRoot, batchDir))).toSorted(), ["photo.png", "records.json"]);
 
   // ## A `records` part that isn't valid JSON is refused
 
-  // doctest:L107
   const badJsonBody = buildMultipart([
     { name: "card", value: "_content/tasks/Task.browser-task.card" },
     { name: "records", value: "{ not json" },
   ]);
 
-  // doctest:L112
   const badJsonRes = await server.request({
     method: "POST",
     url: "/api/cards/submit",
@@ -132,12 +126,10 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
     headers: MULTIPART_HEADERS,
   });
 
-  // doctest:L119
   t.check(badJsonRes, { statusCode: 400, body: { ok: false, message: "records must be valid JSON" } });
 
   // ## A file part whose name is a path, not a bare filename, is refused before anything is written
 
-  // doctest:L126
   const pathyBody = buildMultipart([
     { name: "card", value: "_content/tasks/Task.browser-task.card" },
     {
@@ -150,7 +142,6 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
     { name: "evil", filename: "../escape.png", contentType: "image/png", value: PNG_BYTES },
   ]);
 
-  // doctest:L138
   const pathyRes = await server.request({
     method: "POST",
     url: "/api/cards/submit",
@@ -158,7 +149,6 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
     headers: MULTIPART_HEADERS,
   });
 
-  // doctest:L145
   t.check(pathyRes, {
     statusCode: 400,
     body: {
@@ -171,12 +161,10 @@ void test("A valid multipart batch is accepted and lands on disk", async (t) => 
   // Only the one accepted batch from the first case exists under the inbox — the
   // rejected requests never landed a batch:
 
-  // doctest:L153
   t.check(await readdir(join(server.boxRoot, "_content/tasks/Task.attach/inbox")), [batch.value]);
 
   // ## Two file parts with the same name are refused
 
-  // doctest:L160
   const dupBody = buildMultipart([
     { name: "card", value: "_content/tasks/Task.browser-task.card" },
     { name: "records", filename: "records.json", contentType: "application/json", value: JSON.stringify({ coverage: { scanned: 1, stoppedAt: "x", reason: "end-of-feed" }, records: [] }) },

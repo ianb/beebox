@@ -11,7 +11,6 @@ import { jitteredBackoff } from "../../src/shared/backoff.js";
 
 // ## The ceiling grows exponentially with attempt, then clamps at the cap
 void test("The ceiling grows exponentially with attempt, then clamps at the cap", async (t) => {
-  // doctest:L15
   const opts = { baseMs: 1000, capMs: 8000 };
   // attempt 1: ceiling = 1000, attempt 2: 2000, attempt 3: 4000, attempt 4: 8000 (== cap),
   // attempt 5 would be 16000 but clamps to the 8000 cap.
@@ -29,7 +28,6 @@ void test("The ceiling grows exponentially with attempt, then clamps at the cap"
 
   // Every draw is non-negative:
 
-  // doctest:L32
   const anyNegative = Array.from({ length: 200 }, () => jitteredBackoff(3, opts)).some((v) => v < 0);
   t.check(anyNegative, false);
 });

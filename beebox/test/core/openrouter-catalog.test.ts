@@ -24,7 +24,6 @@ const serve = (body: string, status?: number) => async (url: string, init?: Requ
 // A `:variant` suffix is a routing choice on the same model, so it looks up the
 // base id. The catalog call carries no key.
 void test("A :variant suffix is a routing choice on the same model, so it looks up the b...", async (t) => {
-  // doctest:L28
   clearOpenRouterCatalogCache();
   t.check(await lookupOpenRouterModel("qwen/qwen3-coder:exacto", { fetch: await catalog(), now: 0 }), {
     ok: true,
@@ -41,13 +40,11 @@ void test("A :variant suffix is a routing choice on the same model, so it looks 
     },
   });
 
-  // doctest:L32
   t.check(calls.at(-1), "https://openrouter.ai/api/v1/models auth=none");
 });
 
 // A model with no cache pricing reports null there, not zero.
 void test("A model with no cache pricing reports null there, not zero.", async (t) => {
-  // doctest:L39
   t.check((await lookupOpenRouterModel("moonshotai/kimi-k2-0905", { fetch: await catalog(), now: 0 })), {
     ok: true,
     found: true,
@@ -68,14 +65,12 @@ void test("A model with no cache pricing reports null there, not zero.", async (
 //
 // Admin refuses it; the catalog only reports.
 void test("Admin refuses it; the catalog only reports.", async (t) => {
-  // doctest:L48
   const noTools = await lookupOpenRouterModel("inference-net/schematron-v2-turbo", { fetch: await catalog(), now: 0 });
   t.check(noTools.ok && noTools.found && noTools.model.supportsTools, false);
 });
 
 // ## An unknown id is "not found", not an error
 void test("An unknown id is \"not found\", not an error", async (t) => {
-  // doctest:L56
   t.check(await lookupOpenRouterModel("deepseek/not-a-model", { fetch: await catalog(), now: 0 }), {
     ok: true,
     found: false,
@@ -87,7 +82,6 @@ void test("An unknown id is \"not found\", not an error", async (t) => {
 // A second lookup inside the hour reads the fetched catalog. An hour later it
 // fetches again.
 void test("A second lookup inside the hour reads the fetched catalog.", async (t) => {
-  // doctest:L66
   clearOpenRouterCatalogCache();
   const fetch = await catalog();
   await lookupOpenRouterModel("qwen/qwen3-coder", { fetch, now: 0 });
@@ -95,21 +89,18 @@ void test("A second lookup inside the hour reads the fetched catalog.", async (t
   await lookupOpenRouterModel("qwen/qwen3-coder", { fetch, now: 59 * 60 * 1000 });
   t.check(calls.length - before, 0);
 
-  // doctest:L74
   await lookupOpenRouterModel("qwen/qwen3-coder", { fetch, now: 61 * 60 * 1000 });
   t.check(calls.length - before, 1);
 });
 
 // ## A failed catalog read is an error the add form shows
 void test("A failed catalog read is an error the add form shows", async (t) => {
-  // doctest:L82
   clearOpenRouterCatalogCache();
   t.check(await lookupOpenRouterModel("qwen/qwen3-coder", { fetch: serve("{}", 503), now: 0 }), {
     ok: false,
     error: "https://openrouter.ai/api/v1/models answered HTTP 503",
   });
 
-  // doctest:L86
   clearOpenRouterCatalogCache();
   t.check((await lookupOpenRouterModel("qwen/qwen3-coder", { fetch: serve("{\"data\":\"nope\"}"), now: 0 })).ok, false);
 });
@@ -119,7 +110,6 @@ void test("A failed catalog read is an error the add form shows", async (t) => {
 // The key's own spend, across every use of the key. The key goes as a bearer
 // token.
 void test("The key's own spend, across every use of the key.", async (t) => {
-  // doctest:L97
   t.check(await readOpenRouterKeyUsage("placeholder-key", { fetch: serve(await fixture("key.json")) }), {
     ok: true,
     usage: {
@@ -131,10 +121,8 @@ void test("The key's own spend, across every use of the key.", async (t) => {
     },
   });
 
-  // doctest:L100
   t.check(calls.at(-1), "https://openrouter.ai/api/v1/key auth=Bearer placeholder-key");
 
-  // doctest:L103
   t.check(await readOpenRouterKeyUsage("bad", { fetch: serve("{}", 401) }), {
     ok: false,
     error: "https://openrouter.ai/api/v1/key answered HTTP 401",

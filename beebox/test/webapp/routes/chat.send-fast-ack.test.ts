@@ -67,17 +67,14 @@ void test("The response arrives while the engine start is still parked", async (
       t.error(error);
     }
   });
-  // doctest:L63
   const backend = createFakeChatBackend();
   const ctx = await makeTestServer({ chatBackend: backend });
 
-  // doctest:L66
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L71
   const gate = openSendGate();
   const res = await ctx.request({
     method: "POST",
@@ -85,7 +82,6 @@ void test("The response arrives while the engine start is still parked", async (
     payload: { session: "new", message: "how cold is it out", messageId: "ack-1" },
   });
 
-  // doctest:L78
   t.check(
     // The engine start is still parked, so the backend has not been asked for a
     // run yet — and the client already has its turn.
@@ -96,12 +92,10 @@ void test("The response arrives while the engine start is still parked", async (
   // Releasing the gate lets the run start against the turn the client is already
   // subscribed to — no frame is lost, because the buffer was wired before the ack.
 
-  // doctest:L88
   gate.release();
   await gate.completed;
   const started = backend.runs.length > 0;
 
-  // doctest:L92
   t.check(`started=${started} | errored=${getTurnBuffer(String(bodyField(res.body, "turnId")))?.errored}`, "started=true | errored=null");
 });
 
@@ -125,11 +119,9 @@ void test("Idle sends include ones with no session yet (session:", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L112
   const backend = createFakeChatBackend();
   const ctx = await makeTestServer({ chatBackend: backend });
 
-  // doctest:L115
   const recorded: string[] = [];
   const sessionIds: unknown[] = [];
   ctx.eventBus.subscribe({
@@ -140,7 +132,6 @@ void test("Idle sends include ones with no session yet (session:", async (t) => 
     },
   });
 
-  // doctest:L125
   const gate = openSendGate();
   const res = await ctx.request({
     method: "POST",
@@ -149,6 +140,5 @@ void test("Idle sends include ones with no session yet (session:", async (t) => 
   });
   const live = getTurnBuffer(String(bodyField(res.body, "turnId")));
 
-  // doctest:L133
   t.check(`${res.statusCode} | turn=${typeof bodyField(res.body, "turnId")} | recorded=${recorded.length} | sessionId=${JSON.stringify(sessionIds[0])} | runs=${backend.runs.length} | live=${live !== undefined && !live.complete}`, "200 | turn=string | recorded=1 | sessionId=null | runs=0 | live=true");
 });

@@ -30,7 +30,6 @@ const code = `\`<b>{% x %}</b>\` inline\n\n${fence}liquid\n{% if user %}<b>hi</b
 // openers outside code. Headings, lists, links, autolinks and emphasis pass
 // through:
 void test("neutralizeIngestedMarkdown backslash-escapes raw HTML and Markdoc tag openers...", async (t) => {
-  // doctest:L33
   t.check(neutralizeIngestedMarkdown(clipped).split("\n"), [
     "# Title",
     "",
@@ -38,7 +37,6 @@ void test("neutralizeIngestedMarkdown backslash-escapes raw HTML and Markdoc tag
     "See <https://example.com> and [docs](https://example.com/d).",
   ]);
 
-  // doctest:L36
   t.check(render(neutralizeIngestedMarkdown(clipped)), "<article><h1>Title</h1><p>Use &lt;details&gt; and {% todo %}x{% /todo %} &lt;!-- hidden --&gt; See <a href=\"https://example.com\">https://example.com</a> and <a href=\"https://example.com/d\">docs</a>.</p></article>");
 });
 
@@ -46,7 +44,6 @@ void test("neutralizeIngestedMarkdown backslash-escapes raw HTML and Markdoc tag
 // tags inside fenced code, though, so a fence holding `{%` (a Liquid or Jinja
 // template on a clipped page) gets `{% process=false %}`:
 void test("Code is already literal, so code spans pass through unchanged.", async (t) => {
-  // doctest:L45
   t.check(neutralizeIngestedMarkdown(code).split("\n"), [
     "`<b>{% x %}</b>` inline",
     "",
@@ -57,14 +54,12 @@ void test("Code is already literal, so code spans pass through unchanged.", asyn
     "after",
   ]);
 
-  // doctest:L48
   await t.checkText(render(neutralizeIngestedMarkdown(code)), `<article><p><code>&lt;b&gt;{% x %}&lt;/b&gt;</code> inline</p><pre data-language="liquid">{% if user %}&lt;b&gt;hi&lt;/b&gt;{% endif %}
 </pre><p>after</p></article>`);
 });
 
 // Outside text cannot turn processing back on with its own fence annotation:
 void test("Outside text cannot turn processing back on with its own fence annotation:", async (t) => {
-  // doctest:L56
   const sneaky = `${fence}liquid {% process=true %}\n{% todo %}call now{% /todo %}\n${fence}`;
   await t.checkText(render(neutralizeIngestedMarkdown(sneaky)), `<article><pre data-language="liquid">{% todo %}call now{% /todo %}
 </pre></article>`);
@@ -72,7 +67,6 @@ void test("Outside text cannot turn processing back on with its own fence annota
 
 // Escaping twice changes nothing:
 void test("Escaping twice changes nothing:", async (t) => {
-  // doctest:L65
   const once = neutralizeIngestedMarkdown(clipped + "\n\n" + code);
   t.check(neutralizeIngestedMarkdown(once), once);
 });
@@ -84,7 +78,6 @@ void test("Escaping twice changes nothing:", async (t) => {
 // value cannot add a link, an image, HTML or a tag. Line breaks become hard breaks indented to stay in the
 // enclosing list item:
 void test("Some outside values are plain text, not Markdown:", async (t) => {
-  // doctest:L77
   const value = escapeMarkdownText("[verify](/_content/finance) <b>now</b>\n# not a heading", { indent: "  " });
   t.check(render(`- **message:** ${value}`), "<article><ul><li><strong>message:</strong> [verify](/_content/finance) &lt;b&gt;now&lt;/b&gt;<br># not a heading</li></ul></article>");
 });

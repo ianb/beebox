@@ -13,7 +13,6 @@ import { applySelections } from "../../../src/lib/selection/serialize.js";
 
 // ## Inline replacement at the token (typed message)
 void test("Inline replacement at the token (typed message)", async (t) => {
-  // doctest:L17
   t.check(
     applySelections("Compare [selection1] with the intro", { selections: [
       { id: 1, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body; heading: Proofing (#proofing)" },
@@ -24,7 +23,6 @@ void test("Inline replacement at the token (typed message)", async (t) => {
 
 // ## No token in the body — appended (spoken message)
 void test("No token in the body — appended (spoken message)", async (t) => {
-  // doctest:L27
   t.check(
     applySelections("look at what I selected", { selections: [
       { id: 1, ref: "/_content/notes/Bread.doc.card", text: "let it rise", position: "body" },
@@ -36,7 +34,6 @@ void test("No token in the body — appended (spoken message)", async (t) => {
 
 // ## Mixed: one referenced inline, one orphan appended; empty position omits the attribute
 void test("Mixed: one referenced inline, one orphan appended; empty position omits the attribute", async (t) => {
-  // doctest:L37
   t.check(
     applySelections("see [selection1]", { selections: [
       { id: 1, ref: "/a.card", text: "alpha", position: "body" },
@@ -49,7 +46,6 @@ void test("Mixed: one referenced inline, one orphan appended; empty position omi
 
 // ## XML-escaping of ref, position, and text
 void test("XML-escaping of ref, position, and text", async (t) => {
-  // doctest:L48
   t.check(
     applySelections("[selection1]", { selections: [
       { id: 1, ref: "/a&b.card", text: "x < y & z", position: "p\"q" },
@@ -60,7 +56,6 @@ void test("XML-escaping of ref, position, and text", async (t) => {
 
 // ## Unknown token is left as literal text
 void test("Unknown token is left as literal text", async (t) => {
-  // doctest:L58
   t.check(
     applySelections("[selection1] and [selection9]", { selections: [
       { id: 1, ref: "/a.card", text: "alpha", position: "" },
@@ -71,7 +66,6 @@ void test("Unknown token is left as literal text", async (t) => {
 
 // ## Voice anchor: inserted after the anchored phrase (not appended)
 void test("Voice anchor: inserted after the anchored phrase (not appended)", async (t) => {
-  // doctest:L68
   t.check(
     applySelections("let me look at this part and continue", { selections: [
       { id: 1, ref: "/a.card", text: "X", position: "", anchor: "look at this part" },
@@ -82,7 +76,6 @@ void test("Voice anchor: inserted after the anchored phrase (not appended)", asy
 
 // ## Voice anchor: case/punctuation-insensitive (survives the HQ pass)
 void test("Voice anchor: case/punctuation-insensitive (survives the HQ pass)", async (t) => {
-  // doctest:L78
   t.check(
     applySelections("So, what does THIS part mean?", { selections: [
       { id: 1, ref: "/a.card", text: "X", position: "", anchor: "this part" },
@@ -93,7 +86,6 @@ void test("Voice anchor: case/punctuation-insensitive (survives the HQ pass)", a
 
 // ## Voice anchor: empty anchor places the selection at the start
 void test("Voice anchor: empty anchor places the selection at the start", async (t) => {
-  // doctest:L88
   t.check(
     applySelections("the rest of it", { selections: [
       { id: 1, ref: "/a.card", text: "X", position: "", anchor: "" },
@@ -104,7 +96,6 @@ void test("Voice anchor: empty anchor places the selection at the start", async 
 
 // ## Voice anchor: phrase not found, no timing → falls back to appending
 void test("Voice anchor: phrase not found, no timing → falls back to appending", async (t) => {
-  // doctest:L98
   t.check(
     applySelections("hello world", { selections: [
       { id: 1, ref: "/a.card", text: "X", position: "", anchor: "goodbye moon" },
@@ -119,7 +110,6 @@ void test("Voice anchor: phrase not found, no timing → falls back to appending
 // Grabbed 4 words into an 8-word utterance → ~50% through; inserted after the
 // 4th body word and tagged `placement`, rather than dumped at the end.
 void test("Grabbed 4 words into an 8-word utterance → ~50% through; inserted after the 4...", async (t) => {
-  // doctest:L111
   t.check(
     applySelections("one two three four five six seven eight", { selections: [
       { id: 1, ref: "/a.card", text: "X", position: "", anchor: "no such phrase", spokenWords: 4 },
@@ -133,7 +123,6 @@ void test("Grabbed 4 words into an 8-word utterance → ~50% through; inserted a
 // `beta` anchors precisely; the second lost its anchor but was grabbed 4/5 of
 // the way through, so it lands after `delta` — keeping the two in order.
 void test("beta anchors precisely; the second lost its anchor but was grabbed 4/5 of the...", async (t) => {
-  // doctest:L124
   t.check(
     applySelections("alpha beta gamma delta epsilon", { selections: [
       { id: 1, ref: "/a.card", text: "A", position: "", anchor: "beta" },
@@ -148,7 +137,6 @@ void test("beta anchors precisely; the second lost its anchor but was grabbed 4/
 // Text quoted from the chat itself has no file behind it; the tag drops `ref`
 // and `pos` says where it came from.
 void test("Text quoted from the chat itself has no file behind it; the tag drops ref and...", async (t) => {
-  // doctest:L138
   t.check(
     applySelections("Why [selection1]?", { selections: [
       { id: 1, ref: null, text: "Proof it overnight", position: "chat transcript; assistant message" },

@@ -24,7 +24,6 @@ function visible(text: string) {
 
 // A JSON line whose string holds U+2028 and U+2029 stays one line and parses:
 void test("A JSON line whose string holds U+2028 and U+2029 stays one line and parses:", async (t) => {
-  // doctest:L28
   const file = [
     JSON.stringify({ text: "Load the kiln\u2028Fire by noon\u2029Unload" }),
     JSON.stringify({ text: "next" }),
@@ -38,7 +37,6 @@ void test("A JSON line whose string holds U+2028 and U+2029 stays one line and p
   // LF one, an empty line between newlines is kept, and a last line with no trailing
   // newline still arrives:
 
-  // doctest:L41
   t.check(await lines(["a\r\n\nb"]), [
     "a",
     "",
@@ -48,7 +46,6 @@ void test("A JSON line whose string holds U+2028 and U+2029 stays one line and p
   // Chunk boundaries do not matter, including one that falls inside a multi-byte
   // character:
 
-  // doctest:L49
   const bytes = Buffer.from("é\u2028x\nsecond\n");
   t.check((await lines([bytes.subarray(0, 1), bytes.subarray(1, 4), bytes.subarray(4)])).map(visible), [
     "é<LS>x",

@@ -30,7 +30,6 @@ function reaches(viewer: { isOwner: boolean; email: string | null }): string {
 
 // ## The owner reaches every device on the box
 void test("The owner reaches every device on the box", async (t) => {
-  // doctest:L34
   t.check(reaches(owner), "priya's phone, tomas's phone, an orphan");
 
   // ## A member reaches their own device and nobody else's
@@ -38,7 +37,6 @@ void test("The owner reaches every device on the box", async (t) => {
   // This is the point of the change: a member who loses a phone can unpair it
   // themselves instead of asking the owner to do it for them.
 
-  // doctest:L44
   t.check(reaches(member), "tomas's phone");
 
   // ## A machine caller is not a person, so it reaches nothing
@@ -52,6 +50,5 @@ void test("The owner reaches every device on the box", async (t) => {
   // a caller with no email would hand every such device to exactly this caller, so
   // the rule requires a real address on both sides.
 
-  // doctest:L60
   t.check(reaches(machine), "nothing");
 });

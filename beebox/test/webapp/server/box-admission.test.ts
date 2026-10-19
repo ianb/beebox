@@ -21,7 +21,6 @@ void test("line 14", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L15
   const box = await makeTmpBox({ git: true });
   const server = Fastify();
   registerBoxAdmission(server, [{ slug: "test", boxRoot: box.root }]);
@@ -51,7 +50,6 @@ void test("line 14", async (t) => {
     oauth: 503,
   });
 
-  // doctest:L39
   // The refusal says what holds the box and how long, so a client can wait it out.
   const refused = await server.inject({ method: "POST", url: "/test/write" });
   t.check({ retryAfter: refused.headers["retry-after"], error: refused.json().error }, {
@@ -59,14 +57,12 @@ void test("line 14", async (t) => {
     error: "Box is closed for fixture; expected to reopen within 1 min",
   });
 
-  // doctest:L44
   t.check(
     // Global identity remains available to inspect a closed box.
     (await server.inject({ method: "POST", url: "/auth/login" })).statusCode,
     200,
   );
 
-  // doctest:L48
   const caller = router({ write: publicProcedure.mutation(() => "ok") }).createCaller(trpcContext({
     boxRoot: box.root,
     isAuthenticatedOwner: true,
@@ -78,15 +74,12 @@ void test("line 14", async (t) => {
     "SERVICE_UNAVAILABLE",
   );
 
-  // doctest:L57
   finish.resolve();
   t.check((await pending).statusCode, 200);
 
-  // doctest:L61
   await maintenance.drain();
   t.check(boxRequestsAreIdle(box.root), true);
 
-  // doctest:L65
   await maintenance.complete();
 });
 
@@ -106,7 +99,6 @@ void test("An admitted request that never reaches a reply — the client dropped
       t.error(error);
     }
   });
-  // doctest:L83
   const abortBox = await makeTmpBox({ git: true });
   const abortServer = Fastify();
   registerBoxAdmission(abortServer, [{ slug: "test", boxRoot: abortBox.root }]);
@@ -118,7 +110,6 @@ void test("An admitted request that never reaches a reply — the client dropped
   const until = async (check: () => boolean) => { for (let i = 0; i < 100 && !check(); i += 1) await new Promise((resolve) => setTimeout(resolve, 20)); return check(); };
   t.check(await until(() => !boxRequestsAreIdle(abortBox.root)), true);
 
-  // doctest:L95
   socket.destroy();
   t.check(await until(() => boxRequestsAreIdle(abortBox.root)), true);
 });

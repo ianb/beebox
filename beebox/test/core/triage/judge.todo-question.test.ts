@@ -26,7 +26,6 @@ void test("line 20", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L21
   const box = await makeTmpBox();
   await box.write("_content/bills/Bills.landmark.card", `---
 destinations:
@@ -46,10 +45,8 @@ destinations:
   const records = snapshot.destinations.find((destination) => destination.name === "records");
   t.check(bills?.todoQuestion, "Does this bill still need payment or investigation?");
 
-  // doctest:L41
   t.check(records?.todoQuestion, undefined);
 
-  // doctest:L44
   invariant(bills && records, "fixture destinations compile");
   invariant(bills.todoQuestion, "bills destination has a todo question");
   const compiled = await compileTriageInstructions(box.root);
@@ -57,21 +54,16 @@ destinations:
   t.check({ todoQuestion: category?.todoQuestion, landmarkRef: category?.landmarkRef }, { todoQuestion: bills.todoQuestion, landmarkRef: bills.ref });
   t.check(compiled.doc, any(String).includes(bills.todoQuestion));
 
-  // doctest:L51
   t.check(LandmarkDestination.safeParse({ for: ["triage"], "todo-question": "   " }).success, false);
 
-  // doctest:L54
   t.check(LandmarkDestination.parse({ for: ["triage"], "todo-question": " Does this need attention? " })["todo-question"], "Does this need attention?");
 
-  // doctest:L57
   const evidence: Evidence = { version: 1, source: { ref: "/_content/inbox/staged/Bill.doc.card", digest: "a".repeat(64), gitRevision: null, attachmentRef: null }, status: "ready", parts: [{ ref: "/_content/inbox/staged/Bill.doc.card", digest: "a".repeat(64), mediaType: "text/plain", method: "native-text", toolVersion: "1", status: "ready", text: "Household utility bill: payment is outstanding.", omissions: [] }], recipe: { adapterVersion: 1, steps: ["native text"], maxTextChars: 1000 } };
   const request = buildTriageRequest({ evidence, instructions: snapshot });
   t.check(Object.keys(request.questions), ["destination", `todo_${bills.optionId}`]);
 
-  // doctest:L62
   t.check(request.questions[`todo_${bills.optionId}`]?.type, "noul");
 
-  // doctest:L65
   const yes = createFakeJev({ answers: (name, { question }) => name === "destination" ? fixedAnswer(question, { yes: true }) : { type: "noul", probability: 0.9 } });
   const judgment = await judgeItem(box.root, { evidence, instructions: snapshot, jev: yes });
   t.check(judgment, {
@@ -99,16 +91,13 @@ destinations:
     },
   });
 
-  // doctest:L70
   // One call carries the destination question and the follow-up question; the prompt wording is not pinned here.
   t.check(yes.judgeCalls.map((call) => Object.keys(call.questions)), [["destination", `todo_${bills.optionId}`]]);
 
-  // doctest:L73
   const no = createFakeJev({ answers: (name, { question }) => name === "destination" ? fixedAnswer(question, { yes: true }) : { type: "noul", probability: 0.1 } });
   const negative = await judgeItem(box.root, { evidence, instructions: snapshot, jev: no });
   t.check(negative.todoAnswers?.[bills.optionId], 0.1);
 
-  // doctest:L78
   // Preparation-only judgments may lack answers; an evaluated configured
   // question cannot silently disappear from the provider result.
   const missing: JevService = { ...yes, judge: async (input) => {
@@ -118,12 +107,10 @@ destinations:
   } };
   await t.checkThrows(async () => (await judgeItem(box.root, { evidence, instructions: snapshot, jev: missing })), "TriageJudgmentError: Jev returned a missing or invalid destination todo answer");
 
-  // doctest:L88
   // Historical/no-question snapshots retain a destination-only request shape.
   const withoutQuestions = { ...snapshot, destinations: snapshot.destinations.map(({ todoQuestion: _todoQuestion, ...destination }) => destination) };
   t.check(Object.keys(buildTriageRequest({ evidence, instructions: withoutQuestions }).questions).join(","), "destination");
 
-  // doctest:L93
   const old = await judgeItem(box.root, { evidence, instructions: withoutQuestions, jev: createFakeJev({ answers: (_name, { question }) => fixedAnswer(question, { yes: true }) }) });
   t.check(old.todoAnswers, undefined);
 });

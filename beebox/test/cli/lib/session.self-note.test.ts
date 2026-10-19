@@ -26,7 +26,6 @@ const userLine = ({ uuid, timestamp, text }: { uuid: string; timestamp: string; 
 // multi-line body is trimmed, XML-escaped attribute values decode, and
 // surrounding whitespace is tolerated:
 void test("A tag yields ref, commit and body; absent attributes are null.", async (t) => {
-  // doctest:L29
   t.check(
     [
       '<self-note ref="_config/schedules/daily.card" commit="abc123">body text</self-note>',
@@ -71,7 +70,6 @@ line two`,
 // stripped before matching, otherwise the note falls through to a normal
 // user bubble:
 void test("Every turn is persisted with a <chat-app .../> snapshot prepended, so a self-...", async (t) => {
-  // doctest:L52
   t.check(parseSelfNote('<chat-app narration="off" prose="on" time="2026-07-01T02:47:12.815Z"/>\n<self-note ref="foo.md">did stuff</self-note>'), {
     ref: "foo.md",
     commit: null,
@@ -81,7 +79,6 @@ void test("Every turn is persisted with a <chat-app .../> snapshot prepended, so
 
 // Text that is not a self-note returns null, including an unclosed tag:
 void test("Text that is not a self-note returns null, including an unclosed tag:", async (t) => {
-  // doctest:L59
   t.check([parseSelfNote("hello world"), parseSelfNote("<self-note>no closing tag")], [
     null,
     null,
@@ -94,7 +91,6 @@ void test("Text that is not a self-note returns null, including an unclosed tag:
 // with `\n\n`, so a single user entry can contain several `<self-note>`
 // blocks back-to-back. `parseSelfNotes` returns them all:
 void test("ChatSession.drainQueue() concatenates a burst of enqueued self-notes with \\n\\...", async (t) => {
-  // doctest:L70
   t.check(parseSelfNotes("<self-note>one</self-note>\n\n<self-note ref=\"x\">two</self-note>\n\n<self-note commit=\"abc\">three</self-note>"), [
     {
       ref: null,
@@ -118,7 +114,6 @@ void test("ChatSession.drainQueue() concatenates a burst of enqueued self-notes 
 // rejected — falls through to normal user rendering so the other text isn't
 // silently hidden. Text with no self-notes is null too:
 void test("Mixed content (self-note plus other text, before, after or between) is reject...", async (t) => {
-  // doctest:L84
   t.check(
     [
       parseSelfNotes("<self-note>note</self-note>\nrandom extra text"),
@@ -144,7 +139,6 @@ void test("Mixed content (self-note plus other text, before, after or between) i
 // notes only for a pure-self-note `user` entry; non-user entries and user
 // entries without self-note text return null:
 void test("entrySelfNotes is the shared extractor used by both the CLI transcript render...", async (t) => {
-  // doctest:L103
   t.check(
     [
       entrySelfNotes({ type: "user", content: [{ type: "text", text: "<self-note ref=\"a.card\">hello</self-note>" }] }),
@@ -179,7 +173,6 @@ void test("A self-note written into the session JSONL as a user-position text en
       t.error(error);
     }
   });
-  // doctest:L119
   const box = await makeTmpBox();
   await box.write("log.jsonl", [
     userLine({ uuid: "u1", timestamp: "2026-04-17T00:00:00Z", text: "<typed>hello</typed>" }),
@@ -206,7 +199,6 @@ void test("A session whose only user-position entries are self-notes has zero us
       t.error(error);
     }
   });
-  // doctest:L141
   const box = await makeTmpBox();
   async function metaOf(lines: string[]) {
     await box.write("log.jsonl", lines.join("\n"));
@@ -242,7 +234,6 @@ void test("A missing or blank body is a 400.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L166
   const ctx = await makeTestServer();
   const post = async (payload: Record<string, unknown>) => {
     const res = await ctx.request({ method: "POST", url: "/api/chat/self-note", payload });

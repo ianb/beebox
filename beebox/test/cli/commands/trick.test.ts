@@ -116,11 +116,9 @@ void test("Runs from `boxRoot/src/tricks`, with `BBX_BOX_ROOT` set to the box ro
       t.error(error);
     }
   });
-  // doctest:L57
   const box = await makeTmpBox({ git: true });
   await writeTrick(box, { name: "probe", content: PROBE_TRICK });
 
-  // doctest:L60
   const r = await runTrickCli(box.root, ["probe"]);
   const expectedCwd = await realpath(box.path("src/tricks"));
   const expectedRoot = await realpath(box.root);
@@ -139,7 +137,6 @@ void test("The migration and CI can validate the author-provided declarations wi
       t.error(error);
     }
   });
-  // doctest:L84
   const box = await makeTmpBox({ git: true });
   await writeTrick(box, { name: "needs-key", content: PROBE_TRICK });
   await writeTrickSecrets(box, {
@@ -149,7 +146,6 @@ void test("The migration and CI can validate the author-provided declarations wi
     ],
   });
 
-  // doctest:L90
   const checked = await runTrickCli(box.root, ["--check-secrets"]);
   t.check({ code: checked.code, stdout: checked.stdout.trim() }, {
     code: 0,
@@ -166,10 +162,8 @@ void test("Listing and not-found messages name `src/tricks/scripts/...`", async 
       t.error(error);
     }
   });
-  // doctest:L102
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L104
   const empty = await runTrickCli(box.root, []);
   t.check(empty, {
     code: 0,
@@ -181,7 +175,6 @@ See node_modules/beebox/box-docs/tricks.md for details.
     stderr: "",
   });
 
-  // doctest:L110
   const missing = await runTrickCli(box.root, ["nope"]);
   t.check(missing, {
     code: 1,
@@ -200,12 +193,10 @@ void test("A successful run commits only the paths the trick changed", async (t)
       t.error(error);
     }
   });
-  // doctest:L183
   const box = await boxWithPendingEdit();
   const r = await runTrickCli(box.root, ["write", "out/new/deep/result.txt"]);
   t.check(r.code, 0);
 
-  // doctest:L188
   t.check(headCommit(box), {
     subject: "Auto-commit changes from trick: write",
     runBy: "trick/write",
@@ -214,7 +205,6 @@ void test("A successful run commits only the paths the trick changed", async (t)
     ],
   });
 
-  // doctest:L191
   t.check(dirty(box), [
     "?? notes/someone-else.txt",
   ]);
@@ -233,7 +223,6 @@ void test("A path that was dirty before the run and that the trick changes again
       t.error(error);
     }
   });
-  // doctest:L206
   const box = await boxWithPendingEdit();
   await writeFile(box.path("notes/shared.txt"), "committed\nedited before the run\n");
   await runTrickCli(box.root, ["write", "notes/shared.txt"]);
@@ -241,12 +230,10 @@ void test("A path that was dirty before the run and that the trick changes again
     "notes/shared.txt",
   ]);
 
-  // doctest:L212
   await t.checkText(await readFile(box.path("notes/shared.txt"), "utf8"), `committed
 edited before the run
 from trick`);
 
-  // doctest:L217
   t.check(dirty(box), [
     "?? notes/someone-else.txt",
   ]);
@@ -265,7 +252,6 @@ void test("The 10 MB guard that protects a blind sweep also applies to the trick
       t.error(error);
     }
   });
-  // doctest:L232
   const box = await boxWithPendingEdit();
   await writeTrick(box, { name: "big", content: `
 import { writeFileSync } from "node:fs";
@@ -278,12 +264,10 @@ writeFileSync(join(process.env.BBX_BOX_ROOT, "out/small.txt"), "small\\n");
   git(box, ["commit", "-q", "-m", "big trick"]);
 
   const r = await runTrickCli(box.root, ["big"]);
-  // doctest:L243
   t.check(headCommit(box).files, [
     "out/small.txt",
   ]);
 
-  // doctest:L247
   t.check(r, {
     code: 0,
     stdout: `Committed 2 path(s) changed by trick "big".
@@ -292,7 +276,6 @@ writeFileSync(join(process.env.BBX_BOX_ROOT, "out/small.txt"), "small\\n");
 `,
   });
 
-  // doctest:L250
   t.check(dirty(box), [
     "?? notes/someone-else.txt",
     "?? out/big.dat",
@@ -308,20 +291,16 @@ void test("Output that git ignores commits nothing", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L261
   const box = await boxWithPendingEdit();
   await writeFile(box.path(".gitignore"), (await readFile(box.path(".gitignore"), "utf8")) + "scratch/\n");
   git(box, ["commit", "-q", "-am", "ignore scratch"]);
   const headBefore = git(box, ["rev-parse", "HEAD"]);
 
-  // doctest:L266
   const r = await runTrickCli(box.root, ["write", "scratch/out.txt"]);
   t.check(r.code, 0);
 
-  // doctest:L270
   t.check(git(box, ["rev-parse", "HEAD"]), headBefore);
 
-  // doctest:L273
   t.check(dirty(box), [
     "?? notes/someone-else.txt",
   ]);
@@ -336,22 +315,17 @@ void test("`--no-commit` and a failed run leave the tree as the trick left it", 
       t.error(error);
     }
   });
-  // doctest:L284
   const box = await boxWithPendingEdit();
   const headBefore = git(box, ["rev-parse", "HEAD"]);
 
-  // doctest:L287
   const skipped = await runTrickCli(box.root, ["write", "--no-commit", "out/a.txt"]);
   t.check(skipped.code, 0);
 
-  // doctest:L293
   const failed = await runTrickCli(box.root, ["write", "out/b.txt", "fail"]);
   t.check(failed.code, 3);
 
-  // doctest:L297
   t.check(git(box, ["rev-parse", "HEAD"]), headBefore);
 
-  // doctest:L300
   t.check(dirty(box), [
     "?? notes/someone-else.txt",
     "?? out/a.txt",

@@ -40,7 +40,6 @@ async function makeBox() {
 
 // ## Fresh install — writes both files
 void test("Fresh install — writes both files", async (t) => {
-  // doctest:L43
   const box = await makeBox();
   const changed = await installValidationHooks(box.root);
   t.check(changed.toSorted(), [
@@ -89,7 +88,6 @@ void test("Fresh install — writes both files", async (t) => {
 // commits with the worktree's schemas, whichever checkout reinstalls the hooks.
 // `BBX_HOOK_BIN` still wins when set, so this case clears it:
 void test("When the box has an installed engine (nodemodules/beebox), the hooks run that...", async (t) => {
-  // doctest:L149
   const box = await makeBox();
   const engine = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-fake-engine-"));
   await fs.mkdir(path.join(engine, "bin"));
@@ -97,7 +95,6 @@ void test("When the box has an installed engine (nodemodules/beebox), the hooks 
   await fs.mkdir(path.join(box.root, "node_modules"), { recursive: true });
   await fs.symlink(engine, path.join(box.root, "node_modules", "beebox"));
 
-  // doctest:L156
   const savedOverride = process.env["BBX_HOOK_BIN"];
   delete process.env["BBX_HOOK_BIN"];
   try {
@@ -106,7 +103,6 @@ void test("When the box has an installed engine (nodemodules/beebox), the hooks 
     if (savedOverride !== undefined) process.env["BBX_HOOK_BIN"] = savedOverride;
   }
 
-  // doctest:L164
   const expected = JSON.stringify(path.join(await fs.realpath(engine), "bin", "bbx"));
   const preCommit = await fs.readFile(path.join(box.root, ".git/hooks/pre-commit"), "utf-8");
   const settings = await readSettings(box);
@@ -116,7 +112,6 @@ void test("When the box has an installed engine (nodemodules/beebox), the hooks 
 
 // ## Idempotent — second run changes nothing
 void test("Idempotent — second run changes nothing", async (t) => {
-  // doctest:L181
   const box = await makeBox();
   await installValidationHooks(box.root);
   const second = await installValidationHooks(box.root);
@@ -125,7 +120,6 @@ void test("Idempotent — second run changes nothing", async (t) => {
 
 // ## Rename migration — replaces the retired managed hook
 void test("Rename migration — replaces the retired managed hook", async (t) => {
-  // doctest:L191
   const box = await makeBox();
   const hookPath = path.join(box.root, ".git/hooks/pre-commit");
   await fs.writeFile(hookPath, "#!/bin/sh\n# callback-box validation hook (managed)\nexit 0\n");
@@ -139,7 +133,6 @@ void test("Rename migration — replaces the retired managed hook", async (t) =>
 // The post-commit migration removes the retired URL-check block instead of
 // leaving it ahead of the new block:
 void test("The post-commit migration removes the retired URL-check block instead of leav...", async (t) => {
-  // doctest:L208
   const box = await makeBox();
   const postPath = path.join(box.root, ".git/hooks/post-commit");
   await fs.writeFile(
@@ -174,7 +167,6 @@ BBX_URLCHECK="/stale/bin/bbx"
 //
 // Existing user settings under unrelated top-level keys are preserved verbatim:
 void test("Existing user settings under unrelated top-level keys are preserved verbatim:", async (t) => {
-  // doctest:L248
   const box = await makeBox();
   await fs.mkdir(path.join(box.root, ".claude"), { recursive: true });
   await fs.writeFile(
@@ -185,10 +177,8 @@ void test("Existing user settings under unrelated top-level keys are preserved v
     }, null, 2)
   );
 
-  // doctest:L258
   await installValidationHooks(box.root);
 
-  // doctest:L260
   // The validation hook was added alongside the preserved keys.
   t.check(await readSettings(box), {
     permissions: { allow: ["Bash(npm test)"] },
@@ -203,7 +193,6 @@ void test("Existing user settings under unrelated top-level keys are preserved v
 //
 // A user-installed PostToolUse hook for a different matcher (or different command) stays alongside ours:
 void test("A user-installed PostToolUse hook for a different matcher (or different comma...", async (t) => {
-  // doctest:L280
   const box = await makeBox();
   await fs.mkdir(path.join(box.root, ".claude"), { recursive: true });
   await fs.writeFile(
@@ -217,10 +206,8 @@ void test("A user-installed PostToolUse hook for a different matcher (or differe
     }, null, 2)
   );
 
-  // doctest:L293
   await installValidationHooks(box.root);
 
-  // doctest:L295
   const settings = await readSettings(box);
   // User's entry is still there, untouched:
   t.check(settings.hooks.PostToolUse, [
@@ -233,7 +220,6 @@ void test("A user-installed PostToolUse hook for a different matcher (or differe
 //
 // If the existing settings file references a stale bbx path (the old `validate "$f"` style), `installValidationHooks` rewrites the command in place rather than duplicating the entry:
 void test("If the existing settings file references a stale bbx path (the old validate \"...", async (t) => {
-  // doctest:L313
   const box = await makeBox();
   await fs.mkdir(path.join(box.root, ".claude"), { recursive: true });
   await fs.writeFile(
@@ -250,10 +236,8 @@ void test("If the existing settings file references a stale bbx path (the old va
     }, null, 2)
   );
 
-  // doctest:L329
   await installValidationHooks(box.root);
 
-  // doctest:L331
   const settings = await readSettings(box);
   t.check(settings.hooks.PostToolUse, [
     { matcher: "Edit|Write|MultiEdit", hooks: [{ command: any(String).endsWith(" validate --hook") }] },
@@ -264,7 +248,6 @@ void test("If the existing settings file references a stale bbx path (the old va
 //
 // If `.git/` does not exist (a non-box directory, or a fixture that skipped git), only the settings file gets written; the pre-commit step is skipped instead of bootstrapping a stray `.git/hooks/` directory:
 void test("If .git/ does not exist (a non-box directory, or a fixture that skipped git),...", async (t) => {
-  // doctest:L344
   const box = await makeTmpBox({ git: "none" });
   const changed = await installValidationHooks(box.root);
   t.check(changed.toSorted(), [
@@ -275,7 +258,6 @@ void test("If .git/ does not exist (a non-box directory, or a fixture that skipp
 
   // No phantom `.git/` directory was created:
 
-  // doctest:L357
   await t.checkThrows(() => fs.access(path.join(box.root, ".git")), "Error");
 });
 
@@ -283,24 +265,20 @@ void test("If .git/ does not exist (a non-box directory, or a fixture that skipp
 //
 // A pre-commit hook that doesn't carry our marker is the user's own and stays put:
 void test("A pre-commit hook that doesn't carry our marker is the user's own and stays put:", async (t) => {
-  // doctest:L366
   const box = await makeBox();
   const hookPath = path.join(box.root, ".git/hooks/pre-commit");
   await fs.writeFile(hookPath, "#!/bin/sh\necho user hook\n");
   await fs.chmod(hookPath, 0o755);
 
-  // doctest:L371
   const origConsoleWarn = console.warn;
   console.warn = () => {};
   const changed = await installValidationHooks(box.root);
   console.warn = origConsoleWarn;
 
-  // doctest:L376
   t.check(changed, ["_config/bbx-validate.ignore", ".claude/rules/bbx-validate-ignore.md", ".claude/settings.json", ".git/hooks/post-commit"]);
 
   // The user's hook is unchanged:
 
-  // doctest:L383
   await t.checkText(await fs.readFile(hookPath, "utf-8"), `#!/bin/sh
 echo user hook`);
 });
@@ -311,7 +289,6 @@ echo user hook`);
 // three-line hook. That hook is safe to adopt: beebox's managed hook keeps
 // the annex command and adds the card-validation gate after it.
 void test("When git annex init gets the hook slot first, it installs its canonical three...", async (t) => {
-  // doctest:L395
   const box = await makeBox();
   const hookPath = path.join(box.root, ".git/hooks/pre-commit");
   await fs.writeFile(
@@ -320,7 +297,6 @@ void test("When git annex init gets the hook slot first, it installs its canonic
   );
   await fs.chmod(hookPath, 0o755);
 
-  // doctest:L403
   const changed = await installValidationHooks(box.root);
   const body = await fs.readFile(hookPath, "utf-8");
   const again = await installValidationHooks(box.root);
@@ -333,19 +309,16 @@ void test("When git annex init gets the hook slot first, it installs its canonic
 // A near-match with an extra user command is foreign, even though it contains
 // git-annex's generated body, and remains byte-for-byte untouched:
 void test("A near-match with an extra user command is foreign, even though it contains g...", async (t) => {
-  // doctest:L427
   const box = await makeBox();
   const hookPath = path.join(box.root, ".git/hooks/pre-commit");
   const customBody = "#!/bin/sh\n# automatically configured by git-annex\ngit annex pre-commit .\necho custom\n";
   await fs.writeFile(hookPath, customBody);
 
-  // doctest:L432
   const origConsoleWarn = console.warn;
   console.warn = () => {};
   const changed = await installValidationHooks(box.root);
   console.warn = origConsoleWarn;
 
-  // doctest:L437
   t.check(changed, ["_config/bbx-validate.ignore", ".claude/rules/bbx-validate-ignore.md", ".claude/settings.json", ".git/hooks/post-commit"]);
   t.check(await fs.readFile(hookPath, "utf-8"), customBody);
 });
@@ -355,7 +328,6 @@ void test("A near-match with an extra user command is foreign, even though it co
 // With no existing post-commit hook, one is created with our marker block and the
 // non-blocking `--urls-since HEAD~1` command, and it's executable:
 void test("With no existing post-commit hook, one is created with our marker block and t...", async (t) => {
-  // doctest:L454
   const box = await makeBox();
   await installValidationHooks(box.root);
   const body = await fs.readFile(path.join(box.root, ".git/hooks/post-commit"), "utf-8");
@@ -370,18 +342,15 @@ void test("With no existing post-commit hook, one is created with our marker blo
 // appended after it. A second install is idempotent — the foreign hook stays and
 // nothing changes:
 void test("A pre-existing post-commit (e.g.", async (t) => {
-  // doctest:L476
   const box = await makeBox();
   const postPath = path.join(box.root, ".git/hooks/post-commit");
   const lfs = "#!/bin/sh\ngit lfs post-commit \"$@\"\n";
   await fs.writeFile(postPath, lfs);
 
-  // doctest:L481
   await installValidationHooks(box.root);
   const merged = await fs.readFile(postPath, "utf-8");
   t.check(merged, any(String).startsWith(lfs).includes("beebox url-check (managed)"));
 
-  // doctest:L491
   const again = await installValidationHooks(box.root);
   t.check(again, []);
   t.check(await fs.readFile(postPath, "utf-8"), merged);
@@ -395,16 +364,13 @@ void test("A pre-existing post-commit (e.g.", async (t) => {
 // fires only when an agent opens that file, warning it off. The seed is commented
 // out; the rule is scoped to the ignore file's path:
 void test("installValidationHooks also seeds the operator-owned config/bbx-validate.igno...", async (t) => {
-  // doctest:L508
   const box = await makeBox();
   await installValidationHooks(box.root);
 
-  // doctest:L511
   const seed = await fs.readFile(path.join(box.root, "_config/bbx-validate.ignore"), "utf-8");
   // Every non-blank line is a comment — nothing is actively ignored out of the box.
   t.check(seed.split("\n").filter((l) => l.trim() !== "" && !l.trimStart().startsWith("#")), []);
 
-  // doctest:L518
   const rule = await fs.readFile(path.join(box.root, ".claude/rules/bbx-validate-ignore.md"), "utf-8");
   // path-conditional scope; the rest is generated prose, so the check stays narrow
   t.check(rule, any(String).includes("- \"_config/bbx-validate.ignore\""));
@@ -413,11 +379,9 @@ void test("installValidationHooks also seeds the operator-owned config/bbx-valid
   // only when the file is absent, so a second install (or a deploy-sync) leaves a
   // customized file untouched:
 
-  // doctest:L529
   await fs.writeFile(path.join(box.root, "_config/bbx-validate.ignore"), "vendor/**\n");
   const again = await installValidationHooks(box.root);
   t.check(again, []);
 
-  // doctest:L536
   t.check(await fs.readFile(path.join(box.root, "_config/bbx-validate.ignore"), "utf-8"), "vendor/**\n");
 });

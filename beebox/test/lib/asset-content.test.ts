@@ -28,7 +28,6 @@ void test("A file holding a pointer is reported with the size and hash the conte
       t.error(error);
     }
   });
-  // doctest:L26
   const box = await makeTmpBox();
   await box.write("n.attach/photo.jpg", POINTER);
   const p = await probePointer(box.path("n.attach/photo.jpg"));
@@ -36,7 +35,6 @@ void test("A file holding a pointer is reported with the size and hash the conte
 
   // Real content probes as null — it is content, not a pointer:
 
-  // doctest:L36
   await fs.writeFile(box.path("n.attach/real.jpg"), Buffer.alloc(5000, 9));
   t.check(await probePointer(box.path("n.attach/real.jpg")), null);
 
@@ -44,27 +42,22 @@ void test("A file holding a pointer is reported with the size and hash the conte
   // the common case in a route that needs the size for `Content-Length` anyway —
   // pays nothing for files too large to be a pointer:
 
-  // doctest:L46
   t.check(await probePointer(box.path("n.attach/real.jpg"), { knownSize: 5000 }), null);
 
   // A missing file probes as null rather than throwing. "Not there at all" is a
   // different condition with its own handling (a 404), and conflating the two would
   // make both harder to report accurately:
 
-  // doctest:L55
   t.check(await probePointer(box.path("n.attach/gone.jpg")), null);
 
   // `readAssetContent` is for callers that just want bytes. It branches on the one
   // distinction that matters:
 
-  // doctest:L63
   const absent = await readAssetContent(box.path("n.attach/photo.jpg"));
   t.check(absent.ok, false);
 
-  // doctest:L67
   t.check(absent.ok ? "" : absent.error.kind, "not-present");
 
-  // doctest:L70
   const present = await readAssetContent(box.path("n.attach/real.jpg"));
   t.check(present.ok ? present.value.length : -1, 5000);
 
@@ -72,7 +65,6 @@ void test("A file holding a pointer is reported with the size and hash the conte
   // infrastructure error the existing boundary handlers already catch, and
   // laundering it here would blur the distinction this type exists to draw:
 
-  // doctest:L80
   const thrown = await readAssetContent(box.path("n.attach/gone.jpg")).then(
     () => "returned a Result",
     (e: unknown) => (e instanceof Error ? e.message.slice(0, 6) : "non-error"),

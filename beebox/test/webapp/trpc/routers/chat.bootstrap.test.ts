@@ -123,12 +123,10 @@ void test("history is null exactly when sessionId is null — there is nothing t
       t.error(error);
     }
   });
-  // doctest:L97
   const projects = await mkdtemp(join(tmpdir(), "bbx-bootstrap-projects-"));
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = projects;
   const server = await makeTestServer();
 
-  // doctest:L101
   const empty = await caller(server).chat.bootstrap({ slice: TAIL });
   t.check(shape(empty), {
     kind: "empty",
@@ -142,15 +140,12 @@ void test("history is null exactly when sessionId is null — there is nothing t
   // The full idle `status` payload, once: the engine fields show a fresh box offers
   // only `claude`. Model ids rotate, so they are wildcards.
 
-  // doctest:L110
   t.check(empty.status, idleStatus(null));
 
   // ## An explicit session id returns that session's history and status
 
-  // doctest:L117
   await seedTranscript(server, "sess-explicit");
 
-  // doctest:L119
   const got = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: TAIL });
   t.check(got, {
     kind: "resumable",
@@ -176,7 +171,6 @@ void test("history is null exactly when sessionId is null — there is nothing t
   //
   // The history slice options are the ones `chat.history` takes:
 
-  // doctest:L141
   const tailed = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: { mode: "tail", tail: 1 } });
   t.check(tailed, {
     kind: "resumable",
@@ -200,10 +194,8 @@ void test("history is null exactly when sessionId is null — there is nothing t
   // `chat.defaultSession` does, so the client no longer has to ask, navigate, and
   // ask again.
 
-  // doctest:L156
   await setDefaultSession(server, "sess-explicit");
 
-  // doctest:L158
   const c = caller(server);
   const [viaDefault, viaHistory, viaStatus, viaDirectory] = await Promise.all([
     c.chat.defaultSession(),
@@ -213,7 +205,6 @@ void test("history is null exactly when sessionId is null — there is nothing t
   ]);
   const atomic = await c.chat.bootstrap({ slice: TAIL });
 
-  // doctest:L167
   // `label` and `pending` are bootstrap's own additions — the three procedures it
   // replaces have no equivalent (`pending` reads the acceptance record on the
   // event bus, not the transcript) — so they sit out the comparison.
@@ -239,7 +230,6 @@ void test("history is null exactly when sessionId is null — there is nothing t
   // back to an id prefix for their rows; bootstrap's label deliberately
   // doesn't.)
 
-  // doctest:L193
   const missing = await caller(server).chat.bootstrap({ session: "no-such-session", slice: TAIL });
   t.check(shape(missing), {
     kind: "unavailable",
@@ -257,10 +247,8 @@ void test("history is null exactly when sessionId is null — there is nothing t
   // is an empty one — `""` is not a session id, and accepting it would report
   // `sessionId: ""` next to a status that correctly says there is no session.
 
-  // doctest:L203
   t.check(await caller(server).chat.bootstrap(wire(`{ "session": 42, "slice": ${JSON.stringify(TAIL)} }`)).then(() => "no error", (e) => e.code), "BAD_REQUEST");
 
-  // doctest:L206
   t.check(await caller(server).chat.bootstrap({ session: "", slice: TAIL }).then(() => "no error", (e) => e.code), "BAD_REQUEST");
 
   // The slice is a discriminated union with hard bounds, and each arm is strict —
@@ -268,7 +256,6 @@ void test("history is null exactly when sessionId is null — there is nothing t
   // with extras, and a slice past the retention ceiling is refused at the door
   // rather than served as a bigger read:
 
-  // doctest:L216
   const c2 = caller(server);
   // A fresh object literal would be refused at compile time; a variable is not.
   const tailWithPageFields = { mode: "tail", tail: 1, offset: 0, limit: 40 } as const;
@@ -288,14 +275,12 @@ void test("history is null exactly when sessionId is null — there is nothing t
   // transcript snippet, so the chip and the pickers can't disagree about what a chat
   // is called.
 
-  // doctest:L237
   await mkdir(join(server.boxRoot, "_content/chat/web"), { recursive: true });
   await writeFile(
     join(server.boxRoot, "_content/chat/web/2026-01-01_sess-exp.chat.card"),
     "---\nsession: sess-explicit\ntitle: Chasing down a duplicate charge\n---\n\n",
   );
 
-  // doctest:L243
   const titled = await caller(server).chat.bootstrap({ session: "sess-explicit", slice: TAIL });
   t.check(titled.label, "Chasing down a duplicate charge");
 
@@ -304,20 +289,17 @@ void test("history is null exactly when sessionId is null — there is nothing t
   // the id's `_<shortid>` suffix still names its chat; the filename convention is
   // only a fast path for finding it.
 
-  // doctest:L254
   await writeFile(
     join(server.boxRoot, "_content/chat/web/Duplicate_charge_followup.chat.card"),
     "---\nsession: sess-renamed\ntitle: Renamed husk still names its chat\n---\n\n",
   );
 
-  // doctest:L259
   const renamed = await caller(server).chat.bootstrap({ session: "sess-renamed", slice: TAIL });
   t.check(renamed.label, "Renamed husk still names its chat");
 
   // An empty id in the persisted default-session pointer means "none" too, rather
   // than a session named `""`:
 
-  // doctest:L268
   await setDefaultSession(server, "");
   t.check(shape(await caller(server).chat.bootstrap({ slice: TAIL })), {
     kind: "empty",

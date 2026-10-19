@@ -45,7 +45,6 @@ void test("The root landmark seeds narration on.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L42
   const backend = createFakeChatBackend();
   const realStart = backend.start.bind(backend);
   const runStarted = new Promise<void>((resolve) => {
@@ -58,7 +57,6 @@ void test("The root landmark seeds narration on.", async (t) => {
     "---\nnavigation:\n  label: Box\n  chat-app:\n    narration: on\n---\n",
   );
 
-  // doctest:L54
   const inherited = "11111111-1111-4111-8111-111111111111";
   await api.chat.reserveSession({ sessionId: inherited, contextDir: "", engine: "claude" });
   t.check(await api.chat.features({ session: inherited }), { features: { narration: "on", prose: "on" } });
@@ -66,7 +64,6 @@ void test("The root landmark seeds narration on.", async (t) => {
   // An explicit per-chat `off` overrides the seeded `on` and survives the same
   // reload read even though the chat has not started and still has no history row.
 
-  // doctest:L64
   await api.chat.setFeature({ session: inherited, feature: "narration", value: "off" });
   t.check(await api.chat.features({ session: inherited }), { features: { narration: "off", prose: "on" } });
   t.check(await getFeaturesForSession(server.boxRoot, inherited), null);
@@ -76,13 +73,11 @@ void test("The root landmark seeds narration on.", async (t) => {
   // Changing the landmark does not rewrite the earlier chat's features; a newly
   // reserved chat gets the new seed.
 
-  // doctest:L78
   await server.seed(
     "_content/Box.landmark.card",
     "---\nnavigation:\n  label: Box\n  chat-app:\n    prose: off\n---\n",
   );
 
-  // doctest:L83
   const proseOff = "22222222-2222-4222-8222-222222222222";
   await api.chat.reserveSession({ sessionId: proseOff, contextDir: "", engine: "claude" });
   t.check(await api.chat.features({ session: inherited }), { features: { narration: "off", prose: "on" } });
@@ -92,7 +87,6 @@ void test("The root landmark seeds narration on.", async (t) => {
   // persist to history. The now-released reservation must not keep swallowing
   // updates into its orphaned in-memory record.
 
-  // doctest:L97
   const accepted = await server.request({
     method: "POST",
     url: "/api/chat/send",
@@ -117,7 +111,6 @@ void test("The root landmark seeds narration on.", async (t) => {
   // before its feature store has loaded. That empty in-memory store must not mask
   // the persisted value on reload.
 
-  // doctest:L127
   const started = "33333333-3333-4333-8333-333333333333";
   await appendHistory(server.boxRoot, { sessionId: started, engine: "claude" });
   await updateFeaturesForSession(server.boxRoot, {

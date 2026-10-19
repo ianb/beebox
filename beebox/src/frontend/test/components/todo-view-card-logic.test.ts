@@ -74,13 +74,11 @@ function shape(nodes: TodoNode[]): string {
 // the `parked` group permanently unreachable on the stock plate: `parked` is a
 // STATUS, not a plate-state, so it was never included by that default.
 void test("An explicit todo-status: list wins; an omitted one defaults to [\"open\", \"park...", async (t) => {
-  // doctest:L78
   t.check(resolveTodoViewStatusFilter({}), [
     "open",
     "parked",
   ]);
 
-  // doctest:L81
   t.check(resolveTodoViewStatusFilter({ "todo-status": ["done"] }), [
     "done",
   ]);
@@ -88,7 +86,6 @@ void test("An explicit todo-status: list wins; an omitted one defaults to [\"ope
   // Garbage and empty values fall back to the same default rather than querying
   // for nothing.
 
-  // doctest:L89
   t.check(
     [
       resolveTodoViewStatusFilter({ "todo-status": "not-an-array" }),
@@ -115,7 +112,6 @@ void test("An explicit todo-status: list wins; an omitted one defaults to [\"ope
   // reduction and the list keep agreeing about what is in scope. A card that
   // already lists `done` does not get it twice.
 
-  // doctest:L102
   t.check(
     [
       statusFilterWithFinished(["open", "parked"], false),
@@ -146,7 +142,6 @@ void test("An explicit todo-status: list wins; an omitted one defaults to [\"ope
 // A card path would scope the query to the card itself, which holds no todos.
 // A card at the box root asks about the box.
 void test("A card path would scope the query to the card itself, which holds no todos.", async (t) => {
-  // doctest:L116
   t.check(
     [
       hereForCard("_content/projects/Porch/Plate.todo-view.card"),
@@ -164,7 +159,6 @@ void test("A card path would scope the query to the card itself, which holds no 
 // Items arrive flat and in locator order; each names the todo whose list item
 // contains it.
 void test("Items arrive flat and in locator order; each names the todo whose list item c...", async (t) => {
-  // doctest:L129
   const items = [
     item(5, { text: "Clear the deck" }),
     item(6, { text: "Pull the old boards", parent: at(5) }),
@@ -172,19 +166,16 @@ void test("Items arrive flat and in locator order; each names the todo whose lis
     item(9, { text: "Order lumber" }),
   ];
 
-  // doctest:L136
   t.check(shape(buildTodoTree(items)), "Clear the deck > (Pull the old boards > (Haul them off)), Order lumber");
 
   // An item whose parent is not in the list is a root rather than a
   // disappearance — the filter kept a child whose ancestor chain the row did not
   // reach.
 
-  // doctest:L145
   t.check(shape(buildTodoTree([item(6, { text: "Pull the old boards", parent: at(5) })])), "Pull the old boards");
 
   // `todoKey` is the identity `parent` names, in both capture forms.
 
-  // doctest:L152
   t.check(
     [
       todoKey(item(5, { text: "x" })),
@@ -201,14 +192,12 @@ void test("Items arrive flat and in locator order; each names the todo whose lis
   // which is why sharing one would not merely confuse the tree: it would make two
   // siblings collide in the list.
 
-  // doctest:L165
   const sameLine = [
     item(5, { text: "Appraise" }),
     item(5, { text: "Insure", locator: { kind: "body", line: 5, nth: 2 } }),
     item(6, { text: "Get the policy number", parent: { kind: "body", line: 5, nth: 2 } }),
   ];
 
-  // doctest:L171
   t.check(sameLine.map((i) => todoKey(i)), [
     "_content/projects/Porch/Plan.doc.card:5",
     "_content/projects/Porch/Plan.doc.card:5#2",
@@ -227,7 +216,6 @@ void test("Items arrive flat and in locator order; each names the todo whose lis
   // `parent` addresses one of the two, not the line, so the nested todo hangs off
   // the todo that owns it.
 
-  // doctest:L182
   t.check(shape(buildTodoTree(sameLine)), "Appraise, Insure > (Get the policy number)");
 });
 
@@ -237,7 +225,6 @@ void test("Items arrive flat and in locator order; each names the todo whose lis
 // whatever heading the parent sat beneath — so a child written after a later
 // heading does not jump out of its own tree.
 void test("Only a ROOT is placed in a section.", async (t) => {
-  // doctest:L193
   const row: TodoRow = {
     card: { path: "_content/projects/Porch/Plan.doc.card", title: "Porch plan" },
     via: "scope",
@@ -255,7 +242,6 @@ void test("Only a ROOT is placed in a section.", async (t) => {
     ],
   };
 
-  // doctest:L210
   t.check(buildRowSections(row).map((s) => ({ label: s.label, path: s.path, nodes: shape(s.nodes) })), [
     { label: null, path: [], nodes: "Decide the budget" },
     { label: "Demolition", path: ["Demolition"], nodes: "Clear the deck > (Pull the old boards)" },
@@ -265,7 +251,6 @@ void test("Only a ROOT is placed in a section.", async (t) => {
   // A section whose items the filter hid entirely is not rendered as an empty
   // heading.
 
-  // doctest:L221
   t.check(
     buildRowSections({ ...row, items: [item(4, { text: "Decide the budget" })] }).map((s) => ({ label: s.label, path: s.path, nodes: shape(s.nodes) })),
     [{ label: null, path: [], nodes: "Decide the budget" }],
@@ -275,7 +260,6 @@ void test("Only a ROOT is placed in a section.", async (t) => {
   // is not dropped. A dropped todo is neither progress nor outstanding work, so
   // counting it either way would misstate the section.
 
-  // doctest:L230
   t.check(progressOf(reduction({ open: 2, done: 5, parked: 0, dropped: 3 })), {
     done: 5,
     total: 7,
@@ -287,7 +271,6 @@ void test("Only a ROOT is placed in a section.", async (t) => {
 // `later` is `open` minus `onPlate` — the reduction carries no separate `quiet`
 // field because it doesn't need one.
 void test("later is open minus onPlate — the reduction carries no separate quiet field b...", async (t) => {
-  // doctest:L240
   t.check(plateHeadline(reduction({ open: 7, onPlate: 5 })), {
     onPlate: 5,
     later: 2,
@@ -297,7 +280,6 @@ void test("later is open minus onPlate — the reduction carries no separate qui
   // `assigned: "agent"` query's reduction counts every item scope admitted
   // (boxholder items included), so only the matching subset is the agent's own.
 
-  // doctest:L249
   const agentResult: TodoResult = {
     query: { here: "", glob: "**/*.card", includeReferring: false, group: "place" },
     reduction: reduction({ open: 9 }),
@@ -324,7 +306,6 @@ void test("later is open minus onPlate — the reduction carries no separate qui
     ],
   };
 
-  // doctest:L275
   t.check(matchingItemCount(agentResult), 2);
 });
 
@@ -334,7 +315,6 @@ void test("later is open minus onPlate — the reduction carries no separate qui
 // `due` wins over `start` because it is the harder of the two, and the strip
 // records which one it is showing.
 void test("Every open matching item that carries a date, across every row, in date order.", async (t) => {
-  // doctest:L286
   const result: TodoResult = {
     query: { here: "", glob: "**/*.card", includeReferring: false, group: "place" },
     reduction: reduction(),
@@ -364,7 +344,6 @@ void test("Every open matching item that carries a date, across every row, in da
     ],
   };
 
-  // doctest:L315
   t.check(datedTodos(result).map((d) => ({ date: d.date, kind: d.kind, text: d.item.text, cardTitle: d.cardTitle })), [
     { date: "2026-09-22", kind: "due", text: "Both dates", cardTitle: "Porch plan" },
     { date: "2026-09-25", kind: "start", text: "Book the skip", cardTitle: "Porch plan" },
@@ -374,26 +353,21 @@ void test("Every open matching item that carries a date, across every row, in da
   // An undated box produces an empty strip, which is how the component knows not
   // to render one at all.
 
-  // doctest:L326
   t.check(datedTodos({ ...result, groups: [] }), []);
 });
 
 // ## A long annotation truncates behind an expand control
 void test("A long annotation truncates behind an expand control", async (t) => {
-  // doctest:L333
   const short = "Tomas has the sander";
   const long = `${"a note that keeps going ".repeat(8)}end`;
 
-  // doctest:L336
   t.check([needsExpand(short), needsExpand(long)], [
     false,
     true,
   ]);
 
-  // doctest:L339
   t.check(clampAnnotation(short), "Tomas has the sander");
 
-  // doctest:L342
   t.check(
     clampAnnotation(long),
     "a note that keeps going a note that keeps going a note that keeps going a note that keeps going a note that keeps going a note that keeps go…",
@@ -406,7 +380,6 @@ void test("A long annotation truncates behind an expand control", async (t) => {
 // so it covers the whole box. The line names the box, not the folder the card
 // sits in and not the pattern.
 void test("The stock plate card lives in content but is installed with the glob , so it...", async (t) => {
-  // doctest:L356
   t.check(
     [
       scopeDescription({ here: "_content", glob: "**" }),
@@ -423,12 +396,9 @@ void test("The stock plate card lives in content but is installed with the glob 
 // here". When the scope is already the whole box there is no elsewhere, so the
 // stock plate's line stops at "the whole box".
 void test("A query that includes referring todos adds \"plus todos elsewhere that link he...", async (t) => {
-  // doctest:L371
   t.check(scopeLineText({ here: "_content", glob: "**", includeReferring: true }), "Scope: the whole box");
 
-  // doctest:L374
   t.check(scopeLineText({ here: "recipes", glob: "recipes/**", includeReferring: true }), "Scope: recipes, plus todos elsewhere that link here");
 
-  // doctest:L377
   t.check(scopeLineText({ here: "recipes", glob: "recipes/**", includeReferring: false }), "Scope: recipes");
 });

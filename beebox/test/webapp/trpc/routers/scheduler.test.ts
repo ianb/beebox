@@ -62,44 +62,36 @@ void test("Disabling writes enabled:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L59
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/digest.scheduled-script.card", SCHED);
   box.commitAll("seed");
   const c = caller(box.root);
 
-  // doctest:L64
   const off = await c.scheduler.setEnabled({ name: "digest", enabled: false });
   t.check(off, {
     enabled: false,
   });
 
-  // doctest:L70
   const fmOff = await frontmatter(box, "digest");
   // enabled explicitly false; sibling fields untouched.
   t.check(fmOff, { cron: "0 6 * * *", description: "Morning digest", runs: "true", enabled: false });
 
-  // doctest:L77
   const head = (await newestCommit(box.root));
   t.check(head.subject, "Disable schedule: digest");
 
-  // doctest:L81
   t.check(head.trailers, {
     Source: "webapp",
     Endpoint: "scheduler.setEnabled",
   });
 
-  // doctest:L86
   const on = await c.scheduler.setEnabled({ name: "digest", enabled: true });
   t.check(on, {
     enabled: true,
   });
 
-  // doctest:L90
   // Re-enabling drops the key entirely (absence == enabled).
   t.check(await frontmatter(box, "digest"), { cron: "0 6 * * *", description: "Morning digest", runs: "true" });
 
-  // doctest:L94
   t.check((await newestCommit(box.root)).subject, "Enable schedule: digest");
 });
 
@@ -118,28 +110,23 @@ void test("A second setEnabled(true) on an already-enabled card produces byte-id
       t.error(error);
     }
   });
-  // doctest:L111
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/digest.scheduled-script.card", SCHED);
   box.commitAll("seed");
   const c = caller(box.root);
 
-  // doctest:L116
   // First enable settles the card into its canonical serialized form.
   await c.scheduler.setEnabled({ name: "digest", enabled: true });
   const before = (await newestCommit(box.root)).hash;
 
-  // doctest:L120
   // Second enable changes nothing on disk — no new commit.
   const res = await c.scheduler.setEnabled({ name: "digest", enabled: true });
   const after = (await newestCommit(box.root)).hash;
 
-  // doctest:L124
   t.check(res, {
     enabled: true,
   });
 
-  // doctest:L127
   t.check(after, before);
 });
 
@@ -152,18 +139,15 @@ void test("setEnabled failure paths: missing schedule, empty name", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L138
   const box = await makeTmpBox({ git: true });
   const c = caller(box.root);
 
-  // doctest:L141
   t.check(
     // No such schedule card.
     await code(c.scheduler.setEnabled({ name: "ghost", enabled: false })),
     "NOT_FOUND",
   );
 
-  // doctest:L145
   t.check(
     // Empty name rejected by input validation.
     await code(c.scheduler.setEnabled({ name: "", enabled: false })),
@@ -183,7 +167,6 @@ void test("A disabled schedule can't be triggered (BADREQUEST); a missing one is
       t.error(error);
     }
   });
-  // doctest:L160
   const box = await makeTmpBox({ git: true });
   await box.write(
     "_config/schedules/off.scheduled-script.card",
@@ -192,11 +175,9 @@ void test("A disabled schedule can't be triggered (BADREQUEST); a missing one is
   box.commitAll("seed");
   const c = caller(box.root);
 
-  // doctest:L168
   const disabled = await c.scheduler.trigger({ name: "off" }).then(() => "none", (e) => `${e.code}:${e.message}`);
   t.check(disabled, "BAD_REQUEST:Schedule \"off\" is disabled");
 
-  // doctest:L172
   t.check(await code(c.scheduler.trigger({ name: "ghost" })), "NOT_FOUND");
 });
 
@@ -216,13 +197,11 @@ void test("Enable and disable launched together against the same card.", async (
       t.error(error);
     }
   });
-  // doctest:L190
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/race.scheduled-script.card", SCHED);
   box.commitAll("seed");
   const c = caller(box.root);
 
-  // doctest:L195
   const [ra, rb] = await Promise.all([
     c.scheduler.setEnabled({ name: "race", enabled: false }),
     c.scheduler.setEnabled({ name: "race", enabled: true }),
@@ -230,7 +209,6 @@ void test("Enable and disable launched together against the same card.", async (
   // Both calls resolved without a concurrent-write crash.
   t.check([ra, rb], [{ enabled: false }, { enabled: true }]);
 
-  // doctest:L205
   // Both RMWs ran to completion: an Enable and a Disable commit both landed.
   const subjects = (await getLog(box.root, 2)).map((l) => l.subject).toSorted();
   t.check(subjects, [
@@ -238,7 +216,6 @@ void test("Enable and disable launched together against the same card.", async (
     "Enable schedule: race",
   ]);
 
-  // doctest:L212
   // Serialization invariant, whichever call won: the on-disk enabled state
   // agrees with the newest commit's action. If the newest commit enabled the
   // schedule the key is absent; if it disabled, the key is false. A mismatch

@@ -46,7 +46,7 @@ Run with `npx tap`.
 | Import | Contents |
 |---|---|
 | `@ianbicking/tap-check/tap` | Adds `t.check`, `t.checkText`, and `t.checkThrows` to tap (use in `.taprc`) |
-| `@ianbicking/tap-check/check` | Patterns (`any`, `uuid`, `isoDate`, `oneOf`, `str`, `optional`, `unordered`, `containing`, `capture`, `others`, `anything`, `not`, `is`, `instanceOf`), `eventually`, `runCommand`, and `printed` |
+| `@ianbicking/tap-check/check` | Patterns (`any`, `uuid`, `isoDate`, `oneOf`, `str`, `optional`, `unordered`, `containing`, `capture`, `others`, `anything`, `not`, `is`, `instanceOf`), `eventually` and `runCommand` |
 | `@ianbicking/tap-check/eslint` | ESLint plugin: `check-whole-value`, `no-voided-check`, `no-tap-assert` |
 
 ## Lint rules

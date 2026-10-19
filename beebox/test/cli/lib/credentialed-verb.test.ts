@@ -127,7 +127,6 @@ function gwsVerb(args: string[]) {
 // The server being down is a machine problem. An HTTP refusal still preserves
 // the server's typed code and boxholder attribution.
 void test("The server being down is a machine problem.", async (t) => {
-  // doctest:L137
   const transport = refusalFor(new TypeError("fetch failed"), { remote: true });
   t.check(transport, {
     kind: "BOX_UNREACHABLE",
@@ -149,7 +148,6 @@ void test("No token file is involved:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L149
   const ctx = await makeTestServer({
     openAccess: false,
     services: {
@@ -167,7 +165,6 @@ void test("No token file is involved:", async (t) => {
     BBX_AGENT_TOKEN: getOrCreateAgentToken(ctx.boxRoot),
   });
 
-  // doctest:L166
   const calendars = await calendarsVerb(ctx.boxRoot);
   t.check(calendars, {
     ok: true,
@@ -188,7 +185,6 @@ void test("No token file is involved:", async (t) => {
   // `primary`, and the listing resolves that alias rather than showing the box as
   // syncing nothing.
 
-  // doctest:L178
   const tracked = await trackVerb(ctx.boxRoot, "thread-1");
   t.check(tracked, {
     ok: true,
@@ -205,7 +201,6 @@ void test("No token file is involved:", async (t) => {
 
   // The card is a real card in the box, written and committed by the server.
 
-  // doctest:L186
   t.checkText(await ctx.read("_content/inbox/email/thread-The_roof-thread-1.email-thread.card"), `---
 email:
   thread-id: thread-1
@@ -225,7 +220,6 @@ messages:
   // `gws` hands back the child's own streams and exit code rather than a rendered
   // sentence, so the caller reads exactly what the upstream CLI said.
 
-  // doctest:L194
   const ran = await gwsVerb(["gmail", "messages", "list"]);
   t.check(ran, {
     ok: true,
@@ -235,7 +229,6 @@ messages:
   // A command outside the read-only vocabulary is refused before anything is minted,
   // and the refusal is the caller's to fix — not the box's state.
 
-  // doctest:L203
   t.check(await gwsVerb(["gmail", "messages", "delete"]), {
     ok: false,
     error: { kind: "BAD_REQUEST", message: "Rejected non-read-only gws command: gmail messages delete", fix: "caller" },
@@ -256,7 +249,6 @@ void test("This box has no fakes, so the server meets the same two gates a produ
       t.error(error);
     }
   });
-  // doctest:L218
   const ctx = await makeTestServer({ openAccess: false });
   const serverUrl = await ctx.server.listen({ port: 0, host: "127.0.0.1" });
   setEnv({
@@ -266,7 +258,6 @@ void test("This box has no fakes, so the server meets the same two gates a produ
     BBX_AGENT_TOKEN: getOrCreateAgentToken(ctx.boxRoot),
   });
 
-  // doctest:L227
   t.check(await calendarsVerb(ctx.boxRoot), {
     ok: false,
     error: {
@@ -276,7 +267,6 @@ void test("This box has no fakes, so the server meets the same two gates a produ
     },
   });
 
-  // doctest:L232
   t.check(await trackVerb(ctx.boxRoot, "thread-1"), {
     ok: false,
     error: {
@@ -290,7 +280,6 @@ void test("This box has no fakes, so the server meets the same two gates a produ
   // different sentence, still the boxholder's, and the one the agent needs to relay
   // instead of guessing.
 
-  // doctest:L241
   await mkdir(join(ctx.boxRoot, "_config"), { recursive: true });
   await writeFile(
     join(ctx.boxRoot, "_config/box.json"),
@@ -315,7 +304,6 @@ void test("This box has no fakes, so the server meets the same two gates a produ
   // gates in this process — the marker decides where the work runs, never what the
   // process can read.
 
-  // doctest:L260
   setEnv({ BBX_SPAWN_PROFILE: "tooling" });
   const local = await calendarsVerb(ctx.boxRoot);
   t.check(local, gap);

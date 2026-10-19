@@ -17,11 +17,9 @@ const repairFrontmatter = (fromRel: string, content: string) => repairFrontmatte
 
 // ## A stale link is rewritten to the file's current location
 void test("A stale link is rewritten to the file's current location", async (t) => {
-  // doctest:L21
   const r = repair("issues/features/bar.md", "see [foo](../bugs/foo.md) for context");
   t.check(r.content, "see [foo](../closed/bugs/foo.md) for context");
 
-  // doctest:L25
   t.check(r.rewrites, [
     {
       line: 1,
@@ -33,7 +31,6 @@ void test("A stale link is rewritten to the file's current location", async (t) 
 
 // ## Frontmatter scalar and list paths use the same repair contract
 void test("Frontmatter scalar and list paths use the same repair contract", async (t) => {
-  // doctest:L32
   const fm = repairFrontmatter("issues/features/bar.md", `---
 title: Bar
 design: ../../beebox/old/guide.md
@@ -49,7 +46,6 @@ issues:
 ---
 # Bar`);
 
-  // doctest:L48
   t.check(fm.rewrites, [
     {
       line: 3,
@@ -66,14 +62,12 @@ issues:
 
 // ## A link that already resolves is left untouched (anchor preserved)
 void test("A link that already resolves is left untouched (anchor preserved)", async (t) => {
-  // doctest:L55
   const ok = repair("issues/features/bar.md", "[foo](../closed/bugs/foo.md#section)");
   t.check(ok, { content: "[foo](../closed/bugs/foo.md#section)", rewrites: [], unfixable: [] });
 });
 
 // ## An unfixable link (true rename/delete) is reported, never guessed
 void test("An unfixable link (true rename/delete) is reported, never guessed", async (t) => {
-  // doctest:L66
   const gone = repair("issues/features/bar.md", "[x](../bugs/deleted-thing.md)");
   t.check(gone, {
     content: "[x](../bugs/deleted-thing.md)",
@@ -90,14 +84,12 @@ void test("An unfixable link (true rename/delete) is reported, never guessed", a
 
 // ## Links inside inline code are left alone (they illustrate syntax)
 void test("Links inside inline code are left alone (they illustrate syntax)", async (t) => {
-  // doctest:L77
   const inline = repair("issues/features/bar.md", "the form is `[foo](../bugs/foo.md)` — a cross-link");
   t.check(inline, { content: "the form is `[foo](../bugs/foo.md)` — a cross-link", rewrites: [], unfixable: [] });
 });
 
 // ## Links inside a fenced code block are left alone
 void test("Links inside a fenced code block are left alone", async (t) => {
-  // doctest:L88
   const fence = "`".repeat(3);
   const fenced = repair("issues/features/bar.md", fence + "\n[foo](../bugs/foo.md)\n" + fence);
   t.check(fenced, { content: fence + "\n[foo](../bugs/foo.md)\n" + fence, rewrites: [], unfixable: [] });
@@ -105,7 +97,6 @@ void test("Links inside a fenced code block are left alone", async (t) => {
 
 // ## An ambiguous basename (2+ candidates) is guarded, not rewritten
 void test("An ambiguous basename (2+ candidates) is guarded, not rewritten", async (t) => {
-  // doctest:L97
   const amb = repairLinks({ fromRel: "docs/a.md", content: "[x](./missing/x.md)", fileExists: () => false, basenameLookup: buildBasenameLookup(["p/x.md", "q/x.md"]) });
   t.check(amb, {
     content: "[x](./missing/x.md)",
@@ -122,7 +113,6 @@ void test("An ambiguous basename (2+ candidates) is guarded, not rewritten", asy
 
 // ## Whitelisted one-per-directory basenames are never auto-resolved
 void test("Whitelisted one-per-directory basenames are never auto-resolved", async (t) => {
-  // doctest:L105
   const readme = repairLinks({ fromRel: "docs/a.md", content: "[r](./missing/README.md)", fileExists: () => false, basenameLookup: buildBasenameLookup(["x/README.md"]) });
   t.check(readme, {
     content: "[r](./missing/README.md)",
@@ -133,13 +123,11 @@ void test("Whitelisted one-per-directory basenames are never auto-resolved", asy
 
 // ## duplicateBasenames flags shared basenames, excluding the whitelist
 void test("duplicateBasenames flags shared basenames, excluding the whitelist", async (t) => {
-  // doctest:L113
   t.check(duplicateBasenames(["issues/bugs/x.md", "issues/closed/bugs/x.md"]).get("x.md"), [
     "issues/bugs/x.md",
     "issues/closed/bugs/x.md",
   ]);
 
-  // doctest:L116
   // README.md / AGENTS.md are intentionally one-per-dir — never counted as duplicates.
   t.check(duplicateBasenames(["a/README.md", "b/README.md", "c/dup.md", "d/dup.md"]), new Map([["dup.md", ["c/dup.md", "d/dup.md"]]]));
 });

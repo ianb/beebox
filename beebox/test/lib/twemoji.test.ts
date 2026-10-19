@@ -18,7 +18,6 @@ const fileFor = (emoji: string) => {
 
 // ## A plain emoji resolves to its codepoint
 void test("A plain emoji resolves to its codepoint", async (t) => {
-  // doctest:L22
   t.check([fileFor("📦"), fileFor("🍳")].join(" | "), "1f4e6.svg exists | 1f373.svg exists");
 });
 
@@ -28,10 +27,8 @@ void test("A plain emoji resolves to its codepoint", async (t) => {
 // ZWJ sequence the selector is part of how the sequence is spelled, so it stays —
 // getting this backwards resolves to a file that isn't there.
 void test("⚗️ is U+2697 followed by U+FE0F, but Twemoji names the file 2697.svg.", async (t) => {
-  // doctest:L33
   t.check([twemojiCodePoints("⚗️"), fileFor("⚗️")].join(" | "), "2697 | 2697.svg exists");
 
-  // doctest:L38
   t.check(fileFor("👩‍🍳"), "1f469-200d-1f373.svg exists");
 
   // Twemoji's own filenames disagree with each other about this: the rainbow flag
@@ -39,7 +36,6 @@ void test("⚗️ is U+2697 followed by U+FE0F, but Twemoji names the file 2697.
   // emoji typed with the selector its file omits still resolves rather than
   // silently falling back to the generic icon.
 
-  // doctest:L48
   t.check([fileFor("🏳️‍🌈"), fileFor("👩‍🍳".replace("\u{1F469}", "\u{1F469}\uFE0F"))].join(" | "), "1f3f3-fe0f-200d-1f308.svg exists | 1f469-200d-1f373.svg exists");
 });
 
@@ -48,7 +44,6 @@ void test("⚗️ is U+2697 followed by U+FE0F, but Twemoji names the file 2697.
 // A symbol is free text from a card — it can be a letter, a word, or an emoji
 // newer than the bundled set. Callers fall back to the app's own icon.
 void test("A symbol is free text from a card — it can be a letter, a word, or an emoji n...", async (t) => {
-  // doctest:L58
   t.check(
     [
       twemojiSvgPath(""),
@@ -69,7 +64,6 @@ void test("A symbol is free text from a card — it can be a letter, a word, or 
 // a name no artwork answers to — containment is a property of the encoding, not
 // a check that could be forgotten.
 void test("Every character becomes hex digits, so a symbol that looks like a path is jus...", async (t) => {
-  // doctest:L73
   t.check(
     [
       twemojiCodePoints("../x"),

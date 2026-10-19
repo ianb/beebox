@@ -143,7 +143,6 @@ void test("When the selected place holds at least 0.9 of the judgment, submit de
       t.error(error);
     }
   });
-  // doctest:L129
   const { box, sessionId } = await gardenBox();
   const runtime = scriptedRuntime(box.root);
   const fake = judged({ c0: 0.95, c1: 0.03, c2: 0.02 });
@@ -172,7 +171,6 @@ void test("When the selected place holds at least 0.9 of the judgment, submit de
   // It does not ask Jev again or send again. Different text under the same id is
   // refused.
 
-  // doctest:L148
   const again = await api.submit(request);
   t.check([again.state, fake.calls.length, runtime.sends.length], [
     "sent",
@@ -180,13 +178,11 @@ void test("When the selected place holds at least 0.9 of the judgment, submit de
     1,
   ]);
 
-  // doctest:L152
   t.check(await failure(() => api.submit({ ...request, message: "Something else" })), "CONFLICT: This send already has different text. Start another message.");
 
   // Two callers submitting the same id at once take the record lock in turn: one
   // judgment, one delivery.
 
-  // doctest:L160
   const twice = { id: randomUUID(), message: "Water the tomatoes" };
   const [one, two] = await Promise.all([api.submit(twice), api.submit(twice)]);
   t.check([one.state, two.state, fake.calls.length, runtime.sends.length], [
@@ -198,7 +194,6 @@ void test("When the selected place holds at least 0.9 of the judgment, submit de
 
   // A busy chat queues the message; the view says so.
 
-  // doctest:L169
   scriptedRuntime(box.root, { send: () => ({ status: 200, body: { queued: true } }) });
   t.check(face(await api.submit({ id: randomUUID(), message: "Also the faucet" })), {
     state: "sent",
@@ -225,7 +220,6 @@ void test("Below the floor, submit stores the thought and offers the three likel
       t.error(error);
     }
   });
-  // doctest:L187
   const { box } = await gardenBox();
   const runtime = scriptedRuntime(box.root);
   const api = caller(box.root, judged({ c0: 0.5, c1: 0.45, c2: 0.05 }));
@@ -255,10 +249,8 @@ void test("Below the floor, submit stores the thought and offers the three likel
   // A candidate the record did not offer is refused. The chosen one is delivered.
   // A second `choose` on the sent record returns it unchanged.
 
-  // doctest:L209
   t.check(await failure(() => api.choose({ id: unsure.id, candidateId: "c9" })), "BAD_REQUEST: Choose one of the offered destinations.");
 
-  // doctest:L212
   const chosen = await api.choose({ id: unsure.id, candidateId: "c1", channel: "web-mobile" });
   const reserved = runtime.reservations[0];
   assert.ok(reserved && chosen.destination);
@@ -277,10 +269,8 @@ void test("Below the floor, submit stores the thought and offers the three likel
     ],
   ]);
 
-  // doctest:L218
   t.check((await api.choose({ id: unsure.id, candidateId: "c0" })).destination?.label, "New chat in Garden");
 
-  // doctest:L221
   t.check(await failure(() => api.choose({ id: randomUUID(), candidateId: "c0" })), "NOT_FOUND: This message is no longer stored.");
 });
 
@@ -303,7 +293,6 @@ void test("origin says how the thought was entered.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L242
   const { box } = await gardenBox();
   const runtime = scriptedRuntime(box.root);
   const sure = caller(box.root, judged({ c0: 0.95, c1: 0.03, c2: 0.02 }));
@@ -322,12 +311,10 @@ void test("origin says how the thought was entered.", async (t) => {
     "<external-input source=\"apple-app-intents\">Renew my passport</external-input>",
   ]);
 
-  // doctest:L260
   t.check(retriedExternal.state, "sent");
 
   // An origin outside the supported inputs is refused.
 
-  // doctest:L267
   await t.checkText(await failure(() => sure.submit(untrusted({ id: randomUUID(), message: "Hum", origin: "video" }))), "«BAD_REQUEST: *»");
 });
 
@@ -345,7 +332,6 @@ void test("When the phone ran its own HQ pass (docs/plans/ios-quick-chat-hq.md),
       t.error(error);
     }
   });
-  // doctest:L283
   const { box } = await gardenBox();
   const runtime = scriptedRuntime(box.root);
   const sure = caller(box.root, judged({ c0: 0.95, c1: 0.03, c2: 0.02 }));
@@ -363,10 +349,8 @@ void test("When the phone ran its own HQ pass (docs/plans/ios-quick-chat-hq.md),
   // `hqService` belongs only to a voice thought, and must be a short token: it is
   // framed into a wrapper attribute.
 
-  // doctest:L303
   await t.checkText(await failure(() => sure.submit({ id: randomUUID(), message: "Buy stamps", origin: "typed", hqService: "apple-speech-transcriber" })), "«BAD_REQUEST: *»");
 
-  // doctest:L306
   await t.checkText(await failure(() => sure.submit({ id: randomUUID(), message: "Hi", origin: "voice", hqService: "x\" onload=\"y" })), "«BAD_REQUEST: *»");
 });
 
@@ -385,7 +369,6 @@ void test("The box's existing root chat and the new general chat share the root.
       t.error(error);
     }
   });
-  // doctest:L323
   const { box, sessionId } = await gardenBox();
   const runtime = scriptedRuntime(box.root);
   const api = caller(box.root, judged({ c0: 0.45, c1: 0.05, c2: 0.5 }));

@@ -44,7 +44,6 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
       t.error(error);
     }
   });
-  // doctest:L40
   const bigDoc = "https://evil.example/" + "A".repeat(5000);
   t.check(
     await postCsp("application/csp-report", { "csp-report": { "violated-directive": "img-src", "blocked-uri": "https://x/y", "document-uri": bigDoc } })
@@ -52,7 +51,6 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
     204,
   );
 
-  // doctest:L44
   const lines = logLines();
   const parsed = JSON.parse(lines[lines.length - 1] ?? "");
   // Field is capped well under its original 5021 chars (2048 + ellipsis).
@@ -60,7 +58,6 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
 
   // ## A body over the small dedicated limit is rejected (413), nothing logged
 
-  // doctest:L57
   const linesBefore = logLines();
   // 20 KB body — over the 16 KB CSP-report limit (but far under the server-wide
   // 50 MB JSON limit that used to apply).
@@ -68,7 +65,6 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
   const status = await postCsp("application/csp-report", huge);
   t.check(status, 413);
 
-  // doctest:L65
   t.check(
     // The oversized report never reached the log — no new line appended.
     logLines(),
@@ -82,13 +78,11 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
   // under the server-wide 50 MB limit; the per-route `bodyLimit` now bounds the raw
   // body for every content-type.
 
-  // doctest:L78
   const linesBeforeJson = logLines();
   const hugeJson = JSON.stringify({ "csp-report": { "document-uri": "https://x/" + "C".repeat(20_000) } });
   const jsonStatus = await postCsp("application/json", hugeJson);
   t.check(jsonStatus, 413);
 
-  // doctest:L84
   t.check(
     // Nothing logged from the rejected oversized JSON body.
     logLines(),
@@ -97,12 +91,10 @@ void test("Under the body limit, a large document-uri (5000 chars) still gets tr
 
   // ## A batch POST logs at most the per-request cap
 
-  // doctest:L92
   const linesBeforeBatch = logLines();
   const batch = Array.from({ length: 50 }, (_v, i) => ({ type: "csp-violation", body: { effectiveDirective: "script-src", blockedURL: "https://cdn/" + i + ".js", documentURL: "https://app/p" } }));
   t.check(await postCsp("application/reports+json", batch), 204);
 
-  // doctest:L97
   t.check(
     // 50 reports posted, but only the first 20 are logged.
     logLines().slice(linesBeforeBatch.length).map((line) => JSON.parse(line)),

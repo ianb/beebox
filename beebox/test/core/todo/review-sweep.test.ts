@@ -54,7 +54,6 @@ void test("All sets empty", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L51
   const box = await seedBox();
   setTime("2026-07-28T12:00:00.000Z");
   await box.write("store/a.doc.card", doc("Just a plain doc, no todos.\n"));
@@ -66,7 +65,6 @@ void test("All sets empty", async (t) => {
   // undated todo, and fresh agent follow-ups. Only the fresh open agent todo is
   // actionable: the future-start, deferred, done, and boxholder todos stay out.
 
-  // doctest:L65
   await box.write(
     "store/b.doc.card",
     doc(
@@ -91,10 +89,8 @@ void test("All sets empty", async (t) => {
   // the escalated and stale ones are still reported. A todo whose `start` falls
   // after the baseline is stirring again.
 
-  // doctest:L92
   await t.checkText(await sweep(box.root, "2026-07-25"), "{\"escalated\":[\"fix-escalated\"],\"stirring\":[],\"actionable\":[\"agent-fresh\"],\"stale\":[\"fix-stale\"]}");
 
-  // doctest:L95
   await t.checkText(await sweep(box.root, "2026-07-19"), "{\"escalated\":[\"fix-escalated\"],\"stirring\":[\"fix-stirring\"],\"actionable\":[\"agent-fresh\"],\"stale\":[\"fix-stale\"]}");
 
   // ## Each brief item says where it was written
@@ -102,7 +98,6 @@ void test("All sets empty", async (t) => {
   // What the card is, and the heading above it, so the brief reads in context
   // without the agent opening anything.
 
-  // doctest:L105
   await box.write(
     "store/Porch.doc.card",
     "---\ntitle: Porch rebuild\n---\n## Decking\n\n{% todo id=\"deck\" due=\"2026-07-01\" %}Order lumber{% /todo %}\n"
@@ -137,7 +132,6 @@ void test("Pacific/Kiritimati is UTC+14 — far enough ahead of UTC that a BBXTI
       t.error(error);
     }
   });
-  // doctest:L132
   const boxTz = await makeTmpBox({ git: true });
   await boxTz.write("_config/box.json", JSON.stringify({ timezone: "Pacific/Kiritimati" }));
   setTime("2026-07-28T23:00:00.000Z"); // 2026-07-29, 13:00 local in Pacific/Kiritimati
@@ -162,7 +156,6 @@ void test("recheck is when the review said it would look again (docs/plans/todos
       t.error(error);
     }
   });
-  // doctest:L155
   const boxR = await seedBox();
   setTime("2026-07-28T12:00:00.000Z");
   await boxR.write(

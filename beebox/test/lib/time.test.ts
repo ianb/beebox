@@ -14,7 +14,6 @@ import * as path from "node:path";
 //
 // Without any stubs, `getBoxTime()` returns approximately now:
 void test("Without any stubs, getBoxTime() returns approximately now:", async (t) => {
-  // doctest:L17
   const now = Date.now();
   t.check(getBoxTime().getTime(), any(Number).between(now - 999, now + 999));
 });
@@ -30,11 +29,9 @@ void test("The BBXTIME env var overrides time globally:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L28
   process.env.BBX_TIME = "2025-06-15T12:00:00Z";
   t.check(getBoxTime().toISOString(), "2025-06-15T12:00:00.000Z");
 
-  // doctest:L34
   t.check(getBoxTimeISO(), "2025-06-15T12:00:00.000Z");
 });
 
@@ -50,7 +47,6 @@ void test("BBX_TIME takes priority over stubs.yaml", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L45
   const box = await makeTmpBox();
   const stubsPath = path.join(box.root, "../stubs.yaml");
   fs.writeFileSync(stubsPath, "time: 2025-01-01T00:00:00Z\n");
@@ -72,7 +68,6 @@ void test("When a stubs.yaml file exists in the parent of the box root, its time
       t.error(error);
     }
   });
-  // doctest:L66
   const box = await makeTmpBox();
   const stubsPath = path.join(box.root, "../stubs.yaml");
   fs.writeFileSync(stubsPath, "time: 2025-07-04T10:30:00Z\n");
@@ -90,7 +85,6 @@ void test("Missing stubs.yaml falls back to real time", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L83
   const box = await makeTmpBox();
   clearTimeCache();
   const now = Date.now();
@@ -110,7 +104,6 @@ void test("The stubs.yaml result is cached per box root:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L101
   const box = await makeTmpBox();
   const stubsPath = path.join(box.root, "../stubs.yaml");
   fs.writeFileSync(stubsPath, "time: 2025-03-01T00:00:00Z\n");
@@ -131,7 +124,6 @@ void test("clearTimeCache resets the cache", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L122
   const box = await makeTmpBox();
   const stubsPath = path.join(box.root, "../stubs.yaml");
   fs.writeFileSync(stubsPath, "time: 2025-03-01T00:00:00Z\n");

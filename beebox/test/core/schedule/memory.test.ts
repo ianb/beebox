@@ -69,17 +69,14 @@ void test("Before the first run the cursor is set to HEAD and saved, so the firs
       t.error(error);
     }
   });
-  // doctest:L66
   const box = await makeTmpBox({ git: true });
   await box.write("_content/notes/old.doc.card", "---\ntitle: Old\n---\n");
   await box.write("_config/schedules/watch.scheduled-script.card", WATCH);
   box.commitAll("setup");
   await box.write("_tmp/next-carry", "told them about old");
 
-  // doctest:L72
   t.check(await tick(box), { status: "ran", warnings: [] });
 
-  // doctest:L75
   await t.checkText(await box.read("_tmp/seen.txt"), `since: setup
 time: (none)
 carry: (none)
@@ -92,7 +89,6 @@ added: []`);
 
   // The run succeeded, so the cursor moved to HEAD, and the carry is in state:
 
-  // doctest:L93
   const first = await loadScriptState(box.root, "watch");
   const firstRun = capture(isoDate());
   const duration = any(Number).between(0, Infinity);
@@ -116,19 +112,16 @@ added: []`);
   // A card arrives. The second run sees it, the first run's time, and the carry.
   // It writes no carry file, so the carry is kept.
 
-  // doctest:L103
   await fs.rm(box.path("_tmp/next-carry"));
   await box.write("_content/notes/new.doc.card", "---\ntitle: New\n---\n");
   box.commitAll("add new");
   t.check(await tick(box), { status: "ran", warnings: [] });
 
-  // doctest:L109
   await t.checkText((await box.read("_tmp/seen.txt")).replace(firstRun.value, "<first run>"), `since: setup
 time: <first run>
 carry: told them about old
 added: [_content/notes/new.doc.card]`);
 
-  // doctest:L115
   t.check(await loadScriptState(box.root, "watch"), {
     lastRun: isoDate(),
     lastResult: "success",
@@ -151,7 +144,6 @@ added: [_content/notes/new.doc.card]`);
 
   // The defer file is a fresh path each run, gone after it:
 
-  // doctest:L122
   const deferPath = (await box.read("_tmp/defer-path.txt")).trim();
   t.check(await fs.access(deferPath).then(() => "present", () => "gone"), "gone");
 
@@ -160,14 +152,12 @@ added: [_content/notes/new.doc.card]`);
   // A failure keeps `lastCommit`, so the next run sees the same cards again and
   // nothing is dropped.
 
-  // doctest:L133
   const beforeFailure = (await loadScriptState(box.root, "watch")).lastCommit;
   await box.write("_content/notes/third.doc.card", "---\ntitle: Third\n---\n");
   box.commitAll("add third");
   await box.write("_tmp/fail", "");
   t.check(await tick(box), { status: "error", warnings: [] });
 
-  // doctest:L140
   const failed = await loadScriptState(box.root, "watch");
   t.check(failed, {
     lastRun: isoDate(),
@@ -190,11 +180,9 @@ added: [_content/notes/new.doc.card]`);
     ],
   });
 
-  // doctest:L144
   await fs.rm(box.path("_tmp/fail"));
   t.check(await tick(box), { status: "ran", warnings: [] });
 
-  // doctest:L148
   await t.checkText(await box.read("_tmp/seen.txt"), `since: add new
 time: «date»
 carry: told them about old
@@ -202,14 +190,12 @@ added: [_content/notes/third.doc.card]`);
 
   // ## A carry over 4 KB is truncated, with a warning
 
-  // doctest:L155
   await box.write("_tmp/next-carry", "x".repeat(5000));
   const big = await tick(box);
   t.check(big.warnings, [
     "  watch: carry of 5000 bytes truncated to 4096",
   ]);
 
-  // doctest:L162
   t.check((await loadScriptState(box.root, "watch")).carry, "x".repeat(4096));
 });
 
@@ -221,7 +207,6 @@ added: [_content/notes/third.doc.card]`);
 // reason from an exit-75 marker (`test/cli/commands/tick.defer.doctest.md`); a
 // `deferred` with no reason (an engine outage) holds it too.
 void test("success advances, and so does a deferral whose items were seen (no-change, no...", async (t) => {
-  // doctest:L179
   t.check(
     [
       cursorAdvances("success", null),
@@ -250,7 +235,6 @@ void test("bbx procedure run inside a schedule inherits the tick's environment, 
       t.error(error);
     }
   });
-  // doctest:L199
   const box = await makeTmpBox();
   const names = ["BBX_SINCE_COMMIT", "BBX_SINCE_TIME", "BBX_CARRY_IN", "BBX_CARRY_OUT", "BBX_DEFER_FILE", "BBX_SCHEDULE_NAME", "BBX_SUMMARY_FILE"];
   for (const name of names) process.env[name] = `value-of-${name}`;

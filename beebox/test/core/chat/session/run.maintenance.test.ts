@@ -21,7 +21,6 @@ void test("line 13", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L14
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, skipBootstrap: true, systemPrompt: async () => "test" });
@@ -43,7 +42,6 @@ first` }],
 second` }],
   ]);
 
-  // doctest:L31
   session.enqueue("third queued before closure");
   const secondDone = once(session, "done");
   run.emitResult();
@@ -58,7 +56,6 @@ first` }],
 second` }],
   ]);
 
-  // doctest:L41
   await maintenance.complete();
   session.resumeAfterMaintenance();
   await waitForRuns(backend, { count: 2, timeoutMs: 3000 });

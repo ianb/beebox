@@ -23,18 +23,15 @@ function fakeSourceBuffer(events: string[]): ChunkSink {
 
 // A decodable chunk resolves on `updateend`.
 void test("A decodable chunk resolves on updateend.", async (t) => {
-  // doctest:L27
   t.check(await appendChunk(fakeSourceBuffer(["update", "updateend"]), new Uint8Array([1, 2, 3])).then(() => "appended"), "appended");
 });
 
 // An undecodable one rejects on `error`, even though `updateend` follows.
 void test("An undecodable one rejects on error, even though updateend follows.", async (t) => {
-  // doctest:L34
   await t.checkThrows(async () => (await appendChunk(fakeSourceBuffer(["error", "updateend"]), new Uint8Array([1, 2, 3]))), "SourceBufferAppendError: Streaming speech audio could not be decoded (SourceBuffer error)");
 });
 
 // An append the browser aborts (the source was torn down) rejects too.
 void test("An append the browser aborts (the source was torn down) rejects too.", async (t) => {
-  // doctest:L41
   await t.checkThrows(async () => (await appendChunk(fakeSourceBuffer(["abort", "updateend"]), new Uint8Array([1]))), "SourceBufferAppendError: Streaming speech audio could not be decoded (SourceBuffer abort)");
 });

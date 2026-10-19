@@ -50,18 +50,15 @@ void test("A refused run answers 409 with the reason, and nothing is recorded", 
       t.error(error);
     }
   });
-  // doctest:L47
   const backend = createFakeChatBackend();
   const ctx = await makeTestServer({ chatBackend: backend });
   await writeFile(join(ctx.boxRoot, "_config/box.json"), JSON.stringify({ agentModel: "qwen/qwen3-coder", openrouterModels: [{ id: "qwen/qwen3-coder", label: "Qwen3 Coder" }] }));
 
-  // doctest:L51
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L56
   const { result: res } = await capturingErrors(() => ctx.request({
     method: "POST",
     url: "/api/chat/send",
@@ -79,12 +76,10 @@ void test("A refused run answers 409 with the reason, and nothing is recorded", 
     runs: [],
   });
 
-
   // ## Once the cause is fixed, the same message id is sent
   //
   // The refusal kept no claim, so the retry is not answered as a duplicate.
 
-  // doctest:L77
   await writeFile(join(ctx.boxRoot, "_config/box.json"), JSON.stringify({}));
   const retry = await ctx.request({
     method: "POST",

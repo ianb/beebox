@@ -32,7 +32,6 @@ void test("Format pulls scalar frontmatter fields", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L29
   const box = await makeTmpBox();
   await mkdir(join(box.root, "_content/inbox"), { recursive: true });
   await writeFile(join(box.root, "_content/inbox/Hello.doc.card"), `---
@@ -56,7 +55,6 @@ void test("Nested fields resolve; missing fields are empty", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L49
   const box = await makeTmpBox();
   await mkdir(join(box.root, "_content/inbox"), { recursive: true });
   await writeFile(join(box.root, "_content/inbox/Photo.image.card"), `---
@@ -70,7 +68,6 @@ exif:
     "_content/inbox/Photo.image.card\tCanon",
   ]);
 
-  // doctest:L61
   const missing = await lsLines(box.root, { paths: ["_content/inbox/Photo.image.card"], format: "{nope}" });
   t.check(missing, [
     "_content/inbox/Photo.image.card\t",
@@ -86,7 +83,6 @@ void test("Bare `ls` (no format) lists paths only", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L73
   const box = await makeTmpBox();
   await mkdir(join(box.root, "_content/inbox"), { recursive: true });
   await writeFile(join(box.root, "_content/inbox/Hello.doc.card"), "---\ntitle: Hi\n---\n");

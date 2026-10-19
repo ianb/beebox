@@ -62,7 +62,6 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
       t.error(error);
     }
   });
-  // doctest:L58
   await box.write(
     "store/a.doc.card",
     doc(
@@ -80,12 +79,10 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
   // frontmatter block's line count (`splitCardContent`'s `lineOffset`) is added
   // to the tag's body-relative line before reporting it.
 
-  // doctest:L92
   t.check(result1.issues, []);
 
   // ## Nested `{% see-also %}` is pulled out, not left in the main text
 
-  // doctest:L99
   await box.write(
     "store/b.doc.card",
     doc(
@@ -94,7 +91,6 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
     )
   );
   const result2 = await collectTodos(box.root, { glob: "store/b.doc.card" });
-  // doctest:L110
   t.check(result2.todos, [
     {
       path: "store/b.doc.card",
@@ -125,7 +121,6 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
   // `quiet` (before `start`), and `parked` are each derived from the shared
   // `todo-model.ts` truth table using the box's configured timezone.
 
-  // doctest:L121
   await box.write(
     "store/plate.doc.card",
     doc(
@@ -157,7 +152,6 @@ void test("A body {% todo %} tag and a frontmatter todos: entry on the same card
 async function invalidAndUnreadable(t: Test) {
   // ## A `{% todo %}` with an invalid `status` is a visible-invalid result, not a silent drop
 
-  // doctest:L155
   await box.write(
     "store/bad-status.doc.card",
     doc("", '{% todo status="Done" %}Bad status{% /todo %}\n')
@@ -165,7 +159,6 @@ async function invalidAndUnreadable(t: Test) {
   const badStatusResult = await collectTodos(box.root, { glob: "store/bad-status.doc.card" });
   t.check(badStatusResult.todos, []);
 
-  // doctest:L163
   t.check(badStatusResult.issues, [
     {
       kind: "validate",
@@ -185,7 +178,6 @@ async function invalidAndUnreadable(t: Test) {
   // `status` was silently coerced to `"open"` instead of becoming a visible-invalid
   // result.
 
-  // doctest:L182
   await box.write(
     "store/bad-status-multiline.doc.card",
     doc("", '{% todo status="Done" %}\nBad status, multi-line\n{% /todo %}\n')
@@ -193,7 +185,6 @@ async function invalidAndUnreadable(t: Test) {
   const badStatusMultiline = await collectTodos(box.root, { glob: "store/bad-status-multiline.doc.card" });
   t.check(badStatusMultiline.todos, []);
 
-  // doctest:L190
   t.check(badStatusMultiline.issues, [
     {
       kind: "validate",
@@ -204,7 +195,6 @@ async function invalidAndUnreadable(t: Test) {
 
   // ## A card whose type has no registered schema is a visible `unknown-type` issue, not a silent skip
 
-  // doctest:L197
   await box.write(
     "store/unknown-type.memmo.card",
     doc("", "{% todo %}Never collected — unregistered type{% /todo %}\n")
@@ -212,14 +202,12 @@ async function invalidAndUnreadable(t: Test) {
   const unknownTypeResult = await collectTodos(box.root, { glob: "store/unknown-type.memmo.card" });
   t.check(unknownTypeResult.todos, []);
 
-  // doctest:L205
   t.check(unknownTypeResult.issues, [
     { kind: "unknown-type", path: "store/unknown-type.memmo.card", message: 'no registered schema for card type "memmo"' },
   ]);
 
   // ## Unparseable frontmatter is a visible `load` issue
 
-  // doctest:L215
   await box.write(
     "store/bad-frontmatter.doc.card",
     "---\ntitle: [unclosed\n---\n{% todo %}Never collected{% /todo %}\n"
@@ -227,7 +215,6 @@ async function invalidAndUnreadable(t: Test) {
   const badLoadResult = await collectTodos(box.root, { glob: "store/bad-frontmatter.doc.card" });
   t.check(badLoadResult.todos, []);
 
-  // doctest:L223
   t.check(badLoadResult.issues, [
     {
       kind: "load",
@@ -240,7 +227,6 @@ async function invalidAndUnreadable(t: Test) {
 async function scopeAndOrdering(t: Test) {
   // ## Duplicate `id` across cards is reported, but both todos still come back
 
-  // doctest:L230
   await box.write("store/dup1.doc.card", doc("", '{% todo id="shared" %}First{% /todo %}\n'));
   await box.write("store/dup2.doc.card", doc("", '{% todo id="shared" %}Second{% /todo %}\n'));
   const dupResult = await collectTodos(box.root, { glob: "store/dup{1,2}.doc.card" });
@@ -298,7 +284,6 @@ async function scopeAndOrdering(t: Test) {
 
   // ## `--glob` scopes which cards are scanned
 
-  // doctest:L249
   await box.write("other/c.doc.card", doc("", '{% todo id="outside-scope" %}Not scoped in{% /todo %}\n'));
   const scoped = await collectTodos(box.root, { glob: "store/dup1.doc.card" });
   t.check(scoped.todos.map((todo) => todo.id), ["shared"]);
@@ -313,7 +298,6 @@ async function scopeAndOrdering(t: Test) {
   // box-wide plate rendered every non-card file in the box as a
   // "card couldn't be read" error.
 
-  // doctest:L266
   await box.write("store/notes.md", "Not a card at all.\n");
   const allTodoLocations = [
     "other/c.doc.card#other/c.doc.card:5",
@@ -330,7 +314,6 @@ async function scopeAndOrdering(t: Test) {
   const wideOpen = await collectTodos(box.root, { glob: "**" });
   t.check(wideOpen.issues.filter((i) => i.path === "store/notes.md" || i.path === "_config/box.json"), []);
 
-  // doctest:L271
   t.check(wideOpen.todos.map((todo) => `${todo.path}#${formatTodoLocation(todo)}`), allTodoLocations);
 
   // ## A malformed box timezone degrades instead of crashing the whole collector
@@ -343,7 +326,6 @@ async function scopeAndOrdering(t: Test) {
   // display. `loadBoxTimezone` now validates and falls back to the host
   // timezone with a warning instead of throwing.
 
-  // doctest:L286
   const badTzBox = await makeTmpBox();
   await badTzBox.write("_config/box.json", JSON.stringify({ timezone: "America/Chciago" }));
   await badTzBox.write(
@@ -353,7 +335,6 @@ async function scopeAndOrdering(t: Test) {
   const badTzResult = await collectTodos(badTzBox.root);
   t.check(badTzResult.todos.map((todo) => todo.id), ["survives"]);
 
-  // doctest:L296
   await badTzBox.cleanup();
 
   // ## Deterministic ordering: path, then locator
@@ -362,7 +343,6 @@ async function scopeAndOrdering(t: Test) {
   // locator order every time (body locators sort before frontmatter locators on
   // the same card).
 
-  // doctest:L306
   const full = await collectTodos(box.root);
   t.check(full.todos.map((todo) => `${todo.path}#${formatTodoLocation(todo)}`), allTodoLocations);
 }

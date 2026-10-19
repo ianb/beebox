@@ -34,7 +34,6 @@ const AT = "2026-09-15T00:00:00.000Z";
 // plan's two caps arrive as `{unit:3,number:5}` and `{unit:6,number:1}`. The plan
 // tier rides along in the label, since it is what decides how big the window is.
 void test("unit is a period code — 3 hours, 6 weeks — with number as the count, so the p...", async (t) => {
-  // doctest:L38
   t.check(parseGlmQuota(FRESH, AT).windows.map((w) => [w.label, w.durationMinutes]), [
     [
       "5-hour window (lite)",
@@ -54,7 +53,6 @@ void test("unit is a period code — 3 hours, 6 weeks — with number as the cou
 // than drop the window (reporting less than we know) it is dated as if spending
 // started now, which is the earliest it could end.
 void test("The 5-hour cap refreshes five hours after the first spend, so an unused windo...", async (t) => {
-  // doctest:L50
   const [fiveHour, weekly] = parseGlmQuota(FRESH, AT).windows;
   t.check([fiveHour?.resetsAt, weekly?.resetsAt], [
     "2026-09-15T05:00:00.000Z",
@@ -67,7 +65,6 @@ void test("The 5-hour cap refreshes five hours after the first spend, so an unus
 //
 // ## Used percentages are carried, never recomputed
 void test("The weekly window's reset is the server's own epoch-milliseconds value, not a...", async (t) => {
-  // doctest:L61
   const spent = { data: { level: "pro", limits: [{ unit: 3, number: 5, usage: 2000, currentValue: 640, remaining: 1360, percentage: 32 }] } };
   t.check(parseGlmQuota(spent, AT).windows[0], {
     label: "5-hour window (pro)",
@@ -87,7 +84,6 @@ void test("The weekly window's reset is the server's own epoch-milliseconds valu
 // has no key, so a box with no coding plan shows no GLM card rather than one that
 // reads "unavailable" forever.
 void test("Claude and Codex resolve through a local CLI or SDK, so collectAgentQuotas de...", async (t) => {
-  // doctest:L77
   const quotas = await collectAgentQuotas({
     claudeRequest: () => Promise.resolve({ rate_limits: null, rate_limits_available: false }),
     codexRequest: () => Promise.resolve({ rateLimits: null }),
@@ -104,7 +100,6 @@ void test("Claude and Codex resolve through a local CLI or SDK, so collectAgentQ
 // A response with no limits is `unavailable` with the server's own message, rather
 // than an empty card that looks like zero usage.
 void test("A response with no limits is unavailable with the server's own message, rathe...", async (t) => {
-  // doctest:L92
   t.check(parseGlmQuota({ msg: "Operation failed", data: { limits: [] } }, AT), {
     provider: "glm",
     status: "unavailable",
@@ -117,7 +112,6 @@ void test("A response with no limits is unavailable with the server's own messag
 // An unrecognized period code keeps the window — the percentage is still true —
 // and simply declines to name a duration.
 void test("An unrecognized period code keeps the window — the percentage is still true —...", async (t) => {
-  // doctest:L100
   t.check(parseGlmQuota({ data: { limits: [{ unit: 99, number: 2, percentage: 5, nextResetTime: 1790037095999 }] } }, AT).windows[0], {
     label: "Window",
     usedPercent: 5,

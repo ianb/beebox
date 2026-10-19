@@ -52,11 +52,9 @@ class FakeCodexFailureError extends Error {
 // worktree must not re-point the entry at itself while another checkout is using
 // it, so the only command that runs is the question.
 void test("A registration at the expected version whose root still exists is left alone,...", async (t) => {
-  // doctest:L51
   const codex = fakeCodex(() => listing({ version: "0.1.1", path: PLUGIN_ROOT }));
   await installCodexPlugin(codex.run);
 
-  // doctest:L54
   t.check(codex.calls, [
     "plugin list --json",
   ]);
@@ -65,14 +63,12 @@ void test("A registration at the expected version whose root still exists is lef
 // Codex cachebusters are build metadata, not a wire-contract version change, so
 // they do not make every fresh process re-register the global marketplace:
 void test("Codex cachebusters are build metadata, not a wire-contract version change, so...", async (t) => {
-  // doctest:L62
   const codex = fakeCodex(() => listing({
     version: "0.1.1+codex.local-20260831-120000",
     path: PLUGIN_ROOT,
   }));
   await installCodexPlugin(codex.run);
 
-  // doctest:L68
   t.check(codex.calls, [
     "plugin list --json",
   ]);
@@ -82,7 +78,6 @@ void test("Codex cachebusters are build metadata, not a wire-contract version ch
 // whose `source` has an `id` and no `path`. Only our own entry needs a path; a
 // parser that demanded one everywhere failed every chat query behind it:
 void test("Since codex-cli 0.153.4 the list also carries the account's remote plugins, w...", async (t) => {
-  // doctest:L77
   const codex = fakeCodex(() => JSON.stringify({
     installed: [
       { pluginId: "github@openai-curated-remote", version: "0.1.12", source: { source: "remote", id: "plugin_connector_1p_x" } },
@@ -91,7 +86,6 @@ void test("Since codex-cli 0.153.4 the list also carries the account's remote pl
   }));
   await installCodexPlugin(codex.run);
 
-  // doctest:L85
   t.check(codex.calls, [
     "plugin list --json",
   ]);
@@ -100,7 +94,6 @@ void test("Since codex-cli 0.153.4 the list also carries the account's remote pl
 // Our own entry without a local path is a registration this module does not
 // understand, and it re-registers rather than trusting it:
 void test("Our own entry without a local path is a registration this module does not und...", async (t) => {
-  // doctest:L93
   const codex = fakeCodex((args) => {
     if (args[1] === "list") return JSON.stringify({
       installed: [{ pluginId: "beebox-codex@beebox", version: "0.1.1", source: { source: "remote", id: "plugin_x" } }],
@@ -109,7 +102,6 @@ void test("Our own entry without a local path is a registration this module does
   });
   await installCodexPlugin(codex.run);
 
-  // doctest:L101
   t.check(codex.calls.at(-1), "plugin add beebox-codex@beebox --json");
 
   // The plugin not being installed here is a different fact from the registration
@@ -118,7 +110,6 @@ void test("Our own entry without a local path is a registration this module does
   // marketplace. An existing marketplace whose root is on disk is one we can just
   // install from.
 
-  // doctest:L112
   const borrow = fakeCodex((args) => {
     if (args[1] === "list") return JSON.stringify({ installed: [] });
     if (args[1] === "marketplace") return marketplaces(PACKAGE_ROOT);
@@ -126,7 +117,6 @@ void test("Our own entry without a local path is a registration this module does
   });
   await installCodexPlugin(borrow.run);
 
-  // doctest:L119
   t.check(borrow.calls, [
     "plugin list --json",
     "plugin marketplace list --json",
@@ -136,7 +126,6 @@ void test("Our own entry without a local path is a registration this module does
   // When there is no marketplace to install from — or its root is gone — this
   // checkout registers one. Someone has to.
 
-  // doctest:L131
   const claim = fakeCodex((args) => {
     if (args[1] === "list") return JSON.stringify({ installed: [] });
     if (args[1] === "marketplace") return marketplaces("/nonexistent/deleted-temp-checkout");
@@ -144,7 +133,6 @@ void test("Our own entry without a local path is a registration this module does
   });
   await installCodexPlugin(claim.run);
 
-  // doctest:L138
   t.check(claim.calls.slice(-2), [
     "plugin marketplace add <root> --json",
     "plugin add beebox-codex@beebox --json",
@@ -158,7 +146,6 @@ void test("Our own entry without a local path is a registration this module does
 // every `codex plugin …` command on the machine stayed broken until a human ran
 // the removal by hand. Now the failed list *is* the repair signal.
 void test("The regression case. A temp checkout registered the marketplace and was then...", async (t) => {
-  // doctest:L150
   const codex = fakeCodex((args) => {
     if (args[1] === "list") {
       // What Codex prints once the registered marketplace root is gone.
@@ -168,7 +155,6 @@ void test("The regression case. A temp checkout registered the marketplace and w
   });
   await installCodexPlugin(codex.run);
 
-  // doctest:L159
   t.check(codex.calls, [
     "plugin list --json",
     "plugin remove beebox-codex@beebox --json",
@@ -181,14 +167,12 @@ void test("The regression case. A temp checkout registered the marketplace and w
   // "nothing to remove" and "too broken to remove cleanly" are both fine. Only the
   // `add` has to succeed.
 
-  // doctest:L174
   const brokenCleanup = fakeCodex((args) => {
     if (args[1] === "list" || args[1] === "remove" || args[2] === "remove") throw new FakeCodexFailureError("no");
     return "{}";
   });
   await installCodexPlugin(brokenCleanup.run);
 
-  // doctest:L180
   t.check(brokenCleanup.calls.slice(-2), [
     "plugin marketplace add <root> --json",
     "plugin add beebox-codex@beebox --json",
@@ -198,13 +182,11 @@ void test("The regression case. A temp checkout registered the marketplace and w
 // A registration whose path is gone gets the same repair even when the list
 // itself still answers — a stale entry naming a culled worktree.
 void test("A registration whose path is gone gets the same repair even when the list its...", async (t) => {
-  // doctest:L188
   const codex = fakeCodex((args) => (
     args[1] === "list" ? listing({ version: "0.1.1", path: "/nonexistent/culled-worktree/plugins/beebox-codex" }) : "{}"
   ));
   await installCodexPlugin(codex.run);
 
-  // doctest:L193
   t.check(codex.calls.slice(-1), [
     "plugin add beebox-codex@beebox --json",
   ]);
@@ -212,23 +194,19 @@ void test("A registration whose path is gone gets the same repair even when the 
   // A version that isn't the one this checkout ships is also a re-point: the
   // plugin's wire contract is what the running code assumes.
 
-  // doctest:L201
   const stale = fakeCodex((args) => (
     args[1] === "list" ? listing({ version: "0.0.9", path: PLUGIN_ROOT }) : "{}"
   ));
   await installCodexPlugin(stale.run);
 
-  // doctest:L206
   await t.checkText(JSON.stringify(stale.calls.length), "5");
 
   // When the `add` itself fails there is nothing left to try, and the caller gets a
   // typed error with the cause attached rather than a raw exec failure.
 
-  // doctest:L214
   const dead = fakeCodex(() => { throw new FakeCodexFailureError("codex: command not found"); });
   const caught = await installCodexPlugin(dead.run).catch((e: unknown) => e);
 
-  // doctest:L217
   t.check([caught instanceof CodexPluginInstallError, caught instanceof Error ? caught.message : ""], [
     true,
     "Could not install the Bee Box Codex plugin",

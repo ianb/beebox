@@ -70,7 +70,6 @@ void test("Both output modes succeed while preserving human follow-up", async (t
       t.error(error);
     }
   });
-  // doctest:L67
   const box = await fixture();
   const json = await cli(box, ["--sweep", "--json"]);
   const report: { status: string; questions: string[] } = JSON.parse(json.stdout.trim().split("\n").at(-1) ?? "");
@@ -82,7 +81,6 @@ void test("Both output modes succeed while preserving human follow-up", async (t
     ],
   });
 
-  // doctest:L73
   const text = await cli(box, ["--sweep"]);
   t.check({ code: text.code, warning: text.stderr.includes("Migration questions need attention:") && text.stderr.includes(questionPath) }, {
     code: 0,
@@ -102,7 +100,6 @@ void test("A missing manifest requires a human baseline decision; it cannot be t
       t.error(error);
     }
   });
-  // doctest:L88
   const box = await makeTmpBox({ git: true });
   await rm(box.path(MANIFEST_PATH));
   const result = await cli(box, ["--sweep", "--json"]);

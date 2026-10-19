@@ -79,7 +79,6 @@ async function lastIntent() {
 
 // ## `--check` lists the channels that can reach the person
 void test("`--check` lists the channels that can reach the person", async (t) => {
-  // doctest:L83
   await t.checkText(await run({ title: undefined, options: { check: true } }), `apns: no
 web-push: yes
 exit 0`);
@@ -88,7 +87,6 @@ exit 0`);
 // A subscribed browser is not enough on its own: without VAPID keys a push
 // cannot be sent, so `--check` says no and exits 1:
 void test("A subscribed browser is not enough on its own:", async (t) => {
-  // doctest:L94
   await t.checkText(await run({ title: undefined, options: { check: true }, services: {} }), `apns: no
 web-push: no
 exit 1`);
@@ -97,7 +95,6 @@ exit 1`);
 // On a box with no channel it exits 1, so an agent knows not to promise a
 // reminder:
 void test("On a box with no channel it exits 1, so an agent knows not to promise a remin...", async (t) => {
-  // doctest:L105
   const bare = await makeTmpBox({ git: true });
   const bareCheck = await run({ title: undefined, options: { check: true }, services: {}, root: bare.root });
   await bare.cleanup();
@@ -108,11 +105,9 @@ exit 1`);
 
 // ## A loud notification sends on every reachable channel
 void test("A loud notification sends on every reachable channel", async (t) => {
-  // doctest:L118
   await t.checkText(await run({ title: "Field trip form due", options: { target: "card:_content/inbox/field-trip.email.card", loudness: "loud", body: "Sign it by Friday." } }), `<id>: apns skipped (no-audience), web-push sent
 exit 0`);
 
-  // doctest:L123
   const slug = await boxSlug(box.root);
   t.check([push.sent.at(-1)?.payload.body, push.sent.at(-1)?.payload.url.replace(slug, "<box>"), push.sent.at(-1)?.payload.silent], [
     "Sign it by Friday.",
@@ -127,7 +122,6 @@ exit 0`);
 // coming, so `bbx notify` never reads it unasked. With stdin piped and no body
 // flag, the body is empty and stdin is left alone.
 void test("An agent's shell or a schedule's pipeline can hold stdin open with nothing co...", async (t) => {
-  // doctest:L135
   let stdinReads = 0;
   const counted = async () => { stdinReads += 1; return "never read"; };
   const quietLog = console.log;
@@ -140,11 +134,9 @@ void test("An agent's shell or a schedule's pipeline can hold stdin open with no
     0,
   ]);
 
-  // doctest:L144
   await t.checkText(await run({ title: "Weekly summary", options: { target: "dashboard", body: "-" }, stdin: "Three cards changed.\n" }), `<id>: apns skipped (no-audience), web-push sent
 exit 0`);
 
-  // doctest:L149
   const summary = await lastIntent();
   t.check([summary.body, summary.loudness, summary.source], [
     "Three cards changed.",
@@ -152,17 +144,14 @@ exit 0`);
     "doctest",
   ]);
 
-  // doctest:L153
   await t.checkText(await run({ title: "From stdin", options: { target: "dashboard", bodyFile: "-", channel: "web-push" }, stdin: "Via --body-file -\n" }), `<id>: web-push sent
 exit 0`);
 
-  // doctest:L158
   t.check((await lastIntent()).body, "Via --body-file -");
 
   // A `-` body with nothing piped, or with stdin already carrying the targets, is
   // a usage error:
 
-  // doctest:L166
   await t.checkText(
     [
       await run({ title: "x", options: { target: "dashboard", body: "-" } }),
@@ -181,7 +170,6 @@ exit 2`,
 // the tick sets `BBX_SCHEDULE_NAME` to the card's stem (and lets it through to a
 // procedure's shells), so a notification names the schedule that sent it.
 void test("From a chat session's shell the source is the chat.", async (t) => {
-  // doctest:L184
   await t.checkText(
     [
       notifySource({ chatSession: "s1", env: { BBX_SCHEDULE_NAME: "watch-field-trip" } }),
@@ -196,20 +184,17 @@ bbx notify`,
 
 // ## `--body-file` reads the body from a file
 void test("`--body-file` reads the body from a file", async (t) => {
-  // doctest:L198
   const bodyFile = path.join(box.root, "body.txt");
   await fs.writeFile(bodyFile, "Line one\nLine two\n");
   await t.checkText(await run({ title: "From a file", options: { target: "chat:new", bodyFile, loudness: "loud", channel: "web-push" } }), `<id>: web-push sent
 exit 0`);
 
-  // doctest:L205
   await t.checkText((await lastIntent()).body, `Line one
 Line two`);
 });
 
 // ## `--targets-from-stdin` sends one notification per target
 void test("`--targets-from-stdin` sends one notification per target", async (t) => {
-  // doctest:L214
   await t.checkText(await run({ title: "Two cards need review", options: { targetsFromStdin: true, body: "See the card.", loudness: "loud", channel: "web-push" }, stdin: "card:_content/a.doc.card\ncard:_content/b.doc.card\n" }), `<id>: web-push sent
 <id>: web-push sent
 exit 0`);
@@ -219,7 +204,6 @@ exit 0`);
 //
 // Every tried channel failed:
 void test("Every tried channel failed:", async (t) => {
-  // doctest:L226
   const failingPush = createFakePush({ failEndpoints: ["https://push.example/phone"] });
   await t.checkText(await run({ title: "Will not arrive", options: { target: "dashboard", loudness: "loud", channel: "web-push" }, services: { push: failingPush } }), `stderr: Not delivered: <id>: web-push failed (no device received the push (sent 0, pruned 0, failed 1))
 exit 1`);
@@ -227,7 +211,6 @@ exit 1`);
 
 // ## Bad flags and bad targets exit 2 before anything is sent
 void test("Bad flags and bad targets exit 2 before anything is sent", async (t) => {
-  // doctest:L236
   const before = await readRecent(box.root, { days: 1 });
   await t.checkText(
     [
@@ -255,7 +238,6 @@ stderr: Error: Invalid notification target "card:../outside.card": the path must
 exit 2`,
   );
 
-  // doctest:L262
   t.check(await readRecent(box.root, { days: 1 }), before);
 });
 
@@ -266,7 +248,6 @@ exit 2`,
 // and skip. Nothing is sent and nothing is logged. The paired phone here has a
 // registration, but the server has no APNs key.
 void test("It prints the intent, who each channel would reach (and whether the server co...", async (t) => {
-  // doctest:L274
   await pairFakePushDevice(box.root, { label: "test phone" });
   await writePresence(box.root, { activeWeb: 0, now: new Date() });
   const sentBefore = [...push.sent];
@@ -282,14 +263,12 @@ would skip: none
 dry run: nothing sent, nothing logged
 exit 0`);
 
-  // doctest:L291
   t.check([push.sent, await readRecent(box.root, { days: 1 })], [sentBefore, loggedBefore]);
 
   // The dry run applies the same rule a send does, so it shows the effect of the
   // live presence reading and of `--channel`. `--presence <n>` substitutes a
   // reading, to preview a `quiet` notification with someone in the app:
 
-  // doctest:L300
   await t.checkText(await run({ title: "Pick up Sam", options: { target: "chat:new", loudness: "quiet", dryRun: true, presence: "2", channel: "web-push" } }), `intent: quiet "Pick up Sam" -> chat:new
 presence: 2 active web sessions (--presence)
 audience:
@@ -300,7 +279,6 @@ would skip: web-push (present)
 dry run: nothing sent, nothing logged
 exit 0`);
 
-  // doctest:L312
   await t.checkText(
     [
       await run({ title: "x", options: { target: "dashboard", presence: "1" } }),
@@ -315,14 +293,12 @@ exit 2`,
   // A dry run needs no `--target`: it previews `chat:new`, where most
   // notifications land. A send still requires one.
 
-  // doctest:L327
   t.check((await run({ title: "Pick up Sam", options: { dryRun: true } })).split("\n")[0], "intent: quiet \"Pick up Sam\" -> chat:new");
 
   // ## Fake mode shows in a dry run
   //
   // Under `BBX_NOTIFY_FAKE=1` every channel is configured through its fake:
 
-  // doctest:L336
   process.env.BBX_NOTIFY_FAKE = "1";
   const fakeRun = await run({ title: "Pick up Sam", options: { target: "dashboard", loudness: "dot", dryRun: true }, services: {} });
   delete process.env.BBX_NOTIFY_FAKE;
@@ -355,7 +331,6 @@ void test("An agent's shell, or a script a schedule runs, has BBXSERVERURL, BBXB
       t.error(error);
     }
   });
-  // doctest:L363
   const serverApns = createFakeApns();
   const serverPush = createFakePush();
   const server = await makeTestServer({ openAccess: false, services: { notify: { apns: serverApns, push: serverPush } } });
@@ -369,14 +344,12 @@ void test("An agent's shell, or a script a schedule runs, has BBXSERVERURL, BBXB
   process.env.BBX_BOX_NAME = TEST_SLUG;
   process.env.BBX_AGENT_TOKEN = getOrCreateAgentToken(server.boxRoot);
 
-  // doctest:L376
   const localApns = createFakeApns();
   const local = { apns: localApns, push };
   const localBefore = [localApns.sent.length, push.sent.length];
   await t.checkText(await run({ title: "Pick up Sam", options: { target: "chat:new", loudness: "loud", body: "At 3." }, services: local, root: server.boxRoot }), `<id>: apns sent, web-push sent
 exit 0`);
 
-  // doctest:L384
   t.check(
     {
       server: [serverApns.sent.length, serverPush.sent.length],
@@ -393,14 +366,12 @@ exit 0`);
 
   // The server logged it, with this shell's source:
 
-  // doctest:L394
   t.check((await readRecent(server.boxRoot, { days: 1 })).at(-1)?.intent.source, "doctest");
 
   // `--check` reports what the server can reach, so an agent never hears "no" for
   // a channel only the server has keys for. `--verbose` names the path, on stderr;
   // without it nothing about the path is printed.
 
-  // doctest:L403
   await t.checkText((await run({ title: undefined, options: { check: true, verbose: true }, services: {}, root: server.boxRoot })).replace(process.env.BBX_SERVER_URL, "<server>"), `stderr: [notify] via the box server (<server>)
 apns: yes
 web-push: yes
@@ -409,7 +380,6 @@ exit 0`);
   // `--dry-run` reads the same audience from the box and takes the channel keys
   // from the server, so the phone is not `[unconfigured]` here:
 
-  // doctest:L415
   await t.checkText(await run({ title: "Pick up Sam", options: { target: "chat:new", loudness: "loud", dryRun: true, presence: "0" }, services: {}, root: server.boxRoot }), `intent: loud "Pick up Sam" -> chat:new
 presence: 0 active web sessions (--presence)
 audience:
@@ -423,7 +393,6 @@ exit 0`);
   // A server that is named but does not answer is an error: delivering in this
   // process instead would quietly lose the channels only the server has keys for.
 
-  // doctest:L432
   await server.cleanup();
   const beforeDown = [[...localApns.sent], [...push.sent]];
   const down = await run({ title: "Pick up Sam", options: { target: "dashboard", loudness: "loud" }, services: local, root: server.boxRoot }).catch((e) => `threw: ${e.name}: ${e.message.split(":")[0]}`);
@@ -435,7 +404,6 @@ exit 0`);
   // With no box environment it delivers in this process again, and `--verbose`
   // says why:
 
-  // doctest:L443
   delete process.env.BBX_SERVER_URL;
   delete process.env.BBX_BOX_NAME;
   delete process.env.BBX_AGENT_TOKEN;

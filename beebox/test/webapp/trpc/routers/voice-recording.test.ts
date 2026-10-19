@@ -67,13 +67,11 @@ void test("claim before ready is `pending`; after ready it is `claimed` and idem
       t.error(error);
     }
   });
-  // doctest:L62
   const box = await makeTmpBox({ git: true });
   const session = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
   await requestHq({ box, session, emissionId: "em-1" });
   const c = caller(box);
 
-  // doctest:L67
   t.check(await c.voiceRecording.claim({ recordingId: session.id, emissionId: "em-1" }), {
     outcome: "pending",
     hq: {
@@ -81,13 +79,11 @@ void test("claim before ready is `pending`; after ready it is `claimed` and idem
     },
   });
 
-  // doctest:L72
   await applyVoiceEvent({
     boxRoot: box.root, id: session.id,
     event: { type: "allPiecesDone", result: READY_RESULT },
   });
 
-  // doctest:L77
   const claimed = await c.voiceRecording.claim({ recordingId: session.id, emissionId: "em-1" });
   t.check(claimed, {
     outcome: "claimed",
@@ -99,7 +95,6 @@ void test("claim before ready is `pending`; after ready it is `claimed` and idem
     },
   });
 
-  // doctest:L81
   await t.checkText(
     // Idempotent repeat — same call again, same outcome, no error.
     JSON.stringify(await c.voiceRecording.claim({ recordingId: session.id, emissionId: "em-1" })),
@@ -116,18 +111,15 @@ void test("fallBack before ready is `fellBack`; after ready HQ wins with `claime
       t.error(error);
     }
   });
-  // doctest:L93
   const box = await makeTmpBox({ git: true });
   const fellBack = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
   await requestHq({ box, session: fellBack, emissionId: "em-live" });
   const c = caller(box);
 
-  // doctest:L98
   t.check(await c.voiceRecording.fallBack({ recordingId: fellBack.id, emissionId: "em-live" }), {
     outcome: "fellBack",
   });
 
-  // doctest:L101
   // Idempotent repeat (a lost response, retried) — even after HQ finishes.
   await applyVoiceEvent({
     boxRoot: box.root, id: fellBack.id,
@@ -137,7 +129,6 @@ void test("fallBack before ready is `fellBack`; after ready HQ wins with `claime
     outcome: "fellBack",
   });
 
-  // doctest:L111
   const wonByHq = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
   await requestHq({ box, session: wonByHq, emissionId: "em-won" });
   await applyVoiceEvent({
@@ -145,7 +136,6 @@ void test("fallBack before ready is `fellBack`; after ready HQ wins with `claime
     event: { type: "allPiecesDone", result: READY_RESULT },
   });
 
-  // doctest:L118
   t.check(await c.voiceRecording.fallBack({ recordingId: wonByHq.id, emissionId: "em-won" }), {
     outcome: "claimed",
     result: {
@@ -166,7 +156,6 @@ void test("fallBack after a terminal HQ failure reports `failed`", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L129
   const box = await makeTmpBox({ git: true });
   const session = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
   await requestHq({ box, session, emissionId: "em-1" });
@@ -180,7 +169,6 @@ void test("fallBack after a terminal HQ failure reports `failed`", async (t) => 
   });
   const c = caller(box);
 
-  // doctest:L142
   t.check(await c.voiceRecording.fallBack({ recordingId: session.id, emissionId: "em-1" }), {
     outcome: "failed",
     failure: {
@@ -200,13 +188,11 @@ void test("A mismatched emission id is a CONFLICT, never a silent no-op", async 
       t.error(error);
     }
   });
-  // doctest:L153
   const box = await makeTmpBox({ git: true });
   const session = await stageVoiceRecording(box, { targetSessionId: "chat-1" });
   await requestHq({ box, session, emissionId: "em-1" });
   const c = caller(box);
 
-  // doctest:L158
   t.check(await c.voiceRecording.claim({ recordingId: session.id, emissionId: "wrong-emission" }).then(() => "no error", codeOf), "CONFLICT");
 });
 
@@ -224,12 +210,10 @@ void test("Owner check mirrors authorizeCaptureSessionOwner:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L174
   const box = await makeTmpBox({ git: true });
   const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", createdBy: "someone-else@example.com" });
   await requestHq({ box, session, emissionId: "em-1" });
   const stranger = caller(box);
 
-  // doctest:L179
   t.check(await stranger.voiceRecording.status({ recordingId: session.id }).then(() => "no error", codeOf), "NOT_FOUND");
 });

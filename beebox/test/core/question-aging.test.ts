@@ -75,7 +75,6 @@ void test("No nudge before the default 7-day threshold", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L70
   const box = await makeTmpBox({ git: true });
   await seedBox(box);
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: ASKED_AT });
@@ -85,7 +84,6 @@ void test("No nudge before the default 7-day threshold", async (t) => {
   );
   box.commitAll("seed question");
 
-  // doctest:L79
   setTime(addMs(ASKED_AT, DEFAULT_NUDGE_AFTER_MS - 60_000));
   const before = await ageQuestions(box.root);
   t.check(before, {
@@ -96,7 +94,6 @@ void test("No nudge before the default 7-day threshold", async (t) => {
   // At the 7-day mark it nudges exactly once. The nudge is `quiet`, pushed to the
   // subscribed device, targets the question, and is in the notification log:
 
-  // doctest:L89
   setTime(addMs(ASKED_AT, DEFAULT_NUDGE_AFTER_MS));
   const push = createFakePush();
   const nudgedResult = await ageQuestions(box.root, { push });
@@ -107,11 +104,9 @@ void test("No nudge before the default 7-day threshold", async (t) => {
     expired: [],
   });
 
-  // doctest:L95
   await t.checkText(push.describe(), `FakePush: 1 sent
   https://push.example/qaging → ⏰ Reminder: a question is waiting: What color?`);
 
-  // doctest:L99
   const [logged] = await readRecent(box.root, { days: 1 });
   const id = capture(any(String));
   t.check(logged?.intent, {
@@ -132,7 +127,6 @@ void test("No nudge before the default 7-day threshold", async (t) => {
   // A second sweep at the same age (or later, still under expiry) does not
   // re-nudge — the latch dedups it:
 
-  // doctest:L108
   setTime(addMs(ASKED_AT, DEFAULT_NUDGE_AFTER_MS + 60 * 60 * 1000));
   t.check(await ageQuestions(box.root), {
     nudged: [],
@@ -141,7 +135,6 @@ void test("No nudge before the default 7-day threshold", async (t) => {
 
   // The question is still pending — nudging never sets `expired-at`:
 
-  // doctest:L116
   const card = await box.read("_bookkeeping/questions/Color.question.card");
   t.check(card, question({ prompt: "What color?", askedAt: ASKED_AT.toISOString() }));
 });
@@ -159,7 +152,6 @@ void test("No push subscription exists here:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L132
   const box = await makeTmpBox({ git: true });
   await seedBox(box);
   await box.write(
@@ -168,7 +160,6 @@ void test("No push subscription exists here:", async (t) => {
   );
   box.commitAll("seed question");
 
-  // doctest:L140
   setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
   const result = await ageQuestions(box.root);
   t.check(result, {
@@ -178,7 +169,6 @@ void test("No push subscription exists here:", async (t) => {
     ],
   });
 
-  // doctest:L145
   const card = await box.read("_bookkeeping/questions/Stale.question.card");
   t.check(
     card,
@@ -195,12 +185,10 @@ expired-at: 2026-01-31T00:00:00.000Z
 
   // The commit carries the `Expired-By` trailer:
 
-  // doctest:L153
   t.check(headTrailers(box.root), "Expire question: Stale.question\n\nExpired-By: question-aging");
 
   // Expired questions drop out of the pending count and pending-questions list:
 
-  // doctest:L160
   const state = await getSystemState(box.root);
   t.check(state.questions, [
     {
@@ -213,7 +201,6 @@ expired-at: 2026-01-31T00:00:00.000Z
     },
   ]);
 
-  // doctest:L164
   const { pendingQuestions } = await generateContext(box.root);
   t.check(pendingQuestions, []);
 });
@@ -230,7 +217,6 @@ void test("A 10-day override nudges at 5 days (half), not the default 7:", async
       t.error(error);
     }
   });
-  // doctest:L179
   const box = await makeTmpBox({ git: true });
   await seedBox(box);
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: ASKED_AT });
@@ -241,14 +227,12 @@ void test("A 10-day override nudges at 5 days (half), not the default 7:", async
   );
   box.commitAll("seed question");
 
-  // doctest:L189
   setTime(addMs(ASKED_AT, TEN_DAYS_MS / 2 - 60_000));
   t.check(await ageQuestions(box.root), {
     nudged: [],
     expired: [],
   });
 
-  // doctest:L193
   setTime(addMs(ASKED_AT, TEN_DAYS_MS / 2));
   t.check(await ageQuestions(box.root), {
     nudged: [
@@ -259,7 +243,6 @@ void test("A 10-day override nudges at 5 days (half), not the default 7:", async
 
   // Past the full 10-day override window it expires (not the 30-day default):
 
-  // doctest:L201
   setTime(addMs(ASKED_AT, TEN_DAYS_MS));
   t.check(await ageQuestions(box.root), {
     nudged: [],
@@ -282,7 +265,6 @@ void test("A pending question with no asked-at (shouldn't exist post-migration, 
       t.error(error);
     }
   });
-  // doctest:L217
   const box = await makeTmpBox({ git: true });
   await seedBox(box);
   await box.write(
@@ -291,14 +273,12 @@ void test("A pending question with no asked-at (shouldn't exist post-migration, 
   );
   box.commitAll("seed question");
 
-  // doctest:L225
   setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
   t.check(await ageQuestions(box.root), {
     nudged: [],
     expired: [],
   });
 
-  // doctest:L229
   const card = await box.read("_bookkeeping/questions/NoAskedAt.question.card");
   t.check(card, "---\nprompt: When was this asked?\ninput:\n  type: text\n---\n");
 });
@@ -324,7 +304,6 @@ void test("The shared withQuestionTransition primitive (question-transition.ts) 
       t.error(error);
     }
   });
-  // doctest:L252
   const box = await makeTmpBox({ git: true });
   await seedBox(box);
   await box.write(
@@ -334,14 +313,12 @@ void test("The shared withQuestionTransition primitive (question-transition.ts) 
   );
   box.commitAll("seed question");
 
-  // doctest:L261
   setTime(addMs(ASKED_AT, DEFAULT_EXPIRE_AFTER_MS));
   t.check(await ageQuestions(box.root), {
     nudged: [],
     expired: [],
   });
 
-  // doctest:L265
   const card = await box.read("_bookkeeping/questions/AlreadyAnswered.question.card");
   t.check(
     card,

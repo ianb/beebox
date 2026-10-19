@@ -41,13 +41,11 @@ void test("Pure path computation — encodes slashes as hyphens:", async (t) => 
 // `/api/session-media` serves a photo out of whichever transcript this resolves
 // to. An ordinary binding resolves as you would expect:
 void test("A landmark-bound chat runs the SDK with its cwd set to a box subdirectory, an...", async (t) => {
-  // doctest:L48
   t.check(containedSessionCwd("/tmp/test-box", "_content/recipes"), path.join("/tmp/test-box", "_content/recipes"));
 });
 
 // No binding is the box root:
 void test("No binding is the box root:", async (t) => {
-  // doctest:L55
   t.check([containedSessionCwd("/tmp/test-box", undefined), containedSessionCwd("/tmp/test-box", "")], [
     "/tmp/test-box",
     "/tmp/test-box",
@@ -58,14 +56,12 @@ void test("No binding is the box root:", async (t) => {
 // plausible — it falls back to the box root, so the transcript it names is simply
 // not found rather than read from somewhere else:
 void test("A row that climbs out of the box does not get clamped into something plausibl...", async (t) => {
-  // doctest:L64
   t.check(containedSessionCwd("/tmp/test-box", "../../etc"), "/tmp/test-box");
 });
 
 // A leading slash does not make it absolute — `path.join` reads it as
 // box-relative, so it lands inside the box rather than at the filesystem root:
 void test("A leading slash does not make it absolute — path.join reads it as box-relativ...", async (t) => {
-  // doctest:L72
   t.check(containedSessionCwd("/tmp/test-box", "/etc/passwd"), "/tmp/test-box/etc/passwd");
 });
 
@@ -80,7 +76,6 @@ void test("Empty file", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L81
   const box = await makeTmpBox();
   await box.write("log.jsonl", "");
   const result = await parseSessionLog({ logPath: box.path("log.jsonl"), slice: ALL });
@@ -96,7 +91,6 @@ void test("User and assistant entries", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L100
   const box = await makeTmpBox();
   const lines = [
     JSON.stringify({
@@ -135,7 +129,6 @@ void test("User entries with only toolresult blocks (no real text) are skipped:"
       t.error(error);
     }
   });
-  // doctest:L139
   const box = await makeTmpBox();
   const lines = [
     JSON.stringify({
@@ -173,7 +166,6 @@ void test("System and result entries are skipped:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L172
   const box = await makeTmpBox();
   const lines = [
     JSON.stringify({ type: "system", uuid: "s1", message: { content: "init" } }),
@@ -205,7 +197,6 @@ void test("Pagination", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L196
   const box = await makeTmpBox();
   const lines = [];
   for (let i = 0; i < 5; i++) {
@@ -232,21 +223,18 @@ void test("Pagination", async (t) => {
 //
 // ### Text block
 void test("Text block", async (t) => {
-  // doctest:L228
   const result = transformContent([{ type: "text", text: "hello world" }]);
   t.check(result, [{ type: "text", text: "hello world" }]);
 });
 
 // ### String content (legacy format)
 void test("String content (legacy format)", async (t) => {
-  // doctest:L239
   const result = transformContent("plain string");
   t.check(result, [{ type: "text", text: "plain string" }]);
 });
 
 // ### Tool use block
 void test("Tool use block", async (t) => {
-  // doctest:L250
   const result = transformContent([{
     type: "tool_use",
     name: "Read",
@@ -258,7 +246,6 @@ void test("Tool use block", async (t) => {
 
 // ### Tool result block
 void test("Tool result block", async (t) => {
-  // doctest:L270
   const result = transformContent([{
     type: "tool_result",
     tool_use_id: "tool_1",
@@ -269,21 +256,18 @@ void test("Tool result block", async (t) => {
 
 // ### Thinking block
 void test("Thinking block", async (t) => {
-  // doctest:L287
   const result = transformContent([{ type: "thinking", thinking: "Let me consider..." }]);
   t.check(result, [{ type: "thinking", text: "Let me consider..." }]);
 });
 
 // ### Redacted thinking
 void test("Redacted thinking", async (t) => {
-  // doctest:L298
   const result = transformContent([{ type: "redacted_thinking" }]);
   t.check(result, [{ type: "thinking", text: "[redacted]" }]);
 });
 
 // ### Empty/non-array content
 void test("Empty/non-array content", async (t) => {
-  // doctest:L309
   const result = transformContent(null);
   t.check(result, []);
 });
@@ -293,7 +277,6 @@ void test("Empty/non-array content", async (t) => {
 // User-pasted images arrive as image content blocks with a base64 source.
 // They're preserved so the chat UI can render them inline.
 void test("User-pasted images arrive as image content blocks with a base64 source.", async (t) => {
-  // doctest:L320
   const result = transformContent([
     { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAA" } }
   ]);
@@ -308,7 +291,6 @@ void test("User-pasted images arrive as image content blocks with a base64 sourc
 //
 // Image blocks using a URL source are preserved as `imageUrl`:
 void test("Image blocks using a URL source are preserved as imageUrl:", async (t) => {
-  // doctest:L332
   const result = transformContent([
     { type: "image", source: { type: "url", url: "https://example.com/x.png" } }
   ]);
@@ -325,7 +307,6 @@ void test("Image blocks using a URL source are preserved as imageUrl:", async (t
 // plumbing and filters them out (the surrounding user prose, if any,
 // is what carries the real message).
 void test("Claude Code emits user-role turns containing only image blocks when feeding P...", async (t) => {
-  // doctest:L347
   const { writeFile } = await import("node:fs/promises");
   const { mkdtempSync } = await import("node:fs");
   const { tmpdir } = await import("node:os");
@@ -364,42 +345,32 @@ void test("Claude Code emits user-role turns containing only image blocks when f
 
 // ## summarizeToolInput
 void test("summarizeToolInput", async (t) => {
-  // doctest:L378
   t.check(summarizeToolInput("Read", { file_path: "/src/main.ts" }), "/src/main.ts");
 
-  // doctest:L381
   t.check(summarizeToolInput("Bash", { description: "Run tests", command: "npm test" }), "Run tests");
 
-  // doctest:L384
   t.check(summarizeToolInput("Glob", { pattern: "**/*.ts" }), "**/*.ts");
 
-  // doctest:L387
   t.check(summarizeToolInput("Grep", { pattern: "TODO", path: "src/" }), "TODO in src/");
 
-  // doctest:L390
   t.check(summarizeToolInput("TodoWrite", { todos: [] }), "update todos");
 
-  // doctest:L393
   t.check(summarizeToolInput("Write", { file_path: "/tmp/out.txt", content: "hello world" }), "/tmp/out.txt (11 chars)");
 });
 
 // ## summarizeToolResult
 void test("summarizeToolResult", async (t) => {
-  // doctest:L400
   t.check(summarizeToolResult("simple string"), "simple string");
 
-  // doctest:L403
   t.check(summarizeToolResult(["line1", "line2"]), "line1\nline2");
 });
 
 // Array with text objects:
 void test("Array with text objects:", async (t) => {
-  // doctest:L412
   t.check(summarizeToolResult([{ text: "first" }, { text: "second" }]), "first\nsecond");
 });
 
 // Non-string/non-array returns empty:
 void test("Non-string/non-array returns empty:", async (t) => {
-  // doctest:L421
   t.check(summarizeToolResult(42), "");
 });

@@ -28,15 +28,12 @@ void test("The failure propagates, and the session goes back to idle", async (t)
       t.error(error);
     }
   });
-  // doctest:L24
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
-  // doctest:L28
   backend.failNextStart = Object.assign(new Error("spawn EBADF"), { code: "EBADF" });
 
-  // doctest:L30
   let caught = "none";
   try {
     await session.send("hello");
@@ -44,7 +41,6 @@ void test("The failure propagates, and the session goes back to idle", async (t)
     caught = e instanceof Error ? e.message : String(e);
   }
 
-  // doctest:L37
   t.check(`${caught} | busy=${session.isBusy()} | running=${session.isRunning()}`, "spawn EBADF | busy=false | running=false");
 });
 
@@ -61,20 +57,16 @@ void test("The point of resetting to idle:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L52
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
-  // doctest:L56
   backend.failNextStart = new Error("spawn EBADF");
   await session.send("first").catch(() => null);
 
-  // doctest:L59
   const sent = await session.send("second");
   await tick();
 
-  // doctest:L62
   t.check(`sent=${sent} | runs=${backend.runs.length} | busy=${session.isBusy()}`, "sent=true | runs=1 | busy=true");
 });
 
@@ -91,19 +83,15 @@ void test("A lock left held would make bbx tick defer commits indefinitely again
       t.error(error);
     }
   });
-  // doctest:L77
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, skipBootstrap: true });
 
-  // doctest:L81
   backend.failNextStart = new Error("spawn EBADF");
   await session.send("hello").catch(() => null);
 
-  // doctest:L84
   const { readdir } = await import("node:fs/promises");
   const stateDir = await readdir(`${box.root}/.beebox`).catch((): string[] => []);
 
-  // doctest:L87
   t.check(stateDir.filter((f) => f.includes("chat-active")).join(","), "");
 });

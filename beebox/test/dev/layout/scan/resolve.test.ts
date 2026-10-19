@@ -28,16 +28,13 @@ const aliases = loadAliases({ repoRoot, packageRoot: "pkg" });
 
 // ## A pure path join, no filesystem involved
 void test("A pure path join, no filesystem involved", async (t) => {
-  // doctest:L32
   t.check(resolveRepoRelative({ fromDir: "a/b", relative: "../c" }), "a/c");
 });
 
 // ## An alias resolves through `baseUrl`/`paths`
 void test("An alias resolves through `baseUrl`/`paths`", async (t) => {
-  // doctest:L39
   t.check(aliases.baseDir, "pkg");
 
-  // doctest:L42
   t.check(resolveImport({ specifier: "@x/foo", importerPath: "pkg/src/a.ts", repoRoot, aliases }), {
     target: "pkg/dir/foo.ts",
     external: false,
@@ -46,7 +43,6 @@ void test("An alias resolves through `baseUrl`/`paths`", async (t) => {
 
 // ## `.js` swapped for `.ts` when the exact path is absent
 void test("`.js` swapped for `.ts` when the exact path is absent", async (t) => {
-  // doctest:L49
   t.check(resolveImport({ specifier: "./b.js", importerPath: "pkg/src/a.ts", repoRoot, aliases }), {
     target: "pkg/src/b.ts",
     external: false,
@@ -55,7 +51,6 @@ void test("`.js` swapped for `.ts` when the exact path is absent", async (t) => 
 
 // ## Appending `/index.ts` when a directory has no extension match
 void test("Appending `/index.ts` when a directory has no extension match", async (t) => {
-  // doctest:L56
   t.check(resolveImport({ specifier: "./util", importerPath: "pkg/src/a.ts", repoRoot, aliases }), {
     target: "pkg/src/util/index.ts",
     external: false,
@@ -64,7 +59,6 @@ void test("Appending `/index.ts` when a directory has no extension match", async
 
 // ## A Vite query suffix (`?url`, `?raw`, ...) is stripped before resolving
 void test("A Vite query suffix (`?url`, `?raw`, ...) is stripped before resolving", async (t) => {
-  // doctest:L63
   t.check(resolveImport({ specifier: "./b.js?url", importerPath: "pkg/src/a.ts", repoRoot, aliases }), {
     target: "pkg/src/b.ts",
     external: false,
@@ -73,7 +67,6 @@ void test("A Vite query suffix (`?url`, `?raw`, ...) is stripped before resolvin
 
 // ## A relative specifier that resolves to no file on disk
 void test("A relative specifier that resolves to no file on disk", async (t) => {
-  // doctest:L70
   t.check(resolveImport({ specifier: "./missing.js", importerPath: "pkg/src/a.ts", repoRoot, aliases }), {
     target: null,
     external: false,
@@ -82,7 +75,6 @@ void test("A relative specifier that resolves to no file on disk", async (t) => 
 
 // ## An alias match whose target resolves to no file on disk
 void test("An alias match whose target resolves to no file on disk", async (t) => {
-  // doctest:L77
   t.check(resolveImport({ specifier: "@x/missing", importerPath: "pkg/src/a.ts", repoRoot, aliases }), {
     target: null,
     external: false,
@@ -91,7 +83,6 @@ void test("An alias match whose target resolves to no file on disk", async (t) =
 
 // ## A bare specifier matching no alias is external
 void test("A bare specifier matching no alias is external", async (t) => {
-  // doctest:L84
   t.check(resolveImport({ specifier: "zod", importerPath: "pkg/src/a.ts", repoRoot, aliases }), {
     target: null,
     external: true,
@@ -107,7 +98,6 @@ void test("No `tsconfig.json`: `baseDir` defaults to the package root, no aliase
       t.error(error);
     }
   });
-  // doctest:L91
   const noConfig = loadAliases({ repoRoot, packageRoot: "pkg/dir" });
   t.check(noConfig, { baseDir: "pkg/dir", entries: [] });
 });

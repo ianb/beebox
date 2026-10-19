@@ -97,7 +97,9 @@ const STALE_MS = 2 * 60 * 60 * 1000;
 const SWEEP_INTERVAL_MS = 10 * 60 * 1000;
 const SWEEP_MAX_REMOVALS = 2000;
 // `bbx-test-` covers every isolation preload's per-process dir (home, auth,
-// secrets, origin); see `process-temp-dir.ts`.
+// secrets, origin; see `process-temp-dir.ts`) and every test box.
+// `bbx-doctest-` is the test-box prefix before 2026-10-18, kept so boxes left
+// by earlier runs are still swept.
 const SWEEP_PREFIXES = ["bbx-doctest-", "bbx-test-"];
 
 function claimSweep(stamp: string): boolean {

@@ -31,11 +31,9 @@ const tick = () => new Promise((r) => setImmediate(r));
 // A second acquisition for the same file waits until the first's callback fully
 // completes — it does not start while the first still holds the lock:
 void test("A second acquisition for the same file waits until the first's callback fully...", async (t) => {
-  // doctest:L34
   const events: string[] = [];
   const gateA = deferred();
 
-  // doctest:L37
   const pA = withCardLock("/box/todo.card", async () => {
     events.push("A:start");
     await gateA.promise;
@@ -45,11 +43,9 @@ void test("A second acquisition for the same file waits until the first's callba
     events.push("B:start");
   });
 
-  // doctest:L46
   await tick();
   t.check(events.join(","), "A:start");
 
-  // doctest:L50
   gateA.resolve();
   await Promise.all([pA, pB]);
   t.check(events.join(","), "A:start,A:end,B:start");
@@ -60,11 +56,9 @@ void test("A second acquisition for the same file waits until the first's callba
 // `path.resolve` collapses relative/`.`/`..`/redundant-separator spellings, so a
 // file reached two ways still serializes:
 void test("path.resolve collapses relative/./../redundant-separator spellings, so a file...", async (t) => {
-  // doctest:L62
   const order: string[] = [];
   const gate = deferred();
 
-  // doctest:L65
   const p1 = withCardLock("/box/x.card", async () => {
     order.push("1:start");
     await gate.promise;
@@ -74,11 +68,9 @@ void test("path.resolve collapses relative/./../redundant-separator spellings, s
     order.push("2:start");
   });
 
-  // doctest:L74
   await tick();
   t.check(order.join(","), "1:start");
 
-  // doctest:L78
   gate.resolve();
   await Promise.all([p1, p2]);
   t.check(order.join(","), "1:start,1:end,2:start");
@@ -88,11 +80,9 @@ void test("path.resolve collapses relative/./../redundant-separator spellings, s
 //
 // Locks are per file; a lock on one card never blocks work on another:
 void test("Locks are per file; a lock on one card never blocks work on another:", async (t) => {
-  // doctest:L89
   const order: string[] = [];
   const gate = deferred();
 
-  // doctest:L92
   const pa = withCardLock("/box/a.card", async () => {
     order.push("a:start");
     await gate.promise;
@@ -102,7 +92,6 @@ void test("Locks are per file; a lock on one card never blocks work on another:"
     order.push("b:start");
   });
 
-  // doctest:L101
   await tick();
   t.check(
     // b did not queue behind a — it ran while a is still holding.
@@ -110,7 +99,6 @@ void test("Locks are per file; a lock on one card never blocks work on another:"
     "a:start,b:start",
   );
 
-  // doctest:L106
   gate.resolve();
   await Promise.all([pa, pb]);
   t.check("done", "done");
@@ -121,10 +109,8 @@ void test("Locks are per file; a lock on one card never blocks work on another:"
 // The failing task's rejection reaches its own caller, but the next queued task
 // still runs, and a normal callback's return value passes straight through:
 void test("The failing task's rejection reaches its own caller, but the next queued task...", async (t) => {
-  // doctest:L118
   const order: string[] = [];
 
-  // doctest:L120
   const bad = withCardLock("/box/c.card", async () => {
     order.push("bad");
     throw new Error("boom");
@@ -134,7 +120,6 @@ void test("The failing task's rejection reaches its own caller, but the next que
     return 42;
   });
 
-  // doctest:L129
   const err = await bad.catch((e) => errorMessage(e));
   const value = await good;
   t.check([err, value, order.join(",")], [
@@ -151,7 +136,6 @@ void test("The failing task's rejection reaches its own caller, but the next que
 // the inner). Rather than hang silently, `withCardLock` throws
 // `ReentrantCardLockError`:
 void test("A callback that re-acquires the SAME file's lock from within itself can never...", async (t) => {
-  // doctest:L147
   const outcome = await withCardLock("/box/d.card", async () => {
     return withCardLock("/box/d.card", async () => "inner")
       .then(() => "no-throw", (e) => toError(e).name);
@@ -162,7 +146,6 @@ void test("A callback that re-acquires the SAME file's lock from within itself c
 // Locking a *different* file from within a locked callback is fine — only
 // same-key nesting deadlocks:
 void test("Locking a different file from within a locked callback is fine — only same-ke...", async (t) => {
-  // doctest:L159
   const out = await withCardLock("/box/e.card", async () => {
     const inner = await withCardLock("/box/f.card", async () => "inner-ok");
     return `outer-got:${inner}`;
@@ -176,16 +159,13 @@ void test("Locking a different file from within a locked callback is fine — on
 // tail), so the map holds only files with active or queued work, never every
 // file ever touched:
 void test("The per-file chain is removed once it fully drains (compare-and-delete of the...", async (t) => {
-  // doctest:L174
   await tick();
   t.check(activeCardLockCount(), 0);
 
-  // doctest:L178
   const gate = deferred();
   const p = withCardLock("/box/drain.card", async () => { await gate.promise; });
   t.check(activeCardLockCount(), 1);
 
-  // doctest:L183
   gate.resolve();
   await p;
   await tick();

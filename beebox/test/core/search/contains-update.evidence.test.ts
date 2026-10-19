@@ -43,18 +43,15 @@ void test("This is the regression anchor for a real bug:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L39
   const box = await makeTmpBox();
   await box.write(CARD, doc("contains: A trip to the coast."));
 
-  // doctest:L42
   const first = await setDerivedContains(box.root, {
     relPath: CARD,
     evidence: "- decision: booked the coast cottage",
   });
   t.check(first, { unchanged: false });
 
-  // doctest:L49
   const after = await readFile(box.path(CARD), "utf8");
   t.checkText(after, `---
 title: Coast trip
@@ -68,7 +65,6 @@ Body text.`);
   // Writing the same evidence again is a no-op, so a nightly pass that finds nothing
   // new doesn't churn the card or its git history.
 
-  // doctest:L65
   const second = await setDerivedContains(box.root, {
     relPath: CARD,
     evidence: "- decision: booked the coast cottage",
@@ -77,7 +73,6 @@ Body text.`);
 
   // Both fields move together when both are supplied.
 
-  // doctest:L76
   await setDerivedContains(box.root, {
     relPath: CARD,
     contains: "Planning a coast trip, now booked.",
@@ -107,7 +102,6 @@ Body text.`);
 // rather than a live bug, and the cases that need it are the frontmatter-only
 // ones.
 void test("The staleness sidecar decides whether a card's contains still describes its c...", async (t) => {
-  // doctest:L104
   // Real schemas: `doc` has a body field, `file` is frontmatter-only.
   const cardSchemas = await createCardSchemaMap();
   const docSchema = cardSchemas.get("doc");
@@ -126,14 +120,12 @@ void test("The staleness sidecar decides whether a card's contains still describ
     fields,
   });
 
-  // doctest:L122
   // Bodied card: frontmatter is not in the basis at all.
   t.check(
     computeContainsBasis({ card: bodied({ contains: "A trip." }) }),
     computeContainsBasis({ card: bodied({ contains: "A trip.", "contains-evidence": "- learned: trains" }) }),
   );
 
-  // doctest:L127
   // Frontmatter-only card: the exclusion is what keeps the basis stable.
   t.check(
     computeContainsBasis({ card: flat({ source: "voice", contains: "A trip." }) }),
@@ -144,7 +136,6 @@ void test("The staleness sidecar decides whether a card's contains still describ
   // testing the exclusion rather than a basis that ignores everything. (`status` is
   // itself basis-excluded, so it makes a poor control — use a content field.)
 
-  // doctest:L138
   t.check(
     computeContainsBasis({ card: flat({ source: "voice" }) }),
     not(computeContainsBasis({ card: flat({ source: "email" }) })),
@@ -156,7 +147,6 @@ void test("The staleness sidecar decides whether a card's contains still describ
   // `2026-10-11-contains-never-stale-for-bodied-card-with-empty-body`). Whitespace
   // counts as empty.
 
-  // doctest:L150
   const emptyBodied = (fields: Record<string, unknown>): LoadedCard => ({
     kind: "frontmatter",
     path: "Person.doc.card",
@@ -168,7 +158,6 @@ void test("The staleness sidecar decides whether a card's contains still describ
     not(computeContainsBasis({ card: emptyBodied({ phone: "555-0199" }) })),
   );
 
-  // doctest:L160
   t.check(
     computeContainsBasis({ card: emptyBodied({ phone: "555-0100", contains: "Idris." }) }),
     computeContainsBasis({ card: emptyBodied({ phone: "555-0100", contains: "Idris.", "contains-evidence": "- met at the market" }) }),
@@ -187,11 +176,9 @@ void test("An evidence field is expected to be long, so the lint budget stays sc
       t.error(error);
     }
   });
-  // doctest:L171
   const box = await makeTmpBox();
   const longText = "x".repeat(400);
 
-  // doctest:L174
   await box.write(CARD, doc(`contains: ${longText}`));
   const ctx = await buildLoadContext(box.root);
   const overLong = await lintCardsDispatch([box.path(CARD)], { boxRoot: box.root, ctx });
@@ -205,7 +192,6 @@ void test("An evidence field is expected to be long, so the lint budget stays sc
 
   // The same length in `contains-evidence`, with a short `contains`, is clean.
 
-  // doctest:L184
   await box.write(CARD, doc(`contains: A trip.\ncontains-evidence: ${longText}`));
   const evidenceLong = await lintCardsDispatch([box.path(CARD)], { boxRoot: box.root, ctx });
   t.check(evidenceLong.results[0]?.warnings, []);

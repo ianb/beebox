@@ -86,13 +86,11 @@ void test("params.path names the card, and the view finds it in cards.", async (
       t.error(error);
     }
   });
-  // doctest:L82
   const box = await makeTmpBox({ deps: true, git: true });
   await activateRecipe(box);
   await box.write(CARD_PATH, DINNER);
   await box.write("_content/recipes/Marinara.recipe.card", "---\ntitle: Marinara\n---\n{% yield amount=\"2\" %}2 cups{% /yield %}\n");
 
-  // doctest:L87
   const html = await renderRecipe(box, { path: CARD_PATH });
   const text = html.replace(/<!-- -->/g, "").replace(/<[^>]+>/g, "");
   // The page is generated HTML, so each check keeps the one fragment it names.
@@ -111,7 +109,6 @@ void test("params.path names the card, and the view finds it in cards.", async (
   // `scaleAmount` returns a React element for a range, so the yield renders it as a
   // node beside the remaining label text.
 
-  // doctest:L109
   const { makeRecipeComponents, RecipeScaleContext } = await import("../../../src/plugins/recipe/view/tags.js");
   const { RecipeYield } = makeRecipeComponents();
   const scaledYield = renderToString(createElement(RecipeScaleContext.Provider, { value: 2 },
@@ -122,7 +119,6 @@ void test("params.path names the card, and the view finds it in cards.", async (
 
   // ## Without a matching card the view says so
 
-  // doctest:L121
   const bare = await renderRecipe(box, {});
   t.check(bare, any(String).includes("This recipe card is not available."));
 });

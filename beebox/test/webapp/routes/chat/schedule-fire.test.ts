@@ -71,7 +71,6 @@ void test("Session B is most-active, but the schedule was created in session A."
       t.error(error);
     }
   });
-  // doctest:L67
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box.root, backend);
@@ -79,7 +78,6 @@ void test("Session B is most-active, but the schedule was created in session A."
   await setMostActive(box.root, SESSION_B);
   await makeTranscript(box.root, SESSION_A);
 
-  // doctest:L74
   const firePromise = fireChatSchedule(
     { boxRoot: box.root, registry, eventBus, wireSession: noopWire },
     makeSchedule({ sessionId: SESSION_A }),
@@ -88,13 +86,11 @@ void test("Session B is most-active, but the schedule was created in session A."
   backend.runs[0]?.emitResult();
   await firePromise;
 
-  // doctest:L82
   t.check(backend.runs.map((run) => run.startOptions.resumeSessionId), [SESSION_A]);
 
   // The reminder is composed by beebox, not typed, so it goes out marked
   // client-composed.
 
-  // doctest:L90
   t.check(backend.runs[0]?.sentClientComposed, [
     true,
   ]);
@@ -113,7 +109,6 @@ void test("An entry persisted before sessionId existed keeps the old behavior:",
       t.error(error);
     }
   });
-  // doctest:L105
   const box2 = await makeTmpBox({ git: true });
   const backend2 = createFakeChatBackend();
   const registry2 = makeRegistry(box2.root, backend2);
@@ -121,7 +116,6 @@ void test("An entry persisted before sessionId existed keeps the old behavior:",
   await setMostActive(box2.root, SESSION_MOST_ACTIVE);
   await makeTranscript(box2.root, SESSION_MOST_ACTIVE);
 
-  // doctest:L112
   const firePromise2 = fireChatSchedule(
     { boxRoot: box2.root, registry: registry2, eventBus: eventBus2, wireSession: noopWire },
     makeSchedule({}),
@@ -130,7 +124,6 @@ void test("An entry persisted before sessionId existed keeps the old behavior:",
   backend2.runs[0]?.emitResult();
   await firePromise2;
 
-  // doctest:L120
   t.check(backend2.runs.map((run) => run.startOptions.resumeSessionId), [SESSION_MOST_ACTIVE]);
 });
 
@@ -148,14 +141,12 @@ void test("When the targeted session's turn ends with iserror (the unresumable c
       t.error(error);
     }
   });
-  // doctest:L136
   const box3 = await makeTmpBox({ git: true });
   const backend3 = createFakeChatBackend();
   const registry3 = makeRegistry(box3.root, backend3);
   const eventBus3 = createEventBus(box3.root);
   await makeTranscript(box3.root, SESSION_DEAD);
 
-  // doctest:L142
   const firePromise3 = fireChatSchedule(
     { boxRoot: box3.root, registry: registry3, eventBus: eventBus3, wireSession: noopWire },
     makeSchedule({ sessionId: SESSION_DEAD }),
@@ -168,7 +159,6 @@ void test("When the targeted session's turn ends with iserror (the unresumable c
   backend3.runs[1]?.emitResult();
   await firePromise3;
 
-  // doctest:L154
   t.check(backend3.runs.map((run) => run.startOptions.resumeSessionId ?? null), [SESSION_DEAD, null]);
 });
 
@@ -187,7 +177,6 @@ void test("A chat that explicitly picked an OpenRouter model the owner has since
       t.error(error);
     }
   });
-  // doctest:L175
   const box4 = await makeTmpBox({ git: true });
   const backend4 = createFakeChatBackend();
   const registry4 = makeRegistry(box4.root, backend4);
@@ -196,7 +185,6 @@ void test("A chat that explicitly picked an OpenRouter model the owner has since
   // The chat's own pick; the box config has no openrouterModels, as after removal.
   registry4.getOrCreate(SESSION_A).setModel("moonshotai/kimi-k2-0905:exacto");
 
-  // doctest:L183
   await fireChatSchedule(
     { boxRoot: box4.root, registry: registry4, eventBus: eventBus4, wireSession: noopWire },
     makeSchedule({ sessionId: SESSION_A }),

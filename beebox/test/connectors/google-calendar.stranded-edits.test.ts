@@ -16,7 +16,6 @@ import { loadCalendarState } from "../../src/connectors/google-calendar/state.js
 import { contentHash } from "../../src/lib/content-hash.js";
 import ky from "ky";
 
-
 // Freeze the connector's clock so the sync time-window is deterministic: the
 // fixed-date fixtures below (2026-06-0X) stay inside the 30-day-back window no
 // matter when the suite runs. Without this the tests age out (a June fixture
@@ -133,13 +132,11 @@ after(async () => {
 // retry queue forever, re-patched and re-reported on every wakeup. Now the file
 // is stranded — moved to `_content/calendar/stranded/`, untracked, reported once.
 void test("A patch that comes back 404 is definitive:", async (t) => {
-  // doctest:L134
   const box = await newBox();
   const inner = primaryCalendar([
     evt("evt-gone", { summary: "Deleted but edited here", start: "2026-06-05T10:00:00Z", end: "2026-06-05T11:00:00Z" }),
   ]);
 
-  // doctest:L139
   let patchCalls = 0;
   const calendar: GoogleCalendarService = {
     ...inner,
@@ -156,13 +153,11 @@ void test("A patch that comes back 404 is definitive:", async (t) => {
     },
   };
 
-  // doctest:L155
   const connector = connect(box, calendar);
   await connector.sync();
   const file = await editFirst(box, { from: "Deleted but edited here", to: "MINE now" });
   inner.events = [];
 
-  // doctest:L160
   // The patch 404s. One try, then the file is stranded.
   const strandRun = await connector.sync();
   const dir = join(box.root, CAL_DIR);
@@ -189,7 +184,6 @@ void test("A patch that comes back 404 is definitive:", async (t) => {
   // attribute to whatever ran next. Nothing is left behind in the working tree
   // either:
 
-  // doctest:L180
   const nameStatus = execSync("git show --name-status --pretty=format: HEAD", { cwd: box.root, encoding: "utf-8" });
   // Columns are status, path(s) — and the box package puts the box under
   // content/, so match by suffix rather than by a whole path.
@@ -216,7 +210,6 @@ void test("A patch that comes back 404 is definitive:", async (t) => {
   // The next run neither calls the API for it nor mentions it — the retry loop is
   // over, and the boxholder's edit is sitting in `stranded/` if they want it back:
 
-  // doctest:L202
   const quietRun = await connector.sync();
   t.check(
     ({
@@ -241,13 +234,11 @@ void test("A patch that comes back 404 is definitive:", async (t) => {
 // first failed, and the first run more than `STRANDED_AFTER_MS` (seven days)
 // later gives up on it.
 void test("A 503 says nothing about whether Google would ever take the edit, so it is re...", async (t) => {
-  // doctest:L220
   const box = await newBox();
   const inner = primaryCalendar([
     evt("evt-lunch", { summary: "Lunch", start: "2026-06-05T12:00:00Z", end: "2026-06-05T13:00:00Z", updated: "2026-06-01T10:00:00Z" }),
   ]);
 
-  // doctest:L225
   let clock = new Date("2026-06-15T12:00:00Z");
   const patchFails = true;
   const calendar: GoogleCalendarService = {
@@ -262,13 +253,11 @@ void test("A 503 says nothing about whether Google would ever take the edit, so 
     },
   };
 
-  // doctest:L239
   const connector = connectAt(box, { calendar, now: () => clock });
   await connector.sync();
   const file = await editFirst(box, { from: "SUMMARY:Lunch", to: "SUMMARY:Lunch MINE" });
   const dir = join(box.root, CAL_DIR);
 
-  // doctest:L244
   // First failure: reported, file kept, and the retry window opens.
   const firstFail = await connector.sync();
   const first = {
@@ -278,7 +267,6 @@ void test("A 503 says nothing about whether Google would ever take the edit, so 
     pendingSince: await pendingSince(box, "evt-lunch primary"),
   };
 
-  // doctest:L253
   // A day later it is still inside the window, so it is retried — and the stamp
   // is left alone, because the window measures the edit's age, not this run's.
   clock = new Date("2026-06-16T12:00:00Z");
@@ -289,7 +277,6 @@ void test("A 503 says nothing about whether Google would ever take the edit, so 
     pendingSince: await pendingSince(box, "evt-lunch primary"),
   };
 
-  // doctest:L263
   // Eight days after the first failure the edit has run out of window. It is
   // stranded with the last error named, and the run after that says nothing.
   clock = new Date("2026-06-23T12:00:00Z");
@@ -328,7 +315,6 @@ void test("A 503 says nothing about whether Google would ever take the edit, so 
 // the moment the edit lands, so a later unrelated failure starts a fresh week
 // rather than inheriting a spent one.
 void test("A push Google accepts inside the window closes it instead:", async (t) => {
-  // doctest:L289
   const box = await newBox();
   const inner = primaryCalendar([
     evt("evt-lunch", { summary: "Lunch", start: "2026-06-05T12:00:00Z", end: "2026-06-05T13:00:00Z", updated: "2026-06-01T10:00:00Z" }),
@@ -347,14 +333,12 @@ void test("A push Google accepts inside the window closes it instead:", async (t
     },
   };
 
-  // doctest:L307
   const connector = connectAt(box, { calendar, now: () => clock });
   await connector.sync();
   await editFirst(box, { from: "SUMMARY:Lunch", to: "SUMMARY:Lunch MINE" });
   await connector.sync();
   const opened = await pendingSince(box, "evt-lunch primary");
 
-  // doctest:L313
   patchFails = false;
   clock = new Date("2026-06-18T12:00:00Z");
   const accepted = await connector.sync();
@@ -384,13 +368,11 @@ void test("A push Google accepts inside the window closes it instead:", async (t
 // ordinary pull.) It is still tracked, too — an untracked `.ics` would be read as
 // a locally-created event and inserted back into Google as a duplicate series.
 void test("singleEvents=false plus a timeMin/timeMax leaves it to Google whether a serie...", async (t) => {
-  // doctest:L336
   const box = await newBox();
   const inner = primaryCalendar([
     evt("evt-weekly", { summary: "Weekly sync", start: { dateTime: "2026-06-01T14:00:00-04:00", timeZone: "America/New_York" }, end: { dateTime: "2026-06-01T15:00:00-04:00", timeZone: "America/New_York" }, recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO"] }),
   ]);
 
-  // doctest:L344
   const calendar = expiringTokens(inner, {
     // Google still holds the series even though the resync did not list it, so a
     // patch to it succeeds. (The stale pass has already run by then — this is
@@ -407,8 +389,6 @@ void test("singleEvents=false plus a timeMin/timeMax leaves it to Google whether
   // The resync comes back without the master. Nothing may be concluded from that.
   inner.events = [];
   const result = await connector.sync();
-  // doctest:L353
-  // doctest:L357
   t.check(
     ({
       success: result.success,
@@ -428,7 +408,6 @@ void test("singleEvents=false plus a timeMin/timeMax leaves it to Google whether
   // from a full resync is deleted-on-Google and its edit is given up on; for a
   // master, absence is not evidence, so the edit stays in the ordinary push queue:
 
-  // doctest:L373
   await editFirst(box, { from: "Weekly sync", to: "Weekly sync MINE" });
   const afterEdit = await connector.sync();
   t.check(
@@ -456,28 +435,23 @@ void test("singleEvents=false plus a timeMin/timeMax leaves it to Google whether
 // against, so a later edit to an event the boxholder created here would look
 // identical to the original forever and never enter the pending-edit push.
 void test("A file pushed from the box gets tracked with the hash of what is on disk, lik...", async (t) => {
-  // doctest:L392
   const box = await newBox();
   await box.seed(`${CAL_DIR}/local-new.ics`, localIcs("local-editable", { summary: "Locally created" }));
   box.commitAll("seed local ics");
 
-  // doctest:L396
   const inner = primaryCalendar();
   // After the insert, Google has nothing new to report on any later sync.
   const { mode, calendar } = quietable(inner);
 
-  // doctest:L400
   const connector = connect(box, calendar);
   const first = await connector.sync();
   const firstRun = { pushed: first.pushed?.length, remote: inner.events[0]?.summary };
 
   // Edit the file the box created. The next sync patches it up:
 
-  // doctest:L408
   const filePath = join(box.root, CAL_DIR, "local-new.ics");
   await writeFile(filePath, (await readFile(filePath, "utf-8")).replace("Locally created", "Locally created MINE"));
 
-  // doctest:L411
   mode.quiet = true;
   const second = await connector.sync();
   t.check(
@@ -511,20 +485,16 @@ void test("A file pushed from the box gets tracked with the hash of what is on d
 // Make the rewrite fail by taking write permission off the file: it stays
 // readable, so everything up to the rewrite proceeds exactly as it normally does.
 void test("Pushing a locally-created .ics is two steps:", async (t) => {
-  // doctest:L435
   const box = await newBox();
   await box.seed(`${CAL_DIR}/annotated.ics`, localIcs("annotated-local", { summary: "Book the hall", extra: "X-BBX-REASON:the caterer asked\r\n" }));
   box.commitAll("seed local ics");
 
-  // doctest:L439
   const inner = primaryCalendar();
   const { mode, calendar } = quietable(inner);
 
-  // doctest:L442
   const filePath = join(box.root, CAL_DIR, "annotated.ics");
   await chmod(filePath, 0o444);
 
-  // doctest:L445
   const connector = connect(box, calendar);
   const first = await connector.sync();
   const state = await loadCalendarState(box.root);
@@ -541,7 +511,6 @@ void test("Pushing a locally-created .ics is two steps:", async (t) => {
     },
   };
 
-  // doctest:L461
   // The second sync is the one that used to duplicate. Google still has exactly
   // one event, and the file (annotations and all, since the strip never
   // happened) is neither re-pushed nor seen as a pending edit.
@@ -593,18 +562,15 @@ void test("Pushing a locally-created .ics is two steps:", async (t) => {
 // no longer matches the file, so the next run re-patches the same content Google
 // already has — idempotent, and never a second event.
 void test("The pending-edit pass patches Google and then rewrites the local file from th...", async (t) => {
-  // doctest:L499
   const box = await newBox();
   const inner = primaryCalendar([
     evt("evt-review", { summary: "Review", start: "2026-06-05T09:00:00Z", end: "2026-06-05T10:00:00Z", updated: "2026-06-01T10:00:00Z" }),
   ]);
   const { mode, calendar } = quietable(inner);
 
-  // doctest:L505
   const connector = connect(box, calendar);
   await connector.sync();
 
-  // doctest:L508
   // The edit changes the summary and leaves an annotation the normalizing
   // rewrite would have dropped, so the file and Google's copy really do differ.
   const file = await editFirst(box, { from: "Review", to: "Review MINE" });
@@ -612,11 +578,9 @@ void test("The pending-edit pass patches Google and then rewrites the local file
   const filePath = join(box.root, CAL_DIR, file);
   await chmod(filePath, 0o444);
 
-  // doctest:L515
   mode.quiet = true;
   const rewriteFailed = await connector.sync();
 
-  // doctest:L518
   // The entry is still tracked, and its hash describes what Google accepted
   // rather than what is on disk — that mismatch is the retry.
   const state = await loadCalendarState(box.root);
@@ -632,7 +596,6 @@ void test("The pending-edit pass patches Google and then rewrites the local file
     },
   };
 
-  // doctest:L533
   // Give the file back its write bit and the next run re-patches the same
   // content. Google ends up where it already was, with one event.
   await chmod(filePath, 0o644);

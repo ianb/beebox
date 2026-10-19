@@ -16,7 +16,6 @@ import { assertNever, invariant, checkInvariant, tolerateNever } from "../../src
 //
 // Forcing an unhandled value through (as only a boundary bug could) throws:
 void test("Used in a default: case, it throws if a union member was left unhandled.", async (t) => {
-  // doctest:L21
   await t.checkThrows(
     async () => (// eslint-disable-next-line no-restricted-syntax -- deliberately feeding an off-union value to exercise the runtime guard
     assertNever("c" as never)),
@@ -28,7 +27,6 @@ void test("Used in a default: case, it throws if a union member was left unhandl
 //
 // It throws in every environment (no dev/prod split):
 void test("It throws in every environment (no dev/prod split):", async (t) => {
-  // doctest:L31
   const one: number = 1;
   await t.checkThrows(async () => (invariant(one === 2, "one is not two")), "InvariantError: one is not two");
 });
@@ -38,13 +36,11 @@ void test("It throws in every environment (no dev/prod split):", async (t) => {
 // For the deliberate prod-degradation path: it returns a boolean and does not
 // throw, so the caller decides how to degrade.
 void test("For the deliberate prod-degradation path:", async (t) => {
-  // doctest:L42
   t.check(checkInvariant(1 === 1, "always true"), true);
 });
 
 // It logs via `console.error` and returns `false` when the condition fails:
 void test("It logs via console.error and returns false when the condition fails:", async (t) => {
-  // doctest:L49
   const errors: string[] = [];
   const originalError = console.error;
   console.error = (...args: unknown[]) => { errors.push(args.join(" ")); };
@@ -65,7 +61,6 @@ void test("It logs via console.error and returns false when the condition fails:
 // vendor node-type union) where a best-effort caller should degrade instead of
 // crash.
 void test("Same compile-time exhaustiveness demand as assertNever, but never throws — it...", async (t) => {
-  // doctest:L66
   const warnings: string[] = [];
   const originalWarn = console.warn;
   console.warn = (...args: unknown[]) => { warnings.push(args.join(" ")); };

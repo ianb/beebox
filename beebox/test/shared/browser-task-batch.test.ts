@@ -30,7 +30,6 @@ const good = { name: "Spring Show", date: "2026-10-03", permalink: "https://exam
 //
 // Every record parses, every attachment is uploaded, every upload is referenced.
 void test("Every record parses, every attachment is uploaded, every upload is referenced.", async (t) => {
-  // doctest:L32
   const ok = validateBatch({ schemaJson: schema, manifest: { coverage, records: [good] }, fileNames: ["p9.jpg", "p9-a.jpg"] });
   t.check(ok, {
     ok: true,
@@ -58,7 +57,6 @@ void test("Every record parses, every attachment is uploaded, every upload is re
 //
 // A record that fails the schema reports the field path and zod's message:
 void test("A record that fails the schema reports the field path and zod's message:", async (t) => {
-  // doctest:L42
   const bad = validateBatch({ schemaJson: schema, manifest: { coverage, records: [{ ...good, name: "", date: "soon" }] }, fileNames: ["p9.jpg", "p9-a.jpg"] });
   t.check(bad, {
     ok: false,
@@ -81,7 +79,6 @@ void test("A record that fails the schema reports the field path and zod's messa
 
 // An invented field is an error because the schema says `additionalProperties: false`:
 void test("An invented field is an error because the schema says additionalProperties:", async (t) => {
-  // doctest:L50
   t.check(validateBatch({ schemaJson: schema, manifest: { coverage, records: [{ ...good, venue: "Barn" }] }, fileNames: ["p9.jpg", "p9-a.jpg"] }), {
     ok: false,
     issues: [
@@ -97,7 +94,6 @@ void test("An invented field is an error because the schema says additionalPrope
 
 // A referenced file that was not uploaded, with the record index and the name:
 void test("A referenced file that was not uploaded, with the record index and the name:", async (t) => {
-  // doctest:L57
   const missing = validateBatch({ schemaJson: schema, manifest: { coverage, records: [good] }, fileNames: ["p9.jpg"] });
   t.check(missing, {
     ok: false,
@@ -115,7 +111,6 @@ void test("A referenced file that was not uploaded, with the record index and th
 
 // An uploaded file nothing references:
 void test("An uploaded file nothing references:", async (t) => {
-  // doctest:L65
   t.check(validateBatch({ schemaJson: schema, manifest: { coverage, records: [good] }, fileNames: ["p9.jpg", "p9-a.jpg", "stray.png"] }), {
     ok: false,
     issues: [
@@ -132,7 +127,6 @@ void test("An uploaded file nothing references:", async (t) => {
 // Bad file names: a path, a leading dot, or a reserved name. A bad name is never
 // also reported as unreferenced.
 void test("Bad file names:", async (t) => {
-  // doctest:L73
   t.check(validateBatch({ schemaJson: schema, manifest: { coverage, records: [good] }, fileNames: ["p9.jpg", "p9-a.jpg", "../x.png", ".hidden", "records.json"] }), {
     ok: false,
     issues: [
@@ -157,7 +151,6 @@ void test("Bad file names:", async (t) => {
     ],
   });
 
-  // doctest:L76
   t.check(["a.jpg", "A_b-c.9.PNG", "../a", ".a", "records.json", "filed.json", "a/b.jpg", ""].map(isValidBatchFileName), [
     true,
     true,
@@ -172,7 +165,6 @@ void test("Bad file names:", async (t) => {
 
 // Missing or malformed coverage refuses the batch before records are looked at:
 void test("Missing or malformed coverage refuses the batch before records are looked at:", async (t) => {
-  // doctest:L83
   const noCoverage = validateBatch({ schemaJson: schema, manifest: { records: [good] }, fileNames: ["p9.jpg", "p9-a.jpg"] });
   t.check(noCoverage, {
     ok: false,
@@ -190,7 +182,6 @@ void test("Missing or malformed coverage refuses the batch before records are lo
     ],
   });
 
-  // doctest:L87
   const badReason = validateBatch({ schemaJson: schema, manifest: { coverage: { ...coverage, reason: "bored" }, records: [] }, fileNames: [] });
   t.check(badReason, {
     ok: false,
@@ -212,7 +203,6 @@ void test("Missing or malformed coverage refuses the batch before records are lo
 
 // A bare array is not a manifest:
 void test("A bare array is not a manifest:", async (t) => {
-  // doctest:L103
   t.check(validateBatch({ schemaJson: schema, manifest: [good], fileNames: [] }), {
     ok: false,
     issues: [
@@ -233,7 +223,6 @@ void test("A bare array is not a manifest:", async (t) => {
 // A schema that uses a keyword the attachment walk cannot follow is refused by
 // name, so the author knows what to remove:
 void test("A schema that uses a keyword the attachment walk cannot follow is refused by...", async (t) => {
-  // doctest:L111
   const withRef = validateBatch({ schemaJson: { ...schema, properties: { ...schema.properties, venue: { $ref: "#/$defs/venue" } } }, manifest: { coverage, records: [] }, fileNames: [] });
   t.check(withRef, {
     ok: false,
@@ -249,7 +238,6 @@ void test("A schema that uses a keyword the attachment walk cannot follow is ref
 
 // A schema that is not a schema at all reports the conversion error:
 void test("A schema that is not a schema at all reports the conversion error:", async (t) => {
-  // doctest:L119
   t.check(validateBatch({ schemaJson: { type: "spaceship" }, manifest: { coverage, records: [] }, fileNames: [] }), {
     ok: false,
     issues: [
@@ -265,7 +253,6 @@ void test("A schema that is not a schema at all reports the conversion error:", 
 // A composition that mixes an attachment branch with another string branch is
 // ambiguous (is the value a file name or a URL?) and is refused by path:
 void test("A composition that mixes an attachment branch with another string branch is a...", async (t) => {
-  // doctest:L127
   const mixed = { type: "object", properties: { media: { anyOf: [{ type: "string", format: "attachment" }, { type: "string", format: "uri" }] } } };
   const amb = validateBatch({ schemaJson: mixed, manifest: { coverage, records: [] }, fileNames: [] });
   t.check(amb, {
@@ -285,7 +272,6 @@ void test("A composition that mixes an attachment branch with another string bra
 // `anyOf` branches are tried against the same value, so an attachment reached
 // through a branch is still required.
 void test("anyOf branches are tried against the same value, so an attachment reached thr...", async (t) => {
-  // doctest:L139
   const branched = { type: "object", properties: { media: { anyOf: [{ type: "string", format: "attachment" }, { type: "null" }] } } };
   t.check(validateBatch({ schemaJson: branched, manifest: { coverage, records: [{ media: "m.jpg" }, { media: null }] }, fileNames: [] }), {
     ok: false,
@@ -300,7 +286,6 @@ void test("anyOf branches are tried against the same value, so an attachment rea
     ],
   });
 
-  // doctest:L143
   t.check(validateBatch({ schemaJson: branched, manifest: { coverage, records: [{ media: "m.jpg" }, { media: null }] }, fileNames: ["m.jpg"] }), {
     ok: true,
     count: 2,
@@ -324,7 +309,6 @@ void test("anyOf branches are tried against the same value, so an attachment rea
 //
 // A scan that hit a login wall reports that, with nothing to file.
 void test("A scan that hit a login wall reports that, with nothing to file.", async (t) => {
-  // doctest:L152
   const wall = validateBatch({ schemaJson: schema, manifest: { coverage: { scanned: 0, stoppedAt: "", reason: "login-wall" }, records: [] }, fileNames: [] });
   t.check(wall, {
     ok: true,

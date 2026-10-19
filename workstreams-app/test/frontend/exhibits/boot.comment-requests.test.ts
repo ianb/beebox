@@ -20,7 +20,6 @@ import {
 // case carries neither. Absent fields are absent — `undefined` would serialize
 // away, but an explicit key is what a strict parser sees.
 void test("A selection carries its quoted text and the heading above it; the whole-exhib...", async (t) => {
-  // doctest:L24
   const anchored = commentRequest({
     anchor: { quoted: "A1 shows the old frame", section: "Figures", fragment: ":~:text=A1%20shows" },
     body: "  The caption is wrong.  ",
@@ -52,7 +51,6 @@ void test("A selection carries its quoted text and the heading above it; the who
 // `bin/comments`'s own sentence — or `{ error }`. Both are shown as they are;
 // anything else is reported by status rather than as a blank.
 void test("The exhibits API refuses with { message, detail } — the detail is bin/comment...", async (t) => {
-  // doctest:L41
   t.check(
     [
       responseProblem({ status: 409, body: { message: "The comment was not saved.", detail: "comments: store is missing its marker" } }),
@@ -74,7 +72,6 @@ void test("The exhibits API refuses with { message, detail } — the detail is b
 // Speech is appended to what is typed, so a correction already made is not
 // thrown away by recording again; an empty transcript changes nothing.
 void test("Speech is appended to what is typed, so a correction already made is not thro...", async (t) => {
-  // doctest:L56
   t.check(
     [
       appendTranscript("", " the caption is wrong "),
@@ -93,6 +90,5 @@ void test("Speech is appended to what is typed, so a correction already made is 
 //
 // Where it went, and the exact call that reads it.
 void test("Where it went, and the exact call that reads it.", async (t) => {
-  // doctest:L69
   t.check(savedMessage("exhibits-rethink"), "Saved for exhibits-rethink. The agent reads it with bin/comments list --workstream exhibits-rethink at its next pickup.");
 });

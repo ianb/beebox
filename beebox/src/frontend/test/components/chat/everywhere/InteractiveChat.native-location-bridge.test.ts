@@ -32,7 +32,6 @@ function bridgeHarness(initialEnabled: boolean) {
 
 // ## Initial state synchronization is read-only
 void test("Initial state synchronization is read-only", async (t) => {
-  // doctest:L36
   const statePosts: string[] = [];
   const shell: NativeShellWindow = { beeboxNativePost: (_channel, payload) => statePosts.push(payload) };
   postNativeLocationState(false, shell);
@@ -41,7 +40,6 @@ void test("Initial state synchronization is read-only", async (t) => {
 
 // ## Toggle on captures before enabling
 void test("Toggle on captures before enabling", async (t) => {
-  // doctest:L46
   const enabling = bridgeHarness(false);
   await handleNativeLocationRequest(
     { id: "22222222-2222-2222-2222-222222222222", action: "toggle" },
@@ -61,7 +59,6 @@ void test("Toggle on captures before enabling", async (t) => {
 
 // ## Toggle off does not capture
 void test("Toggle off does not capture", async (t) => {
-  // doctest:L58
   const disabling = bridgeHarness(true);
   await handleNativeLocationRequest(
     { id: "33333333-3333-3333-3333-333333333333", action: "toggle" },

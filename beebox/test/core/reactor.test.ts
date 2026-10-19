@@ -24,7 +24,6 @@ import * as path from "node:path";
 // The system prompt must never embed the box's absolute path — agent-visible
 // text stays box-relative (`docs/implemented-plans/one-root-box-layout.md`, criterion 4).
 void test("The system prompt must never embed the box's absolute path — agent-visible te...", async (t) => {
-  // doctest:L27
   // The prompt is large generated text, so the check is on what it must not hold.
   t.check(buildReactorSystemPrompt(), not(any(String).matches(/\/(Users|home|tmp|private)\//)));
 });
@@ -33,7 +32,6 @@ void test("The system prompt must never embed the box's absolute path — agent-
 //
 // ### Formats job list with descriptions
 void test("Formats job list with descriptions", async (t) => {
-  // doctest:L36
   const prompt = buildReactorUserPrompt(
     ["_bookkeeping/jobs/task1.job.card", "_bookkeeping/jobs/task2.job.card"],
     { jobDescriptions: ["### _bookkeeping/jobs/task1.job.card\n```\ndo thing 1\n```",
@@ -59,7 +57,6 @@ Process each job according to its type's instructions, then call \`bbx finish\` 
 
 // ### Ambient todo line, when given, leads the prompt
 void test("Ambient todo line, when given, leads the prompt", async (t) => {
-  // doctest:L54
   const promptWithAmbient = buildReactorUserPrompt(
     ["_bookkeeping/jobs/only.job.card"],
     {
@@ -84,7 +81,6 @@ Process each job according to its type's instructions, then call \`bbx finish\` 
 
 // ### No ambient line, when omitted or null
 void test("No ambient line, when omitted or null", async (t) => {
-  // doctest:L68
   const promptNoAmbient = buildReactorUserPrompt(
     ["_bookkeeping/jobs/only.job.card"],
     { jobDescriptions: ["### _bookkeeping/jobs/only.job.card\n```\nsolo task\n```"], ambientLine: null },
@@ -106,14 +102,12 @@ Process each job according to its type's instructions, then call \`bbx finish\` 
 //
 // ### Finds job cards and sorts by priority
 void test("Finds job cards and sorts by priority", async (t) => {
-  // doctest:L81
   const box = await makeTmpBox({ git: true });
   const jobsDir = path.join(box.root, "_bookkeeping/jobs");
   await box.write("_bookkeeping/jobs/task-a.job.card", "---\npriority: low\n---\nLow A");
   await box.write("_bookkeeping/jobs/task-b.job.card", "---\npriority: normal\n---\nNormal B");
   await box.write("_bookkeeping/jobs/task-c.job.card", "---\npriority: low\n---\nLow C");
 
-  // doctest:L87
   const cards = await findJobCards(jobsDir);
   t.check(cards, [
     { file: "task-b.job.card", priority: "normal", createdAt: isoDate() },
@@ -121,7 +115,6 @@ void test("Finds job cards and sorts by priority", async (t) => {
     { file: "task-c.job.card", priority: "low", createdAt: isoDate() },
   ]);
 
-  // doctest:L101
   await box.cleanup();
 });
 
@@ -133,7 +126,6 @@ void test("Finds job cards and sorts by priority", async (t) => {
 // date is rejected rather than normalized — `Date.UTC` would happily roll month
 // 99 into a later year and hand a mangled filename a real, wrong age.
 void test("createdAt is what the reactor's low-priority deadline and the stalled-jobs he...", async (t) => {
-  // doctest:L113
   const box = await makeTmpBox({ git: true });
   const jobsDir = path.join(box.root, "_bookkeeping/jobs");
   await box.write("_bookkeeping/jobs/2026-08-18T09-30-00-gmail.intake.job.card", "---\n---\nStamped to the second");
@@ -141,7 +133,6 @@ void test("createdAt is what the reactor's low-priority deadline and the stalled
   await box.write("_bookkeeping/jobs/2026-99-99T99-99-bad.intake.job.card", "---\n---\nNot a date");
   await box.write("_bookkeeping/jobs/handwritten.job.card", "---\n---\nNo stamp at all");
 
-  // doctest:L120
   const byFile = new Map((await findJobCards(jobsDir)).map((c) => [c.file, c.createdAt]));
   t.check(Object.fromEntries(byFile), {
     "2026-08-18T09-30-00-gmail.intake.job.card": new Date("2026-08-18T09:30:00.000Z"),
@@ -161,33 +152,25 @@ void test("createdAt is what the reactor's low-priority deadline and the stalled
   // The two that carry no usable stamp fall back to the mtime, so they read as
   // newly written rather than as ancient or as unknown.
 
-  // doctest:L132
-
-
-  // doctest:L136
   await box.cleanup();
 });
 
 // ### Type filter only matches typed suffix
 void test("Type filter only matches typed suffix", async (t) => {
-  // doctest:L142
   const box = await makeTmpBox({ git: true });
   const jobsDir = path.join(box.root, "_bookkeeping/jobs");
   await box.write("_bookkeeping/jobs/msg1.digest.job.card", "---\nconnector: rss\n---\nDigest");
   await box.write("_bookkeeping/jobs/sweep.intake.job.card", "---\nconnector: gmail\n---\nIntake");
 
-  // doctest:L147
   const digestOnly = await findJobCards(jobsDir, { typeFilter: "digest" });
   t.check(digestOnly, [{ file: "msg1.digest.job.card", priority: "normal", createdAt: isoDate() }]);
 
-  // doctest:L154
   const all = await findJobCards(jobsDir);
   t.check(all, [
     { file: "msg1.digest.job.card", priority: "normal", createdAt: isoDate() },
     { file: "sweep.intake.job.card", priority: "normal", createdAt: isoDate() },
   ]);
 
-  // doctest:L158
   await box.cleanup();
 });
 
@@ -196,26 +179,22 @@ void test("Type filter only matches typed suffix", async (t) => {
 // A job no connector made (here, a full wakeup's inbox triage) matches no
 // connector filter:
 void test("A job no connector made (here, a full wakeup's inbox triage) matches no conne...", async (t) => {
-  // doctest:L167
   const box = await makeTmpBox({ git: true });
   const jobsDir = path.join(box.root, "_bookkeeping/jobs");
   await box.write("_bookkeeping/jobs/email.intake.job.card", "---\nconnector: gmail\n---\nEmail triage");
   await box.write("_bookkeeping/jobs/feed.digest.job.card", "---\nconnector: rss\n---\nDigest");
   await box.write("_bookkeeping/jobs/inbox.intake.job.card", "---\npriority: normal\n---\nInbox triage");
 
-  // doctest:L173
   const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });
   t.check(gmailOnly.map((c) => c.file), [
     "email.intake.job.card",
   ]);
 
-  // doctest:L177
   const rssOnly = await findJobCards(jobsDir, { connectorFilter: "rss" });
   t.check(rssOnly.map((c) => c.file), [
     "feed.digest.job.card",
   ]);
 
-  // doctest:L181
   // Other jobs stay put for a future run that does match them
   const noFilter = await findJobCards(jobsDir);
   t.check(noFilter, [
@@ -224,7 +203,6 @@ void test("A job no connector made (here, a full wakeup's inbox triage) matches 
     { file: "inbox.intake.job.card", priority: "normal", createdAt: isoDate() },
   ]);
 
-  // doctest:L186
   await box.cleanup();
 });
 
@@ -235,35 +213,29 @@ void test("A job no connector made (here, a full wakeup's inbox triage) matches 
 // only grepped XML attributes, silently dropping every frontmatter job
 // from filtered runs):
 void test("Current job cards are YAML frontmatter, not XML — discovery reads the priorit...", async (t) => {
-  // doctest:L197
   const box = await makeTmpBox({ git: true });
   const jobsDir = path.join(box.root, "_bookkeeping/jobs");
   await box.write("_bookkeeping/jobs/y1.intake.job.card", "---\nconnector: gmail\npriority: low\ndescription: Triage 1 inbox item\nitems:\n  - ref: _content/inbox/a.doc.card\n---\n");
   await box.write("_bookkeeping/jobs/y2.intake.job.card", "---\nconnector: rss\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
 
-  // doctest:L202
   const gmailOnly = await findJobCards(jobsDir, { connectorFilter: "gmail" });
   t.check(gmailOnly, [{ file: "y1.intake.job.card", priority: "low", createdAt: isoDate() }]);
 
-  // doctest:L209
   await box.cleanup();
 });
 
 // ### Empty directory returns empty array
 void test("Empty directory returns empty array", async (t) => {
-  // doctest:L215
   const box = await makeTmpBox({ git: true });
   await fs.mkdir(path.join(box.root, "_bookkeeping/jobs"), { recursive: true });
   const cards = await findJobCards(path.join(box.root, "_bookkeeping/jobs"));
   t.check(cards, []);
 
-  // doctest:L221
   await box.cleanup();
 });
 
 // ### Non-existent directory returns empty array
 void test("Non-existent directory returns empty array", async (t) => {
-  // doctest:L227
   const cards = await findJobCards("/tmp/nonexistent-reactor-test-dir");
   t.check(cards, []);
 });
@@ -272,7 +244,6 @@ void test("Non-existent directory returns empty array", async (t) => {
 //
 // ### Includes the job card and priority label (no xml fence)
 void test("Includes the job card and priority label (no xml fence)", async (t) => {
-  // doctest:L237
   const desc = await buildJobDescription(
     {
       card: { file: "task.intake.job.card", priority: "low", createdAt: null },
@@ -313,11 +284,9 @@ void test("Includes the job card and priority label (no xml fence)", async (t) =
 // cards inlined and its intake-job schema instructions injected. (Pre-purge the
 // XML-only `extractRefs`/`extractRootTag` regexes silently dropped both.)
 void test("The core purge fix:", async (t) => {
-  // doctest:L268
   const box = await makeTmpBox({ git: true });
   await box.write("store/inbox/item1.card", "---\nstatus: new\n---\nHello from item one");
 
-  // doctest:L271
   const desc = await buildJobDescription(
     {
       card: { file: "x.intake.job.card", priority: "normal", createdAt: null },
@@ -331,7 +300,6 @@ void test("The core purge fix:", async (t) => {
     box.root,
   );
 
-  // doctest:L284
   t.check(
     desc,
     str`${[
@@ -359,13 +327,11 @@ void test("The core purge fix:", async (t) => {
     ].join("\n")}${any(String)}`,
   );
 
-  // doctest:L295
   await box.cleanup();
 });
 
 // ### Handles missing refs gracefully
 void test("Handles missing refs gracefully", async (t) => {
-  // doctest:L301
   const desc = await buildJobDescription(
     {
       card: { file: "task.intake.job.card", priority: "normal", createdAt: null },
@@ -403,7 +369,6 @@ void test("Handles missing refs gracefully", async (t) => {
 // A job that isn't a recognized frontmatter card (legacy XML, hand-edited) is
 // surfaced with its raw content and a warning rather than crashing the batch.
 void test("A job that isn't a recognized frontmatter card (legacy XML, hand-edited) is s...", async (t) => {
-  // doctest:L328
   const desc = await buildJobDescription(
     {
       card: { file: "legacy.job.card", priority: "normal", createdAt: null },

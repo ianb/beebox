@@ -22,7 +22,6 @@ function parse(payload: VoiceFinalizeOp) {
 
 // ## HQ send: `emissionId` and `hq.emissionId` both present
 void test("HQ send: `emissionId` and `hq.emissionId` both present", async (t) => {
-  // doctest:L26
   const { body, ok } = parse({ kind: "finalize", chunkCount: 3, emissionId: "em-1", hq: { emissionId: "em-1", sessionId: "chat-1" } });
   t.check({ ok, body }, {
     ok: true,
@@ -42,7 +41,6 @@ void test("HQ send: `emissionId` and `hq.emissionId` both present", async (t) =>
 // A recording sealed without an HQ request (`get-last-audio` finds it by
 // `emissionId` alone):
 void test("A recording sealed without an HQ request (get-last-audio finds it by emission...", async (t) => {
-  // doctest:L37
   const { body, ok } = parse({ kind: "finalize", chunkCount: 2, emissionId: "em-2", hq: null });
   t.check({ ok, body }, {
     ok: true,
@@ -56,7 +54,6 @@ void test("A recording sealed without an HQ request (get-last-audio finds it by 
 
 // ## Unconsumed/cancel/unmount seal: both null
 void test("Unconsumed/cancel/unmount seal: both null", async (t) => {
-  // doctest:L45
   const { body, ok } = parse({ kind: "finalize", chunkCount: 0, emissionId: null, hq: null });
   t.check({ ok, body }, {
     ok: true,
@@ -73,7 +70,6 @@ void test("Unconsumed/cancel/unmount seal: both null", async (t) => {
 // Guards against exactly the drift this test exists to catch: a client that
 // still doesn't send the field the server now requires.
 void test("Guards against exactly the drift this test exists to catch:", async (t) => {
-  // doctest:L56
   const result = VoiceFinalizeBodySchema.safeParse({ chunkCount: 1, hq: null });
   t.check(result.success, false);
 });

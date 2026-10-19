@@ -75,13 +75,11 @@ void test("A registered phone gets the push", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L71
   const box = await makeTmpBox({ git: true });
   await pairPhone(box, { label: "Jamie's iPhone", token: PHONE, environment: "sandbox" });
   const apns = createFakeApns();
   const result = await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { apns } });
 
-  // doctest:L76
   await t.checkText(await logged(box), `apns sent
 web-push skipped: no-audience`);
 
@@ -89,7 +87,6 @@ web-push skipped: no-audience`);
   // reads (contract §5.10). With no bundle id configured, the topic is a
   // placeholder.
 
-  // doctest:L87
   const [sent] = apns.sent;
   invariant(sent, "the push reached the fake APNs");
   t.check([sent.token === PHONE, sent.environment, sent.headers, sent.payload.target, sent.payload.loudness, sent.payload.notificationId === result.id], [
@@ -108,7 +105,6 @@ web-push skipped: no-audience`);
   // The debug log has one line for the send, naming the device, the loudness, and
   // the target, and never the token:
 
-  // doctest:L97
   const debug = await fs.readFile(path.join(box.root, ".beebox", "push-debug.log"), "utf-8");
   const line = JSON.parse(debug.trim().split("\n").at(-1) ?? "");
   t.check([line.channel, line.device, line.environment, line.loudness, line.target, line.result, debug.includes(PHONE)], [
@@ -123,11 +119,9 @@ web-push skipped: no-audience`);
 
   // A `dot` goes to the phone alone: it is a badge, and no other channel has one.
 
-  // doctest:L106
   await notifyBoxholder(box.root, { intent: intent("dot"), now: NOW, services: { apns } });
   t.check(await logged(box), "apns sent");
 
-  // doctest:L110
   t.check(apns.sent[1]?.payload, {
     aps: {
       badge: 1,
@@ -151,17 +145,14 @@ void test("APNs answers 410 Unregistered (or 400 BadDeviceToken) for a token tha
       t.error(error);
     }
   });
-  // doctest:L131
   const box = await makeTmpBox({ git: true });
   await pairPhone(box, { label: "Jamie's iPhone", token: PHONE, environment: "production" });
   const apns = createFakeApns({ goneTokens: [PHONE] });
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { apns } });
 
-  // doctest:L136
   await t.checkText(await logged(box), `apns failed: no device received the push (sent 0 of 1, pruned 1)
 web-push skipped: no-audience`);
 
-  // doctest:L141
   t.check([devicePushRegistrations(box.root).length, listMobileDevices(box.root).map((d) => [d.label, d.push, d.revokedAt ?? null])], [
     0,
     [
@@ -176,7 +167,6 @@ web-push skipped: no-audience`);
   // With the registration gone the phone is no longer an audience, until it
   // registers again:
 
-  // doctest:L149
   await notifyBoxholder(box.root, { intent: intent("quiet"), now: NOW, services: { apns } });
   t.check((await logged(box)).split("\n")[0], "apns skipped: no-audience");
 });
@@ -193,7 +183,6 @@ void test("The line is sent when any phone took the push.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L164
   const box = await makeTmpBox({ git: true });
   await pairPhone(box, { label: "Jamie's iPhone", token: PHONE, environment: "production" });
   await pairPhone(box, { label: "old iPad", token: TABLET, environment: "sandbox" });
@@ -202,10 +191,8 @@ void test("The line is sent when any phone took the push.", async (t) => {
   const apns = createFakeApns({ goneTokens: [TABLET] });
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW, services: { apns } });
 
-  // doctest:L172
   t.check((await logged(box)).split("\n")[0], "apns sent: devices: sent 1 of 2, pruned 1");
 
-  // doctest:L175
   t.check(apns.sent.map((s) => s.environment), [
     "production",
   ]);
@@ -224,18 +211,14 @@ void test("Without an injected service the channel needs all four BBXAPNS values
       t.error(error);
     }
   });
-  // doctest:L189
   const box = await makeTmpBox({ git: true });
   await pairPhone(box, { label: "Jamie's iPhone", token: PHONE, environment: "sandbox" });
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW });
 
-  // doctest:L193
   t.check((await logged(box)).split("\n")[0], "apns skipped: unconfigured");
 
-  // doctest:L196
   t.check((await notifyChannels(box.root)).apns, false);
 
-  // doctest:L199
   Object.assign(process.env, { BBX_APNS_KEY_PATH: "/nonexistent/AuthKey.p8", BBX_APNS_KEY_ID: "KEY", BBX_APNS_TEAM_ID: "TEAM", BBX_APNS_BUNDLE_ID: "app.example" });
   const withKeys = (await notifyChannels(box.root)).apns;
   t.check(withKeys, true);
@@ -243,7 +226,6 @@ void test("Without an injected service the channel needs all four BBXAPNS values
   // With keys set but the key file missing, the send is a `failed` line with the
   // reason, and nothing throws:
 
-  // doctest:L209
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW });
   for (const name of ENV) delete process.env[name];
   t.check((await logged(box)).split("\n")[0], "apns failed: no device received the push (sent 0 of 1, failed 1): Failed loading token key: ENOENT: no such file or directory, open '/nonexistent/AuthKey.p8'");

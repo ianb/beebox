@@ -46,14 +46,12 @@ const base = (await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: repoRoot 
 
 // ## A file moved twice across two commits composes into one old->new mapping
 void test("A file moved twice across two commits composes into one old->new mapping", async (t) => {
-  // doctest:L50
   await mkdir(join(repoRoot, "pkg/src/sub"), { recursive: true });
   await git(["mv", "pkg/src/a.ts", "pkg/src/sub/a.ts"]);
   await git(["commit", "-q", "-m", "first move"]);
   await git(["mv", "pkg/src/sub/a.ts", "pkg/src/sub/renamed.ts"]);
   await git(["commit", "-q", "-m", "second move"]);
 
-  // doctest:L56
   const { moves, rejected } = computeRenamesFromGit({ repoRoot, base });
   t.check(moves, [
     {
@@ -62,17 +60,14 @@ void test("A file moved twice across two commits composes into one old->new mapp
     },
   ]);
 
-  // doctest:L60
   t.check(rejected, []);
 
   // ## The composed mapping rewrites the doc's mention
 
-  // doctest:L67
   const roots = scanRoots(repoRoot);
   const result = computeMentionRewrite({ repoRoot, moves, roots, rewrittenFiles: new Set() });
   t.check(result.fileEdits.get("docs/note.md"), "See pkg/src/sub/renamed.ts for details.\n");
 
-  // doctest:L72
   await t.checkText(await read("docs/note.md"), "See pkg/src/a.ts for details.");
 });
 
@@ -82,7 +77,6 @@ void test("A file moved twice across two commits composes into one old->new mapp
 // just git's history — so a rename whose new path was since deleted (without a
 // commit) is rejected rather than blindly applied.
 void test("A detected rename is only trusted once the working tree agrees with it, not j...", async (t) => {
-  // doctest:L83
   await write("pkg/src/gone.ts", "export const gone = 1;\n");
   await git(["add", "-A"]);
   await git(["commit", "-q", "-m", "add gone.ts"]);
@@ -91,7 +85,6 @@ void test("A detected rename is only trusted once the working tree agrees with i
   await git(["commit", "-q", "-m", "move gone.ts"]);
   await rm(join(repoRoot, "pkg/src/moved-gone.ts"));
 
-  // doctest:L91
   const { moves: goneMoves, rejected: goneRejected } = computeRenamesFromGit({ repoRoot, base: goneBase });
   t.check(goneMoves, []);
   t.check(goneRejected, [
@@ -112,7 +105,6 @@ void test("Rejected when the working tree contradicts it: old path still present
       t.error(error);
     }
   });
-  // doctest:L102
   await write("pkg/src/still.ts", "export const still = 1;\n");
   await git(["add", "-A"]);
   await git(["commit", "-q", "-m", "add still.ts"]);
@@ -121,7 +113,6 @@ void test("Rejected when the working tree contradicts it: old path still present
   await git(["commit", "-q", "-m", "move still.ts"]);
   await write("pkg/src/still.ts", "export const still = 1;\n");
 
-  // doctest:L110
   const { moves: stillMoves, rejected: stillRejected } = computeRenamesFromGit({ repoRoot, base: stillBase });
   t.check(stillMoves, []);
   t.check(stillRejected, [

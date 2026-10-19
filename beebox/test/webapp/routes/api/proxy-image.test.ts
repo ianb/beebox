@@ -21,7 +21,6 @@ async function guard(url: string) {
 
 // ## Private, loopback, link-local, and mapped addresses are blocked
 void test("Private, loopback, link-local, and mapped addresses are blocked", async (t) => {
-  // doctest:L25
   t.check(
     [
       isBlockedAddress("127.0.0.1"),
@@ -40,7 +39,6 @@ void test("Private, loopback, link-local, and mapped addresses are blocked", asy
 
 // ## Public addresses are allowed
 void test("Public addresses are allowed", async (t) => {
-  // doctest:L42
   t.check(
     [
       isBlockedAddress("8.8.8.8"),
@@ -54,41 +52,35 @@ void test("Public addresses are allowed", async (t) => {
 
 // ## assertPublicHttpUrl rejects bad schemes, local hosts, literal private IPs, and junk
 void test("assertPublicHttpUrl rejects bad schemes, local hosts, literal private IPs, and junk", async (t) => {
-  // doctest:L54
   t.check(
     await guard("ftp://example.com/a.png")
     ,
     "only http(s) URLs are proxied",
   );
 
-  // doctest:L57
   t.check(
     await guard("http://localhost/a.png")
     ,
     "local hostnames are not proxied",
   );
 
-  // doctest:L60
   t.check(
     await guard("http://127.0.0.1/a.png")
     ,
     "resolves to a non-public address",
   );
 
-  // doctest:L63
   t.check(
     await guard("http://169.254.169.254/latest/meta-data/")
     ,
     "resolves to a non-public address",
   );
 
-  // doctest:L66
   t.check(await guard("not a url"), "malformed URL");
 });
 
 // ## A public literal-IP URL passes
 void test("A public literal-IP URL passes", async (t) => {
-  // doctest:L73
   t.check(
     await guard("https://8.8.8.8/logo.png")
     ,

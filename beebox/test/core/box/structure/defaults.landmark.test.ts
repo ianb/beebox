@@ -44,18 +44,15 @@ function gitInit(dir: string) {
 // the browser tab — so a fleet scaffolded with one hardcoded label would be a
 // fleet of identical-looking tabs.
 void test("A box with no landmark gets one installed under content/ (returns its box-rel...", async (t) => {
-  // doctest:L48
   const A = await makeContentBox();
   const rA = await installRootLandmark(A);
   t.check(rA, "_content/Box.landmark.card");
 
-  // doctest:L53
   t.check(await rootLabel(A), basename(A));
 
   // The root place carries the box's two onboarding openers, so a new box's first
   // chat offers them (they moved here from the briefing seed).
 
-  // doctest:L62
   t.check(parseLandmarkFields(await readFile(join(A, "_content/Box.landmark.card"), "utf8"))?.navigation?.openers, [
     "Let me tell you what this box is for.",
     "What can you do?",
@@ -66,20 +63,17 @@ void test("A box with no landmark gets one installed under content/ (returns its
 // parser reads as having no role — is repaired in place (the existing filename is
 // kept and returned):
 void test("An inert root landmark — here the legacy XML-body shape, which the frontmatte...", async (t) => {
-  // doctest:L71
   const B = await makeContentBox();
   await writeFile(join(B, "_content", "Box.landmark.card"), "---\ncontent-type: application/x-card+xml\n---\n<landmark><navigation><label>Old</label></navigation></landmark>\n");
   const rB = await installRootLandmark(B);
   t.check(rB, "_content/Box.landmark.card");
 
-  // doctest:L77
   t.check(await rootLabel(B), basename(B));
 });
 
 // A repair keeps the place summary. An inert landmark whose body the agent
 // wrote gets the stock frontmatter back, and its body survives:
 void test("A repair keeps the place summary.", async (t) => {
-  // doctest:L86
   const S = await makeContentBox();
   await writeFile(join(S, "_content", "Box.landmark.card"), "---\nsymbol:\n  glyph: 📦\n---\nTwo lists so far: groceries and the landlord.\n");
   await installRootLandmark(S);
@@ -96,7 +90,6 @@ symbol:
 Two lists so far: groceries and the landlord.
 `);
 
-  // doctest:L95
   t.check(parseLandmarkFields(repaired), {
     navigation: {
       label: basename(S),
@@ -109,13 +102,11 @@ Two lists so far: groceries and the landlord.
 // A real landmark (it has a navigation role) is left untouched — returns null, the
 // user owns it:
 void test("A real landmark (it has a navigation role) is left untouched — returns null,...", async (t) => {
-  // doctest:L103
   const C = await makeContentBox();
   await writeFile(join(C, "_content", "Home.landmark.card"), "---\nsymbol:\n  glyph: 🏠\nnavigation:\n  label: Home\n---\n");
   const rC = await installRootLandmark(C);
   t.check(rC, null);
 
-  // doctest:L109
   t.check(await rootLabel(C), "Home");
 });
 
@@ -123,7 +114,6 @@ void test("A real landmark (it has a navigation role) is left untouched — retu
 // (this is the staging + commit sequence `runHousekeeping` runs) — an inert one
 // becomes tracked rather than lingering as an uncommitted working file:
 void test("The returned path is what the wakeup commits, so a refilled landmark persists...", async (t) => {
-  // doctest:L119
   const G = await makeContentBox();
   gitInit(G);
   await writeFile(join(G, "_content", "Box.landmark.card"), "---\ncontent-type: application/x-card+xml\n---\n<landmark><navigation><label>Old</label></navigation></landmark>\n");

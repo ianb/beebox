@@ -19,19 +19,16 @@ import { dirBasename, placeLabel } from "../../src/lib/place-label.js";
 // names the bare box root "Home" (docs/glossary.md) while a literal `/chat`
 // route keeps "Chat".
 void test("/ redirects to /chat (Track A) and both render the same page, but the pill na...", async (t) => {
-  // doctest:L23
   t.check(placeLabel({ pathname: "/test1", boxSlug: "test1" }), {
     label: "Home",
     dir: null,
   });
 
-  // doctest:L26
   t.check(placeLabel({ pathname: "/test1/", boxSlug: "test1" }), {
     label: "Home",
     dir: null,
   });
 
-  // doctest:L29
   t.check(placeLabel({ pathname: "/test1/chat", boxSlug: "test1" }), {
     label: "Chat",
     dir: null,
@@ -42,7 +39,6 @@ void test("/ redirects to /chat (Track A) and both render the same page, but the
 //
 // `/history/<hash>` is still History.
 void test("/history/<hash> is still History.", async (t) => {
-  // doctest:L38
   t.check(placeLabel({ pathname: "/test1/history/a1b2c3", boxSlug: "test1" }).label, "History");
 });
 
@@ -52,7 +48,6 @@ void test("/history/<hash> is still History.", async (t) => {
 // form — a `_content` path shows bare, no leading area prefix
 // (`display-path.ts`).
 void test("A directory path is itself the dir.", async (t) => {
-  // doctest:L49
   t.check(placeLabel({ pathname: "/test1/browse/_content/recipes", boxSlug: "test1" }), {
     label: "Browse: recipes",
     dir: "_content/recipes",
@@ -62,7 +57,6 @@ void test("A directory path is itself the dir.", async (t) => {
 // A trailing segment with a `.` reads as a file, so the dir is its parent — the
 // landmark lookup wants the enclosing directory, not the card.
 void test("A trailing segment with a . reads as a file, so the dir is its parent — the l...", async (t) => {
-  // doctest:L57
   t.check(placeLabel({ pathname: "/test1/browse/_content/recipes/Bread.card", boxSlug: "test1" }), {
     label: "Browse: recipes/Bread.card",
     dir: "_content/recipes",
@@ -72,7 +66,6 @@ void test("A trailing segment with a . reads as a file, so the dir is its parent
 // A machinery-area path shows the area's friendly label instead of the
 // underscore name.
 void test("A machinery-area path shows the area's friendly label instead of the undersco...", async (t) => {
-  // doctest:L65
   t.check(placeLabel({ pathname: "/test1/browse/_bookkeeping/jobs", boxSlug: "test1" }), {
     label: "Browse: Bookkeeping:jobs",
     dir: "_bookkeeping/jobs",
@@ -82,7 +75,6 @@ void test("A machinery-area path shows the area's friendly label instead of the 
 // Browsing the box root has no path portion, and its dir is the root (`""`, not
 // `null`) — the root can itself hold a landmark.
 void test("Browsing the box root has no path portion, and its dir is the root (\"\", not n...", async (t) => {
-  // doctest:L73
   t.check(placeLabel({ pathname: "/test1/browse", boxSlug: "test1" }), {
     label: "Browse",
     dir: "",
@@ -94,13 +86,11 @@ void test("Browsing the box root has no path portion, and its dir is the root (\
 // Both `/card/$` and `/views/$` render one card; the card's own title is the page
 // heading, so the pill names the kind and spends its dir on the landmark lookup.
 void test("Both /card/$ and /views/$ render one card; the card's own title is the page h...", async (t) => {
-  // doctest:L83
   t.check(placeLabel({ pathname: "/test1/card/_content/recipes/Bread.card", boxSlug: "test1" }), {
     label: "Card",
     dir: "_content/recipes",
   });
 
-  // doctest:L86
   t.check(placeLabel({ pathname: "/test1/views/_content/plate.todo-view.card", boxSlug: "test1" }), {
     label: "Card",
     dir: "_content",
@@ -112,7 +102,6 @@ void test("Both /card/$ and /views/$ render one card; the card's own title is th
 // An unknown route (the router redirects these to the box root anyway) names the
 // landing rather than inventing a label.
 void test("An unknown route (the router redirects these to the box root anyway) names th...", async (t) => {
-  // doctest:L96
   t.check(placeLabel({ pathname: "/test1/nonesuch", boxSlug: "test1" }), {
     label: "Chat",
     dir: null,
@@ -125,7 +114,6 @@ void test("An unknown route (the router redirects these to the box root anyway) 
 // landmark lives in its card's attach folder, so that segment would read as a
 // filename; the `.attach` suffix is dropped.
 void test("The pill's folder half shows the landmark directory's last segment.", async (t) => {
-  // doctest:L107
   t.check(
     [
       dirBasename(""),

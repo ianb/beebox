@@ -26,7 +26,6 @@ const FOLLOW = { explicit: null, engine: "claude" as const };
 
 // A chat with no choice of its own follows the box; one with a choice keeps it.
 void test("A chat with no choice of its own follows the box; one with a choice keeps it.", async (t) => {
-  // doctest:L30
   const box = await makeTmpBox();
   const unpinned = await resolveSessionModel(box.root, FOLLOW);
   t.check([(unpinned.model?.length ?? 0) > 0, unpinned.source], [
@@ -34,7 +33,6 @@ void test("A chat with no choice of its own follows the box; one with a choice k
     "default",
   ]);
 
-  // doctest:L35
   const pinned = "claude-sonnet-5-5";
   await pin(box.root, { agentModel: pinned });
   const followed = await resolveSessionModel(box.root, FOLLOW);
@@ -43,7 +41,6 @@ void test("A chat with no choice of its own follows the box; one with a choice k
     "default",
   ]);
 
-  // doctest:L41
   const choice = "claude-fable-5-1";
   const own = await resolveSessionModel(box.root, { engine: "claude", explicit: choice });
   t.check([own.model === choice, own.source], [
@@ -51,6 +48,5 @@ void test("A chat with no choice of its own follows the box; one with a choice k
     "explicit",
   ]);
 
-  // doctest:L46
   await box.cleanup();
 });

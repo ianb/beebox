@@ -23,7 +23,6 @@ function render(src: string): string {
 //
 // A tag whose body has no newlines is inline — emits `RedactedInline`.
 void test("A tag whose body has no newlines is inline — emits RedactedInline.", async (t) => {
-  // doctest:L26
   t.check(render("The answer is {% redacted %}42{% /redacted %}."), "<article><p>The answer is <RedactedInline>42</RedactedInline>.</p></article>");
 });
 
@@ -31,6 +30,5 @@ void test("A tag whose body has no newlines is inline — emits RedactedInline."
 //
 // A tag with block-level body emits `RedactedBlock`.
 void test("A tag with block-level body emits RedactedBlock.", async (t) => {
-  // doctest:L36
   t.check(render("{% redacted %}\n\nA spoiler paragraph.\n\n{% /redacted %}"), "<article><RedactedBlock><p>A spoiler paragraph.</p></RedactedBlock></article>");
 });

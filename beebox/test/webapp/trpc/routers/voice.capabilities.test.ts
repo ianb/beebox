@@ -36,7 +36,6 @@ void test("Nothing granted: everything is unusable, and each says what it needs"
       t.error(error);
     }
   });
-  // doctest:L33
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
   process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
   const box = await makeTmpBox({ git: true });
@@ -65,7 +64,6 @@ void test("Nothing granted: everything is unusable, and each says what it needs"
 
   // Saving an unusable choice is allowed and warned about in the same response.
 
-  // doctest:L44
   const chosen = await owner(box.root).transcription.setHqService({ hqService: "mai-diarized" });
   t.check(`${chosen.hqService} — ${String(chosen.warning)}`, "mai-diarized — This box has no key for mai-diarized yet; grant openrouter in Admin → Secrets or it will fail on every pass.");
 
@@ -74,7 +72,6 @@ void test("Nothing granted: everything is unusable, and each says what it needs"
   // Gemini speech is not among them: through OpenRouter it would lose the
   // personality card's speaking style, so choosing it still saves but warns.
 
-  // doctest:L55
   await setSecret({ name: "openrouter", value: "sk-or-v1-placeholder-placeholder-placeholder-placeholder" });
   await grantSecret({ slug: await boxSlug(box.root), name: "openrouter", access: "server" });
   const lit = await owner(box.root).voice.capabilities();
@@ -86,7 +83,6 @@ void test("Nothing granted: everything is unusable, and each says what it needs"
     openaiTts: false,
   });
 
-  // doctest:L61
   const ok = await owner(box.root).tts.setBackend({ backend: "gemini" });
   t.check(`${ok.backend} — ${String(ok.warning)}`, "gemini — This box has no key for gemini yet; grant gemini in Admin → Secrets or it will fail on every pass.");
 });

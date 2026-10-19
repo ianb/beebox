@@ -12,7 +12,6 @@ import { mapDeepgramWords } from "../../../../src/core/transcription/dispatch/de
 
 // ## Deepgram mapping carries confidence through
 void test("Deepgram mapping carries confidence through", async (t) => {
-  // doctest:L16
   await t.checkText(
     JSON.stringify(
       mapDeepgramWords([
@@ -29,7 +28,6 @@ void test("Deepgram mapping carries confidence through", async (t) => {
 // anything else in that slot. The `typeof` guard treats every non-number the
 // same as absent, rather than crashing or coercing.
 void test("A response is unvalidated JSON — Deepgram could send a string, null, or anyth...", async (t) => {
-  // doctest:L31
   // Simulating a malformed untrusted Deepgram response (confidence as a
   // string instead of a number) — not a shape `mapDeepgramWords` promises to
   // accept, but exactly what an unvalidated boundary can hand it.
@@ -46,7 +44,6 @@ void test("A response is unvalidated JSON — Deepgram could send a string, null
 // Multiple words: only the ones with numeric confidence get the field, in
 // original order.
 void test("Multiple words:", async (t) => {
-  // doctest:L45
   await t.checkText(
     JSON.stringify(
       mapDeepgramWords([

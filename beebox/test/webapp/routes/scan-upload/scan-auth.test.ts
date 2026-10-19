@@ -48,13 +48,11 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
       t.error(error);
     }
   });
-  // doctest:L42
   delete process.env.BBX_HUB_SECRET;
   const box = await makeTmpBox();
   const scan = await createScanToken(box.root, { name: "laptop-scansnap", createdBy: "owner@example.com" });
   const server = await makeScanServer(box.root);
 
-  // doctest:L47
   const ok = await server.inject({
     method: "GET",
     url: "/api/scan/whoami",
@@ -62,7 +60,6 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
   });
   t.check(ok.statusCode, 200);
 
-  // doctest:L55
   await t.checkText(ok.payload, "{\"source\":\"scan-token\",\"tokenName\":\"laptop-scansnap\",\"email\":null}");
 
   // ## A mobile device token does NOT satisfy the scan gate's token path
@@ -71,11 +68,9 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
   // the scan store it is just an unknown string. Nothing here rejects it by
   // inspecting a scope — the scan store simply doesn't contain it.
 
-  // doctest:L66
   const ticket = createMobilePairingTicket(box.root, { createdBy: "owner@example.com" });
   const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "phone" });
 
-  // doctest:L69
   const mobileAttempt = await server.inject({
     method: "GET",
     url: "/api/scan/whoami",
@@ -86,7 +81,6 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
   // An absent, malformed, or bogus credential is the same bare 401 — these routes
   // are machine-facing, so there is no login redirect to fall back to.
 
-  // doctest:L82
   const attempts = await Promise.all(
     [{}, { authorization: "Bearer nope" }, { authorization: scan.token }].map((headers) =>
       server.inject({ method: "GET", url: "/api/scan/whoami", headers }).then((r) => r.statusCode)),
@@ -99,10 +93,8 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
 
   // ## Revocation locks the uploader out immediately
 
-  // doctest:L93
   t.check(await revokeScanToken(box.root, "laptop-scansnap"), true);
 
-  // doctest:L96
   t.check(
     (await server.inject({
       method: "GET",
@@ -119,7 +111,6 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
   // answer. Here it arrives the way a hub-fronted request does; a box member who
   // isn't the owner is not enough.
 
-  // doctest:L112
   process.env.BBX_HUB_SECRET = "scan-auth-doctest-hub-secret";
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
   const hubHeaders = (email: string) => ({
@@ -127,14 +118,11 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
     "x-bbx-authenticated-email": email,
   });
 
-  // doctest:L119
   const asOwner = await server.inject({ method: "GET", url: "/api/scan/whoami", headers: hubHeaders("owner@example.com") });
   t.check(asOwner.statusCode, 200);
 
-  // doctest:L123
   await t.checkText(asOwner.payload, "{\"source\":\"owner\",\"tokenName\":null,\"email\":\"owner@example.com\"}");
 
-  // doctest:L126
   const asMember = await server.inject({ method: "GET", url: "/api/scan/whoami", headers: hubHeaders("guest@example.com") });
   t.check(asMember.statusCode, 401);
 });
@@ -154,13 +142,11 @@ void test("/api/pairing/session reads the mobile store and only the mobile store
       t.error(error);
     }
   });
-  // doctest:L146
   const box2 = await makeTmpBox();
   const scan2 = await createScanToken(box2.root, { name: "uploader", createdBy: null });
   const pairingServer = Fastify({ logger: false });
   registerPairingRoutes(pairingServer, { boxRoot: box2.root, boxSlug: "test" });
 
-  // doctest:L151
   t.check(
     (await pairingServer.inject({
       method: "POST",
@@ -189,13 +175,11 @@ void test("On a real auth-on box server the scan token reaches no route at all:"
       t.error(error);
     }
   });
-  // doctest:L172
   delete process.env.BBX_HUB_SECRET;
   const authedServer = await makeTestServer({ openAccess: false });
   const scan3 = await createScanToken(authedServer.boxRoot, { name: "uploader", createdBy: null });
   const scanBearer = { authorization: `Bearer ${scan3.token}` };
 
-  // doctest:L177
   const probes: { method: "GET" | "POST"; url: string }[] = [
     { method: "GET", url: "/api/trpc/health.check" },
     { method: "POST", url: "/api/pairing/session" },

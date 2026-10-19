@@ -115,7 +115,6 @@ void test("ps and shell history see every argument, so the argv form is rejected
       t.error(error);
     }
   });
-  // doctest:L71
   const dir = await useTempStore();
   const refused = await runCaptured(() =>
     runSetSecret({ name: "mistral", argvValue: "placeholder-value-1", agentConfirmed: true }),
@@ -146,7 +145,6 @@ void test("grant hands another box a live credential, so it needs a human's expl
       t.error(error);
     }
   });
-  // doctest:L96
   const dir = await useTempStore();
   await setSecret({ name: "mistral", value: "placeholder-value-2" });
   // The box these `status` calls run in: its slug is its directory's basename,
@@ -154,7 +152,6 @@ void test("grant hands another box a live credential, so it needs a human's expl
   const demoBox = join(dir, "demo-box");
   await mkdir(demoBox);
 
-  // doctest:L103
   const blocked = await runCaptured(() => runGrantSecret({ boxOrRoot: "demo-box", name: "mistral" }));
   t.check(seen(blocked), {
     exitCode: 1,
@@ -164,7 +161,6 @@ void test("grant hands another box a live credential, so it needs a human's expl
   const after = await runCaptured(() => runSecretsStatus({ boxOrRoot: "demo-box", boxRoot: demoBox }));
   t.check(seen(after), { exitCode: undefined, logs: ["Box: demo-box", "  granted: none"], errors: [] });
 
-  // doctest:L110
   const declared = await runCaptured(() => runDeclareSecret({ name: "weatherapi", note: "for a trick" }));
   t.check(seen(declared), {
     exitCode: undefined,
@@ -177,7 +173,6 @@ void test("grant hands another box a live credential, so it needs a human's expl
   // With `--agent-confirmed` — the flag that asserts a human asked — the same grant
   // goes through, and `status` reports it:
 
-  // doctest:L126
   const granted = await runCaptured(() =>
     runGrantSecret({ boxOrRoot: "demo-box", name: "mistral", access: "agent", agentConfirmed: true }),
   );
@@ -201,15 +196,11 @@ void test("grant hands another box a live credential, so it needs a human's expl
   //
   // An unknown access level is refused rather than silently downgraded:
 
-  // doctest:L146
   const bad = await runCaptured(() =>
     runGrantSecret({ boxOrRoot: "demo-box", name: "mistral", access: "root", agentConfirmed: true }),
   );
   t.check(seen(bad), { exitCode: 1, logs: [], errors: ["Unknown access level \"root\" — use \"server\" (default) or \"agent\"."] });
 
-  // doctest:L157`);
-
-  // doctest:L157
   const revoked = await runCaptured(() =>
     runRevokeSecret({ boxOrRoot: "demo-box", name: "mistral", agentConfirmed: true }),
   );
@@ -232,11 +223,9 @@ void test("Declaring grants nothing, so without attribution the slot would vanis
       t.error(error);
     }
   });
-  // doctest:L177
   const dir = await useTempStore();
   const boxDir = await mkdtemp(join(tmpdir(), "weather-box-"));
 
-  // doctest:L180
   const declared = await runCaptured(() =>
     runDeclareSecret({ name: "weatherapi", note: "for the forecast trick", boxRoot: boxDir }),
   );
@@ -249,7 +238,6 @@ void test("Declaring grants nothing, so without attribution the slot would vanis
     errors: [],
   });
 
-  // doctest:L185
   const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir, boxRoot: boxDir }));
   t.check(seen(status, boxDir), {
     exitCode: undefined,
@@ -262,7 +250,6 @@ void test("Declaring grants nothing, so without attribution the slot would vanis
   // Once the boxholder supplies the value and grants it, it reports as a grant
   // instead — a declared slot is only news while it is still waiting:
 
-  // doctest:L199
   await setSecret({ name: "weatherapi", value: "placeholder-value-4" });
   await runCaptured(() =>
     runGrantSecret({ boxOrRoot: boxDir, name: "weatherapi", access: "agent", agentConfirmed: true }),
@@ -286,11 +273,9 @@ void test("Reasons are additive:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L223
   const dir = await useTempStore();
   const boxDir = await mkdtemp(join(tmpdir(), "weather-box-"));
 
-  // doctest:L226
   await runCaptured(() =>
     runDeclareSecret({ name: "weatherapi", uses: ["forecasts in the morning brief"], boxRoot: boxDir }),
   );
@@ -305,7 +290,6 @@ void test("Reasons are additive:", async (t) => {
     errors: [],
   });
 
-  // doctest:L234
   const status = await runCaptured(() => runSecretsStatus({ boxOrRoot: boxDir, boxRoot: boxDir }));
   t.check(seen(status, boxDir), {
     exitCode: undefined,
@@ -322,7 +306,6 @@ void test("Reasons are additive:", async (t) => {
 
   // Dropping a reason in an agent session is refused without `--agent-confirmed`:
 
-  // doctest:L249
   const blocked = await runCaptured(() =>
     runDescribeSecret({ name: "weatherapi", clearUses: true, boxRoot: boxDir }),
   );
@@ -332,7 +315,6 @@ void test("Reasons are additive:", async (t) => {
     errors: [machineRefusal("Refusing to remove a secret's stated uses: this looks like an agent session (CLAUDECODE is set in the environment).")],
   });
 
-  // doctest:L255
   const cleared = await runCaptured(() =>
     runDescribeSecret({ name: "weatherapi", clearUses: true, agentConfirmed: true }),
   );
@@ -355,7 +337,6 @@ void test("Adding a reason is unguarded for the box the agent is standing in —
       t.error(error);
     }
   });
-  // doctest:L280
   const dir = await useTempStore();
   const ownBox = join(dir, "own-box");
   await mkdir(ownBox);
@@ -363,7 +344,6 @@ void test("Adding a reason is unguarded for the box the agent is standing in —
   await grantSecret({ slug: "own-box", name: "weatherapi", access: "agent" });
   await setSecret({ name: "someone-elses", value: "placeholder-value-6" });
 
-  // doctest:L287
   const mine = await runCaptured(() =>
     runDescribeSecret({ name: "weatherapi", addUses: ["the umbrella reminder trick"], boxRoot: ownBox }),
   );
@@ -378,7 +358,6 @@ void test("Adding a reason is unguarded for the box the agent is standing in —
   // answered identically — the only difference between the two messages is the name
   // the caller supplied:
 
-  // doctest:L303
   const foreign = await runCaptured(() =>
     runDescribeSecret({ name: "someone-elses", addUses: ["curiosity"], boxRoot: ownBox }),
   );
@@ -399,7 +378,6 @@ void test("Adding a reason is unguarded for the box the agent is standing in —
   // `--agent-confirmed` — a human explicitly asked — carries it through, and outside
   // a box there is no own-box view at all:
 
-  // doctest:L322
   const confirmed = await runCaptured(() =>
     runDescribeSecret({ name: "someone-elses", addUses: ["the boxholder asked"], boxRoot: ownBox, agentConfirmed: true }),
   );
@@ -410,7 +388,6 @@ void test("Adding a reason is unguarded for the box the agent is standing in —
     errors: [],
   });
 
-  // doctest:L327
   const nowhere = await runCaptured(() =>
     runDescribeSecret({ name: "weatherapi", addUses: ["curiosity"], boxRoot: null }),
   );
@@ -430,7 +407,6 @@ void test("`list` prints names and metadata, never values", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L346
   const dir = await useTempStore();
   await setSecret({ name: "mistral", value: "placeholder-value-3", note: "transcription" });
   const listed = await runCaptured(() => runListSecrets({ agentConfirmed: true }));
@@ -440,7 +416,6 @@ void test("`list` prints names and metadata, never values", async (t) => {
     errors: [],
   });
 
-
   // ## An agent sees its own box, not the machine
   //
   // `list` is the machine-wide inventory — every secret name and which boxes hold
@@ -448,7 +423,6 @@ void test("`list` prints names and metadata, never values", async (t) => {
   // per-box and stays open to an agent, but only for the box the command is
   // standing in. Neither discloses a value; what is withheld is the map.
 
-  // doctest:L364
   const listBlocked = await runCaptured(() => runListSecrets());
   t.check(seen(listBlocked), {
     exitCode: 1,
@@ -456,17 +430,14 @@ void test("`list` prints names and metadata, never values", async (t) => {
     errors: [machineRefusal("Refusing to list every secret on this machine: this looks like an agent session (CLAUDECODE is set in the environment).")],
   });
 
-  // doctest:L368
   const ownBox = join(dir, "own-box");
   const otherBox = join(dir, "other-box");
   await mkdir(ownBox);
   await mkdir(otherBox);
 
-  // doctest:L373
   const own = await runCaptured(() => runSecretsStatus({ boxOrRoot: "own-box", boxRoot: ownBox }));
   t.check(seen(own), { exitCode: undefined, logs: ["Box: own-box", "  granted: none"], errors: [] });
 
-  // doctest:L377
   const other = await runCaptured(() => runSecretsStatus({ boxOrRoot: "other-box", boxRoot: ownBox }));
   t.check(seen(other), {
     exitCode: 1,
@@ -474,7 +445,6 @@ void test("`list` prints names and metadata, never values", async (t) => {
     errors: [statusRefusal({ head: "Refusing to report on box \"other-box\"", why: "the box you are working in is \"own-box\".", tail: "Try: bbx secrets status own-box" })],
   });
 
-  // doctest:L381
   const nowhere = await runCaptured(() => runSecretsStatus({ boxOrRoot: "own-box", boxRoot: null }));
   t.check(seen(nowhere), {
     exitCode: 1,

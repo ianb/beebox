@@ -18,12 +18,10 @@ import { buildStamp, describeBuild, UNKNOWN_REVISION, type BuildStamp } from "..
 
 // ## Source mode is reported as source, not as a fake build
 void test("Source mode is reported as source, not as a fake build", async (t) => {
-  // doctest:L22
   t.check(buildStamp(), {
     mode: "source",
   });
 
-  // doctest:L27
   t.check(describeBuild(buildStamp()), "running from source (a checkout — tracks current source)");
 });
 
@@ -32,7 +30,6 @@ void test("Source mode is reported as source, not as a fake build", async (t) =>
 // The shape `build.ts` bakes in. Constructed directly here — the point under test
 // is the rendering, and the replacement itself belongs to the build.
 void test("The shape build.ts bakes in.", async (t) => {
-  // doctest:L37
   const bundle: BuildStamp = { mode: "bundle", revision: "16e177c0", builtAt: "2026-09-14T18:46:01.243Z" };
   t.check(describeBuild(bundle), "bundle 16e177c0, built 2026-09-14T18:46:01.243Z");
 
@@ -40,7 +37,6 @@ void test("The shape build.ts bakes in.", async (t) => {
   // uncommitted work is not the revision it names, and a box told a clean hash
   // would be told something false about the file it is talking to.
 
-  // doctest:L47
   t.check(describeBuild({ mode: "bundle", revision: "16e177c0-dirty", builtAt: "2026-09-14T18:46:01.243Z" }), "bundle 16e177c0-dirty, built 2026-09-14T18:46:01.243Z");
 
   // ## A build with no git tree still reports when it was built
@@ -49,6 +45,5 @@ void test("The shape build.ts bakes in.", async (t) => {
   // still real — which is the half that answers "is this uploader old?", so the
   // stamp stays useful rather than degrading to nothing.
 
-  // doctest:L58
   t.check(describeBuild({ mode: "bundle", revision: UNKNOWN_REVISION, builtAt: "2026-09-14T18:46:01.243Z" }), "bundle unknown revision, built 2026-09-14T18:46:01.243Z");
 });

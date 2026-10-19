@@ -30,7 +30,6 @@ void test("Tier order: entry-point, then primary, then nested landmarks, then ex
       t.error(error);
     }
   });
-  // doctest:L27
   const box = await makeTmpBox();
   await box.write("_content/Spot.landmark.card", "---\nnavigation:\n  label: Spot\n  expand:\n    - query: Extra.doc.card\n---\n");
   await box.write("_content/Extra.doc.card", "---\n---\n");
@@ -38,14 +37,12 @@ void test("Tier order: entry-point, then primary, then nested landmarks, then ex
   await box.write("_content/Plan.doc.card", "---\nprominence: primary\n---\n");
   await box.write("_content/Sub/Sub.landmark.card", "---\nnavigation:\n  label: Sub\n---\n");
 
-  // doctest:L34
   const derived = await prunedSubtree(box.root, "");
   const { links } = await resolveLandmark(
     { label: "Spot", expand: [{ query: "Extra.doc.card" }] },
     { landmarkDir: box.path("_content"), landmarkPath: "_content/Spot.landmark.card", boxRoot: box.root, cardSchemas: await createCardSchemaMap(box.root), derived },
   );
 
-  // doctest:L40
   t.check(summarize(links), [
     {
       ref: "_content/Idx.doc.card",
@@ -89,18 +86,15 @@ void test("The card is BOTH links:-listed (with a label) and marked primary — 
       t.error(error);
     }
   });
-  // doctest:L83
   const box = await makeTmpBox();
   await box.write("_content/Plan.doc.card", "---\nprominence: primary\n---\n");
 
-  // doctest:L86
   const derived = await prunedSubtree(box.root, "");
   const { links } = await resolveLandmark(
     { label: "Spot", links: [{ ref: "/_content/Plan.doc.card", label: "the plan" }] },
     { landmarkDir: box.path("_content"), landmarkPath: "_content/Spot.landmark.card", boxRoot: box.root, cardSchemas: await createCardSchemaMap(box.root), derived },
   );
 
-  // doctest:L92
   t.check(summarize(links), [
     {
       ref: "_content/Plan.doc.card",
@@ -121,19 +115,16 @@ void test("A place may list its own entry point.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L112
   const box = await makeTmpBox();
   await box.write("_content/List.doc.card", "---\nprominence: entry-point\n---\n");
   await box.write("_content/Other.doc.card", "---\n---\n");
 
-  // doctest:L116
   const derived = await prunedSubtree(box.root, "");
   const { links } = await resolveLandmark(
     { label: "Spot", links: [{ ref: "/_content/List.doc.card", label: "the list" }, { ref: "/_content/Other.doc.card" }] },
     { landmarkDir: box.path("_content"), landmarkPath: "_content/Spot.landmark.card", boxRoot: box.root, cardSchemas: await createCardSchemaMap(box.root), derived },
   );
 
-  // doctest:L122
   t.check(summarize(links), [
     {
       ref: "_content/List.doc.card",
@@ -162,17 +153,14 @@ void test("Omitting derived (the identity-only callers, and any resolver call th
       t.error(error);
     }
   });
-  // doctest:L136
   const box = await makeTmpBox();
   await box.write("_content/Bread.recipe.card", "---\ntitle: Bread\n---\n");
 
-  // doctest:L139
   const { links, derivedProblems } = await resolveLandmark(
     { label: "Recipes", links: [{ ref: "Bread.recipe.card" }] },
     { landmarkDir: box.path("_content"), landmarkPath: "_content/Recipes.landmark.card", boxRoot: box.root, cardSchemas: await createCardSchemaMap(box.root) },
   );
 
-  // doctest:L144
   t.check(summarize(links), [
     {
       ref: "_content/Bread.recipe.card",
@@ -182,7 +170,6 @@ void test("Omitting derived (the identity-only callers, and any resolver call th
     },
   ]);
 
-  // doctest:L155
   t.check(derivedProblems, []);
 });
 
@@ -199,19 +186,16 @@ void test("A slugged filename loses punctuation, so a link titled from it reads 
       t.error(error);
     }
   });
-  // doctest:L170
   const box = await makeTmpBox();
   await box.write("_content/Cake_Carrier_Marisol.doc.card", "---\ntitle: Cake carrier (Marisol's)\nprominence: primary\n---\n");
   await box.write("_content/Ladder.doc.card", "---\nprominence: primary\n---\n");
 
-  // doctest:L174
   const derived = await prunedSubtree(box.root, "");
   const { links } = await resolveLandmark(
     { label: "Spot" },
     { landmarkDir: box.path("_content"), landmarkPath: "_content/Spot.landmark.card", boxRoot: box.root, cardSchemas: await createCardSchemaMap(box.root), derived },
   );
 
-  // doctest:L180
   t.check(links.map((l) => l.title), [
     "Cake carrier (Marisol's)",
     "Ladder",
@@ -232,20 +216,17 @@ void test("A nested landmark's row used to open the landmark card itself, a page
       t.error(error);
     }
   });
-  // doctest:L196
   const box = await makeTmpBox();
   await box.write("_content/Inventory/Inventory.landmark.card", "---\nnavigation:\n  label: Inventory\n---\n");
   await box.write("_content/Inventory/Index.doc.card", "---\nprominence: entry-point\n---\n");
   await box.write("_content/Garden/Garden.landmark.card", "---\nnavigation:\n  label: Garden\n---\n");
 
-  // doctest:L201
   const derived = await prunedSubtree(box.root, "");
   const { links } = await resolveLandmark(
     { label: "Home" },
     { landmarkDir: box.path("_content"), landmarkPath: "_content/Home.landmark.card", boxRoot: box.root, cardSchemas: await createCardSchemaMap(box.root), derived },
   );
 
-  // doctest:L207
   t.check(links.map((l) => ({ ref: l.ref, label: l.label })), [
     {
       ref: "_content/Garden/Garden.landmark.card",

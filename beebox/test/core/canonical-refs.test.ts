@@ -80,22 +80,16 @@ async function seedBox() {
 // and a bare fragment. A document-relative path is not — and the check names the
 // box-root form it should have been written as, suffix and all.
 void test("Box-root-absolute is canonical; so is a card's attach/ scope, an external URL...", async (t) => {
-  // doctest:L84
   const from = { fromPath: "_content/store/notes/Meeting.doc.card", kind: "card" } as const;
 
-  // doctest:L86
   t.check(checkCanonicalRef({ ref: "/_content/store/notes/Plan.doc.card", ...from }), { status: "canonical" });
 
-  // doctest:L89
   t.check(checkCanonicalRef({ ref: "attach/photo.jpg", ...from }), { status: "canonical" });
 
-  // doctest:L92
   t.check(checkCanonicalRef({ ref: "https://example.com/x", ...from }), { status: "canonical" });
 
-  // doctest:L95
   t.check(checkCanonicalRef({ ref: "#risks", ...from }), { status: "canonical" });
 
-  // doctest:L98
   t.check(checkCanonicalRef({ ref: "../people/Dana.person.card?view=card", ...from }), {
     status: "rewritable",
     canonical: "/_content/store/people/Dana.person.card?view=card",
@@ -109,13 +103,11 @@ void test("Box-root-absolute is canonical; so is a card's attach/ scope, an exte
 // inside the box root but lands outside every underscore area (Track B's
 // namespace fence, `docs/implemented-plans/one-root-box-layout.md`).
 void test("A .md dossier owns no attach scope, so attach/x there is a literal subdirecto...", async (t) => {
-  // doctest:L110
   t.check(checkCanonicalRef({ ref: "attach/photo.jpg", fromPath: "_content/docs/guide.md", kind: "markdown" }), {
     status: "rewritable",
     canonical: "/_content/docs/attach/photo.jpg",
   });
 
-  // doctest:L113
   t.check(checkCanonicalRef({ ref: "../../escape.md", fromPath: "_content/docs/guide.md", kind: "markdown" }), { status: "escapes" });
 });
 
@@ -127,7 +119,6 @@ void test("A .md dossier owns no attach scope, so attach/x there is a literal su
 // what `--fix` would write. The absolute ref, the `attach/` ref, and the
 // external link are not flagged.
 void test("lintCardsDispatch emits type:", async (t) => {
-  // doctest:L126
   const box = await seedBox();
   const report = await lintCardsDispatch(
     [box.path("_content/store/notes/Meeting.doc.card")],
@@ -144,7 +135,6 @@ Non-canonical ref at refs[2]: ../people/Missing.person.card → /_content/store/
   // the body link's warning is still there (default-on), alongside the ordinary
   // broken-ref warning for the target that really is missing:
 
-  // doctest:L146
   const quiet = await lintCardsDispatch(
     [box.path("_content/store/notes/Meeting.doc.card")],
     { boxRoot: box.root, ctx },
@@ -167,7 +157,6 @@ Non-canonical ref at refs[2]: ../people/Missing.person.card → /_content/store/
   // Formal `[text](path)` links in plain `.md` dossiers are checked the same way,
   // with `kind: "markdown"`.
 
-  // doctest:L160
   const dossier = await collectDossierCanonicalWarnings([box.path("_content/docs/guide.md")], box.root);
   await t.checkText(dossier.join("\n"), `_content/docs/guide.md: Non-canonical ref at line 3: ../store/notes/Plan.doc.card → /_content/store/notes/Plan.doc.card
 _content/docs/guide.md: Non-canonical ref at line 4: ../store/notes/Gone.doc.card → /_content/store/notes/Gone.doc.card
@@ -177,17 +166,14 @@ _content/docs/guide.md: Non-canonical ref at line 4: ../../escape.md escapes the
   // The same two numbers are what `--json` reports as `nonCanonicalRefs` and
   // `nonCanonicalDossierLinks`.
 
-  // doctest:L173
   const buckets = { cardSummary: report, viewWarnings: [], dossierWarnings: dossier };
   t.check(canonicalCounts(buckets), {
     refs: 3,
     dossierLinks: 3,
   });
 
-  // doctest:L177
   t.check(formatCanonicalReport({ ...buckets, dossierWarnings: [] }, { colors: false }), "Canonical refs: 3 non-canonical refs, 0 non-canonical dossier links — rerun with `--canonical --fix` to rewrite the ones whose target exists");
 
-  // doctest:L182
   await box.cleanup();
 });
 
@@ -199,7 +185,6 @@ _content/docs/guide.md: Non-canonical ref at line 4: ../../escape.md escapes the
 // written — re-expressing a ref whose target doesn't exist would invent a path
 // nobody can verify.
 void test("The rewrite is text-surgical:", async (t) => {
-  // doctest:L194
   const box = await seedBox();
   const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
   t.check(fixed, {
@@ -212,7 +197,6 @@ void test("The rewrite is text-surgical:", async (t) => {
     skipped: 3,
   });
 
-  // doctest:L201
   await t.checkText(await box.read("_content/store/notes/Meeting.doc.card"), `---
 type: doc
 title: Ashfield sync
@@ -227,7 +211,6 @@ See [the plan](/_content/store/notes/Plan.doc.card?view=ledger) and [the site](h
   // The dossier's one resolvable link is rewritten in place; the already-absolute
   // link, the dangling one, and the box-escaping one are left alone.
 
-  // doctest:L219
   await t.checkText(await box.read("_content/docs/guide.md"), `# Guide
 «blankline»
 Read [the plan](/_content/store/notes/Plan.doc.card) and [again](/_content/store/notes/Plan.doc.card).
@@ -236,7 +219,6 @@ Also [missing](../store/notes/Gone.doc.card) and [outside](../../escape.md).`);
   // Re-running the report against the fixed box comes back clean except for the
   // dangling refs it deliberately refused to touch:
 
-  // doctest:L231
   const after = await lintCardsDispatch(
     [box.path("_content/store/notes/Meeting.doc.card")],
     { boxRoot: box.root, ctx, canonical: true },
@@ -247,7 +229,6 @@ Also [missing](../store/notes/Gone.doc.card) and [outside](../../escape.md).`);
   // Running `--fix` again is a no-op — nothing left that both resolves and is
   // relative:
 
-  // doctest:L246
   const again = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
   t.check(again, {
     refsRewritten: 0,
@@ -259,7 +240,6 @@ Also [missing](../store/notes/Gone.doc.card) and [outside](../../escape.md).`);
     skipped: 3,
   });
 
-  // doctest:L252
   await box.cleanup();
 });
 
@@ -272,7 +252,6 @@ Also [missing](../store/notes/Gone.doc.card) and [outside](../../escape.md).`);
 // same link dangling when its target moved. The scan now runs over contiguous runs
 // of scannable lines, so both agree on the set.
 void test("inlineLinkPattern's label class matches newlines, so validate — which runs it...", async (t) => {
-  // doctest:L265
   const box = await makeTmpBox();
   await box.write("_content/store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nThe plan.\n");
   await box.write(
@@ -292,7 +271,6 @@ void test("inlineLinkPattern's label class matches newlines, so validate — whi
 
   // The label's line break survives the rewrite — only the ref is replaced:
 
-  // doctest:L279
   await t.checkText(await box.read("_content/store/notes/Wrapped.doc.card"), `---
 type: doc
 title: Wrapped
@@ -300,7 +278,6 @@ title: Wrapped
 See [the long-awaited
 plan](/_content/store/notes/Plan.doc.card) for details.`);
 
-  // doctest:L290
   await box.cleanup();
 });
 
@@ -319,7 +296,6 @@ plan](/_content/store/notes/Plan.doc.card) for details.`);
 // preserved in place — before, the comment was captured as part of the token, so
 // the ref never resolved and `--fix` silently skipped it.
 void test("The fixer shares bbx mv's text-surgical scan but not all of its posture.", async (t) => {
-  // doctest:L309
   const FENCE = "`".repeat(3);
   const box = await makeTmpBox();
   await box.write("_content/store/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nThe plan.\n");
@@ -331,7 +307,6 @@ void test("The fixer shares bbx mv's text-surgical scan but not all of its postu
       FENCE + "md\nFenced [plan](Plan.doc.card)\n" + FENCE + "\n",
   );
 
-  // doctest:L320
   const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
   t.check(fixed, {
     refsRewritten: 3,
@@ -343,7 +318,6 @@ void test("The fixer shares bbx mv's text-surgical scan but not all of its postu
     skipped: 0,
   });
 
-  // doctest:L326
   const notes = await box.read("_content/store/notes/Notes.doc.card");
   await t.checkText(notes.split("\n").filter((line) => line.includes("Plan.doc.card")).join("\n"), `ref: /_content/store/notes/Plan.doc.card  # the plan
   - /_content/store/notes/Plan.doc.card # also
@@ -351,7 +325,6 @@ void test("The fixer shares bbx mv's text-surgical scan but not all of its postu
 Inline [plan](/_content/store/notes/Plan.doc.card).
 Fenced [plan](Plan.doc.card)`);
 
-  // doctest:L337
   await box.cleanup();
 });
 
@@ -362,7 +335,6 @@ Fenced [plan](Plan.doc.card)`);
 // succeeds — so a malformed ref read as a valid one. Now the shared algebra fails
 // closed on them, and each surfaces as an ordinary broken-ref warning.
 void test("ref:", async (t) => {
-  // doctest:L348
   const box = await makeTmpBox();
   await box.write(
     "_content/store/notes/Empty.doc.card",
@@ -381,13 +353,11 @@ void test("ref:", async (t) => {
   // None of the three is canonical-rewritable — there is no target to re-express
   // from the box root, and `--fix` leaves the card untouched:
 
-  // doctest:L368
   t.check(canonicalCounts({ cardSummary: report, viewWarnings: [], dossierWarnings: [] }), {
     refs: 0,
     dossierLinks: 0,
   });
 
-  // doctest:L371
   const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
   t.check(fixed, {
     refsRewritten: 0,
@@ -399,7 +369,6 @@ void test("ref:", async (t) => {
     skipped: 0,
   });
 
-  // doctest:L377
   await box.cleanup();
 });
 
@@ -423,7 +392,6 @@ void test("ref:", async (t) => {
 // coincidence, not special-cased: the algebra doesn't treat `_content` as
 // special except at the root.
 void test("Old code wrote bare refs meaning them from the box root — under v3 that means...", async (t) => {
-  // doctest:L401
   const box = await makeTmpBox();
   await box.write("_content/people/Dana.person.card", "---\ntype: person\nname: Dana\n---\nDana.\n");
   await box.write("_content/team/Ops.doc.card", "---\ntype: doc\ntitle: Ops\n---\nOps.\n");
@@ -443,7 +411,6 @@ void test("Old code wrote bare refs meaning them from the box root — under v3 
   // plain arrow (`--fix` won't write it — the summary's skipped count is what says
   // so).
 
-  // doctest:L422
   const report = await lintCardsDispatch(
     [box.path("_content/store/notes/Thread.doc.card")],
     { boxRoot: box.root, ctx, canonical: true },
@@ -456,7 +423,6 @@ Non-canonical ref at refs[2]: ghosts/Nobody.doc.card → /_content/store/notes/g
   // Three of the four are counted broken today — the two box-root-intent refs and the
   // truly missing one:
 
-  // doctest:L438
   await t.checkText(report.results[0]!.warnings.filter((w) => w.type === "reference").map((w) => w.message).join("\n"), `Broken reference at ref: _content/people/Dana.person.card does not exist
 Broken reference at refs[0]: _content/people/Dana.person.card#bio does not exist
 Broken reference at refs[2]: ghosts/Nobody.doc.card does not exist`);
@@ -466,7 +432,6 @@ Broken reference at refs[2]: ghosts/Nobody.doc.card does not exist`);
   // payload: they change what a ref points at (from nothing to something), which an
   // ordinary canonicalization never does.
 
-  // doctest:L451
   const fixed = await canonicalizeBox(box.root, { ignore: await loadValidationIgnore(box.root) });
   t.check(fixed, {
     refsRewritten: 0,
@@ -478,13 +443,11 @@ Broken reference at refs[2]: ghosts/Nobody.doc.card does not exist`);
     skipped: 1,
   });
 
-  // doctest:L457
   t.check(formatCanonicalizeReport(fixed), "Canonicalized 0 refs and 0 dossier links in 2 files; repaired 2 dangling refs and 1 dossier link that resolve from the box root; 1 ref ambiguous (both readings exist) left alone; 1 left unrewritten (target missing or ref escapes the box)");
 
   // The `#bio` fragment survives the repair, and the ambiguous and dangling refs are
   // byte-identical to what was written:
 
-  // doctest:L465
   await t.checkText(await box.read("_content/store/notes/Thread.doc.card"), `---
 type: doc
 title: Thread
@@ -496,13 +459,11 @@ refs:
 ---
 Thread.`);
 
-  // doctest:L480
   await t.checkText(await box.read("_content/docs/guide.md"), "Ask [Dana](/_content/people/Dana.person.card).");
 
   // Re-validating proves the point end to end: the repaired refs are no longer
   // counted broken, only the genuinely missing one is.
 
-  // doctest:L488
   const after = await lintCardsDispatch(
     [box.path("_content/store/notes/Thread.doc.card")],
     { boxRoot: box.root, ctx, canonical: true },
@@ -512,12 +473,10 @@ Thread.`);
   // What's left non-canonical is exactly the pair `--fix` refuses: the ambiguous ref
   // and the dangling one.
 
-  // doctest:L500
   t.check(canonicalCounts({ cardSummary: after, viewWarnings: [], dossierWarnings: [] }), {
     refs: 2,
     dossierLinks: 0,
   });
 
-  // doctest:L505
   await box.cleanup();
 });

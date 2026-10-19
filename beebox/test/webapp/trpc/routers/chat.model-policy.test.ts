@@ -40,7 +40,6 @@ function caller(server: TestServer, opts?: { isOwner?: boolean }) {
 // default as the model it will use, and says where that came from. A box that has
 // pinned nothing reports the `strong` tier for its engine rather than `null`.
 void test("A pin is visible to the next status read:", async (t) => {
-  // doctest:L43
   const server = await makeTestServer();
   const initial = await caller(server).chat.status({});
   t.check(modelView(initial), {
@@ -49,7 +48,6 @@ void test("A pin is visible to the next status read:", async (t) => {
     boxDefault: str`${any(String)}`,
   });
 
-  // doctest:L48
   await caller(server).chat.setDefaultModel({ model: "claude-sonnet-5-5" });
   clearBoxConfigCache(server.boxRoot);
   t.check(modelView(await caller(server).chat.status({})), {
@@ -64,7 +62,6 @@ void test("A pin is visible to the next status read:", async (t) => {
   // against (boxholder, 2026-09-14: *"using the harness default is hard to
   // understand"*).
 
-  // doctest:L61
   await caller(server).chat.setDefaultModel({ model: null });
   clearBoxConfigCache(server.boxRoot);
   t.check((await caller(server).chat.status({})).boxDefault, initial.boxDefault);
@@ -72,22 +69,18 @@ void test("A pin is visible to the next status read:", async (t) => {
   // A model the box's engine cannot run is refused at the boundary rather than
   // stored and silently ignored later.
 
-  // doctest:L71
   const foreign = "gpt-6.1-sol";
   await t.checkThrows(() => caller(server).chat.setDefaultModel({ model: foreign }), `TRPCError: Model ${foreign} is unavailable for claude chats`);
 
   // A model no engine offers is refused by the settings path too, rather than being
   // saved and then dropped on every read.
 
-  // doctest:L80
   await t.checkThrows(() => caller(server).admin.updateBoxConfig({ agentModel: "sonnet" }), "TRPCError: Unknown model id sonnet");
 
   // Pinning is the owner's call.
 
-  // doctest:L87
   t.check(await caller(server, { isOwner: false }).chat.setDefaultModel({ model: "claude-sonnet-5-5" }).catch((e) => e.code), "FORBIDDEN");
 
-  // doctest:L90
   await server.cleanup();
 });
 
@@ -107,14 +100,12 @@ void test("chat.setModel and chat.setFeature change a setting on a conversation 
       t.error(error);
     }
   });
-  // doctest:L103
   const server = await makeTestServer();
   const api = caller(server);
   const claudeDefault = (await api.chat.status({})).boxDefault;
   assert.ok(claudeDefault, "an unpinned box still names a default");
   const unknown = "11111111-2222-3333-4444-555555555555";
 
-  // doctest:L109
   t.check([
     await api.chat.setModel({ session: unknown, model: "claude-sonnet-5-5" }).catch((e) => e.code),
     await api.chat.setFeature({ session: unknown, feature: "narration", value: "on" }).catch((e) => e.code),
@@ -123,7 +114,6 @@ void test("chat.setModel and chat.setFeature change a setting on a conversation 
   // The id is also not left behind in the registry — refusing it and registering it
   // anyway would leave the ghost the next reader has to disbelieve:
 
-  // doctest:L120
   t.check(getChatRuntime(server.boxRoot)?.registry.get(unknown), null);
 
   // A reservation IS a record, so a coined chat still takes settings before its
@@ -131,7 +121,6 @@ void test("chat.setModel and chat.setFeature change a setting on a conversation 
   // box's. This is the case the refusal above must not break — on a codex-default
   // box, a Claude model on a coined Claude chat is still accepted:
 
-  // doctest:L130
   await api.admin.updateBoxConfig({ agentEngine: "codex", engines: { claude: true, codex: true } });
   clearBoxConfigCache(server.boxRoot);
   const receipt = await api.chat.reserveSession({
@@ -146,7 +135,6 @@ void test("chat.setModel and chat.setFeature change a setting on a conversation 
   // was checked against. Leaving it implicit let a Claude model validate and then
   // start on the box's Codex default, quietly running something else.
 
-  // doctest:L152
   const { resolveChatEngine } = await import("../../../../src/core/chat/session/engine.js");
   const implicit = "33333333-4444-4555-8666-777777777777";
   t.check((await api.chat.reserveSession({ sessionId: implicit, model: claudeDefault })).kind, "reserved");

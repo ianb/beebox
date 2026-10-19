@@ -52,14 +52,12 @@ void test("Neither is a problem, and a permanent \"not connected\" line would be
       t.error(error);
     }
   });
-  // doctest:L45
   await t.checkText(
     // No grants at all yet.
     describe(await googleAuthHealthChecks(tmp, { now: NOW })),
     "[]",
   );
 
-  // doctest:L49
   // Configured — the box holds the client-credential grants — but no Google
   // authorization has ever been stored.
   await configureGoogle();
@@ -67,12 +65,10 @@ void test("Neither is a problem, and a permanent \"not connected\" line would be
 
   // ## A live grant reports how recently it was verified
 
-  // doctest:L59
   await saveGoogleTokens({ refreshToken: "rt-1", accessToken: "at-1", }, { boxRoot: tmp });
   const live = await googleAuthHealthChecks(tmp, { now: NOW });
   await t.checkText(describe(live), "[{\"name\":\"google-auth\",\"ok\":true,\"severity\":\"warning\"}]");
 
-  // doctest:L64
   t.check(live[0]?.message, str`Google authorization is live (last verified ${any(String)} ago)`);
 
   // ## A dead grant is a warning naming the breakage, the impact, and the fix
@@ -81,12 +77,10 @@ void test("Neither is a problem, and a permanent \"not connected\" line would be
   // working — and a dead grant must not flip `bbx health`'s exit code for scripts
   // gating on "is this box broken".
 
-  // doctest:L75
   await markGoogleAuthDead({ boxRoot: tmp, reason: "Token has been expired or revoked." });
   const dead = await googleAuthHealthChecks(tmp, { now: NOW });
   await t.checkText(describe(dead), "[{\"name\":\"google-auth\",\"ok\":false,\"severity\":\"warning\"}]");
 
-  // doctest:L80
   t.check(dead[0]?.message, str`Google authorization expired or was revoked ${any(String)} ago (Token has been expired or revoked.) — Gmail, Calendar and Drive sync are paused. Reconnect at /${any(String)}/admin?reconnect=google`);
 
   // The link points at the admin page's Google Services section rather than a
@@ -95,7 +89,6 @@ void test("Neither is a problem, and a permanent \"not connected\" line would be
   //
   // ## Reconnecting flips it back
 
-  // doctest:L91
   await saveGoogleTokens({ refreshToken: "rt-2", accessToken: "at-2" }, { boxRoot: tmp });
   await t.checkText(describe(await googleAuthHealthChecks(tmp, { now: NOW })), "[{\"name\":\"google-auth\",\"ok\":true,\"severity\":\"warning\"}]");
 });

@@ -167,7 +167,6 @@ void test("Full prepare: cards, timing sidecars, exact timeline, commit, wrapper
       t.error(error);
     }
   });
-  // doctest:L162
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
   const id = await stageSealedSession(box.root);
@@ -178,7 +177,6 @@ void test("Full prepare: cards, timing sidecars, exact timeline, commit, wrapper
   // succeeds sends no notification. Each clip has a `.timing.json` sidecar with
   // its words:
 
-  // doctest:L174
   const doc = await box.read(docRel);
   t.check(
     ({
@@ -200,7 +198,6 @@ void test("Full prepare: cards, timing sidecars, exact timeline, commit, wrapper
   // The assembled body interleaves speech, the photo (a markdown link to its
   // image card), and the silence gap (a plain text line) in absolute-time order (silence is measured from the last word before the gap):
 
-  // doctest:L189
   await t.checkText(splitCardContent(await box.read(docRel)).body.trim(), `Walked through the kitchen.
 «blankline»
 [photo-001](attach/photo-001.image.card)
@@ -212,7 +209,6 @@ Found the recipe.`);
   // The document is committed with the capture message + trailer, and delivery
   // flipped the card `new` → `delivered` in a second (card-only) commit:
 
-  // doctest:L203
   const subjects = gitSubjects(box.root);
   t.check(
     ({
@@ -233,7 +229,6 @@ Found the recipe.`);
   // `capture-status` delivered event fired with the doc path. The staging
   // session's media was cleaned up once delivered:
 
-  // doctest:L218
   const events = eventBus.readSince(0);
   const expectedWrapper = buildCaptureWrapper({ docPath: docRel, imageCount: 1, audioSeconds: 7, summary: "Walked through the kitchen." });
   t.check(
@@ -263,7 +258,6 @@ void test("A native segment is one complete M4A file.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L243
   const box = await makeTmpBox({ git: true });
   await configureBox(box, { script: { "audio-001.m4a": SCRIPT["audio-001.m4a"] } });
   const staged = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
@@ -310,14 +304,12 @@ void test("When only some clips transcribe, the capture is delivered anyway with
       t.error(error);
     }
   });
-  // doctest:L282
   const box = await makeTmpBox({ git: true });
   // Script only the first segment's clip; the second clip fails to transcribe.
   await configureBox(box, { script: { "audio-001.webm": SCRIPT["audio-001.webm"] } });
   const id = await stageSealedSession(box.root);
   const { eventBus, attach, docRel, close } = await prepareOn(box, { id });
 
-  // doctest:L288
   const doc = await box.read(docRel);
   const clipCards = (await readdir(box.path(attach))).filter((f) => f.endsWith(".audio.card")).toSorted();
   const clips = await Promise.all(clipCards.map(async (f) => parseYaml(splitCardContent(await box.read(`${attach}/${f}`)).frontmatterText)));
@@ -340,7 +332,6 @@ void test("When only some clips transcribe, the capture is delivered anyway with
   // The delivered wrapper carries `transcription-failed`, with the summary taken
   // from the clip that succeeded (not the failed clip 0-or-2):
 
-  // doctest:L303
   const captureMsg = userMessages(eventBus.readSince(0))[0]?.message ?? "";
   t.check(
     ({
@@ -368,13 +359,11 @@ void test("A delivery failure leaves the committed document in place and the ses
       t.error(error);
     }
   });
-  // doctest:L323
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
   const id = await stageSealedSession(box.root);
   const { registry, eventBus, close } = chatFor(box);
 
-  // doctest:L328
   // The first send() fails, then succeeds — simulating a transient delivery
   // error followed by a retry (the resume path).
   let failNext = true;
@@ -382,7 +371,6 @@ void test("A delivery failure leaves the committed document in place and the ses
     session.send = async () => { if (failNext) { failNext = false; return false; } return true; };
   }
 
-  // doctest:L335
   await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry, wireSession: failFirstSend });
   t.check((await readStagingSession({ boxRoot: box.root, id }))?.state, "failed:deliver");
 
@@ -390,12 +378,10 @@ void test("A delivery failure leaves the committed document in place and the ses
   // preparation delivers (send succeeds now) with no duplicate cards or commits,
   // and the body is unchanged:
 
-  // doctest:L345
   const { docRel } = cardPaths(id);
   const bodyAfterFirst = splitCardContent(await box.read(docRel)).body.trim();
   const first = { bodyStarts: bodyAfterFirst.startsWith("Walked through the kitchen."), captureCommits: captureCommits(box.root) };
 
-  // doctest:L349
   await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry, wireSession: failFirstSend });
   t.check(
     ({
@@ -430,23 +416,19 @@ void test("Two staged sessions prepared via Promise.all must each produce their 
       t.error(error);
     }
   });
-  // doctest:L371
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
   const idA = await stageSealedSession(box.root);
   const idB = await stageSealedSession(box.root);
 
-  // doctest:L376
   const { registry, eventBus, close } = chatFor(box);
 
-  // doctest:L378
   await Promise.all([
     prepareCaptureSession({ boxRoot: box.root, id: idA, eventBus, registry }),
     prepareCaptureSession({ boxRoot: box.root, id: idB, eventBus, registry }),
   ]);
   await tick();
 
-  // doctest:L384
   const baseA = cardPaths(idA).basename;
   const baseB = cardPaths(idB).basename;
 
@@ -455,7 +437,6 @@ void test("Two staged sessions prepared via Promise.all must each produce their 
   // inspection out of the example block and returns a single verdict. Both
   // delivered — their staging media was cleaned up:
 
-  // doctest:L394
   t.check(
     ({
       deliveredCommits: gitSubjects(box.root).filter((s) => s.startsWith("Capture delivered: ")).length,
@@ -490,12 +471,10 @@ void test("A crash after send() resolved (the message reached the transcript) bu
       t.error(error);
     }
   });
-  // doctest:L416
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
   const id = await stageSealedSession(box.root);
 
-  // doctest:L420
   // The capture targets a known chat; seed its history + an (initially empty)
   // transcript JSONL that the mock send writes into.
   await setStagingState({ boxRoot: box.root, id, state: "sealed" });
@@ -504,14 +483,12 @@ void test("A crash after send() resolved (the message reached the transcript) bu
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, "");
 
-  // doctest:L428
   // Rewire the staged session's target to the known chat.
   const staged = await readStagingSession({ boxRoot: box.root, id });
   assert.ok(staged);
   staged.targetSessionId = "s-known";
   await writeFile(`${box.root}/_tmp/capture-staging/${id}/session.json`, JSON.stringify(staged, null, 2));
 
-  // doctest:L434
   const { registry, eventBus, close } = chatFor(box);
   let sendCount = 0;
   let crashOnSend = true;
@@ -526,18 +503,15 @@ void test("A crash after send() resolved (the message reached the transcript) bu
     };
   }
 
-  // doctest:L448
   // First run: send lands the message, then "crashes" before the delivered write.
   // The simulated crash makes this call reject; the test only needs the state it leaves behind.
   await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry, wireSession: scriptedSend }).catch(() => {});
   t.check(sendCount, 1);
 
-  // doctest:L453
   t.check((await readStagingSession({ boxRoot: box.root, id }))?.state, "delivering");
 
   // Resume: the probe short-circuits delivery — no second send, still one message:
 
-  // doctest:L460
   crashOnSend = false;
   await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry, wireSession: scriptedSend });
   t.check(
@@ -570,23 +544,19 @@ void test("A card that fails validation must not leave orphaned uncommitted file
       t.error(error);
     }
   });
-  // doctest:L484
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
   const id = await stageSealedSession(box.root);
 
-  // doctest:L488
   const { docRel: cardRel, attach: attachRel } = cardPaths(id);
   // Seed an invalid card (bogus `delivered`, no session-id) + an empty attach dir,
   // so prepare skips the write step and validates the pre-seeded card.
   await mkdir(`${box.root}/${attachRel}`, { recursive: true });
   await writeFile(`${box.root}/${cardRel}`, "---\ndelivered: not-a-boolean\n---\n");
 
-  // doctest:L494
   const { registry, eventBus, close } = chatFor(box);
   await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
 
-  // doctest:L497
   t.check((await readStagingSession({ boxRoot: box.root, id }))?.state, "failed:assemble");
 
   // With nobody present in the app, the person gets one `quiet` notice. This
@@ -594,7 +564,6 @@ void test("A card that fails validation must not leave orphaned uncommitted file
   // invalid files this run wrote are deleted — no orphaned uncommitted files,
   // working tree clean, so a re-fire rebuilds from scratch:
 
-  // doctest:L507
   const [notice] = await readRecent(box.root, { days: 36500 });
   assert.ok(notice);
   t.check(
@@ -632,7 +601,6 @@ void test("Post-annex boxes gitignore the whole capture staging attach scope (/t
       t.error(error);
     }
   });
-  // doctest:L540
   const box = await makeTmpBox({ git: true });
   await configureBox(box, { extraIgnore: "**/tmp-capture/**/*.attach/**\n" });
   const id = await stageSealedSession(box.root);
@@ -641,7 +609,6 @@ void test("Post-annex boxes gitignore the whole capture staging attach scope (/t
   // The capture delivered (staging cleaned up) and the card was committed —
   // flipped to `delivered` — while the attach files exist on disk untracked:
 
-  // doctest:L550
   t.check(
     ({
       staging: await readStagingSession({ boxRoot: box.root, id }),

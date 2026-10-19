@@ -20,7 +20,6 @@ void test("line 15", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L16
   const server = await makeTestServer();
   const ctx: TrpcContext = trpcContext({ boxRoot: server.boxRoot, boxSlug: "t", isAuthenticatedOwner: true });
   const caller = filesRouter.createCaller(ctx);
@@ -30,25 +29,20 @@ void test("line 15", async (t) => {
     kind: "directory",
   });
 
-  // doctest:L24
   t.check(await caller.kind({ path: "_content/README" }), {
     kind: "file",
   });
 
-  // doctest:L27
   t.check(await caller.kind({ path: "_content/missing" }), {
     kind: "missing",
   });
 
-  // doctest:L30
   t.check(await caller.kind({ path: "" }), {
     kind: "directory",
   });
 
-  // doctest:L33
   await t.checkThrows(async () => (await caller.kind({ path: "_content/../package.json" })), "TRPCError: Path is outside the box namespace");
 
-  // doctest:L38
   await fs.symlink(server.boxRoot, path.join(server.boxRoot, "_content/escape"));
   await t.checkThrows(async () => (await caller.kind({ path: "_content/escape/package.json" })), "TRPCError: Path is outside the box namespace");
 });

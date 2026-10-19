@@ -29,7 +29,6 @@ async function docsFor(path: string, text: string) {
 //
 // A short body stays a single document; the `contains` sentence rides along.
 void test("A short body stays a single document; the contains sentence rides along.", async (t) => {
-  // doctest:L34
   const docs = await docsFor(
     "_content/inbox/Dentist_Call.doc.card",
     "---\ntitle: Dentist call\ncontains: Dentist moved to June 17; confirmation in this email.\n---\nThe dentist called — appointment moved to June 17.\n"
@@ -50,7 +49,6 @@ void test("A short body stays a single document; the contains sentence rides alo
 
 // ## Email messages fold headers and snippet, never the body file
 void test("Email messages fold headers and snippet, never the body file", async (t) => {
-  // doctest:L60
   const docs = await docsFor(
     "_content/inbox/email/t.attach/msg-001.email-message.card",
     "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: alice@example.com\n  to: bob@example.com\n  received: 2026-05-14T19:00:00Z\n  subject: Weekend plans\n  snippet: Hey, are you free Saturday...\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n"
@@ -68,13 +66,11 @@ void test("Email messages fold headers and snippet, never the body file", async 
     },
   ]);
 
-  // doctest:L73
   t.check(declareInputFiles({ path: "_content/inbox/email/t.attach/msg-001.email-message.card", card: await loadCardFromText({ content: "---\nemail:\n  message-id: \"<m1@example.com>\"\n  thread-id: t1\n  from: a@x.com\n  received: 2026-05-14T19:00:00Z\n  subject: s\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n", source: "_content/inbox/email/t.attach/msg-001.email-message.card", ctx }) }), []);
 });
 
 // ## Email threads fold subject, participants, labels, and date-range
 void test("Email threads fold subject, participants, labels, and date-range", async (t) => {
-  // doctest:L80
   const docs = await docsFor(
     "_content/inbox/email/thread-x.email-thread.card",
     "---\nemail:\n  thread-id: t1\n  subject: Usage-based pricing demo\n  participants:\n    - hello@metricly.example\n  date-range:\n    start: 2026-05-14T19:00:00Z\n    end: 2026-05-14T19:00:00Z\n  labels:\n    - promotions\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n"
@@ -95,7 +91,6 @@ void test("Email threads fold subject, participants, labels, and date-range", as
 
 // ## Gdocs declare their content snapshot and index it as the body
 void test("Gdocs declare their content snapshot and index it as the body", async (t) => {
-  // doctest:L96
   const cardText = "---\ndrive:\n  id: d1\n  link: https://docs.google.com/document/d/d1/edit\n  owner: owner@example.com\n  modified: 2026-05-01\ntitle: Project Notes\ncontent:\n  ref: attach/Project_Notes.md\n---\n";
   const path = "_content/drive/Project_Notes.gdoc.card";
   const card = await loadCardFromText({ content: cardText, source: path, ctx });
@@ -103,7 +98,6 @@ void test("Gdocs declare their content snapshot and index it as the body", async
     "_content/drive/Project_Notes.attach/Project_Notes.md",
   ]);
 
-  // doctest:L102
   const inputContents = new Map([["_content/drive/Project_Notes.attach/Project_Notes.md", "Quarterly planning notes for the project."]]);
   const docs = extractCardDocs({ path, card, contentHash: "h1", inputContents });
   t.check(docs, [
@@ -126,7 +120,6 @@ void test("Gdocs declare their content snapshot and index it as the body", async
 // so the extractor folds it into the document; a directory briefing with no body
 // text is still found by what it says the directory is for.
 void test("The purpose statement lives in the briefing's purpose: field, not its body, s...", async (t) => {
-  // doctest:L118
   const docs = await docsFor(
     "_content/garden/briefing.briefing.card",
     "---\ntype: briefing\npurpose: Plans and records for the vegetable garden.\n---\n"
@@ -147,7 +140,6 @@ void test("The purpose statement lives in the briefing's purpose: field, not its
 
 // ## An image's description doubles as its contains fallback; OCR text indexes
 void test("An image's description doubles as its contains fallback; OCR text indexes", async (t) => {
-  // doctest:L129
   const docs = await docsFor(
     "_bookkeeping/archive/photo.image.card",
     "---\nfilename:\n  ref: attach/boiler.jpg\n  via:\n    channel: camera-user\n    at: 2026-05-01T10:00:00Z\ndescription: The boiler's serial-number plate (K-44210)\ntext:\n  - source: plate\n    content: Serial K-44210 Model HX-200 240V\n---\n"
@@ -168,7 +160,6 @@ void test("An image's description doubles as its contains fallback; OCR text ind
 
 // ## Long bodies split into per-section documents; the preamble stays on the card
 void test("Long bodies split into per-section documents; the preamble stays on the card", async (t) => {
-  // doctest:L146
   const section = "words ".repeat(Math.ceil(SECTION_SPLIT_THRESHOLD / 12));
   const bodyText = `Intro before any heading.\n\n# Mill\n${section}\n\n## Gears\n${section}\n\n# Store\n${section}\n`;
   const docs = await docsFor(
@@ -195,7 +186,6 @@ void test("Long bodies split into per-section documents; the preamble stays on t
 
 // ## Short bodies with headings stay one document
 void test("Short bodies with headings stay one document", async (t) => {
-  // doctest:L168
   const split = splitMarkdownSections("Preamble.\n\n# One\nalpha\n\n# Two\nbeta\n");
   t.check(split, {
     preamble: "Preamble.",
@@ -205,7 +195,6 @@ void test("Short bodies with headings stay one document", async (t) => {
     ],
   });
 
-  // doctest:L175
   const docs = await docsFor("box/examples/Short.doc.card", "---\ntitle: Short\n---\nPreamble.\n\n# One\nalpha\n");
   t.check(docs, [
     {
@@ -223,7 +212,6 @@ void test("Short bodies with headings stay one document", async (t) => {
 
 // ## Sheets index their tab titles
 void test("Sheets index their tab titles", async (t) => {
-  // doctest:L183
   const docs = await docsFor(
     "_content/drive/Budget.gsheet.card",
     "---\ndrive:\n  id: d2\n  link: https://docs.google.com/spreadsheets/d/d2/edit\n  owner: o@example.com\n  modified: 2026-05-01\ntitle: Family Budget\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"

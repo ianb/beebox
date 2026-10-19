@@ -58,7 +58,6 @@ function errorName(fn: () => unknown): string {
 // The supervised-reload boundary resolves after a session actually closes, not
 // merely after `stop()` starts. A delayed fake makes that ordering observable:
 void test("The supervised-reload boundary resolves after a session actually closes, not...", async (t) => {
-  // doctest:L61
   let closeListener = () => {};
   const delayed = {
     getSessionId: () => "delayed-session",
@@ -73,13 +72,11 @@ void test("The supervised-reload boundary resolves after a session actually clos
   await new Promise((resolve) => setImmediate(resolve));
   t.check(shutdownResolved, false);
 
-  // doctest:L76
   closeListener();
   t.check(await delayedShutdown, []);
 
   // A stuck close is bounded and names the session the child had to leave behind:
 
-  // doctest:L84
   t.check(await stopChatSessionsAndWait([delayed], { timeoutMs: 5, periodMs: 1 }), [
     "delayed-session",
   ]);
@@ -89,7 +86,6 @@ void test("The supervised-reload boundary resolves after a session actually clos
 // commit, then the backend spawn) would finish after the box was torn down.
 // Shutdown waits for the start, then stops the run it opened:
 void test("A session still starting is not running yet, but its start (the bootstrap doc...", async (t) => {
-  // doctest:L93
   let finishStart = () => {};
   let running = false;
   let stopped = false;
@@ -109,18 +105,15 @@ void test("A session still starting is not running yet, but its start (the boots
     false,
   );
 
-  // doctest:L110
   finishStart();
   t.check(await startingShutdown, []);
 
-  // doctest:L114
   t.check(stopped, true);
 
   // A start that never finishes is bounded by the same time limit and named.
   // It does not hold back a session that is already running: that one is stopped
   // at once, and it closes:
 
-  // doctest:L123
   const stuck = { ...starting, getSessionId: () => "stuck-session", whenStarted: () => new Promise<void>(() => {}) };
   let liveStopped = false;
   let liveOnClose = () => {};
@@ -135,7 +128,6 @@ void test("A session still starting is not running yet, but its start (the boots
     "stuck-session",
   ]);
 
-  // doctest:L136
   t.check(liveStopped, true);
 });
 
@@ -153,12 +145,10 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
       t.error(error);
     }
   });
-  // doctest:L147
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box, backend);
 
-  // doctest:L151
   clock = 1_000;
   const s1 = registry.getOrCreate("s1");
   await s1.send("hi");
@@ -174,7 +164,6 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
   // A third session arrives. The cap check runs before its spawn (mirroring
   // `chat-send-routes.ts`) and stops s1 — the LRU by `lastSubprocessUse`:
 
-  // doctest:L166
   clock = 3_000;
   const s3 = registry.getOrCreate("s3");
   registry.touch("s3", { subprocessUse: true });
@@ -189,7 +178,6 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
   // The evicted entry is still addressable — `get` returns the same instance,
   // ready to re-spawn on the next send:
 
-  // doctest:L179
   t.check(registry.get("s1"), is(s1));
 
   // ## Pins beat the LRU order
@@ -197,14 +185,12 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
   // A pinned entry (an SSE listener is attached) is skipped by the cap even when
   // it is the LRU candidate; eviction falls through to the next unpinned one.
 
-  // doctest:L189
   // Respawn s1 (clock 4000) so s2 (clock 2000) is now the LRU.
   clock = 4_000;
   await s1.send("again");
   registry.touch("s1", { subprocessUse: true });
   await tick();
 
-  // doctest:L195
   // Pin the LRU (s2); the cap check for s3 must evict s1 instead.
   const releaseS2 = registry.pin("s2");
   registry.enforceLiveCap("s3");
@@ -216,7 +202,6 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
   // When every candidate is pinned or current, nothing is evicted — the cap
   // logs and declines rather than killing an in-flight stream:
 
-  // doctest:L206
   clock = 5_000;
   await s1.send("respawn");
   const releaseS1 = registry.pin("s1");
@@ -231,7 +216,6 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
   // cancel a second pin on the same entry. s2 holds two pins; the first is released
   // twice, and the cap still skips s2 and evicts unpinned s1 instead:
 
-  // doctest:L220
   const releaseS2b = registry.pin("s2");
   releaseS1();
   releaseS2();
@@ -245,7 +229,6 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
 
   // Release the second pin so later examples start unpinned:
 
-  // doctest:L233
   releaseS2b();
 
   // ## Idle sweep drops untouched entries, pins protect
@@ -253,7 +236,6 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
   // Entries idle past `idleTimeoutMs` (10s here) are dropped entirely; a pinned
   // entry survives regardless of age.
 
-  // doctest:L242
   // s3 stays fresh; s1 and s2 age out. Pin s2 to shield it.
   const releaseS2Again = registry.pin("s2");
   clock = 16_500; // s1/s2 last touched at ≤5_000 → idle; s3 touched at 3_000 → also idle
@@ -269,7 +251,6 @@ void test("Two sessions spawn under a cap of 2; starting a third evicts the one 
   // Releasing the pin exposes s2 to the next sweep; s3 (last touched by the
   // assertions above) ages out too, emptying the registry:
 
-  // doctest:L255
   releaseS2Again();
   clock = 40_000;
   registry.sweepIdle();
@@ -289,7 +270,6 @@ void test("Deletion reservation stops and tombstones a live session", async (t) 
       t.error(error);
     }
   });
-  // doctest:L270
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box, backend);
@@ -306,7 +286,6 @@ void test("Deletion reservation stops and tombstones a live session", async (t) 
     blocked: true,
   });
 
-  // doctest:L285
   t.check(errorName(() => registry.getOrCreate(sessionId)), "SessionDeletingError");
 });
 
@@ -326,12 +305,10 @@ void test("prewarm() installs a warm subprocess slot on the shared backend so th
       t.error(error);
     }
   });
-  // doctest:L303
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box, backend);
 
-  // doctest:L307
   clock = 1_000;
   await registry.prewarm();
   await t.checkText(backend.describe(), `warmHeld: true
@@ -342,7 +319,6 @@ closeWarmCount: 0`);
   // Chat goes quiet: `lastUse` (1_000) ages past `idleTimeoutMs` (10s). The sweep
   // closes the warm slot — an idle box shouldn't hold a Claude subprocess forever:
 
-  // doctest:L320
   clock = 30_000;
   registry.sweepIdle();
   await t.checkText(backend.describe(), `warmHeld: false
@@ -353,7 +329,6 @@ closeWarmCount: 1`);
   // Activity resumes: `getOrCreate` re-warms (best-effort, fire-and-forget) because
   // prewarm was requested earlier and the backend now reports no warm slot:
 
-  // doctest:L333
   registry.getOrCreate("s1");
   await waitFor(() => backend.prewarmCount === 2);
   await t.checkText(backend.describe(), `warmHeld: true
@@ -364,7 +339,6 @@ closeWarmCount: 1`);
   // No stampede while already warm: further accessors see `hasWarm() === true` and
   // don't fire redundant re-prewarms — the count stays put:
 
-  // doctest:L346
   registry.get("s1");
   registry.getOrCreate("s1");
   registry.touch("s1");
@@ -376,13 +350,11 @@ closeWarmCount: 1`);
   // start on a codex-default box fell to the box default and tripped the
   // coined-must-be-Claude invariant — a 500 at chat open.
 
-  // doctest:L360
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
   const { clearBoxConfigCache } = await import("../../../../src/core/box/config.js");
   const { randomUUID } = await import("node:crypto");
 
-  // doctest:L365
   const codexBox = await makeTmpBox({ git: true });
   await fs.mkdir(path.join(codexBox.root, "_config"), { recursive: true });
   await fs.writeFile(
@@ -391,7 +363,6 @@ closeWarmCount: 1`);
   );
   clearBoxConfigCache(codexBox.root);
 
-  // doctest:L373
   const codexBackend = createFakeChatBackend();
   const codexRegistry = makeRegistry(codexBox, codexBackend);
   const coined = randomUUID();
@@ -432,17 +403,14 @@ closeWarmCount: 1`);
     history: { id: coined, engine: "claude", features: { narration: "on" } },
   });
 
-  // doctest:L409
   await codexRegistry.shutdown();
   t.check(coinedSession.isRunning(), false);
 
-  // doctest:L413
   await codexBox.cleanup();
 
   // Shutdown closes the warm slot immediately too — it is a subprocess like any
   // session's:
 
-  // doctest:L420
   registry.shutdown();
   t.check(`closeWarmCount=${backend.closeWarmCount} warmHeld after shutdown: ${backend.hasWarm()}`, "closeWarmCount=2 warmHeld after shutdown: false");
 });
@@ -457,7 +425,6 @@ void test("Maintenance cannot be undone by a read warming a session", async (t) 
       t.error(error);
     }
   });
-  // doctest:L433
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = new ChatSessionRegistry(box.root, { backend });
@@ -470,7 +437,6 @@ void test("Maintenance cannot be undone by a read warming a session", async (t) 
     starts: 1,
   });
 
-  // doctest:L443
   registry.resumeAfterMaintenance();
   await registry.prewarm();
   t.check({ warm: backend.hasWarm(), starts: backend.prewarmCount }, {
@@ -494,7 +460,6 @@ void test("A prewarm first probes the box for the start options, and only then a
       t.error(error);
     }
   });
-  // doctest:L463
   const box = await makeTmpBox();
   const backend = createFakeChatBackend();
   const registry = makeRegistry(box, backend);

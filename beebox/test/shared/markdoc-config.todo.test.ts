@@ -29,19 +29,16 @@ function render(src: string): string {
 
 // ## A valid todo, block form
 void test("A valid todo, block form", async (t) => {
-  // doctest:L32
   t.check(render('{% todo id="vet-refill" assigned="Dana" due="2026-08-01" %}\n\nCall the vet about the prescription refill\n\n{% /todo %}'), "<article><TodoBlock id=\"vet-refill\" assigned=\"Dana\" due=\"2026-08-01\"><p>Call the vet about the prescription refill</p></TodoBlock></article>");
 });
 
 // ## A valid todo, inline form
 void test("A valid todo, inline form", async (t) => {
-  // doctest:L40
   t.check(render("Remember to {% todo %}call the vet{% /todo %} today."), "<article><p>Remember to <TodoInline>call the vet</TodoInline> today.</p></article>");
 });
 
 // ## Bare `{% todo %}` (no attributes) is a valid open todo
 void test("Bare `{% todo %}` (no attributes) is a valid open todo", async (t) => {
-  // doctest:L48
   t.check(check("{% todo %}\n\nJust a plain todo\n\n{% /todo %}"), "valid");
 });
 
@@ -49,49 +46,39 @@ void test("Bare `{% todo %}` (no attributes) is a valid open todo", async (t) =>
 //
 // `matches` is Markdoc's own built-in attribute-enum check (`attribute-value-invalid`) — the schema hands it the `TODO_STATUSES` list from `todo-model.ts` rather than restating the enum.
 void test("matches is Markdoc's own built-in attribute-enum check (attribute-value-inval...", async (t) => {
-  // doctest:L58
   t.check(check('{% todo status="Done" %}\n\ntext\n\n{% /todo %}'), "attribute-value-invalid");
 });
 
 // ## Valid status values all pass
 void test("Valid status values all pass", async (t) => {
-  // doctest:L66
   t.check(check('{% todo status="open" %}\n\ntext\n\n{% /todo %}'), "valid");
 
-  // doctest:L70
   t.check(check('{% todo status="parked" %}\n\ntext\n\n{% /todo %}'), "valid");
 });
 
 // ## Relative `start` without `due` is a validate() error
 void test("Relative `start` without `due` is a validate() error", async (t) => {
-  // doctest:L78
   t.check(check('{% todo start="-3d" %}\n\ntext\n\n{% /todo %}'), "todo-relative-start-requires-due");
 });
 
 // ## `start` after `due` (both absolute) is a validate() error
 void test("`start` after `due` (both absolute) is a validate() error", async (t) => {
-  // doctest:L86
   t.check(check('{% todo due="2026-08-01" start="2026-08-05" %}\n\ntext\n\n{% /todo %}'), "todo-start-after-due");
 });
 
 // ## `by="agent"` without `created` is a validate() error
 void test("`by=\"agent\"` without `created` is a validate() error", async (t) => {
-  // doctest:L94
   t.check(check('{% todo by="agent" %}\n\ntext\n\n{% /todo %}'), "todo-agent-requires-created");
 
-  // doctest:L98
   t.check(check('{% todo by="agent" created="2026-07-28" %}\n\ntext\n\n{% /todo %}'), "valid");
 });
 
 // ## `recheck` is a declared attribute: a date or `never`, else a validate() error
 void test("`recheck` is a declared attribute: a date or `never`, else a validate() error", async (t) => {
-  // doctest:L106
   t.check(check('Order lumber {% todo due="2026-07-01" recheck="2026-10-15" %}soon{% /todo %}'), "valid");
 
-  // doctest:L110
   t.check(check('{% todo recheck="never" %}old idea{% /todo %}'), "valid");
 
-  // doctest:L114
   t.check(check('{% todo recheck="next week" %}text{% /todo %}'), "todo-invalid-recheck");
 });
 
@@ -104,7 +91,6 @@ void test("`recheck` is a declared attribute: a date or `never`, else a validate
 // words for the boxholder draw a **warning**, not an error, so the todo is still
 // collected and shown while the author fixes it. The check ignores case.
 void test("assigned is absent for the boxholder's own todos, \"agent\" for the box agent's...", async (t) => {
-  // doctest:L129
   t.check(
     validate(parse('{% todo assigned="User" %}\n\ntext\n\n{% /todo %}'), markdocConfig)
       .map((e) => ({ id: e.error.id, level: e.error.level })),
@@ -116,7 +102,6 @@ void test("assigned is absent for the boxholder's own todos, \"agent\" for the b
   ],
   );
 
-  // doctest:L133
   t.check(["me", "boxholder", "you", "OWNER"].map((word) => check(`{% todo assigned="${word}" %}\n\ntext\n\n{% /todo %}`)), [
     "todo-assigned-boxholder-placeholder",
     "todo-assigned-boxholder-placeholder",
@@ -127,7 +112,6 @@ void test("assigned is absent for the boxholder's own todos, \"agent\" for the b
 
 // A person's name and `"agent"` pass.
 void test("A person's name and \"agent\" pass.", async (t) => {
-  // doctest:L140
   t.check([check('{% todo assigned="Dana" %}\n\ntext\n\n{% /todo %}'), check('{% todo assigned="agent" %}\n\ntext\n\n{% /todo %}')], [
     "valid",
     "valid",
@@ -136,7 +120,6 @@ void test("A person's name and \"agent\" pass.", async (t) => {
 
 // Card lint reports it as a warning on any card body.
 void test("Card lint reports it as a warning on any card body.", async (t) => {
-  // doctest:L147
   const { lintBodyMarkdoc } = await import("../../src/core/body-markdoc-lint.js");
   t.check(lintBodyMarkdoc('{% todo assigned="user" %}\n\nCall the vet\n\n{% /todo %}').map((issue) => issue.severity), [
     "warning",
@@ -145,7 +128,6 @@ void test("Card lint reports it as a warning on any card body.", async (t) => {
 
 // The frontmatter `todos:` form of a todo gets the same warning.
 void test("The frontmatter todos: form of a todo gets the same warning.", async (t) => {
-  // doctest:L155
   const { lintFrontmatterTodoAssigned } = await import("../../src/core/body-markdoc-lint.js");
   t.check(
     lintFrontmatterTodoAssigned({ todos: [{ text: "Call the vet", assigned: "Dana" }, { text: "Pay the bill", assigned: "me" }] })
@@ -166,13 +148,11 @@ void test("The frontmatter todos: form of a todo gets the same warning.", async 
 // (used at runtime) preserves the case, which is what the `SeeAlso` component
 // (`components/SeeAlso.tsx`) actually receives as `props.sourceRef`.
 void test("Markdoc's HTML renderer lowercases attribute names (sourceRef → sourceref) —...", async (t) => {
-  // doctest:L169
   t.check(render('{% todo id="vet-refill" %}\n\nCall the vet\n\n{% see-also ref="people/dana.person.card" %}Dana offered to pick it up{% /see-also %}\n\n{% /todo %}'), "<article><TodoBlock id=\"vet-refill\"><p>Call the vet</p><p><SeeAlso sourceref=\"people/dana.person.card\">Dana offered to pick it up</SeeAlso></p></TodoBlock></article>");
 });
 
 // ## `see-also` with an external `href` (no `ref` → `sourceRef` rename applies)
 void test("`see-also` with an external `href` (no `ref` → `sourceRef` rename applies)", async (t) => {
-  // doctest:L177
   t.check(
     render('{% see-also href="https://example.com/thread" %}the original request{% /see-also %}')
     ,
@@ -182,13 +162,11 @@ void test("`see-also` with an external `href` (no `ref` → `sourceRef` rename a
 
 // ## `see-also` with neither `ref` nor `href` is an error
 void test("`see-also` with neither `ref` nor `href` is an error", async (t) => {
-  // doctest:L185
   t.check(check("{% see-also %}dangling reason{% /see-also %}"), "see-also-missing-target");
 });
 
 // ## `see-also` with both `ref` and `href` is an error
 void test("`see-also` with both `ref` and `href` is an error", async (t) => {
-  // doctest:L193
   t.check(
     check('{% see-also ref="a.card" href="https://example.com" %}ambiguous{% /see-also %}')
     ,

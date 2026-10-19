@@ -22,27 +22,23 @@ const prose =
 
 // ## Ordinary prose is good
 void test("Ordinary prose is good", async (t) => {
-  // doctest:L26
   t.check(assessTextLayer(prose), "good");
 });
 
 // Including prose thick with English's one-letter words, which is the obvious
 // false positive for a single-character-token test:
 void test("Including prose thick with English's one-letter words, which is the obvious f...", async (t) => {
-  // doctest:L34
   t.check(assessTextLayer("I asked a friend, and I gave a book to a boy I know, and a dog I saw ran off with a bone I had."), "good");
 });
 
 // ## A character-spaced layer is junk
 void test("A character-spaced layer is junk", async (t) => {
-  // doctest:L41
   t.check(assessTextLayer(spaced("powerfulandruledmostoftheworldbuteven")), "junk");
 });
 
 // The real shape — spaced words interleaved with a few intact ones — is still
 // junk, because the single-character tokens dominate:
 void test("The real shape — spaced words interleaved with a few intact ones — is still j...", async (t) => {
-  // doctest:L49
   t.check(assessTextLayer("MFG.CO. Hsstings, Minnesots / Logan, Ohio / " + spaced("ongagothere") + " was a wizard " + spaced("whowasextremely")), "junk");
 });
 
@@ -51,12 +47,10 @@ void test("The real shape — spaced words interleaved with a few intact ones �
 // Below the sample threshold the ratio is noise, and guessing `junk` would pay
 // for OCR on a document whose layer is fine.
 void test("Below the sample threshold the ratio is noise, and guessing junk would pay fo...", async (t) => {
-  // doctest:L59
   t.check(assessTextLayer("A B C"), "good");
 });
 
 void test("Too little text to judge reads as good", async (t) => {
-  // doctest:L64
   t.check(assessTextLayer(""), "good");
 });
 
@@ -64,7 +58,6 @@ void test("Too little text to judge reads as good", async (t) => {
 //
 // No layer at all — OCR the layout's regions, the only way to get any text:
 void test("No layer at all — OCR the layout's regions, the only way to get any text:", async (t) => {
-  // doctest:L73
   t.check(ocrIntentFor({ hasTextLayer: false, textLayerQuality: "none" }), "regions");
 });
 
@@ -72,12 +65,10 @@ void test("No layer at all — OCR the layout's regions, the only way to get any
 // existing layer in place around what it OCRs, so fragments of the garbage
 // survive into the output.
 void test("A junk layer — replace it wholesale.", async (t) => {
-  // doctest:L82
   t.check(ocrIntentFor({ hasTextLayer: true, textLayerQuality: "junk" }), "replace");
 });
 
 // A good layer — read it, and run no OCR at all:
 void test("A good layer — read it, and run no OCR at all:", async (t) => {
-  // doctest:L89
   t.check(ocrIntentFor({ hasTextLayer: true, textLayerQuality: "good" }), "off");
 });

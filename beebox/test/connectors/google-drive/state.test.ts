@@ -40,7 +40,6 @@ function driveState(opts: {
 // newer value (it differs from the snapshot the sync loaded), `B` is preserved
 // from fresh (the sync never saw it), `C` is added.
 void test("A sync that updated file A and discovered new file C, merged against fresh st...", async (t) => {
-  // doctest:L44
   const snapshot = driveState({ files: { A: fileState("t0") } });
   const fresh = driveState({ files: { A: fileState("t0"), B: fileState("cli") } });
   const working = driveState({ files: { A: fileState("t1-updated"), C: fileState("new") } });
@@ -61,7 +60,6 @@ void test("A sync that updated file A and discovered new file C, merged against 
   // A file the sync merely READ (identical to its snapshot) defers to fresh, so a
   // concurrent writer's update to that same key is NOT clobbered.
 
-  // doctest:L60
   const snap2 = driveState({ files: { A: fileState("t0") } });
   const fresh2 = driveState({ files: { A: fileState("concurrent-edit") } });
   const working2 = driveState({ files: { A: fileState("t0") } });
@@ -73,7 +71,6 @@ void test("A sync that updated file A and discovered new file C, merged against 
   // additions land, this writer's removals (an ID whose card it just re-created)
   // are honoured, and an ID a concurrent writer added survives untouched.
 
-  // doctest:L74
   const snap3 = driveState({ files: {}, driveTrashed: ["gone", "restored"] });
   const fresh3 = driveState({ files: {}, driveTrashed: ["gone", "restored", "concurrent"] });
   const working3 = driveState({ files: {}, driveTrashed: ["gone", "newly-trashed"] });
@@ -98,10 +95,8 @@ void test("The server loads { A }, snapshots it, then does its work.", async (t)
       t.error(error);
     }
   });
-  // doctest:L89
   const box = await makeTmpBox();
 
-  // doctest:L91
   // Server's initial load + snapshot.
   await updateTransientState<DriveTransientState>({
     boxRoot: box.root, connectorName: "google-drive", defaultValue: driveState({ files: {} }),
@@ -110,20 +105,17 @@ void test("The server loads { A }, snapshots it, then does its work.", async (t)
   const serverWorking = driveState({ files: { A: fileState("t0") } });
   const serverSnapshot: DriveTransientState = structuredClone(serverWorking);
 
-  // doctest:L99
   // Concurrent CLI `bbx drive add B` — a locked delta write against fresh state.
   await updateTransientState<DriveTransientState>({
     boxRoot: box.root, connectorName: "google-drive", defaultValue: driveState({ files: {} }),
     update: (freshState) => driveState({ files: { ...freshState.files, B: fileState("cli") } }),
   });
 
-  // doctest:L105
   // Server finishes: updates A in place, discovers C, delta-saves.
   serverWorking.files["A"] = fileState("t1-updated");
   serverWorking.files["C"] = fileState("new");
   await commitDriveStateDelta({ boxRoot: box.root, snapshot: serverSnapshot, working: serverWorking });
 
-  // doctest:L110
   const onDisk = await loadDriveState(box.root);
   t.check(
     {

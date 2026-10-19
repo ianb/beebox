@@ -23,7 +23,6 @@ import { join } from "node:path";
 //
 // The ref value and a `view:<line>:<index>` path are returned.
 void test("The ref value and a view:<line>:<index> path are returned.", async (t) => {
-  // doctest:L27
   t.check(extractViewRefs('<CardLink cardRef="/_content/Foo.doc.card">Foo</CardLink>'), [
     { path: "view:1:0", ref: "/_content/Foo.doc.card" },
   ]);
@@ -31,7 +30,6 @@ void test("The ref value and a view:<line>:<index> path are returned.", async (t
 
 // Single quotes work too.
 void test("Single quotes work too.", async (t) => {
-  // doctest:L44
   t.check(extractViewRefs("<CardRef cardRef='/_content/Bar.card' />"), [{ path: "view:1:0", ref: "/_content/Bar.card" }]);
 });
 
@@ -39,7 +37,6 @@ void test("Single quotes work too.", async (t) => {
 //
 // Lines are 1-indexed; the index increments per match.
 void test("Lines are 1-indexed; the index increments per match.", async (t) => {
-  // doctest:L53
   const src = [
     'import { CardLink, CardRef } from "beebox/view-widgets";',
     "",
@@ -64,19 +61,15 @@ void test("Lines are 1-indexed; the index increments per match.", async (t) => {
 // (`cardRef={expr}`) is unresolvable statically, and a bare DOM `ref=` is not a
 // card ref.
 void test("Only literal quoted cardRef attributes are tracked.", async (t) => {
-  // doctest:L80
   t.check(extractViewRefs("<CardLink cardRef={someVar} />"), []);
 
-  // doctest:L83
   t.check(extractViewRefs('<input ref="x" />'), []);
 
-  // doctest:L86
   t.check(extractViewRefs("plain source, no widgets"), []);
 });
 
 // ## lintViewRefs flags broken refs, passes existing ones
 void test("lintViewRefs flags broken refs, passes existing ones", async (t) => {
-  // doctest:L93
   const box = await makeTmpBox();
   await box.write("_content/Real.doc.card", "---\ntitle: Real\n---\nhi");
   await box.write(
@@ -94,21 +87,18 @@ void test("lintViewRefs flags broken refs, passes existing ones", async (t) => {
 // ref-rewrite pass (both call `listBoxViewFiles`) find views there directly,
 // with no package/content split to resolve:
 void test("shapeVersion 3 has one root — boxCodePaths' viewsDir is always <boxRoot>/src/...", async (t) => {
-  // doctest:L112
   const viewsBox = await makeTmpBox();
   await mkdir(join(viewsBox.root, "src/views"), { recursive: true });
   await writeFile(join(viewsBox.root, "src/views/dashboard.tsx"), "export default function Dashboard() { return null; }");
   const found = await listBoxViewFiles(viewsBox.root);
   t.check(found, [join(viewsBox.root, "src/views/dashboard.tsx")]);
 
-  // doctest:L121
   await writeFile(join(viewsBox.root, "_content/people/alice.person.card"), "---\ntype: person\n---\nAlice\n");
   const view = join(viewsBox.root, "src/views/dashboard.tsx");
   await writeFile(view, '<CardLink cardRef="_content/people/alice.person.card" />');
   const canonicalWarnings = await collectViewCanonicalWarnings([view], viewsBox.root);
   t.check(canonicalWarnings, ["src/views/dashboard.tsx: Non-canonical ref at view:1:0: _content/people/alice.person.card → /_content/people/alice.person.card"]);
 
-  // doctest:L128
   const fixed = await canonicalizeBox(viewsBox.root, {
     ignore: await loadValidationIgnore(viewsBox.root),
   });
@@ -118,7 +108,6 @@ void test("shapeVersion 3 has one root — boxCodePaths' viewsDir is always <box
     view: "<CardLink cardRef=\"/_content/people/alice.person.card\" />",
   });
 
-  // doctest:L134
   const moved = rewriteViewRefs({
     boxRoot: viewsBox.root,
     viewAbsPath: view,
@@ -139,7 +128,6 @@ void test("shapeVersion 3 has one root — boxCodePaths' viewsDir is always <box
 // `remap` maps a resolved absolute path to its new home (or null). Only the
 // `cardRef` whose target moved is rewritten; the count reflects real changes.
 void test("remap maps a resolved absolute path to its new home (or null).", async (t) => {
-  // doctest:L153
   const boxRoot = "/box";
   const text = '<CardLink cardRef="/_content/Foo.doc.card" /><CardRef cardRef="/_content/Stay.card" />';
   const remap = (abs: string) =>

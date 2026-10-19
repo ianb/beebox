@@ -49,7 +49,6 @@ const { ChunkedRecorder } = await import("../../../src/lib/audio/recorder.js");
 
 // ## The caller's timeslice is passed through to MediaRecorder.start()
 void test("The caller's timeslice is passed through to MediaRecorder.start()", async (t) => {
-  // doctest:L52
   const chunks = [];
   const rec = new ChunkedRecorder({ onChunk: (c) => chunks.push(c), timesliceMs: 5000 });
   await rec.start();
@@ -61,20 +60,17 @@ void test("The caller's timeslice is passed through to MediaRecorder.start()", a
 // Before the stop the recorder is recording and no chunk has arrived; after
 // `await stopAsync()` the tail chunk has been delivered and recording is over.
 void test("Before the stop the recorder is recording and no chunk has arrived; after awa...", async (t) => {
-  // doctest:L65
   const chunks = [];
   const rec = new ChunkedRecorder({ onChunk: (c) => chunks.push(c), timesliceMs: 5000 });
   await rec.start();
   t.check([rec.recording, chunks.length].join(","), "true,0");
 
-  // doctest:L71
   await rec.stopAsync();
   t.check([rec.recording, chunks.length].join(","), "false,1");
 });
 
 // ## stopAsync() on an unstarted recorder resolves immediately (no hang)
 void test("stopAsync() on an unstarted recorder resolves immediately (no hang)", async (t) => {
-  // doctest:L79
   const rec = new ChunkedRecorder({ onChunk: () => {} });
   await rec.stopAsync();
   t.check(rec.recording, false);

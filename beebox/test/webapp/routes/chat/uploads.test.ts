@@ -26,7 +26,7 @@ const UploadedPath = z.looseObject({ path: z.string() });
 
 /** A minimal multipart body: an optional `batch` text part, then one `file` part. */
 function multipart(opts: { filename: string; mimetype: string; bytes: Buffer; batch?: string }) {
-  const boundary = "----bbx-doctest-boundary";
+  const boundary = "----bbx-test-boundary";
   const batchPart = opts.batch === undefined
     ? ""
     : `--${boundary}\r\nContent-Disposition: form-data; name="batch"\r\n\r\n${opts.batch}\r\n`;
@@ -55,7 +55,6 @@ void test("The bytes are stored as sent:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L46
   const ctx = await makeTestServer();
   const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
   const body = multipart({ filename: "receipt (1).png", mimetype: "image/png", bytes });
@@ -72,10 +71,8 @@ void test("The bytes are stored as sent:", async (t) => {
     },
   });
 
-  // doctest:L53
   const uploaded = UploadedFile.parse(res.body);
 
-  // doctest:L68
   t.check((await readFile(join(ctx.boxRoot, uploaded.path))).toString("hex"), bytes.toString("hex"));
 });
 
@@ -88,7 +85,6 @@ void test("No file field is a 400", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L79
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -112,7 +108,6 @@ void test("Two uploads with the same batch land side by side under tmp/chat/<bat
       t.error(error);
     }
   });
-  // doctest:L101
   const ctx = await makeTestServer();
   const bytes = Buffer.from("receipt-bytes");
   const batch = "m1abcd-x9y8z7w6";
@@ -125,14 +120,12 @@ void test("Two uploads with the same batch land side by side under tmp/chat/<bat
     "_tmp/chat/m1abcd-x9y8z7w6/IMG_0001-2.jpg",
   ]);
 
-  // doctest:L110
   t.check((await readFile(join(ctx.boxRoot, "_tmp/chat/m1abcd-x9y8z7w6/notes.txt"), "utf8")), "receipt-bytes");
 
   // A message's uploads run in parallel, and two pasted clipboard images are
   // both called `image.png`: the name is claimed by the write itself, so neither
   // clobbers the other.
 
-  // doctest:L119
   const race = await Promise.all([1, 2, 3].map((n) =>
     ctx.request({ method: "POST", url: "/api/chat/upload-file", ...multipart({ filename: "image.png", mimetype: "image/png", bytes: Buffer.from(`copy-${String(n)}`), batch }) })));
   const paths = race.map((r) => UploadedPath.parse(r.body).path).toSorted();
@@ -142,13 +135,11 @@ void test("Two uploads with the same batch land side by side under tmp/chat/<bat
     "_tmp/chat/m1abcd-x9y8z7w6/image.png",
   ]);
 
-  // doctest:L125
   t.check((await Promise.all(paths.map((p) => readFile(join(ctx.boxRoot, p), "utf8")))).toSorted(), ["copy-1", "copy-2", "copy-3"]);
 
   // A batch id is a directory name the client minted, never a path: anything
   // outside `[A-Za-z0-9_-]{8,64}` is refused, not sanitized.
 
-  // doctest:L133
   const bad = await ctx.request({ method: "POST", url: "/api/chat/upload-file", ...multipart({ filename: "x.txt", mimetype: "text/plain", bytes, batch: "../escape" }) });
   t.check(bad, { statusCode: 400, body: { error: "Invalid batch id" } });
 });

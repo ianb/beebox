@@ -46,18 +46,15 @@ void test("Two husks, one per engine.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L43
   const box = await makeTmpBox();
   await mkdir(box.path("_content/chat/web"), { recursive: true });
   await writeTranscript(box, CLAUDE_CHAT);
   await writeHusk(box, { name: "2026-08-20_11111111", session: CLAUDE_CHAT });
   await writeHusk(box, { name: "2026-08-19_22222222", session: CODEX_CHAT, engine: "codex" });
 
-  // doctest:L49
   const realPath = process.env["PATH"];
   process.env["PATH"] = "/nonexistent";
 
-  // doctest:L52
   await t.checkText(
     // The claude chat is still listed. Before this change, the codex husk's
     // unreachable metadata rejected the whole call and this threw.
@@ -71,6 +68,5 @@ void test("Two husks, one per engine.", async (t) => {
   // boxholder a transcript was lost when it is sitting there, readable again as
   // soon as the CLI works.
 
-  // doctest:L65
   t.check(await loadDeadHusks(box.root), []);
 });

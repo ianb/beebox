@@ -56,31 +56,26 @@ const doc = (body: string) => `---\ntitle: Note\n---\n${body}\n`;
 // A card in the person's area that says "the user confirmed" gets the reminder,
 // naming the phrase and the fix:
 void test("A card in the person's area that says \"the user confirmed\" gets the reminder,...", async (t) => {
-  // doctest:L60
   t.check(await afterWrite("_content/Drill.doc.card", { content: doc("The user confirmed the drill is with Sam.") }), "_content/Drill.doc.card is shown to the person whose box this is, and the text you just wrote calls them \"the user\". Write \"you\" (in a briefing, their own \"I\": \"I'm cataloguing my tools\"), unless the words quote someone else.");
 });
 
 // "The boxholder" and its possessive count too, and an Edit is checked by its
 // new text:
 void test("\"The boxholder\" and its possessive count too, and an Edit is checked by its n...", async (t) => {
-  // doctest:L68
   t.check(await afterWrite("_content/Tools.doc.card", { old_string: "x", new_string: "Listed from the boxholder's memory." }), "_content/Tools.doc.card is shown to the person whose box this is, and the text you just wrote calls them \"the boxholder's\". Write \"you\" (in a briefing, their own \"I\": \"I'm cataloguing my tools\"), unless the words quote someone else.");
 });
 
 // Text that says "you" gets no reminder, and neither does agent-facing text
 // outside `_content/`, where "the user" is the right word:
 void test("Text that says \"you\" gets no reminder, and neither does agent-facing text out...", async (t) => {
-  // doctest:L76
   t.check(await afterWrite("_content/Drill2.doc.card", { content: doc("You confirmed the drill is with Sam.") }), null);
 
-  // doctest:L79
   t.check(await afterWrite("_bookkeeping/jobs/Followup.doc.card", { content: doc("Ask the user about the drill.") }), null);
 });
 
 // The phrase finder lowercases and folds whitespace, and does not match words
 // that merely contain "user":
 void test("The phrase finder lowercases and folds whitespace, and does not match words t...", async (t) => {
-  // doctest:L87
   t.check(thirdPersonPhrases("The  User said so; the boxholders agreed; a username; reuser"), [
     "the user",
     "the boxholders",

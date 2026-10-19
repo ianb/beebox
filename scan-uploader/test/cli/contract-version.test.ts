@@ -26,10 +26,8 @@ function verdict(params: { client: number; server: number | undefined }): string
 
 // ## Matching versions say nothing
 void test("Matching versions say nothing", async (t) => {
-  // doctest:L29
   t.check(verdict({ client: 3, server: 3 }), "current");
 
-  // doctest:L34
   t.check(describeDrift(compareContractVersion({ client: 3, server: 3 })), undefined);
 });
 
@@ -38,20 +36,17 @@ void test("Matching versions say nothing", async (t) => {
 // This is the case the mechanism exists for: the box deployed, the bundle on the
 // laptop did not.
 void test("This is the case the mechanism exists for:", async (t) => {
-  // doctest:L44
   t.check(verdict({ client: 2, server: 3 }), "client-behind 2→3");
 
   // The message has to be actionable, and there is no update path to point at
   // except the manual one — nothing fetches the bundle and nothing self-updates —
   // so it names the rebuild rather than just the numbers:
 
-  // doctest:L53
   t.check(describeDrift(compareContractVersion({ client: 2, server: 3 })), str`${any(String)}out of date${any(String)}Rebuild and re-copy dist/scan-uploader.mjs.`);
 
   // It also says what is actually at risk, since "out of date" alone does not
   // explain why anyone should care about a client that still uploads:
 
-  // doctest:L61
   t.check(describeDrift(compareContractVersion({ client: 2, server: 3 })), str`${any(String)}rules for when a scanned file is safe to move or delete are older${any(String)}`);
 });
 
@@ -61,10 +56,8 @@ void test("This is the case the mechanism exists for:", async (t) => {
 // wrong — but it is the *box* that needs deploying, and saying so keeps the
 // reader from rebuilding the uploader over and over.
 void test("Real, and harmless on its own — this client's obligations are stricter, not w...", async (t) => {
-  // doctest:L72
   t.check(verdict({ client: 4, server: 3 }), "server-behind 4→3");
 
-  // doctest:L77
   t.check(describeDrift(compareContractVersion({ client: 4, server: 3 })), str`${any(String)}The BOX is behind this uploader — deploy the box${any(String)}`);
 });
 
@@ -74,10 +67,8 @@ void test("Real, and harmless on its own — this client's obligations are stric
 // so `undefined` is an ordinary state rather than a defensive one. Reporting
 // drift here would fire on every box in the fleet the day this ships.
 void test("Every box predates the version field until it deploys the code that sends it,...", async (t) => {
-  // doctest:L88
   t.check(verdict({ client: 3, server: undefined }), "unknown");
 
-  // doctest:L93
   t.check(describeDrift(compareContractVersion({ client: 3, server: undefined })), undefined);
 });
 
@@ -87,12 +78,10 @@ void test("Every box predates the version field until it deploys the code that s
 // compared. Nothing can test that a human *bumped* it — that is the mechanism's
 // one irreducible gap, documented at the constant — but its shape is checkable.
 void test("Guards against the constant being edited into something that cannot be compared.", async (t) => {
-  // doctest:L104
   t.check(`${String(Number.isInteger(SCAN_CONTRACT_VERSION))} ${String(SCAN_CONTRACT_VERSION > 0)}`, "true true");
 
   // A client compared against itself is always current, whatever the constant
   // becomes:
 
-  // doctest:L112
   t.check(verdict({ client: SCAN_CONTRACT_VERSION, server: SCAN_CONTRACT_VERSION }), "current");
 });

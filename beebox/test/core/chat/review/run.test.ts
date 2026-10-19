@@ -127,18 +127,15 @@ void test("A qualifying session gets titled, summarized, and journalled", async 
       t.error(error);
     }
   });
-  // doctest:L127
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L130
   const huskPath = await seed(box, {
     sessionId: "sess1234",
     husk: "",
     entries: [bulk("u1"), userEntry("u2", "and another thing"), bulk("u3")],
   });
 
-  // doctest:L136
   const reviewer = fakeReviewer([OUTPUT]);
   const summary = await runChatReview(box.root, {
     reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
@@ -152,11 +149,9 @@ void test("A qualifying session gets titled, summarized, and journalled", async 
   // The husk carries all four fields, and the reviewer was told this was a bootstrap
   // pass with no prior account.
 
-  // doctest:L148
   const card = await readFile(box.path(huskPath), "utf8");
   t.checkText(card, huskText({ session: sid("sess1234"), span: "6bf738fa00192a0e" }, "Sorting out a recurring billing problem"));
 
-  // doctest:L157
   t.check(reviewer.calls, [{
     sessionId: sid("sess1234"),
     currentTitle: null,
@@ -170,7 +165,6 @@ void test("A qualifying session gets titled, summarized, and journalled", async 
   // The journal has advanced to the end of the transcript, so there is no new span
   // and no model call.
 
-  // doctest:L167
   const second = fakeReviewer([OUTPUT]);
   const again = await runChatReview(box.root, {
     reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
@@ -186,18 +180,15 @@ void test("A qualifying session gets titled, summarized, and journalled", async 
 
   // ## Growth is an increment, and the previous account is the input
 
-  // doctest:L178
   const logPath = getSessionLogPath(box.root, sid("sess1234"));
   const grown = [bulk("u1"), userEntry("u2", "and another thing"), bulk("u3"), bulk("u4"), bulk("u5")];
   await writeFile(logPath, grown.map((e) => JSON.stringify(e)).join("\n") + "\n");
   const when = new Date(NOW.getTime() - 5 * HOUR);
   await utimes(logPath, when, when);
 
-  // doctest:L184
   const third = fakeReviewer([{ ...OUTPUT, title: "" }]);
   await runChatReview(box.root, { reviewer: third, maxSessions: 10, now: NOW, ownerEmail: null });
 
-  // doctest:L187
   t.check(third.calls[0], {
     sessionId: sid("sess1234"),
     currentTitle: "Sorting out a recurring billing problem",
@@ -208,7 +199,6 @@ void test("A qualifying session gets titled, summarized, and journalled", async 
 
   // An empty title means "keep the existing one", so it survives.
 
-  // doctest:L201
   t.checkText(await readFile(box.path(huskPath), "utf8"), huskText({ session: sid("sess1234"), span: "64ffeea542992332" }, "Sorting out a recurring billing problem"));
 });
 
@@ -225,38 +215,32 @@ void test("The review detects that the title no longer hashes to what it wrote, 
       t.error(error);
     }
   });
-  // doctest:L216
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   const huskPath = await seed(box, {
     sessionId: "sess5678", husk: "", entries: [bulk("v1"), bulk("v2")],
   });
 
-  // doctest:L222
   await runChatReview(box.root, {
     reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
   });
 
-  // doctest:L226
   // The boxholder retitles it by hand.
   const written = await readFile(box.path(huskPath), "utf8");
   await writeFile(box.path(huskPath),
     written.replace("title: Sorting out a recurring billing problem", "title: The Acme mess"));
 
-  // doctest:L231
   // More conversation arrives.
   const logPath = getSessionLogPath(box.root, sid("sess5678"));
   await writeFile(logPath, [bulk("v1"), bulk("v2"), bulk("v3"), bulk("v4")].map((e) => JSON.stringify(e)).join("\n") + "\n");
   const when = new Date(NOW.getTime() - 5 * HOUR);
   await utimes(logPath, when, when);
 
-  // doctest:L237
   await runChatReview(box.root, {
     reviewer: fakeReviewer([{ ...OUTPUT, title: "A completely different title" }]),
     maxSessions: 10, now: NOW, ownerEmail: null,
   });
 
-  // doctest:L242
   const after = await readFile(box.path(huskPath), "utf8");
   t.checkText(after, huskText({ session: sid("sess5678"), span: "1adea253dc56352d" }, "The Acme mess"));
 
@@ -265,7 +249,6 @@ void test("The review detects that the title no longer hashes to what it wrote, 
   // offered a replacement: a hand-owned title is reconciled by definition, so the
   // next short growth has nothing to ask about.
 
-  // doctest:L253
   const state = await loadReviewState(box.root);
   const entry = state.sessions[sid("sess5678")];
   t.check(entry, {
@@ -294,14 +277,12 @@ void test("At first review there is no stored hash, but the husk may already car
       t.error(error);
     }
   });
-  // doctest:L271
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   const huskPath = await seed(box, {
     sessionId: "sesspre", husk: "title: Notes on the roof leak\n", entries: [bulk("p1"), bulk("p2")],
   });
 
-  // doctest:L277
   await runChatReview(box.root, {
     reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
   });
@@ -310,8 +291,6 @@ void test("At first review there is no stored hash, but the husk may already car
 
   // The rest of the review still lands, and the field is marked `manual` from here on.
 
-  // doctest:L288
-  // doctest:L291
   t.check((await loadReviewState(box.root)).sessions[sid("sesspre")], {
     applied: {
       metadata: { spanId: "9b5cd26becaf6b27", endUuid: "p2", endIndex: 1, prefixHash: "0c87745b677be2fc", at: NOW.toISOString() },
@@ -326,14 +305,12 @@ void test("At first review there is no stored hash, but the husk may already car
   // An auto-set snippet title, by contrast, is ours to replace — otherwise the
   // feature could never improve the titles it exists to improve.
 
-  // doctest:L299
   const box2 = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box2.path("claude-projects");
   const husk2 = await seed(box2, {
     sessionId: "sesssnip", husk: "", entries: [bulk("q1"), bulk("q2")],
   });
 
-  // doctest:L305
   // The exact snippet ensureChatHusk would have written, derived the same way.
   const meta = await getSessionMetadata({
     sessionId: sid("sesssnip"),
@@ -347,6 +324,5 @@ void test("At first review there is no stored hash, but the husk may already car
   });
   t.checkText(await readFile(box2.path(husk2), "utf8"), huskText({ session: sid("sesssnip"), span: "0cd03e6cdee49df8", titleFirst: true }, "Sorting out a recurring billing problem"));
 
-  // doctest:L319
   await box2.cleanup();
 });

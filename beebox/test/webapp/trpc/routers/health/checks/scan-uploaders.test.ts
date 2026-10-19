@@ -77,18 +77,15 @@ void test("A box with no uploaders has nothing to report", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L62
   const emptyBox = await makeTmpBox();
   t.check(check(emptyBox.root), "scan-uploaders ok=true severity=warning");
 
-  // doctest:L68
   t.check(message(emptyBox.root), "No scan uploaders configured");
 
   // ## A current uploader passes
   //
   // Built after the box's deploy and speaking the box's contract.
 
-  // doctest:L77
   const currentBox = await makeTmpBox();
   await uploaderCalled(currentBox.root, {
     name: "scansnap-laptop",
@@ -98,7 +95,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   });
   t.check(check(currentBox.root), "scan-uploaders ok=true severity=warning");
 
-  // doctest:L89
   t.check(message(currentBox.root), "1 scan uploader configured; none reported an out-of-date build");
 
   // ## A build older than the box's deploy is out of date
@@ -107,7 +103,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   // honest in a way comparing git hashes could never be — an uploader's revision
   // hash says nothing about which is newer.
 
-  // doctest:L100
   const oldBuildBox = await makeTmpBox();
   await uploaderCalled(oldBuildBox.root, {
     name: "scansnap-laptop",
@@ -124,7 +119,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   // be spelled out, because nothing fetches the bundle and there is no update path
   // except copying the file again:
 
-  // doctest:L119
   t.check(message(oldBuildBox.root), str`${any(String)}scansnap-laptop (build aaaa1111, built 2026-03-11T00:00:00.000Z, contract v2)${any(String)}re-copy dist/scan-uploader.mjs${any(String)}`);
 
   // ## A contract version below the box's is out of date
@@ -132,7 +126,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   // Independent of the build date — an uploader can be freshly built off a stale
   // branch.
 
-  // doctest:L129
   const oldContractBox = await makeTmpBox();
   await uploaderCalled(oldContractBox.root, {
     name: "scansnap-laptop",
@@ -148,7 +141,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   // uploader in existence reported nothing before these headers shipped, so
   // treating "unknown" as "stale" would light up the whole fleet on day one.
 
-  // doctest:L147
   const silentBox = await makeTmpBox();
   await uploaderCalled(silentBox.root, { name: "older-uploader" });
   t.check(check(silentBox.root), "scan-uploaders ok=true severity=warning");
@@ -163,14 +155,12 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   //
   // A checkout at the box's contract passes:
 
-  // doctest:L164
   const sourceBox = await makeTmpBox();
   await uploaderCalled(sourceBox.root, { name: "dev-checkout", contract: "2", build: "source" });
   t.check(check(sourceBox.root), "scan-uploaders ok=true severity=warning");
 
   // A checkout below it does not:
 
-  // doctest:L173
   const staleCheckoutBox = await makeTmpBox();
   await uploaderCalled(staleCheckoutBox.root, { name: "old-branch-checkout", contract: "1", build: "source" });
   t.check(check(staleCheckoutBox.root), "scan-uploaders ok=false severity=warning");
@@ -180,7 +170,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   // A revoked credential cannot upload, so its build is not a problem anyone needs
   // to act on.
 
-  // doctest:L185
   const revokedBox = await makeTmpBox();
   await uploaderCalled(revokedBox.root, {
     name: "retired-laptop",
@@ -191,7 +180,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   await revokeScanToken(revokedBox.root, "retired-laptop");
   t.check(check(revokedBox.root), "scan-uploaders ok=true severity=warning");
 
-  // doctest:L198
   t.check(message(revokedBox.root), "No scan uploaders configured");
 
   // ## With no deploy time, the check judges nothing
@@ -200,7 +188,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   // deploy for a build to be older than. The contract comparison still applies —
   // that number is known without a deploy.
 
-  // doctest:L209
   const localBox = await makeTmpBox();
   await uploaderCalled(localBox.root, {
     name: "scansnap-laptop",
@@ -211,7 +198,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   const local = scanUploaderFreshnessCheck(localBox.root, { deployedAt: null, contractVersion: BOX_CONTRACT, now: NOW });
   t.check(`ok=${String(local.ok)}`, "ok=true");
 
-  // doctest:L222
   const localBehind = scanUploaderFreshnessCheck(localBox.root, { deployedAt: null, contractVersion: 9, now: NOW });
   t.check(`ok=${String(localBehind.ok)}`, "ok=false");
 
@@ -220,7 +206,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   // These are untrusted client strings. A diagnostic field must not manufacture a
   // stale verdict out of something it could not parse.
 
-  // doctest:L233
   const junkBox = await makeTmpBox();
   await uploaderCalled(junkBox.root, {
     name: "confused-uploader",
@@ -237,7 +222,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   // bundle as fine forever — the one failure worse than having no check, because it
   // answers the question wrongly rather than not at all.
 
-  // doctest:L252
   const skewedBox = await makeTmpBox();
   await uploaderCalled(skewedBox.root, {
     name: "clock-skewed-laptop",
@@ -251,7 +235,6 @@ void test("A box with no uploaders has nothing to report", async (t) => {
   //
   // The boxholder has to know *which* machine to go and re-copy the file on.
 
-  // doctest:L268
   const fleetBox = await makeTmpBox();
   await uploaderCalled(fleetBox.root, { name: "desk-laptop", contract: "2", build: "f1", builtAt: "2026-03-01T00:00:00.000Z" });
   await uploaderCalled(fleetBox.root, { name: "travel-laptop", contract: "2", build: "f2", builtAt: "2026-09-13T00:00:00.000Z" });

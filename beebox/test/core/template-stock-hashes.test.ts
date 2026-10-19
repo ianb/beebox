@@ -59,7 +59,6 @@ function inconsistentEntries(): string[] {
 // If this lists a guide, its constant changed without the ledger being updated —
 // run `pnpm template-stock:update`.
 void test("If this lists a guide, its constant changed without the ledger being updated...", async (t) => {
-  // doctest:L63
   t.check(driftedGuides(), []);
 });
 
@@ -68,7 +67,6 @@ void test("If this lists a guide, its constant changed without the ledger being 
 // Adding a `MANAGED_STOCK_TEMPLATES` entry (or a ledger key) without the other side
 // would leave a guide untracked or a dangling record.
 void test("Adding a MANAGEDSTOCKTEMPLATES entry (or a ledger key) without the other side...", async (t) => {
-  // doctest:L73
   t.check(managedMatchesLedger(), true);
 });
 
@@ -76,6 +74,5 @@ void test("Adding a MANAGEDSTOCKTEMPLATES entry (or a ledger key) without the ot
 //
 // `current` must not also appear in `superseded`, and no hash may be listed twice.
 void test("current must not also appear in superseded, and no hash may be listed twice.", async (t) => {
-  // doctest:L82
   t.check(inconsistentEntries(), []);
 });

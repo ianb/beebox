@@ -79,7 +79,6 @@ function roundTrippedFixtures(): Record<string, string | undefined> {
 // values such as `audio="0:00"`; the chip decides whether that value is visually
 // omitted.
 void test("The fixture record documents one canonical example per current kind.", async (t) => {
-  // doctest:L82
   t.check(serializedFixtures(), {
     capture: `<capture doc="tmp-capture/x.capture-session.card" images="2" audio="0:00">
 Two reference photos.
@@ -91,7 +90,6 @@ Reference documents.
 </upload>`,
   });
 
-  // doctest:L85
   t.check(parsedFixtures(), {
     capture: [
       {
@@ -117,17 +115,14 @@ Reference documents.
     ],
   });
 
-  // doctest:L88
   const kinds: string[] = [...DELIVERED_USER_MESSAGE_KINDS].toSorted();
   t.check(kinds, Object.keys(fixtures).toSorted());
 
-  // doctest:L91
   t.check(roundTrippedFixtures(), serializedFixtures());
 });
 
 // The serializer rejects every delimiter that would truncate a `doc` attribute.
 void test("The serializer rejects every delimiter that would truncate a doc attribute.", async (t) => {
-  // doctest:L98
   await t.checkThrows(async () => (serializeDeliveredUserMessage({ ...fixtures.capture, doc: "tmp-capture/bad>path.card" })), "InvariantError");
 });
 
@@ -137,7 +132,6 @@ void test("The serializer rejects every delimiter that would truncate a doc attr
 // JSONL: the snapshot is prepended to an otherwise ordinary delivered capture.
 // The codec removes that display-only tag before it finds message blocks.
 void test("This sanitized fixture has the exact structure observed in a real session JSONL:", async (t) => {
-  // doctest:L109
   const persisted = '<chat-app narration="off" prose="on" local-time="Tuesday 2026-08-04 13:42 CDT (afternoon)"/>\n' + captureWire;
   t.check(partSummary(parseDeliveredUserMessageParts(persisted)), [{ kind: "capture", doc: "tmp-capture/x.capture-session.card" }]);
 });
@@ -147,7 +141,6 @@ void test("This sanitized fixture has the exact structure observed in a real ses
 // `ChatSession` joins queued sends with blank lines. The parser emits every
 // structured block and preserves all surrounding user-visible text.
 void test("ChatSession joins queued sends with blank lines.", async (t) => {
-  // doctest:L120
   const combined = "Please keep these together.\n\n" + captureWire + "\n\n" + uploadWire + "\n\nThen compare them.";
   t.check(partSummary(parseDeliveredUserMessageParts(combined)), [{ kind: "text", text: "Please keep these together.\n\n" }, { kind: "capture", doc: "tmp-capture/x.capture-session.card" }, { kind: "text", text: "\n\n" }, { kind: "upload", doc: "tmp-upload/b/Batch.upload-batch.card" }, { kind: "text", text: "\n\nThen compare them." }]);
 });
@@ -157,7 +150,6 @@ void test("ChatSession joins queued sends with blank lines.", async (t) => {
 // A known tag with no `doc` is not a chip. Its bytes remain text, and scanning
 // continues so a later valid delivery still renders structurally.
 void test("A known tag with no doc is not a chip.", async (t) => {
-  // doctest:L131
   const malformed = '<capture images="1" audio="0:05">\nbroken\n</capture>';
   t.check(partSummary(parseDeliveredUserMessageParts(malformed + "\n\n" + uploadWire)), [{ kind: "text", text: "<capture images=\"1\" audio=\"0:05\">\nbroken\n</capture>\n\n" }, { kind: "upload", doc: "tmp-upload/b/Batch.upload-batch.card" }]);
 });
@@ -167,11 +159,9 @@ void test("A known tag with no doc is not a chip.", async (t) => {
 // Only standalone registered blocks become structured parts. A same-line wrapper
 // mention and an unknown future-looking tag stay literal.
 void test("Only standalone registered blocks become structured parts.", async (t) => {
-  // doctest:L142
   const mention = "see this: " + captureWire;
   t.check(partSummary(parseDeliveredUserMessageParts(mention)), [{ kind: "text", text: "see this: <capture doc=\"tmp-capture/x.capture-session.card\" images=\"2\" audio=\"0:00\">\nTwo reference photos.\n</capture>" }]);
 
-  // doctest:L146
   const unknown = "<new-delivery doc=\"x.card\">\nhello\n</new-delivery>";
   t.check(partSummary(parseDeliveredUserMessageParts(unknown)), [{ kind: "text", text: "<new-delivery doc=\"x.card\">\nhello\n</new-delivery>" }]);
 });
@@ -182,11 +172,9 @@ void test("Only standalone registered blocks become structured parts.", async (t
 // later standalone block still becomes a chip. A malformed standalone opener is
 // also rejected when it would otherwise swallow a nested delivered block.
 void test("After rejecting a prose opener, scanning resumes inside the rejected span so...", async (t) => {
-  // doctest:L158
   const proseOpener = "does the <capture> tag work?\n\n" + captureWire;
   t.check(partSummary(parseDeliveredUserMessageParts(proseOpener)), [{ kind: "text", text: "does the <capture> tag work?\n\n" }, { kind: "capture", doc: "tmp-capture/x.capture-session.card" }]);
 
-  // doctest:L162
   const unterminated = '<capture doc="broken.card">\nunfinished\n\n' + captureWire;
   t.check(partSummary(parseDeliveredUserMessageParts(unterminated)), [{ kind: "text", text: "<capture doc=\"broken.card\">\nunfinished\n\n" }, { kind: "capture", doc: "tmp-capture/x.capture-session.card" }]);
 });

@@ -26,7 +26,6 @@ async function readFm(path: string): Promise<Record<string, unknown>> {
 
 // ## A fresh card gets stamped with version/size/mtime
 void test("A fresh card gets stamped with version/size/mtime", async (t) => {
-  // doctest:L25
   const box = await makeTmpBox();
   await box.write("store/src/foo.ts", "console.log(1);\n");
   const cardPath = box.path("store/review/Foo.extfile.card");
@@ -34,7 +33,6 @@ void test("A fresh card gets stamped with version/size/mtime", async (t) => {
   const r1 = await syncExtfile({ boxRoot: box.root, paths: [cardPath] });
   t.check(r1, [{ path: cardPath, status: "stamped" }]);
 
-  // doctest:L33
   const fm = await readFm(cardPath);
   t.check(fm, {
     type: "extfile",
@@ -47,7 +45,6 @@ void test("A fresh card gets stamped with version/size/mtime", async (t) => {
 
 // ## A bumped mtime with unchanged content is "unchanged" (no rewrite)
 void test("A bumped mtime with unchanged content is \"unchanged\" (no rewrite)", async (t) => {
-  // doctest:L44
   const box = await makeTmpBox();
   await box.write("store/src/foo.ts", "console.log(1);\n");
   const cardPath = box.path("store/review/Foo.extfile.card");
@@ -59,14 +56,12 @@ void test("A bumped mtime with unchanged content is \"unchanged\" (no rewrite)",
   const r2 = await syncExtfile({ boxRoot: box.root, paths: [cardPath] });
   t.check(r2, [{ path: cardPath, status: "unchanged" }]);
 
-  // doctest:L56
   const after = await readFm(cardPath);
   t.check(after, before);
 });
 
 // ## Changed content re-stamps with a new version
 void test("Changed content re-stamps with a new version", async (t) => {
-  // doctest:L64
   const box = await makeTmpBox();
   await box.write("store/src/foo.ts", "console.log(1);\n");
   const cardPath = box.path("store/review/Foo.extfile.card");
@@ -83,7 +78,6 @@ void test("Changed content re-stamps with a new version", async (t) => {
   const r3 = await syncExtfile({ boxRoot: box.root, paths: [cardPath] });
   t.check(r3, [{ path: cardPath, status: "stamped" }]);
 
-  // doctest:L75
   t.check(await readFm(cardPath), {
     type: "extfile",
     href: `file:${box.path("store/src/foo.ts")}`,
@@ -95,7 +89,6 @@ void test("Changed content re-stamps with a new version", async (t) => {
 
 // ## An unresolvable href is reported, not thrown
 void test("An unresolvable href is reported, not thrown", async (t) => {
-  // doctest:L83
   const box = await makeTmpBox();
   const cardPath = box.path("store/review/Gone.extfile.card");
   await box.write("store/review/Gone.extfile.card", "---\ntype: extfile\nhref: file:/nonexistent/nope.ts\n---\n");

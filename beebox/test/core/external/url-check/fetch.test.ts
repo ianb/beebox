@@ -13,7 +13,6 @@ import { extractExternalUrls, isCheckableUrl } from "../../../../src/core/extern
 // trailing sentence punctuation, and dedupes — so the same URL written three ways
 // collapses to one:
 void test("extractExternalUrls pulls every distinct URL out of a blob, whether it's a ma...", async (t) => {
-  // doctest:L17
   const text = [
     "See [the docs](https://example.org/guide#install) for setup.",
     "Bare: https://example.org/guide, and again https://example.org/guide#top.",
@@ -21,7 +20,6 @@ void test("extractExternalUrls pulls every distinct URL out of a blob, whether i
     "Internal [card](/store/a.card) and [rel](../b.md) are ignored.",
   ].join("\n");
 
-  // doctest:L24
   t.check([...extractExternalUrls(text)].toSorted(), [
     "https://example.org/guide",
     "https://other.test/x",
@@ -32,7 +30,6 @@ void test("extractExternalUrls pulls every distinct URL out of a blob, whether i
 // RFC-2606 reserved doc domains (`example.com/.org/.net`, `.test`, `.invalid`,
 // `localhost`) are skipped so a placeholder link never triggers a network hit:
 void test("isCheckableUrl keeps only real external http(s) targets — non-http schemes an...", async (t) => {
-  // doctest:L37
   await t.checkText(
     JSON.stringify(
       [

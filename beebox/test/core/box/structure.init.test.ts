@@ -55,11 +55,9 @@ void test("After a fresh init, schedule files should be committed (not just on d
       t.error(error);
     }
   });
-  // doctest:L51
   const tmp = await makeTmpDir();
   const { boxRoot } = await fullInit(tmp);
 
-  // doctest:L54
   await t.checkText(await listFiles(boxRoot, "_config/schedules"), `chat-review.scheduled-script.card
 check-calendar.scheduled-script.card
 check-drive.scheduled-script.card
@@ -93,11 +91,9 @@ void test("Procedures and guides are also committed", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L92
   const tmp = await makeTmpDir();
   const { boxRoot } = await fullInit(tmp);
 
-  // doctest:L95
   await t.checkText(await listFiles(boxRoot, "_config/procedures"), `browser-task-drain.procedure.card
 process-retrospective.procedure.card
 refresh-maps.procedure.card
@@ -106,7 +102,6 @@ todo-review.procedure.card`);
   // The stock agent-backed procedures use portable tiers, so a fresh box never
   // ships a provider-specific model pin:
 
-  // doctest:L107
   const refreshMaps = await fs.readFile(
     path.join(boxRoot, "_config/procedures/refresh-maps.procedure.card"),
     "utf8",
@@ -126,7 +121,6 @@ todo-review.procedure.card`);
   t.check(browserTaskDrain, any(String).includes("model: balanced"));
   t.check(stockProcedures.join("\n"), not(any(String).matches(/model: (?:haiku|sonnet|opus|fable)/)));
 
-  // doctest:L131
   await t.checkText(await listFiles(boxRoot, "_config"), `calendar.guide.card
 connectors
 feedback
@@ -140,7 +134,6 @@ schemas
 template-versions.json
 transcription.json`);
 
-  // doctest:L148
   t.check(await getStatus(boxRoot), { staged: [], modified: [], untracked: [], clean: true });
 });
 
@@ -153,10 +146,8 @@ void test("Git repo is initialized", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L160
   const tmp = await makeTmpDir();
   const { boxRoot } = await fullInit(tmp);
 
-  // doctest:L163
   t.check(await isRepo(boxRoot), true);
 });

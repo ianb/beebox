@@ -34,44 +34,36 @@ void test("Expired runs are deleted; newest, pinned, and unexpired survive", asy
       t.error(error);
     }
   });
-  // doctest:L31
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L33
   // alpha: two expired runs — keep-newest saves the second despite expiry
   await box.write("_bookkeeping/procedure/runs/alpha_2025-01-01T0000/run.procedure-run.card",
     runCard('procedure="p" outcome="completed" started-at="2025-01-01T00:00:00Z" completed-at="2025-01-01T00:01:00Z" expires="2025-02-01T00:00:00Z"'));
   await box.write("_bookkeeping/procedure/runs/alpha_2025-02-01T0000/run.procedure-run.card",
     runCard('procedure="p" outcome="completed" started-at="2025-02-01T00:00:00Z" completed-at="2025-02-01T00:01:00Z" expires="2025-03-01T00:00:00Z"'));
 
-  // doctest:L39
   // beta: old run pinned with expires="never", plus a newer one
   await box.write("_bookkeeping/procedure/runs/beta_2025-01-01T0000/run.procedure-run.card",
     runCard('procedure="p" outcome="completed" started-at="2025-01-01T00:00:00Z" completed-at="2025-01-01T00:01:00Z" expires="never"'));
   await box.write("_bookkeeping/procedure/runs/beta_2026-06-01T0000/run.procedure-run.card",
     runCard('procedure="p" outcome="completed" started-at="2026-06-01T00:00:00Z" completed-at="2026-06-01T00:01:00Z" expires="2099-01-01T00:00:00Z"'));
 
-  // doctest:L45
   // gamma: legacy cards without expires — completed-at + 30d default applies
   await box.write("_bookkeeping/procedure/runs/gamma_2025-01-01T0000/run.procedure-run.card",
     runCard('procedure="p" outcome="completed" started-at="2025-01-01T00:00:00Z" completed-at="2025-01-01T00:01:00Z"'));
   await box.write("_bookkeeping/procedure/runs/gamma_2099-01-01T0000/run.procedure-run.card",
     runCard('procedure="p" outcome="completed" started-at="2099-01-01T00:00:00Z" completed-at="2099-01-01T00:01:00Z"'));
 
-  // doctest:L51
   box.commitAll("Seed run history");
 
-  // doctest:L53
   const output: string[] = [];
   const ctx = { boxRoot: box.root, writeLine: (s: string) => output.push(s), write: () => {} };
   const result = await gcProcedureRuns(ctx);
   if (!result.ok) throw new Error(result.error.message);
 
-  // doctest:L60
   const left = await box.list("_bookkeeping/procedure/runs");
   const dirs = left.split("\n").filter(f => !f.endsWith(".card") && !f.endsWith(".gitkeep")).map(f => f.replace("_bookkeeping/procedure/runs/", ""));
 
-  // doctest:L64
   // The deletions were committed in one sweep
   const log = await getLog(box.root, 1);
   t.check(
@@ -98,10 +90,8 @@ void test("Even when every run is unexpired, a procedure keeps at most MAXRUNSPE
       t.error(error);
     }
   });
-  // doctest:L86
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L88
   // Seed cap+3 unexpired runs for one procedure. Dir names end in a sortable
   // timestamp; only the ceiling (not expiry) can prune these.
   const total = MAX_RUNS_PER_PROCEDURE + 3;
@@ -113,12 +103,10 @@ void test("Even when every run is unexpired, a procedure keeps at most MAXRUNSPE
   }
   box.commitAll("Seed a runaway procedure");
 
-  // doctest:L98
   const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
   const result = await gcProcedureRuns(ctx);
   if (!result.ok) throw new Error(result.error.message);
 
-  // doctest:L102
   const left = await box.list("_bookkeeping/procedure/runs");
   const kept = left.split("\n").filter(f => f.includes("loop_") && !f.endsWith(".card")).map(f => f.replace("_bookkeeping/procedure/runs/", ""));
   // The three oldest go; the newest MAX_RUNS_PER_PROCEDURE stay.
@@ -142,22 +130,18 @@ void test("A run card with no outcome (the engine crashed or was killed) has no 
       t.error(error);
     }
   });
-  // doctest:L125
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L127
   await box.write("_bookkeeping/procedure/runs/crash_2025-01-01T0000/run.procedure-run.card",
     runCard('procedure="p" started-at="2025-01-01T00:00:00Z"'));
   await box.write("_bookkeeping/procedure/runs/crash_2099-01-01T0000/run.procedure-run.card",
     runCard('procedure="p" outcome="completed" started-at="2099-01-01T00:00:00Z" completed-at="2099-01-01T00:01:00Z" expires="never"'));
 
-  // doctest:L132
   // Age the crashed card's mtime past the running-detection staleness window
   const stale = new Date(Date.now() - 2 * 60 * 60 * 1000);
   await utimes(box.path("_bookkeeping/procedure/runs/crash_2025-01-01T0000/run.procedure-run.card"), stale, stale);
   box.commitAll("Seed crashed run");
 
-  // doctest:L137
   const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
   const result = await gcProcedureRuns(ctx);
   if (!result.ok) throw new Error(result.error.message);
@@ -176,17 +160,14 @@ void test("The same stuck-running card with a fresh mtime is treated as live wor
       t.error(error);
     }
   });
-  // doctest:L155
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L157
   await box.write("_bookkeeping/procedure/runs/live_2025-01-01T0000/run.procedure-run.card",
     runCard('procedure="p" started-at="2025-01-01T00:00:00Z"'));
   await box.write("_bookkeeping/procedure/runs/live_2099-01-01T0000/run.procedure-run.card",
     runCard('procedure="p" outcome="completed" started-at="2099-01-01T00:00:00Z" completed-at="2099-01-01T00:01:00Z" expires="never"'));
   box.commitAll("Seed live run");
 
-  // doctest:L163
   const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
   const result = await gcProcedureRuns(ctx);
   if (!result.ok) throw new Error(result.error.message);
@@ -202,7 +183,6 @@ void test("Empty and missing runs dirs are fine", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L178
   const box = await makeTmpBox({ git: true });
   const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
   const result = await gcProcedureRuns(ctx);

@@ -124,13 +124,11 @@ async function capturedError(run: () => Promise<unknown>) {
 }
 
 void test("line 64", async (t) => {
-  // doctest:L65
   const { box, evidence, instructions, destination, baseJudgment } = await receiptFixture();
   const receipt = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...baseJudgment, todoAnswers: { [destination.optionId]: 0.8 } } });
   const applied = await applyDecision({ boxRoot: box.root, decision: receipt });
   t.check(applied.application.todoAnnotation?.state, "applied");
 
-  // doctest:L71
   const target = box.path("_content/inbox/triaged/bills/Paper.doc.card");
   const annotated = await fs.readFile(target, "utf8");
   const created = await getTriageTodoDate(box.root);
@@ -142,15 +140,12 @@ todos:
 ${todoEntry(created, "")}---
 A bill requiring review.`);
 
-  // doctest:L79
   const appliedAgain = await applyDecision({ boxRoot: box.root, decision: receipt.id });
   t.check(appliedAgain.application.todoAnnotation, applied.application.todoAnnotation);
 
-  // doctest:L83
   const parsedAfterRepeat = await fs.readFile(target, "utf8");
   t.check(parsedAfterRepeat, annotated);
 
-  // doctest:L87
   // Completion state and later notes survive a retry unchanged.
   await setTodoStatus(box.root, { file: target, status: "done" });
   const completed = await fs.readFile(target, "utf8");
@@ -162,30 +157,24 @@ A bill requiring review.`);
   const afterCompletionRetry = await applyDecision({ boxRoot: box.root, decision: receipt.id });
   t.check(afterCompletionRetry.application.todoAnnotation?.state, "applied");
 
-  // doctest:L94
   t.check(await fs.readFile(target, "utf8"), completed);
 
-  // doctest:L97
   const reprepared = await replayDecisions({ boxRoot: box.root, ids: [receipt.id], instructions, maxCalls: 1, prepareAgain: true, env: { BBX_JEV_FAKE: "1" } });
   t.check(reprepared.results[0], replayResult(0.8));
 
-  // doctest:L107
   await box.cleanup();
 });
 
 void test("line 110", async (t) => {
-  // doctest:L111
   const { box, evidence, instructions, baseJudgment } = await receiptFixture({ question: null });
   const withoutQuestion = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: baseJudgment });
   await applyDecision({ boxRoot: box.root, decision: withoutQuestion });
   t.check(await fs.readFile(box.path("_content/inbox/triaged/bills/Paper.doc.card"), "utf8"), NO_TODO_TEXT);
 
-  // doctest:L117
   await box.cleanup();
 });
 
 void test("line 120", async (t) => {
-  // doctest:L121
   const { box, instructions, destination, baseJudgment } = await receiptFixture();
   await fs.writeFile(box.path("_content/inbox/staged/Paper.txt"), "Raw admitted text.");
   const rawEvidence = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Paper.txt" });
@@ -194,16 +183,13 @@ void test("line 120", async (t) => {
   rawError = await capturedError(() => applyDecision({ boxRoot: box.root, decision: raw }));
   t.check(rawError, `TriageReceiptError: Triage receipt: Incomplete decision ${raw.id}: Cannot annotate triage target ${box.path("_content/inbox/staged/Paper.txt")}: positive follow-up requires a card with frontmatter`);
 
-  // doctest:L130
   const rawStillStaged = await fs.access(box.path("_content/inbox/staged/Paper.txt")).then(() => true, () => false);
   t.check(rawStillStaged, true);
 
-  // doctest:L134
   await box.cleanup();
 });
 
 void test("line 137", async (t) => {
-  // doctest:L138
   const { box, evidence, instructions, destination, baseJudgment } = await receiptFixture();
   const receipt = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...baseJudgment, todoAnswers: { [destination.optionId]: 0.95 } } });
   const from = box.path("_content/inbox/staged/Paper.doc.card");
@@ -219,19 +205,15 @@ void test("line 137", async (t) => {
   await git.commit(`Route paper\n\nTriage-Decision: ${receipt.id}\nTriage-Classifier: fake-jev`);
   await fs.writeFile(to, plan.after); // Simulate a crash after the atomic todo replacement.
 
-  // doctest:L153
   const resumed = await applyDecision({ boxRoot: box.root, decision: receipt.id });
   t.check(resumed.application.todoAnnotation?.state, "applied");
 
-  // doctest:L157
   const exactReplay = await replayDecisions({ boxRoot: box.root, ids: [receipt.id], instructions, maxCalls: 1, prepareAgain: true, env: { BBX_JEV_FAKE: "1" } });
   t.check(exactReplay.results[0], replayResult(0.95));
-  // doctest:L167
   await box.cleanup();
 });
 
 void test("line 170", async (t) => {
-  // doctest:L171
   const { box, evidence, instructions, destination, baseJudgment } = await receiptFixture();
   const negative = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...baseJudgment, todoAnswers: { [destination.optionId]: 0.5 } } });
   const missing = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...baseJudgment, todoAnswers: undefined } });
@@ -239,24 +221,20 @@ void test("line 170", async (t) => {
   missingError = await capturedError(() => applyDecision({ boxRoot: box.root, decision: missing }));
   t.check(missingError, `TriageReceiptError: Triage receipt: Incomplete decision ${missing.id}: Triage receipt: Missing recorded todo answer for configured destination /_content/bills/Bills.landmark.card; make the evidence readable, then prepare and judge a new decision for the held item. Retrying this correction cannot supply the missing answer`);
 
-  // doctest:L179
   await applyDecision({ boxRoot: box.root, decision: negative });
   const negativeText = await fs.readFile(box.path("_content/inbox/triaged/bills/Paper.doc.card"), "utf8");
   t.check(negativeText, NO_TODO_TEXT);
 
-  // doctest:L184
   await box.cleanup();
 });
 
 void test("line 187", async (t) => {
-  // doctest:L188
   const { box, evidence, instructions, destination, baseJudgment } = await receiptFixture();
   const held = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...baseJudgment, outcome: "unclear", destinationRef: null, answer: { ...baseJudgment.answer, choice: "unclear", probabilities: { [destination.optionId]: 0.1, "no-match": 0.1, unclear: 0.8 } } } });
   await applyDecision({ boxRoot: box.root, decision: held });
   const heldText = await fs.readFile(box.path("_content/inbox/triaged/_unsure/Paper.doc.card"), "utf8");
   t.check(heldText, NO_TODO_TEXT);
 
-  // doctest:L195
   const corrected = createDecisionReceipt({ boxRoot: box.root, evidence, instructions, judgment: { ...baseJudgment, todoAnswers: { [destination.optionId]: 0.9 } }, originalDecisionId: held.id });
   corrected.resolution = { destinationRef: destination.ref, sourceRef: "/_bookkeeping/questions/example.question.card", actor: "user" };
   corrected.application.from = held.application.to;
@@ -265,12 +243,10 @@ void test("line 187", async (t) => {
   const correctedApplied = await applyDecision({ boxRoot: box.root, decision: corrected });
   t.check(correctedApplied.application.todoAnnotation?.state, "applied");
 
-  // doctest:L204
   await box.cleanup();
 });
 
 void test("line 207", async (t) => {
-  // doctest:L208
   const box = await makeTmpBox();
   await box.write("_content/bills/Bills.landmark.card", "---\ndestinations:\n  - for: [triage]\n    rules: Bills.\n    todo-question: Does this need follow-up?\n---\n");
   await box.write("_content/inbox/staged/Legacy.doc.card", "---\ntitle: Legacy\n---\nBill.");
@@ -285,17 +261,14 @@ todos:
 ${todoEntry(await getTriageTodoDate(box.root), "")}---
 Bill.`);
 
-  // doctest:L219
   await box.write("_content/inbox/staged/No.doc.card", "---\ntitle: No\n---\nBill.");
   await applyTriage({ boxRoot: box.root, categories: compiled.categories, decisions: [{ file: "No.doc.card", category: category.name, confidence: "confident", reason: "Bill", todo: false }] });
   t.check(await fs.readFile(box.path("_content/inbox/triaged/bills/No.doc.card"), "utf8"), "---\ntitle: No\n---\nBill.");
 
-  // doctest:L224
   await box.cleanup();
 });
 
 void test("line 227", async (t) => {
-  // doctest:L228
   const { box, destination } = await receiptFixture();
   const file = box.path("_content/inbox/staged/Paper.doc.card");
   const original = await fs.readFile(file, "utf8");
@@ -315,6 +288,5 @@ ${todoEntry(await getTriageTodoDate(box.root), "")}undeclared: keep-me
 ---
 A bill requiring review.`);
 
-  // doctest:L237
   await box.cleanup();
 });

@@ -28,7 +28,6 @@ void test("The URL reaches the blob whose Git path contains #, ?, and literal %2
       t.error(error);
     }
   });
-  // doctest:L25
   const url = buildHistoryBlobUrl({ apiBase: "/api", hash, filePath });
   const response = await server.rawRequest({ method: "GET", url });
   t.check(`${response.statusCode} ${response.payload}`, "200 encoded path payload");

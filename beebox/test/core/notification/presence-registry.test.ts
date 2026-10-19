@@ -27,7 +27,6 @@ void test("Heartbeat, lapse, and the entry is gone", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L24
   const box = await makeTmpBox();
   await registry.heartbeat(box.root, "tab-aaaaaaaa");
   t.check([registry.size(), (await livePresence(box.root, { now: at(0) })).activeWeb], [
@@ -38,7 +37,6 @@ void test("Heartbeat, lapse, and the entry is gone", async (t) => {
   // Two minutes later the tab has lapsed. The first sweep writes zero and keeps
   // the entry; the next finds nothing due and removes it.
 
-  // doctest:L34
   clock = T0 + 120_000;
   await registry.sweep(box.root);
   t.check([registry.size(), (await livePresence(box.root, { now: at(120) })).activeWeb], [
@@ -46,20 +44,17 @@ void test("Heartbeat, lapse, and the entry is gone", async (t) => {
     0,
   ]);
 
-  // doctest:L39
   await registry.sweep(box.root);
   t.check(registry.size(), 0);
 
   // A later heartbeat starts a fresh entry and writes the count again:
 
-  // doctest:L47
   await registry.heartbeat(box.root, "tab-bbbbbbbb");
   t.check([registry.size(), (await livePresence(box.root, { now: at(120) })).activeWeb], [
     1,
     1,
   ]);
 
-  // doctest:L51
   clock = T0 + 300_000;
   await registry.sweep(box.root);
   await registry.sweep(box.root);

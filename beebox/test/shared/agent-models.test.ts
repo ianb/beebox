@@ -18,7 +18,6 @@ import {
 //
 // Each engine has four distinct tiers; Codex's `strongest` is Astra.
 void test("Each engine has four distinct tiers; Codex's strongest is Astra.", async (t) => {
-  // doctest:L21
   t.check(
     [
       resolveProcedureModel({engine: "claude", model: "efficient"}),
@@ -45,7 +44,6 @@ void test("Each engine has four distinct tiers; Codex's strongest is Astra.", as
 
 // ## Legacy aliases
 void test("Legacy aliases", async (t) => {
-  // doctest:L37
   t.check(
     [
       resolveProcedureModel({engine: "claude", model: "haiku"}),
@@ -75,7 +73,6 @@ void test("Legacy aliases", async (t) => {
 // GLM rides the claude engine with its own tier column; its two ids overlap
 // across the four tiers by design. The default (no provider) stays first-party.
 void test("GLM rides the claude engine with its own tier column; its two ids overlap acr...", async (t) => {
-  // doctest:L56
   t.check(
     [
       providerOf(MODEL_ID.glm),
@@ -93,7 +90,6 @@ void test("GLM rides the claude engine with its own tier column; its two ids ove
 });
 
 void test("Provider columns", async (t) => {
-  // doctest:L66
   t.check(
     [
       resolveProcedureModel({engine: "claude", model: "efficient", provider: "glm"}),
@@ -118,7 +114,6 @@ void test("Provider columns", async (t) => {
 // GLM ids carry tiers, so box-config admission and cross-engine degradation
 // work through the existing registry.
 void test("GLM ids carry tiers, so box-config admission and cross-engine degradation wor...", async (t) => {
-  // doctest:L82
   t.check([modelTier(MODEL_ID.glm), modelTier(MODEL_ID.glmFlash)], [
     "strong",
     "balanced",

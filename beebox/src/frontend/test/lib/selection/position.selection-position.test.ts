@@ -18,7 +18,6 @@ import { formatPosition, formatTranscriptPosition } from "../../../src/lib/selec
 // `formatTranscriptPosition(startRole, endRole)` takes the `data-role` of the
 // message holding each end of the selection.
 void test("A selection from the chat transcript has no document behind it.", async (t) => {
-  // doctest:L22
   t.check(
     [
       formatTranscriptPosition("assistant", "assistant"),
@@ -37,7 +36,6 @@ void test("A selection from the chat transcript has no document behind it.", asy
 
 // ## All parts present
 void test("All parts present", async (t) => {
-  // doctest:L40
   t.check(
     formatPosition({
       section: "body",
@@ -51,13 +49,11 @@ void test("All parts present", async (t) => {
 
 // ## No heading above the selection — clause omitted
 void test("No heading above the selection — clause omitted", async (t) => {
-  // doctest:L53
   t.check(formatPosition({ section: "body", heading: null, paragraph: 3, line: null }), "body; paragraph 3");
 });
 
 // ## Heading and line, no section or paragraph
 void test("Heading and line, no section or paragraph", async (t) => {
-  // doctest:L61
   t.check(
     formatPosition({
       section: null,
@@ -71,12 +67,10 @@ void test("Heading and line, no section or paragraph", async (t) => {
 
 // ## Frontmatter selection
 void test("Frontmatter selection", async (t) => {
-  // doctest:L74
   t.check(formatPosition({ section: "frontmatter", heading: null, paragraph: null, line: null }), "frontmatter");
 });
 
 // ## Nothing determinable yields an empty string
 void test("Nothing determinable yields an empty string", async (t) => {
-  // doctest:L82
   t.check(formatPosition({ section: null, heading: null, paragraph: null, line: null }), "");
 });

@@ -57,25 +57,21 @@ async function rejection(p: Promise<unknown>): Promise<unknown> {
 
 // ## Resolves a `file:` URL under an allowed root
 void test("Resolves a `file:` URL under an allowed root", async (t) => {
-  // doctest:L67
   t.check(await resolveExternalRef(href, { roots }), file);
 });
 
 // ## Version markers: content hash + git rev for a committed file
 void test("Version markers: content hash + git rev for a committed file", async (t) => {
-  // doctest:L75
   t.check(shape(await buildVersionMarkers(file)), "sha256:<hash> git:<rev>");
 });
 
 // ## An untracked file has only the content hash
 void test("An untracked file has only the content hash", async (t) => {
-  // doctest:L83
   t.check(shape(await buildVersionMarkers(untracked)), "sha256:<hash>");
 });
 
 // ## A dirty edit changes the hash but keeps the git rev
 void test("A dirty edit changes the hash but keeps the git rev", async (t) => {
-  // doctest:L91
   const before = await buildVersionMarkers(file);
   writeFileSync(file, "edited content\n");
   const after = await buildVersionMarkers(file);
@@ -86,18 +82,15 @@ void test("A dirty edit changes the hash but keeps the git rev", async (t) => {
 
 // ## A non-`file:` URL is rejected
 void test("A non-`file:` URL is rejected", async (t) => {
-  // doctest:L99
   t.check(await rejection(resolveExternalRef("https://example.com/x", { roots })), instanceOf(ExternalRefError));
 });
 
 // ## A path outside every allowed root is rejected
 void test("A path outside every allowed root is rejected", async (t) => {
-  // doctest:L107
   t.check(await rejection(resolveExternalRef(`file:${outside}`, { roots })), instanceOf(ExternalRefError));
 });
 
 // ## A denylisted path (`.git/`) is rejected even under the root
 void test("A denylisted path (`.git/`) is rejected even under the root", async (t) => {
-  // doctest:L115
   t.check(await rejection(resolveExternalRef(`file:${path.join(root, ".git", "config")}`, { roots })), instanceOf(ExternalRefError));
 });

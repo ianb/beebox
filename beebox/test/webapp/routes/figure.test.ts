@@ -97,7 +97,6 @@ void test("A valid sketch in an attach scope compiles to a JavaScript module (no
       t.error(error);
     }
   });
-  // doctest:L76
   const ctx = await makeTestServer();
   const res = await compile(ctx, { name: "Demo", source: P5_SKETCH });
   t.check(page(res), {
@@ -122,7 +121,6 @@ export {
   // without resolving them, so the compile succeeds and the output carries no bare
   // canvas-loop specifier:
 
-  // doctest:L88
   const orbit = await compile(ctx, { name: "Orbit", source: CANVAS_LOOP_SKETCH });
   t.check(page(orbit), {
     statusCode: 200,
@@ -155,7 +153,6 @@ export {
   // resolvable from a box), which arrives through the `figureError` channel and
   // names the module:
 
-  // doctest:L105
   const wrong = await compile(ctx, { name: "Wrong", source: VALUE_IMPORT_SKETCH });
   t.check(page(wrong), {
     statusCode: 200,
@@ -167,7 +164,6 @@ export {
   // A syntax error does not 500 — it returns a module exporting `figureError`, which
   // the harness checks before treating `default` as the sketch factory:
 
-  // doctest:L119
   const broken = await compile(ctx, { name: "Broken", source: "export default function( {" });
   t.check(page(broken), {
     statusCode: 200,
@@ -192,7 +188,6 @@ void test("The figure route compiles with cache:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L137
   const ctx = await makeTestServer();
   const rel = "_content/inbox/Cache.attach/sketch.ts";
   const abs = join(ctx.boxRoot, rel);
@@ -203,7 +198,6 @@ void test("The figure route compiles with cache:", async (t) => {
   await ctx.seed(rel, "export default function (p5, mount, figure) { const marker = \"AAA\"; return () => marker; }");
   await utimes(abs, pinned, pinned);
 
-  // doctest:L147
   const first = await moduleFor(ctx, rel);
   const cacheModule = (marker: string) => ({
     statusCode: 200,
@@ -223,11 +217,9 @@ export {
   // Rewrite to a SAME-LENGTH marker and re-pin the same mtime (mtime and size both
   // unchanged) — the re-request still returns the NEW output, not the cached "AAA":
 
-  // doctest:L156
   await writeFile(abs, "export default function (p5, mount, figure) { const marker = \"BBB\"; return () => marker; }");
   await utimes(abs, pinned, pinned);
 
-  // doctest:L159
   const second = await moduleFor(ctx, rel);
   t.check(page(second), cacheModule("BBB"));
 });
@@ -247,7 +239,6 @@ void test("A figure source path is contained to the box by string prefix, but st
       t.error(error);
     }
   });
-  // doctest:L176
   const ctx = await makeTestServer();
   const secretPath = join(ctx.boxRoot, "..", "OUTSIDE_SECRET.txt");
   await writeFile(secretPath, "TOPSECRET-DO-NOT-LEAK");
@@ -255,7 +246,6 @@ void test("A figure source path is contained to the box by string prefix, but st
   await ctx.seed("_content/inbox/Evil.attach/real.ts", "export default () => {};");
   await symlink(secretPath, join(ctx.boxRoot, "_content/inbox/Evil.attach/escape.ts"));
 
-  // doctest:L183
   const res = await moduleFor(ctx, "_content/inbox/Evil.attach/escape.ts");
   t.check(page(res), {
     statusCode: 400,
@@ -265,7 +255,6 @@ void test("A figure source path is contained to the box by string prefix, but st
 
   // A dangling symlink (target absent) is a clean 404, not a 500:
 
-  // doctest:L191
   await symlink(
     join(ctx.boxRoot, "_content/inbox/Evil.attach/nonexistent-target.ts"),
     join(ctx.boxRoot, "_content/inbox/Evil.attach/broken.ts"),
@@ -293,21 +282,16 @@ void test("Each bad request is refused before any compile.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L214
   const ctx = await makeTestServer();
   await ctx.seed("_content/notes/loose.ts", "export default () => {};");
   const status = async (query: string) => (await ctx.request({ method: "GET", url: `/api/figure/module.js${query}` })).statusCode;
 
-  // doctest:L218
   t.check(await status(""), 400);
 
-  // doctest:L221
   t.check(await status("?path=../outside.ts"), 400);
 
-  // doctest:L224
   t.check(await status("?path=_content/notes/loose.ts"), 400);
 
-  // doctest:L227
   t.check(await status("?path=_content/inbox/Ghost.attach/missing.ts"), 404);
 });
 
@@ -327,7 +311,6 @@ void test("A card filename carries its type — Cube.figure.card — while its a
       t.error(error);
     }
   });
-  // doctest:L245
   const ctx = await makeTestServer();
   await ctx.seed("_content/figures/Cube.figure.card", "");
   await ctx.seed("_content/figures/Cube.attach/sketch.ts", "export default () => () => {};");
@@ -346,7 +329,6 @@ export {
   // A positional card — a bare `<type>.card`, "the ‹type› of this directory" — owns
   // `<type>.attach/` by the same rule.
 
-  // doctest:L256
   await ctx.seed("_content/figures/gallery.card", "");
   await ctx.seed("_content/figures/gallery.attach/sketch.ts", "export default () => () => {};");
   t.check(page(await moduleFor(ctx, "_content/figures/gallery.attach/sketch.ts")), {
@@ -365,7 +347,6 @@ export {
   // an existing card. This prevents arbitrary box files from becoming compilable
   // modules merely by being placed under a `*.attach` directory:
 
-  // doctest:L267
   await ctx.seed("_content/inbox/Loose.attach/sketch.ts", "export default () => {};");
   const loose = await moduleFor(ctx, "_content/inbox/Loose.attach/sketch.ts");
   t.check(page(loose), {

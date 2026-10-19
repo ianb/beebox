@@ -73,7 +73,6 @@ const ctx: LoadCardContext = {
 // is box-root-absolute (the convention recommended by `record.tsx`'s
 // instructions); bare paths are resolved relative to the source card.
 void test("Refs carried by Markdoc tag attributes inside a card body (e.g.", async (t) => {
-  // doctest:L77
   const box = await makeTmpBox();
   await box.write(
     "_content/box/notes/Meeting.doc.card",
@@ -101,7 +100,6 @@ void test("Refs carried by Markdoc tag attributes inside a card body (e.g.", asy
 
 // ## A display-form path in a body Markdoc tag `ref` is a lint ERROR
 void test("A display-form path in a body Markdoc tag `ref` is a lint ERROR", async (t) => {
-  // doctest:L99
   const box = await makeTmpBox();
   await box.write(
     "_content/box/notes/Meeting.doc.card",
@@ -134,7 +132,6 @@ void test("A display-form path in a body Markdoc tag `ref` is a lint ERROR", asy
 // delete stayed silent until someone clicked it. They are now walked like any
 // other ref — `type: "reference"` warnings that land in the broken-ref count.
 void test("bbx mv has always rewritten [text](path) / ![alt](path) inside card bodies; v...", async (t) => {
-  // doctest:L126
   const box = await makeTmpBox();
   await box.write(
     "_content/box/notes/Plan.doc.card",
@@ -166,7 +163,6 @@ void test("bbx mv has always rewritten [text](path) / ![alt](path) inside card b
 // `Config:box.json`), so it reaches this same display-form check instead of
 // being silently dropped:
 void test("A display-form path written into an inline link, or a reference-style link DE...", async (t) => {
-  // doctest:L152
   const box = await makeTmpBox();
   await box.write(
     "_content/box/notes/Inline.doc.card",
@@ -190,10 +186,8 @@ void test("A display-form path written into an inline link, or a reference-style
     totalWarnings: 0,
   });
 
-  // doctest:L164
   t.check(inlineResult.results[0]!.errors[0]!.message, "Display-form path at body:1:link: `Config:box.json` is the boxholder's display form; write `/_config/box.json`");
 
-  // doctest:L169
   const box2 = await makeTmpBox();
   await box2.write(
     "_content/box/notes/RefDef.doc.card",
@@ -223,7 +217,6 @@ void test("A display-form path written into an inline link, or a reference-style
 // a URL scheme, a protocol-relative `//host`, or a bare `#anchor` — are skipped
 // rather than resolved as paths:
 void test("Links that resolve are clean, and links that name nothing in the box — a URL...", async (t) => {
-  // doctest:L187
   const box = await makeTmpBox();
   await box.write("_content/box/notes/Brief.doc.card", "---\ntype: doc\ntitle: Brief\n---\nx\n");
   await box.write("_content/box/notes/Plan.attach/chart.png", "PNG");
@@ -266,7 +259,6 @@ void test("Links that resolve are clean, and links that name nothing in the box 
 // card's `<basename>.attach/` scope. An `attach/` ref resolving into the card's
 // attach scope is clean; a missing one in the same scope warns:
 void test("The one warning is the relative-ref deprecation notice (Track B) for the docu...", async (t) => {
-  // doctest:L221
   const box = await makeTmpBox();
   await box.write(
     "_content/box/notes/Note.doc.card",
@@ -299,7 +291,6 @@ void test("The one warning is the relative-ref deprecation notice (Track B) for 
 // filename type isn't a registered schema (a typo, or a box-local type the test
 // ctx doesn't include) is surfaced as a non-blocking warning rather than failing.
 void test("There's no XML loader fallback anymore:", async (t) => {
-  // doctest:L245
   const box = await makeTmpBox();
   await box.write(
     "_content/inbox/Note.unknowntype.card",
@@ -329,7 +320,6 @@ void test("There's no XML loader fallback anymore:", async (t) => {
 // frontmatter now). It's surfaced as a warning — visible, but non-blocking so one
 // stray card doesn't brick a box's pre-commit/automation:
 void test("A .card with no frontmatter block at all is malformed (every card is frontmat...", async (t) => {
-  // doctest:L266
   const box = await makeTmpBox();
   await box.write("_content/inbox/Broken.doc.card", "this is not a frontmatter card\n");
   const result = await lintCardsDispatch(
@@ -357,7 +347,6 @@ void test("A .card with no frontmatter block at all is malformed (every card is 
 // Commentary is attach-only — it carries no target field; bare `{% source %}`
 // anchors point at the containing host card.
 void test("Commentary is attach-only — it carries no target field; bare {% source %} anc...", async (t) => {
-  // doctest:L288
   const box = await makeTmpBox();
   await box.write(
     "_content/store/review/Plan.attach/Plan.commentary.card",
@@ -387,7 +376,6 @@ void test("Commentary is attach-only — it carries no target field; bare {% sou
 // carrying one (pre-attach drift) loads fine — the key is stripped — and surfaces
 // as an unknown-key warning so it gets cleaned off disk.
 void test("Commentary no longer has defaultHref/defaultRef/targets.", async (t) => {
-  // doctest:L308
   const box = await makeTmpBox();
   await box.write(
     "_content/store/review/Stale.commentary.card",
@@ -420,7 +408,6 @@ void test("Commentary no longer has defaultHref/defaultRef/targets.", async (t) 
 // well-formed card lints clean; a non-`file:` href or a malformed `version` is an
 // error. Whether the href resolves on this machine is *not* checked here.
 void test("An extfile card's href must be a file: URL, and a present version must carry...", async (t) => {
-  // doctest:L332
   const box = await makeTmpBox();
   await box.write(
     "_content/store/review/Good.extfile.card",
@@ -446,7 +433,6 @@ void test("An extfile card's href must be a file: URL, and a present version mus
 
 // A non-`file:` href is an error:
 void test("A non-file: href is an error:", async (t) => {
-  // doctest:L348
   const box = await makeTmpBox();
   await box.write(
     "_content/store/review/BadHref.extfile.card",
@@ -474,7 +460,6 @@ void test("A non-file: href is an error:", async (t) => {
 
 // A malformed `version` (no `sha256:` marker) is an error:
 void test("A malformed version (no sha256: marker) is an error:", async (t) => {
-  // doctest:L364
   const box = await makeTmpBox();
   await box.write(
     "_content/store/review/BadVer.extfile.card",
@@ -507,7 +492,6 @@ void test("A malformed version (no sha256: marker) is an error:", async (t) => {
 // (setup) errors when `mode: forbidden`; a card that trips it surfaces the hook's
 // message, and a card that doesn't lints clean.
 void test("card-lint no longer hardcodes which types get extra validation — it calls sch...", async (t) => {
-  // doctest:L385
   const box = await makeTmpBox();
   await box.write(
     "_content/store/Bad.gadget.card",

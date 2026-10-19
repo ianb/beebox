@@ -63,24 +63,20 @@ class ProbeExplodedError extends Error {
 
 // ## First call computes; calls within the TTL are free
 void test("First call computes; calls within the TTL are free", async (t) => {
-  // doctest:L67
   const clock = { t: 1_000_000 };
   const now = () => clock.t;
   const { probe, compute } = makeProbe();
   const box = "/tmp/box-ttl";
 
-  // doctest:L72
   const first = await getHealthSnapshot(box, { compute, now });
   t.check(`${first.status} runs=${String(probe.runs)}`, "healthy runs=1");
 
-  // doctest:L76
   const second = await getHealthSnapshot(box, { compute, now });
   t.check(`${second.status} runs=${String(probe.runs)}`, "healthy runs=1");
 
   // A break that happens inside the TTL window is not visible yet — that's the
   // deliberate trade:
 
-  // doctest:L85
   probe.status = "unhealthy";
   clock.t += HEALTH_SNAPSHOT_TTL_MS - 1;
   const third = await getHealthSnapshot(box, { compute, now });
@@ -91,12 +87,10 @@ void test("First call computes; calls within the TTL are free", async (t) => {
   // The request that finds the snapshot stale still gets the *old* report — it never
   // waits on the probes — but it starts the refresh, so the next caller sees truth.
 
-  // doctest:L98
   clock.t += 2;
   const stale = await getHealthSnapshot(box, { compute, now });
   t.check(`${stale.status} runs=${String(probe.runs)}`, "healthy runs=2");
 
-  // doctest:L103
   await new Promise((resolve) => setTimeout(resolve, 0));
   const refreshed = await getHealthSnapshot(box, { compute, now });
   t.check(`${refreshed.status} runs=${String(probe.runs)}`, "unhealthy runs=2");
@@ -104,13 +98,11 @@ void test("First call computes; calls within the TTL are free", async (t) => {
 
 // ## Concurrent cold callers compute once
 void test("Concurrent cold callers compute once", async (t) => {
-  // doctest:L112
   const clock = { t: 5_000_000 };
   const now = () => clock.t;
   const { probe, compute } = makeProbe();
   const box = "/tmp/box-concurrent";
 
-  // doctest:L117
   const results = await Promise.all([
     getHealthSnapshot(box, { compute, now }),
     getHealthSnapshot(box, { compute, now }),
@@ -126,27 +118,22 @@ void test("Concurrent cold callers compute once", async (t) => {
 // now, not as it was up to a minute ago. (`bbx health` and `/api/health` don't come
 // through here at all — they call `runHealthChecks` directly.)
 void test("This is the contract deploy runbooks depend on:", async (t) => {
-  // doctest:L134
   const clock = { t: 9_000_000 };
   const now = () => clock.t;
   const { probe, compute } = makeProbe();
   const box = "/tmp/box-fresh";
 
-  // doctest:L139
   await getHealthSnapshot(box, { compute, now });
   probe.status = "degraded";
 
-  // doctest:L142
   const cached = await getHealthSnapshot(box, { compute, now });
   t.check(`${cached.status} runs=${String(probe.runs)}`, "healthy runs=1");
 
-  // doctest:L146
   const fresh = await getHealthSnapshot(box, { compute, now, fresh: true });
   t.check(`${fresh.status} runs=${String(probe.runs)}`, "degraded runs=2");
 
   // A `fresh` run also re-seeds the snapshot, so the next cached read is current:
 
-  // doctest:L154
   const afterFresh = await getHealthSnapshot(box, { compute, now });
   t.check(`${afterFresh.status} runs=${String(probe.runs)}`, "degraded runs=2");
 });
@@ -159,28 +146,24 @@ void test("This is the contract deploy runbooks depend on:", async (t) => {
 // of the TTL — precisely the window a deploy verifier reads. (Found by Codex
 // review, 2026-08-01.)
 void test("Snapshot writes are ordered by when each computation started, not when it fin...", async (t) => {
-  // doctest:L168
   const clock = { t: 20_000_000 };
   const now = () => clock.t;
   const gated = makeGatedProbe();
   const compute = gated.compute;
   const box = "/tmp/box-race";
 
-  // doctest:L174
   const cold = getHealthSnapshot(box, { compute, now });
   gated.call(0).resolve(report("healthy"));
   t.check((await cold).status, "healthy");
 
   // Age the snapshot out, then start a background refresh and leave it hanging:
 
-  // doctest:L183
   clock.t += HEALTH_SNAPSHOT_TTL_MS + 1;
   const stale = await getHealthSnapshot(box, { compute, now });
   t.check(`${stale.status} computes=${String(gated.calls.length)}`, "healthy computes=2");
 
   // A `fresh` call now starts its own computation and finishes first:
 
-  // doctest:L192
   const freshPromise = getHealthSnapshot(box, { compute, now, fresh: true });
   gated.call(2).resolve(report("degraded"));
   t.check((await freshPromise).status, "degraded");
@@ -188,7 +171,6 @@ void test("Snapshot writes are ordered by when each computation started, not whe
   // Now the older background refresh finally lands with a *different* verdict. It
   // must not win:
 
-  // doctest:L202
   gated.call(1).resolve(report("unhealthy"));
   await tick();
   const after = await getHealthSnapshot(box, { compute, now });
@@ -203,7 +185,6 @@ void test("Snapshot writes are ordered by when each computation started, not whe
 // failure is latched and the next reader recomputes in the foreground and gets
 // the error.
 void test("If the refresh behind a stale read throws, the snapshot is no longer merely o...", async (t) => {
-  // doctest:L218
   const clock = { t: 30_000_000 };
   const now = () => clock.t;
   const mode: { status: HealthReport["status"]; fail: boolean; runs: number } = { status: "healthy", fail: false, runs: 0 };
@@ -214,10 +195,8 @@ void test("If the refresh behind a stale read throws, the snapshot is no longer 
   };
   const box = "/tmp/box-refresh-fail";
 
-  // doctest:L228
   t.check((await getHealthSnapshot(box, { compute, now })).status, "healthy");
 
-  // doctest:L231
   clock.t += HEALTH_SNAPSHOT_TTL_MS + 1;
   mode.fail = true;
   const stale = await getHealthSnapshot(box, { compute, now });
@@ -225,18 +204,15 @@ void test("If the refresh behind a stale read throws, the snapshot is no longer 
 
   // The next read no longer hides behind the snapshot:
 
-  // doctest:L241
   await tick();
   t.check(await caught(() => getHealthSnapshot(box, { compute, now })), "ProbeExplodedError: probe exploded");
 
   // And a recovery clears the latch — back to normal cached service:
 
-  // doctest:L249
   mode.fail = false;
   mode.status = "degraded";
   t.check((await getHealthSnapshot(box, { compute, now })).status, "degraded");
 
-  // doctest:L254
   mode.status = "unhealthy";
   t.check((await getHealthSnapshot(box, { compute, now })).status, "degraded");
 });

@@ -28,7 +28,6 @@ void test("A child arms the real observer for an unassigned session, without det
       t.error(error);
     }
   });
-  // doctest:L22
   const box = await makeTmpBox();
   const script = `
 import { observeAssignedSession } from './src/core/chat/session/deliver-user-message.ts';
@@ -45,7 +44,6 @@ console.log('pending:' + registry.listenerCount('session-assigned'));
   // The observer still ignores unrelated assignments, persists the matching ID
   // once, and removes its listener after that assignment.
 
-  // doctest:L41
   const registry = new ChatSessionRegistry(box.root, { backend: createFakeChatBackend() });
   const session = new ChatSession(box.root, { backend: createFakeChatBackend(), sessionFile: null, initialSessionId: "target" });
   const assigned: string[] = [];
@@ -53,13 +51,11 @@ console.log('pending:' + registry.listenerCount('session-assigned'));
   registry.emit("session-assigned", { sessionId: "other" });
   t.check(assigned, []);
 
-  // doctest:L49
   registry.emit("session-assigned", { sessionId: "target" });
   registry.emit("session-assigned", { sessionId: "target" });
   t.check(assigned, [
     "target",
   ]);
 
-  // doctest:L54
   t.check(registry.listenerCount("session-assigned"), 0);
 });

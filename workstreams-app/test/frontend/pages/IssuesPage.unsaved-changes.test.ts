@@ -13,7 +13,6 @@ let confirmations = 0;
 const navigation = { currentRouteId: "/issues", nextRouteId: "/streams" };
 
 void test("line 15", async (t) => {
-  // doctest:L16
   t.check(
     {
       cleanDisabled: clean.disabled,

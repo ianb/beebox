@@ -55,11 +55,9 @@ void test("The request body is the shared contract fixture, posted verbatim.", a
       t.error(error);
     }
   });
-  // doctest:L53
   const phone = await pair("Jamie's iPhone");
   await t.checkText(await register(phone.deviceToken, fixture("request-sandbox.json").input), "204");
 
-  // doctest:L57
   t.check(held(), "Jamie's iPhone sandbox 01234567");
 
   // ## Registering again replaces the token
@@ -67,18 +65,14 @@ void test("The request body is the shared contract fixture, posted verbatim.", a
   // Tokens change on reinstall with no signal, so the phone posts every launch and
   // the latest post wins. An uppercase token is stored lowercase.
 
-  // doctest:L67
   await t.checkText(await register(phone.deviceToken, fixture("request-production-uppercase.json").input), "204");
 
-  // doctest:L70
   await t.checkText(await register(phone.deviceToken, { token: "ABCDEF0123456789", environment: "sandbox" }), "204");
 
-  // doctest:L73
   t.check(held(), "Jamie's iPhone sandbox abcdef01");
 
   // ## The device list shows the registration without the token
 
-  // doctest:L80
   const listed = listMobileDevices(ctx.boxRoot)[0];
   if (listed === undefined) throw new Error("no device listed");
   t.check([listed.label, listed.push?.environment, typeof listed.push?.registeredAt, "apns" in listed, JSON.stringify(listed).includes("abcdef0123456789")], [
@@ -94,11 +88,9 @@ void test("The request body is the shared contract fixture, posted verbatim.", a
   // A phone paired a second time keeps its APNs token, so registering it on the new
   // device clears it from the old record; otherwise every push would arrive twice.
 
-  // doctest:L92
   const repaired = await pair("Jamie's iPhone (re-paired)");
   await t.checkText(await register(repaired.deviceToken, { token: "abcdef0123456789", environment: "sandbox" }), "204");
 
-  // doctest:L96
   t.check(held(), "Jamie's iPhone (re-paired) sandbox abcdef01");
 
   // ## Refusals
@@ -106,16 +98,13 @@ void test("The request body is the shared contract fixture, posted verbatim.", a
   // A bad body is 400, and the registration is unchanged. The fixtures are the
   // contract's refused bodies.
 
-  // doctest:L106
   await t.checkText(await register(repaired.deviceToken, fixture("error-400-environment.json").input), "400 {\"error\":\"Invalid option: expected one of \\\"sandbox\\\"|\\\"production\\\"\"}");
 
-  // doctest:L109
   await t.checkText(await register(repaired.deviceToken, fixture("error-400-token-not-hex.json").input), "400 {\"error\":\"token must be the APNs device token in hex\"}");
 
   // No bearer, a bad bearer, and a revoked device are all 401. The box's auth
   // wall refuses them before the route runs.
 
-  // doctest:L117
   const body = { token: "abcdef0123456789", environment: "sandbox" };
   await revokeMobileDevice(ctx.boxRoot, phone.deviceId);
   await t.checkText(
@@ -133,7 +122,6 @@ void test("The request body is the shared contract fixture, posted verbatim.", a
   // device to register for, and the route refuses it with the contract's error
   // body.
 
-  // doctest:L135
   const open = await makeTestServer({ openAccess: true });
   const response = await open.rawRequest({ method: "POST", url: "/api/pairing/push-token", payload: body });
   await open.cleanup();

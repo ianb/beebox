@@ -19,7 +19,6 @@ import { createGoogleCalendarConnector } from "../../src/connectors/google-calen
 import { loadCalendarState } from "../../src/connectors/google-calendar/state.js";
 import ky from "ky";
 
-
 // Freeze the connector's clock so the sync time-window is deterministic: the
 // fixed-date fixtures below (2026-06-0X) stay inside the 30-day-back window no
 // matter when the suite runs. Without this the tests age out (a June fixture
@@ -144,7 +143,6 @@ after(async () => {
 // the regression bar — the basic-vs-extended date format bug that broke every
 // box's calendar sync would have thrown here).
 void test("Seed the fake with a single recurring weekly event in America/NewYork and sync.", async (t) => {
-  // doctest:L109
   const box = await newBox();
   const calendar = primaryCalendar([
     evt("evt-meeting", { summary: "Weekly sync", start: { dateTime: "2026-06-01T14:00:00-04:00", timeZone: "America/New_York" }, end: { dateTime: "2026-06-01T15:00:00-04:00", timeZone: "America/New_York" }, recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO"] }),
@@ -172,12 +170,10 @@ void test("Seed the fake with a single recurring weekly event in America/NewYork
 // Drop an unrecognized `.ics` into `_content/calendar/`. The connector parses it,
 // inserts it into the fake calendar, and tracks it in state.
 void test("Drop an unrecognized .ics into content/calendar/.", async (t) => {
-  // doctest:L152
   const box = await newBox();
   await box.seed(`${CAL_DIR}/local-new.ics`, localIcs("local-1", { summary: "Locally created" }));
   box.commitAll("seed local ics");
 
-  // doctest:L156
   const calendar = primaryCalendar();
   const result = await connect(box, calendar).sync();
   t.check(result, { success: true, created: [], updated: [], pushed: ["_content/calendar/local-new.ics"] });
@@ -192,7 +188,6 @@ void test("Drop an unrecognized .ics into content/calendar/.", async (t) => {
 // timestamp untouched. Because nothing changed remotely since the last pull, the
 // local edit is pushed up to Google and the local file keeps it.
 void test("Sync an event, edit the local .ics, then sync again with Google's updated tim...", async (t) => {
-  // doctest:L169
   const box = await newBox();
   const calendar = primaryCalendar([lunch()]);
   const connector = connect(box, calendar);
@@ -200,7 +195,6 @@ void test("Sync an event, edit the local .ics, then sync again with Google's upd
   const file = await editFirst(box, { from: "Lunch", to: "Lunch MINE" });
   await connector.sync();
 
-  // doctest:L176
   t.check(calendar.events, [
     {
       id: "evt-lunch",
@@ -223,7 +217,6 @@ void test("Sync an event, edit the local .ics, then sync again with Google's upd
 // overwritten with Google's version, and the change is recorded as a normal
 // update (never a push).
 void test("Sync an event, edit the local .ics, and also change Google's copy with a diff...", async (t) => {
-  // doctest:L189
   const box = await newBox();
   const calendar = primaryCalendar([
     evt("evt-standup", { summary: "Standup", start: { dateTime: "2026-06-02T09:00:00-04:00", timeZone: "America/New_York" }, end: { dateTime: "2026-06-02T09:15:00-04:00", timeZone: "America/New_York" }, updated: "2026-06-01T10:00:00Z" }),
@@ -232,12 +225,10 @@ void test("Sync an event, edit the local .ics, and also change Google's copy wit
   await connector.sync();
   const file = await editFirst(box, { from: "Standup", to: "Standup MINE" });
 
-  // doctest:L200
   // A concurrent remote change with a newer `updated` timestamp.
   calendar.events[0]!.summary = "Standup (rescheduled)";
   calendar.events[0]!.updated = "2026-06-02T10:00:00Z";
 
-  // doctest:L204
   const result = await connector.sync();
   const rewritten = await readIcs(box, file);
   t.check(result, { success: true, created: [], updated: ["_content/calendar/2026-06-02_-standup.ics"] });
@@ -263,11 +254,9 @@ void test("Sync an event, edit the local .ics, and also change Google's copy wit
 // handler cleared the stale one before the refetch stored anew; sync tokens live
 // in the gitignored transient state, so read via the loader).
 void test("Incremental syncs pass Google the stored sync token; when Google reports it e...", async (t) => {
-  // doctest:L224
   const box = await newBox();
   const inner = primaryCalendar([evt("evt-1", { summary: "Planning", start: "2026-06-03T10:00:00Z", end: "2026-06-03T11:00:00Z" })]);
 
-  // doctest:L227
   // Any listEvents call that presents a sync token gets a 410, as Google does
   // for an expired token. Full-window calls pass through.
   let tokenRejections = 0;
@@ -283,7 +272,6 @@ void test("Incremental syncs pass Google the stored sync token; when Google repo
   };
   const connector = connect(box, calendar);
 
-  // doctest:L242
   // First sync: full window (no token yet) — records "fake-sync-token".
   // The second presents the stored token, gets the 410, and falls back to a full sync in the same run.
   const first = await connector.sync();
@@ -304,10 +292,8 @@ void test("Incremental syncs pass Google the stored sync token; when Google repo
 // overall error and commit contain controlled diagnostics, not the thrown event
 // text or token-like detail.
 void test("Each calendar is an independent member of the configured working set.", async (t) => {
-  // doctest:L266
   const box = await newBox({ calendars: ["bad", "good"], syncDaysBack: 30, syncDaysForward: 90 });
 
-  // doctest:L268
   const firstBadEvent = evt("evt-bad-first", { summary: "Written before failure", start: "2026-06-10T09:00:00Z", end: "2026-06-10T10:00:00Z" });
   const poisonBadEvent: CalendarEvent = {
     id: "evt-bad-poison",
@@ -320,7 +306,6 @@ void test("Each calendar is an independent member of the configured working set.
   });
   const goodEvent = evt("evt-good", { summary: "Later calendar still runs", start: "2026-06-12T09:00:00Z", end: "2026-06-12T10:00:00Z" });
 
-  // doctest:L280
   const inner = createFakeGoogleCalendar({
     calendars: [
       { id: "bad", summary: "Bad", accessRole: "owner" },
@@ -343,15 +328,12 @@ void test("Each calendar is an independent member of the configured working set.
     },
   };
 
-  // doctest:L302
   const connector = connect(box, calendar);
   await connector.sync();
 
-  // doctest:L305
   await box.seed(`${CAL_DIR}/local-new.ics`, localIcs("local-after-failure", { summary: "Push after pull failure", date: "20260613" }));
   box.commitAll("seed local orphan");
 
-  // doctest:L308
   exerciseFailure = true;
   const result = await connector.sync();
   const state = await loadCalendarState(box.root);
@@ -426,10 +408,8 @@ _content/calendar/2026-06-12_evt-good.ics`,
 // fails, the connector leaves the invalid token absent, continues later
 // calendars, and never exposes the HTTP request URL containing token material.
 void test("A real 410 clears the stale token and triggers a full retry.", async (t) => {
-  // doctest:L350
   const box = await newBox({ calendars: ["expired", "healthy"] });
 
-  // doctest:L352
   const inner = createFakeGoogleCalendar({
     calendars: [
       { id: "expired", summary: "Expired", accessRole: "owner" },
@@ -454,13 +434,11 @@ void test("A real 410 clears the stale token and triggers a full retry.", async 
     },
   };
 
-  // doctest:L376
   const connector = connect(box, calendar);
   await connector.sync();
   exerciseRetryFailure = true;
   const result = await connector.sync();
 
-  // doctest:L381
   const state = await loadCalendarState(box.root);
   t.check(result, {
     success: false,
@@ -479,21 +457,17 @@ void test("A real 410 clears the stale token and triggers a full retry.", async 
 // sync — is NOT co-committed under the calendar connector's attribution; it stays
 // staged and uncommitted, exactly where the concurrent actor put it.
 void test("The connector builds an EXPLICIT changed-file list and commits exactly it, ra...", async (t) => {
-  // doctest:L402
   const box = await newBox();
   const calendar = primaryCalendar([
     evt("evt-review", { summary: "Review", start: "2026-06-04T15:00:00Z", end: "2026-06-04T16:00:00Z", updated: "2026-06-01T10:00:00Z" }),
   ]);
 
-  // doctest:L407
   // A concurrent actor stages an unrelated file just before the sync commits.
   await writeFile(join(box.root, "notes.md"), "work in progress\n");
   execSync("git add notes.md", { cwd: box.root });
 
-  // doctest:L411
   await connect(box, calendar).sync();
 
-  // doctest:L413
   t.checkText(
     committedFiles(box),
     `_bookkeeping/connectors/google-calendar-state.json
@@ -512,7 +486,6 @@ _content/calendar/2026-06-04_t-review.ics`,
 // a duplicate of every existing event into Google. The load refuses instead, and
 // the sync stops before the push pass runs.
 void test("bookkeeping/connectors/google-calendar-state.json is the index of which .ics...", async (t) => {
-  // doctest:L430
   const box = await newBox();
   const calendar = primaryCalendar([evt("evt-review", { summary: "Review", start: "2026-06-04T09:00:00Z", end: "2026-06-04T10:00:00Z" })]);
   const reviewEvent: CalendarEvent = { id: "evt-review", status: "confirmed", summary: "Review", start: { dateTime: "2026-06-04T09:00:00Z" }, end: { dateTime: "2026-06-04T10:00:00Z" } };
@@ -528,11 +501,9 @@ void test("bookkeeping/connectors/google-calendar-state.json is the index of whi
   // at, and the local `.ics` is still there too — a failed load never touches the
   // store:
 
-  // doctest:L445
   const statePath = join(box.root, "_bookkeeping/connectors/google-calendar-state.json");
   await writeFile(statePath, '{"syncTokens": {}, "eventFiles": {"evt-rev');
 
-  // doctest:L448
   const second = await connector.sync();
   t.check(second, {
     success: false,
@@ -552,19 +523,16 @@ void test("bookkeeping/connectors/google-calendar-state.json is the index of whi
 // failure is now part of the result. The error names the operation, the calendar,
 // and the file still sitting there waiting to be retried.
 void test("An untracked .ics that Google refuses used to warn and continue, so the file...", async (t) => {
-  // doctest:L476
   const box = await newBox();
   await box.seed(`${CAL_DIR}/local-new.ics`, localIcs("local-rejected", { summary: "Rejected push" }));
   box.commitAll("seed local ics");
 
-  // doctest:L480
   const inner = primaryCalendar();
   const calendar: GoogleCalendarService = {
     ...inner,
     insertEvent: async () => throwCalendarHttpError(503, "https://calendar.test/events"),
   };
 
-  // doctest:L486
   const result = await connect(box, calendar).sync();
   t.check(result, {
     success: false,

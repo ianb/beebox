@@ -19,7 +19,6 @@ import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## readLandmarkFeatures — read from a navigation role
 void test("readLandmarkFeatures — read from a navigation role", async (t) => {
-  // doctest:L23
   const navigation = { label: "Daily dump", "chat-app": { narration: "on", prose: "off" } } as const;
   t.check(readLandmarkFeatures(navigation), {
     narration: "on",
@@ -29,7 +28,6 @@ void test("readLandmarkFeatures — read from a navigation role", async (t) => {
 
 // A navigation without a `chat-app` mapping returns an empty map.
 void test("A navigation without a chat-app mapping returns an empty map.", async (t) => {
-  // doctest:L31
   t.check(readLandmarkFeatures({ label: "Plain" }), {});
 });
 
@@ -37,7 +35,6 @@ void test("A navigation without a chat-app mapping returns an empty map.", async
 // depth — the schema rejects them at parse time, but hand-edited cards
 // might bypass validation).
 void test("Unknown features and invalid values are dropped silently (defense in depth —...", async (t) => {
-  // doctest:L40
   // Hand-edited card values that bypass schema validation, so they cannot satisfy the parsed type.
   const navigation: LandmarkNavigationData = JSON.parse(
     '{"label":"x","chat-app":{"narration":"on","bogus":"yes","prose":"maybe"}}',
@@ -56,7 +53,6 @@ void test("readLandmarkFeaturesForDir — find the landmark in a directory", asy
       t.error(error);
     }
   });
-  // doctest:L50
   const box = await makeTmpBox();
   await box.write(
     "_content/store/dump/Daily.landmark.card",
@@ -82,7 +78,6 @@ void test("The shared resolver applies root-landmark values, then explicit chat 
       t.error(error);
     }
   });
-  // doctest:L72
   const box = await makeTmpBox();
   await box.write("_config/box.json", JSON.stringify({ hqDictation: "on" }));
   await box.write(
@@ -91,12 +86,10 @@ void test("The shared resolver applies root-landmark values, then explicit chat 
   );
   t.check(await seedFeaturesForNewChat({ boxRoot: box.root, contextDir: null }), {});
 
-  // doctest:L81
   t.check(await seedFeaturesForNewChat({ boxRoot: box.root, contextDir: "" }), {
     narration: "on",
   });
 
-  // doctest:L84
   t.check(
     await seedFeaturesForNewChat({
       boxRoot: box.root,
@@ -118,7 +111,6 @@ void test("A directory with no landmark card returns null.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L99
   const box = await makeTmpBox();
   await box.write("_content/store/empty/Notes.md", "no landmark here\n");
   t.check(await readLandmarkFeaturesForDir(box.root, "_content/store/empty"), null);
@@ -134,7 +126,6 @@ void test("A landmark without chat-app returns null too — empty seeds and no l
       t.error(error);
     }
   });
-  // doctest:L113
   const box = await makeTmpBox();
   await box.write(
     "_content/store/plain/Plain.landmark.card",
@@ -157,7 +148,6 @@ void test("A contextDir that would resolve outside the box fails closed:", async
       t.error(error);
     }
   });
-  // doctest:L134
   const box = await makeTmpBox();
   await box.write(
     "../outside-marker.landmark.card",

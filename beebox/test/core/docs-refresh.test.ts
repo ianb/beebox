@@ -54,10 +54,8 @@ void test("The first run on a box that has never generated:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L50
   const box = await makeCleanBox();
 
-  // doctest:L52
   const result = await refreshGeneratedDocs({ boxRoot: box.root });
   t.check(
     {
@@ -76,7 +74,6 @@ void test("The first run on a box that has never generated:", async (t) => {
 
   // One measured output commit carries the refresh attribution.
 
-  // doctest:L65
   t.check(git(box, "log", "-1", "--format=%s|%(trailers:key=Created-By,valueonly)"), "Refresh generated docs|docs-refresh");
 });
 
@@ -94,12 +91,10 @@ void test("This runs against every box on every deploy, so the quiet path has to
       t.error(error);
     }
   });
-  // doctest:L81
   const box = await makeCleanBox();
   await refreshGeneratedDocs({ boxRoot: box.root });
   const before = Number(git(box, "rev-list", "--count", "HEAD"));
 
-  // doctest:L85
   const result = await refreshGeneratedDocs({ boxRoot: box.root });
   t.check(
     { result, commits: Number(git(box, "rev-list", "--count", "HEAD")) },
@@ -110,15 +105,12 @@ void test("This runs against every box on every deploy, so the quiet path has to
   // closed first would wait in its drain; this one answers while the work is still
   // running and leaves no maintenance phase behind.
 
-  // doctest:L98
   const busy = await acquireBoxWork(box.root, { reason: "live chat run" });
   const quiet = refreshGeneratedDocs({ boxRoot: box.root }).then((outcome) => outcome.status);
   t.check(await Promise.race([quiet, new Promise((resolve) => setTimeout(() => resolve("still draining"), 3000))]), "current");
 
-  // doctest:L103
   t.check(await boxMaintenanceStatus(box.root), null);
 
-  // doctest:L106
   await busy.release();
 });
 
@@ -137,11 +129,9 @@ void test("What the deploy step exists for:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L122
   const box = await makeCleanBox();
   await refreshGeneratedDocs({ boxRoot: box.root });
 
-  // doctest:L125
   await writeFile(box.path(".claude/rules/card-pdf.md"), "stale rule\n");
   await writeFile(
     box.path(".claude/skills/views/SKILL.md"),
@@ -150,7 +140,6 @@ void test("What the deploy step exists for:", async (t) => {
   await rm(box.path(GENERATE_MARKER));
   box.commitAll("box carries stale generated guidance");
 
-  // doctest:L133
   const result = await refreshGeneratedDocs({ boxRoot: box.root });
   const rule = await box.read(".claude/rules/card-pdf.md");
   const skill = await box.read(".claude/skills/views/SKILL.md");
@@ -174,7 +163,6 @@ void test("Dirty input remains outside the generated-output commit", async (t) =
       t.error(error);
     }
   });
-  // doctest:L152
   const box = await makeCleanBox();
   await box.write("_content/notes.md", "work in progress\n");
   git(box, "add", "_content/notes.md");
@@ -198,7 +186,6 @@ void test("The failed generation has already written files.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L170
   const box = await makeCleanBox();
   const hooks = join(git(box, "rev-parse", "--absolute-git-dir"), "reject-hooks");
   await mkdir(hooks);
@@ -207,14 +194,11 @@ void test("The failed generation has already written files.", async (t) => {
   git(box, "config", "core.hooksPath", hooks);
   await t.checkThrows(async () => (await refreshGeneratedDocs({ boxRoot: box.root })), "DocsRefreshError");
 
-  // doctest:L179
   await t.checkThrows(async () => (await access(box.path(GENERATE_MARKER))), "Error");
 
-  // doctest:L182
   const pending = git(box, "rev-parse", "refs/bbx/migrations/docs-refresh/pending");
   t.check(pending, any(String).matches(/^[\da-f]{40,64}$/));
 
-  // doctest:L186
   git(box, "config", "--unset", "core.hooksPath");
   const result = await refreshGeneratedDocs({ boxRoot: box.root });
   t.check({ result, rules: git(box, "ls-files", ".claude/rules").split("\n"), pending: git(box, "for-each-ref", "--format=%(objectname)", "refs/bbx/migrations/docs-refresh/pending"), status: git(box, "status", "--porcelain") }, {

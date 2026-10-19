@@ -56,18 +56,15 @@ void test("The killed process leaves its guard directory on disk, and it stays t
       t.error(error);
     }
   });
-  // doctest:L52
   const box = await makeTmpBox({ git: true });
   await crashedHolder(box.root, {});
 
-  // doctest:L55
   t.check(existsSync(join(box.root, ".git", "beebox-index.lock.guard")), true);
 
   // The next writer still commits. The budget is shortened so the test does not
   // spend a real minute waiting the dead holder out, which is exactly the situation
   // a hard failure would have turned into an error:
 
-  // doctest:L64
   process.env["BBX_BOX_GIT_LOCK_WAIT_MS"] = "300";
   const warnings: string[] = [];
   const realError = console.error;
@@ -82,26 +79,22 @@ void test("The killed process leaves its guard directory on disk, and it stays t
   console.error = realError;
   delete process.env["BBX_BOX_GIT_LOCK_WAIT_MS"];
 
-  // doctest:L78
   t.check(hash, any(String).matches(/^[\da-f]{40}$/));
 
   // The degradation was announced, not swallowed — it names the dead holder so a
   // reader can tell "a process died holding this" from "the index is genuinely
   // busy":
 
-  // doctest:L87
   t.check(warnings, [
     str`[box-git-lock] could not acquire ${any(String)}/.git/beebox-index.lock within 300ms (held by pid ${any(String)} on ${any(String)} since ${any(String)}). Proceeding WITHOUT the lock: this git operation is not serialized against other writers, and may fail on .git/index.lock or co-commit another writer's staged files. A holder this old is either crashed (its lock clears at the stale window) or is not one of ours — investigate what is holding the box's git index.`,
   ]);
 
   // It landed, and the tree is clean:
 
-  // doctest:L94
   t.check(await getStatus(box.root), { staged: [], modified: [], untracked: [], clean: true });
 
   // And it landed *well* inside the stale window rather than after it. This is the
   // assertion that fails if the lock ever goes back to failing hard on expiry:
 
-  // doctest:L102
   t.check(elapsed, any(Number).between(0, LOCK_STALE_MS.default));
 });

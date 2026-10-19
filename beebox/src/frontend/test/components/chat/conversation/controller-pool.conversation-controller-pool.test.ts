@@ -59,7 +59,6 @@ const boundSession = (sent: Sent | undefined) => (sent?.binding?.target.kind ===
 // API bases must produce separate startup records even though both boxes are
 // named `test1`; production keeps the historical `test1` scope.
 void test("Two worktrees live under one browser origin during development.", async (t) => {
-  // doctest:L61
   const f = fixture();
   const paperTarget = { ...start, clientConversationId: "paper-start" };
   const chatTarget = { ...start, clientConversationId: "chat-start" };
@@ -102,7 +101,6 @@ void test("Two worktrees live under one browser origin during development.", asy
 
 // ## A captured send survives navigation and inactive actors are released
 void test("A captured send survives navigation and inactive actors are released", async (t) => {
-  // doctest:L91
   const f = fixture();
   const first = f.pool.select(session("first"));
   await tick();
@@ -125,7 +123,6 @@ void test("A captured send survives navigation and inactive actors are released"
 
 // ## An unrelated assignment cannot release a fresh conversation's follow-up
 void test("An unrelated assignment cannot release a fresh conversation's follow-up", async (t) => {
-  // doctest:L108
   const f = fixture();
   const first = f.pool.select(start);
   await tick();
@@ -174,7 +171,6 @@ void test("An unrelated assignment cannot release a fresh conversation's follow-
 
 // ## Reload never turns a follow-up into a second fresh start
 void test("Reload never turns a follow-up into a second fresh start", async (t) => {
-  // doctest:L131
   const f = fixture();
   f.pool.select(start);
   await tick();
@@ -221,7 +217,6 @@ void test("Reload never turns a follow-up into a second fresh start", async (t) 
 
 // ## A box switch after upload capture cannot send through the new API prefix
 void test("A box switch after upload capture cannot send through the new API prefix", async (t) => {
-  // doctest:L153
   const f = fixture();
   f.pool.select(session("first"));
   await tick();
@@ -239,7 +234,6 @@ void test("A box switch after upload capture cannot send through the new API pre
 
 // ## Corrupted startup metadata fails closed
 void test("Corrupted startup metadata fails closed", async (t) => {
-  // doctest:L169
   let message = "";
   try {
     new StartRecords({ getItem: () => "{broken", setItem: () => {} }, "test1");
@@ -251,7 +245,6 @@ void test("Corrupted startup metadata fails closed", async (t) => {
 
 // ## A first send during loading waits for the owning stream
 void test("A first send during loading waits for the owning stream", async (t) => {
-  // doctest:L182
   const f = fixture();
   const actor = f.pool.select(start);
   const captured = f.pool.capture(bind(start));
@@ -290,7 +283,6 @@ void test("A first send during loading waits for the owning stream", async (t) =
 
 // ## Two starts only adopt their own stream identities
 void test("Two starts only adopt their own stream identities", async (t) => {
-  // doctest:L196
   const f = fixture();
   const other = { ...start, clientConversationId: "other-start" };
   const first = f.pool.select(start);
@@ -324,7 +316,6 @@ void test("Two starts only adopt their own stream identities", async (t) => {
 
 // ## Suspension releases a locally held follow-up without dispatch
 void test("Suspension releases a locally held follow-up without dispatch", async (t) => {
-  // doctest:L222
   const f = fixture();
   f.pool.select(start);
   await tick();
@@ -367,7 +358,6 @@ void test("Suspension releases a locally held follow-up without dispatch", async
 
 // ## Metadata failures preserve acceptance and don't crash assignment observers
 void test("Metadata failures preserve acceptance and don't crash assignment observers", async (t) => {
-  // doctest:L240
   const f = fixture();
   const originalWrite = f.storage.setItem;
   let writes = 0;
@@ -400,7 +390,6 @@ void test("Metadata failures preserve acceptance and don't crash assignment obse
 
 // ## Storage failure before dispatch never submits the fresh start
 void test("Storage failure before dispatch never submits the fresh start", async (t) => {
-  // doctest:L267
   const f = fixture();
   f.storage.setItem = () => { throw new Error("storage blocked"); };
   f.pool.select(start);
@@ -418,7 +407,6 @@ void test("Storage failure before dispatch never submits the fresh start", async
 
 // ## Effect replay preserves actors; real detach stops them
 void test("Effect replay preserves actors; real detach stops them", async (t) => {
-  // doctest:L283
   const f = fixture();
   const actor = f.pool.select(session("first"));
   await tick();
@@ -438,7 +426,6 @@ void test("Effect replay preserves actors; real detach stops them", async (t) =>
 
 // ## A definitively refused first send is retryable and releases held follow-ups
 void test("A definitively refused first send is retryable and releases held follow-ups", async (t) => {
-  // doctest:L300
   const f = fixture();
   f.holdReceipts();
   const actor = f.pool.select(start);
@@ -475,7 +462,6 @@ void test("A definitively refused first send is retryable and releases held foll
 
 // ## Uncertain rejection releases waiters but keeps restart recovery-only
 void test("Uncertain rejection releases waiters but keeps restart recovery-only", async (t) => {
-  // doctest:L330
   const f = fixture();
   f.holdReceipts();
   const actor = f.pool.select(start);
@@ -525,7 +511,6 @@ void test("Uncertain rejection releases waiters but keeps restart recovery-only"
 
 // ## Restore and edit may start again, but a pre-refusal capture cannot
 void test("Restore and edit may start again, but a pre-refusal capture cannot", async (t) => {
-  // doctest:L354
   const f = fixture();
   f.holdReceipts();
   const actor = f.pool.select(start);
@@ -560,7 +545,6 @@ void test("Restore and edit may start again, but a pre-refusal capture cannot", 
 
 // ## Accepted startup without init has a bounded visible wait and releases its actor
 void test("Accepted startup without init has a bounded visible wait and releases its actor", async (t) => {
-  // doctest:L383
   const f = fixture();
   f.pool.suspend();
   const pool = new ConversationControllerPool("test1", { ...f.options, aliasWaitMs: 50 });

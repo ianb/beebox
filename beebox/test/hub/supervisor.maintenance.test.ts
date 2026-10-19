@@ -35,7 +35,6 @@ void test("line 26", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L27
   const box = await makeTmpBox({ git: true, deps: true });
   const identityFile = box.path(".beebox/fixture-bundle");
   await writeFile(identityFile, "generation one");
@@ -65,7 +64,6 @@ void test("line 26", async (t) => {
   await supervisor.startAll();
   t.check(supervisor.getStatuses()[0]?.status, "running");
 
-  // doctest:L58
   const firstPid = capture(any(Number).positive());
   const firstPort = capture(any(Number).positive());
   const first = supervisor.getStatuses()[0];
@@ -85,17 +83,14 @@ void test("line 26", async (t) => {
   while ((await boxMaintenanceStatus(box.root)) === null && Date.now() < deadline) await delay();
   t.check((await boxMaintenanceStatus(box.root))?.phase, "draining");
 
-  // doctest:L66
   t.check(children.map((child) => child.exitCode), [null]);
 
-  // doctest:L69
   t.check(
     (await fetch(`http://127.0.0.1:${first?.port}/fixture/not-a-route`, { method: "POST" })).status
     ,
     503,
   );
 
-  // doctest:L72
   await accepted.release();
   while ((children.length < 2 || supervisor.getStatuses()[0]?.status !== "running" || (await boxMaintenanceStatus(box.root)) !== null) && Date.now() < deadline) await delay();
   const next = supervisor.getStatuses()[0];
@@ -110,10 +105,8 @@ void test("line 26", async (t) => {
     lastStart: { at: isoDate(), spawnMs: any(Number), readyMs: any(Number) },
   });
 
-  // doctest:L78
   t.check(children[0]?.exitCode, 75);
 
-  // doctest:L81
   t.check(readiness, [
     {
       phase: null,
@@ -125,10 +118,8 @@ void test("line 26", async (t) => {
     },
   ]);
 
-  // doctest:L85
   t.check(await boxMaintenanceStatus(box.root), null);
 
-  // doctest:L88
   t.check(
     (await fetch(`http://127.0.0.1:${next?.port}/api/build-info`)).status
     ,

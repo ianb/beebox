@@ -74,7 +74,6 @@ void test("The callback receives multiple bounded chunks rather than one materia
       t.error(error);
     }
   });
-  // doctest:L71
   const chunks: string[] = [];
   await writeSessionReport({
     logPath,

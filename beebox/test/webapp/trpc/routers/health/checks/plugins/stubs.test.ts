@@ -30,7 +30,6 @@ void test("The regex sees static import/export ...", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L27
   const box = await makeTmpBox();
   await box.write("src/schemas/course.ts", 'import { cardSchema } from "beebox/cards";\nimport courseware from "beebox/plugins/courseware";\n\nexport default cardSchema("course", courseware.schemas["course"]);\n');
   await box.write("src/views/concept-map.tsx", 'export { default } from "beebox/plugins/courseware/view";\n');
@@ -56,7 +55,6 @@ void test("The regex sees static import/export ...", async (t) => {
   // With `courseware` installed and nothing active, each courseware stub warns;
   // the trick's import of a plugin the engine does not have is an error.
 
-  // doctest:L46
   const imports = await scanStubImports(box.root);
   t.check(failing(stubImportChecks({ imports, installed: new Set(["courseware"]), active: new Set(), failures: [] })), [
     {
@@ -82,7 +80,6 @@ void test("The regex sees static import/export ...", async (t) => {
   // (`schema-load-status.ts`); this check surfaces that record for stub files, by
   // the loader's file name within `src/schemas/`.
 
-  // doctest:L62
   const active = new Set(["courseware"]);
   const failures = [{ file: "course.ts", message: "Cannot find package 'beebox/plugins/courseware'", at: "2026-10-10T00:00:00.000Z" }];
   t.check(failing(stubImportChecks({ imports, installed: active, active, failures })).filter((c) => c.name === "plugin-stub-missing"), [
@@ -100,7 +97,6 @@ void test("The regex sees static import/export ...", async (t) => {
 
   // With every import active and loading, both checks report ok:
 
-  // doctest:L74
   t.check(stubImportChecks({ imports: imports.filter((i) => i.plugin === "courseware"), installed: active, active, failures: [] }).map((c) => `${c.name}:${c.ok ? "ok" : "FAIL"}`), [
     "plugin-stub-inactive:ok",
     "plugin-stub-missing:ok",

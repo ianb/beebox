@@ -18,13 +18,11 @@ const card = (path: string): ViewTarget => ({ path, viewer: null, params: {}, vi
 //
 // On the desktop, the opposite of the pane the list renders in:
 void test("On the desktop, the opposite of the pane the list renders in:", async (t) => {
-  // doctest:L22
   t.check(listLinkRoute({ workspace: true, mobile: false, pane: "left" }), {
     kind: "open",
     destinationPane: "right",
   });
 
-  // doctest:L25
   t.check(listLinkRoute({ workspace: true, mobile: false, pane: "right" }), {
     kind: "open",
     destinationPane: "left",
@@ -34,17 +32,14 @@ void test("On the desktop, the opposite of the pane the list renders in:", async
 // On a phone there is one pane; the workspace's own mobile rule places the
 // card, so no destination is named:
 void test("On a phone there is one pane; the workspace's own mobile rule places the card...", async (t) => {
-  // doctest:L33
   await t.checkText(JSON.stringify(listLinkRoute({ workspace: true, mobile: true, pane: "left" })), "{\"kind\":\"open\"}");
 });
 
 // Outside a workspace pane (no workspace, or a surface no pane provides), the
 // link keeps its plain `href`:
 void test("Outside a workspace pane (no workspace, or a surface no pane provides), the l...", async (t) => {
-  // doctest:L41
   t.check(listLinkRoute({ workspace: true, mobile: false, pane: null }).kind, "href");
 
-  // doctest:L44
   t.check(listLinkRoute({ workspace: false, mobile: false, pane: null }).kind, "href");
 });
 
@@ -54,7 +49,6 @@ void test("Outside a workspace pane (no workspace, or a surface no pane provides
 // destination puts the card in the right pane, and the plate stays where it
 // was; without a destination the reducer would have used the originating pane.
 void test("The plate is open in the left pane.", async (t) => {
-  // doctest:L55
   const plate = "_content/plate.todo-view.card";
   const roof = "_content/projects/porch-rebuild/roof.doc.card";
   let state = reduceWorkspace(createEmptyWorkspaceState(), {

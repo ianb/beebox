@@ -41,7 +41,6 @@ const today = (short: string) => str`_content/chat/web/${any(String).matches(/^\
 // on the card. A brand-new session has no readable transcript yet, so the
 // husk starts untitled.
 void test("The session field carries the association; there is no activity state on the...", async (t) => {
-  // doctest:L31
   const box = await makeTmpBox();
   const path = await ensureChatHusk(box.root, {
     sessionId: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869",
@@ -50,7 +49,6 @@ void test("The session field carries the association; there is no activity state
   });
   t.check(path, "_content/chat/web/2026-07-02_59fc20dd.chat.card");
 
-  // doctest:L40
   t.checkText(await box.read(path), `---
 session: 59fc20dd-fe6d-45cb-8f37-f1508a5a0869
 context-dir: _content/projects
@@ -63,7 +61,6 @@ origin-name: ${name}
   //
   // Even with a different date: the field, not the file name, is the key.
 
-  // doctest:L60
   t.check(
     await ensureChatHusk(box.root, {
       sessionId: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869",
@@ -72,13 +69,11 @@ origin-name: ${name}
     "_content/chat/web/2026-07-02_59fc20dd.chat.card",
   );
 
-  // doctest:L66
   t.check(
     await findChatHuskEntry(box.root, "59fc20dd-fe6d-45cb-8f37-f1508a5a0869"),
     stamped({ path: "_content/chat/web/2026-07-02_59fc20dd.chat.card", session: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869", contextDir: "_content/projects" }),
   );
 
-  // doctest:L69
   t.check(await findChatHuskEntry(box.root, "00000000-0000-4000-8000-000000000000"), null);
 
   // Renaming the husk to a name with no `_<shortid>` suffix is safe — renaming is
@@ -87,7 +82,6 @@ origin-name: ${name}
   // (`issues/bugs/2026-07-28-renamed-husk-duplicates-on-backfill.md`). The suffix is
   // only a lookup hint; when it misses, the `session`-field scan finds the card.
 
-  // doctest:L80
   await rename(box.path("_content/chat/web/2026-07-02_59fc20dd.chat.card"), box.path("_content/chat/web/Planning the trip.chat.card"));
   t.check(
     await ensureChatHusk(box.root, {
@@ -97,7 +91,6 @@ origin-name: ${name}
     "_content/chat/web/Planning the trip.chat.card",
   );
 
-  // doctest:L87
   t.check(await listChatHusks(box.root), [
     stamped({ path: "_content/chat/web/Planning the trip.chat.card", session: "59fc20dd-fe6d-45cb-8f37-f1508a5a0869", contextDir: "_content/projects" }),
   ]);
@@ -113,7 +106,6 @@ origin-name: ${name}
 // the session chip. So the title goes through `extractSnippet`, the one cleaning
 // step between a raw user message and a display label.
 void test("A stored user message is wrapped twice over:", async (t) => {
-  // doctest:L102
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("projects");
   const titled = "cccc1111-2222-3333-4444-555566667777";
@@ -136,7 +128,6 @@ first-message: Please reply with just the word ok.
   // carries the `<typed>` shell with the sender's identity on it. None of that
   // belongs in the stored snippet:
 
-  // doctest:L127
   const web = "dddd1111-2222-3333-4444-555566667777";
   const webLog = getSessionLogPath(box.root, web);
   await mkdir(dirname(webLog), { recursive: true });
@@ -166,7 +157,6 @@ void test("Transcript discovery honors BBXCLAUDEPROJECTSDIR; a history entry who
       t.error(error);
     }
   });
-  // doctest:L150
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("projects");
   const live = "aaaa1111-2222-3333-4444-555566667777";
@@ -179,15 +169,12 @@ void test("Transcript discovery honors BBXCLAUDEPROJECTSDIR; a history entry who
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, "{}\n");
 
-  // doctest:L162
   await reconcileChatHusks(box.root);
   const liveHusk = await findChatHuskEntry(box.root, live);
   t.check(liveHusk, stamped({ path: today("aaaa1111"), session: live }));
 
-  // doctest:L167
   t.check(await findChatHuskEntry(box.root, ghost), null);
 
-  // doctest:L170
   t.checkText(await readFsFile(box.path(liveHusk?.path ?? ""), "utf-8"), `---
 session: ${live}
 engine: claude
@@ -200,7 +187,6 @@ origin-name: ${name}
   // history backfill may still have been writing entries during an earlier pass —
   // is repaired by the next one instead of staying invisible forever.
 
-  // doctest:L180
   const late = "cccc1111-2222-3333-4444-555566667777";
   const lateLog = getSessionLogPath(box.root, late);
   await mkdir(dirname(lateLog), { recursive: true });
@@ -210,13 +196,11 @@ origin-name: ${name}
     migrated: true,
   }));
 
-  // doctest:L189
   await reconcileChatHusks(box.root);
   t.check(await findChatHuskEntry(box.root, late), stamped({ path: today("cccc1111"), session: late }));
 
   // An already-husked session is left exactly as it was — no duplicate card.
 
-  // doctest:L197
   const before = await listChatHusks(box.root);
   await reconcileChatHusks(box.root);
   const again = await listChatHusks(box.root);
@@ -232,7 +216,6 @@ origin-name: ${name}
 // editorially gone from the picker. Files without a `session` field are
 // skipped.
 void test("The picker reads husks, not the history file:", async (t) => {
-  // doctest:L216
   const box = await makeTmpBox();
   await ensureChatHusk(box.root, {
     sessionId: "aaaa1111-0000-0000-0000-000000000000",
@@ -261,7 +244,6 @@ title: Planning the garden
 // session, naming the paths. It doesn't pick a winner: which husk keeps the
 // chat's title and body is the boxholder's call.
 void test("Two husks claiming one session is no longer created — ensure is idempotent on...", async (t) => {
-  // doctest:L255
   const box = await makeTmpBox();
   const dup = "59fc20dd-fe6d-45cb-8f37-f1508a5a0869";
   await box.write("_content/chat/web/2026-07-02_59fc20dd.chat.card", `---\nsession: ${dup}\n---\n`);
@@ -269,17 +251,14 @@ void test("Two husks claiming one session is no longer created — ensure is ide
   await box.write("_content/chat/web/2026-07-03_aaaa9999.chat.card",
     "---\nsession: aaaa9999-fe6d-45cb-8f37-f1508a5a0869\n---\n");
 
-  // doctest:L262
   const warnings: string[] = [];
   const original = console.warn;
   console.warn = (msg: string) => { warnings.push(msg); };
   await reconcileChatHusks(box.root);
   console.warn = original;
 
-  // doctest:L268
   t.check(warnings, ["chat-husk: 2 husks claim session 59fc20dd-fe6d-45cb-8f37-f1508a5a0869 (_content/chat/web/2026-07-02_59fc20dd.chat.card, _content/chat/web/Copied.chat.card) — keep one and `bbx trash` the others"]);
 
-  // doctest:L271
   t.check(await listChatHusks(box.root), [
     { path: "_content/chat/web/2026-07-02_59fc20dd.chat.card", session: dup },
     { path: "_content/chat/web/2026-07-03_aaaa9999.chat.card", session: "aaaa9999-fe6d-45cb-8f37-f1508a5a0869" },
@@ -303,7 +282,6 @@ void test("A husk from before origin existed gets it on the first boot of the ma
       t.error(error);
     }
   });
-  // doctest:L285
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("projects");
   const here = "eeee1111-2222-3333-4444-555566667777";
@@ -328,7 +306,6 @@ title: Old trip
   await writeFile(hereLog, "{}\n");
 
   await reconcileChatHusks(box.root);
-  // doctest:L308
   t.checkText(await box.read("_content/chat/web/Kitchen redo.chat.card"), `---
 session: eeee1111-2222-3333-4444-555566667777
 title: Kitchen redo
@@ -342,13 +319,11 @@ Decided on the tile in this chat.`);
   // unstamped — "unknown" is honest, and a guessed origin would make an expired
   // chat look like it lives somewhere it doesn't.
 
-  // doctest:L325
   t.checkText(await box.read("_content/chat/web/Old trip.chat.card"), `---
 session: ffff1111-2222-3333-4444-555566667777
 title: Old trip
 ---`);
 
-  // doctest:L331
   const kitchen = await box.read("_content/chat/web/Kitchen redo.chat.card");
   await reconcileChatHusks(box.root);
   t.check(await box.read("_content/chat/web/Kitchen redo.chat.card"), kitchen);

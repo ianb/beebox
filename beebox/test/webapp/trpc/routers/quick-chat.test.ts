@@ -32,7 +32,6 @@ void test("line 26", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L27
   const box = await makeTmpBox();
   const api = caller(box.root);
   t.check(
@@ -48,6 +47,5 @@ void test("line 26", async (t) => {
   ],
   );
 
-  // doctest:L36
   t.check((await readdir(box.root, { recursive: true })).filter((entry) => entry.includes("quick-chat")), []);
 });

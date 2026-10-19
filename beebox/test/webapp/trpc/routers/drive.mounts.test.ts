@@ -123,7 +123,6 @@ void test("An empty list means two different things — no mounts yet, or Google
       t.error(error);
     }
   });
-  // doctest:L102
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   t.check(await caller(box.root).drive.mounts(), {
@@ -146,19 +145,16 @@ void test("mount writes the .gfolder.card and runs one mirror pass, so by the ti
       t.error(error);
     }
   });
-  // doctest:L120
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   const c = caller(box.root, { drive: recipesDrive() });
 
-  // doctest:L124
   const mounted = await c.drive.mount({
     url: "https://drive.google.com/drive/folders/folder-1",
     dir: "_content/drive/recipes",
   });
   t.check(mounted, RECIPES_MOUNTED);
 
-  // doctest:L133
   const listed = await c.drive.mounts();
   t.check(listed, {
     connected: true,
@@ -184,7 +180,6 @@ void test("mount writes the .gfolder.card and runs one mirror pass, so by the ti
   // `syncFolder` mirrors that same mount again on demand. Nothing changed upstream,
   // so the pass creates nothing and re-stamps the card.
 
-  // doctest:L162
   const synced = await c.drive.syncFolder({ cardPath: "_content/drive/recipes/Recipes.gfolder.card" });
   t.check(synced, {
     created: [],
@@ -198,7 +193,6 @@ void test("mount writes the .gfolder.card and runs one mirror pass, so by the ti
   // `link` writes a pointer to any Drive item, copying nothing. It is a separate
   // mount from the mirror, so it can sit anywhere in the box.
 
-  // doctest:L176
   const linked = await c.drive.link({ url: "https://drive.google.com/file/d/deck-9/view", path: "_content/notes/Kickoff" });
   t.check(linked, {
     cardPath: "_content/notes/Kickoff.glink.card",
@@ -209,7 +203,6 @@ void test("mount writes the .gfolder.card and runs one mirror pass, so by the ti
   // Pointing a second card at something the mirror already speaks for is refused —
   // one Drive ID, one card.
 
-  // doctest:L185
   t.check(
     await refusal(c.drive.link({ url: "https://drive.google.com/file/d/pdf-1/view", path: "_content/notes/Scan" }))
     ,
@@ -231,19 +224,16 @@ void test("The context knows how the request authenticated, so the commit says s
       t.error(error);
     }
   });
-  // doctest:L201
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   const agent = caller(box.root, { drive: recipesDrive(), actor: "agent" });
 
-  // doctest:L205
   await agent.drive.mount({ url: "https://drive.google.com/drive/folders/folder-1", dir: "_content/drive/recipes" });
   t.check(await lastTrigger(box.root), "agent");
 
   // A pointer written from the settings page is the same commit shape with the other
   // actor — one mechanism, not a second record.
 
-  // doctest:L214
   await caller(box.root, { drive: recipesDrive(), actor: "user" }).drive.link({
     url: "https://drive.google.com/file/d/deck-9/view",
     path: "_content/notes/Kickoff",
@@ -254,7 +244,6 @@ void test("The context knows how the request authenticated, so the commit says s
   // actor joins it rather than replacing it, so one commit answers both "what
   // happened" and "who asked".
 
-  // doctest:L227
   await agent.drive.unmount({ cardPath: "_content/drive/recipes/Recipes.gfolder.card" });
   t.check(await lastTrigger(box.root), "agent");
 });
@@ -273,20 +262,16 @@ void test("Unmounting is bbx rm on the mount card.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L244
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   const c = caller(box.root, { drive: recipesDrive() });
   await c.drive.mount({ url: "https://drive.google.com/drive/folders/folder-1", dir: "_content/drive/recipes" });
 
-  // doctest:L249
   const removed = await c.drive.unmount({ cardPath: "_content/drive/recipes/Recipes.gfolder.card" });
   t.check(removed, { cardPath: "_content/drive/recipes/Recipes.gfolder.card", trashedTo: "_bookkeeping/trash/Recipes.gfolder.card" });
 
-  // doctest:L255
   t.check((await c.drive.mounts()).mounts, []);
 
-  // doctest:L258
   // The Sheet and the pointer are untouched.
   t.check((await box.list()).split("\n").filter((p) => p.startsWith("_content/drive/recipes/") && p.endsWith(".card")), [
     "_content/drive/recipes/Budget_2026.gsheet.card",
@@ -308,12 +293,10 @@ void test("Everything the mount operations refuse is something the person who as
       t.error(error);
     }
   });
-  // doctest:L275
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   const c = caller(box.root, { drive: recipesDrive() });
 
-  // doctest:L279
   t.check(
     await refusal(c.drive.mount({ url: "https://example.com/nope", dir: "_content/drive/x" }))
     ,
@@ -322,7 +305,6 @@ void test("Everything the mount operations refuse is something the person who as
 
   // A Drive URL that is not a folder names the command that would work instead.
 
-  // doctest:L286
   t.check(
     await refusal(c.drive.mount({ url: "https://drive.google.com/file/d/pdf-1/view", dir: "_content/drive/x" }))
     ,
@@ -332,10 +314,8 @@ void test("Everything the mount operations refuse is something the person who as
   // `syncFolder` on something that is not a mount card is the same kind of refusal —
   // a stale page, or a mount someone removed in between.
 
-  // doctest:L294
   t.check(await refusal(c.drive.syncFolder({ cardPath: "_content/drive/recipes/Missing.gfolder.card" })), "BAD_REQUEST: _content/drive/recipes/Missing.gfolder.card is not a Drive folder mount card");
 
-  // doctest:L297
   t.check(await refusal(c.drive.syncFolder({ cardPath: "_content/notes/Plan.doc.card" })), "BAD_REQUEST: _content/notes/Plan.doc.card is not a Drive folder mount card");
 
   // ## A path that climbs out of the box is refused before anything is written
@@ -344,27 +324,23 @@ void test("Everything the mount operations refuse is something the person who as
   // `..` that escapes the box and never clamps it back to the root. The refusal
   // names the input so a typo is fixable.
 
-  // doctest:L308
   t.check(
     await refusal(c.drive.mount({ url: "https://drive.google.com/drive/folders/folder-1", dir: "../outside" }))
     ,
     "BAD_REQUEST: The target directory must be a path inside the box: ../outside",
   );
 
-  // doctest:L311
   t.check(
     await refusal(c.drive.link({ url: "https://drive.google.com/file/d/pdf-1/view", path: "/" }))
     ,
     "BAD_REQUEST: The pointer path must be a path inside the box: /",
   );
 
-  // doctest:L314
   t.check(await code(c.drive.unmount({ cardPath: "../../etc/passwd" })), "BAD_REQUEST");
 
   // A leading `/` is box-root-absolute, not filesystem-absolute — the one spelling
   // that looks like an escape and is not.
 
-  // doctest:L322
   const rooted = await c.drive.mount({
     url: "https://drive.google.com/drive/folders/folder-1",
     dir: "/_content/drive/recipes",
@@ -386,12 +362,10 @@ void test("The verification step the 2026-09-14 incident lacked.", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L342
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   const c = caller(box.root, { drive: recipesDrive() });
 
-  // doctest:L346
   const folder = await c.drive.inspect({ url: "https://drive.google.com/drive/folders/folder-1" });
   t.check(folder, {
     id: "folder-1",
@@ -408,7 +382,6 @@ void test("The verification step the 2026-09-14 incident lacked.", async (t) => 
   // A Sheet names the card type a sync would write, and the handler's own preview
   // comes through — which is how the CLI can print tabs without a second call.
 
-  // doctest:L355
   const sheet = await c.drive.inspect({ url: "https://drive.google.com/file/d/sheet-1/view" });
   t.check(sheet, {
     id: "sheet-1",
@@ -425,7 +398,6 @@ void test("The verification step the 2026-09-14 incident lacked.", async (t) => 
   // Once the folder is mirrored, the same inspect names the card that claims it —
   // so "is this already mounted?" stops being a guess.
 
-  // doctest:L370
   await c.drive.mount({ url: "https://drive.google.com/drive/folders/folder-1", dir: "_content/drive/recipes" });
   t.check(
     (await c.drive.inspect({ url: "https://drive.google.com/file/d/sheet-1/view" })).claimedBy
@@ -437,7 +409,6 @@ void test("The verification step the 2026-09-14 incident lacked.", async (t) => 
 
   // An unreadable input is the caller's mistake, not a Drive outage.
 
-  // doctest:L378
   t.check(
     await refusal(c.drive.inspect({ url: "https://example.com/nope" }))
     ,
@@ -458,12 +429,10 @@ void test("The file verb.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L393
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   const c = caller(box.root, { drive: recipesDrive() });
 
-  // doctest:L397
   const added = await c.drive.add({ url: "https://drive.google.com/file/d/sheet-1/view", path: "_content/budget" });
   t.check(added, {
     cardPath: "_content/budget.gsheet.card",
@@ -472,14 +441,12 @@ void test("The file verb.", async (t) => {
     written: ["_content/budget.attach/Sheet1.json", "_content/budget.gsheet.card"],
   });
 
-  // doctest:L403
   t.check((await box.list()).split("\n"), containing(["_content/budget.gsheet.card"]));
 
   // A second card for one Drive id is refused: transient state is keyed by id while
   // attachments are per-card, so two cards are two working copies that overwrite
   // each other upstream.
 
-  // doctest:L412
   t.check(
     await refusal(c.drive.add({ url: "https://drive.google.com/file/d/sheet-1/view", path: "_content/budget-again" }))
     ,
@@ -489,14 +456,12 @@ void test("The file verb.", async (t) => {
   // A type nothing syncs two-way names the verb that would work instead, and a path
   // that climbs out of the box is refused before anything is written.
 
-  // doctest:L420
   t.check(
     await refusal(c.drive.add({ url: "https://drive.google.com/file/d/pdf-1/view", path: "_content/scan" }))
     ,
     "BAD_REQUEST: Scan.pdf is a application/pdf, which nothing syncs two-way — use `bbx drive link` to point at it, or `bbx drive mount` if it is a folder",
   );
 
-  // doctest:L423
   t.check(
     await refusal(c.drive.add({ url: "https://drive.google.com/file/d/sheet-1/view", path: "../outside" }))
     ,
@@ -505,7 +470,6 @@ void test("The file verb.", async (t) => {
 
   // ## list browses Drive without writing anything
 
-  // doctest:L430
   t.check(
     (await c.drive.list({ folder: "https://drive.google.com/drive/folders/folder-1" })).map((f) => f.name).toSorted()
     ,
@@ -517,7 +481,6 @@ void test("The file verb.", async (t) => {
 
   // An unreadable folder id is a BAD_REQUEST like every other bad input, not a 500.
 
-  // doctest:L437
   t.check(
     await code(c.drive.list({ folder: "https://example.com/nope" }))
     ,

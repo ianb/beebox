@@ -31,26 +31,21 @@ async function staged(box: TmpBox) {
 }
 
 void test("line 28", async (t) => {
-  // doctest:L29
   const box = await makeTmpBox({git:true});
   t.check(await acceptQuickCapture({boxRoot:box.root,id,owner:"owner@example.test",declaration}), {
     id: "11111111-1111-4111-8111-111111111111",
     state: "accepted",
   });
 
-  // doctest:L33
   t.check(await acceptQuickCapture({boxRoot:box.root,id,owner:"owner@example.test",declaration}), {
     id: "11111111-1111-4111-8111-111111111111",
     state: "accepted",
   });
 
-  // doctest:L36
   await t.checkThrows(async () => (await acceptQuickCapture({boxRoot:box.root,id,owner:"other@example.test",declaration})), "QuickCaptureError: This capture belongs to another user.");
 
-  // doctest:L39
   await t.checkThrows(async () => (await acceptQuickCapture({boxRoot:box.root,id,owner:"owner@example.test",declaration:{...declaration,input:"Changed"}})), "QuickCaptureError: This capture ID already belongs to different content.");
 
-  // doctest:L42
   const raw = present(await readCapture(box.root,id));
   t.check(raw, {
     id,
@@ -62,31 +57,25 @@ void test("line 28", async (t) => {
     attempts: 0,
   });
 
-  // doctest:L46
   await box.cleanup();
 });
 
 // Incomplete declarations never seal. The exact material and instructions are
 // preserved together, and a restart can recover materialization.
 void test("Incomplete declarations never seal.", async (t) => {
-  // doctest:L53
   const box = await makeTmpBox({git:true});
   await t.checkThrows(async () => (await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:image})), "QuickCaptureError: The complete declared material was not received.");
 
-  // doctest:L57
   const bytes = await staged(box);
   await t.checkThrows(async () => (await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:image,bytes:{...bytes,size:2}})), "QuickCaptureError: The complete declared material was not received.");
 
-  // doctest:L61
   t.check(await readCapture(box.root,id), null);
 
-  // doctest:L64
   t.check(await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:image,bytes}), {
     id: "11111111-1111-4111-8111-111111111111",
     state: "accepted",
   });
 
-  // doctest:L67
   const record = present(await processCapture({boxRoot:box.root,jev:undefined,chat:undefined},id));
   t.check(record, {
     id,
@@ -103,13 +92,10 @@ void test("Incomplete declarations never seal.", async (t) => {
   // A capture with words is routed to a chat, which files it, so its source waits
   // in the git-ignored incoming folder: written, and not in git yet.
 
-  // doctest:L76
   t.check(execFileSync("git",["status","--porcelain","--untracked-files=all"],{cwd:box.root,encoding:"utf8"}).split("\n").filter(Boolean), []);
 
-  // doctest:L79
   t.check(await readFile(join(captureDirectory(box.root,id),"material"),"utf8"), "abc");
 
-  // doctest:L82
   const replay = present(await processCapture({boxRoot:box.root,jev:undefined,chat:undefined},id));
   t.check(replay, {
     id,
@@ -123,14 +109,12 @@ void test("Incomplete declarations never seal.", async (t) => {
     sourceCommitted: true,
   });
 
-  // doctest:L86
   await box.cleanup();
 });
 
 // Identity follows a filed doc. Removing a committed source creates a terminal
 // Gone receipt; replay cannot recreate the old source path.
 void test("Identity follows a filed doc.", async (t) => {
-  // doctest:L93
   const box = await makeTmpBox({git:true});
   const saved = {...declaration,input:undefined,material:clipping.material};
   await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:saved});
@@ -148,14 +132,11 @@ void test("Identity follows a filed doc.", async (t) => {
     filingRequested: true,
   });
 
-  // doctest:L100
   await writeCapture(box.root,{...first,sourceRef:"../../etc/passwd"});
   await t.checkThrows(async () => (await reconcileCaptureSource(box.root,id)), "QuickCaptureError: The saved source reference is invalid.");
 
-  // doctest:L103
   await writeCapture(box.root,first);
 
-  // doctest:L105
   await mkdir(box.path("_content/filed"),{recursive:true});
   await rename(box.path(present(first.sourceRef)),box.path("_content/filed/source.doc.card"));
   const filed = present(await reconcileCaptureSource(box.root,id));
@@ -172,7 +153,6 @@ void test("Identity follows a filed doc.", async (t) => {
     filingRequested: true,
   });
 
-  // doctest:L111
   t.check(present(await readCapture(box.root,id)), {
     id,
     owner: null,
@@ -186,7 +166,6 @@ void test("Identity follows a filed doc.", async (t) => {
     filingRequested: true,
   });
 
-  // doctest:L114
   // A duplicate elsewhere must not trigger a scan when the stored reference is valid.
   const sourceText=await readFile(box.path(present(filed.sourceRef)),"utf8");
   await writeFile(box.path("_content/filed/copy.doc.card"),sourceText);
@@ -203,12 +182,10 @@ void test("Identity follows a filed doc.", async (t) => {
     filingRequested: true,
   });
 
-  // doctest:L120
   await rm(box.path("_content/filed/copy.doc.card"));
   await rm(box.path(present(filed.sourceRef)));
   await t.checkThrows(async () => (await acceptQuickCapture({boxRoot:box.root,id,owner:null,declaration:saved})), "QuickCaptureError: This capture was deleted. It cannot be recreated by retrying.");
 
-  // doctest:L125
   t.check(present(await readCapture(box.root,id)), {
     id,
     owner: null,
@@ -223,7 +200,6 @@ void test("Identity follows a filed doc.", async (t) => {
     filingRequested: true,
   });
 
-  // doctest:L128
   await writeFile(box.path("_content/filed/copy.doc.card"),sourceText);
   const terminal=present(await reconcileCaptureSource(box.root,id));
   t.check(terminal, {
@@ -240,6 +216,5 @@ void test("Identity follows a filed doc.", async (t) => {
     filingRequested: true,
   });
 
-  // doctest:L133
   await box.cleanup();
 });

@@ -22,7 +22,6 @@ void test("line 16", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L17
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const registry = new ChatSessionRegistry(box.root, { backend, buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }) });
@@ -41,14 +40,11 @@ void test("line 16", async (t) => {
   await committed;
   t.check(await earlyCheck, "ExactSessionTargetError");
 
-  // doctest:L36
   t.check(await assertExactSessionTarget(ctx, id), undefined);
 
-  // doctest:L39
   registry.deletion.begin(id);
   await t.checkThrows(async () => (await assertExactSessionTarget(ctx, id)), "UnavailableChatSessionError");
 
-  // doctest:L43
   registry.deletion.cancel(id);
   await t.checkThrows(async () => (await assertExactSessionTarget(ctx, "unknown-id")), "ExactSessionTargetError");
 });

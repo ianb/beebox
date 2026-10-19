@@ -9,7 +9,6 @@ import path from "node:path";
 import { blocklistCandidates } from "../commit-blocklist-check.js";
 
 void test("line 11", async (t) => {
-  // doctest:L12
   t.check(
     blocklistCandidates({
       repoRoot: "/src/worktrees/topic",
@@ -22,7 +21,6 @@ void test("line 11", async (t) => {
   ],
   );
 
-  // doctest:L19
   t.check(
     blocklistCandidates({
       repoRoot: "/src/main",
@@ -34,7 +32,6 @@ void test("line 11", async (t) => {
   ],
   );
 
-  // doctest:L26
   t.check(
     blocklistCandidates({
       repoRoot: "/src/main",

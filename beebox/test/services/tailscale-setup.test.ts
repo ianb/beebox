@@ -177,7 +177,6 @@ const noWaitIo: SetupIo = { interactive: false, log: () => {}, waitForContinue: 
 // a 503, or `{open:true}` are each refused (open / ambiguous) — a generic proxy or
 // unrelated service never passes as a protected beebox.
 void test("A {error:…} 401 or an authenticated-user body (email + isOwner + boxes) ⇒ enf...", async (t) => {
-  // doctest:L170
   t.check(
     [
       classifyAuthPosture({ reachable: false, status: null }),
@@ -198,7 +197,6 @@ void test("A {error:…} 401 or an authenticated-user body (email + isOwner + bo
 // Serve unconfigured, auth enforced: setup configures serve, re-verifies to
 // `ready`, records the exposure entry, and reports the working URL.
 void test("Serve unconfigured, auth enforced:", async (t) => {
-  // doctest:L198
   const state: SimState = { status: runningStatus, serve: {}, probe: enforced401 };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: noWaitIo });
@@ -221,7 +219,6 @@ void test("Serve unconfigured, auth enforced:", async (t) => {
 // If the `tailscale serve` write fails AFTER intent is recorded, the intent STAYS
 // (over-recording is the fail-closed direction — the startup guard/stop heals it).
 void test("If the tailscale serve write fails AFTER intent is recorded, the intent STAYS...", async (t) => {
-  // doctest:L240
   const state: SimState = { status: runningStatus, serve: {}, probe: enforced401, bgCode: 1 };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3230 }, io: noWaitIo });
@@ -237,7 +234,6 @@ void test("If the tailscale serve write fails AFTER intent is recorded, the inte
 
 // ## Idempotent: a second run reaches the same state, no duplicate intent
 void test("Idempotent: a second run reaches the same state, no duplicate intent", async (t) => {
-  // doctest:L258
   const state: SimState = { status: runningStatus, serve: {}, probe: enforced401 };
   const sim = makeServeSim(state);
   await runTailscaleSetup(sim.deps, { target: { port: 3211 }, io: noWaitIo });
@@ -255,7 +251,6 @@ void test("Idempotent: a second run reaches the same state, no duplicate intent"
 // A pre-existing foreign mapping (another service on host:8443) survives setup;
 // the new host:443 mapping is added alongside it.
 void test("A pre-existing foreign mapping (another service on host:8443) survives setup;...", async (t) => {
-  // doctest:L275
   const foreign = {
     Web: { "box.tail1234.ts.net:8443": { Handlers: { "/": { Proxy: "http://127.0.0.1:5000" } } } },
   };
@@ -287,7 +282,6 @@ void test("A pre-existing foreign mapping (another service on host:8443) survive
 // The loopback `/auth/me` probe reports `{ open: true }` — setup refuses, never
 // issues a serve command, and records no intent.
 void test("The loopback /auth/me probe reports { open:", async (t) => {
-  // doctest:L297
   const state: SimState = {
     status: runningStatus,
     serve: {},
@@ -304,11 +298,9 @@ void test("The loopback /auth/me probe reports { open:", async (t) => {
 
 // ## Guard: refuse on an unreachable, ambiguous, generic-401, or random-JSON probe
 void test("Guard: refuse on an unreachable, ambiguous, generic-401, or random-JSON probe", async (t) => {
-  // doctest:L321
   const unreachable = makeServeSim({ status: runningStatus, serve: {}, probe: { reachable: false, status: null } });
   const r1 = await runTailscaleSetup(unreachable.deps, { target: { port: 3221 }, io: noWaitIo });
 
-  // doctest:L324
   const generic401 = makeServeSim({ status: runningStatus, serve: {}, probe: { reachable: true, status: 401, body: "Unauthorized" } });
   const r2 = await runTailscaleSetup(generic401.deps, { target: { port: 3222 }, io: noWaitIo });
 
@@ -327,7 +319,6 @@ void test("Guard: refuse on an unreachable, ambiguous, generic-401, or random-JS
 // If `/__router/status` answers with the dev router's status JSON, setup refuses —
 // the router fronts every worktree and is never a valid Tailscale target.
 void test("If /router/status answers with the dev router's status JSON, setup refuses —...", async (t) => {
-  // doctest:L347
   const state: SimState = {
     status: runningStatus,
     serve: {},
@@ -349,7 +340,6 @@ void test("If /router/status answers with the dev router's status JSON, setup re
 // PROVES the denial over the served tailnet path before recording exposure — the
 // exposure entry lands ONLY after the served anonymous probe returns 401 + header.
 void test("A Track-B-guarded router (loopback /router/status denies anonymously with 401...", async (t) => {
-  // doctest:L371
   const state: SimState = { status: runningStatus, serve: {}, routerProbe: guardedRouterProbe };
   const sim = makeServeSim(state);
   const result = await runTailscaleSetup(sim.deps, { target: { port: 3210 }, io: noWaitIo });
@@ -378,7 +368,6 @@ void test("The FIRST tailscale serve --https=443 triggers Let's Encrypt cert iss
       t.error(error);
     }
   });
-  // doctest:L397
   const state: SimState = {
     status: runningStatus,
     serve: {},
@@ -411,7 +400,6 @@ void test("The FIRST tailscale serve --https=443 triggers Let's Encrypt cert iss
 // proven denied end-to-end. Setup tears the just-written mapping back down, refuses,
 // and records NO exposure intent (fail closed).
 void test("The gate classifies guarded on loopback but is NOT isolated over Serve (the s...", async (t) => {
-  // doctest:L436
   const state: SimState = {
     status: runningStatus,
     serve: {},
@@ -446,7 +434,6 @@ void test("The served proof fails (200, no header) and the serve … off teardow
       t.error(error);
     }
   });
-  // doctest:L472
   const state: SimState = {
     status: runningStatus,
     serve: {},
@@ -470,7 +457,6 @@ void test("The served proof fails (200, no header) and the serve … off teardow
 //
 // The guarded-router path issues no `funnel` command and writes no `AllowFunnel`.
 void test("The guarded-router path issues no funnel command and writes no AllowFunnel.", async (t) => {
-  // doctest:L506
   const state: SimState = { status: runningStatus, serve: {}, routerProbe: guardedRouterProbe };
   const sim = makeServeSim(state);
   await runTailscaleSetup(sim.deps, { target: { port: 3271 }, io: noWaitIo });
@@ -485,7 +471,6 @@ void test("The guarded-router path issues no funnel command and writes no AllowF
 // The same port answers on `10.0.0.5` — the server is bound to a public interface,
 // not 127.0.0.1 only. Refuse before exposing it further.
 void test("The same port answers on 10.0.0.5 — the server is bound to a public interface...", async (t) => {
-  // doctest:L522
   const state: SimState = {
     status: runningStatus,
     serve: {},
@@ -506,7 +491,6 @@ void test("The same port answers on 10.0.0.5 — the server is bound to a public
 // At `needs-login` (a human step) with `--no-wait`, setup prints the instruction
 // and returns a failing result rather than waiting.
 void test("At needs-login (a human step) with --no-wait, setup prints the instruction an...", async (t) => {
-  // doctest:L545
   const logged: string[] = [];
   const io: SetupIo = { interactive: false, log: (l) => { logged.push(l); }, waitForContinue: () => Promise.resolve() };
   const sim = makeServeSim({ status: { BackendState: "NeedsLogin", Self: null, CertDomains: null }, serve: {}, probe: { reachable: false, status: null } });
@@ -522,7 +506,6 @@ void test("At needs-login (a human step) with --no-wait, setup prints the instru
 // With a TTY, setup waits at `needs-login`; when the operator completes the step
 // (here the fake flips the backend to `Running`), the loop advances to success.
 void test("With a TTY, setup waits at needs-login; when the operator completes the step...", async (t) => {
-  // doctest:L563
   const state: SimState = { status: { BackendState: "NeedsLogin", Self: null, CertDomains: null }, serve: {}, probe: enforced401 };
   const sim = makeServeSim(state);
   const io: SetupIo = {
@@ -538,7 +521,6 @@ void test("With a TTY, setup waits at needs-login; when the operator completes t
 //
 // Set up two mappings (foreign on :8443, ours on :443 via setup), then stop ours.
 void test("Set up two mappings (foreign on :8443, ours on :443 via setup), then stop ours.", async (t) => {
-  // doctest:L583
   const foreign = {
     Web: { "box.tail1234.ts.net:8443": { Handlers: { "/": { Proxy: "http://127.0.0.1:5000" } } } },
   };
@@ -558,7 +540,6 @@ void test("Set up two mappings (foreign on :8443, ours on :443 via setup), then 
 // The target is mapped at `/foo` on :443 alongside an UNRELATED `/` handler
 // (a different port). Stop removes `/foo` and leaves `/` untouched.
 void test("The target is mapped at /foo on :443 alongside an UNRELATED / handler (a diff...", async (t) => {
-  // doctest:L610
   const serve: ServeConfigJson = {
     Web: {
       "box.tail1234.ts.net:443": {
@@ -597,7 +578,6 @@ void test("A mapping created before a node rename lives under the OLD hostname (
       t.error(error);
     }
   });
-  // doctest:L650
   const serve: ServeConfigJson = {
     Web: {
       "old-name.tail1234.ts.net:8443": { Handlers: { "/": { Proxy: "http://127.0.0.1:3260" } } },
@@ -623,7 +603,6 @@ void test("A mapping created before a node rename lives under the OLD hostname (
 // Intent is recorded, then `tailscale` is unavailable — stop cannot prove the
 // mapping is gone, so it keeps the intent (fail closed) and exits nonzero.
 void test("Intent is recorded, then tailscale is unavailable — stop cannot prove the map...", async (t) => {
-  // doctest:L687
   await recordExposure({ port: 3260, dnsName: "box.tail1234.ts.net" });
   const sim = makeServeSim({ status: runningStatus, serve: {}, probe: enforced401, binaryPresent: false });
   const stop = await runTailscaleStop(sim.deps, { target: { port: 3260 } });
@@ -637,7 +616,6 @@ void test("Intent is recorded, then tailscale is unavailable — stop cannot pro
 
 // ## Stop when nothing is configured is a clean no-op (exit 0)
 void test("Stop when nothing is configured is a clean no-op (exit 0)", async (t) => {
-  // doctest:L701
   const sim = makeServeSim({ status: runningStatus, serve: {}, probe: { reachable: false, status: null } });
   const stop = await runTailscaleStop(sim.deps, { target: { port: 3299 } });
   t.check(stop, { ok: true, message: "Nothing configured for loopback:3299 — nothing to stop." });
@@ -658,7 +636,6 @@ void test("While another process holds the exposure lock, recordExposure refuses
       t.error(error);
     }
   });
-  // doctest:L717
   const lockPath = `${EXPOSURE_FILE}.lock`;
   await acquireLock(lockPath, { op: "other-process" });
   let blockedName = "";

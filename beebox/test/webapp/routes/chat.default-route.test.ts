@@ -31,7 +31,6 @@ void test("Missing pointer returns null", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L28
   await t.checkText(await getDefaultSession(), `200
 {
   "sessionId": null
@@ -39,7 +38,6 @@ void test("Missing pointer returns null", async (t) => {
 
   // ## Existing pointer returns the session id
 
-  // doctest:L39
   await mkdir(join(boxRoot, ".beebox"), { recursive: true });
   await writeFile(
     join(boxRoot, ".beebox/chat-session-id.json"),

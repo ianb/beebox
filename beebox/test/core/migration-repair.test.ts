@@ -20,7 +20,6 @@ void test("line 15", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L16
   const box = await makeTmpBox({ git: true });
   const snapshot = await captureMigrationSnapshot(box.root, "probe");
   let invocations = 0;
@@ -65,7 +64,6 @@ void test("line 52", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L53
   const box = await makeTmpBox({ git: true });
   const snapshot = await captureMigrationSnapshot(box.root, "interrupted");
   execFileSync("git", ["update-ref", "refs/bbx/migrations/interrupted/repair-started", snapshot.ref], { cwd: box.root });
@@ -90,7 +88,6 @@ void test("line 70", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L71
   const box = await makeTmpBox({ git: true });
   const snapshot = await captureMigrationSnapshot(box.root, "unavailable");
   await t.checkThrows(
@@ -102,6 +99,5 @@ void test("line 70", async (t) => {
     "MigrationRepairUnavailableError",
   );
 
-  // doctest:L80
   t.check(execFileSync("git", ["for-each-ref", "--format=%(refname)", "refs/bbx/migrations/unavailable/repair-started"], { cwd: box.root }).toString().trim(), "");
 });

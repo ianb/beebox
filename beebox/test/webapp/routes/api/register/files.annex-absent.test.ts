@@ -28,7 +28,6 @@ void test("A GET for absent content is 409, not 404:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L25
   await server.seed("_content/n.attach/photo.jpg", POINTER);
   const res = await server.rawRequest({ method: "GET", url: "/api/files/_content/n.attach/photo.jpg" });
   const body = JSON.parse(res.payload);
@@ -37,7 +36,6 @@ void test("A GET for absent content is 409, not 404:", async (t) => {
   // It names the remedy, since the reader is usually an agent deciding what to do
   // next:
 
-  // doctest:L36
   t.check(body.hint, "Fetch it with `git annex get _content/n.attach/photo.jpg`");
 
   // **`HEAD` gets the same treatment.** This is the case worth testing explicitly:
@@ -45,7 +43,6 @@ void test("A GET for absent content is 409, not 404:", async (t) => {
   // `ETag` computed from the pointer, so a client would cache the wrong metadata
   // and never ask for the body:
 
-  // doctest:L46
   const head = await server.rawRequest({ method: "HEAD", url: "/api/files/_content/n.attach/photo.jpg" });
   const pointerBytes = String(POINTER.length);
   t.check(`${head.statusCode} describes-pointer=${head.headers["content-length"] === pointerBytes}`, "409 describes-pointer=false");
@@ -54,7 +51,6 @@ void test("A GET for absent content is 409, not 404:", async (t) => {
   // handling, so a byte range over absent content is refused rather than answered
   // with a `206` carrying a fragment of `/annex/objects/…`:
 
-  // doctest:L57
   const ranged = await server.rawRequest({
     method: "GET",
     url: "/api/files/_content/n.attach/photo.jpg",
@@ -65,7 +61,6 @@ void test("A GET for absent content is 409, not 404:", async (t) => {
   // Present content is unaffected — the probe only ever reads files small enough to
   // be a pointer, so ordinary serving keeps working:
 
-  // doctest:L70
   await server.seed("_content/n.attach/real.txt", "actual file content");
   const real = await server.rawRequest({ method: "GET", url: "/api/files/_content/n.attach/real.txt" });
   t.check(`${real.statusCode} ${real.payload}`, "200 actual file content");
@@ -73,7 +68,6 @@ void test("A GET for absent content is 409, not 404:", async (t) => {
   // A small text file that merely *starts* with a slash is content, not a pointer —
   // the predicate fails closed rather than guessing:
 
-  // doctest:L80
   await server.seed("_content/n.attach/notes.txt", "/annex/objects/ is where annex keeps things\n");
   const notes = await server.rawRequest({ method: "GET", url: "/api/files/_content/n.attach/notes.txt" });
   t.check(notes.statusCode, 200);

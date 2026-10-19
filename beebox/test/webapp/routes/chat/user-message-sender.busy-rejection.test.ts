@@ -48,7 +48,6 @@ void test("Both sends go to one resolved chat in the same tick, so each passes t
       t.error(error);
     }
   });
-  // doctest:L43
   const backend = createFakeChatBackend();
   const ctx = await makeTestServer({ chatBackend: backend });
   const recorded: string[] = [];
@@ -56,7 +55,6 @@ void test("Both sends go to one resolved chat in the same tick, so each passes t
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L50
   const runtime = getChatRuntime(ctx.boxRoot);
   if (runtime === undefined) throw new Error("chat runtime is not registered");
   const resolved = await runtime.resolveSendTarget({ sessionParam: "new", contextDir: undefined, requestSeedFeatures: undefined, exactSession: false });
@@ -65,7 +63,6 @@ void test("Both sends go to one resolved chat in the same tick, so each passes t
     runtime.sendUserMessage({ target: resolved.target, message, messageId, user: null, channel: "ios-native" })
       .then((outcome) => ({ messageId, message, status: outcome.status, body: outcome.body }));
 
-  // doctest:L58
   const outcomes = (await Promise.all([send("feed the cat before noon", "long"), send("and water the ferns", "short")]))
     .toSorted((a, b) => a.status - b.status);
   t.check(outcomes.map((o) => [o.status, "turnId" in o.body ? "turnId" : o.body]), [
@@ -85,7 +82,6 @@ void test("Both sends go to one resolved chat in the same tick, so each passes t
   // behind a bootstrap git commit, so the waits below allow for a loaded host; they
   // bound a hang and do not measure latency.
 
-  // doctest:L69
   const [admitted, refused] = outcomes;
   if (admitted === undefined || refused === undefined) throw new Error("expected two send outcomes");
   await eventually(() => backend.runs.length === 1, { label: "the admitted send starts a run", timeoutMs: 120_000 });
@@ -103,7 +99,6 @@ void test("Both sends go to one resolved chat in the same tick, so each passes t
 
   // The engine received the admitted message and never the refused one.
 
-  // doctest:L78
   await eventually(() => engineReceived(backend).length > 0, { label: "the engine receives the admitted message", timeoutMs: 120_000 });
   const received = engineReceived(backend).join("\n");
   t.check(({ admitted: received.includes(admitted.message), refused: received.includes(refused.message) }), {
@@ -114,7 +109,6 @@ void test("Both sends go to one resolved chat in the same tick, so each passes t
   // Because no claim was taken, the refused id is not answered `deduplicated`
   // later. Once the turn ends, the same id is a new send that the chat accepts.
 
-  // doctest:L88
   backend.lastRun()?.emitResult();
   await eventually(() => !resolved.target.session.isBusy(), { label: "the first turn ends", timeoutMs: 120_000 });
   const again = await send(refused.message, refused.messageId);

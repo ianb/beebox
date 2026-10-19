@@ -22,7 +22,6 @@ void test("line 17", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L18
   const box = await makeTmpBox({ git: true });
   const claudeCli = createFakeClaudeCli({ loggedIn: false });
   const ctx: TrpcContext = trpcContext({
@@ -35,14 +34,12 @@ void test("line 17", async (t) => {
 
   // Submitting a code before any login is in progress is refused, not swallowed.
 
-  // doctest:L32
   const refused = await admin.claudeSubmitCode({ code: "abc" }).then(() => "accepted", (e) => e.message);
   t.check(refused, "No sign-in in progress — start again");
 
   // The login returns the sign-in URL (the new claude.com host); status is still
   // logged-out until the code arrives.
 
-  // doctest:L41
   const started = await admin.claudeLogin();
   const beforeCode = await admin.claudeStatus();
   t.check(
@@ -57,7 +54,6 @@ void test("line 17", async (t) => {
 
   // Delivering the code completes the login; the next status poll sees it.
 
-  // doctest:L50
   const submitted = await admin.claudeSubmitCode({ code: "  the-code-from-the-page  " });
   const afterCode = await admin.claudeStatus();
   t.check([submitted.accepted, afterCode.loggedIn], [
@@ -71,7 +67,6 @@ void test("line 17", async (t) => {
   // about whether a login exists (no process is spawned here — the assertion is on
   // the shared state, exercised through the refusal path).
 
-  // doctest:L63
   const { createClaudeCliService } = await import("../../../../src/services/claude-cli.js");
   const first = createClaudeCliService();
   const second = createClaudeCliService();

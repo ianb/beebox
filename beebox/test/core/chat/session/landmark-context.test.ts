@@ -16,7 +16,6 @@ import { buildLandmarkBoxContext } from "../../../../src/core/chat/session/landm
 // Each include arrives. The root file's own text does not: Claude Code loads it
 // natively from the landmark directory.
 void test("Each include arrives.", async (t) => {
-  // doctest:L18
   const box = await makeTmpBox();
   await box.write("AGENTS.md", "@guide.md\n@_content/brief.md\n\nHouse rule: be brief.\n");
   await box.write("guide.md", "Guide text.\n");
@@ -33,18 +32,15 @@ Guide text.
 <!-- beebox include: _content/brief.md -->
 Briefing text.`);
 
-  // doctest:L32
   await box.cleanup();
 });
 
 // A box with no root instruction file, or one with no includes, adds nothing.
 void test("A box with no root instruction file, or one with no includes, adds nothing.", async (t) => {
-  // doctest:L38
   const bare = await makeTmpBox();
   await rm(bare.path("AGENTS.md"), { force: true });
   t.check(await buildLandmarkBoxContext(bare.root), "");
 
-  // doctest:L43
   await bare.cleanup();
 });
 
@@ -52,7 +48,6 @@ void test("A box with no root instruction file, or one with no includes, adds no
 // it, and starts the chat without box context, as chats started before box
 // context existed (`chat/session/run/start.ts`).
 void test("An include that escapes the box throws.", async (t) => {
-  // doctest:L51
   const escaping = await makeTmpBox();
   await escaping.write("AGENTS.md", "@../outside.md\n");
   const escapeError = await buildLandmarkBoxContext(escaping.root).then(() => null, (e: unknown) => e);
@@ -63,14 +58,12 @@ void test("An include that escapes the box throws.", async (t) => {
     specifier: "../outside.md",
   });
 
-  // doctest:L56
   await escaping.cleanup();
 });
 
 // A symlink inside the box that points outside it is refused the same way: the
 // include's real path must stay in the box or its engine package.
 void test("A symlink inside the box that points outside it is refused the same way:", async (t) => {
-  // doctest:L63
   const linked = await makeTmpBox();
   const outside = await makeTmpBox();
   await outside.write("secret.md", "host secret\n");
@@ -84,7 +77,6 @@ void test("A symlink inside the box that points outside it is refused the same w
     specifier: "notes.md",
   });
 
-  // doctest:L71
   await linked.cleanup();
   await outside.cleanup();
 });

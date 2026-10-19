@@ -43,14 +43,12 @@ function validationMessages(src: string): string[] {
 
 // ## Third-party attribution is preserved
 void test("Third-party attribution is preserved", async (t) => {
-  // doctest:L37
   const attributed = quoteTag('{% quote from="Rina Patel, studio owner" %}Exact words.{% /quote %}');
   t.check(`${attributed.name}:${attributed.attributes["from"]}`, "QuoteInline:Rina Patel, studio owner");
 });
 
 // ## Existing unattributed quotes remain valid
 void test("Existing unattributed quotes remain valid", async (t) => {
-  // doctest:L46
   const unattributed = quoteTag("{% quote %}The user's exact words.{% /quote %}");
   t.check(`${unattributed.name}:${String(unattributed.attributes["from"])}`, "QuoteInline:undefined");
 });
@@ -61,17 +59,14 @@ void test("Existing unattributed quotes remain valid", async (t) => {
 // from explicitly requesting `plain`, allowing the active card theme to supply
 // its own default.
 void test("The renderer receives the closed treatment name.", async (t) => {
-  // doctest:L59
   const layered = blockQuoteTag('{% quote from="A participant" treatment="layered" %}\nKeep the example close.\n{% /quote %}');
   t.check(`${layered.name}:${layered.attributes["treatment"]}:${layered.attributes["from"]}`, "QuoteBlock:layered:A participant");
 
-  // doctest:L64
   await t.checkText(String(blockQuoteTag("{% quote %}\nTheme default.\n{% /quote %}").attributes["treatment"]), "undefined");
 });
 
 // ## Treatment names are validated
 void test("Treatment names are validated", async (t) => {
-  // doctest:L72
   t.check(validationMessages('{% quote treatment="floating" %}\nNo such treatment.\n{% /quote %}'), [
     "Attribute 'treatment' must match one of [\"layered\",\"inset\",\"plain\"]. Got 'floating' instead.",
   ]);
@@ -82,16 +77,13 @@ void test("Treatment names are validated", async (t) => {
 // An explicit treatment never turns a quote inside a sentence into block markup.
 // The validation issue flows through the existing card-body warning pipeline.
 void test("An explicit treatment never turns a quote inside a sentence into block markup.", async (t) => {
-  // doctest:L85
   const inlineLayered = quoteTag('Before {% quote treatment="layered" %}exact words{% /quote %} after.');
   t.check(`${inlineLayered.name}:${inlineLayered.attributes["treatment"]}`, "QuoteInline:layered");
 
-  // doctest:L90
   t.check(validationMessages('Before {% quote treatment="layered" %}exact words{% /quote %} after.'), [
     "Quote treatment 'layered' applies only to block quotes; this quote remains inline",
   ]);
 
-  // doctest:L96
   const [inlineWarning] = lintBodyMarkdoc('Before {% quote treatment="layered" %}exact words{% /quote %} after.');
   t.check(`${inlineWarning?.severity}:${inlineWarning?.message}`, "warning:Markdoc body issue at line 1 (quote): Quote treatment 'layered' applies only to block quotes; this quote remains inline");
 });

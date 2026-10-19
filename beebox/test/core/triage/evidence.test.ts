@@ -32,7 +32,6 @@ void test("Complete scope enumeration includes unsupported bytes.", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L25
   const box = await makeTmpBox();
   await box.write("_content/inbox/staged/House.doc.card", "---\ntitle: Household\n---\nRead attachments.");
   await box.write("_content/inbox/staged/House.attach/notice.html", '<h1>Notice</h1><p>Boundary hearing</p><a href="https://example.invalid/case">Case details</a><script>not evidence</script>');
@@ -53,20 +52,16 @@ void test("Complete scope enumeration includes unsupported bytes.", async (t) =>
     ],
   ]);
 
-  // doctest:L33
   t.check(prepared.status, "partial");
 
-  // doctest:L36
   t.check(prepared.parts[2]?.text, `Notice
 Boundary hearing
 Case details (https://example.invalid/case)`);
 
-  // doctest:L41
   await verifyEvidence(box.root, prepared);
   await box.write("_content/inbox/staged/House.attach/new.txt", "New evidence");
   await t.checkThrows(async () => (await verifyEvidence(box.root, prepared)), "InvariantError: stale-decision: attachment scope changed; prepare again");
 
-  // doctest:L46
   await box.write("_content/inbox/staged/House.doc.card", "Changed content");
   await t.checkThrows(async () => (await verifyEvidence(box.root, prepared)), "InvariantError: stale-decision: changed evidence /_content/inbox/staged/House.doc.card; prepare again");
 });
@@ -82,7 +77,6 @@ void test("An analyzed PDF card owns its generated direct page renders.", async 
       t.error(error);
     }
   });
-  // doctest:L60
   const box = await makeTmpBox();
   await box.write("_content/inbox/staged/Rendered.doc.card", "Capture session");
   await box.write("_content/inbox/staged/Rendered.attach/source.pdf.card", "---\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\n---\n" + "S".repeat(48_000));
@@ -108,13 +102,11 @@ void test("An analyzed PDF card owns its generated direct page renders.", async 
     any(Number).between(0, JEV_MAX_REQUEST_CHARS),
   ]);
 
-  // doctest:L78
   t.check([...new Set(pageParts.map((part) => part.mediaType))].toSorted(), [
     "image/avif",
     "image/webp",
   ]);
 
-  // doctest:L81
   await fs.writeFile(path.join(innerAttach, "page-012.webp"), "changed page bytes");
   let stalePage = "";
   await (async () => { try { await verifyEvidence(box.root, pageEvidence); } catch (error) { stalePage = String(error); } })();
@@ -131,7 +123,6 @@ void test("Missing usable structured text or a body excluded by the text budget 
       t.error(error);
     }
   });
-  // doctest:L96
   const box = await makeTmpBox();
   const attach = path.join(box.root, "_content/inbox/staged");
   await box.write("_content/inbox/staged/Empty.pdf.card", "---\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\n---\n");
@@ -145,7 +136,6 @@ void test("Missing usable structured text or a body excluded by the text budget 
     [["page-001.avif"]],
   ]);
 
-  // doctest:L107
   await box.write("_content/inbox/staged/Oversized.pdf.card", "---\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\n---\n" + "O".repeat(1_000));
   await fs.mkdir(path.join(attach, "Oversized.attach"), { recursive: true });
   await fs.copyFile(path.join(fixture, "digital-property.pdf"), path.join(attach, "Oversized.attach/source.pdf"));
@@ -158,7 +148,6 @@ void test("Missing usable structured text or a body excluded by the text budget 
     [["page-001.webp"]],
   ]);
 
-  // doctest:L116
   await box.write("_content/inbox/staged/Unrelated.doc.card", "Ordinary document");
   await box.write("_content/inbox/staged/Unrelated.attach/page-001.avif", "unowned page");
   await box.write("_content/inbox/staged/Unrelated.attach/page-002.webp", "unowned WebP page");
@@ -182,17 +171,14 @@ void test("Native text is read directly; junk and absent layers go through diffe
       t.error(error);
     }
   });
-  // doctest:L134
   const box = await makeTmpBox();
   await fs.copyFile(path.join(fixture, "digital-property.pdf"), path.join(box.root, "_content/inbox/staged/native.pdf"));
   const native = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/native.pdf" });
   t.check(native.parts[0]?.method, "pdf-native-text");
 
-  // doctest:L140
   // Text from the PDF extractor: its spacing and page marks are the tool's, so only the content is pinned.
   t.check(native.parts[0]?.text, any(String).includes("property"));
 
-  // doctest:L143
   const fake = createFakeDocling({ markdown: "Recovered household statement" });
   const workspaces: string[] = [];
   const docling: DoclingService = { extract: async (source, opts) => { workspaces.push(opts.workDir); return fake.extract(source, opts); } };
@@ -205,35 +191,28 @@ void test("Native text is read directly; junk and absent layers go through diffe
     "regions",
   ]);
 
-  // doctest:L153
   t.check([junk.status, scanned.status], [
     "ready",
     "ready",
   ]);
 
-  // doctest:L156
   t.check(await Promise.all(workspaces.map(async (dir) => fs.access(dir).then(() => true, () => false))), [
     false,
     false,
   ]);
 
-  // doctest:L159
   const reused = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/junk.pdf", docling, previousEvidence: junk });
   t.check(fake.calls.map((call) => call.ocr), ["replace", "regions"]);
 
-  // doctest:L163
   t.check(reused.parts[0]?.text, "Recovered household statement");
 
-  // doctest:L166
   const failing = createFakeDocling({ failWith: "OCR unavailable" });
   const failureDirs: string[] = [];
   const failure = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/scan.pdf", docling: { extract: async (source, opts) => { failureDirs.push(opts.workDir); return failing.extract(source, opts); } } });
   t.check(failure.status, "unavailable");
 
-  // doctest:L172
   t.check(failure.parts[0]?.omissions, ["OCR unavailable", "No readable content prepared"]);
 
-  // doctest:L175
   t.check(await Promise.all(failureDirs.map(async (dir) => fs.access(dir).then(() => true, () => false))), [
     false,
   ]);
@@ -249,7 +228,6 @@ void test("Image analysis supplies objects and text, using the existing injectab
       t.error(error);
     }
   });
-  // doctest:L187
   const box = await makeTmpBox();
   await box.write("_content/inbox/staged/photo.png", "fake image bytes");
   const vision = createFakeScanVision();
@@ -261,7 +239,6 @@ void test("Image analysis supplies objects and text, using the existing injectab
     [["photo.png"]],
   ]);
 
-  // doctest:L194
   const blankVision = createFakeScanVision({ analyze: () => [{ index: 0, kind: "photo", paired_with_index: null, description: "", title: "", rotation: 0, subject_bbox: null, has_text: false, text_blocks: [], date_hint: null, flag_for_review: false, flag_reason: null }] });
   const emptyImage = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/photo.png", vision: blankVision });
   t.check([emptyImage.status, emptyImage.parts[0]?.omissions], [
@@ -269,7 +246,6 @@ void test("Image analysis supplies objects and text, using the existing injectab
     ["Vision returned no semantic description or text", "No readable content prepared"],
   ]);
 
-  // doctest:L199
   await box.write("_content/inbox/staged/mail.eml", "From: =?UTF-8?Q?Jos=C3=A9?= <jose@example.invalid>\r\nContent-Type: multipart/alternative; boundary=abc\r\n\r\n--abc\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\nHello=2C household notice\r\n--abc\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<p>Hello household notice</p>\r\n--abc\r\nContent-Type: application/pdf\r\nContent-Disposition: attachment; filename=\"bill.pdf\"\r\n\r\nnot decoded\r\n--abc--\r\n");
   const mail = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/mail.eml" });
   t.check([mail.parts[0]?.method, mail.parts[0]?.text, mail.status, mail.parts[0]?.omissions], [
@@ -279,7 +255,6 @@ void test("Image analysis supplies objects and text, using the existing injectab
     ["Raw MIME is not decoded; encoded bodies and attachments require research", "No readable content prepared"],
   ]);
 
-  // doctest:L204
   await box.write("_content/inbox/staged/long.txt", "Early irrelevant information. Later important qualification.");
   const bounded = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/long.txt", maxTextChars: 10 });
   t.check([bounded.status, bounded.parts[0]?.text, bounded.parts[0]?.omissions], [
@@ -297,7 +272,6 @@ void test("Image analysis supplies objects and text, using the existing injectab
 // Capture-session scan scope: admit the structured PDF card before its raw
 // derivatives, retain every digest; non-generated page images stay visual evidence.
 async function checkCaptureSession(t: Test, box: TmpBox) {
-  // doctest:L209
   await box.write("_content/inbox/staged/capture-session.card", "Capture bundle");
   await box.write("_content/inbox/staged/capture-session.attach/source.pdf.card", "---\ntitle: Source\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\ndocling:\n  ref: attach/docling.json.gz\n---\n" + "S".repeat(48_000));
   const sourcePdfPath = path.join(box.root, "_content/inbox/staged/capture-session.attach/source.attach/source.pdf");
@@ -336,7 +310,6 @@ async function checkCaptureSession(t: Test, box: TmpBox) {
     ],
   ]);
 
-  // doctest:L225
   t.check([structured.status, structured.parts.find((part) => part.ref.endsWith("source.pdf.card"))?.text.length, structured.parts.filter((part) => part.method === "representation-selected").map((part) => part.duplicateOf)], [
     "ready",
     any(Number).above(48_000),
@@ -346,13 +319,11 @@ async function checkCaptureSession(t: Test, box: TmpBox) {
     ],
   ]);
 
-  // doctest:L228
   const serializedTriageRequest = serializeTriageRequest({ evidence: structured, instructions: structuredInstructions });
   // eslint-disable-next-line tap-check/check-whole-value -- the request's size budget is the contract; the JSON itself is ~48KB of generated text
   t.check(serializedTriageRequest.length, any(Number).between(0, JEV_MAX_REQUEST_CHARS));
   t.check(structured.recipe.steps, structured.parts.map((part) => `${part.ref}: ${part.method}`));
 
-  // doctest:L232
   const recognizedSidecar = structured.parts.find((part) => part.ref.endsWith("docling.json.gz"));
   t.check([structured.status, recognizedSidecar?.method, recognizedSidecar?.status, recognizedSidecar?.text, recognizedSidecar?.omissions], [
     "ready",
@@ -362,14 +333,12 @@ async function checkCaptureSession(t: Test, box: TmpBox) {
     [],
   ]);
 
-  // doctest:L236
   t.check(docling.calls, []);
 
   return { docling, structuredInstructions };
 }
 
 async function checkStrayAndPairedCards(t: Test, { box, structuredInstructions }: { box: TmpBox; structuredInstructions: InstructionSnapshot }) {
-  // doctest:L239
   // An unreferenced gzip is unsupported evidence, so its omission stays visible.
   await box.write("_content/inbox/staged/Unknown.doc.card", "Readable source");
   await box.write("_content/inbox/staged/Unknown.attach/stray.json.gz", "unreferenced sidecar bytes");
@@ -382,7 +351,6 @@ async function checkStrayAndPairedCards(t: Test, { box, structuredInstructions }
     ["Unsupported media: .gz", "No readable content prepared"],
   ]);
 
-  // doctest:L247
   // Distinct cards preserve distinct frontmatter even when their bodies match.
   await box.write("_content/inbox/staged/CardPair.doc.card", "Pair");
   await box.write("_content/inbox/staged/CardPair.attach/a.doc.card", "---\ntitle: First\n---\nSame useful body");
@@ -394,7 +362,6 @@ async function checkStrayAndPairedCards(t: Test, { box, structuredInstructions }
     ["utf8", null, "---\ntitle: Second\n---\nSame useful body"],
   ]);
 
-  // doctest:L255
   // Identical plain text keeps each digest while only the first part carries text.
   await box.write("_content/inbox/staged/TextPair.doc.card", "Pair");
   await box.write("_content/inbox/staged/TextPair.attach/a.txt", "One retained passage");
@@ -410,7 +377,6 @@ async function checkStrayAndPairedCards(t: Test, { box, structuredInstructions }
 }
 
 async function checkFallbacks(t: Test, { box, docling, structuredInstructions }: { box: TmpBox; docling: ReturnType<typeof createFakeDocling>; structuredInstructions: InstructionSnapshot }) {
-  // doctest:L264
   // Empty analyzed body is not authoritative: use the 42k text-layer.
   await box.write("_content/inbox/staged/Empty.pdf.card", "---\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\n---\n");
   await fs.mkdir(path.join(box.root, "_content/inbox/staged/Empty.attach"), { recursive: true });
@@ -424,7 +390,6 @@ async function checkFallbacks(t: Test, { box, docling, structuredInstructions }:
     "---\nstatus: analyzed\nfilename:\n  ref: attach/source.pdf\n---\n",
   ]);
 
-  // doctest:L273
   const fallback = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/capture-session.card", maxTextChars: 43_000, vision: createFakeScanVision(), docling });
   t.check([fallback.status, fallback.parts.find((part) => part.ref.endsWith("source.pdf.card"))?.status, fallback.parts.find((part) => part.ref.endsWith("text-layer.txt"))?.text, fallback.parts.find((part) => part.ref.endsWith("/source.pdf"))?.duplicateOf], [
     "partial",
@@ -433,10 +398,8 @@ async function checkFallbacks(t: Test, { box, docling, structuredInstructions }:
     "/_content/inbox/staged/capture-session.attach/source.attach/text-layer.txt",
   ]);
 
-  // doctest:L277
   t.check(docling.calls, []);
 
-  // doctest:L280
   // If neither existing representation fits, the deferred PDF is extracted once.
   await fs.rm(path.join(box.root, "_content/inbox/staged/capture-session.attach/source.attach/text-layer.txt"));
   const extractedFallback = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/capture-session.card", maxTextChars: 43_000, vision: createFakeScanVision(), docling });
@@ -449,29 +412,24 @@ async function checkFallbacks(t: Test, { box, docling, structuredInstructions }:
 }
 
 async function checkBudgetAndAnnex(t: Test, box: TmpBox) {
-  // doctest:L286
   await box.write("_content/inbox/staged/budget.txt", "Readable content");
   const escapedInstructions: InstructionSnapshot = { version: 1, compilerVersion: 1, policy: '"'.repeat(40_000), trial: true, sources: [], destinations: [] };
   let requestBudgetError = "";
   await (async () => { try { await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/budget.txt", instructions: escapedInstructions }); } catch (error) { requestBudgetError = String(error); } })();
   t.check(requestBudgetError, "InvariantError: Serialized Jev request exceeds request budget 80000 characters even with all evidence parts excluded");
 
-  // doctest:L293
   await box.write("_content/inbox/staged/Missing.pdf.card", "---\nfile: attach/missing.pdf\n---\nDocument title only");
   const missing = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Missing.pdf.card" });
   t.check(missing.status, "partial");
 
-  // doctest:L298
   t.check(missing.parts[0]?.omissions, ["Missing referenced attachment: attach/missing.pdf"]);
 
-  // doctest:L301
   await box.write("_content/inbox/staged/Lost.doc.card", "Body");
   await box.write("_content/inbox/intake/Lost.attach/source.txt", "Stranded");
   let stranded = "";
   try { await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Lost.doc.card" }); } catch (error) { stranded = String(error); };
   t.check(stranded, `InvariantError: Stranded attachment scope: ${box.path("_content/inbox/intake/Lost.attach")}; repair before preparation`);
 
-  // doctest:L308
   await box.write("_content/inbox/staged/Shared.doc.card", "Shared");
   await fs.mkdir(path.join(box.root, "_content/inbox/staged/Shared.attach"), { recursive: true });
   await fs.symlink("/etc/hosts", path.join(box.root, "_content/inbox/staged/Shared.attach/external.txt"));
@@ -479,7 +437,6 @@ async function checkBudgetAndAnnex(t: Test, box: TmpBox) {
   try { await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Shared.doc.card" }); } catch (error) { escapedBox = String(error); };
   t.check(escapedBox, `InvariantError: Evidence escapes box: ${box.path("_content/inbox/staged/Shared.attach/external.txt")}`);
 
-  // doctest:L316
   await fs.rm(path.join(box.root, "_content/inbox/staged/Shared.attach/external.txt"));
   await fs.mkdir(path.join(box.root, ".git/annex/objects/test-key"), { recursive: true });
   await fs.writeFile(path.join(box.root, ".git/annex/objects/test-key/content.txt"), "Annexed evidence text");
@@ -487,6 +444,5 @@ async function checkBudgetAndAnnex(t: Test, box: TmpBox) {
   const annexed = await prepareItem({ boxRoot: box.root, sourceRef: "/_content/inbox/staged/Shared.doc.card" });
   t.check(annexed.parts[1]?.text, "Annexed evidence text");
 
-  // doctest:L324
   await t.checkThrows(async () => (await prepareItem({ boxRoot: box.root, sourceRef: "/../../etc/passwd" })), "InvariantError: Invalid evidence ref: /../../etc/passwd");
 }

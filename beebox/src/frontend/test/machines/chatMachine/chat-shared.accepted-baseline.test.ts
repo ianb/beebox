@@ -48,12 +48,10 @@ function textOf(e: { content: SessionContentBlock[] } | undefined) {
 // 12:54 whose echo the agent wrote eight seconds later. By the time the page
 // reloads, both are in the history.
 void test("A conversation that already contains the word \"yes\", then a message accepted...", async (t) => {
-  // doctest:L52
   const box = await makeTmpBox();
   const bus = createEventBus(box.root);
   accept(bus, { at: "2026-08-26T12:54:34.000Z", message: "yes" });
 
-  // doctest:L56
   const history = [
     entry({ uuid: "item-100", timestamp: "2026-08-26T11:00:00.000Z", text: "yes" }),
     entry({ uuid: "item-255", timestamp: "2026-08-26T12:54:42.000Z", text: "yes" }),
@@ -65,7 +63,6 @@ void test("A conversation that already contains the word \"yes\", then a message
     history: history.map((e) => ({ uuid: e.uuid, timestamp: e.timestamp })),
   });
 
-  // doctest:L67
   await t.checkText(
     // The old entry cannot answer for this message; the echo can.
     JSON.stringify(pending?.reconcileKnownUuids),
@@ -75,7 +72,6 @@ void test("A conversation that already contains the word \"yes\", then a message
   // So the client retires it, and the conversation is the two entries it actually
   // contains — not three with the last one repeated.
 
-  // doctest:L76
   const merged = reconcilePending({ serverMessages: history, pendingMessages: pending ? [pending] : [] });
   t.check({ messages: merged.messages.map((e) => e.uuid), stillPending: merged.pendingMessages.length }, {
     messages: [
@@ -91,7 +87,6 @@ void test("A conversation that already contains the word \"yes\", then a message
   // conversation with the echo not yet written: the only "yes" on record is the old
   // one, and it must not answer for the new message.
 
-  // doctest:L88
   const [stillWaiting] = readAcceptedMessages(bus, {
     sessionId: SESSION,
     now: NOW,
@@ -103,7 +98,6 @@ void test("A conversation that already contains the word \"yes\", then a message
     pendingMessages: stillWaiting ? [stillWaiting] : [],
   });
 
-  // doctest:L99
   t.check({ messages: notYet.messages.map(textOf), stillPending: notYet.pendingMessages.length }, {
     messages: [
       "yes",
@@ -118,7 +112,6 @@ void test("A conversation that already contains the word \"yes\", then a message
   // the thing being waited for, and letting it reconcile would retire a message it
   // has nothing to do with.
 
-  // doctest:L110
   const [undated] = readAcceptedMessages(bus, {
     sessionId: SESSION,
     now: NOW,
@@ -126,7 +119,6 @@ void test("A conversation that already contains the word \"yes\", then a message
     history: [{ uuid: "item-100", timestamp: "" }],
   });
 
-  // doctest:L117
   t.check(undated?.reconcileKnownUuids, [
     "item-100",
   ]);
@@ -148,7 +140,6 @@ void test("The bus carries the message text without its image bytes, so the body
       t.error(error);
     }
   });
-  // doctest:L131
   const box = await makeTmpBox();
   const bus = createEventBus(box.root);
   accept(bus, {

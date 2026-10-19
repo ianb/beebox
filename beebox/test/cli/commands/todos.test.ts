@@ -62,7 +62,6 @@ void test("Default filter is `--status open` (escalated, on-plate, and quiet all
       t.error(error);
     }
   });
-  // doctest:L59
   await t.checkText(await run(), `OVERDUE (1)
   _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
 ON YOUR PLATE (1)
@@ -72,19 +71,16 @@ LATER (1)
 
   // ## `--status done`
 
-  // doctest:L72
   await t.checkText(await run({ status: "done" }), `DONE (1)
   _content/plate.doc.card:12  [done-one] Already handled`);
 
   // ## `--status parked`
 
-  // doctest:L81
   await t.checkText(await run({ status: "parked" }), `PARKED (1)
   _content/plate.doc.card:10  [parked-one] Parked`);
 
   // ## `--on-plate` narrows the default (open) filter further, excluding quiet
 
-  // doctest:L90
   await t.checkText(await run({ onPlate: true }), `OVERDUE (1)
   _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
 ON YOUR PLATE (1)
@@ -92,18 +88,15 @@ ON YOUR PLATE (1)
 
   // ## `--assigned`
 
-  // doctest:L101
   await t.checkText(await run({ assigned: "Dana" }), `OVERDUE (1)
   _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)`);
 
   // ## No match
 
-  // doctest:L110
   t.check(await run({ assigned: "Nobody" }), "No todos match.");
 
   // ## A card that fails to load prints a trailing "could not be read" section — never silently dropped
 
-  // doctest:L117
   await box.write(
     "_content/bad.doc.card",
     "---\ntitle: 42\n---\n{% todo %}Never collected{% /todo %}\n"
@@ -117,17 +110,14 @@ ON YOUR PLATE (1)
 
   // ## `--json` carries the full structured records, plus `issues` alongside
 
-  // doctest:L134
   const jsonOut = await run({ status: "parked", json: true });
   const parsed: { todos: Array<{ id: string }>; issues: Array<{ kind: string }> } = JSON.parse(jsonOut);
   t.check(parsed.todos.map((todo) => todo.id).join(", "), "parked-one");
 
-  // doctest:L139
   t.check(parsed.issues.map((i) => i.kind).join(", "), "load");
 
   // ## An invalid `--status` value is a clean error, not a crash
 
-  // doctest:L146
   async function runCaptured(options: Parameters<typeof runTodosForBox>[1]) {
     const errors: string[] = [];
     const origError = console.error;
@@ -149,10 +139,8 @@ ON YOUR PLATE (1)
     return { errors, exitCode };
   }
 
-  // doctest:L167
   const badStatus = await runCaptured({ status: "wontfix" });
   t.check(badStatus.errors.join("\n"), "Error: --status must be one of open, done, dropped, parked (got \"wontfix\")");
 
-  // doctest:L171
   t.check(badStatus.exitCode, 1);
 });

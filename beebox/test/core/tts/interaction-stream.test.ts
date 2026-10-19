@@ -34,7 +34,6 @@ const audioEvent = (bytes: number[]) =>
 //
 // The lifecycle events around the audio carry no samples and are ignored.
 void test("The lifecycle events around the audio carry no samples and are ignored.", async (t) => {
-  // doctest:L38
   const body = [
     "event: interaction.created\ndata: {\"event_type\":\"interaction.created\"}\n\n",
     "event: step.start\ndata: {\"event_type\":\"step.start\"}\n\n",
@@ -57,7 +56,6 @@ void test("The lifecycle events around the audio carry no samples and are ignore
 // A chunk can end mid-event, or between the `\r` and `\n` of a CRLF stream, and
 // the samples still come out whole.
 void test("A chunk can end mid-event, or between the \\r and \\n of a CRLF stream, and the...", async (t) => {
-  // doctest:L56
   const crlf = (audioEvent([7, 8]) + audioEvent([9])).replaceAll("\n", "\r\n");
   t.check([...await collectInteractionAudio(streamOf(crlf.slice(0, 20), crlf.slice(20, 21), crlf.slice(21, 90), crlf.slice(90)))], [
     7,
@@ -71,7 +69,6 @@ void test("A chunk can end mid-event, or between the \\r and \\n of a CRLF strea
 // The HTTP status was 200 by the time the stream started, so this is the only
 // place the failure is visible. The route turns it into a 502 naming the cause.
 void test("The HTTP status was 200 by the time the stream started, so this is the only p...", async (t) => {
-  // doctest:L67
   await t.checkThrows(async () => (await collectInteractionAudio(streamOf(audioEvent([1]), "event: error\ndata: {\"event_type\":\"error\",\"error\":{\"message\":\"quota exceeded\"}}\n\n"))), "InteractionStreamError: Gemini stream failed: quota exceeded");
 });
 
@@ -79,16 +76,13 @@ void test("The HTTP status was 200 by the time the stream started, so this is th
 // the SSE `event: error` line or a top-level `error` — still fails. Skipping it
 // as an unknown shape would end the clip as if it were complete.
 void test("An error event that does not match the expected shape — no eventtype, only th...", async (t) => {
-  // doctest:L76
   await t.checkThrows(async () => (await collectInteractionAudio(streamOf(audioEvent([1]), "event: error\ndata: {\"error\":{\"message\":\"quota exceeded\"}}\n\n"))), "InteractionStreamError: Gemini stream failed: quota exceeded");
 
-  // doctest:L79
   await t.checkThrows(async () => (await collectInteractionAudio(streamOf(audioEvent([1]), "data: {\"error\":{\"code\":500}}\n\n"))), "InteractionStreamError: Gemini stream failed: error event with no message");
 });
 
 // An event that is not JSON fails the same way.
 void test("An event that is not JSON fails the same way.", async (t) => {
-  // doctest:L86
   await t.checkThrows(async () => (await collectInteractionAudio(streamOf("event: step.delta\ndata: {not json\n\n"))), "InteractionStreamError: Gemini stream failed: unparseable event: «*»");
 });
 
@@ -97,7 +91,6 @@ void test("An event that is not JSON fails the same way.", async (t) => {
 // A consumer that stops after the first chunk — the browser left — cancels the
 // response body, which closes the connection to the provider.
 void test("A consumer that stops after the first chunk — the browser left — cancels the...", async (t) => {
-  // doctest:L96
   let cancelled = false;
   const encoder = new TextEncoder();
   const open = new ReadableStream({

@@ -51,7 +51,6 @@ void test("An allowed file returns a JSON envelope", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L48
   const ctx = await makeExternalServer();
   await allowRoot(ctx);
   const res = await ctx.request({ method: "GET", url: extUrl(`file:${file}`) });
@@ -70,7 +69,6 @@ void test("The box's own root is always allowed (no config needed)", async (t) =
       t.error(error);
     }
   });
-  // doctest:L73
   const ctx = await makeExternalServer();
   await ctx.seed("notes/inside.md", "in-box\n");
   const url = extUrl(`file:${path.join(ctx.boxRoot, "notes", "inside.md")}`);
@@ -89,7 +87,6 @@ void test("A path outside the allowed roots is 404", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L87
   const ctx = await makeExternalServer();
   await allowRoot(ctx);
   t.check(await ctx.request({ method: "GET", url: extUrl(`file:${outside}`) }), {
@@ -107,7 +104,6 @@ void test("A non-`file:` URL is 400", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L100
   const ctx = await makeExternalServer();
   t.check(await ctx.request({ method: "GET", url: extUrl("https://example.com/x") }), {
     statusCode: 400,
@@ -124,7 +120,6 @@ void test("A missing href is 400", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L112
   const ctx = await makeExternalServer();
   t.check(await ctx.request({ method: "GET", url: "/api/external" }), {
     statusCode: 400,
@@ -141,7 +136,6 @@ void test("Omission fails closed (404), regardless of `NODE_ENV`", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L124
   const previousNodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = "development";
   const ctx = await makeTestServer();

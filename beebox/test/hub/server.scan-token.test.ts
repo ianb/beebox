@@ -110,7 +110,6 @@ void test("The bearer is forwarded untouched (the child verifies it again agains
       t.error(error);
     }
   });
-  // doctest:L97
   const accepted = await fetch(`${hubBase}/test1/api/scan/check`, { method: "POST", headers: scanAuth });
   const body = BoxEcho.parse(await accepted.json());
   t.check(
@@ -133,7 +132,6 @@ void test("The bearer is forwarded untouched (the child verifies it again agains
   // The PUT path is covered too — with the hash in its contract form (64 lowercase
   // hex).
 
-  // doctest:L113
   const hash = "a".repeat(64);
   const put = await fetch(`${hubBase}/test1/api/scan/files/${hash}`, { method: "PUT", headers: scanAuth, body: "x" });
   t.check(put.status, 200);
@@ -142,7 +140,6 @@ void test("The bearer is forwarded untouched (the child verifies it again agains
   // under it, a subpath below a legal one, a trailing slash, and a malformed hash
   // are all just other protected surfaces, 401'd without waking the box.
 
-  // doctest:L124
   const nonScan = ["/test1/api/scan/other", "/test1/api/scan", "/test1/api/scan/", "/test1/api/scan/check/", "/test1/api/scan/check/extra", `/test1/api/scan/files/${hash}/extra`, "/test1/api/scan/files/NOTAHASH", `/test1/api/scan/files/${"A".repeat(64)}`];
   const others = await Promise.all(nonScan.map((p) => fetch(`${hubBase}${p}`, { method: "POST", headers: scanAuth })));
   t.check(others.map((res) => res.status).join(" "), "401 401 401 401 401 401 401 401");
@@ -160,7 +157,6 @@ void test("The bearer is forwarded untouched (the child verifies it again agains
   // mobile gate has. A scan token minted for THIS box is worthless against a slug it
   // doesn't own.
 
-  // doctest:L144
   const gates: Array<[string, string, string, Record<string, string>]> = [
     ["scan token, tRPC path", "GET", "/test1/api/trpc/health.check", scanAuth],
     ["scan token, events path", "GET", "/test1/events", scanAuth],
@@ -185,10 +181,8 @@ scan token, slug it doesn't own → 401`);
   // Revocation takes effect at the hub immediately, because the hub reads the same
   // on-disk store the box child does.
 
-  // doctest:L172
   t.check(await revokeScanToken(scanBox.root, "laptop-scansnap"), true);
 
-  // doctest:L175
   const afterRevoke = await fetch(`${hubBase}/test1/api/scan/check`, { method: "POST", headers: scanAuth });
   t.check(afterRevoke.status, 401);
 });

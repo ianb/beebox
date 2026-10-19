@@ -78,13 +78,11 @@ void test("The Mistral probe lists models — a read-only call that creates noth
       t.error(error);
     }
   });
-  // doctest:L75
   const dir = await useTempStore();
   const calls: RecordedCall[] = [];
   await setSecret({ name: "mistral", value: "placeholder-mistral-key" });
   const verified = await probeSecret({ name: "mistral", deps: { fetch: recordingFetch(200, calls) } });
 
-  // doctest:L80
   t.check(verified, { status: "ok", at: isoDate() });
   t.check(calls[0]?.url, "https://api.mistral.ai/v1/models");
   t.check(calls[0]?.headers.get("Authorization"), "Bearer placeholder-mistral-key");
@@ -92,7 +90,6 @@ void test("The Mistral probe lists models — a read-only call that creates noth
 
   // ## A rejected key: `failed`, and the reason never quotes the value
 
-  // doctest:L94
   const rejected = await probeSecret({ name: "mistral", deps: { fetch: recordingFetch(401, []) } });
   t.check(rejected, { status: "failed", reason: "the provider rejected this credential (HTTP 401)", at: isoDate() });
 
@@ -101,7 +98,6 @@ void test("The Mistral probe lists models — a read-only call that creates noth
   // A 500 must never flag a working credential as expired — the boxholder would
   // rotate a perfectly good key.
 
-  // doctest:L110
   const blip = await probeSecret({ name: "mistral", deps: { fetch: recordingFetch(500, []) } });
   t.check(blip, { status: "unchecked", reason: "the check was inconclusive (HTTP 500)", at: isoDate() });
   t.check([isAuthRejection(401), isAuthRejection(500), isAuthRejection(429)], [true, false, false]);
@@ -110,7 +106,6 @@ void test("The Mistral probe lists models — a read-only call that creates noth
   //
   // An ad-hoc slot an agent declared has no server-owned probe, and never gains one.
 
-  // doctest:L125
   await setSecret({ name: "weatherapi", value: "placeholder-weather-key" });
   const adhoc = await probeSecret({ name: "weatherapi", deps: { fetch: recordingFetch(200, []) } });
   t.check(adhoc, { status: "unchecked", reason: "no verification is available for this credential", at: isoDate() });
@@ -124,7 +119,6 @@ void test("The Mistral probe lists models — a read-only call that creates noth
   // consumer parses. When the stored value does not parse, the probe cannot be run,
   // and the boxholder needs to know that, not a silent `unchecked`.
 
-  // doctest:L147
   await setSecret({ name: "deepgram", value: "not-json-at-all" });
   const malformed = await probeSecret({ name: "deepgram", deps: { fetch: recordingFetch(200, []) } });
   t.check(malformed, { status: "failed", reason: "the stored value is not in the shape this credential needs", at: isoDate() });
@@ -135,7 +129,6 @@ void test("The Mistral probe lists models — a read-only call that creates noth
   // either hide a bad rotation behind `ok` or mark a fresh key as expired. The write
   // is a compare-and-set on the entry's `updated` stamp.
 
-  // doctest:L161
   let release: () => void = () => {};
   const slowFetch = async () => {
     await new Promise<void>((resolve) => { release = resolve; });
@@ -154,17 +147,14 @@ void test("The Mistral probe lists models — a read-only call that creates noth
   // actually needed. `resolveSecret` surfaces it as `suspect`, which the admin page
   // renders as "may be expired".
 
-  // doctest:L184
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
   await grantSecret({ slug, name: "weatherapi", access: "agent" });
 
-  // doctest:L188
   const before = await resolveSecret({ boxRoot: box.root, name: "weatherapi", purpose: "forecast", access: "agent" });
   invariant(before.ok, "the granted secret resolves");
   t.check(before.value, { value: "placeholder-weather-key", suspect: false });
 
-  // doctest:L192
   await markSecretVerificationFailed("weatherapi", "a forecast request was rejected with HTTP 401");
   const after = await resolveSecret({ boxRoot: box.root, name: "weatherapi", purpose: "forecast", access: "agent" });
   invariant(after.ok, "the suspect secret still resolves");
@@ -174,7 +164,6 @@ void test("The Mistral probe lists models — a read-only call that creates noth
   // Storing a new value clears the old verdict — a rotated key has not been checked
   // yet, and carrying `failed` forward would leave a fresh key marked expired.
 
-  // doctest:L209
   await setSecret({ name: "weatherapi", value: "placeholder-weather-key-2" });
   t.check(await storedVerified("weatherapi"), undefined);
 });

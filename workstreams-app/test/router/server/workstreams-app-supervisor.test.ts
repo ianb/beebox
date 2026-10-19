@@ -178,7 +178,6 @@ function makeEffects() {
 // (owner session OR the browse key, since 2026-08-24), while mutations require the
 // owner plus the existing same-origin check. Unknown verbs stay denied.
 void test("The resident app is the only workstreams renderer.", async () => {
-  // doctest:L181
   assert.deepEqual(
     classifyRouterRoute({ method: "GET", url: "/workstreams/api/trpc/workstreams.list" }),
     { kind: "dev-read" },
@@ -192,7 +191,6 @@ void test("The resident app is the only workstreams renderer.", async () => {
     { kind: "unknown" },
   );
 
-  // doctest:L194
   const redirect = { status: 0, location: "" };
   const req = { url: "/workstreams/issues/", headers: { accept: "text/html" } };
   writeDeny(
@@ -222,7 +220,6 @@ void test("The resident app is the only workstreams renderer.", async () => {
 // The private capability is injected only after every incoming `x-bbx-*` header
 // has been removed. Cookies and ordinary proxy headers survive.
 void test("The private capability is injected only after every incoming x-bbx- header ha...", async () => {
-  // doctest:L223
   const headers = {
     cookie: "session=owner",
     "x-bbx-authenticated-email": "forged@example.test",
@@ -236,7 +233,6 @@ void test("The private capability is injected only after every incoming x-bbx- h
     "x-bbx-workstreams-capability": "router-generated",
   });
 
-  // doctest:L236
   const viteHeaders = { "x-bbx-workstreams-capability": "forged" };
   prepareWorkstreamsAppHeaders(viteHeaders, null);
   assert.deepEqual(viteHeaders, {});
@@ -249,7 +245,6 @@ void test("The private capability is injected only after every incoming x-bbx- h
 // active lifecycle job or mutating request, the old generation remains ready and
 // the restart stays pending until the activity is finished.
 void test("The first generation exposes separate backend and frontend targets.", async () => {
-  // doctest:L249
   const fake = makeEffects();
   const supervisor = createWorkstreamsAppSupervisor(fake.effects, {
     appRoot: "/tmp/fake-workstreams-app",
@@ -261,7 +256,6 @@ void test("The first generation exposes separate backend and frontend targets.",
   });
   await supervisor.start();
 
-  // doctest:L260
   assert.equal(supervisor.state().phase, "ready");
   assert.deepEqual(supervisor.targetFor("/workstreams/api/trpc/workstreams.list"), {
     port: 4100,
@@ -274,7 +268,6 @@ void test("The first generation exposes separate backend and frontend targets.",
     kind: "frontend",
   });
 
-  // doctest:L272
   fake.setActiveJobs(2);
   fake.triggerWatch("src/server/main/app.ts");
   await fake.fireTimer(10);
@@ -289,7 +282,6 @@ void test("The first generation exposes separate backend and frontend targets.",
   });
   assert.equal(fake.spawnOptions.length, 2);
 
-  // doctest:L286
   fake.setActiveJobs(0);
   await fake.fireTimer(20);
   assert.equal(supervisor.state().phase, "ready");
@@ -304,12 +296,10 @@ void test("The first generation exposes separate backend and frontend targets.",
   // Frontend-only edits are left to Vite HMR. The periodic fingerprint still
   // recovers a missed backend watcher event and schedules another app-only restart.
 
-  // doctest:L302
   fake.triggerWatch("src/frontend/main/App.tsx");
   await fake.fireTimer(10);
   assert.equal(fake.spawnOptions.length, 4);
 
-  // doctest:L306
   fake.setFingerprint("fingerprint-b");
   await fake.fireTimer(30);
   await fake.fireTimer(10);
@@ -320,19 +310,16 @@ void test("The first generation exposes separate backend and frontend targets.",
   // request or lifecycle job completed. The buildless fallback exposes state, log,
   // and retry without depending on the app package.
 
-  // doctest:L318
   fake.children.at(-1)!.fire({ code: 9, signal: null });
   assert.equal(supervisor.state().phase, "failed");
   assert.equal(supervisor.targetFor("/workstreams/"), null);
 
-  // doctest:L322
   const fallback = renderWorkstreamsAppFallback(supervisor.state(), "~/.cache/beebox/logs/workstreams-app.log");
   assert.match(fallback, /Workstreams app unavailable/);
   assert.match(fallback, /frontend exited unexpectedly \(code 9\)/);
   assert.match(fallback, /__router\/retry\/workstreams-app/);
   assert.match(fallback, /workstreams-app\.log/);
 
-  // doctest:L328
   await supervisor.shutdown();
   assert.equal(supervisor.state().phase, "stopped");
 });
@@ -342,7 +329,6 @@ void test("The first generation exposes separate backend and frontend targets.",
 // The reconciliation fingerprint ignores frontend sources (Vite owns their HMR)
 // but includes backend and shared contracts.
 void test("The reconciliation fingerprint ignores frontend sources (Vite owns their HMR)...", async () => {
-  // doctest:L338
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "workstreams-supervisor-"));
   await fs.mkdir(path.join(root, "src/frontend/main"), { recursive: true });
   await fs.mkdir(path.join(root, "src/server/main"), { recursive: true });
@@ -361,7 +347,6 @@ void test("The reconciliation fingerprint ignores frontend sources (Vite owns th
   await fs.writeFile(path.join(root, "src/server/main/app.ts"), "two");
   assert.notEqual(await fingerprintWorkstreamsApp(root), before);
 
-  // doctest:L356
   assert.equal(shouldRestartWorkstreamsBackend("src/frontend/styles.css"), false);
   assert.equal(shouldRestartWorkstreamsBackend("src/router/server/listener.ts"), false);
   assert.equal(shouldRestartWorkstreamsBackend("src/shared/workstreams.ts"), true);
@@ -384,7 +369,6 @@ void test("The reconciliation fingerprint ignores frontend sources (Vite owns th
 // The child receives the port and the persisted token; Vite never learns the
 // token.
 void test("The exhibits surface is a second listener in the same process group, on its o...", async () => {
-  // doctest:L379
   const exhibits = makeEffects();
   const exhibitsSupervisor = createWorkstreamsAppSupervisor(exhibits.effects, {
     appRoot: "/tmp/fake-workstreams-app",
@@ -396,7 +380,6 @@ void test("The exhibits surface is a second listener in the same process group, 
   });
   await exhibitsSupervisor.start();
 
-  // doctest:L390
   assert.deepEqual(exhibits.exhibitsEvents, [`hold:${String(EXHIBITS_DEFAULT_PORT)}`, "release"]);
   assert.equal(exhibits.exhibitsFallback(), null);
   assert.equal(exhibits.spawnOptions[0]?.exhibitsPort, EXHIBITS_DEFAULT_PORT);
@@ -408,12 +391,10 @@ void test("The exhibits surface is a second listener in the same process group, 
   // still own the exhibits port, and a fallback that binds ahead of that gets
   // EADDRINUSE, leaving the developer with no child and no fallback.
 
-  // doctest:L403
   exhibits.children.at(-1)!.fire({ code: 9, signal: null });
   await exhibits.settle();
   assert.deepEqual(exhibits.exhibitsEvents.slice(2), ["stop", `hold:${String(EXHIBITS_DEFAULT_PORT)}`]);
 
-  // doctest:L407
   const page = exhibits.exhibitsFallback() ?? "";
   assert.match(page, /Exhibits unavailable/);
   assert.match(page, /frontend exited unexpectedly \(code 9\)/);
@@ -423,14 +404,12 @@ void test("The exhibits surface is a second listener in the same process group, 
   // A retry releases the port to the replacement child before it is spawned, so the
   // new listener can bind it.
 
-  // doctest:L418
   await exhibitsSupervisor.retry();
   assert.equal(exhibitsSupervisor.state().phase, "ready");
   // The fallback is already bound from the failure, so the retry only releases.
   assert.deepEqual(exhibits.exhibitsEvents.slice(4), ["release"]);
   assert.equal(exhibits.exhibitsFallback(), null);
 
-  // doctest:L424
   await exhibitsSupervisor.shutdown();
   assert.equal(exhibits.exhibitsFallback(), null);
 });
@@ -440,7 +419,6 @@ void test("The exhibits surface is a second listener in the same process group, 
 // is actually free. Without the retry the failure is permanent — nothing else ever
 // tries to bind that port again.
 void test("A socket can outlive the process that owned it, so one refused bind is not th...", async () => {
-  // doctest:L434
   const racing = makeEffects();
   const racingSupervisor = createWorkstreamsAppSupervisor(racing.effects, {
     appRoot: "/tmp/fake-workstreams-app",
@@ -453,19 +431,16 @@ void test("A socket can outlive the process that owned it, so one refused bind i
   });
   await racingSupervisor.start();
 
-  // doctest:L446
   racing.setHoldFailures(1);
   racing.children.at(-1)!.fire({ code: 9, signal: null });
   await racing.settle();
   assert.deepEqual(racing.exhibitsEvents.slice(2), ["stop", "hold-failed"]);
   assert.equal(racing.exhibitsFallback(), null);
 
-  // doctest:L452
   await racing.fireTimer(7);
   await racing.settle();
   assert.deepEqual(racing.exhibitsEvents.slice(2), ["stop", "hold-failed", `hold:${String(EXHIBITS_DEFAULT_PORT)}`]);
   assert.match(racing.exhibitsFallback() ?? "", /Exhibits unavailable/);
 
-  // doctest:L457
   await racingSupervisor.shutdown();
 });

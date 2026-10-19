@@ -65,7 +65,6 @@ tapModule.default.teardown(async () => {
 // `--help` prints the usage and exits 0. The fixture is not a worktree branch, so
 // if the command ran preflight it would exit 1 instead.
 void test("--help prints the usage and exits 0.", async (t) => {
-  // doctest:L48
   const help = cli("--help");
   t.check(help.status, 0);
   t.checkText(help.stdout, USAGE);
@@ -74,7 +73,6 @@ void test("--help prints the usage and exits 0.", async (t) => {
 // An unknown flag and an unknown `--only` kind are usage errors: exit 2, the
 // reason, and the usage, with nothing run.
 void test("An unknown flag and an unknown --only kind are usage errors:", async (t) => {
-  // doctest:L57
   const unknown = cli("--sheeet", "x.json");
   const badKind = cli("--only", "test");
   t.check([unknown.status, badKind.status, unknown.stdout, badKind.stdout], [
@@ -84,7 +82,6 @@ void test("An unknown flag and an unknown --only kind are usage errors:", async 
     "",
   ]);
 
-  // doctest:L64
   t.checkText(unknown.stderr, `finish-verify: bad arguments: Unknown option '--sheeet'\n${USAGE}`);
   t.checkText(badKind.stderr, `finish-verify: bad arguments: --only takes tests, typecheck, lint, smoke, site, apple; got 'test'\n${USAGE}`);
 });
@@ -97,7 +94,6 @@ void test("An unknown flag and an unknown --only kind are usage errors:", async 
 // slot. Here the check starts a background `sleep`, the way pnpm starts tap; the
 // `sleep` must die with finish-verify.
 void test("An agent harness stops a command by signalling its pid alone.", async (t) => {
-  // doctest:L77
   const pidFile = path.join(root, "grandchild.pid");
   const child = spawn(
     process.execPath,
@@ -115,7 +111,6 @@ void test("An agent harness stops a command by signalling its pid alone.", async
 
   // Exit 143 is 128 + SIGTERM's 15, the shell convention for death by signal.
 
-  // doctest:L96
   t.check(code, 143);
 });
 
@@ -124,7 +119,6 @@ void test("An agent harness stops a command by signalling its pid alone.", async
 // the fixture's `bin/private-issues` early, so here that script starts a
 // background `sleep` and waits, which holds preflight in place.
 void test("Without --sheet, finish-verify first runs preflight, which merges main and ca...", async (t) => {
-  // doctest:L106
   const branchRepo = fs.mkdtempSync(path.join(os.tmpdir(), "finish-verify-preflight-"));
   const inRepo = (...args: string[]) => execFileSync("git", args, { cwd: branchRepo });
   inRepo("init", "-q", "-b", "worktree-demo");
@@ -152,7 +146,6 @@ void test("Without --sheet, finish-verify first runs preflight, which merges mai
 // A run that finds another live registration prints a note, so a slow smoke can
 // be read as load. This test registers its own live pid as the other run.
 void test("Every worktree shares one dev router, so another worktree's finish-verify slo...", async (t) => {
-  // doctest:L135
   const runs = path.join(root, ".git", "finish-verify-runs");
   fs.mkdirSync(runs, { recursive: true });
   fs.writeFileSync(path.join(runs, `${process.pid}.json`), JSON.stringify("other-worktree"));
@@ -165,7 +158,6 @@ VERDICT: green`);
 
   // A finished run removes its own registration, so only the planted one remains.
 
-  // doctest:L149
   t.check(fs.readdirSync(runs), [`${process.pid}.json`]);
 });
 
@@ -180,7 +172,6 @@ VERDICT: green`);
 // branch edit, and `site/docs/c.md` is new and untracked. The check fails naming
 // all three; only `a.md` gets the note.
 void test("A site doc that links to a card page broke on main when the card type moved i...", async (t) => {
-  // doctest:L164
   const git = (...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8" });
   git("config", "user.email", "test@example.com");
   git("config", "user.name", "Test");
@@ -211,7 +202,6 @@ void test("A site doc that links to a card page broke on main when the card type
 // not tell load from a broken step. A red smoke now shows the walk's step lines,
 // each with the step's own time and its usual time.
 void test("The smoke walk has one 120-second budget.", async (t) => {
-  // doctest:L195
   const smoke = cli(
     "--sheet",
     sheetFile("echo 'ok   the app loads (9.0s; usual 2.0s)'; echo 'FAIL a card opens (40.0s; usual 8.0s; walk 120.0s)'; exit 1", "smoke"),

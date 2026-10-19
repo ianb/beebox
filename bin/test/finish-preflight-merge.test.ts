@@ -66,7 +66,6 @@ tapModule.default.teardown(async () => {
 // (here `a` was retired), followed by the branch's new entries with their
 // comments.
 void test("Deployed boxes have run main's list in main's order.", async (t) => {
-  // doctest:L64
   t.check(
     appendBranchMigrations({ base, ours, theirs }),
     migrations(entry("a"), entry("main-new", "m.ts"), "  // The branch's migration.", entry("branch-new", "b.ts")),
@@ -77,7 +76,6 @@ void test("Deployed boxes have run main's list in main's order.", async (t) => {
 // A branch that also edited an existing entry, or added an entry main also
 // added, needs a person: the result is `null` and the conflict stands.
 void test("The rule applies only when the branch's change to the file is pure appends.", async (t) => {
-  // doctest:L77
   const edited = migrations(entry("a", "a2.ts"), entry("branch-new", "b.ts"));
   const sameName = migrations(entry("a", "a.ts"), entry("main-new", "b.ts"));
   t.check([appendBranchMigrations({ base, ours: edited, theirs }), appendBranchMigrations({ base, ours: sameName, theirs })], [
@@ -90,7 +88,6 @@ void test("The rule applies only when the branch's change to the file is pure ap
 // deleted an existing row made a choice, so the conflict stands for a person
 // rather than keeping both versions of the row.
 void test("The ledger rule likewise applies only to appends.", async (t) => {
-  // doctest:L88
   const baseLedger = ledger(row("2026-10-01T00:00:00Z", 100));
   const corrected = ledger(row("2026-10-01T00:00:00Z", 101), row("2026-10-03T00:00:00Z", 300));
   const appended = ledger(row("2026-10-01T00:00:00Z", 100), row("2026-10-02T00:00:00Z", 200));
@@ -104,7 +101,6 @@ void test("The ledger rule likewise applies only to appends.", async (t) => {
 // driver, keeps those shared lines once and leaves one row without them. The
 // ledger rule merges parsed rows instead and sorts them by date.
 void test("Both sides append a ledger row and a migration.", async (t) => {
-  // doctest:L103
   git("init", "-q", "-b", "main");
   git("config", "user.email", "test@example.com");
   git("config", "user.name", "Test");
@@ -137,7 +133,6 @@ void test("Both sides append a ledger row and a migration.", async (t) => {
 
   // The ledger keeps all three rows, each complete, oldest first.
 
-  // doctest:L129
   t.checkText(
     fs.readFileSync(path.join(root, "beebox/src/dev/context-history.yaml"), "utf8"),
     [
@@ -155,7 +150,6 @@ void test("Both sides append a ledger row and a migration.", async (t) => {
 // A conflict in a file with no rule exits 3 and leaves the merge in progress for
 // a person, as before.
 void test("A conflict in a file with no rule exits 3 and leaves the merge in progress fo...", async (t) => {
-  // doctest:L144
   git("checkout", "-qb", "worktree-other", "main");
   write("notes.txt", "branch\n");
   commitAll("branch notes");

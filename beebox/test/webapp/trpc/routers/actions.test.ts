@@ -60,16 +60,13 @@ void test("answer resolves the card and emits `question-answered`", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L56
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/questions/Color.question.card", SELECT);
   const { caller, events } = contextFor(box);
 
-  // doctest:L60
   const res = await caller.answer({ questionPath: "_bookkeeping/questions/Color.question.card", answer: "Red" });
   t.check(res, { success: true, message: "Question answered", path: "_bookkeeping/questions/Color.question.card" });
 
-  // doctest:L67
   t.checkText(await box.read("_bookkeeping/questions/Color.question.card"), `---
 type: question
 prompt: Pick one
@@ -88,7 +85,6 @@ answered-at: «date»
 answered-via: web
 ---`);
 
-  // doctest:L70
   t.check(events, [
     { event: "question-answered", data: { path: "_bookkeeping/questions/Color.question.card", answer: "Red", selectedId: undefined, timestamp: isoDate() } },
   ]);
@@ -106,11 +102,9 @@ void test("Answering a card that doesn't exist fails in the command; the procedu
       t.error(error);
     }
   });
-  // doctest:L84
   const box = await makeTmpBox({ git: true });
   const { caller } = contextFor(box);
 
-  // doctest:L87
   const out = await attempt(() => caller.answer({ questionPath: "_bookkeeping/questions/Nope.question.card", answer: "Red" }));
   t.check(out, "THREW:BAD_REQUEST:Could not load card: _bookkeeping/questions/Nope.question.card");
 });
@@ -124,16 +118,13 @@ void test("dismiss flips the card and emits `question-dismissed`", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L99
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/questions/Color.question.card", SELECT);
   const { caller, events } = contextFor(box);
 
-  // doctest:L103
   const res = await caller.dismiss({ questionPath: "_bookkeeping/questions/Color.question.card" });
   t.check(res, { success: true, message: "Question dismissed", path: "_bookkeeping/questions/Color.question.card" });
 
-  // doctest:L110
   t.checkText(await box.read("_bookkeeping/questions/Color.question.card"), `---
 type: question
 prompt: Pick one
@@ -148,7 +139,6 @@ directive: Use the picked color
 dismissed-at: «date»
 ---`);
 
-  // doctest:L113
   t.check(events, [{ event: "question-dismissed", data: { path: "_bookkeeping/questions/Color.question.card", timestamp: isoDate() } }]);
 });
 
@@ -161,7 +151,6 @@ void test("dismiss rejects a non-pending question as BAD_REQUEST", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L124
   const box = await makeTmpBox({ git: true });
   await box.write(
     "_bookkeeping/questions/Color.question.card",
@@ -173,7 +162,6 @@ void test("dismiss rejects a non-pending question as BAD_REQUEST", async (t) => 
   );
   const { caller } = contextFor(box);
 
-  // doctest:L135
   const out = await attempt(() => caller.dismiss({ questionPath: "_bookkeeping/questions/Color.question.card" }));
   t.check(out, "THREW:BAD_REQUEST:Question is answered, not pending; only a pending question can be dismissed");
 });
@@ -192,15 +180,12 @@ void test("The tRPC input is box-relative only:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L152
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/questions/Color.question.card", SELECT);
   const { caller } = contextFor(box);
 
-  // doctest:L156
   const absPath = `${box.root}/_bookkeeping/questions/Color.question.card`;
 
-  // doctest:L158
   const ans = await attempt(() => caller.answer({ questionPath: absPath, answer: "Red" }));
   t.check(ans, `THREW:BAD_REQUEST:[
   {
@@ -212,7 +197,6 @@ void test("The tRPC input is box-relative only:", async (t) => {
   }
 ]`);
 
-  // doctest:L162
   const dis = await attempt(() => caller.dismiss({ questionPath: absPath }));
   t.check(dis, `THREW:BAD_REQUEST:[
   {
@@ -224,6 +208,5 @@ void test("The tRPC input is box-relative only:", async (t) => {
   }
 ]`);
 
-  // doctest:L166
   t.check(await box.read("_bookkeeping/questions/Color.question.card"), SELECT);
 });

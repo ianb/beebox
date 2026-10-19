@@ -66,7 +66,6 @@ void test("The compliant plugin has no finding; a file outside src/plugins/ is n
       t.error(error);
     }
   });
-  // doctest:L64
   t.check(findings.filter((f) => f.path.includes("/good/")), []);
 });
 

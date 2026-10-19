@@ -9,7 +9,6 @@ import "@ianbicking/tap-check/tap";
 import { CardActivityStore } from "../../../../src/components/chat/conversation/card-activity-store.js";
 
 void test("line 11", async (t) => {
-  // doctest:L12
   const activity = new CardActivityStore();
   const first = "_content/house/Energy.doc.card?view=costs";
   const second = "_content/kitchen/Plan.doc.card";
@@ -25,12 +24,10 @@ void test("line 11", async (t) => {
     },
   });
 
-  // doctest:L20
   t.check(activity.capture(second), {
     openCard: "_content/kitchen/Plan.doc.card",
   });
 
-  // doctest:L23
   activity.report(second, { kind: "scrolled", detail: "0.7" });
   activity.report(first, { kind: "modified", detail: "Updated cost again" });
   activity.accepted(cancelled);
@@ -54,7 +51,6 @@ void test("line 11", async (t) => {
     },
   });
 
-  // doctest:L32
   const final = activity.capture(first);
   activity.accepted(final);
   t.check(activity.capture(first), {
@@ -71,11 +67,9 @@ void test("line 11", async (t) => {
     },
   });
 
-  // doctest:L40
   t.check(activity.capture("_content/house/Energy.doc.card?view=summary"), {
     openCard: "_content/house/Energy.doc.card",
   });
 
-  // doctest:L43
   t.check(activity.capture(undefined), {});
 });

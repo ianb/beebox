@@ -21,15 +21,12 @@ void test("ensureBoxTmpDir creates the dir and returns its path", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L19
   const box = await makeTmpBox();
   const dir = await ensureBoxTmpDir(box.root);
   t.check(dir, boxTmpDir(box.root));
 
-  // doctest:L26
   t.check(await fs.access(dir).then(() => "exists", () => "absent"), "exists");
 
-  // doctest:L31
   // Idempotent — a second call on an existing dir is fine.
   const again = await ensureBoxTmpDir(box.root);
   t.check(again, dir);

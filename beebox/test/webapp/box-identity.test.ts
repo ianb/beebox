@@ -75,11 +75,9 @@ void test("The name comes from the local user record, so an attributed chat mess
       t.error(error);
     }
   });
-  // doctest:L65
   const optedIn = await makeTmpBox();
   await setAgentBrowsing(optedIn, "owner");
 
-  // doctest:L68
   t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: withKey, openAccess: false }), { email: "owner@example.com", name: "Owner", source: "browse" });
 
   // ## The same key on a box that never opted in is nobody
@@ -88,17 +86,14 @@ void test("The name comes from the local user record, so an attributed chat mess
   // person actually uses must not hand it an identity just because the key is set on
   // the machine.
 
-  // doctest:L79
   const plainBox = await makeTmpBox();
 
-  // doctest:L81
   t.check(await resolveBoxIdentity({ boxRoot: plainBox.root, request: withKey, openAccess: false }), { email: null, name: null, source: null });
 
   // ## The field without the key grants nothing
   //
   // The opt-in is not a credential — it only says what a credential means here.
 
-  // doctest:L90
   t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: noKey, openAccess: false }), { email: null, name: null, source: null });
 
   // ## A bad value is treated as absent, and warned once per box
@@ -107,7 +102,6 @@ void test("The name comes from the local user record, so an attributed chat mess
   // is a hand-edit mistake that must fail closed rather than be guessed at. The warn
   // names the box and the value, and fires once however many requests arrive.
 
-  // doctest:L101
   const badBox = await makeTmpBox();
   await setAgentBrowsing(badBox, "yes");
   const warnings: string[] = [];
@@ -117,7 +111,6 @@ void test("The name comes from the local user record, so an attributed chat mess
   await resolveBoxIdentity({ boxRoot: badBox.root, request: withKey, openAccess: false });
   console.warn = originalWarn;
 
-  // doctest:L110
   t.check(first, { email: null, name: null, source: null });
   t.check(warnings, [
     `[box-identity] Ignoring agentBrowsing: "yes" in ${path.join(badBox.root, "_config", "box.json")} — the only supported value is "owner".`,
@@ -129,7 +122,6 @@ void test("The name comes from the local user record, so an attributed chat mess
   // the request keeps the identity it had (a 401 at the gate) and the box is named in
   // a warning.
 
-  // doctest:L124
   const ownerless = await makeTmpBox();
   await setAgentBrowsing(ownerless, "owner");
   delete process.env.BBX_OWNER_EMAIL;
@@ -144,7 +136,6 @@ void test("The name comes from the local user record, so an attributed chat mess
   process.env.BBX_AUTH_FILE = path.join(authDir, "auth.json");
   resetLocalUserCache();
 
-  // doctest:L138
   t.check(ownerlessIdentity, { email: null, name: null, source: null });
   t.check(noOwnerWarnings, [
     `[box-identity] ${ownerless.root} sets agentBrowsing: "owner", but this deployment has no owner to act as; agent browsing stays unauthenticated.`,
@@ -156,11 +147,9 @@ void test("The name comes from the local user record, so an attributed chat mess
   // the key is the cookie's owner, `source: "cookie"`, so nothing about who acted is
   // blurred by which credentials happened to ride along.
 
-  // doctest:L152
   const cookie = signSession({ email: "owner@example.com", name: "Owner" });
   const both = { headers: { authorization: `Bearer ${KEY}` }, cookies: { [COOKIE_NAME]: cookie } };
 
-  // doctest:L155
   t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: both, openAccess: false }), { email: "owner@example.com", name: "Owner", source: "cookie" });
 
   // ## `open` is returned as-is
@@ -168,7 +157,6 @@ void test("The name comes from the local user record, so an attributed chat mess
   // An open-access box has no wall to clear; the rung must not turn its ambient
   // openness into a named person.
 
-  // doctest:L165
   t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: withKey, openAccess: true }), { email: null, name: null, source: "open" });
 
   // ## A corrupt credential store is never masked by the key
@@ -183,7 +171,6 @@ void test("The name comes from the local user record, so an attributed chat mess
   // `unavailable` at all — the case that exists is a request carrying both, which is
   // the one below.
 
-  // doctest:L182
   await writeFile(path.join(authDir, "auth.json"), "{not json at all");
   resetLocalUserCache();
   // The resolver logs the outage loudly (once per process) — captured here so the
@@ -194,7 +181,6 @@ void test("The name comes from the local user record, so an attributed chat mess
   const corrupt = await resolveBoxIdentity({ boxRoot: optedIn.root, request: both, openAccess: false });
   console.error = originalError;
 
-  // doctest:L192
   t.check(corrupt, { email: null, name: null, source: "unavailable" });
   t.check(errors, [
     str`[auth] auth store unavailable while verifying a session cookie; failing closed (503): AuthFileCorruptError: Auth file at ${path.join(authDir, "auth.json")} is corrupt: ${any(String)}`,

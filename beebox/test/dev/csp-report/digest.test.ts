@@ -16,7 +16,6 @@ function line({ ts, directive, blocked }: { ts: string; directive: string; block
 //
 // No violations → safe to flip Report-Only to enforcing (with a human in the loop):
 void test("No violations → safe to flip Report-Only to enforcing (with a human in the lo...", async (t) => {
-  // doctest:L20
   const clean = digestCspReports("");
   t.check(clean, {
     total: 0,
@@ -33,7 +32,6 @@ before flipping — this tool proposes, it does not change the policy.`,
 //
 // Repeated violations of the same directive+origin collapse into one row with a count and a first/last-seen window; distinct ones are listed separately, most-frequent first. Blank lines and any non-JSON line are skipped:
 void test("Repeated violations of the same directive+origin collapse into one row with a...", async (t) => {
-  // doctest:L36
   const log = [
     line({ ts: "2026-06-01T10:00:00.000Z", directive: "frame-src", blocked: "https://vimeo.com" }),
     line({ ts: "2026-06-01T11:00:00.000Z", directive: "frame-src", blocked: "https://vimeo.com" }),
@@ -73,7 +71,6 @@ For each: is the blocked origin a legitimate consumer to allowlist, or a real bu
 //
 // `entriesSince` filters by the prior run's timestamp watermark (ISO-8601 UTC sorts lexically, so `>` is chronological); `newestTs` is what the CLI writes back as the next cursor. This is robust to the sink's rolling truncation — it filters by time, not byte offset.
 void test("entriesSince filters by the prior run's timestamp watermark (ISO-8601 UTC sor...", async (t) => {
-  // doctest:L69
   const incLog = [
     line({ ts: "2026-06-01T10:00:00.000Z", directive: "frame-src", blocked: "https://vimeo.com" }),
     line({ ts: "2026-06-01T11:00:00.000Z", directive: "frame-src", blocked: "https://vimeo.com" }),
@@ -91,12 +88,10 @@ void test("entriesSince filters by the prior run's timestamp watermark (ISO-8601
     },
   ]);
 
-  // doctest:L83
   t.check(newestTs(entries), "2026-06-02T09:00:00.000Z");
 
   // The summary for a delta lists the new violations and defers the harden verdict to `--all` (a whole-log judgment), rather than asserting "safe to harden" off a clean delta:
 
-  // doctest:L90
   const delta = digestEntries(fresh, { incremental: true, since });
   t.check(delta, {
     total: 1,
@@ -120,7 +115,6 @@ Run \`pnpm csp-digest --all\` for the full-log view before judging a harden.`,
 
   // When nothing is new since the cursor, the delta is clean — but it says so as "no *new* violations", not "safe to harden":
 
-  // doctest:L101
   const newest = newestTs(entries);
   assert.ok(newest, "the log has entries");
   const none = digestEntries(entriesSince(entries, newest), { incremental: true, since: newest });

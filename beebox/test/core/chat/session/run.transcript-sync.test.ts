@@ -53,20 +53,16 @@ void test("An entry already on disk resolves true immediately; an absent one run
       t.error(error);
     }
   });
-  // doctest:L48
   const box = await makeTmpBox({ git: true });
   const sessionId = "tsync-helper";
   const logPath = await resolveSessionLogPath(box.root, sessionId);
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, entryLine("uuid-already-there"));
 
-  // doctest:L54
   t.check(await waitForTranscriptEntry({ boxRoot: box.root, sessionId, uuid: "uuid-already-there", timeoutMs: 500 }), true);
 
-  // doctest:L57
   t.check(await waitForTranscriptEntry({ boxRoot: box.root, sessionId, uuid: "uuid-missing", timeoutMs: 200 }), false);
 
-  // doctest:L60
   const pending = waitForTranscriptEntry({ boxRoot: box.root, sessionId, uuid: "uuid-late", timeoutMs: 3000 });
   setTimeout(() => { void appendFile(logPath, entryLine("uuid-late")); }, 100);
   t.check(await pending, true);
@@ -87,7 +83,6 @@ void test("A turn whose assistant message carries a uuid must not surface result
       t.error(error);
     }
   });
-  // doctest:L78
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, systemPrompt: plainTestPrompt, skipBootstrap: true });
@@ -106,10 +101,8 @@ void test("A turn whose assistant message carries a uuid must not surface result
   run?.emitResult();
   await sleep(200);
 
-  // doctest:L96
   t.check(doneFired, false);
 
-  // doctest:L99
   const done = once(session, "done");
   await appendFile(logPath, entryLine(FINAL_UUID));
   await done;
@@ -130,7 +123,6 @@ void test("Turns whose messages carry no uuid (the fake backend's plain helpers,
       t.error(error);
     }
   });
-  // doctest:L119
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, systemPrompt: plainTestPrompt, skipBootstrap: true });
@@ -145,6 +137,5 @@ void test("Turns whose messages carry no uuid (the fake backend's plain helpers,
   run?.emitResult();
   await done;
 
-  // doctest:L133
   t.check(Date.now() - t0, any(Number).below(1000));
 });

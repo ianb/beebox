@@ -39,7 +39,6 @@ async function captureOutput<T>(fn: () => Promise<T>): Promise<T> {
 // and the third succeeds while requesting a procedure. All three run; the
 // injected procedure runner sees the request and contributes its own failure.
 void test("The first connector returns an ordinary SyncResult error, the second throws,...", async (t) => {
-  // doctest:L43
   const ran: string[] = [];
   const procedureRefs: string[] = [];
   const connectors = [
@@ -62,7 +61,6 @@ void test("The first connector returns an ordinary SyncResult error, the second 
     }),
   ];
 
-  // doctest:L65
   const result = await captureOutput(() => runConnectors("/unused", {
     connectors,
     runProcedureTriggers: async (procedures) => {
@@ -71,7 +69,6 @@ void test("The first connector returns an ordinary SyncResult error, the second 
     },
   }));
 
-  // doctest:L73
   t.check(
     {
       ran,
@@ -98,7 +95,6 @@ void test("The first connector returns an ordinary SyncResult error, the second 
 
 // ## Scoped runs still return their active connector and error count
 void test("Scoped runs still return their active connector and error count", async (t) => {
-  // doctest:L86
   const only = connector("only", async () => ({
     success: false,
     created: [],
@@ -141,7 +137,6 @@ void test("Scoped runs still return their active connector and error count", asy
 // — which naturally processes zero connector-scoped work — instead of falling
 // back to a full run.
 void test("Naming a connector that doesn't match any configured connector must not abort...", async (t) => {
-  // doctest:L123
   const configured = connector("configured", async () => ({
     success: true,
     created: [],
@@ -174,7 +169,6 @@ void test("Naming a connector that doesn't match any configured connector must n
 // `activeConnectorName` unset — that's the signal wakeup.ts uses to run
 // unscoped only when no scoping was ever requested.
 void test("Distinguishes the two undefined-activeConnector cases from the caller's side:", async (t) => {
-  // doctest:L150
   const configuredForFullRun = connector("configured", async () => ({
     success: true,
     created: [],
@@ -207,7 +201,6 @@ void test("Distinguishes the two undefined-activeConnector cases from the caller
 // connector that reported no error and synced nothing may never have been
 // contacted.
 void test("The aggregate errorCount cannot say which connector did what, and a forced wa...", async (t) => {
-  // doctest:L177
   const mixed = [
     connector("google-drive", async () => ({
       success: true,
@@ -264,7 +257,6 @@ void test("The aggregate errorCount cannot say which connector did what, and a f
   // never ran, and a caller that saw only an error count would have to guess which
   // name the cycle failed to find.
 
-  // doctest:L206
   const missed = await captureOutput(() => runConnectors("/unused", {
     connector: "drive",
     connectors: mixed,
@@ -289,7 +281,6 @@ void test("The aggregate errorCount cannot say which connector did what, and a f
 // reactor work, and push. Returning `undefined` for a clean connector phase means
 // the helper never clears an exit status established by some other phase.
 void test("The command applies this value after stale-job cleanup, intake, indexing, rea...", async (t) => {
-  // doctest:L222
   t.check(
     [
       wakeupExitCodeForConnectorErrors(0) ?? null,

@@ -33,7 +33,6 @@ void test("The createAgent option lets tests replace the real Claude Code subpro
       t.error(error);
     }
   });
-  // doctest:L36
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/agent-test.procedure.card", `---
 name: agent-test
@@ -110,7 +109,6 @@ void test("Model resolution happens on the real procedure path before the inject
       t.error(error);
     }
   });
-  // doctest:L119
   const box = await makeTmpBox({ git: true });
   await box.write("_config/box.json", JSON.stringify({ agentEngine: "codex" }));
   await box.write("_config/procedures/codex-tier.procedure.card", `---
@@ -142,7 +140,6 @@ steps:
   });
   const fakeAgent = fakeAgents[0];
   assert.ok(fakeAgent);
-  // doctest:L133
   t.check({ result, model: describeModel(fakeAgent.invocations[0]?.options.model) }, {
     result: {
       ok: true,
@@ -165,7 +162,6 @@ void test("An added OpenRouter model has no tier, so the box's two slots stand i
       t.error(error);
     }
   });
-  // doctest:L168
   const box = await makeTmpBox({ git: true });
   await box.write("_config/box.json", JSON.stringify({
     agentModel: "moonshotai/kimi-k2-0905:exacto",
@@ -199,7 +195,6 @@ steps:
   };
   const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
   const result = await startProcedure({ ctx, procedureNameOrPath: "openrouter-tiers", options: { createAgent } });
-  // doctest:L192
   t.check({ result, models }, {
     result: {
       ok: true,
@@ -222,7 +217,6 @@ void test("A native harness can reject a model or fail without a usable assistan
       t.error(error);
     }
   });
-  // doctest:L221
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/rejected.procedure.card", `---
 name: rejected
@@ -261,7 +255,6 @@ steps:
   const runDir = runs.split("\n").find((file) => file.includes("rejected_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
   const outputFiles = await box.list("_bookkeeping/output");
-  // doctest:L241
   // The session id and git ref are minted per run.
   t.check({ result, step: run?.steps[0], outputFiles }, {
     result: {
@@ -300,7 +293,6 @@ void test("Even a warn instruction check cannot claim a usable validation result
       t.error(error);
     }
   });
-  // doctest:L285
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/judge-rejected.procedure.card", `---
 name: judge-rejected
@@ -334,7 +326,6 @@ steps:
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find((file) => file.includes("judge-rejected_"));
   const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
-  // doctest:L301
   t.check({ result, step: run?.steps[0] }, {
     result: {
       ok: false,
@@ -367,7 +358,6 @@ void test("Directive passed to agent context", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L338
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/directed.procedure.card", `---
 name: directed
@@ -420,7 +410,6 @@ void test("When an agent leaves uncommitted changes, the engine creates a fallba
       t.error(error);
     }
   });
-  // doctest:L390
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/messy.procedure.card", `---
 name: messy
@@ -482,7 +471,6 @@ void test("A run phase with both an agents: and a shells: entry runs the agent f
       t.error(error);
     }
   });
-  // doctest:L447
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/mixed.procedure.card", `---
 name: mixed

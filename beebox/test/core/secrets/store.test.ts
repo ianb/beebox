@@ -45,7 +45,6 @@ void test("Adding a secret and granting it are separate acts — adding makes th
       t.error(error);
     }
   });
-  // doctest:L41
   const dir = await useTempStore();
   await setSecret({ name: "mistral", value: "placeholder-value-1", note: "transcription" });
   await grantSecret({ slug: "demo-box", name: "mistral", access: "server" });
@@ -63,7 +62,6 @@ void test("Adding a secret and granting it are separate acts — adding makes th
 
   // `list` returns metadata only — a value never leaves the store through it:
 
-  // doctest:L57
   const listing = await listSecrets();
   t.check(listing, [
     {
@@ -91,7 +89,6 @@ void test("Adding a secret and granting it are separate acts — adding makes th
 
   // A missing store file is an EMPTY store, not an error — the first-run case:
 
-  // doctest:L74
   await rm(secretsFilePath());
   const empty = await loadSecretStore();
   t.check(empty, { ok: true, value: { secrets: {}, grants: {}, cloudflarePublishConnections: {}, cloudflarePublishBindings: {} } });
@@ -110,21 +107,17 @@ void test("A hand-edit that leaves invalid JSON — or a file that parses but do
       t.error(error);
     }
   });
-  // doctest:L94
   const dir = await useTempStore();
   await writeFile(secretsFilePath(), "{ not json");
   const broken = await loadSecretStore();
   t.check(broken, { ok: false, error: str`invalid JSON (${any(String)})` });
 
-  // doctest:L100
   await writeFile(secretsFilePath(), JSON.stringify({ secrets: { x: { value: 3 } } }));
   const invalid = await loadSecretStore();
   t.check(invalid, { ok: false, error: str`does not match the store schema (${any(String)})` });
 
-  // doctest:L110
   await t.checkThrows(async () => (await listSecrets()), "SecretStoreAccessError");
 
-  // doctest:L113
   await t.checkThrows(async () => (await setSecret({ name: "mistral", value: "placeholder-value-2" })), "SecretStoreAccessError");
 });
 
@@ -140,7 +133,6 @@ void test("declare is the agent's surface:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L127
   const dir = await useTempStore();
   t.check(await declareSecret({ name: "weatherapi", note: "for a trick" }), { created: true });
   t.check(await declareSecret({ name: "weatherapi" }), { created: false });
@@ -171,7 +163,6 @@ void test("declare is the agent's surface:", async (t) => {
   // Removing a secret deliberately leaves its grants behind, so the resolver can
   // report a *stale grant* rather than the misleading "no such secret":
 
-  // doctest:L154
   await removeSecret("mistral");
   t.check((await boxSecretStatus("demo-box")).danglingGrants, ["mistral"]);
   await revokeSecret({ slug: "demo-box", name: "mistral" });
@@ -179,7 +170,6 @@ void test("declare is the agent's surface:", async (t) => {
 
   // Revoking a grant the box does not hold is an error, not a silent no-op:
 
-  // doctest:L166
   await t.checkThrows(async () => (await revokeSecret({ slug: "demo-box", name: "mistral" })), "SecretGrantNotFoundError");
 });
 
@@ -195,7 +185,6 @@ void test("A bucket-scoped publish token works for one bucket only, so a second 
       t.error(error);
     }
   });
-  // doctest:L180
   const dir = await useTempStore();
   await setSecret({
     name: "bucket-token/demo-box",
@@ -208,20 +197,17 @@ void test("A bucket-scoped publish token works for one bucket only, so a second 
     { name: "bucket-token/demo-box", access: "server", hasValue: true, uses: { builtin: [], declared: [], observed: [] } },
   ]);
 
-  // doctest:L193
   await t.checkThrows(async () => (await grantSecret({ slug: "other-box", name: "bucket-token/demo-box", access: "server" })), "SecretNotShareableError: The secret \"bucket-token/demo-box\" is marked single-box (it belongs to \"demo-box\") and cannot also be granted to \"other-box\". Some credentials bind to one box structurally — a bucket-scoped publish token works for one bucket only — so sharing one would break the box already using it. Create a separate secret for this box.");
 
   // Granting a name that does not exist is refused too — a grant never conjures an
   // entry:
 
-  // doctest:L201
   await t.checkThrows(async () => (await grantSecret({ slug: "demo-box", name: "nonexistent", access: "server" })), "SecretNotFoundError");
 
   // `setAndGrantSecret` reads ownership off the STORE, never off its own arguments:
   // a flow that passes an `owningBox` naming itself cannot take over an entry
   // another box owns, and cannot hand an entry it does own to a third box.
 
-  // doctest:L210
   await t.checkThrows(
     async () => (await setAndGrantSecret({
       name: "bucket-token/demo-box",
@@ -234,7 +220,6 @@ void test("A bucket-scoped publish token works for one bucket only, so a second 
     "SecretNotShareableError: The secret \"bucket-token/demo-box\" is marked single-box (it belongs to \"demo-box\") and cannot also be granted to \"other-box\". Some credentials bind to one box structurally — a bucket-scoped publish token works for one bucket only — so sharing one would break the box already using it. Create a separate secret for this box.",
   );
 
-  // doctest:L220
   await t.checkThrows(
     async () => (await setAndGrantSecret({
       name: "bucket-token/demo-box",
@@ -246,7 +231,6 @@ void test("A bucket-scoped publish token works for one bucket only, so a second 
     "SecretNotShareableError",
   );
 
-  // doctest:L229
   // The owner rotating its own value is the case this call exists for.
   await setAndGrantSecret({
     name: "bucket-token/demo-box",

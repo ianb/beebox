@@ -11,7 +11,6 @@ import { rewriteViewTarget, rewriteViewLinksInText } from "../../../src/core/vie
 //
 // A bare path is unchanged; `?zoom` is stripped; `?view=` and other params survive:
 void test("A bare path is unchanged; ?zoom is stripped; ?view= and other params survive:", async (t) => {
-  // doctest:L15
   t.check(
     [
       rewriteViewTarget("store/notes/Plan.doc.card"),

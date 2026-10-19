@@ -44,7 +44,6 @@ void test("A merged removal records a recreatable final SHA", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L41
   const root = await mkdtemp(join(tmpdir(), "workstream-cull-doctest-"));
   const mono = join(root, "mono");
   const worktreeRoot = join(root, "worktrees");
@@ -60,7 +59,6 @@ void test("A merged removal records a recreatable final SHA", async (t) => {
   await git(mono, "worktree", "add", "-b", "worktree-cull-fixture", worktree, "main");
   const finalSha = (await git(worktree, "rev-parse", "HEAD")).stdout.trim();
 
-  // doctest:L56
   const removeScript = [
     '. "$1"',
     'WT_MONO="$2"',
@@ -79,12 +77,10 @@ void test("A merged removal records a recreatable final SHA", async (t) => {
     merged: true,
   });
 
-  // doctest:L72
   const recreated = join(worktreeRoot, "recreated");
   await git(mono, "worktree", "add", "-b", "worktree-recreated", recreated, record.removed.finalSha);
   t.check((await readFile(join(recreated, "file.txt"), "utf8")), "content");
 
-  // doctest:L77
   const dirty = join(worktreeRoot, "dirty-fixture");
   await git(mono, "worktree", "add", "-b", "worktree-dirty-fixture", dirty, "main");
   const dirtyScript = [
@@ -116,7 +112,6 @@ void test("The managed --name <workstream> argument is a second signal in front 
       t.error(error);
     }
   });
-  // doctest:L107
   const livenessScript = [
     '. "$1"',
     "WT_SNAP_STATE=ok",
@@ -127,7 +122,6 @@ void test("The managed --name <workstream> argument is a second signal in front 
   ].join("; ");
   t.check((await execFileAsync("bash", ["-c", livenessScript, "liveness", teardownLib])).stdout, "live|signal=argv pid=123");
 
-  // doctest:L118
   const neighborScript = [
     '. "$1"',
     "WT_SNAP_STATE=ok",
@@ -144,7 +138,6 @@ void test("The managed --name <workstream> argument is a second signal in front 
   // an active registry lease reports `launching`; expired leases stop blocking and
   // malformed leases fail closed.
 
-  // doctest:L137
   const leaseStateDir = await mkdtemp(join(tmpdir(), "workstream-launch-lease-doctest-"));
   await execFileAsync("bash", ["-c", '. "$1"; session_registry_begin_launch seam token-a', "lease", join(repoRoot, "bin/lib/session-registry.sh")], {
     env: { ...process.env, BBX_STATE_DIR: leaseStateDir },
@@ -162,7 +155,6 @@ void test("The managed --name <workstream> argument is a second signal in front 
     "launching|signal=launch-lease",
   );
 
-  // doctest:L152
   const processWinsScript = [
     '. "$1"',
     'WT_SNAP_STATE="ok"',
@@ -178,7 +170,6 @@ void test("The managed --name <workstream> argument is a second signal in front 
     "live|signal=argv pid=123",
   );
 
-  // doctest:L165
   await execFileAsync("bash", ["-c", ". \"$1\"; session_registry_merge seam '{\"launch\":{\"token\":\"old\",\"startedAt\":\"2026-01-01T00:00:00Z\"}}'", "lease", join(repoRoot, "bin/lib/session-registry.sh")], {
     env: { ...process.env, BBX_STATE_DIR: leaseStateDir },
   });
@@ -189,7 +180,6 @@ void test("The managed --name <workstream> argument is a second signal in front 
     "none|launch=expired",
   );
 
-  // doctest:L173
   await execFileAsync("bash", ["-c", ". \"$1\"; session_registry_merge seam '{\"launch\":null}'; session_registry_merge seam '{\"launch\":{\"token\":\"broken\"}}'", "lease", join(repoRoot, "bin/lib/session-registry.sh")], {
     env: { ...process.env, BBX_STATE_DIR: leaseStateDir },
   });
@@ -213,7 +203,6 @@ void test("Removal stops immediately when the worktree directory cannot move int
       t.error(error);
     }
   });
-  // doctest:L192
   const failureRoot = await mkdtemp(join(tmpdir(), "workstream-cull-failure-doctest-"));
   const failureMono = join(failureRoot, "mono");
   const failureWorktree = join(failureRoot, "worktrees/failure-fixture");

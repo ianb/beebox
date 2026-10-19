@@ -58,7 +58,6 @@ const agent2 = text({ uuid: "agent-2", type: "assistant", timestamp: T2, body: "
 // Provider activity is normalized into the same tool-call blocks the existing chat
 // UI renders for Claude, while compaction remains visible:
 void test("Provider activity is normalized into the same tool-call blocks the existing c...", async (t) => {
-  // doctest:L51
   const adapted = adaptCodexThreadHistory(response, { mode: "tail", tail: 20 });
   t.check(adapted, {
     entries: [user1, bash, edit, text({ uuid: "agent-1", type: "assistant", timestamp: T1, body: "Hi" }), text({ uuid: "user-2", type: "user", timestamp: T2, body: "Again" }), compact, agent2],
@@ -68,7 +67,6 @@ void test("Provider activity is normalized into the same tool-call blocks the ex
 
 // Page slicing uses the normalized entry sequence:
 void test("Page slicing uses the normalized entry sequence:", async (t) => {
-  // doctest:L65
   t.check(adaptCodexThreadHistory(response, { mode: "page", offset: 1, limit: 2 }), { entries: [bash, edit], total: 7 });
 });
 
@@ -77,10 +75,8 @@ void test("Page slicing uses the normalized entry sequence:", async (t) => {
 // sent just before a crash, so it reads the tail: on a thread longer than its
 // cap, a page from 0 would never reach that message.
 void test("A tail slice returns the newest entries, a page from offset 0 the oldest.", async (t) => {
-  // doctest:L75
   t.check(adaptCodexThreadHistory(response, { mode: "tail", tail: 2 }), { entries: [compact, agent2], total: 7 });
 
-  // doctest:L78
   t.check(adaptCodexThreadHistory(response, { mode: "page", offset: 0, limit: 2 }), { entries: [user1, bash], total: 7 });
 });
 
@@ -88,7 +84,6 @@ void test("A tail slice returns the newest entries, a page from offset 0 the old
 // activity a stable tool name and keeps large file diffs and search results out of
 // the UI payload:
 void test("The same provider adapter feeds live chat.", async (t) => {
-  // doctest:L87
   t.check(
     [
       normalizeCodexToolItem({ type: "commandExecution", id: "c", command: "bbx status" }),
@@ -112,20 +107,17 @@ void test("The same provider adapter feeds live chat.", async (t) => {
 // Codex reports a command as the shell invocation it ran. Both entry points show
 // the command inside a `bash -lc` wrapper, as Claude's activity does:
 void test("Codex reports a command as the shell invocation it ran.", async (t) => {
-  // doctest:L102
   t.check(normalizeCodexToolItem({ type: "commandExecution", id: "c", command: "/bin/bash -lc 'cat AGENTS.md'" }), { type: "tool_use", id: "c", name: "Bash", input: { command: "cat AGENTS.md" } });
 });
 
 // Codex double-quotes an argument that holds a single quote:
 void test("Codex double-quotes an argument that holds a single quote:", async (t) => {
-  // doctest:L109
   t.check(codexDisplayCommand("/opt/homebrew/bin/bash -lc \"sed -n '1,80p' box-docs/card-image.md && rg -n EXIF box-docs\""), "sed -n '1,80p' box-docs/card-image.md && rg -n EXIF box-docs");
 });
 
 // Anything else shows verbatim: a double-quoted argument with escapes or
 // expansions, a different shell, or a command with no wrapper.
 void test("Anything else shows verbatim:", async (t) => {
-  // doctest:L117
   t.check(
     [
       codexDisplayCommand("/bin/bash -lc \"echo \\\"$HOME\\\"\""),
@@ -145,7 +137,6 @@ void test("Anything else shows verbatim:", async (t) => {
 // The live SDK vocabulary maps through a separate typed entry point while native
 // history retains its app-server vocabulary:
 void test("The live SDK vocabulary maps through a separate typed entry point while nativ...", async (t) => {
-  // doctest:L135
   t.check(
     normalizeCodexSdkToolItem({
       id: "mcp-1",
@@ -165,7 +156,6 @@ void test("The live SDK vocabulary maps through a separate typed entry point whi
 // sources. A listing reads the thread index alone; only a repair listing
 // permits the JSONL metadata scan, which reads every session on the host.
 void test("SDK threads are created by codex exec.", async (t) => {
-  // doctest:L153
   t.check(codexHistoryListParams({ cwds: ["/boxes/example"], cursor: "next", repair: false }), {
     cursor: "next",
     limit: 100,
@@ -186,7 +176,6 @@ void test("SDK threads are created by codex exec.", async (t) => {
 
 // A repair listing is the same request with the scan allowed:
 void test("A repair listing is the same request with the scan allowed:", async (t) => {
-  // doctest:L160
   t.check(codexHistoryListParams({ cwds: ["/boxes/example"], cursor: null, repair: true }), {
     cursor: null,
     limit: 100,
@@ -203,7 +192,6 @@ void test("A repair listing is the same request with the scan allowed:", async (
 // person; comparing the display name to that email would falsely render the
 // message as another participant.
 void test("User identity carried by beebox's message wrapper is normalized just as it is...", async (t) => {
-  // doctest:L170
   const attributed = adaptCodexThreadHistory({
     thread: {
       cwd: "/boxes/example",
@@ -245,7 +233,6 @@ void test("thread/read accepts any known ID, so the adapter rejects a thread who
       t.error(error);
     }
   });
-  // doctest:L196
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-cwd-"));
   const boxRoot = path.join(root, "box");
   const landmark = path.join(boxRoot, "store", "recipes");
@@ -254,13 +241,10 @@ void test("thread/read accepts any known ID, so the adapter rejects a thread who
   fs.mkdirSync(outside);
   fs.symlinkSync(outside, path.join(boxRoot, "outside-link"));
 
-  // doctest:L204
   t.check(assertCodexThreadCwd(boxRoot, landmark), undefined);
 
-  // doctest:L207
   await t.checkThrows(async () => (assertCodexThreadCwd(boxRoot, outside)), "CodexSessionOutsideBoxError: Codex session belongs to a working directory outside this box");
 
-  // doctest:L210
   await t.checkThrows(async () => (assertCodexThreadCwd(boxRoot, path.join(boxRoot, "outside-link"))), "CodexSessionOutsideBoxError: Codex session belongs to a working directory outside this box");
 });
 
@@ -282,24 +266,20 @@ void test("A Codex thread recorded before a box ran the one-root migration carri
       t.error(error);
     }
   });
-  // doctest:L230
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "codex-v2-cwd-"));
   const boxRoot = path.join(root, "box");
   // The v3 area `store/recipes` (v2) maps to — no `content/` directory at all,
   // since it was removed by the migration.
   fs.mkdirSync(path.join(boxRoot, "_content", "recipes"), { recursive: true });
 
-  // doctest:L236
   t.check(assertCodexThreadCwd(boxRoot, path.join(boxRoot, "content")), undefined);
 
-  // doctest:L239
   t.check(assertCodexThreadCwd(boxRoot, path.join(boxRoot, "content", "store", "recipes")), undefined);
 
   // A `content/`-shaped path `mapV2Path` doesn't recognize still fails closed —
   // this fallback only covers what the migration itself knew how to move, so it's
   // left to fail on the original ENOENT rather than being waved through:
 
-  // doctest:L248
   const err = (() => { try { assertCodexThreadCwd(boxRoot, path.join(boxRoot, "content", "nonexistent-nonsense")); return null; } catch (e) { return e; } })();
   const missing = path.join(fs.realpathSync(root), "box", "_content", "nonexistent-nonsense");
   t.check(err, {
@@ -321,7 +301,6 @@ void test("A Codex thread recorded before a box ran the one-root migration carri
 // therefore asks for each v3 cwd's v2 aliases as well. The box root's alias is
 // the v2 `content/` root, and a cwd outside the box has none.
 void test("Reading one thread translates its old cwd forward (above).", async (t) => {
-  // doctest:L267
   t.check({
     root: retiredV2ContentCwds("/boxes/b", "/boxes/b"),
     recipes: retiredV2ContentCwds("/boxes/b", "/boxes/b/_content/recipes"),

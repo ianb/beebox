@@ -63,10 +63,8 @@ const taughtButEvicted = documented.filter((verb) => engineOnly.includes(verb));
 // `buildSurface` registers only what the table names, so an unclassified command
 // would vanish from the CLI rather than announce itself.
 void test("buildSurface registers only what the table names, so an unclassified command...", async (t) => {
-  // doctest:L67
   t.check(unclassified, []);
 
-  // doctest:L70
   t.check(unregistered, []);
 });
 
@@ -74,10 +72,8 @@ void test("buildSurface registers only what the table names, so an unclassified 
 //
 // `engine` is itself a top-level command, so it belongs in the first comparison.
 void test("engine is itself a top-level command, so it belongs in the first comparison.", async (t) => {
-  // doctest:L79
   t.check(topLevel.filter((n) => n !== "engine"), agentNames);
 
-  // doctest:L82
   t.check(engineVerbs, engineNames);
 });
 
@@ -85,7 +81,6 @@ void test("engine is itself a top-level command, so it belongs in the first comp
 // is the property that makes `bbx --help` the surface rather than a filtered view
 // of a longer list.
 void test("Nothing that left the agent's surface is still reachable at the top level.", async (t) => {
-  // doctest:L91
   t.check(leaked, []);
 });
 
@@ -94,10 +89,8 @@ void test("Nothing that left the agent's surface is still reachable at the top l
 // `scheduler`, `pub`, and `secrets` each have a read half an agent uses and an
 // operate half it does not.
 void test("scheduler, pub, and secrets each have a read half an agent uses and an operat...", async (t) => {
-  // doctest:L101
   t.check(splitNames, ["pub", "scheduler", "secrets"]);
 
-  // doctest:L104
   t.check(overlapping, []);
 });
 
@@ -105,10 +98,8 @@ void test("scheduler, pub, and secrets each have a read half an agent uses and a
 // lifecycle. A subcommand named by neither entry is deliberately dropped — that is
 // how the deprecated `bbx scheduler add|remove|list` aliases left the CLI.
 void test("The agent's scheduler offers the reads; the operator's offers the daemon life...", async (t) => {
-  // doctest:L113
   t.check(subNames(program.commands.find((c) => c.name() === "scheduler")), ["log", "status"]);
 
-  // doctest:L116
   t.check(subNames(engineParent?.commands.find((c) => c.name() === "scheduler")), ["install", "start", "uninstall"]);
 });
 
@@ -118,13 +109,10 @@ void test("The agent's scheduler offers the reads; the operator's offers the dae
 // classification. `Smoke` is a union, so an entry cannot have neither a run nor a
 // stated skip — but it can still have an empty one.
 void test("The reason is what a later reader needs in order to argue with the classifica...", async (t) => {
-  // doctest:L127
   t.check(reasonless, []);
 
-  // doctest:L130
   t.check(emptySmoke, []);
 
-  // doctest:L133
   t.check(misaimedSmoke, []);
 });
 
@@ -136,6 +124,5 @@ void test("The reason is what a later reader needs in order to argue with the cl
 // This checks the direction that goes unnoticed: an evicted verb still being
 // taught.
 void test("docs-gen/bbx-commands.ts is hand-written prose shipped into every box for the...", async (t) => {
-  // doctest:L146
   t.check(taughtButEvicted, []);
 });

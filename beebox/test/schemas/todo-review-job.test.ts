@@ -24,7 +24,6 @@ function parse(card: string) {
 
 // ## An item carrying `card` and `section` round-trips
 void test("An item carrying `card` and `section` round-trips", async (t) => {
-  // doctest:L28
   const card = createTodoReviewJobTemplate({
     escalated: [{
       locator: "_content/projects/Porch/Plan.doc.card:8",
@@ -43,7 +42,6 @@ void test("An item carrying `card` and `section` round-trips", async (t) => {
     stale: [],
   });
 
-  // doctest:L46
   const parsed = parse(card);
   const fields = cardFields(parsed, TodoReviewJobSchema);
   t.check(fields.escalated[0], {
@@ -54,7 +52,6 @@ void test("An item carrying `card` and `section` round-trips", async (t) => {
     section: "Build › Decking",
   });
 
-  // doctest:L51
   t.check(fields.actionable[0], {
     locator: "_content/projects/Porch/Plan.doc.card:12",
     text: "Review the delivery note",
@@ -68,7 +65,6 @@ void test("An item carrying `card` and `section` round-trips", async (t) => {
   // one, so the same shape covers both "queued before the fields existed" and
   // "there was nothing to say".
 
-  // doctest:L62
   const older = parse([
     "---",
     "status: pending",
@@ -85,7 +81,6 @@ void test("An item carrying `card` and `section` round-trips", async (t) => {
     "",
   ].join("\n"));
 
-  // doctest:L78
   t.check(cardFields(older, TodoReviewJobSchema).escalated[0], {
     locator: "store/a.doc.card:5",
     text: "An older item",

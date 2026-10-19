@@ -46,7 +46,6 @@ const MAP = "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n
 // `node` that the map doesn't define is a **warning** (a stale node id, not a hard
 // error). A valid node id is silent.
 void test("A progress card's entries reference concept-map nodes by id.", async (t) => {
-  // doctest:L50
   const box = await coursewareBox();
   await box.write("_content/store/Acids.course.card", "---\nconcept-map: { ref: attach/Map.concept-map.card }\n---\nCourse.\n");
   await box.write("_content/store/Acids.attach/Map.concept-map.card", MAP);
@@ -70,7 +69,6 @@ void test("A progress card's entries reference concept-map nodes by id.", async 
 // resolves the **sibling `*.concept-map.card`** (no course back-ref). A `concepts`
 // id the map doesn't define is a **warning** naming the segment that holds it:
 void test("A lesson-plan's segments[].concepts[] reference concept-map nodes by id.", async (t) => {
-  // doctest:L73
   const box = await coursewareBox();
   await box.write("_content/store/Acids.attach/Acids_Concept_Map.concept-map.card", MAP);
   await box.write(
@@ -86,7 +84,6 @@ void test("A lesson-plan's segments[].concepts[] reference concept-map nodes by 
 // A `material` segment that has neither a `material` ref nor `planned: true` is a
 // **deferral warning** — "incomplete material" is stated, never silent:
 void test("A material segment that has neither a material ref nor planned:", async (t) => {
-  // doctest:L88
   const box = await coursewareBox();
   await box.write("_content/store/Acids.attach/Acids_Concept_Map.concept-map.card", MAP);
   await box.write(
@@ -102,7 +99,6 @@ void test("A material segment that has neither a material ref nor planned:", asy
 // A valid plan — every `concepts` id real, every material segment either with a
 // resolvable ref or explicitly `planned: true` — is silent:
 void test("A valid plan — every concepts id real, every material segment either with a r...", async (t) => {
-  // doctest:L103
   const box = await coursewareBox();
   await box.write("_content/store/Acids.attach/Acids_Concept_Map.concept-map.card", MAP);
   await box.write("_content/store/Acids.attach/Recap.doc.card", "---\ntitle: Recap\n---\nRecap.\n");
@@ -121,7 +117,6 @@ void test("A valid plan — every concepts id real, every material segment eithe
 // every node connects is silent; a 0–1 node map is never flagged (edges aren't
 // possible).
 void test("A concept-map node with no edges — nothing it depends on, nothing depending o...", async (t) => {
-  // doctest:L123
   const box = await coursewareBox();
   await box.write(
     "_content/store/Bonds.concept-map.card",
@@ -138,7 +133,6 @@ void test("A concept-map node with no edges — nothing it depends on, nothing d
 
 // A fully connected map warns about nothing:
 void test("A fully connected map warns about nothing:", async (t) => {
-  // doctest:L136
   const box = await coursewareBox();
   await box.write(
     "_content/store/Bonds2.concept-map.card",
@@ -154,7 +148,6 @@ void test("A fully connected map warns about nothing:", async (t) => {
 // plugin warning: the schema still validates it (the box registered the type),
 // but the cross-card checks are the active plugin's.
 void test("The same orphan map in a box whose config/box.json names no plugins gets no p...", async (t) => {
-  // doctest:L153
   const box = await coursewareBox([]);
   await box.write(
     "_content/store/Bonds.concept-map.card",
@@ -168,7 +161,6 @@ void test("The same orphan map in a box whose config/box.json names no plugins g
 // each linted card, so a typo in the config is visible rather than silently
 // disabling the checks:
 void test("A plugins entry that names no installed plugin is reported as a warning on ea...", async (t) => {
-  // doctest:L168
   const box = await coursewareBox(["coursware"]);
   await box.write("_content/store/Bonds.concept-map.card", MAP);
   const result = await lintCardsDispatch([box.path("_content/store/Bonds.concept-map.card")], { boxRoot: box.root, ctx });

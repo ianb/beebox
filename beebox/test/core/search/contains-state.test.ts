@@ -37,7 +37,6 @@ void test("The refresh records contains text and basis; fresh cards aren't stale
       t.error(error);
     }
   });
-  // doctest:L34
   const box = await makeTmpBox();
   await box.write("store/notes/Dentist.doc.card", DOC("Appointment moved to June 17.", "Dentist moved to June 17."));
   await box.write("store/notes/Bare.doc.card", DOC("No contains here yet."));
@@ -49,17 +48,14 @@ void test("The refresh records contains text and basis; fresh cards aren't stale
     currentBasis: "a1349de0673aa734",
   });
 
-  // doctest:L42
   t.check(listStale(state), []);
 
-  // doctest:L45
   t.check(listMissing(state), [
     "store/notes/Bare.doc.card",
   ]);
 
   // ## Editing the body while keeping contains flags the card stale
 
-  // doctest:L52
   await box.write("store/notes/Dentist.doc.card", DOC("Appointment moved AGAIN, now July 2.", "Dentist moved to June 17."));
   await openSearchIndex(box.root);
   t.check(listStale(await loadContainsState(box.root)), [
@@ -68,30 +64,25 @@ void test("The refresh records contains text and basis; fresh cards aren't stale
 
   // ## The hook-time warning fires live, even before any refresh
 
-  // doctest:L61
   const warning = await staleContainsWarning(box.root, { relPath: "store/notes/Dentist.doc.card", ctx });
   t.check(warning, "store/notes/Dentist.doc.card: card content changed but contains: didn't — review it; if it still holds, confirm with `bbx contains update \"store/notes/Dentist.doc.card\" --text \"...same text...\"`");
 
-  // doctest:L65
   t.check(await staleContainsWarning(box.root, { relPath: "store/notes/Bare.doc.card", ctx }), null);
 
   // ## Updating the contains text re-bases; the flag clears
 
-  // doctest:L72
   await box.write("store/notes/Dentist.doc.card", DOC("Appointment moved AGAIN, now July 2.", "Dentist moved to July 2."));
   await openSearchIndex(box.root);
   t.check(listStale(await loadContainsState(box.root)), []);
 
   // ## Confirming unchanged text re-bases too (the bbx contains update path)
 
-  // doctest:L81
   await box.write("store/notes/Dentist.doc.card", DOC("Tweaked wording, July 2 still right.", "Dentist moved to July 2."));
   await openSearchIndex(box.root);
   t.check(listStale(await loadContainsState(box.root)), [
     "store/notes/Dentist.doc.card",
   ]);
 
-  // doctest:L86
   // What `bbx contains update` does with identical text: re-base at the live basis.
   const confirm = await computeBasisForCardPath(box.root, { relPath: "store/notes/Dentist.doc.card", ctx });
   const state2 = await loadContainsState(box.root);
@@ -99,12 +90,10 @@ void test("The refresh records contains text and basis; fresh cards aren't stale
   await saveContainsState(box.root, state2);
   t.check(listStale(await loadContainsState(box.root)), []);
 
-  // doctest:L94
   t.check(await staleContainsWarning(box.root, { relPath: "store/notes/Dentist.doc.card", ctx }), null);
 
   // ## Operational field flips (status) don't stale a body-less card's contains
 
-  // doctest:L101
   await box.write(
     "_content/inbox/email/t.email-thread.card",
     "---\nthread-id: t1\nstatus: new\nsubject: Pricing\nparticipants:\n  - a@x.example\ncontains: Metricly demo offer; no action needed.\ndate-range:\n  start: 2026-05-14T19:00:00Z\n  end: 2026-05-14T19:00:00Z\nmessages: []\n---\n"
@@ -124,18 +113,15 @@ void test("The refresh records contains text and basis; fresh cards aren't stale
   // backfill worklist, and a description change re-bases rather than flagging
   // stale (the retrieval field moved with the content).
 
-  // doctest:L123
   const IMG = (desc: string) =>
     "---\nfilename:\n  ref: attach/boiler.jpg\n  via:\n    channel: camera-user\n    at: 2026-05-01T10:00:00Z\ndescription: " + desc + "\n---\n";
   await box.write("_bookkeeping/archive/boiler.image.card", IMG("The boiler's serial-number plate (K-44210)"));
   await openSearchIndex(box.root);
   t.check(listMissing(await loadContainsState(box.root)), ["store/notes/Bare.doc.card"]);
 
-  // doctest:L130
   await box.write("_bookkeeping/archive/boiler.image.card", IMG("A different plate entirely (Z-99)"));
   await openSearchIndex(box.root);
   t.check(listStale(await loadContainsState(box.root)), []);
 
-  // doctest:L135
   t.check(await staleContainsWarning(box.root, { relPath: "_bookkeeping/archive/boiler.image.card", ctx }), null);
 });

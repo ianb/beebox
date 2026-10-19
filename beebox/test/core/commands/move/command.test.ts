@@ -84,7 +84,6 @@ const indexCard = (body: string) => `---\ntype: doc\ntitle: Index\n---\n${body}\
 // and into its attach dir — are recomputed from its own location. The absolute
 // links stay absolute, repointed at the new location.
 void test("Moving a frontmatter card carries its .attach/ directory along.", async (t) => {
-  // doctest:L84
   await t.checkText(
     await moved({
       files: {
@@ -146,7 +145,6 @@ Abs [Engine](/_bookkeeping/archive/Engine.doc.card) and [photo](/_bookkeeping/ar
 // dir and an inbound ref moves cleanly: the card and its attach directory moved,
 // and the inbound absolute ref was repointed.
 void test("A box can define its own frontmatter card types (e.g.", async (t) => {
-  // doctest:L145
   await t.checkText(
     await moved({
       files: {
@@ -179,7 +177,6 @@ Unpaid: [Water](/_bookkeeping/archive/Water.bill.card).`,
 // `ref` as the first key of a block-list item (`messages:`/`items:` lists) all
 // follow the move, each keeping its own relative or box-root-absolute style.
 void test("Refs carried by Markdoc body tags, the singular ref: scalar and refs: list en...", async (t) => {
-  // doctest:L177
   await t.checkText(
     await moved({
       files: {
@@ -204,7 +201,6 @@ Rel: {% source ref="../../store/people/dana.person.card" usage="y" %}b{% /source
 });
 
 void test("Every reference syntax follows the move, in the style it was written", async (t) => {
-  // doctest:L200
   await t.checkText(
     await moved({
       files: {
@@ -229,7 +225,6 @@ body`,
 });
 
 void test("Every reference syntax follows the move, in the style it was written (line 222)", async (t) => {
-  // doctest:L223
   await t.checkText(
     await moved({
       files: {
@@ -252,7 +247,6 @@ destinations:
 });
 
 void test("Every reference syntax follows the move, in the style it was written (line 243)", async (t) => {
-  // doctest:L244
   await t.checkText(
     await moved({
       files: {
@@ -283,7 +277,6 @@ body`,
 // matches the moving card), and the suffix is re-appended to the rewritten ref in
 // whichever style it was written.
 void test("A ref may address a location within its target — ?view=ledger picks a view, #...", async (t) => {
-  // doctest:L274
   await t.checkText(
     await moved({
       files: {
@@ -312,7 +305,6 @@ both [x](../../_bookkeeping/archive/Ledger.doc.card?view=ledger#risks)`,
 // Moving a directory carries everything under it. References from outside the
 // directory — to anything inside it — are rewritten in either style.
 void test("Moving a directory carries everything under it.", async (t) => {
-  // doctest:L302
   await t.checkText(
     await moved({
       files: {
@@ -340,7 +332,6 @@ Abs [scan](/_bookkeeping/archive/session/scan.capture-session.card) rel [scan2](
 // path) has that link recomputed from its new location; links to siblings that
 // moved with it are unchanged.
 void test("A card inside the moved directory that links out of it (by a relative path) h...", async (t) => {
-  // doctest:L329
   await t.checkText(
     await moved({
       files: {
@@ -368,7 +359,6 @@ By [Dana](../../../_content/box/people/dana.person.card), see [scan](scan.captur
 // unchanged. A single card that names a file in its own attach directory by
 // absolute path gets the new attach path:
 void test("A card inside the moved directory that names a sibling file by a box-absolute...", async (t) => {
-  // doctest:L356
   await t.checkText(
     await moved({
       files: {
@@ -391,7 +381,6 @@ See [Dana](/_content/box/people/dana.person.card).`,
 });
 
 void test("Directory move: recursive, external refs rewritten (relative + absolute)", async (t) => {
-  // doctest:L377
   await t.checkText(
     await moved({
       files: {
@@ -415,7 +404,6 @@ filename:
 // `bbx validate` reads that form, and the next move rewrites it again, keeping
 // the brackets as it keeps every link's style:
 void test("A move to a path with a space writes inbound markdown links in CommonMark's a...", async (t) => {
-  // doctest:L400
   const links = await withBox(
     {
       "_content/cap/Beach.image.card": "---\ntitle: Beach\n---\n",
@@ -432,7 +420,6 @@ void test("A move to a path with a space writes inbound markdown links in Common
       return { spaced, refs, rewritten };
     },
   );
-  // doctest:L411
   t.check(links, {
     spaced: true,
     refs: [
@@ -447,7 +434,6 @@ void test("A move to a path with a space writes inbound markdown links in Common
 // A card can be renamed within its directory; refs follow the new basename and
 // the attach directory is renamed alongside.
 void test("A card can be renamed within its directory; refs follow the new basename and...", async (t) => {
-  // doctest:L426
   await t.checkText(
     await moved({
       files: {
@@ -488,7 +474,6 @@ link [n](New_Name.attach/note.txt)`,
 // fenced example too, because a doc example naming a card that moved should stay
 // truthful rather than point at a dead path.
 void test("The frontmatter scan is line-based, so it has to know the two YAML constructs...", async (t) => {
-  // doctest:L466
   const FENCE = "`".repeat(3);
   const text = await moved({
     files: {
@@ -518,7 +503,6 @@ Fenced [plan](../../../_bookkeeping/archive/Plan.doc.card)`);
 // `view:Ledger.doc.card`, so a scheme ref would resolve to a card that is moving.
 // The refs stay exactly as written.
 void test("Whether a ref names something outside the box is decided by one shared test (...", async (t) => {
-  // doctest:L498
   await t.checkText(
     await moved({
       files: {
@@ -541,7 +525,6 @@ Mail [d](mailto:dana.doc.card), view [l](view:Ledger.doc.card).`,
 
 // ## Dry run makes no changes
 void test("Dry run makes no changes", async (t) => {
-  // doctest:L520
   await t.checkText(
     await moved({
       files: {
@@ -569,7 +552,6 @@ x`,
 // Several sources and a directory destination move each card (and its attach
 // dir) under the destination.
 void test("Several sources and a directory destination move each card (and its attach di...", async (t) => {
-  // doctest:L547
   await t.checkText(
     await moved({
       files: {
@@ -592,7 +574,6 @@ _content/store/kept/Two.doc.card`,
 // keeps the file's kind: a `.md` file cannot become a card. Moving multiple
 // cards to a single file destination is rejected.
 void test("A source that is not a card, a .md file, or a directory is rejected.", async (t) => {
-  // doctest:L569
   t.check(
     ({
       notACard: await rejected({}, { from: "_content/box/notes.txt", to: "_content/store/notes.txt" }),
@@ -626,7 +607,6 @@ void test("A source that is not a card, a .md file, or a directory is rejected."
 // that broke before `bbx mv` covered `.md` files. Only inline links change; the
 // dossier has no frontmatter to re-serialize.
 void test("A non-card markdown dossier (e.g.", async (t) => {
-  // doctest:L592
   await t.checkText(
     await moved({
       files: {
@@ -651,7 +631,6 @@ void test("A non-card markdown dossier (e.g.", async (t) => {
 // relative links are recomputed from its new location. A `.md` file has no
 // attach scope, so nothing else moves with it.
 void test("A plain .md file moves or renames like a card.", async (t) => {
-  // doctest:L616
   const result = await withBox(
     {
       "_content/notes/saoirse.md": "# Saoirse\n\nSee [Dana](dana.person.card).\n",
@@ -694,7 +673,6 @@ void test("A plain .md file moves or renames like a card.", async (t) => {
 // from the new location. (Before this, `bbx mv <dir>` walked cards and views only,
 // so a dossier's links silently dangled.)
 void test("A directory move gets the same .md coverage a single-card move has, and respe...", async (t) => {
-  // doctest:L654
   await t.checkText(
     await moved({
       files: {
@@ -727,7 +705,6 @@ Run by [Dana](../../../_content/box/people/dana.person.card); the [scan](scan.ca
 // written as the source or the destination
 // (`docs/plans/display-path-guard.subplan.md`):
 void test("Config:box.json and Bookkeeping:jobs/x.job.card (the boxholder's display voca...", async (t) => {
-  // doctest:L686
   t.check(
     ({
       from: await rejected({}, { from: "Config:box.json", to: "_content/box/notes/Elsewhere.doc.card" }),

@@ -14,7 +14,6 @@ const leaf = (pathname: string): string | undefined =>
   router.matchRoutes(pathname).at(-1)?.routeId;
 
 void test("line 16", async (t) => {
-  // doctest:L17
   t.check(
     [
       leaf("/issues"),

@@ -24,30 +24,24 @@ async function setEngine(boxRoot: string, agentEngine: unknown): Promise<void> {
 // The dry-run banner identifies the selected harness without starting either
 // vendor subprocess.
 void test("The dry-run banner identifies the selected harness without starting either ve...", async (t) => {
-  // doctest:L28
   const box = await makeTmpBox();
   const agent = createAgent({ name: "selection-test" });
   const result = await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true });
 
-  // doctest:L32
   t.check(result, { success: true, output: "[DRY RUN] Would run Claude via SDK with prompt:\nhello", exitCode: 0, sessionId: "" });
 
-  // doctest:L35
   await box.cleanup();
 });
 
 // ## A box can select Codex
 void test("A box can select Codex", async (t) => {
-  // doctest:L41
   const box = await makeTmpBox();
   await setEngine(box.root, "codex");
   const agent = createAgent({ name: "selection-test" });
   const result = await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true });
 
-  // doctest:L46
   t.check(result, { success: true, output: "[DRY RUN] Would run Codex SDK with prompt:\nhello", exitCode: 0, sessionId: "" });
 
-  // doctest:L49
   await box.cleanup();
 });
 
@@ -55,14 +49,11 @@ void test("A box can select Codex", async (t) => {
 //
 // Configuration errors never fall back silently to a different vendor.
 void test("Configuration errors never fall back silently to a different vendor.", async (t) => {
-  // doctest:L57
   const box = await makeTmpBox();
   await setEngine(box.root, "mystery");
   const agent = createAgent({ name: "selection-test" });
 
-  // doctest:L61
   await t.checkThrows(async () => (await agent.invoke({ boxRoot: box.root, prompt: "hello", dryRun: true })), "InvalidAgentEngineError: Box config agentEngine must be either claude or codex");
 
-  // doctest:L64
   await box.cleanup();
 });

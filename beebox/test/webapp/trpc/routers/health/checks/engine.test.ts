@@ -44,7 +44,6 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
       t.error(error);
     }
   });
-  // doctest:L41
   const box = await makeTmpBox();
   const boxRoot = await scaffoldV3(box);
   await box.write(
@@ -54,7 +53,6 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   await mkdir(box.path("pkg/node_modules"), { recursive: true });
   await symlink(box.path("engines/main/beebox"), box.path("pkg/node_modules/beebox"));
 
-  // doctest:L50
   const healthy = await engineHealthChecks(boxRoot);
   const link = byName(healthy, "engine-link");
   t.check(link, { name: "engine-link", ok: true, message: "engine dependency resolves (beebox 9.9.9)", severity: "warning" });
@@ -65,11 +63,9 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   //
   // The incident shape — the link's target checkout was renamed away.
 
-  // doctest:L67
   await rm(box.path("pkg/node_modules/beebox"));
   await symlink(box.path("nonexistent-checkout/beebox"), box.path("pkg/node_modules/beebox"));
 
-  // doctest:L70
   const dead = await engineHealthChecks(boxRoot);
   const deadLink = byName(dead, "engine-link");
   t.check(deadLink, {
@@ -84,7 +80,6 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   // A resolvable link that points into a `beebox-worktrees` checkout, on a box
   // that is not itself a worktree clone — how test1 broke in the incident.
 
-  // doctest:L91
   await box.write(
     "beebox-worktrees/some-feature/beebox/package.json",
     JSON.stringify({ name: "beebox", version: "0.1.0" }),
@@ -92,7 +87,6 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   await rm(box.path("pkg/node_modules/beebox"));
   await symlink(box.path("beebox-worktrees/some-feature/beebox"), box.path("pkg/node_modules/beebox"));
 
-  // doctest:L98
   const pinned = await engineHealthChecks(boxRoot);
   const pinnedLink = byName(pinned, "engine-link");
   t.check(pinnedLink, {
@@ -102,18 +96,15 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
     severity: "warning",
   });
 
-  // doctest:L109
   await unlink(box.path("pkg/node_modules/beebox"));
   await mkdir(box.path("callback-worktrees/old-feature/beebox"), { recursive: true });
   await writeFile(box.path("callback-worktrees/old-feature/beebox/package.json"), JSON.stringify({ name: "beebox", version: "0.1.0" }));
   await symlink(box.path("callback-worktrees/old-feature/beebox"), box.path("pkg/node_modules/beebox"));
 
-  // doctest:L114
   t.check((await engineHealthChecks(boxRoot)).find((c) => c.name === "engine-link")?.ok, false);
 
   // ## Broken box-local schema file: box-schemas error names the file
 
-  // doctest:L121
   await box.write("pkg/src/schemas/widget.ts", "import { nope } from \"./does-not-exist.js\";\n");
   // The registry caches per-box schema snapshots; in the server a change
   // trigger invalidates on schema edits, so the doctest does the same.
@@ -133,13 +124,11 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
   // this warning is how the box finds out. It names the type, the field, and what
   // to write instead.
 
-  // doctest:L144
   const book = cardSchema("book", {
     fields: { name: z.string(), status: z.enum(["owned", "wanted"]) },
   });
   const shelf = cardSchema("shelf", { fields: { name: z.string() } });
 
-  // doctest:L149
   const fieldCheck = boxSchemaFieldsCheck([book, shelf]);
   t.check(fieldCheck, {
     name: "box-schema-fields",
@@ -148,6 +137,5 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
     severity: "warning",
   });
 
-  // doctest:L159
   t.check(boxSchemaFieldsCheck([shelf]).ok, true);
 });

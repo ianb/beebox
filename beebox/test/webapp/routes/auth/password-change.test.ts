@@ -37,14 +37,12 @@ void test("Success renews this browser and revokes the old cookie", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L28
   const authDir = await mkdtemp(join(tmpdir(), "bbx-password-change-"));
   process.env.BBX_AUTH_FILE = join(authDir, "auth.json");
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "old-password" });
   const ctx = await makeTestServer({ openAccess: false });
 
-  // doctest:L34
   const login = await ctx.server.inject({
     method: "POST",
     url: "/auth/login",
@@ -53,7 +51,6 @@ void test("Success renews this browser and revokes the old cookie", async (t) =>
   const oldCookie = cookieValue(login.headers["set-cookie"]);
   t.check(login.statusCode, 204);
 
-  // doctest:L45
   const changed = await ctx.server.inject({
     method: "POST",
     url: "/auth/password",
@@ -70,7 +67,6 @@ void test("Success renews this browser and revokes the old cookie", async (t) =>
     renewed: true,
   });
 
-  // doctest:L61
   const oldMe = await ctx.server.inject({ method: "GET", url: "/auth/me", headers: { cookie: oldCookie } });
   const newMe = await ctx.server.inject({ method: "GET", url: "/auth/me", headers: { cookie: newCookie } });
   t.check({ oldStatus: oldMe.statusCode, newStatus: newMe.statusCode, hasPassword: newMe.json().hasPassword }, {
@@ -81,7 +77,6 @@ void test("Success renews this browser and revokes the old cookie", async (t) =>
 
   // The old password no longer verifies; the new one does.
 
-  // doctest:L70
   loginThrottle.reset();
   const oldVerified = await verifyPassword({ email: "owner@example.com", password: "old-password" });
   const newVerified = await verifyPassword({ email: "owner@example.com", password: "new-password" });
@@ -89,7 +84,6 @@ void test("Success renews this browser and revokes the old cookie", async (t) =>
 
   // ## Wrong proof and Google-only identities share the public failure
 
-  // doctest:L80
   loginThrottle.reset();
   const wrong = await ctx.server.inject({
     method: "POST",
@@ -99,7 +93,6 @@ void test("Success renews this browser and revokes the old cookie", async (t) =>
   });
   t.check(wrong.statusCode, 401);
 
-  // doctest:L90
   loginThrottle.reset();
   const googleCookie = `${COOKIE_NAME}=${signSession({ email: "google@example.com", name: "Google" })}`;
   const googleOnly = await ctx.server.inject({
@@ -112,7 +105,6 @@ void test("Success renews this browser and revokes the old cookie", async (t) =>
 
   // Malformed input and a caller without a human cookie never mutate credentials.
 
-  // doctest:L105
   const mismatch = await ctx.server.inject({
     method: "POST",
     url: "/auth/password",

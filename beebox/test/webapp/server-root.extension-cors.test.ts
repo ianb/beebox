@@ -25,7 +25,6 @@ const EXT = "chrome-extension://abcdefghijklmnop";
 
 // ## Extension-origin preflight is answered with the origin reflected
 void test("Extension-origin preflight is answered with the origin reflected", async (t) => {
-  // doctest:L29
   const app = await makeServer();
   const res = await app.inject({
     method: "OPTIONS",
@@ -48,7 +47,6 @@ void test("Extension-origin preflight is answered with the origin reflected", as
 
   // ## The real POST response also reflects the extension origin
 
-  // doctest:L51
   const post = await app.inject({
     method: "POST",
     url: "/api/trpc/clerk.commentary",
@@ -65,7 +63,6 @@ void test("Extension-origin preflight is answered with the origin reflected", as
   // A normal cross-origin site's preflight falls through to default handling — no
   // `Access-Control-Allow-Origin`, so the browser blocks it.
 
-  // doctest:L70
   const evil = await app.inject({
     method: "OPTIONS",
     url: "/api/trpc/clerk.commentary",

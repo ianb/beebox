@@ -68,7 +68,6 @@ const target = { relPath: "bugs/2026-01-05-calendar-drops-events.md", visibility
 // The queried issue never ranks against itself, a closed neighbour is marked
 // closed, and a design doc carries no status because it has none.
 void test("The queried issue never ranks against itself, a closed neighbour is marked cl...", async (t) => {
-  // doctest:L78
   const result = await service.related(target);
   t.check(
     {
@@ -101,7 +100,6 @@ void test("The queried issue never ranks against itself, a closed neighbour is m
   // An issue row carries the address the browser links to; a doc row does not,
   // because the issue browser has no page for it (the document browser does).
 
-  // doctest:L93
   t.check(result.rows.toSorted((a, b) => a.path.localeCompare(b.path)).map((row) => row.issue), [
     null,
     {
@@ -115,11 +113,9 @@ void test("The queried issue never ranks against itself, a closed neighbour is m
   // The app is long-lived, so a second request reuses the built index. Only a
   // changed document reaches the embedder again — and only that document.
 
-  // doctest:L103
   await service.related(target);
   const afterSecondRequest = embeddings.calls.length;
 
-  // doctest:L106
   let clock = Date.now();
   const fresh = createIssueRelatedService({ mainRoot: root, embeddings, now: () => clock });
   await fresh.related(target);
@@ -147,7 +143,6 @@ void test("The queried issue never ranks against itself, a closed neighbour is m
   // their own, and the corpus signature does not change when they do — so a
   // long-lived reader retries rather than freezing the first bad answer in place.
 
-  // doctest:L131
   let attempts = 0;
   const flaky = {
     embed: async (texts: string[]) => {
@@ -160,7 +155,6 @@ void test("The queried issue never ranks against itself, a closed neighbour is m
   await fs.cp(root, cold, { recursive: true });
   await fs.rm(path.join(cold, ".issues-index"), { recursive: true, force: true });
 
-  // doctest:L143
   let flakyClock = Date.now();
   const retrying = createIssueRelatedService({ mainRoot: cold, embeddings: flaky, now: () => flakyClock });
   const failed = await retrying.related(target);
@@ -178,7 +172,6 @@ void test("The queried issue never ranks against itself, a closed neighbour is m
   // issues; the Related section says why it is empty rather than showing an error
   // page.
 
-  // doctest:L159
   const keyless = createIssueRelatedService({ mainRoot: root, env: {} });
   const withoutKey = await keyless.related(target);
   t.check({ rows: withoutKey.rows, reason: withoutKey.problem?.reason, mentionsKey: withoutKey.problem?.detail.includes("BBX_OPENAI_API_KEY") }, {
@@ -189,7 +182,6 @@ void test("The queried issue never ranks against itself, a closed neighbour is m
 
   // ## The procedure serves it over the capability wall
 
-  // doctest:L168
   const app = await buildApp({
     services: {
       workstreams: { list: async () => ({ items: [], warnings: [] }) },

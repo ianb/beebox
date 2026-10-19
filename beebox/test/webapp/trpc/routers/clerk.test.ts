@@ -24,7 +24,6 @@ function caller(boxRoot: string) {
 
 // ## commentary captures a page into the inbox and returns the companion URL
 void test("commentary captures a page into the inbox and returns the companion URL", async (t) => {
-  // doctest:L27
   const box = await makeTmpBox({ git: true });
   const res = await caller(box.root).clerk.commentary({
     url: "https://example.com/article",
@@ -42,7 +41,6 @@ void test("commentary captures a page into the inbox and returns the companion U
 
   // ## the webpage card holds the readable body + source provenance
 
-  // doctest:L50
   const webpageRel = res.created.find((p) => p.endsWith(".webpage.card"));
   assert.ok(webpageRel);
   const body = await readFile(path.join(box.root, webpageRel), "utf-8");
@@ -58,7 +56,6 @@ Body text.`);
 
   // ## an unknown destination is rejected
 
-  // doctest:L63
   const err = await caller(box.root).clerk.commentary({
     url: "https://example.com/x",
     title: "X",
@@ -69,7 +66,6 @@ Body text.`);
 
   // ## invalid input (bad url) is rejected by Zod
 
-  // doctest:L77
   const err2 = await caller(box.root).clerk.commentary({
     url: "not-a-url",
     title: "X",
@@ -84,7 +80,6 @@ Body text.`);
   // webpage card and one commit. Two concurrent attempts with one id also write
   // once. A capture without an id (an older extension) still writes normally.
 
-  // doctest:L95
   const { execFileSync } = await import("node:child_process");
   const commits = () => execFileSync("git", ["rev-list", "--count", "HEAD"], { cwd: box.root, encoding: "utf-8" }).trim();
   const webpages = async () => (await readdir(path.join(box.root, "_content/inbox"))).filter((n) => n.endsWith(".webpage.card"));
@@ -130,7 +125,6 @@ Retry body.`);
   // them by `capture-id`, commits them, and acknowledges the capture; git is the
   // state, so a replied capture is a committed one.
 
-  // doctest:L134
   const crashed = {
     url: "https://example.com/crashed",
     title: "Crashed Once",
@@ -152,14 +146,12 @@ Retry body.`);
 
   // ## a capture ID reused for a different page is a conflict
 
-  // doctest:L158
   const reused = await caller(box.root).clerk.commentary({ ...capture, url: "https://example.com/other" })
     .then(() => "no-error", (e) => e.code);
   t.check(reused, "CONFLICT");
 
   // ## tab arrangements are created once and retries are idempotent
 
-  // doctest:L168
   const transferId = "00000000-0000-4000-8000-000000000000";
   const windowId = "10000000-0000-4000-8000-000000000000";
   const tabId = "20000000-0000-4000-8000-000000000000";
@@ -203,7 +195,6 @@ Captured by Bee Box Clerk. Revise the proposal with the boxholder before applyin
 
   // ## a transfer ID cannot be retried with a different source snapshot
 
-  // doctest:L195
   const conflict = await caller(box.root).clerk.tabArrangement({
     ...arrangement,
     source: { windows: [{ id: windowId, tabs: [{ id: tabId, title: "Changed", url: "https://changed.example", pinned: false }] }] },
@@ -225,7 +216,6 @@ void test("The query carries a Zod .output(commentaryDestinationsOutput) — a r
       t.error(error);
     }
   });
-  // doctest:L212
   const dbox = await makeTmpBox({ git: true });
   async function seedLandmark(dir: string, cardBody: string) {
     await mkdir(path.join(dbox.root, dir), { recursive: true });

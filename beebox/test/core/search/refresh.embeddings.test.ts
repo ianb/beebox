@@ -38,7 +38,6 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
       t.error(error);
     }
   });
-  // doctest:L32
   const box = await makeTmpBox();
   await box.write("_content/inbox/Dentist.doc.card", DOC("The dentist appointment moved.", "Dentist moved to June 17."));
   await box.write("store/notes/Plain.doc.card", DOC("Just a note with no contains yet."));
@@ -46,16 +45,13 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
   const built = await openSearchIndex(box.root, { embeddings: fake });
   t.check({ embeddingsReady: built.embeddingsReady, warnings: built.warnings }, { embeddingsReady: true, warnings: [] });
 
-  // doctest:L43
   // Exactly one batched embed call for the one contains-bearing card.
   t.check(fake.calls, [["Dentist moved to June 17."]]);
 
-  // doctest:L50
   // The whole-card doc holds the fake's deterministic vector for that contains.
   const dentist = getByID(built.db, "_content/inbox/Dentist.doc.card#");
   t.check(dentist?.embedding, await fakeVec("Dentist moved to June 17."));
 
-  // doctest:L55
   // A card with no contains gets no vector.
   const plain = getByID(built.db, "store/notes/Plain.doc.card#");
   t.check(
@@ -70,7 +66,6 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
     },
   );
 
-  // doctest:L60
   // The manifest records the embedded card's hash, and leaves the other's unset.
   const m1 = await loadManifest(box.root);
   t.check(m1.files["_content/inbox/Dentist.doc.card"], {
@@ -81,7 +76,6 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
     embeddedHash: "71c146e97cf32ec7",
   });
 
-  // doctest:L65
   t.check(m1.files["store/notes/Plain.doc.card"], {
     mtimeMs: any(Number).positive(),
     size: 54,
@@ -91,25 +85,20 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
 
   // ## Second refresh, nothing changed: no new embed call, still ready
 
-  // doctest:L72
   const again = await openSearchIndex(box.root, { embeddings: fake });
   t.check(again.embeddingsReady, true);
 
-  // doctest:L76
   // Pending set is empty, so the fake is never called again.
   t.check(fake.calls, [["Dentist moved to June 17."]]);
 
   // ## Editing a card's contains re-embeds exactly that text
 
-  // doctest:L84
   await box.write("_content/inbox/Dentist.doc.card", DOC("The dentist appointment moved.", "Dentist moved to July 2 instead."));
   const edited = await openSearchIndex(box.root, { embeddings: fake });
   t.check(edited.embeddingsReady, true);
 
-  // doctest:L89
   t.check(fake.calls, [["Dentist moved to June 17."], ["Dentist moved to July 2 instead."]]);
 
-  // doctest:L95
   const reDentist = getByID(edited.db, "_content/inbox/Dentist.doc.card#");
   t.check(reDentist?.embedding, await fakeVec("Dentist moved to July 2 instead."));
 
@@ -118,7 +107,6 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
   // A fresh `openSearchIndex` restores the index from disk; the persisted vectors
   // must survive the round-trip and answer a native vector search.
 
-  // doctest:L106
   const restored = await openSearchIndex(box.root);
   const vec = await fakeVec("Dentist moved to July 2 instead.");
   const vhits = await search(restored.db, { mode: "vector", vector: { value: vec, property: "embedding" }, similarity: 0.9, limit: 5 });
@@ -126,13 +114,11 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
 
   // ## No service: not ready, no warning (the designed not-configured state)
 
-  // doctest:L116
   const noService = await openSearchIndex(box.root);
   t.check({ embeddingsReady: noService.embeddingsReady, warnings: noService.warnings }, { embeddingsReady: false, warnings: [] });
 
   // ## Embed failure degrades visibly, re-pends, and reports not-ready
 
-  // doctest:L127
   const box2 = await makeTmpBox();
   await box2.write("_content/inbox/Bill.doc.card", DOC("The electric bill is due.", "Electric bill due Friday."));
   const flaky = createFakeEmbeddings({ failTimes: 1 });
@@ -144,12 +130,10 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
     ],
   });
 
-  // doctest:L140
   // Text search still answers, and the text side persisted.
   const textHit = await search(failed.db, { term: "electric", properties: ["contains", "content"] });
   t.check(textHit.hits.map((h) => String(h.document.path)).join("\n"), "_content/inbox/Bill.doc.card");
 
-  // doctest:L145
   const failedManifest = await loadManifest(box2.root);
   t.check(failedManifest.files["_content/inbox/Bill.doc.card"], {
     mtimeMs: any(Number).positive(),
@@ -158,12 +142,10 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
     docIds: ["_content/inbox/Bill.doc.card#"],
   });
 
-  // doctest:L149
   // Same fake instance, next refresh: the card re-pends and this time succeeds.
   const retried = await openSearchIndex(box2.root, { embeddings: flaky });
   t.check(retried.embeddingsReady, true);
 
-  // doctest:L154
   const bill = getByID(retried.db, "_content/inbox/Bill.doc.card#");
   t.check(bill?.embedding, await fakeVec("Electric bill due Friday."));
 
@@ -174,12 +156,10 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
   // a fully embedded corpus. One contended query ranks text-only; the stale
   // warning already marks it degraded.
 
-  // doctest:L167
   const box3 = await makeTmpBox();
   await box3.write("_content/inbox/Contended.doc.card", DOC("A card.", "Fully embedded already."));
   await openSearchIndex(box3.root, { embeddings: createFakeEmbeddings() });
 
-  // doctest:L171
   await acquireLock(searchLockPath(box3.root), { purpose: "doctest-contender" });
   const contended = await openSearchIndex(box3.root, {
     embeddings: createFakeEmbeddings(),
@@ -188,6 +168,5 @@ void test("Cold build with a service: contains-bearing cards get vectors, others
   });
   await releaseLock(searchLockPath(box3.root));
 
-  // doctest:L179
   t.check({ stale: contended.stale, embeddingsReady: contended.embeddingsReady }, { stale: true, embeddingsReady: false });
 });

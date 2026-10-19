@@ -44,25 +44,18 @@ const listed = await listPackageFiles({ repoRoot, packageRoot: "pkg" });
 // module-flavored twins of `.d.ts` and classify the same way, not as ordinary
 // `.mts`/`.cts` modules.
 void test("A TypeScript extension is always a module; a declaration file, test suffixes,...", async (t) => {
-  // doctest:L28
   t.check(classifyFile("pkg/src/foo.ts", true), "module");
 
-  // doctest:L31
   t.check(classifyFile("pkg/src/foo.d.ts", true), "declaration");
 
-  // doctest:L34
   t.check(classifyFile("pkg/src/foo.d.mts", true), "declaration");
 
-  // doctest:L37
   t.check(classifyFile("pkg/src/foo.d.cts", true), "declaration");
 
-  // doctest:L43
   t.check(classifyFile("test/foo.test.ts", false), "test");
 
-  // doctest:L46
   t.check(classifyFile("test/foo.tour.ts", false), "test");
 
-  // doctest:L49
   t.check(classifyFile("pkg/src/foo.card", true), "data");
 });
 
@@ -70,17 +63,14 @@ void test("A TypeScript extension is always a module; a declaration file, test s
 // shim beside TypeScript), and a static asset (data) outside one — the
 // frontend's `public/sw.js` motivating case.
 void test("A plain .js/.mjs/.cjs file is a module inside a source root (a .mjs shim besi...", async (t) => {
-  // doctest:L59
   t.check(classifyFile("pkg/src/foo.mjs", true), "module");
 
-  // doctest:L62
   t.check(classifyFile("pkg/public/sw.js", false), "data");
 });
 
 // Gitignored files are excluded; a nested package (and everything under it) is
 // excluded and reported separately.
 void test("Gitignored files are excluded; a nested package (and everything under it) is...", async (t) => {
-  // doctest:L93
   t.check(listed.files, [
     "pkg/public/sw.js",
     "pkg/scripts/build.ts",
@@ -89,7 +79,6 @@ void test("Gitignored files are excluded; a nested package (and everything under
     "pkg/src/data.json",
   ]);
 
-  // doctest:L96
   t.check(listed.nestedPackages, [
     "pkg/nested",
   ]);
@@ -98,7 +87,6 @@ void test("Gitignored files are excluded; a nested package (and everything under
 // Directories are every ancestor of a listed file, from the package root down;
 // the excluded nested package contributes none.
 void test("Directories are every ancestor of a listed file, from the package root down;...", async (t) => {
-  // doctest:L104
   t.check([...listed.directories].toSorted(), [
     "pkg",
     "pkg/public",
@@ -118,7 +106,6 @@ void test("scripts/ holds a TypeScript file and is not src/test, so it is an ext
       t.error(error);
     }
   });
-  // doctest:L113
   t.check(listed.extraSourceRoots, [
     "pkg/scripts",
   ]);

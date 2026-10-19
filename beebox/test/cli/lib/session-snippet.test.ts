@@ -54,7 +54,6 @@ void test("The first real user turn is the snippet", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L51
   const box = await makeTmpBox();
   const logPath = await transcript(box, [
     user("what's on my calendar tomorrow"),
@@ -62,18 +61,15 @@ void test("The first real user turn is the snippet", async (t) => {
     user("and the day after?"),
   ]);
 
-  // doctest:L58
   t.check(await readFirstUserSnippet({ logPath, snippetMaxLen: 400 }), "what's on my calendar tomorrow");
 
   // It is trimmed to `snippetMaxLen`, with an ellipsis marking the cut.
 
-  // doctest:L65
   t.check(await readFirstUserSnippet({ logPath, snippetMaxLen: 12 }), "what's on m…");
 
   // An empty transcript, or one that never holds a real user turn, has no snippet —
   // callers fall back to the session id rather than inventing a name.
 
-  // doctest:L73
   const emptyLog = box.path("empty.jsonl");
   await writeFile(emptyLog, "");
   t.check(await readFirstUserSnippet({ logPath: emptyLog, snippetMaxLen: 400 }), null);
@@ -92,7 +88,6 @@ void test("Tool-result plumbing, SDK meta prompts, post-compaction summaries, an
       t.error(error);
     }
   });
-  // doctest:L90
   const box = await makeTmpBox();
   const logPath = await transcript(box, [
     user("Tool loaded."),
@@ -102,16 +97,13 @@ void test("Tool-result plumbing, SDK meta prompts, post-compaction summaries, an
     user("ok so about that recipe"),
   ]);
 
-  // doctest:L99
   t.check(await readFirstUserSnippet({ logPath, snippetMaxLen: 400 }), "ok so about that recipe");
 
   // The full-file scanner agrees, because both read the same `userTurnText`.
 
-  // doctest:L106
   const meta = await getSessionMetadata({ sessionId: "s1", logPath, snippetMaxLen: 400 });
   t.check(meta.firstUserSnippet, "ok so about that recipe");
 
-  // doctest:L112
   t.check(meta.userTurns, 1);
 });
 
@@ -128,14 +120,12 @@ void test("Speech-wrapper markup (<chat-app …>, <instructions>, <speech>) is s
       t.error(error);
     }
   });
-  // doctest:L127
   const box = await makeTmpBox();
   const logPath = await transcript(box, [
     user("<instructions>speak briefly</instructions>"),
     user("<speech>how's my week looking</speech>"),
   ]);
 
-  // doctest:L133
   t.check(await readFirstUserSnippet({ logPath, snippetMaxLen: 400 }), "how's my week looking");
 });
 
@@ -152,7 +142,6 @@ void test("A partial or concurrent write mustn't abort the scan — the transcri
       t.error(error);
     }
   });
-  // doctest:L148
   const box = await makeTmpBox();
   const logPath = await transcript(box, [
     "{ not json",
@@ -160,12 +149,10 @@ void test("A partial or concurrent write mustn't abort the scan — the transcri
     user("still found me"),
   ]);
 
-  // doctest:L155
   t.check(await readFirstUserSnippet({ logPath, snippetMaxLen: 400 }), "still found me");
 
   // A transcript that isn't there is the caller's problem, not a silent null — the
   // session lists treat "no transcript" as "nothing to resume" and say so.
 
-  // doctest:L163
   t.check(await readFirstUserSnippet({ logPath: box.path("gone.jsonl"), snippetMaxLen: 400 }).catch((e) => e.code), "ENOENT");
 });

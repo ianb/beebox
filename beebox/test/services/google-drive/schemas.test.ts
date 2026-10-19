@@ -30,7 +30,6 @@ function vErr(raw: unknown, ctx: { schema: z.ZodType; service: string; operation
 // A file with the fields we consume (plus extra keys Google sends) passes;
 // unknown keys are ignored.
 void test("A file with the fields we consume (plus extra keys Google sends) passes; unkn...", async (t) => {
-  // doctest:L34
   const file = {
     id: "f1", name: "Budget", mimeType: "application/vnd.google-apps.spreadsheet",
     modifiedTime: "2026-03-29T10:00:00Z", trashed: false,
@@ -42,7 +41,6 @@ void test("A file with the fields we consume (plus extra keys Google sends) pass
 
   // A file missing its `id` is real drift — a loud error naming service + operation.
 
-  // doctest:L48
   const bad = vErr({ name: "x", mimeType: "y", modifiedTime: "z" }, { schema: driveGetFileSchema, service: "drive", operation: "getFile" });
   t.check({ service: bad?.service, operation: bad?.operation, issues: bad?.issues }, {
     service: "drive",
@@ -59,7 +57,6 @@ void test("A file with the fields we consume (plus extra keys Google sends) pass
 // The list envelope shared by `listFiles`/`listSpreadsheets` — an absent `files`
 // array is legal (empty page).
 void test("The list envelope shared by listFiles/listSpreadsheets — an absent files arra...", async (t) => {
-  // doctest:L59
   validateResponse({ nextPageToken: "p2" }, { schema: driveFileListSchema, service: "drive", operation: "listFiles" });
   validateResponse({ values: [["Name", "Age"], ["Alice", "30"]] }, { schema: sheetValuesSchema, service: "drive", operation: "getSheetValues" });
   const meta = { spreadsheetId: "s1", properties: { title: "T" }, sheets: [{ properties: { sheetId: 0, title: "Sheet1" } }] };
@@ -68,7 +65,6 @@ void test("The list envelope shared by listFiles/listSpreadsheets — an absent 
 
   // A spreadsheet whose sheet is missing its numeric `sheetId` is drift:
 
-  // doctest:L70
   const bad = vErr(
     { spreadsheetId: "s1", properties: { title: "T" }, sheets: [{ properties: { title: "Sheet1" } }] },
     { schema: spreadsheetMetadataSchema, service: "drive", operation: "getSpreadsheet" },
@@ -80,7 +76,6 @@ void test("The list envelope shared by listFiles/listSpreadsheets — an absent 
 
 // ## comments — envelope with optional author/resolved
 void test("comments — envelope with optional author/resolved", async (t) => {
-  // doctest:L81
   const comments = {
     comments: [
       { id: "c1", content: "nice", author: { displayName: "A" }, resolved: false, createdTime: "2026-01-01T00:00:00Z" },
@@ -98,7 +93,6 @@ void test("comments — envelope with optional author/resolved", async (t) => {
 // realistic response — a paragraph with a text run and an equation, plus a table
 // whose cell contains a nested paragraph — validates whole.
 void test("A Google Doc body is a tree:", async (t) => {
-  // doctest:L100
   const doc = {
     documentId: "d1",
     title: "Design",
@@ -136,7 +130,6 @@ void test("A Google Doc body is a tree:", async (t) => {
   // Recursion goes arbitrarily deep — a table cell holding a table holding a cell
   // holding a paragraph still validates.
 
-  // doctest:L140
   const deep = {
     documentId: "d2", title: "Nested", revisionId: "rev-1",
     body: { content: [
@@ -153,13 +146,11 @@ void test("A Google Doc body is a tree:", async (t) => {
   // A read-only share omits `revisionId` (Google only populates it with edit
   // access) — a valid document, not drift:
 
-  // doctest:L159
   validateResponse({ documentId: "d3", title: "ReadOnly" }, { schema: documentStructureSchema, service: "drive", operation: "getDocument" });
   t.check("ok", "ok");
 
   // A document missing its `documentId` IS drift:
 
-  // doctest:L167
   const bad = vErr({ title: "x", revisionId: "r1" }, { schema: documentStructureSchema, service: "drive", operation: "getDocument" });
   t.check(bad?.issues, [
     "documentId: Invalid input: expected string, received undefined",
@@ -168,7 +159,6 @@ void test("A Google Doc body is a tree:", async (t) => {
   // Sheet cells can be raw numbers/booleans (unformatted numeric cells), not just
   // strings:
 
-  // doctest:L176
   validateResponse({ values: [["Name", "Paid"], ["Alice", 30], ["Bob", true]] }, { schema: sheetValuesSchema, service: "drive", operation: "getSheetValues" });
   t.check("ok", "ok");
 });

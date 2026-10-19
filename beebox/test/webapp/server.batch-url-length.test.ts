@@ -18,13 +18,11 @@ const box = await makeTestServer();
 // A batch of `health.check` calls whose procedure list is just under the
 // client's URL limit routes and answers every call.
 void test("A batch of health.check calls whose procedure list is just under the client's...", async (t) => {
-  // doctest:L20
   const names = [];
   while ((names.length + 1) * "health.check,".length < TRPC_MAX_URL_LENGTH - 100) names.push("health.check");
   const list = names.join(",");
   t.check(list, any(String).matches(/^health\.check(,health\.check){115,}$/));
 
-  // doctest:L26
   const res = await box.request({ method: "GET", url: `/api/trpc/${list}?batch=1&input=%7B%7D` });
   // The health payload depends on the host (git-annex version, check status), so each
   // entry is checked only to be a result (not an error) with its status, checks and version.
@@ -34,6 +32,5 @@ void test("A batch of health.check calls whose procedure list is just under the 
     { status: 200, entries: names.map(() => ["status", "checks", "version"]) },
   );
 
-  // doctest:L30
   await box.cleanup();
 });

@@ -28,7 +28,6 @@ void test("Valid capture stores a readable fix, stamped web + capturedAt", async
       t.error(error);
     }
   });
-  // doctest:L25
   const box = await makeTmpBox({ git: true });
   await caller(box.root).location.capture({ lat: 45.5, lng: -122.6, accuracy: 15 });
   const stored = await loadLocation(box.root);
@@ -40,7 +39,6 @@ void test("Valid capture stores a readable fix, stamped web + capturedAt", async
     source: "web",
   });
 
-  // doctest:L32
   t.check(typeof stored.capturedAt, "string");
 });
 
@@ -53,11 +51,9 @@ void test("Out-of-range input is rejected; nothing is written", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L43
   const box = await makeTmpBox({ git: true });
   const rejected = await caller(box.root).location.capture({ lat: 999, lng: 0, accuracy: 10 }).then(() => false, () => true);
   t.check(rejected, true);
 
-  // doctest:L48
   t.check(await loadLocation(box.root), null);
 });

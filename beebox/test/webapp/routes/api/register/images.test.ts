@@ -28,7 +28,6 @@ void test("The route produces a bounded WebP representation with hardened cache 
       t.error(error);
     }
   });
-  // doctest:L25
   const image = await imageRequest("/api/images/_content/photo.jpg?width=40&format=webp");
   const metadata = await Sharp(image.rawPayload).metadata();
   t.check(
@@ -45,14 +44,12 @@ void test("The route produces a bounded WebP representation with hardened cache 
 
   // The long and short option names share one normalized cache entry:
 
-  // doctest:L34
   await imageRequest("/api/images/_content/photo.jpg?w=40&f=webp");
   const cacheNames = await readdir(join(server.boxRoot, ".beebox/image-cache/v1"));
   t.check(cacheNames, [any(String).matches(/^[\da-f]{64}\.webp$/)]);
 
   // `format=auto` varies on Accept and chooses the best supported format:
 
-  // doctest:L43
   const automatic = await imageRequest("/api/images/_content/photo.jpg?width=30", { accept: "image/webp,image/*" });
   t.check(
     { status: automatic.statusCode, contentType: automatic.headers["content-type"], vary: automatic.headers.vary },
@@ -61,7 +58,6 @@ void test("The route produces a bounded WebP representation with hardened cache 
 
   // Conditional GET uses the derived representation identity:
 
-  // doctest:L51
   const unchanged = await imageRequest("/api/images/_content/photo.jpg?width=30", {
     accept: "image/webp,image/*",
     "if-none-match": String(automatic.headers.etag),
@@ -70,7 +66,6 @@ void test("The route produces a bounded WebP representation with hardened cache 
 
   // `HEAD` returns the representation headers without a response body:
 
-  // doctest:L62
   const head = await server.server.inject({ method: "HEAD", url: "/test/api/images/_content/photo.jpg?width=30&format=webp" });
   t.check(
     { status: head.statusCode, contentType: head.headers["content-type"], body: head.body },
@@ -79,7 +74,6 @@ void test("The route produces a bounded WebP representation with hardened cache 
 
   // Image cards resolve through their `filename.ref`, while the source card itself is never decoded:
 
-  // doctest:L70
   await mkdir(join(server.boxRoot, "_content/Portrait.attach"), { recursive: true });
   await writeFile(join(server.boxRoot, "_content/Portrait.attach/photo.jpg"), jpeg);
   await server.seed("_content/Portrait.image.card", "---\nfilename:\n  ref: attach/photo.jpg\n---\n");
@@ -95,7 +89,6 @@ void test("The route produces a bounded WebP representation with hardened cache 
   // `filename.ref`; a box-absolute ref to the same file does not load (the
   // `filename-attach-scope` migration rewrites that legacy form):
 
-  // doctest:L85
   await mkdir(join(server.boxRoot, "_content/Mr. Smith.attach"), { recursive: true });
   await writeFile(join(server.boxRoot, "_content/Mr. Smith.attach/photo.jpg"), jpeg);
   await server.seed("_content/Mr. Smith.image.card", "---\nfilename:\n  ref: attach/photo.jpg\n---\n");
@@ -106,14 +99,12 @@ void test("The route produces a bounded WebP representation with hardened cache 
     { status: 200, width: 24, height: 16 },
   );
 
-  // doctest:L91
   await server.seed("_content/Flat.image.card", "---\nfilename:\n  ref: /_content/photo.jpg\n---\n");
   const flat = await imageRequest("/api/images/_content/Flat.image.card?width=24&format=jpeg");
   t.check({ status: flat.statusCode, body: flat.json() }, { status: 404, body: { error: "Image not found in card" } });
 
   // Crop decisions use dimensions after EXIF orientation, so an already-smaller portrait is not enlarged and cropped:
 
-  // doctest:L99
   const oriented = await Sharp({
     create: { width: 120, height: 80, channels: 3, background: { r: 20, g: 80, b: 160 } },
   }).jpeg().withMetadata({ orientation: 6 }).toBuffer();
@@ -124,14 +115,12 @@ void test("The route produces a bounded WebP representation with hardened cache 
 
   // Crop never enlarges a source that is smaller than the target in one dimension:
 
-  // doctest:L112
   const noUpscale = await imageRequest("/api/images/_content/photo.jpg?width=100&height=130&fit=crop&format=jpeg");
   const noUpscaleMetadata = await Sharp(noUpscale.rawPayload).metadata();
   t.check({ width: noUpscaleMetadata.width, height: noUpscaleMetadata.height }, { width: 100, height: 80 });
 
   // Bad options and non-image paths fail clearly instead of returning original bytes:
 
-  // doctest:L121
   const bad = await server.request({ method: "GET", url: "/api/images/_content/photo.jpg?width=9999" });
   const notImage = await server.request({ method: "GET", url: "/api/images/_content/notes.txt?width=40" });
   t.check(bad, {
@@ -142,7 +131,6 @@ void test("The route produces a bounded WebP representation with hardened cache 
 
   // Containment, dotfiles, and absent annex content retain the original image route's fail-closed behavior:
 
-  // doctest:L130
   await writeFile(join(server.boxRoot, ".hidden.jpg"), jpeg);
   await mkdir(join(server.boxRoot, ".beebox"), { recursive: true });
   await writeFile(join(server.boxRoot, ".beebox/cached.jpg"), jpeg);
@@ -171,7 +159,6 @@ void test("The route produces a bounded WebP representation with hardened cache 
 
   // An allowed extension containing undecodable bytes is an explicit media error, never an original-byte fallback:
 
-  // doctest:L145
   await writeFile(join(server.boxRoot, "_content/broken.jpg"), "not an image");
   const originalWarn = console.warn;
   console.warn = () => {};

@@ -12,7 +12,6 @@ import { layout } from "./fixture.js";
 
 // ## Clean: a single module named by two facets
 void test("Clean: a single module named by two facets", async (t) => {
-  // doctest:L17
   const clean1 = layout({
     files: {
       "src/core/chat/session/history.ts": {},
@@ -25,7 +24,6 @@ void test("Clean: a single module named by two facets", async (t) => {
 
 // ## Clean: a test named for a subdirectory, not a module
 void test("Clean: a test named for a subdirectory, not a module", async (t) => {
-  // doctest:L31
   const clean2 = layout({
     files: {
       "src/core/chat/session/history.ts": {},
@@ -41,7 +39,6 @@ void test("Clean: a test named for a subdirectory, not a module", async (t) => {
 // own mirror, so importing a value from another area and a type from `shared`
 // is unrelated to placement.
 void test("Naming no longer counts imports:", async (t) => {
-  // doctest:L48
   const clean3 = layout({
     files: {
       "src/core/agent/agent.ts": {},
@@ -57,7 +54,6 @@ void test("Naming no longer counts imports:", async (t) => {
 
 // ## Finding: `source-roots` — an extra source root
 void test("Finding: `source-roots` — an extra source root", async (t) => {
-  // doctest:L65
   const extraRoot = layout({
     files: { "src/core/x.ts": {} },
     extraSourceRoots: ["scripts"],
@@ -74,7 +70,6 @@ void test("Finding: `source-roots` — an extra source root", async (t) => {
 
 // ## Finding: `test-placement` — a test outside the test root
 void test("Finding: `test-placement` — a test outside the test root", async (t) => {
-  // doctest:L80
   const outsideRoot = layout({
     files: {
       "src/core/x.ts": {},
@@ -93,7 +88,6 @@ void test("Finding: `test-placement` — a test outside the test root", async (t
 
 // ## Finding: `test-naming` — a flattened prefix name
 void test("Finding: `test-naming` — a flattened prefix name", async (t) => {
-  // doctest:L97
   const flattened = layout({
     files: {
       "src/core/chat/session/archive.ts": {},
@@ -116,7 +110,6 @@ void test("Finding: `test-naming` — a flattened prefix name", async (t) => {
 // (`test/core`) mirrors `src/core`, which exists — so it is not a legitimate
 // scenario group; the test belongs somewhere under the `core` mirror instead.
 void test("test/core/misc is not an exact mirror, and its top segment below test (test/c...", async (t) => {
-  // doctest:L121
   const misplacedGroup = layout({
     files: {
       "src/core/thing.ts": {},
@@ -139,7 +132,6 @@ void test("test/core/misc is not an exact mirror, and its top segment below test
 // name a scenario, not a module, and import whatever they need for setup and
 // assertions.
 void test("test/tours has no source counterpart, so it is a scenario group.", async (t) => {
-  // doctest:L145
   const scenarioTour = layout({
     files: {
       "src/core/x.ts": {},
@@ -157,7 +149,6 @@ void test("test/tours has no source counterpart, so it is a scenario group.", as
 // that has, or will have, its own test tree. This is decided by the group's
 // name alone, not by what the test inside it imports.
 void test("test/frontend has no source counterpart (src/frontend is a nested package, ex...", async (t) => {
-  // doctest:L164
   const nestedNonMirror = layout({
     files: {
       "test/frontend/lib/x.test.ts": { test: ["src/frontend/src/lib/docling.ts"] },
@@ -175,7 +166,6 @@ void test("test/frontend has no source counterpart (src/frontend is a nested pac
 });
 
 void test("Finding: a non-mirror group named after a nested package", async (t) => {
-  // doctest:L179
   const extraRootGroup = layout({
     files: {
       "scripts/migrate/file.ts": {},
@@ -199,7 +189,6 @@ void test("Finding: a non-mirror group named after a nested package", async (t) 
 
 // ## Finding: `support-placement` — a helper placed above its only users
 void test("Finding: `support-placement` — a helper placed above its only users", async (t) => {
-  // doctest:L195
   const misplacedHelper = layout({
     files: {
       "src/core/agent/agent.ts": {},

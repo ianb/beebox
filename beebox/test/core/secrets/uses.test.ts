@@ -32,7 +32,6 @@ async function useTempStore() {
 // one the probe and format registries use — exact name first, then the longest
 // matching `family/` prefix.
 void test("Each line is derived from a real resolveSecret call site, so the boxholder ca...", async (t) => {
-  // doctest:L36
   t.check(builtinSecretUses("openai-thinking"), [
     "speech generation for chat (text-to-speech)",
     "audio transcription (Whisper)",
@@ -42,7 +41,6 @@ void test("Each line is derived from a real resolveSecret call site, so the boxh
   // A name the engine does not read has no built-in reasons — a guess would be
   // worse than silence:
 
-  // doctest:L45
   t.check(builtinSecretUses("weatherapi"), []);
 });
 
@@ -59,7 +57,6 @@ void test("An agent that adds a trick spending an already-granted key appends wh
       t.error(error);
     }
   });
-  // doctest:L56
   const dir = await useTempStore();
   await declareSecret({ name: "weatherapi", note: "from weatherapi.com", uses: ["forecasts in the morning brief"] });
   await declareSecret({ name: "weatherapi", uses: ["the umbrella reminder trick", "forecasts in the morning brief"] });
@@ -70,29 +67,23 @@ void test("An agent that adds a trick spending an already-granted key appends wh
   // exactly; a reason the entry does not carry is an error rather than a silent
   // no-op, since the caller believes it just deleted something.
 
-  // doctest:L69
   t.check((await describeSecret({ name: "weatherapi", addUses: ["severe-weather alerts"] })).uses, ["forecasts in the morning brief", "the umbrella reminder trick", "severe-weather alerts"]);
   t.check((await describeSecret({ name: "weatherapi", removeUses: ["the umbrella reminder trick"] })).uses, ["forecasts in the morning brief", "severe-weather alerts"]);
 
-  // doctest:L77
   await t.checkThrows(async () => (await describeSecret({ name: "weatherapi", removeUses: ["something nobody said"] })), "SecretUseNotFoundError");
 
-  // doctest:L80
   await t.checkThrows(async () => (await describeSecret({ name: "nonexistent", addUses: ["anything"] })), "SecretNotFoundError");
 
   // A reason is free prose, but it must stay one readable line — the store and the
   // admin page both show it as one:
 
-  // doctest:L88
   await t.checkThrows(async () => (await describeSecret({ name: "weatherapi", addUses: ["two\nlines"] })), "InvalidSecretUseError");
 
-  // doctest:L91
   await t.checkThrows(async () => (await describeSecret({ name: "weatherapi", addUses: ["   "] })), "InvalidSecretUseError");
 
   // Rotating a value never erases the reasons — the whole point of recording them is
   // that they outlive the key:
 
-  // doctest:L99
   await setSecret({ name: "weatherapi", value: "placeholder-value-1", uses: ["tide times"] });
   t.check((await listSecrets())[0]?.uses.declared, ["forecasts in the morning brief", "severe-weather alerts", "tide times"]);
 });
@@ -111,13 +102,11 @@ void test("lastUsed is stamped at most hourly, but a purpose label is written th
       t.error(error);
     }
   });
-  // doctest:L115
   const dir = await useTempStore();
   const boxDir = await mkdtemp(join(tmpdir(), "demo-box-"));
   await setSecret({ name: "weatherapi", value: "placeholder-value-2" });
   await grantSecret({ slug: "demo-box", name: "weatherapi", access: "agent" });
 
-  // doctest:L120
   await resolveSecret({ boxRoot: boxDir, slug: "demo-box", name: "weatherapi", purpose: "forecast-trick", access: "agent" });
   await resolveSecret({ boxRoot: boxDir, slug: "demo-box", name: "weatherapi", purpose: "forecast-trick", access: "agent" });
   await resolveSecret({ boxRoot: boxDir, slug: "demo-box", name: "weatherapi", purpose: "umbrella-reminder", access: "agent" });
@@ -126,7 +115,6 @@ void test("lastUsed is stamped at most hourly, but a purpose label is written th
 
   // A refusal records nothing — only a real disclosure is a use:
 
-  // doctest:L131
   await resolveSecret({ boxRoot: boxDir, slug: "other-box", name: "weatherapi", purpose: "snooping", access: "agent" });
   const afterRefusal = await loadSecretStore();
   t.check(afterRefusal.ok ? afterRefusal.value.secrets["weatherapi"]?.purposes : null, ["forecast-trick", "umbrella-reminder"]);
@@ -134,7 +122,6 @@ void test("lastUsed is stamped at most hourly, but a purpose label is written th
   // The three sources reach a display side by side, labelled — observed is the one
   // that can contradict the other two, which is why it is never merged into them:
 
-  // doctest:L141
   await describeSecret({ name: "weatherapi", addUses: ["forecasts in the morning brief"] });
   const status = await boxSecretStatus("demo-box");
   const [granted] = status.granted;
@@ -147,7 +134,6 @@ void test("lastUsed is stamped at most hourly, but a purpose label is written th
 // The registry already says `mistral` transcribes audio; an agent restating it
 // adds a line to the entry but not to the display.
 void test("The registry already says mistral transcribes audio; an agent restating it ad...", async (t) => {
-  // doctest:L162
   t.check(
     secretUsesFor({
       name: "mistral",

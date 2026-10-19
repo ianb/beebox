@@ -32,7 +32,6 @@ function matrix(audience: Audience) {
 // when nobody is present; an open app shows it instead. `dot` is a badge, so
 // only `apns` is a candidate, and presence never suppresses it.
 void test("loud goes everywhere whatever the presence.", async (t) => {
-  // doctest:L36
   await t.checkText(matrix(ALL), `loud  present=0  try [apns web-push]  skip []
 loud  present=1  try [apns web-push]  skip []
 quiet present=0  try [apns web-push]  skip []
@@ -46,7 +45,6 @@ dot   present=1  try [apns]  skip []`);
 // A channel with nobody to reach is a `no-audience` skip. For a `dot` that is
 // the only line, since `apns` is its only candidate.
 void test("A channel with nobody to reach is a no-audience skip.", async (t) => {
-  // doctest:L52
   await t.checkText(matrix(NO_APNS), `loud  present=0  try [web-push]  skip [apns:no-audience]
 loud  present=1  try [web-push]  skip [apns:no-audience]
 quiet present=0  try [web-push]  skip [apns:no-audience]
@@ -61,7 +59,6 @@ dot   present=1  try []  skip [apns:no-audience]`);
 // is `no-audience`. The notification health check reports that outcome. A
 // present person turns a `quiet` into `present` skips: the open app showed it.
 void test("With no audience and nobody present, nothing is tried and every candidate is...", async (t) => {
-  // doctest:L69
   await t.checkText(matrix(NONE), `loud  present=0  try []  skip [apns:no-audience web-push:no-audience]
 loud  present=1  try []  skip [apns:no-audience web-push:no-audience]
 quiet present=0  try []  skip [apns:no-audience web-push:no-audience]
@@ -76,13 +73,11 @@ dot   present=1  try []  skip [apns:no-audience]`);
 // web session is present) passes `onScreen`: a `quiet` or `loud` intent is
 // `present` on every channel, and a `dot` still badges the phone.
 void test("A caller that knows its target is on screen right now (a chat callout while a...", async (t) => {
-  // doctest:L86
   function onScreenRow(loudness: Loudness) {
     const plan = channelsToTry({ intent: { loudness }, audience: ALL, presence: { activeWeb: 1 }, onScreen: true });
     return `${loudness.padEnd(5)} try [${plan.channels.join(" ")}]  skip [${plan.skipped.map((d) => `${d.channel}:${d.detail}`).join(" ")}]`;
   }
 
-  // doctest:L91
   await t.checkText(LOUDNESSES.map(onScreenRow).join("\n"), `loud  try []  skip [apns:present web-push:present]
 quiet try []  skip [apns:present web-push:present]
 dot   try [apns]  skip []`);

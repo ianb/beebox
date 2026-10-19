@@ -18,7 +18,6 @@ import { layout } from "./fixture.js";
 // directory, so every sibling is its own entry, none is reachable from another,
 // and there is nothing to report.
 void test("This is src/lib's shape:", async (t) => {
-  // doctest:L22
   const libLayout = layout({
     files: {
       "src/lib/a.ts": { imports: [] },
@@ -36,7 +35,6 @@ void test("This is src/lib's shape:", async (t) => {
 // from `wakeup.ts`, so they are `wakeup.ts`'s unit; `init.ts`'s unit is itself
 // alone.
 void test("wakeup.ts and init.ts are both entries (something outside commands/ imports e...", async (t) => {
-  // doctest:L41
   const clusterLayout = layout({
     files: {
       "src/commands/wakeup.ts": { imports: ["src/commands/wakeup-steps.ts", "src/commands/wakeup-outcome.ts"] },
@@ -61,7 +59,6 @@ void test("wakeup.ts and init.ts are both entries (something outside commands/ i
 // `shared.ts` is reachable from both `a.ts` and `b.ts`, so it is owned by
 // neither and stays put; both entries' units are themselves alone.
 void test("shared.ts is reachable from both a.ts and b.ts, so it is owned by neither and...", async (t) => {
-  // doctest:L64
   const infraLayout = layout({
     files: {
       "src/commands2/a.ts": { imports: ["src/commands2/shared.ts"] },
@@ -79,7 +76,6 @@ void test("shared.ts is reachable from both a.ts and b.ts, so it is owned by nei
 // helpers, but with one entry the directory is already the unit rule 5 asks
 // for, so there is nothing to report.
 void test("main.ts is the only entry in single/; h1.ts and h2.ts are its helpers, but wi...", async (t) => {
-  // doctest:L83
   const singleLayout = layout({
     files: {
       "src/single/main.ts": { imports: ["src/single/h1.ts", "src/single/h2.ts"] },
@@ -98,7 +94,6 @@ void test("main.ts is the only entry in single/; h1.ts and h2.ts are its helpers
 // imports it" branch, the same as an entry reached from outside. `tool.ts`
 // still owns `tool-helpers.ts`, which no one else reaches.
 void test("tool.ts and other.ts are each imported by nothing (a script run directly, e.g.", async (t) => {
-  // doctest:L103
   const rootLayout = layout({
     files: {
       "src/scripts/tool.ts": { imports: ["src/scripts/tool-helpers.ts"] },
@@ -120,7 +115,6 @@ void test("tool.ts and other.ts are each imported by nothing (a script run direc
 // `main.ts` reaches `types-helper.ts` only through a type-only import;
 // that still counts as an internal edge for unit ownership.
 void test("main.ts reaches types-helper.ts only through a type-only import; that still c...", async (t) => {
-  // doctest:L120
   const typedLayout = layout({
     files: {
       "src/typed/main.ts": { imports: ["type:src/typed/types-helper.ts"] },
@@ -151,7 +145,6 @@ void test("main.ts reaches types-helper.ts only through a type-only import; that
 // member), so it is an ordinary entry; its own exclusive helper
 // `second-helper.ts` still gets a finding.
 void test("registry.ts declares src/setdir as a set (its directory), so setdir's own top...", async (t) => {
-  // doctest:L146
   const setLayout = layout({
     files: {
       "src/registry.ts": {
@@ -187,7 +180,6 @@ void test("registry.ts declares src/setdir as a set (its directory), so setdir's
 // nobody imports is not reported (`main.ts` in the flat-lib example above has
 // no importers and is not flagged as shared-infrastructure).
 void test("util.ts sits at shared/; every one of its importers is under shared/featureA/...", async (t) => {
-  // doctest:L180
   const sharedLayout = layout({
     files: {
       "src/shared/util.ts": { imports: [] },
@@ -214,7 +206,6 @@ void test("util.ts sits at shared/; every one of its importers is under shared/f
 // descent finds no member directory and there is no finding (rule 1: a set
 // directory holds members only, so `util.ts` cannot move there).
 void test("registry.ts declares src/webapp/routes as a set (its directory).", async (t) => {
-  // doctest:L205
   const setMembersLayout = layout({
     files: {
       "src/webapp/util.ts": { imports: [] },
@@ -240,7 +231,6 @@ void test("registry.ts declares src/webapp/routes as a set (its directory).", as
 // child `chat`, so descent continues and lands on `src/webapp/routes/chat/register`,
 // which is not itself a set directory: that is the finding.
 void test("Same set, but util.ts is used only by files inside routes/chat/, a member dir...", async (t) => {
-  // doctest:L232
   const setMemberDirLayout = layout({
     files: {
       "src/webapp/util.ts": { imports: [] },
@@ -273,7 +263,6 @@ void test("Same set, but util.ts is used only by files inside routes/chat/, a me
 // (imported from outside `priv/`) and the unit-directory finding below would
 // disappear.
 void test("helper.test.ts imports helper.ts directly (tests import internals freely),...", async (t) => {
-  // doctest:L263
   const testLayout = layout({
     files: {
       "src/priv/core.ts": { imports: ["src/priv/helper.ts"] },
@@ -302,7 +291,6 @@ void test("helper.test.ts imports helper.ts directly (tests import internals fre
 // declaring a registry makes it an entry regardless of who imports it: the
 // finding below names only `user-helper.ts`, not `reg.ts`.
 void test("reg.ts declares src/mod/schemas as a set.", async (t) => {
-  // doctest:L287
   const registryEntryLayout = layout({
     files: {
       "src/mod/user.ts": { imports: ["src/mod/reg.ts", "src/mod/user-helper.ts"] },
@@ -335,7 +323,6 @@ void test("reg.ts declares src/mod/schemas as a set.", async (t) => {
 // there (as `util.ts` does above). Rule 4 already fixes where a
 // registry-declaring module lives, so it is exempt.
 void test("registry.ts declares src/area/schemas as a set.", async (t) => {
-  // doctest:L318
   const registryFixedLayout = layout({
     files: {
       "src/area/registry.ts": {
@@ -357,7 +344,6 @@ void test("registry.ts declares src/area/schemas as a set.", async (t) => {
 // into `src/`); `tool.ts` and `other.ts` are both entries reached from
 // `consumer.ts`, and `tool-helper.ts` is reachable only from `tool.ts`.
 void test("scripts/ is an extra source root (e.g.", async (t) => {
-  // doctest:L341
   const extraLayout = layout({
     files: {
       "scripts/tool.ts": { imports: ["scripts/tool-helper.ts"] },

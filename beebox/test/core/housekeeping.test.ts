@@ -38,7 +38,6 @@ void test("line 33", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L34
   const box = await makeTmpBox();
   const tmp = path.join(box.root, "_tmp");
   await writeAged(path.join(tmp, "old-flat.pdf"), 9);
@@ -63,11 +62,9 @@ void test("line 33", async (t) => {
   await writeAged(path.join(tmp, "scan-quarantine/old.pdf"), 40);
   await ageDir(path.join(tmp, "scan-quarantine"), 40);
 
-  // doctest:L58
   const log: string[] = [];
   t.check(await cleanupOldTmpUploads(box.root, (m) => log.push(m)), 3);
 
-  // doctest:L62
   t.check(
     await Promise.all([
       exists(path.join(tmp, "old-flat.pdf")),
@@ -89,7 +86,6 @@ void test("line 33", async (t) => {
   ],
   );
 
-  // doctest:L73
   await t.checkText(log.filter((l) => l.includes("Removed:")).map((l) => l.trim().replace(/ \(\d+ days old\)/, "")).toSorted().join("\n"), `Removed: _tmp/chat/empty-batch-03/
 Removed: _tmp/chat/stale-batch-01/
 Removed: _tmp/old-flat.pdf`);

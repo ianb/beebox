@@ -108,12 +108,10 @@ void test("The batch lands as a committed card, the <upload> wrapper reaches the
       t.error(error);
     }
   });
-  // doctest:L104
   const box = await makeTmpBox({ git: true });
   await appendHistory(box.root, { sessionId: "s-known" });
   const id = await stageSealedBulk(box.root, { target: "s-known" });
 
-  // doctest:L108
   const sent: string[] = [];
   const { registry, eventBus, close } = chatFor(box);
   const wireSession = wiring({
@@ -122,7 +120,6 @@ void test("The batch lands as a committed card, the <upload> wrapper reaches the
   });
   await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
-  // doctest:L116
   const cardRel = await batchCardRel(box);
   t.check(
     {
@@ -154,18 +151,15 @@ void test("A batch whose target chat is not known to the box is a broken invaria
       t.error(error);
     }
   });
-  // doctest:L138
   const box = await makeTmpBox({ git: true });
   // Target "s-missing" is deliberately NOT in history.
   const id = await stageSealedBulk(box.root, { target: "s-missing" });
 
-  // doctest:L142
   const sent: string[] = [];
   const { registry, eventBus, close } = chatFor(box);
   const wireSession = wiring({ isBusy: () => false, enqueue: () => {}, send: async (i) => { sent.push(textOf(i)); return true; } });
   await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
-  // doctest:L147
   t.check(
     {
       state: (await readStagingSession({ boxRoot: box.root, id }))?.state,
@@ -183,7 +177,6 @@ void test("A batch whose target chat is not known to the box is a broken invaria
   // the phone down, so the box sends one `quiet` notification to the chat the batch
   // was headed for:
 
-  // doctest:L160
   t.check(await notices(box.root), [
     {
       title: "An upload could not be added to the chat",
@@ -210,12 +203,10 @@ void test("The finalize route, the startup resume and the sweep all catch a work
       t.error(error);
     }
   });
-  // doctest:L186
   const box = await makeTmpBox({ git: true });
   const id = await stageSealedBulk(box.root, { target: "s-known" });
   await writePresence(box.root, { activeWeb: 1, now: new Date() });
 
-  // doctest:L190
   await markBulkPreparationFailed({ boxRoot: box.root, id });
   const [notice] = await notices(box.root);
   assert.ok(notice);
@@ -239,7 +230,6 @@ void test("A send failure leaves the committed batch in place and the session in
       t.error(error);
     }
   });
-  // doctest:L208
   const box = await makeTmpBox({ git: true });
   await appendHistory(box.root, { sessionId: "s-known" });
   const id = await stageSealedBulk(box.root, {
@@ -247,7 +237,6 @@ void test("A send failure leaves the committed batch in place and the session in
     failedItems: [{ id: "z", name: "broke.mov", reason: "timed out" }],
   });
 
-  // doctest:L215
   let failNext = true;
   const { registry, eventBus, close } = chatFor(box);
   const wireSession = wiring({
@@ -256,7 +245,6 @@ void test("A send failure leaves the committed batch in place and the session in
   });
   await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
-  // doctest:L223
   const cardRel = await batchCardRel(box);
   t.check(
     {
@@ -274,7 +262,6 @@ void test("A send failure leaves the committed batch in place and the session in
   // Re-running delivers (send succeeds now), cleans up staging, and adds no new
   // `Upload batch:` commit:
 
-  // doctest:L236
   await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
   t.check(
     {
@@ -305,17 +292,14 @@ void test("When the agent is busy the message is enqueued and the session stays 
       t.error(error);
     }
   });
-  // doctest:L258
   const box = await makeTmpBox({ git: true });
   await appendHistory(box.root, { sessionId: "s-known" });
   const id = await stageSealedBulk(box.root, { target: "s-known" });
 
-  // doctest:L262
   const logPath = await resolveSessionLogPath(box.root, "s-known");
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, "");
 
-  // doctest:L266
   // First run: the agent is busy, so the message is enqueued (and — standing in
   // for the queue draining into the transcript — written to the log). The session
   // stays `delivering`, staging retained.
@@ -343,13 +327,11 @@ void test("When the agent is busy the message is enqueued and the session stays 
   // Reconciliation re-fires the worker: the probe finds the `<upload>` already in the
   // transcript, so no second enqueue/send, and staging is finally cleaned up:
 
-  // doctest:L290
   busy = false;
   let sends = 0;
   script.send = async () => { sends += 1; return true; };
   await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
-  // doctest:L295
   const cardRel = await batchCardRel(box);
   t.check(
     {
@@ -385,17 +367,14 @@ void test("The dangerous window the reorder closes:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L320
   const box = await makeTmpBox({ git: true });
   await appendHistory(box.root, { sessionId: "s-known" });
   const id = await stageSealedBulk(box.root, { target: "s-known" });
 
-  // doctest:L324
   const logPath = await resolveSessionLogPath(box.root, "s-known");
   await mkdir(dirname(logPath), { recursive: true });
   await writeFile(logPath, "");
 
-  // doctest:L328
   // First run: busy agent enqueues (message drains into the transcript); staging
   // stays retained in `delivering`.
   let busy = true;
@@ -413,14 +392,12 @@ void test("The dangerous window the reorder closes:", async (t) => {
   // behind) and re-fire with a live send counter. The probe finds the `<upload>`
   // already in the transcript, so no send happens and the batch finishes:
 
-  // doctest:L348
   await setStagingState({ boxRoot: box.root, id, state: "preparing" });
   busy = false;
   let sends = 0;
   script.send = async () => { sends += 1; return true; };
   await prepareAndDeliverBulkBatch({ boxRoot: box.root, id, eventBus, registry, wireSession });
 
-  // doctest:L354
   const cardRel = await batchCardRel(box);
   t.check(
     {

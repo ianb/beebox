@@ -50,7 +50,6 @@ void test("A granted server secret resolves, and the resolve is logged", async (
       t.error(error);
     }
   });
-  // doctest:L45
   const dir = await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
@@ -60,7 +59,6 @@ void test("A granted server secret resolves, and the resolve is logged", async (
 
   // The log line names the box, the secret, and the purpose — never the value:
 
-  // doctest:L57
   const line = JSON.parse((await readFile(accessLogSegmentPath(new Date().toISOString()), "utf-8")).trim());
   t.check(line, { ts: isoDate(), box: slug, secret: "mistral", purpose: "transcription", event: "resolve" });
 });
@@ -78,7 +76,6 @@ void test("The level lives on the GRANT, not on the secret:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L82
   const dir = await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
@@ -87,7 +84,6 @@ void test("The level lives on the GRANT, not on the secret:", async (t) => {
   await grantSecret({ slug, name: "serveronly", access: "server" });
   await grantSecret({ slug, name: "agentok", access: "agent" });
 
-  // doctest:L90
   t.check(await outcome({ boxRoot: box.root, name: "serveronly", purpose: "p", access: "server" }), "ok:placeholder-value-2");
   t.check(await outcome({ boxRoot: box.root, name: "serveronly", purpose: "p", access: "agent" }), "agent-access-not-granted");
   t.check(await outcome({ boxRoot: box.root, name: "agentok", purpose: "p", access: "server" }), "ok:placeholder-value-3");
@@ -96,7 +92,6 @@ void test("The level lives on the GRANT, not on the secret:", async (t) => {
   // The `agent-access-not-granted` message is written for relay — the agent reads it
   // out and the boxholder knows exactly which action fixes it:
 
-  // doctest:L105
   const refused = await resolveSecret({ boxRoot: box.root, name: "serveronly", purpose: "p", access: "agent" });
   t.check(refused, {
     ok: false,
@@ -123,36 +118,29 @@ void test("Each condition is distinct because its remediation is:", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L121
   const dir = await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
 
-  // doctest:L125
   t.check(await outcome({ boxRoot: box.root, name: "nothing", purpose: "p", access: "server" }), "unknown-secret");
 
-  // doctest:L127
   await setSecret({ name: "ungranted", value: "placeholder-value-4" });
   t.check(await outcome({ boxRoot: box.root, name: "ungranted", purpose: "p", access: "server" }), "not-granted");
 
-  // doctest:L130
   await declareSecret({ name: "declared", note: "awaiting a value" });
   await grantSecret({ slug, name: "declared", access: "server" });
   t.check(await outcome({ boxRoot: box.root, name: "declared", purpose: "p", access: "server" }), "empty-slot");
 
-  // doctest:L134
   await setSecret({ name: "doomed", value: "placeholder-value-5" });
   await grantSecret({ slug, name: "doomed", access: "server" });
   await removeSecret("doomed");
   t.check(await outcome({ boxRoot: box.root, name: "doomed", purpose: "p", access: "server" }), "dangling-grant");
 
-  // doctest:L139
   await writeFile(secretsFile(), "{ not json");
   t.check(await outcome({ boxRoot: box.root, name: "ungranted", purpose: "p", access: "server" }), "store-unreadable");
 
   // Refusals are logged too, each carrying its kind:
 
-  // doctest:L152
   const kinds = (await readFile(accessLogSegmentPath(new Date().toISOString()), "utf-8"))
     .trim()
     .split("\n")
@@ -173,7 +161,6 @@ void test("The probe machinery itself is a later chunk; the resolver only reads 
       t.error(error);
     }
   });
-  // doctest:L172
   const dir = await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
@@ -198,7 +185,6 @@ void test("Summarized into the entry (hourly at most) so deleting an old log seg
       t.error(error);
     }
   });
-  // doctest:L195
   const dir = await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
@@ -226,7 +212,6 @@ void test("observe:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L224
   const dir = await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
@@ -242,7 +227,6 @@ void test("observe:", async (t) => {
   // A real resolve — `observe` omitted — stamps both, and the probe's label is
   // nowhere in the observed list:
 
-  // doctest:L245
   await resolveSecret({ boxRoot: box.root, name: "probed", purpose: "real-work", access: "server" });
   const used = JSON.parse(await readFile(secretsFile(), "utf-8")).secrets.probed;
   t.check(used.lastUsed, { [slug]: isoDate() });
@@ -265,14 +249,11 @@ void test("It is written verbatim into the access log the boxholder reads, so th
       t.error(error);
     }
   });
-  // doctest:L268
   const dir = await useTempStore();
   const box = await makeTmpBox();
   await t.checkThrows(async () => (await resolveSecret({ boxRoot: box.root, name: "anything", purpose: "Not A Label", access: "server" })), "InvariantError");
 
-  // doctest:L275
   await t.checkThrows(async () => (await resolveSecret({ boxRoot: box.root, name: "anything", purpose: "with\nnewline", access: "server" })), "InvariantError");
 
-  // doctest:L278
   t.check(await outcome({ boxRoot: box.root, name: "anything", purpose: "google-oauth", access: "server" }), "unknown-secret");
 });

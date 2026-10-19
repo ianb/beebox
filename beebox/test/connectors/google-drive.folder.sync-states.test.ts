@@ -84,7 +84,6 @@ void test("End to end — subfolders become subdirectories, mirrored on the same
       t.error(error);
     }
   });
-  // doctest:L86
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed(
@@ -93,7 +92,6 @@ void test("End to end — subfolders become subdirectories, mirrored on the same
   );
   box.commitAll("mount the Recipes folder");
 
-  // doctest:L94
   const drive = createFakeGoogleDrive({
     files: [
       driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
@@ -103,7 +101,6 @@ void test("End to end — subfolders become subdirectories, mirrored on the same
     spreadsheets: new Map([["sheet-2", spreadsheetFor({ id: "sheet-2", name: "Cookies" })]]),
   });
 
-  // doctest:L103
   const connector = createGoogleDriveConnector(box.root, drive);
   const result = await connector.sync();
   t.check(result, {
@@ -119,7 +116,6 @@ void test("End to end — subfolders become subdirectories, mirrored on the same
     ],
   });
 
-  // doctest:L108
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
     "_content/drive/recipes/Desserts/Cookies.gsheet.card",
     "_content/drive/recipes/Desserts/Desserts.gfolder.card",
@@ -129,7 +125,6 @@ void test("End to end — subfolders become subdirectories, mirrored on the same
   // The subfolder's own card is a mount in its own right — it can be moved,
   // unmounted, or given a status of its own.
 
-  // doctest:L116
   t.checkText(await box.read("_content/drive/recipes/Desserts/Desserts.gfolder.card"), `---
 drive:
   id: folder-2
@@ -151,7 +146,6 @@ void test("The listing returns the shortcut, never the target, so the card's dri
       t.error(error);
     }
   });
-  // doctest:L130
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed(
@@ -160,7 +154,6 @@ void test("The listing returns the shortcut, never the target, so the card's dri
   );
   box.commitAll("mount the Recipes folder");
 
-  // doctest:L138
   const drive = createFakeGoogleDrive({
     files: [
       driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
@@ -176,7 +169,6 @@ void test("The listing returns the shortcut, never the target, so the card's dri
     spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Bake Times" })]]),
   });
 
-  // doctest:L153
   const connector = createGoogleDriveConnector(box.root, drive);
   const result = await connector.sync();
   const card = await box.read("_content/drive/recipes/Shared_Bake_Times.gsheet.card");
@@ -204,7 +196,6 @@ sheets:
   // A shortcut pointing back at the folder it lives in is a cycle: reported, and
   // not descended into a second time. It is not a failure.
 
-  // doctest:L167
   drive.files.push(driveFile({
     id: "shortcut-2",
     name: "Back To Recipes",
@@ -240,7 +231,6 @@ void test("Only a getFile that says trashed justifies trashing the box card.", a
       t.error(error);
     }
   });
-  // doctest:L195
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed(
@@ -249,7 +239,6 @@ void test("Only a getFile that says trashed justifies trashing the box card.", a
   );
   box.commitAll("mount the Recipes folder");
 
-  // doctest:L203
   const drive = createFakeGoogleDrive({
     files: [
       driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
@@ -262,7 +251,6 @@ void test("Only a getFile that says trashed justifies trashing the box card.", a
     ]),
   });
 
-  // doctest:L215
   const connector = createGoogleDriveConnector(box.root, drive);
   await connector.sync();
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
@@ -274,13 +262,11 @@ void test("Only a getFile that says trashed justifies trashing the box card.", a
   // Now trash one on Drive and move the other into a different folder. Both drop
   // out of the listing; only the trashed one loses its card.
 
-  // doctest:L225
   const doomed = drive.files.find((f) => f.id === "sheet-1");
   if (doomed) doomed.trashed = true;
   const wanderer = drive.files.find((f) => f.id === "sheet-2");
   if (wanderer) wanderer.parents = ["folder-other"];
 
-  // doctest:L230
   const warnings = await captureWarnings(async () => {
     await connector.sync();
   });
@@ -298,7 +284,6 @@ void test("Only a getFile that says trashed justifies trashing the box card.", a
   // is visible on the mount itself rather than only in a console warning. `trashed`
   // needs no count — that card is gone.
 
-  // doctest:L247
   const stamped = await box.read("_content/drive/recipes/Recipes.gfolder.card");
   t.checkText(stamped, `---
 drive:
@@ -312,7 +297,6 @@ not-in-folder: 1
   // A child whose `getFile` fails is left exactly where it is — an error is not
   // evidence that anything was removed.
 
-  // doctest:L260
   drive.files = drive.files.filter((f) => f.id !== "sheet-2");
   const failing = await captureWarnings(async () => {
     await connector.sync();
@@ -330,7 +314,6 @@ not-in-folder: 1
   // `not-in-folder`, and the count that no longer applies is removed outright — a
   // stale number is worse than none.
 
-  // doctest:L277
   const restamped = await box.read("_content/drive/recipes/Recipes.gfolder.card");
   t.checkText(restamped, `---
 drive:
@@ -355,7 +338,6 @@ void test("Two Drive children can derive one local card name.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L296
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed(
@@ -364,7 +346,6 @@ void test("Two Drive children can derive one local card name.", async (t) => {
   );
   box.commitAll("mount the Recipes folder");
 
-  // doctest:L304
   const drive = createFakeGoogleDrive({
     files: [
       driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
@@ -373,7 +354,6 @@ void test("Two Drive children can derive one local card name.", async (t) => {
     ],
   });
 
-  // doctest:L312
   const connector = createGoogleDriveConnector(box.root, drive);
   const result = await connector.sync();
   t.check(result, {
@@ -391,7 +371,6 @@ void test("Two Drive children can derive one local card name.", async (t) => {
   // mirrored everything it could. The collision is a sync-report failure about one
   // child, not a broken mount, and `success: false` is what carries it.
 
-  // doctest:L327
   t.checkText(await box.read("_content/drive/recipes/Recipes.gfolder.card"), `---
 drive:
   id: folder-1
@@ -414,7 +393,6 @@ void test("The tombstone the connector leaves behind is a mirror of Drive's tras
       t.error(error);
     }
   });
-  // doctest:L342
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed(
@@ -423,7 +401,6 @@ void test("The tombstone the connector leaves behind is a mirror of Drive's tras
   );
   box.commitAll("mount the Recipes folder");
 
-  // doctest:L350
   const drive = createFakeGoogleDrive({
     files: [
       driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
@@ -432,7 +409,6 @@ void test("The tombstone the connector leaves behind is a mirror of Drive's tras
     spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Bake Times" })]]),
   });
 
-  // doctest:L358
   const connector = createGoogleDriveConnector(box.root, drive);
   await connector.sync();
   const trashOnDrive = (id: string, trashed: boolean) => {
@@ -440,7 +416,6 @@ void test("The tombstone the connector leaves behind is a mirror of Drive's tras
     if (file) file.trashed = trashed;
   };
 
-  // doctest:L365
   trashOnDrive("sheet-1", true);
   await captureWarnings(async () => { await connector.sync(); });
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), ["_content/drive/recipes/Recipes.gfolder.card"]);
@@ -449,7 +424,6 @@ void test("The tombstone the connector leaves behind is a mirror of Drive's tras
   // Restored on Drive, the next sync lists it again and re-creates the card — the
   // tombstone alone no longer suppresses it.
 
-  // doctest:L378
   trashOnDrive("sheet-1", false);
   const back = await connector.sync();
   t.check(back, {
@@ -476,7 +450,6 @@ void test("The same tombstone made by a person means the opposite thing:", async
       t.error(error);
     }
   });
-  // doctest:L398
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed(
@@ -485,7 +458,6 @@ void test("The same tombstone made by a person means the opposite thing:", async
   );
   box.commitAll("mount the Recipes folder");
 
-  // doctest:L406
   const drive = createFakeGoogleDrive({
     files: [
       driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
@@ -494,11 +466,9 @@ void test("The same tombstone made by a person means the opposite thing:", async
     spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Bake Times" })]]),
   });
 
-  // doctest:L414
   const connector = createGoogleDriveConnector(box.root, drive);
   await connector.sync();
 
-  // doctest:L417
   const receipt = await moveCardsToTrash(
     { boxRoot: box.root, write: () => {}, writeLine: () => {} },
     ["_content/drive/recipes/Bake_Times.gsheet.card"],
@@ -517,7 +487,6 @@ void test("The same tombstone made by a person means the opposite thing:", async
   ]);
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), ["_content/drive/recipes/Recipes.gfolder.card"]);
 
-  // doctest:L425
   const after = await connector.sync();
   t.check(after, { success: true, created: [], updated: ["_content/drive/recipes/Recipes.gfolder.card"] });
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), ["_content/drive/recipes/Recipes.gfolder.card"]);
@@ -536,7 +505,6 @@ void test("A trashed folder lists as empty, and empty read as membership would t
       t.error(error);
     }
   });
-  // doctest:L441
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed(
@@ -545,7 +513,6 @@ void test("A trashed folder lists as empty, and empty read as membership would t
   );
   box.commitAll("mount the Recipes folder");
 
-  // doctest:L449
   const drive = createFakeGoogleDrive({
     files: [
       driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
@@ -554,11 +521,9 @@ void test("A trashed folder lists as empty, and empty read as membership would t
     spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Bake Times" })]]),
   });
 
-  // doctest:L457
   const connector = createGoogleDriveConnector(box.root, drive);
   await connector.sync();
 
-  // doctest:L460
   const folder = drive.files.find((f) => f.id === "folder-1");
   if (folder) folder.trashed = true;
   const warnings = await captureWarnings(async () => { await connector.sync(); });
@@ -573,7 +538,6 @@ void test("A trashed folder lists as empty, and empty read as membership would t
   // The card itself carries the reason, so the mount reads as broken rather than as
   // an empty folder that mirrored fine.
 
-  // doctest:L474
   const card = await box.read("_content/drive/recipes/Recipes.gfolder.card");
   t.checkText(card, `---
 drive:
@@ -586,7 +550,6 @@ error: folder is in Drive trash
 
   // Untrashed on Drive, the very next pass is ordinary again.
 
-  // doctest:L484
   if (folder) folder.trashed = false;
   await connector.sync();
   t.checkText(await box.read("_content/drive/recipes/Recipes.gfolder.card"), `---

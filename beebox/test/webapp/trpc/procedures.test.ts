@@ -60,7 +60,6 @@ async function attempt(fn: () => Promise<unknown>) {
 // (`docs/implemented-plans/secret-custody.md`). A real signed-in owner passes
 // both.
 void test("Each line is procedure caller → result.", async (t) => {
-  // doctest:L64
   const cases: Array<["pub" | "authed" | "owner" | "strictOwner", string, Partial<TrpcContext>]> = [
     ["pub", "anonymous", {}],
     ["owner", "authed non-owner", { authed: true, isOwner: false }],

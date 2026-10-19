@@ -43,13 +43,11 @@ async function pin(boxRoot: string, config: Record<string, unknown>): Promise<vo
 
 // An unpinned box keeps today's behavior — no model, so the harness picks.
 void test("An unpinned box keeps today's behavior — no model, so the harness picks.", async (t) => {
-  // doctest:L47
   const box = await makeTmpBox({ git: true });
   t.check(await modelUsedBy(box.root), undefined);
 
   // A pinned model reaches the invocation.
 
-  // doctest:L55
   await pin(box.root, { agentModel: tierId("claude", "balanced") });
   t.check(tierOf(await modelUsedBy(box.root)), {
     engine: "claude",
@@ -59,7 +57,6 @@ void test("An unpinned box keeps today's behavior — no model, so the harness p
   // A pin the box's engine cannot run resolves to that engine's model at the same
   // tier, rather than disappearing: a Codex box pinned to the Claude balanced model runs the Codex balanced one.
 
-  // doctest:L64
   await pin(box.root, { agentEngine: "codex", agentModel: tierId("claude", "balanced") });
   t.check(tierOf(await modelUsedBy(box.root)), {
     engine: "codex",
@@ -69,17 +66,14 @@ void test("An unpinned box keeps today's behavior — no model, so the harness p
   // A retired id is carried forward instead of failing the registry check and
   // reading as "no policy".
 
-  // doctest:L73
   await pin(box.root, { agentModel: "claude-opus-4-8" });
   t.check(tierOf(await modelUsedBy(box.root)), {
     engine: "claude",
     tier: "strong",
   });
 
-  // doctest:L77
   await pin(box.root, { agentModel: "not-a-model" });
   t.check(await modelUsedBy(box.root), undefined);
 
-  // doctest:L81
   await box.cleanup();
 });

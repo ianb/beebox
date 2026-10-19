@@ -26,7 +26,6 @@ void test("The file is absent until something writes it, and an absent file read
       t.error(error);
     }
   });
-  // doctest:L23
   const box = await makeTmpBox();
   t.check(await readAnnexInfoAttributes(box.root), null);
 
@@ -34,7 +33,6 @@ void test("The file is absent until something writes it, and an absent file read
   // fixed one-line file, so there is no hand-authored content to merge with, and a
   // merge would have to guess which of two conflicting `filter=annex` claims wins:
 
-  // doctest:L33
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
   await fs.mkdir(path.dirname(annexInfoAttributesPath(box.root)), { recursive: true });
@@ -44,7 +42,6 @@ void test("The file is absent until something writes it, and an absent file read
 
   // Idempotent, because `bbx init` runs the repair on every invocation:
 
-  // doctest:L45
   await writeAnnexInfoAttributes(box.root);
   t.check(await readAnnexInfoAttributes(box.root), assetAnnexAttributes());
 });
@@ -57,10 +54,8 @@ void test("The file is absent until something writes it, and an absent file read
 // bytes were. `uncoveredAnnexedPaths` is what turns that into a loud error
 // instead of silent breakage:
 void test("Narrowing the filter is only safe while every already-annexed path has an ext...", async (t) => {
-  // doctest:L63
   t.check(uncoveredAnnexedPaths(["a.attach/photo.jpg", "a.attach/clip.mov", "a.attach/page.frozen"]), []);
 
-  // doctest:L66
   t.check(uncoveredAnnexedPaths(["a.attach/photo.jpg", "a.attach/scan.psd", "a.attach/notes"]), [
     "a.attach/scan.psd",
     "a.attach/notes",
@@ -71,7 +66,6 @@ void test("Narrowing the filter is only safe while every already-annexed path ha
 // iOS `.HEIC` is covered even though `annex.largefiles`' `include=*.heic` would
 // not match it:
 void test("Case-insensitive, matching the character classes the rendered lines use — an...", async (t) => {
-  // doctest:L78
   t.check(uncoveredAnnexedPaths(["a.attach/IMG_0001.HEIC", "a.attach/CLIP.MOV"]), []);
 });
 
@@ -80,7 +74,6 @@ void test("Case-insensitive, matching the character classes the rendered lines u
 // the slug travels with it) and the pre-2026-10 `Batch.upload-batch.attach`. A
 // `.zip` outside either scope is still a gap:
 void test("A bulk batch's scope holds arbitrary types, so any file in it counts as covered:", async (t) => {
-  // doctest:L88
   t.check(
     uncoveredAnnexedPaths([
       "_content/tmp-upload/upload-20261006T0627-d8f4fda6/upload-20261006T0627-d8f4fda6.attach/a.zip",

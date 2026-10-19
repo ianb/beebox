@@ -69,41 +69,32 @@ void test("open writes the filled page, readable by the nginx worker.", async (t
       t.error(error);
     }
   });
-  // doctest:L54
   const d = await tempDirs();
   t.check(await run(d.env, "open", d.template), { code: 0, stdout: "", stderr: "" });
 
-  // doctest:L58
   const page = await readFile(d.page, "utf8");
   t.check(page, str`<p>${startedUtc}</p><script>{"startedMs":${startedMs},"typicalSeconds":null}</script>`);
 
-  // doctest:L62
   await t.checkText(((await stat(d.page)).mode & 0o777).toString(8), "644");
 
   // `close` removes the page, appends the window, and reports the downtime on a
   // line the laptop side reads back for its own record.
 
-  // doctest:L70
   t.check(await run(d.env, "down"), { code: 0, stdout: "", stderr: "" });
 
-  // doctest:L73
   const closed = await run(d.env, "close", "0");
   t.check(closed, { code: 0, stdout: str`Deploy window: down ${seconds}s (ok)`, stderr: "" });
 
-  // doctest:L77
   t.check(await exists(d.page), false);
 
-  // doctest:L80
   t.check(await readFile(d.history, "utf8"), str`${epoch}\t${epoch}\t${epoch}\tok\n`);
 
   // A failed activation closes the window too, recorded as failed.
 
-  // doctest:L87
   await run(d.env, "open", d.template);
   await run(d.env, "down");
   t.check(await run(d.env, "close", "1"), { code: 0, stdout: str`Deploy window: down ${seconds}s (failed)`, stderr: "" });
 
-  // doctest:L92
   t.check(await exists(d.page), false);
   t.check(await readFile(d.history, "utf8"), str`${epoch}\t${epoch}\t${epoch}\tok\n${epoch}\t${epoch}\t${epoch}\tfailed\n`);
 });
@@ -120,7 +111,6 @@ void test("The estimate is the median of the last ten successful windows.", asyn
       t.error(error);
     }
   });
-  // doctest:L106
   const e = await tempDirs();
   await run(e.env, "open", e.template);
   await run(e.env, "close", "0");
@@ -135,18 +125,15 @@ void test("The estimate is the median of the last ten successful windows.", asyn
   // A deploy killed outright leaves its window open. The next `open` replaces the
   // page and records the lost window as abandoned instead of dropping it.
 
-  // doctest:L123
   await run(e.env, "open", e.template);
   t.check(await readFile(e.history, "utf8"), str`${lines.join("\n")}\n${epoch}\t-\t-\tabandoned\n`);
 
   // A trap that fires before any window was opened has nothing to record, and a
   // missing template fails loudly before anything stops.
 
-  // doctest:L132
   await run(e.env, "close", "0");
   t.check(await run(e.env, "close", "0"), { code: 0, stdout: "", stderr: "" });
 
-  // doctest:L136
   t.check(await run(e.env, "open", join(e.root, "missing.html")), {
     code: 1,
     stdout: "",
@@ -168,7 +155,6 @@ void test("deploy.sh writes an EXIT trap and signal traps at the top of the serv
       t.error(error);
     }
   });
-  // doctest:L152
   const deploySh = await readFile("deploy/deploy.sh", "utf8");
   const trapLines = deploySh.match(/<<'WINDOW'\n([\S\s]*?)\nWINDOW\n/)![1]!;
   const f = await tempDirs();
@@ -185,7 +171,6 @@ void test("deploy.sh writes an EXIT trap and signal traps at the top of the serv
     return runFile("bash", { args: [script], env: f.env });
   }
 
-  // doctest:L168
   const failedRun = await activation("false");
   t.check(failedRun, { code: 1, stdout: str`Deploy window: down ${seconds}s (failed)`, stderr: "" });
   t.check(await exists(f.page), false);
@@ -194,17 +179,14 @@ void test("deploy.sh writes an EXIT trap and signal traps at the top of the serv
   // EXIT trap still runs and the page comes down. So is a SIGPIPE, which is what
   // the script gets when the laptop's ssh session drops mid-deploy.
 
-  // doctest:L178
   const signalled = await activation("kill -TERM $$; sleep 5");
   t.check(signalled, { code: 143, stdout: str`Deploy window: down ${seconds}s (failed)`, stderr: "" });
   t.check(await exists(f.page), false);
 
-  // doctest:L182
   const piped = await activation("kill -PIPE $$; sleep 5");
   t.check(piped, { code: 141, stdout: str`Deploy window: down ${seconds}s (failed)`, stderr: "" });
   t.check(await exists(f.page), false);
 
-  // doctest:L186
   const okRun = await activation("true");
   t.check(okRun, { code: 0, stdout: str`Deploy window: down ${seconds}s (ok)`, stderr: "" });
   t.check(await exists(f.page), false);

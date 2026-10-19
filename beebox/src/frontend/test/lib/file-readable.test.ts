@@ -12,7 +12,6 @@ import { errorMessage } from "../../../shared/error-guards.js";
 
 // A readable blob passes, and so does an empty one:
 void test("A readable blob passes, and so does an empty one:", async (t) => {
-  // doctest:L15
   await assertReadable(new Blob(["photo bytes"]), { name: "shelf.jpg" });
   await assertReadable(new Blob([]), { name: "empty.txt" });
   t.check("ok", "ok");
@@ -21,7 +20,6 @@ void test("A readable blob passes, and so does an empty one:", async (t) => {
 // A blob whose stream errors on read, the way a deleted file's does in a
 // browser (even when the browser reports its size as 0), is unreadable:
 void test("A blob whose stream errors on read, the way a deleted file's does in a browse...", async (t) => {
-  // doctest:L25
   const gone = Object.assign(new Blob([]), {
     stream: () => new ReadableStream({ pull(c) { c.error(new TypeError("network error")); } }),
   });

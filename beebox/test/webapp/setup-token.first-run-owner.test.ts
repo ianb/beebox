@@ -49,12 +49,10 @@ void test("This is the deployed configuration, and the regression this test exis
       t.error(error);
     }
   });
-  // doctest:L43
   t.check(printedLines({ owner: "owner@example.com", openAccess: false }), []);
 
   // ## A genuinely unclaimed server still prints its claim link
 
-  // doctest:L50
   const lines = printedLines({ owner: null, openAccess: false });
   t.check(lines, [str`First-run setup: https://box.example.com/auth/setup?token=${any(String)}`]);
 
@@ -62,14 +60,12 @@ void test("This is the deployed configuration, and the regression this test exis
   //
   // There is no auth wall to claim past.
 
-  // doctest:L63
   t.check(printedLines({ owner: null, openAccess: true }), []);
 
   // ## Removing the last local member does not reopen first-run setup
   //
   // An initialized store keeps an empty file as a durable setup tombstone.
 
-  // doctest:L72
   await writeFile(AUTH_FILE, JSON.stringify({ version: 1, users: [] }), { mode: 0o600 });
   t.check(printedLines({ owner: null, openAccess: false }), []);
 });

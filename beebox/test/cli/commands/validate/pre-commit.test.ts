@@ -25,12 +25,10 @@ void test("A staged card that fails validation blocks", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L22
   const box = await makeTmpBox({ git: true });
   await box.write("_content/notes/Plan.doc.card", "---\nstatus: not-a-doc-field\n---\nBody text\n");
   stage(box);
 
-  // doctest:L26
   const outcome = await runPreCommitChecks(box.root, { colors: false });
   t.check([outcome.errorCount > 0, outcome.report.includes("Plan.doc.card")], [
     true,
@@ -41,11 +39,9 @@ void test("A staged card that fails validation blocks", async (t) => {
   // single commit, so "No staged cards or markdown to validate" would be noise on
   // every one of them:
 
-  // doctest:L39
   await box.write("_content/notes/Plan.doc.card", "---\ntitle: Plan\n---\nBody text\n");
   stage(box);
 
-  // doctest:L42
   const clean = await runPreCommitChecks(box.root, { colors: false });
   t.check([clean.errorCount, clean.report, clean.linkWarnings], [
     0,
@@ -58,7 +54,6 @@ void test("A staged card that fails validation blocks", async (t) => {
   // `validate.ts`), since the hook is the surface most likely to catch a misplaced
   // schema before anything else loads the box:
 
-  // doctest:L57
   await box.write("_config/schemas/doc.ts", "export {};\n");
   const legacy = await runPreCommitChecks(box.root, { colors: false });
   t.check([legacy.errorCount, legacy.report.includes("legacy location")], [
@@ -83,14 +78,12 @@ void test("Only a delete or rename can make a link in an unstaged referrer newly
       t.error(error);
     }
   });
-  // doctest:L80
   const box = await makeTmpBox({ git: true });
   await box.write("_content/docs/target.md", "# Target\n");
   await box.write("_content/docs/notes.md", "See [target](/_content/docs/target.md).\n");
   stage(box);
   box.commitAll("seed");
 
-  // doctest:L86
   await box.write("_content/notes/Plan.doc.card", "---\ntitle: Plan\n---\nAn unrelated add.\n");
   stage(box);
   const added = await runPreCommitChecks(box.root, { colors: false });
@@ -103,11 +96,9 @@ void test("Only a delete or rename can make a link in an unstaged referrer newly
   // link in `notes.md` — which is not staged, and which `--staged` could therefore
   // never see. It is a warning: the commit is not blocked.
 
-  // doctest:L101
   box.commitAll("unrelated");
   execSync("git rm -q _content/docs/target.md", { cwd: box.root });
 
-  // doctest:L104
   const deleted = await runPreCommitChecks(box.root, { colors: false });
   t.check(
     [
@@ -136,12 +127,10 @@ void test("checkBoxRoot is wired into --pre-commit as a blocking error — the c
       t.error(error);
     }
   });
-  // doctest:L128
   const strayBox = await makeTmpBox({ git: true });
   await strayBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\ncreated: 2026-08-19T10:00:00Z\n---\n");
   stage(strayBox);
 
-  // doctest:L132
   const strayOutcome = await runPreCommitChecks(strayBox.root, { colors: false });
   t.check([strayOutcome.errorCount > 0, strayOutcome.report.includes("Box root: recipes"), strayOutcome.report.includes("closed vocabulary")], [
     true,
@@ -162,15 +151,12 @@ void test("The unlisted-binary guard reads the index (core/annex/staged-unlisted
       t.error(error);
     }
   });
-  // doctest:L151
   const box = await makeTmpBox({ git: true });
   await box.write("_content/notes/Trip.attach/export.parquet", "x".repeat(1024 * 1024 + 1));
 
-  // doctest:L154
   const unstaged = await runPreCommitChecks(box.root, { colors: false });
   t.check(unstaged.errorCount, 0);
 
-  // doctest:L160
   stage(box);
   const staged = await runPreCommitChecks(box.root, { colors: false });
   t.check([staged.errorCount, staged.report.includes("export.parquet")], [

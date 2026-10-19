@@ -17,7 +17,6 @@ import { createCardSchemaMap } from "../src/schemas.js";
 //
 // The registry tracks all known card types:
 void test("The registry tracks all known card types:", async (t) => {
-  // doctest:L23
   t.check(["doc", "question", "intake-job", "webpage"].filter((type) => !getCardTypes().includes(type)), []);
 });
 
@@ -30,10 +29,8 @@ void test("The registry tracks all known card types:", async (t) => {
 // have every built-in registered — the store module loads the built-in groups
 // itself:
 void test("Template generators produce frontmatter card content for the core card types.", async (t) => {
-  // doctest:L37
   t.check(getTemplate("doc")?.name, "doc");
 
-  // doctest:L40
   t.check(getDefaultTemplate("recipe"), undefined);
 });
 
@@ -41,7 +38,6 @@ void test("Template generators produce frontmatter card content for the core car
 //
 // A select question presents options to the user:
 void test("A select question presents options to the user:", async (t) => {
-  // doctest:L49
   await t.checkText(
     createSelectQuestionTemplate({
       memo: "Context here",
@@ -71,7 +67,6 @@ asked-at: 2026-07-10T09:00:00-07:00
 //
 // An intake job groups items for triage. It has a `priority`, a list of item references, and — when a connector-scoped wakeup made it — the `connector` (every job card on disk is pending; finishing a job deletes it):
 void test("An intake job groups items for triage.", async (t) => {
-  // doctest:L80
   await t.checkText(
     createIntakeJobTemplate({
       description: "Triage 2 new capture sessions",
@@ -92,7 +87,6 @@ items:
 
 // Supports `priority: "low"` and a `connector`:
 void test("Supports priority:", async (t) => {
-  // doctest:L100
   await t.checkText(
     createIntakeJobTemplate({
       connector: "raindrop",
@@ -115,7 +109,6 @@ items:
 // A webpage card is a captured external page: provenance in frontmatter, the
 // readable rendering inline as the body.
 void test("A webpage card is a captured external page:", async (t) => {
-  // doctest:L122
   await t.checkText(
     createWebpageTemplate({
       title: "Example Page",
@@ -136,7 +129,6 @@ The readable page body.`,
 // Optional capture metadata and the frozen-snapshot ref are included only when
 // set:
 void test("Optional capture metadata and the frozen-snapshot ref are included only when...", async (t) => {
-  // doctest:L142
   await t.checkText(
     createWebpageTemplate({
       title: "Example Page",
@@ -168,7 +160,6 @@ Body.`,
 // and optional `params` (declared embed parameters) and `data` (free-form author
 // config) when present:
 void test("A figure card is an embeddable interactive graphic.", async (t) => {
-  // doctest:L173
   t.check(
     FigureSchema.frontmatterSchema.safeParse({
       type: "figure",
@@ -183,7 +174,6 @@ void test("A figure card is an embeddable interactive graphic.", async (t) => {
 
 // `entry` is required — a figure with no source pointer fails validation:
 void test("entry is required — a figure with no source pointer fails validation:", async (t) => {
-  // doctest:L186
   t.check(
     FigureSchema.frontmatterSchema.safeParse({
       type: "figure",
@@ -196,7 +186,6 @@ void test("entry is required — a figure with no source pointer fails validatio
 // The figure template scaffolds a valid card pointing at `attach/sketch.ts`; no
 // `size` param is scaffolded — the starter sizes itself from the container:
 void test("The figure template scaffolds a valid card pointing at attach/sketch.ts; no s...", async (t) => {
-  // doctest:L197
   await t.checkText(createFigureTemplate({ runtime: "p5js", title: "Spinner" }), `---
 runtime: p5js
 entry: attach/sketch.ts
@@ -211,7 +200,6 @@ A p5.js sketch figure. Describe what it demonstrates here; the runnable code liv
 // trigger is not embed-controllable, so it is omitted; the select `tone` maps to a
 // card `string`:
 void test("The canvas-loop template declares embed params that match its starter's value...", async (t) => {
-  // doctest:L214
   await t.checkText(createFigureTemplate({ runtime: "canvas-loop" }), `---
 runtime: canvas-loop
 entry: attach/sketch.ts
@@ -231,7 +219,6 @@ A canvas-loop TEA sketch figure. Describe what it demonstrates here; the runnabl
 
 // The generated card validates against the schema:
 void test("The generated card validates against the schema:", async (t) => {
-  // doctest:L236
   const text = createFigureTemplate({ runtime: "three" });
   const schemas = await createCardSchemaMap();
   const parsed = parseCardText(text, { source: "X.figure.card", schemas });

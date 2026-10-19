@@ -45,7 +45,6 @@ const upTo = (script: string, text: string) => script.slice(0, script.indexOf(te
 const repoRoot = resolve(process.cwd(), "..");
 const launchLib = join(repoRoot, "bin/lib/launch-session.sh");
 const registryLib = join(repoRoot, "bin/lib/session-registry.sh");
-// doctest:L122
 const root = await mkdtemp(join(tmpdir(), "launch-session-doctest-"));
 
 async function beginLaunch({ stateDir, name, token }: { stateDir: string; name: string; token: string }) {
@@ -153,7 +152,6 @@ void test("Claude uses the managed worktree without claiming native ownership", 
   // before Claude starts. A resumed session can instead consume the already
   // resolved path and therefore cannot recreate it with different base arguments.
 
-  // doctest:L154
   const fakeMono = join(root, "fake-mono");
   await mkdir(join(fakeMono, "bin"), { recursive: true });
   await symlink(join(repoRoot, "bin/lib"), join(fakeMono, "bin/lib"), "dir");
@@ -174,7 +172,6 @@ void test("Claude uses the managed worktree without claiming native ownership", 
   t.check({ code: invalid.code, stderr: invalid.stderr }, { code: 1, stderr: "launch-worktree-session: invalid worktree path for seam: ''\n" });
   t.check((await launchState(invalidStateDir, "seam")).state, "failed");
 
-  // doctest:L174
   const resolvedScript = await buildScript(root, {
     agent: "claude",
     resume: true,
@@ -194,7 +191,6 @@ void test("Claude uses the managed worktree without claiming native ownership", 
 // otherwise a malformed id would consume the next flag, and an empty one would
 // treat the briefing itself as the session to resume.
 void test("Claude continues a recorded conversation instead of starting one", async (t) => {
-  // doctest:L196
   const continuedScript = await buildScript(root, {
     agent: "claude",
     resume: false,
@@ -205,7 +201,6 @@ void test("Claude continues a recorded conversation instead of starting one", as
   t.check(upTo(continuedScript, "--resume 40009a22"), has('cd "$wt_path"'));
   t.check(freshScript, lacks('claude --name "seam" --model opus --remote-control seam --resume'));
 
-  // doctest:L209
   const badSession = await expectFailure(buildScript(root, {
     agent: "claude",
     resume: false,
@@ -217,7 +212,6 @@ void test("Claude continues a recorded conversation instead of starting one", as
 
 // ## Codex preserves creation, flags, and teardown behavior
 void test("Codex preserves creation, flags, and teardown behavior", async (t) => {
-  // doctest:L221
   const codexScript = await buildScript(root, { agent: "codex", resume: false });
   const defaultCodexScript = await buildScript(root, {
     agent: "codex",
@@ -233,19 +227,16 @@ void test("Codex preserves creation, flags, and teardown behavior", async (t) =>
   t.check(codexScript, has('session_registry_complete_launch "seam" "token-seam"'));
   t.check(upTo(codexScript, 'codex "${codex_args[@]}"'), has('session_registry_complete_launch "seam" "token-seam"'));
 
-  // doctest:L239
   const codexResumeScript = await buildScript(root, { agent: "codex", resume: true });
   t.check(codexResumeScript, has('codex resume --last "${codex_args[@]}" "$(cat'));
   t.check(upTo(codexResumeScript, "codex_status=$?"), has("codex resume --last"));
 
-  // doctest:L246
   const describedScript = await buildScript(root, { agent: "codex", resume: false, description: "Workstream routing" });
   const undescribedScript = await buildScript(root, { agent: "codex", resume: false });
   t.check(describedScript, has('if $description == "" then {} else {description:$description} end'));
   t.check(describedScript, has("codex-fresh-description.txt"));
   t.check(undescribedScript, has('if $description == "" then {} else {description:$description} end'));
 
-  // doctest:L255
   const resolvedCodexScript = await buildScript(root, {
     agent: "codex",
     resume: true,
@@ -261,7 +252,6 @@ void test("Codex preserves creation, flags, and teardown behavior", async (t) =>
 // script whose token has been superseded aborts at that boundary instead of
 // starting a second agent.
 void test("Completion is token-owned and happens at the agent boundary", async (t) => {
-  // doctest:L271
   const validWorktree = join(root, "valid-worktree");
   await mkdir(validWorktree);
   await execFileAsync("git", ["init", "-b", "main"], { cwd: validWorktree });
@@ -269,7 +259,6 @@ void test("Completion is token-owned and happens at the agent boundary", async (
   await execFileAsync("git", ["add", "README.md"], { cwd: validWorktree });
   await execFileAsync("git", ["-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-m", "fixture"], { cwd: validWorktree });
 
-  // doctest:L278
   const agentBin = join(root, "agent-bin");
   await mkdir(agentBin);
   const fakeClaude = join(agentBin, "claude");
@@ -289,7 +278,6 @@ session_registry_launch_status seam > "$AGENT_OBSERVATION"
     env: { ...process.env, AGENT_OBSERVATION: observation, BBX_STATE_DIR: boundaryStateDir, PATH: `${agentBin}:${process.env.PATH ?? ""}` },
   });
   const completedRecord = JSON.parse(await readFile(join(boundaryStateDir, "workstreams/seam.json"), "utf8"));
-  // doctest:L290
   t.check({ observed: JSON.parse(await readFile(observation, "utf8")).state, storedLaunch: completedRecord.launch, agent: completedRecord.agent }, {
     observed: "none",
     storedLaunch: null,
@@ -302,7 +290,6 @@ void test("A superseded token aborts before the agent starts", async (t) => {
   const agentBin = join(root, "agent-bin");
   const boundaryScriptPath = join(root, "boundary-launch.sh");
   const boundaryStateDir = join(root, "boundary-state");
-  // doctest:L300
   const staleObservation = join(root, "stale-agent-observation.json");
   await beginLaunch({ stateDir: boundaryStateDir, name: "seam", token: "newer-token" });
   const stale = await expectFailure(execFileAsync(boundaryScriptPath, [], {
@@ -322,7 +309,6 @@ void test("Codex launches with the worktree preamble and refuses unmirrored agen
   const validWorktree = join(root, "valid-worktree");
   const agentBin = join(root, "agent-bin");
   const fakeMono = join(root, "fake-mono");
-  // doctest:L309
   // The Codex launcher builds its preamble from the worktree's own script.
   await mkdir(join(validWorktree, "bin"), { recursive: true });
   await symlink(join(repoRoot, "bin/codex-preamble.ts"), join(validWorktree, "bin/codex-preamble.ts"));
@@ -350,7 +336,6 @@ printf '%s\n' "$@" > "$AGENT_OBSERVATION.args"
     agent: "codex",
   });
 
-  // doctest:L333
   // Codex gets the session preamble as developer instructions, oriented to the
   // worktree.
   const codexArgs = await readFile(`${codexObservation}.args`, "utf8");
@@ -358,7 +343,6 @@ printf '%s\n' "$@" > "$AGENT_OBSERVATION.args"
   t.check(codexArgs, has('developer_instructions="# Codex session preamble'));
   t.check(codexArgs, has("~/src/box-worktrees/seam/test1"));
 
-  // doctest:L339
   // A tracked Claude subagent without a generated Codex mirror refuses the launch,
   // so a named agent such as `finish` never runs on the session's default model.
   await mkdir(join(validWorktree, ".claude/agents"), { recursive: true });
@@ -381,7 +365,6 @@ printf '%s\n' "$@" > "$AGENT_OBSERVATION.args"
 void test("A launch registry I/O failure is trapped and reported", async (t) => {
   const validWorktree = join(root, "valid-worktree");
   const agentBin = join(root, "agent-bin");
-  // doctest:L353
   const ioMono = join(root, "io-mono");
   await mkdir(join(ioMono, "bin/lib"), { recursive: true });
   await writeFile(join(ioMono, "bin/lib/session-registry.sh"), `
@@ -411,7 +394,6 @@ void test("Terminal automation failures reach the CLI caller", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L375
   const openStateDir = join(root, "open-state");
   const observingBin = join(root, "observing-bin");
   await mkdir(observingBin);
@@ -440,7 +422,6 @@ void test("Terminal automation failures reach the CLI caller", async (t) => {
     agent: "claude",
   });
 
-  // doctest:L401
   const failingBin = join(root, "failing-bin");
   await mkdir(failingBin);
   const failingOsascript = join(failingBin, "osascript");
@@ -473,7 +454,6 @@ void test("Terminal automation failures reach the CLI caller", async (t) => {
   },
   );
 
-  // doctest:L427
   const blockedStatePath = join(root, "blocked-state");
   await writeFile(blockedStatePath, "not a directory");
   const markerBin = join(root, "marker-bin");

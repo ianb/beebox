@@ -10,7 +10,6 @@ import { naturalCompare } from "../../src/shared/natural-sort.js";
 
 // ## Numeric suffixes sort by value, not lexically
 void test("Numeric suffixes sort by value, not lexically", async (t) => {
-  // doctest:L14
   const names = ["foo-3", "foo-20", "foo-2", "foo-1", "foo-10"];
   t.check(names.toSorted(naturalCompare), [
     "foo-1",
@@ -23,7 +22,6 @@ void test("Numeric suffixes sort by value, not lexically", async (t) => {
 
 // ## Non-numeric names still sort as before, and numbers embedded mid-name work
 void test("Non-numeric names still sort as before, and numbers embedded mid-name work", async (t) => {
-  // doctest:L27
   const mixed = ["b", "a10", "a2", "a1", "c"];
   t.check(mixed.toSorted(naturalCompare), [
     "a1",

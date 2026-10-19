@@ -14,7 +14,6 @@ import type { Quota, RecentFeed, RecentFile } from "../../src/frontend/types.js"
 
 Object.assign(globalThis, { React });
 
-
 const feed: RecentFeed = {
   now: 1_780_000_000,
   files: [],
@@ -31,7 +30,6 @@ const quotas: Quota[] = [{
 }];
 
 void test("line 33", async (t) => {
-  // doctest:L34
   const frontPage = renderToStaticMarkup(createElement(RecentView, {
     feed,
     quotas,
@@ -67,7 +65,6 @@ void test("line 33", async (t) => {
 // case worth clicking on most. A file under `issues/` that is not an issue (no
 // category directory) keeps the browser.
 void test("The feed addresses every entry by repository path, but an issue is not read a...", async (t) => {
-  // doctest:L64
   const recentFile = (relPath: string, workstream: string | null): RecentFile => ({
     relPath,
     kind: "markdown",

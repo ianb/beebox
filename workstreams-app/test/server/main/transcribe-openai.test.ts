@@ -26,7 +26,6 @@ import { createFakeTranscribeService } from "../../../src/server/main/transcribe
 // `mimeType` defaults rather than being required: a browser that reports nothing
 // useful still gets a transcription attempt.
 void test("mimeType defaults rather than being required:", async (t) => {
-  // doctest:L31
   const parsed = transcribeInputSchema.parse({ audio: "AAAA" });
   t.check(parsed, {
     audio: "AAAA",
@@ -35,7 +34,6 @@ void test("mimeType defaults rather than being required:", async (t) => {
 
   // Empty audio is refused at the boundary rather than sent to a paid endpoint.
 
-  // doctest:L39
   t.check(transcribeInputSchema.safeParse({ audio: "" }).success, false);
 });
 
@@ -44,7 +42,6 @@ void test("mimeType defaults rather than being required:", async (t) => {
 // A duration cap is not a byte guarantee — the app inherits Fastify's 1 MiB body
 // limit, and base64 inflates by about a third. The cap has to leave room for that.
 void test("A duration cap is not a byte guarantee — the app inherits Fastify's 1 MiB bod...", async (t) => {
-  // doctest:L49
   const inflated = MAX_AUDIO_BYTES * (4 / 3);
   t.check({ capBytes: MAX_AUDIO_BYTES, base64FitsUnder1MiB: inflated < 1024 * 1024 }, {
     capBytes: 700000,
@@ -57,7 +54,6 @@ void test("A duration cap is not a byte guarantee — the app inherits Fastify's
 // Three different things went wrong and three different things should happen next:
 // configure a key, retry, or report a broken upstream.
 void test("Three different things went wrong and three different things should happen next:", async (t) => {
-  // doctest:L60
   const failures = [
     new TranscriptionNotConfiguredError(),
     new TranscriptionRefusedError(503, "upstream busy"),
@@ -72,7 +68,6 @@ void test("Three different things went wrong and three different things should h
   // The not-configured message names the variable AND the way out, because the
   // person reading it is mid-thought with a recording they cannot send.
 
-  // doctest:L73
   const notConfigured = new TranscriptionNotConfiguredError();
   t.check(
     {
@@ -88,7 +83,6 @@ void test("Three different things went wrong and three different things should h
   // A refusal keeps the status for a report, and still tells the boxholder the
   // recording survived.
 
-  // doctest:L85
   const refused = new TranscriptionRefusedError(429, "rate limited");
   t.check(
     {
@@ -109,7 +103,6 @@ void test("Three different things went wrong and three different things should h
 // The fake is the reason a doctest can drive this at all — there is no way to
 // force a canned transcript through a real HTTP call.
 void test("The fake is the reason a doctest can drive this at all — there is no way to f...", async (t) => {
-  // doctest:L100
   const fake = createFakeTranscribeService("the router does not restart here");
   const result = await fake.transcribe({ audio: Buffer.from([1, 2, 3]), mimeType: "audio/webm" });
   assert.equal(result.text, "the router does not restart here");

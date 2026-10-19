@@ -60,7 +60,6 @@ function claudeQuota(options: { detectedAt: Date; retryAt: Date }) {
 
 // ## A live episode skips due scripts — visibly, and `--force` overrides
 void test("A live episode skips due scripts — visibly, and `--force` overrides", async (t) => {
-  // doctest:L63
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "tick-engine-wait-"));
   t.teardown(async () => {
     delete process.env.BBX_ENGINE_AVAILABILITY_FILE;
@@ -68,11 +67,9 @@ void test("A live episode skips due scripts — visibly, and `--force` overrides
   });
   process.env.BBX_ENGINE_AVAILABILITY_FILE = path.join(dir, "engine-availability.json");
 
-  // doctest:L70
   const reset = new Date(NOW.getTime() + 6 * 60 * 60 * 1000);
   await recordEngineUnavailability(claudeQuota({ detectedAt: NOW, retryAt: reset }));
 
-  // doctest:L73
   const skip = await evaluateSkip(makeCtx());
   t.check(skip, {
     line: str`  Skipping test-script: waiting on claude quota until ${any(String)}`,
@@ -90,13 +87,11 @@ void test("A live episode skips due scripts — visibly, and `--force` overrides
     },
   });
 
-  // doctest:L77
   t.check(await evaluateSkip(makeCtx({ options: { force: true } })), null);
 
   // `lastRun` was untouched by the skip, so the script stays due and runs on the
   // first tick after the episode expires:
 
-  // doctest:L85
   process.env.BBX_ENGINE_AVAILABILITY_FILE = path.join(dir, "empty.json");
   t.check(await evaluateSkip(makeCtx()), null);
 
@@ -106,7 +101,6 @@ void test("A live episode skips due scripts — visibly, and `--force` overrides
   // failures: a script that dies of its own bug during someone else's episode
   // fails normally.
 
-  // doctest:L97
   process.env.BBX_ENGINE_AVAILABILITY_FILE = path.join(dir, "engine-availability.json");
   const fresh = await classifyScheduleFailure({
     boxRoot: "/nonexistent",
@@ -118,7 +112,6 @@ void test("A live episode skips due scripts — visibly, and `--force` overrides
     error: str`Claude is out of usage quota until ${any(String)} (account-level: affects every box and task using this Claude account). Provider message: Claude AI usage limit reached|1780000000`,
   });
 
-  // doctest:L109
   const stale = await classifyScheduleFailure({
     boxRoot: "/nonexistent",
     runStartedAt: new Date(NOW.getTime() + 60_000),
@@ -133,7 +126,6 @@ void test("A live episode skips due scripts — visibly, and `--force` overrides
 // reset (a genuinely broken task doesn't get its counter laundered by a quota
 // episode):
 void test("Not incremented (the engine was unavailable, not the task broken) and not res...", async (t) => {
-  // doctest:L128
   const state = normalizeScriptState({ lastResult: "failure", consecutiveFailures: 4 });
   recordOutcome(state, {
     result: "deferred",

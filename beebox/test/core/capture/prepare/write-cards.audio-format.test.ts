@@ -19,7 +19,6 @@ void test("WebM and M4A produce correctly named media", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L16
   const root = await mkdtemp(join(tmpdir(), "capture-write-cards-"));
   const staging = join(root, "staging");
   const attachRel = "out/session.attach";

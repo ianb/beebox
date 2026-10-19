@@ -23,7 +23,6 @@ function identifiers(node: Node): string[] {
 // The file name decides how the text parses: `.tsx` allows JSX, and the case of
 // the name does not matter. A tree stays readable after the parser closes.
 void test("The file name decides how the text parses:", async (t) => {
-  // doctest:L26
   const parser = createParser();
   const view = parser.parse({ fileName: "Card.TSX", sourceText: "export default function V({ body }) { return <p>{body}</p>; }\n" });
   const module = parser.parse({ fileName: "a.ts", sourceText: "import x from './y.js';\nx();\n" });
@@ -58,11 +57,9 @@ void test("The file name decides how the text parses:", async (t) => {
 // A name that is not a TypeScript or JavaScript file is refused before anything
 // is sent to the process:
 void test("A name that is not a TypeScript or JavaScript file is refused before anything...", async (t) => {
-  // doctest:L50
   const named = createParser();
   await t.checkThrows(async () => (named.parse({ fileName: "notes.md", sourceText: "# hi" })), "ParseError");
 
-  // doctest:L56
   named.close();
 });
 
@@ -72,7 +69,6 @@ void test("A name that is not a TypeScript or JavaScript file is refused before 
 // parser's process is the child started with `--cwd /parse`; the test process
 // has other children (tsx's esbuild service).
 void test("When the TypeScript process dies, the next parse throws instead of returning...", async (t) => {
-  // doctest:L66
   const dying = createParser();
   dying.parse({ fileName: "a.ts", sourceText: "1;" });
   // pgrep exits 1 when nothing matches, so read its output rather than its status.
@@ -82,12 +78,9 @@ void test("When the TypeScript process dies, the next parse throws instead of re
   for (const pid of pids) process.kill(Number(pid), "SIGKILL");
   t.check(pids, [any(String).matches(/^\d+$/)]);
 
-  // doctest:L78
   t.check(await eventually(() => parserPids().length === 0, { label: "the TypeScript process exits" }), true);
 
-  // doctest:L83
   await t.checkThrows(async () => (dying.parse({ fileName: "b.ts", sourceText: "2;" })), "Error");
 
-  // doctest:L88
   dying.close();
 });

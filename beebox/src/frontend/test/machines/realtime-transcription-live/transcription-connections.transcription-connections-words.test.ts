@@ -14,7 +14,6 @@ import { extractFinalWords } from "../../../src/machines/realtime-transcription-
 
 // ## Well-formed words: punctuated_word preferred, confidence carried
 void test("Well-formed words: punctuated_word preferred, confidence carried", async (t) => {
-  // doctest:L18
   const msg = {
     type: "Results",
     is_final: true,
@@ -42,7 +41,6 @@ void test("Well-formed words: punctuated_word preferred, confidence carried", as
 
 // ## Non-numeric confidence is dropped, not coerced
 void test("Non-numeric confidence is dropped, not coerced", async (t) => {
-  // doctest:L38
   const msg = {
     channel: { alternatives: [{ words: [{ word: "hi", confidence: "0.9" }] }] },
   };
@@ -55,7 +53,6 @@ void test("Non-numeric confidence is dropped, not coerced", async (t) => {
 
 // ## No punctuated_word: falls back to word
 void test("No punctuated_word: falls back to word", async (t) => {
-  // doctest:L48
   const msg = {
     channel: { alternatives: [{ words: [{ word: "hi", confidence: 0.5 }] }] },
   };
@@ -69,7 +66,6 @@ void test("No punctuated_word: falls back to word", async (t) => {
 
 // ## An entry with no usable string word is skipped, not fatal
 void test("An entry with no usable string word is skipped, not fatal", async (t) => {
-  // doctest:L58
   const msg = {
     channel: {
       alternatives: [{

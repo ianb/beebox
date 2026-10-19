@@ -103,7 +103,6 @@ function runShellHook(filePath: string, sessionId?: string) {
 //
 // `isViewFile` matches a `.tsx` directly in a `views/` directory, not other tsx:
 void test("isViewFile matches a .tsx directly in a views/ directory, not other tsx:", async (t) => {
-  // doctest:L92
   t.check(
     [
       isViewFile("/box/views/dashboard.tsx"),
@@ -120,7 +119,6 @@ void test("isViewFile matches a .tsx directly in a views/ directory, not other t
 // but `isViewSourceFile` covers them, so editing one runs the Markdown check
 // (and not the compile check):
 void test("Helpers a view imports live beside it (views/lib/…).", async (t) => {
-  // doctest:L107
   t.check(
     [
       isViewSourceFile("/box/src/views/dashboard.tsx"),
@@ -144,11 +142,9 @@ void test("lintViewFile returns null for a view that compiles, and an error mess
       t.error(error);
     }
   });
-  // doctest:L122
   const viewsDir = await makeViews();
   t.check(await lintViewFile(join(viewsDir, "good.tsx")), null);
 
-  // doctest:L128
   const err = await lintViewFile(join(viewsDir, "broken.tsx"));
   t.check(err, str`Build failed with 1 error:
 ${any(String)}/src/views/broken.tsx:1:46: ERROR: Expected ">" but found end of file`);
@@ -166,7 +162,6 @@ void test("The hook agent sessions actually run surfaces a broken view's compile
       t.error(error);
     }
   });
-  // doctest:L143
   const viewsDir = await makeViews();
   const brokenOut = await runHook(join(viewsDir, "broken.tsx"), viewsDir);
   t.check(contextOf(brokenOut), str`View compile error for ${any(String)}/src/views/broken.tsx:
@@ -175,17 +170,14 @@ ${any(String)}/src/views/broken.tsx:1:46: ERROR: Expected ">" but found end of f
 
   // A view that compiles but renders a body as raw text gets the Markdown rule:
 
-  // doctest:L152
   const rawOut = await runHook(join(viewsDir, "raw.tsx"), viewsDir);
   t.check(contextOf(rawOut), str`View error for ${any(String)}/src/views/raw.tsx:\n${MARKDOWN_RULE.replace("LINE", "5")}`);
 
   // Editing a helper under `views/` gets the same rule, naming the helper:
 
-  // doctest:L160
   const helperOut = await runHook(join(viewsDir, "lib", "prose.tsx"), viewsDir);
   t.check(contextOf(helperOut), str`View error for ${any(String)}/src/views/lib/prose.tsx:\n${MARKDOWN_RULE.replace("LINE", "1")}`);
 
-  // doctest:L166
   const goodOut = await runHook(join(viewsDir, "good.tsx"), viewsDir);
   t.check(goodOut, {});
 });
@@ -202,7 +194,6 @@ void test("A broken view through the installed shell hook exits 2 (the nudge con
       t.error(error);
     }
   });
-  // doctest:L181
   const viewsDir = await makeViews();
   const broken = await runShellHook(join(viewsDir, "broken.tsx"));
   t.check(broken, {
@@ -216,19 +207,16 @@ ${any(String)}/src/views/broken.tsx:1:46: ERROR: Expected ">" but found end of f
 
   // The Markdown rule fails the same way:
 
-  // doctest:L195
   const raw = await runShellHook(join(viewsDir, "raw.tsx"));
   t.check(raw, { code: 2, stdout: "", stderr: str`View error for ${any(String)}/src/views/raw.tsx:\n${MARKDOWN_RULE.replace("LINE", "5")}\n` });
 
   // So does an edited helper:
 
-  // doctest:L203
   const helper = await runShellHook(join(viewsDir, "lib", "prose.tsx"));
   t.check(helper, { code: 2, stdout: "", stderr: str`View error for ${any(String)}/src/views/lib/prose.tsx:\n${MARKDOWN_RULE.replace("LINE", "1")}\n` });
 
   // A clean view exits 0:
 
-  // doctest:L211
   const good = await runShellHook(join(viewsDir, "good.tsx"));
   t.check(good, { code: 0, stdout: "", stderr: "" });
 });
@@ -243,7 +231,6 @@ void test("A soft instruction-size warning exits 0 and reaches the agent through
       t.error(error);
     }
   });
-  // doctest:L224
   const warningBox = await makeTmpBox();
   const instructions = join(warningBox.root, "AGENTS.md");
   await writeFile(instructions, "x".repeat(13000));
@@ -264,7 +251,6 @@ void test("One session sees a size tier once for each file.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L247
   const repeatBox = await makeTmpBox();
   const repeatFile = join(repeatBox.root, "AGENTS.md");
   await writeFile(repeatFile, "x".repeat(13000));

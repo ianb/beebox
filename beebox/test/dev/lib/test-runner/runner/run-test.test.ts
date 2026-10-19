@@ -53,25 +53,21 @@ void test("line 45", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L46
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L49
   const shortId = "short-audit";
   const canonicalBox = await realpath(box.root);
   await writeLog(getSessionLogPath(canonicalBox, shortId), 2);
   const shortWarnings = await captureWarnings(async () => { await extractBehavior(box.root, shortId); });
   t.check(shortWarnings, []);
 
-  // doctest:L56
   const longId = "long-audit";
   const mainLog = getSessionLogPath(canonicalBox, longId);
   await writeLog(mainLog, MAX_SESSION_ENTRIES + 1);
   const subagentLog = join(dirname(mainLog), longId, "subagents", "agent-a.jsonl");
   await writeLog(subagentLog, MAX_SESSION_ENTRIES + 1);
 
-  // doctest:L62
   const longWarnings = await captureWarnings(async () => { await extractBehavior(box.root, longId); });
   const pageSize = String(MAX_SESSION_ENTRIES);
   t.check(longWarnings, [
@@ -79,14 +75,10 @@ void test("line 45", async (t) => {
     str`[test-runner] Behavior extraction from ${any(String).endsWith("/long-audit/subagents/agent-a.jsonl")} has ${String(MAX_SESSION_ENTRIES + 1)} entries; using the first ${pageSize}.`,
   ]);
 
-  // doctest:L66
-
-
   // Claude stores transcripts under the physical directory. A symbolic-link cwd
   // must find that transcript, including its response, instead of the lexical path.
   // An absent transcript rejects collection before any audit checks can pass.
 
-  // doctest:L75
   const linkedCwd = box.path("linked-cwd");
   const physicalCwd = box.path("physical-cwd");
   await mkdir(physicalCwd);
@@ -99,23 +91,19 @@ void test("line 45", async (t) => {
   }) + "\n");
   t.check((await extractBehavior(linkedCwd, "linked-audit")).responseText, "Captured response");
 
-  // doctest:L88
   await t.checkThrows(async () => (await extractBehavior(linkedCwd, "missing-audit")), "KnowledgeAuditTranscriptError: Claude knowledge-audit transcript is missing for session missing-audit: «*». No audit checks were evaluated.");
 
-  // doctest:L93
   const linkedPackage = box.path("node_modules/beebox");
   const outside = await makeTmpBox();
   await mkdir(dirname(linkedPackage), { recursive: true });
   await symlink(outside.root, linkedPackage, "dir");
 
-  // doctest:L98
   const linkedFixtureRejected = await assertFixturePathInBox(
     box.root,
     "node_modules/beebox/box-docs/README.md",
   ).then(() => "accepted", (error: Error) => error.message);
   t.check(linkedFixtureRejected, "Knowledge-audit fixture path crosses a symbolic link: node_modules/beebox/box-docs/README.md");
 
-  // doctest:L105
   const linkedPackageDocsRejected = await ensureAuditPackageDocs(box.root, {
     id: "photos",
     prompt: "photos",
@@ -125,12 +113,10 @@ void test("line 45", async (t) => {
   }).then(() => "accepted", (error: Error) => error.message);
   t.check(linkedPackageDocsRejected, "Knowledge-audit fixture path crosses a symbolic link: node_modules/beebox/box-docs/README.md");
 
-  // doctest:L117
   const escapingFixtureRejected = await assertFixturePathInBox(box.root, "../outside.txt")
     .then(() => "accepted", (error: Error) => error.message);
   t.check(escapingFixtureRejected, "Knowledge-audit fixture path escapes the box: ../outside.txt");
 
-  // doctest:L124
   const photosAudit = (await loadTests("src/dev/knowledge-audits.yaml")).tests
     .find((audit) => audit.id === "iphone-photos-album-setup");
   const isForbiddenResponse = (response: string) => photosAudit !== undefined && runChecks(photosAudit, {
@@ -170,12 +156,10 @@ void test("A worktree's box clone links nodemodules/beebox to the engine running
       t.error(error);
     }
   });
-  // doctest:L150
   const clone = await makeTmpBox();
   await mkdir(clone.path("node_modules"), { recursive: true });
   await symlink(PACKAGE_ROOT, clone.path("node_modules/beebox"), "dir");
 
-  // doctest:L154
   await ensureAuditPackageDocs(clone.root, {
     id: "voice",
     prompt: "voice",

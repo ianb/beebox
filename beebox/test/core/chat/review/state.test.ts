@@ -35,7 +35,6 @@ async function errorName(fn: () => Promise<unknown>): Promise<string> {
 
 // ## An unseen session reads as a bootstrap, with no journal entry
 void test("An unseen session reads as a bootstrap, with no journal entry", async (t) => {
-  // doctest:L39
   const state = emptyReviewState();
   t.check(sessionState(state, "never-seen"), {
     applied: {},
@@ -54,7 +53,6 @@ void test("Round-trips through disk", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L47
   const box = await makeTmpBox();
   const state = emptyReviewState();
   state.lastRunAt = "2026-07-28T04:00:00Z";
@@ -71,7 +69,6 @@ void test("Round-trips through disk", async (t) => {
   };
   await saveReviewState(box.root, state);
 
-  // doctest:L63
   const reloaded = await loadReviewState(box.root);
   t.check(reloaded.sessions["s1"]?.applied.metadata?.endUuid, "u-9");
 
@@ -80,28 +77,24 @@ void test("Round-trips through disk", async (t) => {
   // A malformed state file must not stop the night's run — re-reviewing is
   // recoverable, refusing to run is not.
 
-  // doctest:L74
   await box.write(".beebox/chat-review/state.json", "{not json at all");
   t.check(await loadReviewState(box.root), {
     lastRunAt: null,
     sessions: {},
   });
 
-  // doctest:L80
   await box.write(".beebox/chat-review/state.json", JSON.stringify({ sessions: "wrong shape" }));
   t.check(await loadReviewState(box.root), {
     lastRunAt: null,
     sessions: {},
   });
 
-  // doctest:L86
   const fresh = await makeTmpBox();
   t.check(await loadReviewState(fresh.root), {
     lastRunAt: null,
     sessions: {},
   });
 
-  // doctest:L90
   await fresh.cleanup();
 });
 
@@ -114,7 +107,6 @@ void test("In-process review contention fails fast", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L100
   const box = await makeTmpBox();
   let releaseGate: (() => void) | undefined;
   let markStarted: (() => void) | undefined;
@@ -137,7 +129,6 @@ void test("Removing one session preserves the journal", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L121
   const box = await makeTmpBox();
   const state = emptyReviewState();
   state.lastRunAt = "2026-08-07T12:00:00Z";
@@ -170,7 +161,6 @@ void test("A session whose reviewer fails MAXREVIEWATTEMPTS times on one span is
       t.error(error);
     }
   });
-  // doctest:L146
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   const NOW = new Date("2026-07-28T12:00:00Z");
@@ -186,7 +176,6 @@ void test("A session whose reviewer fails MAXREVIEWATTEMPTS times on one span is
   await writeFile(logPath, [entry("a1"), entry("a2")].join("\n") + "\n");
   await backdate();
 
-  // doctest:L161
   let reviewerCalls = 0;
   const failing = {
     async review() { reviewerCalls += 1; throw new Error("model unavailable"); },
@@ -194,13 +183,11 @@ void test("A session whose reviewer fails MAXREVIEWATTEMPTS times on one span is
   };
   const run = () => runChatReview(box.root, { reviewer: failing, maxSessions: 10, now: NOW, ownerEmail: null });
 
-  // doctest:L168
   // MAX_REVIEW_ATTEMPTS failing runs on span A, then one more that must skip it.
   for (let i = 0; i < MAX_REVIEW_ATTEMPTS; i++) await run();
   const skipped = await run();
   const onSpanA = { calls: reviewerCalls, exhausted: skipped.exhausted };
 
-  // doctest:L173
   // New material makes a new span: the reviewer is asked again.
   await appendFile(logPath, entry("b1") + "\n");
   await backdate();

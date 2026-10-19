@@ -47,17 +47,14 @@ function run(action: ControlAction, options: { revealable: boolean; inView: bool
 // or half off the bottom edge — is scrolled to before anything else happens, so the
 // ring the caller draws always lands on something the user can see.
 void test("A control already fully in the viewport is not scrolled; one that is off scre...", async (t) => {
-  // doctest:L51
   t.check(run("point", { revealable: false, inView: true }), "- → -");
 
-  // doctest:L54
   t.check(run("point", { revealable: false, inView: false }), "scrollIntoView → scrolled");
 });
 
 // `focus` is `point` plus the browser's own focus, which is the only state it
 // changes:
 void test("focus is point plus the browser's own focus, which is the only state it changes:", async (t) => {
-  // doctest:L62
   t.check(run("focus", { revealable: false, inView: false }), "scrollIntoView,focus → scrolled,focused");
 });
 
@@ -68,7 +65,6 @@ void test("focus is point plus the browser's own focus, which is the only state 
 // explicit `data-bbx-reveal` opt-in — never an inference from markup, since
 // `role="tab"` and friends fire real state changes in this app.
 void test("reveal is the one action that dispatches a synthetic click, so it is the only...", async (t) => {
-  // doctest:L74
   t.check(run("reveal", { revealable: true, inView: true }), "click → revealed");
 });
 
@@ -76,10 +72,8 @@ void test("reveal is the one action that dispatches a synthetic click, so it is 
 // `point` and says why, which the component puts in its tooltip — degraded in the
 // open, not silently inert:
 void test("Without the opt-in the control is never clicked.", async (t) => {
-  // doctest:L83
   t.check(run("reveal", { revealable: false, inView: true }), "- → - (degraded: this control is not marked as a disclosure control, so it was pointed at rather than opened)");
 
-  // doctest:L86
   t.check(REVEAL_NOT_OPTED_IN, "this control is not marked as a disclosure control, so it was pointed at rather than opened");
 });
 
@@ -88,7 +82,6 @@ void test("Without the opt-in the control is never clicked.", async (t) => {
 // The ring sits *outside* the target's border box, inflated by `RING_PADDING` on
 // every side, so it never covers the control it points at:
 void test("The ring sits outside the target's border box, inflated by RINGPADDING on eve...", async (t) => {
-  // doctest:L96
   t.check(ringBox({ top: 100, left: 40, width: 32, height: 32 }, RING_PADDING), {
     top: 96,
     left: 36,
@@ -100,7 +93,6 @@ void test("The ring sits outside the target's border box, inflated by RINGPADDIN
 // "In view" means *fully* in view: a control half off the bottom edge is one the
 // user cannot properly see, which is exactly the case `point` scrolls for.
 void test("\"In view\" means fully in view:", async (t) => {
-  // doctest:L104
   const viewport = { width: 1024, height: 768 };
   t.check(
     [

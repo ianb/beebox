@@ -25,7 +25,6 @@ async function keylessBox() {
 
 // ## No listener: refused, nothing thrown
 void test("No listener: refused, nothing thrown", async (t) => {
-  // doctest:L29
   const box = await keylessBox();
   const reasons: string[] = [];
   const ready = await sendReadiness({ boxRoot: box.root, backend: {}, explicitModel: null, liveModel: null,
@@ -37,7 +36,6 @@ void test("No listener: refused, nothing thrown", async (t) => {
     ],
   });
 
-  // doctest:L36
   await box.cleanup();
 });
 
@@ -47,7 +45,6 @@ void test("No listener: refused, nothing thrown", async (t) => {
 // is removed from the box, the next send is refused before it is admitted, and a
 // listening client hears why.
 void test("A live third-party run keeps the provider setup it started with.", async (t) => {
-  // doctest:L46
   const box = await keylessBox();
   await writeFile(join(box.root, "_config/box.json"), JSON.stringify({}));
   const session = new EventEmitter();
@@ -62,13 +59,11 @@ void test("A live third-party run keeps the provider setup it started with.", as
     ],
   });
 
-  // doctest:L56
   await box.cleanup();
 });
 
 // ## A first-party live run proceeds
 void test("A first-party live run proceeds", async (t) => {
-  // doctest:L62
   const box = await keylessBox();
   t.check(
     await sendReadiness({ boxRoot: box.root, backend: {}, explicitModel: null, liveModel: null, startOptions: null,
@@ -76,6 +71,5 @@ void test("A first-party live run proceeds", async (t) => {
     true,
   );
 
-  // doctest:L67
   await box.cleanup();
 });

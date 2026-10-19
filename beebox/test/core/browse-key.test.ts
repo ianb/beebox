@@ -28,10 +28,8 @@ const cookie = { cookie: `${BROWSE_KEY_COOKIE}=${KEY}` };
 // The fail-closed default. A deployment that never sets the variable cannot be
 // reached with this credential no matter what a caller sends.
 void test("The fail-closed default.", async (t) => {
-  // doctest:L32
   delete process.env.BBX_BROWSE_API_KEY;
 
-  // doctest:L34
   t.check(
     [
       verifyBrowseKey({}),
@@ -49,10 +47,8 @@ void test("The fail-closed default.", async (t) => {
 // An empty string is "unset", not "the empty key" — otherwise `BBX_BROWSE_API_KEY=`
 // in a `.env` would authenticate a request carrying no credential at all.
 void test("An empty string is \"unset\", not \"the empty key\" — otherwise BBXBROWSEAPIKEY=...", async (t) => {
-  // doctest:L46
   process.env.BBX_BROWSE_API_KEY = "";
 
-  // doctest:L48
   t.check([verifyBrowseKey({}), verifyBrowseKey({ cookie: `${BROWSE_KEY_COOKIE}=` })], [
     false,
     false,
@@ -65,10 +61,8 @@ void test("An empty string is \"unset\", not \"the empty key\" — otherwise BBX
 // it to the WebSocket upgrade, where an `Authorization` header never rides), while
 // a `curl` probe sends the header.
 void test("Both, for different callers:", async (t) => {
-  // doctest:L59
   process.env.BBX_BROWSE_API_KEY = KEY;
 
-  // doctest:L61
   t.check([verifyBrowseKey(bearer), verifyBrowseKey(cookie)], [
     true,
     true,
@@ -80,10 +74,8 @@ void test("Both, for different callers:", async (t) => {
 // Including the near-misses: right key under the wrong cookie name, right value
 // without the `Bearer ` scheme, and a prefix of the real key.
 void test("Including the near-misses:", async (t) => {
-  // doctest:L71
   process.env.BBX_BROWSE_API_KEY = KEY;
 
-  // doctest:L73
   t.check(
     [
       verifyBrowseKey({}),
@@ -108,10 +100,8 @@ void test("Including the near-misses:", async (t) => {
 // value can be a credential — an array is treated as absent rather than being
 // joined or having its first element trusted.
 void test("Node hands back an array when a header arrives more than once.", async (t) => {
-  // doctest:L90
   process.env.BBX_BROWSE_API_KEY = KEY;
 
-  // doctest:L92
   t.check(verifyBrowseKey({ authorization: [`Bearer ${KEY}`, "Bearer other"] }), false);
 });
 
@@ -122,10 +112,8 @@ void test("Node hands back an array when a header arrives more than once.", asyn
 // same-character-length ASCII value reach it and throw out of an auth check —
 // turning a refusal into a 500.
 void test("crypto.timingSafeEqual throws on a length mismatch, and equal JS string lengt...", async (t) => {
-  // doctest:L104
   process.env.BBX_BROWSE_API_KEY = "kéy-with-non-ascii";
 
-  // doctest:L106
   await t.checkText(
     // Same character count as the key, different byte count.
     JSON.stringify(verifyBrowseKey({ authorization: "Bearer key-with-non-asciiX".slice(0, 25) })),
@@ -135,10 +123,8 @@ void test("crypto.timingSafeEqual throws on a length mismatch, and equal JS stri
 
 // The non-ASCII key still works when supplied correctly.
 void test("The non-ASCII key still works when supplied correctly.", async (t) => {
-  // doctest:L114
   process.env.BBX_BROWSE_API_KEY = "kéy-with-non-ascii";
 
-  // doctest:L116
   t.check(verifyBrowseKey({ authorization: "Bearer kéy-with-non-ascii" }), true);
 });
 
@@ -149,9 +135,7 @@ void test("The non-ASCII key still works when supplied correctly.", async (t) =>
 // want is not reliably first, so a first-entry-only check would refuse a request
 // that legitimately carries the key.
 void test("Boxes are path siblings on one origin, so a browser can send several cbbrowse...", async (t) => {
-  // doctest:L128
   process.env.BBX_BROWSE_API_KEY = KEY;
 
-  // doctest:L130
   t.check(verifyBrowseKey({ cookie: `${BROWSE_KEY_COOKIE}=stale; ${BROWSE_KEY_COOKIE}=${KEY}` }), true);
 });

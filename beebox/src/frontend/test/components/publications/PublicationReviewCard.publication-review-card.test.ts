@@ -158,7 +158,6 @@ const disablingMarkup = renderToStaticMarkup(React.createElement(PublicationRevi
 // The disabled serving state exposes the enable action and preserves the audience
 // boundary explanation. No candidate means there is no approval action.
 void test("The disabled serving state exposes the enable action and preserves the audien...", async (t) => {
-  // doctest:L49
   t.check(markup, has("disabled"));
   t.check(markup, has("Enable site"));
   t.check(markup, has("Audience changes always need your approval."));
@@ -170,7 +169,6 @@ void test("The disabled serving state exposes the enable action and preserves th
 // Prepared review keeps the file list and inspection actions, with no active or
 // candidate content hashes exposed in the primary view.
 void test("Prepared review keeps the file list and inspection actions, with no active or...", async (t) => {
-  // doctest:L89
   t.check(preparedMarkup, has("Potential sensitive content"));
   t.check(preparedMarkup, has("Scanned for known secrets: no matches"));
   t.check(preparedMarkup, not(any(String).includes("Files:")));
@@ -188,7 +186,6 @@ void test("Prepared review keeps the file list and inspection actions, with no a
 });
 
 void test("line 148", async (t) => {
-  // doctest:L149
   t.check(alreadyApprovedMarkup, has("Enable site"));
   t.check(alreadyApprovedMarkup, not(any(String).includes("Approve audience and publish")));
   t.check(alreadyApprovedMarkup, not(any(String).includes("Publish prepared update")));
@@ -196,7 +193,6 @@ void test("line 148", async (t) => {
 });
 
 void test("line 185", async (t) => {
-  // doctest:L186
   t.check(actionButton(preparingMarkup, "prepare"), disabledButton({ action: "prepare", busy: true }));
   t.check(actionButton(preparingMarkup, "disable"), disabledButton({ action: "disable", busy: false }));
   t.check(actionButton(disablingMarkup, "disable"), disabledButton({ action: "disable", busy: true }));

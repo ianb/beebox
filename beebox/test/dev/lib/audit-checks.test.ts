@@ -26,7 +26,6 @@ function behavior(responseText: string): AgentBehavior {
 }
 
 void test("line 28", async (t) => {
-  // doctest:L29
   const good = runChecks(auditTest, {
     behavior: behavior("Use box tmp/, not the host `/tmp`."),
     newOrModifiedCards: new Map(),
@@ -61,7 +60,6 @@ void test("line 28", async (t) => {
 // lets Claude read a generated card doc while Codex reads its generated rule
 // skill without weakening the expected knowledge.
 void test("Equivalent generated guidance surfaces can satisfy one navigation check.", async (t) => {
-  // doctest:L54
   const alternateSource = runChecks({
     ...auditTest,
     should_read_any: ["node_modules/beebox/box-docs/card-image.md", "beebox-rule-card-image/SKILL.md"],
@@ -82,7 +80,6 @@ void test("Equivalent generated guidance surfaces can satisfy one navigation che
 // Regexes are rejected at the YAML schema boundary before an audit spends an
 // agent run. Empty patterns are also invalid because they match every response.
 void test("Regexes are rejected at the YAML schema boundary before an audit spends an ag...", async (t) => {
-  // doctest:L69
   const invalid = auditTestSchema.safeParse({
     ...auditTest,
     correct_matches: ["("],
@@ -96,7 +93,6 @@ void test("Regexes are rejected at the YAML schema boundary before an audit spen
 // provider searches under `WebSearch`), a box lookup is a `bbx search` command,
 // and `any` takes either. A `grep` is a search but not a lookup either way.
 void test("shouldsearch asks whether the agent looked something up.", async (t) => {
-  // doctest:L84
   function searched(where: "web" | "box" | "any", observed: Partial<AgentBehavior>) {
     const check = runChecks({ ...auditTest, correct_matches: [], should_search: where }, {
       behavior: { ...behavior("answer"), ...observed },
@@ -127,7 +123,6 @@ void test("shouldsearch asks whether the agent looked something up.", async (t) 
 
 // An audit without `should_search` carries no search check, so it cannot fail one.
 void test("An audit without shouldsearch carries no search check, so it cannot fail one.", async (t) => {
-  // doctest:L107
   t.check(runChecks(auditTest, { behavior: behavior("answer"), newOrModifiedCards: new Map() }).shouldSearchCheck, undefined);
 });
 
@@ -136,7 +131,6 @@ void test("An audit without shouldsearch carries no search check, so it cannot f
 // A card that landed under `_tmp/` fails the check even when the response never
 // names the path; a card under `_content/` passes.
 void test("A card that landed under tmp/ fails the check even when the response never na...", async (t) => {
-  // doctest:L117
   const tmpTest = auditTestSchema.parse({ ...auditTest, cards_not_under: ["_tmp/"] });
   const underTmp = runChecks(tmpTest, {
     behavior: behavior("Saved it."),
@@ -164,7 +158,6 @@ void test("A card that landed under tmp/ fails the check even when the response 
 // A Bash read counts when the file is reached through `cd dir; cat file` or
 // `B=dir; cat $B/file`. A different file in the same directory still does not.
 void test("A Bash read counts when the file is reached through cd dir; cat file or B=dir...", async (t) => {
-  // doctest:L136
   function readCheck(file: string, command: string) {
     return runChecks({ ...auditTest, correct_matches: [], should_read: [file] }, {
       behavior: { ...behavior("answer"), filesRead: [command] },

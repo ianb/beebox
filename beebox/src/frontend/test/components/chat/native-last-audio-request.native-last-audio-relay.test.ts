@@ -20,7 +20,6 @@ import type { NativeShellWindow } from "../../../src/components/chat/native-post
 // The relay crosses on its own channel, through the same neutral transport as
 // every other web→native message:
 void test("The relay crosses on its own channel, through the same neutral transport as e...", async (t) => {
-  // doctest:L24
   const calls: Array<{ channel: string; payload: string }> = [];
   const shell: NativeShellWindow = {
     beeboxNativePost: (channel, payload) => calls.push({ channel, payload }),
@@ -41,7 +40,6 @@ void test("The relay crosses on its own channel, through the same neutral transp
   // omitting the field — the shell prefers the session each recording was dictated
   // into anyway, and falls back to this one only when it has none:
 
-  // doctest:L42
   calls.length = 0;
   postNativeLastAudioRequest(shell, createNativeLastAudioRequest({
     requestId: "req-7f3c",
@@ -58,7 +56,6 @@ void test("The relay crosses on its own channel, through the same neutral transp
   // *ignored* rather than rejected, so a best-effort send would look exactly like a
   // phone that never replied.
 
-  // doctest:L61
   t.check(
     [
       nativeLastAudioRequestFromDetail({ version: 1, requestId: "r", messageId: "m", sessionId: null }),

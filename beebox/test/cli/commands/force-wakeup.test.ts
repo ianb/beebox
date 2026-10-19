@@ -125,7 +125,6 @@ void test("triggeredBy distinguishes this run in the box's history from a schedu
       t.error(error);
     }
   });
-  // doctest:L122
   const box = await boxWith({
     ok: true,
     detail: "",
@@ -153,7 +152,6 @@ void test("triggeredBy distinguishes this run in the box's history from a schedu
     },
   });
 
-  // doctest:L137
   t.check(forceWakeupLines(forced.value), [
     "  google-drive: 3 created, 1 updated, 2 jobs",
     "reactor: ok, 2 jobs processed, 0 remaining",
@@ -174,7 +172,6 @@ void test("This is the failure the incident was made of:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L155
   const box = await boxWith({
     ok: true,
     detail: "",
@@ -192,7 +189,6 @@ void test("This is the failure the incident was made of:", async (t) => {
   // With no `--connector` the child runs the whole cycle, which is what the
   // schedule runs — the same code, not a forced variant of it:
 
-  // doctest:L171
   t.check(box.calls, [{ triggeredBy: "force-wakeup", connector: null }]);
 });
 
@@ -209,7 +205,6 @@ void test("Two overlapping wakeups are ordinary.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L186
   const box = await boxWith({
     ok: true,
     detail: "",
@@ -247,7 +242,6 @@ void test("An older binary or a crash before the end of the cycle leaves nothing
       t.error(error);
     }
   });
-  // doctest:L210
   const box = await boxWith({ ok: true, detail: "", output: "", outcome: null });
   const forced = await forceWakeup({});
   assert.ok(forced.ok);
@@ -265,7 +259,6 @@ void test("A failed child keeps its per-connector detail, and the verb exits non
       t.error(error);
     }
   });
-  // doctest:L224
   const box = await boxWith({
     ok: false,
     detail: "bbx wakeup exited with code 1",
@@ -286,7 +279,6 @@ void test("A failed child keeps its per-connector detail, and the verb exits non
   // `--json` prints exactly this object, so an agent reads fields rather than the
   // lines above:
 
-  // doctest:L244
   t.check(forced.value, {
     ok: false,
     detail: "bbx wakeup exited with code 1",
@@ -318,7 +310,6 @@ void test("The refusal points at the spawn site, not at the box.", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L260
   const box = await boxWith({ ok: true, detail: "", output: "", outcome: report({}) });
   const refusals = await refusalPerProfile();
   t.check(refusals, [
@@ -327,6 +318,5 @@ void test("The refusal points at the spawn site, not at the box.", async (t) => 
     "undefined: BOX_UNREACHABLE | machine | Cannot reach this box's server: BBX_AGENT_TOKEN is not set",
   ]);
 
-  // doctest:L265
   t.check(box.calls, []);
 });

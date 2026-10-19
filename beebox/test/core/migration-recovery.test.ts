@@ -29,7 +29,6 @@ void test("line 22", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L23
   const box = await makeTmpBox({ git: true });
   await box.write("tracked.txt", "original\n");
   await box.write("unrelated.txt", "original unrelated\n");
@@ -61,13 +60,10 @@ void test("line 22", async (t) => {
     binary: "binary input\u0000bytes",
   });
 
-  // doctest:L47
   t.check(git(box, "show", `${snapshot.ref}:filtered.txt`), "FILTERED INPUT");
 
-  // doctest:L50
   t.check(await changedMigrationPaths(box.root, snapshot), []);
 
-  // doctest:L53
   await box.write("tracked.txt", "migrated\n");
   await box.write("new[card].txt", "new output\n");
   const paths = await changedMigrationPaths(box.root, snapshot);
@@ -80,11 +76,9 @@ void test("line 22", async (t) => {
   // staging, while leaving unrelated staging and migrated working content intact.
   // Git pathspec metacharacters in a filename must remain literal.
 
-  // doctest:L65
   git(box, "add", "--", "tracked.txt", "new[card].txt");
   await t.checkThrows(async () => (git(box, "commit", "--only", "-m", "rejected migration", "--", ...paths)), "Error");
 
-  // doctest:L69
   await restoreMigrationIndex(box.root, { snapshot, paths: [...paths, "never-staged.txt"] });
   t.check({ staged: git(box, "show", ":tracked.txt"), unrelated: git(box, "show", ":unrelated.txt"), newStaged: git(box, "ls-files", "new[card].txt"), working: await box.read("tracked.txt"), newWorking: await box.read("new[card].txt") }, {
     staged: "staged only",
@@ -96,11 +90,9 @@ void test("line 22", async (t) => {
 `,
   });
 
-  // doctest:L73
   const again = await captureMigrationSnapshot(box.root, "fixture");
   t.check(again.ref, not(snapshot.ref));
 
-  // doctest:L77
   // An unresolved merge must fail before a recovery ref claims usable input.
   const blob = git(box, "rev-parse", "HEAD:tracked.txt");
   execFileSync("git", ["update-index", "--index-info"], { cwd: box.root, input: `0 ${"0".repeat(40)}\ttracked.txt\n100644 ${blob} 1\ttracked.txt\n100644 ${blob} 2\ttracked.txt\n100644 ${blob} 3\ttracked.txt\n` });

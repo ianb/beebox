@@ -49,7 +49,6 @@ function requestIdOf(data: unknown): string {
 // `create` targets an exact `messageId`; a fulfillment must echo the same id
 // back to be delivered.
 void test("create targets an exact messageId; a fulfillment must echo the same id back t...", async (t) => {
-  // doctest:L58
   const reg = createLastAudioPending();
   const { requestId, outcome } = reg.create({ timeoutMs: 5000, messageId: "msg-abc" });
   const delivered = reg.fulfill(requestId, {
@@ -69,7 +68,6 @@ void test("create targets an exact messageId; a fulfillment must echo the same i
 
 // ## Registry: no answer at all times out
 void test("Registry: no answer at all times out", async (t) => {
-  // doctest:L84
   const reg = createLastAudioPending();
   const { outcome } = reg.create({ timeoutMs: 20, messageId: "msg-x" });
   const result = await outcome;
@@ -83,7 +81,6 @@ void test("Registry: no answer at all times out", async (t) => {
 // audio, the request resolves `none`. `{none:true}` answers aren't targeted
 // (a tab can only say "I don't have it"), so this is unaffected by echo-and-verify.
 void test("A tab reporting \"no audio cached\" doesn't settle immediately — another tab mi...", async (t) => {
-  // doctest:L99
   const reg = createLastAudioPending({ graceMs: 20 });
   const { requestId, outcome } = reg.create({ timeoutMs: 5000, messageId: "msg-y" });
   const reported = reg.reportNone(requestId);
@@ -93,7 +90,6 @@ void test("A tab reporting \"no audio cached\" doesn't settle immediately — an
 
 // ## Registry: audio arriving within the wait window still wins
 void test("Registry: audio arriving within the wait window still wins", async (t) => {
-  // doctest:L112
   const reg = createLastAudioPending({ graceMs: 1000 });
   const { requestId, outcome } = reg.create({ timeoutMs: 5000, messageId: "msg-z" });
   reg.reportNone(requestId);
@@ -113,7 +109,6 @@ void test("Registry: audio arriving within the wait window still wins", async (t
 // `graceMs` override (the production shape), a "none" arriving well within the
 // window still leaves room for a slower correct answer to win.
 void test("Fix (2026-08):", async (t) => {
-  // doctest:L133
   const reg = createLastAudioPending();
   const { requestId, outcome } = reg.create({ timeoutMs: 300, messageId: "msg-slow" });
   reg.reportNone(requestId); // an early "none" from a tab that doesn't hold it
@@ -125,7 +120,6 @@ void test("Fix (2026-08):", async (t) => {
 
 // ## Registry: production default — all tabs answering `none` still resolves `none` at the full window's end
 void test("Registry: production default — all tabs answering `none` still resolves `none` at the full window's end", async (t) => {
-  // doctest:L149
   const reg = createLastAudioPending();
   const { requestId, outcome } = reg.create({ timeoutMs: 60, messageId: "msg-nobody-has-it" });
   reg.reportNone(requestId);
@@ -140,7 +134,6 @@ void test("Registry: production default — all tabs answering `none` still reso
 // `messageId` entirely — is ignored outright. The request stays pending; a
 // later, correctly-targeted answer still wins it.
 void test("Echo-and-verify (Track 1b, load-bearing):", async (t) => {
-  // doctest:L165
   const reg = createLastAudioPending();
   const { requestId, outcome } = reg.create({ timeoutMs: 5000, messageId: "msg-target" });
   const mismatched = reg.fulfill(requestId, { audio: Buffer.from("wrong"), contentType: "audio/wav", recordedAt: null, text: null, messageId: "msg-other", sessionId: null });
@@ -156,7 +149,6 @@ void test("Echo-and-verify (Track 1b, load-bearing):", async (t) => {
 
 // ## Registry: unknown and already-settled ids are refused
 void test("Registry: unknown and already-settled ids are refused", async (t) => {
-  // doctest:L186
   const reg = createLastAudioPending();
   const unknownFulfill = reg.fulfill("nope", { audio: Buffer.from("x"), contentType: "audio/wav", recordedAt: null, text: null, messageId: null, sessionId: null });
   const unknownNone = reg.reportNone("nope");
@@ -182,7 +174,6 @@ void test("This is also the normal multi-tab outcome — a second tab answering 
       t.error(error);
     }
   });
-  // doctest:L208
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -201,7 +192,6 @@ void test("Route: a JSON answer that isn't {none:true} is rejected", async (t) =
       t.error(error);
     }
   });
-  // doctest:L228
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -225,7 +215,6 @@ void test("timeoutMs is clamped to a 100ms minimum, so this resolves quickly.", 
       t.error(error);
     }
   });
-  // doctest:L247
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -248,7 +237,6 @@ void test("A web voice send's recording is staged on the box, and its finalize n
       t.error(error);
     }
   });
-  // doctest:L271
   const ctx = await makeTestServer();
   await stageSealedRecording(ctx.boxRoot, { emissionId: "em-staged-1", sessionId: "sess-7" });
   let relayed = false;
@@ -281,7 +269,6 @@ void test("A web voice send's recording is staged on the box, and its finalize n
   // A message id no staging session names falls through to the tab relay (here
   // nobody answers, so the short wait ends in the relay's 504):
 
-  // doctest:L301
   const gotRelay = new Promise<string>((resolve) => {
     ctx.eventBus.subscribe({ listener: (e) => {
       if (e.event === "chat-last-audio-request") resolve(e.data.messageId);
@@ -308,7 +295,6 @@ void test("A voice send with HQ dictation off still names the message it sealed 
       t.error(error);
     }
   });
-  // doctest:L329
   const ctx = await makeTestServer();
   const session = await createStagingSession({ boxRoot: ctx.boxRoot, targetSessionId: "sess-9", createdBy: null, kind: "voice" });
   await addAudioChunk({
@@ -339,7 +325,6 @@ void test("Track 1b removed the untargeted \"latest\" mode entirely — every re
       t.error(error);
     }
   });
-  // doctest:L360
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -367,7 +352,6 @@ void test("The \"browser\" learns the server-minted request id from the transien
       t.error(error);
     }
   });
-  // doctest:L383
   const ctx = await makeTestServer();
   const gotId = new Promise<string>((resolve) => {
     ctx.eventBus.subscribe({ listener: (e) => {
@@ -452,7 +436,6 @@ void test("Echo-and-verify (Track 1b, load-bearing): (line 459)", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L460
   const ctx = await makeTestServer();
   const gotId = new Promise<string>((resolve) => {
     ctx.eventBus.subscribe({ listener: (e) => {
@@ -539,7 +522,6 @@ void test("The wrong tab answers first; the request stays open, and the right ta
       t.error(error);
     }
   });
-  // doctest:L539
   const ctx = await makeTestServer();
   const gotId = new Promise<string>((resolve) => {
     ctx.eventBus.subscribe({ listener: (e) => {
@@ -599,7 +581,6 @@ void test("A tab that doesn't hold the requested recording answers {none:true} �
       t.error(error);
     }
   });
-  // doctest:L596
   const ctx = await makeTestServer();
   const gotId = new Promise<string>((resolve) => {
     ctx.eventBus.subscribe({ listener: (e) => {
@@ -632,7 +613,6 @@ void test("A tab that doesn't hold the requested recording answers {none:true} �
 // would kill the test process, so this pins the extracted, unit-testable error
 // text instead of invoking the command.
 void test("retranscribe/ask-about-audio/get-last-audio all require --message <id> (unles...", async (t) => {
-  // doctest:L636
   await t.checkText(missingMessageIdError("bbx chat get-last-audio"), "bbx chat get-last-audio: requires --message <id> — read message-id=\"…\" off the <speech> wrapper of the message you mean");
   await t.checkText(missingMessageIdError("bbx chat retranscribe"), "bbx chat retranscribe: requires --message <id> — read message-id=\"…\" off the <speech> wrapper of the message you mean");
 });
@@ -642,14 +622,12 @@ void test("retranscribe/ask-about-audio/get-last-audio all require --message <id
 // Audio questions use the model selected by the bakeoff for full-audio
 // understanding:
 void test("Audio questions use the model selected by the bakeoff for full-audio understa...", async (t) => {
-  // doctest:L649
   t.check(AUDIO_QUESTION_MODEL, "gemini-3.7-flash");
 });
 
 // `audioMimeType` maps `--file` extensions to MIME types; unknown extensions
 // are rejected rather than guessed:
 void test("audioMimeType maps --file extensions to MIME types; unknown extensions are re...", async (t) => {
-  // doctest:L657
   t.check(
     [audioMimeType("/tmp/x/clip.WAV"), audioMimeType("voice.m4a"), audioMimeType("song.mp3"), audioMimeType("notes.txt")],
     ["audio/wav", "audio/mp4", "audio/mpeg", null],
@@ -660,14 +638,12 @@ void test("audioMimeType maps --file extensions to MIME types; unknown extension
 // answer addressed to the asker, not the recording's speaker. Context and a
 // known transcript are optional labeled sections:
 void test("The model prompt wraps the caller's question with framing that keeps the answ...", async (t) => {
-  // doctest:L673
   const bare = buildAudioQuestionPrompt({ question: "What language is spoken?" });
   await t.checkText(bare, `Listen to the attached audio recording (a voice message from the user of a personal-assistant system) and answer the question below about it.
 Answer the question directly and concretely, addressing the person who asked — do not address the speaker in the recording. Quote or transcribe the relevant moments of the audio when that supports the answer.
 «blankline»
 Question: What language is spoken?`);
 
-  // doctest:L684
   const full = buildAudioQuestionPrompt({
     question: "Did the transcript get the Spanish right?",
     context: "The user is practicing Spanish for a trip.",

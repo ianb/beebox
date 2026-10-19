@@ -13,7 +13,6 @@ async function fixture(name: string): Promise<unknown> {
 }
 
 void test("line 14", async (t) => {
-  // doctest:L15
   t.check(quickCaptureDeclarationSchema.parse(await fixture("text")), {
     version: 1,
     capturedAt: "2026-10-12T12:00:00Z",
@@ -21,7 +20,6 @@ void test("line 14", async (t) => {
     input: "Phone test alpha",
   });
 
-  // doctest:L18
   t.check(quickCaptureDeclarationSchema.parse(await fixture("image-with-words")).material, {
     kind: "image",
     id: "11111111-1111-4111-8111-111111111111",
@@ -31,33 +29,25 @@ void test("line 14", async (t) => {
     fileName: "screenshot.png",
   });
 
-  // doctest:L21
   t.check(quickCaptureDeclarationSchema.parse(await fixture("clipping")).input, undefined);
 
-  // doctest:L24
   t.check(quickCaptureDeclarationSchema.parse(await fixture("context")).parentCaptureId, "11111111-1111-4111-8111-111111111111");
 
-  // doctest:L27
   t.check(quickCaptureReceiptSchema.parse(await fixture("receipt")), {
     id: "11111111-1111-4111-8111-111111111111",
     state: "accepted",
   });
 
-  // doctest:L30
   t.check(quickCaptureDeclarationSchema.safeParse(await fixture("invalid-empty")).success, false);
 
-  // doctest:L33
   t.check(quickCaptureDeclarationSchema.safeParse(await fixture("invalid-material-context")).success, false);
 
-  // doctest:L36
   t.check(quickCaptureDeclarationSchema.safeParse({version:2,capturedAt:"2026-10-12T12:00:00Z",source:"apple-app-intents",input:"hello"}).success, false);
 });
 
 // Interrupted provenance is technical audio metadata, never fabricated words.
 void test("Interrupted provenance is technical audio metadata, never fabricated words.", async (t) => {
-  // doctest:L44
   t.check(quickCaptureDeclarationSchema.parse(await fixture("audio-interrupted")).recordingInterrupted, true);
 
-  // doctest:L47
   t.check(quickCaptureDeclarationSchema.safeParse(await fixture("invalid-interrupted-nonaudio")).success, false);
 });

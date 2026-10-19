@@ -47,14 +47,12 @@ const rawUpgradeRequest = { headers: { cookie: `${COOKIE_NAME}=${cookie}` } };
 
 // ## The raw-header (WS) path resolves the same identity as the decorated (HTTP) path
 void test("The raw-header (WS) path resolves the same identity as the decorated (HTTP) path", async (t) => {
-  // doctest:L51
   t.check(resolveRequestIdentity(decoratedRequest, { openAccess: false }), {
     email: "owner@example.com",
     name: "Owner",
     source: "cookie",
   });
 
-  // doctest:L54
   await t.checkText(
     // Without the raw-header fallback this would be `source: null` — the authed WS
     // dying at context creation. With it, the cookie-authed upgrade keeps its identity.
@@ -65,7 +63,6 @@ void test("The raw-header (WS) path resolves the same identity as the decorated 
 
 // ## A raw upgrade with no `Cookie` header is unauthenticated (auth required, fails closed)
 void test("A raw upgrade with no `Cookie` header is unauthenticated (auth required, fails closed)", async (t) => {
-  // doctest:L63
   t.check(resolveRequestIdentity({ headers: {} }, { openAccess: false }), {
     email: null,
     name: null,
@@ -85,7 +82,6 @@ void test("Hub mode still ignores the raw cookie — the fallback doesn't reopen
       t.error(error);
     }
   });
-  // doctest:L70
   process.env.BBX_HUB_SECRET = "hub-secret-xyz";
   await t.checkText(
     // A hub-mode box trusts ONLY secret-gated headers; a raw session cookie on a WS
@@ -95,6 +91,5 @@ void test("Hub mode still ignores the raw cookie — the fallback doesn't reopen
     "{\"email\":null,\"name\":null,\"source\":null}",
   );
 
-  // doctest:L77
   delete process.env.BBX_HUB_SECRET;
 });

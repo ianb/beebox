@@ -35,11 +35,9 @@ void test("The module endpoint returns compiled JavaScript (not JSON), so we use
       t.error(error);
     }
   });
-  // doctest:L32
   const ctx = await makeTestServer();
   await ctx.seedView("test.tsx", VIEW_SOURCE);
 
-  // doctest:L35
   const res = await ctx.rawRequest({ method: "GET", url: "/api/views/test/module.js" });
   // The compiled output externalizes React via the window shim. The payload embeds
   // the shared react-shim runtime, so the check names the shim use, not the whole file.
@@ -56,11 +54,9 @@ void test("A view with a syntax error returns an error module (not a 500):", asy
       t.error(error);
     }
   });
-  // doctest:L54
   const ctx = await makeTestServer();
   await ctx.seedView("broken.tsx", "export default function() { return <div");
 
-  // doctest:L57
   const res = await ctx.rawRequest({ method: "GET", url: "/api/views/broken/module.js" });
   // The error module contains the actual error message:
   t.check({ statusCode: res.statusCode, payload: res.payload }, {
@@ -88,13 +84,11 @@ void test("The cards endpoint returns cards matching a view's dependency globs:"
       t.error(error);
     }
   });
-  // doctest:L86
   const ctx = await makeTestServer();
   await ctx.seedView("test.tsx", VIEW_SOURCE);
   await ctx.seed("_content/inbox/Test.doc.card", DOC_CARD);
   ctx.commitAll("add test data");
 
-  // doctest:L91
   const res = await ctx.request({ method: "GET", url: "/api/views/test/cards" });
   const doc = {
     path: "_content/inbox/Test.doc.card",
@@ -109,7 +103,6 @@ void test("The cards endpoint returns cards matching a view's dependency globs:"
   // can be huge or binary, so it's fetched separately), and each card carries a
   // deep metadata listing of its attach scope:
 
-  // doctest:L118
   const PLAYGROUND_VIEW = `
 export const name = "Playground";
 export const description = "Session history";
@@ -133,11 +126,9 @@ export default function P({ cards, files }) { return <div>{files.length}</div>; 
   // Content comes from `/api/files/*`, which supports byte ranges — a view
   // tails a large log instead of downloading it (suffix form `bytes=-N`):
 
-  // doctest:L154
   const full = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl" });
   t.check({ statusCode: full.statusCode, acceptRanges: full.headers["accept-ranges"] }, { statusCode: 200, acceptRanges: "bytes" });
 
-  // doctest:L161
   const tail = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=-25" } });
   t.check({ statusCode: tail.statusCode, contentRange: tail.headers["content-range"], payload: tail.payload }, {
     statusCode: 206,
@@ -145,11 +136,9 @@ export default function P({ cards, files }) { return <div>{files.length}</div>; 
     payload: "{\"summary\":\"second run\"}\n",
   });
 
-  // doctest:L171
   const mid = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=0-22" } });
   t.check({ statusCode: mid.statusCode, payload: mid.payload }, { statusCode: 206, payload: "{\"summary\":\"first run\"}" });
 
-  // doctest:L175
   const past = await ctx.rawRequest({ method: "GET", url: "/api/files/_content/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=999-" } });
   t.check({ statusCode: past.statusCode, payload: past.payload }, { statusCode: 416, payload: "{\"error\":\"Range not satisfiable\"}" });
 });
@@ -163,10 +152,8 @@ void test("A view with no dependencies returns an empty card list:", async (t) =
       t.error(error);
     }
   });
-  // doctest:L187
   const ctx = await makeTestServer();
 
-  // doctest:L189
   const noDeps = `
 export const name = "Empty";
 export const description = "No deps";
@@ -176,7 +163,6 @@ export default function Empty() { return null; }
 `;
   await ctx.seedView("empty.tsx", noDeps);
 
-  // doctest:L198
   const res = await ctx.request({ method: "GET", url: "/api/views/empty/cards" });
   t.check(res, { statusCode: 200, body: { cards: [], files: [] } });
 });
@@ -190,7 +176,6 @@ void test("Cards endpoint returns 404 for a nonexistent view:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L213
   const ctx = await makeTestServer();
   const res = await ctx.request({ method: "GET", url: "/api/views/nonexistent/cards" });
   t.check(res, { statusCode: 404, body: { error: "View not found" } });

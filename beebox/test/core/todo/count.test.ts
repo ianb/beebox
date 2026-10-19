@@ -41,7 +41,6 @@ void test("One undated todo for the boxholder, one for the agent, and one the ag
       t.error(error);
     }
   });
-  // doctest:L38
   await box.write("_content/notes/Plate.doc.card", doc(`
 {% todo %}Call the vet back{% /todo %}
 
@@ -54,13 +53,11 @@ Decide whether to keep the old kiln notes
 {% /todo %}
 `));
 
-  // doctest:L50
   t.check(await countOnPlateTodos(box.root), 2);
 
   // All three are still collected and still on the plate; the count is the only
   // thing that discriminates.
 
-  // doctest:L58
   const collected = await collectTodos(box.root);
   t.check(collected.todos.map((todo) => [todo.text.slice(0, 12), todo.assigned ?? null, todo.plateState]), [
     [
@@ -80,7 +77,6 @@ Decide whether to keep the old kiln notes
     ],
   ]);
 
-  // doctest:L62
   t.check(collected.todos.filter((todo) => !isBoxholderTodo(todo)).map((todo) => todo.text.slice(0, 12)), [
     "Second pass ",
   ]);
@@ -92,7 +88,6 @@ Decide whether to keep the old kiln notes
   // A placeholder such as `"user"` draws a lint warning (`todoAssignedWarning`)
   // because the author meant the boxholder, so it stays the boxholder's.
 
-  // doctest:L74
   t.check(
     [
       isBoxholderTodo({}),
@@ -116,29 +111,24 @@ Decide whether to keep the old kiln notes
   //
   // Escalation is about the date, not about who is owed the work.
 
-  // doctest:L90
   await box.write("_content/notes/Overdue.doc.card", doc(`
 {% todo assigned="agent" by="agent" created="2026-07-01" due="2026-07-02" %}
 Re-check the frozen snapshot
 {% /todo %}
 `));
 
-  // doctest:L96
   t.check(await countOnPlateTodos(box.root), 2);
 
   // A boxholder todo past due does count, and reads as escalated:
 
-  // doctest:L103
   await box.write("_content/notes/Late.doc.card", doc(`
 {% todo due="2026-07-02" %}Renew the parking permit{% /todo %}
 `));
 
-  // doctest:L107
   t.check(await countOnPlateTodos(box.root), 3);
 
   // Ordering follows card path, so `Late.doc.card` precedes `Overdue.doc.card`:
 
-  // doctest:L114
   t.check((await collectTodos(box.root)).todos.filter((todo) => todo.plateState === "escalated").map((todo) => [todo.text.slice(0, 10), todo.assigned ?? null]), [
     [
       "Renew the ",
@@ -166,11 +156,9 @@ void test("Both read the boxholder-scope predicate (isBoxholderTodo) — count.t
       t.error(error);
     }
   });
-  // doctest:L131
   const scopeBox = await makeTmpBox();
   process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 
-  // doctest:L134
   await scopeBox.write("_content/notes/Everything.doc.card", doc(`
 {% todo %}Undated, on the plate{% /todo %}
 
@@ -195,11 +183,8 @@ Agent's own follow-up, escalated
     since: null,
   });
 
-  // doctest:L152
-  // doctest:L158
   t.check(badge, 2);
 
-  // doctest:L161
   t.check(plate.reduction.onPlate, 2);
 });
 
@@ -216,11 +201,9 @@ void test("The badge counts what the boxholder owes.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L176
   const othersBox = await makeTmpBox();
   process.env.BBX_TIME = "2026-07-28T12:00:00.000Z";
 
-  // doctest:L179
   await othersBox.write("_content/notes/Others.doc.card", doc(`
 {% todo %}Book the hall{% /todo %}
 
@@ -229,10 +212,8 @@ void test("The badge counts what the boxholder owes.", async (t) => {
 {% todo assigned="user" %}Water the ferns{% /todo %}
 `));
 
-  // doctest:L187
   t.check(await countOnPlateTodos(othersBox.root), 2);
 
-  // doctest:L190
   t.check((await collectTodos(othersBox.root)).todos.map((todo) => todo.assigned ?? null), [
     null,
     "Dana",

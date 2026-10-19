@@ -49,28 +49,23 @@ const layout = await scanPackage({ repoRoot, packageRoot: "pkg" });
 
 // ## Files are classified and their facts recorded
 void test("Files are classified and their facts recorded", async (t) => {
-  // doctest:L56
   t.check(layout.files.get("pkg/src/a.ts")?.kind, "module");
 
-  // doctest:L59
   t.check(layout.files.get("pkg/test/x.test.ts")?.kind, "test");
 });
 
 // `scripts/` holds TypeScript and is an extra source root; `public/` holds
 // none, so it is not, and its plain `.js` file is a static asset, not a module.
 void test("scripts/ holds TypeScript and is an extra source root; public/ holds none, so...", async (t) => {
-  // doctest:L67
   t.check(layout.extraSourceRoots, [
     "pkg/scripts",
   ]);
 
-  // doctest:L70
   t.check(layout.files.get("pkg/public/sw.js")?.kind, "data");
 });
 
 // ## Value imports resolve; a registry declaration is read with its member's source
 void test("Value imports resolve; a registry declaration is read with its member's source", async (t) => {
-  // doctest:L77
   const a = layout.files.get("pkg/src/a.ts");
   t.check(importsOf(a).find((i) => i.specifier === "./b.js"), {
     specifier: "./b.js",
@@ -83,7 +78,6 @@ void test("Value imports resolve; a registry declaration is read with its member
     dynamic: false,
   });
 
-  // doctest:L81
   t.check(a?.kind === "module" ? a.registries[0] : null, {
     directory: "pkg/src/commands",
     entry: null,
@@ -102,7 +96,6 @@ void test("Value imports resolve; a registry declaration is read with its member
 
 // ## An unresolved import is a scan finding
 void test("An unresolved import is a scan finding", async (t) => {
-  // doctest:L88
   t.check(layout.scanFindings, [
     {
       rule: "scan",
@@ -114,7 +107,6 @@ void test("An unresolved import is a scan finding", async (t) => {
 
 // ## A test's imports are resolved relative to its own directory
 void test("A test's imports are resolved relative to its own directory", async (t) => {
-  // doctest:L95
   const testFile = layout.files.get("pkg/test/x.test.ts");
   t.check(importsOf(testFile).find((i) => i.specifier === "../src/a.js")?.target, "pkg/src/a.ts");
 });
@@ -128,7 +120,6 @@ void test("Public surfaces come from `package.json` `exports` and the build entr
       t.error(error);
     }
   });
-  // doctest:L103
   t.check(layout.publicSurfaces, [
     {
       specifier: "./main",

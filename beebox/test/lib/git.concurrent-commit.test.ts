@@ -95,19 +95,16 @@ void test("Five processes commit five different files into one box at the same i
       t.error(error);
     }
   });
-  // doctest:L91
   const box = await makeTmpBox({ git: true });
   const names = ["alpha", "bravo", "charlie", "delta", "echo"];
   const outcomes = await raceCommitters(box.root, names);
   const failures = outcomes.filter((o) => o.code !== 0);
 
-  // doctest:L96
   t.check(failures.map((o) => `${o.name}: ${o.last}`).join("\n") || "all succeeded", "all succeeded");
 
   // Every one of them produced a commit — nobody was silently absorbed by another
   // writer's commit and reported success:
 
-  // doctest:L104
   const hash = str`committed ${any(String).matches(/^[\da-f]{40}$/)}`;
   t.check(outcomes.map((o) => o.last), [hash, hash, hash, hash, hash]);
 
@@ -116,7 +113,6 @@ void test("Five processes commit five different files into one box at the same i
   // give, because staging and committing were two separately-raced operations and a
   // neighbour's staged file could ride along:
 
-  // doctest:L114
   await t.checkText(await describeLog(box.root, 5), `commit from alpha / by=alpha / files=alpha.md
 commit from bravo / by=bravo / files=bravo.md
 commit from charlie / by=charlie / files=charlie.md
@@ -126,16 +122,13 @@ commit from echo / by=echo / files=echo.md`);
   // Nothing is left behind: no writer's file stayed uncommitted, and no stale index
   // lock survived the race.
 
-  // doctest:L126
   t.check(await getStatus(box.root), { staged: [], modified: [], untracked: [], clean: true });
 
-  // doctest:L131
   t.check(existsSync(join(box.root, ".git", "index.lock")), false);
 
   // Our own lock releases too — the guard directory is gone, so the next writer
   // acquires immediately rather than waiting out a stale window:
 
-  // doctest:L139
   t.check(existsSync(join(box.root, ".git", "beebox-index.lock.guard")), false);
 });
 
@@ -157,7 +150,6 @@ void test("The lock serializes writers that take it.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L159
   const box = await makeTmpBox({ git: true });
   const indexLock = join(box.root, ".git", "index.lock");
   writeFileSync(indexLock, "");
@@ -167,7 +159,6 @@ void test("The lock serializes writers that take it.", async (t) => {
   const outcome = await awaitOutcome(state);
   rmSync(indexLock);
 
-  // doctest:L168
   t.check(outcome.code, 1);
 
   // The message says what is actually wrong — the index is held — and it arrives

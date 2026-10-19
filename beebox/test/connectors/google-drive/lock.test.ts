@@ -47,11 +47,9 @@ void test("The second span does not start until the first has finished — not i
       t.error(error);
     }
   });
-  // doctest:L44
   const box = await makeTmpBox({ git: true });
   const order: string[] = [];
 
-  // doctest:L47
   const first = withDriveMirrorLock(box.root, async () => {
     order.push("first in");
     await pause(120);
@@ -68,11 +66,9 @@ void test("The second span does not start until the first has finished — not i
 
   // The lock is released when the span ends, including when it throws.
 
-  // doctest:L66
   const failed = withDriveMirrorLock(box.root, () => Promise.reject(new Error("mirror blew up")));
   t.check(await failed.catch((e: unknown) => (e instanceof Error ? e.message : String(e))), "mirror blew up");
 
-  // doctest:L70
   t.check(await inspectLock(path.join(box.root, ".beebox", "drive-mirror.lock")), null);
 
   // ## Nesting passes through instead of deadlocking
@@ -82,7 +78,6 @@ void test("The second span does not start until the first has finished — not i
   // exclusion the inner call wants — so a nested acquisition returns immediately
   // rather than queueing behind its own ancestor.
 
-  // doctest:L82
   t.check(
     await withDriveMirrorLock(box.root, () =>
       withDriveMirrorLock(box.root, () =>
@@ -106,12 +101,10 @@ void test("Not a property of the helper alone:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L101
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   const lockPath = path.join(box.root, ".beebox", "drive-mirror.lock");
 
-  // doctest:L105
   const drive = createFakeGoogleDrive({
     files: [
       driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
@@ -127,7 +120,6 @@ void test("Not a property of the helper alone:", async (t) => {
     },
   };
 
-  // doctest:L120
   const mounted = await mountDriveFolder({
     boxRoot: box.root,
     service: watched,
@@ -143,6 +135,5 @@ void test("Not a property of the helper alone:", async (t) => {
 
   // And it is not still held once the mount returns.
 
-  // doctest:L133
   t.check(await inspectLock(lockPath), null);
 });

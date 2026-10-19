@@ -27,7 +27,6 @@ import type { Workstream, WorkstreamListItem } from "../../../src/frontend/types
 
 Object.assign(globalThis, { React });
 
-
 // A row links to its detail page, and TanStack's <Link> needs a router in
 // context to build an href; the routes themselves are not exercised here. The
 // lifecycle buttons read the tRPC client from context, so the section renders
@@ -114,7 +113,6 @@ function alert(overrides: Partial<ScheduleAlert>): ScheduleAlert {
 // a live session both belong here — the boxholder asked for one place to look, not
 // a row that migrates into "In progress" whenever a run is under way.
 void test("A scheduled record resting between runs and a schedule whose run currently ha...", async (t) => {
-  // doctest:L112
   t.check(
     {
       resting: workstreamStateFor(row({ name: "knip-sweep", schedule: scheduleRow({}), routingState: "scheduled" })).section,
@@ -133,7 +131,6 @@ void test("A scheduled record resting between runs and a schedule whose run curr
 
 // ## The section shows cadence, outcome, overdue, and open alerts
 void test("The section shows cadence, outcome, overdue, and open alerts", async (t) => {
-  // doctest:L124
   const markup = render(createElement(ScheduledSection, {
     rows: [
       row({ name: "knip-sweep", schedule: scheduleRow({ overdue: true, openAlerts: 2 }), routingState: "scheduled" }),
@@ -169,7 +166,6 @@ void test("The section shows cadence, outcome, overdue, and open alerts", async 
 
 // ## A scheduled row with an exhibit links to it
 void test("A scheduled row with an exhibit links to it", async (t) => {
-  // doctest:L149
   const withExhibit = render(createElement(ScheduledSection, {
     rows: [{
       ...row({ name: "knip-sweep", schedule: scheduleRow({}), routingState: "scheduled" }),
@@ -200,7 +196,6 @@ void test("A scheduled row with an exhibit links to it", async (t) => {
 // schedule whose run is under way gets Focus like any live row, and the Alerts
 // toggle stays either way.
 void test("The boxholder's way into a schedule is to go into the workstream and chat, so...", async (t) => {
-  // doctest:L175
   const resting = render(createElement(ScheduledSection, {
     rows: [row({ name: "knip-sweep", schedule: scheduleRow({}), routingState: "scheduled" })],
     issues: [],
@@ -244,7 +239,6 @@ void test("The boxholder's way into a schedule is to go into the workstream and 
 // An hour without a tick is a dead scheduler, not a quiet one; no heartbeat at
 // all on any row means nothing has ever run the tick.
 void test("An hour without a tick is a dead scheduler, not a quiet one; no heartbeat at...", async (t) => {
-  // doctest:L205
   const stale = scheduleHeartbeatStatus([row({ name: "knip-sweep", schedule: scheduleRow({ heartbeat: { lastTickAt: "2026-08-24T09:00:00.000Z" } }), routingState: "scheduled" })], now);
   const never = scheduleHeartbeatStatus([row({ name: "knip-sweep", schedule: scheduleRow({ heartbeat: null }), routingState: "scheduled" })], now);
   const staleMarkup = render(createElement(ScheduledSection, {
@@ -273,7 +267,6 @@ void test("An hour without a tick is a dead scheduler, not a quiet one; no heart
 
 // ## Alerts render their details as Markdown, acknowledged ones fold away
 void test("Alerts render their details as Markdown, acknowledged ones fold away", async (t) => {
-  // doctest:L226
   const alerts = renderToStaticMarkup(createElement(ScheduleAlertList, {
     alerts: [
       alert({}),
@@ -315,7 +308,6 @@ void test("Alerts render their details as Markdown, acknowledged ones fold away"
 // alert's schedule. A standing condition says how long it has stood, and a
 // filed one names its issue.
 void test("Important comes first, then normal, then fyi — the order of urgency, and the...", async (t) => {
-  // doctest:L257
   const grouped = render(createElement(ScheduleAlertList, {
     alerts: [
       alert({ id: "20260918-020500-0001", priority: "fyi", workstream: "sdk-update", title: "Pin at 0.3.273" }),
@@ -351,7 +343,6 @@ void test("Important comes first, then normal, then fyi — the order of urgency
 
 // An old notification can still reveal an alert after it has been acknowledged.
 void test("An old notification can still reveal an alert after it has been acknowledged.", async (t) => {
-  // doctest:L285
   const acknowledgedSelection = renderToStaticMarkup(createElement(ScheduleAlertList, {
     alerts: [alert({ id: "20260810-090000-cd34", state: "acknowledged", acknowledgedAt: "2026-08-11T09:00:00.000Z" })],
     acknowledging: null,
@@ -377,12 +368,10 @@ void test("An old notification can still reveal an alert after it has been ackno
 // (`bin/lib/schedules-alerts.ts` `ALERTS_PAGE_URL`); the per-schedule
 // `/alerts/<schedule>` view stays addressable.
 void test("The producer and browser share the /alerts?alert=<id> contract (bin/lib/sched...", async (t) => {
-  // doctest:L306
   t.check(router.buildLocation({ to: "/alerts", search: { alert: "20260824-115000-ab12" } }).href, "/workstreams/alerts?alert=20260824-115000-ab12");
 });
 
 void test("Notification deep links resolve to the alert route", async (t) => {
-  // doctest:L312
   t.check(
     router.buildLocation({
       to: "/alerts/$name",
@@ -398,7 +387,6 @@ void test("Notification deep links resolve to the alert route", async (t) => {
 // The store has one writer. Acknowledging is `bin/schedules ack <id>`, and the
 // next read reflects it — the app holds no alert state of its own.
 void test("The store has one writer.", async (t) => {
-  // doctest:L326
   const store = new Map<string, ScheduleAlert>([[alert({}).id, alert({})]]);
   const calls: string[][] = [];
   const service = createSchedulesCommandService({
@@ -454,7 +442,6 @@ void test("The store has one writer.", async (t) => {
 // A record the CLI would never have written is a refusal, not a half-rendered
 // panel: the browser shows the error state instead of guessing.
 void test("A record the CLI would never have written is a refusal, not a half-rendered p...", async (t) => {
-  // doctest:L355
   const broken = createSchedulesCommandService({
     repoRoot: "/repo",
     commandRunner: async () => ({ stdout: JSON.stringify({ alerts: [{ ...alert({}), priority: "urgent" }] }), stderr: "" }),

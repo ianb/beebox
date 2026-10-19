@@ -20,7 +20,6 @@ void test("POST /api/actions/create creates a card from a template:", async (t) 
       t.error(error);
     }
   });
-  // doctest:L18
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -35,7 +34,6 @@ void test("POST /api/actions/create creates a card from a template:", async (t) 
 
   // The card exists on disk:
 
-  // doctest:L43
   const content = await ctx.read("_content/inbox/new.doc.card");
   t.check(content, "---\ntitle: From the API\n---\nHello from the API\n");
 });
@@ -49,7 +47,6 @@ void test("Missing path returns 400:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L55
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -68,7 +65,6 @@ void test("Missing template returns 400:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L72
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",

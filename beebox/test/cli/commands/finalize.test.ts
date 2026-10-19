@@ -58,7 +58,6 @@ asked-at: 2026-05-30T11:59:00.000Z
 expired-at: 2026-06-29T12:00:00.000Z
 ---`);
 
-  // doctest:L51
   const sent = (await readRecent(box.root, { days: 1, now: NOW })).filter((n) => n.intent.source === "question-alert");
   t.check(sent.map((n) => [n.intent.target, n.intent.body]), [
     [

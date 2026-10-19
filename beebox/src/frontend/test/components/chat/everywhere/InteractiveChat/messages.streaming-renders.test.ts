@@ -75,7 +75,6 @@ function rows(view: Awaited<ReturnType<typeof mount>>) {
 // assistant message renders. Before the fix, each token rendered all four rows,
 // and the first user message and its ack badge with them.
 void test("The reply's first paragraph is already showing.", async (t) => {
-  // doctest:L79
   const { view, update } = await mountList(streaming("Eggs are on the list.\n\n"));
   view.resetRenders();
   for (const token of ["Anything ", "else", "?", "\n\n"]) await update((props) => ({ ...props, streamText: props.streamText + token }));
@@ -106,7 +105,6 @@ void test("The reply's first paragraph is already showing.", async (t) => {
 // shows, the highlight moves to it, and when the turn finalizes into history
 // entry `a2`, the same row keeps it.
 void test("Auto-played speech carries a stream-… id, not a message id, so the row it hig...", async (t) => {
-  // doctest:L111
   const playing = { ...notPlaying, isPlaying: true, playingMessageId: "stream-t2", playingSegmentIndex: 0, remainingCount: 1 };
   const { view, update } = await mountList({ ...streaming(""), speechPlayback: playing });
   const beforeReply = rows(view);
@@ -132,7 +130,6 @@ void test("Auto-played speech carries a stream-… id, not a message id, so the 
 // from passing to the finalized reply. The streaming row's DOM node is tagged,
 // and after the turn finalizes into `a2` the row still carries the tag:
 void test("The streamed and finalized forms of a reply share one React key, so finalizin...", async (t) => {
-  // doctest:L136
   const pendingHq = [{ id: "v1", text: "one more thing", status: "Transcribing…" }];
   const { view, update } = await mountList({ ...streaming("Eggs added.\n\n"), pendingHq });
   const rowFor = (uuid: string): HTMLElement => {

@@ -36,7 +36,6 @@ void test("line 31", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L32
   const box = await makeTmpBox({ git: true });
   await Promise.all([
     grantInChild(box.root, "first@example.com"),

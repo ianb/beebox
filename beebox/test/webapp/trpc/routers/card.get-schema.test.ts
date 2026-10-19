@@ -27,7 +27,6 @@ void test("A doc has a body field and is ordinary by default:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L24
   const box = await makeTmpBox({ git: true });
   await box.write("_content/Plan.doc.card", "---\ntitle: Plan\n---\nThe plan.\n");
   const doc = await caller(box.root).card.get({ path: "_content/Plan.doc.card" });
@@ -39,7 +38,6 @@ void test("A doc has a body field and is ordinary by default:", async (t) => {
   // A card whose frontmatter fails validation has no schema facts, so the front
   // shows all its fields:
 
-  // doctest:L35
   await box.write("_content/Broken.doc.card", "---\ntitle: [not, a, title]\n---\nBody\n");
   const broken = await caller(box.root).card.get({ path: "_content/Broken.doc.card" });
   t.check([broken.validationError === undefined, broken.schema], [
@@ -61,7 +59,6 @@ void test("detail is the line the card's type writes about itself (summarize), s
       t.error(error);
     }
   });
-  // doctest:L52
   const box = await makeTmpBox({ git: true });
   await box.write("_content/Solder.record.card", "---\nname: Solder\nlocation:\n  text: Tray 3\nquantity:\n  value: 2 spools\n---\n");
   await box.write("_content/Plan.doc.card", "---\ntitle: Plan\n---\nThe plan.\n");

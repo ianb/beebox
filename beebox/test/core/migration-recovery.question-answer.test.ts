@@ -32,7 +32,6 @@ void test("line 25", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L26
   const ctx = await createTestServer();
   const boxRoot = ctx.boxRoot;
   await writeFile(join(boxRoot, "_config/migrations.jsonl"), "");
@@ -52,12 +51,10 @@ void test("line 25", async (t) => {
   const denied = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", payload: { questionPath: question, answer: "Keep both versions" } });
   t.check(denied.statusCode, 503);
 
-  // doctest:L46
   await held.release();
   const response = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", payload: { questionPath: question, answer: "Keep both versions" } });
   t.check(response.statusCode, 200);
 
-  // doctest:L51
   const record = await boxMaintenanceStatus(boxRoot);
   // The card text embeds timestamps and the full repair directive; the answer is the contract here.
   t.check(await readFile(join(boxRoot, question), "utf8"), any(String).includes("answer:\n  text: Keep both versions\n"));
@@ -68,13 +65,11 @@ void test("line 25", async (t) => {
     jobs: [str`${any(String)}-migration_attachments-0-question-${any(String)}.question-followup.job.card`],
   });
 
-  // doctest:L55
   const owner = await acquireBoxMaintenance(boxRoot, { reason: "retry" });
   await owner.run(() => repairMigration({ ...repairOptions, retry: async () => 0 }));
   // The prompt embeds the whole previous question card, whose timestamps vary.
   t.check(agentPrompt, any(String).includes("Previous answered question").includes("Keep both versions"));
 
-  // doctest:L60
   await owner.release();
   const cliQuestion = question.replace("-0.question.card", "-1.question.card");
   await writeFile(join(boxRoot, cliQuestion), createTextQuestionTemplate({ memo: "Migration attachments", askedAt: "2026-09-14T00:00:00Z", prompt: `Migration: attachments\nRecovery: ${snapshot.ref}`, directive: "Wait for migration repair" }));
@@ -96,17 +91,14 @@ answered-via: cli
 ---
 `);
 
-  // doctest:L67
   // An answered question stays answered; the record clears when an attempt completes.
   const again = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", payload: { questionPath: cliQuestion, answer: "second thoughts" } });
   t.check(again.statusCode, 400);
 
-  // doctest:L72
   const open = await acquireBoxMaintenance(boxRoot, { reason: "done" });
   await open.complete();
   t.check(await boxMaintenanceStatus(boxRoot), null);
 
-  // doctest:L77
   const ordinary = "_bookkeeping/questions/Ordinary.question.card";
   await writeFile(join(boxRoot, ordinary), createTextQuestionTemplate({ memo: "Question", askedAt: "2026-09-14T00:00:00Z", prompt: "Proceed?", directive: "Process answer" }));
   const accepted = await acquireBoxWork(boxRoot, { reason: "test" });
@@ -114,14 +106,12 @@ answered-via: cli
   const normal = await ctx.server.inject({ method: "POST", url: "/test/api/trpc/actions.answer", headers: { "x-bbx-box-work": accepted.run(boxWorkEnvironment).BBX_BOX_WORK }, payload: { questionPath: ordinary, answer: "yes" } });
   t.check(normal.statusCode, 200);
 
-  // doctest:L85
   t.check((await readdir(getBoxDir(boxRoot, "jobs"))).filter((file) => file.includes("question-followup")), unordered([
     str`${any(String)}-migration_attachments-0-question-${any(String)}.question-followup.job.card`,
     str`${any(String)}-migration_attachments-1-question-${any(String)}.question-followup.job.card`,
     str`${any(String)}-ordinary-question-${any(String)}.question-followup.job.card`,
   ]));
 
-  // doctest:L88
   await accepted.release();
   await drain.drain();
   await drain.complete();

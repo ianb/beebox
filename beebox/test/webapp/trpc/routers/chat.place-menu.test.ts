@@ -64,20 +64,16 @@ void test("A landmark's freshCount is every chat bound to it inside the 7-day wi
       t.error(error);
     }
   });
-  // doctest:L61
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L64
   await box.write("_content/recipes/Recipes.landmark.card",
     "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n\n");
 
-  // doctest:L67
   await seedSession(box, { sessionId: "recipe01", contextDir: "_content/recipes", daysAgo: 1 });
   await seedSession(box, { sessionId: "recipe02", contextDir: "_content/recipes", daysAgo: 2 });
   await seedSession(box, { sessionId: "recipe03", contextDir: "_content/recipes", daysAgo: 30 });
 
-  // doctest:L71
   const menu = await caller(box.root).chat.placeMenu();
   // Nothing session-shaped rides along — that's the whole point of the split.
   t.check(menu, {
@@ -109,26 +105,21 @@ void test("The box root is always switchable, landmark card or not.", async (t) 
       t.error(error);
     }
   });
-  // doctest:L93
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L96
   await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n\n");
   await seedSession(box, { sessionId: "rootone1", contextDir: "", daysAgo: 1 });
   await seedSession(box, { sessionId: "roottwo2", contextDir: "", daysAgo: 2 });
   await seedSession(box, { sessionId: "rootold3", contextDir: "", daysAgo: 30 });
 
-  // doctest:L101
   t.check((await caller(box.root).chat.placeMenu()).rootFreshCount, 2);
 
   // Once a real root landmark exists it owns those chats, and the count drops to
   // zero — otherwise the client would render them twice.
 
-  // doctest:L109
   await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n\n");
 
-  // doctest:L111
   const withRoot = await caller(box.root).chat.placeMenu();
   t.check(withRoot, {
     landmarks: [
@@ -155,22 +146,18 @@ void test("The menu's row order is a duplicated contract now, so it gets its own
       t.error(error);
     }
   });
-  // doctest:L129
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L132
   await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n\n");
   await box.write("_content/fresh/Fresh.landmark.card", "---\nnavigation:\n  label: Fresh\n---\n\n");
   await box.write("_content/stale/Stale.landmark.card", "---\nnavigation:\n  label: Stale\n---\n\n");
   await box.write("_content/never/Never.landmark.card", "---\nnavigation:\n  label: Never\n---\n\n");
   await box.write("_content/absent/Absent.landmark.card", "---\nnavigation:\n  label: Absent\n---\n\n");
 
-  // doctest:L138
   await seedSession(box, { sessionId: "freshone", contextDir: "_content/fresh", daysAgo: 1 });
   await seedSession(box, { sessionId: "staleone", contextDir: "_content/stale", daysAgo: 30 });
 
-  // doctest:L141
   const menu = await caller(box.root).chat.placeMenu();
   t.check(menu.landmarks.map((l) => ({ label: l.label, freshCount: l.freshCount })), [
     { label: "Fresh", freshCount: 1 },
@@ -183,7 +170,6 @@ void test("The menu's row order is a duplicated contract now, so it gets its own
   // The same box through `chat.byLandmark` orders its rows identically — the
   // duplication is the risk, so the two are compared directly rather than trusted.
 
-  // doctest:L150
   const full = await caller(box.root).chat.byLandmark();
   t.check(full.landmarks.map((l) => l.label), menu.landmarks.map((l) => l.label));
 });
@@ -201,15 +187,12 @@ void test("The menu shows a warning row from problems; without it a hand-edit th
       t.error(error);
     }
   });
-  // doctest:L166
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L169
   await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\n---\n\n");
   await box.write("_content/trips/Trips.landmark.card", "no frontmatter here at all\n");
 
-  // doctest:L172
   const broken = await caller(box.root).chat.placeMenu();
   t.check(broken, {
     landmarks: [

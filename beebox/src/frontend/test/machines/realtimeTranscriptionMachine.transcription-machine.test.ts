@@ -60,7 +60,6 @@ void test("START opens a fresh segment:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L57
   const actor = started("session-abc");
   t.check(
     {
@@ -85,7 +84,6 @@ void test("START opens a fresh segment:", async (t) => {
   // accumulation — the machine holds what it was last told — so a later update with
   // a shorter final text is not a regression to guard against here.
 
-  // doctest:L74
   actor.send({ type: "TEXT_UPDATE", finalText: "hello", interimText: "wor", finalWords: null });
   const first = { ...actor.getSnapshot().context };
   actor.send({ type: "TEXT_UPDATE", finalText: "hello world", interimText: "", finalWords: [] });
@@ -118,13 +116,11 @@ void test("START opens a fresh segment:", async (t) => {
   // empty text keeps what was already final. This is the reconnect-shaped case —
   // the transcript must not be blanked by a finalization that brought nothing.
 
-  // doctest:L97
   const keeper = started();
   keeper.send({ type: "TEXT_UPDATE", finalText: "kept text", interimText: "pending", finalWords: null });
   keeper.send({ type: "TRANSCRIPTION_DONE", text: "", recording: NO_AUDIO });
   const afterEmpty = { ...keeper.getSnapshot().context };
 
-  // doctest:L102
   const replacer = started();
   replacer.send({ type: "TEXT_UPDATE", finalText: "old", interimText: "pending", finalWords: null });
   replacer.send({ type: "TRANSCRIPTION_DONE", text: "final text", words: [], recording: NO_AUDIO });

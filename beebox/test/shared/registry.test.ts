@@ -21,7 +21,6 @@ const verb = (name: string): Verb => ({ name: () => name });
 // Unordered registries sort by key, so a reorder in the file is not a
 // behaviour change.
 void test("Unordered registries sort by key, so a reorder in the file is not a behaviour...", async (t) => {
-  // doctest:L25
   const verbs = defineRegistry<Verb>({
     directory: "./commands",
     entry: "command",
@@ -35,26 +34,21 @@ void test("Unordered registries sort by key, so a reorder in the file is not a b
     "wakeup",
   ]);
 
-  // doctest:L35
   t.check(verbs.get("init")?.name(), "init");
 
-  // doctest:L38
   t.check(verbs.get("nope"), undefined);
 
-  // doctest:L41
   t.check(verbs.list.map((v) => v.name()), [
     "init",
     "migrate",
     "wakeup",
   ]);
 
-  // doctest:L44
   t.check(Object.isFrozen(verbs) && Object.isFrozen(verbs.list), true);
 });
 
 // ## Order as semantics
 void test("Order as semantics", async (t) => {
-  // doctest:L51
   const steps = defineRegistry<string>({
     directory: "./migrations",
     ordered: true,
@@ -73,7 +67,6 @@ void test("Order as semantics", async (t) => {
 // name; the helper only enforces uniqueness (a record cannot repeat a key, so
 // the check is the only guard for this form).
 void test("The layout check verifies each literal key is the member's file or directory...", async (t) => {
-  // doctest:L68
   const surfaces = defineRegistry<string>({
     directory: "./exports",
     ordered: false,
@@ -87,7 +80,6 @@ void test("The layout check verifies each literal key is the member's file or di
 
 // ## Duplicate keys throw at construction
 void test("Duplicate keys throw at construction", async (t) => {
-  // doctest:L80
   await t.checkThrows(
     async () => (defineRegistry<Verb>({
       directory: "./commands",

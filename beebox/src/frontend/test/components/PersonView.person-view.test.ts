@@ -69,7 +69,6 @@ async function renderPerson(frontmatter: Record<string, unknown>, { body, mode, 
 // body opening with `# <name>` loses that heading, as a doc's body does with its
 // title.
 void test("The role line carries a \"Boxholder\" badge.", async (t) => {
-  // doctest:L63
   const rosa = await renderPerson(
     {
       name: "Rosa Quill",
@@ -99,7 +98,6 @@ void test("The role line carries a \"Boxholder\" badge.", async (t) => {
 // Absent fields leave no rows, labels, or empty table behind; the front is the
 // body.
 void test("Absent fields leave no rows, labels, or empty table behind; the front is the...", async (t) => {
-  // doctest:L85
   const plain = await renderPerson({ name: "Charles Babbage" }, { body: "Built the Difference Engine.\n" });
   t.check([plain.summary, plain.links, plain.hasTable, plain.html.includes("Built the Difference Engine.")], [
     null,
@@ -113,10 +111,8 @@ void test("Absent fields leave no rows, labels, or empty table behind; the front
 //
 // An archived person says so on the role line, with or without a role.
 void test("An archived person says so on the role line, with or without a role.", async (t) => {
-  // doctest:L95
   t.check((await renderPerson({ name: "Old Contact", role: "Former landlord", archived: true }, { body: "Moved away.\n" })).summary, "Former landlord | Archived");
 
-  // doctest:L98
   t.check((await renderPerson({ name: "Old Contact", archived: true }, { body: "" })).summary, "Archived");
 });
 
@@ -126,17 +122,14 @@ void test("An archived person says so on the role line, with or without a role."
 // person has no header, so the name shows. A card whose schema is unknown keeps
 // an unexpected field on the front rather than hiding it.
 void test("todos belongs on every front, so it renders in the shared table.", async (t) => {
-  // doctest:L109
   const todo = await renderPerson({ name: "Rosa Quill", todos: [{ text: "Send the notes" }] }, { body: "Notes.\n" });
   t.check([todo.hasTable, todo.html.includes("Send the notes")], [
     true,
     true,
   ]);
 
-  // doctest:L113
   t.check((await renderPerson({ name: "Rosa Quill", role: "Archivist" }, { body: "Notes.\n", mode: "embed" })).summary, "Rosa Quill | Archivist");
 
-  // doctest:L116
   const unknown = await renderPerson({ name: "Rosa Quill", email: 42, nickname: "AL" }, { body: "Notes.\n", schema: null });
   t.check([unknown.summary, unknown.html.includes('field-label">Email<'), unknown.html.includes('field-label">Nickname<'), unknown.html.includes('field-label">Name<')], [
     null,
@@ -150,7 +143,6 @@ void test("todos belongs on every front, so it renders in the shared table.", as
 // case, and a small object that names someone reads as the name with its role
 // beside it.
 void test("The table reads like the rest of the card:", async (t) => {
-  // doctest:L126
   const employer = await renderPerson({ name: "Rosa Quill", "day-job": { name: "Harbour Archive", role: "volunteer" } }, { body: "Notes.\n", schema: null });
   t.check(/data-card-section="frontmatter">(.*?)<\/dl>/s.exec(employer.html)?.[1]?.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|"), "|Day job|Harbour Archive| (volunteer)|");
 });
@@ -161,7 +153,6 @@ void test("The table reads like the rest of the card:", async (t) => {
 // value is not drawn, so with an unknown schema it falls through to the table
 // instead of vanishing.
 void test("boxholder and archived are drawn only when they are true.", async (t) => {
-  // doctest:L138
   const odd = await renderPerson({ name: "Rosa Quill", boxholder: "yes", archived: false }, { body: "Notes.\n", schema: null });
   t.check([odd.summary, odd.html.includes('field-label">Boxholder<'), odd.html.includes('field-label">Archived<')], [
     null,
@@ -172,10 +163,8 @@ void test("boxholder and archived are drawn only when they are true.", async (t)
 
 // ## Phone numbers with an extension are not dialled
 void test("Phone numbers with an extension are not dialled", async (t) => {
-  // doctest:L146
   const { telHref } = await import("../../src/components/PersonView/view.js");
 
-  // doctest:L148
   t.check([telHref("+1 (555) 010-0100"), telHref("+1 (555) 010-0100 x12"), telHref("ext. 4"), telHref("—")], [
     "tel:+15550100100",
     null,
@@ -183,6 +172,5 @@ void test("Phone numbers with an extension are not dialled", async (t) => {
     null,
   ]);
 
-  // doctest:L151
   t.check((await renderPerson({ name: "Rosa Quill", phone: "+1 (555) 010-0100 x12" }, { body: "" })).links, []);
 });

@@ -28,7 +28,6 @@ class CustomState { value = "x"; }
 //
 // Pulls a file path, viewer override (`?view=`), and other params out of a serialized target (the `view:` prefix is optional and tolerated for internal callers). There is no `zoom` flag — a plain link opening the companion pane replaced it.
 void test("Pulls a file path, viewer override (?view=), and other params out of a serial...", async (t) => {
-  // doctest:L31
   t.check(parseViewUrl("view:_content/docs/report.md"), {
     path: "_content/docs/report.md",
     viewer: null,
@@ -36,7 +35,6 @@ void test("Pulls a file path, viewer override (?view=), and other params out of 
     viewState: null,
   });
 
-  // doctest:L34
   t.check(parseViewUrl("_content/docs/report.md?view=source&k=v"), {
     path: "_content/docs/report.md",
     viewer: "source",
@@ -46,7 +44,6 @@ void test("Pulls a file path, viewer override (?view=), and other params out of 
     viewState: null,
   });
 
-  // doctest:L37
   t.check(parseViewUrl("_content/docs/report.md?k=v&viewState=%7B%22page%22%3A%22gallery%22%2C%22index%22%3A2%7D&view=source"), {
     path: "_content/docs/report.md",
     viewer: "source",
@@ -62,7 +59,6 @@ void test("Pulls a file path, viewer override (?view=), and other params out of 
 
 // A leading `/` is stripped — `ViewTarget.path` is box-root-relative, and consumers compare it for exact equality against the file watcher's relative paths (which have no leading slash). Card refs are conventionally written `/_content/…`, so the slash is normalized away here:
 void test("A leading / is stripped — ViewTarget.path is box-root-relative, and consumers...", async (t) => {
-  // doctest:L44
   t.check(parseViewUrl("view:/_bookkeeping/archive/Foo.doc.card"), {
     path: "_bookkeeping/archive/Foo.doc.card",
     viewer: null,
@@ -73,49 +69,36 @@ void test("A leading / is stripped — ViewTarget.path is box-root-relative, and
 
 // `serializeViewUrl` is the round-trip inverse (without the `view:` prefix):
 void test("serializeViewUrl is the round-trip inverse (without the view: prefix):", async (t) => {
-  // doctest:L51
   t.check(serializeViewUrl({ path: "a/b.md", viewer: "source", params: { k: "v" }, viewState: { page: "gallery" } }), "a/b.md?view=source&viewState=%7B%22page%22%3A%22gallery%22%7D&k=v");
 
-  // doctest:L54
   t.check(serializeViewUrl({ path: "a/b.md", viewer: null, params: {}, viewState: {} }), "a/b.md");
 
-  // doctest:L57
   t.check(validateViewState({ page: "gallery", filters: ["open", null], count: 2 }), true);
 
-  // doctest:L60
   t.check(validateViewState({ count: Number.NaN }), false);
 
-  // doctest:L63
   t.check(validateViewState({ when: new Date("2026-01-01") }), false);
 
-  // doctest:L66
   t.check(validateViewState({ filters: new Map([["status", "open"]]) }), false);
 
-  // doctest:L69
   t.check(validateViewState({ custom: new CustomState() }), false);
 
-  // doctest:L72
   const cyclic: ViewState = {};
   cyclic.self = cyclic;
   t.check(validateViewState(cyclic), false);
 
-  // doctest:L77
   // The type admits a cycle, so the runtime boundary is what rejects it for authored JavaScript callers.
   await t.checkThrows(
     async () => (serializeViewUrl({ path: "a/b.md", viewer: null, params: {}, viewState: cyclic })),
     "InvalidViewStateError: Authored view state must be a JSON-safe object",
   );
 
-  // doctest:L82
   t.check(serializeViewUrl({ path: "a/b.md", viewer: "source", params: { k: "v" }, viewState: null }), "a/b.md?view=source&k=v");
 
-  // doctest:L85
   t.check(decideViewHistoryUpdate({ state: { page: "gallery" }, requested: "push", canPush: true }), "push");
 
-  // doctest:L88
   t.check(decideViewHistoryUpdate({ state: { page: "gallery" }, requested: "push", canPush: false }), "replace");
 
-  // doctest:L91
   t.check(decideViewHistoryUpdate({ state: { count: Number.POSITIVE_INFINITY }, requested: "replace", canPush: true }), "rejected");
 });
 
@@ -123,25 +106,20 @@ void test("serializeViewUrl is the round-trip inverse (without the view: prefix)
 //
 // Resolves `href` values from a document at `basePath`, just like a filesystem:
 void test("Resolves href values from a document at basePath, just like a filesystem:", async (t) => {
-  // doctest:L100
   t.check(resolveRelativePath("_content/docs/tax/2023/return-status.md", "1040.pdf"), "_content/docs/tax/2023/1040.pdf");
 
-  // doctest:L103
   t.check(resolveRelativePath("_content/docs/tax/2023/return-status.md", "../2022/summary.md"), "_content/docs/tax/2022/summary.md");
 
-  // doctest:L106
   t.check(resolveRelativePath("_content/docs/tax/2023/return-status.md", "./notes.md"), "_content/docs/tax/2023/notes.md");
 });
 
 // Leading `/` is stripped and treated as box-root-relative:
 void test("Leading / is stripped and treated as box-root-relative:", async (t) => {
-  // doctest:L113
   t.check(resolveRelativePath("_content/docs/a.md", "/_content/other/file.md"), "_content/other/file.md");
 });
 
 // When `basePath` is missing, the relative path is already box-root-relative:
 void test("When basePath is missing, the relative path is already box-root-relative:", async (t) => {
-  // doctest:L120
   t.check(resolveRelativePath(undefined, "_content/notes.md"), "_content/notes.md");
 });
 
@@ -150,10 +128,8 @@ void test("When basePath is missing, the relative path is already box-root-relat
 // the box root is `null`, never clamped back to the root. Callers degrade visibly
 // — a link renders as a broken marker, an image gets an empty (broken) src.
 void test("The rules themselves live in src/shared/ref-path/core.ts (shared with the bac...", async (t) => {
-  // doctest:L130
   t.check(resolveRelativePath("_content/docs/a.md", "../../../etc/passwd"), null);
 
-  // doctest:L133
   t.check(resolveContentTarget("_content/docs/report.md", "../../../etc/passwd?view=source"), null);
 });
 
@@ -163,7 +139,6 @@ void test("The rules themselves live in src/shared/ref-path/core.ts (shared with
 //
 // A relative path resolves against the document's dir; the query becomes viewer + params:
 void test("Turns a markdown link/image href into a ViewTarget, splitting the ?view=/para...", async (t) => {
-  // doctest:L144
   t.check(resolveContentTarget("_content/docs/report.md", "chart.figure.card?size=300"), {
     path: "_content/docs/chart.figure.card",
     viewer: null,
@@ -176,7 +151,6 @@ void test("Turns a markdown link/image href into a ViewTarget, splitting the ?vi
 
 // A leading `/` is box-root-absolute and ignores `basePath` — and `?view=` selects a card-attached viewer:
 void test("A leading / is box-root-absolute and ignores basePath — and ?view= selects a...", async (t) => {
-  // doctest:L151
   t.check(resolveContentTarget("_content/docs/report.md", "/_content/x.bill.card?view=ledger"), {
     path: "_content/x.bill.card",
     viewer: "ledger",
@@ -189,7 +163,6 @@ void test("A leading / is box-root-absolute and ignores basePath — and ?view= 
 // directory base must carry a trailing slash so the strip is a no-op and the
 // relative path resolves *inside* it, not its parent:
 void test("basePath is treated like a containing file (its last segment is stripped).", async (t) => {
-  // doctest:L160
   t.check(
     [
       resolveContentTarget("_content/foo/x.md", "bar.card")?.path,
@@ -213,7 +186,6 @@ void test("basePath is treated like a containing file (its last segment is strip
 // resolution seam; the wiring itself is React rendering, which has no doctest
 // tier):
 void test("Chat message markdown (chat/markdown-rendering.tsx) renders with basePath:", async (t) => {
-  // doctest:L179
   t.check(
     [
       resolveContentTarget(undefined, "_content/sibling.card")?.path,
@@ -231,7 +203,6 @@ void test("Chat message markdown (chat/markdown-rendering.tsx) renders with base
 // An image in that same chat message resolves the same way — `basePath: undefined`
 // sends a bare `photo.png` to the box root, not to `notes/photo.png`:
 void test("An image in that same chat message resolves the same way — basePath:", async (t) => {
-  // doctest:L191
   t.check(resolveImageSrc("_content/photo.png", { boxSlug: "test1", basePath: undefined }), "/test1/api/image/_content/photo.png");
 });
 
@@ -239,25 +210,21 @@ void test("An image in that same chat message resolves the same way — basePath
 //
 // Splits an href into the cases the Markdown renderer cares about. A plain relative/absolute path is a box reference; anything with a scheme or anchor is external; the retired `view:` scheme is `legacy-view` so renderers can draw a visibly-broken marker:
 void test("Splits an href into the cases the Markdown renderer cares about.", async (t) => {
-  // doctest:L200
   t.check(classifyMarkdownHref("view:_content/a.md"), {
     kind: "legacy-view",
     raw: "view:_content/a.md",
   });
 
-  // doctest:L203
   t.check(classifyMarkdownHref("notes.md"), {
     kind: "relative",
     path: "notes.md",
   });
 
-  // doctest:L206
   t.check(classifyMarkdownHref("/_content/a.card?view=ledger"), {
     kind: "relative",
     path: "/_content/a.card?view=ledger",
   });
 
-  // doctest:L209
   t.check(
     classifyMarkdownHref("https://example.com")
     ,
@@ -266,7 +233,6 @@ void test("Splits an href into the cases the Markdown renderer cares about.", as
   },
   );
 
-  // doctest:L212
   t.check(
     classifyMarkdownHref("//cdn.example.com/a.png")
     ,
@@ -275,7 +241,6 @@ void test("Splits an href into the cases the Markdown renderer cares about.", as
   },
   );
 
-  // doctest:L215
   t.check(classifyMarkdownHref("#anchor"), {
     kind: "external",
   });
@@ -285,7 +250,6 @@ void test("Splits an href into the cases the Markdown renderer cares about.", as
 //
 // `control:` points at a control in the running interface rather than at content, so it is recognised before the generic scheme test that would otherwise make it `external`. The address is a `bbx-` DOM id; `action` and `description` ride in a query string parsed with `URLSearchParams`.
 void test("control: points at a control in the running interface rather than at content,...", async (t) => {
-  // doctest:L224
   t.check(classifyMarkdownHref("control:bbx-composer-mic"), {
     kind: "control",
     id: "bbx-composer-mic",
@@ -294,7 +258,6 @@ void test("control: points at a control in the running interface rather than at 
     unknownAction: null,
   });
 
-  // doctest:L227
   t.check(classifyMarkdownHref("control:bbx-composer-mic?action=point&description=Tap%20and%20talk"), {
     kind: "control",
     id: "bbx-composer-mic",
@@ -303,7 +266,6 @@ void test("control: points at a control in the running interface rather than at 
     unknownAction: null,
   });
 
-  // doctest:L230
   t.check(classifyMarkdownHref("control:bbx-composer-add?action=reveal"), {
     kind: "control",
     id: "bbx-composer-add",
@@ -315,7 +277,6 @@ void test("control: points at a control in the running interface rather than at 
 
 // An action the app does not know degrades to `point` and reports the word it did not understand, so the pointer still works — and says so in its tooltip — rather than the whole link dying over a typo:
 void test("An action the app does not know degrades to point and reports the word it did...", async (t) => {
-  // doctest:L237
   t.check(classifyMarkdownHref("control:bbx-composer-send?action=jump"), {
     kind: "control",
     id: "bbx-composer-send",
@@ -327,7 +288,6 @@ void test("An action the app does not know degrades to point and reports the wor
 
 // An empty id names nothing to point at, so it falls through to the malformed-input path — `external`, exactly like an empty href:
 void test("An empty id names nothing to point at, so it falls through to the malformed-i...", async (t) => {
-  // doctest:L244
   t.check(
     [
       classifyMarkdownHref("control:"),
@@ -346,7 +306,6 @@ void test("An empty id names nothing to point at, so it falls through to the mal
 
 // An ill-formed id is *not* rejected here. Classification does not touch the document, and whether an address resolves is live state — `resolveControl` rejects a non-`bbx-` id at the point of use and the pointer renders broken with the reason in its tooltip:
 void test("An ill-formed id is not rejected here.", async (t) => {
-  // doctest:L254
   t.check(classifyMarkdownHref("control:composer-mic"), {
     kind: "control",
     id: "composer-mic",
@@ -365,7 +324,6 @@ void test("An ill-formed id is not rejected here.", async (t) => {
 // external URL goes to markdown-it's own encoder (stood in for here by
 // `encodeURI`). A malformed escape is kept as written:
 void test("markdown-it percent-encodes every link destination, so a link to <Beach walk....", async (t) => {
-  // doctest:L268
   const encode = (url: string) => encodeURI(url);
   t.check(
     [
@@ -387,7 +345,6 @@ void test("markdown-it percent-encodes every link destination, so a link to <Bea
 //
 // True for anything with a URL scheme or a protocol-relative `//host` — used to tell an image/external link from an in-box embed path:
 void test("True for anything with a URL scheme or a protocol-relative //host — used to t...", async (t) => {
-  // doctest:L289
   t.check(
     [
       isExternalUrl("https://example.com/x.png"),
@@ -410,25 +367,21 @@ void test("True for anything with a URL scheme or a protocol-relative //host —
 //
 // A leading `/` means box-root-relative:
 void test("Rewrites a markdown image src into a URL that doesn't depend on the page URL...", async (t) => {
-  // doctest:L305
   t.check(resolveImageSrc("/_content/images/front.png", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" }), "/test1/api/image/_content/images/front.png");
 });
 
 // A bare path is document-relative — resolved against `basePath`:
 void test("A bare path is document-relative — resolved against basePath:", async (t) => {
-  // doctest:L312
   t.check(resolveImageSrc("images/front.png", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" }), "/test1/api/image/_content/dossiers/images/front.png");
 });
 
 // An `.image.card` embed resolves through the same route — the backend reads `filename.ref` and serves the attached binary, so `![](…/foo.image.card)` renders instead of 404ing on the card file:
 void test("An .image.card embed resolves through the same route — the backend reads file...", async (t) => {
-  // doctest:L319
   t.check(resolveImageSrc("images/aya-intake.image.card", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" }), "/test1/api/image/_content/dossiers/images/aya-intake.image.card");
 });
 
 // The legacy `api/files/<path>` form (and the `api/image/<path>` form) is accepted as a hint that the path is already box-root-relative; both re-emit through `/api/image/`:
 void test("The legacy api/files/<path> form (and the api/image/<path> form) is accepted...", async (t) => {
-  // doctest:L326
   t.check(resolveImageSrc("api/files/_content/images/front.png", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" }), "/test1/api/image/_content/images/front.png");
 });
 
@@ -436,13 +389,11 @@ void test("The legacy api/files/<path> form (and the api/image/<path> form) is a
 // empty src — the browser draws its broken-image affordance and the alt text
 // instead of the clamped-to-root image the old resolver would have shown:
 void test("A src that escapes the box root names no servable file, so it resolves to an...", async (t) => {
-  // doctest:L335
   t.check(resolveImageSrc("../../../etc/passwd", { boxSlug: "test1", basePath: "_content/dossiers/annika.md" }), "");
 });
 
 // External URLs pass through untouched:
 void test("External URLs pass through untouched:", async (t) => {
-  // doctest:L342
   t.check(
     resolveImageSrc("https://example.com/x.png", { boxSlug: "test1", basePath: "_content/a.md" })
     ,
@@ -454,7 +405,6 @@ void test("External URLs pass through untouched:", async (t) => {
 //
 // External http(s) images get a box `/api/proxy-image` fallback URL (the original is URL-encoded into `?url=`). Under the Node test runner Vite's `BASE_URL` is unset, so the base prefix is empty.
 void test("External http(s) images get a box /api/proxy-image fallback URL (the original...", async (t) => {
-  // doctest:L351
   t.check(
     externalImageProxyUrl("https://example.com/x.png", "test1")
     ,
@@ -464,7 +414,6 @@ void test("External http(s) images get a box /api/proxy-image fallback URL (the 
 
 // Protocol-relative URLs are assumed https (the proxy needs an absolute scheme):
 void test("Protocol-relative URLs are assumed https (the proxy needs an absolute scheme):", async (t) => {
-  // doctest:L358
   t.check(
     externalImageProxyUrl("//cdn.example.com/y.jpg", "test1")
     ,
@@ -474,7 +423,6 @@ void test("Protocol-relative URLs are assumed https (the proxy needs an absolute
 
 // In-box URLs have no proxy — they return undefined:
 void test("In-box URLs have no proxy — they return undefined:", async (t) => {
-  // doctest:L365
   t.check(externalImageProxyUrl("/test1/api/files/_content/a.png", "test1"), undefined);
 });
 
@@ -484,12 +432,9 @@ void test("In-box URLs have no proxy — they return undefined:", async (t) => {
 //
 // A path segment with `#`, `?`, `%`, or a space is percent-encoded — but the `/` separators between segments are preserved, not escaped into `%2F`:
 void test("These build the URLs the file/image renderers embed a box-relative path into...", async (t) => {
-  // doctest:L376
   t.check(apiFileUrl("test1", "_content/Q&A #3 100% done?.md"), "/test1/api/files/_content/Q%26A%20%233%20100%25%20done%3F.md");
 
-  // doctest:L379
   t.check(apiImageUrl("test1", "_content/Q&A #3 100% done?.png"), "/test1/api/image/_content/Q%26A%20%233%20100%25%20done%3F.png");
 
-  // doctest:L382
   t.check(apiRawFileUrl("/test1/api", "_content/Q&A #3 100% done?.md"), "/test1/api/files/_content/Q%26A%20%233%20100%25%20done%3F.md");
 });

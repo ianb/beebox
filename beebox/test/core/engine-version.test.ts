@@ -26,7 +26,6 @@ async function realEngineVersion() {
 
 // ## `getServingEngineVersion` reads the running engine's own package.json
 void test("`getServingEngineVersion` reads the running engine's own package.json", async (t) => {
-  // doctest:L30
   const engineVersion = await realEngineVersion();
   t.check(await getServingEngineVersion(), engineVersion);
 });
@@ -44,11 +43,9 @@ void test("getInstalledEngineVersion reads <box.root>/nodemodules/beebox/package
       t.error(error);
     }
   });
-  // doctest:L42
   const box = await makeTmpBox();
   t.check(await getInstalledEngineVersion(box.root), null);
 
-  // doctest:L48
   const report = await getEngineVersionReport(box.root);
   t.check(report, { serving: await realEngineVersion(), installed: null, mismatch: false });
 });
@@ -66,12 +63,10 @@ void test("The pinned/installed engine lives at <box.root>/nodemodules/beebox/."
       t.error(error);
     }
   });
-  // doctest:L64
   const box = await makeTmpBox();
   await fs.mkdir(path.join(box.root, "node_modules/beebox"), { recursive: true });
   await fs.writeFile(path.join(box.root, "node_modules/beebox/package.json"), JSON.stringify({ version: "0.0.1" }));
 
-  // doctest:L68
   const report = await getEngineVersionReport(box.root);
   t.check(report, { serving: await realEngineVersion(), installed: "0.0.1", mismatch: true });
 });
@@ -85,13 +80,11 @@ void test("A box whose installed engine matches the serving engine reports no mi
       t.error(error);
     }
   });
-  // doctest:L80
   const box = await makeTmpBox();
   const engineVersion = await realEngineVersion();
   await fs.mkdir(path.join(box.root, "node_modules/beebox"), { recursive: true });
   await fs.writeFile(path.join(box.root, "node_modules/beebox/package.json"), JSON.stringify({ version: engineVersion }));
 
-  // doctest:L85
   const report = await getEngineVersionReport(box.root);
   t.check(report, { serving: engineVersion, installed: engineVersion, mismatch: false });
 });

@@ -11,7 +11,6 @@ import "@ianbicking/tap-check/tap";
 import { unpackedExtensionId, frontTargetScript, waitTimeoutMs } from "../src/clerk-popup.js";
 
 void test("line 13", async (t) => {
-  // doctest:L14
   t.check(unpackedExtensionId("/srv/beebox/beebox-clerk/dist-browse/chrome-mv3"), "aefhjangknhldlihokiojaajoegnlaoh");
 });
 
@@ -19,7 +18,6 @@ void test("line 13", async (t) => {
 // share it. It embeds the URL as a JSON string, so a quote in the URL cannot end
 // the string early.
 void test("The script that fronts the target finds it by URL and refuses when two tabs s...", async (t) => {
-  // doctest:L23
   t.check(
     frontTargetScript('http://localhost/a"b').split("\n")[1]?.trim()
     ,
@@ -31,7 +29,6 @@ void test("The script that fronts the target finds it by URL and refuses when tw
 // and would poll forever, wedging the daemon. The wrapper turns `--timeout`, or
 // 30 seconds, into the default action timeout that does bound it.
 void test("A wait always ends:", async (t) => {
-  // doctest:L32
   t.check([waitTimeoutMs(["--text", "Filed"]), waitTimeoutMs(["--text", "Filed", "--timeout", "180000"])], [
     30000,
     180000,
@@ -39,6 +36,5 @@ void test("A wait always ends:", async (t) => {
 });
 
 void test("line 36", async (t) => {
-  // doctest:L37
   t.check((() => { try { return waitTimeoutMs(["--timeout", "3s"]); } catch (error) { return error instanceof Error ? error.message : error; } })(), "wait --timeout is not a positive integer: 3s");
 });

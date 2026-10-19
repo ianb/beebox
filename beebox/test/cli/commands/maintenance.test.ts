@@ -49,7 +49,6 @@ void test("line 37", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L38
   const previousKey = process.env.BBX_DIAG_API_KEY;
   const configPath = defaultHubConfigPath();
   const one = await makeTmpBox({ git: true });
@@ -66,28 +65,20 @@ void test("line 37", async (t) => {
   });
   t.check(await invoke(readyScript), 0);
 
-  // doctest:L56
   t.check(await boxMaintenanceStatus(one.root), null);
 
-  // doctest:L59
   t.check(await boxMaintenanceStatus(two.root), null);
 
-  // doctest:L62
   t.check(await invoke(readyScript + "\nprocess.exitCode = 1;"), 1);
 
-  // doctest:L65
   t.check((await boxMaintenanceStatus(one.root))?.phase, "exclusive");
 
-  // doctest:L68
   t.check((await boxMaintenanceStatus(two.root))?.phase, "exclusive");
 
-  // doctest:L71
   t.check(await invoke(readyScript), 0);
 
-  // doctest:L74
   t.check(await boxMaintenanceStatus(one.root), null);
 
-  // doctest:L77
   process.env.BBX_DIAG_API_KEY = "fixture-diag";
   await mkdir(dirname(configPath), { recursive: true });
   await writeFile(configPath, JSON.stringify({ boxes: { one: { path: one.root }, two: { path: two.root } } }));
@@ -108,13 +99,10 @@ void test("line 37", async (t) => {
     1,
   );
 
-  // doctest:L94
   t.check(await boxMaintenanceStatus(one.root), null);
 
-  // doctest:L97
   t.check((await boxMaintenanceStatus(two.root))?.phase, "exclusive");
 
-  // doctest:L100
   t.check(verified.toSorted(), [
     "one",
     "two",

@@ -7,7 +7,6 @@ import { transformedResolvedImageUrl } from "../../src/lib/image-transform-url.j
 
 // Box-relative paths are encoded while transform options remain ordinary query parameters.
 void test("Box-relative paths are encoded while transform options remain ordinary query...", async (t) => {
-  // doctest:L11
   t.check(
     apiTransformedImageUrl({
       apiBase: "/image-thumbnails/test1/api",
@@ -20,7 +19,6 @@ void test("Box-relative paths are encoded while transform options remain ordinar
 
 // Resolved canonical photo URLs can switch to a transform without losing their version token.
 void test("Resolved canonical photo URLs can switch to a transform without losing their...", async (t) => {
-  // doctest:L22
   t.check(
     transformedResolvedImageUrl(
       "/image-thumbnails/test1/api/files/store/photo.jpg?v=abc123",
@@ -32,7 +30,6 @@ void test("Resolved canonical photo URLs can switch to a transform without losin
 
 // Animated, unsupported, external, blob, session-media, and history images are deliberately left alone.
 void test("Animated, unsupported, external, blob, session-media, and history images are...", async (t) => {
-  // doctest:L32
   t.check(
     [
       "/test/api/files/wave.gif",
@@ -61,6 +58,5 @@ void test("Animated, unsupported, external, blob, session-media, and history ima
 
 // Chat retry and file-version parameters survive rewriting but do not become transform options.
 void test("Chat retry and file-version parameters survive rewriting but do not become tr...", async (t) => {
-  // doctest:L49
   t.check(transformedResolvedImageUrl("/test/api/files/photo.jpg?v=one&imageRetry=2", { width: 960, format: "auto" }), "/test/api/images/photo.jpg?v=one&imageRetry=2&width=960&format=auto");
 });

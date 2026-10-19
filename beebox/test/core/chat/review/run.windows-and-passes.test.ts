@@ -128,11 +128,9 @@ void test("Nothing before the journal boundary is retained — the span walk str
       t.error(error);
     }
   });
-  // doctest:L134
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L137
   // First pass: a short transcript, reviewed and journalled normally.
   await seed(box, {
     sessionId: "sesscap", husk: "title: Untouched\n", entries: [bulk("cap-0"), bulk("cap-1")],
@@ -145,7 +143,6 @@ void test("Nothing before the journal boundary is retained — the span walk str
 
   // Then the transcript grows by more than a whole read window.
 
-  // doctest:L152
   const logPath = getSessionLogPath(box.root, sid("sesscap"));
   // The last ten are bulky so the leftover span clears the size gate on its own.
   const grown = Array.from({ length: MAX_SESSION_ENTRIES + 10 },
@@ -154,7 +151,6 @@ void test("Nothing before the journal boundary is retained — the span walk str
   const when = new Date(NOW.getTime() - 5 * HOUR);
   await utimes(logPath, when, when);
 
-  // doctest:L160
   const second = fakeReviewer([OUTPUT]);
   const summary = await runChatReview(box.root, {
     reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
@@ -168,12 +164,10 @@ void test("Nothing before the journal boundary is retained — the span walk str
   // The reviewer saw only the new material, and the remaining ten entries are the
   // next run's span — which in turn continues from `cap-5001`, not from the top.
 
-  // doctest:L178
   // The span is 5,000 generated lines plus a tail; the two narrow checks keep it readable.
   t.check(second.calls[0]?.span, any(String).includes("line 0"));
   t.check(second.calls[0]?.span, not(any(String).includes("aaaa")));
 
-  // doctest:L181
   const third = fakeReviewer([OUTPUT]);
   const again = await runChatReview(box.root, {
     reviewer: third, maxSessions: 10, now: NOW, ownerEmail: null,
@@ -200,18 +194,15 @@ void test("\\n Two exchanges clear the 400-char title gate but not the 6,000-cha
       t.error(error);
     }
   });
-  // doctest:L202
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L205
   const huskPath = await seed(box, {
     sessionId: "sessshort",
     husk: "",
     entries: [smallTalk("h1"), smallTalk("h2")],
   });
 
-  // doctest:L211
   const reviewer = fakeReviewer(
     [new Error("the metadata pass must not run")],
     [{ title: "Planning a small birthday dinner" }],
@@ -225,7 +216,6 @@ void test("\\n Two exchanges clear the 400-char title gate but not the 6,000-cha
     titleCalls: [{ sessionId: sid("sessshort"), currentTitle: null, span: any(String) }],
   });
 
-  // doctest:L226
   const card = await readFile(box.path(huskPath), "utf8");
   t.checkText(card, `---
 session: ${sid("sessshort")}
@@ -233,14 +223,12 @@ title: Planning a small birthday dinner
 first-message: please help me plan a small birthday dinner for saturday, eight people, one veg…
 ---`);
 
-  // doctest:L230
   const state = await loadReviewState(box.root);
   const entry = state.sessions[sid("sessshort")]?.applied;
   t.check(entry, { title: { spanId: "87c445c3e179cdce", endUuid: "h2", endIndex: 1, prefixHash: "b4cc4988165ea963", at: NOW.toISOString() } });
 
   // The same span asks nothing the second night — the title journal has advanced.
 
-  // doctest:L239
   const second = fakeReviewer([], [{ title: "Should not be needed" }]);
   const again = await runChatReview(box.root, {
     reviewer: second, maxSessions: 10, now: NOW, ownerEmail: null,
@@ -261,23 +249,19 @@ void test("Summary-sized growth runs the full review, and its title decision cov
       t.error(error);
     }
   });
-  // doctest:L258
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L261
   await seed(box, {
     sessionId: "sessboth",
     husk: "",
     entries: [bulk("k1"), userEntry("k2", "and another thing"), bulk("k3")],
   });
 
-  // doctest:L267
   await runChatReview(box.root, {
     reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
   });
 
-  // doctest:L271
   const state = await loadReviewState(box.root);
   const applied = state.sessions[sid("sessboth")]?.applied;
   const boundary = { spanId: "765ceb0227a4a499", endUuid: "k3", endIndex: 2, prefixHash: "93cf99a7230ded9f", at: NOW.toISOString() };
@@ -286,14 +270,12 @@ void test("Summary-sized growth runs the full review, and its title decision cov
   // Short growth afterwards goes to the TITLE pass only — the summary journal is
   // ahead of it now.
 
-  // doctest:L284
   const logPath = getSessionLogPath(box.root, sid("sessboth"));
   const grown = [bulk("k1"), userEntry("k2", "and another thing"), bulk("k3"), smallTalk("k4"), smallTalk("k5")];
   await writeFile(logPath, grown.map((e) => JSON.stringify(e)).join("\n") + "\n");
   const when = new Date(NOW.getTime() - 5 * HOUR);
   await utimes(logPath, when, when);
 
-  // doctest:L290
   const reviewer = fakeReviewer(
     [new Error("the metadata pass must not run")],
     [{ title: "" }],  // "keep": the billing title still fits the dinner addendum's absence
@@ -306,7 +288,6 @@ void test("Summary-sized growth runs the full review, and its title decision cov
     titleCalls: [anything()],
   });
 
-  // doctest:L300
   const after = await loadReviewState(box.root);
   t.check(after.sessions[sid("sessboth")]?.applied["title"], { spanId: any(String), endUuid: "k5", endIndex: 4, prefixHash: any(String), at: NOW.toISOString() });
 });
@@ -324,31 +305,26 @@ void test("A title pass that answers empty against a chat with NO title reconcil
       t.error(error);
     }
   });
-  // doctest:L316
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L319
   const huskPath = await seed(box, {
     sessionId: "sessempty",
     husk: "",
     entries: [smallTalk("e1"), smallTalk("e2")],
   });
 
-  // doctest:L325
   const reviewer = fakeReviewer([], [{ title: "" }]);
   const summary = await runChatReview(box.root, {
     reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
   });
   t.check(summary, summaryOf({ reviewerFailures: 1, belowThreshold: 1 }));
 
-  // doctest:L332
   const state = await loadReviewState(box.root);
   t.check(state.sessions[sid("sessempty")], {
     applied: {}, titleOwner: "unmanaged", titleHash: null, attempts: 0, titleAttempts: 1, titleFailedSpanId: "e76fa8c3a941634e",
   });
 
-  // doctest:L339
   // Nothing was written to the card.
   t.checkText(await readFile(box.path(huskPath), "utf8"), `---\nsession: ${sid("sessempty")}\n---`);
 });
@@ -367,24 +343,20 @@ void test("A coined-id chat's husk is created before its transcript exists, so c
       t.error(error);
     }
   });
-  // doctest:L356
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L359
   const huskPath = await seed(box, {
     sessionId: "sessfill",
     husk: "",
     entries: [smallTalk("f1"), smallTalk("f2")],
   });
 
-  // doctest:L365
   await runChatReview(box.root, {
     reviewer: fakeReviewer([], [{ title: "Planning a small birthday dinner" }]),
     maxSessions: 10, now: NOW, ownerEmail: null,
   });
 
-  // doctest:L370
   t.checkText(await readFile(box.path(huskPath), "utf8"), `---
 session: ${sid("sessfill")}
 title: Planning a small birthday dinner
@@ -404,29 +376,24 @@ void test("titleOwner:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L384
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L387
   const huskPath = await seed(box, {
     sessionId: "sesshand",
     husk: "title: Notes on the roof leak\n",
     entries: [smallTalk("m1"), smallTalk("m2")],
   });
 
-  // doctest:L393
   const reviewer = fakeReviewer([], [{ title: "Must not be written" }]);
   const summary = await runChatReview(box.root, {
     reviewer, maxSessions: 10, now: NOW, ownerEmail: null,
   });
   t.check({ summary, calls: reviewer.titleCalls }, { summary: summaryOf({ belowThreshold: 1 }), calls: [] });
 
-  // doctest:L400
   const state = await loadReviewState(box.root);
   t.check(state.sessions[sid("sesshand")]?.applied["title"], { spanId: "9f14db44b15ae759", endUuid: "m2", endIndex: 1, prefixHash: "fc5024188147b92e", at: NOW.toISOString() });
 
-  // doctest:L404
   t.checkText(await readFile(box.path(huskPath), "utf8"), `---\nsession: ${sid("sesshand")}\ntitle: Notes on the roof leak\n---`);
 });
 
@@ -446,17 +413,14 @@ void test("A run spans many model calls, and a process killed mid-run (a deploy 
       t.error(error);
     }
   });
-  // doctest:L422
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L425
   // Oldest first: sessfirst is reviewed before sesssecond.
   await seed(box, { sessionId: "sessfirst", husk: "", entries: [smallTalk("p1"), smallTalk("p2")] });
   await utimes(getSessionLogPath(box.root, sid("sessfirst")), new Date(NOW.getTime() - 9 * HOUR), new Date(NOW.getTime() - 9 * HOUR));
   await seed(box, { sessionId: "sesssecond", husk: "", entries: [smallTalk("q1"), smallTalk("q2")] });
 
-  // doctest:L430
   const seen: { onDisk?: { owner: unknown; title: unknown } } = {};
   const reviewer = {
     async review() { throw new Error("must not run"); },

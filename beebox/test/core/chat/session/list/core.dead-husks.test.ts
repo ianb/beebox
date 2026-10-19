@@ -48,19 +48,16 @@ void test("Four husks, one transcript.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L45
   const box = await makeTmpBox();
   await mkdir(box.path("_content/chat/web"), { recursive: true });
   const here = await localOrigin();
 
-  // doctest:L49
   await writeTranscript(box, LIVE);
   await writeHusk(box, { name: "2026-08-20_11111111", session: LIVE, origin: here.id, originName: here.name });
   await writeHusk(box, { name: "2026-08-19_22222222", session: EXPIRED, title: "Trip planning", origin: here.id, originName: here.name });
   await writeHusk(box, { name: "2026-08-18_33333333", session: ELSEWHERE, origin: "prod-machine-id", originName: "prod" });
   await writeHusk(box, { name: "2026-08-17_44444444", session: LEGACY });
 
-  // doctest:L55
   t.check((await listSessionEntries(box.root)).map((e) => e.sessionId), [
     "11111111-1111-4111-8111-111111111111",
   ]);
@@ -70,12 +67,10 @@ void test("Four husks, one transcript.", async (t) => {
   // stamped with nothing at all is `unknown` rather than a guess. Newest first —
   // husk filenames lead with the chat's date, and there is no mtime left to sort on.
 
-  // doctest:L65
   await t.checkText(JSON.stringify(await loadDeadHusks(box.root)), "[{\"sessionId\":\"22222222-2222-4222-8222-222222222222\",\"huskPath\":\"_content/chat/web/2026-08-19_22222222.chat.card\",\"title\":\"Trip planning\",\"transcript\":{\"state\":\"expired\"}},{\"sessionId\":\"33333333-3333-4333-8333-333333333333\",\"huskPath\":\"_content/chat/web/2026-08-18_33333333.chat.card\",\"transcript\":{\"state\":\"elsewhere\",\"originName\":\"prod\"}},{\"sessionId\":\"44444444-4444-4444-8444-444444444444\",\"huskPath\":\"_content/chat/web/2026-08-17_44444444.chat.card\",\"transcript\":{\"state\":\"unknown\"}}]");
 
   // A dead husk keeps its binding, so the lists can still say where the chat lived.
 
-  // doctest:L72
   await writeHusk(box, { name: "2026-08-16_55555555", session: "55555555-5555-4555-8555-555555555555", origin: here.id });
   await writeFile(box.path("_content/chat/web/2026-08-16_55555555.chat.card"), `---\nsession: 55555555-5555-4555-8555-555555555555\ncontext-dir: _content/projects\norigin: ${here.id}\n---\n`);
   t.check((await loadDeadHusks(box.root)).map((h) => `${h.sessionId.slice(0, 8)} ${h.contextDir ?? "(unbound)"} ${h.transcript.state}`).join(", "), "22222222 (unbound) expired, 33333333 (unbound) elsewhere, 44444444 (unbound) unknown, 55555555 _content/projects expired");
@@ -85,7 +80,6 @@ void test("Four husks, one transcript.", async (t) => {
   // With the transcript gone, `first-message` is the only surviving trace of what
   // the conversation opened with — so it renders as a snippet, visibly not a title.
 
-  // doctest:L84
   await writeHusk(box, { name: "2026-08-15_66666666", session: "66666666-6666-4666-8666-666666666666", origin: here.id, firstMessage: "All right. I want to get the guest room ready…" });
   const dead = (await loadDeadHusks(box.root)).find((h) => h.sessionId.startsWith("66666666")) ?? null;
   const titled = (await loadDeadHusks(box.root)).find((h) => h.sessionId.startsWith("22222222")) ?? null;
@@ -97,7 +91,6 @@ void test("Four husks, one transcript.", async (t) => {
   // A dead husk with neither field falls back to the id prefix, same as a live
   // one with no transcript snippet.
 
-  // doctest:L95
   await writeHusk(box, { name: "2026-08-14_77777777", session: "77777777-7777-4777-8777-777777777777", origin: here.id });
   const bare = (await loadDeadHusks(box.root)).find((h) => h.sessionId.startsWith("77777777")) ?? null;
   await t.checkText(deadHuskLabel(bare ?? { sessionId: "", huskPath: "", contextDir: undefined, title: undefined, firstMessage: undefined, transcript: { state: "expired" } }), "77777777");

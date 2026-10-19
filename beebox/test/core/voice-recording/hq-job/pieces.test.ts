@@ -10,7 +10,6 @@ import { planPieces, nextPieceSeconds, HQ_PIECE_SECONDS, HQ_PIECE_FLOOR_SECONDS,
 
 // ## A recording shorter than one piece is a single piece
 void test("A recording shorter than one piece is a single piece", async (t) => {
-  // doctest:L14
   const totalBytes = PCM_BYTES_PER_SECOND * 60;
   t.check(planPieces(totalBytes, HQ_PIECE_SECONDS), [
     {
@@ -25,7 +24,6 @@ void test("A recording shorter than one piece is a single piece", async (t) => {
 // 10 minutes (600s) of audio at the default 300s piece length is exactly two
 // pieces:
 void test("10 minutes (600s) of audio at the default 300s piece length is exactly two pi...", async (t) => {
-  // doctest:L25
   const tenMinutes = PCM_BYTES_PER_SECOND * 600;
   t.check(planPieces(tenMinutes, HQ_PIECE_SECONDS), [
     {
@@ -58,22 +56,18 @@ void test("A length that doesn't divide evenly leaves a shorter final piece — 
 
 // ## Zero bytes produces zero pieces
 void test("Zero bytes produces zero pieces", async (t) => {
-  // doctest:L47
   t.check(planPieces(0, HQ_PIECE_SECONDS), []);
 });
 
 // ## `nextPieceSeconds` halves toward the floor, then returns null
 void test("`nextPieceSeconds` halves toward the floor, then returns null", async (t) => {
-  // doctest:L54
   t.check(nextPieceSeconds(HQ_PIECE_SECONDS), 150);
 
-  // doctest:L57
   t.check(nextPieceSeconds(HQ_PIECE_FLOOR_SECONDS), null);
 });
 
 // A piece length already below the floor also yields `null` (halving only ever
 // moves further from a usable length):
 void test("A piece length already below the floor also yields null (halving only ever mo...", async (t) => {
-  // doctest:L65
   t.check(nextPieceSeconds(100), null);
 });

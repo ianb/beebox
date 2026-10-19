@@ -60,7 +60,6 @@ tapModule.default.teardown(async () => {
 // The fixture repo has no workspace packages, so a `bin/` change is verified by
 // the root scripts, and `pnpm typecheck` is the command to watch.
 void test("The fixture repo has no workspace packages, so a bin/ change is verified by t...", async (t) => {
-  // doctest:L55
   git("init", "-q", "-b", "main");
   git("config", "user.email", "test@example.com");
   git("config", "user.name", "Test");
@@ -76,7 +75,6 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
   // Main gains code after the branch forked. The first preflight run merges it in.
   // That merged tree has never been typechecked, so the first run must not skip.
 
-  // doctest:L72
   git("checkout", "-q", "main");
   commit("bin/other.ts", "export const b = 1;\n");
   git("checkout", "-q", "worktree-demo");
@@ -92,7 +90,6 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
   // unchecked tree. Three finishes in October 2026 skipped typecheck here because
   // the rule asked only about the current merge.
 
-  // doctest:L86
   const second = preflight();
   t.check([second.merge.status, second.skipTypecheckLint.value, typecheck(second)], [
     "up-to-date",
@@ -102,7 +99,6 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
 
   // The reason names the earlier merge, so a reader can find the commit.
 
-  // doctest:L94
   const mergeSha = git("log", "--merges", "-1", "--format=%H").slice(0, 9);
   assert.ok(second.skipTypecheckLint.reason.includes(`merge ${mergeSha}`));
 
@@ -111,7 +107,6 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
   // Docs reach no typecheck or lint, so a branch whose only merge brought
   // Markdown skips both, on the first run and on every rerun.
 
-  // doctest:L104
   git("checkout", "-q", "-b", "worktree-docs", "main");
   commit("bin/docs-branch.ts", "export const c = 1;\n");
   git("checkout", "-q", "main");
@@ -131,7 +126,6 @@ void test("The fixture repo has no workspace packages, so a bin/ change is verif
   // and the branch head must stay where it was. An unknown flag exits 2 for the
   // same reason.
 
-  // doctest:L122
   git("checkout", "-q", "main");
   commit("notes/later.md", "# later\n");
   git("checkout", "-q", "worktree-docs");

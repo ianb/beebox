@@ -30,19 +30,16 @@ const show = (loudness: Loudness, extra?: { tag?: string }) => JSON.stringify(bu
 // No `alert` and no `sound`, so the phone shows no banner. The payload carries no
 // `loudness`.
 void test("No alert and no sound, so the phone shows no banner.", async (t) => {
-  // doctest:L34
   await t.checkText(show("dot"), "{\"payload\":{\"aps\":{\"badge\":1},\"target\":\"card:_content/inbox/field-trip.email.card\",\"notificationId\":\"nAbc123\",\"box\":\"home\"},\"headers\":{\"apns-push-type\":\"alert\",\"apns-topic\":\"app.example\"}}");
 });
 
 // ## `quiet`: a passive banner
 void test("`quiet`: a passive banner", async (t) => {
-  // doctest:L41
   await t.checkText(show("quiet"), "{\"payload\":{\"aps\":{\"alert\":{\"title\":\"Field trip form due Friday\",\"body\":\"The school emailed the form.\"},\"interruption-level\":\"passive\",\"badge\":1},\"target\":\"card:_content/inbox/field-trip.email.card\",\"loudness\":\"quiet\",\"notificationId\":\"nAbc123\",\"box\":\"home\"},\"headers\":{\"apns-push-type\":\"alert\",\"apns-topic\":\"app.example\"}}");
 });
 
 // ## `loud`: an active banner with sound
 void test("`loud`: an active banner with sound", async (t) => {
-  // doctest:L48
   await t.checkText(show("loud"), "{\"payload\":{\"aps\":{\"alert\":{\"title\":\"Field trip form due Friday\",\"body\":\"The school emailed the form.\"},\"interruption-level\":\"active\",\"badge\":1,\"sound\":\"default\"},\"target\":\"card:_content/inbox/field-trip.email.card\",\"loudness\":\"loud\",\"notificationId\":\"nAbc123\",\"box\":\"home\"},\"headers\":{\"apns-push-type\":\"alert\",\"apns-topic\":\"app.example\"}}");
 });
 
@@ -51,7 +48,6 @@ void test("`loud`: an active banner with sound", async (t) => {
 // APNs refuses a collapse id over 64 bytes, so a longer tag collapses by its
 // SHA-256 hex instead: still one id per tag.
 void test("APNs refuses a collapse id over 64 bytes, so a longer tag collapses by its SH...", async (t) => {
-  // doctest:L58
   const short = buildApnsRequest(intent("quiet", { tag: "field-trip" }), { bundleId: "app.example", box: "home" }).headers;
   const long = buildApnsRequest(intent("quiet", { tag: "x".repeat(80) }), { bundleId: "app.example", box: "home" }).headers["apns-collapse-id"] ?? "";
   t.check([short["apns-collapse-id"], long.length, /^[\da-f]+$/.test(long)], [

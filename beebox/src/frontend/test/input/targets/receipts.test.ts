@@ -11,7 +11,6 @@ import { expectReceipt, settleReceipt, pendingReceiptCount } from "../../../src/
 
 // ## Settle resolves the matching expectation
 void test("Settle resolves the matching expectation", async (t) => {
-  // doctest:L15
   const p = expectReceipt("msg-1");
   settleReceipt({ disposition: "sent", emissionId: "msg-1", deduplicated: false });
   const r = await p;
@@ -21,7 +20,6 @@ void test("Settle resolves the matching expectation", async (t) => {
     deduplicated: false,
   });
 
-  // doctest:L21
   t.check(pendingReceiptCount(), 0);
 });
 
@@ -30,29 +28,24 @@ void test("Settle resolves the matching expectation", async (t) => {
 // System sends (e.g. /compact) and pre-registry paths report outcomes too;
 // nothing must throw or leak.
 void test("System sends (e.g.", async (t) => {
-  // doctest:L31
   settleReceipt({ disposition: "queued", emissionId: "msg-never-expected" });
   t.check(pendingReceiptCount(), 0);
 });
 
 // ## Distinct sends settle independently
 void test("Distinct sends settle independently", async (t) => {
-  // doctest:L39
   const a = expectReceipt("msg-a");
   const b = expectReceipt("msg-b");
   t.check(pendingReceiptCount(), 2);
 
-  // doctest:L44
   settleReceipt({ disposition: "queued", emissionId: "msg-b" });
   t.check(await b, {
     disposition: "queued",
     emissionId: "msg-b",
   });
 
-  // doctest:L48
   t.check(pendingReceiptCount(), 1);
 
-  // doctest:L51
   settleReceipt({ disposition: "rejected", emissionId: "msg-a", reason: "network" });
   const ra = await a;
   t.check(ra, {
@@ -68,12 +61,10 @@ void test("Distinct sends settle independently", async (t) => {
 // first POST settles. Both callers must receive the eventual real outcome; a
 // duplicate expectation is not evidence that either send failed.
 void test("A repeated dispatch can register the same persisted emission ID before the fi...", async (t) => {
-  // doctest:L64
   const first = expectReceipt("msg-dup");
   const second = expectReceipt("msg-dup");
   t.check(pendingReceiptCount(), 1);
 
-  // doctest:L69
   settleReceipt({ disposition: "sent", emissionId: "msg-dup", deduplicated: false });
   t.check([await first, await second], [
     {
@@ -88,6 +79,5 @@ void test("A repeated dispatch can register the same persisted emission ID befor
     },
   ]);
 
-  // doctest:L73
   t.check(pendingReceiptCount(), 0);
 });

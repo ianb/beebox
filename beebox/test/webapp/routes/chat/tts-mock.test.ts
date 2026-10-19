@@ -58,7 +58,6 @@ void test("Missing opt-in rejects without calling the provider", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L54
   const audio = createFakeTts();
   const ctx = await makeTestServer({ services: { openaiAudio: audio } });
   const { value: rejected, lines } = await capture("warn", () => ctx.request({
@@ -85,7 +84,6 @@ void test("Explicit development surfaces serve a fixture", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L72
   const audio = createFakeTts();
   const ctx = await makeTestServer({
     devSurfaces: true,
@@ -116,7 +114,6 @@ void test("Both backends answer MP3 — Gemini's PCM is encoded on the way — s
       t.error(error);
     }
   });
-  // doctest:L97
   const gemAudio = createFakeTts({ backend: "gemini", restChunks: [Buffer.alloc(100, 7)] });
   const gemCtx = await makeTestServer({ services: { openaiAudio: gemAudio } });
   const gemRes = await gemCtx.rawRequest({ method: "POST", url: "/api/chat/tts", payload: { text: "Hi." } });
@@ -156,7 +153,6 @@ void test("Both backends answer MP3 — Gemini's PCM is encoded on the way — s
 //   the boxholder as the same bare 500 (2026-09-16: a real OpenRouter speech
 //   call timed out and the reason survived only in the server log).
 void test("Each case below fails before any audio is sent, so the route can still answer...", async (t) => {
-  // doctest:L137
   const { TimeoutError } = await import("ky");
   const cases: [string, TtsService, string | undefined][] = [
     ["too-short body", createFakeTts({ backend: "gemini", emptyResponse: true }), undefined],
@@ -186,7 +182,6 @@ void test("Each case below fails before any audio is sent, so the route can stil
     await ctx.cleanup();
   }
 
-  // doctest:L166
   await t.checkText(lines.join("\n"), `too-short body: {"status":502,"body":{"error":"TTS backend \\"gemini\\" returned 0 bytes — too short to be speech"}}
 unreachable: {"status":502,"body":{"error":"TTS backend unreachable: getaddrinfo ENOTFOUND api.openai.com"},"logged":true}
 provider rejection: {"status":502,"body":{"error":"TTS backend answered 400 Bad Request: Voice name not found"},"logged":true}
@@ -205,7 +200,6 @@ void test("Blank text never reaches the provider.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L180
   const blankAudio = createFakeTts({ backend: "gemini" });
   const blankCtx = await makeTestServer({ services: { openaiAudio: blankAudio } });
   const blankRes = await postTts(blankCtx, "  \n ");
@@ -233,7 +227,6 @@ void test("Once the head is sent, the response is a 200 and cannot become a 502.
       t.error(error);
     }
   });
-  // doctest:L200
   const failing = createFakeTts({ backend: "gemini", failAfterHead: new TypeError("fetch failed", { cause: new Error("socket hang up") }) });
   const failCtx = await makeTestServer({ services: { openaiAudio: failing } });
   const failPort = await listen(failCtx);
@@ -265,7 +258,6 @@ void test("When the browser stops listening — a stop, a new reply, a closed ta
       t.error(error);
     }
   });
-  // doctest:L225
   let releaseRest: () => void = () => {};
   const restGate = new Promise<void>((resolve) => { releaseRest = resolve; });
   const slow = createFakeTts({ backend: "gemini", beforeEachRestChunk: () => restGate });
@@ -296,7 +288,6 @@ void test("A cancelled clip also breaks off its stream, but that is the browser 
       t.error(error);
     }
   });
-  // doctest:L250
   const { SpeechCancelledError } = await import("../../../../src/services/tts.js");
   const leftEarly = createFakeTts({ backend: "gemini", beforeEachRestChunk: () => Promise.reject(new SpeechCancelledError()) });
   const leftCtx = await makeTestServer({ services: { openaiAudio: leftEarly } });
@@ -315,7 +306,6 @@ void test("A cancelled clip also breaks off its stream, but that is the browser 
 // provider 502 and a stalled request — were single attempts, on an endpoint whose
 // provider documents 502/503/524/529 as transient and asks callers to retry.
 void test("retry:", async (t) => {
-  // doctest:L274
   const ttsSource = await (await import("node:fs/promises"))
     .readFile(new URL("../../../../src/services/tts.ts", import.meta.url), "utf8");
   const retryBlock = /const TTS_RETRY = {([\S\s]*?)} satisfies/.exec(ttsSource)?.[1] ?? "";

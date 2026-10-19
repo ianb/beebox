@@ -19,7 +19,6 @@ const check = (l: ReturnType<typeof layout>) => namesRule.check(l);
 // extension; a data file with the same stem (`index.html`) is outside the
 // rule's scope and gets no finding.
 void test("A module, test, or declaration file named index is flagged regardless of exte...", async (t) => {
-  // doctest:L22
   const noIndex = layout({
     files: {
       "src/index.ts": {},
@@ -41,7 +40,6 @@ void test("A module, test, or declaration file named index is flagged regardless
 // A `reexportOnly` module inside `src/exports/` is clean, including when it is
 // itself a public surface's source; the same module elsewhere is flagged.
 void test("A reexportOnly module inside src/exports/ is clean, including when it is itse...", async (t) => {
-  // doctest:L46
   const reexport = layout({
     files: {
       "src/exports/schema.ts": { reexportOnly: true },
@@ -69,7 +67,6 @@ void test("A reexportOnly module inside src/exports/ is clean, including when it
 // specifier (`view-widgets.d.ts` allowed by `./view-widgets`); an unclaimed
 // module (`orphan.ts`) is flagged.
 void test("A code-target (.js/.mjs/.cjs) surface with no known source is flagged at the...", async (t) => {
-  // doctest:L73
   const surfaces = layout({
     files: {
       "src/exports/widgets.ts": {},
@@ -102,7 +99,6 @@ void test("A code-target (.js/.mjs/.cjs) surface with no known source is flagged
 // `src/exports/`, not `pkg`'s: it already lives there, so there is no
 // finding, even though it sits outside `pkg/src/exports`.
 void test("Each message in full, above.", async (t) => {
-  // doctest:L115
   const nestedSource = layout({
     files: {
       "src/frontend/src/exports/view-widgets.tsx": {},
@@ -118,7 +114,6 @@ void test("Each message in full, above.", async (t) => {
 // A source outside that nested package's `src/exports/` is still flagged,
 // naming the nested package's export directory as the destination.
 void test("A source outside that nested package's src/exports/ is still flagged, naming...", async (t) => {
-  // doctest:L132
   const nestedMisplaced = layout({
     files: {
       "src/frontend/src/widgets.tsx": {},
@@ -144,7 +139,6 @@ void test("A source outside that nested package's src/exports/ is still flagged,
 // carries the outer package's `./view-widgets`, sourced from this same file:
 // that satisfies finding 4, so the module is not flagged as an orphan.
 void test("frontend's own view-widgets.tsx (scanned as pkg here, standing in for the nes...", async (t) => {
-  // doctest:L153
   const enclosingNamed = layout({
     files: {
       "src/exports/view-widgets.tsx": {},
@@ -158,7 +152,6 @@ void test("frontend's own view-widgets.tsx (scanned as pkg here, standing in for
 
 // ## A data file in `src/exports/` is out of scope for public-surface membership
 void test("A data file in `src/exports/` is out of scope for public-surface membership", async (t) => {
-  // doctest:L168
   const dataInExports = layout({
     files: {
       "src/exports/schema.ts": {},
@@ -176,7 +169,6 @@ void test("A data file in `src/exports/` is out of scope for public-surface memb
 // exempt, and a test whose stem matches its own directory (not the module it
 // covers) gets no finding.
 void test("Equal (router/router.ts) and prefixed (router/router-core.ts) both count, for...", async (t) => {
-  // doctest:L187
   const repeated = layout({
     files: {
       "src/router/router-core.ts": {},
@@ -202,7 +194,6 @@ void test("Equal (router/router.ts) and prefixed (router/router-core.ts) both co
 // pattern, not `src/exports/`, is the declared location, so the expansion's
 // source gets no finding; a literal key built from the same tree still does.
 void test("Both message shapes shown above.", async (t) => {
-  // doctest:L219
   const wildcard = layout({
     files: {
       "src/plugins/alpha/plugin.ts": {},

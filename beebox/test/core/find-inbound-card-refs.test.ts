@@ -12,13 +12,11 @@ import { makeTmpBox } from "../helpers/test-helpers.js";
 
 // ## Read failures accompany the references that could be scanned
 void test("Read failures accompany the references that could be scanned", async (t) => {
-  // doctest:L16
   const box = await makeTmpBox();
   await box.write("_content/box/notes/Target.doc.card", "---\ntype: doc\ntitle: Target\n---\n");
   await box.write("_content/box/notes/Readable.md", "[target](Target.doc.card)\n");
   await box.write("_content/box/notes/Unreadable.md", "[target](Target.doc.card)\n");
 
-  // doctest:L21
   const unreadable = box.path("_content/box/notes/Unreadable.md");
   const result = await findInboundCardRefs({
     boxRoot: box.root,

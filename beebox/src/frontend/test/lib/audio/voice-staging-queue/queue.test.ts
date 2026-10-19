@@ -49,14 +49,11 @@ let now = 1000;
 
 // ## Enqueue is synchronous; success drains the queue and clears status
 void test("Enqueue is synchronous; success drains the queue and clears status", async (t) => {
-  // doctest:L52
   const { queue, transport } = makeQueue({});
 
-  // doctest:L54
   queue.enqueueCreate("r1", { targetSessionId: "s1" });
   t.check(queue.pendingChunkCount("r1"), 0);
 
-  // doctest:L58
   queue.enqueueChunk("r1", new ArrayBuffer(4));
   queue.enqueueChunk("r1", new ArrayBuffer(4));
   t.check(queue.pendingChunkCount("r1"), 2);
@@ -65,11 +62,9 @@ void test("Enqueue is synchronous; success drains the queue and clears status", 
   // sent successfully is gone and the finalize op knows the chunk count the queue
   // assigned on its own:
 
-  // doctest:L69
   queue.enqueueFinalize("r1", { emissionId: null, hq: null });
   await flushMicrotasks();
 
-  // doctest:L72
   t.check([...queue.getStatusSnapshot()], []);
 
   t.check(transport.calls, ["r1#0:create", "r1#1:chunk", "r1#2:chunk", "r1#3:finalize"]);
@@ -77,10 +72,8 @@ void test("Enqueue is synchronous; success drains the queue and clears status", 
 
 // ## A transient failure retries, then succeeds
 void test("A transient failure retries, then succeeds", async (t) => {
-  // doctest:L82
   const { queue: queue2, transport: transport2 } = makeQueue({ script: { "r2#0": ["transient", "success"] } });
 
-  // doctest:L84
   queue2.enqueueCreate("r2", { targetSessionId: "s1" });
   await flushMicrotasks();
   t.check(queue2.getStatusSnapshot().get("r2"), { queuedOps: 1 });
@@ -88,12 +81,10 @@ void test("A transient failure retries, then succeeds", async (t) => {
   // Advancing time past the first retry delay and waking the drainer lands the
   // second (successful) attempt:
 
-  // doctest:L94
   now += 2000;
   queue2.wake();
   await flushMicrotasks();
 
-  // doctest:L98
   t.check([...queue2.getStatusSnapshot()], []);
 
   t.check(transport2.calls, ["r2#0:create", "r2#0:create"]);
@@ -101,10 +92,8 @@ void test("A transient failure retries, then succeeds", async (t) => {
 
 // ## A terminal failure drops the whole recording and reports it
 void test("A terminal failure drops the whole recording and reports it", async (t) => {
-  // doctest:L108
   const { queue: queue3, transport: transport3 } = makeQueue({ script: { "r3#1": ["terminal"] } });
 
-  // doctest:L110
   queue3.enqueueCreate("r3", { targetSessionId: "s1" });
   queue3.enqueueChunk("r3", new ArrayBuffer(4));
   queue3.enqueueFinalize("r3", { emissionId: null, hq: null });
@@ -113,17 +102,14 @@ void test("A terminal failure drops the whole recording and reports it", async (
   // Its ops are gone, but the status store keeps a terminal note against the
   // recording id, so the UI can still show why it stopped:
 
-  // doctest:L120
   t.check(queue3.getStatusSnapshot().get("r3"), {
     queuedOps: 0,
     lastError: "409 conflict",
     terminal: true,
   });
 
-  // doctest:L123
   t.check(queue3.getFailuresSnapshot(), [{ recordingId: "r3", message: "409 conflict", at: 3000 }]);
 
-  // doctest:L127
   // The finalize op that would have followed the rejected chunk never sends —
   // the whole recording was dropped.
   t.check(transport3.calls, ["r3#0:create", "r3#1:chunk"]);
@@ -134,12 +120,10 @@ void test("A terminal failure drops the whole recording and reports it", async (
 // The transport classifies a 404 as success before the core ever sees it, so a
 // discard for a session the box already forgot resolves silently.
 void test("The transport classifies a 404 as success before the core ever sees it, so a...", async (t) => {
-  // doctest:L139
   const { queue: queue4 } = makeQueue({});
   queue4.enqueueDiscard("r4");
   await flushMicrotasks();
 
-  // doctest:L143
   t.check({ pending: [...queue4.getStatusSnapshot()], failures: queue4.getFailuresSnapshot() }, {
     pending: [],
     failures: [],
@@ -148,14 +132,12 @@ void test("The transport classifies a 404 as success before the core ever sees i
 
 // ## The status store is `useSyncExternalStore`-compatible
 void test("The status store is `useSyncExternalStore`-compatible", async (t) => {
-  // doctest:L150
   const { queue: queue6 } = makeQueue({});
   let notified = 0;
   const unsubscribe = queue6.subscribeStatus(() => { notified += 1; });
   queue6.enqueueCreate("r6", { targetSessionId: "s1" });
   t.check(notified, any(Number).positive());
 
-  // doctest:L157
   unsubscribe();
 });
 
@@ -165,18 +147,15 @@ void test("The status store is `useSyncExternalStore`-compatible", async (t) => 
 // (by mistake) enqueues one more chunk afterward would otherwise corrupt that
 // count; the queue refuses the late chunk instead.
 void test("enqueueFinalize snapshots the chunk count it assigned so far.", async (t) => {
-  // doctest:L167
   const { queue: queue7, transport: transport7 } = makeQueue({});
   queue7.enqueueCreate("r7", { targetSessionId: "s1" });
   queue7.enqueueChunk("r7", new ArrayBuffer(4));
   queue7.enqueueFinalize("r7", { emissionId: null, hq: null });
   t.check(queue7.pendingChunkCount("r7"), 1);
 
-  // doctest:L174
   queue7.enqueueChunk("r7", new ArrayBuffer(4));
   t.check(queue7.pendingChunkCount("r7"), 1);
 
-  // doctest:L178
   await flushMicrotasks();
   t.check(transport7.calls, ["r7#0:create", "r7#1:chunk", "r7#2:finalize"]);
 });
@@ -194,7 +173,6 @@ void test("enqueueFinalize snapshots the chunk count it assigned so far.", async
 // this race, since strict oldest-first ordering otherwise never lets a merely
 // *newer* recording jump ahead of one already mid-backoff.
 void test("Two recordings can each be mid-drain at once across a merge from storage (two...", async (t) => {
-  // doctest:L197
   const storage8 = createInMemoryVoiceStagingStorage();
   storage8.put({
     apiBase: "http://box.example/api",
@@ -215,7 +193,6 @@ void test("Two recordings can each be mid-drain at once across a merge from stor
   // in mid-drain) was sent and succeeded in between — and `stuck`'s backoff is
   // untouched:
 
-  // doctest:L219
   t.check(transport8.calls, ["stuck#0:create", "urgent#0:create"]);
 
   t.check(queue8.getStatusSnapshot().get("stuck"), { queuedOps: 1 });
@@ -223,19 +200,16 @@ void test("Two recordings can each be mid-drain at once across a merge from stor
   // Waking the drainer again immediately still finds `stuck` too soon to retry —
   // `urgent`'s success did not clear its wait:
 
-  // doctest:L230
   queue8.wake();
   await flushMicrotasks();
   t.check(transport8.calls, ["stuck#0:create", "urgent#0:create"]);
 
   // Only once real backoff time has passed does `stuck` retry and succeed:
 
-  // doctest:L239
   now += 5000;
   queue8.wake();
   await flushMicrotasks();
 
-  // doctest:L243
   t.check([...queue8.getStatusSnapshot()], []);
 
   t.check(transport8.calls, ["stuck#0:create", "urgent#0:create", "stuck#0:create"]);

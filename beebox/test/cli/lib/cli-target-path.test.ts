@@ -16,7 +16,6 @@ import { DisplayFormPathArgError,
 
 // ## A plain relative argument joins onto `relativeTo`
 void test("A plain relative argument joins onto `relativeTo`", async (t) => {
-  // doctest:L20
   t.check(resolveCliTargetPath({ boxRoot: "/box", raw: "recipes/Soup.recipe.card", relativeTo: "/somewhere/else" }), "/somewhere/else/recipes/Soup.recipe.card");
 });
 
@@ -26,22 +25,18 @@ void test("A plain relative argument joins onto `relativeTo`", async (t) => {
 // argument was used AS-IS — resolving from the real filesystem root, not the
 // box root, and silently finding nothing:
 void test("Before this fix, path.isAbsolute(\"/config/box.json\") was true, so the argumen...", async (t) => {
-  // doctest:L31
   t.check(resolveCliTargetPath({ boxRoot: "/box", raw: "/_config/box.json", relativeTo: "/somewhere/else" }), "/box/_config/box.json");
 });
 
 // ## A genuine OS-absolute path (not naming an area) is used as-is
 void test("A genuine OS-absolute path (not naming an area) is used as-is", async (t) => {
-  // doctest:L38
   t.check(resolveCliTargetPath({ boxRoot: "/box", raw: "/box/_content/recipes/Soup.recipe.card", relativeTo: "/box" }), "/box/_content/recipes/Soup.recipe.card");
 
-  // doctest:L41
   t.check(resolveCliTargetPath({ boxRoot: "/box", raw: "/etc/passwd", relativeTo: "/box" }), "/etc/passwd");
 });
 
 // ## A display-form path throws `DisplayFormPathArgError`, naming the canonical form
 void test("A display-form path throws `DisplayFormPathArgError`, naming the canonical form", async (t) => {
-  // doctest:L48
   function tryResolve(raw: string): string {
     try {
       return resolveCliTargetPath({ boxRoot: "/box", raw, relativeTo: "/box" });
@@ -50,13 +45,11 @@ void test("A display-form path throws `DisplayFormPathArgError`, naming the cano
     }
   }
 
-  // doctest:L56
   t.check(tryResolve("Config:box.json"), "DisplayFormPathArgError: `Config:box.json` is the boxholder's display form; write `/_config/box.json`");
 
   // `content:` is never a display form (a real URI scheme; `_content` displays
   // bare) — it resolves as an ordinary relative argument instead of throwing:
 
-  // doctest:L64
   t.check(tryResolve("content:box.json"), "/box/content:box.json");
 
   // A `<label>://` double-slash form is a URL, never a display form:
@@ -64,7 +57,6 @@ void test("A display-form path throws `DisplayFormPathArgError`, naming the cano
   // `path.join` normalizes the doubled slash away, same as any other relative
   // argument:
 
-  // doctest:L74
   t.check(
     tryResolve("Config://box.json")
     ,
@@ -79,7 +71,6 @@ void test("A display-form path throws `DisplayFormPathArgError`, naming the cano
 // as the display-form rejection, and both share the `BoxPathArgError` base the
 // commands catch:
 void test("A path nesting a non-tmp area name below the root throws ReservedSegmentPathA...", async (t) => {
-  // doctest:L86
   function tryReserved(raw: string): string {
     try {
       return resolveCliTargetPath({ boxRoot: "/box", raw, relativeTo: "/box" });
@@ -88,12 +79,9 @@ void test("A path nesting a non-tmp area name below the root throws ReservedSegm
     }
   }
 
-  // doctest:L94
   t.check(tryReserved("/_content/recipes/_config/x.card"), "ReservedSegmentPathArgError: _content/recipes/_config/x.card: \"_config\" is a reserved box-area name, legal only at the box root (a nested _tmp is the one exception) — rename this entry");
 
-  // doctest:L97
   t.check(tryReserved("_content/scratch/_tmp/x.txt"), "/box/_content/scratch/_tmp/x.txt");
 
-  // doctest:L100
   t.check(tryReserved("/_config/_template-updates/_content/briefing.md"), "/box/_config/_template-updates/_content/briefing.md");
 });

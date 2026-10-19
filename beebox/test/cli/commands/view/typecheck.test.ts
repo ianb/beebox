@@ -68,14 +68,12 @@ void test("A stale-typed view (removed field) fails; clean passes; `as any` slip
       t.error(error);
     }
   });
-  // doctest:L64
   const box = await makeTmpBox({ deps: true });
   await writeView(box, { rel: "stale.tsx", content: STALE });
   await writeView(box, { rel: "clean.tsx", content: CLEAN });
   await writeView(box, { rel: "anycast.tsx", content: ANYCAST });
   await writeView(box, { rel: "noise.tsx", content: NOISE });
 
-  // doctest:L70
   const result = await typecheckViews(box.root);
   t.check(result, {
     ok: false,

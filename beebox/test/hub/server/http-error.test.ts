@@ -16,7 +16,6 @@ void test("line 11", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L12
   const app = Fastify({ logger: false });
   registerHubErrorHandler(app);
   app.get("/explode", async () => {

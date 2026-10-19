@@ -15,7 +15,6 @@ import { layout } from "../fixture.js";
 //
 // ## No registries, no findings
 void test("Every fixture below that expects a clean (or unrelated-finding) result gives...", async (t) => {
-  // doctest:L19
   const plainLayout = layout({ files: { "src/util.ts": {} } });
   t.check(setsRule.check(plainLayout), []);
 });
@@ -26,7 +25,6 @@ void test("Every fixture below that expects a clean (or unrelated-finding) resul
 // imports the migrate member's type only, which rule 2 (member independence)
 // allows.
 void test("entry:", async (t) => {
-  // doctest:L31
   const commandsLayout = layout({
     files: {
       "src/commands.ts": {
@@ -59,7 +57,6 @@ void test("entry:", async (t) => {
 // candidate members, so `AGENTS.md` is never unclaimed. `stray.ts` is a module,
 // so it still is.
 void test("Data files (a directory's AGENTS.md, fixtures, assets) are opaque to the rule...", async (t) => {
-  // doctest:L65
   const assetsLayout = layout({
     files: {
       "src/assets.ts": {
@@ -90,7 +87,6 @@ void test("Data files (a directory's AGENTS.md, fixtures, assets) are opaque to 
 // `other.ts` is also misnamed for the directory it declares (rule 2), so it
 // carries both findings.
 void test("other.ts is also misnamed for the directory it declares (rule 2), so it carri...", async (t) => {
-  // doctest:L91
   const dupLayout = layout({
     files: {
       "src/dup.ts": {
@@ -126,7 +122,6 @@ void test("other.ts is also misnamed for the directory it declares (rule 2), so 
 //
 // `trpc/router.ts` declares `trpc/routers`: right parent, wrong stem.
 void test("trpc/router.ts declares trpc/routers:", async (t) => {
-  // doctest:L118
   const trpcLayout = layout({
     files: {
       "trpc/router.ts": {
@@ -152,7 +147,6 @@ void test("trpc/router.ts declares trpc/routers:", async (t) => {
 // `customVerb` has no import, and `shared-helper.ts` is a member imported
 // from outside `src/verbs`.
 void test("legacy.ts is an unclaimed file, migrate/ is an unclaimed subdirectory (the re...", async (t) => {
-  // doctest:L142
   const verbsLayout = layout({
     files: {
       "src/verbs.ts": {
@@ -205,7 +199,6 @@ void test("legacy.ts is an unclaimed file, migrate/ is an unclaimed subdirectory
 // `cards.ts` (a file member) and `legacy/handler.ts` (a directory member, via
 // `entry: "handler"`) are keyed wrong.
 void test("The key equals the member name converted from kebab-case to camelCase:", async (t) => {
-  // doctest:L179
   const exportsLayout = layout({
     files: {
       "src/exports.ts": {
@@ -250,7 +243,6 @@ void test("The key equals the member name converted from kebab-case to camelCase
 // imports the registry itself (rule 4's "members must not import their
 // registry").
 void test("health.ts imports chat.ts's value (rule 2 / member-imports); chat.ts imports...", async (t) => {
-  // doctest:L220
   const routesLayout = layout({
     files: {
       "src/routes.ts": {
@@ -301,7 +293,6 @@ void test("health.ts imports chat.ts's value (rule 2 / member-imports); chat.ts 
 // `register` function defined in the same file, also bound by no import: no
 // finding, for the same reason.
 void test("other.ts calls registerish:", async (t) => {
-  // doctest:L266
   const registrationSourcesLayout = layout({
     files: {
       "src/schemas/builtins.ts": { topLevelCalls: ["registerTemplate"] },
@@ -348,7 +339,6 @@ void test("other.ts calls registerish:", async (t) => {
 // `../schemas` resolves to the set directory; `../other` resolves elsewhere
 // and is ignored.
 void test("../schemas resolves to the set directory; ../other resolves elsewhere and is...", async (t) => {
-  // doctest:L308
   const pathReadLayout = layout({
     files: {
       "src/schemas.ts": {
@@ -382,7 +372,6 @@ void test("../schemas resolves to the set directory; ../other resolves elsewhere
 // doesn't count, matching how tests never count as importers for the units
 // rule.
 void test("commands.ts declares completeness over src/commands/, but no module value-imp...", async (t) => {
-  // doctest:L337
   const unimportedLayout = layout({
     files: {
       "src/commands.ts": {
@@ -413,7 +402,6 @@ void test("commands.ts declares completeness over src/commands/, but no module v
 // could keep honest; the finding arrives with the first member. The directory
 // may hold data (a README) and stay clean.
 void test("members:", async (t) => {
-  // doctest:L366
   const emptyLayout = layout({
     files: {
       "src/plugins.ts": {
@@ -431,7 +419,6 @@ void test("members:", async (t) => {
 // all — a set's members are read through a value import (`.list`, `.get`), so
 // a type-only reference proves nothing about who actually enumerates the set.
 void test("entry.ts imports commands.ts for its type only, same as no importer at all —...", async (t) => {
-  // doctest:L385
   const typeOnlyLayout = layout({
     files: {
       "src/commands.ts": {

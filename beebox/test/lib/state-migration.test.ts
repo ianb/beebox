@@ -16,7 +16,6 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), "bbx-state-migration-"));
 
 // ## Old-only state moves and repeated migration is a no-op
 void test("Old-only state moves and repeated migration is a no-op", async (t) => {
-  // doctest:L27
   fs.mkdirSync(path.join(root, ".callback-box"));
   fs.writeFileSync(path.join(root, ".callback-box", "state.json"), "old\n");
   t.check(await migrateBoxState(root), "migrated");
@@ -26,7 +25,6 @@ void test("Old-only state moves and repeated migration is a no-op", async (t) =>
 
 // ## Both paths fail closed
 void test("Both paths fail closed", async (t) => {
-  // doctest:L40
   fs.mkdirSync(path.join(root, ".callback-box"));
   await t.checkThrows(() => migrateBoxState(root), "PersistedStateConflictError");
   t.check(await migrateBoxState(root).catch((e: unknown) => e), instanceOf(PersistedStateConflictError));
@@ -38,7 +36,6 @@ void test("Both paths fail closed", async (t) => {
 // `mkdir -p`) used to leave the box refusing every command until a person
 // deleted the empty directory. Empty means nothing to merge.
 void test("Something creating .beebox/ ahead of the migration (a booting hub child, a mk...", async (t) => {
-  // doctest:L52
   const emptyRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bbx-empty-new-migration-"));
   fs.mkdirSync(path.join(emptyRoot, ".callback-box"));
   fs.writeFileSync(path.join(emptyRoot, ".callback-box", "state.json"), "old\n");
@@ -51,7 +48,6 @@ void test("Something creating .beebox/ ahead of the migration (a booting hub chi
 
 // ## The legacy box marker joins the canonical state directory
 void test("The legacy box marker joins the canonical state directory", async (t) => {
-  // doctest:L68
   const markerRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bbx-marker-migration-"));
   fs.writeFileSync(path.join(markerRoot, ".cb-box"), '{"shapeVersion":2}\n');
   t.check(await migrateBoxState(markerRoot), "migrated");
@@ -62,7 +58,6 @@ void test("The legacy box marker joins the canonical state directory", async (t)
 
 // ## Concurrent callers serialize and converge
 void test("Concurrent callers serialize and converge", async (t) => {
-  // doctest:L82
   const concurrentRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bbx-concurrent-migration-"));
   fs.mkdirSync(path.join(concurrentRoot, ".callback-box"));
   fs.writeFileSync(path.join(concurrentRoot, ".callback-box", "state.json"), "old\n");
@@ -90,7 +85,6 @@ void test("Every getBoxShape call runs the migration check, so it sits on most r
       t.error(error);
     }
   });
-  // doctest:L102
   const migratedRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bbx-migrated-no-lock-"));
   fs.mkdirSync(path.join(migratedRoot, ".beebox"));
   await acquireLock(migrationLockPath(migratedRoot), { purpose: "test holder" });

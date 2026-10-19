@@ -37,14 +37,12 @@ const voice = { "c/X.memo.card": memo("status: processed\ncreated: 2026-10-12T12
 // An explicit `title:` wins. Otherwise a leading heading becomes the title and
 // leaves the body, since a doc does not repeat its title as a heading.
 void test("An explicit title: wins.", async (t) => {
-  // doctest:L41
   await t.checkText(written({ "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\ntitle: Kept\n", "# Not this\nBody\n") }, "n/A.doc.card"), `---
 title: Kept
 ---
 # Not this
 Body`);
 
-  // doctest:L49
   await t.checkText(written({ "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\n", "# Porch *plan*\n\nBody\n") }, "n/A.doc.card"), `---
 title: Porch plan
 ---
@@ -55,7 +53,6 @@ Body`);
 // wraps and cut at 80 characters. That is what the memo list showed. An empty
 // memo is titled from its filename.
 void test("Without either, the first paragraph is the title, joined across its hard wrap...", async (t) => {
-  // doctest:L62
   t.check(written({ "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\n", "- Buy *cedar* boards for\n  the porch\n\nSecond.\n") }, "n/A.doc.card").split("\n"), [
     "---",
     "title: Buy cedar boards for the porch",
@@ -67,7 +64,6 @@ void test("Without either, the first paragraph is the title, joined across its h
     "",
   ]);
 
-  // doctest:L65
   await t.checkText(written({ "n/Old_Voice.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\n") }, "n/Old_Voice.doc.card"), `---
 title: Old Voice
 ---`);
@@ -80,7 +76,6 @@ title: Old Voice
 // `## Clipping` section. A clip title with no URL stays in that section.
 // Global fields such as `todos` and `share-id` are kept.
 void test("source becomes via.channel, verbatim.", async (t) => {
-  // doctest:L80
   t.check(
     written({ "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\nsource: telegram\nshare-id: 11111111-1111-4111-8111-111111111111\ntodos: []\ncontext:\n  url: https://example.com/a\n  title: A page\n  text: A quoted line\n", "My words\n") }, "n/A.doc.card").split("\n")
     ,
@@ -104,7 +99,6 @@ void test("source becomes via.channel, verbatim.", async (t) => {
   ],
   );
 
-  // doctest:L83
   t.check(written({ "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\ncontext:\n  title: A book\n  text: A quoted line\n", "Note\n") }, "n/A.doc.card").split("\n"), [
     "---",
     "title: Note",
@@ -122,7 +116,6 @@ void test("source becomes via.channel, verbatim.", async (t) => {
 
 // A field the migration does not map, top-level or nested, fails the whole run.
 void test("A field the migration does not map, top-level or nested, fails the whole run.", async (t) => {
-  // doctest:L90
   t.check(plan({ "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\npriority: high\ncontext:\n  author: Odette\n") }).failures, [
     "n/A.memo.card: fields this migration does not map: priority, context.author",
   ]);
@@ -135,21 +128,18 @@ void test("A field the migration does not map, top-level or nested, fails the wh
 // same words, re-wrapped or with a link, gets no second copy. Its language,
 // time, and an error with no recording to retry are dropped and reported.
 void test("A transcription with no recording becomes the body, or a ## Transcript sectio...", async (t) => {
-  // doctest:L102
   const tx = "status: new\ncreated: 2026-01-01T00:00:00Z\ntranscription:\n  text: Pick up the paint\n  language: en\n";
   await t.checkText(written({ "n/A.memo.card": memo(tx) }, "n/A.doc.card"), `---
 title: Pick up the paint
 ---
 Pick up the paint`);
 
-  // doctest:L110
   await t.checkText(written({ "n/A.memo.card": memo(tx, "Pick up\nthe [paint](x.doc.card)\n") }, "n/A.doc.card"), `---
 title: Pick up the paint
 ---
 Pick up
 the [paint](x.doc.card)`);
 
-  // doctest:L118
   t.check(plan({ "n/A.memo.card": memo(tx + "transcription-error:\n  permanent: true\n  message: Bad audio\n", "Other words\n") }).dropped, [
     "n/A.memo.card: transcription.language = en",
     "n/A.memo.card: transcription-error with no recording = {\"permanent\":true,\"message\":\"Bad audio\"}",
@@ -163,7 +153,6 @@ the [paint](x.doc.card)`);
 // the card's `via.at`, the only place a creation time is kept; a voice capture
 // was recorded on a microphone. The doc links the card where it linked the file.
 void test("A quick-capture recording in the attach scope gets recording.audio.card and m...", async (t) => {
-  // doctest:L130
   const p = plan(voice, ["c/X.attach/recording.m4a"]);
   t.check([p.moves, p.writes.map((w) => `${w.kind} ${w.path}`)], [
     [
@@ -178,7 +167,6 @@ void test("A quick-capture recording in the attach scope gets recording.audio.ca
     ],
   ]);
 
-  // doctest:L134
   await t.checkText(after(p, (w) => w.kind === "audio"), `---
 filename:
   ref: attach/recording.m4a
@@ -191,7 +179,6 @@ transcription-error:
   message: stale
 ---`);
 
-  // doctest:L148
   await t.checkText(after(p, (w) => w.kind === "doc"), `---
 title: Voice note
 via:
@@ -204,7 +191,6 @@ via:
 // `Note.memo.card`). It moves into the doc's attach scope, and the doc gains a
 // link to it because the memo had none.
 void test("The older layout keeps the recording beside the card (Note.m4a next to Note.m...", async (t) => {
-  // doctest:L163
   const sib = plan({ "n/Note.memo.card": memo("status: new\ncreated: 2026-05-01T08:00:00-05:00\nsource: telegram\n") }, ["n/Note.m4a"]);
   t.check([sib.moves, after(sib, (w) => w.kind === "doc")], [
     [
@@ -226,12 +212,10 @@ via:
 // Two recordings for one memo, or a recording with no `created` time for the
 // card, is a failure.
 void test("Two recordings for one memo, or a recording with no created time for the card...", async (t) => {
-  // doctest:L172
   t.check(plan({ "n/Note.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\n") }, ["n/Note.m4a", "n/Note.attach/b.webm"]).failures, [
     "n/Note.memo.card: more than one recording (n/Note.m4a, n/Note.attach/b.webm); move the extra ones out first",
   ]);
 
-  // doctest:L175
   t.check(plan({ "n/Note.memo.card": memo("status: new\n") }, ["n/Note.m4a"]).failures, [
     "n/Note.memo.card: has a recording but no `created` time for its audio card's via.at",
   ]);
@@ -244,7 +228,6 @@ void test("Two recordings for one memo, or a recording with no created time for 
 // frontmatter ref, an inline YAML map that `bbx mv` skips, or prose. A link to
 // the recording file gains its new folder.
 void test("The doc keeps the memo's directory and basename, so every mention of the memo...", async (t) => {
-  // doctest:L187
   const refs = plan({
     ...voice,
     "c/Index.doc.card": "---\ntitle: Index\nrefs: [{ref: X.memo.card}]\n---\nSee [it](/c/X.memo.card), `X.memo.card`, and [audio](X.attach/recording.m4a). Not `**/*.memo.card`.\n",
@@ -258,7 +241,6 @@ See [it](/c/X.doc.card), \`X.doc.card\`, and [audio](X.attach/recording.attach/r
 
 // A memo that links another memo links the other memo's doc.
 void test("A memo that links another memo links the other memo's doc.", async (t) => {
-  // doctest:L203
   await t.checkText(written({ "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\ntitle: A\n", "See [B](./B.memo.card)\n"), "n/B.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\ntitle: B\n") }, "n/A.doc.card"), `---
 title: A
 ---
@@ -268,7 +250,6 @@ See [B](./B.doc.card)`);
 // A sibling recording's bare filename cannot be told apart from prose, so a
 // remaining mention of it is a failure to fix by hand.
 void test("A sibling recording's bare filename cannot be told apart from prose, so a rem...", async (t) => {
-  // doctest:L215
   t.check(plan({ "n/Note.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\n"), "n/Other.doc.card": "---\ntitle: O\n---\n[audio](Note.m4a)\n" }, ["n/Note.m4a"]).failures, [
     "n/Other.doc.card: mentions a recording that moves into an attach scope; update it by hand first",
   ]);
@@ -281,7 +262,6 @@ void test("A sibling recording's bare filename cannot be told apart from prose, 
 // again and accepts the pieces already in place. Here the audio card and the
 // move landed before the interruption.
 void test("The runner writes audio cards, moves recordings, writes docs, rewrites referr...", async (t) => {
-  // doctest:L227
   const audioCard = after(plan(voice, ["c/X.attach/recording.m4a"]), (w) => w.kind === "audio");
   const moved = plan({ ...voice, "c/X.attach/recording.audio.card": audioCard }, ["c/X.attach/recording.attach/recording.m4a"]);
   t.check([moved.failures, moved.moves, moved.writes.map((w) => `${w.kind} ${w.path}`), moved.deletes], [
@@ -308,7 +288,6 @@ void test("The runner writes audio cards, moves recordings, writes docs, rewrite
 // A memo that links another memo is resumed too: the doc the first run wrote
 // already links the other doc, and the rerun compares it that way.
 void test("The move is planned again even then:", async (t) => {
-  // doctest:L241
   const pair = { "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\ntitle: A\n", "See [B](./B.memo.card)\n"), "n/B.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\ntitle: B\n") };
   const firstA = written(pair, "n/A.doc.card");
   t.check(plan({ ...pair, "n/A.doc.card": firstA }).failures, []);
@@ -317,7 +296,6 @@ void test("The move is planned again even then:", async (t) => {
 // A sibling recording whose audio card was written before the interruption
 // resumes without mistaking that card's own reference for a stray mention.
 void test("A sibling recording whose audio card was written before the interruption resu...", async (t) => {
-  // doctest:L251
   const sibMemo = { "n/Note.memo.card": memo("status: new\ncreated: 2026-05-01T08:00:00-05:00\n") };
   const sibCard = after(plan(sibMemo, ["n/Note.m4a"]), (w) => w.kind === "audio");
   const resumed = plan({ ...sibMemo, "n/Note.attach/Note.audio.card": sibCard }, ["n/Note.m4a"]);
@@ -335,7 +313,6 @@ void test("A sibling recording whose audio card was written before the interrupt
 // A doc already at the target that differs from what the plan writes is not
 // this migration's work, so the run stops.
 void test("A doc already at the target that differs from what the plan writes is not thi...", async (t) => {
-  // doctest:L262
   t.check(plan({ "n/A.memo.card": memo("status: new\ncreated: 2026-01-01T00:00:00Z\n", "Words\n"), "n/A.doc.card": "---\ntitle: Someone else's\n---\n" }).failures, [
     "n/A.memo.card: n/A.doc.card already exists with different content",
   ]);
@@ -359,7 +336,6 @@ void test("The runner applies the plan to a real box.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L278
   const box = await makeTmpBox({ git: true });
   await mkdir(box.path("_content/captures/X.attach"), { recursive: true });
   await writeFile(box.path("_content/captures/X.memo.card"), voice["c/X.memo.card"]);
@@ -372,7 +348,6 @@ void test("The runner applies the plan to a real box.", async (t) => {
   execFileSync("git", ["commit", "-qm", "fixture", "--no-verify"], { cwd: box.root });
   t.check((await lstat(box.path("_content/captures/X.attach/recording.m4a"))).isSymbolicLink(), true);
 
-  // doctest:L291
   const run = await runRetireMemo({ boxRoot: box.root, mode: "apply" });
   t.check([run.code, run.lines.filter((l) => !l.startsWith("audio ") && !l.startsWith("doc "))], [
     2,
@@ -386,14 +361,12 @@ void test("The runner applies the plan to a real box.", async (t) => {
     ],
   ]);
 
-  // doctest:L295
   t.check(await readFile(box.path("_content/captures/X.attach/recording.attach/recording.m4a"), "utf8"), "audio bytes");
 
   // Until the leftovers are fixed, a rerun exits 2 again. A repair that missed one
   // is then recorded with a question for the boxholder that lists it, not as
   // done.
 
-  // doctest:L305
   const again = await runRetireMemo({ boxRoot: box.root, mode: "apply" });
   t.check([again.code, again.lines.at(-1)], [
     2,
@@ -403,7 +376,6 @@ void test("The runner applies the plan to a real box.", async (t) => {
   // Once the agent has changed both to doc cards, the rerun converts nothing and
   // exits 0.
 
-  // doctest:L314
   await writeFile(box.path("src/views/memos.tsx"), "export const dependencies = [\"_content/**/*.doc.card\"];\n");
   await writeFile(box.path("_content/Look.mockup.card"), "---\nrules:\n  - match: \"**/*.doc.card\"\n---\n");
   const fixed = await runRetireMemo({ boxRoot: box.root, mode: "apply" });

@@ -42,7 +42,6 @@ void test("A dead husk is filed away, and leaves every list", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L37
   const box = await makeTmpBox({ git: true });
   const here = await localOrigin();
   await mkdir(box.path("_content/chat/web"), { recursive: true });
@@ -53,7 +52,6 @@ void test("A dead husk is filed away, and leaves every list", async (t) => {
   // Husks are committed cards; the move is a change to a tracked file.
   box.commitAll("seed husk");
 
-  // doctest:L47
   const registry = idleRegistry(box);
   const archived = await archiveChatSession({ boxRoot: box.root, sessionId: DEAD, registry });
   t.check(archived, {
@@ -69,7 +67,6 @@ void test("A dead husk is filed away, and leaves every list", async (t) => {
   // Nothing is gone — the card is a card, at a new path — but the enumerations that
   // feed the chat UI no longer see it, dead list included.
 
-  // doctest:L57
   t.check({
     web: await listChatHusks(box.root),
     archive: await listChatHusksUnder(box.root, "_content/chat/archive"),
@@ -80,7 +77,6 @@ void test("A dead husk is filed away, and leaves every list", async (t) => {
     dead: [],
   });
 
-  // doctest:L64
   t.checkText(await box.read("_content/chat/archive/2026-08-19_22222222.chat.card"), `---\nsession: ${DEAD}\ntitle: Sourdough attempt\norigin: ${here.id}\norigin-name: ${here.name}\n---\n\nNotes from the chat.`);
 
   // ## Archiving twice is the same as archiving once
@@ -88,7 +84,6 @@ void test("A dead husk is filed away, and leaves every list", async (t) => {
   // The second call has nothing to move and says so, rather than reporting the
   // already-filed chat as missing.
 
-  // doctest:L74
   t.check(await archiveChatSession({ boxRoot: box.root, sessionId: DEAD, registry }), {
     status: "already-archived",
     sessionId: "22222222-2222-4222-8222-222222222222",
@@ -109,7 +104,6 @@ void test("Refusal is a result, not an exception:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L89
   const box = await makeTmpBox({ git: true });
   const here = await localOrigin();
   await mkdir(box.path("_content/chat/web"), { recursive: true });
@@ -121,7 +115,6 @@ void test("Refusal is a result, not an exception:", async (t) => {
     `---\nsession: ${LIVE}\norigin: ${here.id}\n---\n\n`,
   );
 
-  // doctest:L100
   const registry = idleRegistry(box);
   t.check(await archiveChatSession({ boxRoot: box.root, sessionId: LIVE, registry }), {
     status: "refused",
@@ -130,7 +123,6 @@ void test("Refusal is a result, not an exception:", async (t) => {
     huskPath: "_content/chat/web/2026-08-20_11111111.chat.card",
   });
 
-  // doctest:L104
   t.check(await listSessionEntries(box.root), [{
     sessionId: LIVE,
     engine: "claude",
@@ -144,7 +136,6 @@ void test("Refusal is a result, not an exception:", async (t) => {
 
   // A session with no card at all is neither archived nor refused.
 
-  // doctest:L111
   t.check(await archiveChatSession({ boxRoot: box.root, sessionId: "33333333-3333-4333-8333-333333333333", registry }), {
     status: "not-found",
     sessionId: "33333333-3333-4333-8333-333333333333",
@@ -166,7 +157,6 @@ void test("A chat is resumable from the moment its id is assigned, which is befo
       t.error(error);
     }
   });
-  // doctest:L128
   const box = await makeTmpBox({ git: true });
   const here = await localOrigin();
   await box.write(
@@ -176,7 +166,6 @@ void test("A chat is resumable from the moment its id is assigned, which is befo
   box.commitAll("seed husk");
   const registry = idleRegistry(box);
 
-  // doctest:L137
   // Nothing holds the session yet: with no transcript either, the husk is dead
   // and archiving is allowed.
   t.check(await loadDeadHusks(box.root), [{
@@ -188,12 +177,10 @@ void test("A chat is resumable from the moment its id is assigned, which is befo
     transcript: { state: "expired" },
   }]);
 
-  // doctest:L144
   // The chat page opens it: the registry now has the session, and the same husk
   // is refused — with a reason that says why, since the transcript is still absent.
   registry.getOrCreate(LIVE);
 
-  // doctest:L148
   t.check(await archiveChatSession({ boxRoot: box.root, sessionId: LIVE, registry }), {
     status: "refused",
     sessionId: "11111111-1111-4111-8111-111111111111",
@@ -201,6 +188,5 @@ void test("A chat is resumable from the moment its id is assigned, which is befo
     huskPath: "_content/chat/web/2026-08-26_11111111.chat.card",
   });
 
-  // doctest:L151
   t.check(await listChatHusks(box.root), [{ path: "_content/chat/web/2026-08-26_11111111.chat.card", session: LIVE, origin: here.id }]);
 });

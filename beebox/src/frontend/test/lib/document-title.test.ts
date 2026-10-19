@@ -14,7 +14,6 @@ import { composeDocumentTitle } from "../../src/lib/document-title.js";
 // The app's name is not in the title. The favicon already identifies the app,
 // and a third segment would never survive truncation.
 void test("The app's name is not in the title.", async (t) => {
-  // doctest:L18
   t.check(composeDocumentTitle({ page: "Grocery planning", box: "Notes" }), "Grocery planning — Notes");
 });
 
@@ -23,7 +22,6 @@ void test("The app's name is not in the title.", async (t) => {
 // `/auth/login` and `/auth/setup` have no box to name, so this is the only place
 // `Bee Box` appears in a title.
 void test("/auth/login and /auth/setup have no box to name, so this is the only place Be...", async (t) => {
-  // doctest:L28
   t.check(composeDocumentTitle({ page: "Sign in", box: null }), "Sign in — Bee Box");
 });
 
@@ -33,10 +31,8 @@ void test("/auth/login and /auth/setup have no box to name, so this is the only 
 // the box — and with no box either (the box-selection landing at `/`), the app
 // name is all that is left.
 void test("Layouts and redirect-only routes declare title:", async (t) => {
-  // doctest:L39
   t.check(composeDocumentTitle({ page: null, box: "Notes" }), "Notes");
 
-  // doctest:L42
   t.check(composeDocumentTitle({ page: null, box: null }), "Bee Box");
 });
 
@@ -46,7 +42,6 @@ void test("Layouts and redirect-only routes declare title:", async (t) => {
 // it falls back the same way a null does, rather than titling a tab with a
 // dangling separator.
 void test("A page publishing an empty or whitespace-only title is publishing nothing — i...", async (t) => {
-  // doctest:L53
   t.check(
     [
       composeDocumentTitle({ page: "   ", box: "Notes" }),
@@ -61,6 +56,5 @@ void test("A page publishing an empty or whitespace-only title is publishing not
 //
 // A card title read from frontmatter can carry it.
 void test("A card title read from frontmatter can carry it.", async (t) => {
-  // doctest:L66
   t.check(composeDocumentTitle({ page: "  Roast chicken  ", box: " Kitchen " }), "Roast chicken — Kitchen");
 });

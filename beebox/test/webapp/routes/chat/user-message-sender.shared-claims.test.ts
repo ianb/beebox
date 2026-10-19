@@ -61,14 +61,12 @@ void test("The route sends first.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L58
   const ctx = await makeTestServer({ chatBackend: createFakeChatBackend() });
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L64
   const viaRoute = await ctx.request({ method: "POST", url: "/api/chat/send", payload: { session: "new", message: "feed the cat", messageId: "route-first" } });
   const viaSender = await sendDirect(ctx.boxRoot, { message: "feed the cat", messageId: "route-first" });
   t.check([viaRoute.statusCode, shape(viaRoute.body), shape(viaSender), recorded], [
@@ -83,7 +81,6 @@ void test("The route sends first.", async (t) => {
   // The sender sends first. The route's later attempt with the same id is the
   // duplicate.
 
-  // doctest:L74
   const senderFirst = await sendDirect(ctx.boxRoot, { message: "water the plants", messageId: "sender-first" });
   const routeSecond = await ctx.request({ method: "POST", url: "/api/chat/send", payload: { session: "new", message: "water the plants", messageId: "sender-first" } });
   t.check([shape(senderFirst), routeSecond.statusCode, shape(routeSecond.body), recorded], [
@@ -100,7 +97,6 @@ void test("The route sends first.", async (t) => {
   // the submit's delivery of the same id is answered as a duplicate, and the record
   // is `sent` with the destination it stored before delivery.
 
-  // doctest:L85
   const routeThenSubmit = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   await ctx.request({ method: "POST", url: "/api/chat/send", payload: { session: "new", message: "<typed>call the vet</typed>", messageId: routeThenSubmit } });
   const submitted = await quickChat(ctx.boxRoot, ctx.eventBus).submit({ id: routeThenSubmit, message: "call the vet" });
@@ -116,7 +112,6 @@ void test("The route sends first.", async (t) => {
   // The submit sends first; the route's later send of the same id is the
   // duplicate.
 
-  // doctest:L96
   const submitThenRoute = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
   const first = await quickChat(ctx.boxRoot, ctx.eventBus).submit({ id: submitThenRoute, message: "buy stamps" });
   const routeAfter = await ctx.request({ method: "POST", url: "/api/chat/send", payload: { session: "new", message: "<typed>buy stamps</typed>", messageId: submitThenRoute } });

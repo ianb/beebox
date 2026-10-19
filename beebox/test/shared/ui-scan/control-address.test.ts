@@ -17,14 +17,12 @@ import { controlAddress, isControlAddress, MAX_CONTROL_ID_LENGTH } from "../../.
 // shapes the app used to mint: a URL-encoded card path (`%`, uppercase, a dot)
 // and a React `useId` value (colons).
 void test("Lowercase kebab-case under bbx-, and nothing else.", async (t) => {
-  // doctest:L20
   t.check(["bbx-nav-profile", "bbx-pane-left-move", "bbx-composer-send-2"].map(isControlAddress), [
     true,
     true,
     true,
   ]);
 
-  // doctest:L28
   t.check(
     [
       "nav-profile",
@@ -57,13 +55,10 @@ void test("Lowercase kebab-case under bbx-, and nothing else.", async (t) => {
 // Slugifying would collapse them onto one, and an address that names two controls
 // is worse than none.
 void test("A #-selector is the reason:", async (t) => {
-  // doctest:L60
   t.check(controlAddress("bbx-workspace-tab", "_config/interface/browse.card"), "bbx-workspace-tab-l5rw63tgnfts62loorsxeztbmnss6ytsn53xgzjomnqxeza");
 
-  // doctest:L63
   t.check(controlAddress("bbx-card-properties", ":r0:"), "bbx-card-properties-hjzdaoq");
 
-  // doctest:L66
   t.check(
     controlAddress("bbx-settings-drive-unmount-id", "Folder_A-1"),
     not(controlAddress("bbx-settings-drive-unmount-id", "folder_a-1")),
@@ -73,7 +68,6 @@ void test("A #-selector is the reason:", async (t) => {
   // it is checked over the characters that motivated the encoder rather than over a
   // tidy sample.
 
-  // doctest:L76
   t.check(
     [
       "_config/interface/browse.card",
@@ -90,7 +84,6 @@ void test("A #-selector is the reason:", async (t) => {
   // character the alphabet does not use — an address either way, and still distinct
   // from every encoded value.
 
-  // doctest:L92
   t.check(controlAddress("bbx-workspace-tab", ""), "bbx-workspace-tab-0");
 
   // ## The length cap is where an address stops being one
@@ -100,13 +93,11 @@ void test("A #-selector is the reason:", async (t) => {
   // words, not handed out as a link — rather than a payload the boundary rejects
   // whole.
 
-  // doctest:L104
   const long = controlAddress("bbx-workspace-tab", "x".repeat(400));
   t.check({ length: long.length, valid: isControlAddress(long) }, { length: any(Number).above(MAX_CONTROL_ID_LENGTH), valid: false });
 
   // A path long enough to hit it is well past anything a box carries: the cap
   // leaves room for roughly 170 bytes under a prefix.
 
-  // doctest:L117
   t.check(isControlAddress(controlAddress("bbx-workspace-tab", "deeply/nested/".repeat(10) + "some-card.card")), true);
 });

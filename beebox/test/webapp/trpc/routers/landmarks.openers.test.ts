@@ -40,7 +40,6 @@ const ROOT = "---\nnavigation:\n  label: test\n  openers:\n    - Let me tell you
 // `_content/*.landmark.card`. The old briefing reader joined `""` with the
 // briefing's name and looked at the box root, so no box showed root openers.
 void test("The root place is the logical directory \"\"; its landmark lives at content/.la...", async (t) => {
-  // doctest:L44
   const box = await makeTmpBox();
   await box.write("_content/Box.landmark.card", ROOT);
   t.check(await openersFor(box.root, ""), [
@@ -51,7 +50,6 @@ void test("The root place is the logical directory \"\"; its landmark lives at c
 
 // ## Each place has its own list, trimmed
 void test("Each place has its own list, trimmed", async (t) => {
-  // doctest:L53
   const box = await makeTmpBox();
   await box.write("_content/Box.landmark.card", ROOT);
   await box.write("_content/lending/Lending.landmark.card",
@@ -67,7 +65,6 @@ void test("Each place has its own list, trimmed", async (t) => {
 // A landmark with no `openers` key and a landmark with `openers: []` both answer
 // `[]`, even though the root lists two.
 void test("A landmark with no openers key and a landmark with openers:", async (t) => {
-  // doctest:L67
   const box = await makeTmpBox();
   await box.write("_content/Box.landmark.card", ROOT);
   await box.write("_content/garden/Garden.landmark.card", "---\nnavigation:\n  label: Garden\n---\n");
@@ -80,7 +77,6 @@ void test("A landmark with no openers key and a landmark with openers:", async (
 
 // ## A directory with no landmark has no payload
 void test("A directory with no landmark has no payload", async (t) => {
-  // doctest:L78
   const box = await makeTmpBox();
   await box.write("_content/Box.landmark.card", ROOT);
   await box.write("_content/loose/Note.doc.card", "---\ntitle: note\n---\n");
@@ -94,7 +90,6 @@ void test("A directory with no landmark has no payload", async (t) => {
 // warning), so `forDir` answers as if there were no landmark rather than
 // quietly dropping the bad entry.
 void test("An opener is a single non-blank line of at most 120 characters.", async (t) => {
-  // doctest:L93
   const box = await makeTmpBox();
   await box.write("_content/broken/Broken.landmark.card",
     "---\nnavigation:\n  label: Broken\n  openers:\n    - \"\"\n---\n");
@@ -104,7 +99,6 @@ void test("An opener is a single non-blank line of at most 120 characters.", asy
 // The validation, case by case. Surrounding whitespace is allowed; the length
 // limit is measured on the trimmed text.
 void test("The validation, case by case.", async (t) => {
-  // doctest:L104
   t.check(
     ({ ok: opensOk(["What can you do?"]), padded: opensOk(["  What can you do?  "]),
       limit: opensOk(["x".repeat(120)]), blank: opensOk(["   "]), empty: opensOk([""]),

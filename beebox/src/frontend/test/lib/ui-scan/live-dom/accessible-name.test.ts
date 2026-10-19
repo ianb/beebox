@@ -45,7 +45,6 @@ function nameOf(html: string): string {
 // where the two deliberately differ: `title` explains why it is disabled while
 // `aria-label` names the control. The name is the label, not the tooltip.
 void test("The composer's Add trigger carries both — title=\"Add\" for the tooltip and ari...", async (t) => {
-  // doctest:L49
   t.check(
     nameOf(`
   <button type="button" title="Capture (send a message first)" aria-label="Capture"
@@ -63,7 +62,6 @@ void test("The composer's Add trigger carries both — title=\"Add\" for the too
 // and nothing else. Without `title` in the chain this control would be nameless
 // and dropped, which is why it sits above `placeholder` rather than last.
 void test("InteractiveChat-composer.tsx gives send an icon and a state-dependent title a...", async (t) => {
-  // doctest:L65
   t.check(
     nameOf(`
   <button disabled title="Queue message (agent is busy)">
@@ -81,7 +79,6 @@ void test("InteractiveChat-composer.tsx gives send an icon and a state-dependent
 // is "Attach file…", not "📎 Attach file…". Whitespace across the wrapping spans
 // collapses to single spaces.
 void test("MenuItem renders <span aria-hidden=\"true\">{icon}</span> beside the label.", async (t) => {
-  // doctest:L81
   t.check(
     nameOf(`
   <button type="button" role="menuitem">
@@ -98,7 +95,6 @@ void test("MenuItem renders <span aria-hidden=\"true\">{icon}</span> beside the 
 // Text content also beats a `title` on the same element, which is what keeps a
 // tooltip from overriding the words the user can actually read:
 void test("Text content also beats a title on the same element, which is what keeps a to...", async (t) => {
-  // doctest:L96
   t.check(nameOf("<button title=\"Send the message\">Send</button>"), "Send");
 });
 
@@ -107,7 +103,6 @@ void test("Text content also beats a title on the same element, which is what ke
 // The composer textarea has no label of any kind — only its placeholder, which
 // changes while dictation is running.
 void test("The composer textarea has no label of any kind — only its placeholder, which...", async (t) => {
-  // doctest:L106
   t.check(
     [
       nameOf("<textarea placeholder=\"Type a message...\"></textarea>"),
@@ -122,7 +117,6 @@ void test("The composer textarea has no label of any kind — only its placehold
 // It is first in the chain, and the referenced element's own name is what counts —
 // here the tab's visible text, not its id.
 void test("It is first in the chain, and the referenced element's own name is what count...", async (t) => {
-  // doctest:L119
   t.check(
     nameOf(`
   <button role="tab" aria-labelledby="tab-label-1" aria-label="ignored" title="ignored too"></button>
@@ -135,7 +129,6 @@ void test("It is first in the chain, and the referenced element's own name is wh
 // A reference that points at nothing falls through to the next step rather than
 // naming the control after a dangling id:
 void test("A reference that points at nothing falls through to the next step rather than...", async (t) => {
-  // doctest:L130
   t.check(nameOf("<button aria-labelledby=\"gone\" title=\"Stop speaking\"></button>"), "Stop speaking");
 });
 
@@ -144,7 +137,6 @@ void test("A reference that points at nothing falls through to the next step rat
 // `alt` applies only where it means something — an `<img>`, an `<area>`, or
 // `<input type="image">`. On anything else it is markup noise and is skipped.
 void test("alt applies only where it means something — an <img>, an <area>, or <input ty...", async (t) => {
-  // doctest:L140
   t.check(
     [
       nameOf("<img src=\"/avatar.png\" alt=\"Dana Whitfield\" />"),
@@ -161,7 +153,6 @@ void test("alt applies only where it means something — an <img>, an <area>, or
 // in prose and none the user would recognise — and counts the drop in the header so
 // the omission is visible rather than silent.
 void test("An icon-only button with no label, no title and no text yields \"\".", async (t) => {
-  // doctest:L155
   await t.checkText(
     nameOf(`
   <button type="button">
@@ -174,6 +165,5 @@ void test("An icon-only button with no label, no title and no text yields \"\"."
 
 // Whitespace-only content counts as nothing, too:
 void test("Whitespace-only content counts as nothing, too:", async (t) => {
-  // doctest:L166
   t.check(nameOf("<button aria-label=\"   \">   </button>"), "");
 });

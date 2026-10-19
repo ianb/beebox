@@ -69,10 +69,8 @@ const { byImporter, edgeCount } = collectRewrites({ sources, moveMap });
 
 // ## Only the affected edges are collected: the moved file's own import, the distant importer's, the test's, the alias importer's, and the non-package importer's
 void test("Only the affected edges are collected: the moved file's own import, the distant importer's, the test's, the alias importer's, and the non-package importer's", async (t) => {
-  // doctest:L76
   t.check(edgeCount, 5);
 
-  // doctest:L79
   t.check([...byImporter.keys()].toSorted(), [
     "pkg/src/other/importer.ts",
     "pkg/src/sub/a.ts",
@@ -84,7 +82,6 @@ void test("Only the affected edges are collected: the moved file's own import, t
 
 // ## Applying moves the files and rewrites every collected specifier
 void test("Applying moves the files and rewrites every collected specifier", async (t) => {
-  // doctest:L86
   moveFiles({ repoRoot, moves });
   applyRewrites({ repoRoot, byImporter });
 
@@ -104,10 +101,8 @@ void test("The unrelated file that only mentions the old path in prose is untouc
       t.error(error);
     }
   });
-  // doctest:L108
   await t.checkText(await read("pkg/docs/note.md"), "See pkg/src/a.ts for details.");
 
-  // doctest:L111
   const mentions = reportMentions({ repoRoot, moves, roots, rewrittenFiles: new Set(byImporter.keys()) });
   t.check(mentions, [
     {

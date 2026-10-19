@@ -38,7 +38,6 @@ function step(ops: VoiceOp[], opts: { now: number; lastOutcome?: LastOutcome | n
 
 // ## Idle: nothing queued
 void test("Idle: nothing queued", async (t) => {
-  // doctest:L48
   t.check(step([], { now: 1000 }), {
     type: "idle",
   });
@@ -46,7 +45,6 @@ void test("Idle: nothing queued", async (t) => {
 
 // ## Ordered ops: the lowest `seq` goes first, and stays first until it's gone
 void test("Ordered ops: the lowest `seq` goes first, and stays first until it's gone", async (t) => {
-  // doctest:L57
   const ops = [
     op({ recordingId: "r1", seq: 0, createdAt: 100 }),
     op({ recordingId: "r1", seq: 1, createdAt: 200 }),
@@ -57,7 +55,6 @@ void test("Ordered ops: the lowest `seq` goes first, and stays first until it's 
   // Once seq 0 is removed (the shell deletes an op on success), seq 1 is next —
   // never seq 2 out of order:
 
-  // doctest:L83
   const afterFirstSucceeds = ops.slice(1);
   t.check(step(afterFirstSucceeds, { now: 1000 }), { type: "send", op: sentOp({ recordingId: "r1", seq: 1, createdAt: 200, attempts: 0 }) });
 });
@@ -67,7 +64,6 @@ void test("Ordered ops: the lowest `seq` goes first, and stays first until it's 
 // Two recordings interleave; the one whose earliest pending op is older goes
 // first, regardless of how the ops happen to be ordered in the array.
 void test("Two recordings interleave; the one whose earliest pending op is older goes fi...", async (t) => {
-  // doctest:L94
   const interleaved = [
     op({ recordingId: "newer", seq: 0, createdAt: 500 }),
     op({ recordingId: "older", seq: 0, createdAt: 100 }),
@@ -75,7 +71,6 @@ void test("Two recordings interleave; the one whose earliest pending op is older
   ];
   t.check(step(interleaved, { now: 1000 }), { type: "send", op: sentOp({ recordingId: "older", seq: 0, createdAt: 100, attempts: 0 }) });
 
-  // doctest:L104
   const olderDone = interleaved.filter((o) => o.recordingId !== "older");
   t.check(step(olderDone, { now: 1000 }), { type: "send", op: sentOp({ recordingId: "newer", seq: 0, createdAt: 500, attempts: 0 }) });
 });
@@ -86,17 +81,14 @@ void test("Two recordings interleave; the one whose earliest pending op is older
 // from when it failed. Before that elapses, the drainer waits; after, it sends
 // again — with `attempts` already bumped by the shell to 1.
 void test("A 502 (or any transient error) on attempt 1 waits retryDelayMs(1) = 1000ms fr...", async (t) => {
-  // doctest:L116
   const failedOnce = op({ recordingId: "r1", seq: 0, createdAt: 100, attempts: 1 });
   const lastOutcome: LastOutcome = { recordingId: "r1", seq: 0, at: 5000, kind: "transient" };
 
-  // doctest:L119
   t.check(step([failedOnce], { now: 5500, lastOutcome }), {
     type: "wait",
     ms: 500,
   });
 
-  // doctest:L125
   t.check(step([failedOnce], { now: 6000, lastOutcome }), { type: "send", op: sentOp({ recordingId: "r1", seq: 0, createdAt: 100, attempts: 1 }) });
 });
 
@@ -105,27 +97,22 @@ void test("A 502 (or any transient error) on attempt 1 waits retryDelayMs(1) = 1
 // `MAX_RETRIES` is 11; past that, the wait is a steady 30s rather than the
 // schedule's last (30s-capped) entry running out immediately.
 void test("MAXRETRIES is 11; past that, the wait is a steady 30s rather than the schedul...", async (t) => {
-  // doctest:L148
   const exhausted = op({ recordingId: "r1", seq: 0, createdAt: 100, attempts: 12 });
   const justFailed: LastOutcome = { recordingId: "r1", seq: 0, at: 5000, kind: "transient" };
 
-  // doctest:L151
   t.check(step([exhausted], { now: 34_000, lastOutcome: justFailed }), {
     type: "wait",
     ms: 1000,
   });
 
-  // doctest:L157
   t.check(step([exhausted], { now: 35_000, lastOutcome: justFailed }), { type: "send", op: sentOp({ recordingId: "r1", seq: 0, createdAt: 100, attempts: 12 }) });
 });
 
 // ## A terminal failure (a 4xx) drops the whole recording
 void test("A terminal failure (a 4xx) drops the whole recording", async (t) => {
-  // doctest:L164
   const rejected = op({ recordingId: "r1", seq: 0, createdAt: 100 });
   const conflict: LastOutcome = { recordingId: "r1", seq: 0, at: 5000, kind: "terminal" };
 
-  // doctest:L167
   t.check(step([rejected], { now: 5001, lastOutcome: conflict }), {
     type: "terminal",
     recordingId: "r1",
@@ -139,7 +126,6 @@ void test("A terminal failure (a 4xx) drops the whole recording", async (t) => {
 // Even an op that has never failed goes terminal once it's too old — the bound
 // is about the op's age, not its attempt count.
 void test("Even an op that has never failed goes terminal once it's too old — the bound...", async (t) => {
-  // doctest:L192
   const ancient = op({ recordingId: "r1", seq: 0, createdAt: 0 });
   t.check(step([ancient], { now: BOUND_MS }), {
     type: "terminal",
@@ -148,7 +134,6 @@ void test("Even an op that has never failed goes terminal once it's too old — 
     reason: "expired",
   });
 
-  // doctest:L196
   t.check(step([ancient], { now: BOUND_MS - 1 }), { type: "send", op: sentOp({ recordingId: "r1", seq: 0, createdAt: 0, attempts: 0 }) });
 });
 
@@ -157,7 +142,6 @@ void test("Even an op that has never failed goes terminal once it's too old — 
 // If the recording's earliest op changed (the prior one succeeded and was
 // removed), a stale `lastOutcome` for the old op is simply ignored.
 void test("If the recording's earliest op changed (the prior one succeeded and was remov...", async (t) => {
-  // doctest:L206
   const next = op({ recordingId: "r1", seq: 1, createdAt: 100 });
   const staleOutcome: LastOutcome = { recordingId: "r1", seq: 0, at: 5000, kind: "terminal" };
   t.check(step([next], { now: 5001, lastOutcome: staleOutcome }), { type: "send", op: sentOp({ recordingId: "r1", seq: 1, createdAt: 100, attempts: 0 }) });
@@ -170,14 +154,12 @@ void test("If the recording's earliest op changed (the prior one succeeded and w
 // (which only exists because ops from a second tab were just merged in) has no
 // outcome yet and sends immediately — and `older`'s wait is unaffected by that.
 void test("lastOutcomes is keyed by recordingId precisely so one recording's outcome can...", async (t) => {
-  // doctest:L220
   const olderOp = op({ recordingId: "older", seq: 0, createdAt: 0, attempts: 1 });
   const newerOp = op({ recordingId: "newer", seq: 0, createdAt: 50 });
   const lastOutcomes = new Map<string, LastOutcome>([
     ["older", { recordingId: "older", seq: 0, at: 5000, kind: "transient" }],
   ]);
 
-  // doctest:L226
   t.check(nextDrainStep([olderOp, newerOp], { now: 5100, lastOutcomes, boundMs: BOUND_MS }), {
     type: "wait",
     ms: 900,
@@ -188,9 +170,7 @@ void test("lastOutcomes is keyed by recordingId precisely so one recording's out
   // never followed by sending a different recording out of turn), `newer` is
   // next, with `older`'s backoff entry left untouched in the map:
 
-  // doctest:L239
   t.check(nextDrainStep([newerOp], { now: 5100, lastOutcomes, boundMs: BOUND_MS }), { type: "send", op: sentOp({ recordingId: "newer", seq: 0, createdAt: 50, attempts: 0 }) });
 
-  // doctest:L242
   t.check(lastOutcomes.get("older"), { recordingId: "older", seq: 0, at: 5000, kind: "transient" });
 });

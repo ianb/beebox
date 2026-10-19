@@ -49,11 +49,9 @@ void test("An entry round-trips, and quarantine lives under the box's swept tmp 
       t.error(error);
     }
   });
-  // doctest:L46
   const box = await makeTmpBox();
   t.check(quarantineDir(box.root), path.join(box.root, "_tmp", "scan-quarantine"));
 
-  // doctest:L50
   await recordQuarantineEntry(box.root, entry(HASH_A));
   const read = await readQuarantineEntry(box.root, HASH_A);
   t.check(read, entry(HASH_A));
@@ -61,7 +59,6 @@ void test("An entry round-trips, and quarantine lives under the box's swept tmp 
   // A hash quarantine has never seen is `null`, not a throw — "unknown" is a normal
   // answer, not an error:
 
-  // doctest:L60
   t.check(await readQuarantineEntry(box.root, HASH_B), null);
 });
 
@@ -78,12 +75,10 @@ void test("The promote worker drives pending → promoting → imported, and rec
       t.error(error);
     }
   });
-  // doctest:L75
   const box = await makeTmpBox();
   await recordQuarantineEntry(box.root, entry(HASH_A));
   await recordQuarantineEntry(box.root, entry(HASH_B, { state: "rejected", reason: "magic bytes say image/png but the extension is .pdf" }));
 
-  // doctest:L79
   const promoting = await updateQuarantineState(box.root, { sha256: HASH_A, state: "promoting" });
   const flagged = await updateQuarantineState(box.root, { sha256: HASH_B, state: "rejected", questionRef: "questions/Bad_Scan.question.card" });
   t.check(promoting, entry(HASH_A, { state: "promoting" }));
@@ -91,7 +86,6 @@ void test("The promote worker drives pending → promoting → imported, and rec
 
   // Reading them all back gives the promote worker its work list, hash-sorted:
 
-  // doctest:L88
   const all = await readAllQuarantineEntries(box.root);
   t.check(all, [
     entry(HASH_A, { state: "promoting" }),
@@ -101,7 +95,6 @@ void test("The promote worker drives pending → promoting → imported, and rec
   // Updating a hash that isn't in quarantine reports `null` rather than inventing an
   // entry — a worker acting on a swept file must notice, not resurrect it:
 
-  // doctest:L97
   t.check(await updateQuarantineState(box.root, { sha256: "c".repeat(64), state: "imported" }), null);
 });
 
@@ -117,14 +110,12 @@ void test("The file's bytes are still on disk and a re-PUT rewrites the verdict,
       t.error(error);
     }
   });
-  // doctest:L111
   const box = await makeTmpBox();
   const dir = await ensureQuarantineDir(box.root);
   await recordQuarantineEntry(box.root, entry(HASH_A));
   await fs.writeFile(path.join(dir, `${HASH_B}.json`), "{ not json at all");
   await fs.writeFile(path.join(dir, `${"c".repeat(64)}.json`), JSON.stringify({ sha256: "c", state: "nonsense" }));
 
-  // doctest:L117
   const all = await readAllQuarantineEntries(box.root);
   t.check(all, [entry(HASH_A)]);
 
@@ -132,7 +123,6 @@ void test("The file's bytes are still on disk and a re-PUT rewrites the verdict,
   // worker materializes it under `originalFilename` later, because scan-import's
   // image grouping keys on scanner `<prefix>_NNN` names:
 
-  // doctest:L127
   await fs.writeFile(quarantineFilePath(box.root, `${HASH_A}.pdf`), "%PDF-1.4\n");
   const names = (await fs.readdir(dir)).toSorted().map((n) => n.slice(0, 4) + n.slice(64));
   t.check(names, [

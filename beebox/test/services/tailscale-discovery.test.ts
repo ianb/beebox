@@ -54,7 +54,6 @@ const noWaitIo = { interactive: false, log: () => {}, waitForContinue: () => Pro
 // A hub config with an explicit `port` yields that port, and the announcement
 // names what was discovered.
 void test("A hub config with an explicit port yields that port, and the announcement nam...", async (t) => {
-  // doctest:L59
   const hubPath = await writeHub("hub.json", { port: 5321, boxes: {} });
   const cap = capturing();
   const r = await resolveTargetOrDiscover({ target: undefined, hubConfigPath: hubPath, log: cap.log });
@@ -68,7 +67,6 @@ void test("A hub config with an explicit port yields that port, and the announce
 // A hub config that omits `port` falls back to the hub default (4310), not the
 // standalone `bbx serve` default (3210):
 void test("A hub config that omits port falls back to the hub default (4310), not the st...", async (t) => {
-  // doctest:L74
   const hubPath = await writeHub("hub-noport.json", { boxes: {} });
   const r = await resolveTargetOrDiscover({ target: undefined, hubConfigPath: hubPath, log: () => {} });
   t.check([r.ok, r.ok ? r.target.port : null], [
@@ -82,7 +80,6 @@ void test("A hub config that omits port falls back to the hub default (4310), no
 // Even with a hub config present (port 5321), an explicit `--target` wins and the
 // config is not consulted (no announcement).
 void test("Even with a hub config present (port 5321), an explicit --target wins and the...", async (t) => {
-  // doctest:L89
   const hubPath = await writeHub("hub-override.json", { port: 5321, boxes: {} });
   const cap = capturing();
   const r = await resolveTargetOrDiscover({ target: "7777", hubConfigPath: hubPath, log: cap.log });
@@ -96,7 +93,6 @@ void test("Even with a hub config present (port 5321), an explicit --target wins
 // An explicit but invalid `--target` is refused (it never falls through to
 // discovery):
 void test("An explicit but invalid --target is refused (it never falls through to discov...", async (t) => {
-  // doctest:L104
   const hubPath = await writeHub("hub-invalid.json", { port: 5321, boxes: {} });
   const r = await resolveTargetOrDiscover({ target: "not-a-port", hubConfigPath: hubPath, log: () => {} });
   t.check([r.ok, r.ok ? null : r.message.includes("invalid --target")], [
@@ -110,7 +106,6 @@ void test("An explicit but invalid --target is refused (it never falls through t
 // A missing (or unreadable) hub config is "no hub to discover" — we do NOT guess a
 // port; we refuse and tell the operator to pass `--target`.
 void test("A missing (or unreadable) hub config is \"no hub to discover\" — we do NOT gues...", async (t) => {
-  // doctest:L119
   const missing = path.join(tmp, "does-not-exist.json");
   const r = await resolveTargetOrDiscover({ target: undefined, hubConfigPath: missing, log: () => {} });
   t.check([r.ok, r.ok ? null : r.message.includes("no hub config found"), r.ok ? null : r.message.includes("--target <port>")], [
@@ -123,7 +118,6 @@ void test("A missing (or unreadable) hub config is \"no hub to discover\" — we
 // An invalid hub config (malformed JSON) is likewise treated as "no hub", not a
 // propagated load error:
 void test("An invalid hub config (malformed JSON) is likewise treated as \"no hub\", not a...", async (t) => {
-  // doctest:L133
   const badPath = path.join(tmp, "bad.json");
   await fs.writeFile(badPath, "{ not json");
   const r = await resolveTargetOrDiscover({ target: undefined, hubConfigPath: badPath, log: () => {} });
@@ -148,7 +142,6 @@ void test("Discovery only supplies a candidate port.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L150
   const hubPath = await writeHub("hub-router.json", { port: 3210, boxes: {} });
   const discovered = await resolveTargetOrDiscover({ target: undefined, hubConfigPath: hubPath, log: () => {} });
   const deps = createFakeTailscaleDeps({

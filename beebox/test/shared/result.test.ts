@@ -28,21 +28,17 @@ const store = { greeting: "hello", blank: "" };
 // `ok(value)` and `err(error)` build the two arms; branching on `.ok` narrows the
 // union so `value`/`error` are only reachable on the matching arm.
 void test("ok(value) and err(error) build the two arms; branching on .ok narrows the uni...", async (t) => {
-  // doctest:L32
   const found = lookup(store, "greeting");
   t.check(found.ok ? found.value : found.error.cause, "HELLO");
 });
 
 // The failure arm carries the tagged error; the caller dispatches on `cause`.
 void test("The failure arm carries the tagged error; the caller dispatches on cause.", async (t) => {
-  // doctest:L40
   const missing = lookup(store, "absent");
   t.check(missing.ok, false);
 
-  // doctest:L44
   t.check(missing.ok ? "n/a" : `${missing.error.cause}:${missing.error.cause === "not-found" ? missing.error.key : ""}`, "not-found:absent");
 
-  // doctest:L47
   const bad = lookup(store, "blank");
   t.check(bad.ok ? "n/a" : bad.error.cause, "parse");
 });
@@ -52,15 +48,12 @@ void test("The failure arm carries the tagged error; the caller dispatches on ca
 // A function with nothing to return on success uses `Result<void>` and the shared
 // `okVoid` marker.
 void test("A function with nothing to return on success uses Result<void> and the shared...", async (t) => {
-  // doctest:L58
   function ensure(flag: boolean): Result<void> {
     return flag ? okVoid : err("flag was false");
   }
 
-  // doctest:L62
   t.check(ensure(true).ok, true);
 
-  // doctest:L65
   const r = ensure(false);
   t.check(r.ok ? "ok" : r.error, "flag was false");
 });

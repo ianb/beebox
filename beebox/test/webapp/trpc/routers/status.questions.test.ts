@@ -50,17 +50,14 @@ void test("line 46", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L47
   const box = await makeTmpBox({ git: true });
   await box.seed(".beebox/box.json", MARKER);
   await box.write("_bookkeeping/questions/Receipt.question.card", VALID);
   await box.write("_bookkeeping/questions/Broken.question.card", MALFORMED);
 
-  // doctest:L52
   const caller = contextFor(box);
   const { items } = await caller.questions();
 
-  // doctest:L55
   const dir = "_bookkeeping/questions";
   t.check(items, [
     {

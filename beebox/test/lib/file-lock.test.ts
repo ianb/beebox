@@ -92,7 +92,6 @@ void test("Acquire creates the guard dir + diagnostic sidecar with our metadata"
       t.error(error);
     }
   });
-  // doctest:L73
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   const holder = await acquireLock(path, { triggeredBy: "manual" });
@@ -115,7 +114,6 @@ void test("Release removes both the guard dir and the sidecar", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L97
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   await acquireLock(path, {});
@@ -140,7 +138,6 @@ void test("Releasing when not held, releasing twice — both fine.", async (t) =
       t.error(error);
     }
   });
-  // doctest:L117
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   await releaseLock(path);
@@ -162,7 +159,6 @@ void test("Acquiring a held lock throws LockHeldError", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L136
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   await acquireLock(path, { who: "first" });
@@ -183,13 +179,11 @@ void test("A fresh guard directory with no in-process release is exactly what an
       t.error(error);
     }
   });
-  // doctest:L158
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   await fs.mkdir(path + ".guard");
   await fs.writeFile(path, foreignSidecar("other-proc", 4242));
 
-  // doctest:L163
   const caught = await acquireLock(path, { who: "us" }).then(() => null, (e) => e);
   t.check(caught, instanceOf(LockHeldError));
   t.check(caught, heldError(4242, { who: "other-proc" }));
@@ -209,7 +203,6 @@ void test("The guard-dir mkdir is atomic, so contention on one path can never do
       t.error(error);
     }
   });
-  // doctest:L184
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   const results = await Promise.allSettled(
@@ -253,12 +246,10 @@ void test("This is the scenario the previous home-grown lock failed:", async (t)
       t.error(error);
     }
   });
-  // doctest:L214
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   await acquireLock(path, { who: "A" });
 
-  // doctest:L218
   let acquiredCount = 0;
   const contend = async (id: string) => {
     for (let attempt = 0; attempt < 40; attempt++) {
@@ -273,7 +264,6 @@ void test("This is the scenario the previous home-grown lock failed:", async (t)
     }
   };
 
-  // doctest:L232
   const contenders = Array.from({ length: 5 }, (_unused, i) => contend(`c${i}`));
   await delay(60); // let them all bounce off A's held lock
   await releaseLock(path); // A steps aside — exactly one contender may now win
@@ -297,7 +287,6 @@ void test("A SIGKILL'd process leaves its guard directory behind with a frozen m
       t.error(error);
     }
   });
-  // doctest:L254
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   const guard = path + ".guard";
@@ -306,7 +295,6 @@ void test("A SIGKILL'd process leaves its guard directory behind with a frozen m
   await fs.utimes(guard, past, past);
   await fs.writeFile(path, foreignSidecar("ghost", 999999));
 
-  // doctest:L262
   const holder = await acquireLock(path, { who: "us" });
   t.check(holder, heldBy({ who: "us" }));
 });
@@ -338,20 +326,16 @@ void test("Request-scoped locks (mobile device store, local users, connector tok
       t.error(error);
     }
   });
-  // doctest:L292
   const box = await makeTmpBox();
   const lockPath = join(box.root, "devices.lock");
   await crashedHolder(lockPath);
 
-  // doctest:L296
   const justAfter = await acquireLock(requestScopedLock(lockPath), { who: "b" }).then(() => "acquired", (e) => e.name);
   t.check(justAfter, "LockHeldError");
 
-  // doctest:L299
   const aged = new Date(Date.now() - LOCK_STALE_MS.request - 1000);
   await fs.utimes(lockPath + ".guard", aged, aged);
 
-  // doctest:L302
   const asDefault = await acquireLock(lockPath, { who: "d" }).then(() => "acquired", (e) => e.name);
   t.check(asDefault, "LockHeldError");
   const holder = await acquireLock(requestScopedLock(lockPath), { who: "recovered" });
@@ -371,14 +355,12 @@ void test("inspectLock must not disagree with acquireLock about staleness:", asy
       t.error(error);
     }
   });
-  // doctest:L324
   const box = await makeTmpBox();
   const lockPath = join(box.root, "devices.lock");
   await crashedHolder(lockPath);
   const aged = new Date(Date.now() - LOCK_STALE_MS.request - 1000);
   await fs.utimes(lockPath + ".guard", aged, aged);
 
-  // doctest:L330
   t.check(await inspectLock(requestScopedLock(lockPath)), null);
   // The holder is the killed child process, so its pid is not ours.
   t.check(await inspectLock(lockPath), { ...heldBy({ purpose: "file-lock-doctest-child" }), pid: any(Number).int() });
@@ -396,13 +378,11 @@ void test("Releasing a path this process never acquired (no recorded release) is
       t.error(error);
     }
   });
-  // doctest:L347
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   await fs.mkdir(path + ".guard");
   await fs.writeFile(path, foreignSidecar("other-proc", 4242));
 
-  // doctest:L352
   await releaseLock(path);
   t.check(
     {
@@ -424,7 +404,6 @@ void test("Returns null when not held", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L369
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   t.check(await inspectLock(path), null);
@@ -440,7 +419,6 @@ void test("Returns the holder when held", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L382
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   await acquireLock(path, { tag: "abc" });
@@ -460,7 +438,6 @@ void test("inspectLock uses proper-lockfile's .check(), which treats a guard who
       t.error(error);
     }
   });
-  // doctest:L401
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   const guard = path + ".guard";
@@ -469,7 +446,6 @@ void test("inspectLock uses proper-lockfile's .check(), which treats a guard who
   await fs.utimes(guard, past, past);
   await fs.writeFile(path, foreignSidecar("ghost", 999999));
 
-  // doctest:L409
   t.check(await inspectLock(path), null);
 });
 
@@ -485,13 +461,11 @@ void test("Steals a held lock", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L422
   const box = await makeTmpBox();
   const path = join(box.root, "test.lock");
   await fs.mkdir(path + ".guard");
   await fs.writeFile(path, foreignSidecar("victim", 4242));
 
-  // doctest:L427
   const stolen = await forceAcquireLock(path, { from: "thief" });
   t.check(stolen, heldBy({ from: "thief" }));
 });
@@ -507,7 +481,6 @@ void test("Returns empty map when directory missing", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L442
   const box = await makeTmpBox();
   const map = await scanLocks(join(box.root, "nope"), { suffix: ".lock", profile: "default" });
   t.check(map, new Map());
@@ -524,14 +497,12 @@ void test("Returns live locks keyed by name (suffix stripped)", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L455
   const box = await makeTmpBox();
   const dir = join(box.root, "locks");
   await fs.mkdir(dir, { recursive: true });
   await acquireLock(join(dir, "alpha.lock"), { who: "a" });
   await acquireLock(join(dir, "beta.lock"), { who: "b" });
 
-  // doctest:L461
   const map = await scanLocks(dir, { suffix: ".lock", profile: "default" });
   t.check(
     map,
@@ -557,20 +528,17 @@ void test("A live lock is reported; a crashed lock (stale guard mtime) is reclai
       t.error(error);
     }
   });
-  // doctest:L485
   const box = await makeTmpBox();
   const dir = join(box.root, "locks");
   await fs.mkdir(dir, { recursive: true });
   await acquireLock(join(dir, "alive.lock"), { who: "alive" });
 
-  // doctest:L490
   const deadPath = join(dir, "dead.lock");
   await fs.mkdir(deadPath + ".guard");
   const past = backdatedPast();
   await fs.utimes(deadPath + ".guard", past, past);
   await fs.writeFile(deadPath, foreignSidecar("ghost", 999999));
 
-  // doctest:L496
   const map = await scanLocks(dir, { suffix: ".lock", profile: "default" });
   const deadGuardGone = await fs.access(deadPath + ".guard").then(() => false).catch(() => true);
   const deadSidecarGone = await fs.access(deadPath).then(() => false).catch(() => true);
@@ -588,14 +556,12 @@ void test("Ignores files without the suffix", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L518
   const box = await makeTmpBox();
   const dir = join(box.root, "locks");
   await fs.mkdir(dir, { recursive: true });
   await acquireLock(join(dir, "real.lock"), {});
   await fs.writeFile(join(dir, "real.json"), `{"pid":${process.pid}}`);
 
-  // doctest:L524
   const map = await scanLocks(dir, { suffix: ".lock", profile: "default" });
   t.check(map, new Map([["real", heldBy({})]]));
 });
@@ -613,7 +579,6 @@ void test("The blocking wrapper accepts the same profiled target as the lower-le
       t.error(error);
     }
   });
-  // doctest:L541
   const box = await makeTmpBox();
   const path = join(box.root, "request-state.lock");
   const result = await withFileLock(

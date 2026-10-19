@@ -13,7 +13,6 @@ import assert from "node:assert/strict";
 // The multipart upload binds a Worker to one bucket, PubId, host handle, and code
 // version. The API token is sent only as the bearer header.
 void test("The multipart upload binds a Worker to one bucket, PubId, host handle, and co...", async (t) => {
-  // doctest:L17
   const requests: Array<{ url: string; method: string | undefined; authorization: string | null; form: RequestInit["body"] }> = [];
   const deployer = createCloudflareWorkerDeployer({
     accountId: "0123456789abcdef0123456789abcdef",

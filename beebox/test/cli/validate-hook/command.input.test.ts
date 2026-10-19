@@ -12,7 +12,6 @@ import { mkdir, writeFile } from "node:fs/promises";
 
 // ## Claude file tools
 void test("Claude file tools", async (t) => {
-  // doctest:L16
   t.check(
     parseHookFilePaths({
       tool_name: "Write",
@@ -26,7 +25,6 @@ void test("Claude file tools", async (t) => {
 
 // ## Codex apply_patch
 void test("Codex apply_patch", async (t) => {
-  // doctest:L26
   t.check(
     parseHookFilePaths({
       tool_name: "apply_patch",
@@ -52,17 +50,14 @@ void test("Codex apply_patch", async (t) => {
 
 // Unknown and malformed tool inputs are ignored quietly:
 void test("Unknown and malformed tool inputs are ignored quietly:", async (t) => {
-  // doctest:L46
   t.check(parseHookFilePaths({ tool_name: "Bash", tool_input: { command: "git status" } }), []);
 
-  // doctest:L49
   t.check(parseHookFilePaths(null), []);
 });
 
 // Codex paths are resolved against the hook payload's cwd, not the hook
 // subprocess's potentially different cwd:
 void test("Codex paths are resolved against the hook payload's cwd, not the hook subproc...", async (t) => {
-  // doctest:L57
   t.check(
     parseHookFilePaths({
       cwd: "/box/content",
@@ -80,7 +75,6 @@ void test("Codex paths are resolved against the hook payload's cwd, not the hook
 // Harness adapters need to show validation errors as failed turns while keeping
 // soft instruction-size feedback as a warning.
 void test("Harness adapters need to show validation errors as failed turns while keeping...", async (t) => {
-  // doctest:L71
   const box = await makeTmpBox();
   await writeFile(`${box.root}/AGENTS.md`, "x".repeat(13000));
   const warning = await validateHookPathsResult([`${box.root}/AGENTS.md`]);
@@ -98,7 +92,6 @@ void test("Harness adapters need to show validation errors as failed turns while
 // box. Writing one, a `CLAUDE.local.md`, or a `.claude/CLAUDE.md` there is an
 // error. (A `CLAUDE.local.md` at the root is already a root stray.)
 void test("A box converted to AGENTS.md (its manifest records agents-md-2026-10, as ever...", async (t) => {
-  // doctest:L87
   const converted = await makeTmpBox();
   await mkdir(`${converted.root}/.claude`, { recursive: true });
   for (const rel of ["CLAUDE.md", "_content/CLAUDE.local.md", ".claude/CLAUDE.md", "AGENTS.md"]) {
@@ -136,7 +129,6 @@ void test("A box converted to AGENTS.md (its manifest records agents-md-2026-10,
 // A box not yet converted still authors `CLAUDE.md`, so the same write gets no
 // finding:
 void test("A box not yet converted still authors CLAUDE.md, so the same write gets no fi...", async (t) => {
-  // doctest:L110
   const unconverted = await makeTmpBox({ legacyInstructions: true });
   await writeFile(`${unconverted.root}/CLAUDE.md`, "# Notes\n");
   const legacyEdit = await validateHookPathsResult([`${unconverted.root}/CLAUDE.md`]);
@@ -154,7 +146,6 @@ void test("A box not yet converted still authors CLAUDE.md, so the same write ge
 // stray root entry (here `recipes/`, created implicitly by the nested card
 // write) is surfaced even though the edited file itself is nested under it:
 void test("An edit anywhere under a top-level segment outside the closed vocabulary runs...", async (t) => {
-  // doctest:L126
   const strayBox = await makeTmpBox();
   await strayBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
   const nestedStrayEdit = await validateHookPathsResult([`${strayBox.root}/recipes/Bread.recipe.card`]);
@@ -168,7 +159,6 @@ void test("An edit anywhere under a top-level segment outside the closed vocabul
 // The same tripwire fires for a stray directly at the root — the edited file
 // need not be nested under it:
 void test("The same tripwire fires for a stray directly at the root — the edited file ne...", async (t) => {
-  // doctest:L138
   const rootStrayBox = await makeTmpBox();
   await rootStrayBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
   await writeFile(`${rootStrayBox.root}/stray-file.txt`, "hi");
@@ -183,7 +173,6 @@ void test("The same tripwire fires for a stray directly at the root — the edit
 // always gets a nudge — even on an otherwise-clean root, where the stray check
 // alone would stay silent:
 void test("Editing package.json (or a lockfile, tsconfig.json, nodemodules/) always gets...", async (t) => {
-  // doctest:L154
   const cleanBox = await makeTmpBox();
   await writeFile(`${cleanBox.root}/package.json`, "{}");
   const cleanEdit = await validateHookPathsResult([`${cleanBox.root}/package.json`]);
@@ -197,7 +186,6 @@ void test("Editing package.json (or a lockfile, tsconfig.json, nodemodules/) alw
 // The same independent nudge fires for a `node_modules/` edit, not just the
 // entry itself — and it's a warning (`hasErrors: false`), not a blocker:
 void test("The same independent nudge fires for a nodemodules/ edit, not just the entry...", async (t) => {
-  // doctest:L166
   const nmBox = await makeTmpBox();
   await nmBox.write("node_modules/pkg/index.js", "module.exports = {};");
   const nmEdit = await validateHookPathsResult([`${nmBox.root}/node_modules/pkg/index.js`]);
@@ -212,7 +200,6 @@ void test("The same independent nudge fires for a nodemodules/ edit, not just th
 // stays quiet — the tripwire fires only on a top-level segment outside the
 // closed vocabulary, or the npm namespace specifically:
 void test("An edit inside a legitimate underscore area or another vocabulary entry stays...", async (t) => {
-  // doctest:L179
   const quietBox = await makeTmpBox();
   await quietBox.write("_content/inbox/x.doc.card", "---\ntitle: X\n---\n");
   const quietEdit = await validateHookPathsResult([`${quietBox.root}/_content/inbox/x.doc.card`]);

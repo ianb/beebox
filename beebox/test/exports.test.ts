@@ -18,28 +18,22 @@ import * as server from "beebox/server";
 // A box-local schema file's whole toolkit: `cardSchema` + `body` (plus `z` from
 // `beebox/schema`, below).
 void test("A box-local schema file's whole toolkit:", async (t) => {
-  // doctest:L21
   const demo = cardSchema("demo", {
     fields: { status: z.enum(["new", "done"]), body: body(z.string()) },
   });
   t.check(demo.type, "demo");
 
-  // doctest:L27
   t.check(Object.keys(demo.fields).toSorted(), ["body", "status"]);
 
-  // doctest:L30
   t.check(splitCardContent("---\nstatus: new\n---\nHello.").body.trim(), "Hello.");
 });
 
 // ## beebox/schema — validator deps, pinned to the engine's versions
 void test("beebox/schema — validator deps, pinned to the engine's versions", async (t) => {
-  // doctest:L37
   t.check(z.string().parse("ok"), "ok");
 
-  // doctest:L40
   t.check(stringifyYaml({ a: 1 }).trim(), "a: 1");
 
-  // doctest:L43
   t.check(parseYaml("a: 1"), {
     a: 1,
   });
@@ -50,13 +44,10 @@ void test("beebox/schema — validator deps, pinned to the engine's versions", a
 // Importing the module must not start anything; it only exposes the functions
 // and the port constant.
 void test("Importing the module must not start anything; it only exposes the functions a...", async (t) => {
-  // doctest:L53
   t.check(typeof server.createServer, "function");
 
-  // doctest:L56
   t.check(typeof server.startServer, "function");
 
-  // doctest:L59
   t.check(server.DEFAULT_PORT, 3210);
 });
 
@@ -65,10 +56,8 @@ void test("Importing the module must not start anything; it only exposes the fun
 // `view-widgets` is React-flavored, so we import it dynamically and just verify
 // the exports resolve. The tsconfig base resolves as an exported JSON path.
 void test("view-widgets is React-flavored, so we import it dynamically and just verify t...", async (t) => {
-  // doctest:L69
   const widgets = await import("beebox/view-widgets");
   t.check(Object.keys(widgets), containing(["CardLink", "CardRef", "Markdown", "NodeViewHostProvider"]));
 
-  // doctest:L73
   t.check(import.meta.resolve("beebox/tsconfig.base.json"), any(String).endsWith("/tsconfig.base.json"));
 });

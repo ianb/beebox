@@ -23,7 +23,6 @@ const stubbedBox = () => stubbedPluginBox("recipe");
 
 // ## The README names the config, one schema stub and one view stub
 void test("The README names the config, one schema stub and one view stub", async (t) => {
-  // doctest:L27
   t.check([...(await readmeStubs()).keys()], [
     "_config/box.json",
     "src/schemas/recipe.ts",
@@ -36,7 +35,6 @@ void test("The README names the config, one schema stub and one view stub", asyn
 // Inline and block `ingredient`, `yield`, `step`, `substitution`, `recipe-section`,
 // and a `subrecipe` whose `ref` names a second recipe card.
 void test("Inline and block ingredient, yield, step, substitution, recipe-section, and a...", async (t) => {
-  // doctest:L37
   const box = await stubbedBox();
   await box.write("_content/recipes/Marinara.recipe.card", [
     "---",
@@ -81,7 +79,6 @@ void test("Inline and block ingredient, yield, step, substitution, recipe-sectio
 
 // ## `bbx create` finds the template the stub re-exports
 void test("`bbx create` finds the template the stub re-exports", async (t) => {
-  // doctest:L78
   const box = await stubbedBox();
   const created = await bbx(box, ["create", "_content/recipes/Dinner.recipe.card", "title=Dinner"]);
   t.check(({ code: created.code, hasYield: (await readFile(join(box.root, "_content/recipes/Dinner.recipe.card"), "utf8")).includes("{% yield") }), {
@@ -92,7 +89,6 @@ void test("`bbx create` finds the template the stub re-exports", async (t) => {
 
 // ## `bbx plugins list` shows the plugin active with both stubs
 void test("`bbx plugins list` shows the plugin active with both stubs", async (t) => {
-  // doctest:L87
   const box = await stubbedBox();
   const listed: { plugins: { name: string; active: boolean; stubs: { kind: string; name: string; present: boolean; effective: boolean }[] }[] } = JSON.parse((await bbx(box, ["plugins", "list", "--json"])).stdout);
   t.check(listed.plugins.filter((p) => p.name === "recipe").map((p) => ({ active: p.active, stubs: p.stubs.map((s) => ({ kind: s.kind, name: s.name, present: s.present, effective: s.effective })) })), [

@@ -31,7 +31,6 @@ async function guard(p: string): Promise<string> {
 
 // ## A box that is its own git repo passes
 void test("A box that is its own git repo passes", async (t) => {
-  // doctest:L35
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-guard-"));
   execSync("git init -q -b main", { cwd: root });
   assertCleanAuditBox(root);
@@ -39,24 +38,20 @@ void test("A box that is its own git repo passes", async (t) => {
 
   // ## A directory nested inside another git repo is refused
 
-  // doctest:L45
   const sub = path.join(root, "nested");
   await fs.mkdir(sub);
   t.check(await guard(sub), "AuditBoxInsideRepoError");
 
   // ## A path that isn't a git repo at all is refused
 
-  // doctest:L54
   const plain = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-guard-plain-"));
   t.check(await guard(plain), "AuditBoxNotGitRepoError");
 
-  // doctest:L60
   await fs.rm(root, { recursive: true, force: true });
   await fs.rm(plain, { recursive: true, force: true });
 
   // ## A shapeVersion-3 box (one root, same as its git top level) passes
 
-  // doctest:L67
   const pkgRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-guard-pkg-"));
   execSync("git init -q -b main", { cwd: pkgRoot });
   await fs.writeFile(
@@ -67,7 +62,6 @@ void test("A box that is its own git repo passes", async (t) => {
   await fs.writeFile(path.join(pkgRoot, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
   t.check(await guard(pkgRoot), "ok");
 
-  // doctest:L80
   await fs.rm(pkgRoot, { recursive: true, force: true });
 });
 
@@ -76,7 +70,6 @@ void test("A box that is its own git repo passes", async (t) => {
 // This runs the actual CLI against a disposable synthetic box. Both a modified
 // tracked file and an untracked file must survive byte-for-byte.
 void test("This runs the actual CLI against a disposable synthetic box.", async (t) => {
-  // doctest:L89
   const dirtyRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-audit-dirty-"));
   execSync("git init -q -b main", { cwd: dirtyRoot });
   execSync("git config user.email test@example.invalid && git config user.name Test", { cwd: dirtyRoot });
@@ -92,7 +85,6 @@ void test("This runs the actual CLI against a disposable synthetic box.", async 
   const stagedDiff = execSync("git diff --cached", { cwd: dirtyRoot, encoding: "utf-8" });
   const headDiff = execSync("git diff HEAD", { cwd: dirtyRoot, encoding: "utf-8" });
 
-  // doctest:L104
   const cliPath = path.join(PACKAGE_ROOT, "src/dev/knowledge-audit.ts");
   const cli = spawnSync(process.execPath, ["--import", "tsx", cliPath, "run", "--box", dirtyRoot], {
     cwd: PACKAGE_ROOT,
@@ -125,7 +117,6 @@ void test("This runs the actual CLI against a disposable synthetic box.", async 
   },
   );
 
-  // doctest:L127
   await fs.rm(dirtyRoot, { recursive: true, force: true });
 });
 
@@ -147,7 +138,6 @@ void test("The CLI's forced docs generation can create untracked guidance.", asy
       t.error(error);
     }
   });
-  // doctest:L142
   const generatedBox = await makeTmpBox({ git: true, legacyInstructions: true });
   await generateDocs(generatedBox.root, { force: true });
   const generatedStatus = (await import("../../../src/dev/lib/box-guard.js")).auditBoxStatus(generatedBox.root);
@@ -160,7 +150,6 @@ void test("The CLI's forced docs generation can create untracked guidance.", asy
   // error — the migration-pointing `BoxShapeError`, not one of the guard's own
   // errors — so it never reads as a false "nested inside another repo":
 
-  // doctest:L161
   const v2Root = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-guard-v2-"));
   execSync("git init -q -b main", { cwd: v2Root });
   await fs.writeFile(
@@ -173,6 +162,5 @@ void test("The CLI's forced docs generation can create untracked guidance.", asy
   await fs.writeFile(path.join(contentDir, ".beebox/box.json"), JSON.stringify({ shapeVersion: 2 }));
   t.check(await guard(contentDir), "PreV3ShapeError");
 
-  // doctest:L176
   await fs.rm(v2Root, { recursive: true, force: true });
 });

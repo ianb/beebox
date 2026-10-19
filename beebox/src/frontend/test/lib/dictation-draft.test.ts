@@ -34,10 +34,8 @@ function fakeStorage(): KeyValueStorage & { dump(): Record<string, string> } {
 // per session, mirroring the composer's `emissionKey`. A missing box slug falls
 // back to `default`:
 void test("One singleton slot per box (docs/plans/input-extraction.md, chunk 4) — not pe...", async (t) => {
-  // doctest:L38
   t.check(draftKey({ boxSlug: "test1", scope: "" }), "bbx-chat-draft:test1:singleton");
 
-  // doctest:L41
   t.check(draftKey({ boxSlug: undefined, scope: "" }), "bbx-chat-draft:default:singleton");
 });
 
@@ -45,7 +43,6 @@ void test("One singleton slot per box (docs/plans/input-extraction.md, chunk 4) 
 // their own `test1` from one origin must not share a dictation draft. Production's
 // scope is empty and its key is unchanged.
 void test("The slot is per box INSTANCE, mirroring the composer:", async (t) => {
-  // doctest:L50
   t.check(
     [
       draftKey({ boxSlug: "test1", scope: "main/test1" }),
@@ -63,7 +60,6 @@ void test("The slot is per box INSTANCE, mirroring the composer:", async (t) => 
 // The named behavior change (mirrors `adoptLegacyComposerDrafts`): other
 // sessions' stale dictation drafts are discarded, not merged.
 void test("The named behavior change (mirrors adoptLegacyComposerDrafts):", async (t) => {
-  // doctest:L63
   const s = fakeStorage();
   s.setItem("bbx-chat-draft:test1:sess-a", JSON.stringify({ text: "older", narration: false, updatedAt: 100 }));
   s.setItem("bbx-chat-draft:test1:sess-b", JSON.stringify({ text: "newest", narration: true, updatedAt: 300 }));
@@ -75,10 +71,8 @@ void test("The named behavior change (mirrors adoptLegacyComposerDrafts):", asyn
     updatedAt: 300,
   });
 
-  // doctest:L71
   t.check(result.discarded, 1);
 
-  // doctest:L74
   t.check(
     // This box's legacy keys are gone; the other box's are untouched.
     Object.keys(s.dump()).toSorted().join(","),
@@ -88,7 +82,6 @@ void test("The named behavior change (mirrors adoptLegacyComposerDrafts):", asyn
 
 // An empty box (no legacy keys, or none that parse) adopts nothing:
 void test("An empty box (no legacy keys, or none that parse) adopts nothing:", async (t) => {
-  // doctest:L82
   const empty = fakeStorage();
   const result2 = adoptLegacyDictationDrafts(empty, { boxSlug: "test1", scope: "" });
   t.check(result2, {
@@ -101,7 +94,6 @@ void test("An empty box (no legacy keys, or none that parse) adopts nothing:", a
 // separate from the legacy per-session prefix, and adoption must not delete or
 // re-adopt the slot it writes to:
 void test("The singleton key itself is never a candidate — it uses the new prefix, separ...", async (t) => {
-  // doctest:L93
   const s2 = fakeStorage();
   s2.setItem("bbx-chat-draft:test1:singleton", "not json {{{");
   s2.setItem("bbx-chat-draft:test1:sess-a", JSON.stringify({ text: "legacy", narration: false, updatedAt: 100 }));
@@ -112,7 +104,6 @@ void test("The singleton key itself is never a candidate — it uses the new pre
     updatedAt: 100,
   });
 
-  // doctest:L100
   t.check(
     // The malformed singleton survives (the caller overwrites it); only the legacy key is removed.
     Object.keys(s2.dump()).toSorted().join(","),
@@ -124,7 +115,6 @@ void test("The singleton key itself is never a candidate — it uses the new pre
 //
 // A well-formed draft round-trips:
 void test("A well-formed draft round-trips:", async (t) => {
-  // doctest:L110
   const draft = { text: "buy oat milk and call the dentist", narration: true, updatedAt: 5 };
   t.check(parseDraft(serializeDraft(draft)), {
     text: "buy oat milk and call the dentist",
@@ -136,23 +126,17 @@ void test("A well-formed draft round-trips:", async (t) => {
 // `parseDraft` returns null for anything it can't trust — absent, empty, or
 // malformed-shape values — so a corrupt entry never reaches the UI:
 void test("parseDraft returns null for anything it can't trust — absent, empty, or malfo...", async (t) => {
-  // doctest:L119
   t.check(parseDraft(null), null);
 
-  // doctest:L122
   t.check(parseDraft(""), null);
 });
 
 void test("serializeDraft / parseDraft", async (t) => {
-  // doctest:L127
   t.check(parseDraft('{"text":"   ","narration":true,"updatedAt":5}'), null);
 
-  // doctest:L130
   t.check(parseDraft('{"text":"hi","narration":"yes","updatedAt":5}'), null);
 
-  // doctest:L133
   t.check(parseDraft('{"text":"hi","narration":true}'), null);
 
-  // doctest:L136
   t.check(parseDraft('{"text":"hi","narration":true,"updatedAt":"5"}'), null);
 });

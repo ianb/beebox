@@ -14,7 +14,6 @@ const repoRoot = resolve(import.meta.dirname, "../../..");
 
 // A doctest in `beebox` names `beebox` and its path inside the package:
 void test("A doctest in beebox names beebox and its path inside the package:", async (t) => {
-  // doctest:L18
   await t.checkText(rootGuardReport({ testFile: `${repoRoot}/beebox/test/lib/cookies.doctest.md`, repoRoot }), `TAP version 14
 1..1
 not ok 1 - run this test from its package: cd beebox && pnpm exec tap test/lib/cookies.doctest.md`);
@@ -22,7 +21,6 @@ not ok 1 - run this test from its package: cd beebox && pnpm exec tap test/lib/c
 
 // A file outside any package with a `.taprc` gets the general instruction:
 void test("A file outside any package with a .taprc gets the general instruction:", async (t) => {
-  // doctest:L27
   await t.checkText(rootGuardReport({ testFile: `${repoRoot}/scratch/x.doctest.md`, repoRoot }), `TAP version 14
 1..1
 not ok 1 - tap is not configured at the monorepo root; run tests from the package that owns them`);

@@ -34,7 +34,6 @@ const UNAVAILABILITY = {
   message: "You've hit your usage limit.",
 };
 
-
 // ## The step fails with the cause; nothing retries after it
 void test("The step fails with the cause; nothing retries after it", async (t) => {
   t.teardown(async () => {
@@ -44,7 +43,6 @@ void test("The step fails with the cause; nothing retries after it", async (t) =
       t.error(error);
     }
   });
-  // doctest:L43
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/quota.procedure.card", `---
 name: quota

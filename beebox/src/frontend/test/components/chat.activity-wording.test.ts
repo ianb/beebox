@@ -40,19 +40,14 @@ function detail(toolName: string, input: Record<string, unknown>) {
 // Tools fall into groups, and TodoWrite is not counted. Lookups say where they
 // looked: the person's box, or the web.
 void test("Tools fall into groups, and TodoWrite is not counted.", async (t) => {
-  // doctest:L44
   t.check(summarizeActivity([{ type: "thinking" }, tools(tool("Read", {}), tool("Grep", {}), tool("Bash", {}))]), "thought it over, checked 2 things in your box, took a step");
 
-  // doctest:L47
   t.check(summarizeActivity([tools(tool("Edit", {}), tool("Write", {}), tool("Bash", {}), tool("mcp__x__y", {}))]), "made 2 changes, took 2 steps");
 
-  // doctest:L50
   t.check(summarizeActivity([tools(tool("Task", {}), tool("Agent", {}), tool("WebFetch", {}))]), "handed off 2 tasks, read a web page");
 
-  // doctest:L53
   t.check(summarizeActivity([tools(tool("WebSearch", {}), tool("WebSearch", {}), tool("WebFetch", {}), tool("WebFetch", {}), tool("Read", {}))]), "searched the web 2 times, read 2 web pages, checked something in your box");
 
-  // doctest:L56
   t.check(summarizeActivity([tools(tool("TodoWrite", {}), tool("TodoWrite", {}))]), "working");
 });
 
@@ -60,7 +55,6 @@ void test("Tools fall into groups, and TodoWrite is not counted.", async (t) => 
 //
 // The title is the file name without `.card` and the type suffix, with spaces:
 void test("The title is the file name without .card and the type suffix, with spaces:", async (t) => {
-  // doctest:L65
   const card = "_content/people/Ana_Reyes.person.card";
   t.check([say("Read", { file_path: card }), say("Edit", { file_path: card }), say("Write", { file_path: card })], [
     "Looked at Ana Reyes",
@@ -74,7 +68,6 @@ void test("The title is the file name without .card and the type suffix, with sp
 // A schema is a new kind of thing the person can keep, so the line names the
 // place it makes, not the file or the word "schema":
 void test("A schema is a new kind of thing the person can keep, so the line names the pl...", async (t) => {
-  // doctest:L76
   t.check(
     [
       say("Write", { file_path: "_config/schemas/loan.ts" }),
@@ -91,7 +84,6 @@ void test("A schema is a new kind of thing the person can keep, so the line name
 
 // The plural follows ordinary English endings:
 void test("The plural follows ordinary English endings:", async (t) => {
-  // doctest:L87
   t.check([say("Write", { file_path: "schemas/inventory.ts" }), say("Write", { file_path: "schemas/box.ts" })], [
     "Set up a place for your inventories",
     "Set up a place for your boxes",
@@ -104,7 +96,6 @@ void test("The plural follows ordinary English endings:", async (t) => {
 // file name, without the extension. Paths arrive absolute or box-relative; the
 // `_content` folder itself is never named.
 void test("A file in the person's content folder that is not a card is named by its file...", async (t) => {
-  // doctest:L98
   const doc = "/srv/box/_content/lists/Errands.md";
   t.check([say("Read", { file_path: doc }), say("Edit", { file_path: doc }), say("Write", { file_path: doc })], [
     "Looked at Errands",
@@ -116,7 +107,6 @@ void test("A file in the person's content folder that is not a card is named by 
 // A Codex file change that touched several files names the first and counts
 // the rest:
 void test("A Codex file change that touched several files names the first and counts the...", async (t) => {
-  // doctest:L107
   t.check(say("Edit", { file_path: "_content/lists/Errands.md", file_paths: ["_content/lists/Errands.md", "_content/a.md", "_content/b.md"] }), "Made a change to Errands and 2 more");
 });
 
@@ -124,7 +114,6 @@ void test("A Codex file change that touched several files names the first and co
 //
 // Agent machinery and paths outside the content folder keep the generic line:
 void test("Agent machinery and paths outside the content folder keep the generic line:", async (t) => {
-  // doctest:L116
   t.check(
     [
       say("Read", { file_path: "notes/todo.txt" }),
@@ -145,7 +134,6 @@ void test("Agent machinery and paths outside the content folder keep the generic
 //
 // The description is shown, capitalized; the command text never is:
 void test("The description is shown, capitalized; the command text never is:", async (t) => {
-  // doctest:L130
   t.check(
     [
       say("Bash", { description: "check the loan dates", command: "rm -rf x" }),
@@ -160,7 +148,6 @@ void test("The description is shown, capitalized; the command text never is:", a
 
 // ## Everything else
 void test("Everything else", async (t) => {
-  // doctest:L140
   t.check(
     [
       say("Grep", {}),
@@ -189,7 +176,6 @@ void test("Everything else", async (t) => {
 // name and its input summary, raw JSON for most, are plumbing and stay in the
 // expanded detail.
 void test("An unknown tool (an MCP tool, a future built-in) gets the neutral label:", async (t) => {
-  // doctest:L167
   t.check(describeToolCall({ type: "tool_use", toolName: "mcp__x__lookup", inputSummary: "{\"q\":\"drill\"}" }), "Took a step");
 });
 
@@ -201,7 +187,6 @@ void test("An unknown tool (an MCP tool, a future built-in) gets the neutral lab
 // A regex or other file pattern keeps the plain line, and the expanded line
 // shows the pattern under it.
 void test("A search for plain words says what it looked for.", async (t) => {
-  // doctest:L180
   t.check(
     [
       say("Grep", { pattern: "lease" }),
@@ -225,7 +210,6 @@ void test("A search for plain words says what it looked for.", async (t) => {
   ],
   );
 
-  // doctest:L201
   t.check([detail("Grep", { pattern: "lease" }).excerpt, detail("Grep", { pattern: "due:\\s*2026" }).excerpt], [
     null,
     {
@@ -242,7 +226,6 @@ void test("A search for plain words says what it looked for.", async (t) => {
 // `.attach/` folder sits in that card. The top of the content folder and
 // anything outside it have no place.
 void test("The place is the folder a content file sits in.", async (t) => {
-  // doctest:L212
   t.check(
     [
       detail("Edit", { file_path: "/box/_content/recipes/Lemon_Chicken.recipe.card" }).place,
@@ -267,7 +250,6 @@ void test("The place is the folder a content file sits in.", async (t) => {
 // its `completed` status marks it finished, and one across several files links
 // the first.
 void test("A finished edit or new file in the content folder names the file the line lin...", async (t) => {
-  // doctest:L229
   t.check(
     [
       detail("Edit", { file_path: "/box/_content/recipes/Lemon_Chicken.recipe.card" }).opens,
@@ -302,7 +284,6 @@ void test("A finished edit or new file in the content folder names the file the 
 // An edit shows what it replaced and with what, trimmed. An edit that
 // replaces every match says so.
 void test("An edit shows what it replaced and with what, trimmed.", async (t) => {
-  // doctest:L245
   t.check(detail("Edit", { file_path: "_content/recipes/Lemon_Chicken.recipe.card", old_string: "Bake at 350°\n", new_string: "Bake at 375°\n" }).excerpt, {
     kind: "change",
     before: "Bake at 350°",
@@ -310,14 +291,12 @@ void test("An edit shows what it replaced and with what, trimmed.", async (t) =>
     everywhere: false,
   });
 
-  // doctest:L248
   t.check(change(detail("Edit", { old_string: "Marta", new_string: "Martha", replace_all: true }).excerpt).everywhere, true);
 });
 
 // Lines the edit kept at its start and end are dropped, so an added line
 // reads as an addition:
 void test("Lines the edit kept at its start and end are dropped, so an added line reads...", async (t) => {
-  // doctest:L256
   t.check(detail("Edit", { old_string: "- pick up chicken", new_string: "- pick up chicken\n- lemons (3)" }).excerpt, {
     kind: "change",
     before: "",
@@ -325,7 +304,6 @@ void test("Lines the edit kept at its start and end are dropped, so an added lin
     everywhere: false,
   });
 
-  // doctest:L259
   t.check(detail("Edit", { old_string: "# Errands\n- milk\n- eggs", new_string: "# Errands\n- oat milk\n- eggs" }).excerpt, {
     kind: "change",
     before: "- milk",
@@ -336,7 +314,6 @@ void test("Lines the edit kept at its start and end are dropped, so an added lin
 
 // Indentation is kept, since it can be the whole change:
 void test("Indentation is kept, since it can be the whole change:", async (t) => {
-  // doctest:L266
   t.check(detail("Edit", { old_string: "due:\n  - today", new_string: "due:\n    - today" }).excerpt, {
     kind: "change",
     before: "  - today",
@@ -348,7 +325,6 @@ void test("Indentation is kept, since it can be the whole change:", async (t) =>
 // An edit with no result yet (still running, or interrupted) is only what the
 // agent asked for, so it has no excerpt:
 void test("An edit with no result yet (still running, or interrupted) is only what the a...", async (t) => {
-  // doctest:L274
   t.check(describeToolDetail(tool("Edit", { old_string: "350°", new_string: "375°" })), {
     place: null,
     failed: false,
@@ -361,7 +337,6 @@ void test("An edit with no result yet (still running, or interrupted) is only wh
 // side, or with the fields missing (a Codex change, a block still streaming),
 // has no excerpt and opens straight to the raw input.
 void test("Deleting text leaves an empty after side; an edit with no text on either side...", async (t) => {
-  // doctest:L283
   t.check(
     [
       detail("Edit", { old_string: "- buy milk", new_string: "" }).excerpt,
@@ -385,7 +360,6 @@ void test("Deleting text leaves an empty after side; an edit with no text on eit
 
 // Long text is cut to three lines and 200 characters, marked with "…":
 void test("Long text is cut to three lines and 200 characters, marked with \"…\":", async (t) => {
-  // doctest:L295
   const long = change(detail("Edit", { old_string: "a\nb\nc\nd\ne", new_string: "x".repeat(300) }).excerpt);
   t.check([long.before, long.after.length, long.after.endsWith("…")], [
     `a
@@ -399,7 +373,6 @@ c…`,
 // A step whose result is an error did not change anything. It is marked, and
 // its excerpt is dropped so the asked-for text does not read as done:
 void test("A step whose result is an error did not change anything.", async (t) => {
-  // doctest:L304
   const failed = { ...tool("Edit", { file_path: "_content/recipes/Lemon_Chicken.recipe.card", old_string: "350°", new_string: "375°" }), resultSummary: "<tool_use_error>String to replace not found in file." };
   t.check(describeToolDetail(failed), {
     place: "in recipes",
@@ -408,14 +381,12 @@ void test("A step whose result is an error did not change anything.", async (t) 
     opens: null,
   });
 
-  // doctest:L308
   t.check(describeToolDetail({ ...tool("Edit", { old_string: "350°", new_string: "375°" }), resultSummary: "The file has been updated." }).failed, false);
 });
 
 // A step with nothing plain to add has no excerpt: a command, an unknown
 // tool, a read, and a new file (its text is the whole file, not a change):
 void test("A step with nothing plain to add has no excerpt:", async (t) => {
-  // doctest:L316
   t.check(
     [
       detail("Bash", { description: "check dates", command: "ls" }).excerpt,

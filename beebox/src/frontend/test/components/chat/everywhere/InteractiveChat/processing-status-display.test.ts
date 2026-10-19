@@ -18,22 +18,17 @@ import {
 
 // ## An unconfirmed bootstrap snapshot stays hidden
 void test("An unconfirmed bootstrap snapshot stays hidden", async (t) => {
-  // doctest:L22
   t.check(shouldShowAgentWorking({ phase: "idle", processBusy: true, confirmation: "unconfirmed" }), false);
 
-  // doctest:L25
   t.check(shouldShowAgentWorking({ phase: "idle", processBusy: true, confirmation: "confirmed" }), true);
 
-  // doctest:L28
   t.check(shouldShowAgentWorking({ phase: "idle", processBusy: false, confirmation: "confirmed" }), false);
 });
 
 // ## Local streaming and its finalizing refresh remain immediate
 void test("Local streaming and its finalizing refresh remain immediate", async (t) => {
-  // doctest:L35
   t.check(shouldShowAgentWorking({ phase: "streaming", processBusy: false, confirmation: "unconfirmed" }), true);
 
-  // doctest:L38
   t.check(shouldShowAgentWorking({ phase: "refreshing-turn", processBusy: false, confirmation: "unconfirmed" }), true);
 });
 
@@ -47,13 +42,10 @@ void test("Local streaming and its finalizing refresh remain immediate", async (
 // a suppressor: a busy turn already confirmed (the agent working on a capture,
 // say) keeps its strip through a reconnect's round-trip rather than flickering.
 void test("The reported flash (issues/bugs/2026-08-05-open-chat-flashes-agent-working-no...", async (t) => {
-  // doctest:L53
   t.check(shouldShowAgentWorking({ phase: "refreshing-resync", processBusy: false, confirmation: "unconfirmed" }), false);
 
-  // doctest:L56
   t.check(shouldShowAgentWorking({ phase: "refreshing-resync", processBusy: true, confirmation: "unconfirmed" }), false);
 
-  // doctest:L59
   t.check(shouldShowAgentWorking({ phase: "refreshing-resync", processBusy: true, confirmation: "confirmed" }), true);
 });
 
@@ -67,14 +59,12 @@ void test("The reported flash (issues/bugs/2026-08-05-open-chat-flashes-agent-wo
 // server-idle reads, so the milliseconds-wide busy→STREAM_RESULT window at a
 // healthy turn end can never trigger a false recovery.
 void test("The machine's streaming state is exited only by frames on the per-turn WS sub...", async (t) => {
-  // doctest:L74
   await t.checkText(
     // A busy server resets the count — a long tool phase never accumulates.
     JSON.stringify(streamWatchdogAdvance({ busy: true, idlePolls: 2 })),
     "{\"idlePolls\":0,\"recover\":false}",
   );
 
-  // doctest:L78
   // Idle reads accumulate; recovery fires exactly at the threshold.
   const s1 = streamWatchdogAdvance({ busy: false, idlePolls: 0 });
   const s2 = streamWatchdogAdvance({ busy: false, idlePolls: s1.idlePolls });

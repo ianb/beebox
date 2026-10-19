@@ -70,7 +70,6 @@ void test("A view that renders off its cards prop produces HTML and exits 0:", a
       t.error(error);
     }
   });
-  // doctest:L66
   const box = await makeViewBox();
   await box.write("_content/inbox/A.doc.card", DOC_CARD);
   await box.write("_content/inbox/B.doc.card", DOC_CARD);
@@ -106,7 +105,6 @@ void test("A view renders a card's body with Markdown from beebox/view-widgets, 
       t.error(error);
     }
   });
-  // doctest:L101
   const box = await makeViewBox();
   await box.write("_content/inbox/A.doc.card", DOC_CARD.replace("Body\n", "See [B](B.doc.card).\n\n{% todo %}Order lumber{% /todo %}\n"));
   await writeView(box, { rel: "prose.tsx", content: `
@@ -141,7 +139,6 @@ void test("The mock exposes the same synchronous imageUrl helper as the browser 
       t.error(error);
     }
   });
-  // doctest:L128
   const box = await makeViewBox();
   await writeView(box, { rel: "image.tsx", content: `
 export const name = "Image";
@@ -173,7 +170,6 @@ void test("A view that throws during render exits 1 with the error and a stack t
       t.error(error);
     }
   });
-  // doctest:L154
   const box = await makeViewBox();
   await writeView(box, { rel: "boom.tsx", content: `
 export const name = "Boom";
@@ -209,7 +205,6 @@ void test("A view that throws while the module evaluates (not in the component b
       t.error(error);
     }
   });
-  // doctest:L192
   const box = await makeViewBox();
   await writeView(box, { rel: "topthrow.tsx", content: `
 export const name = "TopThrow";
@@ -244,7 +239,6 @@ void test("fileUrl is fine in render, but the async helpers (readFile, writeFile
       t.error(error);
     }
   });
-  // doctest:L226
   const box = await makeViewBox();
   await writeView(box, { rel: "early.tsx", content: `
 export const name = "Early";
@@ -276,7 +270,6 @@ void test("Nonexistent view", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L254
   const box = await makeViewBox();
   const r = await runViewTest(box.root, ["ghost"]);
   t.check(r, {
@@ -299,7 +292,6 @@ void test("--path sets params.path; if the path isn't among the view's selected 
       t.error(error);
     }
   });
-  // doctest:L275
   const box = await makeViewBox();
   await writeView(box, { rel: "page.tsx", content: `
 export const name = "Page";
@@ -330,7 +322,6 @@ void test("When a dependency glob selects a card that fails to load, the command
       t.error(error);
     }
   });
-  // doctest:L311
   const box = await makeViewBox();
   await box.write("_content/inbox/Bad.bogus.card", "---\nstatus: new\n---\nno schema\n");
   await writeView(box, { rel: "list.tsx", content: `
@@ -354,7 +345,6 @@ export default function List({ cards }) { return <div>n: {cards.length}</div>; }
 
   // With the flag it exits 0:
 
-  // doctest:L333
   const ok = await runViewTest(box.root, ["list", "--allow-invalid-cards"]);
   t.check(ok, {
     code: 0,

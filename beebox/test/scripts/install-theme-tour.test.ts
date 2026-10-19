@@ -19,7 +19,6 @@ void test("Installation is idempotent and preserves edits", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L16
   const box = await makeTmpBox();
   const source = `${box.root}/seed`;
   await box.write("seed/entry.card", "seed\n");
@@ -32,7 +31,6 @@ void test("Installation is idempotent and preserves edits", async (t) => {
     conflicts: [],
   });
 
-  // doctest:L25
   const second = await installThemeTour(box.root, source);
   t.check(second, {
     copied: [],
@@ -42,7 +40,6 @@ void test("Installation is idempotent and preserves edits", async (t) => {
     conflicts: [],
   });
 
-  // doctest:L31
   await box.write("_content/theme-tour/entry.card", "human edit\n");
   const third = await installThemeTour(box.root, source);
   t.check(third, {

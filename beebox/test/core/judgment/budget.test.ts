@@ -29,33 +29,26 @@ void test("Reservations count up to the cap, all or none", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L26
   const box = await makeTmpBox();
   t.check(await reserveJevCalls(box.root, { calls: 490, now: NOON }), true);
 
-  // doctest:L30
   t.check(await reserveJevCalls(box.root, { calls: 20, now: NOON }), false);
 
-  // doctest:L33
   t.check(await reserveJevCalls(box.root, { calls: 10, now: NOON }), true);
 
-  // doctest:L36
   const stored = JSON.parse(await box.read(".beebox/jev-budget.json"));
   t.check(`${stored.calls} ${stored.deferrals.length}`, "500 1");
 
   // The refused reservation is a deferral the health check reports:
 
-  // doctest:L44
   const check = await jevBudgetHealthCheck(box.root, { now: NOON });
   t.check(`${check.name} ${check.ok}: ${check.message}`, "jev-budget false: 1 judgment run(s) deferred in the last 24 hours because the box reached its daily cap of 500 Jev calls; their schedules retry with the same items");
 
   // The next box-local day starts from zero, and a day after the deferral the
   // check is clear again.
 
-  // doctest:L53
   t.check(await reserveJevCalls(box.root, { calls: 500, now: hours(24) }), true);
 
-  // doctest:L56
   t.check((await jevBudgetHealthCheck(box.root, { now: hours(25) })).ok, true);
 });
 
@@ -72,7 +65,6 @@ void test("No call is made.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L70
   const box = await makeTmpBox();
   await box.write("_config/judgments/any.judgment.card", `---
 questions:
@@ -95,6 +87,5 @@ The state is the cards that changed since the last check.
   console.error = origErr;
   t.check(`${code} ${jev.judgeCalls.length} ${errors.join(" | ")}`, "75 0 bbx judge: deferred (budget): 1 call(s) would pass the box's daily Jev cap");
 
-  // doctest:L93
   await t.checkText(await fs.readFile(BBX_DEFER_FILE, "utf-8"), "{\"reason\":\"budget\"}");
 });

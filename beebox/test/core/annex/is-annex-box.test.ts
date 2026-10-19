@@ -34,18 +34,15 @@ void test("A plain repository: the `.git` directory decides", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L31
   const repo = await tmpRepo();
   await mkdir(join(repo, ".git"), { recursive: true });
   t.check(await isAnnexInitialized(repo), false);
 
-  // doctest:L36
   await mkdir(join(repo, ".git", "annex", "objects"), { recursive: true });
   t.check(await isAnnexInitialized(repo), true);
 
   // A repository with no `.git` at all is simply not annexed — not an error:
 
-  // doctest:L44
   t.check(await isAnnexInitialized(join(repo, "nowhere")), false);
 });
 
@@ -62,21 +59,18 @@ void test("A submodule-style layout keeps the git directory elsewhere and leaves
       t.error(error);
     }
   });
-  // doctest:L59
   const repo = await tmpRepo();
   const gitDir = join(repo, "elsewhere", "gitdir");
   await mkdir(gitDir, { recursive: true });
   await writeFile(join(repo, ".git"), "gitdir: elsewhere/gitdir\n");
   t.check(await isAnnexInitialized(repo), false);
 
-  // doctest:L66
   await mkdir(join(gitDir, "annex"), { recursive: true });
   t.check(await isAnnexInitialized(repo), true);
 
   // Garbage in the pointer file is a `false`, not a throw — a file we cannot read as
   // a pointer names no git directory, and the probe's contract is a plain answer:
 
-  // doctest:L75
   await writeFile(join(repo, ".git"), "this is not a pointer\n");
   t.check(await isAnnexInitialized(repo), false);
 });
@@ -96,7 +90,6 @@ void test("git worktree add gives the new checkout a .git file pointing at a per
       t.error(error);
     }
   });
-  // doctest:L92
   const main = await tmpRepo();
   const worktree = await tmpRepo();
   const commonDir = join(main, ".git");
@@ -106,15 +99,12 @@ void test("git worktree add gives the new checkout a .git file pointing at a per
   // git writes `commondir` as a path relative to the per-worktree git directory.
   await writeFile(join(perWorktree, "commondir"), "../..\n");
 
-  // doctest:L101
   t.check(await isAnnexInitialized(worktree), false);
 
-  // doctest:L104
   await mkdir(join(commonDir, "annex", "objects"), { recursive: true });
   t.check(await isAnnexInitialized(worktree), true);
 
   // The main checkout agrees, which is the point — one repository, one answer:
 
-  // doctest:L112
   t.check(await isAnnexInitialized(main), true);
 });

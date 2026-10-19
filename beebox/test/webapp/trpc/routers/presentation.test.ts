@@ -43,7 +43,6 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
       t.error(error);
     }
   });
-  // doctest:L28
   const box = await makeTmpBox();
   const first = await caller(box.root).presentation.get({ boxKey: "test" });
   t.check([first.catalog.map((theme) => theme.name), first.presentation, first.chrome, first.configProblems], [
@@ -83,7 +82,6 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
     [],
   ]);
 
-  // doctest:L33
   t.check([
     first.canEditCardThemes,
     (await caller(box.root, { isOwner: false }).presentation.get({ boxKey: "test-reader" })).canEditCardThemes,
@@ -93,7 +91,6 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
   // Invalid JSON stays distinguishable from absence while legacy callers retain
   // their established empty-object fallback. A corrected edit recovers.
 
-  // doctest:L45
   const configPath = path.join(box.root, "_config", "box.json");
   await fs.mkdir(path.dirname(configPath), { recursive: true });
   await fs.writeFile(configPath, "{ broken\n");
@@ -104,7 +101,6 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
     {},
   ]);
 
-  // doctest:L56
   await fs.writeFile(configPath, JSON.stringify({
     timezone: "America/Chicago",
     presentation: {
@@ -124,7 +120,6 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
     [],
   ]);
 
-  // doctest:L69
   await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\nsystem-theme:\n  name: plain\n  stock: neutral\n---\n");
   const landmarkTheme = await caller(box.root).presentation.get({ boxKey: "test", contextDir: "_content/recipes/dinner" });
   t.check([landmarkTheme.chrome, landmarkTheme.systemTheme.landmark], [
@@ -148,7 +143,6 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
     },
   ]);
 
-  // doctest:L74
   const inheritedTheme = await caller(box.root).presentation.get({ boxKey: "test", contextDir: "_content/elsewhere" });
   t.check([inheritedTheme.chrome.choice, inheritedTheme.systemTheme.landmark], [
     {
@@ -158,7 +152,6 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
     null,
   ]);
 
-  // doctest:L78
   await box.write("_content/recipes/Recipes.landmark.card", "---\nnavigation:\n  label: Recipes\nsystem-theme:\n  name: post-it\n---\n");
   const invalidLandmarkTheme = await caller(box.root).presentation.get({ boxKey: "invalid-landmark", contextDir: "_content/recipes" });
   t.check(invalidLandmarkTheme.chrome, {
@@ -171,7 +164,6 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
     },
   });
 
-  // doctest:L83
   t.check([invalidLandmarkTheme.systemTheme.boxHasOverride, invalidLandmarkTheme.systemTheme.landmark?.hasOverride, invalidLandmarkTheme.systemTheme.landmark?.explicitTheme], [
     true,
     true,
@@ -185,7 +177,6 @@ void test("An absent config is ordinary and exposes the stable built-in catalog.
   // an unrecognized stock like `purple` is no longer a validation failure — only a
   // malformed shape (a `name` that isn't a string) still counts as invalid.
 
-  // doctest:L95
   await fs.writeFile(configPath, JSON.stringify({
     timezone: "America/Chicago",
     presentation: { default: { name: 42 } },
@@ -224,7 +215,6 @@ void test("A system theme offered by the frontend must also pass the backend mut
       t.error(error);
     }
   });
-  // doctest:L121
   const deckBox = await makeTmpBox({ git: true });
   await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "deck" } });
   clearBoxConfigCache(deckBox.root);
@@ -237,7 +227,6 @@ void test("A system theme offered by the frontend must also pass the backend mut
     problem: null,
   });
 
-  // doctest:L127
   await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "night-atlas" } });
   clearBoxConfigCache(deckBox.root);
   t.check((await caller(deckBox.root).presentation.get({ boxKey: "night-atlas-saved" })).chrome, {
@@ -249,7 +238,6 @@ void test("A system theme offered by the frontend must also pass the backend mut
     problem: null,
   });
 
-  // doctest:L132
   await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "rose-trellis" } });
   clearBoxConfigCache(deckBox.root);
   t.check((await caller(deckBox.root).presentation.get({ boxKey: "rose-trellis-saved" })).chrome, {
@@ -261,7 +249,6 @@ void test("A system theme offered by the frontend must also pass the backend mut
     problem: null,
   });
 
-  // doctest:L137
   await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "gold-thread" } });
   clearBoxConfigCache(deckBox.root);
   t.check((await caller(deckBox.root).presentation.get({ boxKey: "gold-thread-saved" })).chrome, {
@@ -273,7 +260,6 @@ void test("A system theme offered by the frontend must also pass the backend mut
     problem: null,
   });
 
-  // doctest:L142
   await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "goldfish" } });
   clearBoxConfigCache(deckBox.root);
   t.check((await caller(deckBox.root).presentation.get({ boxKey: "goldfish-saved" })).chrome, {
@@ -285,7 +271,6 @@ void test("A system theme offered by the frontend must also pass the backend mut
     problem: null,
   });
 
-  // doctest:L147
   await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "doodlebit" } });
   clearBoxConfigCache(deckBox.root);
   t.check((await caller(deckBox.root).presentation.get({ boxKey: "doodlebit-saved" })).chrome, {
@@ -297,7 +282,6 @@ void test("A system theme offered by the frontend must also pass the backend mut
     problem: null,
   });
 
-  // doctest:L152
   await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "phosphor" } });
   clearBoxConfigCache(deckBox.root);
   t.check((await caller(deckBox.root).presentation.get({ boxKey: "phosphor-saved" })).chrome, {
@@ -309,7 +293,6 @@ void test("A system theme offered by the frontend must also pass the backend mut
     problem: null,
   });
 
-  // doctest:L157
   await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "overprint" } });
   clearBoxConfigCache(deckBox.root);
   t.check((await caller(deckBox.root).presentation.get({ boxKey: "overprint-saved" })).chrome, {
@@ -321,7 +304,6 @@ void test("A system theme offered by the frontend must also pass the backend mut
     problem: null,
   });
 
-  // doctest:L162
   await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "posy" } });
   clearBoxConfigCache(deckBox.root);
   t.check((await caller(deckBox.root).presentation.get({ boxKey: "posy-saved" })).chrome, {
@@ -333,7 +315,6 @@ void test("A system theme offered by the frontend must also pass the backend mut
     problem: null,
   });
 
-  // doctest:L167
   await caller(deckBox.root).presentation.setSystemTheme({ scope: "box", theme: null });
   clearBoxConfigCache(deckBox.root);
   t.check((await caller(deckBox.root).presentation.get({ boxKey: "deck-reset" })).chrome, {
@@ -360,14 +341,12 @@ void test("Anyone signed in to the box may set themes; only an anonymous caller 
       t.error(error);
     }
   });
-  // doctest:L185
   const cardBox = await makeTmpBox({ git: true });
   const cardPath = "_content/notes/Keep.doc.card";
   await cardBox.write(cardPath, "---\n# keep this comment\ntitle: Keep\nfuture-field: still here\n---\nBody stays here.\n");
   const landmarkPath = "_content/notes/Notes.landmark.card";
   await cardBox.write(landmarkPath, "---\n# landmark comment\nnavigation:\n  label: Notes\nfuture-field: retained\n---\n");
 
-  // doctest:L191
   await caller(cardBox.root).presentation.setSystemTheme({ scope: "box", theme: { name: "paper", stock: "manila" } });
   clearBoxConfigCache(cardBox.root);
   t.check((await caller(cardBox.root).presentation.get({ boxKey: "box-theme" })).chrome.choice, {
@@ -375,7 +354,6 @@ void test("Anyone signed in to the box may set themes; only an anonymous caller 
     stock: "manila",
   });
 
-  // doctest:L196
   await caller(cardBox.root).presentation.setSystemTheme({ scope: "landmark", path: landmarkPath, theme: { name: "plain" } });
   const landmarkAfterSet = await cardBox.read(landmarkPath);
   t.checkText(landmarkAfterSet, `---
@@ -388,26 +366,22 @@ system-theme:
 ---`);
   t.check((await caller(cardBox.root).presentation.get({ boxKey: "landmark-theme", contextDir: "_content/notes" })).chrome.origin, "landmark");
 
-  // doctest:L205
   t.check(
     await caller(cardBox.root).presentation.setSystemTheme({ scope: "landmark", path: landmarkPath, theme: { name: "post-it" } })
       .then(() => "accepted", (error) => error.code),
     "BAD_REQUEST",
   );
 
-  // doctest:L209
   t.check(
     await caller(cardBox.root, { authed: false }).presentation.setSystemTheme({ scope: "box", theme: null })
       .then(() => "accepted", (error) => error.code),
     "UNAUTHORIZED",
   );
 
-  // doctest:L213
   await caller(cardBox.root).presentation.setSystemTheme({ scope: "landmark", path: landmarkPath, theme: null });
   clearBoxConfigCache(cardBox.root);
   t.check((await caller(cardBox.root).presentation.get({ boxKey: "landmark-inherits", contextDir: "_content/notes" })).chrome.origin, "box-chrome");
 
-  // doctest:L218
   await caller(cardBox.root).presentation.setSystemTheme({ scope: "box", theme: null });
   clearBoxConfigCache(cardBox.root);
   t.check((await caller(cardBox.root).presentation.get({ boxKey: "box-cleared" })).chrome, {
@@ -419,7 +393,6 @@ system-theme:
     problem: null,
   });
 
-  // doctest:L223
   const set = await caller(cardBox.root).card.setTheme({
     path: cardPath,
     theme: { name: "paper", stock: "blue" },
@@ -439,7 +412,6 @@ Body stays here.`);
   // An unrecognized stock is a box-authored choice, not an error — it is accepted
   // and written as given.
 
-  // doctest:L243
   t.check(
     await caller(cardBox.root).card.setTheme({
       path: cardPath,
@@ -448,7 +420,6 @@ Body stays here.`);
     "accepted",
   );
 
-  // doctest:L249
   t.checkText(await cardBox.read(cardPath), `---
 # keep this comment
 title: Keep
@@ -459,7 +430,6 @@ theme:
 ---
 Body stays here.`);
 
-  // doctest:L254
   await caller(cardBox.root).card.setTheme({ path: cardPath, theme: null });
   const afterClear = await cardBox.read(cardPath);
   t.checkText(afterClear, `---
@@ -469,7 +439,6 @@ future-field: still here
 ---
 Body stays here.`);
 
-  // doctest:L265
   t.check(
     await caller(cardBox.root, { authed: false }).card.setTheme({
       path: cardPath,
@@ -482,7 +451,6 @@ Body stays here.`);
   // the partial success and the saved theme remains visible to the caller's normal
   // file-change refresh.
 
-  // doctest:L277
   const hooksPath = path.join(cardBox.root, ".git", "rejecting-hooks");
   await fs.mkdir(hooksPath, { recursive: true });
   await fs.writeFile(path.join(hooksPath, "pre-commit"), "#!/bin/sh\nexit 1\n");

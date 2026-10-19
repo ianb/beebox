@@ -29,13 +29,11 @@ const MIME_TAIL = "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\
 
 // ## A new outbound (no thread) gets uploaded and stamped
 void test("A new outbound (no thread) gets uploaded and stamped", async (t) => {
-  // doctest:L21
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
   box.commitAll("init box");
 
-  // doctest:L26
   await mkdir(join(box.root, "_content/inbox/email/draft-2026-04-28-hello"), { recursive: true });
   await box.seed(
     "_content/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card",
@@ -43,7 +41,6 @@ void test("A new outbound (no thread) gets uploaded and stamped", async (t) => {
   );
   box.commitAll("agent writes draft");
 
-  // doctest:L33
   const gmail = createFakeGoogleGmail();
   const connector = createGmailConnector(box.root, gmail);
   const result = await connector.sync();
@@ -54,7 +51,6 @@ void test("A new outbound (no thread) gets uploaded and stamped", async (t) => {
     procedures: [],
   });
 
-  // doctest:L39
   t.check(uploaded(gmail), [{
     draft: DRAFT("t-fake-1"),
     raw: `To: alice@example.com\r\nSubject: Hello\r\n${MIME_TAIL}Hi there.\n`,
@@ -62,7 +58,6 @@ void test("A new outbound (no thread) gets uploaded and stamped", async (t) => {
 
   // The card is stamped with the returned draft id and URL:
 
-  // doctest:L46
   const stampedPath = "_content/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card";
   const stamped = await readFile(join(box.root, stampedPath), "utf-8");
   t.check(stamped, `---
@@ -85,13 +80,11 @@ Hi there.
 // `In-Reply-To`/`References` headers and threads the upload onto the existing
 // Gmail thread.
 void test("When an outbound has <in-reply-to ref=\"...\" />, the connector reads the sourc...", async (t) => {
-  // doctest:L78
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
   box.commitAll("init box");
 
-  // doctest:L83
   await mkdir(join(box.root, "_content/inbox/email/thread-Test-abc12345"), { recursive: true });
   await box.seed(
     "_content/inbox/email/thread-Test-abc12345/msg-001.email-message.card",
@@ -103,12 +96,10 @@ void test("When an outbound has <in-reply-to ref=\"...\" />, the connector reads
   );
   box.commitAll("agent writes reply draft");
 
-  // doctest:L94
   const gmail = createFakeGoogleGmail();
   const connector = createGmailConnector(box.root, gmail);
   await connector.sync();
 
-  // doctest:L98
   // Reply uses the source thread-id, and the MIME has the threading headers
   t.check(uploaded(gmail), [{
     draft: DRAFT("thread-abc12345"),
@@ -122,13 +113,11 @@ void test("When an outbound has <in-reply-to ref=\"...\" />, the connector reads
 // Agents sometimes write `<in-reply-to>` with a longer path. All three forms
 // resolve to the same source card:
 void test("Agents sometimes write <in-reply-to> with a longer path.", async (t) => {
-  // doctest:L124
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
   box.commitAll("init box");
 
-  // doctest:L129
   await mkdir(join(box.root, "_content/inbox/email/thread-Test-zzz99999"), { recursive: true });
   await box.seed(
     "_content/inbox/email/thread-Test-zzz99999/msg-001.email-message.card",
@@ -141,12 +130,10 @@ void test("Agents sometimes write <in-reply-to> with a longer path.", async (t) 
   );
   box.commitAll("setup");
 
-  // doctest:L141
   const gmail = createFakeGoogleGmail();
   const connector = createGmailConnector(box.root, gmail);
   await connector.sync();
 
-  // doctest:L145
   t.check(uploaded(gmail), [{
     draft: DRAFT("thread-zzz99999"),
     raw: `To: a@b.com\r\nSubject: Re: X\r\nIn-Reply-To: abs-msg-id\r\nReferences: abs-msg-id\r\n${MIME_TAIL}Reply 1.\n`,
@@ -159,13 +146,11 @@ void test("Agents sometimes write <in-reply-to> with a longer path.", async (t) 
 // source card, we'd rather fail loud than upload it as a brand-new thread
 // the user only notices is wrong after opening Gmail:
 void test("If the agent writes a draft whose in-reply-to doesn't point to a real source...", async (t) => {
-  // doctest:L159
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
   box.commitAll("init box");
 
-  // doctest:L164
   await mkdir(join(box.root, "_content/inbox/email/thread-Bad-aaa00000"), { recursive: true });
   await box.seed(
     "_content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card",
@@ -173,16 +158,13 @@ void test("If the agent writes a draft whose in-reply-to doesn't point to a real
   );
   box.commitAll("setup");
 
-  // doctest:L171
   const gmail = createFakeGoogleGmail();
   const connector = createGmailConnector(box.root, gmail);
   const result = await connector.sync();
 
-  // doctest:L175
   // No draft uploaded, sync reports the error per-card
   t.check(gmail.drafts, []);
 
-  // doctest:L179
   // Inbound sync succeeded, but the failed card is named in the error, so the
   // wakeup and finalize output (and the connector activity record) show it.
   const badCard = "_content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card";
@@ -196,7 +178,6 @@ void test("If the agent writes a draft whose in-reply-to doesn't point to a real
     error: str`Draft upload failed for 1 card: ${badCard}: in-reply-to ref "does-not-exist.email-message.card" did not resolve to a readable email-message card with email.message-id and email.thread-id (looked at ${any(String)}…`,
   });
 
-  // doctest:L187
   // No draft id. The failure is the card's own, so the reason is written on
   // the card and the connector stops retrying it.
   const cardPath = join(box.root, "_content/inbox/email/thread-Bad-aaa00000/draft-001.email-outbound.card");
@@ -217,12 +198,10 @@ gmail-draft-error: ${reason}
   // dashboard lists it instead, until someone fixes the card and deletes the
   // `gmail-draft-error` line:
 
-  // doctest:L200
   const again = await connector.sync();
   t.check(again, { success: true, created: [], updated: [], procedures: [] });
   t.check(gmail.drafts, []);
 
-  // doctest:L204
   const [check] = await strandedDraftsHealthChecks(box.root);
   t.check(check, {
     name: "gmail-drafts",
@@ -231,7 +210,6 @@ gmail-draft-error: ${reason}
     severity: "warning",
   });
 
-  // doctest:L208
   // Fixing the card: point the ref at nothing (a new thread) and drop the error line.
   await writeFile(cardPath, "---\ntype: email-outbound\nstatus: draft\nto: x@y.com\nsubject: \"Re: missing\"\n---\n...\n");
   await connector.sync();
@@ -247,7 +225,6 @@ gmail-draft-error: ${reason}
 // Gmail refusing a draft as malformed (HTTP 400) cannot be fixed by retrying.
 // A network or auth failure can, so it leaves the card untouched:
 void test("Gmail refusing a draft as malformed (HTTP 400) cannot be fixed by retrying.", async (t) => {
-  // doctest:L221
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
@@ -257,7 +234,6 @@ void test("Gmail refusing a draft as malformed (HTTP 400) cannot be fixed by ret
   );
   box.commitAll("setup");
 
-  // doctest:L230
   const gmail = createFakeGoogleGmail();
   gmail.rejectDrafts = "Invalid To header";
   await createGmailConnector(box.root, gmail).sync();
@@ -272,7 +248,6 @@ gmail-draft-error: "Gmail rejected the draft: Invalid To header"
 Hello.
 `);
 
-  // doctest:L237
   await box.seed(
     "_content/inbox/email/draft-2026-04-28-b/draft-001.email-outbound.card",
     "---\ntype: email-outbound\nstatus: draft\nto: bob@example.com\nsubject: Hi\n---\nHello.\n",
@@ -301,7 +276,6 @@ Hello.
   // The first retried failure starts a clock on the card; a later failure inside
   // the week leaves the card as it is:
 
-  // doctest:L253
   await createGmailConnector(box.root, offline).sync();
   t.check(await readFile(otherPath, "utf-8"), other);
 
@@ -310,7 +284,6 @@ Hello.
   // Nothing retries forever. A draft whose upload has failed for 7 days is stranded
   // with the last error, like a card problem, and the dashboard lists it:
 
-  // doctest:L264
   const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
   await writeFile(otherPath, other.replace(/gmail-draft-failing-since: .*/, `gmail-draft-failing-since: ${eightDaysAgo}`));
   await createGmailConnector(box.root, offline).sync();
@@ -325,7 +298,6 @@ gmail-draft-error: "Upload kept failing for 7 days, since ${eightDaysAgo}: socke
 Hello.
 `);
 
-  // doctest:L271
   t.check(await strandedDraftsHealthChecks(box.root), [{
     name: "gmail-drafts",
     ok: false,
@@ -335,7 +307,6 @@ Hello.
 
   // Deleting the error line retries it; a successful upload clears the clock:
 
-  // doctest:L278
   await writeFile(otherPath, gaveUp.replace(/gmail-draft-error: .*\n/, "gmail-draft-failing-since: 2026-01-01T00:00:00.000Z\n"));
   const online = createFakeGoogleGmail();
   await createGmailConnector(box.root, online).sync();
@@ -361,13 +332,11 @@ Hello.
 // An outbound card with `gmail-draft-id` set has already been uploaded — the
 // connector leaves it alone:
 void test("An outbound card with gmail-draft-id set has already been uploaded — the conn...", async (t) => {
-  // doctest:L292
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
   box.commitAll("init box");
 
-  // doctest:L297
   await mkdir(join(box.root, "_content/inbox/email/draft-2026-04-28-already"), { recursive: true });
   await box.seed(
     "_content/inbox/email/draft-2026-04-28-already/draft-001.email-outbound.card",
@@ -375,12 +344,10 @@ void test("An outbound card with gmail-draft-id set has already been uploaded �
   );
   box.commitAll("setup");
 
-  // doctest:L304
   const gmail = createFakeGoogleGmail();
   const connector = createGmailConnector(box.root, gmail);
   await connector.sync();
 
-  // doctest:L308
   t.check(gmail.drafts, []);
 });
 
@@ -389,13 +356,11 @@ void test("An outbound card with gmail-draft-id set has already been uploaded �
 // A normal received `email-message` card under `_content/inbox/email/` is left
 // alone — the connector only uploads `email-outbound` cards:
 void test("A normal received email-message card under content/inbox/email/ is left alone...", async (t) => {
-  // doctest:L318
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
   box.commitAll("init box");
 
-  // doctest:L323
   await mkdir(join(box.root, "_content/inbox/email/thread-Hello-xyz12345"), { recursive: true });
   await box.seed(
     "_content/inbox/email/thread-Hello-xyz12345/msg-001.email-message.card",
@@ -403,11 +368,9 @@ void test("A normal received email-message card under content/inbox/email/ is le
   );
   box.commitAll("setup");
 
-  // doctest:L330
   const gmail = createFakeGoogleGmail();
   const connector = createGmailConnector(box.root, gmail);
   await connector.sync();
 
-  // doctest:L334
   t.check(gmail.drafts, []);
 });

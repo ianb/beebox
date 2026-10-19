@@ -14,7 +14,6 @@ console.warn = () => {};
 //
 // A single tag with content:
 void test("A single tag with content:", async (t) => {
-  // doctest:L18
   const tags = parseTags("<greeting>Hello world</greeting>");
   t.check(tags, [
     {
@@ -29,7 +28,6 @@ void test("A single tag with content:", async (t) => {
 //
 // Attributes are extracted as key-value pairs:
 void test("Attributes are extracted as key-value pairs:", async (t) => {
-  // doctest:L36
   const tags = parseTags('<task status="open" priority="high">Do thing</task>');
   t.check(tags, [
     {
@@ -45,7 +43,6 @@ void test("Attributes are extracted as key-value pairs:", async (t) => {
 
 // ## Self-closing tags
 void test("Self-closing tags", async (t) => {
-  // doctest:L47
   const tags = parseTags('<item ref="test.card" />');
   t.check(tags, [
     {
@@ -62,7 +59,6 @@ void test("Self-closing tags", async (t) => {
 //
 // Inner tags appear as subTags:
 void test("Inner tags appear as subTags:", async (t) => {
-  // doctest:L63
   const tags = parseTags("<outer><inner>nested</inner></outer>");
   t.check(tags, [
     {
@@ -79,14 +75,12 @@ void test("Inner tags appear as subTags:", async (t) => {
     },
   ]);
 
-
 });
 
 // ## Filtering with allowTags
 //
 // Only specified tags are parsed — others are ignored:
 void test("Only specified tags are parsed — others are ignored:", async (t) => {
-  // doctest:L81
   const tags = parseTags("<speech>Hello <b>world</b></speech>", ["speech"]);
   t.check(tags, [
     {
@@ -99,7 +93,6 @@ void test("Only specified tags are parsed — others are ignored:", async (t) =>
 
 // ## Text between tags becomes comments
 void test("Text between tags becomes comments", async (t) => {
-  // doctest:L92
   const tags = parseTags("Some text <tag>inside</tag> more text");
   t.check(tags, [
     {
@@ -124,7 +117,6 @@ void test("Text between tags becomes comments", async (t) => {
 //
 // Backticks wrapping the input are removed (common in LLM output):
 void test("Backticks wrapping the input are removed (common in LLM output):", async (t) => {
-  // doctest:L102
   const tags = parseTags("`<tag>content</tag>`");
   t.check(tags, [
     {
@@ -137,10 +129,8 @@ void test("Backticks wrapping the input are removed (common in LLM output):", as
 
 // ## Empty input
 void test("Empty input", async (t) => {
-  // doctest:L113
   t.check(parseTags(""), []);
 
-  // doctest:L116
   t.check(parseTags("   "), []);
 });
 
@@ -151,17 +141,14 @@ void test("Empty input", async (t) => {
 // the same way, not reported as "Unexpected closing tag". The documented
 // paired ack form (`<ack kind="…">note</ack>`) hits exactly this.
 void test("With an allowTags filter active, an opener outside the allowlist is skipped w...", async (t) => {
-  // doctest:L128
   let warned = 0;
   const origWarn = console.warn;
   console.warn = () => { warned += 1; };
   const tags = parseTags('<speech>hi</speech> <ack kind="appended" ref="x.card">a note</ack>', ["speech"]);
   console.warn = origWarn;
 
-  // doctest:L134
   t.check(warned, 0);
 
-  // doctest:L137
   t.check(tags, [
     {
       type: "speech",
@@ -179,13 +166,11 @@ void test("With an allowTags filter active, an opener outside the allowlist is s
 // An unmatched closer of an ALLOWED tag still warns — that's real
 // malformation worth surfacing:
 void test("An unmatched closer of an ALLOWED tag still warns — that's real malformation...", async (t) => {
-  // doctest:L145
   let warned2 = 0;
   const origWarn2 = console.warn;
   console.warn = () => { warned2 += 1; };
   parseTags("text </speech> more", ["speech"]);
   console.warn = origWarn2;
 
-  // doctest:L151
   t.check(warned2, 1);
 });

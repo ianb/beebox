@@ -35,12 +35,10 @@ void test("Fresh box: installs `_content/plate.todo-view.card` with `glob: \"**\
       t.error(error);
     }
   });
-  // doctest:L31
   const box = await makeBox();
   const installed = await installTodoView(box);
   t.check(installed, true);
 
-  // doctest:L36
   const content = await fs.readFile(path.join(box, "_content/plate.todo-view.card"), "utf-8");
   t.check(content, `---
 title: The Plate
@@ -48,7 +46,6 @@ glob: "**"
 ---
 `);
 
-  // doctest:L42
   const versions = await readVersions(box);
   t.check(versions, {
     "_content/plate.todo-view.card": {
@@ -64,7 +61,6 @@ glob: "**"
 
   // ## Re-running on an already-installed, untouched box is a no-op (`installed: false`)
 
-  // doctest:L52
   const installedAgain = await installTodoView(box);
   t.check(installedAgain, false);
 });
@@ -74,9 +70,7 @@ glob: "**"
 // So `bbx upgrade`/`syncTemplatesFromSource`'s selective commit step recognizes
 // its writes as generated output rather than unrelated dirt:
 void test("So bbx upgrade/syncTemplatesFromSource's selective commit step recognizes its...", async (t) => {
-  // doctest:L67
   t.check(isTemplateManagedPath("_content/plate.todo-view.card"), true);
 
-  // doctest:L70
   t.check(isTemplateManagedPath("_content/other.todo-view.card"), false);
 });

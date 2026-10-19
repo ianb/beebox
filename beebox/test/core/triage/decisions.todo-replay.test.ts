@@ -69,7 +69,6 @@ void test("line 22", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L23
   const box = await makeTmpBox();
   const sourceRef = "/_content/inbox/staged/Notice.doc.card";
   const originalBytes = "---\ntitle: Notice\n---\nUtility bill is outstanding.\n";
@@ -84,24 +83,19 @@ void test("line 22", async (t) => {
   const same = await replayDecisions({ ...shared, instructions, jev: answer(0.8) });
   t.check(same.results[0], replayResult({ todoAnswers: { [OPTION]: 0.8 }, requestHash: "fba23eabe64c388ffaf35f6c8157f926b90761fe5adb572d7a36a49a44a5ab4a" }, false));
 
-  // doctest:L38
   const no = await replayDecisions({ ...shared, instructions, jev: answer(0.1) });
   t.check(no.results[0], replayResult({ todoAnswers: { [OPTION]: 0.1 }, requestHash: "fba23eabe64c388ffaf35f6c8157f926b90761fe5adb572d7a36a49a44a5ab4a" }, true));
 
-  // doctest:L42
   const tie = await replayDecisions({ ...shared, instructions, jev: answer(0.5) });
   t.check(tie.results[0], replayResult({ todoAnswers: { [OPTION]: 0.5 }, requestHash: "fba23eabe64c388ffaf35f6c8157f926b90761fe5adb572d7a36a49a44a5ab4a" }, true));
 
-  // doctest:L46
   const changed = { ...instructions, destinations: instructions.destinations.map((destination) => ({ ...destination, todoQuestion: "Is the payment disputed?" })) };
   const newQuestion = await replayDecisions({ ...shared, instructions: changed, jev: answer(0.9) });
   t.check(newQuestion.results[0], replayResult({ todoAnswers: { [OPTION]: 0.9 }, requestHash: "f94b5fca24342fb2a7c545aef29300991f40b3d33c8a44e5b7e1dc5ad75a6505" }, true));
 
-  // doctest:L51
   const omitted = { ...instructions, destinations: instructions.destinations.map(({ todoQuestion: _todoQuestion, ...destination }) => destination) };
   const absent = await replayDecisions({ ...shared, instructions: omitted, jev: answer(0.9) });
   t.check(absent.results[0], replayResult({ todoAnswers: undefined, requestHash: "c984d29738092475dbf163eac9d2d2c9f1ffdedf9355a5bbab60c155d9c7d3b4" }, true));
 
-  // doctest:L56
   t.check(await fs.readFile(path.join(box.root, sourceRef.slice(1)), "utf8"), originalBytes);
 });

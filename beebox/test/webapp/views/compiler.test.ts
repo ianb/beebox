@@ -16,12 +16,10 @@ import { makeTmpBox } from "../../helpers/test-helpers.js";
 //
 // The compiler extracts name, description, dependencies, modes, layout, and rendersCardTypes from the view's named exports:
 void test("The compiler extracts name, description, dependencies, modes, layout, and ren...", async (t) => {
-  // doctest:L19
   const tmp = await mkdtemp(join(tmpdir(), "views-test-"));
   const viewsDir = join(tmp, "views");
   await mkdir(viewsDir, { recursive: true });
 
-  // doctest:L23
   const source = `
 export const name = "Test View";
 export const description = "A simple test";
@@ -35,7 +33,6 @@ export default function Test() {
 `;
   await writeFile(join(viewsDir, "test.tsx"), source);
 
-  // doctest:L36
   const { meta } = await compileView(join(viewsDir, "test.tsx"));
   t.check(meta, {
     name: "Test View",
@@ -52,7 +49,6 @@ export default function Test() {
   //
   // The compiled output is valid JavaScript with React externalized:
 
-  // doctest:L66
   const { output } = await compileView(join(viewsDir, "test.tsx"));
   t.check(output, any(String).includes("window.__bbxReact"));
 
@@ -60,7 +56,6 @@ export default function Test() {
   //
   // Compiling the same file twice returns cached output (same mtime and size). To show the cache is used, the next example rewrites the source with same-length different text and restores the mtime, so only a cache can still return the old output:
 
-  // doctest:L76
   const viewFile = join(viewsDir, "test.tsx");
   const pinned = new Date("2026-01-01T00:00:00Z");
   await utimes(viewFile, pinned, pinned);
@@ -73,7 +68,6 @@ export default function Test() {
 
   // After invalidation, a fresh compile reads the rewritten source:
 
-  // doctest:L91
   invalidateView(viewFile);
   const { output: output3 } = await compileView(viewFile);
   t.check(output3, any(String).includes("HELLO"));
@@ -90,7 +84,6 @@ export default function Test() {
 // spreads the children array, so the compiled shim carries the `Array.isArray`
 // translation rather than a naive `jsx = React.createElement` alias.
 void test("A view written with real JSX compiles against the react/jsx-runtime shim.", async (t) => {
-  // doctest:L108
   const jtmp = await mkdtemp(join(tmpdir(), "views-jsx-"));
   const jviews = join(jtmp, "views");
   await mkdir(jviews, { recursive: true });
@@ -106,7 +99,6 @@ export default function Multi() {
 
   // The naive alias that dropped `key` and passed array children whole is gone:
 
-  // doctest:L126
   t.check(jsxOut, not(any(String).includes("jsx = React.createElement")));
 });
 
@@ -117,7 +109,6 @@ export default function Multi() {
 // target externalizes React to bare specifiers, so a Node renderer resolves the
 // real React from node_modules and shares one instance with `react-dom/server`:
 void test("A view written with real JSX compiles differently per target.", async (t) => {
-  // doctest:L138
   const tmpT = await mkdtemp(join(tmpdir(), "views-target-"));
   const viewsDirT = join(tmpT, "views");
   await mkdir(viewsDirT, { recursive: true });
@@ -132,31 +123,25 @@ export default function JsxView() {
   const viewPathT = join(viewsDirT, "jsx.tsx");
 
   const browserBuild = await compileView(viewPathT, { target: "browser" });
-  // doctest:L151
   t.check(browserBuild.output, any(String).includes("window.__bbxReact"));
 
   // The browser build never emits a bare `react/jsx-runtime` import; the node build
   // does (esbuild's automatic JSX import, left external):
 
-  // doctest:L160
   t.check(browserBuild.output, not(any(String).matches(/from\s*"react\/jsx-runtime"/)));
 
-  // doctest:L165
   const nodeBuild = await compileView(viewPathT, { target: "node" });
   t.check(nodeBuild.output, any(String).matches(/from\s*"react\/jsx-runtime"/));
 
-  // doctest:L171
   t.check(nodeBuild.output, not(any(String).includes("window.__bbxReact")));
 
   // The node build carries an inline source map for stack mapping:
 
-  // doctest:L178
   t.check(nodeBuild.output, any(String).includes("sourceMappingURL=data:application/json"));
 
   // The two targets are cached independently — compiling one never returns the
   // other's output (no cross-contamination):
 
-  // doctest:L186
   t.check(nodeBuild.output, not(browserBuild.output));
 });
 
@@ -164,12 +149,10 @@ export default function JsxView() {
 //
 // When metadata exports are missing, sensible defaults are used:
 void test("When metadata exports are missing, sensible defaults are used:", async (t) => {
-  // doctest:L195
   const tmp2 = await mkdtemp(join(tmpdir(), "views-test-"));
   const viewsDir2 = join(tmp2, "views");
   await mkdir(viewsDir2, { recursive: true });
 
-  // doctest:L199
   const minimal = `
 export default function Minimal() {
   return window.__bbxReact.createElement("div", null, "minimal");
@@ -177,7 +160,6 @@ export default function Minimal() {
 `;
   await writeFile(join(viewsDir2, "minimal.tsx"), minimal);
 
-  // doctest:L206
   const { meta } = await compileView(join(viewsDir2, "minimal.tsx"));
   t.check(meta, {
     name: "minimal",
@@ -193,7 +175,6 @@ export default function Minimal() {
   // An unknown `layout` fails validation. The view degrades like a broken one,
   // and the marker names the export, so the author can see what to fix:
 
-  // doctest:L229
   await writeFile(join(viewsDir2, "wide.tsx"), `
 export const layout = "wide";
 export const rendersCardTypes = ["sandbox"];
@@ -218,7 +199,6 @@ export default function Wide() {
 //
 // When compilation fails, `buildErrorModule` creates a valid JS module that renders the error:
 void test("When compilation fails, buildErrorModule creates a valid JS module that rende...", async (t) => {
-  // doctest:L249
   const errorJs = buildErrorModule("Unexpected token at line 5");
   t.checkText(errorJs, `export default function ErrorView() {
   return window.__bbxReact.createElement("pre", {style:{color:"red",whiteSpace:"pre-wrap",padding:"1rem"}}, \`Unexpected token at line 5\`);
@@ -235,20 +215,16 @@ export const modes = ["page", "chat"];`);
 // `getBoxShape`/`boxCodePaths`), so it needs a real box — its views
 // directory is `<boxRoot>/src/views`:
 void test("listViews resolves the views directory from the box's shape (via getBoxShape/...", async (t) => {
-  // doctest:L264
   const box3 = await makeTmpBox({ deps: true });
   const tmp3 = box3.root;
 
-  // doctest:L267
   // No views/ directory — returns empty
   const empty = await listViews(tmp3);
   t.check(empty, []);
 
-  // doctest:L274
   const viewsDir3 = join(box3.root, "src/views");
   await mkdir(viewsDir3, { recursive: true });
 
-  // doctest:L277
   await writeFile(join(viewsDir3, "dashboard.tsx"), `
 export const name = "Dashboard";
 export const description = "Overview dashboard";
@@ -270,8 +246,6 @@ export default function Summary() {
 `);
 
   const views = await listViews(tmp3);
-  // doctest:L287
-  // doctest:L297
   t.check(views.toSorted((a, b) => a.name.localeCompare(b.name)), [
     {
       name: "Dashboard",
@@ -301,7 +275,6 @@ export default function Summary() {
   // view that can't even compile has no metadata to import; `rendersCardTypes`
   // degrades to empty rather than being preserved (unlike the old regex fallback):
 
-  // doctest:L315
   await writeFile(join(viewsDir3, "broken.tsx"), `
 export const name = "Broken View";
 export const rendersCardTypes = ["broken-type"];
@@ -313,7 +286,6 @@ export default function Broken() {
 
   const withBroken = await listViews(tmp3);
   const broken = withBroken.find(v => v.slug === "broken");
-  // doctest:L324
   t.check(broken, {
     name: "broken",
     slug: "broken",

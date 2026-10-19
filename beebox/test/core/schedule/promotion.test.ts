@@ -65,18 +65,14 @@ void test("A missing Google connector promotes once, with the Admin section as t
       t.error(error);
     }
   });
-  // doctest:L55
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/watch.scheduled-script.card", card({ requested: true, requires: true }));
   box.commitAll("add schedule");
 
-  // doctest:L59
   t.check(await tick(box, "watch"), "skipped");
 
-  // doctest:L62
   t.check(await sent(box), [FIELD_TRIP_NOTICE]);
 
-  // doctest:L67
   const state = await loadScriptState(box.root, "watch");
   invariant(state.skipped, "skipped episode is recorded");
   t.check(state, {
@@ -97,21 +93,17 @@ void test("A missing Google connector promotes once, with the Admin section as t
 
   // Later ticks in the same episode keep its `since` and send nothing:
 
-  // doctest:L76
   await tick(box, "watch");
   t.check((await loadScriptState(box.root, "watch")).skipped, state.skipped);
 
-  // doctest:L80
   t.check(await sent(box), [FIELD_TRIP_NOTICE]);
 
   // A run clears both the episode and the latch, so the next episode promotes
   // again:
 
-  // doctest:L88
   await box.write("_config/schedules/watch.scheduled-script.card", card({ requested: true, requires: false }));
   t.check(await tick(box, "watch"), "ran");
 
-  // doctest:L92
   const cleared = await loadScriptState(box.root, "watch");
   t.check(cleared, {
     lastRun: isoDate(),
@@ -130,7 +122,6 @@ void test("A missing Google connector promotes once, with the Admin section as t
     recentRuns: [{ ts: isoDate(), durationMs: any(Number).between(0, Infinity) }],
   });
 
-  // doctest:L96
   await box.write("_config/schedules/watch.scheduled-script.card", card({ requested: true, requires: true }));
   await tick(box, "watch");
   t.check(await sent(box), [FIELD_TRIP_NOTICE, FIELD_TRIP_NOTICE]);
@@ -147,18 +138,14 @@ void test("The episode is still recorded; nothing is sent.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L111
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/sync.scheduled-script.card", card({ requested: false, requires: true }));
   box.commitAll("add schedule");
 
-  // doctest:L115
   t.check(await tick(box, "sync"), "skipped");
 
-  // doctest:L118
   t.check((await loadScriptState(box.root, "sync")).skipped, { reason: "missing-connectors", since: isoDate() });
 
-  // doctest:L121
   t.check(await sent(box), []);
 });
 
@@ -174,7 +161,6 @@ void test("The pipeline's defer marker says unconfigured.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L135
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/judge.scheduled-script.card", `---
 cron: "0 * * * *"
@@ -186,7 +172,6 @@ runs: printf '{"reason":"unconfigured"}' > "$BBX_DEFER_FILE"; exit 75
 
   await tick(box, "judge");
   await tick(box, "judge");
-  // doctest:L144
   t.check(await sent(box), [
     {
       loudness: "loud",
@@ -196,7 +181,6 @@ runs: printf '{"reason":"unconfigured"}' > "$BBX_DEFER_FILE"; exit 75
     },
   ]);
 
-  // doctest:L151
   t.check((await loadScriptState(box.root, "judge")).alertedFor, "skipped:unconfigured");
 });
 
@@ -212,7 +196,6 @@ void test("The card itself can run; the tick checks the connectors it requires j
       t.error(error);
     }
   });
-  // doctest:L165
   const box = await makeTmpBox({ git: true });
   await box.seed("_config/box.json", JSON.stringify({ timezone: "UTC" }));
   box.commitAll("seed");
@@ -220,7 +203,6 @@ void test("The card itself can run; the tick checks the connectors it requires j
   await syncConnector(fail, { boxRoot: box.root, now: new Date("2026-09-20T15:00:00Z") });
   await syncConnector(fail, { boxRoot: box.root, now: new Date("2026-09-21T15:00:00Z") });
 
-  // doctest:L172
   const parsed = parseScheduledScript({ type: "scheduled-script", cron: "0 * * * *", "requested-by": "boxholder", requires: { connectors: ["gmail"] }, runs: "true", enabled: true });
   const state = await loadScriptState(box.root, "watch");
   const ctx = { boxRoot: box.root, scriptName: "watch", parsed, state, now: new Date("2026-09-21T16:00:00Z") };
@@ -238,7 +220,6 @@ Reconnect Google in Admin, in the Google Services section.`,
 
   // When the episode ends, the latch clears so the next episode is new:
 
-  // doctest:L187
   const ok = { ...fail, sync: async () => ({ success: true, created: ["_content/inbox/email/a.email-thread.card"], updated: [] }) };
   await syncConnector(ok, { boxRoot: box.root, now: new Date("2026-09-22T15:00:00Z") });
   await checkRequiredConnectors({ ...ctx, now: new Date("2026-09-22T16:00:00Z") });

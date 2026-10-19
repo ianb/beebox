@@ -184,9 +184,7 @@ const OTHERBOX_ROW = {
   probe: null,
 };
 
-
 const UNCHECKED = { status: "unchecked" as const, reason: "verification is turned off on this machine", at: isoDate() };
-
 
 /** The refusal code, or "allowed" — how the gating checks below read. */
 async function attempt(promise: Promise<unknown>): Promise<string> {
@@ -230,14 +228,12 @@ void test("A box member who is not the owner gets nothing, not even the list of 
       t.error(error);
     }
   });
-  // doctest:L76
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
   process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
   const box = await makeTmpBox({ git: true });
   const member = caller(box.root, { isOwner: false });
   const open = caller(box.root, { isOwner: true, isAuthenticatedOwner: false });
 
-  // doctest:L82
   const gated: Record<string, { who: Caller; calls: Record<string, (c: Caller) => Promise<unknown>> }> = {
     member: {
       who: member,
@@ -298,11 +294,9 @@ void test("A box member who is not the owner gets nothing, not even the list of 
   // drift, and a hard gate would brick key entry the day a prefix changes. The
   // response carries the verification verdict and no value.
 
-  // doctest:L139
   const owner = caller(box.root);
   const slug = await boxSlug(box.root);
 
-  // doctest:L142
   const saved = await owner.secrets.setValue({ name: "openai", value: "placeholder-openai-key", note: "embeddings" });
   t.check(saved, {
     warnings: ["Keys for this service usually start with \"sk-\"."],
@@ -313,11 +307,9 @@ void test("A box member who is not the owner gets nothing, not even the list of 
   // Adding is not granting: the name exists machine-wide and this box still cannot
   // resolve it until the boxholder says so.
 
-  // doctest:L156
   const beforeGrant = await owner.secrets.boxStatus();
   t.check(beforeGrant.granted, []);
 
-  // doctest:L159
   await owner.secrets.grant({ box: slug, name: "openai", access: "server" });
   const afterGrant = await owner.secrets.boxStatus();
   t.check(afterGrant, {
@@ -334,7 +326,6 @@ void test("A box member who is not the owner gets nothing, not even the list of 
   // and agent-resolvable for another. `setAccess` refuses when there is no grant to
   // change — creating one silently would be the wrong kind of surprise.
 
-  // doctest:L178
   await owner.secrets.setAccess({ box: slug, name: "openai", access: "agent" });
   t.check((await owner.secrets.boxStatus()).granted, [openaiGranted("agent")]);
   await owner.secrets.setAccess({ box: slug, name: "openai", access: "server" });
@@ -348,7 +339,6 @@ void test("A box member who is not the owner gets nothing, not even the list of 
   // secret refuses a second grant with the store's own explanation rather than a
   // bare "Bad Request".
 
-  // doctest:L197
   await setAndGrantSecret({
     name: "publish-token/otherbox",
     value: "placeholder-bucket-token",
@@ -358,11 +348,9 @@ void test("A box member who is not the owner gets nothing, not even the list of 
     shareable: false,
   });
 
-  // doctest:L206
   const machine = await owner.secrets.machineView();
   t.check(machine, { thisBox: slug, boxes: [slug, "otherbox"], secrets: [openaiRow(slug), OTHERBOX_ROW] });
 
-  // doctest:L219
   t.check(await attempt(owner.secrets.grant({ box: slug, name: "publish-token/otherbox", access: "server" })), "BAD_REQUEST");
   t.checkText(await explain(owner.secrets.grant({ box: slug, name: "publish-token/otherbox", access: "server" })), "The secret \"publish-token/otherbox\" is marked single-box (it belongs to \"otherbox\") and cannot also be granted to \"«*»\". Some credentials bind to one box structurally — a bucket-scoped publish token works for one bucket only — so sharing one would break the box already using it. Create a separate secret for this box.");
 
@@ -371,12 +359,10 @@ void test("A box member who is not the owner gets nothing, not even the list of 
   // Removing an entry deliberately leaves grants naming it behind, as *stale*
   // grants: the remediation differs from "never granted", and every view says so.
 
-  // doctest:L232
   await owner.secrets.remove({ name: "openai" });
   const stale = await owner.secrets.boxStatus();
   t.check({ granted: stale.granted, danglingGrants: stale.danglingGrants }, { granted: [], danglingGrants: ["openai"] });
 
-  // doctest:L237
   await owner.secrets.revoke({ box: slug, name: "openai" });
   t.check((await owner.secrets.boxStatus()).danglingGrants, []);
   t.check(await attempt(owner.secrets.revoke({ box: slug, name: "openai" })), "BAD_REQUEST");
@@ -389,7 +375,6 @@ void test("A box member who is not the owner gets nothing, not even the list of 
   // declared, plus (once resolves happen) the purposes actually observed. Still no
   // value, on either view.
 
-  // doctest:L256
   const withUse = await owner.secrets.setValue({
     name: "weatherapi",
     value: "placeholder-weather-key",
@@ -405,7 +390,6 @@ void test("A box member who is not the owner gets nothing, not even the list of 
   // A rotation appends rather than replaces — the reasons outlive the key, which is
   // the point of writing them down:
 
-  // doctest:L278
   await owner.secrets.setValue({ name: "weatherapi", value: "placeholder-weather-key-2", uses: ["tide times"] });
   const machine2 = await owner.secrets.machineView();
   t.check(machine2, { thisBox: slug, boxes: [slug, "otherbox"], secrets: [mistralRow(slug), OTHERBOX_ROW, weatherRow(slug)] });
@@ -415,13 +399,11 @@ void test("A box member who is not the owner gets nothing, not even the list of 
   // The refusal says which session it wants, so the boxholder is not left guessing
   // why an admin page they can reach refuses one section of itself:
 
-  // doctest:L293
   t.checkText(await explain(open.secrets.boxStatus()), "secrets management requires an authenticated owner session — open-access does not qualify (the store is machine-level, spanning every box on this host)");
 
   // Other owner surfaces are unchanged — the same open-access context still reaches
   // them:
 
-  // doctest:L301
   const account = await open.admin.localAccountStatus({ email: "nobody@example.com" });
   t.check(account, { exists: false });
 });
@@ -443,14 +425,12 @@ void test("The boxholder's failure on 2026-09-09 was a verified key granted to n
       t.error(error);
     }
   });
-  // doctest:L321
   const dir2 = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
   process.env.BBX_SECRETS_FILE = join(dir2, "secrets.json");
   const box2 = await makeTmpBox({ git: true });
   const owner2 = caller(box2.root);
   const slug2 = await boxSlug(box2.root);
 
-  // doctest:L327
   const addInput = { name: "openrouter", value: "sk-or-v1-placeholder-placeholder-placeholder-placeholder-key", grant: { box: slug2, access: "server" as const } };
   const added = await owner2.secrets.setValue(addInput);
   t.check(added, { warnings: [], verified: UNCHECKED, granted: { box: slug2, access: "server" } });
@@ -459,7 +439,6 @@ void test("The boxholder's failure on 2026-09-09 was a verified key granted to n
   // Without `grant` — the machine-wide view — nothing changes about who may use
   // it, and the response says so plainly.
 
-  // doctest:L345
   const machineOnly = await owner2.secrets.setValue({ name: "replicate", value: "placeholder-replicate-token" });
   t.check(machineOnly, { warnings: [], verified: UNCHECKED, granted: null });
   t.check((await owner2.secrets.boxStatus()).granted, [OPENROUTER_GRANTED]);
@@ -475,7 +454,6 @@ void test("Explicit reveal is owner-gated and audited", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L361
   const revealDir = await mkdtemp(join(tmpdir(), "bbx-secrets-reveal-"));
   process.env.BBX_SECRETS_FILE = join(revealDir, "secrets.json");
   const revealBox = await makeTmpBox({ git: true });

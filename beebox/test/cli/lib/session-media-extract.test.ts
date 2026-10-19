@@ -65,13 +65,11 @@ function mediaOf(result: ExtractResult): ExtractedMedia {
 // The server that mints one has no idea what prefix the page is served under, so
 // it emits a path and the client prepends its own API base.
 void test("The server that mints one has no idea what prefix the page is served under, s...", async (t) => {
-  // doctest:L69
   t.check(encodeSessionMediaRef({ sessionId: "s-1", entryUuid: "u-9", index: 2 }), "s-1/u-9/2");
 });
 
 // It round-trips:
 void test("It round-trips:", async (t) => {
-  // doctest:L76
   t.check(parseSessionMediaRef("s-1/u-9/2"), {
     sessionId: "s-1",
     entryUuid: "u-9",
@@ -84,7 +82,6 @@ void test("It round-trips:", async (t) => {
 // of them with one 400, because there is nothing a client could do differently
 // with a more specific complaint:
 void test("Both ids are interpolated into a filesystem path, so the parse is where a cra...", async (t) => {
-  // doctest:L86
   const rejected = [
     "../../../etc/passwd/u-9/0",   // path separators in the session id
     "s-1/../../secrets/0",          // ...or the entry id
@@ -122,7 +119,6 @@ void test("The lookup exists because the obvious implementation is the bug:", as
       t.error(error);
     }
   });
-  // doctest:L109
   const box = await makeTmpBox();
   const logPath = box.path("chat.jsonl");
   const second = turnLine({ uuid: "u-2", text: "second", images: [inlineImage({ mediaType: "image/jpeg", data: photo("b") })] });
@@ -132,7 +128,6 @@ void test("The lookup exists because the obvious implementation is the bug:", as
     turnLine({ uuid: "u-3", text: "third", images: [inlineImage({ mediaType: "image/png", data: photo("c") })] }),
   ].join("\n"));
 
-  // doctest:L117
   // The whole line comes back, and only that one: not a neighbour.
   t.check(await findTranscriptLineByUuid({ logPath, uuid: "u-2" }), { found: true, line: second });
 
@@ -140,18 +135,15 @@ void test("The lookup exists because the obvious implementation is the bug:", as
   // the needle carries the leading quote of the field name, and `parentUuid` has a
   // letter there instead:
 
-  // doctest:L133
   const target = JSON.stringify({ type: "user", uuid: "aaa", parentUuid: null, message: { role: "user", content: [{ type: "text", text: "the target" }] } });
   const child = JSON.stringify({ type: "user", uuid: "bbb", parentUuid: "aaa", message: { role: "user", content: [{ type: "text", text: "the child" }] } });
   await box.write("parented.jsonl", [target, child].join("\n"));
 
-  // doctest:L138
   t.check(await lineOf(box.path("parented.jsonl"), "aaa"), target);
 
   // A uuid nothing carries, and a transcript that does not exist yet, are the same
   // answer — there is no image either way:
 
-  // doctest:L147
   const missing = await findTranscriptLineByUuid({ logPath, uuid: "nope" });
   const absent = await findTranscriptLineByUuid({ logPath: box.path("never-written.jsonl"), uuid: "u-1" });
   t.check([missing, absent], [{ found: false, reason: "not-found" }, { found: false, reason: "not-found" }]);
@@ -173,7 +165,6 @@ void test("Parsing the raw line would work and would also rebuild every payload 
       t.error(error);
     }
   });
-  // doctest:L167
   const box = await makeTmpBox();
   await box.write("two.jsonl", turnLine({
     uuid: "u-two",
@@ -185,7 +176,6 @@ void test("Parsing the raw line would work and would also rebuild every payload 
   }));
   const line = await lineOf(box.path("two.jsonl"), "u-two");
 
-  // doctest:L178
   const first = extractSessionMedia({ line, index: 0 });
   const second = extractSessionMedia({ line, index: 1 });
   // Each photo comes back whole, with its own media type.
@@ -202,7 +192,6 @@ void test("Parsing the raw line would work and would also rebuild every payload 
   // nothing behind it, and saying so separately is what keeps the route from
   // reporting someone else's upload failure as a missing photograph:
 
-  // doctest:L195
   const past = extractSessionMedia({ line, index: 5 });
   await box.write("empty.jsonl", turnLine({
     uuid: "u-empty",
@@ -217,7 +206,6 @@ void test("Parsing the raw line would work and would also rebuild every payload 
   // `Content-Type`, so only real image types get through. Anything else degrades to
   // bytes a browser will not render:
 
-  // doctest:L212
   await box.write("html.jsonl", turnLine({
     uuid: "u-html",
     text: "nice try",
@@ -228,6 +216,5 @@ void test("Parsing the raw line would work and would also rebuild every payload 
 
   // A line the transcript writer left half-written has no image in it either:
 
-  // doctest:L225
   t.check(extractSessionMedia({ line: '{"type":"user","uuid":"u-1","mess', index: 0 }), { ok: false, reason: "unparsable" });
 });

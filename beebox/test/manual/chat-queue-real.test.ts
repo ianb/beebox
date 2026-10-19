@@ -50,7 +50,6 @@ void test("The flow:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L46
   const box = await makeTmpBox();
   const backend = createChatBackend();
   const session = new ChatSession(box.root, {
@@ -59,7 +58,6 @@ void test("The flow:", async (t) => {
     skipBootstrap: true,
   });
 
-  // doctest:L54
   const doneCount = { value: 0 };
   session.on("done", () => { doneCount.value += 1; });
 

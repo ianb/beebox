@@ -19,10 +19,8 @@ void test("line 14", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L15
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L17
   // The real writer path, so these commits carry trailers exactly as the
   // procedure engine, trick runner and connectors write them.
   let nth = 0;
@@ -32,7 +30,6 @@ void test("line 14", async (t) => {
     await stageAndCommitPaths(box.root, { paths: [path], message, trailers });
   };
 
-  // doctest:L26
   await commit("[procedure] refresh the map index", { Procedure: "refresh-maps", Step: "refresh" });
   await commit("[procedure] triage the inbox", { Procedure: "refresh-maps", Step: "triage" });
   await commit("[workflow] fetch the news", { Workflow: "refresh-maps" });
@@ -48,7 +45,6 @@ void test("line 14", async (t) => {
   // Commands, procedures and tricks all appear on one axis; the connector axis is
   // separate and unchanged.
 
-  // doctest:L43
   const facets = await getTrailerFacets(box.root);
   // The retired spelling does not become a second entry — `Workflow: refresh-maps`
   // and `Procedure: refresh-maps` are the same run under two names.
@@ -66,7 +62,6 @@ void test("line 14", async (t) => {
   // This is "show me what that procedure run changed" — three commits, two written
   // with `Procedure:` and one with the older `Workflow:`.
 
-  // doctest:L65
   const byProcedure = await getLogPaginated({
     boxRoot: box.root,
     filter: { greps: buildGreps({ triggers: ["procedure/refresh-maps"] }) },
@@ -76,7 +71,6 @@ void test("line 14", async (t) => {
   // A trick selection matches only the trick, and a command selection only the
   // command — the kinds do not bleed into each other.
 
-  // doctest:L77
   const byTrick = await getLogPaginated({
     boxRoot: box.root,
     filter: { greps: buildGreps({ triggers: ["trick/tidy-inbox"] }) },
@@ -93,7 +87,6 @@ void test("line 14", async (t) => {
   // Selecting several triggers ORs within the axis, and the hand edit is in none of
   // them — which is the distinction the History page exists to make.
 
-  // doctest:L93
   const several = await getLogPaginated({
     boxRoot: box.root,
     filter: { greps: buildGreps({ triggers: ["trick/tidy-inbox", "command/bbx wakeup"] }) },
@@ -103,7 +96,6 @@ void test("line 14", async (t) => {
   // Axes AND together: one trigger plus one connector selects the commit carrying
   // both.
 
-  // doctest:L105
   const both = await getLogPaginated({
     boxRoot: box.root,
     filter: {

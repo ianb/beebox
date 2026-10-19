@@ -44,12 +44,10 @@ function fakeTimers(): SchedulerTimers & { tick(ms: number): void; count(): numb
 
 // ## A debounced write fires once, after the delay
 void test("A debounced write fires once, after the delay", async (t) => {
-  // doctest:L48
   const timers = fakeTimers();
   const s = createPersistScheduler({ debounceMs: 400, timers });
   const written: string[] = [];
 
-  // doctest:L52
   s.schedule(() => written.push("a"));
   timers.tick(399);
   t.check(written, []);
@@ -67,41 +65,34 @@ void test("A debounced write fires once, after the delay", async (t) => {
 // Typing schedules a write per keystroke; only the last one should reach
 // storage, and it should reach it 400ms after the LAST keystroke.
 void test("Typing schedules a write per keystroke; only the last one should reach storag...", async (t) => {
-  // doctest:L73
   const timers = fakeTimers();
   const s = createPersistScheduler({ debounceMs: 400, timers });
   const written: string[] = [];
 
-  // doctest:L77
   s.schedule(() => written.push("hel"));
   timers.tick(300);
   s.schedule(() => written.push("hell"));
   timers.tick(300);
   s.schedule(() => written.push("hello"));
 
-  // doctest:L83
   // Still nothing: each keystroke restarted the window.
   t.check({ written, pendingTimers: timers.count() }, { written: [], pendingTimers: 1 });
 
-  // doctest:L87
   timers.tick(400);
   t.check(written, ["hello"]);
 });
 
 // ## Flush on unmount runs the latest pending write — and only that one
 void test("Flush on unmount runs the latest pending write — and only that one", async (t) => {
-  // doctest:L95
   const timers = fakeTimers();
   const s = createPersistScheduler({ debounceMs: 400, timers });
   const written: string[] = [];
 
-  // doctest:L99
   s.schedule(() => written.push("stale"));
   s.schedule(() => written.push("latest"));
   s.flush();
   t.check(written, ["latest"]);
 
-  // doctest:L105
   // Flushing consumed the pending write: the abandoned timer can't replay it,
   // and a second flush is a no-op.
   timers.tick(1000);
@@ -111,12 +102,10 @@ void test("Flush on unmount runs the latest pending write — and only that one"
 
 // A flush with nothing pending does nothing at all — the common unmount.
 void test("A flush with nothing pending does nothing at all — the common unmount.", async (t) => {
-  // doctest:L116
   const timers = fakeTimers();
   const s = createPersistScheduler({ debounceMs: 400, timers });
   let calls = 0;
 
-  // doctest:L120
   s.flush();
   s.schedule(() => { calls++; });
   timers.tick(400);
@@ -130,18 +119,15 @@ void test("A flush with nothing pending does nothing at all — the common unmou
 // both callers use, so the pending debounced write can't fire again afterwards
 // with staler state.
 void test("onHide receives cancel and does its own synchronous write — the pattern both...", async (t) => {
-  // doctest:L135
   const timers = fakeTimers();
   const s = createPersistScheduler({ debounceMs: 400, timers });
   const written: string[] = [];
 
-  // doctest:L139
   s.schedule(() => written.push("debounced"));
   s.cancel();
   timers.tick(1000);
   t.check(written, []);
 
-  // doctest:L145
   // The tab-hide path: cancel, then persist the current value now.
   s.schedule(() => written.push("debounced-2"));
   s.cancel();

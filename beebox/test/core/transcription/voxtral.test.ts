@@ -23,7 +23,6 @@ import {
 // Two segments where the second starts with a new sentence: spaced
 // correctly even if Voxtral's own `text` had no space.
 void test("Two segments where the second starts with a new sentence:", async (t) => {
-  // doctest:L27
   t.check(
     joinSegmentTexts([
       { text: "It went the way a lot of these things have gone." },
@@ -35,7 +34,6 @@ void test("Two segments where the second starts with a new sentence:", async (t)
 
 // Empty / whitespace-only segments are dropped; the rest still join.
 void test("Empty / whitespace-only segments are dropped; the rest still join.", async (t) => {
-  // doctest:L37
   t.check(
     joinSegmentTexts([
       { text: "First sentence." },
@@ -45,43 +43,33 @@ void test("Empty / whitespace-only segments are dropped; the rest still join.", 
     "First sentence. Second sentence.",
   );
 
-  // doctest:L44
   t.check(joinSegmentTexts([]), null);
 
-  // doctest:L47
   t.check(joinSegmentTexts(undefined), null);
 
-  // doctest:L50
   t.check(joinSegmentTexts([{ text: "" }, { text: "  " }]), null);
 });
 
 // ## The bug case — sentence-end followed by a letter
 void test("The bug case — sentence-end followed by a letter", async (t) => {
-  // doctest:L57
   t.check(repairMissingSentenceSpaces("It went the way a lot of these things have gone.Generic tools were better."), "It went the way a lot of these things have gone. Generic tools were better.");
 
-  // doctest:L60
   t.check(repairMissingSentenceSpaces("Where I said elements, it's actually LLMs.see how that goes."), "Where I said elements, it's actually LLMs. see how that goes.");
 
-  // doctest:L63
   t.check(repairMissingSentenceSpaces("Yes!What?Maybe.Now go."), "Yes! What? Maybe. Now go.");
 });
 
 // ## Don't break decimals or ellipses
 void test("Don't break decimals or ellipses", async (t) => {
-  // doctest:L70
   t.check(repairMissingSentenceSpaces("Version 1.2 released"), "Version 1.2 released");
 
-  // doctest:L73
   t.check(repairMissingSentenceSpaces("Wait... what?"), "Wait... what?");
 
-  // doctest:L76
   t.check(repairMissingSentenceSpaces("The price is $9.99"), "The price is $9.99");
 });
 
 // ## Already-spaced text is untouched
 void test("Already-spaced text is untouched", async (t) => {
-  // doctest:L83
   t.check(repairMissingSentenceSpaces("One sentence. Another sentence."), "One sentence. Another sentence.");
 });
 
@@ -93,38 +81,28 @@ void test("Already-spaced text is untouched", async (t) => {
 // `nextSpeakerLetter` advances; `relabelDiarizedSpeakers` rewrites the
 // raw `Speaker N` prefix to `Speaker (N+1)<letter>`.
 void test("Diarized recordings get a session-letter so the agent can tell that identical...", async (t) => {
-  // doctest:L96
   t.check(findLastSpeakerLetter(""), null);
 
-  // doctest:L99
   t.check(findLastSpeakerLetter("no labels here"), null);
 
-  // doctest:L102
   t.check(findLastSpeakerLetter("earlier: Speaker 1A: hi\nlater: Speaker 2C: bye"), "C");
 
-  // doctest:L105
   t.check(findLastSpeakerLetter("Speaker 10F: ok"), "F");
 });
 
 void test("Per-recording speaker letter", async (t) => {
-  // doctest:L110
   t.check(nextSpeakerLetter(null), "A");
 
-  // doctest:L113
   t.check(nextSpeakerLetter("A"), "B");
 
-  // doctest:L116
   t.check(nextSpeakerLetter("Y"), "Z");
 
-  // doctest:L119
   t.check(nextSpeakerLetter("Z"), "A");
 });
 
 void test("Per-recording speaker letter (line 123)", async (t) => {
-  // doctest:L124
   await t.checkText(relabelDiarizedSpeakers("Speaker 0: hi\nSpeaker 1: bye", "B"), `Speaker 1B: hi
 Speaker 2B: bye`);
 
-  // doctest:L128
   t.check(relabelDiarizedSpeakers("Speaker 0: solo", "A"), "Speaker 1A: solo");
 });

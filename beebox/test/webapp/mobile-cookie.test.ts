@@ -51,18 +51,15 @@ void test("The mint endpoint trades a device token for a cookie", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L44
   const box = await makeTmpBox();
   const server = Fastify();
   await server.register(fastifyCookie);
   registerPairingRoutes(server, { boxRoot: box.root, boxSlug: "test" });
 
-  // doctest:L49
   const ticket = createMobilePairingTicket(box.root);
   const redeemed = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "doctest" });
   if (!redeemed) throw new Error("pairing failed");
 
-  // doctest:L53
   const minted = await server.inject({
     method: "POST",
     url: "/api/pairing/session",
@@ -77,12 +74,10 @@ void test("The mint endpoint trades a device token for a cookie", async (t) => {
   // `HttpOnly` is what keeps the iframe/XSS exfiltration route that the old
   // localStorage channel had from reappearing.
 
-  // doctest:L67
   const setCookie = String(minted.headers["set-cookie"]);
 
   // And it verifies back to the device that minted it.
 
-  // doctest:L75
   const value = setCookie.split(";")[0]?.split("=").slice(1).join("=") ?? "";
   t.check(verifyMobileSession(box.root, decodeURIComponent(value)), {
     deviceId: redeemed.deviceId,
@@ -92,14 +87,12 @@ void test("The mint endpoint trades a device token for a cookie", async (t) => {
 
   // ## A bad or absent token mints nothing
 
-  // doctest:L83
   const noToken = await server.inject({ method: "POST", url: "/api/pairing/session" });
   t.check(
     { status: noToken.statusCode, body: noToken.body },
     { status: 401, body: INVALID_DEVICE_TOKEN },
   );
 
-  // doctest:L86
   const badToken = await server.inject({
     method: "POST",
     url: "/api/pairing/session",
@@ -113,10 +106,8 @@ void test("The mint endpoint trades a device token for a cookie", async (t) => {
   // A revoked device can no longer mint, which is what stops it renewing its way
   // past the TTL bound.
 
-  // doctest:L98
   t.check(await revokeMobileDevice(box.root, redeemed.deviceId), true);
 
-  // doctest:L101
   const revokedMint = await server.inject({
     method: "POST",
     url: "/api/pairing/session",
@@ -141,17 +132,14 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
       t.error(error);
     }
   });
-  // doctest:L121
   const box2 = await makeTmpBox();
   const ticket2 = createMobilePairingTicket(box2.root, { createdBy: "rosa@example.com" });
   const device = await redeemMobilePairingTicket(box2.root, { pairingToken: ticket2.token, deviceLabel: "doctest" });
   if (!device) throw new Error("pairing failed");
 
-  // doctest:L126
   const viaBearer = await resolveMobileRequestAuth(box2.root, { authorization: `Bearer ${device.deviceToken}` });
   t.check(viaBearer, { deviceId: device.deviceId, createdBy: "rosa@example.com", source: "bearer", expiresAt: null });
 
-  // doctest:L130
   const cookie = signMobileSession(box2.root, { deviceId: device.deviceId, createdBy: "rosa@example.com", ttlMs: MOBILE_SESSION_TTL_MS });
   const viaCookie = await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${cookie}` });
   t.check(viaCookie, { deviceId: device.deviceId, createdBy: "rosa@example.com", source: "cookie", expiresAt: any(Number).above(Date.now()) });
@@ -159,10 +147,8 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
   // A request carrying neither resolves to nothing, and a bogus cookie does not
   // fall through to some laxer check.
 
-  // doctest:L140
   t.check(await resolveMobileRequestAuth(box2.root, {}), null);
 
-  // doctest:L143
   t.check(await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=forged` }), null);
 
   // ## A shadowing cookie from a sibling box cannot lock the real one out
@@ -176,7 +162,6 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
   // can't authenticate — but crowding out the real cookie is enough to break a
   // sibling.
 
-  // doctest:L159
   const shadowed = await resolveMobileRequestAuth(box2.root, {
     cookie: `${MOBILE_COOKIE_NAME}=junk-from-a-sibling-box; ${MOBILE_COOKIE_NAME}=${cookie}`,
   });
@@ -184,7 +169,6 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
 
   // Order doesn't matter — the real cookie wins from either side.
 
-  // doctest:L169
   const shadowedAfter = await resolveMobileRequestAuth(box2.root, {
     cookie: `${MOBILE_COOKIE_NAME}=${cookie}; ${MOBILE_COOKIE_NAME}=junk-from-a-sibling-box`,
   });
@@ -192,7 +176,6 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
 
   // And a pile of junk with no real cookie among it still authenticates nothing.
 
-  // doctest:L179
   t.check(
     await resolveMobileRequestAuth(box2.root, {
       cookie: `${MOBILE_COOKIE_NAME}=junk-one; ${MOBILE_COOKIE_NAME}=junk-two`,
@@ -208,25 +191,19 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
   // and cache it while the other kept signing with the old value — every cookie
   // would verify in one process and fail in the other, indefinitely and silently.
 
-  // doctest:L194
   const untouchedBox = await makeTmpBox();
   const secretFile = path.join(untouchedBox.root, ".beebox/mobile-session.secret");
 
-  // doctest:L197
   t.check(verifyMobileSession(untouchedBox.root, cookie), null);
 
-  // doctest:L200
   t.check(fs.existsSync(secretFile), false);
 
   // Minting is the only thing that creates one.
 
-  // doctest:L207
   t.check(signMobileSession(untouchedBox.root, { deviceId: "d", createdBy: null, ttlMs: 60_000 }), any(String).matches(/^[\w-]+\.[\da-f]{64}$/));
 
-  // doctest:L210
   t.check(fs.existsSync(secretFile), true);
 
-  // doctest:L213
   await untouchedBox.cleanup();
 
   // ## Renewal only re-reads the device store past the halfway point
@@ -234,7 +211,6 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
   // A fresh cookie is left alone, so an active session costs no filesystem access
   // per request.
 
-  // doctest:L222
   const fresh = await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${cookie}` });
   if (!fresh) throw new Error("expected a session");
   const untouched = fakeReply();
@@ -243,7 +219,6 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
 
   // Past halfway it re-issues.
 
-  // doctest:L233
   const agedCookie = signMobileSession(box2.root, { deviceId: device.deviceId, createdBy: null, ttlMs: MOBILE_SESSION_TTL_MS / 4 });
   const aged = await resolveMobileRequestAuth(box2.root, { cookie: `${MOBILE_COOKIE_NAME}=${agedCookie}` });
   if (!aged) throw new Error("expected a session");
@@ -254,7 +229,6 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
   // A bearer-authenticated request always (re)issues — verifying the bearer already
   // read the device store, so there's nothing to save by waiting.
 
-  // doctest:L246
   const bearerAuth = await resolveMobileRequestAuth(box2.root, { authorization: `Bearer ${device.deviceToken}` });
   if (!bearerAuth) throw new Error("expected a session");
   const issued = fakeReply();
@@ -267,10 +241,8 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
   // and on the next renewal attempt the stale cookie is actively cleared rather
   // than left to run out.
 
-  // doctest:L261
   t.check(await revokeMobileDevice(box2.root, device.deviceId), true);
 
-  // doctest:L264
   const afterRevoke = fakeReply();
   renewMobileSessionCookie(afterRevoke.reply, { boxRoot: box2.root, boxSlug: "test", auth: aged });
   t.check(afterRevoke.calls, ["clear bbx_mobile path=/test"]);
@@ -278,6 +250,5 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
   // The already-issued cookie still verifies until it expires — that IS the
   // revocation latency, stated rather than hidden.
 
-  // doctest:L274
   t.check(verifyMobileSession(box2.root, agedCookie), { deviceId: device.deviceId, createdBy: null, exp: any(Number).above(Date.now()) });
 });

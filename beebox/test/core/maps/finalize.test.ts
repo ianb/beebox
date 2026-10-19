@@ -29,14 +29,12 @@ void test("When a directory has a MAP.md but no instruction file, finalize write
       t.error(error);
     }
   });
-  // doctest:L25
   const box = await makeTmpBox({ git: true });
   box.commitAll("seed");
   const head = await getHead(box.root);
   await box.write("inbox/MAP.md", "");
   await box.write("MAP.md", "");
 
-  // doctest:L31
   await finalize({
     boxRoot: box.root,
     tasks: [
@@ -45,12 +43,10 @@ void test("When a directory has a MAP.md but no instruction file, finalize write
     ],
   });
 
-  // doctest:L39
   t.check([await box.read("AGENTS.md"), await box.read("inbox/AGENTS.md")], ["@MAP.md\n", "@MAP.md\n"]);
 
   // State file records both at HEAD:
 
-  // doctest:L49
   const state = await loadMapState(box.root);
   t.check(state.maps, {
     "": { asOf: head, generatedAt: isoDate() },
@@ -73,13 +69,11 @@ void test("A box made before agents-md-2026-10 (legacyInstructions) still writes
       t.error(error);
     }
   });
-  // doctest:L72
   const box = await makeTmpBox({ git: true, legacyInstructions: true });
   box.commitAll("seed");
   const head = await getHead(box.root);
   await box.write("store/MAP.md", "");
 
-  // doctest:L77
   await finalize({
     boxRoot: box.root,
     tasks: [
@@ -87,14 +81,12 @@ void test("A box made before agents-md-2026-10 (legacyInstructions) still writes
     ],
   });
 
-  // doctest:L84
   const mirror = join(box.root, "store", "AGENTS.md");
   t.check([(await lstat(mirror)).isSymbolicLink(), await readlink(mirror)], [true, "CLAUDE.md"]);
 
   // An existing CLAUDE.md that only needed the include line inserted already has a
   // mirror beside it, so nothing is relinked:
 
-  // doctest:L96
   await box.write("people/MAP.md", "");
   await box.write("people/CLAUDE.md", "Hand-written notes.\n");
   await finalize({
@@ -118,7 +110,6 @@ void test("If AGENTS.md already has hand-edited content, the @-include is added 
       t.error(error);
     }
   });
-  // doctest:L118
   const box = await makeTmpBox({ git: true });
   const existing = "# Project notes\n\nSome details.\n";
   await box.write("AGENTS.md", existing);
@@ -126,7 +117,6 @@ void test("If AGENTS.md already has hand-edited content, the @-include is added 
   const head = await getHead(box.root);
   await box.write("MAP.md", "");
 
-  // doctest:L125
   await finalize({
     boxRoot: box.root,
     tasks: [
@@ -134,7 +124,6 @@ void test("If AGENTS.md already has hand-edited content, the @-include is added 
     ],
   });
 
-  // doctest:L132
   t.check(await box.read("AGENTS.md"), "@MAP.md\n# Project notes\n\nSome details.\n");
 });
 
@@ -147,14 +136,12 @@ void test("Idempotent — doesn't duplicate the include", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L143
   const box = await makeTmpBox({ git: true });
   await box.write("AGENTS.md", "@MAP.md\n# Notes\n");
   await box.write("MAP.md", "");
   box.commitAll("seed");
   const head = await getHead(box.root);
 
-  // doctest:L149
   await finalize({
     boxRoot: box.root,
     tasks: [
@@ -162,7 +149,6 @@ void test("Idempotent — doesn't duplicate the include", async (t) => {
     ],
   });
 
-  // doctest:L156
   t.check(await box.read("AGENTS.md"), "@MAP.md\n# Notes\n");
 });
 
@@ -177,13 +163,11 @@ void test("State entries pointing to directories that no longer exist are remove
       t.error(error);
     }
   });
-  // doctest:L172
   const box = await makeTmpBox({ git: true });
   await box.write("MAP.md", "");
   box.commitAll("seed");
   const head = await getHead(box.root);
 
-  // doctest:L177
   // Pre-seed state with a stale entry for a directory that doesn't exist.
   await saveMapState({
     boxRoot: box.root,
@@ -195,7 +179,6 @@ void test("State entries pointing to directories that no longer exist are remove
     },
   });
 
-  // doctest:L188
   await finalize({
     boxRoot: box.root,
     tasks: [
@@ -203,7 +186,6 @@ void test("State entries pointing to directories that no longer exist are remove
     ],
   });
 
-  // doctest:L195
   const state = await loadMapState(box.root);
   t.check(state.maps, { "": { asOf: "old", generatedAt: "t" } });
 });
@@ -223,18 +205,15 @@ void test("An update task's MAP.md already exists before the agent runs, so its 
       t.error(error);
     }
   });
-  // doctest:L214
   const box = await makeTmpBox({ git: true });
   await box.write("store/MAP.md", "# Map: store\n\n(stale)\n");
   await box.write("inbox/MAP.md", "# Map: inbox\n\n(stale)\n");
   box.commitAll("seed");
   const head = await getHead(box.root);
 
-  // doctest:L220
   // The agent rewrites store's map and then stops — inbox is never touched.
   await box.write("store/MAP.md", "# Map: store\n\n(rewritten)\n");
 
-  // doctest:L223
   const result = await finalize({
     boxRoot: box.root,
     tasks: [
@@ -243,12 +222,10 @@ void test("An update task's MAP.md already exists before the agent runs, so its 
     ],
   });
 
-  // doctest:L231
   t.check([result.applied, result.skippedUnchanged], [["store"], ["inbox"]]);
 
   // The untouched dir keeps its old `asOf`, so the next run picks it up again:
 
-  // doctest:L241
   const state = await loadMapState(box.root);
   t.check(state.maps, { store: { asOf: head, generatedAt: isoDate() } });
 });
@@ -266,17 +243,14 @@ void test("Finalize runs as a procedure run-phase shell, before the engine commi
       t.error(error);
     }
   });
-  // doctest:L260
   const box = await makeTmpBox({ git: true });
   await box.write("store/MAP.md", "# Map: store\n\n(stale)\n");
   box.commitAll("seed");
   const head = await getHead(box.root);
 
-  // doctest:L265
   // Rewritten but never committed — the state after an agent runs out of turns.
   await box.write("store/MAP.md", "# Map: store\n\n(rewritten)\n");
 
-  // doctest:L268
   const result = await finalize({
     boxRoot: box.root,
     tasks: [
@@ -301,14 +275,12 @@ void test("A map with no state entry is a create task, and a correct one needs n
       t.error(error);
     }
   });
-  // doctest:L292
   const box = await makeTmpBox({ git: true });
   await box.write("store/MAP.md", "# Map: store\n\n- `notes/` — meeting notes\n- `refs/`\n");
   await box.write("inbox/MAP.md", "# Map: store/inbox\n\n- `triage/`\n");
   box.commitAll("seed");
   const head = await getHead(box.root);
 
-  // doctest:L298
   const result = await finalize({
     boxRoot: box.root,
     tasks: [
@@ -326,7 +298,6 @@ void test("A map with no state entry is a create task, and a correct one needs n
   // The verified map is stamped and gets its `AGENTS.md` include; the stale-header
   // one is left for the agent to rewrite:
 
-  // doctest:L320
   const state = await loadMapState(box.root);
   t.check(state.maps, { store: { asOf: head, generatedAt: isoDate() } });
   t.check((await box.read("store/AGENTS.md")).trim(), "@MAP.md");
@@ -344,14 +315,12 @@ void test("A rewrite is still evidence the agent reached the map, so it is stamp
       t.error(error);
     }
   });
-  // doctest:L340
   const box = await makeTmpBox({ git: true });
   await box.write("store/MAP.md", "# Map: store\n");
   box.commitAll("seed");
   const head = await getHead(box.root);
   await box.write("store/MAP.md", "# Map: store\n\n- `notes/`\n");
 
-  // doctest:L346
   const result = await finalize({
     boxRoot: box.root,
     tasks: [
@@ -375,7 +344,6 @@ void test("The map was verified against the brief's listing.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L371
   const box = await makeTmpBox({ git: true });
   await box.write("store/notes/a.md", "a");
   await box.write("store/refs/b.md", "b");
@@ -383,11 +351,9 @@ void test("The map was verified against the brief's listing.", async (t) => {
   box.commitAll("seed");
   const briefHead = await getHead(box.root);
 
-  // doctest:L378
   await box.write("store/urgent/c.md", "c");
   box.commitAll("another writer adds store/urgent/");
 
-  // doctest:L381
   await finalize({
     boxRoot: box.root,
     tasks: [

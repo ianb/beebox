@@ -85,10 +85,8 @@ async function freshBox() {
 // sentence naming a subject. There is no span-size gate: two short exchanges
 // are enough.
 void test("A chat qualifies once the person has sent two messages, or after one when the...", async (t) => {
-  // doctest:L88
   t.check(FIRST_TURN_TITLE_CHARS, 40);
 
-  // doctest:L91
   t.check(
     [
       afterTurnTitleGate({ userTurns: 1, firstMessage: "Help me plan a birthday dinner for Saturday" }),
@@ -117,25 +115,21 @@ void test("Two chats have finished a substantial first turn.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L106
   const box = await freshBox();
   const first = "Help me plan a birthday dinner for Saturday, eight people, one vegetarian.";
   const huskA = await seed(box, { sessionId: A, entries: [user("a1", first), agent("a2", REPLY)] });
   const huskB = await seed(box, { sessionId: B, entries: [user("b1", first), agent("b2", REPLY)] });
 
-  // doctest:L111
   const reviewer = fakeReviewer("Saturday birthday dinner for eight");
   t.check(await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null }), {
     kind: "titled",
     title: "Saturday birthday dinner for eight",
   });
 
-  // doctest:L115
   t.check(reviewer.titleCalls, [
     "aaaaaaaa-1111-4111-8111-111111111111",
   ]);
 
-  // doctest:L118
   const state = await loadReviewState(box.root);
   t.check(state, {
     lastRunAt: null,
@@ -164,21 +158,18 @@ session: ${B}
   // The next turn finds the title journal and makes no call; refreshing the title
   // is the nightly run's job.
 
-  // doctest:L132
   const again = fakeReviewer("Something else");
   t.check(await titleChatAfterTurn(box.root, { sessionId: A, reviewer: again, now: NOW, ownerEmail: null }), {
     kind: "skipped",
     reason: "has-title-journal",
   });
 
-  // doctest:L136
   t.check(again.titleCalls, []);
 
   // The nightly run does not redo it either. Session A has one user turn, below
   // the nightly two-turn minimum, and session B is still inside the quiescence
   // window.
 
-  // doctest:L145
   const nightly = fakeReviewer("Nightly title");
   const summary = await runChatReview(box.root, { reviewer: nightly, maxSessions: 10, now: NOW, ownerEmail: null });
   t.check(summary, {
@@ -202,7 +193,6 @@ session: ${B}
   });
   t.check(nightly.titleCalls, []);
 
-  // doctest:L150
   t.checkText(await readFile(box.path(huskA), "utf8"), `---
 session: ${A}
 title: Saturday birthday dinner for eight
@@ -230,7 +220,6 @@ void test("A real title pass is a model session, and every model session appends
       t.error(error);
     }
   });
-  // doctest:L172
   const box = await freshBox();
   const first = "Help me plan a birthday dinner for Saturday, eight people, one vegetarian.";
   await seed(box, { sessionId: A, entries: [user("a1", first), agent("a2", REPLY)] });
@@ -242,13 +231,11 @@ void test("A real title pass is a model session, and every model session appends
     },
   };
 
-  // doctest:L183
   t.check(await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null }), {
     kind: "titled",
     title: "Saturday birthday dinner for eight",
   });
 
-  // doctest:L186
   const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
   t.check(
     ({
@@ -282,7 +269,6 @@ void test("The nightly run calls the same title pass, so a chat it titles append
       t.error(error);
     }
   });
-  // doctest:L213
   const box = await freshBox();
   const talk = "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. ".repeat(4);
   await seed(box, { sessionId: A, entries: [user("n1", talk), agent("n2", REPLY), user("n3", talk), agent("n4", REPLY)] });
@@ -296,7 +282,6 @@ void test("The nightly run calls the same title pass, so a chat it titles append
     },
   };
 
-  // doctest:L226
   t.check(await runChatReview(box.root, { reviewer, maxSessions: 10, now: NOW, ownerEmail: null }), {
     reviewed: 0,
     titled: 1,
@@ -317,7 +302,6 @@ void test("The nightly run calls the same title pass, so a chat it titles append
     overflow: 0,
   });
 
-  // doctest:L229
   const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
   t.check(
     ({
@@ -350,19 +334,16 @@ void test("A first message of \"hi there\" names nothing, so the first turn is s
       t.error(error);
     }
   });
-  // doctest:L255
   const box = await freshBox();
   const entries = [user("g1", "hi there"), agent("g2", "Hello!")];
   await seed(box, { sessionId: A, entries });
   const reviewer = fakeReviewer("Planning a birthday dinner");
 
-  // doctest:L260
   t.check(await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null }), {
     kind: "skipped",
     reason: "below-gate",
   });
 
-  // doctest:L263
   await seed(box, { sessionId: A, entries: [...entries, user("g3", "help me plan dinner"), agent("g4", "What day?")] });
   t.check(await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null }), {
     kind: "titled",
@@ -382,19 +363,16 @@ void test("The husk already carries a title nobody generated, so the pass record
       t.error(error);
     }
   });
-  // doctest:L278
   const box = await freshBox();
   const huskPath = await seed(box, { sessionId: A, entries: [user("m1", "Help me plan a birthday dinner for Saturday please"), agent("m2", REPLY)] });
   await writeFile(box.path(huskPath), `---\nsession: ${A}\ntitle: Dana's party\n---\n\n`);
   const reviewer = fakeReviewer("Generated");
 
-  // doctest:L283
   t.check(await titleChatAfterTurn(box.root, { sessionId: A, reviewer, now: NOW, ownerEmail: null }), {
     kind: "skipped",
     reason: "not-titled",
   });
 
-  // doctest:L286
   t.check(reviewer.titleCalls, []);
   t.check(await loadReviewState(box.root), {
     lastRunAt: null,
@@ -432,13 +410,11 @@ void test("wireAfterTurnTitling listens for a chat session's done and titles tha
       t.error(error);
     }
   });
-  // doctest:L301
   const box = await freshBox();
   const first = "Help me plan a birthday dinner for Saturday, eight people, one vegetarian.";
   await seed(box, { sessionId: A, entries: [user("a1", first), agent("a2", REPLY)] });
   const huskB = await seed(box, { sessionId: B, entries: [user("b1", first), agent("b2", REPLY)] });
 
-  // doctest:L306
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, systemPrompt: plainTestPrompt, skipBootstrap: true });
   const reviewer = fakeReviewer("Saturday birthday dinner for eight");
@@ -448,7 +424,6 @@ void test("wireAfterTurnTitling listens for a chat session's done and titles tha
     onTitled: (event) => { titled.push(event); },
   });
 
-  // doctest:L315
   await session.send("hello");
   await tick();
   const run = backend.lastRun();
@@ -460,7 +435,6 @@ void test("wireAfterTurnTitling listens for a chat session's done and titles tha
   await done;
   await eventually(() => titled.length === 1, { label: "session A is titled" });
 
-  // doctest:L326
   t.check(titled, [
     {
       sessionId: "aaaaaaaa-1111-4111-8111-111111111111",
@@ -468,7 +442,6 @@ void test("wireAfterTurnTitling listens for a chat session's done and titles tha
     },
   ]);
 
-  // doctest:L329
   t.check(reviewer.titleCalls, [A]);
   t.checkText(await readFile(box.path(huskB), "utf8"), `---
 session: ${B}

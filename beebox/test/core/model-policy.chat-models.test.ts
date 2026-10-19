@@ -43,13 +43,10 @@ function tiersRoundTrip(engine: AgentEngine): boolean {
 }
 
 void test("line 29", async (t) => {
-  // doctest:L30
   t.check(isChatModelAllowed("codex", { model: tierId("codex", "strong"), added: [] }), true);
 
-  // doctest:L33
   t.check(isChatModelAllowed("codex", { model: tierId("claude", "strong"), added: [] }), false);
 
-  // doctest:L36
   t.check([parseChatAgentEngine("codex"), parseChatAgentEngine(undefined), parseChatAgentEngine("other")], [
     "codex",
     null,
@@ -61,19 +58,16 @@ void test("line 29", async (t) => {
 // picks below are retired ids (`gpt-5.6-sol`, `claude-opus-5`), which stored
 // selections may still carry and which load as their current replacement.
 void test("Web chats persist overrides independently by native session id.", async (t) => {
-  // doctest:L45
   const box = await makeTmpBox();
   const firstFile = chatModelFileForSession("first");
   const secondFile = chatModelFileForSession("second");
   saveCurrentModel(box.root, { modelFile: firstFile, model: "gpt-5.6-sol" });
 
-  // doctest:L50
   t.check([label(loadCurrentModel(box.root, firstFile)), label(loadCurrentModel(box.root, secondFile))], [
     "codex strong",
     null,
   ]);
 
-  // doctest:L53
   saveCurrentModel(box.root, { modelFile: secondFile, model: "claude-opus-5" });
   t.check(
     [
@@ -88,7 +82,6 @@ void test("Web chats persist overrides independently by native session id.", asy
   ],
   );
 
-  // doctest:L61
   t.check(
     liveModelState({
       explicit: loadCurrentModel(box.root, firstFile),
@@ -97,7 +90,6 @@ void test("Web chats persist overrides independently by native session id.", asy
     "explicit",
   );
 
-  // doctest:L67
   await box.cleanup();
 });
 
@@ -107,7 +99,6 @@ void test("Web chats persist overrides independently by native session id.", asy
 // The guard is what keeps a tier name from being written where an id belongs and
 // silently resolving to nothing.
 void test("A scenario or procedure card names a tier; the box model policy holds an id.", async (t) => {
-  // doctest:L77
   t.check([isProcedureModelName("opus"), isProcedureModelName("balanced"), isProcedureModelName(tierId("claude", "strong"))], [
     true,
     true,
@@ -116,7 +107,6 @@ void test("A scenario or procedure card names a tier; the box model policy holds
 });
 
 void test("The box model policy", async (t) => {
-  // doctest:L102
   t.check(ENGINES.map((engine) => (["efficient", "balanced", "strong", "strongest"] as const).map((tier) => modelTier(tierId(engine, tier)))), [
     [
       "efficient",
@@ -132,10 +122,8 @@ void test("The box model policy", async (t) => {
     ],
   ]);
 
-  // doctest:L105
   t.check(modelTier("not-a-model"), null);
 
-  // doctest:L108
   t.check(ENGINES.map(tiersRoundTrip), [
     true,
     true,
@@ -149,7 +137,6 @@ void test("The box model policy", async (t) => {
 // `null` here means the box pinned nothing — this translates a pin, it does not
 // invent one.
 void test("An engine that offers the pinned model runs it exactly; one that does not get...", async (t) => {
-  // doctest:L120
   const balanced = tierId("claude", "balanced");
   t.check(
     [
@@ -177,7 +164,6 @@ void test("An engine that offers the pinned model runs it exactly; one that does
 // known model still reads as no policy; a box saying something unreadable is not a
 // box saying nothing.
 void test("What an unpinned box actually RUNS is one level up.", async (t) => {
-  // doctest:L140
   t.check(
     [
       boxDefaultModel("claude", { pinned: null, added: [] }),
@@ -201,7 +187,6 @@ void test("What an unpinned box actually RUNS is one level up.", async (t) => {
 // A chat's own pick wins; a chat that follows takes the box pin; a pick belonging
 // to the other engine falls through to the pin rather than to nothing.
 void test("The small-pass slot is deliberately NOT that default — chat review, retro and...", async (t) => {
-  // doctest:L157
   const pinned = tierId("claude", "balanced");
   t.check(
     [
@@ -236,7 +221,6 @@ void test("The small-pass slot is deliberately NOT that default — chat review,
 // the boxholder their conversation had already moved — the state the system
 // intends, not the one it is in.
 void test("What a running chat reports is the model its subprocess started with, whateve...", async (t) => {
-  // doctest:L173
   const fable = tierId("claude", "strongest");
   const sonnet = tierId("claude", "balanced");
   t.check(
@@ -270,25 +254,20 @@ void test("What a running chat reports is the model its subprocess started with,
 // A hand-edited `agentModel` that no engine offers is rejected at the config
 // boundary, so it never reaches a spawn.
 void test("A hand-edited agentModel that no engine offers is rejected at the config boun...", async (t) => {
-  // doctest:L188
   const policyBox = await makeTmpBox();
   await mkdir(join(policyBox.root, "_config"), { recursive: true });
   const writeConfig = async (config: Record<string, unknown>) =>
     writeFile(join(policyBox.root, "_config/box.json"), JSON.stringify(config));
 
-  // doctest:L193
   await writeConfig({ agentModel: tierId("claude", "balanced") });
   t.check(label(await loadBoxModel(policyBox.root)), "claude balanced");
 
-  // doctest:L197
   await writeConfig({ agentModel: "sonnet" });
   t.check(await loadBoxModel(policyBox.root), null);
 
-  // doctest:L201
   await writeConfig({});
   t.check(await loadBoxModel(policyBox.root), null);
 
-  // doctest:L205
   await policyBox.cleanup();
 });
 
@@ -303,7 +282,6 @@ void test("A hand-edited agentModel that no engine offers is rejected at the con
 // a provider-shaped nickname, which the Codex delegate forwards to the Codex SDK
 // verbatim. **Nothing here can produce a name an engine does not know.**
 void test("Chat review, retro observation and triage are cheap structured passes.", async (t) => {
-  // doctest:L220
   t.check(
     [
       resolveSmallModelForEngine({ engine: "claude", pinned: null, added: [], boxDefault: null }),
@@ -323,7 +301,6 @@ void test("Chat review, retro observation and triage are cheap structured passes
 // A codex box never receives a Claude model id, whatever the box config says —
 // including the nickname the old code hardcoded.
 void test("A codex box never receives a Claude model id, whatever the box config says —...", async (t) => {
-  // doctest:L233
   const smallBox = await makeTmpBox();
   await mkdir(join(smallBox.root, "_config"), { recursive: true });
   const writeSmall = async (config: Record<string, unknown>) => {
@@ -331,19 +308,15 @@ void test("A codex box never receives a Claude model id, whatever the box config
     clearBoxConfigCache(smallBox.root);
   };
 
-  // doctest:L240
   await writeSmall({ agentEngine: "codex" });
   t.check(label(await loadEffectiveSmallModel(smallBox.root)), "codex efficient");
 
-  // doctest:L244
   await writeSmall({ agentEngine: "codex", smallModel: "haiku" });
   t.check(label(await loadEffectiveSmallModel(smallBox.root)), "codex efficient");
 
-  // doctest:L248
   await writeSmall({ agentEngine: "codex", smallModel: tierId("codex", "balanced") });
   t.check(label(await loadEffectiveSmallModel(smallBox.root)), "codex balanced");
 
-  // doctest:L252
   await smallBox.cleanup();
 });
 
@@ -353,7 +326,6 @@ void test("A codex box never receives a Claude model id, whatever the box config
 // config means **only the default engine** — how every box behaved before the
 // field existed — rather than both.
 void test("A box with no Codex subscription should not be offered Codex chats.", async (t) => {
-  // doctest:L262
   const engineBox = await makeTmpBox();
   await mkdir(join(engineBox.root, "_config"), { recursive: true });
   const writeEngines = async (config: Record<string, unknown>) => {
@@ -361,20 +333,17 @@ void test("A box with no Codex subscription should not be offered Codex chats.",
     clearBoxConfigCache(engineBox.root);
   };
 
-  // doctest:L269
   await writeEngines({});
   t.check(await loadEnabledEngines(engineBox.root), [
     "claude",
   ]);
 
-  // doctest:L273
   await writeEngines({ engines: { claude: true, codex: true } });
   t.check(await loadEnabledEngines(engineBox.root), [
     "claude",
     "codex",
   ]);
 
-  // doctest:L277
   await writeEngines({ agentEngine: "codex", engines: { codex: true } });
   t.check(await loadEnabledEngines(engineBox.root), [
     "codex",
@@ -383,13 +352,11 @@ void test("A box with no Codex subscription should not be offered Codex chats.",
   // A config that disables the box's own default engine is a mistake, not a state to
   // honor: nothing could run. The default comes back enabled, loudly.
 
-  // doctest:L286
   await writeEngines({ agentEngine: "codex", engines: { claude: true, codex: false } });
   t.check(await loadEnabledEngines(engineBox.root), [
     "claude",
     "codex",
   ]);
 
-  // doctest:L290
   await engineBox.cleanup();
 });

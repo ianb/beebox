@@ -70,7 +70,6 @@ async function typecheckStub(source: string): Promise<string[]> {
 // `mood`.
 // The doctest gave each example 120s before a still-running notice.
 void test("The plain completion (src/plugins/courseware/README.md, Setup) and the extens...", async (t) => {
-  // doctest:L71
   t.check(
     await typecheckStub(`
 export const Plain = cardSchema("progress", courseware.schemas.progress);
@@ -93,7 +92,6 @@ export default cardSchema("progress", extendSchema(courseware.schemas.progress, 
 // schema carries the base fields with their types and the added one.
 // The doctest gave each example 120s before a still-running notice.
 void test("A field neither side declares, a wrong value for a base enum, and a wrong typ...", async (t) => {
-  // doctest:L91
   t.check(
     await typecheckStub(`
 const Progress = cardSchema("progress", extendSchema(courseware.schemas.progress, {
@@ -124,7 +122,6 @@ void wrongLearner;
 // told at compile time.
 // The doctest gave each example 120s before a still-running notice.
 void test("The runtime RedeclaredFieldError (test/cards/extend-schema.doctest.md) is the...", async (t) => {
-  // doctest:L117
   t.check(
     await typecheckStub(`
 export default cardSchema("progress", extendSchema(courseware.schemas.progress, {

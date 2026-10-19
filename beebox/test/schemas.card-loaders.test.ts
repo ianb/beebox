@@ -25,21 +25,17 @@ function summaryOf(path: string, fields: Record<string, unknown>) {
 // A doc has no `summarize` hook, so its list entry is the base summary: the
 // authored `title:` and no summary attributes.
 void test("A doc has no summarize hook, so its list entry is the base summary:", async (t) => {
-  // doctest:L29
   const d1 = { type: "doc", title: "Groceries for the week", body: "Pick up milk on the way home." };
   const s = summaryOf("_content/inbox/Groceries.doc.card", d1);
   t.check(s.title, "Groceries for the week");
 
-  // doctest:L34
   t.check(s.type, "doc");
 
-  // doctest:L37
   t.check(s.attrs, undefined);
 });
 
 // ## Image — title from description field
 void test("Image — title from description field", async (t) => {
-  // doctest:L44
   const fields1 = {
     type: "image",
     "has-text": true,
@@ -51,7 +47,6 @@ void test("Image — title from description field", async (t) => {
 
 // ## Image — falls back to filename ref
 void test("Image — falls back to filename ref", async (t) => {
-  // doctest:L57
   const fields2 = {
     type: "image",
     filename: { ref: "photo-001.jpg", via: { channel: "camera-environment", at: "2024-01-15T00:00:00Z" } },
@@ -61,7 +56,6 @@ void test("Image — falls back to filename ref", async (t) => {
 
 // ## Image — passes through optional attrs
 void test("Image — passes through optional attrs", async (t) => {
-  // doctest:L68
   const fields3 = {
     type: "image",
     "has-text": true,
@@ -82,7 +76,6 @@ void test("Image — passes through optional attrs", async (t) => {
 // Without validated fields there is no `title:` to read and no type hook runs, so
 // either type falls back to the filename.
 void test("Without validated fields there is no title: to read and no type hook runs, so...", async (t) => {
-  // doctest:L86
   const doc = summarize({ path: "_content/inbox/Unread_Note.doc.card" }, schemas);
   const image = summarize({ path: "_content/inbox/photo-002.image.card" }, schemas);
   t.check([doc.title, doc.attrs, image.title, image.attrs].join("|"), "Unread Note||photo 002|");
@@ -93,10 +86,8 @@ void test("Without validated fields there is no title: to read and no type hook 
 // An inventory record's summary line says where it is and how many, joined by
 // " · ". Either part alone stands alone; with neither, there is no line.
 void test("An inventory record's summary line says where it is and how many, joined by \"...", async (t) => {
-  // doctest:L98
   const { RecordSchema } = await import("../src/schemas/record.js");
 
-  // doctest:L100
   const records = new Map<string, CardSchema>([["record", RecordSchema]]);
   const record = (fields: Record<string, unknown>) =>
     summarize({ path: "_content/inventory/Solder.record.card", type: "record", fields: { type: "record", name: "Solder", body: "", ...fields } }, records);

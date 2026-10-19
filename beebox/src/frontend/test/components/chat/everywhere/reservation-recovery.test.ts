@@ -9,7 +9,6 @@ import { createReservationRecovery } from "../../../../src/components/chat/every
 import { ReservationReceipts } from "../../../../src/components/chat/everywhere/reservation-receipts.js";
 
 void test("line 11", async (t) => {
-  // doctest:L12
   const receipts = new ReservationReceipts({ getItem: () => null, setItem: () => {} }, "test/scope");
   receipts.put({ sessionId: "empty", contextDir: "papers", engine: "claude", model: "haiku" });
   let release!: () => void;
@@ -31,7 +30,6 @@ void test("line 11", async (t) => {
     ],
   });
 
-  // doctest:L24
   release();
   const results = await Promise.all([first, second]);
   receipts.remove("empty");
@@ -48,7 +46,6 @@ void test("line 11", async (t) => {
 
 // Retirement before queued recovery runs prevents a late replay after send/delete.
 void test("Retirement before queued recovery runs prevents a late replay after send/delete.", async (t) => {
-  // doctest:L34
   const receipts = new ReservationReceipts({ getItem: () => null, setItem: () => {} }, "test/scope");
   receipts.put({ sessionId: "empty", contextDir: "", engine: "claude" });
   let calls = 0;
@@ -64,14 +61,12 @@ void test("Retirement before queued recovery runs prevents a late replay after s
 // Unsupported recovery is an error, and a failed attempt does not pin the in-flight
 // slot forever.
 void test("Unsupported recovery is an error, and a failed attempt does not pin the in-fl...", async (t) => {
-  // doctest:L48
   const receipts = new ReservationReceipts({ getItem: () => null, setItem: () => {} }, "test/scope");
   receipts.put({ sessionId: "empty", contextDir: "", engine: "claude" });
   let supported = false;
   const ensure = createReservationRecovery(receipts, async () => ({ kind: supported ? "reserved" : "unsupported" }));
   await t.checkThrows(async () => (await ensure("empty")), "ReservationRecoveryUnsupportedError");
 
-  // doctest:L55
   supported = true;
   t.check((await ensure("empty"))?.sessionId, "empty");
 });

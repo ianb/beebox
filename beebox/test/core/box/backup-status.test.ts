@@ -17,7 +17,6 @@ import {
 // have to be multiplied out. Loose objects (`size`) and packs (`size-pack`) both
 // count; the other keys are counts, not bytes, and must not be summed in.
 void test("-H is the only form that reports pack size, so it hands back human units that...", async (t) => {
-  // doctest:L21
   const output = [
     "count: 42",
     "size: 5.22 MiB",
@@ -33,17 +32,14 @@ void test("-H is the only form that reports pack size, so it hands back human un
 
 // A box whose objects are all loose reports no `size-pack` line at all.
 void test("A box whose objects are all loose reports no size-pack line at all.", async (t) => {
-  // doctest:L38
   t.check(parseCountObjects("count: 3\nsize: 12.00 KiB"), 12288);
 });
 
 // Unparseable or empty output is zero rather than `NaN` — a size we could not
 // measure must not reach the page as "NaN bytes at risk".
 void test("Unparseable or empty output is zero rather than NaN — a size we could not mea...", async (t) => {
-  // doctest:L46
   t.check(parseCountObjects(""), 0);
 
-  // doctest:L49
   t.check(parseCountObjects("size: not-a-number MiB\nsize-pack: 4 QiB"), 0);
 });
 
@@ -53,7 +49,6 @@ void test("Unparseable or empty output is zero rather than NaN — a size we cou
 // box with no annex-capable remote has its filenames on GitHub and its bytes only
 // here — pushing harder will never move them.
 void test("These are different problems and a boxholder has to tell them apart.", async (t) => {
-  // doctest:L60
   t.check(
     assessAssetRisk({
       annex: { bytes: 10100000000, fileCount: 3026 },
@@ -71,7 +66,6 @@ void test("These are different problems and a boxholder has to tell them apart."
 // Give that same box a remote git-annex can send content to and there is nothing
 // to warn about.
 void test("Give that same box a remote git-annex can send content to and there is nothin...", async (t) => {
-  // doctest:L76
   t.check(
     assessAssetRisk({
       annex: { bytes: 10100000000, fileCount: 3026 },
@@ -85,7 +79,6 @@ void test("Give that same box a remote git-annex can send content to and there i
 // A box with no annex is the worse case: its `*.attach/` payloads are gitignored,
 // so git holds not even a pointer to them.
 void test("A box with no annex is the worse case:", async (t) => {
-  // doctest:L88
   t.check(
     assessAssetRisk({
       annex: null,
@@ -104,7 +97,6 @@ void test("A box with no annex is the worse case:", async (t) => {
 // — there is nothing to strand, and warning anyway trains the boxholder to ignore
 // the warning.
 void test("An annexed box holding no assets yet is not at risk, even with no annex remot...", async (t) => {
-  // doctest:L105
   t.check(
     assessAssetRisk({
       annex: { bytes: 0, fileCount: 0 },
@@ -118,7 +110,6 @@ void test("An annexed box holding no assets yet is not at risk, even with no ann
 // Same for a box with neither an annex nor any attachments — a fresh box is
 // quiet, not warned at.
 void test("Same for a box with neither an annex nor any attachments — a fresh box is qui...", async (t) => {
-  // doctest:L117
   t.check(
     assessAssetRisk({
       annex: null,
@@ -136,17 +127,14 @@ void test("Same for a box with neither an annex nor any attachments — a fresh 
 // it is not: a local path dies with the disk. So only a remote naming a host
 // counts.
 void test("git-annex will treat a sibling clone at a local path as a content remote, and...", async (t) => {
-  // doctest:L133
   t.check(isOffsiteRemoteUrl("git@github.com-box-hearth:marlowe/box-hearth.git"), true);
 
-  // doctest:L136
   t.check(
     isOffsiteRemoteUrl("https://github.com/marlowe/box-hearth.git")
     ,
     true,
   );
 
-  // doctest:L139
   t.check(
     isOffsiteRemoteUrl("ssh://git@example.com/srv/box.git")
     ,
@@ -156,30 +144,24 @@ void test("git-annex will treat a sibling clone at a local path as a content rem
 
 // A path on this machine does not, in any of the forms git accepts for one.
 void test("A path on this machine does not, in any of the forms git accepts for one.", async (t) => {
-  // doctest:L146
   t.check(isOffsiteRemoteUrl("/Users/me/src/boxes/hearth"), false);
 
-  // doctest:L149
   t.check(isOffsiteRemoteUrl("../sibling-box"), false);
 
-  // doctest:L152
   t.check(
     isOffsiteRemoteUrl("file:///Users/me/src/boxes/hearth")
     ,
     false,
   );
 
-  // doctest:L155
   t.check(isOffsiteRemoteUrl(""), false);
 });
 
 // Git accepts scp-like remotes without a user, so `host:path` has to count too —
 // requiring `user@` classified a perfectly real remote as a local path.
 void test("Git accepts scp-like remotes without a user, so host:path has to count too —...", async (t) => {
-  // doctest:L163
   t.check(isOffsiteRemoteUrl("github.com:marlowe/box-hearth.git"), true);
 
-  // doctest:L166
   t.check(
     isOffsiteRemoteUrl("ssh://git@example.com:2222/srv/box.git")
     ,
@@ -190,17 +172,14 @@ void test("Git accepts scp-like remotes without a user, so host:path has to coun
 // A loopback host is this machine wearing a hostname, and counting it as offsite
 // would be the same false comfort as a local path.
 void test("A loopback host is this machine wearing a hostname, and counting it as offsit...", async (t) => {
-  // doctest:L174
   t.check(
     isOffsiteRemoteUrl("ssh://localhost/srv/box.git")
     ,
     false,
   );
 
-  // doctest:L177
   t.check(isOffsiteRemoteUrl("git@localhost:box.git"), false);
 
-  // doctest:L180
   t.check(
     isOffsiteRemoteUrl("ssh://127.0.0.1/srv/box.git")
     ,
@@ -210,6 +189,5 @@ void test("A loopback host is this machine wearing a hostname, and counting it a
 
 // A colon that is part of a path, not a host separator, is not a remote host.
 void test("A colon that is part of a path, not a host separator, is not a remote host.", async (t) => {
-  // doctest:L187
   t.check(isOffsiteRemoteUrl("/srv/git:mirror/box.git"), false);
 });

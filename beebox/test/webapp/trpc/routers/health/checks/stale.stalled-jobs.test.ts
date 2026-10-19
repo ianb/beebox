@@ -36,12 +36,10 @@ void test("Age is read from the filename's timestamp prefix, which every job-car
       t.error(error);
     }
   });
-  // doctest:L32
   const box = await makeTmpBox({ git: true });
   const empty = await stalledJobsCheck(box.root);
   t.check(empty, { name: "stalled-jobs", ok: true, message: "no job pending longer than the reactor should take", severity: "warning" });
 
-  // doctest:L37
   await box.write(`_bookkeeping/jobs/${stampFromNow(0)}-fresh.intake.job.card`, job("Today's work"));
   t.check(await stalledJobsCheck(box.root), { name: "stalled-jobs", ok: true, message: "no job pending longer than the reactor should take", severity: "warning" });
 });
@@ -58,7 +56,6 @@ void test("warning, never error:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L52
   const boxOld = await makeTmpBox({ git: true });
   await boxOld.write("_bookkeeping/jobs/2020-03-01T00-00-00-b.intake.job.card", job("Second oldest"));
   await boxOld.write("_bookkeeping/jobs/2020-01-01T00-00-00-a.intake.job.card", job("Oldest"));
@@ -85,7 +82,6 @@ void test("A hand-written or legacy job name has no timestamp; its age falls bac
       t.error(error);
     }
   });
-  // doctest:L75
   const boxPlain = await makeTmpBox({ git: true });
   await boxPlain.write("_bookkeeping/jobs/handwritten.intake.job.card", job("No stamp"));
   t.check(await stalledJobsCheck(boxPlain.root), { name: "stalled-jobs", ok: true, message: "no job pending longer than the reactor should take", severity: "warning" });

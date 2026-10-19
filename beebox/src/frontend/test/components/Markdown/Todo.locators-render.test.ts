@@ -52,13 +52,11 @@ const body = [
 // clone. With a four-line frontmatter block, the body's first line is file
 // line 5:
 void test("Markdoc.transform resolves the tree first, which clones every node, so a look...", async (t) => {
-  // doctest:L55
   await t.checkText(locatorsOf(body, 4), "{\"kind\":\"body\",\"line\":7} {\"kind\":\"body\",\"line\":7,\"nth\":2} {\"kind\":\"body\",\"line\":9}");
 });
 
 // They are exactly the collector's locators for the same body:
 void test("They are exactly the collector's locators for the same body:", async (t) => {
-  // doctest:L62
   const collected = extractBodyTodos({ relPath: "Porch.doc.card", bodyText: body, lineOffset: 4 });
   await t.checkText(collected.ok ? collected.items.map((item) => JSON.stringify(item.locator)).join(" ") : collected.message, "{\"kind\":\"body\",\"line\":7} {\"kind\":\"body\",\"line\":7,\"nth\":2} {\"kind\":\"body\",\"line\":9}");
 });
@@ -68,7 +66,6 @@ void test("They are exactly the collector's locators for the same body:", async 
 // Markdown that is not a card's body (chat, a commit message) is never
 // stamped, and its todos carry no locator:
 void test("Markdown that is not a card's body (chat, a commit message) is never stamped,...", async (t) => {
-  // doctest:L73
   t.check(locatorsOf(body, null), "null null null");
 });
 
@@ -77,10 +74,8 @@ void test("Markdown that is not a card's body (chat, a commit message) is never 
 // `locator` is not a declared attribute, so a hand-written one is dropped; the
 // only locator a todo can carry is the stamped one.
 void test("locator is not a declared attribute, so a hand-written one is dropped; the on...", async (t) => {
-  // doctest:L83
   await t.checkText(locatorsOf('{% todo locator="99" %}Forged{% /todo %}', null), "null");
 
-  // doctest:L86
   await t.checkText(locatorsOf('{% todo locator="99" %}Forged{% /todo %}', 0), "{\"kind\":\"body\",\"line\":1}");
 });
 
@@ -89,7 +84,6 @@ void test("locator is not a declared attribute, so a hand-written one is dropped
 // Rendered with the todo components, each todo's element names its locator,
 // which is what the card summary scrolls to and what a later tick reads.
 void test("Rendered with the todo components, each todo's element names its locator, whi...", async (t) => {
-  // doctest:L96
   const ast = parse(body);
   stampLocators(assignLocators(ast, 4));
   const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath: "Porch.doc.card" });
@@ -106,7 +100,6 @@ void test("Rendered with the todo components, each todo's element names its loca
 // its label and a nested `see-also` drops out, exactly as the collector reads
 // them. Unlocated todos carry no text.
 void test("A tick sends the todo's words for the server to compare with what the collect...", async (t) => {
-  // doctest:L114
   const linked = [
     "{% todo %}Call the [roofer](https://example.com) back{% /todo %}",
     "",
@@ -129,7 +122,6 @@ void test("A tick sends the todo's words for the server to compare with what the
     ],
   ]);
 
-  // doctest:L128
   t.check(todoTags(transform(parse(linked), markdocConfig)).map((tag) => tag.attributes["text"] ?? null), [
     null,
     null,

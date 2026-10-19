@@ -25,10 +25,8 @@ const codex = (tier: Tier) => resolveProcedureModel({ engine: "codex", model: ti
 //
 // Stronger and weaker than the default.
 void test("Model ids come from the tier tables, so the examples survive a model-id bump.", async (t) => {
-  // doctest:L29
   t.check(modelDrift({ model: claude("strongest"), boxDefault: claude("balanced") }), "above");
 
-  // doctest:L32
   t.check(modelDrift({ model: claude("efficient"), boxDefault: claude("strong") }), "below");
 });
 
@@ -36,7 +34,6 @@ void test("Model ids come from the tier tables, so the examples survive a model-
 // different model of the same tier — including one from another engine, since the
 // tier comparison is what makes cross-engine talk meaningful at all.
 void test("\"same\" covers both ways a chat can be level:", async (t) => {
-  // doctest:L41
   t.check(
     [
       modelDrift({ model: claude("strong"), boxDefault: claude("strong") }),
@@ -56,7 +53,6 @@ void test("\"same\" covers both ways a chat can be level:", async (t) => {
 // running an unrecognized model is not known to be at the default, and saying so
 // would be the confidently wrong answer.
 void test("Still null where the answer is genuinely unknown — nothing pinned, status not...", async (t) => {
-  // doctest:L55
   t.check(
     [
       modelDrift({ model: claude("strong"), boxDefault: null }),
@@ -74,7 +70,6 @@ void test("Still null where the answer is genuinely unknown — nothing pinned, 
 // Sol is Codex's `strong` tier, so it reads as stronger than Terra and weaker than
 // a Claude flagship.
 void test("Sol is Codex's strong tier, so it reads as stronger than Terra and weaker tha...", async (t) => {
-  // doctest:L67
   t.check(
     [
       modelDrift({ model: codex("strong"), boxDefault: codex("balanced") }),
@@ -93,7 +88,6 @@ void test("Sol is Codex's strong tier, so it reads as stronger than Terra and we
 // somewhere else, and the tier comparison deliberately flattens it. The chip marks
 // that separately.
 void test("Being on Codex when the box is Claude is not stronger or weaker — it is somew...", async (t) => {
-  // doctest:L81
   t.check(
     [
       engineDrift({ engine: "codex", boxEngine: "claude" }),

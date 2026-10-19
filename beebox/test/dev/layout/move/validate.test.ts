@@ -23,7 +23,6 @@ await execFileAsync("git", ["add", "-A"], { cwd: repoRoot });
 
 // ## A clean move validates and is returned as given
 void test("A clean move validates and is returned as given", async (t) => {
-  // doctest:L27
   await t.checkText(
     JSON.stringify(
       validateMoveList({ moves: [{ from: "pkg/src/a.ts", to: "pkg/src/moved.ts" }], repoRoot }),
@@ -34,16 +33,13 @@ void test("A clean move validates and is returned as given", async (t) => {
 
 // ## A missing, untracked, or already-tracked-as-`to` source fails before anything runs
 void test("A missing, untracked, or already-tracked-as-`to` source fails before anything runs", async (t) => {
-  // doctest:L36
   await t.checkThrows(async () => (validateMoveList({ moves: [{ from: "pkg/src/missing.ts", to: "pkg/src/moved.ts" }], repoRoot })), "MoveSourceMissingError");
 
-  // doctest:L39
   await t.checkThrows(async () => (validateMoveList({ moves: [{ from: "pkg/src/a.ts", to: "pkg/src/b.ts" }], repoRoot })), "MoveTargetExistsError");
 });
 
 // ## Duplicate `from` or `to` across moves fails
 void test("Duplicate `from` or `to` across moves fails", async (t) => {
-  // doctest:L46
   await t.checkThrows(
     async () => (validateMoveList({
       moves: [
@@ -55,7 +51,6 @@ void test("Duplicate `from` or `to` across moves fails", async (t) => {
     "DuplicateMoveSourceError",
   );
 
-  // doctest:L55
   await t.checkThrows(
     async () => (validateMoveList({
       moves: [
@@ -73,7 +68,6 @@ void test("Duplicate `from` or `to` across moves fails", async (t) => {
 // Neither intermediate path (`temp.ts`, `final.ts`) exists yet; the second
 // move's `from` is produced by the first, so the first must run first.
 void test("Neither intermediate path (temp.ts, final.ts) exists yet; the second move's f...", async (t) => {
-  // doctest:L71
   await t.checkText(
     JSON.stringify(
       validateMoveList({
@@ -93,7 +87,6 @@ void test("Neither intermediate path (temp.ts, final.ts) exists yet; the second 
 // `b.ts` already exists; `a.ts -> b.ts` can only run once `b.ts -> c.ts` has
 // vacated it, the opposite order from the produced-from case above.
 void test("b.ts already exists; a.ts -> b.ts can only run once b.ts -> c.ts has vacated...", async (t) => {
-  // doctest:L89
   await t.checkText(
     JSON.stringify(
       validateMoveList({
@@ -117,7 +110,6 @@ void test("A true swap (both paths already exist, each wants the other's spot) c
       t.error(error);
     }
   });
-  // doctest:L104
   await t.checkThrows(
     async () => (validateMoveList({
       moves: [

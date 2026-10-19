@@ -13,23 +13,18 @@ import { formatOptions } from "../../../src/components/ui/FriendlyDate.js";
 // A date-only string formats in UTC regardless of `mode`, so the rendered day
 // matches the written day in every runner timezone:
 void test("A date-only string formats in UTC regardless of mode, so the rendered day mat...", async (t) => {
-  // doctest:L17
   t.check(formatOptions({ iso: "2026-08-14", mode: "date" }), { dateStyle: "medium", timeZone: "UTC" });
 
-  // doctest:L20
   t.check(new Date("2026-08-14").toLocaleString("en-US", formatOptions({ iso: "2026-08-14", mode: "date" })), "Aug 14, 2026");
 
-  // doctest:L23
   t.check(formatOptions({ iso: "2026-08-14" }), { dateStyle: "medium", timeZone: "UTC" });
 });
 
 // Full timestamps are instants and keep the viewer's local zone (no `timeZone`
 // pin), with time shown unless `mode: "date"`:
 void test("Full timestamps are instants and keep the viewer's local zone (no timeZone pi...", async (t) => {
-  // doctest:L31
   const full = formatOptions({ iso: "2026-08-14T10:00:00Z" });
   t.check(full, { dateStyle: "medium", timeStyle: "short" });
 
-  // doctest:L35
   t.check(formatOptions({ iso: "2026-08-14T10:00:00Z", mode: "date" }), { dateStyle: "medium" });
 });

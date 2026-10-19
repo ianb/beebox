@@ -18,7 +18,6 @@ void test("line 13", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L14
   const box = await makeTmpBox();
   const resolved = await resolveAuditBox(box.root);
   t.check(
@@ -35,7 +34,6 @@ void test("line 13", async (t) => {
 
 // A path that isn't a box passes through unchanged, named by its own basename:
 void test("A path that isn't a box passes through unchanged, named by its own basename:", async (t) => {
-  // doctest:L30
   const plain = path.resolve("test/dev/lib");
   const resolved = await resolveAuditBox(plain);
   t.check({ operational: resolved.operationalRoot === plain, boxName: resolved.boxName }, {

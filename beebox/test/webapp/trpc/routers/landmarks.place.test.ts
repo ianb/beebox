@@ -71,7 +71,6 @@ async function lendingBox() {
 // A single-type glob in the place's own folder, the same glob through every
 // folder below, and anything else, which is named by its query.
 void test("A single-type glob in the place's own folder, the same glob through every fol...", async (t) => {
-  // doctest:L75
   t.check(({ here: expandLabel("*.loan.card"), below: expandLabel("**/*.image.card"), other: expandLabel("2026-*.doc.card") }), {
     here: "Every loan card here",
     below: "Every image card here and in folders below",
@@ -88,7 +87,6 @@ void test("A single-type glob in the place's own folder, the same glob through e
 // lists its expands, under a plain-words label with an exact count; one that matches nothing is still there, with
 // `count: 0`, so the page can say "None yet".
 void test("The flat list keeps the curated link (missing, so it stays as a row), the ent...", async (t) => {
-  // doctest:L89
   const box = await lendingBox();
   const page = await payload(box.root, { dir: "_content/lending", expandsAsGroups: true });
   t.check(({ links: rows(page.links), groups: groups(page.groups) }), {
@@ -128,7 +126,6 @@ void test("The flat list keeps the curated link (missing, so it stays as a row),
 //
 // The place menu and the chat's link panel read this shape; it is unchanged.
 void test("The place menu and the chat's link panel read this shape; it is unchanged.", async (t) => {
-  // doctest:L112
   const box = await lendingBox();
   const menu = await payload(box.root, { dir: "_content/lending" });
   t.check(({ links: rows(menu.links), groups: menu.groups.map((g) => g.label) }), {
@@ -150,7 +147,6 @@ void test("The place menu and the chat's link panel read this shape; it is uncha
 //
 // A place with exactly one entry-point card arrives on that card.
 void test("A place with exactly one entry-point card arrives on that card.", async (t) => {
-  // doctest:L133
   const box = await lendingBox();
   t.check((await payload(box.root, { dir: "_content/lending" })).arrival, "_content/lending/Lending_List.doc.card");
 });
@@ -160,7 +156,6 @@ void test("A place with exactly one entry-point card arrives on that card.", asy
 // With two entry points arrival does not guess; with none there is nothing
 // else to open. Either way it opens the place page.
 void test("With two entry points arrival does not guess; with none there is nothing else...", async (t) => {
-  // doctest:L144
   const box = await makeTmpBox();
   await box.write("_content/swim/Swim.landmark.card", "---\nnavigation:\n  label: Swim\n---\n");
   await box.write("_content/swim/Week.doc.card", "---\ntitle: Week\nprominence: entry-point\n---\n");
@@ -181,7 +176,6 @@ void test("With two entry points arrival does not guess; with none there is noth
 // The root is the logical directory `""`; its landmark lives under `_content/`.
 // An entry point inside a nested place belongs to that place, not the root.
 void test("The root is the logical directory \"\"; its landmark lives under content/.", async (t) => {
-  // doctest:L160
   const box = await makeTmpBox();
   await box.write("_content/Box.landmark.card", "---\nnavigation:\n  label: test\n---\n");
   await box.write("_content/lending/Lending.landmark.card", "---\nnavigation:\n  label: Lending\n---\n");
@@ -198,7 +192,6 @@ void test("The root is the logical directory \"\"; its landmark lives under cont
 // A `background` landmark's cards are not listed by level, so it has no entry
 // point to open.
 void test("A background landmark's cards are not listed by level, so it has no entry poi...", async (t) => {
-  // doctest:L175
   const box = await makeTmpBox();
   await box.write("_content/house/House.landmark.card", "---\nprominence: background\nnavigation:\n  label: Housekeeping\n---\n");
   await box.write("_content/house/Log.doc.card", "---\ntitle: Log\nprominence: entry-point\n---\n");
@@ -219,7 +212,6 @@ void test("With expandsAsGroups, the last group is \"Also here\":", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L190
   const box = await makeTmpBox();
   await box.write("_content/house/House.landmark.card", [
     "---",
@@ -246,7 +238,6 @@ void test("With expandsAsGroups, the last group is \"Also here\":", async (t) =>
   await utimes(box.path("_content/house/notes/Landlord.doc.card"), 1_700_000_200, 1_700_000_200);
   await utimes(box.path("_content/house/Spanish.doc.card"), 1_700_000_100, 1_700_000_100);
 
-  // doctest:L216
   const page = await payload(box.root, { dir: "_content/house", expandsAsGroups: true });
   t.check(groups(page.groups), [
     {
@@ -269,7 +260,6 @@ void test("With expandsAsGroups, the last group is \"Also here\":", async (t) =>
 
   // Its rows are derived links with no level, titled like any other row.
 
-  // doctest:L231
   t.check(rows(page.groups[1]?.children ?? []), [
     "derived _content/house/notes/Landlord.doc.card",
     "derived _content/house/Spanish.doc.card",
@@ -278,7 +268,6 @@ void test("With expandsAsGroups, the last group is \"Also here\":", async (t) =>
 
   // Only the server's group carries the `alsoHere` mark the page reads.
 
-  // doctest:L238
   t.check(page.groups.map((g) => ({ label: g.label, alsoHere: g.alsoHere === true })), [
     {
       label: "Recipes",
@@ -292,7 +281,6 @@ void test("With expandsAsGroups, the last group is \"Also here\":", async (t) =>
 
   // The menus omit the flag and get no "Also here".
 
-  // doctest:L245
   t.check((await payload(box.root, { dir: "_content/house" })).groups.map((g) => g.label), [
     "Recipes",
   ]);
@@ -310,7 +298,6 @@ void test("Thirty ordinary cards:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L259
   const box = await makeTmpBox();
   await box.write("_content/many/Many.landmark.card", "---\nnavigation:\n  label: Many\n---\n");
   for (let i = 1; i <= 30; i++) {
@@ -350,7 +337,6 @@ void test("A checkout can give every card the same mtime; the path then orders t
       t.error(error);
     }
   });
-  // doctest:L289
   const box = await makeTmpBox();
   await box.write("_content/same/Same.landmark.card", "---\nnavigation:\n  label: Same\n---\n");
   for (const name of ["B_10", "A", "B_2"]) {
@@ -377,7 +363,6 @@ void test("The author's group keeps its own cards and gets no alsoHere mark; the
       t.error(error);
     }
   });
-  // doctest:L310
   const box = await makeTmpBox();
   await box.write("_content/den/Den.landmark.card", [
     "---",
@@ -424,7 +409,6 @@ void test("Every card here is already in a tier, so the page adds no empty group
       t.error(error);
     }
   });
-  // doctest:L340
   const box = await makeTmpBox();
   await box.write("_content/tidy/Tidy.landmark.card", "---\nnavigation:\n  label: Tidy\n---\n");
   await box.write("_content/tidy/Start.doc.card", "---\ntitle: Start\nprominence: entry-point\n---\n");
@@ -449,10 +433,8 @@ void test("Each row carries detail, the line the card's type writes about itself
       t.error(error);
     }
   });
-  // doctest:L363
   const fs = await import("node:fs/promises");
 
-  // doctest:L365
   const box = await makeTmpBox({ deps: true });
   await fs.mkdir(box.path("src/schemas"), { recursive: true });
   await fs.writeFile(box.path("src/schemas/loan.ts"), `import { body, cardSchema } from "beebox/cards";
@@ -503,7 +485,6 @@ void test("The landmark's body is the place summary (Track C).", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L397
   const box = await makeTmpBox();
   await box.write("_content/lending/Lending.landmark.card",
     "---\nnavigation:\n  label: Lending\n  links:\n    - ref: Stove.doc.card\n---\nThe [stove](Stove.doc.card) is with Idris.\n");

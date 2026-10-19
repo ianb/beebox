@@ -37,7 +37,6 @@ function decide(scores: Record<string, number>, options?: { candidates?: Routing
 // ask three. The last row is not doubt: both top choices are in Garden, and the
 // existing-chat preference selects the raised-beds chat.
 void test("The ten synthetic thoughts measured against the real service post seven and a...", async (t) => {
-  // doctest:L41
   t.check(
     [
       decide({ "raised-beds": 1 }),                               // Check whether the raised bed lumber order shipped
@@ -69,13 +68,11 @@ void test("The ten synthetic thoughts measured against the real service post sev
 // An exact tie between two places asks. The selection still names one of them,
 // by the existing-chat preference and then by id, so the result is stable.
 void test("An exact tie between two places asks.", async (t) => {
-  // doctest:L71
   t.check(decide({ household: 0.5, trip: 0.5 }), "Household: ask");
 });
 
 // A box with one candidate always posts: its place holds all the probability.
 void test("A box with one candidate always posts:", async (t) => {
-  // doctest:L78
   t.check(decide({ general: 1 }, { candidates: candidates.filter((candidate) => candidate.id === "general") }), "New general chat: post");
 });
 
@@ -83,7 +80,6 @@ void test("A box with one candidate always posts:", async (t) => {
 // A chat at the box root with no landmark shares the root with the new general
 // chat, so their sum reaches the floor even though neither alone does.
 void test("A selected chat with no landmark is in the place of its context directory.", async (t) => {
-  // doctest:L87
   const unplaced: RoutingCandidate[] = [
     { id: "loose", label: "Loose ends", target: { kind: "existing-session", sessionId: "s-loose", contextDir: "" } },
     { id: "foo", label: "Foo notes", target: { kind: "existing-session", sessionId: "s-foo", contextDir: "projects/foo" } },
@@ -96,19 +92,16 @@ void test("A selected chat with no landmark is in the place of its context direc
   // chat in `projects/foo` and the new general chat at the root do not add up, so
   // a split between them asks:
 
-  // doctest:L102
   t.check(decide({ general: 0.55, foo: 0.4, trip: 0.05 }, { candidates: unplaced }), "New general chat: ask");
 
   // Two landmark-less chats in the same directory still sum:
 
-  // doctest:L109
   t.check(decide({ foo: 0.5, "foo-2": 0.45, trip: 0.05 }, { candidates: unplaced }), "Foo notes: post");
 });
 
 // A floor of 1 posts only a place that holds every probability. Floating-point
 // summation of 0.53 and 0.47 still counts as the whole.
 void test("A floor of 1 posts only a place that holds every probability.", async (t) => {
-  // doctest:L117
   t.check(
     [
       decide({ "new-garden": 0.53, "raised-beds": 0.47 }, { postFloor: 1 }),
@@ -123,7 +116,6 @@ void test("A floor of 1 posts only a place that holds every probability.", async
 
 // A floor outside zero to one is a programming error.
 void test("A floor outside zero to one is a programming error.", async (t) => {
-  // doctest:L127
   await t.checkThrows(async () => (decide({ general: 1 }, { postFloor: 1.5 })), "InvariantError: Routing post floor must be between zero and one");
 });
 
@@ -134,7 +126,6 @@ void test("A floor outside zero to one is a programming error.", async (t) => {
 // new one, so `thoughtAsksForNewChat` reports it and the preference is skipped.
 // Only the opening words count, in any case, after any leading whitespace.
 void test("selectRoutingDestination prefers an existing chat over a new one in the lead...", async (t) => {
-  // doctest:L139
   t.check(
     [
       "New chat in Garden: what goes next to the tomatoes",
@@ -187,7 +178,6 @@ void test("selectRoutingDestination prefers an existing chat over a new one in t
 // preference. Asked for a new chat, the same judgment selects the new chat in
 // Garden.
 void test("The tomatoes row from the samples selects the existing raised-beds chat by pr...", async (t) => {
-  // doctest:L166
   const probabilities = Object.fromEntries(candidates.map((candidate) => [candidate.id, 0]));
   const split = { ...probabilities, "new-garden": 0.53, "raised-beds": 0.47 };
   t.check(
@@ -210,7 +200,6 @@ void test("The tomatoes row from the samples selects the existing raised-beds ch
   // An exact tie favors the existing chat. Asked for a new chat, the same tie
   // favors the new chat in that landmark.
 
-  // doctest:L179
   const tie = { ...probabilities, "new-garden": 0.5, "raised-beds": 0.5 };
   t.check(
     [false, true].map((newChatRequested) => {

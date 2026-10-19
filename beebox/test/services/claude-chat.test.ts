@@ -13,7 +13,6 @@ import { buildQueryOptions, warmSlotKey, warmCompatible } from "../../src/servic
 // The real Claude adapter forwards the exact BBX environment supplied by the
 // session starter to the SDK query options.
 void test("The real Claude adapter forwards the exact BBX environment supplied by the se...", async (t) => {
-  // doctest:L17
   const exactEnv = {
     PATH: "/repo/beebox/bin:/usr/bin",
     BBX_SERVER_URL: "http://127.0.0.1:3210",
@@ -38,13 +37,11 @@ void test("The real Claude adapter forwards the exact BBX environment supplied b
 // claude.ai connectors of the server's Claude login, which belong to one person
 // (`issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md`).
 void test("A chat session loads the box's project settings (AGENTS.md, rules, skills, ho...", async (t) => {
-  // doctest:L39
   const isolated = buildQueryOptions({ cwd: "/tmp/box", systemPrompt: "system", env: {} });
   t.check(isolated.queryOptions.settingSources, [
     "project",
   ]);
 
-  // doctest:L43
   t.check(isolated.queryOptions.settings, {
     disableClaudeAiConnectors: true,
     claudeMdExcludes: [
@@ -70,7 +67,6 @@ void test("A chat session loads the box's project settings (AGENTS.md, rules, sk
   // (`issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md`).
   // Subagent tools (`Agent`, `SendMessage`, `TaskStop`) stay.
 
-  // doctest:L63
   t.check(isolated.queryOptions.disallowedTools, [
     "CronCreate",
     "CronDelete",
@@ -92,7 +88,6 @@ void test("A chat session loads the box's project settings (AGENTS.md, rules, sk
 // root `AGENTS.md` and `.claude/rules/` still load; computed from `cwd`, they were
 // excluded (`issues/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md`).
 void test("A landmark chat runs with cwd in the landmark's directory and passes the box...", async (t) => {
-  // doctest:L77
   const landmark = buildQueryOptions({ cwd: "/tmp/box/_content/course", boxRoot: "/tmp/box", systemPrompt: "system", env: {} });
   const settings = landmark.queryOptions.settings;
   if (typeof settings !== "object" || !settings.claudeMdExcludes) throw new Error("landmark chat has no claudeMdExcludes");
@@ -111,12 +106,10 @@ void test("A landmark chat runs with cwd in the landmark's directory and passes 
 // is keyed by chat. The unkeyed slot — `""` — is the speculative one, for a send
 // that brings no id of its own.
 void test("A warm slot has its session id baked in at spawn (--session-id), so the pool...", async (t) => {
-  // doctest:L92
   const base = { cwd: "/tmp", systemPrompt: "x", env: {} };
   const forChatA = { ...base, coinedSessionId: "aaaaaaaa-1111-4111-8111-111111111111" };
   const forChatB = { ...base, coinedSessionId: "bbbbbbbb-2222-4222-8222-222222222222" };
 
-  // doctest:L96
   t.check({ speculative: warmSlotKey(base), chatA: warmSlotKey(forChatA) }, {
     speculative: "",
     chatA: "aaaaaaaa-1111-4111-8111-111111111111",
@@ -126,7 +119,6 @@ void test("A warm slot has its session id baked in at spawn (--session-id), so t
   // refused for a chat that brought its own id — it would start the conversation
   // under the wrong one:
 
-  // doctest:L105
   t.check(
     {
       sameChat: warmCompatible(forChatA, forChatA),
@@ -145,7 +137,6 @@ void test("A warm slot has its session id baked in at spawn (--session-id), so t
   // The provider env is baked in too. A slot warmed before the owner turned
   // Claude Code telemetry off still carries telemetry on, so it is refused:
 
-  // doctest:L118
   t.check(
     {
       telemetryTurnedOff: warmCompatible(base, { ...base, env: { DISABLE_TELEMETRY: "1", DISABLE_ERROR_REPORTING: "1" } }),
@@ -160,7 +151,6 @@ void test("A warm slot has its session id baked in at spawn (--session-id), so t
   // The box root is baked in with the isolation settings, so a slot warmed for a
   // plain chat does not serve a landmark chat with the same `cwd`:
 
-  // doctest:L129
   t.check(
     {
       landmarkFromPlain: warmCompatible(base, { ...base, boxRoot: "/tmp" }),

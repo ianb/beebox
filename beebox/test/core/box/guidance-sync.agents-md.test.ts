@@ -43,7 +43,6 @@ void test("A box made before the migration (legacyInstructions) is unconverted."
       t.error(error);
     }
   });
-  // doctest:L41
   const box = await makeTmpBox({ git: "none", legacyInstructions: true });
   await box.write("src/schemas/CLAUDE.md", "# Our own schema notes\n");
   await syncBoxGuidance(box.root, { generators: false });
@@ -74,7 +73,6 @@ void test("With no guides on disk, a converted box's sync installs each tracked 
       t.error(error);
     }
   });
-  // doctest:L62
   const box = await convertedBox();
   await syncBoxGuidance(box.root, { generators: false });
   const versions = JSON.parse(await box.read("_config/template-versions.json"));
@@ -110,7 +108,6 @@ void test("With no guides on disk, a converted box's sync installs each tracked 
   // `AGENTS.md`, with no `CLAUDE.md` and no symlink. A tracked guide is still left
   // alone:
 
-  // doctest:L82
   await fs.mkdir(box.path("_content/mapped"), { recursive: true });
   await ensureInstructionMapInclude(box.root, "_content/mapped");
   const stock = await box.read("src/views/AGENTS.md");
@@ -132,7 +129,6 @@ void test("With no guides on disk, a converted box's sync installs each tracked 
 
   // The root writer creates the root `AGENTS.md` with the agent-guide include:
 
-  // doctest:L98
   await fs.rm(box.path("CLAUDE.md"), { force: true });
   await ensureAgentContext(box.root, []);
   t.check(({ agents: await kind(box, "AGENTS.md"), legacy: await kind(box, "CLAUDE.md"), content: await box.read("AGENTS.md") }), {
@@ -152,7 +148,6 @@ void test("The unconverted root writer keeps CLAUDE.md", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L111
   const box = await makeTmpBox({ git: "none", legacyInstructions: true });
   await fs.rm(box.path("CLAUDE.md"), { force: true });
   await ensureAgentContext(box.root, []);

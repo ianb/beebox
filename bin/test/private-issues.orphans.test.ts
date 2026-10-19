@@ -45,7 +45,6 @@ void test("line 40", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L41
   const report = await execFileAsync(privateIssues, ["report-orphans", mono], { env });
   const defaultRootReport = await execFileAsync(privateIssues, ["report-orphans", mono]);
   const sweep = await execFileAsync(privateIssues, ["sweep-orphans", mono], { env });

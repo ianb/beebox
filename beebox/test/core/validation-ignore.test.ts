@@ -15,7 +15,6 @@ import { join } from "node:path";
 
 // No ignore file → allow-all (nothing is ignored):
 void test("No ignore file → allow-all (nothing is ignored):", async (t) => {
-  // doctest:L19
   const box = await makeTmpBox();
   const ig = await loadValidationIgnore(box.root);
   t.check([ig.isIgnored("_content/anything.md"), ig.isIgnored(join(box.root, "vendor/x.md"))], [
@@ -23,14 +22,12 @@ void test("No ignore file → allow-all (nothing is ignored):", async (t) => {
     false,
   ]);
 
-  // doctest:L29
   await box.cleanup();
 });
 
 // With patterns, matching paths are ignored and others aren't. Both box-relative
 // and absolute paths resolve against the box root:
 void test("With patterns, matching paths are ignored and others aren't.", async (t) => {
-  // doctest:L36
   const box = await makeTmpBox();
   await mkdir(join(box.root, "_config"), { recursive: true });
   await writeFile(join(box.root, "_config/bbx-validate.ignore"), "# a comment\nvendor/**\n_content/imported/**/*.md\n");
@@ -53,13 +50,11 @@ void test("With patterns, matching paths are ignored and others aren't.", async 
   // Paths outside the box root (or empty) are never ignored — the matcher only
   // speaks to box-relative content:
 
-  // doctest:L58
   t.check([ig.isIgnored("/etc/passwd"), ig.isIgnored("")], [
     false,
     false,
   ]);
 
-  // doctest:L66
   await box.cleanup();
 });
 
@@ -69,13 +64,11 @@ void test("With patterns, matching paths are ignored and others aren't.", async 
 // Under the test harness stdout is piped (not a TTY), so it stays off — the common
 // piped/pasted case gets clean, escape-free output:
 void test("useColor emits ANSI only for a real terminal and never when NOCOLOR is set.", async (t) => {
-  // doctest:L76
   t.check(useColor(), false);
 });
 
 // Force a TTY to exercise the terminal branch, and confirm `NO_COLOR` still wins:
 void test("Force a TTY to exercise the terminal branch, and confirm NOCOLOR still wins:", async (t) => {
-  // doctest:L83
   const orig = process.stdout.isTTY;
   process.stdout.isTTY = true;
   const noEnv = process.env.NO_COLOR;

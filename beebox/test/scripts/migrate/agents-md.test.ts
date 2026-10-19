@@ -30,7 +30,6 @@ const dir = (...[d, claude, agents]: [string, DirectoryInput["claude"], Director
 // The registry entry uses the name the resolver checks (later migrations
 // follow it in the list):
 void test("The registry entry uses the name the resolver checks (later migrations follow...", async (t) => {
-  // doctest:L34
   const migration = MIGRATIONS.find((m) => m.name === AGENTS_MD_MIGRATION);
   t.check(migration !== undefined && "script" in migration ? migration.script : undefined, "src/scripts/migrate/agents-md/run.ts");
 });
@@ -40,7 +39,6 @@ void test("The registry entry uses the name the resolver checks (later migration
 // A real `CLAUDE.md` is renamed onto `AGENTS.md`, replacing nothing, the old
 // symlink mirror, or a legacy generated mirror (the marker file).
 void test("A real CLAUDE.md is renamed onto AGENTS.md, replacing nothing, the old symlin...", async (t) => {
-  // doctest:L45
   t.check([ABSENT, LINK, GENERATED].map((agents) => plan({ directories: [dir("src/schemas", FILE, agents)] }).steps), [
     [
       "rename src/schemas/CLAUDE.md -> src/schemas/AGENTS.md",
@@ -58,7 +56,6 @@ void test("A real CLAUDE.md is renamed onto AGENTS.md, replacing nothing, the ol
 // mirror some people make by hand) is removed. A symlink elsewhere is renamed like
 // a file; the link keeps its target.
 void test("A CLAUDE.md that is a symlink to the sibling real AGENTS.md (the reverse mirr...", async (t) => {
-  // doctest:L58
   t.check(
     ({
       reverse: plan({ directories: [dir("", { kind: "symlink", target: "./AGENTS.md" }, AUTHORED)] }).steps,
@@ -78,7 +75,6 @@ void test("A CLAUDE.md that is a symlink to the sibling real AGENTS.md (the reve
 // Already converted: a real `AGENTS.md` alone, or a leftover symlink alone, needs
 // nothing. A second run plans nothing.
 void test("Already converted:", async (t) => {
-  // doctest:L72
   t.check(plan({ directories: [dir("", ABSENT, AUTHORED), dir("_content/x", ABSENT, LINK)], ledger: { "src/schemas/AGENTS.md": entry }, parks: { "src/schemas/AGENTS.md": "# new\n" } }), {
     steps: [],
     conflicts: [],
@@ -90,7 +86,6 @@ void test("Already converted:", async (t) => {
 // Each kind names its path. When any conflict exists, no steps are returned,
 // even for unrelated directories.
 void test("Each kind names its path.", async (t) => {
-  // doctest:L82
   t.check(
     plan({
       directories: [
@@ -119,7 +114,6 @@ void test("Each kind names its path.", async (t) => {
 
 // Each message carries the fix:
 void test("Each message carries the fix:", async (t) => {
-  // doctest:L109
   t.check(planAgentsMd({ directories: [dir("_content/people", FILE, AUTHORED)], localFiles: [], ledger: {}, parks: {} }).conflicts[0]?.message, "_content/people/CLAUDE.md and _content/people/AGENTS.md are both instruction files. Merge them into _content/people/AGENTS.md by hand and delete _content/people/CLAUDE.md.");
 });
 
@@ -128,7 +122,6 @@ void test("Each message carries the fix:", async (t) => {
 // A ledger entry or park under both sibling keys with equal contents is not a
 // conflict.
 void test("A ledger entry or park under both sibling keys with equal contents is not a c...", async (t) => {
-  // doctest:L119
   t.check(plan({ ledger: { "src/views/CLAUDE.md": entry, "src/views/AGENTS.md": { ...entry } }, parks: { "src/views/CLAUDE.md": "# same\n", "src/views/AGENTS.md": "# same\n" } }).steps, [
     "ledger src/views/CLAUDE.md -> src/views/AGENTS.md (equal entry already there; drop legacy)",
     "park src/views/CLAUDE.md -> src/views/AGENTS.md (equal park already there; drop legacy)",
@@ -140,7 +133,6 @@ void test("A ledger entry or park under both sibling keys with equal contents is
 // The walk lists children before their parent; the plan sorts by depth, root
 // first. A directory known only from the ledger or a park still gets its steps.
 void test("The walk lists children before their parent; the plan sorts by depth, root fi...", async (t) => {
-  // doctest:L132
   t.check(
     plan({
       directories: [dir("src/schemas", FILE, LINK), dir("_content/a/b", FILE, ABSENT), dir("", FILE, LINK)],
@@ -163,7 +155,6 @@ void test("The walk lists children before their parent; the plan sorts by depth,
 // `stock` and `pending` move with the hash, so a later template update still
 // merges against the recorded stock instead of parking.
 void test("stock and pending move with the hash, so a later template update still merges...", async (t) => {
-  // doctest:L153
   t.check(rekeyLedger({ "src/schemas/CLAUDE.md": { ...entry, pending: "p1" }, "src/views/CLAUDE.md": entry }, { from: "src/schemas/CLAUDE.md", to: "src/schemas/AGENTS.md", drop: false }), {
     "src/views/CLAUDE.md": {
       sha256: "abc",
@@ -185,7 +176,6 @@ void test("stock and pending move with the hash, so a later template update stil
 //
 // File renamed, ledger and park not moved:
 void test("File renamed, ledger and park not moved:", async (t) => {
-  // doctest:L165
   t.check(plan({ directories: [dir("src/schemas", ABSENT, AUTHORED)], ledger: { "src/schemas/CLAUDE.md": entry }, parks: { "src/schemas/CLAUDE.md": "# parked\n" } }).steps, [
     "ledger src/schemas/CLAUDE.md -> src/schemas/AGENTS.md",
     "park src/schemas/CLAUDE.md -> src/schemas/AGENTS.md",
@@ -194,7 +184,6 @@ void test("File renamed, ledger and park not moved:", async (t) => {
 
 // Ledger moved, park not:
 void test("Ledger moved, park not:", async (t) => {
-  // doctest:L175
   t.check(plan({ directories: [dir("src/schemas", ABSENT, AUTHORED)], ledger: { "src/schemas/AGENTS.md": entry }, parks: { "src/schemas/CLAUDE.md": "# parked\n" } }).steps, [
     "park src/schemas/CLAUDE.md -> src/schemas/AGENTS.md",
   ]);
@@ -202,7 +191,6 @@ void test("Ledger moved, park not:", async (t) => {
 
 // Root renamed, a subdirectory not:
 void test("Root renamed, a subdirectory not:", async (t) => {
-  // doctest:L182
   t.check(plan({ directories: [dir("", ABSENT, AUTHORED), dir("_content/people", FILE, LINK)] }).steps, [
     "rename _content/people/CLAUDE.md -> _content/people/AGENTS.md (replaces symlink)",
   ]);

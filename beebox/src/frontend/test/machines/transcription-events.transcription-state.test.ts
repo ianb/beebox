@@ -24,7 +24,6 @@ import {
 // Keyword spotting is deliberately not a `segmentCapturing` site: it needs live
 // text, which only `recording` has.
 void test("Keyword spotting is deliberately not a segmentCapturing site:", async (t) => {
-  // doctest:L28
   const states = ["idle", "connecting", "recordingLocal", "recording", "reconnecting", "finalizing"] as const;
   t.check(states.map((s) => `${s}:${String(segmentCapturing(s))}`).join(" "), "idle:false connecting:false recordingLocal:true recording:true reconnecting:true finalizing:false");
 });
@@ -34,7 +33,6 @@ void test("Keyword spotting is deliberately not a segmentCapturing site:", async
 // A fake actor stands in for the real one (which needs the audio worklet); it
 // leaves `STOP` unanswered so `finalizing` stays observable.
 void test("A fake actor stands in for the real one (which needs the audio worklet); it l...", async (t) => {
-  // doctest:L39
   let toMachine: (event: TranscriptionEvent) => void = () => {};
   const fake = fromCallback<TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent>(({ sendBack }) => {
     toMachine = sendBack;

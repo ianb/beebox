@@ -108,7 +108,6 @@ void test("A batch of four 200 KB files:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L105
   const { repo, box } = await makeAnnexBox();
   const id = await stageMixedBatch(box);
   const batch = await prepareBulkBatch({ boxRoot: box, id, contextDir: "" });

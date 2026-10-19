@@ -30,35 +30,28 @@ void test("Only sealed/preparing/failed sessions for the chat are returned", asy
       t.error(error);
     }
   });
-  // doctest:L26
   const box = await makeTmpBox();
 
-  // doctest:L28
   // s1: bound to chat-1, one photo, mid-preparation → pending.
   const s1 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
   await addPhoto({ boxRoot: box.root, id: s1.id, filename: "photo-001.jpg", capturedAt: "2026-07-09T14:00:00.000Z", source: "camera-user", buffer: Buffer.from("IMG") });
   await setStagingState({ boxRoot: box.root, id: s1.id, state: "preparing" });
 
-  // doctest:L33
   // s2: bound to chat-1 but still open (capture mode live) → NOT pending.
   await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
 
-  // doctest:L36
   // s3: bound to chat-1 but already delivered → NOT pending.
   const s3 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
   await setStagingState({ boxRoot: box.root, id: s3.id, state: "delivered" });
 
-  // doctest:L40
   // s4: bound to chat-1, delivery failed → pending (retryable).
   const s4 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
   await setStagingState({ boxRoot: box.root, id: s4.id, state: "failed:deliver" });
 
-  // doctest:L44
   // s5: bound to a different chat → excluded from chat-1's list.
   const s5 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-2", createdBy: null });
   await setStagingState({ boxRoot: box.root, id: s5.id, state: "preparing" });
 
-  // doctest:L48
   const { pending } = await caller(box.root).capture.pendingSessions({ sessionId: "chat-1" });
   // The pending entries carry each capture's media counts:
   t.check(pending, [
@@ -80,7 +73,6 @@ void test("Only sealed/preparing/failed sessions for the chat are returned", asy
 
   // The other chat sees only its own capture:
 
-  // doctest:L63
   const other = await caller(box.root).capture.pendingSessions({ sessionId: "chat-2" });
   t.check(other.pending, [
     {
@@ -102,7 +94,6 @@ void test("A chat with no staging sessions returns an empty list", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L75
   const box = await makeTmpBox();
   t.check(await caller(box.root).capture.pendingSessions({ sessionId: "chat-none" }), { pending: [] });
 });

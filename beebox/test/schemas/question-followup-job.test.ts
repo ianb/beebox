@@ -16,7 +16,6 @@ import {
 
 // ## `learning` is an optional passthrough, same shape as the question's
 void test("`learning` is an optional passthrough, same shape as the question's", async (t) => {
-  // doctest:L20
   const accepts = (extra: Record<string, unknown>) => QuestionFollowupJobSchema.frontmatterSchema.safeParse({
     type: "question-followup-job",
     source: "question-answer",
@@ -27,19 +26,15 @@ void test("`learning` is an optional passthrough, same shape as the question's",
     ...extra,
   }).success;
 
-  // doctest:L30
   t.check(accepts({}), true);
 
-  // doctest:L33
   t.check(accepts({ learning: { sink: "guide", proposal: "Items like this belong in category A." } }), true);
 
-  // doctest:L36
   t.check(accepts({ learning: { sink: "guide" } }), false);
 });
 
 // ## Template without `learning`
 void test("Template without `learning`", async (t) => {
-  // doctest:L43
   await t.checkText(
     createQuestionFollowupJobTemplate({
       description: "Follow up on answered question: What color?",
@@ -59,7 +54,6 @@ answer: blue
 
 // ## Template with `learning`
 void test("Template with `learning`", async (t) => {
-  // doctest:L63
   await t.checkText(
     createQuestionFollowupJobTemplate({
       description: "Follow up on answered question: What color?",

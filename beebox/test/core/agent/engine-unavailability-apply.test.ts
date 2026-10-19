@@ -26,7 +26,6 @@ const CODEX_QUOTA_MESSAGE =
 
 // ## A recognized failure is classified, rewritten, and recorded
 void test("A recognized failure is classified, rewritten, and recorded", async (t) => {
-  // doctest:L29
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "engine-apply-"));
   const box = await makeTmpBox();
   t.teardown(async () => {
@@ -36,7 +35,6 @@ void test("A recognized failure is classified, rewritten, and recorded", async (
   });
   process.env.BBX_ENGINE_AVAILABILITY_FILE = path.join(dir, "engine-availability.json");
 
-  // doctest:L38
   const classified = await applyEngineUnavailability(
     { success: false, output: "", error: CODEX_QUOTA_MESSAGE, exitCode: -1, sessionId: "s1" },
     { provider: "codex", boxRoot: box.root },
@@ -58,9 +56,6 @@ void test("A recognized failure is classified, rewritten, and recorded", async (
     },
   });
 
-  // doctest:L45
-
-  // doctest:L48
   const live = await liveEngineUnavailability({ provider: "codex", now: new Date() });
   t.check(live, {
     provider: "codex",
@@ -75,21 +70,16 @@ void test("A recognized failure is classified, rewritten, and recorded", async (
   // The episode is not announced: it is the `engine-quota` health check, and
   // nothing was written to the notification log.
 
-  // doctest:L57
   t.check(await fs.access(path.join(box.root, ".beebox/notifications.jsonl")).then(() => "logged", () => "not logged"), "not logged");
 
   // ## Unrecognized failures and successes pass through untouched
 
-  // doctest:L64
   const ordinary = await applyEngineUnavailability(
     { success: false, output: "x", error: "exit code 1", exitCode: 1, sessionId: "s2" },
     { provider: "codex", boxRoot: box.root },
   );
   t.check(ordinary, { success: false, output: "x", error: "exit code 1", exitCode: 1, sessionId: "s2" });
 
-  // doctest:L71
-
-  // doctest:L74
   const success = await applyEngineUnavailability(
     { success: true, output: "done", exitCode: 0, sessionId: "s3" },
     { provider: "codex", boxRoot: box.root },

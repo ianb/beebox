@@ -22,7 +22,6 @@ function chipOf(wrapper: string) {
 
 // ## The exact wrapper from `buildCaptureWrapper` round-trips into the chip model
 void test("The exact wrapper from `buildCaptureWrapper` round-trips into the chip model", async (t) => {
-  // doctest:L26
   const wrapper = buildCaptureWrapper({
     docPath: "tmp-capture/capture-20260709T1432-ab3f.capture-session.card",
     imageCount: 3,
@@ -40,13 +39,11 @@ void test("The exact wrapper from `buildCaptureWrapper` round-trips into the chi
 
   // The chip label reads the counts:
 
-  // doctest:L39
   t.check(captureChipLabel(chipOf(wrapper)), "Capture — 3 photos, 4:10 audio");
 });
 
 // ## `partial` and `transcription-failed` flags parse to booleans
 void test("`partial` and `transcription-failed` flags parse to booleans", async (t) => {
-  // doctest:L46
   const wrapper = buildCaptureWrapper({
     docPath: "tmp-capture/x.capture-session.card",
     imageCount: 1,
@@ -65,13 +62,11 @@ void test("`partial` and `transcription-failed` flags parse to booleans", async 
     transcriptionFailed: true,
   });
 
-  // doctest:L58
   t.check(captureChipLabel(model), "Capture — 1 photo, 0:05 audio");
 });
 
 // ## A photos-only capture drops the audio segment (0:00 → no audio label)
 void test("A photos-only capture drops the audio segment (0:00 → no audio label)", async (t) => {
-  // doctest:L65
   const wrapper = buildCaptureWrapper({
     docPath: "tmp-capture/x.capture-session.card",
     imageCount: 2,
@@ -92,10 +87,8 @@ void test("A photos-only capture drops the audio segment (0:00 → no audio labe
 
 // ## Non-capture text is not a capture
 void test("Non-capture text is not a capture", async (t) => {
-  // doctest:L79
   t.check(parseCaptureWrapper("just a normal message"), null);
 
-  // doctest:L82
   t.check(parseCaptureWrapper("<capture images=\"1\">no doc attr</capture>"), null);
 });
 
@@ -106,7 +99,6 @@ void test("Non-capture text is not a capture", async (t) => {
 // transcript parser does not have this restriction: it returns ordered text and
 // capture parts without swallowing either.
 void test("The compatibility helper returns one model or null, so surrounding whitespace...", async (t) => {
-  // doctest:L94
   const wrapper = buildCaptureWrapper({
     docPath: "tmp-capture/x.capture-session.card",
     imageCount: 1,
@@ -114,18 +106,15 @@ void test("The compatibility helper returns one model or null, so surrounding wh
     summary: "hi",
   });
 
-  // doctest:L101
   // Surrounding whitespace still parses, to the same model.
   t.check(parseCaptureWrapper("\n\n" + wrapper + "\n"), parseCaptureWrapper(wrapper));
 
-  // doctest:L105
   t.check(
     // Leading prose cannot reduce to one compatibility model.
     parseCaptureWrapper("see this: " + wrapper),
     null,
   );
 
-  // doctest:L109
   t.check(
     // Neither can trailing prose.
     parseCaptureWrapper(wrapper + " what do you think?"),

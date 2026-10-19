@@ -56,7 +56,6 @@ void test("Only the provided keys are persisted (an omitted field stays absent),
       t.error(error);
     }
   });
-  // doctest:L53
   const box = await makeTmpBox({ git: true });
   // A decoy the mutation must NOT sweep into its commit.
   await box.write("_content/decoy.md", "unrelated\n");
@@ -68,7 +67,6 @@ void test("Only the provided keys are persisted (an omitted field stays absent),
     success: true,
   });
 
-  // doctest:L65
   const cfg = await readJson(box, "_config/connectors/google-calendar.json");
   t.check(cfg, {
     calendars: [
@@ -78,15 +76,12 @@ void test("Only the provided keys are persisted (an omitted field stays absent),
     syncDaysBack: 7,
   });
 
-  // doctest:L71
   t.check((await lastCommit(box.root)).subject, "Update calendar sync config");
 
-  // doctest:L76
   // Commit scoped to just the config file; the decoy stayed uncommitted.
   const files = (await simpleGit(box.root).raw(["show", "--name-only", "--relative", "--format=", "HEAD"])).trim();
   t.check(files, "_config/connectors/google-calendar.json");
 
-  // doctest:L81
   // `status` porcelain paths are repo-root-relative; under the one-root layout
   // that's the same box root the decoy was written into.
   t.check((await simpleGit(box.root).status()).not_added, ["_content/decoy.md"]);
@@ -107,11 +102,9 @@ void test("A Drive mount is a .gdoc.card / .gsheet.card / .gfolder.card / .glink
       t.error(error);
     }
   });
-  // doctest:L100
   const box = await makeTmpBox({ git: true });
   const c = caller(box.root);
 
-  // doctest:L103
   await box.write(
     "_config/connectors/google-drive.json",
     JSON.stringify({ folders: [{ driveFolderId: "abc", localPath: "sheets/x" }] }),
@@ -129,7 +122,6 @@ void test("A Drive mount is a .gdoc.card / .gsheet.card / .gfolder.card / .glink
   // config — reading it as "no folder mounts" would silently drop the mounts still
   // owed a conversion.
 
-  // doctest:L116
   await box.write("_config/connectors/google-drive.json", "{oops");
   t.check(await code(c.drive.config()), "INTERNAL_SERVER_ERROR");
 
@@ -139,7 +131,6 @@ void test("A Drive mount is a .gdoc.card / .gsheet.card / .gfolder.card / .glink
   // `bbx drive add` / `inspect` / `list`, letting an agent bearer reach those verbs
   // without shell access to the box.
 
-  // doctest:L128
   t.check(Object.keys(appRouter._def.procedures).filter((name) => name.startsWith("drive.")).toSorted(), [
     "drive.add",
     "drive.config",
@@ -170,11 +161,9 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
       t.error(error);
     }
   });
-  // doctest:L147
   const box = await makeTmpBox({ git: true });
   const c = caller(box.root);
 
-  // doctest:L150
   const res = await c.admin.updateGmailConfig({
     query: "  is:unread  ",
     labels: ["INBOX", "  ", "Work"],
@@ -188,7 +177,6 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
     },
   });
 
-  // doctest:L158
   t.check(await readJson(box, "_config/connectors/gmail.json"), {
     query: "is:unread",
     action: {
@@ -196,12 +184,10 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
     },
   });
 
-  // doctest:L161
   t.check((await lastCommit(box.root)).subject, "Update Gmail filter config");
 
   // Labels alone are written as labels.
 
-  // doctest:L168
   const byLabel = await c.admin.updateGmailConfig({
     query: "",
     labels: ["INBOX", "  ", "Work"],
@@ -213,7 +199,6 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
     action: { type: "track" },
   });
 
-  // doctest:L176
   t.check(await readJson(box, "_config/connectors/gmail.json"), {
     labels: [
       "INBOX",
@@ -227,7 +212,6 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
   // A filter with something to match but no action is refused, so the form cannot
   // save a config the connector would then reject.
 
-  // doctest:L184
   let refused = "";
   try {
     await c.admin.updateGmailConfig({ query: "is:unread", labels: [] });
@@ -241,7 +225,6 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
 
   // A procedure action routes matches without creating any card.
 
-  // doctest:L197
   const routed = await c.admin.updateGmailConfig({
     query: "is:unread",
     labels: [],
@@ -259,7 +242,6 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
   // When nothing is left to match, the action is dropped too: an action with no
   // query or labels beside it is a config error the connector would reject.
 
-  // doctest:L210
   // All-blank input collapses to an empty config.
   const empty = await c.admin.updateGmailConfig({ query: "   ", labels: ["  "] });
   t.check(empty, {
@@ -268,10 +250,8 @@ void test("The query is trimmed and blank labels are filtered out.", async (t) =
     action: null,
   });
 
-  // doctest:L215
   t.check(await readJson(box, "_config/connectors/gmail.json"), {});
 
-  // doctest:L220
   // Re-saving the identical empty config commits nothing new.
   const before = (await lastCommit(box.root)).hash;
   await c.admin.updateGmailConfig({ query: "", labels: [] });

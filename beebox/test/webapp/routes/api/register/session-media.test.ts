@@ -66,7 +66,6 @@ void test("The photograph comes back", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L61
   const res = await fetchMedia(`${SESSION}/entry-1/0`);
   t.check(
     { status: res.statusCode, contentType: res.headers["content-type"], bytesMatch: res.rawPayload.equals(photoBytes) },
@@ -80,7 +79,6 @@ void test("The photograph comes back", async (t) => {
   // cache, and `nosniff` because a photograph must not be reinterpreted as anything
   // a browser would execute:
 
-  // doctest:L79
   t.check(
     { cache: res.headers["cache-control"], nosniff: res.headers["x-content-type-options"] },
     { cache: "private, max-age=31536000, immutable", nosniff: "nosniff" },
@@ -93,7 +91,6 @@ void test("The photograph comes back", async (t) => {
   // bytes never were. Saying which is which would only describe someone's failed
   // upload back to them:
 
-  // doctest:L94
   const status = async (refPath: string) => (await fetchMedia(refPath)).statusCode;
   const misses = await Promise.all([
     status("no-such-session/entry-1/0"),
@@ -105,7 +102,6 @@ void test("The photograph comes back", async (t) => {
   // Both ids land in a filesystem path, so a reference carrying path characters is
   // rejected at the parse boundary rather than resolved and then checked:
 
-  // doctest:L108
   const rejected = await Promise.all([
     status("..%2f..%2f..%2fetc/entry-1/0"),
     status(`${SESSION}/entry-1/notanumber`),

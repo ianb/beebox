@@ -125,7 +125,6 @@ const body = "1. Lint rules took three rounds.\n2. bin/AGENTS.md lacked X.\n3. A
 // order, and the body follows verbatim. The checkout stays clean: nothing was
 // written into it.
 void test("With no session variable, add from the worktree attaches the most recently mo...", async (t) => {
-  // doctest:L126
   const added = await run(["add", "--checkpoint", "implemented"], { input: body });
   const written = added.stdout.trim();
   const { meta: m, body: storedBody } = await frontmatter(written);
@@ -188,7 +187,6 @@ void test("With no session variable, add from the worktree attaches the most rec
 // and the session id comes from its `session_meta`. `--engine claude` restricts
 // the guess to Claude transcripts.
 void test("When the Codex rollout is the most recently written, the mtime guess picks it...", async (t) => {
-  // doctest:L157
   await age(codexMain, 5);
   const codex = await frontmatter((await run(["add", "--checkpoint", "landed"], { input: body })).stdout.trim());
   const claudeOnly = await frontmatter((await run(["add", "--checkpoint", "landed", "--engine", "claude"], { input: body })).stdout.trim());
@@ -218,7 +216,6 @@ void test("When the Codex rollout is the most recently written, the mtime guess 
 // the other), the session whose transcript was written last wins. Flags outrank
 // both.
 void test("A harness's exported session id outranks the mtime guess, even when it names...", async (t) => {
-  // doctest:L174
   const envClaude = await frontmatter((await run(["add", "--checkpoint", "plan-reviewed"], {
     input: body, env: { CLAUDE_CODE_SESSION_ID: "aaaaaaaa-0000-4000-8000-000000000001" },
   })).stdout.trim());
@@ -262,7 +259,6 @@ void test("A harness's exported session id outranks the mtime guess, even when i
 // `main`, and `--workstream` overrides the derived name. A store root that exists
 // without the exhibits marker is refused rather than adopted.
 void test("An empty or whitespace-only body is refused with the four prompts and writes...", async (t) => {
-  // doctest:L199
   const before = (await readdir(join(store, "demo/coding-feedback"))).length;
   const empty = await run(["add", "--checkpoint", "implemented"], { input: "  \n\n" });
   const badCheckpoint = await run(["add", "--checkpoint", "done"], { input: body });
@@ -299,7 +295,6 @@ void test("An empty or whitespace-only body is refused with the four prompts and
 // a same-second entry gets a `-<n>` suffix. `show` prints an entry and refuses a path outside
 // the store.
 void test("list reports the current workstream's entries newest first; --all walks every...", async (t) => {
-  // doctest:L226
   const listed = JSON.parse((await run(["list", "--json"])).stdout);
   const all = JSON.parse((await run(["list", "--all", "--json"])).stdout);
   const text = (await run(["list"])).stdout.trimEnd().split("\n");
@@ -346,7 +341,6 @@ void test("list reports the current workstream's entries newest first; --all wal
 // came after. An entry exactly at the instant is excluded. A value that is not an
 // ISO-8601 UTC instant is refused.
 void test("list --since <iso> keeps only entries strictly after that instant, so a sched...", async (t) => {
-  // doctest:L251
   const everything = JSON.parse((await run(["list", "--all", "--json"])).stdout);
   const pivot = everything[2].timestamp;
   const after = JSON.parse((await run(["list", "--all", "--since", pivot, "--json"])).stdout);

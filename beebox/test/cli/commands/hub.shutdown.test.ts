@@ -37,7 +37,6 @@ async function serverWithLiveConnection() {
 // forced. What matters is that it is BOUNDED, and nowhere near the 8s deadline
 // or the old infinite wait.
 void test("An open connection no longer blocks the close.", async (t) => {
-  // doctest:L40
   const { server, socket } = await serverWithLiveConnection();
   const started = Date.now();
   await closeServer(server);
@@ -47,13 +46,11 @@ void test("An open connection no longer blocks the close.", async (t) => {
     listening: false,
   });
 
-  // doctest:L49
   socket.destroy();
 
   // With no connections at all it returns immediately, so an idle hub is not made
   // slower by the guard that rescues a busy one.
 
-  // doctest:L56
   const idle = http.createServer();
   await new Promise<void>((resolve) => idle.listen(0, "127.0.0.1", () => resolve()));
   const idleStart = Date.now();

@@ -12,7 +12,6 @@ const sharedAliases = {
 
 // ## Extension style is preserved: `.js` stays `.js`, extensionless stays extensionless
 void test("Extension style is preserved: `.js` stays `.js`, extensionless stays extensionless", async (t) => {
-  // doctest:L16
   t.check(
     computeNewSpecifier({
       oldSpecifier: "./b.js",
@@ -23,7 +22,6 @@ void test("Extension style is preserved: `.js` stays `.js`, extensionless stays 
     "./b.js",
   );
 
-  // doctest:L24
   t.check(
     computeNewSpecifier({
       oldSpecifier: "./b",
@@ -37,7 +35,6 @@ void test("Extension style is preserved: `.js` stays `.js`, extensionless stays 
 
 // ## An importer moving to another directory recomputes the relative path, adding `./`
 void test("An importer moving to another directory recomputes the relative path, adding `./`", async (t) => {
-  // doctest:L36
   t.check(
     computeNewSpecifier({
       oldSpecifier: "./b.js",
@@ -51,7 +48,6 @@ void test("An importer moving to another directory recomputes the relative path,
 
 // ## A moved `.test.ts` file keeps its `.test` component, not just its real extension
 void test("A moved `.test.ts` file keeps its `.test` component, not just its real extension", async (t) => {
-  // doctest:L48
   t.check(
     computeNewSpecifier({
       oldSpecifier: "./foo.test.js",
@@ -65,7 +61,6 @@ void test("A moved `.test.ts` file keeps its `.test` component, not just its rea
 
 // ## An alias specifier recomputes within the alias root when the target stays under it
 void test("An alias specifier recomputes within the alias root when the target stays under it", async (t) => {
-  // doctest:L60
   t.check(
     computeNewSpecifier({
       oldSpecifier: "@shared/ref-path",
@@ -79,7 +74,6 @@ void test("An alias specifier recomputes within the alias root when the target s
 
 // ## An alias specifier falls back to relative when the target leaves the alias root
 void test("An alias specifier falls back to relative when the target leaves the alias root", async (t) => {
-  // doctest:L72
   t.check(
     computeNewSpecifier({
       oldSpecifier: "@shared/ref-path",

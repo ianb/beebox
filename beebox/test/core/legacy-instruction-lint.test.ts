@@ -40,7 +40,6 @@ async function box(converted: boolean): Promise<string> {
 
 // A converted box reports each legacy file, one line each:
 void test("A converted box reports each legacy file, one line each:", async (t) => {
-  // doctest:L44
   t.check(await lintLegacyInstructionFiles(await box(true)), [
     ".claude/CLAUDE.md: Name instruction files AGENTS.md. A CLAUDE.md here makes Claude Code ignore every AGENTS.md.",
     "CLAUDE.md: Name instruction files AGENTS.md. A CLAUDE.md here makes Claude Code ignore every AGENTS.md.",
@@ -51,6 +50,5 @@ void test("A converted box reports each legacy file, one line each:", async (t) 
 
 // An unconverted box reports nothing:
 void test("An unconverted box reports nothing:", async (t) => {
-  // doctest:L56
   t.check(await lintLegacyInstructionFiles(await box(false)), []);
 });

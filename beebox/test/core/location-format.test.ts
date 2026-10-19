@@ -13,36 +13,30 @@ const FIX: StoredLocation = { lat: 45.5231, lng: -122.6765, accuracy: 20.4, capt
 
 // ## Fresh fix: coarse age + rounded accuracy
 void test("Fresh fix: coarse age + rounded accuracy", async (t) => {
-  // doctest:L17
   t.check(formatLocationLine(FIX, { now: new Date("2026-06-29T12:04:00.000Z") }), "45.5231,-122.6765 (±20m, captured 4 minutes ago, web)");
 });
 
 // ## A matched place name is prepended
 void test("A matched place name is prepended", async (t) => {
-  // doctest:L24
   t.check(formatLocationLine(FIX, { now: new Date("2026-06-29T12:04:00.000Z"), place: "Home" }), "Home — 45.5231,-122.6765 (±20m, captured 4 minutes ago, web)");
 });
 
 // ## Stale fix gets a `[stale]` flag
 void test("Stale fix gets a `[stale]` flag", async (t) => {
-  // doctest:L31
   t.check(formatLocationLine(FIX, { now: new Date("2026-06-29T14:00:00.000Z") }), "45.5231,-122.6765 (±20m, captured 2 hours ago, web) [stale]");
 });
 
 // ## locationAge: ageMs + stale boolean
 void test("locationAge: ageMs + stale boolean", async (t) => {
-  // doctest:L38
   t.check(locationAge(FIX, new Date("2026-06-29T12:30:00.000Z")), {
     ageMs: 1800000,
     stale: false,
   });
 
-  // doctest:L41
   t.check(locationAge(FIX, new Date("2026-06-29T13:30:00.000Z")).stale, true);
 });
 
 // ## Future `capturedAt` (clock skew) clamps to "moments ago"
 void test("Future `capturedAt` (clock skew) clamps to \"moments ago\"", async (t) => {
-  // doctest:L48
   t.check(formatLocationLine(FIX, { now: new Date("2026-06-29T11:59:00.000Z") }), "45.5231,-122.6765 (±20m, captured moments ago, web)");
 });

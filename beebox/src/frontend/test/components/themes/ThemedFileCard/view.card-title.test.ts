@@ -12,13 +12,11 @@ import "@ianbicking/tap-check/tap";
 // (`card.get` `detail`) under the title, inside the header; without one, the
 // header holds the title alone.
 void test("The card page shows the line the card's type writes about itself (card.get de...", async (t) => {
-  // doctest:L13
   const React = await import("react");
   const { renderToStaticMarkup } = await import("react-dom/server");
   const { resolveCardTheme } = await import("@shared/card-theme/core");
   const { CardThemeSurface } = await import("../../../../src/components/themes/ThemedFileCard/CardThemeSurface.js");
 
-  // doctest:L18
   globalThis.React = React;
   const theme = resolveCardTheme({ path: "_content/Solder.record.card", type: "record", cardChoice: undefined, typeDefault: undefined, presentation: { status: "absent" } });
   const header = (detail: string | undefined) => {

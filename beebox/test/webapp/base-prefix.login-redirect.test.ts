@@ -41,17 +41,14 @@ process.env.BBX_SESSION_SECRET = "test-session-secret-for-login-redirect-doctest
 // redirect — never escape the origin or traverse. A clean single segment passes
 // through unchanged.
 void test("An absent, empty, multi-segment, traversal, or whitespace-bearing value all c...", async (t) => {
-  // doctest:L48
   t.check(
     // Accepted: a single leading-slash segment.
     validateBasePrefix("/main"),
     "/main",
   );
 
-  // doctest:L52
   t.check(validateBasePrefix("/my-worktree_2.0"), "/my-worktree_2.0");
 
-  // doctest:L55
   t.check(
     // Rejected -> "" (fail-safe):
     [
@@ -70,13 +67,10 @@ void test("An absent, empty, multi-segment, traversal, or whitespace-bearing val
 
 // `readBasePrefix` pulls the header (taking the first if duplicated) and validates.
 void test("readBasePrefix pulls the header (taking the first if duplicated) and validates.", async (t) => {
-  // doctest:L72
   t.check(readBasePrefix({ "x-bbx-base-prefix": "/main" }), "/main");
 
-  // doctest:L75
   t.check(readBasePrefix({ "x-bbx-base-prefix": "/../etc" }), "");
 
-  // doctest:L78
   t.check(readBasePrefix({}), "");
 });
 
@@ -95,10 +89,8 @@ void test("With auth on and no cookie, a page navigation redirects to login.", a
       t.error(error);
     }
   });
-  // doctest:L91
   const box = await makeTestServer({ openAccess: false });
 
-  // doctest:L93
   const prefixed = await box.rawRequest({
     method: "GET",
     url: "/browse/some-card",
@@ -112,7 +104,6 @@ void test("With auth on and no cookie, a page navigation redirects to login.", a
   // With NO header the redirect stays exactly as it was before Track A: bare
   // `/auth/login` and an un-prefixed `returnTo`.
 
-  // doctest:L111
   const bare = await box.rawRequest({ method: "GET", url: "/browse/some-card" });
   t.check(bare.headers.location, "/auth/login?returnTo=%2Ftest%2Fbrowse%2Fsome-card");
 
@@ -120,7 +111,6 @@ void test("With auth on and no cookie, a page navigation redirects to login.", a
   // treated as empty — the redirect degrades to the bare form, never escaping the
   // origin.
 
-  // doctest:L121
   const traversal = await box.rawRequest({
     method: "GET",
     url: "/browse/some-card",
@@ -128,7 +118,6 @@ void test("With auth on and no cookie, a page navigation redirects to login.", a
   });
   t.check(traversal.headers.location, "/auth/login?returnTo=%2Ftest%2Fbrowse%2Fsome-card");
 
-  // doctest:L129
   const whitespace = await box.rawRequest({
     method: "GET",
     url: "/browse/some-card",
@@ -159,7 +148,6 @@ void test("The hub serves login at its own root and forwards /<slug>/... to the 
       t.error(error);
     }
   });
-  // doctest:L152
   const childBox = await makeTmpBox();
   const child = http.createServer((_req, res) => {
     res.writeHead(200, { "content-type": "application/json" });
@@ -181,11 +169,9 @@ void test("The hub serves login at its own root and forwards /<slug>/... to the 
   await new Promise<void>((resolve) => hub.listen(0, "127.0.0.1", () => resolve()));
   const hubBase = `http://127.0.0.1:${portOf(hub)}`;
 
-  // doctest:L173
   // Unauthenticated navigation: bare redirect, returnTo already carries /test1.
   const nav = await fetch(`${hubBase}/test1/browse/some-card`, { redirect: "manual" });
 
-  // doctest:L178
   // A spoofed x-bbx-base-prefix is stripped -> identical redirect, not /evil/....
   const spoofed = await fetch(`${hubBase}/test1/browse/some-card`, {
     redirect: "manual",

@@ -22,31 +22,25 @@ function flush(tracker: PresenceTracker, seconds: number) {
 
 // ## Nobody has sent a heartbeat: nothing to write
 void test("Nobody has sent a heartbeat: nothing to write", async (t) => {
-  // doctest:L26
   const tracker = createPresenceTracker();
   t.check(flush(tracker, 0), "no write");
 
   // ## Two tabs count as two; a repeat heartbeat from one tab does not add
 
-  // doctest:L34
   tracker.heard("tab-aaaaaaaa", at(0));
   t.check(flush(tracker, 0), "write 1");
 
-  // doctest:L38
   tracker.heard("tab-bbbbbbbb", at(5));
   tracker.heard("tab-aaaaaaaa", at(10));
   t.check(tracker.count(at(10)), 2);
 
-  // doctest:L43
   t.check(flush(tracker, 10), "write 2");
 
   // ## An unchanged count is rewritten every 30 seconds, not on every heartbeat
 
-  // doctest:L50
   tracker.heard("tab-aaaaaaaa", at(20));
   t.check(flush(tracker, 20), "no write");
 
-  // doctest:L54
   tracker.heard("tab-aaaaaaaa", at(40));
   t.check(flush(tracker, 40), "write 2");
 
@@ -55,16 +49,12 @@ void test("Nobody has sent a heartbeat: nothing to write", async (t) => {
   // Tab b last spoke at 5 s, so at 96 s only tab a (last heard at 40 s) remains.
   // When tab a also lapses, zero is written once and then nothing more.
 
-  // doctest:L65
   t.check(tracker.count(at(95)), 2);
 
-  // doctest:L68
   t.check(flush(tracker, 96), "write 1");
 
-  // doctest:L71
   t.check(flush(tracker, 131), "write 0");
 
-  // doctest:L74
   t.check(flush(tracker, 200), "no write");
 });
 
@@ -72,7 +62,6 @@ void test("Nobody has sent a heartbeat: nothing to write", async (t) => {
 //
 // A client chooses its own id, so a flood of ids drops the oldest past 64.
 void test("A client chooses its own id, so a flood of ids drops the oldest past 64.", async (t) => {
-  // doctest:L83
   const flooded = createPresenceTracker();
   for (let i = 0; i < 100; i++) flooded.heard(`tab-${String(i).padStart(8, "0")}`, at(i / 10));
   t.check(flooded.count(at(10)), 64);

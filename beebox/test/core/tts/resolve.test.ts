@@ -40,7 +40,6 @@ void test("The `gemini` key speaks Gemini", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L37
   const box = await geminiBox(["gemini"]);
   const tts = await resolveTtsService(box.root);
   t.check(({ backend: tts.backend, stylable: tts.stylable }), {
@@ -62,7 +61,6 @@ void test("Through OpenRouter, Gemini 3.8 would lose the personality card's spea
       t.error(error);
     }
   });
-  // doctest:L54
   const box = await geminiBox(["openrouter"]);
   await t.checkThrows(async () => (await resolveTtsService(box.root)), "TtsNotConfiguredError: TTS backend \"gemini\" needs a Google AI Studio key. Grant the \"gemini\" secret to this box, or choose a different TTS backend. An OpenRouter key does not stand in: through OpenRouter the speaking style is lost.");
 });

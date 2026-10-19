@@ -16,7 +16,6 @@ import { conversationTargetFor } from "../../../../src/components/chat/conversat
 
 // ## A cross-engine pick keeps its model
 void test("A cross-engine pick keeps its model", async (t) => {
-  // doctest:L20
   t.check(
     conversationTargetFor(
       { sessionInput: "new", contextDir: "", startEngine: "claude", startModel: "pinned-model" },
@@ -37,7 +36,6 @@ void test("A cross-engine pick keeps its model", async (t) => {
 // Absent means "follow the engine's default", which is not the same as pinning
 // that default — so no `model` key is emitted at all.
 void test("Absent means \"follow the engine's default\", which is not the same as pinning...", async (t) => {
-  // doctest:L33
   t.check(
     conversationTargetFor(
       { sessionInput: "new", contextDir: "", startEngine: "codex" },
@@ -54,11 +52,9 @@ void test("Absent means \"follow the engine's default\", which is not the same a
 
 // ## An unknown engine falls back to claude, and a resumed session ignores both
 void test("An unknown engine falls back to claude, and a resumed session ignores both", async (t) => {
-  // doctest:L43
   const fallback = conversationTargetFor({ sessionInput: "new", contextDir: "" }, "fresh-id");
   t.check(fallback.kind === "start" ? fallback.engine : fallback.kind, "claude");
 
-  // doctest:L47
   t.check(
     conversationTargetFor(
       { sessionInput: "abc123", contextDir: "notes", startEngine: "codex", startModel: "pinned-model" },

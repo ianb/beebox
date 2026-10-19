@@ -98,7 +98,6 @@ void test("The report directives must be present (without them Report-Only has n
 //
 // `report-to` only works if the response also carries a `Reporting-Endpoints` header naming the same endpoint and path:
 void test("report-to only works if the response also carries a Reporting-Endpoints heade...", async (t) => {
-  // doctest:L72
   t.check(
     reportingEndpointsHeader({ reportPath: PROD_CSP_REPORT_PATH }),
     'csp-endpoint="/api/csp-report"',

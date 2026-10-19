@@ -66,7 +66,6 @@ async function render(path: string, home?: unknown) {
 // never mounts, and the only procedure the page subscribes to is
 // `quickChat.home`: no `chat.*` query at all.
 void test("The box screen renders its own sections and input.", async (t) => {
-  // doctest:L70
   const page = await render("/test1/box");
   t.check([page.shellMounts, page.procedures], [
     0,
@@ -75,21 +74,18 @@ void test("The box screen renders its own sections and input.", async (t) => {
     ],
   ]);
 
-  // doctest:L74
   t.check(["Pick up where you left off", "New thought. The box picks the conversation."].filter((text) => !page.html.includes(text)), []);
 
   // The box-wide pages are not on the box screen: they are in the avatar menu.
   // The "Shortcuts" section shows only the box's `nav.card` entries, so it is
   // absent until `quickChat.home` answers with at least one.
 
-  // doctest:L83
   t.check(["In this box", "Dashboard", "Storage summary", "Shortcuts"].filter((text) => page.html.includes(text)), []);
 });
 
 // With one `nav.card` entry in the answer, the section appears with that link
 // and its heading is the only one besides the recent chats.
 void test("With one nav.card entry in the answer, the section appears with that link and...", async (t) => {
-  // doctest:L91
   const html = (await render("/test1/box", { open: [], recentlySent: [], recentChats: [], shortcuts: [{ label: "Questions", to: "/questions" }] })).html;
   const headings = [...html.matchAll(/<h2[^>]*>(.*?)<\/h2>/g)].map(([, text]) => text);
   const shortcuts = [...html.matchAll(/<a[^>]*id="(bbx-box-screen-shortcut-\d+)"[^>]*href="([^"]*)"[^>]*>(.*?)<\/a>/g)].map(([, id, href, text]) => `${id}: ${text} → ${href}`);
@@ -107,6 +103,5 @@ void test("With one nav.card entry in the answer, the section appears with that 
 // The same layout mounts the shell for an ordinary page, so the check above is
 // the route's declaration at work and not a shell that never renders:
 void test("The same layout mounts the shell for an ordinary page, so the check above is...", async (t) => {
-  // doctest:L102
   t.check((await render("/test1/chat")).shellMounts, 1);
 });

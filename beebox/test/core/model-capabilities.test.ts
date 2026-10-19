@@ -32,11 +32,9 @@ void test("No grants at all — nothing is usable", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L29
   await useTempStore();
   const box = await makeTmpBox();
 
-  // doctest:L32
   const caps = await serviceCapabilities(box.root);
   t.check(caps.hq.mai, {
     usable: false,
@@ -45,7 +43,6 @@ void test("No grants at all — nothing is usable", async (t) => {
     ],
   });
 
-  // doctest:L36
   t.check(caps.hq.whisper, {
     usable: false,
     needs: [
@@ -54,7 +51,6 @@ void test("No grants at all — nothing is usable", async (t) => {
     ],
   });
 
-  // doctest:L39
   t.check(caps.hq["whisper-llm"], {
     usable: false,
     needs: [
@@ -63,7 +59,6 @@ void test("No grants at all — nothing is usable", async (t) => {
     ],
   });
 
-  // doctest:L42
   t.check(caps.hq["whisper-llm-mini"], {
     usable: false,
     needs: [
@@ -72,7 +67,6 @@ void test("No grants at all — nothing is usable", async (t) => {
     ],
   });
 
-  // doctest:L45
   t.check(caps.hq.voxtral, {
     usable: false,
     needs: [
@@ -80,7 +74,6 @@ void test("No grants at all — nothing is usable", async (t) => {
     ],
   });
 
-  // doctest:L48
   t.check(caps.hq["voxtral-diarized"], {
     usable: false,
     needs: [
@@ -88,7 +81,6 @@ void test("No grants at all — nothing is usable", async (t) => {
     ],
   });
 
-  // doctest:L51
   t.check(caps.hq["mai-diarized"], {
     usable: false,
     needs: [
@@ -96,7 +88,6 @@ void test("No grants at all — nothing is usable", async (t) => {
     ],
   });
 
-  // doctest:L54
   t.check(caps.tts.openai, {
     usable: false,
     needs: [
@@ -104,7 +95,6 @@ void test("No grants at all — nothing is usable", async (t) => {
     ],
   });
 
-  // doctest:L57
   t.check(caps.tts.gemini, {
     usable: false,
     needs: [
@@ -126,36 +116,28 @@ void test("MAI has no direct arm, and the Whisper family falls back to OpenRoute
       t.error(error);
     }
   });
-  // doctest:L72
   await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
   await setSecret({ name: "openrouter", value: "sk-or-v1-placeholder" });
   await grantSecret({ slug, name: "openrouter", access: "server" });
 
-  // doctest:L78
   const caps = await serviceCapabilities(box.root);
   t.check(caps.hq.mai.usable, true);
 
-  // doctest:L82
   t.check(caps.hq.whisper.usable, true);
 
-  // doctest:L85
   t.check(caps.tts.gemini.usable, false);
 
-  // doctest:L88
   t.check(caps.hq.voxtral.usable, false);
 
-  // doctest:L91
   t.check(caps.tts.openai.usable, false);
 
   // ## Granting `mistral` on top makes `voxtral` usable too
 
-  // doctest:L98
   await setSecret({ name: "mistral", value: "placeholder-mistral-key" });
   await grantSecret({ slug, name: "mistral", access: "server" });
 
-  // doctest:L101
   const caps2 = await serviceCapabilities(box.root);
   t.check(caps2.hq.voxtral.usable, true);
 
@@ -166,7 +148,6 @@ void test("MAI has no direct arm, and the Whisper family falls back to OpenRoute
   // (`openrouter`, `mistral`) and ungranted ones (`openai-thinking`, `gemini`), and
   // neither wrote a line: no `resolve` and no refusal.
 
-  // doctest:L114
   t.check(await readdir(secretsLogDir()).catch(() => []), []);
 });
 
@@ -182,13 +163,11 @@ void test("The Google AI Studio key alone makes Gemini speech usable.", async (t
       t.error(error);
     }
   });
-  // doctest:L128
   await useTempStore();
   const box = await makeTmpBox();
   await setSecret({ name: "gemini", value: "AIza-placeholder-gemini-key" });
   await grantSecret({ slug: await boxSlug(box.root), name: "gemini", access: "server" });
 
-  // doctest:L133
   const caps = await serviceCapabilities(box.root);
   t.check(`${String(caps.tts.gemini.usable)} ${String(caps.hq.mai.usable)}`, "true false");
 });

@@ -21,18 +21,15 @@ void test("The ls command writes output lines via ctx.writeLine(), which become 
       t.error(error);
     }
   });
-  // doctest:L18
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
 
-  // doctest:L21
   await mkdir(join(box.root, "_content/inbox"), { recursive: true });
   await writeFile(
     join(box.root, "_content/inbox/test.task.card"),
     "<task>Test task</task>",
   );
 
-  // doctest:L27
   const messages: OutputLine[] = [];
   const result = await executeCommandStreaming({
     command: "ls",
@@ -54,7 +51,6 @@ void test("The ls command writes output lines via ctx.writeLine(), which become 
 
 // ## Unknown command returns error result
 void test("Unknown command returns error result", async (t) => {
-  // doctest:L67
   const messages: OutputLine[] = [];
   const result = await executeCommandStreaming({
     command: "nonexistent-command",
@@ -77,11 +73,9 @@ void test("When a command returns { success:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L87
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
 
-  // doctest:L90
   const messages: OutputLine[] = [];
   const result = await executeCommandStreaming({
     command: "ls",
@@ -109,17 +103,14 @@ void test("Commands that list multiple items emit one output line per item:", as
       t.error(error);
     }
   });
-  // doctest:L111
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
 
-  // doctest:L114
   await mkdir(join(box.root, "_content/inbox"), { recursive: true });
   await writeFile(join(box.root, "_content/inbox/a.task.card"), "<task>A</task>");
   await writeFile(join(box.root, "_content/inbox/b.task.card"), "<task>B</task>");
   await writeFile(join(box.root, "_content/inbox/c.task.card"), "<task>C</task>");
 
-  // doctest:L119
   const messages: OutputLine[] = [];
   await executeCommandStreaming({
     command: "ls",

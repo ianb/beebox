@@ -142,18 +142,15 @@ void test("The gate below parks the first request as it enters chatSession.send(
       t.error(error);
     }
   });
-  // doctest:L137
   const backend = createFakeChatBackend();
   const started = nextStart(backend);
   const ctx = await makeTestServer({ chatBackend: backend });
 
-  // doctest:L141
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L146
   const gate = openSendGate();
   const send = () => ctx.request({
     method: "POST",
@@ -161,7 +158,6 @@ void test("The gate below parks the first request as it enters chatSession.send(
     payload: { session: "new", message: "feed the cat", messageId: "dup-1" },
   });
 
-  // doctest:L153
   const first = send();
   await gate.entered;
   const second = send();
@@ -169,7 +165,6 @@ void test("The gate below parks the first request as it enters chatSession.send(
   gate.release();
   const [a, b] = await Promise.all([first, second]);
 
-  // doctest:L160
   t.check(`${a.statusCode} | ${b.statusCode} | turn=${typeof bodyField(a.body, "turnId")} | shared=${bodyField(b.body, "turnId") === bodyField(a.body, "turnId")} | recorded=${recorded.length}`, "200 | 200 | turn=string | shared=true | recorded=1");
 });
 
@@ -180,13 +175,11 @@ void test("The gate below parks the first request as it enters chatSession.send(
 // `deduplicated: true`, because a request that has recorded nothing yet may
 // still die or be refused.
 void test("The same rule pinned at the registry it lives in.", async (t) => {
-  // doctest:L178
   const sends = createInFlightSends();
   const settle = sends.begin("in-flight-1");
   const waiting = sends.pending("in-flight-1");
   settle({ status: 200, body: { turnId: "t-1" } });
 
-  // doctest:L183
   await t.checkText(`${JSON.stringify(await waiting)} | afterSettle=${sends.pending("in-flight-1")}`, "{\"status\":200,\"body\":{\"turnId\":\"t-1\"}} | afterSettle=null");
 });
 
@@ -215,18 +208,15 @@ void test("This section used to assert a shared 500, and a freed id:", async (t)
       t.error(error);
     }
   });
-  // doctest:L205
   const backend = createFakeChatBackend();
   const started = nextStart(backend);
   const ctx = await makeTestServer({ chatBackend: backend });
 
-  // doctest:L209
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L214
   backend.failNextStart = new Error("spawn EBADF");
   const gate = openSendGate();
   const send = () => ctx.request({
@@ -235,7 +225,6 @@ void test("This section used to assert a shared 500, and a freed id:", async (t)
     payload: { session: "new", message: "water the plants", messageId: "dup-2" },
   });
 
-  // doctest:L222
   const first = send();
   await gate.entered;
   const second = send();
@@ -244,14 +233,12 @@ void test("This section used to assert a shared 500, and a freed id:", async (t)
   const [a, b] = await Promise.all([first, second]);
   gate.restore();
 
-  // doctest:L230
   const retry = await ctx.request({
     method: "POST",
     url: "/api/chat/send",
     payload: { session: "new", message: "water the plants", messageId: "dup-2" },
   });
 
-  // doctest:L236
   t.check(`${a.statusCode} | turn=${typeof bodyField(a.body, "turnId")} | shared=${bodyField(b.body, "turnId") === bodyField(a.body, "turnId")} | retry=${retry.statusCode} | dedup=${bodyField(retry.body, "deduplicated")} | recorded=${recorded.length}`, "200 | turn=string | shared=true | retry=200 | dedup=true | recorded=1");
 });
 
@@ -278,13 +265,11 @@ void test("The persisted message event and the durable write are one synchronous
       t.error(error);
     }
   });
-  // doctest:L261
   const backend = createFakeChatBackend();
   backend.failNextStart = new Error("spawn EBADF");
   const started = nextStart(backend);
   const crashed = await makeTestServer({ chatBackend: backend });
 
-  // doctest:L268
   const failed = await crashed.request({
     method: "POST",
     url: "/api/chat/send",
@@ -292,13 +277,11 @@ void test("The persisted message event and the durable write are one synchronous
   });
   const persisted = await readDedupState(crashed.boxRoot);
 
-  // doctest:L275
   // Crash once the run has failed to start, the state this section is about.
   await started;
   await crashed.server.close();
   const restarted = await restartOver(crashed.boxRoot, createFakeChatBackend());
   const retry = await restarted.post({ session: "new", message: "buy milk", messageId: "restart-1" });
 
-  // doctest:L281
   t.check(`${failed.statusCode} | turn=${typeof bodyField(failed.body, "turnId")} | persisted=${persisted.includes("restart-1")} | retry=${retry.statusCode} | dedup=${retry.body.deduplicated} | recorded=${restarted.recorded.length}`, "200 | turn=string | persisted=true | retry=200 | dedup=true | recorded=0");
 });

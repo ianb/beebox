@@ -15,7 +15,6 @@ function hex(bytes: Uint8Array) {
 
 // ## A 16 kHz mono header matches the canonical byte layout
 void test("A 16 kHz mono header matches the canonical byte layout", async (t) => {
-  // doctest:L19
   t.check(hex(buildWavHeader({ sampleRate: 16000, channels: 1, byteLength: 4 })), "524946462800000057415645666d74201000000001000100803e0000007d0000020010006461746104000000");
 });
 
@@ -23,6 +22,5 @@ void test("A 16 kHz mono header matches the canonical byte layout", async (t) =>
 //
 // 8 kHz stereo: `byteRate = sampleRate * channels * 2`, `blockAlign = channels * 2`.
 void test("8 kHz stereo:", async (t) => {
-  // doctest:L28
   t.check(hex(buildWavHeader({ sampleRate: 8000, channels: 2, byteLength: 100 })), "524946468800000057415645666d74201000000001000200401f0000007d0000040010006461746164000000");
 });

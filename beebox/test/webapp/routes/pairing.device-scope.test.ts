@@ -59,7 +59,6 @@ void test("The owner sees the whole box", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L53
   const owner = await devicesAs("priya@example.com");
   t.check(`${owner.status} ${owner.payload.scope} ${owner.payload.devices.map((d) => d.label).join(" | ")}`, "200 box owner phone | member phone | a phone paired before pairers were recorded");
 
@@ -68,7 +67,6 @@ void test("The owner sees the whole box", async (t) => {
   // `scope: "own"` is what lets the panel head the list "Your paired devices"
   // instead of implying a one-line list is every device on the box.
 
-  // doctest:L64
   const member = await devicesAs("tomas@example.com");
   t.check(`${member.status} ${member.payload.scope} ${member.payload.devices.map((d) => d.label).join(" | ")}`, "200 own member phone");
 
@@ -77,12 +75,10 @@ void test("The owner sees the whole box", async (t) => {
   // The refusal is NOT_FOUND rather than FORBIDDEN: a distinct code would confirm
   // the id exists on this box.
 
-  // doctest:L75
   const ownerDeviceId = owner.payload.devices.find((d) => d.label === "owner phone")?.id ?? "";
   const memberDeviceId = member.payload.devices[0]?.id ?? "";
   const memberCookie = `bbx_session=${signSession({ email: "tomas@example.com", name: "tomas" })}`;
 
-  // doctest:L79
   async function unpairAsMember(deviceId: string) {
     const response = await ctx.request({
       method: "POST",
@@ -93,7 +89,6 @@ void test("The owner sees the whole box", async (t) => {
     return bodyField(response.body, "error") ? bodyField(response.body, "error", "data", "code") : "ok";
   }
 
-  // doctest:L89
   t.check(`somebody else's: ${await unpairAsMember(ownerDeviceId)}, their own: ${await unpairAsMember(memberDeviceId)}`, "somebody else's: NOT_FOUND, their own: ok");
 
   // ## A caller with no person behind it cannot pair at all
@@ -104,7 +99,6 @@ void test("The owner sees the whole box", async (t) => {
   // forever: it could pair a phone it could never unpair. `createTicket` refuses
   // instead, so the rule holds in both directions.
 
-  // doctest:L102
   process.env.BBX_BROWSE_API_KEY = "browse-key-for-pairing-scope-doctest";
   const plain = await makeTestServer({ openAccess: false });
   const asMachine = await plain.request({
@@ -115,6 +109,5 @@ void test("The owner sees the whole box", async (t) => {
   });
   delete process.env.BBX_BROWSE_API_KEY;
 
-  // doctest:L112
   t.check(`${asMachine.statusCode} ${bodyField(asMachine.body, "error", "data", "code")}`, "403 FORBIDDEN");
 });
