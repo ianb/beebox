@@ -1,9 +1,9 @@
 /**
  * The session chip's "Advanced" sub-panel — split out of its host file to
  * keep that under the 300-line cap (the host was `ChatMenu` until the app
- * bar's `SessionChip` replaced it, docs/plans/top-nav-ia.md Track C2). Debug toggles + process controls only; Model,
+ * bar's `SessionChip` replaced it, docs/implemented-plans/top-nav-ia.md Track C2). Debug toggles + process controls only; Model,
  * Voice settings, and Narration mode moved to the voice chip's own panels
- * (`VoiceChip-panels.tsx`) in chunk 3 of docs/plans/chat-header-chips.md.
+ * (`VoiceChip-panels.tsx`) in chunk 3 of docs/implemented-plans/chat-header-chips.md.
  */
 
 import { MenuItem, MenuDivider } from "../../../ui/dropdown-menu-item";

@@ -1,7 +1,7 @@
 /**
  * What a todo is, apart from its `recheck` — the part the todo review may not
  * change on a boxholder's todo, and the part whose change puts a retired todo
- * back in review (`docs/plans/todos-ui.md`, Track 7).
+ * back in review (`docs/implemented-plans/todos-ui.md`, Track 7).
  *
  * Every tag attribute but `recheck` (`id`, `status`, `assigned`, `by`,
  * `created`, `start`, `due`) and the nested `see-also` evidence. The words are

@@ -1,6 +1,6 @@
 /**
  * HTTP transport for the voice-staging queue's ops
- * (`docs/plans/resilient-voice-recording.md`, Track 2) — the raw capture
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 2) — the raw capture
  * routes (`webapp/routes/capture*.ts`), called the same way `capture-api.ts`
  * calls them, but returning an `OpOutcome` for `nextDrainStep` instead of
  * throwing.

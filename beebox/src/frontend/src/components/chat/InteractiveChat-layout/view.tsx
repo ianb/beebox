@@ -4,7 +4,7 @@
  * above the composer and the composer section (desktop bar + mobile typing
  * row). Presentational — every interactive bit comes in as a prop.
  *
- * The chat header row is gone (docs/plans/top-nav-ia.md Track C2): its title,
+ * The chat header row is gone (docs/implemented-plans/top-nav-ia.md Track C2): its title,
  * context chip, voice chip and `⋯` menu now live in the single app bar, fed
  * by `ChatBarChrome`. `ChatView` keeps a visually-hidden `h1` so the page
  * still has a heading.

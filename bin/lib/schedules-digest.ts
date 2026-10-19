@@ -7,7 +7,7 @@
  * tick, before any schedule, because schedules run serially and one can take
  * hours.
  *
- * Design: beebox/docs/plans/schedule-alert-signal.md (Track B).
+ * Design: beebox/docs/implemented-plans/schedule-alert-signal.md (Track B).
  */
 
 import type { Alert } from "./schedules.js";

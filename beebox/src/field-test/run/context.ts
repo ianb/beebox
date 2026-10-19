@@ -1,6 +1,6 @@
 /**
  * The live state one field run carries between its checklist items
- * (`docs/plans/agent-field-tests.md`, Track 2).
+ * (`docs/implemented-plans/agent-field-tests.md`, Track 2).
  *
  * A separate module purely so the item loop (`run-item.ts`) and the run
  * orchestrator (`run.ts`) can share the shape without importing each other.

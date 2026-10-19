@@ -25,7 +25,7 @@ import { DEFAULT_TTS_INSTRUCTIONS, type TtsBackend } from "../shared/tts-backend
 
 /**
  * Speech on its way from the provider, handed over once its head has arrived
- * (`docs/plans/tts-streamed-playback.md`). Always MP3: the browser's streaming
+ * (`docs/implemented-plans/tts-streamed-playback.md`). Always MP3: the browser's streaming
  * player takes MP3, and Gemini's PCM is encoded on the way.
  */
 export interface TtsAudioStream {

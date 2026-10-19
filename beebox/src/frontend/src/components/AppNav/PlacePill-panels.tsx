@@ -1,7 +1,7 @@
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 /**
  * The `PlacePill`'s landmark menu — the app bar's activity switcher
- * (docs/plans/top-nav-ia.md Track C1, reshaped by docs/plans/box-screen.md
+ * (docs/implemented-plans/top-nav-ia.md Track C1, reshaped by docs/plans/box-screen.md
  * track 3). Split out of PlacePill.tsx to keep both files under the line cap,
  * mirroring `VoiceChip-panels.tsx`.
  *

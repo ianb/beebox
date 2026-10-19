@@ -1,6 +1,6 @@
 /**
  * Todos as a collection — the first (and today the only) `CollectionDef`
- * (`docs/plans/todo-collection.md`, Track 3).
+ * (`docs/implemented-plans/todo-collection.md`, Track 3).
  *
  * Nothing new is decided here. The filter is the old `todos.list` filter, the plate
  * grouping is the order and the labels the list already shows, `stirring` is

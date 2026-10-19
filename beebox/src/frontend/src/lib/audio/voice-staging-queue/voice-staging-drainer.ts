@@ -1,7 +1,7 @@
 /**
  * The drain loop for the voice-staging queue
  * (`voice-staging-queue.ts`, Track 2 of
- * `docs/plans/resilient-voice-recording.md`): repeatedly asks the pure core
+ * `docs/implemented-plans/resilient-voice-recording.md`): repeatedly asks the pure core
  * (`nextDrainStep`) what to do, and carries it out — send an op, wait, or
  * drop a terminally-failed recording. State mutation lives in
  * `voice-staging-queue-state.ts`; this file is "what happens next".

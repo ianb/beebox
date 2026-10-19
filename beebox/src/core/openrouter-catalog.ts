@@ -3,7 +3,7 @@
  * model catalog (no key — prices, context, tool support) and the key's own
  * usage figures (with the key). Adding a model is validated against the
  * catalog, so a typo or a model with no tool calling fails in admin rather
- * than in a chat turn (`docs/plans/openrouter-chat-models.md`, Track 4).
+ * than in a chat turn (`docs/implemented-plans/openrouter-chat-models.md`, Track 4).
  *
  * Neither call spends anything. Both take an injected `fetch` so tests never
  * leave the machine; the fixtures are recorded real responses.

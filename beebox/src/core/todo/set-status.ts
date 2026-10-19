@@ -1,7 +1,7 @@
 /**
  * Set one todo's `status` (or another single attribute, `setTodoAttribute`)
  * by editing exactly the bytes that change — nothing else in the card's text
- * moves (`docs/plans/todos-ui.md`, Tracks 3 and 7).
+ * moves (`docs/implemented-plans/todos-ui.md`, Tracks 3 and 7).
  *
  * A body `{% todo %}` tag is found by re-running the SAME identity pass the
  * collector and the renderer use (`assignLocators`,

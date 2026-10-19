@@ -250,7 +250,7 @@ export const chatControlProcedures = {
    * `status` cannot give (it reports on one id, and reports *idle* for an id it
    * has never heard of, so an outside process cannot tell "quiet" from
    * "unknown"). The field-test harness polls this for its quiescence gate
-   * (`docs/plans/agent-field-tests.md`, Track 2) with the diagnostic key, which
+   * (`docs/implemented-plans/agent-field-tests.md`, Track 2) with the diagnostic key, which
    * is why it is on the diag whitelist in `webapp/auth.ts`.
    *
    * A box whose chat runtime was never initialized reports `initialized: false`

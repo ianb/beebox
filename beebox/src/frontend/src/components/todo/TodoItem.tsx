@@ -1,5 +1,5 @@
 /**
- * One todo, rendered the same wherever it appears (`docs/plans/todos-ui.md`,
+ * One todo, rendered the same wherever it appears (`docs/implemented-plans/todos-ui.md`,
  * Track 2): a `{% todo %}` in a card body (`Todo.tsx`, inline or block), an
  * entry of a card's frontmatter `todos:` (`FrontmatterFields.tsx`), and a line
  * of the todo list (`todo-view/ItemTree.tsx`).

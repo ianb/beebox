@@ -2,7 +2,7 @@
  * Whether a send's run is ready, checked before the send takes the turn.
  * Admitted first, the sender acknowledged a message no run would read, and a
  * sender with no turn-stream listener (quick chat) recorded it as sent
- * (issues/bugs/2026-10-15-quick-chat-sent-when-run-never-starts.md).
+ * (issues/closed/bugs/2026-10-15-quick-chat-sent-when-run-never-starts.md).
  *
  * With no live run it is the preflight `startRun` makes (login, or provider
  * setup for a third-party model); a confirmed login is cached, so the common

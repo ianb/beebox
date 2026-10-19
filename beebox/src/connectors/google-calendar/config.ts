@@ -105,7 +105,7 @@ export interface AvailableCalendarState extends AvailableCalendar {
  * One function because the CLI reaches it two ways — in-process under the
  * tooling profile, through `calendar.available` from an agent's shell — and a
  * caller must not be able to tell which one answered
- * (`docs/plans/agent-capability-delegation.md`).
+ * (`docs/implemented-plans/agent-capability-delegation.md`).
  */
 export async function availableCalendarsWithSyncing(options: {
   boxRoot: string;

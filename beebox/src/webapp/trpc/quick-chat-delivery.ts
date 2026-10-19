@@ -50,8 +50,8 @@ export function quickChatChat(ctx: Pick<TrpcContext, "boxRoot" | "user">, channe
       if (!resolved.ok) return resolved.code === "CHAT_SESSION_UNAVAILABLE" || resolved.status === 404 ? { kind: "gone" } : { kind: "failed", error: resolved.error };
       // Framed as the composer frames a message, so the sender is attributed, and tagged with how it arrived.
       // A dictated thought carries the HQ engine when the phone ran its own HQ pass
-      // (docs/plans/ios-quick-chat-hq.md); otherwise it is the live transcript and carries the live
-      // marker (docs/plans/hq-always.md). No recording reaches the box, so there is no server pass.
+      // (docs/implemented-plans/ios-quick-chat-hq.md); otherwise it is the live transcript and carries the live
+      // marker (docs/implemented-plans/hq-always.md). No recording reaches the box, so there is no server pass.
       const tag = origin === "voice" ? "speech" : "typed";
       const framedMessage = origin === "external"
         ? frameExternalCapture({ message, source, sourceRef: ref, retainedRecording, recordingInterrupted, captureInputKind })

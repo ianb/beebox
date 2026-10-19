@@ -1,7 +1,7 @@
 /**
  * `TodoViewCard`'s view-state shape and the small controls/headline pieces
  * that read it — split out to keep `TodoViewCard.tsx` under the file-size
- * budget (`docs/plans/todo-collection.md`, Track 4; the headline is Track 1).
+ * budget (`docs/implemented-plans/todo-collection.md`, Track 4; the headline is Track 1).
  */
 
 import { Card } from "../ui/Card";

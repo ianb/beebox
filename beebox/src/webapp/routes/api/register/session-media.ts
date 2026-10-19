@@ -7,7 +7,7 @@
  * rather than carry megabytes per read (`cli/lib/session-oversize.ts`). Before
  * this route the stripped block became `[image not displayed]`, so a reloaded
  * conversation showed placeholders where the user's photographs had been
- * (`issues/bugs/2026-08-24-reloaded-conversation-hides-the-photos-you-sent.md`).
+ * (`issues/closed/bugs/2026-08-24-reloaded-conversation-hides-the-photos-you-sent.md`).
  *
  * The photograph was never lost — only left behind. This is the door back to
  * it: history hands the client coordinates, and the client asks for the bytes

@@ -1,6 +1,6 @@
 /**
  * The `todo-review` sweep (`docs/implemented-plans/todo-annotation.md` Track
- * 5b). Since `docs/plans/todos-ui.md` Track 7 it runs as the precheck of the
+ * 5b). Since `docs/implemented-plans/todos-ui.md` Track 7 it runs as the precheck of the
  * stock `todo-review` procedure (`bbx engine todo-review check`,
  * `review-check.ts`) on its own daily schedule, not inside `bbx wakeup`.
  *

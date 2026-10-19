@@ -113,7 +113,7 @@ ${fastifySection}
  * or `target-box-unresolved` — claims about the CALLER — for what is a claim
  * about the server. The boxholder's ruling, 2026-09-15: *"a down worktree is
  * unavailable, not unauthorized."* It cost about half an hour on 2026-08-18
- * (issues/bugs/2026-08-18-failed-worktree-reports-owner-session-required.md) and
+ * (issues/closed/bugs/2026-08-18-failed-worktree-reports-owner-session-required.md) and
  * it is the likeliest explanation of the unexplained iOS error the day this
  * landed, because the message is convincingly about the wrong thing: it points
  * the reader at auth, sessions, and recent deploys, all plausible and all wrong.

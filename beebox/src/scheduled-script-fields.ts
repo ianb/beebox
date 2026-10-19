@@ -5,7 +5,7 @@
  * `at`/`until`/`cron`/`rrule` are only parse-checked lazily at evaluation
  * time otherwise — a malformed value passes card validation and then does
  * nothing at runtime (see
- * issues/bugs/2026-08-10-invalid-schedule-dates-silently-inert.md).
+ * issues/closed/bugs/2026-08-10-invalid-schedule-dates-silently-inert.md).
  */
 
 import { z } from "zod";

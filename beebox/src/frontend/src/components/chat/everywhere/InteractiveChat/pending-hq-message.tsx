@@ -4,7 +4,7 @@ import { UserMessageText } from "../../user-message-text";
 
 /**
  * A voice message waiting for its HQ transcript
- * (docs/plans/resilient-voice-recording.md, Track 4): the realtime text as a
+ * (docs/implemented-plans/resilient-voice-recording.md, Track 4): the realtime text as a
  * faded user bubble with the HQ job's status line inside it, and below it a
  * control to stop waiting and send the live text now.
  */

@@ -416,7 +416,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "30 6 * * *",
     notBefore: "20h",
     onWakeup: false,
-    // Seeded ENABLED (boxholder, 2026-09-24, docs/plans/todos-ui.md Track 7).
+    // Seeded ENABLED (boxholder, 2026-09-24, docs/implemented-plans/todos-ui.md Track 7).
     // Like process-retrospective, the precheck exits CHECK_SKIP when no todo
     // needs review, so a quiet box runs no agent.
     enabled: true,

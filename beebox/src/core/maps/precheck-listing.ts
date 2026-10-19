@@ -8,7 +8,7 @@
  * `git ls-tree`, and a directory holding only gitignored files then counted
  * toward its parent's map, never dirtied it, and appeared in the listing or
  * not depending on which branch ran
- * (`issues/bugs/2026-08-24-map-children-git-vs-disk.md`). A MAP.md is committed
+ * (`issues/closed/bugs/2026-08-24-map-children-git-vs-disk.md`). A MAP.md is committed
  * and travels with the box, so it describes the committed tree; gitignored
  * content is machine-local by the box's own declaration.
  *

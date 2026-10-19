@@ -93,7 +93,7 @@ const devHarnessLayoutRoute = createRoute({
 // --- Box child routes ---
 
 // The box index lands on chat — the conversation is the primary surface
-// (docs/plans/top-nav-ia.md Track A). A redirect rather than mounting
+// (docs/implemented-plans/top-nav-ia.md Track A). A redirect rather than mounting
 // ChatPage here: the chat flows canonicalize onto /chat (ChatPage rewrites
 // the resolved session there), so a root-mounted chat would immediately
 // navigate away from itself.

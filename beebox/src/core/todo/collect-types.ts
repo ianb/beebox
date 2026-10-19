@@ -30,7 +30,7 @@ export type { TodoSeeAlso };
  * One todo exactly as its card spells it — the output of the PURE extract
  * stage (`extract.ts`). Nothing here depends on a clock, a timezone, or any
  * other card, which is what lets a cache sit in front of extraction later
- * (`docs/plans/todo-collection.md`, Track 2).
+ * (`docs/implemented-plans/todo-collection.md`, Track 2).
  *
  * The three position/reference fields are what make an undated todo legible:
  * where it was written (`sectionPath`, `parent`), what the author said right
@@ -48,7 +48,7 @@ export interface TodoItem {
   created: string | undefined;
   due: string | undefined;
   start: string | undefined;
-  /** The todo-review's next-check date, or `"never"` (`docs/plans/todos-ui.md`, Track 7). Never an input to plate state. */
+  /** The todo-review's next-check date, or `"never"` (`docs/implemented-plans/todos-ui.md`, Track 7). Never an input to plate state. */
   recheck: string | undefined;
   seeAlso: TodoSeeAlso[];
   /** Heading texts above the todo, outermost first. `[]` for a frontmatter todo, or a body todo written above the first heading. */

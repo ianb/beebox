@@ -2,7 +2,7 @@
  * Read the tail of a chat session's transcript as raw text, for scanning the
  * most recent speaker-letter tag before a diarized relabel. Shared by the
  * narration-mode HQ route (`chat-audio-routes.ts`) and the voice-recording HQ
- * job (`core/voice-recording/hq-job.ts`, `docs/plans/resilient-voice-recording.md`)
+ * job (`core/voice-recording/hq-job.ts`, `docs/implemented-plans/resilient-voice-recording.md`)
  * — both need "what letter comes next" seeded from the same source rather than
  * two readers of the transcript disagreeing about it.
  *

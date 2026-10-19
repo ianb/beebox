@@ -50,7 +50,7 @@ type DeviceCommand =
 
 /**
  * A voice message waiting for its HQ transcript
- * (docs/plans/resilient-voice-recording.md, Track 4): rendered as a pending
+ * (docs/implemented-plans/resilient-voice-recording.md, Track 4): rendered as a pending
  * bubble with a status line and a "Send live text now" control. Several can
  * wait at once; they dispatch in segment order.
  */

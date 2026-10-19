@@ -1,5 +1,5 @@
 /**
- * Voice-recording GC sweep lifecycle (`docs/plans/resilient-voice-recording.md`,
+ * Voice-recording GC sweep lifecycle (`docs/implemented-plans/resilient-voice-recording.md`,
  * Track 1) — the periodic timer wiring for `sweepVoiceSessions`, split out of
  * `capture.ts` to keep its route-registration function under the line budget.
  * Mirrors `capture.ts`'s `scheduleAbandonmentSweep`: awake-time cadence (never

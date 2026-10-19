@@ -5,7 +5,7 @@
  * `check-drive` ships seeded and disabled, so a box can hold a perfectly good
  * mount that nothing keeps in step — and nothing on this page said so. The line
  * says which state the box is in, and offers the one-click enable when it is
- * off (`docs/plans/agent-capability-delegation.md`).
+ * off (`docs/implemented-plans/agent-capability-delegation.md`).
  */
 
 import { trpc } from "../../../lib/trpc/client";

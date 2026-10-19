@@ -5,7 +5,7 @@
  * Pure — no fs, no network, no child processes (split out of bin/smoke-probe.ts
  * for size; same testing story, bin/smoke-snapshot.test.ts).
  *
- * See issues/exploration/2026-08-26-merge-time-smoke-tier.md.
+ * See issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md.
  */
 
 import {

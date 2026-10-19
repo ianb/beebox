@@ -1,6 +1,6 @@
 /**
  * `here` — the place a collection is asked about, and the only thing that
- * gives a query meaning (`docs/plans/todo-collection.md`, Track 3; the parked
+ * gives a query meaning (`docs/implemented-plans/todo-collection.md`, Track 3; the parked
  * query-cards verdict is that "a standalone query card is a selection with no
  * *here*").
  *

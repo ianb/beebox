@@ -147,7 +147,7 @@ export async function loadEffectiveBoxModel(boxRoot: string): Promise<string | n
  * answer, and the answer defaults to the `efficient` tier for whichever engine
  * is running it. These passes used to name a provider-shaped nickname
  * (`"haiku"`) which the Codex delegate forwarded to the Codex SDK verbatim
- * (`issues/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md`). Nothing
+ * (`issues/closed/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md`). Nothing
  * here can produce a name an engine does not know.
  *
  * An OpenRouter default has no efficient tier, so an unpinned small slot on

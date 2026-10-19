@@ -12,7 +12,7 @@
 // pre-commit hook behind it) is what stands between a broken schedule and a
 // 03:00 failure nobody watches. `bin/` is linted because it contains the
 // worktree tooling and the test selector — real TypeScript that used to
-// pass pre-commit on typecheck alone (issues/code-quality/2026-08-26-bin-typescript-is-not-linted.md).
+// pass pre-commit on typecheck alone (issues/closed/code-quality/2026-08-26-bin-typescript-is-not-linted.md).
 //
 // The global-ignore entry below still matters: vibeCheck's underlying
 // eslint-config-agent contributes rule entries with no `files` key of their

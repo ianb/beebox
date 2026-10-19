@@ -1,6 +1,6 @@
 /**
  * The scan pipeline's durable wakeup trigger (Track 3 of
- * `docs/plans/scanner-ingest.md`).
+ * `docs/implemented-plans/scanner-ingest.md`).
  *
  * `scan-import` ends at an intake job; jobs drain only when something runs
  * `bbx wakeup`. Two facts make a fire-and-forget spawn unacceptable here:

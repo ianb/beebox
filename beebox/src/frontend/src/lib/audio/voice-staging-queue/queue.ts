@@ -1,6 +1,6 @@
 /**
  * The durable voice-staging upload queue
- * (`docs/plans/resilient-voice-recording.md`, Track 2): enqueue* is what
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 2): enqueue* is what
  * Track 3's recorder and Track 4's submit flow call. State lives in
  * `voice-staging-queue-state.ts`; the drain loop that turns queued ops into
  * HTTP calls, with bounded retry, lives in `voice-staging-drainer.ts`. This

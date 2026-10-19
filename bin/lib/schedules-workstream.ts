@@ -14,7 +14,7 @@
  * neither BAILED, and that is an `important` alert — the silent failure this
  * plan exists to refuse.
  *
- * Design: beebox/docs/plans/scheduled-workstreams.md (Track B).
+ * Design: beebox/docs/implemented-plans/scheduled-workstreams.md (Track B).
  */
 
 import * as fs from "node:fs/promises";

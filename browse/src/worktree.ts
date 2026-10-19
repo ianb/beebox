@@ -51,7 +51,7 @@ export function detectWorktreeContext(): WorktreeContext {
  *
  * `BROWSE_BASE_URL` replaces the router-derived default outright, for drivers
  * that own their own server instead of going through the shared dev router —
- * beebox's field-test harness (`docs/plans/agent-field-tests.md`,
+ * beebox's field-test harness (`docs/implemented-plans/agent-field-tests.md`,
  * Track 2) starts a dedicated `bbx serve` on a free port and points browse at
  * `http://127.0.0.1:<port>/<box>`. Without it, `bin/browse open /` would drive
  * the router's `test1` instead: the wrong box, silently.

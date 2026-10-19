@@ -1,5 +1,5 @@
 /**
- * The place summary for one card (`docs/plans/todos-ui.md`, Track 4):
+ * The place summary for one card (`docs/implemented-plans/todos-ui.md`, Track 4):
  * "3 on your plate · 1 later · 1 overdue · 2 done" — the plate's own split, so
  * the numbers agree with the plate and its badge. It is the collection's reduction, rendered —
  * boxholder scope, so an agent follow-up never counts here — and the

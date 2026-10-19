@@ -26,7 +26,7 @@ const CODEX_TELEMETRY_HELPER =
 
 /**
  * What an OpenRouter default does to background work, and what still needs a
- * Claude login (issues/bugs/2026-10-15-background-runs-ignore-box-openrouter-default.md).
+ * Claude login (issues/closed/bugs/2026-10-15-background-runs-ignore-box-openrouter-default.md).
  */
 const OPENROUTER_BACKGROUND_HINT =
   "Background work follows this model too: wakeups, procedures, and chat titles and reviews run on OpenRouter " +

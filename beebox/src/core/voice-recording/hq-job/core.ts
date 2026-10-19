@@ -1,5 +1,5 @@
 /**
- * The HQ transcription job's IO shell (`docs/plans/resilient-voice-recording.md`,
+ * The HQ transcription job's IO shell (`docs/implemented-plans/resilient-voice-recording.md`,
  * Track 1). Concatenates a voice recording's staged PCM chunks, cuts pieces
  * with `planPieces`, transcribes each piece in order via `transcribeAudioHq`,
  * retries a transient/piece-too-long failure with backoff or a halved piece

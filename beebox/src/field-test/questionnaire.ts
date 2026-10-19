@@ -1,5 +1,5 @@
 /**
- * The post-activity questionnaire debrief (`docs/plans/agent-field-tests.md`,
+ * The post-activity questionnaire debrief (`docs/implemented-plans/agent-field-tests.md`,
  * Track 3).
  *
  * After the operator finishes an activity — never before, so the questions

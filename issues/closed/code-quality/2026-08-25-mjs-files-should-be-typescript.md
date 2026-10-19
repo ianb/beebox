@@ -68,7 +68,7 @@ A config loaded through jiti that imports a TS plugin plausibly resolves the
 same way — but plausible is not tested, and the `bin/` scripts are a different
 case, invoked by node directly rather than through ESLint. Prove each path
 rather than converting and hoping. Note this package also carries
-[no self-lint](../../code-quality/2026-07-29-personal-vibe-check-no-self-lint.md), so it is already
+[no self-lint](2026-07-29-personal-vibe-check-no-self-lint.md), so it is already
 the softest spot in the tree — and part of why its config could not be linted is
 that it default-exports a factory, which a `.ts` version does not change.
 
@@ -142,7 +142,7 @@ and nothing else. `preset.ts` binds its implementation to that declaration
 
 - **The preset moved out of `eslint.config.mjs` into `preset.ts`**, which removed
   the structural blocker in
-  [personal-vibe-check has no working self-lint](../../code-quality/2026-07-29-personal-vibe-check-no-self-lint.md):
+  [personal-vibe-check has no working self-lint](2026-07-29-personal-vibe-check-no-self-lint.md):
   ESLint was picking the preset up as that package's own config and crashing on a
   factory default export. That package now has a real `eslint.config.ts`, a
   `tsconfig.json`, and a `typecheck` script. It still has no `lint` script — six

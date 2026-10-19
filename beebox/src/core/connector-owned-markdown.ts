@@ -13,7 +13,7 @@
  *  - An agent editing it must be told what it is. "Fix the lint error" on one
  *    of these files is a push that can destroy structure the markdown does not
  *    express — the incident this module exists because of
- *    (`issues/bugs/2026-09-16-drive-doc-round-trip-destroyed-by-lint-driven-whitespace-edit.md`).
+ *    (`issues/closed/bugs/2026-09-16-drive-doc-round-trip-destroyed-by-lint-driven-whitespace-edit.md`).
  */
 
 import * as fs from "node:fs/promises";

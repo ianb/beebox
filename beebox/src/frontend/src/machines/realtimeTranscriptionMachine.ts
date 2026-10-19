@@ -4,7 +4,7 @@
  * States: idle → connecting → recordingLocal ⇄ recording → finalizing → idle
  *
  * The recording is independent of the live socket
- * (`docs/plans/resilient-voice-recording.md`, Track 3). `connecting` covers
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 3). `connecting` covers
  * only mic permission and worklet startup; once the mic is live (`MIC_LIVE`)
  * every frame stages to the box, and the live transcription socket is a
  * preview that may come and go:
@@ -99,7 +99,7 @@ export const realtimeTranscriptionMachine = setup({
       /**
        * Finalized words with confidence, aligned with finalTranscript —
        * updated in the same transitions so a reconnect can never drift the
-       * two out of step (docs/plans/transcript-confidence.md). `null` means
+       * two out of step (docs/implemented-plans/transcript-confidence.md). `null` means
        * no confidence data has been captured for this segment
        * (Voxtral/OpenAI realtime, or nothing finalized yet) — distinct from
        * `[]` (Deepgram captured words but none exist yet/anymore).

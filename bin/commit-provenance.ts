@@ -2,7 +2,7 @@
 /**
  * Commit provenance trailers (`pnpm commit-provenance`): stamps, validates and
  * queries the `Workstream:` / `Plan:` / `Issue:` trailers on monorepo commits.
- * Plan: beebox/docs/plans/commit-provenance-trailers.md.
+ * Plan: beebox/docs/implemented-plans/commit-provenance-trailers.md.
  *
  * Three roles, one script:
  *

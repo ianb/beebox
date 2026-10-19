@@ -5,7 +5,7 @@
  * The page is unauthenticated, so it states only when the update started and
  * how long updates usually take — never a commit, ref, or anything else that
  * identifies the change (boxholder decision, 2026-09-18; see
- * `docs/plans/deploy-maintenance-page.md`). It must also stay honest when a
+ * `docs/implemented-plans/deploy-maintenance-page.md`). It must also stay honest when a
  * deploy overruns or dies: past OVERRUN_MS it stops promising a quick return,
  * and past PROBABLY_FAILED_MS it says something has likely gone wrong.
  */

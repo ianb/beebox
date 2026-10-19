@@ -7,7 +7,7 @@
  * copy diverged), the task that runs that procedure keeps failing on the old
  * text, and nothing connects the two. A boxholder then watches the same fix
  * ship repeatedly without ever reaching the box
- * (issues/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
+ * (issues/closed/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
  *
  * Two files can be behind a task, and both are template-managed:
  *   - the task's own card, `_config/schedules/<name>.scheduled-script.card`

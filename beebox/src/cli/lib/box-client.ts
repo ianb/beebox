@@ -1,6 +1,6 @@
 /**
  * "Call my own box's procedure with the agent bearer" — the client half of the
- * delegation pattern (`docs/plans/agent-capability-delegation.md`).
+ * delegation pattern (`docs/implemented-plans/agent-capability-delegation.md`).
  *
  * A box agent's shell deliberately holds no connector credential, but it does
  * hold `BBX_AGENT_TOKEN`, which the per-box auth wall accepts as box-scoped

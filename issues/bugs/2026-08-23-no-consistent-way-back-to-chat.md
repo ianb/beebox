@@ -40,7 +40,7 @@ The app bar dropped its link row deliberately — `AppNav.tsx:5-7`:
 > There is no link row, box `<select>`, or hamburger any more: navigation lives
 > in the `PlacePill`'s two menus (switch / here) …
 
-That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
+That is a reasonable IA decision (`docs/implemented-plans/top-nav-ia.md` Track C), but it
 leaves "return to what I was just doing" with no home. The switch menu is the
 closest thing, and it is not the same action: it **moves between landmarks and
 resumes each one's newest chat** (`SessionChip.tsx:9`,

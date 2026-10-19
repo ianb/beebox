@@ -1,7 +1,7 @@
 /**
  * Card path resolution shared by more than one `trpc/routers/` member
  * (`card.ts` and `todos.ts`) — set infrastructure, so it lives at the set's
- * parent (rule 3, `docs/plans/file-layout.md`) rather than inside either
+ * parent (rule 3, `docs/implemented-plans/file-layout.md`) rather than inside either
  * member.
  */
 import * as fs from "node:fs/promises";

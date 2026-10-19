@@ -1,6 +1,6 @@
 /**
  * Everything the harness arranges in the box BEFORE the operator sees it
- * (`docs/plans/agent-field-tests.md`, Track 2).
+ * (`docs/implemented-plans/agent-field-tests.md`, Track 2).
  *
  * Field tests exercise operating order, never setup (boxholder decision): when
  * a scenario involves email, the box starts as if the boxholder had connected

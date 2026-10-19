@@ -52,7 +52,7 @@ enableDebugLogCapture();
 reportPreviousAdminHang();
 
 // Drain any voice-recording ops left over from a reload or a prior visit
-// (docs/plans/resilient-voice-recording.md, Track 2) even before any
+// (docs/implemented-plans/resilient-voice-recording.md, Track 2) even before any
 // recording feature has been touched in this tab.
 startVoiceStagingDrainer();
 

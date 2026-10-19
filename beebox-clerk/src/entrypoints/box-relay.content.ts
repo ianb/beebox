@@ -1,4 +1,4 @@
-// Box-relay content script (Track C of docs/plans/see-as-the-user.md). It is
+// Box-relay content script (Track C of docs/implemented-plans/see-as-the-user.md). It is
 // NOT registered in the manifest (registration: "runtime", matches: []) — the
 // background registers it dynamically at box-enable time with path-scoped match
 // patterns (platform/relay-registration.ts). It is the page's only door to a

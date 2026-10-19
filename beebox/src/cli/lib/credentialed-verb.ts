@@ -9,7 +9,7 @@
  * profile deliberately withholds. With no reachable server it refuses and names
  * the missing piece. Delegation is chosen by who is calling, never by what the
  * process happens to be able to read
- * (`docs/plans/agent-capability-delegation.md`).
+ * (`docs/implemented-plans/agent-capability-delegation.md`).
  *
  * Every refusal names one of three parties who can fix it: the caller (bad
  * input), the boxholder (enable, authorize, grant), or the machine (the server

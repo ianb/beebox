@@ -10,7 +10,7 @@
  * the identical point in the reconnect flow (`TranscriptionSession.mergeFinal`
  * / `mergeWords`, and `beginReconnect`'s prefix fold) — so the word list can
  * never drift out of step with the text it describes (the reconnect
- * direction detail in `docs/plans/transcript-confidence.md`, Track 2).
+ * direction detail in `docs/implemented-plans/transcript-confidence.md`, Track 2).
  */
 
 import type { FinalWord } from "../transcription-events";

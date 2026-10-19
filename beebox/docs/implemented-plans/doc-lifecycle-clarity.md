@@ -116,7 +116,7 @@ and lint passed. A browser check confirmed current-reference, dated-report,
 partial-proposal, and shipped-history labels and Quick Open navigation.
 
 Source verification found an existing handler transport defect, filed separately
-as [TRIAGE_ITEMS truncation](../../../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md).
+as [TRIAGE_ITEMS truncation](../../../issues/closed/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md).
 The current guide describes that limitation; runtime repair is outside this pass.
 
 Independent review corrected stale bare-path references, a contradictory history

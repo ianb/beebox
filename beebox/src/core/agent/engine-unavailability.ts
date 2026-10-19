@@ -8,7 +8,7 @@
  * permanent error would be parked as "recoverable someday" and never fixed.
  * Anything unrecognized keeps the ordinary failure path.
  *
- * Design: docs/plans/deferred-recoverable-agent-failures.md
+ * Design: docs/implemented-plans/deferred-recoverable-agent-failures.md
  */
 
 import type { AgentEngine } from "../box/config.js";

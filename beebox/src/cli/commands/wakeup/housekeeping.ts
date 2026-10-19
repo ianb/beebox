@@ -5,7 +5,7 @@
  * segments, and refills and commits the
  * root landmark. (The todo-review sweep that used to run here is the stock
  * `todo-review` procedure's precheck now, on its own schedule —
- * `docs/plans/todos-ui.md` Track 7.) Lifted out of `wakeup.ts` so the orchestrator
+ * `docs/implemented-plans/todos-ui.md` Track 7.) Lifted out of `wakeup.ts` so the orchestrator
  * reads as the six steps it is.
  */
 

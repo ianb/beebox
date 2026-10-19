@@ -66,7 +66,7 @@ async function readFirstMessage(boxRoot: string, sessionId: string): Promise<str
     // the latter, so the value written from an existing transcript was named
     // `<typed user="…" user-email="…">…</typed>` — putting a sender's email
     // address into a committed card field
-    // (`issues/bugs/2026-08-25-backfilled-husk-title-keeps-the-typed-wrapper.md`).
+    // (`issues/closed/bugs/2026-08-25-backfilled-husk-title-keeps-the-typed-wrapper.md`).
     return extractSnippet(raw, TITLE_MAX_LEN);
   } catch (_e) {
     // No transcript yet (brand-new session, or a coined id whose run has not

@@ -12,7 +12,7 @@
  * with one narrow exception — `submit.recording` carries the segment's
  * staged recording as a live handle (`PendingRecording`: its id plus the
  * seal/discard obligation), by reference. The audio itself is on the box
- * (`docs/plans/resilient-voice-recording.md`), never in this shape.
+ * (`docs/implemented-plans/resilient-voice-recording.md`), never in this shape.
  */
 
 import type { ChatImageAttachment } from "../api-chat";
@@ -129,7 +129,7 @@ export function sendKeywordOf(intent: Extract<VoiceIntent, { kind: "submit" }>):
 /**
  * The emission a voice send finally dispatches, from the realtime emission
  * staged when its segment ended and the outcome of its HQ wait
- * (docs/plans/resilient-voice-recording.md, Track 4). The id and the frozen
+ * (docs/implemented-plans/resilient-voice-recording.md, Track 4). The id and the frozen
  * composer context (typed prefix, selections, attachments) never change;
  * composer input added during the wait belongs to the next message.
  *

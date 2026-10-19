@@ -1,6 +1,6 @@
 /**
  * Pure piece-planning for the HQ transcription job
- * (`docs/plans/resilient-voice-recording.md`, Track 1).
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1).
  *
  * A voice recording is staged as raw 16 kHz mono s16le PCM. The HQ job cuts it
  * into pieces of at most {@link HQ_PIECE_SECONDS} before wrapping each in a WAV

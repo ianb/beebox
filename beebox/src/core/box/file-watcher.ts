@@ -14,7 +14,7 @@
  * ~9.4k files that pinned ~9.4k FDs in `bbx serve`, pushing the process past
  * macOS's legacy per-process `OPEN_MAX` of 10240, past which *every* spawn in
  * the process fails with `EBADF` — so the chat agent could no longer start at
- * all (see issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
+ * all (see issues/closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
  * Watching the ~200 directories instead costs **zero** FDs on macOS (the kernel
  * serves them from FSEvents) and ~7x fewer inotify watches on Linux, while
  * still reporting every child add/change/unlink. Node's own

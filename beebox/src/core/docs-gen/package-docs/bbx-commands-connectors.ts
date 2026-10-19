@@ -5,7 +5,7 @@
  * These verbs work from an agent's shell even though that shell holds no
  * Google credential — the box's server does the credentialed half — so the
  * reference says that once, here, rather than per verb
- * (`docs/plans/agent-capability-delegation.md`). Split out of
+ * (`docs/implemented-plans/agent-capability-delegation.md`). Split out of
  * `bbx-commands.ts` to keep each file under the line limit; assembled there by
  * `generateBbxCommands()`.
  */

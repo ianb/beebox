@@ -73,7 +73,7 @@ const LEGACY_COMPOSER_PREFIX = "bbx-composer-draft";
  * serves every checkout from one origin and two worktrees can each have a
  * `test1`. Sharing that slot handed one clone the other's text AND its
  * `tmp/…` attachment paths, which the receiving clone then reported as expired
- * (issues/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md).
+ * (issues/closed/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md).
  */
 export function emissionKey(input: { boxSlug: string | undefined; scope: string }): string {
   return `${KEY_PREFIX}:${input.scope === "" ? input.boxSlug ?? "default" : input.scope}`;
@@ -220,7 +220,7 @@ export function isEmptyEmissionDraft(
  * than on the debounce. Saving an empty payload instead would be nearly
  * equivalent on restore, but it leaves the key sitting there, and the
  * recovery bug this fixes was diagnosed by looking for exactly that key
- * (issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md):
+ * (issues/closed/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md):
  * gone means gone.
  */
 export function commitPersistedEmission(

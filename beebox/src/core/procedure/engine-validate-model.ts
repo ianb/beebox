@@ -131,7 +131,7 @@ the diff).`;
  * InstructionEvaluation} `inconclusive`, not as `passed: false` — the old
  * fail-closed collapse made a budget problem indistinguishable from wrong
  * work, and readers learned to discount the signal
- * (`issues/bugs/2026-08-12-health-masks-review-step-turn-cap.md`). Nothing
+ * (`issues/closed/bugs/2026-08-12-health-masks-review-step-turn-cap.md`). Nothing
  * silently passes either: an inconclusive check is carried as its own state
  * all the way to `bbx health`.
  */

@@ -10,7 +10,7 @@ priority: normal
 ---
 
 > **Note 2026-10-09 (hq-always workstream).** Every dictated message now gets
-> the HQ pass (`beebox/docs/plans/hq-always.md`), so the HQ wait this bug lives
+> the HQ pass (`beebox/docs/implemented-plans/hq-always.md`), so the HQ wait this bug lives
 > in is no longer limited to chats with HQ dictation on: every voice send with
 > a recording waits. The restructure did not touch the merge rule in
 > `prepareVoiceSubmitEmission`, and nothing in it made a fix natural — the

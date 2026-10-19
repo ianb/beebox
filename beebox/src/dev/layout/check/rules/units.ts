@@ -23,7 +23,7 @@ interface UnitsContext {
    * source of one of its members (a file member, or a directory member's
    * `<dir>/<name>/<entry>.ts`). Such a module is always an entry of its
    * directory and never a unit-directory or shared-infrastructure move
-   * candidate (docs/plans/file-layout.md, Ontology).
+   * candidate (docs/implemented-plans/file-layout.md, Ontology).
    */
   fixedEntries: Set<string>;
 }

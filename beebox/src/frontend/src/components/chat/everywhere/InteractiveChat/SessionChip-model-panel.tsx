@@ -1,11 +1,11 @@
 /**
  * The session chip's "Model" sub-panel — moved here from `VoiceChip-panels.tsx`
- * in the chip polish round (docs/plans/chat-header-chips.md follow-up): Model
+ * in the chip polish round (docs/implemented-plans/chat-header-chips.md follow-up): Model
  * selection isn't a voice I/O concern. It rode along when `ChatMenu` became
- * `SessionChip` (docs/plans/top-nav-ia.md Track C2).
+ * `SessionChip` (docs/implemented-plans/top-nav-ia.md Track C2).
  *
  * Three things are chosen here, at different times
- * (docs/plans/model-engine-policy.md):
+ * (docs/implemented-plans/model-engine-policy.md):
  *
  * - **This chat's model** — any time. Selecting a row sets it.
  * - **This chat's engine** — only before the first message. A chat's engine is

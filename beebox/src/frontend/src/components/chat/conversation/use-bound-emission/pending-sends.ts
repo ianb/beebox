@@ -14,7 +14,7 @@ export interface PendingConversationSend {
   /**
    * `awaitingHq`: a `preparing` voice row whose tab reloaded while it waited
    * for its HQ transcript. It stays visible with explicit actions and is
-   * never sent by a load (docs/plans/resilient-voice-recording.md, Track 4).
+   * never sent by a load (docs/implemented-plans/resilient-voice-recording.md, Track 4).
    */
   readonly status: "preparing" | "awaitingHq" | "pending" | "rejected" | "recovered" | "accepted" | "restored";
   readonly reason?: string;

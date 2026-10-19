@@ -81,7 +81,7 @@ export interface UseRealtimeTranscriptionResult {
   start: (opts?: { earcon?: boolean }) => void;
   /**
    * Stop recording and wait for the final transcript and its words (Fix D,
-   * docs/plans/transcript-confidence.md). The segment's recording is sealed
+   * docs/implemented-plans/transcript-confidence.md). The segment's recording is sealed
    * with `hq: null`: this path hands over text only.
    */
   stop: () => Promise<{ text: string; words: FinalWord[] | null }>;

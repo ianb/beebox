@@ -27,7 +27,7 @@ export type QuickChatOrigin = (typeof QUICK_CHAT_ORIGINS)[number];
 export const QUICK_CHAT_SOURCES = [...QUICK_CAPTURE_SOURCES, "browser-clerk"] as const;
 /**
  * The engine that produced a dictated thought's HQ text on the phone
- * (docs/plans/ios-quick-chat-hq.md); the same name as the native emission's
+ * (docs/implemented-plans/ios-quick-chat-hq.md); the same name as the native emission's
  * `hqService`. A short token, since it is framed into a wrapper attribute.
  */
 export const quickChatHqServiceSchema = z.string().regex(/^[\da-z-]{1,64}$/);

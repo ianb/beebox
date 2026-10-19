@@ -7,7 +7,7 @@
  * Add-to-Home-Screen instead of showing a dead button. We never call
  * subscription.unsubscribe() to disable (it traps Safari into refusing a new
  * subscribe without a fresh gesture) — disabling removes the endpoint
- * server-side only. See docs/plans/web-push-notifications.md (Track E).
+ * server-side only. See docs/implemented-plans/web-push-notifications.md (Track E).
  */
 
 import { useState, useEffect } from "react";

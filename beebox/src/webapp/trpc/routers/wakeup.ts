@@ -8,7 +8,7 @@
  * holds the credential, runs the SAME supervised `bbx wakeup` child the UI Sync
  * button and the scheduler run, with the same `--connector` flag the seeded
  * schedules pass. Forcing and letting it happen are the same code by
- * construction (`docs/plans/agent-capability-delegation.md`).
+ * construction (`docs/implemented-plans/agent-capability-delegation.md`).
  *
  * A forced wakeup runs everything the scheduled one does, on-wakeup scripts
  * included (boxholder, 2026-09-14): skipping a step would be the first

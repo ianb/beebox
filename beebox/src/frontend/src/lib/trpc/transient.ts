@@ -18,7 +18,7 @@
  * HTTP status is 200 once the server starts writing), and a 401 is handled in
  * `trpcFetch` before this runs.
  *
- * See `issues/bugs/2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md`.
+ * See `issues/closed/bugs/2026-09-09-deploy-restart-502-surfaces-as-json-parse-error.md`.
  */
 
 import { isRecord } from "@shared/is-record";

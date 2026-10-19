@@ -63,7 +63,7 @@ export function createUserMessageSender(
       // once the message is queued or the session has taken its turn. A run that then fails to start no longer contradicts it: the
       // failure reaches the client on the turn stream instead of as a 500 that
       // invited a retry which recorded the message a second time
-      // (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
+      // (issues/closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
       // For pending-new sessions, sessionId is still unknown; subscribers will
       // see it once `session-assigned` fires.
       //
@@ -128,7 +128,7 @@ export function createUserMessageSender(
       // window. The turn buffer is already wired, so no frame the run emits is
       // lost between the ack and the client's subscribe, and a start failure
       // surfaces on that stream instead of as an HTTP status
-      // (see startAckedRun; docs/plans/emission-model.md, Track A).
+      // (see startAckedRun; docs/implemented-plans/emission-model.md, Track A).
       //
       // The record waits for admission because the busy check above is not
       // the last word: the awaits since then let a concurrent send take the

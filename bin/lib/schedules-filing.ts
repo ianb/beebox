@@ -6,7 +6,7 @@
  * boxes and paths. Run daily by `schedules/alert-filing/`, not by the tick, so
  * the git work and the private-issues lock wait stay out of the scheduler.
  *
- * Design: beebox/docs/plans/schedule-alert-signal.md (Track B).
+ * Design: beebox/docs/implemented-plans/schedule-alert-signal.md (Track B).
  */
 
 import * as fs from "node:fs/promises";
