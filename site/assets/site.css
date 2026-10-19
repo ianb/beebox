@@ -8,7 +8,10 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .bbx-app-nav > div { display: flex; gap: 14px; align-items: center; padding: 10px 18px; min-height: 60px; }
 .brand { color: inherit; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .bbx-app-nav { color: #fff8ec; }
-.by { margin-left: auto; font-size: 12px; }
+.header-github { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; color: inherit; font-size: 13px; text-decoration: none; }
+.header-github:hover { text-decoration: underline; }
+.header-icon { width: 18px; height: 18px; fill: currentColor; }
+.by { font-size: 12px; }
 .by a { color: inherit; }
 .theme-toggle { display: none; place-items: center; width: 44px; height: 44px; margin: -6px -8px -6px 0; padding: 0; border: 0; border-radius: 999px; background: transparent; color: inherit; cursor: pointer; }
 .theme-toggle:hover { background: #ffffff26; }
@@ -67,7 +70,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
 @media (max-width: 700px) {
   .by { display: none; }
-  .theme-toggle { margin-left: auto; }
+  .header-github span { display: none; }
   .bbx-app-nav > div { padding: 10px 12px; }
   #site-workspace { display: block; }
   .pane { height: 100%; padding: 12px 14px 35px; }
