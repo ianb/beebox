@@ -1,5 +1,5 @@
 ---
-title: "Move typescript-eslint and doctest-typecheck off the TypeScript 6.0 API"
+title: "Move typescript-eslint off the TypeScript 6.0 API"
 workstream: unattached
 area: beebox
 labels: [tooling, typecheck]

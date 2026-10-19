@@ -6,7 +6,10 @@ labels: [testing, doctest]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
+resolution: superseded
 ---
+
+Superseded by the opposite decision: `beebox/docs/implemented-plans/retire-doctest.md` converted every doctest to a `.test.ts` file with `t.check` and removed the doctest format (landed 2026-10-18).
 
 Doctests are this repository's default test form (`beebox/AGENTS.md`), and
 they hold about 87% of test lines. The monorepo still has 132 `*.test.ts`
@@ -40,13 +43,13 @@ written, read, and run one way.
 - **Order.** Convert one package at a time, and keep its test count and
   coverage the same across the conversion.
 
-Do the [doctest usability review](../closed/exploration/2026-09-27-doctest-usability-review.md)
+Do the [doctest usability review](../exploration/2026-09-27-doctest-usability-review.md)
 first or alongside. Its findings may change how the converted tests should
 be written.
 
 ## Fit, from the usability review
 
-The [doctest usability review](../../beebox/docs/implemented-plans/doctest-usability.md)
+The [doctest usability review](../../../beebox/docs/implemented-plans/doctest-usability.md)
 sorted every `*.test.ts` file by test shape (2026-09-28) and ran test-writing
 subjects on conversions. It found:
 

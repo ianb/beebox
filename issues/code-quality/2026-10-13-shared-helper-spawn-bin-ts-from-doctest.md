@@ -1,5 +1,5 @@
 ---
-title: "Shared helper to spawn a bin/*.ts CLI from a doctest fixture"
+title: "Shared helper to spawn a bin/*.ts CLI from a test fixture"
 workstream: unattached
 area: bin
 labels: [tests, tooling]
@@ -8,7 +8,7 @@ discovered-by: agent
 discovered-in: worktree-retrospective — retrospective 20261013-224557
 ---
 
-bin/ doctests that run a `bin/*.ts` CLI from a fixture repo each hand-roll
+bin/ tests (doctests when filed; `bin/test/*.test.ts` since 2026-10-18, e.g. `finish-preflight.test.ts`, `finish-verify.test.ts`) that run a `bin/*.ts` CLI from a fixture repo each hand-roll
 the spawn: tsx resolution (`import.meta.resolve("tsx")`), cwd and env. A bare
 `--import tsx` resolves relative to cwd, so it fails when cwd is a fixture
 outside the repo or a checkout without `node_modules`.

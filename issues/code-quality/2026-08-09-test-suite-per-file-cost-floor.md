@@ -10,7 +10,7 @@ priority: important
 ---
 
 Every test file pays a fixed cost before it runs a single assertion: Node
-process boot, the tsx import hook, the doctest loader, and — for the 37 files
+process boot, the tsx import hook, the doctest loader (removed 2026-10-18 with the doctest format), and — for the 37 files
 that call `makeTestServer()` — a cold template-box build.
 
 The measured figures come from the profiling in

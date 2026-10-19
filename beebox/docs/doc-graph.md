@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-19T00:27:22Z
+Generated: 2026-10-19T01:06:23Z
 Total documents: 544
 
 ## Issues
@@ -60,7 +60,6 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/remove-telegram.review.md** — "Plan review — remove Telegram" (79 lines) · implementation review
 - **docs/implemented-plans/resilient-voice-recording.review.md** — "Cross-model review — resilient-voice-recording (round 1)" (139 lines) · implementation review
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (412 lines) · shipped history · implemented
-- **docs/implemented-plans/retire-doctest.md** — "Retire doctest: TypeScript tests with a typed check()" (1286 lines) · shipped history · implemented
 - **docs/implemented-plans/retire-type-specific-core-tags.review.md** — "Plan Engineering Review — retire-type-specific-core-tags" (66 lines) · implementation review
 - **docs/implemented-plans/ribbon-theme.md** — "Ribbon system and card theme" (214 lines) · shipped history · implemented
 - **docs/implemented-plans/scan-uploader-version-drift.md** — "The scan uploader learns when it has drifted from the box" (587 lines) · shipped history · implemented
@@ -345,6 +344,7 @@ Referenced by:
 - ../issues/closed/code-quality/2026-08-17-bbx-init-prints-a-screenful-on-every-run.md:13 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-08-25-mjs-files-should-be-typescript.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-09-26-generated-guidance-families-without-pruning.md:2 (mention) — title: "Two generated guidance families still leave orphans: guides-for-<type> rules and dangling AGENTS.md symlinks"
+- ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:14 (mention) — Doctests are this repository's default test form (`beebox/AGENTS.md`), and
 - ../issues/closed/code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md:65 (mention) — boxholder's approval (root `AGENTS.md` on lint changes).
 - ../issues/closed/decisions/2026-05-27-bin-browse-wrapper-future.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -375,7 +375,6 @@ Referenced by:
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:23 (mention) — Related: the noisy-output policy in the root AGENTS.md (routine-success
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:8 (mention) — it spawns an agent with a box cwd and box AGENTS.md context and checks
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:55 (mention) — `beebox/AGENTS.md`.
-- ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:11 (mention) — Doctests are this repository's default test form (`beebox/AGENTS.md`), and
 - ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:47 (mention) — needs the boxholder's approval (root `AGENTS.md`).
 - ../issues/decisions/2026-08-25-issue-relationship-fields.md:41 (mention) — context, which lives in AGENTS.md/docs here. Not needed.
 - ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:14 (mention) — `AGENTS.md`. The engine updates before a box's migration runs, and the
@@ -4862,14 +4861,14 @@ Title: "Doctest usability" | 855 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/retire-doctest.md:111 (mention) — - `beebox/docs/implemented-plans/doctest-usability.md:95-97`: *"The doctest
+- ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:52 (link) — The [doctest usability review](../../../beebox/docs/implemented-plans/doctest-usability.md)
 - ../issues/closed/exploration/2026-09-27-doctest-usability-review.md:13 (mention) — Closed: the review is done and its runner, guidance and test-runner changes land with the branch merge of `worktree-doct
-- ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:49 (link) — The [doctest usability review](../../beebox/docs/implemented-plans/doctest-usability.md)
 
 References:
 - → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (frontmatter)
 - → AGENTS.md (mention)
 - → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (link)
-- → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
+- → ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
 - → ../issues/closed/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
 - → ../issues/closed/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md (link)
 - → ../issues/closed/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md (link)
@@ -6377,12 +6376,16 @@ References:
 - → code-style.md (mention)
 - → docs/testing.md (mention)
 
-#### docs/implemented-plans/retire-doctest.md **[ORPHAN]**
+#### docs/implemented-plans/retire-doctest.md
 
 Title: "Retire doctest: TypeScript tests with a typed check()" | 1286 lines | shipped history | implemented
 
+Referenced by:
+- ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:12 (mention) — Superseded by the opposite decision: `beebox/docs/implemented-plans/retire-doctest.md` converted every doctest to a `.te
+- ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:52 (mention) — gone (`beebox/docs/implemented-plans/retire-doctest.md`, 2026-10-18): tests
+
 References:
-- → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (frontmatter)
+- → ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (frontmatter)
 - → ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md (frontmatter)
 - → docs/implemented-plans/typescript-7.md (mention)
 - → docs/engineering-principles.md (mention)

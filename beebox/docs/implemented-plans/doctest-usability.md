@@ -19,7 +19,7 @@ are implemented. The text below keeps the original proposal and its reasoning.
 **Issues addressed:**
 [doctest usability review](../../../issues/closed/exploration/2026-09-27-doctest-usability-review.md).
 Related, not closed by this plan:
-[convert `*.test.ts` to doctests](../../../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md)
+[convert `*.test.ts` to doctests](../../../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md)
 (this plan supplies its fit guidance, see Track F), and
 [beebox `test/` is never type-checked](../../../issues/closed/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md)
 (doctest code blocks are also never type-checked; see NOT in scope).
@@ -671,7 +671,7 @@ reports.
 ### Track F: fit guidance for the conversion issue
 
 Landed as the "Fit, from the usability review" section of the
-[conversion issue](../../../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md).
+[conversion issue](../../../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md).
 The issue itself stays open; it is the conversion work.
 
 Add a short section to the conversion issue, "Fit, from the usability review",
