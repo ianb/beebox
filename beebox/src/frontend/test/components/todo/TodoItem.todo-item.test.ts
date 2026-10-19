@@ -51,11 +51,11 @@ function summary(html: string) {
 // todos carry no known words (`text: null`), so each checkbox falls back to its
 // status name.
 void test("Only done is checked.", async (t) => {
-  t.check(summary(render({ status: "open" })), "unchecked | disabled | Open | text-warm-800");
+  t.check(summary(render({ status: "open" })), "unchecked | disabled | Open | text-card-ink");
 
   t.check(summary(render({ status: "done" })), "checked | disabled | Done | text-card-soft bbx-struck");
 
-  t.check(summary(render({ status: "parked" })), "unchecked | disabled | Parked | text-warm-400");
+  t.check(summary(render({ status: "parked" })), "unchecked | disabled | Parked | text-card-soft");
 
   t.check(summary(render({ status: "dropped" })), "unchecked | disabled | Dropped | text-card-soft bbx-struck");
 });
@@ -73,7 +73,7 @@ void test("Given the todo's words, the checkbox is named by them, so a list of t
 // The status and the locator ride on the element as data attributes, which is
 // how the card summary finds the first open todo to scroll to.
 void test("The status and the locator ride on the element as data attributes, which is h...", async (t) => {
-  t.checkText(render({ status: "open", locator: { kind: "body", line: 12, nth: 2 } }), "<span data-todo-status=\"open\" data-todo-locator=\"12#2\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-warm-800\">Call the roofer</span></span>");
+  t.checkText(render({ status: "open", locator: { kind: "body", line: 12, nth: 2 } }), "<span data-todo-status=\"open\" data-todo-locator=\"12#2\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span></span>");
 
   t.checkText(render({ status: "done", locator: { kind: "frontmatter", index: 0 } }), "<span data-todo-status=\"done\" data-todo-locator=\"todos[0]\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Done\" class=\"accent-warm-500 mr-1 align-middle\" checked=\"\"/><span class=\"text-card-soft bbx-struck\">Call the roofer</span></span>");
 });
@@ -143,9 +143,9 @@ void test("A due date reads \"due Sep 15\".", async (t) => {
 // date in a `<time>`:
 void test("Rendered, the escalated chip takes the warning tone and keeps the machine dat...", async (t) => {
   const escalated = render({ status: "open", due: "2026-09-15", plateState: "escalated" });
-  t.checkText(escalated, "<span data-todo-status=\"open\" data-todo-plate-state=\"escalated\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-warm-800\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-accent-100 text-accent-dark text-[10px] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">overdue · Sep 15</time></span></span>");
+  t.checkText(escalated, "<span data-todo-status=\"open\" data-todo-plate-state=\"escalated\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-accent-100 text-accent-dark text-[10px] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">overdue · Sep 15</time></span></span>");
 
-  t.checkText(render({ status: "open", due: "2026-09-15", plateState: "on-plate" }), "<span data-todo-status=\"open\" data-todo-plate-state=\"on-plate\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-warm-800\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-500 text-[10px] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">due Sep 15</time></span></span>");
+  t.checkText(render({ status: "open", due: "2026-09-15", plateState: "on-plate" }), "<span data-todo-status=\"open\" data-todo-plate-state=\"on-plate\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-500 text-[10px] px-1.5 py-0.5 ml-1 align-middle\"><time dateTime=\"2026-09-15\">due Sep 15</time></span></span>");
 });
 
 // ## `recheck`: a quiet chip in the list only
@@ -174,9 +174,9 @@ void test("recheck is the todo-review's bookkeeping (docs/plans/todos-ui.md, Tra
 // The reading view (a card body, `inline`/`block`) never shows it; the list
 // line does:
 void test("The reading view (a card body, inline/block) never shows it; the list line does:", async (t) => {
-  t.checkText(render({ status: "open", recheck: "2026-10-15", layout: "inline" }), "<span data-todo-status=\"open\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-warm-800\">Call the roofer</span></span>");
+  t.checkText(render({ status: "open", recheck: "2026-10-15", layout: "inline" }), "<span data-todo-status=\"open\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-ink\">Call the roofer</span></span>");
 
-  t.checkText(render({ status: "open", recheck: "2026-10-15", layout: "line" }), "<span data-todo-status=\"open\" class=\"group flex items-start gap-1.5 text-sm\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mt-0.5 shrink-0\"/><span class=\"min-w-0 flex-1\"><span class=\"text-warm-800\">Call the roofer</span><span class=\"ml-1.5 align-middle\" title=\"When the daily todo review looks at this again\"><span class=\"text-warm-500 text-xs\"><time dateTime=\"2026-10-15\">agent checks again Oct 15</time></span></span></span></span>");
+  t.checkText(render({ status: "open", recheck: "2026-10-15", layout: "line" }), "<span data-todo-status=\"open\" class=\"group flex items-start gap-1.5 text-sm\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mt-0.5 shrink-0\"/><span class=\"min-w-0 flex-1\"><span class=\"text-card-ink\">Call the roofer</span><span class=\"ml-1.5 align-middle\" title=\"When the daily todo review looks at this again\"><span class=\"text-warm-500 text-xs\"><time dateTime=\"2026-10-15\">agent checks again Oct 15</time></span></span></span></span>");
 });
 
 // ## Agent follow-ups
@@ -186,9 +186,9 @@ void test("The reading view (a card body, inline/block) never shows it; the list
 // boxholder's finished todo is not.
 void test("An open agent todo reads in the quiet (parked) treatment with an \"agent\" chip.", async (t) => {
   const agentOpen = render({ status: "open", assigned: "agent" });
-  t.check(summary(agentOpen), "unchecked | disabled | Open | text-warm-400");
+  t.check(summary(agentOpen), "unchecked | disabled | Open | text-card-soft");
 
-  t.checkText(agentOpen, "<span data-todo-status=\"open\" data-todo-assigned=\"agent\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-warm-400\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-500 text-[10px] px-1.5 py-0.5 ml-1 align-middle\" title=\"Assigned\">agent</span></span>");
+  t.checkText(agentOpen, "<span data-todo-status=\"open\" data-todo-assigned=\"agent\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-card-soft\">Call the roofer</span><span class=\"inline-block rounded font-medium bg-warm-100 text-warm-500 text-[10px] px-1.5 py-0.5 ml-1 align-middle\" title=\"Assigned\">agent</span></span>");
 
   t.check(
     [
@@ -207,6 +207,6 @@ void test("An open agent todo reads in the quiet (parked) treatment with an \"ag
 // carries no chips.
 void test("A list ancestor kept only as context for a matching child is muted and carrie...", async (t) => {
   const context = render({ status: "open", due: "2026-09-15", layout: "line", muted: true });
-  t.check(summary(context), "unchecked | disabled | Open | text-warm-400");
-  t.checkText(context, "<span data-todo-status=\"open\" class=\"group flex items-start gap-1.5 text-sm\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mt-0.5 shrink-0\"/><span class=\"min-w-0 flex-1\"><span class=\"text-warm-400\">Call the roofer</span></span></span>");
+  t.check(summary(context), "unchecked | disabled | Open | text-card-soft");
+  t.checkText(context, "<span data-todo-status=\"open\" class=\"group flex items-start gap-1.5 text-sm\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mt-0.5 shrink-0\"/><span class=\"min-w-0 flex-1\"><span class=\"text-card-soft\">Call the roofer</span></span></span>");
 });

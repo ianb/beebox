@@ -163,7 +163,7 @@ function Chips({ props }: { props: TodoItemProps }) {
 export function TodoItem(props: TodoItemProps): ReactNode {
   const { assigned, layout, locator, muted, children } = props;
   const controls = useControls(props);
-  const textClass = muted ? "text-warm-400" : todoTextClass({ status: controls.status, assigned });
+  const textClass = muted ? "text-card-soft" : todoTextClass({ status: controls.status, assigned });
   const data = {
     "data-todo-status": props.status,
     "data-todo-assigned": assigned,
