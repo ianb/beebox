@@ -25,6 +25,7 @@
 
 import { execa } from "execa";
 import { mkdtemp, mkdir, writeFile, rm, readdir, stat } from "node:fs/promises";
+import { removeTempCwdTranscripts } from "../core/chat/session/transcript-paths.js";
 import * as os from "node:os";
 import * as path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -400,6 +401,7 @@ async function main(): Promise<void> {
     );
   } finally {
     await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempCwdTranscripts(tmpRoot);
   }
 }
 

@@ -1,11 +1,15 @@
 ---
 title: "Test and probe runs leave thousands of directories in the real Claude projects store"
-workstream: unattached
+workstream: flaky-tests
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-flaky-tests — while fixing the transcript durability gate's symlinked-path bug
+resolution: implemented
 ---
+
+Closed 2026-10-19. `removeTempCwdTranscripts` (`beebox/src/core/chat/session/transcript-paths.ts`) removes the CLI's transcript directories for a temp cwd and its subdirectories. `makeTmpBox().cleanup()`, the manual field test, `smoke-external-box`, and the steering probe (which also now removes its temp cwd) call it when they finish. The 5,799 existing directories older than a day were moved to the Trash (`~/.Trash/claude-projects-stray-temp-dirs-2026-10-19`), not deleted. Not covered: a run killed before its cleanup, and untracked probe scripts (`at-probe-*`, `or-spike-*`).
+
 
 On 2026-10-18 the developer's real `~/.claude/projects` held 5,344
 `-var-folders-*` and 556 `-private-var-folders-*` directories. Each one is
