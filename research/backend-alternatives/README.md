@@ -45,6 +45,7 @@ session transcripts — this README is the synthesis + decision.
 > | [2026-07-18-vllm-self-hosting.md](2026-07-18-vllm-self-hosting.md) | Self-hosting open vision models; vLLM's native Anthropic endpoint |
 > | [2026-07-18-alt-harnesses.md](2026-07-18-alt-harnesses.md) | OpenCode/Goose/Codex/Gemini/Cline/Amp/Crush vs our runtime contract |
 > | [2026-08-25-oh-my-pi.md](2026-08-25-oh-my-pi.md) | Follow-up: oh-my-pi (pi-mono fork) scored on the same contract and against the shipped Codex engine adapter — LATER as a BYO-model third engine; REJECT on Claude subscription (spoofs Claude Code's auth fingerprint) |
+> | [2026-10-18-pi.md](2026-10-18-pi.md) | Follow-up: plain pi 1.3.0 scored on the same contract with live SDK probes — meets the instructions and streaming bar on its own; structured output is the one missing item; replaces oh-my-pi as the LATER third-engine candidate (API keys only) |
 
 ---
 
