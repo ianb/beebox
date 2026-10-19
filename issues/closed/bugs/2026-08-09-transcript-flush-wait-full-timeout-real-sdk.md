@@ -6,7 +6,10 @@ filed-by: agent
 discovered-in: weekly manual-test triage — 2026-08-09T151705Z run, repo 508f42cc
 labels: [manual-tests]
 priority: normal
+resolution: implemented
 ---
+
+Closed 2026-10-18: the gate polled the lexical tmp-box path while the CLI writes under the symlink-resolved path. Fixed in `bb68a237f` (transcript paths) and the follow-up that applies the same encoding to the memory link and the task-output check.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 
@@ -44,7 +47,7 @@ Candidates worth checking when this recurs:
   the `uuid` key differently than the fixture-built ones in
   `chat-session-transcript-sync.doctest.md` assume).
 - Whether this machine's load (concurrent Claude/Codex processes — see
-  [run less of the test suite](../closed/exploration/2026-08-08-run-less-of-the-test-suite.md)
+  [run less of the test suite](../exploration/2026-08-08-run-less-of-the-test-suite.md)
   for the same environment's contention profile) is inflating the real CLI's
   flush latency well past 150ms, in which case the fix is a larger timeout or
   a different gating strategy, not a code bug.
@@ -115,6 +118,12 @@ fixture at the encoded realpath of a box reached through a symlink (fails
 without the fix). The old fixtures passed because they wrote through the
 same helper the gate reads through.
 
-Not fixed, same shape: `symlinkClaudeMemory` (`core/box/structure/core.ts`)
-encodes `path.resolve(boxRoot)`, and `isTaskOutputPathForBox` compares
-against the lexical encoded root.
+Follow-up (same day): `symlinkClaudeMemory` (`core/box/structure/core.ts`)
+now uses `getSessionDir`, and `isTaskOutputPathForBox` encodes the resolved
+box root through the same private helper. The memory-symlink and task-output
+route tests now build their fixtures at the resolved path; both fail without
+the fix. The stray `-var-folders-*` directories in the real
+`~/.claude/projects` are filed separately:
+[stray test directories in the real Claude projects store](../../code-quality/2026-10-18-stray-test-dirs-in-real-claude-projects.md).
+A closed issue with the same root cause, fixed locally at the time:
+[knowledge audit symlink cwd](2026-09-29-knowledge-audit-symlink-cwd-misses-claude-transcript.md).

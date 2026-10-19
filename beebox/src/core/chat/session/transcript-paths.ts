@@ -127,8 +127,9 @@ export function getSessionDir(cwd: string): string {
  * accept an unrelated box whose encoded root happens to start with the
  * same characters.
  *
- * Pure path-string logic only — no filesystem access, so it's safe to call
- * before any `stat`/`realpath` (and the caller re-checks it AFTER
+ * Path-string logic on `filePath` — the only filesystem access resolves the
+ * trusted `boxRoot` the way the CLI does — so it's safe to call before any
+ * `stat`/`realpath` of `filePath` (and the caller re-checks it AFTER
  * `realpath`, so a symlink inside an otherwise-valid path can't point the
  * read at another box's task output).
  */
@@ -147,7 +148,8 @@ export function isTaskOutputPathForBox({ boxRoot, filePath }: { boxRoot: string;
   // Exactly one segment after `tasks/` — a plain output file, not a nested path.
   if (fileSegments.length !== 1 || fileSegments[0] === "") return false;
 
-  const encodedBoxRoot = encodeProjectDir(boxRoot);
+  // The CLI names this segment after its own cwd, symlinks resolved.
+  const encodedBoxRoot = encodeProjectDir(cliCwd(boxRoot));
   return encodedCwd === encodedBoxRoot || encodedCwd.startsWith(`${encodedBoxRoot}-`);
 }
 

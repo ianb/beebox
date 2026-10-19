@@ -13,7 +13,7 @@ import { BOX_DIRS, BOX_MARKER, boxPath } from "../../../lib/paths/core.js";
 import { initRepo, isRepo } from "../../../lib/git/core/operations.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
-import { claudeProjectsRoot, encodeProjectDir } from "../../chat/session/transcript-paths.js";
+import { getSessionDir } from "../../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../../migrations.js";
 import { UNIGNORE_BLOCK } from "../../attachments-gitignore.js";
 import { installTricksPackageJson } from "../templates.js";
@@ -387,15 +387,14 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   const resolvedRoot = path.resolve(boxRoot);
   const shape = await getBoxShape(resolvedRoot);
   const localMemoryDir = path.join(shape.boxRoot, ".claude", "memory");
-  // `claudeProjectsRoot()` and `encodeProjectDir()` (src/core/chat/session/
-  // transcript-paths.ts) are the one shared resolver + encoder for
-  // `~/.claude/projects/<dir>`. The encoder collapses EVERY non-alphanumeric
-  // character (not only `/`) — a box path with `_` or `.` in it, linked under a
-  // `/`-only translation, lands in a directory Claude Code never reads, so its
-  // auto-memory silently stays global. The root also honors
-  // `BBX_CLAUDE_PROJECTS_DIR`, so tests and the box-packageify smoke test
-  // can point this at a fixture directory instead of the real global one.
-  const globalMemoryDir = path.join(claudeProjectsRoot(), encodeProjectDir(resolvedRoot), "memory");
+  // `getSessionDir()` (src/core/chat/session/transcript-paths.ts) is the one
+  // shared resolver + encoder for `~/.claude/projects/<dir>`. It encodes the
+  // cwd as Claude Code sees it — symlinks resolved, EVERY non-alphanumeric
+  // character (not only `/`) collapsed to `-` — so a box path with `_`, `.`,
+  // or a symlink in it is linked where Claude Code reads its memory. The root
+  // honors `BBX_CLAUDE_PROJECTS_DIR`, so tests and the box-packageify smoke
+  // test can point this at a fixture directory instead of the real global one.
+  const globalMemoryDir = path.join(getSessionDir(resolvedRoot), "memory");
 
   // Check if the global path is already a symlink pointing here
   try {

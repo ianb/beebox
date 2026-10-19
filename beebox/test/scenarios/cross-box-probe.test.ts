@@ -110,7 +110,7 @@ void test("A card with a unique marker string, a landmark card (with a distincti
   // file includes one line so it stands as a complete anchor on its own).
   const { encodeProjectDir } = await import("../../src/core/chat/session/transcript-paths.js");
   const tmpRoot = await mkdtemp(join(tmpdir(), "claude-cross-box-probe-"));
-  const taskDir = path.join(tmpRoot, encodeProjectDir(ctx.b.boxRoot), "sess-1", "tasks");
+  const taskDir = path.join(tmpRoot, encodeProjectDir(await fs.realpath(ctx.b.boxRoot)), "sess-1", "tasks");
   await fs.mkdir(taskDir, { recursive: true });
   const betaTaskOutput = path.join(taskDir, "t1.output");
   await fs.writeFile(betaTaskOutput, BETA_MARKER);

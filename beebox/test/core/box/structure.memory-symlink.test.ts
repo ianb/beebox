@@ -19,32 +19,37 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 
-// A box reached through a path containing `_` and `.` (a symlink beside the real
-// box, so `path.resolve` keeps the odd characters) links under the fully collapsed
-// name — the `_` and `.` become `-`:
-void test("A box reached through a path containing  and . (a symlink beside the real box...", async (t) => {
+// A box whose real path holds `_` and `.`, reached through a plain-named
+// symlink, links under its *real* path, fully collapsed. Claude Code keys the
+// directory by its own cwd, which the OS reports with symlinks resolved; the
+// `_` and `.` become `-`:
+void test("A box whose real path holds _ and ., reached through a symlink, links under its real path", async (t) => {
   t.teardown(async () => {
     try {
       if (previousProjects === undefined) delete process.env["BBX_CLAUDE_PROJECTS_DIR"];
       else process.env["BBX_CLAUDE_PROJECTS_DIR"] = previousProjects;
       await fs.rm(projects, { recursive: true, force: true });
-      await fs.unlink(oddRoot);
+      await fs.unlink(plainLink);
+      await fs.rename(oddRoot, originalRoot);
       await box.cleanup();
     } catch (error) {
       t.error(error);
     }
   });
   const box = await makeTmpBox();
+  const originalRoot = box.root;
   const previousProjects = process.env["BBX_CLAUDE_PROJECTS_DIR"];
   const projects = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-projects-"));
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = projects;
   const oddRoot = path.join(path.dirname(box.root), `odd_name.v2-${path.basename(box.root)}`);
-  await fs.symlink(box.root, oddRoot);
+  await fs.rename(box.root, oddRoot);
+  const plainLink = path.join(path.dirname(box.root), `plain-${path.basename(box.root)}`);
+  await fs.symlink(oddRoot, plainLink);
 
-  const linked = await symlinkClaudeMemory(oddRoot);
+  const linked = await symlinkClaudeMemory(plainLink);
   const entries = await fs.readdir(projects);
   t.check(linked, true);
-  t.check(entries, [encodeProjectDir(oddRoot)]);
+  t.check(entries, [encodeProjectDir(await fs.realpath(plainLink))]);
   t.check(entries, [not(any(String).matches(/[._]/))]);
   t.check(path.basename(path.dirname(await fs.readlink(path.join(projects, entries[0] ?? "", "memory")))), ".claude");
 });
