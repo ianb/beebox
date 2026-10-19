@@ -78,3 +78,7 @@ Artifacts: `beebox/test/tours/.artifacts/{nav-pages,new-chat,workspace-panes}/20
 ## Re-encounter 2026-10-09 (journey walks)
 
 Seen again in [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H1) and [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (H1). Every `bin/browse screenshot` timed out (`CDP command timed out: Page.captureScreenshot`, or an empty exit) while snapshot, click and fill worked; `bin/browse close` did not help. The coordinator confirmed the cause: the Mac display had gone to sleep overnight, and capture works with the display held awake (screenshots worked in session `aa-d2`). This answers the open question in this issue. `95073661c` documents it in `beebox/test/user-stories/journeys/README.md`; `prepare.ts` does not check for it and the tooling is not fixed. The A walker fell back to `bin/browse pdf` plus `sips`, which loses the chat and top bar. The priority may be stale given the repeat.
+
+## Re-encounter 2026-10-18 (turn-feedback workstream)
+
+Seen again in the evening: `/turn-feedback/test1/chats` screenshots timed out while `/box` and `main`'s pages captured, which looked page-specific and cost a bisect through the agent's own change before the baseline hung too. Intermittent capture made it read as a code bug. Verification fell back to `bin/browse eval` polling. A first step of "is the display asleep?" in the browse skill would have saved the round trips.
