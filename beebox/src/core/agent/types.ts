@@ -40,11 +40,12 @@ export interface AgentInvokeOptions {
   loadBoxContext?: boolean;
   /**
    * The built-in tools this run may use. Omitted means the harness default
-   * (every built-in). `[]` gives a pass that works only from its prompt:
-   * no tools, so it cannot read or change the box. Codex cannot list tools:
-   * `[]` runs it in the `read-only` sandbox with web search off, so it cannot
-   * change the box or reach the network, though its shell can still read
-   * files. Any other list leaves a Codex run unrestricted.
+   * (every built-in). `[]` gives a pass that works only from its prompt.
+   * On Claude it has no tools, so it cannot read or change the box. On Codex,
+   * which cannot list tools, `[]` runs the `read-only` sandbox with web search
+   * off: the pass cannot change the box or reach the network, but it CAN still
+   * read files through its shell (accepted 2026-10-19). Any other list leaves a
+   * Codex run unrestricted.
    */
   tools?: string[];
   /** Maximum agent turns (default: 20). */
