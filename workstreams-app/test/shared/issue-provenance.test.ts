@@ -9,14 +9,13 @@
 // context clause (a sentence, for the detail pane).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { issueProvenance } from "../../src/shared/issue-provenance.js";
 
 // The documented form names a worktree. It is displayed bare, because `foo` is what
 // the router prefix, the `workstream:` field and `bin/workstreams` all call it —
 // a pill spelling it `worktree-foo` would be the only place that differs.
 void test("The documented form names a worktree.", async (t) => {
-  // doctest:L20
   t.check(issueProvenance("worktree-pub-setup-wrangler — Codex cross-review surfaced these as pre-existing"), {
     source: "pub-setup-wrangler",
     context: "Codex cross-review surfaced these as pre-existing",
@@ -27,7 +26,6 @@ void test("The documented form names a worktree.", async (t) => {
 // the primary session has no worktree to name. It is a source like any other — the
 // split is on the dash, not on a prefix.
 void test("The most common value in practice is main session, because anything filed fro...", async (t) => {
-  // doctest:L29
   t.check(issueProvenance("main session — \"It would be jarring to go into another person's conversation\""), {
     source: "main session",
     context: "\"It would be jarring to go into another person's conversation\"",
@@ -37,7 +35,6 @@ void test("The most common value in practice is main session, because anything f
 // A value that names only a place carries no context, and the detail line then has
 // nothing to add:
 void test("A value that names only a place carries no context, and the detail line then...", async (t) => {
-  // doctest:L37
   t.check(issueProvenance("knip-sweep schedule, run 20260908-191814"), {
     source: "knip-sweep schedule, run 20260908-191814",
     context: null,
@@ -46,7 +43,6 @@ void test("A value that names only a place carries no context, and the detail li
 
 // Absent, empty, and the one value in the queue wrapped in a stray quote:
 void test("Absent, empty, and the one value in the queue wrapped in a stray quote:", async (t) => {
-  // doctest:L44
   t.check(
     [
       issueProvenance(undefined),
@@ -66,7 +62,6 @@ void test("Absent, empty, and the one value in the queue wrapped in a stray quot
 
 // A hand-typed double hyphen splits too, and a context holding its own dash keeps it:
 void test("A hand-typed double hyphen splits too, and a context holding its own dash kee...", async (t) => {
-  // doctest:L55
   t.check(
     [
       issueProvenance("worktree-foo -- typed by hand"),

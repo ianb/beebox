@@ -7,7 +7,7 @@
 // (`src/core/card-fields/apply.ts`) runs it over a box.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parse, stringify } from "yaml";
 import { parseFieldMap, fieldMapPlanner } from "../../../src/core/card-fields/map.js";
 import { applyFieldEdits } from "../../../src/core/card-fields/field-edits.js";
@@ -59,7 +59,6 @@ function refusal(type: string, fm: Record<string, unknown>): string {
 
 // ## A rename keeps the value in the key's place
 void test("A rename keeps the value in the key's place", async (t) => {
-  // doctest:L63
   await t.checkText(run("book", { title: "Dune", status: "owned", pages: 412 }), "{\"title\":\"Dune\",\"ownership\":\"owned\",\"pages\":412}");
 });
 
@@ -67,22 +66,18 @@ void test("A rename keeps the value in the key's place", async (t) => {
 //
 // `unpaid` maps to nothing, so a card that was unpaid simply loses the field.
 void test("unpaid maps to nothing, so a card that was unpaid simply loses the field.", async (t) => {
-  // doctest:L72
   await t.checkText(run("bill", { vendor: "Water", status: "paid", date: "2026-10-01" }), "{\"vendor\":\"Water\",\"paid\":true,\"due\":\"2026-10-01\"}");
 
-  // doctest:L75
   await t.checkText(run("bill", { vendor: "Water", status: "unpaid", date: "2026-10-01" }), "{\"vendor\":\"Water\",\"due\":\"2026-10-01\"}");
 });
 
 // ## List entries take the `list[].field` form
 void test("List entries take the `list[].field` form", async (t) => {
-  // doctest:L82
   await t.checkText(run("lesson", { segments: [{ do: "Read", status: "planned" }, { do: "Try", status: "ready" }] }), "{\"segments\":[{\"do\":\"Read\",\"stage\":\"planned\"},{\"do\":\"Try\",\"stage\":\"ready\"}]}");
 });
 
 // ## Map values take the `map{}.field` form, and a wrong-shaped container is refused
 void test("Map values take the `map{}.field` form, and a wrong-shaped container is refused", async (t) => {
-  // doctest:L89
   const perUnit = fieldMapPlanner(parseFieldMap({ types: { progress: { "units{}.status": { rename: "stage" } } } }));
   t.check(parse(applyFieldEdits(stringify({ units: { intro: { status: "done" }, lab: { note: "x" } } }), perUnit("progress", { units: { intro: { status: "done" }, lab: { note: "x" } } }).edits)), {
     units: {
@@ -95,16 +90,13 @@ void test("Map values take the `map{}.field` form, and a wrong-shaped container 
     },
   });
 
-  // doctest:L93
   t.check(refusal("lesson", { segments: { do: "Read", status: "planned" } }), "lesson segments is not a list; migrate this card by hand");
 
-  // doctest:L96
   t.check(refusal("lesson", { segments: ["Read", { do: "Try", status: "ready" }] }), "lesson segments[0] status is not a map; migrate this card by hand");
 });
 
 // ## A value the card already carries, unchanged, is not a collision
 void test("A value the card already carries, unchanged, is not a collision", async (t) => {
-  // doctest:L103
   await t.checkText(run("bill", { vendor: "Gas", status: "auto-pay", "auto-pay": true }), "{\"vendor\":\"Gas\",\"auto-pay\":true}");
 });
 
@@ -112,10 +104,8 @@ void test("A value the card already carries, unchanged, is not a collision", asy
 //
 // A bare date becomes a date entry; a derived-from URL becomes `sources`.
 void test("A bare date becomes a date entry; a derived-from URL becomes sources.", async (t) => {
-  // doctest:L112
   await t.checkText(run("docket-entry", { name: "Petition", date: "2026-03-04" }), "{\"name\":\"Petition\",\"filed\":{\"value\":\"2026-03-04\"}}");
 
-  // doctest:L115
   await t.checkText(
     run("snapshot", { title: "Feed", source: "https://example.com/p/1" })
     ,
@@ -125,16 +115,13 @@ void test("A bare date becomes a date entry; a derived-from URL becomes sources.
 
 // ## Unlisted values and collisions are refused, so a person decides
 void test("Unlisted values and collisions are refused, so a person decides", async (t) => {
-  // doctest:L122
   t.check(refusal("bill", { status: "disputed" }), "bill status status \"disputed\" has no safe mapping; migrate this card by hand");
 
-  // doctest:L125
   t.check(refusal("book", { status: "owned", ownership: "wanted" }), "book ownership has both the old and the new keys; migrate this card by hand");
 });
 
 // `unlisted: drop` opts a field into losing unknown values instead:
 void test("unlisted:", async (t) => {
-  // doctest:L132
   const lenient = fieldMapPlanner(parseFieldMap({ types: { bill: { status: { values: { paid: { paid: true } }, unlisted: "drop" } } } }));
   t.check(lenient("bill", { status: "disputed" }).edits, [
     {
@@ -148,10 +135,8 @@ void test("unlisted:", async (t) => {
 
 // ## A malformed map is rejected up front
 void test("A malformed map is rejected up front", async (t) => {
-  // doctest:L140
   t.check(accepts({ types: { book: { status: { rename: "ownership", values: {} } } } }), "rejected");
 
-  // doctest:L143
   t.check(accepts({ types: { book: { status: { rename: "ownership" } } } }), "accepted");
 });
 
@@ -167,14 +152,12 @@ void test("A type the map does not name is never touched; a refused card is repo
       t.error(error);
     }
   });
-  // doctest:L153
   const box = await makeTmpBox();
   await box.write("_content/books/Dune.book.card", "---\ntitle: Dune\nstatus: owned\n---\n");
   await box.write("_content/books/Odd.book.card", "---\ntitle: Odd\nstatus: owned\nownership: wanted\n---\n");
   await box.write("_content/bills/Water.bill.card", "---\nvendor: Water\nstatus: paid\n---\n");
   await box.write("_content/Notes.doc.card", "---\ntitle: Notes\nstatus: whatever\n---\nBody.\n");
 
-  // doctest:L159
   const dry = await applyFieldMap(box.root, { map, apply: false });
   t.check(dry, {
     converted: [
@@ -190,10 +173,8 @@ void test("A type the map does not name is never touched; a refused card is repo
     ],
   });
 
-  // doctest:L163
   t.check(await box.read("_content/books/Dune.book.card"), "---\ntitle: Dune\nstatus: owned\n---\n");
 
-  // doctest:L166
   const applied = await applyFieldMap(box.root, { map, apply: true });
   t.check(applied, {
     converted: [
@@ -209,14 +190,12 @@ void test("A type the map does not name is never touched; a refused card is repo
     ],
   });
 
-  // doctest:L170
   t.check(await box.read("_content/books/Dune.book.card"), `---
 title: Dune
 ownership: owned
 ---
 `);
 
-  // doctest:L173
   t.check(await applyFieldMap(box.root, { map, apply: true }), {
     converted: [],
     already: 2,

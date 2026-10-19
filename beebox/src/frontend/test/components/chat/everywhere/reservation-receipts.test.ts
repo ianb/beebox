@@ -7,7 +7,7 @@
 // decoding is recoverable.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ReservationReceipts } from "../../../../src/components/chat/everywhere/reservation-receipts.js";
 
 class MemoryStorage {
@@ -20,7 +20,6 @@ const receipt = { sessionId: "session-1", contextDir: "_content/movies", engine:
 
 // ## Malformed JSON is discarded and replaced by the next legitimate receipt
 void test("Malformed JSON is discarded and replaced by the next legitimate receipt", async (t) => {
-  // doctest:L24
   const storage = new MemoryStorage();
   storage.values.set("bbx-conversation-reservations/test1", "{not-json");
   const receipts = new ReservationReceipts(storage, "test1");
@@ -36,7 +35,6 @@ void test("Malformed JSON is discarded and replaced by the next legitimate recei
 
 // ## Invalid receipt shape is discarded the same way
 void test("Invalid receipt shape is discarded the same way", async (t) => {
-  // doctest:L36
   const storage = new MemoryStorage();
   storage.values.set("bbx-conversation-reservations/test1", JSON.stringify([["session-1", { sessionId: "other-session", contextDir: "_content/movies", engine: "claude" }]]));
   const receipts = new ReservationReceipts(storage, "test1");
@@ -52,7 +50,6 @@ void test("Invalid receipt shape is discarded the same way", async (t) => {
 
 // ## Storage access failures remain visible
 void test("Storage access failures remain visible", async (t) => {
-  // doctest:L48
   const inaccessible = { getItem: () => { throw new Error("storage unavailable"); }, setItem: () => {} };
   await t.checkThrows(async () => (new ReservationReceipts(inaccessible, "test1")), "Error: storage unavailable");
 });

@@ -5,12 +5,11 @@
 // "just do it" authorization are asserted without one.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { issueNextActionSchema } from "../../../../src/shared/documents.js";
 import { ISSUE_NEXT_ACTION_OPTIONS } from "../../../../src/frontend/components/IssuesPane/IssueControls.js";
 
 void test("line 12", async (t) => {
-  // doctest:L13
   t.check(
     {
       schema: ["verify-without-me", "manually-confirmed"].map((value) => issueNextActionSchema.parse(value)),

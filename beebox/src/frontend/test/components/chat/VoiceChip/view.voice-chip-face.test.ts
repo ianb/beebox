@@ -31,7 +31,7 @@
 // (`issues/closed/bugs/2026-08-06-narration-mode-icon-ambiguous-with-mic.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { VoiceChipFace, voiceChipDiarizationEnabled, type VoiceChipFaceState } from "../../../../src/components/chat/VoiceChip/view.js";
@@ -45,7 +45,6 @@ function renderFace(state: VoiceChipFaceState) {
 
 // ## Taking turns, answering aloud
 void test("Taking turns, answering aloud", async (t) => {
-  // doctest:L56
   const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
   t.check(face, "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"false\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg></span>");
 });
@@ -55,14 +54,12 @@ void test("Taking turns, answering aloud", async (t) => {
 // Written lines, not a slashed speaker: a slash says *suppressed*, and that is not
 // what happens — the box still answers, in text.
 void test("Written lines, not a slashed speaker:", async (t) => {
-  // doctest:L76
   const face = renderFace({ muted: true, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
   t.check(face, "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"true\" data-voice-narration=\"false\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M30 4h10M30 8h7M30 12h10\"></path></svg></span>");
 });
 
 // ## You hold the floor
 void test("You hold the floor", async (t) => {
-  // doctest:L84
   const face = renderFace({ muted: false, narrationEnabled: true, hqInFlight: false, diarizationEnabled: false });
   t.check(face, "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"true\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg></span>");
 });
@@ -73,7 +70,6 @@ void test("You hold the floor", async (t) => {
 // because a relationship and a channel do not survive being read as a list of
 // toggle names.
 void test("The glyphs carry it with participants, arrows, and output marks; the accessib...", async (t) => {
-  // doctest:L96
   t.check(
     [
       voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false }),
@@ -96,14 +92,12 @@ void test("The glyphs carry it with participants, arrows, and output marks; the 
 // so it appears only from `sm:` up. Below that the same fact is a pulse, and the
 // accessible name says it at every width.
 void test("The word is worth about 70px, which at phone width is most of the place label...", async (t) => {
-  // doctest:L112
   const face = renderFace({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false });
   t.check(face, "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"false\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg><span aria-hidden=\"true\" class=\"sm:hidden w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse\"></span><span class=\"hidden sm:inline text-xs opacity-80\">transcribing…</span></span>");
 
   const idle = renderFace({ muted: false, narrationEnabled: false, hqInFlight: false, diarizationEnabled: false });
   t.check(idle, "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"false\" data-voice-narration=\"false\" data-voice-diarization=\"false\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><path d=\"M10 5h6l-2-2M16 11h-6l2 2\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M31.5 6a3 3 0 0 1 0 4M35 3.5a6.5 6.5 0 0 1 0 9\"></path></svg></span>");
 
-  // doctest:L127
   t.check(voiceChipLabel({ muted: false, narrationEnabled: false, hqInFlight: true, diarizationEnabled: false }), "Voice — taking turns, answers aloud, transcribing");
 });
 
@@ -112,7 +106,6 @@ void test("The word is worth about 70px, which at phone width is most of the pla
 // Every dictated message gets the HQ pass (docs/plans/hq-always.md), so the
 // chip shows speaker labels exactly when the box's HQ service diarizes.
 void test("Every dictated message gets the HQ pass (docs/plans/hq-always.md), so the chi...", async (t) => {
-  // doctest:L137
   const services: Parameters<typeof voiceChipDiarizationEnabled>[0][] = ["voxtral-diarized", "mai-diarized", "voxtral", "mai", "whisper", "whisper-llm", "whisper-llm-mini", null];
   t.check(services.map(voiceChipDiarizationEnabled), [
     true,
@@ -129,7 +122,6 @@ void test("Every dictated message gets the HQ pass (docs/plans/hq-always.md), so
 // The group works with both arrow states and both channels. Each face still has
 // exactly one bot and one SVG; only the human head count changes.
 void test("The group works with both arrow states and both channels.", async (t) => {
-  // doctest:L146
   const combinations = [false, true].flatMap(diarizationEnabled => [false, true].flatMap(narrationEnabled => [false, true].map(muted => {
     return renderFace({ muted, narrationEnabled, diarizationEnabled, hqInFlight: false });
   })));
@@ -144,6 +136,5 @@ void test("The group works with both arrow states and both channels.", async (t)
     "<span class=\"inline-flex items-center gap-1.5\" data-voice-muted=\"true\" data-voice-narration=\"true\" data-voice-diarization=\"true\"><svg class=\"w-[51px] h-5 shrink-0\" viewBox=\"0 0 41 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.3\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><g transform=\"translate(0 1)\"><g transform=\"translate(0 2) scale(.7)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g><g transform=\"translate(4.5 -1) scale(.7)\"><circle cx=\"4.5\" cy=\"5\" r=\"2.2\"></circle><path d=\"M1 13v-1.5a3.5 3.5 0 0 1 7 0V13\"></path></g></g><path d=\"M10 8h6m-2.5-2.5 2.5 2.5-2.5 2.5\"></path><g transform=\"translate(19 1)\"><path d=\"M4.5 3V1.5M3 1.5h3\"></path><rect x=\".8\" y=\"4\" width=\"7.4\" height=\"8\" rx=\"1.5\"></rect><path d=\"M3 9.8h3\"></path><circle cx=\"3\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"6\" cy=\"7\" r=\".65\" fill=\"currentColor\" stroke=\"none\"></circle></g><path d=\"M30 4h10M30 8h7M30 12h10\"></path></svg></span>",
   ]);
 
-  // doctest:L159
   t.check(voiceChipLabel({ muted: true, narrationEnabled: false, hqInFlight: false, diarizationEnabled: true }), "Voice — taking turns, answers in text, speaker labels on");
 });

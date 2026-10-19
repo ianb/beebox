@@ -9,7 +9,7 @@
 // cursor or holds it. See docs/implemented-plans/notifications.md (Track D).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execSync } from "node:child_process";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import { runOnWakeupScripts } from "../../../src/cli/tick-utils.js";
@@ -60,21 +60,18 @@ void test("A deferral is recorded with its reason, and `once` waits for success"
       t.error(error);
     }
   });
-  // doctest:L57
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/watch.scheduled-script.card", WATCH);
   box.commitAll("setup");
   await box.write("_tmp/reason", "no-change");
   t.check(await tick(box), "skipped | deferred no-change failures=0 | card kept");
 
-  // doctest:L64
   t.check((await loadScriptState(box.root, "watch")).lastError, "no-change: nothing to do");
 
   // `bbx health` shows a schedule that found nothing to do as ok, with the
   // reason. A run held back (budget, an unavailable judge, a missing key) shows
   // as waiting instead.
 
-  // doctest:L73
   const [task] = (await loadScheduleHealth(box.root, new Date())).tasks;
   t.check(`${task?.status}: ${task?.deferReason} (${task?.reason})`, "ok: no-change (nothing to do)");
 
@@ -84,16 +81,13 @@ void test("A deferral is recorded with its reason, and `once` waits for success"
   // the budget, an unavailable judge, or a missing key holds it, so the next run
   // sees the same items.
 
-  // doctest:L85
   await box.write("_content/notes/a.doc.card", "---\ntitle: A\n---\n");
   box.commitAll("add a");
   await box.write("_tmp/reason", "no-pass");
   t.check(await tick(box), "skipped | deferred no-pass failures=0 | card kept");
 
-  // doctest:L91
   t.check((await loadScriptState(box.root, "watch")).lastCommit, head(box));
 
-  // doctest:L94
   const held = head(box);
   await box.write("_content/notes/b.doc.card", "---\ntitle: B\n---\n");
   box.commitAll("add b");
@@ -102,16 +96,13 @@ void test("A deferral is recorded with its reason, and `once` waits for success"
 
   // ## Exit 75 without a marker is a failure
 
-  // doctest:L105
   execSync("rm _tmp/reason && touch _tmp/bare75", { cwd: box.root });
   t.check(await tick(box), "error | failure null failures=1 | card kept");
 
-  // doctest:L109
   t.check((await loadScriptState(box.root, "watch")).lastCommit, held);
 
   // ## Success records `success`, advances the cursor, and deletes the card
 
-  // doctest:L116
   execSync("rm _tmp/bare75", { cwd: box.root });
   t.check(await tick(box), "ran | success null failures=0 | card deleted");
 });
@@ -130,7 +121,6 @@ void test("The first run's cursor is HEAD, so nothing has changed:", async (t) =
       t.error(error);
     }
   });
-  // doctest:L133
   const box = await makeTmpBox({ git: true });
   await box.write("_config/judgments/worth.judgment.card", `---
 questions:
@@ -151,7 +141,6 @@ runs: bbx changes --match '_content/inbox/**' --cat --or-skip | bbx judge _confi
   box.commitAll("setup");
   t.check(await tick(box), "skipped | deferred no-change failures=0 | card kept");
 
-  // doctest:L154
   t.check(await box.read(".beebox/jev-debug.log").then(() => "judge called", () => "no judge call"), "no judge call");
 });
 
@@ -170,7 +159,6 @@ void test("runs:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L171
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/look.procedure.card", `---
 name: look
@@ -204,7 +192,6 @@ runs: bbx procedure run look
   box.commitAll("setup");
   t.check(await tick(box), "skipped | deferred no-change failures=0 | card kept");
 
-  // doctest:L205
   await box.write("_config/schedules/watch.scheduled-script.card", `---
 cron: "0 0 1 1 *"
 runs: bbx procedure run bare
@@ -213,7 +200,6 @@ runs: bbx procedure run bare
   box.commitAll("bare");
   t.check(await tick(box), "skipped | deferred no-change failures=0 | card kept");
 
-  // doctest:L214
   t.check(await box.read("_tmp/ran").then(() => "a step ran", () => "no step ran"), "no step ran");
 });
 
@@ -229,7 +215,6 @@ void test("bbx wakeup's on-wakeup pass records runs through the same path as the
       t.error(error);
     }
   });
-  // doctest:L228
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/done.scheduled-script.card", "---\non-wakeup: true\nonce: true\nruns: \"true\"\n---\n");
   await box.write("_config/schedules/waits.scheduled-script.card", `---
@@ -246,13 +231,10 @@ runs: printf '{"reason":"no-change"}' > "$BBX_DEFER_FILE"; exit 75
   console.log = origLog;
   t.check(ran, 1);
 
-  // doctest:L245
   t.check((await box.list("_config/schedules")).split("\n").filter((p) => p.endsWith(".card")).join("\n"), "_config/schedules/waits.scheduled-script.card");
 
-  // doctest:L248
   const waits = await loadScriptState(box.root, "waits");
   t.check(`${waits.lastResult} ${waits.lastDeferReason} ${waits.consecutiveFailures}`, "deferred no-change 0");
 
-  // doctest:L252
   t.check(execSync("git log -1 --format=%s && git status --porcelain", { cwd: box.root }).toString().trim(), "Wakeup: remove one-shot done");
 });

@@ -8,7 +8,7 @@
 // `docs/implemented-plans/standard-card-fields.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { cardSchema, body } from "../../src/exports/cards.js";
 import { reservedFieldProblems } from "../../src/cards/reserved-fields.js";
@@ -36,10 +36,8 @@ const found = cardSchemas.list.flatMap((s) => reservedFieldProblems(s).map((p) =
 
 // ## Built-in schemas declare no reserved name outside the pending list
 void test("Built-in schemas declare no reserved name outside the pending list", async (t) => {
-  // doctest:L40
   t.check(found.filter((name) => !PENDING_REMOVAL.has(name)), []);
 
-  // doctest:L43
   t.check([...PENDING_REMOVAL].filter((name) => !found.includes(name)), []);
 });
 
@@ -70,7 +68,6 @@ void test("The message says what to write instead.", async (t) => {
     },
   ]);
 
-
 });
 
 // ## Declaring `title` as required is allowed, and the title leads the frontmatter
@@ -79,13 +76,11 @@ void test("The message says what to write instead.", async (t) => {
 // type fails to load without a title. Parse order is serialization order, so
 // `title` comes first wherever the type declares it.
 void test("The one allowed redeclaration makes the global title required.", async (t) => {
-  // doctest:L77
   const note = cardSchema("note-fixture", {
     fields: { mood: z.string().optional(), title: z.string(), body: body(z.string()) },
   });
   t.check(reservedFieldProblems(note), []);
 
-  // doctest:L83
   // Anything other than a required string is still shadowing.
   const shadowed = { field: "title", message: "`title` is a global field every card already has; redeclare it only to require it (`title: z.string()`)" };
   const titleAs = (decl: z.ZodType) => reservedFieldProblems(cardSchema("t", { fields: { title: decl } }));
@@ -97,13 +92,10 @@ void test("The one allowed redeclaration makes the global title required.", asyn
     [shadowed],
   ]);
 
-  // doctest:L88
   const schemas = new Map([["note-fixture", note]]);
 
-  // doctest:L90
   t.check(loads("---\nmood: calm\n---\nBody.\n", schemas), "rejected");
 
-  // doctest:L93
   const card = parseCardText("---\nmood: calm\ntitle: Tuesday\n---\nBody.\n", { source: "a.note-fixture.card", schemas });
   t.check(serializeCardText({ schema: note, fields: card.fields }), `---
 title: Tuesday
@@ -118,12 +110,10 @@ Body.
 // `cardTitle` is what both the file summary and the search index use. A person
 // is titled by its `name`, unless the card declares its own `title:`.
 void test("cardTitle is what both the file summary and the search index use.", async (t) => {
-  // doctest:L104
   const person = cardSchemas.list.find((s) => s.type === "person");
   if (person === undefined) throw new Error("person schema missing");
   const input = { path: "people/Dana_Reyes.person.card", type: "person", fields: { type: "person", name: "Dana Reyes", body: "" } };
   t.check(cardTitle(input, person), "Dana Reyes");
 
-  // doctest:L110
   t.check(cardTitle({ ...input, fields: { ...input.fields, title: "Dana (neighbor)" } }, person), "Dana (neighbor)");
 });

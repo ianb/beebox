@@ -8,7 +8,7 @@
 // platform uses. Tests inject a fake so no subprocess spawns.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { runHealthChecks, type HealthCheck } from "../../../../../../src/webapp/trpc/routers/health/router.js";
 import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../../../../src/services/claude-cli.js";
 import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
@@ -24,7 +24,6 @@ void test("Logged in → the check passes", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L21
   const box = await makeTmpBox({ git: true });
   const claudeCli = createFakeClaudeCli({ loggedIn: true });
   const checks = await runHealthChecks(box.root, { claudeCli });
@@ -45,7 +44,6 @@ void test("Logged out → the check fails with an actionable message (on every p
       t.error(error);
     }
   });
-  // doctest:L35
   const box = await makeTmpBox({ git: true });
   const claudeCli = createFakeClaudeCli({ loggedIn: false });
   const checks = await runHealthChecks(box.root, { claudeCli });
@@ -71,7 +69,6 @@ void test("claude auth status intermittently comes back empty on a machine that 
       t.error(error);
     }
   });
-  // doctest:L54
   const box = await makeTmpBox({ git: true });
   const claudeCli = {
     authStatus: async () => ({ [AUTH_PROBE_INCONCLUSIVE]: true, raw: "" }),

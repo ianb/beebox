@@ -8,8 +8,8 @@
 // `docs/implemented-plans/tailscale-expose-and-protect.md` Track B.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import {
   parseStatusJson,
   parseServeConfig,
@@ -60,7 +60,7 @@ const authed200 = {
 
 // `runTailscaleStatus` receives an already-resolved concrete target (the CLI
 // turns `--target`/auto-discovery into a `{ port }` via `resolveTargetOrDiscover`
-// — see tailscale-discovery.doctest.md). This helper mirrors that boundary.
+// — see test/services/tailscale-discovery.test.ts). This helper mirrors that boundary.
 // Deps with a correct serve config and the given `/auth/me` probe, or with only
 // a status payload.
 const withProbe = (probe: ProbeResult) => createFakeTailscaleDeps({ status: runningStatus, serve: correctServe, probe });
@@ -104,7 +104,6 @@ const report = (deps: TailscaleDeps) => runTailscaleStatus(deps, { target: { por
 //   unprotected box. A reachable answer that is not a beebox auth shape is
 //   `posture-ambiguous`. None of these is `ready`.
 void test("Each input below scripts the fake tailscale CLI and lands in exactly one stat...", async (t) => {
-  // doctest:L107
   const rows: Array<[string, TailscaleDeps]> = [
     ["status exits nonzero", createFakeTailscaleDeps({ status: "", statusCode: 1 })],
     ["serve exits nonzero", createFakeTailscaleDeps({ status: runningStatus, serve: "", serveCode: 1 })],
@@ -121,7 +120,6 @@ void test("Each input below scripts the fake tailscale CLI and lands in exactly 
   ];
   const reports = Object.fromEntries(await Promise.all(rows.map(async ([label, deps]) => [label, await report(deps)] as const)));
 
-  // doctest:L140
   t.check(reports, {
     "status exits nonzero": {
       state: "cli-error",
@@ -307,7 +305,6 @@ void test("Serve and probe states", async (t) => {
 // header), status is `ready` with `guarded: true` — it proved the gate over the
 // real Serve path, not `/auth/me` (the router has none).
 void test("Some states also carry fields a caller acts on.", async (t) => {
-  // doctest:L179
   const funnelServe = { ...correctServe, AllowFunnel: { "box.tail1234.ts.net:443": true } };
   const rows: TailscaleDeps[] = [
     createFakeTailscaleDeps({ binaryPresent: false }),
@@ -318,7 +315,6 @@ void test("Some states also carry fields a caller acts on.", async (t) => {
   ];
   const reports = await Promise.all(rows.map((deps) => report(deps)));
 
-  // doctest:L193
   t.check(reports, [
     {
       state: "binary-absent",
@@ -367,7 +363,6 @@ void test("Some states also carry fields a caller acts on.", async (t) => {
 // `Self` key (an always-emitted status member) — while a new *field* the machine
 // doesn't read passes through (only a renamed/absent required field is drift):
 void test("The zod schema rejects the drifted shape at the boundary — including a missin...", async (t) => {
-  // doctest:L209
   t.check([
     parseStatusJson(JSON.stringify({ Self: {} })),
     parseStatusJson(JSON.stringify({ BackendState: "Running", CertDomains: null })),
@@ -396,7 +391,6 @@ void test("The zod schema rejects the drifted shape at the boundary — includin
 // `toBackendState` maps only the seven known `ipn.State` values; everything else
 // is `null`:
 void test("toBackendState maps only the seven known ipn.State values; everything else is...", async (t) => {
-  // doctest:L225
   t.check([toBackendState("Running"), toBackendState("InUseOtherUser"), toBackendState("Nonsense")], [
     "Running",
     "InUseOtherUser",
@@ -406,7 +400,6 @@ void test("toBackendState maps only the seven known ipn.State values; everything
 
 // `hasFunnelForTarget` checks both the top level and foreground configs:
 void test("hasFunnelForTarget checks both the top level and foreground configs:", async (t) => {
-  // doctest:L236
   t.check(
     [
       hasFunnelForTarget({ AllowFunnel: { "h:443": true } }, "h:443"),
@@ -424,7 +417,6 @@ void test("hasFunnelForTarget checks both the top level and foreground configs:"
 // `loopbackProxyPort` accepts a bare port or a loopback URL, and rejects a
 // non-loopback target (which must not read as a match):
 void test("loopbackProxyPort accepts a bare port or a loopback URL, and rejects a non-lo...", async (t) => {
-  // doctest:L252
   t.check(
     [
       loopbackProxyPort("3210"),
@@ -444,7 +436,6 @@ void test("loopbackProxyPort accepts a bare port or a loopback URL, and rejects 
 // An empty serve config parses to `{}` (Tailscale prints `{}` or `null` when
 // serve is unconfigured):
 void test("An empty serve config parses to {} (Tailscale prints {} or null when serve is...", async (t) => {
-  // doctest:L270
   t.check([parseServeConfig(""), parseServeConfig("null"), parseServeConfig("{}")], [
     {
       ok: true,
@@ -466,7 +457,6 @@ void test("An empty serve config parses to {} (Tailscale prints {} or null when 
 // `reportToJson` returns the structured report agents consume: `ok`, `state`, and
 // the per-state fields.
 void test("reportToJson returns the structured report agents consume:", async (t) => {
-  // doctest:L284
   t.check(reportToJson(await report(withProbe(authed200))), {
     state: "ready",
     ok: true,
@@ -483,7 +473,6 @@ void test("reportToJson returns the structured report agents consume:", async (t
 // Only `ready` gets the `✓` glyph. The guarded-router summary names the router
 // and the anonymous-denied probe.
 void test("Only ready gets the ✓ glyph.", async (t) => {
-  // doctest:L303
   t.checkText(formatReportHuman(await report(createFakeTailscaleDeps({ binaryPresent: false }))), `✗ tailscale: binary-absent
   the \`tailscale\` CLI is not on PATH
   next: Install Tailscale for this platform, then run \`tailscale up\`.
@@ -511,7 +500,6 @@ void test("Only ready gets the ✓ glyph.", async (t) => {
 // router: it falls through to the `/auth/me` posture read (here enforced), as a
 // normal bbx serve/hub with no router shape does.
 void test("classifyTargetPosture reads the loopback /router/status FIRST.", async (t) => {
-  // doctest:L331
   const cases: Array<[string, TailscaleDeps]> = [
     ["guarded router", createFakeTailscaleDeps({ routerProbe: guardedRouterProbe })],
     ["ungated router", createFakeTailscaleDeps({ routerProbe: ungatedRouterProbe })],
@@ -525,7 +513,6 @@ void test("classifyTargetPosture reads the loopback /router/status FIRST.", asyn
   const ungated = await classifyTargetPosture(createFakeTailscaleDeps({ routerProbe: ungatedRouterProbe }), 3210);
   if (ungated.kind === "enforced" || ungated.kind === "router-guarded") throw new Error(`expected a refusal, got ${ungated.kind}`);
 
-  // doctest:L348
   t.check(postures, {
     "guarded router": {
       kind: "router-guarded",
@@ -553,7 +540,6 @@ void test("classifyTargetPosture reads the loopback /router/status FIRST.", asyn
 // the schema allows it) still counts as an exposed HTTPS mapping and falls back
 // to "first host".
 void test("Pure helper behind the admin.tailscaleBaseUrl tRPC query — turns a parsed ser...", async (t) => {
-  // doctest:L368
   const inputs: Array<[string, ServeConfigJson]> = [
     ["no Web section", {}],
     ["single HTTPS host", correctServe],
@@ -566,7 +552,6 @@ void test("Pure helper behind the admin.tailscaleBaseUrl tRPC query — turns a 
     ["no Handlers", { Web: { "box.tail1234.ts.net:443": {} } }],
   ];
 
-  // doctest:L380
   t.check(Object.fromEntries(inputs.map(([label, serve]) => [label, deriveTailscaleBaseUrl(serve)])), {
     "no Web section": null,
     "single HTTPS host": "https://box.tail1234.ts.net",

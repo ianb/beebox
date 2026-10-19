@@ -3,7 +3,7 @@
 // `buildCspPolicy` is the single source of truth for the webapp's Content-Security-Policy, shared by the production Fastify hook and the Vite dev server so the two can't drift. Prod is strict; dev relaxes `script-src`/`style-src` for Vite's inline HMR. Every directive's origins are traced to a real browser connection in the plan.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   buildCspPolicy,
   reportingEndpointsHeader,
@@ -98,7 +98,6 @@ void test("The report directives must be present (without them Report-Only has n
 //
 // `report-to` only works if the response also carries a `Reporting-Endpoints` header naming the same endpoint and path:
 void test("report-to only works if the response also carries a Reporting-Endpoints heade...", async (t) => {
-  // doctest:L72
   t.check(
     reportingEndpointsHeader({ reportPath: PROD_CSP_REPORT_PATH }),
     'csp-endpoint="/api/csp-report"',

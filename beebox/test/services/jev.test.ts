@@ -5,7 +5,7 @@
 // These tests use synthetic data and never contact OpenRouter.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseJevResponse, createJevService, serializeJevRequest } from "../../src/services/jev.js";
 import { parseJudgeResponse, serializeJudgeRequest, type JudgeQuestion } from "../../src/services/jev-judge.js";
 import { boundRoutingContexts } from "../../src/core/chat/routing/quick-chat-submit/catalog.js";
@@ -23,47 +23,35 @@ function response(probabilities: unknown, confidence?: unknown) {
 // A close pair stays close. The service does not impose the application's
 // preference for an existing session. Rounded distributions remain unchanged.
 void test("A close pair stays close.", async (t) => {
-  // doctest:L26
   t.check(parseJevResponse(response({ garden: 0.48, weekend: 0.42, new: 0.1 }), keys).probabilities, {
     garden: 0.48,
     weekend: 0.42,
     new: 0.1,
   });
 
-  // doctest:L29
   t.check(parseJevResponse(response({ garden: 0.333, weekend: 0.333, new: 0.333 }), keys).confidence, 0.8);
 
-  // doctest:L32
   t.check(parseJevResponse(response({ garden: 0.33, weekend: 0.33, new: 0.33 }), keys).confidence, 0.8);
 
-  // doctest:L35
   await t.checkThrows(async () => (parseJevResponse(response({ garden: 1 }), keys)), "JevError");
 
-  // doctest:L38
   await t.checkThrows(async () => (parseJevResponse(response({ garden: 0.5, weekend: 0.5, unknown: 0 }), keys)), "JevError");
 
-  // doctest:L41
   await t.checkThrows(async () => (parseJevResponse(response({ garden: 0.5, weekend: 0.2, new: 0.1 }), keys)), "JevError");
 
-  // doctest:L44
   await t.checkThrows(async () => (parseJevResponse(response({ garden: NaN, weekend: 0, new: 0 }), keys)), "JevError");
 
-  // doctest:L47
   await t.checkThrows(async () => (parseJevResponse(response({ garden: 1.1, weekend: -0.1, new: 0 }), keys)), "JevError");
 
-  // doctest:L50
   await t.checkThrows(async () => (parseJevResponse(response({ garden: 1, weekend: 0, new: 0 }, Infinity), keys)), "JevError");
 
-  // doctest:L53
   await t.checkThrows(async () => (parseJevResponse(null, keys)), "JevError");
 
-  // doctest:L56
   await t.checkThrows(async () => (parseJevResponse({ model: "test", answers: { destination: { type: "noul", confidence: 1, probabilities: { garden: 1, weekend: 0, new: 0 } } } }, keys)), "JevError");
 });
 
 // Oversized catalogs fail before any request. No candidates are silently removed.
 void test("Oversized catalogs fail before any request.", async (t) => {
-  // doctest:L63
   const bounded = createJevService({ apiKey: "unused-test-key" });
   await t.checkThrows(async () => (await bounded.decide({ state: { candidates: "x".repeat(80_001) }, criteria: { existing: "Continue", new: "New" } })), "JevError");
 });
@@ -75,7 +63,6 @@ void test("Oversized catalogs fail before any request.", async (t) => {
 // destinations. These fixtures use the route's criterion descriptions and a
 // maximum-length captured message containing backslashes and newlines.
 void test("The budget includes the captured message, criterion descriptions, fixed promp...", async (t) => {
-  // doctest:L76
   const escapedMessage = "garden\\\n".repeat(1500);
   function budgetedRequest(count: number) {
     const candidates: RoutingCandidate[] = Array.from({ length: count }, (_, index) => ({
@@ -113,7 +100,6 @@ void test("The budget includes the captured message, criterion descriptions, fix
   ],
   );
 
-  // doctest:L98
   await t.checkThrows(async () => (boundRoutingContexts([{ id: "c0", label: "Metadata that cannot fit", target: { kind: "new-session", contextDir: "" } }], 20)), "RoutingCatalogError: Chat routing rules and destination details exceed the request budget. Shorten the rubric, or copy your text into a chat using Chats.");
 });
 
@@ -123,7 +109,6 @@ void test("The budget includes the captured message, criterion descriptions, fix
 // instructions are the situation, then the shared instructions, then its own;
 // `criteria` keeps the wire shape of its type.
 void test("judge sends several named questions over one state.", async (t) => {
-  // doctest:L109
   const questions = {
     trip: { type: "noul", instructions: "Only school mail counts.", criteria: { true: "The school wrote about the field trip.", false: "It did not." } },
     kind: { type: "choice", instructions: ["Pick the sender type."], criteria: { school: "The school", shop: "A shop" } },
@@ -148,7 +133,6 @@ void test("judge sends several named questions over one state.", async (t) => {
     },
   });
 
-  // doctest:L123
   t.check(request.questions.kind, {
     type: "choice",
     instructions: [
@@ -162,7 +146,6 @@ void test("judge sends several named questions over one state.", async (t) => {
     },
   });
 
-  // doctest:L126
   t.check(request.questions.urgency.criteria, [
     "No action",
     "This month",
@@ -173,7 +156,6 @@ void test("judge sends several named questions over one state.", async (t) => {
   // extra one, an option that was not offered, or a distribution that does not sum
   // to one is a `JevError`, never a partial answer.
 
-  // doctest:L135
   const good = {
     model: "typesafe/jev-1.13",
     answers: {
@@ -208,21 +190,15 @@ void test("judge sends several named questions over one state.", async (t) => {
     },
   });
 
-  // doctest:L146
   await t.checkThrows(async () => (parseJudgeResponse({ ...good, answers: { trip: good.answers.trip, kind: good.answers.kind } }, questions)), "JevError: Jev response error: answers did not match the 3 requested questions");
 
-  // doctest:L149
   await t.checkThrows(async () => (parseJudgeResponse({ ...good, answers: { ...good.answers, trip: { type: "noul", noul: 1.2 } } }, questions)), "JevError: Jev response error: question \"trip\" has an invalid noul probability");
 
-  // doctest:L152
   await t.checkThrows(async () => (parseJudgeResponse({ ...good, answers: { ...good.answers, kind: { ...good.answers.kind, choice: "bank" } } }, questions)), "JevError: Jev response error: question \"kind\" chose an option it was not offered");
 
-  // doctest:L155
   await t.checkThrows(async () => (parseJudgeResponse({ ...good, answers: { ...good.answers, kind: { ...good.answers.kind, probabilities: { school: 0.5, shop: 0.2 } } } }, questions)), "JevError: Jev response error: question \"kind\" probabilities summed to 0.7");
 
-  // doctest:L158
   await t.checkThrows(async () => (parseJudgeResponse({ ...good, answers: { ...good.answers, urgency: { ...good.answers.urgency, probabilities: { "0": 0.5, "1": 0.5 } } } }, questions)), "JevError: Jev response error: question \"urgency\" distribution keys did not match its 3 options");
 
-  // doctest:L161
   await t.checkThrows(async () => (parseJudgeResponse({ ...good, answers: { ...good.answers, trip: { type: "choice", choice: "school" } } }, questions)), "JevError: Jev response error: question \"trip\" answer is missing or not a noul");
 });

@@ -5,7 +5,7 @@
 // remain absent even though execa normally extends the parent's environment.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { once } from "node:events";
 import { defaultSpawnChild } from "../../../src/hub/supervisor/child-spawn.js";
 import { buildChildEnv } from "../../../src/hub/supervisor/child-env.js";
@@ -30,7 +30,6 @@ void test("line 13", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L14
   const previousSecret = process.env.BBX_SESSION_SECRET;
   process.env.BBX_SESSION_SECRET = "hub-only-test-sentinel";
   const child = defaultSpawnChild({
@@ -54,7 +53,6 @@ void test("line 13", async (t) => {
     leaked: false,
   });
 
-  // doctest:L35
   child.send({ type: "reload-now" });
   t.check((await child).stdout, "acknowledged");
 });
@@ -67,7 +65,6 @@ void test("line 60", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L61
   let responseCode = 503;
   const server = createServer((_request, response) => {
     response.writeHead(responseCode).end();
@@ -76,7 +73,6 @@ void test("line 60", async (t) => {
   await once(server, "listening");
   await t.checkThrows(async () => (await waitForHttp({ port: portOf(server), reqPath: "/healthz", timeoutMs: 50, label: "fixture" })), "HttpReadinessTimeoutError");
 
-  // doctest:L70
   responseCode = 200;
   await waitForHttp({ port: portOf(server), reqPath: "/healthz", timeoutMs: 2000, label: "fixture" });
   t.check(responseCode, 200);

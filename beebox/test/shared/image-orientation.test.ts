@@ -7,7 +7,7 @@
 // returns {@link ORIENTATION_NORMAL} (1) for anything with no orientation to honor.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   readJpegOrientation,
   isOrientationNormalized,
@@ -48,14 +48,12 @@ function exifJpeg(orientation: number, opts?: { endian?: "II" | "MM" }) {
 //
 // Each of the eight defined EXIF orientations reads back exactly.
 void test("Each of the eight defined EXIF orientations reads back exactly.", async (t) => {
-  // doctest:L52
   t.check([1, 2, 3, 4, 5, 6, 7, 8].map((o) => readJpegOrientation(exifJpeg(o))).join(","), "1,2,3,4,5,6,7,8");
 });
 
 // Big-endian ("MM") TIFF blocks parse identically — the phone that shot the photo
 // picks the byte order, so both must work.
 void test("Big-endian (\"MM\") TIFF blocks parse identically — the phone that shot the pho...", async (t) => {
-  // doctest:L60
   t.check([1, 2, 3, 4, 5, 6, 7, 8].map((o) => readJpegOrientation(exifJpeg(o, { endian: "MM" }))).join(","), "1,2,3,4,5,6,7,8");
 });
 
@@ -64,10 +62,8 @@ void test("Big-endian (\"MM\") TIFF blocks parse identically — the phone that 
 // Orientation 1 is normalized; a rotate/mirror value (here 6, "rotate 90° CW") is
 // not — the case that renders a portrait photo sideways downstream.
 void test("Orientation 1 is normalized; a rotate/mirror value (here 6, \"rotate 90° CW\")...", async (t) => {
-  // doctest:L70
   t.check(isOrientationNormalized(exifJpeg(1)), true);
 
-  // doctest:L73
   t.check(isOrientationNormalized(exifJpeg(6)), false);
 });
 
@@ -76,27 +72,22 @@ void test("Orientation 1 is normalized; a rotate/mirror value (here 6, \"rotate 
 // A JPEG with no EXIF segment, a non-JPEG (here a PNG signature), and empty bytes
 // all mean "nothing to correct" — the reader never throws on hostile input.
 void test("A JPEG with no EXIF segment, a non-JPEG (here a PNG signature), and empty byt...", async (t) => {
-  // doctest:L83
   t.check(
     // SOI + EOI only, no APP1.
     readJpegOrientation(new Uint8Array([0xff, 0xd8, 0xff, 0xd9])),
     1,
   );
 
-  // doctest:L87
   t.check(readJpegOrientation(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])), 1);
 
-  // doctest:L90
   t.check(readJpegOrientation(new Uint8Array([])), 1);
 });
 
 // An out-of-range orientation value (0 or 9 — not a defined EXIF orientation) is
 // ignored, degrading to normal rather than being trusted.
 void test("An out-of-range orientation value (0 or 9 — not a defined EXIF orientation) i...", async (t) => {
-  // doctest:L98
   t.check(readJpegOrientation(exifJpeg(0)), 1);
 
-  // doctest:L101
   t.check(readJpegOrientation(exifJpeg(9)), 1);
 });
 
@@ -105,14 +96,12 @@ void test("An out-of-range orientation value (0 or 9 — not a defined EXIF orie
 // An APP1 segment that isn't the `Exif\0\0` flavor (e.g. XMP) is skipped, and a
 // segment whose declared length runs past the buffer is handled without throwing.
 void test("An APP1 segment that isn't the Exif\\0\\0 flavor (e.g.", async (t) => {
-  // doctest:L111
   t.check(
     // APP1 present but payload is "http" (XMP-like), not "Exif\0\0".
     readJpegOrientation(new Uint8Array([0xff, 0xd8, 0xff, 0xe1, 0x00, 0x08, 0x68, 0x74, 0x74, 0x70, 0xff, 0xd9])),
     1,
   );
 
-  // doctest:L115
   t.check(
     // APP1 claims length 0x0022 but the buffer ends immediately.
     readJpegOrientation(new Uint8Array([0xff, 0xd8, 0xff, 0xe1, 0x00, 0x22])),

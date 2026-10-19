@@ -6,6 +6,8 @@ issues: []
 ---
 # Interface card consolidation — removal report
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The [consolidation plan](interface-cards-consolidation.md) replaces separate page and
 preview presentation with the existing card workspace. Rollout and manual
 acceptance remain open; this report measures local implementation.

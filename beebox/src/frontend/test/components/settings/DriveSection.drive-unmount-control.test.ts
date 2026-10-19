@@ -11,8 +11,8 @@
 // boxholder should read before answering.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -44,14 +44,11 @@ function render(state: { confirming: boolean; busy?: boolean; pending?: boolean 
 // lowercasing it, so distinct Drive IDs stay distinct and every control remains
 // addressable.
 void test("Drive IDs are case-sensitive and may contain characters outside the control s...", async (t) => {
-  // doctest:L47
   const encoded = driveControlId("unmount", "Folder_A-1");
   t.check(encoded, "bbx-settings-drive-unmount-id-izxwyzdfojpucljr");
 
-  // doctest:L51
   t.check(isControlAddress(encoded), true);
 
-  // doctest:L54
   t.check(driveControlId("unmount", "Folder_A-1"), not(driveControlId("unmount", "folder_a-1")));
 });
 
@@ -65,7 +62,6 @@ const ID = "mzxwyzdfoiwtc";
 
 // ## Step one is a single button that commits to nothing
 void test("Step one is a single button that commits to nothing", async (t) => {
-  // doctest:L61
   t.check(
     render({ confirming: false }),
     `<button id="bbx-settings-drive-unmount-id-${ID}" type="button" class="${BUTTON_BASE} ${GHOST}"><span>Unmount</span></button>`,
@@ -74,7 +70,6 @@ void test("Step one is a single button that commits to nothing", async (t) => {
 
 // ## Step two says what will happen, and offers a way back
 void test("Step two says what will happen, and offers a way back", async (t) => {
-  // doctest:L72
   t.check(
     render({ confirming: true }),
     `${QUESTION}<button id="bbx-settings-drive-confirm-id-${ID}" type="button" class="${BUTTON_BASE} ${DANGER}"><span>Yes, unmount</span></button>`
@@ -87,7 +82,6 @@ void test("Step two says what will happen, and offers a way back", async (t) => 
   // confirm button reads as working and Cancel is unavailable — the request is
   // already out.
 
-  // doctest:L90
   t.check(
     render({ confirming: true, busy: true, pending: true }),
     `${QUESTION}<button id="bbx-settings-drive-confirm-id-${ID}" type="button" disabled="" aria-busy="true" class="${BUTTON_BASE} ${DANGER}">${SPINNER}<span>Unmounting…</span></button>`

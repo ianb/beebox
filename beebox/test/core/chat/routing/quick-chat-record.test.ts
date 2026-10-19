@@ -5,7 +5,7 @@
 // the text, the state, where it went or what to choose, and no probabilities.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readdir, utimes, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import assert from "node:assert/strict";
@@ -47,7 +47,6 @@ const legacy = { ...base, selected: newTripChat, delivery: { session: "new", exa
 // An uncertain thought offers its choices by candidate id, with the landmark as
 // detail for an existing chat. The probabilities stay in the record.
 void test("An uncertain thought offers its choices by candidate id, with the landmark as...", async (t) => {
-  // doctest:L51
   t.check(quickChatView(parseQuickChatRecord({ ...base, state: "needs-choice", reason: "uncertain", choices: ["c0", "c5", "c1"] }), NOW), {
     id: "11111111-1111-4111-8111-111111111111",
     message: "Remind me to renew my passport",
@@ -75,7 +74,6 @@ void test("An uncertain thought offers its choices by candidate id, with the lan
 // A `sending` record names its destination before delivery, and shows the last
 // failed attempt. A `sent` record says whether the chat was busy.
 void test("A sending record names its destination before delivery, and shows the last fa...", async (t) => {
-  // doctest:L67
   const { id: _sendingId, message: _sendingMessage, createdAt: _sendingCreated, ...sendingView } = quickChatView(parseQuickChatRecord(sending), NOW);
   t.check(sendingView, {
     state: "sending",
@@ -86,7 +84,6 @@ void test("A sending record names its destination before delivery, and shows the
     lastError: "Chat is not running",
   });
 
-  // doctest:L71
   const { id: _sentId, message: _sentMessage, createdAt: _sentCreated, ...sentView } = quickChatView(parseQuickChatRecord({ ...sending, state: "sent", lastError: undefined, queued: true, sentAt: "2026-10-06T11:59:02.000Z" }), NOW);
   t.check(sentView, {
     state: "sent",
@@ -97,7 +94,6 @@ void test("A sending record names its destination before delivery, and shows the
     queued: true,
   });
 
-  // doctest:L75
   t.check(quickChatView(parseQuickChatRecord({ ...base, state: "discarded", discardedAt: "2026-10-06T11:59:03.000Z" }), NOW).state, "discarded");
 });
 
@@ -105,7 +101,6 @@ void test("A sending record names its destination before delivery, and shows the
 // prevents a second copy is about to expire. The view stops offering Retry and
 // sends the person to the chat to check.
 void test("Past six days from the first delivery attempt, the message-id claim that prev...", async (t) => {
-  // doctest:L84
   const late = quickChatView(parseQuickChatRecord({ ...sending, deliveryStartedAt: "2026-09-30T11:00:00.000Z" }), NOW);
   t.check([late.expired, late.lastError], [
     true,
@@ -120,7 +115,6 @@ void test("Past six days from the first delivery attempt, the message-id claim t
 // receipt may or may not have been sent, so it reads as `sending`, with its
 // delivery window starting at creation.
 void test("quickChat.prepare wrote records with no state.", async (t) => {
-  // doctest:L97
   const receipted = parseQuickChatRecord({ ...legacy, receipt: { sessionId: "s-assigned", turnId: "t1", queued: true } });
   assert.ok(receipted.state === "sent");
   t.check([receipted.state, receipted.destination, receipted.queued, "sentAt" in receipted], [
@@ -133,7 +127,6 @@ void test("quickChat.prepare wrote records with no state.", async (t) => {
     false,
   ]);
 
-  // doctest:L102
   const unreceipted = parseQuickChatRecord(legacy);
   assert.ok(unreceipted.state === "sending");
   t.check([unreceipted.state, unreceipted.destination, unreceipted.deliveryStartedAt], [
@@ -148,7 +141,6 @@ void test("quickChat.prepare wrote records with no state.", async (t) => {
   // wrapper. Records written before the origin was kept, with or without a state,
   // were typed.
 
-  // doctest:L113
   const choice = { ...base, state: "needs-choice", reason: "uncertain", choices: ["c0"] };
   t.check([parseQuickChatRecord({ ...choice, origin: "voice" }).origin, parseQuickChatRecord(choice).origin, unreceipted.origin], [
     "voice",
@@ -159,7 +151,6 @@ void test("quickChat.prepare wrote records with no state.", async (t) => {
 
 // A record that matches neither shape is refused rather than guessed at.
 void test("A record that matches neither shape is refused rather than guessed at.", async (t) => {
-  // doctest:L121
   await t.checkThrows(async () => (parseQuickChatRecord({ ...base, state: "sending" })), "ZodError«*»");
 });
 
@@ -170,7 +161,6 @@ void test("A record that matches neither shape is refused rather than guessed at
 // recent chats stand in, in catalog order. A destination that has gone is never
 // offered again.
 void test("An uncertain thought offers the three most likely destinations and a new gene...", async (t) => {
-  // doctest:L133
   t.check(
     [
       quickChatChoiceIds({ candidates, probabilities: base.probabilities }),
@@ -222,7 +212,6 @@ void test("A record that still needs the person, or is still being delivered, li
       t.error(error);
     }
   });
-  // doctest:L150
   const box = await makeTmpBox();
   const record = parseQuickChatRecord({ ...base, state: "needs-choice", reason: "uncertain", choices: ["c0"] });
   await saveQuickChatRecord(box.root, record);
@@ -239,7 +228,6 @@ void test("A record that still needs the person, or is still being delivered, li
     ],
   ]);
 
-  // doctest:L160
   await saveQuickChatRecord(box.root, { ...sentRecord, sentAt: new Date(NOW).toISOString() });
   t.check([await files(), await listOpenQuickChatRecords(box.root), (await readQuickChatRecord(box.root, ID))?.state], [
     [
@@ -252,7 +240,6 @@ void test("A record that still needs the person, or is still being delivered, li
   // A crash after writing the finished record and before removing the open copy
   // leaves both. The finished one wins, and the open listing skips it.
 
-  // doctest:L169
   await mkdir(join(box.root, ".beebox/quick-chat/open"), { recursive: true });
   await writeFile(join(box.root, ".beebox/quick-chat/open", `${ID}.json`), JSON.stringify(sending));
   t.check([(await readQuickChatRecord(box.root, ID))?.state, await listOpenQuickChatRecords(box.root)], [
@@ -263,7 +250,6 @@ void test("A record that still needs the person, or is still being delivered, li
   // An old record without a receipt sits in the closed location. When a retry
   // writes it as `sending` again, the open copy is the current one.
 
-  // doctest:L179
   const OLD = "22222222-2222-4222-8222-222222222222";
   await writeFile(join(box.root, ".beebox/quick-chat", `${OLD}.json`), JSON.stringify({ ...legacy, id: OLD }));
   const oldRecord = await readQuickChatRecord(box.root, OLD);
@@ -276,7 +262,6 @@ void test("A record that still needs the person, or is still being delivered, li
   // the limit. A record sent two days ago is not recent even when its file was
   // touched later.
 
-  // doctest:L194
   const SENT_A = "33333333-3333-4333-8333-333333333333";
   const SENT_OLD = "44444444-4444-4444-8444-444444444444";
   await saveQuickChatRecord(box.root, { ...sentRecord, id: SENT_A, sentAt: new Date(NOW - 60_000).toISOString() });

@@ -6,7 +6,7 @@
 // it, so the two cannot disagree about which todo `line#2` means.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Markdoc, { type Node } from "@markdoc/markdoc";
 import { assignLocators, type TodoLocator } from "../../src/shared/todo-locators.js";
 
@@ -42,7 +42,6 @@ function locate(markdown: string, lineOffset: number): string {
 //
 // Each todo sits on its own line, so every locator omits `nth`.
 void test("Each todo sits on its own line, so every locator omits nth.", async (t) => {
-  // doctest:L45
   await t.checkText(
     locate([
       "{% todo %}First{% /todo %}",
@@ -62,7 +61,6 @@ void test("Each todo sits on its own line, so every locator omits nth.", async (
 // A line's identity is `path:line` until a second todo forces `#2`; a third
 // keeps counting rather than resetting.
 void test("A line's identity is path:line until a second todo forces #2; a third keeps c...", async (t) => {
-  // doctest:L64
   await t.checkText(locate("{% todo %}One{% /todo %} {% todo %}Two{% /todo %} {% todo %}Three{% /todo %}", 0), `1 "One"
 1#2 "Two"
 1#3 "Three"`);
@@ -74,7 +72,6 @@ void test("A line's identity is path:line until a second todo forces #2; a third
 // same amount — this is what lets a body todo's locator read as a file line
 // rather than a body-only one.
 void test("The frontmatter block's line count shifts every body-relative line by the sam...", async (t) => {
-  // doctest:L78
   t.check(locate("{% todo %}Shifted{% /todo %}", 4), "5 \"Shifted\"");
 });
 
@@ -83,7 +80,6 @@ void test("The frontmatter block's line count shifts every body-relative line by
 // A todo's own list item can nest a deeper list with its own todo; both are
 // just tags encountered walking the tree, numbered as they are met.
 void test("A todo's own list item can nest a deeper list with its own todo; both are jus...", async (t) => {
-  // doctest:L89
   await t.checkText(
     locate([
       "- {% todo %}Sell the piano{% /todo %}",

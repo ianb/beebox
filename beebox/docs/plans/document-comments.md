@@ -8,6 +8,8 @@ issues:
 
 # Document comments
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 A comment **capability** in the workstreams app: on any surface that carries
 `data-bbx-source` provenance tags, select text or click a block and leave a
 remark, typed or spoken. Comments are written to a machine-local store outside

@@ -8,6 +8,8 @@ discovered-by: Ian
 discovered-in: worktree-ts7 — the TypeScript 7 move kept these tools on the 6.0 API
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The [TypeScript 7 plan](../../beebox/docs/implemented-plans/typescript-7.md) moves every
 compile, typecheck and beebox runtime use of TypeScript to 7.0. Two users of
 the old JavaScript compiler API stay on the `typescript` name, which points at

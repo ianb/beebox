@@ -14,7 +14,7 @@
 // from the host user's `~/.claude`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildQueryOptions, type RunAgentOptions } from "../../../../src/core/agent/invoke/run.js";
 import { invariant } from "../../../../src/shared/invariant.js";
 
@@ -35,15 +35,12 @@ function settingsFor(extra: Partial<RunAgentOptions>) {
 // Opting out sets an empty `settingSources`; the default and an explicit `true`
 // load only the `project` source.
 void test("Opting out sets an empty settingSources; the default and an explicit true loa...", async (t) => {
-  // doctest:L39
   t.check(optionsFor({ loadBoxContext: false }).settingSources, []);
 
-  // doctest:L42
   t.check(optionsFor({}).settingSources, [
     "project",
   ]);
 
-  // doctest:L45
   t.check(optionsFor({ loadBoxContext: true }).settingSources, [
     "project",
   ]);
@@ -57,7 +54,6 @@ void test("Opting out sets an empty settingSources; the default and an explicit 
 // under the host's home directory includes `~/.claude/CLAUDE.md`; those files are
 // excluded by path.
 void test("The server's Claude login can carry claude.ai connectors (Gmail, Calendar, Dr...", async (t) => {
-  // doctest:L58
   t.check(optionsFor({}).settings, {
     disableClaudeAiConnectors: true,
     claudeMdExcludes: [
@@ -70,15 +66,13 @@ void test("The server's Claude login can carry claude.ai connectors (Gmail, Cale
     ],
   });
 
-  // doctest:L67
   t.check(settingsFor({ loadBoxContext: false }).disableClaudeAiConnectors, true);
 });
 
 // The same host-account built-ins a chat may not use (scheduling, push, the
-// account's projects and artifacts; `test/services/claude-chat.doctest.md` lists
+// account's projects and artifacts; `test/services/claude-chat.test.ts` lists
 // them) are off for agent runs too, including runs without box context.
 void test("The same host-account built-ins a chat may not use (scheduling, push, the acc...", async (t) => {
-  // doctest:L76
   t.check(optionsFor({ loadBoxContext: false }).disallowedTools, [
     "CronCreate",
     "CronDelete",

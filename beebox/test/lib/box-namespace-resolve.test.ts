@@ -15,7 +15,7 @@
 // differently (`docs/plans/display-path-guard.subplan.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { BoxNamespaceResult } from "../../src/lib/box-namespace-resolve.js";
 import { resolveBoxNamespacePath } from "../../src/lib/box-namespace-resolve.js";
 import { symlink, mkdir, rm } from "node:fs/promises";
@@ -47,7 +47,6 @@ function describe(result: BoxNamespaceResult): string {
 
 // An ordinary in-namespace path resolves normally:
 void test("An ordinary in-namespace path resolves normally:", async (t) => {
-  // doctest:L31
   t.check(resolveBoxNamespacePath("/box", "_content/inbox/x.doc.card"), {
     ok: true,
     resolved: "/box/_content/inbox/x.doc.card",
@@ -57,13 +56,10 @@ void test("An ordinary in-namespace path resolves normally:", async (t) => {
 
 // A path outside every underscore area is rejected:
 void test("A path outside every underscore area is rejected:", async (t) => {
-  // doctest:L38
   t.check(describe(resolveBoxNamespacePath("/box", "package.json")), "escaped");
 
-  // doctest:L41
   t.check(describe(resolveBoxNamespacePath("/box", "src/lib/paths/core.ts")), "escaped");
 
-  // doctest:L44
   t.check(describe(resolveBoxNamespacePath("/box", "node_modules/foo/index.js")), "escaped");
 });
 
@@ -71,28 +67,22 @@ void test("A path outside every underscore area is rejected:", async (t) => {
 // other out-of-vocabulary path — the loud, named error lives at the creation
 // surfaces; the template-updates mirror and nested `_tmp` stay legal:
 void test("A nested reserved area name (box-reserved-segments.ts) is refused like any ot...", async (t) => {
-  // doctest:L53
   t.check(describe(resolveBoxNamespacePath("/box", "_content/recipes/_config/x.card")), "escaped");
 
-  // doctest:L56
   t.check(describe(resolveBoxNamespacePath("/box", "_config/_template-updates/_content/briefing.md")), "_config/_template-updates/_content/briefing.md");
 
-  // doctest:L59
   t.check(describe(resolveBoxNamespacePath("/box", "_content/scratch/_tmp/x.txt")), "_content/scratch/_tmp/x.txt");
 });
 
 // The box root itself (empty relative path) is never in-namespace:
 void test("The box root itself (empty relative path) is never in-namespace:", async (t) => {
-  // doctest:L66
   t.check(describe(resolveBoxNamespacePath("/box", "")), "escaped");
 });
 
 // A genuine escape outside the box root entirely is rejected:
 void test("A genuine escape outside the box root entirely is rejected:", async (t) => {
-  // doctest:L73
   t.check(describe(resolveBoxNamespacePath("/box", "../outside.txt")), "escaped");
 
-  // doctest:L76
   t.check(describe(resolveBoxNamespacePath("/box", "../box-other/secret.txt")), "escaped");
 });
 
@@ -101,16 +91,12 @@ void test("A genuine escape outside the box root entirely is rejected:", async (
 // on `isInBoxNamespace` alone would pass every one of these (each starts with
 // `_content`); checking the RESOLVED path catches them all:
 void test("The bypass this fixes:", async (t) => {
-  // doctest:L86
   t.check(describe(resolveBoxNamespacePath("/box", "_content/../package.json")), "escaped");
 
-  // doctest:L89
   t.check(describe(resolveBoxNamespacePath("/box", "_content/./../src/x")), "escaped");
 
-  // doctest:L92
   t.check(describe(resolveBoxNamespacePath("/box", "_content/../../box-other/secret.txt")), "escaped");
 
-  // doctest:L95
   t.check(describe(resolveBoxNamespacePath("/box", "_content/foo/../../package.json")), "escaped");
 });
 
@@ -118,7 +104,6 @@ void test("The bypass this fixes:", async (t) => {
 // normalizing is still fine — only the resolved location matters, not whether
 // the raw string contained dots:
 void test("A traversal form that stays inside the SAME underscore area after normalizing...", async (t) => {
-  // doctest:L104
   t.check(resolveBoxNamespacePath("/box", "_content/inbox/../drafts/x.doc.card"), {
     ok: true,
     resolved: "/box/_content/drafts/x.doc.card",
@@ -134,10 +119,8 @@ void test("A traversal form that stays inside the SAME underscore area after nor
 // to 400, a tRPC procedure to `TRPCError({ code: "BAD_REQUEST" })`
 // (`docs/plans/display-path-guard.subplan.md`):
 void test("Config:box.json (the boxholder's CONVERSATION vocabulary — never a canonical...", async (t) => {
-  // doctest:L117
   t.check(describe(resolveBoxNamespacePath("/box", "Config:box.json")), "display-form: `Config:box.json` is the boxholder's display form; write `/_config/box.json`");
 
-  // doctest:L120
   t.check(describe(resolveBoxNamespacePath("/box", "Bookkeeping:jobs/x.job.card")), "display-form: `Bookkeeping:jobs/x.job.card` is the boxholder's display form; write `/_bookkeeping/jobs/x.job.card`");
 });
 
@@ -145,7 +128,6 @@ void test("Config:box.json (the boxholder's CONVERSATION vocabulary — never a 
 // displays bare) — it falls through to the ordinary escape check like any
 // other unrecognized top-level segment:
 void test("content: is never a display form (it's a real URI scheme, and content display...", async (t) => {
-  // doctest:L129
   t.check(describe(resolveBoxNamespacePath("/box", "content:box.json")), "escaped");
 });
 
@@ -159,15 +141,12 @@ void test("An ordinary in-namespace path with no symlinks involved resolves the 
       t.error(error);
     }
   });
-  // doctest:L160
   const box = await makeTmpBox();
   await box.write("_content/inbox/x.doc.card", "hello");
 
-  // doctest:L163
   const ordinaryRead = await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/inbox/x.doc.card", mode: "read" });
   t.check(describe(ordinaryRead), "_content/inbox/x.doc.card");
 
-  // doctest:L167
   const ordinaryWrite = await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/inbox/x.doc.card", mode: "write" });
   t.check(describe(ordinaryWrite), "_content/inbox/x.doc.card");
 
@@ -180,13 +159,10 @@ void test("An ordinary in-namespace path with no symlinks involved resolves the 
   // re-check on the resolved path that catches it, since the real relative path
   // comes out as `package.json`, outside every underscore area:
 
-  // doctest:L182
   await symlink("..", box.path("_content/pkg"));
 
-  // doctest:L184
   t.check(describe(await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/pkg/package.json", mode: "read" })), "escaped");
 
-  // doctest:L187
   t.check(describe(await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/pkg/package.json", mode: "write" })), "escaped");
 
   // Browsing the symlinked directory itself (its own leaf IS the symlink) is
@@ -194,21 +170,17 @@ void test("An ordinary in-namespace path with no symlinks involved resolves the 
   // resolves to a non-directory, so a directory-listing route stays safe even
   // under `mode: "read"`:
 
-  // doctest:L197
   t.check(describe(await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/pkg", mode: "read" })), "escaped");
 
   // Reaching further into the package internals (`src/`, `node_modules/`)
   // through the same symlink is refused identically:
 
-  // doctest:L205
   t.check(describe(await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/pkg/src/lib/paths.ts", mode: "read" })), "escaped");
 
-  // doctest:L208
   t.check(describe(await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_content/pkg/node_modules/foo", mode: "read" })), "escaped");
 
   // ### The area segment itself being a symlink is refused before walking deeper
 
-  // doctest:L215
   await mkdir(box.path("elsewhere/_content"), { recursive: true });
   await box.write("elsewhere/_content/x.doc.card", "hi");
   // `bbx init` scaffolds `_config/` as a real directory (migrations manifest,
@@ -216,7 +188,6 @@ void test("An ordinary in-namespace path with no symlinks involved resolves the 
   await rm(box.path("_config"), { recursive: true, force: true });
   await symlink(box.path("elsewhere/_content"), box.path("_config"));
 
-  // doctest:L222
   t.check(describe(await resolveBoxNamespacePathOnDisk({ boxRoot: box.root, rawPath: "_config/x.doc.card", mode: "read" })), "escaped");
 });
 
@@ -234,7 +205,6 @@ void test("A leaf symlink whose target is a plain FILE outside boxRoot entirely 
       t.error(error);
     }
   });
-  // doctest:L238
   const annexBox = await makeTmpBox();
   await mkdir(annexBox.path("_content/photos.attach"), { recursive: true });
   await mkdir(annexBox.path(".git/annex/objects/xx/yy"), { recursive: true });
@@ -244,7 +214,6 @@ void test("A leaf symlink whose target is a plain FILE outside boxRoot entirely 
     annexBox.path("_content/photos.attach/img.jpg"),
   );
 
-  // doctest:L247
   const annexRead = await resolveBoxNamespacePathOnDisk({
     boxRoot: annexBox.root,
     rawPath: "_content/photos.attach/img.jpg",
@@ -255,17 +224,14 @@ void test("A leaf symlink whose target is a plain FILE outside boxRoot entirely 
   // The same leaf symlink is refused for a write or delete — an existing leaf
   // symlink resolving outside the box root is never writable through it:
 
-  // doctest:L260
   t.check(describe(await resolveBoxNamespacePathOnDisk({ boxRoot: annexBox.root, rawPath: "_content/photos.attach/img.jpg", mode: "write" })), "escaped");
 
   // A leaf symlink that resolves INSIDE the box (a same-directory relative
   // symlink) is still fine on write — only an out-of-box target is refused:
 
-  // doctest:L268
   await annexBox.write("_content/photos.attach/real.jpg", "real-bytes");
   await symlink("real.jpg", annexBox.path("_content/photos.attach/alias.jpg"));
 
-  // doctest:L271
   const aliasWrite = await resolveBoxNamespacePathOnDisk({
     boxRoot: annexBox.root,
     rawPath: "_content/photos.attach/alias.jpg",
@@ -289,7 +255,6 @@ void test("Before this fix, ANY leaf symlink resolving to a non-directory target
       t.error(error);
     }
   });
-  // doctest:L293
   const nonAnnexBox = await makeTmpBox();
   await mkdir(nonAnnexBox.path("_content/photos.attach"), { recursive: true });
   await nonAnnexBox.write("package.json", '{"name":"secret-marker"}');
@@ -298,7 +263,6 @@ void test("Before this fix, ANY leaf symlink resolving to a non-directory target
     nonAnnexBox.path("_content/photos.attach/pkg.json"),
   );
 
-  // doctest:L301
   t.check(
     describe(await resolveBoxNamespacePathOnDisk({
       boxRoot: nonAnnexBox.root,
@@ -311,7 +275,6 @@ void test("Before this fix, ANY leaf symlink resolving to a non-directory target
   // A RELATIVE non-annex target that still resolves outside the box entirely
   // (`../package.json`-shaped) is refused the same way:
 
-  // doctest:L313
   await symlink("../../../package.json", nonAnnexBox.path("_content/photos.attach/relative-escape.json"));
   t.check(
     describe(await resolveBoxNamespacePathOnDisk({
@@ -327,7 +290,6 @@ void test("Before this fix, ANY leaf symlink resolving to a non-directory target
   // `.git/annex/`" means the resolved target, not merely a box that happens to
   // have annex initialized:
 
-  // doctest:L328
   await mkdir(nonAnnexBox.path(".git/annex/objects/xx/yy"), { recursive: true });
   await symlink(
     nonAnnexBox.path("package.json"),
@@ -356,14 +318,12 @@ void test("Callers that already have a lexically-resolved BoxNamespacePath (e.g.
       t.error(error);
     }
   });
-  // doctest:L352
   const directBox = await makeTmpBox();
   await directBox.write("_content/note.doc.card", "hi");
   const ns = resolveBoxNamespacePath(directBox.root, "_content/note.doc.card");
   if (!ns.ok) throw new Error("expected an ok resolution");
   t.check(await verifyBoxNamespaceOnDisk({ boxRoot: directBox.root, ns, mode: "read" }), true);
 
-  // doctest:L359
   await symlink("..", directBox.path("_content/pkg"));
   const escapedNs = resolveBoxNamespacePath(directBox.root, "_content/pkg/package.json");
   if (!escapedNs.ok) throw new Error("expected an ok resolution");

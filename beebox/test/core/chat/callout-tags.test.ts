@@ -7,8 +7,8 @@
 // targeting the chat session. See docs/implemented-plans/notifications.md (Track E).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, isoDate, type Pattern } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, isoDate, type Pattern } from "@ianbicking/tap-check/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -67,7 +67,6 @@ const delivery = (d: {
 // optional; an unknown `loudness` is ignored (with a warning), and the body is
 // trimmed:
 void test("A callout needs a context and a body, as the frontend's parseCallouts require...", async (t) => {
-  // doctest:L46
   t.check(
     parseCalloutTags(`Done.
 <callout context="you asked about Saturday">
@@ -96,7 +95,6 @@ Saturday: sunny, high of 72.
   ],
   );
 
-  // doctest:L72
   t.check(parseCalloutTags("No tags here, and <speech>not a callout</speech>."), []);
 });
 
@@ -110,19 +108,15 @@ void test("A turn without callouts sends nothing", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L79
   const box = await makeTmpBox({ git: true });
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: new Date() });
   const push = createFakePush();
   const slug = await boxSlug(box.root);
 
-  // doctest:L83
   t.check(await notifyTurnCallouts(box.root, { text: "All filed.", sessionId: SESSION, services: { push } }), null);
 
-  // doctest:L86
   t.check(await lastLogged(box), undefined);
 
-  // doctest:L89
   t.check(await notifyTurnCallouts(box.root, { text: "<callout loudness=\"loud\">No context.</callout>", sessionId: SESSION, services: { push } }), null);
 
   // ## A `quiet` callout with nobody present is pushed
@@ -130,7 +124,6 @@ void test("A turn without callouts sends nothing", async (t) => {
   // The loudest callout sets the loudness; the first one titles (by its
   // `context`) and carries the notification.
 
-  // doctest:L99
   const text = `<callout context="the field trip" loudness="quiet">The school moved the field trip to Thursday.
 Forms are due Wednesday.</callout> and <callout context="later">second</callout>`;
   await notifyTurnCallouts(box.root, { text, sessionId: SESSION, services: { push } });
@@ -140,7 +133,6 @@ Forms are due Wednesday.</callout> and <callout context="later">second</callout>
     deliveries: [delivery({ id: fieldTrip, channel: "apns", status: "skipped", detail: "no-audience" }), delivery({ id: fieldTrip, channel: "web-push", status: "sent" })],
   });
 
-  // doctest:L110
   t.check(push.sent, [{
     endpoint: SUB.endpoint,
     payload: {
@@ -158,7 +150,6 @@ Forms are due Wednesday.</callout> and <callout context="later">second</callout>
   // The callout is on screen in the open app, so each channel logs
   // `skipped: present`, for a `quiet` callout and for a `loud` one alike.
 
-  // doctest:L120
   await writePresence(box.root, { activeWeb: 1, now: new Date() });
   await notifyTurnCallouts(box.root, { text: "<callout context=\"you asked\" loudness=\"quiet\">Booked.</callout>", sessionId: SESSION, services: { push } });
   const booked = capture(any(String));
@@ -167,7 +158,6 @@ Forms are due Wednesday.</callout> and <callout context="later">second</callout>
     deliveries: [delivery({ id: booked, channel: "apns", status: "skipped", detail: "present" }), delivery({ id: booked, channel: "web-push", status: "skipped", detail: "present" })],
   });
 
-  // doctest:L129
   t.check(push.sent, [{
     endpoint: SUB.endpoint,
     payload: {
@@ -182,7 +172,6 @@ Forms are due Wednesday.</callout> and <callout context="later">second</callout>
 
   // Two callouts, one `loud`: still on screen, still not pushed.
 
-  // doctest:L136
   const two = "<callout context=\"first\">Filed.</callout><callout context=\"the form\" loudness=\"loud\">Due Friday.</callout>";
   await notifyTurnCallouts(box.root, { text: two, sessionId: SESSION, services: { push } });
   const filed = capture(any(String));
@@ -191,7 +180,6 @@ Forms are due Wednesday.</callout> and <callout context="later">second</callout>
     deliveries: [delivery({ id: filed, channel: "apns", status: "skipped", detail: "present" }), delivery({ id: filed, channel: "web-push", status: "skipped", detail: "present" })],
   });
 
-  // doctest:L145
   t.check(push.sent, [{
     endpoint: SUB.endpoint,
     payload: {
@@ -207,7 +195,6 @@ Forms are due Wednesday.</callout> and <callout context="later">second</callout>
   // A callout with no `loudness` is a `dot`: a badge on paired phones only, sent
   // whatever the presence.
 
-  // doctest:L153
   await notifyTurnCallouts(box.root, { text: "<callout context=\"note\">Filed the receipt.</callout>", sessionId: SESSION, services: { push } });
   const dot = capture(any(String));
   t.check(await lastLogged(box), {
@@ -217,7 +204,6 @@ Forms are due Wednesday.</callout> and <callout context="later">second</callout>
 
   // With nobody present, the same `loud` pair is pushed.
 
-  // doctest:L161
   await writePresence(box.root, { activeWeb: 0, now: new Date() });
   await notifyTurnCallouts(box.root, { text: two, sessionId: SESSION, services: { push } });
   const pushed = capture(any(String));
@@ -226,7 +212,6 @@ Forms are due Wednesday.</callout> and <callout context="later">second</callout>
     deliveries: [delivery({ id: pushed, channel: "apns", status: "skipped", detail: "no-audience" }), delivery({ id: pushed, channel: "web-push", status: "sent" })],
   });
 
-  // doctest:L166
   t.check(push.sent, [{
     endpoint: SUB.endpoint,
     payload: {

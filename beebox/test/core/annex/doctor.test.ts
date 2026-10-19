@@ -8,8 +8,8 @@
 // round trip. `check: true` is the read-only mode.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { createFakeGitAnnex } from "../../../src/services/git-annex.js";
 import {
@@ -106,7 +106,6 @@ void test("A correctly configured repository reports every check clean and chang
       t.error(error);
     }
   });
-  // doctest:L76
   const box = await makeTmpBox({ git: true });
   await installHooks(box);
   await writeAnnexInfoAttributes(box.root);
@@ -131,7 +130,6 @@ void test("annex.thin is plain git config, so it does not propagate to clones:",
       t.error(error);
     }
   });
-  // doctest:L104
   const box = await makeTmpBox({ git: true });
   await installHooks(box);
   const annex = createFakeGitAnnex({
@@ -146,7 +144,6 @@ void test("annex.thin is plain git config, so it does not propagate to clones:",
 
   // Under `check: true` nothing is touched and the failure names both commands:
 
-  // doctest:L128
   const annex2 = createFakeGitAnnex({ gitConfig: { "annex.thin": "true" } });
   const readOnly = await runAnnexDoctor(annex2, {
     repoRoot: box.root, boxRoot: box.root, options: { check: true },
@@ -177,7 +174,6 @@ void test("Every box is annex-shaped from its first commit, so an uninitialized 
       t.error(error);
     }
   });
-  // doctest:L156
   const box = await makeTmpBox();
   await box.write(".gitignore", GITIGNORE_BLOCK);
   const annex = createFakeGitAnnex({ initialized: false });
@@ -208,7 +204,6 @@ void test("The annex gate requires both halves of the migration:", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L187
   const box = await makeTmpBox({ git: true });
   await installHooks(box);
   await writeAnnexInfoAttributes(box.root);
@@ -221,7 +216,6 @@ void test("The annex gate requires both halves of the migration:", async (t) => 
   // Repair mode also reports this state instead of rewriting `.gitignore` outside
   // the migration's load-bearing configuration sequence:
 
-  // doctest:L211
   const repairMode = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root, boxRoot: box.root,
   });
@@ -230,7 +224,6 @@ void test("The annex gate requires both halves of the migration:", async (t) => 
 
   // Once the box has the post-annex unignore block, the same check passes:
 
-  // doctest:L224
   await box.write(".gitignore", UNIGNORE_BLOCK);
   const converted = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root, boxRoot: box.root, options: { check: true },
@@ -249,7 +242,6 @@ void test("On a box that IS annexed:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L244
   const box = await makeTmpBox({ git: true });
   await installHooks(box);
   const annex = createFakeGitAnnex({
@@ -287,7 +279,6 @@ void test("git annex init writes  filter=annex into .git/info/attributes, which 
       t.error(error);
     }
   });
-  // doctest:L283
   const box = await makeTmpBox();
   await installHooks(box);
   const fs = await import("node:fs/promises");
@@ -302,20 +293,17 @@ void test("git annex init writes  filter=annex into .git/info/attributes, which 
   // A second run is a no-op — the repair is idempotent, which matters because
   // `bbx init` runs the doctor every time:
 
-  // doctest:L302
   const again = await runAnnexDoctor(healthyFake(), { repoRoot: box.root, boxRoot: box.root });
   t.check(again, report(true));
 
   // Under `check: true` nothing is written and the message names both remedies:
 
-  // doctest:L310
   await fs.writeFile(attrPath, "\n* filter=annex\n");
   const readOnly = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root, boxRoot: box.root, options: { check: true },
   });
   t.check(readOnly, report(false, { attributes: ["failed", ".git/info/attributes is unscoped or stale. Run `bbx doctor annex` without `--check`, or `bbx attachments annex-attributes > .git/info/attributes`."] }));
 
-  // doctest:L320
   await t.checkText(await fs.readFile(attrPath, "utf-8"), `«blankline»
 * filter=annex`);
 });
@@ -336,7 +324,6 @@ void test("An annexed file whose extension the scoped list does not cover keeps 
       t.error(error);
     }
   });
-  // doctest:L339
   const box = await makeTmpBox();
   await installHooks(box);
   const annex = createFakeGitAnnex({
@@ -351,7 +338,6 @@ void test("An annexed file whose extension the scoped list does not cover keeps 
     attributes: ["failed", ".git/info/attributes is left unscoped: scoping it would strand the annexed path(s) reported by annexed-coverage. Fix that first."],
   }));
 
-  // doctest:L360
   const fs2 = await import("node:fs/promises");
   const path2 = await import("node:path");
   t.check(await fs2.readFile(path2.join(box.root, ".git", "info", "attributes"), "utf-8").catch(() => "(absent)"), "(absent)");
@@ -369,7 +355,6 @@ void test("A missing binary short-circuits:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L376
   const box = await makeTmpBox();
   const annex = createFakeGitAnnex({ version: null });
   const result = await runAnnexDoctor(annex, { repoRoot: box.root, boxRoot: box.root });
@@ -391,7 +376,6 @@ void test("A pointer with no content is data already lost.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L394
   const box = await makeTmpBox();
   await installHooks(box);
   await box.write(
@@ -416,7 +400,6 @@ void test("Absent content in a plain subdirectory of a scope is found too — a 
       t.error(error);
     }
   });
-  // doctest:L420
   const box = await makeTmpBox();
   await installHooks(box);
   await box.write(
@@ -443,7 +426,6 @@ void test("The annex smudge hooks are easy to lose without making git annex info
       t.error(error);
     }
   });
-  // doctest:L442
   const box = await makeTmpBox({ git: true });
   await installHooks(box);
   const fs = await import("node:fs/promises");
@@ -472,14 +454,12 @@ void test("The annex smudge hooks are easy to lose without making git annex info
   t.check(readOnly, report(false, { "smudge-hooks": ["failed", "post-checkout and post-merge do not invoke `git annex smudge --update`. Run `bbx doctor annex` without `--check` to reinstall the damaged annex hook(s)."] }));
   t.check(await fs.readFile(postCheckoutPath, "utf-8"), foreignCheckout);
 
-  // doctest:L473
   t.check(await fs.access(postMergePath).then(() => "exists", () => "missing"), "missing");
 
   // Repair mode reinstalls only those two canonical hooks. In particular, a
   // composite `post-commit` that does not invoke annex is healthy and stays
   // byte-for-byte untouched:
 
-  // doctest:L482
   const repaired = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root,
     boxRoot: box.root,
@@ -490,7 +470,6 @@ void test("The annex smudge hooks are easy to lose without making git annex info
   t.check((await fs.stat(postCheckoutPath)).mode & 0o111, not(0));
   t.check(await fs.readFile(postCommitPath, "utf-8"), compositePostCommit);
 
-  // doctest:L501
   const healthy = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root,
     boxRoot: box.root,
@@ -500,7 +479,6 @@ void test("The annex smudge hooks are easy to lose without making git annex info
   // Merely mentioning the smudge command in a comment does not count as invoking
   // it:
 
-  // doctest:L513
   await fs.writeFile(postCheckoutPath, `#!/bin/sh\n# ${ANNEX_SMUDGE_LINE}\n`);
   const commentedSmudge = await runAnnexDoctor(healthyFake(), {
     repoRoot: box.root,
@@ -524,7 +502,6 @@ void test("git annex init declines to install its own pre-commit hook when one a
       t.error(error);
     }
   });
-  // doctest:L535
   const box = await makeTmpBox({ git: true });
   const fs = await import("node:fs/promises");
   const path = await import("node:path");
@@ -539,7 +516,6 @@ void test("git annex init declines to install its own pre-commit hook when one a
   // commented out — both of which mean annex never runs at commit time, which is
   // the whole thing this check exists to catch:
 
-  // doctest:L555
   await fs.writeFile(
     path.join(box.root, ".git", "hooks", "pre-commit"),
     "#!/bin/bash\n# TODO: add git annex pre-commit\n",
@@ -550,6 +526,5 @@ void test("git annex init declines to install its own pre-commit hook when one a
   // The formatted output marks each outcome distinctly, so a repair is not mistaken
   // for a pre-existing pass:
 
-  // doctest:L568
   t.check(formatAnnexDoctor(result).split("\n").filter((l) => l.startsWith("✗")), [`✗ hook: ${HOOK_FAILED}`]);
 });

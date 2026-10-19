@@ -8,7 +8,7 @@
 // stream, and a budget timer the example expires by hand.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   createHqWaiter,
   decideOnStatus,
@@ -79,7 +79,6 @@ function request(opts?: { sendLive?: Promise<void> }) {
 
 // ## The decision a status implies
 void test("The decision a status implies", async (t) => {
-  // doctest:L83
   t.check(
     ([
       { state: "none" },
@@ -105,7 +104,6 @@ void test("The decision a status implies", async (t) => {
     },
   ]);
 
-  // doctest:L92
   t.check(decideOnStatus({ state: "failed", failure: { kind: "permanent", code: "http_401", message: "missing key" } }), {
     kind: "failed",
     failure: {
@@ -118,7 +116,6 @@ void test("The decision a status implies", async (t) => {
 
 // ## The pending bubble's status line
 void test("The pending bubble's status line", async (t) => {
-  // doctest:L99
   const now = Date.parse("2026-09-10T18:00:00.000Z");
   t.check(
     [
@@ -137,14 +134,12 @@ void test("The pending bubble's status line", async (t) => {
 // The waiter reads the status when it subscribes, then follows events for its
 // own recording only.
 void test("The waiter reads the status when it subscribes, then follows events for its o...", async (t) => {
-  // doctest:L116
   const box = fakeBox();
   const { req, progress } = request();
   const outcome = createHqWaiter(box.deps).wait(req);
   await flush();
   t.check(box.calls, ["status"]);
 
-  // doctest:L123
   box.event({ state: "transcribing", piece: 1, pieces: 1, attempt: 1, pieceSeconds: 300 });
   box.event({ state: "ready", result: READY });
   t.check(await outcome, {
@@ -157,10 +152,8 @@ void test("The waiter reads the status when it subscribes, then follows events f
     },
   });
 
-  // doctest:L128
   t.check(progress, ["queued", "transcribing", "ready"]);
 
-  // doctest:L131
   t.check(box.calls, ["status", "claim", "unsubscribe", "budget stopped"]);
 });
 
@@ -169,7 +162,6 @@ void test("The waiter reads the status when it subscribes, then follows events f
 // The box restarted mid-wait; no event reached this tab, but the job finished.
 // When the stream reconnects, the re-query sees `ready`:
 void test("The box restarted mid-wait; no event reached this tab, but the job finished.", async (t) => {
-  // doctest:L141
   const box = fakeBox();
   const { req } = request();
   const outcome = createHqWaiter(box.deps).wait(req);
@@ -186,7 +178,6 @@ void test("The box restarted mid-wait; no event reached this tab, but the job fi
     },
   });
 
-  // doctest:L150
   t.check(box.calls, [
     "status",
     "status",
@@ -198,7 +189,6 @@ void test("The box restarted mid-wait; no event reached this tab, but the job fi
 
 // ## The budget runs out: fall back
 void test("The budget runs out: fall back", async (t) => {
-  // doctest:L157
   const box = fakeBox();
   const { req } = request();
   const outcome = createHqWaiter(box.deps).wait(req);
@@ -210,7 +200,6 @@ void test("The budget runs out: fall back", async (t) => {
     service: "mai",
   });
 
-  // doctest:L165
   t.check(box.calls, [
     "status",
     "fallBack",
@@ -222,7 +211,6 @@ void test("The budget runs out: fall back", async (t) => {
 // If HQ finished just before the fallback landed, `fallBack` answers with the
 // result and the HQ text is sent after all:
 void test("If HQ finished just before the fallback landed, fallBack answers with the res...", async (t) => {
-  // doctest:L173
   const box = fakeBox({ fallBack: { outcome: "claimed", result: READY } });
   const { req } = request();
   const outcome = createHqWaiter(box.deps).wait(req);
@@ -241,7 +229,6 @@ void test("If HQ finished just before the fallback landed, fallBack answers with
 
 // ## "Send live text now" falls back the same way
 void test("\"Send live text now\" falls back the same way", async (t) => {
-  // doctest:L185
   let tap = () => {};
   const sendLive = new Promise<void>((resolve) => { tap = resolve; });
   const box = fakeBox();
@@ -255,7 +242,6 @@ void test("\"Send live text now\" falls back the same way", async (t) => {
     service: "mai",
   });
 
-  // doctest:L195
   t.check(box.calls, [
     "status",
     "fallBack",
@@ -267,7 +253,6 @@ void test("\"Send live text now\" falls back the same way", async (t) => {
   // with the live text — there is nothing left to retry after the send, since a
   // sealed recording is GC'd from the box on its own schedule regardless:
 
-  // doctest:L204
   const unreachable = fakeBox({ fallBackFails: 1 });
   const { req: req2 } = request();
   const outcome2 = createHqWaiter(unreachable.deps).wait(req2);
@@ -282,7 +267,6 @@ void test("\"Send live text now\" falls back the same way", async (t) => {
 
 // ## A permanent failure ends the wait with the reason
 void test("A permanent failure ends the wait with the reason", async (t) => {
-  // doctest:L216
   const box = fakeBox();
   const { req } = request();
   const outcome = createHqWaiter(box.deps).wait(req);

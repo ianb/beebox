@@ -11,7 +11,7 @@
 // Every key below is an obvious placeholder.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,21 +40,17 @@ void test("Neither of the retired sources produces a key.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L35
   const dir = await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
   process.env.BBX_MISTRAL_API_KEY = "placeholder-env-key";
   await box.write("_config/connectors/mistral.secret.json", JSON.stringify({ apiKey: "placeholder-file-key" }));
 
-  // doctest:L41
   t.check(await getMistralApiKey(box.root, { observe: true }), null);
 
-  // doctest:L43
   await setSecret({ name: "mistral", value: "placeholder-store-key" });
   t.check(await getMistralApiKey(box.root, { observe: true }), null);
 
-  // doctest:L46
   await grantSecret({ slug, name: "mistral", access: "server" });
   t.check(await getMistralApiKey(box.root, { observe: true }), "placeholder-store-key");
 
@@ -64,7 +60,6 @@ void test("Neither of the retired sources produces a key.", async (t) => {
   // than left indefinitely: with a file or env arm behind it, `revoke` on a box that
   // still had either would have been a no-op the boxholder could not see.
 
-  // doctest:L61
   await revokeSecret({ slug, name: "mistral" });
   t.check(await getMistralApiKey(box.root, { observe: true }), null);
 
@@ -73,6 +68,5 @@ void test("Neither of the retired sources produces a key.", async (t) => {
   // Grants are per-box, so a caller without one — `TranscribeAudioParams.boxRoot`
   // is optional — has nothing to resolve against.
 
-  // doctest:L72
   t.check(await getMistralApiKey(undefined, { observe: true }), null);
 });

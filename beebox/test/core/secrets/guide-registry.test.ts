@@ -6,7 +6,7 @@
 // "What it is used for" is deliberately not a field: that comes from `uses.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { listSecretGuides, secretGuideFor, unguidedSecretNames } from "../../../src/core/secrets/guide-registry.js";
 import { builtinSecretNames } from "../../../src/core/secrets/uses.js";
 
@@ -16,16 +16,13 @@ import { builtinSecretNames } from "../../../src/core/secrets/uses.js";
 // to `uses.ts` without writing its guide fails here, rather than leaving a name
 // the add form cannot explain.
 void test("This is the assertion that stops the two registries drifting:", async (t) => {
-  // doctest:L20
   t.check(unguidedSecretNames(), []);
 
-  // doctest:L23
   t.check(listSecretGuides().map(({ key }) => key).toSorted(), builtinSecretNames().toSorted());
 });
 
 // ## A guide says what the credential is and where it comes from
 void test("A guide says what the credential is and where it comes from", async (t) => {
-  // doctest:L30
   const or = secretGuideFor("openrouter");
   t.check(or, {
     key: "openrouter",
@@ -46,7 +43,6 @@ void test("A guide says what the credential is and where it comes from", async (
 // The last step of a pasteable key's guide is always the paste itself, because
 // that is the moment the page is for.
 void test("The last step of a pasteable key's guide is always the paste itself, because...", async (t) => {
-  // doctest:L39
   const pasteable = listSecretGuides().filter(({ key }) => !key.endsWith("/"));
   t.check(pasteable.map(({ guide }) => guide.obtainSteps.at(-1)), [
     "Paste it below",
@@ -68,6 +64,5 @@ void test("The last step of a pasteable key's guide is always the paste itself, 
 // That is the honest answer for an ad-hoc secret — the form falls back to its
 // plain fields rather than inventing guidance.
 void test("That is the honest answer for an ad-hoc secret — the form falls back to its p...", async (t) => {
-  // doctest:L50
   t.check(secretGuideFor("weatherapi"), null);
 });

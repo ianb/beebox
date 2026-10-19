@@ -8,6 +8,8 @@ discovered-in: worktree-test-selection — measured while running the test-selec
 priority: backlog
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Measured 2026-08-09 by building the full test→source import graph with esbuild
 over all 484 test entrypoints (method and numbers in
 [run less of the full suite](../closed/exploration/2026-08-08-run-less-of-the-test-suite.md),

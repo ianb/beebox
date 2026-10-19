@@ -8,7 +8,7 @@
 // and only to the ambient reply for that same session.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { SessionEntry } from "../../../../src/api.js";
@@ -31,18 +31,15 @@ function render({ loaded, probeFor }: { loaded: boolean; probeFor: string }) {
 
 // Once the chat has loaded, the ambient reply for the open conversation gets its transcript:
 void test("Once the chat has loaded, the ambient reply for the open conversation gets it...", async (t) => {
-  // doctest:L35
   t.check(render({ loaded: true, probeFor: "chat-a" }), "<span>1:false</span>");
 });
 
 // Before the first history load finishes, it gets nothing, and keeps waiting:
 void test("Before the first history load finishes, it gets nothing, and keeps waiting:", async (t) => {
-  // doctest:L42
   t.check(render({ loaded: false, probeFor: "chat-a" }), "<span>none</span>");
 });
 
 // Another conversation's ambient reply never sees it, and fetches its own:
 void test("Another conversation's ambient reply never sees it, and fetches its own:", async (t) => {
-  // doctest:L49
   t.check(render({ loaded: true, probeFor: "chat-b" }), "<span>none</span>");
 });

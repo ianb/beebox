@@ -4,11 +4,11 @@
 // sent, then its links in tiers and each `expand` as a
 // labeled group (docs/implemented-plans/landmark-arrival.md, Track C). These examples render
 // `PlacePage` with a loaded `landmarks.forDir` payload, the way the
-// `PersonView` doctest renders a person's front.
+// `PersonView` test renders a person's front.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -72,7 +72,6 @@ const startedLending: PlaceChat = { contextDir: "_content/lending", showsOwnOpen
 // opens in Browse. It does not say the folder is empty: the place skips
 // background cards and cards of unknown types. A place with no openers shows no "Start something".
 void test("No links and no groups:", async (t) => {
-  // doctest:L75
   const html = await render({ payload: payload({ openers: [] }) }, startedLending);
   t.check(({ sections: sections(html), text: text(html) }), {
     sections: [
@@ -87,7 +86,6 @@ void test("No links and no groups:", async (t) => {
 // The landmark card's body is the place summary (docs/implemented-plans/place-shows-cards.md,
 // Track C). It renders as markdown above "Start something" and the tiers.
 void test("The landmark card's body is the place summary (docs/implemented-plans/place-s...", async (t) => {
-  // doctest:L86
   const html = await render({ payload: payload({
     groups: [{ label: "Also here", count: 1, alsoHere: true, children: [{ ref: "_content/lending/Stove.loan.card", label: null, title: "Camp stove", exists: true, source: "derived" }] }],
   }), body: "The **stove** is with Idris until Friday.\n" }, startedLending);
@@ -103,7 +101,6 @@ void test("The landmark card's body is the place summary (docs/implemented-plans
 
 // A blank body shows no summary section, and no "No body content" line.
 void test("A blank body shows no summary section, and no \"No body content\" line.", async (t) => {
-  // doctest:L96
   const html = await render({ payload: payload({ openers: [] }), body: "  \n\n" });
   t.check(({ sections: sections(html), text: text(html) }), {
     sections: [
@@ -116,7 +113,6 @@ void test("A blank body shows no summary section, and no \"No body content\" lin
 // A card link in the summary resolves against the landmark's folder and is a
 // link the person can follow.
 void test("A card link in the summary resolves against the landmark's folder and is a li...", async (t) => {
-  // doctest:L105
   const html = await render({ payload: payload({ openers: [] }), body: "Ask [Idris](Idris.person.card) first.\n" });
   t.check(html.match(/<a [^>]*>Idris<\/a>/)?.[0], "<a class=\"bbx-theme-link\" href=\"/test1/views/_content/lending/Idris.person.card\">Idris</a>");
 });
@@ -126,7 +122,6 @@ void test("A card link in the summary resolves against the landmark's folder and
 // A curated link whose card is gone keeps its row, struck through, so the place
 // does not silently shrink. Groups render open on this page.
 void test("A curated link whose card is gone keeps its row, struck through, so the place...", async (t) => {
-  // doctest:L116
   const html = await render({ payload: payload({
     openers: [],
     links: [
@@ -159,7 +154,6 @@ void test("A curated link whose card is gone keeps its row, struck through, so t
 // "Also here" lists 10 cards; the rest show as one count that opens the folder
 // in Browse. Another group's overflow stays plain text.
 void test("\"Also here\" lists 10 cards; the rest show as one count that opens the folder...", async (t) => {
-  // doctest:L144
   const tile = (name: string) => ({ ref: `_content/lending/${name}.doc.card`, label: null, title: name, exists: true, source: "derived" as const });
   const ten = Array.from({ length: 10 }, (_, i) => tile(`Card ${i}`));
   const html = await render({ payload: payload({
@@ -188,7 +182,6 @@ void test("\"Also here\" lists 10 cards; the rest show as one count that opens t
 // The page knows the server's "Also here" group by its `alsoHere` mark, not its
 // label, so an expand the author named "Also here" does not open Browse.
 void test("The page knows the server's \"Also here\" group by its alsoHere mark, not its l...", async (t) => {
-  // doctest:L166
   const html = await render({ payload: payload({
     openers: [],
     groups: [{ label: "Also here", count: 30, children: [{ ref: "_content/lending/Loan.doc.card", label: null, title: "Loan", exists: true, source: "expand" }] }],
@@ -205,7 +198,6 @@ void test("The page knows the server's \"Also here\" group by its alsoHere mark,
 // so a loan tile says who has it without opening the card. A row without one
 // shows the title alone.
 void test("A row's detail (the card type's summarize line) shows under its title, so a l...", async (t) => {
-  // doctest:L181
   const html = await render({ payload: payload({
     openers: [],
     groups: [{ label: "Also here", count: 2, alsoHere: true, children: [
@@ -220,7 +212,6 @@ void test("A row's detail (the card type's summarize line) shows under its title
 //
 // The same place with openers, opened with no chat beside it.
 void test("The same place with openers, opened with no chat beside it.", async (t) => {
-  // doctest:L197
   t.check(sections(await render({ payload: payload() })), [
     "empty",
   ]);
@@ -228,7 +219,6 @@ void test("The same place with openers, opened with no chat beside it.", async (
 
 // ## Beside a started chat in the place, the openers are offered
 void test("Beside a started chat in the place, the openers are offered", async (t) => {
-  // doctest:L204
   const html = await render({ payload: payload() }, startedLending);
   t.check(({ sections: sections(html), start: sectionText(html, "start-something") }), {
     sections: [
@@ -242,7 +232,6 @@ void test("Beside a started chat in the place, the openers are offered", async (
 // While that chat is busy with a turn, the openers wait: they render disabled,
 // and enable again once the turn ends.
 void test("While that chat is busy with a turn, the openers wait:", async (t) => {
-  // doctest:L213
   const disabled = (html: string) => html.match(/<button[^>]*disabled=""/g) ?? [];
   t.check([disabled(await render({ payload: payload() }, { ...startedLending, busy: true })), disabled(await render({ payload: payload() }, startedLending))], [
     [
@@ -259,7 +248,6 @@ void test("While that chat is busy with a turn, the openers wait:", async (t) =>
 // kept (the 2026-10-09 walks read "The open chat is in another place." as an
 // error).
 void test("The button says what it does, and the line under it says the current chat is...", async (t) => {
-  // doctest:L225
   const html = await render({ payload: payload() }, { contextDir: "", showsOwnOpeners: false, busy: false, sendOpener: () => "accepted" });
   t.check(({ sections: sections(html), goTo: sectionText(html, "go-to") }), {
     sections: [
@@ -275,7 +263,6 @@ void test("The button says what it does, and the line under it says the current 
 // If the folder's landmark is another card, the page names both paths instead of
 // showing that card's links as this one's.
 void test("If the folder's landmark is another card, the page names both paths instead o...", async (t) => {
-  // doctest:L236
   t.check(text(await render({ payload: payload({ path: "_content/lending/Aaa.landmark.card" }) })), "This folder has two landmark cards, _content/lending/Lending.landmark.card and _content/lending/Aaa.landmark.card. The place uses _content/lending/Aaa.landmark.card; keep one landmark card per folder.");
 });
 
@@ -284,7 +271,6 @@ void test("If the folder's landmark is another card, the page names both paths i
 // In a pane or on its own page the card header already names the place; an
 // embedded card has no header, so the page draws the mark and label itself.
 void test("In a pane or on its own page the card header already names the place; an embe...", async (t) => {
-  // doctest:L246
   t.check(
     ({
       pane: text(await render({ payload: payload({ openers: [] }) })),

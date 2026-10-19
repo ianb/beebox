@@ -11,7 +11,7 @@
 // answer truthfully.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -122,14 +122,12 @@ void test("Two files from one scan session go to scan-import together, named as 
       t.error(error);
     }
   });
-  // doctest:L120
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A, originalFilename: "Scan_001.pdf" });
   await quarantine(box, { sha256: HASH_B, originalFilename: "Scan_002.pdf" });
   const upload = fakeUpload();
   const wakeup = fakeWakeup();
 
-  // doctest:L126
   const result = await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: upload.runner, runWakeup: wakeup.runner },
@@ -144,7 +142,6 @@ void test("Two files from one scan session go to scan-import together, named as 
     },
   ]);
 
-  // doctest:L133
   t.check({ imported: result.imported, failed: result.failed, wakeup: result.wakeup, wakeups: wakeup.runs }, {
     imported: 2,
     failed: 0,
@@ -158,7 +155,6 @@ void test("Two files from one scan session go to scan-import together, named as 
   // staging copies go with them. Nothing else cleans this directory: the generic
   // `_tmp/` sweep skips directories entirely.
 
-  // doctest:L142
   t.check(
     {
       entries: await readAllQuarantineEntries(box.root),
@@ -176,7 +172,6 @@ void test("Two files from one scan session go to scan-import together, named as 
 
   // The wakeup marker is gone too, because the run succeeded:
 
-  // doctest:L154
   t.check(await exists(wakeupMarkerPath(box.root)), false);
 });
 
@@ -192,13 +187,11 @@ void test("The scanner can emit the same basename from two profiles.", async (t)
       t.error(error);
     }
   });
-  // doctest:L168
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A, originalFilename: "Invoice.pdf" });
   await quarantine(box, { sha256: HASH_B, originalFilename: "Invoice.pdf" });
   const upload = fakeUpload();
 
-  // doctest:L173
   await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
@@ -221,14 +214,12 @@ void test("--source is per invocation, and the token that sent a file is what th
       t.error(error);
     }
   });
-  // doctest:L191
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A, originalFilename: "Study.pdf", tokenName: "laptop-scansnap" });
   await quarantine(box, { sha256: HASH_B, originalFilename: "Desk.pdf", tokenName: "office-scanner" });
   await quarantine(box, { sha256: HASH_C, originalFilename: "Manual.pdf", tokenName: null });
   const upload = fakeUpload();
 
-  // doctest:L197
   await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
@@ -268,7 +259,6 @@ void test("promoting is written before any work, so an entry the last process di
       t.error(error);
     }
   });
-  // doctest:L216
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A, state: "promoting", originalFilename: "Halfway.pdf" });
   // The dead process's staging dir is still lying around.
@@ -276,7 +266,6 @@ void test("promoting is written before any work, so an entry the last process di
   await fs.writeFile(box.path("_tmp/scan-staging/dead-run/Halfway.pdf"), "leftover");
   const upload = fakeUpload();
 
-  // doctest:L223
   const result = await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
@@ -288,7 +277,6 @@ void test("promoting is written before any work, so an entry the last process di
     ],
   });
 
-  // doctest:L230
   t.check(await exists(box.path("_tmp/scan-staging/dead-run")), false);
 });
 
@@ -305,7 +293,6 @@ void test("The wakeup still runs:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L245
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A });
   const result = await runScanPromotePass({
@@ -320,7 +307,6 @@ void test("The wakeup still runs:", async (t) => {
     },
   });
 
-  // doctest:L254
   t.check((await readQuarantineEntry(box.root, HASH_A))?.state, "promoting");
 });
 
@@ -331,7 +317,7 @@ void test("The wakeup still runs:", async (t) => {
 // wakeup is indefinite rather than late. The marker is written before the run and
 // survives a restart; every later pass retries it — but only a bounded number of
 // times, and the outcome carries how long the caller should wait before the next
-// attempt (`core/scan/wakeup-retry.doctest.md` pins the budget itself).
+// attempt (`test/core/scan/promote/wakeup.retry.test.ts` pins the budget itself).
 void test("Connector-scoped scheduled wakeups never drain a scan intake job (it has no c...", async (t) => {
   t.teardown(async () => {
     try {
@@ -340,12 +326,10 @@ void test("Connector-scoped scheduled wakeups never drain a scan intake job (it 
       t.error(error);
     }
   });
-  // doctest:L272
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A });
   const failing = fakeWakeup({ fail: true });
 
-  // doctest:L276
   const first = await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: fakeUpload().runner, runWakeup: failing.runner },
@@ -361,7 +345,6 @@ void test("Connector-scoped scheduled wakeups never drain a scan intake job (it 
 
   // The retry needs no new files — an empty pass still owes the wakeup:
 
-  // doctest:L287
   const recovered = fakeWakeup();
   const second = await runScanPromotePass({
     boxRoot: box.root,
@@ -390,7 +373,6 @@ void test("The rejection reason is written for the person who reads the question
       t.error(error);
     }
   });
-  // doctest:L307
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A,
     state: "rejected",
@@ -398,7 +380,6 @@ void test("The rejection reason is written for the person who reads the question
     reason: "magic bytes say text/html but the extension is .pdf",
   });
 
-  // doctest:L314
   const first = await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: fakeUpload().runner, runWakeup: fakeWakeup().runner },
@@ -410,7 +391,6 @@ void test("The rejection reason is written for the person who reads the question
     ref: "_bookkeeping/questions/scan-rejected-aaaaaaaaaaaa.question.card",
   });
 
-  // doctest:L323
   const card = await box.read(entry.questionRef);
   t.check([card.includes("Contract.pdf"), card.includes("magic bytes say text/html"), !card.includes("answered-at")], [
     true,
@@ -420,7 +400,6 @@ void test("The rejection reason is written for the person who reads the question
 
   // A second pass writes nothing new and the box still holds one question:
 
-  // doctest:L331
   const second = await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: fakeUpload().runner, runWakeup: fakeWakeup().runner },
@@ -446,12 +425,10 @@ void test("The bytes go the moment the question is answered.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L352
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A, state: "rejected", reason: "qpdf --check reported a damaged PDF" });
   const deps = { runUpload: fakeUpload().runner, runWakeup: fakeWakeup().runner };
 
-  // doctest:L356
   // Pass 1 raises the question. It is pending, so nothing is collected.
   await runScanPromotePass({ boxRoot: box.root, deps });
   const held = await runScanPromotePass({ boxRoot: box.root, deps });
@@ -468,12 +445,10 @@ void test("The bytes go the moment the question is answered.", async (t) => {
 
   // Answering the question is what releases the bytes:
 
-  // doctest:L369
   const ref = (await readQuarantineEntry(box.root, HASH_A))?.questionRef;
   assert.ok(ref);
   await box.write(ref, (await box.read(ref)).replace("---\n", "---\nanswer:\n  text: Keep it out\nanswered-at: 2026-09-17T00:00:00.000Z\n"));
 
-  // doctest:L373
   const collected = await runScanPromotePass({ boxRoot: box.root, deps });
   const tombstone = await readQuarantineEntry(box.root, HASH_A);
   assert.ok(tombstone);
@@ -497,7 +472,6 @@ void test("The bytes go the moment the question is answered.", async (t) => {
   // Thirty days on, the tombstone goes too and the hash reverts to `unknown` — far
   // enough out that a re-upload deserves fresh validation:
 
-  // doctest:L390
   const old = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
   await recordQuarantineEntry(box.root, { ...tombstone, resolvedAt: old });
   const swept = await runScanPromotePass({ boxRoot: box.root, deps });
@@ -509,7 +483,6 @@ void test("The bytes go the moment the question is answered.", async (t) => {
   // A deleted question card counts as resolved — deleting it is how a boxholder
   // finishes with one:
 
-  // doctest:L401
   await quarantine(box, { sha256: HASH_B, state: "rejected", reason: "unsupported type: image/gif" });
   await runScanPromotePass({ boxRoot: box.root, deps });
   const rejectedRef = (await readQuarantineEntry(box.root, HASH_B))?.questionRef;
@@ -536,14 +509,12 @@ void test("A re-PUT of a rejected hash is the sanctioned retry path, and it can 
       t.error(error);
     }
   });
-  // doctest:L423
   const box = await makeTmpBox({ git: true });
   const stale = await quarantine(box, { sha256: HASH_A, state: "rejected", reason: "unsupported type: image/gif" });
   // The listing says "rejected, resolved"; the sidecar on disk says the uploader
   // has since re-sent it and it validated.
   await recordQuarantineEntry(box.root, { ...stale, state: "pending", reason: undefined });
 
-  // doctest:L429
   const gc = await collectQuarantine({
     boxRoot: box.root,
     entries: [{ ...stale, questionRef: "_bookkeeping/questions/gone.question.card" }],
@@ -580,7 +551,6 @@ void test("The route reads the ledger first and quarantine second, so the two sw
       t.error(error);
     }
   });
-  // doctest:L453
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A, originalFilename: "Filed.pdf" });
   // A real upload writes the ledger; the fake stands in for that half.
@@ -595,7 +565,6 @@ void test("The route reads the ledger first and quarantine second, so the two sw
   };
   await runScanPromotePass({ boxRoot: box.root, deps: { runUpload: upload, runWakeup: fakeWakeup().runner } });
 
-  // doctest:L467
   const ledger = await loadLedger(box.root);
   t.check(
     {
@@ -621,13 +590,11 @@ void test("The bbx serve child and a hand-run CLI are different processes and bo
       t.error(error);
     }
   });
-  // doctest:L485
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A });
   await acquireLock(promotionLockPath(box.root), { purpose: "test" });
   const upload = fakeUpload();
 
-  // doctest:L490
   const result = await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
@@ -638,7 +605,6 @@ void test("The bbx serve child and a hand-run CLI are different processes and bo
     state: "pending",
   });
 
-  // doctest:L497
   await releaseLock(promotionLockPath(box.root));
 });
 
@@ -651,13 +617,11 @@ void test("Quarantined bytes that vanished become a rejection, not an eternal re
       t.error(error);
     }
   });
-  // doctest:L507
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A, originalFilename: "Vanished.pdf" });
   await fs.rm(quarantineFilePath(box.root, `${HASH_A}.pdf`));
   const upload = fakeUpload();
 
-  // doctest:L512
   const result = await runScanPromotePass({
     boxRoot: box.root,
     deps: { runUpload: upload.runner, runWakeup: fakeWakeup().runner },
@@ -694,13 +658,11 @@ void test("Promotion runs bbx upload --as scan, which stages raw asset bytes.", 
       t.error(error);
     }
   });
-  // doctest:L542
   const box = await makeTmpBox({ git: true });
   await quarantine(box, { sha256: HASH_A });
   await deAnnex(box.root);
   const upload = fakeUpload();
 
-  // doctest:L547
   t.check(
     await runScanPromotePass({
       boxRoot: box.root,
@@ -712,7 +674,6 @@ void test("Promotion runs bbx upload --as scan, which stages raw asset bytes.", 
   // Nothing is lost: the quarantined bytes and their `pending` sidecar stay exactly
   // where they are, so restoring the box makes the very next pass import them.
 
-  // doctest:L558
   await reAnnex(box.root);
   const second = await runScanPromotePass({
     boxRoot: box.root,

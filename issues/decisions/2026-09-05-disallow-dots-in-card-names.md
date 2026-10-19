@@ -10,6 +10,8 @@ discovered-in: "worktree-sidecar-shell — after the figure attach-scope bug"
 priority: normal
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 A card filename is a grammar, not a label: `Name.<type>.card` carries the
 card's identity AND its type, and other names are derived from it — the attach
 directory is `<basename>.attach/`, and `cardBasename()`/`parseCardFileName()`

@@ -15,11 +15,10 @@
 // retires the old hash into `superseded[]` (keeping `priorStockHashes` complete) and
 // records the new `current`.
 //
-// (All logic lives in the setup block so the assertion lines carry no `=>` arrow
-// that the doctest separator would trip over.)
+// (All logic lives in the setup block so the assertion lines carry no `=>` arrow.)
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createHash } from "node:crypto";
 import { MANAGED_STOCK_TEMPLATES } from "../../src/core/box/templates.js";
 import { TEMPLATE_STOCK_HASHES } from "../../src/core/template-stock-hashes.js";
@@ -59,7 +58,6 @@ function inconsistentEntries(): string[] {
 // If this lists a guide, its constant changed without the ledger being updated —
 // run `pnpm template-stock:update`.
 void test("If this lists a guide, its constant changed without the ledger being updated...", async (t) => {
-  // doctest:L63
   t.check(driftedGuides(), []);
 });
 
@@ -68,7 +66,6 @@ void test("If this lists a guide, its constant changed without the ledger being 
 // Adding a `MANAGED_STOCK_TEMPLATES` entry (or a ledger key) without the other side
 // would leave a guide untracked or a dangling record.
 void test("Adding a MANAGEDSTOCKTEMPLATES entry (or a ledger key) without the other side...", async (t) => {
-  // doctest:L73
   t.check(managedMatchesLedger(), true);
 });
 
@@ -76,6 +73,5 @@ void test("Adding a MANAGEDSTOCKTEMPLATES entry (or a ledger key) without the ot
 //
 // `current` must not also appear in `superseded`, and no hash may be listed twice.
 void test("current must not also appear in superseded, and no hash may be listed twice.", async (t) => {
-  // doctest:L82
   t.check(inconsistentEntries(), []);
 });

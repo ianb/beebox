@@ -17,7 +17,7 @@
 // depends on it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import assert from "node:assert/strict";
@@ -80,20 +80,16 @@ void test("The box has one landmark (content/recipes) and no root landmark, so b
       t.error(error);
     }
   });
-  // doctest:L72
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L75
   await box.write("_content/recipes/Recipes.landmark.card",
     "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n\n");
 
-  // doctest:L78
   await seedSession(box, { sessionId: "inrecipe1", contextDir: "_content/recipes", firstMessage: "what can I make with lentils", daysAgo: 1 });
   await seedSession(box, { sessionId: "rootchat1", contextDir: "", firstMessage: "how's my week looking", daysAgo: 2 });
   await seedSession(box, { sessionId: "orphaned1", contextDir: "_content/orphan", firstMessage: "leftover thread", daysAgo: 3 });
 
-  // doctest:L82
   const { landmarks, unassigned } = await caller(box.root).chat.byLandmark();
   t.check(
     { landmarks: landmarks.map((l) => ({ label: l.label, sessions: l.sessions.map((s) => s.sessionId) })), unassigned: rows(unassigned.sessions) },
@@ -109,10 +105,8 @@ void test("The box has one landmark (content/recipes) and no root landmark, so b
   // A root landmark card takes the root chats back — `unassigned` is what's left
   // over, not a second home for the root.
 
-  // doctest:L94
   await box.write("Box.landmark.card", "---\nnavigation:\n  label: Home\n---\n\n");
 
-  // doctest:L96
   const withRoot = await caller(box.root).chat.byLandmark();
   t.check(
     { rootTile: withRoot.landmarks.find((l) => l.dir === "")?.sessions.map((s) => s.sessionId), unassigned: rows(withRoot.unassigned.sessions) },
@@ -134,21 +128,17 @@ void test("Three fresh chats under one non-root landmark still render as one inl
       t.error(error);
     }
   });
-  // doctest:L116
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L119
   await box.write("_content/recipes/Recipes.landmark.card",
     "---\nnavigation:\n  label: Recipes\n---\n\n");
 
-  // doctest:L122
   await seedSession(box, { sessionId: "fresh001", contextDir: "_content/recipes", firstMessage: "newest", daysAgo: 1 });
   await seedSession(box, { sessionId: "fresh002", contextDir: "_content/recipes", firstMessage: "middle", daysAgo: 2 });
   await seedSession(box, { sessionId: "fresh003", contextDir: "_content/recipes", firstMessage: "oldest fresh", daysAgo: 3 });
   await seedSession(box, { sessionId: "stale001", contextDir: "_content/recipes", firstMessage: "long ago", daysAgo: 30 });
 
-  // doctest:L127
   const recipes = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l.dir === "_content/recipes");
   assert.ok(recipes);
   const newest = recipes.sessions[0];
@@ -171,11 +161,9 @@ void test("Three fresh chats under one non-root landmark still render as one inl
 
   // An empty bucket reports zero and null rather than inventing an activity time.
 
-  // doctest:L143
   await box.write("_content/trips/Trips.landmark.card",
     "---\nnavigation:\n  label: Trips\n---\n\n");
 
-  // doctest:L146
   const trips = (await caller(box.root).chat.byLandmark()).landmarks.find((l) => l.dir === "_content/trips");
   assert.ok(trips);
   t.check({ freshCount: trips.freshCount, latestActivity: trips.latestActivity }, { freshCount: 0, latestActivity: null });
@@ -195,20 +183,16 @@ void test("A landmark whose only chats fell out of the fresh window renders no i
       t.error(error);
     }
   });
-  // doctest:L164
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L167
   await box.write("_content/fresh/Fresh.landmark.card", "---\nnavigation:\n  label: Fresh\n---\n\n");
   await box.write("_content/stale/Stale.landmark.card", "---\nnavigation:\n  label: Stale\n---\n\n");
   await box.write("_content/never/Never.landmark.card", "---\nnavigation:\n  label: Never\n---\n\n");
 
-  // doctest:L171
   await seedSession(box, { sessionId: "freshone", contextDir: "_content/fresh", firstMessage: "today", daysAgo: 1 });
   await seedSession(box, { sessionId: "staleone", contextDir: "_content/stale", firstMessage: "a while back", daysAgo: 30 });
 
-  // doctest:L174
   const ordered = await caller(box.root).chat.byLandmark();
   t.check(ordered.landmarks.map((l) => l.label), ["Fresh", "Stale", "Never"]);
 });
@@ -226,19 +210,15 @@ void test("The good landmarks still load.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L190
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L193
   await box.write("_content/recipes/Recipes.landmark.card",
     "---\nnavigation:\n  label: Recipes\n---\n\n");
   await box.write("_content/trips/Trips.landmark.card", "no frontmatter here at all\n");
 
-  // doctest:L197
   await seedSession(box, { sessionId: "intrips01", contextDir: "_content/trips", firstMessage: "where to in august", daysAgo: 1 });
 
-  // doctest:L199
   const broken = await caller(box.root).chat.byLandmark();
   t.check(
     {
@@ -269,12 +249,10 @@ void test("A chat whose transcript is gone can't be resumed, so it can't be a se
       t.error(error);
     }
   });
-  // doctest:L221
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   const here = await localOrigin();
 
-  // doctest:L225
   await box.write("_content/recipes/Recipes.landmark.card",
     "---\nnavigation:\n  label: Recipes\n---\n\n");
   await seedSession(box, { sessionId: "livechat1", contextDir: "_content/recipes", firstMessage: "what's for dinner", daysAgo: 1 });
@@ -283,7 +261,6 @@ void test("A chat whose transcript is gone can't be resumed, so it can't be a se
   await box.write("_content/chat/web/2026-07-19_prod.chat.card",
     "---\nsession: elsewhere1\ncontext-dir: _content/recipes\norigin: prod-machine-id\norigin-name: prod\n---\n\n");
 
-  // doctest:L233
   const picked = await caller(box.root).chat.byLandmark();
   const recipes = picked.landmarks.find((l) => l.label === "Recipes");
   assert.ok(recipes);

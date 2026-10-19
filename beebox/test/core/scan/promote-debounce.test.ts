@@ -11,7 +11,7 @@
 // 150ms waits and the pass fired inside the window (2026-10-08).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createPromoteDebouncer } from "../../../src/core/scan/promote-debounce.js";
 import Fastify from "fastify";
 import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-upload/promote-lifecycle.js";
@@ -48,14 +48,12 @@ function advance(ms: number) {
 
 // ## Two uploads inside the window produce one pass
 void test("Two uploads inside the window produce one pass", async (t) => {
-  // doctest:L52
   mock.timers.enable({ apis: ["setInterval", "Date"], now: 0 });
   const c = counting({ settleMs: 250 });
   c.debouncer.notify();
   advance(150);
   c.debouncer.notify();
 
-  // doctest:L58
   // 350ms in: past the window measured from the first upload (it would have
   // fired by 310, its first tick past 250), still inside the one measured from
   // the second. 0 here is the re-arm; a debouncer that kept the first timer
@@ -63,18 +61,15 @@ void test("Two uploads inside the window produce one pass", async (t) => {
   advance(200);
   t.check(c.runs, 0);
 
-  // doctest:L66
   advance(400);
   t.check(c.runs, 1);
 
   // Nothing re-fires once the batch has settled — the pass runs when work arrives,
   // not on a timer:
 
-  // doctest:L75
   advance(300);
   t.check(c.runs, 1);
 
-  // doctest:L79
   c.debouncer.cancel();
   mock.timers.reset();
 });
@@ -84,7 +79,6 @@ void test("Two uploads inside the window produce one pass", async (t) => {
 // Server close must not leave a promote pass scheduled against a box that is
 // shutting down.
 void test("Server close must not leave a promote pass scheduled against a box that is sh...", async (t) => {
-  // doctest:L89
   mock.timers.enable({ apis: ["setInterval", "Date"], now: 0 });
   const c = counting({ settleMs: 100 });
   c.debouncer.notify();
@@ -92,13 +86,11 @@ void test("Server close must not leave a promote pass scheduled against a box th
   advance(300);
   t.check(c.runs, 0);
 
-  // doctest:L97
   // And a notify after cancel stays cancelled.
   c.debouncer.notify();
   advance(300);
   t.check(c.runs, 0);
 
-  // doctest:L103
   mock.timers.reset();
 });
 
@@ -107,7 +99,6 @@ void test("Server close must not leave a promote pass scheduled against a box th
 // The startup pass is fire-and-forget so a box can serve immediately. Closing the
 // server must still wait for that pass before its temporary box is removed.
 void test("The startup pass is fire-and-forget so a box can serve immediately.", async (t) => {
-  // doctest:L112
   const box = await makeTmpBox({ git: true });
   const app = Fastify();
   let release!: () => void;
@@ -126,12 +117,10 @@ void test("The startup pass is fire-and-forget so a box can serve immediately.",
   await sleep(20);
   t.check(closingSettled, false);
 
-  // doctest:L133
   release();
   await closing;
   t.check(closingSettled, true);
 
-  // doctest:L138
   await box.cleanup();
 });
 
@@ -146,7 +135,6 @@ void test("The startup pass is fire-and-forget so a box can serve immediately.",
 // timer starts the lifecycle after the request has released, and the pass hands
 // its permit to a child, as `bbx wakeup` or the commit hook would receive it.
 void test("An upload request arms the pass while it holds the request's work permit, and...", async (t) => {
-  // doctest:L153
   const box = await makeTmpBox({ git: true });
   const app = Fastify();
   const request = await acquireBoxWork(box.root, { reason: "PUT /scan-upload" });
@@ -170,7 +158,6 @@ void test("An upload request arms the pass while it holds the request's work per
   await armed;
   t.check(await Promise.race([outcome, sleep(5000).then(() => "the pass never ran")]), "admitted");
 
-  // doctest:L177
   await app.close();
   await box.cleanup();
 });

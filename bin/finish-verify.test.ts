@@ -1,7 +1,7 @@
 // Tests for finish-verify's output and verdict logic on synthetic results, and
 // one tiny `node -e` child for the streamed log.
 //
-// A `.test.ts` rather than a doctest, for bin/test-select.test.ts's reason: the
+// A node:test file rather than a t.check test, for bin/test-select.test.ts's reason: the
 // thing under test runs the suites, so testing it from inside one is circular.
 //
 //   node --import tsx --test bin/finish-verify.test.ts
@@ -50,16 +50,16 @@ function result(input: Partial<CommandResult>): CommandResult {
 
 test("failing files come from TAP lines, and only when the name is a real file", () => {
   const output = [
-    "not ok 1 - test/core/box.doctest.md # time=812ms",
+    "not ok 1 - test/core/box.test.ts # time=812ms",
     "not ok 2 - a test whose name has spaces",
-    "    not ok 3 - test/hub/hub-e2e.doctest.md",
-    "not ok 4 - test/core/box.doctest.md",
-    "ok 5 - test/lib/fine.doctest.md",
+    "    not ok 3 - test/hub/hub-e2e.test.ts",
+    "not ok 4 - test/core/box.test.ts",
+    "ok 5 - test/lib/fine.test.ts",
   ].join("\n");
-  const real = new Set(["test/core/box.doctest.md", "test/hub/hub-e2e.doctest.md"]);
+  const real = new Set(["test/core/box.test.ts", "test/hub/hub-e2e.test.ts"]);
   assert.deepEqual(parseFailingFiles(output, (p) => real.has(p)), [
-    "test/core/box.doctest.md",
-    "test/hub/hub-e2e.doctest.md",
+    "test/core/box.test.ts",
+    "test/hub/hub-e2e.test.ts",
   ]);
 });
 
@@ -100,26 +100,26 @@ test("a green run prints one line and no verdict noise", () => {
 });
 
 test("a flake-only failure is green, and named", () => {
-  const flaked = result({ files: [{ file: "test/lib/git-lock.doctest.md", outcome: "flake" }] });
+  const flaked = result({ files: [{ file: "test/lib/git-lock.test.ts", outcome: "flake" }] });
   assert.deepEqual(verdict([flaked]), {
     green: true,
-    flakes: ["test/lib/git-lock.doctest.md"],
+    flakes: ["test/lib/git-lock.test.ts"],
   });
   assert.deepEqual(formatResult(flaked), [
     "FAIL pnpm --dir beebox test:changed (1.0s) → /tmp/out.log",
-    "     flake test/lib/git-lock.doctest.md",
+    "     flake test/lib/git-lock.test.ts",
   ]);
 });
 
 test("one real failure among flakes is red", () => {
   const mixed = result({
     files: [
-      { file: "a.doctest.md", outcome: "flake" },
-      { file: "b.doctest.md", outcome: "real", outputPath: "/tmp/b.log" },
+      { file: "a.test.ts", outcome: "flake" },
+      { file: "b.test.ts", outcome: "real", outputPath: "/tmp/b.log" },
     ],
   });
-  assert.deepEqual(verdict([mixed]), { green: false, flakes: ["a.doctest.md"] });
-  assert.ok(formatResult(mixed).includes("     real  b.doctest.md → /tmp/b.log"));
+  assert.deepEqual(verdict([mixed]), { green: false, flakes: ["a.test.ts"] });
+  assert.ok(formatResult(mixed).includes("     real  b.test.ts → /tmp/b.log"));
 });
 
 test("a red test run whose failing files could not be identified is red", () => {
@@ -143,8 +143,8 @@ test("a beebox TAP path resolves against the package, not the command's cwd", ()
   const root = mkdtempSync(join(tmpdir(), "finish-verify-"));
   try {
     mkdirSync(join(root, "beebox/test/core"), { recursive: true });
-    writeFileSync(join(root, "beebox/test/core/box.doctest.md"), "");
-    const path = "test/core/box.doctest.md";
+    writeFileSync(join(root, "beebox/test/core/box.test.ts"), "");
+    const path = "test/core/box.test.ts";
     assert.equal(existsRelative({ packageDir: join(root, "beebox"), path, root }), true);
     assert.equal(existsRelative({ packageDir: root, path, root }), false);
     const output = `not ok 1 - ${path} # time=812ms`;

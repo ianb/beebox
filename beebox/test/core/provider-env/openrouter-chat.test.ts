@@ -6,8 +6,8 @@
 // (`docs/plans/openrouter-chat-models.md`). These tests are the gate.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { SDKResultSuccess } from "@anthropic-ai/claude-agent-sdk";
@@ -62,7 +62,6 @@ async function refusal(run: () => Promise<unknown>): Promise<string> {
 // OpenRouter ids are `author/slug`, with an optional `:variant`. No first-party,
 // Codex, or GLM id contains a slash, so the slash alone is the provider rule.
 void test("OpenRouter ids are author/slug, with an optional :variant.", async (t) => {
-  // doctest:L65
   t.check(["deepseek/deepseek-v3.2", kimi.id, glm, opus, sol].map(providerOf), [
     "openrouter",
     "openrouter",
@@ -71,7 +70,6 @@ void test("OpenRouter ids are author/slug, with an optional :variant.", async (t
     "openai",
   ]);
 
-  // doctest:L68
   t.check([isOpenRouterModelId(kimi.id), isOpenRouterModelId("deepseek"), isOpenRouterModelId("Deep/Seek"), isOpenRouterModelId("a/b:c:d")], [
     true,
     false,
@@ -85,16 +83,12 @@ void test("OpenRouter ids are author/slug, with an optional :variant.", async (t
 // An empty list is the default for every box. Only claude chats take added
 // models — they ride its Anthropic-shaped transport.
 void test("An empty list is the default for every box.", async (t) => {
-  // doctest:L78
   t.check(isChatModelAllowed("claude", { model: kimi.id, added: [] }), false);
 
-  // doctest:L81
   t.check(isChatModelAllowed("claude", { model: kimi.id, added: [kimi] }), true);
 
-  // doctest:L84
   t.check(isChatModelAllowed("codex", { model: kimi.id, added: [kimi] }), false);
 
-  // doctest:L87
   t.check(chatModelOptions("claude", [kimi]).at(-1)?.label, "Kimi K2");
 });
 
@@ -104,7 +98,6 @@ void test("An empty list is the default for every box.", async (t) => {
 // Following the box default instead would change who answers without anyone
 // choosing it; the spawn refuses with the fix (below). A follower is unaffected.
 void test("A chat that explicitly picked a model the owner later removed keeps that pick.", async (t) => {
-  // doctest:L98
   t.check(
     [
       resolveEffectiveModel({ engine: "claude", pinned: sonnet, added: [] }, { kind: "explicit", model: kimi.id }),
@@ -122,10 +115,8 @@ void test("A chat that explicitly picked a model the owner later removed keeps t
   ],
   );
 
-  // doctest:L104
   t.check(chatModelForEngine("claude", kimi.id), "moonshotai/kimi-k2-0905:exacto");
 
-  // doctest:L107
   t.check(chatModelLabel("claude", { model: kimi.id, added: [] }), "moonshotai/kimi-k2-0905:exacto (removed in admin)");
 });
 
@@ -137,19 +128,15 @@ void test("A chat that explicitly picked a model the owner later removed keeps t
 // `strongest`. An unpinned small slot is the default itself, so nothing in the
 // background quietly needs a Claude login.
 void test("An added model has no tier.", async (t) => {
-  // doctest:L120
   const deepseek = { id: "deepseek/deepseek-v3.2", label: "DeepSeek" };
   const added = [kimi, deepseek];
   const tiers = (small: string) => (["efficient", "balanced", "strong", "strongest", "haiku"] as const)
     .map((name) => named(resolveTierModel({ engine: "claude", name, boxDefault: kimi.id, small })));
 
-  // doctest:L125
   t.check(resolveSmallModelForEngine({ engine: "claude", pinned: null, added, boxDefault: kimi.id }), "moonshotai/kimi-k2-0905:exacto");
 
-  // doctest:L128
   t.check(resolveSmallModelForEngine({ engine: "claude", pinned: deepseek.id, added, boxDefault: kimi.id }), "deepseek/deepseek-v3.2");
 
-  // doctest:L131
   t.check(tiers(deepseek.id), [
     "deepseek/deepseek-v3.2",
     "deepseek/deepseek-v3.2",
@@ -161,7 +148,6 @@ void test("An added model has no tier.", async (t) => {
   // A small slot pinned to a Claude model is the owner's choice: the lower tiers
   // follow it, and those runs need a Claude login.
 
-  // doctest:L139
   t.check(tiers(haiku), [
     "claude efficient",
     "claude efficient",
@@ -173,7 +159,6 @@ void test("An added model has no tier.", async (t) => {
   // Other boxes keep the tier table. A Codex box cannot run an added model, so an
   // OpenRouter small pin falls through to its own efficient tier.
 
-  // doctest:L147
   t.check(
     [
       named(resolveTierModel({ engine: "claude", name: "strong", boxDefault: null, small: haiku })),
@@ -197,7 +182,6 @@ void test("An added model has no tier.", async (t) => {
 // A malformed entry is dropped with a warning; the rest survive. An added model
 // may be the box default and the small-pass model.
 void test("A malformed entry is dropped with a warning; the rest survive.", async (t) => {
-  // doctest:L163
   const box = await boxWith({
     agentModel: kimi.id,
     smallModel: kimi.id,
@@ -210,24 +194,19 @@ void test("A malformed entry is dropped with a warning; the rest survive.", asyn
     },
   ]);
 
-  // doctest:L171
   t.check(await loadBoxModel(box.root), "moonshotai/kimi-k2-0905:exacto");
 
-  // doctest:L174
   t.check(await loadSmallModel(box.root), "moonshotai/kimi-k2-0905:exacto");
 
-  // doctest:L177
   await box.cleanup();
 });
 
 // A default that names a model no longer in the list is not a policy the box
 // can run, so it reads as none.
 void test("A default that names a model no longer in the list is not a policy the box ca...", async (t) => {
-  // doctest:L184
   const box = await boxWith({ agentModel: kimi.id });
   t.check(await loadBoxModel(box.root), null);
 
-  // doctest:L188
   await box.cleanup();
 });
 
@@ -236,7 +215,6 @@ void test("A default that names a model no longer in the list is not a policy th
 // `providerEnvAdditions` is what every spawn path calls. A first-party model
 // needs nothing.
 void test("providerEnvAdditions is what every spawn path calls.", async (t) => {
-  // doctest:L197
   const box = await boxWith({});
   t.check(
     [
@@ -253,31 +231,26 @@ void test("providerEnvAdditions is what every spawn path calls.", async (t) => {
   ],
   );
 
-  // doctest:L206
   await box.cleanup();
 });
 
 // A key alone runs nothing. The refusal names where to add the model.
 void test("A key alone runs nothing.", async (t) => {
-  // doctest:L212
   const box = await boxWith({});
   await grantKey(box.root);
   t.check(await refusal(() => providerEnvAdditions({ boxRoot: box.root, model: kimi.id, purpose: "test" })), "OpenRouterSetupError: This run uses the OpenRouter model moonshotai/kimi-k2-0905:exacto, which is not added for this box. Add it in Admin → OpenRouter models, or pick another model.");
 
-  // doctest:L217
   await box.cleanup();
 });
 
 // An added model without a key refuses too, naming the key setup.
 void test("An added model without a key refuses too, naming the key setup.", async (t) => {
-  // doctest:L223
   const box = await boxWith({ openrouterModels: [kimi] });
   t.check(
     await refusal(() => providerEnvAdditions({ boxRoot: box.root, model: kimi.id, purpose: "test" })),
     'OpenRouterSetupError: This run uses the OpenRouter model moonshotai/kimi-k2-0905:exacto, but no usable OpenRouter key is available for this box (No secret named "openrouter" exists on this machine. It can be declared (bbx secrets declare openrouter), but only the boxholder can supply its value.). Add one in Admin → Secrets and grant it to this box.',
   );
 
-  // doctest:L227
   await box.cleanup();
 });
 
@@ -285,7 +258,6 @@ void test("An added model without a key refuses too, naming the key setup.", asy
 // and every Claude Code model role pinned to the chosen model, so no background
 // call goes out under a `claude-*` id on this key.
 void test("Both present:", async (t) => {
-  // doctest:L235
   const box = await boxWith({ openrouterModels: [kimi] });
   await grantKey(box.root);
   const env: Record<string, string | undefined> = { KEEP: "yes" };
@@ -296,7 +268,6 @@ void test("Both present:", async (t) => {
     "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
   ]);
 
-  // doctest:L242
   t.check([env.KEEP, env.ANTHROPIC_BASE_URL, env.ANTHROPIC_API_KEY, env.ANTHROPIC_DEFAULT_HAIKU_MODEL, env.CLAUDE_CODE_SUBAGENT_MODEL], [
     "yes",
     "https://openrouter.ai/api",
@@ -305,7 +276,6 @@ void test("Both present:", async (t) => {
     "moonshotai/kimi-k2-0905:exacto",
   ]);
 
-  // doctest:L245
   await box.cleanup();
 });
 
@@ -318,7 +288,6 @@ void test("Both present:", async (t) => {
 // endpoint, so a new provider gets them too. A first-party run follows the box's
 // `claudeCodeTelemetry`, which is on unless the owner turns it off.
 void test("Claude Code treats a custom ANTHROPICBASEURL as the Claude API, so its usage...", async (t) => {
-  // doctest:L258
   const flags = ["DISABLE_TELEMETRY", "DISABLE_ERROR_REPORTING", "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"];
   async function flagsByModel(config: Record<string, unknown>) {
     const box = await boxWith({ openrouterModels: [kimi], ...config });
@@ -334,7 +303,6 @@ void test("Claude Code treats a custom ANTHROPICBASEURL as the Claude API, so it
     return seen;
   }
 
-  // doctest:L273
   t.check(await flagsByModel({}), ["1,1,1", "1,1,1", "-,-,-", "-,-,-"]);
 
   // Turned off, a first-party run gets the two telemetry flags but not
@@ -342,10 +310,8 @@ void test("Claude Code treats a custom ANTHROPICBASEURL as the Claude API, so it
   // that variable also stops checks the owner did not ask to stop. A value the
   // loader does not recognize reads as off.
 
-  // doctest:L283
   t.check(await flagsByModel({ claudeCodeTelemetry: "off" }), ["1,1,1", "1,1,1", "1,1,-", "1,1,-"]);
 
-  // doctest:L286
   t.check(await flagsByModel({ claudeCodeTelemetry: "maybe" }), ["1,1,1", "1,1,1", "1,1,-", "1,1,-"]);
 });
 
@@ -355,7 +321,6 @@ void test("Claude Code treats a custom ANTHROPICBASEURL as the Claude API, so it
 // in the spike. A wrong number is worse than none, so a third-party run's
 // result carries no `total_cost_usd`. First-party runs keep theirs.
 void test("The SDK prices every turn as Claude, which overstated OpenRouter spend 5–20×...", async (t) => {
-  // doctest:L297
   const { adaptBackendMessage } = await import("../../../src/core/chat/session/messages.js");
   const result: SDKResultSuccess = {
     type: "result", subtype: "success", is_error: false, result: "", duration_ms: 1, duration_api_ms: 1,
@@ -395,13 +360,11 @@ void test("The spawn gate alone is not enough:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L326
   const { ChatSession } = await import("../../../src/core/chat/session/run/core.js");
   const { createFakeChatBackend } = await import("../../../src/services/claude-chat/core.js");
   const { tick } = await import("../../helpers/chat-session-spawner-helpers.js");
   const { clearBoxConfigCache } = await import("../../../src/core/box/config.js");
 
-  // doctest:L331
   const box = await boxWith({ openrouterModels: [kimi] });
   await grantKey(box.root);
   const backend = createFakeChatBackend();
@@ -410,7 +373,6 @@ void test("The spawn gate alone is not enough:", async (t) => {
   session.on("error", (e: Error) => errors.push(e.name));
   session.setModel(kimi.id);
 
-  // doctest:L339
   await session.send("first");
   await tick();
   backend.lastRun()?.emitResult();
@@ -421,7 +383,6 @@ void test("The spawn gate alone is not enough:", async (t) => {
     "https://openrouter.ai/api",
   ]);
 
-  // doctest:L347
   await writeFile(join(box.root, "_config/box.json"), JSON.stringify({}));
   clearBoxConfigCache(box.root);
   const sent = await session.send("second");
@@ -438,7 +399,6 @@ void test("The spawn gate alone is not enough:", async (t) => {
   // The next attempt cold-starts into the same refusal. It does not fall back to
   // the box default.
 
-  // doctest:L359
   const again = await session.send("third");
   await tick();
   t.check([again, errors, backend.runs.map((r) => r.startOptions.model)], [

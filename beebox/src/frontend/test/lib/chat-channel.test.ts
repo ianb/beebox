@@ -11,13 +11,12 @@
 // breakpoint the layouts switch on.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { chatChannelFor } from "../../src/lib/chat-channel.js";
 
 // The native shell wins over the viewport — an iPad-width native window is still
 // the app, with native chrome around the page:
 void test("The native shell wins over the viewport — an iPad-width native window is stil...", async (t) => {
-  // doctest:L21
   t.check(
     [
       chatChannelFor({ nativeShell: true, wideViewport: false }),
@@ -29,7 +28,6 @@ void test("The native shell wins over the viewport — an iPad-width native wind
 
 // Plain web splits on the breakpoint:
 void test("Plain web splits on the breakpoint:", async (t) => {
-  // doctest:L31
   t.check(
     [
       chatChannelFor({ nativeShell: false, wideViewport: true }),

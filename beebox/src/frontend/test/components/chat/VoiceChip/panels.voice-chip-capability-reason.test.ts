@@ -9,29 +9,25 @@
 // blocks an option on a query that hasn't resolved.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { capabilityReason } from "../../../../src/components/chat/VoiceChip/panels.js";
 
 // ## Usable needs no reason
 void test("Usable needs no reason", async (t) => {
-  // doctest:L18
   t.check(capabilityReason({ usable: true, needs: ["openrouter"] }), null);
 });
 
 // ## Unknown capability (undefined) needs no reason either
 void test("Unknown capability (undefined) needs no reason either", async (t) => {
-  // doctest:L25
   t.check(capabilityReason(undefined), null);
 });
 
 // ## Unusable with one missing secret
 void test("Unusable with one missing secret", async (t) => {
-  // doctest:L32
   t.check(capabilityReason({ usable: false, needs: ["openrouter"] }), "needs the openrouter secret — Admin → Secrets");
 });
 
 // ## Unusable with either of two secrets joined by "or"
 void test("Unusable with either of two secrets joined by \"or\"", async (t) => {
-  // doctest:L39
   t.check(capabilityReason({ usable: false, needs: ["openai-thinking", "openrouter"] }), "needs the openai-thinking or openrouter secret — Admin → Secrets");
 });

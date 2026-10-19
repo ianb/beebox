@@ -7,7 +7,7 @@
 // `waiting: <reason>`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { BoxScheduleHealth } from "../../../src/core/schedule/health-box.js";
 import type { TaskHealth } from "../../../src/core/schedule/health.js";
 import type { HealthCheck } from "../../../src/shared/health-check.js";

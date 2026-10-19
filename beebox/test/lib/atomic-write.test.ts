@@ -8,7 +8,7 @@
 // (caught by cross-model review, 2026-08-01).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";

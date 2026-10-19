@@ -11,8 +11,8 @@
 // `QualifiedSession` is therefore scalars only.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import assert from "node:assert/strict";
@@ -27,7 +27,7 @@ import { loadReviewState, saveReviewState } from "../../../../src/core/chat/revi
 import { MAX_SESSION_ENTRIES, parseSessionLog } from "../../../../src/cli/lib/session.js";
 import { prefixHash } from "../../../../src/core/chat/review/span.js";
 
-// Pin this machine's origin id to a file under the tmp box, so a doctest run
+// Pin this machine's origin id to a file under the tmp box, so a test run
 // neither reads nor mints the real `~/.local/share/beebox/origin-id`.
 const LOCAL_ORIGIN = "11111111-2222-4333-8444-555555555555";
 const FOREIGN_ORIGIN = "99999999-8888-4777-8666-555555555555";
@@ -101,11 +101,9 @@ void test("A qualified session is scalars — no parsed transcript rides along",
       t.error(error);
     }
   });
-  // doctest:L80
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L83
   await seed(box, { sessionId: "sessone", entries: [bulk("a1"), bulk("a2")], agoHours: 5 });
   const result = await discover(box);
   const session = result.qualified[0];
@@ -123,7 +121,6 @@ void test("A qualified session is scalars — no parsed transcript rides along",
   // `readSessionWindow` is how the reviewer gets the entries back. Discovery
   // measured `spanChars` from exactly this, so the two agree.
 
-  // doctest:L126
   const window = await readSessionWindow({
     sessionId: "sessone",
     logPath: session.logPath,
@@ -138,7 +135,6 @@ void test("A qualified session is scalars — no parsed transcript rides along",
 
   // A husk whose transcript is gone reads as null rather than throwing.
 
-  // doctest:L144
   t.check(
     await readSessionWindow({
       sessionId: "nosuch",
@@ -164,11 +160,9 @@ void test("Dropping the arrays did not move any threshold.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L165
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L168
   await seed(box, { sessionId: "sessbig", entries: [bulk("b1"), bulk("b2")], agoHours: 5 });
   await seed(box, {
     sessionId: "sesssmall",
@@ -179,7 +173,6 @@ void test("Dropping the arrays did not move any threshold.", async (t) => {
   await seed(box, { sessionId: "sessnow", entries: [bulk("n1"), bulk("n2")], agoHours: 0 });
   await box.write("_content/chat/web/2026-07-28_sessgone.chat.card", "---\nsession: sessgone\n---\n\n");
 
-  // doctest:L178
   const result = await discover(box);
   t.check(result, {
     qualified: [bulkSession(box, { sessionId: "sessbig", agoHours: 5 })],
@@ -197,11 +190,9 @@ void test("Dropping the arrays did not move any threshold.", async (t) => {
   // The run cap is applied to this order, so the longest-neglected session is the
   // one a capped night makes progress on.
 
-  // doctest:L198
   await seed(box, { sessionId: "sessold", entries: [bulk("d1"), bulk("d2")], agoHours: 40 });
   await seed(box, { sessionId: "sessmid", entries: [bulk("m1"), bulk("m2")], agoHours: 20 });
 
-  // doctest:L201
   t.check(await discover(box), {
     qualified: [
       bulkSession(box, { sessionId: "sessold", agoHours: 40 }),
@@ -232,16 +223,13 @@ void test("A session's transcript lives on one machine, and that machine is the 
       t.error(error);
     }
   });
-  // doctest:L217
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L220
   await seed(box, { sessionId: "sessmine", entries: [bulk("m1"), bulk("m2")], agoHours: 5, origin: LOCAL_ORIGIN });
   await seed(box, { sessionId: "sesstheirs", entries: [bulk("t1"), bulk("t2")], agoHours: 5, origin: FOREIGN_ORIGIN });
   await seed(box, { sessionId: "sessunset", entries: [bulk("u1"), bulk("u2")], agoHours: 5 });
 
-  // doctest:L224
   const result = await discover(box);
   // The foreign husk's transcript is never opened, so a session that ran elsewhere
   // costs nothing to skip — it is turned away before the stat.
@@ -274,16 +262,13 @@ void test("The span walk streams the transcript in pages, so a session that grew
       t.error(error);
     }
   });
-  // doctest:L256
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L259
   const overCap = Array.from({ length: MAX_SESSION_ENTRIES + 10 },
     (_, i) => userEntry(`cap-${String(i)}`, `line ${String(i)}`));
   await seed(box, { sessionId: "sesscap", entries: overCap, agoHours: 5 });
 
-  // doctest:L263
   // A journal whose boundary sits at index 3 — computed over the parsed prefix,
   // exactly as a prior run would have recorded it.
   const parsed = await parseSessionLog({
@@ -310,7 +295,6 @@ void test("The span walk streams the transcript in pages, so a session that grew
     },
   });
 
-  // doctest:L289
   const window = await readSessionWindow({
     sessionId: "sesscap",
     logPath: getSessionLogPath(box.root, "sesscap"),
@@ -328,7 +312,6 @@ void test("The span walk streams the transcript in pages, so a session that grew
   // The journal hash for the new boundary covers the whole prefix, not just the
   // window — so the next run's walk verifies against it.
 
-  // doctest:L310
   const logPath = getSessionLogPath(box.root, "sesscap");
   const head = await parseSessionLog({ logPath, slice: { mode: "page", offset: 0, limit: MAX_SESSION_ENTRIES } });
   const tail = await parseSessionLog({ logPath, slice: { mode: "page", offset: MAX_SESSION_ENTRIES, limit: 4 } });
@@ -350,11 +333,9 @@ void test("Titling is decoupled from the summary gate:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L330
   const tbox = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = tbox.path("claude-projects");
 
-  // doctest:L333
   await seed(tbox, {
     sessionId: "sesschat",
     entries: [

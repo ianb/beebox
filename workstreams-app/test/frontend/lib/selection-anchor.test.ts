@@ -11,7 +11,7 @@
 // rather than here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseFragment, serializeFragment } from "../../../src/frontend/lib/selection-anchor.js";
 
 // Key ORDER is an artifact of how the parser builds its object; the contract is
@@ -32,7 +32,6 @@ function roundTrip(fragment: Record<string, string>) {
 // `textStart` alone, a range, and either context word — the shapes Chrome's
 // generator actually emits.
 void test("textStart alone, a range, and either context word — the shapes Chrome's gener...", async (t) => {
-  // doctest:L36
   const shapes = [
     { textStart: "the router restarts" },
     { textStart: "the router", textEnd: "restarts" },
@@ -62,7 +61,6 @@ void test("textStart alone, a range, and either context word — the shapes Chro
 // to prefix. Getting this wrong parsed the whole fragment to null, so a comment on
 // a hyphen-final selection silently stopped highlighting.
 void test("A lone quoted string ending in - is the text itself, not a prefix with nothin...", async (t) => {
-  // doctest:L51
   t.check([roundTrip({ textStart: "foo-" }), roundTrip({ prefix: "so", textStart: "bar" })], [
     "{\"textStart\":\"foo-\"}",
     "{\"prefix\":\"so\",\"textStart\":\"bar\"}",
@@ -74,14 +72,12 @@ void test("A lone quoted string ending in - is the text itself, not a prefix wit
 // Commas and dashes are the fragment syntax's own separators, so a quote
 // containing them is exactly what a naive serializer mangles.
 void test("Commas and dashes are the fragment syntax's own separators, so a quote contai...", async (t) => {
-  // doctest:L61
   const awkward = { prefix: "a, b", textStart: "one, two - three", suffix: "-x-" };
   await t.checkText(roundTrip(awkward), "{\"prefix\":\"a, b\",\"textStart\":\"one, two - three\",\"suffix\":\"-x-\"}");
 });
 
 // Percent signs and spaces round-trip too, since the payload is URI-encoded.
 void test("Percent signs and spaces round-trip too, since the payload is URI-encoded.", async (t) => {
-  // doctest:L69
   await t.checkText(roundTrip({ textStart: "100% of the time & then some" }), "{\"textStart\":\"100% of the time & then some\"}");
 });
 
@@ -90,7 +86,6 @@ void test("Percent signs and spaces round-trip too, since the payload is URI-enc
 // Stored records carry the `:~:text=` marker; a bare payload is accepted too, so a
 // hand-written value in the YAML still resolves.
 void test("Stored records carry the :~:text= marker; a bare payload is accepted too, so...", async (t) => {
-  // doctest:L79
   t.check(
     [
       parseFragment(":~:text=hello"),
@@ -115,7 +110,6 @@ void test("Stored records carry the :~:text= marker; a bare payload is accepted 
 // An EMPTY `textStart` counts as nothing usable: it would ask the matcher to find
 // the empty string and take whatever it answered.
 void test("A fragment that decodes to nothing usable returns null, so the caller falls b...", async (t) => {
-  // doctest:L95
   t.check([parseFragment(":~:text="), parseFragment("")], [
     null,
     null,

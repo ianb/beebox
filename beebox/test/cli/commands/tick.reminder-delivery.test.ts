@@ -7,8 +7,8 @@
 // reminder's retry does not send it again.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { execSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";

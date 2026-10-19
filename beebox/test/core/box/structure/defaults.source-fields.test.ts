@@ -5,7 +5,7 @@
 // now say `basis: default`. A box's older stock copy updates or parks in place.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -37,7 +37,6 @@ void test("The box has turned the schedule off, a box-owned field, which the upd
       t.error(error);
     }
   });
-  // doctest:L34
   const box = await freshBox();
   const current = await read(box, SCHEDULE);
   await fs.rm(path.join(box, "_config/template-versions.json"));
@@ -46,7 +45,6 @@ void test("The box has turned the schedule off, a box-owned field, which the upd
     "refresh-maps.scheduled-script.card (updated)",
   ]);
 
-  // doctest:L41
   t.check(parse(splitCardContent(await read(box, SCHEDULE)).frontmatterText), {
     cron: "0 5 * * *",
     "not-before": "20h",
@@ -69,7 +67,6 @@ void test("The personality has no prior-stock list, so an untracked box with an 
       t.error(error);
     }
   });
-  // doctest:L55
   const box = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-source-fields-personality-"));
   const template = createInitialPersonalityTemplate();
   const old = template.replaceAll("\n    basis: ", "\n    source: ");

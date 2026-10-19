@@ -8,8 +8,8 @@
 // and kill a run that barely got to execute.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, eventually, instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, eventually, instanceOf } from "@ianbicking/tap-check/check";
 import { startAwakeTimeout, type AwakeElapsed } from "../../src/shared/awake-timeout.js";
 import {
   execWithTimeout,
@@ -29,7 +29,6 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 // under-counts by design. This example sets the gap far above any stall and waits
 // for the timeout to fire, rather than racing a fixed sleep against it:
 void test("Accumulates awake time across ticks and fires onTimeout when the budget is sp...", async (t) => {
-  // doctest:L32
   const state: { fired: AwakeElapsed | null } = { fired: null };
   startAwakeTimeout({ timeoutMs: 60, periodMs: 10, sleepGapMs: 5_000, onTimeout: (e) => { state.fired = e; } });
   t.check(await eventually(() => state.fired !== null, { label: "the awake timeout fires" }), true);
@@ -43,7 +42,6 @@ void test("Accumulates awake time across ticks and fires onTimeout when the budg
 // is credited one 10ms period at most, so wall time exceeds awake time by at
 // least 140ms however slow the surrounding sleeps run:
 void test("A gap between ticks far larger than the period means the machine slept (here...", async (t) => {
-  // doctest:L51
   let fired = null;
   const timer = startAwakeTimeout({ timeoutMs: 5_000, periodMs: 10, sleepGapMs: 60, onTimeout: (e) => { fired = e; } });
   await sleep(40);
@@ -59,7 +57,6 @@ void test("A gap between ticks far larger than the period means the machine slep
 
 // `stop()` freezes the awake counter; the timer never fires afterwards:
 void test("stop() freezes the awake counter; the timer never fires afterwards:", async (t) => {
-  // doctest:L73
   let fired = null;
   const timer = startAwakeTimeout({ timeoutMs: 30, periodMs: 10, onTimeout: (e) => { fired = e; } });
   timer.stop();
@@ -71,13 +68,11 @@ void test("stop() freezes the awake counter; the timer never fires afterwards:",
 //
 // The default budget is 10 minutes of awake runtime:
 void test("The default budget is 10 minutes of awake runtime:", async (t) => {
-  // doctest:L86
   t.check(SCRIPT_TIMEOUT, 600000);
 });
 
 // A successful command resolves with its measured timing:
 void test("A successful command resolves with its measured timing:", async (t) => {
-  // doctest:L93
   const timing = await execWithTimeout("true", { cwd: process.cwd(), stdio: "ignore", timeout: 5_000, env: process.env });
   t.check(timing, { durationMs: any(Number), sleepAffected: false });
 });
@@ -85,7 +80,6 @@ void test("A successful command resolves with its measured timing:", async (t) =
 // A non-zero exit rejects with `CommandFailedError`, carrying the exit code,
 // output tails, and the same timing:
 void test("A non-zero exit rejects with CommandFailedError, carrying the exit code, outp...", async (t) => {
-  // doctest:L107
   const err = await execWithTimeout("echo oops >&2; exit 3", { cwd: process.cwd(), stdio: "ignore", timeout: 5_000, env: process.env }).catch((e) => e);
   t.check(err, {
     name: "CommandFailedError",
@@ -102,7 +96,6 @@ oops`,
 // A command that outlives its awake-time budget is killed (whole process group,
 // SIGKILL) and rejects with `CommandTimedOutError`:
 void test("A command that outlives its awake-time budget is killed (whole process group,...", async (t) => {
-  // doctest:L127
   const err = await execWithTimeout("sleep 30", { cwd: process.cwd(), stdio: "ignore", timeout: 50, periodMs: 10, env: process.env }).catch((e) => e);
   t.check(err, {
     name: "CommandTimedOutError",

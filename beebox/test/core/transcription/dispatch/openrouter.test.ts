@@ -12,7 +12,7 @@
 // diarize, so that service stays on Mistral.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { shapeOpenRouterResult, audioFormatToken } from "../../../../src/core/transcription/dispatch/openrouter.js";
 import {
   HQ_TRANSCRIPTION_SERVICES,
@@ -24,7 +24,6 @@ import {
 //
 // Voxtral stays on Mistral; everything else reaches OpenRouter one way or another.
 void test("Voxtral stays on Mistral; everything else reaches OpenRouter one way or another.", async (t) => {
-  // doctest:L28
   const routable = HQ_TRANSCRIPTION_SERVICES.filter(hqRoutesThroughOpenRouter);
   t.check(routable.join(","), "whisper,whisper-llm,whisper-llm-mini,mai,mai-diarized");
 });
@@ -33,7 +32,6 @@ void test("Voxtral stays on Mistral; everything else reaches OpenRouter one way 
 // so `isMaiHqService` is what tells the dispatcher to demand an OpenRouter key
 // rather than fall back to one.
 void test("The MAI pair is not a fallback but a requirement — those two have no direct a...", async (t) => {
-  // doctest:L38
   const maiOnly = HQ_TRANSCRIPTION_SERVICES.filter(isMaiHqService);
   t.check(maiOnly.join(","), "mai,mai-diarized");
 });
@@ -45,14 +43,12 @@ void test("The MAI pair is not a fallback but a requirement — those two have n
 // `webm` — the same guess the direct Whisper arm's `getContentType` makes, so one
 // recording cannot be read as two different formats depending on the route.
 void test("OpenRouter wants a bare format token, not a MIME type, and derives nothing fr...", async (t) => {
-  // doctest:L51
   const tokens = ["voice.wav", "voice.MP3", "voice.mpga", "voice"].map(audioFormatToken);
   t.check(tokens.join(","), "wav,mp3,webm,webm");
 });
 
 // ## Word timestamps win when they came back
 void test("Word timestamps win when they came back", async (t) => {
-  // doctest:L59
   const wordBody = {
     text: "hello there",
     duration: 1.5,
@@ -83,7 +79,6 @@ void test("Word timestamps win when they came back", async (t) => {
 // through to the plain result rather than being handed an empty `words` array it
 // would read as "this recording has no words".
 void test("Asking for word timing and getting none is not an error — the caller falls th...", async (t) => {
-  // doctest:L75
   const bare = { text: "hello there", duration: 1.5, language: "english" };
   const noWords = shapeOpenRouterResult(bare, { diarization: false, wordTimestamps: true });
   t.check(noWords, {
@@ -100,7 +95,6 @@ void test("Asking for word timing and getting none is not an error — the calle
 // `buildDiarizedText` produces the same "Speaker N:" transcript from either
 // backend — a reader downstream cannot tell which service produced it.
 void test("OpenRouter reports the speaker as a number per segment where Voxtral reports...", async (t) => {
-  // doctest:L89
   const twoSpeakers = {
     text: "Where did you go?I went home.",
     duration: 4,
@@ -111,7 +105,6 @@ void test("OpenRouter reports the speaker as a number per segment where Voxtral 
   await t.checkText(diarized.text, `Speaker 0: Where did you go?
 Speaker 1: I went home.`);
 
-  // doctest:L100
   t.check(diarized.diarized, true);
 });
 
@@ -120,7 +113,6 @@ Speaker 1: I went home.`);
 // segments and `diarized` says plainly that it is not speaker-labeled — which is
 // the condition the caller warns about.
 void test("Diarization requested but no speaker on any segment is the mono-speaker case,...", async (t) => {
-  // doctest:L110
   const unlabeled = {
     text: "Where did you go?I went home.",
     duration: 4,
@@ -133,7 +125,6 @@ void test("Diarization requested but no speaker on any segment is the mono-speak
 // Word timing wins when both are asked for, matching `shapeVoxtralResult`: two
 // diarized services must not disagree about what `--timestamps` returns.
 void test("Word timing wins when both are asked for, matching shapeVoxtralResult:", async (t) => {
-  // doctest:L124
   const both = {
     text: "Where did you go?",
     duration: 2,
@@ -150,7 +141,6 @@ void test("Word timing wins when both are asked for, matching shapeVoxtralResult
 // as "unknown". The ladder mirrors the direct Voxtral arm's: the top-level field,
 // then the seconds OpenRouter billed for, then the end of the last timed thing.
 void test("Duration lands in a card's frontmatter, where 0s reads as a fact rather than...", async (t) => {
-  // doctest:L142
   const billed = { text: "hi", usage: { seconds: 9.2 } };
   const fromUsage = shapeOpenRouterResult(billed, { diarization: false, wordTimestamps: false });
   const timed = { text: "hi", segments: [{ text: "hi", start: 0, end: 3.5 }] };
@@ -167,7 +157,6 @@ void test("Duration lands in a card's frontmatter, where 0s reads as a fact rath
 // `whisper.ts` fills on the same models — one recording must not describe itself
 // differently depending on which key the box holds.
 void test("The verbosejson variants usually return segments, but the LLM audio models an...", async (t) => {
-  // doctest:L160
   const unsegmented = { text: "have gone.Generic tools" };
   const plain = shapeOpenRouterResult(unsegmented, { diarization: false, wordTimestamps: false });
   t.check(plain, {
@@ -182,7 +171,6 @@ void test("The verbosejson variants usually return segments, but the LLM audio m
 // A body missing its own required field is a contract change, not a bad day —
 // retrying the same request would produce the same non-answer.
 void test("A body missing its own required field is a contract change, not a bad day — r...", async (t) => {
-  // doctest:L172
   const textless = { usage: { seconds: 3 } };
   await t.checkThrows(async () => (shapeOpenRouterResult(textless, { diarization: false, wordTimestamps: false })), "OpenRouterTranscriptionShapeError: OpenRouter transcription response is unusable: expected text");
 });

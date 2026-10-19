@@ -5,7 +5,7 @@
 // 24-hour retry window says the window ended, and when.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { ParsedScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
 import { evaluateTaskHealth } from "../../../src/core/schedule/health.js";
 import { normalizeScriptState } from "../../../src/core/schedule/state.js";

@@ -10,8 +10,8 @@
 // (`settleLostReply`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { eventually } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { eventually } from "@ianbicking/tap-check/check";
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../../src/machines/chatMachine/machine.js";
 import type { ChatController } from "../../../src/components/chat/conversation/controller-pool/pool.js";
@@ -60,7 +60,6 @@ const dropMidTurn = (actor: ChatController) => {
 //
 // The first night's case: the drop was transient and the answer is in history.
 void test("The first night's case:", async (t) => {
-  // doctest:L63
   const actor = await chatWith({ entries: [question, entry({ uuid: "a1", type: "assistant", text: "hello" })], total: 2, sessionId: "s1", running: true, busy: false });
   dropMidTurn(actor);
   t.check(await settled(actor), {
@@ -74,7 +73,6 @@ void test("The first night's case:", async (t) => {
 // `replyLost` stays true (the bar shows it as a warning) until a later refresh,
 // such as the one `chat-complete` triggers, finds the reply.
 void test("replyLost stays true (the bar shows it as a warning) until a later refresh, s...", async (t) => {
-  // doctest:L75
   const actor = await chatWith(
     { entries: [question], total: 1, sessionId: "s1", running: true, busy: true },
     { entries: [question, entry({ uuid: "a1", type: "assistant", text: "hello" })], total: 2, sessionId: "s1", running: true, busy: false },
@@ -85,7 +83,6 @@ void test("replyLost stays true (the bar shows it as a warning) until a later re
     error: null,
   });
 
-  // doctest:L85
   actor.send({ type: "REFRESH" });
   t.check(await settled(actor), {
     replyLost: false,
@@ -98,7 +95,6 @@ void test("replyLost stays true (the bar shows it as a warning) until a later re
 // `busy` covers the whole session, so a queued next turn keeps the box busy after
 // the dropped turn's reply is already in history. The reply is checked first.
 void test("busy covers the whole session, so a queued next turn keeps the box busy after...", async (t) => {
-  // doctest:L96
   const actor = await chatWith({ entries: [question, entry({ uuid: "a1", type: "assistant", text: "hello" })], total: 2, sessionId: "s1", running: true, busy: true });
   dropMidTurn(actor);
   t.check(await settled(actor), {
@@ -112,7 +108,6 @@ void test("busy covers the whole session, so a queued next turn keeps the box bu
 // A subprocess that exits mid-turn also ends the stream with no result. History
 // then ends on the question, and the box is idle, so the message got no answer.
 void test("A subprocess that exits mid-turn also ends the stream with no result.", async (t) => {
-  // doctest:L108
   const actor = await chatWith({ entries: [question], total: 1, sessionId: "s1", running: false, busy: false });
   dropMidTurn(actor);
   t.check(await settled(actor), {

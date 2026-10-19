@@ -4,7 +4,7 @@
 // Unsafe link protocols do not become clickable links.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
 import { Markdown } from "../../../src/frontend/components/Markdown.js";

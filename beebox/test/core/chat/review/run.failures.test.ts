@@ -1,9 +1,9 @@
 // # Chat Review: failures, caps, and races in a run
 //
-// Continues [run.doctest.md](run.doctest.md). This part covers credentials dropped from generated text, repair after a crash between the husk and journal writes, reviewer failures, the per-run cap, transcripts that vanish or come back to life mid-run, and the untouched husk body.
+// Continues [run.test.ts](run.test.ts). This part covers credentials dropped from generated text, repair after a crash between the husk and journal writes, reviewer failures, the per-run cap, transcripts that vanish or come back to life mid-run, and the untouched husk body.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appendFile, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";
@@ -153,14 +153,12 @@ void test("The leak scan rejects exactly one thing:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L129
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   const huskPath = await seed(box, {
     sessionId: "sess9999", husk: "", entries: [bulk("w1"), bulk("w2")],
   });
 
-  // doctest:L135
   const summary = await runChatReview(box.root, {
     reviewer: fakeReviewer([{
       ...OUTPUT,
@@ -170,7 +168,6 @@ void test("The leak scan rejects exactly one thing:", async (t) => {
   });
   t.check(summary, summaryWith({ bootstrapped: 1, rejected: [`${sid("sess9999")}:title`] }));
 
-  // doctest:L145
   const card = await readFile(box.path(huskPath), "utf8");
   t.checkText(card, `---
 session: ${sid("sess9999")}
@@ -184,7 +181,6 @@ first-message: ${FIRST_MESSAGE}
   // An ordinary title full of specifics sails through — no name-stripping, no
   // address-stripping.
 
-  // doctest:L154
   const box2 = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box2.path("claude-projects");
   const husk2 = await seed(box2, {
@@ -200,7 +196,6 @@ first-message: ${FIRST_MESSAGE}
   });
   t.check(plain, summaryWith({ reviewed: 1, bootstrapped: 1 }));
 
-  // doctest:L170
   const card2 = await readFile(box2.path(husk2), "utf8");
   t.checkText(card2, `---
 session: ${sid("sessplain")}
@@ -213,7 +208,6 @@ review-span: cdfa7b2936de7114
 first-message: ${FIRST_MESSAGE}
 ---`);
 
-  // doctest:L174
   await box2.cleanup();
 });
 
@@ -234,20 +228,17 @@ void test("The husk is written first and the journal second, so a crash in betwe
       t.error(error);
     }
   });
-  // doctest:L192
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   const huskPath = await seed(box, {
     sessionId: "sesscrash", husk: "", entries: [bulk("c1"), bulk("c2")],
   });
 
-  // doctest:L198
   await runChatReview(box.root, {
     reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
   });
   const afterFirst = await readFile(box.path(huskPath), "utf8");
 
-  // doctest:L203
   // The marker and the account it claims landed together — the marker is never
   // written without them, so it can never certify an account that isn't there.
   t.checkText(afterFirst, `---
@@ -265,7 +256,6 @@ first-message: ${FIRST_MESSAGE}
   await writeFile(box.path(".beebox/chat-review/state.json"),
     JSON.stringify({ lastRunAt: null, sessions: {} }, null, 2) + "\n");
 
-  // doctest:L212
   const recovery = fakeReviewer([{ ...OUTPUT, title: "Should never be written" }]);
   const summary = await runChatReview(box.root, {
     reviewer: recovery, maxSessions: 10, now: NOW, ownerEmail: null,
@@ -276,10 +266,8 @@ first-message: ${FIRST_MESSAGE}
   // The card is untouched, and the journal has caught up — so a third run sees
   // nothing new either.
 
-  // doctest:L224
   t.check(await readFile(box.path(huskPath), "utf8"), afterFirst);
 
-  // doctest:L227
   const state = await loadReviewState(box.root);
   const crashSpan = { spanId: "c7a84bf64dc103ef", endUuid: "c2", endIndex: 1, prefixHash: "2fcfe70228a7f171", at: NOW.toISOString() };
   t.check(state, {
@@ -304,19 +292,16 @@ void test("A reviewer failure is counted, not fatal", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L239
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   await seed(box, { sessionId: "sessfail", husk: "", entries: [bulk("x1"), bulk("x2")] });
 
-  // doctest:L243
   const summary = await runChatReview(box.root, {
     reviewer: fakeReviewer([new Error("model unavailable")]),
     maxSessions: 10, now: NOW, ownerEmail: null,
   });
   t.check(summary, summaryWith({ bootstrapped: 1, reviewerFailures: 1 }));
 
-  // doctest:L250
   const state = await loadReviewState(box.root);
   t.check(state, {
     lastRunAt: NOW.toISOString(),
@@ -340,18 +325,15 @@ void test("Discovery no longer carries parsed transcripts — each reviewed sess
       t.error(error);
     }
   });
-  // doctest:L267
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L270
   for (const [sessionId, agoHours] of [["sessnew", 5], ["sessold", 40], ["sessmid", 20]] satisfies Array<[string, number]>) {
     await seed(box, { sessionId, husk: "", entries: [bulk(`${sessionId}1`), bulk(`${sessionId}2`)] });
     const when = new Date(NOW.getTime() - agoHours * HOUR);
     await utimes(getSessionLogPath(box.root, sid(sessionId)), when, when);
   }
 
-  // doctest:L276
   const reviewer = fakeReviewer([OUTPUT]);
   const summary = await runChatReview(box.root, {
     reviewer, maxSessions: 2, now: NOW, ownerEmail: null,
@@ -362,10 +344,8 @@ void test("Discovery no longer carries parsed transcripts — each reviewed sess
   // The deferred session is untouched — no husk fields, no journal entry — and the
   // next run picks it up.
 
-  // doctest:L292
   t.checkText(await readFile(box.path("_content/chat/web/2026-07-28_sessnew.chat.card"), "utf8"), `---\nsession: ${sid("sessnew")}\n---`);
 
-  // doctest:L295
   const rest = fakeReviewer([OUTPUT]);
   const second = await runChatReview(box.root, {
     reviewer: rest, maxSessions: 2, now: NOW, ownerEmail: null,
@@ -379,7 +359,6 @@ void test("Discovery no longer carries parsed transcripts — each reviewed sess
   // later. In between, the SDK may have cleaned it up. Here the first session's
   // review deletes the second's transcript, so the second re-read finds nothing.
 
-  // doctest:L310
   const box2 = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box2.path("claude-projects");
   for (const [sessionId, agoHours] of [["sessfirst", 40], ["sessvanish", 20]] satisfies Array<[string, number]>) {
@@ -388,7 +367,6 @@ void test("Discovery no longer carries parsed transcripts — each reviewed sess
     await utimes(getSessionLogPath(box2.root, sid(sessionId)), when, when);
   }
 
-  // doctest:L318
   const sabotagedCalls: ReviewArgs[] = [];
   const saboteur: ChatReviewer & { calls: ReviewArgs[] } = {
     calls: sabotagedCalls,
@@ -405,7 +383,6 @@ void test("Discovery no longer carries parsed transcripts — each reviewed sess
   t.check(vanished, summaryWith({ reviewed: 1, bootstrapped: 1, missingTranscripts: 1 }));
   t.check(saboteur.calls.map((c) => label(c.sessionId)), ["sessfirst"]);
 
-  // doctest:L338
   await box2.cleanup();
 });
 
@@ -426,7 +403,6 @@ void test("A run spans one model call per session, so a session that was quiet w
       t.error(error);
     }
   });
-  // doctest:L356
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   for (const [sessionId, agoHours] of [["sessfirst", 40], ["sesslive", 20]] satisfies Array<[string, number]>) {
@@ -435,7 +411,6 @@ void test("A run spans one model call per session, so a session that was quiet w
     await utimes(getSessionLogPath(box.root, sid(sessionId)), when, when);
   }
 
-  // doctest:L364
   const liveLog = getSessionLogPath(box.root, sid("sesslive"));
   const interruptedCalls: ReviewArgs[] = [];
   const interrupting: ChatReviewer & { calls: ReviewArgs[] } = {
@@ -456,7 +431,6 @@ void test("A run spans one model call per session, so a session that was quiet w
   // The deferred session keeps its husk and its journal, so the next quiet night
   // reviews the whole conversation including the new material.
 
-  // doctest:L390
   const state = await loadReviewState(box.root);
   t.checkText(await readFile(box.path("_content/chat/web/2026-07-28_sesslive.chat.card"), "utf8"), `---\nsession: ${sid("sesslive")}\n---`);
   const firstSpan = { spanId: "66a91b9be85faa88", endUuid: "sessfirst2", endIndex: 1, prefixHash: "b3e536ea8b42aba9", at: NOW.toISOString() };
@@ -486,7 +460,6 @@ void test("The account lives in a field, so prose the boxholder wrote in the bod
       t.error(error);
     }
   });
-  // doctest:L408
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   const huskPath = await seed(box, {
@@ -495,7 +468,6 @@ void test("The account lives in a field, so prose the boxholder wrote in the bod
   await writeFile(box.path(huskPath),
     `---\nsession: ${sid("sessbody")}\n---\n\nMy own notes about this chat.\n`);
 
-  // doctest:L416
   await runChatReview(box.root, {
     reviewer: fakeReviewer([OUTPUT]), maxSessions: 10, now: NOW, ownerEmail: null,
   });

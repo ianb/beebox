@@ -1,7 +1,7 @@
 // # A due chat timer remains pending while maintenance owns admission
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ChatScheduleManager, loadChatSchedules } from "../../../src/core/chat/schedules/core.js";
 import { closeBoxMaintenance } from "../../../src/lib/box-maintenance/admission.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -16,7 +16,6 @@ void test("line 9", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L10
   const box = await makeTmpBox({ git: true });
   const maintenance = await closeBoxMaintenance(box.root, { reason: "fixture" });
   const fired = Promise.withResolvers<void>();
@@ -31,7 +30,6 @@ void test("line 9", async (t) => {
     pending: 1,
   });
 
-  // doctest:L22
   await maintenance.drain();
   await maintenance.complete();
   manager.resumeAfterMaintenance();

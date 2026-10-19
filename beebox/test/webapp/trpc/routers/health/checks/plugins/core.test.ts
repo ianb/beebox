@@ -7,7 +7,7 @@
 // no stub are both visible (`docs/plugins.md`, "Health").
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { pluginHealthChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/core.js";
 import { withDocId } from "../../../../../../../src/core/docs-gen/shared.js";
 import type { HealthCheck, PluginDefinition } from "../../../../../../../src/cards/plugin-definition.js";
@@ -44,7 +44,6 @@ void test("The quiet case enumerates each check as ok, so bbx health's pass coun
       t.error(error);
     }
   });
-  // doctest:L41
   const quiet = await makeTmpBox();
   const checks = await pluginHealthChecks(quiet.root);
   t.check(checks, [
@@ -71,7 +70,6 @@ void test("Two course cards and no courseware in config/box.json:", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L66
   const inactive = await makeTmpBox();
   await inactive.write("content/Acids.course.card", "---\n---\nAcids.\n");
   await inactive.write("content/Bases.course.card", "---\n---\nBases.\n");
@@ -96,7 +94,6 @@ void test("The plugin is listed but no stub completes it:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L87
   const bare = await boxWithPlugins(["courseware"]);
   await bare.write("content/Acids.course.card", "---\n---\nAcids.\n");
   t.check(failing(await pluginHealthChecks(bare.root)), [
@@ -153,7 +150,6 @@ void test("The box has src/schemas/progress.ts, but it registers other, so the e
       t.error(error);
     }
   });
-  // doctest:L114
   const wrongType = await makeTmpBox({ deps: true });
   await wrongType.write("_config/box.json", JSON.stringify({ plugins: ["courseware"] }));
   await wrongType.write("src/schemas/progress.ts", 'import { cardSchema } from "beebox/cards";\nimport { z } from "beebox/schema";\n\nexport default cardSchema("other", { fields: { size: z.number() } });\n');
@@ -179,7 +175,6 @@ void test("Each problem activePluginNames reports is one failing row, worded as 
       t.error(error);
     }
   });
-  // doctest:L136
   const typo = await boxWithPlugins(["coursware"]);
   t.check(failing(await pluginHealthChecks(typo.root)).filter((c) => c.name === "plugin-config"), [
     {
@@ -189,7 +184,6 @@ void test("Each problem activePluginNames reports is one failing row, worded as 
     },
   ]);
 
-  // doctest:L142
   await typo.write("_config/box.json", JSON.stringify({ plugins: "courseware" }));
   t.check(failing(await pluginHealthChecks(typo.root)).filter((c) => c.name === "plugin-config"), [
     {
@@ -214,7 +208,6 @@ void test("The engine marks every skill file it writes (guidance-sync/skills.ts)
       t.error(error);
     }
   });
-  // doctest:L159
   const owned = await boxWithPlugins(["courseware"]);
   await owned.write(".claude/skills/courseware/SKILL.md", "---\nname: courseware\n---\nMy own notes.\n");
   t.check(failing(await pluginHealthChecks(owned.root)).filter((c) => c.name === "skill-name-conflict"), [
@@ -227,7 +220,6 @@ void test("The engine marks every skill file it writes (guidance-sync/skills.ts)
 
   // The engine's own marked file is not a conflict:
 
-  // doctest:L172
   const relativePath = ".claude/skills/courseware/SKILL.md";
   await owned.write(relativePath, withDocId({ relativePath, content: "---\nname: courseware\n---\nMirrored.\n" }));
   t.check(failing(await pluginHealthChecks(owned.root)).filter((c) => c.name === "skill-name-conflict"), []);
@@ -246,7 +238,6 @@ void test("Each active plugin's healthChecks(boxRoot) runs with its rows renamed
       t.error(error);
     }
   });
-  // doctest:L189
   const hooked = await boxWithPlugins(["courseware"]);
   const own = fixturePlugin(async () => [{ name: "maps-current", ok: true, message: "All maps rebuilt", severity: "warning" }]);
   t.check((await pluginHealthChecks(hooked.root, { plugins: [own] })).filter((c) => c.name.startsWith("courseware/")), [
@@ -260,7 +251,6 @@ void test("Each active plugin's healthChecks(boxRoot) runs with its rows renamed
 
   // A hook that throws does not take the rest of health down with it:
 
-  // doctest:L198
   const broken = fixturePlugin(async () => { throw new Error("concept map index unreadable"); });
   t.check(failing(await pluginHealthChecks(hooked.root, { plugins: [broken] })).filter((c) => c.name.startsWith("courseware/")), [
     {

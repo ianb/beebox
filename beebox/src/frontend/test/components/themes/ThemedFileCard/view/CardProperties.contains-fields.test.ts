@@ -6,7 +6,7 @@
 // disclosure), then the type fields that `splitCardFields` sends to Properties.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { FileData } from "../../../../../src/file-type-registry.js";
@@ -62,7 +62,6 @@ const doc = render({
 // follow, in the shared fields table; the title, todos, and theme are shown
 // elsewhere and are not repeated:
 void test("A doc with no declared prominence shows its type's default and says so.", async (t) => {
-  // doctest:L57
   t.check(rows(doc), [
     "Filed at = _content/projects/Porch.doc.card",
     "Card type = doc",
@@ -75,11 +74,10 @@ void test("A doc with no declared prominence shows its type's default and says s
 });
 
 // The fields table reads its keys as labels and small objects as one value
-// (`test/lib/readable-fields.doctest.md`). A record is headed by its `name:`
+// (`src/frontend/test/lib/readable-fields.test.ts`). A record is headed by its `name:`
 // (`cardTitle`), so the table leaves out the `name` row that would repeat the
 // header:
 void test("The fields table reads its keys as labels and small objects as one value (tes...", async (t) => {
-  // doctest:L75
   t.check(
     rows(render({
       path: "_content/lending/Camp_stove.record.card",
@@ -100,13 +98,11 @@ void test("The fields table reads its keys as labels and small objects as one va
 
 // The evidence for `contains` sits under a closed disclosure:
 void test("The evidence for contains sits under a closed disclosure:", async (t) => {
-  // doctest:L94
   t.check(doc.match(/<details[^>]*>.*?<\/details>/s)?.[0].replace(/ class="[^"]*"/g, ""), "<details><summary>Contains evidence</summary><p>Three quotes in the body</p></details>");
 });
 
 // A declared level shows as declared:
 void test("A declared level shows as declared:", async (t) => {
-  // doctest:L101
   t.check(rows(render({ path: "_content/Plan.doc.card", type: "doc", schema: docSchema, frontmatter: { prominence: "primary" } })), [
     "Filed at = _content/Plan.doc.card",
     "Card type = doc",
@@ -119,7 +115,6 @@ void test("A declared level shows as declared:", async (t) => {
 // written, or no Prominence row at all. Its type fields stay on the front
 // (`splitCardFields`), so Properties has no fields table:
 void test("A card that failed validation has no schema facts (schema:", async (t) => {
-  // doctest:L111
   const broken = { path: "_content/Broken.doc.card", type: "doc", schema: null };
   t.check(rows(render({ ...broken, frontmatter: { prominence: "global", status: [1, 2] } })), [
     "Filed at = _content/Broken.doc.card",
@@ -127,7 +122,6 @@ void test("A card that failed validation has no schema facts (schema:", async (t
     "Prominence = global",
   ]);
 
-  // doctest:L115
   t.check(rows(render({ ...broken, frontmatter: { status: [1, 2] } })), [
     "Filed at = _content/Broken.doc.card",
     "Card type = doc",
@@ -141,7 +135,6 @@ void test("A card that failed validation has no schema facts (schema:", async (t
 // would show only in Source (docs/implemented-plans/landmark-arrival.md, Track C;
 // docs/implemented-plans/place-shows-cards.md, Track C).
 void test("A landmark's body is the place summary, and most landmarks have none.", async (t) => {
-  // doctest:L127
   const landmarkSchema: Schema = { hasBodyField: true, defaultProminence: "background" };
   const landmark = (body: string | undefined) => render({
     path: "_content/lending/Lending.landmark.card",
@@ -158,7 +151,6 @@ void test("A landmark's body is the place summary, and most landmarks have none.
 
 // Other body-less types keep their fields on the front.
 void test("Other body-less types keep their fields on the front.", async (t) => {
-  // doctest:L142
   const bodiless: Schema = { hasBodyField: false, defaultProminence: "ordinary" };
   const question = render({ path: "_content/Q.question.card", type: "question", schema: bodiless, frontmatter: { question: "Which?" } });
   t.check(question, filedAs("_content/Q.question.card", "question") + foundBy("ordinary", ""));
@@ -167,11 +159,10 @@ void test("Other body-less types keep their fields on the front.", async (t) => 
 // ## An empty body leaves the type fields on the front
 //
 // With no body text, the front shows the type fields
-// (`test/lib/card-field-faces.doctest.md`), so Properties lists no Fields
+// (`src/frontend/test/lib/card-field-faces.test.ts`), so Properties lists no Fields
 // section and nothing shows twice. A body that only repeats the title counts as
 // empty, the same test the front uses.
 void test("With no body text, the front shows the type fields (test/lib/card-field-faces...", async (t) => {
-  // doctest:L156
   const emptyDoc = (body: string | undefined) => render({
     path: "_content/projects/Porch.doc.card", type: "doc", schema: docSchema,
     frontmatter: { title: "Porch", "share-id": "porch-quotes" }, body,

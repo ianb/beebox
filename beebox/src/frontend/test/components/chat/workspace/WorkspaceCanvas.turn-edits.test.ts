@@ -6,7 +6,7 @@
 // carry absolute paths; tabs hold box-relative ones.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { toolEditsPath } from "../../../../src/components/chat/workspace/WorkspaceCanvas/turn-edits.js";
 import type { SessionContentBlock } from "../../../../src/api.js";
 

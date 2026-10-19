@@ -9,12 +9,11 @@
 // cannot send yet. Otherwise it is accepted.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { openerSendDecision } from "../../../src/components/openers/opener-send.js";
 
 // An empty or whitespace-only composer accepts the opener.
 void test("An empty or whitespace-only composer accepts the opener.", async (t) => {
-  // doctest:L18
   t.check(
     ({ empty: openerSendDecision({ draft: "", inFlight: false, disabledReason: undefined }),
       blank: openerSendDecision({ draft: "  \n", inFlight: false, disabledReason: undefined }) }),
@@ -31,7 +30,6 @@ void test("An empty or whitespace-only composer accepts the opener.", async (t) 
 
 // A half-typed draft rejects it; the person's words stay where they are.
 void test("A half-typed draft rejects it; the person's words stay where they are.", async (t) => {
-  // doctest:L26
   t.check(openerSendDecision({ draft: "Bram says he", inFlight: false, disabledReason: undefined }), {
     outcome: "rejected",
     message: "Send or clear your draft first.",
@@ -41,7 +39,6 @@ void test("A half-typed draft rejects it; the person's words stay where they are
 // The two cases where the send funnel would otherwise return silently are
 // rejections too, each with its own message.
 void test("The two cases where the send funnel would otherwise return silently are rejec...", async (t) => {
-  // doctest:L34
   t.check(
     ({ inFlight: openerSendDecision({ draft: "", inFlight: true, disabledReason: undefined }),
       disabled: openerSendDecision({ draft: "", inFlight: false, disabledReason: "Choosing conversation…" }) }),

@@ -10,7 +10,7 @@
 // so that detail survives.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { PassThrough } from "node:stream";
 import { setTimeout as delay } from "node:timers/promises";
 import { forwardChildOutput } from "../../../src/hub/supervisor/child-output-log.js";
@@ -22,27 +22,21 @@ import { makeTmpBox } from "../../helpers/test-helpers.js";
 // `"ing: ...\n"`) is only flushed once the newline completes it -- no
 // half-line gets logged.
 void test("A chunk that arrives split across multiple writes (\"Warn\" then \"ing:", async (t) => {
-  // doctest:L26
   const box = await makeTmpBox();
   t.teardown(() => box.cleanup());
 
-  // doctest:L29
   const stdout = new PassThrough();
   const stderr = new PassThrough();
   const logFile = box.path(".beebox/hub-child.log");
 
-  // doctest:L33
   forwardChildOutput({ child: { stdout, stderr }, logFile });
 
-  // doctest:L35
   stdout.write("child ready on port 4000\n");
   stderr.write("Warn");
   stderr.write("ing: something odd\n");
 
-  // doctest:L39
   await delay(50);
 
-  // doctest:L41
   const content = await box.read(".beebox/hub-child.log");
   await t.checkText(
     // Strip the leading ISO timestamp (nondeterministic) from each line.
@@ -53,7 +47,6 @@ void test("A chunk that arrives split across multiple writes (\"Warn\" then \"in
 
   // A `null` stream (no stdio piped) is a no-op rather than a crash:
 
-  // doctest:L51
   forwardChildOutput({ child: { stdout: null, stderr: null }, logFile: box.path(".beebox/other.log") });
   t.check(true, true);
 });

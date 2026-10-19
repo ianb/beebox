@@ -7,7 +7,7 @@
 // spoke. The ranged git helpers it needs live in `src/lib/git-range.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import {
   recordTurnMarker,
@@ -28,7 +28,6 @@ void test("recordTurnMarker writes one file per session; loadTurnMarker reads it
       t.error(error);
     }
   });
-  // doctest:L25
   const box = await makeTmpBox({ git: true });
   recordTurnMarker(box.root, { sessionId: "sess-1", head: "deadbeef", time: "2026-06-14T00:00:00Z" });
   t.check(loadTurnMarker(box.root, "sess-1"), {
@@ -36,7 +35,6 @@ void test("recordTurnMarker writes one file per session; loadTurnMarker reads it
     time: "2026-06-14T00:00:00Z",
   });
 
-  // doctest:L30
   t.check(loadTurnMarker(box.root, "never-recorded"), null);
 });
 
@@ -52,7 +50,6 @@ void test("After recording the marker, a later commit shows up as \"since your l
       t.error(error);
     }
   });
-  // doctest:L44
   const box = await makeTmpBox({ git: true });
   await box.write("_content/Trip.doc.card", "first");
   box.commitAll("add trip card");
@@ -100,7 +97,6 @@ void test("With no marker yet, the report falls back to the last few commits, la
       t.error(error);
     }
   });
-  // doctest:L96
   const box = await makeTmpBox({ git: true });
   await box.write("_content/Trip.doc.card", "first");
   box.commitAll("add trip card");
@@ -110,6 +106,5 @@ void test("With no marker yet, the report falls back to the last few commits, la
 «*» init
 
 Working tree clean (no uncommitted changes).`);
-
 
 });

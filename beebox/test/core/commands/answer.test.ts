@@ -6,8 +6,8 @@
 // `dismissed` questions stay answerable; only `answered` is terminal.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, str } from "@ianbicking/tap-check/check";
 import { executeAnswer } from "../../../src/core/commands/answer.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

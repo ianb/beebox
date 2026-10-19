@@ -7,7 +7,7 @@
 // forever.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -58,7 +58,6 @@ function alert(over: Partial<Alert>): Alert {
 // Before nine it waits; after nine it runs once; a laptop asleep all morning
 // sends it at the first tick after waking.
 void test("Before nine it waits; after nine it runs once; a laptop asleep all morning se...", async (t) => {
-  // doctest:L45
   const yesterday = local(18, [9, 5]).toISOString();
   t.check(
     [
@@ -83,7 +82,6 @@ void test("Before nine it waits; after nine it runs once; a laptop asleep all mo
   // since the last digest, and each `fyi` once. An `fyi` an earlier digest already
   // listed is closed now.
 
-  // doctest:L63
   const since = local(18, [9]).toISOString();
   const plan = digestPlan([
     alert({ priority: "important", lastSeenAt: local(17, [3]).toISOString() }),
@@ -108,12 +106,10 @@ void test("Before nine it waits; after nine it runs once; a laptop asleep all mo
 
   // Nothing new means no popup; the stamp still moves.
 
-  // doctest:L79
   t.check(digestPlan([alert({ priority: "normal", lastSeenAt: local(17, [3]).toISOString() })], { now: local(19, [9]), lastDigestAt: since }).popup, null);
 
   // ## One tick's digest writes the records and one popup
 
-  // doctest:L86
   const { storeRoot, deps, clock, popups } = await tickStore();
   const ran = [await digestIfDue(deps), await digestIfDue(deps)];
   t.check({ ran, popups: popups.map((p) => [p.title, p.destination]) }, {
@@ -132,7 +128,6 @@ void test("Before nine it waits; after nine it runs once; a laptop asleep all mo
   // The next day's digest closes the fyi, labelled as closed by the digest rather
   // than by a person.
 
-  // doctest:L108
   clock.at = local(20, [9, 5]);
   await digestIfDue(deps);
   const pin = (await readAllAlerts(storeRoot)).find((a) => a.title === "Pin at 0.3.273");
@@ -147,7 +142,6 @@ void test("Before nine it waits; after nine it runs once; a laptop asleep all mo
   // is the first sighting, so repeats do not reset the clock. A filing that has
   // failed for a week is given up on and stays open for a person.
 
-  // doctest:L122
   const now = local(26, [10]).getTime();
   const due = standingToFile([
     alert({ condition: "unconverged", createdAt: new Date(now - 8 * DAY).toISOString() }),
@@ -165,14 +159,12 @@ void test("Before nine it waits; after nine it runs once; a laptop asleep all mo
   // The issue is private and says what the record knows. The title is quoted so a
   // colon or quote in an alert title cannot break the frontmatter.
 
-  // doctest:L139
   const rendered = renderStandingIssue(alert({
     workstream: "box-convergence", condition: "unconverged", title: 'Box convergence: "needs-procedure"',
     occurrences: 9, createdAt: "2026-09-16T00:54:26.922Z", message: "- box a: needs-procedure",
   }), "2026-09-23");
   t.check(rendered.relPath, "bugs/2026-09-23-schedule-box-convergence-unconverged.md");
 
-  // doctest:L148
   await t.checkText(rendered.text.split("\n").slice(0, 10).join("\n"), `---
 title: "box-convergence: Box convergence: \\"needs-procedure\\" (standing since 2026-09-16)"
 workstream: unattached
@@ -189,7 +181,6 @@ discovered-in: main — schedule box-convergence, condition unconverged
   // which is what the one-week bound reads. (The `red-unattributed` condition from
   // the digest section is eight days old by now, so it is filed too.)
 
-  // doctest:L167
   await writeAlert(storeRoot, alert({ id: "20260918-030000-aaaa", condition: "unconverged", createdAt: new Date(now - 8 * DAY).toISOString() }));
   await writeAlert(storeRoot, alert({ id: "20260918-030000-bbbb", condition: "timeout", createdAt: new Date(now - 8 * DAY).toISOString() }));
   const committed: string[] = [];
@@ -228,7 +219,6 @@ discovered-in: main — schedule box-convergence, condition unconverged
   // A filing is announced in one digest, not every day while the condition stays
   // open. Filing clears `digestedAt`; the digest that lists it sets it again.
 
-  // doctest:L194
   const filedOnce = [
     digestPlan(records, { now: new Date(now + DAY), lastDigestAt: new Date(now).toISOString() }).popup?.message,
   ];
@@ -244,7 +234,6 @@ discovered-in: main — schedule box-convergence, condition unconverged
   // An fyi condition raised again after a digest listed it carries new words, so
   // it goes back to unlisted: the next digest shows it instead of closing it.
 
-  // doctest:L209
   const { raiseAlert } = await import("../../lib/schedules-alerts.js");
   const raiseFlakes = () => raiseAlert(deps, {
     workstream: "full-suite", runId: null, title: "flaky", message: "m", details: null, priority: "fyi", condition: "flakes",

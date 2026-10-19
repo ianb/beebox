@@ -6,8 +6,8 @@
 // warnings. See `src/hub/config.ts`.
 
 import { test } from "tap";
-import { any, instanceOf, str } from "agent-doctest/check";
-import "agent-doctest/tap";
+import { any, instanceOf, str } from "@ianbicking/tap-check/check";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadHubConfig, HubConfigError, type HubConfig } from "../../src/hub/config.js";
@@ -51,13 +51,11 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
       t.error(error);
     }
   });
-  // doctest:L47
   const box = await makeTmpBox();
   await box.write("boxes/test1/.beebox/box.json", "");
   const configPath = await writeConfig(box.root, { boxes: { test1: { path: "./boxes/test1" } } });
   const config = await loadOk(configPath);
 
-  // doctest:L54
   t.check(config, {
     port: undefined,
     host: undefined,
@@ -70,7 +68,6 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
 
   // ## An unknown top-level key is rejected (fail-closed, `z.strictObject`)
 
-  // doctest:L61
   const badConfig = await writeConfig(box.root, { boxes: {}, extraKey: true });
   const err = await loadRejected(badConfig);
   t.check(err, instanceOf(HubConfigError));
@@ -78,7 +75,6 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
 
   // ## An unknown key inside a box entry is rejected
 
-  // doctest:L73
   const badEntry = await writeConfig(box.root, { boxes: { test1: { path: "./boxes/test1", port: 1234 } } });
   const badEntryErr = await loadRejected(badEntry);
   t.check(badEntryErr, instanceOf(HubConfigError));
@@ -92,7 +88,6 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   // slugged the same would make some of its own routes unreachable through the
   // hub.
 
-  // doctest:L87
   const reservedConfig = await writeConfig(box.root, { boxes: { webhook: { path: "./boxes/test1" } } });
   const err2 = await loadRejected(reservedConfig);
   t.check(err2, instanceOf(HubConfigError));
@@ -103,7 +98,6 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
 
   // ## A malformed slug (uppercase, leading hyphen, empty) is rejected
 
-  // doctest:L99
   const badSlug = await writeConfig(box.root, { boxes: { "Test-1": { path: "./boxes/test1" } } });
   const badSlugErr = await loadRejected(badSlug);
   t.check(badSlugErr, instanceOf(HubConfigError));
@@ -115,7 +109,6 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   // "critical gap" the plan's Failure modes section warns about (two engines on
   // one `events.db`) — the hub must never be configured to do this on purpose.
 
-  // doctest:L111
   const dupeConfig = await writeConfig(box.root, {
     boxes: {
       test1: { path: "./boxes/test1" },
@@ -140,7 +133,6 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   // resolves both, and `fs.realpath` catches a symlinked alias, before the
   // duplicate check runs.
 
-  // doctest:L135
   await fs.symlink(path.join(box.root, "boxes/test1"), path.join(box.root, "boxes/test1-link"));
   const symlinkConfig = await writeConfig(box.root, {
     boxes: {
@@ -163,7 +155,6 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   // the operational root, but discovery itself must leave it in place so an older
   // worktree can still be served without the router rewriting its state.
 
-  // doctest:L158
   const legacyState = path.join(box.root, "boxes/legacy/content/.callback-box");
   await fs.mkdir(legacyState, { recursive: true });
   await fs.writeFile(path.join(legacyState, "state.json"), "old\n");
@@ -179,10 +170,8 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
     keepRecent: 0,
   });
 
-  // doctest:L166
   t.check(await fs.access(legacyState).then(() => true), true);
 
-  // doctest:L169
   t.check(await fs.access(path.join(box.root, "boxes/legacy/content/.beebox")).then(() => false, () => true), true);
 
   // A box path that doesn't resolve at all (no `.beebox/box.json` anywhere) still loads
@@ -190,7 +179,6 @@ void test("A minimal valid config loads, with the box path resolved to absolute"
   // supervisor reports that box "unhealthy" once it actually tries to launch it
   // (see `cli/commands/hub.ts`'s best-effort `boxEntries` handling):
 
-  // doctest:L179
   const unresolvableConfig = await writeConfig(box.root, { boxes: { broken: { path: "./boxes/does-not-exist" } } });
   t.check(await loadOk(unresolvableConfig), {
     port: undefined,
@@ -212,12 +200,10 @@ void test("Missing config file, invalid JSON", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L191
   const missing = await loadRejected("/nonexistent/hub.json");
   t.check(missing, instanceOf(HubConfigError));
   t.check(missing.message, "Cannot read hub config at /nonexistent/hub.json: ENOENT: no such file or directory, open '/nonexistent/hub.json'");
 
-  // doctest:L197
   const box2 = await makeTmpBox();
   const notJson = path.join(box2.root, "hub.json");
   await fs.writeFile(notJson, "{ not json");
@@ -240,7 +226,6 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L216
   const box3 = await makeTmpBox();
   await box3.write("boxes/test1/.beebox/box.json", "");
   const plainConfigPath = await writeConfig(box3.root, { boxes: { test1: { path: "./boxes/test1" } } });
@@ -250,7 +235,6 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
     idleMs: 300000,
   });
 
-  // doctest:L225
   const lazyConfigPath = await writeConfig(box3.root, {
     boxes: { test1: { path: "./boxes/test1" } },
     lazy: true,
@@ -270,7 +254,6 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
   // `lazy: true` — a positive value on a resident hub is a fail-closed config
   // error, since every box there already stays up.
 
-  // doctest:L244
   const keepConfigPath = await writeConfig(box3.root, {
     boxes: { test1: { path: "./boxes/test1" } },
     lazy: true,
@@ -281,7 +264,6 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
   // `keepRecent > 0` without `lazy: true` is rejected, and the message names the
   // constraint:
 
-  // doctest:L257
   const keepNoLazyPath = await writeConfig(box3.root, {
     boxes: { test1: { path: "./boxes/test1" } },
     keepRecent: 1,
@@ -295,7 +277,6 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
 
   // `keepRecent: 0` without `lazy` is fine (it's the default — nothing to keep):
 
-  // doctest:L272
   const keepZeroPath = await writeConfig(box3.root, {
     boxes: { test1: { path: "./boxes/test1" } },
     keepRecent: 0,
@@ -312,7 +293,6 @@ void test("Boxholder directive (2026-07-04):", async (t) => {
 
   // A negative or non-integer `keepRecent` is a schema error:
 
-  // doctest:L283
   const keepNegPath = await writeConfig(box3.root, {
     boxes: { test1: { path: "./boxes/test1" } },
     lazy: true,

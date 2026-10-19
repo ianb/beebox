@@ -3,11 +3,11 @@
 // A quick chat record lives at `.beebox/quick-chat/<id>.json`, so the id the
 // caller sends becomes part of a file path. Every procedure that takes an id
 // accepts only a UUID: a path string is refused before any file is read or
-// written. The behavior of each procedure is in `quick-chat.submit.doctest.md` and
-// `quick-chat.submit.delivery.doctest.md`.
+// written. The behavior of each procedure is in `quick-chat.submit.test.ts` and
+// `quick-chat.submit.delivery.test.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readdir } from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
 import { quickChatRouter } from "../../../../src/webapp/trpc/routers/quick-chat.js";
@@ -32,7 +32,6 @@ void test("line 26", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L27
   const box = await makeTmpBox();
   const api = caller(box.root);
   t.check(
@@ -48,6 +47,5 @@ void test("line 26", async (t) => {
   ],
   );
 
-  // doctest:L36
   t.check((await readdir(box.root, { recursive: true })).filter((entry) => entry.includes("quick-chat")), []);
 });

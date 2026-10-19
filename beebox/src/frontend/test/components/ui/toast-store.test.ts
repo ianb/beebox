@@ -13,8 +13,8 @@
 // default `setTimeout`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { createToastStore } from "../../../src/components/ui/toast-store.js";
 
@@ -37,7 +37,6 @@ function makeFakeSchedule() {
 
 // ## A single error toast carries message + cause detail
 void test("A single error toast carries message + cause detail", async (t) => {
-  // doctest:L40
   const clock = makeFakeSchedule();
   const store = createToastStore({ schedule: clock.schedule });
   store.error("Failed to restart the agent process", { cause: new Error("HTTP 500") });
@@ -52,7 +51,6 @@ void test("A single error toast carries message + cause detail", async (t) => {
 
   // A cause is optional; without one there's no secondary detail line:
 
-  // doctest:L50
   store.error("Failed to load earlier messages");
   t.check(store.getSnapshot(), [{ id: 1, message: "Failed to restart the agent process", detail: "HTTP 500", count: 1 }, { id: 2, message: "Failed to load earlier messages", detail: undefined, count: 1 }]);
 });
@@ -62,7 +60,6 @@ void test("A single error toast carries message + cause detail", async (t) => {
 // An identical message doesn't stack a second card — it increments the counter on
 // the existing one and refreshes its detail to the latest cause:
 void test("An identical message doesn't stack a second card — it increments the counter...", async (t) => {
-  // doctest:L64
   const clock = makeFakeSchedule();
   const store = createToastStore({ schedule: clock.schedule });
   store.error("Failed to interrupt the agent", { cause: new Error("first") });
@@ -78,7 +75,6 @@ void test("An identical message doesn't stack a second card — it increments th
 
   // A repeat with no cause keeps the prior detail rather than blanking it:
 
-  // doctest:L75
   store.error("Failed to interrupt the agent");
   t.check(store.getSnapshot(), [
     {
@@ -92,7 +88,6 @@ void test("An identical message doesn't stack a second card — it increments th
   // The counter refreshes expiry — one live timer, not three, since each collapse
   // cancels and re-arms:
 
-  // doctest:L84
   t.check(clock.pending(), 1);
 });
 
@@ -100,20 +95,17 @@ void test("An identical message doesn't stack a second card — it increments th
 //
 // Firing the armed timer (what the real 10s `setTimeout` does) drops the toast:
 void test("Firing the armed timer (what the real 10s setTimeout does) drops the toast:", async (t) => {
-  // doctest:L93
   const clock = makeFakeSchedule();
   const store = createToastStore({ schedule: clock.schedule });
   store.error("Failed to cancel the schedule");
   t.check(store.getSnapshot(), [{ id: 1, message: "Failed to cancel the schedule", detail: undefined, count: 1 }]);
 
-  // doctest:L99
   clock.fireAll();
   t.check(store.getSnapshot(), []);
 });
 
 // ## Dismiss removes a specific toast and notifies subscribers
 void test("Dismiss removes a specific toast and notifies subscribers", async (t) => {
-  // doctest:L107
   const clock = makeFakeSchedule();
   const store = createToastStore({ schedule: clock.schedule });
   let notifications = 0;
@@ -124,16 +116,13 @@ void test("Dismiss removes a specific toast and notifies subscribers", async (t)
 
   // Dismissing by id leaves the sibling and fires one notification:
 
-  // doctest:L120
   store.dismiss(1);
   t.check(store.getSnapshot(), [{ id: 2, message: "Failed to load earlier messages", detail: undefined, count: 1 }]);
 
-  // doctest:L124
   t.check(notifications, 3);
 
   // Dismissing an already-gone id is a no-op — no phantom notification:
 
-  // doctest:L131
   store.dismiss(1);
   t.check(notifications, 3);
 
@@ -142,7 +131,6 @@ void test("Dismiss removes a specific toast and notifies subscribers", async (t)
   // `useSyncExternalStore` requires `getSnapshot` to return the same reference when
   // nothing changed, or React re-renders forever:
 
-  // doctest:L142
   t.check(store.getSnapshot(), is(store.getSnapshot()));
 });
 
@@ -157,7 +145,6 @@ void test("Dismiss removes a specific toast and notifies subscribers", async (t)
 //
 // `persist` arms no timer at all:
 void test("Most errors are moments — a restart that failed, a fetch that did not land —...", async (t) => {
-  // doctest:L158
   const clock = makeFakeSchedule();
   const store = createToastStore({ schedule: clock.schedule });
   store.error("Your session has ended, so the box stopped answering.", {
@@ -170,12 +157,9 @@ void test("Most errors are moments — a restart that failed, a fetch that did n
   // destination is a URL and an anchor gets middle-click and keyboard activation
   // for free:
 
-  // doctest:L173
-
   // Firing every timer the store armed leaves it standing, and an ordinary error
   // raised alongside it still expires normally:
 
-  // doctest:L181
   store.error("Failed to restart the agent process");
   clock.fireAll();
   t.check(store.getSnapshot(), [{ id: 1, message: "Your session has ended, so the box stopped answering.", detail: undefined, count: 1, action: { label: "Sign in", href: "/auth/login?returnTo=%2Fchat" }, persist: true }]);
@@ -183,13 +167,11 @@ void test("Most errors are moments — a restart that failed, a fetch that did n
   // A repeat collapses into it as usual — but must not hand it a timer on the way
   // in. The second 401 is more of the same condition, not evidence it is ending:
 
-  // doctest:L191
   store.error("Your session has ended, so the box stopped answering.", { persist: true });
   t.check({ pending: clock.pending(), toasts: store.getSnapshot() }, { pending: 0, toasts: [{ id: 1, message: "Your session has ended, so the box stopped answering.", detail: undefined, count: 2, action: { label: "Sign in", href: "/auth/login?returnTo=%2Fchat" }, persist: true }] });
 
   // Dismissing still works — the person can put it away once they have read it:
 
-  // doctest:L199
   const [persistent] = store.getSnapshot();
   assert.ok(persistent);
   store.dismiss(persistent.id);

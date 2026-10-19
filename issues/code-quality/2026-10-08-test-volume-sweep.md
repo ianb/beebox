@@ -8,6 +8,8 @@ discovered-by: Ian
 discovered-in: skills-review — "we write too many tests" (2026-10-08)
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Numbers on 2026-10-08: 307,625 src lines, 144,891 test lines (0.47); over
 the last 90 days 0.53 test lines added per src line; 795 doctest files,
 10,302 examples. The chat router has 9 doctest files, markdoc-config 8;

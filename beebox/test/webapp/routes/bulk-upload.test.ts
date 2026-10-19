@@ -5,11 +5,11 @@
 // computed server-side as the body streams), and a status/resume endpoint lists
 // registered vs received items. Finalize returns immediately after sealing; the
 // full prepare→deliver worker (retry, at-most-once, reconciliation) is covered in
-// `test/core/bulk-upload/worker.doctest.md`.
+// `test/core/bulk-upload/worker.test.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, not, str, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, not, str, uuid } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";
@@ -135,7 +135,6 @@ void test("A create with no targetSessionId is rejected loudly (400) — a bulk 
       t.error(error);
     }
   });
-  // doctest:L115
   const ctx = await makeTestServer();
   const noTarget = await createBatch(ctx, { items: [] });
   t.check(noTarget, {
@@ -147,7 +146,6 @@ void test("A create with no targetSessionId is rejected loudly (400) — a bulk 
   // its upload capabilities. The batch's context dir is NOT taken from the request —
   // it's derived server-side from the target chat's recorded binding:
 
-  // doctest:L126
   await bindSession({ ctx, sessionId: "chat-abc", contextDir: "_content/photos" });
   const created = await createBatch(ctx, {
     targetSessionId: "chat-abc",
@@ -169,7 +167,6 @@ void test("A create with no targetSessionId is rejected loudly (400) — a bulk 
   // The staging manifest is a `kind: "bulk"` session carrying the registry + the
   // server-derived target context dir:
 
-  // doctest:L147
   const manifest = await manifestOf(ctx, sessionId);
   t.check(manifest, {
     ...bulkManifest(sessionId),
@@ -185,7 +182,6 @@ void test("A create with no targetSessionId is rejected loudly (400) — a bulk 
   // a target with no recorded binding lands at the box root regardless of what the
   // body claims:
 
-  // doctest:L162
   const sneaky = await createBatch(ctx, {
     targetSessionId: "chat-unbound",
     contextDir: "../../../etc",
@@ -214,7 +210,6 @@ void test("The registry is keyed by id, so a duplicate id in one request — or 
       t.error(error);
     }
   });
-  // doctest:L183
   const ctx = await makeTestServer();
   const dupeCreate = await createBatch(ctx, {
     targetSessionId: "chat-1",
@@ -222,7 +217,6 @@ void test("The registry is keyed by id, so a duplicate id in one request — or 
   });
   t.check(dupeCreate, { statusCode: 400, body: { error: "Duplicate item id in registry: a" } });
 
-  // doctest:L193
   const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
   const collide = await send(ctx, {
     method: "POST", url: `/api/bulk/sessions/${sessionIdOf(created)}/items`,
@@ -233,7 +227,6 @@ void test("The registry is keyed by id, so a duplicate id in one request — or 
   // Re-registering an EXISTING id (idempotent append while the picker streams) is
   // still fine:
 
-  // doctest:L206
   const reAdd = await send(ctx, {
     method: "POST", url: `/api/bulk/sessions/${sessionIdOf(created)}/items`,
     payload: { items: [{ id: "a", name: "x.pdf" }] },
@@ -253,7 +246,6 @@ void test("The bytes stream to disk; the manifest entry carries the server-compu
       t.error(error);
     }
   });
-  // doctest:L224
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, {
     targetSessionId: "chat-1",
@@ -261,7 +253,6 @@ void test("The bytes stream to disk; the manifest entry carries the server-compu
   });
   const sessionId = sessionIdOf(created);
 
-  // doctest:L231
   const res = await uploadItem(ctx, {
     sessionId, itemId: "a", filename: "staged-a.bin", originalName: "report.pdf",
     data: Buffer.from("PDFPDF"),
@@ -274,7 +265,6 @@ void test("The bytes stream to disk; the manifest entry carries the server-compu
   // The staged file entry on the manifest carries the same server-computed values
   // and links back to the registry item, and `totalBytes` accumulates:
 
-  // doctest:L248
   const manifest = await manifestOf(ctx, sessionId);
   t.check(manifest, {
     ...bulkManifest(sessionId),
@@ -298,7 +288,6 @@ void test("The bytes stream to disk; the manifest entry carries the server-compu
   // An exact retry (same filename + bytes) is idempotent; the same filename with
   // different bytes is a 409 conflict:
 
-  // doctest:L260
   const replay = await uploadItem(ctx, {
     sessionId, itemId: "a", filename: "staged-a.bin", data: Buffer.from("PDFPDF"),
   });
@@ -329,12 +318,10 @@ void test("The item registry is the record of what was supposed to arrive, so an
       t.error(error);
     }
   });
-  // doctest:L280
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
   const sessionId = sessionIdOf(created);
 
-  // doctest:L284
   const res = await uploadItem(ctx, {
     sessionId, itemId: "ghost", filename: "staged.bin", data: Buffer.from("X"),
   });
@@ -342,7 +329,6 @@ void test("The item registry is the record of what was supposed to arrive, so an
 
   // Registering it afterward (append while the picker streams) lets the upload land:
 
-  // doctest:L294
   const reg = await send(ctx, {
     method: "POST", url: `/api/bulk/sessions/${sessionId}/items`,
     payload: { items: [{ id: "ghost", name: "ghost.pdf" }] },
@@ -371,12 +357,10 @@ void test("The staging filename (X-Upload-Filename) can't claim the session's ow
       t.error(error);
     }
   });
-  // doctest:L315
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
   const sessionId = sessionIdOf(created);
 
-  // doctest:L319
   const names = ["session.json", "session.json.corrupt", ".gitignore", ".hidden"];
   const codes = [];
   for (const name of names) codes.push((await uploadItem(ctx, { sessionId, itemId: "a", filename: name, data: Buffer.from("X") })).statusCode);
@@ -389,7 +373,6 @@ void test("The staging filename (X-Upload-Filename) can't claim the session's ow
 
   // The manifest is untouched — the upload never overwrote it:
 
-  // doctest:L329
   const manifest = await manifestOf(ctx, sessionId);
   t.check(manifest, {
     ...bulkManifest(sessionId),
@@ -411,7 +394,6 @@ void test("Seeding the accumulated bytes to the cap makes a single-byte upload t
       t.error(error);
     }
   });
-  // doctest:L344
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "big.bin" }] });
   const sessionId = sessionIdOf(created);
@@ -419,7 +401,6 @@ void test("Seeding the accumulated bytes to the cap makes a single-byte upload t
   session.totalBytes = MAX_STAGED_BYTES;
   await writeStagingSession({ boxRoot: ctx.boxRoot, session });
 
-  // doctest:L351
   const res = await uploadItem(ctx, { sessionId, itemId: "a", filename: "big.bin", data: Buffer.from("X") });
   t.check(res, { statusCode: 413, body: { error: "Capture exceeds the staging byte limit" } });
 });
@@ -436,7 +417,6 @@ void test("After a partial upload, the status endpoint reports what was register
       t.error(error);
     }
   });
-  // doctest:L371
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, {
     targetSessionId: "chat-1",
@@ -445,7 +425,6 @@ void test("After a partial upload, the status endpoint reports what was register
   const sessionId = sessionIdOf(created);
   await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.pdf", data: Buffer.from("AAAA") });
 
-  // doctest:L379
   const status = { body: StatusBody.parse((await ctx.request({ method: "GET", url: `/api/bulk/sessions/${sessionId}` })).body) };
   t.check(status.body, {
     state: "open",
@@ -463,7 +442,6 @@ void test("Uploading to an unknown session returns 404", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L395
   const ctx = await makeTestServer();
   const res = await uploadItem(ctx, { sessionId: "no-such", itemId: "a", filename: "x.bin", data: Buffer.from("X") });
   t.check(res.statusCode, 404);
@@ -482,13 +460,11 @@ void test("Finalize returns immediately with staged:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L411
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "a.pdf" }] });
   const sessionId = sessionIdOf(created);
   await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.pdf", data: Buffer.from("AAAA") });
 
-  // doctest:L416
   const done = await send(ctx, {
     method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
     payload: { failedItems: [] },
@@ -499,12 +475,10 @@ void test("Finalize returns immediately with staged:", async (t) => {
   // thing after the response, the batch is already out of `open`. The worker may
   // have moved it on to any later state, so the check is only that it is not open.
 
-  // doctest:L429
   t.check((await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId }))?.state, not("open"));
 
   // A further upload after finalize is refused — the session is no longer open:
 
-  // doctest:L436
   const late = await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-late.bin", data: Buffer.from("X") });
   t.check(late, {
     statusCode: 409,
@@ -525,13 +499,11 @@ void test("The composer text the boxholder submitted the batch with rides IN the
       t.error(error);
     }
   });
-  // doctest:L453
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-note", items: [{ id: "a", name: "a.jpg" }] });
   const sessionId = sessionIdOf(created);
   await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
 
-  // doctest:L458
   const done = await send(ctx, {
     method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
     payload: { note: "Receipts from the Tokyo trip" },
@@ -580,13 +552,11 @@ void test("An empty composer must produce a batch indistinguishable from one tha
       t.error(error);
     }
   });
-  // doctest:L482
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-blank", items: [{ id: "a", name: "a.jpg" }] });
   const sessionId = sessionIdOf(created);
   await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
 
-  // doctest:L487
   await send(ctx, {
     method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
     payload: { note: "   \n\t " },
@@ -626,12 +596,10 @@ void test("The note is untrusted client prose, so it is length-capped where it e
       t.error(error);
     }
   });
-  // doctest:L507
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-big", items: [{ id: "a", name: "a.jpg" }] });
   const sessionId = sessionIdOf(created);
 
-  // doctest:L511
   const tooBig = await send(ctx, {
     method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
     payload: { note: "x".repeat(10_001) },
@@ -669,14 +637,12 @@ void test("Cancel is the uploader's affordance for a batch it still owns.", asyn
       t.error(error);
     }
   });
-  // doctest:L539
   const ctx = await makeTestServer();
   const created = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "a", name: "a.jpg" }] });
   const sessionId = sessionIdOf(created);
   await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
   await sealStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
 
-  // doctest:L545
   const codes: Record<string, number> = {};
   for (const state of ["sealed", "preparing", "delivering"] as const) {
     await setStagingState({ boxRoot: ctx.boxRoot, id: sessionId, state });
@@ -690,7 +656,6 @@ void test("Cancel is the uploader's affordance for a batch it still owns.", asyn
 
   // An open batch still cancels normally:
 
-  // doctest:L557
   const open = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "b", name: "b.jpg" }] });
   const cancelled = await send(ctx, { method: "DELETE", url: `/api/bulk/sessions/${sessionIdOf(open)}` });
   t.check(cancelled, { statusCode: 200, body: { success: true } });

@@ -9,7 +9,7 @@
 // existed to prevent.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
@@ -41,14 +41,12 @@ void test("Even with another chat sitting in the most-active pointer — the cha
       t.error(error);
     }
   });
-  // doctest:L37
   const box = await makeTmpBox();
   const registry = makeRegistry(box);
   await appendHistory(box.root, { sessionId: OTHER });
   await setMostActive(box.root, OTHER);
   await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
 
-  // doctest:L43
   const target = await resolveCaptureDeliveryTarget({ boxRoot: box.root, registry, targetSessionId: COINED });
   t.check(target.sessionId, "33333333-4444-4555-8666-777777777777");
 
@@ -56,7 +54,6 @@ void test("Even with another chat sitting in the most-active pointer — the cha
   // the same staged capture goes to the wrong chat, which is the bug this test
   // pins down:
 
-  // doctest:L53
   const blind = await resolveCaptureDeliveryTarget({ boxRoot: box.root, targetSessionId: COINED });
   t.check(blind.sessionId, "88888888-9999-4aaa-8bbb-cccccccccccc");
 });
@@ -74,12 +71,10 @@ void test("The binding is captured at reserve time — nothing else carries it, 
       t.error(error);
     }
   });
-  // doctest:L69
   const box = await makeTmpBox();
   const registry = makeRegistry(box);
   await registry.reserve({ sessionId: COINED, contextDir: "_content/recipes", seedFeatures: {} });
 
-  // doctest:L73
   const target = await resolveCaptureDeliveryTarget({ boxRoot: box.root, registry, targetSessionId: COINED });
   t.check(target, {
     sessionId: "33333333-4444-4555-8666-777777777777",
@@ -100,20 +95,17 @@ void test("Bulk keeps its rule:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L89
   const box = await makeTmpBox();
   const registry = makeRegistry(box);
   await appendHistory(box.root, { sessionId: OTHER });
   await setMostActive(box.root, OTHER);
   await registry.reserve({ sessionId: COINED, contextDir: null, seedFeatures: {} });
 
-  // doctest:L95
   const reserved = await resolveBulkDeliveryTarget({ boxRoot: box.root, registry, targetSessionId: COINED, contextDir: "" });
   t.check(reserved?.sessionId, "33333333-4444-4555-8666-777777777777");
 
   // An id that is neither reserved nor known is still the broken-invariant `null`,
   // not somebody else's chat:
 
-  // doctest:L104
   t.check(await resolveBulkDeliveryTarget({ boxRoot: box.root, registry, targetSessionId: "44444444-5555-4666-8777-888888888888", contextDir: "" }), null);
 });

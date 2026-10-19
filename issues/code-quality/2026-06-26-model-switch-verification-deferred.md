@@ -4,6 +4,8 @@ workstream: unknown
 area: beebox
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Mid-conversation model switching (`src/webapp/routes/chat-session-routes.ts`) has
 no test coverage and recent "model-picker desync" fixes suggest it was flaky.
 It's worth exercising, but a meaningful test needs a real Claude invocation

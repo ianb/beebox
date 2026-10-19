@@ -5,7 +5,7 @@
 // kernel-owned locks that disappear with their holder process.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { execFile, execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
@@ -263,7 +263,6 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
       t.error(error);
     }
   });
-  // doctest:L251
   await writePnpm(true);
   const first = create("same-name");
   await waitFor(path.join(markerDir, "same-name"));
@@ -287,7 +286,6 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
   // Both creators pass their brief repository attachment transaction and reach the
   // post-attachment setup barrier before either is released.
 
-  // doctest:L271
   await fs.rm(release, { force: true });
   await fs.writeFile(calls, "");
   const alpha = create("alpha");
@@ -315,7 +313,6 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
   // Removal reaches the same per-name lock while creation is paused in setup. The
   // checkout remains present until setup releases, then teardown completes.
 
-  // doctest:L294
   t.check(await createThenRemove(), {
     create: 0,
     firstRemoveRefused: true,
@@ -330,7 +327,6 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
   // add fail while trying to create main. A burst against a minimal real
   // repository checks every registration, not merely each process exit.
 
-  // doctest:L305
   t.check(await runBurst(), 24);
 
   // ## Registration without readiness is repaired
@@ -339,7 +335,6 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
   // checkout without the private readiness marker takes the idempotent setup path
   // instead of the fast resume path.
 
-  // doctest:L316
   t.check(await repairInterruptedSetup(), {
     code: 0,
     setupRan: true,
@@ -348,11 +343,10 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
 
   // ## Setup failure stays failed and retryable
   //
-  // The doctest uses the production errexit shell. A failing pnpm exits with its
+  // The test uses the production errexit shell. A failing pnpm exits with its
   // status, leaves setup incomplete, and a later same-name call repairs it before
   // recording readiness.
 
-  // doctest:L327
   t.check(await failThenRepair(), {
     failed: 42,
     incomplete: true,
@@ -365,7 +359,6 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
   // A checkout created before the state protocol has no marker. Its first resume
   // records readiness but preserves the checkout-local environment and skips pnpm.
 
-  // doctest:L337
   t.check(await legacyBackfill(), {
     code: 0,
     envPreserved: true,
@@ -378,7 +371,6 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
   // If teardown was killed after moving the directory but before pruning Git's
   // registration, creation repairs that exact state under the admin lock.
 
-  // doctest:L347
   t.check(await repairDanglingRegistration(), {
     code: 0,
     pathRestored: true,
@@ -391,7 +383,6 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
   // registers the checkout. Once Claude's own removal lands, fresh creation
   // replaces the tombstone and succeeds.
 
-  // doctest:L358
   t.check(await nativeRemovalTombstone(), {
     refusedWhileRegistered: true,
     recreatedAfterRemoval: true,
@@ -402,7 +393,6 @@ void test("The first creator pauses in pnpm after Git has registered the checkou
   // The diagnostic lock file persists, but ownership belongs to the process's open
   // descriptor. Killing that process lets the next caller acquire immediately.
 
-  // doctest:L368
   const holderReady = path.join(root, "holder-ready");
   const holder = spawn("bash", ["-c", [
     '. "$1"',

@@ -5,7 +5,7 @@
 // and the root auth process that consumes it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
@@ -60,12 +60,10 @@ void test("Minted tokens are short-lived, hashed, canonical, and mode 0600", asy
       t.error(error);
     }
   });
-  // doctest:L56
   const dir = await mkdtemp(join(tmpdir(), "bbx-invites-"));
   process.env.BBX_AUTH_FILE = join(dir, "auth.json");
   const now = Date.UTC(2026, 7, 6, 12);
 
-  // doctest:L60
   const minted = await mintAuthInvite({
     boxRoot: "/boxes/family",
     createdBy: " Owner@Example.COM ",
@@ -80,7 +78,6 @@ void test("Minted tokens are short-lived, hashed, canonical, and mode 0600", asy
 
   // The clear token is absent from disk and the file is private.
 
-  // doctest:L73
   const raw = await readFile(authCapabilityStorePath(), "utf-8");
   t.check({ containsToken: raw.includes(minted.token), mode: ((await stat(authCapabilityStorePath())).mode & 0o777).toString(8) }, {
     containsToken: false,
@@ -89,7 +86,6 @@ void test("Minted tokens are short-lived, hashed, canonical, and mode 0600", asy
 
   // Inspection does not consume. Consumption returns trusted stored metadata once.
 
-  // doctest:L81
   t.check(await inspectAuthInvite({ token: minted.token, now: now + 1 }), {
     status: "valid",
     invite: {
@@ -100,7 +96,6 @@ void test("Minted tokens are short-lived, hashed, canonical, and mode 0600", asy
     },
   });
 
-  // doctest:L84
   t.check(await consumeAuthInvite({ token: minted.token, now: now + 2 }), {
     status: "consumed",
     invite: {
@@ -111,7 +106,6 @@ void test("Minted tokens are short-lived, hashed, canonical, and mode 0600", asy
     },
   });
 
-  // doctest:L87
   t.check((await consumeAuthInvite({ token: minted.token, now: now + 3 })).status, "invalid-or-gone");
 });
 
@@ -125,15 +119,12 @@ void test("Expired and malformed capabilities are indistinguishable", async (t) 
       t.error(error);
     }
   });
-  // doctest:L99
   const dir2 = await mkdtemp(join(tmpdir(), "bbx-invites-expired-"));
   process.env.BBX_AUTH_FILE = join(dir2, "auth.json");
   const minted2 = await mintAuthInvite({ boxRoot: "/boxes/a", createdBy: "o@example.com", now: 1_000 });
 
-  // doctest:L103
   t.check((await inspectAuthInvite({ token: minted2.token, now: 1_000 + 15 * 60 * 1_000 })).status, "invalid-or-gone");
 
-  // doctest:L106
   t.check((await inspectAuthInvite({ token: "not-a-token", now: 1_001 })).status, "invalid-or-gone");
 });
 
@@ -147,21 +138,17 @@ void test("Corruption and symlinks fail closed", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L118
   const dir3 = await mkdtemp(join(tmpdir(), "bbx-invites-bad-"));
   process.env.BBX_AUTH_FILE = join(dir3, "auth.json");
   await writeFile(authCapabilityStorePath(), "{bad json", { mode: 0o600 });
 
-  // doctest:L122
   t.check(await rejectionName(() => inspectAuthInvite({ token: "anything" })), "AuthCapabilityStoreError");
 
-  // doctest:L127
   await rm(authCapabilityStorePath());
   const symlinkTarget = join(dir3, "invite-target.json");
   await writeFile(symlinkTarget, JSON.stringify({ version: 1, invites: [] }), { mode: 0o600 });
   await symlink(symlinkTarget, authCapabilityStorePath());
 
-  // doctest:L132
   t.check(await rejectionName(() => inspectAuthInvite({ token: "anything" })), "AuthCapabilityStoreError");
 });
 
@@ -175,14 +162,12 @@ void test("The live-invite cap fails closed", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L144
   const dir5 = await mkdtemp(join(tmpdir(), "bbx-invites-cap-"));
   process.env.BBX_AUTH_FILE = join(dir5, "auth.json");
   for (let index = 0; index < 100; index += 1) {
     await mintAuthInvite({ boxRoot: "/boxes/a", createdBy: "o@example.com" });
   }
 
-  // doctest:L150
   t.check(await rejectionName(() => mintAuthInvite({ boxRoot: "/boxes/a", createdBy: "o@example.com" })), "AuthCapabilityCapacityError");
 });
 
@@ -196,7 +181,6 @@ void test("Concurrent consumption has exactly one winner", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L162
   const dir4 = await mkdtemp(join(tmpdir(), "bbx-invites-race-"));
   process.env.BBX_AUTH_FILE = join(dir4, "auth.json");
   const minted4 = await mintAuthInvite({ boxRoot: "/boxes/a", createdBy: "o@example.com" });
@@ -214,7 +198,6 @@ void test("Password resets are typed siblings and replace older links", async (t
       t.error(error);
     }
   });
-  // doctest:L178
   const resetDir = await mkdtemp(join(tmpdir(), "bbx-password-resets-"));
   process.env.BBX_AUTH_FILE = join(resetDir, "auth.json");
   const firstReset = await mintAuthPasswordReset({
@@ -223,7 +206,6 @@ void test("Password resets are typed siblings and replace older links", async (t
     email: "Member@Example.COM",
   });
 
-  // doctest:L186
   t.check(
     {
       email: firstReset.email,
@@ -239,7 +221,6 @@ void test("Password resets are typed siblings and replace older links", async (t
 
   // Minting a replacement invalidates the older link before capacity is checked.
 
-  // doctest:L197
   for (let index = 0; index < 99; index += 1) {
     await mintAuthInvite({ boxRoot: `/boxes/${String(index)}`, createdBy: "owner@example.com" });
   }
@@ -249,13 +230,11 @@ void test("Password resets are typed siblings and replace older links", async (t
     email: "member@example.com",
   });
 
-  // doctest:L206
   t.check(`${(await inspectAuthPasswordReset({ token: firstReset.token })).status},${(await inspectAuthPasswordReset({ token: replacement.token })).status}`, "invalid-or-gone,valid");
 
   // Consumption invalidates every reset link for that account and cannot consume an
   // invite token.
 
-  // doctest:L214
   const unrelatedInvite = await consumeAuthInvite({ token: replacement.token });
   const consumedReset = await consumeAuthPasswordReset({ token: replacement.token });
   t.check({ invite: unrelatedInvite.status, reset: consumedReset.status, replay: (await consumeAuthPasswordReset({ token: replacement.token })).status }, {
@@ -275,7 +254,6 @@ void test("A v1 invite store upgrades on mutation without losing its invites", a
       t.error(error);
     }
   });
-  // doctest:L228
   const migrationDir = await mkdtemp(join(tmpdir(), "bbx-capability-migration-"));
   process.env.BBX_AUTH_FILE = join(migrationDir, "auth.json");
   const legacyToken = "legacy-token";
@@ -292,13 +270,10 @@ void test("A v1 invite store upgrades on mutation without losing its invites", a
     }],
   }), { mode: 0o600 });
 
-  // doctest:L244
   t.check((await inspectAuthInvite({ token: legacyToken })).status, "valid");
 
-  // doctest:L247
   await mintAuthPasswordReset({ boxRoot: "/boxes/legacy", createdBy: "owner@example.com", email: "legacy@example.com" });
   t.check(JSON.parse(await readFile(authCapabilityStorePath(), "utf-8")).version, 2);
 
-  // doctest:L251
   t.check((await inspectAuthInvite({ token: legacyToken })).status, "valid");
 });

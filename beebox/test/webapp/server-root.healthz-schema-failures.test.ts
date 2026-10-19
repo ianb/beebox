@@ -13,7 +13,7 @@
 // so a regression back to "just read the map" shows up as a false total: 0.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import { makeTestServer } from "../helpers/test-route-server.js";

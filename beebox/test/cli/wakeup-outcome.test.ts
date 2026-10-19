@@ -11,7 +11,7 @@
 // the scan promote worker judges itself by.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   WAKEUP_OUTCOME_PREFIX,
   parseWakeupOutcome,
@@ -24,7 +24,6 @@ const healthy = { connectorErrors: 0, connectors: [], reactorOk: true, reactorSk
 
 // ## The outcome round-trips out of captured output
 void test("The outcome round-trips out of captured output", async (t) => {
-  // doctest:L28
   const output = ["[Running connectors]", line(healthy), "[Pushing to remote]"].join("\n");
   t.check(parseWakeupOutcome(output), {
     connectorErrors: 0,
@@ -39,7 +38,6 @@ void test("The outcome round-trips out of captured output", async (t) => {
 // The last line wins, so output containing an earlier nested run reads the run
 // that just finished:
 void test("The last line wins, so output containing an earlier nested run reads the run...", async (t) => {
-  // doctest:L37
   const first = line({ ...healthy, jobsProcessed: 9 });
   const second = line(healthy);
   t.check(parseWakeupOutcome([first, second].join("\n"))?.jobsProcessed, 1);
@@ -51,7 +49,6 @@ void test("The last line wins, so output containing an earlier nested run reads 
 // wakeup hands these entries to an agent, which has no other channel: the
 // per-connector prose the cycle prints is for a person reading a terminal.
 void test("The aggregate connectorErrors cannot answer \"did Drive sync?\".", async (t) => {
-  // doctest:L50
   const scoped = {
     ...healthy,
     connectors: [
@@ -91,7 +88,6 @@ void test("The aggregate connectorErrors cannot answer \"did Drive sync?\".", as
   // synced. Reading the flag alone is what makes a service the box never contacted
   // look up to date.
 
-  // doctest:L76
   const entry = parseWakeupOutcome(line(scoped))?.connectors[1];
   t.check([entry?.success, entry?.skipped?.detail].join(" | "), "true | No Google credential this process can read");
 });
@@ -100,7 +96,6 @@ void test("The aggregate connectorErrors cannot answer \"did Drive sync?\".", as
 // would index into it. An older binary emits no `connectors` at all, which is the
 // same answer: no information.
 void test("A malformed entry rejects the whole line rather than reaching a caller that w...", async (t) => {
-  // doctest:L86
   t.check(
     [
       parseWakeupOutcome(line({ ...healthy, connectors: [{ name: "gmail" }] })),
@@ -114,7 +109,6 @@ void test("A malformed entry rejects the whole line rather than reaching a calle
 // An unknown skip reason is refused too — a caller dispatches on `reason`, so a
 // value it has no branch for is not a usable skip.
 void test("An unknown skip reason is refused too — a caller dispatches on reason, so a v...", async (t) => {
-  // doctest:L98
   t.check(
     parseWakeupOutcome(line({
       ...healthy,
@@ -129,18 +123,15 @@ void test("An unknown skip reason is refused too — a caller dispatches on reas
 // Guessing success here would resurrect the lost-wakeup bug the marker exists to
 // prevent.
 void test("Guessing success here would resurrect the lost-wakeup bug the marker exists t...", async (t) => {
-  // doctest:L111
   t.check(parseWakeupOutcome("no outcome line here"), null);
 });
 
 void test("Absent or unusable output is \"no information\", never \"fine\"", async (t) => {
-  // doctest:L116
   t.check(parseWakeupOutcome(WAKEUP_OUTCOME_PREFIX + "{truncated"), null);
 });
 
 // A line of the right shape but the wrong types is also no information:
 void test("A line of the right shape but the wrong types is also no information:", async (t) => {
-  // doctest:L123
   t.check(parseWakeupOutcome(WAKEUP_OUTCOME_PREFIX + JSON.stringify({ reactorOk: "yes" })), null);
 });
 
@@ -150,7 +141,6 @@ void test("A line of the right shape but the wrong types is also no information:
 // the scan is not retried — this is the exact production case: exit code 1, work
 // done.
 void test("Connector errors are somebody else's problem.", async (t) => {
-  // doctest:L134
   t.check(
     wakeupSatisfiedScanPromote({
       exitOk: false,
@@ -163,7 +153,6 @@ void test("Connector errors are somebody else's problem.", async (t) => {
 // A failed reactor cycle IS this worker's problem, even when the process exits
 // zero:
 void test("A failed reactor cycle IS this worker's problem, even when the process exits...", async (t) => {
-  // doctest:L145
   t.check(
     wakeupSatisfiedScanPromote({
       exitOk: true,
@@ -177,7 +166,6 @@ void test("A failed reactor cycle IS this worker's problem, even when the proces
 // run, so a queued backfill job is routine — reading it as failure is what made
 // the loop look justified.
 void test("Jobs left queued are not a failure.", async (t) => {
-  // doctest:L157
   t.check(
     wakeupSatisfiedScanPromote({
       exitOk: true,
@@ -190,7 +178,6 @@ void test("Jobs left queued are not a failure.", async (t) => {
 // With no outcome to read, fall back to the exit code — an older binary or a
 // crash before the cycle ended.
 void test("With no outcome to read, fall back to the exit code — an older binary or a cr...", async (t) => {
-  // doctest:L168
   t.check(
     [
       wakeupSatisfiedScanPromote({ exitOk: true, outcome: null }),
@@ -204,7 +191,6 @@ void test("With no outcome to read, fall back to the exit code — an older bina
 // Nothing failed, so `reactorOk` is true — but no job drained, so the marker must
 // survive and the wakeup must be tried again.
 void test("A cycle that skipped because another reactor held the lock did no work at all.", async (t) => {
-  // doctest:L180
   t.check(
     wakeupSatisfiedScanPromote({
       exitOk: true,
@@ -218,7 +204,6 @@ void test("A cycle that skipped because another reactor held the lock did no wor
 // (`wakeup-cycle-lock.ts`) — is the same answer one step earlier. Every count is
 // zero because nothing ran, so the zeros must not read as a clean run.
 void test("A cycle that never started — another bbx wakeup held the per-box cycle lock (...", async (t) => {
-  // doctest:L192
   t.check(
     wakeupSatisfiedScanPromote({
       exitOk: true,

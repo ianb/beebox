@@ -8,7 +8,7 @@
 // owner gives the place back to the owner below it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { dropPlace, pushPlace, topPlace } from "../../src/lib/place-stack.js";
 
 const chat = {};
@@ -19,13 +19,11 @@ const withBrowse = pushPlace(pushPlace([], { owner: chat, place: chatPlace }), {
 
 // Browse publishes over the chat. Clearing Browse shows the chat's place again.
 void test("Browse publishes over the chat.", async (t) => {
-  // doctest:L23
   t.check(topPlace(withBrowse), {
     dir: "inventory/shelves",
     label: "Browse: inventory/shelves",
   });
 
-  // doctest:L26
   t.check(topPlace(dropPlace(withBrowse, browse)), {
     dir: "inventory",
     label: "Inventory",
@@ -38,14 +36,12 @@ void test("Browse publishes over the chat.", async (t) => {
 // Browse still had focus. Browse stays on top, and clearing Browse shows the
 // chat's updated place.
 void test("A republication updates the owner's entry where it stands.", async (t) => {
-  // doctest:L37
   const republished = pushPlace(withBrowse, { owner: chat, place: { dir: "garden", label: "Garden" } });
   t.check(topPlace(republished), {
     dir: "inventory/shelves",
     label: "Browse: inventory/shelves",
   });
 
-  // doctest:L41
   t.check(topPlace(dropPlace(republished, browse)), {
     dir: "garden",
     label: "Garden",
@@ -55,12 +51,10 @@ void test("A republication updates the owner's entry where it stands.", async (t
 // Clearing an owner that published nothing changes nothing, and an empty stack
 // shows no place (the bar falls back to its route label).
 void test("Clearing an owner that published nothing changes nothing, and an empty stack...", async (t) => {
-  // doctest:L49
   t.check(dropPlace(withBrowse, {}).map((e) => e.place.dir), [
     "inventory",
     "inventory/shelves",
   ]);
 
-  // doctest:L52
   t.check(topPlace(dropPlace(dropPlace(withBrowse, browse), chat)), null);
 });

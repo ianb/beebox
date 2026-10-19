@@ -6,7 +6,7 @@
 // API dependency, so the whole policy is exercised here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { decideCalendarSync } from "../../../src/connectors/google-calendar/decide.js";
 
 const kind = (s: Parameters<typeof decideCalendarSync>[0]) => decideCalendarSync(s).kind;
@@ -15,35 +15,29 @@ const kind = (s: Parameters<typeof decideCalendarSync>[0]) => decideCalendarSync
 //
 // A new (untracked) remote event is written down: remote-wins.
 void test("A new (untracked) remote event is written down:", async (t) => {
-  // doctest:L19
   t.check(kind({ source: "remote-event", tracked: false, localEdited: false, remoteChanged: false }), "remote-wins");
 });
 
 // An unedited local file is refreshed from Google: remote-wins.
 void test("An unedited local file is refreshed from Google:", async (t) => {
-  // doctest:L26
   t.check(kind({ source: "remote-event", tracked: true, localEdited: false, remoteChanged: false }), "remote-wins");
 });
 
 // A local edit with no remote change is pushed: local-wins.
 void test("A local edit with no remote change is pushed:", async (t) => {
-  // doctest:L33
   t.check(kind({ source: "remote-event", tracked: true, localEdited: true, remoteChanged: false }), "local-wins");
 });
 
 // The one asymmetric rule — a local edit that collides with a remote change is
 // discarded; remote is authoritative.
 void test("The one asymmetric rule — a local edit that collides with a remote change is...", async (t) => {
-  // doctest:L41
   t.check(kind({ source: "remote-event", tracked: true, localEdited: true, remoteChanged: true }), "remote-wins");
 });
 
 // ## Pull pass — a cancelled remote event
 void test("Pull pass — a cancelled remote event", async (t) => {
-  // doctest:L48
   t.check(kind({ source: "remote-cancelled", tracked: true }), "delete");
 
-  // doctest:L51
   t.check(kind({ source: "remote-cancelled", tracked: false }), "noop");
 });
 
@@ -52,18 +46,15 @@ void test("Pull pass — a cancelled remote event", async (t) => {
 // Deletes only when under the per-sync cap and the state knows the calendar id;
 // otherwise it's skipped with a reason.
 void test("Deletes only when under the per-sync cap and the state knows the calendar id;...", async (t) => {
-  // doctest:L61
   t.check(decideCalendarSync({ source: "local-delete-marker", hasCalendarId: true, underDeleteCap: true }), {
     kind: "delete",
   });
 
-  // doctest:L64
   t.check(decideCalendarSync({ source: "local-delete-marker", hasCalendarId: true, underDeleteCap: false }), {
     kind: "noop",
     reason: "reached per-sync delete cap",
   });
 
-  // doctest:L67
   t.check(decideCalendarSync({ source: "local-delete-marker", hasCalendarId: false, underDeleteCap: true }), {
     kind: "noop",
     reason: "no calendar ID in state",
@@ -72,7 +63,6 @@ void test("Deletes only when under the per-sync cap and the state knows the cale
 
 // The cap is checked before the calendar id, matching the original inline order.
 void test("The cap is checked before the calendar id, matching the original inline order.", async (t) => {
-  // doctest:L74
   t.check(decideCalendarSync({ source: "local-delete-marker", hasCalendarId: false, underDeleteCap: false }), {
     kind: "noop",
     reason: "reached per-sync delete cap",

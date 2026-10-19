@@ -13,13 +13,13 @@
 // delay is zero here; the real schedule is checked at the end.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import http from "node:http";
 import assert from "node:assert";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import { createTRPCClient, httpBatchStreamLink, retryLink } from "@trpc/client";
-import { any, anything, instanceOf } from "agent-doctest/check";
+import { any, anything, instanceOf } from "@ianbicking/tap-check/check";
 import { BoxUnreachableError, fetchFromBox, unreachableCause, shouldRetryOperation, isBoxUnreachable, retryDelayMs, MAX_RETRIES } from "../../../src/lib/trpc/transient.js";
 
 const NGINX_502 = "<!DOCTYPE html>\n<html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center></body></html>";
@@ -98,11 +98,9 @@ void test("Three 502s, then the box is back.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L98
   const box = await boxBehindGateway(3);
   t.check(await box.client.ping.query(), "pong");
 
-  // doctest:L102
   t.check({ refused: box.refused(), reached: box.reached }, {
     refused: 3,
     reached: { ping: 1, send: 0, broken: 0, slow: 0 },
@@ -123,14 +121,12 @@ void test("A batch answers 200 and streams each result as it resolves, so the st
       t.error(error);
     }
   });
-  // doctest:L118
   const box = await boxBehindGateway(0);
   t.check(await Promise.all([box.client.ping.query(), box.client.slow.query()]), [
     "pong",
     "slow answer",
   ]);
 
-  // doctest:L122
   t.check(box.reached, { ping: 1, send: 0, broken: 0, slow: 2 });
 });
 
@@ -147,11 +143,9 @@ void test("After MAXRETRIES retries the query fails.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L137
   const box = await boxBehindGateway(1_000);
   const error = await settle(box.client.ping.query());
 
-  // doctest:L140
   t.check(error, {
     name: "TRPCClientError",
     message: "The box did not answer — it may be restarting. Try again in a moment.",
@@ -190,7 +184,6 @@ void test("A 502 probably means the request never reached the app, but \"probabl
       t.error(error);
     }
   });
-  // doctest:L161
   const box = await boxBehindGateway(1);
   t.check(await settle(box.client.send.mutate()), {
     name: "TRPCClientError",
@@ -210,7 +203,6 @@ void test("A 502 probably means the request never reached the app, but \"probabl
     reached: { ping: 0, send: 0, broken: 0, slow: 0 },
   });
 
-  // doctest:L168
   t.check(await box.client.send.mutate(), "sent");
 });
 
@@ -228,7 +220,6 @@ void test("voiceRecording.claim/.fallBack pass { context:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L184
   const box = await boxBehindGateway(1);
   t.check(await box.client.send.mutate(undefined, { context: { idempotent: true } }), "sent");
 
@@ -244,13 +235,10 @@ void test("voiceRecording.claim/.fallBack pass { context:", async (t) => {
 // voice-staging queue (`lib/audio/voice-staging-queue.ts`) to reuse rather than
 // re-derive.
 void test("isBoxUnreachable is the same test the retry link applies, exported for the vo...", async (t) => {
-  // doctest:L203
   const notUnreachable = new Error("a bug in the procedure");
 
-  // doctest:L205
   t.check(shouldRetryOperation({ type: "mutation", attempts: 1, error: notUnreachable, idempotent: true }), false);
 
-  // doctest:L208
   t.check(isBoxUnreachable(notUnreachable), false);
 });
 
@@ -267,7 +255,6 @@ void test("The stream link's HTTP status is 200 once the server starts writing, 
       t.error(error);
     }
   });
-  // doctest:L219
   const box = await boxBehindGateway(0);
   // The stack holds this machine's paths.
   const procedureStack = any(String).startsWith("TRPCError: a bug in the procedure");
@@ -290,13 +277,11 @@ void test("The stream link's HTTP status is 200 once the server starts writing, 
   // to handle — a 404 here, and a 401 in `trpcFetch`, which has its own
   // session-ended handling that must not become a retry loop.
 
-  // doctest:L232
   t.check((await fetchFromBox(`${box.url}/nope`)).status, 404);
 
   // A cancelled request is not an outage either: the abort passes through unchanged,
   // so a query React Query cancels is never retried.
 
-  // doctest:L240
   const aborted = await settle(fetchFromBox(box.url, { signal: AbortSignal.abort() }));
   t.check(aborted, instanceOf(Error));
   t.check(aborted, { name: "AbortError", message: "This operation was aborted" });
@@ -306,12 +291,10 @@ void test("The stream link's HTTP status is 200 once the server starts writing, 
 //
 // Nothing listening at all is the same failure, with no status to report.
 void test("Nothing listening at all is the same failure, with no status to report.", async (t) => {
-  // doctest:L254
   const box = await boxBehindGateway(0);
   await box.close();
   const error = await settle(fetchFromBox(box.url));
 
-  // doctest:L258
   t.check(error, instanceOf(BoxUnreachableError));
   // A projection, because `detail` is a getter and a whole check skips getters.
   const cause = unreachableCause(error);
@@ -328,7 +311,6 @@ void test("Nothing listening at all is the same failure, with no status to repor
 // A production deploy keeps the site down for about 160-190 s, and a request
 // can land at its very start. The retries span about 211 s, then stop.
 void test("A production deploy keeps the site down for about 160-190 s, and a request ca...", async (t) => {
-  // doctest:L271
   const delays = Array.from({ length: MAX_RETRIES }, (_, i) => retryDelayMs(i + 1));
   t.check(delays, [
     1000,
@@ -344,6 +326,5 @@ void test("A production deploy keeps the site down for about 160-190 s, and a re
     30000,
   ]);
 
-  // doctest:L275
   t.check(delays.reduce((sum, ms) => sum + ms, 0), 211000);
 });

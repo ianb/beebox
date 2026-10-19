@@ -12,7 +12,7 @@
 // here rather than on a phone.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   nativeScanEntries,
   requestNativeControls,
@@ -77,7 +77,6 @@ const mic: NativeControlEntry = {
 // what makes an old build's failed decode answer with a rejection instead of
 // returning silently.
 void test("The command the web posts carries a non-empty id and no payload.", async (t) => {
-  // doctest:L79
   t.check(createNativeScanControlsCommand("scan-1"), {
     version: 2,
     id: "scan-1",
@@ -87,7 +86,6 @@ void test("The command the web posts carries a non-empty id and no payload.", as
 
 // ## The shell answers
 void test("The shell answers", async (t) => {
-  // doctest:L86
   const bridge = fakeBridge(({ id }) => ({
     version: 2,
     id,
@@ -110,7 +108,6 @@ void test("The shell answers", async (t) => {
 // success — distinguishable from a failure precisely because the result carries
 // `ok` rather than signalling by absence.
 void test("A shell with nothing registered answers with an empty list, and that is a suc...", async (t) => {
-  // doctest:L103
   const empty = fakeBridge(({ id }) => ({ version: 2, id, kind: "scan-controls", ok: true, controls: [] }));
   t.check(await requestNativeControls(empty, { commandId: "s", timeoutMs: 50 }), []);
 });
@@ -122,7 +119,6 @@ void test("A shell with nothing registered answers with an empty list, and that 
 // and a silence are the same fact to the agent — the native controls are not in
 // this list.
 void test("All three resolve null, which the handler reports as coverage:", async (t) => {
-  // doctest:L116
   const refused = fakeBridge(({ id }) => ({
     version: 2,
     id,
@@ -134,7 +130,6 @@ void test("All three resolve null, which the handler reports as coverage:", asyn
 });
 
 void test("The shell refuses, never answers, or answers someone else", async (t) => {
-  // doctest:L128
   t.check(await requestNativeControls(fakeBridge(null), { commandId: "s", timeoutMs: 50 }), null);
 });
 
@@ -142,7 +137,6 @@ void test("The shell refuses, never answers, or answers someone else", async (t)
 // the queue is shared, so swallowing it would strand whoever it belongs to (a
 // second scan, or the `point-at-control` answer that comes next).
 void test("A result addressed to a different command is left alone rather than consumed...", async (t) => {
-  // doctest:L137
   const other = fakeBridge(() => ({
     version: 2,
     id: "some-other-command",
@@ -160,7 +154,6 @@ void test("A result addressed to a different command is left alone rather than c
 // A malformed result is not an answer either — the parser rejects it and the wait
 // runs out.
 void test("A malformed result is not an answer either — the parser rejects it and the wa...", async (t) => {
-  // doctest:L153
   const malformed = fakeBridge(({ id }) => ({ version: 2, id, kind: "scan-controls", ok: true }));
   t.check(await requestNativeControls(malformed, { commandId: "s", timeoutMs: 50 }), null);
 });
@@ -172,7 +165,6 @@ void test("A malformed result is not an answer either — the parser rejects it 
 // only point at reads differently from the composer's text field, which it can
 // also focus.
 void test("Native entries become one landmark heading its group plus the controls under...", async (t) => {
-  // doctest:L166
   t.check(
     nativeScanEntries([mic, {
       id: "bbx-composer-input",
@@ -230,7 +222,6 @@ void test("Native entries become one landmark heading its group plus the control
 // would read as "this surface has no controls", which is a different claim from
 // "native answered and had none to report".
 void test("An empty inventory produces no landmark at all:", async (t) => {
-  // doctest:L222
   t.check(nativeScanEntries([]), []);
 });
 
@@ -243,7 +234,6 @@ void test("An empty inventory produces no landmark at all:", async (t) => {
 // The command names the control and the action; the envelope's own `id` is the
 // command id, and the payload's `id` is the `bbx-` address.
 void test("The other direction over the same envelope.", async (t) => {
-  // doctest:L236
   t.check(createNativePointAtControlCommand("point-1", { id: "bbx-composer-mic", action: "point" }), {
     version: 2,
     id: "point-1",
@@ -258,7 +248,6 @@ void test("The other direction over the same envelope.", async (t) => {
 // A shell that drew the ring answers `ok` and nothing else — there is no
 // inventory to return, only the fact that it happened.
 void test("A shell that drew the ring answers ok and nothing else — there is no inventor...", async (t) => {
-  // doctest:L244
   const drew = fakeBridge(({ id }) => ({ version: 2, id, kind: "point-at-control", ok: true }));
   const outcome = await requestNativePointAtControl(drew, {
     commandId: "point-1",
@@ -279,7 +268,6 @@ void test("A shell that drew the ring answers ok and nothing else — there is n
 // Every refusal comes back with the shell's own sentence, which the pointer shows
 // in its broken treatment. An address the shell does not hold:
 void test("Every refusal comes back with the shell's own sentence, which the pointer sho...", async (t) => {
-  // doctest:L259
   const unknown = fakeBridge(({ id }) => ({
     version: 2,
     id,
@@ -305,7 +293,6 @@ void test("Every refusal comes back with the shell's own sentence, which the poi
 // composer's text field and nowhere else on this surface, so asking a button for
 // it is refused rather than quietly turned into a `point`.
 void test("…and an action that control has no native meaning for.", async (t) => {
-  // doctest:L280
   const unsupported = fakeBridge(({ id }) => ({
     version: 2,
     id,
@@ -331,7 +318,6 @@ void test("…and an action that control has no native meaning for.", async (t) 
 // it may well have drawn the ring and lost the reply, so the sentence says what is
 // actually known.
 void test("A shell that never answers is reported as a timeout rather than as a refusal:", async (t) => {
-  // doctest:L301
   t.check(
     await requestNativePointAtControl(fakeBridge(null), {
       commandId: "point-4",
@@ -350,7 +336,6 @@ void test("A shell that never answers is reported as a timeout rather than as a 
 // the same non-destructive rule the scan follows, and the reason a scan and a
 // pointer can be in flight at once.
 void test("An answer to somebody else's command is left on the shared queue for its owne...", async (t) => {
-  // doctest:L315
   const crossed = fakeBridge(() => ({
     version: 2,
     id: "some-other-command",
@@ -376,7 +361,6 @@ void test("An answer to somebody else's command is left on the shared queue for 
 // answer either — the kind is matched, not just the id, so a shell answering the
 // wrong question cannot be read as the right one.
 void test("A scan-controls answer under the pointer's own command id is not the pointer'...", async (t) => {
-  // doctest:L336
   const wrongKind = fakeBridge(({ id }) => ({
     version: 2,
     id,

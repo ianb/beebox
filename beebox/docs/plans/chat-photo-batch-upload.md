@@ -6,6 +6,8 @@ issues: []
 ---
 # Chat photo batch upload
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > **Superseded on the web (2026-09-06).** Track 2's routing sent every non-image
 > — and every over-threshold photo selection — to the full-screen
 > `BulkUploadOverlay`, which seals and sends a message of its own. That made it

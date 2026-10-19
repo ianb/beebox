@@ -9,8 +9,8 @@
 // nothing reads any more.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { containing } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import { planOpenerMoves } from "../../../src/scripts/migrate/briefing-openers/plan.js";
 import { runBriefingOpeners } from "../../../src/scripts/migrate/briefing-openers/run.js";

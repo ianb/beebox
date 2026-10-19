@@ -6,7 +6,7 @@
 // behavior are observable without touching the development checkout.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -62,7 +62,6 @@ void test("An invalid working-tree edit does not affect checks of HEAD or the un
       t.error(error);
     }
   });
-  // doctest:L58
   const repo = fixture();
   writePlan({ repo, rel: "beebox/docs/plans/unicode.md", status: "draft", title: "Café 🐝" });
   git(repo, "add", "beebox/docs/plans/unicode.md");
@@ -88,7 +87,6 @@ void test("Snapshot validation fails closed", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L82
   const repo = fixture();
   writeFileSync(join(repo, "beebox/docs/plans/open.md"), "# No frontmatter\n");
   git(repo, "add", "beebox/docs/plans/open.md");
@@ -115,7 +113,6 @@ void test("The checker comes from the executing bin/land checkout.", async (t) =
       t.error(error);
     }
   });
-  // doctest:L107
   const repo = fixture();
   git(repo, "checkout", "-qb", "worktree-invalid");
   writePlan({ repo, rel: "beebox/docs/plans/open.md", status: "implemented" });
@@ -140,7 +137,6 @@ void test("List, dry-run, and valid landing retain their behavior", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L130
   const repo = fixture();
   git(repo, "checkout", "-qb", "worktree-valid");
   writePlan({ repo, rel: "beebox/docs/plans/next.md", status: "draft" });

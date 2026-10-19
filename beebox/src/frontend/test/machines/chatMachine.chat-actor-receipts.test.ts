@@ -6,13 +6,12 @@
 // receipt; only the actor's later UI work is suppressed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { settleFromTurnStart, settleRejectedTurnStart } from "../../src/machines/chatMachine/chat-receipt-settlement.js";
 import { expectReceipt, pendingReceiptCount } from "../../src/input/targets/receipts.js";
 
 // ## A cancelled actor still reports an accepted send
 void test("A cancelled actor still reports an accepted send", async (t) => {
-  // doctest:L16
   const accepted = expectReceipt("cancelled-success");
   const shouldContinue = settleFromTurnStart({
     messageId: "cancelled-success",
@@ -29,7 +28,6 @@ void test("A cancelled actor still reports an accepted send", async (t) => {
 
 // ## A cancelled actor still reports a rejected send
 void test("A cancelled actor still reports a rejected send", async (t) => {
-  // doctest:L30
   const rejected = expectReceipt("cancelled-failure");
   const shouldContinue = settleRejectedTurnStart({
     messageId: "cancelled-failure",
@@ -55,22 +53,18 @@ void test("A cancelled actor still reports a rejected send", async (t) => {
 
 // ## Every accepted response shape keeps its disposition
 void test("Every accepted response shape keeps its disposition", async (t) => {
-  // doctest:L49
   const queued = expectReceipt("queued");
   const queuedContinues = settleFromTurnStart({ messageId: "queued", result: { queued: true } });
   const queuedReceipt = await queued;
 
-  // doctest:L53
   const duplicate = expectReceipt("duplicate");
   const duplicateContinues = settleFromTurnStart({ messageId: "duplicate", result: { deduplicated: true } });
   const duplicateReceipt = await duplicate;
 
-  // doctest:L57
   const malformed = expectReceipt("malformed");
   const malformedContinues = settleFromTurnStart({ messageId: "malformed", result: {} });
   const malformedReceipt = await malformed;
 
-  // doctest:L61
   t.check(
     {
       queued: [queuedContinues, queuedReceipt.disposition],
@@ -96,7 +90,6 @@ void test("Every accepted response shape keeps its disposition", async (t) => {
 
 // ## Only an explicit refusal carries retry permission
 void test("Only an explicit refusal carries retry permission", async (t) => {
-  // doctest:L72
   const observed = expectReceipt("definitive-refusal");
   settleRejectedTurnStart({ messageId: "definitive-refusal", reason: "invalid model", definitive: true });
   t.check(await observed, {

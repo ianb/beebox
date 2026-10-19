@@ -7,15 +7,15 @@
 // other in-progress user work untouched.
 //
 // shapeVersion 3 has one root, so every git-status path `getStatus` reports is
-// already box-root-relative — no prefix normalization needed. This doctest
+// already box-root-relative — no prefix normalization needed. This test
 // exercises the sync commit directly against a minimal fixture, without also
 // going through the full `generateDocs` pipeline (which would also install a
 // real, executable `.git/hooks/pre-commit` that shells out to a `bbx` binary —
 // an unrelated hazard in a repo-in-a-repo dev/test environment).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { rm } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { commitTemplateSyncChanges, generateDocs } from "../../../src/core/docs-gen/generate/core.js";
@@ -35,18 +35,15 @@ void test("Simulate what the install helpers would have dirtied:", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L31
   const box = await makeTmpBox({ git: true });
   await box.write("_config/template-versions.json", '{"changed":true}\n');
   await box.write("notes.md", "unrelated dirty file\n");
 
-  // doctest:L35
   const before = await getStatus(box.root);
   t.check(before.modified, [
     "_config/template-versions.json",
   ]);
 
-  // doctest:L39
   t.check(before.untracked, [
     "notes.md",
   ]);
@@ -54,25 +51,20 @@ void test("Simulate what the install helpers would have dirtied:", async (t) => 
   // `commitTemplateSyncChanges` commits the modified template file and leaves the
   // unrelated one untouched — untracked, uncommitted:
 
-  // doctest:L47
   await commitTemplateSyncChanges(box.root);
 
-  // doctest:L49
   const status = await getStatus(box.root);
   t.check(status.modified, []);
 
-  // doctest:L53
   t.check(status.untracked, [
     "notes.md",
   ]);
 
   // The commit lands with the expected subject and trailer:
 
-  // doctest:L60
   const log = await getLog(box.root, 1);
   t.check(log[0]?.subject, "Sync templates from upstream");
 
-  // doctest:L64
   t.check(log[0]?.trailers, {
     "Triggered-By": "generateDocs",
   });
@@ -95,7 +87,6 @@ void test("generateDocs writes tracked output after the template sync:", async (
       t.error(error);
     }
   });
-  // doctest:L83
   const genBox = await makeTmpBox({ git: true });
   await generateDocs(genBox.root, { force: true });
   const card = await genBox.read("_content/briefing.briefing.card");
@@ -103,11 +94,9 @@ void test("generateDocs writes tracked output after the template sync:", async (
   genBox.commitAll("edit briefing");
   await generateDocs(genBox.root, { force: true });
 
-  // doctest:L90
   const after = await getStatus(genBox.root);
   t.check([...after.staged, ...after.modified, ...after.untracked].filter((p) => isTemplateManagedPath(p)), []);
 
-  // doctest:L94
   t.check((await getLog(genBox.root, 1))[0]?.subject, "Sync templates from upstream");
 });
 
@@ -126,7 +115,6 @@ void test("isTemplateManagedPath also matches hand-authored files, such as a rul
       t.error(error);
     }
   });
-  // doctest:L111
   const userBox = await makeTmpBox({ git: true });
   await generateDocs(userBox.root, { force: true });
   await userBox.write(".claude/rules/lending.md", "Lend books for two weeks.\n");
@@ -136,13 +124,11 @@ void test("isTemplateManagedPath also matches hand-authored files, such as a rul
   await userBox.write(".claude/rules/lending.md", "Lend books for three weeks.\n");
   await generateDocs(userBox.root, { force: true });
 
-  // doctest:L120
   const afterUserEdit = await getStatus(userBox.root);
   t.check([...afterUserEdit.staged, ...afterUserEdit.modified, ...afterUserEdit.untracked].filter((p) => isTemplateManagedPath(p)), [
     ".claude/rules/lending.md",
   ]);
 
-  // doctest:L124
   t.check((await getLog(userBox.root, 1))[0]?.subject, "Sync templates from upstream");
 });
 
@@ -161,7 +147,6 @@ void test("In a converted box AGENTS.md is the box's own instruction file.", asy
       t.error(error);
     }
   });
-  // doctest:L141
   const authoredBox = await makeTmpBox({ git: true });
   await generateDocs(authoredBox.root, { force: true });
   await authoredBox.write("AGENTS.md", "House rules.\n");
@@ -177,7 +162,6 @@ House rules.`);
   // A tracked guide is engine output, not the box's own file: when generation
   // reinstalls `src/schemas/AGENTS.md`, the same commit takes it.
 
-  // doctest:L158
   await rm(authoredBox.path("src/schemas/AGENTS.md"));
   authoredBox.commitAll("drop the schemas guide");
   await generateDocs(authoredBox.root, { force: true });

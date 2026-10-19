@@ -5,7 +5,7 @@
 // about presentation, never about whether the prose and title appear.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -17,7 +17,6 @@ import type { ExhibitBoot } from "../../../src/shared/exhibits.js";
 // build uses Vite's automatic runtime, where the container needs no React
 // import. Handing the global over is the smallest way to render one here.
 Object.assign(globalThis, { React });
-
 
 function boot(overrides: Partial<ExhibitBoot>): ExhibitBoot {
   return {
@@ -45,7 +44,6 @@ function render(value: ExhibitBoot): string {
 // emphasis as emphasis, not one run-on paragraph. The page's own content follows.
 // There is no answer form.
 void test("Prose renders as Markdown under the title:", async (t) => {
-  // doctest:L49
   const instrument = render(boot({}));
   t.check(
     {
@@ -69,7 +67,6 @@ void test("Prose renders as Markdown under the title:", async (t) => {
 
 // A manifest without prose shows the title and the page only.
 void test("A manifest without prose shows the title and the page only.", async (t) => {
-  // doctest:L64
   const bare = render(boot({
     scope: "apps/threshold-tuner",
     manifest: { title: "Threshold tuner", created: "2026-08-15T00:00:00Z" },
@@ -93,7 +90,6 @@ void test("A manifest without prose shows the title and the page only.", async (
 // no session to bring forward, nobody to send a comment to. The composer renders
 // only once commenting is on and text is selected.
 void test("A store exhibit carries the \"Reply in the session\" button and the Comment con...", async (t) => {
-  // doctest:L82
   const store = render(boot({}));
   const committed = render(boot({
     scope: "apps/threshold-tuner",
@@ -130,10 +126,8 @@ void test("A store exhibit carries the \"Reply in the session\" button and the C
 // non-image figure is a plain link with no button. The file name beside the
 // label links to the raw file, which is the way to the browser's own zoom.
 void test("The default renderer wraps each image figure in a button that opens the full-...", async (t) => {
-  // doctest:L109
   const { DefaultExhibit } = await import("../../../src/frontend/exhibits/boot/DefaultExhibit.js");
 
-  // doctest:L111
   const figures = renderToStaticMarkup(
     createElement(DefaultExhibit, {
       boot: boot({
@@ -172,10 +166,8 @@ void test("The default renderer wraps each image figure in a button that opens t
 // controls the container shows, in one strip: Reply in the session first, then
 // Comment. Nothing else of the container comes with it.
 void test("A raw index.html page that references /controls.ts gets the same two controls...", async (t) => {
-  // doctest:L142
   const { ControlBar } = await import("../../../src/frontend/exhibits/controls/ControlBar.js");
 
-  // doctest:L144
   const bar = renderToStaticMarkup(
     createElement(ControlBar, { scope: "logo-bakeoff/round-3", contentRef: { current: null } }),
   );

@@ -4,7 +4,7 @@
 // identifies which `MAP.md` files need to be created or updated.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { precheck } from "../../../src/core/maps/precheck.js";
 import type { MapTask } from "../../../src/core/maps/precheck.js";
 import { saveMapState } from "../../../src/core/maps/state.js";
@@ -79,12 +79,10 @@ void test("A directory that isn't a git repo is skipped:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L76
   const box = await makeTmpBox({ git: "none" });
   const brief = await precheck({ boxRoot: box.root });
   t.check(brief.needsWork, false);
 
-  // doctest:L81
   t.check(brief.skippedReason, "not_a_repo");
 });
 
@@ -97,7 +95,6 @@ void test("A repo with uncommitted work is skipped — we wait for tomorrow's ru
       t.error(error);
     }
   });
-  // doctest:L92
   const box = await makeTmpBox({ git: true });
   await box.write("scratch.txt", "wip");
   const brief = await precheck({ boxRoot: box.root });
@@ -113,7 +110,6 @@ void test("A repo with uncommitted work is skipped — we wait for tomorrow's ru
 //   appends to it before its first tool call. Without this exception the agent's
 //   `bbx refresh-maps --brief` always returned no tasks.
 void test("Two kinds of uncommitted state are not user work, so they do not skip the run:", async (t) => {
-  // doctest:L113
   const exempt: Array<[string, string, string]> = [
     ["procedure run marker", "_bookkeeping/procedure/runs/refresh-maps_2026-05-09T2052/run.procedure-run.card", "<run-card status=\"running\"/>"],
     ["usage session manifest", "_bookkeeping/usage/session-manifest.jsonl", "{}\n{}\n"],
@@ -131,9 +127,7 @@ void test("Two kinds of uncommitted state are not user work, so they do not skip
     out.push({ label, needsWork: brief.needsWork, skipped: brief.skippedReason ?? null });
     await box.cleanup();
   }
-  // doctest:L126
 
-  // doctest:L131
   t.check(out, [
     { label: "procedure run marker", needsWork: true, skipped: null },
     { label: "usage session manifest", needsWork: true, skipped: null },
@@ -161,7 +155,6 @@ void test("A clean box with no MAP.md files and no state — every directory wit
       t.error(error);
     }
   });
-  // doctest:L152
   const box = await makeTmpBox({ git: true });
   await seedSkeletonMaps(box);
   await box.write("inbox/foo.card", "<card/>");          // file-only dir (skipped)
@@ -169,7 +162,6 @@ void test("A clean box with no MAP.md files and no state — every directory wit
   await box.write("store/scratch/b.md", "b");
   box.commitAll("seed");
 
-  // doctest:L159
   const brief = await precheck({ boxRoot: box.root });
   const store = brief.tasks.find((task) => task.dir === "store");
   t.check({
@@ -199,7 +191,6 @@ void test("A clean box with no MAP.md files and no state — every directory wit
 //
 // Each case starts from a fresh `store/` whose state matches HEAD:
 void test("Recorded state at HEAD means a re-run reports nothing to do.", async (t) => {
-  // doctest:L193
   const cases: Array<[string, null | ((box: TmpBox) => Promise<void>)]> = [
     ["no change", null],
     ["add file", async (box: TmpBox) => { await box.write("store/README.md", "top-level note"); }],
@@ -222,7 +213,6 @@ void test("Recorded state at HEAD means a re-run reports nothing to do.", async 
     await box.cleanup();
   }
 
-  // doctest:L215
   t.check(out, [
     { label: "no change", needsWork: false, tasks: [] },
     { label: "add file", needsWork: true, tasks: [{ dir: "store", action: "update", added: ["README.md"], deleted: [] }] },
@@ -257,7 +247,6 @@ void test("Default patterns include the skeleton hide-list (bookkeeping/procedur
       t.error(error);
     }
   });
-  // doctest:L232
   const box = await makeTmpBox({ git: true });
   await seedSkeletonMaps(box);
   await box.write("a/b/x.card", "x");
@@ -270,7 +259,6 @@ void test("Default patterns include the skeleton hide-list (bookkeeping/procedur
   await box.write("_content/inbox/capture-1.attach/audio.webm", "x");
   box.commitAll("seed");
 
-  // doctest:L244
   const brief = await precheck({ boxRoot: box.root });
   const dirs = brief.tasks.map((task) => task.dir || "<root>").toSorted();
   t.check(dirs, ["a", "emails", "emails/keep"]);
@@ -297,7 +285,6 @@ void test("A box not yet converted to AGENTS.md has an AGENTS.md symlink beside 
       t.error(error);
     }
   });
-  // doctest:L281
   const box = await makeTmpBox({ git: true });
   const skeleton = await seedSkeletonMaps(box);
   await box.write("store/notes/a.md", "a\n");
@@ -308,7 +295,6 @@ void test("A box not yet converted to AGENTS.md has an AGENTS.md symlink beside 
   await box.write("_config/b/y.md", "y");
   box.commitAll("seed");
 
-  // doctest:L291
   const brief = await precheck({ boxRoot: box.root });
   const children = (dir: string) => brief.tasks.find((task) => task.dir === dir)?.children ?? null;
   t.check({ store: children("store"), _config: children("_config") }, {
@@ -321,7 +307,6 @@ void test("A box not yet converted to AGENTS.md has an AGENTS.md symlink beside 
   // immediate children of the mapped directory, so planting the symlink anywhere
   // else, or before the state is stamped, asserts nothing:
 
-  // doctest:L306
   await box.write("people/ann/a.md", "a\n");
   await box.write("people/bob/b.md", "b\n");
   await box.write("people/MAP.md", "# Map: people\n");
@@ -331,19 +316,16 @@ void test("A box not yet converted to AGENTS.md has an AGENTS.md symlink beside 
     state: { maps: { ...skeleton, people: { asOf: await getHead(box.root), generatedAt: "t" } } },
   });
 
-  // doctest:L315
   const peopleTask = async () => {
     const task = (await precheck({ boxRoot: box.root })).tasks.find((entry) => entry.dir === "people");
     return task === undefined ? null : { action: task.action, added: task.added };
   };
 
-  // doctest:L320
   await box.write("people/CLAUDE.md", "@MAP.md\n");
   await symlink("CLAUDE.md", join(box.root, "people", "AGENTS.md"));
   box.commitAll("plant instruction files");
   t.check(await peopleTask(), null);
 
-  // doctest:L325
   await box.write("people/real.md", "r\n");
   box.commitAll("real file");
   t.check(await peopleTask(), { action: "update", added: ["real.md"] });
@@ -358,7 +340,6 @@ void test("User-supplied .bbx-maps-ignore extends the defaults", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L340
   const box = await makeTmpBox({ git: true });
   await seedSkeletonMaps(box);
   await box.write("keep/sub/a.card", "x");
@@ -367,7 +348,6 @@ void test("User-supplied .bbx-maps-ignore extends the defaults", async (t) => {
   await box.write(".bbx-maps-ignore", "dump\n# comment line\n");
   box.commitAll("seed");
 
-  // doctest:L348
   const brief = await precheck({ boxRoot: box.root });
   const dirs = brief.tasks.map((task) => task.dir || "<root>").toSorted();
   t.check(dirs, ["keep"]);
@@ -385,20 +365,17 @@ void test("A directory with one visible subdir and nothing else doesn't qualify 
       t.error(error);
     }
   });
-  // doctest:L365
   const box = await makeTmpBox({ git: true });
   await seedSkeletonMaps(box);
   await box.write("collection/only-child/a.md", "x");
   box.commitAll("seed");
 
-  // doctest:L370
   const brief = await precheck({ boxRoot: box.root });
   const dirs = brief.tasks.map((task) => task.dir || "<root>").toSorted();
   t.check(dirs, []);
 
   // Add a sibling file and the dir qualifies:
 
-  // doctest:L379
   await box.write("collection/notes.md", "y");
   box.commitAll("add sibling file");
   const brief2 = await precheck({ boxRoot: box.root });
@@ -417,7 +394,6 @@ void test("A directory with one visible subdir and nothing else doesn't qualify 
 // `store/items/**` hides `store/items` itself too — useful when the
 // collection is purely incidental and the parent shouldn't even mention it.
 void test("store/items/ excludes the per-item subdirs but keeps store/items/ itself in s...", async (t) => {
-  // doctest:L403
   const patterns: Array<[string, string[]]> = [
     ["store/items/*", []],
     ["store/items/**", ["store/README.md"]],  // 2nd visible child for store
@@ -441,9 +417,7 @@ void test("store/items/ excludes the per-item subdirs but keeps store/items/ its
     out.push({ pattern, dirs, storeChildren: brief.tasks.find((task) => task.dir === "store")?.children });
     await box.cleanup();
   }
-  // doctest:L418
 
-  // doctest:L428
   t.check(out, [
     { pattern: "store/items/*", dirs: ["store", "store/keep"], storeChildren: ["items/", "keep/"] },
     { pattern: "store/items/**", dirs: ["store", "store/keep"], storeChildren: ["README.md", "keep/"] },
@@ -465,7 +439,6 @@ void test("When the commit a MAP.md was generated against no longer resolves —
       t.error(error);
     }
   });
-  // doctest:L443
   const box = await makeTmpBox({ git: true });
   const skeleton = await seedSkeletonMaps(box);
   await box.write("store/notes/a.md", "a\n");
@@ -473,7 +446,6 @@ void test("When the commit a MAP.md was generated against no longer resolves —
   await box.write("store/MAP.md", "# Map: store\n");
   box.commitAll("seed");
 
-  // doctest:L450
   await saveMapState({
     boxRoot: box.root,
     state: {
@@ -485,7 +457,6 @@ void test("When the commit a MAP.md was generated against no longer resolves —
   });
   box.commitAll("state");
 
-  // doctest:L461
   const brief = await precheck({ boxRoot: box.root });
   t.check(brief.anomalies, [{ kind: "asof_unresolvable", dir: "store", asOf: "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef" }]);
   t.check(brief.tasks.map((task) => ({ dir: task.dir, action: task.action, added: task.added })), [{ dir: "store", action: "create", added: [] }]);
@@ -504,7 +475,6 @@ void test("The anomaly must not over-fire.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L480
   const box = await makeTmpBox({ git: true });
   const skeleton = await seedSkeletonMaps(box);
   await box.write("store/notes/a.md", "a\n");
@@ -513,18 +483,15 @@ void test("The anomaly must not over-fire.", async (t) => {
   box.commitAll("seed");
   const asOf = await getHead(box.root);
 
-  // doctest:L488
   await box.write("store/later/c.md", "c\n");
   box.commitAll("add store/later");
 
-  // doctest:L491
   await saveMapState({
     boxRoot: box.root,
     state: { maps: { ...skeleton, store: { asOf, generatedAt: "t" } } },
   });
   box.commitAll("state");
 
-  // doctest:L497
   const brief = await precheck({ boxRoot: box.root });
   t.check(brief.anomalies, []);
   t.check(brief.tasks.map((task) => ({ dir: task.dir, action: task.action, added: task.added })), [{ dir: "store", action: "update", added: ["later/"] }]);
@@ -546,7 +513,6 @@ void test("The walker, the create listing, and the update listing all read the s
       t.error(error);
     }
   });
-  // doctest:L519
   const box = await makeTmpBox({ git: true });
   const skeleton = await seedSkeletonMaps(box);
   await box.write(".gitignore", (await box.read(".gitignore")) + "\n*.jpg\n");
@@ -558,7 +524,6 @@ void test("The walker, the create listing, and the update listing all read the s
   await saveMapState({ boxRoot: box.root, state: { maps: { ...skeleton, store: { asOf: head, generatedAt: "t" } } } });
   box.commitAll("state");
 
-  // doctest:L530
   await box.write("store/photos/holiday.jpg", "JPEG");
   const quiet = await precheck({ boxRoot: box.root });
   t.check(quiet.needsWork, false);
@@ -566,7 +531,6 @@ void test("The walker, the create listing, and the update listing all read the s
   // An unrelated tracked change dirties `store`; the listing still omits the
   // ignored directory:
 
-  // doctest:L540
   await box.write("store/c.md", "c");
   box.commitAll("add c");
   const update = await precheck({ boxRoot: box.root });
@@ -574,7 +538,6 @@ void test("The walker, the create listing, and the update listing all read the s
 
   // The create path, with no state entry, gives the same listing:
 
-  // doctest:L550
   await saveMapState({ boxRoot: box.root, state: { maps: skeleton } });
   box.commitAll("drop store state");
   const create = await precheck({ boxRoot: box.root });
@@ -583,7 +546,6 @@ void test("The walker, the create listing, and the update listing all read the s
   // A directory holding only ignored files does not make its parent a container
   // either:
 
-  // doctest:L561
   await box.write("solo/pics/one.jpg", "JPEG");
   await box.write("solo/pics/two.jpg", "JPEG");
   await box.write("solo/readme.md", "r");
@@ -606,7 +568,6 @@ void test("Git quotes non-ASCII paths in its default output (\"caf\\303\\251.md\
       t.error(error);
     }
   });
-  // doctest:L582
   const box = await makeTmpBox({ git: true });
   const skeleton = await seedSkeletonMaps(box);
   await box.write("store/notes/a.md", "a");
@@ -617,7 +578,6 @@ void test("Git quotes non-ASCII paths in its default output (\"caf\\303\\251.md\
   await saveMapState({ boxRoot: box.root, state: { maps: { ...skeleton, store: { asOf: head, generatedAt: "t" } } } });
   box.commitAll("state");
 
-  // doctest:L592
   await box.write("store/café.md", "c");
   await box.write("store/résumés/r.md", "r");
   box.commitAll("add accented names");

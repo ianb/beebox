@@ -178,7 +178,7 @@ Every place data leaves the machine: destination, trigger (automatic vs
 user-initiated), exactly what data (card bodies? images? audio? email?),
 credential used, per-box scoping, opt-out and what breaks without it. This
 section must be complete across providers — Anthropic, OpenAI, Google,
-Cloudflare, Tailscale, Telegram, push services, git remotes, and any
+Cloudflare, Tailscale, push services, git remotes, and any
 outbound URL fetch. Include every provider, not only the examples listed here.
 
 ### 4. Internal security practices

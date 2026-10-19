@@ -8,11 +8,11 @@
 //
 // These examples call the walk and the generators directly. The full
 // `generateDocs` would also install a real pre-commit hook that shells out to a
-// `bbx` binary (see `generate-docs.doctest.md`).
+// `bbx` binary (see `test/core/docs-gen/generate.test.ts`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

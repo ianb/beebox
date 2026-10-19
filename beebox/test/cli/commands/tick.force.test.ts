@@ -12,7 +12,7 @@
 // skip silently), or `null` meaning "run it".
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { ParsedScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
 import { normalizeScriptState } from "../../../src/core/schedule/state.js";
 import { evaluateSkip, effectiveBusyBlockers } from "../../../src/cli/tick-helpers.js";
@@ -60,37 +60,31 @@ function makeCtx(overrides: Partial<SkipContext> & Pick<SkipContext, "parsed">):
 
 // A script that isn't due is skipped silently — unless forced:
 void test("A script that isn't due is skipped silently — unless forced:", async (t) => {
-  // doctest:L64
   t.check((await evaluateSkip(makeCtx({ parsed: makeScript({ notBefore: "1h" }) })))?.line, "");
 
-  // doctest:L67
   t.check(await evaluateSkip(makeCtx({ parsed: makeScript({ notBefore: "1h" }), options: { force: true } })), null);
 });
 
 // A spent budget skips the run — unless forced (`onWakeup: true` makes the
 // script otherwise due):
 void test("A spent budget skips the run — unless forced (onWakeup:", async (t) => {
-  // doctest:L75
   const overBudget = makeCtx({
     parsed: makeScript({ onWakeup: true, budget: { limitMs: 60_000, windowMs: 3_600_000 } }),
     state: normalizeScriptState({ lastRun: null, lastResult: null, lastError: null, lastDurationMs: null, runCount: 1, recentRuns: [{ ts: "2026-06-09T11:50:00Z", durationMs: 120_000 }] }),
   });
   t.check((await evaluateSkip(overBudget))?.line, "  Skipping test-script: budget exceeded (120s used)");
 
-  // doctest:L82
   t.check(await evaluateSkip({ ...overBudget, options: { force: true } }), null);
 });
 
 // `enabled: false` is an explicit user statement — force does not override it:
 void test("enabled:", async (t) => {
-  // doctest:L89
   t.check((await evaluateSkip(makeCtx({ parsed: makeScript({ enabled: false }), options: { force: true } })))?.line, "  Skipping test-script: disabled (enabled: false)");
 });
 
 // A live lock-group holder is never preempted, forced or not (the `running`
 // map only ever contains live processes — stale locks are cleaned on scan):
 void test("A live lock-group holder is never preempted, forced or not (the running map o...", async (t) => {
-  // doctest:L97
   const held = new Map([["other-script", { pid: 1234, startedAt: "2026-06-09T11:59:00Z", triggeredBy: "schedule", lockGroup: "research" }]]);
   t.check((await evaluateSkip(makeCtx({ parsed: makeScript({ onWakeup: true, lockGroup: "research" }), running: held, options: { force: true } })))?.line, "  Skipping test-script: lock-group \"research\" held by other-script");
 });
@@ -100,7 +94,6 @@ void test("A live lock-group holder is never preempted, forced or not (the runni
 // `effectiveBusyBlockers` decides which in-flight work still defers the
 // whole tick. Without force, everything blocks:
 void test("effectiveBusyBlockers decides which in-flight work still defers the whole tick.", async (t) => {
-  // doctest:L108
   t.check(effectiveBusyBlockers(["chat:abc-123"], { force: false }), [
     "chat:abc-123",
   ]);
@@ -109,12 +102,10 @@ void test("effectiveBusyBlockers decides which in-flight work still defers the w
 // With force, chat sessions stop blocking — a forced run often originates
 // from the chat itself — but running scripts and procedures still do:
 void test("With force, chat sessions stop blocking — a forced run often originates from...", async (t) => {
-  // doctest:L118
   t.check(effectiveBusyBlockers(["script:daily-rumination", "chat:abc-123"], { force: true }), [
     "script:daily-rumination",
   ]);
 
-  // doctest:L123
   t.check(effectiveBusyBlockers(["procedure:refresh-maps"], { force: true }), [
     "procedure:refresh-maps",
   ]);

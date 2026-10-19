@@ -10,7 +10,7 @@
 # staged; index.html-tier apps have no TS and never trigger it.
 #
 # Optional argument: an alternate project directory holding a tsconfig.json
-# (used by the doctest to exercise the gate against fixtures).
+# (used by its test to exercise the gate against fixtures).
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

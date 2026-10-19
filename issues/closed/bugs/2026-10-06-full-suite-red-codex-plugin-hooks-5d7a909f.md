@@ -9,7 +9,7 @@ discovered-in: worktree-codex-plugin-hooks — the hourly full-suite run on main
 resolution: implemented
 ---
 
-**Closed 2026-10-06 (test-suite-health, `50961ada5`).** Not caused by the codex-plugin-hooks landing: the test was a flake near its heap cap that failed about half the time. See [the oversize-lines flake](../../closed/bugs/2026-10-02-session-oversize-lines-flakes-under-load.md).
+**Closed 2026-10-06 (test-suite-health, `50961ada5`).** Not caused by the codex-plugin-hooks landing: the test was a flake near its heap cap that failed about half the time. See [the oversize-lines flake](../../bugs/2026-10-02-session-oversize-lines-flakes-under-load.md).
 
 The hourly batched full-suite run (`schedules/full-suite/`) went red on `main` at
 `5d7a909f`. Bisecting the landings since the last tested

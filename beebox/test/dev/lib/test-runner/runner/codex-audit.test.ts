@@ -5,7 +5,7 @@
 // existing path-oriented checks to work without inventing a Claude-style Read tool.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { codexBehaviorFromActivity } from "../../../../../src/dev/lib/test-runner/runner/codex-audit.js";
 import { emitObservedActivity } from "../../../../../src/core/agent/codex-run/activity.js";
 import type { CodexObservedActivity } from "../../../../../src/core/agent/codex-run/activity.js";
@@ -19,7 +19,6 @@ const behavior = codexBehaviorFromActivity([
 
 // The typed SDK item feeds the audit activity mapper directly:
 void test("The typed SDK item feeds the audit activity mapper directly:", async (t) => {
-  // doctest:L23
   const observed: CodexObservedActivity[] = [];
   const completed = {
     id: "command-1",
@@ -39,7 +38,6 @@ void test("The typed SDK item feeds the audit activity mapper directly:", async 
 });
 
 void test("line 37", async (t) => {
-  // doctest:L38
   const summary = JSON.stringify({
     readCount: behavior.filesRead.length,
     wrappedReadDetected: behavior.filesRead.some((command) => command.includes("bash -lc")),
@@ -54,7 +52,6 @@ void test("line 37", async (t) => {
 
 // An `AGENTS.md` read keeps its own name; nothing rewrites it to `CLAUDE.md`:
 void test("An AGENTS.md read keeps its own name; nothing rewrites it to CLAUDE.md:", async (t) => {
-  // doctest:L54
   const agentsRead = codexBehaviorFromActivity([
     { type: "command", command: "cat people/AGENTS.md" },
   ], "ok");

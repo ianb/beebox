@@ -14,7 +14,7 @@
 // the session about both, and can replay a stored handoff.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execa } from "execa";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -75,7 +75,6 @@ async function run(rig: Rig) {
 // file untracked, and `main` has since changed `f.txt`: the exact case that used
 // to stop the schedule for good.
 void test("The branch has one commit of its own.", async (t) => {
-  // doctest:L80
   const rig = await realRig(REPORTS_DONE);
   const wt = rig.worktreePath;
   await writeFile(join(wt, "g.txt"), "branch work\n");
@@ -86,7 +85,6 @@ void test("The branch has one commit of its own.", async (t) => {
   await writeFile(join(rig.fake.deps.mainRoot, "f.txt"), "main moved\n");
   await git(rig.fake.deps.mainRoot, "commit", "-q", "-am", "main moved");
 
-  // doctest:L90
   const first = await run(rig);
   const parkedRef = `refs/schedules/knip-sweep/parked/${first.kind === "ran" ? first.runId : ""}`;
   t.check(
@@ -107,7 +105,6 @@ void test("The branch has one commit of its own.", async (t) => {
   // The session is told what was parked and which commits the branch still
   // carries, and that it is single-shot.
 
-  // doctest:L105
   const briefing = await rig.transcript();
   t.check(
     [
@@ -124,7 +121,6 @@ void test("The branch has one commit of its own.", async (t) => {
   // The session reported, so the only alert is the runner's own: the branch holds
   // a commit `main` lacks.
 
-  // doctest:L121
   const unlanded = (await readAlerts(rig.fake.deps.storeRoot, "knip-sweep")).filter((alert) => alert.state === "open");
   t.check(unlanded.map((alert) => ({ condition: alert.condition, priority: alert.priority, names: /branch work/u.test(alert.message) })), [
     {
@@ -136,7 +132,6 @@ void test("The branch has one commit of its own.", async (t) => {
 
   // Once the branch lands, the next run resolves it.
 
-  // doctest:L129
   await git(rig.fake.deps.mainRoot, "merge", "-q", "--no-edit", "worktree-knip-sweep");
   await run(rig);
   t.check((await readAlerts(rig.fake.deps.storeRoot, "knip-sweep")).filter((alert) => alert.state === "open").length, 0);
@@ -147,7 +142,6 @@ void test("The branch has one commit of its own.", async (t) => {
 // This agent writes a file and ends without reporting on its first session; on a
 // replay it reports.
 void test("This agent writes a file and ends without reporting on its first session; on...", async (t) => {
-  // doctest:L141
   const flaky = await realRig([
     'if grep -q "This is a replay" "$(dirname "$0")/transcript.txt"; then',
     REPORTS_DONE,
@@ -173,7 +167,6 @@ void test("This agent writes a file and ends without reporting on its first sess
   // running `run` again (so `lastRunAt` stays put), parks the bailed session's
   // file, and the session's report closes it out.
 
-  // doctest:L162
   const before = (await readScheduleState(flaky.fake.deps.storeRoot, "knip-sweep")).lastRunAt;
   clock += 3600_000;
   flaky.fake.setNow(clock);
@@ -208,7 +201,6 @@ void test("This agent writes a file and ends without reporting on its first sess
 // The 2026-09-04 refusal said only "(live)", so nobody could tell afterwards what
 // the guard had seen. The guard's reason now travels in the alert.
 void test("The 2026-09-04 refusal said only \"(live)\", so nobody could tell afterwards wh...", async (t) => {
-  // doctest:L185
   const busy = await launchRig({
     name: "knip-sweep",
     yaml: workstreamYaml("  worktree: true"),
@@ -232,7 +224,6 @@ void test("The 2026-09-04 refusal said only \"(live)\", so nobody could tell aft
 // run would find a clean tree, so this alert is the only place the parked ref
 // is mentioned.
 void test("The branch's own commit conflicts with main, so no session starts.", async (t) => {
-  // doctest:L207
   const stuck = await realRig(REPORTS_DONE);
   await writeFile(join(stuck.worktreePath, "f.txt"), "branch says\n");
   await git(stuck.worktreePath, "commit", "-q", "-am", "branch says");
@@ -261,7 +252,6 @@ void test("The branch's own commit conflicts with main, so no session starts.", 
 // `main` took the branch's change as a different commit with the same content,
 // and the branch has not merged `main` since. Landing it would change nothing.
 void test("main took the branch's change as a different commit with the same content, an...", async (t) => {
-  // doctest:L230
   const twin = await realRig(REPORTS_DONE);
   await writeFile(join(twin.worktreePath, "h.txt"), "same work\n");
   await git(twin.worktreePath, "add", "h.txt");

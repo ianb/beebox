@@ -7,7 +7,7 @@
 // hands back a stamp only once the file serves.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isRecoverableImageUrl, waitForImage, withVersionStamp } from "../../src/hooks/use-image-recovery.js";
 
 /** A fake clock: records the delays asked for, never actually waits. */
@@ -18,7 +18,6 @@ function fakeSleep(log: number[]) {
 // Only in-box file URLs are recoverable — an external image that fails has no
 // file on this server to wait for, and the proxy fallback already covers it:
 void test("Only in-box file URLs are recoverable — an external image that fails has no f...", async (t) => {
-  // doctest:L22
   t.check(
     [
       isRecoverableImageUrl("/main/test1/api/images/_content/a.attach/a.webp?width=960"),
@@ -37,7 +36,6 @@ void test("Only in-box file URLs are recoverable — an external image that fail
 
 // The probe stops at the first success, and the stamp is handed back only then:
 void test("The probe stops at the first success, and the stamp is handed back only then:", async (t) => {
-  // doctest:L34
   const asked: number[] = [];
   let calls = 0;
   const recovered = await waitForImage({
@@ -61,7 +59,6 @@ void test("The probe stops at the first success, and the stamp is handed back on
 // A file that never appears exhausts the schedule and reports failure, so the
 // placeholder stays and nothing keeps polling:
 void test("A file that never appears exhausts the schedule and reports failure, so the p...", async (t) => {
-  // doctest:L51
   const asked: number[] = [];
   const recovered = await waitForImage({
     url: "/api/files/never.webp",
@@ -82,7 +79,6 @@ void test("A file that never appears exhausts the schedule and reports failure, 
 // Unmounting (or a changed source) aborts mid-schedule, and an abort is never
 // reported as a recovery even if the probe would have succeeded:
 void test("Unmounting (or a changed source) aborts mid-schedule, and an abort is never r...", async (t) => {
-  // doctest:L67
   const controller = new AbortController();
   const asked: number[] = [];
   const recovered = await waitForImage({
@@ -104,7 +100,6 @@ void test("Unmounting (or a changed source) aborts mid-schedule, and an abort is
 // cache-buster the routes already accept — the image-transform route rejects
 // any other query key — and replaces an earlier `v=` rather than doubling it:
 void test("The recovered image loads under a fresh URL.", async (t) => {
-  // doctest:L85
   t.check(
     [
       withVersionStamp("/api/files/a.png", "7"),

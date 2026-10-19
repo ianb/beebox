@@ -5,11 +5,11 @@
 // path is named so callers (the composer "Send screenshot…" item, and later the
 // `bbx chat screenshot` consent popup) branch honestly. The DOM-heavy grab itself
 // (getDisplayMedia → hidden `<video>` → canvas → PNG) can't run under the Node
-// doctest tier, but the two pure decision points can: the getDisplayMedia
+// test tier, but the two pure decision points can: the getDisplayMedia
 // rejection mapping and the feature-detect.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   classifyGetDisplayMediaError,
   isFrameDecoded,
@@ -30,7 +30,6 @@ function named(name: string, message: string) {
 // picker and when permission is denied — either way it's the user's deliberate
 // "no", handled silently by callers.
 void test("The browser rejects with NotAllowedError both when the user cancels the picke...", async (t) => {
-  // doctest:L34
   t.check(classifyGetDisplayMediaError(named("NotAllowedError", "Permission denied")), {
     kind: "declined",
   });
@@ -38,7 +37,6 @@ void test("The browser rejects with NotAllowedError both when the user cancels t
 
 // ## Any other rejection is a real `error` carrying the message
 void test("Any other rejection is a real `error` carrying the message", async (t) => {
-  // doctest:L41
   t.check(classifyGetDisplayMediaError(named("NotFoundError", "no capture source")), {
     kind: "error",
     message: "no capture source",
@@ -48,7 +46,6 @@ void test("Any other rejection is a real `error` carrying the message", async (t
 // A non-Error rejection still yields a usable message rather than `[object Object]`
 // losing the detail.
 void test("A non-Error rejection still yields a usable message rather than [object Objec...", async (t) => {
-  // doctest:L49
   t.check(classifyGetDisplayMediaError("stream unavailable"), {
     kind: "error",
     message: "stream unavailable",
@@ -60,7 +57,6 @@ void test("A non-Error rejection still yields a usable message rather than [obje
 // Under Node (no `navigator.mediaDevices`) the menu item is hidden — the same
 // result mobile Safari and insecure contexts produce.
 void test("Under Node (no navigator.mediaDevices) the menu item is hidden — the same res...", async (t) => {
-  // doctest:L59
   t.check(isScreenshotSupported(), false);
 });
 
@@ -70,19 +66,14 @@ void test("Under Node (no navigator.mediaDevices) the menu item is hidden — th
 // needs `readyState >= HAVE_CURRENT_DATA` **and** real dimensions — an undecoded or
 // zero-sized first frame is not ready, so we never draw a blank PNG.
 void test("isFrameDecoded is the predicate the frame-wait loop polls.", async (t) => {
-  // doctest:L70
   const frame = ({ readyState, videoWidth, videoHeight }: { readyState: number; videoWidth: number; videoHeight: number }) => ({ readyState, videoWidth, videoHeight, HAVE_CURRENT_DATA: 2 as const });
 
-  // doctest:L72
   t.check(isFrameDecoded(frame({ readyState: 2, videoWidth: 1920, videoHeight: 1080 })), true);
 
-  // doctest:L75
   t.check(isFrameDecoded(frame({ readyState: 0, videoWidth: 1920, videoHeight: 1080 })), false);
 
-  // doctest:L78
   t.check(isFrameDecoded(frame({ readyState: 4, videoWidth: 0, videoHeight: 0 })), false);
 
-  // doctest:L81
   t.check(isFrameDecoded(frame({ readyState: 2, videoWidth: 1920, videoHeight: 0 })), false);
 });
 

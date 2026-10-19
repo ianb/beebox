@@ -8,7 +8,7 @@
 // these links at commit time.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { findSiteReferenceLinkProblems, referencePublishPath } from "../../../src/dev/doc-check/site-reference-links.js";
 
 /** The generated set for these examples: two card types and one other reference page. */
@@ -21,7 +21,6 @@ const check = (rel: string, content: string) => findSiteReferenceLinkProblems({ 
 // `reference/cards/`, and every other file goes straight under `reference/`, as
 // in `site/docs-generated.ts`.
 void test("The engine exports flat filenames.", async (t) => {
-  // doctest:L25
   t.check([referencePublishPath("card-audio.md"), referencePublishPath("triage.md")], [
     "reference/cards/audio.md",
     "reference/triage.md",
@@ -35,7 +34,6 @@ void test("The engine exports flat filenames.", async (t) => {
 // published directory, so `../reference/cards/course.md` from `capabilities/` is
 // `reference/cards/course.md`.
 void test("The courseware case:", async (t) => {
-  // doctest:L37
   t.check(check("site/docs/capabilities/courses.md", "See [course](../reference/cards/course.md) and [audio](../reference/cards/audio.md#fields).\n"), [
     {
       line: 1,
@@ -47,7 +45,6 @@ void test("The courseware case:", async (t) => {
 
 // A top-level page links without `../`, and the line number counts from 1.
 void test("A top-level page links without ../, and the line number counts from 1.", async (t) => {
-  // doctest:L44
   t.check(check("site/docs/02-uses.md", "intro\n- [briefing](reference/cards/briefing.md)\n"), [
     {
       line: 2,

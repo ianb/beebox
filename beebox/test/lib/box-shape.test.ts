@@ -14,8 +14,8 @@
 // by hand, or fabricate a v2-shaped fixture, to construct the rejected inputs.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -59,7 +59,6 @@ const boxWithMarker = async (marker: string) => {
 // are each a `BoxShapeError`; the first says conversion has been removed, the
 // third names the version it found.
 void test("A marker with no shapeVersion, an empty marker, and a shapeVersion below 3 ar...", async (t) => {
-  // doctest:L62
   const noVersion = await boxWithMarker(JSON.stringify({ version: "1.0.0", created: "2026-01-01T00:00:00.000Z" }));
   const empty = await boxWithMarker("");
   const v2 = await boxWithMarker(JSON.stringify({ shapeVersion: 2 }));
@@ -80,7 +79,6 @@ void test("A marker with no shapeVersion, an empty marker, and a shapeVersion be
 // both rejected with the migration-pointing error, each naming which root it
 // saw.
 void test("A v2 package root (marker at content/) and a v2 content/ root itself are both...", async (t) => {
-  // doctest:L84
   const dir = await makeV2PackageRoot();
   const results = {
     packageRoot: await rejection(dir, ["conversion has been removed", "package root"]),
@@ -95,7 +93,6 @@ void test("A v2 package root (marker at content/) and a v2 content/ root itself 
 
 // An unknown future `shapeVersion` is a clear error naming what is needed:
 void test("An unknown future shapeVersion is a clear error naming what is needed:", async (t) => {
-  // doctest:L100
   const box = await boxWithMarker(JSON.stringify({ shapeVersion: 4 }));
   const result = await rejection(box.root, ["newer beebox"]);
   await box.cleanup();
@@ -108,22 +105,18 @@ void test("An unknown future shapeVersion is a clear error naming what is needed
 // and one that does not declare `beebox` are each a `BoxShapeError`, the first
 // naming the box root and the second naming `beebox`.
 void test("beebox in devDependencies alone still resolves.", async (t) => {
-  // doctest:L114
   const dev = await makeTmpBox();
   await fs.writeFile(path.join(dev.root, "package.json"), JSON.stringify({ name: "my-box", devDependencies: { "beebox": "0.1.0" } }));
   const resolved = (await getBoxShape(dev.root)).boxRoot === dev.root;
 
-  // doctest:L118
   const missing = await makeTmpBox();
   await fs.rm(path.join(missing.root, "package.json"));
   const missingResult = await rejection(missing.root, [missing.root]);
 
-  // doctest:L122
   const undeclared = await makeTmpBox();
   await fs.writeFile(path.join(undeclared.root, "package.json"), JSON.stringify({ name: "my-box", dependencies: { lodash: "1.0.0" } }));
   const undeclaredResult = await rejection(undeclared.root, ["beebox"]);
 
-  // doctest:L126
   await Promise.all([dev.cleanup(), missing.cleanup(), undeclared.cleanup()]);
   t.check(({ resolved, missingResult, undeclaredResult }), {
     resolved: true,
@@ -141,7 +134,6 @@ void test("beebox in devDependencies alone still resolves.", async (t) => {
 //
 // A real v3 box is found (`shapeVersion` 3) and both resolvers return its root:
 void test("getBoxShapeIfPresent tolerates a marker-less path but not a broken one; resol...", async (t) => {
-  // doctest:L145
   const box = await makeTmpBox();
   const lookup = await getBoxShapeIfPresent(box.root);
   const results = {
@@ -166,7 +158,6 @@ void test("getBoxShapeIfPresent tolerates a marker-less path but not a broken on
 // `bbx serve`) where a configured box path resolving to "not a box" must fail
 // loudly:
 void test("A directory with no .beebox/box.json is \"not a box\" (found:", async (t) => {
-  // doctest:L166
   const plain = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-nobox-"));
   const results = {
     found: (await getBoxShapeIfPresent(plain)).found,
@@ -184,7 +175,6 @@ void test("A directory with no .beebox/box.json is \"not a box\" (found:", async
 // A malformed marker is a real error and still throws — it is NOT mistaken for
 // "no box":
 void test("A malformed marker is a real error and still throws — it is NOT mistaken for...", async (t) => {
-  // doctest:L181
   const bad = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-badbox-"));
   await fs.mkdir(path.join(bad, ".beebox"), { recursive: true });
   await fs.writeFile(path.join(bad, ".beebox/box.json"), "{not json");
@@ -197,7 +187,6 @@ void test("A malformed marker is a real error and still throws — it is NOT mis
 // `getBoxShapeIfPresent` never treats a v2 shape as "not a box", and
 // `resolveBoxRoot` never silently resolves it.
 void test("A v2 package root is a real error too (the migration-pointing one):", async (t) => {
-  // doctest:L195
   const v2dir = await makeV2PackageRoot();
   const results = {
     getBoxShapeIfPresent: await outcome(getBoxShapeIfPresent(v2dir), noConversion),

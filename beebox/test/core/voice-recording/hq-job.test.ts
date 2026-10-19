@@ -8,7 +8,7 @@
 // a real backoff or reach a real HQ service.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
@@ -124,7 +124,6 @@ void test("A voice-recording-status event is emitted for each transition:", asyn
       t.error(error);
     }
   });
-  // doctest:L121
   const run = await runJob({
     bytes: 1000,
     script: [
@@ -161,7 +160,6 @@ void test("12,000,000 bytes at the default 300 s piece length (9,600,000 bytes/p
       t.error(error);
     }
   });
-  // doctest:L144
   const run = await runJob({
     bytes: 12_000_000,
     script: [
@@ -196,7 +194,6 @@ void test("A permanent failure fails the recording; the HQ badge gets a reason",
       t.error(error);
     }
   });
-  // doctest:L165
   const run = await runJob({
     bytes: 1000,
     script: [{ error: new ScriptedTranscriptionError("missing key", { permanent: true, status: 401, body: "no api key" }) }],
@@ -227,7 +224,6 @@ void test("hqRequest.requestedAt is checked before every attempt — including t
       t.error(error);
     }
   });
-  // doctest:L185
   const run = await runJob({
     bytes: 1000,
     requestedAt: "2026-09-09T18:00:00.000Z",
@@ -257,7 +253,6 @@ void test("20,000,000 bytes is three pieces at 300 s (9,600,000 + 9,600,000 + 80
       t.error(error);
     }
   });
-  // doctest:L206
   const run = await runJob({
     bytes: 20_000_000,
     service: "mai-diarized",
@@ -301,7 +296,6 @@ void test("If a process restart interrupts a retrying job, runHqJob's backoff mu
       t.error(error);
     }
   });
-  // doctest:L233
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
   const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes: 1000 });
@@ -319,16 +313,13 @@ void test("If a process restart interrupts a retrying job, runHqJob's backoff mu
     },
   });
 
-  // doctest:L250
   const eventBus = createEventBus(box.root);
   const events = collectBusEvents(eventBus);
 
-  // doctest:L253
   const transcribePiece = scriptedTranscribe([{ text: "resumed" }]);
   const clock = fakeClock("2026-09-10T18:05:00.000Z"); // well past nextAttemptAt
   await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock, transcribePiece });
 
-  // doctest:L257
   await t.checkText(
     // The resumed attempt should be 6 (continuing from the persisted 5), not 1.
     JSON.stringify({ resumedAttempt: events[0]?.hq.state === "transcribing" ? events[0].hq.attempt : null }),

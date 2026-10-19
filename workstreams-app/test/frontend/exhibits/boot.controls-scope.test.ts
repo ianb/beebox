@@ -6,11 +6,10 @@
 // store exhibit, so it gets no bar.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isStoreScope, scopeFromPath } from "../../../src/frontend/exhibits/controls/scope.js";
 
 void test("line 12", async (t) => {
-  // doctest:L13
   t.check(
     [
       scopeFromPath("/logo-bakeoff/round-3/"),
@@ -32,7 +31,6 @@ void test("line 12", async (t) => {
 });
 
 void test("line 24", async (t) => {
-  // doctest:L25
   t.check([isStoreScope("logo-bakeoff/round-3"), isStoreScope("apps/instrument"), isStoreScope("main/x")], [
     true,
     false,

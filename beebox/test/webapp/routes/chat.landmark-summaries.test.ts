@@ -12,13 +12,12 @@
 // separate frontmatter reader) kept working.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { loadLandmarkSummaries } from "../../../src/core/landmark/summaries.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
 // ## Frontmatter landmark cards yield label + text symbol
 void test("Frontmatter landmark cards yield label + text symbol", async (t) => {
-  // doctest:L22
   const box = await makeTmpBox();
   await box.write(
     "Box.landmark.card",
@@ -29,7 +28,6 @@ void test("Frontmatter landmark cards yield label + text symbol", async (t) => {
     "---\nsymbol:\n  glyph: 🍳\nnavigation:\n  label: Recipes\n---\n",
   );
 
-  // doctest:L32
   const { summaries, problems } = await loadLandmarkSummaries(box.root);
   t.check(summaries, [
     {
@@ -52,20 +50,17 @@ void test("Frontmatter landmark cards yield label + text symbol", async (t) => {
     },
   ]);
 
-  // doctest:L36
   t.check(problems, []);
 });
 
 // ## An image `symbol: { src }` resolves to a box-relative path
 void test("An image `symbol: { src }` resolves to a box-relative path", async (t) => {
-  // doctest:L43
   const box = await makeTmpBox();
   await box.write(
     "trips/Trips.landmark.card",
     "---\nsymbol:\n  src: /_content/trips/Trips.attach/pin.png\nnavigation:\n  label: Trips\n---\n",
   );
 
-  // doctest:L49
   const { summaries } = await loadLandmarkSummaries(box.root);
   t.check(summaries, [
     {
@@ -90,14 +85,12 @@ void test("An image `symbol: { src }` resolves to a box-relative path", async (t
 // absolute path win, so a leading-`/` src silently escaped the box
 // (`../../../archive/…`) and 404'd. Both now call `readLandmarkSymbol`.
 void test("The regression that shipped broken icons to the app bar's place menu while th...", async (t) => {
-  // doctest:L65
   const box = await makeTmpBox();
   await box.write(
     "archive/people/marlowe/Marlowe.landmark.card",
     "---\nsymbol:\n  src: /_content/archive/people/marlowe/images/priya-portrait.webp\nnavigation:\n  label: Marlowe\n---\n",
   );
 
-  // doctest:L71
   const { summaries } = await loadLandmarkSummaries(box.root);
   t.check(summaries[0]?.symbol?.src, "_content/archive/people/marlowe/images/priya-portrait.webp");
 });
@@ -107,14 +100,12 @@ void test("The regression that shipped broken icons to the app bar's place menu 
 // A landmark card with no `navigation` (a pure routing target) still produces a
 // tile, labeled from its filename — it isn't skipped.
 void test("A landmark card with no navigation (a pure routing target) still produces a t...", async (t) => {
-  // doctest:L82
   const box = await makeTmpBox();
   await box.write(
     "archive/Old_Mail.landmark.card",
     "---\ndestinations:\n  - for:\n      - triage\n---\n",
   );
 
-  // doctest:L88
   const { summaries } = await loadLandmarkSummaries(box.root);
   t.check(summaries, [
     {
@@ -134,19 +125,16 @@ void test("A landmark card with no navigation (a pure routing target) still prod
 // once a landmark is the only route to an activity, a hand-edit that breaks the
 // frontmatter would make that activity disappear without a trace.
 void test("One bad card doesn't fail the read — the good landmarks still come back — but...", async (t) => {
-  // doctest:L101
   const box = await makeTmpBox();
   await box.write("Good.landmark.card", "---\nnavigation:\n  label: Good\n---\n");
   await box.write("Bad.landmark.card", "not a frontmatter card at all\n");
   await box.write("deep/Broken.landmark.card", "---\nnavigation:\n  label: [unterminated\n---\n");
 
-  // doctest:L106
   const { summaries, problems } = await loadLandmarkSummaries(box.root);
   t.check(summaries.map((s) => s.label), [
     "Good",
   ]);
 
-  // doctest:L110
   t.check(problems, [
     {
       kind: "landmark-parse",

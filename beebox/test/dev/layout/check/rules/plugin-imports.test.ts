@@ -8,7 +8,7 @@
 // scanner's, not a hand-built edge list.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -66,7 +66,6 @@ void test("The compliant plugin has no finding; a file outside src/plugins/ is n
       t.error(error);
     }
   });
-  // doctest:L64
   t.check(findings.filter((f) => f.path.includes("/good/")), []);
 });
 

@@ -5,7 +5,7 @@
 // card type and fallback body as Clerk.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
@@ -21,7 +21,6 @@ function caller(boxRoot: string) {
 // The TypeScript contract accepts the same non-batched tRPC envelope fixture that
 // the native XCTest decodes:
 void test("The TypeScript contract accepts the same non-batched tRPC envelope fixture th...", async (t) => {
-  // doctest:L25
   const fixture = JSON.parse(await readFile("test/mobile-contract/fixtures/share-destinations.json", "utf-8"));
   t.check(shareDestinationsOutput.parse(fixture.result.data), {
     chats: [
@@ -48,7 +47,6 @@ void test("Destinations include Inbox and only landmarks advertising share", asy
       t.error(error);
     }
   });
-  // doctest:L33
   const box = await makeTmpBox({ git: true });
   await mkdir(path.join(box.root, "_content/reading"), { recursive: true });
   await writeFile(path.join(box.root, "_content/reading/Reading.landmark.card"), `---
@@ -77,7 +75,6 @@ destinations:
 
   // ## URL saves are Clerk-compatible and idempotent after a move
 
-  // doctest:L63
   const request = {
     kind: "url" as const,
     shareId: "00000000-0000-4000-8000-000000000001",
@@ -100,7 +97,6 @@ share-id: 00000000-0000-4000-8000-000000000001
 ---
 [An Example](https://example.com/article)`);
 
-  // doctest:L87
   const moved = path.join("_content/inbox", path.basename(firstCreated));
   await mkdir(path.join(box.root, "_content/inbox"), { recursive: true });
   await rename(path.join(box.root, firstCreated), path.join(box.root, moved));
@@ -114,7 +110,6 @@ share-id: 00000000-0000-4000-8000-000000000001
   // with the text it would generate byte for byte, so this fixture pins that shape:
   // a retry of such a share finds the card instead of reporting a conflict.
 
-  // doctest:L103
   const oldRequest = { ...request, shareId: "00000000-0000-4000-8000-000000000003", title: "Before" };
   const oldRel = "_content/inbox/Before_00000000-0000-4000-8000-000000000003.webpage.card";
   const migratedCard = [
@@ -133,7 +128,6 @@ share-id: 00000000-0000-4000-8000-000000000001
 
   // ## A reused share id with different immutable content conflicts
 
-  // doctest:L124
   const conflict = await caller(box.root).share.saveTextual({
     ...request,
     url: "https://different.example/",
@@ -142,7 +136,6 @@ share-id: 00000000-0000-4000-8000-000000000001
 
   // ## A stale landmark selection is rejected instead of becoming Inbox
 
-  // doctest:L135
   const stale = await caller(box.root).share.saveTextual({
     kind: "text",
     shareId: "00000000-0000-4000-8000-000000000002",

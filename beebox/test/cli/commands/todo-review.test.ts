@@ -14,8 +14,8 @@
 // part is played by editing the card directly.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing, not } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
@@ -168,10 +168,8 @@ void test("Nothing to review: `check` exits CHECK_SKIP", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L164
   const empty = await boxWith('{% todo due="2026-12-01" %}Paint the rail{% /todo %}', "2026-09-25");
 
-  // doctest:L166
   t.check(await run(empty.root, ["check"]), {
     code: 75,
     out: [
@@ -181,7 +179,6 @@ void test("Nothing to review: `check` exits CHECK_SKIP", async (t) => {
 
   // `verify` with no review saved is an error, not a pass:
 
-  // doctest:L173
   await t.checkThrows(async () => (await run(empty.root, ["verify"])), "TodoReviewNotCheckedError");
 });
 
@@ -198,21 +195,16 @@ void test("The brief is the review instructions (the same text a legacy job card
       t.error(error);
     }
   });
-  // doctest:L188
   const box = await boxWith('{% todo due="2026-09-01" %}Order lumber{% /todo %}', "2026-09-25");
 
-  // doctest:L190
   const first = await run(box.root, ["check"]);
   t.check(first.code, 0);
 
-  // doctest:L194
   const brief = first.out.join("\n");
   t.check(brief.split("\n")[0], "# Processing a Todo Review");
 
-  // doctest:L198
   t.check(brief.match(/Today \(box-local\) is [\d-]+\./)?.[0], "Today (box-local) is 2026-09-25.");
 
-  // doctest:L201
   await t.checkText(brief.slice(brief.indexOf("```yaml")), `«codeblock»yaml
 escalated:
   - locator: store/Porch.doc.card:4
@@ -221,20 +213,16 @@ escalated:
     card: Porch
 «codeblock»`);
 
-  // doctest:L211
   t.check(await pendingJobs(box.root), 0);
 
   // ## A fresh undated agent todo is on the next precheck
 
-  // doctest:L218
   const fresh = await boxWith('{% todo assigned="agent" %}Review the delivery note{% /todo %}', "2026-09-25");
 
-  // doctest:L220
   const freshBrief = (await run(fresh.root, ["check"])).out.join("\n");
   t.check(freshBrief, any(String).includes("actionable:"));
   t.check(freshBrief, any(String).includes("Review the delivery note"));
 
-  // doctest:L224
   await fresh.cleanup();
 
   // ## `verify` fails an item left open without a recheck, and passes it once rechecked
@@ -242,7 +230,6 @@ escalated:
   // The validate step names the item and why, and exits 1 (the procedure then
   // re-invokes the agent with this output).
 
-  // doctest:L233
   t.check(await run(box.root, ["verify"]), {
     code: 1,
     out: [
@@ -253,13 +240,11 @@ escalated:
 
   // A `recheck` more than 90 days out is refused:
 
-  // doctest:L240
   await edit(box.root, { from: '{% todo due="2026-09-01" %}', to: '{% todo due="2026-09-01" recheck="2027-03-01" %}' });
   t.check((await run(box.root, ["verify"])).out[1], "- store/Porch.doc.card:4 \"Order lumber\": recheck 2027-03-01 is 157 days from today (2026-09-25); it must be 1-90 days out");
 
   // Ten days out, with a reason after the closing tag, settles it:
 
-  // doctest:L248
   await edit(box.root, {
     from: '{% todo due="2026-09-01" recheck="2027-03-01" %}Order lumber{% /todo %}',
     to: '{% todo due="2026-09-01" recheck="2026-10-05" %}Order lumber{% /todo %} — quote due next week',
@@ -277,26 +262,21 @@ escalated:
   // and say what was changed. (A reworded todo is not found by the words `check`
   // saved.)
 
-  // doctest:L263
   setTime("2026-10-06T12:00:00.000Z");
   t.check(await checkCode(box.root), 0);
 
-  // doctest:L267
   await edit(box.root, { from: '{% todo due="2026-09-01" recheck="2026-10-05" %}', to: '{% todo status="done" due="2026-10-20" recheck="2026-10-10" %}' });
   t.check((await run(box.root, ["verify"])).out[1], "- store/Porch.doc.card:4 \"Order lumber\": the review may change only recheck on the boxholder's todos (changed: status, due)");
 
-  // doctest:L271
   await edit(box.root, { from: '{% todo status="done" due="2026-10-20" recheck="2026-10-10" %}Order lumber', to: '{% todo due="2026-09-01" recheck="2026-10-10" %}Order cedar lumber' });
   t.check((await run(box.root, ["verify"])).out[1], "- store/Porch.doc.card:4 \"Order lumber\": not found on its card as written: the review may not reword the boxholder's todos");
 
   // Every attribute but `recheck` is frozen, `created` included; the note after
   // the closing tag is free.
 
-  // doctest:L280
   await edit(box.root, { from: '{% todo due="2026-09-01" recheck="2026-10-10" %}Order cedar lumber{% /todo %}', to: '{% todo created="2026-09-02" due="2026-09-01" recheck="2026-10-10" %}Order lumber{% /todo %} — still waiting' });
   t.check((await run(box.root, ["verify"])).out[1], "- store/Porch.doc.card:4 \"Order lumber\": the review may change only recheck on the boxholder's todos (changed: created)");
 
-  // doctest:L284
   await edit(box.root, { from: '{% todo created="2026-09-02" ', to: "{% todo " });
   t.check((await run(box.root, ["verify"])).code, 0);
 });
@@ -310,19 +290,15 @@ void test("The agent's own todo may change status, or be reworded", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L296
   const own = await boxWith('{% todo assigned="agent" by="agent" created="2026-07-01" due="2026-09-01" %}Tidy the index{% /todo %}', "2026-09-25");
   t.check(await checkCode(own.root), 0);
 
-  // doctest:L300
   await edit(own.root, { from: '{% todo assigned="agent"', to: '{% todo status="done" assigned="agent"' });
   t.check((await run(own.root, ["verify"])).out[0], "Every todo review item is settled");
 
-  // doctest:L304
   await edit(own.root, { from: 'status="done" ', to: "" });
   t.check(await checkCode(own.root), 0);
 
-  // doctest:L308
   await edit(own.root, { from: "Tidy the index", to: "Tidy the index cards" });
   t.check((await run(own.root, ["verify"])).out[0], "Every todo review item is settled");
 });
@@ -340,20 +316,16 @@ void test("The stirring baseline moves only when verify passes.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L324
   const stir = await boxWith('{% todo start="2026-09-24" due="2026-10-30" %}Book the painter{% /todo %}', "2026-09-25");
   await run(stir.root, ["check"]);
   t.check((await run(stir.root, ["verify"])).code, 1);
 
-  // doctest:L329
   setTime("2026-09-26T12:00:00.000Z");
   t.check((await run(stir.root, ["check"])).out.join("\n"), any(String).includes("stirring:"));
 
-  // doctest:L333
   await edit(stir.root, { from: 'due="2026-10-30" %}', to: 'due="2026-10-30" recheck="2026-09-27" %}' });
   t.check((await run(stir.root, ["verify"])).code, 0);
 
-  // doctest:L337
   setTime("2026-09-28T12:00:00.000Z");
   t.check(await checkCode(stir.root), 75);
 });
@@ -371,14 +343,11 @@ void test("Escalated first (oldest due first), then stirring, actionable, then s
       t.error(error);
     }
   });
-  // doctest:L353
   const many = await boxWith(manyTodosCard(), "2026-09-25");
 
-  // doctest:L355
   const capped = (await run(many.root, ["check"])).out.join("\n");
   t.check(capped, any(String).includes("25 of 29 shown; the rest come in later runs."));
 
-  // doctest:L359
   const saved = JSON.parse(await fs.readFile(path.join(many.root, ".beebox/todo-review-sweep.json"), "utf-8")).review.items.map((i: { text: string }) => i.text);
   t.check(saved, Array.from({ length: 25 }, (_, i) => `Task ${String(i + 1).padStart(2, "0")}`));
 
@@ -386,11 +355,9 @@ void test("Escalated first (oldest due first), then stirring, actionable, then s
   // was cut, the stirring baseline does not move: the next run still lists the
   // painter as stirring, with the other three cut todos.
 
-  // doctest:L369
   await recheckAllShown(many.root, "2026-10-20");
   t.check((await run(many.root, ["verify"])).out[0], "Every todo review item is settled");
 
-  // doctest:L373
   setTime("2026-09-26T12:00:00.000Z");
   const rest = (await run(many.root, ["check"])).out.join("\n");
   await t.checkText(rest.slice(rest.indexOf("## The items")), `## The items
@@ -422,11 +389,9 @@ stale:
   // Once those are settled too, the baseline moves and the painter is no longer
   // stirring.
 
-  // doctest:L408
   await recheckAllShown(many.root, "2026-10-20");
   t.check((await run(many.root, ["verify"])).out[0], "Every todo review item is settled");
 
-  // doctest:L412
   setTime("2026-09-27T12:00:00.000Z");
   t.check(await checkCode(many.root), 75);
 });
@@ -443,7 +408,6 @@ void test("A todo-review job card queued by the old wakeup hook still validates 
       t.error(error);
     }
   });
-  // doctest:L427
   const legacy = await seedBox();
   setTime("2026-09-25T12:00:00.000Z");
   await legacy.write(
@@ -458,7 +422,6 @@ void test("A todo-review job card queued by the old wakeup hook still validates 
     ],
   });
 
-  // doctest:L437
   t.check(await pendingJobs(legacy.root), 1);
 });
 
@@ -476,21 +439,17 @@ void test("never written by the review's own verify holds only while the todo is
       t.error(error);
     }
   });
-  // doctest:L453
   const back = await boxWith('{% todo due="2026-09-01" %}Fix the gate{% /todo %}\n\n{% todo due="2026-09-01" recheck="never" %}Old idea{% /todo %}', "2026-09-25");
   t.check(await retire(back.root), "Stopped reviewing store/Porch.doc.card:4: Fix the gate (third recheck with no change)");
 
-  // doctest:L457
   setTime("2026-11-01T12:00:00.000Z");
   t.check(await checkCode(back.root), 75);
 
-  // doctest:L461
   await edit(back.root, { from: 'due="2026-09-01" recheck="never" %}Fix', to: 'due="2026-10-15" recheck="never" %}Fix' });
   const relisted = (await run(back.root, ["check"])).out.join("\n");
   t.check(relisted, any(String).includes("Fix the gate"));
   t.check(relisted, not(any(String).includes("Old idea")));
 
-  // doctest:L466
   await edit(back.root, { from: 'recheck="never" %}Fix', to: 'recheck="2026-11-15" %}Fix' });
   t.check((await run(back.root, ["verify"])).out[0], "Every todo review item is settled");
 });
@@ -508,18 +467,15 @@ void test("Retired, then the boxholder removes never:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L482
   const sneaky = await boxWith('{% todo due="2026-09-01" %}Fix the gate{% /todo %}', "2026-09-25");
   await retire(sneaky.root);
   await edit(sneaky.root, { from: ' recheck="never"', to: "" });
   setTime("2026-11-01T12:00:00.000Z");
   t.check(await checkCode(sneaky.root), 0);
 
-  // doctest:L489
   await edit(sneaky.root, { from: 'due="2026-09-01" %}', to: 'due="2026-09-01" recheck="never" %}' });
   t.check((await run(sneaky.root, ["verify"])).out[1], "- store/Porch.doc.card:4 \"Fix the gate\": recheck=\"never\" is set only by the review itself; give a date 1-90 days out");
 
-  // doctest:L493
   setTime("2026-11-02T12:00:00.000Z");
   t.check((await run(sneaky.root, ["check"])).out.join("\n"), any(String).includes("Fix the gate"));
 });
@@ -537,16 +493,12 @@ void test("Each daily cycle:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L509
   const tired = await boxWith('{% todo due="2026-09-01" %}Fix the gate{% /todo %}', "2026-09-25");
 
-  // doctest:L511
   t.check((await cycle(tired.root, { day: "2026-09-25", from: 'due="2026-09-01" %}', to: 'due="2026-09-01" recheck="2026-09-30" %}' })).out[0], "Every todo review item is settled");
 
-  // doctest:L514
   t.check((await cycle(tired.root, { day: "2026-09-30", from: 'recheck="2026-09-30"', to: 'recheck="2026-10-10"' })).out[0], "Every todo review item is settled");
 
-  // doctest:L517
   t.check(await unreviewedTodosCheck(tired.root), {
     name: "todos-unreviewed",
     ok: true,
@@ -554,28 +506,23 @@ void test("Each daily cycle:", async (t) => {
     severity: "warning",
   });
 
-  // doctest:L520
   const third = await cycle(tired.root, { day: "2026-10-10", from: 'recheck="2026-10-10"', to: 'recheck="2026-10-20"' });
   t.check(third.out[0], "Stopped reviewing store/Porch.doc.card:4: Fix the gate (third recheck with no change)");
 
-  // doctest:L524
   t.check(await fs.readFile(path.join(tired.root, CARD), "utf-8"), `---
 title: Porch
 ---
 {% todo due="2026-09-01" recheck="never" %}Fix the gate{% /todo %}
 `);
 
-  // doctest:L527
   t.check(execSync("git log -1 --format=%s", { cwd: tired.root, encoding: "utf-8" }).trim(), "Stop reviewing todo: Fix the gate");
 
   // The todo is out of the review for good (the next check skips), and the health
   // check names it:
 
-  // doctest:L535
   setTime("2026-11-30T12:00:00.000Z");
   t.check(await checkCode(tired.root), 75);
 
-  // doctest:L539
   const health = await unreviewedTodosCheck(tired.root);
   t.check([health.name, health.ok, health.severity], [
     "todos-unreviewed",
@@ -583,7 +530,6 @@ title: Porch
     "warning",
   ]);
 
-  // doctest:L543
   t.check(health.message, "1 open todo is no longer reviewed: store/Porch.doc.card:4 \"Fix the gate\". Remove recheck=\"never\" or edit one to put it back in review.");
 
   // ## `check` prunes the recheck history of todos that are gone
@@ -591,10 +537,8 @@ title: Porch
   // The history is keyed by card path and the todo's words. Once the card is
   // gone, the next check drops its entry.
 
-  // doctest:L553
   t.check(await rechecks(tired.root), ["[\"store/Porch.doc.card\",\"Fix the gate\"]"]);
 
-  // doctest:L556
   await fs.rm(path.join(tired.root, CARD));
   await run(tired.root, ["check"]);
   t.check(await rechecks(tired.root), []);
@@ -613,24 +557,20 @@ void test("Two rechecks, then the boxholder moves the due date between reviews."
       t.error(error);
     }
   });
-  // doctest:L573
   const tended = await boxWith('{% todo due="2026-09-01" %}Call the roofer{% /todo %}', "2026-09-25");
 
-  // doctest:L575
   await cycle(tended.root, { day: "2026-09-25", from: 'due="2026-09-01" %}', to: 'due="2026-09-01" recheck="2026-09-30" %}' });
   await cycle(tended.root, { day: "2026-09-30", from: 'recheck="2026-09-30"', to: 'recheck="2026-10-10"' });
   await edit(tended.root, { from: 'due="2026-09-01"', to: 'due="2026-10-01"' });
   const afterEdit = await cycle(tended.root, { day: "2026-10-10", from: 'recheck="2026-10-10"', to: 'recheck="2026-10-20"' });
   t.check(afterEdit.out[0], "Every todo review item is settled");
 
-  // doctest:L582
   t.check(await fs.readFile(path.join(tended.root, CARD), "utf-8"), `---
 title: Porch
 ---
 {% todo due="2026-10-01" recheck="2026-10-20" %}Call the roofer{% /todo %}
 `);
 
-  // doctest:L585
   await edit(tended.root, { from: "Call the roofer", to: "Call the roofer again" });
   await run(tended.root, ["check"]);
   t.check(await rechecks(tended.root), []);
@@ -645,7 +585,6 @@ void test("The health check is quiet with no retired todos, and ignores agent fo
       t.error(error);
     }
   });
-  // doctest:L598
   const quiet = await seedBox();
   await quiet.write(
     CARD,
@@ -675,7 +614,6 @@ void test("The sweep moved to the procedure.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L621
   const woken = await boxWith('{% todo due="2026-09-01" %}Order lumber{% /todo %}', "2026-09-25");
   await quietly(() => runHousekeeping(woken.root));
   t.check(await pendingJobs(woken.root), 0);
@@ -694,21 +632,17 @@ void test("An absent enabled means enabled.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L638
   const fresh = await makeTmpBox({ git: true });
   t.check(await installProcedures(fresh.root), containing(["todo-review.procedure.card"]));
 
-  // doctest:L642
   t.check(await installSchedules(fresh.root), containing(["todo-review.scheduled-script.card"]));
 
-  // doctest:L645
   const sched = await fs.readFile(path.join(fresh.root, "_config/schedules/todo-review.scheduled-script.card"), "utf-8");
   await t.checkText(sched.split("\n").filter((line) => /^(cron|not-before|timeout|enabled|runs):/.test(line)).join("\n"), `cron: 30 6 * * *
 not-before: 20h
 timeout: 30m
 runs: bbx procedure run todo-review`);
 
-  // doctest:L653
   const def = await loadProcedureDefinition(path.join(fresh.root, "_config/procedures/todo-review.procedure.card"));
   t.check(def.steps.map((s) => [s.id, s.precheck?.shells[0]?.split("\n")[0], s.precheck?.passOutput, s.run?.agents.length, s.run?.agents[0]?.maxTurns, s.validate?.phase.shells, s.validate?.severity]), [
     [
@@ -724,6 +658,5 @@ runs: bbx procedure run todo-review`);
     ],
   ]);
 
-  // doctest:L657
   t.check(def.steps[0]?.run?.agents[0]?.prompt, not(any(String).includes("bbx finish")));
 });

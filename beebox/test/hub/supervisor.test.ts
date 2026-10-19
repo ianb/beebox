@@ -19,8 +19,8 @@
 //    restarted) twice, and two children end up running for one box slot.
 
 import { test } from "tap";
-import { any, isoDate, uuid } from "agent-doctest/check";
-import "agent-doctest/tap";
+import { any, isoDate, uuid } from "@ianbicking/tap-check/check";
+import "@ianbicking/tap-check/tap";
 import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
 import type { ChildProc } from "../../src/hub/supervisor/child-spawn.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
@@ -78,7 +78,6 @@ const validEntry = {
 
 // ## `buildChildEnv` allowlists, never spreads
 void test("`buildChildEnv` allowlists, never spreads", async (t) => {
-  // doctest:L79
   const sourceEnv = {
     PATH: "/usr/bin:/bin",
     HOME: "/home/beebox",
@@ -106,10 +105,8 @@ void test("`buildChildEnv` allowlists, never spreads", async (t) => {
     BBX_DEEPGRAM: "not-actually-prefixed",
   };
 
-  // doctest:L106
   const env = buildChildEnv({ sourceEnv, hubExtras: { BBX_HUB_SECRET: "per-boot-hub-secret" } });
 
-  // doctest:L108
   // Whole-env equality also proves every withheld name (BBX_SESSION_SECRET, NODE_ENV,
   // the connector credentials, unlisted names) is absent.
   t.check(env, {
@@ -127,7 +124,6 @@ void test("`buildChildEnv` allowlists, never spreads", async (t) => {
   // A source env with nothing set produces an env containing ONLY the hub
   // extras -- confirms the allowlist filters, it doesn't just fail to strip:
 
-  // doctest:L155
   t.check(buildChildEnv({ sourceEnv: {}, hubExtras: { BBX_HUB_SECRET: "x" } }), {
     BBX_HUB_SECRET: "x",
   });
@@ -137,7 +133,6 @@ void test("`buildChildEnv` allowlists, never spreads", async (t) => {
   // name, `BBX_PUSH_FAKE`, which `notifyFakeMode()` still honors for one release.
   // A child that lost the alias would send for real while the hub was faking.
 
-  // doctest:L165
   const notifyEnv = {
     BBX_NOTIFY_FAKE: "1",
     BBX_PUSH_FAKE: "1",
@@ -172,7 +167,6 @@ void test("A readiness-timeout kill's own exit event doesn't double-schedule a r
       t.error(error);
     }
   });
-  // doctest:L183
   const fixture = await makeTmpBox({ git: true });
   const children: FakeChild[] = [];
   function spawnChild() {
@@ -185,7 +179,6 @@ void test("A readiness-timeout kill's own exit event doesn't double-schedule a r
     return Promise.reject(new Error("simulated readiness timeout"));
   }
 
-  // doctest:L195
   const config = {
     port: undefined,
     host: undefined,
@@ -209,7 +202,6 @@ void test("A readiness-timeout kill's own exit event doesn't double-schedule a r
   // recorded the failure, killed the (fake) child, and scheduled exactly one
   // restart.
 
-  // doctest:L220
   const afterTimeout = supervisor.getStatuses()[0];
   t.check({ status: afterTimeout?.status, restarts: afterTimeout?.restarts }, {
     status: "starting",
@@ -221,7 +213,6 @@ void test("A readiness-timeout kill's own exit event doesn't double-schedule a r
   // scheduled restart hasn't run yet. Without the fix this double-counts the
   // same failure and schedules a second, overlapping restart.
 
-  // doctest:L231
   children[0]?.fireExit(null, "SIGTERM");
   const afterExit = supervisor.getStatuses()[0];
   t.check({ status: afterExit?.status, restarts: afterExit?.restarts }, {
@@ -240,7 +231,6 @@ void test("A development reload exit restarts cleanly without consuming crash bu
       t.error(error);
     }
   });
-  // doctest:L245
   const reloadFixture = await makeTmpBox({ git: true });
   const reloadChildren: FakeChild[] = [];
   function reloadSpawnChild() {
@@ -270,10 +260,8 @@ void test("A development reload exit restarts cleanly without consuming crash bu
   while ((await boxMaintenanceStatus(reloadFixture.root)) === null) await new Promise((resolve) => setImmediate(resolve));
   t.check(reloadChildren.map((child) => child.pid), [905000]);
 
-  // doctest:L275
   await t.checkThrows(async () => (await acquireBoxWork(reloadFixture.root, { reason: "test" })), "BoxMaintenanceError");
 
-  // doctest:L278
   await acceptedReloadWork.release();
   while (reloadChildren.length < 2 || reloadSupervisor.getStatuses()[0]?.status !== "running" || (await boxMaintenanceStatus(reloadFixture.root)) !== null) {
     await new Promise((resolve) => setImmediate(resolve));
@@ -290,7 +278,6 @@ void test("A development reload exit restarts cleanly without consuming crash bu
     lastStart: { at: isoDate(), spawnMs: any(Number), readyMs: any(Number) },
   });
 
-  // doctest:L286
   await new Promise((resolve) => setImmediate(resolve));
   rejectReloadReady = true;
   reloadChildren[1]?.fireMessage({ type: "reload-request" });
@@ -302,7 +289,6 @@ void test("A development reload exit restarts cleanly without consuming crash bu
   // the release itself; the brief window where the owner still holds `exclusive`
   // is not a state to assert on.
 
-  // doctest:L299
   while (reloadSupervisor.getStatuses()[0]?.status !== "unhealthy" || (await boxMaintenanceStatus(reloadFixture.root))?.owner !== null) await new Promise((resolve) => setImmediate(resolve));
   const failedReload = await boxMaintenanceStatus(reloadFixture.root);
   // The record says changes began and did not complete: exclusive, unowned.
@@ -315,7 +301,6 @@ void test("A development reload exit restarts cleanly without consuming crash bu
     step: undefined,
   });
 
-  // doctest:L305
   const afterFailedReload = await acquireBoxWork(reloadFixture.root, { reason: "test" });
   await afterFailedReload.release();
 });
@@ -333,7 +318,6 @@ void test("Stopping after the reload acknowledgment leaves a stopped box open", 
       t.error(error);
     }
   });
-  // doctest:L320
   const stopReloadFixture = await makeTmpBox({ git: true });
   const stopReloadChildren: FakeChild[] = [];
   let stopReloadAcknowledged = false;
@@ -371,13 +355,10 @@ void test("Stopping after the reload acknowledgment leaves a stopped box open", 
   const stopReloadPhase = await boxMaintenanceStatus(stopReloadFixture.root);
   t.check(stopReloadPhase, null);
 
-  // doctest:L350
   t.check(stopReloadSupervisor.getStatuses()[0]?.status, "stopped");
 
-  // doctest:L353
   t.check(stopReloadChildren.map((child) => child.pid), [907000]);
 
-  // doctest:L356
   const afterStopWork = await acquireBoxWork(stopReloadFixture.root, { reason: "test" });
   await afterStopWork.release();
 });
@@ -388,7 +369,7 @@ void test("Stopping after the reload acknowledgment leaves a stopped box open", 
 // lazy/idle semantics `workstreams-app/src/router/server/listener.ts` already has for whole worktrees. No real
 // process is spawned here either -- `spawnChild`/`checkReady` are faked the
 // same way as above, and the idle timer is driven by a tiny `idleMs` so the
-// doctest doesn't wait out a real 5-minute default.
+// test doesn't wait out a real 5-minute default.
 void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on first call, idle collection returns it to stopped", async (t) => {
   t.teardown(async () => {
     try {
@@ -398,7 +379,6 @@ void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on 
       t.error(error);
     }
   });
-  // doctest:L374
   const lazyFixture = await makeTmpBox({ git: true });
   const lazyChildren: FakeChild[] = [];
   function lazySpawnChild() {
@@ -410,7 +390,6 @@ void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on 
     return Promise.resolve(); // instantly "ready" -- no real HTTP involved
   }
 
-  // doctest:L385
   const lazyConfig = {
     port: undefined,
     host: undefined,
@@ -430,54 +409,41 @@ void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on 
 
   // `startAll()` spawned nothing -- the box starts "stopped", not "starting":
 
-  // doctest:L406
   t.check(lazySupervisor.getStatuses()[0]?.status, "stopped");
 
-  // doctest:L409
   t.check(lazyChildren.map((child) => child.pid), []);
 
-  // doctest:L412
   t.check(lazySupervisor.get("fixture"), undefined);
 
   // `ensureRunning` spawns it and returns the endpoint once ready:
 
-  // doctest:L419
   const endpoint = await lazySupervisor.ensureRunning("fixture");
   t.check(endpoint?.slug, "fixture");
 
-  // doctest:L423
   t.check(lazySupervisor.getStatuses()[0]?.status, "running");
 
-  // doctest:L426
   t.check(lazyChildren.map((child) => child.pid), [910000]);
 
   // After `idleMs` with no further `ensureRunning` calls, the box is SIGTERM'd
   // and reported "stopped" again -- `getStatuses()`/`/healthz` surface it, and a
   // fresh `ensureRunning` spawns a NEW child (not the same generation):
 
-  // doctest:L435
   await new Promise((r) => setTimeout(r, 150));
   t.check(lazySupervisor.getStatuses()[0]?.status, "stopped");
 
-  // doctest:L439
   t.check(lazySupervisor.get("fixture"), undefined);
 
-  // doctest:L442
   const revived = await lazySupervisor.ensureRunning("fixture");
   t.check(revived?.slug, "fixture");
 
-  // doctest:L446
   t.check(lazyChildren.map((child) => child.pid), [910000, 910001]);
 
-  // doctest:L449
   t.check(lazySupervisor.getStatuses()[0]?.status, "running");
 
   // An unconfigured slug's `ensureRunning` just resolves `undefined` -- no spawn attempt:
 
-  // doctest:L456
   t.check(await lazySupervisor.ensureRunning("nope"), undefined);
 
-  // doctest:L459
   t.check(lazyChildren.map((child) => child.pid), [910000, 910001]);
 });
 
@@ -486,7 +452,7 @@ void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on 
 // Boxholder directive (2026-07-11): with `keepRecent: 1` a lazy hub keeps the
 // single most-recently-used box alive instead of idle-stopping it, so a burst of
 // use leaves one box warm ("basically free"). The idle-fire decision is exposed
-// as `evaluateIdle(slug)` (the real `setTimeout` just calls it) so the doctest
+// as `evaluateIdle(slug)` (the real `setTimeout` just calls it) so the test
 // drives it deterministically via an injected clock, with a large `idleMs` so no
 // real timer fires mid-test.
 void test("`keepRecent`: the most-recently-used running box is exempt from idle-stop, and is displaced when another box becomes more recent", async (t) => {
@@ -498,7 +464,6 @@ void test("`keepRecent`: the most-recently-used running box is exempt from idle-
       t.error(error);
     }
   });
-  // doctest:L478
   const keepFixture = await makeTmpBox({ git: true });
   const keepChildren: FakeChild[] = [];
   function keepSpawnChild() {
@@ -510,7 +475,6 @@ void test("`keepRecent`: the most-recently-used running box is exempt from idle-
     return Promise.resolve();
   }
 
-  // doctest:L489
   let clock = 1000;
   const keepConfig = {
     port: undefined,
@@ -533,7 +497,6 @@ void test("`keepRecent`: the most-recently-used running box is exempt from idle-
   // Use box `a` (at t=1000), then box `b` (at t=2000): `b` is now the more-recent
   // box, so the keep-set is `[b]`.
 
-  // doctest:L513
   clock = 1000;
   await keepSupervisor.ensureRunning("a");
   clock = 2000;
@@ -545,13 +508,10 @@ void test("`keepRecent`: the most-recently-used running box is exempt from idle-
   // `a`'s idle timer firing stops it (not in the keep-set); `b`'s firing keeps it
   // alive (most-recently-used) and re-arms:
 
-  // doctest:L525
   t.check(await keepSupervisor.evaluateIdle("a"), "stopped");
 
-  // doctest:L528
   t.check(await keepSupervisor.evaluateIdle("b"), "kept");
 
-  // doctest:L531
   t.check(keepSupervisor.getStatuses().map((s) => ({ slug: s.slug, status: s.status })), [
     {
       slug: "a",
@@ -566,17 +526,14 @@ void test("`keepRecent`: the most-recently-used running box is exempt from idle-
   // Now use `a` again (at t=3000): it becomes the most-recent box, displacing `b`
   // from the keep-set. `b`'s next idle evaluation therefore stops it:
 
-  // doctest:L539
   clock = 3000;
   await keepSupervisor.ensureRunning("a");
   t.check(keepSupervisor.keepSetSlugs(), [
     "a",
   ]);
 
-  // doctest:L544
   t.check(await keepSupervisor.evaluateIdle("b"), "stopped");
 
-  // doctest:L547
   t.check(await keepSupervisor.evaluateIdle("a"), "kept");
 });
 
@@ -595,7 +552,6 @@ void test("`keepRecent`: recency persists across a hub restart — `startAll` pr
       t.error(error);
     }
   });
-  // doctest:L564
   const rtFixture = await makeTmpBox({ git: true });
   function makeRtSupervisor() {
     const children: FakeChild[] = [];
@@ -625,13 +581,11 @@ void test("`keepRecent`: recency persists across a hub restart — `startAll` pr
     return { supervisor, children };
   }
 
-  // doctest:L593
   const first = makeRtSupervisor();
   await first.supervisor.startAll();
 
   // First boot: no persisted state yet, so `startAll` pre-starts nothing:
 
-  // doctest:L600
   t.check(first.supervisor.getStatuses().map((s) => s.status), [
     "stopped",
     "stopped",
@@ -640,7 +594,6 @@ void test("`keepRecent`: recency persists across a hub restart — `startAll` pr
   // Use `a` then `b` (so `b` is most-recent), then shut down — `stopAll` flushes
   // recency to disk:
 
-  // doctest:L608
   await first.supervisor.ensureRunning("a");
   await first.supervisor.ensureRunning("b");
   await first.supervisor.stopAll();
@@ -648,7 +601,6 @@ void test("`keepRecent`: recency persists across a hub restart — `startAll` pr
   // A fresh Supervisor over the same config pre-starts the single most-recent box
   // (`b`) on `startAll`, leaving `a` stopped:
 
-  // doctest:L617
   const second = makeRtSupervisor();
   await second.supervisor.startAll();
   t.check(second.supervisor.getStatuses().map((s) => ({ slug: s.slug, status: s.status })), [
@@ -662,7 +614,6 @@ void test("`keepRecent`: recency persists across a hub restart — `startAll` pr
     },
   ]);
 
-  // doctest:L622
   t.check(second.children.map((child) => child.pid), [930000]);
 });
 
@@ -684,11 +635,9 @@ void test("Chat schedules keep a lazy box running, and pre-start it at boot", as
       t.error(error);
     }
   });
-  // doctest:L642
   const schedFixture = await makeTmpBox({ git: true });
   await schedFixture.write(".beebox/chat-schedules.json", JSON.stringify([validEntry]));
 
-  // doctest:L654
   const schedChildren: FakeChild[] = [];
   const schedSupervisor = new Supervisor({
     config: {
@@ -716,27 +665,21 @@ void test("Chat schedules keep a lazy box running, and pre-start it at boot", as
   // would normally stop it. But its `chat-schedules.json` holds an entry, so
   // `evaluateIdle` keeps it alive instead — a distinct `kept-schedule` result:
 
-  // doctest:L683
   await schedSupervisor.ensureRunning("rice");
   t.check(schedSupervisor.getStatuses()[0]?.status, "running");
 
-  // doctest:L687
   t.check(schedSupervisor.keepSetSlugs(), []);
 
-  // doctest:L690
   t.check(await schedSupervisor.evaluateIdle("rice"), "kept-schedule");
 
-  // doctest:L693
   t.check(schedSupervisor.getStatuses()[0]?.status, "running");
 
   // Once the schedule fires and the file empties, the next idle evaluation stops
   // the box normally:
 
-  // doctest:L701
   await schedFixture.write(".beebox/chat-schedules.json", JSON.stringify([]));
   t.check(await schedSupervisor.evaluateIdle("rice"), "stopped");
 
-  // doctest:L705
   t.check(schedSupervisor.getStatuses()[0]?.status, "stopped");
 });
 
@@ -760,11 +703,9 @@ void test("chat schedules pre-start a lazy box at boot", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L719
   const bootFixture = await makeTmpBox({ git: true });
   await bootFixture.write(".beebox/chat-schedules.json", JSON.stringify([validEntry]));
 
-  // doctest:L722
   const bootChildren: FakeChild[] = [];
   const bootSupervisor = new Supervisor({
     config: {
@@ -788,16 +729,13 @@ void test("chat schedules pre-start a lazy box at boot", async (t) => {
   });
   await bootSupervisor.startAll();
 
-  // doctest:L745
   t.check(bootSupervisor.getStatuses()[0]?.status, "running");
 
-  // doctest:L748
   t.check(bootChildren.map((child) => child.pid), [950000]);
 
   // A box with no schedule file is left stopped by the same `startAll` (the scan
   // only starts boxes that actually hold pending schedules):
 
-  // doctest:L756
   const idleFixture = await makeTmpBox({ git: true });
   const idleChildren: FakeChild[] = [];
   const idleSupervisor = new Supervisor({
@@ -822,9 +760,7 @@ void test("chat schedules pre-start a lazy box at boot", async (t) => {
   });
   await idleSupervisor.startAll();
 
-  // doctest:L780
   t.check(idleSupervisor.getStatuses()[0]?.status, "stopped");
 
-  // doctest:L783
   t.check(idleChildren.map((child) => child.pid), []);
 });

@@ -4,7 +4,7 @@
 // tier, and for some tiers a slug or reader emails.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { PublicationSchema, createPublicationCardTemplate } from "../../src/schemas/publication.js";
 import { parseCardText } from "../../src/core/card-io.js";
 
@@ -19,7 +19,6 @@ function check(fields: Record<string, unknown>): string {
 // Each tier accepts its own fields. `public` may carry a slug; `accounts` must
 // carry emails.
 void test("Each tier accepts its own fields.", async (t) => {
-  // doctest:L23
   t.check(
     [
       check({ tier: "public" }),
@@ -41,7 +40,6 @@ void test("Each tier accepts its own fields.", async (t) => {
 // A slug outside `public`, missing or empty emails on `accounts`, and emails on
 // another tier are rejected.
 void test("A slug outside public, missing or empty emails on accounts, and emails on ano...", async (t) => {
-  // doctest:L37
   t.check(
     [
       check({ tier: "secret", slug: "my-site" }),
@@ -61,7 +59,6 @@ void test("A slug outside public, missing or empty emails on accounts, and email
 // The request fields themselves are required, and the title has the
 // publication title rule.
 void test("The request fields themselves are required, and the title has the publication...", async (t) => {
-  // doctest:L50
   t.check(
     [
       check({ tier: "nobody" }) === "ok",
@@ -80,7 +77,6 @@ void test("The request fields themselves are required, and the title has the pub
 
 // The template renders a card that parses back with the same fields.
 void test("The template renders a card that parses back with the same fields.", async (t) => {
-  // doctest:L62
   const text = createPublicationCardTemplate({ pubId, title: "Team", connection: "cf", tier: "accounts", emails: ["kim@example.com"], body: "Notes\n" });
   const card = parseCardText(text, { source: "Team.publication.card", schemas: new Map([[PublicationSchema.type, PublicationSchema]]) });
   t.check({ tier: card.fields["tier"], emails: card.fields["emails"], body: text.endsWith("Notes\n") }, {

@@ -9,8 +9,8 @@
 // `format:` still records the source type.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import { PdfSchema, createPdfTemplate } from "../../src/schemas/pdf.js";
 import { FileSchema } from "../../src/schemas/file.js";
 import { cardFields, parseCardText } from "../../src/core/card-io.js";

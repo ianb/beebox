@@ -4,8 +4,8 @@
 // client finalize call to lose when a share extension exits.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, uuid } from "@ianbicking/tap-check/check";
 import { z } from "zod";
 import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/test-route-server.js";
 import type { QuickCaptureDeclaration } from "../../../src/shared/quick-capture.js";
@@ -88,7 +88,6 @@ async function settle(ctx: TestServer) {
 }
 
 void test("line 72", async (t) => {
-  // doctest:L73
   const ctx=await makeTestServer();
   t.check(await upload(ctx,declaration), {
     statusCode: 200,
@@ -98,7 +97,6 @@ void test("line 72", async (t) => {
     },
   });
 
-  // doctest:L77
   await settle(ctx);
   t.check(await upload(ctx,declaration), {
     statusCode: 200,
@@ -108,7 +106,6 @@ void test("line 72", async (t) => {
     },
   });
 
-  // doctest:L81
   t.check(await upload(ctx,{...declaration,material:{kind:"clipping",text:"Different evidence"}}), {
     statusCode: 409,
     body: {
@@ -116,7 +113,6 @@ void test("line 72", async (t) => {
     },
   });
 
-  // doctest:L84
   const detail=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id}))}`});
   t.check(detail, trpcOk({
     id,
@@ -129,13 +125,11 @@ void test("line 72", async (t) => {
     serverAccepted: true,
   }));
 
-  // doctest:L88
   await ctx.cleanup();
 });
 
 // Missing file and undeclared/extra bytes refuse the entire composite.
 void test("Missing file and undeclared/extra bytes refuse the entire composite.", async (t) => {
-  // doctest:L94
   const ctx=await makeTestServer();
   const image: QuickCaptureDeclaration={...declaration,input:"Find the problem",material:{kind:"image",id,mimeType:"image/png",byteLength:3,sha256:createHash("sha256").update("abc").digest("hex"),fileName:"shot.png"}};
   t.check(await upload(ctx,image), {
@@ -145,10 +139,8 @@ void test("Missing file and undeclared/extra bytes refuse the entire composite."
     },
   });
 
-  // doctest:L99
   t.check(await readCapture(ctx.boxRoot,id), null);
 
-  // doctest:L102
   t.check(await postParts(ctx,[declarationPart(declaration),{kind:"file",file:{name:"material",filename:"shot.png",contentType:"image/png",data:Buffer.from("abc")}}]), {
     statusCode: 400,
     body: {
@@ -156,7 +148,6 @@ void test("Missing file and undeclared/extra bytes refuse the entire composite."
     },
   });
 
-  // doctest:L105
   t.check(await postParts(ctx,[declarationPart(image),{kind:"file",file:{name:"material",filename:"shot.png",contentType:"image/png",data:Buffer.from("ab")}}]), {
     statusCode: 400,
     body: {
@@ -164,14 +155,12 @@ void test("Missing file and undeclared/extra bytes refuse the entire composite."
     },
   });
 
-  // doctest:L108
   await ctx.cleanup();
 });
 
 // Owner identity is enforced equally for HTTP replay and tRPC read/write. A
 // human delete leaves a permanent Gone receipt that stale transfer cannot undo.
 void test("Owner identity is enforced equally for HTTP replay and tRPC read/write.", async (t) => {
-  // doctest:L116
   const ctx=await makeTestServer({openAccess:false});
   const a=await mobile(ctx,"a@example.test");
   const b=await mobile(ctx,"b@example.test");
@@ -183,7 +172,6 @@ void test("Owner identity is enforced equally for HTTP replay and tRPC read/writ
     },
   });
 
-  // doctest:L122
   await settle(ctx);
   t.check(await ownedUpload(ctx,{value:declaration,headers:b}), {
     statusCode: 403,
@@ -192,7 +180,6 @@ void test("Owner identity is enforced equally for HTTP replay and tRPC read/writ
     },
   });
 
-  // doctest:L126
   const hidden=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id}))}`,headers:b});
   t.check(hidden, trpcFailure({
     statusCode: 403,
@@ -202,11 +189,9 @@ void test("Owner identity is enforced equally for HTTP replay and tRPC read/writ
     path: "quickCapture.detail",
   }));
 
-  // doctest:L130
   const otherList=await ctx.request({method:"GET",url:"/api/trpc/quickCapture.list",headers:b});
   t.check(otherList, trpcOk({ captures: [] }));
 
-  // doctest:L134
   const deleted=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{...a,"content-type":"application/json"},payload:{id}});
   t.check(deleted, trpcOk({
     id,
@@ -217,7 +202,6 @@ void test("Owner identity is enforced equally for HTTP replay and tRPC read/writ
     serverAccepted: true,
   }));
 
-  // doctest:L138
   t.check(await ownedUpload(ctx,{value:declaration,headers:a}), {
     statusCode: 410,
     body: {
@@ -225,14 +209,12 @@ void test("Owner identity is enforced equally for HTTP replay and tRPC read/writ
     },
   });
 
-  // doctest:L141
   await ctx.cleanup();
 });
 
 // Deleting an original removes its exposed source content but retains a pending
 // context event's own words. Late choice and new context cannot revive the source.
 void test("Deleting an original removes its exposed source content but retains a pending...", async (t) => {
-  // doctest:L149
   const ctx=await makeTestServer();
   const eventId="22222222-2222-4222-8222-222222222222";
   await upload(ctx,{...declaration,input:"Parent private words"});
@@ -261,7 +243,6 @@ void test("Deleting an original removes its exposed source content but retains a
     },
   }));
 
-  // doctest:L159
   await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{"content-type":"application/json"},payload:{id}});
   const original=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id}))}`});
   t.check(original, trpcOk({
@@ -273,7 +254,6 @@ void test("Deleting an original removes its exposed source content but retains a
     serverAccepted: true,
   }));
 
-  // doctest:L165
   const tombstone=await readCapture(ctx.boxRoot,id);
   t.check(tombstone, {
     id,
@@ -287,7 +267,6 @@ void test("Deleting an original removes its exposed source content but retains a
     attempts: 0,
   });
 
-  // doctest:L169
   const after=await ctx.request({method:"GET",url:`/api/trpc/quickCapture.detail?input=${encodeURIComponent(JSON.stringify({id:eventId}))}`});
   t.check(after, trpcOk({
     id: eventId,
@@ -301,7 +280,6 @@ void test("Deleting an original removes its exposed source content but retains a
     serverAccepted: true,
   }));
 
-  // doctest:L174
   const late=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.choose",headers:{"content-type":"application/json"},payload:{id:eventId,candidateId:firstChoiceId(before)}});
   t.check(late, trpcFailure({
     statusCode: 404,
@@ -311,7 +289,6 @@ void test("Deleting an original removes its exposed source content but retains a
     path: "quickCapture.choose",
   }));
 
-  // doctest:L178
   t.check(await eventUpload(ctx,{id:"33333333-3333-4333-8333-333333333333",value:{version:1,capturedAt:"2026-10-12T12:02:00Z",source:"apple-native-input",parentCaptureId:id,input:"Late words"}}), {
     statusCode: 410,
     body: {
@@ -319,14 +296,12 @@ void test("Deleting an original removes its exposed source content but retains a
     },
   });
 
-  // doctest:L181
   await ctx.cleanup();
 });
 
 // URLSession's declaration part names application/json. Multipart's parsed JSON
 // field is accepted just like the text field, with the same receipt identity.
 void test("URLSession's declaration part names application/json.", async (t) => {
-  // doctest:L189
   const ctx=await makeTestServer();
   const form=buildMultipartForm([{kind:"field",field:{name:"declaration",value:JSON.stringify(declaration)}}]);
   const jsonBody=Buffer.from(form.body.toString("utf8").replace('name="declaration"\r\n\r\n','name="declaration"\r\nContent-Type: application/json\r\n\r\n'));
@@ -338,7 +313,6 @@ void test("URLSession's declaration part names application/json.", async (t) => 
     },
   });
 
-  // doctest:L195
   await settleEvent(ctx,id);
   await ctx.cleanup();
 });
@@ -346,7 +320,6 @@ void test("URLSession's declaration part names application/json.", async (t) => 
 // The declaration limit accounts for UTF-8 and JSON escaping. A valid 100000-unit
 // CJK clipping needs 300000 UTF-8 bytes; worst-case escaped content needs 600000.
 void test("The declaration limit accounts for UTF-8 and JSON escaping.", async (t) => {
-  // doctest:L204
   const ctx=await makeTestServer();
   const quoted="文".repeat(100000);
   t.check(await upload(ctx,{...declaration,material:{kind:"clipping",text:quoted}}), {
@@ -357,10 +330,8 @@ void test("The declaration limit accounts for UTF-8 and JSON escaping.", async (
     },
   });
 
-  // doctest:L209
   t.check(clippingText(await readCapture(ctx.boxRoot,id)), quoted);
 
-  // doctest:L212
   await settleEvent(ctx,id);
   const escapedId="22222222-2222-4222-8222-222222222222";
   t.check(await eventUpload(ctx,{id:escapedId,value:{...declaration,material:{kind:"clipping",text:"\u0000".repeat(100000)}}}), {
@@ -371,10 +342,8 @@ void test("The declaration limit accounts for UTF-8 and JSON escaping.", async (
     },
   });
 
-  // doctest:L217
   t.check(clippingText(await readCapture(ctx.boxRoot,escapedId)), "\u0000".repeat(100000));
 
-  // doctest:L220
   await settleEvent(ctx,escapedId);
   await ctx.cleanup();
 });
@@ -382,12 +351,10 @@ void test("The declaration limit accounts for UTF-8 and JSON escaping.", async (
 // Discarding an uncertain upload reserves its UUID under the requesting owner
 // before any buffered POST can seal. A 404 read alone is never deletion evidence.
 void test("Discarding an uncertain upload reserves its UUID under the requesting owner b...", async (t) => {
-  // doctest:L228
   const ctx=await makeTestServer();
   const deleted=await ctx.request({method:"POST",url:"/api/trpc/quickCapture.delete",headers:{"content-type":"application/json"},payload:{id}});
   t.check(deleted, trpcOk({ id, state: "gone", attempts: 0, serverAccepted: true }));
 
-  // doctest:L233
   t.check(await upload(ctx,declaration), {
     statusCode: 410,
     body: {
@@ -395,7 +362,6 @@ void test("Discarding an uncertain upload reserves its UUID under the requesting
     },
   });
 
-  // doctest:L236
   await ctx.cleanup();
 });
 
@@ -403,7 +369,6 @@ void test("Discarding an uncertain upload reserves its UUID under the requesting
 // written. Deleting the capture then still finds the source by its `share-id` and
 // removes it.
 void test("A crash can land between writing the source and recording that it was written.", async (t) => {
-  // doctest:L244
   const ctx=await makeTestServer();
   await acceptQuickCapture({boxRoot:ctx.boxRoot,id,owner:null,declaration:{...declaration,input:"Keep this"}});
   const record=await readCapture(ctx.boxRoot,id);
@@ -419,6 +384,5 @@ void test("A crash can land between writing the source and recording that it was
     after: false,
   });
 
-  // doctest:L256
   await ctx.cleanup();
 });

@@ -4,8 +4,8 @@
 // the sibling fields visible.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FrontmatterFields } from "../../src/components/MarkdownCardView/FrontmatterFields.js";
@@ -54,12 +54,12 @@ const plate = indexPlateStates(cardPath, [
 ]);
 
 // Which fields the card front passes to this table is decided by
-// `splitCardFields` (`test/lib/card-field-faces.doctest.md`).
+// `splitCardFields` (`src/frontend/test/lib/card-field-faces.test.ts`).
 //
 // ## Fields read as a person reads them
 //
 // A label is the key in sentence case, with no colon
-// (`test/lib/readable-fields.doctest.md`). A small object reads as one value: a
+// (`src/frontend/test/lib/readable-fields.test.ts`). A small object reads as one value: a
 // person's name links to their card with the role beside it in parentheses,
 // and a measure reads as its value with its note.
 /** The visible text of each `<dt>`/`<dd>` cell, in order, "|"-separated. */
@@ -72,7 +72,7 @@ function cells(markup: string): string {
 // The card page shows the title from `title:`. A body that opens with the same
 // `# heading` would show it twice, so the view leaves that line out. It uses
 // `leadingTitleHeading`, the predicate lint warns with
-// (`test/shared/leading-title-heading.doctest.md`). The line is blanked rather
+// (`test/shared/leading-title-heading.test.ts`). The line is blanked rather
 // than removed, so a todo further down keeps the locator the collector gives it:
 // body line 5 after a three-line frontmatter is file line 8.
 /** Render a doc card's view inside a router and a query client that never answers. */
@@ -164,7 +164,6 @@ void test("A todos: value that is not a valid todo list keeps the generic render
 });
 
 void test("Fields read as a person reads them", async (t) => {
-  // doctest:L106
   const record = renderFields({
     "back-by": "2026-10-20",
     lender: { name: "Idris", ref: "../people/Idris_Okafor.person.card", role: "lender" },
@@ -178,22 +177,18 @@ void test("Fields read as a person reads them", async (t) => {
 // observation, so the text is not made a link and both keep their own rows. An
 // extra key the rule does not know keeps its row too.
 void test("A ref beside text can be the evidence for the text, as in a guide's observati...", async (t) => {
-  // doctest:L120
   t.check(cells(renderFields({ observation: { text: "Water pools by the door", ref: "../notes/Rain.note.card" } })), "|Observation|Text|Water pools by the door|Ref|../notes/Rain.note.card|");
 
-  // doctest:L123
   t.check(cells(renderFields({ length: { value: "3", unit: "m" } })), "|Length|Value|3|Unit|m|");
 });
 
 // A web address that reads as one value stays a link, as a bare URL field
 // does.
 void test("A web address that reads as one value stays a link, as a bare URL field does.", async (t) => {
-  // doctest:L131
   t.check(renderFields({ location: { text: "https://maps.example/shelf" } }), any(String).matches(/<a href="https:\/\/maps\.example\/shelf"[^>]*>https:\/\/maps\.example\/shelf<\/a>/));
 });
 
 void test("A body heading that repeats the title is hidden", async (t) => {
-  // doctest:L171
   const repeated = await renderCard("# Trip Report\n\nWe drove down on Friday.\n\n{% todo %}Return the van{% /todo %}\n");
   t.check(repeated, not(any(String).includes("<h1")));
   t.check(repeated, any(String).includes("We drove down"));
@@ -206,7 +201,6 @@ void test("A different first heading stays:", async (t) => {
 });
 
 void test("An empty bodied card shows its fields, not \"No body content\"", async (t) => {
-  // doctest:L208
   const empty = await renderRecord("# Solder\n");
   t.check(empty, any(String).includes('data-card-section="frontmatter"'));
   t.check(empty, any(String).includes("Tray 3"));
@@ -217,7 +211,6 @@ void test("An empty bodied card shows its fields, not \"No body content\"", asyn
 // no "Name" row: a record is headed by its `name:`, which the header already
 // shows. A card headed by something else (its `title:`) keeps the `name` row.
 void test("The front reads \"Location\" and \"With Idris\", with no nested \"Text\" row and no...", async (t) => {
-  // doctest:L218
   async function renderFront(frontmatter: Record<string, unknown>): Promise<string | null> {
     const data: FileData = { path: "_content/lending/Camp_stove.record.card", frontmatter, body: "", schema: { hasBodyField: true, defaultProminence: "ordinary" } };
     const view = React.createElement(MarkdownCardView, { data, onNavigate: noop, mode: "page" });
@@ -230,22 +223,18 @@ void test("The front reads \"Location\" and \"With Idris\", with no nested \"Tex
     return section === null ? null : cells(section[1] ?? "");
   }
 
-  // doctest:L230
   t.check(await renderFront({ name: "Camp stove", location: { text: "With Idris" }, quantity: { value: "1 stove" } }), "|Location|With Idris|Quantity|1 stove|");
 
-  // doctest:L233
   t.check(await renderFront({ title: "Stove", name: "Camp stove", location: { text: "With Idris" } }), "|Name|Camp stove|Location|With Idris|");
 
   // A record with only its name has nothing beside the header, so the front draws
   // no empty field section.
 
-  // doctest:L241
   t.check(await renderFront({ name: "Camp stove" }), null);
 });
 
 // With a body, the fields stay in Properties:
 void test("With a body, the fields stay in Properties:", async (t) => {
-  // doctest:L248
   const full = await renderRecord("Lead-free, 0.8mm.\n");
   t.check(full, not(any(String).includes("data-card-section=\"frontmatter\"")));
   t.check(full, not(any(String).includes("Tray 3")));
@@ -253,7 +242,6 @@ void test("With a body, the fields stay in Properties:", async (t) => {
 });
 
 void test("An embed reads title, summary line, body, then fields", async (t) => {
-  // doctest:L278
   const rendered = await renderEmbed({
     path: "_content/inventory/Solder.record.card",
     frontmatter: { name: "Solder", location: { text: "Tray 3" }, quantity: { value: "2 spools" } },
@@ -270,7 +258,6 @@ void test("An embed reads title, summary line, body, then fields", async (t) => 
 // A page shows the same card with its fields in Properties and no heading of
 // its own; the card header has the title.
 void test("A page shows the same card with its fields in Properties and no heading of it...", async (t) => {
-  // doctest:L293
   const page = await renderCard("Lead-free, 0.8mm.\n");
   t.check(sectionOrder(page), [
     "body",

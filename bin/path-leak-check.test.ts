@@ -27,8 +27,8 @@ test("allows deploy service accounts and placeholders", () => {
     `deploy/README.md:5:cd ${H}beebox/app`,
     `docs/box.md:9:${H}bbx-test1/content`,
     `schemas/extfile.tsx:74:file:${U}me/src/x.ts`,
-    `test/x.doctest.md:3:${U}x/tmp`,
-    `test/y.doctest.md:4:${H}user/box`,
+    `test/x.test.ts:3:${U}x/tmp`,
+    `test/y.test.ts:4:${H}user/box`,
   ].join("\n");
   assert.deepEqual(findLeaks(lines), []);
 });

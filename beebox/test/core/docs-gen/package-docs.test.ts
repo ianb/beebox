@@ -9,8 +9,8 @@
 // Design: `docs/plans/box-docs-in-package.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing, not } from "@ianbicking/tap-check/check";
 import { mkdtemp, mkdir, readFile, readdir, chmod, rm, writeFile } from "node:fs/promises";
 import { writeBoxCardDocs } from "../../../src/core/docs-gen/box-docs.js";
 import { cardSchema } from "../../../src/exports/cards.js";
@@ -55,50 +55,39 @@ void test("A card doc uses only built-in templates and carries the contains: app
 
 // ## ensurePackageDocs writes once, then reports current; a changed fingerprint rewrites
 void test("ensurePackageDocs writes once, then reports current; a changed fingerprint rewrites", async (t) => {
-  // doctest:L66
   const packageRoot = await mkdtemp(join(tmpdir(), "bbx-pkgdocs-"));
   const first = await ensurePackageDocs({ packageRoot });
   t.check(first, { status: "written", dir: join(packageRoot, "box-docs") });
 
-  // doctest:L71
   const second = await ensurePackageDocs({ packageRoot });
   t.check(second, { status: "current" });
 
-  // doctest:L75
   // Every doc landed, plus the fingerprint file; no temp sibling was left behind
   const files = (await readdir(join(packageRoot, "box-docs"))).toSorted();
   t.check(files, containing(["README.md", ".hash", "card-doc.md"]));
 
-  // doctest:L80
   t.check(await readdir(packageRoot), ["box-docs"]);
 
-  // doctest:L83
   // The filenames the box pruner uses are exactly what the package holds
   t.check(files.filter((f) => f !== ".hash").toSorted(), engineDocFilenames().toSorted());
 
-  // doctest:L87
   await rm(packageRoot, { recursive: true, force: true });
 });
 
 // ## An unwritable package root is reported, not thrown
 void test("An unwritable package root is reported, not thrown", async (t) => {
-  // doctest:L93
   const readOnlyRoot = await mkdtemp(join(tmpdir(), "bbx-pkgdocs-ro-"));
   await chmod(readOnlyRoot, 0o500);
   const blocked = await ensurePackageDocs({ packageRoot: readOnlyRoot });
   const blockedDir = join(readOnlyRoot, "box-docs");
   t.check(blocked, { status: "unwritable", dir: blockedDir, reason: `EACCES writing ${blockedDir}` });
 
-  // doctest:L99
-
-  // doctest:L102
   await chmod(readOnlyRoot, 0o700);
   await rm(readOnlyRoot, { recursive: true, force: true });
 });
 
 // ## Concurrent ensures in one process share a single write
 void test("Concurrent ensures in one process share a single write", async (t) => {
-  // doctest:L109
   const sharedRoot = await mkdtemp(join(tmpdir(), "bbx-pkgdocs-race-"));
   const results = await Promise.all([
     ensurePackageDocs({ packageRoot: sharedRoot }),
@@ -112,11 +101,9 @@ void test("Concurrent ensures in one process share a single write", async (t) =>
     { status: "written", dir: sharedDir },
   ]);
 
-  // doctest:L118
   // One live directory, no temp or old siblings left behind
   t.check(await readdir(sharedRoot), ["box-docs"]);
 
-  // doctest:L122
   await rm(sharedRoot, { recursive: true, force: true });
 });
 
@@ -127,7 +114,6 @@ void test("Concurrent ensures in one process share a single write", async (t) =>
 // to `replaceDirContents`: stale files go, new ones arrive, the fingerprint is
 // written last, and the temp directory is removed.
 void test("In a container, the engine's box-docs/ comes from an image layer, and overlay...", async (t) => {
-  // doctest:L133
   const layerRoot = await mkdtemp(join(tmpdir(), "bbx-pkgdocs-exdev-"));
   const live = join(layerRoot, "box-docs");
   const incoming = join(layerRoot, ".box-docs-new");
@@ -141,16 +127,12 @@ void test("In a container, the engine's box-docs/ comes from an image layer, and
   await writeFile(join(incoming, ".hash"), "new\n");
   await replaceDirContents({ from: incoming, to: live });
 
-  // doctest:L146
   t.check((await readdir(live)).toSorted(), [".hash", "README.md", "card-doc.md"]);
 
-  // doctest:L149
   t.check([await readFile(join(live, "README.md"), "utf-8"), (await readFile(join(live, ".hash"), "utf-8")).trim()], ["new index", "new"]);
 
-  // doctest:L152
   t.check(await readdir(layerRoot), ["box-docs"]);
 
-  // doctest:L155
   await rm(layerRoot, { recursive: true, force: true });
 });
 
@@ -161,7 +143,6 @@ void test("In a container, the engine's box-docs/ comes from an image layer, and
 // the box-local card docs — in that order, so a box-local schema that shadows a
 // built-in type (`doc` here) keeps its doc where the agent guide points.
 void test("An older engine wrote every engine doc into the box's content/docs/generated/.", async (t) => {
-  // doctest:L166
   const boxRoot = await mkdtemp(join(tmpdir(), "bbx-boxdocs-"));
   const docsDir = join(boxRoot, "_content/docs/generated");
   await mkdir(docsDir, { recursive: true });
@@ -169,7 +150,6 @@ void test("An older engine wrote every engine doc into the box's content/docs/ge
   await writeFile(join(docsDir, "card-doc.md"), "old built-in card doc");
   await writeFile(join(docsDir, "intake-guide.md"), "compiled from this box");
 
-  // doctest:L173
   const boxDoc = cardSchema("doc", {
     description: "this box's doc",
     category: "authored",
@@ -178,13 +158,10 @@ void test("An older engine wrote every engine doc into the box's content/docs/ge
   });
   await writeBoxCardDocs({ boxRoot, boxCardSchemas: [boxDoc], boxTemplates: [] });
 
-  // doctest:L181
   t.check((await readdir(docsDir)).toSorted(), ["card-doc.md", "intake-guide.md"]);
 
-  // doctest:L184
   // A generated card doc: the box's own instructions text is the narrow check.
   t.check(await readFile(join(docsDir, "card-doc.md"), "utf-8"), any(String).includes("How THIS box writes docs."));
 
-  // doctest:L187
   await rm(boxRoot, { recursive: true, force: true });
 });

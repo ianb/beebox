@@ -10,7 +10,7 @@
 // a temp root, the same variable `wt_paths_init` sets for real callers.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, writeFile, rm, readFile, lstat, readlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -20,7 +20,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 const lib = join(repoRoot, "bin/lib/comments-store.sh");
-const root = await mkdtemp(join(tmpdir(), "comments-mount-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "comments-mount-test-"));
 const store = join(root, "dev-comments");
 const wt = join(root, "beebox-worktrees/demo");
 await mkdir(wt, { recursive: true });
@@ -55,7 +55,6 @@ async function sh(script: string) {
 // The whole store mounts, not a per-workstream directory — a comment belongs to a
 // document, and the namespaces inside the store do the separating.
 void test("The whole store mounts, not a per-workstream directory — a comment belongs to...", async (t) => {
-  // doctest:L59
   const mount = await sh(`wt_comments_mount "${wt}"`);
   const link = await readlink(join(wt, "comments"));
   const marker = await lstat(join(store, ".dev-comments"));
@@ -72,19 +71,16 @@ void test("The whole store mounts, not a per-workstream directory — a comment 
   // Removing a worktree removes a symlink. This is the property the whole store
   // location exists for.
 
-  // doctest:L73
   await writeFile(join(store, "tracked"), "");
   await rm(join(store, "tracked"));
   await mkdir(join(store, "tracked"), { recursive: true });
   await writeFile(join(store, "tracked/note.md.comments.yaml"), "version: 1\ncomments: []\n");
 
-  // doctest:L78
   const trash = join(root, "trash");
   await mkdir(trash);
   await execFileAsync("mv", [wt, join(trash, "wt-demo")]);
   const survived = await readFile(join(store, "tracked/note.md.comments.yaml"), "utf8");
 
-  // doctest:L83
   await mkdir(wt, { recursive: true });
   const remount = await sh(`wt_comments_mount "${wt}"`);
   const throughLink = await readFile(join(wt, "comments/tracked/note.md.comments.yaml"), "utf8");
@@ -103,7 +99,6 @@ void test("The whole store mounts, not a per-workstream directory — a comment 
   //
   // Resume runs the same call as create, so it has to self-heal rather than fail.
 
-  // doctest:L100
   await execFileAsync("ln", ["-sfn", join(root, "somewhere-else"), join(wt, "comments")]);
   const repoint = await sh(`wt_comments_mount "${wt}"`);
   const healed = await readlink(join(wt, "comments"));
@@ -118,7 +113,6 @@ void test("The whole store mounts, not a per-workstream directory — a comment 
 // A mistyped `BBX_COMMENTS_ROOT` would otherwise scatter comment files
 // through an unrelated directory — the same posture the exhibits store takes.
 void test("A mistyped BBXCOMMENTSROOT would otherwise scatter comment files through an u...", async (t) => {
-  // doctest:L113
   const stranger = join(root, "someone-elses-dir");
   await mkdir(stranger, { recursive: true });
   const refused = await execFileAsync("bash", [
@@ -139,7 +133,6 @@ void test("A mistyped BBXCOMMENTSROOT would otherwise scatter comment files thro
 // mount's call to make: it refuses and says so, and the caller's mount is
 // best-effort, so the session continues.
 void test("Nothing in this repo writes through the mount, so a real comments/ directory...", async (t) => {
-  // doctest:L132
   const wt2 = join(root, "beebox-worktrees/real-dir");
   await mkdir(join(wt2, "comments"), { recursive: true });
   await writeFile(join(wt2, "comments/someone-put-this-here.txt"), "keep me\n");
@@ -172,7 +165,6 @@ void test("A dir-only pattern (comments/) does not match a symlink, which would 
       t.error(error);
     }
   });
-  // doctest:L152
   const ignore = await readFile(join(repoRoot, ".gitignore"), "utf8");
   const lines = ignore.split("\n");
   t.check({ exact: lines.includes("/comments"), noSlashForm: !lines.includes("/comments/") }, {
@@ -182,7 +174,6 @@ void test("A dir-only pattern (comments/) does not match a symlink, which would 
 
   // Git agrees: the mount is ignored in a real checkout.
 
-  // doctest:L161
   const checked = await execFileAsync("git", ["check-ignore", "-v", "comments"], { cwd: repoRoot })
     .then((r) => r.stdout.trim().endsWith("comments"), () => false);
   t.check(checked, true);

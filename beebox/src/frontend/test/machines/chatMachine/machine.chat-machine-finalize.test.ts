@@ -23,8 +23,8 @@
 // transcript.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../../src/machines/chatMachine/machine.js";
 import { applyStreamError, promoteLastToPending } from "../../../src/machines/chatMachine/chat-actions.js";
@@ -86,7 +86,6 @@ async function inRefreshing() {
 // blanking `streamText` and re-entering `refreshing` (aborting and restarting the
 // fetch). The reply vanished from the DOM until the *second* roundtrip returned.
 void test("The regression:", async (t) => {
-  // doctest:L88
   const { actor, historyCalls } = await inRefreshing();
   actor.send({ type: "REFRESH" });
   const after = actor.getSnapshot();
@@ -102,7 +101,6 @@ void test("The regression:", async (t) => {
 // The guard is scoped to the states that own a live stream — an idle tab
 // reacting to another tab's `chat-complete` still refetches.
 void test("The guard is scoped to the states that own a live stream — an idle tab reacti...", async (t) => {
-  // doctest:L101
   const { actor } = await startMachine();
   const before = actor.getSnapshot().matches("idle");
   actor.send({ type: "REFRESH" });
@@ -119,7 +117,6 @@ void test("The guard is scoped to the states that own a live stream — an idle 
 // optimistic user entry must remain visible until a later snapshot contains its
 // durable counterpart; that later reconciliation must replace it exactly once.
 void test("chat-history is delivered as the global SETMESSAGES event, including while th...", async (t) => {
-  // doctest:L116
   const oldUser = {
     uuid: "server-old",
     type: "user" as const,
@@ -139,7 +136,6 @@ void test("chat-history is delivered as the global SETMESSAGES event, including 
     return { uuids: messages.map((entry) => entry.uuid), pending: pendingMessages.length };
   };
 
-  // doctest:L135
   actor.send({ type: "SET_MESSAGES", messages: [oldUser], sessionId: "s1" });
   t.check(view(), {
     uuids: [
@@ -149,7 +145,6 @@ void test("chat-history is delivered as the global SETMESSAGES event, including 
     pending: 1,
   });
 
-  // doctest:L139
   actor.send({ type: "SET_MESSAGES", messages: [oldUser, durableSend], sessionId: "s1" });
   t.check(view(), {
     uuids: [
@@ -167,7 +162,6 @@ void test("chat-history is delivered as the global SETMESSAGES event, including 
 // emission UUID; they must not mutate the newer queued entry merely because it
 // is last.
 void test("A second send can already be queued while the first send's start request is s...", async (t) => {
-  // doctest:L152
   const { actor } = await startMachine();
   actor.send({ type: "SEND", message: "<typed>first</typed>", messageId: "m-first" });
   const activeContext = actor.getSnapshot().context;
@@ -179,7 +173,6 @@ void test("A second send can already be queued while the first send's start requ
     pendingMessages: [active, queued],
   };
 
-  // doctest:L163
   const failed = applyStreamError({
     context: overlappingContext,
     event: { type: "STREAM_FAILED", error: "not accepted", accepted: false },
@@ -188,7 +181,6 @@ void test("A second send can already be queued while the first send's start requ
     "m-second",
   ]);
 
-  // doctest:L170
   const promoted = promoteLastToPending({ context: overlappingContext });
   t.check(({ messages: promoted.messages?.map((entry) => [entry.uuid, entry.pending === true]), pending: promoted.pendingMessages?.length }), {
     messages: [
@@ -211,7 +203,6 @@ void test("A second send can already be queued while the first send's start requ
 // the turn was queued, `STREAM_QUEUED` promotes that same entry rather than
 // adding a second reconciliation record.
 void test("Ordinary sends are tracked without queued styling.", async (t) => {
-  // doctest:L182
   const { actor } = await startMachine();
   const tracked = () => {
     const { pendingMessages } = actor.getSnapshot().context;
@@ -223,7 +214,6 @@ void test("Ordinary sends are tracked without queued styling.", async (t) => {
     queued: false,
   });
 
-  // doctest:L191
   actor.send({ type: "STREAM_QUEUED" });
   t.check(tracked(), {
     count: 1,
@@ -237,7 +227,6 @@ void test("Ordinary sends are tracked without queued styling.", async (t) => {
 // refresh may remove that optimistic bubble instead of re-appending a permanent,
 // undimmed ghost after every future snapshot.
 void test("STREAMFAILED accepted=false means no durable entry can ever arrive.", async (t) => {
-  // doctest:L203
   const { actor } = await startMachine({ history: EMPTY });
   actor.send({ type: "SEND", message: "<typed>rejected</typed>", messageId: "m-rejected" });
   actor.send({ type: "STREAM_FAILED", error: "not accepted", accepted: false });
@@ -260,13 +249,11 @@ void test("STREAMFAILED accepted=false means no durable entry can ever arrive.",
 // through `refreshing`, the same finalize path as a healthy turn, so any partial
 // streamed text is held for the history swap rather than blanked.
 void test("The stream watchdog (useProcessingStatusPoll in components/chat/processing-st...", async (t) => {
-  // doctest:L223
   const { actor, historyCalls } = await startMachine();
   actor.send({ type: "SEND", message: "hi", messageId: "m1" });
   actor.send({ type: "STREAM_TEXT", text: "partial reply before the socket died" });
   const streaming = actor.getSnapshot().matches("streaming");
 
-  // doctest:L228
   actor.send({ type: "STREAM_RECOVER" });
   const recovered = actor.getSnapshot();
   t.check(({ streaming, refreshing: recovered.matches("refreshing"), streamText: recovered.context.streamText, historyCalls: historyCalls.length }), {

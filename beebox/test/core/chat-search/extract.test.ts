@@ -7,7 +7,7 @@
 // speech envelopes don't pollute matches.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   chunkSessionEntries,
   entrySearchText,
@@ -36,7 +36,6 @@ function entry({
 
 // ## One short exchange is one chunk anchored at its first entry
 void test("One short exchange is one chunk anchored at its first entry", async (t) => {
-  // doctest:L35
   const docs = chunkSessionEntries({
     sessionId: "11111111-1111-4111-8111-111111111111",
     title: "Insurance follow-up",
@@ -47,7 +46,6 @@ void test("One short exchange is one chunk anchored at its first entry", async (
     fromIndex: 0,
   });
 
-  // doctest:L45
   t.check(docs, [
     {
       id: "11111111-1111-4111-8111-111111111111#aaa1",
@@ -62,7 +60,6 @@ void test("One short exchange is one chunk anchored at its first entry", async (
 
 // ## Tool traffic and non-dialogue entries contribute nothing
 void test("Tool traffic and non-dialogue entries contribute nothing", async (t) => {
-  // doctest:L67
   const interrupted: SessionEntry = { uuid: "t1", type: "interrupted", timestamp: "2026-09-28T10:00:00Z", content: [] };
   const toolUse: SessionEntry = {
     uuid: "t2",
@@ -80,7 +77,6 @@ void test("Tool traffic and non-dialogue entries contribute nothing", async (t) 
   // cursor (the manifest slices by parsed entry index), but adds nothing to a
   // chunk.
 
-  // doctest:L91
   t.check(
     chunkSessionEntries({
       sessionId: "s",
@@ -94,7 +90,6 @@ void test("Tool traffic and non-dialogue entries contribute nothing", async (t) 
 
 // ## User text is wrapper-stripped; assistant text is left verbatim
 void test("User text is wrapper-stripped; assistant text is left verbatim", async (t) => {
-  // doctest:L103
   t.check(
     entrySearchText(
       entry({ uuid: "u1", type: "user", text: '<typed user="Ann">what about the roof claim?</typed>' })
@@ -102,7 +97,6 @@ void test("User text is wrapper-stripped; assistant text is left verbatim", asyn
     "what about the roof claim?",
   );
 
-  // doctest:L108
   t.check(
     entrySearchText(
       entry({ uuid: "a1", type: "assistant", text: "The **roof** claim is approved." })
@@ -113,7 +107,6 @@ void test("User text is wrapper-stripped; assistant text is left verbatim", asyn
 
 // ## A chunk closes at the budget; the next entry anchors the next chunk
 void test("A chunk closes at the budget; the next entry anchors the next chunk", async (t) => {
-  // doctest:L117
   const filler = "x".repeat(400);
   const docs = chunkSessionEntries({
     sessionId: "s",
@@ -128,7 +121,6 @@ void test("A chunk closes at the budget; the next entry anchors the next chunk",
     fromIndex: 0,
   });
 
-  // doctest:L131
   // The shared normalizer splits each 400-char run of "x" into 64-char words.
   const filler400 = [...Array.from({ length: 6 }, () => "x".repeat(64)), "x".repeat(16)].join(" ");
   t.check(docs, [
@@ -157,7 +149,6 @@ void test("A chunk closes at the budget; the next entry anchors the next chunk",
 //
 // ## The cursor chunks only the tail — incremental refresh
 void test("Four 400-char entries joined stay just under the 1600-char budget, so they sh...", async (t) => {
-  // doctest:L148
   const entries = [
     entry({ uuid: "d1", type: "user", text: "first turn" }),
     entry({ uuid: "d2", type: "assistant", text: "first reply" }),
@@ -166,7 +157,6 @@ void test("Four 400-char entries joined stay just under the 1600-char budget, so
   const full = chunkSessionEntries({ sessionId: "s", title: "", entries, fromIndex: 0 });
   const tail = chunkSessionEntries({ sessionId: "s", title: "", entries, fromIndex: 2 });
 
-  // doctest:L156
   t.check(full, [
     {
       id: "s#d1",
@@ -184,7 +174,6 @@ void test("Four 400-char entries joined stay just under the 1600-char budget, so
 
 // ## An oversize entry becomes one whole chunk, not a split one
 void test("An oversize entry becomes one whole chunk, not a split one", async (t) => {
-  // doctest:L169
   const docs = chunkSessionEntries({
     sessionId: "s",
     title: "",
@@ -192,7 +181,6 @@ void test("An oversize entry becomes one whole chunk, not a split one", async (t
     fromIndex: 0,
   });
 
-  // doctest:L176
   // Unbroken 64+ char runs are split by the shared normalizer so the radix tree
   // stays shallow:
   t.check(docs, [

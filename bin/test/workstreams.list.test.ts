@@ -5,7 +5,7 @@
 // makes absence explicit.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -45,7 +45,7 @@ void test("Removed records appear only when requested", async (t) => {
       t.error(error);
     }
   });
-  const root = await mkdtemp(join(tmpdir(), "workstream-list-doctest-"));
+  const root = await mkdtemp(join(tmpdir(), "workstream-list-test-"));
   const stateDir = join(root, "state");
   const worktreeRoot = join(root, "worktrees");
   await mkdir(join(stateDir, "workstreams"), { recursive: true });

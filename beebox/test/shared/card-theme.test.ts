@@ -4,7 +4,7 @@
 // so the browser and server diagnostics use the same precedence and vocabulary.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   parsePresentationConfig,
   resolveCardTheme,
@@ -39,7 +39,6 @@ function invalidSchemaThrows() {
 // The card wins. Without one, the first matching ordered rule wins before the box
 // type override, schema preference, box default, and engine fallback.
 void test("The card wins.", async (t) => {
-  // doctest:L43
   const presentation = parsePresentationConfig({
     default: { name: "paper", stock: "blue" },
     cardTypes: { doc: { name: "plain" } },
@@ -49,7 +48,6 @@ void test("The card wins.", async (t) => {
     ],
   });
 
-  // doctest:L52
   t.check(
     resolveCardTheme({
       path: "_content/notes/One.doc.card",
@@ -70,7 +68,6 @@ void test("The card wins.", async (t) => {
   },
   );
 
-  // doctest:L61
   t.check(
     resolveCardTheme({
       path: "_content/notes/One.doc.card",
@@ -95,7 +92,6 @@ void test("The card wins.", async (t) => {
 // Choices are atomic: omitting stock takes that theme's default. It cannot inherit
 // the lower paper stock. With no authored choice, the engine is plain.
 void test("Choices are atomic:", async (t) => {
-  // doctest:L74
   t.check(
     resolveCardTheme({
       path: "_content/tasks/One.doc.card",
@@ -117,7 +113,6 @@ void test("Choices are atomic:", async (t) => {
   },
   );
 
-  // doctest:L84
   t.check(
     resolveCardTheme({
       path: "_content/One.doc.card",
@@ -141,7 +136,6 @@ void test("Choices are atomic:", async (t) => {
 // theme's default card theme. Every authored source still wins over it, the box
 // default included. An unknown system theme falls back to plain.
 void test("Shown on a system theme, a card with no authored choice takes that system the...", async (t) => {
-  // doctest:L97
   t.check(
     resolveCardTheme({
       path: "_content/One.doc.card",
@@ -162,7 +156,6 @@ void test("Shown on a system theme, a card with no authored choice takes that sy
   },
   );
 
-  // doctest:L105
   t.check(
     resolveCardTheme({
       path: "_content/One.doc.card",
@@ -173,7 +166,6 @@ void test("Shown on a system theme, a card with no authored choice takes that sy
     "box-default",
   );
 
-  // doctest:L113
   t.check(
     resolveCardTheme({
       path: "_content/One.doc.card",
@@ -184,7 +176,6 @@ void test("Shown on a system theme, a card with no authored choice takes that sy
     "plain",
   );
 
-  // doctest:L121
   t.check(systemCardThemes("paper"), [
     "paper",
     "post-it",
@@ -195,7 +186,6 @@ void test("Shown on a system theme, a card with no authored choice takes that sy
 // Each system theme's default card theme is a card theme, and every theme it
 // pairs with exists in the catalog.
 void test("Each system theme's default card theme is a card theme, and every theme it pa...", async (t) => {
-  // doctest:L129
   t.check(
     THEME_CATALOG.filter((theme) => theme.chrome).flatMap((theme) => systemCardThemes(theme.name)
       .filter((name) => THEME_CATALOG.find((item) => item.name === name)?.systemOnly !== false)
@@ -209,7 +199,6 @@ void test("Each system theme's default card theme is a card theme, and every the
 // choice still wins over the presentation default. The catalog supplies defaults
 // and capabilities for the themes the host ships; it is not an allowlist.
 void test("Themes are an OPEN set.", async (t) => {
-  // doctest:L141
   const ownStock = resolveCardTheme({
     path: "_content/One.doc.card",
     type: "doc",
@@ -232,7 +221,6 @@ void test("Themes are an OPEN set.", async (t) => {
 // own. With no catalog entry there is no default stock, so it gets the neutral
 // one unless the card names its own.
 void test("A theme name the host has never heard of is equally fine — a box may author i...", async (t) => {
-  // doctest:L156
   const ownTheme = resolveCardTheme({
     path: "_content/One.doc.card",
     type: "doc",
@@ -251,7 +239,6 @@ void test("A theme name the host has never heard of is equally fine — a box ma
 // Presentation config is one validated unit. What still makes it invalid is a
 // malformed *shape* — a bad match pattern here — not an unfamiliar theme name.
 void test("Presentation config is one validated unit.", async (t) => {
-  // doctest:L170
   const badConfig = parsePresentationConfig({
     default: { name: "unknown" },
     rules: [{ match: "/absolute/**", theme: { name: "paper" } }],
@@ -261,7 +248,6 @@ void test("Presentation config is one validated unit.", async (t) => {
     1,
   ]);
 
-  // doctest:L177
   const degraded = resolveCardTheme({
     path: "_content/One.doc.card",
     type: "doc",
@@ -281,7 +267,6 @@ void test("Presentation config is one validated unit.", async (t) => {
 
 // `**` crosses zero or more segments while `*` stays within one segment.
 void test(" crosses zero or more segments while  stays within one segment.", async (t) => {
-  // doctest:L189
   t.check(
     [
       themePatternMatches("_content/**/Notes.*.card", "_content/Notes.doc.card"),
@@ -303,7 +288,6 @@ void test(" crosses zero or more segments while  stays within one segment.", asy
 // Chrome is selected independently. A theme without a chrome implementation is
 // a visible configuration problem with base/plain fallback.
 void test("Chrome is selected independently.", async (t) => {
-  // doctest:L203
   const chrome = resolveChromeTheme(parsePresentationConfig({ chrome: { name: "post-it" } }));
   t.check([chrome.choice, chrome.origin, chrome.problem?.message], [
     {
@@ -319,7 +303,6 @@ void test("Chrome is selected independently.", async (t) => {
 // release removed — keeps the box usable: chrome falls back to Flat and the
 // choice is reported as a problem rather than silently rewritten.
 void test("A saved system theme the host does not ship — box-authored, or one a later re...", async (t) => {
-  // doctest:L213
   const retired = resolveChromeTheme(parsePresentationConfig({ chrome: { name: "retired-theme", stock: "retired-stock" } }));
   t.check([retired.choice, retired.origin, retired.problem?.message, validateSystemThemeChoice({ name: "retired-theme" }).choice], [
     {
@@ -338,7 +321,6 @@ void test("A saved system theme the host does not ship — box-authored, or one 
 // A card saved with such a theme keeps its literal name and stock with no
 // problem; it renders on the base card material until a person chooses another.
 void test("A card saved with such a theme keeps its literal name and stock with no probl...", async (t) => {
-  // doctest:L222
   const retiredCard = resolveCardTheme({
     path: "_content/One.doc.card",
     type: "doc",
@@ -362,7 +344,6 @@ void test("A card saved with such a theme keeps its literal name and stock with 
 // sticky note over the box's Paper default while chrome stays Spectrum; no stock
 // leaks from either of the other choices.
 void test("Choosing chrome does not recolor the card's saved theme.", async (t) => {
-  // doctest:L238
   const mixed = parsePresentationConfig({
     default: { name: "paper" },
     chrome: { name: "spectrum" },
@@ -399,7 +380,6 @@ void test("Choosing chrome does not recolor the card's saved theme.", async (t) 
 // A card-only box default does not require its theme to provide chrome. When the
 // default is a sticky note, app chrome quietly keeps the engine's plain theme:
 void test("A card-only box default does not require its theme to provide chrome.", async (t) => {
-  // doctest:L260
   const implicitChrome = resolveChromeTheme(parsePresentationConfig({ default: { name: "post-it" } }));
   t.check(implicitChrome, {
     choice: {
@@ -414,7 +394,6 @@ void test("A card-only box default does not require its theme to provide chrome.
 // The global field validates the persisted selector's shape, and a schema can
 // carry a catalog-validated default as metadata.
 void test("The global field validates the persisted selector's shape, and a schema can c...", async (t) => {
-  // doctest:L269
   const schema = cardSchema("theme-example", {
     fields: { body: z.string() },
     theme: { name: "paper", stock: "cream" },
@@ -437,7 +416,6 @@ void test("The global field validates the persisted selector's shape, and a sche
 
 // An engine schema may publish any theme name; only a malformed choice throws.
 void test("An engine schema may publish any theme name; only a malformed choice throws.", async (t) => {
-  // doctest:L284
   t.check(invalidSchemaThrows(), true);
 });
 
@@ -452,7 +430,6 @@ void test("Card lint accepts a stock the catalog does not list — the box may h
       t.error(error);
     }
   });
-  // doctest:L293
   const lintBox = await makeTmpBox();
   await lintBox.write(
     "_content/Own.doc.card",
@@ -481,7 +458,6 @@ void test("Card lint accepts a stock the catalog does not list — the box may h
 // Bloom is both a system and card material. Choosing it supplies the approved
 // cutouts stock to unthemed cards; an explicit Paper card keeps its own material.
 void test("Bloom is both a system and card material.", async (t) => {
-  // doctest:L321
   t.check(validateSystemThemeChoice({ name: "bloom" }), {
     choice: {
       name: "bloom",
@@ -490,14 +466,12 @@ void test("Bloom is both a system and card material.", async (t) => {
     problem: null,
   });
 
-  // doctest:L324
   t.check(systemCardThemes("bloom"), [
     "bloom",
     "letter-set",
     "post-it",
   ]);
 
-  // doctest:L327
   t.check(resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "bloom" }), {
     choice: {
       name: "bloom",
@@ -510,7 +484,6 @@ void test("Bloom is both a system and card material.", async (t) => {
     },
   });
 
-  // doctest:L330
   t.check(resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "bloom", cardChoice: { name: "paper", stock: "blue" } }).choice, {
     name: "paper",
     stock: "blue",
@@ -520,7 +493,6 @@ void test("Bloom is both a system and card material.", async (t) => {
 // Ribbon supplies the flow stock to unthemed cards while retaining explicit choices.
 // Its paired card list puts its own material first.
 void test("Ribbon supplies the flow stock to unthemed cards while retaining explicit cho...", async (t) => {
-  // doctest:L338
   t.check(validateSystemThemeChoice({ name: "ribbon" }), {
     choice: {
       name: "ribbon",
@@ -529,14 +501,12 @@ void test("Ribbon supplies the flow stock to unthemed cards while retaining expl
     problem: null,
   });
 
-  // doctest:L341
   t.check(systemCardThemes("ribbon"), [
     "ribbon",
     "paper",
     "post-it",
   ]);
 
-  // doctest:L344
   t.check(resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "ribbon" }), {
     choice: {
       name: "ribbon",
@@ -549,7 +519,6 @@ void test("Ribbon supplies the flow stock to unthemed cards while retaining expl
     },
   });
 
-  // doctest:L347
   t.check(resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "ribbon", cardChoice: { name: "paper", stock: "blue" } }).choice, {
     name: "paper",
     stock: "blue",
@@ -559,7 +528,6 @@ void test("Ribbon supplies the flow stock to unthemed cards while retaining expl
 // Deck provides the panels stock as both chrome and inherited card material. Its
 // paired set starts with Deck; an explicitly blue Paper card remains blue Paper.
 void test("Deck provides the panels stock as both chrome and inherited card material.", async (t) => {
-  // doctest:L355
   t.check(validateSystemThemeChoice({ name: "deck" }), {
     choice: {
       name: "deck",
@@ -568,14 +536,12 @@ void test("Deck provides the panels stock as both chrome and inherited card mate
     problem: null,
   });
 
-  // doctest:L358
   t.check(systemCardThemes("deck"), [
     "deck",
     "paper",
     "post-it",
   ]);
 
-  // doctest:L361
   t.check(resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "deck" }), {
     choice: {
       name: "deck",
@@ -588,13 +554,11 @@ void test("Deck provides the panels stock as both chrome and inherited card mate
     },
   });
 
-  // doctest:L364
   t.check(resolveCardTheme({ path: "_content/Seed.doc.card", type: "doc", presentation: { status: "absent" }, systemTheme: "deck", cardChoice: { name: "paper", stock: "blue" } }).choice, {
     name: "paper",
     stock: "blue",
   });
 
-  // doctest:L367
   t.check(validateSystemThemeChoice({ name: "rose-trellis" }), {
     choice: {
       name: "rose-trellis",
@@ -603,14 +567,12 @@ void test("Deck provides the panels stock as both chrome and inherited card mate
     problem: null,
   });
 
-  // doctest:L370
   t.check(systemCardThemes("rose-trellis"), [
     "rose-trellis",
     "paper",
     "post-it",
   ]);
 
-  // doctest:L373
   t.check(validateSystemThemeChoice({ name: "gold-thread" }), {
     choice: {
       name: "gold-thread",
@@ -619,14 +581,12 @@ void test("Deck provides the panels stock as both chrome and inherited card mate
     problem: null,
   });
 
-  // doctest:L376
   t.check(systemCardThemes("gold-thread"), [
     "gold-thread",
     "paper",
     "post-it",
   ]);
 
-  // doctest:L379
   t.check(validateSystemThemeChoice({ name: "goldfish" }), {
     choice: {
       name: "goldfish",
@@ -635,14 +595,12 @@ void test("Deck provides the panels stock as both chrome and inherited card mate
     problem: null,
   });
 
-  // doctest:L382
   t.check(systemCardThemes("goldfish"), [
     "goldfish",
     "paper",
     "post-it",
   ]);
 
-  // doctest:L385
   t.check(validateSystemThemeChoice({ name: "doodlebit" }), {
     choice: {
       name: "doodlebit",
@@ -651,7 +609,6 @@ void test("Deck provides the panels stock as both chrome and inherited card mate
     problem: null,
   });
 
-  // doctest:L388
   t.check(systemCardThemes("doodlebit"), [
     "doodlebit",
     "paper",
@@ -661,7 +618,6 @@ void test("Deck provides the panels stock as both chrome and inherited card mate
 
 // ## Painted and gilded themes
 void test("Painted and gilded themes", async (t) => {
-  // doctest:L395
   t.check(validateSystemThemeChoice({ name: "tempest" }), {
     choice: {
       name: "tempest",
@@ -670,14 +626,12 @@ void test("Painted and gilded themes", async (t) => {
     problem: null,
   });
 
-  // doctest:L398
   t.check(systemCardThemes("tempest"), [
     "tempest",
     "paper",
     "post-it",
   ]);
 
-  // doctest:L401
   t.check(validateSystemThemeChoice({ name: "veil" }), {
     choice: {
       name: "veil",
@@ -686,14 +640,12 @@ void test("Painted and gilded themes", async (t) => {
     problem: null,
   });
 
-  // doctest:L404
   t.check(systemCardThemes("veil"), [
     "veil",
     "paper",
     "post-it",
   ]);
 
-  // doctest:L407
   t.check(validateSystemThemeChoice({ name: "gilt" }), {
     choice: {
       name: "gilt",
@@ -702,7 +654,6 @@ void test("Painted and gilded themes", async (t) => {
     problem: null,
   });
 
-  // doctest:L410
   t.check(systemCardThemes("gilt"), [
     "gilt",
     "paper",

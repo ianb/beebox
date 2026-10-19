@@ -5,7 +5,7 @@
 // worktree look orphaned.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -15,7 +15,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 const privateIssues = join(repoRoot, "bin/private-issues");
-const root = await mkdtemp(join(tmpdir(), "private-issues-orphans-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "private-issues-orphans-test-"));
 const mono = join(root, "beebox");
 const customWorktrees = join(root, "custom-worktrees");
 const worktree = join(customWorktrees, "custom-root");
@@ -45,7 +45,6 @@ void test("line 40", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L41
   const report = await execFileAsync(privateIssues, ["report-orphans", mono], { env });
   const defaultRootReport = await execFileAsync(privateIssues, ["report-orphans", mono]);
   const sweep = await execFileAsync(privateIssues, ["sweep-orphans", mono], { env });

@@ -8,10 +8,10 @@
 //
 // The verdict is a pure function over `BoxRuntimeStatus[]`, so it's tested here
 // directly — no server, no child. The route that serves it as 200/503 is covered
-// in `hub-router.doctest.md`.
+// in `test/hub/server.router.test.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isBoxBroken, hubVerdict } from "../../src/hub/health.js";
 import type { BoxRuntimeStatus, BoxRunStatus } from "../../src/hub/box-status.js";
 
@@ -23,7 +23,6 @@ function box(status: BoxRunStatus, extra?: Partial<BoxRuntimeStatus>): BoxRuntim
 
 // ## A running box is healthy; an idle (stopped) box is not a fault
 void test("A running box is healthy; an idle (stopped) box is not a fault", async (t) => {
-  // doctest:L27
   t.check(
     {
       running: isBoxBroken(box("running")),
@@ -41,7 +40,6 @@ void test("A running box is healthy; an idle (stopped) box is not a fault", asyn
 // `starting` is broken only once it has already failed at least once — a first
 // clean boot is `starting` with zero failures and is NOT a fault.
 void test("starting is broken only once it has already failed at least once — a first cl...", async (t) => {
-  // doctest:L40
   t.check(
     {
       unhealthy: isBoxBroken(box("unhealthy")),
@@ -63,7 +61,6 @@ void test("starting is broken only once it has already failed at least once — 
 // `restarts` would pin the hub red forever; keying on `consecutiveFailures`
 // doesn't. This box is healthy.
 void test("The trap:", async (t) => {
-  // doctest:L56
   t.check(isBoxBroken(box("running", { restarts: 47, consecutiveFailures: 0 })), false);
 });
 
@@ -72,7 +69,6 @@ void test("The trap:", async (t) => {
 // An all-idle fleet is `ok`. One crash-looping box among healthy ones makes the
 // whole hub `unhealthy`.
 void test("An all-idle fleet is ok.", async (t) => {
-  // doctest:L66
   t.check(
     {
       empty: hubVerdict([]),

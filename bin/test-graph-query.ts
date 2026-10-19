@@ -44,7 +44,7 @@ export function scopedChanges(changed: string[]): string[] {
   return changed.filter((path) => {
     const inScope =
       path.startsWith("beebox/") ||
-      path.startsWith("agent-doctest/") ||
+      path.startsWith("tap-check/") ||
       path === "package.json" ||
       path === "pnpm-lock.yaml" ||
       path === "pnpm-workspace.yaml";

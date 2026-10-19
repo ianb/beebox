@@ -8,7 +8,7 @@
 // text.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { TurnBuffer } from "../../../src/core/chat/turn-buffer.js";
 import type { ChatMessage } from "../../../src/core/chat/session/messages.js";
 

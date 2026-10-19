@@ -11,8 +11,8 @@
 // Concurrent callers asking for the *same* read now share one parse.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is, not } from "@ianbicking/tap-check/check";
 import { loadSessionHistory, sessionHistoryReadStats } from "../../../../src/core/chat/session/load-history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -84,12 +84,10 @@ void test("Ten concurrent identical reads, one parse", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L61
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   await seed(box.root, 6);
 
-  // doctest:L65
   const before = sessionHistoryReadStats().reads;
   const results = await Promise.all(
     Array.from({ length: 10 }, () => loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL })),
@@ -103,18 +101,15 @@ void test("Ten concurrent identical reads, one parse", async (t) => {
   // The window is shared, so it is frozen — a caller that starts mutating its
   // answer would be corrupting every peer's:
 
-  // doctest:L82
   t.check(Object.isFrozen(first.entries), true);
 
   // The map empties as soon as the read settles. It is a coalescing window, not a
   // cache:
 
-  // doctest:L90
   t.check(sessionHistoryReadStats().inFlight, 0);
 
   // So a caller arriving *after* the resolution reads the file again:
 
-  // doctest:L97
   const after = sessionHistoryReadStats().reads;
   await loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL });
   t.check(readsSince(after), 1);
@@ -125,7 +120,6 @@ void test("Ten concurrent identical reads, one parse", async (t) => {
   // page's tail request read the same file into different windows, so they must not
   // coalesce with each other — nor with a different session's read:
 
-  // doctest:L110
   const mixed = sessionHistoryReadStats().reads;
   const [tail, page, other] = await Promise.all([
     loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL }),
@@ -141,7 +135,6 @@ void test("Ten concurrent identical reads, one parse", async (t) => {
 
   // A tail that differs only in `minRealUserMessages` is a different window too:
 
-  // doctest:L126
   const widened = sessionHistoryReadStats().reads;
   await Promise.all([
     loadSessionHistory(box.root, { sessionId: SESSION, slice: { mode: "tail", tail: 200 } }),
@@ -188,7 +181,6 @@ void test("Which store holds a transcript is a question about a specific session
       t.error(error);
     }
   });
-  // doctest:L160
   const codexBox = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = codexBox.path("claude-projects");
   const stub = codexBox.path("codex-stub");
@@ -196,7 +188,6 @@ void test("Which store holds a transcript is a question about a specific session
   process.env["BBX_CODEX_BINARY"] = stub;
   await configure(codexBox.root, { agentEngine: "codex", engines: { claude: true, codex: true } });
 
-  // doctest:L167
   const unrecorded = await loadSessionHistory(codexBox.root, { sessionId: SESSION, slice: TAIL });
   t.check(unrecorded, history({ sessionId: SESSION, indexes: [], total: 0 }));
 
@@ -205,7 +196,6 @@ void test("Which store holds a transcript is a question about a specific session
   // so the unrecorded read answering empty means it did not take that path, not that
   // the path happens to be broken for everyone.
 
-  // doctest:L179
   const recordedCodex = randomUUID();
   await recordSessionStart(codexBox.root, { sessionId: recordedCodex, engine: "codex" });
   const reached = await loadSessionHistory(codexBox.root, { sessionId: recordedCodex, slice: TAIL })
@@ -215,7 +205,6 @@ void test("Which store holds a transcript is a question about a specific session
   // The fallback is not "assume Claude" — it is "read what is on this disk". A
   // transcript FILE under an unrecorded id is still served:
 
-  // doctest:L191
   await seed(codexBox.root, 4);
   const stillServed = await loadSessionHistory(codexBox.root, { sessionId: SESSION, slice: TAIL });
   t.check(stillServed, history({ sessionId: SESSION, indexes: [0, 1, 2, 3], total: 4 }));
@@ -236,12 +225,10 @@ void test("A caller reading BECAUSE it knows the transcript just changed (the po
       t.error(error);
     }
   });
-  // doctest:L222
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
   await seed(box.root, 6);
 
-  // doctest:L226
   const before = sessionHistoryReadStats().reads;
   const [ordinary, fresh] = await Promise.all([
     loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL }),
@@ -253,7 +240,6 @@ void test("A caller reading BECAUSE it knows the transcript just changed (the po
   // A `fresh` read also isn't visible to *other* callers to join — it never
   // occupies the `inFlight` slot:
 
-  // doctest:L242
   const beforeOrdinary = sessionHistoryReadStats().reads;
   const [_freshAlone, twoOrdinary] = await Promise.all([
     loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL, fresh: true }),
@@ -281,15 +267,12 @@ void test("A missing JSONL is a normal state (a brand-new chat), and it answers 
       t.error(error);
     }
   });
-  // doctest:L270
   const box = await makeTmpBox();
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
-  // doctest:L273
   const empty = await loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL });
   t.check(empty, history({ sessionId: SESSION, indexes: [], total: 0 }));
 
-  // doctest:L276
   await seed(box.root, 3);
   const found = await loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL });
   t.check(found, history({ sessionId: SESSION, indexes: [0, 1, 2], total: 3 }));
@@ -299,12 +282,10 @@ void test("A missing JSONL is a normal state (a brand-new chat), and it answers 
   // (not the ENOENT that legitimately means "no transcript yet"), and the loader
   // rethrows rather than reporting an empty conversation:
 
-  // doctest:L290
   const logPath = getSessionLogPath(box.root, SESSION);
   await rm(logPath);
   await mkdir(logPath);
 
-  // doctest:L294
   const before = sessionHistoryReadStats().reads;
   const failures = await Promise.allSettled(
     Array.from({ length: 3 }, () => loadSessionHistory(box.root, { sessionId: SESSION, slice: TAIL })),

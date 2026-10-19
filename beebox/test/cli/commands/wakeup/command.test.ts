@@ -4,7 +4,7 @@
 // individual helper functions that do the filesystem work.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execSync } from "node:child_process";
 import { join } from "node:path";
 import { readFile, readdir } from "node:fs/promises";
@@ -23,28 +23,23 @@ process.env.BBX_TIME = "2026-03-04T05:06:07Z";
 // When there are card files in `_content/inbox/` that aren't referenced by any
 // existing job, an intake job gets created:
 void test("When there are card files in content/inbox/ that aren't referenced by any exi...", async (t) => {
-  // doctest:L24
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
 
-  // doctest:L28
   // Put two cards in the inbox
   await box.seed("_content/inbox/note1.doc.card", "---\ntitle: Hello\n---\n");
   await box.seed("_content/inbox/note2.task.card", "<task>Do thing</task>");
   box.commitAll("add inbox items");
 
-  // doctest:L33
   const count = await createIntakeJobsForUnjobbed(box.root);
   t.check(count, 2);
 
-  // doctest:L37
   // A job was created in _bookkeeping/jobs/
   const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
   const jobFile = allFiles.find(f => f.endsWith(".intake.job.card"));
   t.check(allFiles, [".gitkeep", "2026-03-04T05-06-07-inbox.intake.job.card"]);
 
-  // doctest:L43
   // The job references both items
   const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFile ?? ""), "utf-8");
   t.check(content, `---
@@ -60,7 +55,6 @@ items:
   // created above are collected, so the same items aren't re-jobbed (this
   // regressed once when ref collection only understood legacy XML `ref=""`):
 
-  // doctest:L57
   t.check(await createIntakeJobsForUnjobbed(box.root), 0);
 });
 
@@ -68,16 +62,13 @@ items:
 //
 // If a pending job already references an inbox item, it's not double-counted:
 void test("If a pending job already references an inbox item, it's not double-counted:", async (t) => {
-  // doctest:L66
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
 
-  // doctest:L70
   // Create an inbox item
   await box.seed("_content/inbox/already-handled.doc.card", "---\ntitle: Old\n---\n");
 
-  // doctest:L73
   // Create a job that already references it
   await box.seed(
     "_bookkeeping/jobs/existing.intake.job.card",
@@ -85,7 +76,6 @@ void test("If a pending job already references an inbox item, it's not double-co
   );
   box.commitAll("setup");
 
-  // doctest:L80
   const count = await createIntakeJobsForUnjobbed(box.root);
   t.check(count, 0);
 });
@@ -94,27 +84,22 @@ void test("If a pending job already references an inbox item, it's not double-co
 //
 // Capture sessions, images, and audio cards get their own low-priority job:
 void test("Capture sessions, images, and audio cards get their own low-priority job:", async (t) => {
-  // doctest:L90
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
 
-  // doctest:L94
   await box.seed("_content/inbox/note.doc.card", "---\ntitle: Important\n---\n");
   await box.seed("_content/inbox/snap.capture-session.card", "<capture-session>Snap</capture-session>");
   await box.seed("_content/inbox/pic.image.card", "<image>Photo</image>");
   box.commitAll("add items");
 
-  // doctest:L99
   const count = await createIntakeJobsForUnjobbed(box.root);
   t.check(count, 3);
 
-  // doctest:L103
   const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
   const jobFiles = allFiles.filter(f => f.endsWith(".intake.job.card")).toSorted();
   t.check(allFiles, [".gitkeep", "2026-03-04T05-06-07-inbox-low.intake.job.card", "2026-03-04T05-06-07-inbox.intake.job.card"]);
 
-  // doctest:L108
   // One normal-priority job with the doc, one low-priority with captures
   const job0 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[0] ?? ""), "utf-8");
   const job1 = await readFile(join(box.root, "_bookkeeping/jobs", jobFiles[1] ?? ""), "utf-8");
@@ -140,18 +125,15 @@ items:
 // Items in `_content/inbox/feedback/` have their own pipeline and are not
 // picked up for intake:
 void test("Items in content/inbox/feedback/ have their own pipeline and are not picked u...", async (t) => {
-  // doctest:L125
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
 
-  // doctest:L129
   await box.seed("_content/inbox/feedback/fb1.feedback.card", "<feedback>Good</feedback>");
   // One real inbox item
   await box.seed("_content/inbox/real.doc.card", "---\ntitle: Real item\n---\n");
   box.commitAll("add items");
 
-  // doctest:L134
   const count = await createIntakeJobsForUnjobbed(box.root);
   t.check(count, 1);
 });
@@ -162,22 +144,18 @@ void test("Items in content/inbox/feedback/ have their own pipeline and are not 
 // connector to upload it. It is never intake work, so a draft that cannot upload
 // yet does not earn a fresh intake job every cycle:
 void test("An email-outbound card is a draft the agent wrote, waiting for the Gmail conn...", async (t) => {
-  // doctest:L146
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
 
-  // doctest:L150
   await box.seed("_content/inbox/email/thread-1/draft-001.email-outbound.card", "---\ntype: email-outbound\nstatus: draft\nto: a@example.com\nsubject: Hi\n---\nHello.\n");
   await box.seed("_content/inbox/email/thread-1/msg-001.email-message.card", "<email-message>Hi</email-message>");
   box.commitAll("add items");
 
-  // doctest:L154
   // Only the received message is jobbed
   const count = await createIntakeJobsForUnjobbed(box.root);
   t.check(count, 1);
 
-  // doctest:L159
   const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
   const content = await readFile(join(box.root, "_bookkeeping/jobs", allFiles.find(f => f.endsWith(".intake.job.card")) ?? ""), "utf-8");
   t.check(content, `---
@@ -191,12 +169,10 @@ items:
 
 // ### Returns 0 for empty inbox
 void test("Returns 0 for empty inbox", async (t) => {
-  // doctest:L168
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
 
-  // doctest:L172
   const count = await createIntakeJobsForUnjobbed(box.root);
   t.check(count, 0);
 });
@@ -208,29 +184,24 @@ void test("Returns 0 for empty inbox", async (t) => {
 // is tagged `connector: X` so the same wakeup's reactor (with the
 // matching `connectorFilter`) processes it.
 void test("Under bbx wakeup --connector X, only items in the connector's declared inboxP...", async (t) => {
-  // doctest:L185
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
 
-  // doctest:L189
   // One item in the gmail-owned subdir, one in an unrelated subdir
   await box.seed("_content/inbox/email/thread-1/msg-001.email-message.card", "<email-message>Hi</email-message>");
   await box.seed("_content/inbox/pages-saved/page1.doc.card", "---\ntitle: Saved\n---\n");
   box.commitAll("add items");
 
-  // doctest:L194
   const fakeGmail: Connector = { name: "gmail", inboxPaths: ["_content/inbox/email"], sync: async () => ({ success: true, created: [], updated: [] }) };
   const count = await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail });
 
-  // doctest:L197
   t.check(
     // Only the email item — the pages-saved item is left for full wakeup
     count,
     1,
   );
 
-  // doctest:L201
   const allFiles = await readdir(join(box.root, "_bookkeeping/jobs"));
   const jobFile = allFiles.find(f => f.endsWith(".intake.job.card"));
   const content = await readFile(join(box.root, "_bookkeeping/jobs", jobFile ?? ""), "utf-8");
@@ -251,18 +222,15 @@ items:
 // by such a job as unjobbed: the item joins the scoped job and leaves the other
 // one. A full scan leaves the item where it is.
 void test("A full wakeup's intake job has no connector, and the scoped reactor processes...", async (t) => {
-  // doctest:L219
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
 
-  // doctest:L223
   await box.seed("_content/inbox/email/x.email-thread.card", "<email-thread>Hi</email-thread>");
   await box.seed("_content/inbox/email/y.email-thread.card", "<email-thread>Yo</email-thread>");
   await box.seed("_content/inbox/note.doc.card", "---\ntitle: Kept\n---\n");
   box.commitAll("add items");
 
-  // doctest:L228
   await createIntakeJobsForUnjobbed(box.root);
   const jobsDir = join(box.root, "_bookkeeping/jobs");
   const intakeJobs = async () => (await readdir(jobsDir)).filter((f) => f.endsWith(".intake.job.card")).toSorted();
@@ -272,11 +240,9 @@ void test("A full wakeup's intake job has no connector, and the scoped reactor p
   // The gmail-scoped scan takes both email items. The unscoped job keeps the doc,
   // and its description counts what remains:
 
-  // doctest:L240
   const fakeGmail: Connector = { name: "gmail", inboxPaths: ["_content/inbox/email"], sync: async () => ({ success: true, created: [], updated: [] }) };
   t.check(await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail }), 2);
 
-  // doctest:L244
   const gmailJob = (await intakeJobs()).find((f) => f.endsWith("-gmail.intake.job.card"));
   const gmailContent = await readFile(join(jobsDir, gmailJob ?? ""), "utf-8");
   t.check(gmailContent, `---
@@ -289,7 +255,6 @@ items:
 ---
 `);
 
-  // doctest:L253
   const unscopedContent = await readFile(join(jobsDir, unscoped ?? ""), "utf-8");
   t.check(unscopedContent, `---
 priority: normal
@@ -301,14 +266,12 @@ items:
 
   // The move is committed with the new job:
 
-  // doctest:L265
   t.checkText(execSync("git status --porcelain", { cwd: box.root }).toString().trim(), "");
 });
 
 // A job that the move empties is deleted. Here the unscoped job holds only an
 // email item:
 void test("A job that the move empties is deleted.", async (t) => {
-  // doctest:L273
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("init box");
@@ -319,21 +282,17 @@ void test("A job that the move empties is deleted.", async (t) => {
   );
   box.commitAll("setup");
 
-  // doctest:L283
   const fakeGmail: Connector = { name: "gmail", inboxPaths: ["_content/inbox/email"], sync: async () => ({ success: true, created: [], updated: [] }) };
   t.check(await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail }), 1);
 
-  // doctest:L287
   const jobs = (await readdir(join(box.root, "_bookkeeping/jobs"))).filter((f) => f.endsWith(".intake.job.card"));
   t.check(jobs, ["2026-03-04T05-06-07-gmail.intake.job.card"]);
 
-  // doctest:L291
   t.checkText(execSync("git status --porcelain", { cwd: box.root }).toString().trim(), "");
 
   // A scoped scan does not take an item from a job it will process — a second gmail
   // scan is a no-op:
 
-  // doctest:L299
   t.check(await createIntakeJobsForUnjobbed(box.root, { connector: fakeGmail }), 0);
 });
 
@@ -345,7 +304,6 @@ void test("A job that the move empties is deleted.", async (t) => {
 //
 // ### Deletes a pending job whose refs all point at missing files
 void test("Stale-job cleanup reads the job's frontmatter status: and refs.", async (t) => {
-  // doctest:L312
   const box = await makeTmpBox({ git: true });
   await box.write(
     "_bookkeeping/jobs/dead.intake.job.card",
@@ -353,17 +311,14 @@ void test("Stale-job cleanup reads the job's frontmatter status: and refs.", asy
   );
   box.commitAll("queue stale job");
 
-  // doctest:L319
   const cleaned = await cleanupStaleJobs(box.root);
   t.check(cleaned, 1);
 
-  // doctest:L323
   t.check(await readdir(join(box.root, "_bookkeeping/jobs")), [".gitkeep"]);
 });
 
 // ### Keeps a pending job that still has a live ref
 void test("Keeps a pending job that still has a live ref", async (t) => {
-  // doctest:L330
   const box = await makeTmpBox({ git: true });
   await box.write("_content/inbox/live.doc.card", "---\ntitle: Note\n---\nstill here");
   await box.write(
@@ -372,7 +327,6 @@ void test("Keeps a pending job that still has a live ref", async (t) => {
   );
   box.commitAll("queue live job");
 
-  // doctest:L338
   t.check(await cleanupStaleJobs(box.root), 0);
 });
 
@@ -382,7 +336,6 @@ void test("Keeps a pending job that still has a live ref", async (t) => {
 // is still eligible for stale cleanup — `readCardFrontmatter` is a loose read that
 // doesn't apply defaults, so cleanup must.
 void test("A job that leaves status: off relies on the schema default (pending), so it i...", async (t) => {
-  // doctest:L349
   const box = await makeTmpBox({ git: true });
   await box.write(
     "_bookkeeping/jobs/nostatus.intake.job.card",
@@ -390,6 +343,5 @@ void test("A job that leaves status: off relies on the schema default (pending),
   );
   box.commitAll("queue statusless job");
 
-  // doctest:L356
   t.check(await cleanupStaleJobs(box.root), 1);
 });

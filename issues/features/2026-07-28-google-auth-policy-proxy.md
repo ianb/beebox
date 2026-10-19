@@ -7,6 +7,8 @@ needs: [design]
 discovered-in: main session — boxholder idea, out of the Google-auth thread
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 A standalone service that **holds the Google OAuth grant once** and re-serves it
 to many boxes as **scoped, filtered, escape-proof views**. You authorize the
 stable proxy against Google; individual boxes then authorize to *the proxy*, not

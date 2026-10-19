@@ -8,8 +8,8 @@
 // field gets the command's own message, not a schema failure.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { unordered } from "@ianbicking/tap-check/check";
 import { runCommand, createCollectorContext, getCommand, listCommands } from "../../src/core/command-runner.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 

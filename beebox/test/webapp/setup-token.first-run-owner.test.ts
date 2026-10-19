@@ -10,8 +10,8 @@
 // `BBX_OWNER_EMAIL`. The gate is now "no owner at all".
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { rm, writeFile } from "node:fs/promises";
@@ -19,7 +19,7 @@ import { maybeArmFirstRunSetup } from "../../src/webapp/setup-token.js";
 
 // Point the credential store at a path that does not exist, so there are zero
 // local users in every case below — isolating the owner check as the variable.
-const AUTH_FILE = path.join(os.tmpdir(), "bbx-first-run-setup-doctest-absent.json");
+const AUTH_FILE = path.join(os.tmpdir(), "bbx-first-run-setup-test-absent.json");
 process.env.BBX_AUTH_FILE = AUTH_FILE;
 
 function printedLines({ owner, openAccess }: { owner: string | null; openAccess: boolean }) {
@@ -49,12 +49,10 @@ void test("This is the deployed configuration, and the regression this test exis
       t.error(error);
     }
   });
-  // doctest:L43
   t.check(printedLines({ owner: "owner@example.com", openAccess: false }), []);
 
   // ## A genuinely unclaimed server still prints its claim link
 
-  // doctest:L50
   const lines = printedLines({ owner: null, openAccess: false });
   t.check(lines, [str`First-run setup: https://box.example.com/auth/setup?token=${any(String)}`]);
 
@@ -62,14 +60,12 @@ void test("This is the deployed configuration, and the regression this test exis
   //
   // There is no auth wall to claim past.
 
-  // doctest:L63
   t.check(printedLines({ owner: null, openAccess: true }), []);
 
   // ## Removing the last local member does not reopen first-run setup
   //
   // An initialized store keeps an empty file as a durable setup tombstone.
 
-  // doctest:L72
   await writeFile(AUTH_FILE, JSON.stringify({ version: 1, users: [] }), { mode: 0o600 });
   t.check(printedLines({ owner: null, openAccess: false }), []);
 });

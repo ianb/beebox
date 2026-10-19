@@ -5,7 +5,7 @@
 
 import * as path from "node:path";
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   emptyLedger,
   findEntry,
@@ -62,7 +62,6 @@ void test("loadLedger returns empty when the file is absent", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L60
   const box = await makeTmpBox();
   const l = await loadLedger(box.root);
   t.check(l, {
@@ -103,7 +102,6 @@ void test("If somebody hand-edits the file into something other than the expecte
       t.error(error);
     }
   });
-  // doctest:L98
   const box3 = await makeTmpBox();
   await box3.write(LEDGER_REL_PATH, JSON.stringify({ version: 999, entries: [] }));
   const err = await caught(() => loadLedger(box3.root));
@@ -126,7 +124,6 @@ void test("The SHA-256 of the three-byte string abc is documented in FIPS 180-4.
       t.error(error);
     }
   });
-  // doctest:L114
   const box4 = await makeTmpBox();
   await box4.write("sample.txt", "abc");
   t.check(await sha256File(box4.path("sample.txt")), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
@@ -137,7 +134,6 @@ void test("The SHA-256 of the three-byte string abc is documented in FIPS 180-4.
 // JPEGs from a flatbed scanner come out as `<prefix>_NNN.jpg`. We group by
 // prefix so a single upload invocation produces one session per scanner run.
 void test("JPEGs from a flatbed scanner come out as <prefix>NNN.jpg.", async (t) => {
-  // doctest:L130
   const groups = groupScanFiles([
     "/in/Scan2026-04-29_153807_000.jpg",
     "/in/Scan2026-04-29_153807_001.jpg",
@@ -155,7 +151,6 @@ void test("JPEGs from a flatbed scanner come out as <prefix>NNN.jpg.", async (t)
 
 // ## groupScanFiles: each PDF is its own group
 void test("groupScanFiles: each PDF is its own group", async (t) => {
-  // doctest:L146
   const groups2 = groupScanFiles([
     "/in/letter.pdf",
     "/in/will.pdf",
@@ -174,7 +169,6 @@ void test("groupScanFiles: each PDF is its own group", async (t) => {
 // Image filenames without a `_NNN.ext` tail (no underscore-digits suffix) bundle
 // into one fallback group — the caller's invocation defines the batch.
 void test("Image filenames without a NNN.ext tail (no underscore-digits suffix) bundle i...", async (t) => {
-  // doctest:L162
   const groups3 = groupScanFiles([
     "/in/holiday.jpg",
     "/in/random.png",
@@ -191,7 +185,6 @@ void test("Image filenames without a NNN.ext tail (no underscore-digits suffix) 
 // `photo-0001.jpg` clusters by the `photo` prefix the same way
 // `Scan_001.jpg` clusters by `Scan`.
 void test("The separator before the digit suffix can be either  or - — photo-0001.jpg cl...", async (t) => {
-  // doctest:L177
   const groups5 = groupScanFiles([
     "/in/photo-0001.jpg",
     "/in/photo-0002.jpg",
@@ -204,7 +197,6 @@ void test("The separator before the digit suffix can be either  or - — photo-0
 
 // ## groupScanFiles: rejects unsupported types
 void test("groupScanFiles: rejects unsupported types", async (t) => {
-  // doctest:L189
   const err = await caught(async () => groupScanFiles(["/in/notes.txt"]));
   t.check(err, {
     name: "UnsupportedFileTypeError",
@@ -228,7 +220,6 @@ void test("The ledger is a read-modify-write, and two writers genuinely race:", 
       t.error(error);
     }
   });
-  // doctest:L203
   const boxL = await makeTmpBox();
   await Promise.all(
     Array.from({ length: 10 }, (_, i) =>
@@ -243,7 +234,6 @@ void test("The ledger is a read-modify-write, and two writers genuinely race:", 
   // The mutation runs against the ledger as it is on disk *now*, never a caller's
   // stale copy — so a dedup check inside the mutation sees the other writers' work:
 
-  // doctest:L218
   await updateLedger(boxL.root, (ledger) => {
     if (findEntry(ledger, "hash-3") === undefined) addEntry(ledger, entry("hash-3"));
   });

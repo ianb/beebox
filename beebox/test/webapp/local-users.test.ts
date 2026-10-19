@@ -6,8 +6,8 @@
 // that env var is a test-only seam, inert in every real deployment.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, instanceOf, isoDate, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, instanceOf, isoDate, not } from "@ianbicking/tap-check/check";
 import { mkdtemp, rm, writeFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -62,7 +62,6 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
       t.error(error);
     }
   });
-  // doctest:L51
   const owner = await createFirstUser({ email: "Boxholder@Example.com", name: "Boxholder", password: "correct horse" });
   t.check(owner, {
     email: "boxholder@example.com",
@@ -75,22 +74,18 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
   // Credential lock exhaustion is part of the store-unavailable contract, so every
   // route that already fails closed on an unavailable store also handles it.
 
-  // doctest:L60
   const lockError: Error = new AuthFileLockError("/redacted/auth.lock");
   t.check(lockError, instanceOf(AuthStoreUnavailableError));
 
   // The email is canonicalized (trim + lowercase); the owner email is discoverable.
 
-  // doctest:L67
   t.check(getLocalOwnerEmail(), "boxholder@example.com");
 
   // The file is 0600, and the plaintext password never appears in it.
 
-  // doctest:L74
   const info = await stat(AUTH_FILE);
   t.check(info.mode & 0o777, 0o600);
 
-  // doctest:L78
   const raw = await import("node:fs/promises").then((fs) => fs.readFile(AUTH_FILE, "utf-8"));
   t.check(raw, not(any(String).includes("correct horse")));
 
@@ -98,84 +93,65 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
   //
   // Email match is case-insensitive; verification returns the public user.
 
-  // doctest:L88
   const ok = await verifyPassword({ email: "  BOXHOLDER@example.com ", password: "correct horse" });
   t.check(ok, publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }));
 
-  // doctest:L92
   t.check(await verifyPassword({ email: "boxholder@example.com", password: "wrong" }), null);
 
   // An unknown email returns null too (no enumeration — same shape as a bad password).
 
-  // doctest:L99
   t.check(await verifyPassword({ email: "nobody@example.com", password: "correct horse" }), null);
 
   // ## A second owner creation fails without replacing the first
 
-  // doctest:L106
   t.check(await rejectName(() => createFirstUser({ email: "other@example.com", name: "Other", password: "hunter2" })), "UserExistsError");
 
   // ## Add a member, then verify and list
 
-  // doctest:L113
   const member = await addUser({ email: "Member@Example.com", name: "Member", password: "s3cret", role: "member" });
   t.check(member, publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }));
 
-  // doctest:L117
   t.check(await verifyPassword({ email: "member@example.com", password: "s3cret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }));
 
-  // doctest:L120
   t.check(listUsers(), [publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 })]);
 
   // Adding a duplicate, or a second owner, is refused.
 
-  // doctest:L127
   t.check(await rejectName(() => addUser({ email: "member@example.com", name: "Dup", password: "x", role: "member" })), "UserExistsError");
 
-  // doctest:L130
   t.check(await rejectName(() => addUser({ email: "second@example.com", name: "Second", password: "x", role: "owner" })), "OwnerExistsError");
 
   // ## Set password bumps `gen` (revokes outstanding sessions)
 
-  // doctest:L137
   t.check(getLocalUser("member@example.com"), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }));
   t.check(await setPassword({ email: "member@example.com", password: "n3wsecret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 2 }));
 
   // The old password no longer verifies; the new one does.
 
-  // doctest:L146
   t.check(await verifyPassword({ email: "member@example.com", password: "s3cret" }), null);
 
-  // doctest:L149
   t.check(await verifyPassword({ email: "member@example.com", password: "n3wsecret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 2 }));
 
   // The reset flow can do expensive hashing before entering the credential-store
   // lock, while preserving the same generation bump and user metadata.
 
-  // doctest:L157
   const resetHash = await hashPassword("reset-secret");
   const resetUser = await setPasswordWithPasswordHash({ email: " MEMBER@example.com ", scrypt: resetHash });
   t.check(resetUser, publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 3 }));
 
-  // doctest:L162
   t.check(await verifyPassword({ email: "member@example.com", password: "n3wsecret" }), null);
 
-  // doctest:L165
   t.check(await verifyPassword({ email: "member@example.com", password: "reset-secret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 3 }));
 
-  // doctest:L170
   t.check(await rejectName(() => setPassword({ email: "ghost@example.com", password: "x" })), "NoSuchUserError");
 
   // ## Remove a member; refuse to remove the owner
 
-  // doctest:L177
   await removeUser({ email: "member@example.com" });
   t.check(listUsers(), [publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 })]);
 
-  // doctest:L181
   t.check(await rejectName(() => removeUser({ email: "boxholder@example.com" })), "LastOwnerRemovalError");
 
-  // doctest:L184
   t.check(await rejectName(() => removeUser({ email: "ghost@example.com" })), "NoSuchUserError");
 
   // ## Rehash-on-verify: a changed work factor transparently rewrites the record
@@ -183,20 +159,16 @@ void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", asyn
   // The owner was hashed at N=2^14. Lower the current factor to 2^13; a successful
   // verify should rewrite the stored record with the new parameters.
 
-  // doctest:L194
   t.check(JSON.parse(raw).users[0].scrypt, { N: 16384, r: 8, p: 1, salt: any(String), hash: any(String) });
 
-  // doctest:L197
   process.env.BBX_AUTH_SCRYPT_N = String(2 ** 13);
   t.check(await verifyPassword({ email: "boxholder@example.com", password: "correct horse" }), publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }));
 
-  // doctest:L201
   const rehashed = await import("node:fs/promises").then((fs) => fs.readFile(AUTH_FILE, "utf-8"));
   t.check(JSON.parse(rehashed).users[0].scrypt, { N: 8192, r: 8, p: 1, salt: any(String), hash: any(String) });
 
   // `gen` is unchanged by a rehash (it's not a credential change).
 
-  // doctest:L209
   t.check(getLocalUser("boxholder@example.com"), publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }));
 });
 
@@ -210,18 +182,15 @@ void test("A corrupt file is a hard failure — never a silent fall-open", async
       t.error(error);
     }
   });
-  // doctest:L222
   const dir2 = await mkdtemp(join(tmpdir(), "bbx-auth-bad-"));
   process.env.BBX_AUTH_FILE = join(dir2, "auth.json");
 
-  // doctest:L225
   await writeFile(process.env.BBX_AUTH_FILE, "{ not valid json", { mode: 0o600 });
   await t.checkThrows(async () => (listUsers()), "AuthFileCorruptError");
 
   // A well-formed-JSON-but-wrong-shape file (here: zero users) is corrupt too — the
   // login path refuses it rather than treating it as an empty store.
 
-  // doctest:L234
   await writeFile(process.env.BBX_AUTH_FILE, JSON.stringify({ version: 2, users: [] }), { mode: 0o600 });
   t.check(await rejectName(() => verifyPassword({ email: "boxholder@example.com", password: "x" })), "AuthFileCorruptError");
 });
@@ -236,23 +205,17 @@ void test("Missing file is the first-run state, not an error", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L247
   const dir3 = await mkdtemp(join(tmpdir(), "bbx-auth-empty-"));
   process.env.BBX_AUTH_FILE = join(dir3, "auth.json");
 
-  // doctest:L250
   t.check(listUsers(), []);
 
-  // doctest:L253
   t.check(getLocalOwnerEmail(), null);
 
-  // doctest:L256
   t.check(getLocalUser("anyone@example.com"), null);
 
-  // doctest:L259
   t.check(await verifyPassword({ email: "anyone@example.com", password: "x" }), null);
 
-  // doctest:L262
   t.check(await rejectName(() => addUser({ email: "member@example.com", name: "Member", password: "member-password", role: "member" })), "NoOwnerError");
 });
 
@@ -271,13 +234,11 @@ void test("Google-authenticated owners do not need a local password.", async (t)
       t.error(error);
     }
   });
-  // doctest:L277
   const memberFirstDir = await mkdtemp(join(tmpdir(), "bbx-auth-member-first-"));
   process.env.BBX_AUTH_FILE = join(memberFirstDir, "auth.json");
   process.env.BBX_AUTH_SCRYPT_N = String(2 ** 14);
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
 
-  // doctest:L282
   await addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" });
   t.check({ owner: getLocalOwnerEmail(), users: listUsers().map((user) => `${user.email}:${user.role}`) }, {
     owner: null,
@@ -289,11 +250,9 @@ void test("Google-authenticated owners do not need a local password.", async (t)
   // Removing the only member keeps an empty credential-store tombstone. First-run
   // setup must not reopen after local auth has been initialized once.
 
-  // doctest:L291
   await removeUser({ email: "member@example.com" });
   t.check(listUsers(), []);
 
-  // doctest:L295
   t.check({ file: await stat(process.env.BBX_AUTH_FILE).then(() => "exists"), initialized: isLocalAuthStoreInitialized() }, {
     file: "exists",
     initialized: true,
@@ -301,12 +260,10 @@ void test("Google-authenticated owners do not need a local password.", async (t)
 
   // The CLI owner-creation path can add the configured owner after members exist.
 
-  // doctest:L302
   await addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" });
   const laterOwner = await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
   t.check(laterOwner, publicUser({ email: "owner@example.com", name: "Owner", role: "owner", gen: 1 }));
 
-  // doctest:L307
   t.check(listUsers(), [publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }), publicUser({ email: "owner@example.com", name: "Owner", role: "owner", gen: 1 })]);
 });
 
@@ -325,13 +282,11 @@ void test("Both initialization paths share the credential-file lock.", async (t)
       t.error(error);
     }
   });
-  // doctest:L324
   const raceDir = await mkdtemp(join(tmpdir(), "bbx-auth-first-race-"));
   process.env.BBX_AUTH_FILE = join(raceDir, "auth.json");
   process.env.BBX_AUTH_SCRYPT_N = String(2 ** 12);
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
 
-  // doctest:L329
   const raceResults = await Promise.allSettled([
     createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" }),
     addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" }),
@@ -360,18 +315,15 @@ void test("`BBX_OWNER_EMAIL` pins the first owner's identity", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L347
   const dir4 = await mkdtemp(join(tmpdir(), "bbx-auth-owner-"));
   process.env.BBX_AUTH_FILE = join(dir4, "auth.json");
   process.env.BBX_AUTH_SCRYPT_N = String(2 ** 14);
   process.env.BBX_OWNER_EMAIL = "configured@example.com";
 
-  // doctest:L352
   t.check(await rejectName(() => createFirstUser({ email: "someone-else@example.com", name: "X", password: "p" })), "OwnerEmailMismatchError");
 
   // A matching (case-insensitively) email is accepted.
 
-  // doctest:L359
   const owner = await createFirstUser({ email: "Configured@Example.com", name: "Cfg", password: "p" });
   t.check(owner, publicUser({ email: "configured@example.com", name: "Cfg", role: "owner", gen: 1 }));
 });

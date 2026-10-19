@@ -5,7 +5,7 @@
 // source-repository ref from which the clone can be reconstructed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs/promises";
@@ -21,7 +21,6 @@ function git(cwd: string, args: string[]): void {
 // Worktree setup recognizes boxes that still carry the pre-rename engine package
 // name and migrates the dependency while installing the worktree-local override.
 void test("Worktree setup recognizes boxes that still carry the pre-rename engine packag...", async (t) => {
-  // doctest:L25
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "box-engine-repoint-"));
   t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
   const packageJson = path.join(root, "package.json");
@@ -58,7 +57,6 @@ void test("Worktree setup recognizes boxes that still carry the pre-rename engin
 // An existing clone with the tracked pre-rename box marker is made recognizable
 // to the renamed engine without modifying the source box.
 void test("An existing clone with the tracked pre-rename box marker is made recognizable...", async (t) => {
-  // doctest:L54
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "box-marker-migrate-"));
   t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
   const oldMarker = path.join(root, "content/.cb-box");
@@ -89,7 +87,6 @@ void test("An existing clone with the tracked pre-rename box marker is made reco
 // keep work, a test-setup branch, or a linked issue awaiting manual testing. Both
 // supported YAML list forms are recognized.
 void test("Cull pins report the highest-priority reason until it is resolved:", async (t) => {
-  // doctest:L79
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "cull-pins-"));
   t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
   const mono = path.join(root, "mono");
@@ -111,7 +108,6 @@ void test("Cull pins report the highest-priority reason until it is resolved:", 
   await fs.writeFile(path.join(clone, "state"), "keep\n");
   git(clone, ["commit", "-qam", "keep"]);
 
-  // doctest:L100
   const pin = (): string => execFileSync("bash", ["-c", [
     ". bin/lib/workstream-box-state.sh",
     "workstream_cull_pin_reason seam",
@@ -127,20 +123,17 @@ void test("Cull pins report the highest-priority reason until it is resolved:", 
   }).trim();
   t.check(pin(), "keep-unmerged");
 
-  // doctest:L116
   git(source, ["fetch", "-q", clone, "keep:keep"]);
   git(source, ["merge", "--ff-only", "keep"]);
   git(clone, ["branch", "test-setup"]);
   t.check(pin(), "test-setup");
 
-  // doctest:L122
   git(clone, ["branch", "-D", "test-setup"]);
   await fs.mkdir(path.join(mono, "issues", "features"), { recursive: true });
   const issue = path.join(mono, "issues", "features", "x.md");
   await fs.writeFile(issue, "---\nworkstream: seam\nneeds: [manual-testing]\n---\n");
   t.check(pin(), "manual-testing");
 
-  // doctest:L129
   await fs.writeFile(issue, "---\nworkstream: seam\nneeds: []\n---\n");
   assert.throws(pin);
   await fs.writeFile(issue, "---\nworkstream: seam\nneeds:\n  - manual-testing\n---\n");
@@ -150,7 +143,6 @@ void test("Cull pins report the highest-priority reason until it is resolved:", 
 // Resetting a test clone checks out and hard-resets `main` without moving the
 // `keep` branch.
 void test("Resetting a test clone checks out and hard-resets main without moving the kee...", async (t) => {
-  // doctest:L140
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "reset-test-"));
   t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
   const clone = path.join(root, "boxes", "seam", "test1");
@@ -200,7 +192,6 @@ void test("Resetting a test clone checks out and hard-resets main without moving
 // Preservation pushes a dated, recreatable ref. An existing conflicting ref makes
 // the operation fail closed and leaves the clone's keep content intact.
 void test("Preservation pushes a dated, recreatable ref.", async (t) => {
-  // doctest:L183
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "keep-preserve-"));
   t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
   const source = path.join(root, "source");
@@ -250,7 +241,6 @@ void test("Preservation pushes a dated, recreatable ref.", async (t) => {
 // Recreation fetches the preserved ref, checks out clone `main`, and resets its
 // content to that ref.
 void test("Recreation fetches the preserved ref, checks out clone main, and resets its c...", async (t) => {
-  // doctest:L234
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "box-restore-"));
   t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
   const source = path.join(root, "source");

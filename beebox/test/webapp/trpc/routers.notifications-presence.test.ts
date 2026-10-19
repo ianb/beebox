@@ -9,11 +9,11 @@
 // `notifyBoxholder` reads) sees the count.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { any, isoDate, str } from "agent-doctest/check";
+import { any, isoDate, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { trpcContext } from "../../helpers/trpc-context.js";
 import { appRouter } from "../../../src/webapp/trpc/routers.js";
@@ -55,12 +55,11 @@ async function attempt(fn: () => Promise<unknown>) {
 //
 // The box has no channel configured, so each channel is logged `no-audience`.
 void test("The box has no channel configured, so each channel is logged no-audience.", async (t) => {
-  // doctest:L58
   const first = await notifyBoxholder(box.root, {
-    intent: { title: "Field trip form due", body: "Sign by Friday.", target: { kind: "dashboard" }, loudness: "loud", source: "doctest" },
+    intent: { title: "Field trip form due", body: "Sign by Friday.", target: { kind: "dashboard" }, loudness: "loud", source: "test" },
   });
   const second = await notifyBoxholder(box.root, {
-    intent: { title: "Talk about the trip?", body: "", target: { kind: "chat-new" }, loudness: "quiet", source: "doctest" },
+    intent: { title: "Talk about the trip?", body: "", target: { kind: "chat-new" }, loudness: "quiet", source: "test" },
   });
   const recent = await caller({}).notifications.recent({ days: 3 });
   const skipped = (notificationId: string, channel: "apns" | "web-push") => ({
@@ -81,7 +80,7 @@ void test("The box has no channel configured, so each channel is logged no-audie
         body: "",
         target: "chat:new",
         loudness: "quiet",
-        source: "doctest",
+        source: "test",
       },
       deliveries: [skipped(second.id, "apns"), skipped(second.id, "web-push")],
     },
@@ -94,7 +93,7 @@ void test("The box has no channel configured, so each channel is logged no-audie
         body: "Sign by Friday.",
         target: "dashboard",
         loudness: "loud",
-        source: "doctest",
+        source: "test",
       },
       deliveries: [skipped(first.id, "apns"), skipped(first.id, "web-push")],
     },
@@ -105,7 +104,6 @@ void test("The box has no channel configured, so each channel is logged no-audie
   // A `chat:new` tap carries the id, and the chat page shows the intent. An id the
   // log no longer has (rotated away) is null, not an error.
 
-  // doctest:L77
   const got = await caller({}).notifications.get({ id: second.id });
   t.check(got, {
     intent: {
@@ -116,25 +114,21 @@ void test("The box has no channel configured, so each channel is logged no-audie
       body: "",
       target: "chat:new",
       loudness: "quiet",
-      source: "doctest",
+      source: "test",
     },
     deliveries: [skipped(second.id, "apns"), skipped(second.id, "web-push")],
   });
 
-  // doctest:L81
   t.check(await caller({}).notifications.get({ id: "no-such-id" }), null);
 
   // ## Both routers need an authenticated request
 
-  // doctest:L88
   t.check(await attempt(() => caller({ authed: false }).notifications.recent({})), "THREW:UNAUTHORIZED");
 
-  // doctest:L91
   t.check(await attempt(() => caller({ authed: false }).presence.heartbeat({ sessionId: "tab-aaaaaaaa" })), "THREW:UNAUTHORIZED");
 
   // ## heartbeat: each tab counts once, and the file reflects it
 
-  // doctest:L98
   await caller({}).presence.heartbeat({ sessionId: "tab-aaaaaaaa" });
   await caller({}).presence.heartbeat({ sessionId: "tab-bbbbbbbb" });
   await caller({}).presence.heartbeat({ sessionId: "tab-aaaaaaaa" });
@@ -144,7 +138,6 @@ void test("The box has no channel configured, so each channel is logged no-audie
 
   // A malformed session id is rejected:
 
-  // doctest:L108
   t.check(await attempt(() => caller({}).presence.heartbeat({ sessionId: "x" })), "THREW:BAD_REQUEST");
 });
 
@@ -163,7 +156,6 @@ void test("send and channels: the box's agent or its owner, on the server's serv
   // now has a paired phone and a subscribed browser, and the server holds fakes for
   // both.
 
-  // doctest:L120
   await pairFakePushDevice(box.root, { label: "test phone" });
   await addSubscription({
     boxSlug: await boxSlug(box.root),
@@ -173,7 +165,6 @@ void test("send and channels: the box's agent or its owner, on the server's serv
   const notify = { apns: createFakeApns(), push: createFakePush() };
   const agent = caller({ actor: "agent", user: null, isOwner: false, isAuthenticatedOwner: false, services: { notify } });
 
-  // doctest:L129
   t.check(await agent.notifications.channels(), {
     reach: {
       apns: true,
@@ -188,7 +179,6 @@ void test("send and channels: the box's agent or its owner, on the server's serv
   // A send runs `notifyBoxholder` in the server process, so the delivery goes out
   // on the server's services and lands in the log like any other:
 
-  // doctest:L137
   const sent = await agent.notifications.send({
     intent: { title: "Pick up Sam", body: "At 3.", target: "chat:new", loudness: "loud", source: "bbx notify" },
   });
@@ -238,7 +228,6 @@ void test("send and channels: the box's agent or its owner, on the server's serv
     },
   );
 
-  // doctest:L143
   t.check(await caller({}).notifications.get({ id: sent.id }), {
     intent: {
       kind: "intent",
@@ -258,7 +247,6 @@ void test("send and channels: the box's agent or its owner, on the server's serv
 
   // `channel` restricts the send to one channel, as `bbx notify --channel` does:
 
-  // doctest:L150
   const one = await agent.notifications.send({
     intent: { title: "Only the phone", body: "", target: "dashboard", loudness: "loud", source: "bbx notify" },
     channel: "apns",
@@ -270,8 +258,7 @@ void test("send and channels: the box's agent or its owner, on the server's serv
   // boxholder's phone is the box's voice. An unauthenticated request never gets
   // that far.
 
-  // doctest:L164
-  const intent = { title: "x", body: "", target: "dashboard", loudness: "loud", source: "doctest" } as const;
+  const intent = { title: "x", body: "", target: "dashboard", loudness: "loud", source: "test" } as const;
   t.check(await caller({ services: { notify } }).notifications.send({ intent }), {
     id: any(String),
     deliveries: [
@@ -280,7 +267,6 @@ void test("send and channels: the box's agent or its owner, on the server's serv
     ],
   });
 
-  // doctest:L168
   t.check(
     [
       await attempt(() => caller({ user: { email: "member@example.org", name: "Member" }, isOwner: false, isAuthenticatedOwner: false }).notifications.send({ intent })),
@@ -295,6 +281,5 @@ void test("send and channels: the box's agent or its owner, on the server's serv
   // A target the log could not hold is refused at the boundary, before anything is
   // logged or sent:
 
-  // doctest:L182
   t.check(await attempt(() => agent.notifications.send({ intent: { ...intent, target: "card:../outside.card" } })), "THREW:BAD_REQUEST");
 });

@@ -5,7 +5,7 @@
 // unset. Expected client errors keep their useful messages.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../helpers/test-route-server.js";
 import Fastify from "fastify";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
@@ -43,7 +43,6 @@ void test("line 37", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L38
   const previousNodeEnv = process.env.NODE_ENV;
   delete process.env.NODE_ENV;
   const originalError = console.error;
@@ -77,7 +76,6 @@ void test("This exercises the formatter through tRPC's real Fastify adapter, wit
       t.error(error);
     }
   });
-  // doctest:L67
   const app = Fastify();
   await app.register(fastifyTRPCPlugin, {
     prefix: "/trpc",
@@ -118,7 +116,6 @@ void test("A moved card exposes only its validated box-relative destination", as
       t.error(error);
     }
   });
-  // doctest:L98
   const movedApp = Fastify();
   await movedApp.register(fastifyTRPCPlugin, {
     prefix: "/trpc",
@@ -156,7 +153,6 @@ void test("This uses the real card route and an unstaged Markdown rename.", asyn
       t.error(error);
     }
   });
-  // doctest:L124
   const cardServer = await makeTestServer();
   await cardServer.seed("_content/documents/legal/status.md", "Enough unchanged body text for Git to identify the Markdown rename.\n");
   cardServer.commitAll("seed moved card");

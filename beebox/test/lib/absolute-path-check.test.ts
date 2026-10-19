@@ -6,17 +6,15 @@
 // specific paths. Same allowlist shape as the monorepo's `bin/path-leak-check.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { findAbsoluteMachinePaths } from "../../src/lib/absolute-path-check.js";
 
 // A real home path is flagged, macOS and Linux forms alike:
 void test("A real home path is flagged, macOS and Linux forms alike:", async (t) => {
-  // doctest:L15
   t.check(findAbsoluteMachinePaths("See /Users/beebox/src/boxes/test1 for the fixture."), [
     "/Users/beebox/",
   ]);
 
-  // doctest:L18
   t.check(findAbsoluteMachinePaths("Logs at /home/beebox/.local/share/beebox."), [
     "/home/beebox/",
   ]);
@@ -25,7 +23,6 @@ void test("A real home path is flagged, macOS and Linux forms alike:", async (t)
 // The placeholder names used in `file:` URL examples and docs (`me`, `you`,
 // `user`, `x`) are not flagged:
 void test("The placeholder names used in file: URL examples and docs (me, you, user, x)...", async (t) => {
-  // doctest:L26
   t.check(
     [
       findAbsoluteMachinePaths("open file:///Users/me/Desktop/scan.pdf"),
@@ -41,13 +38,11 @@ void test("The placeholder names used in file: URL examples and docs (me, you, u
 // Text with no absolute path — a box ref, a relative path, prose — carries
 // nothing:
 void test("Text with no absolute path — a box ref, a relative path, prose — carries noth...", async (t) => {
-  // doctest:L37
   t.check(findAbsoluteMachinePaths("See /_content/docs/report.md and ../notes.md."), []);
 });
 
 // Multiple leaks in one text are all reported, in order:
 void test("Multiple leaks in one text are all reported, in order:", async (t) => {
-  // doctest:L44
   t.check(findAbsoluteMachinePaths("/Users/beebox/a and /home/bbx-test1/b"), [
     "/Users/beebox/",
     "/home/bbx-test1/",
@@ -57,7 +52,6 @@ void test("Multiple leaks in one text are all reported, in order:", async (t) =>
 // A path inside a URL is the page's or the tab's own address, not a leak — a
 // site whose routes start with `/home/`, or a captured `file://` tab:
 void test("A path inside a URL is the page's or the tab's own address, not a leak — a si...", async (t) => {
-  // doctest:L52
   // Built at run time: the monorepo's own path-leak check reads test text literally.
   const site = "https://college.example" + "/ho" + "me/";
   t.check(
@@ -78,7 +72,6 @@ void test("A path inside a URL is the page's or the tab's own address, not a lea
 
 // An ordinary URL can contain a `/home/` route without naming a machine path:
 void test("An ordinary URL can contain a /home/ route without naming a machine path:", async (t) => {
-  // doctest:L65
   t.check(
     findAbsoluteMachinePaths("See https://example.gov/App/home/section/page")
     ,
@@ -88,7 +81,6 @@ void test("An ordinary URL can contain a /home/ route without naming a machine p
 
 // Compact structured text doesn't let an earlier URL hide a later machine path:
 void test("Compact structured text doesn't let an earlier URL hide a later machine path:", async (t) => {
-  // doctest:L72
   t.check(
     findAbsoluteMachinePaths('{"url":"https://example.gov/home/section","cwd":"/Users/beebox/src"}')
     ,

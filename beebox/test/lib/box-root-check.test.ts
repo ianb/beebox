@@ -6,7 +6,7 @@
 // `docs/implemented-plans/one-root-box-layout.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir } from "node:fs/promises";
 import { checkBoxRoot } from "../../src/lib/box-root-check.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
@@ -21,7 +21,6 @@ void test("A box with only vocabulary entries — areas, npm namespace, agent id
       t.error(error);
     }
   });
-  // doctest:L18
   const box = await makeTmpBox();
   await box.write("_content/inbox/x.doc.card", "---\ntitle: Note\n---\n");
   await box.write("package.json", "{}");
@@ -39,7 +38,6 @@ void test("A stray non-underscore directory — the \"user content lives loose a
       t.error(error);
     }
   });
-  // doctest:L34
   const strayBox = await makeTmpBox();
   await strayBox.write("recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
   const strays = await checkBoxRoot(strayBox.root);
@@ -50,7 +48,6 @@ void test("A stray non-underscore directory — the \"user content lives loose a
     },
   ]);
 
-  // doctest:L40
   t.check(strays[0]!.message, "recipes: the box root is a closed vocabulary — user content goes under /_content/");
 });
 
@@ -67,7 +64,6 @@ void test("A running reactor holds .bbx-reactor.lock plus its guard directory .b
       t.error(error);
     }
   });
-  // doctest:L55
   const lockBox = await makeTmpBox();
   await lockBox.write(".bbx-reactor.lock", "{}");
   await mkdir(`${lockBox.root}/.bbx-reactor.lock.guard`);
@@ -87,7 +83,6 @@ void test("A stray content/ directory gets a message calling out the specific re
       t.error(error);
     }
   });
-  // doctest:L71
   const legacyBox = await makeTmpBox();
   await legacyBox.write("content/box/inbox/x.doc.card", "---\ntitle: Note\n---\n");
   const legacyStrays = await checkBoxRoot(legacyBox.root);
@@ -105,7 +100,6 @@ void test("An unlisted underscore directory — an ad hoc scratch, say — gets 
       t.error(error);
     }
   });
-  // doctest:L87
   const adHocBox = await makeTmpBox();
   await adHocBox.write("_scratch/notes.txt", "hi");
   const adHocStrays = await checkBoxRoot(adHocBox.root);
@@ -116,7 +110,6 @@ void test("An unlisted underscore directory — an ad hoc scratch, say — gets 
     },
   ]);
 
-  // doctest:L93
   t.check(adHocStrays[0]!.message, "_scratch: ad hoc underscore directories are reserved — the underscore areas are exactly _content, _config, _bookkeeping, _publish, _tmp; rename or remove this one");
 });
 
@@ -130,7 +123,6 @@ void test("OS/editor junk (.DSStore and friends) is ignored outright, not report
       t.error(error);
     }
   });
-  // doctest:L105
   const junkBox = await makeTmpBox();
   await junkBox.write(".DS_Store", "");
   await junkBox.write("zebra/x.txt", "z");
@@ -142,6 +134,5 @@ void test("OS/editor junk (.DSStore and friends) is ignored outright, not report
 // A box root that doesn't exist yet reports no strays — there is nothing to
 // flag, and the caller's own box-root resolution is a separate failure mode:
 void test("A box root that doesn't exist yet reports no strays — there is nothing to fla...", async (t) => {
-  // doctest:L122
   t.check(await checkBoxRoot("/nonexistent/not-a-real-box-root-12345"), []);
 });

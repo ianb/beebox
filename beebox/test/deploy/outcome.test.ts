@@ -9,8 +9,8 @@
 // (`issues/bugs/2026-09-18-deploy-reads-ssh-failure-as-a-signal.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
@@ -22,27 +22,21 @@ async function outcome(rc: number, signal: string): Promise<string> {
 }
 
 void test("line 23", async (t) => {
-  // doctest:L24
   t.check([await outcome(0, ""), await outcome(1, ""), await outcome(137, "")], ["ok", "failed", "failed"]);
 
-  // doctest:L27
   t.check(await outcome(255, ""), "unreachable");
 
-  // doctest:L30
   t.check(await outcome(130, "INT"), "interrupted");
 });
 
 // `deploy.sh` classifies through that function and chains a queued deploy after
 // every outcome except an interrupt.
 void test("deploy.sh classifies through that function and chains a queued deploy after e...", async (t) => {
-  // doctest:L38
   const deploySh = await readFile("deploy/deploy.sh", "utf8");
   // `deploySh` is the whole deploy script: a narrow check on the lines under test.
   t.check(deploySh, not(any(String).includes('"$rc" -ge 128')));
 
-  // doctest:L42
   t.check(deploySh, any(String).includes('outcome="$(deploy_outcome "$rc" "$INTERRUPTED_BY")"'));
 
-  // doctest:L45
   t.check(deploySh, any(String).includes('if [ "$outcome" != interrupted ] && [ -n "$newer" ]'));
 });

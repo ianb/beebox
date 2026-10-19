@@ -6,7 +6,7 @@
 // fulfillment, and the `reportNone` window.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createPendingBrowserRequests } from "../../src/core/pending-browser-request.js";
 
 // The screenshot consumer's fulfillment payload is a small union:
@@ -19,7 +19,6 @@ type ScreenshotAnswer =
 // The happy path for a two-phase request: the browser acks (cancelling the
 // `no-client` window), then answers with an image.
 void test("The happy path for a two-phase request:", async (t) => {
-  // doctest:L26
   const reg = createPendingBrowserRequests<ScreenshotAnswer>();
   const { requestId, outcome } = reg.create({ timeoutMs: 5000, ackGraceMs: 5000 });
   const acked = reg.ack(requestId);
@@ -37,7 +36,6 @@ void test("The happy path for a two-phase request:", async (t) => {
 // `no-client` — nothing was listening (tab closed, event dropped, user on
 // mobile). This is distinct from `timeout` below.
 void test("When ackGraceMs is set and no ack arrives within it, the request resolves no-...", async (t) => {
-  // doctest:L49
   const reg = createPendingBrowserRequests<ScreenshotAnswer>();
   const { outcome } = reg.create({ timeoutMs: 5000, ackGraceMs: 20 });
   const result = await outcome;
@@ -50,7 +48,6 @@ void test("When ackGraceMs is set and no ack arrives within it, the request reso
 // applies — a client saw the request but never answered (e.g. the user ignored
 // the popup).
 void test("Once acked, the no-client window is cancelled and only the overall timeout ap...", async (t) => {
-  // doctest:L63
   const reg = createPendingBrowserRequests<ScreenshotAnswer>();
   const { requestId, outcome } = reg.create({ timeoutMs: 20, ackGraceMs: 5000 });
   const acked = reg.ack(requestId);
@@ -63,7 +60,6 @@ void test("Once acked, the no-client window is cancelled and only the overall ti
 // The multi-tab contract: the first answer settles the request; a second tab's
 // answer (and any answer to an unknown id) is refused.
 void test("The multi-tab contract:", async (t) => {
-  // doctest:L79
   const reg = createPendingBrowserRequests<ScreenshotAnswer>();
   const unknownFulfill = reg.fulfill("nope", { kind: "declined" });
   const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
@@ -82,7 +78,6 @@ void test("The multi-tab contract:", async (t) => {
 // window — it can never resolve `no-client`, only `timeout` when nothing
 // answers.
 void test("A request created without ackGraceMs (the last-audio shape) has no ack window...", async (t) => {
-  // doctest:L100
   const reg = createPendingBrowserRequests<ScreenshotAnswer>();
   const { outcome } = reg.create({ timeoutMs: 20 });
   const result = await outcome;
@@ -96,7 +91,6 @@ void test("A request created without ackGraceMs (the last-audio shape) has no ac
 // window, if any, is cancelled too (the reporting client clearly received the
 // request).
 void test("A tab reporting \"nothing here\" doesn't settle immediately — another tab might...", async (t) => {
-  // doctest:L115
   const reg = createPendingBrowserRequests<ScreenshotAnswer>({ graceMs: 20 });
   const { requestId, outcome } = reg.create({ timeoutMs: 5000, ackGraceMs: 5000 });
   const reported = reg.reportNone(requestId);
@@ -106,7 +100,6 @@ void test("A tab reporting \"nothing here\" doesn't settle immediately — anoth
 
 // ## An answer within the wait window still wins over `none`
 void test("An answer within the wait window still wins over `none`", async (t) => {
-  // doctest:L128
   const reg = createPendingBrowserRequests<ScreenshotAnswer>({ graceMs: 1000 });
   const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
   reg.reportNone(requestId);
@@ -117,7 +110,6 @@ void test("An answer within the wait window still wins over `none`", async (t) =
 
 // ## Ack and reportNone on unknown ids are refused
 void test("Ack and reportNone on unknown ids are refused", async (t) => {
-  // doctest:L140
   const reg = createPendingBrowserRequests<ScreenshotAnswer>();
   t.check({ ack: reg.ack("nope"), none: reg.reportNone("nope") }, { ack: false, none: false });
 });
@@ -130,7 +122,6 @@ void test("Ack and reportNone on unknown ids are refused", async (t) => {
 // browser answering afterwards settles nothing, which the route maps to 404.
 // Idempotent: a second cancel (or one on an unknown id) returns `false`.
 void test("cancel is for a long-poll whose caller vanished (CLI killed / connection drop...", async (t) => {
-  // doctest:L157
   const reg = createPendingBrowserRequests<ScreenshotAnswer>();
   const { requestId } = reg.create({ timeoutMs: 5000, ackGraceMs: 5000 });
   const cancel = reg.cancel(requestId);

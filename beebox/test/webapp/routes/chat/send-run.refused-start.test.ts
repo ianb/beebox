@@ -1,7 +1,7 @@
 // # `POST /api/chat/send` — a run that cannot start is refused, not accepted
 //
 // A send is acknowledged once the session takes the turn; the run starts after
-// (see `send-run.start-failure.doctest.md`). A run that is certain to be refused —
+// (see `send-run.start-failure.test.ts`). A run that is certain to be refused —
 // no Claude login, or a third-party model with no provider setup — used to be
 // acknowledged too. The web composer then showed the error on the turn stream,
 // but a sender that never subscribes to that stream, such as quick chat, stored
@@ -17,8 +17,8 @@
 // path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { uuid } from "@ianbicking/tap-check/check";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
@@ -50,18 +50,15 @@ void test("A refused run answers 409 with the reason, and nothing is recorded", 
       t.error(error);
     }
   });
-  // doctest:L47
   const backend = createFakeChatBackend();
   const ctx = await makeTestServer({ chatBackend: backend });
   await writeFile(join(ctx.boxRoot, "_config/box.json"), JSON.stringify({ agentModel: "qwen/qwen3-coder", openrouterModels: [{ id: "qwen/qwen3-coder", label: "Qwen3 Coder" }] }));
 
-  // doctest:L51
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L56
   const { result: res } = await capturingErrors(() => ctx.request({
     method: "POST",
     url: "/api/chat/send",
@@ -79,12 +76,10 @@ void test("A refused run answers 409 with the reason, and nothing is recorded", 
     runs: [],
   });
 
-
   // ## Once the cause is fixed, the same message id is sent
   //
   // The refusal kept no claim, so the retry is not answered as a duplicate.
 
-  // doctest:L77
   await writeFile(join(ctx.boxRoot, "_config/box.json"), JSON.stringify({}));
   const retry = await ctx.request({
     method: "POST",

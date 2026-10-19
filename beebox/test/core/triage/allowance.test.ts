@@ -4,8 +4,8 @@
 // and rejects inherited IDs after cleanup. It does not mutate the parent's env.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -34,7 +34,6 @@ void test("line 14", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L15
   const box = await fs.mkdtemp(path.join(os.tmpdir(), "triage-allowance-"));
   let runId = "";
   const failures = await withTriageAllowance(box, async env => {
@@ -51,10 +50,8 @@ void test("line 14", async (t) => {
     "TriageAllowanceError",
   ]);
 
-  // doctest:L29
   t.check(await fs.readdir(path.join(box, ".beebox/triage-runs")), []);
 
-  // doctest:L32
   t.check(process.env.BBX_TRIAGE_RUN_ID, not(runId));
 });
 
@@ -66,7 +63,6 @@ void test("Cross-process reservation, expiry, and cleanup", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L58
   const box = await fs.mkdtemp(path.join(os.tmpdir(), "triage-allowance-"));
   let inherited: Record<string, string> = {};
   const before = process.env.BBX_TRIAGE_RUN_ID;
@@ -90,16 +86,12 @@ void test("Cross-process reservation, expiry, and cleanup", async (t) => {
     researchRemaining: 0,
   });
 
-  // doctest:L73
   t.check(await childReserve(box, { env: inherited, count: 1 }), "Error");
 
-  // doctest:L76
   t.check(process.env.BBX_TRIAGE_RUN_ID, before);
 
-  // doctest:L79
   t.check(await fs.readdir(path.join(box, ".beebox/triage-runs")), []);
 
-  // doctest:L82
   const expired = await withTriageAllowance(box, async env => {
     const file = path.join(box, ".beebox/triage-runs", env.BBX_TRIAGE_RUN_ID + ".json");
     const quota = JSON.parse(await fs.readFile(file, "utf8"));
@@ -108,13 +100,10 @@ void test("Cross-process reservation, expiry, and cleanup", async (t) => {
   });
   t.check(expired, "TriageAllowanceError");
 
-  // doctest:L91
   t.check(await fs.readdir(path.join(box, ".beebox/triage-runs")), []);
 
-  // doctest:L94
   const failed = await withTriageAllowance(box, async () => { throw new Error("synthetic research failure"); }).catch(error => error.message);
   t.check(failed, "synthetic research failure");
 
-  // doctest:L98
   t.check(await fs.readdir(path.join(box, ".beebox/triage-runs")), []);
 });

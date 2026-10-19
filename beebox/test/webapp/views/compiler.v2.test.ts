@@ -8,8 +8,8 @@
 // timeout-bounded subprocess) rather than regexing source text.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, eventually, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, eventually, isoDate } from "@ianbicking/tap-check/check";
 import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises";
 import { basename, join, dirname } from "node:path";
 import { tmpdir } from "node:os";
@@ -89,11 +89,9 @@ void test("listViews finds a view at `boxRoot/src/views`", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L85
   const box = await makeV3Box();
   await box.writeView("widget-view.tsx", WIDGET_VIEW);
 
-  // doctest:L88
   const views = await listViews(box.contentRoot);
   t.check(views, [{
     name: "Widget View",
@@ -111,7 +109,6 @@ void test("listViews finds a view at `boxRoot/src/views`", async (t) => {
   // `name` is computed (`parts.join("")`) — a fallback to the slug would mean the
   // import never happened:
 
-  // doctest:L99
   const meta = views[0];
   t.check(meta, {
     name: "Widget View",
@@ -126,7 +123,6 @@ void test("listViews finds a view at `boxRoot/src/views`", async (t) => {
 
   // ## `bbx view test` renders it, resolving `beebox/view-widgets` and `react` through the box's own real `node_modules`
 
-  // doctest:L107
   const r = await runViewTest(box.contentRoot, "widget-view");
   t.check(r, {
     code: 0,
@@ -136,7 +132,6 @@ void test("listViews finds a view at `boxRoot/src/views`", async (t) => {
 
   // The rendered `<CardLink>` derives its label from the ref's filename (`Test`):
 
-  // doctest:L115
 });
 
 // ## A broken view still appears in the listing, degraded to an error marker
@@ -148,7 +143,6 @@ void test("A broken view still appears in the listing, degraded to an error mark
       t.error(error);
     }
   });
-  // doctest:L126
   const box = await makeV3Box();
   await box.writeView("broken.tsx", `
 export const name = "Broken";
@@ -159,7 +153,6 @@ export default function Broken() {
 `);
 
   const views = await listViews(box.contentRoot);
-  // doctest:L135
   t.check(views, [{
     name: "broken",
     slug: "broken",
@@ -185,7 +178,6 @@ void test("A top-level infinite loop blocks module evaluation forever; the metad
       t.error(error);
     }
   });
-  // doctest:L151
   const box = await makeV3Box();
   await box.writeView("hangs.tsx", `
 export const name = "Hangs";
@@ -196,7 +188,6 @@ export default function Hangs() { return null; }
   const start = Date.now();
   const views = await listViews(box.contentRoot);
   const elapsedMs = Date.now() - start;
-  // doctest:L158
   t.check(views, [{
     name: "hangs",
     slug: "hangs",
@@ -217,7 +208,7 @@ export default function Hangs() { return null; }
 // runner kills its own process at a deadline, even while the import spins. Start a lister on the hanging view, wait for its
 // metadata runner, kill the lister with SIGKILL, and the runner is gone within
 // seconds:
-// The doctest gave each example 60s before a still-running notice.
+// Each example gets 60s before a still-running notice.
 void test("The timeout above is the parent's.", async (t) => {
   t.teardown(async () => {
     try {
@@ -226,7 +217,6 @@ void test("The timeout above is the parent's.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L178
   const box = await makeV3Box();
   await box.writeView("spins.tsx", `
 export const name = "Spins";
@@ -260,9 +250,5 @@ export default function Spins() { return null; }
 
   const runner = await eventually(() => runnerOf(lister.pid ?? -1), { label: "the metadata runner starts", timeoutMs: 30000 });
   lister.kill("SIGKILL");
-  // doctest:L185
-  // doctest:L191
-  // doctest:L200
-  // doctest:L209
   t.check(await eventually(() => !alive(runner), { label: "the orphaned runner exits", timeoutMs: 15000 }), true);
 });

@@ -4,12 +4,11 @@
 // happens to mention a move is not a protocol.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { cardLoadRecovery, fileChangeAffectsPath } from "../../src/lib/moved-card-recovery.js";
 import { resolveLoadState } from "../../src/lib/file-load-state.js";
 
 void test("line 11", async (t) => {
-  // doctest:L12
   t.check(
     cardLoadRecovery({
       message: "Card not found",
@@ -21,17 +20,14 @@ void test("line 11", async (t) => {
   },
   );
 
-  // doctest:L18
   t.check(cardLoadRecovery({ message: "moved to _content/Guess.doc.card" }), null);
 
-  // doctest:L21
   t.check(cardLoadRecovery({ data: { recovery: { kind: "moved", path: "not-a-card.md" } } }), null);
 });
 
 // A failed live refetch can retain cached content and still carry recovery. The
 // two decisions are intentionally independent.
 void test("A failed live refetch can retain cached content and still carry recovery.", async (t) => {
-  // doctest:L29
   const movedError = {
     message: "Card not found: _content/Old.doc.card",
     data: { recovery: { kind: "moved", path: "_content/New.doc.card" } },
@@ -53,7 +49,6 @@ void test("A failed live refetch can retain cached content and still carry recov
 // only when it is a rename, which covers a whole directory moving without making
 // ordinary directory writes refetch every descendant.
 void test("An exact file event always refreshes the open file.", async (t) => {
-  // doctest:L52
   t.check(
     fileChangeAffectsPath(
       { event: "change", path: "/_content/session/Note.doc.card" },
@@ -62,7 +57,6 @@ void test("An exact file event always refreshes the open file.", async (t) => {
     true,
   );
 
-  // doctest:L58
   t.check(
     fileChangeAffectsPath(
       { event: "rename", path: "_content/session" },
@@ -71,7 +65,6 @@ void test("An exact file event always refreshes the open file.", async (t) => {
     true,
   );
 
-  // doctest:L64
   t.check(
     fileChangeAffectsPath(
       { event: "change", path: "_content/session" },
@@ -80,7 +73,6 @@ void test("An exact file event always refreshes the open file.", async (t) => {
     false,
   );
 
-  // doctest:L70
   t.check(
     fileChangeAffectsPath(
       { event: "rename", path: "_content/sess" },

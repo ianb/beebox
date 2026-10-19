@@ -10,8 +10,8 @@
 // docs under `docs/box/`, and the built-in `card-<type>.md` docs.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
@@ -52,7 +52,6 @@ async function dangling(): Promise<string[]> {
 //
 // A regex that matched nothing would pass the next check vacuously.
 void test("A regex that matched nothing would pass the next check vacuously.", async (t) => {
-  // doctest:L55
   // `containing` matches each item once, so eleven items mean more than ten pointers.
   t.check(await pointers(), containing(Array.from({ length: 11 }, () => any(String).matches(/^src\/.+: .+\.md$/))));
 });
@@ -62,6 +61,5 @@ void test("A regex that matched nothing would pass the next check vacuously.", a
 // If this lists a pointer, either the doc was renamed or removed (fix the
 // pointer) or the pointer has a typo.
 void test("If this lists a pointer, either the doc was renamed or removed (fix the point...", async (t) => {
-  // doctest:L65
   t.check(await dangling(), []);
 });

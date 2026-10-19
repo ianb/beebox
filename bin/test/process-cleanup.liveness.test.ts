@@ -10,7 +10,7 @@
 // the sweep can only ever see the fake processes made here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile, spawn } from "node:child_process";
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -25,7 +25,7 @@ const repoRoot = resolve(process.cwd(), "..");
 // reports as /private/var/folders, and the liveness guard compares cwds as
 // literal prefixes. Nothing under ~/src has that problem, so this is a
 // property of the scratch tree, not of the code under test.
-const home = await realpath(await mkdtemp(join(tmpdir(), "process-cleanup-doctest-")));
+const home = await realpath(await mkdtemp(join(tmpdir(), "process-cleanup-test-")));
 const worktreeRoot = join(home, "src/beebox-worktrees");
 const browseRoot = join(home, ".cache/beebox/browse");
 const fakeBin = join(home, "fakebin");

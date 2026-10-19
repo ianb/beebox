@@ -6,7 +6,7 @@
 // sitting in — no climb needed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { generateAgentGuide } from "../../../../src/core/agent-guide/guide/core.js";
 import type { BoxShape } from "../../../../src/lib/box-shape.js";
 
@@ -17,7 +17,6 @@ const v3Shape: BoxShape = {
 
 // ## A shapeVersion-3 box gets the BOX_CODE section
 void test("A shapeVersion-3 box gets the BOX_CODE section", async (t) => {
-  // doctest:L21
   const full = generateAgentGuide({ procedures: [], shape: v3Shape, instructionFile: "AGENTS.md" });
   const text = full.slice(full.indexOf("## BOX_CODE"), full.indexOf("\n## ", full.indexOf("## BOX_CODE")));
   t.check(text.split("\n")[0], "## BOX_CODE — Box-Owned Code");
@@ -25,7 +24,6 @@ void test("A shapeVersion-3 box gets the BOX_CODE section", async (t) => {
 
 // ## A box's full generated guide includes the section, positioned after the directory layout
 void test("A box's full generated guide includes the section, positioned after the directory layout", async (t) => {
-  // doctest:L30
   const guide3 = generateAgentGuide({ procedures: [], shape: v3Shape, instructionFile: "AGENTS.md" });
   const guideLines = guide3.split("\n");
   t.check(
@@ -40,7 +38,6 @@ void test("A box's full generated guide includes the section, positioned after t
 // `CLAUDE.md` in one not yet converted; `generateDocs` passes
 // `instructionFileName(boxRoot)`, and the sentence names it.
 void test("The nested guides under src/ are AGENTS.md in a converted box and CLAUDE.md i...", async (t) => {
-  // doctest:L43
   const sentence = (instructionFile: string): string => {
     const guide = generateAgentGuide({ procedures: [], shape: v3Shape, instructionFile });
     const start = guide.indexOf("Each has its own");
@@ -48,6 +45,5 @@ void test("The nested guides under src/ are AGENTS.md in a converted box and CLA
   };
   t.check(sentence("CLAUDE.md"), "Each has its own `CLAUDE.md` that says what to read before writing there.");
 
-  // doctest:L51
   t.check(sentence("AGENTS.md"), "Each has its own `AGENTS.md` that says what to read before writing there.");
 });

@@ -7,12 +7,11 @@
 // OAuth with a redirect_uri mismatch (the double slash).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { baseServerUrl } from "../../src/webapp/base-server-url.js";
 
 // ## A slug deployment strips the slug, no trailing slash
 void test("A slug deployment strips the slug, no trailing slash", async (t) => {
-  // doctest:L16
   t.check(
     baseServerUrl("https://box.example.com/ledger")
     ,
@@ -22,7 +21,6 @@ void test("A slug deployment strips the slug, no trailing slash", async (t) => {
 
 // ## A trailing slash on the input doesn't leak through
 void test("A trailing slash on the input doesn't leak through", async (t) => {
-  // doctest:L23
   t.check(
     baseServerUrl("https://box.example.com/ledger/")
     ,
@@ -35,14 +33,12 @@ void test("A trailing slash on the input doesn't leak through", async (t) => {
 // This is the case that surfaced the bug: with no slug segment to strip, the old
 // code left the pathname as `/` and returned `https://host/`.
 void test("This is the case that surfaced the bug:", async (t) => {
-  // doctest:L33
   t.check(
     baseServerUrl("https://bbx.example.org")
     ,
     "https://bbx.example.org",
   );
 
-  // doctest:L36
   t.check(
     baseServerUrl("https://bbx.example.org/")
     ,
@@ -52,7 +48,6 @@ void test("This is the case that surfaced the bug:", async (t) => {
 
 // ## A deployment under a path prefix keeps the prefix (only the slug is stripped)
 void test("A deployment under a path prefix keeps the prefix (only the slug is stripped)", async (t) => {
-  // doctest:L43
   t.check(
     baseServerUrl("https://example.com/apps/ledger")
     ,

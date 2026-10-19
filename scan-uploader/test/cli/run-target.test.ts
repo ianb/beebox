@@ -8,7 +8,7 @@
 // mock's call log.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { writeFileSync } from "node:fs";
 import { mkdir, readdir, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";

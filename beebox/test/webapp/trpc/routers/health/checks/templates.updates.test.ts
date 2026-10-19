@@ -7,7 +7,7 @@
 // (`issues/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { templateUpdatesCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/templates.js";
 import { loadScheduleHealth, summarizeScheduleHealth } from "../../../../../../src/core/schedule/health-box.js";
 import { saveScriptState, normalizeScriptState } from "../../../../../../src/core/schedule/state.js";
@@ -36,7 +36,6 @@ void test("The quiet case says so rather than staying silent — the check is en
       t.error(error);
     }
   });
-  // doctest:L33
   const clean = await makeTmpBox({ git: true });
   const ok = await templateUpdatesCheck(clean.root);
   t.check(ok, { name: "template-updates", ok: true, message: "No template updates parked for review", severity: "warning" });
@@ -55,7 +54,6 @@ void test("Drift is a pending choice, not a defect, so it must not fail a deploy
       t.error(error);
     }
   });
-  // doctest:L50
   const drifted = await makeTmpBox({ git: true });
   await drifted.write("_config/_template-updates/_config/briefing.guide.card", "---\n---\nstock\n");
   await drifted.write("_config/_template-updates/_config/procedures/refresh-maps.procedure.card", procedureCard);
@@ -77,7 +75,6 @@ void test("The trap:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L73
   const stuck = await makeTmpBox({ git: true });
   await stuck.write("_config/schedules/refresh-maps.scheduled-script.card", scheduleCard("bbx procedure run refresh-maps"));
   await stuck.write("_config/procedures/refresh-maps.procedure.card", procedureCard);
@@ -98,21 +95,18 @@ void test("The trap:", async (t) => {
   // The task association is computed in `health-box.ts`, not in the CLI, so the
   // dashboard and `--json` carry it too. The check reads it:
 
-  // doctest:L88
   const err = await templateUpdatesCheck(stuck.root, health);
   t.check(err, { name: "template-updates", ok: false, message: "1 template update parked for review: _config/procedures/refresh-maps.procedure.card. A parked update belongs to a task that is failing: refresh-maps — _config/procedures/refresh-maps.procedure.card; the fix may already be on disk. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.", severity: "error" });
 
   // Without the schedule health (the dashboard and `/api/health` have none loaded)
   // the same box reports the un-escalated, drift-only verdict rather than guessing:
 
-  // doctest:L100
   t.check(await templateUpdatesCheck(stuck.root), { name: "template-updates", ok: false, message: "1 template update parked for review: _config/procedures/refresh-maps.procedure.card. Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.", severity: "warning" });
 
   // The failing task's own line carries the note wherever a task speaks — the
   // session-start summary and proactive alerts both build on
   // `describeUnhealthyTask` + `describeParkedUpdates`:
 
-  // doctest:L109
   t.check(summarizeScheduleHealth(health, NOW), "refresh-maps: failing ×5 (never succeeded) — parked update: _config/_template-updates/_config/procedures/refresh-maps.procedure.card — the fix may already be on disk");
 });
 
@@ -130,7 +124,6 @@ void test("failing and inconclusive both escalate — a parked fix that nobody h
       t.error(error);
     }
   });
-  // doctest:L125
   const unjudged = await makeTmpBox({ git: true });
   await unjudged.write("_config/schedules/refresh-maps.scheduled-script.card", scheduleCard("bbx procedure run refresh-maps"));
   await unjudged.write("_config/procedures/refresh-maps.procedure.card", procedureCard);
@@ -155,7 +148,6 @@ void test("failing and inconclusive both escalate — a parked fix that nobody h
 // `_config/schedules/<name>.scheduled-script.card`, or the procedure its `runs`
 // command executes. An unrelated parked guide attaches to nothing.
 void test("A parked update only attaches to a task it actually belongs to:", async (t) => {
-  // doctest:L158
   const parked = ["_config/briefing.guide.card", "_config/procedures/refresh-maps.procedure.card", "_config/schedules/check-email.scheduled-script.card"];
   t.check({ ownCard: parkedUpdatesForTask({ name: "check-email", runs: "bbx wakeup --connector gmail" }, parked), viaProcedure: parkedUpdatesForTask({ name: "refresh-maps", runs: "bbx procedure run refresh-maps" }, parked), unrelated: parkedUpdatesForTask({ name: "chat-review", runs: "bbx chat review run" }, parked) }, {
     ownCard: [
@@ -171,7 +163,6 @@ void test("A parked update only attaches to a task it actually belongs to:", asy
   // `bbx procedure run` resolves its argument: a bare name under
   // `_config/procedures/`, an explicit card path as given.
 
-  // doctest:L168
   t.check([procedureCardForRuns("bbx procedure run process-pages"), procedureCardForRuns("cd /box && bbx procedure run 'refresh maps'"), procedureCardForRuns("bbx procedure run _config/procedures/custom.procedure.card"), procedureCardForRuns("bbx procedure gc"), procedureCardForRuns("bbx wakeup")], [
     "_config/procedures/process-pages.procedure.card",
     "_config/procedures/refresh maps.procedure.card",
@@ -185,7 +176,6 @@ void test("A parked update only attaches to a task it actually belongs to:", asy
   // `--step maps refresh-maps` resolved to `maps`, linking the task to a card that
   // does not exist and hiding the parked fix for the one that does.
 
-  // doctest:L178
   t.check(
     [
       procedureCardForRuns("bbx procedure run --step maps refresh-maps"),

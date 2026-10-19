@@ -9,7 +9,7 @@
 // So the parser now reports what it did not recognise, and callers decide how loudly.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseIssueFile } from "../../../src/server/main/issue-domain.js";
 
 const parse = (frontmatter: string) => parseIssueFile({
@@ -19,7 +19,6 @@ const parse = (frontmatter: string) => parseIssueFile({
 
 // ## A key outside the schema is named
 void test("A key outside the schema is named", async (t) => {
-  // doctest:L23
   t.check(
     parse([
       'title: "Something broke"',
@@ -34,7 +33,6 @@ void test("A key outside the schema is named", async (t) => {
 
 // ## Several are sorted, so the report is stable
 void test("Several are sorted, so the report is stable", async (t) => {
-  // doctest:L34
   t.check(
     parse([
       'title: "Something broke"',
@@ -55,7 +53,6 @@ void test("Several are sorted, so the report is stable", async (t) => {
 // reported as unknown on every issue that uses it — which is the failure this whole
 // mechanism would otherwise cause.
 void test("If this list and issues/AGENTS.md drift apart, a legitimate field starts bein...", async (t) => {
-  // doctest:L50
   t.check(
     parse([
       'title: "Something broke"',
@@ -80,7 +77,6 @@ void test("If this list and issues/AGENTS.md drift apart, a legitimate field sta
 // an old branch is therefore unknown, so it surfaces instead of silently doing
 // nothing.
 void test("Next actions moved to a local store outside git.", async (t) => {
-  // doctest:L73
   t.check(
     parse([
       'title: "Something broke"',

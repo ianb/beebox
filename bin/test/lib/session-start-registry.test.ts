@@ -5,7 +5,7 @@
 // replace an interactive session record.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -44,8 +44,7 @@ void test("Interactive ancestor wins over main cwd", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L41
-  const root = await mkdtemp(join(tmpdir(), "session-start-registry-doctest-"));
+  const root = await mkdtemp(join(tmpdir(), "session-start-registry-test-"));
   const stateDir = join(root, "state");
   const worktreeRoot = join(root, "worktrees");
   await mkdir(join(worktreeRoot, "foo"), { recursive: true });
@@ -59,7 +58,6 @@ void test("Interactive ancestor wins over main cwd", async (t) => {
 
   // ## Headless ancestor writes nothing
 
-  // doctest:L54
   await runHook({ stateDir, worktreeRoot, command: "claude -p --worktree bar", sessionId: "headless-id" });
   const headlessExists = await stat(join(stateDir, "workstreams/bar.json")).then(() => true, () => false);
   t.check(headlessExists, false);

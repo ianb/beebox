@@ -9,7 +9,7 @@
 // (`{queued}`/`{deduplicated}`/`{turnId}`) once past validation.
 
 import t, { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { bodyField } from "../../../helpers/test-helpers.js";
 import { resolveChannel } from "../../../../src/webapp/routes/chat/helpers.js";
@@ -35,7 +35,6 @@ t.teardown(async () => {
 // A missing or empty `message`, or a missing `session`, is a 400. An empty-string
 // `message` is rejected too, not just an absent field:
 void test("A missing or empty message, or a missing session, is a 400.", async (st) => {
-  // doctest:L34
   await st.checkText(
     [
       await send({ session: "new" }),
@@ -51,7 +50,6 @@ void test("A missing or empty message, or a missing session, is a 400.", async (
 // A concrete session whose local transcript is missing is a named 410, never an
 // SDK resume attempt or generic 500:
 void test("A concrete session whose local transcript is missing is a named 410, never an...", async (st) => {
-  // doctest:L49
   const res = await ctx.request({
     method: "POST",
     url: "/api/chat/send",
@@ -67,7 +65,6 @@ void test("A concrete session whose local transcript is missing is a named 410, 
 // requested id through the registry fallback, and the `new` sentinel is invalid
 // in exact mode:
 void test("An exact target must name an existing resumable chat.", async (st) => {
-  // doctest:L63
   await st.checkText(
     [
       await send({ message: "https://example.com", session: "missing-session", exactSession: true }),
@@ -83,7 +80,6 @@ void test("An exact target must name an existing resumable chat.", async (st) =>
 // rejected at the zod parse boundary, before reaching `validateImages`'s
 // content-level checks:
 void test("A malformed image attachment (wrong field types, or an empty dataBase64 that...", async (st) => {
-  // doctest:L78
   st.check(
     [
       (await send(image({ id: "not-a-number", mimeType: "image/png", dataBase64: "abc" }))).split(" ")[0],
@@ -99,7 +95,6 @@ void test("A malformed image attachment (wrong field types, or an empty dataBase
 // image encoder used to produce for pasted photos; `image/svg+xml`; `image/bmp`)
 // gets a clean 400 instead of failing opaquely downstream:
 void test("An otherwise well-shaped image passes the zod boundary and reaches the conten...", async (st) => {
-  // doctest:L92
   await st.checkText(
     [
       await send(image({ id: 1, mimeType: "application/pdf", dataBase64: "abc" })),
@@ -116,7 +111,6 @@ void test("An otherwise well-shaped image passes the zod boundary and reaches th
 // browser can tell the iOS shell from mobile web, since the WebView carries an
 // ordinary iPhone UA. What the client sends wins over that UA:
 void test("The surface the message was sent from is the client's to declare — only the b...", async (st) => {
-  // doctest:L108
   st.check(
     [
       resolveChannel("ios-native", "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"),
@@ -130,7 +124,6 @@ void test("The surface the message was sent from is the client's to declare — 
 // posting straight to this route — keeps getting the UA classification it got
 // before the field existed, and nothing at all when there is no UA to read:
 void test("A client that declares nothing — an old web bundle, or the iOS share extensio...", async (st) => {
-  // doctest:L120
   st.check(
     [
       resolveChannel(undefined, "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"),
@@ -145,7 +138,6 @@ void test("A client that declares nothing — an old web bundle, or the iOS shar
 // 400 rather than a made-up attribute in the agent's context. Invalid ambient
 // attention is likewise rejected before session resolution:
 void test("The value is a closed union at the parse boundary, so an unknown surface is a...", async (st) => {
-  // doctest:L133
   st.check(
     [
       await send({ message: "hi", session: "new", channel: "smoke-signal" }),

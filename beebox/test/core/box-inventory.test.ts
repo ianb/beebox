@@ -5,8 +5,8 @@
 // are excluded, while loose files and orphaned attachment directories stay visible.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { scanBoxInventory } from "../../src/core/box-inventory/core.js";
@@ -46,7 +46,7 @@ await fs.writeFile(box.path("node_modules/pkg/index.js"), "ignored");
 
 // A real Git-annex repository verifies path mapping, logical key size, and the
 // linked storage split. Machines without Git-annex use the expected contract,
-// matching the repository's other annex doctests.
+// matching the repository's other annex tests.
 let annexBox: Awaited<ReturnType<typeof makeTmpBox>> | undefined;
 interface AnnexResult {
   enabled: boolean;

@@ -9,6 +9,8 @@ discovered-in: worktree-full-suite-verdicts — consolidating the 08-24/08-25 lo
 priority: important
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Three filings (2026-08-24 ×2, 2026-08-25, now closed as superseded by this one)
 reported the same finding with different victim files: under concurrent
 worktree load (load averages 19–40, up to 11 sibling `pnpm test`/lint

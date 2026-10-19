@@ -6,7 +6,7 @@
 // Stored at `_config/transcription.json`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   loadTranscriptionConfig,
   updateTranscriptionConfig,
@@ -17,7 +17,6 @@ import { makeTmpBox } from "../../helpers/test-helpers.js";
 //
 // With no box: defaults for both fields.
 void test("With no box:", async (t) => {
-  // doctest:L21
   const cfg = await loadTranscriptionConfig();
   t.check(cfg, {
     service: "voxtral",
@@ -34,7 +33,6 @@ void test("With a box and no config file:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L29
   const box = await makeTmpBox();
   t.check(await loadTranscriptionConfig(box.root), {
     service: "voxtral",
@@ -53,7 +51,6 @@ void test("Setting just hqService preserves service.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L43
   const box = await makeTmpBox();
   await updateTranscriptionConfig(box.root, { service: "voxtral" });
   await updateTranscriptionConfig(box.root, { hqService: "voxtral" });
@@ -75,7 +72,6 @@ void test("A pre-existing config file with just service should still load — th
       t.error(error);
     }
   });
-  // doctest:L60
   const box = await makeTmpBox();
   await box.write("_config/transcription.json", '{"service":"deepgram"}\n');
   t.check(await loadTranscriptionConfig(box.root), {

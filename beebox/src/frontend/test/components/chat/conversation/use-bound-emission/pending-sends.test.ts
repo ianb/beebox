@@ -7,7 +7,7 @@
 // automatically.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createPendingSendsStore, quarantineUnreadablePendingSends, pendingSendRecoveryCopies } from "../../../../../src/components/chat/conversation/use-bound-emission/pending-sends.js";
 import { storageScopeFor } from "../../../../../src/lib/storage-scope.js";
 import type { Emission } from "../../../../../src/input/emission.js";
@@ -59,7 +59,6 @@ const voice = (id: string): Emission => ({ id, origin: "voice", text: "live word
 // snapshot empty and notifies no subscriber, so the caller can preserve its
 // draft:
 void test("A voice send with an image, a file, a selection and word timings is staged un...", async (t) => {
-  // doctest:L52
   const storage = memoryStorage();
   const emission: Emission = { id: "voice-1", origin: "voice", text: "Check [image#1]", diarized: true,
     images: [{ id: 1, mimeType: "image/png", dataBase64: "a".repeat(600_000) }],
@@ -74,14 +73,12 @@ void test("A voice send with an image, a file, a selection and word timings is s
   storage.writeError = "quota";
   await t.checkThrows(async () => (store.stage(emission, binding)), "Error: quota");
 
-  // doctest:L67
   t.check({ snapshot: store.getSnapshot(), notices }, { snapshot: [], notices: 0 });
 
   // Once storage works, the staged send is recovered by a fresh store with its
   // full content (image bytes, words, selections) and its original destination,
   // as `recovered` rather than resent. A store for another box sees nothing:
 
-  // doctest:L76
   storage.writeError = null;
   store.stage(emission, binding);
   t.check(
@@ -92,49 +89,38 @@ void test("A voice send with an image, a file, a selection and word timings is s
   // Same-ID retries must preserve content and binding. Late receipts remove only the
   // original saved message, leaving a later draft or another saved send untouched.
 
-  // doctest:L101
   store.rejected(emission.id, "Offline");
   t.check(store.getSnapshot(), [{ emission, binding, status: "rejected", reason: "Offline" }]);
 
-  // doctest:L105
   await t.checkThrows(async () => (store.stage(emission, { ...binding, target: { kind: "session", sessionId: "garden", contextDir: "_content/garden" } })), "PendingSendChangedError: A saved message cannot change its destination or content");
 
-  // doctest:L108
   store.stage(emission, binding);
   t.check(store.getSnapshot(), [{ emission, binding, status: "pending" }]);
 
-  // doctest:L112
   const { words: _words, ...withoutWords } = emission;
   void _words;
   store.stage({ ...emission, id: "hq-2", hqText: true, hqService: "openai", words: undefined }, binding);
   store.accepted("voice-1");
   t.check(store.getSnapshot(), [{ emission: { ...withoutWords, id: "hq-2", hqText: true, hqService: "openai" }, binding, status: "pending" }]);
 
-  // doctest:L117
   t.check(open(storage).getSnapshot(), [{ emission: { ...withoutWords, id: "hq-2", hqText: true, hqService: "openai" }, binding, status: "recovered", reason: INTERRUPTED }]);
 
-  // doctest:L121
   store.restored("hq-2");
   t.check(store.getSnapshot(), []);
 
-  // doctest:L125
   unsubscribe();
 
   // Preparing HQ is the only phase allowed to replace content under an existing ID.
   // After final dispatch, that ID's content cannot drift on retry.
 
-  // doctest:L132
   store.prepare({ ...emission, id: "hq-work" }, { binding });
   t.check(store.getSnapshot(), [{ emission: { ...emission, id: "hq-work" }, binding, status: "preparing" }]);
 
-  // doctest:L136
   store.stage({ ...emission, id: "hq-work", text: "Corrected HQ text", hqText: true, hqService: "hq" }, binding);
   t.check(store.getSnapshot(), [{ emission: { ...emission, id: "hq-work", text: "Corrected HQ text", hqText: true, hqService: "hq" }, binding, status: "pending" }]);
 
-  // doctest:L140
   await t.checkThrows(async () => (store.stage({ ...emission, id: "hq-work", text: "different" }, binding)), "PendingSendChangedError: A saved message cannot change its destination or content");
 
-  // doctest:L143
   store.accepted("hq-work");
 });
 
@@ -146,7 +132,6 @@ void test("A voice send with an image, a file, a selection and word timings is s
 // are on the box, and the user chooses which text to send. Loading never sends
 // it. A `preparing` row without a recording keeps the old recovered path.
 void test("prepare with a recordingId marks a voice send that is waiting for its HQ tran...", async (t) => {
-  // doctest:L155
   const storage = memoryStorage();
   const live = open(storage);
   live.prepare(voice("waiting"), { binding: chatBinding, recordingId: "rec-1" });
@@ -159,7 +144,6 @@ void test("prepare with a recordingId marks a voice send that is waiting for its
   // The user's choice may still replace the realtime snapshot once — here with the
   // HQ text — and the provenance survives storage:
 
-  // doctest:L167
   const reloaded = open(storage);
   reloaded.stage({ ...voice("waiting"), hqText: true, hqService: "whisper" }, chatBinding);
   t.check(open(storage).getSnapshot(), [
@@ -172,7 +156,6 @@ void test("prepare with a recordingId marks a voice send that is waiting for its
   // `"pending"`/`"failed"`. It loads, and the marker is dropped: a voice emission
   // without `hqText` is live text either way.
 
-  // doctest:L180
   storage.data.set("bbx-pending-web-sends:test", JSON.stringify({
     version: 1,
     rows: [{ emission: { ...voice("legacy"), hqFallback: "pending" }, binding: chatBinding, status: "pending" }],
@@ -182,7 +165,6 @@ void test("prepare with a recordingId marks a voice send that is waiting for its
 
 // Dismissing an `awaitingHq` item removes it; its recording stays on the box:
 void test("Dismissing an awaitingHq item removes it; its recording stays on the box:", async (t) => {
-  // doctest:L192
   const storage = memoryStorage();
   open(storage).prepare(voice("gone"), { binding: chatBinding, recordingId: "rec-2" });
   const reloaded = open(storage);
@@ -196,7 +178,6 @@ void test("Dismissing an awaitingHq item removes it; its recording stays on the 
 // one worktree must not load completed sends saved by another worktree, while the
 // production API base retains the historical `test1` key.
 void test("The dev router serves every worktree from one origin.", async (t) => {
-  // doctest:L207
   const storage = memoryStorage();
   const paperScope = storageScopeFor("/paper-cards/test1/api");
   const chatScope = storageScopeFor("/chat-everywhere/test1/api");
@@ -222,7 +203,6 @@ void test("The dev router serves every worktree from one origin.", async (t) => 
 // an accepted row, with neither Retry nor Restore; if writes still work, that
 // marker also survives reload. Even a later rejected callback cannot reverse it.
 void test("An acceptance remains authoritative when storage cleanup fails.", async (t) => {
-  // doctest:L227
   const storage = memoryStorage();
   storage.refuseRemoves = true;
   const emission = typed("accepted", "Sent");
@@ -231,15 +211,12 @@ void test("An acceptance remains authoritative when storage cleanup fails.", asy
   store.accepted(emission.id);
   t.check(store.getSnapshot(), [{ emission, binding: chatBinding, status: "accepted", reason: ACCEPTED_UNCLEARED }]);
 
-  // doctest:L236
   t.check(open(storage).getSnapshot(), [{ emission, binding: chatBinding, status: "accepted", reason: ACCEPTED_UNCLEARED }]);
 
-  // doctest:L239
   storage.writeError = "storage disabled";
   store.rejected(emission.id, "late error");
   t.check(store.getSnapshot(), [{ emission, binding: chatBinding, status: "accepted", reason: ACCEPTED_UNCLEARED }]);
 
-  // doctest:L244
   await t.checkThrows(async () => (store.stage(emission, chatBinding)), "PendingSendChangedError: A saved message cannot change its destination or content");
 });
 
@@ -247,7 +224,6 @@ void test("An acceptance remains authoritative when storage cleanup fails.", asy
 // that copy, then reset. A failed preservation write leaves the original alone.
 // The action never removes a valid saved message and never submits anything.
 void test("Unreadable state has an explicit escape:", async (t) => {
-  // doctest:L253
   const storage = memoryStorage();
   const key = "bbx-pending-web-sends:test";
   const raw = '{"version":1,"rows":[broken but potentially recoverable';
@@ -255,10 +231,8 @@ void test("Unreadable state has an explicit escape:", async (t) => {
   storage.writeError = "quota";
   await t.checkThrows(async () => (quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" })), "Error: quota");
 
-  // doctest:L261
   t.check(storage.getItem(key), raw);
 
-  // doctest:L264
   storage.writeError = null;
   const fresh = quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" });
   t.check(
@@ -266,21 +240,17 @@ void test("Unreadable state has an explicit escape:", async (t) => {
     { snapshot: [], original: null, copies: [{ key: "bbx-pending-web-sends-quarantine:test:0", raw }] },
   );
 
-  // doctest:L269
   const emission = typed("new", "A new message");
   fresh.stage(emission, chatBinding);
   t.check(quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot(), [{ emission, binding: chatBinding, status: "recovered", reason: INTERRUPTED }]);
 
-  // doctest:L274
   t.check(pendingSendRecoveryCopies(storage, "test"), [{ key: "bbx-pending-web-sends-quarantine:test:0", raw }]);
 
-  // doctest:L277
   // Wrong-box envelopes are also preserved intact, never routed to this box.
   const wrongBox = JSON.stringify({ version: 1, rows: [{ emission, binding: { ...chatBinding, boxSlug: "other" }, status: "pending" }] });
   storage.data.set(key, wrongBox);
   t.check(quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" }).getSnapshot(), []);
 
-  // doctest:L282
   t.check(pendingSendRecoveryCopies(storage, "test"), [
     { key: "bbx-pending-web-sends-quarantine:test:0", raw },
     { key: "bbx-pending-web-sends-quarantine:test:1", raw: wrongBox },
@@ -290,7 +260,6 @@ void test("Unreadable state has an explicit escape:", async (t) => {
 // A storage backend silently refusing the preservation write cannot trick recovery
 // into deleting the only surviving copy.
 void test("A storage backend silently refusing the preservation write cannot trick recov...", async (t) => {
-  // doctest:L290
   const raw = "damaged";
   let removed = false;
   const storage = {
@@ -300,7 +269,6 @@ void test("A storage backend silently refusing the preservation write cannot tri
   };
   await t.checkThrows(async () => (quarantineUnreadablePendingSends(storage, { boxSlug: "test", storageScope: "test" })), "PendingSendPreservationError");
 
-  // doctest:L300
   t.check(removed, false);
 });
 
@@ -311,7 +279,6 @@ void test("A storage backend silently refusing the preservation write cannot tri
 // memory (so delivery and its receipt still work) but nothing is written, and
 // a reload would not recover it.
 void test("The session-storage quota is about 5 MB, so two large photos can exceed it.", async (t) => {
-  // doctest:L312
   const storage = memoryStorage();
   storage.setItem = () => { throw new DOMException("The quota has been exceeded.", "QuotaExceededError"); };
   const store = open(storage);
@@ -320,7 +287,6 @@ void test("The session-storage quota is about 5 MB, so two large photos can exce
 
   // Its acceptance then clears it like any other send:
 
-  // doctest:L323
   store.accepted("big-1");
   t.check(store.getSnapshot(), []);
 });
@@ -331,7 +297,6 @@ void test("The session-storage quota is about 5 MB, so two large photos can exce
 // carry the uploaded original's `path` or the retry silently goes out with the
 // pixels and no file line (the storage schema strips keys it does not name).
 void test("The recovery envelope is what a rejected send is retried from, so it has to c...", async (t) => {
-  // doctest:L335
   const storage = memoryStorage();
   const withPath: Emission = { ...typed("img-1", "receipt [image#1]"),
     images: [{ id: 1, mimeType: "image/jpeg", dataBase64: "AA", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" }] };

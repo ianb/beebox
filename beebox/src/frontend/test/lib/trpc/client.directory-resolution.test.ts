@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 
 const execFileAsync = promisify(execFile);
 const beeBoxRoot = fileURLToPath(new URL("../../../../..", import.meta.url));
@@ -10,7 +10,7 @@ const successMarker = "TRPC_DIRECTORY_IMPORT_OK";
 const childArgs = [
   "--disable-warning=DEP0040",
   "--import=tsx",
-  "--import=agent-doctest/tap",
+  "--import=@ianbicking/tap-check/tap",
   "--input-type=module",
   "--eval",
   `const imported = await import('./src/frontend/src/lib/view-bindings.ts');

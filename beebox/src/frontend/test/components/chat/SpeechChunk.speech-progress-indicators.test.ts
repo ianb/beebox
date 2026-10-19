@@ -5,7 +5,7 @@
 // screen-reader description prevents color from being the only signal.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SpeechChunk } from "../../../src/components/chat/SpeechChunk.js";

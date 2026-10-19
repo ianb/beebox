@@ -11,7 +11,7 @@
 // agents leave notes worth reading.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -52,7 +52,6 @@ await git(root, ["commit", "-qm", "base"]);
 // The exception is scoped twice over — to `scratch/` and to markdown — so a build
 // artifact cannot ride in with the notes.
 void test("The exception is scoped twice over — to scratch/ and to markdown — so a build...", async (t) => {
-  // doctest:L57
   const listed = (await listBrowsablePaths(root)).map((entry) => entry.relPath);
   const shape = {
     tracked: listed.includes("bin/lib/comments-store.ts"),
@@ -74,7 +73,6 @@ void test("The exception is scoped twice over — to scratch/ and to markdown �
   // Each entry carries its kind, so the palette can show what a path is without a
   // second read.
 
-  // doctest:L74
   const kinds = (await listBrowsablePaths(root))
     .filter((entry) => entry.relPath === "README.md" || entry.relPath === "bin/lib/comments-store.ts")
     .map((entry) => `${entry.relPath}:${entry.kind}`)
@@ -87,7 +85,6 @@ void test("The exception is scoped twice over — to scratch/ and to markdown �
   // Plan role and status travel with the index entry; they do not participate in
   // matching or ranking.
 
-  // doctest:L86
   const navigation = (await listBrowsablePaths(root)).find((entry) => entry.relPath.endsWith("navigation.md"));
   t.check(navigation?.lifecycle, {
     role: "proposal",
@@ -98,7 +95,6 @@ void test("The exception is scoped twice over — to scratch/ and to markdown �
   // Plan-directory convention files stay current references, while the deliberate
   // flat history document keeps its historical role.
 
-  // doctest:L95
   t.check(
     [
       documentLifecycle("beebox/docs/plans/README.md", null),
@@ -133,7 +129,6 @@ void test("Typing part of a filename should find that file, not every directory 
       t.error(error);
     }
   });
-  // doctest:L109
   const corpus = [
     { relPath: "bin/lib/comments-store.ts", kind: "code" as const, lifecycle: null },
     { relPath: "docs/comments/overview.md", kind: "markdown" as const, lifecycle: null },
@@ -147,7 +142,6 @@ void test("Typing part of a filename should find that file, not every directory 
   // A subsequence still matches when nothing contiguous does — the reason `cstore`
   // finds the file — but scores below a real substring hit.
 
-  // doctest:L123
   const scattered = scorePath("bin/lib/comments-store.ts", "cstore");
   const contiguous = scorePath("bin/lib/comments-store.ts", "store");
   const missing = scorePath("bin/lib/comments-store.ts", "zzz");
@@ -160,12 +154,10 @@ void test("Typing part of a filename should find that file, not every directory 
   // An empty query returns the corpus rather than nothing, so the palette opens with
   // something in it.
 
-  // doctest:L134
   await t.checkText(JSON.stringify(searchPaths(corpus, { text: "", limit: 2 }).length), "2");
 
   // Ties break toward the shorter path, which is almost always the one meant.
 
-  // doctest:L141
   const ties = searchPaths(
     [
       { relPath: "a/very/deep/nested/store.ts", kind: "code" as const, lifecycle: null },

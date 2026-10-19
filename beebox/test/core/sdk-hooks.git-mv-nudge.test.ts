@@ -6,7 +6,7 @@
 // non-box moves, `bbx mv`, and non-PreToolUse events.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { HookJSONOutput } from "@anthropic-ai/claude-agent-sdk";
 import { gitMvNudgeHook } from "../../src/core/sdk-hooks.js";
 
@@ -32,25 +32,20 @@ async function nudge(command: string, event?: "PreToolUse" | "PostToolUse") {
 
 // `git mv` on a `store/` path nudges toward `bbx mv`:
 void test("git mv on a store/ path nudges toward bbx mv:", async (t) => {
-  // doctest:L36
   t.check(await nudge("git mv store/old/valley store/new/valley"), "You're using `git mv` on box content. `git mv` relocates files but does NOT rewrite inbound references, so links/refs pointing at the moved content will dangle. Prefer `bbx mv` — it moves the files AND rewrites every reference, including inline links in `.md` dossiers. Use plain `git mv` only if you intentionally want to move without updating references.");
 });
 
 // So does a `.card` move outside `store/` (the wrapper still mishandles refs):
 void test("So does a .card move outside store/ (the wrapper still mishandles refs):", async (t) => {
-  // doctest:L43
   t.check(await nudge("cd box && git mv box/A.doc.card box/sub/A.doc.card"), "You're using `git mv` on box content. `git mv` relocates files but does NOT rewrite inbound references, so links/refs pointing at the moved content will dangle. Prefer `bbx mv` — it moves the files AND rewrites every reference, including inline links in `.md` dossiers. Use plain `git mv` only if you intentionally want to move without updating references.");
 });
 
 // It stays quiet for `bbx mv` (already the right tool), a non-box `git mv`, and a
 // PostToolUse event (it's a pre-tool nudge):
 void test("It stays quiet for bbx mv (already the right tool), a non-box git mv, and a P...", async (t) => {
-  // doctest:L51
   t.check(await nudge("bbx mv store/a store/b"), null);
 
-  // doctest:L54
   t.check(await nudge("git mv README.md docs/notes.md"), null);
 
-  // doctest:L57
   t.check(await nudge("git mv store/a store/b", "PostToolUse"), null);
 });

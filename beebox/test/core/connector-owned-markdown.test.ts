@@ -6,7 +6,7 @@
 // error" edit that destroyed two Google Docs (`issues/bugs/2026-09-16-drive-doc-round-trip-destroyed-by-lint-driven-whitespace-edit.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import {
   isConnectorOwnedMarkdown,

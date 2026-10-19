@@ -5,12 +5,11 @@
 // per section.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { PAGE_SECTIONS, type PageSection, pageTitle, sectionFavicon } from "../../../src/frontend/lib/page-identity.js";
 import { issueSearchParams } from "../../../src/frontend/lib/issue-link.js";
 
 void test("line 12", async (t) => {
-  // doctest:L13
   t.check(
     {
       issues: pageTitle("issues"),
@@ -31,7 +30,6 @@ void test("line 12", async (t) => {
 
 // Every section's favicon is distinct, and none repeats a color or a letter.
 void test("Every section's favicon is distinct, and none repeats a color or a letter.", async (t) => {
-  // doctest:L26
   const sections: PageSection[] = ["recent", "streams", "issues", "plans", "browse", "testing", "alerts"];
   t.check(
     {
@@ -51,7 +49,6 @@ void test("Every section's favicon is distinct, and none repeats a color or a le
 
 // An issue link leaves out the default public visibility and names only private.
 void test("An issue link leaves out the default public visibility and names only private.", async (t) => {
-  // doctest:L39
   await t.checkText(
     JSON.stringify({
       public: issueSearchParams({ relPath: "bugs/2026-01-01-x.md", visibility: "public" }),

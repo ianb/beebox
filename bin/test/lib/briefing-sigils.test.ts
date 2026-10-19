@@ -8,7 +8,7 @@
 // spans are not, because the 2026-09-20 incident's sigil sat inside backticks.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -34,7 +34,6 @@ function failureDetails(error: unknown): { code: number; stderr: string } {
 // Both sigils match at the start of a token, before punctuation, and inside
 // parentheses or quotes. A name that is not a skill directory is ignored.
 void test("Both sigils match at the start of a token, before punctuation, and inside par...", async (t) => {
-  // doctest:L30
   t.check(scan("Land through /finish.\nThen ($cross-model) review, \"/browse\" it.\nRun /deploy and $HOME."), [
     "1:/finish",
     "2:$cross-model",
@@ -47,7 +46,6 @@ void test("Both sigils match at the start of a token, before punctuation, and in
 // A slash inside a path, a URL segment, a home path, a longer hyphenated name,
 // and a file extension all leave the skill name alone.
 void test("A slash inside a path, a URL segment, a home path, a longer hyphenated name,...", async (t) => {
-  // doctest:L40
   t.check(
     scan("See bin/finish-verify, .claude/skills/finish/SKILL.md, http://localhost:3210/browse/x, ~/browse, /finish-preflight, /issues.md, and /browse/notes.")
     ,
@@ -61,7 +59,6 @@ void test("A slash inside a path, a URL segment, a home path, a longer hyphenate
 // at least as long) are skipped. Inline code spans and stray backticks are
 // scanned like any other prose.
 void test("Fenced blocks (backtick or tilde, closed only by a fence of the same characte...", async (t) => {
-  // doctest:L51
   t.check(
     scan([
       "Quote `bin/x /finish` or ``a `$finish` b``.",
@@ -91,7 +88,6 @@ void test("Fenced blocks (backtick or tilde, closed only by a fence of the same 
 // `workstream_check_briefing_sigils` reads skill names from each checkout's
 // `.claude/skills/` at run time and fails closed when none can be read.
 void test("workstreamcheckbriefingsigils reads skill names from each checkout's .claude/...", async (t) => {
-  // doctest:L74
   const repo = resolve(process.cwd(), "..");
   const other = await mkdtemp(join(tmpdir(), "briefing-sigils-"));
   await mkdir(join(other, ".claude/skills/only-here"), { recursive: true });
@@ -120,7 +116,6 @@ void test("workstreamcheckbriefingsigils reads skill names from each checkout's 
   ],
   );
 
-  // doctest:L97
   const empty = await mkdtemp(join(tmpdir(), "briefing-sigils-empty-"));
   const { code, stderr } = await execFileAsync("node", ["--import", "tsx", "bin/briefing-sigils.ts", join(empty, "none")], { cwd: repo }).then(() => ({ code: 0, stderr: "" }), failureDetails);
   t.check([code, stderr.trim().replace(empty, "<empty>")], [

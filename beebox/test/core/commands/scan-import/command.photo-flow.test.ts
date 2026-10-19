@@ -6,8 +6,8 @@
 // Design: `docs/plans/scan-vision-claude.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, str } from "@ianbicking/tap-check/check";
 import { runPhotoMode } from "../../../../src/core/commands/scan-import/command.js";
 import { createFakeScanVision } from "../../../../src/services/scan-vision.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";

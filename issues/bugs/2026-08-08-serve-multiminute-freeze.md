@@ -8,6 +8,8 @@ labels: [field-test-findings, code-error]
 priority: backlog
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > `reconfirm?` checked 2026-09-05: still live. Nothing since the 2026-08-18 checkpoint touched `bulk-upload.ts`, `bulk-upload/worker.ts`, `git.ts`, or `git-lock.ts`. The remaining suspects (git-index contention vs. a tab hang) need what the checkpoint already named: a credentialed identity driving bulk upload concurrently with a chat turn under `node --cpu-prof` plus a heartbeat curl.
 
 > **Checked 2026-08-18 — still live, and today's git-lock work argues *against*

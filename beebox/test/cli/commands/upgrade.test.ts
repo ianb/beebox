@@ -4,16 +4,16 @@
 // `bbx migrate`/`bbx init`/`tsc`) behind a single `runCommand` injection point —
 // see the module doc comment in `src/cli/commands/upgrade.ts`. Everything else
 // (the git snapshot, the working tree, `package.json`, `node_modules/`) is
-// real: these doctests exercise a real git repo in a temp dir with a fake
+// real: these tests exercise a real git repo in a temp dir with a fake
 // `runCommand` standing in for pnpm/the new engine's subprocesses, so the
 // revert path's real effect (working tree back to the snapshot, previous
 // engine "reinstalled") can be observed directly rather than asserted about a
 // mock. All the fake-runner logic lives here in setup (module scope) — example
-// blocks stay to single calls + assertions, per `.claude/rules/doctest.md`.
+// blocks stay to single calls + assertions.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, instanceOf } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -141,13 +141,11 @@ void test("The commit carries the Upgraded-To trailer with the ACTUALLY-installe
       t.error(error);
     }
   });
-  // doctest:L137
   const boxRoot = await makeV3Fixture();
   const calls: string[] = [];
   const result = await upgrade(boxRoot, makeFakeRunner({ boxRoot, calls }));
   t.check(result.installedVersion, "0.2.0");
 
-  // doctest:L143
   t.check(calls, [
     "preflight-validate",
     "pnpm-install",
@@ -158,7 +156,6 @@ void test("The commit carries the Upgraded-To trailer with the ACTUALLY-installe
     "bbx-health",
   ]);
 
-  // doctest:L146
   t.check((await getLog(boxRoot, 1))[0]?.trailers, {
     "Upgraded-To": "beebox@0.2.0",
   });
@@ -166,7 +163,6 @@ void test("The commit carries the Upgraded-To trailer with the ACTUALLY-installe
   // A box that validates under the new engine, with its plugin health quiet,
   // reports nothing:
 
-  // doctest:L154
   t.check(({ validationIssues: result.validationIssues, pluginHealth: result.pluginHealth }), {
     validationIssues: null,
     pluginHealth: [],
@@ -187,13 +183,11 @@ void test("bbx validate under the new engine runs after typecheck so cards a plu
       t.error(error);
     }
   });
-  // doctest:L170
   const boxRoot = await makeV3Fixture();
   const calls: string[] = [];
   const result = await upgrade(boxRoot, makeFakeRunner({ boxRoot, calls, failLabel: "bbx-validate", failOutput: "content/Acids.course.card: missing required field learner" }));
   t.check(result.validationIssues, "content/Acids.course.card: missing required field learner");
 
-  // doctest:L176
   t.check(calls, [
     "preflight-validate",
     "pnpm-install",
@@ -204,7 +198,6 @@ void test("bbx validate under the new engine runs after typecheck so cards a plu
     "bbx-health",
   ]);
 
-  // doctest:L179
   t.check((await getLog(boxRoot, 1))[0]?.trailers, {
     "Upgraded-To": "beebox@0.2.0",
   });
@@ -221,7 +214,6 @@ void test("A warning is kept too.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L192
   const boxRoot = await makeV3Fixture();
   const warned = "content/Acids.course.card\n  warning: no schema registered for card type \"course\" — card not validated\n1 file checked, 1 warning in 1 file\n";
   const result = await upgrade(boxRoot, makeFakeRunner({ boxRoot, calls: [], outputs: { "bbx-validate": warned } }));
@@ -244,7 +236,6 @@ void test("After validate, bbx health --json runs under the new engine and the f
       t.error(error);
     }
   });
-  // doctest:L212
   const boxRoot = await makeV3Fixture();
   const report = JSON.stringify({ boxChecks: [
     { name: "plugin-config", ok: true, message: "Every plugins entry in _config/box.json names an installed plugin", severity: "error" },
@@ -259,7 +250,6 @@ void test("After validate, bbx health --json runs under the new engine and the f
     "legacy-exposition-rules (warning): content/Acids.attach/Plan.exposition-plan.card still carries rules",
   ]);
 
-  // doctest:L227
   t.check((await getLog(boxRoot, 1))[0]?.trailers, {
     "Upgraded-To": "beebox@0.2.0",
   });
@@ -267,7 +257,6 @@ void test("After validate, bbx health --json runs under the new engine and the f
   // Output that is not the health JSON (the new engine's `bbx health` crashed) is
   // one line in the same list rather than silence:
 
-  // doctest:L235
   const boxRoot2 = await makeV3Fixture();
   const broken = await upgrade(boxRoot2, async (request: RunCommandArgs) => request.label === "bbx-health" ? { code: 1, output: "TypeError: boom\n    at health.ts:1" } : makeFakeRunner({ boxRoot: boxRoot2, calls: [] })(request));
   t.check(broken.pluginHealth.map((line) => line.replace(/\(.*\)/, "(...)")), [
@@ -292,7 +281,6 @@ void test("bbx-migrate fails partway through, after scaffolding a new, never-tra
       t.error(error);
     }
   });
-  // doctest:L258
   const boxRoot = await makeV3Fixture();
   const snapshotSha = await getHead(boxRoot);
   const calls: string[] = [];
@@ -300,7 +288,6 @@ void test("bbx-migrate fails partway through, after scaffolding a new, never-tra
   const thrown = await upgradeError(boxRoot, runCommand);
   t.check(thrown, instanceOf(UpgradeStepFailedError));
 
-  // doctest:L266
   t.check(calls, [
     "preflight-validate",
     "pnpm-install",
@@ -312,28 +299,22 @@ void test("bbx-migrate fails partway through, after scaffolding a new, never-tra
   // and the previous engine is back (the fake restore step's write, standing in
   // for a real `pnpm install`):
 
-  // doctest:L275
   t.check(await readPinnedSpec(boxRoot), "0.1.0");
 
-  // doctest:L278
   t.check(await readInstalledVersion(boxRoot), "0.1.0");
 
   // HEAD never moved (nothing had been committed yet), the untracked file is gone,
   // and the working tree is clean again — not just "no tracked diff", but
   // genuinely restored:
 
-  // doctest:L287
   t.check(await getHead(boxRoot), snapshotSha);
 
-  // doctest:L290
   t.check(await fs.access(path.join(boxRoot, "untracked-scaffold.txt")).then(() => true, () => false), false);
 
-  // doctest:L293
   t.check(await getStatus(boxRoot), { staged: [], modified: [], untracked: [], clean: true });
 
   // The failure is logged to `.beebox/logs/upgrade.log`:
 
-  // doctest:L300
   const logText = await fs.readFile(path.join(boxRoot, ".beebox/logs/upgrade.log"), "utf-8");
   t.check(logText, any(String).includes("boom: migration blew up"));
 });
@@ -351,19 +332,16 @@ void test("A dirty working tree refuses to start (nothing to snapshot against); 
       t.error(error);
     }
   });
-  // doctest:L315
   const boxRoot = await makeV3Fixture();
   await fs.writeFile(path.join(boxRoot, "README.md"), "uncommitted\n");
   const dirty = await upgradeError(boxRoot, makeFakeRunner({ boxRoot, calls: [] }));
 
-  // doctest:L319
   const legacyRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-upgrade-legacy-"));
   await fs.mkdir(path.join(legacyRoot, ".beebox"), { recursive: true });
   await fs.writeFile(path.join(legacyRoot, ".beebox/box.json"), "");
   execSync("git init -q -b main && git add -A && git commit -q -m init --allow-empty", { cwd: legacyRoot });
   const legacy = await upgradeError(legacyRoot, makeFakeRunner({ boxRoot: legacyRoot, calls: [] }));
 
-  // doctest:L325
   t.check([dirty instanceof DirtyWorkingTreeError, legacy instanceof BoxShapeError], [
     true,
     true,
@@ -384,7 +362,6 @@ void test("The fake installer checks the real gate while the dependency has chan
       t.error(error);
     }
   });
-  // doctest:L341
   const boxRoot = await makeV3Fixture();
   const active = await acquireBoxWork(boxRoot, { reason: "test" });
   const calls: string[] = [];
@@ -404,7 +381,6 @@ void test("The fake installer checks the real gate while the dependency has chan
   await waitForClosed(boxRoot);
   t.check(calls, []);
 
-  // doctest:L361
   await active.release();
   const result = await upgrading;
   t.check(({ version: result.installedVersion, denied, childJoins, maintenancePermit, phase: await boxMaintenanceStatus(boxRoot) }), {
@@ -428,7 +404,6 @@ void test("The existing rollback restores tracked code and data and reinstalls t
       t.error(error);
     }
   });
-  // doctest:L378
   const boxRoot = await makeV3Fixture();
   const result = await upgradeError(boxRoot, makeFakeRunner({ boxRoot, calls: [], failLabel: "tsc", failOutput: "bad types" }));
   t.check(result, instanceOf(UpgradeStepFailedError));

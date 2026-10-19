@@ -13,7 +13,7 @@
 // "committed" and prove nothing.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -57,7 +57,6 @@ void test("line 47", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L48
   const repo = await mkdtemp(path.join(tmpdir(), "bbx-largefiles-"));
   execFileSync("git", ["init", "-q", "."], { cwd: repo });
   execFileSync("git", ["config", "user.email", "t@t"], { cwd: repo });
@@ -66,7 +65,6 @@ void test("line 47", async (t) => {
   execFileSync("git", ["annex", "config", "--set", "annex.largefiles", assetLargefilesExpression()], { cwd: repo, stdio: "pipe" });
   await fs.writeFile(path.join(repo, ".git", "info", "attributes"), assetAnnexAttributes());
 
-  // doctest:L56
   await fs.mkdir(path.join(repo, "Note.attach"), { recursive: true });
   for (const name of ["lower.jpg", "UPPER.JPG", "Mixed.Jpg"]) {
     await fs.writeFile(path.join(repo, "Note.attach", name), Buffer.alloc(200_000, 0x42));
@@ -75,7 +73,6 @@ void test("line 47", async (t) => {
   execFileSync("git", ["add", "-A"], { cwd: repo });
   execFileSync("git", ["commit", "-q", "-m", "assets"], { cwd: repo });
 
-  // doctest:L64
   await t.checkText(ANNEX ? classify(repo) : "skipped: git-annex not installed", `Mixed.Jpg ANNEXED
 Note.doc.card in-git
 UPPER.JPG ANNEXED

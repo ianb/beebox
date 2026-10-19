@@ -5,8 +5,8 @@
 // place of the card. See docs/plans/interface-as-cards.md ("instrument cards").
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { parseCardText } from "../src/core/card-io.js";
 import { createCardSchemaMap } from "../src/schemas.js";
 import { ViewSchema } from "../src/schemas/view.js";

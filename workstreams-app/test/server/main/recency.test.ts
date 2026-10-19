@@ -12,8 +12,8 @@
 // than the moment of paint.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, unordered, type Expected } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, unordered, type Expected } from "@ianbicking/tap-check/check";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

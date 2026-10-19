@@ -6,7 +6,7 @@
 // external SDK/CLI boundaries are replaced here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { buildScriptEnv } from "../../../../src/core/script-env/core.js";
 import type { ConsumeStreamOptions } from "../../../../src/core/agent/invoke/stream.js";
@@ -27,7 +27,6 @@ void test("line 20", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L21
   const box = await makeTmpBox();
   const originalSecret = process.env.BBX_HUB_SECRET;
   const originalId = process.env.BBX_TRIAGE_RUN_ID;
@@ -50,7 +49,6 @@ void test("line 20", async (t) => {
     "inherited-run",
   ]);
 
-  // doctest:L38
   let codexEnv: Record<string, string | undefined> = {};
   const { runCodexAgent } = await t.mockImport("../../../../src/core/agent/codex-run/core.ts", {
     "../../../../src/core/agent/auth-preflight.ts": { ...auth, checkCodexAuth: async () => {} },
@@ -62,7 +60,6 @@ void test("line 20", async (t) => {
   });
   t.check(result, { output: "done", resultText: "done", exitCode: 0, sessionId: "fake-session", structuredOutput: undefined, success: true });
 
-  // doctest:L50
   t.check([codexEnv.BBX_TRIAGE_RUN_ID, codexEnv.BBX_TRIAGE_RESEARCH, codexEnv.BBX_SPAWN_PROFILE, codexEnv.BBX_HUB_SECRET ?? null, process.env.BBX_TRIAGE_RUN_ID], [
     "codex-run",
     "1",
@@ -71,10 +68,8 @@ void test("line 20", async (t) => {
     "inherited-run",
   ]);
 
-  // doctest:L53
   t.check(codexEnv.CODEX_HOME, process.env.CODEX_HOME);
 
-  // doctest:L56
   let defaultEnv: unknown = "unset";
   await runCodexAgent({ boxRoot: box.root, prompt: "test", systemPrompt: "" }, (options: CodexSdkSessionOptions) => {
     defaultEnv = options.env;
@@ -82,7 +77,6 @@ void test("line 20", async (t) => {
   });
   t.check(defaultEnv, undefined);
 
-  // doctest:L64
   const next = await buildScriptEnv(box.root);
   t.check([next.BBX_TRIAGE_RUN_ID, next.BBX_TRIAGE_RESEARCH ?? null, next.BBX_HUB_SECRET ?? null], [
     "inherited-run",

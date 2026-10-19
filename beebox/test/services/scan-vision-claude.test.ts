@@ -7,8 +7,8 @@
 // Design: `docs/plans/scan-vision-claude.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, instanceOf } from "@ianbicking/tap-check/check";
 import {
   claudeScanWireSchema,
   parseClaudeScanBatch,

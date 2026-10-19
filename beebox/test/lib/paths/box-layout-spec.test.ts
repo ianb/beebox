@@ -3,14 +3,14 @@
 // `BOX_LAYOUT` (`src/lib/paths/box-layout-spec.ts`) is the one place the box
 // directory list, its paths, and its prose live. `BOX_DIRS` (`paths.ts`) and the
 // in-box agent guide's directory table (`agent-guide/box-shape.ts`) both derive
-// from it; this doctest checks the derivation, plus that `docs/box-layout.md`'s
+// from it; this test checks the derivation, plus that `docs/box-layout.md`'s
 // hand-written tables haven't drifted from the spec's text — a stand-in for
 // regenerating the doc in place, since (unlike the generated agent docs, which are
 // whole-file generated) `docs/box-layout.md` mixes prose with tables.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT } from "../../../src/lib/paths/box-layout-spec.js";
 import { BOX_ROOT_VOCABULARY } from "../../../src/shared/box-root-vocabulary.js";
@@ -22,11 +22,9 @@ const boxLayoutDoc = await fs.readFile(new URL("../../../docs/box-layout.md", im
 
 // ## Every `BOX_DIRS` key/value comes from a spec entry, and vice versa
 void test("Every `BOX_DIRS` key/value comes from a spec entry, and vice versa", async (t) => {
-  // doctest:L25
   const boxDirsFromSpec = Object.fromEntries(keyedEntries.map((entry) => [entry.boxDirsKey, entry.path]));
   t.check(boxDirsFromSpec, BOX_DIRS);
 
-  // doctest:L29
   // Same key count both ways — no spec entry silently dropped, no BOX_DIRS key the spec doesn't know about.
   const specKeys: string[] = keyedEntries.map((entry) => entry.boxDirsKey);
   t.check(specKeys.toSorted(), Object.keys(BOX_DIRS).toSorted());
@@ -34,7 +32,6 @@ void test("Every `BOX_DIRS` key/value comes from a spec entry, and vice versa", 
 
 // ## Every spec'd path lives under an underscore area (or is code/agent-config)
 void test("Every spec'd path lives under an underscore area (or is code/agent-config)", async (t) => {
-  // doctest:L37
   const areasNeedingUnderscore = new Set(["content", "config", "bookkeeping", "publish", "tmp"]);
   const wronglyRooted = keyedEntries.filter(
     (entry) => areasNeedingUnderscore.has(entry.area) && !entry.path.startsWith("_")
@@ -46,7 +43,6 @@ void test("Every spec'd path lives under an underscore area (or is code/agent-co
 //
 // An unrecognized key throws a typed error rather than returning `undefined` silently:
 void test("An unrecognized key throws a typed error rather than returning undefined sile...", async (t) => {
-  // doctest:L50
   // The key parameter is a closed union; Reflect.apply passes a key outside it to reach the runtime guard.
   await t.checkThrows(
     () => Reflect.apply(boxLayoutEntry, undefined, ["not-a-real-key"]),
@@ -59,7 +55,6 @@ void test("An unrecognized key throws a typed error rather than returning undefi
 
 // ## `BOX_ROOT_VOCABULARY` covers every underscore area `BOX_LAYOUT` uses
 void test("`BOX_ROOT_VOCABULARY` covers every underscore area `BOX_LAYOUT` uses", async (t) => {
-  // doctest:L63
   const rootAreaNames = new Set<string>(keyedEntries.map((entry) => entry.path.split("/")[0] ?? "").filter((seg) => seg.startsWith("_")));
   const vocabAreaNames = new Set<string>(BOX_ROOT_VOCABULARY.filter((e) => e.kind === "area").map((e) => e.name));
   t.check([...rootAreaNames].filter((name) => !vocabAreaNames.has(name)), []);
@@ -71,7 +66,6 @@ void test("`BOX_ROOT_VOCABULARY` covers every underscore area `BOX_LAYOUT` uses"
 // `_bookkeeping/archive/*` row is the exception: a hand-written summary, not a
 // spec entry - box-shape.ts owns collapsing the three archive entries into one row.
 void test("directoryLayoutRows looks up each row by BOXDIRS key.", async (t) => {
-  // doctest:L76
   t.checkText(directoryLayoutRows(), "«*»| `_bookkeeping/archive/` | Processed/completed items |«*»");
 });
 
@@ -86,7 +80,6 @@ void test("directoryLayoutRows looks up each row by BOXDIRS key.", async (t) => 
 // `config` and `.claude` themselves are section headers in the doc (not table
 // rows — only their sub-paths get rows), so they're excluded here:
 void test("Every keyed entry that has a developer-facing row in the doc's content/, book...", async (t) => {
-  // doctest:L92
   const docRelevantAreas = new Set(["content", "bookkeeping", "config", "publish", "tmp", "tricks", "agent-config"]);
   const sectionHeaderKeys = new Set(["config", "claude"]);
   const docEntries = keyedEntries.filter(

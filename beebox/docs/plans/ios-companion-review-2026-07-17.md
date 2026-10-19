@@ -6,6 +6,8 @@ issues: []
 ---
 # iOS Companion — follow-up code review (2026-07-17)
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 **Reviewer:** Claude (Opus), re-checked against HEAD (`c7e77831`) with a fresh iOS pass and a full wire/behavioral contract map. Spot-checked the load-bearing findings (C1/C2 fix sites, the N1 `deliver` early-return, the N2 token-in-URL construction, the I4 photo-remove reindex) against the code directly.
 **Scope:** everything under `ios-app/` re-reviewed against the July-9 punch list (`ios-companion-review-2026-07-09.md`), plus the box-side mobile pairing/auth/bridge status carried over from that review. Supersedes the July-9 doc.
 **Audience:** Codex, who wrote this. Still a punch list, not a rewrite mandate.

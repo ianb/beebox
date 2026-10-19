@@ -8,7 +8,7 @@
 // non-answer (`inconclusive`), where nothing found a defect at all.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   conciseScheduleError,
   evaluateTaskHealth,
@@ -77,7 +77,6 @@ const scheduler: SchedulerHeartbeat = { status: "running", lastTickAt: "2026-06-
 //
 // A daily 5am cron that last ran (and succeeded) this morning:
 void test("A daily 5am cron that last ran (and succeeded) this morning:", async (t) => {
-  // doctest:L76
   t.check(statusOf({ fields: dailyAt5, state: ran("2026-06-09T05:00:10Z") }), "ok");
 });
 
@@ -134,7 +133,6 @@ void test("A task that lost a race for the box's git index never got to run its 
 // The concise error shown by `bbx health` and proactive alerts prefers the precise
 // child-process diagnostic over the generic command wrapper:
 void test("The concise error shown by bbx health and proactive alerts prefers the precis...", async (t) => {
-  // doctest:L116
   t.check(
     conciseScheduleError(
       "Command failed with exit code 1\nstderr:\n" +
@@ -150,7 +148,6 @@ void test("The concise error shown by bbx health and proactive alerts prefers th
 // A timeout without a precise stderr diagnostic keeps its actionable headline
 // instead of showing the last progress line:
 void test("A timeout without a precise stderr diagnostic keeps its actionable headline i...", async (t) => {
-  // doctest:L130
   t.check(
     conciseScheduleError(
       "Command timed out after 1800000ms of awake runtime\n" +
@@ -164,7 +161,7 @@ void test("A timeout without a precise stderr diagnostic keeps its actionable he
 //
 // (Cron expressions evaluate in server-local time, same as `isDue` — the
 // examples here use hourly crons, which mean the same thing in every
-// timezone, so the doctest passes on any machine.)
+// timezone, so the test passes on any machine.)
 //
 // An hourly task last attempted two days ago has missed dozens of
 // occurrences; pending time is measured from the earliest one:
@@ -186,40 +183,33 @@ void test("(Cron expressions evaluate in server-local time, same as isDue — th
 // hourly task 40 minutes late (the allowance floor is 30m, half-cadence for an
 // hourly task is 30m):
 void test("But a task only a little past its occurrence is still within its allowance —...", async (t) => {
-  // doctest:L157
   const lastHour = ran("2026-06-09T10:00:10Z");
   t.check(statusOf({ fields: hourly, state: lastHour, now: new Date("2026-06-09T11:25:00Z") }), "ok");
 
-  // doctest:L161
   t.check(statusOf({ fields: hourly, state: lastHour, now: new Date("2026-06-09T11:45:00Z") }), "overdue");
 });
 
 // A never-attempted task measures from the card's mtime:
 void test("A never-attempted task measures from the card's mtime:", async (t) => {
-  // doctest:L168
   t.check(statusOf({ fields: hourly, cardMtime: new Date("2026-06-05T00:00:00Z") }), "overdue");
 });
 
 // `not-before` postpones due-ness — an hourly cron with `not-before: 30m`
 // that ran 35 minutes ago has an occurrence pending but well within its allowance:
 void test("not-before postpones due-ness — an hourly cron with not-before:", async (t) => {
-  // doctest:L176
   t.check(statusOf({ fields: { ...hourly, "not-before": "30m" }, state: ran("2026-06-09T11:25:00Z") }), "ok");
 });
 
 // On-wakeup-only tasks have no intrinsic cadence and are never overdue:
 void test("On-wakeup-only tasks have no intrinsic cadence and are never overdue:", async (t) => {
-  // doctest:L183
   t.check(statusOf({ fields: { "on-wakeup": true, "not-before": "5m" }, state: ran("2026-05-01T00:00:00Z") }), "ok");
 });
 
 // A one-shot `at` task unserved an hour past its time is overdue; once
 // attempted it never re-triggers:
 void test("A one-shot at task unserved an hour past its time is overdue; once attempted...", async (t) => {
-  // doctest:L191
   t.check(statusOf({ fields: { at: "2026-06-09T09:00:00Z" } }), "overdue");
 
-  // doctest:L194
   t.check(statusOf({ fields: { at: "2026-06-09T09:00:00Z" }, state: ran("2026-06-09T09:00:30Z") }), "ok");
 });
 
@@ -353,13 +343,11 @@ void test("When the box's engine is out of quota (deferred-recoverable), every e
     lastError: "boom",
   });
 
-  // doctest:L308
   t.check(statusOf({ fields: { ...dailyAt5, enabled: false }, engineWaitReason: reason }), "disabled");
 
   // The waiting state is neither summarized as unhealthy nor alertable —
   // the episode itself is the one box-level line the summary leads with:
 
-  // doctest:L316
   t.check(summarizeScheduleHealth({ tasks: [waitingFailing], scheduler, engineWait: reason }, NOW), "waiting on codex quota until Aug 19, 11:34 PM");
 
   t.check(selectAlertableTasks({ tasks: [waitingFailing], scheduler, engineWait: reason }), []);
@@ -432,7 +420,6 @@ void test("A run that exits with the inconclusive marker records lastResult:", a
 // the only line that says the work completed, so it wins over
 // `Command failed with exit code 2`:
 void test("The inconclusive line is the headline bbx health prints for that error — it i...", async (t) => {
-  // doctest:L389
   t.check(
     conciseScheduleError(
       "Command failed with exit code 2\nstderr:\n" +

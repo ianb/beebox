@@ -4,7 +4,7 @@
 // depending on router-owned modules.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -16,7 +16,6 @@ const fetchedAt = "2026-08-13T12:00:00.000Z";
 
 // ## Provider payloads retain windows, model scopes, and credits
 void test("Provider payloads retain windows, model scopes, and credits", async (t) => {
-  // doctest:L20
   const codex = parseCodexQuota({
     rateLimits: {
       limitName: "Codex",
@@ -83,7 +82,6 @@ void test("Provider payloads retain windows, model scopes, and credits", async (
 // Claude's short window is secondary in the panel even when the provider returns
 // it first. Other providers retain their source order.
 void test("Claude's short window is secondary in the panel even when the provider return...", async (t) => {
-  // doctest:L52
   const short = { label: "5-hour window", usedPercent: 10, resetsAt: fetchedAt, durationMinutes: 300 };
   const weekly = { label: "7-day window", usedPercent: 20, resetsAt: fetchedAt, durationMinutes: 10_080 };
   t.check(
@@ -109,7 +107,6 @@ void test("Claude's short window is secondary in the panel even when the provide
 // Short-window tanks and Codex model-specific tanks remain visible in the panel,
 // but they cannot mark the provider headline over pace.
 void test("Short-window tanks and Codex model-specific tanks remain visible in the panel...", async (t) => {
-  // doctest:L67
   const summaryNow = new Date("2026-08-20T16:41:00.000Z");
   const codexQuota = {
     provider: "codex" as const,
@@ -127,7 +124,6 @@ void test("Short-window tanks and Codex model-specific tanks remain visible in t
 // Claude's general and Fable weekly quotas collapse when they agree and name the
 // disagreement when they do not.
 void test("Claude's general and Fable weekly quotas collapse when they agree and name th...", async (t) => {
-  // doctest:L86
   const claudeSummaryNow = new Date("2026-08-20T16:41:00.000Z");
   const claudeSummaryQuota = {
     provider: "claude" as const,
@@ -158,7 +154,6 @@ void test("A panel-open foreground collection persists Claude quota data, and a 
       t.error(error);
     }
   });
-  // doctest:L108
   const stateDir = await fs.mkdtemp(path.join(os.tmpdir(), "workstreams-quota-"));
   let claudeRequests = 0;
   let codexRequests = 0;

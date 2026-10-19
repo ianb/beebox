@@ -6,7 +6,7 @@
 // label stays. A chat that cannot be resumed (deleted, archived) gets none.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { TRPCError } from "@trpc/server";
 import { ChatSession } from "../../../../../src/core/chat/session/run/core.js";
 import { ChatSessionRegistry } from "../../../../../src/core/chat/session/registry/core.js";

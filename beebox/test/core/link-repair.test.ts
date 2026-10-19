@@ -6,7 +6,7 @@
 // missing target is reported for an agent to resolve — never guessed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { repairBoxLinks } from "../../src/core/link-repair.js";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
@@ -21,12 +21,10 @@ async function write({ box, rel, content }: { box: TmpBox; rel: string; content:
 // A dossier links to the pre-move path of an image that now lives one directory
 // deeper. The basename is unique, so the link is rewritten to the real location:
 void test("A dossier links to the pre-move path of an image that now lives one directory...", async (t) => {
-  // doctest:L25
   const box = await makeTmpBox();
   await write({ box, rel: "store/notebook/ashfield/valley/images/bram-face.attach/bram-face.webp", content: "IMG" });
   await write({ box, rel: "store/notebook/ashfield/valley/dossiers/bram.md", content: "# Bram\n\n![face](/store/notebook/valley/images/bram-face.attach/bram-face.webp)\n" });
 
-  // doctest:L29
   const report = await repairBoxLinks(box.root, { dryRun: false });
   t.check(report, {
     fixed: [
@@ -45,25 +43,21 @@ void test("A dossier links to the pre-move path of an image that now lives one d
 
   // The file on disk now points at the real image:
 
-  // doctest:L40
   await t.checkText(await readFile(join(box.root, "store/notebook/ashfield/valley/dossiers/bram.md"), "utf-8"), `# Bram
 «blankline»
 ![face](/store/notebook/ashfield/valley/images/bram-face.attach/bram-face.webp)`);
 
-  // doctest:L45
   await box.cleanup();
 });
 
 // When two files share the basename, the trailing-path overlap picks the right one
 // (here the `valley/` copy beats the `island/` copy):
 void test("When two files share the basename, the trailing-path overlap picks the right...", async (t) => {
-  // doctest:L52
   const box = await makeTmpBox();
   await write({ box, rel: "store/notebook/ashfield/valley/images/face.webp", content: "V" });
   await write({ box, rel: "store/notebook/ashfield/island/images/face.webp", content: "I" });
   await write({ box, rel: "store/notebook/ashfield/valley/dossiers/x.md", content: "![f](/store/notebook/valley/images/face.webp)\n" });
 
-  // doctest:L57
   const report = await repairBoxLinks(box.root, { dryRun: true });
   t.check(report, {
     fixed: [
@@ -80,20 +74,17 @@ void test("When two files share the basename, the trailing-path overlap picks th
     unresolvable: [],
   });
 
-  // doctest:L67
   await box.cleanup();
 });
 
 // A true tie (same basename, equal trailing overlap) is reported as ambiguous —
 // not rewritten — with the candidates for an agent to choose:
 void test("A true tie (same basename, equal trailing overlap) is reported as ambiguous —...", async (t) => {
-  // doctest:L74
   const box = await makeTmpBox();
   await write({ box, rel: "store/a/shared.webp", content: "A" });
   await write({ box, rel: "store/b/shared.webp", content: "B" });
   await write({ box, rel: "store/notes.md", content: "![s](/store/gone/shared.webp)\n" });
 
-  // doctest:L79
   const report = await repairBoxLinks(box.root, { dryRun: true });
   t.check(report, {
     fixed: [],
@@ -109,13 +100,11 @@ void test("A true tie (same basename, equal trailing overlap) is reported as amb
     unresolvable: [],
   });
 
-  // doctest:L94
   await box.cleanup();
 });
 
 // A link whose basename exists nowhere is unresolvable:
 void test("A link whose basename exists nowhere is unresolvable:", async (t) => {
-  // doctest:L100
   const box = await makeTmpBox();
   await write({ box, rel: "store/notes.md", content: "![x](/store/missing/ghost.webp)\n" });
   const report = await repairBoxLinks(box.root, { dryRun: true });
@@ -133,6 +122,5 @@ void test("A link whose basename exists nowhere is unresolvable:", async (t) => 
     ],
   });
 
-  // doctest:L115
   await box.cleanup();
 });

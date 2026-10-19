@@ -5,7 +5,7 @@
 // temporary box; they make no model calls and use only synthetic content.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { prepareItem } from "../../../../src/core/triage/evidence/core.js";
@@ -41,7 +41,6 @@ function destinationJudgment({ evidence, instructions, outcome }: { evidence: Ev
 
 // ## Dry run does not research or move
 void test("Dry run does not research or move", async (t) => {
-  // doctest:L45
   const box = await harnessBox("txt");
   let researchCalls = 0;
   const result = await runJevTriage({ boxRoot: box.root, dryRun: true,
@@ -56,7 +55,6 @@ void test("Dry run does not research or move", async (t) => {
     staged: "Initial synthetic evidence.",
   });
 
-  // doctest:L55
   await box.cleanup();
 });
 
@@ -66,7 +64,6 @@ void test("Dry run does not research or move", async (t) => {
 // then applies the decision. This bounds the repair loop and makes the receipt
 // describe the final evidence and rule snapshot.
 void test("The harness recompiles both inputs after research, judges once more, and only...", async (t) => {
-  // doctest:L65
   const box = await harnessBox("txt");
   const judged: Array<{ text: string; rules: string }> = [];
   let researchCalls = 0;
@@ -106,13 +103,11 @@ Research note: Research remained unresolved.`,
   },
   );
 
-  // doctest:L86
   await box.cleanup();
 });
 
 // ## A deterministic item failure is recorded and the next item still runs
 void test("A deterministic item failure is recorded and the next item still runs", async (t) => {
-  // doctest:L92
   const box = await harnessBox("txt");
   await box.write("_content/inbox/staged/Later.txt", "Later synthetic evidence.");
   box.commitAll("second staged item");
@@ -143,13 +138,11 @@ void test("A deterministic item failure is recorded and the next item still runs
   },
   );
 
-  // doctest:L108
   await box.cleanup();
 });
 
 // ## Wholly unavailable evidence skips Jev and remains held
 void test("Wholly unavailable evidence skips Jev and remains held", async (t) => {
-  // doctest:L114
   const box = await harnessBox("bin");
   let judgeCalls = 0;
   let researchCalls = 0;
@@ -172,13 +165,11 @@ void test("Wholly unavailable evidence skips Jev and remains held", async (t) =>
   },
   );
 
-  // doctest:L126
   await box.cleanup();
 });
 
 // ## Only quota failures defer; operational errors remain visible
 void test("Only quota failures defer; operational errors remain visible", async (t) => {
-  // doctest:L132
   const quotaBox = await harnessBox("txt");
   const quota = await runJevTriage({ boxRoot: quotaBox.root, prepare: prepareItem,
     judge: async () => { throw new TriageBudgetError(); }, research: async () => null,
@@ -187,7 +178,6 @@ void test("Only quota failures defer; operational errors remain visible", async 
     sourceRemains: await fs.readFile(quotaBox.path("_content/inbox/staged/Document.txt"), "utf8") };
   await quotaBox.cleanup();
 
-  // doctest:L140
   const errorBox = await harnessBox("txt");
   const operational = await runJevTriage({ boxRoot: errorBox.root, prepare: prepareItem,
     judge: async () => { throw new Error("provider unavailable"); }, research: async () => null,

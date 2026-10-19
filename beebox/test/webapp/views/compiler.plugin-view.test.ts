@@ -20,7 +20,7 @@
 //   external so the box's copy is used, not a second one bundled in.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
@@ -46,7 +46,6 @@ async function makeViewBox() {
   await symlink(join(reactNodeModules, "react-dom"), join(box.root, "node_modules", "react-dom"), "dir");
   return box;
 }
-
 
 // A box activates the plugin by naming it in `_config/box.json` and writing the
 // stubs its README lists (docs/plugins.md): the schema stub makes `concept-map`
@@ -117,14 +116,12 @@ await writeFile(join(box.root, "src", "views", "concept-map.tsx"), STUB);
 // The built bundle has no `__require("react")` left; its only `react` and
 // `react-dom` references are the shim modules' own imports, one per specifier:
 void test("The built bundle has no require(\"react\") left; its only react and react-dom r...", async (t) => {
-  // doctest:L121
   const bundle = await readFile(join(PACKAGE_ROOT, "dist", "plugins", "courseware", "view.js"), "utf8");
   t.check([bundle.includes('__require("react")'), bundle.includes('require("react")')], [
     false,
     false,
   ]);
 
-  // doctest:L125
   t.check([...bundle.matchAll(/^import (\w+) from "(react[^"]*)";$/gm)].map((m) => m[2]).toSorted(), [
     "react",
     "react-dom",
@@ -137,7 +134,6 @@ void test("The built bundle has no require(\"react\") left; its only react and r
 // The stub's metadata comes from the real import, and the rendered page has the
 // card's prose (through `Markdown`) and every concept's name:
 void test("The stub's metadata comes from the real import, and the rendered page has the...", async (t) => {
-  // doctest:L135
   const { html, meta } = await renderThroughCompiler(box, { path: CARD_PATH });
   t.check([meta.rendersCardTypes, meta.dependencies], [
     [
@@ -148,7 +144,6 @@ void test("The stub's metadata comes from the real import, and the rendered page
     ],
   ]);
 
-  // doctest:L139
   t.check(["this map orders what to learn first", "Part-whole meaning", "Equivalent fractions", "Adding unlike denominators"].map((s) => html.includes(s)), [
     true,
     true,
@@ -162,14 +157,12 @@ void test("The stub's metadata comes from the real import, and the rendered page
 // The stub's browser module has no `require("react")` either, and reads both
 // host globals:
 void test("The stub's browser module has no require(\"react\") either, and reads both host...", async (t) => {
-  // doctest:L149
   const { output } = await bundleView(join(box.root, "src", "views", "concept-map.tsx"), { cache: false });
   t.check([output.includes('__require("react")'), output.includes('require("react')], [
     false,
     false,
   ]);
 
-  // doctest:L153
   t.check([output.includes("window.__bbxReact;"), output.includes("window.__bbxReactDOM;")], [
     true,
     true,
@@ -179,7 +172,6 @@ void test("The stub's browser module has no require(\"react\") either, and reads
 // The `react` shim's named exports are the installed React's public surface,
 // not a hand list, and `react-dom` has a shim of its own:
 void test("The react shim's named exports are the installed React's public surface, not...", async (t) => {
-  // doctest:L161
   await writeFile(join(box.root, "src", "views", "hooks.tsx"), `import { useSyncExternalStore, useLayoutEffect, useId, useImperativeHandle } from "react";
 import { createPortal } from "react-dom";
 export default function Hooks() { useId(); return createPortal(null, document.body); }
@@ -209,7 +201,6 @@ void test("A view may import only the host modules the shims cover:", async (t) 
       t.error(error);
     }
   });
-  // doctest:L173
   await writeFile(join(box.root, "src", "views", "server.tsx"), "import { renderToString } from \"react-dom/server\";\nexport default () => renderToString(null);\n");
   await t.checkThrows(async () => (await bundleView(join(box.root, "src", "views", "server.tsx"), { cache: false })), "Error: Build failed with 1 error:«*»react-dom/server is not available to a view«*»");
 });

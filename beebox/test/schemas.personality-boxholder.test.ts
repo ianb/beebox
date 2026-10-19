@@ -7,7 +7,7 @@
 // resulting "Your boxholder is …" line into the agent guide.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { compilePersonality } from "../src/schemas/personality/schema.js";
 import { loadBoxholders } from "../src/core/docs-gen/config-cards/boxholder-cards.js";
 import { makeTmpBox } from "./helpers/test-helpers.js";

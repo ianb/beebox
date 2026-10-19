@@ -8,8 +8,8 @@
 // Here the host is a fake, so these cases run anywhere.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, str } from "@ianbicking/tap-check/check";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import {
@@ -70,7 +70,6 @@ async function manifest(box: TmpBox) {
 // The wrapper checks the same pattern and more; this copy only gives the agent a
 // better error before anything is recorded.
 void test("The wrapper checks the same pattern and more; this copy only gives the agent...", async (t) => {
-  // doctest:L72
   t.check(invalidPackageNames(["glabels", "python3-openpyxl", "libc++1", "g++", "-o", "./x.deb", "Glabels", "x"]), ["-o", "./x.deb", "Glabels", "x"]);
 });
 
@@ -86,7 +85,6 @@ void test("The record comes first, so the need is kept even when this host canno
       t.error(error);
     }
   });
-  // doctest:L82
   const box = await makeTmpBox();
   const host = fakeHost();
   const result = await captured(() =>
@@ -94,10 +92,8 @@ void test("The record comes first, so the need is kept even when this host canno
   );
   t.check(result, { code: 0, lines: ["Recorded glabels in _config/host-packages.json; commit it with your other changes."] });
 
-  // doctest:L90
   t.check(host.calls.map((call) => call.replace(/^[^:]+/, "<box>")), ["<box>: glabels"]);
 
-  // doctest:L93
   await captured(() => runHostInstall({ boxRoot: box.root, packages: ["file", "glabels"], why: "Identify upload types" }, host.system));
   await t.checkText(await manifest(box), `{
   "packages": {
@@ -122,7 +118,6 @@ void test("A refusal keeps the record and says who decides", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L117
   const box = await makeTmpBox();
   const host = fakeHost({ answer: () => 2 });
   const result = await captured(() =>
@@ -150,7 +145,6 @@ void test("Exit 3 means \"this host cannot\", distinct from a refusal.", async (
       t.error(error);
     }
   });
-  // doctest:L140
   const box = await makeTmpBox();
   const host = fakeHost({ supports: false });
   const result = await captured(() =>
@@ -176,7 +170,6 @@ void test("When sudo will not run the wrapper, the message names the likely caus
       t.error(error);
     }
   });
-  // doctest:L161
   const box = await makeTmpBox();
   const host = fakeHost({ sudo: false });
   const result = await captured(() =>
@@ -202,7 +195,6 @@ void test("Bad input is refused before anything is written", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L182
   const box = await makeTmpBox();
   const host = fakeHost();
   const bad = await captured(() => runHostInstall({ boxRoot: box.root, packages: ["glabel.*"], why: "x" }, host.system));
@@ -221,7 +213,6 @@ void test("A hand-broken manifest is reported, never overwritten", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L202
   const box = await makeTmpBox();
   await box.write("_config/host-packages.json", '{"packages":{"glabels":{"added":"2026-09-17"}}}\n');
   const host = fakeHost();
@@ -246,7 +237,6 @@ void test("One call per package, so a refused package does not block the others.
       t.error(error);
     }
   });
-  // doctest:L225
   const box = await makeTmpBox();
   await recordHostPackages(box.root, { names: ["file", "glabels", "openssh-server"], why: "x", added: "2026-09-17" });
   const host = fakeHost({ installed: ["file"], answer: (names) => (names[0] === "openssh-server" ? 2 : 0) });
@@ -254,7 +244,6 @@ void test("One call per package, so a refused package does not block the others.
   t.check(result.code, 2);
   t.check(host.calls.map((call) => call.replace(/^[^:]+/, "<box>")), ["<box>: glabels", "<box>: openssh-server"]);
 
-  // doctest:L235
   const done = await captured(() => runHostSync({ boxRoot: box.root }, fakeHost({ installed: ["file", "glabels", "openssh-server"] }).system));
   t.check(done, { code: 0, lines: ["All 3 recorded host packages are installed."] });
 });
@@ -268,7 +257,6 @@ void test("Health: missing packages warn; a host without dpkg lists them without
       t.error(error);
     }
   });
-  // doctest:L247
   const box = await makeTmpBox();
   const none = await hostPackagesCheck(box.root, { queryInstalled: fakeHost().system.queryInstalled });
   t.check(none, null);
@@ -291,9 +279,7 @@ void test("Health: missing packages warn; a host without dpkg lists them without
 
 // ## Pure pieces
 void test("Pure pieces", async (t) => {
-  // doctest:L268
   t.check(missingHostPackages({ a1: { why: "x", added: "2026-09-17" }, b2: { why: "y", added: "2026-09-17" } }, new Set(["a1"])), ["b2"]);
 
-  // doctest:L271
   t.check([wrapperBoxLabel("test1"), wrapperBoxLabel("My_Box"), wrapperBoxLabel("--x"), wrapperBoxLabel("___")], ["test1", "my-box", "x", "box"]);
 });

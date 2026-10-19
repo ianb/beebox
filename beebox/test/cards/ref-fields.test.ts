@@ -8,8 +8,8 @@
 // inline — the pre-distinction behaviour.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not, str } from "@ianbicking/tap-check/check";
 import { z } from "zod";
 import { cardSchema, cardRef, opaqueContentRef, collectInlineRefs } from "../../src/exports/cards.js";
 import { buildJobDescription } from "../../src/core/reactor/engine/batch-jobs.js";

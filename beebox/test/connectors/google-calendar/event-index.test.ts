@@ -8,7 +8,7 @@
 // for why the separator is a space and why the calendar id comes last.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -104,7 +104,6 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
       t.error(error);
     }
   });
-  // doctest:L101
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/google-calendar.json", JSON.stringify({
@@ -112,7 +111,6 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   }, null, 2));
   box.commitAll("init two-calendar box");
 
-  // doctest:L108
   const calendar = makeRoutedCalendar({
     work: [{
       id: "evt-shared",
@@ -130,7 +128,6 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
     }],
   });
 
-  // doctest:L125
   const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
   const dir = join(box.root, "_content/calendar");
   const first = await connector.sync();
@@ -145,7 +142,6 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   // Both are tracked, under one key each. Keyed by the bare id, the second sync
   // would have overwritten the first's entry and left its file untracked:
 
-  // doctest:L136
   t.check(await trackedKeys(box.root), [
     "evt-shared home",
     "evt-shared work",
@@ -153,7 +149,6 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
 
   // Each file names the calendar it came from:
 
-  // doctest:L143
   const workIcs = await readFile(join(dir, "2026-06-10_t-shared.ics"), "utf-8");
   const homeIcs = await readFile(join(dir, "2026-06-10_t-shared_4ea140.ics"), "utf-8");
   t.check(
@@ -173,11 +168,9 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   // — the pull never sees the edit, so the pending-edit pass owns it. Work's pull
   // still reconciles ITS `evt-shared`, which must not make the pass skip home's.
 
-  // doctest:L159
   calendar.silent.add("home");
   await writeFile(join(dir, "2026-06-10_t-shared_4ea140.ics"), homeIcs.replace("SUMMARY:Dentist", "SUMMARY:Dentist MINE"));
 
-  // doctest:L162
   const second = await connector.sync();
   t.check(
     {
@@ -202,14 +195,12 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   // entry — under the bare-id key, the cancellation deleted whichever file was
   // written last.
 
-  // doctest:L179
   calendar.silent.delete("home");
   calendar.byCalendar["work"] = [{
     id: "evt-shared",
     status: "cancelled",
   }];
 
-  // doctest:L185
   const third = await connector.sync();
   t.check(
     {
@@ -237,7 +228,6 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   // index order decides. Untracking the loser is safe because the file stays tracked
   // by the keeper, so the orphan scan never re-inserts it.
 
-  // doctest:L208
   const statePath = join(box.root, "_bookkeeping/connectors/google-calendar-state.json");
   const collided = {
     version: 2,
@@ -249,7 +239,6 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   };
   await writeFile(statePath, JSON.stringify(collided, null, 2));
 
-  // doctest:L219
   const deduped = await connector.sync();
   t.check(
     {
@@ -274,7 +263,6 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
   // and patches into the wrong calendar's event: the exact failure this dedupe
   // exists to prevent.
 
-  // doctest:L237
   const homeFile = "2026-06-10_t-shared_4ea140.ics";
   const homeHash = contentHash(await readFile(join(dir, homeFile), "utf-8"));
   await writeFile(statePath, JSON.stringify({
@@ -287,7 +275,6 @@ void test("Both calendars return an event called evt-shared, on the same day.", 
     },
   }, null, 2));
 
-  // doctest:L249
   const byHash = await connector.sync();
   t.check(
     {
@@ -319,14 +306,11 @@ void test("State written before the key change is keyed by the bare event id and
       t.error(error);
     }
   });
-  // doctest:L267
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
 
-  // doctest:L270
   box.commitAll("init box");
 
-  // doctest:L272
   const calendar = createFakeGoogleCalendar({
     calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
     events: [{
@@ -353,13 +337,11 @@ void test("State written before the key change is keyed by the bare event id and
   // A second file joins it, tracked only by an old-format entry — an event Google
   // no longer returns, so nothing but the index says it is ours.
 
-  // doctest:L296
   const older = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n" +
     "BEGIN:VEVENT\r\nUID:evt-other\r\nSUMMARY:Older\r\n" +
     "DTSTART:20260620T090000Z\r\nDTEND:20260620T100000Z\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
   await writeFile(join(dir, "2026-06-20_vt-other.ics"), older);
 
-  // doctest:L301
   const statePath = join(box.root, "_bookkeeping/connectors/google-calendar-state.json");
   await writeFile(statePath, JSON.stringify({
     syncTokens: {},
@@ -369,7 +351,6 @@ void test("State written before the key change is keyed by the bare event id and
     },
   }, null, 2));
 
-  // doctest:L310
   t.check(await trackedKeys(box.root), [
     "evt-old (legacy)",
     "evt-other primary",
@@ -380,7 +361,6 @@ void test("State written before the key change is keyed by the bare event id and
   // in the pull and is adopted onto its real calendar; `evt-other` — which Google
   // does not return — keeps its file under the re-keyed entry.
 
-  // doctest:L320
   const after = await connector.sync();
   t.check(
     {
@@ -405,7 +385,6 @@ void test("State written before the key change is keyed by the bare event id and
 
   // The rewritten file carries the version marker:
 
-  // doctest:L333
   const saved: { version?: number } = JSON.parse(await readFile(statePath, "utf-8"));
   t.check(saved.version, 2);
 
@@ -415,7 +394,6 @@ void test("State written before the key change is keyed by the bare event id and
   // a bare key is invisible to every lookup, so the stale pass would read its event
   // as deleted on Google and remove the file.
 
-  // doctest:L345
   const marked: { version: number; syncTokens: Record<string, string>; eventFiles: Record<string, unknown> } =
     JSON.parse(await readFile(statePath, "utf-8"));
   const other = marked.eventFiles["evt-other primary"];
@@ -423,7 +401,6 @@ void test("State written before the key change is keyed by the bare event id and
   marked.eventFiles["evt-other"] = other;
   await writeFile(statePath, JSON.stringify(marked, null, 2));
 
-  // doctest:L352
   t.check(await trackedKeys(box.root), [
     "evt-old primary",
     "evt-other primary",

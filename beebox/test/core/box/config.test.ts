@@ -13,7 +13,7 @@
 // than propagating the crash.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { loadBoxTimezone } from "../../../src/core/box/config.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
@@ -26,19 +26,16 @@ void test("No timezone configured: `null`, no warning", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L23
   const box = await makeTmpBox();
   t.check(await loadBoxTimezone(box.root), null);
 
   // ## A valid IANA timezone loads as-is
 
-  // doctest:L31
   await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chicago" }));
   t.check(await loadBoxTimezone(box.root), "America/Chicago");
 
   // ## A malformed timezone degrades to `null` (host fallback), not a thrown `RangeError`
 
-  // doctest:L39
   await box.write("_config/box.json", JSON.stringify({ timezone: "America/Chciago" }));
   t.check(await loadBoxTimezone(box.root), null);
 });

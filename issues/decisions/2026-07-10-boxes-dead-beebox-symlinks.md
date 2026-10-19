@@ -7,6 +7,8 @@ filed-by: agent
 discovered-in: worktree-orama-semantic-search — live-testing semantic search on a local box
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Found 2026-07-10: 13 of 13 local boxes under `~/src/boxes/` had a dead
 `node_modules/beebox` symlink, so any box-local schema (a `bill`
 here, an `outline`/`progress` or `itinerary`/`stop` pair there)

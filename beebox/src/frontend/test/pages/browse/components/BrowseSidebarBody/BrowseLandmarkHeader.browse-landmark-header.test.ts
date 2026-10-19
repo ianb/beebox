@@ -5,7 +5,7 @@
 // navigation callback; URL-shaped links stay ordinary external anchors.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BrowseLandmarkHeader } from "../../../../../src/pages/browse/components/BrowseSidebarBody/BrowseLandmarkHeader.js";
@@ -42,7 +42,6 @@ const header = renderToStaticMarkup(React.createElement(BrowseLandmarkHeader, {
 // button for the page callback, an external ref is an anchor, and a missing card
 // is visibly unavailable.
 void test("The section owns its landmark and names the place.", async (t) => {
-  // doctest:L47
   t.check(
     [
       header.includes('aria-label="Box landmark"'),
@@ -61,21 +60,18 @@ void test("The section owns its landmark and names the place.", async (t) => {
   // form of its path — bare for a `_content` path, `<AreaLabel>:...` for a
   // machinery area (`display-path.ts`).
 
-  // doctest:L65
   const unlabeledContentHeader = renderToStaticMarkup(React.createElement(BrowseLandmarkHeader, {
     landmark: { ...landmark, label: "", path: "_content/recipes/Box.landmark.card" },
     boxSlug: "test1",
     onNavigate: () => {},
   }));
 
-  // doctest:L71
   const unlabeledMachineryHeader = renderToStaticMarkup(React.createElement(BrowseLandmarkHeader, {
     landmark: { ...landmark, label: "", path: "_bookkeeping/jobs/Box.landmark.card" },
     boxSlug: "test1",
     onNavigate: () => {},
   }));
 
-  // doctest:L77
   t.check(
     [
       unlabeledContentHeader.includes(">recipes/Box.landmark.card<"),
@@ -88,7 +84,6 @@ void test("The section owns its landmark and names the place.", async (t) => {
 // The landmark card itself is not repeated in the raw listing once the header
 // represents it. Other cards and files remain present.
 void test("The landmark card itself is not repeated in the raw listing once the header r...", async (t) => {
-  // doctest:L88
   const listing = renderToStaticMarkup(React.createElement(BrowseSidebarList, {
     data: {
       path: "",

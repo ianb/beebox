@@ -13,8 +13,8 @@
 // reconnecting across a deploy resync instead of replaying stale-shaped rows.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import Database from "better-sqlite3";
 import { join } from "node:path";
 import { createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";
@@ -60,10 +60,8 @@ const samples = {
 // The sample catalog covers every event, and each parses cleanly against the
 // schema the read boundary uses:
 void test("The sample catalog covers every event, and each parses cleanly against the sc...", async (t) => {
-  // doctest:L60
   t.check(Object.keys(samples).toSorted(), Object.keys(eventSchemas).toSorted());
 
-  // doctest:L63
   const failures = Object.entries(samples).filter(([name, sample]) => !(isBusEventName(name) && eventSchemas[name].safeParse(sample).success)).map(([name]) => name);
   t.check(failures, []);
 });
@@ -74,13 +72,11 @@ void test("The sample catalog covers every event, and each parses cleanly agains
 // undefined one, so the persisted row omits it. Both must stay optional (Zod v4
 // treats a bare `z.unknown()` object property as required):
 void test("An answer carries only answer OR selectedId; JSON.stringify drops the undefin...", async (t) => {
-  // doctest:L75
   t.check(eventSchemas["question-answered"].safeParse({ path: "Q.question.card", selectedId: "opt-1", timestamp: TS }), {
     success: true,
     data: { path: "Q.question.card", selectedId: "opt-1", timestamp: TS },
   });
 
-  // doctest:L78
   t.check(eventSchemas["question-answered"].safeParse({ path: "Q.question.card", answer: "freeform", timestamp: TS }), {
     success: true,
     data: { path: "Q.question.card", answer: "freeform", timestamp: TS },
@@ -100,7 +96,6 @@ void test("Validation gates, it never transforms:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L88
   const box = await makeTmpBox();
   const bus = createEventBus(box.root);
   bus.emit("card-created", samples["card-created"]);
@@ -127,13 +122,11 @@ void test("readSince(afterId) answers \"what have I missed\", which needs a curs
       t.error(error);
     }
   });
-  // doctest:L116
   const box2 = await makeTmpBox();
   const bus2 = createEventBus(box2.root);
   for (const source of ["a", "b", "c", "d"]) bus2.emit("cards-changed", { source });
   bus2.emit("chat-complete", { sessionId: "s-1", timestamp: TS });
 
-  // doctest:L121
   t.check(bus2.readRecent({ event: "cards-changed", limit: 3 }), [
     { id: 2, event: "cards-changed", data: { source: "b" }, createdAt },
     { id: 3, event: "cards-changed", data: { source: "c" }, createdAt },
@@ -143,14 +136,12 @@ void test("readSince(afterId) answers \"what have I missed\", which needs a curs
   // It answers about one type only — a busier neighbouring event stream cannot
   // crowd out the answer:
 
-  // doctest:L129
   t.check(bus2.readRecent({ event: "chat-complete", limit: 10 }), [
     { id: 5, event: "chat-complete", data: { sessionId: "s-1", timestamp: TS }, createdAt },
   ]);
 
   // A type nothing has emitted is empty, not an error:
 
-  // doctest:L136
   t.check(bus2.readRecent({ event: "chat-user-message", limit: 10 }), []);
 });
 
@@ -168,12 +159,10 @@ void test("Emit one valid row, then hand-write three broken ones directly into S
       t.error(error);
     }
   });
-  // doctest:L152
   const box = await makeTmpBox();
   const bus = createEventBus(box.root);
   bus.emit("cards-changed", { source: "gmail" });
 
-  // doctest:L156
   const dbPath = join(box.root, ".beebox/events.db");
   const raw = new Database(dbPath);
   const ins = raw.prepare("INSERT INTO events (event, data) VALUES (?, ?)");
@@ -182,7 +171,6 @@ void test("Emit one valid row, then hand-write three broken ones directly into S
   ins.run("mystery-event", JSON.stringify({ x: 1 }));        // unknown event name
   raw.close();
 
-  // doctest:L164
   const rows = bus.readSince(0);
   t.check(rows, [
     { id: 1, event: "cards-changed", data: { source: "gmail" }, createdAt },
@@ -193,8 +181,6 @@ void test("Emit one valid row, then hand-write three broken ones directly into S
 
   // The valid sibling keeps its real payload; a sentinel carries the original event
   // name and raw payload for debugging:
-
-  // doctest:L173
 
 });
 
@@ -212,7 +198,6 @@ void test("Persist two rows, then simulate a deploy that bumped the schema gener
       t.error(error);
     }
   });
-  // doctest:L192
   const box = await makeTmpBox();
   const bus1 = createEventBus(box.root);
   bus1.emit("cards-changed", { source: "a" });
@@ -222,15 +207,12 @@ void test("Persist two rows, then simulate a deploy that bumped the schema gener
     { id: 2, event: "cards-changed", data: { source: "b" }, createdAt },
   ]);
 
-  // doctest:L201
   bus1.close();
 
-  // doctest:L203
   const raw = new Database(join(box.root, ".beebox/events.db"));
   raw.prepare("UPDATE event_meta SET schema_generation = ? WHERE id = 1").run(EVENT_SCHEMA_GENERATION - 1);
   raw.close();
 
-  // doctest:L207
   const bus2 = createEventBus(box.root);
   t.check(bus2.readSince(0), []);
 });
@@ -249,7 +231,6 @@ void test("A box upgraded from before generation stamping has an events table fu
       t.error(error);
     }
   });
-  // doctest:L224
   const box = await makeTmpBox();
   const legacyPath = join(box.root, ".beebox");
   await box.write(".beebox/.keep", "");
@@ -258,7 +239,6 @@ void test("A box upgraded from before generation stamping has an events table fu
   legacy.prepare("INSERT INTO events (event, data) VALUES (?, ?)").run("cards-changed", JSON.stringify({ source: "old" }));
   legacy.close();
 
-  // doctest:L232
   const bus = createEventBus(box.root);
   t.check(bus.readSince(0), []);
 });

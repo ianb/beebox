@@ -11,8 +11,8 @@
 // the other box's scope.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import { createTwoBoxTestServer } from "../helpers/test-server.js";
 
 // ## Both scopes answer under their own slug, with an agent bearer

@@ -5,7 +5,7 @@
 // over cards, labels, and controls.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { useDoodlebitMotion } from "../../../src/components/themes/useDoodlebitMotion.js";
@@ -43,7 +43,6 @@ function pointerMove(target: Element, { x, y, pointerType }: { x: number; y: num
 }
 
 void test("line 45", async (t) => {
-  // doctest:L46
   const view = await mount(h(Surface));
   const surface = view.container.querySelector<HTMLElement>("#surface")!;
   const open = view.container.querySelector("#open")!;
@@ -73,7 +72,6 @@ void test("line 45", async (t) => {
 
 // Reduced motion and touch input do not advance the walkers.
 void test("Reduced motion and touch input do not advance the walkers.", async (t) => {
-  // doctest:L71
   setMotionAllowed(false);
   const reduced = await mount(h(Surface));
   const reducedSurface = reduced.container.querySelector<HTMLElement>("#surface")!;

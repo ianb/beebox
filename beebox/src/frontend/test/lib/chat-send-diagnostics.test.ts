@@ -5,8 +5,8 @@
 // event API accepts enumerated metadata, not message content.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import {
   beginChatSendDiagnostic,
@@ -45,7 +45,6 @@ console.warn = (value: unknown) => warnings.push(String(value));
 
 // ## A routine send stays silent and records hop ordering
 void test("A routine send stays silent and records hop ordering", async (t) => {
-  // doctest:L42
   beginChatSendDiagnostic({
     emissionId: "msg-ok",
     origin: "typed",
@@ -66,7 +65,6 @@ void test("A routine send stays silent and records hop ordering", async (t) => {
 
 // ## A rejection flushes one content-free timeline
 void test("A rejection flushes one content-free timeline", async (t) => {
-  // doctest:L65
   beginChatSendDiagnostic({
     emissionId: "msg-timeout",
     origin: "voice",
@@ -93,7 +91,6 @@ void test("A rejection flushes one content-free timeline", async (t) => {
     },
   ]);
 
-  // doctest:L86
   t.check(
     chatSendReasonKind("request contained diagnostic transport test at https://secret.invalid")
     ,
@@ -103,7 +100,6 @@ void test("A rejection flushes one content-free timeline", async (t) => {
 
 // ## A transport anomaly flushes even after a fast accepted receipt
 void test("A transport anomaly flushes even after a fast accepted receipt", async (t) => {
-  // doctest:L93
   beginChatSendDiagnostic({
     emissionId: "msg-stream",
     origin: "typed",
@@ -118,7 +114,6 @@ void test("A transport anomaly flushes even after a fast accepted receipt", asyn
   }
   recordChatSendEvent("msg-stream", { event: "turn-stream-error", detail: { errorLength: 120 } });
 
-  // doctest:L107
   t.check(warnings.slice(1).map(parseWarning), [
     {
       version: 1,
@@ -140,7 +135,6 @@ void test("A transport anomaly flushes even after a fast accepted receipt", asyn
 
 // ## A retry keeps a separate terminal snapshot and ring pressure preserves dispatch
 void test("A retry keeps a separate terminal snapshot and ring pressure preserves dispatch", async (t) => {
-  // doctest:L121
   beginChatSendDiagnostic({
     emissionId: "msg-retry",
     origin: "typed",
@@ -153,10 +147,8 @@ void test("A retry keeps a separate terminal snapshot and ring pressure preserve
   for (let i = 0; i < 30; i++) recordChatSendEnvironmentEvent("bus-ws-connect");
   recordChatSendEvent("msg-retry", { event: "post-error", detail: { reasonKind: "network" } });
 
-  // doctest:L133
   t.check(warnings.slice(2).map((warning) => parseWarning(warning).trigger), ["post-retry-scheduled", "post-error"]);
 
-  // doctest:L136
   // `online` is left out: Node's `navigator.onLine` is undefined, which the
   // event's `boolean | null` type does not allow.
   const first = inspectChatSendDiagnostic("msg-retry")[0];
@@ -167,7 +159,6 @@ void test("A retry keeps a separate terminal snapshot and ring pressure preserve
     detail: { origin: "typed", textLength: 42, imageCount: 0, fileCount: 0, selectionCount: 0 },
   });
 
-  // doctest:L139
   console.warn = originalWarn;
   Date.now = originalNow;
   resetChatSendDiagnostics();

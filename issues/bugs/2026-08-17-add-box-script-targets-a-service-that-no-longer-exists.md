@@ -10,6 +10,8 @@ needs: [manual-testing]
 priority: normal
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > **⏳ Awaiting manual testing** — the fix landed on `worktree-add-box-process`
 > (`d72111bb` + `fe30d4d5`). Everything reachable without production is
 > verified; the one thing that is not is a real run against the live server.

@@ -6,11 +6,11 @@
 // dashboard shows a warning until the condition clears or the owner dismisses
 // it. Nothing is sent: health never notifies on its own
 // (docs/implemented-plans/notifications.md, Track E). See `connectors/activity-verdict.ts` for the rule and
-// `connector-activity-verdict.doctest.md` for its cases.
+// `test/connector-activity.verdict.test.ts` for its cases.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { readRecent } from "../../../../src/core/notification/log.js";
@@ -66,12 +66,10 @@ void test("Thirty days of new mail, then three days of successful syncs that onl
       t.error(error);
     }
   });
-  // doctest:L62
   const box = await seedBox();
   const last = await runDays(box.root, { start: FIRST_DAY, pattern: "P".repeat(30) + "ZZ" });
   t.check(await updateConnectorEpisodes(box.root, { now: at(last) }), null);
 
-  // doctest:L67
   const day3 = await runDays(box.root, { start: addDays(last, 1), pattern: "Z" });
   t.check(await updateConnectorEpisodes(box.root, { now: at(day3) }), {
     connectors: [
@@ -79,7 +77,6 @@ void test("Thirty days of new mail, then three days of successful syncs that onl
     ],
   });
 
-  // doctest:L71
   const [warning] = await connectorActivityHealthChecks(box.root, { now: at(day3) });
   t.check(warning, {
     name: "connector-activity:gmail",
@@ -89,22 +86,18 @@ void test("Thirty days of new mail, then three days of successful syncs that onl
     actions: ["dismiss-connector-episode"],
   });
 
-  // doctest:L75
   t.check(await readRecent(box.root, { days: 1, now: at(day3) }), []);
 
   // The episode is stamped, so later ticks, including on later quiet days, record
   // nothing new:
 
-  // doctest:L83
   t.check(await updateConnectorEpisodes(box.root, { now: at(day3) }), null);
 
-  // doctest:L86
   const day4 = await runDays(box.root, { start: addDays(day3, 1), pattern: "Z" });
   t.check(await updateConnectorEpisodes(box.root, { now: at(day4) }), null);
 
   // ## The dashboard warns until the owner dismisses it
 
-  // doctest:L94
   const [check] = await connectorActivityHealthChecks(box.root, { now: at(day4) });
   invariant(check, "the quiet connector raises a warning");
   t.check(check, {
@@ -115,32 +108,25 @@ void test("Thirty days of new mail, then three days of successful syncs that onl
     actions: ["dismiss-connector-episode"],
   });
 
-  // doctest:L99
   t.check(await caller(box.root, false).health.dismissConnectorEpisode({ check: check.name }).then(() => "allowed", (e) => e.code), "FORBIDDEN");
 
-  // doctest:L102
   t.check(await caller(box.root, true).health.dismissConnectorEpisode({ check: check.name }), {
     success: true,
   });
 
-  // doctest:L105
   t.check(await connectorActivityHealthChecks(box.root, { now: at(day4) }), []);
 
   // Dismissing when nothing is open is an error, not a silent success:
 
-  // doctest:L112
   t.check(await caller(box.root, true).health.dismissConnectorEpisode({ check: "connector-activity:calendar" }).then(() => "allowed", (e) => e.code), "NOT_FOUND");
 
   // ## New items end the episode; the next one is new
 
-  // doctest:L119
   const recovered = await runDays(box.root, { start: addDays(day4, 1), pattern: "P" });
   t.check(await updateConnectorEpisodes(box.root, { now: at(recovered) }), null);
 
-  // doctest:L123
   t.check((await loadConnectorActivity(box.root)).connectors.gmail?.episode, null);
 
-  // doctest:L126
   const failing = await runDays(box.root, { start: addDays(recovered, 1), pattern: "EE" });
   t.check(await updateConnectorEpisodes(box.root, { now: at(failing) }), {
     connectors: [
@@ -148,7 +134,6 @@ void test("Thirty days of new mail, then three days of successful syncs that onl
     ],
   });
 
-  // doctest:L130
   t.check(await connectorActivityHealthChecks(box.root, { now: at(failing) }), [
     {
       name: "connector-activity:gmail",
@@ -169,7 +154,6 @@ void test("A damaged record is a warning, not a reset", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L141
   const box = await seedBox();
   await box.seed("_bookkeeping/connectors/connector-activity.state.json", "{\"version\":2}");
   const [check] = await connectorActivityHealthChecks(box.root, { now: at(FIRST_DAY) });

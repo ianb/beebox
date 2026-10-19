@@ -4,8 +4,8 @@
 // processing, lock management, and cycle behavior.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import {
   runReactor,
 } from "../../../src/core/reactor/engine/core.js";
@@ -47,12 +47,10 @@ const testOverrides = {
 //
 // ### Single batch job processed by agent
 void test("Single batch job processed by agent", async (t) => {
-  // doctest:L50
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/jobs/task.intake.job.card", intakeJob("Write a haiku"));
   box.commitAll("Add job");
 
-  // doctest:L54
   const created: FakeAgent[] = [];
   const agentFactory = (opts: CreateAgentOptions) => {
     const agent = createFakeAgent({
@@ -66,17 +64,14 @@ void test("Single batch job processed by agent", async (t) => {
     return agent;
   };
 
-  // doctest:L67
   const result = await runReactor({
     boxRoot: box.root,
     ...testOverrides,
     createAgent: agentFactory,
   });
 
-  // doctest:L73
   t.check(result, { success: true, jobsProcessed: 1, jobsRemaining: 0 });
 
-  // doctest:L82
   // System prompt no longer carries the absolute box path (dropped so it
   // doesn't leak this machine's temp/home directory into agent context).
   const fakeAgent = created[0];
@@ -84,19 +79,16 @@ void test("Single batch job processed by agent", async (t) => {
   // The prompts are large generated text, so the check is on what the prompt must not hold.
   t.check(fakeAgent.invocations.map((i) => i.systemPrompt), [not(any(String).includes(box.root))]);
 
-  // doctest:L89
   await box.cleanup();
 });
 
 // ### Multiple batch jobs in one session
 void test("Multiple batch jobs in one session", async (t) => {
-  // doctest:L95
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/jobs/task1.intake.job.card", intakeJob("Task one"));
   await box.write("_bookkeeping/jobs/task2.intake.job.card", intakeJob("Task two"));
   box.commitAll("Add jobs");
 
-  // doctest:L100
   const created: FakeAgent[] = [];
   const agentFactory = (opts: CreateAgentOptions) => {
     const agent = createFakeAgent({
@@ -112,42 +104,35 @@ void test("Multiple batch jobs in one session", async (t) => {
     return agent;
   };
 
-  // doctest:L115
   const result = await runReactor({
     boxRoot: box.root,
     ...testOverrides,
     createAgent: agentFactory,
   });
 
-  // doctest:L121
   t.check(result, { success: true, jobsProcessed: 2, jobsRemaining: 0 });
 
-  // doctest:L124
   // Single agent session (one invocation with both jobs)
   const fakeAgent = created[0];
   invariant(fakeAgent, "the reactor created its agent");
   // The prompt is large generated text: it holds both jobs.
   t.check(fakeAgent.invocations.map((i) => i.prompt), [any(String).includes("Task one").includes("Task two")]);
 
-  // doctest:L136
   await box.cleanup();
 });
 
 // ### Dry run does not invoke agent
 void test("Dry run does not invoke agent", async (t) => {
-  // doctest:L142
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/jobs/task.intake.job.card", intakeJob("Should not run"));
   box.commitAll("Add job");
 
-  // doctest:L146
   let agentCreated = false;
   const agentFactory = (opts: CreateAgentOptions) => {
     agentCreated = true;
     return createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
   };
 
-  // doctest:L152
   const result = await runReactor({
     boxRoot: box.root,
     ...testOverrides,
@@ -155,31 +140,25 @@ void test("Dry run does not invoke agent", async (t) => {
     dryRun: true,
   });
 
-  // doctest:L159
   t.check(agentCreated, false);
 
-  // doctest:L162
   t.check(result, { success: true, jobsProcessed: 0, jobsRemaining: 1 });
 
-  // doctest:L165
   await box.cleanup();
 });
 
 // ### skipLowPriority skips when only low-priority jobs exist
 void test("skipLowPriority skips when only low-priority jobs exist", async (t) => {
-  // doctest:L171
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/jobs/digest.intake.job.card", intakeJob("Daily digest", { priority: "low" }));
   box.commitAll("Add low-pri job");
 
-  // doctest:L175
   let agentCreated = false;
   const agentFactory = (opts: CreateAgentOptions) => {
     agentCreated = true;
     return createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
   };
 
-  // doctest:L181
   const result = await runReactor({
     boxRoot: box.root,
     ...testOverrides,
@@ -187,13 +166,10 @@ void test("skipLowPriority skips when only low-priority jobs exist", async (t) =
     skipLowPriority: true,
   });
 
-  // doctest:L188
   t.check(agentCreated, false);
 
-  // doctest:L191
   t.check(result, { success: true, jobsProcessed: 0, jobsRemaining: 1 });
 
-  // doctest:L194
   await box.cleanup();
 });
 
@@ -210,7 +186,6 @@ void test("Lock prevents concurrent runs", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L202
   const box = await makeTmpBox({ git: true });
   const lockFile = path.join(box.root, ".bbx-reactor.lock");
   // Simulate a live holder in another process: a fresh guard directory (what
@@ -223,21 +198,18 @@ void test("Lock prevents concurrent runs", async (t) => {
     metadata: { kind: "reactor" },
   }));
 
-  // doctest:L214
   const result = await runReactor({
     boxRoot: box.root,
     ...testOverrides,
     createAgent: (opts) => createFakeAgent({ name: opts.name, act: async () => ({ success: true }) }),
   });
 
-  // doctest:L220
   // Reactor bailed due to lock
   t.check(result, { success: true, jobsProcessed: 0, jobsRemaining: 0, skipped: "locked" });
 });
 
 // ### Stale lock is cleaned up
 void test("Stale lock is cleaned up", async (t) => {
-  // doctest:L234
   const box = await makeTmpBox({ git: true });
   const lockFile = path.join(box.root, ".bbx-reactor.lock");
   // Simulate a crashed holder: a guard directory whose mtime is well past the
@@ -252,11 +224,9 @@ void test("Stale lock is cleaned up", async (t) => {
     metadata: { kind: "reactor" },
   }));
 
-  // doctest:L248
   await box.write("_bookkeeping/jobs/task.intake.job.card", intakeJob("After stale lock"));
   box.commitAll("Add job");
 
-  // doctest:L251
   let fakeAgent;
   const agentFactory = (opts: CreateAgentOptions) => {
     fakeAgent = createFakeAgent({
@@ -269,18 +239,15 @@ void test("Stale lock is cleaned up", async (t) => {
     return fakeAgent;
   };
 
-  // doctest:L263
   const result = await runReactor({
     boxRoot: box.root,
     ...testOverrides,
     createAgent: agentFactory,
   });
 
-  // doctest:L269
   // Stale lock was cleaned up and reactor ran
   t.check(result, { success: true, jobsProcessed: 1, jobsRemaining: 0 });
 
-  // doctest:L273
   await box.cleanup();
 });
 
@@ -291,13 +258,11 @@ void test("Stale lock is cleaned up", async (t) => {
 // The reactor loops when jobs remain after a cycle. Here we start with
 // 2 jobs but the agent only finishes 1 per invocation, requiring 2 cycles.
 void test("The reactor loops when jobs remain after a cycle.", async (t) => {
-  // doctest:L284
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/jobs/task1.intake.job.card", intakeJob("First task"));
   await box.write("_bookkeeping/jobs/task2.intake.job.card", intakeJob("Second task"));
   box.commitAll("Add jobs");
 
-  // doctest:L289
   let cycle = 0;
   const agentFactory = (opts: CreateAgentOptions) => {
     const currentCycle = cycle++;
@@ -312,7 +277,6 @@ void test("The reactor loops when jobs remain after a cycle.", async (t) => {
     });
   };
 
-  // doctest:L303
   const result = await runReactor({
     boxRoot: box.root,
     ...testOverrides,
@@ -320,16 +284,13 @@ void test("The reactor loops when jobs remain after a cycle.", async (t) => {
     maxCycles: 3,
   });
 
-  // doctest:L310
   t.check(result, { success: true, jobsProcessed: 2, jobsRemaining: 0 });
 
-  // doctest:L316
   t.check(
     // Two cycles were needed
     cycle,
     2,
   );
 
-  // doctest:L320
   await box.cleanup();
 });

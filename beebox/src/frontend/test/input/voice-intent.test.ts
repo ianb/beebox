@@ -9,8 +9,8 @@
 // never appears here — it belongs to the next message instead.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, is, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, is, not } from "@ianbicking/tap-check/check";
 import { routeComposerSend } from "../../src/components/chat/InteractiveChat-helpers.js";
 import { buildVoiceSubmitEmission, prepareVoiceSubmitEmission, sendKeywordOf } from "../../src/input/voice-intent.js";
 
@@ -28,7 +28,6 @@ function anyMessageId() {
 // settled fallback exists only for the narrow race where the segment became idle
 // before the click handler ran.
 void test("The desktop and mobile Send buttons share this decision.", async (t) => {
-  // doctest:L26
   const calls: string[] = [];
   t.check(
     routeComposerSend({
@@ -40,10 +39,8 @@ void test("The desktop and mobile Send buttons share this decision.", async (t) 
     "finalizing",
   );
 
-  // doctest:L35
   t.check(calls, ["finalize"]);
 
-  // doctest:L38
   const settledCalls: string[] = [];
   t.check(
     routeComposerSend({
@@ -55,10 +52,8 @@ void test("The desktop and mobile Send buttons share this decision.", async (t) 
     "settled",
   );
 
-  // doctest:L47
   t.check(settledCalls, ["settled"]);
 
-  // doctest:L50
   const typedCalls: string[] = [];
   t.check(
     routeComposerSend({
@@ -70,13 +65,11 @@ void test("The desktop and mobile Send buttons share this decision.", async (t) 
     "typed",
   );
 
-  // doctest:L59
   t.check(typedCalls, ["typed"]);
 });
 
 // ## Prior composer text folds in ahead of the new utterance
 void test("Prior composer text folds in ahead of the new utterance", async (t) => {
-  // doctest:L66
   const e = buildVoiceSubmitEmission({
     priorInput: "note to self,",
     finalText: "buy more flour",
@@ -102,7 +95,6 @@ void test("Prior composer text folds in ahead of the new utterance", async (t) =
 
 // ## No prior text: the utterance stands alone
 void test("No prior text: the utterance stands alone", async (t) => {
-  // doctest:L87
   t.check(buildVoiceSubmitEmission({ priorInput: "", finalText: "send message", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false }), {
     id: anyMessageId(),
     origin: "voice",
@@ -124,7 +116,6 @@ void test("No prior text: the utterance stands alone", async (t) => {
 // sends; the frozen snapshots now carry pending images and files, as they do
 // selections.
 void test("A file attached while dictating used to be silently dropped from keyword send...", async (t) => {
-  // doctest:L98
   const e3 = buildVoiceSubmitEmission({
     priorInput: "",
     finalText: "please summarize the attached report",
@@ -161,7 +152,6 @@ void test("A file attached while dictating used to be silently dropped from keyw
 
 // ## Each call mints a distinct emission id (the dedup key)
 void test("Each call mints a distinct emission id (the dedup key)", async (t) => {
-  // doctest:L116
   const a = buildVoiceSubmitEmission({ priorInput: "", finalText: "x", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
   const b = buildVoiceSubmitEmission({ priorInput: "", finalText: "x", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
   t.check(a.id, not(b.id));
@@ -174,7 +164,6 @@ void test("Each call mints a distinct emission id (the dedup key)", async (t) =>
 // collapses that onto `undefined` via `resolveEmissionWords`, so the assembler
 // never stamps a false `stt="deepgram"`.
 void test("A service that never captures confidence (or a segment nothing was finalized...", async (t) => {
-  // doctest:L130
   t.check(
     buildVoiceSubmitEmission({
       priorInput: "", finalText: "voxtral said this", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
@@ -197,7 +186,6 @@ void test("A service that never captures confidence (or a segment nothing was fi
 // Belt-and-braces: an array is present but no entry carries a numeric
 // `confidence` — equally uninformative, equally `undefined`.
 void test("Belt-and-braces:", async (t) => {
-  // doctest:L141
   t.check(
     buildVoiceSubmitEmission({
       priorInput: "", finalText: "no scores here", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
@@ -220,7 +208,6 @@ void test("Belt-and-braces:", async (t) => {
 // A real Deepgram capture — even one where every word cleared the
 // threshold — rides straight through, so the assembler still stamps `stt`:
 void test("A real Deepgram capture — even one where every word cleared the threshold — r...", async (t) => {
-  // doctest:L152
   t.check(
     buildVoiceSubmitEmission({
       priorInput: "", finalText: "all clear", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
@@ -257,7 +244,6 @@ void test("A real Deepgram capture — even one where every word cleared the thr
 // composer context never change: text typed into the composer during the wait
 // belongs to the next message.
 void test("prepareVoiceSubmitEmission builds the dispatched emission from the realtime e...", async (t) => {
-  // doctest:L168
   const hqIntent = {
     kind: "submit" as const,
     text: "rough words <send-message phrase=\"clean up and send\" />",
@@ -287,7 +273,6 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
     hqService: "voxtral",
   });
 
-  // doctest:L186
   t.check(hq.id, realtime.id);
 
   // The HQ text replaced the realtime words, so Track 3's HQ-drop rule applies:
@@ -300,7 +285,6 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
   // back, and the tag is appended with `heard="live"` — not both transcripts. The
   // agent reads the trailing words for sense (docs/plans/hq-always.md):
 
-  // doctest:L204
   t.check(
     prepareVoiceSubmitEmission({
       realtime,
@@ -323,7 +307,6 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
   // When the HQ text does contain a recognizable keyword, its own words become the
   // tag, unmarked:
 
-  // doctest:L216
   t.check(
     prepareVoiceSubmitEmission({
       realtime,
@@ -347,7 +330,6 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
   // dictation heard "send checkpoint"; the HQ text reads "send message". The
   // checkpoint tag is kept, marked `heard="live"`, and the HQ words stay as text:
 
-  // doctest:L229
   const checkpointIntent = { ...hqIntent, text: "part one <send-checkpoint-message phrase=\"send checkpoint\" />", matchedPhrase: "send checkpoint" };
   t.check(
     prepareVoiceSubmitEmission({
@@ -370,7 +352,6 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
 
   // A blank HQ result is a fallback: it would otherwise erase the spoken words.
 
-  // doctest:L241
   t.check(
     prepareVoiceSubmitEmission({
       realtime,
@@ -387,11 +368,9 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
   // with its realtime words. Without `hqText`, the assembler marks it
   // `stt="live"`.
 
-  // doctest:L257
   const late = prepareVoiceSubmitEmission({ realtime, outcome: { kind: "fallback", reason: "budget", service: null }, keyword: null });
   t.check(late, is(realtime));
 
-  // doctest:L261
   t.check(
     prepareVoiceSubmitEmission({
       realtime,
@@ -408,7 +387,6 @@ void test("prepareVoiceSubmitEmission builds the dispatched emission from the re
 // when HQ does not arrive, a placeholder body keeps the message (and its
 // `message-id`, which the kept recording answers to):
 void test("Recorded wholly while live text was paused, a segment has no realtime text; w...", async (t) => {
-  // doctest:L276
   const silent = buildVoiceSubmitEmission({ priorInput: "typed first", finalText: "", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
   const placeholder = prepareVoiceSubmitEmission({ realtime: silent, outcome: { kind: "fallback", reason: "budget", service: null }, keyword: null });
   t.check(placeholder, {
@@ -436,7 +414,6 @@ void test("Recorded wholly while live text was paused, a segment has no realtime
 // phrase to restore, and an empty `<send-message phrase="" />` would be
 // meaningless control markup with no narration-mode guidance to explain it.
 void test("A manual stop-and-send (docs/implemented-plans/hq-dictation-switch.md, chunk...", async (t) => {
-  // doctest:L293
   const manualIntent = {
     kind: "submit" as const,
     text: "quick thought before I go",
@@ -447,7 +424,6 @@ void test("A manual stop-and-send (docs/implemented-plans/hq-dictation-switch.md
   };
   t.check(sendKeywordOf(manualIntent), null);
 
-  // doctest:L304
   const manualRealtime = buildVoiceSubmitEmission({ priorInput: "", finalText: manualIntent.text,
     selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
   const manualPrepared = prepareVoiceSubmitEmission({

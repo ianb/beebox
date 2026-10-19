@@ -7,7 +7,7 @@
 // overrides, with provenance").
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   resolveViewParams,
   HISTORY_QUERY_CODEC,
@@ -15,7 +15,6 @@ import {
 
 // ## Card params alone: everything originates from the card
 void test("Card params alone: everything originates from the card", async (t) => {
-  // doctest:L19
   const r = resolveViewParams({
     card: { feedback: true, connectors: ["gmail"] },
     query: {},
@@ -28,7 +27,6 @@ void test("Card params alone: everything originates from the card", async (t) =>
     ],
   });
 
-  // doctest:L27
   t.check(r.origins, {
     feedback: "card",
     connectors: "card",
@@ -40,7 +38,6 @@ void test("Card params alone: everything originates from the card", async (t) =>
 // An explicit `false` in the URL can switch off a card's `true` — the
 // override spelling for booleans.
 void test("An explicit false in the URL can switch off a card's true — the override spel...", async (t) => {
-  // doctest:L37
   const r = resolveViewParams({
     card: { feedback: true, connectors: ["gmail"] },
     query: { session: "abc123", feedback: "false" },
@@ -54,14 +51,12 @@ void test("An explicit false in the URL can switch off a card's true — the ove
     session: "abc123",
   });
 
-  // doctest:L45
   t.check(r.origins, {
     feedback: "url",
     connectors: "card",
     session: "url",
   });
 
-  // doctest:L48
   t.check(r.card, {
     feedback: true,
     connectors: [
@@ -75,7 +70,6 @@ void test("An explicit false in the URL can switch off a card's true — the ove
 // Renderer plumbing injects extras (`path`, `view`) into query params —
 // codecs must ignore them.
 void test("Renderer plumbing injects extras (path, view) into query params — codecs must...", async (t) => {
-  // doctest:L58
   t.check(
     HISTORY_QUERY_CODEC.fromQuery({
       connector: "gmail,rss",
@@ -90,7 +84,6 @@ void test("Renderer plumbing injects extras (path, view) into query params — c
   },
   );
 
-  // doctest:L65
   t.check(HISTORY_QUERY_CODEC.toQuery({ connectors: ["gmail", "rss"], touchpoint: true }), {
     connector: "gmail,rss",
     touchpoint: "true",
@@ -99,7 +92,6 @@ void test("Renderer plumbing injects extras (path, view) into query params — c
 
 // ## Without a codec, URL params are ignored entirely
 void test("Without a codec, URL params are ignored entirely", async (t) => {
-  // doctest:L72
   const r = resolveViewParams({
     card: { feedback: true },
     query: { session: "abc123" },

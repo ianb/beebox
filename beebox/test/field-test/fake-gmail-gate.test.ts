@@ -5,7 +5,7 @@
 // The gate that honors it is fail-closed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -74,7 +74,6 @@ void test("BBXFAKEGMAIL against a box with no config/test-box marker throws at s
       t.error(error);
     }
   });
-  // doctest:L70
   const dir = await scratch();
   const statePath = join(dir, "gmail.json");
   await saveFakeGmailState(statePath, { ...emptyFakeGmailState(), labels });
@@ -84,7 +83,6 @@ void test("BBXFAKEGMAIL against a box with no config/test-box marker throws at s
   box.commitAll("initialize box");
   process.env.BBX_FAKE_GMAIL = statePath;
 
-  // doctest:L79
   await t.checkThrows(async () => (await createGmailConnector(box.root).sync()), "FakeGmailNotPermittedError");
 
   // `bbx wakeup`'s connector loop absorbs sync failures so one flaky service cannot
@@ -92,21 +90,17 @@ void test("BBXFAKEGMAIL against a box with no config/test-box marker throws at s
   // `ConnectorFatalError` and the loop rethrows instead of printing a line and
   // carrying on into intake, the reactor and push.
 
-  // doctest:L89
   await t.checkThrows(async () => (await runConnectors(box.root, { connector: "gmail" })), "FakeGmailNotPermittedError");
 
   // With the marker in place the same box syncs from the file. A first sync only
   // establishes the checkpoint and baselines the rule; the injected message then
   // arrives as cards, and nothing else does.
 
-  // doctest:L98
   await box.seed(TEST_BOX_MARKER, "field-test box\n");
   box.commitAll("mark as a field-test box");
 
-  // doctest:L101
   t.check(await createGmailConnector(box.root).sync(), { success: true, created: [], updated: [], procedures: [] });
 
-  // doctest:L104
   await saveFakeGmailState(statePath, appendMessageToState({
     state: await loadFakeGmailState(statePath),
     message: message({ id: "arrived", subject: "Arrived" }),
@@ -123,7 +117,6 @@ void test("BBXFAKEGMAIL against a box with no config/test-box marker throws at s
     procedures: [],
   });
 
-  // doctest:L112
   const messageCard = result.created.find((p) => p.endsWith(".email-message.card")) ?? "";
   const card = await readFile(join(box.root, messageCard), "utf-8");
   t.check(card, `---
@@ -154,7 +147,6 @@ void test("Without BBXFAKEGMAIL the connector behaves exactly as before:", async
       t.error(error);
     }
   });
-  // doctest:L130
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("initialize box");

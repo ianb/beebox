@@ -5,7 +5,7 @@
 // the active theme decides how that named request looks.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { makeQuoteComponents } from "../../../src/components/Markdown/Quote.js";

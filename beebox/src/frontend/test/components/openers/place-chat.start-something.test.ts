@@ -6,7 +6,7 @@
 // (docs/implemented-plans/landmark-arrival.md, Track C, boxholder decisions a and b).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { startSomething } from "../../../src/components/openers/place-chat.js";
 
 const OPENERS = ["Who has what right now?", "Log a new loan"];
@@ -20,7 +20,6 @@ function chat(contextDir: string | null, showsOwnOpeners: boolean) {
 //
 // A landmark card opened on its own page has no chat beside it.
 void test("A landmark card opened on its own page has no chat beside it.", async (t) => {
-  // doctest:L24
   t.check(startSomething({ payloadDir: "_content/lending", openers: OPENERS, chat: null }), {
     openers: [],
     goToPlace: false,
@@ -32,7 +31,6 @@ void test("A landmark card opened on its own page has no chat beside it.", async
 // The empty chat shows the same openers, so the page does not repeat them
 // (decision a).
 void test("The empty chat shows the same openers, so the page does not repeat them (deci...", async (t) => {
-  // doctest:L34
   t.check(startSomething({ payloadDir: "_content/lending", openers: OPENERS, chat: chat("_content/lending", true) }), {
     openers: [],
     goToPlace: false,
@@ -44,7 +42,6 @@ void test("The empty chat shows the same openers, so the page does not repeat th
 // Once the chat has a message it no longer shows openers; the page is where they
 // stay reachable.
 void test("Once the chat has a message it no longer shows openers; the page is where the...", async (t) => {
-  // doctest:L44
   t.check(startSomething({ payloadDir: "_content/lending", openers: OPENERS, chat: chat("_content/lending", false) }), {
     openers: [
       "Who has what right now?",
@@ -57,7 +54,6 @@ void test("Once the chat has a message it no longer shows openers; the page is w
 // The root place is the logical directory `""`, the same form the chat's
 // `contextDir` uses.
 void test("The root place is the logical directory \"\", the same form the chat's contextD...", async (t) => {
-  // doctest:L52
   t.check(startSomething({ payloadDir: "", openers: ["What can you do?"], chat: chat("", false) }), {
     openers: [
       "What can you do?",
@@ -68,7 +64,6 @@ void test("The root place is the logical directory \"\", the same form the chat'
 
 // ## A place with no openers offers none
 void test("A place with no openers offers none", async (t) => {
-  // doctest:L59
   t.check(startSomething({ payloadDir: "_content/garden", openers: [], chat: chat("_content/garden", false) }), {
     openers: [],
     goToPlace: false,
@@ -82,7 +77,6 @@ void test("A place with no openers offers none", async (t) => {
 // chat (decision b). The link is offered whether or not the place has openers:
 // it is how the person gets to the place's own chat.
 void test("An opener sent from here would start this place's work in the other place's c...", async (t) => {
-  // doctest:L71
   t.check(
     ({
       withOpeners: startSomething({ payloadDir: "_content/lending", openers: OPENERS, chat: chat("", false) }),

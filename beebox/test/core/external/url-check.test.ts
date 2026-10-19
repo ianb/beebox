@@ -6,7 +6,7 @@
 // offline.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { checkExternalUrls } from "../../../src/core/external/url-check/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { UrlVerdict } from "../../../src/core/external/url-check/fetch.js";
@@ -34,7 +34,6 @@ const NOW = "2026-06-28T00:00:00.000Z";
 // tree check (base = HEAD) sees only the *new* URL — the committed one is never
 // handed to the checker:
 void test("Commit a doc with one URL, then add a second URL without committing.", async (t) => {
-  // doctest:L38
   const box = await makeTmpBox({ git: true });
   await box.write("notes.md", "[old](https://host-a.linkcheck.dev/a)\n");
   box.commitAll("seed");
@@ -43,7 +42,6 @@ void test("Commit a doc with one URL, then add a second URL without committing."
     "[old](https://host-a.linkcheck.dev/a)\n[new](https://host-b.linkcheck.dev/b)\n",
   );
 
-  // doctest:L46
   const log: string[][] = [];
   const r1 = await checkExternalUrls(box.root, {
     mode: { kind: "working" },
@@ -61,7 +59,6 @@ void test("Commit a doc with one URL, then add a second URL without committing."
   // Now make a newly-added URL broken. It's reported, and recorded in the gitignored
   // cache so it keeps surfacing — and a *good* URL is stored nowhere:
 
-  // doctest:L67
   await box.write(
     "notes.md",
     "[old](https://host-a.linkcheck.dev/a)\n[bad](https://host-c.linkcheck.dev/c)\n",
@@ -93,7 +90,6 @@ void test("Commit a doc with one URL, then add a second URL without committing."
   // HEAD's base set) — and once it returns ok it's dropped from the cache and the
   // report goes clean:
 
-  // doctest:L99
   box.commitAll("commit the bad link");
   const log3: string[][] = [];
   const r3 = await checkExternalUrls(box.root, {
@@ -110,7 +106,6 @@ void test("Commit a doc with one URL, then add a second URL without committing."
     cacheBroken: [],
   });
 
-  // doctest:L119
   await box.cleanup();
 });
 

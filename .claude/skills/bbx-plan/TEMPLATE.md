@@ -34,7 +34,7 @@ reads the frontmatter `issues:` list to close them; one left off is forgotten.
 ## Stated preferences this plan trades against
 
 <!-- Which of these apply, and the specific principles findings will trace to:
-     - beebox/docs/engineering-principles.md — the twelve principles, by number
+     - beebox/docs/engineering-principles.md — the principles, by number
      - beebox/AGENTS.md — conventions, validation contract, "no features
        beyond the task"
      - beebox/code-style.md — the mechanical rules

@@ -12,7 +12,7 @@
 // rewritten, which is the same interleaving one step later.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   runUnderWakeupCycleLock,
   wakeupCycleLockPath,
@@ -48,11 +48,9 @@ void test("The outer call models a wakeup that is mid-cycle; the inner one is a 
       t.error(error);
     }
   });
-  // doctest:L44
   const box = await makeTmpBox();
   process.env[WAKEUP_OUTCOME_ENV] = "1";
 
-  // doctest:L47
   const second: { ran: boolean | null; didWork: boolean } = { ran: null, didWork: false };
   const printed = await capture(async () => {
     await runUnderWakeupCycleLock(box.root, async () => {
@@ -62,13 +60,11 @@ void test("The outer call models a wakeup that is mid-cycle; the inner one is a 
     });
   });
 
-  // doctest:L57
   t.check(second, { ran: false, didWork: false });
 
   // It is one visible line, not a silent no-op — a skipped cycle that printed
   // nothing would read as a cycle that found nothing to do:
 
-  // doctest:L65
   t.check(printed, [
     WAKEUP_ALREADY_RUNNING,
     '[wakeup-outcome] {"connectorErrors":0,"connectors":[],"reactorOk":true,"reactorSkipped":false,"jobsProcessed":0,"jobsRemaining":0,"skipped":"wakeup-running"}',
@@ -80,7 +76,6 @@ void test("The outer call models a wakeup that is mid-cycle; the inner one is a 
   // counts would take "0 errors, reactor ok" as an answer about work that never
   // started. `skipped` is what distinguishes the two.
 
-  // doctest:L76
   const outcome = parseWakeupOutcome(printed.join("\n"));
   t.check(outcome, {
     connectorErrors: 0,
@@ -95,18 +90,14 @@ void test("The outer call models a wakeup that is mid-cycle; the inner one is a 
   // An unrecognized skip value is "no information", not a skip — the parser refuses
   // the whole line rather than passing a value callers cannot dispatch on:
 
-  // doctest:L85
   t.check(parseWakeupOutcome(`[wakeup-outcome] ${JSON.stringify({ ...outcome, skipped: "something-else" })}`), null);
 
   // ## The lock is released, so the next cycle runs normally
 
-  // doctest:L92
   t.check(await inspectLock(wakeupCycleLockPath(box.root)), null);
 
-  // doctest:L95
   let thirdCycleDidWork = false;
   t.check(await runUnderWakeupCycleLock(box.root, async () => { thirdCycleDidWork = true; }), true);
 
-  // doctest:L99
   t.check(thirdCycleDidWork, true);
 });

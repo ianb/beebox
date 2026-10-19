@@ -6,6 +6,8 @@ issues: []
 ---
 # Operator-driven member password reset
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The operator and member flows described below are implemented. Automated tests
 cover capability migration/isolation, authorization, reset redemption, session
 revocation, replay, throttling, scrypt capacity, and failure pages. The isolated

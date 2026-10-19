@@ -4,7 +4,7 @@
 // logged server-side while their response remains generic.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { registerHubErrorHandler } from "../../../src/hub/server/http-error.js";
 
@@ -16,7 +16,6 @@ void test("line 11", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L12
   const app = Fastify({ logger: false });
   registerHubErrorHandler(app);
   app.get("/explode", async () => {

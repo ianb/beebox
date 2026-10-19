@@ -8,8 +8,8 @@
 // See `docs/triage.md` §Triage (stage 2).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, str } from "@ianbicking/tap-check/check";
 import { compileTriageInstructions } from "../../src/core/triage/instructions.js";
 import { runTriage } from "../../src/core/triage/run/core.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
@@ -26,7 +26,6 @@ void test("A landmark with a triage destination becomes a category; landmarks wi
       t.error(error);
     }
   });
-  // doctest:L22
   const box = await makeTmpBox();
   await box.write(
     "_content/recipes/Recipes.landmark.card",
@@ -67,7 +66,6 @@ navigation:
 `,
   );
 
-  // doctest:L62
   const { categories } = await compileTriageInstructions(box.root);
   t.check(categories.map((c) => ({ name: c.name, dir: c.dir, rules: c.rules })), [
     {
@@ -96,7 +94,6 @@ void test("The triage agent's decisions are applied verbatim for confident and p
       t.error(error);
     }
   });
-  // doctest:L90
   const box = await makeTmpBox();
   await box.write(
     "_content/recipes/Recipes.landmark.card",
@@ -113,7 +110,6 @@ destinations:
   );
   await box.write("_content/inbox/staged/Bread.doc.card", "<doc>flour, water, salt</doc>");
 
-  // doctest:L106
   const result = await runTriage({
     boxRoot: box.root,
     decide: async (items) => ({
@@ -126,7 +122,6 @@ destinations:
     }),
   });
 
-  // doctest:L118
   t.check(result.applications, [
     {
       file: "Bread.doc.card",
@@ -135,7 +130,6 @@ destinations:
     },
   ]);
 
-  // doctest:L128
   t.check(await box.read("_content/inbox/triaged/recipes/Bread.doc.card"), "<doc>flour, water, salt</doc>");
 });
 
@@ -148,7 +142,6 @@ void test("Probable decisions drop a review marker", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L139
   const box = await makeTmpBox();
   await box.write(
     "_content/recipes/Recipes.landmark.card",
@@ -165,7 +158,6 @@ destinations:
   );
   await box.write("_content/inbox/staged/Maybe.doc.card", "<doc>could be a recipe</doc>");
 
-  // doctest:L155
   await runTriage({
     boxRoot: box.root,
     decide: async (items) => ({
@@ -178,7 +170,6 @@ destinations:
     }),
   });
 
-  // doctest:L167
   await t.checkText(await box.read("_content/inbox/triaged/recipes/Maybe.doc.card.probable.txt"), `Triage confidence: probable
 Reason: Vague ingredient mention.`);
 });
@@ -195,7 +186,6 @@ void test("A guess-level decision moves the file into unsure/ and writes a quest
       t.error(error);
     }
   });
-  // doctest:L183
   const box = await makeTmpBox();
   await box.write(
     "_content/recipes/Recipes.landmark.card",
@@ -225,7 +215,6 @@ destinations:
   );
   await box.write("_content/inbox/staged/Mystery.doc.card", "<doc>ambiguous</doc>");
 
-  // doctest:L212
   const result = await runTriage({
     boxRoot: box.root,
     decide: async (items) => ({
@@ -238,7 +227,6 @@ destinations:
     }),
   });
 
-  // doctest:L224
   t.check(
     result.applications.map((a) => ({
       file: a.file,
@@ -256,7 +244,6 @@ destinations:
   ],
   );
 
-  // doctest:L240
   const yaml = await box.read(result.applications[0]?.questionPath ?? "");
   t.check(
     yaml,
@@ -296,7 +283,6 @@ void test("Empty staged is a no-op", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L264
   const box = await makeTmpBox();
   const result = await runTriage({ boxRoot: box.root, decide: async () => ({ decisions: [] }) });
   t.check({ empty: result.empty, decisions: result.decisions }, {

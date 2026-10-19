@@ -6,7 +6,7 @@
 // "Bee Box" and opened on the box picker.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { boxManifest } from "../../../src/webapp/routes/box-identity-assets.js";
 
 const identity = { slug: "kitchen", name: "Kitchen", symbol: null };
@@ -17,7 +17,6 @@ const identity = { slug: "kitchen", name: "Kitchen", symbol: null };
 // manifest is worth serving. `scope` also keeps the installed window from
 // wandering into another box.
 void test("starturl and scope are the box's own root — that is most of why a per-box man...", async (t) => {
-  // doctest:L21
   const m = boxManifest(identity);
   t.check([m["name"], m["short_name"], m["start_url"], m["scope"]].join(" | "), "Kitchen | Kitchen | /kitchen/ | /kitchen/");
 });
@@ -28,7 +27,6 @@ void test("starturl and scope are the box's own root — that is most of why a p
 // sizes an OS draws for an installed app, and an install captures them once, so
 // the format with no support question attached is the right one.
 void test("PNG rather than the SVG a Chromium browser would also accept:", async (t) => {
-  // doctest:L33
   t.check(boxManifest(identity)["icons"], [
     {
       src: "/kitchen/icon-192.png",

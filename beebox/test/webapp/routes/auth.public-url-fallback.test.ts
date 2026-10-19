@@ -14,12 +14,12 @@
 // standalone box server's behavior exactly as it was.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { registerAuthSurface, type AuthRoutesOptions } from "../../../src/webapp/routes/auth/register.js";
 
-process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-public-url-fallback-doctest";
-process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-public-url-fallback-doctest";
+process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-public-url-fallback-test";
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-public-url-fallback-test";
 delete process.env.BBX_PUBLIC_URL;
 delete process.env.PUBLIC_URL;
 
@@ -44,7 +44,6 @@ void test("The hub's own base URL is used when `publicUrlFallback` is passed", a
       t.error(error);
     }
   });
-  // doctest:L39
   t.check(
     await loginRedirectUri({ boxes: [], publicUrlFallback: "http://127.0.0.1:4310" })
     ,
@@ -53,12 +52,10 @@ void test("The hub's own base URL is used when `publicUrlFallback` is passed", a
 
   // ## Without it, standalone behavior is unchanged (box server's own default)
 
-  // doctest:L46
   t.check(await loginRedirectUri({ boxes: [] }), "http://localhost:3210/auth/callback");
 
   // ## `BBX_PUBLIC_URL`, when set, still wins over either fallback
 
-  // doctest:L53
   process.env.BBX_PUBLIC_URL = "https://bbx.example.org";
   t.check(
     await loginRedirectUri({ boxes: [], publicUrlFallback: "http://127.0.0.1:4310" })

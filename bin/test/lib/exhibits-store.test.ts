@@ -8,7 +8,7 @@
 // `wt_paths_init` sets for real callers.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, writeFile, rm, readFile, lstat, readlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -18,7 +18,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 const lib = join(repoRoot, "bin/lib/exhibits-store.sh");
-const root = await mkdtemp(join(tmpdir(), "exhibits-store-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "exhibits-store-test-"));
 const store = join(root, "workstream-exhibits");
 const wt = join(root, "beebox-worktrees/demo");
 await mkdir(wt, { recursive: true });
@@ -51,18 +51,15 @@ async function sh(script: string) {
 // operation `wt_remove_now` performs) takes only the link, and a resume
 // re-mount makes the content reachable again.
 void test("A fresh mount creates the store root with its marker, the per-workstream dire...", async (t) => {
-  // doctest:L47
   const mount = await sh(`wt_exhibits_mount "${wt}" demo`);
   const link = await readlink(join(wt, "exhibits"));
   await writeFile(join(wt, "exhibits/note.md"), "kept\n");
 
-  // doctest:L51
   const trash = join(root, "trash");
   await mkdir(trash);
   await execFileAsync("mv", [wt, join(trash, "wt-demo")]);
   const survivedInStore = await readFile(join(store, "demo/note.md"), "utf8");
 
-  // doctest:L56
   await mkdir(wt, { recursive: true });
   const remount = await sh(`wt_exhibits_mount "${wt}" demo`);
   const backThroughLink = await readFile(join(wt, "exhibits/note.md"), "utf8");
@@ -91,7 +88,6 @@ void test("A fresh mount creates the store root with its marker, the per-workstr
 // symlink. A rescue that would overwrite an existing store entry refuses
 // instead — fail closed, since the caller's next step is destructive.
 void test("A real exhibits/ directory (failed mount, then something wrote into the tree)...", async (t) => {
-  // doctest:L76
   const wt2 = join(root, "beebox-worktrees/demo2");
   await mkdir(join(wt2, "exhibits"), { recursive: true });
   await writeFile(join(wt2, "exhibits/stranded.md"), "rescued\n");
@@ -99,7 +95,6 @@ void test("A real exhibits/ directory (failed mount, then something wrote into t
   const rescued = await readFile(join(store, "demo2/stranded.md"), "utf8");
   const nowSymlink = (await lstat(join(wt2, "exhibits"))).isSymbolicLink();
 
-  // doctest:L83
   const wt3 = join(root, "beebox-worktrees/demo2-again");
   await mkdir(join(wt3, "exhibits"), { recursive: true });
   await writeFile(join(wt3, "exhibits/stranded.md"), "conflicting\n");
@@ -133,7 +128,6 @@ void test("The guards:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L102
   const bareRoot = join(root, "unmarked-store");
   await mkdir(bareRoot);
   const unmarked = await execFileAsync("bash", ["-c", 'set -u; . "$0"; wt_exhibits_ensure_root', lib], {

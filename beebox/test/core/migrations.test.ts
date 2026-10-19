@@ -7,7 +7,7 @@
 // that discovery.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { MIGRATIONS, isProcedureMigration } from "../../src/core/migrations.js";
@@ -31,7 +31,6 @@ async function missingScripts(): Promise<string[]> {
 
 // Every script-kind entry resolves to a file:
 void test("Every script-kind entry resolves to a file:", async (t) => {
-  // doctest:L35
   t.check(await missingScripts(), []);
 });
 
@@ -39,7 +38,6 @@ void test("Every script-kind entry resolves to a file:", async (t) => {
 // unrunnable — the box would record the first as applied and skip the second
 // forever:
 void test("The name is the manifest key, so a duplicate would make one entry unrunnable...", async (t) => {
-  // doctest:L44
   const names = MIGRATIONS.map((m) => m.name);
   t.check(names, [...new Set(names)]);
 });
@@ -49,14 +47,12 @@ void test("The name is the manifest key, so a duplicate would make one entry unr
 // applied. Retired migrations stay registered and run the shared no-op
 // `src/scripts/migrate/retired.ts` rather than disappearing.
 void test("The list is append-only:", async (t) => {
-  // doctest:L54
   t.check(MIGRATIONS[0]?.name, "attachments");
 });
 
 // The tombstone is safe to run on any box: it exits 0 and prints nothing, so a
 // box that somehow still has a retired name pending records it quietly.
 void test("The tombstone is safe to run on any box:", async (t) => {
-  // doctest:L62
   let output = "";
   const code = await runMigrationScript({ script: "src/scripts/migrate/retired.ts", boxRoot: "/nonexistent-box", onOutput: (text) => { output += text; } });
   t.check({ code, output }, {

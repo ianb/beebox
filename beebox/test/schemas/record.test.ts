@@ -7,7 +7,7 @@
 // `ref:`, and the linter's ref walk then reported it as a missing file.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas.js";
 import { errorMessage } from "../../src/shared/error-guards.js";

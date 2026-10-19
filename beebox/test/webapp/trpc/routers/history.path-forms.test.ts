@@ -17,7 +17,7 @@
 // (`src/shared/box-path.ts` states the rule).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -31,26 +31,22 @@ writeFileSync(path.join(boxRoot, "_config", "template-versions.json"), "{}");
 
 // The box-relative form passes through untouched:
 void test("The box-relative form passes through untouched:", async (t) => {
-  // doctest:L35
   t.check(normalizeHistoryPath("_config/template-versions.json", boxRoot), "_config/template-versions.json");
 });
 
 // The git-root-relative form the diff panel displays resolves to the same file:
 void test("The git-root-relative form the diff panel displays resolves to the same file:", async (t) => {
-  // doctest:L41
   t.check(normalizeHistoryPath("content/_config/template-versions.json", boxRoot), "_config/template-versions.json");
 });
 
 // A path that names nothing is returned unchanged, so the caller's own validation
 // and the empty result still describe what was actually asked for:
 void test("A path that names nothing is returned unchanged, so the caller's own validati...", async (t) => {
-  // doctest:L48
   t.check(normalizeHistoryPath("_config/nope.json", boxRoot), "_config/nope.json");
 
   // Stripping only happens when it *helps*. A box that genuinely contains its own
   // `content/` directory keeps that path, because the as-is form exists:
 
-  // doctest:L55
   mkdirSync(path.join(boxRoot, "content"), { recursive: true });
   writeFileSync(path.join(boxRoot, "content", "notes.md"), "hi");
   t.check(normalizeHistoryPath("content/notes.md", boxRoot), "content/notes.md");

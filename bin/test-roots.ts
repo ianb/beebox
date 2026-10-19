@@ -2,7 +2,7 @@
  * Every directory that holds tests or the tap tests converted from them,
  * the package that runs them, and the typecheck script whose program covers
  * them. The test conversion driver and its checks read this list
- * (beebox/docs/implemented-plans/retire-doctest.md, track 2). Other test runners
+ * (track 2 of the plan that retired the Markdown test format). Other test runners
  * (node:test files, beebox-clerk) are not listed.
  *
  *   node --import tsx bin/test-roots.ts           # print the list
@@ -40,7 +40,7 @@ export const TEST_ROOTS: readonly TestRoot[] = [
   { dir: "scan-uploader/test/", runFrom: "scan-uploader", typecheck: { dir: "scan-uploader", script: "typecheck" }, lintFrom: "scan-uploader" },
   { dir: "browse/packages/agent-browser-typed/test/", runFrom: "browse", typecheck: { dir: "browse", script: "typecheck" }, lintFrom: "browse" },
   { dir: "browse/test/", runFrom: "browse", typecheck: { dir: "browse", script: "typecheck" }, lintFrom: "browse" },
-  { dir: "agent-doctest/test/", runFrom: "agent-doctest", typecheck: { dir: "agent-doctest", script: "typecheck" }, lintFrom: "agent-doctest" },
+  { dir: "tap-check/test/", runFrom: "tap-check", typecheck: { dir: "tap-check", script: "typecheck" }, lintFrom: "tap-check" },
 ];
 
 /** The root owning a repo-relative file: the longest `dir` that contains it. */

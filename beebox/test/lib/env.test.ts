@@ -6,7 +6,7 @@
 // never has to touch the real `process.env`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import {
   loadEnv,
@@ -28,7 +28,6 @@ function loadErr(schema: z.ZodType, source: NodeJS.ProcessEnv): EnvValidationErr
 // Local Git children retain basic process discovery and locale settings without
 // receiving ambient Git/editor overrides that subprocess guards reject.
 void test("Local Git children retain basic process discovery and locale settings without...", async (t) => {
-  // doctest:L32
   const previousEditor = process.env.EDITOR;
   process.env.EDITOR = "unsafe-editor";
   const gitEnv = childProcessEnv({ GIT_INDEX_FILE: "/scratch/index" });
@@ -45,13 +44,10 @@ void test("Local Git children retain basic process discovery and locale settings
 //
 // A present `PORT` is coerced to a number; an empty or absent one reads as unset.
 void test("A present PORT is coerced to a number; an empty or absent one reads as unset.", async (t) => {
-  // doctest:L46
   t.check(loadEnv(serverEnvSchema, { PORT: "8080" }), { PORT: 8080 });
 
-  // doctest:L49
   t.check(loadEnv(serverEnvSchema, { PORT: "" }), {});
 
-  // doctest:L52
   t.check(loadEnv(serverEnvSchema, {}), {});
 });
 
@@ -60,7 +56,6 @@ void test("A present PORT is coerced to a number; an empty or absent one reads a
 // Three malformed vars in one source produce three problems in one error — not a
 // fail-on-first-var.
 void test("Three malformed vars in one source produce three problems in one error — not...", async (t) => {
-  // doctest:L62
   const caught = loadErr(serverEnvSchema, { PORT: "notaport", PUBLIC_URL: "not a url", BBX_OWNER_EMAIL: "bad" });
   // The message names all three failing vars; a non-secret var echoes its received
   // value to aid debugging.
@@ -83,7 +78,6 @@ void test("Three malformed vars in one source produce three problems in one erro
 // `BBX_SESSION_SECRET` is in the secret set, so a validation failure on it shows
 // `<redacted>` and the raw value appears nowhere in the error.
 void test("BBXSESSIONSECRET is in the secret set, so a validation failure on it shows <r...", async (t) => {
-  // doctest:L88
   const strictSecret = z.object({ BBX_SESSION_SECRET: z.string().min(32) });
   const secretErr = loadErr(strictSecret, { BBX_SESSION_SECRET: "hunter2-too-short" });
   t.check(secretErr, {
@@ -96,7 +90,6 @@ void test("BBXSESSIONSECRET is in the secret set, so a validation failure on it 
 
 // The secret-name set is the single source of truth for what gets redacted.
 void test("The secret-name set is the single source of truth for what gets redacted.", async (t) => {
-  // doctest:L99
   t.check(
     SECRET_ENV_NAMES,
     new Set([
@@ -116,13 +109,10 @@ void test("The secret-name set is the single source of truth for what gets redac
 // Development surfaces are a positive, server-specific opt-in. Server and hub
 // entrypoints accept only literal `1`; unrelated CLI commands ignore the key.
 void test("Development surfaces are a positive, server-specific opt-in.", async (t) => {
-  // doctest:L112
   t.check(loadEnv(serverEnvSchema, { BBX_DEV_SURFACES: "1" }), { BBX_DEV_SURFACES: "1" });
 
-  // doctest:L115
   t.check(loadEnv(hubEnvSchema, { BBX_DEV_SURFACES: "1" }), { BBX_DEV_SURFACES: "1" });
 
-  // doctest:L118
   t.check(
     {
       server: loadErr(serverEnvSchema, { BBX_DEV_SURFACES: "true" })?.problems,
@@ -140,7 +130,6 @@ void test("Development surfaces are a positive, server-specific opt-in.", async 
 // `cliEnvSchema` only knows its own keys, so a server-only secret in the source is
 // ignored — it never lands in the CLI's typed env.
 void test("cliEnvSchema only knows its own keys, so a server-only secret in the source i...", async (t) => {
-  // doctest:L130
   t.check(loadEnv(cliEnvSchema, { PORT: "3000", BBX_SESSION_SECRET: "leak-me" }), {
     PORT: 3000,
   });
@@ -148,7 +137,6 @@ void test("cliEnvSchema only knows its own keys, so a server-only secret in the 
 
 // `serverEnvSchema` does model that secret, so the same source keeps it:
 void test("serverEnvSchema does model that secret, so the same source keeps it:", async (t) => {
-  // doctest:L137
   t.check(loadEnv(serverEnvSchema, { BBX_SESSION_SECRET: "kept" }), { BBX_SESSION_SECRET: "kept" });
 });
 
@@ -156,6 +144,5 @@ void test("serverEnvSchema does model that secret, so the same source keeps it:"
 // keeping it in the base schema is what lets a validated hub pass the same path
 // to its children.
 void test("The global credential-store override is common to the hub, server, and CLI; k...", async (t) => {
-  // doctest:L146
   t.check(loadEnv(cliEnvSchema, { BBX_AUTH_FILE: "/srv/beebox/auth.json" }), { BBX_AUTH_FILE: "/srv/beebox/auth.json" });
 });

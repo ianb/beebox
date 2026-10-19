@@ -7,7 +7,7 @@
 // and a real rewrite would read as unchanged and go unstamped.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { refreshMapsCommand } from "../../../src/cli/commands/refresh-maps.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { fileExists } from "../../../src/lib/file-exists.js";
@@ -31,7 +31,6 @@ void test("line 26", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L27
   const box = await makeTmpBox({ git: true });
   await box.write("work/notes/a.md", "a");
   await box.write("work/refs/b.md", "b");
@@ -40,7 +39,6 @@ void test("line 26", async (t) => {
   const cwd = process.cwd();
   process.chdir(box.root);
 
-  // doctest:L35
   await run(["--brief"]);
   const afterBrief = await fileExists(briefPath);
   await run([]);

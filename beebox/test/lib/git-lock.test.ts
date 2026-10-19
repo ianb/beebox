@@ -6,8 +6,8 @@
 // and runs `fn` unserialized rather than failing when it cannot acquire the lock.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { withBoxGitLock, activeBoxGitLockCount, BOX_GIT_LOCK_WAIT_MS } from "../../src/lib/git-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../src/lib/file-lock.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
@@ -30,10 +30,8 @@ void test("A box is one repository with one git index, so two concurrent spans o
       t.error(error);
     }
   });
-  // doctest:L24
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L26
   const order: string[] = [];
   const outer = withBoxGitLock(box.root, async () => {
     order.push("first-enter");
@@ -50,7 +48,6 @@ void test("A box is one repository with one git index, so two concurrent spans o
   // The lock file itself lives inside the git directory, so holding it leaves
   // nothing behind in the working tree:
 
-  // doctest:L45
   await withBoxGitLock(box.root, async () => "held");
   t.check(await getStatus(box.root), { staged: [], modified: [], untracked: [], clean: true });
 });
@@ -71,10 +68,8 @@ void test("proper-lockfile is not reentrant, so a nested acquisition would stall
       t.error(error);
     }
   });
-  // doctest:L64
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L66
   const trace: string[] = [];
   await withBoxGitLock(box.root, async () => {
     trace.push("outer");
@@ -91,7 +86,6 @@ void test("proper-lockfile is not reentrant, so a nested acquisition would stall
   // would wait behind its own ancestor — an unbounded deadlock rather than a
   // bounded one — so this finishing at all is the assertion:
 
-  // doctest:L85
   let queueDepthInsideNested = -1;
   await withBoxGitLock(box.root, async () => {
     await withBoxGitLock(box.root, async () => {
@@ -102,7 +96,6 @@ void test("proper-lockfile is not reentrant, so a nested acquisition would stall
 
   // The queue drains once the outer span completes:
 
-  // doctest:L98
   t.check(activeBoxGitLockCount(), 0);
 });
 
@@ -118,10 +111,8 @@ void test("Two concurrent tasks in one bbx serve would otherwise both poll the f
       t.error(error);
     }
   });
-  // doctest:L112
   const box = await makeTmpBox({ git: true });
 
-  // doctest:L114
   const log: string[] = [];
   const tasks = ["a", "b", "c"].map((name) =>
     withBoxGitLock(box.root, async () => {
@@ -135,7 +126,6 @@ void test("Two concurrent tasks in one bbx serve would otherwise both poll the f
 
   // A caller that throws does not poison the queue behind it:
 
-  // doctest:L130
   const results: string[] = [];
   const failing = withBoxGitLock(box.root, async () => {
     throw new LockHeldError({ pid: 1, hostname: "test", acquiredAt: "now", metadata: {} });
@@ -151,7 +141,6 @@ void test("Two concurrent tasks in one bbx serve would otherwise both poll the f
   // both reject with `LockHeldError`, and without distinguishing them a throwing
   // `fn` would be retried unserialized:
 
-  // doctest:L148
   let calls = 0;
   await withBoxGitLock(box.root, async () => {
     calls += 1;
@@ -172,10 +161,8 @@ void test("There is no index to serialize on, and inventing an error here would 
       t.error(error);
     }
   });
-  // doctest:L167
   const box = await makeTmpBox();
 
-  // doctest:L169
   t.check(await withBoxGitLock(box.root, async () => "ran"), "ran");
 });
 
@@ -199,21 +186,18 @@ void test("This is the property that keeps the lock from ever wedging a box.", a
       t.error(error);
     }
   });
-  // doctest:L191
   const box = await makeTmpBox({ git: true });
   process.env["BBX_BOX_GIT_LOCK_WAIT_MS"] = "300";
   const errors: string[] = [];
   const realError = console.error;
   console.error = (...args) => { errors.push(args.map(String).join(" ")); };
 
-  // doctest:L197
   // Hold the lock as an unrelated owner would, then release our in-process
   // record of it so `withBoxGitLock` sees a foreign holder.
   const gitDir = join(box.root, ".git");
   const lockPath = join(gitDir, "beebox-index.lock");
-  await acquireLock(lockPath, { purpose: "doctest-foreign-holder" });
+  await acquireLock(lockPath, { purpose: "test-foreign-holder" });
 
-  // doctest:L203
   const result = await withBoxGitLock(box.root, async () => "ran unserialized");
   console.error = realError;
   t.check(result, "ran unserialized");
@@ -221,7 +205,6 @@ void test("This is the property that keeps the lock from ever wedging a box.", a
   // The degradation is never silent — it names the holder and says plainly that the
   // operation was not serialized:
 
-  // doctest:L213
   t.check(errors, [
     str`[box-git-lock] could not acquire ${join(realpathSync(box.root), ".git", "beebox-index.lock")} within 300ms (held by pid ${String(process.pid)} on ${os.hostname()} since ${any(String)}). Proceeding WITHOUT the lock: this git operation is not serialized against other writers, and may fail on .git/index.lock or co-commit another writer's staged files. A holder this old is either crashed (its lock clears at the stale window) or is not one of ours — investigate what is holding the box's git index.`,
   ]);
@@ -229,7 +212,6 @@ void test("This is the property that keeps the lock from ever wedging a box.", a
   // The shipped budget is a minute — long enough that only a writer outside our
   // control reaches it:
 
-  // doctest:L227
   await releaseLock(lockPath);
   delete process.env["BBX_BOX_GIT_LOCK_WAIT_MS"];
   t.check(BOX_GIT_LOCK_WAIT_MS, 60000);

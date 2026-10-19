@@ -5,7 +5,7 @@
 // segment as successfully spoken and rapidly advance through the whole queue.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   formatMediaElementFailure,
   formatPlaybackRejection,
@@ -14,7 +14,7 @@ import {
 } from "../../../src/lib/audio/context.js";
 
 Object.defineProperty(globalThis, "navigator", {
-  value: { userAgent: "doctest browser" },
+  value: { userAgent: "test browser" },
   configurable: true,
 });
 
@@ -36,7 +36,6 @@ Object.defineProperty(globalThis, "Audio", { value: RejectingAudio, configurable
 
 // ## A rejected play is a failed segment
 void test("A rejected play is a failed segment", async (t) => {
-  // doctest:L40
   const playbackErrors: unknown[][] = [];
   const originalConsoleError = console.error;
   console.error = (...args) => playbackErrors.push(args);
@@ -55,7 +54,6 @@ void test("A rejected play is a failed segment", async (t) => {
 // The browser gives an `Event` to `onerror`, which serializes as `{}`. Format the
 // media element's stable diagnostic fields instead.
 void test("The browser gives an Event to onerror, which serializes as {}.", async (t) => {
-  // doctest:L62
   await t.checkText(
     formatMediaElementFailure("url", {
       error: { code: 3 },
@@ -65,7 +63,6 @@ void test("The browser gives an Event to onerror, which serializes as {}.", asyn
     "[audio] operation=url mediaError=MEDIA_ERR_DECODE(3) networkState=NETWORK_LOADING(2) readyState=HAVE_METADATA(1)",
   );
 
-  // doctest:L69
   await t.checkText(
     formatMediaElementFailure("stream", {
       error: null,
@@ -75,7 +72,6 @@ void test("The browser gives an Event to onerror, which serializes as {}.", asyn
     "[audio] operation=stream mediaError=none networkState=NETWORK_NO_SOURCE(3) readyState=HAVE_NOTHING(0)",
   );
 
-  // doctest:L76
   await t.checkText(
     formatMediaElementFailure("blob", {
       error: { code: 99 },
@@ -85,9 +81,7 @@ void test("The browser gives an Event to onerror, which serializes as {}.", asyn
     "[audio] operation=blob mediaError=UNKNOWN(99) networkState=UNKNOWN(99) readyState=UNKNOWN(99)",
   );
 
-  // doctest:L83
   await t.checkText(formatPlaybackRejection("blob", new DOMException("Playback needs a gesture", "NotAllowedError")), "[audio] operation=blob play() rejected NotAllowedError: Playback needs a gesture");
 
-  // doctest:L86
   t.check(formatThrownError(new TypeError("Unsupported MIME type")), "TypeError: Unsupported MIME type");
 });

@@ -6,7 +6,7 @@
 // be tens of megabytes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { sha256File } from "../../src/cli/hash.js";

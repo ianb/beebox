@@ -7,6 +7,8 @@ issues:
 ---
 # Box screen: a thought goes in before the box loads
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 When I open the app with a thought in my head, I want to type or say it at once, so that it is safe in the box before any chat has loaded. When the box knows where the thought belongs, I want it posted there without a question. When the box does not know, I want a short list to pick from, and I want the thought kept if I walk away.
 
 Today the iOS app loads the full web chat and the last conversation first. Quick chat sits behind that load, as a web form in a sheet. The web Quick chat page skips the box load, but its send and recovery behavior loses messages and overwrites drafts. This plan adds a box screen with an inline composer on iOS and web, moves routing and delivery to one server operation, and reshapes the app bar's menus so that the box screen holds what concerns the whole box.

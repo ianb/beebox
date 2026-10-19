@@ -5,7 +5,7 @@
 // `summarize` hook. Non-card files go through path loaders registered here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   registerPathLoader,
   resetLoaderRegistry,
@@ -26,20 +26,17 @@ const NO_SCHEMAS = new Map<string, CardSchema>();
 //
 // A file with no card type gets the filename, cleaned up.
 void test("A file with no card type gets the filename, cleaned up.", async (t) => {
-  // doctest:L30
   resetLoaderRegistry();
   t.check(summarize({ path: "_content/inbox/Meeting_Notes.doc.card" }, NO_SCHEMAS), {
     path: "_content/inbox/Meeting_Notes.doc.card",
     title: "Meeting Notes",
   });
 
-  // doctest:L34
   t.check(summarize({ path: "photo-001.jpg" }, NO_SCHEMAS), { path: "photo-001.jpg", title: "photo 001" });
 
   // `title`, `contains` and `symbol` belong to every card, so the registry reads
   // them rather than each card type remembering to.
 
-  // doctest:L42
   const s = summarize({
     path: "_content/figures/Cube.figure.card",
     type: "figure",
@@ -60,7 +57,6 @@ void test("A file with no card type gets the filename, cleaned up.", async (t) =
   // or schema default silently win over something the author wrote. A theme of the
   // wrong SHAPE carries nothing, and resolves to plain.
 
-  // doctest:L58
   const unknownTheme = summarize({ path: "_content/x.doc.card", type: "doc", fields: { theme: { name: "velvet" } } }, NO_SCHEMAS);
   t.check(unknownTheme, {
     path: "_content/x.doc.card",
@@ -69,7 +65,6 @@ void test("A file with no card type gets the filename, cleaned up.", async (t) =
     cardTheme: { name: "velvet", stock: "neutral" },
   });
 
-  // doctest:L62
   const malformedTheme = summarize({ path: "_content/y.doc.card", type: "doc", fields: { theme: "paper" } }, NO_SCHEMAS);
   t.check(malformedTheme, {
     path: "_content/y.doc.card",
@@ -78,21 +73,18 @@ void test("A file with no card type gets the filename, cleaned up.", async (t) =
     cardTheme: { name: "plain", stock: "neutral" },
   });
 
-  // doctest:L66
   const raw = summarize({ path: "_content/x.txt" }, NO_SCHEMAS);
   t.check(raw, { path: "_content/x.txt", title: "x" });
 
   // A malformed symbol is dropped rather than shipped — `readCardSymbol` validates
   // before it resolves.
 
-  // doctest:L75
   t.check(summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: "🧊" } }, NO_SCHEMAS), {
     path: "_content/x.doc.card",
     title: "x",
     type: "doc",
   });
 
-  // doctest:L78
   t.check(summarize({ path: "_content/x.doc.card", type: "doc", fields: { symbol: { glyph: "  " } } }, NO_SCHEMAS), {
     path: "_content/x.doc.card",
     title: "x",
@@ -102,7 +94,6 @@ void test("A file with no card type gets the filename, cleaned up.", async (t) =
 
 // ## A card type with no `summarize` gets the base
 void test("A card type with no `summarize` gets the base", async (t) => {
-  // doctest:L85
   resetLoaderRegistry();
   const PlainSchema = cardSchema("plain", { fields: { note: z.string() } });
   const s = summarize(
@@ -120,7 +111,6 @@ void test("A card type with no `summarize` gets the base", async (t) => {
 //
 // The common case. The type keeps the standard title and adds a second line.
 void test("The common case.", async (t) => {
-  // doctest:L100
   resetLoaderRegistry();
   const TaskSchema = cardSchema("task", {
     fields: { state: z.enum(["open", "done"]), owner: z.string().optional() },
@@ -141,13 +131,10 @@ void test("The common case.", async (t) => {
   // `summaryText` is the text form of the same summary, for the agent-facing
   // surfaces that have no React tree.
 
-  // doctest:L117
   t.check(summaryText(s), "Rewire Lamp — open · Dana Whitfield");
 
-  // doctest:L120
   t.check(summaryText({ path: "a.card", title: "Just a title" }), "Just a title");
 
-  // doctest:L123
   t.check(summaryText({ path: "a.card", title: "Blank detail", detail: "   " }), "Blank detail");
 });
 
@@ -156,7 +143,6 @@ void test("The common case.", async (t) => {
 // A type whose title is not its filename replaces it, and hands its list
 // component a typed payload.
 void test("A type whose title is not its filename replaces it, and hands its list compon...", async (t) => {
-  // doctest:L133
   resetLoaderRegistry();
   interface QuoteAttrs { length: number }
   const QuoteSchema = cardSchema("quote", {
@@ -183,7 +169,6 @@ void test("A type whose title is not its filename replaces it, and hands its lis
   // `summarize` runs only on fields a schema vouched for. When the card didn't
   // load, the registry has no fields to hand over, and the row is still the row.
 
-  // doctest:L156
   t.check(summarize({ path: "_content/Broken_Quote.quote.card" }, schemaMap(QuoteSchema)), {
     path: "_content/Broken_Quote.quote.card",
     title: "Broken Quote",
@@ -200,7 +185,6 @@ void test("A type whose title is not its filename replaces it, and hands its lis
 // The fields are checked against the schema before the hook is called, and a bag
 // that fails keeps the base summary.
 void test("A summarize hook is typed as receiving this type's validated fields, and it i...", async (t) => {
-  // doctest:L171
   resetLoaderRegistry();
   const calls: string[] = [];
   const ImageSchema = cardSchema("image", {
@@ -220,12 +204,10 @@ void test("A summarize hook is typed as receiving this type's validated fields, 
   // The fall back is visible, not silent: whoever called `summarize` that way gets
   // told which field was wrong.
 
-  // doctest:L193
   t.check(warnings, ["summarize() was handed unvalidated \"image\" fields for _content/Kite.image.card; using the base summary:"]);
 
   // Validated fields reach the hook exactly as before.
 
-  // doctest:L200
   t.check(summarize({ path: "_content/Kite.image.card", type: "image", fields: { type: "image", status: "draft" } }, schemaMap(ImageSchema)), {
     path: "_content/Kite.image.card",
     title: "Kite",
@@ -237,7 +219,6 @@ void test("A summarize hook is typed as receiving this type's validated fields, 
   // with its default, and the body (which the frontmatter schema does not know)
   // still comes through.
 
-  // doctest:L209
   const NoteSchema = cardSchema("note", {
     fields: { state: z.enum(["new", "kept"]).default("new"), body: body(z.string()) },
     summarize: (card, base) => ({ ...base, detail: `${card.state}: ${card.body}` }),
@@ -252,7 +233,6 @@ void test("A summarize hook is typed as receiving this type's validated fields, 
 
 // ## A `summarize` that throws is a bug in that schema, not a lost row
 void test("A `summarize` that throws is a bug in that schema, not a lost row", async (t) => {
-  // doctest:L220
   resetLoaderRegistry();
   const BadSchema = cardSchema("bad", {
     fields: { n: z.number() },
@@ -265,7 +245,6 @@ void test("A `summarize` that throws is a bug in that schema, not a lost row", a
   console.warn = original;
   t.check(s, { path: "_content/Thing.bad.card", title: "Thing", type: "bad" });
 
-  // doctest:L238
   t.check(warnings, ["summarize() for card type \"bad\" failed on _content/Thing.bad.card; using the base summary:"]);
 });
 
@@ -273,7 +252,6 @@ void test("A `summarize` that throws is a bug in that schema, not a lost row", a
 //
 // A blank title renders a blank row; the base title always says something.
 void test("A blank title renders a blank row; the base title always says something.", async (t) => {
-  // doctest:L247
   resetLoaderRegistry();
   const EmptySchema = cardSchema("empty", {
     fields: { n: z.number() },
@@ -292,7 +270,6 @@ void test("A blank title renders a blank row; the base title always says somethi
 //
 // Cards never reach these — their type's schema answers for them.
 void test("Cards never reach these — their type's schema answers for them.", async (t) => {
-  // doctest:L262
   resetLoaderRegistry();
   registerPathLoader<Record<string, never>>(
     (p: string) => p.endsWith(".md"),
@@ -303,7 +280,6 @@ void test("Cards never reach these — their type's schema answers for them.", a
   // A path loader's own title wins over the filename — it computed it on purpose.
   // Two matching loaders is a registration mistake: the first wins, loudly.
 
-  // doctest:L275
   const warnings: string[] = [];
   const original = console.warn;
   console.warn = (msg: string) => { warnings.push(msg); };
@@ -331,7 +307,6 @@ void test("A landmark card stands for its place, so its summary title is the nav
       t.error(error);
     }
   });
-  // doctest:L294
   const { LandmarkSchema } = await import("../../src/schemas/landmark.js");
   const landmarks = schemaMap(LandmarkSchema);
   t.check([

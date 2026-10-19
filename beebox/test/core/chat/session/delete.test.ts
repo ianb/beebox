@@ -5,7 +5,7 @@
 // injected here so the fixture never touches the developer's real Claude data.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { access, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { deleteChatSession } from "../../../../src/core/chat/session/delete/apply/core.js";
@@ -84,7 +84,6 @@ void test("Full ordered delete", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L81
   const fx = await chatFixture({ digit: "1", git: true, title: "Junk chat", transcript: true, history: {} });
   const { box, sessionId, projectDir, jsonl, registry, scheduleManager } = fx;
   const sidecar = join(projectDir, sessionId);
@@ -96,7 +95,6 @@ void test("Full ordered delete", async (t) => {
   await saveReviewState(box.root, review);
   box.commitAll("seed chat");
 
-  // doctest:L92
   scheduleManager.addSchedule({
     label: "linked", alarm: false, announce: null, content: "later",
     durationMs: 60_000, sessionId,
@@ -118,7 +116,6 @@ void test("Full ordered delete", async (t) => {
 
   // All resumable state and the chat card are gone from the working tree:
 
-  // doctest:L112
   t.check(
     {
       transcript: await missing(jsonl),
@@ -152,7 +149,6 @@ void test("Malformed callback state aborts before deletion", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L132
   const fx = await chatFixture({ digit: "6" });
   const { box, sessionId, registry } = fx;
   await box.write(".beebox/chat-session-history.json", "{broken");
@@ -176,7 +172,6 @@ void test("The editable husk and the history index must name the same SDK cwd.",
       t.error(error);
     }
   });
-  // doctest:L150
   const fx = await chatFixture({ digit: "3", history: { contextDir: "_content/landmark" } });
   const { box, sessionId } = fx;
   await box.write("_content/landmark/.keep", "");
@@ -203,7 +198,6 @@ void test("If the git commit fails after permanent storage deletion, a fresh reg
       t.error(error);
     }
   });
-  // doctest:L168
   const fx = await chatFixture({ digit: "4", git: true, transcript: true, history: {} });
   const { box, sessionId, projectDir, registry, scheduleManager } = fx;
   await box.commitAll("seed retry chat");
@@ -244,7 +238,6 @@ void test("An uncommitted chat card is deleted without a commit", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L193
   const fx = await chatFixture({ digit: "5", git: true, transcript: true, history: {} });
   const { box, sessionId, projectDir } = fx;
   const result = await deleteChatSession({ boxRoot: box.root, sessionId, runtime: fx.runtime, sdkDelete: async (id) => rm(join(projectDir, `${id}.jsonl`), { force: true }) });
@@ -268,7 +261,6 @@ void test("SDK no-change failure restores beebox state", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L207
   const fx = await chatFixture({ digit: "2", transcript: true, history: {} });
   const { box, sessionId, jsonl, registry, scheduleManager } = fx;
   await setMostActive(box.root, sessionId);
@@ -289,7 +281,6 @@ void test("SDK no-change failure restores beebox state", async (t) => {
     "TypeError",
   );
 
-  // doctest:L227
   t.check(
     {
       transcriptPresent: !(await missing(jsonl)),

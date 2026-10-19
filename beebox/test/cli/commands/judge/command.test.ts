@@ -8,8 +8,8 @@
 // docs/implemented-plans/notifications.md (Track D).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -110,7 +110,6 @@ void test("--per-line --cards reads each line as a card path and judges the card
       t.error(error);
     }
   });
-  // doctest:L106
   const box = await seededBox();
   await t.checkText(await judge({ box, cardPath: "_config/judgments/field-trip.judgment.card", options: { perLine: true, cards: true }, run: { stdin: CARDS } }), `{"input":"_content/inbox/trip.email.card","answers":{"trip":{"type":"noul","probability":0.92}}}
 {"input":"_content/inbox/lunch.email.card","answers":{"trip":{"type":"noul","probability":0.08}}}
@@ -121,7 +120,6 @@ exit 0`);
   // `--cards` the state is the card followed by that text, as `bbx changes --cat`
   // prints it, so the judge sees the body and not only the subject.
 
-  // doctest:L119
   const thread = "_content/inbox/email/Trip.email-thread.attach";
   await box.write(`${thread}/msg-001.email-message.card`, "---\ntype: email-message\nemail:\n  subject: Spring outing\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n");
   await box.write(`${thread}/msg-001.attach/msg-001.body.txt`, `The field trip is on May 3. ${"Please read on. ".repeat(20)}\n`);
@@ -131,28 +129,23 @@ exit 0`);
   // `--min` sets the bar and `--select` prints only the inputs that passed, so the
   // next command in the pipe gets paths.
 
-  // doctest:L131
   await t.checkText(await judge({ box, cardPath: "_config/judgments/field-trip.judgment.card", options: { perLine: true, cards: true, min: ["trip=0.8"], select: true }, run: { stdin: CARDS } }), `_content/inbox/trip.email.card
 exit 0`);
 
   // `--choice` asks for an option; `name.option=p` bounds one option's
   // probability; `--decide` takes several conditions as JSON. All combine with AND.
 
-  // doctest:L140
   const reply = "_config/judgments/needs-reply.judgment.card";
   await t.checkText(await judge({ box, cardPath: reply, options: { perLine: true, cards: true, choice: ["reply=expects"], select: true }, run: { stdin: CARDS } }), `_content/inbox/lunch.email.card
 exit 0`);
 
-  // doctest:L145
   await t.checkText(await judge({ box, cardPath: reply, options: { perLine: true, cards: true, min: ["reply.none=0.8"], select: true }, run: { stdin: CARDS } }), `_content/inbox/trip.email.card
 _content/inbox/receipt.email.card
 exit 0`);
 
-  // doctest:L150
   await t.checkText(await judge({ box, cardPath: reply, options: { perLine: true, cards: true, decide: '{"reply": {"is": "expects"}, "urgency": {"min": 2}}', select: true }, run: { stdin: CARDS } }), `_content/inbox/lunch.email.card
 exit 0`);
 
-  // doctest:L154
   t.check(await judge({ box, cardPath: reply, options: { perLine: true, cards: true, decide: '{"reply.expects": {"max": 0.5}}', min: ["urgency.2=0.5"], select: true }, run: { stdin: CARDS } }), "exit 0");
 });
 
@@ -170,7 +163,6 @@ void test("Without --per-line, all of stdin is one state:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L169
   const box = await seededBox();
   const trip = "_config/judgments/field-trip.judgment.card";
   const cat = `=== _content/inbox/trip.email.card\n${email("Spring field trip", "The field trip is on May 3.")}`;
@@ -180,14 +172,12 @@ void test("Without --per-line, all of stdin is one state:", async (t) => {
   // When nothing passed, `--or-skip` writes `{ "reason": "no-pass" }` to
   // `$BBX_DEFER_FILE` and exits 75, which a schedule records as deferred.
 
-  // doctest:L181
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-judge-"));
   const BBX_DEFER_FILE = path.join(dir, "defer.json");
   const quiet = `=== _content/inbox/receipt.email.card\n${email("Your receipt", "Thank you for your order.")}`;
   await t.checkText(await judge({ box, cardPath: trip, options: { min: ["trip=0.8"], echo: true, orSkip: true }, run: { stdin: quiet, env: { BBX_DEFER_FILE } } }), `stderr: bbx judge: deferred (no-pass): none of 1 state(s) passed
 exit 75`);
 
-  // doctest:L188
   await t.checkText(await fs.readFile(BBX_DEFER_FILE, "utf-8"), "{\"reason\":\"no-pass\"}");
 
   // When `bbx changes --or-skip` found nothing, it wrote `no-change` and exited
@@ -195,22 +185,18 @@ exit 75`);
   // why, so the judge exits 75 without a word. With no marker yet, it defers and
   // says so.
 
-  // doctest:L198
   const upstream = path.join(dir, "upstream.json");
   await fs.writeFile(upstream, '{"reason":"no-change"}\n');
   t.check(await judge({ box, cardPath: trip, options: { min: ["trip=0.8"], echo: true, orSkip: true }, run: { stdin: "", env: { BBX_DEFER_FILE: upstream } } }), "exit 75");
 
-  // doctest:L203
   await t.checkText(await fs.readFile(upstream, "utf-8"), "{\"reason\":\"no-change\"}");
 
-  // doctest:L206
   await t.checkText(await judge({ box, cardPath: trip, options: { min: ["trip=0.8"], echo: true, orSkip: true }, run: { stdin: "", env: { BBX_DEFER_FILE: path.join(dir, "fresh.json") } } }), `stderr: bbx judge: deferred (no-pass): no state on stdin
 exit 75`);
 
   // Every call is in `.beebox/jev-debug.log`: the card, the input, the state cut
   // at 500 characters, the answers, and whether it passed.
 
-  // doctest:L215
   const log = (await box.read(".beebox/jev-debug.log")).trim().split("\n").map((l) => JSON.parse(l));
   const last = log.at(-1);
   t.check([log.length, last.card, last.passed, last.answers], [
@@ -239,7 +225,6 @@ void test("Nothing is sent and nothing is logged.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L233
   const box = await seededBox();
   await box.write("_content/briefing.briefing.card", "---\ntype: briefing\npurpose: \"The household box for the Rivera family: two parents and a child in second grade.\"\n---\n");
   const service = jev();
@@ -247,7 +232,6 @@ void test("Nothing is sent and nothing is logged.", async (t) => {
   const [situation, request, exit] = out.split("\n").filter((l) => !l.startsWith("stderr:"));
   t.check(situation, "situation: the root briefing's purpose (_content/briefing.briefing.card)");
 
-  // doctest:L241
   t.check(JSON.parse(request ?? ""), {
     model: str`typesafe/jev-${any(String)}`,
     provider: {
@@ -273,27 +257,22 @@ void test("Nothing is sent and nothing is logged.", async (t) => {
     },
   });
 
-  // doctest:L267
   t.check(`${exit} ${service.judgeCalls.length}`, "exit 0 0");
 
-  // doctest:L270
   t.check(await fs.access(box.path(".beebox/jev-debug.log")).then(() => "logged", () => "not logged"), "not logged");
 
   // A state under 300 characters draws a warning: without the body, answers sit
   // near 50%. It gives the length and does not echo the state back.
 
-  // doctest:L278
   t.check(out.split("\n").find((l) => l.startsWith("stderr:")), "stderr: bbx judge: warning: a state is 16 characters; a state without the body judges near 50%");
 
   // A `situation:` ref replaces the briefing; with neither, the dry run says so.
 
-  // doctest:L285
   await box.write("_content/about/household.doc.card", "---\ntitle: Household\n---\nTwo adults share this box.\n");
   await box.write("_config/judgments/with-situation.judgment.card", TRIP.replace("---\nY", "situation:\n  ref: /_content/about/household.doc.card\n---\nY"));
   const stdout = (text: string) => text.split("\n").filter((l) => !l.startsWith("stderr:"));
   t.check(stdout(await judge({ box, cardPath: "_config/judgments/with-situation.judgment.card", options: { dryRun: true }, run: { stdin: "x" } }))[0], "situation: _content/about/household.doc.card");
 
-  // doctest:L291
   await fs.rm(box.path("_content/briefing.briefing.card"));
   t.check(stdout(await judge({ box, cardPath: "_config/judgments/field-trip.judgment.card", options: { dryRun: true }, run: { stdin: "x" } }))[0], "situation: none (the root briefing _content/briefing.briefing.card has no purpose statement)");
 });
@@ -310,7 +289,6 @@ void test("For tuning a card against a kept example:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L306
   const box = await seededBox();
   const saved = box.path("_tmp/kept-trip.txt");
   await box.write("_tmp/kept-trip.txt", email("Spring field trip", "The field trip form is due Friday."));
@@ -331,7 +309,6 @@ void test("A --cards batch over --max-batch is refused:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L324
   const box = await seededBox();
   const trip = "_config/judgments/field-trip.judgment.card";
   await t.checkText(await judge({ box, cardPath: trip, options: { cards: true, maxBatch: "2" }, run: { stdin: CARDS } }), `stderr: Error: 3 cards is more than --max-batch 2. A batch is only right when the whole says something the items do not; judge each card with --per-line
@@ -339,7 +316,6 @@ exit 2`);
 
   // Within the limit, the batch is one state: every card after a `=== <path>` line.
 
-  // doctest:L334
   const service = jev();
   await judge({ box, cardPath: trip, options: { cards: true }, run: { stdin: CARDS, service } });
   t.check(service.judgeCalls.length + " " + String(service.judgeCalls[0]?.state).split("\n").filter((l) => l.startsWith("===")).join(", "), "1 === _content/inbox/trip.email.card, === _content/inbox/lunch.email.card, === _content/inbox/receipt.email.card");
@@ -348,47 +324,37 @@ exit 2`);
   // is about 80,000, so it would fail on every run and defer as `jev-unavailable`
   // forever. The message says what to change.
 
-  // doctest:L345
   const huge = await judge({ box, cardPath: trip, options: {}, run: { stdin: "x".repeat(60_001), service } });
   t.check(`${huge.split("\n").length} | ${huge.includes("is 60001 characters, over the 60000 a Jev request can carry; judge smaller states with --per-line or a narrower --match")} | ${huge.endsWith("exit 2")} | ${service.judgeCalls.length}`, "2 | true | true | 1");
 
   // A bad card or flag exits 2 with the message, before any call.
 
-  // doctest:L353
   await t.checkText(await judge({ box, cardPath: "_content/inbox/trip.email.card", options: {}, run: { stdin: "x" } }), `stderr: Error: _content/inbox/trip.email.card is not a judgment card in the box (<name>.judgment.card)
 exit 2`);
 
-  // doctest:L357
   await t.checkText(await judge({ box, cardPath: trip, options: { min: ["trip=high"] }, run: { stdin: "x" } }), `stderr: Error: --min trip=high: write name=p or name.option=p with p between 0 and 1
 exit 2`);
 
-  // doctest:L361
   await t.checkText(await judge({ box, cardPath: trip, options: { choice: ["trip=yes"] }, run: { stdin: "x" } }), `stderr: Error: trip: a noul takes min and max (its probability), not is
 exit 2`);
 
-  // doctest:L365
   await t.checkText(await judge({ box, cardPath: "_config/judgments/needs-reply.judgment.card", options: { choice: ["reply=maybe"] }, run: { stdin: "x" } }), `stderr: Error: reply: "maybe" is not one of expects, none, unclear
 exit 2`);
 
-  // doctest:L369
   await t.checkText(await judge({ box, cardPath: trip, options: { min: ["school=0.5"] }, run: { stdin: "x" } }), `stderr: Error: school: the card has no question "school" (it has trip)
 exit 2`);
 
   // A probability bound (a noul, or `name.option`) lies between 0 and 1; a score's
   // level bound keeps its range.
 
-  // doctest:L378
   await t.checkText(await judge({ box, cardPath: trip, options: { decide: '{"trip": {"min": 70}}' }, run: { stdin: "x" } }), `stderr: Error: trip: min 70 is a probability, between 0 and 1
 exit 2`);
 
-  // doctest:L382
   await t.checkText(await judge({ box, cardPath: "_config/judgments/needs-reply.judgment.card", options: { decide: '{"reply.expects": {"max": -0.1}}' }, run: { stdin: "x" } }), `stderr: Error: reply.expects: max -0.1 is a probability, between 0 and 1
 exit 2`);
 
-  // doctest:L386
   t.check((await judge({ box, cardPath: "_config/judgments/needs-reply.judgment.card", options: { decide: '{"urgency": {"min": 2}}' }, run: { stdin: "x", service } })).split("\n").at(-1), "exit 0");
 
-  // doctest:L389
   await t.checkText(await judge({ box, cardPath: trip, options: { select: true, echo: true }, run: { stdin: "x" } }), `stderr: Error: give --select or --echo, not both
 exit 2`);
 
@@ -398,7 +364,6 @@ exit 2`);
   // between the two here.) Both exit 75 whether or not
   // `--or-skip` was given, so a schedule keeps its items for the next run.
 
-  // doctest:L401
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-judge-"));
   const BBX_DEFER_FILE = path.join(dir, "defer.json");
   const down = createFakeJev({ error: new JevError("HTTP 503", "request") });
@@ -406,28 +371,23 @@ exit 2`);
 stderr: bbx judge: deferred (jev-unavailable): Jev request error: HTTP 503
 exit 75`);
 
-  // doctest:L409
   await t.checkText(await fs.readFile(BBX_DEFER_FILE, "utf-8"), "{\"reason\":\"jev-unavailable\"}");
 
-  // doctest:L412
   await fs.rm(BBX_DEFER_FILE);
   await t.checkText(await judge({ box, cardPath: trip, options: { dryRun: false }, run: { stdin: CARDS, env: { BBX_DEFER_FILE }, service: undefined } }), `stderr: bbx judge: warning: «*»
 stderr: bbx judge: deferred (unconfigured): the box has no OpenRouter key granted
 exit 75`);
 
-  // doctest:L418
   await t.checkText(await fs.readFile(BBX_DEFER_FILE, "utf-8"), "{\"reason\":\"unconfigured\"}");
 
   // `BBX_JEV_FAKE` stands in for the key on a dev box: `1` answers a confident
   // yes, `0` a confident no.
 
-  // doctest:L426
   await t.checkText(await judge({ box, cardPath: trip, options: { perLine: true, cards: true, min: ["trip=0.8"], select: true }, run: { stdin: CARDS, env: { BBX_JEV_FAKE: "1" }, service: undefined } }), `_content/inbox/trip.email.card
 _content/inbox/lunch.email.card
 _content/inbox/receipt.email.card
 exit 0`);
 
-  // doctest:L432
   await t.checkText(await judge({ box, cardPath: "_config/judgments/needs-reply.judgment.card", options: { perLine: true, cards: true, choice: ["reply=unclear"], select: true }, run: { stdin: CARDS, env: { BBX_JEV_FAKE: "0" }, service: undefined } }), `_content/inbox/trip.email.card
 _content/inbox/lunch.email.card
 _content/inbox/receipt.email.card

@@ -7,7 +7,7 @@
 // the blob-preview path instead of the text renderer.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseDiff } from "../../../../src/components/history/HistoryViewCard/CommitDetail-diff.js";
 
 const ANNEX_KEY =
@@ -34,19 +34,16 @@ function summarize(diff: string): string {
 
 // An **added** annexed file — its pointer arrives on a `+` line:
 void test("An added annexed file — its pointer arrives on a + line:", async (t) => {
-  // doctest:L38
   t.check(summarize(diffFor({ path: "photos/cat.jpg", marker: "new file mode 100644", line: `+/annex/objects/${ANNEX_KEY}` })), "photos/cat.jpg binary=true hunks=0");
 
   // A **removed** annexed file — the pointer shows up on a `-` line. (This was the
   // reported bug's second half: removed annexed images rendered as pointer text.)
 
-  // doctest:L46
   t.check(summarize(diffFor({ path: "photos/cat.jpg", marker: "deleted file mode 100644", line: `-/annex/objects/${ANNEX_KEY}` })), "photos/cat.jpg binary=true hunks=0");
 
   // A **removed LFS** file gets the same treatment — the old check only looked at
   // added lines:
 
-  // doctest:L54
   t.check(
     summarize(diffFor({ path: "clip.mp4", marker: "deleted file mode 100644", line: "-version https://git-lfs.github.com/spec/v1" }))
     ,
@@ -56,6 +53,5 @@ void test("An added annexed file — its pointer arrives on a + line:", async (t
   // Ordinary text that merely *mentions* the annex path mid-line is untouched — the
   // prefix must start the changed line:
 
-  // doctest:L62
   t.check(summarize(diffFor({ path: "notes.md", marker: "new file mode 100644", line: "+see /annex/objects/ for storage details" })), "notes.md binary=false hunks=2");
 });

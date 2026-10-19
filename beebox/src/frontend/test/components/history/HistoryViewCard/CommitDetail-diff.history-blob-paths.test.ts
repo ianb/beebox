@@ -4,13 +4,12 @@
 // history diff parser decodes those bytes before displaying or fetching the file.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseDiff } from "../../../../src/components/history/HistoryViewCard/CommitDetail-diff.js";
 import { buildHistoryBlobUrl } from "../../../../src/components/history/HistoryViewCard/history-blob-url.js";
 
 // A quoted UTF-8 filename is decoded in both the diff header and rename metadata:
 void test("A quoted UTF-8 filename is decoded in both the diff header and rename metadata:", async (t) => {
-  // doctest:L14
   const quotedRename = [
     'diff --git "a/old/caf\\303\\251 #100%.png" "b/new/caf\\303\\251 #100%.png"',
     "similarity index 100%",
@@ -31,7 +30,6 @@ void test("A quoted UTF-8 filename is decoded in both the diff header and rename
 // Characters with URL meaning are encoded within each segment while directory
 // separators remain separators:
 void test("Characters with URL meaning are encoded within each segment while directory s...", async (t) => {
-  // doctest:L29
   const specialPath = parseDiff(
     "diff --git a/media/100%#?.png b/media/100%#?.png\nBinary files differ"
   )[0]?.path;

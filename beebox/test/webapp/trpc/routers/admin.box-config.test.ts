@@ -6,8 +6,8 @@
 // the saved fields.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext, TrpcUser } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -37,7 +37,6 @@ void test("Invite minting requires a concrete signed-in box owner", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L29
   const inviteAuthDir = await mkdtemp(join(tmpdir(), "bbx-admin-invite-"));
   process.env.BBX_AUTH_FILE = join(inviteAuthDir, "auth.json");
   process.env.BBX_AUTH_SCRYPT_N = "1024";
@@ -45,7 +44,6 @@ void test("Invite minting requires a concrete signed-in box owner", async (t) =>
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
   const inviteBox = await makeTmpBox({ git: true });
 
-  // doctest:L36
   const invite = await caller(inviteBox.root).admin.createInvite({ email: " Member@Example.COM " });
   t.check(invite, {
     invitePath: str`/auth/invite?token=${any(String).matches(/^[\w-]+$/)}`,
@@ -55,7 +53,6 @@ void test("Invite minting requires a concrete signed-in box owner", async (t) =>
   // Open/test owner authorization without a human identity cannot mint a bearer
   // capability into the global credential store.
 
-  // doctest:L45
   const openResult = await caller(inviteBox.root, null).admin.createInvite({}).then(
     () => "allowed",
     (error) => error.code,
@@ -65,7 +62,6 @@ void test("Invite minting requires a concrete signed-in box owner", async (t) =>
   // The owner can detect when an allowlist addition would grant an already-created
   // local account, including an identity previously claimed through an open invite.
 
-  // doctest:L57
   await addUser({ email: "claimed@example.com", name: "Claimed", password: "claimed-password", role: "member" });
   t.check(await caller(inviteBox.root).admin.localAccountStatus({ email: " Claimed@Example.COM " }), {
     exists: true,
@@ -73,7 +69,6 @@ void test("Invite minting requires a concrete signed-in box owner", async (t) =>
 
   // Pinned invites cannot replace an existing local identity.
 
-  // doctest:L65
   const pinnedConflict = await caller(inviteBox.root).admin.createInvite({ email: "claimed@example.com" }).then(
     () => "allowed",
     (error) => error.code,
@@ -83,7 +78,6 @@ void test("Invite minting requires a concrete signed-in box owner", async (t) =>
   // A corrupt capability store is a typed, generic precondition failure on the
   // owner surface; its filesystem path is not exposed in the error message.
 
-  // doctest:L77
   await writeFile(`${process.env.BBX_AUTH_FILE}.invites.json`, "not json", { mode: 0o600 });
   const unavailableInvite = await caller(inviteBox.root).admin.createInvite({}).then(
     () => ({ code: "none", message: "" }),
@@ -107,7 +101,6 @@ void test("The configured Google owner can mint before any local-password accoun
       t.error(error);
     }
   });
-  // doctest:L97
   const noOwnerAuthDir = await mkdtemp(join(tmpdir(), "bbx-admin-no-owner-"));
   process.env.BBX_AUTH_FILE = join(noOwnerAuthDir, "auth.json");
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
@@ -118,7 +111,6 @@ void test("The configured Google owner can mint before any local-password accoun
     expiresAt: any(Number).above(Date.now()),
   });
 
-  // doctest:L105
   t.check(await caller(noOwnerBox.root).admin.boxConfig(), {
     boxSlug: "test",
     allowedEmails: [],
@@ -152,7 +144,6 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L119
   const box = await makeTmpBox({ git: true });
   const res = await caller(box.root).admin.updateBoxConfig({ googleServices: { calendar: true, gmail: false } });
   // The change was committed (a new commit exists on top of the box's initial one).
@@ -177,7 +168,6 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
 
   // ## boxConfig round-trips googleServices and exposes ownerEmail
 
-  // doctest:L135
   const cfg = await caller(box.root).admin.boxConfig();
   t.check(cfg, {
     boxSlug: "test",
@@ -200,21 +190,17 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
   // Missing engine configuration defaults to Claude, while a Codex selection is
   // persisted and returned through the same owner-only mutation.
 
-  // doctest:L147
   t.check(cfg.agentEngine, "claude");
 
-  // doctest:L150
   const engineResult = await caller(box.root).admin.updateBoxConfig({ agentEngine: "codex" });
   const engineConfig = JSON.parse(await box.read("_config/box.json"));
   t.check({ returned: engineResult.agentEngine, saved: engineConfig.agentEngine }, { returned: "codex", saved: "codex" });
 
-  // doctest:L155
   t.check((await caller(box.root).admin.boxConfig()).agentEngine, "codex");
 
   // Retired model pins are shown as the current model in Admin, matching the model
   // the runtime will use instead of presenting a working pin as unavailable.
 
-  // doctest:L163
   await box.write("_config/box.json", JSON.stringify({
     agentEngine: "codex",
     agentModel: "gpt-5.6-sol",
@@ -225,7 +211,6 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
   // runtime rejects this value too, so Admin must surface the same configuration
   // failure instead of fabricating a usable-looking payload.
 
-  // doctest:L176
   await box.write("_config/box.json", JSON.stringify({ agentEngine: "other" }));
   const originalConsoleWarn = console.warn;
   console.warn = () => {};
@@ -236,29 +221,24 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
   console.warn = originalConsoleWarn;
   t.check(invalidConfigResult, "PRECONDITION_FAILED: Box configuration is unreadable.");
 
-  // doctest:L187
   await box.write("_config/box.json", JSON.stringify({ agentEngine: "codex" }));
 
   // Google login availability is reported separately from per-box Google service
   // toggles, so the allowed-user UI can describe how a non-local account signs in.
 
-  // doctest:L194
   delete process.env.GOOGLE_OAUTH_CLIENT_ID;
   delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
   t.check((await caller(box.root).admin.boxConfig()).googleLoginConfigured, false);
 
-  // doctest:L199
   process.env.GOOGLE_OAUTH_CLIENT_ID = "login-client";
   t.check((await caller(box.root).admin.boxConfig()).googleLoginConfigured, false);
 
-  // doctest:L203
   process.env.GOOGLE_OAUTH_CLIENT_ID = "login-client";
   process.env.GOOGLE_OAUTH_CLIENT_SECRET = "login-secret";
   t.check((await caller(box.root).admin.boxConfig()).googleLoginConfigured, true);
 
   // ## updateBoxConfig still accepts allowedEmails and filters non-emails
 
-  // doctest:L212
   const res2 = await caller(box.root).admin.updateBoxConfig({
     allowedEmails: [" A@Example.COM ", "a@example.com", "not-an-email"],
   });
@@ -277,7 +257,6 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
   // Only allowed local members are exposed as password-reset targets. The owner and
   // allowed addresses without a local account are excluded.
 
-  // doctest:L224
   const memberAuthDir = await mkdtemp(join(tmpdir(), "bbx-admin-members-"));
   process.env.BBX_AUTH_FILE = join(memberAuthDir, "auth.json");
   process.env.BBX_AUTH_SCRYPT_N = "1024";
@@ -306,27 +285,23 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
   // owner identity makes its allowlist entry non-redundant. It is still ineligible
   // for the member password-reset action.
 
-  // doctest:L247
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
   process.env.BBX_OWNER_EMAIL = "google-owner@example.com";
   const localOwnerDetail = (await caller(box.root).admin.boxConfig()).allowedUserDetails
     .find((user) => user.email === "owner@example.com");
   t.check(localOwnerDetail, { email: "owner@example.com", kind: "local-owner", resetEligible: false });
 
-  // doctest:L254
   delete process.env.BBX_OWNER_EMAIL;
 
   // The owner can mint a reset only for that eligible member; the returned link is
   // root-auth-relative and never contains the email address.
 
-  // doctest:L261
   const reset = await caller(box.root).admin.createPasswordReset({ email: " MEMBER@EXAMPLE.COM " });
   t.check(reset, {
     resetPath: str`/auth/reset-password?token=${any(String).matches(/^[\w-]+$/)}`,
     expiresAt: any(Number).above(Date.now()),
   });
 
-  // doctest:L269
   t.check(
     await caller(box.root).admin.createPasswordReset({ email: "invited@example.com" }).then(
       () => "allowed",
@@ -337,7 +312,6 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
 
   // ## empty input is rejected
 
-  // doctest:L288
   const err = await caller(box.root).admin.updateBoxConfig({}).then(() => "none", (e) => e.code);
   t.check(err, "BAD_REQUEST");
 });
@@ -347,7 +321,6 @@ void test("updateBoxConfig writes googleServices and commits", async (t) => {
 // The setting governs first-party runs only. Turning it off is saved,
 // committed, and read by the spawn seam on the next run.
 void test("The setting governs first-party runs only.", async (t) => {
-  // doctest:L300
   const { providerEnvAdditions } = await import("../../../../src/core/provider-env/core.js");
   const box = await makeTmpBox({ git: true });
   const before = (await caller(box.root).admin.boxConfig()).claudeCodeTelemetry;
@@ -371,13 +344,11 @@ void test("The setting governs first-party runs only.", async (t) => {
     },
   );
 
-  // doctest:L309
   await box.cleanup();
 });
 
 // ## Codex analytics default off and the owner can turn them on
 void test("Codex analytics default off and the owner can turn them on", async (t) => {
-  // doctest:L315
   const box = await makeTmpBox({ git: true });
   const before = (await caller(box.root).admin.boxConfig()).codexTelemetry;
   const saved = await caller(box.root).admin.updateBoxConfig({ codexTelemetry: "on" });
@@ -387,7 +358,6 @@ void test("Codex analytics default off and the owner can turn them on", async (t
     "on",
   ]);
 
-  // doctest:L321
   await box.cleanup();
 });
 
@@ -400,7 +370,6 @@ void test("A Git failure does not falsely report that the saved config rolled ba
       t.error(error);
     }
   });
-  // doctest:L327
   const rejectedCommitBox = await makeTmpBox({ git: true });
   await rejectedCommitBox.write(".git/hooks/pre-commit", "#!/bin/sh\nexit 1\n");
   await chmod(join(rejectedCommitBox.root, ".git/hooks/pre-commit"), 0o755);

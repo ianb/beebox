@@ -2,7 +2,7 @@ plugin:
   - "!@tapjs/typescript"
 node-arg:
   - --import=tsx
-  - --import=agent-doctest/tap
+  - --import=@ianbicking/tap-check/tap
 include:
   # t.check tests only. The router's `node:test` files are NOT listed here: tap does
   # not run that runner's files, and listing them made it report "no tests

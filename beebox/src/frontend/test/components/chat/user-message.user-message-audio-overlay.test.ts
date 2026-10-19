@@ -10,7 +10,7 @@
 // for badge presence and the text swap.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { UserMessage } from "../../../src/components/chat/user-message/view.js";
@@ -91,7 +91,6 @@ const LIVE_STATUS = '<div role="status" class="bbx-chat-user-status text-xs text
 
 // ## Retranscription: label includes the resolved service
 void test("Retranscription: label includes the resolved service", async (t) => {
-  // doctest:L66
   const specs = buildAudioBadgeSpecs(
     { retranscription: { newText: "two large eggs", service: "deepgram-hq", diarized: false } },
     "two large legs",
@@ -104,7 +103,6 @@ void test("Retranscription: label includes the resolved service", async (t) => {
 
 // ## Retranscription: no service known → label omits the placeholder
 void test("Retranscription: no service known → label omits the placeholder", async (t) => {
-  // doctest:L93
   const noServiceSpecs = buildAudioBadgeSpecs(
     { retranscription: { newText: "two large eggs", diarized: false } },
     "two large legs",
@@ -125,7 +123,6 @@ void test("Consulted: fixed label; detail carries the question(s) asked", async 
 
 // ## Both present: retranscription badge first, consulted appended after
 void test("Both present: retranscription badge first, consulted appended after", async (t) => {
-  // doctest:L123
   const bothSpecs = buildAudioBadgeSpecs(
     { retranscription: { newText: "x", diarized: false }, consulted: { questions: ["did I sound annoyed?"] } },
     "y",
@@ -135,7 +132,6 @@ void test("Both present: retranscription badge first, consulted appended after",
 
 // ## Full render: no overlay store → no badge, original text shown
 void test("Full render: no overlay store → no badge, original text shown", async (t) => {
-  // doctest:L134
   const plainOut = render([voiceEntry("msg-1", "two large legs")]);
   t.check(plainOut, ownBubble({ badge: null, hq: "", text: "two large legs", status: "" }));
 });
@@ -146,21 +142,17 @@ void test("Full render: no overlay store → no badge, original text shown", asy
 // only from a successful server response. Reloading history therefore retains
 // the evidence without relying on the transient retranscription overlay store.
 void test("The service comes from the persisted speech wrapper, which the client stamps...", async (t) => {
-  // doctest:L149
   const hqEntry = hqVoiceEntry("msg-hq", "server corrected words");
   t.check(resolveTranscriptionProvenance(hqEntry), {
     kind: "hq",
     service: "whisper-llm",
   });
 
-  // doctest:L153
   t.check(resolveEntryMessageId(hqEntry), "msg-hq");
 
-  // doctest:L156
   const hqOut = render([hqEntry]);
   t.check(hqOut, ownBubble({ badge: null, hq: hqMarker("whisper-llm"), text: "server corrected words", status: "" }));
 
-  // doctest:L160
   t.check(render([voiceEntry("msg-realtime", "fast words")]), ownBubble({ badge: null, hq: "", text: "fast words", status: "" }));
 });
 
@@ -169,7 +161,6 @@ void test("The service comes from the persisted speech wrapper, which the client
 // renders the live-text status line. The legacy wrappers above still read the
 // same way.
 void test("Current messages mark the exception instead (docs/plans/hq-always.md):", async (t) => {
-  // doctest:L170
   function wrapped(attrs: string, id: string): SessionEntry {
     return { uuid: id, type: "user", timestamp: "2026-10-09T12:00:00Z", content: [{ type: "text", text: `<speech ${attrs} message-id="${id}">words</speech>` }] };
   }
@@ -185,16 +176,13 @@ void test("Current messages mark the exception instead (docs/plans/hq-always.md)
     },
   ]);
 
-  // doctest:L178
   t.check(render([currentLive]), ownBubble({ badge: null, hq: "", text: "words", status: LIVE_STATUS }));
 
-  // doctest:L181
   t.check(render([currentHq]), ownBubble({ badge: null, hq: hqMarker("apple-speech-transcriber"), text: "words", status: "" }));
 });
 
 // ## Full render: a matching retranscription swaps the displayed text and shows a badge
 void test("Full render: a matching retranscription swaps the displayed text and shows a badge", async (t) => {
-  // doctest:L188
   const store = createAudioOverlayStore();
   store.applyRetranscription("msg-2", { newText: "two large eggs", service: "deepgram-hq", diarized: false });
   const swappedOut = render([voiceEntry("msg-2", "two large legs")], store);
@@ -206,7 +194,6 @@ void test("Full render: a matching retranscription swaps the displayed text and 
 // An overlay for a DIFFERENT message id sitting in the same store must not
 // leak onto an unrelated bubble.
 void test("An overlay for a DIFFERENT message id sitting in the same store must not leak...", async (t) => {
-  // doctest:L204
   const otherStore = createAudioOverlayStore();
   otherStore.applyRetranscription("msg-other", { newText: "not this bubble", diarized: false });
   const untouchedOut = render([voiceEntry("msg-3", "two large legs")], otherStore);
@@ -215,7 +202,6 @@ void test("An overlay for a DIFFERENT message id sitting in the same store must 
 
 // ## Full render: consulted-only overlay → badge present, text unchanged
 void test("Full render: consulted-only overlay → badge present, text unchanged", async (t) => {
-  // doctest:L220
   const consultedStore = createAudioOverlayStore();
   consultedStore.applyConsulted("msg-4", "did I sound annoyed?");
   const consultedOut = render([voiceEntry("msg-4", "two large legs")], consultedStore);
@@ -227,7 +213,6 @@ void test("Full render: consulted-only overlay → badge present, text unchanged
 // In a shared session, Bob's retranscribed message must update on a different
 // viewer's (Alice's) screen too — the overlay isn't scoped to who's looking.
 void test("In a shared session, Bob's retranscribed message must update on a different v...", async (t) => {
-  // doctest:L236
   const otherStore = createAudioOverlayStore();
   otherStore.applyRetranscription("msg-bob-1", { newText: "corrected bob text", service: "deepgram-hq", diarized: false });
   const otherOut = renderAsOtherViewer([otherUserVoiceEntry("msg-bob-1", "original bob text")], otherStore);
@@ -236,7 +221,6 @@ void test("In a shared session, Bob's retranscribed message must update on a dif
 
 // ## Fix (cross-model review): another user's bubble also shows the consulted badge
 void test("Fix (cross-model review): another user's bubble also shows the consulted badge", async (t) => {
-  // doctest:L252
   const otherConsultedStore = createAudioOverlayStore();
   otherConsultedStore.applyConsulted("msg-bob-2", "was that sarcasm?");
   const otherConsultedOut = renderAsOtherViewer([otherUserVoiceEntry("msg-bob-2", "bob asked something")], otherConsultedStore);
@@ -250,7 +234,6 @@ void test("Fix (cross-model review): another user's bubble also shows the consul
 // agent-facing `<unsure>` tag the normal bubble path styles instead (same
 // unwrap `stripSpeechWrappers` does backend-side).
 void test("originalDisplayText (user-entry-content.tsx) feeds the popover's \"realtime tr...", async (t) => {
-  // doctest:L270
   const unsureEntry: SessionEntry = {
     uuid: "sdk-uuid-unsure",
     type: "user",
@@ -260,7 +243,6 @@ void test("originalDisplayText (user-entry-content.tsx) feeds the popover's \"re
   t.check(originalDisplayText(unsureEntry), "they're all cloud code in different ways");
 
   // The popover content itself renders the clean, unwrapped text, never the raw tag.
-  // doctest:L283
   const unsureSpecs = buildAudioBadgeSpecs(
     { retranscription: { newText: "two large eggs", service: "deepgram-hq", diarized: false } },
     originalDisplayText(unsureEntry),

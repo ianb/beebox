@@ -9,7 +9,7 @@
 // and the refs pending jobs hold, so these examples call it directly.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { filingPlan, isWordless, nextKickAt, FILING_WAITING_ERROR, type FilingDoc } from "../../../src/core/quick-capture/filing.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import type { CaptureRecord } from "../../../src/core/quick-capture/store.js";
@@ -43,7 +43,6 @@ const shared = { version: 1 as const, capturedAt: "2026-10-17T12:00:00Z", source
 // Only saved material with no words of its own is filed. A capture with words
 // goes to chat; a recording keeps its transcription retry instead.
 void test("Only saved material with no words of its own is filed.", async (t) => {
-  // doctest:L30
   const words = capture("1", { declaration: { version: 1, capturedAt: at(0), source: "apple-share-extension", input: "compare this", material: { kind: "url", url: "https://example.com" } } });
   const recording = capture("2", { declaration: { version: 1, capturedAt: at(0), source: "apple-voice-recording", material: { kind: "audio", id: "00000000-0000-4000-8000-000000000002", mimeType: "audio/mp4", byteLength: 1, sha256: "a".repeat(64), fileName: "r.m4a" } } });
   t.check([isWordless(capture("3")), isWordless(words), isWordless(recording)], [
@@ -56,7 +55,6 @@ void test("Only saved material with no words of its own is filed.", async (t) =>
 // Nothing is queued until two minutes pass with no new word-less capture from
 // that person, so a burst reaches the agent together.
 void test("Nothing is queued until two minutes pass with no new word-less capture from t...", async (t) => {
-  // doctest:L40
   t.check(filingPlan({ records: [capture("1")], docs: docs(placeholder("1")), queued: none, now: T0 + 60000 }), {
     clear: [],
     dequeue: [],
@@ -65,7 +63,6 @@ void test("Nothing is queued until two minutes pass with no new word-less captur
     exhausted: [],
   });
 
-  // doctest:L43
   t.check(filingPlan({ records: [capture("1")], docs: docs(placeholder("1")), queued: none, now: T0 + 120000 }), {
     clear: [],
     dequeue: [],
@@ -82,7 +79,6 @@ void test("Nothing is queued until two minutes pass with no new word-less captur
 // A newer capture holds back the person's older ones. Another person's captures
 // settle on their own clock.
 void test("A newer capture holds back the person's older ones.", async (t) => {
-  // doctest:L51
   const records = [capture("1"), capture("2", { acceptedAt: at(1.5) }), capture("3", { owner: "james@example.com" })];
   t.check(filingPlan({ records, docs: docs(placeholder("1"), placeholder("2"), placeholder("3")), queued: none, now: T0 + 150000 }), {
     clear: [],
@@ -100,7 +96,6 @@ void test("A newer capture holds back the person's older ones.", async (t) => {
 // A capture still being prepared holds the burst open too, before its own
 // filing request exists.
 void test("A capture still being prepared holds the burst open too, before its own filin...", async (t) => {
-  // doctest:L60
   const preparing = capture("2", { state: "preparing", filingRequested: undefined, acceptedAt: at(1.9) });
   t.check(filingPlan({ records: [capture("1"), preparing], docs: docs(placeholder("1")), queued: none, now: T0 + 120000 }).queue, []);
 });
@@ -109,7 +104,6 @@ void test("A capture still being prepared holds the burst open too, before its o
 // deleted. The job disappearing proves nothing, because `bbx finish` deletes a
 // whole job card, items appended after the agent read it included.
 void test("Done is read from the doc:", async (t) => {
-  // doctest:L70
   const moved: [string, FilingDoc] = ["00000000-0000-4000-8000-000000000002", { ref: "_content/Recipes/00000000-0000-4000-8000-000000000002.doc.card", title: "Saved capture" }];
   const retitled: [string, FilingDoc] = ["00000000-0000-4000-8000-000000000001", { ref: ref("1"), title: "Lemon pasta recipe" }];
   const gone: [string, FilingDoc] = ["00000000-0000-4000-8000-000000000003", null];
@@ -123,7 +117,6 @@ void test("Done is read from the doc:", async (t) => {
 // A ref already in a pending job is not appended again, so a crash between the
 // append and the record update cannot queue it twice. The wakeup is still due.
 void test("A ref already in a pending job is not appended again, so a crash between the...", async (t) => {
-  // doctest:L81
   t.check(filingPlan({ records: [capture("1")], docs: docs(placeholder("1")), queued: new Set([ref("1")]), now: T0 + 600000 }), {
     clear: [],
     dequeue: [],
@@ -139,7 +132,6 @@ void test("A ref already in a pending job is not appended again, so a crash betw
 // once; the words route to chat as before. The capture leaves filing for good
 // when the words are delivered, and until then it only waits.
 void test("Words win.", async (t) => {
-  // doctest:L90
   const words = { version: 1 as const, capturedAt: at(1), source: "apple-native-input" as const, input: "compare this with ours", parentCaptureId: "00000000-0000-4000-8000-000000000001" };
   const sending = capture("9", { state: "sending", filingRequested: undefined, declaration: words });
   t.check(filingPlan({ records: [capture("1"), sending], docs: docs(placeholder("1")), queued: new Set([ref("1")]), now: T0 + 600000 }), {
@@ -152,7 +144,6 @@ void test("Words win.", async (t) => {
     exhausted: [],
   });
 
-  // doctest:L95
   const sent = capture("9", { state: "sent", filingRequested: undefined, declaration: words });
   t.check(filingPlan({ records: [capture("1"), sent], docs: docs(placeholder("1")), queued: none, now: T0 + 600000 }).clear, [
     "00000000-0000-4000-8000-000000000001",
@@ -162,13 +153,11 @@ void test("Words win.", async (t) => {
 // A deleted context event does not take the capture out of filing, and a
 // capture caught mid-Retry, briefly "preparing", keeps its request.
 void test("A deleted context event does not take the capture out of filing, and a captur...", async (t) => {
-  // doctest:L104
   const deletedContext = capture("9", { state: "gone", filingRequested: undefined, declaration: { version: 1, capturedAt: at(1), source: "apple-native-input", input: "never sent", parentCaptureId: "00000000-0000-4000-8000-000000000001" } });
   t.check(filingPlan({ records: [capture("1"), deletedContext], docs: docs(placeholder("1")), queued: none, now: T0 + 600000 }).queue, [
     "_content/captures/00000000-0000-4000-8000-000000000001.doc.card",
   ]);
 
-  // doctest:L108
   t.check(filingPlan({ records: [capture("1", { state: "preparing" })], docs: docs(placeholder("1")), queued: none, now: T0 + 600000 }), {
     clear: [],
     dequeue: [],
@@ -181,7 +170,6 @@ void test("A deleted context event does not take the capture out of filing, and 
 // Wakeups back off: 2, 4 and 8 minutes, then every 15. A capture waits for its
 // next allowed time.
 void test("Wakeups back off:", async (t) => {
-  // doctest:L116
   t.check([1, 2, 3, 4, 5].map(kicks => (Date.parse(nextKickAt(T0, kicks)) - T0) / 60000), [
     2,
     4,
@@ -190,14 +178,12 @@ void test("Wakeups back off:", async (t) => {
     15,
   ]);
 
-  // doctest:L119
   t.check(filingPlan({ records: [capture("1", { filingKicks: 1, filingKickAt: at(12) })], docs: docs(placeholder("1")), queued: new Set([ref("1")]), now: T0 + 600000 }).kick, []);
 });
 
 // After six wakeups the sweep stops starting cycles and shows the person why,
 // once. A later cycle that files the capture clears the message with the rest.
 void test("After six wakeups the sweep stops starting cycles and shows the person why, o...", async (t) => {
-  // doctest:L127
   t.check(filingPlan({ records: [capture("1", { filingKicks: 6 })], docs: docs(placeholder("1")), queued: new Set([ref("1")]), now: T0 + 600000 }), {
     clear: [],
     dequeue: [],
@@ -208,14 +194,12 @@ void test("After six wakeups the sweep stops starting cycles and shows the perso
     ],
   });
 
-  // doctest:L130
   t.check(filingPlan({ records: [capture("1", { filingKicks: 6, error: FILING_WAITING_ERROR })], docs: docs(placeholder("1")), queued: new Set([ref("1")]), now: T0 + 600000 }).exhausted, []);
 });
 
 // An exhausted capture does not hold back a newer one: the newer one gets its
 // own wakeups.
 void test("An exhausted capture does not hold back a newer one:", async (t) => {
-  // doctest:L138
   const tired = capture("1", { filingKicks: 6, error: FILING_WAITING_ERROR });
   const fresh = capture("2", { acceptedAt: at(5) });
   t.check(filingPlan({ records: [tired, fresh], docs: docs(placeholder("1"), placeholder("2")), queued: new Set([ref("1")]), now: T0 + 600000 }).kick, [
@@ -232,7 +216,6 @@ void test("The worker and the sweep on a box", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L163
   process.env.BBX_TIME = "2026-10-17T12:00:00Z";
   const box = await makeTmpBox({ git: true });
   await acceptQuickCapture({ boxRoot: box.root, id: captureId, owner: null, declaration: shared });
@@ -242,13 +225,11 @@ void test("The worker and the sweep on a box", async (t) => {
     true,
   ]);
 
-  // doctest:L170
   t.check(await runFilingSweep({ boxRoot: box.root, wakeupRunning: false }), false);
 
   // Two minutes later the doc is on the job, the sweep asks for a box cycle, and
   // the record says when the next one may start.
 
-  // doctest:L178
   process.env.BBX_TIME = "2026-10-17T12:02:00Z";
   const wake = await runFilingSweep({ boxRoot: box.root, wakeupRunning: false });
   const jobFile = (await readdir(box.path("_bookkeeping/jobs"))).find(name => name.endsWith(".intake.job.card"));
@@ -268,7 +249,6 @@ void test("The worker and the sweep on a box", async (t) => {
 
   // A sweep before that time appends nothing and starts nothing.
 
-  // doctest:L190
   process.env.BBX_TIME = "2026-10-17T12:03:00Z";
   const wakeAgain = await runFilingSweep({ boxRoot: box.root, wakeupRunning: false });
   const again = parseFrontmatterObject(await readFile(box.path(`_bookkeeping/jobs/${jobFile}`), "utf8"));
@@ -283,7 +263,6 @@ void test("The worker and the sweep on a box", async (t) => {
 
   // When the agent retitles the doc, the next sweep clears the request.
 
-  // doctest:L200
   const docPath = box.path("_content/captures/11111111-1111-4111-8111-111111111111.doc.card");
   await writeFile(docPath, (await readFile(docPath, "utf8")).replace("title: Saved capture", "title: Lemon pasta recipe"));
   const wakeFiled = await runFilingSweep({ boxRoot: box.root, wakeupRunning: false });
@@ -306,7 +285,6 @@ void test("Retry on a saved word-less capture starts a fresh set of wakeups and 
       t.error(error);
     }
   });
-  // doctest:L217
   process.env.BBX_TIME = "2026-10-17T12:00:00Z";
   const box = await makeTmpBox({ git: true });
   await acceptQuickCapture({ boxRoot: box.root, id: captureId, owner: null, declaration: shared });

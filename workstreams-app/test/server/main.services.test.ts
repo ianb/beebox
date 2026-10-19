@@ -5,7 +5,7 @@
 // and committed by selected path without consuming unrelated dirt.
 
 import { test, type Test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -105,7 +105,6 @@ workstream: example
 // the same path grammar; visibility selects the root, so `private/` is never a
 // path prefix supplied by a client.
 void test("Issue paths are category-relative Markdown files.", async (t) => {
-  // doctest:L102
   t.check(
     {
       open: issueRelPathSchema.safeParse("bugs/2026-08-13-example.md").success,
@@ -136,7 +135,6 @@ void test("Documents retain issue, plan, body, and testing semantics", async (t)
       t.error(error);
     }
   });
-  // doctest:L116
   const fixture = await makeRepo();
   const documents = createDocumentsService({
     mainRoot: fixture.root,
@@ -190,7 +188,6 @@ async function checkAssociations(t: Test): Promise<void> {
   // `discovered-in` convention and worktree activity relative to main. The frontend
   // receives these indicators instead of parsing provenance itself.
 
-  // doctest:L143
   const associated = parseIssueFile({
     relPath: "bugs/2026-08-13-associated.md",
     source: `---
@@ -238,13 +235,10 @@ async function checkDetailBoundaries(t: Test, ctx: Ctx): Promise<void> {
   // The detail boundary rejects traversal even when called below tRPC, and public
   // and private visibility cannot cross-read the same relative path.
 
-  // doctest:L176
   await t.checkThrows(async () => (await documents.issueDetail("../secret.md", "public")), "InvalidIssuePathError: invalid issue path: ../secret.md");
 
-  // doctest:L179
   await t.checkThrows(async () => (await documents.issueDetail("bugs/2026-08-13-escape.md", "public")), "InvalidIssuePathError: invalid issue path: bugs/2026-08-13-escape.md");
 
-  // doctest:L182
   await t.checkThrows(
     async () => (await documents.saveIssueChanges([{
       relPath: "closed/bugs/../../secret.md",
@@ -255,7 +249,6 @@ async function checkDetailBoundaries(t: Test, ctx: Ctx): Promise<void> {
     "InvalidIssuePathError: invalid issue path: closed/bugs/../../secret.md",
   );
 
-  // doctest:L190
   const privateDetail = await documents.issueDetail("bugs/2026-08-13-example.md", "private");
   t.check({ title: privateDetail.frontmatter.title, body: privateDetail.body?.trim() }, {
     title: "Private example",
@@ -268,7 +261,6 @@ async function checkSaveCommit(t: Test, ctx: Ctx): Promise<void> {
   // Saving changes updates priority and makes exactly one path-scoped commit.
   // An unrelated dirty file remains uncommitted.
 
-  // doctest:L199
   await fs.writeFile(path.join(fixture.root, "notes.txt"), "unrelated\n");
   const saved = await documents.saveIssueChanges([{
     relPath: "bugs/2026-08-13-example.md",
@@ -294,7 +286,6 @@ async function checkNextAction(t: Test, ctx: Ctx): Promise<void> {
   // clears when both the action and the message are withdrawn. A message can stand
   // alone.
 
-  // doctest:L219
   const headBefore = (await git(fixture.root, ["rev-parse", "HEAD"])).stdout;
   const set = await documents.setIssueNextAction({
     visibility: "public", slug: "2026-08-13-second", action: "discuss", message: "  Ask about the cache  ",
@@ -339,7 +330,6 @@ async function checkStaleRevision(t: Test, ctx: Ctx): Promise<void> {
   const { documents } = ctx;
   // A stale browser revision fails before writing or committing.
 
-  // doctest:L246
   await t.checkThrows(
     async () => (await documents.saveIssueChanges([{
       relPath: "bugs/2026-08-13-example.md",
@@ -357,7 +347,6 @@ async function checkBatchConflictAndRollback(t: Test, ctx: Ctx): Promise<void> {
   // not written, and a failure during a later atomic rename restores already-renamed
   // members and cleans temporary files.
 
-  // doctest:L260
   const sourceBeforeBatch = await fs.readFile(fixture.issuePath, "utf8");
   const batchConflict = await documents.saveIssueChanges([
     {
@@ -386,7 +375,6 @@ async function checkBatchConflictAndRollback(t: Test, ctx: Ctx): Promise<void> {
   },
   );
 
-  // doctest:L282
   const secondBeforeBatch = await fs.readFile(fixture.secondIssuePath, "utf8");
   let renameCalls = 0;
   const renameFailure = await saveIssueChanges({
@@ -438,7 +426,6 @@ async function checkPrivateSave(t: Test, ctx: Ctx): Promise<void> {
   // Saving the private record commits only in the private repository and leaves the
   // public issue with the same relative path untouched.
 
-  // doctest:L324
   const privateSaved = await documents.saveIssueChanges([{
     relPath: "bugs/2026-08-13-example.md",
     visibility: "private",
@@ -468,7 +455,6 @@ async function checkWorktreeOverlay(t: Test, ctx: Ctx): Promise<void> {
   // An authoritative worktree overlay resolves beneath that checkout's `issues/`
   // directory, not at the checkout root.
 
-  // doctest:L345
   const overlayRoot = path.join(fixture.worktreesRoot, "example");
   const relPath = "bugs/2026-08-13-example.md";
   await fs.mkdir(path.join(overlayRoot, "issues", "bugs"), { recursive: true });
@@ -490,7 +476,6 @@ async function checkMergedOverlays(t: Test): Promise<void> {
   // Committed, working-copy, renamed, and untracked overlays retain the same
   // precedence metadata the workstreams page uses to choose an issue source.
 
-  // doctest:L367
   const merged = mergeOverlaySources({
     worktree: "example",
     committed: "M\0issues/bugs/committed.md\0R100\0issues/bugs/old.md\0issues/bugs/new.md\0",
@@ -543,13 +528,11 @@ async function checkMergedOverlays(t: Test): Promise<void> {
   );
 }
 
-
 // ## Resume jobs expose meaningful phases and deduplicate active work
 //
 // Progress markers can straddle stderr chunks without losing or inventing a
 // stage.
 void test("Progress markers can straddle stderr chunks without losing or inventing a stage.", async (t) => {
-  // doctest:L390
   const stages: string[] = [];
   const parseMarker = createResumeMarkerParser((stage) => stages.push(stage));
   parseMarker("noise\nWORKSTREAM_RESUME_STATUS:rest");
@@ -561,7 +544,6 @@ void test("Progress markers can straddle stderr chunks without losing or inventi
 });
 
 void test("Resume jobs expose meaningful phases and deduplicate active work", async (t) => {
-  // doctest:L399
   let finishResume: (() => void) | undefined;
   const calls: ActionCommandRequest[] = [];
   const actions = createActionsService({
@@ -593,7 +575,6 @@ void test("Resume jobs expose meaningful phases and deduplicate active work", as
   // Completing the command advances a non-terminal job to `ready`; ordinary actions
   // run synchronously and never create jobs.
 
-  // doctest:L425
   finishResume?.();
   await new Promise((resolve) => setImmediate(resolve));
   const job = first.status === "started" ? actions.job(first.job.id) : null;

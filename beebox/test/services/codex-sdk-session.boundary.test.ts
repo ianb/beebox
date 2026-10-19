@@ -5,7 +5,7 @@
 // available to transcript administration.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { globSync } from "glob";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -17,24 +17,20 @@ function importers(fragment: string): string[] {
 }
 
 void test("line 19", async (t) => {
-  // doctest:L20
   t.check(importers('from "@openai/codex-sdk"'), [
     "src/services/codex-sdk-session/core.ts",
   ]);
 
-  // doctest:L23
   t.check(importers('codex-history-server.js"'), [
     "src/core/chat/session/codex-transcript/core.ts",
   ]);
 
-  // doctest:L26
   t.check(fs.existsSync(path.join("src", "services", "codex-app-server.ts")), false);
 });
 
 // The adapter passes the caller's exact BBX environment to the SDK, dropping
 // only explicitly undefined entries required by the SDK's stricter type.
 void test("The adapter passes the caller's exact BBX environment to the SDK, dropping on...", async (t) => {
-  // doctest:L34
   const exactEnv = {
     PATH: "/repo/beebox/bin:/usr/bin",
     BBX_SERVER_URL: "http://127.0.0.1:3210",
@@ -52,7 +48,6 @@ void test("The adapter passes the caller's exact BBX environment to the SDK, dro
 // shape used by startup/model rejection), while a failure after assistant output
 // keeps partial-progress semantics:
 void test("A failed Codex turn with no assistant response is an invocation failure (the...", async (t) => {
-  // doctest:L49
   const rejected = resultFromCodexTurn({
     threadId: "rejected",
     output: "",

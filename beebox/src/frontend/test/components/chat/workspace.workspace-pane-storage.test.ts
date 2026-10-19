@@ -5,8 +5,8 @@
 // usable in-memory state plus notices that the UI adapter can report.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import { createEmptyWorkspaceState } from "../../../src/components/chat/workspace/state-model.js";
 import type { WorkspaceState } from "../../../src/components/chat/workspace/state-types.js";
 import { createWorkspaceBrowserStoreWithStorage, type WorkspaceStorage } from "../../../src/components/chat/workspace/WorkspaceProvider/workspace-browser-store.js";
@@ -78,13 +78,10 @@ const legacyRaw = JSON.stringify({
 
 // ## The API base isolates same-origin development worktrees
 void test("The API base isolates same-origin development worktrees", async (t) => {
-  // doctest:L52
   t.check(storageScopeFor("/paper-cards/test1/api"), "paper-cards/test1");
 
-  // doctest:L55
   t.check(workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "session-1" }), "bbx:workspace-panes:v2:paper-cards/test1:session-1");
 
-  // doctest:L58
   t.check(
     workspaceStorageKey({ apiBase: "/other-worktree/test1/api", logicalConversationId: "session-1" }),
     not(workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "session-1" })),
@@ -92,13 +89,11 @@ void test("The API base isolates same-origin development worktrees", async (t) =
 
   // Production URLs retain their box identity too.
 
-  // doctest:L65
   t.check(storageScopeFor("/my-box/api/"), "my-box");
 });
 
 // ## Version 2 round-trips complete targets and pane state
 void test("Version 2 round-trips complete targets and pane state", async (t) => {
-  // doctest:L72
   const original = workspaceWith("notes/card.md");
   const restored = parseWorkspaceState(serializeWorkspaceState(original));
   t.check(restored, { state: original, source: "v2", notices: [] });
@@ -106,7 +101,6 @@ void test("Version 2 round-trips complete targets and pane state", async (t) => 
   // An entry whose registry key disagrees with its serialized target is invalid;
   // the bad payload is not rewritten or cleared by this pure parser.
 
-  // doctest:L91
   const mismatched = JSON.parse(serializeWorkspaceState(original));
   mismatched.tabs["notes/card.md"].url = "/views/other.md";
   const rejected = parseWorkspaceState(JSON.stringify(mismatched));
@@ -119,7 +113,6 @@ void test("Version 2 round-trips complete targets and pane state", async (t) => 
   // Malformed JSON and a wrong version likewise fall back to an initial workspace
   // with a reportable notice rather than throwing.
 
-  // doctest:L105
   const invalidV2: ReturnType<typeof parseWorkspaceState> = {
     state: EMPTY_STATE,
     source: "empty",
@@ -136,7 +129,6 @@ void test("Version 2 round-trips complete targets and pane state", async (t) => 
 // workspace normalizer repairs that reference and the boundary reports that it
 // did so.
 void test("A structurally valid snapshot can still point at a closed active card.", async (t) => {
-  // doctest:L119
   const drifted = JSON.parse(serializeWorkspaceState(workspaceWith("a")));
   drifted.panes.left.activePath = "missing";
   const repaired = parseWorkspaceState(JSON.stringify(drifted));
@@ -153,7 +145,6 @@ void test("A structurally valid snapshot can still point at a closed active card
 // function. The migration keeps the legacy order, selection, pin, and complete
 // view target; the right pane starts as conversation.
 void test("The caller must establish provenance before passing a legacy value to this fu...", async (t) => {
-  // doctest:L139
   const legacy = importTrustedLegacyWorkspace(legacyRaw);
   t.check(legacy, {
     state: {
@@ -175,7 +166,6 @@ void test("The caller must establish provenance before passing a legacy value to
 
   // Invalid trusted legacy data is recoverable and reportable.
 
-  // doctest:L159
   t.check(importTrustedLegacyWorkspace("not-json"), {
     state: EMPTY_STATE,
     source: "empty",
@@ -187,7 +177,6 @@ void test("The caller must establish provenance before passing a legacy value to
 //
 // A valid v2 snapshot wins over a trusted legacy strip.
 void test("A valid v2 snapshot wins over a trusted legacy strip.", async (t) => {
-  // doctest:L168
   t.check(
     restoreWorkspaceState({
       v2Raw: serializeWorkspaceState(workspaceWith("stored")),
@@ -200,12 +189,10 @@ void test("A valid v2 snapshot wins over a trusted legacy strip.", async (t) => 
   // workspace starts quietly empty; it does not present a migration diagnostic for
   // state it intentionally ignored.
 
-  // doctest:L180
   t.check(restoreWorkspaceState({ v2Raw: null }), { state: EMPTY_STATE, source: "empty", notices: [] });
 
   // Blocked browser storage also has a notice that does not contain stored data.
 
-  // doctest:L191
   t.check(storageUnavailableNotice(new Error("denied")), {
     code: "storage-unavailable",
     message: "Workspace persistence is unavailable (denied). This workspace will remain usable until reload.",
@@ -218,7 +205,6 @@ void test("A valid v2 snapshot wins over a trusted legacy strip.", async (t) => 
 // workspace to its session changes the writer first and saves the current state
 // under that identity, so an old-identity write cannot arrive afterward.
 void test("The store writes each transition synchronously.", async (t) => {
-  // doctest:L205
   const values = new Map<string, string>();
   const storage: WorkspaceStorage = {
     getItem: (key) => values.get(key) ?? null,
@@ -236,14 +222,11 @@ void test("The store writes each transition synchronously.", async (t) => {
   unsubscribe();
   t.check(store.getIdentity(), "session-42");
 
-  // doctest:L223
   t.check(observedAdoption, "session-42:provisional-17->session-42");
 
-  // doctest:L226
   const assignedKey = workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "session-42" });
   t.check(parseWorkspaceState(values.get(assignedKey) ?? null).state, openedCards([{ path: "draft", label: "Draft", at: 1 }]));
 
-  // doctest:L230
   const provisionalKey = workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "provisional-17" });
   values.set(provisionalKey, serializeWorkspaceState(workspaceWith("stale-provisional")));
   store.dispatch({ type: "openCard", target: target("after-assignment"), label: "After assignment", at: 2, viewport: "desktop" });
@@ -256,11 +239,9 @@ void test("The store writes each transition synchronously.", async (t) => {
   // Selecting another conversation persists the old one and loads the selected
   // snapshot. Selecting it again restores the assigned workspace.
 
-  // doctest:L244
   store.select("session-other");
   t.check(store.get(), EMPTY_STATE);
 
-  // doctest:L248
   store.dispatch({ type: "openCard", target: target("other"), label: "Other", at: 2, viewport: "desktop" });
   store.select("session-42");
   t.check(store.get(), openedCards([
@@ -273,7 +254,6 @@ void test("The store writes each transition synchronously.", async (t) => {
 // and exposes a notice. A rejected read during selection starts an unseen target
 // conversation empty; returning to the first identity restores its cached cards.
 void test("A rejected write leaves the current conversation's in-memory workspace in pla...", async (t) => {
-  // doctest:L259
   let rejectReads = false;
   const rejectedStorage: WorkspaceStorage = {
     getItem: () => {
@@ -288,18 +268,14 @@ void test("A rejected write leaves the current conversation's in-memory workspac
   const stillHere = openedCards([{ path: "still-here", label: "Still here", at: 1 }]);
   t.check(rejectedStore.get(), stillHere);
 
-  // doctest:L273
   t.check(rejectedStore.getNotice(), "Workspace persistence is unavailable (write denied). This workspace will remain usable until reload.");
 
-  // doctest:L276
   rejectReads = true;
   rejectedStore.select("second");
   t.check(rejectedStore.get(), EMPTY_STATE);
 
-  // doctest:L281
   t.check(rejectedStore.getNotice(), "Workspace persistence is unavailable (read denied). This workspace will remain usable until reload.");
 
-  // doctest:L284
   rejectedStore.dispatch({ type: "openCard", target: target("second-only"), label: "Second only", at: 2, viewport: "desktop" });
   rejectedStore.select("first");
   t.check(rejectedStore.get(), stillHere);
@@ -312,7 +288,6 @@ void test("A rejected write leaves the current conversation's in-memory workspac
 // candidate flag when it finds nothing in memory and nothing in storage.
 // `takeArrival` returns the flag once and clears it.
 void test("Arrival opens the place only for a conversation this tab has no saved arrange...", async (t) => {
-  // doctest:L301
   const arrivalValues = new Map<string, string>();
   const arrivalStorage: WorkspaceStorage = {
     getItem: (key) => arrivalValues.get(key) ?? null,
@@ -322,21 +297,17 @@ void test("Arrival opens the place only for a conversation this tab has no saved
   arrivals.select("fresh-chat");
   t.check(arrivals.hasArrival(), true);
 
-  // doctest:L311
   t.check(arrivals.takeArrival(), true);
 
-  // doctest:L314
   t.check(arrivals.takeArrival(), false);
 
   // An arrangement in storage is saved state, even one with no cards, so it is not
   // a candidate. Neither is a conversation this store already holds in memory.
 
-  // doctest:L322
   arrivalValues.set(workspaceStorageKey({ apiBase: "/paper-cards/test1/api", logicalConversationId: "closed-everything" }), serializeWorkspaceState(createEmptyWorkspaceState()));
   arrivals.select("closed-everything");
   t.check(arrivals.hasArrival(), false);
 
-  // doctest:L327
   arrivals.select("stored-cards");
   arrivals.select("fresh-chat");
   t.check(arrivals.hasArrival(), false);
@@ -344,12 +315,10 @@ void test("Arrival opens the place only for a conversation this tab has no saved
   // Any card action by the person ends a pending arrival, and so does
   // `cancelArrival` (a pointer, focus, or key event in the chat pane).
 
-  // doctest:L337
   arrivals.select("dispatched");
   arrivals.dispatch({ type: "openCard", target: target("mine"), label: "Mine", at: 3, viewport: "desktop" });
   t.check(arrivals.takeArrival(), false);
 
-  // doctest:L342
   arrivals.select("typed-first");
   arrivals.cancelArrival();
   t.check(arrivals.takeArrival(), false);
@@ -357,7 +326,6 @@ void test("Arrival opens the place only for a conversation this tab has no saved
   // Adopting a session id keeps the provisional chat's arrangement, so the adopted
   // identity is not a new arrival.
 
-  // doctest:L352
   arrivals.select("provisional-arrival");
   arrivals.adopt("session-arrival");
   t.check(arrivals.hasArrival(), false);

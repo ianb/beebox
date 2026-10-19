@@ -10,7 +10,7 @@
 // "synced" because its own card says so.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   DRIVE_CHILD_BADGES,
   driveChildState,
@@ -23,7 +23,6 @@ function column(card: { type: string; conflict?: boolean }): string {
 
 // ## A Doc or a Sheet is content the box holds both ends of
 void test("A Doc or a Sheet is content the box holds both ends of", async (t) => {
-  // doctest:L27
   t.check(column({ type: "gdoc" }), "synced");
 });
 
@@ -34,10 +33,8 @@ void test("A Doc or a Sheet is content the box holds both ends of", async (t) =>
 // read off the child — a mount can have no `error` for a listing that succeeded
 // while one child's content sync did not.
 void test("The whole reason the column exists (plan failure mode:", async (t) => {
-  // doctest:L39
   t.check(column({ type: "gdoc", conflict: true }), "conflict");
 
-  // doctest:L42
   t.check(DRIVE_CHILD_BADGES[driveChildState({ type: "gsheet", conflict: true })], {
     label: "conflict",
     tone: "danger",
@@ -47,16 +44,13 @@ void test("The whole reason the column exists (plan failure mode:", async (t) =>
 
 // ## Pointers and nested mounts are distinct kinds, not degraded files
 void test("Pointers and nested mounts are distinct kinds, not degraded files", async (t) => {
-  // doctest:L48
   t.check(column({ type: "glink" }), "pointer");
 
-  // doctest:L51
   t.check(column({ type: "gfolder" }), "subfolder mount");
 
   // A pointer is never "synced": nothing was copied, so calling it synced would
   // promise a local copy that does not exist.
 
-  // doctest:L59
   t.check(column({ type: "glink", conflict: true }), "pointer");
 });
 
@@ -65,7 +59,6 @@ void test("Pointers and nested mounts are distinct kinds, not degraded files", a
 // Someone can write a doc into a mirrored directory. The mirror leaves it alone,
 // and the column says that rather than implying the mirror covers it.
 void test("Someone can write a doc into a mirrored directory.", async (t) => {
-  // doctest:L69
   t.check(column({ type: "doc" }), "not a Drive card");
 });
 
@@ -74,7 +67,6 @@ void test("Someone can write a doc into a mirrored directory.", async (t) => {
 // The column renders `DRIVE_CHILD_BADGES[state]`, so a state added without an
 // entry would render `undefined` at runtime. Pin the coverage.
 void test("The column renders DRIVECHILDBADGES[state], so a state added without an entry...", async (t) => {
-  // doctest:L79
   t.check(DRIVE_CHILD_BADGES, {
     synced: { label: "synced", tone: "success", title: "Content is mirrored two-way with Drive." },
     conflict: { label: "conflict", tone: "danger", title: "The last sync could not reconcile the box and Drive copies." },

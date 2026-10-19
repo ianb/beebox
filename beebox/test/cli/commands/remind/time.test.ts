@@ -5,7 +5,7 @@
 // enters: the file sets TZ to a zone neither box uses.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { formatCardAt, formatClock, formatDate, formatWhen, resolveReminderTime } from "../../../../src/cli/commands/remind/time.js";
 
 process.env.TZ = "Asia/Tokyo";

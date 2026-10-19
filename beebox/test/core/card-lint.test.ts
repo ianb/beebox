@@ -5,7 +5,7 @@
 // its frontmatter, then merges results into a single LintSummary.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import {
   body,
@@ -88,7 +88,6 @@ const ctx: LoadCardContext = {
 
 // ## Frontmatter cards that satisfy their schema lint clean
 void test("Frontmatter cards that satisfy their schema lint clean", async (t) => {
-  // doctest:L75
   const box = await makeTmpBox();
   await box.write(
     "_content/inbox/email/thread-x.email-thread.card",
@@ -107,7 +106,6 @@ void test("Frontmatter cards that satisfy their schema lint clean", async (t) =>
 
 // ## Schema violations in frontmatter cards surface as lint errors
 void test("Schema violations in frontmatter cards surface as lint errors", async (t) => {
-  // doctest:L98
   const box = await makeTmpBox();
   await box.write(
     "_content/inbox/email/broken.email-thread.card",
@@ -126,7 +124,6 @@ void test("Schema violations in frontmatter cards surface as lint errors", async
 // renders, and indexes. Lint surfaces it as a warning (not an error) so it gets
 // cleaned off disk eventually without blocking commits.
 void test("A key the schema doesn't declare is stripped on load, so the card still loads...", async (t) => {
-  // doctest:L121
   const box = await makeTmpBox();
   await box.write(
     "_content/inbox/notes/drift.doc.card",
@@ -147,7 +144,6 @@ void test("A key the schema doesn't declare is stripped on load, so the card sti
 // (referents being moved, archived, trashed, or hand-deleted), and treating
 // each as a hard error would block commits on any box with accumulated drift.
 void test("Each entry in a ref-declared field is resolved against the box; missing targe...", async (t) => {
-  // doctest:L146
   const box = await makeTmpBox();
   await box.write(
     "_content/inbox/email/thread-x/thread.email-thread.card",
@@ -170,7 +166,6 @@ void test("Each entry in a ref-declared field is resolved against the box; missi
 // useful sentence the linter can say — "https://… does not exist" sends the reader
 // looking for a file nobody meant to write.
 void test("A ref names a path inside the box.", async (t) => {
-  // doctest:L172
   const box = await makeTmpBox();
   await box.write(
     "_content/inbox/email/thread-y/thread.email-thread.card",
@@ -189,7 +184,6 @@ void test("A ref names a path inside the box.", async (t) => {
   // A bare `#anchor` and an empty ref are NOT swept in with it: both name something
   // in-box (or missing), and the existence walk already describes them correctly.
 
-  // doctest:L189
   await box.write(
     "_content/inbox/email/thread-z/thread.email-thread.card",
     "---\ntype: email-thread\nthread-id: t3\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: \"#exp4\"\n---\n",
@@ -200,7 +194,6 @@ void test("A ref names a path inside the box.", async (t) => {
   );
   t.check(anchorRef, one(`${box.root}/_content/inbox/email/thread-z/thread.email-thread.card`, warn("reference", "Broken reference at messages[0].ref: #exp4 does not exist")));
 
-  // doctest:L202
   await box.cleanup();
 });
 
@@ -211,7 +204,6 @@ void test("A ref names a path inside the box.", async (t) => {
 // broken-ref warning: the message names the canonical form so the fix is
 // obvious (`docs/plans/display-path-guard.subplan.md`).
 void test("Config:box.json (the boxholder's CONVERSATION vocabulary — never a canonical...", async (t) => {
-  // doctest:L213
   const box = await makeTmpBox();
   await box.write(
     "_content/inbox/email/thread-x/thread.email-thread.card",
@@ -239,7 +231,6 @@ void test("Config:box.json (the boxholder's CONVERSATION vocabulary — never a 
 // message probes `/_content/<path>` and appends a suggestion when THAT
 // resolves (`docs/plans/display-path-guard.subplan.md`):
 void test("A ref's bare form is DOCUMENT-relative, not box-root-relative — but a boxhold...", async (t) => {
-  // doctest:L242
   const box = await makeTmpBox();
   await box.write("_content/recipes/Soup.recipe.card", "---\ntype: doc\ntitle: Soup\n---\n");
   await box.write(
@@ -261,7 +252,6 @@ void test("A ref's bare form is DOCUMENT-relative, not box-root-relative — but
 // No suggestion is offered when `/_content/<path>` doesn't resolve either — the
 // plain "does not exist" message is unchanged:
 void test("No suggestion is offered when /content/<path> doesn't resolve either — the pl...", async (t) => {
-  // doctest:L260
   const box2 = await makeTmpBox();
   await box2.write(
     "_content/box/notes/Meeting.doc.card",
@@ -283,7 +273,6 @@ void test("No suggestion is offered when /content/<path> doesn't resolve either 
 // disk under `node_modules/`, but no ref can reach it, and "does not exist" would
 // send the author looking for a missing file:
 void test("A ref the box namespace fence refuses says so instead.", async (t) => {
-  // doctest:L278
   const boxFence = await makeTmpBox();
   await boxFence.write("node_modules/beebox/box-docs/card-doc.md", "# doc\n");
   await boxFence.write(
@@ -304,7 +293,6 @@ void test("A ref the box namespace fence refuses says so instead.", async (t) =>
 // An `attach/…` ref never gets the content-form suggestion — it's a legitimate,
 // different relative form, not the display vocabulary:
 void test("An attach/… ref never gets the content-form suggestion — it's a legitimate, d...", async (t) => {
-  // doctest:L296
   const box3 = await makeTmpBox();
   await box3.write(
     "_content/box/notes/Meeting.doc.card",
@@ -328,7 +316,6 @@ void test("An attach/… ref never gets the content-form suggestion — it's a l
 // it doesn't, regardless of which spot inside it the ref points at. Handing the
 // whole string to the filesystem used to report these documented refs as broken.
 void test("feedback.target.ref is documented as path#fragment.", async (t) => {
-  // doctest:L317
   const box = await makeTmpBox();
   await box.write("_content/box/notes/Plan.doc.card", "---\ntype: doc\ntitle: Plan\n---\nBody.\n");
   await box.write(
@@ -351,7 +338,6 @@ void test("feedback.target.ref is documented as path#fragment.", async (t) => {
 // the noise. Zero broken refs (even alongside other warnings) means no such
 // clause is added at all — a clean box gets no new output.
 void test("Broken-reference warnings accumulate silently across renames/deletes and can...", async (t) => {
-  // doctest:L341
   const box = await makeTmpBox();
   await box.write(
     "_content/inbox/email/thread-x/thread.email-thread.card",
@@ -368,7 +354,6 @@ void test("Broken-reference warnings accumulate silently across renames/deletes 
 // A warning that isn't a broken ref (e.g. an unknown frontmatter key) leaves
 // the summary's broken-ref clause off entirely:
 void test("A warning that isn't a broken ref (e.g.", async (t) => {
-  // doctest:L359
   const box = await makeTmpBox();
   await box.write(
     "_content/inbox/notes/drift.doc.card",
@@ -388,7 +373,6 @@ void test("A warning that isn't a broken ref (e.g.", async (t) => {
 // nudge reaches agents (the PostToolUse hook surfaces warnings) without
 // blocking commits.
 void test("contains is one concise sentence stating what can be found in the card; past...", async (t) => {
-  // doctest:L380
   const box = await makeTmpBox();
   const longContains = "x".repeat(220);
   await box.write(

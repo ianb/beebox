@@ -6,7 +6,7 @@
 // when the active one closes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { sidecarReducer, EMPTY_SIDECAR, MAX_UNPINNED_TABS, type SidecarState } from "../../../src/components/chat/sidecar-tabs.js";
 
 /** A `ViewTarget` for a card path, with no viewer or params. */
@@ -36,17 +36,14 @@ function strip(state: SidecarState): string {
 // An open appends and activates. Opening a document that is already open
 // activates its tab instead of adding a second one.
 void test("An open appends and activates.", async (t) => {
-  // doctest:L35
   const two = open(open(EMPTY_SIDECAR, { path: "a", at: 1 }), { path: "b", at: 2 });
   t.check(strip(two), "a [b]");
 
-  // doctest:L39
   await t.checkText(strip(open(two, { path: "a", at: 3 })), "[a] b");
 
   // Re-opening the same path with a different viewer refreshes the tab's target in
   // place, so `?view=` actually switches rather than colliding with the open tab.
 
-  // doctest:L47
   const withViewer = sidecarReducer(two, {
     type: "open",
     target: { path: "a", viewer: "markdown", params: {}, viewState: null },
@@ -64,16 +61,13 @@ void test("An open appends and activates.", async (t) => {
 
 // ## Closing falls back to the neighbour
 void test("Closing falls back to the neighbour", async (t) => {
-  // doctest:L63
   const three = open(open(open(EMPTY_SIDECAR, { path: "a", at: 1 }), { path: "b", at: 2 }), { path: "c", at: 3 });
   t.check(strip(sidecarReducer(three, { type: "close", path: "c" })), "a [b]");
 
   // Closing a tab that is not the active one leaves the active one alone.
 
-  // doctest:L71
   t.check(strip(sidecarReducer(three, { type: "close", path: "a" })), "b [c]");
 
-  // doctest:L74
   t.check(sidecarReducer(sidecarReducer(sidecarReducer(three, { type: "close", path: "a" }), { type: "close", path: "b" }), { type: "close", path: "c" }), {
     tabs: [],
     activePath: null,
@@ -82,18 +76,15 @@ void test("Closing falls back to the neighbour", async (t) => {
 
 // ## A pinned tab sorts first and stays through other opens
 void test("A pinned tab sorts first and stays through other opens", async (t) => {
-  // doctest:L81
   const pinned = sidecarReducer(open(open(EMPTY_SIDECAR, { path: "a", at: 1 }), { path: "b", at: 2 }), { type: "togglePin", path: "b", at: 5 });
   t.check(strip(pinned), "📌[b] a");
 
-  // doctest:L85
   t.check(strip(open(open(pinned, { path: "c", at: 3 }), { path: "d", at: 4 })), "📌b a c [d]");
 
   // Unpinning drops it to the head of the unpinned group rather than back to where
   // it was opened — the same place a browser leaves an unpinned tab. It stops being
   // first-class without jumping across the strip.
 
-  // doctest:L94
   await t.checkText(strip(sidecarReducer(pinned, { type: "togglePin", path: "b", at: 5 })), "[b] a");
 });
 
@@ -102,19 +93,16 @@ void test("A pinned tab sorts first and stays through other opens", async (t) =>
 // `a` was opened first and never returned to, so it is what an over-cap open
 // drops.
 void test("a was opened first and never returned to, so it is what an over-cap open drops.", async (t) => {
-  // doctest:L104
   let state = EMPTY_SIDECAR;
   for (let i = 0; i < MAX_UNPINNED_TABS; i++) state = open(state, { path: `t${i}`, at: i + 1 });
   t.check(paths(state), ["t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11"]);
 
-  // doctest:L109
   state = open(state, { path: "one-more", at: 100 });
   t.check(paths(state), ["t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "one-more"]);
 
   // Selecting a tab makes it recently-active, which takes it out of the firing
   // line: the next-oldest goes instead.
 
-  // doctest:L124
   state = sidecarReducer(state, { type: "select", path: "t1", at: 101 });
   state = open(state, { path: "another", at: 102 });
   t.check(paths(state), ["t1", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10", "t11", "one-more", "another"]);
@@ -125,7 +113,6 @@ void test("a was opened first and never returned to, so it is what an over-cap o
 // Twelve pinned tabs plus twelve unpinned is twenty-four open tabs: pinning is
 // how the person says "not this one", and the cap only governs the rest.
 void test("Twelve pinned tabs plus twelve unpinned is twenty-four open tabs:", async (t) => {
-  // doctest:L139
   let state = EMPTY_SIDECAR;
   for (let i = 0; i < 12; i++) {
     state = open(state, { path: `p${i}`, at: i + 1 });
@@ -134,7 +121,6 @@ void test("Twelve pinned tabs plus twelve unpinned is twenty-four open tabs:", a
   for (let i = 0; i < MAX_UNPINNED_TABS; i++) state = open(state, { path: `u${i}`, at: 100 + i });
   t.check(paths(state), ["p0", "p1", "p2", "p3", "p4", "p5", "p6", "p7", "p8", "p9", "p10", "p11", "u0", "u1", "u2", "u3", "u4", "u5", "u6", "u7", "u8", "u9", "u10", "u11"]);
 
-  // doctest:L148
   state = open(state, { path: "one-more", at: 200 });
   t.check(
     { pinned: state.tabs.filter((tab) => tab.pinned).map((tab) => tab.target.path), unpinned: state.tabs.filter((tab) => !tab.pinned).map((tab) => tab.target.path) },
@@ -147,7 +133,6 @@ void test("Twelve pinned tabs plus twelve unpinned is twenty-four open tabs:", a
   // tab too long, and the tab they just unpinned, which the toggle marks as touched.
   // The next-oldest goes instead.
 
-  // doctest:L160
   const full: SidecarState = {
     tabs: [
       { target: target("kept"), label: "kept", pinned: true, lastActiveAt: 1 },
@@ -163,7 +148,6 @@ void test("Twelve pinned tabs plus twelve unpinned is twenty-four open tabs:", a
 
 // ## Restore puts a stored strip back, pinned-first
 void test("Restore puts a stored strip back, pinned-first", async (t) => {
-  // doctest:L183
   const restored = sidecarReducer(EMPTY_SIDECAR, {
     type: "restore",
     state: {
@@ -181,7 +165,6 @@ void test("Restore puts a stored strip back, pinned-first", async (t) => {
   // Pinning survives other opens, not an explicit "close this panel" — the close
   // button means what it says.
 
-  // doctest:L203
   t.check(sidecarReducer(restored, { type: "closeAll" }), {
     tabs: [],
     activePath: null,

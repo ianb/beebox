@@ -8,6 +8,8 @@ labels: [manual-tests]
 priority: normal
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 `test/manual/chat-queue-real.test.ts` (real `claude` SDK process, not the
 fake backend) logged the durability-gate warning from
 `beebox/src/core/chat/session/run/transcript-sync.ts` on **both** of its two

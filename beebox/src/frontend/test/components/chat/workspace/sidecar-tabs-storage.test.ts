@@ -6,8 +6,8 @@
 // entry is dropped on its own instead of taking the strip with it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import { serializeSidecarState, parseSidecarState, sidecarTabsKey, selectSidecarSession, persistSidecarTransition, loadSidecarState, saveSidecarState } from "../../../../src/components/chat/workspace/sidecar-tabs-storage.js";
 
 function target(path: string) {
@@ -27,13 +27,10 @@ const strip = {
 // that has not been assigned a session id yet is keyed by the placeholder the
 // route carries.
 void test("Two conversations in two browser tabs must not fight over one slot, and a cha...", async (t) => {
-  // doctest:L30
   t.check(sidecarTabsKey({ boxSlug: "test1", sessionInput: "abc123" }), "bbx:sidecar-tabs:test1:abc123");
 
-  // doctest:L33
   t.check(sidecarTabsKey({ boxSlug: "test1", sessionInput: "new" }), "bbx:sidecar-tabs:test1:new");
 
-  // doctest:L36
   t.check(sidecarTabsKey({ boxSlug: undefined, sessionInput: "new" }), "bbx:sidecar-tabs:default:new");
 });
 
@@ -42,14 +39,12 @@ void test("Two conversations in two browser tabs must not fight over one slot, a
 // The target is stored as the same `view:` string the `?card=` param carries —
 // one serialization of a `ViewTarget`, not two.
 void test("The target is stored as the same view: string the ?card= param carries — one...", async (t) => {
-  // doctest:L46
   const back = parseSidecarState(serializeSidecarState(strip))!;
   t.check(back, strip);
 
   // A viewer and its params ride along, so a reload does not silently switch which
   // lens a document was open in.
 
-  // doctest:L61
   const withViewer = serializeSidecarState({
     tabs: [{ target: { path: "_content/Data.card", viewer: "sheet", params: { tab: "2" }, viewState: null }, label: "Data", pinned: false, lastActiveAt: 1 }],
     activePath: "_content/Data.card",
@@ -63,19 +58,14 @@ void test("The target is stored as the same view: string the ?card= param carrie
 
 // ## Nothing stored, or nothing usable, is not an error
 void test("Nothing stored, or nothing usable, is not an error", async (t) => {
-  // doctest:L76
   t.check(parseSidecarState(null), null);
 
-  // doctest:L79
   t.check(parseSidecarState(""), null);
 
-  // doctest:L82
   t.check(parseSidecarState("{not json"), null);
 
-  // doctest:L85
   t.check(parseSidecarState(JSON.stringify({ v: 1, tabs: [], activePath: null })), null);
 
-  // doctest:L88
   t.check(parseSidecarState(JSON.stringify({ v: 1, activePath: "x" })), null);
 });
 
@@ -84,7 +74,6 @@ void test("Nothing stored, or nothing usable, is not an error", async (t) => {
 // An entry with no url, or a url that parses to no path, is the case a hand-edit
 // or an older bundle produces. Its neighbours are still worth restoring.
 void test("An entry with no url, or a url that parses to no path, is the case a hand-edi...", async (t) => {
-  // doctest:L98
   const mixed = parseSidecarState(JSON.stringify({
     v: 1,
     activePath: "_content/Good.card",
@@ -102,7 +91,6 @@ void test("An entry with no url, or a url that parses to no path, is the case a 
   // A missing label falls back to the path, and a missing or nonsense `pinned` /
   // `lastActiveAt` takes the quiet default rather than rejecting the tab.
 
-  // doctest:L118
   const sparse = parseSidecarState(JSON.stringify({
     v: 1,
     activePath: null,
@@ -120,7 +108,6 @@ void test("An entry with no url, or a url that parses to no path, is the case a 
 // A double-written or hand-edited store must not be able to produce two tabs that
 // act as one.
 void test("One tab per path is an invariant the reducer and the React keys both rely on.", async (t) => {
-  // doctest:L137
   const duped = parseSidecarState(JSON.stringify({
     v: 1,
     activePath: "_content/Twice.card",
@@ -139,7 +126,6 @@ void test("One tab per path is an invariant the reducer and the React keys both 
 //
 // Otherwise the pane would restore a strip and render nothing in it.
 void test("Otherwise the pane would restore a strip and render nothing in it.", async (t) => {
-  // doctest:L157
   const orphaned = parseSidecarState(JSON.stringify({
     v: 1,
     activePath: "_content/Gone.card",
@@ -161,7 +147,6 @@ void test("Explicit conversation changes restore; assignment only renames", asyn
       t.error(error);
     }
   });
-  // doctest:L169
   const previousStorage = Object.getOwnPropertyDescriptor(globalThis, "sessionStorage");
   const values = new Map<string, string>();
   Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: {
@@ -181,7 +166,6 @@ void test("Explicit conversation changes restore; assignment only renames", asyn
     kitchenStored: strip,
   });
 
-  // doctest:L185
   const provisional = { storageKey: "start-one", logicalKey: "logical-one", panel: strip };
   const assigned = selectSidecarSession(provisional, { storageKey: "assigned-one", logicalKey: "logical-one" });
   persistSidecarTransition(provisional, assigned);

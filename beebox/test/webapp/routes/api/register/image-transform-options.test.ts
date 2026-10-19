@@ -3,8 +3,8 @@
 // The public query vocabulary is strict, but aliases normalize to one typed option set.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import {
   imageTransformCacheKey,
   negotiateImageFormat,
@@ -19,7 +19,6 @@ function optionError(query: Record<string, unknown>): string {
 
 // Defaults match the public contract and `format=auto` negotiates from `Accept`:
 void test("Defaults match the public contract and format=auto negotiates from Accept:", async (t) => {
-  // doctest:L22
   t.check(parseImageTransformOptions({ height: "240" }, "image/avif,image/webp").options, {
     width: undefined,
     height: 240,
@@ -32,13 +31,11 @@ void test("Defaults match the public contract and format=auto negotiates from Ac
 
 // An AVIF type explicitly rejected with `q=0` falls through to WebP:
 void test("An AVIF type explicitly rejected with q=0 falls through to WebP:", async (t) => {
-  // doctest:L36
   t.check(negotiateImageFormat("image/avif;q=0, image/webp;q=0.8"), "webp");
 });
 
 // Unknown, duplicate, and physically oversized options fail at the boundary:
 void test("Unknown, duplicate, and physically oversized options fail at the boundary:", async (t) => {
-  // doctest:L43
   t.check([optionError({ width: "10", nope: "1" }), optionError({ width: "10", w: "10" }), optionError({ width: "3000", dpr: "2" })], [
     "Invalid image option \"nope\": unknown option",
     "Invalid image option \"width\": use only one of width or w",
@@ -48,7 +45,6 @@ void test("Unknown, duplicate, and physically oversized options fail at the boun
 
 // Aliases produce the same disk-cache identity after normalization, while a source version change does not:
 void test("Aliases produce the same disk-cache identity after normalization, while a sou...", async (t) => {
-  // doctest:L55
   const options = parseImageTransformOptions({ width: "480", quality: "75", format: "webp" }).options;
   const equivalent = parseImageTransformOptions({ w: "480", q: "75", f: "webp" }).options;
   const retried = parseImageTransformOptions({ w: "480", q: "75", f: "webp", v: "changed", imageRetry: "2" }).options;
@@ -63,7 +59,6 @@ void test("Aliases produce the same disk-cache identity after normalization, whi
 
 // The purge removes stale temporary and finished files, then the oldest live variants until the cache is at most 512 MiB:
 void test("The purge removes stale temporary and finished files, then the oldest live va...", async (t) => {
-  // doctest:L69
   const mib = 1024 * 1024;
   const now = Date.UTC(2026, 8, 3);
   t.check(
@@ -83,7 +78,6 @@ void test("The purge removes stale temporary and finished files, then the oldest
 
 // Sustained writes trigger cleanup before the hourly timer, bounding growth between sweeps:
 void test("Sustained writes trigger cleanup before the hourly timer, bounding growth bet...", async (t) => {
-  // doctest:L88
   const mib = 1024 * 1024;
   t.check(
     [

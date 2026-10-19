@@ -4,12 +4,11 @@
 // separately and require an account-scoped R2 read to confirm the selected account.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createCloudflarePublishTokenVerifier } from "../../src/services/cloudflare-publish-token-verifier.js";
 
 // An account token is verified against the chosen account.
 void test("An account token is verified against the chosen account.", async (t) => {
-  // doctest:L13
   const requests: Array<{ url: string; authorization: string | null }> = [];
   const verifier = createCloudflarePublishTokenVerifier({
     fetch: async (url, init) => {
@@ -33,7 +32,6 @@ void test("An account token is verified against the chosen account.", async (t) 
   // A user token follows the user-verification endpoint, then a read-only R2 list
   // confirms its access to the selected account.
 
-  // doctest:L29
   const userRequests: Array<{ url: string; method: string | undefined }> = [];
   const userVerifier = createCloudflarePublishTokenVerifier({
     fetch: async (url, init) => {
@@ -55,7 +53,6 @@ void test("An account token is verified against the chosen account.", async (t) 
 
   // An active user token without R2 access gets a distinct, actionable diagnosis.
 
-  // doctest:L46
   const noR2Access = createCloudflarePublishTokenVerifier({
     fetch: async (url) => {
       if (url.endsWith("/user/tokens/verify")) return Response.json({ success: true, result: { id: "user-token-id", status: "active" } });
@@ -73,7 +70,6 @@ void test("An account token is verified against the chosen account.", async (t) 
 
   // A successful HTTP response with an unrecognized shape is reported as a response problem, not a credential problem.
 
-  // doctest:L63
   const unexpectedR2Response = createCloudflarePublishTokenVerifier({
     fetch: async (url) => {
       if (url.endsWith("/user/tokens/verify")) return Response.json({ success: true, result: { id: "user-token-id", status: "active" } });
@@ -91,7 +87,6 @@ void test("An account token is verified against the chosen account.", async (t) 
 
   // Invalid credentials are rejected without echoing the token.
 
-  // doctest:L80
   const disabled = createCloudflarePublishTokenVerifier({
     fetch: async () => Response.json({ success: true, result: { id: "token-id", status: "disabled" } }),
   });

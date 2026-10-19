@@ -8,7 +8,7 @@
 // to an engine's failure.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { MODEL_ID } from "../../src/shared/model-ids.js";
 import { isRecord } from "../../src/shared/is-record.js";
 import { appRouter } from "../../src/webapp/trpc/routers.js";
@@ -58,7 +58,6 @@ void test("The first reservation carries Claude, its model, and its landmark.", 
       t.error(error);
     }
   });
-  // doctest:L43
   const server = await makeTestServer({ chatBackend: createFakeChatBackend() });
   const api = caller(server);
   await api.admin.updateBoxConfig({ agentEngine: "codex",
@@ -67,7 +66,6 @@ void test("The first reservation carries Claude, its model, and its landmark.", 
     engine: "claude" as const, model: MODEL_ID.haiku };
   await api.chat.reserveSession(receipt);
 
-  // doctest:L51
   const original = getChatRuntime(server.boxRoot)!;
   // A real process restart clears reserve.ts's module-level engine index too.
   // The test process keeps the module loaded, so release that one record at the
@@ -80,11 +78,9 @@ void test("The first reservation carries Claude, its model, and its landmark.", 
   });
   setChatRuntime(server.boxRoot, { ...original, registry: restartedRegistry });
 
-  // doctest:L64
   const missing = await api.chat.bootstrap({ session: ID, slice: TAIL });
   t.check(missing.kind, "unavailable");
 
-  // doctest:L68
   t.check(
     await api.chat.history({ session: ID, slice: TAIL }).then(
       (result) => `empty: ${String(result.entries.length === 0 && result.total === 0)}`,
@@ -93,7 +89,6 @@ void test("The first reservation carries Claude, its model, and its landmark.", 
     "empty: true",
   );
 
-  // doctest:L74
   const reserved = await api.chat.reserveSession(receipt);
   const bootstrap = await api.chat.bootstrap({ session: ID, slice: TAIL });
   const history = await api.chat.history({ session: ID, slice: TAIL });

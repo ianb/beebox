@@ -7,7 +7,7 @@
 // and content that is not served says why rather than arriving as an empty pane.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -48,7 +48,6 @@ const read = (relPath: string, workstream?: string) =>
 // Extension-driven because that is what the developer sees in the path. No
 // extension reads as `code`, which is the renderer that degrades best.
 void test("Extension-driven because that is what the developer sees in the path.", async (t) => {
-  // doctest:L55
   const kinds = ["a.md", "b.ts", "c.html", "d.json", "Makefile", "e.PNGX"].map(kindForPath);
   t.check(kinds, [
     "markdown",
@@ -65,7 +64,6 @@ void test("Extension-driven because that is what the developer sees in the path.
 // The same address reads differently through the lens, and the document says which
 // checkout answered.
 void test("The same address reads differently through the lens, and the document says wh...", async (t) => {
-  // doctest:L66
   const onMain = await read("beebox/docs/plans/foo.md");
   const onBranch = await read("beebox/docs/plans/foo.md", "demo");
   const lens = {
@@ -95,7 +93,6 @@ void test("The same address reads differently through the lens, and the document
 // An unknown workstream is refused by name — the browser can say which worktree it
 // could not find, rather than rendering main's copy as if it were the branch's.
 void test("An unknown workstream is refused by name — the browser can say which worktree...", async (t) => {
-  // doctest:L85
   const unknown = await read("beebox/docs/plans/foo.md", "ghost")
     .then(() => "ALLOWED", (e: unknown) => (e instanceof Error ? e.name : "unknown"));
   t.check({ unknown, mainRootIsDefault: rootForWorkstream(roots, null) === mainRoot }, {
@@ -108,7 +105,6 @@ void test("An unknown workstream is refused by name — the browser can say whic
 //
 // Traversal, absolute paths, and a NUL byte are all refused rather than clamped.
 void test("Traversal, absolute paths, and a NUL byte are all refused rather than clamped.", async (t) => {
-  // doctest:L96
   const escapes = ["../escape.md", "beebox/../../escape.md", "/etc/passwd", `a${"\u0000"}b`];
   const named = (e: unknown) => (e instanceof Error ? e.name : "unknown");
   const outcomes = await Promise.all(escapes.map((relPath) => read(relPath).then(() => "ALLOWED", named)));
@@ -122,7 +118,6 @@ void test("Traversal, absolute paths, and a NUL byte are all refused rather than
   // A **symlink** pointing out of the checkout passes every lexical check, which is
   // why containment is re-checked after `realpath`.
 
-  // doctest:L107
   await fs.symlink(path.join(outside, "secret.txt"), path.join(mainRoot, "escape-link.txt"));
   const viaSymlink = await read("escape-link.txt")
     .then((d) => `LEAKED: ${String(d.text)}`, (e: unknown) => (e instanceof Error ? e.name : "unknown"));
@@ -134,7 +129,6 @@ void test("Traversal, absolute paths, and a NUL byte are all refused rather than
 // Directories sort first, dotfiles are hidden, and each entry carries the address
 // the browser links to — so a listing is navigable rather than a dead end.
 void test("Directories sort first, dotfiles are hidden, and each entry carries the addre...", async (t) => {
-  // doctest:L120
   const dir = await read("beebox/docs");
   t.check({ kind: dir.kind, entries: dir.entries, text: dir.text }, {
     kind: "directory",
@@ -152,7 +146,6 @@ void test("Directories sort first, dotfiles are hidden, and each entry carries t
 
 // The repository root is a legal address, spelled `""`.
 void test("The repository root is a legal address, spelled \"\".", async (t) => {
-  // doctest:L128
   const root = await read("");
   t.check({ kind: root.kind, hasEntries: root.entries.length > 0 }, {
     kind: "directory",
@@ -165,16 +158,13 @@ void test("The repository root is a legal address, spelled \"\".", async (t) => 
 // "No content" and "content we would not read" must not look alike, so `text` is
 // null and `problem` carries the reason.
 void test("\"No content\" and \"content we would not read\" must not look alike, so text is...", async (t) => {
-  // doctest:L139
   await fs.writeFile(path.join(mainRoot, "binary.bin"), Buffer.from([0x41, 0x00, 0x42]));
   const binary = await read("binary.bin");
 
-  // doctest:L142
   const bigPath = path.join(mainRoot, "big.ts");
   await fs.writeFile(bigPath, "x".repeat(MAX_TEXT_BYTES + 1024));
   const big = await read("big.ts");
 
-  // doctest:L146
   const refusals = {
     binaryText: binary.text,
     binaryNamed: binary.problem?.includes("not text") ?? false,
@@ -196,7 +186,6 @@ void test("\"No content\" and \"content we would not read\" must not look alike,
 // browser renders, the second is a refusal. A traversal that names a *missing*
 // file is still a refusal, which is why the nearest existing ancestor is checked.
 void test("\"That path is not here\" and \"you asked for something outside this checkout\" a...", async (t) => {
-  // doctest:L163
   const nameOf = (e: unknown) => (e instanceof Error ? e.name : "unknown");
   const missing = await read("no/such/file.md").then(() => "ALLOWED", nameOf);
   const missingDir = await read("no/such/dir/deeper/file.md").then(() => "ALLOWED", nameOf);
@@ -224,7 +213,6 @@ void test("The store's namespace choice depends on this, and the browser lists u
       t.error(error);
     }
   });
-  // doctest:L177
   await fs.mkdir(path.join(mainRoot, "scratch"), { recursive: true });
   await fs.writeFile(path.join(mainRoot, "scratch/notes.md"), "# Notes\n");
   const notes = await read("scratch/notes.md");

@@ -1,10 +1,10 @@
 // # Quick chat submit: delivery, discard, and home
 //
-// Continues [quick-chat.submit.doctest.md](quick-chat.submit.doctest.md). This part covers thoughts kept when routing cannot run, finishing an interrupted delivery on the next submit, a missing destination, new chats without a session id, discarding a stored thought, and the home screen's recent chats.
+// Continues [quick-chat.submit.test.ts](quick-chat.submit.test.ts). This part covers thoughts kept when routing cannot run, finishing an interrupted delivery on the next submit, a missing destination, new chats without a session id, discarding a stored thought, and the home screen's recent chats.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, str, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, str, uuid } from "@ianbicking/tap-check/check";
 import { mkdir, writeFile, rm, utimes } from "node:fs/promises";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -142,7 +142,6 @@ void test("With no OpenRouter key and no injected service, or when Jev fails or 
       t.error(error);
     }
   });
-  // doctest:L124
   const { box } = await gardenBox();
   scriptedRuntime(box.root);
   const reasons: Array<ReturnType<typeof face>> = [];
@@ -197,7 +196,6 @@ void test("With no OpenRouter key and no injected service, or when Jev fails or 
     },
   ]);
 
-  // doctest:L140
   t.check(lines, [
     str`warn [quick-chat] routing judgment failed for ${uuid()}: Jev request error: timeout`,
     str`warn [quick-chat] routing judgment failed for ${uuid()}: Jev response error: distribution keys did not match`,
@@ -206,7 +204,6 @@ void test("With no OpenRouter key and no injected service, or when Jev fails or 
   // When the catalog itself cannot be built, here an invalid rubric, the only
   // choice is a new general chat, and choosing it delivers.
 
-  // doctest:L151
   await box.write("_config/chat-routing.yaml", "destinations: not-a-list\n");
   const fake = judged({ c0: 1 });
   const api = caller(box.root, fake);
@@ -228,7 +225,6 @@ void test("With no OpenRouter key and no injected service, or when Jev fails or 
     ],
   ]);
 
-  // doctest:L162
   t.check(face(await api.choose({ id: stuck.id, candidateId: "general" })), {
     state: "sent",
     destination: {
@@ -253,7 +249,6 @@ void test("If the server stops after writing sending and before delivering, the 
       t.error(error);
     }
   });
-  // doctest:L179
   const { box } = await gardenBox();
   const fake = judged({ c0: 0.95, c1: 0.03, c2: 0.02 });
   const api = caller(box.root, fake);
@@ -267,12 +262,10 @@ void test("If the server stops after writing sending and before delivering, the 
     lastError: "Chat is not running on the box. Retry in a moment.",
   });
 
-  // doctest:L186
   t.check((await api.home()).open.map((view) => view.state), [
     "sending",
   ]);
 
-  // doctest:L189
   const runtime = scriptedRuntime(box.root);
   const resent = await api.submit({ id: request.id, message: request.message });
   t.check(face(resent), {
@@ -332,7 +325,6 @@ void test("If the server stops after writing sending and before delivering, the 
   // without `queued`, which cannot be recovered. Here the first delivery claims the
   // id and then fails before answering.
 
-  // doctest:L201
   const crashing = scriptedRuntime(box.root, { send: () => { throw new Error("server stopped"); } });
   const lost = { id: randomUUID(), message: "Pay the water bill" };
   const crash = await capturingLogs(() => api.submit(lost));
@@ -350,7 +342,6 @@ void test("If the server stops after writing sending and before delivering, the 
     ],
   ]);
 
-  // doctest:L210
   t.check(face(await api.submit(lost)), {
     state: "sent",
     destination: {
@@ -359,7 +350,6 @@ void test("If the server stops after writing sending and before delivering, the 
     },
   });
 
-  // doctest:L213
   const waterBill = { message: "<typed source=\"box-screen\">Pay the water bill</typed>", user: "ari@example.com", channel: null };
   t.check(crashing.sends, [waterBill, waterBill]);
 
@@ -367,7 +357,6 @@ void test("If the server stops after writing sending and before delivering, the 
   // attempt, a retry is refused without sending: the row says the message may
   // already be in the chat and offers only Open chat and Discard.
 
-  // doctest:L222
   clearChatRuntime(box.root);
   const late = { id: randomUUID(), message: "Book the dentist" };
   await api.submit(late);
@@ -405,7 +394,6 @@ void test("A chat deleted between routing and delivery answers the send route's 
       t.error(error);
     }
   });
-  // doctest:L247
   const { box } = await gardenBox();
   const runtime = scriptedRuntime(box.root, { resolve: () => ({ ok: false, status: 410, error: "Conversation is not available on this machine", code: "CHAT_SESSION_UNAVAILABLE" }) });
   const api = caller(box.root, judged({ c0: 0.95, c1: 0.03, c2: 0.02 }));
@@ -427,7 +415,6 @@ void test("A chat deleted between routing and delivery answers the send route's 
   ]);
   t.check(runtime.sends, []);
 
-  // doctest:L253
   scriptedRuntime(box.root);
   const gardenApi = caller(box.root, judged({ c0: 0.02, c1: 0.95, c2: 0.03 }));
   const pending = { id: randomUUID(), message: "Start a seed list" };
@@ -461,7 +448,6 @@ void test("Codex assigns the session id when its first turn runs, so the record 
       t.error(error);
     }
   });
-  // doctest:L277
   const { box } = await gardenBox();
   await box.write("_config/box.json", JSON.stringify({ agentEngine: "codex" }));
   const runtime = scriptedRuntime(box.root, { reserve: "unsupported" });
@@ -497,7 +483,6 @@ void test("A thought that was not sent can be discarded.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L296
   const { box } = await gardenBox();
   scriptedRuntime(box.root);
   const api = caller(box.root, judged({ c0: 0.5, c1: 0.45, c2: 0.05 }));
@@ -519,11 +504,9 @@ void test("A thought that was not sent can be discarded.", async (t) => {
   t.check(face(await api.discard({ id: unsure.id })), { state: "discarded" });
   t.check((await api.home()).open, []);
 
-  // doctest:L303
   const sent = await api.choose({ id: (await api.submit({ id: randomUUID(), message: "Fix the gate" })).id, candidateId: "c0" });
   t.check((await api.discard({ id: sent.id })).state, "sent");
 
-  // doctest:L307
   t.check(await failure(() => api.discard({ id: randomUUID() })), "NOT_FOUND: This message is no longer stored.");
 });
 
@@ -544,7 +527,6 @@ void test("home lists unfinished thoughts, the ones sent in the last day, recent
       t.error(error);
     }
   });
-  // doctest:L326
   const { box, sessionId } = await gardenBox();
   scriptedRuntime(box.root);
   await box.write("nav.card", "---\nentries:\n  - { href: /questions }\n  - { href: /browse }\n  - { ref: /_content/Garden/Garden.landmark.card, label: Garden plan }\n---\n");
@@ -587,7 +569,6 @@ void test("home lists unfinished thoughts, the ones sent in the last day, recent
 
   // Every procedure needs an authenticated caller.
 
-  // doctest:L346
   const anonymous = callerFor(box.root, { authed: false });
   t.check([await failure(() => anonymous.home()), await failure(() => anonymous.submit({ id: randomUUID(), message: "x" })), await failure(() => anonymous.discard({ id: randomUUID() }))], [
     "UNAUTHORIZED: Not authenticated",
@@ -611,7 +592,6 @@ void test("The recent chats are newest first.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L364
   const { box, sessionId: rootChat } = await gardenBox();
   scriptedRuntime(box.root);
   const gardenChat = randomUUID();
@@ -622,7 +602,6 @@ void test("The recent chats are newest first.", async (t) => {
   const api = caller(box.root, judged({ c0: 1 }));
   const rows = async () => (await api.home()).recentChats.map((chat) => [chat.sessionId, chat.landmark?.label ?? null]);
 
-  // doctest:L374
   const earlier = new Date(Date.now() - 60_000);
   await utimes(gardenLog, earlier, earlier);
   t.check(await rows(), [
@@ -636,7 +615,6 @@ void test("The recent chats are newest first.", async (t) => {
     ],
   ]);
 
-  // doctest:L379
   const rootLog = getSessionLogPath(box.root, rootChat);
   const earliest = new Date(Date.now() - 120_000);
   await utimes(rootLog, earliest, earliest);

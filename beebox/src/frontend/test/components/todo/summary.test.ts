@@ -8,7 +8,7 @@
 // follow-up never counts. `CardTodos.tsx` owns that query; this is the line.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TodoSummaryLine } from "../../../src/components/todo/TodoSummaryLine.js";
@@ -32,7 +32,6 @@ function text(html: string) {
 
 // ## No todos, no line
 void test("No todos, no line", async (t) => {
-  // doctest:L34
   t.check(line({}), "");
 });
 
@@ -41,7 +40,6 @@ void test("No todos, no line", async (t) => {
 // The card is finished; the line still says so, and "0 on your plate" is not a
 // control.
 void test("The card is finished; the line still says so, and \"0 on your plate\" is not a...", async (t) => {
-  // doctest:L44
   t.check(text(line({ done: 2 }, noop)), "0 on your plate · 2 done");
 });
 
@@ -51,20 +49,17 @@ void test("The card is finished; the line still says so, and \"0 on your plate\"
 // With an open todo rendered below, the first count is a button that scrolls
 // to it.
 void test("escalated is the server's word for past due; the line calls it overdue.", async (t) => {
-  // doctest:L55
   await t.checkText(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 }, noop)), "[3 on your plate] · 1 overdue · 2 done");
 });
 
 // In a box view nothing is drawn to scroll to, so the same counts are plain
 // text rather than a button that does nothing:
 void test("In a box view nothing is drawn to scroll to, so the same counts are plain tex...", async (t) => {
-  // doctest:L63
   t.check(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 })), "3 on your plate · 1 overdue · 2 done");
 });
 
 // Parked todos are named when there are any:
 void test("Parked todos are named when there are any:", async (t) => {
-  // doctest:L70
   t.check(text(line({ open: 1, onPlate: 1, parked: 2 })), "1 on your plate · 2 parked");
 });
 
@@ -74,10 +69,8 @@ void test("Parked todos are named when there are any:", async (t) => {
 // names it "later", as the plate's headline does. The control is the count
 // of the todos it goes to: "on your plate" when any are, else "later".
 void test("An open todo whose start has not come yet is not on the plate; the line names...", async (t) => {
-  // doctest:L81
   await t.checkText(text(line({ open: 3, onPlate: 2 }, noop)), "[2 on your plate] · 1 later");
 
-  // doctest:L84
   t.check(text(line({ open: 1, onPlate: 0 }, noop)), "0 on your plate · [1 later]");
 });
 
@@ -85,13 +78,11 @@ void test("An open todo whose start has not come yet is not on the plate; the li
 // must carry that plate state explicitly: one embedded from another card has
 // none here, so it is never the target.
 void test("On a card, the control scrolls to the first todo in the set it names.", async (t) => {
-  // doctest:L93
   t.check(
     controlTargetSelector({ onPlate: 0 }),
     "[data-todo-status=\"open\"]:not([data-todo-assigned=\"agent\"])[data-todo-plate-state=\"quiet\"]",
   );
 
-  // doctest:L96
   t.check(
     controlTargetSelector({ onPlate: 2 }),
     "[data-todo-status=\"open\"]:not([data-todo-assigned=\"agent\"])[data-todo-plate-state=\"on-plate\"], [data-todo-status=\"open\"]:not([data-todo-assigned=\"agent\"])[data-todo-plate-state=\"escalated\"]",
@@ -105,7 +96,6 @@ void test("On a card, the control scrolls to the first todo in the set it names.
 // pass. Its "open" control opens the directory's list: its own `todo-view` card
 // when one sits directly in it, else the plate.
 void test("A directory's browse page shows the same line for every card under it (Direct...", async (t) => {
-  // doctest:L108
   t.check(
     directoryListPath([
       { relativePath: "_content/projects/porch-rebuild/budget.doc.card", type: "doc" },
@@ -114,6 +104,5 @@ void test("A directory's browse page shows the same line for every card under it
     "_content/projects/porch-rebuild/todos.todo-view.card",
   );
 
-  // doctest:L114
   t.check(directoryListPath([{ relativePath: "_content/projects/porch-rebuild/budget.doc.card", type: "doc" }]), "_content/plate.todo-view.card");
 });

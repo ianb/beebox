@@ -9,6 +9,8 @@ discovered-in: doctest-typecheck worktree — fixing about 5,700 doctest type er
 priority: backlog
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Status 2026-10-16 (workstream `doctest-typecheck`): most of this list is done.
 Done: the Fastify request/reply parameters (`DiagRequest`, `CookieReply`),
 `SpeechClient` for the speech playback machine, `buildQueryOptions` returning

@@ -10,7 +10,7 @@
 // forward only and refuses to guess.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   matchBlocksToPages,
   normalizeForMatch,
@@ -29,7 +29,6 @@ function show(map: Map<number, number>) {
 // The body is a *rendering* of these same characters, so the text matches but the
 // spacing doesn't.
 void test("The body is a rendering of these same characters, so the text matches but the...", async (t) => {
-  // doctest:L33
   t.check(normalizeForMatch("  Onboarding   starts\non your\tfirst Monday.  "), "onboarding starts on your first monday.");
 });
 
@@ -37,7 +36,6 @@ void test("The body is a rendering of these same characters, so the text matches
 //
 // Blocks that line up with the docling texts get their page.
 void test("Blocks that line up with the docling texts get their page.", async (t) => {
-  // doctest:L42
   const texts = [
     { text: "Employee Handbook 2026", page: 1 },
     { text: "Onboarding starts on your first Monday.", page: 1 },
@@ -60,7 +58,6 @@ void test("Blocks that line up with the docling texts get their page.", async (t
   // a figure's alt line) and drops ones it did. Unmatched blocks are simply skipped;
   // the cursor never goes backwards, so the rest still lands.
 
-  // doctest:L64
   t.check(
     show(matchBlocksToPages([
       "Employee Handbook 2026",
@@ -75,7 +72,6 @@ void test("Blocks that line up with the docling texts get their page.", async (t
   // A prefix match counts in either direction, because the two renderings truncate
   // each other: a heading rendered with its numbering, a paragraph docling split.
 
-  // doctest:L78
   t.check(show(matchBlocksToPages(["Onboarding starts"], texts)), "0=1");
 });
 
@@ -85,7 +81,6 @@ void test("Blocks that line up with the docling texts get their page.", async (t
 // produces no marker at all — a paragraph labelled with the wrong page is worse
 // than one labelled with none.
 void test("A block that matches candidates on different pages inside the lookahead windo...", async (t) => {
-  // doctest:L89
   t.check(
     show(matchBlocksToPages(["Continued"], [
       { text: "Continued", page: 4 },
@@ -101,7 +96,6 @@ void test("A block that matches candidates on different pages inside the lookahe
 // occurrence the block is actually rendering, so a wrong page label is exactly
 // as possible as a right one:
 void test("A short, generic block that repeats — a heading like \"Continued\" — is skipped...", async (t) => {
-  // doctest:L103
   t.check(
     show(matchBlocksToPages(["Continued"], [
       { text: "Continued", page: 4 },
@@ -115,7 +109,6 @@ void test("A short, generic block that repeats — a heading like \"Continued\" 
 // one candidate — a repeat this exact is not a coincidental short-heading
 // collision, so the first hit is trusted:
 void test("A block long enough to be specific clears the same window even with more than...", async (t) => {
-  // doctest:L115
   t.check(
     show(matchBlocksToPages(["This heading is long enough to be unambiguous"], [
       { text: "This heading is long enough to be unambiguous", page: 4 },
@@ -128,7 +121,6 @@ void test("A block long enough to be specific clears the same window even with m
 // Empty blocks (a spacer paragraph, a `<li>` holding only a nested list) are
 // ignored rather than matched against the next text:
 void test("Empty blocks (a spacer paragraph, a <li> holding only a nested list) are igno...", async (t) => {
-  // doctest:L126
   t.check(show(matchBlocksToPages(["", "   ", "Benefits"], [{ text: "Benefits", page: 2 }])), "2=2");
 });
 
@@ -137,7 +129,6 @@ void test("Empty blocks (a spacer paragraph, a <li> holding only a nested list) 
 // The view draws a marker where the page *turns*, so the map is reduced to the
 // first block of each new page.
 void test("The view draws a marker where the page turns, so the map is reduced to the fi...", async (t) => {
-  // doctest:L136
   const matched = matchBlocksToPages(
     ["A one", "A two", "A three", "B one", "B two", "C one"],
     [
@@ -155,7 +146,6 @@ void test("The view draws a marker where the page turns, so the map is reduced t
 // A backwards page is a mis-match, not a page the reader re-entered, so it is
 // dropped rather than drawn:
 void test("A backwards page is a mis-match, not a page the reader re-entered, so it is d...", async (t) => {
-  // doctest:L155
   t.check(pageBoundaries(new Map([[0, 1], [1, 3], [2, 2], [3, 4]])).map((b) => b.page).join(","), "1,3,4");
 });
 
@@ -165,7 +155,6 @@ void test("A backwards page is a mis-match, not a page the reader re-entered, so
 // Tables and pictures are dropped (they have no comparable rendered text), and so
 // is any item docling placed on no page.
 void test("pagedTexts takes the text items that carry provenance, in reading order.", async (t) => {
-  // doctest:L166
   t.check(
     pagedTexts(readDoclingDocument({
       body: { children: [{ $ref: "#/texts/0" }, { $ref: "#/tables/0" }, { $ref: "#/texts/1" }] },

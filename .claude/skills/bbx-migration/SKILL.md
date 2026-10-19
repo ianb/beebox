@@ -7,8 +7,8 @@ allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 # bbx-migration
 
 A migration is a **one-shot transform of card data already on disk** — renames,
-field strips, format flips, refactors. The full how-to (the `bbx engine migrate` runner,
-the per-box `_config/migrations.jsonl` manifest, the harness, the migrator table)
+field strips, format flips, refactors. The full how-to (the `bbx engine migrate` runner and the per-box
+`_config/migrations.jsonl` manifest)
 lives in **`beebox/docs/cards/migrations.md`** — read it before writing one.
 This skill is the part the runbook can't enforce: deciding *whether* you need a
 migration, *which kind*, and not repeating the scars.

@@ -18,7 +18,7 @@
 // would reach it, and is enough to prove the fix without a raw socket.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
@@ -81,11 +81,9 @@ void test("A traversal form that starts inside content/ but resolves to package.
       t.error(error);
     }
   });
-  // doctest:L85
   const getRes = await server.request({ method: "GET", url: "/api/files/_content%2f..%2fpackage.json" });
   t.check(getRes.statusCode, 403);
 
-  // doctest:L89
   const putRes = await server.request({
     method: "PUT",
     url: "/api/files/_content%2f..%2fpackage.json",
@@ -93,20 +91,17 @@ void test("A traversal form that starts inside content/ but resolves to package.
   });
   t.check(putRes.statusCode, 403);
 
-  // doctest:L97
   const deleteRes = await server.request({ method: "DELETE", url: "/api/files/_content%2f..%2fpackage.json" });
   t.check(deleteRes.statusCode, 403);
 
   // `package.json` on disk is untouched by the write attempt:
 
-  // doctest:L105
   const pkgJsonPath = join(server.boxRoot, "package.json");
   const packageJsonAfter = await readFile(pkgJsonPath, "utf-8");
   t.check(packageJsonAfter, markedPackageJson);
 
   // ## `/api/files-commit`
 
-  // doctest:L114
   const commitRes = await server.request({
     method: "POST",
     url: "/api/files-commit",
@@ -119,20 +114,17 @@ void test("A traversal form that starts inside content/ but resolves to package.
   // A traversal that resolves to `src/` (outside the namespace) 403s rather than
   // listing it:
 
-  // doctest:L129
   const browseRes = await server.request({ method: "GET", url: "/api/browse/_content%2f..%2fsrc" });
   t.check(browseRes.statusCode, 403);
 
   // ## `/api/image/*`
 
-  // doctest:L137
   await server.seed("_content/photo.jpg", "fake-jpeg-bytes");
   const imageRes = await server.request({ method: "GET", url: "/api/image/_content%2f..%2fpackage.json" });
   t.check(imageRes.statusCode, 403);
 
   // ## `/api/figure/module.js`
 
-  // doctest:L146
   const figureRes = await server.request({ method: "GET", url: "/api/figure/module.js?path=_content%2f..%2fpackage.json" });
   t.check(figureRes.statusCode, 400);
 
@@ -142,7 +134,6 @@ void test("A traversal form that starts inside content/ but resolves to package.
   // path as repo-root-relative), so the fence normalizes with
   // `path.posix.normalize` instead — same bypass shape, same fix:
 
-  // doctest:L158
   server.commitAll("seed commit");
   const hash = execFileSync("git", ["rev-parse", "HEAD"], { cwd: server.boxRoot, encoding: "utf-8" }).trim();
   const historyUrl = "/api/history/blob/" + hash + "/_content%2f..%2fpackage.json";
@@ -154,13 +145,11 @@ void test("A traversal form that starts inside content/ but resolves to package.
   // tRPC input travels as a plain string (no URL encoding involved), so the raw
   // traversal string reaches `resolveCardPath` directly:
 
-  // doctest:L172
   const ctx = ownerCtx(server.boxRoot);
   t.check(await trpcDisplayFormMessage(() => cardRouter.createCaller(ctx).get({ path: "_content/../package.json" })), "Invalid card path");
 
   // ## `status.browse` (tRPC)
 
-  // doctest:L180
   const statusBrowseRes = await statusRouter.createCaller(ctx).browse({ path: "_content/../src" });
   t.check(statusBrowseRes, {
     path: "_content/../src",
@@ -176,7 +165,6 @@ void test("A traversal form that starts inside content/ but resolves to package.
   // batch of paths — an unfenced traversal here would leak `package.json`/`src/*`
   // content through the batch summary endpoint. It's now fenced too:
 
-  // doctest:L192
   const filesRouterModule = await import("../../../src/webapp/trpc/routers/files/router.js");
   const summarizeRes = await filesRouterModule.filesRouter.createCaller(ctx).summarize({
     paths: ["_content/../package.json"],
@@ -191,13 +179,11 @@ void test("A traversal form that starts inside content/ but resolves to package.
   // `/_content/<path>` genuinely exists, the refusal message suggests it
   // (`docs/plans/display-path-guard.subplan.md`):
 
-  // doctest:L209
   await server.seed("_content/recipes/Soup.recipe.card", "---\ntype: doc\ntitle: Soup\n---\n");
   t.check(await trpcDisplayFormMessage(() => cardRouter.createCaller(ctx).get({ path: "recipes/Soup.recipe.card" })), "Invalid card path — did you mean `/_content/recipes/Soup.recipe.card`?");
 
   // No suggestion when the content-form path doesn't exist either:
 
-  // doctest:L217
   t.check(await trpcDisplayFormMessage(() => cardRouter.createCaller(ctx).get({ path: "nowhere/at/all.card" })), "Invalid card path");
 
   // ## Display-form paths (`docs/plans/display-path-guard.subplan.md`)
@@ -207,32 +193,24 @@ void test("A traversal form that starts inside content/ but resolves to package.
   // the canonical form, at every choke point above — distinct from the generic
   // 403/empty-listing a genuine namespace escape gets:
 
-  // doctest:L229
   const filesDisplayRes = await server.request({ method: "GET", url: "/api/files/Config:box.json" });
   t.check(filesDisplayRes.statusCode, 400);
 
-  // doctest:L233
   t.check(errorOf(filesDisplayRes.body), "`Config:box.json` is the boxholder's display form; write `/_config/box.json`");
 
-  // doctest:L236
   const browseDisplayRes = await server.request({ method: "GET", url: "/api/browse/Config:box.json" });
   t.check(browseDisplayRes.statusCode, 400);
 
-  // doctest:L240
   const imageDisplayRes = await server.request({ method: "GET", url: "/api/image/Config:box.json" });
   t.check(imageDisplayRes.statusCode, 400);
 
-  // doctest:L244
   const figureDisplayRes = await server.request({ method: "GET", url: "/api/figure/module.js?path=Config:box.json" });
   t.check(figureDisplayRes.statusCode, 400);
 
-  // doctest:L250
   t.check(await trpcDisplayFormMessage(() => cardRouter.createCaller(ctx).get({ path: "Config:box.json" })), "`Config:box.json` is the boxholder's display form; write `/_config/box.json`");
 
-  // doctest:L253
   t.check(await trpcDisplayFormMessage(() => statusRouter.createCaller(ctx).browse({ path: "Bookkeeping:jobs/x.job.card" })), "`Bookkeeping:jobs/x.job.card` is the boxholder's display form; write `/_bookkeeping/jobs/x.job.card`");
 
-  // doctest:L256
   t.check(
     await trpcDisplayFormMessage(() =>
       historyRouter.createCaller(ctx).list({ filter: { path: "Config:box.json" } })
@@ -259,16 +237,13 @@ void test("Percent-encoded .. (above) is one way to reach outside the namespace;
       t.error(error);
     }
   });
-  // doctest:L278
   const symServer = await makeTestServer();
   const symMarkedPackageJson = await writePackageMarker(symServer.boxRoot, "secret-marker-2");
   await symlink("..", join(symServer.boxRoot, "_content/pkg"));
 
-  // doctest:L282
   const symGetRes = await symServer.request({ method: "GET", url: "/api/files/_content/pkg/package.json" });
   t.check(symGetRes.statusCode, 403);
 
-  // doctest:L286
   const symPutRes = await symServer.request({
     method: "PUT",
     url: "/api/files/_content/pkg/package.json",
@@ -278,7 +253,6 @@ void test("Percent-encoded .. (above) is one way to reach outside the namespace;
 
   // `package.json` on disk is untouched by the write attempt:
 
-  // doctest:L298
   const symPkgJsonPath = join(symServer.boxRoot, "package.json");
   const symPkgJsonAfter = await readFile(symPkgJsonPath, "utf-8");
   t.check(symPkgJsonAfter, symMarkedPackageJson);
@@ -286,24 +260,20 @@ void test("Percent-encoded .. (above) is one way to reach outside the namespace;
   // Browsing straight into the symlinked directory (the browse target itself IS
   // the symlink) is refused too — not just deeper paths through it:
 
-  // doctest:L308
   const symBrowseRes = await symServer.request({ method: "GET", url: "/api/browse/_content/pkg" });
   t.check(symBrowseRes.statusCode, 403);
 
-  // doctest:L312
   const symBrowseDeeperRes = await symServer.request({ method: "GET", url: "/api/browse/_content/pkg/src" });
   t.check(symBrowseDeeperRes.statusCode, 403);
 
   // `card.get` (tRPC) refuses the same path:
 
-  // doctest:L320
   const symCtx = ownerCtx(symServer.boxRoot);
   t.check(await trpcDisplayFormMessage(() => cardRouter.createCaller(symCtx).get({ path: "_content/pkg/package.json" })), "Invalid card path");
 
   // `status.browse` (tRPC) refuses it too — an empty listing, not the package
   // directory's contents:
 
-  // doctest:L329
   const symStatusBrowseRes = await statusRouter.createCaller(symCtx).browse({ path: "_content/pkg" });
   t.check(symStatusBrowseRes, {
     path: "_content/pkg",
@@ -316,7 +286,6 @@ void test("Percent-encoded .. (above) is one way to reach outside the namespace;
   // `files.summarize` (tRPC) refuses it — no `package.json` content leaks through
   // the batch summary endpoint:
 
-  // doctest:L338
   const symFilesRouterModule = await import("../../../src/webapp/trpc/routers/files/router.js");
   const symSummarizeRes = await symFilesRouterModule.filesRouter.createCaller(symCtx).summarize({
     paths: ["_content/pkg/package.json"],
@@ -339,7 +308,6 @@ void test("The on-disk fence must not break the shape git-annex actually uses:",
       t.error(error);
     }
   });
-  // doctest:L359
   const annexServer = await makeTestServer();
   await mkdir(join(annexServer.boxRoot, ".git/annex/objects/xx/yy"), { recursive: true });
   await writeFile(join(annexServer.boxRoot, ".git/annex/objects/xx/yy/real.txt"), "real annexed bytes");
@@ -349,17 +317,14 @@ void test("The on-disk fence must not break the shape git-annex actually uses:",
     join(annexServer.boxRoot, "_content/inbox/annexed.txt"),
   );
 
-  // doctest:L368
   const annexGetRes = await annexServer.rawRequest({ method: "GET", url: "/api/files/_content/inbox/annexed.txt" });
   t.check(annexGetRes.statusCode, 200);
 
-  // doctest:L372
   t.check(annexGetRes.payload, "real annexed bytes");
 
   // The same leaf symlink refuses a write or delete through it — an existing leaf
   // symlink resolving outside the box is never writable, only readable:
 
-  // doctest:L380
   const annexPutRes = await annexServer.request({
     method: "PUT",
     url: "/api/files/_content/inbox/annexed.txt",
@@ -367,7 +332,6 @@ void test("The on-disk fence must not break the shape git-annex actually uses:",
   });
   t.check(annexPutRes.statusCode, 403);
 
-  // doctest:L388
   const annexDeleteRes = await annexServer.request({ method: "DELETE", url: "/api/files/_content/inbox/annexed.txt" });
   t.check(annexDeleteRes.statusCode, 403);
 });
@@ -389,7 +353,6 @@ void test("The directory fence above (/api/browse/content/pkg) only checks the l
       t.error(error);
     }
   });
-  // doctest:L408
   const escServer = await makeTestServer();
   await mkdir(join(escServer.boxRoot, "src"), { recursive: true });
   await writeFile(
@@ -399,7 +362,6 @@ void test("The directory fence above (/api/browse/content/pkg) only checks the l
   await escServer.seed("_content/Normal.doc.card", "---\ntitle: Normal\n---\nNormal.\n");
   await symlink(join("..", "src", "private.doc.card"), join(escServer.boxRoot, "_content", "alias.doc.card"));
 
-  // doctest:L417
   const escBrowseRes = await escServer.request({ method: "GET", url: "/api/browse/_content" });
   t.check(
     {

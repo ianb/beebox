@@ -8,7 +8,7 @@
 // payload) keeps its fuller shape.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
@@ -53,7 +53,6 @@ void test("The questions directory doesn't exist yet in a fresh box — a missin
       t.error(error);
     }
   });
-  // doctest:L50
   const box = await makeTmpBox({ git: true });
   t.check(await caller(box).navStatus(), {
     counts: {
@@ -76,14 +75,12 @@ void test("Answered and dismissed questions are resolved; they don't belong on t
       t.error(error);
     }
   });
-  // doctest:L65
   const box = await makeTmpBox({ git: true });
   await box.write("_bookkeeping/questions/One.question.card", question(""));
   await box.write("_bookkeeping/questions/Two.question.card", question("answer:\n  text: Blue\nanswered-at: 2026-01-02T00:00:00Z\n"));
   await box.write("_bookkeeping/questions/Three.question.card", question("dismissed-at: 2026-01-02T00:00:00Z\n"));
   await box.write("_bookkeeping/questions/inbox-review/Four.question.card", question(""));
 
-  // doctest:L71
   const counts = (await caller(box).navStatus()).counts;
   t.check(counts.pendingQuestions, 2);
 
@@ -93,12 +90,10 @@ void test("Answered and dismissed questions are resolved; they don't belong on t
   // the same number (it shares this count rather than deriving its own), so the
   // nav and the dashboard can't disagree.
 
-  // doctest:L83
   await box.write("_bookkeeping/questions/Broken.question.card", "---\ninput: not-a-mapping\n---\n");
   // `status.status` reads box metadata, so give the marker its full contents.
   await box.write(".beebox/box.json", JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" }));
 
-  // doctest:L87
   const navCount = (await caller(box).navStatus()).counts.pendingQuestions;
   const dashboardCount = (await caller(box).status()).counts.pendingQuestions;
   t.check(`${navCount} == ${dashboardCount}`, "3 == 3");
@@ -109,7 +104,6 @@ void test("Answered and dismissed questions are resolved; they don't belong on t
   // the same derivation `bbx todos` uses, reached through the shared collector. A
   // `done` todo and one that hasn't started yet are both off the plate.
 
-  // doctest:L100
   await box.write(
     "_content/notes/Plans.doc.card",
     `---
@@ -125,7 +119,6 @@ Body.
 `,
   );
 
-  // doctest:L115
   const withTodos = (await caller(box).navStatus()).counts;
   t.check(withTodos, {
     pendingQuestions: 3,
@@ -140,7 +133,6 @@ Body.
   // card, with what a box-wide todo query reports — including a `{% todo %}` captured in a
   // card body rather than frontmatter.
 
-  // doctest:L128
   await box.write(
     "_content/notes/Body.doc.card",
     `---
@@ -150,14 +142,12 @@ title: Body capture
 `,
   );
 
-  // doctest:L137
   const collected = await collectTodos(box.root);
   const fromCollector = collected.todos.filter(
     (todo) => todo.plateState === "escalated" || todo.plateState === "on-plate",
   ).length;
   const fromBadge = (await caller(box).navStatus()).counts.onPlateTodos;
 
-  // doctest:L143
   t.check(`${fromCollector} == ${fromBadge}`, "2 == 2");
 });
 
@@ -174,7 +164,6 @@ void test("The nav badge's dot:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L158
   const escBox = await makeTmpBox({ git: true });
   await escBox.write(
     "_content/notes/Overdue.doc.card",
@@ -187,7 +176,6 @@ title: Overdue
 `,
   );
 
-  // doctest:L170
   const escCounts = (await caller(escBox).navStatus()).counts;
   t.check([escCounts.onPlateTodos, escCounts.escalatedTodos], [
     1,

@@ -5,7 +5,7 @@
 // chat-history discovery can treat a person's thought as system plumbing.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { SessionEntry } from "../../../src/cli/lib/session-entry.js";
 import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
 
@@ -15,12 +15,10 @@ function entry(text: string, type: SessionEntry["type"]): SessionEntry {
 
 // An external assistant submission is a human message.
 void test("An external assistant submission is a human message.", async (t) => {
-  // doctest:L18
   t.check(isRealUserMessage(entry('<external-input source="apple-app-intents">Call the office</external-input>', "user")), true);
 });
 
 // An assistant-authored mention of the wrapper does not become user input.
 void test("An assistant-authored mention of the wrapper does not become user input.", async (t) => {
-  // doctest:L25
   t.check(isRealUserMessage(entry("<external-input>Call the office</external-input>", "assistant")), false);
 });

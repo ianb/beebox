@@ -5,8 +5,8 @@
 // reopen, since absent means open), committed with its own endpoint trailer. The executor never calls it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { execFileSync } from "node:child_process";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -32,11 +32,9 @@ void test("Close, then reopen", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L28
   const closed = await caller(box.root).browserTask.setClosed({ path: cardPath, closed: true });
   t.check(closed, { closed: true, commit: any(String).matches(/^[\da-f]{40}$/), commitWarning: null });
 
-  // doctest:L32
   t.checkText(
     await box.read(cardPath),
     `---
@@ -49,13 +47,11 @@ closed: true
 Find shows.`,
   );
 
-  // doctest:L35
   t.checkText(execFileSync("git", ["log", "-1", "--format=%B"], { cwd: box.root }).toString(), `Close browser task: _content/tasks/Task.browser-task.card
 «blankline»
 Source: webapp
 Endpoint: browserTask.setClosed`);
 
-  // doctest:L38
   const reopened = await caller(box.root).browserTask.setClosed({ path: cardPath, closed: false });
   t.check(reopened, { closed: false, commit: any(String).matches(/^[\da-f]{40}$/), commitWarning: null });
   t.checkText(
@@ -71,7 +67,6 @@ Find shows.`,
 
   // The body and the other fields survive the round trip:
 
-  // doctest:L46
   const after = await box.read(cardPath);
   t.checkText(
     after,
@@ -89,7 +84,6 @@ Find shows.`,
   // `browserTask.list` walks `_content` for task cards and derives each one's
   // lifecycle state; the dashboard shows the due and never-scanned ones.
 
-  // doctest:L57
   await box.write("_content/tasks/Weekly.browser-task.card", "---\ntype: browser-task\ntitle: Weekly feed\nstart:\n  href: https://example.test/w\nrescan-after: P7D\nlast-upload: 2020-01-01T00:00:00Z\n---\nScan it.\n");
   box.commitAll("seed weekly");
   const listed = await caller(box.root).browserTask.list();
@@ -125,15 +119,11 @@ Find shows.`,
   //
   // Not an owner, not a browser-task card, not a card at all:
 
-  // doctest:L69
   t.check(await caller(box.root, { isOwner: false }).browserTask.setClosed({ path: cardPath, closed: true }).then(() => "accepted", (e) => e.code), "FORBIDDEN");
 
-  // doctest:L72
   t.check(await caller(box.root).browserTask.setClosed({ path: "_content/notes/Note.doc.card", closed: true }).then(() => "accepted", (e) => e.code), "BAD_REQUEST");
 
-  // doctest:L75
   t.check(await caller(box.root).browserTask.setClosed({ path: "_content/tasks/Nope.browser-task.card", closed: true }).then(() => "accepted", (e) => e.code), "NOT_FOUND");
 
-  // doctest:L78
   t.check(await caller(box.root).browserTask.setClosed({ path: "../outside.browser-task.card", closed: true }).then(() => "accepted", (e) => e.code), "FORBIDDEN");
 });

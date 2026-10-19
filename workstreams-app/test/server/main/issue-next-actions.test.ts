@@ -5,7 +5,7 @@
 // a request follows its issue across `closed/` and category moves.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -18,7 +18,6 @@ const now = () => new Date("2026-10-05T12:00:00Z");
 
 // ## A missing store is empty; the first write creates and marks it
 void test("A missing store is empty; the first write creates and marks it", async (t) => {
-  // doctest:L22
   const root = path.join(scratch, "store");
   const before = await readNextActions(root);
   const written = await writeNextAction({
@@ -55,7 +54,6 @@ void test("A missing store is empty; the first write creates and marks it", asyn
   // Setting only an action drops a previous message: a request is replaced whole,
   // so a stale message never rides along with a new value.
 
-  // doctest:L43
   const key = nextActionKey("private", "2026-08-01-x");
   const replaced = await writeNextAction({ root, key, now, request: { action: "discuss", message: null } });
   const removed = await writeNextAction({ root, key, request: { action: null, message: "   " } });
@@ -74,7 +72,6 @@ void test("A missing store is empty; the first write creates and marks it", asyn
   // an error, never an empty map: that would hide the developer's requests. A key
   // that is not `<visibility>/<slug>` is refused before any write.
 
-  // doctest:L57
   const stranger = path.join(scratch, "stranger");
   await fs.mkdir(stranger);
   await fs.writeFile(path.join(stranger, "notes.txt"), "someone else's\n");
@@ -103,7 +100,6 @@ void test("A missing store is empty; the first write creates and marks it", asyn
 
 // ## The root sits beside the main checkout unless overridden
 void test("The root sits beside the main checkout unless overridden", async (t) => {
-  // doctest:L76
   const previous = process.env["BBX_ISSUE_ACTIONS_ROOT"];
   delete process.env["BBX_ISSUE_ACTIONS_ROOT"];
   const notGit = await nextActionsRoot(scratch);

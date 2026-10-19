@@ -6,7 +6,7 @@
 // Sharp verifies the encoded bytes and dimensions without contacting a provider.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createClaudeScanVision, type ClaudeQueryFunction } from "../../src/services/scan-vision-claude.js";
 import Sharp from "sharp";
 import { z } from "zod";
@@ -46,7 +46,6 @@ function sentImage(message: unknown) {
 
 // ## Claude receives supported, correctly labeled bytes and alignment stays strict
 void test("Claude receives supported, correctly labeled bytes and alignment stays strict", async (t) => {
-  // doctest:L49
   const result = await createClaudeScanVision({ boxRoot: dir, query }).analyzeBatch({ imagePaths: [inputPath], boxholderContext: null });
   const imageBlock = sentImage(capturedMessage);
   const sentBytes = Buffer.from(imageBlock.source.data, "base64");
@@ -61,7 +60,6 @@ void test("Claude receives supported, correctly labeled bytes and alignment stay
     0,
   ]);
 
-  // doctest:L56
   const sourceUnchanged = (await (await import("node:fs/promises")).readFile(inputPath)).equals(original);
   t.check([await Sharp(original).metadata().then((m) => [m.format, m.width, m.height]), sourceUnchanged], [
     [
@@ -72,7 +70,6 @@ void test("Claude receives supported, correctly labeled bytes and alignment stay
     true,
   ]);
 
-  // doctest:L60
   const pngPath = join(dir, "page-002.png");
   await Sharp(original).png().toFile(pngPath);
   await createClaudeScanVision({ boxRoot: dir, query }).analyzeBatch({ imagePaths: [pngPath], boxholderContext: null });
@@ -89,7 +86,6 @@ void test("An unreadable AVIF is rejected locally and never sent to the provider
       t.error(error);
     }
   });
-  // doctest:L71
   const invalidPath = join(dir, "figure-001.avif");
   await writeFile(invalidPath, "not an image");
   let invalidCalls = 0;

@@ -5,8 +5,8 @@
 // warnings and therefore require the owner.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import { appRouter } from "../../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../../src/webapp/trpc/context.js";
@@ -50,7 +50,6 @@ await fs.writeFile(boxGrowthStatePath(box.root), `${JSON.stringify(warningState,
 
 // ## A non-owner cannot acknowledge or change expectations
 void test("A non-owner cannot acknowledge or change expectations", async (t) => {
-  // doctest:L53
   const deniedAcknowledge = await caller(box.root, false).health.acknowledgeBoxGrowth().then(
     () => "allowed",
     (error) => error.code,
@@ -68,7 +67,6 @@ void test("A non-owner cannot acknowledge or change expectations", async (t) => 
 
 // ## Acknowledgement preserves rate sensitivity
 void test("Acknowledgement preserves rate sensitivity", async (t) => {
-  // doctest:L73
   const result = await caller(box.root, true).health.acknowledgeBoxGrowth();
   const accepted = await readBoxGrowthState(box.root);
   if (accepted.status !== "measured") throw new Error("expected measured state");
@@ -84,7 +82,6 @@ void test("Acknowledgement preserves rate sensitivity", async (t) => {
 
 // ## Expecting current rates stores durable headroom
 void test("Expecting current rates stores durable headroom", async (t) => {
-  // doctest:L90
   await fs.writeFile(boxGrowthStatePath(box.root), `${JSON.stringify(warningState, null, 2)}\n`);
   const expectedResult = await caller(box.root, true).health.expectBoxGrowthRates();
   const expected = await readBoxGrowthState(box.root);

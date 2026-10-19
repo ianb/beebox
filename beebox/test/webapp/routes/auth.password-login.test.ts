@@ -3,12 +3,12 @@
 // The local login surface (`src/webapp/routes/auth/register.ts`): `POST /auth/login` verifies
 // credentials and mints the session cookie; `POST /auth/setup` claims the owner
 // account with a live setup token. These are ROOT routes (not box-scoped), so the
-// doctest injects against the bare Fastify instance rather than the slug-prefixing
+// test injects against the bare Fastify instance rather than the slug-prefixing
 // helpers. `BBX_AUTH_SCRYPT_N` is lowered so scrypt is fast, and the server is
 // constructed with `openAccess: false` so real auth is exercised.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
@@ -17,7 +17,7 @@ import { armSetupToken, clearSetupToken } from "../../../src/webapp/setup-token.
 import { loginThrottle } from "../../../src/webapp/routes/auth/login-throttle.js";
 import { createFirstUser, getLocalOwnerEmail } from "../../../src/webapp/local-users.js";
 
-// Fast scrypt for the doctest (test-only work-factor seam).
+// Fast scrypt for the test (test-only work-factor seam).
 process.env.BBX_AUTH_SCRYPT_N = "1024";
 // Exercise REAL auth: clear any configured owner email that would constrain the
 // first account (the server itself is constructed with openAccess: false below).
@@ -56,11 +56,9 @@ async function resetAuth() {
 
 // ## A correct password sets the session cookie and returns 204
 void test("A correct password sets the session cookie and returns 204", async (t) => {
-  // doctest:L60
   await resetAuth();
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "correct-horse-battery" });
 
-  // doctest:L63
   const ok = await postAuth("/auth/login", { email: "owner@example.com", password: "correct-horse-battery" });
   t.check(
     { status: ok.statusCode, body: ok.body, cookies: ok.cookies.map((c) => c.name) },
@@ -70,11 +68,9 @@ void test("A correct password sets the session cookie and returns 204", async (t
 
 // ## Wrong password and unknown user both answer an identical 401 (no enumeration)
 void test("Wrong password and unknown user both answer an identical 401 (no enumeration)", async (t) => {
-  // doctest:L74
   await resetAuth();
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "correct-horse-battery" });
 
-  // doctest:L77
   const wrongPass = await postAuth("/auth/login", { email: "owner@example.com", password: "wrong" });
   t.check({ status: wrongPass.statusCode, body: wrongPass.json() }, {
     status: 401,
@@ -83,7 +79,6 @@ void test("Wrong password and unknown user both answer an identical 401 (no enum
     },
   });
 
-  // doctest:L81
   // Reset the throttle so the second attempt is judged on its own merits (the
   // first failure would otherwise cool-down this IP).
   loginThrottle.reset();
@@ -95,14 +90,12 @@ void test("Wrong password and unknown user both answer an identical 401 (no enum
     },
   });
 
-  // doctest:L88
   t.check(
     // Byte-for-byte identical responses.
     unknownUser.json(),
     wrongPass.json(),
   );
 
-  // doctest:L92
   // A parsed-but-non-object body (array/null/etc.) is rejected FAST as a 400 —
   // it must not fall through to the raw-stream reader (whose events already
   // fired) and stall until the read timeout. Regression guard for the
@@ -114,11 +107,9 @@ void test("Wrong password and unknown user both answer an identical 401 (no enum
 
 // ## Setup happy path: a live token creates the owner and mints a session
 void test("Setup happy path: a live token creates the owner and mints a session", async (t) => {
-  // doctest:L105
   await resetAuth();
   const token = armSetupToken({ now: Date.now() });
 
-  // doctest:L108
   const setupOk = await postAuth("/auth/setup", {
     email: "Boss@Example.com",
     name: "Boss",
@@ -130,7 +121,6 @@ void test("Setup happy path: a live token creates the owner and mints a session"
     { status: 204, body: "", cookies: ["bbx_session"] },
   );
 
-  // doctest:L120
   t.check(
     // The owner was persisted (email canonicalized to lowercase).
     getLocalOwnerEmail(),
@@ -140,11 +130,9 @@ void test("Setup happy path: a live token creates the owner and mints a session"
 
 // ## Setup rejects a wrong token (403) and an expired one (410)
 void test("Setup rejects a wrong token (403) and an expired one (410)", async (t) => {
-  // doctest:L128
   await resetAuth();
   armSetupToken({ now: Date.now() });
 
-  // doctest:L131
   const wrongToken = await postAuth("/auth/setup", {
     email: "boss@example.com",
     name: "Boss",
@@ -156,7 +144,6 @@ void test("Setup rejects a wrong token (403) and an expired one (410)", async (t
     body: { error: "Invalid setup token" },
   });
 
-  // doctest:L140
   // A token armed 20 minutes ago is past its 15-minute TTL → 410 Gone.
   loginThrottle.reset();
   const staleToken = armSetupToken({ now: Date.now() - 20 * 60 * 1000 });
@@ -177,12 +164,10 @@ void test("Setup rejects a wrong token (403) and an expired one (410)", async (t
 
 // ## Setup answers 410 once an account exists
 void test("Setup answers 410 once an account exists", async (t) => {
-  // doctest:L156
   await resetAuth();
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "correct-horse-battery" });
   const lateToken = armSetupToken({ now: Date.now() });
 
-  // doctest:L160
   const claimed = await postAuth("/auth/setup", {
     email: "other@example.com",
     name: "Other",
@@ -201,7 +186,6 @@ void test("Setup answers 410 once an account exists", async (t) => {
 // An empty initialized store is a durable setup tombstone after the last member is
 // removed.
 void test("An empty initialized store is a durable setup tombstone after the last member...", async (t) => {
-  // doctest:L174
   await resetAuth();
   await writeFile(AUTH_FILE, JSON.stringify({ version: 1, users: [] }), { mode: 0o600 });
   const tombstoneToken = armSetupToken({ now: Date.now() });
@@ -222,23 +206,19 @@ void test("An empty initialized store is a durable setup tombstone after the las
 
 // ## Two concurrent setups race on the store lock — one wins (204), one loses (409)
 void test("Two concurrent setups race on the store lock — one wins (204), one loses (409)", async (t) => {
-  // doctest:L190
   await resetAuth();
   const raceToken = armSetupToken({ now: Date.now() });
   const body = { email: "first@example.com", name: "First", password: "password1234", token: raceToken };
 
-  // doctest:L194
   const [a, b] = await Promise.all([postAuth("/auth/setup", body), postAuth("/auth/setup", body)]);
   t.check([a, b].map((res) => res.statusCode).toSorted((x, y) => x - y), [204, 409]);
 });
 
 // ## A form login redirects (302) to the sanitized returnTo and sets the cookie
 void test("A form login redirects (302) to the sanitized returnTo and sets the cookie", async (t) => {
-  // doctest:L202
   await resetAuth();
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "correct-horse-battery" });
 
-  // doctest:L205
   const ok = await postForm("/auth/login", {
     email: "owner@example.com",
     password: "correct-horse-battery",
@@ -250,7 +230,6 @@ void test("A form login redirects (302) to the sanitized returnTo and sets the c
     cookies: ["bbx_session"],
   });
 
-  // doctest:L213
   // A malicious returnTo (protocol-relative escape) collapses to "/" — never off-origin.
   loginThrottle.reset();
   const evil = await postForm("/auth/login", {
@@ -263,11 +242,9 @@ void test("A form login redirects (302) to the sanitized returnTo and sets the c
 
 // ## A failed form login redirects back to the bare page with a generic error, no cookie
 void test("A failed form login redirects back to the bare page with a generic error, no cookie", async (t) => {
-  // doctest:L227
   await resetAuth();
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "correct-horse-battery" });
 
-  // doctest:L230
   const bad = await postForm("/auth/login", { email: "owner@example.com", password: "wrong", returnTo: "/test/home" });
   t.check({ status: bad.statusCode, location: bad.headers.location, cookies: bad.cookies.length }, {
     status: 302,
@@ -278,11 +255,9 @@ void test("A failed form login redirects back to the bare page with a generic er
 
 // ## A form setup creates the owner, redirects to the root, and sets the cookie
 void test("A form setup creates the owner, redirects to the root, and sets the cookie", async (t) => {
-  // doctest:L238
   await resetAuth();
   const token = armSetupToken({ now: Date.now() });
 
-  // doctest:L241
   const setup = await postForm("/auth/setup", {
     email: "boss@example.com",
     name: "Boss",
@@ -299,11 +274,9 @@ void test("A form setup creates the owner, redirects to the root, and sets the c
 
 // ## A form setup with mismatched passwords redirects back with error=mismatch, no account created
 void test("A form setup with mismatched passwords redirects back with error=mismatch, no account created", async (t) => {
-  // doctest:L255
   await resetAuth();
   const mismatchToken = armSetupToken({ now: Date.now() });
 
-  // doctest:L258
   const mm = await postForm("/auth/setup", {
     email: "boss@example.com",
     name: "Boss",
@@ -335,12 +308,10 @@ void test("isFormRequest compares the exact MIME essence, not a substring — so
       t.error(error);
     }
   });
-  // doctest:L287
   await resetAuth();
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "correct-horse-battery" });
   loginThrottle.reset();
 
-  // doctest:L291
   const decoy = await server.server.inject({
     method: "POST",
     url: "/auth/login",

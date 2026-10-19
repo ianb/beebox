@@ -14,8 +14,8 @@
 // failed in production (its `bbx validate` could not get admitted).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { join } from "node:path";
 import { chmod, readdir, rm, writeFile } from "node:fs/promises";
 import { execa } from "execa";

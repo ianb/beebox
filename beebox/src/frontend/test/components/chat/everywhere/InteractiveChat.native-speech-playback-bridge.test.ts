@@ -5,7 +5,7 @@
 // it after the final queued segment.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   postNativeResponseState,
   postNativeSpeechPlaybackState,
@@ -14,7 +14,6 @@ import type { NativeShellWindow } from "../../../../src/components/chat/native-p
 
 // The neutral bridge receives both playback edges as JSON payloads:
 void test("The neutral bridge receives both playback edges as JSON payloads:", async (t) => {
-  // doctest:L18
   const calls: Array<{ channel: string; payload: string }> = [];
   const shell: NativeShellWindow = {
     beeboxNativePost: (channel, payload) => calls.push({ channel, payload }),
@@ -36,7 +35,6 @@ void test("The neutral bridge receives both playback edges as JSON payloads:", a
 // The response-generation edge uses a separate semantic state so native waiting
 // ticks stop at the same streaming-to-refreshing boundary as web chat:
 void test("The response-generation edge uses a separate semantic state so native waiting...", async (t) => {
-  // doctest:L32
   const responseCalls: Array<{ channel: string; payload: string }> = [];
   const responseShell: NativeShellWindow = {
     beeboxNativePost: (channel, payload) => responseCalls.push({ channel, payload }),

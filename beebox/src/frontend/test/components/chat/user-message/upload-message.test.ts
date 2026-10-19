@@ -12,7 +12,7 @@
 // rides *inside* the body, so their words were wrapped in angle brackets too.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { parseUploadWrapper } from "../../../../src/components/chat/user-message/upload-message.js";
 
@@ -20,7 +20,6 @@ import { parseUploadWrapper } from "../../../../src/components/chat/user-message
 //
 // This is the real wrapper shape from a box's second batch.
 void test("This is the real wrapper shape from a box's second batch.", async (t) => {
-  // doctest:L24
   const model = parseUploadWrapper(`<upload doc="_content/documents/property/shop/tmp-upload/upload-20260801T0035-a56e0530/Batch.upload-batch.card" files="16" bytes="135 MB">
 Shop exterior
 
@@ -41,7 +40,6 @@ Shop exterior
 // The server omits the note entirely rather than sending an empty one, so the body
 // is the summary alone.
 void test("The server omits the note entirely rather than sending an empty one, so the b...", async (t) => {
-  // doctest:L40
   const model = parseUploadWrapper(`<upload doc="tmp-upload/b/Batch.upload-batch.card" files="3" bytes="2 KB">
 3 files uploaded (2 KB).
 </upload>`);
@@ -57,7 +55,6 @@ void test("The server omits the note entirely rather than sending an empty one, 
 // Splitting on the LAST blank line keeps the whole introduction together — a user
 // who writes two paragraphs shouldn't have the first silently become the summary.
 void test("Splitting on the LAST blank line keeps the whole introduction together — a us...", async (t) => {
-  // doctest:L54
   const model = parseUploadWrapper(`<upload doc="tmp-upload/c/Batch.upload-batch.card" files="2" bytes="1 KB">
 Receipts from the Tokyo trip.
 
@@ -76,7 +73,6 @@ File them under 2026 travel.`,
 
 // ## Failures are surfaced
 void test("Failures are surfaced", async (t) => {
-  // doctest:L69
   const model = parseUploadWrapper(`<upload doc="tmp-upload/d/Batch.upload-batch.card" files="31" bytes="4.2 KB" failed="3">
 31 files uploaded (4.2 KB); 3 failed.
 </upload>`);
@@ -92,7 +88,6 @@ void test("Failures are surfaced", async (t) => {
 // Ordinary text, and a sibling `<capture>` wrapper, must both fall through to
 // their own renderers.
 void test("Ordinary text, and a sibling <capture> wrapper, must both fall through to the...", async (t) => {
-  // doctest:L83
   t.check(
     {
       plain: parseUploadWrapper("just a message"),

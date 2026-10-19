@@ -5,7 +5,7 @@
 // appends one delta per turn. The ordinary usage sync imports both native engines.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   appendCodexTurnUsage,
   codexUsageDelta,
@@ -16,7 +16,6 @@ import { queryUsage, syncUsage } from "../../src/core/usage.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
 void test("line 18", async (t) => {
-  // doctest:L19
   const box = await makeTmpBox();
   const usage = {
     inputTokens: 100,
@@ -42,7 +41,6 @@ void test("line 18", async (t) => {
     usage,
   });
 
-  // doctest:L44
   t.check(await readCodexTurnUsage(box.root), [
     {
       sessionId: "codex-session",
@@ -62,7 +60,6 @@ void test("line 18", async (t) => {
     },
   ]);
 
-  // doctest:L47
   t.check(await totalCodexSessionUsage(box.root, "codex-session"), {
     inputTokens: 200,
     cachedInputTokens: 120,
@@ -71,7 +68,6 @@ void test("line 18", async (t) => {
     reasoningOutputTokens: 14,
   });
 
-  // doctest:L50
   t.check(
     codexUsageDelta({
       inputTokens: 260,
@@ -89,10 +85,8 @@ void test("line 18", async (t) => {
   },
   );
 
-  // doctest:L59
   await t.checkThrows(async () => (codexUsageDelta({ ...usage, inputTokens: 50 }, usage)), "CodexUsageCounterResetError: Codex cumulative usage was smaller than its recorded session total");
 
-  // doctest:L62
   await syncUsage(box.root);
   t.check(queryUsage(box.root, "SELECT task, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens, message_count FROM usage"), [
     {
@@ -105,6 +99,5 @@ void test("line 18", async (t) => {
     },
   ]);
 
-  // doctest:L66
   await box.cleanup();
 });

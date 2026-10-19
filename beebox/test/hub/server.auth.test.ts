@@ -3,14 +3,14 @@
 // With `GOOGLE_OAUTH_CLIENT_ID` set, the hub is the ONE process that verifies
 // the session cookie (it's the only process that may hold the signing
 // secret — see `src/webapp/auth.ts`'s `resolveRequestIdentity` doc comment
-// for why). This doctest exercises the hub's proxy path with hub auth
+// for why). This test exercises the hub's proxy path with hub auth
 // **enabled**: unauthenticated HTML navigation redirects to `/auth/login`,
 // unauthenticated API/WS gets a bare 401, an authenticated cookie becomes an
 // `x-bbx-authenticated-email` header on the proxied request, and
 // `/healthz` + `/webhook/<slug>/*` stay outside the wall regardless.
 
 import { test, type Test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import http from "node:http";
 import net from "node:net";
 import assert from "node:assert/strict";
@@ -28,13 +28,13 @@ import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession } from "..
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
-const HUB_SECRET = "test-hub-secret-for-auth-doctest";
+const HUB_SECRET = "test-hub-secret-for-auth-test";
 
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-server-auth-doctest";
-process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-hub-server-auth-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-server-auth-test";
+process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-hub-server-auth-test";
 // registerAuthRoutes now fails loudly on an ID-without-secret half-config
 // (MissingOAuthClientSecretError), so the fake credentials must be a pair.
-process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-hub-server-auth-doctest";
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-hub-server-auth-test";
 
 // A per-test credential store (empty until the gen-revocation section creates an
 // owner) with a fast test-only scrypt work factor. Pointing BBX_AUTH_FILE at a
@@ -85,9 +85,9 @@ const mobileBox = await makeTmpBox();
 const mobileTicket = createMobilePairingTicket(mobileBox.root);
 const mobileRedeemed = await redeemMobilePairingTicket(mobileBox.root, {
   pairingToken: mobileTicket.token,
-  deviceLabel: "doctest mobile",
+  deviceLabel: "test mobile",
 });
-if (!mobileRedeemed) throw new Error("doctest mobile pairing failed");
+if (!mobileRedeemed) throw new Error("test mobile pairing failed");
 const mobileToken = mobileRedeemed.deviceToken;
 const mobileDeviceId = mobileRedeemed.deviceId;
 const endpoints = staticEndpointProvider([{ slug: "test1", origin: box.origin }]);
@@ -130,16 +130,13 @@ void test("Unauthenticated HTML navigation redirects to `/auth/login`", async (t
 });
 
 async function loginAndProxy(t: Test) {
-  // doctest:L108
   const navResponse = await fetch(`${hubBase}/test1/browse/some-card`, { redirect: "manual" });
   t.check(navResponse.status, 302);
 
-  // doctest:L112
   t.check(navResponse.headers.get("location"), "/auth/login?returnTo=%2Ftest1%2Fbrowse%2Fsome-card");
 
   // ## A mobile bearer token proxies without a browser session
 
-  // doctest:L119
   const mobileResponse = await fetch(`${hubBase}/test1/chat?nativeComposer=1`, {
     headers: { authorization: `Bearer ${mobileToken}` },
   });
@@ -165,7 +162,6 @@ async function loginAndProxy(t: Test) {
   // checks it against that box's token file and proxies it with no identity
   // attached; the box child checks it again. A different token is a bare 401.
 
-  // doctest:L139
   const agentToken = getOrCreateAgentToken(mobileBox.root);
   const agentResponse = await fetch(`${hubBase}/test1/api/chat/ui/request`, {
     method: "POST",
@@ -203,7 +199,6 @@ async function bogusCredentials(t: Test) {
   // attacker learns nothing about which slugs are real, and pays no box-wake for
   // the guess.
 
-  // doctest:L171
   const trpcPath = "/api/trpc/health.check";
   const refused: Array<[string, string, Record<string, string>]> = [
     ["no credential, real slug", "test1", {}],
@@ -227,7 +222,6 @@ no credential, unknown slug → 401`);
   // A real `bbx_mobile` cookie does pass — this is the credential a WebSocket
   // upgrade carries, since the browser API cannot set headers on one.
 
-  // doctest:L198
   const mobileCookie = signMobileSession(mobileBox.root, {
     deviceId: mobileDeviceId,
     createdBy: null,
@@ -243,14 +237,12 @@ no credential, unknown slug → 401`);
 async function discovery(t: Test) {
   // ## A mobile bearer token can discover its paired box
 
-  // doctest:L213
   const boxesWithoutMobileAuth = await fetch(`${hubBase}/api/boxes`);
   t.check(await boxesWithoutMobileAuth.json(), {
     boxes: [],
     authRequired: true,
   });
 
-  // doctest:L217
   const boxesWithMobileAuth = await fetch(`${hubBase}/api/boxes`, {
     headers: { authorization: `Bearer ${mobileToken}` },
   });
@@ -271,7 +263,6 @@ async function discovery(t: Test) {
   // device bearer token. The hub should pass the request through without injecting a
   // browser identity.
 
-  // doctest:L232
   const pairingResponse = await fetch(`${hubBase}/test1/api/pairing/redeem`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -295,18 +286,16 @@ async function discovery(t: Test) {
 
   // ## A valid session cookie becomes `x-bbx-authenticated-email` on the proxied request
 
-  // doctest:L250
   const cookieValue = signSession({ email: "person@example.com", name: "Person" });
   const authedResponse = await fetch(`${hubBase}/test1/browse/some-card`, {
     headers: { cookie: `${COOKIE_NAME}=${cookieValue}` },
   });
   t.check(authedResponse.status, 200);
 
-  // doctest:L257
   const authedBody = BoxEcho.parse(await authedResponse.json());
   t.check({ email: authedBody.xBbxAuthenticatedEmail, secret: authedBody.xBbxHubSecret }, {
     email: "person@example.com",
-    secret: "test-hub-secret-for-auth-doctest",
+    secret: "test-hub-secret-for-auth-test",
   });
 
 }
@@ -320,36 +309,29 @@ async function healthzAndWebhooks(t: Test) {
   // gets a 401 from the gate, NOT a 302 to `/auth/login`. With the diag bearer key
   // it returns the verdict.
 
-  // doctest:L271
-  process.env.BBX_DIAG_API_KEY = "test-diag-key-for-auth-doctest";
+  process.env.BBX_DIAG_API_KEY = "test-diag-key-for-auth-test";
 
-  // doctest:L273
   const healthzNoKey = await fetch(`${hubBase}/healthz`, { redirect: "manual" });
   t.check(healthzNoKey.status, 401);
 
-  // doctest:L277
-  const healthzWithKey = await fetch(`${hubBase}/healthz`, { headers: { authorization: "Bearer test-diag-key-for-auth-doctest" } });
+  const healthzWithKey = await fetch(`${hubBase}/healthz`, { headers: { authorization: "Bearer test-diag-key-for-auth-test" } });
   t.check(healthzWithKey.status, 200);
 
-  // doctest:L281
   delete process.env.BBX_DIAG_API_KEY;
 
   // ## A webhook path proxies through with NO session required, and no email attached
 
-  // doctest:L287
   const webhookResponse = await fetch(`${hubBase}/webhook/test1/incoming`);
   const webhookBody = BoxEcho.parse(await webhookResponse.json());
   t.check(webhookResponse.status, 200);
 
-  // doctest:L292
   t.check({ email: webhookBody.xBbxAuthenticatedEmail, secret: webhookBody.xBbxHubSecret }, {
     email: null,
-    secret: "test-hub-secret-for-auth-doctest",
+    secret: "test-hub-secret-for-auth-test",
   });
 
   // ## An unauthenticated WebSocket upgrade is rejected with a raw 401 (no cookie fallback either)
 
-  // doctest:L299
   function rawUpgradeRequest({ port, path: reqPath, headers }: { port: number; path: string; headers?: Record<string, string> }): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       const socket = net.connect(port, "127.0.0.1", () => {
@@ -377,7 +359,6 @@ async function healthzAndWebhooks(t: Test) {
     });
   }
 
-  // doctest:L326
   const unauthedUpgrade = await rawUpgradeRequest({ port: portOf(hubServer), path: "/test1/ws" });
   t.check(unauthedUpgrade, "HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
 
@@ -390,17 +371,14 @@ async function revocation(t: Test) {
   // so a cookie minted before a password change (stale `gen`) is rejected at the hub —
   // `decideHubAuth` no longer trusts an HMAC-valid-but-revoked cookie.
 
-  // doctest:L338
   await createFirstUser({ email: "owner@example.com", name: "Owner", password: "pw-original" });
   resetLocalUserCache();
 
-  // doctest:L341
   // A cookie minted now carries the record's current gen (1) and proxies through.
   const genCookie = signSession({ email: "owner@example.com", name: "Owner" });
   const authedGen = await fetch(`${hubBase}/test1/browse/x`, { headers: { cookie: `${COOKIE_NAME}=${genCookie}` } });
   t.check(authedGen.status, 200);
 
-  // doctest:L347
   // Change the password → gen bumps to 2 → the old cookie is now revoked.
   await setPassword({ email: "owner@example.com", password: "pw-rotated" });
   resetLocalUserCache();
@@ -410,6 +388,5 @@ async function revocation(t: Test) {
   });
   t.check(revoked.status, 302);
 
-  // doctest:L357
   t.check(revoked.headers.get("location"), "/auth/login?returnTo=%2Ftest1%2Fbrowse%2Fx");
 }

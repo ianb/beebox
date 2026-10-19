@@ -7,8 +7,8 @@
 // in `runReactor` that consume it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { runOneCycle } from "../../../../src/core/reactor/engine/cycle.js";
 import type { RunCycleParams } from "../../../../src/core/reactor/engine/cycle.js";
 import { runReactor } from "../../../../src/core/reactor/engine/core.js";
@@ -31,7 +31,7 @@ const intakeJob = (description: string, opts?: { priority?: "normal" | "low" }) 
   createIntakeJobTemplate({ description, items: [], ...(opts ?? {}) });
 
 // Base cycle params: fast fakes for the subprocess/doc stages (same rationale
-// as reactor-integration.doctest.md), no filters, sync off.
+// as test/core/reactor/engine.integration.test.ts), no filters, sync off.
 function cycleParams(boxRoot: string, agentFactory: RunCycleParams["agentFactory"]): RunCycleParams {
   return {
     boxRoot,
@@ -123,7 +123,6 @@ const engineOverrides = {
 
 // ## Discovery: no jobs → clean no-op cycle
 void test("Discovery: no jobs → clean no-op cycle", async (t) => {
-  // doctest:L126
   t.check(summary(await cycleOn({}, { skipLowPriority: false })), {
     success: true,
     jobsProcessed: 0,
@@ -138,7 +137,6 @@ void test("Discovery: no jobs → clean no-op cycle", async (t) => {
 //
 // The cycle reports them as remaining without invoking any agent.
 void test("An empty queue never reaches the agent factory.", async (t) => {
-  // doctest:L137
   t.check(summary(await cycleOn({ "later.intake.job.card": intakeJob("Low prio", { priority: "low" }) }, { skipLowPriority: true })), {
     success: true,
     jobsProcessed: 0,
@@ -161,7 +159,6 @@ void test("An empty queue never reaches the agent factory.", async (t) => {
 // an unstamped filename, whose age falls back to the mtime and so reads as
 // young; this one is dated 2020.
 void test("skipLowPriority buys \"an idle box doesn't spend an agent turn every tick on o...", async (t) => {
-  // doctest:L156
   const name = "2020-01-01T00-00-00-stale.intake.job.card";
   t.check(summary(await cycleOn({ [name]: intakeJob("Long overdue", { priority: "low" }) }, { skipLowPriority: true, act: finishing(name) })), {
     success: true,
@@ -184,7 +181,6 @@ void test("skipLowPriority buys \"an idle box doesn't spend an agent turn every 
 // days 01–05 went, 06 and 07 wait. The next cycle finds them overdue and takes
 // them.
 void test("A box coming out of a long wedge can hold months of deferred work, and every...", async (t) => {
-  // doctest:L175
   const listJobs = async (box: TmpBox) =>
     (await fs.readdir(path.join(box.root, jobsDir))).filter((f) => f !== ".gitkeep").toSorted();
   const { after, ...first } = await cycleOn(overdueBacklog(), {
@@ -218,7 +214,6 @@ void test("A box coming out of a long wedge can hold months of deferred work, an
 // low-priority cards must not push the normal job to a later wakeup. All eight
 // are offered, and the normal job is listed first.
 void test("The cap applies only to the deadline path.", async (t) => {
-  // doctest:L198
   const normal = "2026-06-01T00-00-00-now.intake.job.card";
   const { prompts, ...mixed } = await cycleOn(
     { ...overdueBacklog(), [normal]: intakeJob("Real work") },
@@ -244,7 +239,6 @@ void test("The cap applies only to the deadline path.", async (t) => {
 // creates it `priority: normal` for exactly this reason: it must eventually
 // reach an agent even when it's the only job around.
 void test("The wakeup todo-review sweep (docs/implemented-plans/todo-annotation.md Track...", async (t) => {
-  // doctest:L226
   const review = "review.todo-review.job.card";
   const card = createTodoReviewJobTemplate({
     escalated: [],
@@ -266,7 +260,6 @@ void test("The wakeup todo-review sweep (docs/implemented-plans/todo-annotation.
 // job lands concurrently still credits 2 processed (the old subtraction would
 // have reported 1) and reports the newcomer as remaining.
 void test("The processed count is a set difference against the jobs the cycle set out to...", async (t) => {
-  // doctest:L244
   const consumeBoth = async ({ boxRoot }: { boxRoot: string }) => {
     await finishing("a.intake.job.card", "b.intake.job.card")({ boxRoot });
     // A connector delivers a new job mid-cycle.
@@ -299,21 +292,18 @@ void test("Five jobs, one finished per cycle, capped at 2 cycles:", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L263
   const box3 = await makeTmpBox({ git: true });
   for (const n of ["j1", "j2", "j3", "j4", "j5"]) {
     await box3.write(`${jobsDir}/${n}.intake.job.card`, intakeJob(`Job ${n}`));
   }
   box3.commitAll("add jobs");
 
-  // doctest:L269
   let cycles = 0;
   const onePerCycle = (opts: CreateAgentOptions) => {
     const n = ++cycles;
     return createFakeAgent({ name: opts.name, act: finishing(`j${n}.intake.job.card`) });
   };
 
-  // doctest:L275
   const capped = await runReactor({ boxRoot: box3.root, ...engineOverrides, createAgent: onePerCycle, maxCycles: 2 });
   t.check(({ processed: capped.jobsProcessed, remaining: capped.jobsRemaining, cycles }), {
     processed: 2,
@@ -326,7 +316,6 @@ void test("Five jobs, one finished per cycle, capped at 2 cycles:", async (t) =>
   // An agent that consumes nothing would loop forever; the engine breaks after one
   // zero-progress cycle instead of burning through `maxCycles`.
 
-  // doctest:L286
   cycles = 0;
   const stuckFactory = (opts: CreateAgentOptions) => {
     cycles += 1;

@@ -5,7 +5,7 @@
 // verification URL and short-lived user code.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeCodexCli } from "../../../../src/services/codex-cli/core.js";
 import { checkCodexAuth, resetCodexAuthCache } from "../../../../src/core/agent/auth-preflight.js";
@@ -21,7 +21,6 @@ void test("line 16", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L17
   const box = await makeTmpBox({ git: true });
   const codexCli = createFakeCodexCli({ status: { kind: "logged-out" } });
   const ctx: TrpcContext = trpcContext({
@@ -35,7 +34,6 @@ void test("line 16", async (t) => {
   // It does not make the account appear authenticated before Codex completes the
   // flow.
 
-  // doctest:L32
   const started = await admin.codexLogin();
   const status = await admin.codexStatus();
   t.check([started.verificationUrl, started.userCode, codexCli.loginPending, status.kind], [
@@ -47,11 +45,9 @@ void test("line 16", async (t) => {
 
   // Cancellation ends the pending ceremony, and logout clears authenticated state.
 
-  // doctest:L41
   await admin.codexCancelLogin();
   t.check(codexCli.loginPending, false);
 
-  // doctest:L45
   codexCli.status = { kind: "logged-in" };
   const loggedOut = await admin.codexLogout();
   const afterLogout = await admin.codexStatus();
@@ -64,7 +60,6 @@ void test("line 16", async (t) => {
   // after logout probes again and sees the logout instead of running on a stale
   // ten-minute success.
 
-  // doctest:L57
   resetCodexAuthCache();
   codexCli.status = { kind: "logged-in" };
   await checkCodexAuth({ codexCli });

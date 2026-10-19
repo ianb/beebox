@@ -8,8 +8,8 @@
 // file named by `BBX_CHAT_SESSION_ID_FILE`, and `resolveChatSessionId` reads it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import {
   BBX_CHAT_SESSION_ID_ENV,
   BBX_CHAT_SESSION_ID_FILE_ENV,
@@ -26,7 +26,6 @@ import * as fs from "node:fs";
 // `allocateSessionIdFilePath` returns a fresh path each call and touches no disk —
 // an unconsumed spawn leaves nothing behind:
 void test("allocateSessionIdFilePath returns a fresh path each call and touches no disk...", async (t) => {
-  // doctest:L29
   const a = allocateSessionIdFilePath();
   const b = allocateSessionIdFilePath();
   t.check(a, not(b));
@@ -42,12 +41,10 @@ void test("Write then read round-trips the id", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L41
   const p = allocateSessionIdFilePath();
   writeSessionIdFile(p, "sess-abc-123");
   t.check(readSessionIdFile(p), "sess-abc-123");
 
-  // doctest:L48
   // A later reassignment (id changed) overwrites in place.
   writeSessionIdFile(p, "sess-def-456");
   t.check(readSessionIdFile(p), "sess-def-456");
@@ -55,12 +52,10 @@ void test("Write then read round-trips the id", async (t) => {
 
 // ## Reading an absent or empty file yields null
 void test("Reading an absent or empty file yields null", async (t) => {
-  // doctest:L61
   t.check(readSessionIdFile(allocateSessionIdFilePath()), null);
 });
 
 void test("Reading an absent or empty file yields null (line 65)", async (t) => {
-  // doctest:L66
   const p = allocateSessionIdFilePath();
   fs.writeFileSync(p, "   \n");
   const r = readSessionIdFile(p);
@@ -73,7 +68,6 @@ void test("Reading an absent or empty file yields null (line 65)", async (t) => 
 // Cleanup deletes the file; a second cleanup, on a path that no longer exists,
 // does nothing and creates nothing:
 void test("Cleanup deletes the file; a second cleanup, on a path that no longer exists,...", async (t) => {
-  // doctest:L80
   const p = allocateSessionIdFilePath();
   writeSessionIdFile(p, "to-remove");
   const before = fs.existsSync(p);
@@ -91,7 +85,6 @@ void test("Cleanup deletes the file; a second cleanup, on a path that no longer 
 //
 // `BBX_CHAT_SESSION_ID` (a resume) wins with no file read and no wait:
 void test("BBXCHATSESSIONID (a resume) wins with no file read and no wait:", async (t) => {
-  // doctest:L95
   const savedId = process.env[BBX_CHAT_SESSION_ID_ENV];
   process.env[BBX_CHAT_SESSION_ID_ENV] = "resumed-777";
   const id = await resolveChatSessionId();
@@ -102,7 +95,6 @@ void test("BBXCHATSESSIONID (a resume) wins with no file read and no wait:", asy
 
 // ## resolveChatSessionId falls back to the file when no direct env var
 void test("resolveChatSessionId falls back to the file when no direct env var", async (t) => {
-  // doctest:L108
   const p = allocateSessionIdFilePath();
   writeSessionIdFile(p, "new-sess-999");
   const savedId = process.env[BBX_CHAT_SESSION_ID_ENV];
@@ -122,7 +114,6 @@ void test("resolveChatSessionId falls back to the file when no direct env var", 
 // With the file path set but never written, a short `waitMs` elapses and the
 // command degrades to "no session" rather than hanging:
 void test("With the file path set but never written, a short waitMs elapses and the comm...", async (t) => {
-  // doctest:L129
   const p = allocateSessionIdFilePath();
   const savedId = process.env[BBX_CHAT_SESSION_ID_ENV];
   const savedFile = process.env[BBX_CHAT_SESSION_ID_FILE_ENV];
@@ -139,7 +130,6 @@ void test("With the file path set but never written, a short waitMs elapses and 
 
 // ## resolveChatSessionId returns null with no session context at all
 void test("resolveChatSessionId returns null with no session context at all", async (t) => {
-  // doctest:L150
   const savedId = process.env[BBX_CHAT_SESSION_ID_ENV];
   const savedFile = process.env[BBX_CHAT_SESSION_ID_FILE_ENV];
   delete process.env[BBX_CHAT_SESSION_ID_ENV];

@@ -7,7 +7,7 @@
 // modes — no disclosure appears.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BrowseSidebarList } from "../../../../../src/pages/browse/components/BrowseSidebarBody/BrowseSidebarList.js";
@@ -50,7 +50,6 @@ function renderList(data: BrowseData, mode: "compact" | "raw"): string {
 
 // ## Compact: the entry-point card and the primary-carrying directory lead, with its landmark identity; everything else folds behind "4 more"
 void test("Compact: the entry-point card and the primary-carrying directory lead, with its landmark identity; everything else folds behind \"4 more\"", async (t) => {
-  // doctest:L54
   const compact = renderList(mixedData, "compact");
   t.check(
     [
@@ -68,7 +67,6 @@ void test("Compact: the entry-point card and the primary-carrying directory lead
 
 // ## Raw: every item renders flat, prominence ignored, no disclosure
 void test("Raw: every item renders flat, prominence ignored, no disclosure", async (t) => {
-  // doctest:L70
   const raw = renderList(mixedData, "raw");
   t.check(
     [
@@ -86,7 +84,6 @@ void test("Raw: every item renders flat, prominence ignored, no disclosure", asy
 
 // ## Nothing prominent: compact renders identically to raw, no disclosure
 void test("Nothing prominent: compact renders identically to raw, no disclosure", async (t) => {
-  // doctest:L86
   const plainData: BrowseData = {
     path: "",
     background: false,

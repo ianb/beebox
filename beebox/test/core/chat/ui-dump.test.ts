@@ -8,13 +8,13 @@
 // the closing instruction that teaches it how to use them.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { formatUiDump } from "../../../src/core/chat/ui-dump.js";
 import type { UiScanEntry, UiScanPayload } from "../../../src/shared/ui-scan/core.js";
 
 // The dump prints the scan time in the reader's own timezone ("14:32 local"),
-// so the doctest fixes the zone rather than the expectation. Node re-reads
+// so the test fixes the zone rather than the expectation. Node re-reads
 // process.env.TZ on each Date operation.
 process.env.TZ = "UTC";
 
@@ -59,7 +59,6 @@ function withoutInstruction(text: string): string {
 // annotated disclosure trigger with a `— does` line the scan cannot infer, a
 // disabled Send, an off-screen row, and the counted omissions.
 void test("The realistic case:", async (t) => {
-  // doctest:L62
   const chat = payload({
     omittedUnnamed: 3,
     omittedUnknownRole: 1,
@@ -131,7 +130,6 @@ it; describe that one in words too.`);
 // "this surface has no such controls", which is the failure this feature exists
 // to avoid — so the sentence names them.
 void test("Inside the native shell the composer, mic, capture and box switcher are nativ...", async (t) => {
-  // doctest:L136
   await t.checkText(withoutInstruction(formatUiDump(payload({ coverage: "dom-native-unavailable", channel: "ios-native" }))), `UI on screen — ios-native, /main/test1/chat, scanned 14:32 local
 Covers: browser DOM only — the native app did not answer. The composer,
 the mic, capture and the box switcher are native controls on this surface
@@ -147,7 +145,6 @@ No controls were found on screen — the page may still be loading.`);
 // which no pointer can detect at click time — so the dump names it, and a
 // truncated list says it is short.
 void test("A duplicated bbx- id resolves to whichever element comes first in the documen...", async (t) => {
-  // doctest:L154
   await t.checkText(
     withoutInstruction(
       formatUiDump(
@@ -175,7 +172,6 @@ button [Send](control:bbx-composer-send)`,
 // user can actually reach — off-screen loses; if both are on screen, the channel
 // decides.
 void test("Track 4a could not unify the desktop and mobile composer rows, so the mobile...", async (t) => {
-  // doctest:L181
   const bothRows = [
     entry({ role: "textbox", name: "Type a message...", id: "bbx-composer-input" }),
     entry({ role: "textbox", name: "Type a message...", id: "bbx-composer-input-mobile" }),
@@ -193,7 +189,6 @@ void test("Track 4a could not unify the desktop and mobile composer rows, so the
   // An off-screen row loses regardless of the channel — that is the case where the
   // layout has already made the decision:
 
-  // doctest:L201
   const offscreenDesktop = [
     entry({ role: "textbox", name: "Type a message...", id: "bbx-composer-input", offscreen: true }),
     entry({ role: "textbox", name: "Type a message...", id: "bbx-composer-input-mobile" }),
@@ -213,7 +208,6 @@ void test("Track 4a could not unify the desktop and mobile composer rows, so the
 // `control:` links a DOM control does — the composer's text field takes a `focus`,
 // the Add button is marked `[reveal]`, and the mic takes neither.
 void test("On the phone the shell answers with its own registry, and those entries are g...", async (t) => {
-  // doctest:L220
   const nativeEntries: UiScanEntry[] = [
     entry({ kind: "landmark", role: "native", name: "Composer", actions: [] }),
     entry({
@@ -261,7 +255,6 @@ native "Composer"
 // An installed shell too old to act on anything reports no actions at all, and the
 // dump refuses to hand out a link it knows would break on click.
 void test("An installed shell too old to act on anything reports no actions at all, and...", async (t) => {
-  // doctest:L267
   await t.checkText(
     withoutInstruction(formatUiDump(payload({
       entries: [

@@ -15,7 +15,7 @@
 // that evening.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { resolveSessionLabel } from "../../../../../src/core/chat/session/list/label.js";
@@ -62,14 +62,12 @@ function codexLabel(preview: string | undefined, title?: string) {
 // The preview the app-server reports is the thread's verbatim first user message —
 // envelope and all — so it goes through the same stripping a transcript scan does.
 void test("The preview the app-server reports is the thread's verbatim first user messag...", async (t) => {
-  // doctest:L66
   t.check(await codexLabel(firstMessage("Hey, welcome to my little story place!")), "“Hey, welcome to my little story place!”");
 });
 
 // Voice sends carry their own wrappers, including the keyword marker that ended
 // the utterance. Those come off too.
 void test("Voice sends carry their own wrappers, including the keyword marker that ended...", async (t) => {
-  // doctest:L74
   t.check(
     await codexLabel(
       '<chat-app narration="off" prose="on" local-time="Friday 2026-08-14 23:14 CDT (late night)"/>\n' +
@@ -85,7 +83,6 @@ void test("Voice sends carry their own wrappers, including the keyword marker th
 // A husk title still wins — the nightly chat review's name for a chat beats any
 // first message.
 void test("A husk title still wins — the nightly chat review's name for a chat beats any...", async (t) => {
-  // doctest:L88
   t.check(await codexLabel(firstMessage("could you look at the rent thing"), "Chasing down a duplicate charge"), "Chasing down a duplicate charge");
 
   // A Codex thread whose metadata never reached us, or whose first message is
@@ -93,10 +90,8 @@ void test("A husk title still wins — the nightly chat review's name for a chat
   // Unlike the transcript reader, there's no second message to fall through to —
   // `preview` is only the first — so this is where a Codex label stops looking.
 
-  // doctest:L98
   t.check(await codexLabel(undefined), "01a0023e");
 
-  // doctest:L103
   t.check(await codexLabel('<chat-app narration="off" prose="on"/>'), "01a0023e");
 
   // The engine picks the source and nothing else. `labelSource` is that pick, and
@@ -104,7 +99,6 @@ void test("A husk title still wins — the nightly chat review's name for a chat
   // whichever branch a ternary happened to fall through to — which is how Codex
   // came to skip the cleaning in the first place.
 
-  // doctest:L113
   t.check(
     [
       labelSource(entry("codex", { preview: "hi" })),
@@ -132,7 +126,6 @@ void test("A Claude chat reaches the same answers through its transcript.", asyn
       t.error(error);
     }
   });
-  // doctest:L123
   const box = await makeTmpBox();
   const logPath = box.path("log.jsonl");
   await mkdir(dirname(logPath), { recursive: true });
@@ -142,7 +135,6 @@ void test("A Claude chat reaches the same answers through its transcript.", asyn
     message: { role: "user", content: [{ type: "text", text: firstMessage("what's on my calendar tomorrow") }] },
   }) + "\n");
 
-  // doctest:L132
   t.check(
     await resolveSessionLabel({
       sessionId: "claude01-9c1f",
@@ -156,7 +148,6 @@ void test("A Claude chat reaches the same answers through its transcript.", asyn
   // falls back rather than failing the whole enumeration. (Expect the warning below;
   // that's the fixture.)
 
-  // doctest:L145
   t.check(
     await resolveSessionLabel({
       sessionId: "claude01-9c1f",

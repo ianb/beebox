@@ -8,7 +8,7 @@
 // failure path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   recognizeEngineUnavailability,
   describeEngineUnavailability,
@@ -29,7 +29,6 @@ const NOW = new Date(2026, 7, 18, 12, 0);
 // The embedded reset time ("Aug 19th, 2026 11:34 PM") has no timezone — it is
 // interpreted as box-local wall clock.
 void test("The embedded reset time (\"Aug 19th, 2026 11:34 PM\") has no timezone — it is i...", async (t) => {
-  // doctest:L33
   const hit = recognizeEngineUnavailability({ provider: "codex", message: CODEX_QUOTA_MESSAGE, now: NOW });
   t.check(hit, {
     provider: "codex",
@@ -44,20 +43,16 @@ void test("The embedded reset time (\"Aug 19th, 2026 11:34 PM\") has no timezone
   // procedure output. It names the cause, the scope, and the reset time, and keeps
   // the provider's verbatim message.
 
-  // doctest:L49
   const description = describeEngineUnavailability(hit!);
   t.check(description, `Codex is out of usage quota until Aug 19, 11:34 PM (account-level: affects every box and task using this Codex account). Provider message: ${CODEX_QUOTA_MESSAGE}`);
 });
 
 // ## Unrecognized failures stay ordinary failures
 void test("Unrecognized failures stay ordinary failures", async (t) => {
-  // doctest:L63
   t.check(recognizeEngineUnavailability({ provider: "codex", message: "Codex Exec exited with code 1: Reading prompt from stdin...", now: new Date() }), null);
 
-  // doctest:L66
   t.check(recognizeEngineUnavailability({ provider: "codex", message: null, now: new Date() }), null);
 
-  // doctest:L69
   t.check(recognizeEngineUnavailability({ provider: "claude", message: "result.is_error was true", now: new Date() }), null);
 });
 
@@ -66,7 +61,6 @@ void test("Unrecognized failures stay ordinary failures", async (t) => {
 // Format drift in the provider's date degrades to hourly retries — never an
 // unbounded park, never a hard error.
 void test("Format drift in the provider's date degrades to hourly retries — never an unb...", async (t) => {
-  // doctest:L79
   const NOW2 = new Date(2026, 7, 18, 12, 0);
   const drifted = recognizeEngineUnavailability({
     provider: "codex",
@@ -88,7 +82,6 @@ void test("Format drift in the provider's date degrades to hourly retries — ne
 // A reset in the past or more than 7 days out is treated as a misparse (a wrong
 // year or inverted AM/PM must not invert the meaning).
 void test("A reset in the past or more than 7 days out is treated as a misparse (a wrong...", async (t) => {
-  // doctest:L98
   const NOW3 = new Date(2026, 7, 18, 12, 0);
   const past = recognizeEngineUnavailability({
     provider: "codex",
@@ -104,7 +97,6 @@ void test("A reset in the past or more than 7 days out is treated as a misparse 
     message: "You've hit your usage limit. Please try again at Aug 17th, 2026 11:34 PM.",
   });
 
-  // doctest:L107
   const farOut = recognizeEngineUnavailability({
     provider: "codex",
     message: "You've hit your usage limit. Please try again at Sep 19th, 2026 11:34 PM.",
@@ -125,7 +117,6 @@ void test("A reset in the past or more than 7 days out is treated as a misparse 
 // Claude Code's known surface embeds a unix epoch: `usage limit reached|<secs>`.
 // The bare phrase without an epoch falls back to the hold.
 void test("Claude Code's known surface embeds a unix epoch:", async (t) => {
-  // doctest:L122
   const NOW4 = new Date(2026, 7, 18, 12, 0);
   const epochSecs = Math.floor(new Date(2026, 7, 19, 3, 0).getTime() / 1000);
   const claudeEpoch = recognizeEngineUnavailability({
@@ -142,7 +133,6 @@ void test("Claude Code's known surface embeds a unix epoch:", async (t) => {
     message: `Claude AI usage limit reached|${epochSecs}`,
   });
 
-  // doctest:L135
   const claudeBare = recognizeEngineUnavailability({
     provider: "claude",
     message: "Claude AI usage limit reached — upgrade to continue",

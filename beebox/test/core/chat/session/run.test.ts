@@ -4,8 +4,8 @@
 // reset, and history loading. These tests don't spawn a real Claude process.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf } from "@ianbicking/tap-check/check";
 import { ChatSession, buildContentBlocks } from "../../../../src/core/chat/session/run/core.js";
 import { chatHistorySlice } from "../../../../src/core/chat/session/load-history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
@@ -24,7 +24,6 @@ void test("A new ChatSession on an empty box has no session and is idle:", async
       t.error(error);
     }
   });
-  // doctest:L20
   const box = await makeTmpBox();
   const session = new ChatSession(box.root);
   t.check(
@@ -44,7 +43,6 @@ void test("Writing a session file before constructing ChatSession loads it:", as
       t.error(error);
     }
   });
-  // doctest:L40
   const box = await makeTmpBox();
   const dir = path.join(box.root, ".beebox");
   await fs.mkdir(dir, { recursive: true });
@@ -67,7 +65,6 @@ void test("Invalid JSON in the session file is handled gracefully:", async (t) =
       t.error(error);
     }
   });
-  // doctest:L61
   const box = await makeTmpBox();
   const dir = path.join(box.root, ".beebox");
   await fs.mkdir(dir, { recursive: true });
@@ -87,7 +84,6 @@ void test("Reset deletes the session file and clears the in-memory session ID:",
       t.error(error);
     }
   });
-  // doctest:L79
   const box = await makeTmpBox();
   const dir = path.join(box.root, ".beebox");
   await fs.mkdir(dir, { recursive: true });
@@ -98,11 +94,9 @@ void test("Reset deletes the session file and clears the in-memory session ID:",
   const session = new ChatSession(box.root);
   t.check(session.getSessionId(), "to-reset");
 
-  // doctest:L90
   session.resetSession();
   t.check(session.getSessionId(), null);
 
-  // doctest:L94
   const exists = await fs.access(path.join(dir, "chat-session-id.json")).then(() => true, () => false);
   t.check(exists, false);
 });
@@ -118,7 +112,6 @@ void test("Reset on a session with no file doesn't throw:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L108
   const box = await makeTmpBox();
   const session = new ChatSession(box.root);
   session.resetSession();
@@ -136,7 +129,6 @@ void test("With no session ID, getHistory returns empty:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L124
   const box = await makeTmpBox();
   const session = new ChatSession(box.root);
   const history = await session.getHistory(chatHistorySlice());
@@ -154,7 +146,6 @@ void test("With a session ID but no actual log file on disk, returns empty entri
       t.error(error);
     }
   });
-  // doctest:L143
   const box = await makeTmpBox();
   const dir = path.join(box.root, ".beebox");
   await fs.mkdir(dir, { recursive: true });
@@ -185,7 +176,6 @@ void test("A read error is NOT an empty transcript.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L173
   const box = await makeTmpBox();
   const previousProjects = process.env["BBX_CLAUDE_PROJECTS_DIR"];
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = path.join(box.root, "claude-projects");
@@ -198,7 +188,6 @@ void test("A read error is NOT an empty transcript.", async (t) => {
   await fs.mkdir(getSessionLogPath(box.root, "unreadable-session"), { recursive: true });
   const session = new ChatSession(box.root);
 
-  // doctest:L185
   let thrown = null;
   try {
     await session.getHistory(chatHistorySlice());
@@ -219,7 +208,6 @@ void test("A read error is NOT an empty transcript.", async (t) => {
 //
 // With no images, the helper returns a single text block unchanged:
 void test("With no images, the helper returns a single text block unchanged:", async (t) => {
-  // doctest:L209
   t.check(buildContentBlocks({ text: "hello world" }), [
     {
       type: "text",
@@ -233,7 +221,6 @@ void test("With no images, the helper returns a single text block unchanged:", a
 // An `[image#N]` token in the text is replaced with the matching image block,
 // and the surrounding text is split into separate blocks:
 void test("An [image#N] token in the text is replaced with the matching image block, and...", async (t) => {
-  // doctest:L219
   const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "AAAA" }];
   const blocks = buildContentBlocks({ text: "before [image#1] after", images: imgs });
   t.check(blocks, [
@@ -260,7 +247,6 @@ void test("An [image#N] token in the text is replaced with the matching image bl
 //
 // Images without a matching `[image#N]` token get appended after the text:
 void test("Images without a matching [image#N] token get appended after the text:", async (t) => {
-  // doctest:L230
   const imgs = [{ id: 1, mimeType: "image/jpeg", dataBase64: "QQ==" }];
   const blocks = buildContentBlocks({ text: "no token here", images: imgs });
   t.check(blocks, [
@@ -274,7 +260,6 @@ void test("Images without a matching [image#N] token get appended after the text
 // A `[image#9]` token with no matching attachment stays as literal text
 // (rather than being silently dropped):
 void test("A [image#9] token with no matching attachment stays as literal text (rather t...", async (t) => {
-  // doctest:L242
   const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "X" }];
   const blocks = buildContentBlocks({ text: "[image#9] is orphan [image#1] real", images: imgs });
   t.check(blocks, [
@@ -304,7 +289,6 @@ void test("A [image#9] token with no matching attachment stays as literal text (
 // every transcript written before then looks like this, and replaying one has to
 // land the photos in the same places it always did.
 void test("Two different images resolve to different blocks at their respective token po...", async (t) => {
-  // doctest:L256
   const imgs = [
     { id: 1, mimeType: "image/png", dataBase64: "ONE" },
     { id: 2, mimeType: "image/png", dataBase64: "TWO" },
@@ -327,7 +311,6 @@ void test("Two different images resolve to different blocks at their respective 
 // block; the line stays text, so the agent reads the path right after the
 // pixels.
 void test("An inline image whose original was uploaded is listed in the trailing <attach...", async (t) => {
-  // doctest:L275
   const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "PX" }];
   const text = "<typed>why is this wrong? [image#1]</typed>\n<attachments>\n[image#1]: _tmp/2026-09-16T10-00-00.000Z_shot.png\n</attachments>";
   const blocks = buildContentBlocks({ text, images: imgs });
@@ -347,7 +330,6 @@ void test("An inline image whose original was uploaded is listed in the trailing
 // An image referenced ONLY in the block (its body token was edited out) is still
 // appended as a block, exactly as an unreferenced image always was:
 void test("An image referenced ONLY in the block (its body token was edited out) is stil...", async (t) => {
-  // doctest:L286
   const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "PX" }];
   const text = "<typed>edited out</typed>\n<attachments>\n[image#1]: _tmp/x.png\n</attachments>";
   t.check(buildContentBlocks({ text, images: imgs }), [

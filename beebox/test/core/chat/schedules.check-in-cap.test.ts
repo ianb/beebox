@@ -8,7 +8,7 @@
 // disk, so a save failure undoes it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { ChatScheduleManager, parseScheduleTags } from "../../../src/core/chat/schedules/core.js";

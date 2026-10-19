@@ -4,7 +4,7 @@
 // source file) that produces each target.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, mkdir, writeFile, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -84,7 +84,6 @@ const surfaces = scanPublicSurfaces({ repoRoot, packageRoot: "pkg", buildEntries
 // A build entry (`build({ entryPoints, outfile })` in any module of the
 // package, not only `scripts/*.ts`) gives the source for its target.
 void test("A build entry (build({ entryPoints, outfile }) in any module of the package,...", async (t) => {
-  // doctest:L88
   t.check(surfaces.find((s) => s.specifier === "./cards"), {
     specifier: "./cards",
     target: "pkg/dist/cards/index.js",
@@ -95,7 +94,6 @@ void test("A build entry (build({ entryPoints, outfile }) in any module of the p
 // No build entry for `./schema`: it falls back to `<pkg>/src/exports/schema.ts`,
 // which exists.
 void test("No build entry for ./schema:", async (t) => {
-  // doctest:L96
   t.check(surfaces.find((s) => s.specifier === "./schema"), {
     specifier: "./schema",
     target: "pkg/dist/exports/schema.js",
@@ -106,7 +104,6 @@ void test("No build entry for ./schema:", async (t) => {
 // No build entry and no fallback file: `source` is null. A string `exports`
 // value is used directly.
 void test("No build entry and no fallback file:", async (t) => {
-  // doctest:L104
   t.check(surfaces.find((s) => s.specifier === "./server"), {
     specifier: "./server",
     target: "pkg/dist/exports/server.js",
@@ -117,14 +114,12 @@ void test("No build entry and no fallback file:", async (t) => {
 // An object with no `default` prefers `import`; one with neither takes the
 // first string value.
 void test("An object with no default prefers import; one with neither takes the first st...", async (t) => {
-  // doctest:L112
   t.check(surfaces.find((s) => s.specifier === "./widgets"), {
     specifier: "./widgets",
     target: "pkg/dist/widgets/index.js",
     source: null,
   });
 
-  // doctest:L115
   t.check(surfaces.find((s) => s.specifier === "./other"), {
     specifier: "./other",
     target: "pkg/dist/other/index.js",
@@ -134,7 +129,6 @@ void test("An object with no default prefers import; one with neither takes the 
 
 // A non-JS target's `source` is the target itself.
 void test("A non-JS target's source is the target itself.", async (t) => {
-  // doctest:L122
   t.check(surfaces.find((s) => s.specifier === "./tsconfig.base.json"), {
     specifier: "./tsconfig.base.json",
     target: "pkg/tsconfig.base.json",
@@ -148,7 +142,6 @@ void test("A non-JS target's source is the target itself.", async (t) => {
 // for every `view.tsx`. Each expansion carries the pattern it came from, and a
 // directory without the named module (`docs-only`) is no surface.
 void test("./plugins/ stands for every src/plugins/<name>/plugin.ts; ./plugins//view for...", async (t) => {
-  // doctest:L133
   t.check(surfaces.filter((s) => s.pattern !== undefined).map((s) => `${s.pattern} ${s.specifier} ${s.target} ${s.source}`), [
     "./plugins/* ./plugins/alpha pkg/dist/plugins/alpha/plugin.js pkg/src/plugins/alpha/plugin.ts",
     "./plugins/* ./plugins/beta pkg/dist/plugins/beta/plugin.js pkg/src/plugins/beta/plugin.ts",
@@ -172,11 +165,9 @@ void test("No `package.json`", async (t) => {
 // build entry itself — a plain recursive walk of each ancestor package, not
 // just its `scripts/` directory.
 void test("A nested package (pkg/nested) has no exports of its own; its enclosing chain...", async (t) => {
-  // doctest:L161
   await write("pkg/nested/package.json", JSON.stringify({ name: "nested" }));
   await write("package.json", JSON.stringify({ exports: { "./root-thing": "./dist/root-thing.js" } }));
 
-  // doctest:L164
   const enclosing = scanEnclosingSurfaces({ repoRoot, packageRoot: "pkg/nested" });
   t.check(enclosing.map((s) => s.specifier), [
     "./cards",
@@ -191,7 +182,6 @@ void test("A nested package (pkg/nested) has no exports of its own; its enclosin
     "./root-thing",
   ]);
 
-  // doctest:L168
   t.check(enclosing.find((s) => s.specifier === "./cards")?.source, "pkg/src/cards/index.ts");
 });
 
@@ -204,7 +194,6 @@ void test("Scanning pkg itself only walks to the repo root.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L175
   t.check(scanEnclosingSurfaces({ repoRoot, packageRoot: "pkg" }).map((s) => s.specifier), [
     "./root-thing",
   ]);

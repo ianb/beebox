@@ -11,7 +11,7 @@
 // `nginx` on the PATH (`brew install nginx` on macOS).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { createServer } from "node:http";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -60,7 +60,6 @@ void test("line 53", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L54
   const root = await mkdtemp(join(tmpdir(), "bbx-nginx-"));
   const pageDir = join(root, "run");
   await mkdir(join(root, "logs"), { recursive: true });
@@ -87,35 +86,29 @@ void test("line 53", async (t) => {
 
   // With the hub down and no deploy page, a visitor gets the plain 502.
 
-  // doctest:L80
   const outage = await get(port);
   t.check([outage.status, outage.body.includes("502 Bad Gateway"), String(outage.deploy)].join(" "), "502 true null");
 
   // With the page in place, every method gets a 503 carrying the page, marked
   // uncacheable, with the header the open page polls for.
 
-  // doctest:L89
   await writeFile(join(pageDir, "deploy-in-progress.html"), "<h1>This site is updating</h1>");
   const during = await get(port);
   t.check([during.status, during.body, during.cache, during.retryAfter, during.deploy].join(" | "), "503 | <h1>This site is updating</h1> | no-store | 30 | in-progress");
 
-  // doctest:L94
   const posted = await get(port, { method: "POST", body: "{}" });
   t.check([posted.status, posted.body].join(" "), "503 <h1>This site is updating</h1>");
 
-  // doctest:L98
   const head = await get(port, { method: "HEAD" });
   t.check([head.status, head.deploy].join(" "), "503 in-progress");
 
   // The page's internal address is not reachable from outside.
 
-  // doctest:L106
   t.check((await get(port, { path: "/__bbx_deploy_in_progress.html" })).status, 404);
 
   // Once the hub listens, its own answers pass through, including its own 503,
   // even while a page file exists.
 
-  // doctest:L114
   await new Promise<void>((done) => upstream.listen(upstreamPort, "127.0.0.1", done));
   const hub503 = await get(port);
   await t.checkText([hub503.status, hub503.body, String(hub503.deploy)].join(" "), "503 {\"error\":\"box_unavailable\"} null");

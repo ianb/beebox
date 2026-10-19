@@ -5,8 +5,8 @@
 // cookie, and consumes the token exactly once.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, not, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, not, str } from "@ianbicking/tap-check/check";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -63,7 +63,6 @@ void test("A pinned invite creates a member and grants only its target box", asy
       t.error(error);
     }
   });
-  // doctest:L34
   const authDir = await mkdtemp(join(tmpdir(), "bbx-invite-route-"));
   process.env.BBX_AUTH_FILE = join(authDir, "auth.json");
   process.env.BBX_OWNER_EMAIL = "Owner@Example.COM";
@@ -74,7 +73,6 @@ void test("A pinned invite creates a member and grants only its target box", asy
     email: "Member@Example.COM",
   });
 
-  // doctest:L44
   const page = await ctx.server.inject({ method: "GET", url: `/auth/invite?token=${minted.token}` });
   t.check({ status: page.statusCode, noStore: page.headers["cache-control"], referrer: page.headers["referrer-policy"], pinned: page.payload.includes("member@example.com") }, {
     status: 200,
@@ -86,7 +84,6 @@ void test("A pinned invite creates a member and grants only its target box", asy
   // Wrong content types are rejected immediately, before reading or throttling the
   // public form body.
 
-  // doctest:L53
   const wrongType = await ctx.server.inject({
     method: "POST",
     url: "/auth/invite",
@@ -98,7 +95,6 @@ void test("A pinned invite creates a member and grants only its target box", asy
   // A confirmation typo preserves the live token and pinned identity, so correcting
   // the form can still accept the same invitation.
 
-  // doctest:L67
   const mismatch = await ctx.server.inject(inviteForm({
     token: minted.token,
     name: "Member",
@@ -115,7 +111,6 @@ void test("A pinned invite creates a member and grants only its target box", asy
   // before consuming the capability. Restoring the owner configuration makes the
   // same link usable again.
 
-  // doctest:L82
   delete process.env.BBX_OWNER_EMAIL;
   const missingOwner = await ctx.server.inject(inviteForm({
     token: minted.token,
@@ -125,10 +120,8 @@ void test("A pinned invite creates a member and grants only its target box", asy
   }));
   t.check({ status: missingOwner.statusCode, payload: missingOwner.payload }, { status: 503, payload: UNAVAILABLE_PAGE });
 
-  // doctest:L92
   process.env.BBX_OWNER_EMAIL = "Owner@Example.COM";
 
-  // doctest:L96
   const accepted = await ctx.server.inject(inviteForm({
     token: minted.token,
     email: "attacker-change@example.com",
@@ -142,15 +135,12 @@ void test("A pinned invite creates a member and grants only its target box", asy
     cookie: true,
   });
 
-  // doctest:L106
   t.check(listUsers(), [storedUser({ email: "member@example.com", name: "Member", role: "member" })]);
 
-  // doctest:L109
   t.check(JSON.parse(await ctx.read("_config/box.json")), { allowedEmails: ["member@example.com"] });
 
   // Replay has the same dead-link response as an expired or unknown token.
 
-  // doctest:L116
   const originalReplayWarn = console.warn;
   const replayWarnings: unknown[][] = [];
   console.warn = (...args: unknown[]) => replayWarnings.push(args);
@@ -172,7 +162,6 @@ void test("A pinned invite creates a member and grants only its target box", asy
 
   // Malformed open-invite email input does not consume the bearer capability.
 
-  // doctest:L133
   loginThrottle.reset();
   const retryableInvite = await mintAuthInvite({ boxRoot: ctx.boxRoot, createdBy: "owner@example.com" });
   const badEmail = await ctx.server.inject(inviteForm({
@@ -199,7 +188,6 @@ void test("A pinned invite creates a member and grants only its target box", asy
   // closed without leaking the store path or burning through Fastify's default
   // error response.
 
-  // doctest:L158
   const authFailureInvite = await mintAuthInvite({ boxRoot: ctx.boxRoot, createdBy: "owner@example.com" });
   await writeFile(process.env.BBX_AUTH_FILE, "not json", { mode: 0o600 });
   loginThrottle.reset();
@@ -230,12 +218,10 @@ void test("A pinned invite creates a member and grants only its target box", asy
   // A corrupt capability store fails closed with an unavailable response rather
   // than exposing a generic server error or treating the token as valid.
 
-  // doctest:L185
   await writeFile(`${process.env.BBX_AUTH_FILE}.invites.json`, "not json", { mode: 0o600 });
   const corruptStore = await ctx.server.inject({ method: "GET", url: `/auth/invite?token=${minted.token}` });
   t.check({ status: corruptStore.statusCode, payload: corruptStore.payload }, { status: 503, payload: UNAVAILABLE_PAGE });
 
-  // doctest:L192
   loginThrottle.reset();
   const corruptPost = await ctx.server.inject(inviteForm({
     token: minted.token,
@@ -261,7 +247,6 @@ void test("A box-config failure leaves an explicit, signed-out partial account",
       t.error(error);
     }
   });
-  // doctest:L218
   const partialAuthDir = await mkdtemp(join(tmpdir(), "bbx-invite-partial-"));
   process.env.BBX_AUTH_FILE = join(partialAuthDir, "auth.json");
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
@@ -325,7 +310,6 @@ void test("Open invites cannot claim an owner or an already-authorized identity"
       t.error(error);
     }
   });
-  // doctest:L260
   const authDir2 = await mkdtemp(join(tmpdir(), "bbx-invite-collision-"));
   process.env.BBX_AUTH_FILE = join(authDir2, "auth.json");
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
@@ -334,7 +318,6 @@ void test("Open invites cannot claim an owner or an already-authorized identity"
   await ctx2.seed("_config/box.json", JSON.stringify({ allowedEmails: ["GoogleOnly@Example.COM"] }));
   const openOwner = await mintAuthInvite({ boxRoot: ctx2.boxRoot, createdBy: "owner@example.com" });
 
-  // doctest:L268
   const originalCollisionWarn = console.warn;
   const collisionWarnings: unknown[][] = [];
   console.warn = (...args: unknown[]) => collisionWarnings.push(args);
@@ -354,7 +337,6 @@ void test("Open invites cannot claim an owner or an already-authorized identity"
   // The collision burns the capability, so it cannot be reused to probe another
   // address or claim a valid one.
 
-  // doctest:L287
   loginThrottle.reset();
   const originalReuseWarn = console.warn;
   console.warn = () => {};
@@ -371,7 +353,6 @@ void test("Open invites cannot claim an owner or an already-authorized identity"
   // A separate capability rejects an already-authorized identity with the same
   // dead-link response and is likewise consumed.
 
-  // doctest:L306
   loginThrottle.reset();
   const openAllowlisted = await mintAuthInvite({ boxRoot: ctx2.boxRoot, createdBy: "owner@example.com" });
   const originalAllowlistedWarn = console.warn;
@@ -386,6 +367,5 @@ void test("Open invites cannot claim an owner or an already-authorized identity"
   console.warn = originalAllowlistedWarn;
   t.check({ status: allowlistedClaim.statusCode, payload: allowlistedClaim.payload }, { status: 410, payload: UNAVAILABLE_PAGE });
 
-  // doctest:L321
   t.check(listUsers(), [storedUser({ email: "owner@example.com", name: "Owner", role: "owner" })]);
 });

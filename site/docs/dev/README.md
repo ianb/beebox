@@ -15,7 +15,7 @@ than a small fix. The first page below describes all of that.
 
 The repository is a monorepo: the Bee Box engine, a Chrome extension
 (beebox-clerk) that talks to a hosted box, an iOS companion app, the
-`t.check` test plugin extracted for reuse (agent-doctest), a shared lint and TypeScript
+`t.check` test plugin extracted for reuse (tap-check), a shared lint and TypeScript
 preset (personal-vibe-check), and the generator for this site. All of it is
 TypeScript, managed as pnpm workspaces from one root install. Running it
 from source is a pnpm install and a `bbx engine init` of your own box; the

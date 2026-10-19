@@ -5,8 +5,8 @@
 // id is the capability token, so its shape and entropy are part of the contract.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { generatePubId, pubIdSchema } from "../../src/publish/manifest.js";
 
 // ## `generatePubId` produces a value the schema accepts
@@ -14,7 +14,6 @@ import { generatePubId, pubIdSchema } from "../../src/publish/manifest.js";
 // The id is 26 base32 characters, and two calls differ (128 bits of entropy make a
 // collision cryptographically impossible). We assert shape, not the random value.
 void test("The id is 26 base32 characters, and two calls differ (128 bits of entropy mak...", async (t) => {
-  // doctest:L17
   const id = generatePubId();
   t.check(id, any(String).matches(/^[2-7a-z]{26}$/));
 

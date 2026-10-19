@@ -6,6 +6,8 @@ issues: []
 ---
 # Source-available release of beebox
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Make the `beebox` monorepo publishable as a public, source-available
 GPLv3 project on GitHub: readable and cloneable by strangers, buildable by
 contributors, free of personal secrets/PII, and with its personal-infrastructure
@@ -26,7 +28,7 @@ service; those are named deferrals below.
   comments (a stranger reading the source shouldn't hit the author's domain). The
   full deploy parametrization + subplan waits until someone actually needs to
   self-host on a server.
-- **Scope:** the whole monorepo ships as one repo, mixed licenses intact (app GPLv3; `agent-doctest` + `personal-vibe-check` MIT).
+- **Scope:** the whole monorepo ships as one repo, mixed licenses intact (app GPLv3; `tap-check` + `personal-vibe-check` MIT).
 - **Claude auth:** never implicitly inherit an ambient `ANTHROPIC_API_KEY` from
   the environment (bill-safety — keep force-stripping it), but allow a key the
   operator *explicitly configures* as an alternative to subscription auth. See Track F.
@@ -50,7 +52,7 @@ skip-with-rationale rather than omitted.
 - `beebox/code-style.md` — style rules for any code touched by deploy
   genericization (no default parameters, max 2 positional params, no `any`,
   custom error classes). Config parametrization must obey these.
-- Licensing decisions from 2026-07-05: root `LICENSE` GPLv3; `agent-doctest`
+- Licensing decisions from 2026-07-05: root `LICENSE` GPLv3; `tap-check`
   and `personal-vibe-check` MIT with their own `LICENSE` files. The release must
   not contradict these (see the README claim finding under What already exists).
 
@@ -75,11 +77,11 @@ new construction.
   has a "Five-minute start" for a box owner, but it depends on a tarball
   (`README.md:24`: *"npm publish is planned but not live yet"*). The
   source-available cut rewrites this to a build-from-source path, not a new doc.
-- **LICENSE files — partially done.** Root `LICENSE` (GPLv3), `agent-doctest/LICENSE`
+- **LICENSE files — partially done.** Root `LICENSE` (GPLv3), `tap-check/LICENSE`
   and `personal-vibe-check/LICENSE` (MIT) exist. `README.md:35` claims *"Each
   carries its own `LICENSE`"* — currently false for `beebox/`, `beebox-clerk/`,
   `browse/`. Rebuild: add the three missing files or correct the claim.
-- **agent-doctest + personal-vibe-check are already standalone** (own README,
+- **tap-check + personal-vibe-check are already standalone** (own README,
   LICENSE, docs). No packaging work for them in this cut.
 
 ## Prior art (external)
@@ -178,7 +180,7 @@ history decision. **No history surgery needed.** The repeatable gate is
   test data), `docs/reports/knowledge-taxonomy-catalog-2026-02-23.md` (the personality run notes) (agent inferring the real
   name), `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) (real email).
 - **Direction.** Swap to a roster name from `docs/example-names.md`. The
-  `agent-doctest/LICENSE` + `agent-doctest/README.md` real-name uses are
+  `tap-check/LICENSE` + `tap-check/README.md` real-name uses are
   *authorship attribution*, not boxholder data — leave them (author's call).
 - **First implementation chunk.** Replace the three identified files' real
   identifiers with roster equivalents; re-run the affected doctests to confirm

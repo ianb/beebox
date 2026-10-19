@@ -8,7 +8,7 @@
 // browser receives.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import { strict as assert } from "node:assert";
 import * as os from "node:os";
@@ -51,14 +51,12 @@ void test("A newly-pending question notifies once, then latches", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L47
   const box = await makeTmpBox({ git: true });
   await box.seed(".beebox/box.json", MARKER);
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: NOW });
   await box.seed("_bookkeeping/questions/Color.question.card", question("What color?"));
   box.commitAll("seed question");
 
-  // doctest:L53
   const push = createFakePush();
   const first = await checkPendingQuestionsAndNotify(box.root, { now: NOW, push });
   t.check(first?.notified, [
@@ -68,21 +66,17 @@ void test("A newly-pending question notifies once, then latches", async (t) => {
   // It is a `dot` targeting the question card. A dot goes to paired phones only,
   // and this box has none, so the subscribed browser gets nothing:
 
-  // doctest:L63
   await t.checkText(await lastLogged(box), `dot → question:_bookkeeping/questions/Color.question.card
 apns skipped: no-audience`);
 
-  // doctest:L68
   t.check(push.sent, []);
 
   // A second sweep finds nothing new (the question is latched):
 
-  // doctest:L75
   t.check(await checkPendingQuestionsAndNotify(box.root, { now: NOW, push }), null);
 
   // ## A second question notifies only the new one
 
-  // doctest:L82
   await box.seed("_bookkeeping/questions/Size.question.card", question("What size?"));
   const third = await checkPendingQuestionsAndNotify(box.root, { now: NOW, push });
   t.check(third?.notified, [
@@ -94,14 +88,12 @@ apns skipped: no-audience`);
   // A question that blocks something with a date sends a muted notification, so
   // the subscribed browser receives it, deep-linked to the card:
 
-  // doctest:L94
   await box.seed("_bookkeeping/questions/Form.question.card", question("Sign the form by Friday?", "time-bound"));
   await checkPendingQuestionsAndNotify(box.root, { now: NOW, push });
   await t.checkText(await lastLogged(box), `quiet → question:_bookkeeping/questions/Form.question.card
 apns skipped: no-audience
 web-push sent`);
 
-  // doctest:L102
   const slug = await boxSlug(box.root);
   t.check(push.sent, [
     {
@@ -127,12 +119,10 @@ void test("No reachable channel → no sweep", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L114
   const box = await makeTmpBox({ git: true });
   await box.seed(".beebox/box.json", MARKER);
   await box.seed("_bookkeeping/questions/Color.question.card", question("What color?"));
   box.commitAll("seed");
 
-  // doctest:L119
   t.check(await checkPendingQuestionsAndNotify(box.root, { now: NOW }), null);
 });

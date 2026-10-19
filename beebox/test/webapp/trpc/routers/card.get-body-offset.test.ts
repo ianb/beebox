@@ -7,7 +7,7 @@
 // (`docs/plans/todos-ui.md`, Track 2).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Markdoc from "@markdoc/markdoc";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
@@ -34,7 +34,6 @@ void test("A doc with a three-field frontmatter block:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L26
   const box = await makeTmpBox({ git: true });
   await box.write("_content/Porch.doc.card", [
     "---",
@@ -49,13 +48,11 @@ void test("A doc with a three-field frontmatter block:", async (t) => {
   ].join("\n"));
   box.commitAll("seed");
 
-  // doctest:L40
   const card = await caller(box.root).card.get({ path: "_content/Porch.doc.card" });
   t.check(card.bodyLineOffset, 5);
 
   // Numbering the returned body with that offset gives the collector's locator:
 
-  // doctest:L48
   t.check([...assignLocators(parse(card.body ?? ""), card.bodyLineOffset).values()], [
     {
       kind: "body",
@@ -63,7 +60,6 @@ void test("A doc with a three-field frontmatter block:", async (t) => {
     },
   ]);
 
-  // doctest:L51
   const res = await caller(box.root).collections.query({
     collection: "todos",
     query: { here: "_content/Porch.doc.card", includeReferring: false, params: { status: ["open"] } },
@@ -78,7 +74,6 @@ void test("A doc with a three-field frontmatter block:", async (t) => {
   // A card whose frontmatter does not validate still reports the offset, since
   // its body is still shown:
 
-  // doctest:L63
   await box.write("_content/Broken.doc.card", "---\ntitle: [not, a, title]\n---\nBody\n");
   const broken = await caller(box.root).card.get({ path: "_content/Broken.doc.card" });
   t.check([broken.validationError === undefined, broken.bodyLineOffset, broken.body], [

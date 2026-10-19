@@ -6,7 +6,7 @@
 //
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { fenceForPrompt } from "../../src/lib/prompt-fence.js";
 
 // ## Plain content gets the minimum 3-backtick fence
@@ -14,7 +14,6 @@ import { fenceForPrompt } from "../../src/lib/prompt-fence.js";
 // Content with no backticks is wrapped in the CommonMark minimum fence, with a
 // trailing newline ensured before the closing fence.
 void test("Content with no backticks is wrapped in the CommonMark minimum fence, with a...", async (t) => {
-  // doctest:L21
   t.checkText(fenceForPrompt("hello world"), "```\nhello world\n```");
 });
 
@@ -23,7 +22,6 @@ void test("Content with no backticks is wrapped in the CommonMark minimum fence,
 // An existing trailing newline is reused — the closing fence still lands on its
 // own line, with no extra blank line.
 void test("An existing trailing newline is reused — the closing fence still lands on its...", async (t) => {
-  // doctest:L31
   t.checkText(fenceForPrompt("line one\nline two\n"), "```\nline one\nline two\n```");
 });
 
@@ -32,7 +30,6 @@ void test("An existing trailing newline is reused — the closing fence still la
 // Content containing its own ``` fenced block is wrapped one backtick longer, so
 // the inner run cannot close the outer fence.
 void test("Content containing its own  fenced block is wrapped one backtick longer, so t...", async (t) => {
-  // doctest:L41
   t.checkText(fenceForPrompt("before\n```\ninside\n```\nafter"), "````\nbefore\n```\ninside\n```\nafter\n````");
 });
 
@@ -41,7 +38,6 @@ void test("Content containing its own  fenced block is wrapped one backtick long
 // A run of five backticks forces a six-backtick fence — the wrapper always beats
 // the longest run by one, with no cap.
 void test("A run of five backticks forces a six-backtick fence — the wrapper always beat...", async (t) => {
-  // doctest:L51
   t.checkText(fenceForPrompt("x `````"), "``````\nx `````\n``````");
 });
 
@@ -50,7 +46,6 @@ void test("A run of five backticks forces a six-backtick fence — the wrapper a
 // Empty content produces an open fence, a newline, and a close fence — no interior
 // line.
 void test("Empty content produces an open fence, a newline, and a close fence — no inter...", async (t) => {
-  // doctest:L65
   t.checkText(fenceForPrompt(""), "```\n```");
 });
 
@@ -59,7 +54,6 @@ void test("Empty content produces an open fence, a newline, and a close fence �
 // A backtick fence cannot be closed by a tilde line, so tilde-fenced content nests
 // inside the minimum 3-backtick fence untouched.
 void test("A backtick fence cannot be closed by a tilde line, so tilde-fenced content ne...", async (t) => {
-  // doctest:L75
   t.checkText(fenceForPrompt("~~~~\ntilde block\n~~~~"), "```\n~~~~\ntilde block\n~~~~\n```");
 });
 
@@ -68,6 +62,5 @@ void test("A backtick fence cannot be closed by a tilde line, so tilde-fenced co
 // Content ending in `\r` (no `\n`) is not treated as newline-terminated, so a
 // newline is added before the closing fence.
 void test("Content ending in \\r (no \\n) is not treated as newline-terminated, so a newli...", async (t) => {
-  // doctest:L85
   t.checkText(fenceForPrompt("partial\r"), "```\npartial\r\n```");
 });

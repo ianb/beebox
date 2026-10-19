@@ -6,7 +6,7 @@
 // MAP.md-style count doesn't work here).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { computeTodoAmbientLine } from "../../../src/core/todo/ambient-summary.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
@@ -29,7 +29,6 @@ async function seedBox() {
 // A box with no todos, or only quiet/done/dropped/parked ones, gets `null` —
 // not an empty string, not a "0 todos" line.
 void test("A box with no todos, or only quiet/done/dropped/parked ones, gets null — not...", async (t) => {
-  // doctest:L33
   const box = await seedBox();
   await box.write(
     "store/a.doc.card",
@@ -42,7 +41,6 @@ void test("A box with no todos, or only quiet/done/dropped/parked ones, gets nul
 
   // ## Open todos on the plate: counts, singular/plural, and the escalated note
 
-  // doctest:L48
   const box2 = await seedBox();
   await box2.write(
     "store/b.doc.card",
@@ -53,7 +51,6 @@ void test("A box with no todos, or only quiet/done/dropped/parked ones, gets nul
   // Escalated (past-due) todos get called out separately, and the count is
   // plural once there's more than one:
 
-  // doctest:L61
   const box3 = await seedBox();
   await box3.write(
     "store/c.doc.card",

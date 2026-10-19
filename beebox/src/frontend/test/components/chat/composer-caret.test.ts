@@ -12,13 +12,12 @@
 // where the caret belongs, or `null` for "leave it alone".
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { caretAfterTextChange } from "../../../src/components/chat/composer-caret.js";
 
 // A keystroke's own change is left alone. The person typing is the only one who
 // knows where they want the caret, and moving it would fight them.
 void test("A keystroke's own change is left alone.", async (t) => {
-  // doctest:L22
   t.check(
     [
       caretAfterTextChange({ text: "draft surv", lastTyped: "draft surv" }),
@@ -36,20 +35,17 @@ void test("A keystroke's own change is left alone.", async (t) => {
 // person had typed `draft survives?` with the caret inside `surv|ives?`, then a
 // restore replaced the whole value.
 void test("Anything else reached the store another way, and goes to the end of the text...", async (t) => {
-  // doctest:L35
   t.check(caretAfterTextChange({ text: "In 2 minutes, remind me to stretch.", lastTyped: "draft survives?" }), 35);
 });
 
 // A clear after send is the same shape, and lands the caret at 0 rather than
 // leaving it at the offset the sent text had:
 void test("A clear after send is the same shape, and lands the caret at 0 rather than le...", async (t) => {
-  // doctest:L43
   t.check(caretAfterTextChange({ text: "", lastTyped: "draft survives?" }), 0);
 });
 
 // Nothing typed yet — a fresh mount, a restore into an untouched composer — is
 // also not the user's keystroke, so the caret follows the text it was handed:
 void test("Nothing typed yet — a fresh mount, a restore into an untouched composer — is...", async (t) => {
-  // doctest:L51
   t.check(caretAfterTextChange({ text: "restored draft", lastTyped: null }), 14);
 });

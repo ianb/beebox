@@ -4,7 +4,7 @@
 // tracking state in run cards, and handling various step outcomes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { startProcedure, resumeProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -119,7 +119,6 @@ const stepStatuses = (run: ProcedureRun | null) => (run?.steps ?? []).map((s) =>
 // creates a run directory, commits at each phase boundary, and records
 // results in the run card.
 void test("A procedure with a single shell step runs to completion.", async (t) => {
-  // doctest:L117
   const r = await startOn("greet", procedure("greet", [
     step("hello", { run: 'echo "Hello from procedure" > _bookkeeping/output/greeting.txt' }),
   ]));
@@ -140,7 +139,6 @@ void test("A procedure with a single shell step runs to completion.", async (t) 
 // shell never ran. A precheck that printed nothing reports its exit code as a
 // number, in plain text.
 void test("When a precheck exits with $CHECKSKIP, the step is skipped — not failed.", async (t) => {
-  // doctest:L132
   const r = await startOn("maybe", procedure("maybe", [
     step("skipped", { precheck: "exit $CHECK_SKIP", run: 'echo "SHOULD NOT RUN" > _bookkeeping/output/bad.txt' }),
     step("runs", { run: 'echo "OK" > _bookkeeping/output/good.txt' }),
@@ -162,7 +160,6 @@ void test("When a precheck exits with $CHECKSKIP, the step is skipped — not fa
 // scheduler.jsonl, not in a dir-per-nothing. Commits are only init plus the
 // procedure card itself.
 void test("When every step skips, the run was a no-op:", async (t) => {
-  // doctest:L148
   const r = await startOn("idle", procedure("idle", [
     step("first", { precheck: 'echo "nothing new"; exit $CHECK_SKIP', run: 'echo "NEVER" > _bookkeeping/output/never.txt' }),
     step("second", { precheck: "exit $CHECK_SKIP", run: 'echo "ALSO NEVER" > _bookkeeping/output/also.txt' }),
@@ -182,7 +179,6 @@ void test("When every step skips, the run was a no-op:", async (t) => {
 // step's own run phase. The precheck's stdout is captured on the run card so the
 // reason is inspectable after the fact.
 void test("When a precheck exits with a non-zero, non-skip code, the step fails and the...", async (t) => {
-  // doctest:L164
   const r = await startOn("fail-early", procedure("fail-early", [
     step("broken", { precheck: 'echo "missing prerequisite: config not found"\nexit 1', run: 'echo "NEVER" > _bookkeeping/output/never.txt' }),
     step("after", { run: 'echo "ALSO NEVER" > _bookkeeping/output/also.txt' }),
@@ -211,7 +207,6 @@ void test("When a precheck exits with a non-zero, non-skip code, the step fails 
 // Validation shells run after the step's run phase. `severity="warn"`
 // lets the procedure continue; `severity="abort"` stops it.
 void test("Validation shells run after the step's run phase.", async (t) => {
-  // doctest:L185
   const warned = await startOn("validate", procedure("validate", [
     step("warned", { run: 'echo "did work" > _bookkeeping/output/work.txt', validate: 'echo "not ideal"; exit 1', severity: "warn" }),
     step("after-warn", { run: 'echo "still going" > _bookkeeping/output/still.txt' }),
@@ -251,7 +246,6 @@ void test("Validation shells run after the step's run phase.", async (t) => {
 // output streams — is recorded on the step's run record so `bbx procedure status`
 // shows why.
 void test("A non-zero exit from a run-phase shell fails the step (it does not silently \"...", async (t) => {
-  // doctest:L211
   const r = await startOn("runfail", procedure("runfail", [
     step("work", { run: 'echo "doing work"\necho "boom" >&2\nexit 3' }),
     step("after", { run: 'echo "nope" > _bookkeeping/output/nope.txt' }),
@@ -290,7 +284,6 @@ void test("A non-zero exit from a run-phase shell fails the step (it does not si
 // success. Combined with `-e`, the script stops at the failing pipe, so the
 // later command never ran.
 void test("Shells run under set -euo pipefail.", async (t) => {
-  // doctest:L248
   const nounset = await startOn("nounset", procedure("nounset", [
     step("typo", { run: 'echo "count is $COUNNT"' }),
   ]));
@@ -323,7 +316,6 @@ void test("Shells run under set -euo pipefail.", async (t) => {
 
 // ## Dry run previews without executing
 void test("Dry run previews without executing", async (t) => {
-  // doctest:L271
   const r = await startOnWith({ name: "preview", card: procedure("preview", [
     step("first", { precheck: "true", run: 'echo "side effect" > _bookkeeping/output/effect.txt', validate: "true", severity: "warn" }),
     step("second", { agent: "Do something" }),
@@ -348,7 +340,6 @@ void test("Dry run previews without executing", async (t) => {
 
 // ## Step filtering with --step
 void test("Step filtering with --step", async (t) => {
-  // doctest:L287
   const r = await startOnWith({ name: "multi", card: procedure("multi", [
     step("alpha", { run: 'echo "a" > _bookkeeping/output/a.txt' }),
     step("beta", { run: 'echo "b" > _bookkeeping/output/b.txt' }),
@@ -366,7 +357,6 @@ void test("Step filtering with --step", async (t) => {
 // A name with no procedure card is an error mentioning "not found"; a `--step`
 // that is not in the procedure is an error listing the available step ids.
 void test("A name with no procedure card is an error mentioning \"not found\"; a --step th...", async (t) => {
-  // doctest:L301
   const missing = await startOn("nonexistent", null);
   const badStep = await startOnWith({ name: "steps", card: procedure("steps", [step("real", { run: "true" })]), options: { step: "fake" } });
   t.check(
@@ -396,7 +386,6 @@ void test("A name with no procedure card is an error mentioning \"not found\"; a
 // procedure definition override the defaults; "never" pins every run of that
 // procedure.
 void test("At completion the engine stamps expires on the run card — completed-at plus 3...", async (t) => {
-  // doctest:L320
   const dayMs = 24 * 60 * 60 * 1000;
   const expiry = async (name: string, card: string) => {
     const { ok, run } = await startOn(name, card);
@@ -429,7 +418,6 @@ void test("At completion the engine stamps expires on the run card — completed
 // sentinel is created, resuming completes the run — and `alpha`, which
 // appends a marker each time it runs, is left untouched.
 void test("When a run fails partway, resumeProcedure re-runs from the first not-yet-comp...", async (t) => {
-  // doctest:L347
   const staged = procedure("staged", [
     step("alpha", { run: 'echo "x" >> _bookkeeping/output/alpha-runs.txt' }),
     step("beta", { precheck: "test -f _bookkeeping/output/sentinel", run: 'echo "b" > _bookkeeping/output/b.txt' }),
@@ -453,8 +441,6 @@ void test("When a run fails partway, resumeProcedure re-runs from the first not-
     const resumed = await resumeProcedure({ ctx, runDir: await requireRunDir(box, "staged") });
     return { afterFirst, afterResume: { ok: resumed.ok, ...(await snapshot()) } };
   });
-  // doctest:L360
-  // doctest:L364
   t.check(states, {
     afterFirst: {
       ok: false,
@@ -483,7 +469,6 @@ void test("When a run fails partway, resumeProcedure re-runs from the first not-
 //
 // Resuming an already-completed run changes nothing and reports success.
 void test("Resuming an already-completed run changes nothing and reports success.", async (t) => {
-  // doctest:L382
   const noop = await withBox({ done: procedure("done", [step("only", { run: 'echo "done" > _bookkeeping/output/done.txt' })]) }, async (box) => {
     const { ctx } = contextFor(box);
     await startProcedure({ ctx, procedureNameOrPath: "done" });
@@ -513,7 +498,6 @@ void test("Every step's work finished, so there is nothing to resume — but the
       t.error(error);
     }
   });
-  // doctest:L403
   const box = await makeTmpBox({ git: true });
   const dir = "_bookkeeping/procedure/runs/refresh-maps_2026-08-24T05-00-00";
   await box.write(`${dir}/run.procedure-run.card`, `---
@@ -534,7 +518,6 @@ steps:
 
   const { ctx } = contextFor(box);
   const result = await resumeProcedure({ ctx, runDir: dir });
-  // doctest:L421
   t.check(
     ({
       ok: result.ok,
@@ -559,7 +542,6 @@ steps:
 
 // ## Resume with no runs returns an error
 void test("Resume with no runs returns an error", async (t) => {
-  // doctest:L444
   const none = await withBox({}, async (box) => {
     const { ctx } = contextFor(box);
     const result = await resumeProcedure({ ctx });

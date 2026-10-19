@@ -6,6 +6,8 @@ issues: []
 ---
 # The input — interface design
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Extracts the chat composer and
 its satellites into a distinct component with a firm API. Grows out of
 the frame-model notes in `docs/plans/interface-as-cards.md` ("The input

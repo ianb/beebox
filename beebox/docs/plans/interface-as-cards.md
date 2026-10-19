@@ -7,6 +7,8 @@ issues:
 ---
 # Interface as cards — canonical Dashboard, Settings, and Browse
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Open Dashboard, Settings, and Browse alongside other cards without leaving the
 workspace. Give each a real, canonical card address, type-inferred rendering,
 and a notes margin; keep the existing pane controls and conversation ownership.

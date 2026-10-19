@@ -8,24 +8,21 @@
 // local-time / zoomed-view / time-passed bits).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildSpeechMessage } from "../../../src/components/chat/InteractiveChat-helpers.js";
 
 // ## Plain speech, no selections
 void test("Plain speech, no selections", async (t) => {
-  // doctest:L17
   t.check(buildSpeechMessage({ text: "found three items", diarized: false, selections: [], attrs: " local-time=\"14:23\"" }), "<speech local-time=\"14:23\">found three items</speech>");
 });
 
 // ## Diarized HQ transcription
 void test("Diarized HQ transcription", async (t) => {
-  // doctest:L25
   t.check(buildSpeechMessage({ text: "speaker A and speaker B", diarized: true, selections: [], attrs: " local-time=\"14:23\"" }), "<speech diarized=\"1\" local-time=\"14:23\">speaker A and speaker B</speech>");
 });
 
 // ## A pending selection is appended after the spoken text
 void test("A pending selection is appended after the spoken text", async (t) => {
-  // doctest:L33
   t.check(
     buildSpeechMessage({
       text: "look at this part",

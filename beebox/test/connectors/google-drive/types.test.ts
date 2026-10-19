@@ -3,14 +3,13 @@
 // Tests for extracting Google Drive file IDs from various URL formats.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { extractDriveFileId } from "../../../src/connectors/google-drive/types.js";
 
 // ## Google Sheets, Docs, Slides and Drive file URLs
 //
 // All four carry the ID in a `/d/<id>/` segment.
 void test("All four carry the ID in a /d/<id>/ segment.", async (t) => {
-  // doctest:L14
   t.check(
     extractDriveFileId("https://docs.google.com/spreadsheets/d/1aBcDeFgHiJkLmNoPqRsT/edit#gid=0")
     ,
@@ -20,7 +19,6 @@ void test("All four carry the ID in a /d/<id>/ segment.", async (t) => {
 
 // ## Drive open URL with query param
 void test("Drive open URL with query param", async (t) => {
-  // doctest:L21
   t.check(
     extractDriveFileId("https://drive.google.com/open?id=1aBcDeFgHiJkLmNoPqRsT")
     ,
@@ -30,19 +28,16 @@ void test("Drive open URL with query param", async (t) => {
 
 // ## Bare file ID
 void test("Bare file ID", async (t) => {
-  // doctest:L28
   t.check(extractDriveFileId("1aBcDeFgHiJkLmNoPqRsT"), "1aBcDeFgHiJkLmNoPqRsT");
 });
 
 // ## Short string is not a file ID
 void test("Short string is not a file ID", async (t) => {
-  // doctest:L35
   t.check(extractDriveFileId("abc"), null);
 });
 
 // ## Random URL is not a file ID
 void test("Random URL is not a file ID", async (t) => {
-  // doctest:L42
   t.check(
     extractDriveFileId("https://example.com/page")
     ,

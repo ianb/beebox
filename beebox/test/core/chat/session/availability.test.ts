@@ -9,7 +9,7 @@
 // rather than guessed at.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { deriveTranscriptState, resolveSessionAvailability } from "../../../../src/core/chat/session/availability.js";
 import { localOrigin } from "../../../../src/core/chat/session/origin.js";
@@ -45,19 +45,16 @@ void test("A readable transcript is `present`, whoever's it is", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L41
   const box = await makeTmpBox({ git: true });
   process.env["BBX_ORIGIN_ID_FILE"] = box.path("origin-id");
   const here = (await localOrigin()).id;
 
-  // doctest:L45
   t.check(await deriveTranscriptState({ husk: husk({ origin: "some-other-machine" }), present: true }), {
     state: "present",
   });
 
   // ## This machine's own chat, with no transcript left, is `expired`
 
-  // doctest:L52
   t.check(await deriveTranscriptState({ husk: husk({ origin: here, originName: "this-laptop" }), present: false }), {
     state: "expired",
   });
@@ -68,13 +65,11 @@ void test("A readable transcript is `present`, whoever's it is", async (t) => {
   // renamed after the fact — so when the husk carries none, the id itself stands in
   // rather than the row going nameless.
 
-  // doctest:L63
   t.check(await deriveTranscriptState({ husk: husk({ origin: "prod-machine-id", originName: "prod" }), present: false }), {
     state: "elsewhere",
     originName: "prod",
   });
 
-  // doctest:L66
   t.check(await deriveTranscriptState({ husk: husk({ origin: "prod-machine-id" }), present: false }), {
     state: "elsewhere",
     originName: "prod-machine-id",
@@ -86,12 +81,10 @@ void test("A readable transcript is `present`, whoever's it is", async (t) => {
   // ran, and calling that `expired` would report another machine's live chat as
   // this machine's dead one. Reconcile backfills `origin`, so the state decays.
 
-  // doctest:L77
   t.check(await deriveTranscriptState({ husk: husk({}), present: false }), {
     state: "unknown",
   });
 
-  // doctest:L80
   t.check(await deriveTranscriptState({ husk: null, present: false }), {
     state: "unknown",
   });
@@ -130,7 +123,6 @@ void test("resolveSessionAvailability needs to know which store holds a transcri
       t.error(error);
     }
   });
-  // doctest:L110
   const noRecordBox = await makeTmpBox({ git: true });
   await configure(noRecordBox.root, { agentEngine: "codex", engines: { claude: true, codex: true } });
   process.env["BBX_ORIGIN_ID_FILE"] = noRecordBox.path("origin-id");
@@ -138,7 +130,6 @@ void test("resolveSessionAvailability needs to know which store holds a transcri
   process.env["BBX_CODEX_BINARY"] = noRecordBox.path("no-such-codex-binary");
   const registry = new ChatSessionRegistry(noRecordBox.root);
 
-  // doctest:L117
   const availability = await resolveSessionAvailability({
     boxRoot: noRecordBox.root,
     sessionId: randomUUID(),
@@ -175,7 +166,6 @@ void test("resolveSessionAvailability answers resumable early for a chat that is
       t.error(error);
     }
   });
-  // doctest:L149
   const ghostBox = await makeTmpBox({ git: true });
   process.env["BBX_ORIGIN_ID_FILE"] = ghostBox.path("origin-id");
   process.env["BBX_CLAUDE_PROJECTS_DIR"] = ghostBox.path("claude-projects");
@@ -185,7 +175,6 @@ void test("resolveSessionAvailability answers resumable early for a chat that is
     buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
   });
 
-  // doctest:L158
   const ghost = randomUUID();
   ghostRegistry.getOrCreate(ghost);
   const asGhost = await resolveSessionAvailability({ boxRoot: ghostBox.root, sessionId: ghost, registry: ghostRegistry });
@@ -194,7 +183,6 @@ void test("resolveSessionAvailability answers resumable early for a chat that is
   // A session that is actually running is resumable, transcript or not — which is
   // the case the gate exists for:
 
-  // doctest:L170
   const live = randomUUID();
   const liveSession = ghostRegistry.getOrCreate(live);
   await liveSession.send("hi");
@@ -207,7 +195,6 @@ void test("resolveSessionAvailability answers resumable early for a chat that is
   // passes this gate; it stays resumable because it has a transcript, which is what
   // the checks below the gate read. Nothing durable was riding on the gate alone.
 
-  // doctest:L186
   const evicted = randomUUID();
   await recordSessionStart(ghostBox.root, { sessionId: evicted, engine: "claude" });
   const logPath = getSessionLogPath(ghostBox.root, evicted);

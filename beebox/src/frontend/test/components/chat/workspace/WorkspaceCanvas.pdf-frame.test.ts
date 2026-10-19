@@ -12,7 +12,7 @@
 // show them.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { PdfFrame } from "../../../../src/components/PdfFrame.js";
@@ -24,7 +24,7 @@ import { isWorkspacePdf } from "../../../../src/components/chat/workspace/Worksp
 // Only these two members, not the full registry (`installRenderers()`):
 // several other renderers (markdown, markdown-card, ...) pull in
 // `lib/markdoc-parse.ts`, whose `@markdoc/markdoc` import doesn't resolve
-// under the plain tsx/root-tsconfig runtime this doctest runs under.
+// under the plain tsx/root-tsconfig runtime this test runs under.
 for (const entry of [pdfRenderer, binaryRenderer]) registerFileType(entry.selector, { renderer: entry.renderer });
 globalThis.React = React;
 
@@ -63,13 +63,10 @@ void test("The frame, the fallback, and the download link", async (t) => {
 // their container gives them — a column flex whose object takes the leftover
 // space, which is why FileView's companion wrapper is itself a column.
 void test("page owns the viewport, so it takes a viewport-relative height.", async (t) => {
-  // doctest:L68
   t.check(render({ ...base, mode: "page" }), pageFrame);
 
-  // doctest:L71
   t.check(render({ ...base, mode: "chat" }), frame({ wrapperClass: "flex flex-col", toolbar: TOOLBAR, objectClass: "w-full h-80" }));
 
-  // doctest:L74
   // The companion frame claims the remainder of a column that has a height —
   // and falls back to a viewport floor when its ancestors are content-sized,
   // which is what the browse detail panel and the chat sidebar actually give it.
@@ -78,7 +75,6 @@ void test("page owns the viewport, so it takes a viewport-relative height.", asy
 
 // An omitted `mode` behaves like `page`, the surface a bare PDF path lands on:
 void test("An omitted mode behaves like page, the surface a bare PDF path lands on:", async (t) => {
-  // doctest:L85
   t.check(render(base), pageFrame);
 });
 
@@ -88,7 +84,6 @@ void test("An omitted mode behaves like page, the surface a bare PDF path lands 
 // uses the pane's available height without adding another toolbar or a viewport
 // height floor. Unsupported viewers still receive the fallback links.
 void test("The tab already names the file and its menu supplies Open/Download.", async (t) => {
-  // doctest:L96
   t.check(
     render({ ...base, mode: "companion", workspacePdf: true }),
     frame({ wrapperClass: "flex flex-col h-full min-h-0", toolbar: "", objectClass: "w-full h-full flex-1 min-h-0" }),
@@ -98,7 +93,6 @@ void test("The tab already names the file and its menu supplies Open/Download.",
 // Old view names fall back to the preferred renderer, just as in FileView. An
 // explicit Download view retains its selector so the PDF remains reachable.
 void test("Old view names fall back to the preferred renderer, just as in FileView.", async (t) => {
-  // doctest:L119
   t.check([null, "PDF", "pdf", "retired-view", "Download"].map((viewer) => isWorkspacePdf("_content/guide.pdf", viewer)), [
     true,
     true,
@@ -107,6 +101,5 @@ void test("Old view names fall back to the preferred renderer, just as in FileVi
     false,
   ]);
 
-  // doctest:L122
   t.check(isWorkspacePdf("_content/guide.pdf.card", null), false);
 });

@@ -20,8 +20,8 @@
 // (`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { anything } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { anything } from "@ianbicking/tap-check/check";
 import { INLINE_PHOTO_LIMIT, routeAddedFiles } from "../../../../src/components/chat/InteractiveChat-attachments/file-routing.js";
 
 /** Stand-ins for `File`s — routing reads nothing but the MIME type. */
@@ -40,7 +40,6 @@ const split = (files: { type: string; name: string }[], existingInlinePhotos: nu
 // The everyday case, and the one the regression broke: a PDF and a photo picked
 // together both attach to the message, each in the representation that suits it.
 void test("The everyday case, and the one the regression broke:", async (t) => {
-  // doctest:L43
   t.check(
     {
       limit: INLINE_PHOTO_LIMIT,
@@ -80,7 +79,6 @@ void test("The everyday case, and the one the regression broke:", async (t) => {
 // path. So "a couple of files" and "a folder of scans" differ only in how many
 // chips appear.
 void test("Their bound was the payload, and they aren't in it — a [file#N] carries a path.", async (t) => {
-  // doctest:L59
   t.check(
     {
       threePdfs: split([pdf("a"), pdf("b"), pdf("c")], 0).upload,
@@ -103,7 +101,6 @@ void test("Their bound was the payload, and they aren't in it — a [file#N] car
 // references instead of payload, which is the whole reason the limit is safe to
 // hold at a small number.
 void test("They aren't refused and they don't open anything — they just travel as refere...", async (t) => {
-  // doctest:L73
   t.check(
     {
       atLimit: split(photos(3), 0).inline.length,
@@ -135,7 +132,6 @@ void test("They aren't refused and they don't open anything — they just travel
 // two representations for no reason the user could predict — so the PDF's
 // companion photos join it rather than splitting off.
 void test("Inlining part of a selection and uploading the rest would scatter one act acr...", async (t) => {
-  // doctest:L88
   t.check(
     {
       mixedOverLimit: split([...photos(4), pdf("report.pdf")], 0),
@@ -163,7 +159,6 @@ void test("Inlining part of a selection and uploading the rest would scatter one
 // per-source — photos or files, never both at once — so picking twice before
 // sending has to keep working.)
 void test("The decision reads the composer's current inline photo count, not just the ne...", async (t) => {
-  // doctest:L103
   t.check(
     {
       twoPlusOne: split(photos(1), 2).inline.length,
@@ -207,7 +202,6 @@ void test("The decision reads the composer's current inline photo count, not jus
 // land six inline photos — breaking the bound via exactly the race it exists to
 // prevent.
 void test("A file never costs a photo slot, and vice versa:", async (t) => {
-  // doctest:L124
   t.check(
     {
       threeStillEncodingPlusOne: split(photos(1), 3).inline.length,
@@ -227,7 +221,6 @@ void test("A file never costs a photo slot, and vice versa:", async (t) => {
 // Paste and drop both route through here, and both can fire with nothing
 // attached.
 void test("Paste and drop both route through here, and both can fire with nothing attached.", async (t) => {
-  // doctest:L138
   t.check(split([], 0), {
     inline: [],
     upload: [],

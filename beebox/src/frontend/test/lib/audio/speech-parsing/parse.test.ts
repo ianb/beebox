@@ -3,7 +3,7 @@
 // `parseAllSpeechTags()` extracts `<speech>` tags from assistant responses for TTS playback. Each segment has text content and optional voice/emotion/instruction attributes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseAllSpeechTags, hasAssistantSpeech } from "../../../../src/lib/audio/speech-parsing/parse.js";
 import { splitSpeechParts } from "../../../../src/lib/audio/speech-parsing/parse.js";
 
@@ -20,7 +20,6 @@ console.warn = () => {};
 //
 // A simple speech tag extracts its text:
 void test("A simple speech tag extracts its text:", async (t) => {
-  // doctest:L18
   const segments = parseAllSpeechTags("<speech>Hello there!</speech>");
   t.check(segments, [
     {
@@ -41,7 +40,6 @@ void test("A simple speech tag extracts its text:", async (t) => {
 // Delivery instructions ride on the `instructions` attribute; the tag's content
 // is only the spoken text:
 void test("Delivery instructions ride on the instructions attribute; the tag's content i...", async (t) => {
-  // doctest:L37
   const segments = parseAllSpeechTags('<speech instructions="Gentle, not urgent">I found three overdue items.</speech>');
   t.check(segments, [
     {
@@ -60,7 +58,6 @@ void test("Delivery instructions ride on the instructions attribute; the tag's c
 // The value is entity-decoded the same way `name` is, so an agent can write a
 // double quote as `&quot;` and an ampersand as `&amp;`:
 void test("The value is entity-decoded the same way name is, so an agent can write a dou...", async (t) => {
-  // doctest:L49
   const segments = parseAllSpeechTags('<speech instructions="Say &quot;ta-da&quot; slowly &amp; warmly">Ta-da.</speech>');
   t.check(segments, [
     {
@@ -80,7 +77,6 @@ void test("The value is entity-decoded the same way name is, so an agent can wri
 // with stale guidance still contain it, so it is still read, and its text is
 // removed from the spoken text:
 void test("The older form nests an <instructions> child.", async (t) => {
-  // doctest:L59
   const segments = parseAllSpeechTags(`<speech>Good morning!
 <instructions>Warm and cheerful</instructions>
 </speech>`);
@@ -101,7 +97,6 @@ void test("The older form nests an <instructions> child.", async (t) => {
 // When both forms appear, the attribute wins and the child's text is still
 // kept out of the spoken text:
 void test("When both forms appear, the attribute wins and the child's text is still kept...", async (t) => {
-  // doctest:L73
   const segments = parseAllSpeechTags('<speech instructions="From the attribute">Hello.<instructions>From the child</instructions></speech>');
   t.check(segments, [
     {
@@ -120,7 +115,6 @@ void test("When both forms appear, the attribute wins and the child's text is st
 // A child that carries its own attributes is still a child; its text is not
 // spoken:
 void test("A child that carries its own attributes is still a child; its text is not spo...", async (t) => {
-  // doctest:L85
   const segments = parseAllSpeechTags('<speech>Hello.<instructions pace="slow">Gentle</instructions></speech>');
   t.check(segments, [
     {
@@ -138,7 +132,6 @@ void test("A child that carries its own attributes is still a child; its text is
 
 // An empty attribute falls back to the child:
 void test("An empty attribute falls back to the child:", async (t) => {
-  // doctest:L96
   const segments = parseAllSpeechTags('<speech instructions=" "><instructions>From the child</instructions>Hello.</speech>');
   t.check(segments, [
     {
@@ -156,7 +149,6 @@ void test("An empty attribute falls back to the child:", async (t) => {
 
 // ## Emotion attribute
 void test("Emotion attribute", async (t) => {
-  // doctest:L104
   const segments = parseAllSpeechTags('<speech emotion="happy">Great news!</speech>');
   t.check(segments, [
     {
@@ -176,7 +168,6 @@ void test("Emotion attribute", async (t) => {
 //
 // Valid voices are accepted:
 void test("Valid voices are accepted:", async (t) => {
-  // doctest:L114
   const segments = parseAllSpeechTags('<speech voice="coral">Hello</speech>');
   t.check(segments, [
     {
@@ -194,7 +185,6 @@ void test("Valid voices are accepted:", async (t) => {
 
 // Invalid voices are silently ignored:
 void test("Invalid voices are silently ignored:", async (t) => {
-  // doctest:L122
   const segments = parseAllSpeechTags('<speech voice="unknown">Hello</speech>');
   t.check(segments, [
     {
@@ -212,7 +202,6 @@ void test("Invalid voices are silently ignored:", async (t) => {
 
 // ## Multiple speech segments
 void test("Multiple speech segments", async (t) => {
-  // doctest:L133
   const segments = parseAllSpeechTags("Some text\n<speech>First</speech>\nMore text\n<speech>Second</speech>");
   t.check(segments, [
     {
@@ -242,13 +231,10 @@ void test("Multiple speech segments", async (t) => {
 //
 // Quick check for speech content:
 void test("Quick check for speech content:", async (t) => {
-  // doctest:L157
   t.check(hasAssistantSpeech("<speech>Hello</speech>"), true);
 
-  // doctest:L160
   t.check(hasAssistantSpeech("Just regular text"), false);
 
-  // doctest:L163
   t.check(hasAssistantSpeech("<speech>unclosed tag"), false);
 });
 
@@ -262,7 +248,6 @@ void test("Quick check for speech content:", async (t) => {
 //
 // ### Stray duplicate `</instructions>`
 void test("Real-world failure:", async (t) => {
-  // doctest:L178
   const segs = parseAllSpeechTags(
     "<speech><instructions>Speak warmly</instructions></instructions>Hello there.</speech>"
   );
@@ -286,7 +271,6 @@ void test("Real-world failure:", async (t) => {
 // second "s"). `normalizeInstructionTags` canonicalizes it before parsing, so the
 // direction is recovered (not lost) and never leaks into the spoken text.
 void test("The agent sometimes misspells the instructions tag (intructions, missing the...", async (t) => {
-  // doctest:L198
   const segs = parseAllSpeechTags(
     "<speech><instructions>Slow and clipped</intructions></instructions>The alarm fired.</speech>"
   );
@@ -310,7 +294,6 @@ void test("The agent sometimes misspells the instructions tag (intructions, miss
 // the instructions are extracted and the prose stays out of the spoken text
 // (previously it leaked in as content).
 void test("When both the open and close are typo'd, the whole block still normalizes — t...", async (t) => {
-  // doctest:L218
   const segs = parseAllSpeechTags(
     "<speech name=\"Honey\" override-instructions=\"1\">What a thing to name it.\n<intructions>Quiet, dry, each word careful.</intructions></speech>"
   );
@@ -333,7 +316,6 @@ void test("When both the open and close are typo'd, the whole block still normal
 // When the agent emits two instructions blocks inside one speech tag, keep
 // only the last non-empty one and strip both from the spoken text.
 void test("When the agent emits two instructions blocks inside one speech tag, keep only...", async (t) => {
-  // doctest:L240
   const segs = parseAllSpeechTags(
     "<speech><instructions>First note.</instructions>Hello there.<instructions>Second, more specific note.</instructions></speech>"
   );
@@ -353,7 +335,6 @@ void test("When the agent emits two instructions blocks inside one speech tag, k
 
 // Empty instructions blocks are ignored when picking the last one.
 void test("Empty instructions blocks are ignored when picking the last one.", async (t) => {
-  // doctest:L256
   const segs = parseAllSpeechTags(
     "<speech><instructions>Real note.</instructions>Body.<instructions>   </instructions></speech>"
   );
@@ -377,7 +358,6 @@ void test("Empty instructions blocks are ignored when picking the last one.", as
 // the chat. The spoken `text` drops them entirely; `displayText` keeps the
 // markup so the rendered message still shows the blur.
 void test("Markdoc {% redacted %}…{% /redacted %} spans render as hidden-until-tap in th...", async (t) => {
-  // doctest:L270
   const segs = parseAllSpeechTags(
     "<speech>The answer is {% redacted %}42{% /redacted %} — try it first.</speech>"
   );
@@ -397,7 +377,6 @@ void test("Markdoc {% redacted %}…{% /redacted %} spans render as hidden-until
 
 // Multiple redacted spans in one speech tag are all dropped:
 void test("Multiple redacted spans in one speech tag are all dropped:", async (t) => {
-  // doctest:L283
   const segs = parseAllSpeechTags(
     "<speech>{% redacted %}one{% /redacted %} and {% redacted %}two{% /redacted %} stay hidden.</speech>"
   );
@@ -418,7 +397,6 @@ void test("Multiple redacted spans in one speech tag are all dropped:", async (t
 // An unclosed `{% redacted %}` hides everything through the end of the speech —
 // dropping just the marker would leak the hidden content:
 void test("An unclosed {% redacted %} hides everything through the end of the speech — d...", async (t) => {
-  // doctest:L294
   const segs = parseAllSpeechTags(
     "<speech>Before. {% redacted %}secret with no close tag</speech>"
   );
@@ -438,7 +416,6 @@ void test("An unclosed {% redacted %} hides everything through the end of the sp
 
 // A stray close marker is stripped rather than spoken as literal markup:
 void test("A stray close marker is stripped rather than spoken as literal markup:", async (t) => {
-  // doctest:L304
   const segs = parseAllSpeechTags(
     "<speech>Oops {% /redacted %} extra close.</speech>"
   );
@@ -459,7 +436,6 @@ void test("A stray close marker is stripped rather than spoken as literal markup
 // A speech tag that is entirely redacted yields empty spoken text (the playback
 // machine skips the TTS call for it):
 void test("A speech tag that is entirely redacted yields empty spoken text (the playback...", async (t) => {
-  // doctest:L315
   const segs = parseAllSpeechTags(
     "<speech>{% redacted %}all hidden{% /redacted %}</speech>"
   );
@@ -481,7 +457,6 @@ void test("A speech tag that is entirely redacted yields empty spoken text (the 
 //
 // An optional `name` attribute labels the speaker of a chunk:
 void test("An optional name attribute labels the speaker of a chunk:", async (t) => {
-  // doctest:L330
   const segs = parseAllSpeechTags('<speech name="Bob">hi, I am bob!</speech>');
   t.check(segs, [
     {
@@ -499,7 +474,6 @@ void test("An optional name attribute labels the speaker of a chunk:", async (t)
 
 // No `name` attribute leaves it undefined:
 void test("No name attribute leaves it undefined:", async (t) => {
-  // doctest:L341
   const segs = parseAllSpeechTags("<speech>plain</speech>");
   t.check(segs, [
     {
@@ -516,7 +490,6 @@ void test("No name attribute leaves it undefined:", async (t) => {
 });
 
 void test("Splitting into ordered parts", async (t) => {
-  // doctest:L359
   const parts = splitSpeechParts("Intro text <speech>one</speech> mid <speech name=\"Q\">two</speech>");
   t.check(parts, [
     {
@@ -560,7 +533,6 @@ void test("Splitting into ordered parts", async (t) => {
 
 // Content with no speech is a single text part:
 void test("Content with no speech is a single text part:", async (t) => {
-  // doctest:L376
   const parts = splitSpeechParts("just prose, nothing spoken");
   t.check(parts, [
     {

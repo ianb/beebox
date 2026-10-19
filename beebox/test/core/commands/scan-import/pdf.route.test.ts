@@ -17,8 +17,8 @@
 // photos.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import { execa } from "execa";
@@ -86,7 +86,7 @@ void test("The card is a pdf.card, not a set of photo cards, and the extraction 
 // ## A PDF that already carries text is left alone
 //
 // A good text layer beats re-OCRing an image of itself. (A layer that is present
-// but junk is a third case — see `pdf-probe.doctest.md`.)
+// but junk is a third case — see `test/core/pdf/probe.test.ts`.)
 void test("A good text layer beats re-OCRing an image of itself.", async (t) => {
   t.teardown(async () => {
     try {

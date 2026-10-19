@@ -1,6 +1,6 @@
 // # The collection runner (`core/collection/run.ts`)
 //
-// Filesystem-tier doctests for `docs/plans/todo-collection.md` Track 3.
+// Filesystem-tier tests for `docs/plans/todo-collection.md` Track 3.
 // `runCollection` does the five stages in order — scope, extract, derive,
 // reference scope, then match/reduce/group — over a fixture box, against the
 // one collection that exists today (`core/todo/collection.ts`).
@@ -9,8 +9,8 @@
 // the only place a clock can enter.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { runCollection } from "../../../src/core/collection/run/core.js";
 import { todoCollection, TodoParamsSchema, type DerivedTodo, type TodoParams, type TodoReduction } from "../../../src/core/todo/collection.js";
 import type { CollectionQuery, CollectionResult } from "../../../src/core/collection/types.js";

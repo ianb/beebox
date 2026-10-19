@@ -3,7 +3,7 @@
 // The cache shares identical misses and admits no more than two distinct transforms at once.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, mkdtemp, readdir, rm, truncate, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -43,7 +43,6 @@ void test("line 38", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L39
   const first = cache.getOrCreate({ key: "first", extension: "webp", generate: generate() });
   const duplicate = cache.getOrCreate({ key: "first", extension: "webp", generate: generate() });
   const second = cache.getOrCreate({ key: "second", extension: "webp", generate: generate() });
@@ -53,12 +52,10 @@ void test("line 38", async (t) => {
 
   // Releasing one slot starts the queued transform; the duplicate still shares the first result.
 
-  // doctest:L51
   releases.shift()?.();
   await until(() => generated === 3);
   t.check(`${generated} ${active} ${maximum}`, "3 2 2");
 
-  // doctest:L58
   releases.shift()?.();
   releases.shift()?.();
   const results = await Promise.all([first, duplicate, second, third]);
@@ -71,12 +68,10 @@ void test("line 38", async (t) => {
 
   // A later request reads the stored representation without another generation.
 
-  // doctest:L68
   t.check((await cache.getOrCreate({ key: "first", extension: "webp", generate: generate() })).toString(), "generated");
 
   // An overdue write purges stale temporary files and trims the oldest variants to the 512 MiB bound.
 
-  // doctest:L75
   const purgeRoot = join(root, "purge-box");
   const purgeDir = join(purgeRoot, ".beebox/image-cache/v1");
   await mkdir(purgeDir, { recursive: true });

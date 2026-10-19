@@ -1,7 +1,7 @@
 // # Trick secret declarations
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -16,7 +16,6 @@ void test("Reads a declaration without running the trick", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L13
   const box = await makeTmpBox();
   const trickDir = box.path(join("src", "tricks", "scripts", "images"));
   await mkdir(trickDir, { recursive: true });
@@ -35,7 +34,6 @@ void test("Reads a declaration without running the trick", async (t) => {
 
 // ## Resolves through the derived child environment
 void test("Resolves through the derived child environment", async (t) => {
-  // doctest:L31
   const seen: { url: string; body: unknown; authorization: string | null }[] = [];
   const resolved = await resolveTrickSecret({
     env: { BBX_SERVER_URL: "http://localhost:3210", BBX_BOX_NAME: "test1", BBX_AGENT_TOKEN: "agent-token" },
@@ -62,7 +60,6 @@ void test("Invalid declarations fail before execution", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L61
   const invalidBox = await makeTmpBox();
   const invalidDir = invalidBox.path(join("src", "tricks", "scripts", "bad"));
   await mkdir(invalidDir, { recursive: true });

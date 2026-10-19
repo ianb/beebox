@@ -8,7 +8,7 @@
 // don't count.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
@@ -37,7 +37,6 @@ void test("Escalated + on-plate count; quiet and done are excluded", async (t) =
       t.error(error);
     }
   });
-  // doctest:L34
   const box = await makeTmpBox({ git: true });
   await box.seed(".beebox/box.json", MARKER);
   await box.write(
@@ -51,17 +50,14 @@ void test("Escalated + on-plate count; quiet and done are excluded", async (t) =
   );
   box.commitAll("seed");
 
-  // doctest:L47
   const { counts } = await contextFor(box).status();
   t.check(counts.onPlateTodos, 2);
 
   // ## Zero when there are none
 
-  // doctest:L55
   await box.write("_content/a.doc.card", doc("No todos here.\n"));
   box.commitAll("clear");
 
-  // doctest:L58
   const after = await contextFor(box).status();
   t.check(after.counts.onPlateTodos, 0);
 });

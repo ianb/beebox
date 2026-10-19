@@ -5,7 +5,7 @@
 // `relativePathLiterals`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { extractModuleFacts, parseSourceFile } from "../../../../src/dev/layout/scan/imports.js";
 
 function facts(source: string) {
@@ -19,7 +19,6 @@ function facts(source: string) {
 // named-import list are type-only; a side-effect import binds no names and is
 // a value import.
 void test("A default/named import is a value import; import type and an all-type named-i...", async (t) => {
-  // doctest:L23
   t.check(facts("import A from \"./a.js\";").imports, [
     {
       specifier: "./a.js",
@@ -31,7 +30,6 @@ void test("A default/named import is a value import; import type and an all-type
     },
   ]);
 
-  // doctest:L26
   t.check(facts("import type { A } from \"./b.js\";").imports, [
     {
       specifier: "./b.js",
@@ -43,7 +41,6 @@ void test("A default/named import is a value import; import type and an all-type
     },
   ]);
 
-  // doctest:L29
   t.check(facts("import { type A, type B } from \"./c.js\";").imports, [
     {
       specifier: "./c.js",
@@ -56,7 +53,6 @@ void test("A default/named import is a value import; import type and an all-type
     },
   ]);
 
-  // doctest:L32
   t.check(facts("import \"./d.js\";").imports, [
     {
       specifier: "./d.js",
@@ -70,7 +66,6 @@ void test("A default/named import is a value import; import type and an all-type
 // A named import mixing a type and a value binding is a value import as a
 // whole (not every element is type-only).
 void test("A named import mixing a type and a value binding is a value import as a whole...", async (t) => {
-  // doctest:L40
   t.check(facts("import { type A, B } from \"./e.js\";").imports, [
     {
       specifier: "./e.js",
@@ -86,7 +81,6 @@ void test("A named import mixing a type and a value binding is a value import as
 
 // ## Dynamic import and require, anywhere
 void test("Dynamic import and require, anywhere", async (t) => {
-  // doctest:L47
   t.check(facts("async function f() { await import(\"./f.js\"); }").imports, [
     {
       specifier: "./f.js",
@@ -96,7 +90,6 @@ void test("Dynamic import and require, anywhere", async (t) => {
     },
   ]);
 
-  // doctest:L50
   t.check(facts("const x = require(\"./g.js\");").imports, [
     {
       specifier: "./g.js",
@@ -109,7 +102,6 @@ void test("Dynamic import and require, anywhere", async (t) => {
 
 // ## Export declarations with a module specifier
 void test("Export declarations with a module specifier", async (t) => {
-  // doctest:L57
   t.check(facts("export { x } from \"./h.js\";").imports, [
     {
       specifier: "./h.js",
@@ -119,7 +111,6 @@ void test("Export declarations with a module specifier", async (t) => {
     },
   ]);
 
-  // doctest:L60
   t.check(facts("export type { Y } from \"./i.js\";").imports, [
     {
       specifier: "./i.js",
@@ -135,13 +126,10 @@ void test("Export declarations with a module specifier", async (t) => {
 // True only when every top-level statement is an import or an export, and at
 // least one is an export.
 void test("True only when every top-level statement is an import or an export, and at le...", async (t) => {
-  // doctest:L70
   t.check(facts("import { a } from \"./a.js\";\nexport { a };").reexportOnly, true);
 
-  // doctest:L73
   t.check(facts("export function f() {}").reexportOnly, false);
 
-  // doctest:L76
   t.check(facts("import { a } from \"./a.js\";").reexportOnly, false);
 });
 
@@ -149,7 +137,6 @@ void test("True only when every top-level statement is an import or an export, a
 //
 // Callee text of top-level expression-statement calls, `await` unwrapped.
 void test("Callee text of top-level expression-statement calls, await unwrapped.", async (t) => {
-  // doctest:L85
   t.check(facts("registerConnector(x);\nawait init();").topLevelCalls, [
     "registerConnector",
     "init",
@@ -161,7 +148,6 @@ void test("Callee text of top-level expression-statement calls, await unwrapped.
 // A relative string or no-substitution template literal that is not an
 // import/export/dynamic-import/require specifier.
 void test("A relative string or no-substitution template literal that is not an import/e...", async (t) => {
-  // doctest:L95
   t.check(facts("import { a } from \"./a.js\";\nconst p = \"./data/foo.json\";\nconst q = `../other`;").relativePathLiterals, [
     "./data/foo.json",
     "../other",

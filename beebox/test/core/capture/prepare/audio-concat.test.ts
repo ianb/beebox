@@ -6,12 +6,11 @@
 // with chunk order preserved.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { concatSegments } from "../../../../src/core/capture/prepare/audio-concat.js";
 
 // ## Two segments, three chunks each → two buffers, order preserved
 void test("Two segments, three chunks each → two buffers, order preserved", async (t) => {
-  // doctest:L15
   const out = concatSegments([
     {
       segmentId: "seg-a",
@@ -34,7 +33,6 @@ void test("Two segments, three chunks each → two buffers, order preserved", as
 //
 // A segment that recorded no chunks produces no card:
 void test("A segment that recorded no chunks produces no card:", async (t) => {
-  // doctest:L48
   const out = concatSegments([
     { segmentId: "empty", startedAt: "2026-07-09T14:00:00.000Z", chunks: [] },
     { segmentId: "real", startedAt: "2026-07-09T14:01:00.000Z", chunks: [Buffer.from("X")] },
@@ -50,7 +48,6 @@ void test("A segment that recorded no chunks produces no card:", async (t) => {
 // since the last `dataavailable` is lost). Concat is pure byte-join, so it returns
 // a buffer carrying the full prefix plus whatever survived — never throwing:
 void test("A crash mid-recording can leave the last chunk cut to half its bytes (the tai...", async (t) => {
-  // doctest:L66
   const header = Buffer.from("HEADER-cluster0-cluster1-");
   const truncatedTail = Buffer.from("cluster2-HALF").subarray(0, 8); // "cluster2" — cut mid-chunk
   const out = concatSegments([

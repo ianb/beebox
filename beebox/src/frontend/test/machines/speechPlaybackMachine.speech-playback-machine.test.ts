@@ -7,7 +7,7 @@
 // the UI does not make a rapid series of playback failures look successful.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createActor } from "xstate";
 import { speechPlaybackMachine, type SpeechClient } from "../../src/machines/speechPlaybackMachine.js";
 import type { SpeechSegment } from "../../src/lib/audio/speech-parsing/parse.js";

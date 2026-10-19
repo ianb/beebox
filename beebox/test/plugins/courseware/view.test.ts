@@ -12,11 +12,11 @@
 // build step and imported through the package `exports` map, given the cards the
 // real loader selects, and rendered to a string inside `NodeViewHostProvider`.
 // The stub-to-render path through the view compiler is
-// `test/webapp/views/compiler.plugin-view.doctest.md`.
+// `test/webapp/views/compiler.plugin-view.test.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { mkdir, writeFile } from "node:fs/promises";
@@ -33,7 +33,6 @@ import { buildGraph } from "../../../src/plugins/courseware/view/graph/model.js"
 await buildPluginBundlesIntoDist();
 const view = await import("beebox/plugins/courseware/view");
 const { NodeViewHostProvider } = await import("beebox/view-widgets");
-
 
 // A box activates the plugin by naming it in `_config/box.json` and writing the
 // stubs its README lists (docs/plugins.md): the schema stub makes `concept-map`
@@ -86,7 +85,6 @@ Fractions name parts of a whole; this map orders what to learn first.
 // `parseConcepts` reads the card's `concepts` frontmatter into typed nodes,
 // skipping entries without an id and name and defaulting an unknown kind:
 void test("parseConcepts reads the card's concepts frontmatter into typed nodes, skippin...", async (t) => {
-  // doctest:L89
   const parsed = parseConcepts([
     { id: "a", name: "A", kind: "principle", related: [{ to: "b", kind: "prerequisite" }, { to: "zz", kind: "nonsense" }] },
     { id: "b", name: "B", kind: "weird" },
@@ -101,7 +99,6 @@ void test("parseConcepts reads the card's concepts frontmatter into typed nodes,
   // sits below its source, and an edge to an unknown id is dropped (card-lint
   // reports it):
 
-  // doctest:L103
   const { nodes, edges } = buildGraph(parsed);
   const a = nodes.find((n) => n.id === "a");
   const b = nodes.find((n) => n.id === "b");
@@ -131,12 +128,10 @@ void test("The rendered page has the intro prose (through Markdown) and every co
       t.error(error);
     }
   });
-  // doctest:L117
   const box = await makeTmpBox({ deps: true, git: true });
   await activateCourseware(box);
   await box.write(CARD_PATH, FRACTIONS_CARD);
 
-  // doctest:L121
   const html = await renderConceptMap(box, { path: CARD_PATH });
   // The page is generated HTML, so each check keeps the one fragment it names.
   t.check(html, any(String).includes("this map orders what to learn first"));
@@ -146,14 +141,12 @@ void test("The rendered page has the intro prose (through Markdown) and every co
 
   // The misconception count shows on its node, and the legend is present:
 
-  // doctest:L129
   t.check(html, any(String).includes("1 common misconception"));
   t.check(html, any(String).includes("Concept kinds"));
 
   // Without `params.path` the view has no anchor card and says so instead of
   // rendering an empty graph:
 
-  // doctest:L137
   const bare = await renderConceptMap(box, {});
   t.check(bare, any(String).includes("This concept-map card is not available."));
 });

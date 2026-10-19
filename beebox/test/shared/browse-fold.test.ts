@@ -5,7 +5,7 @@
 // listing, and what folds behind "N more". Every branch in the module doc.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { foldListing, type Listing, type FoldEntry } from "../../src/shared/browse-fold.js";
 
 interface Card { name: string; prominence: "entry-point" | "primary" | "background" | "ordinary" }
@@ -58,7 +58,6 @@ function fmtAll(entries: FoldEntry<Card, Dir, File>[]): string {
 // prominent: `folded` is false and `more` is today's order — dirs, then
 // cards, then files, each natural-sorted.
 void test("No entry-point or primary card, no subdirectory carrying anything prominent:", async (t) => {
-  // doctest:L62
   const plain = listing({
     cards: [card("Zeta", "ordinary"), card("Alpha", "ordinary")],
     dirs: [dir("sub")],
@@ -70,13 +69,11 @@ void test("No entry-point or primary card, no subdirectory carrying anything pro
 
 // An empty listing folds the same way — nothing to lead with, no disclosure.
 void test("An empty listing folds the same way — nothing to lead with, no disclosure.", async (t) => {
-  // doctest:L75
   t.check(foldListing(listing({})).folded, false);
 });
 
 // ## Entry-point and primary cards lead, ordinary and background follow
 void test("Entry-point and primary cards lead, ordinary and background follow", async (t) => {
-  // doctest:L82
   const mixed = listing({
     cards: [
       card("Ordinary1", "ordinary"),
@@ -95,7 +92,6 @@ void test("Entry-point and primary cards lead, ordinary and background follow", 
 // one with neither, but with a marked card elsewhere forcing a fold, lands in
 // `more` unmarked. A subdirectory's own landmark identity travels with it.
 void test("A subdirectory whose summary has an entry point or a primary joins lead; one...", async (t) => {
-  // doctest:L102
   const dirs = listing({
     cards: [card("Entry", "entry-point")],
     dirs: [
@@ -107,7 +103,6 @@ void test("A subdirectory whose summary has an entry point or a primary joins le
   const dirsResult = foldListing(dirs);
   t.check(`${fmtAll(dirsResult.lead)} | ${fmtAll(dirsResult.more)}`, "card:Entry dir:Recipes | dir:Notes dir:Logs*");
 
-  // doctest:L114
   const leadDirs = dirsResult.lead.flatMap((e) => (e.kind === "dir" ? [e.dir] : []));
   t.check(leadDirs[0]?.landmark?.label, "Recipes");
 });
@@ -118,7 +113,6 @@ void test("A subdirectory whose summary has an entry point or a primary joins le
 // ancestor's) — every item folds into `more`, dimmed, regardless of its own
 // level, and `folded` is true.
 void test("The listing's own directory is background (its landmark, or a cascaded ancest...", async (t) => {
-  // doctest:L127
   const bg = listing({
     background: true,
     cards: [card("Entry", "entry-point"), card("Plain", "ordinary")],
@@ -131,7 +125,6 @@ void test("The listing's own directory is background (its landmark, or a cascade
 
 // ## Sorting is natural order within every tier
 void test("Sorting is natural order within every tier", async (t) => {
-  // doctest:L141
   const nat = listing({
     cards: [card("Item-10", "primary"), card("Item-2", "primary"), card("Item-1", "primary")],
   });

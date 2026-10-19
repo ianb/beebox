@@ -9,8 +9,8 @@
 // attributed to a real user.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, uuid } from "@ianbicking/tap-check/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -42,17 +42,14 @@ void test("Pair a device whose createdBy is the owner, then resolve a request th
       t.error(error);
     }
   });
-  // doctest:L35
   const box = await makeTmpBox();
   await createFirstUser({ email: "rosa@example.com", password: "correct-horse", name: "Rosa Okafor" });
 
-  // doctest:L38
   const ticket = createMobilePairingTicket(box.root, { createdBy: "rosa@example.com" });
   const device = await redeemMobilePairingTicket(box.root, { pairingToken: ticket.token, deviceLabel: "iPhone" });
   const deviceToken = capture(any(String));
   t.check(device, { deviceId: uuid(), deviceToken, label: "iPhone" });
 
-  // doctest:L43
   const sender = await resolveMobileSender(box.root, { authorization: `Bearer ${deviceToken.value}` });
   t.check(sender, {
     email: "rosa@example.com",
@@ -62,18 +59,15 @@ void test("Pair a device whose createdBy is the owner, then resolve a request th
   // That identity is what flows into the message tag, so the transcript shows a real
   // sender instead of an unattributed `<typed>`:
 
-  // doctest:L52
   if (sender === null) throw new Error("expected a sender");
   t.check(injectUserAttr("<typed>hello from my phone</typed>", sender), "<typed user=\"Rosa Okafor\" user-email=\"rosa@example.com\">hello from my phone</typed>");
 
   // Attributes already on the wrapper stay, after the sender. The box screen's
   // thoughts carry `source="box-screen"`, typed or spoken:
 
-  // doctest:L61
   const priya = { email: "priya@example.com", name: "Priya Marlowe" };
   t.check(injectUserAttr('<typed source="box-screen">Buy stamps</typed>', priya), "<typed user=\"Priya Marlowe\" user-email=\"priya@example.com\" source=\"box-screen\">Buy stamps</typed>");
 
-  // doctest:L65
   t.check(injectUserAttr('<speech source="box-screen">Call the plumber</speech>', priya), "<speech user=\"Priya Marlowe\" user-email=\"priya@example.com\" source=\"box-screen\">Call the plumber</speech>");
 
   // ## Without a local record the email stands in for the name
@@ -82,7 +76,6 @@ void test("Pair a device whose createdBy is the owner, then resolve a request th
   // Google-only login) still attributes — the display name degrades to the email
   // rather than failing.
 
-  // doctest:L76
   const ticket2 = createMobilePairingTicket(box.root, { createdBy: "tomas@example.com" });
   const device2 = await redeemMobilePairingTicket(box.root, { pairingToken: ticket2.token, deviceLabel: "iPad" });
   t.check(await resolveMobileSender(box.root, { authorization: `Bearer ${device2?.deviceToken}` }), {
@@ -95,7 +88,6 @@ void test("Pair a device whose createdBy is the owner, then resolve a request th
   // A device paired in open mode carries no `createdBy`, so there is genuinely no
   // user — matching the cookie path's `null` for an unauthenticated request.
 
-  // doctest:L88
   const openTicket = createMobilePairingTicket(box.root);
   const openDevice = await redeemMobilePairingTicket(box.root, { pairingToken: openTicket.token, deviceLabel: "kiosk" });
   t.check(await resolveMobileSender(box.root, { authorization: `Bearer ${openDevice?.deviceToken}` }), null);
@@ -103,10 +95,8 @@ void test("Pair a device whose createdBy is the owner, then resolve a request th
   // A request with no mobile credentials at all is also null (nothing to resolve),
   // and a bogus bearer token never matches a device.
 
-  // doctest:L98
   t.check(await resolveMobileSender(box.root, {}), null);
 
-  // doctest:L101
   t.check(await resolveMobileSender(box.root, { authorization: "Bearer not-a-real-token" }), null);
 });
 

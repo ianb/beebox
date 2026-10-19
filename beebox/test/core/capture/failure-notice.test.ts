@@ -6,8 +6,8 @@
 // sentence. See docs/implemented-plans/notifications.md (Track E).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, isoDate } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -52,20 +52,17 @@ void test("Nobody present: one `quiet` notice to the capture's chat", async (t) 
       t.error(error);
     }
   });
-  // doctest:L47
   const box = await makeTmpBox({ git: true });
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: new Date() });
   const push = createFakePush();
   const staged = await createStagingSession({ boxRoot: box.root, targetSessionId: "sess-1", createdBy: null });
 
-  // doctest:L52
   await markCapturePreparationFailed({
     boxRoot: box.root, id: staged.id, eventBus, services: { push },
     reason: "The capture was saved, but it could not be delivered to the chat.",
   });
   t.check(emitted, ["capture-status failed"]);
 
-  // doctest:L59
   const [notice] = await readRecent(box.root, { days: 1 });
   assert.ok(notice);
   const notificationId = capture(any(String));
@@ -82,7 +79,6 @@ void test("Nobody present: one `quiet` notice to the capture's chat", async (t) 
   } as const;
   t.check(notice.intent, intent);
 
-  // doctest:L71
   const slug = await boxSlug(box.root);
   const sent = [{
     endpoint: "https://push.example/capture",
@@ -101,7 +97,6 @@ void test("Nobody present: one `quiet` notice to the capture's chat", async (t) 
   //
   // The open app already shows the failed capture bubble.
 
-  // doctest:L80
   await writePresence(box.root, { activeWeb: 1, now: new Date() });
   await markCapturePreparationFailed({ boxRoot: box.root, id: staged.id, eventBus, services: { push }, reason: "Again." });
   t.check(await readRecent(box.root, { days: 1 }), [{

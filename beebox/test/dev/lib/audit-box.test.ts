@@ -5,7 +5,7 @@
 // basename.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as path from "node:path";
 import { resolveAuditBox } from "../../../src/dev/lib/audit-box.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -18,7 +18,6 @@ void test("line 13", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L14
   const box = await makeTmpBox();
   const resolved = await resolveAuditBox(box.root);
   t.check(
@@ -35,7 +34,6 @@ void test("line 13", async (t) => {
 
 // A path that isn't a box passes through unchanged, named by its own basename:
 void test("A path that isn't a box passes through unchanged, named by its own basename:", async (t) => {
-  // doctest:L30
   const plain = path.resolve("test/dev/lib");
   const resolved = await resolveAuditBox(plain);
   t.check({ operational: resolved.operationalRoot === plain, boxName: resolved.boxName }, {

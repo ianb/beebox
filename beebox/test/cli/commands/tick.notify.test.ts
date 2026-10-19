@@ -7,8 +7,8 @@
 // (Track D).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, isoDate } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import { loadScriptState } from "../../../src/core/schedule/state.js";
@@ -37,7 +37,6 @@ void test("requested-by:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L33
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/remind-vet.scheduled-script.card", `---
 at: 2020-10-02T08:30
@@ -52,7 +51,6 @@ notify:
   box.commitAll("add reminder");
 
   const result = await runTick(box.root, { quiet: true });
-  // doctest:L46
   t.check(result.scripts, [
     {
       name: "remind-vet",
@@ -62,7 +60,6 @@ notify:
     },
   ]);
 
-  // doctest:L50
   const [sent] = await readRecent(box.root, { days: 36500 });
   assert.ok(sent);
   const id = capture(any(String));
@@ -84,15 +81,12 @@ Context: _content/pets/pepper-shots.todo.card`,
       { kind: "delivery", notificationId: id.value, at: isoDate(), channel: "web-push", status: "sent", detail: "fake" },
     ]);
 
-  // doctest:L66
   t.check((await loadScriptState(box.root, "remind-vet")).lastResult, "success");
 
-  // doctest:L69
   t.check(await scheduleCards(box), "");
 
   // The deletion is committed like any other one-shot's:
 
-  // doctest:L76
   await t.check(import("node:child_process").then(({ execSync }) => execSync("git log -1 --format=%s", { cwd: box.root }).toString().trim()), "Tick: remove one-shot remind-vet");
 });
 
@@ -108,7 +102,6 @@ void test("A schedule the box set up for itself is quiet unless it says otherwis
       t.error(error);
     }
   });
-  // doctest:L90
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/weekly-note.scheduled-script.card", `---
 at: 2020-01-01T09:00
@@ -128,7 +121,6 @@ notify:
       { kind: "delivery", notificationId: id.value, at: isoDate(), channel: "web-push", status: "sent", detail: "fake" },
     ]);
 
-  // doctest:L105
   t.check(await scheduleCards(box), "_config/schedules/weekly-note.scheduled-script.card");
 });
 
@@ -146,7 +138,6 @@ void test("With no fake mode and no channel configured, nothing can carry it.", 
       t.error(error);
     }
   });
-  // doctest:L120
   delete process.env.BBX_NOTIFY_FAKE;
   const box = await makeTmpBox({ git: true });
   await box.write("_config/schedules/remind-call.scheduled-script.card", `---
@@ -174,7 +165,6 @@ notify:
     ],
   });
 
-  // doctest:L134
   const state = await loadScriptState(box.root, "remind-call");
   t.check(state, {
     lastRun: isoDate(),
@@ -193,6 +183,5 @@ notify:
     recentRuns: [{ ts: isoDate(), durationMs: any(Number).int() }],
   });
 
-  // doctest:L138
   t.check(await scheduleCards(box), "_config/schedules/remind-call.scheduled-script.card");
 });

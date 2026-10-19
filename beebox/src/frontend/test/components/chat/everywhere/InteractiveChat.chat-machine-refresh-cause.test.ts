@@ -12,7 +12,7 @@
 // Agent working" bug.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../../../src/machines/chatMachine/machine.js";
 import type { ChatController } from "../../../../src/components/chat/conversation/controller-pool/pool.js";
@@ -56,12 +56,10 @@ async function afterTurn(terminal: ChatEvent) {
 }
 
 void test("The strip's phase follows the cause", async (t) => {
-  // doctest:L55
   const actor = await idleActor();
   actor.send({ type: "REFRESH" });
   t.check(chatDisplayPhase(actor.getSnapshot()), "refreshing-resync");
 
-  // doctest:L60
   const turn = await idleActor();
   turn.send({ type: "SEND", message: "hi", messageId: "m1" });
   turn.send({ type: "STREAM_RESULT" });
@@ -74,7 +72,6 @@ void test("The strip's phase follows the cause", async (t) => {
 // flight (a >5s bootstrap). Honoring it would cancel that fetch; the load's own
 // result is fresher than any event the REFRESH could be covering for.
 void test("The reconnect gate's trailing timer can fire while fetchInitial is still in f...", async (t) => {
-  // doctest:L74
   const actor = createActor(
     chatMachine.provide({
       actors: {
@@ -92,23 +89,18 @@ void test("The reconnect gate's trailing timer can fire while fetchInitial is st
 
 // ## A REFRESH from idle is a resync
 void test("A REFRESH from idle is a resync", async (t) => {
-  // doctest:L93
   const actor = await idleActor();
   t.check(where(actor), "idle/resync");
 
-  // doctest:L97
   actor.send({ type: "REFRESH" });
   t.check(where(actor), "refreshing/resync");
 });
 
 void test("Every edge out of `streaming` is a turn refresh", async (t) => {
-  // doctest:L114
   t.check(await afterTurn({ type: "STREAM_RESULT" }), "refreshing/turn");
 
-  // doctest:L117
   t.check(await afterTurn({ type: "STREAM_FAILED", error: "socket closed", accepted: true }), "refreshing/turn");
 
-  // doctest:L120
   t.check(await afterTurn({ type: "STREAM_RECOVER" }), "refreshing/turn");
 });
 
@@ -119,10 +111,9 @@ void test("Every edge out of `streaming` is a turn refresh", async (t) => {
 // ## A later resync does not inherit the turn's cause
 //
 // `chat-complete` lands a beat after STREAM_RESULT and is ignored inside
-// `refreshing` (see chat-machine-finalize.doctest.md), so the turn's cause holds
+// `refreshing` (see src/frontend/test/machines/chatMachine/machine.chat-machine-finalize.test.ts), so the turn's cause holds
 // through its own fetch; the *next* REFRESH, once idle, is a resync again.
 void test("(An interrupted turn takes the STREAMERROR/STREAMFAILED interrupting branches...", async (t) => {
-  // doctest:L135
   const actor = await idleActor();
   actor.send({ type: "SEND", message: "hi", messageId: "m1" });
   actor.send({ type: "STREAM_RESULT" });

@@ -9,7 +9,7 @@
 // `reason`, `no-file` or `no-schema`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { pluginTypeCoverage } from "../../../src/core/plugins/coverage.js";
 
 const courseware = { name: "courseware", schemaTypes: ["course", "concept-map"], viewNames: ["concept-map"] };
@@ -32,7 +32,6 @@ function coverage(overrides: Partial<Parameters<typeof pluginTypeCoverage>[0]>) 
 // The cards have no schema; the plugin that provides it is named with the count.
 // Nothing is "declared missing" because the plugin is not active.
 void test("The cards have no schema; the plugin that provides it is named with the count.", async (t) => {
-  // doctest:L36
   t.check(coverage({ typesOnDisk: new Map([["course", 3], ["note", 10]]) }), {
     unprovided: [
       {
@@ -50,7 +49,6 @@ void test("The cards have no schema; the plugin that provides it is named with t
 // Both signals fire: the cards are unprovided, and the active plugin's
 // declarations (two types, one view) have no stubs.
 void test("Both signals fire:", async (t) => {
-  // doctest:L46
   t.check(coverage({ typesOnDisk: new Map([["course", 2]]), active: new Set(["courseware"]) }), {
     unprovided: [
       {
@@ -86,7 +84,6 @@ void test("Both signals fire:", async (t) => {
 //
 // Only the declarations are missing; no card is at risk.
 void test("Only the declarations are missing; no card is at risk.", async (t) => {
-  // doctest:L62
   t.check(coverage({ active: new Set(["courseware"]) }), {
     unprovided: [],
     declaredMissing: [
@@ -117,7 +114,6 @@ void test("Only the declarations are missing; no card is at risk.", async (t) =>
 // The stubs put the types in the effective schema map and the view file on disk,
 // so nothing is reported, with or without cards.
 void test("The stubs put the types in the effective schema map and the view file on disk...", async (t) => {
-  // doctest:L79
   t.check(
     coverage({
       typesOnDisk: new Map([["course", 2], ["concept-map", 1]]),
@@ -139,7 +135,6 @@ void test("The stubs put the types in the effective schema map and the view file
 // defines some other type, or failed to load (then `plugin-stub-missing` also
 // reports the failure). File presence never passes a declaration on its own.
 void test("The type is absent from the effective map, so its cards are unprovided and th...", async (t) => {
-  // doctest:L96
   t.check(
     coverage({
       typesOnDisk: new Map([["course", 1]]),
@@ -177,7 +172,6 @@ void test("The type is absent from the effective map, so its cards are unprovide
 // Each plugin is named for the same unprovided type; only the active one has a
 // missing declaration.
 void test("Each plugin is named for the same unprovided type; only the active one has a...", async (t) => {
-  // doctest:L116
   const other = { name: "syllabus", schemaTypes: ["course"], viewNames: [] };
   t.check(
     coverage({

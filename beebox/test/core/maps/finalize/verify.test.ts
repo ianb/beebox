@@ -5,7 +5,7 @@
 // count as current. Each rule restates the refresh-maps prompt's format section.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { verifyMapCoverage } from "../../../../src/core/maps/finalize/verify.js";
 
 function check(content: string, children: string[]) {
@@ -17,7 +17,6 @@ function check(content: string, children: string[]) {
 // Subdirectories and anchor files are listed; plain files may be left out; bare
 // and annotated bullets both count; nested bullets and prose are not checked.
 void test("Subdirectories and anchor files are listed; plain files may be left out; bare...", async (t) => {
-  // doctest:L22
   t.check(
     check(
       [
@@ -42,7 +41,6 @@ void test("Subdirectories and anchor files are listed; plain files may be left o
 // A header left from an older layout fails, so the agent rewrites the map. Every
 // map on a box migrated to one root carried one of these.
 void test("A header left from an older layout fails, so the agent rewrites the map.", async (t) => {
-  // doctest:L45
   t.check(check("# Map: store/work\n\n- `acme/`\n", ["acme/"]), {
     ok: false,
     problems: ['header is "# Map: store/work", expected "# Map: _content/work"'],
@@ -51,7 +49,6 @@ void test("A header left from an older layout fails, so the agent rewrites the m
 
 // ## Every subdirectory and anchor must be listed
 void test("Every subdirectory and anchor must be listed", async (t) => {
-  // doctest:L52
   t.check(check("# Map: _content/work\n\n- `acme/`\n", ["acme/", "beta/", "Work.landmark.card", "plain.md"]), {
     ok: false,
     problems: ["does not list beta/", "does not list Work.landmark.card"],
@@ -60,7 +57,6 @@ void test("Every subdirectory and anchor must be listed", async (t) => {
 
 // A subdirectory written without its trailing slash is a different name:
 void test("A subdirectory written without its trailing slash is a different name:", async (t) => {
-  // doctest:L61
   t.check(check("# Map: _content/work\n\n- `acme` — contracts\n", ["acme/"]), {
     ok: false,
     problems: ["does not list acme/", "lists acme, which is not in the directory's listing"],
@@ -71,7 +67,6 @@ void test("A subdirectory written without its trailing slash is a different name
 //
 // A deleted entry, or one the ignore policy hides, fails:
 void test("A deleted entry, or one the ignore policy hides, fails:", async (t) => {
-  // doctest:L72
   t.check(check("# Map: _content/work\n\n- `acme/`\n- `old-client/` — gone\n", ["acme/"]), {
     ok: false,
     problems: ["lists old-client/, which is not in the directory's listing"],
@@ -80,7 +75,6 @@ void test("A deleted entry, or one the ignore policy hides, fails:", async (t) =
 
 // ## An empty map fails on every count
 void test("An empty map fails on every count", async (t) => {
-  // doctest:L79
   t.check(check("", ["acme/"]), {
     ok: false,
     problems: ['header is "", expected "# Map: _content/work"', "does not list acme/"],

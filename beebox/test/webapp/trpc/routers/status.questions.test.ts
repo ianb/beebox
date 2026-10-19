@@ -9,7 +9,7 @@
 // section, pointing at the raw file) instead of silently dropping it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
@@ -50,17 +50,14 @@ void test("line 46", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L47
   const box = await makeTmpBox({ git: true });
   await box.seed(".beebox/box.json", MARKER);
   await box.write("_bookkeeping/questions/Receipt.question.card", VALID);
   await box.write("_bookkeeping/questions/Broken.question.card", MALFORMED);
 
-  // doctest:L52
   const caller = contextFor(box);
   const { items } = await caller.questions();
 
-  // doctest:L55
   const dir = "_bookkeeping/questions";
   t.check(items, [
     {

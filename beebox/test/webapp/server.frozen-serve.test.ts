@@ -2,7 +2,7 @@
 // TestServer.response, so the status and headers are checked with the body.
 
 import { test } from "tap";
-import { any, others, str } from "agent-doctest/check";
+import { any, others, str } from "@ianbicking/tap-check/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer } from "../helpers/test-route-server.js";

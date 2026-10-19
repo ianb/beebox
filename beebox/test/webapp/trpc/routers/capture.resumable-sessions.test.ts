@@ -5,8 +5,8 @@
 // visible chat or exact client-held staging id.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -28,7 +28,6 @@ void test("Lifecycle, chat matching, and owner isolation", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L24
   const box = await makeTmpBox();
   const owned = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: "owner@example.com" });
   await addPhotoTo(box.root, owned.id);
@@ -49,7 +48,6 @@ void test("Lifecycle, chat matching, and owner isolation", async (t) => {
 
   // An exact client-held id finds a standalone capture:
 
-  // doctest:L47
   const byId = selectResumableCaptures({
     sessions,
     targetSessionId: null,
@@ -61,7 +59,6 @@ void test("Lifecycle, chat matching, and owner isolation", async (t) => {
   // The same chat and ids reveal nothing to another user; empty and sealed sessions
   // are absent for the owner too:
 
-  // doctest:L61
   const otherUser = selectResumableCaptures({
     sessions,
     targetSessionId: "chat-1",
@@ -99,8 +96,7 @@ void test("GET /api/capture/sessions/resumable resolves its owner through resolv
       t.error(error);
     }
   });
-  // doctest:L91
-  const KEY = "browse-key-for-capture-doctest";
+  const KEY = "browse-key-for-capture-test";
   const ORIGINAL_OWNER = process.env.BBX_OWNER_EMAIL;
   process.env.BBX_BROWSE_API_KEY = KEY;
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
@@ -109,12 +105,10 @@ void test("GET /api/capture/sessions/resumable resolves its owner through resolv
   const authDir = await mkdtemp(join(tmpdir(), "bbx-capture-browse-"));
   process.env.BBX_AUTH_FILE = join(authDir, "no-such-auth.json");
 
-  // doctest:L100
   const keyHeaders = { authorization: `Bearer ${KEY}` };
   const optedIn = await makeTestServer({ openAccess: false });
   await optedIn.seed("_config/box.json", JSON.stringify({ agentBrowsing: "owner" }));
 
-  // doctest:L104
   await t.checkText(await optedIn.inject({ method: "GET", url: "/api/capture/sessions/resumable", headers: keyHeaders }), `200
 {
   "resumable": []
@@ -123,10 +117,8 @@ void test("GET /api/capture/sessions/resumable resolves its owner through resolv
   // A box that never opted in still refuses — the key clears the wall there but is
   // nobody, so there is no capture owner to answer for.
 
-  // doctest:L115
   const plain = await makeTestServer({ openAccess: false });
 
-  // doctest:L117
   await t.checkText(await plain.inject({ method: "GET", url: "/api/capture/sessions/resumable", headers: keyHeaders }), `401
 {
   "error": "Not authenticated"

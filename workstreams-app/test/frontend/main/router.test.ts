@@ -5,7 +5,7 @@
 // redirect path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createMemoryHistory } from "@tanstack/react-router";
 import { router } from "../../../src/frontend/main/router.js";
 
@@ -14,7 +14,6 @@ const leaf = (pathname: string): string | undefined =>
   router.matchRoutes(pathname).at(-1)?.routeId;
 
 void test("line 16", async (t) => {
-  // doctest:L17
   t.check(
     [
       leaf("/issues"),

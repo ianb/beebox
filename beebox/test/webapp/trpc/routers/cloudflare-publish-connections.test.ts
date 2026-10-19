@@ -6,8 +6,8 @@
 // credential value.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, not } from "@ianbicking/tap-check/check";
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -76,14 +76,12 @@ async function message(promise: Promise<unknown>) {
 
 // Only a real authenticated owner may manage this machine-wide credential.
 void test("Only a real authenticated owner may manage this machine-wide credential.", async (t) => {
-  // doctest:L47
   t.check(await message(caller(false).cloudflarePublishConnections.list()), "FORBIDDEN");
 
   // Saving verifies the token against the selected account and returns metadata,
   // never the token itself. Other write capabilities remain explicitly unverified
   // until actual server provisioning exercises them.
 
-  // doctest:L56
   const owner = caller(true);
   const saved = await owner.cloudflarePublishConnections.save({
     name: "studio",
@@ -97,7 +95,6 @@ void test("Only a real authenticated owner may manage this machine-wide credenti
 
   // The token has its own server-only connection slot, not a generic secret slot.
 
-  // doctest:L74
   const metadata = await owner.cloudflarePublishConnections.list();
   const generic = await listSecrets();
   const raw = JSON.parse(await readFile(storeFile, "utf-8"));
@@ -111,7 +108,6 @@ void test("Only a real authenticated owner may manage this machine-wide credenti
   // event identifies the credential without recording its value. Browser UI
   // refuses Show when `navigator.webdriver` is true; this is a client-side check.
 
-  // doctest:L90
   t.check(await message(caller(false).cloudflarePublishConnections.revealToken({ name: "studio" })), "FORBIDDEN");
   // A retired input field, passed through a variable so only the server-side schema rejects it.
   const legacyReveal = { name: "studio", webdriver: true };
@@ -134,7 +130,6 @@ void test("Only a real authenticated owner may manage this machine-wide credenti
   // A grant is always `server`; there is no API input that can raise a publishing
   // token to agent access. The resolver refuses boxes without the grant.
 
-  // doctest:L108
   await owner.cloudflarePublishConnections.grant({ name: "studio", boxSlug: "test-box" });
   const credential = await resolveCloudflarePublishCredential({
     name: "studio", boxSlug: "test-box", purpose: "publish-prepare", at: new Date().toISOString(),
@@ -160,7 +155,6 @@ void test("Only a real authenticated owner may manage this machine-wide credenti
   // Publication locators are box-owned, while sites in one box and connection share
   // the same isolated bucket. A copied PubId cannot be resolved by another box.
 
-  // doctest:L124
   const createdAt = new Date().toISOString();
   const bindingA = await reserveCloudflarePublishBinding({
     pubId: "abcdefghijklmnopqrstuvwxyz",
@@ -210,7 +204,6 @@ void test("Only a real authenticated owner may manage this machine-wide credenti
   // A failed verification does not create or rotate a connection. Revocation drops
   // the credential while retaining routing metadata and grants for diagnosis.
 
-  // doctest:L151
   const rejectingVerifier = createFakeCloudflarePublishTokenVerifier({ error: new Error("bad token") });
   const rejecting = appRouter.createCaller(trpcContext({
     boxRoot: box.root,

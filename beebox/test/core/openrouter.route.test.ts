@@ -12,7 +12,7 @@
 // through.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,22 +33,18 @@ async function useTempStore() {
 // the state every caller here already handles by degrading (text-only search, the
 // Claude scan backend, a CLI that says what to grant).
 void test("A workload with neither credential is not broken — it is unconfigured, which...", async (t) => {
-  // doctest:L37
   await useTempStore();
   const box = await makeTmpBox();
 
-  // doctest:L41
   const nothing = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: null });
   t.check(nothing, null);
 });
 
 // ## The direct key alone routes direct
 void test("The direct key alone routes direct", async (t) => {
-  // doctest:L49
   await useTempStore();
   const box = await makeTmpBox();
 
-  // doctest:L52
   const direct = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: "placeholder-openai-key" });
   t.check(direct, {
     via: "direct",
@@ -58,16 +54,13 @@ void test("The direct key alone routes direct", async (t) => {
 
 // ## The OpenRouter key alone routes through OpenRouter
 void test("The OpenRouter key alone routes through OpenRouter", async (t) => {
-  // doctest:L60
   await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
 
-  // doctest:L64
   await setSecret({ name: "openrouter", value: "placeholder-openrouter-key" });
   await grantSecret({ slug, name: "openrouter", access: "server" });
 
-  // doctest:L67
   const fallback = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: null });
   t.check(fallback, {
     via: "openrouter",
@@ -80,16 +73,13 @@ void test("The OpenRouter key alone routes through OpenRouter", async (t) => {
 // This is the case the decision is about. The OpenRouter key is granted and
 // usable, and it is not used — the box keeps the provider it already had.
 void test("This is the case the decision is about.", async (t) => {
-  // doctest:L78
   await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
 
-  // doctest:L82
   await setSecret({ name: "openrouter", value: "placeholder-openrouter-key" });
   await grantSecret({ slug, name: "openrouter", access: "server" });
 
-  // doctest:L85
   const both = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: "placeholder-openai-key" });
   t.check(both, { via: "direct", apiKey: "placeholder-openai-key" });
   t.check(await getOpenRouterKey(box.root, { purpose: "embeddings", observe: false }), "placeholder-openrouter-key");
@@ -100,11 +90,9 @@ void test("This is the case the decision is about.", async (t) => {
 // Storing a secret on the machine is not granting it to a box, and there is no
 // further arm to fall to — the box is simply unconfigured.
 void test("Storing a secret on the machine is not granting it to a box, and there is no...", async (t) => {
-  // doctest:L99
   await useTempStore();
   const box = await makeTmpBox();
 
-  // doctest:L102
   await setSecret({ name: "openrouter", value: "placeholder-openrouter-key" });
   const ungranted = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: null });
   t.check(ungranted, null);
@@ -114,12 +102,10 @@ void test("Storing a secret on the machine is not granting it to a box, and ther
 // every provider key, so a credential introduced after that migration is
 // store-only from the start rather than born with a deprecated path.
 void test("There is no env-var arm and no legacy file:", async (t) => {
-  // doctest:L113
   await useTempStore();
   const box = await makeTmpBox();
   process.env.BBX_OPENROUTER_API_KEY = "placeholder-env-openrouter-key";
 
-  // doctest:L117
   const ignored = await routeVia({ boxRoot: box.root, purpose: "embeddings", directKey: null });
   delete process.env.BBX_OPENROUTER_API_KEY;
   t.check(ignored, null);

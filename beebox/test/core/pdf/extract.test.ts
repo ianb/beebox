@@ -10,11 +10,11 @@
 // is exactly what this flow did before Docling existed.
 //
 // Docling itself is faked here (the services pattern); the real binary is
-// exercised by `pdf-extract-integration.doctest.md`.
+// exercised by `test/core/pdf/extract.integration.test.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { runPdfMode } from "../../../src/core/commands/scan-import/pdf.js";
 import { runPdfReanalyze } from "../../../src/core/commands/pdf-reanalyze.js";
 import { createFakeDocling, MAX_EXTRACTION_ARTIFACTS } from "../../../src/services/docling/core.js";
@@ -39,7 +39,7 @@ const schemas = await createCardSchemaMap();
 
 // The raw text layer comes from poppler, which is a deployed-server given but
 // not a developer-machine one — so assertions about it are
-// availability-appropriate, like `pdf-probe.doctest.md`.
+// availability-appropriate, like `test/core/pdf/probe.test.ts`.
 const havePdftotext = await execa("pdftotext", ["-v"], { reject: false }).then((r) => r.exitCode === 0, () => false);
 
 // The fields these examples read from a parsed pdf card, validated rather than assumed.
@@ -118,7 +118,6 @@ void test("A successful extraction lands an extracted pdf card", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L96
   const box = await makeTmpBox({ git: true });
   const docling = createFakeDocling({
     markdown: "## Invoice 2026-04\n\n![Image](out/source_artifacts/image_000000_fake.png)\n",
@@ -134,7 +133,6 @@ void test("A successful extraction lands an extracted pdf card", async (t) => {
   // The fake was asked for a no-OCR extraction — `do_ocr=False` is the default, not
   // an option the caller has to remember:
 
-  // doctest:L114
   await t.checkText(docling.describe(), `docling fake (succeeds), 1 call(s)
   source.pdf ocr=off languages=-`);
 
@@ -142,19 +140,16 @@ void test("A successful extraction lands an extracted pdf card", async (t) => {
   // one per figure. Every image is a real WebP — the fake emits real PNG bytes and
   // `sharp` re-encodes them for real:
 
-  // doctest:L125
   await t.checkText(await attachContents(box), `docling.json.gz
 figure-001.webp
 page-001.webp
 page-002.webp
 source.pdf`);
 
-  // doctest:L133
   const dir = await sessionDir(box);
   const webp = await readFile(join(box.root, "_content/inbox", dir, "source.attach/page-001.webp"));
   t.check(webp.subarray(8, 12).toString("latin1"), "WEBP");
 
-  // doctest:L138
   const json = gunzipSync(await readFile(join(box.root, "_content/inbox", dir, "source.attach/docling.json.gz")));
   t.check(JSON.parse(json.toString()).schema_name, "DoclingDocument");
 
@@ -163,7 +158,6 @@ source.pdf`);
   // figure reference rewritten into the attach scope, not left pointing at Docling's
   // scratch directory:
 
-  // doctest:L149
   const { rel, content } = await readPdfCard(box);
   const card = parsePdfCard(content, rel);
   // `metadata.pages` comes from the PDF itself (poppler), falling back to the
@@ -175,16 +169,12 @@ source.pdf`);
     metadata: { pages: havePdftotext ? 1 : 2 },
   });
 
-  // doctest:L160
   await t.checkText(card.rawBody.trim(), `## Invoice 2026-04
 «blankline»
 ![Image](attach/figure-001.webp)`);
 
-  // doctest:L171
-
   // The session card points at the pdf card:
 
-  // doctest:L178
   const sessionCard = await box.read(importData(result).sessionCardPath);
   await t.checkText(sessionCard, sessionCardText());
 });
@@ -201,7 +191,6 @@ void test("WebP permits at most 16,383 pixels on each axis.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L193
   const scratch = await mkdtemp(join(tmpdir(), "bbx-tall-render-"));
   const attachAbsDir = join(scratch, "attach");
   const workDir = join(scratch, "work");
@@ -267,7 +256,6 @@ void test("Docling's markdown is the body, and it is faithful-but-lossy.", async
       t.error(error);
     }
   });
-  // doctest:L248
   const box = await makeTmpBox({ git: true });
   await importPdf(box, { docling: createFakeDocling({ markdown: "rendered", pageCount: 1 }) });
   const dir = await sessionDir(box);
@@ -281,7 +269,6 @@ void test("Docling's markdown is the body, and it is faithful-but-lossy.", async
 
   // It holds the PDF's own words, not Docling's rendering of them:
 
-  // doctest:L259
   const raw = havePdftotext
     ? await readFile(join(box.root, "_content/inbox", dir, "source.attach/text-layer.txt"), "utf-8")
     : "Invoice 2026-04 Northwind Traders";
@@ -303,7 +290,6 @@ void test("An empty asset would be worse than an absent one — it reads as \"th
       t.error(error);
     }
   });
-  // doctest:L278
   const scratch = await mkdtemp(join(tmpdir(), "bbx-text-layer-"));
   const workDir = join(scratch, "work");
   const attachAbsDir = join(scratch, "attach");
@@ -312,7 +298,6 @@ void test("An empty asset would be worse than an absent one — it reads as \"th
   const textlessPath = join(scratch, "textless.pdf");
   await writeFile(textlessPath, textlessPdf());
 
-  // doctest:L286
   const result = await extractPdf({
     docling: createFakeDocling({ markdown: "", pageCount: 1 }),
     sourcePath: textlessPath,
@@ -351,7 +336,6 @@ void test("A scan that arrived through the upload route carries the credential t
       t.error(error);
     }
   });
-  // doctest:L311
   const box = await makeTmpBox({ git: true });
   const result = await importPdf(box, { docling: createFakeDocling({ markdown: "billed", pageCount: 1 }), source: "scan-upload/laptop-scansnap" });
   const { rel, content } = await readPdfCard(box);
@@ -363,7 +347,6 @@ void test("A scan that arrived through the upload route carries the credential t
     metadata: { pages: 1 },
   });
 
-  // doctest:L318
   const sessionCard = await box.read(importData(result).sessionCardPath);
   await t.checkText(sessionCard, sessionCardText("scan-upload/laptop-scansnap"));
 
@@ -371,7 +354,6 @@ void test("A scan that arrived through the upload route carries the credential t
   // carries no `uploader` at all — no uploader sent the file, so an absent one is
   // the honest answer:
 
-  // doctest:L328
   const plain = await makeTmpBox({ git: true });
   const plainResult = await importPdf(plain, { docling: createFakeDocling({ markdown: "billed", pageCount: 1 }) });
   const plainDoc = await readPdfCard(plain);
@@ -383,7 +365,6 @@ void test("A scan that arrived through the upload route carries the credential t
   });
   await t.checkText(await plain.read(importData(plainResult).sessionCardPath), sessionCardText());
 
-  // doctest:L337
   await plain.cleanup();
 });
 
@@ -399,7 +380,6 @@ void test("Nothing is lost:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L350
   const box = await makeTmpBox({ git: true });
   const docling = createFakeDocling({ failWith: "Docling exited 1: killed by the OOM killer" });
   const result = await importPdf(box, { docling });
@@ -408,10 +388,8 @@ void test("Nothing is lost:", async (t) => {
     data: { extracted: false, sessionCardPath, intakeJobPath },
   });
 
-  // doctest:L359
   t.check(await attachContents(box), "source.pdf");
 
-  // doctest:L362
   const { rel, content } = await readPdfCard(box);
   const card = parsePdfCard(content, rel);
   t.check({ fields: card.fields, body: card.rawBody.trim() }, {
@@ -439,12 +417,10 @@ void test("A document with no readable text is a real answer.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L392
   const box = await makeTmpBox({ git: true });
   const result = await importPdf(box, { docling: createFakeDocling({ markdown: "", pageCount: 1 }) });
   t.check(importData(result), { extracted: true, sessionCardPath, intakeJobPath });
 
-  // doctest:L397
   const { rel, content } = await readPdfCard(box);
   const card = parsePdfCard(content, rel);
   t.check({ fields: card.fields, body: card.rawBody.trim() }, {
@@ -457,7 +433,6 @@ void test("A document with no readable text is a real answer.", async (t) => {
     body: "",
   });
 
-  // doctest:L402
   await t.checkText(await attachContents(box), `docling.json.gz
 page-001.webp
 source.pdf`);
@@ -475,17 +450,14 @@ void test("The card is re-extracted in place.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L419
   const box = await makeTmpBox({ git: true });
   await importPdf(box, { docling: createFakeDocling({ markdown: "first pass", pageCount: 3 }) });
   const dir = await sessionDir(box);
   const cardRel = `_content/inbox/${dir}/source.pdf.card`;
 
-  // doctest:L424
   // Stand in for an agent's downstream processing pass.
   await box.write(cardRel, (await box.read(cardRel)).replace("format: pdf", "format: pdf\ndescription: A utility bill"));
 
-  // doctest:L427
   const docling = createFakeDocling({ markdown: "second pass", pageCount: 1 });
   const { ctx } = createCollectorContext(box.root);
   const result = await runPdfReanalyze(ctx, {
@@ -499,13 +471,11 @@ void test("The card is re-extracted in place.", async (t) => {
 
   // The flags reached the extractor:
 
-  // doctest:L440
   await t.checkText(docling.describe(), `docling fake (succeeds), 1 call(s)
   source.pdf ocr=replace languages=en,de`);
 
   // The body and page count are the new run's; the description is the old card's:
 
-  // doctest:L449
   const card = parsePdfCard(await box.read(cardRel), cardRel);
   t.check({ fields: card.fields, body: card.rawBody.trim() }, {
     fields: {
@@ -521,7 +491,6 @@ void test("The card is re-extracted in place.", async (t) => {
   // Three pages became one, and the two stale page assets are gone rather than
   // sitting beside the new one:
 
-  // doctest:L458
   await t.checkText(await attachContents(box), `docling.json.gz
 page-001.webp
 source.pdf`);
@@ -539,7 +508,6 @@ void test("Both generated extensions are disposable, including page numbers wide
       t.error(error);
     }
   });
-  // doctest:L475
   const scratch = await mkdtemp(join(tmpdir(), "bbx-render-cleanup-"));
   await writeFile(join(scratch, "source.pdf"), "original");
   await writeFile(join(scratch, "page-001.avif"), "old render");
@@ -569,13 +537,11 @@ void test("Reanalyze refuses clearly on a card it cannot work with", async (t) =
       t.error(error);
     }
   });
-  // doctest:L493
   const box = await makeTmpBox({ git: true });
   const { ctx } = createCollectorContext(box.root);
   const missing = await runPdfReanalyze(ctx, { args: { card: "_content/inbox/Nope.pdf.card" } });
   t.check(missing, { success: false, error: "Card not found: _content/inbox/Nope.pdf.card" });
 
-  // doctest:L499
   const wrongType = await runPdfReanalyze(ctx, { args: { card: "_content/inbox/Nope.doc.card" } });
   t.check(wrongType, { success: false, error: "Not a pdf card: _content/inbox/Nope.doc.card" });
 
@@ -584,7 +550,6 @@ void test("Reanalyze refuses clearly on a card it cannot work with", async (t) =
   // path naming somewhere else entirely, is a clean refusal rather than a file read
   // outside the box. Fail-closed — nothing is clamped back to the root.
 
-  // doctest:L510
   const outside = ["../outside/Secret.pdf.card", "box/../../outside/Secret.pdf.card", "/etc/Secret.pdf.card", "/tmp/Secret.pdf.card"];
   const escapes = await Promise.all(outside.map((card) => runPdfReanalyze(ctx, { args: { card } })));
   t.check(escapes, [
@@ -597,7 +562,6 @@ void test("Reanalyze refuses clearly on a card it cannot work with", async (t) =
   // A `..` that stays inside the box is fine — it just normalizes, and the refusal
   // that follows is about the card, not the path:
 
-  // doctest:L524
   const inside = await runPdfReanalyze(ctx, { args: { card: "_content/inbox/../inbox/Nope.pdf.card" } });
   t.check(inside, { success: false, error: "Card not found: _content/inbox/Nope.pdf.card" });
 });
@@ -616,14 +580,12 @@ void test("Docling decides how many artifacts it writes; the caps (D16) sit betw
       t.error(error);
     }
   });
-  // doctest:L541
   const scratch = await mkdtemp(join(tmpdir(), "bbx-doc-bounds-"));
   const workDir = join(scratch, "work");
   const attachAbsDir = join(scratch, "attach");
   await mkdir(workDir, { recursive: true });
   await mkdir(attachAbsDir, { recursive: true });
 
-  // doctest:L547
   const tooMany = await extractPdf({
     docling: createFakeDocling({ pageCount: MAX_EXTRACTION_ARTIFACTS + 1 }),
     sourcePath: join(scratch, "source.pdf"),
@@ -637,12 +599,10 @@ void test("Docling decides how many artifacts it writes; the caps (D16) sit betw
   // Nothing was written into the attach scope — the refusal happens before the
   // re-encode, not halfway through it:
 
-  // doctest:L563
   t.check(await readdir(attachAbsDir), []);
 
   // Right at the cap is still a normal extraction:
 
-  // doctest:L570
   const atCap = await extractPdf({
     docling: createFakeDocling({ pageCount: 3, figureCount: 2 }),
     sourcePath: join(scratch, "source.pdf"),

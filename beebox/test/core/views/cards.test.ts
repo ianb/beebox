@@ -6,7 +6,7 @@
 // (`skipped`), which the route drops but `bbx view test` surfaces.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -31,7 +31,6 @@ void test("A dependency glob selecting a card returns it as a ViewCard, with non
       t.error(error);
     }
   });
-  // doctest:L28
   const box = await makeTmpBox();
   await box.write("_content/inbox/Test.doc.card", DOC_CARD);
   await box.write("_content/inbox/Test.attach/notes.txt", "hello");
@@ -75,7 +74,6 @@ void test("A view with no dependency globs loads nothing:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L73
   const box = await makeTmpBox();
   const result = await loadViewCards(box.root, []);
   t.check(result, {
@@ -99,12 +97,10 @@ void test("A card that matches a glob but fails to load (here:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L91
   const box = await makeTmpBox();
   await box.write("_content/inbox/Good.doc.card", DOC_CARD);
   await box.write("_content/inbox/Bad.bogus.card", "---\nstatus: new\n---\nno schema for this type\n");
 
-  // doctest:L95
   const result = await loadViewCards(box.root, ["_content/**/*.card"]);
   t.check({ paths: result.cards.map((c) => c.path), skipped: result.skipped }, {
     paths: ["_content/inbox/Good.doc.card"],
@@ -131,12 +127,10 @@ void test("/.doc.card from the unified root would otherwise reach a package-inte
       t.error(error);
     }
   });
-  // doctest:L118
   const box = await makeTmpBox();
   await box.write("_content/inbox/Real.doc.card", DOC_CARD);
   await box.write("src/private.doc.card", DOC_CARD);
 
-  // doctest:L122
   const result = await loadViewCards(box.root, ["**/*.doc.card"]);
   t.check(result.cards.map((c) => c.path), ["_content/inbox/Real.doc.card"]);
 });
@@ -155,7 +149,6 @@ void test("A dependency glob matching INSIDE an underscore area can still name a
       t.error(error);
     }
   });
-  // doctest:L138
   const box = await makeTmpBox();
   const outside = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-outside-"));
   await fs.writeFile(path.join(outside, "secret.card"), DOC_CARD);
@@ -163,7 +156,6 @@ void test("A dependency glob matching INSIDE an underscore area can still name a
   await fs.symlink(path.join(outside, "secret.card"), box.path("_content/inbox/Escape.doc.card"));
   await box.write("_content/inbox/Real.doc.card", DOC_CARD);
 
-  // doctest:L145
   const result = await loadViewCards(box.root, ["_content/**/*.card"]);
   t.check(result.cards.map((c) => c.path), ["_content/inbox/Real.doc.card"]);
 });

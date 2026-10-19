@@ -7,7 +7,7 @@
 // files feedback.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { codexSdkConfig, type CodexSdkSessionOptions } from "../../../src/services/codex-sdk-session/core.js";
@@ -26,7 +26,6 @@ const fakeTurn = { sessionId: "s", output: "done", resultText: "done", durationM
 
 // ## The overrides every Codex run gets
 void test("The overrides every Codex run gets", async (t) => {
-  // doctest:L30
   t.check(codexSdkConfig({ systemPrompt: "be brief", analytics: false }), {
     developer_instructions: "be brief",
     analytics: {
@@ -38,7 +37,6 @@ void test("The overrides every Codex run gets", async (t) => {
     check_for_update_on_startup: false,
   });
 
-  // doctest:L33
   t.check(codexSdkConfig({ systemPrompt: "", analytics: true }).analytics.enabled, true);
 });
 
@@ -46,7 +44,6 @@ void test("The overrides every Codex run gets", async (t) => {
 // belong to no box. They get the same fixed settings with analytics off; plugin
 // installs are themselves analytics events.
 void test("Direct CLI calls (plugin install, login, the auth and history app-servers) be...", async (t) => {
-  // doctest:L42
   t.check(codexCliArgs(["plugin", "add", "beebox@beebox", "--json"]), [
     "-c",
     "analytics.enabled=false",
@@ -66,7 +63,6 @@ void test("Direct CLI calls (plugin install, login, the auth and history app-ser
 // Missing, `"off"`, and an unrecognized value all mean off. Only an explicit
 // `"on"` turns analytics on.
 void test("Missing, \"off\", and an unrecognized value all mean off.", async (t) => {
-  // doctest:L52
   const box = await makeTmpBox();
   const { runCodexAgent } = await t.mockImport("../../../src/core/agent/codex-run/core.ts", {
     "../../../src/core/agent/auth-preflight.ts": { ...auth, checkCodexAuth: async () => {} },
@@ -87,7 +83,6 @@ void test("Missing, \"off\", and an unrecognized value all mean off.", async (t)
     true,
   ]);
 
-  // doctest:L68
   await box.cleanup();
 });
 
@@ -95,7 +90,6 @@ void test("Missing, \"off\", and an unrecognized value all mean off.", async (t)
 //
 // A chat finds its box from its working directory.
 void test("A chat finds its box from its working directory.", async (t) => {
-  // doctest:L76
   const box = await makeTmpBox();
   const { createCodexChatBackend } = await t.mockImport("../../../src/services/claude-chat/codex-chat.ts", {
     "../../../src/core/agent/ensure-codex-plugin.ts": { ensureCodexPluginInstalled: async () => {} },
@@ -119,6 +113,5 @@ void test("A chat finds its box from its working directory.", async (t) => {
     true,
   ]);
 
-  // doctest:L97
   await box.cleanup();
 });

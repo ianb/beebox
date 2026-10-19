@@ -3,6 +3,8 @@ title: "CLAUDE.md / docs backlog (from CLAUDE-MD-REVIEW, 2026-04)"
 workstream: unknown
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 2026-07-04 · backlog, carried forward from a retired audit doc.
 
 Still-open items from the 2026-04-28 CLAUDE.md self-audit

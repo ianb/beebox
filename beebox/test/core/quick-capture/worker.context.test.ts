@@ -4,8 +4,8 @@
 // no work until human words arrive; later context follows the same fixed chat.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { capture, any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { capture, any, isoDate } from "@ianbicking/tap-check/check";
 import { mkdir, rename } from "node:fs/promises";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { invariant } from "../../../src/shared/invariant.js";
@@ -152,22 +152,18 @@ async function acceptFollowup(box: TmpBox) {
 
 // Context cannot bind to a missing original or another owner's capture.
 void test("Context cannot bind to a missing original or another owner's capture.", async (t) => {
-  // doctest:L38
   const box=await makeTmpBox({git:true});
   await t.checkThrows(async () => (await acceptQuickCapture({boxRoot:box.root,id:first,owner:null,declaration:{...declaration,parentCaptureId:parent,input:"Explain this"}})), "QuickCaptureError: Wait for the original capture to be accepted before sending context.");
 
-  // doctest:L42
   await acceptQuickCapture({boxRoot:box.root,id:parent,owner:"a@example.test",declaration:{...declaration,material:{kind:"url",url:"https://example.com/"}}});
   await t.checkThrows(async () => (await acceptQuickCapture({boxRoot:box.root,id:first,owner:"b@example.test",declaration:{...declaration,parentCaptureId:parent,input:"Explain this"}})), "QuickCaptureError: This capture belongs to another user.");
 
-  // doctest:L46
   await box.cleanup();
 });
 
 // The first words prompt routing. A later event waits until that choice is fixed
 // and delivery acknowledged; it then uses the same session with its own UUID.
 void test("The first words prompt routing.", async (t) => {
-  // doctest:L53
   const box=await makeTmpBox({git:true});
   const ctx=context(box);
   await acceptQuickCapture({boxRoot:box.root,id:parent,owner:null,declaration:{...declaration,material:{kind:"url",url:"https://example.com/"}}});
@@ -176,15 +172,12 @@ void test("The first words prompt routing.", async (t) => {
   await acceptQuickCapture({boxRoot:box.root,id:second,owner:null,declaration:{...declaration,parentCaptureId:parent,input:"Compare it"}});
   t.check(present(await processCapture(ctx,first)), followUp({id:first,digest:"89f4df11da04cf0c031706f67e0e3930bbbb7cf75c704985cd601b67d4cfbc83",input:"Explain this"},{state:"needs-choice",sourceRef:CAPTURED_PATH}));
 
-  // doctest:L62
   t.check(present(await processCapture(ctx,second)), followUp({id:second,digest:"937f9dde3a5e9105ce112146a31b0738b59aef5b8f948d310b010ce781767ffc",input:"Compare it"},{state:"blocked",error:"Choose a destination for the original capture before sending context."}));
 
-  // doctest:L65
   const choice=offered(await readQuickChatRecord(box.root,first));
   await chooseQuickChat(ctx,{id:first,candidateId:present(choice.choices[0])});
   t.check(present(await processCapture(ctx,first)), followUp({id:first,digest:"89f4df11da04cf0c031706f67e0e3930bbbb7cf75c704985cd601b67d4cfbc83",input:"Explain this"},{state:"sent",sourceRef:CAPTURED_PATH}));
 
-  // doctest:L70
   await mkdir(box.path("_content/filed"),{recursive:true});
   await rename(box.path("_content/captures/11111111-1111-4111-8111-111111111111.doc.card"),box.path("_content/filed/source.doc.card"));
   const done=present(await processCapture(ctx,second));
@@ -199,21 +192,16 @@ void test("The first words prompt routing.", async (t) => {
   ]);
   t.check(secondSession.value, firstSession.value);
 
-  // doctest:L79
-
-  // doctest:L85
   await processCapture(ctx,second);
   t.check(ctx.delivered, [
     {id:first,session:firstSession.value,words:"Explain this",sourceRef:CAPTURED_PATH},
     {id:second,session:firstSession.value,words:"Compare it",sourceRef:"_content/filed/source.doc.card"},
   ]);
 
-  // doctest:L89
   await box.cleanup();
 });
 
 void test("line 100", async (t) => {
-  // doctest:L101
   const box=await makeTmpBox({git:true});
   const ctx=context(box);
   await acceptQuickCapture({boxRoot:box.root,id:parent,owner:null,declaration:{...declaration,input:"Old thought"}});
@@ -230,14 +218,12 @@ void test("line 100", async (t) => {
   }));
   t.check(ctx.delivered, []);
 
-  // doctest:L112
   await box.cleanup();
 });
 
 // Automatic recovery stops after seven days. A not-yet-delivered original can be
 // recovered by explicit Retry, while preserving its original UUID.
 void test("Automatic recovery stops after seven days.", async (t) => {
-  // doctest:L119
   const box=await makeTmpBox({git:true});
   const ctx=context(box);
   await acceptQuickCapture({boxRoot:box.root,id:parent,owner:null,declaration:{...declaration,material:{kind:"url",url:"https://example.com/"}}});
@@ -257,7 +243,6 @@ void test("Automatic recovery stops after seven days.", async (t) => {
   });
   t.check(ctx.delivered, []);
 
-  // doctest:L129
   const manual=present(await processCapture({...ctx,manualRetry:true},parent));
   t.check(manual, {
     id:parent,
@@ -273,47 +258,39 @@ void test("Automatic recovery stops after seven days.", async (t) => {
     filingRequested:true,
   });
 
-  // doctest:L133
   await box.cleanup();
 });
 
 // Context points to the original capture, never to another context event.
 void test("Context points to the original capture, never to another context event.", async (t) => {
-  // doctest:L140
   const box=await makeTmpBox({git:true});
   await acceptQuickCapture({boxRoot:box.root,id:parent,owner:null,declaration:{...declaration,material:{kind:"url",url:"https://example.com/"}}});
   await acceptQuickCapture({boxRoot:box.root,id:first,owner:null,declaration:{...declaration,parentCaptureId:parent,input:"Original context"}});
   await t.checkThrows(async () => (await acceptQuickCapture({boxRoot:box.root,id:second,owner:null,declaration:{...declaration,parentCaptureId:first,input:"Nested context"}})), "QuickCaptureError: Add context to an original capture, not another context event.");
 
-  // doctest:L146
   await box.cleanup();
 });
 
 void test("line 224", async (t) => {
-  // doctest:L225
   const box=await makeTmpBox({git:true});
   const runtime=codexRuntime(box,"post-send");
   await chooseParent(box,runtime);
   const bound=await waitBound(box);
   t.check(bound, chatRecord(NEW_SESSION,{state:"sent",sentAt:isoDate()}));
 
-  // doctest:L232
   await acceptFollowup(box);
   t.check(present(await processCapture(runtime.ctx,first)), FOLLOW_UP_SENT);
 
-  // doctest:L236
   t.check(runtime.targets, [
     "new",
     ACTUAL,
   ]);
 
-  // doctest:L239
   clearChatRuntime(box.root);
   await box.cleanup();
 });
 
 void test("line 243", async (t) => {
-  // doctest:L244
   const box=await makeTmpBox({git:true});
   const runtime=codexRuntime(box,"delayed");
   await chooseParent(box,runtime);
@@ -323,45 +300,37 @@ void test("line 243", async (t) => {
     error:"Waiting for the original chat to identify itself. Your words are kept. If the box restarted before recording that identity, send them explicitly in the original chat.",
   }));
 
-  // doctest:L251
   runtime.assign();
   const bound=await waitBound(box);
   t.check(bound, chatRecord(EXISTING_SESSION,{state:"sent",sentAt:isoDate()}));
 
-  // doctest:L256
   t.check(present(await processCapture(runtime.ctx,first)), FOLLOW_UP_SENT);
 
-  // doctest:L259
   t.check(runtime.targets, [
     "new",
     ACTUAL,
   ]);
 
-  // doctest:L262
   clearChatRuntime(box.root);
   await box.cleanup();
 });
 
 void test("line 266", async (t) => {
-  // doctest:L267
   const box=await makeTmpBox({git:true});
   const runtime=codexRuntime(box,"lost-response");
   await chooseParent(box,runtime);
   const bound=await waitBound(box);
   t.check(bound, chatRecord(EXISTING_SESSION,{state:"sending",lastError:"Synthetic completion response lost."}));
 
-  // doctest:L274
   t.check(present(await processCapture(runtime.ctx,parent)), parentRecord({digest:"c11a5e11a2e1e181c8c0c8f8c60462aa6c4fb9cea5eef0f8929ec3717709b7dc",input:"Initial thought"},{
     state:"sent",
     sourceRef:INCOMING_PATH,
     sourceCommitted:true,
   }));
 
-  // doctest:L277
   await acceptFollowup(box);
   t.check(present(await processCapture(runtime.ctx,first)), FOLLOW_UP_SENT);
 
-  // doctest:L281
   t.check(runtime.targets, [
     "new",
     ACTUAL,
@@ -369,7 +338,6 @@ void test("line 266", async (t) => {
   ]);
   t.check(runtime.claims, new Set([parent,first]));
 
-  // doctest:L284
   clearChatRuntime(box.root);
   await box.cleanup();
 });

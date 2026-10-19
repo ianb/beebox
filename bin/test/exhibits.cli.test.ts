@@ -10,7 +10,7 @@
 // store or the developer's worktrees.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, writeFile, readFile, rm, lstat } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -21,7 +21,7 @@ const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 const cli = join(repoRoot, "bin/exhibits");
 
-const root = await mkdtemp(join(tmpdir(), "exhibits-cli-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "exhibits-cli-test-"));
 const store = join(root, "workstream-exhibits");
 const state = join(root, "state");
 const mono = join(root, "beebox");
@@ -77,7 +77,6 @@ await writeFile(join(root, "appendix.markdown"), "second document\n");
 // the URL — one line, nothing else; the
 // `[exhibits]` progress lines go to stderr.
 void test("add creates the directory, maps one Markdown input to doc.md, copies the figu...", async (t) => {
-  // doctest:L77
   const added = await run([
     "add",
     "--workstream", "demo",
@@ -134,7 +133,6 @@ void test("add creates the directory, maps one Markdown input to doc.md, copies 
 // The manifest must satisfy the app's own schema, not just look right — the CLI
 // and the renderer share one contract (`workstreams-app/src/shared/exhibits.ts`).
 void test("The manifest must satisfy the app's own schema, not just look right — the CLI...", async (t) => {
-  // doctest:L109
   const { exhibitManifestSchema } = await import(
     resolve(repoRoot, "workstreams-app/src/shared/exhibits.ts")
   );
@@ -150,7 +148,6 @@ void test("The manifest must satisfy the app's own schema, not just look right �
 // title whose slug is `coding-feedback` (the CODING_FEEDBACK notes directory) is
 // refused.
 void test("Refusals, all fail-closed:", async (t) => {
-  // doctest:L124
   const collision = await run([
     "add", "--workstream", "demo", "--title", "Dashboard Density Options",
     "--prose", "again",
@@ -211,7 +208,6 @@ void test("Refusals, all fail-closed:", async (t) => {
 // `worktree-demo` writes to the `demo` store, and the mount (`<checkout>/exhibits`
 // → the store dir) is ensured on the way. The main checkout is `main`.
 void test("The workstream defaults from the cwd's checkout:", async (t) => {
-  // doctest:L171
   const derived = await run(
     ["add", "--title", "Derived", "--prose", "just showing you"],
     worktree,
@@ -239,7 +235,6 @@ void test("The workstream defaults from the cwd's checkout:", async (t) => {
 // there. `list --json` reports every exhibit as `{ workstream, name, title,
 // created, permanent }`.
 void test("url reprints a stable URL for an existing exhibit and refuses one that isn't...", async (t) => {
-  // doctest:L191
   const url = await run(["url", "demo/derived"]);
   const missing = await run(["url", "demo/nope"]);
   const listed0 = await run(["list", "--json", "--workstream", "demo"]);
@@ -287,7 +282,6 @@ void test("url reprints a stable URL for an existing exhibit and refuses one tha
 // says so. Committed apps show up in `list` marked permanent, with their runtime
 // data read from the store's reserved `apps/` namespace.
 void test("--permanent is the other tier:", async (t) => {
-  // doctest:L216
   const permanent = await run(["add", "--permanent", "--title", "Threshold Tuner"], worktree);
   const appDir = join(worktree, "dev/apps/threshold-tuner");
   const appManifest = JSON.parse(await readFile(join(appDir, "exhibit.json"), "utf8"));
@@ -337,7 +331,6 @@ void test("--permanent is the other tier:", async (t) => {
 // captions than figures is refused with the counts, and the refusal happens
 // before the exhibit directory is created, so the slug stays free.
 void test("--caption is repeatable:", async (t) => {
-  // doctest:L246
   const captioned = await run([
     "add", "--workstream", "demo", "--title", "Captioned",
     "--caption", "Comfortable spacing on the card list",
@@ -397,7 +390,6 @@ void test("--caption is repeatable:", async (t) => {
 // every path segment, so a screenshot straight off a Mac desktop
 // (`Screen Shot 2026-08-15.png`) would otherwise be a figure whose URL 404s.
 void test("Copied files are renamed to something the app can route to.", async (t) => {
-  // doctest:L277
   const shot3 = join(root, "Screen Shot 2026-08-15.png");
   await writeFile(shot3, "png-bytes");
   const shaped = await run([
@@ -437,7 +429,6 @@ void test("Copied files are renamed to something the app can route to.", async (
 // printing everything, so an incomplete inventory is never taken for a complete
 // one.
 void test("A manifest that does not parse is not skipped:", async (t) => {
-  // doctest:L304
   await writeFile(join(store, "demo/named-files/exhibit.json"), '{"title":"Named Fi');
   const broken = await run(["list", "--json", "--workstream", "demo"]);
   const brokenRows = JSON.parse(broken.stdout);
@@ -472,7 +463,6 @@ void test("A manifest that does not parse is not skipped:", async (t) => {
 // string `title` or `created`, is also a problem row (the app rejects both), and
 // `list` exits 1.
 void test("A directory with no exhibit.json, or a manifest that is valid JSON but lacks...", async (t) => {
-  // doctest:L324
   await writeFile(join(store, "demo/named-files/exhibit.json"), '{"title":"T"}');
   await mkdir(join(store, "demo/no-manifest"), { recursive: true });
   const incomplete = await run(["list", "--json", "--workstream", "demo"]);
@@ -506,7 +496,6 @@ void test("A directory with no exhibit.json, or a manifest that is valid JSON bu
 // Two inputs that sanitize to the same name are refused before the exhibit
 // directory is created, so the slug stays free.
 void test("Two inputs that sanitize to the same name are refused before the exhibit dire...", async (t) => {
-  // doctest:L344
   await mkdir(join(root, "a"), { recursive: true });
   await writeFile(join(root, "a/Shot One.png"), "a");
   await writeFile(join(root, "shot-one.png"), "b");
@@ -537,7 +526,6 @@ void test("The URL always carries a token.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L363
   const tokenFile = join(state, "exhibits-token");
   await rm(tokenFile);
   const minted = await run(["url", "demo/derived"]);

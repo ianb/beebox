@@ -5,8 +5,8 @@
 // needing a human alone. See `src/core/migration-sweep.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import { chmod, readFile, rm, writeFile } from "node:fs/promises";
@@ -80,13 +80,11 @@ void test("The common case — this runs against every box on every deploy, so t
       t.error(error);
     }
   });
-  // doctest:L76
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [] });
   await box.commitAll("seed migration manifest");
   const before = git(box, "rev-list", "--count", "HEAD");
 
-  // doctest:L81
   const result = await sweepMigrations({ boxRoot: box.root });
   t.check({ status: result.status, newCommits: Number(git(box, "rev-list", "--count", "HEAD")) - Number(before) }, {
     status: "current",
@@ -97,15 +95,12 @@ void test("The common case — this runs against every box on every deploy, so t
   // closed first would sit in its drain until that work ended; this one reads,
   // finds nothing, and returns while the work is still admitted.
 
-  // doctest:L91
   const busy = await acquireBoxWork(box.root, { reason: "live chat run" });
   const quiet = sweepMigrations({ boxRoot: box.root }).then((outcome) => outcome.status);
   t.check(await Promise.race([quiet, new Promise((resolve) => setTimeout(() => resolve("still draining"), 3000))]), "current");
 
-  // doctest:L96
   t.check(await boxMaintenanceStatus(box.root), null);
 
-  // doctest:L99
   await busy.release();
 });
 
@@ -126,12 +121,10 @@ void test("The manifest entry and the changes it describes land in the same comm
       t.error(error);
     }
   });
-  // doctest:L117
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROBE] });
   await box.commitAll("seed migration manifest");
 
-  // doctest:L121
   const result = await sweepMigrations({ boxRoot: box.root });
   t.check({ status: result.status, applied: expectStatus(result, "applied").applied.map((m) => m.name) }, {
     status: "applied",
@@ -140,7 +133,6 @@ void test("The manifest entry and the changes it describes land in the same comm
     ],
   });
 
-  // doctest:L127
   t.check(
     {
       subject: git(box, "log", "-1", "--format=%s"),
@@ -158,7 +150,6 @@ void test("The manifest entry and the changes it describes land in the same comm
 
   // A second sweep is a no-op — the manifest now records it:
 
-  // doctest:L139
   t.check((await sweepMigrations({ boxRoot: box.root })).status, "current");
 });
 
@@ -178,7 +169,6 @@ void test("An unattended sweep has no procedure runner.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L157
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROBE, PROCEDURE] });
   await box.commitAll("script then procedure pending");
@@ -213,7 +203,6 @@ void test("With a runner, the --repair pass applies procedure migrations itself.
       t.error(error);
     }
   });
-  // doctest:L181
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROCEDURE] });
   await box.commitAll("procedure pending");
@@ -230,7 +219,6 @@ void test("With a runner, the --repair pass applies procedure migrations itself.
     receipt: "",
   });
 
-  // doctest:L192
   const second = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: true, runProcedure });
   const record = await boxMaintenanceStatus(box.root);
   t.check({ status: second.status, runs, question: questionOf(second), record: record?.phase, owner: record?.owner }, {
@@ -241,7 +229,6 @@ void test("With a runner, the --repair pass applies procedure migrations itself.
     owner: null,
   });
 
-  // doctest:L197
   await box.write(questionOf(first), questionText.replace("---\n", "---\nanswer:\n  text: Retry it\nanswered-at: 2026-09-17T00:00:00.000Z\n"));
   await box.commitAll("answer");
   exit = 0;
@@ -257,7 +244,6 @@ void test("With a runner, the --repair pass applies procedure migrations itself.
   // unfinished attempt's own snapshot, and a person's `--apply` still runs the
   // procedure directly:
 
-  // doctest:L211
   await box.write(MANIFEST_PATH, (await box.read(MANIFEST_PATH)).split("\n").filter((line) => !line.includes(PROCEDURE)).join("\n"));
   await box.commitAll("pending again");
   const unfinished = git(box, "rev-parse", "HEAD");
@@ -270,7 +256,6 @@ void test("With a runner, the --repair pass applies procedure migrations itself.
     namesReceipt: true,
   });
 
-  // doctest:L219
   const manual = await sweepMigrations({ boxRoot: box.root, repair: true, unattended: false, runProcedure });
   t.check({ status: manual.status, runs, recorded: (await box.read(MANIFEST_PATH)).includes(PROCEDURE), open: expectStatus(manual, "attention").questions }, {
     status: "attention",
@@ -299,14 +284,12 @@ void test("--yield is the hourly schedule's mode.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L238
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROBE] });
   await box.commitAll("seed migration manifest");
   const holder = spawn(process.execPath, ["--import", "tsx", join(import.meta.dirname, "../helpers/box-maintenance-child.ts"), box.root], { stdio: ["pipe", "pipe", "inherit"] });
   await once(holder.stdout, "data");
 
-  // doctest:L244
   const deferred = await sweepMigrations({ boxRoot: box.root, yield: true });
   t.check({ status: deferred.status, holders: expectStatus(deferred, "deferred").holders.map((entry) => entry.reason), phase: await boxMaintenanceStatus(box.root) }, {
     status: "deferred",
@@ -316,7 +299,6 @@ void test("--yield is the hourly schedule's mode.", async (t) => {
     phase: null,
   });
 
-  // doctest:L248
   holder.stdin.end("finish");
   await once(holder, "exit");
   t.check((await sweepMigrations({ boxRoot: box.root, yield: true })).status, "applied");
@@ -325,7 +307,6 @@ void test("--yield is the hourly schedule's mode.", async (t) => {
   // That is what the lock is for, so a yielding pass defers and names it rather
   // than failing the check.
 
-  // doctest:L259
   await seedManifest(box, { pending: [PROBE] });
   const deploy = await closeBoxMaintenance(box.root, { reason: "deployment" });
   const behindDeploy = await sweepMigrations({ boxRoot: box.root, yield: true });
@@ -349,13 +330,11 @@ void test("The recovery ref preserves input while the path-scoped output commit 
       t.error(error);
     }
   });
-  // doctest:L277
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROBE] });
   await box.commitAll("seed migration manifest");
   await box.write("_content/inbox/Half_Written.doc.card", "---\ntitle: Note\n---\nmid-edit\n");
 
-  // doctest:L282
   const result = await sweepMigrations({ boxRoot: box.root });
   t.check({ status: result.status, untracked: git(box, "ls-files", "--others", "--exclude-standard") }, {
     status: "applied",
@@ -364,7 +343,6 @@ void test("The recovery ref preserves input while the path-scoped output commit 
 
   // The migration was recorded despite the unrelated dirty file:
 
-  // doctest:L290
   // The manifest lists every shipped migration; only this entry is the contract.
   t.check(await box.read(MANIFEST_PATH), any(String).includes(PROBE));
 });
@@ -387,7 +365,6 @@ void test("The manifest entry has to be written before the commit, because it be
       t.error(error);
     }
   });
-  // doctest:L310
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROBE] });
   await box.commitAll("seed migration manifest");
@@ -402,14 +379,12 @@ void test("The manifest entry has to be written before the commit, because it be
   await writeFile(hookPath, `${stockHook}\nexit 1\n`);
   await chmod(hookPath, 0o755);
 
-  // doctest:L324
   const result = await sweepMigrations({ boxRoot: box.root });
   t.check(result.status, "commit-failed");
 
   // The manifest is back to what it was, so the migration is still pending and the
   // next sweep retries it:
 
-  // doctest:L333
   t.check(
     {
       recorded: (await box.read(MANIFEST_PATH)).includes(PROBE),
@@ -436,7 +411,6 @@ void test("It predates bbx migrate, and only a human can say whether it is alrea
       t.error(error);
     }
   });
-  // doctest:L352
   const box = await makeTmpBox({ git: true });
   await rm(join(box.root, MANIFEST_PATH));
   t.check((await sweepMigrations({ boxRoot: box.root })).status, "no-manifest");
@@ -451,7 +425,6 @@ void test("Partial conversion asks once and lets later migrations proceed", asyn
       t.error(error);
     }
   });
-  // doctest:L365
   const box = await makeTmpBox({ git: true });
   // Keep this pinned to a script migration: procedure migrations are intentionally
   // not handled by the unattended sweep.
@@ -481,7 +454,6 @@ void test("Partial conversion asks once and lets later migrations proceed", asyn
     calls: 3,
   });
 
-  // doctest:L389
   const next = await sweepMigrations({ boxRoot: box.root });
   t.check({ status: next.status, questions: expectStatus(next, "attention").questions.length }, {
     status: "attention",
@@ -505,7 +477,6 @@ void test("A missing manifest is not permission to activate new code, even if an
       t.error(error);
     }
   });
-  // doctest:L407
   const box = await makeTmpBox({ git: true });
   await rm(join(box.root, MANIFEST_PATH));
   const owner = await acquireBoxMaintenance(box.root, { reason: "deployment" });
@@ -527,7 +498,6 @@ void test("A joined blocker revokes readiness and leaves deployment closed", asy
       t.error(error);
     }
   });
-  // doctest:L423
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROCEDURE] });
   await box.commitAll("pending procedure");
@@ -556,7 +526,6 @@ void test("The 2026-09-16 incident:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L448
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROBE] });
   await box.commitAll("seed");
@@ -569,12 +538,10 @@ void test("The 2026-09-16 incident:", async (t) => {
     ref: true,
   });
 
-  // doctest:L456
   const work = await acquireBoxWork(box.root, { reason: "chat run" });
   await work.release();
   t.check((await sweepMigrations({ boxRoot: box.root, runScript: async () => 0 })).status, "applied");
 
-  // doctest:L461
   t.check(await boxMaintenanceStatus(box.root), null);
 });
 
@@ -593,7 +560,6 @@ void test("A sleep longer than the lock's stale window, or a deploy controller t
       t.error(error);
     }
   });
-  // doctest:L478
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROBE] });
   await box.commitAll("seed");
@@ -623,7 +589,6 @@ void test("The new attempt snapshots current input and staging, but its output c
       t.error(error);
     }
   });
-  // doctest:L501
   const box = await makeTmpBox({ git: true });
   await seedManifest(box, { pending: [PROBE] });
   await box.write("_content/Converted.doc.card", "---\ntitle: Note\n---\nOriginal\n");
@@ -638,11 +603,9 @@ void test("The new attempt snapshots current input and staging, but its output c
   const runScript = async () => { await box.write("_content/Converted.doc.card", converted); return 0; };
   t.check((await sweepMigrations({ boxRoot: box.root, runScript })).status, "commit-failed");
 
-  // doctest:L516
   await rm(hook);
   t.check((await sweepMigrations({ boxRoot: box.root, repair: true, runScript })).status, "applied");
 
-  // doctest:L520
   t.check({ committed: git(box, "show", "HEAD:_content/Converted.doc.card").endsWith("Converted"), staged: git(box, "diff", "--cached", "--name-only"), unstaged: git(box, "diff", "--name-only"), pendingRef: git(box, "for-each-ref", "--format=%(refname)", `refs/bbx/migrations/${PROBE}/pending`) }, {
     committed: true,
     staged: "_content/unrelated.txt",

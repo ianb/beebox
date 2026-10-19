@@ -13,8 +13,8 @@
 // Values below are obvious placeholders.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -58,16 +58,13 @@ void test("An `agent`-level grant resolves, with the token as a bearer", async (
       t.error(error);
     }
   });
-  // doctest:L52
   const ctx = await makeTestServer();
   const token = getOrCreateAgentToken(ctx.boxRoot);
   const agentAuth = { authorization: `Bearer ${token}` };
 
-  // doctest:L56
   await setSecret({ name: "weatherapi", value: "placeholder-weather-key" });
   await grantSecret({ slug: TEST_SLUG, name: "weatherapi", access: "agent" });
 
-  // doctest:L59
   const res = await ctx.request({
     method: "POST",
     url: "/api/secrets/resolve",
@@ -81,11 +78,9 @@ void test("An `agent`-level grant resolves, with the token as a bearer", async (
   // The message is written for relay: the agent reads it out to the boxholder, who
   // knows which button raises the grant.
 
-  // doctest:L78
   await setSecret({ name: "mistral", value: "placeholder-mistral-key" });
   await grantSecret({ slug: TEST_SLUG, name: "mistral", access: "server" });
 
-  // doctest:L81
   const serverOnly = await ctx.request({
     method: "POST",
     url: "/api/secrets/resolve",
@@ -102,7 +97,6 @@ void test("An `agent`-level grant resolves, with the token as a bearer", async (
 
   // ## An unknown name is a 404 that names the fix
 
-  // doctest:L101
   const unknown = await ctx.request({
     method: "POST",
     url: "/api/secrets/resolve",
@@ -123,7 +117,6 @@ void test("An `agent`-level grant resolves, with the token as a bearer", async (
   // refuses every credential that is not the box's own agent token. A wrong bearer,
   // a session cookie, and the hub's authenticated-email header all get the same 401.
 
-  // doctest:L123
   const notAgent = {
     statusCode: 401,
     body: {
@@ -140,7 +133,6 @@ void test("An `agent`-level grant resolves, with the token as a bearer", async (
 
   // ## Every resolve and refusal is logged with its purpose, never its value
 
-  // doctest:L137
   const log = await accessLog();
   t.check(log, [
     { ts: isoDate(), box: "test", secret: "weatherapi", purpose: "weather-trick", event: "resolve" },
@@ -165,7 +157,6 @@ void test("An `agent`-level grant resolves, with the token as a bearer", async (
   // A body that is not `{name, purpose}` is a 400 — the purpose is a short label
   // for that log, not a payload.
 
-  // doctest:L151
   const bad = await ctx.request({
     method: "POST",
     url: "/api/secrets/resolve",
@@ -184,7 +175,6 @@ void test("An `agent`-level grant resolves, with the token as a bearer", async (
   // agent-authored callers cannot write a newline, a JSON blob, or a whole prompt
   // into the boxholder's access log:
 
-  // doctest:L166
   async function badPurpose(purpose: string) {
     const reply = await ctx.request({
       method: "POST",

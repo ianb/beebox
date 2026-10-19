@@ -12,7 +12,7 @@
 // uninformatively or silently producing garbage.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { parseGeminiJsonArray } from "../../../src/core/describe-images/helpers.js";
 

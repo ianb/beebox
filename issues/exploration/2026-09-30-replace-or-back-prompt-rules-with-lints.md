@@ -9,6 +9,8 @@ discovered-in: main session — reviewing which custom lint rules exist
 priority: important
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Many rules in the instruction files are mechanical: "always use X, never
 Y". A rule stated only in prose depends on the agent reading it, attending to
 it, and remembering it in a long session. A lint enforces the same rule on

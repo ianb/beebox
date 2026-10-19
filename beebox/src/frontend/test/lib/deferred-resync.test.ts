@@ -6,11 +6,11 @@
 // exactly once — no matter how many triggers accumulated — the moment the tab
 // becomes visible.
 //
-// A fake `VisibilityAdapter` stands in for `document`: the frontend doctests run
+// A fake `VisibilityAdapter` stands in for `document`: the frontend tests run
 // under plain Node (no jsdom), so there's no real `document.hidden` to flip.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createDeferredResync, type VisibilityAdapter } from "../../src/lib/deferred-resync.js";
 
 function makeFakeVisibility(): VisibilityAdapter & { setHidden: (hidden: boolean) => void } {
@@ -38,24 +38,20 @@ function makeFakeVisibility(): VisibilityAdapter & { setHidden: (hidden: boolean
 // mounted components all reacting to one WS reconnect — run `fn` once, on the
 // next microtask.
 void test("Several trigger() calls in the same synchronous tick — the shape of N mounted...", async (t) => {
-  // doctest:L42
   let calls = 0;
   const visibility = makeFakeVisibility();
   const resync = createDeferredResync(() => { calls += 1; }, { visibility });
 
-  // doctest:L46
   resync.trigger();
   resync.trigger();
   resync.trigger();
   t.check(calls, 0);
 
-  // doctest:L52
   await Promise.resolve();
   t.check(calls, 1);
 
   // A trigger AFTER that microtask has fired schedules a fresh, independent run:
 
-  // doctest:L60
   resync.trigger();
   await Promise.resolve();
   t.check(calls, 2);
@@ -66,13 +62,11 @@ void test("Several trigger() calls in the same synchronous tick — the shape of
 // While `visibility.isHidden()` is true, `trigger()` doesn't schedule `fn` at
 // all — not even after a microtask turn:
 void test("While visibility.isHidden() is true, trigger() doesn't schedule fn at all — n...", async (t) => {
-  // doctest:L72
   let calls = 0;
   const visibility = makeFakeVisibility();
   visibility.setHidden(true);
   const resync = createDeferredResync(() => { calls += 1; }, { visibility });
 
-  // doctest:L77
   resync.trigger();
   resync.trigger();
   resync.trigger();
@@ -82,14 +76,12 @@ void test("While visibility.isHidden() is true, trigger() doesn't schedule fn at
   // Becoming visible fires it exactly once, regardless of how many triggers piled
   // up while hidden:
 
-  // doctest:L89
   visibility.setHidden(false);
   await Promise.resolve();
   t.check(calls, 1);
 
   // A visibility transition with no pending trigger is a no-op:
 
-  // doctest:L98
   visibility.setHidden(true);
   visibility.setHidden(false);
   await Promise.resolve();
@@ -102,13 +94,11 @@ void test("While visibility.isHidden() is true, trigger() doesn't schedule fn at
 // code that isn't screen-driven) must stay current even while the tab is
 // backgrounded. `alwaysVisible: true` keeps same-tick coalescing but never parks:
 void test("Some state (view-bindings.ts's module-level cache, feeding correctness for co...", async (t) => {
-  // doctest:L112
   let calls = 0;
   const visibility = makeFakeVisibility();
   visibility.setHidden(true);
   const resync = createDeferredResync(() => { calls += 1; }, { visibility, alwaysVisible: true });
 
-  // doctest:L117
   resync.trigger();
   resync.trigger();
   await Promise.resolve();
@@ -122,7 +112,6 @@ void test("Some state (view-bindings.ts's module-level cache, feeding correctnes
 // independent: triggering one never invokes the other's `fn`, and each tracks
 // its own hidden/pending state.
 void test("Two createDeferredResync instances (the shape of two different resync \"keys\"...", async (t) => {
-  // doctest:L132
   let callsA = 0;
   let callsB = 0;
   const visibilityA = makeFakeVisibility();
@@ -131,13 +120,11 @@ void test("Two createDeferredResync instances (the shape of two different resync
   const resyncA = createDeferredResync(() => { callsA += 1; }, { visibility: visibilityA });
   const resyncB = createDeferredResync(() => { callsB += 1; }, { visibility: visibilityB });
 
-  // doctest:L140
   resyncA.trigger();
   resyncB.trigger();
   await Promise.resolve();
   t.check([callsA, callsB].join(","), "1,0");
 
-  // doctest:L146
   visibilityB.setHidden(false);
   await Promise.resolve();
   t.check([callsA, callsB].join(","), "1,1");
@@ -148,13 +135,11 @@ void test("Two createDeferredResync instances (the shape of two different resync
 // After `dispose()`, a later visibility transition can't resurrect a pending
 // trigger — the instance is inert.
 void test("After dispose(), a later visibility transition can't resurrect a pending trig...", async (t) => {
-  // doctest:L158
   let calls = 0;
   const visibility = makeFakeVisibility();
   visibility.setHidden(true);
   const resync = createDeferredResync(() => { calls += 1; }, { visibility });
 
-  // doctest:L163
   resync.trigger();
   resync.dispose();
   visibility.setHidden(false);
@@ -170,12 +155,10 @@ void test("After dispose(), a later visibility transition can't resurrect a pend
 // microtask fires — the queued run must become a no-op, not invoke `fn` against
 // a torn-down caller:
 void test("A trigger() schedules run() via queueMicrotask before the microtask actually...", async (t) => {
-  // doctest:L180
   let calls = 0;
   const visibility = makeFakeVisibility();
   const resync = createDeferredResync(() => { calls += 1; }, { visibility });
 
-  // doctest:L184
   resync.trigger();
   resync.dispose();
   await Promise.resolve();
@@ -189,13 +172,11 @@ void test("A trigger() schedules run() via queueMicrotask before the microtask a
 // object; disposal must make that reference inert too, not just future calls
 // made through `resync.trigger`:
 void test("Some callers (e.g.", async (t) => {
-  // doctest:L199
   let calls = 0;
   const visibility = makeFakeVisibility();
   const resync = createDeferredResync(() => { calls += 1; }, { visibility });
   const { trigger } = resync;
 
-  // doctest:L204
   resync.dispose();
   trigger();
   await Promise.resolve();

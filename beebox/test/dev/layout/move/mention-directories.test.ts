@@ -1,7 +1,7 @@
 // # Detecting a directory rename hiding inside a move list
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -31,7 +31,6 @@ await git(["add", "-A"]);
 
 // ## A directory whose every tracked file moves to the same new directory with the same suffix is detected as a rename
 void test("A directory whose every tracked file moves to the same new directory with the same suffix is detected as a rename", async (t) => {
-  // doctest:L35
   const uniform = [
     { from: "scripts/migrate/one.ts", to: "scripts/migrations/one.ts" },
     { from: "scripts/migrate/sub/two.ts", to: "scripts/migrations/sub/two.ts" },
@@ -54,7 +53,6 @@ void test("A directory with only some files moving is NOT reported as a rename (
       t.error(error);
     }
   });
-  // doctest:L47
   const partial = [{ from: "scripts/keep/a.ts", to: "scripts/kept/a.ts" }];
   const partialRenames = detectDirectoryRenames({ repoRoot, moves: partial });
   t.check(partialRenames, []);

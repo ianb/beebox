@@ -8,33 +8,29 @@
 // form before comparing or looking up.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { boxRelativePath } from "../../src/shared/box-path.js";
 
 // A leading slash (the authoring/ref form) is stripped:
 void test("A leading slash (the authoring/ref form) is stripped:", async (t) => {
-  // doctest:L17
   t.check(boxRelativePath("/_bookkeeping/archive/Foo.doc.card"), "_bookkeeping/archive/Foo.doc.card");
 });
 
 // Redundant leading slashes collapse, and the empty string (the box root) is left
 // alone:
 void test("Redundant leading slashes collapse, and the empty string (the box root) is le...", async (t) => {
-  // doctest:L25
   t.check(
     boxRelativePath("///people/Priya.person.card")
     ,
     "people/Priya.person.card",
   );
 
-  // doctest:L28
   t.check(boxRelativePath(""), "");
 });
 
 // Only the leading slash is touched — interior and trailing slashes are left as-is
 // (document-relative resolution is `resolveRelativePath`'s job, not this helper's):
 void test("Only the leading slash is touched — interior and trailing slashes are left as...", async (t) => {
-  // doctest:L36
   t.check(
     boxRelativePath("/_content//a/b.card")
     ,

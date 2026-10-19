@@ -27,8 +27,8 @@
 // isolated test HOME.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, oneOf, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, oneOf, str } from "@ianbicking/tap-check/check";
 import { createDoclingService, doclingArgs } from "../../../src/services/docling/core.js";
 import type { DoclingExtraction } from "../../../src/services/docling/core.js";
 import type { Result } from "../../../src/shared/result.js";
@@ -72,19 +72,16 @@ function weightsMissing(result: Result<DoclingExtraction>) {
 // This part runs everywhere — it is a pure function, and it is the thing most
 // likely to rot when Docling changes its CLI.
 void test("This part runs everywhere — it is a pure function, and it is the thing most l...", async (t) => {
-  // doctest:L75
   t.check(doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "off", languages: null }).join(" "), str`--from docling==${any(String)} --with onnxruntime --with rapidocr docling convert /scan/source.pdf --to md --to json --image-export-mode referenced --table-mode fast --device cpu --document-timeout 600 --output /work -q --no-ocr`);
 
   // `--force-ocr` is deprecated upstream; `--ocr-mode` is the supported spelling.
   // A junk text layer must be replaced wholesale, so it gets `full_page`:
 
-  // doctest:L83
   t.check(doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "replace", languages: ["en", "de"] }).slice(-7).join(" "), "--ocr --ocr-mode full_page --ocr-engine rapidocr --ocr-lang en,de");
 
   // A PDF with no text layer instead gets `layout_regions`, which measured better
   // on dense scanned forms:
 
-  // doctest:L91
   t.check(doclingArgs("/scan/source.pdf", { workDir: "/work", ocr: "regions", languages: null }).slice(-5).join(" "), "--ocr --ocr-mode layout_regions --ocr-engine rapidocr");
 });
 
@@ -97,21 +94,18 @@ void test("A real extraction over a real PDF", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L98
   const dir = await mkdtemp(join(tmpdir(), "docling-real-"));
   const pdfPath = join(dir, "source.pdf");
   await writeFile(pdfPath, textPdf());
   const workDir = join(dir, "work");
   await import("node:fs/promises").then((fs) => fs.mkdir(workDir, { recursive: true }));
 
-  // doctest:L104
   const result: Result<DoclingExtraction> | null = probeSkip
     ? null
     : await createDoclingService().extract(pdfPath, { workDir, ocr: "off", languages: null });
   const skipReason = probeSkip ?? (result !== null && weightsMissing(result) ? "Docling model weights are not in the Hugging Face hub cache" : null);
   if (skipReason && !probeSkip) console.warn(`[skipped] pdf-extract-integration: ${skipReason}`);
 
-  // doctest:L110
   const extracted = result?.ok ? result.value : null;
   const failure = result === null || result.ok ? null : result.error;
   // The checked value: the skipped answer, or what the extraction says when it ran.
@@ -120,7 +114,6 @@ void test("A real extraction over a real PDF", async (t) => {
     return extracted ? ran(extracted) : undefined;
   };
 
-  // doctest:L113
   // One line, whichever path ran — so a skip is visible rather than a silent pass.
   t.check(skipReason ? "SKIPPED" : (extracted ? "EXTRACTED" : `FAILED: ${failure}`), oneOf("SKIPPED", "EXTRACTED"));
 
@@ -130,17 +123,13 @@ void test("A real extraction over a real PDF", async (t) => {
   // paths relative to an output root that does not match where the files land, so
   // the walk is load-bearing):
 
-  // doctest:L128
   t.check(pick("Northwind", (run) => (run.markdown.includes("Northwind") ? "Northwind" : run.markdown)), "Northwind");
 
   // Page renders are PNGs Docling wrote — the WebP re-encode happens a layer up, in
   // `pdf-extract.ts`; one render per page of the one-page fixture.
-  // doctest:L131
   t.check(pick(["png"], (run) => run.pageImages.map((image) => image.filePath.split(".").pop())), ["png"]);
 
-  // doctest:L134
   t.check(skipReason ? "DoclingDocument" : (extracted ? JSON.parse(await readFile(extracted.jsonPath, "utf-8")).schema_name : undefined), "DoclingDocument");
 
-  // doctest:L137
   t.check(pick(DOCLING_VERSION, (run) => run.version), DOCLING_VERSION);
 });

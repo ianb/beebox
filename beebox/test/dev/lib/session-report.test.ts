@@ -6,7 +6,7 @@
 // string.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -74,7 +74,6 @@ void test("The callback receives multiple bounded chunks rather than one materia
       t.error(error);
     }
   });
-  // doctest:L71
   const chunks: string[] = [];
   await writeSessionReport({
     logPath,

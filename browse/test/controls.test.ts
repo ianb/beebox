@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   annotateSnapshot, applyLiveIds, boxCenter, judgeBox, parseCheckResult, parseTarget, refRenumbered, upstreamSelector,
 } from "../src/controls.js";
@@ -36,7 +36,6 @@ const ENTRIES = [
 
 // ## Targets: bbx- ids in either spelling, refs, and everything else untouched
 void test("Targets: bbx- ids in either spelling, refs, and everything else untouched", async (t) => {
-  // doctest:L40
   assert.deepEqual(parseTarget("bbx-nav-profile"), { kind: "id", id: "bbx-nav-profile" });
   assert.deepEqual(parseTarget("#bbx-nav-profile"), { kind: "id", id: "bbx-nav-profile" });
   assert.deepEqual(parseTarget("@e12"), { kind: "ref", ref: "e12" });
@@ -52,7 +51,6 @@ void test("Targets: bbx- ids in either spelling, refs, and everything else untou
 
 // ## Annotate: unique role+name matches get their id appended; ambiguous and unnamed-by-this-engine do not
 void test("Annotate: unique role+name matches get their id appended; ambiguous and unnamed-by-this-engine do not", async (t) => {
-  // doctest:L56
   const out = annotateSnapshot(SNAPSHOT, ENTRIES);
   const lines = out.text.split("\n");
   assert.equal(lines[1], '  - button "Where you are: Chat" [expanded=false, ref=e7, id=bbx-nav-place]');
@@ -73,7 +71,6 @@ void test("Annotate: unique role+name matches get their id appended; ambiguous a
 // spaces inserted between block-level children (for example, a title, type badge,
 // path, and snippet in one Search option).
 void test("Snapshot output escapes quotes and backslashes in an accessible name.", async (t) => {
-  // doctest:L77
   const RICH_SNAPSHOT = '- option "A title type path \\"quoted\\" \\\\Inbox" [ref=e20]';
   const rich = annotateSnapshot(RICH_SNAPSHOT, [{ id: "bbx-search-result", role: "option", name: 'A title type path "quoted" \\Inbox' }]);
   assert.equal(rich.text, '- option "A title type path \\"quoted\\" \\\\Inbox" [ref=e20, id=bbx-search-result]');
@@ -82,7 +79,6 @@ void test("Snapshot output escapes quotes and backslashes in an accessible name.
 // Escaped control characters must stay on one snapshot line. An unfamiliar
 // upstream escape must leave the snapshot readable rather than throwing.
 void test("Escaped control characters must stay on one snapshot line.", async (t) => {
-  // doctest:L86
   const multilineName = "Line\nwith\ttab";
   const multilineSnapshot = `- button ${JSON.stringify(multilineName)} [ref=e21]`;
   const multiline = annotateSnapshot(multilineSnapshot, []);
@@ -95,7 +91,6 @@ void test("Escaped control characters must stay on one snapshot line.", async (t
 
 // ## Annotate: live lookups fill the gaps and update the ref table
 void test("Annotate: live lookups fill the gaps and update the ref table", async (t) => {
-  // doctest:L99
   const out = annotateSnapshot(SNAPSHOT, ENTRIES);
   const text = applyLiveIds(out, { e8: "bbx-nav-profile", e9: "bbx-panel-close", e1: "not-a-bbx-id" });
   const lines = text.split("\n");
@@ -107,7 +102,6 @@ void test("Annotate: live lookups fill the gaps and update the ref table", async
 
 // ## Renumbering: a ref that changed hands between the last two snapshots is described both ways
 void test("Renumbering: a ref that changed hands between the last two snapshots is described both ways", async (t) => {
-  // doctest:L111
   const user = { role: "button", name: "User", id: "bbx-nav-profile" };
   const heading = { role: "heading", name: "Chat", id: null };
   assert.equal(refRenumbered(user, user), null);
@@ -119,7 +113,6 @@ void test("Renumbering: a ref that changed hands between the last two snapshots 
 
 // ## Check result: anything that is not a well-formed pass is a failure
 void test("Check result: anything that is not a well-formed pass is a failure", async (t) => {
-  // doctest:L123
   assert.deepEqual(parseCheckResult('"{\\"ok\\":true,\\"scrolled\\":false}"'), { ok: true, scrolled: false });
   assert.deepEqual(parseCheckResult('{"ok":false,"reason":"disabled","detail":"button#bbx-composer-send"}'), { ok: false, reason: "disabled", detail: "button#bbx-composer-send" });
   assert.deepEqual(parseCheckResult('"{\\"ok\\":true,\\"scrolled\\":true,\\"clickAt\\":{\\"x\\":12.5,\\"y\\":40}}"'), { ok: true, scrolled: true, clickAt: { x: 12.5, y: 40 } });
@@ -130,7 +123,6 @@ void test("Check result: anything that is not a well-formed pass is a failure", 
 
 // ## Geometry: zero-size and off-screen boxes are refused, on-screen passes
 void test("Geometry: zero-size and off-screen boxes are refused, on-screen passes", async (t) => {
-  // doctest:L134
   const vp = { width: 1280, height: 800 };
   assert.equal(judgeBox({ x: 10, y: 10, width: 0, height: 20 }, vp).ok, false);
   assert.equal(judgeBox({ x: -9999, y: 10, width: 50, height: 20 }, vp).ok, false);

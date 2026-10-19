@@ -7,8 +7,8 @@
 // that shape — see `src/core/chat/session/transcript-paths.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { isTaskOutputPathForBox, encodeProjectDir } from "../../../../src/core/chat/session/transcript-paths.js";
 
 const BOX_ROOT = "/srv/boxes/alpha";

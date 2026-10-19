@@ -12,8 +12,8 @@
 // inert types (images, etc.) gain `nosniff` but stay inline.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import net from "node:net";
@@ -32,7 +32,6 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L28
   await server.seed("_content/page.html", "<html><body><script>alert(1)</script></body></html>");
   const html = await server.rawRequest({ method: "GET", url: "/api/files/_content/page.html" });
   t.check(`${html.statusCode} ${html.headers["content-type"]} ${html.headers["content-disposition"]} ${html.headers["x-content-type-options"]}`, "200 text/html attachment; filename=\"page.html\" nosniff");
@@ -40,7 +39,6 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
   // An `.svg` file (script-capable when rendered as a document) gets the same
   // treatment:
 
-  // doctest:L38
   await server.seed("_content/mark.svg", "<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>");
   const svg = await server.rawRequest({ method: "GET", url: "/api/files/_content/mark.svg" });
   t.check(`${svg.statusCode} ${svg.headers["content-type"]} ${svg.headers["content-disposition"]}`, "200 image/svg+xml attachment; filename=\"mark.svg\"");
@@ -49,7 +47,6 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
   // no `Content-Disposition`, and its own sandboxed CSP instead of a bare
   // `nosniff`-only treatment:
 
-  // doctest:L49
   await server.seed("_content/snapshot.frozen", "<html><body>captured page</body></html>");
   const frozen = await server.rawRequest({ method: "GET", url: "/api/files/_content/snapshot.frozen" });
   t.check(`${frozen.statusCode} ${frozen.headers["content-type"]} ${JSON.stringify(frozen.headers["content-disposition"] ?? null)} ${frozen.headers["x-content-type-options"]} ${frozen.headers["content-security-policy"]}`, str`200 text/html null nosniff sandbox allow-scripts; script-src '${any(String)}'`);
@@ -59,7 +56,6 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
   // before the file's disposition changed) must not keep reusing a stale,
   // unhardened cached response forever:
 
-  // doctest:L61
   const notModified = await server.rawRequest({
     method: "GET",
     url: "/api/files/_content/page.html",
@@ -70,7 +66,6 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
   // An ordinary inert type (an image) still serves inline, but now also carries
   // `nosniff`:
 
-  // doctest:L74
   await server.seed("_content/photo.jpg", "fake-jpeg-bytes");
   const img = await server.rawRequest({ method: "GET", url: "/api/files/_content/photo.jpg" });
   t.check(`${img.statusCode} ${img.headers["content-type"]} ${JSON.stringify(img.headers["content-disposition"] ?? null)} ${img.headers["x-content-type-options"]}`, "200 image/jpeg null nosniff");
@@ -80,13 +75,11 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
   // through it is forced to download with `nosniff`, not rendered inline
   // (closing the incomplete-coverage gap the codex review flagged):
 
-  // doctest:L86
   const svgImage = await server.rawRequest({ method: "GET", url: "/api/image/_content/mark.svg" });
   t.check(`${svgImage.statusCode} ${svgImage.headers["content-type"]} ${svgImage.headers["content-disposition"]} ${svgImage.headers["x-content-type-options"]}`, "200 image/svg+xml attachment; filename=\"mark.svg\" nosniff");
 
   // An ordinary image through `/api/image/*` stays inline but gains `nosniff`:
 
-  // doctest:L94
   const jpgImage = await server.rawRequest({ method: "GET", url: "/api/image/_content/photo.jpg" });
   t.check(`${jpgImage.statusCode} ${jpgImage.headers["content-type"]} ${JSON.stringify(jpgImage.headers["content-disposition"] ?? null)} ${jpgImage.headers["x-content-type-options"]}`, "200 image/jpeg null nosniff");
 
@@ -107,12 +100,10 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
   // crafted client would) can, and is the only way to actually exercise
   // `containWithinBox`'s prefix-collision branch through the real HTTP route:
 
-  // doctest:L117
   const siblingDir = `${server.boxRoot}-other`;
   await mkdir(siblingDir, { recursive: true });
   await writeFile(join(siblingDir, "secret.jpg"), "sibling-bytes");
 
-  // doctest:L121
   await server.server.listen({ port: 0 });
   const listenAddr = server.server.server.address();
   if (listenAddr === null || typeof listenAddr === "string") {
@@ -120,7 +111,6 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
   }
   const listenPort = listenAddr.port;
 
-  // doctest:L128
   function rawHttpGet(reqPath: string) {
     return new Promise<string>((resolve, reject) => {
       const sock = net.connect(listenPort, "127.0.0.1", () => {
@@ -133,7 +123,6 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
     });
   }
 
-  // doctest:L140
   const boxDirName = server.boxRoot.split("/").pop();
   const escapeImage = await rawHttpGet(`/${TEST_SLUG}/api/image/../${boxDirName}-other/secret.jpg`);
   t.check(
@@ -146,7 +135,6 @@ void test("A .html file is forced to download, not render inline:", async (t) =>
   // sync `containWithinBox` call is reachable with an ordinary `../<sibling>`
   // path):
 
-  // doctest:L157
   const ctx = trpcContext({ boxRoot: server.boxRoot, boxSlug: "t", eventBus: server.eventBus, actor: "none" });
   const escapeBrowse = await statusRouter.createCaller(ctx).browse({ path: `../${boxDirName}-other` });
   t.check(

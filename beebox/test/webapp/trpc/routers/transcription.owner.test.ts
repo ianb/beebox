@@ -8,7 +8,7 @@
 // service to everyone who can see the chat.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readFile, rm } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
@@ -40,18 +40,15 @@ void test("An authenticated non-owner is refused, and nothing is written", async
       t.error(error);
     }
   });
-  // doctest:L37
   const fixtureBox = await makeTmpBox({ git: true });
   const boxRoot = fixtureBox.root;
 
-  // doctest:L40
   t.check(await attempt(() => caller(boxRoot, { authed: true }).setService({ service: "deepgram" })), "THREW:FORBIDDEN");
   t.check(await attempt(() => caller(boxRoot, { authed: true }).setHqService({ hqService: "voxtral" })), "THREW:FORBIDDEN");
   t.check(await caller(boxRoot, { authed: true }).config(), { service: "voxtral", hqService: "whisper" });
 
   // ## The owner repoints it, and the change lands on disk
 
-  // doctest:L53
   t.check(await caller(boxRoot, { isOwner: true }).setService({ service: "deepgram" }), { service: "deepgram" });
   t.check(await caller(boxRoot, { isOwner: true }).setHqService({ hqService: "voxtral-diarized" }), {
     hqService: "voxtral-diarized",

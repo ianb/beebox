@@ -6,6 +6,8 @@ issues: []
 ---
 # Native Android companion app
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan adds a native Kotlin/Jetpack Compose Android app that pairs with one or
 more self-hosted Bee Box instances and reproduces the iOS companion's stance:
 a `WKWebView`-equivalent (`android.webkit.WebView`) hosts the box's existing web

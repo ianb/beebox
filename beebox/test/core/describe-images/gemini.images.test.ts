@@ -7,7 +7,7 @@
 // never contacts a provider.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -24,7 +24,6 @@ void test("line 18", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L19
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "gemini-scan-images-"));
   const previousFetch = globalThis.fetch;
   const heicPath = path.join(dir, "synthetic.heic");
@@ -36,7 +35,6 @@ void test("line 18", async (t) => {
   const avifPath = path.join(dir, "real.avif");
   await Sharp(Buffer.from('<svg width="257" height="113" xmlns="http://www.w3.org/2000/svg"><rect width="257" height="113" fill="white"/></svg>')).avif().toFile(avifPath);
 
-  // doctest:L30
   const GeminiRequest = z.object({ contents: z.array(z.object({ parts: z.array(z.object({ inlineData: z.object({ data: z.string(), mimeType: z.string() }).optional() })) })) });
   const requestBodies: Array<z.infer<typeof GeminiRequest>> = [];
   globalThis.fetch = async (_input, init) => {
@@ -51,7 +49,6 @@ void test("line 18", async (t) => {
     });
   };
 
-  // doctest:L44
   const result = await analyzeScanBatchWithGemini("fake-key", { imagePaths: [heicPath, heifPath, avifPath], boxholderContext: null });
   const parts = (requestBodies[0]?.contents[0]?.parts ?? []).flatMap((part) => part.inlineData ?? []);
   const heicRoundTrip = Buffer.from(parts[0]?.data ?? "", "base64").equals(heicBytes);

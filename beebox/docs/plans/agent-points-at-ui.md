@@ -8,6 +8,8 @@ issues:
 
 # The agent sees the interface and points at controls in it
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The box agent cannot see the running interface. This plan gives it two things:
 a way to ask what controls are on the user's screen right now, and a way to
 write a tappable reference to one of them inside its answer. It covers web and

@@ -6,8 +6,8 @@
 // engine's two reads.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import { pluginByName, pluginNames, plugins } from "../src/plugins.js";
 import { definePlugin } from "../src/cards/plugin-definition.js";
 import { access } from "node:fs/promises";
@@ -102,26 +102,21 @@ async function conventionProblems(): Promise<string[]> {
 // Every name the registry lists resolves to a definition carrying that name;
 // an unknown name is `undefined`, never a throw.
 void test("Every name the registry lists resolves to a definition carrying that name; an...", async (t) => {
-  // doctest:L17
   t.check(plugins.directory, "./plugins");
 
-  // doctest:L20
   t.check(pluginNames().map((name) => pluginByName(name)?.name), pluginNames());
 
-  // doctest:L23
   t.check(pluginByName("no-such-plugin"), undefined);
 });
 
 // `definePlugin` is an identity with a type check: a plugin module's
 // `export default definePlugin({...})` is what the registry imports.
 void test("definePlugin is an identity with a type check:", async (t) => {
-  // doctest:L31
   const input = { name: "example", description: "An example plugin", docs: "src/plugins/example/README.md", schemas: undefined };
   t.check(definePlugin(input), is(input));
 });
 
 void test("Every plugin follows the mechanical conventions", async (t) => {
-  // doctest:L114
   const problems = await conventionProblems();
   t.check(problems, []);
 });

@@ -4,8 +4,8 @@
 // cards unless a thread is already tracked or a bounded rule selects it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { initBox } from "../../src/core/box/structure/core.js";
@@ -58,7 +58,6 @@ void test("Gmail is enabled for the box but nothing says what to collect.", asyn
       t.error(error);
     }
   });
-  // doctest:L54
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   box.commitAll("initialize box");
@@ -83,7 +82,6 @@ void test("An explicit {} is the way to say \"connected, nothing automatic\".", 
       t.error(error);
     }
   });
-  // doctest:L75
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
@@ -95,14 +93,11 @@ void test("An explicit {} is the way to say \"connected, nothing automatic\".", 
   const connector = createGmailConnector(box.root, gmail);
   t.check(await connector.sync(), { success: true, created: [], updated: [], procedures: [] });
 
-  // doctest:L87
   gmail.addMessage(message({ id: "new", subject: "New mail" }));
   t.check(await connector.sync(), { success: true, created: [], updated: [], procedures: [] });
 
-  // doctest:L91
   t.check(await findTrackedGmailThreads(box.root), new Map());
 
-  // doctest:L94
   t.check(await transientState(box.root), { historyId: "2" });
 });
 
@@ -118,7 +113,6 @@ void test("A procedure action records a bounded summary and returns one coalesce
       t.error(error);
     }
   });
-  // doctest:L108
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", JSON.stringify({
@@ -151,7 +145,6 @@ void test("A procedure action records a bounded summary and returns one coalesce
     ],
   });
 
-  // doctest:L134
   t.check(await transientState(box.root), {
     historyId: "2",
     rules: {
@@ -188,7 +181,6 @@ void test("The obsolete GC timestamp is ignored and removed on the next successf
       t.error(error);
     }
   });
-  // doctest:L148
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
@@ -201,7 +193,6 @@ void test("The obsolete GC timestamp is ignored and removed on the next successf
   const result = await createGmailConnector(box.root, gmail).sync();
   t.check(result, { success: true, created: [], updated: [], procedures: [] });
 
-  // doctest:L161
   t.check(await transientState(box.root), {
     historyId: "1",
   });
@@ -219,7 +210,6 @@ void test("Once explicitly tracked, a thread is refreshed on regular connector s
       t.error(error);
     }
   });
-  // doctest:L175
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
@@ -244,7 +234,6 @@ void test("Once explicitly tracked, a thread is refreshed on regular connector s
   await connector.sync();
   t.check(fetchedThreads, 0);
 
-  // doctest:L200
   gmail.addMessage(message({ id: "m2", threadId: "tracked", subject: "Working thread" }));
   gmail.addMessage(message({ id: "other", threadId: "untracked", subject: "Other thread" }));
   const result = await connector.sync();
@@ -258,10 +247,8 @@ void test("Once explicitly tracked, a thread is refreshed on regular connector s
     procedures: [],
   });
 
-  // doctest:L206
   t.check(fetchedThreads, 1);
 
-  // doctest:L209
   t.check(await findTrackedGmailThreads(box.root), new Map([
     ["tracked", {
       threadId: "tracked",
@@ -284,7 +271,6 @@ void test("Enabling a rule reports its existing match count without importing ba
       t.error(error);
     }
   });
-  // doctest:L224
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", JSON.stringify({
@@ -302,13 +288,11 @@ void test("Enabling a rule reports its existing match count without importing ba
   const connector = createGmailConnector(box.root, gmail);
   t.check(await connector.sync(), { success: true, created: [], updated: [], procedures: [] });
 
-  // doctest:L242
   t.check(await transientState(box.root), {
     rules: { "agent-label": { baselineAt: isoDate(), baselineMatches: 1 } },
     historyId: "1",
   });
 
-  // doctest:L245
   gmail.addMessage(message({ id: "first", subject: "First new", labelIds: ["Label_7"] }));
   gmail.addMessage(message({ id: "second", subject: "Second new", labelIds: ["Label_7"] }));
   const result = await connector.sync();
@@ -323,7 +307,6 @@ void test("Enabling a rule reports its existing match count without importing ba
     procedures: [],
   });
 
-  // doctest:L251
   t.check(await findTrackedGmailThreads(box.root), new Map([
     ["t-first", {
       threadId: "t-first",
@@ -332,7 +315,6 @@ void test("Enabling a rule reports its existing match count without importing ba
     }],
   ]));
 
-  // doctest:L254
   const state = await transientState(box.root);
   t.check(state, {
     historyId: "3",
@@ -371,7 +353,6 @@ void test("An expired cursor establishes a new checkpoint, leaves tracked cards 
       t.error(error);
     }
   });
-  // doctest:L272
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", JSON.stringify({ labels: ["callback"], action: { type: "track" } }));
@@ -387,7 +368,6 @@ void test("An expired cursor establishes a new checkpoint, leaves tracked cards 
   const result = await connector.sync();
   t.check(result, { success: true, created: [], updated: [], procedures: [] });
 
-  // doctest:L288
   t.check(await transientState(box.root), {
     historyId: "3",
     rules: { shorthand: { baselineAt: isoDate(), baselineMatches: 2 } },
@@ -407,7 +387,6 @@ void test("Only an explicit rule selection may create a card.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L303
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed("_config/connectors/gmail.json", "{}\n");
@@ -433,6 +412,5 @@ void test("Only an explicit rule selection may create a card.", async (t) => {
   const result = await connector.sync();
   t.check(result, { success: true, created: [], updated: [], procedures: [] });
 
-  // doctest:L329
   t.check(await findTrackedGmailThreads(box.root), new Map());
 });

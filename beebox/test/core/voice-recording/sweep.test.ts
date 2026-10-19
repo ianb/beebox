@@ -6,8 +6,8 @@
 // after sealing if it never becomes terminal.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";
 import type { StagingSession, StagingVoice } from "../../../src/core/capture/staging-schema.js";
@@ -44,25 +44,20 @@ void test("An open, never-sealed recording is GC'd after 7 days — not before",
       t.error(error);
     }
   });
-  // doctest:L40
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
 
-  // doctest:L43
   const stale = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
   await backdate(box, { id: stale.id, session: { createdAt: EIGHT_DAYS_AGO } });
 
-  // doctest:L46
   const fresh = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
   await backdate(box, { id: fresh.id, session: { createdAt: SIX_DAYS_AGO } });
 
-  // doctest:L49
   const result = await sweepVoiceSessions({ boxRoot: box.root });
   t.check(result.deleted, [
     str`${any(String)}`,
   ]);
 
-  // doctest:L55
   t.check(
     {
       deletedWasStale: result.deleted[0] === stale.id,
@@ -86,15 +81,12 @@ void test("A sealed recording with no HQ requested is terminal immediately, GC'd
       t.error(error);
     }
   });
-  // doctest:L70
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
 
-  // doctest:L73
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
   await sealVoiceSession({ boxRoot: box.root, id: session.id, emissionId: null, hq: null });
 
-  // doctest:L76
   const sealed = await readStagingSession({ boxRoot: box.root, id: session.id });
   invariant(sealed?.voice, "sealed recording keeps its voice state");
   t.check({ sealedAt: sealed.voice.sealedAt === sealed.voice.terminalAt, terminalAtSet: sealed.voice.terminalAt !== undefined }, {
@@ -102,7 +94,6 @@ void test("A sealed recording with no HQ requested is terminal immediately, GC'd
     terminalAtSet: true,
   });
 
-  // doctest:L83
   await backdate(box, { id: session.id, voice: { terminalAt: EIGHT_DAYS_AGO } });
   const result = await sweepVoiceSessions({ boxRoot: box.root });
   t.check(
@@ -129,11 +120,9 @@ void test("The client sent realtime text (fellBack); an HQ result that arrives l
       t.error(error);
     }
   });
-  // doctest:L102
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
 
-  // doctest:L105
   const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
   await sealVoiceSession({
     boxRoot: box.root, id: session.id, emissionId: "e1",
@@ -146,7 +135,6 @@ void test("The client sent realtime text (fellBack); an HQ result that arrives l
     event: { type: "allPiecesDone", result: { text: "hi", diarized: false, service: "whisper", pieces: 1 } },
   });
 
-  // doctest:L117
   const result = await sweepVoiceSessions({ boxRoot: box.root });
   t.check(
     {
@@ -173,11 +161,9 @@ void test("The tab closed during the HQ wait:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L136
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
 
-  // doctest:L139
   async function sealedReadyUnclaimed(sealedAt: string) {
     const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null, kind: "voice" });
     await sealVoiceSession({
@@ -194,7 +180,6 @@ void test("The tab closed during the HQ wait:", async (t) => {
   const stale = await sealedReadyUnclaimed(EIGHT_DAYS_AGO);
   const fresh = await sealedReadyUnclaimed(SIX_DAYS_AGO);
 
-  // doctest:L155
   const staleSession = await readStagingSession({ boxRoot: box.root, id: stale.id });
   invariant(staleSession?.voice, "stale recording keeps its voice state");
   const staleVoice = staleSession.voice;
@@ -204,7 +189,6 @@ void test("The tab closed during the HQ wait:", async (t) => {
     terminalAt: null,
   });
 
-  // doctest:L161
   const result = await sweepVoiceSessions({ boxRoot: box.root });
   t.check(
     {

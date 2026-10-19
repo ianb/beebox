@@ -10,7 +10,7 @@
 // it is reachable here without a backend.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   type CaptureBubbleModel,
   captureBubblePhase,
@@ -42,16 +42,12 @@ const faceOf = (model: CaptureBubbleModel) => {
 // the step; past it, the caption starts reporting how long it has been — a silent
 // minute is what the boxholder read as failure.
 void test("Preparation takes about a minute.", async (t) => {
-  // doctest:L45
   t.check(faceOf(bubble("preparing", 5_000)), "working: preparing…");
 
-  // doctest:L48
   t.check(faceOf({ ...bubble("preparing", 5_000), liveStatus: "transcribing" }), "working: transcribing…");
 
-  // doctest:L51
   t.check(faceOf(bubble("delivering", 5_000)), "working: queued…");
 
-  // doctest:L54
   t.check(faceOf(bubble("preparing", 4 * MINUTE)), "working: still preparing — 4 min");
 });
 
@@ -61,10 +57,8 @@ void test("Preparation takes about a minute.", async (t) => {
 // from nothing having happened. A resolved capture keeps its row for a moment and
 // says which ending it got:
 void test("Delivery used to be rendered as the row vanishing, which is indistinguishable...", async (t) => {
-  // doctest:L65
   t.check(faceOf({ ...bubble("delivering", MINUTE), resolution: "delivered" }), "resolved: delivered");
 
-  // doctest:L68
   t.check(faceOf({ ...bubble("failed:prepare", 3 * DAY), resolution: "discarded" }), "resolved: discarded");
 });
 
@@ -75,16 +69,12 @@ void test("Delivery used to be rendered as the row vanishing, which is indisting
 // its own. The chip now draws the same line, which is what decides whether Retry
 // or Discard is the emphasized verb.
 void test("The abandonment sweep already draws this line:", async (t) => {
-  // doctest:L80
   t.check(faceOf(bubble("failed:deliver", 10_000)), "failed-fresh: failed just now");
 
-  // doctest:L83
   t.check(faceOf(bubble("failed:deliver", 20 * MINUTE)), "failed-fresh: failed 20 min ago");
 
-  // doctest:L86
   t.check(faceOf(bubble("failed:prepare", 90 * MINUTE)), "failed-aged: failed 2 hr ago");
 
-  // doctest:L89
   t.check(faceOf(bubble("failed:prepare", 16 * DAY)), "failed-aged: failed 16 days ago");
 });
 
@@ -93,14 +83,12 @@ void test("The abandonment sweep already draws this line:", async (t) => {
 // emphasized for discard on the strength of its age alone, and a retry that just
 // failed would report the age of the original attempt:
 void test("A failure ages from lastActivityAt, not from when the capture was created — o...", async (t) => {
-  // doctest:L99
   t.check(faceOf({ ...bubble("failed:deliver", 20 * DAY), lastActivityAt: agesAgo(2 * MINUTE) }), "failed-fresh: failed 2 min ago");
 });
 
 // A live `failed` event counts as failure even while the query still says the
 // capture is preparing:
 void test("A live failed event counts as failure even while the query still says the cap...", async (t) => {
-  // doctest:L107
   t.check(faceOf({ ...bubble("preparing", 10 * MINUTE), liveStatus: "failed" }), "failed-fresh: failed 10 min ago");
 });
 
@@ -111,17 +99,13 @@ void test("A live failed event counts as failure even while the query still says
 // a duration — and an un-aged failure is treated as fresh, because emphasizing
 // discard is a judgement that needs the age to support it.
 void test("The first frame renders before the wall clock is read (and startedAt could in...", async (t) => {
-  // doctest:L119
   const noClock = bubble("failed:prepare", 16 * DAY);
   t.check(`${captureBubblePhase(noClock, null)}: ${captureBubbleCaption(noClock, null)}`, "failed-fresh: failed");
 
-  // doctest:L123
   t.check(captureBubbleAgeMs({ ...noClock, lastActivityAt: "not a date" }, NOW), null);
 
-  // doctest:L126
   t.check(captureBubbleAgeMs({ ...bubble("preparing", MINUTE), startedAt: "not a date" }, NOW), null);
 
-  // doctest:L129
   t.check(captureBubbleAgeMs(noClock, 0), null);
 });
 
@@ -130,7 +114,6 @@ void test("The first frame renders before the wall clock is read (and startedAt 
 // A retry or discard that came back with an error takes over the caption — a
 // user-initiated action never silently no-ops.
 void test("A retry or discard that came back with an error takes over the caption — a us...", async (t) => {
-  // doctest:L139
   t.check(faceOf({ ...bubble("failed:prepare", 2 * DAY), actionError: "couldn't discard — Cancel failed: 409" }), "failed-aged: couldn't discard — Cancel failed: 409");
 });
 
@@ -139,12 +122,9 @@ void test("A retry or discard that came back with an error takes over the captio
 // Discard deletes staged media that reached no other surface, so the confirmation
 // has to say what it is deleting:
 void test("Discard deletes staged media that reached no other surface, so the confirmati...", async (t) => {
-  // doctest:L149
   t.check(captureMediaSummary(COUNTS), "2 photos, 3 clips, 1 file");
 
-  // doctest:L152
   t.check(captureMediaSummary({ photos: 7, files: 0, audioSegments: 1 }), "7 photos, 1 clip");
 
-  // doctest:L155
   t.check(captureMediaSummary({ photos: 0, files: 0, audioSegments: 0 }), "capture");
 });

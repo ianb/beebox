@@ -7,7 +7,7 @@
 // ("Lint rule suppression") has the rules and that history.
 import { builtinModules } from "node:module";
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
-import agentDoctest from "agent-doctest/eslint";
+import tapCheck from "@ianbicking/tap-check/eslint";
 
 // Session creation has one owner. Four call sites used to reach
 // `registry.createNew()` independently — the send route, capture and bulk
@@ -335,11 +335,11 @@ export default [
     // own asserts.
     // src/frontend/eslint.config.ts sets the same rules for the frontend's tests.
     files: ["test/**/*.ts"],
-    plugins: { "agent-doctest": agentDoctest },
+    plugins: { "tap-check": tapCheck },
     rules: {
-      "agent-doctest/check-whole-value": "error",
-      "agent-doctest/no-voided-check": "error",
-      "agent-doctest/no-tap-assert": "error",
+      "tap-check/check-whole-value": "error",
+      "tap-check/no-voided-check": "error",
+      "tap-check/no-tap-assert": "error",
     },
   },
 ];

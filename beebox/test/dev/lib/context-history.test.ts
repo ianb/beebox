@@ -5,7 +5,7 @@
 // history object is never mutated, so successive runs accumulate.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -39,7 +39,6 @@ const ENTRY3 = { ...base, date: "2026-06-21T00:00:00Z", initial: 52000, peak: 52
 
 // ## A first run seeds the box and audit
 void test("A first run seeds the box and audit", async (t) => {
-  // doctest:L38
   const h1 = appendRun({}, run({ box: "test1", date: "2026-06-20T00:00:00Z", measurements: [
     { auditId: "box-structure-inbox", stats: stats({ initialTokens: 41000, peakTokens: 41000, turnCount: 1 }) },
   ] }));
@@ -50,7 +49,6 @@ void test("A first run seeds the box and audit", async (t) => {
   // The earlier entry is preserved; the new one lands after it. Watching `initial`
   // drop across this series is the whole point — trim, re-run, compare.
 
-  // doctest:L51
   const h2 = appendRun(h1, run({ box: "test1", date: "2026-06-21T00:00:00Z", measurements: [
     { auditId: "box-structure-inbox", stats: stats({ initialTokens: 38000, peakTokens: 39000, turnCount: 3 }) },
   ] }));
@@ -58,12 +56,10 @@ void test("A first run seeds the box and audit", async (t) => {
 
   // ## appendRun does not mutate the input history
 
-  // doctest:L61
   t.check(h1, { test1: { "box-structure-inbox": [ENTRY1] } });
 
   // ## Different boxes stay isolated
 
-  // doctest:L68
   const h3 = appendRun(h2, run({ box: "ledger", date: "2026-06-21T00:00:00Z", measurements: [
     { auditId: "box-structure-inbox", stats: stats({ initialTokens: 52000, peakTokens: 52000, turnCount: 1 }) },
   ] }));
@@ -86,7 +82,6 @@ void test("loadHistory parses the outer box → audit id → entries shape stric
       t.error(error);
     }
   });
-  // doctest:L85
   const dir = await mkdtemp(join(tmpdir(), "context-history-"));
   const historyPath = join(dir, "context-history.yaml");
   await writeFile(
@@ -145,7 +140,6 @@ void test("loadHistory parses the outer box → audit id → entries shape stric
   // that blocked recording on 2026-08-23 must not block a later, unrelated
   // audit's measurement from being appended and written back.
 
-  // doctest:L125
   await recordRun({
     historyPath,
     box: "test1",

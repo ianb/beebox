@@ -95,7 +95,7 @@ const config: KnipConfig = {
   // Out of scope for this config. Each is its own package with its own
   // backlog; folding them in is a separate piece of work, not a config line.
   ignoreWorkspaces: [
-    "agent-doctest",
+    "tap-check",
     "browse",
     "browse/**",
     "beebox/pub-worker",

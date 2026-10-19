@@ -9,7 +9,7 @@ import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { sessionProfileDir } from "../src/worktree.js";
 
 const base = await mkdtemp(join(tmpdir(), "browse-profile-"));
@@ -28,7 +28,6 @@ async function refused(fn: () => Promise<unknown>): Promise<string> {
 //
 // Created on demand, and distinct per session name.
 void test("Created on demand, and distinct per session name.", async (t) => {
-  // doctest:L33
   const alpha = await sessionProfileDir("alpha");
   const beta = await sessionProfileDir("beta");
   t.check(
@@ -53,7 +52,6 @@ void test("Created on demand, and distinct per session name.", async (t) => {
 // Otherwise `a/b` and `a-b` would both reduce to `a-b` and share one profile —
 // reintroducing the collision this exists to prevent.
 void test("The name becomes a path segment, so it is sanitized rather than trusted:", async (t) => {
-  // doctest:L52
   const escaped = await sessionProfileDir("../../escape");
   const slashed = await sessionProfileDir("a/b");
   const dashed = await sessionProfileDir("a-b");
@@ -83,7 +81,6 @@ void test("Invoked outside bin/browse there is no base to put profiles under, an
       t.error(error);
     }
   });
-  // doctest:L68
   delete process.env["BROWSE_PROFILE_BASE"];
   t.check(await refused(async () => sessionProfileDir("alpha")), "BROWSE_PROFILE_BASE is not set. Invoke via bin/browse, not directly.");
 });

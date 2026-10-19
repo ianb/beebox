@@ -11,8 +11,8 @@
 // is asserted without spending a settle window.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { runAllTargets, type RunAllDeps } from "../../src/cli/run-all.js";
 import type { TargetConfig, UploaderConfig } from "../../src/cli/config.js";
 import type { RunSummary } from "../../src/cli/run-target.js";

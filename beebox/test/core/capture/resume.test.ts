@@ -10,7 +10,7 @@
 // fails to compile here until this decides how it resumes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
@@ -61,11 +61,9 @@ void test("A sealed capture session resumes; a sealed voice session does not", a
       t.error(error);
     }
   });
-  // doctest:L55
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
 
-  // doctest:L58
   const capture = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
   await addPhoto({
     boxRoot: box.root, id: capture.id, filename: "p.jpg", capturedAt: "2026-07-09T14:00:00.000Z",
@@ -73,13 +71,11 @@ void test("A sealed capture session resumes; a sealed voice session does not", a
   });
   await setStagingState({ boxRoot: box.root, id: capture.id, state: "sealed" });
 
-  // doctest:L65
   const voice = await createStagingSession({
     boxRoot: box.root, targetSessionId: "chat-voice", createdBy: null, kind: "voice",
   });
   await setStagingState({ boxRoot: box.root, id: voice.id, state: "sealed" });
 
-  // doctest:L70
   const backend = createFakeChatBackend();
   const registry = new ChatSessionRegistry(box.root, {
     backend,
@@ -87,7 +83,6 @@ void test("A sealed capture session resumes; a sealed voice session does not", a
   });
   const eventBus = createEventBus(box.root);
 
-  // doctest:L77
   await resumeStagingSessions({ boxRoot: box.root, eventBus, registry });
   const captureDelivered = await waitForGone({ boxRoot: box.root, id: capture.id });
   await tick();
@@ -95,14 +90,12 @@ void test("A sealed capture session resumes; a sealed voice session does not", a
   // The capture session was picked up and delivered (no longer sitting `sealed` on
   // disk — `prepareCaptureSession` cleans it up once delivered):
 
-  // doctest:L86
   t.check(captureDelivered, true);
 
   // The voice session was left completely untouched — still `sealed`, and its
   // `voice` object unchanged, because resume never dispatched into it: `hq: none`
   // means HQ was never requested, so there's no job to resume.
 
-  // doctest:L95
   const voiceAfter = await readStagingSession({ boxRoot: box.root, id: voice.id });
   assert.ok(voiceAfter?.voice);
   t.check({ state: voiceAfter.state, hq: voiceAfter.voice.hq, handoff: voiceAfter.voice.handoff }, {
@@ -127,11 +120,9 @@ void test("A voice session with `hq.state: \"queued\"` resumes the HQ job", asyn
       t.error(error);
     }
   });
-  // doctest:L110
   const box = await makeTmpBox({ git: true });
   await configureBox(box);
 
-  // doctest:L113
   const voice = await createStagingSession({
     boxRoot: box.root, targetSessionId: "chat-voice", createdBy: null, kind: "voice",
   });
@@ -144,7 +135,6 @@ void test("A voice session with `hq.state: \"queued\"` resumes the HQ job", asyn
     hq: { emissionId: "e1", sessionId: "chat-voice", service: "whisper", requestedAt: "2026-09-10T18:00:00.000Z" },
   });
 
-  // doctest:L125
   const backend = createFakeChatBackend();
   const registry = new ChatSessionRegistry(box.root, {
     backend,
@@ -152,14 +142,12 @@ void test("A voice session with `hq.state: \"queued\"` resumes the HQ job", asyn
   });
   const eventBus = createEventBus(box.root);
 
-  // doctest:L132
   await resumeStagingSessions({ boxRoot: box.root, eventBus, registry });
 
   // The job ran (and failed fast — this test box holds no HQ credentials), which
   // is the observable proof resume actually fired it rather than leaving it
   // `queued` forever:
 
-  // doctest:L140
   async function waitForHqSettled({ boxRoot, id, timeoutMs }: { boxRoot: string; id: string; timeoutMs?: number }) {
     const limit = timeoutMs ?? 2000;
     const start = Date.now();

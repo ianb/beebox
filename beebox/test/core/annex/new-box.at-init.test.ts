@@ -16,7 +16,7 @@
 // as the reason its bug went unnoticed for months.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
@@ -128,13 +128,11 @@ async function assetStaysVisible(): Promise<string> {
 // an error. The refusal names the install line rather than trying to repair:
 // `bbx init` does not install system packages.
 void test("version() returning null is the service's normal \"not installed\" answer, not...", async (t) => {
-  // doctest:L132
   t.check(await caught(() => requireGitAnnex(createFakeGitAnnex({ version: null }))), "git-annex is required to create a Bee Box: a box tracks its assets in the annex from its first commit, and without the binary every commit on that box fails. Install it (`apt install git-annex` / `brew install git-annex`).");
 });
 
 // With the binary present it passes silently — routine success is not news.
 void test("With the binary present it passes silently — routine success is not news.", async (t) => {
-  // doctest:L140
   t.check(await caught(() => requireGitAnnex(createFakeGitAnnex())), "(no error)");
 });
 
@@ -148,7 +146,6 @@ void test("With the binary present it passes silently — routine success is not
 // Asserting that `.git/annex/` exists would pass against a fabricated directory
 // and prove nothing.
 void test("The whole point of the preflight is this box.", async (t) => {
-  // doctest:L155
   t.check(ANNEX ? await realBytesAnnex() : "annexed", "annexed");
 });
 
@@ -157,7 +154,6 @@ void test("The whole point of the preflight is this box.", async (t) => {
 // that no longer hides assets — so this also asserts `annexNewBox` rewrote the
 // manifest-scheme `.gitignore` that `scaffoldBoxRoot` left behind.
 void test("The same box reads as annex-shaped to the probe every asset writer gates on.", async (t) => {
-  // doctest:L165
   t.check(ANNEX ? await shapeFlips() : "before=false after=true", "before=false after=true");
 });
 
@@ -168,7 +164,6 @@ void test("The same box reads as annex-shaped to the probe every asset writer ga
 // (`c47fd2be1` left a production box with 536 such assets). So the check is
 // `git check-ignore` against a real file, not a reading of the `.gitignore`.
 void test("The failure this seam keeps having is an ignore rule in a spelling nothing ma...", async (t) => {
-  // doctest:L177
   t.check(ANNEX ? await assetStaysVisible() : "visible to git", "visible to git");
 });
 
@@ -186,6 +181,5 @@ void test("The failure this seam keeps having is an ignore rule in a spelling no
 // reachable — a box whose `.gitignore` was hand-edited back to hiding assets and
 // whose annex was never set up.
 void test("initBox writes the un-ignore block unconditionally — there is only one block...", async (t) => {
-  // doctest:L196
   t.check(ANNEX ? await reinitAnnexesAnUnannexedBox() : "annexed=true ignored=false", "annexed=true ignored=false");
 });

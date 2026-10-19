@@ -18,7 +18,7 @@
 // message.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { bodyField } from "../../../helpers/test-helpers.js";
 import { createFakeChatBackend, type FakeChatBackend } from "../../../../src/services/claude-chat/core.js";
@@ -56,17 +56,14 @@ void test("A failed run start: 200 with a turnId, and the failure on that turn",
       t.error(error);
     }
   });
-  // doctest:L53
   const backend = createFakeChatBackend();
   const ctx = await makeTestServer({ chatBackend: backend });
 
-  // doctest:L56
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L61
   backend.failNextStart = Object.assign(new Error("spawn EBADF"), { code: "EBADF" });
   const res = await ctx.request({
     method: "POST",
@@ -76,7 +73,6 @@ void test("A failed run start: 200 with a turnId, and the failure on that turn",
   const turn = await awaitTurnCompletion(bodyField(res.body, "turnId"));
   const failure = turn.errored ?? "(no error frame)";
 
-  // doctest:L70
   t.check(`${res.statusCode} | turn=${typeof bodyField(res.body, "turnId")} | recorded=${recorded.length} | errored=${failure} | complete=${turn.complete}`, "200 | turn=string | recorded=1 | errored=spawn EBADF | complete=true");
 
   // ## Retrying the same messageId is deduplicated — the message is already here
@@ -84,14 +80,12 @@ void test("A failed run start: 200 with a turnId, and the failure on that turn",
   // The client was told the box has this message, and it does. A retry (an iOS
   // redelivery on relaunch, say) must not append a second copy of it to history.
 
-  // doctest:L80
   const retry = await ctx.request({
     method: "POST",
     url: "/api/chat/send",
     payload: { session: "new", message: "did you water the plants", messageId: "m1" },
   });
 
-  // doctest:L86
   t.check(`${retry.statusCode} | dedup=${bodyField(retry.body, "deduplicated")} | recorded=${recorded.length}`, "200 | dedup=true | recorded=1");
 });
 
@@ -107,17 +101,14 @@ void test("The reorder must not lose the event on the happy path — the pending
       t.error(error);
     }
   });
-  // doctest:L100
   const backend = createFakeChatBackend();
   const ctx = await makeTestServer({ chatBackend: backend });
 
-  // doctest:L103
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L108
   const res = await ctx.request({
     method: "POST",
     url: "/api/chat/send",
@@ -125,7 +116,6 @@ void test("The reorder must not lose the event on the happy path — the pending
   });
   await awaitFakeRuns(backend, 1);
 
-  // doctest:L115
   t.check(`${res.statusCode} | recorded=${recorded.length} | ${recorded[0]}`, "200 | recorded=1 | water the plants");
 });
 
@@ -138,17 +128,14 @@ void test("A duplicate messageId arriving after a *successful* send is still ded
       t.error(error);
     }
   });
-  // doctest:L126
   const backend = createFakeChatBackend();
   const ctx = await makeTestServer({ chatBackend: backend });
 
-  // doctest:L129
   const recorded: string[] = [];
   ctx.eventBus.subscribe({
     listener: (e: BusEvent) => { if (e.event === "chat-user-message") recorded.push(e.data.message); },
   });
 
-  // doctest:L134
   await ctx.request({
     method: "POST",
     url: "/api/chat/send",
@@ -161,6 +148,5 @@ void test("A duplicate messageId arriving after a *successful* send is still ded
   });
   await awaitFakeRuns(backend, 1);
 
-  // doctest:L146
   t.check(`${again.statusCode} | dedup=${bodyField(again.body, "deduplicated")} | recorded=${recorded.length}`, "200 | dedup=true | recorded=1");
 });

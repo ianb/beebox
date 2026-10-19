@@ -6,7 +6,7 @@
 // transcript. `--latest` with `--since` stays rejected.
 
 import { t as tap, test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile, utimes } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -78,7 +78,6 @@ tap.teardown(async () => {
 
 // ## Without an ID, every session's new turns
 void test("Without an ID, every session's new turns", async (t) => {
-  // doctest:L73
   t.check(questions(await printed(() => runSinceMode(common))), [
     "alpha new question",
     "beta new question",
@@ -87,7 +86,6 @@ void test("Without an ID, every session's new turns", async (t) => {
 
 // ## With an ID, only that session's new turns
 void test("With an ID, only that session's new turns", async (t) => {
-  // doctest:L80
   t.check(questions(await printed(() => runSinceMode({ ...common, sessionId: alpha }))), [
     "alpha new question",
   ]);
@@ -95,7 +93,6 @@ void test("With an ID, only that session's new turns", async (t) => {
 
 // ## A named session with nothing new says so
 void test("A named session with nothing new says so", async (t) => {
-  // doctest:L87
   const later = resolveSince("2026-07-04T00:00:00Z");
   t.check(await printed(() => runSinceMode({ ...common, since: later, sessionId: beta })), "No activity in session bbbb2222-0000-0000-0000-000000000002 since 2026-07-04T00:00:00.000Z.");
 });

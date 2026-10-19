@@ -7,10 +7,10 @@
 // renames itself when its network location changes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import { readFile, writeFile } from "node:fs/promises";
-import { any } from "agent-doctest/check";
+import { any } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { localOrigin, readOrCreateOriginId } from "../../../../src/core/chat/session/origin.js";
 
@@ -27,19 +27,15 @@ void test("BBXORIGINIDFILE points the helper somewhere other than the real per-u
       t.error(error);
     }
   });
-  // doctest:L22
   const box = await makeTmpBox();
   process.env["BBX_ORIGIN_ID_FILE"] = box.path("origin-id");
 
-  // doctest:L25
   const first = await localOrigin();
   t.check(first, { id: any(String).matches(/^[\da-f-]{36}$/), name: os.hostname() });
 
-  // doctest:L32
   const onDisk = (await readFile(box.path("origin-id"), "utf-8")).trim();
   t.check(onDisk, first.id);
 
-  // doctest:L36
   const second = await localOrigin();
   t.check(second, first);
 });
@@ -61,15 +57,12 @@ void test("Nothing serializes the very first read:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L57
   const box = await makeTmpBox();
   const idFile = box.path("state/origin-id");
   const [a, b] = await Promise.all([readOrCreateOriginId(idFile), readOrCreateOriginId(idFile)]);
 
-  // doctest:L61
   t.check(a, b);
 
-  // doctest:L64
   t.check(a, (await readFile(idFile, "utf-8")).trim());
 });
 
@@ -83,12 +76,10 @@ void test("an existing id is read, never replaced", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L75
   const box = await makeTmpBox();
   await writeFile(box.path("origin-id"), "b0d1e2f3-4567-4890-abcd-ef0123456789\n");
   process.env["BBX_ORIGIN_ID_FILE"] = box.path("origin-id");
 
-  // doctest:L79
   t.check((await localOrigin()).id, "b0d1e2f3-4567-4890-abcd-ef0123456789");
 });
 
@@ -107,11 +98,9 @@ void test("A missing file is the ordinary first-run case.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L96
   const box = await makeTmpBox();
   await writeFile(box.path("origin-id"), "not-a-uuid\n");
   process.env["BBX_ORIGIN_ID_FILE"] = box.path("origin-id");
 
-  // doctest:L100
   await t.checkThrows(async () => (await localOrigin()), "CorruptOriginIdError");
 });

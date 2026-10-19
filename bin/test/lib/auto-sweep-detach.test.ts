@@ -16,8 +16,8 @@
 // stand-in `bin/workstreams` that just sleeps, so no real worktree is ever at risk.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { execFile, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { chmod, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -28,7 +28,7 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const repoRoot = resolve(process.cwd(), "..");
 
-const root = await mkdtemp(join(tmpdir(), "auto-sweep-doctest-"));
+const root = await mkdtemp(join(tmpdir(), "auto-sweep-test-"));
 const home = join(root, "home");
 const fakeRepo = join(root, "repo");
 const log = join(home, ".cache/beebox/worktree-cleanup.log");
@@ -77,13 +77,11 @@ void test("The caller returns immediately, and the sweep runs on its own", async
       t.error(error);
     }
   });
-  // doctest:L73
   await fakeSweep(2);
   const started = Date.now();
   await execFileAsync(hook, ["session-end"], { env });
   const callerMs = Date.now() - started;
 
-  // doctest:L78
   const finished = await until((s) => s.includes("END"));
   t.check(callerMs, any(Number).below(1500));
   t.checkText(finished, `«date» auto-sweep trigger=session-end START
@@ -96,7 +94,6 @@ void test("The caller returns immediately, and the sweep runs on its own", async
   // killed group-wide, which is what happens to a hook when its Claude session tears
   // down.
 
-  // doctest:L94
   await rm(log, { force: true });
   await fakeSweep(2);
   const launcher = spawn(hook, ["session-end"], { env, detached: true, stdio: "ignore" });
@@ -104,7 +101,6 @@ void test("The caller returns immediately, and the sweep runs on its own", async
   await sleep(300);
   try { process.kill(-launcher.pid!, "SIGKILL"); } catch (_error) { /* already gone */ }
 
-  // doctest:L101
   const afterKill = await until((s) => s.includes("END"));
   t.checkText(afterKill, `«date» auto-sweep trigger=session-end START
   sweeping
@@ -116,14 +112,12 @@ void test("The caller returns immediately, and the sweep runs on its own", async
   // contend for the same git work, and there is always another session start or end
   // to run it.
 
-  // doctest:L113
   await rm(log, { force: true });
   await fakeSweep(3);
   await execFileAsync(hook, ["session-end"], { env });
   await until((s) => s.includes("START"));
   await execFileAsync(hook, ["session-start"], { env });
 
-  // doctest:L119
   const both = await until((s) => s.includes("SKIPPED"));
   t.checkText(both, `«date» auto-sweep trigger=session-end START
 «date» auto-sweep trigger=session-start SKIPPED (sweep «int» already running)`);
@@ -132,7 +126,6 @@ void test("The caller returns immediately, and the sweep runs on its own", async
   // later run — the failure this whole file is about is a sweep being killed, so the
   // lock must not turn that into a permanent one.
 
-  // doctest:L132
   await until((s) => s.includes("END"));
   // An END in the log is not proof the sweep that wrote it has EXITED — and a
   // still-running holder makes the next run log "SKIPPED (sweep N already
@@ -148,7 +141,6 @@ void test("The caller returns immediately, and the sweep runs on its own", async
   await fakeSweep(0);
   await execFileAsync(hook, ["session-end"], { env });
 
-  // doctest:L147
   // One predicate, not two sequential waits: the notice is written BEFORE the
   // sweep runs (auto-sweep.sh), so any log containing END must already contain
   // it. Waiting for them separately let a stale END satisfy the first wait.
@@ -165,7 +157,6 @@ void test("The caller returns immediately, and the sweep runs on its own", async
   // so a `START` with neither `END` nor `INTERRUPTED` means exactly that, which is
   // the diagnosis rather than a mystery.
 
-  // doctest:L166
   await rm(log, { force: true });
   await fakeSweep(1);
   await execFileAsync(hook, ["session-end"], { env });
@@ -173,7 +164,6 @@ void test("The caller returns immediately, and the sweep runs on its own", async
   const sweepPid = Number((await readFile(join(lock, "pid"), "utf8")).trim());
   process.kill(sweepPid, "SIGTERM");
 
-  // doctest:L173
   const interrupted = await until((s) => s.includes("INTERRUPTED"));
   t.checkText(interrupted, `«date» auto-sweep trigger=session-end START
   sweeping
@@ -192,7 +182,6 @@ void test("The caller returns immediately, and the sweep runs on its own", async
   // belong to any worktree — driven against a scratch checkout so nothing real is
   // in scope.
 
-  // doctest:L192
   const fakeMono = join(root, "mono");
   await mkdir(join(fakeMono, "beebox"), { recursive: true });
   await execFileAsync("git", ["init", "-q"], { cwd: fakeMono });
@@ -201,7 +190,6 @@ void test("The caller returns immediately, and the sweep runs on its own", async
   await fakeSweep(0);
   await cp(join(fakeRepo, "bin/workstreams"), join(fakeMono, "bin/workstreams"));
 
-  // doctest:L200
   await rm(log, { force: true });
   const hookInput = JSON.stringify({
     cwd: fakeMono,
@@ -215,7 +203,6 @@ void test("The caller returns immediately, and the sweep runs on its own", async
     { env: { ...env, BBX_STATE_DIR: join(home, ".cache/beebox") } },
   ).catch(() => null);
 
-  // doctest:L213
   const fromEarlyExit = await until((s) => s.includes("END"));
   t.checkText(fromEarlyExit, `«date» pid=«int» SessionEnd event: session=no-worktree reason=prompt_input_exit cwd=«*»/mono
 «date» pid=«int» SessionEnd decision=skip:not-a-worktree-session resolved=''

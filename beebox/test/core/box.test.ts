@@ -8,8 +8,8 @@
 // box root.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, not } from "@ianbicking/tap-check/check";
 import { strict as assert } from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -19,7 +19,7 @@ import { scaffoldBoxRoot } from "../../src/core/box/package.js";
 import { findBoxRoot, BOX_MARKER } from "../../src/lib/paths/core.js";
 
 async function makeTmpDir() {
-  return fs.mkdtemp(path.join(os.tmpdir(), "bbx-doctest-"));
+  return fs.mkdtemp(path.join(os.tmpdir(), "bbx-test-"));
 }
 
 async function listDirs(root: string) {
@@ -44,7 +44,7 @@ async function listDirs(root: string) {
 // A fresh v3 box's operational tree lives right at `boxRoot` (which is also
 // the npm-package root). We filter to just the operational (underscore) areas
 // here — `src/`, `.claude/`, `.beebox/`, and `node_modules/` are the code/agent
-// side, covered by their own doctests:
+// side, covered by their own tests:
 void test("A fresh v3 box's operational tree lives right at boxRoot (which is also the n...", async (t) => {
   const tmp = await makeTmpDir();
   const { boxRoot } = await scaffoldBoxRoot(tmp);

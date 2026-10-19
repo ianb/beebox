@@ -7,7 +7,7 @@
 // original destination. These examples use a fake box for `claim`/`fallBack`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { resolveAwaitingHq, type AwaitingHqResolution } from "../../../../../src/components/chat/conversation/use-bound-emission/awaiting-hq.js";
 import type { PendingConversationSend } from "../../../../../src/components/chat/conversation/use-bound-emission/pending-sends.js";
@@ -56,7 +56,6 @@ function fakeBox(replies: { claim?: Claim; fallBack?: FallBack }) {
 // gets the same tag back, marked `heard="live"` because the HQ text did not
 // reproduce it.
 void test("The saved realtime text ended with the spoken \"send message\" tag; the HQ text...", async (t) => {
-  // doctest:L60
   const { box, calls } = fakeBox({ claim: { outcome: "claimed", result: READY } });
   const r = await resolveAwaitingHq({ row: row(inSession, "rough wordz <send-message phrase=\"send message\" />"), recordingId: "rec-1", choice: "hq", box });
   t.check({ kind: r.kind, text: sent(r).text, hqText: sent(r).hqText, id: sent(r).id, calls }, {
@@ -72,7 +71,6 @@ void test("The saved realtime text ended with the spoken \"send message\" tag; t
 
 // If the result is not ready after all, nothing is sent:
 void test("If the result is not ready after all, nothing is sent:", async (t) => {
-  // doctest:L69
   const { box } = fakeBox({ claim: { outcome: "pending", hq: { state: "transcribing", piece: 1, pieces: 2, attempt: 1, pieceSeconds: 300 } } });
   t.check((await resolveAwaitingHq({ row: row(inSession, "rough"), recordingId: "rec-1", choice: "hq", box })).kind, "not-ready");
 });
@@ -82,7 +80,6 @@ void test("If the result is not ready after all, nothing is sent:", async (t) =>
 // The fallback is the realtime emission unchanged — no `hqText`, so the
 // assembler marks it `stt="live"`.
 void test("The fallback is the realtime emission unchanged — no hqText, so the assembler...", async (t) => {
-  // doctest:L80
   const { box, calls } = fakeBox({ fallBack: { outcome: "fellBack" } });
   const r = await resolveAwaitingHq({ row: row(inSession, "rough words"), recordingId: "rec-1", choice: "live", box });
   t.check({ text: sent(r).text, hqText: sent(r).hqText ?? null, calls }, {
@@ -93,7 +90,6 @@ void test("The fallback is the realtime emission unchanged — no hqText, so the
     ],
   });
 
-  // doctest:L85
   const won = fakeBox({ fallBack: { outcome: "claimed", result: READY } });
   t.check(sent(await resolveAwaitingHq({ row: row(inSession, "rough words"), recordingId: "rec-1", choice: "live", box: won.box })).text, "clean words");
 });

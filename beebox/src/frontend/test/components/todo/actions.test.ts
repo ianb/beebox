@@ -5,12 +5,12 @@
 // `FileView` provides it around a card; Markdown rendered anywhere else has no
 // provider, and then the checkbox is read-only and there is no "+".
 //
-// The doctests run under plain Node with no DOM, so a click is exercised
+// The tests run under plain Node with no DOM, so a click is exercised
 // through the same functions the checkbox calls (`tickInput`, `runTick`,
 // `todoSelection`), and the rendered controls through static markup.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import assert from "node:assert/strict";
@@ -65,7 +65,6 @@ const actions: TodoActions = {
 //
 // With no provider, the checkbox is read-only and there is no "+":
 void test("With no provider, the checkbox is read-only and there is no \"+\":", async (t) => {
-  // doctest:L69
   t.check(controls(render({ status: "open" }, undefined)), "read-only, no +");
 });
 
@@ -73,7 +72,6 @@ void test("With no provider, the checkbox is read-only and there is no \"+\":", 
 // A parked or dropped todo keeps a disabled checkbox (it cannot express that
 // status) but can still go to chat. An agent's open todo is tickable too.
 void test("With a provider, an open or done todo's checkbox is live and \"+\" is offered.", async (t) => {
-  // doctest:L78
   t.check(
     [
       controls(render({ status: "open" }, actions)),
@@ -90,7 +88,6 @@ void test("With a provider, an open or done todo's checkbox is live and \"+\" is
 // A todo without a full address (no card path or no text, as in chat Markdown)
 // and a list's muted context row get neither.
 void test("A surface with no chat composer provides addToChat:", async (t) => {
-  // doctest:L93
   t.check(
     [
       controls(render({ status: "open" }, { ...actions, addToChat: null })),
@@ -106,9 +103,8 @@ void test("A surface with no chat composer provides addToChat:", async (t) => {
 //
 // Ticking an open todo asks for `done` and says it saw `open`; unticking is the
 // reverse. The server refuses the write unless both the text and the status
-// still match (`trpc-todos-set-status.doctest.md`).
+// still match (`test/webapp/trpc/routers/todos.set-status.test.ts`).
 void test("Ticking an open todo asks for done and says it saw open; unticking is the rev...", async (t) => {
-  // doctest:L109
   t.check(tickInput(address, "open"), {
     path: "_content/Porch.doc.card",
     locator: {
@@ -120,7 +116,6 @@ void test("Ticking an open todo asks for done and says it saw open; unticking is
     status: "done",
   });
 
-  // doctest:L112
   t.check([tickInput(address, "done")?.status, tickInput(address, "done")?.expectedStatus, tickInput(address, "parked"), tickInput(address, "dropped")], [
     "open",
     "done",
@@ -135,13 +130,11 @@ void test("Ticking an open todo asks for done and says it saw open; unticking is
 // it (the refreshed card replaces it); on failure it puts the old state back
 // and shows why.
 void test("runTick shows the new state before the write returns.", async (t) => {
-  // doctest:L123
   function recorder() {
     const log: string[] = [];
     return { log, view: { show: (s: "open" | "done" | null) => log.push(`show ${String(s)}`), fail: (m: string | null) => log.push(`fail ${String(m)}`) } };
   }
 
-  // doctest:L128
   calls.length = 0;
   const ok = recorder();
   const okInput = tickInput(address, "open");
@@ -157,7 +150,6 @@ void test("runTick shows the new state before the write returns.", async (t) => 
     ],
   ]);
 
-  // doctest:L138
   const failing = { ...actions, setStatus: async () => { throw new Error("This card changed since it was shown — it has been reloaded"); } };
   const bad = recorder();
   const originalWarn = console.warn;
@@ -179,7 +171,6 @@ void test("runTick shows the new state before the write returns.", async (t) => 
 // The selection names the card by its absolute ref, carries the todo's words,
 // and says where the todo sits.
 void test("The selection names the card by its absolute ref, carries the todo's words, a...", async (t) => {
-  // doctest:L156
   t.check(
     [
       todoSelection(address),

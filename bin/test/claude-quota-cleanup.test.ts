@@ -5,7 +5,7 @@
 // other Claude setting.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
@@ -18,7 +18,6 @@ const repoRoot = path.resolve(process.cwd(), "..");
 const workstreams = path.join(repoRoot, "bin/workstreams");
 
 void test("line 20", async (t) => {
-  // doctest:L21
   const configDir = await fs.mkdtemp(path.join(os.tmpdir(), "claude-quota-cleanup-"));
   t.teardown(async () => await fs.rm(configDir, { recursive: true, force: true }));
   const settings = path.join(configDir, "settings.json");
@@ -44,7 +43,6 @@ void test("line 20", async (t) => {
 
 // An unrelated status line is user-owned configuration and is refused unchanged.
 void test("An unrelated status line is user-owned configuration and is refused unchanged.", async (t) => {
-  // doctest:L43
   const configDir = await fs.mkdtemp(path.join(os.tmpdir(), "claude-quota-cleanup-"));
   t.teardown(async () => await fs.rm(configDir, { recursive: true, force: true }));
   const settings = path.join(configDir, "settings.json");

@@ -6,8 +6,8 @@
 // accepting and whether a batch is valid.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, is, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, is, str } from "@ianbicking/tap-check/check";
 import { BrowserTaskSchema, createBrowserTaskTemplate } from "../../src/schemas/browser-task.js";
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas.js";

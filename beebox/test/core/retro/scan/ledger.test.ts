@@ -6,7 +6,7 @@
 // Set as the lines go past, without ever materializing the entries.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -34,11 +34,9 @@ void test("A missing ledger reads as empty", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L31
   const box = await makeTmpBox();
   t.check(await loadLedgerEntries(box.root), []);
 
-  // doctest:L35
   t.check(await loadEvidenceHashes(box.root), new Set());
 });
 
@@ -54,16 +52,13 @@ void test("Blank and corrupt lines are skipped rather than poisoning the history
       t.error(error);
     }
   });
-  // doctest:L49
   const box = await makeTmpBox();
   await appendLedgerEntries(box.root, [entry(1), entry(2)]);
   const ledgerPath = join(box.root, ".beebox/retro/observations.jsonl");
   await appendFile(ledgerPath, "\n{not json}\n" + JSON.stringify({ missing: "fields" }) + "\n");
   await appendLedgerEntries(box.root, [entry(3)]);
 
-  // doctest:L55
   t.check(await loadLedgerEntries(box.root), [entry(1), entry(2), entry(3)]);
 
-  // doctest:L60
   t.check(await loadEvidenceHashes(box.root), new Set(["hash-1", "hash-2", "hash-3"]));
 });

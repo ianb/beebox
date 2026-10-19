@@ -2,11 +2,11 @@
 //
 // The card page shows the title from `title:`. A body that opens with the same
 // text as an H1 reads the title twice, so `lintCardsDispatch` warns on it. The
-// check uses `leadingTitleHeading` (`test/shared/leading-title-heading.doctest.md`),
+// check uses `leadingTitleHeading` (`test/shared/leading-title-heading.test.ts`),
 // the same predicate the card view uses to hide that line.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { cardSchema, type CardSchema } from "../../../../src/cards/schema.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -27,7 +27,6 @@ async function bodyWarnings(name: string, text: string): Promise<string[]> {
 }
 
 void test("line 29", async (t) => {
-  // doctest:L30
   t.check(await bodyWarnings("Trip.doc.card", "---\ntitle: Trip Report\n---\n# Trip report\n\nWe drove down on Friday.\n"), [
     "body repeats the title as a heading; the title is shown from `title:`",
   ]);
@@ -35,15 +34,12 @@ void test("line 29", async (t) => {
 
 // A body that opens with prose, or with a different heading, does not warn:
 void test("A body that opens with prose, or with a different heading, does not warn:", async (t) => {
-  // doctest:L37
   t.check(await bodyWarnings("Trip.doc.card", "---\ntitle: Trip Report\n---\nWe drove down on Friday.\n\n# Trip Report\n"), []);
 
-  // doctest:L40
   t.check(await bodyWarnings("Trip.doc.card", "---\ntitle: Trip Report\n---\n# Day one\n\nWe drove down on Friday.\n"), []);
 });
 
 // A card type without a body field is not checked, even when its file has text after the frontmatter:
 void test("A card type without a body field is not checked, even when its file has text...", async (t) => {
-  // doctest:L47
   t.check(await bodyWarnings("Gold.badge.card", "---\ntitle: Gold\n---\n# Gold\n"), []);
 });

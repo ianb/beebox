@@ -7,7 +7,7 @@
 // a silent scan-without-priors. This file pins that resolution ladder.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";

@@ -11,7 +11,7 @@
 // whose copy differs from its recorded version keeps its copy: that is an edit.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
@@ -60,7 +60,6 @@ void test("An untracked box's old stock guides update in place", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L55
   const box = await boxWith({
     "_config/intake.guide.card": oldStock("intake"),
     "_config/calendar.guide.card": oldStock("calendar"),
@@ -70,23 +69,19 @@ void test("An untracked box's old stock guides update in place", async (t) => {
     "calendar.guide.card (updated)",
   ]);
 
-  // doctest:L62
   t.check(await fs.readFile(path.join(box, "_config/intake.guide.card"), "utf-8"), createInitialGuideTemplate({ name: "intake" }));
 
   // ## An untracked box's pre-`basis` stock guide updates in place
 
-  // doctest:L69
   const preBasis = await boxWith({ "_config/intake.guide.card": preBasisStock("intake") });
   t.check((await installGuides(preBasis)).filter((entry) => entry.includes("intake.guide.card")), [
     "intake.guide.card (updated)",
   ]);
 
-  // doctest:L73
   t.check(await fs.readFile(path.join(preBasis, "_config/intake.guide.card"), "utf-8"), createInitialGuideTemplate({ name: "intake" }));
 
   // ## An untracked box's pre-doc stock guides update in place
 
-  // doctest:L80
   const preDoc = await boxWith({ "_config/intake.guide.card": preDocStock("intake"), "_config/calendar.guide.card": preDocStock("calendar") });
   t.check(await installGuides(preDoc), [
     "intake.guide.card (updated)",
@@ -95,7 +90,6 @@ void test("An untracked box's old stock guides update in place", async (t) => {
 
   // ## A tracked box that diverged from its recorded version parks the update
 
-  // doctest:L88
   const tracked = await boxWith({
     "_config/intake.guide.card": oldStock("intake"),
     "_config/template-versions.json": JSON.stringify({ "_config/intake.guide.card": { sha256: "0".repeat(64), "installed-at": "2026-09-01T00:00:00Z" } }),
@@ -104,6 +98,5 @@ void test("An untracked box's old stock guides update in place", async (t) => {
     "_config/_template-updates/_config/intake.guide.card (update available)",
   ]);
 
-  // doctest:L95
   t.check(await fs.readFile(path.join(tracked, "_config/intake.guide.card"), "utf-8"), oldStock("intake"));
 });

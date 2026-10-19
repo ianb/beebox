@@ -6,12 +6,11 @@
 // callers' formats still resolve from the single map.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mimetypeToExtension } from "../../src/lib/mimetype.js";
 
 // ## Formerly CLI-only formats (image/heic, video/*)
 void test("Formerly CLI-only formats (image/heic, video/*)", async (t) => {
-  // doctest:L15
   t.check(
     ["image/heic", "image/heif", "video/mp4", "video/webm"].map(mimetypeToExtension),
     [".heic", ".heif", ".mp4", ".webm"],
@@ -20,18 +19,15 @@ void test("Formerly CLI-only formats (image/heic, video/*)", async (t) => {
 
 // ## Voice capture formats
 void test("Voice capture formats", async (t) => {
-  // doctest:L29
   t.check(["audio/aac", "audio/x-m4a"].map(mimetypeToExtension), [".aac", ".m4a"]);
 });
 
 // ## Formerly webapp-only formats (pdf, text, json)
 void test("Formerly webapp-only formats (pdf, text, json)", async (t) => {
-  // doctest:L39
   t.check(["application/pdf", "text/plain", "application/json"].map(mimetypeToExtension), [".pdf", ".txt", ".json"]);
 });
 
 // ## Unknown type falls back to .bin
 void test("Unknown type falls back to .bin", async (t) => {
-  // doctest:L51
   t.check(mimetypeToExtension("application/x-nonsense"), ".bin");
 });

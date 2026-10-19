@@ -47,7 +47,7 @@ export interface TmpBox {
  * needs (~1.1 s); `"none"` is for the two tests that assert gitlessness.
  */
 export async function makeTmpBox(opts?: { git?: boolean | "none"; deps?: boolean; legacyInstructions?: boolean }): Promise<TmpBox> {
-  const root = await mkdtemp(join(tmpdir(), "bbx-doctest-"));
+  const root = await mkdtemp(join(tmpdir(), "bbx-test-"));
 
   // `legacyInstructions` makes a box from before `agents-md-2026-10`: its
   // manifest omits that migration, so the scaffold writes CLAUDE.md guides

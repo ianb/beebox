@@ -7,7 +7,7 @@
 // an honest remedy.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   classifyCodexAuthStatus,
   createCodexCliService,
@@ -18,12 +18,10 @@ import { join } from "node:path";
 
 // ## The supported status answers are explicit
 void test("The supported status answers are explicit", async (t) => {
-  // doctest:L22
   t.check(classifyCodexAuthStatus({ errorCode: 0, output: "Logged in using ChatGPT" }), {
     kind: "logged-in",
   });
 
-  // doctest:L25
   t.check(classifyCodexAuthStatus({ errorCode: 1, output: "warning: config note\nNot logged in\nRun codex login" }), {
     kind: "logged-out",
   });
@@ -31,19 +29,16 @@ void test("The supported status answers are explicit", async (t) => {
   // An absent executable and an answer whose contract changed are different from a
   // logout. Neither should tell the boxholder to log in.
 
-  // doctest:L33
   t.check(classifyCodexAuthStatus({ errorCode: "ENOENT", output: "spawn codex ENOENT" }), {
     kind: "unavailable",
     detail: "spawn codex ENOENT",
   });
 
-  // doctest:L36
   t.check(classifyCodexAuthStatus({ errorCode: 2, output: "error: unexpected argument 'status'" }), {
     kind: "inconclusive",
     detail: "error: unexpected argument 'status'",
   });
 
-  // doctest:L39
   t.check(classifyCodexAuthStatus({ errorCode: 2, output: "API key - sk-secret_123" }), {
     kind: "inconclusive",
     detail: "API key - <redacted>",
@@ -56,7 +51,6 @@ void test("The supported status answers are explicit", async (t) => {
 // must cancel and replace an abandoned ceremony rather than handing the owner an
 // expired code. This scripted binary exercises that real client path.
 void test("The production service talks to Codex app-server over JSONL.", async (t) => {
-  // doctest:L50
   const dir = await mkdtemp(join(tmpdir(), "bbx-codex-auth-"));
   const binary = join(dir, "codex-fixture.mjs");
   await writeFile(binary, `#!/usr/bin/env node

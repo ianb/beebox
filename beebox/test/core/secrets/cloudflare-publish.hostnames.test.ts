@@ -4,7 +4,7 @@
 // box, uses the granted connection, and normalizes host spelling.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -31,7 +31,6 @@ void test("An identical reservation is retryable, while other-box reuse and rena
       process.exitCode = 1;
     }
   });
-  // doctest:L26
   const reserved = await reserveCloudflarePublishBoxHost(hostInput);
   const retry = await reserveCloudflarePublishBoxHost({ ...hostInput, hostname: "sites.example.org" });
   const duplicate = await Promise.resolve()

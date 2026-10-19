@@ -7,8 +7,8 @@
 // open-ended enum fields stay strings.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { validateResponse, ConnectorResponseError } from "../../src/services/connector-response.js";
 import { gmailMessageSchema } from "../../src/services/google-gmail/schemas.js";
 import { calendarEventSchema } from "../../src/services/google-calendar/schemas.js";
@@ -24,7 +24,6 @@ function vErr(raw: unknown, ctx: { schema: z.ZodType; service: string; operation
 // A Gmail message with the fields we consume (plus extra keys Google sends)
 // passes — unknown keys are ignored, not rejected.
 void test("A Gmail message with the fields we consume (plus extra keys Google sends) pas...", async (t) => {
-  // doctest:L27
   const msg = { id: "m1", threadId: "t1", labelIds: ["INBOX"], internalDate: "1700000000000", extraKey: "ignored" };
   validateResponse(msg, { schema: gmailMessageSchema, service: "gmail", operation: "getMessage" });
   t.check("ok", "ok");
@@ -35,7 +34,6 @@ void test("A Gmail message with the fields we consume (plus extra keys Google se
 // A message missing its `id` is real drift — a loud error, not a silent
 // `undefined` in a card.
 void test("A message missing its id is real drift — a loud error, not a silent undefined...", async (t) => {
-  // doctest:L39
   const bad = vErr({ threadId: "t1" }, { schema: gmailMessageSchema, service: "gmail", operation: "getMessage" });
   t.check({ service: bad?.service, operation: bad?.operation }, {
     service: "gmail",
@@ -45,7 +43,6 @@ void test("A message missing its id is real drift — a loud error, not a silent
   // The error names the failing field but never echoes the raw payload (it may hold
   // personal mail content):
 
-  // doctest:L48
   t.check(bad?.issues, [
     str`id: ${any(String)}`,
   ]);
@@ -56,7 +53,6 @@ void test("A message missing its id is real drift — a loud error, not a silent
 // A calendar event with a `status` value we've never seen still validates — a new
 // Google status must not break a sync.
 void test("A calendar event with a status value we've never seen still validates — a new...", async (t) => {
-  // doctest:L58
   const ev = { id: "e1", status: "someFutureStatus" };
   validateResponse(ev, { schema: calendarEventSchema, service: "calendar", operation: "listEvents" });
   t.check("ok", "ok");

@@ -8,7 +8,7 @@
 // distinguishable from a hand edit.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   buildTriggerGrep,
   commitStep,
@@ -25,7 +25,6 @@ import {
 // The id is what a filter persists; the name is what a boxholder reads. `trick/`
 // is already the shape the trick runner writes, so its name is the bare trick.
 void test("The id is what a filter persists; the name is what a boxholder reads.", async (t) => {
-  // doctest:L29
   t.check(
     ["Triggered-By", "Procedure", "Run-By"]
       .map((key) => triggerFromTrailer(key, key === "Run-By" ? "trick/tidy-inbox" : "bbx wakeup"))
@@ -38,7 +37,6 @@ void test("The id is what a filter persists; the name is what a boxholder reads.
 // A key that names something other than a trigger — a connector, a phase — is
 // not one, so the axis stays about what ran rather than what it touched.
 void test("A key that names something other than a trigger — a connector, a phase — is n...", async (t) => {
-  // doctest:L40
   t.check(
     [
       triggerFromTrailer("Pulled-By", "gmail-connector"),
@@ -59,7 +57,6 @@ void test("A key that names something other than a trigger — a connector, a ph
 // as the same procedure id, so selecting a run finds both its pre- and
 // post-rename commits instead of silently dropping the older half.
 void test("Workflow: has no writer left, but a box's existing commits have it.", async (t) => {
-  // doctest:L55
   const old = triggerFromTrailer("Workflow", "process-news");
   const now = triggerFromTrailer("Procedure", "process-news");
   t.check(`${old?.id} === ${now?.id}: ${old?.id === now?.id}`, "procedure/process-news === procedure/process-news: true");
@@ -70,20 +67,17 @@ void test("Workflow: has no writer left, but a box's existing commits have it.",
 // Procedure commits carry no `Triggered-By` at all — reading only that key is
 // what made them look like hand edits.
 void test("Procedure commits carry no Triggered-By at all — reading only that key is wha...", async (t) => {
-  // doctest:L67
   const trailers = parseTrailersMulti("Procedure: refresh-maps\nStep: triage\nSession: abc12345");
   t.check(commitTriggers(trailers).map(triggerLabel).join(" | ") + ` @ ${commitStep(trailers)}`, "procedure refresh-maps @ triage");
 });
 
 // A hand edit names nothing, which is the distinction the timeline draws.
 void test("A hand edit names nothing, which is the distinction the timeline draws.", async (t) => {
-  // doctest:L75
   await t.checkText(JSON.stringify([commitTriggers(parseTrailersMulti("")), commitStep(undefined)]), "[[],null]");
 });
 
 // Two conventions on one commit both show, procedures before commands.
 void test("Two conventions on one commit both show, procedures before commands.", async (t) => {
-  // doctest:L82
   t.check(
     commitTriggers(parseTrailersMulti("Triggered-By: bbx tick\nProcedure: nightly"))
       .map((trigger) => trigger.id)
@@ -94,7 +88,6 @@ void test("Two conventions on one commit both show, procedures before commands."
 
 // ## Trailers the UI renders are stripped from the body it shows
 void test("Trailers the UI renders are stripped from the body it shows", async (t) => {
-  // doctest:L91
   t.check(
     stripTrailers([
       "Refreshed the map index.",
@@ -114,26 +107,22 @@ void test("Trailers the UI renders are stripped from the body it shows", async (
 // Each kind maps back to the key its writer used, and the procedure kind matches
 // the retired spelling too.
 void test("Each kind maps back to the key its writer used, and the procedure kind matche...", async (t) => {
-  // doctest:L109
   t.check(buildTriggerGrep(["procedure/refresh-maps", "trick/tidy", "command/bbx wakeup"]), "^((Procedure|Workflow): refresh-maps|Run-By: trick/tidy|Triggered-By: bbx wakeup)$");
 });
 
 // Regex metacharacters in a run name are escaped, not interpreted.
 void test("Regex metacharacters in a run name are escaped, not interpreted.", async (t) => {
-  // doctest:L116
   t.check(buildTriggerGrep(["command/bbx tick (retry)"]), "^(Triggered-By: bbx tick \\(retry\\))$");
 });
 
 // An id that names no kind is refused rather than dropped: a silently omitted
 // axis would widen the result to every commit.
 void test("An id that names no kind is refused rather than dropped:", async (t) => {
-  // doctest:L124
   t.check([parseTriggerId("process-news"), parseTriggerId("nope/x"), parseTriggerId("procedure/")], [
     null,
     null,
     null,
   ]);
 
-  // doctest:L127
   await t.checkThrows(async () => (buildTriggerGrep(["process-news"])), "InvariantError: not a trigger id: \"process-news\"");
 });

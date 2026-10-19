@@ -6,6 +6,8 @@ issues: []
 ---
 # Production Codex session startup and authentication
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Bee Box production cannot start a Codex chat because the service account has no Codex CLI. After that prerequisite is fixed, the same account also needs a supported Codex login and an actionable run-path preflight. This plan makes the complete startup path provisioned, tested, and diagnosable without widening secret custody.
 
 **Issues addressed:** none. Searches for `codex`, `plugin`, `authentication`, and the exact user-visible error found related completed issues and the open intermittent thread-start issue, but no queue item for the deterministic production provisioning failure.

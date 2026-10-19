@@ -1,7 +1,7 @@
 // # Candidate-state protection for canonical interface cards
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFileSync } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";

@@ -1,9 +1,9 @@
 // # Gmail tracked working set: rules, discovery, and gws
 //
-// Continues [tracking.doctest.md](tracking.doctest.md). This part covers the rules baseline and its bounds, resumable history discovery, the shared tracking lock, and the read-only `gws` passthrough with its bounded capture.
+// Continues [tracking.test.ts](tracking.test.ts). This part covers the rules baseline and its bounds, resumable history discovery, the shared tracking lock, and the read-only `gws` passthrough with its bounded capture.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { errorMessage } from "../../../src/shared/error-guards.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";
@@ -98,7 +98,6 @@ function addFreshMessage(gmail: FakeGmail) {
 // Activating a rule reports the existing remote match count but does not track
 // the backlog. Only later history candidates are eligible for its action.
 void test("Activating a rule reports the existing remote match count but does not track...", async (t) => {
-  // doctest:L51
   const gmail = oldMailGmail();
   const config = parseGmailConnectorConfig({ labels: ["callback"], action: { type: "track" } });
   const baseline = await evaluateGmailRules({
@@ -112,13 +111,11 @@ void test("Activating a rule reports the existing remote match count but does no
   });
   t.check(baseline.trackRequests, []);
 
-  // doctest:L70
   t.check(baseline.state, { rules: { shorthand: { baselineAt: "2026-08-05T12:00:00.000Z", baselineMatches: 1 } } });
 
   // A later matching thread is selected once and consumes one rolling-budget
   // event, even if more than one changed message from that thread is examined.
 
-  // doctest:L81
   const fresh = addFreshMessage(gmail);
   const selected = await evaluateGmailRules({
     service: gmail,
@@ -136,7 +133,6 @@ void test("Activating a rule reports the existing remote match count but does no
     },
   ]);
 
-  // doctest:L95
   t.check(selected.state, {
     rules: {
       shorthand: {
@@ -156,7 +152,6 @@ void test("A spent budget and procedure rules summarize matches without tracking
   // A spent budget leaves a visible private summary instead of creating a deferred
   // automatic-import queue.
 
-  // doctest:L103
   const cappedConfig = parseGmailConnectorConfig({
     rules: [{
       name: "small-cap",
@@ -182,7 +177,6 @@ void test("A spent budget and procedure rules summarize matches without tracking
   });
   t.check(capped.trackRequests, []);
 
-  // doctest:L129
   t.check(capped.state, {
     rules: {
       "small-cap": {
@@ -208,7 +202,6 @@ void test("A spent budget and procedure rules summarize matches without tracking
   // Procedure rules coalesce matching messages into one post-sync request and keep
   // the candidate content out of the directive.
 
-  // doctest:L140
   const procedureConfig = parseGmailConnectorConfig({
     rules: [{
       name: "review-mail",
@@ -236,7 +229,6 @@ void test("A spent budget and procedure rules summarize matches without tracking
     },
   ]);
 
-  // doctest:L163
   t.check(procedureResult.state, {
     rules: {
       "review-mail": {
@@ -275,7 +267,6 @@ void test("A stage rule and unsafe Message-IDs", async (t) => {
   // and nothing is woken. That is the state a rule sits in while its procedure is
   // still being written.
 
-  // doctest:L172
   const stageConfig = parseGmailConnectorConfig({
     rules: [{ name: "watch-mail", query: "label:callback", action: { type: "stage" } }],
   });
@@ -293,7 +284,6 @@ void test("A stage rule and unsafe Message-IDs", async (t) => {
     procedures: [],
   });
 
-  // doctest:L187
   t.check(stageResult.state, {
     rules: {
       "watch-mail": {
@@ -319,7 +309,6 @@ void test("A stage rule and unsafe Message-IDs", async (t) => {
   // whatever the eventual procedure would have seen — skipping tracked threads
   // (as `track` does) would drop that mail from the backlog for good.
 
-  // doctest:L196
   const alreadyTracked = await evaluateGmailRules({
     service: gmail,
     config: stageConfig,
@@ -353,7 +342,6 @@ void test("A stage rule and unsafe Message-IDs", async (t) => {
   // Messages without a safe RFC Message-ID are reported as unevaluated instead of
   // being interpolated into Gmail's search syntax or silently treated as a miss.
 
-  // doctest:L213
   const unsafe = await evaluateUnsafeMessage({ gmail, config: procedureConfig });
   t.check(unsafe, { queries: 0, unevaluatedThreadId: "unsafe-thread" });
 });
@@ -363,7 +351,6 @@ void test("A stage rule and unsafe Message-IDs", async (t) => {
 // A single oversized history record is consumed across sync checkpoints rather
 // than loaded all at once or truncated.
 void test("A single oversized history record is consumed across sync checkpoints rather...", async (t) => {
-  // doctest:L252
   const gmail = createFakeGoogleGmail();
   const refs = Array.from({ length: GMAIL_HISTORY_REF_LIMIT + 1 }, (_, index) => ({
     message: { id: `message-${index}`, threadId: `thread-${index}` },
@@ -385,7 +372,6 @@ void test("A single oversized history record is consumed across sync checkpoints
     requestedMaxResults: 100,
   });
 
-  // doctest:L271
   const secondPage = await discoverGmailChanges({
     service: gmail,
     startHistoryId: firstPage.historyId,
@@ -401,7 +387,6 @@ void test("A single oversized history record is consumed across sync checkpoints
 
 // Legacy GC timestamps are discarded while owned state remains validated.
 void test("Legacy GC timestamps are discarded while owned state remains validated.", async (t) => {
-  // doctest:L286
   t.check(
     parseGmailTransientState({
       historyId: "42",
@@ -423,7 +408,6 @@ void test("Explicit tracking and scheduled sync share one lock, so their state a
       t.error(error);
     }
   });
-  // doctest:L297
   const box = await makeTmpBox();
   const events: string[] = [];
   let releaseFirst!: () => void;
@@ -451,7 +435,6 @@ void test("Explicit tracking and scheduled sync share one lock, so their state a
     "first-start",
   ]);
 
-  // doctest:L323
   releaseFirst();
   await Promise.all([first, second]);
   t.check(events, [
@@ -466,14 +449,12 @@ void test("Explicit tracking and scheduled sync share one lock, so their state a
 // The wrapper keeps upstream command names, but accepts only Gmail reads and
 // introspection before it mints a token or starts the child process.
 void test("The wrapper keeps upstream command names, but accepts only Gmail reads and in...", async (t) => {
-  // doctest:L339
   t.check(assertReadOnlyGwsArgs(["gmail", "users", "messages", "list", "--params", '{"userId":"me"}']), undefined);
   t.check(assertReadOnlyGwsArgs(["gmail", "+read", "--id", "abc"]), undefined);
   t.check(assertReadOnlyGwsArgs(["schema", "gmail.users.threads.get"]), undefined);
 });
 
 void test("The gws passthrough is remote-read-only", async (t) => {
-  // doctest:L347
   let rejected = "";
   try {
     assertReadOnlyGwsArgs(["gmail", "users", "messages", "modify"]);
@@ -484,7 +465,6 @@ void test("The gws passthrough is remote-read-only", async (t) => {
 });
 
 void test("The gws passthrough is remote-read-only (line 357)", async (t) => {
-  // doctest:L358
   let nonGmail = "";
   try {
     assertReadOnlyGwsArgs(["drive", "files", "list"]);
@@ -501,7 +481,6 @@ void test("The gws passthrough is remote-read-only (line 357)", async (t) => {
 // What it must not do either is announce a truncation that never happened — output
 // that fits comes back exactly as the child wrote it.
 void test("The server runs gws on behalf of a delegating caller, so a command that print...", async (t) => {
-  // doctest:L376
   const small = boundedCapture(100);
   small.add("one ");
   small.add("two");
@@ -510,7 +489,6 @@ void test("The server runs gws on behalf of a delegating caller, so a command th
   // Past the limit the overflow is counted rather than kept, across however many
   // chunks the child's stream arrived in.
 
-  // doctest:L387
   const tight = boundedCapture(5);
   tight.add("abcd");
   tight.add("efgh");

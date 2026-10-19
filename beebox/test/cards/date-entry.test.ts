@@ -6,7 +6,7 @@
 // Ontology in `docs/implemented-plans/standard-card-fields.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { DateEntrySchema, cardSchema } from "../../src/exports/cards.js";
 import { parseCardText } from "../../src/core/card-io.js";
@@ -29,7 +29,6 @@ function check(entry: unknown): string {
 
 // ## A value at any precision, a range, and a named kind
 void test("A value at any precision, a range, and a named kind", async (t) => {
-  // doctest:L33
   t.check(
     [
       { value: "1974" },
@@ -45,19 +44,15 @@ void test("A value at any precision, a range, and a named kind", async (t) => {
 
 // Free text, an impossible month, and a time without an offset are refused:
 void test("Free text, an impossible month, and a time without an offset are refused:", async (t) => {
-  // doctest:L47
   t.check(check({ value: "circa 1970" }), "value: expected an ISO 8601 date: YYYY, YYYY-MM, YYYY-MM-DD, or a date and time with an offset");
 
-  // doctest:L50
   t.check(check({ value: "1974-13" }), "value: expected an ISO 8601 date: YYYY, YYYY-MM, YYYY-MM-DD, or a date and time with an offset");
 
-  // doctest:L53
   t.check(check({ value: "2026-09-28", end: "2026-09-28T09:30" }), "end: expected an ISO 8601 date: YYYY, YYYY-MM, YYYY-MM-DD, or a date and time with an offset");
 });
 
 // ## A box-local schema uses it for one named date or a list
 void test("A box-local schema uses it for one named date or a list", async (t) => {
-  // doctest:L60
   const bill = cardSchema("bill-fixture", {
     fields: { payee: z.string(), due: DateEntrySchema, dates: z.array(DateEntrySchema).optional() },
   });
@@ -82,7 +77,6 @@ void test("A box-local schema uses it for one named date or a list", async (t) =
 // ISO 8601 can state, so a record's `value` is not format-checked; `end` is. A
 // bare year is a YAML number, so it is quoted (`value: "1974"`).
 void test("Records hold dates transcribed from old documents, and some are not dates ISO...", async (t) => {
-  // doctest:L76
   const builtIns = await createCardSchemaMap();
   const record = (dates: string) => parseCardText(`---\nname: Letter\ndates:\n${dates}---\n`, { source: "letter.record.card", schemas: builtIns });
   t.check(record("  - value: 1970s\n    note: Guessed from the car\n  - value: 1974-06\n    end: 1974-08\n    kind: written\n").fields["dates"], [
@@ -97,7 +91,6 @@ void test("Records hold dates transcribed from old documents, and some are not d
     },
   ]);
 
-  // doctest:L81
   await t.checkText(rejection(record, "  - value: \"1974\"\n    end: summer\n"), `letter.record.card: invalid record frontmatter:
   - dates[0].end: expected an ISO 8601 date: YYYY, YYYY-MM, YYYY-MM-DD, or a date and time with an offset`);
 });

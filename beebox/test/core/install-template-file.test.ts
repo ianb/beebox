@@ -12,8 +12,8 @@
 // `pruneStaleTemplateUpdates` sweeps parked files older than 30 days (configurable) so the review pile doesn't accumulate cruft indefinitely.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -71,7 +71,6 @@ async function mirror({ box, rel, ageDays, target }: { box: string; rel: string;
 //
 // A file that doesn't exist gets written and recorded:
 void test("A file that doesn't exist gets written and recorded:", async (t) => {
-  // doctest:L74
   const box = await makeBox();
   const result = await install({ box, templateContent: "v1\n", relPath: "_config/calendar.guide.card" });
   t.check({ result, content: await get(box, "_config/calendar.guide.card"), recorded: Object.keys(await readVersions(box)) }, {
@@ -91,7 +90,6 @@ void test("A file that doesn't exist gets written and recorded:", async (t) => {
 // it since we installed it), a new template version pushes through cleanly
 // (`overwritten`):
 void test("Re-running with the same template content is a no-op (unchanged).", async (t) => {
-  // doctest:L88
   const box = await makeBox();
   await install({ box, templateContent: "v1\n" });
   const same = await install({ box, templateContent: "v1\n" });
@@ -108,7 +106,6 @@ void test("Re-running with the same template content is a no-op (unchanged).", a
 //
 // When the local file differs from the recorded hash, we don't overwrite — we park the new template for the user to review. The user's edit is preserved, and the new template sits in `_template-updates/` mirroring the original relpath verbatim, so the copy-back-to-accept path is obvious:
 void test("When the local file differs from the recorded hash, we don't overwrite — we p...", async (t) => {
-  // doctest:L101
   const box = await makeBox();
   await install({ box, templateContent: "v1\n" });
   await put({ box, rel: REL, content: "user edit\n" });
@@ -123,11 +120,9 @@ void test("When the local file differs from the recorded hash, we don't overwrit
 
   // And the recorded hash is **not** updated (so if the user copies the parked version into place later, the next install can recognise it and overwrite cleanly):
 
-  // doctest:L112
   const entryBefore = (await readVersions(box))[REL];
   t.check(entryBefore, { sha256: sha("v1\n"), "installed-at": isoDate(), stock: "v1\n", pending: sha("v2\n") });
 
-  // doctest:L116
   await install({ box, templateContent: "v2\n" });
   t.check((await readVersions(box))[REL], entryBefore);
 });
@@ -139,7 +134,6 @@ void test("When the local file differs from the recorded hash, we don't overwrit
 // reports nothing; after the box diverges and a new template parks, the original
 // relpath (not the mirrored `_template-updates/` path) is listed:
 void test("listParkedTemplateUpdates returns the original relpaths that currently have a...", async (t) => {
-  // doctest:L129
   const box = await makeBox();
   await install({ box, templateContent: "v1\n" });
   const clean = await listParkedTemplateUpdates(box);
@@ -157,13 +151,11 @@ void test("listParkedTemplateUpdates returns the original relpaths that currentl
 //
 // A box that was installed before the version tracker existed has files but no `template-versions.json` entry. If local matches the new template, we silently adopt the hash. If local doesn't match (could be user-edited or an old template version we can't recognise), we park — the conservative call:
 void test("A box that was installed before the version tracker existed has files but no...", async (t) => {
-  // doctest:L143
   const box = await makeBox();
   await put({ box, rel: REL, content: "v1\n" });
   const matching = await install({ box, templateContent: "v1\n" });
   const adopted = (await readVersions(box))[REL];
 
-  // doctest:L148
   const other = await makeBox();
   await put({ box: other, rel: REL, content: "mystery content\n" });
   const mystery = await install({ box: other, templateContent: "v2\n" });
@@ -180,7 +172,6 @@ void test("A box that was installed before the version tracker existed has files
 // hash that isn't listed still parks: the mechanism widens what counts as
 // recognised stock, it doesn't stop protecting edited files.
 void test("priorStockHashes names stock content shipped before this file was tracked, so...", async (t) => {
-  // doctest:L162
   const run = async (local: string) => {
     const box = await makeBox();
     await put({ box, rel: REL, content: local });
@@ -202,14 +193,12 @@ void test("priorStockHashes names stock content shipped before this file was tra
 // version is recorded parks a deliberate revert to old stock instead of stomping
 // it:
 void test("hasRecordedTemplateVersion is how a caller scopes that allowlist to the boots...", async (t) => {
-  // doctest:L182
   const box = await makeBox();
   await fs.mkdir(path.join(box, "_config"), { recursive: true });
   const before = await hasRecordedTemplateVersion(box, REL);
   await install({ box, templateContent: "v1\n" });
   const after = await hasRecordedTemplateVersion(box, REL);
 
-  // doctest:L188
   await put({ box, rel: REL, content: "old stock\n" });
   const tracked = await hasRecordedTemplateVersion(box, REL);
   const result = await install({ box, templateContent: "v2\n", ...(tracked ? {} : { priorStockHashes: [sha("old stock\n")] }) });
@@ -225,7 +214,6 @@ void test("hasRecordedTemplateVersion is how a caller scopes that allowlist to t
 //
 // Guide templates regenerate their `created-at` timestamps every install. With a `normalize` function we strip the volatile fields before hashing, so reinstalls don't think the user edited the file:
 void test("Guide templates regenerate their created-at timestamps every install.", async (t) => {
-  // doctest:L200
   const box = await makeBox();
   const normalize = (s: string) => s.replace(/ts="[^"]*"/g, "");
   await install({ box, templateContent: "<guide ts=\"2026-01-01\"/>\n", relPath: "_config/g.card", normalize });
@@ -241,7 +229,6 @@ void test("Guide templates regenerate their created-at timestamps every install.
 // - the box disables it AND edits the definition: still `parked` — real customization is never clobbered;
 // - the box is already on current content and differs only by the toggle: `unchanged`, nothing rewritten.
 void test("Some card templates have fields the box owns as per-box state rather than def...", async (t) => {
-  // doctest:L217
   const rel = "_config/schedules/s.scheduled-script.card";
   const card = ({ runs, description, extra }: { runs: string; description: string; extra?: string }) => `---\nruns: ${runs}\ndescription: ${description}\n${extra ?? ""}---\n`;
   const scenario = async ({ local, template }: { local: string; template: string }) => {
@@ -293,7 +280,6 @@ enabled: false
 //
 // `pruneStaleTemplateUpdates` deletes files in `_config/_template-updates/` older than the threshold (default 30 days). Recent parks are left alone. Each mirror has its on-disk target present (the realistic case — a mirror is only ever parked because an on-disk copy diverged), so only *age* decides removal here:
 void test("pruneStaleTemplateUpdates deletes files in config/template-updates/ older tha...", async (t) => {
-  // doctest:L244
   const box = await makeBox();
   const oldFile = await mirror({ box, rel: "old.card", ageDays: 40, target: true });
   const newFile = await mirror({ box, rel: "new.card", ageDays: 0, target: true });
@@ -309,18 +295,15 @@ void test("pruneStaleTemplateUpdates deletes files in config/template-updates/ o
 
 // When `_template-updates/` doesn't exist, prune is a silent no-op:
 void test("When template-updates/ doesn't exist, prune is a silent no-op:", async (t) => {
-  // doctest:L255
   t.check(await pruneStaleTemplateUpdates(await makeBox()), []);
 });
 
 // Empty subdirectories are swept after files. A subdir that still holds a non-stale file (with its on-disk target present) is left in place — the sweep is best-effort and silent, so a non-empty directory is not an error:
 void test("Empty subdirectories are swept after files.", async (t) => {
-  // doctest:L262
   const emptied = await makeBox();
   await mirror({ box: emptied, rel: "procedures/x.procedure.card", ageDays: 40, target: true });
   await pruneStaleTemplateUpdates(emptied);
 
-  // doctest:L266
   const mixed = await makeBox();
   await mirror({ box: mixed, rel: "procedures/old.procedure.card", ageDays: 40, target: true });
   await mirror({ box: mixed, rel: "procedures/fresh.procedure.card", ageDays: 0, target: true });
@@ -345,7 +328,6 @@ void test("Empty subdirectories are swept after files.", async (t) => {
 //
 // A parked mirror whose on-disk `<relpath>` no longer exists (the copy was deleted, or a relpath-scheme migration renamed it) is drift-count noise — nothing for it to update. It's removed even when recent:
 void test("A parked mirror whose on-disk <relpath> no longer exists (the copy was delete...", async (t) => {
-  // doctest:L283
   const box = await makeBox();
   await mirror({ box, rel: "procedures/gone.procedure.card", ageDays: 0, target: false }); // freshly parked, NO on-disk copy
   t.check(await pruneStaleTemplateUpdates(box, { now: Date.now() }), [
@@ -359,18 +341,15 @@ void test("A parked mirror whose on-disk <relpath> no longer exists (the copy wa
 //
 // The local reverting to the last cleanly-installed version (recorded hash = v1) makes a fresh v2 push a clean `overwritten`. An `unchanged` outcome clears it too — e.g. a migration edits the local file to match the current template:
 void test("Once a divergent box comes back into line with the template — the boxholder c...", async (t) => {
-  // doctest:L296
   const reverted = await parkedBox();
   const parkedBefore = await listParkedTemplateUpdates(reverted);
   await put({ box: reverted, rel: REL, content: "v1\n" });
   const overwritten = await install({ box: reverted, templateContent: "v2\n" });
 
-  // doctest:L301
   const matched = await parkedBox();
   await put({ box: matched, rel: REL, content: "v2\n" });
   const unchanged = await install({ box: matched, templateContent: "v2\n" });
 
-  // doctest:L305
   t.check(
     ({
       parkedBefore,

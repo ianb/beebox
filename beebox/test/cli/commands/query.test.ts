@@ -1,6 +1,6 @@
 // # `bbx query <collection>` — the agent's read surface over a collection
 //
-// CLI-tier doctests for `docs/plans/todo-collection.md` Track 4. `bbx query`
+// CLI-tier tests for `docs/plans/todo-collection.md` Track 4. `bbx query`
 // and the web list run the same query through the same runner, so what the
 // agent is told matches what the boxholder sees.
 //
@@ -9,10 +9,10 @@
 // card, a `§` line names the section when it changes, indentation follows the
 // parent chain, and an annotation gets its own `—` line.
 // `runQueryForBox(boxRoot, { collection, options })` is exercised directly,
-// same approach as `test/cli/commands/todos.doctest.md`.
+// same approach as `test/cli/commands/todos.test.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { runQueryForBox } from "../../../src/cli/commands/query.js";
 import type { TodoQueryResult } from "../../../src/core/todo/query.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -77,7 +77,6 @@ void test("The card header is the card's own summary plus its path and what it a
       t.error(error);
     }
   });
-  // doctest:L74
   await t.checkText(await run({ here: PORCH }), `Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026-08-10
  § Demolition
   _content/projects/Porch/Plan.doc.card:8  Pull the permit  (context)
@@ -99,7 +98,6 @@ Errands  _content/Errands.doc.card (refers here)  — 1 open, 0 done
   // `--no-referring` restores the subtree-only scan, which is what a large box
   // pays for when it does not want the box-wide read.
 
-  // doctest:L99
   await t.checkText(await run({ here: PORCH, referring: false }), `Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026-08-10
  § Demolition
   _content/projects/Porch/Plan.doc.card:8  Pull the permit  (context)
@@ -110,7 +108,6 @@ Errands  _content/Errands.doc.card (refers here)  — 1 open, 0 done
 
   // ## No `--here` is the whole box
 
-  // doctest:L113
   await t.checkText(await run({ glob: "_content/Errands.doc.card" }), `Errands  _content/Errands.doc.card  — 2 open, 0 done
   _content/Errands.doc.card:4  Hardware run
       — for the porch
@@ -121,7 +118,6 @@ Errands  _content/Errands.doc.card (refers here)  — 1 open, 0 done
   // Only `plate` gets group headings: `place` is a single group whose label would
   // just repeat the command.
 
-  // doctest:L127
   await t.checkText(await run({ here: PORCH, referring: false, group: "plate", status: ["open", "done"] }), `On your plate (2)
 Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026-08-10
  § Demolition
@@ -137,12 +133,10 @@ Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026
 
   // ## Params
 
-  // doctest:L146
   await t.checkText(await run({ here: PORCH, referring: false, status: ["done"] }), `Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026-08-10
  § Demolition
   _content/projects/Porch/Plan.doc.card:8  Pull the permit`);
 
-  // doctest:L152
   t.check(await run({ here: PORCH, referring: false, assigned: "nobody" }), "No todos match.");
 
   // ## `--json` is the whole `CollectionResult`
@@ -150,10 +144,8 @@ Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026
   // The structured form carries what the text form summarizes — including the
   // position and reference fields that make an undated todo legible.
 
-  // doctest:L162
   const parsed: TodoQueryResult = JSON.parse(await run({ here: PORCH, referring: false, json: true }));
 
-  // doctest:L164
   t.check(parsed.query, {
     here: "_content/projects/Porch",
     glob: "_content/projects/Porch/**",
@@ -161,7 +153,6 @@ Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026
     group: "place",
   });
 
-  // doctest:L167
   t.check(parsed.reduction, {
     open: 2,
     done: 1,
@@ -172,7 +163,6 @@ Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026
     next: "2026-08-10",
   });
 
-  // doctest:L170
   const child = parsed.groups[0]?.rows[0]?.items.find((i) => i.text === "File the copy");
   t.check([child?.sectionPath, child?.parent, child?.annotation, child?.matching], [
     [
@@ -188,7 +178,6 @@ Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026
 
   // ## An unknown collection names the ones that exist
 
-  // doctest:L178
   const origError = console.error;
   const origExit = process.exit;
   const errors: string[] = [];
@@ -204,15 +193,12 @@ Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026
     process.exit = origExit;
   }
 
-  // doctest:L193
   t.check(`${errors.join("\n")} [exit ${exitCode}]`, "Error: unknown collection \"questions\" — valid names: todos [exit 1]");
 
   // ## Issues print in a trailing block, exactly as `bbx todos` prints them
 
-  // doctest:L200
   await box.write(`${PORCH}/Broken.doc.card`, "---\ntitle: 7\n---\n{% todo %}Lost{% /todo %}\n");
 
-  // doctest:L202
   await t.checkText((await run({ here: PORCH, referring: false })).split("\n").slice(-3).join("\n"), `1 cards could not be read for todos:
   [load] _content/projects/Porch/Broken.doc.card: _content/projects/Porch/Broken.doc.card: invalid doc frontmatter:
   - title: expected string, got number`);

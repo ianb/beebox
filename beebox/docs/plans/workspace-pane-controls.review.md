@@ -1,5 +1,7 @@
 # Plan Engineering Review — workspace pane controls
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Independent review: Claude Opus, 2026-09-08. The primary agent verified findings
 against source and revised [the plan](workspace-pane-controls.md). The reviewer
 read an earlier draft while mobile-state and deferred directory/Dashboard edits

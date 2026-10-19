@@ -6,8 +6,8 @@
 // without reading or mutating the service account's real Codex home.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { readFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -23,7 +23,7 @@ void test("The CLI and SDK versions are one lockstep contract.", async (t) => {
   t.check(packageJson.dependencies["@openai/codex"], packageJson.dependencies["@openai/codex-sdk"]);
 
   // The resolver reaches an executable whose reported version is the package pin.
-  // The doctest harness already supplies an isolated `CODEX_HOME`, so this cannot
+  // The test harness already supplies an isolated `CODEX_HOME`, so this cannot
   // read or mutate the developer's plugin or authentication state.
 
   const result = await execFileAsync(codexBinaryPath(), ["--version"]);

@@ -7,7 +7,7 @@
 // markdown stream before rendering.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   ACK_KINDS,
   getAckKind,
@@ -27,7 +27,6 @@ console.warn = () => {};
 //
 // An unrecognized kind has no entry.
 void test("An unrecognized kind has no entry.", async (t) => {
-  // doctest:L31
   t.check(getAckKind("nope"), null);
 });
 
@@ -35,7 +34,6 @@ void test("An unrecognized kind has no entry.", async (t) => {
 //
 // Self-closing form, no inner text.
 void test("Self-closing form, no inner text.", async (t) => {
-  // doctest:L40
   t.check(parseAcks("<ack kind=\"appended\" ref=\"a.card\"/>"), [
     {
       kind: "appended",
@@ -46,7 +44,6 @@ void test("Self-closing form, no inner text.", async (t) => {
 
 // Paired form with inner text.
 void test("Paired form with inner text.", async (t) => {
-  // doctest:L47
   t.check(parseAcks("<ack kind=\"edited\" ref=\"a.md\">Reworked the intro</ack>"), [
     {
       kind: "edited",
@@ -58,7 +55,6 @@ void test("Paired form with inner text.", async (t) => {
 
 // Empty text is dropped, ref is optional.
 void test("Empty text is dropped, ref is optional.", async (t) => {
-  // doctest:L54
   t.check(parseAcks("<ack kind=\"created\"></ack>"), [
     {
       kind: "created",
@@ -71,16 +67,13 @@ void test("Empty text is dropped, ref is optional.", async (t) => {
 // Unknown kinds are silently dropped (with a console warning the caller
 // can ignore). Acks with no `kind` attribute are also dropped.
 void test("Unknown kinds are silently dropped (with a console warning the caller can ign...", async (t) => {
-  // doctest:L64
   t.check(parseAcks("<ack kind=\"frob\"/>"), []);
 
-  // doctest:L67
   t.check(parseAcks("<ack ref=\"x.card\"/>"), []);
 });
 
 // Mixed valid and invalid in one response — valids survive.
 void test("Mixed valid and invalid in one response — valids survive.", async (t) => {
-  // doctest:L74
   t.check(
     parseAcks(
       "prose <ack kind=\"created\" ref=\"a.card\"/> more <ack kind=\"frob\"/> end"
@@ -101,23 +94,19 @@ void test("Mixed valid and invalid in one response — valids survive.", async (
 // no-response ack, stripped from prose, and recognized by `isNoResponseOnly` —
 // so it never leaks into the render.
 void test("The agent sometimes writes the bare <no-response/> shorthand instead of the c...", async (t) => {
-  // doctest:L88
   t.check(parseAcks("<no-response/>"), [
     {
       kind: "no-response",
     },
   ]);
 
-  // doctest:L91
   t.check(stripStructuredOutputTags("ok<no-response/>"), "ok");
 
-  // doctest:L94
   t.check(isNoResponseOnly("<no-response/>"), true);
 });
 
 // The paired form (`<no-response></no-response>`) normalizes the same way.
 void test("The paired form (<no-response></no-response>) normalizes the same way.", async (t) => {
-  // doctest:L101
   t.check(isNoResponseOnly("<no-response></no-response>"), true);
 });
 
@@ -129,17 +118,14 @@ void test("The paired form (<no-response></no-response>) normalizes the same way
 // paired (inner text becomes the ack's text), or a lone opening tag.
 // Attributes such as `ref` carry over.
 void test("The same slip happens with the other kinds:", async (t) => {
-  // doctest:L114
   t.check(parseAcks("Saved it.<todo-added>"), [
     {
       kind: "todo-added",
     },
   ]);
 
-  // doctest:L117
   t.check(stripStructuredOutputTags("Saved it.<todo-added>"), "Saved it.");
 
-  // doctest:L120
   t.check(parseAcks("<created ref=\"a.card\"/> and <edited ref=\"b.md\">the intro</edited>"), [
     {
       kind: "created",
@@ -152,14 +138,12 @@ void test("The same slip happens with the other kinds:", async (t) => {
     },
   ]);
 
-  // doctest:L123
   t.check(stripStructuredOutputTags("a<todo-completed/>b<appended>x</appended>c"), "abc");
 });
 
 // The alias pattern lists the kinds by hand. Every registered kind must
 // normalize, so a kind added to `ACK_KINDS` without the pattern fails here.
 void test("The alias pattern lists the kinds by hand.", async (t) => {
-  // doctest:L131
   t.check(
     ACK_KINDS.map((k) => parseAcks(`<${k.kind}/>`)),
     ACK_KINDS.map((k) => [{ kind: k.kind }]),
@@ -169,7 +153,6 @@ void test("The alias pattern lists the kinds by hand.", async (t) => {
 // Only exact kind names are aliases. A longer tag that starts with a kind name
 // is left alone.
 void test("Only exact kind names are aliases.", async (t) => {
-  // doctest:L139
   t.check(parseAcks("<created-at>"), []);
 });
 
@@ -179,17 +162,14 @@ void test("Only exact kind names are aliases.", async (t) => {
 // replace the example with an ack: the prose would lose the example and gain a
 // false indication. Inline code spans and fenced blocks are left as written.
 void test("A reply that explains the tags shows them as code.", async (t) => {
-  // doctest:L150
   t.check(stripStructuredOutputTags("Write `<created>` here"), "Write `<created>` here");
 
-  // doctest:L153
   t.check(parseAcks("Write `<created>` here"), []);
 });
 
 // A fenced block is left alone as well. (The example uses a `~~~` fence so it
 // can sit inside this file's own code fence; backtick fences match the same way.)
 void test("A fenced block is left alone as well.", async (t) => {
-  // doctest:L161
   const fenced = "Example:\n~~~\n<todo-added>\n~~~\nDone.";
   t.check(stripStructuredOutputTags(fenced).split("\n"), [
     "Example:",
@@ -199,16 +179,13 @@ void test("A fenced block is left alone as well.", async (t) => {
     "Done.",
   ]);
 
-  // doctest:L165
   t.check(parseAcks(fenced), []);
 
-  // doctest:L168
   t.check(parseAcks("Example:\n" + "`".repeat(3) + "\n<todo-added>\n" + "`".repeat(3)), []);
 });
 
 // A bare tag outside the code still normalizes in the same reply.
 void test("A bare tag outside the code still normalizes in the same reply.", async (t) => {
-  // doctest:L175
   t.check(stripStructuredOutputTags("Use `<created>` for files.<todo-added>"), "Use `<created>` for files.");
 });
 
@@ -216,7 +193,6 @@ void test("A bare tag outside the code still normalizes in the same reply.", asy
 //
 // Single callout with a context label.
 void test("Single callout with a context label.", async (t) => {
-  // doctest:L184
   t.check(
     parseCallouts(
       "<callout context=\"weather Sat\">Saturday: sunny, 72.</callout>"
@@ -232,7 +208,6 @@ void test("Single callout with a context label.", async (t) => {
 
 // Multiple callouts stack in document order.
 void test("Multiple callouts stack in document order.", async (t) => {
-  // doctest:L193
   const r = parseCallouts(
     "<callout context=\"a\">first</callout> middle <callout context=\"b\">second</callout>"
   );
@@ -244,10 +219,8 @@ void test("Multiple callouts stack in document order.", async (t) => {
 
 // Missing context → dropped. Empty body → dropped.
 void test("Missing context → dropped.", async (t) => {
-  // doctest:L206
   t.check(parseCallouts("<callout>no context</callout>"), []);
 
-  // doctest:L209
   t.check(parseCallouts("<callout context=\"x\"></callout>"), []);
 });
 
@@ -258,7 +231,6 @@ void test("Missing context → dropped.", async (t) => {
 // callout showed above it. Text parts keep their other tags for the prose
 // renderer; a callout without a context is dropped, as `parseCallouts` drops it.
 void test("A reply renders its callouts where the agent wrote them.", async (t) => {
-  // doctest:L221
   t.check(
     splitCalloutParts([
       "Here is the plan.",
@@ -295,13 +267,10 @@ Have a good evening.
 // renderer doesn't show the raw XML. Self-closing and paired forms
 // both strip.
 void test("Removes <ack>, <callout>, and <chat-app> tags so the prose renderer doesn't s...", async (t) => {
-  // doctest:L241
   t.check(stripStructuredOutputTags("hello <ack kind=\"created\"/> world"), "hello  world");
 
-  // doctest:L244
   t.check(stripStructuredOutputTags("<callout context=\"x\">body</callout>after"), "after");
 
-  // doctest:L247
   t.check(stripStructuredOutputTags("before <chat-app narration=\"on\"/> after"), "before  after");
 });
 
@@ -309,6 +278,5 @@ void test("Removes <ack>, <callout>, and <chat-app> tags so the prose renderer d
 // companion-pane snapshot) strips whole, body included — otherwise the
 // snapshot leaks into the displayed message.
 void test("The paired <chat-app> form with <card-activity> children (the companion-pane...", async (t) => {
-  // doctest:L256
   t.check(stripStructuredOutputTags("<chat-app prose=\"on\" open-card=\"x\">\n<card-activity kind=\"explored\">king -> chief</card-activity>\n</chat-app>kept"), "kept");
 });

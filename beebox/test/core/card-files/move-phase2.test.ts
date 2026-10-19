@@ -5,7 +5,7 @@
 // link, and retrying a partially completed move must repair it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { movePhase2CardFiles, movePathPreservingAnnexSymlink } from "../../../src/core/card-files/move-phase2.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -20,7 +20,6 @@ void test("The card move and the standalone file move both retain access to thei
       t.error(error);
     }
   });
-  // doctest:L17
   const box = await makeTmpBox();
   const object = box.path(".git/annex/objects/aa/bb/SHA256E--asset.bin");
   await fs.mkdir(box.path("_content/inbox/staged/Note.attach"), { recursive: true });
@@ -42,7 +41,6 @@ void test("The card move and the standalone file move both retain access to thei
   await movePathPreservingAnnexSymlink(attach, filedAttach);
   const filedAfterRetry = await fs.readFile(`${filedAttach}/asset.bin`, "utf8");
 
-  // doctest:L38
   await fs.symlink("../../../.git/annex/objects/aa/bb/SHA256E--asset.bin", box.path("_content/inbox/staged/raw.pdf"));
   await movePhase2CardFiles(
     box.path("_content/inbox/staged/raw.pdf"),
@@ -65,7 +63,6 @@ void test("The card move and the standalone file move both retain access to thei
   // Recovery uses the original source location to interpret unchanged link text
   // after the directory rename already succeeded.
 
-  // doctest:L57
   await fs.mkdir(box.path("_content/inbox/intake/Recover.doc.attach"), { recursive: true });
   await fs.symlink("../../../../.git/annex/objects/aa/bb/SHA256E--asset.bin", box.path("_content/inbox/intake/Recover.doc.attach/asset.bin"));
   const oldScope = box.path("_content/inbox/intake/Recover.doc.attach");
@@ -86,7 +83,6 @@ void test("Cards without attachments still move normally.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L76
   const plain = await makeTmpBox();
   await fs.writeFile(plain.path("_content/inbox/intake/Plain.doc.card"), "card");
   t.check(await movePhase2CardFiles(
@@ -97,7 +93,6 @@ void test("Cards without attachments still move normally.", async (t) => {
     to: plain.path("_content/inbox/staged/Plain.doc.card"),
   }]);
 
-  // doctest:L84
   t.check(
     (await movePathPreservingAnnexSymlink(
       plain.path("_content/inbox/missing.pdf"),

@@ -4,7 +4,7 @@
 // one site twice, so `lintCardsDispatch` reports every card in the pair.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { lintCardsDispatch } from "../../../src/core/card-lint/core/lint-cards.js";
 import { PublicationSchema } from "../../../src/schemas/publication.js";
@@ -15,7 +15,6 @@ function card(pubId: string): string {
 }
 
 void test("line 17", async (t) => {
-  // doctest:L18
   const box = await makeTmpBox();
   await box.write("_content/sites/Home.publication.card", card("abcdefghijklmnopqrstuvwxyz"));
   await box.write("_content/old/Home copy.publication.card", card("abcdefghijklmnopqrstuvwxyz"));
@@ -30,6 +29,5 @@ void test("line 17", async (t) => {
     distinct: 0,
   });
 
-  // doctest:L30
   t.check(result.results[0]!.errors[0]!.message, "Duplicate publication id abcdefghijklmnopqrstuvwxyz: _content/sites/Home.publication.card and _content/old/Home copy.publication.card claim one publication. Keep one card. Delete the copy, or give it a new id from `bbx pub id`.");
 });

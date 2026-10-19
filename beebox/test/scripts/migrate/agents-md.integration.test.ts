@@ -15,7 +15,7 @@
 // with a map include stub and its mirror.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import * as fs from "node:fs/promises";
@@ -109,7 +109,6 @@ void test("Every instruction file is a CLAUDE.md with its symlink mirror:", asyn
       t.error(error);
     }
   });
-  // doctest:L105
   const root = await fixture();
   t.check(await instructionFiles(root), [
     "AGENTS.md (symlink)",
@@ -131,7 +130,6 @@ void test("Every instruction file is a CLAUDE.md with its symlink mirror:", asyn
   // The new engine's sync on the unconverted box keeps the edited legacy guide and
   // its park, and plants no real `AGENTS.md`:
 
-  // doctest:L129
   await syncBoxGuidance(root, { generators: true });
   t.check(({ files: (await instructionFiles(root)).filter((f) => f.startsWith("AGENTS") || f.includes("/AGENTS")).map((f) => f.split(" ")[1]), state: await guideState(root) }), {
     files: [
@@ -168,7 +166,6 @@ void test("The dry run lists the steps, parents first, and writes nothing:", asy
       t.error(error);
     }
   });
-  // doctest:L146
   const root = await fixture();
   const dry = await runAgentsMd({ boxRoot: root, mode: "plan" });
   t.check(({ code: dry.code, lines: dry.lines }), {
@@ -194,7 +191,6 @@ void test("The dry run lists the steps, parents first, and writes nothing:", asy
   // the migration the way `bbx engine migrate` would before the sync runs. The sync
   // then parks nothing new and does not overwrite the edited guide:
 
-  // doctest:L174
   const applied = await runAgentsMd({ boxRoot: root, mode: "apply" });
   await fs.appendFile(path.join(root, "_config/migrations.jsonl"), `${JSON.stringify({ name: "agents-md-2026-10", "applied-at": "2026-10-09T00:00:00.000Z" })}\n`);
   await syncBoxGuidance(root, { generators: true });
@@ -225,7 +221,6 @@ void test("The dry run lists the steps, parents first, and writes nothing:", asy
 
   // The map include stub kept its content, and a second run has nothing to do:
 
-  // doctest:L196
   t.check(({ stub: await fs.readFile(path.join(root, "_content/mapped/AGENTS.md"), "utf8"), again: (await runAgentsMd({ boxRoot: root, mode: "apply" })).lines }), {
     stub: `@MAP.md
 `,
@@ -247,7 +242,6 @@ void test("A real AGENTS.md beside the root CLAUDE.md stops the run with exit 1,
       t.error(error);
     }
   });
-  // doctest:L210
   const root = await fixture();
   await fs.rm(path.join(root, "AGENTS.md"));
   await fs.writeFile(path.join(root, "AGENTS.md"), "# Codex notes\n");
@@ -276,7 +270,6 @@ void test("A real AGENTS.md beside the root CLAUDE.md stops the run with exit 1,
 // Each row is one stop point: how many `CLAUDE.md` files the stop left, and
 // every problem found (empty is valid).
 void test("For each step count, the run stops there.", async (t) => {
-  // doctest:L244
   const rows: string[] = [];
   for (let stop = 1; stop < 11; stop++) {
     const root = await fixture();
@@ -335,7 +328,6 @@ void test("The generation cache keys on input mtimes and the engine version, not
       t.error(error);
     }
   });
-  // doctest:L288
   const root = await fixture();
   await generateDocs(root);
   const guide = () => fs.readFile(path.join(root, ".beebox/agent-guide.md"), "utf8");

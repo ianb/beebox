@@ -16,8 +16,8 @@
 // analysis because a package was missing.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { probePdf, renderPdfPages, PdfRenderError } from "../../../src/core/pdf/probe.js";
 import type { PdfProbe } from "../../../src/core/pdf/probe.js";
 import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";
@@ -47,13 +47,11 @@ function verdict(probe: PdfProbe) {
 
 // ## A PDF with a text layer routes to pdf mode
 void test("A PDF with a text layer routes to pdf mode", async (t) => {
-  // doctest:L50
   const probe = await probePdf(await fixture("text.pdf", textPdf()));
   t.check(verdict(probe), str`${any(String)}:true`);
 
   // Where poppler is installed, that `true` is measured rather than assumed:
 
-  // doctest:L58
   t.check(havePdftotext ? probe.textLayerSource : "probed", "probed");
 });
 
@@ -62,7 +60,6 @@ void test("A PDF with a text layer routes to pdf mode", async (t) => {
 // This is the case that only works with a real probe — without poppler the
 // fallback sends it to pdf mode instead:
 void test("This is the case that only works with a real probe — without poppler the fall...", async (t) => {
-  // doctest:L68
   const probe = await probePdf(await fixture("textless.pdf", textlessPdf()));
   t.check(havePdftotext ? verdict(probe) : "probed:false", "probed:false");
 });
@@ -73,7 +70,6 @@ void test("This is the case that only works with a real probe — without popple
 // watermark, a page-number artifact). The detector needs a real page's worth
 // before it calls it a document, so one of those cannot misroute a photo batch:
 void test("A scanner's textless output often still carries a few characters (a producer...", async (t) => {
-  // doctest:L80
   const probe = await probePdf(await fixture("sparse.pdf", textPdf({ text: "3" })));
   t.check(havePdftotext ? verdict(probe) : "probed:false", "probed:false");
 });
@@ -84,11 +80,9 @@ void test("A scanner's textless output often still carries a few characters (a p
 // card's `metadata:`. All three are optional; a scanner rarely sets title/author,
 // and a host without poppler simply reports none of them.
 void test("pages/title/author are read with pdfinfo — they populate the document card's...", async (t) => {
-  // doctest:L92
   const probe = await probePdf(await fixture("meta.pdf", textPdf()));
   await t.checkText(havePdftotext ? String(probe.pages) : "1", "1");
 
-  // doctest:L96
   t.check(probe.title ?? null, null);
 });
 
@@ -96,7 +90,6 @@ void test("pages/title/author are read with pdfinfo — they populate the docume
 //
 // The textless branch renders with `pdftoppm` at 150 DPI, in page order.
 void test("The textless branch renders with pdftoppm at 150 DPI, in page order.", async (t) => {
-  // doctest:L105
   const rendered = havePdftoppm
     ? await renderPdfPages(await fixture("render.pdf", textlessPdf()), { outDir: join(dir, "out") })
     : ["stand-in/page-1.jpg"];
@@ -113,6 +106,5 @@ void test("Failure is loud, not degraded:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L116
   t.check(await renderPdfPages(join(dir, "does-not-exist.pdf"), { outDir: join(dir, "out2") }).then(() => "no error", (e) => `${e.name}: ${String(e instanceof PdfRenderError)}`), "PdfRenderError: true");
 });

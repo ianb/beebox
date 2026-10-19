@@ -5,7 +5,7 @@
 // including literal percent signs that resemble escapes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFileSync } from "node:child_process";
 import { makeTestServer } from "../../../../../../test/helpers/test-route-server.js";
 import { buildHistoryBlobUrl } from "../../../../src/components/history/HistoryViewCard/history-blob-url.js";
@@ -28,7 +28,6 @@ void test("The URL reaches the blob whose Git path contains #, ?, and literal %2
       t.error(error);
     }
   });
-  // doctest:L25
   const url = buildHistoryBlobUrl({ apiBase: "/api", hash, filePath });
   const response = await server.rawRequest({ method: "GET", url });
   t.check(`${response.statusCode} ${response.payload}`, "200 encoded path payload");

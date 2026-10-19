@@ -6,11 +6,11 @@
 // when every view renders.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile, symlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
-import { any, type Expected, str, unordered } from "agent-doctest/check";
+import { any, type Expected, str, unordered } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { checkViews, type ViewCheckResult } from "../../../../src/cli/commands/view/command.js";
 import { PACKAGE_ROOT } from "../../../../src/lib/package-root.js";
@@ -19,7 +19,7 @@ const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
 
 // This test verifies render correctness, not the production timeout threshold.
 // Full-suite contention has pushed a valid cold render past 40 seconds, so keep
-// enough headroom here while the outer doctest timeout still catches hangs.
+// enough headroom here while the outer test timeout still catches hangs.
 const TEST_VIEW_TIMEOUT_MS = 60000;
 
 // A v2 box carries its own physical React copy. The renderer overrides it
@@ -76,13 +76,11 @@ void test("A mix of good and broken views fails, and names which", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L72
   const box = await makeViewBox();
   await writeView(box, { rel: "good.tsx", content: GOOD_VIEW });
   await writeView(box, { rel: "broken.tsx", content: BROKEN_VIEW });
   await box.write("_content/inbox/Test.doc.card", DOC_CARD);
 
-  // doctest:L77
   const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
   t.check(result, {
     ok: false,
@@ -107,11 +105,9 @@ void test("A box with no broken views passes", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L98
   const box = await makeViewBox();
   await writeView(box, { rel: "good.tsx", content: GOOD_VIEW });
 
-  // doctest:L101
   const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
   t.check(result, { ok: true, views: [{ slug: "good", ok: true }] });
 });
@@ -125,7 +121,6 @@ void test("A box with no views at all is trivially OK", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L116
   const box = await makeTmpBox();
   const result = await checkViews({ boxRoot: box.root, timeoutMs: TEST_VIEW_TIMEOUT_MS });
   t.check(result, {

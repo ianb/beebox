@@ -8,11 +8,11 @@
 // bytes elsewhere — the same shape `/api/files/` uses), never a 200 serving
 // pointer text as an image.
 //
-// Like `to-annex.doctest.md` this exercises a **real** git-annex repository;
+// Like `test/core/bulk-upload/prepare.annex.test.ts` this exercises a **real** git-annex repository;
 // where git-annex is not installed the assertions degrade to a recorded skip.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFileSync } from "node:child_process";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 
@@ -37,7 +37,7 @@ function repoGit(args: string[]): string {
 }
 
 if (ANNEX) {
-  repoGit(["annex", "init", "--quiet", "doctest"]);
+  repoGit(["annex", "init", "--quiet", "test"]);
   repoGit(["config", "annex.addunlocked", "true"]);
   await server.seed("_content/photo.png", "fake png bytes, annexed");
   repoGit(["annex", "add", "--quiet", "_content/photo.png"]);
@@ -62,7 +62,6 @@ void test("An added annexed file serves its real bytes. The committed blob is po
       t.error(error);
     }
   });
-  // doctest:L54
   const added = ANNEX
     ? await server.rawRequest({ method: "GET", url: `/api/history/blob/${addHash}/_content/photo.png` })
     : { statusCode: 200, payload: "fake png bytes, annexed" };
@@ -71,7 +70,6 @@ void test("An added annexed file serves its real bytes. The committed blob is po
   // **A removed file is fetched at the parent commit** — the frontend appends `^`
   // to the hash, which the route accepts:
 
-  // doctest:L65
   if (ANNEX) {
     repoGit(["rm", "--quiet", "_content/photo.png"]);
     repoGit(["commit", "--quiet", "-m", "remove photo"]);
@@ -85,7 +83,6 @@ void test("An added annexed file serves its real bytes. The committed blob is po
   // **Dropped content is a 409, not a 200 of pointer text.** The body names what
   // the content should be, mirroring the working-tree routes:
 
-  // doctest:L81
   if (ANNEX) {
     const pointer = repoGit(["cat-file", "-p", `${rmHash}^:_content/photo.png`]);
     const key = pointer.replace("/annex/objects/", "");
@@ -100,7 +97,6 @@ void test("An added annexed file serves its real bytes. The committed blob is po
   // A hash with anything but hex and one trailing `^` is rejected before touching
   // git:
 
-  // doctest:L98
   const bad = await server.rawRequest({ method: "GET", url: "/api/history/blob/abc123%5E%5E/_content/photo.png" });
   t.check(bad.statusCode, 400);
 });

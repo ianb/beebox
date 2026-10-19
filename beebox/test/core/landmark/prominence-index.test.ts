@@ -9,8 +9,8 @@
 // or any ancestor.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { unordered } from "@ianbicking/tap-check/check";
 import { utimes } from "node:fs/promises";
 import { prunedSubtree } from "../../../src/core/landmark/prominence-index.js";
 import { getParseCount, resetParseCount } from "../../../src/core/landmark/prominence-cache.js";
@@ -25,7 +25,6 @@ void test("A directory of mixed cards: only non-ordinary levels are indexed", as
       t.error(error);
     }
   });
-  // doctest:L29
   const box = await makeTmpBox();
   await box.write("_content/Entry.doc.card", "---\nprominence: entry-point\n---\n");
   await box.write("_content/Primary1.doc.card", "---\nprominence: primary\n---\n");
@@ -34,7 +33,6 @@ void test("A directory of mixed cards: only non-ordinary levels are indexed", as
   // A system-category card is background BY TYPE with no declared prominence.
   await box.write("_content/Job.contains-backfill-job.card", "---\ndescription: test\nitems: []\n---\n");
 
-  // doctest:L37
   const { entries, nested, summary } = await prunedSubtree(box.root, "");
   t.check(entries, unordered([
     { boxPath: "/_content/Entry.doc.card", level: "entry-point", kind: "card" },
@@ -43,10 +41,8 @@ void test("A directory of mixed cards: only non-ordinary levels are indexed", as
     { boxPath: "/_content/Primary2.doc.card", level: "primary", kind: "card" },
   ]));
 
-  // doctest:L45
   t.check(nested, []);
 
-  // doctest:L48
   t.check(summary, {
     hasEntryPoint: true,
     primaryCount: 2,
@@ -69,21 +65,17 @@ void test("A primary card inside a directory that has its own landmark card is n
       t.error(error);
     }
   });
-  // doctest:L65
   const box = await makeTmpBox();
   await box.write("_content/Sub/Sub.landmark.card", "---\nnavigation:\n  label: Sub\n---\n");
   await box.write("_content/Sub/SubPrimary.doc.card", "---\nprominence: primary\n---\n");
 
-  // doctest:L69
   const { entries, nested, summary } = await prunedSubtree(box.root, "");
   t.check(entries, [{ boxPath: "/_content/Sub/Sub.landmark.card", level: "background", kind: "landmark" }]);
 
-  // doctest:L73
   t.check(nested, [
     { path: "_content/Sub/Sub.landmark.card", dir: "_content/Sub", label: "Sub", symbol: null, prominence: null },
   ]);
 
-  // doctest:L76
   t.check(summary, {
     hasEntryPoint: false,
     primaryCount: 0,
@@ -104,19 +96,15 @@ void test("A landmark written prominence:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L91
   const box = await makeTmpBox();
   await box.write("_content/BG/BG.landmark.card", "---\nprominence: background\n---\n");
   await box.write("_content/BG/BGPrimary.doc.card", "---\nprominence: primary\n---\n");
 
-  // doctest:L95
   const { entries, nested, summary } = await prunedSubtree(box.root, "");
   t.check(entries, []);
 
-  // doctest:L100
   t.check(nested, []);
 
-  // doctest:L103
   t.check(summary, {
     hasEntryPoint: false,
     primaryCount: 0,
@@ -137,16 +125,13 @@ void test("A card living inside its owner's <basename>.attach/ directory is fold
       t.error(error);
     }
   });
-  // doctest:L118
   const box = await makeTmpBox();
   await box.write("_content/Att.doc.card", "---\n---\n");
   await box.write("_content/Att.attach/AttPrimary.doc.card", "---\nprominence: primary\n---\n");
 
-  // doctest:L122
   const { entries, summary } = await prunedSubtree(box.root, "");
   t.check(entries, []);
 
-  // doctest:L127
   t.check(summary, {
     hasEntryPoint: false,
     primaryCount: 0,
@@ -156,12 +141,10 @@ void test("A card living inside its owner's <basename>.attach/ directory is fold
   // An attach scope that holds ITS OWN landmark card is a nested landmark like
   // any other, not skipped:
 
-  // doctest:L135
   await box.write("_content/Course.doc.card", "---\n---\n");
   await box.write("_content/Course.attach/Course.landmark.card", "---\nnavigation:\n  label: Course notes\n---\n");
   await box.write("_content/Course.attach/CoursePrimary.doc.card", "---\nprominence: primary\n---\n");
 
-  // doctest:L139
   const after = await prunedSubtree(box.root, "");
   t.check(after.nested, [
     { path: "_content/Course.attach/Course.landmark.card", dir: "_content/Course.attach", label: "Course notes", symbol: null, prominence: null },
@@ -180,16 +163,13 @@ void test("Deeper/ has no landmark card, but its ancestor BG/ is a background la
       t.error(error);
     }
   });
-  // doctest:L154
   const box = await makeTmpBox();
   await box.write("_content/BG/BG.landmark.card", "---\nprominence: background\n---\n");
   await box.write("_content/BG/Deeper/DeeperPrimary.doc.card", "---\nprominence: primary\n---\n");
 
-  // doctest:L158
   const { entries, summary } = await prunedSubtree(box.root, "_content/BG/Deeper");
   t.check(entries, []);
 
-  // doctest:L163
   t.check(summary, {
     hasEntryPoint: false,
     primaryCount: 0,
@@ -200,13 +180,11 @@ void test("Deeper/ has no landmark card, but its ancestor BG/ is a background la
   // housekeeping: `background` written there is ignored (and lint-warned), so the
   // root's own walk and every descendant's still run.
 
-  // doctest:L172
   await box.write("_content/Box.landmark.card", "---\nprominence: background\nnavigation:\n  label: Box\n---\n");
   await box.write("_content/Top.doc.card", "---\nprominence: primary\n---\n");
   const root = await prunedSubtree(box.root, "");
   t.check(root.entries, [{ boxPath: "/_content/Top.doc.card", level: "primary", kind: "card" }]);
 
-  // doctest:L178
   t.check(root.summary, { hasEntryPoint: false, primaryCount: 1, background: false });
 });
 
@@ -225,7 +203,6 @@ void test("ordinary lists every ordinary-level card the walk reached, with its f
       t.error(error);
     }
   });
-  // doctest:L195
   const box = await makeTmpBox();
   await box.write("_content/Groceries.doc.card", "---\n---\n");
   await box.write("_content/Box.briefing.card", "---\n---\nAbout this box.\n");
@@ -237,14 +214,12 @@ void test("ordinary lists every ordinary-level card the walk reached, with its f
   await utimes(box.path("_content/Groceries.doc.card"), 1_700_000_000, 1_700_000_000);
   await utimes(box.path("_content/Box.briefing.card"), 1_700_000_100, 1_700_000_100);
 
-  // doctest:L206
   const { ordinary, entries } = await prunedSubtree(box.root, "");
   t.check(ordinary, unordered([
     { boxPath: "/_content/Box.briefing.card", mtimeMs: 1_700_000_100_000 },
     { boxPath: "/_content/Groceries.doc.card", mtimeMs: 1_700_000_000_000 },
   ]));
 
-  // doctest:L215
   t.check(entries, unordered([
     { boxPath: "/_content/Sub/Sub.landmark.card", level: "background", kind: "landmark" },
     { boxPath: "/_content/tmp-capture/Walk.capture-session.card", level: "background", kind: "card" },
@@ -265,15 +240,12 @@ void test("The per-file cache (prominence-cache.ts) memoizes each file's parse b
       t.error(error);
     }
   });
-  // doctest:L233
   const box = await makeTmpBox();
   await box.write("_content/Entry.doc.card", "---\nprominence: entry-point\n---\n");
   await box.write("_content/Sub/Sub.landmark.card", "---\nnavigation:\n  label: Sub\n---\n");
 
-  // doctest:L237
   await prunedSubtree(box.root, "");
 
-  // doctest:L239
   resetParseCount();
   await prunedSubtree(box.root, "");
   t.check(getParseCount(), 0);
@@ -294,13 +266,11 @@ void test("A walk reads every card under its place, so the cache must hold a who
       t.error(error);
     }
   });
-  // doctest:L258
   const box = await makeTmpBox();
   await Promise.all(
     Array.from({ length: 4500 }, (_, i) => box.write(`_content/d${i % 30}/Card${i}.doc.card`, "---\n---\n")),
   );
 
-  // doctest:L263
   resetParseCount();
   await prunedSubtree(box.root, "");
   const cold = getParseCount();

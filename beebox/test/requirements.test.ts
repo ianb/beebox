@@ -14,7 +14,7 @@
 // Placeholder values throughout.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -60,12 +60,10 @@ void test("A granted secret with a value configures the connector", async (t) =>
       t.error(error);
     }
   });
-  // doctest:L55
   const dir = await useTempStore();
   const box = await makeTmpBox();
   const slug = await boxSlug(box.root);
 
-  // doctest:L59
   t.check(await missing(box.root, "raindrop"), ["raindrop"]);
   await setSecret({ name: "raindrop", value: "placeholder-raindrop-key" });
   t.check(await missing(box.root, "raindrop"), ["raindrop"]);
@@ -77,7 +75,6 @@ void test("A granted secret with a value configures the connector", async (t) =>
   // A granted-but-empty slot is a declared intention, not a configured connector —
   // the script would fail exactly as it does with no grant at all.
 
-  // doctest:L77
   await declareSecret({ name: "someservice", note: "waiting on the boxholder" });
   await grantSecret({ slug, name: "someservice", access: "agent" });
   t.check(await missing(box.root, "someservice"), ["someservice"]);
@@ -88,7 +85,6 @@ void test("A granted secret with a value configures the connector", async (t) =>
   // `<name>/<slug>`; either one, granted to this box and holding a value, is
   // configured.
 
-  // doctest:L91
   await setSecret({ name: `otherservice/${slug}`, value: "placeholder-token" });
   t.check(await missing(box.root, "otherservice"), ["otherservice"]);
   await grantSecret({ slug, name: `otherservice/${slug}`, access: "server" });
@@ -102,23 +98,19 @@ void test("A granted secret with a value configures the connector", async (t) =>
   // that runs and does nothing is worse than one the scheduler skips before it
   // spends a run.
 
-  // doctest:L109
   const tokensFile = join(dir, "google-tokens.json");
   await writeFile(tokensFile, JSON.stringify({ refreshToken: "placeholder-refresh" }));
   process.env.BBX_GOOGLE_TOKENS_FILE = tokensFile;
   await box.write("_config/box.json", JSON.stringify({ googleServices: { gmail: true } }));
 
-  // doctest:L114
   t.check(await missing(box.root, "gmail"), ["gmail"]);
 
-  // doctest:L116
   for (const name of ["google-oauth-client-id", "google-oauth-client-secret"]) {
     await setSecret({ name, value: `placeholder-${name}` });
     await grantSecret({ slug, name, access: "server" });
   }
   t.check(await missing(box.root, "gmail"), []);
 
-  // doctest:L122
   // The per-box policy still gates it independently.
   await box.write("_config/box.json", JSON.stringify({ googleServices: { gmail: false } }));
   t.check(await missing(box.root, "gmail"), ["gmail"]);
@@ -131,7 +123,6 @@ void test("A granted secret with a value configures the connector", async (t) =>
   // writes nothing: neither `resolve` lines where Google is configured nor
   // `unknown-secret` refusals where it is not.
 
-  // doctest:L140
   await box.write("_config/box.json", JSON.stringify({ googleServices: { gmail: true } }));
   const before = await logLines();
   t.check(await missing(box.root, "gmail"), []);
@@ -145,7 +136,6 @@ void test("A granted secret with a value configures the connector", async (t) =>
   //
   // `bbx health` flags such a file separately; here it is simply not a credential.
 
-  // doctest:L159
   await box.write("_config/connectors/pocket.secret.json", JSON.stringify({ apiKey: "placeholder-pocket-key" }));
   t.check(await missing(box.root, "pocket"), ["pocket"]);
   t.check(await missing(box.root, "pocket", "raindrop", "nothinghere"), ["pocket", "raindrop", "nothinghere"]);

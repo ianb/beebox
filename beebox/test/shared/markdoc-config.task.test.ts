@@ -7,7 +7,7 @@
 // Tested headlessly through Markdoc's own `renderers.html` — no React, no DOM.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Markdoc from "@markdoc/markdoc";
 import { markdocConfig } from "../../src/shared/markdoc-config/tags/core.js";
 
@@ -20,18 +20,15 @@ function render(src: string): string {
 
 // ## The label holds the checkbox and the inline text
 void test("The label holds the checkbox and the inline text", async (t) => {
-  // doctest:L23
   t.check(render("- [x] Pack **tent**\n- [ ] Stove"), "<article><ul><li><label><Task done=\"true\"></Task>Pack <strong>tent</strong></label></li><li><label><Task done=\"false\"></Task>Stove</label></li></ul></article>");
 });
 
 // ## A nested list stays outside the label
 void test("A nested list stays outside the label", async (t) => {
-  // doctest:L31
   t.check(render("- [ ] Gear\n  - [x] Tent"), "<article><ul><li><label><Task done=\"false\"></Task>Gear</label><ul><li><label><Task done=\"true\"></Task>Tent</label></li></ul></li></ul></article>");
 });
 
 // ## A plain list item is unchanged
 void test("A plain list item is unchanged", async (t) => {
-  // doctest:L39
   t.check(render("- Tent"), "<article><ul><li>Tent</li></ul></article>");
 });

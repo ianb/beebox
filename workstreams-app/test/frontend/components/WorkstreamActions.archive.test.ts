@@ -12,7 +12,7 @@
 // removed with unmerged work would hide recovery state.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { workstreamActionVerbs } from "../../../src/frontend/components/WorkstreamActions.js";
 import type { Workstream } from "../../../src/frontend/types.js";
 
@@ -45,7 +45,6 @@ function row(over: {
 
 // A settled row can be put away; a live one has nothing settled to hide yet.
 void test("A settled row can be put away; a live one has nothing settled to hide yet.", async (t) => {
-  // doctest:L49
   t.check(
     {
       dormant: workstreamActionVerbs(row({ state: "dormant" })),
@@ -72,7 +71,6 @@ void test("A settled row can be put away; a live one has nothing settled to hide
   // the CLI refuses it so the recovery state stays visible, and the button must not
   // offer what the CLI will reject.
 
-  // doctest:L62
   t.check(
     {
       culledMerged: workstreamActionVerbs(row({ state: "removed", removed: { merged: true } })),
@@ -92,7 +90,6 @@ void test("A settled row can be put away; a live one has nothing settled to hide
   // An archived row offers exactly one move — come back. The other verbs act on a
   // row the boxholder deliberately put away.
 
-  // doctest:L73
   t.check(
     {
       archived: workstreamActionVerbs(row({ state: "dormant", archived: true })),

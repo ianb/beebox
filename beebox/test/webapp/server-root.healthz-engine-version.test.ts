@@ -5,7 +5,7 @@
 // way it already rolls up parked template updates and schema load failures.
 // The comparison itself lives in `getEngineVersionReport`
 // (`src/core/engine-version.js`), covered directly by
-// `test/core/engine-version.doctest.md` — this doctest only checks the field
+// `test/core/engine-version.test.ts` — this test only checks the field
 // is wired into the route.
 //
 // A test box with no separately-installed engine — what `makeTestServer`
@@ -13,7 +13,7 @@
 // installed version, so it never contributes a mismatch:
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../helpers/test-route-server.js";
 import { bodyField } from "../helpers/test-helpers.js";
 
@@ -28,7 +28,6 @@ void test("line 22", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L23
   const server = await makeTestServer();
   const headers = { authorization: "Bearer test-diag-key" };
   const response = await server.rootRequest({ method: "GET", url: "/healthz", headers });

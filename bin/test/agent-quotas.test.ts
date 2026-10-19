@@ -5,7 +5,7 @@
 // compare actual usage with the fraction of the window that has elapsed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
@@ -24,7 +24,6 @@ import {
 // Codex may return a generic bucket alongside named limit buckets. The named
 // Codex bucket is authoritative, and model-specific limits remain visible.
 void test("Codex may return a generic bucket alongside named limit buckets.", async (t) => {
-  // doctest:L29
   const codexQuota = parseCodexQuota(
     {
       rateLimits: { primary: { usedPercent: 99, resetsAt: 1_800 } },
@@ -95,7 +94,6 @@ void test("Codex may return a generic bucket alongside named limit buckets.", as
 // percentage fields. Both parse, and the SDK's model-scoped weekly limits are
 // preserved.
 void test("Claude's historical status-line payload and current SDK payload use different...", async (t) => {
-  // doctest:L72
   const legacyClaude = parseClaudeQuota({
     rate_limits: {
       five_hour: { used_percentage: 12, resets_at: 18_000 },
@@ -119,7 +117,6 @@ void test("Claude's historical status-line payload and current SDK payload use d
   ],
   );
 
-  // doctest:L84
   const sdkClaude = parseClaudeQuota({
     rate_limits: {
       five_hour: { utilization: 12, resets_at: "2026-08-11T00:20:00Z" },
@@ -156,7 +153,6 @@ void test("Claude's historical status-line payload and current SDK payload use d
 // Pace is the difference between quota used and elapsed window time. With two of
 // seven days elapsed, 20% usage is nine percentage points ahead of pace.
 void test("Pace is the difference between quota used and elapsed window time.", async (t) => {
-  // doctest:L106
   const pace = quotaPace({
     label: "7-day window",
     usedPercent: 20,
@@ -183,7 +179,6 @@ void test("Pace is the difference between quota used and elapsed window time.", 
 // independent, and a failed refresh retains a stale Claude snapshot with its
 // original capture time.
 void test("A fresh persistent cache suppresses SDK work.", async (t) => {
-  // doctest:L127
   const staleDir = await fs.mkdtemp(path.join(os.tmpdir(), "agent-quotas-"));
   t.teardown(async () => await fs.rm(staleDir, { recursive: true, force: true }));
   await fs.writeFile(path.join(staleDir, "claude-rate-limits.json"), JSON.stringify({
@@ -223,7 +218,6 @@ void test("A fresh persistent cache suppresses SDK work.", async (t) => {
   },
   );
 
-  // doctest:L154
   const freshDir = await fs.mkdtemp(path.join(os.tmpdir(), "agent-quotas-"));
   t.teardown(async () => await fs.rm(freshDir, { recursive: true, force: true }));
   const capturedAt = "2026-08-10T00:00:00Z";
@@ -259,7 +253,6 @@ void test("A fresh persistent cache suppresses SDK work.", async (t) => {
 
 // Concurrent readers in one process share a single SDK request.
 void test("Concurrent readers in one process share a single SDK request.", async (t) => {
-  // doctest:L184
   const sharedDir = await fs.mkdtemp(path.join(os.tmpdir(), "agent-quotas-"));
   t.teardown(async () => await fs.rm(sharedDir, { recursive: true, force: true }));
   let sharedRequests = 0;
@@ -302,7 +295,6 @@ void test("Concurrent readers in one process share a single SDK request.", async
 // successful snapshot exists yet. Repeated reads therefore do not spawn a Claude
 // subprocess every time the dashboard refreshes.
 void test("Failures are negative-cached for the same ten-minute cadence, including when...", async (t) => {
-  // doctest:L221
   const failureDir = await fs.mkdtemp(path.join(os.tmpdir(), "agent-quotas-"));
   t.teardown(async () => await fs.rm(failureDir, { recursive: true, force: true }));
   let failedRequests = 0;
@@ -335,7 +327,6 @@ void test("Failures are negative-cached for the same ten-minute cadence, includi
 // successful refresh replaces it, writes a private file, and leaves no temporary
 // siblings behind.
 void test("A malformed capture timestamp cannot make an old payload look fresh.", async (t) => {
-  // doctest:L248
   const malformedDir = await fs.mkdtemp(path.join(os.tmpdir(), "agent-quotas-"));
   t.teardown(async () => await fs.rm(malformedDir, { recursive: true, force: true }));
   const malformedPath = path.join(malformedDir, "claude-rate-limits.json");
@@ -384,7 +375,6 @@ void test("A malformed capture timestamp cannot make an old payload look fresh."
 // refresh and return an unavailable result immediately; a blocking CLI reader can
 // join that same pending request.
 void test("Dashboard reads never wait on a missing Claude cache.", async (t) => {
-  // doctest:L288
   const backgroundDir = await fs.mkdtemp(path.join(os.tmpdir(), "agent-quotas-"));
   t.teardown(async () => await fs.rm(backgroundDir, { recursive: true, force: true }));
   interface UsageResult {
@@ -410,7 +400,6 @@ void test("Dashboard reads never wait on a missing Claude cache.", async (t) => 
   assert.equal(initial[0]?.status, "unavailable");
   assert.match(initial[0]?.message ?? "", /refreshing/);
 
-  // doctest:L313
   const completed = collectAgentQuotas(backgroundOptions);
   finishRequest({
     rate_limits_available: true,
@@ -424,7 +413,6 @@ void test("Dashboard reads never wait on a missing Claude cache.", async (t) => 
 // Finally, a missing Codex executable rejects cleanly instead of surfacing an
 // unhandled stdin error.
 void test("Finally, a missing Codex executable rejects cleanly instead of surfacing an u...", async () => {
-  // doctest:L328
   await assert.rejects(
     requestCodexRateLimits(1_000, "definitely-not-a-real-codex-command"),
     /ENOENT/,

@@ -8,7 +8,7 @@
 // `docs/plans/google-auth-reauth-health.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp } from "node:fs/promises";
@@ -41,35 +41,27 @@ void test("A live grant records nothing", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L32
   const box = await makeTmpBox({ git: true });
   box.commitAll("seed");
   await saveGoogleTokens({ refreshToken: "rt-1", accessToken: "at-1" });
 
-  // doctest:L36
   t.check(await refreshGoogleAuth(box.root, { now: NOW }), null);
 
   // ## A dead grant is one episode, and sends nothing
 
-  // doctest:L43
   await markGoogleAuthDead({ reason: "Token has been expired or revoked." });
 
-  // doctest:L45
   t.check(await refreshGoogleAuth(box.root, { now: NOW }), { probed: false, since: NOW.toISOString() });
 
-  // doctest:L48
   t.check(await refreshGoogleAuth(box.root, { now: NOW }), null);
 
-  // doctest:L51
   t.check(await readRecent(box.root, { days: 1, now: NOW }), []);
 
   // ## Reconnecting clears the latch, so a relapse is a new episode
 
-  // doctest:L58
   await saveGoogleTokens({ refreshToken: "rt-2", accessToken: "at-2" });
   t.check(await refreshGoogleAuth(box.root, { now: NOW }), null);
 
-  // doctest:L62
   await markGoogleAuthDead({ reason: "revoked again" });
   t.check(await refreshGoogleAuth(box.root, { now: NOW }), { probed: false, since: NOW.toISOString() });
 });

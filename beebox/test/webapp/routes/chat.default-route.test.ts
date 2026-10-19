@@ -5,7 +5,7 @@
 // `trpc.chat.defaultSession`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -31,7 +31,6 @@ void test("Missing pointer returns null", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L28
   await t.checkText(await getDefaultSession(), `200
 {
   "sessionId": null
@@ -39,7 +38,6 @@ void test("Missing pointer returns null", async (t) => {
 
   // ## Existing pointer returns the session id
 
-  // doctest:L39
   await mkdir(join(boxRoot, ".beebox"), { recursive: true });
   await writeFile(
     join(boxRoot, ".beebox/chat-session-id.json"),

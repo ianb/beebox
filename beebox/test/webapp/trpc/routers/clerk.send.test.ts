@@ -6,12 +6,12 @@
 // empty, and a reference to the card. Page text never becomes the message; the
 // page's title, site, and URL go to Jev as routing data.
 //
-// These doctests use a synthetic box with git, the fake Jev service, and a
+// These tests use a synthetic box with git, the fake Jev service, and a
 // scripted chat runtime that claims message ids the way `send-dedup.ts` does.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, uuid } from "@ianbicking/tap-check/check";
 import { readFile, readdir, rm, unlink } from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
@@ -127,7 +127,6 @@ async function failure(run: () => Promise<unknown>) {
 // holds the note and the card reference; the page title is not in it. Jev sees
 // the page as data beside the note.
 void test("The card is written to content/incoming/ with its frozen snapshot, and the fo...", async (t) => {
-  // doctest:L108
   const box = await gardenBox();
   const sends = scriptedRuntime(box.root);
   const jev = clear();
@@ -170,7 +169,6 @@ void test("The card is written to content/incoming/ with its frozen snapshot, an
   // The card carries the send's id as `capture-id`, and the frozen page sits in its
   // attach folder.
 
-  // doctest:L129
   const text = await readFile(path.join(box.root, card), "utf8");
   t.check(
     ({ captureId: text.match(/capture-id: (.*)/)?.[1] === id, body: text.slice(text.lastIndexOf("---") + 3).trim(),
@@ -189,7 +187,6 @@ Terrace them.`,
   // A lost response makes the Clerk send the same payload again. The box answers
   // from the stored send: one card, one delivery.
 
-  // doctest:L141
   const again = await caller(box.root, jev).clerk.send(page(id, { note: "for the slope out back" }));
   t.check({ again, cards: (await incoming(box)).filter((name) => name.endsWith(".webpage.card")), sends }, {
     again: result,
@@ -204,7 +201,6 @@ Terrace them.`,
   // frozen page. A repeat of the send after that still writes no card: the stored
   // send answers, naming the path it was delivered with.
 
-  // doctest:L154
   const { ctx } = createCollectorContext(box.root);
   const moved = await executeMove(ctx, { from: card, to: "_content/Garden/", commit: true });
   const committed = execFileSync("git", ["show", "--name-only", "--format=", "HEAD"], { cwd: box.root, encoding: "utf8" }).trim().split("\n");
@@ -241,7 +237,6 @@ Terrace them.`,
   // renames, with no old path left behind: a moved directory counts as tracked
   // when any file under it is.
 
-  // doctest:L173
   const filed = `_content/Garden/${card.split("/").at(-1)}`;
   const again2 = await executeMove(createCollectorContext(box.root).ctx, { from: filed, to: "_content/Reading/", commit: true });
   const changed = execFileSync("git", ["show", "--name-status", "--format=", "HEAD"], { cwd: box.root, encoding: "utf8" }).trim().split("\n");
@@ -273,7 +268,6 @@ Terrace them.`,
 
   // ## The same id with a different page or note is refused
 
-  // doctest:L190
   t.check(
     [await failure(() => caller(box.root, jev).clerk.send(page(id, { note: "for the slope out back", url: "https://example.com/other" }))),
       await failure(() => caller(box.root, jev).clerk.send(page(id, { note: "different words" })))],
@@ -289,7 +283,6 @@ Terrace them.`,
 // The view carries the page so the box screen can label the row; the message is
 // empty.
 void test("The view carries the page so the box screen can label the row; the message is...", async (t) => {
-  // doctest:L204
   const box = await gardenBox();
   scriptedRuntime(box.root);
   const id = randomUUID();
@@ -305,7 +298,6 @@ void test("The view carries the page so the box screen can label the row; the me
   // Someone files the waiting card from Browse, renaming it. Choosing a
   // destination delivers the card's current path, found by its `capture-id`.
 
-  // doctest:L220
   const sends = scriptedRuntime(box.root);
   const { ctx } = createCollectorContext(box.root);
   await executeMove(ctx, { from: result.card, to: "_content/Garden/Beds.webpage.card", commit: true });
@@ -327,7 +319,6 @@ void test("The view carries the page so the box screen can label the row; the me
 
 // ## A card removed before the choice is not delivered
 void test("A card removed before the choice is not delivered", async (t) => {
-  // doctest:L231
   const box = await gardenBox();
   const sends = scriptedRuntime(box.root);
   const id = randomUUID();
@@ -350,7 +341,6 @@ void test("A card removed before the choice is not delivered", async (t) => {
 
 // ## Two sends with the same title get two cards
 void test("Two sends with the same title get two cards", async (t) => {
-  // doctest:L244
   const box = await gardenBox();
   scriptedRuntime(box.root);
   const [first, second] = [randomUUID(), randomUUID()];
@@ -367,7 +357,6 @@ void test("Two sends with the same title get two cards", async (t) => {
 // The box can stop after writing the card and before storing the send. The
 // Clerk's repeat finds the card by its id and routes it; no second card.
 void test("The box can stop after writing the card and before storing the send.", async (t) => {
-  // doctest:L259
   const box = await gardenBox();
   const sends = scriptedRuntime(box.root);
   const id = randomUUID();
@@ -383,7 +372,6 @@ void test("The box can stop after writing the card and before storing the send."
 
 // ## Without a routing key, the page waits with recent chats to choose from
 void test("Without a routing key, the page waits with recent chats to choose from", async (t) => {
-  // doctest:L273
   const box = await gardenBox();
   scriptedRuntime(box.root);
   const id = randomUUID();

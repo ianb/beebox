@@ -5,8 +5,8 @@
 // project-level skills, so a freshly-installed skill is invocable.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../../../helpers/test-helpers.js";
 import { generateSkills, skillConflicts } from "../../../../../src/core/box/guidance-sync/skills/core.js";
 import { readFile, readdir } from "node:fs/promises";

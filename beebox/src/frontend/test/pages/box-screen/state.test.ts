@@ -7,7 +7,7 @@
 // the web page reads the same answers the phone does.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readFileSync } from "node:fs";
 import {
   boxScreenReducer, boxScreenRows, boxScreenStorageKey, parseStoredBoxScreen, pendingRetry,
@@ -42,7 +42,6 @@ const OTHER_ID = "99999999-8888-4777-8666-555555555555";
 // A sent thought names its chat and links to it. "Open chat" only navigates; it
 // puts nothing in the chat's composer.
 void test("A sent thought names its chat and links to it.", async (t) => {
-  // doctest:L46
   t.check(rowFace(fixture("view-sent")), {
     kind: "sent",
     title: "Sent to Trip planning",
@@ -52,14 +51,12 @@ void test("A sent thought names its chat and links to it.", async (t) => {
     },
   });
 
-  // doctest:L49
   t.check(title(fixture("view-sent-queued")), "Queued in Trip planning");
 });
 
 // A new chat on an engine that assigns its id later has no session to open, so
 // the row offers the chat list:
 void test("A new chat on an engine that assigns its id later has no session to open, so...", async (t) => {
-  // doctest:L57
   t.check(link(fixture("view-sent-no-session")), {
     kind: "all-chats",
   });
@@ -68,7 +65,6 @@ void test("A new chat on an engine that assigns its id later has no session to o
 // A thought that needs the person says why in words and offers the choices. No
 // percentages reach the page.
 void test("A thought that needs the person says why in words and offers the choices.", async (t) => {
-  // doctest:L65
   t.check(rowFace(fixture("view-needs-choice-uncertain")), {
     kind: "needs-choice",
     title: "Not sure where this goes",
@@ -90,16 +86,13 @@ void test("A thought that needs the person says why in words and offers the choi
     ],
   });
 
-  // doctest:L76
   t.check(title(fixture("view-needs-choice-routing-unavailable")), "Could not sort this");
 
-  // doctest:L79
   t.check(title(fixture("view-needs-choice-destination-gone")), "That chat is gone");
 });
 
 // A delivery that failed offers Retry and Discard, with the server's sentence:
 void test("A delivery that failed offers Retry and Discard, with the server's sentence:", async (t) => {
-  // doctest:L86
   t.check(rowFace(fixture("view-sending-not-delivered")), {
     kind: "not-delivered",
     title: "Not delivered",
@@ -110,7 +103,6 @@ void test("A delivery that failed offers Retry and Discard, with the server's se
 // Past six days a retry could post twice, so the row sends the person to the
 // chat to check, and offers no Retry:
 void test("Past six days a retry could post twice, so the row sends the person to the ch...", async (t) => {
-  // doctest:L94
   t.check(rowFace(fixture("view-sending-expired")), {
     kind: "expired",
     title: "This may already be in Trip planning. Open the chat to check.",
@@ -120,7 +112,6 @@ void test("Past six days a retry could post twice, so the row sends the person t
     },
   });
 
-  // doctest:L97
   t.check(rowFace(fixture("view-discarded")), {
     kind: "discarded",
   });
@@ -131,7 +122,6 @@ void test("Past six days a retry could post twice, so the row sends the person t
 // Send keeps the id and text as `unsent` until `submit` answers. The input
 // clears on the answer, and the answer becomes a row.
 void test("Send keeps the id and text as unsent until submit answers.", async (t) => {
-  // doctest:L107
   let state = run(fresh(), [{ type: "edit", text: "  Call the plumber  " }]);
   const unsent = present(submission(state, ID));
   t.check(unsent, {
@@ -139,7 +129,6 @@ void test("Send keeps the id and text as unsent until submit answers.", async (t
     message: "Call the plumber",
   });
 
-  // doctest:L112
   state = run(state, [{ type: "submit-started", unsent, origin: "send" }]);
   t.check([unsentStatus(state), storedBoxScreen(state)], [
     "Sending…",
@@ -152,7 +141,6 @@ void test("Send keeps the id and text as unsent until submit answers.", async (t
     },
   ]);
 
-  // doctest:L116
   const answer: QuickChatView = { id: ID, message: "Call the plumber", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "routing-unavailable", choices: [{ candidateId: "general", label: "New general chat" }] };
   state = run(state, [{ type: "submit-answered", view: answer }]);
   t.check([state.draft, state.unsent, unsentStatus(state)], [
@@ -161,7 +149,6 @@ void test("Send keeps the id and text as unsent until submit answers.", async (t
     null,
   ]);
 
-  // doctest:L121
   t.check(boxScreenRows(undefined, state).needsYou.map((view) => title(view)), [
     "Could not sort this",
   ]);
@@ -170,15 +157,12 @@ void test("Send keeps the id and text as unsent until submit answers.", async (t
 // A failed request keeps the thought. Sending the same text again reuses its id;
 // edited text is a new thought.
 void test("A failed request keeps the thought.", async (t) => {
-  // doctest:L129
   let state = run(fresh(), [{ type: "edit", text: "Call the plumber" }]);
   state = run(state, [{ type: "submit-started", unsent: present(submission(state, ID)), origin: "send" }, { type: "submit-failed", error: "Failed to fetch" }]);
   t.check(unsentStatus(state), "Not sent: Failed to fetch");
 
-  // doctest:L134
   t.check(submission(state, OTHER_ID), { id: "11111111-2222-4333-8444-555555555555", message: "Call the plumber" });
 
-  // doctest:L137
   t.check(submission(run(state, [{ type: "edit", text: "Call the electrician" }]), OTHER_ID), {
     id: "99999999-8888-4777-8666-555555555555",
     message: "Call the electrician",
@@ -194,7 +178,6 @@ void test("A failed request keeps the thought.", async (t) => {
 // from a React effect) leaves a window where a reload sends the text under a
 // new id.
 void test("submitUnsent writes {id, message} to storage before it starts the request.", async (t) => {
-  // doctest:L151
   const calls: unknown[][] = [];
   const unsent = { id: ID, message: "Book the vet" };
   const answer: QuickChatView = { id: ID, message: "Book the vet", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "uncertain", choices: [] };
@@ -231,14 +214,12 @@ void test("submitUnsent writes {id, message} to storage before it starts the req
   // What the store call wrote is what a reload restores, and a failed request
   // leaves that record in place for the retry:
 
-  // doctest:L172
   const reloaded = restoreBoxScreen(parseStoredBoxScreen(JSON.stringify(calls[0]?.[1])));
   t.check(pendingRetry(reloaded), {
     id: "11111111-2222-4333-8444-555555555555",
     message: "Book the vet",
   });
 
-  // doctest:L176
   const failed: unknown[][] = [];
   const originalConsoleError = console.error;
   console.error = (message) => failed.push(["logged", message]);
@@ -277,7 +258,6 @@ void test("submitUnsent writes {id, message} to storage before it starts the req
 // text is back in the input and the page submits it again on its own, with the
 // same id, so the server answers with the record it may already have.
 void test("The page stored the thought and closed before submit answered.", async (t) => {
-  // doctest:L202
   const raw = JSON.stringify({ draft: "", unsent: { id: ID, message: "Book the vet" } });
   const state = restoreBoxScreen(parseStoredBoxScreen(raw));
   t.check([state.draft, unsentStatus(state), pendingRetry(state)], [
@@ -289,13 +269,11 @@ void test("The page stored the thought and closed before submit answered.", asyn
     },
   ]);
 
-  // doctest:L207
   t.check(pendingRetry(run(state, [{ type: "submit-started", unsent: present(pendingRetry(state)), origin: "reload" }])), null);
 
   // If `home` already lists that record (the answer was lost, not the request), the
   // row stays out of "Needs you" until the retry answers, so the thought shows once:
 
-  // doctest:L215
   const home: Home = { open: [{ id: ID, message: "Book the vet", createdAt: "2026-10-06T15:00:00.000Z", state: "needs-choice", reason: "uncertain", choices: [] }], recentlySent: [] };
   t.check(boxScreenRows(home, state).needsYou, []);
 });
@@ -303,13 +281,11 @@ void test("The page stored the thought and closed before submit answered.", asyn
 // A malformed stored value is dropped with a warning rather than breaking the
 // page, and the key is the box screen's own, never the chat composer's:
 void test("A malformed stored value is dropped with a warning rather than breaking the p...", async (t) => {
-  // doctest:L224
   t.check(parseStoredBoxScreen("{not json"), {
     draft: "",
     unsent: null,
   });
 
-  // doctest:L227
   t.check([boxScreenStorageKey({ boxSlug: "test1", scope: "" }), boxScreenStorageKey({ boxSlug: "test1", scope: "main/test1" })], [
     "bbx-box-screen:test1",
     "bbx-box-screen:main/test1",
@@ -321,7 +297,6 @@ void test("A malformed stored value is dropped with a warning rather than breaki
 // An answer replaces `home`'s copy of the same record. A discarded record leaves
 // the screen, and a chosen one moves from "Needs you" to sent.
 void test("An answer replaces home's copy of the same record.", async (t) => {
-  // doctest:L237
   const home = homeFixture();
   const [uncertain, notDelivered] = home.open;
   assert.ok(uncertain && notDelivered, "home lists two open records");
@@ -343,7 +318,6 @@ void test("An answer replaces home's copy of the same record.", async (t) => {
 
 // A failed choose or discard leaves the row and says what went wrong:
 void test("A failed choose or discard leaves the row and says what went wrong:", async (t) => {
-  // doctest:L253
   const state = run(fresh(), [{ type: "row-started", id: ID, request: "choose" }, { type: "row-failed", id: ID, error: "Chat is not running" }]);
   t.check([state.busy, state.rowErrors], [
     [],
@@ -359,7 +333,6 @@ void test("A failed choose or discard leaves the row and says what went wrong:",
 // chat. The thought is already stored and posted, so a slow chat loses nothing.
 // The fixtures share one record id, so the sent answer is the same thought.
 void test("A send the person just made that comes back sent with a chat opens that chat.", async (t) => {
-  // doctest:L265
   const sent = fixture("view-sent");
   const sendIt = (view: QuickChatView) => run(fresh(), [
     { type: "edit", text: view.message },
@@ -375,12 +348,10 @@ void test("A send the person just made that comes back sent with a chat opens th
     [],
   ]);
 
-  // doctest:L275
   t.check(run(state, [{ type: "follow-up-done" }]).followUp, null);
 
   // A choose the person made opens the chat it posted to, the same way:
 
-  // doctest:L282
   const open = fixture("view-needs-choice-uncertain");
   t.check(
     run(fresh(), [
@@ -398,7 +369,6 @@ void test("A send the person just made that comes back sent with a chat opens th
   // delivered. The row's status line is a live region, so the answer is also
   // announced.
 
-  // doctest:L296
   t.check(
     [
       sendIt(fixture("view-sent-no-session")).followUp,
@@ -421,14 +391,12 @@ void test("A send the person just made that comes back sent with a chat opens th
   ],
   );
 
-  // doctest:L307
   t.check(followUpFor(fixture("view-discarded")), null);
 
   // A send that fails stays in the input, and the pinned status line under it
   // says "Not sent", so nothing needs scrolling. The thought is no longer awaited:
   // only pressing Send again makes its answer follow up.
 
-  // doctest:L316
   state = run(fresh(), [
     { type: "edit", text: sent.message },
     { type: "submit-started", unsent: { id: sent.id, message: sent.message }, origin: "send" },
@@ -445,7 +413,6 @@ void test("A send the person just made that comes back sent with a chat opens th
   // The reload's own retry of a stored thought only updates the list, even when
   // the answer is `sent` with a chat:
 
-  // doctest:L331
   const reloaded = restoreBoxScreen({ draft: "", unsent: { id: sent.id, message: sent.message } });
   state = run(reloaded, [
     { type: "submit-started", unsent: present(pendingRetry(reloaded)), origin: "reload" },
@@ -458,7 +425,6 @@ void test("A send the person just made that comes back sent with a chat opens th
 
   // A discard is the person's action, but it has no chat and no row to show:
 
-  // doctest:L343
   t.check(
     run(fresh(), [
       { type: "row-started", id: open.id, request: "discard" },
@@ -473,7 +439,6 @@ void test("A send the person just made that comes back sent with a chat opens th
   // page starts awaiting nothing, so an answer for a thought it did not send
   // follows up nothing:
 
-  // doctest:L357
   t.check([restoreBoxScreen({ draft: "", unsent: null }).awaiting, run(fresh(), [{ type: "submit-answered", view: sent }]).followUp], [
     [],
     null,
@@ -482,7 +447,6 @@ void test("A send the person just made that comes back sent with a chat opens th
   // A later answer that nobody awaits keeps a follow-up the page has not acted on
   // yet:
 
-  // doctest:L365
   state = run(sendIt(sent), [{ type: "row-answered", view: fixture("view-sent-queued") }]);
   t.check(state.followUp, {
     kind: "open-chat",

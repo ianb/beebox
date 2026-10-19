@@ -11,7 +11,7 @@
 // login.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { registerBoxPicker } from "../../../src/hub/server/box-picker.js";
 import { signSession, COOKIE_NAME } from "../../../src/webapp/auth.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -21,7 +21,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-box-picker-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-box-picker-test";
 
 const boxA = await makeTmpBox();
 await boxA.write("_config/box.json", JSON.stringify({ allowedEmails: ["alice@example.com"] }));
@@ -35,7 +35,7 @@ const boxes = [
 
 // A path with no index.html forces the minimal-list fallback, which is where the
 // ACL filtering lives; the SPA-served case gets a real index.html below.
-const NO_FRONTEND = path.join(os.tmpdir(), "box-picker-no-frontend-doctest");
+const NO_FRONTEND = path.join(os.tmpdir(), "box-picker-no-frontend-test");
 
 /** The fallback page: a fixed template around one `<li>` per listed box. */
 function pickerPage(slugs: string[]): string {
@@ -83,7 +83,6 @@ void test("Frontend built: `/` serves the SPA (box list comes from /api/boxes, n
       t.error(error);
     }
   });
-  // doctest:L55
   delete process.env.GOOGLE_OAUTH_CLIENT_ID;
   delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
   // "Hub auth off" is now the explicit openAccess construction option.
@@ -93,7 +92,6 @@ void test("Frontend built: `/` serves the SPA (box list comes from /api/boxes, n
   const spaRes = await spaApp.inject({ method: "GET", url: "/" });
   t.check(spaRes.statusCode, 200);
 
-  // doctest:L65
   t.checkText(spaRes.body, "<!doctype html><html><body><div id=\"root\"></div></body></html>");
 });
 
@@ -106,14 +104,12 @@ void test("Hub auth off, no frontend build: every configured box is listed, no s
       t.error(error);
     }
   });
-  // doctest:L77
   delete process.env.GOOGLE_OAUTH_CLIENT_ID;
   delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
   const openApp = await startPicker(NO_FRONTEND, true);
   const openRes = await openApp.inject({ method: "GET", url: "/" });
   t.check(openRes.statusCode, 200);
 
-  // doctest:L84
   t.checkText(openRes.body, pickerPage(["box-a", "box-b"]));
 });
 
@@ -131,37 +127,31 @@ void test("Hub auth on, no session: redirected to login", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L95
   // Auth is required by default now (openAccess is false for this picker).
-  process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-box-picker-doctest";
+  process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-box-picker-test";
   // Paired secret: an ID-without-secret half-config is now a loud
   // MissingOAuthClientSecretError wherever auth routes register.
-  process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-box-picker-doctest";
+  process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-box-picker-test";
   const gatedApp = await startPicker(NO_FRONTEND, false);
   const noSessionRes = await gatedApp.inject({ method: "GET", url: "/" });
   t.check(noSessionRes.statusCode, 302);
 
-  // doctest:L105
   t.check(noSessionRes.headers.location, "/auth/login?returnTo=%2F");
 
   // ## Hub auth on, session for alice@example.com: only box-a is listed (fallback)
 
-  // doctest:L112
   const aliceCookie = signSession({ email: "alice@example.com", name: "Alice" });
   const aliceRes = await gatedApp.inject({ method: "GET", url: "/", headers: { cookie: `${COOKIE_NAME}=${aliceCookie}` } });
   t.check(aliceRes.statusCode, 200);
 
-  // doctest:L117
   // Only box-a is listed; box-b is absent.
   t.checkText(aliceRes.body, pickerPage(["box-a"]));
 
   // ## A session for an email on neither box's allowedEmails sees an empty list
 
-  // doctest:L127
   const strangerCookie = signSession({ email: "stranger@example.com", name: "Stranger" });
   const strangerRes = await gatedApp.inject({ method: "GET", url: "/", headers: { cookie: `${COOKIE_NAME}=${strangerCookie}` } });
   t.check(strangerRes.statusCode, 200);
 
-  // doctest:L132
   t.checkText(strangerRes.body, pickerPage([]));
 });

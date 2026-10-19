@@ -6,7 +6,7 @@
 // an alternate project directory so the gate is testable against fixtures.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -56,17 +56,14 @@ async function run(dir: string) {
 // only `index.html` apps (no TypeScript at all) is a normal state, not a
 // failure.
 void test("A page that compiles under the container's settings passes — including a type...", async (t) => {
-  // doctest:L56
   await writeFile(join(project, "demo/index.tsx"),
     'import { Storage } from "@exhibits/client";\n' +
     'export const storage = new Storage<{ level: number }>("state");\n');
   const good = await run(project);
 
-  // doctest:L61
   await writeFile(join(project, "demo/index.tsx"), "const level: number = \"loud\";\nexport default level;\n");
   const bad = await run(project);
 
-  // doctest:L64
   const htmlOnly = join(root, "html-only");
   await mkdir(htmlOnly, { recursive: true });
   await writeFile(join(htmlOnly, "tsconfig.json"), "{}");
@@ -95,7 +92,6 @@ void test("The real dev/apps/ tree currently holds only index.html-tier apps, so
       t.error(error);
     }
   });
-  // doctest:L80
   const real = await run("");
   t.check({ code: real.code, quiet: real.out.includes("nothing to check") || real.out === "" }, {
     code: 0,

@@ -8,7 +8,7 @@
 // (docs/implemented-plans/landmark-arrival.md, Track C).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { placeSections } from "../../../src/components/PlaceView/sections.js";
 
 function link({ ref, source, prominence }: { ref: string; source: "listed" | "derived" | "expand" | "place"; prominence?: "entry-point" | "primary" | "background" }) {
@@ -27,7 +27,6 @@ function outline(result: ReturnType<typeof placeSections>) {
 // they came from. A nested place is `source: "place"`, so a derived card with
 // the same `prominence` is not mistaken for one.
 void test("The server already sends links in tier order; the page groups them by where t...", async (t) => {
-  // doctest:L31
   t.check(
     outline(placeSections({
       links: [
@@ -59,7 +58,6 @@ void test("The server already sends links in tier order; the page groups them by
 // entry points ("Start here"), not with the pinned links. A listed card with no
 // derived level stays pinned.
 void test("A place may list its own entry point in links:.", async (t) => {
-  // doctest:L61
   t.check(
     outline(placeSections({
       links: [
@@ -82,7 +80,6 @@ void test("A place may list its own entry point in links:.", async (t) => {
 // The place expects such cards, so the page shows the group with "None yet"
 // rather than "No cards to show here yet."
 void test("The place expects such cards, so the page shows the group with \"None yet\" rat...", async (t) => {
-  // doctest:L78
   t.check(outline(placeSections({ links: [], groups: [{ label: "Every loan card here", count: 0, children: [] }] })), [
     "Every loan card here (0)",
   ]);
@@ -93,7 +90,6 @@ void test("The place expects such cards, so the page shows the group with \"None
 // The server appends "Also here" after the landmark's own groups, and the page
 // keeps the server's group order.
 void test("The server appends \"Also here\" after the landmark's own groups, and the page...", async (t) => {
-  // doctest:L88
   t.check(
     outline(placeSections({
       links: [link({ ref: "List.doc.card", source: "derived", prominence: "entry-point" })],
@@ -112,6 +108,5 @@ void test("The server appends \"Also here\" after the landmark's own groups, and
 
 // ## No links and no groups is an empty place
 void test("No links and no groups is an empty place", async (t) => {
-  // doctest:L101
   t.check(outline(placeSections({ links: [], groups: [] })), "empty");
 });

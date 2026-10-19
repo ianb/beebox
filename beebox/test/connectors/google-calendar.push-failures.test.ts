@@ -1,9 +1,9 @@
 // # Google Calendar connector: failed pushes and resyncs
 //
-// Continues [google-calendar.doctest.md](google-calendar.doctest.md). This part covers a rejected `X-BBX-DELETE`, failed and retried patches, a full resync after a 410 removing vanished events, and a local edit pushed when Google returns nothing.
+// Continues [google-calendar.test.ts](google-calendar.test.ts). This part covers a rejected `X-BBX-DELETE`, failed and retried patches, a full resync after a 410 removing vanished events, and a local edit pushed when Google returns nothing.
 
 import { after, test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
@@ -13,7 +13,6 @@ import type { CalendarEvent, GoogleCalendarService } from "../../src/services/go
 import { createGoogleCalendarConnector } from "../../src/connectors/google-calendar/connector.js";
 import { loadCalendarState } from "../../src/connectors/google-calendar/state.js";
 import ky from "ky";
-
 
 // Freeze the connector's clock so the sync time-window is deterministic: the
 // fixed-date fixtures below (2026-06-0X) stay inside the 30-day-back window no
@@ -129,24 +128,20 @@ after(async () => {
 // retry loop runs forever behind a `bbx wakeup` that exits zero. The failure says
 // which file is stuck.
 void test("A delete Google rejects has to stay pending — the file and its X-BBX-DELETE m...", async (t) => {
-  // doctest:L127
   const box = await newBox();
   const inner = primaryCalendar([
     evt("evt-cancelme", { summary: "Cancel me", start: "2026-06-05T09:00:00Z", end: "2026-06-05T10:00:00Z", updated: "2026-06-01T10:00:00Z" }),
   ]);
 
-  // doctest:L132
   // After the first sync nothing changed remotely, and every delete is refused.
   const { mode, calendar } = quietable(inner, {
     deleteEvent: async () => throwCalendarHttpError(503, "https://calendar.test/events/evt-cancelme"),
   });
 
-  // doctest:L137
   const connector = connect(box, calendar);
   await connector.sync();
   const file = await editFirst(box, { from: "END:VEVENT", to: "X-BBX-DELETE:no longer happening\r\nEND:VEVENT" });
 
-  // doctest:L141
   mode.quiet = true;
   const result = await connector.sync();
   t.check(
@@ -174,7 +169,6 @@ void test("A delete Google rejects has to stay pending — the file and its X-BB
 // stored hash is left alone so the next sync retries, and the run fails; the
 // failure points at the file. Nothing is recorded as an update (`updated` stays empty).
 void test("When the local file changed and Google's copy did not, the connector pushes t...", async (t) => {
-  // doctest:L162
   const box = await newBox();
   const inner = primaryCalendar([lunch()]);
   const calendar: GoogleCalendarService = {
@@ -182,12 +176,10 @@ void test("When the local file changed and Google's copy did not, the connector 
     patchEvent: async () => throwCalendarHttpError(503, "https://calendar.test/events/evt-lunch"),
   };
 
-  // doctest:L169
   const connector = connect(box, calendar);
   await connector.sync();
   const file = await editFirst(box, { from: "Lunch", to: "Lunch MINE" });
 
-  // doctest:L173
   const result = await connector.sync();
   t.check(
     ({
@@ -208,7 +200,6 @@ void test("When the local file changed and Google's copy did not, the connector 
 
   // A later sync where the patch works pushes the edit that was held:
 
-  // doctest:L187
   await connect(box, inner).sync();
   t.check(inner.events[0]?.summary, "Lunch MINE");
 });
@@ -221,7 +212,6 @@ void test("When the local file changed and Google's copy did not, the connector 
 // only the events Google returned, leaving the deleted one as a stale `.ics`
 // forever. Now the resync reconciles — but never at the cost of a local edit.
 void test("A full-window list is the whole truth for that window and does not report del...", async (t) => {
-  // doctest:L201
   const box = await newBox();
   const inner = primaryCalendar([
     evt("evt-keep", { summary: "Still on Google", start: "2026-06-03T10:00:00Z", end: "2026-06-03T11:00:00Z" }),
@@ -229,13 +219,11 @@ void test("A full-window list is the whole truth for that window and does not re
     evt("evt-edited", { summary: "Deleted but edited here", start: "2026-06-05T10:00:00Z", end: "2026-06-05T11:00:00Z" }),
   ]);
 
-  // doctest:L208
   // The fake's listEvents ignores syncToken/timeMin/timeMax and always returns
   // whatever `inner.events` currently holds, so filtering an event out below is
   // exactly "Google no longer returns it". This wrapper supplies the 410.
   const calendar = expiringTokens(inner);
 
-  // doctest:L213
   const dir = join(box.root, CAL_DIR);
   const summaries = async (): Promise<string[]> => {
     const found: string[] = [];
@@ -245,7 +233,6 @@ void test("A full-window list is the whole truth for that window and does not re
     return found.toSorted();
   };
 
-  // doctest:L222
   const connector = connect(box, calendar);
   await connector.sync();
   const initial = await summaries();
@@ -256,9 +243,8 @@ void test("A full-window list is the whole truth for that window and does not re
   // than deleted behind the boxholder's back — the edit is still on disk, under
   // `stranded/`, and the run reports it once. Nothing tracks it any more, so no
   // later run patches, reports, or re-inserts it (index keys are
-  // `<eventId> <calendarId>` — see `google-calendar-event-index.doctest.md`):
+  // `<eventId> <calendarId>` — see `test/connectors/google-calendar/event-index.test.ts`):
 
-  // doctest:L236
   let editedFile = "";
   for (const name of await icsNames(box)) {
     const text = await readIcs(box, name);
@@ -268,7 +254,6 @@ void test("A full-window list is the whole truth for that window and does not re
   }
   inner.events = inner.events.filter((e) => e.id === "evt-keep");
 
-  // doctest:L245
   const result = await connector.sync();
   t.check(
     ({
@@ -303,11 +288,9 @@ void test("A full-window list is the whole truth for that window and does not re
   // its absence is not evidence of anything and it is never removed. Push one into
   // Google (which tracks it), delete it there, and force another 410:
 
-  // doctest:L272
   await box.seed(`${CAL_DIR}/2027-01-01_faraway.ics`, localIcs("far-away", { summary: "Far future", date: "20270101" }));
   const pushRun = await connector.sync();
 
-  // doctest:L275
   inner.events = inner.events.filter((e) => e.summary !== "Far future");
   const afterFar = await connector.sync();
   t.check(
@@ -335,19 +318,16 @@ void test("A full-window list is the whole truth for that window and does not re
 // response and its hash re-stamped, so the edit stops being pending — a third
 // sync pushes nothing.
 void test("The pull can only reconcile events Google chooses to return, and an increment...", async (t) => {
-  // doctest:L297
   const box = await newBox();
   const inner = primaryCalendar([lunch()]);
   // After the first pull the incremental sync returns nothing, exactly as Google
   // does when no one has touched the event since the stored token.
   const { mode, calendar } = quietable(inner);
 
-  // doctest:L303
   const connector = connect(box, calendar);
   await connector.sync();
   await editFirst(box, { from: "Lunch", to: "Lunch MINE" });
 
-  // doctest:L307
   mode.quiet = true;
   const result = await connector.sync();
   const third = await connector.sync();
@@ -381,7 +361,6 @@ void test("The pull can only reconcile events Google chooses to return, and an i
 // incremental sync — Google returns nothing at all — and the held edit still goes
 // up.
 void test("A patch Google refuses leaves the file and its stored hash alone so the edit...", async (t) => {
-  // doctest:L331
   const box = await newBox();
   const inner = primaryCalendar([
     evt("evt-dentist", { summary: "Dentist", start: "2026-06-05T09:00:00Z", end: "2026-06-05T10:00:00Z", updated: "2026-06-01T10:00:00Z" }),
@@ -394,17 +373,14 @@ void test("A patch Google refuses leaves the file and its stored hash alone so t
     },
   });
 
-  // doctest:L343
   const connector = connect(box, calendar);
   await connector.sync();
   await editFirst(box, { from: "Dentist", to: "Dentist MINE" });
 
-  // doctest:L347
   patchFails = true;
   const rejected = await connector.sync();
   const afterRejected = { success: rejected.success, remote: inner.events[0]?.summary };
 
-  // doctest:L351
   mode.quiet = true;
   patchFails = false;
   const retried = await connector.sync();

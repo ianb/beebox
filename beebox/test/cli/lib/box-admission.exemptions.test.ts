@@ -11,7 +11,7 @@
 // never loaded.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -53,7 +53,6 @@ async function runWhereNoBoxExists(name: string): Promise<string> {
 // It reads a box and writes to stdout; there is nothing to admit, and it must
 // survive running where no box exists. Admission lets its action run:
 void test("It reads a box and writes to stdout; there is nothing to admit, and it must s...", async (t) => {
-  // doctest:L57
   t.check(await runWhereNoBoxExists("agent-context"), "ran");
 });
 
@@ -62,7 +61,6 @@ void test("It reads a box and writes to stdout; there is nothing to admit, and i
 // One more read-only command and one lifecycle owner, each from the two exemption
 // sets, also run without a box:
 void test("One more read-only command and one lifecycle owner, each from the two exempti...", async (t) => {
-  // doctest:L67
   t.check([await runWhereNoBoxExists("status"), await runWhereNoBoxExists("auth")], [
     "ran",
     "ran",
@@ -74,6 +72,5 @@ void test("One more read-only command and one lifecycle owner, each from the two
 // A command in neither set is refused before its action runs. This keeps the
 // exemptions from silently covering everything:
 void test("A command in neither set is refused before its action runs.", async (t) => {
-  // doctest:L77
   t.check(await runWhereNoBoxExists("card"), "CliBoxRequiredError");
 });

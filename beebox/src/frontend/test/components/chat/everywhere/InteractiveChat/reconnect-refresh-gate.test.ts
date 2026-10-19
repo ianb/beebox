@@ -13,7 +13,7 @@
 // serviced.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createReconnectRefreshGate } from "../../../../../src/components/chat/everywhere/InteractiveChat/reconnect-refresh-gate.js";
 
 type Handle = ReturnType<typeof globalThis.setTimeout>;
@@ -71,17 +71,14 @@ function makeGate(startAt: number) {
 // bootstrap already loaded history, so an immediate reconnect is redundant —
 // but it's not lost, it just waits for the rest of the window.
 void test("Mirrors the original \"first connect shortly after mount\" case:", async (t) => {
-  // doctest:L75
   const { clock, state, reconnect } = makeGate(1_000);
 
-  // doctest:L77
   clock.advance(1000);
   reconnect();
   t.check(state.refreshes, 0);
 
   // ## A connect past the window fires immediately, and becomes the new baseline
 
-  // doctest:L86
   clock.advance(4500);
   reconnect();
   t.check(state.refreshes, 1);
@@ -92,7 +89,6 @@ void test("Mirrors the original \"first connect shortly after mount\" case:", as
   // this is the bug fix: the old code only checked elapsed-since-mount once, so
   // every reconnect after the first sent an unconditional REFRESH.
 
-  // doctest:L99
   clock.advance(200);
   reconnect();
   clock.advance(200);
@@ -102,7 +98,6 @@ void test("Mirrors the original \"first connect shortly after mount\" case:", as
   // Once enough time has passed since the last actual REFRESH (not since mount),
   // it fires again:
 
-  // doctest:L111
   clock.advance(5000);
   reconnect();
   t.check(state.refreshes, 2);
@@ -113,15 +108,12 @@ void test("Mirrors the original \"first connect shortly after mount\" case:", as
 // `minIntervalMs` is a floor — exactly at the boundary hasn't cleared it (the
 // next tick will).
 void test("minIntervalMs is a floor — exactly at the boundary hasn't cleared it (the nex...", async (t) => {
-  // doctest:L123
   const { clock, state, reconnect } = makeGate(0);
 
-  // doctest:L125
   clock.advance(5000);
   reconnect();
   t.check(state.refreshes, 1);
 
-  // doctest:L130
   clock.advance(4999);
   reconnect();
   t.check(state.refreshes, 1);
@@ -136,19 +128,15 @@ void test("minIntervalMs is a floor — exactly at the boundary hasn't cleared i
 // further `notifyReconnect` call — but the armed timer still fires once the
 // window elapses:
 void test("The scenario that used to lose history for good:", async (t) => {
-  // doctest:L146
   const { clock, state, reconnect } = makeGate(0);
 
-  // doctest:L148
   clock.advance(4900);
   reconnect();
   t.check(state.refreshes, 0);
 
-  // doctest:L153
   clock.advance(99);
   t.check(state.refreshes, 0);
 
-  // doctest:L157
   clock.advance(1);
   t.check(state.refreshes, 1);
 });
@@ -157,10 +145,8 @@ void test("The scenario that used to lose history for good:", async (t) => {
 // single pending timer rather than each pushing the deadline back out. Advancing
 // to the ORIGINAL deadline (not pushed out by the second reconnect) fires it:
 void test("Further reconnects that land before the timer fires coalesce into the same si...", async (t) => {
-  // doctest:L167
   const { clock, state, reconnect } = makeGate(0);
 
-  // doctest:L169
   clock.advance(4900);
   reconnect();
   clock.advance(50);
@@ -168,7 +154,6 @@ void test("Further reconnects that land before the timer fires coalesce into the
   reconnect();
   t.check(clock.pendingCount(), 1);
 
-  // doctest:L177
   clock.advance(50);
   t.check(state.refreshes, 1);
 });
@@ -178,16 +163,13 @@ void test("Further reconnects that land before the timer fires coalesce into the
 // Unmount (or a session switch remounting the hook) must not let a stale timer
 // fire into a torn-down closure.
 void test("Unmount (or a session switch remounting the hook) must not let a stale timer...", async (t) => {
-  // doctest:L188
   const { clock, gate, state, reconnect } = makeGate(0);
 
-  // doctest:L190
   clock.advance(4900);
   reconnect();
   gate.dispose();
   clock.advance(5000);
   t.check(state.refreshes, 0);
 
-  // doctest:L197
   t.check(clock.pendingCount(), 0);
 });

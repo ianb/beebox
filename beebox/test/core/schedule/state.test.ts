@@ -4,8 +4,8 @@
 // and lock files.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import {
   pruneRecentRuns,
   recordRun,
@@ -35,16 +35,13 @@ function freshState() {
 //
 // No runs returns undefined:
 void test("Removes run records older than the given window.", async (t) => {
-  // doctest:L31
   t.check(pruneRecentRuns(undefined, { windowMs: 3_600_000, now: new Date("2026-03-01T12:00:00Z") }), undefined);
 
-  // doctest:L34
   t.check(pruneRecentRuns([], { windowMs: 3_600_000, now: new Date("2026-03-01T12:00:00Z") }), undefined);
 });
 
 // Recent runs within the window are kept:
 void test("Recent runs within the window are kept:", async (t) => {
-  // doctest:L41
   t.check(
     pruneRecentRuns(
       [{ ts: "2026-03-01T11:30:00Z", durationMs: 5000 }],
@@ -61,7 +58,6 @@ void test("Recent runs within the window are kept:", async (t) => {
 
 // Old runs outside the window are removed:
 void test("Old runs outside the window are removed:", async (t) => {
-  // doctest:L51
   t.check(
     pruneRecentRuns(
       [{ ts: "2026-03-01T10:00:00Z", durationMs: 5000 }],
@@ -73,7 +69,6 @@ void test("Old runs outside the window are removed:", async (t) => {
 
 // Old records are pruned during recording:
 void test("Old records are pruned during recording:", async (t) => {
-  // doctest:L71
   const state2 = freshState();
   state2.recentRuns = [{ ts: "2026-03-01T10:00:00Z", durationMs: 1000 }];
   recordRun(state2, {
@@ -122,7 +117,6 @@ void test("The single outcome-recording path for all triggers (tick, wakeup, web
     ],
   });
 
-  // doctest:L112
   recordOutcome(st, {
     result: "success", error: null, durationMs: 200, sleepAffected: false,
     windowMs: 3_600_000, now: new Date("2026-03-01T14:00:00Z"),
@@ -273,7 +267,6 @@ void test("Acquire and load shows running script", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L204
   const box = await makeTmpBox();
   await acquireScriptLock({ boxRoot: box.root, scriptName: "my-script", triggeredBy: "schedule" });
   const running = await loadRunningScripts(box.root);
@@ -289,7 +282,6 @@ void test("Release removes from running", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L225
   const box = await makeTmpBox();
   await acquireScriptLock({ boxRoot: box.root, scriptName: "temp", triggeredBy: "test" });
   await releaseScriptLock({ boxRoot: box.root, scriptName: "temp" });
@@ -307,7 +299,6 @@ void test("Lock with lock-group", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L240
   const box = await makeTmpBox();
   await acquireScriptLock({ boxRoot: box.root, scriptName: "grouped", triggeredBy: "schedule", lockGroup: "agents" });
   const running = await loadRunningScripts(box.root);
@@ -323,7 +314,6 @@ void test("Stale lock (dead PID) is cleaned up", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L257
   const box = await makeTmpBox();
   const stateDir = box.root + "/_config/schedules/.state";
   await fs.mkdir(stateDir, { recursive: true });
@@ -333,7 +323,6 @@ void test("Stale lock (dead PID) is cleaned up", async (t) => {
     triggeredBy: "test",
   }) + "\n");
 
-  // doctest:L266
   const running = await loadRunningScripts(box.root);
   t.check([...running], []);
 });
@@ -347,7 +336,6 @@ void test("No state directory returns empty map", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L278
   const box = await makeTmpBox();
   const running = await loadRunningScripts(box.root);
   t.check([...running], []);
@@ -368,7 +356,6 @@ void test("Reads bookkeeping/procedure/runs//run.procedure-run.card and reports 
       t.error(error);
     }
   });
-  // doctest:L297
   const box = await makeTmpBox();
   const runDir = box.root + "/_bookkeeping/procedure/runs/test-run_2026-05-16T1200";
   await fs.mkdir(runDir, { recursive: true });
@@ -379,7 +366,6 @@ void test("Reads bookkeeping/procedure/runs//run.procedure-run.card and reports 
   await fs.writeFile(doneDir + "/run.procedure-run.card",
     "---\nprocedure: test\noutcome: failed\nstarted-at: 2026-05-16T11:00:00Z\nsteps:\n  - id: s\n    status: running\n---\n");
 
-  // doctest:L307
   t.check(await loadRunningProcedures(box.root), [
     "test-run_2026-05-16T1200",
   ]);
@@ -398,7 +384,6 @@ void test("A procedure that crashed mid-step leaves its run card without an outc
       t.error(error);
     }
   });
-  // doctest:L324
   const box = await makeTmpBox();
   const runDir = box.root + "/_bookkeeping/procedure/runs/orphan_2026-03-16T2056";
   await fs.mkdir(runDir, { recursive: true });
@@ -406,12 +391,10 @@ void test("A procedure that crashed mid-step leaves its run card without an outc
   await fs.writeFile(cardPath,
     "---\nprocedure: test\nstarted-at: 2026-03-16T20:56:00Z\nsteps: []\n---\n");
 
-  // doctest:L331
   // Backdate the run card to two hours ago.
   const twoHoursAgo = (Date.now() - 2 * 60 * 60 * 1000) / 1000;
   await utimes(cardPath, twoHoursAgo, twoHoursAgo);
 
-  // doctest:L335
   t.check(await loadRunningProcedures(box.root), []);
 });
 
@@ -424,7 +407,6 @@ void test("Ignores finished runs", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L346
   const box = await makeTmpBox();
   for (const [name, outcome] of [["completed_run", "completed"], ["failed_run", "failed"], ["unjudged_run", "inconclusive"]]) {
     const runDir = box.root + "/_bookkeeping/procedure/runs/" + name;
@@ -433,6 +415,5 @@ void test("Ignores finished runs", async (t) => {
       `---\nprocedure: test\noutcome: ${outcome}\nstarted-at: 2026-05-16T12:00:00Z\nsteps: []\n---\n`);
   }
 
-  // doctest:L354
   t.check(await loadRunningProcedures(box.root), []);
 });

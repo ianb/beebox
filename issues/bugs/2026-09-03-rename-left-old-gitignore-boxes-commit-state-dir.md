@@ -9,6 +9,8 @@ discovered-by: Ian
 discovered-in: main session — a `git reset --hard` on a local box reverted its chat registry and broke the open chat
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 ## What happened
 
 The boxholder reset a local box's `main` to an older commit. The chat that

@@ -10,8 +10,8 @@
 // relapse is a new episode.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import type { TmpBox } from "../../../helpers/test-helpers.js";
 import type { StoredEngineUnavailability } from "../../../../src/core/agent/engine-availability-store.js";
@@ -56,12 +56,10 @@ void test("A failing task is a dashboard check, and nothing is sent", async (t) 
       t.error(error);
     }
   });
-  // doctest:L52
   const box = await makeTmpBox({ git: true });
   await seedFailingTask(box);
   box.commitAll("seed");
 
-  // doctest:L56
   const check = scheduledTasksCheck(await loadScheduleHealth(box.root, NOW), NOW);
   t.check(check, {
     name: "scheduled-tasks",
@@ -70,22 +68,18 @@ void test("A failing task is a dashboard check, and nothing is sent", async (t) 
     severity: "warning",
   });
 
-  // doctest:L60
   t.check(await recordScheduleEpisodes(box.root, { now: NOW }), { tasks: ["sync-notes"] });
 
-  // doctest:L63
   t.check(await readRecent(box.root, { days: 1, now: NOW }), []);
 
   // The task is latched, so the next daemon cycle records nothing new:
 
-  // doctest:L70
   const state = await loadScriptState(box.root, "sync-notes");
   t.check(state.alertedFor, "failing");
   t.check(await recordScheduleEpisodes(box.root, { now: NOW }), null);
 
   // A successful run clears the latch and the check; a relapse is a new episode:
 
-  // doctest:L81
   recordOutcome(state, {
     result: "success", error: null, durationMs: 100, sleepAffected: false,
     windowMs: 86_400_000, now: new Date("2026-06-09T13:00:00Z"),
@@ -98,7 +92,6 @@ void test("A failing task is a dashboard check, and nothing is sent", async (t) 
     severity: "warning",
   });
 
-  // doctest:L89
   recordOutcome(state, {
     result: "failure", error: "boom", durationMs: 100, sleepAffected: false,
     windowMs: 86_400_000, now: new Date("2026-06-09T14:00:00Z"),
@@ -109,7 +102,6 @@ void test("A failing task is a dashboard check, and nothing is sent", async (t) 
   });
   await saveScriptState({ boxRoot: box.root, scriptName: "sync-notes", state });
 
-  // doctest:L99
   t.check(await recordScheduleEpisodes(box.root, { now: new Date("2026-06-09T15:05:00Z") }), { tasks: ["sync-notes"] });
 });
 
@@ -118,7 +110,6 @@ void test("A failing task is a dashboard check, and nothing is sent", async (t) 
 // The daemon ran here and stopped: no task can fail or run late in a way the
 // check would see, so the heartbeat itself is the finding.
 void test("The daemon ran here and stopped:", async (t) => {
-  // doctest:L113
   const health: BoxScheduleHealth = {
     tasks: [],
     scheduler: { status: "stale", lastTickAt: "2026-06-09T09:00:00.000Z", ageMs: 3 * 3_600_000 },
@@ -132,7 +123,6 @@ void test("The daemon ran here and stopped:", async (t) => {
     severity: "warning",
   });
 
-  // doctest:L122
   t.check(scheduledTasksCheck({ ...health, scheduler: { status: "running", lastTickAt: "2026-06-09T11:59:00.000Z", ageMs: 60_000 } }, NOW), {
     name: "scheduled-tasks",
     ok: true,
@@ -143,7 +133,6 @@ void test("The daemon ran here and stopped:", async (t) => {
   // With no heartbeat ever (a dev box, where no daemon runs), the check passes and
   // says so, rather than claiming tasks are running:
 
-  // doctest:L130
   const never = scheduledTasksCheck({ ...health, scheduler: { status: "never", lastTickAt: null, ageMs: null } }, NOW);
   t.check(never, {
     name: "scheduled-tasks",
@@ -158,7 +147,6 @@ void test("The daemon ran here and stopped:", async (t) => {
 // An engine out of usage quota used to notify; it is now the `engine-quota`
 // check, present only while the episode is live.
 void test("An engine out of usage quota used to notify; it is now the engine-quota check...", async (t) => {
-  // doctest:L141
   const live: StoredEngineUnavailability = {
     provider: "claude", reason: "quota-exhausted", retryAt: "2026-06-09T18:00:00Z", retryAtSource: "parsed",
     detectedAt: "2026-06-09T10:00:00Z", message: "limit", episodeStartedAt: "2026-06-09T09:00:00Z",
@@ -173,6 +161,5 @@ void test("An engine out of usage quota used to notify; it is now the engine-quo
     severity: "warning",
   });
 
-  // doctest:L150
   t.check(engineQuotaChecks(null, NOW), []);
 });

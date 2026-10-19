@@ -7,7 +7,7 @@
 // subscribing under two boxes is stored once with both opt-ins.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import * as os from "node:os";
@@ -40,14 +40,12 @@ void test("subscribe records the endpoint under the box; idempotent on re-subscr
       t.error(error);
     }
   });
-  // doctest:L35
   await caller("alpha").push.subscribe(SUB);
   await caller("alpha").push.subscribe(SUB);
   t.check(await endpointsForBox("alpha"), [SUB]);
 
   // ## Same endpoint under a second box is stored once with both opt-ins
 
-  // doctest:L44
   await caller("beta").push.subscribe(SUB);
   const a = await endpointsForBox("alpha");
   const b = await endpointsForBox("beta");
@@ -55,13 +53,11 @@ void test("subscribe records the endpoint under the box; idempotent on re-subscr
 
   // ## disable removes it from one box only
 
-  // doctest:L54
   await caller("alpha").push.disable({ endpoint: SUB.endpoint });
   t.check([await endpointsForBox("alpha"), await endpointsForBox("beta")], [[], [SUB]]);
 
   // ## vapidPublicKey reports null when the server has no VAPID key
 
-  // doctest:L62
   t.check(await caller("alpha").push.vapidPublicKey(), {
     publicKey: null,
   });

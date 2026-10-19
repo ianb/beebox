@@ -7,7 +7,7 @@
 // file is scoped to the asset extensions. `BULK_BATCH_ATTACH_PATTERN` is the line
 // that puts a batch scope on the filter's path.
 //
-// This runs a **real** git-annex repository. The sibling `prepare.doctest.md` can
+// This runs a **real** git-annex repository. The sibling `prepare.test.ts` can
 // only prove a blob was *tracked*, which is equally true when its raw bytes were
 // committed — the exact failure this file exists to catch. Between 2026-08-04 and
 // 2026-08-18 a batch's `.zip` committed as a raw blob while its photos annexed,
@@ -15,7 +15,7 @@
 // assertions degrade to a recorded skip rather than a false pass.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -108,7 +108,6 @@ void test("A batch of four 200 KB files:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L105
   const { repo, box } = await makeAnnexBox();
   const id = await stageMixedBatch(box);
   const batch = await prepareBulkBatch({ boxRoot: box, id, contextDir: "" });

@@ -12,7 +12,7 @@
 // query, so they mark the whole query.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import assert from "node:assert/strict";
 import { combineQueuedInputs } from "../../../../src/core/chat/session/state.js";
@@ -32,12 +32,10 @@ void test("A composed send marks the turn; a typed send does not", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L28
   const box = await makeTmpBox({ git: true });
   const backend = createFakeChatBackend();
   const session = new ChatSession(box.root, { backend, systemPrompt: plainTestPrompt, skipBootstrap: true });
 
-  // doctest:L32
   await session.send({ text: "<typed>hello</typed>" });
   await waitForRuns(backend, { count: 1, timeoutMs: 2000 });
   const run = backend.lastRun();
@@ -48,7 +46,6 @@ void test("A composed send marks the turn; a typed send does not", async (t) => 
   await done;
   await session.send({ text: "<self-note>from a script</self-note>", clientComposed: true });
 
-  // doctest:L42
   t.check(run.sentClientComposed, [
     false,
     true,
@@ -61,7 +58,6 @@ void test("A composed send marks the turn; a typed send does not", async (t) => 
 // turn is composed if any part of it is, so outside text cannot ride along
 // unmarked with a typed message.
 void test("Sends that arrive during a busy turn are joined into one turn.", async (t) => {
-  // doctest:L58
   await t.checkText(
     JSON.stringify([
       combineQueuedInputs([{ text: "typed" }, { text: "note", clientComposed: true }]).clientComposed,
@@ -75,7 +71,6 @@ void test("Sends that arrive during a busy turn are joined into one turn.", asyn
 //
 // ## Agent runs mark the whole query
 void test("(null is how JSON.stringify prints a missing entry in an array.)", async (t) => {
-  // doctest:L70
   const options = buildQueryOptions(
     { boxRoot: "/box", systemPrompt: "", prompt: "hi" },
     { env: {}, maxTurns: 4, binaryPath: null, appendedSystem: "" },

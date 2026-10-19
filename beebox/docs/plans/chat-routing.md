@@ -7,6 +7,8 @@ issues:
 ---
 # Quick chat destination routing
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 When the boxholder has a thought to send, they should not have to find the right conversation first. Quick chat selects an existing conversation or a new conversation in the right landmark, delivers through ordinary chat, and then shows the routing result.
 
 **Superseded in part by [box-screen.md](box-screen.md).** The catalog, the

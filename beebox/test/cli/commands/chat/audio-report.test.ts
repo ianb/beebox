@@ -5,7 +5,7 @@
 // the pure report-building/skip logic the CLI call sites use before posting.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import {
   buildRetranscriptionReport,

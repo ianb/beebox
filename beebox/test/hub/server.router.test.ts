@@ -1,7 +1,7 @@
 // # `bbx hub` routing: the endpoint seam, plus the D2 auth split (Track D, chunks D1-D2)
 //
 // `src/hub/server/core.ts` never talks to a child process directly — it only
-// consumes `EndpointProvider` (`src/hub/endpoints.ts`). This doctest proves
+// consumes `EndpointProvider` (`src/hub/endpoints.ts`). This test proves
 // the router/proxy layer against a **fake endpoint**: a trivial `http.Server`
 // standing in for "a box the hub supervises," fed in via
 // `staticEndpointProvider` instead of a real `Supervisor`. That's the whole
@@ -16,8 +16,8 @@
 // `http.Server` after `ready()`), and now takes `hubSecret` + `boxes`.
 
 import { t as root, test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, str } from "@ianbicking/tap-check/check";
 import http from "node:http";
 import net from "node:net";
 import crypto from "node:crypto";
@@ -37,7 +37,7 @@ import { acquireBoxMaintenance, boxMaintenanceStatus } from "../../src/lib/box-m
 import { renderUnavailablePage } from "../../src/hub/server/box-unavailable.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-const HUB_SECRET = "test-hub-secret-for-router-doctest";
+const HUB_SECRET = "test-hub-secret-for-router-test";
 // The default box has a real, empty content root, as a new box does. A missing
 // root is a broken box, and reading its name logs a warning.
 const defaultBoxRoot = await mkdtemp(join(tmpdir(), "bbx-router-"));
@@ -49,12 +49,12 @@ await mkdir(join(defaultBoxRoot, "_content"));
 // passes `openAccess: true` by default. The ONE section that needs hub auth
 // actually ON constructs its hub with `openAccess: false`.
 // Both hub health routes require this bearer key (mirroring the box server's
-// own /healthz). Set it for the whole doctest; the auth header helper below
+// own /healthz). Set it for the whole test; the auth header helper below
 // sends it.
-const DIAG_KEY = "test-diag-key-for-router-doctest";
+const DIAG_KEY = "test-diag-key-for-router-test";
 process.env.BBX_DIAG_API_KEY = DIAG_KEY;
 const diagAuth = { headers: { authorization: `Bearer ${DIAG_KEY}` } };
-const BROWSE_KEY = "test-browse-key-for-router-doctest";
+const BROWSE_KEY = "test-browse-key-for-router-test";
 
 /** The JSON the fake box and the hub's own routes answer with; every field a
  *  check below reads is optional because each route answers with its own subset. */
@@ -113,7 +113,7 @@ async function startFakeBox() {
       "Connection: Upgrade\r\n" +
       `Sec-WebSocket-Accept: ${accept}\r\n\r\n`
     );
-    // No frame handling needed -- the doctest only checks the handshake made it through.
+    // No frame handling needed -- the test only checks the handshake made it through.
   });
   await listen(server);
   const port = portOf(server);
@@ -192,11 +192,11 @@ async function getJson(hub: { base: string }, request: RequestInit & { path: str
 // Hub auth ON needs a (fake) OAuth client pair and a session secret.
 function setOAuthEnv(on: boolean) {
   const vars = {
-    GOOGLE_OAUTH_CLIENT_ID: "test-client-id-for-router-doctest",
+    GOOGLE_OAUTH_CLIENT_ID: "test-client-id-for-router-test",
     // registerAuthRoutes fails loudly on an ID-without-secret half-config
     // (MissingOAuthClientSecretError), so the fake credentials must be a pair.
-    GOOGLE_OAUTH_CLIENT_SECRET: "test-client-secret-for-router-doctest",
-    BBX_SESSION_SECRET: "test-session-secret-for-router-doctest",
+    GOOGLE_OAUTH_CLIENT_SECRET: "test-client-secret-for-router-test",
+    BBX_SESSION_SECRET: "test-session-secret-for-router-test",
   };
   for (const [name, value] of Object.entries(vars)) {
     if (on) process.env[name] = value;
@@ -241,7 +241,7 @@ root.teardown(async () => {
 // An unconfigured slug 404s without touching any endpoint. `/` routes to the
 // hub's box-picker handler, which serves the SPA when the frontend bundle is built
 // and a minimal box list otherwise — either way a 200 with an HTML body (the
-// picker-content behavior itself is covered in `box-picker.doctest.md`; this just
+// picker-content behavior itself is covered in `test/hub/server/box-picker.test.ts`; this just
 // asserts the routing):
 void test("An unconfigured slug 404s without touching any endpoint.", async (t) => {
   t.teardown(async () => {
@@ -253,19 +253,15 @@ void test("An unconfigured slug 404s without touching any endpoint.", async (t) 
       t.error(error);
     }
   });
-  // doctest:L222
   const box = await startFakeBox();
   const hub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]));
 
-  // doctest:L225
   const missingResponse = await fetch(`${hub.base}/nope/x`);
   t.check(missingResponse.status, 404);
 
-  // doctest:L229
   const rootResponse = await fetch(`${hub.base}/`);
   t.check(rootResponse.status, 200);
 
-  // doctest:L233
   t.checkText(await rootResponse.text(), "<!DOCTYPE html>\n<html>\n<head>\n  <title>Bee Box Hub</title>\n  <meta charset=\"utf-8\">\n  <style>\n    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 2rem auto; padding: 0 1rem; }\n    h1 { color: #333; }\n    ul { padding-left: 1.25rem; }\n    li { margin: 0.25rem 0; }\n  </style>\n</head>\n<body>\n  <h1>Boxes</h1>\n  <ul>\n    <li><a href=\"/test1/\">test1</a></li>\n  </ul>\n</body>\n</html>");
 
   // ## A request under a configured slug is proxied unchanged (no prefix stripping)
@@ -273,7 +269,6 @@ void test("An unconfigured slug 404s without touching any endpoint.", async (t) 
   // The box's own Fastify instance serves itself at `/<slug>/...` already (same
   // as standalone `bbx serve --slug`) — the hub forwards the full path as-is.
 
-  // doctest:L243
   const proxied = await getJson(hub, { path: "/test1/browse/some-card" });
   t.check([proxied.status, proxied.body.method, proxied.body.url], [
     200,
@@ -300,25 +295,23 @@ void test("Identity headers: client-supplied ones are stripped, the hub's own ar
   // identity the HUB decided on. With hub auth off, that means the box sees
   // `x-bbx-hub-auth: off` + the hub secret — never the client's claimed email.
 
-  // doctest:L255
   const spoofed = await getJson(hub, { path: "/test1/browse/some-card",
     headers: { "x-bbx-authenticated-email": "attacker@evil.com", "x-bbx-hub-secret": "attacker-supplied-secret" },
   });
   t.check(spoofed.body.headers, {
     xBbxAuthenticatedEmail: null,
-    xBbxHubSecret: "test-hub-secret-for-router-doctest",
+    xBbxHubSecret: "test-hub-secret-for-router-test",
     xBbxHubAuth: "off",
   });
 
   // A webhook path is proxied unauthenticated, carrying only the hub secret:
 
-  // doctest:L265
   const webhook = await getJson(hub, { path: "/webhook/test1/incoming" });
   t.check([webhook.status, webhook.body.headers], [
     200,
     {
       xBbxAuthenticatedEmail: null,
-      xBbxHubSecret: "test-hub-secret-for-router-doctest",
+      xBbxHubSecret: "test-hub-secret-for-router-test",
       xBbxHubAuth: null,
     },
   ]);
@@ -330,7 +323,6 @@ void test("Identity headers: client-supplied ones are stripped, the hub's own ar
   // as per-box mobile auth would skip those headers and make the child reject the
   // request.
 
-  // doctest:L278
   process.env.BBX_BROWSE_API_KEY = BROWSE_KEY;
   const browseHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]), {
     openAccess: false,
@@ -342,12 +334,11 @@ void test("Identity headers: client-supplied ones are stripped, the hub's own ar
     200,
     {
       xBbxAuthenticatedEmail: null,
-      xBbxHubSecret: "test-hub-secret-for-router-doctest",
+      xBbxHubSecret: "test-hub-secret-for-router-test",
       xBbxHubAuth: "off",
     },
   ]);
 
-  // doctest:L288
   await stopHub(browseHub);
   delete process.env.BBX_BROWSE_API_KEY;
 
@@ -369,7 +360,6 @@ void test("WebSocket upgrades and a lazy provider cold-start HTTP requests only"
   // A WebSocket upgrade under a configured slug is proxied through; one for an
   // unconfigured slug gets a raw 404 (never reaches an endpoint):
 
-  // doctest:L298
   const upgradeResponse = await rawUpgradeRequest({ port: hub.port, path: "/test1/ws" });
   const rejectedUpgrade = await rawUpgradeRequest({ port: hub.port, path: "/nope/ws" });
   t.check([upgradeResponse, rejectedUpgrade], [
@@ -382,20 +372,17 @@ void test("WebSocket upgrades and a lazy provider cold-start HTTP requests only"
   // The lazy provider (`makeLazyProvider`, in setup) mirrors a lazy `Supervisor`
   // (`src/hub/supervisor/core.ts`) without spawning a real process. This proves
   // `hub-server.ts`'s contract, not `Supervisor`'s own cold-start mechanics
-  // (covered separately in `supervisor.doctest.md`).
+  // (covered separately in `test/hub/supervisor.test.ts`).
   //
   // An HTTP request to the stopped box cold-starts it via `ensureRunning` and
   // still gets proxied through on the SAME request (no separate retry needed):
 
-  // doctest:L315
   const lazyProvider = makeLazyProvider({ slug: "lazybox", origin: box.origin });
   const lazyHub = await startHub(lazyProvider, { boxes: [{ slug: "lazybox", boxRoot: "/nonexistent/lazybox" }] });
 
-  // doctest:L318
   const coldResponse = await fetch(`${lazyHub.base}/lazybox/browse/x`);
   t.check(coldResponse.status, 200);
 
-  // doctest:L322
   t.check(lazyProvider.ensureCalls, 1);
 
   // A SECOND request while the box is still running goes through `ensureRunning`
@@ -405,23 +392,19 @@ void test("WebSocket upgrades and a lazy provider cold-start HTTP requests only"
   // at cold-start would never be touched again and it would get SIGTERM'd out
   // from under live traffic:
 
-  // doctest:L334
   const warmResponse = await fetch(`${lazyHub.base}/lazybox/browse/y`);
   t.check(warmResponse.status, 200);
 
-  // doctest:L338
   t.check(lazyProvider.ensureCalls, 2);
 
   // A WebSocket upgrade to that same slug once it's stopped again gets a 503
   // (known slug, not running) -- never a 404, and `ensureRunning` is NOT called
   // (an abandoned tab's WS reconnect must not resurrect the box):
 
-  // doctest:L347
   lazyProvider.stop();
   const idleUpgrade = await rawUpgradeRequest({ port: lazyHub.port, path: "/lazybox/ws" });
   t.check(idleUpgrade, "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
 
-  // doctest:L352
   t.check(lazyProvider.ensureCalls, 2);
 
   // A box-scoped keepalive uses the ordinary HTTP path, so it wakes the stopped
@@ -429,14 +412,11 @@ void test("WebSocket upgrades and a lazy provider cold-start HTTP requests only"
   // every HTTP path; the load-bearing assertion is that the hub calls
   // `ensureRunning` before proxying this request:
 
-  // doctest:L362
   const wakeResponse = await fetch(`${lazyHub.base}/lazybox/api/keepalive`, { method: "HEAD" });
   t.check(wakeResponse.status, 200);
 
-  // doctest:L366
   t.check(lazyProvider.ensureCalls, 3);
 
-  // doctest:L369
   await stopHub(lazyHub);
 
 });
@@ -461,7 +441,6 @@ void test("The Google-services OAuth callback routes to the box named in state",
   // same identity-header gate as any other proxied request. An unknown/missing box
   // in `state` never reaches any endpoint:
 
-  // doctest:L382
   const callback = await getJson(hub, { path: `${CALLBACK}test1:admin`,
     headers: { "x-bbx-authenticated-email": "attacker@evil.com" },
   });
@@ -470,12 +449,11 @@ void test("The Google-services OAuth callback routes to the box named in state",
     "/auth/google-services/callback?code=abc123&state=test1:admin",
     {
       xBbxAuthenticatedEmail: null,
-      xBbxHubSecret: "test-hub-secret-for-router-doctest",
+      xBbxHubSecret: "test-hub-secret-for-router-test",
       xBbxHubAuth: "off",
     },
   ]);
 
-  // doctest:L388
   const unknownBoxResponse = await fetch(`${hub.base}${CALLBACK}nope`);
   t.check(unknownBoxResponse.status, 400);
 
@@ -488,19 +466,16 @@ void test("The Google-services OAuth callback routes to the box named in state",
   // this file) to have a session to check in the first place: the hub is
   // constructed with `openAccess: false` so it verifies the session cookie.
 
-  // doctest:L403
   const ownedBox = await makeTmpBox();
   await ownedBox.write("_config/box.json", JSON.stringify({ allowedEmails: ["owner@example.com"] }));
   setOAuthEnv(true);
 
-  // doctest:L407
   const authedHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]), {
     boxes: [{ slug: "test1", boxRoot: ownedBox.root }],
     openAccess: false,
   });
   const socketsBeforeDenial = box.sockets.map((socket) => socket.remotePort);
 
-  // doctest:L413
   const strangerCookie = signSession({ email: "stranger@example.com", name: "Stranger" });
   const deniedResponse = await fetch(`${authedHub.base}${CALLBACK}test1:admin`, {
     headers: { cookie: `${COOKIE_NAME}=${strangerCookie}` },
@@ -509,12 +484,10 @@ void test("The Google-services OAuth callback routes to the box named in state",
 
   // The denial never reaches the child -- no new connection to the fake box:
 
-  // doctest:L424
   t.check(box.sockets.map((socket) => socket.remotePort), socketsBeforeDenial);
 
   // An email on the box's own `allowedEmails` is forwarded, same as any other authorized request:
 
-  // doctest:L431
   const allowedCookie = signSession({ email: "owner@example.com", name: "Owner" });
   const allowed = await getJson(authedHub, { path: `${CALLBACK}test1:admin`,
     headers: { cookie: `${COOKIE_NAME}=${allowedCookie}` },
@@ -525,7 +498,6 @@ void test("The Google-services OAuth callback routes to the box named in state",
     "owner@example.com",
   ]);
 
-  // doctest:L438
   setOAuthEnv(false);
   await stopHub(authedHub);
   await ownedBox.cleanup();
@@ -550,11 +522,9 @@ void test("The Google-services callback cold-starts an idle box and authenticate
   // `ensureRunning`-preferring helper as the catch-all, not a plain `get()` that
   // would 400 as `unknown_box` even though the box is configured.
 
-  // doctest:L451
   const oauthLazyProvider = makeLazyProvider({ slug: "oauthlazybox", origin: box.origin });
   const oauthLazyHub = await startHub(oauthLazyProvider, { boxes: [{ slug: "oauthlazybox", boxRoot: "/nonexistent/oauthlazybox" }] });
 
-  // doctest:L454
   const oauthCold = await getJson(oauthLazyHub, { path: `${CALLBACK}oauthlazybox:admin` });
   t.check([oauthCold.status, oauthLazyProvider.ensureCalls, oauthCold.body.url], [
     200,
@@ -562,7 +532,6 @@ void test("The Google-services callback cold-starts an idle box and authenticate
     "/auth/google-services/callback?code=abc123&state=oauthlazybox:admin",
   ]);
 
-  // doctest:L458
   await stopHub(oauthLazyHub);
 
   // ## The Google-services callback authenticates BEFORE resolving/waking any box
@@ -575,7 +544,6 @@ void test("The Google-services callback cold-starts an idle box and authenticate
   // passing through). An unknown slug is handled identically — same 302 to login,
   // still no wake — so the response reveals nothing about which slugs are configured.
 
-  // doctest:L472
   setOAuthEnv(true);
   const preAuthProvider = makeLazyProvider({ slug: "preauthbox", origin: box.origin });
   const preAuthHub = await startHub(preAuthProvider, {
@@ -583,7 +551,6 @@ void test("The Google-services callback cold-starts an idle box and authenticate
     openAccess: false,
   });
 
-  // doctest:L479
   const outcomes = [];
   for (const state of ["preauthbox:admin", "nosuchbox:admin"]) {
     const res = await fetch(`${preAuthHub.base}${CALLBACK}${state}`, { redirect: "manual" });
@@ -598,7 +565,6 @@ void test("The Google-services callback cold-starts an idle box and authenticate
     { status: 302, location: "/auth/login?returnTo=%2Fauth%2Fgoogle-services%2Fcallback%3Fcode%3Dabc123%26state%3Dnosuchbox%3Aadmin", ensureCalls: 0 },
   ]);
 
-  // doctest:L491
   setOAuthEnv(false);
   await stopHub(preAuthHub);
 
@@ -617,10 +583,9 @@ void test("The hub owns /api/boxes and gates /healthz by diag key", async (t) =>
 
   // ## `/api/boxes` is hub-owned, matching the standalone server's shape
   //
-  // With hub auth off (this doctest's default), every configured box is listed
+  // With hub auth off (this test's default), every configured box is listed
   // -- same "open" semantics as `/` and a standalone box outside auth mode.
 
-  // doctest:L501
   const apiBoxes = await getJson(hub, { path: "/api/boxes" });
   t.check([apiBoxes.status, apiBoxes.body], [
     200,
@@ -641,7 +606,6 @@ void test("The hub owns /api/boxes and gates /healthz by diag key", async (t) =>
   // → the verdict. (`BBX_DIAG_API_KEY` is read per-request, so temporarily unsetting
   // it exercises the unconfigured branch without restarting the hub.)
 
-  // doctest:L513
   const savedKey = process.env.BBX_DIAG_API_KEY;
   delete process.env.BBX_DIAG_API_KEY;
   const unconfigured = await fetch(`${hub.base}/healthz`);
@@ -659,9 +623,8 @@ void test("The hub owns /api/boxes and gates /healthz by diag key", async (t) =>
   // The status code carries the verdict so a monitor reading only the code alarms;
   // the body names the crash-looping box. Here `getHealth` is injected to report a
   // box latched `unhealthy` (the shape `hubVerdict` produces from supervisor state
-  // — see `hub-health.doctest.md` for the derivation itself).
+  // — see `test/hub/health.test.ts` for the derivation itself).
 
-  // doctest:L531
   const brokenHealth = (): HubHealth => ({
     status: "unhealthy",
     boxes: [{ slug: "sick", status: "unhealthy", pid: undefined, port: undefined, restarts: 5, consecutiveFailures: 5, lastError: "ERR_DLOPEN_FAILED", lastStart: undefined }],
@@ -674,7 +637,6 @@ void test("The hub owns /api/boxes and gates /healthz by diag key", async (t) =>
     "sick",
   ]);
 
-  // doctest:L540
   await stopHub(brokenHub);
 
 });
@@ -698,11 +660,9 @@ void test("/healthz/canary cold-starts one box and reports whether it serves", a
   // whose cold-start never yields an endpoint → 503 `canary-failed`; an empty
   // config → 503 `no-boxes`.
 
-  // doctest:L552
   const canaryProvider = makeLazyProvider({ slug: "canarybox", origin: box.origin });
   const canaryHub = await startHub(canaryProvider, { boxes: [{ slug: "canarybox", boxRoot: "/nonexistent/canarybox" }] });
 
-  // doctest:L555
   // No ?box= → picks the first configured slug, cold-starts it, 200.
   const canaryOk = await getJson(canaryHub, { path: "/healthz/canary", ...diagAuth });
   t.check([canaryOk.status, canaryOk.body, canaryProvider.ensureCalls], [
@@ -717,7 +677,6 @@ void test("/healthz/canary cold-starts one box and reports whether it serves", a
   // A provider whose `ensureRunning` never yields an endpoint (the crash-loop case
   // — the child never becomes ready) → 503, naming the slug:
 
-  // doctest:L565
   const deadProvider = {
     get: (slug: string) => NO_ENDPOINTS.get(slug),
     slugs: () => ["deadbox"],
@@ -731,12 +690,10 @@ void test("/healthz/canary cold-starts one box and reports whether it serves", a
     "deadbox",
   ]);
 
-  // doctest:L575
   await stopHub(deadHub);
 
   // An empty configuration has nothing to canary → 503 `no-boxes`:
 
-  // doctest:L581
   const emptyHub = await startHub(staticEndpointProvider([]), { boxes: [] });
   const canaryEmpty = await getJson(emptyHub, { path: "/healthz/canary", ...diagAuth });
   t.check([canaryEmpty.status, canaryEmpty.body], [
@@ -746,22 +703,18 @@ void test("/healthz/canary cold-starts one box and reports whether it serves", a
     },
   ]);
 
-  // doctest:L586
   await stopHub(emptyHub);
 
   // The canary is also diag-gated — no key → 401, and the gate runs BEFORE the
   // side effect, so an unauthorized request never cold-starts a box
   // (`ensureCalls` unchanged):
 
-  // doctest:L594
   const callsBefore = canaryProvider.ensureCalls;
   const canaryNoKey = await fetch(`${canaryHub.base}/healthz/canary`);
   t.check(canaryNoKey.status, 401);
 
-  // doctest:L599
   t.check(canaryProvider.ensureCalls, callsBefore);
 
-  // doctest:L602
   await stopHub(canaryHub);
 
   // ## The canary reproduces the incident path: a real Supervisor whose child never becomes ready → 503
@@ -771,7 +724,6 @@ void test("/healthz/canary cold-starts one box and reports whether it serves", a
   // rejects models the 2026-07-16 ABI crash (the child never answers `/healthz`, so
   // `ensureRunning` never yields a live endpoint). The canary must 503, not 200.
 
-  // doctest:L613
   const crashFixture = await makeTmpBox();
   type ExitHandler = (code: number | null, signal: NodeJS.Signals | null) => void;
   function crashSpawn(): ChildProc {
@@ -794,7 +746,6 @@ void test("/healthz/canary cold-starts one box and reports whether it serves", a
   await crashSupervisor.startAll();
   const crashHub = await startHub(crashSupervisor, { boxes: [{ slug: "crashbox", boxRoot: crashFixture.root }] });
 
-  // doctest:L634
   const canaryCrash = await getJson(crashHub, { path: "/healthz/canary", ...diagAuth });
   t.check([canaryCrash.status, canaryCrash.body.status, canaryCrash.body.slug], [
     503,
@@ -802,7 +753,6 @@ void test("/healthz/canary cold-starts one box and reports whether it serves", a
     "crashbox",
   ]);
 
-  // doctest:L638
   await crashSupervisor.stopAll();
   await crashFixture.cleanup();
   await stopHub(crashHub);
@@ -824,7 +774,6 @@ void test("A known slug with no endpoint is never a 404 (the 2026-09-16 incident
       t.error(error);
     }
   });
-  // doctest:L656
   const closedBox = await makeTmpBox({ git: true });
   const provider = {
     get: (slug: string) => NO_ENDPOINTS.get(slug), slugs: () => ["closed", "broken"],
@@ -854,7 +803,6 @@ void test("A known slug with no endpoint is never a 404 (the 2026-09-16 incident
     },
   });
 
-  // doctest:L677
   // A page navigation (a browser, the iOS web view) gets a scriptless page: a
   // sign that swings once, the sentence, and a refresh after Retry-After.
   const page = await fetch(`${closedHub.base}/closed/chat`, { headers: { accept: "text/html,application/xhtml+xml" } });
@@ -872,7 +820,6 @@ void test("A known slug with no endpoint is never a 404 (the 2026-09-16 incident
     detail: "Box closed is closed for migration (pid <n>, since <time>); it reopens when that process finishes or exits",
   });
 
-  // doctest:L684
   // A form post that accepts HTML gets the sentence as text: a self-reload would repeat it as a GET.
   const posted = await fetch(`${closedHub.base}/closed/chat`, { method: "POST", headers: { accept: "text/html" } });
   t.check({ status: posted.status, type: posted.headers.get("content-type"), text: (await posted.text()).replace(/\(pid \d+, since \S+\)/u, "(pid <n>, since <time>)").replace(/Retry in \d+ seconds/u, "Retry in <n> seconds") }, {
@@ -883,7 +830,6 @@ Retry in <n> seconds.
 `,
   });
 
-  // doctest:L689
   // Once the owner names a step, the sentence and the body say which one is running.
   await owner.step("finding changed files");
   const stepped = z.object({ step: z.unknown(), message: z.string() }).parse(await (await fetch(`${closedHub.base}/closed/api/x`)).json());
@@ -895,10 +841,8 @@ Retry in <n> seconds.
     message: str`Box closed is closed for migration (pid <n>, since <time>); current step: finding changed files, since ${isoDate()}; it reopens when that process finishes or exits`,
   });
 
-  // doctest:L695
   Date.now = realNow;
 
-  // doctest:L697
   await owner.beginChanges();
   await owner.release();
   const reopened = await fetch(`${closedHub.base}/closed/api/x`);
@@ -907,7 +851,6 @@ Retry in <n> seconds.
     error: "box_unavailable",
   });
 
-  // doctest:L703
   // Pairing redemption passes the auth wall unauthenticated and learns nothing about the owner.
   const unauthed = await startHub(provider, { boxes: [{ slug: "closed", boxRoot: closedBox.root }], openAccess: false });
   const sealed = await acquireBoxMaintenance(closedBox.root, { reason: "migration" });
@@ -920,7 +863,6 @@ Retry in <n> seconds.
     },
   });
 
-  // doctest:L710
   await sealed.complete();
   unauthed.server.close();
   for (const socket of unauthed.sockets) socket.destroy();
@@ -937,7 +879,6 @@ Retry in <n> seconds.
 // A retry shorter than the swing would restart it on every reload, so a short
 // retry gets a still sign; message text is escaped.
 void test("A retry shorter than the swing would restart it on every reload, so a short r...", async (t) => {
-  // doctest:L729
   const quick = renderUnavailablePage({ status: 503, retryAfter: 3, body: { error: "box_unavailable", message: "Box <b> is not running" } });
   t.check({ refresh: quick.match(/content="(\d+)">/u)?.[1], sign: quick.match(/<div class="(bbx-sign[^"]*)">/u)?.[1], headline: quick.match(/<h1 class="bbx-sign-title">([^<]*)<\/h1>/u)?.[1], detail: quick.match(/<p class="detail">([^<]*)<\/p>/u)?.[1] }, {
     refresh: "3",

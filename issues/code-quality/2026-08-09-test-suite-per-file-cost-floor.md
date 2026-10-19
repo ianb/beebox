@@ -9,6 +9,8 @@ discovered-in: worktree-test-selection — sized while planning change-based tes
 priority: important
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Every test file pays a fixed cost before it runs a single assertion: Node
 process boot, the tsx import hook, the doctest loader (removed 2026-10-18 with the doctest format), and — for the 37 files
 that call `makeTestServer()` — a cold template-box build.

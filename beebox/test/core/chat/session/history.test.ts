@@ -6,8 +6,8 @@
 // Claude entries.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import { readFile, mkdir, writeFile, rm } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { dirname, join } from "node:path";
@@ -62,7 +62,6 @@ void test("Legacy entries remain Claude-owned, while an explicit Codex entry sta
       t.error(error);
     }
   });
-  // doctest:L58
   const box = await makeTmpBox();
   await box.write(
     ".beebox/chat-session-history.json",
@@ -94,7 +93,6 @@ void test("The history file is per-checkout; the husk card travels with the box.
       t.error(error);
     }
   });
-  // doctest:L82
   const codexSession = "0198f0b0-1111-7111-8111-111111111111";
   const box = await makeTmpBox();
   await box.write(
@@ -107,7 +105,6 @@ void test("The history file is per-checkout; the husk card travels with the box.
   // absent, so resolution falls through to the history entry rather than carrying
   // a nonsense string into engine dispatch.
 
-  // doctest:L97
   const junkSession = "0198f0b0-2222-7222-8222-222222222222";
   await box.write(
     `_content/chat/web/2026-08-26_${junkSession.slice(0, 8)}.chat.card`,
@@ -132,7 +129,6 @@ void test("Removal is idempotent, preserves unrelated rows and the migration mar
       t.error(error);
     }
   });
-  // doctest:L120
   const box = await makeTmpBox();
   await box.write(
     ".beebox/chat-session-history.json",
@@ -150,12 +146,10 @@ void test("Removal is idempotent, preserves unrelated rows and the migration mar
     active: null,
   });
 
-  // doctest:L134
   t.check(await getMostActiveSavedAt(box.root), savedAt);
 
   // A newer pointer wins the compare-and-clear race:
 
-  // doctest:L141
   await setMostActive(box.root, "newer");
   await clearMostActiveIfMatches(box.root, "gone");
   t.check(await getMostActive(box.root), "newer");
@@ -172,14 +166,12 @@ void test("A legacy file with sessionIds:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L156
   const box = await makeTmpBox();
   await box.write(
     ".beebox/chat-session-history.json",
     JSON.stringify({ sessionIds: ["abc", "def"], migrated: true }),
   );
 
-  // doctest:L162
   t.check(await loadHistoryEntries(box.root), [
     {
       id: "abc",
@@ -191,7 +183,6 @@ void test("A legacy file with sessionIds:", async (t) => {
     },
   ]);
 
-  // doctest:L175
   t.check(await loadHistory(box.root), [
     "abc",
     "def",
@@ -209,17 +200,14 @@ void test("Once appendHistory runs against a v1 file, it writes the new shape.",
       t.error(error);
     }
   });
-  // doctest:L192
   const box = await makeTmpBox();
   await box.write(
     ".beebox/chat-session-history.json",
     JSON.stringify({ sessionIds: ["abc"], migrated: true }),
   );
 
-  // doctest:L198
   await appendHistory(box.root, { sessionId: "def" });
 
-  // doctest:L200
   const raw = await readFile(join(box.root, ".beebox/chat-session-history.json"), "utf-8");
   const parsed = JSON.parse(raw);
   t.check(parsed, {
@@ -248,12 +236,10 @@ void test("A second call with the same id is a no-op.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L228
   const box = await makeTmpBox();
   await appendHistory(box.root, { sessionId: "abc" });
   await appendHistory(box.root, { sessionId: "abc" });
 
-  // doctest:L232
   t.check(await loadHistory(box.root), ["abc"]);
 });
 
@@ -270,12 +256,10 @@ void test("When a session was first added without a contextDir (e.g.", async (t)
       t.error(error);
     }
   });
-  // doctest:L247
   const box = await makeTmpBox();
   await appendHistory(box.root, { sessionId: "abc" });
   await appendHistory(box.root, { sessionId: "abc", contextDir: "_content/recipes" });
 
-  // doctest:L251
   t.check(await loadHistoryEntries(box.root), [
     {
       id: "abc",
@@ -298,12 +282,10 @@ void test("Once a session is bound to a directory, the binding is durable — a 
       t.error(error);
     }
   });
-  // doctest:L273
   const box = await makeTmpBox();
   await appendHistory(box.root, { sessionId: "abc", contextDir: "_content/recipes" });
   await appendHistory(box.root, { sessionId: "abc", contextDir: "_content/todos" });
 
-  // doctest:L277
   t.check(await getDirectoryForSession(box.root, "abc"), "_content/recipes");
 });
 
@@ -316,18 +298,14 @@ void test("getDirectoryForSession returns null for unbound and unknown sessions"
       t.error(error);
     }
   });
-  // doctest:L288
   const box = await makeTmpBox();
   await appendHistory(box.root, { sessionId: "abc", contextDir: "_content/recipes" });
   await appendHistory(box.root, { sessionId: "def" });
 
-  // doctest:L292
   t.check(await getDirectoryForSession(box.root, "abc"), "_content/recipes");
 
-  // doctest:L295
   t.check(await getDirectoryForSession(box.root, "def"), null);
 
-  // doctest:L298
   t.check(await getDirectoryForSession(box.root, "ghi"), null);
 });
 
@@ -348,13 +326,11 @@ void test("\"\" is the box-root landmark, and a chat opened from the Box row is 
       t.error(error);
     }
   });
-  // doctest:L316
   const box = await makeTmpBox();
   await appendHistory(box.root, { sessionId: "abc", contextDir: "" });
   await appendHistory(box.root, { sessionId: "def" });
   await seedSessionLog(box.root, "abc");
 
-  // doctest:L321
   t.check(
     {
       root: await getDirectoryForSession(box.root, "abc"),
@@ -383,13 +359,11 @@ void test("resolveSessionLogPath re-reads the whole history file to find the ent
       t.error(error);
     }
   });
-  // doctest:L342
   const box = await makeTmpBox();
   await appendHistory(box.root, { sessionId: "bound", contextDir: "_content/recipes" });
   await appendHistory(box.root, { sessionId: "unbound" });
   const entries = await loadHistoryEntries(box.root);
 
-  // doctest:L347
   t.check(
     entries.map((entry) => sessionLogPathFor(box.root, entry)),
     await Promise.all(entries.map((entry) => resolveSessionLogPath(box.root, entry.id))),
@@ -398,12 +372,10 @@ void test("resolveSessionLogPath re-reads the whole history file to find the ent
   // A bound entry's log lives under its context dir's encoded projects directory,
   // not the box root's:
 
-  // doctest:L357
   const [bound, unbound] = entries;
   assert.ok(bound && unbound);
   t.check(sessionLogPathFor(box.root, bound), not(sessionLogPathFor(box.root, { id: bound.id, engine: bound.engine })));
 
-  // doctest:L362
   t.check(sessionLogPathFor(box.root, unbound), getSessionLogPath(box.root, "unbound"));
 });
 
@@ -421,7 +393,6 @@ void test("When several sessions are associated with the same directory, the mos
       t.error(error);
     }
   });
-  // doctest:L377
   const box = await makeTmpBox();
   await appendHistory(box.root, { sessionId: "first", contextDir: "_content/recipes" });
   await appendHistory(box.root, { sessionId: "other", contextDir: "_content/todos" });
@@ -432,13 +403,10 @@ void test("When several sessions are associated with the same directory, the mos
   await seedSessionLog(box.root, "second");
   await seedSessionLog(box.root, "third");
 
-  // doctest:L387
   t.check(await getLastSessionForDirectory(box.root, "_content/recipes"), "third");
 
-  // doctest:L390
   t.check(await getLastSessionForDirectory(box.root, "_content/todos"), "other");
 
-  // doctest:L393
   t.check(await getLastSessionForDirectory(box.root, "_content/never"), null);
 });
 
@@ -455,7 +423,6 @@ void test("Sessions in the history without a contextDir (e.g.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L408
   const box = await makeTmpBox();
   await appendHistory(box.root, { sessionId: "plain" });
   await appendHistory(box.root, { sessionId: "bound", contextDir: "_content/recipes" });
@@ -464,6 +431,5 @@ void test("Sessions in the history without a contextDir (e.g.", async (t) => {
   await seedSessionLog(box.root, "bound");
   await seedSessionLog(box.root, "another-plain");
 
-  // doctest:L416
   t.check(await getLastSessionForDirectory(box.root, "_content/recipes"), "bound");
 });

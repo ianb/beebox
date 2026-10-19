@@ -7,6 +7,8 @@ issues:
 ---
 # Bound the promote retry, and stop routing documents into the photo flow
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Two defects found while setting up scanner ingest on a real laptop, one of
 which ran in production. A box whose Google authorization had expired put the
 scan promote worker into an unbounded retry loop that ran a full agent every

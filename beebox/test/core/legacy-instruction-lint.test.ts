@@ -6,10 +6,10 @@
 // so `bbx validate` reports each `CLAUDE.md`, `CLAUDE.local.md`, and
 // `.claude/CLAUDE.md` as an error. A box not yet converted still authors
 // `CLAUDE.md` and gets no finding. The validate hook makes the same check on one
-// written file (`test/cli/validate-hook/command.input.doctest.md`).
+// written file (`test/cli/validate-hook/command.input.test.ts`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -40,7 +40,6 @@ async function box(converted: boolean): Promise<string> {
 
 // A converted box reports each legacy file, one line each:
 void test("A converted box reports each legacy file, one line each:", async (t) => {
-  // doctest:L44
   t.check(await lintLegacyInstructionFiles(await box(true)), [
     ".claude/CLAUDE.md: Name instruction files AGENTS.md. A CLAUDE.md here makes Claude Code ignore every AGENTS.md.",
     "CLAUDE.md: Name instruction files AGENTS.md. A CLAUDE.md here makes Claude Code ignore every AGENTS.md.",
@@ -51,6 +50,5 @@ void test("A converted box reports each legacy file, one line each:", async (t) 
 
 // An unconverted box reports nothing:
 void test("An unconverted box reports nothing:", async (t) => {
-  // doctest:L56
   t.check(await lintLegacyInstructionFiles(await box(false)), []);
 });

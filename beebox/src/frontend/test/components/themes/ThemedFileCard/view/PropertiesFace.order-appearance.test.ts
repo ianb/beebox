@@ -9,7 +9,7 @@
 // appearance, its alternate views, then the actions menu.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -92,7 +92,6 @@ const doc = await render({
 // A doc with `contains` and a type field shows every section; the headings
 // come in the order above:
 void test("A doc with contains and a type field shows every section; the headings come i...", async (t) => {
-  // doctest:L96
   t.check(headings(doc), [
     "h2 Properties",
     "h3 Found by",
@@ -109,7 +108,6 @@ void test("A doc with contains and a type field shows every section; the heading
 // preferred view" button and, under it, a button that copies the card's whole
 // original text (the boxholder asked for it beside "Original text", 2026-10-13):
 void test("The view chooser comes last but for the actions menu.", async (t) => {
-  // doctest:L114
   t.check(textOf(doc.slice(doc.lastIndexOf("<section"))), "View Doc Original text Use preferred view Copy original text Card actions");
 });
 
@@ -118,7 +116,6 @@ void test("The view chooser comes last but for the actions menu.", async (t) => 
 // One row names the theme, its stock, and what chose it. The swatch grid sits
 // under a "Change" disclosure that is closed when Properties opens:
 void test("One row names the theme, its stock, and what chose it.", async (t) => {
-  // doctest:L124
   const section = appearance(doc);
   t.check([textOf(section.replace(/<details.*<\/details>/s, "")), /<details[^>]*><summary[^>]*>[^<]*<\/summary>/.exec(section)?.[0].replace(/ class="[^"]*"/g, "")], [
     "Appearance Paper cream · Set on this card",
@@ -128,7 +125,6 @@ void test("One row names the theme, its stock, and what chose it.", async (t) =>
   // Inside it, the card themes that go with the system theme come first, its
   // default leading; the rest wait behind "All card themes":
 
-  // doctest:L133
   t.check(/<details.*<\/details>/s.exec(section)?.[0].match(/aria-label="([^"]*)"/g)?.slice(0, 4), [
     "aria-label=\"Choose card appearance\"",
     "aria-label=\"Goes with Flat\"",
@@ -136,13 +132,11 @@ void test("One row names the theme, its stock, and what chose it.", async (t) =>
     "aria-label=\"Paper — cream\"",
   ]);
 
-  // doctest:L136
   t.check(textOf(/<details class="mt-3">.*?<\/summary>/s.exec(section)?.[0] ?? ""), "All card themes");
 });
 
 // An image card also offers the image itself; a doc does not:
 void test("An image card also offers the image itself; a doc does not:", async (t) => {
-  // doctest:L143
   const photo = await render({
     path: "_content/Porch.image.card", type: "image", schema: null,
     frontmatter: { title: "Porch", filename: { ref: "attach/porch.jpg" } },
@@ -155,7 +149,6 @@ void test("An image card also offers the image itself; a doc does not:", async (
   // A box-authored theme has no catalog swatch; the card's own choice is still
   // drawn, first, under "This card":
 
-  // doctest:L155
   const custom = appearance(await render({
     path: "_content/Studio.doc.card", type: "doc", schema: null,
     frontmatter: { title: "Studio", theme: { name: "studio-blue", stock: "ink" } },
@@ -169,7 +162,6 @@ void test("An image card also offers the image itself; a doc does not:", async (
 // A viewer who is not signed in sees the row without the disclosure, and a
 // note saying why, so the missing control is never silent:
 void test("A viewer who is not signed in sees the row without the disclosure, and a note...", async (t) => {
-  // doctest:L167
   const readOnly = appearance(await render({ path: "_content/Plan.doc.card", type: "doc", schema: null, frontmatter: {} }, { canEdit: false }));
   t.check([textOf(readOnly), readOnly.includes("<details")], [
     "Appearance Flat neutral · Default appearance Sign in to change this setting.",
@@ -179,7 +171,6 @@ void test("A viewer who is not signed in sees the row without the disclosure, an
 
 // A landmark's system theme sits in the same disclosure, below the swatch grid:
 void test("A landmark's system theme sits in the same disclosure, below the swatch grid:", async (t) => {
-  // doctest:L175
   const landmark = appearance(await render({ path: "_content/Home.landmark.card", type: "landmark", schema: null, frontmatter: {} }, { canEdit: true }));
   t.check(/<details.*<\/details>/s.exec(landmark)?.[0].match(/aria-label="(Choose card appearance|System theme)"/g), [
     "aria-label=\"Choose card appearance\"",
@@ -193,7 +184,6 @@ void test("A landmark's system theme sits in the same disclosure, below the swat
 // views, with no actions menu. It has no frontmatter to hold a theme, so its
 // Appearance row says where a theme is set instead of offering Change:
 void test("A plain Markdown file keeps its two rows, then mentions, appearance, and view...", async (t) => {
-  // doctest:L187
   const note = await render({ path: "notes/todo.md", frontmatter: {} }, { canEdit: true });
   t.check([headings(note), appearance(note).includes("<details"), note.includes("Card actions"), textOf(appearance(note))], [
     [

@@ -9,7 +9,7 @@
 // got is the whole point the first time.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -40,7 +40,6 @@ void test("A fresh init reports what it created", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L37
   const fresh = await withOutput(() => runInit(boxRoot, { branch: "main" }));
   t.check(
     {
@@ -66,7 +65,6 @@ void test("A fresh init reports what it created", async (t) => {
   // Not one line — no "ensured the directories exist", no "generated the docs", no
   // "built the search index". Those name the steps that ran, which is not news.
 
-  // doctest:L55
   const quiet = await withOutput(() => runInit(boxRoot, { branch: "main" }));
   t.check(quiet.join(""), "");
 
@@ -75,7 +73,6 @@ void test("A fresh init reports what it created", async (t) => {
   // The header earns its line by having a list under it — a bare "Installed
   // main.personality.card" would not say which box.
 
-  // doctest:L66
   await fs.rm(path.join(boxRoot, "_config/main.personality.card"));
   const refilled = await withOutput(() => runInit(boxRoot, { branch: "main" }));
   t.check(
@@ -98,7 +95,6 @@ void test("A fresh init reports what it created", async (t) => {
   // silence would read as a hang, and it is also recorded — otherwise that progress
   // line would be the entire output of the run, naming no box.
 
-  // doctest:L84
   const freshBox = path.join(dir, "bbox");
   await withOutput(() => runInit(freshBox, { branch: "main" }));
   await fs.rm(path.join(freshBox, ".beebox/search-index-manifest.json"));

@@ -18,8 +18,8 @@
 // a real 2xx.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, str } from "@ianbicking/tap-check/check";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { TRPCError } from "@trpc/server";
@@ -81,11 +81,9 @@ void test("Web-shaped input (no `source`) renders exactly as before, modulo cont
       t.error(error);
     }
   });
-  // doctest:L77
   const box = await makeTmpBox({ git: true });
   const c = caller(box.root);
 
-  // doctest:L80
   await c.debugLog.submit({
     entries: [
       { level: "error", message: "Something broke" },
@@ -93,7 +91,6 @@ void test("Web-shaped input (no `source`) renders exactly as before, modulo cont
     ],
   });
 
-  // doctest:L87
   const lines = (await box.read(LOG_PATH)).trim().split("\n");
   t.check(lines, [
     str`${isoDate()} [error] Something broke`,
@@ -105,7 +102,6 @@ void test("Web-shaped input (no `source`) renders exactly as before, modulo cont
   // The in-memory ring buffer (`debugLog.get`) is untouched by the tagging
   // change when there's no `source`.
 
-  // doctest:L104
   const got = await c.debugLog.get();
   t.check(got.entries, [
     { ts: isoDate(), level: "error", message: "Something broke" },
@@ -122,15 +118,12 @@ void test("iOS-shaped input: `source` tags every line; `at` only surfaces once i
       t.error(error);
     }
   });
-  // doctest:L116
   const box = await makeTmpBox({ git: true });
   const c = caller(box.root);
 
-  // doctest:L119
   const recentAt = new Date(Date.now() - 1000).toISOString(); // 1s ago: no tag
   const staleAt = new Date(Date.now() - 3600_000).toISOString(); // 1h ago: tagged
 
-  // doctest:L122
   await c.debugLog.submit({
     source: "ios",
     entries: [
@@ -139,7 +132,6 @@ void test("iOS-shaped input: `source` tags every line; `at` only surfaces once i
     ],
   });
 
-  // doctest:L130
   const lines = (await box.read(LOG_PATH)).trim().split("\n");
   t.check(lines, [
     str`${isoDate()} [error] [ios] capture: upload failed`,
@@ -149,7 +141,6 @@ void test("iOS-shaped input: `source` tags every line; `at` only surfaces once i
   // The ring buffer entry's `message` carries the same `[source]`/`[source@<at>]`
   // tag baked in -- `debugLog.get` stays a flat `{ts,level,message}` shape.
 
-  // doctest:L142
   const got = await c.debugLog.get();
   t.check(got.entries, [
     { ts: isoDate(), level: "error", message: "[ios] capture: upload failed" },
@@ -166,30 +157,25 @@ void test("Caps and the closed level enum are enforced (`BAD_REQUEST`)", async (
       t.error(error);
     }
   });
-  // doctest:L157
   const box = await makeTmpBox({ git: true });
   const c = caller(box.root);
 
-  // doctest:L160
   t.check(
     // Message over the 4000-char cap.
     await code(c.debugLog.submit({ entries: [{ level: "error", message: "x".repeat(4001) }] })),
     "BAD_REQUEST",
   );
 
-  // doctest:L164
   t.check(
     // Level outside the closed enum.
     await code(submitRaw(c, { entries: [{ level: "debug", message: "hi" }] })),
     "BAD_REQUEST",
   );
 
-  // doctest:L168
   // More than 100 entries in a batch.
   const tooMany = Array.from({ length: 101 }, () => ({ level: "log" as const, message: "x" }));
   t.check(await code(c.debugLog.submit({ entries: tooMany })), "BAD_REQUEST");
 
-  // doctest:L173
   t.check(
     // Bad source slug (uppercase not allowed).
     await code(c.debugLog.submit({ source: "iOS", entries: [{ level: "error", message: "hi" }] })),
@@ -198,7 +184,6 @@ void test("Caps and the closed level enum are enforced (`BAD_REQUEST`)", async (
 
   // Nothing landed in the log file from any of the rejected batches.
 
-  // doctest:L181
   t.check(await box.read(LOG_PATH).catch((e) => e.code), "ENOENT");
 });
 
@@ -215,18 +200,15 @@ void test("A plain (non-strict) z.object -- old server against a newer client th
       t.error(error);
     }
   });
-  // doctest:L196
   const box = await makeTmpBox({ git: true });
   const c = caller(box.root);
 
-  // doctest:L199
   await submitRaw(c, {
     source: "ios",
     futureTopLevelField: "ignored",
     entries: [{ level: "error", message: "still lands", at: new Date().toISOString(), futureEntryField: 123 }],
   });
 
-  // doctest:L205
   const lines = (await box.read(LOG_PATH)).trim().split("\n");
   t.check(lines, [str`${isoDate()} [error] [ios] still lands`]);
 });
@@ -246,14 +228,11 @@ void test("Unlike the old lenient appendRollingLog, this route's write goes thro
       t.error(error);
     }
   });
-  // doctest:L223
   const box = await makeTmpBox({ git: true });
   const c = caller(box.root);
 
-  // doctest:L226
   await box.write(`${LOG_PATH}/blocker`, "occupying the path as a directory");
 
-  // doctest:L228
   t.check(await code(c.debugLog.submit({ entries: [{ level: "error", message: "should not silently vanish" }] })), "INTERNAL_SERVER_ERROR");
 
   // The in-memory ring is committed only after the append succeeds, so a failed
@@ -261,7 +240,6 @@ void test("Unlike the old lenient appendRollingLog, this route's write goes thro
   // entries the mutation reported as lost, and the client's retry would duplicate
   // them.
 
-  // doctest:L238
   const got = await c.debugLog.get();
   t.check(got.entries, []);
 });
@@ -279,10 +257,8 @@ void test("Pins the non-batched tRPC HTTP-RPC shape a Swift URLSession POST actu
       t.error(error);
     }
   });
-  // doctest:L254
   const server = await makeTestServer();
 
-  // doctest:L256
   const res = await server.request({
     method: "POST",
     url: "/api/trpc/debugLog.submit",
@@ -290,7 +266,6 @@ void test("Pins the non-batched tRPC HTTP-RPC shape a Swift URLSession POST actu
   });
   t.check(res.statusCode, 200);
 
-  // doctest:L264
   t.check(res.body, {
     result: {
       data: {
@@ -299,7 +274,6 @@ void test("Pins the non-batched tRPC HTTP-RPC shape a Swift URLSession POST actu
     },
   });
 
-  // doctest:L267
   const line = (await server.read(LOG_PATH)).trim();
   t.check(line, str`${isoDate()} [error] [ios@2026-08-03T12:00:00Z] capture: probe`);
 });
@@ -320,21 +294,17 @@ void test("test/mobile-contract/fixtures/debug-log-submit/ holds the same vector
       t.error(error);
     }
   });
-  // doctest:L286
   const server = await makeTestServer();
   const fixtures = loadSubmitFixtures();
 
-  // doctest:L289
   t.check(fixtures.map(({ file }) => file), ["capture-upload-failure.json", "mixed-level-batch.json"]);
 
-  // doctest:L292
   await t.checkText(await postSubmitFixtures(server, fixtures), `capture-upload-failure.json 200 {"result":{"data":{"ok":true}}}
 mixed-level-batch.json 200 {"result":{"data":{"ok":true}}}`);
 
   // Every fixture entry landed as its own tagged line, in order, with the message
   // the fixture pins.
 
-  // doctest:L301
   const lines = (await server.read(LOG_PATH)).trim().split("\n");
   const expectedMessages = fixtures.flatMap(({ fixture }) => fixture.expected.entries);
   t.check(lines, expectedMessages.map((entry) => str`${isoDate()} [${entry.level}] [ios@${entry.at}] ${entry.message}`));

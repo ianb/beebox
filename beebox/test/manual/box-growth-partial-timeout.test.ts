@@ -5,7 +5,7 @@
 // expensive for every run. The weekly manual-test job runs it instead.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { scanBoxGrowth } from "../../src/core/box-growth/scan.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
@@ -20,7 +20,6 @@ void test("A native traversal that times out retains every complete type/path pa
       t.error(error);
     }
   });
-  // doctest:L17
   const partialBox = await makeTmpBox();
   const fakeFind = partialBox.path("fake-find.sh");
   await fs.writeFile(fakeFind, [

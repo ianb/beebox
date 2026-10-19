@@ -8,7 +8,7 @@
 // save's own updates and deletions.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mergeSyncTokens } from "../../../src/connectors/google-calendar/state.js";
 
 // ## Per-key resolution: updated wins, untouched defers, deleted stays deleted
@@ -18,7 +18,6 @@ import { mergeSyncTokens } from "../../../src/connectors/google-calendar/state.j
 // save's value, `family` survives from fresh, and `work` is removed — a plain
 // spread would have resurrected the stale token.
 void test("This save advanced primary and cleared work (410 → forced full resync); meanw...", async (t) => {
-  // doctest:L22
   const merged = mergeSyncTokens({
     snapshot: { primary: "t0", work: "t0", family: "t0" },
     fresh: { primary: "t0", work: "t0", family: "t1-concurrent" },
@@ -37,7 +36,6 @@ void test("This save advanced primary and cleared work (410 → forced full resy
 // second save's re-stored token differs from its (cleared) baseline and wins —
 // against a fixed start-of-sync snapshot it would look "unchanged" and be lost.
 void test("The 410 path saves twice:", async (t) => {
-  // doctest:L39
   // Save 1: token cleared. Baseline was {primary: t0}.
   const afterClear = mergeSyncTokens({
     snapshot: { primary: "t0" },
@@ -46,7 +44,6 @@ void test("The 410 path saves twice:", async (t) => {
   });
   t.check(afterClear, {});
 
-  // doctest:L50
   // Save 2: full resync re-stored the same token value. Baseline is now {} (the
   // last save), so the re-store is a visible delta and lands.
   const afterResync = mergeSyncTokens({

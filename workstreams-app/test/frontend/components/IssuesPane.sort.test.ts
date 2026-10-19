@@ -5,7 +5,7 @@
 // and refreshes those records.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { filterAndSortIssues } from "../../../src/frontend/components/IssuesPane/panel.js";
 
 const records = [
@@ -15,7 +15,6 @@ const records = [
 ];
 
 void test("line 17", async (t) => {
-  // doctest:L18
   t.check(
     {
       sorted: filterAndSortIssues(records, { sort: "priority" }).map((issue) => issue.slug),

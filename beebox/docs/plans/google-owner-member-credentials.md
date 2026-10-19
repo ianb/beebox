@@ -6,6 +6,8 @@ issues: []
 ---
 # Google owners can administer local member credentials
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan lets an authenticated Google owner create invite and password-reset
 links without first creating a local owner password on the host. Invite
 acceptance can initialize a credential store that contains members and no local

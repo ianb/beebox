@@ -1,11 +1,11 @@
 // # ScanVision service — backend selection
 //
 // The `ScanVision` service is the photo-analysis backend behind `bbx scan-import`'s
-// photo flow (design: `docs/plans/scan-vision-claude.md`). This doctest covers the
+// photo flow (design: `docs/plans/scan-vision-claude.md`). This test covers the
 // backend selection rules.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { selectScanVisionBackend } from "../../src/services/scan-vision.js";
 
 // ## Backend selection
@@ -17,7 +17,6 @@ import { selectScanVisionBackend } from "../../src/services/scan-vision.js";
 // (`core/gemini-key.ts`, the machine secret store) when it has one, OpenRouter
 // otherwise — so there is one place a Gemini key is resolved.
 void test("Default (no BBXSCANVISION) is Claude — the zero-setup path.", async (t) => {
-  // doctest:L21
   const claude = selectScanVisionBackend({}, null);
   t.check(claude, {
     ok: true,
@@ -26,7 +25,6 @@ void test("Default (no BBXSCANVISION) is Claude — the zero-setup path.", async
     },
   });
 
-  // doctest:L25
   const gemini = selectScanVisionBackend({ BBX_SCAN_VISION: "gemini" }, { via: "direct", apiKey: "placeholder-gemini-key" });
   t.check(gemini, {
     ok: true,
@@ -39,17 +37,14 @@ void test("Default (no BBXSCANVISION) is Claude — the zero-setup path.", async
     },
   });
 
-  // doctest:L29
   const noKey = selectScanVisionBackend({ BBX_SCAN_VISION: "gemini" }, null);
   t.check(noKey.ok ? "ok" : noKey.error, "BBX_SCAN_VISION=gemini but no key can reach the model — grant the \"gemini\" or \"openrouter\" secret to this box");
 
-  // doctest:L33
   const typo = selectScanVisionBackend({ BBX_SCAN_VISION: "gemnii" }, { via: "direct", apiKey: "placeholder-gemini-key" });
   t.check(typo.ok ? "ok" : typo.error, "BBX_SCAN_VISION=gemnii is not a valid backend (valid: claude, gemini)");
 
   // A key present but empty is still "no key" — the same fail-closed answer:
 
-  // doctest:L42
   const emptyKey = selectScanVisionBackend({ BBX_SCAN_VISION: "gemini" }, { via: "direct", apiKey: "" });
   t.check(emptyKey.ok, false);
 });

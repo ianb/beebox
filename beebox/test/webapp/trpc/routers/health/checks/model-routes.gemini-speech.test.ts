@@ -9,7 +9,7 @@
 // style.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -43,7 +43,6 @@ void test("Gemini voice with only an OpenRouter key fails, naming the fix", asyn
       t.error(error);
     }
   });
-  // doctest:L40
   const box = await boxWith({ backend: "gemini", grants: ["openrouter"] });
   const check = await geminiKeyCheck(box.root);
   t.check(({ ok: check.ok, message: check.message }), {
@@ -64,7 +63,6 @@ void test("There the OpenRouter key is a working route for audio questions, and 
       t.error(error);
     }
   });
-  // doctest:L56
   const box = await boxWith({ backend: "openai", grants: ["openrouter"] });
   const check = await geminiKeyCheck(box.root);
   t.check(({ ok: check.ok, message: check.message }), {

@@ -5,7 +5,7 @@
 // and a corrupted file is loud.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { loadTtsConfig, updateTtsConfig } from "../../../src/core/tts/config.js";
@@ -23,7 +23,6 @@ void test("The default is openai, and that is the point:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L20
   const box = await makeTmpBox();
   t.check(await loadTtsConfig(box.root), {
     backend: "openai",
@@ -39,13 +38,11 @@ void test("Choosing a backend writes it, and reads back", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L32
   const box = await makeTmpBox();
   t.check(await updateTtsConfig(box.root, { backend: "gemini" }), {
     backend: "gemini",
   });
 
-  // doctest:L36
   t.check(await loadTtsConfig(box.root), {
     backend: "gemini",
   });
@@ -63,7 +60,6 @@ void test("The boxholder can edit this by hand, and a typo must not silently fal
       t.error(error);
     }
   });
-  // doctest:L50
   const box = await makeTmpBox();
   await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
   await fs.writeFile(path.join(box.root, "_config/tts.json"), '{"backend":"elevenlabs"}\n');
@@ -82,7 +78,6 @@ void test("Absent means defaults; malformed JSON means something is wrong and sh
       t.error(error);
     }
   });
-  // doctest:L67
   const box = await makeTmpBox();
   await fs.mkdir(path.join(box.root, "_config"), { recursive: true });
   await fs.writeFile(path.join(box.root, "_config/tts.json"), "{not json\n");
@@ -94,7 +89,6 @@ void test("Absent means defaults; malformed JSON means something is wrong and sh
 // `loadTtsConfig()` is called from paths that may have no box in scope; it
 // answers rather than throwing.
 void test("loadTtsConfig() is called from paths that may have no box in scope; it answer...", async (t) => {
-  // doctest:L84
   t.check(await loadTtsConfig(undefined), {
     backend: "openai",
   });

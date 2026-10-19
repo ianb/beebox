@@ -11,8 +11,8 @@
 // none of them appears in the output.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -51,11 +51,11 @@ async function runCaptured(fn: () => Promise<unknown>) {
   let exitCode: number | string | undefined;
   console.log = (...args) => { logs.push(args.join(" ")); };
   console.error = (...args) => { errors.push(args.join(" ")); };
-  process.exit = (code?: number | string | null) => { exitCode = code ?? 0; throw new Error("__doctest_process_exit__"); };
+  process.exit = (code?: number | string | null) => { exitCode = code ?? 0; throw new Error("__test_process_exit__"); };
   try {
     await fn();
   } catch (e) {
-    if (!(e instanceof Error) || e.message !== "__doctest_process_exit__") throw e;
+    if (!(e instanceof Error) || e.message !== "__test_process_exit__") throw e;
   } finally {
     console.log = origLog;
     console.error = origError;
@@ -114,7 +114,6 @@ void test("--dry-run writes nothing, so it needs no --agent-confirmed.", async (
       t.error(error);
     }
   });
-  // doctest:L101
   const { dir, boxes } = await makeMachine();
   const planned = await runCaptured(() => runMigrateSecrets({ root: boxes, dryRun: true }));
   t.checkText(planned.logs.filter((line) => line !== "").join("\n").replaceAll(boxes, "<boxes>"), `Boxes examined: alpha, beta, gamma
@@ -131,7 +130,6 @@ Dry run — nothing was written.`);
   // is reported rather than imported under a guessed name: an entry no reader ever
   // asks for would be a credential moved for nothing.
 
-  // doctest:L121
   const secretsFile = process.env.BBX_SECRETS_FILE;
   invariant(secretsFile, "makeMachine points BBX_SECRETS_FILE at a temp store");
   t.check(existsSync(secretsFile), false);
@@ -146,14 +144,12 @@ Dry run — nothing was written.`);
   // string their consumer parses (`secrets/json-secret.ts`), with a fixed key order
   // so two boxes holding one credential dedupe instead of differing by key order.
 
-  // doctest:L138
   const applied = await runCaptured(() => runMigrateSecrets({ root: boxes, agentConfirmed: true }));
   t.checkText(applied.logs.slice(-4).join("\n"), `Created 3 entries, wrote 4 grants, left 0 existing entries untouched.
 1 box/name pair(s) held a conflicting value and were parked — see the CONFLICT lines above.
 The original files are LEFT IN PLACE — readers still fall back to them during the transition.
 Check each box with \`bbx secrets status <box>\`, then delete the files in a separate pass.`);
 
-  // doctest:L148
   const after = await secretStore();
   t.check(after.grants, {
     beta: { deepgram: "server", mistral: "server" },
@@ -165,7 +161,6 @@ Check each box with \`bbx secrets status <box>\`, then delete the files in a sep
 
   // Nothing the migration printed carried a value:
 
-  // doctest:L172
   const output = [...planned.logs, ...applied.logs].join("\n");
   t.check(output, not(any(String).includes("placeholder-shared-mistral")));
   t.check(output, not(any(String).includes("placeholder-deepgram")));
@@ -176,7 +171,6 @@ Check each box with \`bbx secrets status <box>\`, then delete the files in a sep
   // again after a box is added, and a rotated key is not silently reverted to what
   // the stale file still holds.
 
-  // doctest:L184
   const again = await runCaptured(() => runMigrateSecrets({ root: boxes, agentConfirmed: true }));
   t.check(again.logs.find((line) => line.startsWith("Created")), "Created 0 entries, wrote 0 grants, left 3 existing entries untouched.");
 
@@ -186,7 +180,6 @@ Check each box with \`bbx secrets status <box>\`, then delete the files in a sep
   // unchanged; a single-box secret is skipped with a note rather than failing the
   // run, because the new box needs its own token, not alpha's.
 
-  // doctest:L196
   await setAndGrantSecret({ name: "bucket-token/alpha", value: "placeholder-bucket-token", slug: "alpha", access: "server", owningBox: "alpha", shareable: false });
   const copied = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "alpha", toBoxOrRoot: "delta", agentConfirmed: true }));
   t.check(copied.logs, [
@@ -201,7 +194,6 @@ Check each box with \`bbx secrets status <box>\`, then delete the files in a sep
   // source whose grants are **all single-box** must NOT trigger that fallback, or
   // the new box would be handed the very token the skip just refused.
 
-  // doctest:L213
   const noGrants = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "zeta", toBoxOrRoot: "delta", agentConfirmed: true }));
   const onlySingle = await runCaptured(() => runCopyGrants({ fromBoxOrRoot: "gamma", toBoxOrRoot: "delta", agentConfirmed: true }));
   t.check(noGrants.logs[0], 'Nothing copied: "zeta" has no grants at all.');
@@ -210,7 +202,6 @@ Check each box with \`bbx secrets status <box>\`, then delete the files in a sep
   // And the store still holds one copy of the shared key, now granted to three
   // boxes — which is the whole point of the exercise:
 
-  // doctest:L226
   const listing = await listSecrets();
   t.check(listing.map((entry) => ({ name: entry.name, grants: Object.keys(entry.grants) })), [
     { name: "bucket-token/alpha", grants: ["alpha"] },
@@ -237,11 +228,9 @@ void test("The dangerous case:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L250
   const machine = await makeMachine();
   await setSecret({ name: "mistral", value: JSON.parse(MISTRAL_SHARED).apiKey + "-rotated" });
 
-  // doctest:L253
   const planned = await runCaptured(() => runMigrateSecrets({ root: machine.boxes, dryRun: true }));
   t.checkText(planned.logs.filter((line) => line.includes("mistral")).join("\n"), `  mistral — already in the store (left as it is); grants: 
   mistral/alpha — new entry, single-box; grants: alpha, beta
@@ -255,7 +244,6 @@ void test("The dangerous case:", async (t) => {
 
   // Applying it grants nobody the rotated key they do not have:
 
-  // doctest:L270
   const applied = await runCaptured(() => runMigrateSecrets({ root: machine.boxes, agentConfirmed: true }));
   t.checkText(applied.logs.slice(-4).join("\n"), `Created 3 entries, wrote 4 grants, left 1 existing entry untouched.
 3 box/name pair(s) held a conflicting value and were parked — see the CONFLICT lines above.

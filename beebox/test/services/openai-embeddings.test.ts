@@ -3,12 +3,12 @@
 // `EmbeddingsService` wraps OpenAI's `/v1/embeddings` endpoint.
 // `getOpenAiEmbeddingsKey` resolves the box's `openai` grant from the
 // machine secret store — the grant semantics are covered in
-// `test/core/secrets/lifecycle.keys.doctest.md`; what matters here is that an
+// `test/core/secrets/lifecycle.keys.test.ts`; what matters here is that an
 // unconfigured box yields `null` rather than throwing, so the search path can
 // degrade to text mode.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   EMBEDDING_DIMENSIONS,
   parseEmbeddingsResponse,

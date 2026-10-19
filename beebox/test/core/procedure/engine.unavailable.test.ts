@@ -11,8 +11,8 @@
 // quota exhaustion, a silently-successful no-op step.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
@@ -34,7 +34,6 @@ const UNAVAILABILITY = {
   message: "You've hit your usage limit.",
 };
 
-
 // ## The step fails with the cause; nothing retries after it
 void test("The step fails with the cause; nothing retries after it", async (t) => {
   t.teardown(async () => {
@@ -44,7 +43,6 @@ void test("The step fails with the cause; nothing retries after it", async (t) =
       t.error(error);
     }
   });
-  // doctest:L43
   const box = await makeTmpBox({ git: true });
   await box.write("_config/procedures/quota.procedure.card", `---
 name: quota

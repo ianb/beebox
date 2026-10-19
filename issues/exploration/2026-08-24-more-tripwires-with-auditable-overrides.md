@@ -10,6 +10,8 @@ discovered-in: commit-provenance workstream — reviewing what Contract-Unchange
 priority: normal
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 `Contract-Unchanged` (`.husky/pre-commit` + `.husky/commit-msg` +
 `bin/mobile-contract-check.ts`) is a specific shape: a **heuristic** check that
 can false-positive, so a hard block is wrong and `--no-verify` is worse; the

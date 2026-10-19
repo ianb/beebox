@@ -9,8 +9,8 @@
 // (2026-08-01).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import {
   parseSessionLog,
   MAX_RETAINED_BYTES,
@@ -57,12 +57,10 @@ void test("The fixture is ~2 400 lines carrying ~60 KB of payload each — a 120
       t.error(error);
     }
   });
-  // doctest:L38
   const box = await makeTmpBox();
   const logPath = box.path("big.jsonl");
   await writeBigSessionLog({ logPath, lines: 2400, payloadBytes: 60_000 });
 
-  // doctest:L42
   const out = await parseUnderHeapCap({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 }, heapMb: 128 });
   // `retainedMb` is a heap measurement.
   t.check(out, { entries: 200, total: 1800, hasMore: true, stubs: 0, stubSample: null, retainedMb: any(Number) });
@@ -77,7 +75,6 @@ void test("The fixture is ~2 400 lines carrying ~60 KB of payload each — a 120
   // A page request of the same transcript is bounded the same way — retention is
   // the window, not the file:
 
-  // doctest:L63
   const pageOut = await parseUnderHeapCap({ logPath, slice: { mode: "page", offset: 10, limit: 40 }, heapMb: 128 });
   t.check(pageOut, { entries: 40, total: 1800, hasMore: true, stubs: 0, stubSample: null, retainedMb: any(Number) });
 });
@@ -98,12 +95,10 @@ void test("The parser separately stubs any single raw line over 256 KiB.", async
       t.error(error);
     }
   });
-  // doctest:L87
   const box = await makeTmpBox();
   const logPath = box.path("byte-budget.jsonl");
   await writeBigSessionLog({ logPath, lines: 320, payloadBytes: 180_000 });
 
-  // doctest:L91
   const result = await parseSessionLog({
     logPath,
     slice: { mode: "tail", tail: 200 },
@@ -119,7 +114,6 @@ void test("The parser separately stubs any single raw line over 256 KiB.", async
   // short page reports `hasMore`, so callers advance by the number actually
   // returned and can fetch the next contiguous page without skipping entries.
 
-  // doctest:L111
   const page = await parseSessionLog({
     logPath,
     slice: { mode: "page", offset: 0, limit: 200 },
@@ -140,7 +134,6 @@ void test("Tail mode keeps the last N entries, and the count stays exact", async
       t.error(error);
     }
   });
-  // doctest:L131
   const box = await makeTmpBox();
   const lines = [];
   for (let i = 0; i < 6; i++) {
@@ -153,7 +146,6 @@ void test("Tail mode keeps the last N entries, and the count stays exact", async
   }
   await box.write("log.jsonl", lines.join("\n"));
 
-  // doctest:L143
   const result = await parseSessionLog({
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 2 },
@@ -164,7 +156,6 @@ void test("Tail mode keeps the last N entries, and the count stays exact", async
   // (typed/spoken) user turns — the floor that keeps the chat page from opening on
   // an assistant monologue with no question in view:
 
-  // doctest:L161
   const widened = await parseSessionLog({
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 1, minRealUserMessages: 4 },
@@ -174,7 +165,6 @@ void test("Tail mode keeps the last N entries, and the count stays exact", async
   // Asking for more real user messages than the transcript holds keeps everything
   // it has — up to the hard ceiling, never more:
 
-  // doctest:L173
   const all = await parseSessionLog({
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 1, minRealUserMessages: 99 },
@@ -183,7 +173,6 @@ void test("Tail mode keeps the last N entries, and the count stays exact", async
 
   // A slice past the ceiling is a programming error, not a bigger read:
 
-  // doctest:L184
   await t.checkThrows(
     () => parseSessionLog({
       logPath: box.path("log.jsonl"),
@@ -207,7 +196,6 @@ void test("A toolresult rides on its tooluse block rather than appearing as its 
       t.error(error);
     }
   });
-  // doctest:L203
   const box = await makeTmpBox();
   await box.write("log.jsonl", [
     JSON.stringify({
@@ -227,7 +215,6 @@ void test("A toolresult rides on its tooluse block rather than appearing as its 
     }),
   ].join("\n"));
 
-  // doctest:L222
   const result = await parseSessionLog({
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 200 },
@@ -269,7 +256,6 @@ void test("The graft window is the trailing assistant run and nothing more, capp
       t.error(error);
     }
   });
-  // doctest:L245
   const box = await makeTmpBox();
   const lines = [];
   for (let i = 0; i < 300; i++) {
@@ -297,7 +283,6 @@ void test("The graft window is the trailing assistant run and nothing more, capp
   }));
   await box.write("log.jsonl", lines.join("\n"));
 
-  // doctest:L272
   const result = await parseSessionLog({
     logPath: box.path("log.jsonl"),
     slice: { mode: "tail", tail: 400 },

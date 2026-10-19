@@ -5,12 +5,12 @@
 // presentation marker.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { capture, isoDate } from "agent-doctest/check";
+import { capture, isoDate } from "@ianbicking/tap-check/check";
 import { execa } from "execa";
 
 const repoRoot = path.resolve(process.cwd(), "..");

@@ -11,8 +11,8 @@
 // registered as a migration is load-bearing in a path no one runs by hand.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { containing } from "@ianbicking/tap-check/check";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseProcedureDefinition } from "../../src/schemas/procedure.js";
@@ -41,23 +41,19 @@ const ungated = migrationProcedures.filter((p) => definitions.has(p) && !hasAbor
 
 // Every shipped template is valid frontmatter that satisfies the procedure schema:
 void test("Every shipped template is valid frontmatter that satisfies the procedure schema:", async (t) => {
-  // doctest:L44
   t.check(unparseable, []);
 });
 
 // At least one template exists, so an empty directory cannot pass the check above
 // by vacuum:
 void test("At least one template exists, so an empty directory cannot pass the check abo...", async (t) => {
-  // doctest:L52
   t.check(names, containing(["refresh-maps.procedure.card"]));
 });
 
 // Every procedure named by the migration registry ships a template, and every one
 // of those carries an abort gate:
 void test("Every procedure named by the migration registry ships a template, and every o...", async (t) => {
-  // doctest:L60
   t.check(missingTemplate, []);
 
-  // doctest:L63
   t.check(ungated, []);
 });

@@ -7,6 +7,8 @@ area: dev-infra
 priority: backlog
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Claude Code can run agents in a hosted cloud sandbox (claude.ai/code / the Agent
 tool's `isolation: "remote"`): an ephemeral Linux container that clones the repo,
 runs a setup/bootstrap step, then hands an agent a shell with (optionally

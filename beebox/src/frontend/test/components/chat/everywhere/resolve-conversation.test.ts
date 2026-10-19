@@ -6,7 +6,7 @@
 // turning arbitrary missing ids into new chats.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { resolveConversation } from "../../../../src/components/chat/everywhere/resolve-conversation.js";
 import { ReservationReceipts } from "../../../../src/components/chat/everywhere/reservation-receipts.js";
 import { QueryClient } from "@tanstack/react-query";
@@ -83,7 +83,6 @@ function cachedBootstrapUtils(options: {
 // Constructing a new store over the same storage simulates a reload in that tab.
 // The server-minted id and all context needed to repeat the reservation survive.
 void test("Constructing a new store over the same storage simulates a reload in that tab.", async (t) => {
-  // doctest:L85
   const storage = new MemoryStorage();
   const receipts = new ReservationReceipts(storage, "paper-cards/test1");
   const reserveCalls: Array<{ sessionId: string; contextDir: string; engine?: string; model?: string }> = [];
@@ -124,7 +123,6 @@ void test("Constructing a new store over the same storage simulates a reload in 
   // recovery: it replaces a stale cached `chat.directoryFor` answer (here the
   // pre-recovery `""`) without a request of its own.
 
-  // doctest:L115
   let reservationRestored = false;
   const recoveryUtils = cachedBootstrapUtils({
     bootstraps: [{ get kind(): string {
@@ -173,7 +171,6 @@ void test("Constructing a new store over the same storage simulates a reload in 
 // An arbitrary explicit id has no receipt, and a receipt stored for another API
 // scope cannot authorize it. Neither case calls the reservation endpoint.
 void test("An arbitrary explicit id has no receipt, and a receipt stored for another API...", async (t) => {
-  // doctest:L147
   const storage = new MemoryStorage();
   const paperReceipts = new ReservationReceipts(storage, "paper-cards/test1");
   paperReceipts.put({ sessionId: "other-scope-id", contextDir: "papers", engine: "claude", model: "sonnet" });
@@ -203,7 +200,6 @@ void test("An arbitrary explicit id has no receipt, and a receipt stored for ano
 // the race where the chat became real; if it is still missing or empty, it stays
 // unavailable under the receipt's original landmark.
 void test("A matching receipt never makes taken mean success.", async (t) => {
-  // doctest:L169
   const storage = new MemoryStorage();
   const receipts = new ReservationReceipts(storage, "paper-cards/test1");
   receipts.put({ sessionId: "still-missing", contextDir: "papers", engine: "claude" });
@@ -224,7 +220,6 @@ void test("A matching receipt never makes taken mean success.", async (t) => {
 // If the retry proves the chat became real, normal bootstrap wins and its stale
 // receipt is removed.
 void test("If the retry proves the chat became real, normal bootstrap wins and its stale...", async (t) => {
-  // doctest:L186
   const storage = new MemoryStorage();
   const receipts = new ReservationReceipts(storage, "paper-cards/test1");
   receipts.put({ sessionId: "became-real", contextDir: "papers", engine: "claude" });
@@ -244,7 +239,6 @@ void test("If the retry proves the chat became real, normal bootstrap wins and i
 // request itself fails: a missing or unexpectedly empty bootstrap must stay on
 // that conversation rather than minting a fresh default chat.
 void test("Passive navigation can restore a remembered conversation without naming it in...", async (t) => {
-  // doctest:L204
   const storage = new MemoryStorage();
   const receipts = new ReservationReceipts(storage, "paper-cards/test1");
   receipts.put({ sessionId: "remembered", contextDir: "papers", engine: "claude" });
@@ -284,7 +278,6 @@ void test("Passive navigation can restore a remembered conversation without nami
 // Codex cannot accept a client-coined id, so it still carries context, engine,
 // model, and feature seeds in a pending `start` target.
 void test("Codex cannot accept a client-coined id, so it still carries context, engine,...", async (t) => {
-  // doctest:L233
   const utils = fakeUtils({ boxEngine: "codex", features: { audience: "teacher" } });
   let reserves = 0;
   const result = await resolveConversation({ utils: utils.utils,
@@ -313,7 +306,6 @@ void test("Codex cannot accept a client-coined id, so it still carries context, 
 // An old box default or remembered chat does not require the user to recover an
 // unavailable transcript. Explicit picks above still preserve the requested id.
 void test("An old box default or remembered chat does not require the user to recover an...", async (t) => {
-  // doctest:L251
   const utils = fakeUtils({ boxEngine: "codex", bootstraps: [unavailable("old-default")] });
   const result = await resolveConversation({ utils: utils.utils,
     reserve: async () => ({ kind: "unsupported" }), receipts: null,
@@ -338,7 +330,6 @@ void test("An old box default or remembered chat does not require the user to re
 //
 // A fresh reservation and the Codex `start` fallback are both unstarted.
 void test("Openers belong on a conversation the resolver created for this tab that has n...", async (t) => {
-  // doctest:L273
   const receipts = new ReservationReceipts(new MemoryStorage(), "paper-cards/test1");
   const reserved = await resolveConversation({ utils: fakeUtils({ boxEngine: "claude" }).utils,
     reserve: async (input) => ({ kind: "reserved", sessionId: input.sessionId }), receipts,
@@ -356,7 +347,6 @@ void test("Openers belong on a conversation the resolver created for this tab th
 // unstarted. The same empty bootstrap without a receipt is an existing empty
 // session, and a session with history is resumed; neither is unstarted.
 void test("Reloading a reserved session that still holds this tab's receipt keeps it uns...", async (t) => {
-  // doctest:L289
   const storage = new MemoryStorage();
   const receipts = new ReservationReceipts(storage, "paper-cards/test1");
   receipts.put({ sessionId: "mine", contextDir: "", engine: "claude" });
@@ -377,7 +367,6 @@ void test("Reloading a reserved session that still holds this tab's receipt keep
   // keeps "New conversation", the label it had before the reload; an untitled
   // session that is not unstarted reads "Conversation".
 
-  // doctest:L308
   t.check(
     ({ reload: reload.selection.kind === "ready" ? reload.selection.label : null,
       emptyNoReceipt: emptyNoReceipt.selection.kind === "ready" ? emptyNoReceipt.selection.label : null }),
@@ -392,7 +381,6 @@ void test("Reloading a reserved session that still holds this tab's receipt keep
 // unstarted; a restored session target is unstarted only while this tab holds
 // its receipt.
 void test("A restored start target (a Codex chat chosen before its first send) is unstar...", async (t) => {
-  // doctest:L318
   const receipts = new ReservationReceipts(new MemoryStorage(), "paper-cards/test1");
   receipts.put({ sessionId: "held", contextDir: "", engine: "claude" });
   const utils = fakeUtils({}).utils;

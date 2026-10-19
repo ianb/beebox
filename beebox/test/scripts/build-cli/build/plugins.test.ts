@@ -6,8 +6,8 @@
 // `bundle.ts` (`build:cli`) imports it; `pnpm build` runs it after `tsc`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { mkdtemp, mkdir, writeFile, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
@@ -40,7 +40,6 @@ const rel = (p: string | null) => (p === null ? null : relative(root, p));
 // Every directory under `src/plugins/` is an entry, sorted by name, with the
 // entry modules it holds; a file directly in `src/plugins/` is not a plugin.
 void test("Every directory under src/plugins/ is an entry, sorted by name, with the entr...", async (t) => {
-  // doctest:L43
   t.check(entries.map((e) => ({ name: e.name, index: rel(e.index), view: rel(e.view) })), [
     {
       name: "alpha",
@@ -59,7 +58,6 @@ void test("Every directory under src/plugins/ is an entry, sorted by name, with 
     },
   ]);
 
-  // doctest:L51
   t.check(await listPluginEntries(join(root, "no-such-root")), []);
 });
 
@@ -70,7 +68,6 @@ void test("Every directory under src/plugins/ is an entry, sorted by name, with 
 // package's `exports` with `*` replaced by the plugin name, so the map never
 // names a file the build does not emit.
 void test("pluginOutfiles is the dist-relative file list one entry produces.", async (t) => {
-  // doctest:L63
   const pkg = JSON.parse(await readFile(join(PACKAGE_ROOT, "package.json"), "utf8"));
   const indexTarget = pkg.exports["./plugins/*"].default;
   const viewTarget = pkg.exports["./plugins/*/view"].default;
@@ -79,14 +76,12 @@ void test("pluginOutfiles is the dist-relative file list one entry produces.", a
     "./dist/plugins/*/view.js",
   ]);
 
-  // doctest:L69
   t.check(entries.flatMap((e) => pluginOutfiles(e).map((f) => `./dist/${f}`)), [
     "./dist/plugins/alpha/plugin.js",
     "./dist/plugins/alpha/view.js",
     "./dist/plugins/beta/plugin.js",
   ]);
 
-  // doctest:L72
   t.check(
     entries.flatMap((e) =>
       pluginOutfiles(e).map((f) => {
@@ -120,13 +115,11 @@ void test("The esbuild plugin turns import \"x.css\" into JavaScript that append
       process.exitCode = 1;
     }
   });
-  // doctest:L91
   await write("css/shared.css", ".concept { color: red }\n");
   await write("css/other.css", ".other { color: blue }\n");
   await write("css/one.ts", "import \"./shared.css\";\nexport const one = 1;\n");
   await write("css/two.ts", "import \"./shared.css\";\nimport \"./other.css\";\nexport const two = 2;\n");
 
-  // doctest:L96
   async function bundleText(entry: string) {
     const result = await build({
       entryPoints: [join(root, "css", entry)],
@@ -159,7 +152,6 @@ void test("The esbuild plugin turns import \"x.css\" into JavaScript that append
     };
   }
 
-  // doctest:L128
   const oneJs = await bundleText("one.ts");
   const twoJs = await bundleText("two.ts");
   const doc = fakeDocument();
@@ -172,13 +164,11 @@ void test("The esbuild plugin turns import \"x.css\" into JavaScript that append
     str`style[data-bbx-plugin-css=${any(String)}] .other { color: blue }`,
   ]);
 
-  // doctest:L142
   t.check(PLUGIN_CSS_ATTRIBUTE, "data-bbx-plugin-css");
 
   // Without a `document` (Node, or `bbx view test` rendering on the server) the
   // module loads and appends nothing.
 
-  // doctest:L150
   new Function("document", oneJs)(undefined);
   t.check("loaded", "loaded");
 });

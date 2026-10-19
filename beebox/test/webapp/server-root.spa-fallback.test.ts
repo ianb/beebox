@@ -11,7 +11,7 @@
 // upgrade, which the browser API cannot attach headers to).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
@@ -40,7 +40,7 @@ registerSpaFallback(server, {
 const ticket = createMobilePairingTicket(box.root);
 const redeemed = await redeemMobilePairingTicket(box.root, {
   pairingToken: ticket.token,
-  deviceLabel: "doctest mobile",
+  deviceLabel: "test mobile",
 });
 if (!redeemed) throw new Error("mobile pairing failed");
 
@@ -60,7 +60,6 @@ void test("Unauthenticated SPA fallback is still blocked in hub mode", async (t)
       t.error(error);
     }
   });
-  // doctest:L50
   const unauthenticated = await server.inject({
     method: "GET",
     url: "/test/chat?nativeComposer=1",
@@ -80,7 +79,6 @@ void test("Unauthenticated SPA fallback is still blocked in hub mode", async (t)
 
   // ## A mobile bearer token can load the embedded chat document
 
-  // doctest:L64
   const bearerResponse = await server.inject({
     method: "GET",
     url: "/test/chat?nativeComposer=1",
@@ -102,7 +100,6 @@ void test("Unauthenticated SPA fallback is still blocked in hub mode", async (t)
   // The cookie is what carries a WebKit-initiated reload, which re-issues the bare
   // URL with no Authorization header.
 
-  // doctest:L82
   const cookie = signMobileSession(box.root, {
     deviceId: redeemed.deviceId,
     createdBy: null,
@@ -130,7 +127,6 @@ void test("Unauthenticated SPA fallback is still blocked in hub mode", async (t)
   // access log or in history was replayable until someone manually revoked the
   // device. Passing it as `?mobileToken=` now authenticates nothing.
 
-  // doctest:L106
   const queryResponse = await server.inject({
     method: "GET",
     url: `/test/chat?nativeComposer=1&mobileToken=${encodeURIComponent(redeemed.deviceToken)}`,
@@ -140,7 +136,6 @@ void test("Unauthenticated SPA fallback is still blocked in hub mode", async (t)
   // A cookie signed by a *different* box is rejected too — the signing secret is
   // per-box, so one box's cookie is not a credential anywhere else.
 
-  // doctest:L118
   const otherBox = await makeTmpBox();
   const foreignCookie = signMobileSession(otherBox.root, {
     deviceId: redeemed.deviceId,
@@ -154,6 +149,5 @@ void test("Unauthenticated SPA fallback is still blocked in hub mode", async (t)
   });
   t.check(foreignResponse.statusCode, 401);
 
-  // doctest:L132
   await otherBox.cleanup();
 });

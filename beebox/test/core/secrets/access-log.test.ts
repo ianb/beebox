@@ -16,8 +16,8 @@
 // Values are never logged, here as everywhere.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, str } from "@ianbicking/tap-check/check";
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -47,12 +47,10 @@ void test("A mint appends one line naming the box, the secret, and the purpose",
       t.error(error);
     }
   });
-  // doctest:L42
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
   process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
   const box = await makeTmpBox();
 
-  // doctest:L46
   await recordSecretMint({ boxRoot: box.root, slug: "example-box", secret: "deepgram", purpose: "deepgram-temp-key" });
   await recordSecretMint({ boxRoot: box.root, slug: "example-box", secret: "openai-thinking", purpose: "openai-realtime-client-secret" });
 
@@ -62,7 +60,6 @@ void test("A mint appends one line naming the box, the secret, and the purpose",
 
   // Uncapped by design — ten mints in a row are ten log lines, not a refusal:
 
-  // doctest:L61
   const mints = Array.from({ length: 10 }, () => recordSecretMint({ boxRoot: box.root, slug: "example-box", secret: "deepgram", purpose: "deepgram-temp-key" }));
   await Promise.all(mints);
   t.check(await readLog(getBoxTimeISO(box.root)), [deepgramMint, realtimeMint, ...Array.from({ length: 10 }, () => deepgramMint)]);
@@ -70,10 +67,9 @@ void test("A mint appends one line naming the box, the secret, and the purpose",
   // Without an authoritative slug the box's own is derived from disk, so a mint is
   // always attributable to some box:
 
-  // doctest:L71
   await recordSecretMint({ boxRoot: box.root, secret: "deepgram", purpose: "deepgram-temp-key" });
   const derived = (await readLog(getBoxTimeISO(box.root))).at(-1);
-  t.check(derived, { ...deepgramMint, box: str`bbx-doctest-${any(String)}` });
+  t.check(derived, { ...deepgramMint, box: str`bbx-test-${any(String)}` });
 
   // ## Segments older than twelve months are deleted
   //
@@ -82,7 +78,6 @@ void test("A mint appends one line naming the box, the secret, and the purpose",
   // `lastUsed` on the store entry is untouched, so "is this still in use" survives
   // the deletion of the segment that recorded the use.
 
-  // doctest:L85
   const logDir = secretsLogDir();
   await mkdir(logDir, { recursive: true });
   for (const name of ["2025-08.jsonl", "2025-09.jsonl", "2025-10.jsonl", "2026-10.jsonl", "notes.txt", "2024-01.jsonl.bak", "2024-13.jsonl"]) {
@@ -103,7 +98,6 @@ void test("A mint appends one line naming the box, the secret, and the purpose",
 
   // A machine with no log yet has nothing to sweep:
 
-  // doctest:L113
   process.env.BBX_SECRETS_FILE = join(dir, "never-used", "secrets.json");
   t.check(await pruneSecretAccessLog(new Date()), []);
 });

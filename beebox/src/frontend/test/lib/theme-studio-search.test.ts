@@ -4,11 +4,10 @@
 // the system and card choices remain independent.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { themeStudioSearchSchema } from "../../src/lib/theme-studio-search.js";
 
 void test("line 10", async (t) => {
-  // doctest:L11
   const defaults = themeStudioSearchSchema.parse({});
   t.check([defaults.system, defaults.systemStock, defaults.card, defaults.cardStock], [
     "plain",
@@ -17,7 +16,6 @@ void test("line 10", async (t) => {
     "neutral",
   ]);
 
-  // doctest:L15
   const draft = themeStudioSearchSchema.parse({ system: "draft", card: "paper", cardStock: "blue" });
   t.check([draft.system, draft.systemStock, draft.card, draft.cardStock], [
     "draft",
@@ -26,6 +24,5 @@ void test("line 10", async (t) => {
     "blue",
   ]);
 
-  // doctest:L19
   t.check(themeStudioSearchSchema.safeParse({ system: ["draft", "paper"] }).success, false);
 });

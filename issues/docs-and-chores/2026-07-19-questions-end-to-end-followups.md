@@ -5,6 +5,8 @@ area: beebox
 design: ../../beebox/docs/implemented-plans/questions-end-to-end.md
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Followups from the questions-end-to-end implementation (merged to main
 2026-07-10, `29863299`). The feature is live in code but the rollout has
 unfinished operational steps, and the review passes left named test gaps.

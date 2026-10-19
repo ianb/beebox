@@ -6,7 +6,7 @@
 // `src/core/landmark/nearest.ts` and `docs/plans/open-chat-from-card.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   nearestDirFromDirs,
   nearestLandmarkDir,
@@ -20,32 +20,27 @@ import { makeTmpBox } from "../../helpers/test-helpers.js";
 // Deepest enclosing landmark wins. With a root landmark (`""`) and a mid-tree one,
 // a card under the mid-tree dir binds to the deeper one:
 void test("Deepest enclosing landmark wins.", async (t) => {
-  // doctest:L24
   t.check(nearestDirFromDirs("class/activities/shared/Logprobs.sandbox.card", ["", "class/activities"]), "class/activities");
 });
 
 // A card with no enclosing non-root landmark falls back to the root (`""`):
 void test("A card with no enclosing non-root landmark falls back to the root (\"\"):", async (t) => {
-  // doctest:L31
   t.check(nearestDirFromDirs("store/notes/idea.doc.card", ["class/activities"]), "");
 });
 
 // A card directly at the box root resolves to the root, never a sibling landmark:
 void test("A card directly at the box root resolves to the root, never a sibling landmark:", async (t) => {
-  // doctest:L38
   t.check(nearestDirFromDirs("Inbox.doc.card", ["class/activities"]), "");
 });
 
 // A sibling/prefix-overlap dir does not falsely enclose — `class/act` must not
 // match a card under `class/activities/`:
 void test("A sibling/prefix-overlap dir does not falsely enclose — class/act must not ma...", async (t) => {
-  // doctest:L46
   t.check(nearestDirFromDirs("class/activities/x.card", ["class/act", "class/activities"]), "class/activities");
 });
 
 // The landmark's own directory encloses cards sitting directly in it:
 void test("The landmark's own directory encloses cards sitting directly in it:", async (t) => {
-  // doctest:L53
   t.check(nearestDirFromDirs("class/activities/Index.card", ["class/activities"]), "class/activities");
 });
 
@@ -55,7 +50,6 @@ void test("The landmark's own directory encloses cards sitting directly in it:",
 // parse — so the body's validity doesn't gate which directory counts as a
 // landmark. Seed a root and a nested landmark, then resolve a deep card:
 void test("Landmark directories are keyed on the .landmark.card filename — a glob, no pa...", async (t) => {
-  // doctest:L64
   const box = await makeTmpBox();
   await box.write("Home.landmark.card", "---\ntype: landmark\n---\n");
   await box.write("class/activities/Activities.landmark.card", "garbled not-even-yaml {{{");
@@ -64,7 +58,6 @@ void test("Landmark directories are keyed on the .landmark.card filename — a g
 
 // A card outside any landmarked subtree falls back to the root:
 void test("A card outside any landmarked subtree falls back to the root:", async (t) => {
-  // doctest:L74
   const box = await makeTmpBox();
   await box.write("class/activities/Activities.landmark.card", "---\ntype: landmark\n---\n");
   t.check(await nearestLandmarkDir(box.root, { cardPath: "store/notes/idea.doc.card" }), "");
@@ -75,7 +68,6 @@ void test("A card outside any landmarked subtree falls back to the root:", async
 // The `?card=` value flows into `card.get`; `openForCard` rejects paths that could
 // escape the box:
 void test("The ?card= value flows into card.get; openForCard rejects paths that could es...", async (t) => {
-  // doctest:L86
   t.check(
     [
       isBoxRelativeCardPath("class/activities/x.card"),
@@ -95,14 +87,11 @@ void test("The ?card= value flows into card.get; openForCard rejects paths that 
 // zod input validation, which tRPC reports as `BAD_REQUEST` carrying the zod
 // issue message (`docs/plans/display-path-guard.subplan.md`).
 void test("Every tRPC procedure that takes a contextDir/dir/card-path string through thi...", async (t) => {
-  // doctest:L104
   const ok = boxRelativePathSchema.safeParse("class/activities/x.card");
   t.check(ok.success, true);
 
-  // doctest:L108
   const displayForm = boxRelativePathSchema.safeParse("Config:box.json");
   t.check(displayForm.success, false);
 
-  // doctest:L112
   t.check(displayForm.success ? "" : displayForm.error.issues[0]!.message, "`Config:box.json` is the boxholder's display form; write `/_config/box.json`");
 });

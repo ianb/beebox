@@ -7,8 +7,8 @@
 // `last-upload`, and commits the whole batch as one unit.
 
 import { test, type TestBase } from "tap";
-import "agent-doctest/tap";
-import { any, capture, not, str, unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, not, str, unordered } from "@ianbicking/tap-check/check";
 import { mkdtemp, writeFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -66,7 +66,6 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L59
   const validTemp = await makeTempDir();
   await writeFile(join(validTemp, "photo.png"), PNG_BYTES);
   const validManifest = {
@@ -75,7 +74,6 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
     notes: "this key is not part of the manifest shape",
   };
 
-  // doctest:L67
   const accepted = await acceptSubmission({
     boxRoot: box.root,
     cardRel: "_content/tasks/Task.browser-task.card",
@@ -96,11 +94,9 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
   // The batch dir holds the uploaded file and a `records.json` with a sniffed
   // `files` array; nothing is left under the temp dir:
 
-  // doctest:L84
   const batchDir = accepted.ok ? accepted.dir : "";
   t.check((await readdir(box.path(batchDir))).toSorted(), ["photo.png", "records.json"]);
 
-  // doctest:L88
   const recordsOut = JSON.parse(await box.read(join(batchDir, "records.json")));
   t.check(recordsOut, {
     coverage: { scanned: 1, stoppedAt: "https://example.com/feed/post-1", reason: "end-of-feed" },
@@ -111,12 +107,9 @@ void test("A well-formed batch is accepted, filed, and committed", async (t) => 
   // Only the validated shape is persisted, plus the server's `files`; a stray
   // top-level key in the request manifest does not reach disk:
 
-  // doctest:L100
-
   // The card's `last-upload` is set, and the commit carries both paths under
   // the `card-submission` trailer:
 
-  // doctest:L108
   const cardText = await box.read("_content/tasks/Task.browser-task.card");
   t.checkText(cardText, `---
 type: browser-task
@@ -127,7 +120,6 @@ last-upload: 2026-09-12T10:00:00.000Z
 ---
 Scan the feed for show announcements.`);
 
-  // doctest:L112
   const commitBody = execSync("git log -1 --format=%B", { cwd: box.root }).toString();
   t.checkText(commitBody, `Accept submission ${firstBatch.value} for _content/tasks/Task.browser-task.card
 
@@ -135,14 +127,12 @@ Created-By: card-submission`);
 
   // ## A schema-invalid batch is refused as a unit; nothing is filed
 
-  // doctest:L120
   const invalidTemp = await makeTempDir();
   const invalidManifest = {
     coverage: { scanned: 1, stoppedAt: "https://example.com/feed/post-2", reason: "end-of-feed" },
     records: [{ permalink: "https://example.com/feed/post-2" }], // missing required "text"
   };
 
-  // doctest:L126
   const invalid = await acceptSubmission({
     boxRoot: box.root,
     cardRel: "_content/tasks/Task.browser-task.card",
@@ -162,22 +152,18 @@ Created-By: card-submission`);
   // The temp dir is gone, and the inbox still holds only the one batch from the
   // valid submission above:
 
-  // doctest:L149
   t.check(await readdir(invalidTemp).catch((e) => e.code), "ENOENT");
 
-  // doctest:L152
   t.check(await readdir(box.path("_content/tasks/Task.attach/inbox")), [firstBatch.value]);
 
   // ## An uploaded file no record references is also refused
 
-  // doctest:L159
   const strayTemp = await makeTempDir();
   const strayManifest = {
     coverage: { scanned: 1, stoppedAt: "https://example.com/feed/post-3", reason: "end-of-feed" },
     records: [{ permalink: "https://example.com/feed/post-3", text: "no photo here" }],
   };
 
-  // doctest:L165
   const stray = await acceptSubmission({
     boxRoot: box.root,
     cardRel: "_content/tasks/Task.browser-task.card",
@@ -198,14 +184,12 @@ Created-By: card-submission`);
 
   // ## A card type that never opted in refuses with 404
 
-  // doctest:L204
   await box.write(
     "_content/notes/Note.doc.card",
     "---\ntitle: Note\n---\nA doc body.\n"
   );
   box.commitAll("seed doc");
 
-  // doctest:L210
   const docTemp = await makeTempDir();
   const docResult = await acceptSubmission({
     boxRoot: box.root,
@@ -221,7 +205,6 @@ Created-By: card-submission`);
   // A path that leaves the box, or that is not a card, is refused as 404 before any
   // lock is taken, and the temp dir is removed:
 
-  // doctest:L228
   const escapeTemp = await makeTempDir();
   const escaped = await acceptSubmission({
     boxRoot: box.root,
@@ -237,7 +220,6 @@ Created-By: card-submission`);
 
   // A missing card is also a 404:
 
-  // doctest:L245
   const missingTemp = await makeTempDir();
   const missing = await acceptSubmission({
     boxRoot: box.root,
@@ -255,14 +237,12 @@ Created-By: card-submission`);
 
 // ## A closed task refuses with 409, before any validation runs
 async function closedTaskRefused(t: TestBase) {
-  // doctest:L181
   await box.write(
     "_content/tasks/Closed.browser-task.card",
     "---\ntype: browser-task\ntitle: Closed Task\nclosed: true\nstart:\n  href: https://example.com/closed\n---\nDone scanning.\n"
   );
   box.commitAll("seed closed task");
 
-  // doctest:L187
   const closedTemp = await makeTempDir();
   const closed = await acceptSubmission({
     boxRoot: box.root,
@@ -281,7 +261,6 @@ async function closedTaskRefused(t: TestBase) {
 // `withCardLock` serializes the two read-modify-write spans, so both batches
 // are filed — never a lost `last-upload` update.
 async function concurrentSubmissionsLand(t: TestBase) {
-  // doctest:L265
   const concurrentManifest = (post: string) => ({
     coverage: { scanned: 1, stoppedAt: post, reason: "end-of-feed" },
     records: [{ permalink: post, text: "concurrent" }],
@@ -289,7 +268,6 @@ async function concurrentSubmissionsLand(t: TestBase) {
   const tempA = await makeTempDir();
   const tempB = await makeTempDir();
 
-  // doctest:L272
   const [resultA, resultB] = await Promise.all([
     acceptSubmission({
       boxRoot: box.root,
@@ -311,7 +289,6 @@ async function concurrentSubmissionsLand(t: TestBase) {
     }),
   ]);
 
-  // doctest:L293
   const batchA = capture(str`20260912-110000-${any(String)}`);
   const batchB = capture(str`20260912-110000-${any(String)}`);
   t.check([resultA, resultB], [

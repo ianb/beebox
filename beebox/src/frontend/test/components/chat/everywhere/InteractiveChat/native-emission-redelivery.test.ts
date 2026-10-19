@@ -8,7 +8,7 @@
 // transcript gains no duplicate row (the 2026-08-19 voice-duplicate regression).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createNativeDispatchRegistry, resolveNativeDispatch } from "../../../../../src/components/chat/everywhere/InteractiveChat/native-emission-redelivery.js";
 import type { Receipt } from "../../../../../src/input/targets/receipts.js";
 
@@ -18,7 +18,6 @@ function sent(emissionId: string): Receipt {
 
 // ## A redelivered id shares the outcome — one dispatch, two receipts
 void test("A redelivered id shares the outcome — one dispatch, two receipts", async (t) => {
-  // doctest:L22
   const registry = createNativeDispatchRegistry();
   let dispatches = 0;
   const first = resolveNativeDispatch("em-1", {
@@ -44,7 +43,6 @@ void test("A redelivered id shares the outcome — one dispatch, two receipts", 
   // The entry outlives settlement on purpose: the shell may redeliver after the
   // receipt was dropped mid-navigation, and the answer is still this outcome.
 
-  // doctest:L43
   const third = resolveNativeDispatch("em-1", {
     registry,
     dispatch: () => { dispatches += 1; return Promise.resolve(sent("em-1")); },
@@ -57,7 +55,6 @@ void test("A redelivered id shares the outcome — one dispatch, two receipts", 
 
   // ## A rejection is per-attempt: the shell's Retry dispatches for real
 
-  // doctest:L54
   const rejecting = createNativeDispatchRegistry();
   let attempts = 0;
   const failed = resolveNativeDispatch("em-2", {
@@ -80,7 +77,6 @@ void test("A redelivered id shares the outcome — one dispatch, two receipts", 
 
   // ## A thrown dispatch also clears the entry
 
-  // doctest:L75
   const throwing = createNativeDispatchRegistry();
   let calls = 0;
   const boom = resolveNativeDispatch("em-3", {

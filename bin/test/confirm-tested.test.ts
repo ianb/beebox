@@ -4,7 +4,7 @@
 // needs remain, the issue is marked implemented and can move to the closed queue.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -14,7 +14,6 @@ import { confirmTestedContent } from "../confirm-tested.js";
 
 // The last need closes the issue and records who performed the acceptance step.
 void test("The last need closes the issue and records who performed the acceptance step.", async () => {
-  // doctest:L19
   const result = confirmTestedContent(
     `---
 title: Test me
@@ -36,7 +35,6 @@ Try it.
 // Other needs keep the issue open. Both flow and block YAML lists accepted by the
 // frontmatter validator are supported.
 void test("Other needs keep the issue open.", async () => {
-  // doctest:L41
   const flow = confirmTestedContent(
     `---
 title: Test me
@@ -51,7 +49,6 @@ needs: [decision, manual-testing]
   assert.match(flow.content, /needs: \[decision]/);
   assert.doesNotMatch(flow.content, /resolution:/);
 
-  // doctest:L55
   const block = confirmTestedContent(
     `---
 title: Test me
@@ -71,7 +68,6 @@ needs:
 
 // An issue not awaiting manual testing cannot be confirmed through this path.
 void test("An issue not awaiting manual testing cannot be confirmed through this path.", async () => {
-  // doctest:L75
   assert.throws(
     () =>
       confirmTestedContent(
@@ -91,7 +87,6 @@ needs: [decision]
 // The shell transaction runs doc-check after moving the issue. If validation
 // fails, both the issue and Git index return exactly to their original state.
 void test("The shell transaction runs doc-check after moving the issue.", async (t) => {
-  // doctest:L95
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "confirm-tested-"));
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   const issueDirectory = path.join(root, "issues", "features");
@@ -119,7 +114,6 @@ Try it.
   execFileSync("git", ["add", "."], { cwd: root });
   execFileSync("git", ["commit", "-qm", "fixture"], { cwd: root });
 
-  // doctest:L122
   const repo = path.resolve(process.cwd(), "..");
   const run = spawnSync("bash", ["-c", [
     `. "${repo}/bin/lib/worktree-paths.sh"`,

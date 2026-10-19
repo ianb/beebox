@@ -6,7 +6,7 @@
 // the fake Drive service.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import {
@@ -124,7 +124,6 @@ function cardsIn(listing: string, dir: string): string[] {
 // A Doc and a Sheet have handlers, so they are mirrored as synced cards. A PDF
 // has none: the box records that it exists and where, and copies nothing.
 void test("A Doc and a Sheet have handlers, so they are mirrored as synced cards.", async (t) => {
-  // doctest:L127
   const plan = planFolderSync(planInput({
     children: [
       child({ id: "doc-1", name: "Trip Notes", mimeType: DOC_MIME }),
@@ -147,7 +146,6 @@ void test("A Doc and a Sheet have handlers, so they are mirrored as synced cards
     },
   ]);
 
-  // doctest:L137
   t.check(plan.createLinks, [
     {
       driveId: "pdf-1",
@@ -160,7 +158,6 @@ void test("A Doc and a Sheet have handlers, so they are mirrored as synced cards
   // A child that already has a card here, or anywhere in the box, is left to the
   // box-wide card pass — the mirror only fills gaps.
 
-  // doctest:L145
   const held = planFolderSync(planInput({
     children: [
       child({ id: "sheet-1", name: "Budget 2026", mimeType: SHEET_MIME }),
@@ -174,7 +171,6 @@ void test("A Doc and a Sheet have handlers, so they are mirrored as synced cards
 
 // ## The plan — a subfolder is a subdirectory with its own mount card
 void test("The plan — a subfolder is a subdirectory with its own mount card", async (t) => {
-  // doctest:L160
   const plan = planFolderSync(planInput({
     children: [child({ id: "folder-2", name: "Desserts", mimeType: FOLDER_MIME })],
   }));
@@ -191,7 +187,6 @@ void test("The plan — a subfolder is a subdirectory with its own mount card", 
   // An already-mirrored subfolder keeps the card it has, and is still descended
   // into (that is how its own children stay current).
 
-  // doctest:L171
   const existing = planFolderSync(planInput({
     children: [child({ id: "folder-2", name: "Desserts", mimeType: FOLDER_MIME })],
     entries: [{ driveId: "folder-2", kind: "folder", cardPath: "sweets/Sweets.gfolder.card" }],
@@ -213,7 +208,6 @@ void test("The plan — a subfolder is a subdirectory with its own mount card", 
 // A folder already entered on this pass is a cycle (a shortcut pointing back at
 // an ancestor is the usual way). It is logged, not treated as a failure.
 void test("A folder already entered on this pass is a cycle (a shortcut pointing back at...", async (t) => {
-  // doctest:L186
   const cycle = planFolderSync(planInput({
     children: [child({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME, via: "shortcut-1" })],
     claimed: ["folder-1"],
@@ -236,7 +230,6 @@ void test("A folder already entered on this pass is a cycle (a shortcut pointing
   // The depth cap and the per-pass folder cap both leave the child's card in place
   // — membership is still recorded — but stop the walk there.
 
-  // doctest:L199
   const deep = planFolderSync(planInput({
     children: [child({ id: "folder-9", name: "Deep", mimeType: FOLDER_MIME })],
     depth: MAX_FOLDER_DEPTH,
@@ -255,7 +248,6 @@ void test("A folder already entered on this pass is a cycle (a shortcut pointing
     duplicates: [],
   });
 
-  // doctest:L210
   const wide = planFolderSync(planInput({
     children: [child({ id: "folder-9", name: "Deep", mimeType: FOLDER_MIME })],
     foldersSoFar: MAX_FOLDERS_PER_PASS,
@@ -282,7 +274,6 @@ void test("A folder already entered on this pass is a cycle (a shortcut pointing
 // which the connector then refuses to sync at all — so the first wins and the
 // rest are named.
 void test("Two shortcuts to one Doc, or a subfolder plus a shortcut to it, both resolve...", async (t) => {
-  // doctest:L226
   const plan = planFolderSync(planInput({
     children: [
       child({ id: "doc-1", name: "Trip Notes", mimeType: DOC_MIME }),
@@ -314,14 +305,12 @@ void test("Two shortcuts to one Doc, or a subfolder plus a shortcut to it, both 
 // must come back. `restorable` is the set of IDs whose only claim is one of the
 // connector's own tombstones.
 void test("A tombstone in bookkeeping/trash/ claims its Drive ID, which is what stops a...", async (t) => {
-  // doctest:L251
   const blocked = planFolderSync(planInput({
     children: [child({ id: "sheet-1", name: "Budget", mimeType: SHEET_MIME })],
     claimed: ["sheet-1"],
   }));
   t.check(blocked.createFiles, []);
 
-  // doctest:L258
   const restored = planFolderSync(planInput({
     children: [child({ id: "sheet-1", name: "Budget", mimeType: SHEET_MIME })],
     claimed: ["sheet-1"],
@@ -331,7 +320,6 @@ void test("A tombstone in bookkeeping/trash/ claims its Drive ID, which is what 
 
   // A restored subfolder comes back the same way, and a restored pointer too.
 
-  // doctest:L270
   const folder = planFolderSync(planInput({
     children: [child({ id: "folder-2", name: "Desserts", mimeType: FOLDER_MIME })],
     claimed: ["folder-2"],
@@ -341,7 +329,6 @@ void test("A tombstone in bookkeeping/trash/ claims its Drive ID, which is what 
     { driveId: "folder-2", name: "Desserts", cardPath: "Desserts/Desserts.gfolder.card", create: true, enter: true },
   ]);
 
-  // doctest:L278
   const pointer = planFolderSync(planInput({
     children: [child({ id: "pdf-1", name: "Scan.pdf", mimeType: "application/pdf" })],
     claimed: ["pdf-1"],
@@ -357,7 +344,6 @@ void test("A tombstone in bookkeeping/trash/ claims its Drive ID, which is what 
 // The plan only reports it; whether it was trashed, moved out, or unreadable is
 // a `getFile` the caller makes.
 void test("The plan only reports it; whether it was trashed, moved out, or unreadable is...", async (t) => {
-  // doctest:L293
   const plan = planFolderSync(planInput({
     children: [child({ id: "sheet-1", name: "Budget", mimeType: SHEET_MIME })],
     entries: [
@@ -384,7 +370,6 @@ void test("The plan only reports it; whether it was trashed, moved out, or unrea
   // membership has to reach there to notice it went away). The mount's own card is
   // never its own child.
 
-  // doctest:L311
   const liveCards = [
     { driveId: "folder-1", kind: "folder" as const, absPath: "/_content/recipes/Recipes.gfolder.card", relPath: "", content: "" },
     { driveId: "sheet-1", kind: "file" as const, absPath: "/_content/recipes/Budget.gsheet.card", relPath: "", content: "" },
@@ -418,14 +403,12 @@ void test("The plan only reports it; whether it was trashed, moved out, or unrea
 // A Drive folder URL has no `/d/` segment, so before this it only resolved by
 // accident when someone pasted a bare ID.
 void test("A Drive folder URL has no /d/ segment, so before this it only resolved by acc...", async (t) => {
-  // doctest:L332
   t.check(
     extractDriveFileId("https://drive.google.com/drive/folders/1AbCfolderID")
     ,
     "1AbCfolderID",
   );
 
-  // doctest:L335
   t.check(
     extractDriveFileId("https://drive.google.com/drive/u/0/folders/1AbCfolderID?usp=sharing")
     ,
@@ -442,7 +425,6 @@ void test("End to end — a mount discovers its children and points at the rest"
       t.error(error);
     }
   });
-  // doctest:L342
   const box = await makeTmpBox({ git: true });
   await initBox(box.root);
   await box.seed(
@@ -451,7 +433,6 @@ void test("End to end — a mount discovers its children and points at the rest"
   );
   box.commitAll("mount the Recipes folder");
 
-  // doctest:L350
   const drive = createFakeGoogleDrive({
     files: [
       driveFile({ id: "folder-1", name: "Recipes", mimeType: FOLDER_MIME }),
@@ -463,7 +444,6 @@ void test("End to end — a mount discovers its children and points at the rest"
     spreadsheets: new Map([["sheet-1", spreadsheetFor({ id: "sheet-1", name: "Bake Times" })]]),
   });
 
-  // doctest:L361
   const connector = createGoogleDriveConnector(box.root, drive);
   const result = await connector.sync();
   t.check(result, {
@@ -478,7 +458,6 @@ void test("End to end — a mount discovers its children and points at the rest"
     updated: ["_content/drive/recipes/Recipes.gfolder.card"],
   });
 
-  // doctest:L366
   t.check(cardsIn(await box.list(), "_content/drive/recipes/"), [
     "_content/drive/recipes/Bake_Times.gsheet.card",
     "_content/drive/recipes/Recipes.gfolder.card",
@@ -490,7 +469,6 @@ void test("End to end — a mount discovers its children and points at the rest"
   // the purpose notes are the boxholder's to write. (The card name comes from
   // `safeFilename`, which drops the dot in `Scan 2024.pdf`.)
 
-  // doctest:L375
   await t.checkText(await box.read("_content/drive/recipes/Scan_2024pdf.glink.card"), `---
 drive:
   id: pdf-1
@@ -502,7 +480,6 @@ origin: mirror
 
   // The folder card is re-stamped with the Drive name, link, and the last outcome.
 
-  // doctest:L389
   const folderCard = await box.read("_content/drive/recipes/Recipes.gfolder.card");
   await t.checkText(folderCard.replace(/last-sync: .*/, "last-sync: «stamped»"), `---
 drive:
@@ -514,7 +491,6 @@ last-sync: «stamped»
 
   // A second pass with nothing changed creates nothing and rewrites no pointer.
 
-  // doctest:L403
   const again = await connector.sync();
   t.check(again, { success: true, created: [], updated: ["_content/drive/recipes/Recipes.gfolder.card"] });
 });

@@ -7,7 +7,7 @@
 // declaration is a couple of lines (base URL + auth header shape).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { makeTestServer } from "../../../../helpers/test-route-server.js";
 import { bodyField } from "../../../../helpers/test-helpers.js";
@@ -38,7 +38,6 @@ void test("Missing key → clear 503 naming the grant to ask for", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L33
   const ctx = await makeTestServer();
   const res = await ctx.request({
     method: "POST",
@@ -47,12 +46,10 @@ void test("Missing key → clear 503 naming the grant to ask for", async (t) => 
   });
   t.check(res.statusCode, 503);
 
-  // doctest:L42
   t.check(bodyField(res.body, "error"), "No API key for \"replicate\" — ask the boxholder to grant the \"replicate\" secret to this box (bbx secrets set replicate; bbx secrets grant <box> replicate)");
 
   // ## With a key: forwarded with auth injected, cookies stripped
 
-  // doctest:L49
   await setSecret({ name: "replicate", value: "r8_test_key" });
   await grantSecret({ slug: await boxSlug(ctx.boxRoot), name: "replicate", access: "server" });
   const ok = await ctx.request({
@@ -63,21 +60,16 @@ void test("Missing key → clear 503 naming the grant to ask for", async (t) => 
   });
   t.check(ok.statusCode, 200);
 
-  // doctest:L60
   t.check(bodyField(ok.body, "auth"), "Bearer r8_test_key");
 
-  // doctest:L63
   t.check(bodyField(ok.body, "cookie"), null);
 
-  // doctest:L66
   t.check(bodyField(ok.body, "echo", "input", "prompt"), "hi");
 
   // ## Unknown adapters enumerate the valid set
 
-  // doctest:L73
   const nope = await ctx.request({ method: "POST", url: "/api/adapters/nope/v1/x", payload: {} });
   t.check(nope.statusCode, 404);
 
-  // doctest:L77
   t.check(bodyField(nope.body, "error"), "Unknown adapter \"nope\" — available: replicate, mistral, anthropic, openai, openrouter");
 });

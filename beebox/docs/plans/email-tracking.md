@@ -6,6 +6,8 @@ issues: []
 ---
 # Email tracking instead of mailbox mirroring
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan changes Gmail from a mailbox mirror into a remote source with an explicit tracked working set. Gmail remains the complete archive. An email thread enters Git only when a person, an agent, a procedure, or a bounded automatic rule chooses to track it.
 
 An Opus cross-model review was run after the boxholder explicitly requested it. Its eight findings are addressed in the implementation: delta-only tracked refresh, legacy-state migration, resumable history bounds, safe Message-ID handling, delete-during-sync protection, connector serialization, shared procedure-trigger orchestration, and distinct baseline/overflow counts.

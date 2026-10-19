@@ -6,6 +6,8 @@ issues: []
 ---
 # Narration Mode — Design
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phased out work"). Activities have since been removed entirely — see [activities-retrospective-2026-05-14.md](../reports/activities-retrospective-2026-05-14.md). The narration-as-piecemeal-feature direction described here is what stuck.
 
 ## Motivation

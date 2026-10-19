@@ -9,7 +9,7 @@
 // See `issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { createGoogleOAuthState } from "../../../../src/google/oauth-state.js";
 import { signSession, COOKIE_NAME } from "../../../../src/webapp/auth.js";
@@ -29,13 +29,11 @@ function bbx(query: string): { method: "GET"; url: string } {
 
 // ## An attacker-chosen `state` (with a `code`) is rejected — no tokens written
 void test("An attacker-chosen `state` (with a `code`) is rejected — no tokens written", async (t) => {
-  // doctest:L30
   const ctx = await makeTestServer();
   // A forged state naming the real box, plus a plausible auth code.
   const res = await ctx.rootRequest(bbx("state=test:forged-nonce&code=attacker-code"));
   t.check(res, { statusCode: 400, body: { error: "Invalid or expired OAuth state" } });
 
-  // doctest:L36
   t.check(
     // The shared token file was never created — no exchange happened.
     existsSync(tokensFile),
@@ -44,11 +42,9 @@ void test("An attacker-chosen `state` (with a `code`) is rejected — no tokens 
 
   // ## A missing / malformed `state` is rejected too
 
-  // doctest:L44
   const noState = await ctx.rootRequest(bbx("code=attacker-code"));
   t.check(noState, { statusCode: 400, body: { error: "Invalid OAuth state" } });
 
-  // doctest:L48
   // Legacy bare-slug and slug:returnPath shapes carry no minted nonce → rejected.
   const legacy = await ctx.rootRequest(bbx("state=test&code=x"));
   t.check(legacy, { statusCode: 400, body: { error: "Invalid OAuth state" } });
@@ -60,10 +56,8 @@ void test("An attacker-chosen `state` (with a `code`) is rejected — no tokens 
   // than the 400 rejection — proof the nonce cleared the security gate. Replaying it
   // then fails, because consumption is one-time.
 
-  // doctest:L62
   const state = createGoogleOAuthState({ boxRoot: ctx.boxRoot, boxSlug: "test", returnPath: "admin", createdBy: null });
 
-  // doctest:L64
   // Use the raw Fastify inject (a 302 has no JSON body for rootRequest to parse).
   const accepted = await ctx.server.inject(bbx(`state=${encodeURIComponent(state)}`));
   t.check(
@@ -71,12 +65,10 @@ void test("An attacker-chosen `state` (with a `code`) is rejected — no tokens 
     NO_CODE_REDIRECT,
   );
 
-  // doctest:L69
   // Replaying the now-consumed nonce is rejected.
   const replay = await ctx.rootRequest(bbx(`state=${encodeURIComponent(state)}&code=x`));
   t.check(replay, { statusCode: 400, body: { error: "Invalid or expired OAuth state" } });
 
-  // doctest:L74
   await ctx.cleanup();
 });
 
@@ -94,11 +86,9 @@ void test("When the nonce was minted by an owner (createdBy set), the session co
       t.error(error);
     }
   });
-  // doctest:L85
   const ctx2 = await makeTestServer();
   const ownerState = createGoogleOAuthState({ boxRoot: ctx2.boxRoot, boxSlug: "test", returnPath: "admin", createdBy: "owner@example.com" });
 
-  // doctest:L88
   // Completed with NO session identity → mismatch → 403, no tokens written.
   const anon = await ctx2.rootRequest(bbx(`state=${encodeURIComponent(ownerState)}&code=x`));
   t.check(anon, NOT_INITIATOR);
@@ -107,7 +97,6 @@ void test("When the nonce was minted by an owner (createdBy set), the session co
   // A different signed-in user is likewise rejected (the nonce is single-use, so mint
   // a fresh one).
 
-  // doctest:L101
   const strangerState = createGoogleOAuthState({ boxRoot: ctx2.boxRoot, boxSlug: "test", returnPath: "admin", createdBy: "owner@example.com" });
   const strangerCookie = signSession({ email: "stranger@example.com", name: "Stranger" });
   const stranger = await ctx2.rootRequest({
@@ -120,7 +109,6 @@ void test("When the nonce was minted by an owner (createdBy set), the session co
   // The initiating owner completing the callback clears the gate (no `code` → 302
   // back to the box, not a 403).
 
-  // doctest:L116
   const ownerState2 = createGoogleOAuthState({ boxRoot: ctx2.boxRoot, boxSlug: "test", returnPath: "admin", createdBy: "owner@example.com" });
   const ownerCookie = signSession({ email: "owner@example.com", name: "Owner" });
   const owner = await ctx2.server.inject({
@@ -133,6 +121,5 @@ void test("When the nonce was minted by an owner (createdBy set), the session co
     NO_CODE_REDIRECT,
   );
 
-  // doctest:L126
   await ctx2.cleanup();
 });

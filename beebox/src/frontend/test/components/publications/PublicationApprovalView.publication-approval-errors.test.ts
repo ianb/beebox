@@ -5,14 +5,13 @@
 // so the card presents the current candidate and revision for a retry.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { handlePublicationMutationError } from "../../../src/components/publications/PublicationApprovalView.js";
 
 const notices: Array<{ message: string; needsSignIn: boolean }> = [];
 let refreshed = false;
 
 void test("line 14", async (t) => {
-  // doctest:L15
   await handlePublicationMutationError(
     {
       error: { message: "The publication candidate changed. Review the latest candidate before approving it.", data: { code: "BAD_REQUEST" } },
@@ -27,6 +26,5 @@ void test("line 14", async (t) => {
     },
   ]);
 
-  // doctest:L25
   t.check(refreshed, true);
 });

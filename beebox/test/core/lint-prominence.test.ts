@@ -6,7 +6,7 @@
 // that has no effect where it was written. Every rule here is a warning.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { lintProminenceBudget } from "../../src/core/lint-prominence/core.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
@@ -35,7 +35,6 @@ const cards = (n: number, prominence: string) =>
 // Two entry points and seven primary cards are each within budget; a card with
 // no `prominence` at all is ordinary and never counted.
 void test("Two entry points and seven primary cards are each within budget; a card with...", async (t) => {
-  // doctest:L39
   t.check(
     await warningsFor({
       "_content/notes/Index.doc.card": marked("entry-point"),
@@ -52,7 +51,6 @@ void test("Two entry points and seven primary cards are each within budget; a ca
 // `MAX_ENTRY_POINTS_PER_DIR` is 2; a third is the exceptional case the lint
 // warns about.
 void test("MAXENTRYPOINTSPERDIR is 2; a third is the exceptional case the lint warns about.", async (t) => {
-  // doctest:L54
   t.check(
     await warningsFor({
       "_content/notes/A.doc.card": marked("entry-point"),
@@ -67,7 +65,6 @@ void test("MAXENTRYPOINTSPERDIR is 2; a third is the exceptional case the lint w
 //
 // `MAX_PRIMARY_PER_DIR` is 7; an eighth trips the warning.
 void test("MAXPRIMARYPERDIR is 7; an eighth trips the warning.", async (t) => {
-  // doctest:L67
   t.check(await warningsFor(cards(8, "primary")), "too-many-primary: _content/notes: 8 primary cards in _content/notes; primary is the thing itself, not everything good — if everything here is the thing, mark nothing and give the directory an entry point");
 });
 
@@ -77,7 +74,6 @@ void test("MAXPRIMARYPERDIR is 7; an eighth trips the warning.", async (t) => {
 // away — a card under it still marked prominent is a warning naming both
 // cards.
 void test("A landmark explicitly marked prominence:", async (t) => {
-  // doctest:L78
   t.check(
     await warningsFor({
       "_content/logs/Logs.landmark.card": marked("background"),
@@ -91,7 +87,6 @@ void test("A landmark explicitly marked prominence:", async (t) => {
 // only for a landmark that WROTE `background`, not every landmark (a landmark
 // is background BY TYPE, but that describes the file, not the place).
 void test("A card under an ordinary (unmarked) landmark is unaffected — the cascade is o...", async (t) => {
-  // doctest:L90
   t.check(
     await warningsFor({
       "_content/recipes/Recipes.landmark.card": "---\nnavigation:\n  label: Recipes\n---\n",
@@ -106,7 +101,6 @@ void test("A card under an ordinary (unmarked) landmark is unaffected — the ca
 // under `A`'s cascade even though the nearest landmark isn't the background
 // one.
 void test("content/A is background; content/A/B has its OWN (non-background) landmark; a...", async (t) => {
-  // doctest:L103
   t.check(
     await warningsFor({
       "_content/A/A.landmark.card": marked("background"),
@@ -123,7 +117,6 @@ void test("content/A is background; content/A/B has its OWN (non-background) lan
 // either absent or `background`; writing `entry-point` or `primary` on it is a
 // misunderstanding of the field.
 void test("A landmark marks a place, not a visitable file — its own prominence is either...", async (t) => {
-  // doctest:L118
   t.check(await warningsFor({ "_content/recipes/Recipes.landmark.card": marked("entry-point") }), "landmark-prominence: _content/recipes/Recipes.landmark.card: a landmark marks a place; the place's entry point is a visitable card inside it");
 });
 
@@ -133,7 +126,6 @@ void test("A landmark marks a place, not a visitable file — its own prominence
 // mark inside it is invisible to every reader, since the scope is folded into
 // its owner.
 void test("Foo.attach/ is owned when a sibling card's basename is Foo.", async (t) => {
-  // doctest:L129
   t.check(
     await warningsFor({
       "_content/projects/Foo.doc.card": "---\ntitle: Foo\n---\n",
@@ -146,7 +138,6 @@ void test("Foo.attach/ is owned when a sibling card's basename is Foo.", async (
 // An UNOWNED `.attach/`-suffixed directory (no sibling card named `Foo`) is not
 // a real attach scope for this rule's purposes — nothing to warn about.
 void test("An UNOWNED .attach/-suffixed directory (no sibling card named Foo) is not a r...", async (t) => {
-  // doctest:L140
   t.check(await warningsFor({ "_content/projects/Foo.attach/Note.doc.card": marked("primary") }), "");
 });
 
@@ -154,7 +145,6 @@ void test("An UNOWNED .attach/-suffixed directory (no sibling card named Foo) is
 // (`prunedSubtree` walks it), so a mark inside it feeds the landmark's derived
 // list and is not warned about.
 void test("An owned attach scope that holds its OWN landmark is that landmark's home (pr...", async (t) => {
-  // doctest:L149
   t.check(
     await warningsFor({
       "_content/courses/Foo.course.card": "---\ntitle: Foo\n---\n",
@@ -170,14 +160,12 @@ void test("An owned attach scope that holds its OWN landmark is that landmark's 
 // The root landmark lives directly in `_content/`. Marking it `background`
 // is the box's identity, not a place that can be housekeeping — the value is ignored and warned about.
 void test("The root landmark lives directly in content/.", async (t) => {
-  // doctest:L163
   t.check(await warningsFor({ "_content/Box.landmark.card": marked("background") }), "background-root-landmark: _content/Box.landmark.card: the root landmark is marked prominence: background — the root is the box's identity, not a place that can be housekeeping, so the value is ignored; remove it");
 });
 
 // A landmark elsewhere in the tree marked `background` is an ordinary
 // housekeeping place, not the root — no root-specific warning.
 void test("A landmark elsewhere in the tree marked background is an ordinary housekeepin...", async (t) => {
-  // doctest:L171
   t.check(await warningsFor({ "_content/logs/Logs.landmark.card": marked("background") }), "");
 });
 
@@ -187,7 +175,6 @@ void test("A landmark elsewhere in the tree marked background is an ordinary hou
 // `primary` and inside the landmark's pruned subtree, with no label: the
 // derived list already shows it, so the entry is redundant.
 void test("The landmark links its own Plan.doc.card, which is already marked primary and...", async (t) => {
-  // doctest:L182
   t.check(
     await warningsFor({
       "_content/proj/Proj.landmark.card":
@@ -201,7 +188,6 @@ void test("The landmark links its own Plan.doc.card, which is already marked pri
 // A LABELED entry, or one pointing outside the landmark's pruned subtree
 // (a nested landmark's territory), is not flagged.
 void test("A LABELED entry, or one pointing outside the landmark's pruned subtree (a nes...", async (t) => {
-  // doctest:L194
   t.check(
     await warningsFor({
       "_content/proj/Proj.landmark.card":

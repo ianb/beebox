@@ -23,7 +23,7 @@ schemas under the package `src/schemas/`, importing `beebox/cards`
 Things the schema system does that you'd otherwise miss:
 
 - **Every schema silently gets seven optional global fields** —
-  `title`, `contains`, `contains-evidence`, `todos`, `symbol`, and
+  `title`, `contains`, `contains-evidence`, `todos`, `symbol`,
   `prominence`, and `theme` (`GLOBAL_CARD_FIELDS`, `src/cards/schema.ts`).
   `contains` is the prime retrieval field (search boosts it 3×) — a
   card type whose writers never populate it is invisible to search.

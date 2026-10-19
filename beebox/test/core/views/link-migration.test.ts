@@ -4,14 +4,13 @@
 // box paths, dropping the `?zoom` flag and preserving every other query param.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { rewriteViewTarget, rewriteViewLinksInText } from "../../../src/core/views/link-migration.js";
 
 // ## rewriteViewTarget (a single URL after the `view:` prefix)
 //
 // A bare path is unchanged; `?zoom` is stripped; `?view=` and other params survive:
 void test("A bare path is unchanged; ?zoom is stripped; ?view= and other params survive:", async (t) => {
-  // doctest:L15
   t.check(
     [
       rewriteViewTarget("store/notes/Plan.doc.card"),

@@ -11,12 +11,12 @@
 // wait for the daily digest.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { any, capture, not, str } from "agent-doctest/check";
+import { any, capture, not, str } from "@ianbicking/tap-check/check";
 import { execa } from "execa";
 import { raiseAlert, type DesktopNotification, type RunnerDeps } from "../../lib/schedules-alerts.js";
 import { migrateAlerts, resolveConditions } from "../../lib/schedules-alert-lifecycle.js";
@@ -74,9 +74,9 @@ void test("Only important pops up", async (t) => {
   // latest words. The file set changed between runs; that goes in the message, not
   // the key, so the condition stays one condition.
 
-  const first = await raise({ condition: "red-unattributed", priority: "normal", message: "a.doctest.md failing" });
-  await raise({ condition: "red-unattributed", priority: "normal", message: "a.doctest.md, b.doctest.md failing" });
-  const third = await raise({ condition: "red-unattributed", priority: "normal", message: "b.doctest.md failing" });
+  const first = await raise({ condition: "red-unattributed", priority: "normal", message: "a.test.ts failing" });
+  await raise({ condition: "red-unattributed", priority: "normal", message: "a.test.ts, b.test.ts failing" });
+  const third = await raise({ condition: "red-unattributed", priority: "normal", message: "b.test.ts failing" });
   const standing = (await readAlerts(storeRoot, "full-suite")).filter((alert) => alert.condition === "red-unattributed");
   t.check(standing, [third]);
   t.check(third, {
@@ -84,7 +84,7 @@ void test("Only important pops up", async (t) => {
     workstream: "full-suite",
     runId: null,
     title: "full suite: red, no attributable landing",
-    message: "b.doctest.md failing",
+    message: "b.test.ts failing",
     details: null,
     priority: "normal",
     createdAt: first.createdAt,

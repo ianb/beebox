@@ -11,8 +11,8 @@
 // `~/.config/beebox/boxes.json`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf, str } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadBoxesConfig, BoxesConfigParseError } from "../../../src/core/box/boxes-config.js";

@@ -7,6 +7,8 @@ issues:
 ---
 # TTS backend selection, and per-backend style direction
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > When the box speaks a reply I want it to sound right for the moment — hushed
 > because it is late and the house is asleep, brisk because I am on my way out,
 > gentle because the news is bad. I say so in plain words on the personality

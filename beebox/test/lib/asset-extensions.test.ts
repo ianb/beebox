@@ -6,7 +6,7 @@
 // annex. See `src/lib/asset-extensions.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   ASSET_EXTENSIONS,
   assetAnnexAttributes,
@@ -132,7 +132,6 @@ void test("It must not become a bare path glob. A .attach/ scope holds committed
 // of filter startup for nothing. Since `annex.largefiles` is purely
 // extension-based, the filter is scoped to the same extensions:
 void test("The third rendering:", async (t) => {
-  // doctest:L90
   await t.checkText(assetAnnexAttributes(), `# Managed by beebox — do not edit.
 # Rendered from ASSET_EXTENSIONS (src/lib/asset-extensions.ts); \`bbx doctor annex\` restores it.
 # Replaces git-annex's default \`* filter=annex\`, which puts every text commit

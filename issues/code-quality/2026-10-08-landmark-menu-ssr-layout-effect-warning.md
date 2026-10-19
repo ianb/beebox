@@ -7,6 +7,8 @@ discovered-by: agent
 discovered-in: worktree-theme-polish — changed frontend doctest run
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The frontend doctest run emits React's `useLayoutEffect does nothing on the
 server` warning from `AppNav/PlacePill-landmarks.tsx`. The assertions pass, but
 the warning obscures actionable test diagnostics.

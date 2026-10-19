@@ -5,7 +5,7 @@
 // also offer no destructive controls.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { workstreamActionVerbs } from "../../../src/frontend/components/WorkstreamActions.js";
 import { workstreamStateFor } from "../../../src/frontend/pages/WorkstreamsPage.js";
 import type { Workstream } from "../../../src/frontend/types.js";
@@ -41,7 +41,6 @@ function row({ state, routingState, routingAction }: RowOptions): Workstream {
 }
 
 void test("line 37", async (t) => {
-  // doctest:L38
   const launching = row({ state: "active", routingState: "launching", routingAction: "wait-for-launch" });
   const expired = row({ state: "expired", routingState: "uncertain", routingAction: "investigate" });
   const resumed = row({ state: "active", routingState: "launching", routingAction: "wait-for-launch" });
@@ -72,7 +71,6 @@ void test("line 37", async (t) => {
 // resumed. This is the row a machine restart leaves behind: session gone,
 // commits still on the branch.
 void test("A row whose worktree exists but whose agent is not live cannot be focused or...", async (t) => {
-  // doctest:L59
   const dormant = row({ state: "active", routingState: "launching", routingAction: "wait-for-launch" });
   dormant.session.launch = { state: "none", startedAt: null, expiresAt: null, failedAt: null, reason: null };
   dormant.agent = { state: "none", reason: "" };
@@ -110,4 +108,4 @@ void test("A row whose worktree exists but whose agent is not live cannot be foc
 // A dormant row gained `archive` on 2026-09-12 — the verb existed in the CLI and
 // the shared list but had no button. `removed` here carries `merged: false`, work
 // that never landed, and the CLI refuses to archive that so no button is offered
-// for it either (see `workstream-archive-actions.doctest.md`).
+// for it either (see `WorkstreamActions.archive.test.ts`).

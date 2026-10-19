@@ -5,7 +5,7 @@
 // target it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
@@ -19,11 +19,9 @@ async function terminalCheck(body: string) {
 
 // ## Invalid and dead ttys never count as live agents
 void test("Invalid and dead ttys never count as live agents", async (t) => {
-  // doctest:L23
   const invalid = await terminalCheck('terminal_agent_on_tty "not-a-tty"; printf "%s" "$?"');
   await t.checkText(invalid.stdout, "1");
 
-  // doctest:L27
   const dead = await terminalCheck('terminal_agent_on_tty "/dev/ttys999"; printf "%s" "$?"');
   await t.checkText(dead.stdout, "1");
 });

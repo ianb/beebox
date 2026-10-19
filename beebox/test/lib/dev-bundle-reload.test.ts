@@ -6,7 +6,7 @@
 // remain opted out.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { abandonDevBundleDrain, devBundleWasReplaced } from "../../src/lib/dev-bundle-reload.js";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
@@ -20,13 +20,11 @@ process.env.BBX_DEV_BUNDLE_PATH = bundle;
 process.env.BBX_DEV_BUNDLE_ID = `${first.dev}:${first.ino}:${first.size}:${first.mtimeNs}`;
 
 void test("line 22", async (t) => {
-  // doctest:L23
   t.check(await devBundleWasReplaced(), false);
 });
 
 // Atomic replacement changes inode/size even if its mtime is forced backward:
 void test("Atomic replacement changes inode/size even if its mtime is forced backward:", async (t) => {
-  // doctest:L30
   const replacement = path.join(dir, "replacement.mjs");
   await fs.writeFile(replacement, "older replacement");
   await fs.utimes(replacement, new Date(0), new Date(0));
@@ -46,7 +44,6 @@ void test("An unsafe/stuck drain can reopen writes while suppressing repeated at
       t.error(error);
     }
   });
-  // doctest:L42
   await abandonDevBundleDrain();
   t.check(await devBundleWasReplaced(), false);
 });

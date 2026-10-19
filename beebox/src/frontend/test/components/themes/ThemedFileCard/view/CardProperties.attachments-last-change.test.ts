@@ -7,7 +7,7 @@
 // the newest commit touching the card and links to the History card.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToString } from "react-dom/server";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -62,7 +62,6 @@ function listing(answer: RouterOutput["status"]["browse"]) {
 // The scope listing becomes one list of links: subdirectories first, then cards, then
 // other files, each labelled by its path inside the scope.
 void test("The scope listing becomes one list of links:", async (t) => {
-  // doctest:L66
   t.check(
     attachmentEntries("_content/projects/Porch.attach", {
       dirs: [{ name: "scans", fileCount: 2, summary: { background: false, hasEntryPoint: false, primaryCount: 0 } }],
@@ -91,13 +90,11 @@ void test("The scope listing becomes one list of links:", async (t) => {
 // `status.browse` answers a missing directory with an empty listing, so an
 // empty listing is the "No attachments" state:
 void test("status.browse answers a missing directory with an empty listing, so an empty...", async (t) => {
-  // doctest:L84
   t.check(textOf(await render(React.createElement(CardAttachments, { path: cardPath, onNavigate: noop }), listing(emptyListing))), "Attachments No attachments");
 });
 
 // With entries, the heading counts them and each is a link with a real href:
 void test("With entries, the heading counts them and each is a link with a real href:", async (t) => {
-  // doctest:L91
   const html = await render(React.createElement(CardAttachments, { path: cardPath, onNavigate: noop }), listing({
     ...emptyListing, files: [{ relativePath: `${scope}/photo.jpg`, name: "photo.jpg" }],
   }));
@@ -109,7 +106,6 @@ void test("With entries, the heading counts them and each is a link with a real 
 
 // While the listing loads, the section says so:
 void test("While the listing loads, the section says so:", async (t) => {
-  // doctest:L101
   t.check(textOf(await render(React.createElement(CardAttachments, { path: cardPath, onNavigate: noop }))), "Attachments Checking attachments…");
 });
 
@@ -117,7 +113,6 @@ void test("While the listing loads, the section says so:", async (t) => {
 //
 // A card with no commits yet says so, and offers no History link:
 void test("A card with no commits yet says so, and offers no History link:", async (t) => {
-  // doctest:L110
   const changed = await render(React.createElement(CardLastChange, { path: cardPath, onNavigate: noop }), (queryClient: QueryClient) => {
     queryClient.setQueryData(getQueryKey(trpc.history.list, { filter: { path: cardPath }, count: 1 }, "query"), { commits: [], nextCursor: undefined });
   });
@@ -130,7 +125,6 @@ void test("A card with no commits yet says so, and offers no History link:", asy
 // With a commit, the line carries the full date as its tooltip, and "History"
 // links to the History card filtered to this card's path:
 void test("With a commit, the line carries the full date as its tooltip, and \"History\" l...", async (t) => {
-  // doctest:L121
   const committed = await render(React.createElement(CardLastChange, { path: cardPath, onNavigate: noop }), (queryClient: QueryClient) => {
     queryClient.setQueryData(getQueryKey(trpc.history.list, { filter: { path: cardPath }, count: 1 }, "query"),
       { commits: [{ hash: "abc123", date: "2026-10-03T09:30:00Z", subject: "Add porch quotes" }], nextCursor: undefined });

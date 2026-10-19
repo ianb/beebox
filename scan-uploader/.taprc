@@ -2,7 +2,7 @@ plugin:
   - "!@tapjs/typescript"
 node-arg:
   - --import=tsx
-  - --import=agent-doctest/tap
+  - --import=@ianbicking/tap-check/tap
 include:
   - test/**/*.test.ts
 reporter: tap

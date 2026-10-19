@@ -8,6 +8,8 @@ issues:
 
 # One browser
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 A single reading surface in the workstreams app for everything the developer
 reads about the work: repository markdown, source code, dev artifacts, plans,
 issues, and an index of exhibits. It replaces a set of surfaces that grew

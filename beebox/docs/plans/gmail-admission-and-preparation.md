@@ -8,6 +8,8 @@ issues:
 ---
 # Gmail admission and email preparation
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Keep unrelated incoming mail out of box content while preparing enough evidence
 to judge messages with HTML, PDFs, and images. The admitted-document triage
 harness, common evidence preparation, and destination-question todo annotation

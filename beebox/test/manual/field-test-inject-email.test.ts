@@ -12,15 +12,15 @@
 // subprocesses. Unattended runtime is ~4 minutes and it costs one agent session's
 // API credit. The in-process half of the same pipeline (the gate, the state
 // format, `sync()` producing cards) is covered for free in
-// `test/field-test/fake-gmail-gate.doctest.md`; what only this can prove is that a
+// `test/field-test/fake-gmail-gate.test.ts`; what only this can prove is that a
 // SUBPROCESS sees the fake mailbox at all.
 //
 // Assertions are on shape — files present, counts — never on what the agent
 // decided to do with the mail.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing } from "@ianbicking/tap-check/check";
 import { mkdtemp, mkdir, rm, writeFile, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -46,7 +46,6 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L42
   const runDir = await mkdtemp(join(tmpdir(), "bbx-field-pre-"));
   const scenarioDir = join(runDir, "scenario");
   await mkdir(join(scenarioDir, "emails"), { recursive: true });
@@ -77,7 +76,6 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
     ].join("\n"),
   );
 
-  // doctest:L72
   const scenario = await loadFieldScenario(scenarioDir);
   t.check(scenarioNeedsGmail(scenario), true);
 
@@ -85,14 +83,11 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
   // configuration, so the connector config is seeded and committed before the
   // operator exists.
 
-  // doctest:L82
   const box = await createFieldBox(join(runDir, "run"));
   await seedFieldBox({ box, scenario });
 
-  // doctest:L85
   t.check(await fileExists(join(box.boxRoot, "_config/connectors/gmail.json")), true);
 
-  // doctest:L88
   // The scenario's chat model is pinned as the box's model policy
   // (`agentModel` in `_config/box.json`), which `seedFieldBox` writes and commits
   // as part of the baseline (`src/field-test/run/seed.ts`).
@@ -103,7 +98,6 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
   // there. Skip it and the run's first injected message is part of that baseline and
   // never arrives — which reads in a report as "the box ignored my email".
 
-  // doctest:L101
   const statePath = join(runDir, "fake-gmail.json");
   await baselineGmailSync({
     statePath,
@@ -111,14 +105,12 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
     env: { BBX_TIME: scenario.startTime },
   });
 
-  // doctest:L108
   t.check((await tree(box.boxRoot)).filter((f) => f.endsWith(".email-thread.card")), []);
 
   // Injecting then appends the message plus its `messagesAdded` history record — the
   // cursor is not derived from array length — and the connector-scoped wakeup turns
   // it into cards.
 
-  // doctest:L117
   const messageId = await injectEmail({
     emailsDir: scenario.emailsDir,
     fixture: "hello",
@@ -129,7 +121,6 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
   });
   t.check(messageId, "hello");
 
-  // doctest:L128
   const state = await loadFakeGmailState(statePath);
   t.check(state, {
     version: 1,
@@ -163,7 +154,6 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
   // The real proof: the box now holds email cards it did not have a moment ago.
   // Card paths carry generated ids, so each check keeps the card-type suffix.
 
-  // doctest:L136
   const files = await tree(box.boxRoot);
   t.check(files, containing([any(String).endsWith(".email-thread.card"), any(String).endsWith(".email-message.card")]));
 
@@ -176,7 +166,6 @@ void test("A fixture arrives as mail and becomes a card", async (t) => {
   // the background maintenance types quiescence ignores
   // (`BACKGROUND_JOB_TYPES` in `src/field-test/quiescence.ts`).
 
-  // doctest:L154
   t.check(
     files.filter(
       (f) =>

@@ -4,7 +4,7 @@
 // navigation within that page keeps the same editor state and does not prompt.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { issueNavigationGuard } from "../../../src/frontend/pages/IssuesPage.js";
 
 const clean = issueNavigationGuard(false);
@@ -13,7 +13,6 @@ let confirmations = 0;
 const navigation = { currentRouteId: "/issues", nextRouteId: "/streams" };
 
 void test("line 15", async (t) => {
-  // doctest:L16
   t.check(
     {
       cleanDisabled: clean.disabled,

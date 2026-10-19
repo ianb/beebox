@@ -7,7 +7,7 @@
 // non-fatal `problems` (dangling refs) for the health check.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { resolveNav } from "../../src/core/nav.js";
 import { parseNavFields } from "../../src/schemas/nav.js";
@@ -16,7 +16,6 @@ import { tmpdir } from "node:os";
 
 // ## No nav.card → absent (no custom section, not a problem)
 void test("No nav.card → absent (no custom section, not a problem)", async (t) => {
-  // doctest:L20
   const box = await makeTmpBox();
   const result = await resolveNav(box.root);
   t.check(result.status, "absent");
@@ -24,7 +23,6 @@ void test("No nav.card → absent (no custom section, not a problem)", async (t)
 
 // ## href entries resolve with builtin labels, overridable per entry
 void test("href entries resolve with builtin labels, overridable per entry", async (t) => {
-  // doctest:L29
   const box = await makeTmpBox();
   await box.write("nav.card", `---
 entries:
@@ -36,7 +34,6 @@ entries:
   const result = await resolveNav(box.root);
   t.check(result.status, "ok");
 
-  // doctest:L41
   t.check(result.status === "ok" ? result.entries : null, [
     {
       kind: "href",
@@ -63,7 +60,6 @@ entries:
 // `exists: false`) and is reported in `problems` so the health check can
 // surface it.
 void test("A ref entry's label falls back to the target card's frontmatter title, then t...", async (t) => {
-  // doctest:L70
   const box = await makeTmpBox();
   await box.write("_content/projects/Big_Refactor.doc.card", `---
 title: The Big Refactor
@@ -94,7 +90,6 @@ entries:
     },
   ]);
 
-  // doctest:L102
   t.check(result.status === "ok" ? result.problems : null, [
     "ref \"_content/gone/Missing.doc.card\" does not point at an existing file",
   ]);
@@ -107,7 +102,6 @@ entries:
 // `target` (the shell builds `/<box>/browse/<target>` from it, so the slash
 // must not survive into the entry).
 void test("nav.card sits at the box root, so the canonical leading-/ form and the bare f...", async (t) => {
-  // doctest:L114
   const box = await makeTmpBox();
   await box.write("_content/projects/Big_Refactor.doc.card", `---
 title: The Big Refactor
@@ -137,13 +131,11 @@ entries:
     },
   ]);
 
-  // doctest:L145
   t.check(result.status === "ok" ? result.problems : null, []);
 
   // A leading-`/` ref at a path that doesn't exist is a dangling ref like any
   // other — reported in `problems`, still rendered:
 
-  // doctest:L153
   await box.write("nav.card", `---
 entries:
   - { ref: /_content/gone/Missing.doc.card }
@@ -154,13 +146,11 @@ entries:
     "ref \"/_content/gone/Missing.doc.card\" does not point at an existing file",
   ]);
 
-  // doctest:L162
   t.check(missing.status === "ok" ? missing.entries[0]?.target : null, "_content/gone/Missing.doc.card");
 });
 
 // ## An unknown href fails validation with the valid set enumerated
 void test("An unknown href fails validation with the valid set enumerated", async (t) => {
-  // doctest:L169
   const box = await makeTmpBox();
   await box.write("nav.card", `---
 entries:
@@ -170,19 +160,16 @@ entries:
   const result = await resolveNav(box.root);
   t.check(result.status, "invalid");
 
-  // doctest:L179
   t.check(result.status === "invalid" ? result.error.includes("href must be one of: /, /chat, /dashboard") : null, true);
 });
 
 // ## Malformed cards are invalid, never a crash
 void test("Malformed cards are invalid, never a crash", async (t) => {
-  // doctest:L186
   const box = await makeTmpBox();
   await box.write("nav.card", "just some text, no frontmatter\n");
   const result = await resolveNav(box.root);
   t.check(result.status === "invalid" ? result.error : null, "nav.card has no frontmatter block");
 
-  // doctest:L192
   await box.write("nav.card", "---\nentries: []\n---\n");
   const empty = await resolveNav(box.root);
   t.check(empty.status, "invalid");
@@ -202,7 +189,6 @@ void test("A .. that climbs out of the box is refused — including one hidden b
       t.error(error);
     }
   });
-  // doctest:L205
   const box = await makeTmpBox();
   const outsideDir = await mkdtemp(`${tmpdir()}/bbx-nav-outside-`);
   const outside = `${outsideDir}/Secret.doc.card`;
@@ -210,7 +196,6 @@ void test("A .. that climbs out of the box is refused — including one hidden b
   await box.write("_content/.keep", "");
   await symlink(outside, box.path("_content/Leak.doc.card"));
 
-  // doctest:L212
   await box.write("nav.card", `---
 entries:
   - { href: / }
@@ -226,13 +211,11 @@ entries:
     "ref \"/_content/Leak.doc.card\" must be box-relative (must not escape the box via a symlink)",
   ]);
 
-  // doctest:L229
   t.check(result.status === "ok" ? result.entries.length : null, 1);
 });
 
 // ## parseNavFields: an entry may be href or ref, not both
 void test("parseNavFields: an entry may be href or ref, not both", async (t) => {
-  // doctest:L241
   const bad = parseNavFields(`---
 entries:
   - { href: /chat, ref: _content/x.doc.card }

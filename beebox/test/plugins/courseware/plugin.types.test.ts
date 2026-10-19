@@ -14,8 +14,8 @@
 // resolves `beebox/*` through the package `exports` map, as an installed box does.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { execFile } from "node:child_process";
 import { mkdir, symlink } from "node:fs/promises";
 import { createRequire } from "node:module";
@@ -68,9 +68,8 @@ async function typecheckStub(source: string): Promise<string[]> {
 // extension `docs/plugins.md` shows (adding `mood`) both typecheck; the delta's
 // `summarize` sees the base's `entries` with its element type and the added
 // `mood`.
-// The doctest gave each example 120s before a still-running notice.
+// Each example gets 120s before a still-running notice.
 void test("The plain completion (src/plugins/courseware/README.md, Setup) and the extens...", async (t) => {
-  // doctest:L71
   t.check(
     await typecheckStub(`
 export const Plain = cardSchema("progress", courseware.schemas.progress);
@@ -91,9 +90,8 @@ export default cardSchema("progress", extendSchema(courseware.schemas.progress, 
 // A field neither side declares, a wrong value for a base enum, and a wrong type
 // for a base field are each compile errors; `InferCardFields` on the completed
 // schema carries the base fields with their types and the added one.
-// The doctest gave each example 120s before a still-running notice.
+// Each example gets 120s before a still-running notice.
 void test("A field neither side declares, a wrong value for a base enum, and a wrong typ...", async (t) => {
-  // doctest:L91
   t.check(
     await typecheckStub(`
 const Progress = cardSchema("progress", extendSchema(courseware.schemas.progress, {
@@ -119,12 +117,11 @@ void wrongLearner;
 
 // ## Redeclaring a base field fails under `tsc`
 //
-// The runtime `RedeclaredFieldError` (`test/cards/extend-schema.doctest.md`) is
+// The runtime `RedeclaredFieldError` (`test/cards/extend-schema.test.ts`) is
 // the fallback for a box running under type stripping; a typechecked box is
 // told at compile time.
-// The doctest gave each example 120s before a still-running notice.
-void test("The runtime RedeclaredFieldError (test/cards/extend-schema.doctest.md) is the...", async (t) => {
-  // doctest:L117
+// Each example gets 120s before a still-running notice.
+void test("The runtime RedeclaredFieldError (test/cards/extend-schema.test.ts) is the...", async (t) => {
   t.check(
     await typecheckStub(`
 export default cardSchema("progress", extendSchema(courseware.schemas.progress, {

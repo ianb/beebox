@@ -9,6 +9,8 @@ priority: important
 needs: [manual-testing]
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > **⏳ Awaiting manual testing** — all three items are settled in code
 > (`305c3a2a`); what is left is a look at the real composer. Only the developer
 > clears this. See [Manual testing](#manual-testing).

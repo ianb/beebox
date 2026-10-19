@@ -7,7 +7,7 @@
 // `bbx plugins list`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { activePluginNames } from "../../../src/core/box/config.js";
 import { activePlugins, describeInvalidPluginEntries, listPlugins } from "../../../src/core/plugins/active.js";
@@ -20,7 +20,6 @@ async function boxWithPlugins(value: unknown) {
 
 // ## A missing field activates nothing; a known name activates that plugin once
 void test("A missing field activates nothing; a known name activates that plugin once", async (t) => {
-  // doctest:L24
   const box = await makeTmpBox();
   t.check(await activePluginNames(box.root), {
     active: [],
@@ -29,7 +28,6 @@ void test("A missing field activates nothing; a known name activates that plugin
 });
 
 void test("A missing field activates nothing; a known name activates that plugin once (line 29)", async (t) => {
-  // doctest:L30
   const box = await boxWithPlugins(["courseware", "courseware"]);
   t.check(({ names: await activePluginNames(box.root), active: (await activePlugins(box.root)).map((p) => p.name) }), {
     names: {
@@ -51,7 +49,6 @@ void test("A missing field activates nothing; a known name activates that plugin
 // nothing is active: the message says what the field must be rather than
 // listing each wrong element.
 void test("Each unknown name is one invalid entry beside the names that do resolve.", async (t) => {
-  // doctest:L43
   const box = await boxWithPlugins(["coursware", "courseware"]);
   const { active, invalid } = await activePluginNames(box.root);
   t.check(({ active, problems: describeInvalidPluginEntries(invalid) }), {
@@ -65,7 +62,6 @@ void test("Each unknown name is one invalid entry beside the names that do resol
 });
 
 void test("An unknown name disables only itself; a malformed field disables everything", async (t) => {
-  // doctest:L50
   const box = await boxWithPlugins(["courseware", 3]);
   const { active, invalid } = await activePluginNames(box.root);
   t.check(({ active, problems: describeInvalidPluginEntries(invalid) }), {
@@ -77,7 +73,6 @@ void test("An unknown name disables only itself; a malformed field disables ever
 });
 
 void test("An unknown name disables only itself; a malformed field disables everything (line 56)", async (t) => {
-  // doctest:L57
   const box = await boxWithPlugins("courseware");
   t.check(describeInvalidPluginEntries((await activePluginNames(box.root)).invalid), [
     "box.json \"plugins\" must be an array of plugin names; found \"courseware\"",
@@ -90,7 +85,6 @@ void test("An unknown name disables only itself; a malformed field disables ever
 // schema (`src/schemas/<type>.ts`) and view (`src/views/<name>.tsx`) with whether
 // the box has written it, since activation is the agent writing those files.
 void test("An inactive plugin lists with no stubs.", async (t) => {
-  // doctest:L69
   const box = await makeTmpBox();
   t.check((await listPlugins(box.root)).plugins.map((p) => `${p.name} ${p.active ? "active" : "inactive"} ${p.description} ${p.docs} stubs=${p.stubs.length}`), [
     "courseware inactive Courses, lesson plans, learner progress node_modules/beebox/src/plugins/courseware/README.md stubs=0",
@@ -99,7 +93,6 @@ void test("An inactive plugin lists with no stubs.", async (t) => {
 });
 
 void test("The listing covers every installed plugin and the active ones' stubs", async (t) => {
-  // doctest:L78
   const box = await boxWithPlugins(["courseware", "nope"]);
   await box.write("src/schemas/course.ts", "// stub\n");
   await box.write("src/views/concept-map.tsx", "// stub\n");

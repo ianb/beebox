@@ -6,7 +6,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
-import agentDoctest from "agent-doctest/eslint";
+import tapCheck from "@ianbicking/tap-check/eslint";
 
 // --- Frontend import-boundary contract (project-local; see
 // docs/plans/clerk-contract-and-import-boundary.md Track 2, and the paths
@@ -96,7 +96,7 @@ const BACKEND_LIB_BAN_MESSAGE =
 const SHARED_ALIAS_PATTERN = {
   group: ["**/shared/**"],
   message:
-    "Import shared modules via the @shared/* alias, not a raw relative path. (Raw relative is reserved for the few modules that run outside Vite — doctests and the view-widgets bundle — where @shared can't resolve; those are exempted in eslint.config.ts.)",
+    "Import shared modules via the @shared/* alias, not a raw relative path. (Raw relative is reserved for the few modules that run outside Vite — tests and the view-widgets bundle — where @shared can't resolve; those are exempted in eslint.config.ts.)",
 };
 // Modules exercised outside the Vite bundler that legitimately import src/shared/
 // by raw relative path (@shared unresolvable there — see SHARED_ALIAS_PATTERN).
@@ -232,15 +232,15 @@ export default [
   },
   {
     // Tests compare whole values with t.check (../../docs/testing/check.md),
-    // as in ../../eslint.config.ts. agent-doctest resolves from beebox's
+    // as in ../../eslint.config.ts. tap-check resolves from beebox's
     // node_modules, as it does for these tests' tap preloads; declaring it
     // here would make pnpm install a second set of its tap peers.
     files: ["test/**/*.{ts,tsx}"],
-    plugins: { "agent-doctest": agentDoctest },
+    plugins: { "tap-check": tapCheck },
     rules: {
-      "agent-doctest/check-whole-value": "error",
-      "agent-doctest/no-voided-check": "error",
-      "agent-doctest/no-tap-assert": "error",
+      "tap-check/check-whole-value": "error",
+      "tap-check/no-voided-check": "error",
+      "tap-check/no-tap-assert": "error",
     },
   },
 ];

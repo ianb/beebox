@@ -15,8 +15,8 @@
 // on both.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import Sharp from "sharp";
 import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";
@@ -121,14 +121,12 @@ void test("An uploader's first move is check, which answers unknown for a hash t
       t.error(error);
     }
   });
-  // doctest:L113
   resetScanRateLimits();
   const ctx = await makeScanTestServer();
   await ctx.startupPass;
   const png = await pngBytes();
   const hash = sha256(png);
 
-  // doctest:L119
   const first = await check(ctx, [hash]);
   t.check(first, {
     statusCode: 200,
@@ -143,7 +141,6 @@ void test("An uploader's first move is check, which answers unknown for a hash t
   // The PUT streams the bytes into quarantine, re-hashes them, sniffs the magic
   // bytes against the claimed extension, and decodes the image — all before the 200:
 
-  // doctest:L138
   const accepted = await put(ctx, { bytes: png, filename: "Receipts_001.png" });
   t.check({ status: accepted.statusCode, body: accepted.body }, {
     status: 200,
@@ -157,14 +154,12 @@ void test("An uploader's first move is check, which answers unknown for a hash t
   // image grouping keys on scanner `<prefix>_NNN` names, and it records which token
   // uploaded the file as provenance:
 
-  // doctest:L149
   const sidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${hash}.json`));
     t.check(sidecar, sidecarOf({ hash, state: "pending", ext: ".png", name: "Receipts_001.png" }));
 
   // `check` now reports `pending` — confirmed, so the client may archive its copy —
   // and a re-PUT of the same hash is a `duplicate` no-op rather than a re-store:
 
-  // doctest:L165
   const second = await check(ctx, [hash]);
   const duplicate = await put(ctx, { bytes: png, filename: "Receipts_001.png" });
     t.check({ second, duplicate }, {
@@ -175,12 +170,10 @@ void test("An uploader's first move is check, which answers unknown for a hash t
   // The lifecycle invoked the injected startup pass for this exact annex-shaped
   // box before the route assertions ran:
 
-  // doctest:L178
   t.check(ctx.promotionRoots, [ctx.boxRoot]);
 
   // `X-Scan-Profile` rides along as free-text provenance when the scanner sends one:
 
-  // doctest:L185
   const withProfile = await put(ctx, {
     bytes: Buffer.concat([png, Buffer.from("\n")]),
     filename: "Receipts_002.png",
@@ -210,7 +203,6 @@ void test("The extension allowlist is intentionally relaxed for these formats, b
       t.error(error);
     }
   });
-  // doctest:L207
   resetScanRateLimits();
   const ctx = await makeScanTestServer();
   const webp = await webpBytes();
@@ -238,7 +230,6 @@ void test("The extension allowlist is intentionally relaxed for these formats, b
   // Changing a valid AVIF's major brand to `mif1` makes file-type report HEIF. The
   // same valid AV1 image remains accepted through full pixel decode.
 
-  // doctest:L230
   const mif1 = Buffer.from(avif);
   mif1.write("mif1", 8);
   const branded = await put(ctx, { bytes: mif1, filename: "Receipts_005.avif" });
@@ -257,7 +248,6 @@ void test("imported comes from the box's upload ledger, not from quarantine — 
       t.error(error);
     }
   });
-  // doctest:L247
   resetScanRateLimits();
   const ctx = await makeScanTestServer();
   const png = await pngBytes();
@@ -273,7 +263,6 @@ void test("imported comes from the box's upload ledger, not from quarantine — 
     }],
   }));
 
-  // doctest:L262
   const states = await check(ctx, [hash]);
   const reput = await put(ctx, { bytes: png, filename: "Receipts_001.png" });
   t.check({ states, reput }, {
@@ -294,13 +283,11 @@ void test("Truncation and corruption defense.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L278
   resetScanRateLimits();
   const ctx = await makeScanTestServer();
   const png = await pngBytes();
   const wrongHash = sha256(Buffer.from("something else entirely"));
 
-  // doctest:L283
   const res = await put(ctx, { bytes: png, hash: wrongHash, filename: "Receipts_001.png" });
   t.check({ status: res.statusCode, body: res.body }, {
     status: 422,
@@ -311,7 +298,6 @@ void test("Truncation and corruption defense.", async (t) => {
 
   // Neither the claimed hash nor the real one is now known to the box:
 
-  // doctest:L291
   const after = await check(ctx, [wrongHash, sha256(png)]);
   t.check(after, checked({ [wrongHash]: { state: "unknown" }, [sha256(png)]: { state: "unknown" } }));
 });
@@ -329,13 +315,11 @@ void test("The magic-byte sniff is the type-smuggling gate:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L307
   resetScanRateLimits();
   const ctx = await makeScanTestServer();
   const png = await pngBytes();
   const hash = sha256(png);
 
-  // doctest:L312
   const res = await put(ctx, { bytes: png, filename: "Statement.pdf" });
   t.check({ status: res.statusCode, body: res.body }, {
     status: 422,
@@ -349,7 +333,6 @@ void test("The magic-byte sniff is the type-smuggling gate:", async (t) => {
   // share handed back, say) are rejected the same way — the sniff failing open would
   // defeat the whole gate:
 
-  // doctest:L322
   const html = Buffer.from("<!DOCTYPE html>\n<html><body>Not found</body></html>\n");
   const htmlRes = await put(ctx, { bytes: html, filename: "Statement.pdf" });
   t.check(htmlRes, {
@@ -359,7 +342,6 @@ void test("The magic-byte sniff is the type-smuggling gate:", async (t) => {
 
   // An extension outside the accepted set never gets as far as a sniff:
 
-  // doctest:L331
   const otherBytes = Buffer.concat([png, Buffer.from("tail")]);
   const zip = await put(ctx, { bytes: otherBytes, filename: "Scans.zip" });
   t.check(zip, {
@@ -374,7 +356,6 @@ void test("The magic-byte sniff is the type-smuggling gate:", async (t) => {
   // `check` answers `rejected` with the reason, and the client must never dispose of
   // it:
 
-  // doctest:L342
   const states = await check(ctx, [hash]);
   const sidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${hash}.json`));
   t.check({ states, sidecar }, {
@@ -391,7 +372,6 @@ void test("The magic-byte sniff is the type-smuggling gate:", async (t) => {
   // verdict — that is the deliberate retry path after a validator fix, and here the
   // client corrects the filename instead:
 
-  // doctest:L354
   const retry = await put(ctx, { bytes: png, filename: "Statement.png" });
   const recheck = await check(ctx, [hash]);
   t.check({ retry, recheck }, {
@@ -409,13 +389,11 @@ void test("PDFs: a valid one is accepted, a corrupt one is rejected — or 503 w
       t.error(error);
     }
   });
-  // doctest:L367
   resetScanRateLimits();
   const ctx = await makeScanTestServer();
   const hasQpdf = await qpdfAvailable();
   const pdf = textlessPdf();
 
-  // doctest:L372
   const good = await put(ctx, { bytes: pdf, filename: "Invoice.pdf" });
   // Where qpdf is missing the route refuses with a retryable 503 (rather than
   // accepting unvalidated bytes or blaming the file); with qpdf it gives a real verdict.
@@ -428,7 +406,6 @@ void test("PDFs: a valid one is accepted, a corrupt one is rejected — or 503 w
   // against half-written scans is the client's settle gate plus the hash-integrity
   // check, while qpdf catches hard corruption (exit 2):
 
-  // doctest:L385
   const corrupt = Buffer.from("%PDF-1.4\n<<garbage");
   const bad = await put(ctx, { bytes: corrupt, filename: "Invoice.pdf" });
   // The structural verdict quotes qpdf's output, which carries a temp path.
@@ -444,7 +421,6 @@ void test("PDFs: a valid one is accepted, a corrupt one is rejected — or 503 w
   // so the uploader retries later instead of treating a server misconfiguration as a
   // verdict on its file.
 
-  // doctest:L396
   const states = await check(ctx, [sha256(pdf), sha256(corrupt)]);
   t.check(states, checked(hasQpdf ? {
     [sha256(pdf)]: { state: "pending" },
@@ -469,12 +445,10 @@ void test("A Content-Length over the 50 MB cap is refused before a byte is trans
       t.error(error);
     }
   });
-  // doctest:L411
   resetScanRateLimits();
   const ctx = await makeScanTestServer();
   const png = await pngBytes();
 
-  // doctest:L415
   const declared = await put(ctx, {
     bytes: png,
     filename: "Huge.png",
@@ -486,7 +460,6 @@ void test("A Content-Length over the 50 MB cap is refused before a byte is trans
   // Fastify's `bodyLimit` does not meter a passthrough parser — the route counts the
   // bytes itself and aborts the moment they cross the cap:
 
-  // doctest:L429
   const oversize = Buffer.alloc(50 * 1024 * 1024 + 1024, 0x41);
   const lied = await put(ctx, {
     bytes: oversize,
@@ -497,14 +470,12 @@ void test("A Content-Length over the 50 MB cap is refused before a byte is trans
 
   // No partial file survives either refusal — quarantine holds nothing:
 
-  // doctest:L442
   const states = await check(ctx, [sha256(oversize)]);
   t.check(states, checked({ [sha256(oversize)]: { state: "unknown" } }));
 
   // A body with no `Content-Length` at all is refused too: the contract requires it,
   // and a length-less stream is exactly the shape a runaway upload arrives in.
 
-  // doctest:L451
   const noLength = await ctx.request({
     method: "PUT",
     url: `/api/scan/files/${sha256(png)}`,
@@ -526,12 +497,10 @@ void test("The hash in the path is the idempotency key for everything downstream
       t.error(error);
     }
   });
-  // doctest:L471
   resetScanRateLimits();
   const ctx = await makeScanTestServer();
   const png = await pngBytes();
 
-  // doctest:L475
   const malformedHashes = ["not-a-hash", sha256(png).toUpperCase(), sha256(png) + "00"];
   const codes = [];
   for (const hash of malformedHashes) codes.push((await put(ctx, { bytes: png, hash, filename: "a.png" })).statusCode);
@@ -547,7 +516,6 @@ void test("The hash in the path is the idempotency key for everything downstream
   // `../../etc/passwd` arrives as `passwd` and then fails on having no extension at
   // all; the traversal never reaches a path join:
 
-  // doctest:L489
   const missing = await put(ctx, { bytes: png, filename: null });
   const blank = await put(ctx, { bytes: png, filename: "   " });
   const traversal = await put(ctx, { bytes: png, filename: "../../etc/passwd" });
@@ -566,7 +534,6 @@ void test("The hash in the path is the idempotency key for everything downstream
   // `check` validates its batch the same way — a malformed hash or an over-cap batch
   // is a 400 rather than a map full of `unknown`:
 
-  // doctest:L504
   const malformed = await check(ctx, ["nope"]);
   const overCap = await check(ctx, Array.from({ length: 501 }, (_v, i) => sha256(Buffer.from(String(i)))));
   const notAnArray = await ctx.request({ method: "POST", url: "/api/scan/check", payload: { hashes: "abc" } });
@@ -578,7 +545,6 @@ void test("The hash in the path is the idempotency key for everything downstream
 
   // An empty batch is legal — a folder with nothing new in it is a normal run:
 
-  // doctest:L514
   const empty = await check(ctx, []);
   t.check(empty, checked({}));
 });
@@ -595,11 +561,9 @@ void test("A bound on a runaway or looping uploader, an order of magnitude above
       t.error(error);
     }
   });
-  // doctest:L529
   resetScanRateLimits();
   const ctx = await makeScanTestServer();
 
-  // doctest:L532
   let last = await check(ctx, []);
   for (let i = 1; i < SCAN_RATE_LIMIT + 1; i++) last = await check(ctx, []);
   t.check(last, { statusCode: 429, body: { error: "Too many scan requests; retry after the interval in Retry-After" } });
@@ -607,7 +571,6 @@ void test("A bound on a runaway or looping uploader, an order of magnitude above
   // The response carries the seconds until the window rolls over, which is what the
   // contract tells the client to honor:
 
-  // doctest:L542
   const throttled = await ctx.rawRequest({ method: "POST", url: "/api/scan/check", payload: { hashes: [] } });
   const retryAfter = Number(throttled.headers["retry-after"]);
   t.check({ statusCode: throttled.statusCode, retryAfter }, {
@@ -617,7 +580,6 @@ void test("A bound on a runaway or looping uploader, an order of magnitude above
 
   // Clearing the window lets the same credential straight back in:
 
-  // doctest:L551
   resetScanRateLimits();
   t.check(await check(ctx, []), checked({}));
 });
@@ -640,14 +602,12 @@ void test("These routes are registered in a sibling scope outside the box's gene
       t.error(error);
     }
   });
-  // doctest:L568
   resetScanRateLimits();
   delete process.env.BBX_HUB_SECRET;
   const ctx = await makeScanTestServer({ openAccess: false });
   const png = await pngBytes();
   const token = await createScanToken(ctx.boxRoot, { name: "laptop-scansnap", createdBy: "owner@example.com" });
 
-  // doctest:L574
   const asToken = await ctx.request({
     method: "PUT",
     url: `/api/scan/files/${sha256(png)}`,
@@ -668,7 +628,6 @@ void test("These routes are registered in a sibling scope outside the box's gene
   // The sidecar records which token it was — this becomes `scan-upload/<name>`
   // provenance on the card the promote worker files:
 
-  // doctest:L592
   const tokenSidecar = JSON.parse(await ctx.read(`_tmp/scan-quarantine/${sha256(png)}.json`));
   t.check(tokenSidecar, sidecarOf({ hash: sha256(png), state: "pending", ext: ".png", name: "Receipts_001.png", tokenName: "laptop-scansnap" }));
 
@@ -677,8 +636,7 @@ void test("These routes are registered in a sibling scope outside the box's gene
   // resolves to nothing here, because the scan gate reads the scan store and only
   // the scan store:
 
-  // doctest:L603
-  process.env.BBX_HUB_SECRET = "scan-upload-doctest-secret";
+  process.env.BBX_HUB_SECRET = "scan-upload-test-secret";
   process.env.BBX_OWNER_EMAIL = "owner@example.com";
   const asOwner = await check(ctx, [sha256(png)]);
   const asOwnerHub = await ctx.request({
@@ -686,7 +644,7 @@ void test("These routes are registered in a sibling scope outside the box's gene
     url: "/api/scan/check",
     payload: { hashes: [sha256(png)] },
     headers: {
-      "x-bbx-hub-secret": "scan-upload-doctest-secret",
+      "x-bbx-hub-secret": "scan-upload-test-secret",
       "x-bbx-authenticated-email": "owner@example.com",
     },
   });
@@ -736,12 +694,10 @@ void test("Every section above runs on an annex-converted box (annexBox:", async
       t.error(error);
     }
   });
-  // doctest:L663
   resetScanRateLimits();
   const ctx = await makeTestServer({ assetsHiddenAgain: true });
   const png = await pngBytes();
 
-  // doctest:L667
   const refused = await check(ctx, [sha256(png)]);
   t.check({ status: refused.statusCode, body: refused.body }, {
     status: 503,
@@ -754,7 +710,6 @@ void test("Every section above runs on an annex-converted box (annexBox:", async
   // The PUT answers identically — the refusal runs before auth and before the bytes
   // are read, because the answer does not depend on who is asking:
 
-  // doctest:L676
   const stored = await put(ctx, { bytes: png, filename: "Receipts_001.png" });
   t.check({ status: stored.statusCode, body: stored.body }, {
     status: 503,
@@ -767,6 +722,5 @@ void test("Every section above runs on an annex-converted box (annexBox:", async
   // Quarantine stays empty — no sidecar, no bytes, nothing for a promote pass to
   // find:
 
-  // doctest:L685
   t.check(await ctx.read(`_tmp/scan-quarantine/${sha256(png)}.json`).then(() => "recorded", (e) => e.code), "ENOENT");
 });

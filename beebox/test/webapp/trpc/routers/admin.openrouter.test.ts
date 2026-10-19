@@ -7,7 +7,7 @@
 // `openrouterFetch` service so nothing leaves the machine.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { mkdtemp } from "node:fs/promises";
@@ -56,7 +56,6 @@ void test("An empty box: no models, no key", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L53
   process.env.BBX_SECRETS_FILE = join(await mkdtemp(join(tmpdir(), "bbx-secrets-")), "secrets.json");
   clearOpenRouterCatalogCache();
   const server = await makeTestServer();
@@ -71,18 +70,14 @@ void test("An empty box: no models, no key", async (t) => {
   // A typo, an id OpenRouter does not carry, and a model with no tool calling are
   // all refused here, before any chat could try them.
 
-  // doctest:L66
   t.check(await message(() => caller(server).admin.addOpenrouterModel({ id: "DeepSeek V3", label: "x" })), "Enter an OpenRouter model id like deepseek/deepseek-v3.2 (lowercase, author/model) and a label of at most 60 characters.");
 
-  // doctest:L69
   t.check(await message(() => caller(server).admin.addOpenrouterModel({ id: "deepseek/not-a-model", label: "x" })), "OpenRouter has no model deepseek/not-a-model. Check the id on openrouter.ai/models.");
 
-  // doctest:L72
   t.check(await message(() => caller(server).admin.addOpenrouterModel({ id: "inference-net/schematron-v2-turbo", label: "x" })), "inference-net/schematron-v2-turbo does not support tool calling, which every chat and agent turn needs.");
 
   // A valid model is saved with its label and listed with its price.
 
-  // doctest:L79
   await caller(server).admin.addOpenrouterModel({ id: "moonshotai/kimi-k2-0905:exacto", label: " Kimi K2 " });
   clearBoxConfigCache(server.boxRoot);
   const listed = (await caller(server).admin.openrouterModels()).models[0];
@@ -104,23 +99,19 @@ void test("An empty box: no models, no key", async (t) => {
 
   // ## The added model can be the box default, and then cannot be removed
 
-  // doctest:L90
   await caller(server).admin.updateBoxConfig({ agentModel: "moonshotai/kimi-k2-0905:exacto" });
   clearBoxConfigCache(server.boxRoot);
   t.check((await caller(server).admin.boxConfig()).agentModel, "moonshotai/kimi-k2-0905:exacto");
 
-  // doctest:L95
   t.check(await message(() => caller(server).admin.removeOpenrouterModel({ id: "moonshotai/kimi-k2-0905:exacto" })), "moonshotai/kimi-k2-0905:exacto is this box's default model. Change the default model first, then remove it.");
 
   // An id that was never added cannot become the default.
 
-  // doctest:L102
   t.check(await message(() => caller(server).admin.updateBoxConfig({ agentModel: "qwen/qwen3-coder" })), "Unknown model id qwen/qwen3-coder");
 
   // The small model is guarded the same way: background passes on an
   // OpenRouter-default box run on it, and removing it would send them to Claude.
 
-  // doctest:L110
   await caller(server).admin.updateBoxConfig({ agentModel: null });
   const configPath = join(server.boxRoot, "_config/box.json");
   const withSmall = JSON.parse(await readFile(configPath, "utf8"));
@@ -130,7 +121,6 @@ void test("An empty box: no models, no key", async (t) => {
 
   // Once neither slot names it, removal works and the list is empty again.
 
-  // doctest:L122
   await writeFile(configPath, JSON.stringify(withSmall));
   clearBoxConfigCache(server.boxRoot);
   await caller(server).admin.removeOpenrouterModel({ id: "moonshotai/kimi-k2-0905:exacto" });
@@ -142,12 +132,10 @@ void test("An empty box: no models, no key", async (t) => {
   // `chat.status` offers added models only when the key is usable — rows whose
   // every run would refuse are noise.
 
-  // doctest:L136
   await caller(server).admin.addOpenrouterModel({ id: "qwen/qwen3-coder", label: "Qwen3 Coder" });
   clearBoxConfigCache(server.boxRoot);
   t.check((await caller(server).chat.status({})).addedModels, []);
 
-  // doctest:L141
   await setSecret({ name: "openrouter", value: "placeholder-openrouter-key" });
   await grantSecret({ slug: await boxSlug(server.boxRoot), name: "openrouter", access: "server" });
   t.check((await caller(server).chat.status({})).addedModels, [
@@ -157,7 +145,6 @@ void test("An empty box: no models, no key", async (t) => {
     },
   ]);
 
-  // doctest:L146
   const withKey = await caller(server).admin.openrouterModels();
   t.check(withKey, {
     keyGranted: true,
@@ -191,6 +178,5 @@ void test("An empty box: no models, no key", async (t) => {
 
   // ## Owner only
 
-  // doctest:L154
   t.check(await message(() => caller(server, { isOwner: false }).admin.addOpenrouterModel({ id: "qwen/qwen3-coder", label: "x" })), "Owner access required");
 });

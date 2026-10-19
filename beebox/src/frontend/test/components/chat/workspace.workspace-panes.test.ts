@@ -5,7 +5,7 @@
 // single foreground without rewriting the remembered desktop layout.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   createEmptyWorkspaceState,
   normalizeWorkspaceState,
@@ -46,11 +46,9 @@ const cardOnly = (pane: PaneId, path: string): Projection => ({ visiblePanes: [{
 // Fresh state anchors chat on the right, so a desktop open reveals the card on
 // the left. Showing conversation there collapses both chat projections into one.
 void test("Fresh state anchors chat on the right, so a desktop open reveals the card on...", async (t) => {
-  // doctest:L37
   let state = open(createEmptyWorkspaceState(), { path: "a", at: 1 });
   t.check(state.panes, { left: cards(["a"], "a"), right: CHAT_PANE });
 
-  // doctest:L41
   t.check(projectWorkspace(state, "desktop"), {
     visiblePanes: [
       {
@@ -66,7 +64,6 @@ void test("Fresh state anchors chat on the right, so a desktop open reveals the 
     restorePane: null,
   });
 
-  // doctest:L44
   state = reduceWorkspace(state, { type: "showChat", pane: "left", viewport: "desktop" }).state;
   t.check(projectWorkspace(state, "desktop"), fullChat("left"));
 });
@@ -77,7 +74,6 @@ void test("Fresh state anchors chat on the right, so a desktop open reveals the 
 // opening it while chat is left atomically moves it to the right and refreshes
 // its explicit viewer.
 void test("The same path is never duplicated.", async (t) => {
-  // doctest:L59
   let state = open(createEmptyWorkspaceState(), { path: "a", at: 1 });
   state = open(state, { path: "b", at: 2, originatingPane: "left" });
   state = reduceWorkspace(state, { type: "showChat", pane: "left", viewport: "desktop" }).state;
@@ -103,7 +99,6 @@ void test("The same path is never duplicated.", async (t) => {
 // active tab, reveals the destination, and leaves a neighbour selected. Leaving
 // focus returns to split rather than jumping to conversation.
 void test("With no visible chat, a new card uses the originating pane.", async (t) => {
-  // doctest:L80
   let state = open(createEmptyWorkspaceState(), { path: "left-a", at: 1 });
   state = reduceWorkspace(state, { type: "showChat", pane: "left", viewport: "desktop" }).state;
   state = open(state, { path: "right-a", at: 2, originatingPane: "right" });
@@ -111,15 +106,12 @@ void test("With no visible chat, a new card uses the originating pane.", async (
   state = open(state, { path: "left-b", at: 3, originatingPane: "left" });
   t.check(state.panes, { left: cards(["left-a", "left-b"], "left-b"), right: cards(["right-a"], "right-a") });
 
-  // doctest:L88
   state = reduceWorkspace(state, { type: "moveActive", pane: "left" }).state;
   t.check(state.panes, { left: cards(["left-a"], "left-a"), right: cards(["right-a", "left-b"], "left-b") });
 
-  // doctest:L92
   state = reduceWorkspace(state, { type: "focusPane", pane: "right" }).state;
   t.check(state.layout, { kind: "focus", pane: "right" });
 
-  // doctest:L96
   state = reduceWorkspace(state, { type: "backToSplit", pane: "right" }).state;
   t.check(state.layout, { kind: "split" });
 });
@@ -132,7 +124,6 @@ void test("With no visible chat, a new card uses the originating pane.", async (
 // there instead of duplicating or moving Browse. Mobile keeps its single-card
 // placement rules.
 void test("Browse uses this hint for files:", async (t) => {
-  // doctest:L110
   let state = open(createEmptyWorkspaceState(), { path: "browse", at: 1 });
   state = reduceWorkspace(state, { type: "focusPane", pane: "left" }).state;
   state = open(state, { path: "file-a", at: 2, originatingPane: "left", destinationPane: "right" });
@@ -141,12 +132,10 @@ void test("Browse uses this hint for files:", async (t) => {
     layout: { kind: "split" },
   });
 
-  // doctest:L116
   state = open(state, { path: "browse-right", at: 3, originatingPane: "right" });
   state = open(state, { path: "file-b", at: 4, originatingPane: "right", destinationPane: "right" });
   t.check(state.panes, { left: cards(["browse"], "browse"), right: cards(["file-a", "browse-right", "file-b"], "file-b") });
 
-  // doctest:L121
   const mobile = open(createEmptyWorkspaceState(), { path: "mobile-file", at: 1, viewport: "mobile", destinationPane: "right" });
   t.check(mobile.panes, { left: cards(["mobile-file"], "mobile-file"), right: CHAT_PANE });
 });
@@ -155,13 +144,11 @@ void test("Browse uses this hint for files:", async (t) => {
 // hint, opening a card retained in the other pane keeps the pre-existing focus
 // behavior and moves focus to its owning pane.
 void test("An explicit desktop destination also relocates an existing card.", async (t) => {
-  // doctest:L131
   let relocation = open(createEmptyWorkspaceState(), { path: "file", at: 1 });
   relocation = open(relocation, { path: "browse", at: 2, originatingPane: "left" });
   relocation = open(relocation, { path: "file", at: 3, originatingPane: "left", destinationPane: "right" });
   t.check(relocation.panes, { left: cards(["browse"], "browse"), right: cards(["file"], "file") });
 
-  // doctest:L137
   let focused = open(createEmptyWorkspaceState(), { path: "left", at: 1 });
   focused = reduceWorkspace(focused, { type: "showChat", pane: "left", viewport: "desktop" }).state;
   focused = open(focused, { path: "right", at: 2 });
@@ -184,25 +171,21 @@ void test("An explicit desktop destination also relocates an existing card.", as
 // and pane display flags. Show cards restores a retained selection without a new
 // opposite-pane open decision.
 void test("Entering mobile chooses the last explicitly interacted-with card.", async (t) => {
-  // doctest:L155
   let state = open(createEmptyWorkspaceState(), { path: "a", at: 1 });
   state = open(state, { path: "b", at: 2, originatingPane: "right" });
   state = reduceWorkspace(state, { type: "setViewport", viewport: "mobile" }).state;
   t.check(projectWorkspace(state, "mobile"), cardOnly("left", "b"));
 
-  // doctest:L161
   const desktopBefore = structuredClone({ layout: state.layout, panes: state.panes });
   state = reduceWorkspace(state, { type: "showChat", pane: "right", viewport: "mobile" }).state;
   t.check(projectWorkspace(state, "mobile"), fullChat("left"));
 
-  // doctest:L166
   t.check({ layout: state.layout, panes: state.panes }, desktopBefore);
   t.check(desktopBefore, {
     layout: { kind: "split" },
     panes: { left: cards(["a", "b"], "b"), right: CHAT_PANE },
   });
 
-  // doctest:L169
   state = reduceWorkspace(state, { type: "restoreCards", viewport: "mobile" }).state;
   t.check(projectWorkspace(state, "mobile"), cardOnly("left", "b"));
 });
@@ -210,7 +193,6 @@ void test("Entering mobile chooses the last explicitly interacted-with card.", a
 // Mobile Show conversation restores the card just put aside, even when the chat
 // anchor points to the other pane and that pane also retains cards.
 void test("Mobile Show conversation restores the card just put aside, even when the chat...", async (t) => {
-  // doctest:L178
   let state = open(createEmptyWorkspaceState(), { path: "left", at: 1 });
   state = reduceWorkspace(state, { type: "showChat", pane: "left", viewport: "desktop" }).state;
   state = open(state, { path: "right", at: 2 });
@@ -224,7 +206,6 @@ void test("Mobile Show conversation restores the card just put aside, even when 
     projection: fullChat("right"),
   });
 
-  // doctest:L188
   state = reduceWorkspace(state, { type: "restoreCards", viewport: "mobile" }).state;
   t.check(projectWorkspace(state, "mobile"), cardOnly("right", "right"));
 });
@@ -234,7 +215,6 @@ void test("Mobile Show conversation restores the card just put aside, even when 
 // Both panes remain visible, but attention follows selection rather than always
 // falling onto the right-hand projection.
 void test("Both panes remain visible, but attention follows selection rather than always...", async (t) => {
-  // doctest:L199
   let state = open(createEmptyWorkspaceState(), { path: "left", at: 1 });
   state = reduceWorkspace(state, { type: "showChat", pane: "left", viewport: "desktop" }).state;
   state = open(state, { path: "right", at: 2 });
@@ -248,7 +228,6 @@ void test("Both panes remain visible, but attention follows selection rather tha
     restorePane: null,
   });
 
-  // doctest:L207
   state = reduceWorkspace(state, { type: "selectTab", path: "left", at: 4, viewport: "desktop" }).state;
   t.check(projectWorkspace(state, "desktop"), {
     visiblePanes: [{ pane: "left", path: "left" }, { pane: "right", path: "right" }],
@@ -261,7 +240,6 @@ void test("Both panes remain visible, but attention follows selection rather tha
 
 // ## Closing repairs selections, mobile return, and focused empty panes
 void test("Closing repairs selections, mobile return, and focused empty panes", async (t) => {
-  // doctest:L215
   let state = open(createEmptyWorkspaceState(), { path: "a", at: 1 });
   state = reduceWorkspace(state, { type: "focusPane", pane: "left" }).state;
   state = reduceWorkspace(state, { type: "setViewport", viewport: "mobile" }).state;
@@ -277,7 +255,6 @@ void test("Closing repairs selections, mobile return, and focused empty panes", 
 // Closing the active foreground tab in the left pane keeps attention on its left
 // neighbour even while a second card remains visible on the right.
 void test("Closing the active foreground tab in the left pane keeps attention on its lef...", async (t) => {
-  // doctest:L231
   let state = open(createEmptyWorkspaceState(), { path: "left-a", at: 1 });
   state = open(state, { path: "left-b", at: 2 });
   state = reduceWorkspace(state, { type: "showChat", pane: "left", viewport: "desktop" }).state;
@@ -305,7 +282,6 @@ void test("Closing the active foreground tab in the left pane keeps attention on
 // viewer, params, or authored view state. Those fields change only when the new
 // open intent explicitly supplies them.
 void test("A link that names only the path activates the existing tab without erasing it...", async (t) => {
-  // doctest:L251
   let state = reduceWorkspace(createEmptyWorkspaceState(), {
     type: "openCard",
     target: { path: "a", viewer: "canvas", params: { mode: "detail" }, viewState: { frame: 4 } },
@@ -329,7 +305,6 @@ void test("A link that names only the path activates the existing tab without er
 // The move keeps the pane, renderer parameters, pin, and active-card identity. It
 // does not open a second tab at the destination path.
 void test("The move keeps the pane, renderer parameters, pin, and active-card identity.", async (t) => {
-  // doctest:L267
   let state = reduceWorkspace(createEmptyWorkspaceState(), {
     type: "openCard",
     target: { path: "old", viewer: "canvas", params: { page: "2" }, viewState: null },
@@ -378,7 +353,6 @@ void test("The move keeps the pane, renderer parameters, pin, and active-card id
   },
   );
 
-  // doctest:L287
   let pathLabeled = reduceWorkspace(createEmptyWorkspaceState(), {
     type: "openCard",
     target: { path: "old", viewer: null, params: {}, viewState: null },
@@ -397,7 +371,6 @@ void test("The move keeps the pane, renderer parameters, pin, and active-card id
 // When the destination is already open, its richer tab state wins and the stale
 // source tab is removed without moving or focusing the destination.
 void test("When the destination is already open, its richer tab state wins and the stale...", async (t) => {
-  // doctest:L305
   let converging = reduceWorkspace(createEmptyWorkspaceState(), {
     type: "openCard",
     target: { path: "archive/new", viewer: "canvas", params: { page: "9" }, viewState: { frame: 4 } },
@@ -450,7 +423,6 @@ void test("When the destination is already open, its richer tab state wins and t
 
 // ## Move and focus are explicit card interactions
 void test("Move and focus are explicit card interactions", async (t) => {
-  // doctest:L333
   let state = open(createEmptyWorkspaceState(), { path: "a", at: 1 });
   state = reduceWorkspace(state, { type: "moveActive", pane: "left" }).state;
   t.check(state.lastInteraction, {
@@ -458,7 +430,6 @@ void test("Move and focus are explicit card interactions", async (t) => {
     path: "a",
   });
 
-  // doctest:L338
   state = reduceWorkspace(state, { type: "focusPane", pane: "right" }).state;
   t.check(state.lastInteraction, {
     kind: "card",
@@ -472,7 +443,6 @@ void test("Move and focus are explicit card interactions", async (t) => {
 // paths fall back to a real tab, empty card displays become chat, and invalid
 // focus/mobile references are repaired.
 void test("Duplicates keep their first owner, missing registry paths disappear, active p...", async (t) => {
-  // doctest:L350
   const seed = { target: target("a", null), label: "a", pinned: false, lastActiveAt: 1 };
   const repaired = normalizeWorkspaceState({
     version: 2,
@@ -501,7 +471,6 @@ void test("Duplicates keep their first owner, missing registry paths disappear, 
 
 // ## The unpinned cap is global and protects both pane selections
 void test("The unpinned cap is global and protects both pane selections", async (t) => {
-  // doctest:L374
   let state = createEmptyWorkspaceState();
   for (let i = 0; i < 12; i++) state = open(state, { path: `l${i}`, at: i + 1, originatingPane: "left" });
   state = open(state, { path: "right-active", at: 20, originatingPane: "right" });
@@ -510,7 +479,6 @@ void test("The unpinned cap is global and protects both pane selections", async 
     ["l1", "l2", "l3", "l4", "l5", "l6", "l7", "l8", "l9", "l10", "l11", "right-active"],
   );
 
-  // doctest:L380
   t.check(state.panes, {
     left: cards(["l1", "l2", "l3", "l4", "l5", "l6", "l7", "l8", "l9", "l10", "l11", "right-active"], "right-active"),
     right: CHAT_PANE,

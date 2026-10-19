@@ -5,7 +5,7 @@
 // places, and unparseable cards. `bbx location get` then names the matched place.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { loadPlaces } from "../../src/core/place-cards.js";
 import { matchPlace } from "../../src/core/geo.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
@@ -21,7 +21,6 @@ void test("Loads unarchived, fully-coordinated places; skips drafts/archived/hal
       t.error(error);
     }
   });
-  // doctest:L18
   const box = await makeTmpBox();
   await box.write("places/Home.place.card", place("Home", "lat: 45.5231\nlng: -122.6765\nradius: 150\n"));
   await box.write("places/Draft.place.card", place("Draft", "address: somewhere\n"));        // coordless
@@ -32,7 +31,6 @@ void test("Loads unarchived, fully-coordinated places; skips drafts/archived/hal
     "Home",
   ]);
 
-  // doctest:L29
   const fix = { lat: 45.5231, lng: -122.6765, accuracy: 12 };
   const m = matchPlace(fix, places);
   t.check(m ? m.name : null, "Home");
@@ -47,7 +45,6 @@ void test("A missing radius falls back to the default", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L42
   const box = await makeTmpBox();
   await box.write("places/Office.place.card", place("Office", "lat: 40.0\nlng: -74.0\n"));
   const places = await loadPlaces(box.root);
@@ -63,7 +60,6 @@ void test("A typo'd out-of-range coordinate is skipped (schema-enforced)", async
       t.error(error);
     }
   });
-  // doctest:L56
   const box = await makeTmpBox();
   await box.write("places/Good.place.card", place("Good", "lat: 1\nlng: 2\nradius: 50\n"));
   await box.write("places/Bad.place.card", place("Bad", "lat: 999\nlng: 2\nradius: 50\n"));
@@ -82,7 +78,6 @@ void test("One unparseable place card is skipped; the others still load", async 
       t.error(error);
     }
   });
-  // doctest:L71
   const box = await makeTmpBox();
   await box.write("places/Good.place.card", place("Good", "lat: 1\nlng: 2\nradius: 50\n"));
   await box.write("places/Bad.place.card", "---\nname: [unterminated\n---\nbody\n");

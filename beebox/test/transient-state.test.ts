@@ -9,8 +9,8 @@
 // `<state-file>.lock` path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf } from "@ianbicking/tap-check/check";
 import {
   updateTransientState,
   loadTransientState,
@@ -31,8 +31,8 @@ async function tryCall(fn: () => Promise<unknown>): Promise<unknown> {
 }
 
 // A yield inside the critical section widens the window a lost-update bug would
-// exploit — serialization must still hold across it. Kept in setup because the
-// doctest tracker splits multi-line `;`-terminated bodies in example blocks.
+// exploit — serialization must still hold across it. Kept in setup so multi-line
+// `;`-terminated bodies stay out of example blocks.
 function bumpCount(boxRoot: string, connectorName: string): Promise<{ count: number }> {
   return updateTransientState<{ count: number }>({
     boxRoot,
@@ -66,7 +66,6 @@ void test("On first run the state file is absent, so update receives defaultValu
       t.error(error);
     }
   });
-  // doctest:L62
   const box = await makeTmpBox();
   const result = await updateTransientState<{ lastUpdateId: number }>({
     boxRoot: box.root,
@@ -78,7 +77,6 @@ void test("On first run the state file is absent, so update receives defaultValu
     lastUpdateId: 5,
   });
 
-  // doctest:L74
   // Persisted to _bookkeeping/connectors/gmail.state.json, not just returned.
   const onDisk = await loadTransientState({
     boxRoot: box.root,
@@ -104,7 +102,6 @@ void test("Two overlapping updates each express their change as a delta against 
       t.error(error);
     }
   });
-  // doctest:L96
   const box = await makeTmpBox();
   const [a, b] = await Promise.all([bumpCount(box.root, "gmail"), bumpCount(box.root, "gmail")]);
   t.check(
@@ -116,7 +113,6 @@ void test("Two overlapping updates each express their change as a delta against 
   ],
   );
 
-  // doctest:L107
   const onDisk = await loadTransientState({
     boxRoot: box.root,
     connectorName: "gmail",
@@ -124,7 +120,6 @@ void test("Two overlapping updates each express their change as a delta against 
   });
   t.check(onDisk, { count: 2 });
 
-  // doctest:L117
   t.check(
     // The sibling lock file is released, not left behind.
     await lockFileExists(box.root, "gmail"),
@@ -144,7 +139,6 @@ void test("Ten overlapping increments over the same file all land — the strong
       t.error(error);
     }
   });
-  // doctest:L132
   const box = await makeTmpBox();
   await Promise.all(Array.from({ length: 10 }, () => bumpCount(box.root, "drive")));
   const onDisk = await loadTransientState({
@@ -170,13 +164,11 @@ void test("Missing and corrupt mean opposite things here.", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L156
   const box = await makeTmpBox();
   const gmailState = transientStatePath(box.root, "gmail");
   await mkdir(path.dirname(gmailState), { recursive: true });
   await writeFile(gmailState, '{"historyId": "trunca');
 
-  // doctest:L161
   const readBack = await tryCall(() => loadTransientState<{ historyId: string | null }>({
     boxRoot: box.root, connectorName: "gmail", defaultValue: { historyId: null },
   }));
@@ -190,7 +182,6 @@ void test("Missing and corrupt mean opposite things here.", async (t) => {
   // The RMW aborts too, so the damaged bytes are still on disk for a human to look
   // at rather than replaced by a one-field default.
 
-  // doctest:L172
   const updated = await tryCall(() => updateTransientState<{ historyId: string | null }>({
     boxRoot: box.root,
     connectorName: "gmail",
@@ -210,7 +201,6 @@ void test("Missing and corrupt mean opposite things here.", async (t) => {
 
   // A genuinely absent file still takes the default — first run is not an error.
 
-  // doctest:L188
   t.check(
     await loadTransientState({
       boxRoot: box.root, connectorName: "never-synced", defaultValue: { historyId: null },
@@ -234,7 +224,6 @@ void test("saveTransientState replaces the file by temp-write + fsync + atomic r
       t.error(error);
     }
   });
-  // doctest:L205
   const box = await makeTmpBox();
   await updateTransientState({
     boxRoot: box.root,

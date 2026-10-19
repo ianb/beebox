@@ -18,7 +18,7 @@
     "@tapjs/core": "^4.0.0",
     "@types/node": "^24.0.0",
     "@typescript/native": "npm:typescript@7.0.2",
-    "agent-doctest": "workspace:*",
+    "@ianbicking/tap-check": "workspace:*",
     "esbuild": "^0.25.0",
     "eslint": "^9.39.2",
     "tap": "^21.0.0",

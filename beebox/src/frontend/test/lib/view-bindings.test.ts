@@ -12,12 +12,11 @@
 // reloaded.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createSingleFlightCache } from "../../src/lib/view-bindings.js";
 
 // ## `invalidate()` then `load()` in the same tick returns post-invalidation data
 void test("`invalidate()` then `load()` in the same tick returns post-invalidation data", async (t) => {
-  // doctest:L21
   let fetchCount = 0;
   let value = "first";
   const cache = createSingleFlightCache(async () => {
@@ -25,11 +24,9 @@ void test("`invalidate()` then `load()` in the same tick returns post-invalidati
     return value;
   });
 
-  // doctest:L28
   const before = await cache.load();
   const fetchesBefore = fetchCount;
 
-  // doctest:L31
   value = "second";
   cache.invalidate();
   const after = await cache.load();
@@ -41,14 +38,12 @@ void test("`invalidate()` then `load()` in the same tick returns post-invalidati
 
 // ## Concurrent `load()` calls share one in-flight fetch
 void test("Concurrent `load()` calls share one in-flight fetch", async (t) => {
-  // doctest:L43
   let fetchCount2 = 0;
   const cache2 = createSingleFlightCache(async () => {
     fetchCount2 += 1;
     return "value";
   });
 
-  // doctest:L49
   const [a, b, c] = await Promise.all([cache2.load(), cache2.load(), cache2.load()]);
   t.check({ fetches: fetchCount2, values: [a, b, c] }, { fetches: 1, values: ["value", "value", "value"] });
 });
@@ -60,14 +55,12 @@ void test("Concurrent `load()` calls share one in-flight fetch", async (t) => {
 // shape of many mounted views all reacting to one event) needs no special
 // handling: the next `load()` still just starts one fresh fetch.
 void test("Unlike a resync trigger with side effects worth deduplicating, clearing an al...", async (t) => {
-  // doctest:L65
   let fetchCount3 = 0;
   const cache3 = createSingleFlightCache(async () => {
     fetchCount3 += 1;
     return "value";
   });
 
-  // doctest:L71
   await cache3.load();
   cache3.invalidate();
   cache3.invalidate();

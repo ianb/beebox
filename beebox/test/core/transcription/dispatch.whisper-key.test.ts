@@ -15,7 +15,7 @@
 // now calls.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -45,12 +45,10 @@ void test("The message is the one the boxholder acts on, not the old bare env-va
       t.error(error);
     }
   });
-  // doctest:L40
   const dir = await useTempStore();
   const box = await makeTmpBox();
   delete process.env.THINKING_OPENAI_API_KEY;
 
-  // doctest:L44
   let failure: unknown;
   try {
     await transcribeAudioHq(
@@ -76,17 +74,14 @@ void test("The message is the one the boxholder acts on, not the old bare env-va
   // This is the reader the Whisper path calls, exercised against the same box. The
   // retired env var is exported first to show it no longer participates.
 
-  // doctest:L67
   const slug = await boxSlug(box.root);
   process.env.THINKING_OPENAI_API_KEY = "placeholder-whisper-env-key";
   const ungranted = await getOpenAiThinkingKey(box.root, { observe: true });
 
-  // doctest:L71
   await setSecret({ name: "openai-thinking", value: "placeholder-whisper-store-key" });
   await grantSecret({ slug, name: "openai-thinking", access: "server" });
   const granted = await getOpenAiThinkingKey(box.root, { observe: true });
 
-  // doctest:L75
   t.check(
     { ungranted, granted, noBox: await getOpenAiThinkingKey(undefined, { observe: true }) },
     { ungranted: null, granted: "placeholder-whisper-store-key", noBox: null },

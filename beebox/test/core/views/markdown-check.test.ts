@@ -7,8 +7,8 @@
 // with the rule and where to ask for more.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing } from "@ianbicking/tap-check/check";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -27,7 +27,6 @@ const IMPORT = "import { Markdown } from \"beebox/view-widgets\";\n";
 // A card's body as the children of `<Markdown>`, guarded by a truthiness test
 // (`ViewCard.body` is optional):
 void test("A card's body as the children of <Markdown>, guarded by a truthiness test (Vi...", async (t) => {
-  // doctest:L30
   t.check(
     await problems(IMPORT + `export default function V({ cards }) {
   return cards.map((card) => card.body ? <Markdown key={card.path} card={card}>{card.body}</Markdown> : null);
@@ -39,7 +38,6 @@ void test("A card's body as the children of <Markdown>, guarded by a truthiness 
 // Other truthiness tests pass too, and so does a destructured `body` used the
 // same way, `??` inside the children, and `Markdown` under another local name:
 void test("Other truthiness tests pass too, and so does a destructured body used the sam...", async (t) => {
-  // doctest:L40
   t.check(
     await problems(IMPORT + `function A({ card }) { return card.body && <Markdown card={card}>{card.body ?? ""}</Markdown>; }
 function B({ card }) { if (!card.body) return null; return card.body !== undefined ? "has text" : "none"; }
@@ -48,7 +46,6 @@ function D() { return <div ref={(el) => el && document.body.append(el)} />; }`),
     "ok",
   );
 
-  // doctest:L46
   t.check(
     await problems(`import { Markdown as Prose } from "beebox/view-widgets";
 export default ({ card }) => <Prose card={card}>{card.body!}</Prose>;`),
@@ -61,7 +58,6 @@ export default ({ card }) => <Prose card={card}>{card.body!}</Prose>;`),
 // The old guide's `<p>{card.body}</p>`, the split-and-render pattern, a
 // fallback that renders the raw text, and a destructured body rendered raw:
 void test("The old guide's <p>{card.body}</p>, the split-and-render pattern, a fallback...", async (t) => {
-  // doctest:L57
   await t.checkText(
     await problems(IMPORT + `function A({ card }) { return <p>{card.body}</p>; }
 function B({ card }) { return card.body.split("\\n\\n").map((para) => <p>{para}</p>); }
@@ -77,7 +73,6 @@ function D({ card: { body } }) { return <div>{body}</div>; }`),
 // A component named `Markdown` that does not come from `beebox/view-widgets`
 // does not count:
 void test("A component named Markdown that does not come from beebox/view-widgets does n...", async (t) => {
-  // doctest:L71
   t.check(
     await problems(`function Markdown({ children }) { return <pre>{children}</pre>; }
 export default ({ card }) => <Markdown>{card.body}</Markdown>;`),
@@ -90,7 +85,6 @@ export default ({ card }) => <Markdown>{card.body}</Markdown>;`),
 // A string, a template, and a regex (backslashes are ignored, so an escaped
 // `\{%` still counts):
 void test("A string, a template, and a regex (backslashes are ignored, so an escaped \\{%...", async (t) => {
-  // doctest:L82
   await t.checkText(
     await problems(`const OPEN = "{% todo %}";
 const tag = (name) => \`{% \${name} %}\`;
@@ -105,7 +99,6 @@ const strip = (text) => text.replace(/\\{%[^%]*%\\}/g, "");`),
 //
 // Any subpath, a library family, `require`, and dynamic `import()`:
 void test("Any subpath, a library family, require, and dynamic import():", async (t) => {
-  // doctest:L95
   await t.checkText(
     await problems(`import { marked } from "marked";
 import ReactMarkdown from "react-markdown";
@@ -128,7 +121,6 @@ const load = () => import("micromark");`),
 // `src/core/views/doc/core.ts`) passes, so the guide cannot teach the form the
 // check rejects:
 void test("Every tsx example in the generated view guide (generateViewsDoc, src/core/vie...", async (t) => {
-  // doctest:L116
   const blocks = [...generateViewsDoc().matchAll(/`{3}tsx\n([\S\s]*?)`{3}/g)].flatMap((m) => m[1] ?? []);
   const failing: string[] = [];
   for (const block of blocks) if ((await checkViewMarkdown(block)).length > 0) failing.push(block.slice(0, 60));
@@ -151,13 +143,11 @@ void test("lintViewMarkdown(path, { root }) is what bbx validate --hook and the 
       t.error(error);
     }
   });
-  // doctest:L130
   const dir = await mkdtemp(join(tmpdir(), "view-md-"));
   await writeFile(join(dir, "clean.tsx"), IMPORT + "export default ({ card }) => card.body ? <Markdown card={card}>{card.body}</Markdown> : null;");
   await writeFile(join(dir, "raw.tsx"), "export default ({ card }) => <p>{card.body}</p>;");
   t.check(await lintViewMarkdown(join(dir, "clean.tsx"), { root: dir }), null);
 
-  // doctest:L136
   t.check(await lintViewMarkdown(join(dir, "raw.tsx"), { root: dir }), `View renders Markdown by hand:
   line 1: reads \`card.body\` outside \`<Markdown>\`
 Render card text with \`Markdown\` from \`beebox/view-widgets\`. If it lacks something this view needs, say so in \`_config/feedback/\`.`);
@@ -179,7 +169,6 @@ void test("A view renders whatever the local files it imports render, so lintVie
       t.error(error);
     }
   });
-  // doctest:L156
   const box = await mkdtemp(join(tmpdir(), "view-md-helpers-"));
   const views = join(box, "src", "views");
   await mkdir(join(views, "lib"), { recursive: true });
@@ -197,7 +186,6 @@ export default ({ card }) => <Body card={card} />;`);
   await writeFile(join(views, "lib", "body", "index.tsx"), `import { Markdown } from "beebox/view-widgets";
 export const Body = ({ card }) => card.body ? <Markdown card={card}>{card.body}</Markdown> : null;`);
 
-  // doctest:L175
   t.check(await lintViewMarkdown(join(views, "event.tsx"), { root: box }), `View renders Markdown by hand:
   src/views/lib/prose.tsx line 3: reads \`card.body\` outside \`<Markdown>\`
   src/views/lib/strip.ts line 2: has the Markdoc delimiter \`{%\` in a literal
@@ -207,7 +195,6 @@ Render card text with \`Markdown\` from \`beebox/view-widgets\`. If it lacks som
   // cycle ends. Checking the helper directly finds the same problems, reported
   // against the helper itself:
 
-  // doctest:L187
   t.check(await lintViewMarkdown(join(views, "lib", "strip.ts"), { root: box }), `View renders Markdown by hand:
   line 2: has the Markdoc delimiter \`{%\` in a literal
   src/views/lib/prose.tsx line 3: reads \`card.body\` outside \`<Markdown>\`
@@ -215,6 +202,5 @@ Render card text with \`Markdown\` from \`beebox/view-widgets\`. If it lacks som
 
   // A view whose helper renders through `Markdown` passes:
 
-  // doctest:L197
   t.check(await lintViewMarkdown(join(views, "clean.tsx"), { root: box }), null);
 });

@@ -5,8 +5,8 @@
 // production. See `src/core/agent/token.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { getOrCreateAgentToken, verifyAgentBearer, resolveAgentToken } from "../../../src/core/agent/token.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { makeTestServer } from "../../helpers/test-route-server.js";
@@ -25,7 +25,6 @@ void test("Token generation is idempotent and stays put", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L21
   const box = await makeTmpBox();
   const first = getOrCreateAgentToken(box.root);
   const second = getOrCreateAgentToken(box.root);
@@ -36,7 +35,6 @@ void test("Token generation is idempotent and stays put", async (t) => {
 
   // Verification accepts exactly `Bearer <token>` and nothing else:
 
-  // doctest:L37
   t.check({
     good: verifyAgentBearer(box.root, `Bearer ${first}`),
     wrongToken: verifyAgentBearer(box.root, `Bearer ${"x".repeat(64)}`),
@@ -57,7 +55,6 @@ void test("Only spawners (buildScriptEnv) provision the token; a verify against 
       t.error(error);
     }
   });
-  // doctest:L58
   const box = await makeTmpBox();
   t.check(verifyAgentBearer(box.root, "Bearer " + "x".repeat(64)), false);
   t.check(await box.list(".beebox").catch(() => ""), not(any(String).includes(".beebox/agent-token")));
@@ -65,7 +62,6 @@ void test("Only spawners (buildScriptEnv) provision the token; a verify against 
 
 // ## resolveAgentToken prefers the env var
 void test("resolveAgentToken prefers the env var", async (t) => {
-  // doctest:L74
   process.env.BBX_AGENT_TOKEN = "t".repeat(64);
   const resolved = resolveAgentToken();
   delete process.env.BBX_AGENT_TOKEN;
@@ -77,7 +73,6 @@ void test("resolveAgentToken prefers the env var", async (t) => {
 // Without the env var it returns null — it never guesses a token file from
 // `process.cwd()`, which is a box *subdirectory* in landmark sessions.
 void test("Without the env var it returns null — it never guesses a token file from proc...", async (t) => {
-  // doctest:L87
   delete process.env.BBX_AGENT_TOKEN;
   t.check(resolveAgentToken(), null);
 });
@@ -95,7 +90,6 @@ void test("With auth enabled, an unauthenticated loopback POST is rejected; the 
       t.error(error);
     }
   });
-  // doctest:L99
   // Auth is always-on by default; the test-server helper opens the wall
   // (openAccess: true) so most route tests run open. Construct with
   // openAccess: false here to exercise the wall.

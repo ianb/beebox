@@ -11,7 +11,7 @@
 // `docs/implemented-plans/box-agents-md.md`, Track A and Track B "Intermediate states".
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -62,7 +62,6 @@ async function halfMoved(content: string): Promise<string> {
 // old key. A new template overwrites it as unmodified stock (no park), and the
 // entry stays under the key it was found under.
 void test("The file is stock V1 under its new name; the ledger records V1 under the old...", async (t) => {
-  // doctest:L66
   const box = await halfMoved(V1);
   const result = await installTemplateFile({ boxRoot: box, relPath: RENAMED, templateContent: V2 });
   const versions = await ledger(box);
@@ -97,7 +96,6 @@ Add notes here.
 
 // `hasRecordedTemplateVersion` answers for either name:
 void test("hasRecordedTemplateVersion answers for either name:", async (t) => {
-  // doctest:L82
   const box = await halfMoved(V1);
   t.check([await hasRecordedTemplateVersion(box, RENAMED), await hasRecordedTemplateVersion(box, LEGACY)], [
     true,
@@ -110,7 +108,6 @@ void test("hasRecordedTemplateVersion answers for either name:", async (t) => {
 // A boxholder edit to the renamed guide merges with the new template using the
 // `stock` recorded under the old key, the same as before the rename.
 void test("A boxholder edit to the renamed guide merges with the new template using the...", async (t) => {
-  // doctest:L93
   const box = await halfMoved(V1.replace("Add notes here.", "A box note."));
   const result = await installTemplateFile({ boxRoot: box, relPath: RENAMED, templateContent: V2 });
   t.check(({ outcome: result.outcome, content: await fs.readFile(path.join(box, RENAMED), "utf-8"), keys: Object.keys(await ledger(box)) }), {
@@ -137,7 +134,6 @@ A box note.
 // name is rewritten in place rather than duplicated under the new one, and the
 // pending hash goes on the existing key.
 void test("When the guide cannot merge, the update parks.", async (t) => {
-  // doctest:L106
   const box = await halfMoved("# Mine\n\nRewritten by the box.\n");
   await put({ box, rel: `_config/_template-updates/${LEGACY}`, content: "# Older parked copy\n" });
   const result = await installTemplateFile({ boxRoot: box, relPath: RENAMED, templateContent: V2 });
@@ -171,7 +167,6 @@ Add notes here.
 // `bbx template diff` reads the renamed file, the park under the old name, and
 // the stock under the old key:
 void test("bbx template diff reads the renamed file, the park under the old name, and th...", async (t) => {
-  // doctest:L123
   const box = await halfMoved("# Mine\n");
   await put({ box, rel: `_config/_template-updates/${LEGACY}`, content: V2 });
   const update = await readTemplateUpdate(box, RENAMED);
@@ -185,7 +180,6 @@ void test("bbx template diff reads the renamed file, the park under the old name
 
 // When the guide converges to the template, a park under either name is cleared:
 void test("When the guide converges to the template, a park under either name is cleared:", async (t) => {
-  // doctest:L133
   const box = await halfMoved(V1);
   await put({ box, rel: `_config/_template-updates/${LEGACY}`, content: V2 });
   await installTemplateFile({ boxRoot: box, relPath: RENAMED, templateContent: V1 });
@@ -198,7 +192,6 @@ void test("When the guide converges to the template, a park under either name is
 // `CLAUDE.md` whose guide now lives at `AGENTS.md` still has its original; one
 // with neither name on disk is an orphan.
 void test("pruneStaleTemplateUpdates removes a park whose original is gone.", async (t) => {
-  // doctest:L147
   const box = await halfMoved(V1);
   await put({ box, rel: `_config/_template-updates/${LEGACY}`, content: V2 });
   await put({ box, rel: "_config/_template-updates/src/views/CLAUDE.md", content: V2 });
@@ -211,7 +204,6 @@ void test("pruneStaleTemplateUpdates removes a park whose original is gone.", as
 //
 // The rule is narrow: any other path keeps its own key.
 void test("The rule is narrow:", async (t) => {
-  // doctest:L159
   const box = await makeBox();
   await put({ box, rel: "src/schemas/README.md", content: V1 });
   await put({ box, rel: "_config/template-versions.json", content: JSON.stringify({

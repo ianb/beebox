@@ -3,7 +3,7 @@
 // The installer keeps both local and upstream edits when a recorded stock version provides a clean three-way merge. A conflicting edit stays parked for an agent to inspect.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -27,7 +27,6 @@ async function write(root: string, content: string) { await fs.writeFile(path.jo
 
 // A clean merge records the new stock hash and does not re-park on the next install:
 void test("A clean merge records the new stock hash and does not re-park on the next ins...", async (t) => {
-  // doctest:L28
   const root = await box();
   await seed(root);
   await write(root, v1.replace("local line", "box edit"));
@@ -35,19 +34,15 @@ void test("A clean merge records the new stock hash and does not re-park on the 
   const first = await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: v2 });
   t.check(first, { outcome: "overwritten", writtenAt: rel });
 
-  // doctest:L36
   t.check(await fs.readFile(path.join(root, rel), "utf-8"), "heading\nbox edit\nseparator\nupstream edit\nfooter\n");
 
-  // doctest:L39
   t.check(await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: v2 }), { outcome: "skipped" });
 
-  // doctest:L42
   t.check(await listParkedTemplateUpdates(root), []);
 });
 
 // A schedule's box-owned `enabled` value survives acceptance and its canonical pending hash is recorded:
 void test("A schedule's box-owned enabled value survives acceptance and its canonical pe...", async (t) => {
-  // doctest:L49
   const root = await box();
   const schedule = "_config/schedules/example.scheduled-script.card";
   const old = "---\nruns: bbx sync\ndescription: old\n---\n";
@@ -59,17 +54,14 @@ void test("A schedule's box-owned enabled value survives acceptance and its cano
     writtenAt: "_config/_template-updates/_config/schedules/example.scheduled-script.card",
   });
 
-  // doctest:L58
   await resolveTemplateUpdate({ boxRoot: root, relPath: schedule, accept: true });
   t.check(await fs.readFile(path.join(root, schedule), "utf-8"), "---\nruns: bbx sync\ndescription: new\nenabled: false\n---\n");
 
-  // doctest:L62
   t.check(await installTemplateFile({ boxRoot: root, relPath: schedule, templateContent: next, boxOwnedFields: ["enabled"] }), { outcome: "unchanged" });
 });
 
 // Two separate conflicts stay parked instead of aborting the install:
 void test("Two separate conflicts stay parked instead of aborting the install:", async (t) => {
-  // doctest:L69
   const root = await box();
   const stock = "head\nA\na1\na2\na3\na4\na5\nB\ntail\n";
   await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: stock });
@@ -80,7 +72,6 @@ void test("Two separate conflicts stay parked instead of aborting the install:",
 
 // A migration that rewrites unmodified stock records its new bytes, so a later upstream revision can update it:
 void test("A migration that rewrites unmodified stock records its new bytes, so a later...", async (t) => {
-  // doctest:L81
   const root = await box();
   await seed(root);
   const migrated = v1.replace("local line", "renamed field");
@@ -91,7 +82,6 @@ void test("A migration that rewrites unmodified stock records its new bytes, so 
 
 // An automated rewrite of a box-customized copy does not claim that content as stock:
 void test("An automated rewrite of a box-customized copy does not claim that content as...", async (t) => {
-  // doctest:L93
   const root = await box();
   await seed(root);
   await write(root, "box customized\n");
@@ -101,7 +91,6 @@ void test("An automated rewrite of a box-customized copy does not claim that con
 
 // A text merge that creates invalid YAML frontmatter also stays parked:
 void test("A text merge that creates invalid YAML frontmatter also stays parked:", async (t) => {
-  // doctest:L104
   const root = await box();
   const stock = "---\na: one\nb: two\nc: three\nd: four\ne: five\nf: six\n---\nbody\n";
   await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: stock });
@@ -112,14 +101,12 @@ void test("A text merge that creates invalid YAML frontmatter also stays parked:
 
 // When both sides edit the same line, the park and its three views remain available:
 void test("When both sides edit the same line, the park and its three views remain avail...", async (t) => {
-  // doctest:L116
   const root = await box();
   await seed(root);
   await write(root, v1.replace("local line", "box edit"));
   const v2 = v1.replace("local line", "upstream edit");
   t.check(await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: v2 }), { outcome: "parked", writtenAt: parkedRel });
 
-  // doctest:L123
   const views = await readTemplateUpdate(root, rel);
   t.check(views, {
     local: "heading\nbox edit\nseparator\nupstream line\nfooter\n",
@@ -128,35 +115,28 @@ void test("When both sides edit the same line, the park and its three views rema
     stockHash: STOCK_HASH,
   });
 
-  // doctest:L127
   await t.checkThrows(() => resolveTemplateUpdate({ boxRoot: root, relPath: `./${rel}`, accept: false }), "InvalidTemplatePathError");
 
   // An agent can accept wholesale, or write its own merged local file and resolve the parked version. Both choices record the upstream version so it does not re-park:
 
-  // doctest:L140
   await resolveTemplateUpdate({ boxRoot: root, relPath: rel, accept: true });
   t.check(await fs.readFile(path.join(root, rel), "utf-8"), v2);
 
-  // doctest:L144
   t.check(await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: v2 }), { outcome: "unchanged" });
 
-  // doctest:L147
   await write(root, v2.replace("upstream edit", "box judgment"));
   const v3 = v2.replace("upstream edit", "later upstream");
   t.check(await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: v3 }), { outcome: "parked", writtenAt: parkedRel });
 
-  // doctest:L152
   await write(root, v3.replace("later upstream", "agent merged both"));
   await resolveTemplateUpdate({ boxRoot: root, relPath: rel, accept: false });
   t.check(await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: v3 }), { outcome: "skipped" });
 
-  // doctest:L157
   t.check(await listParkedTemplateUpdates(root), []);
 });
 
 // Older tracker entries have a hash but no stock bytes; their diff says so, and accept still works:
 void test("Older tracker entries have a hash but no stock bytes; their diff says so, and...", async (t) => {
-  // doctest:L164
   const root = await box();
   await seed(root);
   const versionsPath = path.join(root, "_config/template-versions.json");
@@ -166,10 +146,8 @@ void test("Older tracker entries have a hash but no stock bytes; their diff says
   await write(root, "box edit\n");
   t.check(await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: "upstream\n" }), { outcome: "parked", writtenAt: parkedRel });
 
-  // doctest:L174
   t.check(await readTemplateUpdate(root, rel), { local: "box edit\n", parked: "upstream\n", stock: null, stockHash: STOCK_HASH });
 
-  // doctest:L177
   await resolveTemplateUpdate({ boxRoot: root, relPath: rel, accept: true });
   t.check(await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: "upstream\n" }), { outcome: "unchanged" });
 });
@@ -183,7 +161,6 @@ void test("The box-agent command displays the comparison and accepts the parked 
       t.error(error);
     }
   });
-  // doctest:L185
   const root = await box();
   await fs.mkdir(path.join(root, ".beebox"));
   await fs.writeFile(path.join(root, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
@@ -231,6 +208,5 @@ index c4dc744..4cd051d 100644
     `Accepted ${rel}`,
   ]);
 
-  // doctest:L206
   t.check(await listParkedTemplateUpdates(root), []);
 });

@@ -9,7 +9,7 @@
 // op instead of the real IndexedDB-backed queue.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   VoiceStager,
   startStagedRecording,

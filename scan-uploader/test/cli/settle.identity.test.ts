@@ -3,10 +3,10 @@
 // Two independent defenses against a scanner writing a file out from under the
 // uploader: the **settle gate** (skip files touched too recently) before the
 // first hash, and **identity snapshot + restat-before-disposition** (see
-// run-target.doctest.md) after it.
+// run-target.test.ts) after it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { utimes, writeFile } from "node:fs/promises";
 import { isSettled, SETTLE_WINDOW_MS } from "../../src/cli/settle.js";
 import { identityEquals, snapshotIdentity } from "../../src/cli/identity.js";
@@ -16,7 +16,6 @@ const dir = await makeTmpDir("settle");
 
 // A file just written is not settled — its mtime is within the 10s window:
 void test("A file just written is not settled — its mtime is within the 10s window:", async (t) => {
-  // doctest:L21
   const fresh = `${dir}/fresh.pdf`;
   await writeFile(fresh, "scan bytes");
   t.check(await isSettled(fresh, Date.now()), false);
@@ -24,7 +23,6 @@ void test("A file just written is not settled — its mtime is within the 10s wi
 
 // A file whose mtime is safely in the past IS settled:
 void test("A file whose mtime is safely in the past IS settled:", async (t) => {
-  // doctest:L30
   const old = `${dir}/old.pdf`;
   await writeFile(old, "scan bytes");
   const oldMtime = new Date(Date.now() - SETTLE_WINDOW_MS - 1000);
@@ -35,7 +33,6 @@ void test("A file whose mtime is safely in the past IS settled:", async (t) => {
 // The boundary is inclusive of "now minus the window" — exactly at the window
 // edge counts as settled (`>=`, not `>`):
 void test("The boundary is inclusive of \"now minus the window\" — exactly at the window e...", async (t) => {
-  // doctest:L42
   const boundary = `${dir}/boundary.pdf`;
   await writeFile(boundary, "scan bytes");
   const now = Date.now();
@@ -54,7 +51,6 @@ void test("snapshotIdentity captures device, inode, size, and nanosecond mtime."
       t.error(error);
     }
   });
-  // doctest:L55
   const stable = `${dir}/stable.pdf`;
   await writeFile(stable, "unchanged bytes");
   const first = await snapshotIdentity(stable);
@@ -64,7 +60,6 @@ void test("snapshotIdentity captures device, inode, size, and nanosecond mtime."
   // Appending to the file (same path, different bytes) changes its identity —
   // this is the signal `run-target.ts` checks before disposition:
 
-  // doctest:L67
   const before = await snapshotIdentity(stable);
   await writeFile(stable, "unchanged bytes and then some more");
   const after = await snapshotIdentity(stable);

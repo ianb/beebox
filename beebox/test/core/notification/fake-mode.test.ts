@@ -7,7 +7,7 @@
 // and `bbx health` read it like any other.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -27,7 +27,7 @@ const ENV = ["BBX_NOTIFY_FAKE", "BBX_PUSH_FAKE", "BBX_APNS_KEY_PATH", "BBX_APNS_
 for (const name of ENV) delete process.env[name];
 
 const NOW = new Date("2026-09-26T12:00:00Z");
-const intent = (loudness: Loudness): NotificationInput => ({ title: "Fake-mode check", body: "", target: { kind: "dashboard" }, loudness, source: "fake-doctest" });
+const intent = (loudness: Loudness): NotificationInput => ({ title: "Fake-mode check", body: "", target: { kind: "dashboard" }, loudness, source: "fake-test" });
 
 async function logged(box: TmpBox) {
   const [n] = (await readRecent(box.root, { days: 1, now: NOW })).toReversed();
@@ -52,7 +52,6 @@ void test("The box has no paired phone, no push subscription, and no keys.", asy
       t.error(error);
     }
   });
-  // doctest:L49
   const box = await makeTmpBox({ git: true });
   process.env.BBX_NOTIFY_FAKE = "1";
   t.check(await notifyChannels(box.root), {
@@ -60,7 +59,6 @@ void test("The box has no paired phone, no push subscription, and no keys.", asy
     webPush: true,
   });
 
-  // doctest:L54
   await notifyBoxholder(box.root, { intent: intent("loud"), now: NOW });
   await t.checkText(await logged(box), `apns sent: fake
 web-push sent: fake`);
@@ -68,13 +66,11 @@ web-push sent: fake`);
   // Both push channels leave their debug lines, the APNs one naming the
   // synthetic phone:
 
-  // doctest:L65
   await t.checkText((await debugLines(box)).map((l) => l.channel === "apns" ? `apns ${l.device} ${l.loudness} ${l.target}` : `web-push ${l.title}`).join("\n"), `apns synthetic phone loud dashboard
 web-push Fake-mode check`);
 
   // A registered device is used in place of the synthetic one:
 
-  // doctest:L74
   await pairFakePushDevice(box.root, { label: "dev phone" });
   await notifyBoxholder(box.root, { intent: intent("dot"), now: NOW });
   delete process.env.BBX_NOTIFY_FAKE;
@@ -94,7 +90,6 @@ void test("Fake mode fakes the audience and the services, not the decision:", as
       t.error(error);
     }
   });
-  // doctest:L93
   const box = await makeTmpBox({ git: true });
   process.env.BBX_NOTIFY_FAKE = "1";
   await writePresence(box.root, { activeWeb: 1, now: NOW });
@@ -116,7 +111,6 @@ void test("The old web-push-only switch is read as an alias, with a warning to r
       t.error(error);
     }
   });
-  // doctest:L113
   const box = await makeTmpBox({ git: true });
   process.env.BBX_PUSH_FAKE = "1";
   const warnings: string[] = [];

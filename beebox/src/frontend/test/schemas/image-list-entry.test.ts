@@ -8,7 +8,7 @@
 // `FileEntry` now passes `hidePath` to a custom list entry too.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ImageCardListEntry } from "../../../schemas/image/list-entry.js";
@@ -26,7 +26,6 @@ function shows(props: { compact: boolean; hidePath: boolean }) {
 
 // ## A list that hides paths shows the title alone
 void test("A list that hides paths shows the title alone", async (t) => {
-  // doctest:L30
   t.check(shows({ compact: false, hidePath: true }), {
     title: true,
     path: false,
@@ -35,7 +34,6 @@ void test("A list that hides paths shows the title alone", async (t) => {
 
 // ## Other lists keep the path, unless the row is compact
 void test("Other lists keep the path, unless the row is compact", async (t) => {
-  // doctest:L37
   t.check([shows({ compact: false, hidePath: false }), shows({ compact: true, hidePath: false })], [
     {
       title: true,

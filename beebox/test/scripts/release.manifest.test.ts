@@ -7,12 +7,12 @@
 // the failure mode it catches is real: shipping a tarball whose `exports` map
 // promises a path `files` silently excludes, which only shows up later as a
 // runtime `ERR_MODULE_NOT_FOUND` in a stranger's box (exactly the F1 release
-// smoke test's job, but that's a slow end-to-end script — this doctest is the
+// smoke test's job, but that's a slow end-to-end script — this test is the
 // fast, CI-friendly manifest check that runs on every `pnpm test`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { containing } from "@ianbicking/tap-check/check";
 import { readFile, access, glob } from "node:fs/promises";
 import * as path from "node:path";
 
@@ -96,7 +96,7 @@ void test("Every `exports` map target is covered by `files`", async (t) => {
   //
   // Only the entries that are checked-in source, not build output (`dist` and
   // `src/frontend/dist` only exist after `pnpm release`/`build:cli`, so this
-  // doctest — which runs on every `pnpm test`, build or no build — can't assert
+  // test — which runs on every `pnpm test`, build or no build — can't assert
   // on those without forcing a build here). A stale/renamed entry among the
   // checked-in ones (e.g. a leftover path from a layout change) would silently
   // ship nothing for that entry rather than fail loudly — catch it here instead

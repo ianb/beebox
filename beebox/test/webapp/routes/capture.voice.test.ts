@@ -1,10 +1,10 @@
 // # Capture routes: voice sessions
 //
-// Continues [capture.doctest.md](capture.doctest.md). This part covers voice sessions: idempotent client-generated create with an owner and kind fence, staging of `pcm-s16le-16k` chunks, finalize contiguity checks, idempotent finalize, and finalize with `hq` set.
+// Continues [capture.test.ts](capture.test.ts). This part covers voice sessions: idempotent client-generated create with an owner and kind fence, staging of `pcm-s16le-16k` chunks, finalize contiguity checks, idempotent finalize, and finalize with `hq` set.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { z } from "zod";
 import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/test-route-server.js";
 import { StagingSessionSchema, type StagingSession, type StagingVoice } from "../../../src/core/capture/staging-schema.js";
@@ -148,7 +148,6 @@ void test("A voice recording (docs/plans/resilient-voice-recording.md) creates i
       t.error(error);
     }
   });
-  // doctest:L163
   const ctx = await makeTestServer();
   const recordingId = "6a6e6b1e-2f8a-4c9a-8b1a-1a2b3c4d5e6f";
   const voice = { kind: "voice", targetSessionId: "chat-voice", id: recordingId };
@@ -168,7 +167,6 @@ void test("A voice recording (docs/plans/resilient-voice-recording.md) creates i
   // The manifest carries the `voice` object with `hq: none` and `handoff: open`,
   // and was created only once (one directory, not two):
 
-  // doctest:L176
   const manifest = await manifestOf(ctx, recordingId);
   t.check(({ kind: manifest.kind, voice: manifest.voice }), {
     kind: "voice",
@@ -186,7 +184,6 @@ void test("A voice recording (docs/plans/resilient-voice-recording.md) creates i
 
   // A non-UUID-v4 id is rejected before any session is created:
 
-  // doctest:L184
   const badId = await createSession(ctx, { ...voice, id: "not-a-uuid" });
   t.check(badId.statusCode, 400);
 
@@ -194,12 +191,10 @@ void test("A voice recording (docs/plans/resilient-voice-recording.md) creates i
   // brand-new chat before it has a session. The manifest records `null`; the HQ
   // job and late delivery read the session from finalize's `hq.sessionId` instead.
 
-  // doctest:L194
   const unboundId = "8c8d8e3f-4a0b-4e1c-8d3c-3c4d5e6f7081";
   const noTarget = await createSession(ctx, { kind: "voice", id: unboundId });
   t.check(noTarget.statusCode, 200);
 
-  // doctest:L199
   t.check(voiceOf(await manifestOf(ctx, unboundId)).targetSessionId, null);
 });
 
@@ -213,7 +208,6 @@ void test("A different mobile-pairing owner reusing the same recording id is a c
       t.error(error);
     }
   });
-  // doctest:L211
   const ctx = await makeTestServer();
   const ownerAuth = await pairedAuth(ctx, { createdBy: "owner@example.com", deviceLabel: "Owner's phone" });
   const otherAuth = await pairedAuth(ctx, { createdBy: "other@example.com", deviceLabel: "Other phone" });
@@ -221,7 +215,6 @@ void test("A different mobile-pairing owner reusing the same recording id is a c
   const created = await createSessionWithHeaders(ctx, { payload: voice, headers: ownerAuth });
   t.check(created.statusCode, 200);
 
-  // doctest:L219
   const stolen = await createSessionWithHeaders(ctx, { payload: voice, headers: otherAuth });
   t.check(({ status: stolen.statusCode, error: stolen.body.error }), {
     status: 409,
@@ -243,12 +236,10 @@ void test("The upload route accepts one segment of raw PCM chunks per voice reco
       t.error(error);
     }
   });
-  // doctest:L236
   const ctx = await makeTestServer();
   const recordingId = "8c8f8d3f-4f0c-4e1c-8d3c-3c4d5e6f7081";
   await createSession(ctx, { kind: "voice", targetSessionId: "chat-voice", id: recordingId });
 
-  // doctest:L240
   const chunk1 = await pcmChunk(ctx, { recordingId, n: 1, text: "PCM1" });
   const chunk2 = await pcmChunk(ctx, { recordingId, n: 2, text: "PCM2" });
   t.check([chunk1.statusCode, chunk2.statusCode], [
@@ -256,7 +247,6 @@ void test("The upload route accepts one segment of raw PCM chunks per voice reco
     200,
   ]);
 
-  // doctest:L245
   const manifest = await manifestOf(ctx, recordingId);
   t.check(manifest.segments.map((s) => ({ id: s.id, format: s.format, chunks: s.chunks })), [
     {
@@ -269,7 +259,6 @@ void test("The upload route accepts one segment of raw PCM chunks per voice reco
     },
   ]);
 
-  // doctest:L249
   t.check((await pcmChunk(ctx, { recordingId, n: 1, text: "PCM1" })).statusCode, 200);
 });
 
@@ -283,7 +272,6 @@ void test("A pcm-s16le-16k chunk aimed at an ordinary capture session is refused
       t.error(error);
     }
   });
-  // doctest:L261
   const ctx = await makeTestServer();
   const created = await createSession(ctx, { targetSessionId: "chat-abc" });
   const res = await uploadRaw(ctx, {
@@ -311,7 +299,6 @@ void test("Uploads are refused once a session isn't open, so a chunk missing at 
       t.error(error);
     }
   });
-  // doctest:L284
   const ctx = await makeTestServer();
   const created = await createSession(ctx, { kind: "voice", targetSessionId: "chat-voice" });
   const sessionId = sessionIdOf(created);
@@ -323,7 +310,6 @@ void test("Uploads are refused once a session isn't open, so a chunk missing at 
     code: "missing-chunks",
   });
 
-  // doctest:L293
   t.check((await manifestOf(ctx, sessionId)).state, "open");
 });
 
@@ -341,7 +327,6 @@ void test("A finalize with no HQ requested seals the session and leaves hq:", as
       t.error(error);
     }
   });
-  // doctest:L309
   const ctx = await makeTestServer();
   const sessionId = await voiceWithChunk(ctx);
   const body = { chunkCount: 1, emissionId: "em-idem", hq: null };
@@ -368,7 +353,6 @@ void test("A finalize with no HQ requested seals the session and leaves hq:", as
     },
   ]);
 
-  // doctest:L317
   t.check(voiceOf(await manifestOf(ctx, sessionId)).emissionId, "em-idem");
 });
 
@@ -382,7 +366,6 @@ void test("Finalize refuses when hq.emissionId disagrees with the top-level emis
       t.error(error);
     }
   });
-  // doctest:L329
   const ctx = await makeTestServer();
   const sessionId = await voiceWithChunk(ctx);
   const mismatch = await finalize(ctx, {
@@ -406,7 +389,6 @@ void test("A repeat that asks for HQ under a DIFFERENT emission than what alread
       t.error(error);
     }
   });
-  // doctest:L347
   const ctx = await makeTestServer();
   const sessionId = await voiceWithChunk(ctx);
   await finalize(ctx, { sessionId, payload: { chunkCount: 1, emissionId: "e1", hq: { emissionId: "e1", sessionId: "chat-voice" } } });
@@ -416,7 +398,6 @@ void test("A repeat that asks for HQ under a DIFFERENT emission than what alread
   });
   t.check(conflicting.statusCode, 409);
 
-  // doctest:L358
   // Wait for the (fire-and-forget, credential-less) HQ job's fast permanent
   // failure to settle before this test's cleanup closes the event bus, so it
   // can't emit into a torn-down bus mid-flight.
@@ -437,7 +418,6 @@ void test("The manifest's hqRequest records the resolved service and the emissio
       t.error(error);
     }
   });
-  // doctest:L377
   const ctx = await makeTestServer();
   const sessionId = await voiceWithChunk(ctx);
   const res = await finalize(ctx, {
@@ -451,7 +431,6 @@ void test("The manifest's hqRequest records the resolved service and the emissio
     },
   });
 
-  // doctest:L385
   const manifest = await manifestOf(ctx, sessionId);
   const { emissionId, sessionId: hqSessionId, service } = hqRequestOf(manifest);
   t.check(({ emissionId, sessionId: hqSessionId, service }), {
@@ -460,7 +439,6 @@ void test("The manifest's hqRequest records the resolved service and the emissio
     service: "whisper",
   });
 
-  // doctest:L392
   // Let the credential-less job settle before cleanup closes the event bus.
   await waitForHqDone(ctx, sessionId);
 });
@@ -478,7 +456,6 @@ void test("The first voice message of a new chat is finalized before the box ass
       t.error(error);
     }
   });
-  // doctest:L407
   const ctx = await makeTestServer();
   const created = await createSession(ctx, { kind: "voice" });
   const sessionId = sessionIdOf(created);
@@ -494,13 +471,11 @@ void test("The first voice message of a new chat is finalized before the box ass
     },
   });
 
-  // doctest:L417
   const { emissionId, sessionId: hqSessionId } = hqRequestOf(await manifestOf(ctx, sessionId));
   t.check(({ emissionId, sessionId: hqSessionId }), {
     emissionId: "e-new",
     sessionId: null,
   });
 
-  // doctest:L423
   await waitForHqDone(ctx, sessionId);
 });

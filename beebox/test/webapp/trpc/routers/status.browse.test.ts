@@ -3,13 +3,13 @@
 // Track C of `docs/implemented-plans/card-prominence.md`: `status.browse` adds each
 // card's effective `prominence`, each subdirectory's pruned-subtree
 // `DirectorySummary` (plus its own landmark identity when it has one), and
-// the listed directory's own `background` cascade. No doctest previously
+// the listed directory's own `background` cascade. No test previously
 // exercised `status.browse`'s general listing shape (only the namespace-fence
-// suite in `box-namespace-fence-traversal.doctest.md` calls it, for security);
-// this is that doctest.
+// suite in `test/webapp/trpc/routers.namespace-fence-traversal.test.ts` calls it, for security);
+// this is that test.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
@@ -35,7 +35,6 @@ void test("An entry-point/primary/background-declared card reports that level; a
       t.error(error);
     }
   });
-  // doctest:L32
   const server = await makeTestServer();
   await server.seed("_content/Entry.doc.card", "---\ntitle: Entry\nprominence: entry-point\n---\n");
   await server.seed("_content/Primary.doc.card", "---\ntitle: Primary\nprominence: primary\n---\n");
@@ -44,7 +43,6 @@ void test("An entry-point/primary/background-declared card reports that level; a
   await server.seed("_content/Box.landmark.card", "---\nnavigation:\n  label: Box\n---\n");
   await server.seed("_content/Hello.chat.card", "---\nsession: s1\n---\n");
 
-  // doctest:L40
   const listing = await statusRouter.createCaller(ctxFor(server.boxRoot)).browse({ path: "_content" });
   t.check(
     listing.cards
@@ -56,7 +54,6 @@ void test("An entry-point/primary/background-declared card reports that level; a
 
   // The listed directory itself is not background — nothing here cascaded it.
 
-  // doctest:L51
   t.check(listing.background, false);
 });
 
@@ -73,7 +70,6 @@ void test("A subdirectory holding a primary card reports it in its summary; one 
       t.error(error);
     }
   });
-  // doctest:L66
   const server2 = await makeTestServer();
   // "Cookbook", not "recipes": the default test box already scaffolds
   // `_content/recipes/`, and macOS's case-insensitive filesystem would
@@ -82,28 +78,23 @@ void test("A subdirectory holding a primary card reports it in its summary; one 
   await server2.seed("_content/Cookbook/Soup.doc.card", "---\ntitle: Soup\nprominence: primary\n---\n");
   await server2.seed("_content/Plain/Notes.doc.card", "---\ntitle: Notes\n---\n");
 
-  // doctest:L74
   const listing2 = await statusRouter.createCaller(ctxFor(server2.boxRoot)).browse({ path: "_content" });
   const byName = new Map(listing2.dirs.map((d) => [d.name, d]));
 
-  // doctest:L77
   t.check(byName.get("Cookbook")?.summary, {
     hasEntryPoint: false,
     primaryCount: 1,
     background: false,
   });
 
-  // doctest:L80
   t.check(byName.get("Cookbook")?.landmark?.label, "Cookbook");
 
-  // doctest:L83
   t.check(byName.get("Plain")?.summary, {
     hasEntryPoint: false,
     primaryCount: 0,
     background: false,
   });
 
-  // doctest:L86
   t.check(byName.get("Plain")?.landmark, undefined);
 });
 
@@ -120,16 +111,13 @@ void test("A directory whose own landmark is written background reports backgrou
       t.error(error);
     }
   });
-  // doctest:L101
   const server3 = await makeTestServer();
   await server3.seed("_content/Housekeeping/Housekeeping.landmark.card", "---\nprominence: background\n---\n");
   await server3.seed("_content/Housekeeping/Notable.doc.card", "---\ntitle: Notable\nprominence: entry-point\n---\n");
 
-  // doctest:L105
   const bgListing = await statusRouter.createCaller(ctxFor(server3.boxRoot)).browse({ path: "_content/Housekeeping" });
   t.check(bgListing.background, true);
 
-  // doctest:L109
   t.check(bgListing.cards.find((c) => c.name === "Notable")?.prominence, "entry-point");
 });
 
@@ -146,13 +134,11 @@ void test("A synced Doc marked conflict:", async (t) => {
       t.error(error);
     }
   });
-  // doctest:L124
   const server4 = await makeTestServer();
   await server4.seed("_content/Drive/Contended.gdoc.card", "---\ntitle: Contended\nconflict: true\n---\n");
   await server4.seed("_content/Drive/Settled.gdoc.card", "---\ntitle: Settled\n---\n");
   await server4.seed("_content/Drive/Note.doc.card", "---\ntitle: Note\nvia:\n  channel: email\n---\n");
 
-  // doctest:L129
   const driveListing = await statusRouter.createCaller(ctxFor(server4.boxRoot)).browse({ path: "_content/Drive" });
   await t.checkText(JSON.stringify(driveListing.cards.map((c) => ({ name: c.name, conflict: c.conflict, via: "via" in c }))), "[{\"name\":\"Contended\",\"conflict\":true,\"via\":false},{\"name\":\"Note\",\"via\":false},{\"name\":\"Settled\",\"via\":false}]");
 });

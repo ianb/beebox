@@ -6,8 +6,8 @@
 // A confident yes keeps the title and advances the journal for free.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { anything } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { anything } from "@ianbicking/tap-check/check";
 import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
@@ -105,7 +105,6 @@ const ROOF_TURNS: Array<[string, string, string]> = [
 
 // ## The decision is one threshold on the noul's probability
 void test("The decision is one threshold on the noul's probability", async (t) => {
-  // doctest:L70
   t.check([titleKeeps({ probability: 0.75 }), titleKeeps({ probability: 0.74 })], [
     true,
     false,
@@ -114,7 +113,6 @@ void test("The decision is one threshold on the noul's probability", async (t) =
   // The question is a noul with a true/false criterion pair — the shape
   // `services/jev-judge.ts` serializes and strictly validates.
 
-  // doctest:L78
   t.check(QUESTION, {
     type: "noul",
     instructions: [
@@ -135,12 +133,10 @@ void test("The decision is one threshold on the noul's probability", async (t) =
 // reviewer's `title` is never called, the title stands unchanged, and the title
 // journal still advances past the span.
 void test("The whole pipeline, with a fake Jev scripted to a confident yes:", async (t) => {
-  // doctest:L89
   const box = await makeTmpBox();
   const sessionId = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
   await seedChat(box, { sessionId, turns: DINNER_TURNS });
 
-  // doctest:L96
   // A scripted confident YES, through the real checker and the real parser.
   const jev = createFakeJev({ answers: () => ({ type: "noul", probability: 0.97 }) });
   const freshness = createJevFreshnessChecker(jev, box.root);
@@ -151,7 +147,6 @@ void test("The whole pipeline, with a fake Jev scripted to a confident yes:", as
     async title() { this.titleCalls += 1; throw new Error("must not run"); },
   };
 
-  // doctest:L106
   const summary = await runChatReview(box.root, {
     reviewer, maxSessions: 10, now: NOW, ownerEmail: null, freshness,
   });
@@ -167,7 +162,6 @@ void test("The whole pipeline, with a fake Jev scripted to a confident yes:", as
     },
   ]);
 
-  // doctest:L116
   const state = await loadReviewState(box.root);
   t.check(state, {
     lastRunAt: NOW.toISOString(),
@@ -186,24 +180,20 @@ void test("The whole pipeline, with a fake Jev scripted to a confident yes:", as
 
   // The card is untouched — same title, nothing added.
 
-  // doctest:L124
   t.checkText(await readFile(box.path(CARD_PATH), "utf8"), `---
 session: ${sessionId}
 title: Planning a small birthday dinner
 ---`);
 
-  // doctest:L127
   await box.cleanup();
 });
 
 // ## A low "still fits" runs the reviewer and takes its title
 void test("A low \"still fits\" runs the reviewer and takes its title", async (t) => {
-  // doctest:L133
   const box = await makeTmpBox();
   const sessionId = "11111111-2222-4333-8444-555555555555";
   await seedChat(box, { sessionId, turns: ROOF_TURNS });
 
-  // doctest:L140
   const freshness = createJevFreshnessChecker(
     createFakeJev({ answers: () => ({ type: "noul", probability: 0.2 }) }),
     box.root,
@@ -224,14 +214,12 @@ void test("A low \"still fits\" runs the reviewer and takes its title", async (t
     { sessionId, currentTitle: "Planning a small birthday dinner", span: recentMessages(ROOF_TURNS) },
   ]);
 
-  // doctest:L158
   t.checkText(await readFile(box.path(CARD_PATH), "utf8"), `---
 session: ${sessionId}
 title: Emergency roof leak and the upstairs room
 first-message: forget the dinner — the roof started leaking, can you help me find an emergency…
 ---`);
 
-  // doctest:L161
   await box.cleanup();
 });
 
@@ -240,7 +228,6 @@ first-message: forget the dinner — the roof started leaking, can you help me f
 // The expensive path is the correct fallback; the warning keeps the degradation
 // visible.
 void test("The expensive path is the correct fallback; the warning keeps the degradation...", async (t) => {
-  // doctest:L170
   const box = await makeTmpBox();
   const sessionId = "99999999-8888-4777-8666-555555555555";
   await seedChat(box, { sessionId, turns: [
@@ -248,7 +235,6 @@ void test("The expensive path is the correct fallback; the warning keeps the deg
     ["x2", "2026-07-28T03:30:00Z", "something with vermouth, ideally make-ahead in a batch. "],
   ] });
 
-  // doctest:L177
   const failing = {
     async check() { throw new Error("jev unavailable"); },
   };
@@ -261,7 +247,6 @@ void test("The expensive path is the correct fallback; the warning keeps the deg
   });
   t.check(summary, summaryWith({ titled: 1 }));
 
-  // doctest:L190
   await box.cleanup();
 });
 
@@ -276,12 +261,10 @@ void test("`BBX_JEV_FAKE` resolves a working checker; a bad value degrades to no
       t.error(error);
     }
   });
-  // doctest:L196
   const box = await makeTmpBox();
   const yes = await resolveFreshnessChecker(box.root, { ...process.env, BBX_JEV_FAKE: "1" });
   t.check(yes, { checker: anything(), fake: true });
   t.check(yes === null ? null : await yes.checker.check({ title: "T", recent: "r", sessionId: "s" }), { keeps: true });
 
-  // doctest:L201
   t.check(await resolveFreshnessChecker(box.root, { BBX_JEV_FAKE: "banana" }), null);
 });

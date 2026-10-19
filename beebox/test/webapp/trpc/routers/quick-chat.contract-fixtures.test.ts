@@ -13,7 +13,7 @@
 // - `home.json` is the envelope of the `home` query.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -57,7 +57,6 @@ function check(schema: z.ZodType, value: unknown): string {
 // The generic external origin requires an allowlisted platform source, and typed
 // or voice messages cannot claim an external source.
 void test("The generic external origin requires an allowlisted platform source, and type...", async (t) => {
-  // doctest:L61
   const validBase = { id: "5f0c2a9e-3b1d-4c7a-9e2f-8d6b1a4c3e70", message: "x" };
   t.check(
     [
@@ -74,7 +73,6 @@ void test("The generic external origin requires an allowlisted platform source, 
 // Every fixture in the directory is one of the three kinds, and each parses with
 // the schema the router uses, field for field.
 void test("Every fixture in the directory is one of the three kinds, and each parses wit...", async (t) => {
-  // doctest:L73
   const names = (await readdir(DIR)).toSorted();
   const results: Record<string, string> = {};
   for (const name of names) {
@@ -110,7 +108,6 @@ void test("Every fixture in the directory is one of the three kinds, and each pa
 // The view fixtures cover each state and reason the box screen distinguishes, and
 // a page sent from the Clerk with no note: an empty message beside `page`.
 void test("The view fixtures cover each state and reason the box screen distinguishes, a...", async (t) => {
-  // doctest:L110
   const faces: (string | boolean | null)[][] = [];
   for (const name of (await readdir(DIR)).filter((file) => file.startsWith("view-")).toSorted()) {
     const { state, reason, lastError, expired, queued, destination, page, message } = viewOf(await fixture(name));
@@ -224,7 +221,6 @@ void test("The request fixtures go over the real HTTP tRPC adapter as the phone 
       t.error(error);
     }
   });
-  // doctest:L138
   const server = await makeTestServer();
   const submit = await server.request({ method: "POST", url: "/api/trpc/quickChat.submit", payload: await fixture("submit-request.json") });
   t.check([submit.statusCode, check(quickChatViewSchema, dataOf(submit.body)), viewOf(submit.body).state, viewOf(submit.body).reason], [
@@ -234,7 +230,6 @@ void test("The request fixtures go over the real HTTP tRPC adapter as the phone 
     "routing-unavailable",
   ]);
 
-  // doctest:L143
   const home = await server.request({ method: "GET", url: "/api/trpc/quickChat.home" });
   t.check([home.statusCode, check(quickChatHomeSchema, dataOf(home.body)), homeOf(home.body).open.length], [
     200,
@@ -242,7 +237,6 @@ void test("The request fixtures go over the real HTTP tRPC adapter as the phone 
     1,
   ]);
 
-  // doctest:L147
   const retry = await server.request({ method: "POST", url: "/api/trpc/quickChat.retry", payload: await fixture("retry-request.json") });
   t.check([retry.statusCode, check(quickChatViewSchema, dataOf(retry.body)), viewOf(retry.body).state], [
     200,
@@ -250,7 +244,6 @@ void test("The request fixtures go over the real HTTP tRPC adapter as the phone 
     "needs-choice",
   ]);
 
-  // doctest:L151
   const discard = await server.request({ method: "POST", url: "/api/trpc/quickChat.discard", payload: await fixture("discard-request.json") });
   t.check([discard.statusCode, viewOf(discard.body).state], [
     200,
@@ -264,7 +257,6 @@ void test("The request fixtures go over the real HTTP tRPC adapter as the phone 
   // The server logs each failed procedure; these two are failures by design, so
   // the log is captured and shown.
 
-  // doctest:L164
   const logged: string[] = [];
   const { error: logError } = console;
   console.error = (...args: unknown[]) => { logged.push(args.map(String).join(" ")); };

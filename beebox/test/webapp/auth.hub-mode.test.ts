@@ -10,12 +10,12 @@
 // `/auth/*` also goes dead (404) in hub mode, since the hub owns login.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../helpers/test-route-server.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 
 process.env.BBX_HUB_SECRET = "test-hub-secret-xyz";
-process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-mode-auth-doctest";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-mode-auth-test";
 
 const server = await makeTestServer();
 await server.seed("_config/box.json", JSON.stringify({ allowedEmails: [" Allowed@Example.COM "] }));
@@ -31,13 +31,11 @@ void test("No hub headers at all -> 401 (fails closed, not open)", async (t) => 
       t.error(error);
     }
   });
-  // doctest:L26
   const noHeaders = await server.request({ method: "GET", url: "/api/trpc/health.check" });
   t.check(noHeaders.statusCode, 401);
 
   // ## A spoofed email header without the secret is ignored -> still 401
 
-  // doctest:L34
   const spoofedNoSecret = await server.request({
     method: "GET",
     url: "/api/trpc/health.check",
@@ -47,7 +45,6 @@ void test("No hub headers at all -> 401 (fails closed, not open)", async (t) => 
 
   // ## A spoofed email header with the WRONG secret is also ignored -> 401
 
-  // doctest:L46
   const spoofedWrongSecret = await server.request({
     method: "GET",
     url: "/api/trpc/health.check",
@@ -62,7 +59,6 @@ void test("No hub headers at all -> 401 (fails closed, not open)", async (t) => 
   // back in with a self-issued or stolen cookie signed by the SAME symmetric
   // secret every sibling box would also accept.
 
-  // doctest:L63
   const cookieValue = signSession({ email: "allowed@example.com", name: "Allowed User" });
   const cookiePresented = await server.request({
     method: "GET",
@@ -73,7 +69,6 @@ void test("No hub headers at all -> 401 (fails closed, not open)", async (t) => 
 
   // ## Valid secret + email NOT on the box's allowedEmails -> 403 (identity ok, authorization denied)
 
-  // doctest:L76
   const validButNotAllowed = await server.request({
     method: "GET",
     url: "/api/trpc/health.check",
@@ -83,7 +78,6 @@ void test("No hub headers at all -> 401 (fails closed, not open)", async (t) => 
 
   // ## Valid secret + an allowedEmails email -> 200
 
-  // doctest:L88
   const validAndAllowed = await server.request({
     method: "GET",
     url: "/api/trpc/health.check",
@@ -93,7 +87,6 @@ void test("No hub headers at all -> 401 (fails closed, not open)", async (t) => 
 
   // ## Valid secret + `x-bbx-hub-auth: off` (hub-wide auth disabled) bypasses the ACL entirely
 
-  // doctest:L100
   const hubAuthOff = await server.request({
     method: "GET",
     url: "/api/trpc/health.check",
@@ -103,7 +96,6 @@ void test("No hub headers at all -> 401 (fails closed, not open)", async (t) => 
 
   // ## The box's own `/auth/login` is dead in hub mode -- 404, not a redirect loop
 
-  // doctest:L112
   const ownAuthLogin = await server.rootRequest({ method: "GET", url: "/auth/login" });
   t.check(ownAuthLogin.statusCode, 404);
 });
@@ -122,7 +114,6 @@ void test("Same headers that would grant access above do nothing here — the te
       t.error(error);
     }
   });
-  // doctest:L131
   const openServer = await makeTestServer();
   const openWithSpoofedHeaders = await openServer.request({
     method: "GET",

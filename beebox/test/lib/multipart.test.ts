@@ -7,13 +7,12 @@
 // request's `Content-Type` header.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { buildMultipartForm } from "../../src/lib/multipart.js";
 
 // ## File part + field part, in order
 void test("File part + field part, in order", async (t) => {
-  // doctest:L16
   const { body, boundary } = buildMultipartForm([
     {
       kind: "file",
@@ -34,24 +33,20 @@ void test("File part + field part, in order", async (t) => {
 
   // Boundary is a fresh random token each call, prefixed `----FormBoundary`:
 
-  // doctest:L39
   t.check(boundary, any(String).matches(/^-{4}FormBoundary[\da-z]+$/));
 
-  // doctest:L42
   const second = buildMultipartForm([]);
   t.check(second.boundary, not(boundary));
 });
 
 // ## No parts — just the closing boundary
 void test("No parts — just the closing boundary", async (t) => {
-  // doctest:L50
   const empty = buildMultipartForm([]);
   t.check(empty.body.toString("utf-8"), `--${empty.boundary}--\r\n`);
 });
 
 // ## Field-only parts (no file) preserve given order
 void test("Field-only parts (no file) preserve given order", async (t) => {
-  // doctest:L58
   const { body: fieldsBody, boundary: fieldsBoundary } = buildMultipartForm([
     { kind: "field", field: { name: "a", value: "1" } },
     { kind: "field", field: { name: "b", value: "2" } },

@@ -8,7 +8,7 @@
 // can be shown once and named instead of vanishing into a console warning.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,14 +40,12 @@ void test("mai is reachable only through OpenRouter, so with an empty secret sto
       t.error(error);
     }
   });
-  // doctest:L37
   const dir = await mkdtemp(join(tmpdir(), "bbx-secrets-"));
   process.env.BBX_SECRETS_FILE = join(dir, "secrets.json");
   const ctx = await makeTestServer();
   await mkdir(join(ctx.boxRoot, "_config"), { recursive: true });
   await writeFile(join(ctx.boxRoot, "_config/transcription.json"), JSON.stringify({ hqService: "mai" }));
 
-  // doctest:L43
   const res = await postClip(ctx);
   t.check({ status: res.statusCode, code: bodyField(res.body, "code"), permanent: bodyField(res.body, "permanent"), namesTheSecret: /"openrouter"/.test(String(bodyField(res.body, "error"))) }, {
     status: 500,
