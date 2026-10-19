@@ -98,7 +98,7 @@ TestBase.prototype.check = function tapCheckValue(this: InstanceType<typeof Test
     if (outcome.generalized !== undefined) extra.generalized = literalBlock(outcome.generalized);
     this.fail(outcome.message, extra);
   };
-  return isThenable(actual) ? held(this, Promise.resolve(actual).then(run)) : run(actual);
+  return isThenable(actual) ? held(this, Promise.resolve(actual).then(run, (e: unknown) => { rejected(this, e); })) : run(actual);
 } as TestBase["check"];
 
 /**
@@ -112,6 +112,14 @@ function ignore(): void {
   // A settled outcome is all the waiter needs.
 }
 
+/**
+ * A checked promise that rejects is a failed check, reported on the test:
+ * left to the caller, an unawaited check's rejection would be lost.
+ */
+function rejected(t: TestBase, error: unknown): void {
+  t.fail("the checked promise rejected", { error: literalBlock(error instanceof Error ? (error.stack ?? String(error)) : String(error)) });
+}
+
 function held<T>(t: TestBase, promise: Promise<T>): Promise<T> {
   const settled: Promise<void> = promise.then(ignore, ignore);
   void t.waitOn(settled);
@@ -120,7 +128,7 @@ function held<T>(t: TestBase, promise: Promise<T>): Promise<T> {
 
 /** A string's trailing newlines are not compared: command output and files end with one, and expected text rarely does. */
 function trimEnd(value: string): string {
-  return value.replace(/\n+$/, "");
+  return value.replace(/(?:\r?\n)+$/, "");
 }
 
 TestBase.prototype.checkText = function tapCheckText(
@@ -133,7 +141,7 @@ TestBase.prototype.checkText = function tapCheckText(
     if (result.pass) this.pass("");
     else this.fail("check failed", failureExtra(result));
   };
-  return isThenable(actual) ? held(this, Promise.resolve(actual).then(run)) : run(actual);
+  return isThenable(actual) ? held(this, Promise.resolve(actual).then(run, (e: unknown) => { rejected(this, e); })) : run(actual);
 };
 
 /**
@@ -153,10 +161,13 @@ TestBase.prototype.checkThrows = function tapCheckThrows(
   (this as { currentAssert: unknown }).currentAssert = (this as { checkThrows: unknown }).checkThrows;
 
   const finish = (caught: unknown, threw: boolean): void => {
-    let described: string;
     if (!threw) {
-      described = "(no error thrown)";
-    } else if (!full) {
+      // Not compared as text: `«*»` would otherwise match the absence of an error.
+      this.fail("no error thrown", { expected: literalBlock(expected) });
+      return;
+    }
+    let described: string;
+    if (!full) {
       described = caught instanceof Error ? caught.name : String(caught);
     } else {
       const name = caught instanceof Error ? caught.name : "Error";

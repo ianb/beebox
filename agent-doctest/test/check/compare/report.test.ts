@@ -209,6 +209,7 @@ void test("patterns: any, refinements, uuid, isoDate, oneOf", async (t) => {
   t.notOk(passes({ n: 1 }, is(first)), "an equal copy is not the same object");
   t.ok(passes({ n: 1 }, not(is(first))), "a different object");
   t.notOk(passes(first, not(is(first))));
+  t.check([is(-0).source, is(1n).source, not(Number.NaN).source, not(Infinity).source, is(first).source], ["is(-0)", "is(1n)", "not(NaN)", "not(Infinity)", "is(<reference>)"]);
   t.ok(passes(new RangeError("x"), instanceOf(Error)));
   t.notOk(passes(new Error("x"), instanceOf(RangeError)));
   t.checkText(report({ n: 7 }, { n: any(Number).int().between(1, 5) }), `check failed: 1 mismatch

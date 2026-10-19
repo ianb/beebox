@@ -326,6 +326,9 @@ function recorder(): { fake: TestBase; calls: Call[] } {
   const fake = {
     pass: (message: string) => (calls.push(["pass", message, undefined]), true),
     fail: (message: string, extra: Record<string, unknown>) => (calls.push(["fail", message, extra]), false),
+    waitOn: async () => {
+      // A held check's settled copy; nothing to wait on here.
+    },
   } as unknown as TestBase;
   return { fake, calls };
 }
@@ -359,9 +362,29 @@ test("t.checkThrows() puts the stack in the failure", async (t) => {
   TestBase.prototype.checkThrows.call(fake, () => { throw new RangeError("x"); }, "TypeError");
   TestBase.prototype.checkThrows.call(fake, () => undefined, "TypeError");
   t.check(Object.keys(calls[0]?.[2] ?? {}).sort(), ["diff", "stack", "suggested"]);
-  t.check(Object.keys(calls[1]?.[2] ?? {}).sort(), ["diff", "suggested"]);
+  const [kind, message, extra] = calls[1] ?? [];
+  t.check({ kind, message, keys: Object.keys(extra ?? {}), expected: (extra?.expected as { value?: unknown } | undefined)?.value }, { kind: "fail", message: "no error thrown", keys: ["expected"], expected: "TypeError" });
 });
 
 test("t.checkThrows() settles an async fn through a promise", async (t) => {
   await t.checkThrows(async () => { throw new RangeError("late"); }, "RangeError: late");
+});
+
+test("t.checkThrows() fails when nothing throws, even against a wildcard", async (t) => {
+  const { fake, calls } = recorder();
+  TestBase.prototype.checkThrows.call(fake, () => "fine", "«*»");
+  await TestBase.prototype.checkThrows.call(fake, async () => "fine", "«*»");
+  t.check(calls.map(([kind, msg]) => [kind, msg]), [["fail", "no error thrown"], ["fail", "no error thrown"]]);
+});
+
+test("t.checkText() reports a rejected promise as a failed check", async (t) => {
+  const { fake, calls } = recorder();
+  await TestBase.prototype.checkText.call(fake, Promise.reject(new Error("boom")), "ready");
+  t.check(calls.map(([kind, msg]) => [kind, msg]), [["fail", "the checked promise rejected"]]);
+});
+
+test("t.checkText() ignores trailing CRLF line ends", async (t) => {
+  const { fake, calls } = recorder();
+  TestBase.prototype.checkText.call(fake, "ready\r\n\r\n", "ready");
+  t.check(calls.map(([kind]) => kind), ["pass"]);
 });

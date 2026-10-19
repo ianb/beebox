@@ -46,7 +46,7 @@ Run with `npx tap`.
 | Import | Contents |
 |---|---|
 | `agent-doctest/tap` | Adds `t.check`, `t.checkText`, and `t.checkThrows` to tap (use in `.taprc`) |
-| `agent-doctest/check` | Patterns (`any`, `uuid`, `isoDate`, `oneOf`, `str`, `optional`, `unordered`, `containing`, `capture`, `others`, `anything`), `eventually`, `runCommand`, and `printed` |
+| `agent-doctest/check` | Patterns (`any`, `uuid`, `isoDate`, `oneOf`, `str`, `optional`, `unordered`, `containing`, `capture`, `others`, `anything`, `not`, `is`, `instanceOf`), `eventually`, `runCommand`, and `printed` |
 | `agent-doctest/eslint` | ESLint plugin: `check-whole-value`, `no-voided-check`, `no-tap-assert` |
 
 ## Lint rules

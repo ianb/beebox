@@ -30,13 +30,15 @@ function calleeIs(node: Node, name: string): boolean {
 
 /**
  * The expression under wrappers that do not change what it computes:
- * `x?.includes(y)` (a chain), `await x.has(y)`, and TypeScript's `x!` and
- * `x as T`, which reach ESLint as `TSNonNullExpression` and `TSAsExpression`.
+ * `x?.includes(y)` (a chain), `await x.has(y)`, and TypeScript's `x!`,
+ * `x as T`, `x satisfies T` and `<T>x`.
  */
+const TS_WRAPPERS = new Set(["TSNonNullExpression", "TSAsExpression", "TSSatisfiesExpression", "TSTypeAssertion"]);
+
 function unwrap(node: Node): Node {
   if (node.type === "ChainExpression" || node.type === "AwaitExpression") return unwrap(node.type === "ChainExpression" ? node.expression : node.argument);
   const ts = node as { type: string; expression?: Node };
-  if ((ts.type === "TSNonNullExpression" || ts.type === "TSAsExpression") && ts.expression !== undefined) return unwrap(ts.expression);
+  if (TS_WRAPPERS.has(ts.type) && ts.expression !== undefined) return unwrap(ts.expression);
   return node;
 }
 

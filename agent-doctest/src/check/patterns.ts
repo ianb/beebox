@@ -168,8 +168,14 @@ export function isoDate(): Pattern<string> {
 
 type Literal = string | number | boolean | null | undefined;
 
-function literalSource(value: Literal): string {
-  return value === undefined ? "undefined" : JSON.stringify(value);
+/** A value as source text: JSON for plain literals, spelled out where JSON is wrong or throws. */
+function literalSource(value: unknown): string {
+  if (value === undefined) return "undefined";
+  if (typeof value === "number" && !Number.isFinite(value)) return String(value);
+  if (Object.is(value, -0)) return "-0";
+  if (typeof value === "bigint") return `${String(value)}n`;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null) return JSON.stringify(value);
+  return "<reference>";
 }
 
 /** One of the given literal values. */
@@ -184,7 +190,7 @@ export function oneOf<const L extends readonly Literal[]>(...values: L): Pattern
  * reference: `t.check(store.getSnapshot(), is(first))`.
  */
 export function is<T>(value: T): Pattern<T> {
-  const source = `is(${typeof value === "object" && value !== null ? "<reference>" : literalSource(value as Literal)})`;
+  const source = `is(${literalSource(value)})`;
   return new Pattern<T>(source, (v) => (Object.is(v, value) ? OK : fail(`${source}: a different value or a copy`)));
 }
 

@@ -160,7 +160,8 @@ await t.checkThrows(() => parseCard("no frontmatter"), "CardParseError: missing 
 - Check the whole value. A test that checks `result.items.length` passes when
   the items are wrong. A test that checks `result.items` does not.
 - Do not compare `JSON.stringify(x)`; check `x`.
-- Do not check `a === b` against `true`; check `a` against `b`.
+- Do not check `a === b` against `true`; check `a` against `b`, or
+  `t.check(a, is(b))` when `a` must be the same object as `b`.
 - Check one field only when that field is the whole contract.
 - Make the value deterministic before you reach for a pattern: pass a fixed
   clock, a fixed id, a fixed seed.
