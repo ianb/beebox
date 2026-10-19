@@ -22,7 +22,7 @@ final class ScanTokenClientTests: XCTestCase {
     func testStatusesMapToProblems() async {
         let cases: [(Int, String, ScanTokenError)] = [
             (401, "{}", .deviceRefused),
-            (403, #"{"error":{"message":"Owner access required"}}"#, .notOwner),
+            (403, #"{"error":{"message":"A scan uploader records who set it up, so it needs a signed-in person."}}"#, .pairedByNobody),
             (409, #"{"error":{"message":"taken"}}"#, .rejected(status: 409, message: "taken")),
             (200, #"{"result":{"data":{}}}"#, .malformedResponse),
         ]

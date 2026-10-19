@@ -390,8 +390,9 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
     check applies only the contract test (`scan-uploaders.ts:96-101`).
   - Credential: when the boxholder turns on upload for a paired box, the app
     calls `scanTokens.create` with its device token and keeps the plaintext
-    in the Keychain. A device paired by a non-owner gets FORBIDDEN, and the
-    settings say that only the box owner's pairing can upload scans.
+    in the Keychain. Anyone with access to the box may mint one, since they can
+    already upload through the web app (boxholder, 2026-10-19). Only a device
+    recorded against nobody gets FORBIDDEN, and the settings say to pair again.
   - Credential lifecycle:
     - Each mint gets a fresh name, `mac-<host>-<yyyymmdd>-<4 random hex>`,
       and the app records it per box so it can revoke it. A fixed name cannot
@@ -517,7 +518,7 @@ The boxholder approved this scale on 2026-10-17 ("Go ahead with the size").
 | The same link arrives twice at once | A: concurrency test | single-flight by pairing token | Clear (second call is a no-op) |
 | The moved store reads the old file or Keychain item wrongly | C: existing 11 tests move | the iOS profile keeps today's paths | Silent if wrong; the tests are the guard |
 | The pbxproj package reference is wrong | B: `bin/apple-test --ios` | build fails | Clear |
-| A non-owner's pairing tries to mint a scan token | E | FORBIDDEN mapped to a settings message | Clear |
+| A pairing recorded against nobody tries to mint a scan token | E | FORBIDDEN mapped to a settings message | Clear |
 | A file changes between check and disposition | E: ported `settle.identity` case | restat before disposition | Clear (left in place) |
 | The launchd agent and the app both watch one folder | E | the app refuses that folder | Clear |
 | The app is not running when a scan lands | E | sweep at launch; login item | Clear on next launch |
