@@ -343,11 +343,17 @@ export function formatSmokeReport(summary: SmokeSummary): string {
     (step) => step.failed === 0 && step.ran >= TRIM_EVIDENCE_RUNS,
   );
   if (idle.length > 0) {
-    const seconds = idle.reduce((sum, step) => sum + step.medianSeconds, 0);
+    // No seconds total. A step's p50 is not what deleting it saves: a step can
+    // be the navigation a later step reads from, and a clean record cannot say
+    // whether an earlier step already covers what it checks. Both come from the
+    // step list in bin/smoke.ts, not the log
+    // (issues/closed/code-quality/2026-09-09-smoke-report-trim-footer-overstates-recoverable-cost.md).
     lines.push(
       "",
-      `Never caught anything in ${String(TRIM_EVIDENCE_RUNS)}+ runs, costing` +
-        ` ${seconds.toFixed(1)}s of every walk: ${idle.map((step) => step.id).join(", ")}.`,
+      `Never failed in ${String(TRIM_EVIDENCE_RUNS)}+ runs: ${idle.map((step) => step.id).join(", ")}.`,
+      "A clean record makes a step a candidate, not a trim: check in bin/smoke.ts",
+      "that an earlier step already catches what it checks, and that no later step",
+      "relies on it. Its p50 is not what a trim recovers.",
       "Read `ran`, not the run count, as the denominator — the walk stops at the",
       "first failure, so a late step has seen fewer runs than an early one.",
       "`forced` is failures under deliberate fault injection: it proves the step",
