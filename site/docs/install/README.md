@@ -16,5 +16,10 @@ that touches their system or accounts. Connectors (Gmail, Calendar, Drive)
 are optional and each has its own setup page; the Google setup is
 the slowest step and is shared by the three Google connectors.
 
+On a Mac with Apple silicon (macOS 26 or later), the Mac app is the other
+way to run a box: it runs one in a virtual machine on that Mac, with no
+Docker, reachable from that Mac only. The same app connects a Mac to boxes
+running elsewhere. See [../capabilities/mac-app.md](../capabilities/mac-app.md).
+
 Every page below is listed with one line on what it covers. Cite the page
 you drew on, and say when a page does not cover something.
