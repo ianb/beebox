@@ -7,7 +7,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-full-suite-verdicts — consolidating the 08-24/08-25 load-flake filings
 priority: important
+resolution: implemented
 ---
+
+Closed 2026-10-19 (flaky-tests): every recurring victim file is fixed, deleted, already fixed, or shown not test-caused (see the 2026-10-18 section), and the test-doc rules for time, load, and real processes landed in `beebox/docs/testing/check.md`. The ad-hoc slow-run banner stays unbuilt, as the section below says.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 
@@ -78,9 +81,9 @@ needs a source-parameterized `durationHistories` and parsed durations plumbed
 out of the wrapper (~50 lines). Build it only if mid-run pressure onset keeps
 showing up after the gates above. Per-test budget scaling was considered and
 rejected as gold-plating. Related per-test items:
-[process-group timeout](../closed/bugs/2026-08-25-schedules-process-group-timeout-test-flaky-under-load.md),
-[router shutdown](../closed/bugs/2026-08-24-router-core-shutdown-test-flakes-under-load.md),
-[awake timeout](../closed/bugs/2026-08-20-awake-timeout-doctest-flakes-on-a-cold-run.md).
+[process-group timeout](2026-08-25-schedules-process-group-timeout-test-flaky-under-load.md),
+[router shutdown](2026-08-24-router-core-shutdown-test-flakes-under-load.md),
+[awake timeout](2026-08-20-awake-timeout-doctest-flakes-on-a-cold-run.md).
 
 ## Check-in on 2026-09-18
 
