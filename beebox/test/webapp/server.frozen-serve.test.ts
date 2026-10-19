@@ -1,5 +1,11 @@
 // Serving frozen page snapshots, checked as whole responses with
 // TestServer.response, so the status and headers are checked with the body.
+//
+// `.frozen` captures are untrusted HTML served as `text/html`. The file route
+// injects a fixed image-fallback script and serves the page under a hash-pinned
+// CSP: `sandbox allow-scripts` keeps the opaque origin, and
+// `script-src 'sha256-…'` runs only that one script, so the captured page's own
+// scripts and handlers stay blocked.
 
 import { test } from "tap";
 import { any, others, str } from "@ianbicking/tap-check/check";

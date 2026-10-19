@@ -62,8 +62,9 @@ void test("Fresh install — writes both files", async (t) => {
   // hook when one already exists, so this line is the only thing that runs annex at
   // commit time, and the hook `exit 0`s when `bbx` is not resolvable. An annex call
   // placed below that would vanish on the under-provisioned machine most likely to be
-  // missing git-annex too. The annex block is gated on whether this repo is annexed;
-  // once it is, a missing binary is fatal. One `bbx` invocation does the whole
+  // missing git-annex too. The annex block is gated on whether this repo is annexed,
+  // so a box not yet annexed keeps committing normally; once it is, a missing binary
+  // is fatal. One `bbx` invocation does the whole
   // commit-time suite (it used to be several, each paying the CLI startup floor while
   // holding the git lock), and no manifest-era `attachments verify` call remains.
   const hookPath = path.join(box.root, ".git/hooks/pre-commit");
