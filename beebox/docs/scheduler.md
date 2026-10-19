@@ -35,6 +35,14 @@ Key behaviors:
   `consecutiveFailures`, and `bbx health` shows `waiting`, not `failing`.
   The boxholder is notified once per episode with the reset time. Design:
   `docs/implemented-plans/deferred-recoverable-agent-failures.md`.
+- **Reminders (`notify:` cards)** — A card with `notify:` and no `runs:` runs
+  no agent and no shell, so it runs while a chat is active (other cards wait
+  for the chat) and is not held back by engine quota; a failed send is a
+  `failure`, never `deferred`. A failed `notify:` `at` card retries with
+  backoff (1, 2, 4 … minutes, capped at 60) until 24 hours after its `at`, then
+  stays failing in health (`retry window ended <time>`). A `runs:` `at` card
+  gets one attempt. A send that got through stays `success` even when its
+  housekeeping (the `once` deletion) fails, so it is not sent twice.
 - **Inconclusive runs (no verdict)** — A script whose work completed but whose
   check never decided exits **3** (`INCONCLUSIVE_EXIT_CODE`) and prints one
   `Inconclusive: …` line on stderr (`bbx procedure run` when a validate step's

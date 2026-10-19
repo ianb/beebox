@@ -21,7 +21,8 @@ import {
   parseDuration,
   type ParsedScheduledScript,
 } from "../../schemas/scheduled-script/schema.js";
-import { isWithinBudget } from "../../schemas/scheduled-script/due.js";
+import { isWithinBudget, reminderRetryEndsAt } from "../../schemas/scheduled-script/due.js";
+import { formatRetryAt } from "../agent/engine-unavailability.js";
 import type { ScriptState } from "./state.js";
 import { DEFER_REASON_TEXT, foundNothingToDo, type DeferReason } from "./defer-reason.js";
 import { isContendedFailure, isStaleLockFailure } from "../../lib/git/core/operations.js";
@@ -128,7 +129,8 @@ export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
   if (parsed.until && now > new Date(parsed.until)) {
     return { ...base, status: "disabled", reason: `expired (until ${parsed.until})` };
   }
-  if (input.engineWaitReason !== undefined) {
+  // A `notify:` card runs no agent, so the engine's wait is not its wait.
+  if (input.engineWaitReason !== undefined && parsed.action.kind !== "notify") {
     return { ...base, status: "waiting", reason: input.engineWaitReason };
   }
 
@@ -154,11 +156,12 @@ export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
     // this only has to stop lying about which condition it is.
     const staleLock = state.lastError !== null && isStaleLockFailure(state.lastError);
     const contended = !staleLock && state.lastError !== null && isContendedFailure(state.lastError);
-    const failureReason = staleLock
-      ? "blocked by an abandoned .git/index.lock — see the box's stale-git-index-lock health check"
-      : contended
-        ? "contended — another process held the box's git index"
-        : blockedReason;
+    const failureReason = retryWindowEnded(parsed, { state, now })
+      ?? (staleLock
+        ? "blocked by an abandoned .git/index.lock — see the box's stale-git-index-lock health check"
+        : contended
+          ? "contended — another process held the box's git index"
+          : blockedReason);
     return { ...base, status: "failing", ...(failureReason ? { reason: failureReason } : {}) };
   }
   if (blockedReason) {
@@ -190,6 +193,16 @@ export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
     };
   }
   return { ...base, status: "ok" };
+}
+
+/** For a failed `notify:` one-shot past its retry window: says so, with when it ended. */
+function retryWindowEnded(
+  parsed: ParsedScheduledScript,
+  { state, now }: { state: ScriptState; now: Date },
+): string | null {
+  const endsAt = reminderRetryEndsAt(parsed);
+  if (endsAt === null || state.lastResult !== "failure" || now < endsAt) return null;
+  return `retry window ended ${formatRetryAt(endsAt.toISOString())}`;
 }
 
 interface MissedOccurrence {
