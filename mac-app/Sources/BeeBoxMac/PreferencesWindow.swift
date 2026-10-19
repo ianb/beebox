@@ -444,7 +444,7 @@ struct GeneralTab: View {
     @ObservedObject var hosting: HostingController
     @ObservedObject var updates: Updates
     let uninstall: () -> Void
-    @State private var notifications = "…"
+    @State private var notifications: UploadNotifications.Status?
 
     var body: some View {
         TabPage(explanation: "Bee Box Desktop lives in the menu bar. It needs to be running to watch folders and to run a box on this Mac.") {
@@ -459,9 +459,15 @@ struct GeneralTab: View {
                 }
                 Section("Notifications") {
                     HStack {
-                        Text("Notifications are \(notifications).")
+                        Text(notifications?.sentence ?? "…")
                         Spacer()
-                        Button("Open Notification Settings") { UploadNotifications.openSettings() }
+                        if notifications == .undecided {
+                            Button("Allow Notifications…") {
+                                Task { notifications = await UploadNotifications.requestAndReport() }
+                            }
+                        } else {
+                            Button("Open Notification Settings") { UploadNotifications.openSettings() }
+                        }
                     }
                     Text("Bee Box Desktop sends one notification when a watched folder sends files or a box refuses one. Problems that last show in the menu instead.")
                         .font(.caption).foregroundStyle(.secondary)
@@ -491,7 +497,7 @@ struct GeneralTab: View {
         }
         .task {
             notifications = await UploadNotifications.status()
-            appLog("notifications status=\(notifications)")
+            appLog("notifications status=\(notifications?.rawValue ?? "nil")")
         }
     }
 }
