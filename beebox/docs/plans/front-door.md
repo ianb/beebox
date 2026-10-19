@@ -302,13 +302,19 @@ the shipped stock summary; total for the plan about 1,200 changed lines
   and a text-equality flag.
 - **In-chat question tag, rejected 2026-07-10** (`issues/closed/features/2026-06-09-in-chat-interactive-questions.md`,
   wontfix: "synchronous chat is a different situation from the async
-  question queue — in chat the agent just asks in prose"). This plan does
-  not reopen it: the agent still asks in prose in chat and creates no card
-  for it. What changes is where a *pending card* can be answered: the chat's
-  empty state becomes a surface for the queue, which `docs/questions.md`
-  ("Surfacing") already names as the intended replacement for the retired
-  header badge ("inline questions in chat (not built)"). The two statements
-  in that doc disagree today; Track A's docs item reconciles them.
+  question queue — in chat the agent just asks in prose"). This plan
+  reopens part of it and says which part: the agent still asks in prose in
+  chat and creates no card for it, and the chat gets no option buttons or
+  structured reply (the review of 2026-10-19 held that buttons for every
+  pending card would be the rejected structured answer by another name).
+  What changes is where a *pending card* can be answered: the chat's empty
+  state shows the newest one as text, and the person answers in words. The
+  boxholder's 2026-10-19 direction ("the box should start with questions,
+  and the way those questions are presented in the beginning is how we do
+  this onboarding") is the authority for that much. `docs/questions.md`
+  ("Surfacing") already names inline questions in chat as the intended
+  replacement for the retired header badge while its "NOT in scope" rejects
+  them; Track A's docs item reconciles the two with this split.
 
 - **Boxholder, 2026-07-20/21** (first-run-experience issue): "a firm menu of
   a few complete flows, each with a real payoff ... NOT an open 'feed me
@@ -490,56 +496,89 @@ filesystem root. Evaluated-only; no acknowledgement entry.
     said>." }`; `directive`: "Write the purpose into the briefing in the
     person's words, write two or three sentences on the Box page (the root
     landmark's body) in their words, and replace the stock openers with ones
-    for what they said." `expires-after` is left to the default 30 days: an
-    unanswered onboarding question leaves the active view like any other and
-    stays answerable. Fresh install only; the repair path does not seed, and
+    for what they said." `expires-after` is left to the default. Aging runs
+    at `bbx finalize` on the wakeup cadence (`docs/questions.md`, "Aging"),
+    and a fresh box has no wakeup schedule enabled, so on such a box the
+    question stays pending, and stays the first screen, until it is answered
+    or dismissed. That is the intended behavior: a box that has never been
+    told its purpose keeps asking, quietly, with "Not now" one tap away.
+    Fresh install only; the repair path does not seed, and
     a box that already has questions is untouched. The install is
     idempotent by filename stamp like the other seeded files.
   - **Which question the chat shows.** `status.questions` already returns
-    every card with `state` (`status.ts:225-249`); the chat's shell
-    (`InteractiveChat/shell.tsx`, which already queries `landmarks.forDir`
-    for the openers) adds `trpc.status.questions.useQuery` and picks the
-    newest pending by `asked-at`, then by path. One question at a time; the
-    count of other pending ones shows as "and N more", a link to the
-    Questions card (`SYSTEM_CARD_PATHS.questions`) through `useOpenBeside`.
+    every card with `state`, `prompt`, `memo`, `inputType`, `options`
+    (`status.ts:225-249`) but not `asked-at`; `QuestionInfo`
+    (`status.ts:36-43`) gains `askedAt?: string` read from the card. The
+    chat's shell (`InteractiveChat/shell.tsx`, which already queries
+    `landmarks.forDir` for the openers) adds `trpc.status.questions.useQuery`
+    and picks the newest pending by `askedAt`, then by path; a card marked
+    `invalid` (`status.ts:44-49`) is never shown in the chat, since it has
+    no prompt, and counts toward "and N more" so it is still reachable. One
+    question at a time; the count of other pending ones shows as "and N
+    more", a link to the Questions card (`SYSTEM_CARD_PATHS.questions`)
+    through `useOpenBeside`.
     Only the root chat (`contextDir === ""`) shows a question; a place's
     chat shows its openers as today. Only an unstarted chat shows it: once
     a message exists, the empty state is gone.
   - **How it looks.** `EmptyChat` (`messages.tsx:148-162`) gains
     `openQuestion?: OpenQuestion | null`. It renders the `prompt` as one
-    line in the agent's voice where the stock lead was; for `text`, the
-    composer's placeholder becomes the prompt and the composer is focused
-    (the composer already takes a placeholder, `InteractiveChat-composer/view.tsx:123`,
-    and the mobile row the same, `InteractiveChat-mobile-row.tsx:66`); for
-    `select`, the options render as `ChatOpeners` buttons (the existing
-    control, `messages.tsx:158`); for `confirm`, two buttons, Yes and No.
-    A quiet "Not now" calls `actions.dismiss`. Clicking the line focuses the
-    composer. The openers render beneath, then "Start a conversation." as
-    today.
+    line in the agent's voice where the stock lead was, with the `memo`
+    under it in the quiet style when the card has one (the Questions page
+    shows the memo for the same reason, `QuestionForm.tsx:48`: the person
+    should know what "this" is before answering). The presentation is text
+    for every input type: a `select` question's options are listed in the
+    line itself ("Finance, Personal, or something else?") and a `confirm`
+    question reads as a yes-or-no sentence; the person answers by typing or
+    speaking, and the agent passes the label when it answers the card
+    (`resolveSelectAnswer` already matches typed labels, `answer.ts:60-80`).
+    No option buttons: that would be the in-chat structured answer the
+    2026-07-10 decision rejected, and typing works for every type
+    (question 13). The composer's placeholder becomes the prompt and the
+    composer is focused (the composer already takes a placeholder,
+    `InteractiveChat-composer/view.tsx:123`, and the mobile row the same,
+    `InteractiveChat-mobile-row.tsx:66`). A quiet "Not now" calls
+    `actions.dismiss`. Clicking the line focuses the composer. The openers
+    render beneath, then "Start a conversation." as today.
   - **How the answer travels.** The person's message is an ordinary chat
-    message. The send payload gains an optional `answeringQuestion?: string`
-    (box-relative card path), declared by the client when the message is
-    typed or tapped from the open question, surfacing on the `<chat-app>`
-    snapshot as `answering-question="…"` (`messages.ts:86-112`, next to
-    `openCard`). Option taps send the option label as the message text with
-    the same attribute. The server does not mark the card answered on send:
-    the agent does, after hearing. Additive change to the mobile contract
-    (`mobile-contract.md:993`); the iOS app sends nothing and is unaffected
-    (bbx-ios-overlap).
+    message. The send payload gains an optional `openQuestion?: string`
+    (box-relative card path): the client sends it on *every* message in the
+    root chat while the shown question is still pending, not only the first,
+    so the agent that missed it on one turn still sees it on the next. It
+    surfaces on the `<chat-app>` snapshot as `open-question="…"`, next to
+    `open-card`. The field has the same hops as `openCard`, each named here
+    because a field added to only two of them is silently dropped: the HTTP
+    parser (`webapp/routes/chat/helpers.ts`), `ChatSendInput`
+    (`chat/session/messages.ts:86-112`), the queued-send combiner
+    (`chat/session/state.ts:213-222`, which rebuilds its output from named
+    fields; latest wins, as for `openCard`), snapshot assembly
+    (`chat/session/run/start.ts:205-222`, `composeSendSnapshot`), and the
+    prompt's snapshot section (`prompts.ts:120-143`). The server does not
+    mark the card answered on send: the agent does, after hearing.
+    Additive change to the mobile contract (`mobile-contract.md:993`); the
+    iOS app sends nothing and is unaffected (bbx-ios-overlap).
   - **How the agent answers.** `bbx answer` gains `--via chat`
     (`answered-via` enum gains `chat`, `question.ts:150`). With `via: "chat"`
     the command records the answer and writes no follow-up job
-    (`answer.ts:252-260` becomes conditional), because the agent applies the
-    `directive` and records the `learning` in the same conversation. The
-    chat system prompt (`chat/session/prompts.ts`) gains a short section,
-    "Answering a question in chat": when the snapshot names
-    `answering-question`, read the card, hear the person out (one follow-up
-    at most before acting), then `bbx answer <path> --via chat "<their
-    answer in their words>"`, do what its `directive:` says now, and record
-    its `learning:` as a `user-stated` fact; if the briefing already holds
-    the answer, answer the card from the briefing without asking again
-    (`guide.md:301-306`); never create a question card for something asked
-    in chat (`guide.md:294-296`, unchanged).
+    (`answer.ts:252-260` becomes conditional). The order of operations is
+    the durable path: the agent **does the directive first, then answers
+    the card**. While the work is not done the card is still pending, and
+    the pending card is the work item: the chat shows it again, and the
+    snapshot keeps naming it. An answered card is terminal
+    (`docs/questions.md`, "Lifecycle"), so answering is the last step, never
+    the first. The chat system prompt (`chat/session/prompts.ts`) gains a
+    short section, "An open question in this chat": when the snapshot names
+    `open-question`, read the card; hear the person out (one follow-up at
+    most before acting); do what its `directive:` says and record its
+    `learning:` as a `user-stated` fact; then `bbx answer <path> --via chat
+    "<their answer in their words>"`. If the briefing already holds the
+    answer, answer the card from the briefing without asking again
+    (`guide.md:301-306`). A message under `narration="on"` never answers a
+    card (`prompts.ts:196-200`: the person is thinking aloud and does not
+    expect replies); the agent waits for a message that is a reply. In a
+    shared chat the `user` attribute names who answered, and the answer text
+    records it ("Juni: mostly lending"); anyone in the chat may answer, as
+    anyone in the chat may edit the briefing. Never create a question card
+    for something asked in chat (`guide.md:294-296`, unchanged).
   - **The agent's first reply.** The same prompt section says: after the
     answer, reflect it back in a sentence and offer two or three things the
     box could do for *that*, in the person's terms; no capabilities before
@@ -573,7 +612,7 @@ filesystem root. Evaluated-only; no acknowledgement entry.
     waiting to hear from you"; never "question card" to the person);
     `box-docs/card-question.md` gains `--via chat`.
 - **Vocabulary lock-ins.** `installRootQuestion`; the send-payload field
-  `answeringQuestion` and snapshot attribute `answering-question`;
+  `openQuestion` and snapshot attribute `open-question`; `QuestionInfo.askedAt`;
   `answered-via: chat`; `EmptyChat.openQuestion`; the labels "and N more",
   "Not now", and the opener "Tell me about talking instead of typing."
 - **First implementation chunk.** The seed with a `t.check` test (fresh box
@@ -581,10 +620,14 @@ filesystem root. Evaluated-only; no acknowledgement entry.
   and a directive; repair seeds nothing; a box with questions is untouched);
   `answered-via: chat` with the no-job branch and a test (a chat answer
   records the answer and leaves `_bookkeeping/jobs/` empty; a web answer
-  still writes the job); the `<chat-app>` attribute with a snapshot test;
-  then the chat empty state with a DOM test for text, select, confirm, the
-  "and N more" count, and the place-chat quiet case. The removal of the
-  stock summary is the first commit, so the tree never carries both.
+  still writes the job); the `open-question` field through every hop, with
+  a combiner test (two queued sends, the first carrying it, the combined
+  input keeps it) and a snapshot test; `askedAt` on `QuestionInfo` with a
+  test whose filenames sort opposite to their `asked-at` values; then the
+  chat empty state with a DOM test for a text question, a select question
+  listed inline, the memo line, the "and N more" count, the invalid-card
+  case, and the place-chat quiet case. The removal of the stock summary is
+  the first commit, so the tree never carries both.
 
 ### Track B — Root arrival always opens the root page
 
@@ -711,8 +754,9 @@ filesystem root. Evaluated-only; no acknowledgement entry.
 
 ### Track F — "The box can build you a page"
 
-- **What.** The idea reaches the person two ways: the stock summary's last
-  sentence (Track A) and a rule in the `what-can-you-do` skill. A third
+- **What.** The idea reaches the person two ways: the agent's offers right
+  after the person answers the opening question (Track A's prompt rule) and
+  a rule in the `what-can-you-do` skill. A third
   stock opener was considered and is question 6's alternative: a one-click
   "build me a page" on an empty box promises a flow the box has not been
   walked through, which the 2026-07-21 direction warns against.
@@ -775,16 +819,16 @@ none
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| The agent records the purpose outside the briefing; stock summary and openers stay | No (the openers fix recorded this as residual) | The compiled `**Front page:**` line shows the agent the stock state every turn (Track A) | Clear to the agent; the person sees stale onboarding text until they say so |
-| An existing box never gets the stock body (install is once; "a real landmark" is untouched) | Track A test for the repair branch | By design: an existing box's agent owns its body; the briefing rule still applies when the purpose is recorded | Silent and accepted: existing boxes have agents and cards already |
+| The agent hears the answer, does the work, and never runs `bbx answer` | Knowledge audit `front-door-answer-in-chat` | The card stays pending; the chat shows it again and the snapshot keeps naming it; the "answer from the briefing" rule closes it next time | Clear to the agent; the person may see the question once more |
+| The turn stops between the directive and `bbx answer` | The audit checks the order; no unit test can | Same: pending card, work partly done; the agent finishes from the briefing | Clear to the agent |
+| An existing box with a pending backlog opens on a stale triage question | Questions 10 and 11 record the choice | One question, its memo under it, "and N more", "Not now" | Visible |
 | Root arrival opens the page over a deliberately marked entry point | Track B test | The card leads under "Start here" | Clear |
 | A chat answer leaves a follow-up job no fresh box ever runs | Track A test: chat answer writes no job | `--via chat` skips the job; the agent applies the directive in the conversation | Cannot happen; a web or CLI answer keeps its job |
 | The agent answers the card before hearing enough | Chat-prompt rule: one follow-up at most, then answer | An answered card is terminal (`docs/questions.md`, "Lifecycle": "A new question is asked instead of reopening one"); the briefing and the Box page stay editable in the same conversation, so a correction is one more sentence from the person | Visible in the agent's reflected-back sentence |
-| A select question's option labels are long or many | DOM test with six options | `ChatOpeners` wraps buttons as today; above eight options the chat shows the first eight and "Answer on the Questions page" | Visible: the link |
+| A select question has many or long options | DOM test with six options | Options are listed inline as text; above six the line says "…or one of N more, on the Questions page" with the link | Visible: the link |
 | The count line and the nav badge disagree | No | Same query (`status.navStatus`), same invalidation | Cannot happen while both read it |
 | `status.navStatus` fails | Track C DOM test | "Counts unavailable" with retry; distinct from zero | Clear |
-| An inert root landmark with a person-written body is repaired | Track A test | Repair keeps the body and adds no stock text | Clear |
-| The phone's empty chat shows stock text after the agent rewrote the body | Track A test on `stockSummary` | The flag is computed from the body on each openers read | Clear |
+| An inert root landmark with a person-written body is repaired | Round-one test (kept) | Repair keeps the body and adds no stock text | Clear |
 | A person's hand-made empty folder folds out of sight | Track D fold test (`taxes/` case) | Only seeded template paths fold | Cannot happen |
 | A seeded folder holding only plain files (a PDF in `drive/`) folds | Track D test | It is in "N more" with its count; Raw and direct links show it | Clear, one click |
 | Compact Browse on `_content` hides a stray root file | No | `bbx validate` reports it; Raw shows it | Clear through validate, silent in Browse |
@@ -1018,18 +1062,28 @@ Later the same day, after seeing the shipped stock summary (Revision, above):
     - **Lean:** newest.
 
 12. **Where the agent learns that a message answers a question.**
-    - *The `<chat-app>` snapshot (Track A).* The attribute travels with the
-      message, like `open-card`; one additive field in the send payload.
+    - *The `<chat-app>` snapshot (Track A).* The attribute travels with
+      every message while the question is pending, like `open-card`; one
+      additive field in the send payload, carried through its five hops.
     - *The compiled briefing lists pending questions.* No payload change,
       but the agent has to guess which message answers which, and the
       briefing compiles at session start, not per message.
     - **Lean:** the snapshot.
 
-7. **The agent's later summary on the phone.** Track A shows the stock text
-   in the phone's empty chat; once the agent has written the real summary,
-   the phone's first screen is chat and openers again, and the summary is on
-   the Box tab. Should the agent's summary also show there? Lean: not now;
-   walk the phone after this lands.
+7. **The agent's later summary on the phone.** Withdrawn with the stock
+   summary: the phone's first screen is the chat, which asks the question
+   while one is pending and shows the openers after. The Box tab holds the
+   summary.
+
+13. **How a select or confirm question is answered in the chat.**
+    - *Text only (Track A).* Options are listed in the question's line; the
+      person types or says one; the agent passes the label. No new control,
+      and the 2026-07-10 decision against structured in-chat answers stands.
+    - *Option buttons.* `ChatOpeners` already renders a row of buttons, so
+      the cost is small; a tap is faster than typing on the phone. It is the
+      structured answer that decision rejected, for every pending card.
+    - **Lean:** text only, and revisit buttons as their own question once
+      pending questions have lived in the chat for a while.
 
 ## Knowledge audits
 
@@ -1038,7 +1092,7 @@ Two new agent-facing rules get `knows_directly` entries in
 
 - `front-door-answer-in-chat` (replaces `front-door-stock-summary`, which
   audited the withdrawn stock summary): a chat-mode prompt whose
-  `<chat-app>` snapshot names `answering-question` and whose message is
+  `<chat-app>` snapshot names `open-question` and whose message is
   "mostly what I lend people and what I owe". Correct: hears them out (at
   most one follow-up), then `bbx answer … --via chat` in their words, writes
   the briefing purpose and the Box page, retires the stock openers, and

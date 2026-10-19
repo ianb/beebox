@@ -118,3 +118,50 @@ The index redirect, the root listing filter, the recursive `fileCount`, the
 "Also here" group, the openers hiding rule beside an unstarted chat, and the
 display-path leak check were cited correctly and the reviewer did not
 dispute them.
+
+# Plan Engineering Review, round 2 — the revised Track A (2026-10-19)
+
+Reviewer: codex gpt-6-sol, effort high, 134 s. Prompt:
+`scratch/cross-model/front-door-plan-r2.prompt.md`; answer
+`scratch/cross-model/2026-10-19T21-30-11-416Z-codex.md`. Scope: the
+"Revision of 2026-10-19" section and the rewritten Track A only.
+
+## Findings and adjudication
+
+1. **`--via chat` with no job can lose the directive's work** when the turn
+   stops after `bbx answer` (an answered card is terminal). Accepted. The
+   plan now orders the agent's steps: do the directive, record the learning,
+   then answer the card; the pending card is the durable work item. The
+   "retrospective catches a miss" claim was unsupported and is removed.
+2. **A missed answer vanished with the empty state.** Accepted. The client
+   sends `openQuestion` on every message while the shown question is
+   pending, so the snapshot keeps naming it.
+3. **Select and confirm buttons for every pending card reopen the 2026-07-10
+   decision more than the plan admitted.** Accepted. Presentation is text
+   for every input type; options are listed in the line; the agent passes
+   the typed label. Question 13 records buttons as the alternative. The
+   "Stated preferences" entry now says which part of the July decision this
+   reopens and on whose authority.
+4. **"One additive field" understated the snapshot plumbing** (parser, send
+   input, queued-send combiner, snapshot assembly, prompt). Accepted; the
+   five hops are named and the combiner test is in the first chunk.
+5. **Newest-pending on a backlog box, and no memo in the chat.** Accepted in
+   part: the memo renders under the prompt. Newest-pending stays the lean of
+   question 11, with the backlog case named in Failure modes; it is the
+   boxholder's call (questions 10 and 11).
+6. **`status.questions` has no `asked-at`; invalid cards.** Accepted.
+   `QuestionInfo.askedAt` is added; invalid cards never show in the chat and
+   count toward "and N more"; a filename-order test is in the first chunk.
+7. **Shared chat and narration need an authority rule.** Accepted: narration
+   never answers a card; in a shared chat the `user` attribute names who
+   answered and the answer text records it.
+8. **The 30-day exit is not automatic on a fresh box.** Accepted; the plan
+   states plainly that without a wakeup the question stays until answered or
+   dismissed, and calls that intended.
+9. **Stale round-one text** in Stated preferences, Failure modes, and
+   question 7. Accepted and cleaned.
+
+## Things the reviewer checked and found clean
+
+Seeding one question for a new box as the fit for the boxholder's
+direction; the fresh-box schedule facts; the agent-audience `bbx answer`.
