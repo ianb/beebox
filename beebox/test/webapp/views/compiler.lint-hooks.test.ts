@@ -9,8 +9,8 @@
 // `Markdown` is an error of the same weight (`test/core/views/markdown-check.doctest.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

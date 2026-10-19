@@ -10,8 +10,8 @@
 // actually using, because that makes the holder's commit fail.
 
 import { test } from "tap";
-import { any, str } from "agent-doctest/check";
-import "agent-doctest/tap";
+import { any, str } from "@ianbicking/tap-check/check";
+import "@ianbicking/tap-check/tap";
 import { open, utimes, writeFile } from "node:fs/promises";
 import { existsSync, realpathSync } from "node:fs";
 import { join } from "node:path";

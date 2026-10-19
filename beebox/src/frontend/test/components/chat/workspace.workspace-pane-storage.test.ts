@@ -5,8 +5,8 @@
 // usable in-memory state plus notices that the UI adapter can report.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import { createEmptyWorkspaceState } from "../../../src/components/chat/workspace/state-model.js";
 import type { WorkspaceState } from "../../../src/components/chat/workspace/state-types.js";
 import { createWorkspaceBrowserStoreWithStorage, type WorkspaceStorage } from "../../../src/components/chat/workspace/WorkspaceProvider/workspace-browser-store.js";

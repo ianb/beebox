@@ -8,8 +8,8 @@
 // `src/core/schedule/promotion.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import { loadScriptState } from "../../../src/core/schedule/state.js";
 import { readRecent } from "../../../src/core/notification/log.js";

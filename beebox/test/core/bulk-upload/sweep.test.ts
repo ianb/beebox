@@ -7,8 +7,8 @@
 // decisions are inspected directly, without a chat runtime.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not, unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not, unordered } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";

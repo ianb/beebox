@@ -7,7 +7,7 @@
 // shown is the day written; full timestamps keep local-zone formatting.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { formatOptions } from "../../../src/components/ui/FriendlyDate.js";
 
 // A date-only string formats in UTC regardless of `mode`, so the rendered day

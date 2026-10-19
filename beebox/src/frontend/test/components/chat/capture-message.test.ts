@@ -8,7 +8,7 @@
 // output of `buildCaptureWrapper`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseCaptureWrapper, captureChipLabel } from "../../../src/components/chat/capture-message.js";
 import { buildCaptureWrapper } from "../../../../core/capture/prepare/deliver.js";
 import assert from "node:assert/strict";

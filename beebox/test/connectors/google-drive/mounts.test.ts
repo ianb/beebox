@@ -7,8 +7,8 @@
 // assert the message, not just that it threw.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
 import {

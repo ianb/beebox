@@ -3,7 +3,7 @@
 // Tests for the Google Drive connector using fake services.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { readdir, rename, rm } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/test-helpers.js";

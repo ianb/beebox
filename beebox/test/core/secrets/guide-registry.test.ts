@@ -6,7 +6,7 @@
 // "What it is used for" is deliberately not a field: that comes from `uses.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { listSecretGuides, secretGuideFor, unguidedSecretNames } from "../../../src/core/secrets/guide-registry.js";
 import { builtinSecretNames } from "../../../src/core/secrets/uses.js";
 

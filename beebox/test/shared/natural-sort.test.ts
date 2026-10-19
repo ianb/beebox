@@ -5,7 +5,7 @@
 // lexical order (`foo-2`, `foo-20`, `foo-3`) that plain `localeCompare` produces.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { naturalCompare } from "../../src/shared/natural-sort.js";
 
 // ## Numeric suffixes sort by value, not lexically

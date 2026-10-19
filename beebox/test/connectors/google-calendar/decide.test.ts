@@ -6,7 +6,7 @@
 // API dependency, so the whole policy is exercised here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { decideCalendarSync } from "../../../src/connectors/google-calendar/decide.js";
 
 const kind = (s: Parameters<typeof decideCalendarSync>[0]) => decideCalendarSync(s).kind;

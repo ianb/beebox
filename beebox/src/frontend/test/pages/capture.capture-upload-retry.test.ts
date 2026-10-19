@@ -13,7 +13,7 @@
 // outcomes, and only the latter reaches this function.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { classifyUploadFailure } from "../../src/pages/capture/api.js";
 import {
   UploadAbortedError,

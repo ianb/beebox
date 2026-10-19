@@ -10,7 +10,7 @@
 // "synced" because its own card says so.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   DRIVE_CHILD_BADGES,
   driveChildState,

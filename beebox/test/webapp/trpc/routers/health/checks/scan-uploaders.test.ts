@@ -13,8 +13,8 @@
 // standing condition without nagging. Same reasoning as `template-updates`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 import { createScanToken, resolveScanRequestAuth, revokeScanToken } from "../../../../../../src/core/scan/tokens.js";
 import { scanUploaderFreshnessCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/scan-uploaders.js";

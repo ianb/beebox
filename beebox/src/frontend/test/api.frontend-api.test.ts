@@ -11,7 +11,7 @@
 // `//api/...`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { joinBaseAndPath } from "../src/api";
 
 // ## In prod (base = "/"), the helper is a no-op

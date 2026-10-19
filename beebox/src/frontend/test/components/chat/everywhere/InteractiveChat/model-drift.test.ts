@@ -13,7 +13,7 @@
 // Now the absence means exactly one thing: the comparison could not be made.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { modelDrift, engineDrift } from "../../../../../src/components/chat/everywhere/InteractiveChat/model-drift.js";
 import { resolveProcedureModel } from "../../../../../../shared/agent-models.js";
 

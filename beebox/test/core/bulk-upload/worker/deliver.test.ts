@@ -6,7 +6,7 @@
 // `bytes` is the compact human size; the body is the batch's one-line summary.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildUploadWrapper } from "../../../../src/core/bulk-upload/worker/deliver.js";
 
 async function catchName(fn: () => unknown) {

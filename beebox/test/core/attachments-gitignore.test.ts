@@ -9,8 +9,8 @@
 // in place produces a box where no asset is annexed and nothing reports it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { spawnSync } from "node:child_process";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { runUnignore } from "../../src/core/attachments-gitignore.js";

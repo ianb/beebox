@@ -7,7 +7,7 @@
 // restoration needs a Linux root fixture as well.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join, dirname } from "node:path";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";

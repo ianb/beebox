@@ -12,7 +12,7 @@
 // keep validating.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { TodoReviewJobSchema, createTodoReviewJobTemplate } from "../../src/schemas/todo-review-job.js";
 import { cardFields, parseCardText } from "../../src/core/card-io.js";
 

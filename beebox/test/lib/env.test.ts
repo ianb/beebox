@@ -6,7 +6,7 @@
 // never has to touch the real `process.env`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import {
   loadEnv,

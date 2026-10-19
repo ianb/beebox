@@ -8,7 +8,7 @@
 // `docs/plans/narration-mode.md` for the design.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   readLandmarkFeatures,
   readLandmarkFeaturesForDir,

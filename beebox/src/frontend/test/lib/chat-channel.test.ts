@@ -11,7 +11,7 @@
 // breakpoint the layouts switch on.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { chatChannelFor } from "../../src/lib/chat-channel.js";
 
 // The native shell wins over the viewport — an iPad-width native window is still

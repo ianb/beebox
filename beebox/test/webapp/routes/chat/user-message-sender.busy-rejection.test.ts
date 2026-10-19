@@ -13,8 +13,8 @@
 // `chat-user-message` event and no entry in `.beebox/message-dedup.json`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { anything, eventually } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { anything, eventually } from "@ianbicking/tap-check/check";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { BusEvent } from "../../../../src/core/event-bus/core.js";

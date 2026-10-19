@@ -6,8 +6,8 @@
 // warnings. See `src/hub/config.ts`.
 
 import { test } from "tap";
-import { any, instanceOf, str } from "agent-doctest/check";
-import "agent-doctest/tap";
+import { any, instanceOf, str } from "@ianbicking/tap-check/check";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadHubConfig, HubConfigError, type HubConfig } from "../../src/hub/config.js";

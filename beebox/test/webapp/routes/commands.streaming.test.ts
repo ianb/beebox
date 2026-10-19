@@ -3,7 +3,7 @@
 // `executeCommandStreaming()` runs a command and emits structured `OutputLine` messages. This is the testable core of the streaming execute endpoint — the route handler just wires `emit` to SSE format.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

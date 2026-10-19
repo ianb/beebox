@@ -12,8 +12,8 @@
 // the vector half rank that card top.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { anything } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { anything } from "@ianbicking/tap-check/check";
 import { searchBox } from "../../../src/core/search/query/core.js";
 import { createFakeEmbeddings, EmbeddingsError, type EmbeddingsService } from "../../../src/services/openai-embeddings.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

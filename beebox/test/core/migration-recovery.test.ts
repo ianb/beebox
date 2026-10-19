@@ -5,8 +5,8 @@
 // application commit hooks. Changed-path detection excludes earlier dirty input.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { execFileSync } from "node:child_process";
 import { readFile, writeFile, chmod } from "node:fs/promises";
 import { join } from "node:path";

@@ -5,7 +5,7 @@
 // expression stays available elsewhere (tooltips, the card itself).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { describeCadence, type ScheduleCadenceInput } from "../../../src/core/schedule/describe.js";
 
 function cadence(overrides: Partial<ScheduleCadenceInput>): string {

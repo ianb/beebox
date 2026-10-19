@@ -16,7 +16,7 @@
 // several of which see a raw `http.IncomingMessage` — shares one implementation.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { verifyBrowseKey, BROWSE_KEY_COOKIE } from "../../src/core/browse-key.js";
 
 const KEY = "test-browse-key-0123456789";

@@ -6,7 +6,7 @@
 // `useOpenBeside`, which asks `listLinkRoute` where it goes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { ViewTarget } from "../../../../../src/lib/view-url.js";
 import { listLinkRoute } from "../../../../../src/components/chat/workspace/use-open-beside/open-beside.js";
 import { createEmptyWorkspaceState, paneForPath } from "../../../../../src/components/chat/workspace/state-model.js";

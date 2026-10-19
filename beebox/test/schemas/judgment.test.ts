@@ -6,8 +6,8 @@
 // type names the shape it needs. See docs/implemented-plans/notifications.md (Track D).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { JudgmentSchema, judgmentQuestions } from "../../src/schemas/judgment/schema.js";
 import { cardFields, parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas.js";

@@ -9,7 +9,7 @@
 // contract is "emit the children, never crash."
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { emitBodyAsMarkdown } from "../../../../src/core/markdoc/emit/core.js";
 
 // ## A GFM table degrades to its flattened cell text

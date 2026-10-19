@@ -8,7 +8,7 @@
 // identifier bound to any other module is not a registry call.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { extractRegistries } from "../../../../../src/dev/layout/scan/package/registries.js";
 import { parseSourceFile } from "../../../../../src/dev/layout/scan/imports.js";
 import type { ImportEdge } from "../../../../../src/dev/layout/model.js";

@@ -35,8 +35,8 @@
 // through real `server.inject()` with `alpha`'s actual bearer header.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { TRPCError } from "@trpc/server";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";

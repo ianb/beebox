@@ -7,7 +7,7 @@
 // (`issues/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { templateUpdatesCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/templates.js";
 import { loadScheduleHealth, summarizeScheduleHealth } from "../../../../../../src/core/schedule/health-box.js";
 import { saveScriptState, normalizeScriptState } from "../../../../../../src/core/schedule/state.js";

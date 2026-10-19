@@ -12,7 +12,7 @@
 // (issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createPersistScheduler, type SchedulerTimers } from "../../src/lib/persist-scheduler.js";
 
 /** A hand-cranked clock: `tick(ms)` fires whatever is due. */

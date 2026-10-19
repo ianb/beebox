@@ -11,7 +11,7 @@
 // React, no DOM.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Markdoc from "@markdoc/markdoc";
 import { makeHeadingNode } from "../../src/shared/markdoc-config/tags/core.js";
 

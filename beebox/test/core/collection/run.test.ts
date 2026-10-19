@@ -9,8 +9,8 @@
 // the only place a clock can enter.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { runCollection } from "../../../src/core/collection/run/core.js";
 import { todoCollection, TodoParamsSchema, type DerivedTodo, type TodoParams, type TodoReduction } from "../../../src/core/todo/collection.js";
 import type { CollectionQuery, CollectionResult } from "../../../src/core/collection/types.js";

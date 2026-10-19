@@ -9,7 +9,7 @@
 // (`test/cli/commands/todo-review.doctest.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { computeTodoReviewSets, boxTodayEpoch, toBriefItem } from "../../../src/core/todo/review-sweep.js";
 import { parseIsoDate } from "../../../src/shared/todo-model.js";

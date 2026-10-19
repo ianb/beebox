@@ -1,7 +1,7 @@
 // # Publication links use the approved hostname and tier route
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { publicationUrl, samePublicationAudience, type PublicationUrlScope } from "../../src/shared/publication-url.js";
 
 const pubId = "abcdefghijklmnopqrstuvwxyz";

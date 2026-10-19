@@ -7,10 +7,10 @@
 // renames itself when its network location changes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import { readFile, writeFile } from "node:fs/promises";
-import { any } from "agent-doctest/check";
+import { any } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { localOrigin, readOrCreateOriginId } from "../../../../src/core/chat/session/origin.js";
 

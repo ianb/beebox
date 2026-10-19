@@ -7,7 +7,7 @@
 // markdown stream before rendering.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   ACK_KINDS,
   getAckKind,

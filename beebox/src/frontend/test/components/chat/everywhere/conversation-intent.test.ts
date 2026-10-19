@@ -5,7 +5,7 @@
 // a cold bare chat retains the existing most-active bootstrap behavior.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { routeConversationRequest, createResolutionGate } from "../../../../src/components/chat/everywhere/conversation-intent.js";
 import type { ConversationSelection } from "../../../../../shared/chat-composer-binding.js";
 

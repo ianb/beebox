@@ -27,7 +27,7 @@
 // its server-side consumer is an HTTP endpoint rather than a parser.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { composerBindingPublicationSchema } from "../../../../../../shared/chat-composer-binding.js";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";

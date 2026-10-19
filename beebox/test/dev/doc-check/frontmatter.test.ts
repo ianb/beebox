@@ -4,7 +4,7 @@
 // inject the set of paths that resolve.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { frontmatterProblems } from "../../../src/dev/doc-check/frontmatter.js";
 
 const files = new Set(["issues/features/x.md", "beebox/docs/plans/next.md"]);

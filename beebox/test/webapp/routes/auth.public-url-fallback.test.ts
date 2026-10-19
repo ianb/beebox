@@ -14,7 +14,7 @@
 // standalone box server's behavior exactly as it was.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { registerAuthSurface, type AuthRoutesOptions } from "../../../src/webapp/routes/auth/register.js";
 

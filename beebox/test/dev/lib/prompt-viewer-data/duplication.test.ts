@@ -4,7 +4,7 @@
 // the prompt viewer. Plus `estimateTokens`, a rough deterministic token estimate.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { findDuplication, estimateTokens } from "../../../../src/dev/lib/prompt-viewer-data/duplication.js";
 
 // ## estimateTokens

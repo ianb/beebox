@@ -5,7 +5,7 @@
 // tool input summarization, TTS voice validation).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   parseSessionLog,
   transformContent,

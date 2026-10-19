@@ -5,7 +5,7 @@
 // These tests use synthetic data and never contact OpenRouter.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseJevResponse, createJevService, serializeJevRequest } from "../../src/services/jev.js";
 import { parseJudgeResponse, serializeJudgeRequest, type JudgeQuestion } from "../../src/services/jev-judge.js";
 import { boundRoutingContexts } from "../../src/core/chat/routing/quick-chat-submit/catalog.js";

@@ -4,8 +4,8 @@
 // the sibling fields visible.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { FrontmatterFields } from "../../src/components/MarkdownCardView/FrontmatterFields.js";

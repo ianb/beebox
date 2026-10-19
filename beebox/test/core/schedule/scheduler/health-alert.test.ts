@@ -10,8 +10,8 @@
 // relapse is a new episode.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import type { TmpBox } from "../../../helpers/test-helpers.js";
 import type { StoredEngineUnavailability } from "../../../../src/core/agent/engine-availability-store.js";

@@ -6,7 +6,7 @@
 // filtered out — a chat in another landmark is always still reachable.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { ChatSessionInfo } from "../../../../../src/api.js";
 import { layoutSessionList, sessionIdHint, type SessionListLayout } from "../../../../../src/components/chat/everywhere/InteractiveChat/session-list-grouping.js";
 

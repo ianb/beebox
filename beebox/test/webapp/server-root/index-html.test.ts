@@ -5,7 +5,7 @@
 // server does this on the read it was already performing per request.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { BoxIdentity } from "../../../src/core/landmark/box-identity.js";
 import { stampBoxIdentity, documentBoxSlug } from "../../../src/webapp/server-root/index-html.js";
 

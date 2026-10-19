@@ -12,7 +12,7 @@
 // same approach as `test/cli/commands/todos.doctest.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { runQueryForBox } from "../../../src/cli/commands/query.js";
 import type { TodoQueryResult } from "../../../src/core/todo/query.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

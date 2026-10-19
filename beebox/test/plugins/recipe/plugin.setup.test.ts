@@ -11,7 +11,7 @@
 // (`test/helpers/plugin-bundles.ts`) so the test does not depend on a prior build.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";

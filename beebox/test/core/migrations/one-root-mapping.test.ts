@@ -8,7 +8,7 @@
 // it instead of silently dropping data.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mapV2Path, v2ContentPathsFor } from "../../../src/core/migrations/one-root-mapping.js";
 
 // ## Every v2 area maps to its documented v3 destination

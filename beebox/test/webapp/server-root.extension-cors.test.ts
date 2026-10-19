@@ -8,7 +8,7 @@
 // the origin on the real request's response.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { registerChromeExtensionCors } from "../../src/webapp/server-root/root-routes.js";
 

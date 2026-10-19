@@ -9,7 +9,7 @@
 // This file drives the route end to end with two real, independent boxes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createTwoBoxTestServer } from "../../helpers/test-server.js";

@@ -6,7 +6,7 @@
 // Each check states the findings in full, so the wording a boxholder sees is pinned.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { testsRule } from "../../../../../src/dev/layout/check/rules/tests.js";
 import { layout } from "./fixture.js";
 

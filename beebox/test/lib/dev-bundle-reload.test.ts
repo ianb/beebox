@@ -6,7 +6,7 @@
 // remain opted out.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { abandonDevBundleDrain, devBundleWasReplaced } from "../../src/lib/dev-bundle-reload.js";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";

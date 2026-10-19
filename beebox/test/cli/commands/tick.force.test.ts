@@ -12,7 +12,7 @@
 // skip silently), or `null` meaning "run it".
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { ParsedScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";
 import { normalizeScriptState } from "../../../src/core/schedule/state.js";
 import { evaluateSkip, effectiveBusyBlockers } from "../../../src/cli/tick-helpers.js";

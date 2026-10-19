@@ -7,7 +7,7 @@
 // non-fatal `problems` (dangling refs) for the health check.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { resolveNav } from "../../src/core/nav.js";
 import { parseNavFields } from "../../src/schemas/nav.js";

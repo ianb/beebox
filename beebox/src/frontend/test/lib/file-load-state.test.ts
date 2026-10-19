@@ -8,7 +8,7 @@
 // message and never came back.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { resolveLoadState, describeQueryFailure } from "../../src/lib/file-load-state.js";
 import { BoxUnreachableError } from "../../src/lib/trpc/transient.js";
 

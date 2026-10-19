@@ -6,7 +6,7 @@
 // frontmatter keys.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { symlink, mkdir } from "node:fs/promises";
 import { applyMark, markPlace } from "../../src/core/place-mark.js";
 import { saveLocation, type StoredLocation } from "../../src/core/location-store.js";

@@ -13,8 +13,8 @@
 // filesystem doctest shouldn't leave litter outside its own tmpdir.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, instanceOf, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, instanceOf, str } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";

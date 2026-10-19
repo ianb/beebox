@@ -1,9 +1,9 @@
 /**
- * `agent-doctest/check`: the patterns and types for `t.check`, and the
+ * `@ianbicking/tap-check/check`: the patterns and types for `t.check`, and the
  * observation helpers (`runCommand`, `eventually`, `printed`).
  *
  * `t.check`, `t.checkText`, and `t.checkThrows` themselves are methods on
- * tap's test object, added by `agent-doctest/tap`.
+ * tap's test object, added by `@ianbicking/tap-check/tap`.
  */
 
 export {

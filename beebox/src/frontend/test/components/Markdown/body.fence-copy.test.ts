@@ -4,7 +4,7 @@
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { Markdown } from "../../../src/components/Markdown/body.js";
 import { BoxSlugProvider } from "../../../src/lib/box-slug.js";
 

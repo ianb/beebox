@@ -4,8 +4,8 @@
 // `.beebox` with one same-filesystem rename. It never merges two directories.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, instanceOf } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";

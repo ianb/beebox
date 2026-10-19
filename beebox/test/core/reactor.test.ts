@@ -4,8 +4,8 @@
 // procedure detection, and job description building.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, not, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, not, str } from "@ianbicking/tap-check/check";
 import {
   buildReactorSystemPrompt,
   buildReactorUserPrompt,

@@ -16,8 +16,8 @@
 // analysis because a package was missing.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { probePdf, renderPdfPages, PdfRenderError } from "../../../src/core/pdf/probe.js";
 import type { PdfProbe } from "../../../src/core/pdf/probe.js";
 import { textPdf, textlessPdf } from "../../helpers/pdf-fixtures.js";

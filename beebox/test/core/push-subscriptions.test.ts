@@ -9,8 +9,8 @@
 // `src/core/push-subscriptions.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf } from "@ianbicking/tap-check/check";
 import assert from "node:assert";
 import { addSubscription, endpointsForBox, PushStoreCorruptError } from "../../src/core/push-subscriptions.js";
 import * as os from "node:os";

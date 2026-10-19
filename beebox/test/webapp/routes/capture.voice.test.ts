@@ -3,8 +3,8 @@
 // Continues [capture.doctest.md](capture.doctest.md). This part covers voice sessions: idempotent client-generated create with an owner and kind fence, staging of `pcm-s16le-16k` chunks, finalize contiguity checks, idempotent finalize, and finalize with `hq` set.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { z } from "zod";
 import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/test-route-server.js";
 import { StagingSessionSchema, type StagingSession, type StagingVoice } from "../../../src/core/capture/staging-schema.js";

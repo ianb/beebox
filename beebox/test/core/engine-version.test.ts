@@ -8,7 +8,7 @@
 // from, so the two surfaces can't disagree.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {

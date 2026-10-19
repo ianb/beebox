@@ -1,7 +1,7 @@
 // # `browse screenshot` argument parsing
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 
 // `--help` must never become an output path: before this parser returned a
 // discriminated result, `bin/browse screenshot --help` took a screenshot and

@@ -4,7 +4,7 @@
 // hook. The registry builds the base summary and the type extends or replaces it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { DocSchema } from "../src/schemas/doc.js";
 import { ImageSchema } from "../src/schemas/image/schema.js";
 import { summarize } from "../src/core/loader-registry.js";

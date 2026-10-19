@@ -7,7 +7,7 @@
 // label.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { contextChipLabel } from "../../../../../src/components/chat/everywhere/InteractiveChat/context-chip-label.js";
 
 // ## Landmark label wins when present

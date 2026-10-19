@@ -10,8 +10,8 @@
 // (`settleLostReply`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { eventually } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { eventually } from "@ianbicking/tap-check/check";
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../../src/machines/chatMachine/machine.js";
 import type { ChatController } from "../../../src/components/chat/conversation/controller-pool/pool.js";

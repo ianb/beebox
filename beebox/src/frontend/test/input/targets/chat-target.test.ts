@@ -10,7 +10,7 @@
 // function and is covered by typecheck + manual verification instead.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { chatTargetStatus, planRestore, applyRestorePlan } from "../../../src/input/targets/chat-target.js";
 import { createTypedEmission, createVoiceEmission } from "../../../src/input/emission.js";
 import { createEmissionStore } from "../../../src/input/emission-store.js";

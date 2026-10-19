@@ -11,7 +11,7 @@
 // rather than here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseFragment, serializeFragment } from "../../../src/frontend/lib/selection-anchor.js";
 
 // Key ORDER is an artifact of how the parser builds its object; the contract is

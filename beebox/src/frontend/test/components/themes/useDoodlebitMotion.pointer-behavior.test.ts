@@ -5,7 +5,7 @@
 // over cards, labels, and controls.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mount } from "../../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { useDoodlebitMotion } from "../../../src/components/themes/useDoodlebitMotion.js";

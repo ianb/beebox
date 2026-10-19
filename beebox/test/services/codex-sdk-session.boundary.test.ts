@@ -5,7 +5,7 @@
 // available to transcript administration.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { globSync } from "glob";
 import * as fs from "node:fs";
 import * as path from "node:path";

@@ -7,7 +7,7 @@
 // and the place's `landmarks.forDir` query has settled.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { arrivalOpens, arrivalWaits } from "../../../../../src/components/chat/workspace/WorkspaceProvider/arrival.js";
 import { decideWorkspaceNavigation } from "../../../../../src/components/chat/workspace/history.js";
 

@@ -4,7 +4,7 @@
 // existing history view without reading Codex's private rollout file.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   adaptCodexThreadHistory,
   assertCodexThreadCwd,

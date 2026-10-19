@@ -10,7 +10,7 @@
 // a pre-change snapshot, so it schedules a trailing fetch instead.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createFetchCoalescer } from "../../src/lib/fetch-coalescer.js";
 
 // A manually-resolvable promise, so a test can control exactly when a

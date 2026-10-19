@@ -7,7 +7,7 @@
 // only resolves the path: nothing is read or written.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir, userInfo } from "node:os";

@@ -9,7 +9,7 @@
 // blocks an option on a query that hasn't resolved.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { capabilityReason } from "../../../../src/components/chat/VoiceChip/panels.js";
 
 // ## Usable needs no reason

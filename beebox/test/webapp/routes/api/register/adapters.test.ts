@@ -7,7 +7,7 @@
 // declaration is a couple of lines (base URL + auth header shape).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { makeTestServer } from "../../../../helpers/test-route-server.js";
 import { bodyField } from "../../../../helpers/test-helpers.js";

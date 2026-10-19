@@ -8,8 +8,8 @@
 // receipt that only `persistSearchIndex` (or `indexUnchanged`) mints.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, anything } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, anything } from "@ianbicking/tap-check/check";
 import { search } from "@orama/orama";
 import { readFile, writeFile } from "node:fs/promises";
 import { openSearchIndex } from "../../../src/core/search/refresh/core.js";

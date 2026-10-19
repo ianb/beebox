@@ -8,8 +8,8 @@
 // and kill a run that barely got to execute.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, eventually, instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, eventually, instanceOf } from "@ianbicking/tap-check/check";
 import { startAwakeTimeout, type AwakeElapsed } from "../../src/shared/awake-timeout.js";
 import {
   execWithTimeout,

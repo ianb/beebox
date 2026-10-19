@@ -6,8 +6,8 @@
 // engine's two reads.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import { pluginByName, pluginNames, plugins } from "../src/plugins.js";
 import { definePlugin } from "../src/cards/plugin-definition.js";
 import { access } from "node:fs/promises";

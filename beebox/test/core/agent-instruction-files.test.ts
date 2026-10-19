@@ -8,7 +8,7 @@
 // takes the box-level name. Plan: `docs/implemented-plans/box-agents-md.md`, Track A.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, mkdir, writeFile, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";

@@ -8,7 +8,7 @@
 // `FileEntry` now passes `hidePath` to a custom list entry too.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ImageCardListEntry } from "../../../schemas/image/list-entry.js";

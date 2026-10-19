@@ -7,8 +7,8 @@
 // with the rule and where to ask for more.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing } from "@ianbicking/tap-check/check";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";

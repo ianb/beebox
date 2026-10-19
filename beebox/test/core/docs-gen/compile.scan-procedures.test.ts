@@ -9,7 +9,7 @@
 // frontmatter card, so every procedure was indexed as `"(could not parse)"`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { scanProcedures } from "../../../src/core/docs-gen/compile/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 

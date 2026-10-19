@@ -1,7 +1,7 @@
 // # Canonical system card identity
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { SYSTEM_CARD_COHORTS, SYSTEM_CARD_PATHS, SYSTEM_CARD_MIGRATION, REMAINING_SYSTEM_CARD_MIGRATION, systemCardLocationError } from "../../src/shared/system-card-paths.js";
 import { typeFromFilename } from "../../src/core/card-io.js";
 

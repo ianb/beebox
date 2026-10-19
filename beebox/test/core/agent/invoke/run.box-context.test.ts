@@ -14,7 +14,7 @@
 // from the host user's `~/.claude`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildQueryOptions, type RunAgentOptions } from "../../../../src/core/agent/invoke/run.js";
 import { invariant } from "../../../../src/shared/invariant.js";
 

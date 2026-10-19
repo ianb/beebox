@@ -9,7 +9,7 @@
 // entry rather than failing the whole message.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { extractFinalWords } from "../../../src/machines/realtime-transcription-live/transcription-connections.js";
 
 // ## Well-formed words: punctuated_word preferred, confidence carried

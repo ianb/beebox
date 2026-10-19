@@ -8,7 +8,7 @@
 // and quotes are explicit.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { applySelections } from "../../../src/lib/selection/serialize.js";
 
 // ## Inline replacement at the token (typed message)

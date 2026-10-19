@@ -6,7 +6,7 @@
 // the same box.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { composeDocumentTitle } from "../../src/lib/document-title.js";
 
 // ## Page and box, in that order

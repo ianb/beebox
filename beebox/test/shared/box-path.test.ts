@@ -8,7 +8,7 @@
 // form before comparing or looking up.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { boxRelativePath } from "../../src/shared/box-path.js";
 
 // A leading slash (the authoring/ref form) is stripped:

@@ -5,8 +5,8 @@
 // needing a human alone. See `src/core/migration-sweep.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import { chmod, readFile, rm, writeFile } from "node:fs/promises";

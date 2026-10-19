@@ -9,7 +9,7 @@
 // whole worker runs deterministically.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readdir, readFile, writeFile, appendFile, mkdir, access } from "node:fs/promises";

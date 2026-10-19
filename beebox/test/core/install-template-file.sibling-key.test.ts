@@ -11,7 +11,7 @@
 // `docs/implemented-plans/box-agents-md.md`, Track A and Track B "Intermediate states".
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

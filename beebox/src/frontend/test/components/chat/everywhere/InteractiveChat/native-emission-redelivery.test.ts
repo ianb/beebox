@@ -8,7 +8,7 @@
 // transcript gains no duplicate row (the 2026-08-19 voice-duplicate regression).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createNativeDispatchRegistry, resolveNativeDispatch } from "../../../../../src/components/chat/everywhere/InteractiveChat/native-emission-redelivery.js";
 import type { Receipt } from "../../../../../src/input/targets/receipts.js";
 

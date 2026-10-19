@@ -6,8 +6,8 @@
 // that env var is a test-only seam, inert in every real deployment.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, instanceOf, isoDate, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, instanceOf, isoDate, not } from "@ianbicking/tap-check/check";
 import { mkdtemp, rm, writeFile, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

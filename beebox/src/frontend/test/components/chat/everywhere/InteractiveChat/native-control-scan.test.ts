@@ -12,7 +12,7 @@
 // here rather than on a phone.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   nativeScanEntries,
   requestNativeControls,

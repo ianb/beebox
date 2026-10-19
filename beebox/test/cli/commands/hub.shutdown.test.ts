@@ -13,8 +13,8 @@
 // never ran on any deploy.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import * as http from "node:http";
 import * as net from "node:net";
 import { closeServer } from "../../../src/cli/commands/hub.js";

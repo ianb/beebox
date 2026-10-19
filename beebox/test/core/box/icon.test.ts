@@ -8,9 +8,9 @@
 // bytes it hands out.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { renderBoxIcon } from "../../../src/core/box/icon.js";
-import { not } from "agent-doctest/check";
+import { not } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 

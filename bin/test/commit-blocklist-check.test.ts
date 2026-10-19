@@ -4,7 +4,7 @@
 // main checkout's machine-local list beside Git's common directory.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import path from "node:path";
 import { blocklistCandidates } from "../commit-blocklist-check.js";
 

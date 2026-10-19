@@ -10,8 +10,8 @@
 // credential store `webapp/local-users.ts`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, instanceOf, isoDate, optional } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, instanceOf, isoDate, optional } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";

@@ -5,7 +5,7 @@
 // constructs the list". `beebox/docs/plans/file-layout.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { setsRule } from "../../../../../../src/dev/layout/check/rules/sets/rule.js";
 import { layout } from "../fixture.js";
 
@@ -292,7 +292,7 @@ void test("health.ts imports chat.ts's value (rule 2 / member-imports); chat.ts 
 //
 // `builtins.ts` calls `registerTemplate`, imported from `./templates-registry.js`
 // inside this package: a finding. `serializers.ts` calls `registerSerializer`,
-// imported from the external package `agent-doctest/check`: no finding. `ns.ts`
+// imported from the external package `@ianbicking/tap-check/check`: no finding. `ns.ts`
 // calls `ns.registerThing` where `ns` is bound by an external namespace import:
 // no finding, since the dotted callee's root `ns` is external. `worklet.ts`
 // calls `registerProcessor` (the AudioWorklet global, like
@@ -327,7 +327,7 @@ void test("other.ts calls registerish:", async (t) => {
   const serializers = registrationSourcesLayout.files.get("pkg/src/serializers.ts");
   if (serializers === undefined || serializers.kind !== "module") throw new Error("expected module");
   serializers.imports = [
-    { specifier: "agent-doctest/check", target: null, external: true, typeOnly: false, names: ["registerSerializer"], dynamic: false },
+    { specifier: "@ianbicking/tap-check/check", target: null, external: true, typeOnly: false, names: ["registerSerializer"], dynamic: false },
   ];
   const ns = registrationSourcesLayout.files.get("pkg/src/connectors/ns.ts");
   if (ns === undefined || ns.kind !== "module") throw new Error("expected module");

@@ -9,7 +9,7 @@ import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { sessionProfileDir } from "../src/worktree.js";
 
 const base = await mkdtemp(join(tmpdir(), "browse-profile-"));

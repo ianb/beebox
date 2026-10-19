@@ -8,8 +8,8 @@
 // covers native resolution and stray-file detection.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { containing } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";

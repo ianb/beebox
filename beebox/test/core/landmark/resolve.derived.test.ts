@@ -10,7 +10,7 @@
 // `prominence` alone cannot tell it from a derived card.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { resolveLandmark } from "../../../src/core/landmark/resolve/core.js";
 import { createCardSchemaMap } from "../../../src/schemas.js";
 import { prunedSubtree } from "../../../src/core/landmark/prominence-index.js";

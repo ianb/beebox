@@ -4,7 +4,7 @@
 // the system and card choices remain independent.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { themeStudioSearchSchema } from "../../src/lib/theme-studio-search.js";
 
 void test("line 10", async (t) => {

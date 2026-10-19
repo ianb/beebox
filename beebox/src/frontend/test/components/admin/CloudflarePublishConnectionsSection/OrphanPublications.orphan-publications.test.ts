@@ -6,7 +6,7 @@
 // publication has a card.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { OrphanPublicationList } from "../../../../src/components/admin/CloudflarePublishConnectionsSection/OrphanPublications.js";

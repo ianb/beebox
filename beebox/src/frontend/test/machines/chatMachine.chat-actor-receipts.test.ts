@@ -6,7 +6,7 @@
 // receipt; only the actor's later UI work is suppressed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { settleFromTurnStart, settleRejectedTurnStart } from "../../src/machines/chatMachine/chat-receipt-settlement.js";
 import { expectReceipt, pendingReceiptCount } from "../../src/input/targets/receipts.js";
 

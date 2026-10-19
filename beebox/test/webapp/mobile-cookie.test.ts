@@ -10,13 +10,13 @@
 // expires, so renewal is the only place revocation can take effect.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import type { CookieSerializeOptions } from "@fastify/cookie";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import fastifyCookie from "@fastify/cookie";
-import { any, str } from "agent-doctest/check";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket, revokeMobileDevice } from "../../src/core/mobile/pairing.js";
 import { MOBILE_COOKIE_NAME, MOBILE_SESSION_TTL_MS, signMobileSession, verifyMobileSession } from "../../src/core/mobile/session.js";

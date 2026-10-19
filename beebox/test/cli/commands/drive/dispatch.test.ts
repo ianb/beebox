@@ -12,7 +12,7 @@
 // false`), so the bearer is doing real work.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer, TEST_SLUG } from "../../../helpers/test-route-server.js";

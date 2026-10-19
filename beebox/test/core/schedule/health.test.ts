@@ -8,7 +8,7 @@
 // non-answer (`inconclusive`), where nothing found a defect at all.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   conciseScheduleError,
   evaluateTaskHealth,

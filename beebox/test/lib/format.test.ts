@@ -3,7 +3,7 @@
 // `stripAnsi` removes ANSI escape codes from text, useful for logging or when color support is disabled.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { colorLevel, fmt, stripAnsi } from "../../src/lib/format.js";
 
 void test("line 9", async (t) => {

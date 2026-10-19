@@ -1,7 +1,7 @@
 // # Image transform URL helpers
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { apiTransformedImageUrl } from "../../src/api-core.js";
 import { transformedResolvedImageUrl } from "../../src/lib/image-transform-url.js";
 

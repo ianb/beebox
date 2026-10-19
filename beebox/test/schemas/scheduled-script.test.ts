@@ -3,7 +3,7 @@
 // Parsing, scheduling, and budget utilities for scheduled script cards. Scripts define what to run and when — evaluated by `bbx tick` (cron) and `bbx wakeup` (on-wakeup).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   parseDuration,
   parseBudget,

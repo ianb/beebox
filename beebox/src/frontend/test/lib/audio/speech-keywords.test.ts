@@ -3,7 +3,7 @@
 // `detectKeyword()` recognizes voice control commands in Whisper transcripts — things like "send message", "cancel", "microphone off". When a keyword is found, it's replaced with an XML tag in the transcript.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { detectKeyword, appendSendKeywordTag, sendKeywordIn } from "../../../src/lib/audio/speech-keywords.js";
 
 // ## Send commands

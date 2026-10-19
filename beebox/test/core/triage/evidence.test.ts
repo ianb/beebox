@@ -5,8 +5,8 @@
 
 import { test } from "tap";
 import type { Test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { prepareItem, verifyEvidence } from "../../../src/core/triage/evidence/core.js";
@@ -348,7 +348,7 @@ async function checkCaptureSession(t: Test, box: TmpBox) {
 
   // doctest:L228
   const serializedTriageRequest = serializeTriageRequest({ evidence: structured, instructions: structuredInstructions });
-  // eslint-disable-next-line agent-doctest/check-whole-value -- the request's size budget is the contract; the JSON itself is ~48KB of generated text
+  // eslint-disable-next-line tap-check/check-whole-value -- the request's size budget is the contract; the JSON itself is ~48KB of generated text
   t.check(serializedTriageRequest.length, any(Number).between(0, JEV_MAX_REQUEST_CHARS));
   t.check(structured.recipe.steps, structured.parts.map((part) => `${part.ref}: ${part.method}`));
 

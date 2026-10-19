@@ -6,7 +6,7 @@
 // arbitrary paths or build commands.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { pubIdSchema } from "../../src/publish/manifest.js";
 import { definitionFromCard, publicationDefinitionSchema } from "../../src/publish/publication-definition.js";
 import { readPublicationCardSource, resolvePublicationCardPath } from "../../src/publish/prepare/card-source.js";

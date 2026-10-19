@@ -11,7 +11,7 @@
 // rewritten too.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { executeMove } from "../../../../src/core/commands/move/command.js";
 import { extractBodyLinks } from "../../../../src/core/body-refs.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";

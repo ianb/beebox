@@ -7,7 +7,7 @@
 // worktree's build (in its Secure Preferences); the path below is made up.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { unpackedExtensionId, frontTargetScript, waitTimeoutMs } from "../src/clerk-popup.js";
 
 void test("line 13", async (t) => {

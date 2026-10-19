@@ -5,7 +5,7 @@
 // also offer no destructive controls.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { workstreamActionVerbs } from "../../../src/frontend/components/WorkstreamActions.js";
 import { workstreamStateFor } from "../../../src/frontend/pages/WorkstreamsPage.js";
 import type { Workstream } from "../../../src/frontend/types.js";

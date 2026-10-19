@@ -6,7 +6,7 @@
 // is why ambiguity has to be defined carefully.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { abbreviateTitle, ambiguousMarks, pinnedFace } from "../../../../../src/components/chat/workspace/SidecarTabStrip/tab-identity.js";
 
 type PinnedSymbol = Parameters<typeof pinnedFace>[0]["symbol"];

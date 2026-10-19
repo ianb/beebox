@@ -9,7 +9,7 @@
 // it depends on the live rendered document; this covers the pure formatter.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { formatPosition, formatTranscriptPosition } from "../../../src/lib/selection/position.js";
 
 // ## Chat transcript selections name the chat and the speaker

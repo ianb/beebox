@@ -5,7 +5,7 @@
 // card has no mentions.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { findInboundCardRefs } from "../../src/core/find-inbound-card-refs.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

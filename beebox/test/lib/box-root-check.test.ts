@@ -6,7 +6,7 @@
 // `docs/implemented-plans/one-root-box-layout.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir } from "node:fs/promises";
 import { checkBoxRoot } from "../../src/lib/box-root-check.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

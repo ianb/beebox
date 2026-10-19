@@ -7,7 +7,7 @@
 // exists", and only claim it when there isn't one.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { installCodexPlugin, CodexPluginInstallError } from "../../../src/core/agent/ensure-codex-plugin.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 

@@ -8,7 +8,7 @@
 // `docs/implemented-plans/standard-card-fields.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { cardSchema, body } from "../../src/exports/cards.js";
 import { reservedFieldProblems } from "../../src/cards/reserved-fields.js";

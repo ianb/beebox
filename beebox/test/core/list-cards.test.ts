@@ -1,7 +1,7 @@
 // # Box card and Markdown listings
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 
 // `listBoxCardFiles` and `listBoxMarkdownFiles` skip a publication project's
 // build output (`<name>.attach/project/dist/`) and `node_modules/` at any depth.

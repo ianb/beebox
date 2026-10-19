@@ -8,8 +8,8 @@
 // here we test the route boundary only.)
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { str, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { str, uuid } from "@ianbicking/tap-check/check";
 import { z } from "zod";
 import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/test-route-server.js";
 import { StagingSessionSchema } from "../../../src/core/capture/staging-schema.js";

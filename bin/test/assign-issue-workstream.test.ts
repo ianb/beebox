@@ -4,7 +4,7 @@
 // preserves the rest of the issue exactly.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { assignIssueWorkstream } from "../assign-issue-workstream.js";
 
 void test("line 10", async (t) => {

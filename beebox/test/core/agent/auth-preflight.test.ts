@@ -8,8 +8,8 @@
 // result so a wakeup cycle doesn't shell out per job.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf } from "@ianbicking/tap-check/check";
 import {
   checkClaudeAuth,
   checkCodexAuth,

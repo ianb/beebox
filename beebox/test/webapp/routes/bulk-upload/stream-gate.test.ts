@@ -6,7 +6,7 @@
 // the pre-commit byte check and jointly overshoot the staging cap.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { beginStream, endStream } from "../../../../src/webapp/routes/bulk-upload/stream-gate.js";
 
 // ## A second concurrent stream for the same item is refused

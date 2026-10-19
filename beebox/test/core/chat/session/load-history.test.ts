@@ -11,8 +11,8 @@
 // Concurrent callers asking for the *same* read now share one parse.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is, not } from "@ianbicking/tap-check/check";
 import { loadSessionHistory, sessionHistoryReadStats } from "../../../../src/core/chat/session/load-history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

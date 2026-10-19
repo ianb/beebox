@@ -12,7 +12,7 @@
 // to `idle`, and rethrows so the caller can report the failure.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

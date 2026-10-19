@@ -8,8 +8,8 @@
 // the closing instruction that teaches it how to use them.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { formatUiDump } from "../../../src/core/chat/ui-dump.js";
 import type { UiScanEntry, UiScanPayload } from "../../../src/shared/ui-scan/core.js";
 

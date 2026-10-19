@@ -1,5 +1,5 @@
 {
-  "name": "agent-doctest",
+  "name": "@ianbicking/tap-check",
   "version": "0.1.0",
   "description": "t.check assertions and lint rules for tap tests",
   "type": "module",
@@ -35,9 +35,5 @@
     "src/",
     "docs/"
   ],
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ianb/agent-doctest.git"
-  }
+  "license": "MIT"
 }

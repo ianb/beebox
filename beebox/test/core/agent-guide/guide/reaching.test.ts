@@ -6,8 +6,8 @@
 // the same constant the briefing template uses, so the two cannot drift.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { generateAgentGuide } from "../../../../src/core/agent-guide/guide/core.js";
 import { reachingDefaultQuote } from "../../../../src/core/agent-guide/guide/reaching.js";
 import { createBriefingTemplate, REACHING_ME_DEFAULT } from "../../../../src/schemas/briefing.js";

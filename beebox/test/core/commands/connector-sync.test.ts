@@ -5,7 +5,7 @@
 // advances its cursor.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { runConnectorSync } from "../../../src/core/commands/connector-sync.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";

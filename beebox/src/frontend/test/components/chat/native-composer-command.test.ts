@@ -4,7 +4,7 @@
 // transport and strictly parses the native durability acknowledgement.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   createNativeAddSelectionCommand,
   nativeCommandResultFromDetail,

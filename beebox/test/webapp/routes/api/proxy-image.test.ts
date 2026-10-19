@@ -7,7 +7,7 @@
 // check on top, not exercised here).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isBlockedAddress, assertPublicHttpUrl, UnsafeProxyUrlError } from "../../../../src/webapp/routes/api/proxy-image.js";
 
 async function guard(url: string) {

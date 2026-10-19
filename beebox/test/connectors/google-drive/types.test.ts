@@ -3,7 +3,7 @@
 // Tests for extracting Google Drive file IDs from various URL formats.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { extractDriveFileId } from "../../../src/connectors/google-drive/types.js";
 
 // ## Google Sheets, Docs, Slides and Drive file URLs

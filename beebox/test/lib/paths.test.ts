@@ -3,8 +3,8 @@
 // Utilities for working with card filenames and Bee Box directory structure.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf } from "@ianbicking/tap-check/check";
 import { PreV3ShapeError } from "../../src/lib/box-shape-errors.js";
 import { parseCardName, isCardFile, findBoxRoot } from "../../src/lib/paths/core.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

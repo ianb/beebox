@@ -6,8 +6,8 @@
 // tracked). Both are dev-only and read-only.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf, not } from "@ianbicking/tap-check/check";
 import {
   resolveExternalRef,
   buildVersionMarkers,

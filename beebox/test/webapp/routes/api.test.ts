@@ -3,7 +3,7 @@
 // The core data API provides endpoints for reading box state, browsing cards, and modifying card attributes. All routes are purely local (file reads and git operations).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../helpers/test-route-server.js";
 import { execSync } from "node:child_process";
 

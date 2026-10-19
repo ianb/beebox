@@ -5,8 +5,8 @@
 // `isLintableMarkdown` is the shared skip predicate (`--all` and `--staged` agree).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import {
   listStagedMarkdown,

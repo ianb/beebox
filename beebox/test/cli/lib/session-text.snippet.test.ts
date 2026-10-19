@@ -8,7 +8,7 @@
 // quote from that document. A title must show the question, not the quote.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { extractSnippet } from "../../../src/cli/lib/session-text.js";
 
 void test("line 14", async (t) => {

@@ -5,7 +5,7 @@
 // the text, the state, where it went or what to choose, and no probabilities.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readdir, utimes, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import assert from "node:assert/strict";

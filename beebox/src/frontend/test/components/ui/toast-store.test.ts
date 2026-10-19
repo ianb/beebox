@@ -13,8 +13,8 @@
 // default `setTimeout`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { createToastStore } from "../../../src/components/ui/toast-store.js";
 

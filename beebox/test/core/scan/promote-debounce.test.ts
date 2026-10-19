@@ -11,7 +11,7 @@
 // 150ms waits and the pass fired inside the window (2026-10-08).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createPromoteDebouncer } from "../../../src/core/scan/promote-debounce.js";
 import Fastify from "fastify";
 import { startScanPromoteLifecycle } from "../../../src/webapp/routes/scan-upload/promote-lifecycle.js";

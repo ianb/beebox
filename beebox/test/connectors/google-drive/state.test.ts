@@ -8,7 +8,7 @@
 // survives the other's save.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   mergeDriveState,
   commitDriveStateDelta,

@@ -8,7 +8,7 @@
 // local-time / zoomed-view / time-passed bits).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildSpeechMessage } from "../../../src/components/chat/InteractiveChat-helpers.js";
 
 // ## Plain speech, no selections

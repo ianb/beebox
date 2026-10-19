@@ -10,7 +10,7 @@
 // forward only and refuses to guess.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   matchBlocksToPages,
   normalizeForMatch,

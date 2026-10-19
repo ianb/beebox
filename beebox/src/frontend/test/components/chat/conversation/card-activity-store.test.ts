@@ -5,7 +5,7 @@
 // receipt cannot erase activity recorded after its send gesture.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { CardActivityStore } from "../../../../src/components/chat/conversation/card-activity-store.js";
 
 void test("line 11", async (t) => {

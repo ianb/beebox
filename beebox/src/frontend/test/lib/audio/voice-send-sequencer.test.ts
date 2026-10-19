@@ -7,7 +7,7 @@
 // segment's slow one instead of overtaking it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createVoiceSendSequencer } from "../../../src/lib/audio/voice-send-sequencer.js";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));

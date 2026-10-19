@@ -6,7 +6,7 @@
 // as `?path=`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";
 import { writeFile, utimes, symlink, rm } from "node:fs/promises";
 import { join, relative } from "node:path";

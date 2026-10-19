@@ -5,7 +5,7 @@
 // Everything else in the card is unchanged.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { setTodoAttribute, setTodoStatus } from "../../../src/core/todo/set-status.js";
 import { extractCardTodos } from "../../../src/core/todo/extract/core.js";
 import { buildLoadContext } from "../../../src/core/load-context.js";

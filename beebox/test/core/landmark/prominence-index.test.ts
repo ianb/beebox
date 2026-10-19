@@ -9,8 +9,8 @@
 // or any ancestor.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { unordered } from "@ianbicking/tap-check/check";
 import { utimes } from "node:fs/promises";
 import { prunedSubtree } from "../../../src/core/landmark/prominence-index.js";
 import { getParseCount, resetParseCount } from "../../../src/core/landmark/prominence-cache.js";

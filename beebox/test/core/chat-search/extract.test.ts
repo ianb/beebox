@@ -7,7 +7,7 @@
 // speech envelopes don't pollute matches.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   chunkSessionEntries,
   entrySearchText,

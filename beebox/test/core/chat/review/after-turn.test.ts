@@ -10,8 +10,8 @@
 // The reviewer is a scripted fake; no model is called.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { eventually } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { eventually } from "@ianbicking/tap-check/check";
 import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { once } from "node:events";

@@ -6,7 +6,7 @@
 // live in-flight list shown above the composer.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import type {
   SDKTaskNotificationMessage,

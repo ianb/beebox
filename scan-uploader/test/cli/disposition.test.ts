@@ -9,7 +9,7 @@
 // move files on the developer's desktop).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { chmod, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { delimiter, join } from "node:path";
 import { applyDisposition } from "../../src/cli/disposition.js";

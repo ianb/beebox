@@ -25,7 +25,7 @@ const PACKAGES = new Set([
   "beebox",
   "beebox/pub-worker",
   "site",
-  "agent-doctest",
+  "tap-check",
   "canvas-loop",
   "workstreams-app",
 ]);

@@ -6,8 +6,8 @@
 // and runs `fn` unserialized rather than failing when it cannot acquire the lock.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { withBoxGitLock, activeBoxGitLockCount, BOX_GIT_LOCK_WAIT_MS } from "../../src/lib/git-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../src/lib/file-lock.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

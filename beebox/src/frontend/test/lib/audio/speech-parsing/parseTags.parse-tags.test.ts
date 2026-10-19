@@ -3,7 +3,7 @@
 // `parseTags()` is a permissive XML-like tag parser for assistant responses. It handles nested tags, attributes, self-closing tags, and treats unmatched text as comment nodes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseTags } from "../../../../src/lib/audio/speech-parsing/parseTags.js";
 
 // Some assertions feed malformed/mismatched closing tags to exercise the

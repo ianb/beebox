@@ -8,7 +8,7 @@
 // than silently forwarding a photo the model will see sideways.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { warnOnUnnormalizedImageOrientation } from "../../../../src/webapp/routes/chat/helpers.js";
 
 // Minimal JPEG carrying a single EXIF Orientation tag (little-endian TIFF).

@@ -6,8 +6,8 @@
 // (`docs/plans/openrouter-chat-models.md`). These tests are the gate.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { SDKResultSuccess } from "@anthropic-ai/claude-agent-sdk";

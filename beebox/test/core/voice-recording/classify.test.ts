@@ -5,7 +5,7 @@
 // to retry with backoff, halve the piece and restart, or give up.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { classifyHqError } from "../../../src/core/voice-recording/classify.js";
 
 // ## No response at all (network error/timeout) is transient

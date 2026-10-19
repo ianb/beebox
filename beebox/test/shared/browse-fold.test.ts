@@ -5,7 +5,7 @@
 // listing, and what folds behind "N more". Every branch in the module doc.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { foldListing, type Listing, type FoldEntry } from "../../src/shared/browse-fold.js";
 
 interface Card { name: string; prominence: "entry-point" | "primary" | "background" | "ordinary" }

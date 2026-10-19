@@ -9,7 +9,7 @@
 // `refreshing`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../../src/machines/chatMachine/machine.js";
 import type { PendingSessionEntry, SessionEntry } from "../../../src/api-chat.js";

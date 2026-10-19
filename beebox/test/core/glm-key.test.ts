@@ -5,7 +5,7 @@
 // pure, and the missing-key error names the two setup commands.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { glmEnvAdditions, GlmKeyError } from "../../src/core/glm-key.js";
 import { UnknownSecretError } from "../../src/core/secrets/errors.js";
 

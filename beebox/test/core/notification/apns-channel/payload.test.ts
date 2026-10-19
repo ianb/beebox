@@ -8,7 +8,7 @@
 // `test/mobile-contract/fixtures/apns-payload/`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildApnsRequest } from "../../../../src/core/notification/apns-channel/payload.js";
 import type { NotificationIntent, Loudness } from "../../../../src/core/notification/intent.js";
 

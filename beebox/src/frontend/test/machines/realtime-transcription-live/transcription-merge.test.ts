@@ -9,7 +9,7 @@
 // `docs/plans/transcript-confidence.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mergeFinalText, mergeFinalWords } from "../../../src/machines/realtime-transcription-live/transcription-merge.js";
 
 // ## No committed prefix yet (first connection of a segment)

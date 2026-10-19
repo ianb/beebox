@@ -5,7 +5,7 @@
 // Disabling only changes the edge authority; it does not remove the Worker route.
 
 import { after, test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";

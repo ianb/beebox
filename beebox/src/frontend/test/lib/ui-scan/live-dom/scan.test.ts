@@ -15,7 +15,7 @@
 // `InteractiveChat-voice-button.tsx` and `ui/Dropdown.tsx`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { scanControls, MAX_ENTRIES } from "../../../../src/lib/ui-scan/live-dom/scan.js";
 import { controlAddress, resolveControl, resolveVisibleControl } from "../../../../src/lib/ui-scan/resolve.js";
 import type { ControlEntry, ScanResult } from "../../../../src/lib/ui-scan/types.js";

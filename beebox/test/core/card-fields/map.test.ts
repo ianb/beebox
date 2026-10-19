@@ -7,7 +7,7 @@
 // (`src/core/card-fields/apply.ts`) runs it over a box.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parse, stringify } from "yaml";
 import { parseFieldMap, fieldMapPlanner } from "../../../src/core/card-fields/map.js";
 import { applyFieldEdits } from "../../../src/core/card-fields/field-edits.js";

@@ -2,11 +2,11 @@
 
 `t.checkText(actual, expected)` compares text. `actual` is a string or a promise of one; `expected` is a string that may hold `«»` wildcards. Use it for command output and other rendered text. To compare a value, use `t.check` ([guide](../../beebox/docs/testing/check.md)); serialize nothing here.
 
-`agent-doctest/tap` adds the method to every tap test object (`.taprc` loads it with `--import`; import it too for the TypeScript types).
+`@ianbicking/tap-check/tap` adds the method to every tap test object (`.taprc` loads it with `--import`; import it too for the TypeScript types).
 
 ```ts
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 
 test("example", async (t) => {
   t.checkText(render(), "total: «int»");

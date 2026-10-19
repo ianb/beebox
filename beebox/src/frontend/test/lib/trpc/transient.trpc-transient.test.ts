@@ -13,13 +13,13 @@
 // delay is zero here; the real schedule is checked at the end.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import http from "node:http";
 import assert from "node:assert";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { createHTTPHandler } from "@trpc/server/adapters/standalone";
 import { createTRPCClient, httpBatchStreamLink, retryLink } from "@trpc/client";
-import { any, anything, instanceOf } from "agent-doctest/check";
+import { any, anything, instanceOf } from "@ianbicking/tap-check/check";
 import { BoxUnreachableError, fetchFromBox, unreachableCause, shouldRetryOperation, isBoxUnreachable, retryDelayMs, MAX_RETRIES } from "../../../src/lib/trpc/transient.js";
 
 const NGINX_502 = "<!DOCTYPE html>\n<html><head><title>502 Bad Gateway</title></head><body><center><h1>502 Bad Gateway</h1></center></body></html>";

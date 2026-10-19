@@ -6,7 +6,7 @@
 // that has no effect where it was written. Every rule here is a warning.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { lintProminenceBudget } from "../../src/core/lint-prominence/core.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

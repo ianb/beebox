@@ -5,7 +5,7 @@
 // shape used by the web composer, so the visible chat session owns the send.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { nativeEmissionFromDetail, parseNativeEmissionDetail } from "../../../../../src/components/chat/everywhere/InteractiveChat/native-emission.js";
 
 void test("line 11", async (t) => {

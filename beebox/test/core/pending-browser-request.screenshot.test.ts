@@ -5,8 +5,8 @@
 // registry behind them is covered by `pending-browser-request.doctest.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { getOrCreateAgentToken } from "../../src/core/agent/token.js";
 import { makeTestServer, type TestServer } from "../helpers/test-route-server.js";
 

@@ -4,7 +4,7 @@
 // tier, and for some tiers a slug or reader emails.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { PublicationSchema, createPublicationCardTemplate } from "../../src/schemas/publication.js";
 import { parseCardText } from "../../src/core/card-io.js";
 

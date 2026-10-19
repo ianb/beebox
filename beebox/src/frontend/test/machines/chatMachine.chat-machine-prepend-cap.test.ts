@@ -11,7 +11,7 @@
 // window stays contiguous.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { prependOlderMessages } from "../../src/machines/chatMachine/chat-actions.js";
 import { initialChatContext } from "../../src/machines/chatMachine/chat-machine-context.js";
 import { MAX_RETAINED_MESSAGES } from "../../src/machines/chat-types.js";

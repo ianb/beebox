@@ -7,8 +7,8 @@
 // filename rejection — not the acceptance rules themselves.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, str } from "@ianbicking/tap-check/check";
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer } from "../../helpers/test-route-server.js";

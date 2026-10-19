@@ -7,7 +7,7 @@
 // cannot hang forever.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { run } from "../src/runner.js";
 
 async function refused(fn: () => Promise<unknown>): Promise<string> {

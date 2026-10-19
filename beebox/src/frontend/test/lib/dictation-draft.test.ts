@@ -7,7 +7,7 @@
 // `relative-time.doctest.md`, where the capture chip shares it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   draftKey,
   parseDraft,

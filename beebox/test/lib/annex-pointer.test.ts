@@ -10,7 +10,7 @@
 // doctor and every content read path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isAnnexPointer, parseAnnexPointer, describeAbsentContent } from "../../src/lib/annex-pointer.js";
 
 /** Encode text as the bytes a reader would get off disk. */
@@ -26,15 +26,12 @@ const POINTER =
 // carried in the key itself, so a caller can say what the content *should* be
 // without fetching it:
 void test("A pointer parses into its key, expected size, and expected hash — all three c...", async (t) => {
-  // doctest:L30
-  const p = parseAnnexPointer(bytes(POINTER));
-  t.check(p?.size, 300000);
-
-  // doctest:L34
-  t.check(p?.sha256, "2ee2c7d493840de6795751cfb0c75d899624f1e5494f129b840812f129638f92");
-
-  // doctest:L37
-  t.check(p?.key, "SHA256E-s300000--2ee2c7d493840de6795751cfb0c75d899624f1e5494f129b840812f129638f92.jpg");
+  t.check(parseAnnexPointer(bytes(POINTER)), {
+    key: "SHA256E-s300000--2ee2c7d493840de6795751cfb0c75d899624f1e5494f129b840812f129638f92.jpg",
+    backend: "SHA256E",
+    size: 300000,
+    sha256: "2ee2c7d493840de6795751cfb0c75d899624f1e5494f129b840812f129638f92",
+  });
 });
 
 // The trailing newline is optional, and an extensionless key (a file with no

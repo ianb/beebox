@@ -6,7 +6,7 @@
 // leave out a `name` row that repeats the header.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { cardTitle } from "../../src/lib/card-title.js";
 
 void test("line 12", async (t) => {

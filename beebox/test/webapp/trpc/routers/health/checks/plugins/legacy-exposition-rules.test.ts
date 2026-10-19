@@ -8,7 +8,7 @@
 // fires in a box where the plugin is inactive.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { legacyExpositionRulesChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/legacy-exposition-rules.js";
 import { makeTmpBox } from "../../../../../../helpers/test-helpers.js";
 

@@ -10,7 +10,7 @@
 // class with a message that says what to do next rather than only what went wrong.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import {
   MAX_AUDIO_BYTES,

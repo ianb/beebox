@@ -7,7 +7,7 @@
 // server, so only a todo the server calls `escalated` reads as overdue.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TodoItem } from "../../../src/components/todo/TodoItem.js";

@@ -5,7 +5,7 @@
 // patch command that can name several files.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseHookFilePaths, validateHookPathsResult } from "../../../src/cli/validate-hook/command.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { mkdir, writeFile } from "node:fs/promises";

@@ -4,7 +4,7 @@
 // Before the first section reaches that offset, the first category remains active.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { activeCategoryAtOffset, issueCategoryId } from "../../../src/frontend/lib/issue-category-nav.js";
 
 const categories = [

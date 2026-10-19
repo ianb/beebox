@@ -6,7 +6,7 @@
 // Sharp verifies the encoded bytes and dimensions without contacting a provider.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createClaudeScanVision, type ClaudeQueryFunction } from "../../src/services/scan-vision-claude.js";
 import Sharp from "sharp";
 import { z } from "zod";

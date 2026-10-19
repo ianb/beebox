@@ -3,7 +3,7 @@
 // Browse owns its directory and structured detail independently of route splats.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseBrowseState, browseCardTarget, normalizeBrowseTarget, legacyBrowseTarget } from "../../src/lib/browse-card-state.js";
 import { serializeViewUrl, parseViewUrl } from "../../src/lib/view-url.js";
 import type { ViewTarget } from "../../src/lib/view-url.js";

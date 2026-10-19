@@ -8,7 +8,7 @@
 // platform uses. Tests inject a fake so no subprocess spawns.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { runHealthChecks, type HealthCheck } from "../../../../../../src/webapp/trpc/routers/health/router.js";
 import { createFakeClaudeCli, AUTH_PROBE_INCONCLUSIVE } from "../../../../../../src/services/claude-cli.js";
 import { makeTmpBox } from "../../../../../helpers/test-helpers.js";

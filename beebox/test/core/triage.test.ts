@@ -8,8 +8,8 @@
 // See `docs/triage.md` §Triage (stage 2).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, str } from "@ianbicking/tap-check/check";
 import { compileTriageInstructions } from "../../src/core/triage/instructions.js";
 import { runTriage } from "../../src/core/triage/run/core.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

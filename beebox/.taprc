@@ -9,7 +9,7 @@ node-arg:
   # boundary reached by child CLI processes before command dispatch. This is a
   # TypeScript preload, so it must follow the tsx loader.
   - --import=./test/helpers/isolate-user-home.ts
-  - --import=agent-doctest/tap
+  - --import=@ianbicking/tap-check/tap
   # Compile frontend modules with the React Compiler, as the Vite build does
   # (src/frontend/test/helpers/react-compiler-hooks.ts).
   - --import=./src/frontend/test/helpers/react-compiler-register.ts

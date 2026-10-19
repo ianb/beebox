@@ -3,7 +3,7 @@
 // Tests for the JSON sheet data format — building, serializing, parsing, and extracting values.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildSheetData, serializeSheetData, parseSheetData, sheetDataToValues, isFormulaCell } from "../../../../../src/connectors/google-drive/handlers/sheets/sheet-data.js";
 
 // ## Build sheet data from formula + formatted values

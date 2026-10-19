@@ -6,7 +6,7 @@
 // with chunk order preserved.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { concatSegments } from "../../../../src/core/capture/prepare/audio-concat.js";
 
 // ## Two segments, three chunks each → two buffers, order preserved

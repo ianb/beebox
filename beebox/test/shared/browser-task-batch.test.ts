@@ -5,7 +5,7 @@
 // for one record and refuses the batch as a unit, reporting every issue it found.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { validateBatch, isValidBatchFileName } from "../../src/shared/browser-task-batch.js";
 
 const schema = {

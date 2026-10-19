@@ -5,8 +5,8 @@
 // `kind`, `parent`, `forEachChild`, `getText`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, eventually } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, eventually } from "@ianbicking/tap-check/check";
 import { spawnSync } from "node:child_process";
 import { createParser, isIdentifier, SyntaxKind, type Node } from "../../../src/lib/typescript/syntax.js";
 

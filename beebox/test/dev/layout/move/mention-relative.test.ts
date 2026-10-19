@@ -1,7 +1,7 @@
 // # Form 4: a mention relative to the mentioning file's own directory
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { relativeCandidates, isRelativeMentionCandidateFile } from "../../../../src/dev/layout/move/mention-relative.js";
 
 const move = { from: "pkg/src/a.ts", to: "pkg/src/sub/a.ts" };

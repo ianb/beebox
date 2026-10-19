@@ -7,7 +7,7 @@
 // driven directly and returns the exit code.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { runRegisterFakePush } from "../../../src/cli/commands/pairing.js";

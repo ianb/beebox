@@ -13,7 +13,7 @@
 // than propagating the crash.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { loadBoxTimezone } from "../../../src/core/box/config.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 

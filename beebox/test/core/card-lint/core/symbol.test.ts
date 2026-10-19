@@ -6,7 +6,7 @@
 // and a card must stay loadable and openable whatever is wrong with it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { symbolIssues } from "../../../../src/core/card-lint/core/symbol.js";
 
 const issues = (symbol: unknown) => symbolIssues({ symbol });

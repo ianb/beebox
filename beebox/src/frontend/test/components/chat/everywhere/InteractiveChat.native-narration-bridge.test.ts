@@ -5,7 +5,7 @@
 // changes which transcript is used after a voice keyword send.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { postNativeHqDictationState, postNativeNarrationState } from "../../../../src/components/chat/everywhere/InteractiveChat/use-native-bridge.js";
 import type { NativeShellWindow } from "../../../../src/components/chat/native-post.js";
 

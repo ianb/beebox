@@ -3,7 +3,7 @@
 // `KeywordPattern` compiles pattern strings into matchers for detecting keywords in speech input. Patterns support alternatives, optional words, and multi-word groups.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { KeywordPattern, TESTING_EXPORTS } from "../../../src/lib/patmatch/keyword-pattern.js";
 
 const { normalizeWord } = TESTING_EXPORTS;

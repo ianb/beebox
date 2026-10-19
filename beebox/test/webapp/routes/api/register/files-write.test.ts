@@ -7,8 +7,8 @@
 // are chatty); git state rides on view metadata instead.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, not } from "@ianbicking/tap-check/check";
 import { z } from "zod";
 import { makeTestServer, type InjectResult } from "../../../../helpers/test-route-server.js";
 import { getStatus } from "../../../../../src/lib/git/core/operations.js";

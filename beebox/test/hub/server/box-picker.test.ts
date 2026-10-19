@@ -11,7 +11,7 @@
 // login.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { registerBoxPicker } from "../../../src/hub/server/box-picker.js";
 import { signSession, COOKIE_NAME } from "../../../src/webapp/auth.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

@@ -8,7 +8,7 @@
 // resumable, and the nightly review ignores the mark.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";

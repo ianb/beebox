@@ -9,7 +9,7 @@
 // `reason`, `no-file` or `no-schema`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { pluginTypeCoverage } from "../../../src/core/plugins/coverage.js";
 
 const courseware = { name: "courseware", schemaTypes: ["course", "concept-map"], viewNames: ["concept-map"] };

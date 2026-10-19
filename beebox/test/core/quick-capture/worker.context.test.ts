@@ -4,8 +4,8 @@
 // no work until human words arrive; later context follows the same fixed chat.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { capture, any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { capture, any, isoDate } from "@ianbicking/tap-check/check";
 import { mkdir, rename } from "node:fs/promises";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { invariant } from "../../../src/shared/invariant.js";

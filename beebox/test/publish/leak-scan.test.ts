@@ -7,7 +7,7 @@
 // binary-skip case, and the stable-id contract.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { scanBundle } from "../../src/publish/leak-scan.js";
 
 // Convenience: scan a single text file with no owner/allowlist context.

@@ -5,7 +5,7 @@
 // basename.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as path from "node:path";
 import { resolveAuditBox } from "../../../src/dev/lib/audit-box.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

@@ -7,7 +7,7 @@
 // deterministic.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { formatElapsed, formatAgo } from "../../src/lib/relative-time.js";
 
 // ## The magnitude, without a preposition

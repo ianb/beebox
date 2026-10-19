@@ -9,7 +9,7 @@
 // for responses where segments is empty.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   joinSegmentTexts,
   repairMissingSentenceSpaces,

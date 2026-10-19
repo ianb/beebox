@@ -1,7 +1,7 @@
 // # Mention-rewrite text mechanics: the path-token boundary rule and `knip.ts` block scoping
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   containsToken,
   replaceToken,

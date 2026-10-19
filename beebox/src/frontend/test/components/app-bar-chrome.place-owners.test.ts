@@ -12,7 +12,7 @@
 // ordering shows this bug, so this is a DOM doctest.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mount } from "../helpers/dom-harness.js";
 import { createElement as h } from "react";
 import { AppBarChromeProvider, useAppBarPlace, useAppBarPublishedPlace } from "../../src/components/app-bar-chrome.js";

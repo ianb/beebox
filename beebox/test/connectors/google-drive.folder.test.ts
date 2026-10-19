@@ -6,7 +6,7 @@
 // the fake Drive service.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import {

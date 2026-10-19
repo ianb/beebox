@@ -8,7 +8,7 @@
 // scripted fake and no model.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";

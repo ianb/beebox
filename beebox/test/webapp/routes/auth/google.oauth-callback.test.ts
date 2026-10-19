@@ -9,7 +9,7 @@
 // See `issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { createGoogleOAuthState } from "../../../../src/google/oauth-state.js";
 import { signSession, COOKIE_NAME } from "../../../../src/webapp/auth.js";

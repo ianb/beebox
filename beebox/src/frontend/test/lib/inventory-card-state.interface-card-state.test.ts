@@ -1,7 +1,7 @@
 // # Inventory and Admin card state
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseInventoryCardState } from "../../src/lib/inventory-card-state.js";
 import { adminArrivalKey, adminArrivalReceipt, adminArrivalViewState, adminTabViewState, clearAdminArrivalState, parseAdminCardState, shouldAcknowledgeAdminArrival, shouldConsumeAdminArrival } from "../../src/lib/admin-card-state.js";
 import { boxRouteSurface } from "../../src/lib/box-route-layout.js";

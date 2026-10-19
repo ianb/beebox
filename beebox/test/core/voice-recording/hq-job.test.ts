@@ -8,7 +8,7 @@
 // a real backoff or reach a real HQ service.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";

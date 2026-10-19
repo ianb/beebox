@@ -7,7 +7,7 @@
 // render (`docs/plans/todo-collection.md`, Track 4).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   buildRowSections,
   buildTodoTree,

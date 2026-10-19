@@ -6,8 +6,8 @@
 // directory's name).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { unordered } from "@ianbicking/tap-check/check";
 import { namesRule } from "../../../../../src/dev/layout/check/rules/names.js";
 import { layout } from "./fixture.js";
 

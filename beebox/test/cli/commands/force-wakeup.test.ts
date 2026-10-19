@@ -13,7 +13,7 @@
 // of this path with nothing to verify.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { makeTestServer, TEST_SLUG } from "../../helpers/test-route-server.js";
 import { getOrCreateAgentToken } from "../../../src/core/agent/token.js";

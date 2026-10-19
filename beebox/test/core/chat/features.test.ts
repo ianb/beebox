@@ -10,7 +10,7 @@
 // covers the registry primitives.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   composeChatAppSnapshot,
   getDefaults,

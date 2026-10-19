@@ -4,7 +4,7 @@
 // attempt; an interrupted receipt also becomes a question instead of a replay.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFileSync } from "node:child_process";
 import type { Agent } from "../../src/core/agent/invoke/core.js";
 import { createFakeAgent } from "./fake-agent.js";

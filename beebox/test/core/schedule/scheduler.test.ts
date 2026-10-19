@@ -3,7 +3,7 @@
 // Tests for scheduler utility functions — box validation.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isBox } from "../../../src/core/schedule/scheduler/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import * as fs from "node:fs/promises";

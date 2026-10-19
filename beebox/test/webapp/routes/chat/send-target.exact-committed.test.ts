@@ -5,7 +5,7 @@
 // appeared. Deletion still wins over that live entry.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { once } from "node:events";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";

@@ -5,7 +5,7 @@
 // rules decide it; the Source view keeps the keys and shapes as written.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { compactValue, fieldLabel, withoutHeaderName } from "../../src/lib/readable-fields.js";
 
 // ## Labels

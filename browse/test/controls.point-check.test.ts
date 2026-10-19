@@ -20,7 +20,7 @@
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { checkScript, parseCheckResult, type Box, type CheckResult } from "../src/controls.js";
 
 class StubNode { static TEXT_NODE = 3; }

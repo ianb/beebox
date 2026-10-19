@@ -9,7 +9,7 @@
 // rather than guessed at.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { deriveTranscriptState, resolveSessionAvailability } from "../../../../src/core/chat/session/availability.js";
 import { localOrigin } from "../../../../src/core/chat/session/origin.js";

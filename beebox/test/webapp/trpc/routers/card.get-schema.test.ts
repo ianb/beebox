@@ -7,7 +7,7 @@
 // card did not parse against a schema.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

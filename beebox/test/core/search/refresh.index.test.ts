@@ -6,7 +6,7 @@
 // rebuilds silently.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 
 import { search } from "@orama/orama";
 import { rename, writeFile } from "node:fs/promises";

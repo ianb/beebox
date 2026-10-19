@@ -8,7 +8,7 @@
 // and only to the ambient reply for that same session.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { SessionEntry } from "../../../../src/api.js";

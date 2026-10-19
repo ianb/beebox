@@ -9,7 +9,7 @@ Every test is a `.test.ts` file run by tap. How to write one: [testing with
 **Runner:** [tap](https://node-tap.org/) v21 with tsx
 **Run:** `pnpm test`
 
-Each package has a `.taprc`. It loads tsx and the `agent-doctest/tap` plugin
+Each package has a `.taprc`. It loads tsx and the `@ianbicking/tap-check/tap` plugin
 (`t.check`) with `--import`.
 
 The files themselves are the catalog: `ls test/**/*.test.ts`.

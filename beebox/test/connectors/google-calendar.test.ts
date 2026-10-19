@@ -6,8 +6,8 @@
 // generation path (VTIMEZONE + DTSTART) without hitting the network.
 
 import { after, test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, str } from "@ianbicking/tap-check/check";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { readFile, readdir, writeFile } from "node:fs/promises";

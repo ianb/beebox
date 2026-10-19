@@ -13,8 +13,8 @@
 // that has to be right, so it is asserted here with no server in reach.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { compareContractVersion, describeDrift, SCAN_CONTRACT_VERSION } from "../../src/cli/contract-version.js";
 
 /** The verdict kind, plus the two versions when it carries them — the whole

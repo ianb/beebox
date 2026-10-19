@@ -7,8 +7,8 @@
 // in `runReactor` that consume it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { runOneCycle } from "../../../../src/core/reactor/engine/cycle.js";
 import type { RunCycleParams } from "../../../../src/core/reactor/engine/cycle.js";
 import { runReactor } from "../../../../src/core/reactor/engine/core.js";

@@ -7,7 +7,7 @@
 // other half of the answer (`docs/implemented-plans/chat-session-identity.md`, Track 3).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../../../helpers/test-helpers.js";

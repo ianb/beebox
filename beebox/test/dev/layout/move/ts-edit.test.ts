@@ -1,7 +1,7 @@
 // # `rewriteTsFile`: AST-located specifier rewrites
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { rewriteTsFile } from "../../../../src/dev/layout/move/ts-edit.js";
 
 // ## Import, export-from, dynamic import, and require specifiers are all rewritten

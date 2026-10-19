@@ -4,7 +4,7 @@
 // tracking state in run cards, and handling various step outcomes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { startProcedure, resumeProcedure } from "../../../src/core/procedure/engine/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

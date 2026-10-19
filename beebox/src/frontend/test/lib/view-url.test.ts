@@ -3,7 +3,7 @@
 // Parse, classify, and resolve the box-path URLs that markdown links/images use to reference files inside the box. Markdown authors plain paths (`_content/x.card`, `/_content/x.card?view=source`); the retired `view:` scheme survives only as an internal serialization marker (companion-pane URL persistence), which `parseViewUrl` still tolerates.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   parseViewUrl,
   serializeViewUrl,

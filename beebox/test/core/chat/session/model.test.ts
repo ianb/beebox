@@ -9,7 +9,7 @@
 // That is what lets a pin leave conversations in progress alone.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { resolveSessionModel } from "../../../../src/core/chat/session/model.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

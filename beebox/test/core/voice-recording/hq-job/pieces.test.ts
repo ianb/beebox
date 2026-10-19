@@ -5,7 +5,7 @@
 // `nextPieceSeconds` halves the piece length toward the floor.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { planPieces, nextPieceSeconds, HQ_PIECE_SECONDS, HQ_PIECE_FLOOR_SECONDS, PCM_BYTES_PER_SECOND } from "../../../../src/core/voice-recording/hq-job/pieces.js";
 
 // ## A recording shorter than one piece is a single piece

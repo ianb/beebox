@@ -8,7 +8,7 @@
 // Tested headlessly through Markdoc's own `renderers.html` — no React, no DOM.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Markdoc from "@markdoc/markdoc";
 import { markdocConfig } from "../../src/shared/markdoc-config/tags/core.js";
 

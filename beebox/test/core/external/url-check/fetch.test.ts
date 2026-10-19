@@ -5,7 +5,7 @@
 // exercised here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { extractExternalUrls, isCheckableUrl } from "../../../../src/core/external/url-check/fetch.js";
 
 // `extractExternalUrls` pulls every distinct URL out of a blob, whether it's a

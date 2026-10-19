@@ -6,8 +6,8 @@
 // lifecycle is `open → sealed → …` and a cancel tears the directory down.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, str, unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, str, unordered } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { Readable } from "node:stream";
 import {

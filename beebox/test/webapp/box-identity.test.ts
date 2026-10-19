@@ -10,8 +10,8 @@
 // opt-in, and an owner to act as. Each row below removes one of them.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { str, any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { str, any } from "@ianbicking/tap-check/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";

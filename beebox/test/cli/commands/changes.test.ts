@@ -7,7 +7,7 @@
 // moved is not "added". See docs/implemented-plans/notifications.md (Track D).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";

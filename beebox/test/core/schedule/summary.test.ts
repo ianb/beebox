@@ -9,8 +9,8 @@
 // last 20 runs (`src/core/schedule/summary.ts`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, anything, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, anything, str } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import {

@@ -6,7 +6,7 @@
 // `<basename>.attach/` scope.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { lintAttachLayout } from "../../src/lib/attach-lint.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 

@@ -7,7 +7,7 @@
 // `plugins` option stands in for the registry so a fixture hook can misbehave.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { pluginLintIssues } from "../../../../src/core/card-lint/core/plugin-lint.js";
 import type { PluginDefinition } from "../../../../src/cards/plugin-definition.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

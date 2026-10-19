@@ -7,7 +7,7 @@
 // and a real rewrite would read as unchanged and go unstamped.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { refreshMapsCommand } from "../../../src/cli/commands/refresh-maps.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { fileExists } from "../../../src/lib/file-exists.js";

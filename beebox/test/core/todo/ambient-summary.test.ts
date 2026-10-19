@@ -6,7 +6,7 @@
 // MAP.md-style count doesn't work here).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { computeTodoAmbientLine } from "../../../src/core/todo/ambient-summary.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 

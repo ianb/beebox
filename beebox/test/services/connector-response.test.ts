@@ -7,8 +7,8 @@
 // open-ended enum fields stay strings.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { validateResponse, ConnectorResponseError } from "../../src/services/connector-response.js";
 import { gmailMessageSchema } from "../../src/services/google-gmail/schemas.js";
 import { calendarEventSchema } from "../../src/services/google-calendar/schemas.js";

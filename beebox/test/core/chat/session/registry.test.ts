@@ -11,8 +11,8 @@
 // `isRunning()` reflects which sessions hold a live subprocess.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, is, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, is, str } from "@ianbicking/tap-check/check";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

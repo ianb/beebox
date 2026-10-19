@@ -12,7 +12,7 @@
 // where the caret belongs, or `null` for "leave it alone".
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { caretAfterTextChange } from "../../../src/components/chat/composer-caret.js";
 
 // A keystroke's own change is left alone. The person typing is the only one who

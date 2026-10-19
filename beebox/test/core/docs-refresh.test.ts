@@ -6,8 +6,8 @@
 // a box that needs a human alone. See `src/core/docs-refresh.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing, not } from "@ianbicking/tap-check/check";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { rm, writeFile, mkdir, chmod, access } from "node:fs/promises";

@@ -5,7 +5,7 @@
 // now say `basis: default`. A box's older stock copy updates or parks in place.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";

@@ -8,7 +8,7 @@
 // `test/core/mobile/pairing.device-visibility.doctest.md`; this is the gate over HTTP.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

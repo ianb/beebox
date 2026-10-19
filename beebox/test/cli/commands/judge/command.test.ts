@@ -8,8 +8,8 @@
 // docs/implemented-plans/notifications.md (Track D).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";

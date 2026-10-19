@@ -5,7 +5,7 @@
 // remain absent even though execa normally extends the parent's environment.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { once } from "node:events";
 import { defaultSpawnChild } from "../../../src/hub/supervisor/child-spawn.js";
 import { buildChildEnv } from "../../../src/hub/supervisor/child-env.js";

@@ -5,7 +5,7 @@
 // covers the pure option and warm-pool rules of the real adapter.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildQueryOptions, warmSlotKey, warmCompatible } from "../../src/services/claude-chat/core.js";
 
 // ## Query options

@@ -5,8 +5,8 @@
 // live wrapper. Mounted only with the explicit development-surface opt-in.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTestServer } from "../../../../helpers/test-route-server.js";
 import { mkdtempSync, writeFileSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";

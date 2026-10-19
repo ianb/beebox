@@ -3,7 +3,7 @@
 // Continues [google-drive.folder.doctest.md](google-drive.folder.doctest.md). This part covers end-to-end mirrored-folder syncs: subdirectories, followed shortcuts, trashed, moved-out and unreadable children, safe-name collisions, restore from the Drive trash, `bbx rm` tombstones, and the mount's own folder in the Drive trash.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../../src/services/google-drive/core.js";

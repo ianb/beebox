@@ -4,7 +4,7 @@
 // individual helper functions that do the filesystem work.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execSync } from "node:child_process";
 import { join } from "node:path";
 import { readFile, readdir } from "node:fs/promises";

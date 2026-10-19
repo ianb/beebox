@@ -6,7 +6,7 @@
 // left untouched, rather than guessed into either clone.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { storageScopeFor } from "../../../../src/lib/storage-scope.js";
 import { readConversation, saveConversation } from "../../../../src/components/chat/everywhere/conversation-context/conversation-state.js";
 import { readTrackedSessions, writeTrackedSessions } from "../../../../src/components/chat/ambient/tracked-sessions.js";

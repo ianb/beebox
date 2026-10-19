@@ -10,7 +10,7 @@
 // "not present" rather than taking the whole scan down.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

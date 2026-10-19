@@ -9,11 +9,11 @@
 // `notifyBoxholder` reads) sees the count.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { any, isoDate, str } from "agent-doctest/check";
+import { any, isoDate, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { trpcContext } from "../../helpers/trpc-context.js";
 import { appRouter } from "../../../src/webapp/trpc/routers.js";

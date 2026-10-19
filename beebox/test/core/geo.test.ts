@@ -5,8 +5,8 @@
 // radius (strict — no accuracy inflation), or null.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { haversineMeters, matchPlace } from "../../src/core/geo.js";
 
 const A = { name: "A", lat: 45, lng: -122, radius: 200 };

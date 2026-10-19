@@ -9,7 +9,7 @@
 // Design: `beebox/docs/plans/scheduled-workstreams.md` (Track D).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { createElement, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

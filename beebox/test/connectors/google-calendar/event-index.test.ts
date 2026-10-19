@@ -8,7 +8,7 @@
 // for why the separator is a space and why the calendar id comes last.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

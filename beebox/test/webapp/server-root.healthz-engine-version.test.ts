@@ -13,7 +13,7 @@
 // installed version, so it never contributes a mismatch:
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../helpers/test-route-server.js";
 import { bodyField } from "../helpers/test-helpers.js";
 

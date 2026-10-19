@@ -5,8 +5,8 @@
 // map include (`AGENTS.md`; `CLAUDE.md` in a box not yet converted).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { finalize } from "../../../src/core/maps/finalize/core.js";
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git/core/operations.js";

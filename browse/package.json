@@ -19,7 +19,7 @@
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/node": "^24.0.0",
     "@typescript/native": "npm:typescript@7.0.2",
-    "agent-doctest": "workspace:*",
+    "@ianbicking/tap-check": "workspace:*",
     "eslint": "^9.0.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "tap": "^21.0.0",

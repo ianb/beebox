@@ -3,7 +3,7 @@
 // Helpers for the `.attach/` directory convention. Every card may have a sibling directory named `<basename>.attach/`. Refs from the card to its attached files use the virtual prefix `attach/<file>`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   cardBasename,
   attachDirFor,

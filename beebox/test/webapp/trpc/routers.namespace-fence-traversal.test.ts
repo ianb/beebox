@@ -18,7 +18,7 @@
 // would reach it, and is enough to prove the fix without a raw socket.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, readFile, writeFile, symlink } from "node:fs/promises";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";

@@ -3,7 +3,7 @@
 // Continues [google-calendar.doctest.md](google-calendar.doctest.md). This part covers local edits Google will never accept, the week of retries before an edit is stranded, recurring masters surviving a resync, and the cases where a push succeeded but the local rewrite failed.
 
 import { after, test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { chmod, readFile, readdir, writeFile } from "node:fs/promises";

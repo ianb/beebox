@@ -5,8 +5,8 @@
 // production. See `src/core/agent/token.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { getOrCreateAgentToken, verifyAgentBearer, resolveAgentToken } from "../../../src/core/agent/token.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { makeTestServer } from "../../helpers/test-route-server.js";

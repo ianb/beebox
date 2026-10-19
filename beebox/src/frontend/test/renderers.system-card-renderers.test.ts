@@ -3,7 +3,7 @@
 // Canonical interface cards have dedicated renderers.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { getRenderers, registerFileType } from "../src/file-type-registry.js";
 import {
   adminRenderer,

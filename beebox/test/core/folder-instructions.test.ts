@@ -6,7 +6,7 @@
 // Files holding only `@` includes (a map-only stub) are skipped.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/test-helpers.js";

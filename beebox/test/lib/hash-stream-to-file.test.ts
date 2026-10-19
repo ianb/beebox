@@ -7,7 +7,7 @@
 // the caller never cleans up after a throw.
 
 import { t as tap, test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { Readable } from "node:stream";
 import { createHash } from "node:crypto";
 import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";

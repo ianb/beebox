@@ -6,7 +6,7 @@
 // failures throw instead (see `shared/invariant.ts`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ok, err, okVoid, type Result } from "../../src/shared/result.js";
 
 // A tagged error arm — the pattern for a function whose caller acts on the cause.

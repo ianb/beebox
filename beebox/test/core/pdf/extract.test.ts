@@ -13,8 +13,8 @@
 // exercised by `pdf-extract-integration.doctest.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { runPdfMode } from "../../../src/core/commands/scan-import/pdf.js";
 import { runPdfReanalyze } from "../../../src/core/commands/pdf-reanalyze.js";
 import { createFakeDocling, MAX_EXTRACTION_ARTIFACTS } from "../../../src/services/docling/core.js";

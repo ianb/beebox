@@ -8,8 +8,8 @@
 // reporting runs end to end with no network and no browser globals.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { createVoiceStagingQueue } from "../../../../src/lib/audio/voice-staging-queue/queue.js";
 import { createInMemoryVoiceStagingStorage } from "../../../../src/lib/audio/voice-staging-queue/voice-staging-storage.js";
 

@@ -8,7 +8,7 @@
 // scan, so a retry after an interruption plans only what is left.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { planAgentsMd, rekeyLedger, describeStep, type DirectoryInput } from "../../../src/scripts/migrate/agents-md/plan.js";
 import { MIGRATIONS } from "../../../src/core/migrations.js";
 import { AGENTS_MD_MIGRATION } from "../../../src/core/agent-instruction-files.js";

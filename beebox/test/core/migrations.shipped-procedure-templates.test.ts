@@ -11,8 +11,8 @@
 // registered as a migration is load-bearing in a path no one runs by hand.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { containing } from "@ianbicking/tap-check/check";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseProcedureDefinition } from "../../src/schemas/procedure.js";

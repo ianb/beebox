@@ -31,7 +31,7 @@
 // (`issues/closed/bugs/2026-08-06-narration-mode-icon-ambiguous-with-mic.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { VoiceChipFace, voiceChipDiarizationEnabled, type VoiceChipFaceState } from "../../../../src/components/chat/VoiceChip/view.js";

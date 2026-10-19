@@ -5,8 +5,8 @@
 // The caller owns cleanup and passes only the card's box-relative path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { mkdir, readFile, symlink, truncate, writeFile } from "node:fs/promises";
 import path from "node:path";
 import assert from "node:assert/strict";

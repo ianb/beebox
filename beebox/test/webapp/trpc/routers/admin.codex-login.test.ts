@@ -5,7 +5,7 @@
 // verification URL and short-lived user code.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeCodexCli } from "../../../../src/services/codex-cli/core.js";
 import { checkCodexAuth, resetCodexAuthCache } from "../../../../src/core/agent/auth-preflight.js";

@@ -3,8 +3,8 @@
 // Parsing and formatting utilities for `.ics` calendar files. `parseIcsContent` extracts events from iCalendar data. `formatEvent` produces terminal-friendly display strings. `parseTimespan` converts shorthand like `"7d"` into milliseconds.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { parseIcsContent, formatEvent, parseTimespan, filterByDateRange, type CalendarEvent } from "../../../src/connectors/google-calendar/utils.js";
 
 // ## parseIcsContent

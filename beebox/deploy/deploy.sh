@@ -411,7 +411,7 @@ if [[ "$NEED_CLEAN_INSTALL" == true ]]; then
   step "Lockfile/patches changed (or first install) — wiping checkout node_modules for a clean reinstall..."
   rm -rf "$CHECKOUT/node_modules" \
          "$CHECKOUT/personal-vibe-check/node_modules" \
-         "$CHECKOUT/agent-doctest/node_modules" \
+         "$CHECKOUT/tap-check/node_modules" \
          "$CHECKOUT/beebox/node_modules" \
          "$CHECKOUT/beebox/src/frontend/node_modules"
 fi
@@ -500,15 +500,17 @@ RSYNC_OPTS=(-az --delete
 # Sync monorepo packages FROM THE BUILD CHECKOUT. These are pnpm workspace
 # members linked via `workspace:*` deps, so they must all be present alongside
 # beebox on the server for the root `pnpm install` to resolve.
-# personal-vibe-check and agent-doctest are devDeps of beebox (the server
+# personal-vibe-check and tap-check are devDeps of beebox (the server
 # install is non-prod because the runtime uses tsx, itself a devDep).
 # browse/agent-browser-typed are deliberately NOT synced — they're dev-only
 # tooling and a partial workspace installs fine (pnpm ignores absent members).
-for repo in personal-vibe-check agent-doctest beebox; do
+for repo in personal-vibe-check tap-check beebox; do
   local_path="$CHECKOUT/$repo/"
   if [[ ! -d "$local_path" ]]; then
-    echo "  $repo: not found at $local_path, skipping"
-    continue
+    # Fatal, not skipped: beebox's frozen install needs every workspace dep,
+    # and it runs after the hub stops. Failing here keeps the site up.
+    echo "ERROR: $repo not found at $local_path (renamed? update this list)" >&2
+    exit 1
   fi
   step "Syncing $repo..."
   rsync "${RSYNC_OPTS[@]}" "$local_path" "$SSH_TARGET:$STAGE_DIR/$repo/"
@@ -645,7 +647,7 @@ queue_remote stdin bash -s <<'REMOTE'
     echo "  First workspace deploy: clearing legacy per-package node_modules..."
     rm -rf /opt/beebox/cardworks/node_modules \
            /opt/beebox/personal-vibe-check/node_modules \
-           /opt/beebox/agent-doctest/node_modules \
+           /opt/beebox/tap-check/node_modules \
            /opt/beebox/beebox/node_modules \
            /opt/beebox/beebox/src/frontend/node_modules
   fi

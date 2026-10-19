@@ -7,8 +7,8 @@
 // `last-upload`, and commits the whole batch as one unit.
 
 import { test, type TestBase } from "tap";
-import "agent-doctest/tap";
-import { any, capture, not, str, unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, not, str, unordered } from "@ianbicking/tap-check/check";
 import { mkdtemp, writeFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

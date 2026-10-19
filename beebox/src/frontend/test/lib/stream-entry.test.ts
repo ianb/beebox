@@ -6,7 +6,7 @@
 // so they agree on shape: tools first, then the text block.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildStreamEntry } from "../../src/lib/stream-entry.js";
 
 // Text with no tools — a single text block, the given uuid, assistant type:

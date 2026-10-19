@@ -4,7 +4,7 @@
 // separately and require an account-scoped R2 read to confirm the selected account.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createCloudflarePublishTokenVerifier } from "../../src/services/cloudflare-publish-token-verifier.js";
 
 // An account token is verified against the chosen account.

@@ -3,8 +3,8 @@
 // The public query vocabulary is strict, but aliases normalize to one typed option set.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import {
   imageTransformCacheKey,
   negotiateImageFormat,

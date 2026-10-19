@@ -3,7 +3,7 @@
 // The installer keeps both local and upstream edits when a recorded stock version provides a clean three-way merge. A conflicting edit stays parked for an agent to inspect.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";

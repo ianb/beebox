@@ -7,8 +7,8 @@
 // targeting the chat session. See docs/implemented-plans/notifications.md (Track E).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, isoDate, type Pattern } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, isoDate, type Pattern } from "@ianbicking/tap-check/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";

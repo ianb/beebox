@@ -5,7 +5,7 @@
 // **peak** loaded context, how much answering **added**, and the turn count.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { loadedContextTokens, summarizeContextUsage } from "../../../src/dev/lib/context-usage.js";
 
 // The loaded context of a turn sums all three input components — never just

@@ -6,7 +6,7 @@
 // the same predicate the card view uses to hide that line.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { cardSchema, type CardSchema } from "../../../../src/cards/schema.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

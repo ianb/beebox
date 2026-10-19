@@ -23,8 +23,8 @@
 // transcript.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../../src/machines/chatMachine/machine.js";
 import { applyStreamError, promoteLastToPending } from "../../../src/machines/chatMachine/chat-actions.js";

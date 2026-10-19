@@ -5,7 +5,7 @@
 // resolve their semantic place on cold entry, while warm selection wins.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { cardChatSearch, legacyAdminRedirect, legacyCaptureRedirect, legacyCardRedirect, legacySystemCardRedirect, workspaceRouteTarget, systemCardEntryContext, systemCardAttentionRef, withoutShellParams, workspaceProjectionSearch } from "../../src/lib/system-card-navigation.js";
 import { routeConversationRequest } from "../../src/components/chat/everywhere/conversation-intent.js";
 import { SYSTEM_CARD_PATHS } from "../../../shared/system-card-paths.js";

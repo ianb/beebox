@@ -7,7 +7,7 @@
 // last, one line each; `bbx status` prints the same lines.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { promisify } from "node:util";

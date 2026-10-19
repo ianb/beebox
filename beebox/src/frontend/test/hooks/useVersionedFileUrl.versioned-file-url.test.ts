@@ -5,7 +5,7 @@
 // viewer document when the file is reopened.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { versionedFileUrl } from "../../src/hooks/useVersionedFileUrl.js";
 
 void test("line 11", async (t) => {

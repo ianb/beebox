@@ -8,7 +8,7 @@
 // follow-up never counts. `CardTodos.tsx` owns that query; this is the line.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { TodoSummaryLine } from "../../../src/components/todo/TodoSummaryLine.js";

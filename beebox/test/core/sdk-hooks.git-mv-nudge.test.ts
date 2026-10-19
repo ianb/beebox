@@ -6,7 +6,7 @@
 // non-box moves, `bbx mv`, and non-PreToolUse events.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { HookJSONOutput } from "@anthropic-ai/claude-agent-sdk";
 import { gitMvNudgeHook } from "../../src/core/sdk-hooks.js";
 

@@ -8,7 +8,7 @@
 // owner gives the place back to the owner below it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { dropPlace, pushPlace, topPlace } from "../../src/lib/place-stack.js";
 
 const chat = {};

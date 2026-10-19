@@ -12,7 +12,7 @@
 // diarize, so that service stays on Mistral.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { shapeOpenRouterResult, audioFormatToken } from "../../../../src/core/transcription/dispatch/openrouter.js";
 import {
   HQ_TRANSCRIPTION_SERVICES,

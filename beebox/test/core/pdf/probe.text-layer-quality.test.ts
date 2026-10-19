@@ -10,7 +10,7 @@
 // downstream. Re-OCRing the same pages recovered 2056 usable words against 112.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { assessTextLayer } from "../../../src/core/pdf/probe.js";
 import { ocrIntentFor } from "../../../src/core/commands/scan-import/pdf.js";
 

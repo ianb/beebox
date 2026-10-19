@@ -9,7 +9,7 @@
 // (`{queued}`/`{deduplicated}`/`{turnId}`) once past validation.
 
 import t, { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { bodyField } from "../../../helpers/test-helpers.js";
 import { resolveChannel } from "../../../../src/webapp/routes/chat/helpers.js";

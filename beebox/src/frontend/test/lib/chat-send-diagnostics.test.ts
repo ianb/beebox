@@ -5,8 +5,8 @@
 // event API accepts enumerated metadata, not message content.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import {
   beginChatSendDiagnostic,

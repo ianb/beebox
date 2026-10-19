@@ -9,8 +9,8 @@
 // (2026-08-01).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import {
   parseSessionLog,
   MAX_RETAINED_BYTES,

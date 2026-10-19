@@ -6,7 +6,7 @@
 // the raw `/api/actions/answer` duplicate was removed.)
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../helpers/test-route-server.js";
 
 // ## Creating a card

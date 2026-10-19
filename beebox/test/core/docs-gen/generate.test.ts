@@ -14,8 +14,8 @@
 // an unrelated hazard in a repo-in-a-repo dev/test environment).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { rm } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { commitTemplateSyncChanges, generateDocs } from "../../../src/core/docs-gen/generate/core.js";

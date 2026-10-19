@@ -7,7 +7,7 @@
 // does nothing about the duplicated work, so the span itself is exclusive.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { initBox } from "../../../src/core/box/structure/core.js";
 import { inspectLock } from "../../../src/lib/file-lock.js";

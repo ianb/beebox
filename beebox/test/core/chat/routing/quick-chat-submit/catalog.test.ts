@@ -1,7 +1,7 @@
 // # Quick chat candidates and provisional policy
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildRoutingCandidates, loadRoutingRubric, boundRoutingContexts, formatRecentRoutingContext, routingHistoryMetadata } from "../../../../../src/core/chat/routing/quick-chat-submit/catalog.js";
 import { routingCandidateSchema } from "../../../../../src/core/chat/routing/policy.js";
 import { selectRoutingDestination } from "../../../../../src/core/chat/routing/policy.js";

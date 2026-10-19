@@ -6,7 +6,7 @@
 // hand-edit or partial write can never crash a read or an agent turn.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { loadLocation, saveLocation, type StoredLocation } from "../../src/core/location-store.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 

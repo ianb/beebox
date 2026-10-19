@@ -8,8 +8,8 @@
 // tier — no chat runtime, no delivery (that is a later chunk).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { containing, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { containing, isoDate } from "@ianbicking/tap-check/check";
 import { execFileSync } from "node:child_process";
 import { access, mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";

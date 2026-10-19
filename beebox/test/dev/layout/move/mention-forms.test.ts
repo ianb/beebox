@@ -1,7 +1,7 @@
 // # The literal mention forms a move (or directory rename) produces
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { fileForms, directoryForms } from "../../../../src/dev/layout/move/mention-forms.js";
 
 const roots = ["pkg", "other-pkg"];

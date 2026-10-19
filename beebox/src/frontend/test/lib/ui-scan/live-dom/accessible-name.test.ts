@@ -13,7 +13,7 @@
 // nothing but a placeholder.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { computeAccessibleName } from "../../../../src/lib/ui-scan/live-dom/accessible-name.js";
 import type { ScanElement } from "../../../../src/lib/ui-scan/types.js";
 import { fixtureRoot } from "../../../../../../test/frontend/lib/ui-scan/fixture.js";

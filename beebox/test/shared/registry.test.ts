@@ -10,7 +10,7 @@
 // `pnpm exec tsc --noEmit -p tsconfig.json` in `beebox/`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { defineRegistry } from "../../src/shared/registry.js";
 
 interface Verb { name(): string; }

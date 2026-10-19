@@ -6,7 +6,7 @@
 // store exhibit, so it gets no bar.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isStoreScope, scopeFromPath } from "../../../src/frontend/exhibits/controls/scope.js";
 
 void test("line 12", async (t) => {

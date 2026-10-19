@@ -8,7 +8,7 @@
 // payload) keeps its fuller shape.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { TmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";

@@ -13,7 +13,7 @@
 // serviced.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createReconnectRefreshGate } from "../../../../../src/components/chat/everywhere/InteractiveChat/reconnect-refresh-gate.js";
 
 type Handle = ReturnType<typeof globalThis.setTimeout>;

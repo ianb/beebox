@@ -10,8 +10,8 @@
 // one-sentence text.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { setDerivedContains } from "../../../src/core/search/contains-update.js";
 import { lintCardsDispatch } from "../../../src/core/card-lint/core/lint-cards.js";

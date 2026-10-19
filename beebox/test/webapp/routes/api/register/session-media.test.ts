@@ -6,7 +6,7 @@
 // conversation full of old photos costs nothing until someone scrolls to one.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as path from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import { makeTestServer } from "../../../../helpers/test-route-server.js";

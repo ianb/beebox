@@ -9,7 +9,7 @@
 // this is that doctest.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";

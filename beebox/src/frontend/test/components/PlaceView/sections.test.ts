@@ -8,7 +8,7 @@
 // (docs/implemented-plans/landmark-arrival.md, Track C).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { placeSections } from "../../../src/components/PlaceView/sections.js";
 
 function link({ ref, source, prominence }: { ref: string; source: "listed" | "derived" | "expand" | "place"; prominence?: "entry-point" | "primary" | "background" }) {

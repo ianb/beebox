@@ -4,7 +4,7 @@
 // history diff parser decodes those bytes before displaying or fetching the file.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseDiff } from "../../../../src/components/history/HistoryViewCard/CommitDetail-diff.js";
 import { buildHistoryBlobUrl } from "../../../../src/components/history/HistoryViewCard/history-blob-url.js";
 

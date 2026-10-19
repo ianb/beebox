@@ -5,7 +5,7 @@
 // per section.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { PAGE_SECTIONS, type PageSection, pageTitle, sectionFavicon } from "../../../src/frontend/lib/page-identity.js";
 import { issueSearchParams } from "../../../src/frontend/lib/issue-link.js";
 

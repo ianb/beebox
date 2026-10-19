@@ -6,7 +6,7 @@
 // job wire format — not from a legacy `<description>` element.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { finishJob } from "../../src/core/finish-job.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

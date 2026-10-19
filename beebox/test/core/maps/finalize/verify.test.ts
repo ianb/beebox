@@ -5,7 +5,7 @@
 // count as current. Each rule restates the refresh-maps prompt's format section.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { verifyMapCoverage } from "../../../../src/core/maps/finalize/verify.js";
 
 function check(content: string, children: string[]) {

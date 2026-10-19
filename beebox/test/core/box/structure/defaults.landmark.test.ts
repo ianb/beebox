@@ -6,7 +6,7 @@
 // real landmark alone.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir } from "node:fs/promises";
 import { installRootLandmark } from "../../../../src/core/box/structure/defaults.js";
 import { parseLandmarkFields } from "../../../../src/schemas/landmark.js";

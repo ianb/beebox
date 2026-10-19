@@ -8,7 +8,7 @@
 // that failed to load (keep-last-good otherwise hides them).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, symlink, rm, unlink, writeFile } from "node:fs/promises";
 import { z } from "zod";
 import { engineHealthChecks, boxSchemaFieldsCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/engine.js";

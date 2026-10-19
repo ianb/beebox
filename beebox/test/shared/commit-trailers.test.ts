@@ -8,7 +8,7 @@
 // distinguishable from a hand edit.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   buildTriggerGrep,
   commitStep,

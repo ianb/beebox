@@ -4,8 +4,8 @@
 // cards unless a thread is already tracked or a bounded rule selects it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { initBox } from "../../src/core/box/structure/core.js";

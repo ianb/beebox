@@ -40,7 +40,7 @@ export const TEST_ROOTS: readonly TestRoot[] = [
   { dir: "scan-uploader/test/", runFrom: "scan-uploader", typecheck: { dir: "scan-uploader", script: "typecheck" }, lintFrom: "scan-uploader" },
   { dir: "browse/packages/agent-browser-typed/test/", runFrom: "browse", typecheck: { dir: "browse", script: "typecheck" }, lintFrom: "browse" },
   { dir: "browse/test/", runFrom: "browse", typecheck: { dir: "browse", script: "typecheck" }, lintFrom: "browse" },
-  { dir: "agent-doctest/test/", runFrom: "agent-doctest", typecheck: { dir: "agent-doctest", script: "typecheck" }, lintFrom: "agent-doctest" },
+  { dir: "tap-check/test/", runFrom: "tap-check", typecheck: { dir: "tap-check", script: "typecheck" }, lintFrom: "tap-check" },
 ];
 
 /** The root owning a repo-relative file: the longest `dir` that contains it. */

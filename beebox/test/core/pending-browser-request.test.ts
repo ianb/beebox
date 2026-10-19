@@ -6,7 +6,7 @@
 // fulfillment, and the `reportNone` window.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createPendingBrowserRequests } from "../../src/core/pending-browser-request.js";
 
 // The screenshot consumer's fulfillment payload is a small union:

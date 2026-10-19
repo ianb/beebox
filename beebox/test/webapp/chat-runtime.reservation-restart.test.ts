@@ -8,7 +8,7 @@
 // to an engine's failure.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { MODEL_ID } from "../../src/shared/model-ids.js";
 import { isRecord } from "../../src/shared/is-record.js";
 import { appRouter } from "../../src/webapp/trpc/routers.js";

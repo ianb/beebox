@@ -8,7 +8,7 @@
 // (covered in `chat-features.doctest.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   appendHistory,
   getFeaturesForSession,

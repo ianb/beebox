@@ -6,7 +6,7 @@
 // render as the empty string. Each formatted line is `<relative-path>\t<rendered>`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

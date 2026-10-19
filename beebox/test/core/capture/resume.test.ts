@@ -10,7 +10,7 @@
 // fails to compile here until this decides how it resumes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";

@@ -3,7 +3,7 @@
 // `src/shared/ref-path/core.ts` is THE home for turning a ref — an in-box pointer written in a card, a view, or a markdown link — into a box-relative path. Backend (`core/ref-exists.ts`) and frontend (`frontend/src/lib/view-url.ts`) share this one implementation, so a ref means the same thing on both sides.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseRef, resolveRefPath } from "../../src/shared/ref-path/core.js";
 
 // ## parseRef

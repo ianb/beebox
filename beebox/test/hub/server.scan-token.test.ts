@@ -8,7 +8,7 @@
 // 401 (or a login redirect, for a page navigation) at the hub.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import http from "node:http";
 import type net from "node:net";
 import assert from "node:assert/strict";

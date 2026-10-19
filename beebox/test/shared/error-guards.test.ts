@@ -7,8 +7,8 @@
 // frontend copy.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf, is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf, is } from "@ianbicking/tap-check/check";
 import {
   errnoCode,
   isErrnoException,

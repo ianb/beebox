@@ -6,7 +6,7 @@
 // `boxSlug` reads the shape and returns `path.basename(shape.boxRoot)`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";

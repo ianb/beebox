@@ -5,7 +5,7 @@
 // root is explicitly writable, so official SDK threads use full access.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { CODEX_BOX_SANDBOX } from "../../../src/services/codex-sdk-session/sandbox.js";
 import { codexSdkThreadOptions } from "../../../src/services/codex-sdk-session/core.js";
 

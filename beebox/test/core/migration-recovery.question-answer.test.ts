@@ -6,8 +6,8 @@
 // repair both read it. While an owner holds the box, answers are refused.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, str, unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, str, unordered } from "@ianbicking/tap-check/check";
 import { strict as assert } from "node:assert";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";

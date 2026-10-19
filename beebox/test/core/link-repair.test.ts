@@ -6,7 +6,7 @@
 // missing target is reported for an agent to resolve — never guessed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { repairBoxLinks } from "../../src/core/link-repair.js";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
 import { mkdir, writeFile, readFile } from "node:fs/promises";

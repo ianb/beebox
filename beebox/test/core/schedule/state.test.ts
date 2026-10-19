@@ -4,8 +4,8 @@
 // and lock files.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import {
   pruneRecentRuns,
   recordRun,

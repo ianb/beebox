@@ -9,8 +9,8 @@
 // same mechanism, same `fresh`/`unchanged` idempotence, no bespoke seeding path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";

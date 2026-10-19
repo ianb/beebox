@@ -7,7 +7,7 @@
 // not it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { resolveVoice } from "../../../src/core/tts/voices.js";
 
 // ## A voice the backend serves is used as asked

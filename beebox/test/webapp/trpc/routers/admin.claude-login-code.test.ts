@@ -7,7 +7,7 @@
 // hands the code to the waiting process, and the status poll then flips.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { createFakeClaudeCli } from "../../../../src/services/claude-cli.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";

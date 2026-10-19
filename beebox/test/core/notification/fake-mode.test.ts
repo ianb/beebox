@@ -7,7 +7,7 @@
 // and `bbx health` read it like any other.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";

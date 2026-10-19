@@ -9,7 +9,7 @@
 // cannot send yet. Otherwise it is accepted.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { openerSendDecision } from "../../../src/components/openers/opener-send.js";
 
 // An empty or whitespace-only composer accepts the opener.

@@ -3,7 +3,7 @@
 // Shared filename helpers used by both backend (connectors, CLI) and frontend (capture upload).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   sanitizeFilenameStem,
   sanitizeFilename,

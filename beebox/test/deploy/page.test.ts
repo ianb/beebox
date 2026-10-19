@@ -7,7 +7,7 @@
 // a deploy overruns.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
 import { deployPageText } from "../../src/shared/deploy-page-text.js";

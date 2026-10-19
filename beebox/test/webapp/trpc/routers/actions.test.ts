@@ -6,8 +6,8 @@
 // refresh. A command failure surfaces as a `BAD_REQUEST` TRPCError.
 
 import { test } from "tap";
-import { isoDate } from "agent-doctest/check";
-import "agent-doctest/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
+import "@ianbicking/tap-check/tap";
 import { actionsRouter } from "../../../../src/webapp/trpc/routers/actions.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { EventBus } from "../../../../src/core/event-bus/core.js";

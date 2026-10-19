@@ -6,7 +6,7 @@
 // work.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { installThemeTour } from "../../src/scripts/install-theme-tour.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 

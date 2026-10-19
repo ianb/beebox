@@ -9,8 +9,8 @@
 // `<state-file>.lock` path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf } from "@ianbicking/tap-check/check";
 import {
   updateTransientState,
   loadTransientState,

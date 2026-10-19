@@ -7,7 +7,7 @@
 // the blob-preview path instead of the text renderer.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseDiff } from "../../../../src/components/history/HistoryViewCard/CommitDetail-diff.js";
 
 const ANNEX_KEY =

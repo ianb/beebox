@@ -6,7 +6,7 @@
 // Set as the lines go past, without ever materializing the entries.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appendFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

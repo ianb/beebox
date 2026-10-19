@@ -6,7 +6,7 @@
 // sitting in — no climb needed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { generateAgentGuide } from "../../../../src/core/agent-guide/guide/core.js";
 import type { BoxShape } from "../../../../src/lib/box-shape.js";
 

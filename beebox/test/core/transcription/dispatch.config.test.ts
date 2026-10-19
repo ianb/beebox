@@ -6,7 +6,7 @@
 // Stored at `_config/transcription.json`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   loadTranscriptionConfig,
   updateTranscriptionConfig,

@@ -8,8 +8,8 @@
 // `test/core/bulk-upload/worker.doctest.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, not, str, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, not, str, uuid } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";

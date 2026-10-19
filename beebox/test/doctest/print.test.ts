@@ -3,8 +3,8 @@
 // Verify that `print()` is available as a scope-local function in doctest blocks.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { printed } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { printed } from "@ianbicking/tap-check/check";
 
 // ## Basic print
 void test("Basic print", async (t) => {

@@ -9,8 +9,8 @@
 // notification channel being configured — only nudge *delivery* does.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, isoDate, str } from "@ianbicking/tap-check/check";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import * as os from "node:os";
 import * as path from "node:path";

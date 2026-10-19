@@ -5,7 +5,7 @@
 // controller handle; its destination is chosen at capture, not at receipt time.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { submitTypedDraft } from "../../../src/components/chat/conversation/typed-submit.js";
 import { createEmissionStore } from "../../../src/input/emission-store.js";
 import { boundTurnFields } from "../../../src/machines/chatMachine/chat-bound-turn.js";

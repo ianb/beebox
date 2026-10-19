@@ -14,8 +14,8 @@
 // - `.` — no sync ran that day
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import { connectorVerdict, nextEpisode, describeVerdict } from "../src/connector-activity/verdict.js";
 import { addDays } from "../src/connector-activity/core.js";
 import type { ConnectorDay, ConnectorEpisode } from "../src/connector-activity/core.js";

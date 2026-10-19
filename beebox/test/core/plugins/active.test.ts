@@ -7,7 +7,7 @@
 // `bbx plugins list`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { activePluginNames } from "../../../src/core/box/config.js";
 import { activePlugins, describeInvalidPluginEntries, listPlugins } from "../../../src/core/plugins/active.js";

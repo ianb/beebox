@@ -10,7 +10,7 @@
 // under plain Node (no jsdom), so there's no real `document.hidden` to flip.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createDeferredResync, type VisibilityAdapter } from "../../src/lib/deferred-resync.js";
 
 function makeFakeVisibility(): VisibilityAdapter & { setHidden: (hidden: boolean) => void } {

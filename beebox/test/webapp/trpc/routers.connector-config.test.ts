@@ -11,7 +11,7 @@
 // `trpc-drive-mounts.doctest.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { TRPCError } from "@trpc/server";
 import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";

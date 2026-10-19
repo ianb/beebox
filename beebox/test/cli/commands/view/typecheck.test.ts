@@ -6,10 +6,10 @@
 // cleanup), which the render gate (`bbx view check`) can't see.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { type Expected, unordered } from "agent-doctest/check";
+import { type Expected, unordered } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { typecheckViews, type ViewTypecheckResult } from "../../../../src/cli/commands/view/typecheck.js";
 

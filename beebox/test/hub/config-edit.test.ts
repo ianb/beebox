@@ -7,8 +7,8 @@
 // happens with the live file untouched.
 
 import { test } from "tap";
-import { any, instanceOf, str } from "agent-doctest/check";
-import "agent-doctest/tap";
+import { any, instanceOf, str } from "@ianbicking/tap-check/check";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {

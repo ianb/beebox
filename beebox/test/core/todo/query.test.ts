@@ -14,8 +14,8 @@
 // contribute reports.
 
 import { test, type Test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { runTodoQuery } from "../../../src/core/todo/query.js";
 import { formatTodoLocation } from "../../../src/core/todo/collect-types.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

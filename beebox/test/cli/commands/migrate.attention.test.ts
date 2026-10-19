@@ -5,7 +5,7 @@
 // agent or installer runs, and push subscriptions are isolated from the user.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { spawn } from "node:child_process";
 import { rm } from "node:fs/promises";
 import { createRequire } from "node:module";

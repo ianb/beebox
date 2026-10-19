@@ -9,8 +9,8 @@
 // See `docs/landmarks.md` for the full design.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { utimes } from "node:fs/promises";
 import {

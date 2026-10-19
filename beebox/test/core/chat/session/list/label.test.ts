@@ -15,7 +15,7 @@
 // that evening.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { resolveSessionLabel } from "../../../../../src/core/chat/session/list/label.js";

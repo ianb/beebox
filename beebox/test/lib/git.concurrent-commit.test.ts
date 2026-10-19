@@ -7,8 +7,8 @@
 // excluded is another process — so these examples spawn real ones.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { spawn } from "node:child_process";
 import { existsSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";

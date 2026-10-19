@@ -5,7 +5,7 @@
 // chat-history discovery can treat a person's thought as system plumbing.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { SessionEntry } from "../../../src/cli/lib/session-entry.js";
 import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
 

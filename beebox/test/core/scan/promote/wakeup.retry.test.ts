@@ -7,7 +7,7 @@
 // the rule that new scan files start the budget over.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import {
   MAX_WAKEUP_ATTEMPTS,

@@ -10,8 +10,8 @@
 // failure is visible even when a future one has a cause we haven't met yet.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { stalledJobsCheck } from "../../../../../../src/webapp/trpc/routers/health/checks/stale.js";
 import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 import { createIntakeJobTemplate } from "../../../../../../src/schemas/intake-job.js";

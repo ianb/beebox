@@ -5,7 +5,7 @@
 // `src/core/annex/info-attributes.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import {
   annexInfoAttributesPath,

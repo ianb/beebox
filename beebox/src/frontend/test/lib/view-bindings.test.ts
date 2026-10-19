@@ -12,7 +12,7 @@
 // reloaded.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createSingleFlightCache } from "../../src/lib/view-bindings.js";
 
 // ## `invalidate()` then `load()` in the same tick returns post-invalidation data

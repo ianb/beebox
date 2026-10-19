@@ -5,7 +5,7 @@
 // (the audience) and how many web sessions have a person active (presence).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { channelsToTry } from "../../../src/core/notification/channels.js";
 import type { Audience } from "../../../src/core/notification/channels.js";
 import type { Loudness } from "../../../src/core/notification/intent.js";

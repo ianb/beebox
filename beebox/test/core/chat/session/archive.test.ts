@@ -11,8 +11,8 @@
 // can still open.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";

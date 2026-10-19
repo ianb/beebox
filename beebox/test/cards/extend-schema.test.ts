@@ -8,9 +8,9 @@
 // `summarize` and `InferCardFields` see.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
-import { any, instanceOf, is, str } from "agent-doctest/check";
+import { any, instanceOf, is, str } from "@ianbicking/tap-check/check";
 import { join } from "node:path";
 import { z } from "zod";
 import {

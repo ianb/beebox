@@ -7,7 +7,7 @@
 // decoding is recoverable.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ReservationReceipts } from "../../../../src/components/chat/everywhere/reservation-receipts.js";
 
 class MemoryStorage {

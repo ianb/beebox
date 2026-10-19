@@ -4,7 +4,7 @@
 // and preserves pending manifests and Git recovery references.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { createClaudeAgent } from "../../src/core/agent/invoke/core.js";
 import { createCodexAgent } from "../../src/core/agent/codex-agent.js";

@@ -7,7 +7,7 @@
 // subscribing under two boxes is stored once with both opt-ins.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import * as os from "node:os";

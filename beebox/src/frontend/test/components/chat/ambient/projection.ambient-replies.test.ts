@@ -5,7 +5,7 @@
 // interpret an arbitrary suffix as a whole callout.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { projectAmbientReply, observeAmbientReply, EMPTY_ATTENTION } from "../../../../src/components/chat/ambient/projection.js";
 import type { SessionEntry } from "../../../../../cli/lib/session-entry.js";
 

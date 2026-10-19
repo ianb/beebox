@@ -8,8 +8,8 @@
 // declared.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { GLOBAL_CARD_FIELDS } from "../../src/cards/schema.js";
 import { Prominence, effectiveLevel } from "../../src/shared/prominence.js";
 import { DocSchema } from "../../src/schemas/doc.js";

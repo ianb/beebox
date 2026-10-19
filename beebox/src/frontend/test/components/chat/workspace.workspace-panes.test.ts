@@ -5,7 +5,7 @@
 // single foreground without rewriting the remembered desktop layout.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   createEmptyWorkspaceState,
   normalizeWorkspaceState,

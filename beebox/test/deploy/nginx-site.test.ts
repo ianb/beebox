@@ -11,8 +11,8 @@
 // This needs `nginx` on the PATH (`brew install nginx` on macOS).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { execFile } from "node:child_process";
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import { createServer as createNetServer } from "node:net";

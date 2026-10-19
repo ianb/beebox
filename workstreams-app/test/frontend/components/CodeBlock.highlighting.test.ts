@@ -5,7 +5,7 @@
 // `workstreams-app/src/router/server/docs.ts`, the doc reader it consolidates.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import React from "react";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";

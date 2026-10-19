@@ -6,7 +6,7 @@
 // specific paths. Same allowlist shape as the monorepo's `bin/path-leak-check.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { findAbsoluteMachinePaths } from "../../src/lib/absolute-path-check.js";
 
 // A real home path is flagged, macOS and Linux forms alike:

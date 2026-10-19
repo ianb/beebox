@@ -13,7 +13,7 @@
 // stamp only exists once esbuild's `define` has replaced it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildStamp, describeBuild, UNKNOWN_REVISION, type BuildStamp } from "../src/build-stamp.js";
 
 // ## Source mode is reported as source, not as a fake build

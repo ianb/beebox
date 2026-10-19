@@ -1,7 +1,7 @@
 // # markdown-link-rules: BBX001 no-legacy-view-links + BBX002 no-broken-internal-links
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { lint as markdownlint } from "markdownlint/promise";
 import { noBrokenInternalLinks, noLegacyViewLinks } from "../../src/core/markdown-lint-rules.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

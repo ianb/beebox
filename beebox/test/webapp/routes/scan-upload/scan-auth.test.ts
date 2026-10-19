@@ -8,7 +8,7 @@
 // gets through the scan gate's token path not at all.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { makeTestServer } from "../../../helpers/test-route-server.js";

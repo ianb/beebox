@@ -7,7 +7,7 @@
 // hands back a stamp only once the file serves.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isRecoverableImageUrl, waitForImage, withVersionStamp } from "../../src/hooks/use-image-recovery.js";
 
 /** A fake clock: records the delays asked for, never actually waits. */

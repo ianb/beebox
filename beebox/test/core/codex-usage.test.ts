@@ -5,7 +5,7 @@
 // appends one delta per turn. The ordinary usage sync imports both native engines.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   appendCodexTurnUsage,
   codexUsageDelta,

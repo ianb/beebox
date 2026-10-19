@@ -8,7 +8,7 @@
 // text" for card files. Everything else passes through.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { rendererDisplayLabel } from "../../src/lib/renderer-display-label.js";
 
 // ## "Card" shows the humanized card type when nothing more specific exists

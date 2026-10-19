@@ -15,7 +15,7 @@
 // differently (`docs/plans/display-path-guard.subplan.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { BoxNamespaceResult } from "../../src/lib/box-namespace-resolve.js";
 import { resolveBoxNamespacePath } from "../../src/lib/box-namespace-resolve.js";
 import { symlink, mkdir, rm } from "node:fs/promises";

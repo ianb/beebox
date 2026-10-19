@@ -5,7 +5,7 @@
 // account request is made.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createCloudflareWorkerDeployer } from "../../../src/services/managed-publication-runtime/worker-deployer.js";
 import { staticBearer } from "../../../src/services/cloudflare-bearer.js";
 import assert from "node:assert/strict";

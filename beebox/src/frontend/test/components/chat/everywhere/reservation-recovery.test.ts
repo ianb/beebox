@@ -4,7 +4,7 @@
 // same exact reservation, and must not infer one from an arbitrary session ID.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createReservationRecovery } from "../../../../src/components/chat/everywhere/reservation-recovery.js";
 import { ReservationReceipts } from "../../../../src/components/chat/everywhere/reservation-receipts.js";
 

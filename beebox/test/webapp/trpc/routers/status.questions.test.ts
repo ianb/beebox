@@ -9,7 +9,7 @@
 // section, pointing at the raw file) instead of silently dropping it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";

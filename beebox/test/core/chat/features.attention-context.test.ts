@@ -4,7 +4,7 @@
 // An explicit snapshot replaces legacy companion context, including clearing it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { sendBodySchema, extractCardFields, buildSendInput } from "../../../src/webapp/routes/chat/helpers.js";
 import { composeChatAppSnapshot, parseChatAppDeltas } from "../../../src/core/chat/features.js";
 import { combineQueuedInputs } from "../../../src/core/chat/session/state.js";

@@ -5,7 +5,7 @@
 // and a corrupted file is loud.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { loadTtsConfig, updateTtsConfig } from "../../../src/core/tts/config.js";

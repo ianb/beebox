@@ -3,7 +3,7 @@
 // Tests for the `drive-handler-docs` handler using fake services.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { access, unlink } from "node:fs/promises";

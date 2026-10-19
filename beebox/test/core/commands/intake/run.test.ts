@@ -12,7 +12,7 @@
 // See `docs/triage.md` and `src/core/commands/intake/run.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { runIntake } from "../../../../src/core/commands/intake/run.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 

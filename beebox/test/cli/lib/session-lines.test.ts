@@ -9,7 +9,7 @@
 // caller cannot forget it: it is handed a line already measured against the bound.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readTranscriptLines } from "../../../src/cli/lib/session-lines.js";
 import { MAX_SESSION_LINE_BYTES } from "../../../src/cli/lib/session-oversize.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

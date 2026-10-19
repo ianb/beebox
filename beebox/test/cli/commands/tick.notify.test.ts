@@ -7,8 +7,8 @@
 // (Track D).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, isoDate } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import { loadScriptState } from "../../../src/core/schedule/state.js";

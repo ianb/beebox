@@ -6,7 +6,7 @@
 // would also match `openai` to `openrouter`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { normalizeSecretName, suggestSecretName } from "../../src/shared/secret-name-suggest.js";
 
 const known = ["openrouter", "openai-thinking", "mistral", "bucket-token/"];

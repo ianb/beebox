@@ -9,7 +9,7 @@
 // because this flow has no consent prompt.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";
 import { makeTestServer, type TestServer } from "../../../helpers/test-route-server.js";
 import type { UiScanEntry, UiScanPayload } from "../../../../src/shared/ui-scan/core.js";

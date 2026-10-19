@@ -7,7 +7,7 @@
 // Claude projects dir, overridable for tests via `BBX_CLAUDE_PROJECTS_DIR`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

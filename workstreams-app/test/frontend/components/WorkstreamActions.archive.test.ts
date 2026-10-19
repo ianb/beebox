@@ -12,7 +12,7 @@
 // removed with unmerged work would hide recovery state.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { workstreamActionVerbs } from "../../../src/frontend/components/WorkstreamActions.js";
 import type { Workstream } from "../../../src/frontend/types.js";
 

@@ -14,7 +14,7 @@
 // refresh indefinitely. The last section here pins them apart.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createContainsBackfillJob, refreshSearchIndex } from "../../../../src/cli/commands/wakeup/steps.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { searchBox } from "../../../../src/core/search/query/core.js";

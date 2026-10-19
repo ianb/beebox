@@ -6,8 +6,8 @@
 // refactor's zero-behavior-change guarantee is these strings.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not, str } from "@ianbicking/tap-check/check";
 import { assembleChatMessage } from "../../src/input/targets/chat-assemble.js";
 import { createTypedEmission, createVoiceEmission } from "../../src/input/emission.js";
 import { buildSpeechMessage } from "../../src/components/chat/InteractiveChat-helpers.js";

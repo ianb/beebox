@@ -3,7 +3,7 @@
 // `buildCspPolicy` is the single source of truth for the webapp's Content-Security-Policy, shared by the production Fastify hook and the Vite dev server so the two can't drift. Prod is strict; dev relaxes `script-src`/`style-src` for Vite's inline HMR. Every directive's origins are traced to a real browser connection in the plan.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   buildCspPolicy,
   reportingEndpointsHeader,

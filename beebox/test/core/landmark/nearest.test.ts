@@ -6,7 +6,7 @@
 // `src/core/landmark/nearest.ts` and `docs/plans/open-chat-from-card.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   nearestDirFromDirs,
   nearestLandmarkDir,

@@ -4,7 +4,7 @@
 // inputs, and refuses empty/unknown versions or file-bearing follow-up.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readFile } from "node:fs/promises";
 import { quickCaptureDeclarationSchema, quickCaptureReceiptSchema } from "../../src/shared/quick-capture.js";
 

@@ -5,7 +5,7 @@
 // missing target or a relative path that escapes the monorepo stays unresolved.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { resolveExternalRef, type ExternalResolveContext } from "../../src/dev/doc-graph-data/data.js";
 
 const context: ExternalResolveContext = {

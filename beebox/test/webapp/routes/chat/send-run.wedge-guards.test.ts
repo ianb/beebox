@@ -15,7 +15,7 @@
 //    never resolve.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { createFakeChatBackend, type FakeChatBackendRun } from "../../../../src/services/claude-chat/core.js";
 import { makeTmpBox, bodyField } from "../../../helpers/test-helpers.js";

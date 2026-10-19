@@ -24,7 +24,7 @@ import * as path from "node:path";
 // root) and end in a file extension. bin/skill-lint.ts shares the list.
 export const REPO_PATH_DIRS = [
   "beebox", "bin", "docs", "src", "test", "schedules", "workstreams-app", "ios-app", "canvas-loop", "issues",
-  ".claude", "agent-doctest", "deploy", "scan-uploader", "beebox-clerk", "personal-vibe-check", "research", "dev",
+  ".claude", "tap-check", "deploy", "scan-uploader", "beebox-clerk", "personal-vibe-check", "research", "dev",
 ];
 const CANDIDATE_RE = /^[^\s/]+\/\S*\.[A-Za-z]{1,5}$/;
 const PLACEHOLDER_RE = /[*<>{}…]|\.{3}/;

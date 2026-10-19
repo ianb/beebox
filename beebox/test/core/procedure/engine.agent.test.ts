@@ -4,8 +4,8 @@
 // directive passing, and fallback commits for uncommitted agent changes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
 import { startProcedure } from "../../../src/core/procedure/engine/core.js";

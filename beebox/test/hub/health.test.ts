@@ -11,7 +11,7 @@
 // in `hub-router.doctest.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isBoxBroken, hubVerdict } from "../../src/hub/health.js";
 import type { BoxRuntimeStatus, BoxRunStatus } from "../../src/hub/box-status.js";
 

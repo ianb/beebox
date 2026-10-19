@@ -8,7 +8,7 @@ export default [
       // beebox's box-architecture conventions (a colocated .spec per
       // module, one export per file); the Worker package is a small, flat CF
       // bundle whose tests live under test/, so these don't apply here — same
-      // stance the sibling agent-doctest package takes.
+      // stance the sibling tap-check package takes.
       "ddd/require-spec-file": "off",
       "single-export/single-export": "off",
     },

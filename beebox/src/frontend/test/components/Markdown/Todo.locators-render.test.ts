@@ -8,7 +8,7 @@
 // stamp onto the `Tag` as `locator`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Markdoc from "@markdoc/markdoc";
 import type { RenderableTreeNode, Tag } from "@markdoc/markdoc";
 import * as React from "react";

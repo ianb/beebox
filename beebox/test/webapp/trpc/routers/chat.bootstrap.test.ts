@@ -14,9 +14,9 @@
 // report anything different from them.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
-import { any } from "agent-doctest/check";
+import { any } from "@ianbicking/tap-check/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";

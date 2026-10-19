@@ -6,7 +6,7 @@
 // `name: null`). Job cards keep their dotted discovery convention.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseCardFileName, cardTypeFromName } from "../../src/shared/card-name.js";
 
 // ## Nominal names split into name + type

@@ -669,7 +669,7 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
     {
       // disabledRules are rules reviewed and rejected, each with its reason.
       // The main block reaches only root-scoped files, so a package whose
-      // test/ is not in its file patterns (browse, agent-doctest) still had
+      // test/ is not in its file patterns (browse, tap-check) still had
       // them from eslint-config-agent's base: a converted test exported its
       // stub classes for class-export, and a fixture-writing test met
       // detect-non-literal-fs-filename on every fs call (boxholder,
@@ -779,15 +779,15 @@ export function vibeCheck(options?: VibeCheckOptions): Linter.Config[] {
         // Burned down 2026-07-10: 190 sites converted to real narrowing
         // (optional chaining, explicit guards, or a typed assertion helper)
         // across beebox (backend + frontend), beebox-clerk, and
-        // agent-doctest.
+        // tap-check (then named agent-doctest).
         "@typescript-eslint/no-non-null-assertion": "error",
         // Flags conditions/optional-chains/binary-expressions that TypeScript's
         // types prove can never be false (or never true) — usually a stale
         // guard left over after a type narrowed, or a check that was never
         // reachable to begin with. Burned down 2026-07-10: ~200 sites fixed
         // across beebox (backend + frontend), beebox-clerk, and
-        // agent-doctest; 3 sites kept a justified single-line disable comment
-        // (agent-doctest/src/tap-check/text/compare.ts and
+        // tap-check; 3 sites kept a justified single-line disable comment
+        // (tap-check's text compare and
         // beebox frontend useSSRMachine.ts, router.tsx) where the
         // condition is genuinely defensive against a case the type system
         // can't see (e.g. a cast at a parse/runtime boundary).

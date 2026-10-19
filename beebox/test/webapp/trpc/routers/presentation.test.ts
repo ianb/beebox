@@ -4,8 +4,8 @@
 // box selection rules, schema defaults, and independently resolved chrome.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";

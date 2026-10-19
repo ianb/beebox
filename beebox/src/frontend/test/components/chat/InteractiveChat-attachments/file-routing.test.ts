@@ -20,8 +20,8 @@
 // (`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { anything } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { anything } from "@ianbicking/tap-check/check";
 import { INLINE_PHOTO_LIMIT, routeAddedFiles } from "../../../../src/components/chat/InteractiveChat-attachments/file-routing.js";
 
 /** Stand-ins for `File`s — routing reads nothing but the MIME type. */

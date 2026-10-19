@@ -6,7 +6,7 @@
 // disclosure), then the type fields that `splitCardFields` sends to Properties.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { FileData } from "../../../../../src/file-type-registry.js";

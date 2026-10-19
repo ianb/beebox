@@ -6,7 +6,7 @@
 // the test and the command that runs it there.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { rootGuardReport } from "../../lib/tap-root-guard.ts";
 import { resolve } from "node:path";
 

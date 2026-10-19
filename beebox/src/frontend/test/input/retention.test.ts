@@ -7,7 +7,7 @@
 // capacity.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createRetentionStore } from "../../src/input/retention.js";
 
 // ## Keying: retain and get by emission id

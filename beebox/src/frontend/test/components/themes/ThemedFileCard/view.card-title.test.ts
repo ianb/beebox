@@ -6,7 +6,7 @@
 // ## The card type's summary line sits under the title
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 
 // The card page shows the line the card's type writes about itself
 // (`card.get` `detail`) under the title, inside the header; without one, the

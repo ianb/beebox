@@ -10,7 +10,7 @@
 // 4. how the FIFO popup queue + ephemeral indicators fold.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import type { ScreenshotRequest, ScreenshotState } from "../../../../../src/components/chat/everywhere/InteractiveChat/screenshot-request-logic.js";
 import {

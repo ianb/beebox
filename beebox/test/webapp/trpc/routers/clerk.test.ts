@@ -7,8 +7,8 @@
 // error rather than a silent misfile.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture as captureValue, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture as captureValue, str } from "@ianbicking/tap-check/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";

@@ -3,8 +3,8 @@
 // Stubbable time for scenario testing. Resolution: `BBX_TIME` env var → `stubs.yaml` in parent dir → real time.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { getBoxTime, getBoxTimeISO, clearTimeCache } from "../../src/lib/time.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import * as fs from "node:fs";

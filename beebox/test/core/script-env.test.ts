@@ -5,8 +5,8 @@
 // `BBX_SERVER_URL` (plus any caller-specific additions).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { buildScriptEnv, buildToolingScriptEnv, parsePublicUrl, prependBbxBinToPath, registerBoxPublicUrl, unregisterBoxPublicUrl } from "../../src/core/script-env/core.js";
 import { serveEndpointPath, writeServeEndpoint } from "../../src/core/serve-endpoint.js";
 import { spawnProfile } from "../../src/lib/spawn-profile.js";

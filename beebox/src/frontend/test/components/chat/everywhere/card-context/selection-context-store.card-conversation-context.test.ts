@@ -3,7 +3,7 @@
 // Text selections keep their source even after the user moves elsewhere.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createCardContextStore, visibleCardSelectionSink } from "../../../../../src/components/chat/everywhere/card-context/selection-context-store.js";
 
 void test("line 9", async (t) => {

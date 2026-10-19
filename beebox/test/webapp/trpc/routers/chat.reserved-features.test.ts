@@ -6,7 +6,7 @@
 // disk alone has no row and would reset the UI to the registry default (`off`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer, type TestServer } from "../../../helpers/test-route-server.js";

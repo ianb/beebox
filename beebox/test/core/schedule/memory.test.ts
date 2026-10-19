@@ -8,8 +8,8 @@
 // the schedule's machine-local state. See docs/implemented-plans/notifications.md (Track D).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, isoDate } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import { execSync } from "node:child_process";
 import { runTick } from "../../../src/cli/commands/tick.js";

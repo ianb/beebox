@@ -13,7 +13,7 @@
 // standing openers re-arm once the chat beside them has taken the send.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ChatOpeners, clickOpener, latchAfterChatChange, openersDisabled } from "../../../src/components/openers/ChatOpeners.js";

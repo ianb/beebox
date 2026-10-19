@@ -19,7 +19,7 @@
 // browser; the capture overlay is opened there because it mounts only after a click.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import * as React from "react";

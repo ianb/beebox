@@ -5,8 +5,8 @@
 // eviction so it can never grow without limit.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import { AudioCache, cacheKey } from "../../../../src/lib/audio/tts-client/cache.js";
 
 // ## Cache keys

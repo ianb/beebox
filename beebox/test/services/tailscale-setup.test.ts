@@ -10,8 +10,8 @@
 // TTY. See `docs/implemented-plans/tailscale-expose-and-protect.md` Track B chunk 2.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";

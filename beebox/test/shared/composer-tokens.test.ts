@@ -6,7 +6,7 @@
 // every persisted draft, and every iOS build that has not updated still uses it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { attachmentsBlockStart, composerToken, composerTokenIn, normalizeComposerTokens } from "../../src/shared/composer-tokens.js";
 
 // ## The writer emits one form

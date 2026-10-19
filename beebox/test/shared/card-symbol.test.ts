@@ -7,8 +7,8 @@
 // sees both.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { CardSymbol, MAX_GLYPH_GRAPHEMES } from "../../src/shared/card-symbol.js";
 import { isCssColour } from "../../src/shared/css-colour.js";
 import { countGraphemes } from "../../src/shared/graphemes.js";

@@ -7,8 +7,8 @@
 // rejects. See `src/google/oauth-state.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture } from "@ianbicking/tap-check/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";

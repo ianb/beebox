@@ -6,7 +6,7 @@
  * shapes as the actual argument and names the whole-value form.
  *
  * When one field really is the whole contract, keep the check and add
- * `// eslint-disable-next-line agent-doctest/check-whole-value -- <why>`.
+ * `// eslint-disable-next-line tap-check/check-whole-value -- <why>`.
  */
 
 import type { Rule } from "eslint";

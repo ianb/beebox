@@ -6,7 +6,7 @@
 // is deterministic.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { lastChangeLine } from "../../src/lib/last-change-line.js";
 
 const now = Date.parse("2026-10-06T12:00:00Z");

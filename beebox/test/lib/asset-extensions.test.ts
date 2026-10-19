@@ -6,7 +6,7 @@
 // annex. See `src/lib/asset-extensions.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   ASSET_EXTENSIONS,
   assetAnnexAttributes,

@@ -13,8 +13,8 @@
 // (an older client) the file lands flat in `_tmp/` under a timestamped name.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";

@@ -5,7 +5,7 @@
 // places, and unparseable cards. `bbx location get` then names the matched place.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { loadPlaces } from "../../src/core/place-cards.js";
 import { matchPlace } from "../../src/core/geo.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

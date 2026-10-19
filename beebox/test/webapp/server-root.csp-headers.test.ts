@@ -3,8 +3,8 @@
 // The CSP Report-Only header attaches to HTML document responses only, and yields to any route that already set its own CSP (the frozen captured-page route's `sandbox` policy must stay authoritative). The report sink accepts both wire formats and appends to a log. These exercise the wiring directly on a bare Fastify instance.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import Fastify from "fastify";
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

@@ -8,7 +8,7 @@
 // two-product contract.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   QuestionFollowupJobSchema,
   createQuestionFollowupJobTemplate,

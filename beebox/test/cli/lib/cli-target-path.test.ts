@@ -10,7 +10,7 @@
 // real OS-absolute path — resolves against `boxRoot`, not the filesystem root.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { DisplayFormPathArgError,
   ReservedSegmentPathArgError, resolveCliTargetPath } from "../../../src/cli/lib/cli-target-path.js";
 

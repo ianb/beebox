@@ -13,7 +13,7 @@
 // assert the plumbing without spawning the SDK.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createAgent } from "../../../../src/core/agent/invoke/core.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 

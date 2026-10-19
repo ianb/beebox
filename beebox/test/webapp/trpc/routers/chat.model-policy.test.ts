@@ -9,8 +9,8 @@
 // pinning writes box configuration and is owner-gated.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import type { TestServer } from "../../../helpers/test-route-server.js";

@@ -6,7 +6,7 @@
 // the consumer is an agent reading the directory, not another API.
 
 import { test, type Test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

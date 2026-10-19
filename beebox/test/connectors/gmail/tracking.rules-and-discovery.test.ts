@@ -3,7 +3,7 @@
 // Continues [tracking.doctest.md](tracking.doctest.md). This part covers the rules baseline and its bounds, resumable history discovery, the shared tracking lock, and the read-only `gws` passthrough with its bounded capture.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { errorMessage } from "../../../src/shared/error-guards.js";
 import { createFakeGoogleGmail } from "../../../src/services/google-gmail-fake/core.js";

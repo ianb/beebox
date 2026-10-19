@@ -13,7 +13,7 @@
 //   every Codex chat is created already.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { resolveChatEngine, resolveStartEngine, resolveRecordedChatEngine } from "../../../../src/core/chat/session/engine.js";
 import { reserveChatSession, ChatReservationStore } from "../../../../src/core/chat/session/reserve.js";
 import { clearBoxConfigCache } from "../../../../src/core/box/config.js";

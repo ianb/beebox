@@ -6,7 +6,7 @@
 // once the run log holds enough history, its usual (median) time.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { formatStepTime } from "../smoke-lib.js";
 
 /** A step's history as `--report` folds it from the run log. */

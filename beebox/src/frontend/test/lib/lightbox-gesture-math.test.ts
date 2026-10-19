@@ -6,7 +6,7 @@
 // container-centered (a client point minus the wrapper's untransformed center).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   clampAbs,
   clampScale,

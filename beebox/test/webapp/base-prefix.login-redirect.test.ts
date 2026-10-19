@@ -12,7 +12,7 @@
 // requests by the hub.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { validateBasePrefix, readBasePrefix } from "../../src/webapp/base-prefix.js";
 import { makeTestServer } from "../helpers/test-route-server.js";
 import http from "node:http";

@@ -5,7 +5,7 @@
 // processes race.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { makeTmpBox } from "../helpers/test-helpers.js";

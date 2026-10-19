@@ -7,7 +7,7 @@
 // mirrors box-relative destination paths).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { findReservedNestedSegment, reservedNestedSegmentMessage } from "../../src/lib/box-reserved-segments.js";
 
 // ## Nested area names are violations; the first segment never is

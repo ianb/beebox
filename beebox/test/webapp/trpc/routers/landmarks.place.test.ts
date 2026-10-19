@@ -8,7 +8,7 @@
 // that arriving at the place opens.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { utimes } from "node:fs/promises";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";

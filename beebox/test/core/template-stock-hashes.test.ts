@@ -19,7 +19,7 @@
 // that the doctest separator would trip over.)
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createHash } from "node:crypto";
 import { MANAGED_STOCK_TEMPLATES } from "../../src/core/box/templates.js";
 import { TEMPLATE_STOCK_HASHES } from "../../src/core/template-stock-hashes.js";

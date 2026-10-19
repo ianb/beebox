@@ -4,7 +4,7 @@
 // here; the git and filesystem gathering around them needs a real repo.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   parseCountObjects,
   assessAssetRisk,

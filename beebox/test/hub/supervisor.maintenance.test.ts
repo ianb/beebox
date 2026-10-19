@@ -12,8 +12,8 @@
 // production budget is not what this file tests.
 
 import { test } from "tap";
-import { any, capture, isoDate, not } from "agent-doctest/check";
-import "agent-doctest/tap";
+import { any, capture, isoDate, not } from "@ianbicking/tap-check/check";
+import "@ianbicking/tap-check/tap";
 import { statSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";

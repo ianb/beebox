@@ -3,8 +3,8 @@
 // Continues [quick-chat.submit.doctest.md](quick-chat.submit.doctest.md). This part covers thoughts kept when routing cannot run, finishing an interrupted delivery on the next submit, a missing destination, new chats without a session id, discarding a stored thought, and the home screen's recent chats.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, str, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, str, uuid } from "@ianbicking/tap-check/check";
 import { mkdir, writeFile, rm, utimes } from "node:fs/promises";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";

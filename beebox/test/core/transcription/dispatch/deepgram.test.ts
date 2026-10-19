@@ -7,7 +7,7 @@
 // when the raw value is genuinely a `number`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mapDeepgramWords } from "../../../../src/core/transcription/dispatch/deepgram.js";
 
 // ## Deepgram mapping carries confidence through

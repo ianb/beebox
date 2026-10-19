@@ -7,7 +7,7 @@
 // malformed image can never reach the SDK subprocess through a silent cast.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   toSdkUserContent,
   isSupportedImageMediaType,

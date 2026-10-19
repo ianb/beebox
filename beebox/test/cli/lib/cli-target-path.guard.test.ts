@@ -12,7 +12,7 @@
 // `CommandResult` failure shape).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { runCommand } from "../../../src/core/command-runner.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

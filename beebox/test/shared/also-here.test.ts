@@ -7,7 +7,7 @@
 // them.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { alsoHere } from "../../src/shared/also-here.js";
 
 const card = (boxPath: string, mtimeMs: number) => ({ boxPath, mtimeMs });

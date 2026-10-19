@@ -12,7 +12,7 @@
 // cross it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { rewriteLegacyHandoff } from "../../../src/cli/entry/legacy-argv.js";
 
 /** argv as a spawned CLI sees it: [node, script, ...args]. */

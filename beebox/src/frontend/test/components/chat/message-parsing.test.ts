@@ -10,7 +10,7 @@
 // user-typed lookalikes stay.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { stripUserDisplayTags } from "../../../src/components/chat/message-parsing.js";
 
 // A composed attach message: the block and its declared token both vanish; the

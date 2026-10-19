@@ -11,7 +11,7 @@
 // card that changed, and a card that went away.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { loadLandmarkSummaries } from "../../../src/core/landmark/summaries.js";
 import { readLandmarkCard } from "../../../src/core/landmark/card-cache.js";

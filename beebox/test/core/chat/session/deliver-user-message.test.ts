@@ -5,7 +5,7 @@
 // fixture completed its assertions but timed out waiting for Node to exit.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

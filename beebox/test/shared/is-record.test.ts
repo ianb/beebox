@@ -5,7 +5,7 @@
 // See `src/shared/is-record.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isRecord } from "../../src/shared/is-record.js";
 
 // A plain object narrows to a record, so string-key access needs no cast:

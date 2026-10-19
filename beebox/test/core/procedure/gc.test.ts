@@ -8,7 +8,7 @@
 // and anything still running.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { gcProcedureRuns } from "../../../src/core/procedure/gc.js";
 import { MAX_RUNS_PER_PROCEDURE } from "../../../src/core/procedure/run-expiry.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

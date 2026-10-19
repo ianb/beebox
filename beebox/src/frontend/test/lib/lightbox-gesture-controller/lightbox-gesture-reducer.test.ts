@@ -7,7 +7,7 @@
 // every transition deterministic instead of device-only.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   initialGestureState,
   reduceGesture,

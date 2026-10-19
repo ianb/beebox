@@ -14,7 +14,7 @@
 // home, which has never seen the husk's thread, so the index lacks it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../../helpers/trpc-context.js";

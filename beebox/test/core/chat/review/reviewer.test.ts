@@ -12,7 +12,7 @@
 // options each pass hands its agent, then shows the SDK options they become.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createSdkChatReviewer } from "../../../../src/core/chat/review/reviewer.js";
 import { buildQueryOptions } from "../../../../src/core/agent/invoke/run.js";
 import { createFakeAgent, type FakeAgent } from "../../fake-agent.js";

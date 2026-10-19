@@ -7,7 +7,7 @@
 // returns {@link ORIENTATION_NORMAL} (1) for anything with no orientation to honor.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   readJpegOrientation,
   isOrientationNormalized,

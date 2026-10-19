@@ -12,8 +12,8 @@
 // blocks stay to single calls + assertions, per `.claude/rules/doctest.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, instanceOf } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";

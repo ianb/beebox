@@ -6,7 +6,7 @@
 // text does not.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { twemojiCodePoints, twemojiSvgPath } from "../../src/lib/twemoji.js";
 import { existsSync } from "node:fs";
 import { basename } from "node:path";

@@ -9,7 +9,7 @@
 // cursor or holds it. See docs/implemented-plans/notifications.md (Track D).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execSync } from "node:child_process";
 import { runTick } from "../../../src/cli/commands/tick.js";
 import { runOnWakeupScripts } from "../../../src/cli/tick-utils.js";

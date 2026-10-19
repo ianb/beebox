@@ -7,8 +7,8 @@
 // — `open` (still capturing) and `delivered` (done, cleaned up) sessions are excluded.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

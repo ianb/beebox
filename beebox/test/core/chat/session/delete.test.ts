@@ -5,7 +5,7 @@
 // injected here so the fixture never touches the developer's real Claude data.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { access, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { deleteChatSession } from "../../../../src/core/chat/session/delete/apply/core.js";

@@ -3,7 +3,7 @@
 // Converts arbitrary text to a filesystem-safe filename. Strips non-alphanumeric characters (keeping spaces and hyphens), replaces spaces with underscores, and limits to 50 characters.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { safeFilename } from "../../src/lib/safe-filename.js";
 
 // Basic usage — spaces become underscores, punctuation stripped:

@@ -11,7 +11,7 @@
 // streams in.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mount } from "../../../../helpers/dom-harness.js";
 import { createElement as h, useState, type ComponentProps } from "react";
 import type { SessionEntry } from "../../../../../src/api-chat.js";

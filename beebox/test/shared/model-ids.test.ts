@@ -7,7 +7,7 @@
 // provides the final boundary for raw procedure-card IDs.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { MODEL_ID, normalizeModelId } from "../../src/shared/model-ids.js";
 
 // ## Retired IDs translate forward

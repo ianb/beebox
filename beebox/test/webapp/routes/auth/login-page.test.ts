@@ -14,8 +14,8 @@
 // a same-origin path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { sanitizeReturnTo } from "../../../../src/webapp/routes/auth/login-page.js";
 import { escapeHtml } from "../../../../src/lib/escape-html.js";

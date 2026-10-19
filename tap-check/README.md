@@ -1,4 +1,4 @@
-# agent-doctest
+# tap-check
 
 The `t.check` plugin for [tap](https://node-tap.org/), and the lint rules that keep `t.check` tests strong.
 
@@ -10,7 +10,7 @@ The package began as a runner for executable markdown (`.doctest.md`). That form
 
 ```ts
 import { test } from "tap";
-import { any } from "agent-doctest/check";
+import { any } from "@ianbicking/tap-check/check";
 
 void test("a note has an id and a title", async (t) => {
   t.check(await createNote("Draft"), { id: any(String), title: "Draft" });
@@ -24,7 +24,7 @@ The full guide, with patterns and failure output, is [testing with t.check](../b
 ## Install
 
 ```bash
-npm install --save-dev agent-doctest tap tsx
+npm install --save-dev @ianbicking/tap-check tap tsx
 ```
 
 Create a `.taprc` in your project root:
@@ -34,7 +34,7 @@ plugin:
   - "!@tapjs/typescript"
 node-arg:
   - --import=tsx
-  - --import=agent-doctest/tap
+  - --import=@ianbicking/tap-check/tap
 include:
   - test/**/*.test.ts
 ```
@@ -45,25 +45,25 @@ Run with `npx tap`.
 
 | Import | Contents |
 |---|---|
-| `agent-doctest/tap` | Adds `t.check`, `t.checkText`, and `t.checkThrows` to tap (use in `.taprc`) |
-| `agent-doctest/check` | Patterns (`any`, `uuid`, `isoDate`, `oneOf`, `str`, `optional`, `unordered`, `containing`, `capture`, `others`, `anything`, `not`, `is`, `instanceOf`), `eventually`, `runCommand`, and `printed` |
-| `agent-doctest/eslint` | ESLint plugin: `check-whole-value`, `no-voided-check`, `no-tap-assert` |
+| `@ianbicking/tap-check/tap` | Adds `t.check`, `t.checkText`, and `t.checkThrows` to tap (use in `.taprc`) |
+| `@ianbicking/tap-check/check` | Patterns (`any`, `uuid`, `isoDate`, `oneOf`, `str`, `optional`, `unordered`, `containing`, `capture`, `others`, `anything`, `not`, `is`, `instanceOf`), `eventually`, `runCommand`, and `printed` |
+| `@ianbicking/tap-check/eslint` | ESLint plugin: `check-whole-value`, `no-voided-check`, `no-tap-assert` |
 
 ## Lint rules
 
 Enable the rules on test files:
 
 ```ts
-import agentDoctest from "agent-doctest/eslint";
+import tapCheck from "@ianbicking/tap-check/eslint";
 
 export default [
   {
     files: ["test/**/*.ts"],
-    plugins: { "agent-doctest": agentDoctest },
+    plugins: { "tap-check": tapCheck },
     rules: {
-      "agent-doctest/check-whole-value": "error",
-      "agent-doctest/no-voided-check": "error",
-      "agent-doctest/no-tap-assert": "error",
+      "tap-check/check-whole-value": "error",
+      "tap-check/no-voided-check": "error",
+      "tap-check/no-tap-assert": "error",
     },
   },
 ];

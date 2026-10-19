@@ -4,7 +4,7 @@
 // width and 70vh maximum height. The scroll controller compensates load-time reflow.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { LightboxProvider } from "../../src/components/LightboxProvider.js";

@@ -3,7 +3,7 @@
 // `parseAllSpeechTags()` extracts `<speech>` tags from assistant responses for TTS playback. Each segment has text content and optional voice/emotion/instruction attributes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseAllSpeechTags, hasAssistantSpeech } from "../../../../src/lib/audio/speech-parsing/parse.js";
 import { splitSpeechParts } from "../../../../src/lib/audio/speech-parsing/parse.js";
 

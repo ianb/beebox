@@ -5,7 +5,7 @@
 // recoverable, so the broken link can be rewritten. Pure logic (fs/git injected).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { repairFrontmatterPaths, repairLinks, duplicateBasenames, buildBasenameLookup } from "../../../src/dev/doc-check/link-repair.js";
 
 // A tiny fake tree: bugs/foo.md has moved to closed/bugs/foo.md.

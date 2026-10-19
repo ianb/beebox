@@ -6,7 +6,7 @@
 // callers' formats still resolve from the single map.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mimetypeToExtension } from "../../src/lib/mimetype.js";
 
 // ## Formerly CLI-only formats (image/heic, video/*)

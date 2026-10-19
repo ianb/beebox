@@ -12,8 +12,8 @@
 // transcript's first user message, then the session-id prefix).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, unordered } from "@ianbicking/tap-check/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";

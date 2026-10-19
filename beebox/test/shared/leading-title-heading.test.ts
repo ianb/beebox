@@ -5,7 +5,7 @@
 // and the card view can hide it. The match ignores case and surrounding spaces.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { blankLeadingTitleHeading, leadingTitleHeading } from "../../src/shared/leading-title-heading.js";
 
 void test("line 11", async (t) => {

@@ -18,8 +18,8 @@
 // a real 2xx.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, str } from "@ianbicking/tap-check/check";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { TRPCError } from "@trpc/server";

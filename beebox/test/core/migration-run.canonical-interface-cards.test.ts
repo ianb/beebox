@@ -8,8 +8,8 @@
 // manifest while that cohort's cards are missing or invalid.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { containing, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { containing, isoDate } from "@ianbicking/tap-check/check";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { rm } from "node:fs/promises";
 import { existsSync } from "node:fs";

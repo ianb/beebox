@@ -7,7 +7,7 @@
 // and dropped from the chat's history.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { Readable } from "node:stream";
 import { jsonlLines } from "../../src/lib/jsonl-lines.js";
 

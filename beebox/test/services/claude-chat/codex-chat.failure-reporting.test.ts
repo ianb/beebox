@@ -7,8 +7,8 @@
 // cause.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { codexFailureEvent } from "../../../src/services/claude-chat/codex-chat.js";
 import { warnErroredTurn } from "../../../src/core/chat/session/messages.js";
 import type { ChatMessageResult } from "../../../src/core/chat/message-types.js";

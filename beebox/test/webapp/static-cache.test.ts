@@ -10,7 +10,7 @@
 // wiring on a bare Fastify instance over a fake `dist/` tree.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";

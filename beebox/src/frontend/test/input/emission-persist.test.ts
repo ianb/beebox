@@ -5,7 +5,7 @@
 // decision). See docs/plans/input-extraction.md chunk 4.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   emissionKey,
   serializePersistedEmission,

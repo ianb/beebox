@@ -8,7 +8,7 @@
 // `wt_paths_init` sets for real callers.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, writeFile, rm, readFile, lstat, readlink } from "node:fs/promises";
 import { tmpdir } from "node:os";

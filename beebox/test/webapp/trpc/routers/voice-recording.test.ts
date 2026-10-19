@@ -8,7 +8,7 @@
 // write, and both mutations are idempotent by `(recordingId, emissionId)`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { TRPCError } from "@trpc/server";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import type { TrpcContext, TrpcUser } from "../../../../src/webapp/trpc/context.js";

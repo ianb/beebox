@@ -15,8 +15,8 @@
 // on both.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import Sharp from "sharp";
 import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";

@@ -5,7 +5,7 @@
 // backend selection rules.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { selectScanVisionBackend } from "../../src/services/scan-vision.js";
 
 // ## Backend selection

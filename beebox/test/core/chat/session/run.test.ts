@@ -4,8 +4,8 @@
 // reset, and history loading. These tests don't spawn a real Claude process.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf } from "@ianbicking/tap-check/check";
 import { ChatSession, buildContentBlocks } from "../../../../src/core/chat/session/run/core.js";
 import { chatHistorySlice } from "../../../../src/core/chat/session/load-history.js";
 import { getSessionLogPath } from "../../../../src/core/chat/session/transcript-paths.js";

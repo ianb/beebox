@@ -8,7 +8,7 @@
 // these links at commit time.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { findSiteReferenceLinkProblems, referencePublishPath } from "../../../src/dev/doc-check/site-reference-links.js";
 
 /** The generated set for these examples: two card types and one other reference page. */

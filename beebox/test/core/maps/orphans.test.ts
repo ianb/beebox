@@ -7,7 +7,7 @@
 // the state entry.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { findOrphanMaps, pruneOrphanMaps } from "../../../src/core/maps/orphans.js";
 import { loadMapState, saveMapState } from "../../../src/core/maps/state.js";
 import { getHead } from "../../../src/lib/git/core/operations.js";

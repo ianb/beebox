@@ -7,8 +7,8 @@
 // no card is left pending — the signal the query layer gates hybrid on.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { search, getByID } from "@orama/orama";
 import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
 import { loadManifest } from "../../../src/core/search/refresh/manifest.js";

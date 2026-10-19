@@ -7,7 +7,7 @@
 // or a recording it cannot place, names the memo, writes nothing, and exits 1.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFileSync } from "node:child_process";
 import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
 import { planRetireMemo, type PlannedWrite } from "../../../src/scripts/migrate/retire-memo/plan.js";

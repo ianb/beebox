@@ -5,7 +5,7 @@
 // scroll effect to target. An explicit filter remains authoritative.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { issuePassesStatusFilter, missingIssueRelPath } from "../../../src/frontend/components/IssuesPane/panel.js";
 import type { Issue } from "../../../src/shared/documents.js";
 

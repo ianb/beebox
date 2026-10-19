@@ -7,7 +7,7 @@
 // refusal for an event that doesn't apply from the current state.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { nextVoiceState } from "../../../../src/core/voice-recording/voice-staging/state.js";
 import type { VoiceEvent } from "../../../../src/core/voice-recording/voice-staging/state.js";
 import type { StagingVoice } from "../../../../src/core/capture/staging-schema.js";

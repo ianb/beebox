@@ -5,7 +5,7 @@
 // deleting it stops tracking without changing Gmail.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

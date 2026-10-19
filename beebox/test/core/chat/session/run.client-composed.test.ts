@@ -12,7 +12,7 @@
 // query, so they mark the whole query.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import assert from "node:assert/strict";
 import { combineQueuedInputs } from "../../../../src/core/chat/session/state.js";

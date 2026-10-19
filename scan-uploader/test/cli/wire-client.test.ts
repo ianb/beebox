@@ -7,7 +7,7 @@
 // retrying through a 429 before succeeding.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { checkHashes, parseContractVersion, putFile } from "../../src/cli/wire-client.js";
 import { startFakeScanServer, type FakeScanServer } from "./fake-scan-server.js";
 import { writeFile } from "node:fs/promises";

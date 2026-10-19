@@ -11,7 +11,7 @@
 // session, and the applied-span id on the husk turns even that into a no-op.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import {
   MAX_REVIEW_ATTEMPTS,

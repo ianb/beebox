@@ -6,7 +6,7 @@
 // `test/lib/box-root-check.doctest.md`; this covers only the formatting.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   checkPresentationErrors,
   checkReservedSegmentErrors,

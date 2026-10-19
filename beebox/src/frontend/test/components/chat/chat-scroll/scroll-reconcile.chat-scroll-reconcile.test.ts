@@ -11,7 +11,7 @@
 // `/dev/chat-scroll`, but the *decision* is deterministic and checked here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { decideReconcile } from "../../../../src/components/chat/chat-scroll/scroll-reconcile.js";
 import { bottomScrollTop } from "../../../../src/components/chat/chat-scroll/bottom.js";
 

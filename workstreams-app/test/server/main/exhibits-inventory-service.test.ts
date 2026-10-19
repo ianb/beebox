@@ -7,8 +7,8 @@
 // and manifest handling without starting a dev server.
 
 import { test, type Test } from "tap";
-import "agent-doctest/tap";
-import { any, is, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, is, not } from "@ianbicking/tap-check/check";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

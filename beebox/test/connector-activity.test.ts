@@ -5,8 +5,8 @@
 // connector that stopped producing apart from a quiet week.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "./helpers/test-helpers.js";
 import {
   syncConnector,

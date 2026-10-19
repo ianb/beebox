@@ -8,8 +8,8 @@
 // elsewhere by typecheck + manual verification.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not, is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not, is } from "@ianbicking/tap-check/check";
 import { createEmissionStore } from "../../src/input/emission-store.js";
 import { draftAttachments } from "../../src/input/emission.js";
 

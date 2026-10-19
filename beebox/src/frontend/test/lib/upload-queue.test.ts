@@ -9,7 +9,7 @@
 // each gets essentially the whole pipe and stays done.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { UploadQueue } from "../../src/lib/upload-queue.js";
 
 /** A task that resolves only when told to, recording its start order. */

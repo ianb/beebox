@@ -3,7 +3,7 @@
 // Continues [run.doctest.md](run.doctest.md). This part covers credentials dropped from generated text, repair after a crash between the husk and journal writes, reviewer failures, the per-run cap, transcripts that vanish or come back to life mid-run, and the untouched husk body.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appendFile, mkdir, readFile, rm, utimes, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";

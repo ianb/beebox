@@ -9,7 +9,7 @@
 // chooses between a `<span>` and a `<p>`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Stack } from "../../../src/components/ui/Stack.js";

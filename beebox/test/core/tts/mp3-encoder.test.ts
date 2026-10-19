@@ -6,7 +6,7 @@
 // the server (`docs/plans/tts-streamed-playback.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { pcmToMp3 } from "../../../src/core/tts/mp3-encoder.js";
 
 /** `seconds` of a 440 Hz tone as 16-bit little-endian mono 24 kHz PCM. */

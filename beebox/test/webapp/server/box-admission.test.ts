@@ -1,7 +1,7 @@
 // # HTTP admission closes before waiting for accepted preparation
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { router, publicProcedure } from "../../../src/webapp/trpc/procedures.js";
 import { registerBoxAdmission, boxRequestsAreIdle } from "../../../src/webapp/server/box-admission.js";

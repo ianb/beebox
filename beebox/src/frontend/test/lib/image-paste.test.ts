@@ -11,7 +11,7 @@
 // have. So the format is named, and so are the ones that work.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { unsupportedImageMessage } from "../../src/lib/image-paste.js";
 
 const file = (name: string, type: string) => new File([], name, { type });

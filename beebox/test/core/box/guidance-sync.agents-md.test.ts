@@ -7,7 +7,7 @@
 // `docs/implemented-plans/box-agents-md.md`, Track A.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { syncBoxGuidance } from "../../../src/core/box/guidance-sync/core.js";

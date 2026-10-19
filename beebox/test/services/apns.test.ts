@@ -5,7 +5,7 @@
 // `@parse/node-apn`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { classifyApnsFailure, ApnsSendError } from "../../src/services/apns.js";
 
 /** One library failure, classified. */

@@ -5,7 +5,7 @@
 // name to the signed-in user's email.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isOtherChatUser } from "../../../../src/components/chat/user-message/chat-message-sender.js";
 
 void test("line 11", async (t) => {

@@ -9,8 +9,8 @@
 // Design: `docs/plans/box-docs-in-package.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing, not } from "@ianbicking/tap-check/check";
 import { mkdtemp, mkdir, readFile, readdir, chmod, rm, writeFile } from "node:fs/promises";
 import { writeBoxCardDocs } from "../../../src/core/docs-gen/box-docs.js";
 import { cardSchema } from "../../../src/exports/cards.js";

@@ -7,7 +7,7 @@
 // mutation cannot disagree about whose device it is.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mayManageMobileDevice } from "../../../src/core/mobile/pairing.js";
 
 const devices = {

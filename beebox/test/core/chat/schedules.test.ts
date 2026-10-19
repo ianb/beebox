@@ -3,9 +3,9 @@
 // `parseScheduleTags` and `parseCancelScheduleTags` extract schedule instructions from assistant response text.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseScheduleTags, parseCancelScheduleTags, ChatScheduleManager, loadChatSchedules } from "../../../src/core/chat/schedules/core.js";
-import { any, isoDate, str } from "agent-doctest/check";
+import { any, isoDate, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";

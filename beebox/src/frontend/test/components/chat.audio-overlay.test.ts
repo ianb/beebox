@@ -9,7 +9,7 @@
 // machinery.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { resolveEntryMessageId } from "../../src/components/chat/message-parsing.js";
 import { createAudioOverlayStore } from "../../src/components/chat/audio-overlay-store.js";
 import { matchesOwnSession } from "../../src/components/chat/everywhere/InteractiveChat/ws.js";

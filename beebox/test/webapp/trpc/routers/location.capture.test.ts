@@ -5,7 +5,7 @@
 // is rejected by Zod and nothing is written.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { loadLocation } from "../../../../src/core/location-store.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

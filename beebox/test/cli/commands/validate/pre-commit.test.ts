@@ -9,7 +9,7 @@
 // stderr and never does.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execSync } from "node:child_process";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { runPreCommitChecks } from "../../../../src/cli/commands/validate/pre-commit.js";

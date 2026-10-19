@@ -3,8 +3,8 @@
 // `createOrAppendIntakeJob` manages intake job files in a box. It creates new job cards or appends items to the pending one with the same batching key, `(connector, priority)`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not, str, unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not, str, unordered } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { createOrAppendIntakeJob } from "../../src/job-cards/intake-utils.js";

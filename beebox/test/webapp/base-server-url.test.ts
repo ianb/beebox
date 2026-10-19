@@ -7,7 +7,7 @@
 // OAuth with a redirect_uri mismatch (the double slash).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { baseServerUrl } from "../../src/webapp/base-server-url.js";
 
 // ## A slug deployment strips the slug, no trailing slash

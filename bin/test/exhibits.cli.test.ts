@@ -10,7 +10,7 @@
 // store or the developer's worktrees.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, writeFile, readFile, rm, lstat } from "node:fs/promises";
 import { tmpdir } from "node:os";

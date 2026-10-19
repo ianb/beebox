@@ -4,8 +4,8 @@
 // processing, lock management, and cycle behavior.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import {
   runReactor,
 } from "../../../src/core/reactor/engine/core.js";

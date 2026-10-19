@@ -9,7 +9,7 @@
 // own GC) and are never touched.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { cleanupOldTmpUploads } from "../../src/core/housekeeping.js";

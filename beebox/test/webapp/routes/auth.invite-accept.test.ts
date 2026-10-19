@@ -5,8 +5,8 @@
 // cookie, and consumes the token exactly once.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, not, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, not, str } from "@ianbicking/tap-check/check";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

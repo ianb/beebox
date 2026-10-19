@@ -7,8 +7,8 @@
 // target fails here before it fails in a real box.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing } from "@ianbicking/tap-check/check";
 import { cardSchema, body, splitCardContent } from "beebox/cards";
 import { z, parseYaml, stringifyYaml } from "beebox/schema";
 import * as server from "beebox/server";

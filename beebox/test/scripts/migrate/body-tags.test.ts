@@ -9,8 +9,8 @@
 // `bbx engine migrate` records no manifest entry.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing } from "@ianbicking/tap-check/check";
 import { createHash } from "node:crypto";
 import { planBodyTagRewrites } from "../../../src/scripts/migrate/body-tags/plan.js";
 import { runBodyTags } from "../../../src/scripts/migrate/body-tags/run.js";

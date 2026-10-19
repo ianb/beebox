@@ -10,7 +10,7 @@
 // read reports it missing).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { configure } from "../../src/cli/configure.js";

@@ -8,8 +8,8 @@
 // file named by `BBX_CHAT_SESSION_ID_FILE`, and `resolveChatSessionId` reads it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import {
   BBX_CHAT_SESSION_ID_ENV,
   BBX_CHAT_SESSION_ID_FILE_ENV,

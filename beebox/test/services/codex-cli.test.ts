@@ -7,7 +7,7 @@
 // an honest remedy.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   classifyCodexAuthStatus,
   createCodexCliService,

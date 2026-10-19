@@ -5,7 +5,7 @@
 // so the card presents the current candidate and revision for a retry.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { handlePublicationMutationError } from "../../../src/components/publications/PublicationApprovalView.js";
 
 const notices: Array<{ message: string; needsSignIn: boolean }> = [];

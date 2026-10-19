@@ -6,11 +6,11 @@
 // when every view renders.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile, symlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { createRequire } from "node:module";
-import { any, type Expected, str, unordered } from "agent-doctest/check";
+import { any, type Expected, str, unordered } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import { checkViews, type ViewCheckResult } from "../../../../src/cli/commands/view/command.js";
 import { PACKAGE_ROOT } from "../../../../src/lib/package-root.js";

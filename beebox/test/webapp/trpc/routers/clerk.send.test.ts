@@ -10,8 +10,8 @@
 // scripted chat runtime that claims message ids the way `send-dedup.ts` does.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, uuid } from "@ianbicking/tap-check/check";
 import { readFile, readdir, rm, unlink } from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";

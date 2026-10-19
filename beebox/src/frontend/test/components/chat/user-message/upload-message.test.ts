@@ -12,7 +12,7 @@
 // rides *inside* the body, so their words were wrapped in angle brackets too.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { parseUploadWrapper } from "../../../../src/components/chat/user-message/upload-message.js";
 

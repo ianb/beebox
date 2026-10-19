@@ -7,7 +7,7 @@
 // in `createContext` (`server-box-scope.ts`) so these gates are pure checks.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { TRPCError } from "@trpc/server";
 import type { TrpcContext } from "../../../src/webapp/trpc/context.js";
 import { router, publicProcedure, authedProcedure, ownerProcedure, authenticatedOwnerProcedure } from "../../../src/webapp/trpc/procedures.js";

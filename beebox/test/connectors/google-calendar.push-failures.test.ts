@@ -3,7 +3,7 @@
 // Continues [google-calendar.doctest.md](google-calendar.doctest.md). This part covers a rejected `X-BBX-DELETE`, failed and retried patches, a full resync after a 410 removing vanished events, and a local edit pushed when Google returns nothing.
 
 import { after, test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";

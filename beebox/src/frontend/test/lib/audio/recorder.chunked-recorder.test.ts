@@ -7,7 +7,7 @@
 // path (Done / cancel / mode exit) proceeds. A bare `stop()` would drop that tail.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 
 // Minimal fake MediaRecorder: records the timeslice passed to start(), and emits
 // a final `dataavailable` asynchronously on stop() (as the real API does).

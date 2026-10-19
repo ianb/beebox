@@ -6,7 +6,7 @@
 // both the snapshot attribute and the queued-send union.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   unionActivityKinds,
   renderActivityChildren,

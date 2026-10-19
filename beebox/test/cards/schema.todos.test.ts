@@ -8,7 +8,7 @@
 // source of truth, not two.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { cardSchema, body, type CardSchema } from "../../src/exports/cards.js";
 import { parseCardText, CardIOError } from "../../src/core/card-io.js";

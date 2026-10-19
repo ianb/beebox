@@ -13,7 +13,7 @@
 // someone looks at it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { encodeSessionMediaRef, parseSessionMediaRef } from "../../../src/shared/session-media.js";
 import { findTranscriptLineByUuid } from "../../../src/cli/lib/session-line-scan.js";
 import { extractSessionMedia } from "../../../src/cli/lib/session-media-extract.js";

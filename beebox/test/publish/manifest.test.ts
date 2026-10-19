@@ -5,8 +5,8 @@
 // id is the capability token, so its shape and entropy are part of the contract.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { generatePubId, pubIdSchema } from "../../src/publish/manifest.js";
 
 // ## `generatePubId` produces a value the schema accepts

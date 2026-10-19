@@ -4,7 +4,7 @@
 // so the browser and server diagnostics use the same precedence and vocabulary.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   parsePresentationConfig,
   resolveCardTheme,

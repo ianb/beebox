@@ -6,7 +6,7 @@
 // and audible to them.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { deliverStyle } from "../../../src/core/tts/style.js";
 
 // ## Both backends have a field for it

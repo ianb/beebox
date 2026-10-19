@@ -7,7 +7,7 @@
 // environment, registeredAt }`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";

@@ -53,5 +53,5 @@ gone (`beebox/docs/implemented-plans/retire-doctest.md`, 2026-10-18): tests
 are `.test.ts` files that ESLint lints and `tsc` typechecks. The test-file
 deslop rules (`no-poor-substring-tests`, `no-repeated-expect-call`,
 `no-call-only-assertions`) now apply to every test; part 1's run covers
-them. `agent-doctest/check-whole-value` already rejects the substring and
+them. `tap-check/check-whole-value` already rejects the substring and
 boolean forms inside `t.check`.

@@ -11,7 +11,7 @@
 // collapses a non-verdict into a verdict.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as path from "node:path";
 import * as os from "node:os";
 import * as fs from "node:fs/promises";

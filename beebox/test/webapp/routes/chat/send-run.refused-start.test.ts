@@ -17,8 +17,8 @@
 // path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { uuid } from "@ianbicking/tap-check/check";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer } from "../../../helpers/test-route-server.js";

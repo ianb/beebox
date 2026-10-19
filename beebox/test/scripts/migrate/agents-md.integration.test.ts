@@ -15,7 +15,7 @@
 // with a map include stub and its mirror.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import * as fs from "node:fs/promises";

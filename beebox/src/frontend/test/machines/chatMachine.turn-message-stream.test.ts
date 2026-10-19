@@ -14,7 +14,7 @@
 // "intermediate text/embeds vanish, only the last block renders" bug.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { handleTurnMessage } from "../../src/machines/chatMachine/chat-actors.js";
 import type { ChatMessage } from "../../../core/chat/session/messages.js";
 import type { ChatEvent } from "../../src/machines/chat-types.js";

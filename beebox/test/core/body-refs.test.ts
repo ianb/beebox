@@ -7,7 +7,7 @@
 // attribute is literally named `ref`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { extractBodyLinks, extractBodyRefs, extractReferenceDefinitions } from "../../src/core/body-refs.js";
 import { rewriteReferrerRefs } from "../../src/core/rewrite-card-refs/core.js";
 

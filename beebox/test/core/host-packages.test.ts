@@ -8,8 +8,8 @@
 // Here the host is a fake, so these cases run anywhere.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, str } from "@ianbicking/tap-check/check";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import {

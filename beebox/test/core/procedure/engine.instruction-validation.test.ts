@@ -6,8 +6,8 @@
 // the scripted verdict for the validate-phase judge.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
 import type { Result } from "../../../src/shared/result.js";

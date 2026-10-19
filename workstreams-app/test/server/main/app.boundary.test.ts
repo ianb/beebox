@@ -5,7 +5,7 @@
 // command execution so tests never inspect real worktrees.
 
 import { test, type Test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   createWorkstreamsCommandService,
   type CommandRequest,

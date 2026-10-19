@@ -3,8 +3,8 @@
 // The views API serves agent-generated React components. It lists available views, serves compiled JS modules, and returns cards matching a view's dependency globs.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { join, relative } from "node:path";
 import { makeTestServer } from "../../helpers/test-route-server.js";
 

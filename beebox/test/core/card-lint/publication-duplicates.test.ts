@@ -4,7 +4,7 @@
 // one site twice, so `lintCardsDispatch` reports every card in the pair.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { lintCardsDispatch } from "../../../src/core/card-lint/core/lint-cards.js";
 import { PublicationSchema } from "../../../src/schemas/publication.js";

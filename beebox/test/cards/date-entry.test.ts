@@ -6,7 +6,7 @@
 // Ontology in `docs/implemented-plans/standard-card-fields.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { DateEntrySchema, cardSchema } from "../../src/exports/cards.js";
 import { parseCardText } from "../../src/core/card-io.js";

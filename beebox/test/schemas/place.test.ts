@@ -5,7 +5,7 @@
 // mark`); the `validate` hook flags a half-set coordinate.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { PlaceSchema, createPlaceTemplate } from "../../src/schemas/place.js";
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas.js";

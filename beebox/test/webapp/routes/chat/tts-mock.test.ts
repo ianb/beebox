@@ -5,8 +5,8 @@
 // before any provider lookup or paid call.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, eventually } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, eventually } from "@ianbicking/tap-check/check";
 import { makeTestServer, type TestServer } from "../../../helpers/test-route-server.js";
 import { createFakeTts, createTtsService, type TtsService } from "../../../../src/services/tts.js";
 import { getOrCreateAgentToken } from "../../../../src/core/agent/token.js";

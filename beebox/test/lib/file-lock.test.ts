@@ -8,8 +8,8 @@
 // for request-scoped locks — never by an unconditional unlink-by-path.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, anything, capture, instanceOf, isoDate, str, unordered } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, anything, capture, instanceOf, isoDate, str, unordered } from "@ianbicking/tap-check/check";
 import {
   acquireLock,
   releaseLock,

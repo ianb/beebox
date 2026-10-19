@@ -1,7 +1,7 @@
 // # A due chat timer remains pending while maintenance owns admission
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ChatScheduleManager, loadChatSchedules } from "../../../src/core/chat/schedules/core.js";
 import { closeBoxMaintenance } from "../../../src/lib/box-maintenance/admission.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

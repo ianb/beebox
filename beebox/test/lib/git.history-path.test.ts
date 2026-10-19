@@ -5,7 +5,7 @@
 // menu and the useful missing-card state.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { rename, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { getLogPaginated } from "../../src/lib/git/core/operations.js";

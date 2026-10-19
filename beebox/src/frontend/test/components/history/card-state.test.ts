@@ -1,8 +1,8 @@
 // # History card state
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { anything } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { anything } from "@ianbicking/tap-check/check";
 import { legacyHistoryState, parseHistoryCardState, normalizeHistoryViewRouteTarget } from "../../../src/components/history/card-state.js";
 import { historyLookupFailureSearch, historyViewRedirectSearch } from "../../../src/components/history/card-state.js";
 import { parseViewUrl } from "../../../src/lib/view-url.js";

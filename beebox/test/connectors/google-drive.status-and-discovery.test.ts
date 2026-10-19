@@ -3,7 +3,7 @@
 // Continues [google-drive.doctest.md](google-drive.doctest.md). This part covers Drive status sharing the live-card scan, Drive IDs parsed from YAML, duplicate `drive.id` handling, and folder discovery refusals.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
 import { rm } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/test-helpers.js";

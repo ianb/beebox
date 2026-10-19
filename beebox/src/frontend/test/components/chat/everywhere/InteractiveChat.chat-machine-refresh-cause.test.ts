@@ -12,7 +12,7 @@
 // Agent working" bug.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createActor, fromPromise, fromCallback } from "xstate";
 import { chatMachine } from "../../../../src/machines/chatMachine/machine.js";
 import type { ChatController } from "../../../../src/components/chat/conversation/controller-pool/pool.js";

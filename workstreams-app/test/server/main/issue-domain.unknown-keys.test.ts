@@ -9,7 +9,7 @@
 // So the parser now reports what it did not recognise, and callers decide how loudly.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseIssueFile } from "../../../src/server/main/issue-domain.js";
 
 const parse = (frontmatter: string) => parseIssueFile({

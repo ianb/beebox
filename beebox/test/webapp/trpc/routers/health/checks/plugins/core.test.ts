@@ -7,7 +7,7 @@
 // no stub are both visible (`docs/plugins.md`, "Health").
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { pluginHealthChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/core.js";
 import { withDocId } from "../../../../../../../src/core/docs-gen/shared.js";
 import type { HealthCheck, PluginDefinition } from "../../../../../../../src/cards/plugin-definition.js";

@@ -4,7 +4,7 @@
 // reads. A dotted directory, extensionless file, and missing path stay distinct.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTestServer } from "../../../../helpers/test-route-server.js";

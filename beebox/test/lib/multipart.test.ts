@@ -7,8 +7,8 @@
 // request's `Content-Type` header.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { buildMultipartForm } from "../../src/lib/multipart.js";
 
 // ## File part + field part, in order

@@ -3,8 +3,8 @@
 // The views compiler takes agent-written `.tsx` files and compiles them to ES modules using esbuild. It extracts metadata from named exports and caches compiled output by mtime.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, not } from "@ianbicking/tap-check/check";
 import { mkdir, writeFile, utimes } from "node:fs/promises";
 import { join } from "node:path";
 import { mkdtemp } from "node:fs/promises";

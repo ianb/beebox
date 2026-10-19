@@ -6,7 +6,7 @@
  *
  * Resolves @tapjs/core from the consuming project's node_modules
  * (via process.cwd()) to avoid the dual-package singleton problem
- * when agent-doctest is linked via file: dependency.
+ * when tap-check is linked as a workspace dependency.
  *
  * Usage in tests (no import needed):
  *

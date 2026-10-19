@@ -5,7 +5,7 @@
 // `summarize` hook. Non-card files go through path loaders registered here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   registerPathLoader,
   resetLoaderRegistry,

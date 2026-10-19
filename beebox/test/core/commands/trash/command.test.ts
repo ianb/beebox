@@ -6,7 +6,7 @@
 // CLI while the command silently ignored it and trashed the files anyway.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { executeTrash, moveCardsToTrash } from "../../../../src/core/commands/trash/command.js";

@@ -8,7 +8,7 @@
 
 import assert from "node:assert/strict";
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   annotateSnapshot, applyLiveIds, boxCenter, judgeBox, parseCheckResult, parseTarget, refRenumbered, upstreamSelector,
 } from "../src/controls.js";

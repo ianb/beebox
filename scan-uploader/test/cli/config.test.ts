@@ -4,7 +4,7 @@
 // exactly what's wrong — there's no silent partial-config fallback.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { loadConfig } from "../../src/cli/config.js";

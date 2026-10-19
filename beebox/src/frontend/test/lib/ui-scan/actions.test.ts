@@ -8,7 +8,7 @@
 // implementation; `ring.ts` holds the geometry the overlay is drawn from.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { performControlAction, REVEAL_NOT_OPTED_IN } from "../../../src/lib/ui-scan/actions.js";
 import { ringBox, isRectInViewport, RING_PADDING } from "../../../src/lib/ui-scan/ring.js";
 import type { ControlAction } from "../../../src/lib/ui-scan/types.js";

@@ -6,7 +6,7 @@
 // it collapses checklists into paragraphs upstream.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { stripsUpstreamTrailingWhitespace } from "../../../../../src/connectors/google-drive/handlers/docs/whitespace.js";
 
 const remote = "- [ ] Parent  \n      - [ ] Child  \n";

@@ -11,8 +11,8 @@
 // `ctx.services` — so no procedure here reaches Google.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { containing, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { containing, isoDate } from "@ianbicking/tap-check/check";
 import { TRPCError } from "@trpc/server";
 import type { TrpcActor, TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";

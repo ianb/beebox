@@ -7,7 +7,7 @@
 // `<AreaLabel>:path/inside`, with the label derived from the area name.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   areaDisplayLabel,
   detectDisplayFormPath,

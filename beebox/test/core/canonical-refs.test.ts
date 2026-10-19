@@ -13,7 +13,7 @@
 // broken-ref signal. `--canonical` reports frontmatter refs too.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../../src/exports/cards.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

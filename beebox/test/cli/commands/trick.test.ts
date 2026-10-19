@@ -6,7 +6,7 @@
 // listing/error messages resolve through the box's actual shape.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile, realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";

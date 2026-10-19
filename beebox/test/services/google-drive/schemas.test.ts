@@ -6,7 +6,7 @@
 // modelled; unknown extra keys pass; a missing REQUIRED field is loud drift.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   validateResponse,
   ConnectorResponseError,

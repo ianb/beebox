@@ -9,7 +9,7 @@
 // `Content-Type` rather than assuming one.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mediaTypeOf } from "../../../../src/lib/audio/tts-client/playable.js";
 
 // ## The media type survives; other parameters do not

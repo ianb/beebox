@@ -99,7 +99,7 @@ type Week = {
   codebaseShare: number;
 };
 
-const CODEBASE_PREFIXES = ["bin/", ".claude/", ".codex/", ".husky/", "workstreams-app/", "personal-vibe-check/", "agent-doctest/", "dev/", "browse/", "research/", "scripts/", "patches/", ".github/", "beebox/docs/testing/", "beebox/docs/plans/", "beebox/docs/implemented-plans/", "beebox/src/dev/", "beebox/field-tests/", "beebox/src/field-test/", "beebox/deploy/"];
+const CODEBASE_PREFIXES = ["bin/", ".claude/", ".codex/", ".husky/", "workstreams-app/", "personal-vibe-check/", "agent-doctest/", "tap-check/", "dev/", "browse/", "research/", "scripts/", "patches/", ".github/", "beebox/docs/testing/", "beebox/docs/plans/", "beebox/docs/implemented-plans/", "beebox/src/dev/", "beebox/field-tests/", "beebox/src/field-test/", "beebox/deploy/"];
 const CODEBASE_FILES = ["AGENTS.md", "CLAUDE.md", "eslint.config", "tsconfig", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".prettierrc", ".gitignore", ".commit-blocklist"];
 function isCodebase(path: string): boolean {
   const base = basename(path);

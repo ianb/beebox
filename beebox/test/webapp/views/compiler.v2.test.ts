@@ -8,8 +8,8 @@
 // timeout-bounded subprocess) rather than regexing source text.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, eventually, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, eventually, isoDate } from "@ianbicking/tap-check/check";
 import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises";
 import { basename, join, dirname } from "node:path";
 import { tmpdir } from "node:os";

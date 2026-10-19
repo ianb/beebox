@@ -11,7 +11,7 @@
 // closing tag (`annotation`), and whatever it points at (`refs`).
 
 import { test, type Test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { extractCardTodos } from "../../../src/core/todo/extract/core.js";
 import { deriveTodo } from "../../../src/core/todo/derive.js";

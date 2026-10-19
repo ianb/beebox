@@ -9,7 +9,7 @@
 // work, so no code path can describe the pointer as if it were the file.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../../../../helpers/test-route-server.js";
 
 const server = await makeTestServer();

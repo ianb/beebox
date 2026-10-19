@@ -7,7 +7,7 @@
 // boxes in use.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { createPresenceRegistry } from "../../../src/core/notification/presence-registry/core.js";
 import { livePresence } from "../../../src/core/notification/presence.js";

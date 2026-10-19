@@ -1,8 +1,8 @@
 // # A persistent SDK run retains admission across turns
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { once } from "node:events";
 import assert from "node:assert/strict";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";

@@ -7,7 +7,7 @@
 // carry `pending: true`, which gives them the dimmed "queued — waiting" UI.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { reconcilePending, mergeAcceptedIntoPending, holdInjectedMessage } from "../../src/machines/chatMachine/chat-shared.js";
 import type { PendingSessionEntry, SessionEntry } from "../../src/api.js";
 

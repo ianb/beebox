@@ -61,7 +61,7 @@ test("every docs/ entry in beebox's package files list still ships", () => {
 test("isDeployedPath: shipped subprojects and root pnpm files, nothing else", () => {
   for (const path of [
     "beebox/src/hub/server.ts",
-    "agent-doctest/src/run.ts",
+    "tap-check/src/exports/check.ts",
     "personal-vibe-check/eslint.config.ts",
     "patches/tap+21.0.1.patch",
     "package.json",

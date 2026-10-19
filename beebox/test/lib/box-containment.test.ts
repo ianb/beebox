@@ -6,8 +6,8 @@
 // (nonexistent) ref, never followed.
 
 import { test } from "tap";
-import { str } from "agent-doctest/check";
-import "agent-doctest/tap";
+import { str } from "@ianbicking/tap-check/check";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { symlink } from "node:fs/promises";
 import {

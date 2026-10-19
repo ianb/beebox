@@ -5,7 +5,7 @@
 // `targetUrl` into a root-relative deep link for one box. It is never a raw URL.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseTarget, formatTarget, targetUrl } from "../../../src/core/notification/target.js";
 
 function render(value: string) {

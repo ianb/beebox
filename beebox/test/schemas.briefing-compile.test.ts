@@ -8,7 +8,7 @@
 // are `JSON.stringify`-ed to pin exact whitespace.)
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { compileBriefing } from "../src/schemas/briefing.js";
 import { compileBriefings as compileBoxBriefings } from "../src/core/docs-gen/compile/core.js";
 import { makeTmpBox } from "./helpers/test-helpers.js";

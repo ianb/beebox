@@ -3,8 +3,8 @@
 // Helpers for the `scan-import` command: sliding-overlap batch planning, pair reconciliation across overlapping batches, and bundling resolved pages into photo/back groups.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not, str } from "@ianbicking/tap-check/check";
 import {
   planScanBatches,
   runScanBatches,

@@ -11,7 +11,7 @@
 // empty.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { cardTypesList } from "../../../../src/core/agent-guide/guide/cards.js";
 import { generateAgentGuide } from "../../../../src/core/agent-guide/guide/core.js";
 import { cardSchemas } from "../../../../src/schemas.js";

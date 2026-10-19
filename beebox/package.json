@@ -120,7 +120,7 @@
     "@types/proper-lockfile": "^4.1.4",
     "@types/web-push": "^3.6.4",
     "@xyflow/react": "^12.11.0",
-    "agent-doctest": "workspace:*",
+    "@ianbicking/tap-check": "workspace:*",
     "axe-core": "^4.11.4",
     "dagre": "^0.8.5",
     "eslint": "^9.39.2",

@@ -3,7 +3,7 @@
 // The schema system registers card types, provides template generators, and validates cards. Each card type has a type name, template generator, and optional instructions for agents.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createSelectQuestionTemplate } from "../src/schemas/question.js";
 import { getCardTypes } from "../src/schemas.js";
 import { getDefaultTemplate, getTemplate } from "../src/templates-registry.js";

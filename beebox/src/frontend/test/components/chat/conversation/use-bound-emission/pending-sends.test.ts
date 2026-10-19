@@ -7,7 +7,7 @@
 // automatically.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createPendingSendsStore, quarantineUnreadablePendingSends, pendingSendRecoveryCopies } from "../../../../../src/components/chat/conversation/use-bound-emission/pending-sends.js";
 import { storageScopeFor } from "../../../../../src/lib/storage-scope.js";
 import type { Emission } from "../../../../../src/input/emission.js";

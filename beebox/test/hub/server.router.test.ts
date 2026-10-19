@@ -16,8 +16,8 @@
 // `http.Server` after `ready()`), and now takes `hubSecret` + `boxes`.
 
 import { t as root, test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, str } from "@ianbicking/tap-check/check";
 import http from "node:http";
 import net from "node:net";
 import crypto from "node:crypto";

@@ -5,7 +5,7 @@
 // like a per-box identity asset.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isBoxIdentityAssetPath, perBoxIdentityAssetPattern } from "../../src/shared/box-identity-asset-routes.js";
 import { readFile } from "node:fs/promises";
 import vm from "node:vm";

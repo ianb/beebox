@@ -5,7 +5,7 @@
 // primitives and the frontmatter splitter.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import {
   cardSchema,

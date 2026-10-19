@@ -20,8 +20,8 @@
 // (`issues/bugs/2026-08-09-reload-loses-in-flight-question.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";

@@ -12,7 +12,7 @@
 // can't drift between the label a list shows and the turn counts a report shows.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { readFirstUserSnippet } from "../../../src/cli/lib/session-snippet.js";

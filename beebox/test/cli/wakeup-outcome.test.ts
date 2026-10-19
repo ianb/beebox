@@ -11,7 +11,7 @@
 // the scan promote worker judges itself by.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   WAKEUP_OUTCOME_PREFIX,
   parseWakeupOutcome,

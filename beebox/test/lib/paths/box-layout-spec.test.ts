@@ -9,8 +9,8 @@
 // whole-file generated) `docs/box-layout.md` mixes prose with tables.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { instanceOf } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { instanceOf } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT } from "../../../src/lib/paths/box-layout-spec.js";
 import { BOX_ROOT_VOCABULARY } from "../../../src/shared/box-root-vocabulary.js";

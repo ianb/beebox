@@ -5,7 +5,7 @@
 // it survives the rebuild.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { preserveAgentFields } from "../src/preserve-agent-fields.js";
 import { makeTmpBox } from "./helpers/test-helpers.js";
 

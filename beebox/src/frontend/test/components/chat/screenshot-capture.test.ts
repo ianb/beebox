@@ -9,7 +9,7 @@
 // rejection mapping and the feature-detect.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   classifyGetDisplayMediaError,
   isFrameDecoded,

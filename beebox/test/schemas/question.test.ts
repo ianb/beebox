@@ -9,8 +9,8 @@
 // `test/core/commands/answer.doctest.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, str } from "@ianbicking/tap-check/check";
 import {
   QuestionSchema,
   questionState,

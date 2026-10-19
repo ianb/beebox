@@ -1,7 +1,7 @@
 # Tests with `t.check`
 
 **Location:** `test/<area>/<name>.test.ts`, mirroring the `src/` path
-**Runner:** [tap](https://node-tap.org/) with the `agent-doctest/tap` plugin
+**Runner:** [tap](https://node-tap.org/) with the `@ianbicking/tap-check/tap` plugin
 **Run:** `pnpm test`, or `pnpm exec tap test/<path>.test.ts` from the package
 
 A test file is `<name>.test.ts`, run by tap. Each test compares whole values
@@ -19,7 +19,7 @@ whole observed value, so a regression shows as a diff.
 // every malformed cookie returns null rather than throwing.
 
 import { test } from "tap";
-import { any } from "agent-doctest/check";
+import { any } from "@ianbicking/tap-check/check";
 import { signMobileSession, verifyMobileSession } from "../../../src/core/mobile/session.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 
@@ -89,7 +89,7 @@ runs. A fixed clock or a fixed id is a stronger test.
 
 ## Patterns
 
-Patterns are imported from `agent-doctest/check`. Each pattern is typed:
+Patterns are imported from `@ianbicking/tap-check/check`. Each pattern is typed:
 `any(String)` is accepted only where the actual value is a string.
 
 | Pattern | Matches |
@@ -191,7 +191,7 @@ behavior is right.
   `.read()`, `.commitAll()`, and `.cleanup()`. It uses Fastify `inject()`, so
   no socket opens. `.request()` and `.inject()` prefix URLs with the test box
   slug (`/test`). `.rootRequest()` hits a root-level route without the prefix.
-- `eventually(fn, { label })`, from `agent-doctest/check`, waits for a
+- `eventually(fn, { label })`, from `@ianbicking/tap-check/check`, waits for a
   condition. Never use a fixed sleep.
 
 ## Service fakes

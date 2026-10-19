@@ -14,7 +14,7 @@
 // bookkeeping, not about a socket.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createActor } from "xstate";
 import { fromCallback } from "xstate";
 import type { TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent } from "../../src/machines/transcription-events.js";

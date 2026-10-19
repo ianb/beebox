@@ -5,7 +5,7 @@
 // compare actual usage with the fraction of the window that has elapsed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";

@@ -5,7 +5,7 @@
 // cannot silently miss either half of live updating.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { viewSlugFromSourcePath } from "../../src/lib/view-source-path.js";
 
 // Legacy and package-layout paths resolve to the same slug:

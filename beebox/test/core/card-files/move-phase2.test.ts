@@ -5,7 +5,7 @@
 // link, and retrying a partially completed move must repair it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { movePhase2CardFiles, movePathPreservingAnnexSymlink } from "../../../src/core/card-files/move-phase2.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

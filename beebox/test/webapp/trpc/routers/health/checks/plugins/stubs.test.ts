@@ -8,7 +8,7 @@
 // stub failed to load).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { scanStubImports, stubImportChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/stubs.js";
 import type { HealthCheck } from "../../../../../../../src/webapp/trpc/routers/health/router.js";
 import { makeTmpBox } from "../../../../../../helpers/test-helpers.js";

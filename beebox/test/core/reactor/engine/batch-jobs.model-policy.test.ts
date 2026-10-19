@@ -10,7 +10,7 @@
 // (`docs/implemented-plans/model-engine-policy.md`, Track B).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { processBatchJobs } from "../../../../src/core/reactor/engine/batch-jobs.js";
 import type { JobWithContent } from "../../../../src/core/reactor/types.js";
 import { createFakeAgent } from "../../fake-agent.js";

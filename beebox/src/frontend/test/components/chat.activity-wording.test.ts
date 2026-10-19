@@ -5,7 +5,7 @@
 // expanded line; only the label is lay language.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import {
   describeToolCall,

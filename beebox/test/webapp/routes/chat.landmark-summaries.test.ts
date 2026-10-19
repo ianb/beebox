@@ -12,7 +12,7 @@
 // separate frontmatter reader) kept working.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { loadLandmarkSummaries } from "../../../src/core/landmark/summaries.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 

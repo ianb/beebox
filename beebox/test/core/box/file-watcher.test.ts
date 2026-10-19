@@ -10,8 +10,8 @@
 // (`issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing, str } from "@ianbicking/tap-check/check";
 import {
   ensureBoxWatcher,
   closeBoxWatcher,

@@ -7,7 +7,7 @@
 // message's content blocks counts once.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { devBehaviorFromStreamJson, devClaudeArgs } from "../../../../src/dev/lib/test-runner/dev-session.js";
 import { auditTestSchema } from "../../../../src/dev/lib/test-suite-schema.js";
 

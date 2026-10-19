@@ -4,7 +4,7 @@
 // happens to mention a move is not a protocol.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { cardLoadRecovery, fileChangeAffectsPath } from "../../src/lib/moved-card-recovery.js";
 import { resolveLoadState } from "../../src/lib/file-load-state.js";
 

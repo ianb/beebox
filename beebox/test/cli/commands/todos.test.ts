@@ -9,7 +9,7 @@
 // spawning the CLI as a subprocess.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { runTodosForBox } from "../../../src/cli/commands/todos.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 

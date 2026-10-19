@@ -6,7 +6,7 @@
 // draw is exercised by bounds-checking many samples.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { jitteredBackoff } from "../../src/shared/backoff.js";
 
 // ## The ceiling grows exponentially with attempt, then clamps at the cap

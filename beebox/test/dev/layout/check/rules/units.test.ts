@@ -8,7 +8,7 @@
 // rule 1 governs its top level.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { unitsRule } from "../../../../../src/dev/layout/check/rules/units.js";
 import { layout } from "./fixture.js";
 

@@ -10,8 +10,8 @@
 // docs under `docs/box/`, and the built-in `card-<type>.md` docs.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, containing } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";

@@ -8,7 +8,7 @@
 // body-ref machinery — a different surface, the same `{path, ref}` shape.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { extractViewRefs, lintViewRefs } from "../../../src/core/views/refs.js";
 import { collectViewCanonicalWarnings } from "../../../src/core/canonical-refs.js";
 import { canonicalizeBox } from "../../../src/core/canonicalize-refs.js";

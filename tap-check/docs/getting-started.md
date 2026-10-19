@@ -4,7 +4,7 @@ Write tests with `t.check(actual, expected)` alongside tap. The expected value i
 
 ```ts
 import { test } from "tap";
-import { any } from "agent-doctest/check";
+import { any } from "@ianbicking/tap-check/check";
 
 void test("safeFilename strips special characters", async (t) => {
   t.check(safeFilename("Hello World!"), "Hello_World");
@@ -13,7 +13,7 @@ void test("safeFilename strips special characters", async (t) => {
 });
 ```
 
-`agent-doctest/tap` adds the methods to every tap test object. The `.taprc` in the [README](../README.md) loads it with `--import`.
+`@ianbicking/tap-check/tap` adds the methods to every tap test object. The `.taprc` in the [README](../README.md) loads it with `--import`.
 
 For patterns, matching rules, how to find the expected value, and how to read a failure, see [testing with t.check](../../beebox/docs/testing/check.md).
 
@@ -30,4 +30,4 @@ On failure, the caught error's stack trace is in the tap diagnostics.
 
 ## Lint
 
-Enable the three rules from `agent-doctest/eslint` on test files. See the [README](../README.md#lint-rules).
+Enable the three rules from `@ianbicking/tap-check/eslint` on test files. See the [README](../README.md#lint-rules).

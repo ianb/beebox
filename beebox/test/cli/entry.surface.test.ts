@@ -7,7 +7,7 @@
 // agent's surface in the first place. These tests are that gate.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { Command } from "commander";
 import { buildProgram } from "../../src/cli/entry/program.js";
 import { SURFACE } from "../../src/cli/entry/surface-data.js";

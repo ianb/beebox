@@ -6,8 +6,8 @@
 // box reopens the moment its owner is gone: a closure cannot outlive its owner.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, str } from "@ianbicking/tap-check/check";
 import { execFileSync, spawn } from "node:child_process";
 import { once } from "node:events";
 import { mkdir, readdir, readFile, rm } from "node:fs/promises";

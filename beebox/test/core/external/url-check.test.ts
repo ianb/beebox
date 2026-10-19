@@ -6,7 +6,7 @@
 // offline.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { checkExternalUrls } from "../../../src/core/external/url-check/core.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { UrlVerdict } from "../../../src/core/external/url-check/fetch.js";

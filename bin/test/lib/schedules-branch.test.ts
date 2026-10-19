@@ -14,7 +14,7 @@
 // the session about both, and can replay a stored handoff.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execa } from "execa";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";

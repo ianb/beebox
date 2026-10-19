@@ -10,7 +10,7 @@
 // boundary, so this is one predicate rather than six fixes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { probePointer, readAssetContent } from "../../src/lib/asset-content.js";

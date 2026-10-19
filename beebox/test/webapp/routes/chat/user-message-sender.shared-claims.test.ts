@@ -9,7 +9,7 @@
 // `quickChat.submit`, which uses the record id as the message id.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { BusEvent, EventBus } from "../../../../src/core/event-bus/core.js";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";

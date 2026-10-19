@@ -4,7 +4,7 @@
 // box paths, dropping the `?zoom` flag and preserving every other query param.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { rewriteViewTarget, rewriteViewLinksInText } from "../../../src/core/views/link-migration.js";
 
 // ## rewriteViewTarget (a single URL after the `view:` prefix)

@@ -5,7 +5,7 @@
 // recovery hook instead of rendering its recovery affordance.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   dropSmallRecoveredDictation,
   RECOVERED_DICTATION_MIN_CHARACTERS,

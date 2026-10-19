@@ -71,7 +71,7 @@ exploration.
   straight from disk. **Reuse the pattern** with a new route (see Track B).
 - **Deploy hooks won't fire**: `.husky/post-commit:31-33` /
   `.husky/post-merge:22-23` gate on
-  `^(beebox|agent-doctest|personal-vibe-check|patches)/` + root pnpm
+  `^(beebox|tap-check|personal-vibe-check|patches)/` + root pnpm
   files — a top-level `site/` matches nothing, so site commits never trigger
   the box deploy. No change needed; the box deploy remains separate from the
   site's Cloudflare Pages Git integration. `.github/workflows/pages.yml` runs

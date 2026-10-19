@@ -4,8 +4,8 @@
 // and queued POST action. Selection and actor retention are the actual pool code.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import { createActor, fromPromise, fromCallback, type EventObject, type CallbackActorLogic } from "xstate";
 import { chatMachine } from "../../../../src/machines/chatMachine/machine.js";

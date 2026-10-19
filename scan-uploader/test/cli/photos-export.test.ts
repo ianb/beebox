@@ -4,7 +4,7 @@
 // Photos library.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { exportPhotos } from "../../src/cli/photos-export.js";

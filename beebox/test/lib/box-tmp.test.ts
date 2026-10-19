@@ -7,7 +7,7 @@
 // `src/webapp/routes|trpc` in `eslint.config.ts`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import { boxTmpDir, ensureBoxTmpDir } from "../../src/lib/box-tmp.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

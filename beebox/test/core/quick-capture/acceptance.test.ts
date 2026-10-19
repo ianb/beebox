@@ -4,8 +4,8 @@
 // owner scoped, and accepted only with all declared bytes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import { acceptQuickCapture } from "../../../src/core/quick-capture/acceptance.js";

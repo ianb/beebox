@@ -6,7 +6,7 @@
 // when the active one closes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { sidecarReducer, EMPTY_SIDECAR, MAX_UNPINNED_TABS, type SidecarState } from "../../../src/components/chat/sidecar-tabs.js";
 
 /** A `ViewTarget` for a card path, with no viewer or params. */

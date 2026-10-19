@@ -12,7 +12,7 @@
 // running the real checks.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import type { HealthReport } from "../../../../../../src/webapp/trpc/routers/health/checks/snapshot.js";
 import { getHealthSnapshot, HEALTH_SNAPSHOT_TTL_MS } from "../../../../../../src/webapp/trpc/routers/health/checks/snapshot.js";

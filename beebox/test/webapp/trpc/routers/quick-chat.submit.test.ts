@@ -12,8 +12,8 @@
 // delivery of one id is answered as a duplicate.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str, uuid } from "@ianbicking/tap-check/check";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";

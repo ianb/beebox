@@ -27,8 +27,8 @@
 // isolated test HOME.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, oneOf, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, oneOf, str } from "@ianbicking/tap-check/check";
 import { createDoclingService, doclingArgs } from "../../../src/services/docling/core.js";
 import type { DoclingExtraction } from "../../../src/services/docling/core.js";
 import type { Result } from "../../../src/shared/result.js";

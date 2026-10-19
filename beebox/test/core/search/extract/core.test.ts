@@ -6,7 +6,7 @@
 // out of the index — see `src/schemas/email-message.tsx`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { loadCardFromText, type LoadCardContext } from "../../../../src/core/card-io.js";
 import {
   declareInputFiles,

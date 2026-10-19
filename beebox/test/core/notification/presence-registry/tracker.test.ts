@@ -6,7 +6,7 @@
 // it is nonzero, so a reader never sees a live count go stale.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createPresenceTracker } from "../../../../src/core/notification/presence-registry/tracker.js";
 import type { PresenceTracker } from "../../../../src/core/notification/presence-registry/tracker.js";
 

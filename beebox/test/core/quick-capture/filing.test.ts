@@ -9,7 +9,7 @@
 // and the refs pending jobs hold, so these examples call it directly.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { filingPlan, isWordless, nextKickAt, FILING_WAITING_ERROR, type FilingDoc } from "../../../src/core/quick-capture/filing.js";
 import { invariant } from "../../../src/shared/invariant.js";
 import type { CaptureRecord } from "../../../src/core/quick-capture/store.js";

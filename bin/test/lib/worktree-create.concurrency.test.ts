@@ -5,7 +5,7 @@
 // kernel-owned locks that disappear with their holder process.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { execFile, execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs/promises";

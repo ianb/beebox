@@ -3,7 +3,7 @@
 // Helper utilities for scan-import's Gemini image analysis: image file detection and MIME type mapping.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   isImageFile,
   getMimeType,

@@ -6,7 +6,7 @@
 // transcript. `--latest` with `--since` stays rejected.
 
 import { t as tap, test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile, utimes } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";

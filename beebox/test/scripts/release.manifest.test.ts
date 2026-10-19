@@ -11,8 +11,8 @@
 // fast, CI-friendly manifest check that runs on every `pnpm test`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { containing } from "@ianbicking/tap-check/check";
 import { readFile, access, glob } from "node:fs/promises";
 import * as path from "node:path";
 

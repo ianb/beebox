@@ -7,7 +7,7 @@
 // advanced past the 60-minute window before the sweep runs.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { createEventBus } from "../../../src/core/event-bus/core.js";
 import { eventSchemas } from "../../../src/core/event-bus/schemas.js";

@@ -11,7 +11,7 @@
 // this one kept dropping it unnoticed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { conversationTargetFor } from "../../../../src/components/chat/conversation/use-conversation-machine.js";
 
 // ## A cross-engine pick keeps its model

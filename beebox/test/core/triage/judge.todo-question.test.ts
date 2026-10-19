@@ -5,8 +5,8 @@
 // the destination classification call and its immutable evidence.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import { compileInstructionSnapshot } from "../../../src/core/triage/snapshot.js";
 import { compileTriageInstructions } from "../../../src/core/triage/instructions.js";

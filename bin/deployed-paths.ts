@@ -19,7 +19,7 @@
  * rewrite) so the drift test can compare the two literally.
  */
 export const DEPLOYED_PATHS_PATTERN =
-  "^(beebox|agent-doctest|personal-vibe-check|patches)/|^(package\\.json|pnpm-workspace\\.yaml|\\.npmrc|pnpm-lock\\.yaml)$";
+  "^(beebox|tap-check|personal-vibe-check|patches)/|^(package\\.json|pnpm-workspace\\.yaml|\\.npmrc|pnpm-lock\\.yaml)$";
 
 /**
  * Paths under a shipped root that never reach the server: `beebox/docs/` is

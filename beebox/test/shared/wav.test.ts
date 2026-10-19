@@ -6,7 +6,7 @@
 // inline builder wrote before this module absorbed it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildWavHeader } from "../../src/shared/wav.js";
 
 function hex(bytes: Uint8Array) {

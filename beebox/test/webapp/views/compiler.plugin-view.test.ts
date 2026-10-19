@@ -20,7 +20,7 @@
 //   external so the box's copy is used, not a second one bundled in.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";

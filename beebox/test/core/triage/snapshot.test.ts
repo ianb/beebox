@@ -4,8 +4,8 @@
 // The classifier never manufactures missing evidence or prose explanations.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

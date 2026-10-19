@@ -6,7 +6,7 @@
 // messageId. See docs/plans/input-extraction.md chunk 3.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { expectReceipt, settleReceipt, pendingReceiptCount } from "../../../src/input/targets/receipts.js";
 
 // ## Settle resolves the matching expectation

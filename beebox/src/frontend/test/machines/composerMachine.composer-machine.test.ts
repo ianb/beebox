@@ -9,7 +9,7 @@
 // *decisions*. See `docs/chat/composer.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createActor } from "xstate";
 import { composerMachine, type ComposerEvent } from "../../src/machines/composerMachine.js";
 

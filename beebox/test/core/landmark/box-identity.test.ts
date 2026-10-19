@@ -7,7 +7,7 @@
 // dashboard header, and the browser tab all say.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readBoxIdentity } from "../../../src/core/landmark/box-identity.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";

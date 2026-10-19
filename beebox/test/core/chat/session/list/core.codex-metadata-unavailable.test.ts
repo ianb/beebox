@@ -10,7 +10,7 @@
 // Now the failure is contained to the chats it's actually about.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox, type TmpBox } from "../../../../helpers/test-helpers.js";

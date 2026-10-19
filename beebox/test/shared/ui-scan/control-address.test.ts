@@ -7,8 +7,8 @@
 // runtime data into an id and hope.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { controlAddress, isControlAddress, MAX_CONTROL_ID_LENGTH } from "../../../src/shared/ui-scan/control-address.js";
 
 // ## What the grammar admits

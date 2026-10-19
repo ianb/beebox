@@ -6,7 +6,7 @@
 // common case (no file) costs nothing.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { loadValidationIgnore } from "../../src/core/validation-ignore.js";
 import { useColor } from "../../src/cli/commands/validate/report.js";

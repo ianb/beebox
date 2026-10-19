@@ -9,7 +9,7 @@
 // that entry — the rest of the chain still runs.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { ParsedScheduledScript } from "../../../src/schemas/scheduled-script/schema.js";

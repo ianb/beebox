@@ -6,7 +6,7 @@
 // (docs/implemented-plans/landmark-arrival.md, Track C, boxholder decisions a and b).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { startSomething } from "../../../src/components/openers/place-chat.js";
 
 const OPENERS = ["Who has what right now?", "Log a new loan"];

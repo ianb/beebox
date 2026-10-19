@@ -13,7 +13,7 @@
 // the fake scripts it via `emitResult({ isError: true })`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { fireChatSchedule } from "../../../../src/webapp/routes/chat/schedule-fire.js";
 import { ChatSessionRegistry } from "../../../../src/core/chat/session/registry/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";

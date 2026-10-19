@@ -5,7 +5,7 @@
 // filtered by hostname and attach with hostname/service/zone_id/zone_name.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createCloudflareProvisioningClient } from "../../../src/services/cloudflare-provisioning/core.js";
 import { staticBearer } from "../../../src/services/cloudflare-bearer.js";
 

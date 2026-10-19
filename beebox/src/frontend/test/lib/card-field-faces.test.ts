@@ -7,7 +7,7 @@
 // the card is found, and `properties`, its table of type fields.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { COMMON_FIELDS, isCardBodyEmpty, splitCardFields } from "../../src/lib/card-field-faces.js";
 import { GLOBAL_CARD_FIELDS } from "../../../cards/schema.js";
 

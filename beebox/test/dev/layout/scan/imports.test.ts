@@ -5,7 +5,7 @@
 // `relativePathLiterals`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { extractModuleFacts, parseSourceFile } from "../../../../src/dev/layout/scan/imports.js";
 
 function facts(source: string) {

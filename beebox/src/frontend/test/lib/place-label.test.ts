@@ -10,7 +10,7 @@
 // subdirectory. A non-null `dir` is what gets handed to `landmarks.forDir`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { dirBasename, placeLabel } from "../../src/lib/place-label.js";
 
 // ## The box root is Home; a literal `/chat` route is still Chat

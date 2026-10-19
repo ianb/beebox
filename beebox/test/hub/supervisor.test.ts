@@ -19,8 +19,8 @@
 //    restarted) twice, and two children end up running for one box slot.
 
 import { test } from "tap";
-import { any, isoDate, uuid } from "agent-doctest/check";
-import "agent-doctest/tap";
+import { any, isoDate, uuid } from "@ianbicking/tap-check/check";
+import "@ianbicking/tap-check/tap";
 import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
 import type { ChildProc } from "../../src/hub/supervisor/child-spawn.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

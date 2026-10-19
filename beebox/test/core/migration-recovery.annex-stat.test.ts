@@ -7,7 +7,7 @@
 // differ go through the clean filter.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFileSync } from "node:child_process";
 import { readFile, utimes } from "node:fs/promises";
 import { join } from "node:path";

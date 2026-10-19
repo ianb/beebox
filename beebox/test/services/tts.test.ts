@@ -7,8 +7,8 @@
 // not a result.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, eventually } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, eventually } from "@ianbicking/tap-check/check";
 import { collectAudio, createTtsService } from "../../src/services/tts.js";
 import assert from "node:assert/strict";
 

@@ -6,7 +6,7 @@
 // arrives. "New" means "not in the list at Done".
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { startCaptureWait, stepCaptureWait } from "../../../../../src/components/chat/everywhere/InteractiveChat/capture-anchor.js";
 
 // The bubble appears first and is anchored once; the message arrives later,

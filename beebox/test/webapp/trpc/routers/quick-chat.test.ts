@@ -7,7 +7,7 @@
 // `quick-chat.submit.delivery.doctest.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readdir } from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
 import { quickChatRouter } from "../../../../src/webapp/trpc/routers/quick-chat.js";

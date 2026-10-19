@@ -3,8 +3,8 @@
 // Continues [run.doctest.md](run.doctest.md). This part covers reviewing a long backlog in windows, short chats titled by the title pass, the metadata pass advancing both journals, empty "keep" failures, filling a missing `first-message`, hand-owned titles, and saving each session's journal before the next.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, anything, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, anything, not } from "@ianbicking/tap-check/check";
 import { appendFile, mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { dirname } from "node:path";

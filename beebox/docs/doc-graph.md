@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-19T01:06:23Z
-Total documents: 544
+Generated: 2026-10-19T01:17:52Z
+Total documents: 545
 
 ## Issues
 
@@ -85,6 +85,7 @@ These documents are not referenced by any other document.
 - **docs/plans/pdf-render-webp.review.md** — "Plan Engineering Review — PDF render WebP" (104 lines) · plan review
 - **docs/plans/publish-custom-domain-admin.review.md** — "Plan Engineering Review — custom hostname assignment" (91 lines) · plan review
 - **docs/plans/publish-sites-admin.review.md** — "Plan Engineering Review — publish-sites-admin" (156 lines) · plan review
+- **docs/plans/purge-agent-doctest.md** — "Purge agent-doctest: rename the check library, drop doctest leftovers" (217 lines) · proposal · active
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
 - **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines) · proposal · partial
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines) · plan review
@@ -268,6 +269,7 @@ Referenced by:
 - docs/plans/public-site-story-extraction.subplan.md:59 (mention) — per AGENTS.md ("Sonnet 5 is good at subagent work"; extraction is
 - docs/plans/public-site.md:31 (mention) — - Root `AGENTS.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
 - docs/plans/publish-sites-admin.md:111 (mention) — AGENTS.md             # lazy pointer to installed box-docs/publishing.md
+- docs/plans/purge-agent-doctest.md:65 (mention) — `beebox/src/dev/doc-check/file-paths.ts:27`; `AGENTS.md`, `README.md`,
 - docs/plans/scan-vision-claude.md:494 (mention) — | Box AGENTS.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` —
 - docs/plans/source-available-release.md:394 (mention) — it now adds features beyond the task (`AGENTS.md` Behavioral Notes).
 - docs/plans/worktree-control-surface.md:144 (mention) — (`:236-242`), runs the workspace install (`:252`), generates the Codex AGENTS.md
@@ -3357,6 +3359,7 @@ Referenced by:
 - docs/development/workflow.md:5 (mention) — services](technologies.md).
 - docs/implemented-plans/doc-structure-development.md:64 (mention) — | `technologies.md` | `development/technologies.md` |
 - docs/implemented-plans/doc-structure-install-server.md:174 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
+- docs/plans/purge-agent-doctest.md:67 (mention) — `beebox/docs/development/technologies.md`, `site/docs/dev/README.md`,
 - ../issues/docs-and-chores/2026-10-17-public-provider-list-drifts-from-code.md:13 (mention) — `beebox/docs/development/technologies.md` ("AI services used"). Page
 - ../research/fabric-review.md:96 (mention) — | Subprocessor list that names one vendor while the product offers ten; training on content unless the person opts out |
 
@@ -6007,7 +6010,7 @@ References:
 - → ../beebox/docs/mobile-contract.md (link)
 - → ../.claude/skills/bbx-ios-overlap/SKILL.md (link)
 - → ../personal-vibe-check/AGENTS.md (link)
-- → ../agent-doctest/README.md (link)
+- → ../tap-check/README.md (link)
 - → ../canvas-loop/README.md (link)
 - → ../bin/AGENTS.md (link)
 - → ../research/AGENTS.md (link)
@@ -6381,6 +6384,7 @@ References:
 Title: "Retire doctest: TypeScript tests with a typed check()" | 1286 lines | shipped history | implemented
 
 Referenced by:
+- docs/plans/purge-agent-doctest.md:9 (mention) — The doctest format is gone (`beebox/docs/implemented-plans/retire-doctest.md`),
 - ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:12 (mention) — Superseded by the opposite decision: `beebox/docs/implemented-plans/retire-doctest.md` converted every doctest to a `.te
 - ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:52 (mention) — gone (`beebox/docs/implemented-plans/retire-doctest.md`, 2026-10-18): tests
 
@@ -8622,6 +8626,17 @@ Title: "Plan Engineering Review — publish-sites-admin" | 156 lines | plan revi
 References:
 - → docs/unimplemented-plans/publish-pages-superseded.md (mention)
 
+#### docs/plans/purge-agent-doctest.md **[ORPHAN]**
+
+Title: "Purge agent-doctest: rename the check library, drop doctest leftovers" | 217 lines | proposal | active
+
+References:
+- → docs/implemented-plans/retire-doctest.md (mention)
+- → AGENTS.md (mention)
+- → docs/plans/README.md (mention)
+- → docs/development/technologies.md (mention)
+- → docs/plans/source-available-release.md (mention)
+
 #### docs/plans/README.md
 
 Title: "docs/plans/ — proposals and in-flight plans" | 80 lines | current reference
@@ -8637,6 +8652,7 @@ Referenced by:
 - docs/plans/asset-annex.md:1080 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/container-first.md:322 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
+- docs/plans/purge-agent-doctest.md:65 (mention) — `beebox/src/dev/doc-check/file-paths.ts:27`; `AGENTS.md`, `README.md`,
 - docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
 - docs/reports/plan-directory-migration-history-2026-09-13.md:5 (link) — locations. Use the [current plan conventions](../plans/README.md) when working
@@ -8750,6 +8766,7 @@ Title: "Source-available release of beebox" | 536 lines | proposal | active
 Referenced by:
 - docs/implemented-plans/remove-telegram.review.md:73 (mention) — `source-available-release.md` cites the removed admin flow as history;
 - docs/plans/installation-story.md:17 (mention) — Coordinates with `docs/plans/source-available-release.md`: this plan
+- docs/plans/purge-agent-doctest.md:104 (mention) — (`beebox/docs/plans/source-available-release.md` and others found by
 - ../issues/closed/bugs/2026-07-05-report-workflows-emit-relative-paths.md:41 (mention) — (`beebox/docs/plans/source-available-release.md`) records the leak
 - ../issues/closed/decisions/2026-07-08-release-cloud-provider-honesty.md:21 (mention) — feature gap. Two things to settle in `docs/plans/source-available-release.md`:
 - ../issues/closed/features/2026-07-12-bbx-doctor-preflight.md:27 (mention) — `beebox/docs/plans/source-available-release.md` (preflight + actionable
@@ -9358,7 +9375,7 @@ Referenced by:
 - docs/testing/tap-tests.md:4 (mention) — `t.check`](check.md). This page covers how the runner is set up.
 - docs/testing/tours.md:35 (link) — [tests](check.md); "does the app boot at all" is the
 - ../.claude/skills/tests/SKILL.md:8 (link) — The reference is [testing with t.check](../../../beebox/docs/testing/check.md):
-- ../AGENTS.md:12 (link) — - **Tests:** `.test.ts` files with `t.check` ([reference](beebox/docs/testing/check.md)); [agent-doctest/README.md](agen
+- ../AGENTS.md:12 (link) — - **Tests:** `.test.ts` files with `t.check` ([reference](beebox/docs/testing/check.md)); [tap-check/README.md](tap-chec
 - ../bin/AGENTS.md:9 (link) — ([reference](../beebox/docs/testing/check.md)) under `bin/test/`, mirroring the
 - ../dev/devprocess-talk/inventory.md:373 (mention) — - **Where:** `agent-doctest/`, the `doctest` skill, and the doctests testing page (the skill and page were replaced by `
 

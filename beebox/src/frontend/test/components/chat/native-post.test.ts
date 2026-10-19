@@ -9,7 +9,7 @@
 // object form, so no installed build ever loses receipts during the transition.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { postNativeMessage } from "../../../src/components/chat/native-post.js";
 import type { NativeShellWindow } from "../../../src/components/chat/native-post.js";
 

@@ -9,7 +9,7 @@
 // branches can't drift.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as path from "node:path";
 import {
   devServerEnvironment,

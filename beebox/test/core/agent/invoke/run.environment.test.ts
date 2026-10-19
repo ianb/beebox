@@ -6,7 +6,7 @@
 // external SDK/CLI boundaries are replaced here.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { buildScriptEnv } from "../../../../src/core/script-env/core.js";
 import type { ConsumeStreamOptions } from "../../../../src/core/agent/invoke/stream.js";

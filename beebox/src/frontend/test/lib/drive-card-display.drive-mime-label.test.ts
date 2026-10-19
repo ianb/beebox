@@ -11,7 +11,7 @@
 // prints anyway.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { driveMimeLabel } from "../../src/lib/drive-card-display.js";
 
 // ## Google's own types read as products, not as vendor strings

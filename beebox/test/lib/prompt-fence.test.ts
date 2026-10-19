@@ -6,7 +6,7 @@
 //
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { fenceForPrompt } from "../../src/lib/prompt-fence.js";
 
 // ## Plain content gets the minimum 3-backtick fence

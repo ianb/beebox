@@ -8,7 +8,7 @@
 // browser receives.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { boxSlug } from "../../src/lib/box-slug.js";
 import { strict as assert } from "node:assert";
 import * as os from "node:os";

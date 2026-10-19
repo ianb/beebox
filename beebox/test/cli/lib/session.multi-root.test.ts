@@ -10,7 +10,7 @@
 // searched on a miss). Transcript location honors `BBX_CLAUDE_PROJECTS_DIR`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, writeFile, utimes } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

@@ -10,7 +10,7 @@
 // (`throttle`, not `t` — `t` is the tap test object each block already binds.)
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { LoginThrottle, CONCURRENCY_RETRY_MS } from "../../../../src/webapp/routes/auth/login-throttle.js";
 
 // ## Backoff escalates per `(ip,email)` and clears on success

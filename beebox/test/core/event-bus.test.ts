@@ -13,8 +13,8 @@
 // reconnecting across a deploy resync instead of replaying stale-shaped rows.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import Database from "better-sqlite3";
 import { join } from "node:path";
 import { createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";

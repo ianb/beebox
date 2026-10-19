@@ -12,7 +12,7 @@
 // where git-annex is not installed the assertions degrade to a recorded skip.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { execFileSync } from "node:child_process";
 import { makeTestServer } from "../../../helpers/test-route-server.js";
 

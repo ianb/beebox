@@ -6,8 +6,8 @@
 // entry is dropped on its own instead of taking the strip with it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import { serializeSidecarState, parseSidecarState, sidecarTabsKey, selectSidecarSession, persistSidecarTransition, loadSidecarState, saveSidecarState } from "../../../../src/components/chat/workspace/sidecar-tabs-storage.js";
 
 function target(path: string) {

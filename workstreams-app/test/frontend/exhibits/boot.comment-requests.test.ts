@@ -6,7 +6,7 @@
 // agent running `bin/comments list`, so what reaches the wire is what matters.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   appendTranscript,
   commentRequest,

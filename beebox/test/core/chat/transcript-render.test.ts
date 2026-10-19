@@ -7,8 +7,8 @@
 // cannot express, since its length stops growing at the cap.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import {
   elideMiddle,
   MAX_RENDERED_CHARS,

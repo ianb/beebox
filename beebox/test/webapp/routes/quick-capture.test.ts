@@ -4,8 +4,8 @@
 // client finalize call to lose when a share extension exits.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, uuid } from "@ianbicking/tap-check/check";
 import { z } from "zod";
 import { makeTestServer, type InjectResult, type TestServer } from "../../helpers/test-route-server.js";
 import type { QuickCaptureDeclaration } from "../../../src/shared/quick-capture.js";

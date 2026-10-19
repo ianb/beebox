@@ -1,7 +1,7 @@
 // # Move list: `parseMoveList`
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseMoveList } from "../../../../src/dev/layout/move/list.js";
 
 // ## A well-formed list parses; other top-level keys are ignored

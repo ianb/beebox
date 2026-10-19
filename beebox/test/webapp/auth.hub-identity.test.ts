@@ -10,7 +10,7 @@
 // needed to exercise the header logic itself.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { resolveRequestIdentity, verifyHubSecret, isHubMode, signSession, COOKIE_NAME, type IdentityRequest } from "../../src/webapp/auth.js";
 
 /** Minimal fake FastifyRequest: just enough of the shape resolveRequestIdentity/verifyHubSecret read. */

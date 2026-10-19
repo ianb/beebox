@@ -6,8 +6,8 @@
 // after sealing if it never becomes terminal.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { TmpBox } from "../../helpers/test-helpers.js";
 import type { StagingSession, StagingVoice } from "../../../src/core/capture/staging-schema.js";

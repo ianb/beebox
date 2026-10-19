@@ -7,7 +7,7 @@
 // overrides, with provenance").
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   resolveViewParams,
   HISTORY_QUERY_CODEC,

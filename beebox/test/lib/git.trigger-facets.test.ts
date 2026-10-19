@@ -6,7 +6,7 @@
 // the retired `Workflow:` spelling a box's older commits still carry.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { getLogPaginated, getTrailerFacets, stageAndCommitPaths } from "../../src/lib/git/core/operations.js";
 import { buildGreps } from "../../src/webapp/trpc/routers/history.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

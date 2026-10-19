@@ -10,7 +10,7 @@
 // `/healthz` + `/webhook/<slug>/*` stay outside the wall regardless.
 
 import { test, type Test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import http from "node:http";
 import net from "node:net";
 import assert from "node:assert/strict";

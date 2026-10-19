@@ -3,7 +3,7 @@
 // A markdown image whose `src` points at a recognized video URL renders an embedded player instead of an `<img>`. `detectVideoEmbed` classifies the URL and returns a normalized, privacy-friendly embed URL — or `null` to fall back to normal image rendering.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { detectVideoEmbed } from "../../src/lib/video-url.js";
 
 // ## YouTube URL forms

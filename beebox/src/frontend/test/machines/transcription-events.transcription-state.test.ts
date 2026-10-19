@@ -10,7 +10,7 @@
 // (`docs/plans/resilient-voice-recording.md`, Track 3).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createActor, fromCallback } from "xstate";
 import { segmentCapturing } from "../../src/machines/transcription-events.js";
 import type { TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent } from "../../src/machines/transcription-events.js";

@@ -6,7 +6,7 @@
 // moved while `contains` didn't.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { openSearchIndex } from "../../../src/core/search/refresh/core.js";
 import {
   loadContainsState,

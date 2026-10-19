@@ -5,7 +5,7 @@
 // the model of the invocation that created it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { createModelCarrier } from "../../../../src/core/agent/invoke/model-carry.js";
 
 // ## Omitted models ride the first explicit one

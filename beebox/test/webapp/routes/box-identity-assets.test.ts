@@ -6,7 +6,7 @@
 // "Bee Box" and opened on the box picker.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { boxManifest } from "../../../src/webapp/routes/box-identity-assets.js";
 
 const identity = { slug: "kitchen", name: "Kitchen", symbol: null };

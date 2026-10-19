@@ -4,8 +4,8 @@
 // follow-up job. Only a pending question can be dismissed.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate, str } from "@ianbicking/tap-check/check";
 import { executeDismiss } from "../../../src/core/commands/dismiss.js";
 import { createCollectorContext } from "../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

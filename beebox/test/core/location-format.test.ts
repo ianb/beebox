@@ -5,7 +5,7 @@
 // (1 hour) is flagged `[stale]` but still reported.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { formatLocationLine, locationAge } from "../../src/core/location-format.js";
 import type { StoredLocation } from "../../src/core/location-store.js";
 

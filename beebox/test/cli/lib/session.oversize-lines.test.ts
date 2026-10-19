@@ -11,8 +11,8 @@
 // records a placeholder entry instead.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { parseSessionLog, MAX_SESSION_LINE_BYTES } from "../../../src/cli/lib/session.js";
 import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
 import { writeGiantLineSessionLog } from "./session-log-fixture.js";

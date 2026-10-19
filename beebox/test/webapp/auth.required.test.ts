@@ -10,8 +10,8 @@
 // shape, `/api/push/resubscribe` behind the wall).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { anything, containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { anything, containing } from "@ianbicking/tap-check/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

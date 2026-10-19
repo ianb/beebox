@@ -5,7 +5,7 @@
 // reference and listed at the end, each with a link back to its references.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as markdoc from "@markdoc/markdoc";
 import { markdocConfig } from "../../src/shared/markdoc-config/tags/core.js";
 import { parseMarkdown } from "../../src/shared/markdoc-config/parse/core.js";

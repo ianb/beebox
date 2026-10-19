@@ -5,8 +5,8 @@
 // CLI long-poll to the browser tab holding the recording.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { createLastAudioPending, type LastAudioFulfillment, type LastAudioOutcome } from "../../src/core/last-audio-pending.js";
 import { eventSchemas } from "../../src/core/event-bus/schemas.js";
 import { AUDIO_QUESTION_MODEL, buildAudioQuestionPrompt } from "../../src/core/audio-question.js";

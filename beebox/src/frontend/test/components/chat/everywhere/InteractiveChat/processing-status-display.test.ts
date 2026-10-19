@@ -10,7 +10,7 @@
 // (`chatMachine.ts` records the cause in `context.refreshCause`).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   shouldShowAgentWorking,
   streamWatchdogAdvance,

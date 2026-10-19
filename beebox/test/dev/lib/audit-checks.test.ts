@@ -5,7 +5,7 @@
 // negation and `host /tmp`, while still rejecting an answer that recommends it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { runChecks } from "../../../src/dev/lib/audit-checks.js";
 import { auditTestSchema } from "../../../src/dev/lib/test-suite-schema.js";
 import type { AgentBehavior, AuditTest } from "../../../src/dev/lib/test-runner/runner/run-test.js";

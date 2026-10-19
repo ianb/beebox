@@ -4,7 +4,7 @@
 // identifies which `MAP.md` files need to be created or updated.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { precheck } from "../../../src/core/maps/precheck.js";
 import type { MapTask } from "../../../src/core/maps/precheck.js";
 import { saveMapState } from "../../../src/core/maps/state.js";

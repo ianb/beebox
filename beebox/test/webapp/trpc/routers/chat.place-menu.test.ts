@@ -13,7 +13,7 @@
 // row's count**. Both are invisible in a type check.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mkdir, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";

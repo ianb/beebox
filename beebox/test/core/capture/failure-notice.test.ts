@@ -6,8 +6,8 @@
 // sentence. See docs/implemented-plans/notifications.md (Track E).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, capture, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, capture, isoDate } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import * as os from "node:os";
 import * as path from "node:path";

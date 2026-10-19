@@ -11,7 +11,7 @@
 // upgrade, which the browser API cannot attach headers to).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Fastify from "fastify";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";

@@ -10,7 +10,7 @@
 // `/auth/*` also goes dead (404) in hub mode, since the hub owns login.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { makeTestServer } from "../helpers/test-route-server.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 

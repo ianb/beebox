@@ -8,8 +8,8 @@
 // this schema.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { containing } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { containing } from "@ianbicking/tap-check/check";
 import { TodoViewSchema, createTodoViewTemplate } from "../../src/schemas/todo-view.js";
 import { getCardTypes } from "../../src/schemas.js";
 import { getDefaultTemplate } from "../../src/templates-registry.js";

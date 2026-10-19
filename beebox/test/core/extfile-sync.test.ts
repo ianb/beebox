@@ -7,8 +7,8 @@
 // inside the box resolves without extra `externalRoots` config.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { readFile, utimes, writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { parse as parseYaml } from "yaml";

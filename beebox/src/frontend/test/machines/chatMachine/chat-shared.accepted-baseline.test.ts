@@ -19,7 +19,7 @@
 // aged out of the ten-minute acceptance window.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readAcceptedMessages } from "../../../../core/chat/session/accepted-messages.js";
 import { reconcilePending } from "../../../src/machines/chatMachine/chat-shared.js";
 import { createEventBus } from "../../../../core/event-bus/core.js";

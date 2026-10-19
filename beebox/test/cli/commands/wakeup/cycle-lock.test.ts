@@ -12,7 +12,7 @@
 // rewritten, which is the same interleaving one step later.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   runUnderWakeupCycleLock,
   wakeupCycleLockPath,

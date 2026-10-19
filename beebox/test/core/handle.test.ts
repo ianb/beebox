@@ -8,7 +8,7 @@
 // See `docs/triage.md` §Handle (stage 3) and `src/core/handle.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   runHandle,
   formatHandlingLines,

@@ -3,7 +3,7 @@
 // The digest turns the JSONL `csp-reports.log` (written by the `/api/csp-report` sink) into a deduped summary the local review routine uses to decide whether the policy is safe to harden. It arranges context — it never flips the policy itself. `digestCspReports` digests a whole log; `parseCspLog` + `entriesSince` + `digestEntries` are the incremental pieces the cursor-driven CLI composes.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { digestCspReports, parseCspLog, entriesSince, newestTs, digestEntries } from "../../../src/dev/csp-report/digest.js";
 

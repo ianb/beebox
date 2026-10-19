@@ -4,7 +4,7 @@
 // distinguish a third party's exact words from an unattributed user quote.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Markdoc, { type Tag } from "@markdoc/markdoc";
 import { lintBodyMarkdoc } from "../../src/core/body-markdoc-lint.js";
 import { markdocConfig } from "../../src/shared/markdoc-config/tags/core.js";

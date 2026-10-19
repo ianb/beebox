@@ -3,7 +3,7 @@
 // Continues [card-lint.doctest.md](card-lint.doctest.md). This part covers universal Markdoc body validation, non-`ref` path fields, media and chat husk fields, absolute machine paths, and type-scoped Markdoc tags.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../../src/exports/cards.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

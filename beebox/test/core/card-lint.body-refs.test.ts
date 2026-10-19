@@ -3,7 +3,7 @@
 // Continues [card-lint.doctest.md](card-lint.doctest.md). This part covers broken refs and inline links in card bodies, `attach/` scope, cards of types without a schema, commentary and extfile cards, and a schema's `validate` hook.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../../src/exports/cards.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";

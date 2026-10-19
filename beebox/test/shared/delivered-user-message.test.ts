@@ -5,7 +5,7 @@
 // transcript text, and render through an exhaustive frontend dispatch.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   DELIVERED_USER_MESSAGE_KINDS,
   parseDeliveredUserMessageParts,

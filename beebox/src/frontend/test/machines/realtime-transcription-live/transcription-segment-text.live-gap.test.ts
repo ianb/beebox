@@ -9,7 +9,7 @@
 // `SegmentTranscript` (where the marker sits, and when it goes).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ReplayRing } from "../../../src/machines/realtime-transcription-live/transcription-replay-ring.js";
 import { SegmentTranscript } from "../../../src/machines/realtime-transcription-live/transcription-segment-text.js";
 

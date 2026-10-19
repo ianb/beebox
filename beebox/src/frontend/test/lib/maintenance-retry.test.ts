@@ -5,7 +5,7 @@
 // that long and sends once more; without a usable deadline it fails as before.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { maintenanceRetryDelayMs } from "../../src/lib/maintenance-retry.js";
 
 void test("line 11", async (t) => {

@@ -5,7 +5,7 @@
 // segment as successfully spoken and rapidly advance through the whole queue.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   formatMediaElementFailure,
   formatPlaybackRejection,

@@ -16,8 +16,8 @@
 // fail if any tag's content is missing.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, not } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
 import { buildPluginBundlesIntoDist } from "../../helpers/plugin-bundles.js";
 import { mkdir, writeFile } from "node:fs/promises";

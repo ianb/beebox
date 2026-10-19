@@ -6,7 +6,7 @@
 // boundary/user-facing validation.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { assertNever, invariant, checkInvariant, tolerateNever } from "../../src/shared/invariant.js";
 
 // ## `assertNever` — exhaustiveness terminator

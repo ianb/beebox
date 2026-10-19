@@ -7,7 +7,7 @@
 // other process, just async tasks within one Node process.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   withCardLock,
   activeCardLockCount,

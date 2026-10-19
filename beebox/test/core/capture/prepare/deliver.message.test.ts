@@ -6,8 +6,8 @@
 // for the Claude subprocess so we can inspect what was sent.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { makeTmpBox, type TmpBox } from "../../../helpers/test-helpers.js";
 import type { ChatBackend } from "../../../../src/services/claude-chat/core.js";
 import type { FakeChatBackendRun } from "../../../../src/services/claude-chat/fake.js";

@@ -6,9 +6,9 @@
 // root file the way the harness does at the box root, for the system prompt.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { rm, symlink } from "node:fs/promises";
-import { instanceOf } from "agent-doctest/check";
+import { instanceOf } from "@ianbicking/tap-check/check";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { UnsafeAgentContextIncludeError } from "../../../../src/core/agent-context-includes.js";
 import { buildLandmarkBoxContext } from "../../../../src/core/chat/session/landmark-context.js";

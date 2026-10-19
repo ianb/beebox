@@ -11,7 +11,7 @@
 // whose copy differs from its recorded version keeps its copy: that is an edit.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";

@@ -7,7 +7,7 @@
 // first finalize announced every old question and then expired them all.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import { finalizeQuestions } from "../../../src/cli/commands/finalize.js";

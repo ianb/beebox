@@ -9,8 +9,8 @@
 // See `docs/plans/google-auth-reauth-health.md`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";

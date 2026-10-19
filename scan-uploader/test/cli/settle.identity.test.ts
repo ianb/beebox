@@ -6,7 +6,7 @@
 // run-target.doctest.md) after it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { utimes, writeFile } from "node:fs/promises";
 import { isSettled, SETTLE_WINDOW_MS } from "../../src/cli/settle.js";
 import { identityEquals, snapshotIdentity } from "../../src/cli/identity.js";

@@ -4,7 +4,7 @@
 // the line the debug log keeps and ships to the server.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { describeArg } from "../../src/lib/debug-log-format.js";
 
 class ImageProcessingError extends Error {

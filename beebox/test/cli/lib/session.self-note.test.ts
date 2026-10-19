@@ -5,7 +5,7 @@
 // input validation.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { parseSelfNote, parseSelfNotes, entrySelfNotes, parseSessionLog, getSessionMetadata } from "../../../src/cli/lib/session.js";
 import type { SessionLogSlice } from "../../../src/cli/lib/session-retention.js";
 import assert from "node:assert/strict";

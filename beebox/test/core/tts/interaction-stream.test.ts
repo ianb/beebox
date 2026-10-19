@@ -6,7 +6,7 @@
 // only the audio.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { interactionAudioChunks } from "../../../src/core/tts/interaction-stream.js";
 
 /** Every chunk the stream yields, joined. */

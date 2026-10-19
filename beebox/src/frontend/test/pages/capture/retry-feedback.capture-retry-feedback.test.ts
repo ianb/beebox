@@ -7,7 +7,7 @@
 // the batch ended.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { nextRetryFeedback } from "../../../src/pages/capture/retry-feedback.js";
 import type { RetryFeedback, RetryFeedbackEvent } from "../../../src/pages/capture/retry-feedback.js";
 

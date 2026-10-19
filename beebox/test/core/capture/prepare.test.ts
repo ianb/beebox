@@ -7,8 +7,8 @@
 // deterministically with no API key or Claude subprocess.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, str } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
 import { execFileSync } from "node:child_process";
 import { mkdir, writeFile, appendFile, readFile, readdir, rm, access } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";

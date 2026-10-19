@@ -11,7 +11,7 @@
 // fix a process looking in the wrong place — the message is what sent them there.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp, writeFile } from "node:fs/promises";

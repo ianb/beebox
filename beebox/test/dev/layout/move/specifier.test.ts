@@ -1,7 +1,7 @@
 // # `computeNewSpecifier`: recomputing an import after a move
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { computeNewSpecifier } from "../../../../src/dev/layout/move/specifier.js";
 
 const noAliases = { baseDir: "", entries: [] };

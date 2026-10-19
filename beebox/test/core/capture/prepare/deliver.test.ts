@@ -5,7 +5,7 @@
 // chat-vocabulary lock-in. `summarizeCapture` picks the one-line summary.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { buildCaptureWrapper, summarizeCapture } from "../../../../src/core/capture/prepare/deliver.js";
 
 // ## The wrapper: doc, image count, audio duration (M:SS), one-line summary

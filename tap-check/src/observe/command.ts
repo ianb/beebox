@@ -59,7 +59,7 @@ export function runCommand(argv: readonly [string, ...string[]], options: Comman
 
 /**
  * The argv that runs a TypeScript file under tsx with this Node binary. tsx
- * is resolved from agent-doctest's own dependencies by absolute URL, so the
+ * is resolved from tap-check's own dependencies by absolute URL, so the
  * command works from any cwd, including a fixture directory outside the repo.
  */
 export function tsxCommand(script: string, ...args: string[]): [string, ...string[]] {

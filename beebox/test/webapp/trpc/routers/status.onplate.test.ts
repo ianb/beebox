@@ -8,7 +8,7 @@
 // don't count.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { statusRouter } from "../../../../src/webapp/trpc/routers/status.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";

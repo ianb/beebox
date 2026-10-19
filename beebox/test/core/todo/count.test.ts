@@ -7,7 +7,7 @@
 // inflates their badge.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { countOnPlateTodos } from "../../../src/core/todo/count.js";
 import { runTodoQuery } from "../../../src/core/todo/query.js";
 import { isBoxholderTodo, TODO_AGENT } from "../../../src/shared/todo-model.js";

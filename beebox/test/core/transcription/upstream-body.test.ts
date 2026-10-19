@@ -11,7 +11,7 @@
 // directory's only *value* import cycle.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { truncateUpstreamBody } from "../../../src/core/transcription/upstream-body.js";
 
 // ## Short bodies pass through unchanged

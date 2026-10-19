@@ -3,7 +3,7 @@
 // The model picker and mutation boundary share one engine-indexed registry.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isChatModelAllowed, parseChatAgentEngine } from "../../src/shared/chat-models.js";
 import { modelTier, resolveProcedureModel, isProcedureModelName, PROCEDURE_MODEL_NAMES } from "../../src/shared/agent-models.js";
 import { boxDefaultModel, liveModelState, resolveBoxModelForEngine, resolveEffectiveModel, resolveSmallModelForEngine, loadEffectiveSmallModel } from "../../src/core/model-policy.js";

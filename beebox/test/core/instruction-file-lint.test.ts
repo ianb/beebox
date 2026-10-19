@@ -7,7 +7,7 @@
 // gentle nudge at `INSTRUCTION_FILE_WARN_CHARS`, firmer language at `INSTRUCTION_FILE_FIRM_CHARS`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { lintAllInstructionFiles, lintInstructionFileSize, INSTRUCTION_FILE_WARN_CHARS, INSTRUCTION_FILE_FIRM_CHARS } from "../../src/core/instruction-file-lint.js";
 import { mkdtemp, mkdir, writeFile, symlink } from "node:fs/promises";
 import { join } from "node:path";

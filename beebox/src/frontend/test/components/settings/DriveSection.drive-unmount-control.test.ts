@@ -11,8 +11,8 @@
 // boxholder should read before answering.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { not } from "@ianbicking/tap-check/check";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {

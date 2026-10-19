@@ -7,7 +7,7 @@
 // and would otherwise resolve.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { isForbiddenPrivateLinkTarget, findPrivateLinkViolations, PRIVATE_LINK_REASON } from "../../../src/dev/doc-check/private-link.js";
 
 // ## Forbidden forms: relative, `../`-relative, root-relative, dev-browser URL

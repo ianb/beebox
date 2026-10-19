@@ -5,7 +5,7 @@
 // resolves nowhere. Pure logic (fs injected).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { candidatePath, findFilePathProblems, repairFilePaths } from "../../../src/dev/doc-check/file-paths.js";
 
 // A tiny fake tree.

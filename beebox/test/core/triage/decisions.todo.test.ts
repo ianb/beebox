@@ -5,8 +5,8 @@
 // merge rules.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { uuid } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { uuid } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import { simpleGit } from "simple-git";
 import { makeTmpBox } from "../../helpers/test-helpers.js";

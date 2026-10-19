@@ -12,8 +12,8 @@
 // half a minute of wall clock when it does run (one Sonnet call, one page).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import { createClaudeScanVision } from "../../src/services/scan-vision-claude.js";
 import { resolveClaudeCodeBinary } from "../../src/core/sdk-binary-path.js";
 import { checkClaudeAuth } from "../../src/core/agent/auth-preflight.js";

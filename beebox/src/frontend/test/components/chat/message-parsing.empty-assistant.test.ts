@@ -3,8 +3,8 @@
 // An assistant entry does not create a message when its parts have no visible content. This applies to both saved history and the provisional streaming entry.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { groupIntoParts, hasRenderableAssistantContent } from "../../../src/components/chat/message-parsing.js";
 import { buildDataItems } from "../../../src/components/chat/everywhere/InteractiveChat/message-items.js";
 import type { SessionEntry, SessionContentBlock } from "../../../src/api.js";

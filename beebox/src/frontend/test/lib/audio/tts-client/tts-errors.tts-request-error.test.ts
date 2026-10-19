@@ -6,7 +6,7 @@
 // the status is kept on the error for code that branches on it.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { ttsRequestError } from "../../../../src/lib/audio/tts-client/tts-errors.js";
 
 void test("line 12", async (t) => {

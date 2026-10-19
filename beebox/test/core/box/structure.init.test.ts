@@ -3,8 +3,8 @@
 // Tests that `bbx init` creates the full box structure and commits everything in one initial commit — including schedules, procedures, guides, and personality cards.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, not } from "@ianbicking/tap-check/check";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";

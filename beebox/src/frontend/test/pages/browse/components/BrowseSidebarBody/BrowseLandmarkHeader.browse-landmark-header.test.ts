@@ -5,7 +5,7 @@
 // navigation callback; URL-shaped links stay ordinary external anchors.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BrowseLandmarkHeader } from "../../../../../src/pages/browse/components/BrowseSidebarBody/BrowseLandmarkHeader.js";

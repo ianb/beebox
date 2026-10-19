@@ -5,7 +5,7 @@
 // aren't exercised here — they need a DOM; these are the DOM-free parts.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import {
   locationShareKey,
   parseLocationShareState,

@@ -5,7 +5,7 @@
 // The caller supplies the clock.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { browserTaskState, describeBrowserTaskState } from "../../src/shared/browser-task-state.js";
 import { parseIso8601DurationMs, isIso8601Duration } from "../../src/shared/iso-duration.js";
 

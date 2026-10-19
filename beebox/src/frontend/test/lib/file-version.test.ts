@@ -8,7 +8,7 @@
 // session (driven by `file-change` SSE events), forcing a fresh fetch.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { bumpFileVersion, bustImageSrc } from "../../src/lib/file-version.js";
 
 // ## bustImageSrc

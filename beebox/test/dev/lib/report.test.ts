@@ -5,7 +5,7 @@
 // rather than a YAML diff you go find.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { ContextHistoryEntry } from "../../../src/dev/lib/context-history.js";
 import { formatBaselineDelta, renderContextSummary } from "../../../src/dev/lib/report.js";
 import type { TestResult } from "../../../src/dev/lib/test-runner/runner/run-test.js";

@@ -11,12 +11,12 @@
 // wait for the daily digest.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { any, capture, not, str } from "agent-doctest/check";
+import { any, capture, not, str } from "@ianbicking/tap-check/check";
 import { execa } from "execa";
 import { raiseAlert, type DesktopNotification, type RunnerDeps } from "../../lib/schedules-alerts.js";
 import { migrateAlerts, resolveConditions } from "../../lib/schedules-alert-lifecycle.js";

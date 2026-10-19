@@ -7,7 +7,7 @@
 // Order and depth are `list`'s own.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { filterLandmarks } from "../../src/lib/landmark-filter.js";
 
 // `landmarks.list` order: root first, then by directory; depth counts ancestor landmarks.

@@ -7,7 +7,7 @@
 // and content that is not served says why rather than arriving as an empty pane.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

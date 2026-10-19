@@ -9,7 +9,7 @@
 // context clause (a sentence, for the detail pane).
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { issueProvenance } from "../../src/shared/issue-provenance.js";
 
 // The documented form names a worktree. It is displayed bare, because `foo` is what

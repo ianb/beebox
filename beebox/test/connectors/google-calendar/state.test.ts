@@ -8,7 +8,7 @@
 // save's own updates and deletions.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { mergeSyncTokens } from "../../../src/connectors/google-calendar/state.js";
 
 // ## Per-key resolution: updated wins, untouched defers, deleted stays deleted

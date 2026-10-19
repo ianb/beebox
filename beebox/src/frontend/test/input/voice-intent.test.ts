@@ -9,8 +9,8 @@
 // never appears here — it belongs to the next message instead.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, is, not } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, is, not } from "@ianbicking/tap-check/check";
 import { routeComposerSend } from "../../src/components/chat/InteractiveChat-helpers.js";
 import { buildVoiceSubmitEmission, prepareVoiceSubmitEmission, sendKeywordOf } from "../../src/input/voice-intent.js";
 

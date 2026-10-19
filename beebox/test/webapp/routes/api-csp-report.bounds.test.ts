@@ -8,8 +8,8 @@
 // `src/webapp/routes/api-csp-report.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { isoDate } from "@ianbicking/tap-check/check";
 import { makeTestServer } from "../../helpers/test-route-server.js";
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";

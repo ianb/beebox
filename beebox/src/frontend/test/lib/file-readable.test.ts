@@ -6,7 +6,7 @@
 // so the caller can say what actually happened.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { assertReadable, UnreadableFileError } from "../../src/lib/file-readable.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 

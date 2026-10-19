@@ -6,8 +6,8 @@
 // a recording as terminally failed, or sit idle.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { anything } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { anything } from "@ianbicking/tap-check/check";
 import { nextDrainStep, type VoiceOp, type LastOutcome } from "../../../src/lib/audio/voice-staging-queue-core.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

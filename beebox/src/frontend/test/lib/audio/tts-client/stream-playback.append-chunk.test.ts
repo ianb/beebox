@@ -8,7 +8,7 @@
 // spec's events in the spec's order.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { appendChunk, type ChunkSink } from "../../../../src/lib/audio/tts-client/stream-playback.js";
 
 /** A SourceBuffer stand-in whose append fires `events`, in order, on the next tick. */

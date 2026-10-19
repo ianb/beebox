@@ -10,7 +10,7 @@
 // so that detail survives.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { PassThrough } from "node:stream";
 import { setTimeout as delay } from "node:timers/promises";
 import { forwardChildOutput } from "../../../src/hub/supervisor/child-output-log.js";

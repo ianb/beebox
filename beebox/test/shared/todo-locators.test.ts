@@ -6,7 +6,7 @@
 // it, so the two cannot disagree about which todo `line#2` means.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Markdoc, { type Node } from "@markdoc/markdoc";
 import { assignLocators, type TodoLocator } from "../../src/shared/todo-locators.js";
 

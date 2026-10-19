@@ -6,7 +6,7 @@
 // trimmed real responses (recorded 2026-09-19), not hand-written guesses.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { readFile } from "node:fs/promises";
 import { clearOpenRouterCatalogCache, lookupOpenRouterModel, readOpenRouterKeyUsage } from "../../src/core/openrouter-catalog.js";
 

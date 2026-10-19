@@ -6,7 +6,7 @@
 // and runs Markdoc tags; outside content should do neither.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import Markdoc from "@markdoc/markdoc";
 import { markdocConfig } from "../../src/shared/markdoc-config/tags/core.js";
 import { parseMarkdown } from "../../src/shared/markdoc-config/parse/core.js";

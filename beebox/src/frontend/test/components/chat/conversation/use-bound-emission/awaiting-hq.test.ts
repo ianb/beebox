@@ -7,7 +7,7 @@
 // original destination. These examples use a fake box for `claim`/`fallBack`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import assert from "node:assert/strict";
 import { resolveAwaitingHq, type AwaitingHqResolution } from "../../../../../src/components/chat/conversation/use-bound-emission/awaiting-hq.js";
 import type { PendingConversationSend } from "../../../../../src/components/chat/conversation/use-bound-emission/pending-sends.js";

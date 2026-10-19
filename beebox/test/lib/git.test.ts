@@ -3,8 +3,8 @@
 // Tests for the git helper functions in `src/lib/git/core.ts`.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any, isoDate } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate } from "@ianbicking/tap-check/check";
 import {
   initRepo, isRepo, getStatus, stageFiles, stageAll,
   commit, getLog, getLogPaginated, getDiff, getCommitDiff,

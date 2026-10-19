@@ -7,7 +7,7 @@
 // reaches the floor, 0.9 by default.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import type { RoutingCandidate } from "../../../../src/core/chat/routing/policy.js";
 import { routingDisposition, selectRoutingDestination, thoughtAsksForNewChat } from "../../../../src/core/chat/routing/policy.js";
 

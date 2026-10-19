@@ -11,8 +11,8 @@
 // assistant response at all).
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { any } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { any } from "@ianbicking/tap-check/check";
 import assert from "node:assert/strict";
 import type { AgentFactory } from "../../../src/core/procedure/engine-types.js";
 import { evaluateInstructions } from "../../../src/core/procedure/engine-validate-model.js";

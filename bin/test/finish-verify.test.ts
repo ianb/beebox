@@ -7,8 +7,8 @@
 
 import * as tapModule from "tap";
 import { test } from "tap";
-import "agent-doctest/tap";
-import { eventually } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { eventually } from "@ianbicking/tap-check/check";
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";

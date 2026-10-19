@@ -6,7 +6,7 @@
 // turning arbitrary missing ids into new chats.
 
 import { test } from "tap";
-import "agent-doctest/tap";
+import "@ianbicking/tap-check/tap";
 import { resolveConversation } from "../../../../src/components/chat/everywhere/resolve-conversation.js";
 import { ReservationReceipts } from "../../../../src/components/chat/everywhere/reservation-receipts.js";
 import { QueryClient } from "@tanstack/react-query";

@@ -6,8 +6,8 @@
 // audience or is waiting for a signed-in member.
 
 import { test } from "tap";
-import "agent-doctest/tap";
-import { is } from "agent-doctest/check";
+import "@ianbicking/tap-check/tap";
+import { is } from "@ianbicking/tap-check/check";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../src/webapp/trpc/routers.js";
 import { pubCommand } from "../../../../src/cli/commands/pub/command.js";
