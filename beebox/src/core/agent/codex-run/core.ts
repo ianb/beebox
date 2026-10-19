@@ -102,9 +102,10 @@ export async function runCodexAgent(
         `${fmt.warn("Codex does not expose a per-turn USD budget; beebox will enforce the configured tool-turn limit only.")}\n`,
       );
     }
+    const env = await invocationEnv(options);
     const session = (createSession ?? createCodexSdkSession)({
       cwd: options.cwd ?? options.boxRoot,
-      env: await invocationEnv(options),
+      env,
       systemPrompt: [options.systemPrompt + tzContext, includedContext].filter(Boolean).join("\n\n"),
       model: options.model,
       resumeSessionId: options.resumeSessionId,
@@ -154,6 +155,7 @@ export async function runCodexAgent(
         invocationId: randomUUID(),
         task: options.task,
         model: options.model,
+        env,
         usage: cumulative === null || previous === null ? null : codexUsageDelta(cumulative, previous),
         onOutput: options.onOutput,
       });

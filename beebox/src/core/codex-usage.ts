@@ -3,8 +3,12 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { errnoCode } from "../shared/error-guards.js";
+import { errnoCode, errorMessage } from "../shared/error-guards.js";
 import { BOX_DIRS } from "../lib/paths/core.js";
+import { codexHomeDir, readCodexRolloutModel } from "../services/codex-rollout-model.js";
+
+/** The ledger's model when neither the rollout nor the request names one. */
+export const CODEX_UNKNOWN_MODEL = "codex-default";
 
 export const CODEX_USAGE_REL_PATH = `${BOX_DIRS.usage}/codex-turns.jsonl`;
 
@@ -33,6 +37,29 @@ class CodexUsageCounterResetError extends Error {
     super("Codex cumulative usage was smaller than its recorded session total");
     this.name = "CodexUsageCounterResetError";
   }
+}
+
+/**
+ * The model to record for a completed turn: the one Codex's rollout names for
+ * the thread's latest turn, else the requested one, else
+ * {@link CODEX_UNKNOWN_MODEL}. A failed lookup goes to `warn` and never stops
+ * the row being written.
+ */
+export async function codexUsageModel(options: {
+  threadId: string;
+  requested: string | undefined;
+  /** The session's environment, for its `CODEX_HOME`. */
+  env: Record<string, string | undefined> | undefined;
+  warn: (text: string) => void;
+}): Promise<string> {
+  let reported: string | null = null;
+  try {
+    reported = await readCodexRolloutModel({ codexHome: codexHomeDir(options.env), threadId: options.threadId });
+    if (reported === null) options.warn(`No Codex rollout found for thread ${options.threadId}; its model is unknown.`);
+  } catch (error) {
+    options.warn(`Could not read the model of Codex thread ${options.threadId}: ${errorMessage(error)}`);
+  }
+  return reported ?? options.requested ?? CODEX_UNKNOWN_MODEL;
 }
 
 /** Append one completed native turn. Callers pass `last`, never cumulative totals. */
