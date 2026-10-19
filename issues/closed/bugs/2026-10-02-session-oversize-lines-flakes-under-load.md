@@ -1,12 +1,15 @@
 ---
 title: "session.oversize-lines test flakes under full-suite load (heap-capped parse child dies)"
-workstream: test-suite-health
+workstream: flaky-tests
 area: beebox
 labels: [tests, flaky]
 filed-by: agent
 discovered-in: worktree-knip-sweep — two full beebox suite runs on 2026-10-02
 priority: normal
+resolution: implemented
 ---
+
+Closed 2026-10-18 by `14b6ea5ec` (flaky-tests): the heap cap is gone, so the death it caused cannot recur; see "Heap cap removed" below.
 
 **Reopened 2026-10-18 (doctest-typecheck).** `test/cli/lib/session.oversize-lines.test.ts`, test "40 giant lines of ~1.2 MB payload each", failed in a full `pnpm -C beebox test` run with `parse child exited SIGABRT with stdout ""` and a V8 fatal-error stack in stderr, so the 128 MB backstop cap is not always enough. Host load average was 13 (other sessions running). The same file passed alone before and after (14/14). The change under test touched only a comment in this file.
 

@@ -126,3 +126,33 @@ step's line now gives its own time and its median from the run log
 line adds the walk total. When smoke is red, `bin/finish-verify` prints those
 lines under its FAIL line, and it names any other finish-verify run that
 shares the dev router. The budgets and the rest of this issue are unchanged.
+
+## 2026-10-18 (flaky-tests): the recurring victims, file by file
+
+Hourly full-suite alerts since 2026-09-20 and the ledger named about ten
+files that failed more than once. Each was traced to a test-caused timing
+dependence, not to load alone:
+
+- `test/core/box/file-watcher.test.ts`: one write, then a wait for its real
+  FSEvents delivery; libuv drops lost batches silently. Now rewrites until
+  delivered; watched-set tests use the fake watcher (`21d12d818`).
+- `test/hub/supervisor*.test.ts`: waited on a phase written before the owner
+  lock was released (fixed 2026-10-12, `b7783f446`, `e58f6b879`); two
+  remaining fixed sleeps now wait on the end state (`5e1ff6bdf`).
+- `src/frontend/test/lib/trpc/client.directory-resolution.test.ts`: 12 cold
+  tsx children under a 15 s SIGKILL; it could not detect the bug it was
+  written for. Deleted (`68961cad6`).
+- `test/cli/lib/session-retention.test.ts`, `session.oversize-lines.test.ts`:
+  a heap cap on a tsx child. Replaced with a peak-live-heap measurement
+  (`14b6ea5ec`).
+- `test/lib/git-stale-lock.test.ts`: system-wide `lsof` under a 5 s budget;
+  fixed 2026-10-12 (`d62933815`), no failure in 131 runs since.
+- `bin/test/lib/auto-sweep-detach.test.ts`: a 1500 ms return bound; now an
+  event-order check (`9f04ae4af`).
+- `test/deploy/nginx-site.test.ts`: pooled keep-alive connections closed by
+  `nginx -s reload`; now fresh connections (`a145d9e9a`).
+- `test/core/last-audio-pending.test.ts`: fixed 2026-10-12 (`a0eb972de`).
+
+The `docs-refresh` and `install-validation-hooks` failures were 10-minute
+"timeout!" kills in runs 20261014-145730 and 20261005-201105, where 36 and
+13 files timed out together: a host stall, not the files.
