@@ -15,11 +15,16 @@ import {
   type TodoStatus,
 } from "@shared/todo-model";
 
-/** Status treatment for a todo's own words, the same in a card body, in frontmatter, and in the list. */
+/**
+ * Status treatment for a todo's own words, the same in a card body, in
+ * frontmatter, and in the list. Colors come from the card theme's ink
+ * (`card-ink`, `card-soft`), so a todo reads on light and dark themes alike;
+ * outside a themed card they fall back to the warm palette.
+ */
 const STATUS_TEXT_CLASS: Record<TodoStatus, string> = {
-  open: "text-warm-800",
+  open: "text-card-ink",
   done: "text-card-soft bbx-struck",
-  parked: "text-warm-400",
+  parked: "text-card-soft",
   dropped: "text-card-soft bbx-struck",
 };
 
