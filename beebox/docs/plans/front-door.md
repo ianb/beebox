@@ -36,7 +36,7 @@ until the discussion. Reviewed once by `codex gpt-6-sol` (plan mode,
   the search half where it is.
 - [Collection views are badly defined](../../../issues/features/2026-08-19-collection-views-are-badly-defined.md)
   and ["Today" view as a recurring procedure](../../../issues/features/2026-05-11-today-view.md):
-  the root page's plate line is a count over existing todo data, not a
+  the root page's count line is a count over existing todo data, not a
   collection view and not a digest.
 - [Give box agents annotated screenshots of the app](../../../issues/features/2026-10-05-box-agent-interface-screenshots.md):
   the "Landmarks page with no on-screen path" finding is the agent guessing
@@ -108,8 +108,8 @@ front door to that card.
 | Situation | Act, show, or quiet | Surface and card | Attention |
 |---|---|---|---|
 | Juni, first open | Show | Root place page: stock summary at the top, then "Nothing saved here yet" | Waits to be found; the chat beside it shows the openers |
-| Juni, next morning | Show | Root place page: the agent's summary, the plate line, "Also here" | Waits to be found |
-| Tomas, Sunday evening | Show | Root place page: plate line; the Lending place's summary says what is out | Waits to be found |
+| Juni, next morning | Show | Root place page: the agent's summary, the count line, "Also here" | Waits to be found |
+| Tomas, Sunday evening | Show | Root place page: count line; the Lending place's summary says what is out | Waits to be found |
 | Priya, Browse | Show | Browse opens on her content; empty template folders fold behind "N more" | Waits to be found |
 | Idris, schedules | Show on request | Browse's Raw switch shows the box root and its five areas | Found by choice |
 | Juni, a dozen lines | Show | The stock summary's last sentence and a third opener; later, the agent's offer in chat | Waits to be found; the agent offers when a list grows |
@@ -153,7 +153,7 @@ decided: keep any sentence the person wrote, ask before removing it
 - **The root has one marked entry point** (the test box): today arrival
   opens that card. With Track B the root page opens and lists the card first
   under "Start here".
-- **Nothing on the plate and no questions:** the plate line is absent, as
+- **No todos and no questions:** the count line is absent, as
   `summaryParts` already returns `null` for an empty reduction
   (`summary.ts:41`).
 - **A seeded folder has no cards yet** (`recipes/` on a new box): it folds
@@ -189,8 +189,8 @@ Juni, a new box, desktop layout.
    The root page's "Also here" lists them; the agent updates the root
    summary in the same turn (the place-shows-cards rule).
 5. Next morning she opens the box. Arrival opens the root page: her summary,
-   "1 on your plate" (the ladder is due Friday), and the two cards. She
-   clicks the plate line; the plate view opens beside the chat.
+   "1 to do" (the ladder is due Friday), and the two cards. She
+   clicks the count line; the todo view opens beside the chat.
 6. A month later her lending list is twelve cards. The agent, answering a
    question about the stove, offers: "I can make you a page that shows
    what's out and what's due. Want one?" (Track F). She says yes; the agent
@@ -209,13 +209,20 @@ deletions), not a BIG CHANGE.
 |---|---|---|---|
 | A. Stock root summary and the replace rule | 170 | 110 | A new box says what it is, on the desktop page and in the phone's empty chat; the agent takes over the words at the first real conversation |
 | B. Root arrival always opens the root page | 20 | 30 | One marked card cannot take the front door |
-| C. Plate and questions on the root page | 110 | 70 | Day two says what is due and waiting, where the person looks |
+| C. Todo and question counts on the root page | 110 | 70 | Day two says what is due and waiting, where the person looks |
 | D. Browse opens on content; seeded empty folders fold | 220 | 140 | Browse reads as the person's folders; the whole box stays one link away |
 | E. Words | 60 | 40 | No "card" or "folder /" on the first screen; "landmark" glossed where it is first met |
 | F. "The box can build you a page" | 40 | 30 | The discovery stops depending on luck |
 | Authored docs (landmarks.md, box-layout.md, glossary, what-you-could-do.md, speaking examples) | 120 | | |
 
 ## Stated preferences this plan trades against
+
+- **Content is where the time goes (boxholder, 2026-10-19):** the content
+  root is where a person spends all their time; the other storage areas
+  are only for jumping out. Track D follows this. It also rules out any
+  front-door element that points at the machinery areas.
+- **No plate metaphor (boxholder, 2026-10-19):** user-facing words this
+  plan adds do not say "plate". Track C's line follows this.
 
 - **Boxholder, 2026-07-20/21** (first-run-experience issue): "a firm menu of
   a few complete flows, each with a real payoff ... NOT an open 'feed me
@@ -239,7 +246,7 @@ deletions), not a BIG CHANGE.
   platform mechanism. No onboarding card type, no welcome flag, no new
   surface: the root page, the landmark body, the openers, the briefing rule,
   the fold, and `TodoSummaryLine` carry everything.
-- **Engineering principle 8, one way to do each thing:** the plate line on
+- **Engineering principle 8, one way to do each thing:** the count line on
   the root page reads the same `status.navStatus` query the nav badge reads
   (`nav.tsx:120-123`), with the same invalidation, so the two cannot
   disagree.
@@ -267,7 +274,7 @@ deletions), not a BIG CHANGE.
   file take an update. Not used for the root landmark today (it has a role
   the moment it exists), and this plan does not add it: an existing box's
   root body belongs to its agent.
-- The plate line: `TodoSummaryLine` and `summaryParts` (`todo/summary.ts:39-49`);
+- The count line: `TodoSummaryLine` and `summaryParts` (`todo/summary.ts:39-49`);
   `DirectoryTodos` deliberately skips the root ("The box root gets no line —
   its summary is the plate and the nav badge", `DirectoryTodos.tsx:11-12`).
   Track C gives the root its line on the place page, from the nav counts.
@@ -313,7 +320,7 @@ filesystem root. Evaluated-only; no acknowledgement entry.
   writes at init, `STOCK_ROOT_SUMMARY` beside `STOCK_ROOT_OPENERS` in
   `schemas/landmark.ts`. Identified by text equality with the constant; the
   briefing rule and a test refer to it. It is not a new card and not a flag.
-- **Plate line** (exists as `TodoSummaryLine` on cards and directories): on
+- **Count line** (exists as `TodoSummaryLine` on cards and directories): on
   the root page it reads the nav counts, so it is `onPlateTodos` and
   `escalatedTodos` only (no "later", "parked", or "done": the nav counts do
   not carry them). The questions count joins it as a second part.
@@ -400,11 +407,13 @@ filesystem root. Evaluated-only; no acknowledgement entry.
   with one entry point has `arrival` equal to its landmark path; a nested
   place with one keeps the card.
 
-### Track C — Plate and questions on the root page
+### Track C — Todo and question counts on the root page
 
 - **What.** The root place page shows one quiet line under the summary:
-  "3 on your plate · 1 overdue · 2 questions waiting". Each count opens its
-  surface beside the chat: the plate view (`plate.todo-view.card`) and the
+  "3 to do · 1 overdue · 2 questions waiting". The line does not say
+  "plate": the boxholder does not want that metaphor (decision, 2026-10-19).
+  Each count opens its surface beside the chat: the todo view
+  (`plate.todo-view.card`, whose own title is out of scope here) and the
   questions card (`SYSTEM_CARD_PATHS.questions`).
 - **Why.** Day two says nothing about what is due (table, row 4); the nav
   badge is the only signal and the walks did not read it.
@@ -414,8 +423,8 @@ filesystem root. Evaluated-only; no acknowledgement entry.
     the query the nav already mounts and invalidates on card and question
     events. A failed query passes `"unavailable"`.
   - A pure `rootLineParts(counts)` in `components/todo/summary.ts` returns
-    `SummaryPart[] | null`: `null` when every count is zero; `"N on your
-    plate"` and `"N overdue"` when `onPlateTodos > 0`; `"N questions waiting"`
+    `SummaryPart[] | null`: `null` when every count is zero; `"N to do"`
+    and `"N overdue"` when `onPlateTodos > 0`; `"N questions waiting"`
     when `pendingQuestions > 0`. It does not call `summaryParts`, whose
     reduction shape (`open`, `done`, `parked`) the nav counts do not carry.
   - `TodoSummaryLine` today takes a reduction and one `openAction` and calls
@@ -560,7 +569,7 @@ none
 | The agent records the purpose outside the briefing; stock summary and openers stay | No (the openers fix recorded this as residual) | The compiled `**Front page:**` line shows the agent the stock state every turn (Track A) | Clear to the agent; the person sees stale onboarding text until they say so |
 | An existing box never gets the stock body (install is once; "a real landmark" is untouched) | Track A test for the repair branch | By design: an existing box's agent owns its body; the briefing rule still applies when the purpose is recorded | Silent and accepted: existing boxes have agents and cards already |
 | Root arrival opens the page over a deliberately marked entry point | Track B test | The card leads under "Start here" | Clear |
-| The plate line and the nav badge disagree | No | Same query (`status.navStatus`), same invalidation | Cannot happen while both read it |
+| The count line and the nav badge disagree | No | Same query (`status.navStatus`), same invalidation | Cannot happen while both read it |
 | `status.navStatus` fails | Track C DOM test | "Counts unavailable" with retry; distinct from zero | Clear |
 | An inert root landmark with a person-written body is repaired | Track A test | Repair keeps the body and adds no stock text | Clear |
 | The phone's empty chat shows stock text after the agent rewrote the body | Track A test on `stockSummary` | The flag is computed from the body on each openers read | Clear |
@@ -624,6 +633,26 @@ are accepted with the reason beside them.
 Each is a choice for the discussion, with a lean and the consequence for a
 person using the box.
 
+### Decisions from the discussion (2026-10-19)
+
+The boxholder settled these; the questions below stay as the record of the
+alternatives.
+
+- **Question 1:** yes, the stock summary (Track A).
+- **Question 2:** yes, the root always opens its page (Track B).
+- **Question 3:** the count line stays, but the word "plate" goes. The
+  boxholder does not like the plate metaphor and said it is a term the
+  agent focuses on more than they do. The line reads "3 to do · 1 overdue ·
+  2 questions waiting". Renaming the stock todo view ("The Plate") and the
+  "on your plate" summary wording elsewhere is a separate issue, not this
+  plan.
+- **Question 4:** Browse always starts at the person's content (Track D).
+  Stated as a principle: the content root is where a person spends all
+  their time; the other areas are for jumping out, an escape hatch, and
+  nothing on the front door should send a person there.
+- **Question 5b:** keep the slug; fix the glossary.
+- Questions 5, 6, and 7 were not discussed; their leans stand.
+
 1. **What the first page says on an empty box.** A "stock summary" is a
    short paragraph the box ships with in the root place's body; the agent
    replaces it when it learns the box's purpose.
@@ -647,21 +676,21 @@ person using the box.
      leads it under "Start here". A person who marked one card as the thing
      to see first gets the page with that card at the top.
    - *Keep the rule* (decision 2 of 2026-10-08). A box with one marked card
-     opens on that card; the summary and plate line are one click away on
+     opens on that card; the summary and count line are one click away on
      the Box tab. The test box's case may be a poorly chosen entry point,
      not a wrong rule.
    - **Lean:** root page always; nested places keep the rule. Cost: one
      condition. This revisits a decision, so it is the boxholder's call.
 
-3. **What day two shows.** The "plate line" is the one-line count already
+3. **What day two shows.** The "count line" is the one-line count already
    shown on cards and folders ("3 on your plate · 1 overdue").
-   - *Plate line plus questions on the root page (Track C).* Tomas sees what
+   - *Count line plus questions on the root page (Track C).* Tomas sees what
      is due and what the box is asking, where he is looking. Cost: about
      150 lines.
    - *Rely on the agent's summary.* The agent is already asked to keep the
      root body current; no new line. Fails when the agent has not updated
      it, and a count is a fact the page can state itself.
-   - **Lean:** the plate line.
+   - **Lean:** the count line.
 
 4. **How much of the storage layout Browse shows, and to whom.**
    - *Browse starts on the person's content; the whole box is one link away
@@ -762,7 +791,7 @@ fold fixtures; Track E's two DOM assertions. Done when those pass, the two
 knowledge audits pass against the test box clone, and the exhibit shows a
 fresh throwaway box's first page and Browse beside the test box's. No data
 shape changes; no migration. Existing boxes change behavior only in Browse's
-compact root, the root arrival rule, the root page's plate line, and the
+compact root, the root arrival rule, the root page's count line, and the
 empty copy.
 
 ## Scenario walks
