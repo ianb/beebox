@@ -13,39 +13,15 @@
  *   test("example", async (t) => {
  *     t.check("actual", "expected");
  *     await t.check(asyncFn(), "expected");
- *     t.checkThrows(() => badCall(), { expected: "ErrorName", mode: "name" });
+ *     t.checkText(output, "total: «int»");
+ *     t.checkThrows(() => badCall(), "ErrorName: bad «*»");
  *   });
  */
 
-import { TestBase, type Extra } from "@tapjs/core";
-import { inspect, type CheckOptions, type CheckResult, type Extractions } from "./text/compare.js";
+import { TestBase } from "@tapjs/core";
+import { compareText, type TextComparison } from "./text/compare.js";
 import { NO_EXPECTED, checkValue } from "../check/compare/report.js";
 import type { Expected } from "../check/expected.js";
-
-type DoctestDiagnostic = Pick<Extra, "at" | "source">;
-
-interface DoctestCheckOptions {
-  check: string | CheckOptions;
-  diagnostic: DoctestDiagnostic;
-}
-
-interface DoctestThrowsOptions {
-  expected: string;
-  mode: "name" | "full";
-  diagnostic?: DoctestDiagnostic;
-  /** Test point name, as for CheckOptions.label */
-  label?: string;
-}
-
-interface DoctestCheckResult {
-  result: CheckResult;
-  diagnostic?: DoctestDiagnostic;
-  label: string | undefined;
-}
-
-function isDoctestCheckOptions(value: string | CheckOptions | DoctestCheckOptions): value is DoctestCheckOptions {
-  return typeof value === "object" && "check" in value;
-}
 
 /** A promise of the result when `actual` is promise-like; the result itself otherwise. */
 type Settled<T, R> = T extends PromiseLike<unknown> ? Promise<R> : R;
@@ -69,23 +45,17 @@ declare module "@tapjs/core" {
     // would widen it to fit a wrong expected value instead of reporting it.
     check<T>(actual: T, expected?: NoInfer<Expected<Awaited<T>>>): Settled<T, void>;
     /**
-     * Compare `actual`'s serialized text with `expected` text, which may
-     * hold `«»` wildcards. A string's trailing newlines are not compared.
-     * For command output and other text; use `check` for values.
+     * Compare the text `actual` with `expected` text, which may hold `«»`
+     * wildcards. Trailing newlines in `actual` are not compared. For command
+     * output and other text; use `check` for values.
      */
-    checkText(
-      actual: unknown,
-      expected: string | CheckOptions | DoctestCheckOptions,
-    ): Extractions | Promise<Extractions>;
+    checkText(actual: string | PromiseLike<string>, expected: string): void | Promise<void>;
     /**
      * Assert that `fn` throws (or rejects). `expected` is `"Name"` to check
      * the error's name, or `"Name: message"` to check both; the message may
      * hold `«»` wildcards.
      */
-    checkThrows(
-      fn: () => unknown,
-      expected: string | DoctestThrowsOptions,
-    ): Extractions | Promise<Extractions>;
+    checkThrows(fn: () => unknown, expected: string): void | Promise<void>;
   }
 }
 
@@ -102,40 +72,13 @@ function literalBlock(text: string): unknown {
   return { [Symbol.for("yaml.node.type")]: Symbol.for("yaml.scalar"), value: text, type: "BLOCK_LITERAL" };
 }
 
-/** The doctest's source excerpt as a literal block, for the same reason. */
-function blockSource(diagnostic: DoctestDiagnostic): Record<string, unknown> {
-  return typeof diagnostic.source === "string" ? { ...diagnostic, source: literalBlock(diagnostic.source) } : diagnostic;
-}
-
 /** Failure diagnostics: hint, diff, and a paste-ready suggested value. */
-function failureExtra(result: CheckResult & { pass: false }): Record<string, unknown> {
+function failureExtra(result: TextComparison & { pass: false }): Record<string, unknown> {
   return {
     ...(result.hint === null ? {} : { hint: literalBlock(result.hint) }),
     diff: literalBlock(result.diff),
     suggested: literalBlock(result.suggested),
   };
-}
-
-function report(
-  t: InstanceType<typeof TestBase>,
-  { result, diagnostic = {}, label }: DoctestCheckResult,
-): Extractions {
-  (t as { currentAssert: unknown }).currentAssert = (t as { checkText: unknown }).checkText;
-
-  // A label names the test point, pass or fail ("line 42: s.toUpperCase()").
-  if (result.pass) {
-    t.pass(label ?? "");
-    // `=> «show»`: the value is the point, so it goes into the TAP stream.
-    if (result.shown !== undefined) {
-      const [first = "", ...rest] = result.shown.split("\n");
-      t.comment(`${label ?? "shown"} => ${first}`);
-      for (const line of rest) t.comment(`  ${line}`);
-    }
-    return result.extractions;
-  }
-
-  t.fail(label ?? result.message, { ...blockSource(diagnostic), ...failureExtra(result) });
-  return result.extractions;
 }
 
 TestBase.prototype.check = function tapCheckValue(this: InstanceType<typeof TestBase>, ...args: unknown[]): unknown {
@@ -175,78 +118,60 @@ function held<T>(t: TestBase, promise: Promise<T>): Promise<T> {
   return promise;
 }
 
-/** A string's trailing newlines, which expected text in a doctest cannot hold, are not compared. */
-function trimEnd(value: unknown): unknown {
-  return typeof value === "string" ? value.replace(/\n+$/, "") : value;
+/** A string's trailing newlines are not compared: command output and files end with one, and expected text rarely does. */
+function trimEnd(value: string): string {
+  return value.replace(/\n+$/, "");
 }
 
 TestBase.prototype.checkText = function tapCheckText(
-  actual: unknown,
-  expected: string | CheckOptions | DoctestCheckOptions,
-): Extractions | Promise<Extractions> {
-  const check = isDoctestCheckOptions(expected) ? expected.check : expected;
-  const diagnostic = isDoctestCheckOptions(expected) ? expected.diagnostic : undefined;
-  const label = typeof check === "object" ? check.label : undefined;
-  const result = actual instanceof Promise
-    ? actual.then((value) => inspect(trimEnd(value), check))
-    : inspect(trimEnd(actual), check);
-
-  if (result instanceof Promise) {
-    return held(this, result.then((resolved) => report(this, {
-      result: resolved,
-      label,
-      ...(diagnostic ? { diagnostic } : {}),
-    })));
-  }
-
-  return report(this, { result, label, ...(diagnostic ? { diagnostic } : {}) });
+  this: InstanceType<typeof TestBase>,
+  ...[actual, expected]: Parameters<TestBase["checkText"]>
+): void | Promise<void> {
+  const run = (text: string): void => {
+    (this as { currentAssert: unknown }).currentAssert = (this as { checkText: unknown }).checkText;
+    const result = compareText(trimEnd(text), expected);
+    if (result.pass) this.pass("");
+    else this.fail("check failed", failureExtra(result));
+  };
+  return isThenable(actual) ? held(this, Promise.resolve(actual).then(run)) : run(actual);
 };
 
 /**
  * Assert that fn() throws (or, for an async fn, rejects) with an error
- * matching expected.
- * mode="name" compares just error.name; mode="full" compares "ErrorName: message".
- * On failure, includes the caught error's stack trace in diagnostics.
+ * matching expected: "Name" compares just error.name; "Name: message"
+ * compares both. On failure, includes the caught error's stack trace in
+ * diagnostics.
  *
  * A sync fn reports synchronously; a fn returning a Promise reports via a
- * returned Promise the caller must await (the doctest loader always awaits).
+ * returned Promise the caller must await.
  */
 TestBase.prototype.checkThrows = function tapCheckThrows(
-  fn: () => unknown,
-  options: string | DoctestThrowsOptions,
-): Extractions | Promise<Extractions> {
-  // A plain string is the expected error: "Name" checks the name, and
-  // "Name: message" checks both (as a doctest's `=> throws` line does).
-  const { expected, mode, diagnostic, label: pointName }: DoctestThrowsOptions = typeof options === "string"
-    ? { expected: options, mode: options.includes(": ") ? "full" : "name" }
-    : options;
+  this: InstanceType<typeof TestBase>,
+  ...[fn, expected]: Parameters<TestBase["checkThrows"]>
+): void | Promise<void> {
+  const full = expected.includes(": ");
   (this as { currentAssert: unknown }).currentAssert = (this as { checkThrows: unknown }).checkThrows;
 
-  const finish = (caught: unknown, threw: boolean): Extractions => {
-    let label: string;
+  const finish = (caught: unknown, threw: boolean): void => {
+    let described: string;
     if (!threw) {
-      label = "(no error thrown)";
-    } else if (mode === "name") {
-      label = caught instanceof Error ? caught.name : String(caught);
+      described = "(no error thrown)";
+    } else if (!full) {
+      described = caught instanceof Error ? caught.name : String(caught);
     } else {
       const name = caught instanceof Error ? caught.name : "Error";
       const msg = caught instanceof Error ? caught.message : String(caught);
-      label = `${name}: ${msg}`;
+      described = `${name}: ${msg}`;
     }
 
-    const result = inspect(label, expected) as CheckResult;
-
+    const result = compareText(described, expected);
     if (result.pass) {
-      this.pass(pointName ?? "");
-      return result.extractions;
+      this.pass("");
+      return;
     }
-
-    const extra: Record<string, unknown> = { ...blockSource(diagnostic ?? {}), ...failureExtra(result) };
-    if (caught instanceof Error && caught.stack) {
-      extra.stack = caught.stack;
-    }
-    this.fail(pointName ?? result.message, extra);
-    return result.extractions;
+    const extra = failureExtra(result);
+    if (caught instanceof Error && caught.stack) extra.stack = caught.stack;
+    this.fail("check failed", extra);
   };
 
   let returned: unknown;

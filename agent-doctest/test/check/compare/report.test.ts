@@ -386,7 +386,7 @@ suggested:
 void test("the diff shows only real differences", async (t) => {
   const outcome = checkValue({ id: ID, n: 2, title: "x" }, { id: uuid(), n: any(Number), title: "y" });
   t.equal(outcome.pass, false);
-  if (!outcome.pass) t.checkText(outcome.diff, `- expected
+  if (!outcome.pass && outcome.diff !== undefined) t.checkText(outcome.diff, `- expected
 + actual
 
   {

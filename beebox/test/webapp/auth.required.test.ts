@@ -11,6 +11,7 @@
 
 import { test } from "tap";
 import "agent-doctest/tap";
+import { anything, containing } from "agent-doctest/check";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -267,8 +268,8 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
   delete process.env.BBX_SECRETS_STORE_ISOLATED;
   if (PRIOR_STORE === undefined) delete process.env.BBX_SECRETS_FILE; else process.env.BBX_SECRETS_FILE = PRIOR_STORE;
   t.check(overrideOnly, SECRETS_NEED_OWNER_SESSION);
-  // The hint list is generated from the secret registry; the status shows the panel opened.
-  t.check(atIsolatedSecrets.statusCode, 200);
+  // The hint list is generated from the secret registry, so only its presence is pinned.
+  t.check(atIsolatedSecrets, { statusCode: 200, body: { result: { data: containing([anything()]) } } });
 
   // On a box that never opted in, the key means what it always did: it clears the
   // wall and reaches an authenticated procedure, and nothing owner-gated.

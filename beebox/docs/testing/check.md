@@ -139,9 +139,9 @@ await revokeDevice(deviceId.value);
 
 ## Text and errors
 
-`t.checkText(actual, text)` compares the value's text. The text may hold
-`«»` wildcards (`«int»`, `«uuid»`, `«date»`, `«*»`). Use it for command
-output and other text, not for values.
+`t.checkText(actual, text)` compares a string, or a promise of one, with
+`text`. The text may hold `«»` wildcards (`«int»`, `«uuid»`, `«date»`,
+`«*»`). Use it for command output and other text; use `t.check` for values.
 
 ```ts
 t.checkText(runStatus(), `ready: «int» cards
