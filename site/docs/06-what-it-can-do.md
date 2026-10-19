@@ -16,7 +16,7 @@ its type; a **box** is the directory of them. One page per capability is in
 - [Chat](capabilities/chat.md): the central web conversation, with resumable threads.
 - [Voice](capabilities/voice.md): dictation, transcription, and spoken replies.
 - [Phone capture](capabilities/phone-capture.md): record, photograph, and upload from a phone.
-- [Mac app](capabilities/mac-app.md): open your boxes from the menu bar, send files from watched folders or a Photos album, and optionally run a box on the Mac.
+- [Mac app](capabilities/mac-app.md): run a box on your Mac, and connect your Mac to boxes anywhere, sending them files from watched folders and Photos albums.
 - [Triage](capabilities/triage.md): classify and file what arrives, with confidence levels.
 - [Questions](capabilities/questions.md): the agent asks instead of guessing.
 - [Schedules](capabilities/schedules.md): recurring runs and agent-set timers.

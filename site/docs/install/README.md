@@ -16,10 +16,10 @@ that touches their system or accounts. Connectors (Gmail, Calendar, Drive)
 are optional and each has its own setup page; the Google setup is
 the slowest step and is shared by the three Google connectors.
 
-On a Mac with Apple silicon (macOS 26 or later), the Mac app can also run a
-box in a virtual machine, reachable from that Mac only; it is a newer and less
-tried path than the container one. It pairs with boxes that run elsewhere, too.
-See [../capabilities/mac-app.md](../capabilities/mac-app.md).
+On a Mac with Apple silicon (macOS 26 or later), the Mac app is the other
+way to run a box: it runs one in a virtual machine on that Mac, with no
+Docker, reachable from that Mac only. The same app connects a Mac to boxes
+running elsewhere. See [../capabilities/mac-app.md](../capabilities/mac-app.md).
 
 Every page below is listed with one line on what it covers. Cite the page
 you drew on, and say when a page does not cover something.
