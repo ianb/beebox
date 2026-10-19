@@ -92,9 +92,10 @@ function Shimmer({
   );
 }
 
-// Once revealed, keep a subtle `info` (iris) tint so the text still reads as
-// "this was redacted" at a glance rather than looking like ordinary content.
-const REVEALED_TINT = "text-info-dark";
+// Once revealed, keep an iris cast (`.bbx-redacted-revealed` in index.css) so
+// the text still reads as "this was redacted" at a glance. It mixes iris into
+// the surrounding text color, so it stays readable on light and dark themes.
+const REVEALED_TINT = "bbx-redacted-revealed";
 
 export function RedactedInline({ children }: { children?: ReactNode }): ReactNode {
   const [revealed, setRevealed] = useState(false);
@@ -110,7 +111,7 @@ export function RedactedBlock({ children }: { children?: ReactNode }): ReactNode
   const [revealed, setRevealed] = useState(false);
   if (revealed) {
     return (
-      <div data-redacted="revealed" className={`my-2 ${REVEALED_TINT}`}>
+      <div data-redacted="revealed" className={`my-2 px-2 py-1 ${REVEALED_TINT}`}>
         {children}
       </div>
     );
