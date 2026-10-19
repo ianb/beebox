@@ -1,6 +1,6 @@
 ---
 title: "Purge agent-doctest: rename the check library, drop doctest leftovers"
-status: active
+status: implemented
 workstream: doctest-typecheck
 issues: []
 ---

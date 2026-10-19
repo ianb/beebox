@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-10-19T01:53:28Z
+Generated: 2026-10-19T01:56:03Z
 Total documents: 546
 
 ## Issues
@@ -52,6 +52,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/plugins-slice-2.review.md** — "Plan Engineering Review — plugins slice 2" (109 lines) · implementation review
 - **docs/implemented-plans/plugins-slice-3.review.md** — "Plan review — plugins slice 3" (70 lines) · implementation review
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (449 lines) · shipped history · implemented
+- **docs/implemented-plans/purge-agent-doctest.md** — "Purge agent-doctest: rename the check library, drop doctest leftovers" (253 lines) · shipped history · implemented
 - **docs/implemented-plans/readable-card-fields.md** — "Readable card fields" (276 lines) · shipped history · implemented
 - **docs/implemented-plans/refresh-maps-convergence.review.md** — "Plan Engineering Review — refresh-maps convergence" (382 lines) · implementation review
 - **docs/implemented-plans/remove-box-shape-v1.core-review.md** — "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (63 lines) · shipped history · implemented
@@ -86,7 +87,6 @@ These documents are not referenced by any other document.
 - **docs/plans/pdf-render-webp.review.md** — "Plan Engineering Review — PDF render WebP" (106 lines) · plan review
 - **docs/plans/publish-custom-domain-admin.review.md** — "Plan Engineering Review — custom hostname assignment" (91 lines) · plan review
 - **docs/plans/publish-sites-admin.review.md** — "Plan Engineering Review — publish-sites-admin" (156 lines) · plan review
-- **docs/plans/purge-agent-doctest.md** — "Purge agent-doctest: rename the check library, drop doctest leftovers" (253 lines) · proposal · active
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
 - **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (434 lines) · proposal · partial
 - **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (142 lines) · plan review
@@ -215,6 +215,7 @@ Referenced by:
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/prompt-calibration.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/publication-card-home.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/purge-agent-doctest.md:65 (mention) — `beebox/src/dev/doc-check/file-paths.ts:27`; `AGENTS.md`, `README.md`,
 - docs/implemented-plans/questions-end-to-end.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/refresh-clerk.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/refresh-maps-convergence.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -270,7 +271,6 @@ Referenced by:
 - docs/plans/public-site-story-extraction.subplan.md:61 (mention) — per AGENTS.md ("Sonnet 5 is good at subagent work"; extraction is
 - docs/plans/public-site.md:31 (mention) — - Root `AGENTS.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
 - docs/plans/publish-sites-admin.md:113 (mention) — AGENTS.md             # lazy pointer to installed box-docs/publishing.md
-- docs/plans/purge-agent-doctest.md:65 (mention) — `beebox/src/dev/doc-check/file-paths.ts:27`; `AGENTS.md`, `README.md`,
 - docs/plans/scan-vision-claude.md:496 (mention) — | Box AGENTS.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` —
 - docs/plans/source-available-release.md:396 (mention) — it now adds features beyond the task (`AGENTS.md` Behavioral Notes).
 - docs/plans/worktree-control-surface.md:146 (mention) — (`:236-242`), runs the workspace install (`:252`), generates the Codex AGENTS.md
@@ -724,6 +724,7 @@ Referenced by:
 - docs/implemented-plans/doctest-usability.md:543 (mention) — `README.md` "Custom serializers"). Run today's `matchWithWildcards` on that
 - docs/implemented-plans/plugins-slice-2.md:302 (mention) — (`bbx-recipe-body`, `bbx-recipe-step` counters), `README.md`. Core deletes
 - docs/implemented-plans/private-issues-shadow-repo.md:160 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
+- docs/implemented-plans/purge-agent-doctest.md:65 (mention) — `beebox/src/dev/doc-check/file-paths.ts:27`; `AGENTS.md`, `README.md`,
 - docs/implemented-plans/refresh-maps-correctness.md:193 (mention) — - Every child that is an anchor file (`README.md`, `*.briefing.card`,
 - docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
 - docs/implemented-plans/retire-doctest.md:1056 (mention) — `CONTRIBUTING.md:28,56`, and `README.md:48`.
@@ -3362,7 +3363,7 @@ Referenced by:
 - docs/development/workflow.md:5 (mention) — services](technologies.md).
 - docs/implemented-plans/doc-structure-development.md:64 (mention) — | `technologies.md` | `development/technologies.md` |
 - docs/implemented-plans/doc-structure-install-server.md:174 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
-- docs/plans/purge-agent-doctest.md:67 (mention) — `beebox/docs/development/technologies.md`, `site/docs/dev/README.md`,
+- docs/implemented-plans/purge-agent-doctest.md:67 (mention) — `beebox/docs/development/technologies.md`, `site/docs/dev/README.md`,
 - ../issues/docs-and-chores/2026-10-17-public-provider-list-drifts-from-code.md:13 (mention) — `beebox/docs/development/technologies.md` ("AI services used"). Page
 - ../research/fabric-review.md:96 (mention) — | Subprocessor list that names one vendor while the product offers ten; training on content unless the person opts out |
 
@@ -6081,6 +6082,17 @@ References:
 - → docs/plans/publish-sites-admin.md (mention)
 - → docs/plans/publication-approval-card.md (mention)
 
+#### docs/implemented-plans/purge-agent-doctest.md **[ORPHAN]**
+
+Title: "Purge agent-doctest: rename the check library, drop doctest leftovers" | 253 lines | shipped history | implemented
+
+References:
+- → docs/implemented-plans/retire-doctest.md (mention)
+- → AGENTS.md (mention)
+- → README.md (mention)
+- → docs/development/technologies.md (mention)
+- → docs/plans/source-available-release.md (mention)
+
 #### docs/implemented-plans/questions-end-to-end.md
 
 Title: "Questions, end-to-end" | 667 lines | shipped history | implemented
@@ -6401,6 +6413,7 @@ References:
 Title: "Retire doctest: TypeScript tests with a typed check()" | 1286 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/purge-agent-doctest.md:9 (mention) — The doctest format is gone (`beebox/docs/implemented-plans/retire-doctest.md`),
 - docs/plans/README.md:24 (mention) — findable without masquerading as current docs. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this
 - docs/plans/agent-points-at-ui.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - docs/plans/android-companion-app.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
@@ -6455,7 +6468,6 @@ Referenced by:
 - docs/plans/publication-approval-card.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - docs/plans/publish-shared-host-per-box.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - docs/plans/publish-sites-admin.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
-- docs/plans/purge-agent-doctest.md:9 (mention) — The doctest format is gone (`beebox/docs/implemented-plans/retire-doctest.md`),
 - docs/plans/scan-guide-card.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - docs/plans/scan-retry-and-document-route.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
 - docs/plans/scan-vision-claude.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
@@ -8809,17 +8821,6 @@ Title: "Plan Engineering Review — publish-sites-admin" | 156 lines | plan revi
 References:
 - → docs/unimplemented-plans/publish-pages-superseded.md (mention)
 
-#### docs/plans/purge-agent-doctest.md **[ORPHAN]**
-
-Title: "Purge agent-doctest: rename the check library, drop doctest leftovers" | 253 lines | proposal | active
-
-References:
-- → docs/implemented-plans/retire-doctest.md (mention)
-- → AGENTS.md (mention)
-- → docs/plans/README.md (mention)
-- → docs/development/technologies.md (mention)
-- → docs/plans/source-available-release.md (mention)
-
 #### docs/plans/README.md
 
 Title: "docs/plans/ — proposals and in-flight plans" | 80 lines | current reference
@@ -8835,7 +8836,6 @@ Referenced by:
 - docs/plans/asset-annex.md:1082 (mention) — the server. See that directory's `README.md` for the restore
 - docs/plans/container-first.md:324 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
-- docs/plans/purge-agent-doctest.md:65 (mention) — `beebox/src/dev/doc-check/file-paths.ts:27`; `AGENTS.md`, `README.md`,
 - docs/plans/scan-guide-card.md:94 (mention) — `README.md` install table. Reshaped in place to guide-card form.
 - docs/plans/source-available-release.md:78 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
 - docs/reports/plan-directory-migration-history-2026-09-13.md:5 (link) — locations. Use the [current plan conventions](../plans/README.md) when working
@@ -8953,9 +8953,9 @@ References:
 Title: "Source-available release of beebox" | 538 lines | proposal | active
 
 Referenced by:
+- docs/implemented-plans/purge-agent-doctest.md:104 (mention) — (`beebox/docs/plans/source-available-release.md` and others found by
 - docs/implemented-plans/remove-telegram.review.md:73 (mention) — `source-available-release.md` cites the removed admin flow as history;
 - docs/plans/installation-story.md:19 (mention) — Coordinates with `docs/plans/source-available-release.md`: this plan
-- docs/plans/purge-agent-doctest.md:104 (mention) — (`beebox/docs/plans/source-available-release.md` and others found by
 - ../issues/closed/bugs/2026-07-05-report-workflows-emit-relative-paths.md:41 (mention) — (`beebox/docs/plans/source-available-release.md`) records the leak
 - ../issues/closed/decisions/2026-07-08-release-cloud-provider-honesty.md:21 (mention) — feature gap. Two things to settle in `docs/plans/source-available-release.md`:
 - ../issues/closed/features/2026-07-12-bbx-doctor-preflight.md:27 (mention) — `beebox/docs/plans/source-available-release.md` (preflight + actionable
