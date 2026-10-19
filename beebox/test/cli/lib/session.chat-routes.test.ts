@@ -27,9 +27,11 @@ const ALL = { mode: "page", offset: 0, limit: 5000 } satisfies SessionLogSlice;
 
 // ## getSessionLogPath
 //
-// Pure path computation — encodes slashes as hyphens:
+// Encodes slashes as hyphens. The cwd is resolved through symlinks first, as
+// the CLI's own cwd is; a path that does not exist (no symlink in it) stays
+// as written. (`/home` would not: macOS resolves it under `/System/Volumes`.)
 void test("Pure path computation — encodes slashes as hyphens:", async (t) => {
-  t.check(getSessionLogPath("/home/user/mybox", "abc-123"), path.join(os.homedir(), ".claude/projects/-home-user-mybox/abc-123.jsonl"));
+  t.check(getSessionLogPath("/bbx-no-such-dir/user/mybox", "abc-123"), path.join(os.homedir(), ".claude/projects/-bbx-no-such-dir-user-mybox/abc-123.jsonl"));
 
 });
 

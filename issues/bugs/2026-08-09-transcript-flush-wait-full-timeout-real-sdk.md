@@ -86,3 +86,35 @@ Session `59226045-43e6-470a-b59a-72aaf19f95ea`, entries
 `47f8e82a-bbd8-473b-827f-74017ced05e9` and
 `e77e9251-a8f4-4739-addf-f965c238a3db`. Still a standing condition; still
 unconfirmed which of the two candidate explanations above applies.
+
+## 2026-10-18 root cause found: wrong transcript path for a symlinked box root
+
+Instrumented `waitForTranscriptEntry` and ran `chat-queue-real.test.ts` against
+the real CLI. The wait polled
+`~/.claude/projects/-var-folders-...-T-bbx-test-XXXX/<session>.jsonl`, a file
+that never existed; the CLI wrote the transcript to
+`~/.claude/projects/-private-var-folders-...-T-bbx-test-XXXX/<session>.jsonl`.
+The CLI names the directory after its own `process.cwd()`, which the OS
+reports with symlinks resolved, and on macOS `/var` links to `/private/var`.
+beebox encoded the lexical box path. Neither slow flush nor uuid formatting
+was involved.
+
+Scope: the gate has never worked for a box whose root path passes through a
+symlink (every macOS tmp test box). The same mismatch hit every transcript
+lookup built on `getSessionDir`/`getSessionLogPath` (history reads, session
+roots), not only the gate. Real boxes under `~/src/boxes/` and the worktree
+test boxes resolve to themselves, so the gate has been working for them.
+
+Fix: `getSessionDir`/`getSessionLogPath` in
+`beebox/src/core/chat/session/transcript-paths.ts` now encode the realpath
+of the cwd (a missing cwd resolves its nearest existing ancestor), as
+`session/delete/apply/storage.ts` and the test runner already did. After the
+fix the real-SDK test logs no warning and runs in ~6s instead of ~27s. New
+test in `test/core/chat/session/run.transcript-sync.test.ts` seeds the
+fixture at the encoded realpath of a box reached through a symlink (fails
+without the fix). The old fixtures passed because they wrote through the
+same helper the gate reads through.
+
+Not fixed, same shape: `symlinkClaudeMemory` (`core/box/structure/core.ts`)
+encodes `path.resolve(boxRoot)`, and `isTaskOutputPathForBox` compares
+against the lexical encoded root.

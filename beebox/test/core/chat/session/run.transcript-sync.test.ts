@@ -19,14 +19,15 @@ import "@ianbicking/tap-check/tap";
 import { any } from "@ianbicking/tap-check/check";
 import { once } from "node:events";
 import assert from "node:assert/strict";
-import { mkdir, writeFile, appendFile, rm } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdir, mkdtemp, writeFile, appendFile, realpath, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
 import { createFakeChatBackend } from "../../../../src/services/claude-chat/core.js";
 import { waitForTranscriptEntry } from "../../../../src/core/chat/session/run/transcript-sync.js";
 import { resolveSessionLogPath } from "../../../../src/core/chat/session/history.js";
-import { getSessionDir } from "../../../../src/core/chat/session/transcript-paths.js";
+import { claudeProjectsRoot, encodeProjectDir, getSessionDir } from "../../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { tick, plainTestPrompt } from "../../../helpers/chat-session-spawner-helpers.js";
 
@@ -66,6 +67,43 @@ void test("An entry already on disk resolves true immediately; an absent one run
   const pending = waitForTranscriptEntry({ boxRoot: box.root, sessionId, uuid: "uuid-late", timeoutMs: 3000 });
   setTimeout(() => { void appendFile(logPath, entryLine("uuid-late")); }, 100);
   t.check(await pending, true);
+});
+
+// ## A box reached through a symlink: the CLI writes under the resolved path
+//
+// The CLI names a transcript directory after its own `process.cwd()`, which
+// the OS reports with symlinks resolved. A box root that passes through a
+// symlink (every macOS tmp dir: `/var` links to `/private/var`) therefore has
+// its transcripts under the encoded *real* path. Seeding the fixture there,
+// rather than through beebox's own path helper, is what the real CLI does; the
+// gate must find it.
+void test("A box reached through a symlink: the CLI writes under the resolved path", async (t) => {
+  t.teardown(async () => {
+    try {
+      await rm(dirname(logPath), { recursive: true, force: true });
+      await rm(linkDir, { recursive: true, force: true });
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  const linkDir = await mkdtemp(join(tmpdir(), "bbx-tsync-link-"));
+  const linkedRoot = join(linkDir, "box");
+  await symlink(box.root, linkedRoot);
+  const sessionId = "tsync-symlinked";
+  const logPath = join(claudeProjectsRoot(), encodeProjectDir(await realpath(box.root)), `${sessionId}.jsonl`);
+  await mkdir(dirname(logPath), { recursive: true });
+  await writeFile(logPath, entryLine("uuid-via-real-path"));
+
+  t.check(
+    {
+      linkedPathDiffers: encodeProjectDir(linkedRoot) !== encodeProjectDir(await realpath(box.root)),
+      resolved: await resolveSessionLogPath(linkedRoot, sessionId),
+      found: await waitForTranscriptEntry({ boxRoot: linkedRoot, sessionId, uuid: "uuid-via-real-path", timeoutMs: 500 }),
+    },
+    { linkedPathDiffers: true, resolved: logPath, found: true },
+  );
 });
 
 // ## ChatSession holds `done` until the final assistant entry is flushed

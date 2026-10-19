@@ -71,20 +71,39 @@ export function containedSessionCwd(boxRoot: string, contextDir: string | undefi
 }
 
 /**
+ * The cwd as the Claude CLI records it. The CLI keys a transcript by its own
+ * `process.cwd()`, which the OS reports with symlinks resolved: a box under
+ * macOS's `/var/folders` (a link to `/private/var/folders`) has its
+ * transcripts under `-private-var-folders-...`. When the cwd does not exist
+ * (a deleted landmark), its nearest existing ancestor is resolved and the
+ * rest re-appended, so it keeps the same prefix as its box root.
+ */
+function cliCwd(cwd: string): string {
+  const absolute = path.resolve(cwd);
+  try {
+    return fs.realpathSync(absolute);
+  } catch (e) {
+    const code = errnoCode(e);
+    if (code !== "ENOENT" && code !== "ENOTDIR") throw e;
+    const parent = path.dirname(absolute);
+    return parent === absolute ? absolute : path.join(cliCwd(parent), path.basename(absolute));
+  }
+}
+
+/**
  * Get the path to a Claude Code session log file. `cwd` is whatever
  * was passed as the SDK's `cwd` for the run — usually the box root,
  * but a landmark-bound chat or audit uses a subdirectory.
  */
 export function getSessionLogPath(cwd: string, sessionId: string): string {
-  const claudeDir = path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
-  return path.join(claudeDir, `${sessionId}.jsonl`);
+  return path.join(getSessionDir(cwd), `${sessionId}.jsonl`);
 }
 
 /**
  * Get the Claude Code projects directory for a given SDK cwd.
  */
 export function getSessionDir(cwd: string): string {
-  return path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
+  return path.join(claudeProjectsRoot(), encodeProjectDir(cliCwd(cwd)));
 }
 
 /**
