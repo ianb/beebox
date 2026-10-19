@@ -34,15 +34,17 @@ export interface AgentInvokeOptions {
    * Set false for a small structured pass whose inputs are all in its prompt:
    * on a real box that context is ~9,700 words on EVERY invocation
    * (measured on the test box, 2026-08-26), and a judge emitting a verdict
-   * cannot use it. Claude-only — the Codex harness has no equivalent lever, so
-   * a Codex box still pays it.
+   * cannot use it. On Codex, false skips both Bee Box's `AGENTS.md` expansion
+   * and Codex's own project-doc load.
    */
   loadBoxContext?: boolean;
   /**
    * The built-in tools this run may use. Omitted means the harness default
    * (every built-in). `[]` gives a pass that works only from its prompt:
-   * no tools, so it cannot read or change the box. Claude-only, like
-   * `loadBoxContext`.
+   * no tools, so it cannot read or change the box. Codex cannot list tools:
+   * `[]` runs it in the `read-only` sandbox with web search off, so it cannot
+   * change the box or reach the network, though its shell can still read
+   * files. Any other list leaves a Codex run unrestricted.
    */
   tools?: string[];
   /** Maximum agent turns (default: 20). */

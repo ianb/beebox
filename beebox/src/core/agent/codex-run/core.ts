@@ -44,6 +44,10 @@ export interface CodexRunOptions {
   outputSchema?: Record<string, unknown> | undefined;
   cwd?: string | undefined;
   additionalDirectories?: string[] | undefined;
+  /** As `AgentInvokeOptions.loadBoxContext`. False skips every `AGENTS.md` load. */
+  loadBoxContext?: boolean | undefined;
+  /** As `AgentInvokeOptions.tools`. Only `[]` changes a Codex run: it runs read-only. */
+  tools?: string[] | undefined;
 }
 
 function invocationSignal(signal: AbortSignal | undefined, limit: AbortSignal): AbortSignal {
@@ -53,6 +57,20 @@ function invocationSignal(signal: AbortSignal | undefined, limit: AbortSignal): 
 
 async function invocationEnv(options: CodexRunOptions): Promise<NodeJS.ProcessEnv | undefined> {
   return options.env === undefined ? undefined : buildScriptEnv(options.boxRoot, options.env);
+}
+
+/** The box guidance Codex does not load itself (`@` includes), or nothing for a run without box context. */
+async function includedBoxContext(boxRoot: string, loadBoxContext: boolean): Promise<string> {
+  if (!loadBoxContext) return "";
+  return expandInstructionIncludes({
+    instructionPath: join(boxRoot, await instructionFilePath(boxRoot, "")),
+    boxRoot,
+  });
+}
+
+/** Codex cannot list tools, so only an empty list (a prompt-only pass) changes the run. */
+function isPromptOnly(tools: string[] | undefined): boolean {
+  return tools !== undefined && tools.length === 0;
 }
 
 /** Run one fresh or resumed Codex turn and map it to the existing Agent result. */
@@ -76,10 +94,9 @@ export async function runCodexAgent(
     await checkCodexAuth();
     await ensureCodexPluginInstalled();
     const tzContext = options.resumeSessionId === undefined ? await buildTimezoneContext(options.boxRoot) : "";
-    const includedContext = await expandInstructionIncludes({
-      instructionPath: join(options.boxRoot, await instructionFilePath(options.boxRoot, "")),
-      boxRoot: options.boxRoot,
-    });
+    const loadBoxContext = options.loadBoxContext !== false;
+    const includedContext = await includedBoxContext(options.boxRoot, loadBoxContext);
+    const readOnly = isPromptOnly(options.tools);
     if (options.maxBudgetUsd !== undefined) {
       options.onOutput?.(
         `${fmt.warn("Codex does not expose a per-turn USD budget; beebox will enforce the configured tool-turn limit only.")}\n`,
@@ -93,6 +110,8 @@ export async function runCodexAgent(
       resumeSessionId: options.resumeSessionId,
       additionalDirectories: options.additionalDirectories,
       analytics: (await loadCodexTelemetry(options.boxRoot)) === "on",
+      loadProjectDocs: loadBoxContext,
+      readOnly,
     });
     const changedPaths = new Set<string>();
     let toolCount = 0;

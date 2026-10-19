@@ -42,3 +42,17 @@ Worth keeping the sentinel's one virtue — a row is still written when the mode
 is unknown — rather than dropping rows that cannot be attributed.
 
 > 2026-10-17 (main, issue survey): still true. The sentinel is written at two sites now: `beebox/src/services/claude-chat/codex-chat.ts:190` and `beebox/src/core/agent/codex-run/usage.ts:22`.
+
+## Notes
+
+2026-10-19: skipped in bug-burndown-3 because the issue's premise is wrong and
+the fix needs a design choice. The SDK event stream does not carry the model:
+a probe of `codex exec --experimental-json` (0.163.0) emits `thread.started`
+with only `thread_id`, and `turn.completed` with only `usage`. The model is
+available in two places. One is app-server `thread/read`
+(`includeTurns: false`), whose `thread.model` reads `gpt-6-astra`. The other
+is Codex's private rollout JSONL (`turn_context.model`, per turn). The
+app-server call took about 8 s cold on the dev machine and 1 ms warm. Doing it
+inline would delay each chat result frame and each batch run on a cold server.
+The choices are: (a) look up through the shared history app-server after the
+result is sent, (b) parse the rollout file, or (c) keep the sentinel.
