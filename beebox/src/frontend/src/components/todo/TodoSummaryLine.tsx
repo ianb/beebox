@@ -1,6 +1,6 @@
 /**
  * The quiet one-line todo summary at the top of a card or a directory
- * (`docs/plans/todos-ui.md`, Track 4). Presentational: `CardTodos.tsx` and
+ * (`docs/implemented-plans/todos-ui.md`, Track 4). Presentational: `CardTodos.tsx` and
  * `DirectoryTodos.tsx` own the queries and decide what "N open" does — scroll
  * to the first open todo on a card, open the list from a directory.
  */

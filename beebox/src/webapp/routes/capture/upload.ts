@@ -43,7 +43,7 @@ type StageAudioResult = { ok: true } | { ok: false; status: number; error: strin
 /**
  * The `audio` upload-kind branch, split out to keep `handleCaptureUpload`'s
  * complexity in budget. `pcm-s16le-16k` is the voice-recording format
- * (`docs/plans/resilient-voice-recording.md`) — a capture session staging it
+ * (`docs/implemented-plans/resilient-voice-recording.md`) — a capture session staging it
  * would hand a capture card's write path raw PCM it never learned to
  * concatenate/convert, so it is refused on any session that isn't `voice`.
  */

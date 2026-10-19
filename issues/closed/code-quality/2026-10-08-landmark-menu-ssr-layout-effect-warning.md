@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-theme-polish — changed frontend doctest run
+resolution: implemented
 ---
+
+> Resolved 2026-10-19 in bug-burndown-3: the landmark list uses an SSR-safe layout effect.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 
@@ -32,3 +35,15 @@ Keep the menu's browser focus and viewport behavior when resolving this.
 Choose whether the test should render in a browser-like environment or the
 component should use an SSR-compatible effect. Do not suppress all console
 warnings in the doctest harness.
+
+## Resolution
+
+2026-10-19 (bug-burndown-3): Chose the SSR-compatible effect. New
+`beebox/src/frontend/src/hooks/use-isomorphic-layout-effect.ts` exports
+`useIsomorphicLayoutEffect` (`useEffect` when `window` is undefined,
+`useLayoutEffect` otherwise); `PlacePill-landmarks.tsx` uses it, so browser
+focus and viewport timing are unchanged. The frontend ESLint config registers
+the hook with `react-hooks/exhaustive-deps` (`additionalHooks`) so its
+dependency list is still checked. `PlacePill.menus.test.ts` now fails if React
+reports through `console.error` during its server render; it captures only
+inside that render and does not silence the harness.

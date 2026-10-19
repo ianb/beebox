@@ -563,7 +563,7 @@ tests:
       - '(?:not|no|cannot|never|reject|invalid)[\s\S]{0,100}(?:bypass|remov|mark|fake)|(?:bypass|remov|mark|fake)[\s\S]{0,100}(?:not|cannot|never|reject|invalid)'
     tags: [interface-cards]
 
-  # === Host packages (docs/plans/box-host-packages.md) ===
+  # === Host packages (docs/implemented-plans/box-host-packages.md) ===
   # Status (2026-09-17, Claude): 1/1 passed with no reads/searches on the
   # worktree's test1 clone (a macOS host); the agent also named the unsupported-
   # host path and a question card for non-chat runs.
@@ -608,7 +608,7 @@ tests:
     response_not_contains: ["pip install", "npm install", "apt install"]
     tags: [tooling]
 
-  # === Browser tasks (docs/plans/browser-task-card.md) ===
+  # === Browser tasks (docs/implemented-plans/browser-task-card.md) ===
 
   - id: browser-task-authoring
     prompt: "The boxholder wants you to gather pottery show announcements from an Instagram account they follow. The box has no browser session. What card do you create, and where does the record schema go?"
@@ -772,7 +772,7 @@ tests:
     tags: [cards]
     notes: >
       The field is cheap to set and agents write most cards, so the whole value
-      of the mark depends on restraint. See docs/plans/card-symbol.md.
+      of the mark depends on restraint. See docs/implemented-plans/card-symbol.md.
       Status (2026-09-05): PASSES on content — the agent answered that most
       cards should not have one, named the "everything marked is nothing
       marked" reason, and listed card types that should almost never carry one.
@@ -1915,7 +1915,7 @@ tests:
     watch_for: >
       Names bbx notify with loudness and target, the notify: schedule card for
       a time, and bbx changes / bbx judge for a watch. The web-push card and
-      its finalize path are gone (docs/plans/notifications.md, Track A).
+      its finalize path are gone (docs/implemented-plans/notifications.md, Track A).
     correct_contains: ["bbx notify", "loudness"]
     tags: [connectors, notifications]
 
@@ -2141,7 +2141,7 @@ tests:
       - "\\bI(?:['’]ll| will)\\s+(?:go ahead and\\s+)?delete"
     tags: [todos, behavioral]
 
-  # === Todo collection (docs/plans/todo-collection.md, Track 5) ===
+  # === Todo collection (docs/implemented-plans/todo-collection.md, Track 5) ===
   #
   # Where a todo is written is what it means: the heading above it, the todo
   # it nests under, and the links it carries all decide how it reads back.
@@ -2216,7 +2216,7 @@ tests:
     correct_contains_any: ["dropped", "drop"]
     tags: [todos, agent-work]
 
-  # docs/plans/todos-ui.md Track 7: the todo-review procedure's brief requires
+  # docs/implemented-plans/todos-ui.md Track 7: the todo-review procedure's brief requires
   # every item to end with a status change or a `recheck` date, and `recheck`
   # is the one attribute the agent may write on the boxholder's todos. The
   # agent guide todos section and the review brief's instructions carry it.
@@ -3796,7 +3796,7 @@ tests:
     # copy of the worktree test box; landmark-parent and landmark-subdir also
     # passed at 32k.
     notes: >
-      Regression for issues/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md:
+      Regression for issues/closed/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md:
       landmark chats once excluded the box root's AGENTS.md and rules and
       never received the agent guide or briefing.
 
@@ -4163,8 +4163,8 @@ tests:
     expected_level: knows_about
     watch_for: >
       The handler reads the TRIAGE_ITEMS environment variable, which contains
-      null-delimited box-relative paths of items in the bucket. Useful idiom:
-      pipe through `xargs -0` for shell steps.
+      newline-delimited box-relative paths of items in the bucket. Useful idiom:
+      `printf '%s\n' "$TRIAGE_ITEMS" | while IFS= read -r item; do ...; done`.
     correct_contains: ["TRIAGE_ITEMS"]
     tags: [triage-pipeline, procedures]
 
@@ -4800,7 +4800,7 @@ tests:
     tags: [laws, chat, behavioral, vocabulary]
 
   # Speak the User's Language, self-reference half (added 2026-09-02, vocab
-  # sweep — docs/plans/vocab-glossary-sweep.md): "the agent"/"the assistant"/
+  # sweep — docs/implemented-plans/vocab-glossary-sweep.md): "the agent"/"the assistant"/
   # "your box assistant" are guide words *about* the agent, never what it
   # calls itself in conversation. The `[→ …]` counterpart of this sweep is
   # already covered by source-no-bracket-form above.
@@ -5940,7 +5940,7 @@ tests:
     tags: [views, cards]
 
   # === Views: card text through Markdown ===
-  # Added 2026-09-25 (docs/plans/todos-ui.md, Track 6). knows_directly per the
+  # Added 2026-09-25 (docs/implemented-plans/todos-ui.md, Track 6). knows_directly per the
   # plan: the views/AGENTS.md stub names `Markdown` and the rule, so the agent
   # should not need views.md. The always-loaded agent guide does not name view
   # APIs, so the stub loading (or not) decides the measured level.
@@ -6063,7 +6063,7 @@ tests:
 
   # === Web-page capture + commentary (clerk) ===
   #
-  # Conventions from docs/plans/webpage-card-and-commentary.md. The landmark
+  # Conventions from docs/implemented-plans/webpage-card-and-commentary.md. The landmark
   # <destination for="…"> role and the capture flow are documented in the agent
   # guide (behavior.ts + box-shape.ts) + the webpage/commentary schema
   # instructions.
@@ -6787,7 +6787,7 @@ tests:
 
   # === Bulk file upload ===
   #
-  # docs/plans/bulk-file-upload.md Track 4. An `<upload doc="..." files="N"
+  # docs/implemented-plans/bulk-file-upload.md Track 4. An `<upload doc="..." files="N"
   # bytes="..." failed="M">` chat message is the bulk sibling of `<capture>` —
   # documented alongside it in CHAT_SYSTEM_PROMPT (prompts.ts), so this entry
   # needs chat_mode: true. The filing duties (including the "ask before filing
@@ -6958,7 +6958,7 @@ tests:
   # Persistent problem: the agent writes a bare `Foo.type.card` filename as
   # literal text in a chat reply instead of a clickable markdown link, so the
   # user can't tap to open it. See
-  # issues/bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md.
+  # issues/closed/bugs/2026-07-21-agent-emits-bare-card-filenames-in-chat.md.
   #
   # DESIGN INTENT: test the agent's *intuition*, not its knowledge. A prompt that
   # asks "how do you reference a card?" makes it think about linking and it gets
@@ -7009,7 +7009,7 @@ tests:
   # === Chat Review ===
   #
   # Status (2026-07-28): all 3 pass. Added with the chat-review implementation
-  # (docs/plans/chat-review.md). Note chat-review-vs-compaction read 1 file
+  # (docs/implemented-plans/chat-review.md). Note chat-review-vs-compaction read 1 file
   # rather than answering purely from context — it passes, but it is the
   # weakest of the three and worth re-checking if the vocabulary drifts.
   # Run: pnpm knowledge-audit run --box <path> --filter chat-review
@@ -7070,7 +7070,7 @@ tests:
 
   # === Scanned documents (`pdf.card`) ===
   #
-  # Track 4 of docs/plans/scanner-ingest.md. One entry, per the plan's
+  # Track 4 of docs/implemented-plans/scanner-ingest.md. One entry, per the plan's
   # "Knowledge audits" section: the agent should be able to say what a
   # `pdf.card` is, where its original bytes live, and what an `error:`
   # means — from the schema instructions in its always-on surface,
@@ -7139,7 +7139,7 @@ tests:
 
   # === Scan provenance (`uploader: scan-upload/<token-name>`) ===
   #
-  # The plan's second audit entry (docs/plans/scanner-ingest.md, "Knowledge
+  # The plan's second audit entry (docs/implemented-plans/scanner-ingest.md, "Knowledge
   # audits"): an agent triaging a scan intake job should be able to say where
   # the session came from, straight from the capture-session schema
   # instructions, without going source-diving. The failure it guards against is
@@ -7339,7 +7339,7 @@ tests:
   # tags when quoting into a card) unprompted.
   #
   # The chat prompt's "Voice is transcribed" section defines <unsure> marks
-  # (docs/plans/transcript-confidence.md): the realtime transcriber wraps
+  # (docs/implemented-plans/transcript-confidence.md): the realtime transcriber wraps
   # low-acoustic-confidence words, stt= names the transcriber, and absence of
   # marks is not verification. The failure this guards against is the agent
   # building on a marked meaning-critical word (a negative, a number, a name)
@@ -7390,10 +7390,10 @@ tests:
       Also worth watching in the transcript: the agent should know absence of
       marks is not verification (confident mishearings get no mark) and that
       a message without marks may simply have no confidence data. Marks only
-      ever appear on live text (`stt="live"`, docs/plans/hq-always.md): the HQ
+      ever appear on live text (`stt="live"`, docs/implemented-plans/hq-always.md): the HQ
       pass every other voice message gets carries no per-word confidence.
 
-  # HQ is every voice message's pass (docs/plans/hq-always.md); `stt="live"`
+  # HQ is every voice message's pass (docs/implemented-plans/hq-always.md); `stt="live"`
   # marks the exception, and `heard="live"` on a send tag marks a command the
   # HQ text did not reproduce. The failure this guards against is the agent
   # treating the trailing command words as content, or retranscribing an
@@ -7884,7 +7884,7 @@ tests:
       narration or prose features.
     tags: [chat-everywhere, chat-attention]
 
-  # Resilient voice recording (docs/plans/resilient-voice-recording.md):
+  # Resilient voice recording (docs/implemented-plans/resilient-voice-recording.md):
   # long diarized recordings are transcribed in parts with fresh speaker
   # letters per part.
   # Status (2026-10-09, hq-always): wrapper lost `stt="hq"` (HQ is unmarked
@@ -8240,7 +8240,7 @@ tests:
       - "--pending"
     tags: [publish-sites]
 
-  # === Reaching the boxholder (docs/plans/notifications.md, Track F) ===
+  # === Reaching the boxholder (docs/implemented-plans/notifications.md, Track F) ===
   # The policy is the root briefing's "Reaching me" section; the mechanics are
   # the agent guide's REACHING_THE_BOXHOLDER section.
   # Status (2026-09-26, Claude, worktree test box): 5/5 pass.

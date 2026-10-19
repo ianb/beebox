@@ -37,7 +37,7 @@ export type { SelfNoteInfo };
  *
  * Only the `<speech>`/`<typed>`/`<external-input>` *shell* tags (and their attributes, e.g.
  * `stt="live"`) are stripped here — a marker embedded *inside* the body,
- * like `<unsure>word</unsure>` (docs/plans/transcript-confidence.md, Track
+ * like `<unsure>word</unsure>` (docs/implemented-plans/transcript-confidence.md, Track
  * 4), survives this pass on purpose and is handled downstream by
  * `UserMessageText` (`user-message-text.tsx`), which renders it as its inner
  * word with a subtle style rather than dropping it.
@@ -114,7 +114,7 @@ const MESSAGE_ID_WRAPPER_RE = /^\s*<speech\b[^>]*\bmessage-id="([^"]*)"/;
 const SPEECH_WRAPPER_RE = /^\s*<speech\b([^>]*)>/;
 const STT_ATTR_RE = /\bstt="([^"]*)"/;
 const STT_SERVICE_ATTR_RE = /\bstt-service="([^"]*)"/;
-// Legacy fallback marker, before `stt="live"` (docs/plans/hq-always.md).
+// Legacy fallback marker, before `stt="live"` (docs/implemented-plans/hq-always.md).
 // `pending` predates the removal of late correction and reads the same.
 const HQ_ATTR_RE = /\bhq="(?:pending|failed)"/;
 
@@ -127,7 +127,7 @@ function speechWrapperAttrs(entry: SessionEntry): string | undefined {
 /**
  * A voice message whose text is the live transcript: `stt="live"`, or the
  * legacy `hq="failed"`. Every dictated message gets the HQ pass when it can
- * (docs/plans/hq-always.md), so this is the exception the UI labels.
+ * (docs/implemented-plans/hq-always.md), so this is the exception the UI labels.
  */
 export function isLiveTranscriptMessage(entry: SessionEntry): boolean {
   const attrs = speechWrapperAttrs(entry) ?? "";

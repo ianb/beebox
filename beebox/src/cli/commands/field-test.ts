@@ -1,6 +1,6 @@
 /**
  * `bbx field-test` — the agent field-test tier's harness commands
- * (`docs/plans/agent-field-tests.md`): `run` a scenario, `list` the corpus, and
+ * (`docs/implemented-plans/agent-field-tests.md`): `run` a scenario, `list` the corpus, and
  * `inject-email` for driving a fake mailbox by hand.
  */
 

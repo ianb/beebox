@@ -4,7 +4,7 @@ import { voiceStagingFailures, voiceStagingIsPersistent, voiceStagingStatus } fr
 
 /**
  * Voice problems that will not fix themselves, shown on the voice chip
- * (docs/plans/resilient-voice-recording.md, Track 4): a permanent HQ failure
+ * (docs/implemented-plans/resilient-voice-recording.md, Track 4): a permanent HQ failure
  * (once per service and code, until dismissed), a recording upload the queue
  * gave up on, and a browser that cannot keep recordings durably.
  */

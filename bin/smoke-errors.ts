@@ -6,7 +6,7 @@
  * assembled at the throw site. Split out of bin/smoke-probe.ts because there are
  * enough of them to be their own module.
  *
- * See issues/exploration/2026-08-26-merge-time-smoke-tier.md.
+ * See issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md.
  */
 
 /** A step that failed, with enough context to act on without re-running. */

@@ -6,7 +6,7 @@
  * allowed to do. Both now have a server counterpart running the same
  * connector-level function, so the CLI verb works from an agent's shell with
  * the credential never leaving this process
- * (`docs/plans/agent-capability-delegation.md`).
+ * (`docs/implemented-plans/agent-capability-delegation.md`).
  *
  * `pending` has no procedure here on purpose: it reads the box's own transient
  * state and needs nothing from Google, so it stays in-process in every profile.

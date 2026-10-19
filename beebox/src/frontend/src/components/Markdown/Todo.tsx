@@ -6,7 +6,7 @@
  * …{% /todo %}` marks any span as a todo. Inline vs block is decided by the
  * Markdoc transform's `node.inline` split (`quote`/`source` precedent). Both
  * render through `TodoItem`, so a todo reads the same in a card body, in
- * frontmatter, and in the list (`docs/plans/todos-ui.md`, Track 2).
+ * frontmatter, and in the list (`docs/implemented-plans/todos-ui.md`, Track 2).
  *
  * `locator` is not an authored attribute: the `todo` transform adds it when
  * `Markdown` renders a card's body (`markdoc-config.ts`), and it is how the

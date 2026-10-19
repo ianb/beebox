@@ -67,7 +67,7 @@ export type StagingFile = z.infer<typeof StagingFileSchema>;
  * photo/voice-memo batch that becomes a capture-session card; `bulk` is a bulk
  * file-upload batch (`docs/implemented-plans/bulk-file-upload.md`) that becomes an
  * `upload-batch` card; `voice` is a chat voice recording
- * (`docs/plans/resilient-voice-recording.md`) staged as raw PCM chunks and
+ * (`docs/implemented-plans/resilient-voice-recording.md`) staged as raw PCM chunks and
  * transcribed by the HQ job. Old manifests predate the field and parse as
  * `capture`.
  */
@@ -327,7 +327,7 @@ export function isBulkSession(session: StagingSession): boolean {
 }
 
 /**
- * True for a voice-recording-pipeline session (`docs/plans/resilient-voice-recording.md`).
+ * True for a voice-recording-pipeline session (`docs/implemented-plans/resilient-voice-recording.md`).
  * Written as an exhaustive switch for the same reason as {@link isCaptureSession}
  * — a future fourth kind must fail to compile here until this decides how it
  * is filtered.

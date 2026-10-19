@@ -1,7 +1,7 @@
 /**
  * The app bar's place chip: a split pill naming where the user is
  * (box ▸ landmark) and opening the two navigation menus
- * (docs/plans/top-nav-ia.md Track C1).
+ * (docs/implemented-plans/top-nav-ia.md Track C1).
  *
  * Face — split like `VoiceChip`'s, but with two separately actionable halves:
  *  - Left (the switch menu): box-name prefix, the landmark's symbol + label

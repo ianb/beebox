@@ -1,6 +1,6 @@
 /**
  * Commentary card schema — review-and-comment on a host card from inside a box.
- * See `docs/plans/box-commentary-surface.md` and `docs/plans/extfile-card.md`.
+ * See `docs/plans/box-commentary-surface.md` and `docs/implemented-plans/extfile-card.md`.
  *
  * **Attach-only:** a commentary card lives in a host card's `.attach/` scope and
  * its bare `{% source %}` anchors target the containing card — an `extfile`

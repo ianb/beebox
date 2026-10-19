@@ -1,6 +1,6 @@
 /**
  * Field-test box creation — the "fresh box" half of a run's lifecycle
- * (`docs/plans/agent-field-tests.md`, Track 2).
+ * (`docs/implemented-plans/agent-field-tests.md`, Track 2).
  *
  * A field run owns a disposable box: `bbx init` it under the run directory,
  * mark it as a test box, commit that as the baseline. Everything else about a

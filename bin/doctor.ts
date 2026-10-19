@@ -35,7 +35,7 @@
  *     production disk truncated every large response with nothing saying so.
  *   - The scheduler heartbeat (`<store>/state.json`) is under an hour old and
  *     the `com.beebox.schedules` launchd job is loaded — the anti-silence
- *     check for beebox/docs/plans/scheduled-workstreams.md.
+ *     check for beebox/docs/implemented-plans/scheduled-workstreams.md.
  *   - The frontend build output exists (`beebox/src/frontend/dist`,
  *     Vite's `build.outDir`), else "run `pnpm --dir beebox
  *     build:frontend`".

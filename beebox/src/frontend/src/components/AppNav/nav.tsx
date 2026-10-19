@@ -1,7 +1,7 @@
 import { workspaceRouteTarget } from "../../lib/system-card-navigation";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 /**
- * The unified app bar (docs/plans/top-nav-ia.md Track C) — one gradient row,
+ * The unified app bar (docs/implemented-plans/top-nav-ia.md Track C) — one gradient row,
  * every page, every width.
  *
  * There is no link row, box `<select>`, or hamburger any more: navigation

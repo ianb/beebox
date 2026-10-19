@@ -65,11 +65,11 @@ test("summarizeSmokeLog: steps read in walk order, by first appearance", () => {
 test("formatSmokeReport: no trim advice until a clean record means something", () => {
   const oneRun = formatSmokeReport(summarizeSmokeLog([RUN({})]));
   assert.match(oneRun, /1 run logged/);
-  assert.doesNotMatch(oneRun, /Never caught anything/);
+  assert.doesNotMatch(oneRun, /Never failed in/);
 
   const many = formatSmokeReport(summarizeSmokeLog(Array.from({ length: 25 }, () => RUN({}))));
   assert.match(many, /25 runs logged/);
-  assert.match(many, /Never caught anything in 20\+ runs/);
+  assert.match(many, /Never failed in 20\+ runs/);
   assert.match(many, /cold-start, place-menu/);
 });
 
@@ -123,5 +123,5 @@ test("formatSmokeReport: forced failures are shown, and never counted as caught"
   assert.match(report, /forced/);
   // cold-start fired only on demand, so it still reads as never having caught
   // anything — which is the honest thing for a trim decision to see.
-  assert.match(report, /Never caught anything in 20\+ runs[\S\s]*cold-start/);
+  assert.match(report, /Never failed in 20\+ runs[\S\s]*cold-start/);
 });

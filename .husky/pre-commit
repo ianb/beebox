@@ -179,6 +179,12 @@ if echo "$staged" | grep -q '^workstreams-app/'; then
   ws_app_typechecked=1
 fi
 
+# The shared lint preset lints and type-checks itself
+# (issues/code-quality/2026-07-29-personal-vibe-check-no-self-lint.md).
+if echo "$staged" | grep -q '^personal-vibe-check/'; then
+  run_pair personal-vibe-check "pnpm --silent lint" "pnpm --silent typecheck"
+fi
+
 # Cross-package imports escape the per-subproject gating above. `workstreams-app`
 # imports beebox SOURCE directly — the router takes `webapp/auth.ts`,
 # `webapp/box-access.ts`, `core/mobile/request-auth.ts` and `webapp/base-prefix.ts`;

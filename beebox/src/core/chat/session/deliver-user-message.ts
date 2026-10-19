@@ -165,7 +165,7 @@ export async function deliverUserMessage(opts: {
   // `chat-user-message` is a *persisted* event, so it is emitted only once the
   // message is genuinely on its way. Emitting it up front put messages into the
   // conversation history that the agent never received whenever the run failed
-  // to start (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md),
+  // to start (issues/closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md),
   // and the caller's retry then recorded them a second time.
   const recordUserMessage = (): void => {
     eventBus.emit("chat-user-message", {

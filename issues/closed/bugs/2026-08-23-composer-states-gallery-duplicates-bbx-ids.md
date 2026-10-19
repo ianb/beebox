@@ -3,7 +3,10 @@ title: Bee Box surfaces render duplicate bbx control ids
 workstream: bbx-ids-gallery
 priority: backlog
 discovered-in: worktree-publish-pages — publication card browser verification
+resolution: implemented
 ---
+
+Resolved by 48141a1d8 (dev galleries) and 4102bbeaf (Admin Overview).
 
 Several Bee Box surfaces render the same `bbx-` id on more than one element.
 This creates invalid HTML, and `getElementById` or `bin/browse` can target the
@@ -45,3 +48,18 @@ keep this issue limited to the development galleries.
 ## Decision (2026-10-06)
 
 The developer approved the first option: gallery copies render unaddressed (an id prefix or suppression prop threaded through the harness). Assigned to the `bbx-ids-gallery` workstream.
+
+## Resolution
+
+Commit 48141a1d8 threads an unaddressed mode through the composer and capture
+components, so `ComposerStatesHarness` and `CaptureModeHarness` gallery copies
+render without `bbx-` ids. Commit 4102bbeaf renamed the Admin Overview group
+card id to `bbx-admin-group-<tab>`, so it no longer collides with the
+`bbx-admin-overview-<section>` row button.
+
+Browser check (2026-10-19, bug-burndown-3 test1 clone): a script counted
+duplicate `id` attributes on each page. `/dev/composer-states` (266 buttons)
+and `/dev/capture-mode` (27 buttons) had no ids other than `#root`. The Admin
+card (`/views/_config/interface/admin.card`) had 116 ids, no duplicates, and
+`bbx-admin-group-secrets` and `bbx-admin-overview-secrets` on separate
+elements.

@@ -180,6 +180,15 @@ export const eventSchemas = {
     sessionId: z.string().nullable(),
     task: taskEventSchema,
   }),
+  /**
+   * The full set of live background tasks on a chat session (replace
+   * semantics); empty when the session's CLI process starts or ends. Never
+   * session-less: a null id would match, and replace, every tab's set.
+   */
+  "chat-task-level": z.object({
+    sessionId: z.string(),
+    tasks: z.array(z.object({ taskId: z.string(), description: z.string() })),
+  }),
   /** A chat session's feature flags changed. */
   "chat-features-changed": z.object({
     sessionId: z.string(),
@@ -244,7 +253,7 @@ export const eventSchemas = {
   }),
   /**
    * A voice recording's HQ pass or handoff moved
-   * (`docs/plans/resilient-voice-recording.md`, Track 1). Emitted by the HQ
+   * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1). Emitted by the HQ
    * job (`core/voice-recording/hq-job.ts`) after every persisted transition.
    * `sessionId` is the chat session the HQ result is for
    * (`voice.hqRequest.sessionId`), or null for the first message of a new

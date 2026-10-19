@@ -1,6 +1,6 @@
 /**
  * A card's own todos, asked of the server once per card view
- * (`docs/plans/todos-ui.md`, Tracks 2 and 4).
+ * (`docs/implemented-plans/todos-ui.md`, Tracks 2 and 4).
  *
  * `FileView` wraps a card's rendered body in `CardTodos`. It runs one
  * `collections.query` whose `here` is the card itself (the scope glob is then

@@ -1102,7 +1102,7 @@ highlight — the outcome the issue asks for.
   screen. Neither closes the other.
 - **Fixing discoverability.** `issues/features/2026-08-08-no-visible-search-or-home.md`
   (no visible search, no home surface) and
-  `issues/bugs/2026-08-03-attach-vs-upload-menu-confusing.md` describe an
+  `issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md` describe an
   interface that is hard to navigate. A pointer makes those failures
   survivable; it does not fix them, and it must not be used as an argument that
   they are fixed.

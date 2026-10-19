@@ -19,6 +19,7 @@
   },
   "files": [
     "preset.ts",
+    "preset/",
     "types.d.ts",
     "plugin.ts",
     "prettier.config.ts",
@@ -63,9 +64,10 @@
   "scripts": {
     "format": "prettier --write \"**/*.{ts,json}\"",
     "format:check": "prettier --check \"**/*.{ts,json}\"",
+    "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/ .",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
-    "lint:circular": "madge --circular --extensions ts,tsx src/",
+    "lint:circular": "madge --circular --extensions ts --ts-config tsconfig.json preset.ts plugin.ts preset/ rules/ bin/",
     "test": "node --test rules/test/*.test.ts",
     "typecheck": "tsc --noEmit"
   }

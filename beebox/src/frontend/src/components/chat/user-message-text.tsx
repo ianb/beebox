@@ -70,7 +70,7 @@ export function UserMessageText({ text, attachedFileIds }: { text: string; attac
   // do not change it),
   // <user-selection ref="…" pos="…">quoted text</user-selection> (attached
   // document text), and <unsure>word</unsure> (a low-confidence dictated word,
-  // Track 4 of docs/plans/transcript-confidence.md — see message-parsing.ts's
+  // Track 4 of docs/implemented-plans/transcript-confidence.md — see message-parsing.ts's
   // stripUserDisplayTags for why the wrapper survives that generic strip: only
   // the <speech>/<typed> shell tags are stripped there, not inner markers).
   const tagRe = /<send(?:-close|-checkpoint)?-message\s+phrase="([^"]*?)"[^>]*\/>|<user-selection\b([^>]*)>([\S\s]*?)<\/user-selection>|<unsure>([\S\s]*?)<\/unsure>/gi;
@@ -125,7 +125,7 @@ export function UserMessageText({ text, attachedFileIds }: { text: string; attac
         }
         if (p.type === "unsure") {
           // Subtle mark for a word the transcriber had low acoustic
-          // confidence in (docs/plans/transcript-confidence.md — no
+          // confidence in (docs/implemented-plans/transcript-confidence.md — no
           // tooltip/legend, boxholder decision 2026-08-15). A dotted
           // underline in a muted variant of the bubble's own white text
           // reads in both themes without a new palette token, matching the

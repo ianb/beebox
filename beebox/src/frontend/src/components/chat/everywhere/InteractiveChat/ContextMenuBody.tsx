@@ -1,6 +1,6 @@
 /**
  * The chat's "here" menu body — the full form of the app bar's here menu
- * (docs/plans/top-nav-ia.md Track C2). Lifted verbatim out of the retired
+ * (docs/implemented-plans/top-nav-ia.md Track C2). Lifted verbatim out of the retired
  * `ContextChip`: its trigger and Dropdown died with the chat header row, but
  * its body is still the richest here menu we have, and it can only be built
  * from chat state — `messages` feeds "Recent files", and rows open in the

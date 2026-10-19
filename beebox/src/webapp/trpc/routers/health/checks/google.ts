@@ -8,7 +8,7 @@
  * fresh runs about daily from the scheduler tick, so health queries stay cheap
  * and can be run as often as anyone likes.
  *
- * See docs/plans/google-auth-reauth-health.md.
+ * See docs/implemented-plans/google-auth-reauth-health.md.
  */
 
 import { readGoogleAuthStatus } from "../../../../../google/auth-status.js";

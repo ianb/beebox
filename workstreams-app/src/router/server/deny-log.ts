@@ -3,7 +3,7 @@
 // `deny()` in router-auth.ts is a pure function that returns a decision and logs
 // nothing, so before this module a refused request left no trace at all — which
 // is why an `owner-session-required` reported from iOS on 2026-09-15 is still
-// unexplained (issues/bugs/2026-09-15-dev-router-transient-failures-are-permanent-and-unlogged.md).
+// unexplained (issues/closed/bugs/2026-09-15-dev-router-transient-failures-are-permanent-and-unlogged.md).
 // `deny()` stays pure; the logging happens where a decision is CONSUMED, so
 // `authorizeRouterRequest` remains unit-testable without a logger.
 //

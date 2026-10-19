@@ -1,7 +1,7 @@
 /**
  * "Recent files" sub-panel body for the context chip's menu — extracted from
  * the retired `RecentFilesButton` trigger (chunk 4 of
- * docs/plans/chat-header-chips.md). Derives entries from the session's
+ * docs/implemented-plans/chat-header-chips.md). Derives entries from the session's
  * messages via `useRecentFiles`; peek / panel / page escalate from there.
  *
  * Empty state renders an explicit "No recent files yet" row rather than a

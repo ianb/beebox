@@ -1,6 +1,6 @@
 /**
  * The dated strip at the top of a `todo-view` list
- * (`docs/plans/todo-collection.md`, Track 4).
+ * (`docs/implemented-plans/todo-collection.md`, Track 4).
  *
  * Most todos in a working box carry no date at all, so the few that do are
  * the ones a calendar-shaped reading is actually about. They come first, in
@@ -25,7 +25,7 @@ import { startPrefix } from "../todo/item-logic";
 
 function DatedLine({ dated, boxSlug }: { dated: DatedTodo; boxSlug: string | undefined }) {
   const cardHref = boxSlug === undefined ? undefined : href(`/${boxSlug}/browse/${dated.cardPath}`);
-  // In a workspace pane the card opens in the other pane (`docs/plans/todos-ui.md`, Track 5).
+  // In a workspace pane the card opens in the other pane (`docs/implemented-plans/todos-ui.md`, Track 5).
   const openBeside = useOpenBeside();
   const name = <Text material size="xs" tone="muted">{dated.cardTitle}</Text>;
   const word = dated.kind === "due" ? "due" : startPrefix({ plateState: dated.item.plateState, startIso: dated.date });

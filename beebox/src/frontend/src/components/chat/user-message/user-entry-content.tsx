@@ -143,7 +143,7 @@ export function UserEntryContent({ entry, debugView, audioOverlay, matchesOverla
 }
 
 // Same unwrap `stripSpeechWrappers` does backend-side (`src/cli/lib/session-text.ts`)
-// for a low-confidence-word mark (Track 4, docs/plans/transcript-confidence.md):
+// for a low-confidence-word mark (Track 4, docs/implemented-plans/transcript-confidence.md):
 // the popover wants clean human text, not the agent-facing `<unsure>` marker.
 // `stripUserDisplayTags` only strips the `<speech>`/`<typed>` SHELL — an inner
 // mark like `<unsure>` deliberately survives it (see that function's doc) so

@@ -3,7 +3,7 @@
  *
  * Extraction (`extract.ts`) is pure and cacheable; plate-state is not, because
  * it depends on what box-local day it is right now. Splitting them is the
- * whole point of Track 2 (`docs/plans/todo-collection.md`) — a cache cannot
+ * whole point of Track 2 (`docs/implemented-plans/todo-collection.md`) — a cache cannot
  * sit behind a function that reads `now`.
  *
  * The rule itself is unchanged and still lives in `shared/todo-model.ts`.

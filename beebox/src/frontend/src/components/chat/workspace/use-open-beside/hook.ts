@@ -1,6 +1,6 @@
 /**
  * The workspace pane a component renders in, and the opener built on it
- * (`docs/plans/todos-ui.md`, Track 5).
+ * (`docs/implemented-plans/todos-ui.md`, Track 5).
  *
  * `WorkspaceCanvas` provides `WorkspacePaneContext` around each pane's card,
  * so anything a card renders — including a card peeked inside it — knows its

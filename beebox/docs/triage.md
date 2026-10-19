@@ -66,13 +66,19 @@ implemented.
 
 ## Handler contract
 
-`bbx handle` invokes a category's procedure once for its bucket. The current
-implementation attempts to put the box-relative item paths in the
-`TRIAGE_ITEMS` environment variable separated by NUL bytes. Environment
-variables cannot transport embedded NUL bytes, so this contract is currently
-broken for a live multi-item procedure invocation. Do not write a handler that
-depends on parsing this value until the runtime transport is fixed. This guide
-records the defect rather than presenting the intended shell recipe as usable.
+`bbx handle` invokes a category's procedure once for its bucket and puts the
+box-relative item paths in the `TRIAGE_ITEMS` environment variable, one path
+per line. The variable is forwarded into the procedure's shell steps. A shell
+step reads it line by line and quotes `"$item"`, because paths can contain
+spaces:
+
+```sh
+printf '%s\n' "$TRIAGE_ITEMS" | while IFS= read -r item; do
+  process "$item"
+done
+```
+
+A bucket item whose name contains a newline fails that bucket's handling.
 
 A handler moves or removes every item it successfully finishes. Leaving an item
 in the bucket keeps it visible for a later run.

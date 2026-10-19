@@ -14,7 +14,7 @@
  * (`notification/fake-mode.ts`) routes through a fake service (and a synthetic
  * endpoint when none are subscribed), so any trigger can be exercised on
  * desktop with no setup. See
- * docs/plans/web-push-notifications.md (Track B).
+ * docs/implemented-plans/web-push-notifications.md (Track B).
  */
 
 import * as fs from "node:fs/promises";

@@ -49,19 +49,21 @@ numeric score, and never a "wrong"/"unknown" level):
 ## Writing a handler procedure
 
 \`bbx handle\` invokes a category's handler procedure once per bucket, passing the
-bucket's items through the **\`TRIAGE_ITEMS\` environment variable** — a
-null-delimited (\`\\0\`) list of box-relative paths. It's set in the process env
-and forwarded into the procedure's shell steps, so a handler reads its work from
-there rather than scanning a directory:
+bucket's items through the **\`TRIAGE_ITEMS\` environment variable** — one
+box-relative path per line. It's set in the process env and forwarded into the
+procedure's shell steps, so a handler reads its work from there rather than
+scanning a directory:
 
 \`\`\`sh
 # In a shell step of the handler procedure:
-printf '%s' "$TRIAGE_ITEMS" | xargs -0 -I{} sh -c 'process "{}"'
+printf '%s\\n' "$TRIAGE_ITEMS" | while IFS= read -r item; do
+  process "$item"
+done
 \`\`\`
 
-Use \`xargs -0\` (or split on NUL) — the paths are NUL-delimited so filenames with
-spaces survive. When the handler finishes, it moves each item out of the bucket
-(\`bbx mv\` to its destination, or \`bbx rm\` to trash); the bucket is empty when done.
+Split on newlines and quote \`"$item"\` — paths may contain spaces. When the
+handler finishes, it moves each item out of the bucket (\`bbx mv\` to its
+destination, or \`bbx rm\` to trash); the bucket is empty when done.
 
 \`bbx handle\` reports its worst bucket: exit 1 if a handler procedure failed,
 exit 3 if one finished its work but its review reached no verdict (one

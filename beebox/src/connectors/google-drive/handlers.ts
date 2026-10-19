@@ -6,7 +6,7 @@
  * `DriveTypeHandler`). `defineRegistry` replaces the former mutable array
  * that `registerDriveHandler` populated as a side effect of each handler
  * module's own import — existence no longer depends on some caller having
- * imported the handler module first. Rules: docs/plans/file-layout.md,
+ * imported the handler module first. Rules: docs/implemented-plans/file-layout.md,
  * rule 4.
  */
 import { defineRegistry } from "../../shared/registry.js";

@@ -11,7 +11,7 @@
  * One module for all three services: the gates are identical (`googleServices`
  * in `_config/box.json`, then the OAuth grant), and the 2026-09-14 incident was
  * about a family that had its own copy of them
- * (`docs/plans/agent-capability-delegation.md`).
+ * (`docs/implemented-plans/agent-capability-delegation.md`).
  */
 
 import { getGoogleAuth } from "./auth.js";

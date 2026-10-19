@@ -33,7 +33,7 @@ matches the convention it is handed. Worth deciding at the same time whether
 can be enforced, and one that prints 41 lines cannot.
 
 Related: the preset's own `lint:circular` still points at a `src/` it does not
-have ([personal-vibe-check has no working self-lint](../../code-quality/2026-07-29-personal-vibe-check-no-self-lint.md)).
+have ([personal-vibe-check has no working self-lint](2026-07-29-personal-vibe-check-no-self-lint.md)).
 
 Second, smaller thing noticed in the same run: madge prints `Processed 1812
 files (45 warnings)` and offers no way to see the warnings — `--warning` only

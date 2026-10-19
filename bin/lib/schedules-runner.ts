@@ -11,7 +11,7 @@
  * own death. A tick that never got the lock records a SKIP instead: refreshing
  * the heartbeat there would report health it never established.
  *
- * Design: beebox/docs/plans/scheduled-workstreams.md (Track B).
+ * Design: beebox/docs/implemented-plans/scheduled-workstreams.md (Track B).
  */
 
 import * as fs from "node:fs/promises";

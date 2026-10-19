@@ -53,11 +53,11 @@ function summary(html: string) {
 void test("Only done is checked.", async (t) => {
   t.check(summary(render({ status: "open" })), "unchecked | disabled | Open | text-warm-800");
 
-  t.check(summary(render({ status: "done" })), "checked | disabled | Done | text-warm-400 line-through");
+  t.check(summary(render({ status: "done" })), "checked | disabled | Done | text-card-soft bbx-struck");
 
   t.check(summary(render({ status: "parked" })), "unchecked | disabled | Parked | text-warm-400");
 
-  t.check(summary(render({ status: "dropped" })), "unchecked | disabled | Dropped | text-warm-400 line-through");
+  t.check(summary(render({ status: "dropped" })), "unchecked | disabled | Dropped | text-card-soft bbx-struck");
 });
 
 // ## The checkbox is named by the todo
@@ -75,7 +75,7 @@ void test("Given the todo's words, the checkbox is named by them, so a list of t
 void test("The status and the locator ride on the element as data attributes, which is h...", async (t) => {
   t.checkText(render({ status: "open", locator: { kind: "body", line: 12, nth: 2 } }), "<span data-todo-status=\"open\" data-todo-locator=\"12#2\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Open\" class=\"accent-warm-500 mr-1 align-middle\"/><span class=\"text-warm-800\">Call the roofer</span></span>");
 
-  t.checkText(render({ status: "done", locator: { kind: "frontmatter", index: 0 } }), "<span data-todo-status=\"done\" data-todo-locator=\"todos[0]\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Done\" class=\"accent-warm-500 mr-1 align-middle\" checked=\"\"/><span class=\"text-warm-400 line-through\">Call the roofer</span></span>");
+  t.checkText(render({ status: "done", locator: { kind: "frontmatter", index: 0 } }), "<span data-todo-status=\"done\" data-todo-locator=\"todos[0]\" class=\"group\"><input type=\"checkbox\" disabled=\"\" readonly=\"\" aria-label=\"Done\" class=\"accent-warm-500 mr-1 align-middle\" checked=\"\"/><span class=\"text-card-soft bbx-struck\">Call the roofer</span></span>");
 });
 
 // ## Dates, and overdue only from the server

@@ -17,7 +17,7 @@
  * An unwritable package with no docs is reported (`unwritable`) so the caller
  * can make it visible — the agent guide points here on every turn.
  *
- * Design: `docs/plans/box-docs-in-package.md`.
+ * Design: `docs/implemented-plans/box-docs-in-package.md`.
  */
 
 import { basename, join } from "node:path";

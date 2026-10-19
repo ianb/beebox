@@ -7,7 +7,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Codex 0.153.4
 labels: [sdk-update]
+resolution: implemented
 ---
+
+Fixed in bug-burndown-3 (2026-10-19): usage rows record the model from Codex's rollout JSONL.
 
 `codex-chat.ts:185` writes each turn's usage row as:
 
@@ -20,7 +23,7 @@ So every turn on an unconfigured box records the literal string
 
 That was tolerable while the default was stable. It is not, now that keeping the
 inherited default is settled policy
-([decided 2026-09-05](../closed/decisions/2026-09-04-codex-default-model-becomes-astra.md)):
+([decided 2026-09-05](../decisions/2026-09-04-codex-default-model-becomes-astra.md)):
 Codex `0.153.4` changed the bundled default to GPT-6-Astra, and the pin moving
 is enough to change which model answers a boxholder's chat. The usage ledger —
 the one record that could show the switch, its cost, and where a behavior change
@@ -42,3 +45,29 @@ Worth keeping the sentinel's one virtue — a row is still written when the mode
 is unknown — rather than dropping rows that cannot be attributed.
 
 > 2026-10-17 (main, issue survey): still true. The sentinel is written at two sites now: `beebox/src/services/claude-chat/codex-chat.ts:190` and `beebox/src/core/agent/codex-run/usage.ts:22`.
+
+## Notes
+
+2026-10-19 (bug-burndown-3): the issue's premise does not hold. The SDK event
+stream does not carry the model. A probe of `codex exec --experimental-json`
+(0.163.0) emits `thread.started` with only `thread_id`, and `turn.completed`
+with only `usage`. The model appears in two places: app-server `thread/read`
+(`thread.model`; about 8 s with a cold server on the dev machine, 1 ms warm)
+and Codex's rollout JSONL (`turn_context.model`, one record per turn). Ian
+chose the rollout: "I guess option 2".
+
+## Resolution
+
+2026-10-19, bug-burndown-3. `codexUsageModel` (`beebox/src/core/codex-usage.ts`)
+finds the thread's rollout under `$CODEX_HOME/sessions/YYYY/MM/DD/`. The UUIDv7
+thread id gives the creation day, and the days on either side are also
+searched. It reads the file backward to the last `turn_context` record
+(`beebox/src/services/codex-rollout-model.ts`). That took 26 ms on
+a 329 MB rollout. Both usage sites use it: web chat
+(`beebox/src/services/claude-chat/codex-chat.ts`) and batch agents
+(`beebox/src/core/agent/codex-run/usage.ts`). When the rollout is missing or
+unreadable, the run warns and still writes the row: with the requested model
+if one was set, else `codex-default`.
+
+Tests: `beebox/test/services/codex-rollout-model.test.ts`,
+`beebox/test/core/codex-usage.model.test.ts`.

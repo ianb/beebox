@@ -9,7 +9,7 @@
  *
  * Extracted from `LandmarkSection`'s ChatButton so the app bar's `PlacePill`
  * switch menu and the Landmarks page run the exact same action
- * (docs/plans/top-nav-ia.md Track C1).
+ * (docs/implemented-plans/top-nav-ia.md Track C1).
  */
 
 import { useBoxConversation } from "../components/chat/everywhere/conversation-context/context";

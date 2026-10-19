@@ -9,7 +9,7 @@
  * a whole body) cannot be aimed at one todo: there is no source range for
  * "this todo and the words after it".
  *
- * Moved here from `core/todo/extract-text.ts` (`docs/plans/todos-ui.md`,
+ * Moved here from `core/todo/extract-text.ts` (`docs/implemented-plans/todos-ui.md`,
  * Track 3) so a rendered todo carries the same text the collector extracts:
  * the `todo` Markdoc transform (`markdoc-config.ts`) flattens a located
  * todo's children with {@link flattenNodes}, and `todos.setStatus` compares

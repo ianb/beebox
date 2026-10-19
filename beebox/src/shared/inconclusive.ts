@@ -6,7 +6,7 @@
  * a *non-answer* — which is not the same as "the work is wrong". Collapsing it
  * into a failure teaches readers to discount the signal (the maps were fine and
  * health said otherwise; see
- * `issues/bugs/2026-08-12-health-masks-review-step-turn-cap.md`).
+ * `issues/closed/bugs/2026-08-12-health-masks-review-step-turn-cap.md`).
  *
  * This module holds the words that cross process boundaries — the reason tags,
  * the CLI exit code, and the stderr line the scheduler recognizes — so the

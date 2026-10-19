@@ -73,7 +73,7 @@ export function resolveStagedFile(opts: { boxRoot: string; id: string; filename:
  * registry for a bulk file-upload batch (`docs/implemented-plans/bulk-file-upload.md`),
  * whose finalize path reads `files` + `expectedItems` rather than the capture
  * media arrays; pass `kind: "voice"` plus `targetSessionId` for a chat voice
- * recording (`docs/plans/resilient-voice-recording.md`).
+ * recording (`docs/implemented-plans/resilient-voice-recording.md`).
  *
  * `id` lets a caller supply the session id up front — the voice route's
  * idempotent client-generated id (a resumed browser must be able to name the

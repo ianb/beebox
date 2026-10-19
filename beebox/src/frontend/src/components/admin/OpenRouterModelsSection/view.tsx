@@ -2,7 +2,7 @@
  * Admin → OpenRouter models: the owner's act that lets this box run a model
  * OpenRouter carries, billed per use. A key alone runs nothing; each model is
  * added here, validated server-side against OpenRouter's catalog
- * (`docs/plans/openrouter-chat-models.md`). Shown only when Claude Code is an
+ * (`docs/implemented-plans/openrouter-chat-models.md`). Shown only when Claude Code is an
  * enabled engine — these models ride its transport.
  */
 

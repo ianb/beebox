@@ -6,7 +6,7 @@
  * Fake derives deterministic unit vectors from each text so tests never need a
  * real key.
  *
- * Provider decision (sticky, see docs/plans/semantic-search.md § Direction):
+ * Provider decision (sticky, see docs/implemented-plans/semantic-search.md § Direction):
  * text-embedding-3-small at 512 dims via Matryoshka truncation. Model + dims
  * are code constants, not per-box config — a config knob would let boxes
  * drift apart for no benefit; changing the model is a code change whose cost

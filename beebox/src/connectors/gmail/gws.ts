@@ -92,7 +92,7 @@ export function boundedCapture(limit: number) {
  * Captured rather than streamed to this process's stdio: the same call has to
  * answer a person at a terminal and an agent that asked its box's server to run
  * it, and a server-side child has no terminal to stream to
- * (`docs/plans/agent-capability-delegation.md`). The CLI writes the captured
+ * (`docs/implemented-plans/agent-capability-delegation.md`). The CLI writes the captured
  * streams straight back out, so a person sees what they always saw, at the end
  * rather than as it arrives.
  */

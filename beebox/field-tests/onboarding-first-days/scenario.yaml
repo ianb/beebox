@@ -1,4 +1,4 @@
-# The first scenario (`docs/plans/agent-field-tests.md`, Track 4): a household
+# The first scenario (`docs/implemented-plans/agent-field-tests.md`, Track 4): a household
 # adopting an empty box over three simulated days. Nothing is pre-seeded except
 # the mail connector, so this is precisely the first-run experience — the box
 # is as empty for the operator as it is for a new boxholder.

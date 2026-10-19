@@ -2,7 +2,7 @@
  * `bbx todos` — read/query-only surface over the todo collection
  * (`docs/implemented-plans/todo-annotation.md` Track 3).
  *
- * **Superseded by `bbx query todos`** (`docs/plans/todo-collection.md`,
+ * **Superseded by `bbx query todos`** (`docs/implemented-plans/todo-collection.md`,
  * Track 4). It stays for now with its flags and its output unchanged, and is
  * scheduled for removal; the agent guide, the ambient line, and the knowledge
  * audits all teach `bbx query` instead. What changed underneath is that it

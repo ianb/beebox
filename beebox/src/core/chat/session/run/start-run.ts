@@ -10,7 +10,7 @@
  * *every* spawn in the process fails, so the failure is not transient: the chat
  * agent cannot start at all until descriptors are freed. The cause was the box
  * file watcher holding one descriptor per watched file; see
- * `issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md` and
+ * `issues/closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md` and
  * `core/box/file-watcher.ts`. The open-FD count is logged on failure, and a
  * warning fires while there is still headroom, so a recurrence names itself
  * instead of surfacing as an opaque spawn error.
@@ -94,7 +94,7 @@ function startBackendRun(
  * `stop()` nor `restart()` can clear it (both need a live run to close), so
  * every later send queues behind a turn that will never end. That combination —
  * an FD-exhausted spawn plus no unwind — was the "wedged agent" in
- * `issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md`.
+ * `issues/closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md`.
  *
  * The error is rethrown, never swallowed: the caller decides how to report it
  * (the chat-send route turns it into a 500; a queue drain logs it).

@@ -27,7 +27,7 @@ import { fulfillUiScanRequest } from "./ui-scan-request-handler";
 import { bumpFileVersion } from "../../../../lib/file-version";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { ChatEvent } from "../../../../machines/chat-types";
-import type { TaskEvent } from "./background-tasks";
+import type { LiveTaskEntry, TaskEvent } from "./background-tasks";
 import type { CaptureLiveStatus } from "../../capture-bubble";
 import type { ScreenshotRequest } from "./screenshot-request-handler";
 import { recordChatSendEnvironmentEvent } from "../../../../lib/chat-send-diagnostics";
@@ -86,6 +86,8 @@ interface SecondaryEventDeps {
   send: (event: ChatEvent) => void;
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
+  /** The full live background-task set for a session (replace semantics). */
+  onTaskLevel: (tasks: LiveTaskEntry[]) => void;
   /** A capture staging session changed state — refine the pending bubble. */
   onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
   /** The agent asked this session's tab for a screenshot (`bbx chat screenshot`). */
@@ -100,7 +102,7 @@ interface SecondaryEventDeps {
  * main dispatcher to keep each handler's branching legible.
  */
 function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): void {
-  const { sessionId, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, audioOverlayStore } = deps;
+  const { sessionId, setChatFeatures, onTaskEvent, onTaskLevel, onCaptureStatus, onScreenshotRequest, audioOverlayStore } = deps;
   const capture = busEventData(event, "capture-status");
   if (capture) {
     // `sessionId` on the event is null until delivery, so we don't filter by
@@ -112,6 +114,11 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
   const task = busEventData(event, "chat-task");
   if (task) {
     if (forSession(task.sessionId, sessionId)) onTaskEvent(task.task);
+    return;
+  }
+  const taskLevel = busEventData(event, "chat-task-level");
+  if (taskLevel) {
+    if (taskLevel.sessionId === sessionId) onTaskLevel(taskLevel.tasks);
     return;
   }
   const fileChange = busEventData(event, "file-change");
@@ -185,6 +192,7 @@ export function useChatWs(opts: {
   fetchSchedules: () => void;
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
+  onTaskLevel: (tasks: LiveTaskEntry[]) => void;
   onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
   onScreenshotRequest: (request: ScreenshotRequest) => void;
   /** Called immediately before assignment rewrites the fresh-chat URL. */
@@ -192,7 +200,7 @@ export function useChatWs(opts: {
   /** Written by the two audio-review events; read by `UserMessage`'s badges. */
   audioOverlayStore: AudioOverlayStore;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, onSessionAssignment, audioOverlayStore } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onTaskLevel, onCaptureStatus, onScreenshotRequest, onSessionAssignment, audioOverlayStore } = opts;
   const ensureReservation = useBoxConversation()?.ensureReservation;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
@@ -294,9 +302,9 @@ export function useChatWs(opts: {
           });
         }
       } else {
-        handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, audioOverlayStore });
+        handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onTaskLevel, onCaptureStatus, onScreenshotRequest, audioOverlayStore });
       }
-    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest, audioOverlayStore]),
+    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent, onTaskLevel, onCaptureStatus, onScreenshotRequest, audioOverlayStore]),
   });
 
   // Update the URL when the machine learns the assigned session id. Fires for

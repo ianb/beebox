@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execa } from "execa";
 import { issueFiles } from "../../bin/commit-provenance.ts";
-import { parseRunRecord, smokeLogPath, summarizeSmokeLog } from "../../bin/smoke-lib.ts";
+import { mergeSmokeLogs, parseRunRecord, smokeLogReadPaths, summarizeSmokeLog } from "../../bin/smoke-lib.ts";
 import { formatBriefing, hasSomethingToReview, parseBaseline, windowStart, type Baseline, type Evidence, type FiledIssue, type Landing } from "./lib.ts";
 
 const SCHEDULE_DIR = import.meta.dirname;
@@ -32,19 +32,25 @@ async function git(args: string[]): Promise<string> {
   return result.stdout;
 }
 
-/** Every line of the shared log, or refusal — a review with no data to review. */
+/**
+ * Every run in the shared log, under its current and retired names, or
+ * refusal — a review with no data to review.
+ */
 async function readLog(): Promise<string[]> {
   const common = await git(["rev-parse", "--git-common-dir"]);
-  const logPath = smokeLogPath(common.startsWith("/") ? common : path.join(REPO_ROOT, common));
-  return fs.readFile(logPath, "utf8").then(
-    (text) => text.split("\n"),
-    (e: NodeJS.ErrnoException) => {
-      // No log yet is a legitimate state — the tier has simply never run here.
-      // It is not a broken watch, so it is not a refusal.
-      if (e.code === "ENOENT") return [];
-      return refuse(`cannot read ${logPath}: ${e.message}`);
-    },
+  const logPaths = smokeLogReadPaths(common.startsWith("/") ? common : path.join(REPO_ROOT, common));
+  const texts = await Promise.all(
+    logPaths.map((logPath) =>
+      fs.readFile(logPath, "utf8").catch((e: NodeJS.ErrnoException) => {
+        // No log yet is a legitimate state — the tier has simply never run
+        // here, or never under a retired name. It is not a broken watch, so it
+        // is not a refusal.
+        if (e.code === "ENOENT") return "";
+        return refuse(`cannot read ${logPath}: ${e.message}`);
+      }),
+    ),
   );
+  return mergeSmokeLogs(texts);
 }
 
 /** Lines whose run falls inside `[start, end)`. */

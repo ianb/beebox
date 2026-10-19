@@ -1,7 +1,7 @@
 /**
  * Landmark links + groups section of the context chip's menu — extracted
  * from the retired `LandmarkLinksButton` trigger (chunk 4 of
- * docs/plans/chat-header-chips.md). Owns the `trpc.landmarks.forDir` query.
+ * docs/implemented-plans/chat-header-chips.md). Owns the `trpc.landmarks.forDir` query.
  *
  * When the chat is scoped to a directory whose landmark carries
  * `navigation.links` (or `expand` fan-out), this surfaces those resolved

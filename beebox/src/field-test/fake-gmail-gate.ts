@@ -1,5 +1,5 @@
 /**
- * The `BBX_FAKE_GMAIL` gate (`docs/plans/agent-field-tests.md`, Track 1).
+ * The `BBX_FAKE_GMAIL` gate (`docs/implemented-plans/agent-field-tests.md`, Track 1).
  *
  * A field run points a spawned `bbx wakeup` at a fake mailbox by setting
  * `BBX_FAKE_GMAIL=<state file>`. That env var is the single most dangerous

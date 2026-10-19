@@ -76,6 +76,17 @@ details > summary {
   cursor: pointer;
 }
 
+/* Struck text is still read: a done or dropped todo, or `~~text~~` in
+   Markdown. A thin line in a fainter tint of the text color keeps the glyph
+   shapes visible; the text color stays at its readable contrast. */
+.bbx-struck,
+del,
+s {
+  text-decoration-line: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+}
+
 /* ===== Elegant print styles for Markdown / prose in the browse view ===== */
 
 @media print {

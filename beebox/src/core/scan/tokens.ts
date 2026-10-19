@@ -6,7 +6,7 @@
  * gate reduces identity to a boolean, and any valid device bearer can mint a
  * scope-less session cookie via `/api/pairing/session` — so a scoped device
  * token could not be contained (cross-model review finding 1, see
- * `docs/plans/scanner-ingest.review.md`). Keeping scan tokens in their own file
+ * `docs/implemented-plans/scanner-ingest.review.md`). Keeping scan tokens in their own file
  * behind their own `TokenStore` instance makes the isolation structural:
  * `resolveMobileRequestAuth` reads a different file and can never resolve one of
  * these, and no code outside the scan routes reads this store.

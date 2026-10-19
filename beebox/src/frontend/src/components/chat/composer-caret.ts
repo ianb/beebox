@@ -10,7 +10,7 @@
  * That is how a send once went out with a stale draft wrapped around the real
  * message: one message spliced into another at a mid-word offset, stored that
  * way on disk, with no caret-aware code anywhere on the path
- * (issues/bugs/2026-08-22-composer-draft-splices-into-another-message.md). The
+ * (issues/closed/bugs/2026-08-22-composer-draft-splices-into-another-message.md). The
  * same stale offset can delete as well as insert — the variant nobody would
  * notice — which is why this guards the mechanism rather than the one reachable
  * route that produced the sighting.

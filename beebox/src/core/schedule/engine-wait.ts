@@ -7,7 +7,7 @@
  * trouble reading config or the store means "no wait", which degrades to
  * today's ordinary failure behavior.
  *
- * Design: docs/plans/deferred-recoverable-agent-failures.md
+ * Design: docs/implemented-plans/deferred-recoverable-agent-failures.md
  */
 
 import { getBoxTime } from "../../lib/time.js";

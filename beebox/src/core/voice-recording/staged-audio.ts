@@ -1,5 +1,5 @@
 /**
- * `get-last-audio` lookup over voice staging (`docs/plans/resilient-voice-recording.md`,
+ * `get-last-audio` lookup over voice staging (`docs/implemented-plans/resilient-voice-recording.md`,
  * Track 5). A web voice send's recording lives on the box as staged PCM
  * chunks, so the server answers `bbx chat get-last-audio` / `retranscribe`
  * for it directly, before relaying to chat tabs (`chat-last-audio-routes.ts`).

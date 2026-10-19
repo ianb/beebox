@@ -1,5 +1,5 @@
 /**
- * Field-test scenario loader (`docs/plans/agent-field-tests.md`, Track 4).
+ * Field-test scenario loader (`docs/implemented-plans/agent-field-tests.md`, Track 4).
  *
  * A scenario is a directory under `beebox/field-tests/<name>/`:
  *

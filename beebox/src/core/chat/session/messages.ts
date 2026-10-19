@@ -23,6 +23,7 @@ import type {
   SDKTaskProgressMessage,
   SDKTaskStartedMessage,
   SDKTaskUpdatedMessage,
+  SDKBackgroundTasksChangedMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
 import type {
@@ -33,6 +34,8 @@ import type {
   ChatMessageUnknown,
   ChatMessageUser,
   ChatMessageContent,
+  ChatMessageTaskLevel,
+  LiveTaskEntry,
   TaskEvent,
 } from "../message-types.js";
 
@@ -47,7 +50,9 @@ export type {
   ChatMessageStreamEvent,
   ChatMessageResult,
   ChatMessageTask,
+  ChatMessageTaskLevel,
   ChatMessageUnknown,
+  LiveTaskEntry,
   TaskEvent,
 } from "../message-types.js";
 
@@ -119,10 +124,29 @@ export interface ChatSendInput {
 }
 
 /**
+ * True for a task the CLI does not surface as the person's work. `ambient` is
+ * a superset of `skip_transcript` (it adds live-update watchers); both are
+ * checked because a CLI that predates `ambient` sets only `skip_transcript`.
+ */
+function isAmbientTask(msg: { skip_transcript?: boolean; ambient?: boolean }): boolean {
+  return msg.skip_transcript === true || msg.ambient === true;
+}
+
+/**
+ * Normalize the SDK's `background_tasks_changed` level signal into a
+ * `task-level` ChatMessage carrying only the non-ambient live tasks.
+ */
+function adaptTaskLevel(msg: SDKBackgroundTasksChangedMessage): ChatMessageTaskLevel {
+  const tasks: LiveTaskEntry[] = msg.tasks
+    .filter((entry) => entry.ambient !== true)
+    .map((entry) => ({ taskId: entry.task_id, description: entry.description }));
+  return { type: "task-level", session_id: msg.session_id, uuid: msg.uuid, tasks };
+}
+
+/**
  * Normalize one of the SDK's four `task_*` system messages into a `task`
- * ChatMessage. Returns null for ambient/housekeeping tasks (`skip_transcript`)
- * so they don't clutter the inline transcript — progress/updated ticks for
- * such tasks are dropped downstream because no `started` ever registered them.
+ * ChatMessage. Returns null for ambient/housekeeping tasks (see
+ * `isAmbientTask`) so they never read as the person's work.
  */
 function adaptTaskMessage(
   msg:
@@ -134,7 +158,7 @@ function adaptTaskMessage(
   const base = { type: "task" as const, session_id: msg.session_id, uuid: msg.uuid };
   switch (msg.subtype) {
     case "task_started": {
-      if (msg.skip_transcript === true) return null;
+      if (isAmbientTask(msg)) return null;
       const task: TaskEvent = { phase: "started", taskId: msg.task_id, status: "running" };
       if (msg.tool_use_id !== undefined) task.toolUseId = msg.tool_use_id;
       if (msg.description) task.description = msg.description;
@@ -156,7 +180,7 @@ function adaptTaskMessage(
       return { ...base, task };
     }
     case "task_notification": {
-      if (msg.skip_transcript === true) return null;
+      if (isAmbientTask(msg)) return null;
       const task: TaskEvent = { phase: "settled", taskId: msg.task_id, status: msg.status };
       if (msg.tool_use_id !== undefined) task.toolUseId = msg.tool_use_id;
       if (msg.summary) task.summary = msg.summary;
@@ -196,6 +220,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       ) {
         return adaptTaskMessage(msg);
       }
+      if (msg.subtype === "background_tasks_changed") return adaptTaskLevel(msg);
       return null;
     }
     case "assistant": {
@@ -292,7 +317,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
  *
  * A run on a third-party model (GLM, an added OpenRouter model) loses its
  * `total_cost_usd`: the SDK prices every turn as Claude, which overstated
- * OpenRouter spend 5–20× when measured (`docs/plans/openrouter-chat-models.md`,
+ * OpenRouter spend 5–20× when measured (`docs/implemented-plans/openrouter-chat-models.md`,
  * Track 1 (h)). No figure is better than a wrong one; the real spend is the
  * provider's own.
  */

@@ -7,7 +7,7 @@
  * a real box on purpose. bin/smoke-harness.ts owns the I/O and calls into this;
  * the run log lives in bin/smoke-lib.ts.
  *
- * See issues/exploration/2026-08-26-merge-time-smoke-tier.md.
+ * See issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md.
  */
 
 import { isRecord } from "../beebox/src/shared/is-record.js";

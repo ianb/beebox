@@ -1,6 +1,6 @@
 /**
  * What a *collection* is: a staged query over the box's cards whose result
- * several consumers render (`docs/plans/todo-collection.md`, Track 3).
+ * several consumers render (`docs/implemented-plans/todo-collection.md`, Track 3).
  *
  * The stages are the point, and the types enforce the one rule that matters:
  * `extract` receives no clock, so it stays pure and cacheable, and only

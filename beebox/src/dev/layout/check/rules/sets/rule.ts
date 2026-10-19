@@ -4,7 +4,7 @@
  * the side-effect-registration check from rule 4's "nothing else constructs
  * the list" and the mechanical guard that the registry is actually read: a
  * declared registry no module value-imports is a second list that only
- * satisfies the check, not a real set. Rules: docs/plans/file-layout.md.
+ * satisfies the check, not a real set. Rules: docs/implemented-plans/file-layout.md.
  * Each finding is a sibling module by job; this file only assembles and
  * sorts them.
  */

@@ -1,5 +1,5 @@
 /**
- * FIFO ordering for voice sends (`docs/plans/resilient-voice-recording.md`,
+ * FIFO ordering for voice sends (`docs/implemented-plans/resilient-voice-recording.md`,
  * Track 4). Each voice segment reserves a slot the moment it ends; its
  * dispatch then waits for every earlier slot to be released. HQ waits still
  * run concurrently — only the dispatches are ordered — so segment 2's quick

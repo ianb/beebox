@@ -5,7 +5,7 @@
  * Shared by the two surfaces that list sessions under a landmark — the
  * Landmarks page's merged activity sections and the `view: chat-picker`
  * card (`ChatsLandmarkCard`) — so a session reads the same way in both
- * (docs/plans/top-nav-ia.md Track D).
+ * (docs/implemented-plans/top-nav-ia.md Track D).
  */
 
 import { Link } from "@tanstack/react-router";

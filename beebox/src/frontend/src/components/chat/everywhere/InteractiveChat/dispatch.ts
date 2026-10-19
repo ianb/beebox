@@ -133,7 +133,7 @@ export function useEmissionDispatch(opts: {
       const { images, files } = captured.attachments;
       const emission = buildVoiceSubmitEmission({
         priorInput: captured.draft.text, finalText: text, imagesSnapshot: images, filesSnapshot: files, selectionsSnapshot: captured.draft.selections, diarized: false,
-        // Fix D (docs/plans/transcript-confidence.md): the tap-send path
+        // Fix D (docs/implemented-plans/transcript-confidence.md): the tap-send path
         // now carries the hook's realtime words too, same as a keyword
         // send — the interim tail (if any) simply has no words, which the
         // aligner tolerates (fail-open per word).

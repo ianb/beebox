@@ -98,7 +98,7 @@ const content = boxDir;
 // A journey box is built for an agent-driven browser, so it says so: with
 // `agentBrowsing: "owner"` the browse key acts as the box owner and the walker
 // reaches capture, Settings, and every owner-gated procedure
-// (`docs/plans/agent-browsing-owner.md`). This is a disposable fixture setting;
+// (`docs/implemented-plans/agent-browsing-owner.md`). This is a disposable fixture setting;
 // a box a person actually uses must never have it.
 const boxConfigPath = join(content, "_config", "box.json");
 const boxConfig: unknown = existsSync(boxConfigPath) ? JSON.parse(readFileSync(boxConfigPath, "utf8")) : {};

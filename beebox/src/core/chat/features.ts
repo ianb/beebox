@@ -50,7 +50,7 @@ const FEATURE_LIST: readonly FeatureDescriptor[] = [
 /**
  * Features that no longer exist but may still sit in stored session state or
  * landmark seeds. Dropped without a warning. `hq-dictation` went away when
- * every dictated message got the HQ pass (docs/plans/hq-always.md).
+ * every dictated message got the HQ pass (docs/implemented-plans/hq-always.md).
  */
 const RETIRED_FEATURES = new Set(["hq-dictation"]);
 

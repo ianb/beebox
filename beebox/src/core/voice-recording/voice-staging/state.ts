@@ -1,6 +1,6 @@
 /**
  * Pure state machine for one voice recording's HQ pass and handoff
- * (`docs/plans/resilient-voice-recording.md`, Track 1). `nextVoiceState`
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1). `nextVoiceState`
  * takes the manifest's current `voice` object plus one event and returns
  * either the next `voice` object (unchanged, for an idempotent no-op) or a
  * typed refusal for an event that doesn't apply from the current state. All

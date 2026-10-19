@@ -120,7 +120,7 @@ async function readHistory(args: {
  * and each one used to re-parse the whole transcript: ~50 MB of transient heap
  * per request on prod's 15.5 MB session, stacking linearly to the 1.9 GB V8
  * cap and killing `bbx serve` four times (2026-08-03/04,
- * `issues/bugs/2026-08-04-chat-history-parse-transient-oom.md`). Callers that
+ * `issues/closed/bugs/2026-08-04-chat-history-parse-transient-oom.md`). Callers that
  * arrive while a read of the same `(logPath, slice)` is running now await that
  * read instead of starting their own.
  *

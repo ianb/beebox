@@ -1,6 +1,6 @@
 /**
  * Gives the todos inside a card view their actions (`todo-actions.ts`,
- * `docs/plans/todos-ui.md` Track 3). `FileView` renders it around a card's
+ * `docs/implemented-plans/todos-ui.md` Track 3). `FileView` renders it around a card's
  * body, so a body todo, a frontmatter todo, and every line of a todo list
  * shown there can be ticked; "+" appears only when `FileView` has a chat
  * composer to add a selection to.

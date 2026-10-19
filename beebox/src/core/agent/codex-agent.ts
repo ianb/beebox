@@ -50,6 +50,8 @@ export function createCodexAgent(options: CreateCodexAgentOptions): Agent {
       dryRun: invoke.dryRun,
       cwd: invoke.cwd,
       additionalDirectories: invoke.additionalDirectories,
+      loadBoxContext: invoke.loadBoxContext,
+      tools: invoke.tools,
       resumeSessionId: isResume && sessionId !== null ? sessionId : undefined,
       onSessionId: (assigned) => {
         sessionId = assigned;

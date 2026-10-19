@@ -43,6 +43,7 @@ const samples = {
   "chat-user-message": { sessionId: "s1", message: "hi", user: { email: "a@example.com", name: "Rosa" }, timestamp: TS },
   "chat-complete": { sessionId: "s1", timestamp: TS },
   "chat-task": { sessionId: "s1", task: { phase: "started", taskId: "t1", status: "running", description: "Generate image" } },
+  "chat-task-level": { sessionId: "s1", tasks: [{ taskId: "t1", description: "Generate image" }] },
   "chat-features-changed": { sessionId: "s1", features: { theme: "dark" } },
   "schedule-fired": { id: "sch_1", label: "tea", alarm: true, announce: null },
   "chat-history": { sessionId: "s1", entries: [{ uuid: "u1", type: "user", timestamp: TS, content: [{ type: "text", text: "hi" }] }] },

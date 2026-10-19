@@ -5,7 +5,7 @@
  * one this was built for — has only paths. It used to carry a label captured
  * when the tab opened, which meant renaming a card left its tab saying the old
  * thing while the card body below it updated
- * (`issues/bugs/2026-09-05-sidecar-tab-label-never-updates.md`), and it meant a
+ * (`issues/closed/bugs/2026-09-05-sidecar-tab-label-never-updates.md`), and it meant a
  * pinned tab restored from storage had never seen a title at all.
  *
  * So identity is read, not remembered: one batched `files.summarize` for the

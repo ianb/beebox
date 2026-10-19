@@ -1,5 +1,5 @@
 /**
- * What a rendered todo can do (`docs/plans/todos-ui.md`, Track 3): tick it
+ * What a rendered todo can do (`docs/implemented-plans/todos-ui.md`, Track 3): tick it
  * (`open ↔ done`) and drop it into chat as a selection.
  *
  * The two actions reach `TodoItem` through `TodoActionsContext`, not through

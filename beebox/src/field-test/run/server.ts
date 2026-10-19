@@ -1,6 +1,6 @@
 /**
  * Field-test server lifecycle — the "dedicated `bbx serve`" half of a run
- * (`docs/plans/agent-field-tests.md`, Track 2).
+ * (`docs/implemented-plans/agent-field-tests.md`, Track 2).
  *
  * A run owns one server on a port nobody else has: allocate a free port, spawn
  * `bbx serve` on it with the run's env overlay (`BBX_TIME`,

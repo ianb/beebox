@@ -382,7 +382,7 @@ export async function serveDev(params: {
   // router-auth.ts); GETs behind the router can still lazy-start processes
   // (any worktree path) — that is the router's
   // core design, not a mutation this change exposes. Background:
-  // issues/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md.
+  // issues/closed/bugs/2026-08-19-dev-md-images-broken-opaque-origin.md.
   const base = `/${name}/dev`;
   const devRoot = path.join(repoRoot, "dev");
   const [pathOnly = ""] = rest.split("?");

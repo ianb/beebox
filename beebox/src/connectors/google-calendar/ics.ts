@@ -8,25 +8,32 @@
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 import { type CalendarEvent } from "../../services/google-calendar/core.js";
-import { invariant } from "../../shared/invariant.js";
 import { asIcalTime } from "./utils.js";
 
 export type GoogleCalendarEvent = CalendarEvent;
 
+/** Wall-clock time of `instant` in the IANA zone `timeZone`, as "2026-04-01T14:00:00". */
+function wallTimeIn(instant: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+  }).formatToParts(instant);
+  const get = (type: Intl.DateTimeFormatPartTypes): string => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}:${get("second")}`;
+}
+
 /**
- * Parse local time parts from an ISO dateTime string (e.g., "2026-03-29T14:00:00-05:00").
- * The time in the string IS the local time — we extract it directly without UTC conversion.
+ * Wall-clock time in `timeZone` for an RFC 3339 dateTime such as
+ * "2026-03-29T14:00:00-05:00". With a `Z` or `±hh:mm` suffix the string names
+ * an instant, and its digits are the wall time at that offset, which need not
+ * be `timeZone`'s: Google returns the calendar's offset, and a pushed event
+ * comes back in UTC. So convert the instant. Without a suffix the digits are
+ * already wall time in `timeZone`.
  */
-function parseLocalTimeParts(dateTime: string): { year: number; month: number; day: number; hour: number; minute: number; second: number } | null {
-  const match = dateTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-  if (!match) return null;
-  const [year, month, day, hour, minute, second] = match.slice(1);
-  invariant(
-    year !== undefined && month !== undefined && day !== undefined
-      && hour !== undefined && minute !== undefined && second !== undefined,
-    "6 capture groups are non-optional here",
-  );
-  return { year: +year, month: +month, day: +day, hour: +hour, minute: +minute, second: +second };
+function wallTimeForDateTime(dateTime: string, timeZone: string): string | null {
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})?$/.exec(dateTime);
+  if (!match?.[1]) return null;
+  return match[2] ? wallTimeIn(new Date(dateTime), timeZone) : match[1];
 }
 
 /** Offset in minutes between a date's wall-clock time in tzid and UTC. */
@@ -162,21 +169,19 @@ export function vtimezoneBlock(tzid: string): string {
 }
 
 /**
- * Set a datetime property with timezone on a VEVENT component.
- * Parses local time from the ISO string and sets TZID parameter.
+ * Set a datetime property with timezone on a VEVENT component: the wall time
+ * of the dateTime's instant in `timeZone`, labeled with that TZID.
  */
 function setDateTimeWithTz(
   vevent: ICAL.Component,
   opts: { propName: string; dateTime: string; timeZone: string | undefined },
 ): void {
   const { propName, dateTime, timeZone } = opts;
-  const parts = parseLocalTimeParts(dateTime);
-  if (parts && timeZone) {
-    // Format as ISO 8601 extended ("2026-04-01T14:00:00"). fromDateTimeString
-    // rejects iCal basic format; see note in generateVtimezone above.
-    const pad = (n: number, w: number) => String(n).padStart(w, "0");
-    const dtStr = `${pad(parts.year, 4)}-${pad(parts.month, 2)}-${pad(parts.day, 2)}T${pad(parts.hour, 2)}:${pad(parts.minute, 2)}:${pad(parts.second, 2)}`;
-    const dt = ICAL.Time.fromDateTimeString(dtStr);
+  const wallTime = timeZone ? wallTimeForDateTime(dateTime, timeZone) : null;
+  if (wallTime && timeZone) {
+    // ISO 8601 extended form: fromDateTimeString rejects iCal basic format;
+    // see note in generateVtimezone above.
+    const dt = ICAL.Time.fromDateTimeString(wallTime);
     const prop = vevent.updatePropertyWithValue(propName, dt);
     prop.setParameter("tzid", timeZone);
   } else {

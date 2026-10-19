@@ -9,7 +9,7 @@
  * runs the cycle in-process, under ANY spawn profile. It asks the box's own
  * server, which runs the same supervised `bbx wakeup` child the Sync button and
  * the scheduler run; with no reachable server it refuses and names the missing
- * piece (`docs/plans/agent-capability-delegation.md`).
+ * piece (`docs/implemented-plans/agent-capability-delegation.md`).
  *
  * The output answers "did it sync?" per connector, because that is the question
  * the 2026-09-14 incident could not answer: a total of "0 errors" says nothing

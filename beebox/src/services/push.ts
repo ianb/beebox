@@ -10,7 +10,7 @@
  * expected "endpoint is dead" case (404/410) — the caller prunes on `gone`.
  * Genuinely transient failures (429/5xx, network) throw, so the caller can
  * surface them (e.g. stamp an output card `failed`). See
- * docs/plans/web-push-notifications.md (Track B).
+ * docs/implemented-plans/web-push-notifications.md (Track B).
  */
 
 import webpush from "web-push";

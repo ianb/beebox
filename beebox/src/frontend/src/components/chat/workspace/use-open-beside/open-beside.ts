@@ -1,5 +1,5 @@
 /**
- * Where a link from a list opens (`docs/plans/todos-ui.md`, Track 5).
+ * Where a link from a list opens (`docs/implemented-plans/todos-ui.md`, Track 5).
  *
  * A list — the todo list, a directory's todo line — is something one reads
  * beside the thing it leads to. On the desktop, a card opened from a list in

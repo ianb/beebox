@@ -8,7 +8,7 @@
  * Zod schema here, because a schedule that fails at 03:00 on a Sunday with
  * nobody watching is the failure the whole design exists to prevent.
  *
- * Design: beebox/docs/plans/scheduled-workstreams.md (Tracks A, B, C).
+ * Design: beebox/docs/implemented-plans/scheduled-workstreams.md (Tracks A, B, C).
  * Store IO (marker discipline, atomic writes, locks): bin/lib/schedules-store.ts
  */
 

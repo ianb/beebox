@@ -1,6 +1,6 @@
 /**
  * Finding 4 (registry): a record-form member whose literal key does not equal
- * its member name in identifier form. `docs/plans/file-layout.md`'s "Record
+ * its member name in identifier form. `docs/implemented-plans/file-layout.md`'s "Record
  * keys" bullet: `quick-chat.ts` is keyed `quickChat`.
  */
 import type { Finding } from "../../../model.js";

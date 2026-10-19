@@ -35,7 +35,7 @@
  * is what a send leaves behind, and it is a definitive event rather than a
  * keystroke — debouncing it let an in-app navigation cancel the clear and
  * resurface the just-sent draft as "unsent"
- * (issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
+ * (issues/closed/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
  *
  * A restore in progress (the file-existence check is a network round trip)
  * suppresses the debounced persist so a slow check can't have its
@@ -227,7 +227,7 @@ export function useEmissionPersistence(opts: {
       // NOW rather than on the debounce: a debounced clear loses its race
       // with an in-app navigation, and the pre-send draft then comes back as
       // an "unsent" recovery offer
-      // (issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
+      // (issues/closed/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
       if (isEmptyEmissionDraft(emissionStore.get())) {
         cancel();
         persistNow();

@@ -1,6 +1,6 @@
 /**
  * `bbx engine todo-review check` — the precheck of the stock `todo-review`
- * procedure (`docs/plans/todos-ui.md`, Track 7).
+ * procedure (`docs/implemented-plans/todos-ui.md`, Track 7).
  *
  * Computes the sweep's sets (`review-sweep.ts`), saves the items in the sweep
  * state (`review-state.ts`) for the validate step (`review-verify.ts`), and

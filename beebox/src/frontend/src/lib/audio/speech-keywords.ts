@@ -9,7 +9,7 @@ const sendPattern = KeywordPattern.compile(`
 `);
 
 // Once the deliberate HQ fixup; every send gets the HQ pass now
-// (docs/plans/hq-always.md), so it is a plain send. Kept so the phrase still
+// (docs/implemented-plans/hq-always.md), so it is a plain send. Kept so the phrase still
 // sends, and because native persists the action name.
 const sendHqPattern = KeywordPattern.compile(`
   clean up and send

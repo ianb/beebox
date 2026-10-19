@@ -11,7 +11,7 @@ const channelSchema = z.enum(CHAT_CHANNELS).optional();
 /** `origin` is absent from clients built before it existed; their thoughts were typed. */
 export const quickChatSubmitInput = z.object({ id: idSchema, message: z.string().trim().min(1).max(12000),
   origin: z.enum(QUICK_CHAT_ORIGINS).default("typed"), source: z.enum(QUICK_CHAT_SOURCES).optional(),
-  /** The engine of an HQ pass the phone ran (docs/plans/ios-quick-chat-hq.md); absent is live text. */
+  /** The engine of an HQ pass the phone ran (docs/implemented-plans/ios-quick-chat-hq.md); absent is live text. */
   hqService: quickChatHqServiceSchema.optional(), channel: channelSchema })
   .superRefine((input, ctx) => {
     if (input.origin !== "voice" && input.hqService !== undefined) ctx.addIssue({ code: "custom", message: "hqService is only valid for a voice quick chat.", path: ["hqService"] });

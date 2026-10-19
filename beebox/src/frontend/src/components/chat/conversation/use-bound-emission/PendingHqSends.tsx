@@ -24,7 +24,7 @@ interface Props {
 
 /**
  * Voice messages a reload interrupted while they waited for their HQ
- * transcript (docs/plans/resilient-voice-recording.md, Track 4). Each shows
+ * transcript (docs/implemented-plans/resilient-voice-recording.md, Track 4). Each shows
  * the box's HQ status and offers the two sends; nothing is ever sent on its
  * own (boxholder decision 1). Dismissing leaves the recording on the box.
  */

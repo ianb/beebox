@@ -9,7 +9,7 @@
  * store instances.
  *
  * That separation is the whole security property (see
- * `docs/plans/scanner-ingest.md` Track 1 and its review finding 1): every
+ * `docs/implemented-plans/scanner-ingest.md` Track 1 and its review finding 1): every
  * mobile gate reduces identity to a boolean and any valid device bearer can
  * mint a full session cookie, so a "scope" field on one shared store could not
  * be contained. Sharing the *mechanics* while keeping the *stores* disjoint

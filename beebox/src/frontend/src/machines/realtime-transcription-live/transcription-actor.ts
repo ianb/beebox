@@ -5,7 +5,7 @@
  *
  * ## The recording outlives the socket
  *
- * (`docs/plans/resilient-voice-recording.md`, Track 3.) The segment starts in
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 3.) The segment starts in
  * this order: mint a recording id and enqueue its staging `create` (the
  * durable upload queue does not wait for the box); start the mic and send
  * MIC_LIVE; only then look up the live service and open a socket. Every PCM

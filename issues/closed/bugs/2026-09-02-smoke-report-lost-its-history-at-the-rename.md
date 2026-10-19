@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-smoke-review — the weekly smoke-tier review, 2026-09-02
 priority: normal
+resolution: implemented
 ---
 
 `smokeLogPath` (`bin/smoke-lib.ts:113`) derives the log's name from the product
@@ -91,5 +92,18 @@ stranding a 13.7MB `callback-test-ledger.jsonl`. That one is a selector cache
 that rebuilds, so it is cheaper to lose — but it is the same defect, and worth
 fixing in the same pass.
 
-Related: [smoke runs leave no record](../closed/code-quality/2026-08-26-smoke-runs-are-not-in-the-test-ledger.md),
-[merge-time smoke tier](../closed/exploration/2026-08-26-merge-time-smoke-tier.md).
+Related: [smoke runs leave no record](../code-quality/2026-08-26-smoke-runs-are-not-in-the-test-ledger.md),
+[merge-time smoke tier](../exploration/2026-08-26-merge-time-smoke-tier.md).
+
+## Resolution
+
+2026-10-19, bug-burndown-3. `bin/smoke --report` and the weekly
+`smoke-review` schedule now read the log under its retired name
+(`callback-smoke-log.jsonl`) as well as the current one, merge the two in time
+order, and count a run that is in both files once (`smokeLogReadPaths` and
+`mergeSmokeLogs` in `bin/smoke-lib.ts`). Runs still append only to
+`beebox-smoke-log.jsonl`. The report's first line now gives the dates its runs
+cover, so a short history reads as short. On this machine the old file had
+already been copied into the new one by hand; the merge makes that copy and
+any future one count once. The stranded `callback-test-ledger.jsonl` named
+above is not addressed here.

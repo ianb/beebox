@@ -180,7 +180,7 @@ function DesktopComposerRow({
           });
         }}
         // A live segment can always be sent: with live text paused its words
-        // arrive only from the HQ pass (docs/plans/resilient-voice-recording.md).
+        // arrive only from the HQ pass (docs/implemented-plans/resilient-voice-recording.md).
         disabled={sendDisabledReason !== undefined || !(segmentCapturing(transcription.state) || (isTranscribing ? joinTranscript(input, transcription.transcript) : input).trim())}
         title={sendDisabledReason ?? (isTranscribing || !targetBusy ? "Send" : "Queue message (still thinking)")}
       />
@@ -290,7 +290,7 @@ export function ChatInputArea({
           ) : null}
           {/* One file entry: where the files land (inline vs. bulk batch) is
               decided by `file-routing.ts`, not by the user picking a menu item
-              (issues/features/2026-08-03-attach-vs-upload-menu-confusing.md). */}
+              (issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md). */}
           <MenuItem id={hasControlIds ? "bbx-composer-add-files" : undefined} onClick={onAddFiles}>Add files…</MenuItem>
           <ScreenshotMenuItem addFiles={addFiles} includeControlId={hasControlIds} />
           <ShareLocationMenuItem includeControlId={hasControlIds} />

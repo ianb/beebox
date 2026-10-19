@@ -142,7 +142,7 @@ function FrontmatterTodo({ entry, index }: { entry: TodoEntry; index: number }):
 }
 
 /**
- * A card's own `todos:` list, rendered as todos (`docs/plans/todos-ui.md`,
+ * A card's own `todos:` list, rendered as todos (`docs/implemented-plans/todos-ui.md`,
  * Track 2) rather than as `text:`/`due:` rows. `null` when the value is not a
  * valid todo list, so it falls back to the generic rendering — the collector
  * reads nothing from an invalid list either (`core/todo/extract.ts`).

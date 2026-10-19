@@ -2,7 +2,7 @@
  * Add and remove the owner's OpenRouter chat models in `_config/box.json`.
  *
  * Adding is the act that lets a box spend per use on a model, so these are the
- * only writers of `openrouterModels` (`docs/plans/openrouter-chat-models.md`).
+ * only writers of `openrouterModels` (`docs/implemented-plans/openrouter-chat-models.md`).
  * Both run inside the config write lock: the "still the default?" check on
  * removal must see the same file the write replaces.
  */

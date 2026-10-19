@@ -1,5 +1,5 @@
 /**
- * The chat's contribution to the unified app bar (docs/plans/top-nav-ia.md
+ * The chat's contribution to the unified app bar (docs/implemented-plans/top-nav-ia.md
  * Track C2), replacing the old chat header row.
  *
  * Three publications, no rendered output of its own:

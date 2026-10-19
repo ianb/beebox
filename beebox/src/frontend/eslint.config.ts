@@ -9,7 +9,7 @@ import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 import tapCheck from "@ianbicking/tap-check/eslint";
 
 // --- Frontend import-boundary contract (project-local; see
-// docs/plans/clerk-contract-and-import-boundary.md Track 2, and the paths
+// docs/implemented-plans/clerk-contract-and-import-boundary.md Track 2, and the paths
 // comment in tsconfig.json). The frontend must not import backend source by a
 // raw relative path that escapes src/frontend/: type imports go through the
 // @core/@schemas/@backend type-only aliases; value imports go through @shared
@@ -199,6 +199,8 @@ export default [
       // resets, etc.) that are flagged but not actually wrong for our usage.
       // Disable until/unless we do a real audit.
       "react-hooks/set-state-in-effect": "off",
+      // Check the SSR-safe layout effect's dependency list like useLayoutEffect's.
+      "react-hooks/exhaustive-deps": ["error", { additionalHooks: "^useIsomorphicLayoutEffect$" }],
     },
   },
   // Outside any components/ subdirectory: every JSX element's className must

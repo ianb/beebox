@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-smoke-review — the weekly smoke-tier review, 2026-09-09
 priority: normal
+resolution: implemented
 ---
 
 `formatSmokeReport` (`bin/smoke-lib.ts:262-275`) ends every report with a
@@ -100,4 +101,15 @@ above.
   the log.
 
 Related: [`--report` lost 63 runs at the rename](../bugs/2026-09-02-smoke-report-lost-its-history-at-the-rename.md),
-[merge-time smoke tier](../closed/exploration/2026-08-26-merge-time-smoke-tier.md).
+[merge-time smoke tier](../exploration/2026-08-26-merge-time-smoke-tier.md).
+
+## Resolution
+
+2026-10-19, bug-burndown-3. The footer in `formatSmokeReport`
+(`bin/smoke-lib.ts`) no longer sums p50s. It reads "Never failed in 20+ runs:
+<steps>." and then says that a clean record makes a step a candidate only: the
+reader checks in `bin/smoke.ts` that an earlier step already catches what it
+checks and that no later step relies on it, and its p50 is not what a trim
+recovers. The third direction, excluding steps that another step depends on,
+is not implemented: the log does not record that relation, and the footer
+tells the reader to check it in the step list.

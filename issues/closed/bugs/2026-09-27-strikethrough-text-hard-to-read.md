@@ -7,6 +7,7 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder discussion, 2026-09-27
 priority: normal
+resolution: implemented
 ---
 
 The developer finds struck-through text hard to read. Struck text is still
@@ -29,5 +30,15 @@ thinner line in a lighter color than the text (`text-decoration-color`,
 `text-decoration-thickness`), with the text itself kept at readable
 contrast. Apply it to todos and markdown alike. Check both light and dark
 themes, and the card themes (`src/frontend/src/themes/`). The
-[contrast audit](../code-quality/2026-05-28-color-contrast-wcag-aa-audit.md)
+[contrast audit](../../code-quality/2026-05-28-color-contrast-wcag-aa-audit.md)
 covers the text-color side.
+
+## Resolution
+
+2026-10-19, bug-burndown-3: one struck-text style in `beebox/src/frontend/src/index.css`
+(`.bbx-struck`, `del`, `s`): a 1px line at 55% of the text color. Done and
+dropped todos now use `text-card-soft bbx-struck` instead of
+`text-warm-400 line-through`, so their text follows the card theme's soft ink
+(warm-700 outside a themed card). Markdown `~~text~~` keeps the body color and
+gets the same thin line. Checked in the default card, the paper theme, and the
+dark deck theme. Broken links keep their own dotted style.
