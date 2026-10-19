@@ -14,6 +14,7 @@ import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
+import { CHECK_IN_MAX_MS, CheckInNotSavedError, CheckInTooLongError, MAX_TIMEOUT_MS, ScheduleForDeletingSessionError } from "./check-in.js";
 
 export { parseCancelScheduleTags, parseScheduleTags } from "./tags.js";
 
@@ -49,15 +50,6 @@ export function boxChatScheduleDeliveriesAreIdle(boxRoot: string): boolean { ret
 export interface DetachedSchedulesReceipt {
   sessionId: string;
   schedules: ChatSchedule[];
-}
-
-class ScheduleForDeletingSessionError extends Error {
-  readonly sessionId: string;
-  constructor(sessionId: string) {
-    super("Cannot schedule work for a conversation being deleted");
-    this.name = "ScheduleForDeletingSessionError";
-    this.sessionId = sessionId;
-  }
 }
 
 /** Best-effort label for a schedule entry that failed validation, for the skip warning. */
@@ -165,6 +157,7 @@ export class ChatScheduleManager {
     if (opts.sessionId !== undefined && this.blockedSessionIds.has(opts.sessionId)) {
       throw new ScheduleForDeletingSessionError(opts.sessionId);
     }
+    if (opts.durationMs > CHECK_IN_MAX_MS) throw new CheckInTooLongError(opts.durationMs);
     liveManagers.add(this);
     const id = `sch_${Date.now()}_${this.idCounter++}`;
     const now = new Date();
@@ -181,9 +174,13 @@ export class ChatScheduleManager {
       ...(opts.sessionId !== undefined ? { sessionId: opts.sessionId } : {}),
     };
 
+    // Saved before it is armed: a check-in reported as set must survive a restart.
     this.schedules.set(id, schedule);
+    try { this.writeToDisk(); } catch (error) {
+      this.schedules.delete(id);
+      throw new CheckInNotSavedError(error);
+    }
     this.armTimer(schedule);
-    this.saveToDisk();
 
     log(`Scheduled "${schedule.label}" to fire at ${schedule.firesAt} (in ${Math.round(opts.durationMs / 1000)}s)`);
     return schedule;
@@ -296,9 +293,11 @@ export class ChatScheduleManager {
       return;
     }
 
-    const timer = setTimeout(() => {
-      this.startFire(schedule);
-    }, delay);
+    // An entry saved before CHECK_IN_MAX_MS can exceed Node's timer limit:
+    // wait out the limit, then arm again.
+    const timer = delay > MAX_TIMEOUT_MS
+      ? setTimeout(() => { this.timers.delete(schedule.id); this.armTimer(schedule); }, MAX_TIMEOUT_MS)
+      : setTimeout(() => { this.startFire(schedule); }, delay);
 
     // Don't keep process alive just for schedules
     timer.unref();
@@ -383,14 +382,15 @@ export class ChatScheduleManager {
     if (loaded.length > 0) log(`Loaded ${loaded.length} schedule(s) from disk`);
   }
 
-  private saveToDisk(): void {
+  private writeToDisk(): void {
     const filePath = path.join(this.boxRoot, this.schedulesFile);
-    const dir = path.dirname(filePath);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify([...this.schedules.values()], null, 2));
+  }
+
+  private saveToDisk(): void {
     try {
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      fs.writeFileSync(filePath, JSON.stringify([...this.schedules.values()], null, 2));
+      this.writeToDisk();
     } catch (e) {
       log(`Failed to save schedules: ${e}`);
     }
