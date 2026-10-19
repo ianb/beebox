@@ -166,6 +166,31 @@ await t.checkThrows(() => parseCard("no frontmatter"), "CardParseError: missing 
 - Make the value deterministic before you reach for a pattern: pass a fixed
   clock, a fixed id, a fixed seed.
 
+## Time, load, and real processes
+
+The full suite runs many files at once on a loaded host. A test that depends
+on how fast a child process, the filesystem, or the network responds fails
+there.
+
+- A time limit only catches a hang. To claim that a call does not block, check
+  the order of events: hold the background work on a gate, and check that the
+  caller returned before the gate opened.
+- Wait for the final state. A value that is published partway through an
+  operation (a status, a phase, a flag) can be seen before the operation ends.
+- A real OS event can be lost. Inside the `eventually`, repeat only an action
+  that is safe to repeat: rewrite the same file content until the watcher sees
+  it; send each probe request on a fresh connection, because a reload closes
+  pooled ones. Do not repeat the operation under test (a reload, a deploy), or
+  a broken one is hidden. Test our own filtering of events with a fake source.
+- Do not cap a child process's memory to prove a limit. A cap fails under load
+  for reasons unrelated to the code. Sample the child's live heap during the
+  work and check the peak, and the retained heap after it.
+- Narrow a system-wide probe (`lsof`, a process list) to the test's own
+  process.
+- Write a fixture where the external tool writes it, computed independently.
+  A fixture built by the helper under test agrees with that helper when both
+  are wrong.
+
 ## Reading a failure
 
 A failure prints three parts:
