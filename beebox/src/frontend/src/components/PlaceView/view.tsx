@@ -105,6 +105,7 @@ function RootCounts({ counts, onRetry }: { counts: NavCounts | "unavailable"; on
           parts={parts}
           actions={{
             open: open(PLATE_CARD_PATH, "Open your todo list"),
+            overdue: open(PLATE_CARD_PATH, "Open your todo list"),
             questions: open(SYSTEM_CARD_PATHS.questions, "Open the questions waiting for you"),
           }}
         />

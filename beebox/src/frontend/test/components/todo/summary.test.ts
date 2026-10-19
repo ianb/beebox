@@ -118,7 +118,7 @@ function rootLine(counts: { onPlateTodos?: number; escalatedTodos?: number; pend
   const parts = rootLineParts({ onPlateTodos: 0, escalatedTodos: 0, pendingQuestions: 0, ...counts });
   if (parts === null) return null;
   const action = { onClick: noop, title: "Open" };
-  return text(renderToStaticMarkup(React.createElement(CountsLine, { parts, actions: { open: action, questions: action } })));
+  return text(renderToStaticMarkup(React.createElement(CountsLine, { parts, actions: { open: action, overdue: action, questions: action } })));
 }
 
 // Nothing to do and nothing asked: no line at all.
@@ -126,10 +126,11 @@ void test("Nothing to do and nothing asked: no line at all.", async (t) => {
   t.check(rootLine({}), null);
 });
 
-// Todos only. The overdue count is named when there is one, and is plain text.
-void test("Todos only. The overdue count is named when there is one, and is plain text.", async (t) => {
+// Todos only. The overdue count is named when there is one; it opens the same
+// todo view as "to do", so every count on the line opens its surface.
+void test("Todos only. The overdue count is named when there is one and opens the todo view.", async (t) => {
   t.check([rootLine({ onPlateTodos: 3, escalatedTodos: 1 }), rootLine({ onPlateTodos: 2 })], [
-    "[3 to do] · 1 overdue",
+    "[3 to do] · [1 overdue]",
     "[2 to do]",
   ]);
 });
@@ -144,5 +145,5 @@ void test("Questions only: the line does not vanish when nothing is to do.", asy
 
 // Both:
 void test("Both:", async (t) => {
-  t.check(rootLine({ onPlateTodos: 3, escalatedTodos: 1, pendingQuestions: 2 }), "[3 to do] · 1 overdue · [2 questions waiting]");
+  t.check(rootLine({ onPlateTodos: 3, escalatedTodos: 1, pendingQuestions: 2 }), "[3 to do] · [1 overdue] · [2 questions waiting]");
 });

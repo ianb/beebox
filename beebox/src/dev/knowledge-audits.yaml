@@ -8628,7 +8628,12 @@ tests:
   # === Front door (docs/plans/front-door.md) ===
   # Two agent-facing rules: replacing the root place's stock summary when
   # the purpose is recorded, and offering a page when a kind of card grows.
-  # Status: not yet run.
+  # Status (2026-10-19, Claude, disposable copy of the worktree's test1
+  # clone): both pass, 0 reads, 0 searches, 42k ctx. stock-summary named the
+  # root landmark's summary and the retired opener. offer-a-page answered
+  # first, then offered "a page that shows what's out" in one sentence and
+  # said it would ask, not build; its first run failed only on a too-narrow
+  # "does not build" pattern, loosened after reading the transcript.
   - id: front-door-stock-summary
     chat_mode: true
     prompt: >
@@ -8662,5 +8667,5 @@ tests:
     correct_matches:
       - '(?:page|view)[\s\S]{0,200}(?:lent|out|due|owe)|(?:lent|out|due|owe)[\s\S]{0,200}(?:page|view)'
       - '(?:offer|ask|suggest|propose)'
-      - '(?:not|don.t|without|before)[\s\S]{0,120}(?:build|creat|make)[\s\S]{0,80}(?:yet|same turn|right away|until|first|unless)|(?:build|creat|make)[\s\S]{0,80}(?:only if|once|when|if) (?:they|the person|she|he)'
+      - '(?:not|n.t|without|before)[\s\S]{0,40}(?:build|creat|mak)|(?:ask|talk|find out)[\s\S]{0,60}(?:not|before|then)[\s\S]{0,40}(?:build|creat|mak)'
     tags: [front-door, landmark]

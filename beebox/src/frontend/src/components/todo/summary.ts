@@ -62,7 +62,7 @@ export function rootLineParts(counts: NavCounts): SummaryPart[] | null {
   const parts: SummaryPart[] = [];
   if (onPlateTodos > 0) {
     parts.push({ key: "open", count: onPlateTodos, text: `${String(onPlateTodos)} to do`, action: true });
-    if (escalatedTodos > 0) parts.push({ key: "overdue", count: escalatedTodos, text: `${String(escalatedTodos)} overdue`, action: false });
+    if (escalatedTodos > 0) parts.push({ key: "overdue", count: escalatedTodos, text: `${String(escalatedTodos)} overdue`, action: true });
   }
   if (pendingQuestions > 0) {
     const noun = pendingQuestions === 1 ? "question" : "questions";

@@ -255,9 +255,9 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
     }
     if (hasRole) return null; // a real landmark — leave the user's content alone
     // Inert/unparseable — repair in place, keeping the filename and any place summary
-    // (not legacy XML); the stock summary goes only where none is kept.
-    const { body, hasFrontmatter } = splitCardContent(content);
-    await fs.writeFile(path.join(contentDir, existing), hasFrontmatter && !/^\s*(<landmark|$)/.test(body) ? createLandmarkTemplate(template) + body : createLandmarkTemplate({ ...template, body: STOCK_ROOT_SUMMARY }));
+    // (not legacy XML), with or without frontmatter; the stock summary goes only where none is kept.
+    const { body } = splitCardContent(content);
+    await fs.writeFile(path.join(contentDir, existing), /^\s*(<landmark|$)/.test(body) ? createLandmarkTemplate({ ...template, body: STOCK_ROOT_SUMMARY }) : createLandmarkTemplate(template) + body);
     return existingRelPath;
   }
 
