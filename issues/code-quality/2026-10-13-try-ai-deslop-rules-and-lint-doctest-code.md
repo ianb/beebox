@@ -1,5 +1,5 @@
 ---
-title: "Try the ai-deslop oxlint rules on our code, and decide whether doctest code should be linted"
+title: "Try the ai-deslop oxlint rules on our code"
 workstream: unattached
 area: beebox
 labels: [lint, tests]
@@ -46,18 +46,12 @@ rule that finds only real problems, with few findings, can go into
 `personal-vibe-check/` after the findings are fixed. Changing lint config
 needs the boxholder's approval (root `AGENTS.md`).
 
-## Part 2: doctest code is not linted
+## Part 2: test code (moot as first written)
 
-There are ~1,000 `*.doctest.md` files. ESLint has no Markdown processor
-configured, and the code blocks are not part of any `tsc` project. Doctests
-run through tsx, which strips types without checking them. Doctest code
-can therefore hold patterns the linter rejects everywhere else. Example: a
-helper with untyped parameters in
-`beebox/src/frontend/test/components/themes/ThemedFileCard/view/PropertiesFace.order-appearance.test.ts`.
-
-The mechanism (checking the module agent-doctest generates, with its line
-map) has its own issue:
-[typecheck and lint generated doctest modules](../closed/code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md).
-What stays here: which of the deslop rules fit doctest code once that check
-exists. `no-poor-substring-tests` and `no-repeated-expect-call` are test-file
-versions of rules in `beebox/.claude/rules/doctest.md`.
+Part 2 asked whether doctest code should be linted. The doctest format is
+gone (`beebox/docs/implemented-plans/retire-doctest.md`, 2026-10-18): tests
+are `.test.ts` files that ESLint lints and `tsc` typechecks. The test-file
+deslop rules (`no-poor-substring-tests`, `no-repeated-expect-call`,
+`no-call-only-assertions`) now apply to every test; part 1's run covers
+them. `agent-doctest/check-whole-value` already rejects the substring and
+boolean forms inside `t.check`.

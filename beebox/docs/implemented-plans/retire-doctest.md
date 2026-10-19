@@ -3,7 +3,7 @@ title: "Retire doctest: TypeScript tests with a typed check()"
 status: implemented
 workstream: doctest-typecheck
 issues:
-  - ../../../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md
+  - ../../../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md
   - ../../../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md
 ---
 # Retire doctest: TypeScript tests with a typed check()

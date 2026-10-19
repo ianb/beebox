@@ -51,7 +51,7 @@ transcripts, commit history, and memory notes.
   volume.
 - **Fit.** Which kinds of test doctest serves badly. This decides which
   `*.test.ts` files should stay code in the
-  [conversion to doctests](../../code-quality/2026-09-27-convert-test-ts-files-to-doctests.md).
+  [conversion to doctests](../code-quality/2026-09-27-convert-test-ts-files-to-doctests.md).
 
 A usability test here means giving agents defined test-writing tasks and
 recording where they go wrong, not only reading the code.

@@ -1,5 +1,5 @@
 ---
-title: "Narrower source types would remove the casts left in typechecked doctests"
+title: "Narrower source types would remove the casts and untyped doubles left in tests"
 workstream: doctest-typecheck
 area: beebox
 labels: [tests, typescript]
@@ -26,7 +26,7 @@ plumbing to remove one contained, commented cast in a test:
 
 Open: `ChatRuntime.registry` (`src/webapp/chat-runtime.ts`) takes
 `ChatSessionRegistry`, and `getOrCreate` returns `ChatSession`; both classes
-have private members, so quick-chat and clerk doctests cast partial fakes of
+have private members, so quick-chat, clerk and capture tests build partial fakes of
 them, of `ChatRuntime`, and of `ChatSession`. Narrow interfaces for the
 registry and session surface the runtime uses would remove those casts. That
 is a refactor of the chat runtime's types, larger than the rest of this list.
