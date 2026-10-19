@@ -1,48 +1,66 @@
-# Chat schedules
+# Chat check-ins
 
-Agent-initiated timers set during web chat conversations. The agent uses `<schedule>` XML tags in its responses to set timers that fire later, optionally playing an alarm sound and/or TTS announcement, then waking the agent back up to respond.
+A check-in is an agent-initiated timer that comes back to **one conversation**:
+an alarm, "check back this afternoon", a nudge if the user goes quiet. It can
+play an alarm sound or a TTS announcement, then wakes the agent in that
+conversation. It is at most 12 hours long (`CHECK_IN_MAX_MS`,
+`src/core/chat/schedules/check-in.ts`) and ends when its conversation ends. A
+reminder for another day is a reminder card (`bbx remind --at|--in`, see
+`card-scheduled-script` instructions), which reaches the person wherever they
+are. The code still calls a check-in a `ChatSchedule`.
 
 ## How it works
 
-### Agent sets a schedule
+### The agent sets a check-in
 
-The agent includes a `<schedule>` tag in its response:
+From inside its turn, with `bbx remind --here`:
 
-```xml
-<schedule label="check back" in="5m" alarm="true" announce="Time to check in!">
-Remember to ask about the meeting outcome.
-</schedule>
+```bash
+bbx remind --here 5m "Ask about the meeting outcome" --label "check back" --alarm --announce "Time to check in!"
+bbx remind cancel "check back"
 ```
 
-Attributes:
-- `label` (required): Display name, also used for cancellation
-- `in` (required): Duration like `30s`, `5m`, `2h` (units `s/m/h/d/w`)
-- `alarm` (optional): Play alarm sound when firing (`true`/`false`)
-- `announce` (optional): Text spoken via TTS when firing
+The command calls the `chat.addCheckIn` / `chat.cancelCheckIn` tRPC
+procedures (`src/webapp/trpc/routers/chat/check-in-procedures.ts`) with the
+chat's session id, so a refusal (over 12 hours, a bad duration, a chat being
+deleted) comes back to the agent before it answers. Cancel is scoped to the
+conversation.
 
-The text content inside the tag is context passed back to the agent when the schedule fires.
+### The legacy tag
 
-### Agent cancels a schedule
+Older turns used a tag in the response text, and a session may still copy it:
 
 ```xml
+<schedule label="check back" in="5m" alarm="1" announce="Time to check in!">
+Remember to ask about the meeting outcome.
+</schedule>
 <cancel-schedule label="check back" />
 ```
 
+The tag is no longer in the agent prompt. The server still reads it after the
+turn (`chatSession.on("turn-text")` in `src/webapp/routes/chat/register.ts`),
+with the same cap. A tag that is unreadable or refused is not dropped quietly:
+the server queues a `<self-note>` into the session saying it was not set, so
+the agent's next turn corrects what it told the user.
+
 ### Server-side lifecycle
 
-1. `chatSession.on("turn-text")` fires after each agent response
-2. `parseScheduleTags()` / `parseCancelScheduleTags()` extract tags from the response text
-3. `ChatScheduleManager` stores schedules in `.beebox/chat-schedules.json` and sets `setTimeout` timers. Each entry records the **originating session id** (`sessionId`) so the fire can land back in the conversation that created it.
-4. When a timer fires, `fireChatSchedule` (`src/webapp/routes/chat/schedule-fire.ts`):
-   - Broadcasts `schedule-fired` SSE event (alarm/announce data for the frontend), before any session work
-   - Resumes the **originating session** (`schedule.sessionId`) and sends it a `<schedule-fired>` message, so the reply lands in the right thread rather than whatever chat was last active
-   - Broadcasts updated history via SSE once the fired turn completes
+1. `ChatScheduleManager.addSchedule` (`src/core/chat/schedules/core.ts`) refuses a check-in over the cap, saves `.beebox/chat-schedules.json` **before** arming, and undoes the entry if the save fails. Each entry records its **originating session id** (`sessionId`).
+2. `armTimer` waits out Node's 2^31−1 ms timer limit in steps for any entry saved before the cap, so a long entry never fires early.
+3. When a timer fires, `fireChatSchedule` (`src/webapp/routes/chat/schedule-fire.ts`) first checks the target, then broadcasts `schedule-fired` (alarm/announce data), resumes the originating session, and sends it a `<schedule-fired>` message.
 
-### Targeting: originating session, with fallbacks
+### A check-in never moves to another conversation
 
-- **Originating session** — the normal case. The schedule carries the id of the session whose turn created it, and the fire resumes exactly that session.
-- **Legacy fallback (most-active)** — entries persisted before the `sessionId` field existed have none; they fall back to the most-active session (`getMostActive`), preserving the old behavior.
-- **Fresh-session fallback (unresumable target)** — if the targeted session's turn errors instantly (`is_error=true`, e.g. a pre-v2 session id the SDK refuses to resume — see `issues/closed/bugs/2026-07-11-pre-v2-session-resume-broken.md`), the reminder is re-sent **once** into a brand-new session. If that also fails, it's logged (`console.error`) and given up. A fired schedule's response is never silently lost. The failed-turn signal is the session's `done` event, whose `ChatMessageResult` payload carries `is_error`.
+`fireChatSchedule` drops the fire, with a `console.warn` naming the label and
+before any alarm, when:
+
+- the entry has no `sessionId` (persisted before that field existed; its conversation is unknown);
+- the session is being deleted, or cannot be resumed (`resolveSessionAvailability` says `unavailable`; an archived chat is one);
+- the fired turn fails or the chat's model can no longer run.
+
+Deleting a chat detaches its check-ins (`detachForSession`); archiving one does
+too. There is no fresh-session fallback (boxholder, 2026-10-18: if the
+conversation ends, the check-in ends).
 
 ### Frontend display
 
@@ -63,9 +81,11 @@ The `<schedule-fired>` message sent to the agent is a user-type message wrapped 
 | File | Role |
 |------|------|
 | `src/core/chat/schedules/core.ts` | `ChatScheduleManager`, `parseScheduleTags()`, `parseCancelScheduleTags()`, schedule persistence |
-| `src/core/chat/session/run/core.ts` | `CHAT_SYSTEM_PROMPT` (scheduling instructions for the agent) |
-| `src/webapp/routes/chat/register.ts` | Server-side: schedule creation on turn-text (stamps the originating `sessionId`), wires the schedule manager into `webapp/chat-runtime.ts` |
-| `src/webapp/routes/chat/schedule-fire.ts` | `fireChatSchedule` — resolves the target session (originating / most-active / fresh fallback) and injects the fired reminder |
+| `src/core/chat/schedules/check-in.ts` | `CHECK_IN_MAX_MS` and the errors `addSchedule` throws |
+| `src/webapp/trpc/routers/chat/check-in-procedures.ts` | `addCheckIn`, `cancelCheckIn` (used by `bbx remind --here`) |
+| `src/core/chat/session/prompts.ts` | `CHAT_SYSTEM_PROMPT` ("Coming back later" teaches `bbx remind`) |
+| `src/webapp/routes/chat/register.ts` | Server-side: legacy tag parsing on turn-text (stamps the originating `sessionId`, self-notes a rejection), wires the schedule manager into `webapp/chat-runtime.ts` |
+| `src/webapp/routes/chat/schedule-fire.ts` | `fireChatSchedule` — checks the originating session, then injects the fired check-in or drops it |
 | `src/webapp/trpc/routers/chat/control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
 | `src/frontend/src/components/chat/InteractiveChat-layout/view.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |
 | `src/frontend/src/components/chat/everywhere/InteractiveChat/ws.ts` | Subscribes to the box event stream (`schedule-fired`, `chat-history`) over the shared WebSocket |

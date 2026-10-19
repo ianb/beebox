@@ -85,10 +85,14 @@ then `skipped: present` on every channel, and a `dot` still badges.
 
 A scheduled-script card with `notify:` in place of `runs:` is a reminder
 (`src/schemas/scheduled-script/schema.tsx`; the card instructions have the example).
-`bbx tick` calls `notifyBoxholder` in process: no agent and no shell. With
-`at` and `once: true`, the card deletes itself after it fires. The chat's
-`<schedule>` tag is a different thing: it comes back to one conversation
-within hours ([chat timers](chat/schedules.md)).
+The agent writes one with `bbx remind --at|--in` (`src/cli/commands/remind/`),
+which checks that a channel reaches the person at the card's loudness first.
+`bbx tick` calls `notifyBoxholder` in process: no agent and no shell, so a
+notify card runs even while a chat is active and is not held for engine quota.
+With `at` and `once: true`, the card deletes itself after it is sent; a failed
+send retries with backoff for 24 hours. A check-in (`bbx remind --here`) is a
+different thing: it comes back to one conversation within 12 hours
+([chat check-ins](chat/schedules.md)).
 
 ### Watches: schedule memory, `bbx changes`, `bbx judge`
 

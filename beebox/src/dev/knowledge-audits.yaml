@@ -8289,11 +8289,35 @@ tests:
     max_turns: 15
     expected_level: knows_directly
     watch_for: >
-      Writes a scheduled-script card under _config/schedules/ with at:
-      (Tuesday 2026-09-29), once: true, requested-by: boxholder, and a notify:
-      block. FAILS on a <schedule> tag, or a runs: that shells out to bbx
-      notify.
+      Runs bbx remind --at (the next Tuesday) or --in, which writes a
+      scheduled-script card under _config/schedules/ with at:, once: true,
+      requested-by: boxholder, and a notify: block, and tells the user the
+      time it printed. FAILS on bbx remind --here, a <schedule> tag, or a
+      runs: that shells out to bbx notify.
+    bash_contains: ["bbx remind"]
     cards_contain: ["notify:", "requested-by: boxholder", "once: true"]
+    response_not_contains: ["<schedule ", "--here"]
+    tags: [notifications, chat]
+
+  # A check-in comes back to this conversation (bbx-remind plan, Track 4).
+  # Status (2026-10-18, Claude Opus 5.5, copy of the worktree test box,
+  # BBX_NOTIFY_FAKE=1): both pass. remind-vs-schedule: bbx notify --check,
+  # then bbx remind --at with a 9:00 default, the printed time repeated.
+  # remind-check-in: chose bbx remind --here first; the audit runner has no
+  # chat server, so --here is refused there and the agent fell back to a
+  # reminder card and said so. Both agents flagged that the prompt's time=
+  # stamp disagrees with the box clock, and went by the clock.
+  - id: remind-check-in
+    prompt: >
+      <chat-app narration="off" prose="on" time="2026-09-26T15:00:00Z"/>
+      <typed user="boxholder">Remind me to check the rice in 20 minutes.</typed>
+    chat_mode: true
+    max_turns: 10
+    expected_level: knows_directly
+    watch_for: >
+      Runs bbx remind --here 20m with a label (an alarm is a good choice).
+      FAILS on a reminder card (--in/--at), a <schedule> tag, or no timer.
+    bash_contains: ["bbx remind --here"]
     response_not_contains: ["<schedule "]
     tags: [notifications, chat]
 
