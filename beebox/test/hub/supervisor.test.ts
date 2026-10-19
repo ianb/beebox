@@ -19,7 +19,7 @@
 //    restarted) twice, and two children end up running for one box slot.
 
 import { test } from "tap";
-import { any, isoDate, uuid } from "@ianbicking/tap-check/check";
+import { any, eventually, isoDate, uuid } from "@ianbicking/tap-check/check";
 import "@ianbicking/tap-check/tap";
 import { buildChildEnv, Supervisor } from "../../src/hub/supervisor/core.js";
 import type { ChildProc } from "../../src/hub/supervisor/child-spawn.js";
@@ -348,11 +348,13 @@ void test("Stopping after the reload acknowledgment leaves a stopped box open", 
   await stopReloadSupervisor.startAll();
   stopReloadChildren[0]?.fireMessage({ type: "reload-request" });
   while (!stopReloadAcknowledged) await new Promise((resolve) => setImmediate(resolve));
-  const stopReloadDeadline = Date.now() + 2000;
-  while ((await boxMaintenanceStatus(stopReloadFixture.root)) !== null && Date.now() < stopReloadDeadline) {
-    await new Promise((resolve) => setImmediate(resolve));
-  }
-  const stopReloadPhase = await boxMaintenanceStatus(stopReloadFixture.root);
+  // Wait for the reload controller to release the owner lock. Once no owner
+  // holds the box, whatever record remains is final. The timeout only bounds a
+  // failure; a passing run returns as soon as the lock is gone.
+  const { stopReloadPhase } = await eventually(async () => {
+    const status = await boxMaintenanceStatus(stopReloadFixture.root);
+    return (status === null || status.owner === null) && { stopReloadPhase: status };
+  }, { label: "reload controller released the owner lock", timeoutMs: 30_000 });
   t.check(stopReloadPhase, null);
 
   t.check(stopReloadSupervisor.getStatuses()[0]?.status, "stopped");
@@ -428,8 +430,9 @@ void test("Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on 
   // and reported "stopped" again -- `getStatuses()`/`/healthz` surface it, and a
   // fresh `ensureRunning` spawns a NEW child (not the same generation):
 
-  await new Promise((r) => setTimeout(r, 150));
-  t.check(lazySupervisor.getStatuses()[0]?.status, "stopped");
+  // Wait for the real idle timer to fire and stop the box. A fixed 150 ms sleep
+  // raced the timer's callback on a loaded host; the timeout only bounds a failure.
+  await eventually(() => lazySupervisor.getStatuses()[0]?.status === "stopped", { label: "idle timer stopped the box", timeoutMs: 30_000 });
 
   t.check(lazySupervisor.get("fixture"), undefined);
 
