@@ -7,7 +7,10 @@ filed-by: agent
 discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Agent SDK 0.3.247
 labels: [sdk-update]
+resolution: implemented
 ---
+
+Resolved in bug-burndown-3 (2026-10-19); see Resolution.
 
 Two related defects in how chat surfaces background tasks, both named by the
 Agent SDK's own guidance as of 0.3.247.
@@ -47,9 +50,9 @@ not to swap it.
 
 Both land in the same small area, which is why they are one item. The pin
 reached 0.3.243 on 2026-08-26; `ambient` needs 0.3.247, `background_tasks_changed`
-is already available. See the 0.3.247 entry in the [SDK ledger](../../schedules/sdk-update/agent-sdk-notes.md).
+is already available. See the 0.3.247 entry in the [SDK ledger](../../../schedules/sdk-update/agent-sdk-notes.md).
 
-Related: [chat stop and background subagents](../decisions/2026-08-25-chat-stop-and-background-subagents.md).
+Related: [chat stop and background subagents](../../decisions/2026-08-25-chat-stop-and-background-subagents.md).
 
 
 ## Upstream movement (2026-09-01, SDK 0.3.257)
@@ -77,3 +80,26 @@ is already gone. Whoever picks this up should require the pin to be at
 2026-09-03, when the pin reached `0.3.258`** — which is a stronger
 version requirement than the `ambient` flag in part 2 (`0.3.247`, already in the
 pin).
+
+## Resolution
+
+2026-10-19, bug-burndown-3. The pin is `0.3.302`, which meets both the
+`0.3.247` (`ambient`) and `0.3.257` (level signal) requirements.
+
+- `adaptSdkMessage` maps `background_tasks_changed` to a new `task-level`
+  ChatMessage. It removes `ambient` entries.
+- `task_started` and `task_notification` are dropped when `skip_transcript`
+  or `ambient` is true.
+- `ChatSession` emits `task-level`. It emits an empty set when a run opens and
+  when a run closes, because the CLI level is per-process. The
+  `chat-task-level` bus event carries the set. A session with no id is not
+  bridged, because a null id matches every tab.
+- The frontend strip takes membership only from the level (`applyTaskLevel`).
+  Edge events only add detail (last tool, elapsed time) to a task that is
+  already in the set. They never add or remove a task.
+
+Behavior change: a foreground subagent is not in the CLI background set, so
+it no longer shows a pill in the strip.
+
+Tests: `src/frontend/test/components/chat/everywhere/InteractiveChat/background-tasks.task-events.test.ts`
+and `test/core/chat/session/run.task-level.test.ts`.

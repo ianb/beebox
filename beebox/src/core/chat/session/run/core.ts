@@ -82,9 +82,7 @@ export class ChatSession extends EventEmitter {
   /** The chat-active lock held while a run is in flight (`lock.ts`). */
   private readonly runLock = createRunLockHolder(() => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }));
   /** Holds each turn's `result` until the transcript flush lands on disk. */
-  private readonly durability = createTurnDurabilityGate(
-    () => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }),
-  );
+  private readonly durability = createTurnDurabilityGate(() => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }));
 
   constructor(boxRoot: string, options?: ChatSessionOptions) {
     super();
@@ -194,6 +192,7 @@ export class ChatSession extends EventEmitter {
     });
     this.transition({ phase: "ready", run });
     this.coined.noteRunStarted(this.sessionId, this.options);
+    this.emit("task-level", []); // The live-task level is per-process; the CLI sends none at startup.
 
     // Background loop: pump SDK messages into handleMessage. Capture errors
     // and emit as "error" events.
@@ -233,7 +232,7 @@ export class ChatSession extends EventEmitter {
       toIdle: () => { if (this.state.phase !== "idle") this.transition({ phase: "idle" }); },
       releaseRunLock: () => this.runLock.release(),
       emitError: (err) => { this.emit("error", err); },
-      emitClose: (code) => { this.emit("close", code); },
+      emitClose: (code) => { this.emit("task-level", []); this.emit("close", code); }, // its tasks ended with it
       queueLength: () => this.messageQueue.length,
       drainQueue: () => this.drainQueue(),
       log,
@@ -254,6 +253,7 @@ export class ChatSession extends EventEmitter {
     // Background-task events fire between turns (no per-turn SSE attached), so
     // wireSession bridges them to the global event bus, not the per-turn stream.
     if (msg.type === "task") { this.emit("task", msg.task); return; }
+    if (msg.type === "task-level") { this.emit("task-level", msg.tasks); return; }
     // Accumulate assistant text for schedule parsing
     this.turnText = accumulateAssistantText(this.turnText, msg);
 

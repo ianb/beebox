@@ -24,6 +24,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { type ChatSession, type TaskEvent } from "../../../core/chat/session/run/core.js";
+import type { LiveTaskEntry } from "../../../core/chat/message-types.js";
 import { ChatSessionRegistry } from "../../../core/chat/session/registry/core.js";
 import type { ChatBackend } from "../../../services/claude-chat-types.js";
 import { getMostActive } from "../../../core/chat/session/history.js";
@@ -191,6 +192,16 @@ export async function registerChatRoutes(options: RegisterChatRoutesOptions): Pr
         sessionId: session.getSessionId(),
         task,
       });
+    });
+
+    // The level signal for the same strip: the full live set, which the
+    // client swaps in wholesale so a missed `settled` cannot wedge a pill.
+    // A session with no id yet has no earlier process whose tasks could
+    // linger, and a null id would replace every open tab's set.
+    session.on("task-level", (tasks: LiveTaskEntry[]) => {
+      const sessionId = session.getSessionId();
+      if (sessionId === null) return;
+      eventBus.emitTransient("chat-task-level", { sessionId, tasks });
     });
 
     // Bridge per-session feature changes (from setFeature or agent deltas)
