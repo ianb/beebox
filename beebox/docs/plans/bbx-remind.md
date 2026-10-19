@@ -20,9 +20,9 @@ length that fits a conversation.
 - Related, already landed in this workstream: [agent-narrated-an-invented-root-cause](../../../issues/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md) (prompt rule, commit `9b238136c`). The misfire triggered it, but the rule covers any internal failure, so it is not tied to this plan.
 - Queue search: `bin/issues search "chat schedule"`, `"reminder"`, `"setTimeout"`. No other open issue covers chat timers or reminder authoring.
 
-**Review:** cross-model plan review round 1 (codex gpt-6-astra, 2026-10-18).
-Its findings are folded in below; the three that need the boxholder are in
-*Open design questions* as D1–D3.
+**Review:** cross-model plan review rounds 1 and 2 (codex gpt-6-astra,
+2026-10-18). Their findings are folded in below. The boxholder decided D1–D3 the same day;
+see *Decisions*.
 
 ## Design
 
@@ -85,9 +85,8 @@ wrong tool for a month-out reminder, the hub keeps a box awake for as long as a
 chat schedule is pending (`src/hub/AGENTS.md:55`, *"Chat schedules override
 idle-stop"*), and a rejected tag is still silent to the agent.
 
-**Chosen design:** four tracks, plus a fifth if D2 is accepted. Estimated
-~330 source lines and ~300 test lines (additions plus deletions); Track 5 adds
-~40 and ~60. Authored docs and prompt text ~80 lines. Not a big change. The
+**Chosen design:** six tracks. Estimated ~420 source lines and ~420 test
+lines (additions plus deletions). Authored docs and prompt text ~80 lines. Not a big change. The
 fuller design buys in-turn errors and one surface for the agent; the
 boxholder chose it over "keep two surfaces, cap the tag" on 2026-10-18.
 
@@ -139,7 +138,8 @@ No decision depends on an external premise beyond Node's timer limit:
 - **What:** `chat.addCheckIn({ sessionId, in, label, alarm?, announce?, content })` and `chat.cancelCheckIn({ sessionId, label })`.
 - **Why:** the check-in timers live in the `bbx serve` process; the CLI must reach them, and cancel must not hit another chat's same-label check-in.
 - **Direction:** returns `{ id, label, firesAt }`. `BAD_REQUEST` for a bad or over-cap duration; `NOT_FOUND` for a session being deleted (`ScheduleForDeletingSessionError`, `core.ts:52`) or ended (D1); `INTERNAL_SERVER_ERROR` naming `CheckInNotSavedError`. The open chat's pills refresh when the turn's transcript entry lands (`hooks.ts:84`), as today; no new bus event.
-- **First chunk:** both procedures, tested against a real manager in a temp box, including two sessions with the same label.
+- **D1 in this track:** `fireChatSchedule` resolves the target **before** the alarm/TTS broadcast (`schedule-fire.ts:128-134` broadcasts first today). It drops the fire, with `console.warn` naming the label, when the entry has no `sessionId` (a legacy entry; its owner is unknown), when the session is unavailable or archived, or when the fired turn fails; it never opens a fresh session. `archiveChatSession` (which already refuses a live chat, `archive.ts:88-102`) detaches the session's check-ins after the move; a detach save failure is logged at `console.error`, and the fire-time check above keeps the surviving entry silent.
+- **First chunk:** both procedures, tested against a real manager in a temp box, including two sessions with the same label. Plus `schedule-fire` tests: an unavailable session drops the fire; a failed turn is not retried in a fresh session; an archived chat's check-in never fires.
 
 ### Track 3 — `bbx remind`
 
@@ -148,7 +148,7 @@ No decision depends on an external premise beyond Node's timer limit:
   - `bbx remind (--in <duration> | --at <datetime>) <title> [--body <text>] [--loudness dot|quiet|loud] [--context <card>]` — a reminder card, committed.
   - `bbx remind cancel <label>` — cancels a check-in in this chat. A reminder card is removed as any card is (`bbx trash`); the output of the create form says so.
 - **Output:** one line naming what was made and when it is scheduled, in the box zone with weekday and zone abbreviation, e.g. `Check-in "rice" in 20m (18:42 CDT), this chat.` / `Reminder scheduled for Tue 2026-11-18 09:41 CST: "…" (_config/schedules/remind-….scheduled-script.card)`.
-- **Card identity:** `_config/schedules/remind-<slug>-<yyyymmddhhmm-of-creation>.scheduled-script.card`, created exclusively (`wx`). A fresh name per reminder matters because scheduler state is keyed by the filename stem (`core/schedule/state.ts:151`), `once` cleanup deletes only the card (`tick-utils.ts:189`), and an `at` card is due only while `!ctx.lastRun` (`due.ts:44`): reusing a name would inherit a finished reminder's state and never fire.
+- **Card identity:** `_config/schedules/remind-<slug>-<6 random base32 chars>.scheduled-script.card`, created exclusively (`wx`; a collision retries with new random chars). A fresh name per reminder matters because scheduler state is keyed by the filename stem (`core/schedule/state.ts:151`), `once` cleanup deletes only the card (`tick-utils.ts:189`), and an `at` card is due only while `!ctx.lastRun` (`due.ts:44`): reusing a name would inherit a finished reminder's state and never fire.
 - **Time:** `--at` without an offset is read as box-zone wall time; a nonexistent (spring-forward) or ambiguous (fall-back) local time is refused with "add an offset". When the box has no timezone (`loadBoxTimezone` returns `null`, `config.ts:177`), an offset-less `--at` is refused with the same remedy, and the echo uses UTC. `--in` adds to `getBoxTime`. A past instant is refused. The card's `at` carries the offset.
 - **Refusals (exit 1):** `--here` without a chat session; over-cap `--here` (names `--in`); bad, past, or nonexistent time; no channel reaches the person at the card's effective loudness (the default per `instructions.ts:28` when `--loudness` is omitted); `box-client-unavailable` (names the missing env var).
 - **Partial success (exit 0, stderr warning):** the card is written but the path-scoped commit fails. Message: `Reminder is active (… path …); the commit failed: <git error>. Do not recreate it.`
@@ -158,14 +158,25 @@ No decision depends on an external premise beyond Node's timer limit:
 ### Track 4 — agent-facing guidance and the tag
 
 - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482` and the skills content (`guidance-sync/skills/content.ts:173,187`) point at it; the reminder example in `instructions.ts:41-58` shows the command first and the card it writes. `docs/chat/schedules.md` and `docs/notifications.md` follow.
-- **The tag:** `<schedule>` leaves the prompt. Any session can still emit one, for example by copying its own earlier turns, so the parser stays with the same cap. A rejected tag (over-cap, missing `in`, bad duration) gets a self-note into that session — `Your <schedule label="…"> was not set: <reason>. Use bbx remind.` — so the agent's next turn sees it. This is a fallback, not the in-turn error the command gives. Removing the parser is a later cleanup.
+- **The tag:** `<schedule>` leaves the prompt. Any session can still emit one, for example by copying its own earlier turns, so the parser stays with the same cap. A rejected tag (over-cap, missing `in`, bad duration) gets a self-note queued into that session (the `turn-text` handler runs before the queue drains, `session/run/core.ts:271-277`), so the agent's next turn sees it and corrects what it told the user. This is a compatibility exception to "errors inside the turn": the boxholder's choice removes the tag from the prompt, and a silent drop would be worse. Removing the parser is a later cleanup.
 
-### Track 5 — reminder cards are not held back by chat activity (pending D2)
+### Track 5 — reminder cards are not held back by chat activity (D2)
 
 - **What:** a due card whose action is `notify:` (no `runs:`) is exempt from the active-chat busy blocker and the engine-quota gate.
 - **Why:** `runTick` returns before reading any card while a chat is active (`tick.ts:91-102`), and chats can stay active for hours (`tick-helpers.ts:63-66`); every due card also passes the engine-quota gate (`tick-helpers.ts:138-141`). A notify card runs no agent and no shell, so neither guard protects anything for it, and a reminder is delayed exactly while the person is talking to the box.
 - **Direction:** the busy-blocker check moves after card parsing for chat blockers only: notify cards run, other cards defer as today. Script and procedure blockers still defer everything.
-- **First chunk:** the split and a tick test with an active chat lock: a due notify card sends; a due `runs:` card defers.
+- **Classification and health:** a notify action's error is recorded as `failure` directly; it does not pass through the engine-wait classifier (`run-action.ts:148-151` → `engine-wait.ts:89-91`), which would turn a send failure during a chat's quota episode into `deferred`. Health does not attribute a notify card's state to engine wait (`health-box.ts:119-122`, `health.ts:131-132`).
+- **First chunk:** the split and a tick test with an active chat lock: a due notify card sends; a due `runs:` card defers; a send failure while an engine-wait record exists is recorded as `failure`.
+
+### Track 6 — bounded retry for a failed reminder send (D3)
+
+- **What:** a one-shot `at` card whose action is `notify:` and whose last run failed stays due, with backoff, for 24 hours after its `at`. After that it stops retrying and stays failed and visible.
+- **Why:** `recordOutcome` sets `lastRun` on every result (`state.ts:238`), and `at` is due only while `!ctx.lastRun` (`due.ts:44`), so one failed send (push down at 9:00) means the person never hears it. Code-style rule 9: *"Nothing retries forever. Bound a retry in time …, then move the item to a visible terminal state that keeps the user's data."*
+- **Direction:** `ScheduleCheckContext` (`due.ts:16`) gains `lastResult` and `consecutiveFailures`; the caller (`tick-helpers.ts:130`) passes them from `ScriptState`. For a notify `at` card: due when `now >= at` and either `lastRun` is null, or `lastResult === "failure"` and `now < at + 24h` and `now >= lastRun + backoff(consecutiveFailures)`, where `backoff(n) = min(2^(n-1), 60)` minutes. A `runs:` `at` card keeps today's one-attempt rule: a script may have side effects. The terminal state is the existing one: the card stays (`once` deletes only after success, `tick-utils.ts:183-186`), health shows it failing, and the scheduler's episode latch (`alertedFor`, `state.ts:58`) keeps its alert to one per episode.
+- **Vocabulary lock-ins:** `REMINDER_RETRY_WINDOW_MS` (24 h), `reminderRetryBackoffMs(n)`.
+- **A delivered send is not repeated.** A send that succeeded keeps `success` even when later bookkeeping fails (the history append, or the `once` deletion at `tick-utils.ts:205`, which `tick-helpers.ts:270-279` would overwrite as failure); the bookkeeping error is logged at `console.error`. Otherwise Track 6 would send the reminder again.
+- **Health reason:** a notify `at` card past its retry window reports `retry window ended <time>` in its existing health reason, derived from `at`, `lastResult`, and the clock; no new stored field.
+- **First chunk:** the `isDue` change as a pure function with tests: first send due at `at`; after one failure not due at +30 s, due at +1 m; after 7 failures backoff is 60 m; not due at `at + 24h + 1m`; a failed `runs:` `at` card is not due again.
 
 ## Could this be simpler?
 
@@ -200,14 +211,12 @@ none
 | Same title as a finished reminder | Track 3 test | Fresh filename per reminder | Clear (fires) |
 | Commit fails after the card is written | Track 3 test | Partial-success message | Clear: "active, do not recreate" |
 | Reminder due while a chat is active | Track 5 test | Notify cards skip the chat blocker (D2) | Without Track 5: silent delay |
-| Notification send fails once at fire time | Existing: `run-action.ts:73`, `state.ts:236` | Failure recorded; health shows it; `at` card not retried | **Silent to the person** (D3) |
+| Notification send fails at fire time | Track 6 test | Retry with backoff for 24 h | Clear: health shows failing; person gets it when a channel returns |
+| Channel down for over 24 h | Track 6 test | Stops retrying; card stays, health shows failing | Visible terminal state |
 | Box clock shifted in tests vs chat manager's `Date.now()` | — | Check-ins keep `Date.now()` | Documented risk, as today |
 
-> **Critical gap (D3):** a reminder whose single send attempt fails at fire
-> time is never retried: the failure sets `lastRun`, and `at` is due only while
-> `!lastRun`. This exists today for hand-written reminder cards. This plan does
-> not add retry machinery; D3 asks whether to accept and document it or file it
-> as its own fix.
+> **Critical gap:** none. A failed send retries for 24 hours (Track 6); after
+> that the card stays failed in health.
 
 ## Agent-flow / user-flow edge cases
 
@@ -226,14 +235,19 @@ none
 - Watches ("tell me when…") — stay hand-written cards with `bbx changes` / `bbx judge`.
 - Moving check-ins to `getBoxTime` or `startAwakeTimeout` — separate concern; the cap bounds the exposure.
 - Session-scoped pill listing and the pill's box-wide cancel (`control-procedures.ts:425-434`) — existing UI behavior, unchanged.
-- Retrying a failed reminder send — see D3.
+- Retrying a failed `runs:` one-shot — a script may have side effects; it keeps one attempt.
 - Removing the `<schedule>` parser — a later cleanup.
+
+## Decisions
+
+The boxholder decided these on 2026-10-18:
+
+- **D1 — a check-in ends with its conversation.** A check-in fires only into its own conversation, never a fresh one: the fresh-session fallbacks (`schedule-fire.ts:154-158`, `:177-190`) do not apply to entries with a `sessionId`. Deleting (`detachForSession`) **or archiving** the chat (`control-procedures.ts:201`, `archiveChatSession`) cancels its check-ins. A chat that is idle or evicted keeps them. A dropped fire logs at `console.warn` with the label. Legacy entries without `sessionId` keep the most-active fallback.
+- **D2 — reminder cards skip the active-chat wait.** Track 5.
+- **D3 — bounded retry for a failed reminder send, in this plan.** Track 6.
 
 ## Open design questions
 
-- **D1 — what "the conversation ends" means for a check-in.** Today a fire into an unavailable or failing session falls back to a brand-new chat (`schedule-fire.ts:154-158`, `:177-190`), and deletion is the only event that cancels (`detachForSession`). Lean: a check-in fires only into its own conversation, never a fresh one; deleting **or archiving** the chat (`control-procedures.ts:201`) cancels its check-ins; a chat that is merely idle or evicted keeps them. A dropped fire logs at `console.warn` with the label.
-- **D2 — Track 5.** Lean: include it. A reminder held for hours while the person is chatting is the failure this plan exists to remove; the change is local to `runTick`.
-- **D3 — one-attempt delivery.** Lean: accept and document it in this plan, and file an issue for bounded retry (code-style rule 9: bound a retry in time, then a visible terminal state).
 - **The 12 h cap.** Lean: 12 h covers "check back this afternoon" and an evening alarm; anything longer is a reminder.
 
 ## Knowledge audits
@@ -253,14 +267,15 @@ hold the agent's choice. No new test tier.
 ## Implementation order
 
 1. Track 1 (manager cap, save-before-arm, clamp, per-tag catch) — closes the overflow on its own.
-2. Track 2 (procedures), with D1's fire-target change.
+2. Track 2 (procedures), with D1's fire-target change and archive cancellation.
 3. Track 3 (command): template extension, reminder form, `--here`, `cancel`.
-4. Track 5 if D2 is accepted.
-5. Track 4 (prompt, guide, skills content, docs, audits).
+4. Track 5 (notify cards skip the chat blocker).
+5. Track 6 (bounded retry).
+6. Track 4 (prompt, guide, skills content, docs, audits).
 
 ## Rollout shape
 
-Done when: Track 1–3 (and 5) tests pass; `bbx remind --help` smoke passes; the
+Done when: Track 1–3, 5, and 6 tests pass; `bbx remind --help` smoke passes; the
 two audits pass on the worktree's test1 clone; a manual run on test1 sets a
 2-minute check-in that fires in its chat, and a 2-minute reminder card whose
 notification is sent (`BBX_NOTIFY_FAKE=1` log line `sent (fake)`) while a chat
