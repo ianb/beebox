@@ -754,7 +754,11 @@ Two new agent-facing rules get `knows_directly` entries in
   is due, offered, not built.
 
 Both run against the worktree's test box clone before the plan is called
-done; the status comment is recorded here.
+done; the status comment is recorded here. Run 2026-10-19 (Claude, a
+disposable copy of the clone): both pass with no file reads. The offer-a-page
+run answered first, then offered "a page that shows what's out" in one
+sentence and said it would ask, not build; its first run failed only on a
+too-narrow "does not build" pattern, loosened after reading the transcript.
 
 ## What will hold this after it ships
 
