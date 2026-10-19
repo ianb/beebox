@@ -77,3 +77,12 @@ void test("malformed, impossible, past, and missing times are refused", async (t
 void test("the clock and date helpers use the box zone", async (t) => {
   t.check([formatClock(now, CHICAGO), formatDate(new Date("2026-10-19T03:00:00Z"), CHICAGO), formatClock(now, null)], ["09:00 CDT", "2026-10-18", "14:00 UTC"]);
 });
+
+// A field out of range is refused, not rolled into the next month or year:
+// `Date.UTC(2026, 12, 18)` is 2027-01-18, which is not what was asked for.
+void test("a month or offset out of range is refused", async (t) => {
+  t.check([at("2026-13-18T09:00Z", CHICAGO), at("2026-11-18T09:00+15:00", CHICAGO)], [
+    "--at \"2026-13-18T09:00Z\" is not a real date and time; use YYYY-MM-DDTHH:MM in the box's timezone, or add an offset (2026-11-18T09:00-06:00)",
+    "--at \"2026-11-18T09:00+15:00\" has an offset past ±14:00; use YYYY-MM-DDTHH:MM in the box's timezone, or add an offset (2026-11-18T09:00-06:00)",
+  ]);
+});

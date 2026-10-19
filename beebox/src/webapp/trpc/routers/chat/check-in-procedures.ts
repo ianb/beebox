@@ -8,15 +8,16 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure } from "../../procedures.js";
-import { getChatRuntime } from "../../../chat-runtime.js";
+import { getChatRuntime, type ChatRuntime } from "../../../chat-runtime.js";
+import { resolveSessionAvailability } from "../../../../core/chat/session/availability.js";
 import { parseDuration } from "../../../../scheduled-script-duration.js";
 import { CheckInNotSavedError, CheckInTooLongError, ScheduleForDeletingSessionError } from "../../../../core/chat/schedules/core.js";
 import { errorMessage } from "../../../../shared/error-guards.js";
 
-function scheduleManager(boxRoot: string): NonNullable<ReturnType<typeof getChatRuntime>>["scheduleManager"] {
+function chatRuntime(boxRoot: string): ChatRuntime {
   const runtime = getChatRuntime(boxRoot);
   if (!runtime) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Chat runtime not initialized for this box" });
-  return runtime.scheduleManager;
+  return runtime;
 }
 
 function durationMs(text: string): number {
@@ -37,8 +38,13 @@ export const chatCheckInProcedures = {
       announce: z.string().nullable(),
       content: z.string(),
     }))
-    .mutation(({ input, ctx }) => {
-      const manager = scheduleManager(ctx.boxRoot);
+    .mutation(async ({ input, ctx }) => {
+      const { scheduleManager: manager, registry } = chatRuntime(ctx.boxRoot);
+      // A check-in for a chat that has ended would be dropped when it fires; say so now.
+      const availability = await resolveSessionAvailability({ boxRoot: ctx.boxRoot, sessionId: input.sessionId, registry });
+      if (availability.kind === "unavailable") {
+        throw new TRPCError({ code: "NOT_FOUND", message: `Conversation ${input.sessionId} has ended or cannot be resumed (${availability.reason})` });
+      }
       try {
         const schedule = manager.addSchedule({
           label: input.label, alarm: input.alarm, announce: input.announce, content: input.content,
@@ -55,5 +61,5 @@ export const chatCheckInProcedures = {
 
   cancelCheckIn: publicProcedure
     .input(z.object({ sessionId: z.string().min(1), label: z.string().min(1) }))
-    .mutation(({ input, ctx }) => ({ ok: scheduleManager(ctx.boxRoot).cancelByLabel(input.label, { sessionId: input.sessionId }) })),
+    .mutation(({ input, ctx }) => ({ ok: chatRuntime(ctx.boxRoot).scheduleManager.cancelByLabel(input.label, { sessionId: input.sessionId }) })),
 };

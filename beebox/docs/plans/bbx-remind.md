@@ -218,6 +218,13 @@ none
 > **Critical gap:** none. A failed send retries for 24 hours (Track 6); after
 > that the card stays failed in health.
 
+### Accepted after the diff review (codex gpt-6-sol, 2026-10-18)
+
+- The `schedule-fired` alarm sounds in any open chat view, as before this work; a timer must ring wherever the person is looking.
+- The alarm sounds before the fired turn runs, so a turn that then fails has still rung. Waiting for the turn would make a timer late.
+- A send that succeeded and whose `saveScriptState` then fails is recorded as a failure and can be sent again after backoff. That needs a state-file write failure right after a delivered send.
+- Without `BBX_AGENT_TOKEN`, `bbx remind` checks channels in process, like `bbx notify --check`; every box-spawned agent shell has the token.
+
 ## Agent-flow / user-flow edge cases
 
 - **Wrong tag / wrong field:** the agent uses `--here` for a reminder. ADDRESSED: over-cap refusal; under the cap the prompt's rule ("`--here` only comes back to this conversation") covers it, and the `remind-check-in` audit checks it.
@@ -242,7 +249,7 @@ none
 
 The boxholder decided these on 2026-10-18:
 
-- **D1 — a check-in ends with its conversation.** A check-in fires only into its own conversation, never a fresh one: the fresh-session fallbacks (`schedule-fire.ts:154-158`, `:177-190`) do not apply to entries with a `sessionId`. Deleting (`detachForSession`) **or archiving** the chat (`control-procedures.ts:201`, `archiveChatSession`) cancels its check-ins. A chat that is idle or evicted keeps them. A dropped fire logs at `console.warn` with the label. Legacy entries without `sessionId` keep the most-active fallback.
+- **D1 — a check-in ends with its conversation.** A check-in fires only into its own conversation, never a fresh one: the fresh-session fallbacks (`schedule-fire.ts:154-158`, `:177-190`) do not apply to entries with a `sessionId`. Deleting (`detachForSession`) **or archiving** the chat (`control-procedures.ts:201`, `archiveChatSession`) cancels its check-ins. A chat that is idle or evicted keeps them. A dropped fire logs at `console.warn` with the label. A legacy entry without `sessionId` is dropped too: its conversation is unknown, and sending it to the most-active chat would move it to another conversation (review round 2).
 - **D2 — reminder cards skip the active-chat wait.** Track 5.
 - **D3 — bounded retry for a failed reminder send, in this plan.** Track 6.
 

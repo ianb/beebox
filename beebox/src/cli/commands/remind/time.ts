@@ -84,9 +84,11 @@ function resolveAt(at: string, zone: string | null): Result<Date> {
   const [, y, mo, d, h, mi, s, offset] = match;
   const wall: WallTime = { year: Number(y), month: Number(mo), day: Number(d), hour: Number(h), minute: Number(mi), second: Number(s ?? "0") };
   const roundTrip = new Date(wallAsUtcMs(wall));
-  if (roundTrip.getUTCDate() !== wall.day || roundTrip.getUTCHours() !== wall.hour || roundTrip.getUTCMinutes() !== wall.minute) {
+  const fields = [roundTrip.getUTCFullYear(), roundTrip.getUTCMonth() + 1, roundTrip.getUTCDate(), roundTrip.getUTCHours(), roundTrip.getUTCMinutes(), roundTrip.getUTCSeconds()];
+  if (fields.join(",") !== [wall.year, wall.month, wall.day, wall.hour, wall.minute, wall.second].join(",")) {
     return err(`--at "${at}" is not a real date and time; ${AT_FORMS}`);
   }
+  if (offset !== undefined && Math.abs(parseOffset(offset)) > 14 * 60) return err(`--at "${at}" has an offset past ±14:00; ${AT_FORMS}`);
   if (offset !== undefined) return ok(new Date(wallAsUtcMs(wall) - parseOffset(offset) * MINUTE_MS));
   if (zone === null) {
     return err(`This box has no timezone set, so --at "${at}" is ambiguous; add an offset (${at}Z for UTC, or ${at}-06:00)`);
