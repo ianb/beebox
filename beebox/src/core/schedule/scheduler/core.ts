@@ -9,7 +9,7 @@ import { withBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { BOX_MARKER } from "../../../lib/paths/core.js";
+import { isBoxRoot } from "../../../lib/box-identity.js";
 import { runTick, type TickResult } from "../../../cli/commands/tick.js";
 import { getStatus, isRepo } from "../../../lib/git/core/operations.js";
 import { drainBoxGitLocks, GIT_DRAIN_MS } from "../../../lib/git-lock.js";
@@ -43,17 +43,11 @@ export async function loadSchedulerConfig(): Promise<SchedulerConfig> {
 }
 
 /**
- * Validate that a path is a box (has .beebox/box.json marker).
+ * Validate that a path is a box: a `package.json` declaring `beebox` beside
+ * `_config/` (`isBoxRoot`). A broken `package.json` there throws.
  */
 export async function isBox(boxPath: string): Promise<boolean> {
-  try {
-    await fs.access(path.join(boxPath, BOX_MARKER));
-    return true;
-  } catch (_e) {
-    // access() throwing is the expected "not a box" signal (marker absent or
-    // unreadable); the boolean return IS how we report it, no info to log.
-    return false;
-  }
+  return isBoxRoot(boxPath);
 }
 
 // -- JSONL logging with rotation --
@@ -188,7 +182,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
         currentPass = withBoxWork({ boxRoot: boxPath, reason: "scheduler pass" }, async () => {
           try {
             if (!(await isBox(boxPath))) {
-              console.error(`[${new Date().toISOString()}] ${boxPath}: not a valid box (missing ${BOX_MARKER})`);
+              console.error(`[${new Date().toISOString()}] ${boxPath}: not a valid box (needs package.json declaring beebox and _config/)`);
               return;
             }
 

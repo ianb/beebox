@@ -163,3 +163,23 @@ export function bodyField(body: unknown, ...path: Array<string | number>): unkno
   }
   return value;
 }
+
+/**
+ * Write the tracked files that make `root` a box by identity and record its
+ * shape (`src/lib/box-identity.ts`): a `package.json` declaring `beebox` with a
+ * `beebox` block, and `_config/`. For fixtures that need a box without the
+ * cost of `makeTmpBox`'s scaffold. `shapeVersion: null` omits the block.
+ */
+export async function writeBoxFiles(
+  root: string,
+  opts?: { shapeVersion?: number | null; created?: string; name?: string }
+): Promise<void> {
+  const shapeVersion = opts?.shapeVersion === undefined ? 3 : opts.shapeVersion;
+  const pkg = {
+    name: opts?.name ?? "fixture-box",
+    dependencies: { beebox: "*" },
+    ...(shapeVersion === null ? {} : { beebox: { shapeVersion, created: opts?.created ?? "2026-01-01T00:00:00.000Z" } }),
+  };
+  await mkdir(join(root, "_config"), { recursive: true });
+  await writeFile(join(root, "package.json"), JSON.stringify(pkg, null, 2) + "\n");
+}

@@ -9,8 +9,10 @@ import { REMAINING_SYSTEM_CARD_MIGRATION, SEARCH_SYSTEM_CARD_MIGRATION } from ".
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { BOX_DIRS, BOX_MARKER, boxPath } from "../../../lib/paths/core.js";
-import { initRepo, isRepo } from "../../../lib/git/core/operations.js";
+import { BOX_DIRS, boxPath } from "../../../lib/paths/core.js";
+import { BOX_MARKER, isBoxRoot, recordedShapeSource } from "../../../lib/box-identity.js";
+import { MissingShapeRecordError } from "../../../lib/box-shape-errors.js";
+import { hasCommits, initRepo, isRepo } from "../../../lib/git/core/operations.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
 import { getSessionDir } from "../../chat/session/transcript-paths.js";
@@ -95,9 +97,15 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   await fs.mkdir(resolvedRoot, { recursive: true });
   await migrateBoxState(resolvedRoot);
 
-  // Check if already initialized
+  // Already initialized when the box records its shape. A committed repo with
+  // no record was initialized before and lost it — a clone of a box that has
+  // not run `box-shape-record-2026-10` — so it is refused with a recovery
+  // line, not re-initialized with a guessed version and birth date.
   const markerPath = path.join(resolvedRoot, BOX_MARKER);
-  const isUpdate = await isValidBox(resolvedRoot);
+  const isUpdate = (await recordedShapeSource(resolvedRoot)) !== null;
+  if (!isUpdate && (await isRepo(resolvedRoot)) && (await hasCommits(resolvedRoot))) {
+    throw new MissingShapeRecordError(resolvedRoot);
+  }
 
   if (!isUpdate) {
     // Create the marker. Every box is shapeVersion 3 (the one-root layout):
@@ -315,21 +323,15 @@ async function ensureDirectories(boxRoot: string): Promise<void> {
 }
 
 /**
- * Check if a directory is a valid Bee Box.
+ * Check if a directory is a valid Bee Box: a `package.json` declaring
+ * `beebox` beside `_config/` (`isBoxRoot`). Tracked files only, so a clone
+ * of a box is a box.
  *
  * @param boxRoot - Directory to check
  * @returns Whether it's a valid box
  */
 export async function isValidBox(boxRoot: string): Promise<boolean> {
-  const markerPath = path.join(boxRoot, BOX_MARKER);
-  try {
-    await fs.access(markerPath);
-    return true;
-  } catch (_e) {
-    // No marker file (fs.access throws ENOENT) — that is precisely what
-    // "not a valid box" means. The error carries no actionable info.
-    return false;
-  }
+  return isBoxRoot(boxRoot);
 }
 
 /**

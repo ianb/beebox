@@ -16,7 +16,8 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { isValidBox, getBoxMetadata, initBox } from "../../src/core/box/structure/core.js";
 import { scaffoldBoxRoot } from "../../src/core/box/package.js";
-import { findBoxRoot, BOX_MARKER } from "../../src/lib/paths/core.js";
+import { findBoxRoot } from "../../src/lib/paths/core.js";
+import { BOX_MARKER } from "../../src/lib/box-identity.js";
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), "bbx-test-"));
