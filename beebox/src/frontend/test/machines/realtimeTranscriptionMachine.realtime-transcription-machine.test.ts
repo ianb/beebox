@@ -122,7 +122,7 @@ void test("START passes the chat's session id to the actor.", async (t) => {
 // While the agent's speech plays, the mic is held: the actor records silence,
 // and the segment keeps its text and its recording. Ending the segment later
 // hands over one recording that covers the words from before the hold, for the
-// HQ pass (issues/bugs/2026-10-20-replaying-agent-audio-drops-the-recording.md).
+// HQ pass (issues/closed/bugs/2026-10-20-replaying-agent-audio-drops-the-recording.md).
 void test("HOLD keeps the open segment, its text, and its recording.", async (t) => {
   const s = segment();
   s.emit({ type: "MIC_LIVE" });

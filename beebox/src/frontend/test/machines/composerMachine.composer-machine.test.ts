@@ -188,7 +188,7 @@ void test("A user-driven STOPDICTATION ends turn-taking (so the agent won't auto
 // `SPEECH_EXTERNAL` (the SpeechMenu Replay, which plays on its own) holds an
 // active recording — `pausedForSpeech` with no `playSpeech` call. Holding keeps
 // the segment, its text, and its recording; a cancel here once discarded what
-// the person had said (issues/bugs/2026-10-20-replaying-agent-audio-drops-the-recording.md).
+// the person had said (issues/closed/bugs/2026-10-20-replaying-agent-audio-drops-the-recording.md).
 void test("SPEECHEXTERNAL (the SpeechMenu Replay, which plays on its own) holds an active recording.", async (t) => {
   const { actor, calls } = mk();
   actor.send({ type: "RECORDING", value: true });
