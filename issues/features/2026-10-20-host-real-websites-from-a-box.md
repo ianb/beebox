@@ -80,3 +80,18 @@ Questions this raises:
   the box's Cloudflare connection. A site with its own repository may already
   deploy somewhere else (another host, or GitHub Actions). The box may only
   start and report the deploy, not own it.
+
+## Direction, 2026-10-20 (2)
+
+The developer added three requirements for the site's representation:
+
+- **Deploy status is shown in the box**, not only started from it: what is
+  live, the last deploy and its result.
+- **Worktrees, not branches.** Work in progress on a site appears as
+  worktrees (one per change, each previewable), the same way this repository
+  uses managed worktrees instead of bare branches. The box shows which
+  worktrees exist and which one is live.
+- **View and comment on the live site inside the box.** The site card opens the
+  deployed site (and a worktree's preview) in the box, and the box's commenting
+  works on those pages. This is the first concrete case of commentary on an
+  external URL from the Commentary tension above.
