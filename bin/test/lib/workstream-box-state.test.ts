@@ -19,11 +19,19 @@ function git(cwd: string, args: string[]): void {
 }
 
 // Worktree setup recognizes boxes that still carry the pre-rename engine package
-// name and migrates the dependency while installing the worktree-local override.
-void test("Worktree setup recognizes boxes that still carry the pre-rename engine packag...", async (t) => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "box-engine-repoint-"));
+// name and migrates the dependency. The tracked dependency becomes the portable
+// `link:.beebox/engine`, the engine override goes, and the gitignored
+// `.beebox/engine` link holds the worktree's engine path.
+void test("Worktree setup links the worktree engine and commits only the portable spec", async (t) => {
+  const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "box-engine-repoint-")));
   t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
-  const packageJson = path.join(root, "package.json");
+  const box = path.join(root, "box");
+  const worktree = path.join(root, "new-worktree");
+  await fs.mkdir(path.join(worktree, "beebox/bin"), { recursive: true });
+  await fs.writeFile(path.join(worktree, "beebox/package.json"), JSON.stringify({ name: "beebox" }));
+  await fs.copyFile(path.join(repoRoot, "beebox/bin/box-engine-link"), path.join(worktree, "beebox/bin/box-engine-link"));
+  await fs.mkdir(box);
+  const packageJson = path.join(box, "package.json");
   await fs.writeFile(packageJson, JSON.stringify({
     dependencies: { "callback-box": "^0.1.0", react: "^18.3.1" },
     pnpm: { overrides: { "callback-box": "link:/old/engine" } },
@@ -33,24 +41,17 @@ void test("Worktree setup recognizes boxes that still carry the pre-rename engin
     'wt_create_repoint_box_engine "$PACKAGE_JSON" "$WORKTREE"',
   ].join("; ")], {
     cwd: repoRoot,
-    env: { ...process.env, PACKAGE_JSON: packageJson, WORKTREE: "/tmp/new-worktree" },
+    env: { ...process.env, PACKAGE_JSON: packageJson, WORKTREE: worktree },
   });
-  const migrated = JSON.parse(await fs.readFile(packageJson, "utf8"));
   t.check(
     {
-      beebox: migrated.dependencies.beebox,
-      retiredDependency: migrated.dependencies["callback-box"] ?? null,
-      react: migrated.dependencies.react,
-      override: migrated.pnpm.overrides.beebox,
-      oldOverride: migrated.pnpm.overrides["callback-box"] ?? null,
+      packageJson: JSON.parse(await fs.readFile(packageJson, "utf8")),
+      link: await fs.readlink(path.join(box, ".beebox/engine")),
     },
     {
-    beebox: "link:/tmp/new-worktree/beebox",
-    retiredDependency: null,
-    react: "^18.3.1",
-    override: "link:/tmp/new-worktree/beebox",
-    oldOverride: null,
-  },
+      packageJson: { dependencies: { react: "^18.3.1", beebox: "link:.beebox/engine" } },
+      link: path.join(worktree, "beebox"),
+    },
   );
 });
 

@@ -31,6 +31,15 @@ if [[ -n "${BBX_GIT_EMAIL:-}" ]]; then
   git config --global user.email "$BBX_GIT_EMAIL"
 fi
 
+# The box commits `"beebox": "link:.beebox/engine"`; the gitignored link holds
+# this image's engine path. Point it here on every start, before any command
+# (`docker compose run … pnpm add`, the install below) can run pnpm in the box.
+# A fresh `bbx engine init` makes its own link. A failure stops the container.
+ENGINE=/app/node_modules/beebox
+if [[ -f "$BOX_ROOT/package.json" ]]; then
+  "$ENGINE/bin/box-engine-link" link "$BOX_ROOT" "$ENGINE"
+fi
+
 # Any arguments → run them as-is (bbx engine init, claude auth login, a shell, …).
 if [[ $# -gt 0 ]]; then
   exec "$@"
@@ -72,10 +81,18 @@ if [[ "${BBX_SKIP_CONVERGE:-}" != "1" ]]; then
 set -euo pipefail
 BOX_ROOT="$1"
 # A v2 box is a package: it needs its own `pnpm install` before serving so
-# schemas/views resolve (mirrors src/scripts/smoke-external-box.ts). Only on first
-# run — a populated node_modules means it is already installed.
-if [[ ! -d "$BOX_ROOT/node_modules" ]]; then
-  echo "beebox: first run — installing box dependencies (this is a one-time step)..." >&2
+# schemas/views resolve (mirrors src/scripts/smoke-external-box.ts). It runs on
+# first start, and again when the box declares the portable engine spec but
+# node_modules/beebox does not go through the engine link (a migration changed
+# the spec, which does not reinstall).
+box_install() {
+  local portable linked
+  portable=$(node -e 'const p = require(process.argv[1]); console.log((p.dependencies || {}).beebox === "link:.beebox/engine")' "$BOX_ROOT/package.json")
+  linked=$(readlink "$BOX_ROOT/node_modules/beebox" 2>/dev/null || true)
+  if [[ -d "$BOX_ROOT/node_modules" && ( "$portable" != true || "$linked" == ../.beebox/engine ) ]]; then
+    return 0
+  fi
+  echo "beebox: installing box dependencies..." >&2
   # --allow-build approves the box's native/generated deps (better-sqlite3 et
   # al.) to run their install scripts. pnpm 10 blocks them by default, and
   # non-interactively a blocked build is a hard error — the box package.json's
@@ -87,10 +104,13 @@ if [[ ! -d "$BOX_ROOT/node_modules" ]]; then
       --allow-build=@google/genai \
       --allow-build=protobufjs \
       --allow-build=@googleworkspace/cli )
-fi
+  /app/node_modules/beebox/bin/box-engine-link verify "$BOX_ROOT"
+}
+box_install
 
 cd "$BOX_ROOT"
 timeout 600 bbx engine migrate --apply --repair --within-maintenance --prepare --json
+box_install
 CONVERGE
   then
     cat >&2 <<'RECOVERY'
