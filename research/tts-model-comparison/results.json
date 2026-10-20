@@ -208,13 +208,15 @@
       "id": "2a-languages",
       "title": "Code-switching, whole phrases",
       "listenFor": "Accent and prosody at each switch into Spanish, German, and French; the name Lucía.",
-      "text": "Lucía said, and I quote, \"el martes es imposible.\" Klaus just replied \"na ja, Donnerstag geht auch.\" Et la réservation ? C'est déjà fait."
+      "text": "Lucía said, and I quote, \"el martes es imposible.\" Klaus just replied \"na ja, Donnerstag geht auch.\" Et la réservation ? C'est déjà fait.",
+      "pronounce": "Lucía is loo-SEE-ah. Spanish “el martes es imposible” (“Tuesday is impossible”): el MAR-tess ess eem-po-SEE-bleh. German “na ja, Donnerstag geht auch” (“oh well, Thursday works too”): NAH-yah, a shrug, often run together as one word; then DON-ers-tahk gate OWKH, the final ch a breathy sound as in Scottish “loch”. French “Et la réservation ? C'est déjà fait.” (“And the reservation? It's already done.”): ay lah ray-zair-vah-SYOHN, the final n not sounded, only a nasal vowel; then say day-ZHAH FEH."
     },
     {
       "id": "2b-foreign-words",
       "title": "Single German words",
       "listenFor": "Schnapsidee and Stammtisch said as German words inside an English sentence, without the rest going German.",
       "text": "It was really a Schnapsidee, cooked up at the Stammtisch.",
+      "pronounce": "Schnapsidee (a harebrained idea; literally a schnapps idea): SHNAHPS-ee-day. Stammtisch (the regulars' table at a pub): SHTAHM-tish. In both, the opening s sounds like sh.",
       "direction": {
         "prose": "Speak in natural American English, but pronounce 'Schnapsidee' and 'Stammtisch' as German words, with German pronunciation",
         "tagged": "It was really a [German pronunciation] Schnapsidee, cooked up at the [German pronunciation] Stammtisch."
@@ -4400,6 +4402,7 @@
       "audioSec": 23.08,
       "rtf": 0.4,
       "costUsd": 0.006693,
+      "costEstimated": true,
       "transcript": "Before you move the backups, check two things. First, whether the new drive has room; it needs about 40 GB, which, if you've kept the old Photo Library, it probably doesn't. Second, that none of your connected accounts—calendar, email, and the shared drive from last spring—is still syncing, because a copy made mid-sync looks complete and isn't.",
       "extraWords": [
         "40",
@@ -4409,8 +4412,7 @@
       "missingWords": [
         "forty",
         "gigabytes"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4505,6 +4507,7 @@
       "audioSec": 11.6,
       "rtf": 0.46,
       "costUsd": 0.003366,
+      "costEstimated": true,
       "transcript": "Lucía said, and I quote, El martes es imposible. Klaus just replied, Nayang, dónde está get out? Y la reservación? C'est déjà fait.",
       "extraWords": [
         "nayang",
@@ -4524,8 +4527,7 @@
         "auch",
         "et",
         "reservation"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4544,6 +4546,7 @@
       "audioSec": 4.12,
       "rtf": 0.68,
       "costUsd": 0.0011965,
+      "costEstimated": true,
       "transcript": "It was really a schnappsie day, cooked up at the Stammtisch.",
       "extraWords": [
         "schnappsie",
@@ -4552,8 +4555,7 @@
       "leakedWords": [],
       "missingWords": [
         "schnapsidee"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4573,6 +4575,7 @@
       "audioSec": 4.4,
       "rtf": 0.83,
       "costUsd": 0.0012775,
+      "costEstimated": true,
       "transcript": "It was really a schnappsie day, cooked up at the Stammtisch.",
       "extraWords": [
         "schnappsie",
@@ -4581,8 +4584,7 @@
       "leakedWords": [],
       "missingWords": [
         "schnapsidee"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4602,6 +4604,7 @@
       "audioSec": 4.28,
       "rtf": 0.68,
       "costUsd": 0.0012455,
+      "costEstimated": true,
       "transcript": "It was really a Schnapsidee, gekocht op het Stammtisch.",
       "extraWords": [
         "gekocht",
@@ -4614,8 +4617,7 @@
         "up",
         "at",
         "the"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4634,11 +4636,11 @@
       "audioSec": 4.48,
       "rtf": 0.64,
       "costUsd": 0.0013055,
+      "costEstimated": true,
       "transcript": "Thanks for updating the spreadsheet, I can tell you put a lot of care into it.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4658,11 +4660,11 @@
       "audioSec": 6.4,
       "rtf": 0.55,
       "costUsd": 0.0018545,
+      "costEstimated": true,
       "transcript": "Thanks for updating the spreadsheet. I can tell you put a lot of care into it.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4682,6 +4684,7 @@
       "audioSec": 10,
       "rtf": 0.45,
       "costUsd": 0.002896,
+      "costEstimated": true,
       "transcript": "Thanks for updating the spreadsheet,\" dryly, dripping with sarcasm, \"I can tell you put a lot of care into it.",
       "extraWords": [
         "dryly",
@@ -4695,8 +4698,7 @@
         "with",
         "sarcasm"
       ],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4715,11 +4717,11 @@
       "audioSec": 7.56,
       "rtf": 0.56,
       "costUsd": 0.00219,
+      "costEstimated": true,
       "transcript": "It worked! After three weeks of broken builds, the whole thing ran start to finish every single test green.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4739,11 +4741,11 @@
       "audioSec": 10.48,
       "rtf": 0.5,
       "costUsd": 0.003036,
+      "costEstimated": true,
       "transcript": "It worked! After three weeks of broken builds, the whole thing ran start to finish, every single test green!",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4763,11 +4765,11 @@
       "audioSec": 10.48,
       "rtf": 0.47,
       "costUsd": 0.00304,
+      "costEstimated": true,
       "transcript": "It worked! After three weeks of broken builds, the whole thing ran start to finish, every single test green.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4786,11 +4788,11 @@
       "audioSec": 5.96,
       "rtf": 0.66,
       "costUsd": 0.0017325,
+      "costEstimated": true,
       "transcript": "I asked for the report on Monday. It's Thursday. I'm going to need it by the end of today.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4810,11 +4812,11 @@
       "audioSec": 9.68,
       "rtf": 0.5,
       "costUsd": 0.0028035,
+      "costEstimated": true,
       "transcript": "I asked for the report on Monday. It's Thursday. I'm going to need it by the end of today.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4834,6 +4836,7 @@
       "audioSec": 11.36,
       "rtf": 0.51,
       "costUsd": 0.003297,
+      "costEstimated": true,
       "transcript": "Quietly furious, I asked for the report on Monday. It's Thursday. Through gritted teeth, I'm gonna need it by the end of today.",
       "extraWords": [
         "quietly",
@@ -4853,8 +4856,7 @@
       "missingWords": [
         "going",
         "to"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4873,11 +4875,11 @@
       "audioSec": 5.6,
       "rtf": 0.78,
       "costUsd": 0.001633,
+      "costEstimated": true,
       "transcript": "I finished the last of the boxes. I think I'll sit down for a minute before we start on the kitchen.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4897,11 +4899,11 @@
       "audioSec": 8.84,
       "rtf": 0.46,
       "costUsd": 0.00256,
+      "costEstimated": true,
       "transcript": "I finished the last of the boxes. I think I'll sit down for a minute before we start on the kitchen.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-tts-direct",
@@ -4921,13 +4923,13 @@
       "audioSec": 10.28,
       "rtf": 0.49,
       "costUsd": 0.00298,
+      "costEstimated": true,
       "transcript": "Ugh, I finished the last of the boxes. I think I'll sit down for a minute before we start on the kitchen.",
       "extraWords": [
         "ugh"
       ],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -4946,6 +4948,7 @@
       "audioSec": 22.48,
       "rtf": 0.31,
       "costUsd": 0.004362,
+      "costEstimated": true,
       "transcript": "Before you move the backups, check two things. First, whether the new drive has room. It needs about 40 gigabytes, which, if you've kept the old photo library, it probably doesn't. Second, that none of your connected accounts—calendar, email, and the shared drive from last spring—is still syncing, because a copy made mid-sync looks complete and isn't.",
       "extraWords": [
         "40"
@@ -4953,8 +4956,7 @@
       "leakedWords": [],
       "missingWords": [
         "forty"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5049,6 +5051,7 @@
       "audioSec": 12.56,
       "rtf": 0.38,
       "costUsd": 0.00243,
+      "costEstimated": true,
       "transcript": "Lucía said, and I quote, \"El martes es imposible.\" Klaus just replied: \"Na ja, Donnerstag geht auch.\" \"¿E la reservación?\" \"Se deja fé.\"",
       "extraWords": [
         "e",
@@ -5062,8 +5065,7 @@
         "reservation",
         "c'est",
         "fait"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5082,6 +5084,7 @@
       "audioSec": 4,
       "rtf": 0.72,
       "costUsd": 0.0007765,
+      "costEstimated": true,
       "transcript": "It was really a schnapps idea cooked up at the Stammtisch.",
       "extraWords": [
         "schnapps",
@@ -5090,8 +5093,7 @@
       "leakedWords": [],
       "missingWords": [
         "schnapsidee"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5111,6 +5113,7 @@
       "audioSec": 4.44,
       "rtf": 0.54,
       "costUsd": 0.0008665,
+      "costEstimated": true,
       "transcript": "It was really a schnapsy day, cooked up at the Stammtisch.",
       "extraWords": [
         "schnapsy",
@@ -5119,8 +5122,7 @@
       "leakedWords": [],
       "missingWords": [
         "schnapsidee"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5140,6 +5142,7 @@
       "audioSec": 4.88,
       "rtf": 0.56,
       "costUsd": 0.0009545,
+      "costEstimated": true,
       "transcript": "It was really a schnappsie day cooked up at the Stammtisch.",
       "extraWords": [
         "schnappsie",
@@ -5148,8 +5151,7 @@
       "leakedWords": [],
       "missingWords": [
         "schnapsidee"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5168,11 +5170,11 @@
       "audioSec": 4.2,
       "rtf": 0.67,
       "costUsd": 0.0008195,
+      "costEstimated": true,
       "transcript": "Thanks for updating the spreadsheet, I can tell you put a lot of care into it.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5192,11 +5194,11 @@
       "audioSec": 5.76,
       "rtf": 0.53,
       "costUsd": 0.0011195,
+      "costEstimated": true,
       "transcript": "Thanks for updating the spreadsheet. I can tell you put a lot of care into it.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5216,6 +5218,7 @@
       "audioSec": 9.24,
       "rtf": 0.47,
       "costUsd": 0.001792,
+      "costEstimated": true,
       "transcript": "Thanks for updating the spreadsheet,\" Drily, dripping with sarcasm. \"I can tell you put a lot of care into it.",
       "extraWords": [
         "drily",
@@ -5228,8 +5231,7 @@
         "with",
         "sarcasm"
       ],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5248,11 +5250,11 @@
       "audioSec": 8.12,
       "rtf": 0.51,
       "costUsd": 0.001572,
+      "costEstimated": true,
       "transcript": "It worked. After three weeks of broken builds, the whole thing ran start to finish, every single test green.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5272,11 +5274,11 @@
       "audioSec": 8.52,
       "rtf": 0.53,
       "costUsd": 0.00165,
+      "costEstimated": true,
       "transcript": "It worked! After three weeks of broken builds, the whole thing ran start to finish, every single test green.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5296,11 +5298,11 @@
       "audioSec": 9.48,
       "rtf": 0.39,
       "costUsd": 0.00184,
+      "costEstimated": true,
       "transcript": "It worked! After three weeks of broken builds, the whole thing ran, start to finish. Every single test green.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5319,6 +5321,7 @@
       "audioSec": 5.96,
       "rtf": 0.56,
       "costUsd": 0.0011595,
+      "costEstimated": true,
       "transcript": "I asked for the report on Monday. It's Thursday. I'm gonna need it by the end of today.",
       "extraWords": [
         "gonna"
@@ -5327,8 +5330,7 @@
       "missingWords": [
         "going",
         "to"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5348,11 +5350,11 @@
       "audioSec": 8.12,
       "rtf": 0.43,
       "costUsd": 0.0015735,
+      "costEstimated": true,
       "transcript": "I asked for the report on Monday. It's Thursday. I'm going to need it by the end of today.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5372,6 +5374,7 @@
       "audioSec": 13.24,
       "rtf": 0.37,
       "costUsd": 0.002565,
+      "costEstimated": true,
       "transcript": "Quietly furious, I asked for the report on Monday. Coldly: It's Thursday. Through gritted teeth: I'm going to need it by the end of today.",
       "extraWords": [
         "quietly",
@@ -5389,8 +5392,7 @@
         "gritted",
         "teeth"
       ],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5409,11 +5411,11 @@
       "audioSec": 6.36,
       "rtf": 0.56,
       "costUsd": 0.001237,
+      "costEstimated": true,
       "transcript": "I finished the last of the boxes. I think I'll sit down for a minute before we start on the kitchen.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5433,6 +5435,7 @@
       "audioSec": 9.36,
       "rtf": 0.52,
       "costUsd": 0.001813,
+      "costEstimated": true,
       "transcript": "I've finished the last of the boxes. I think I'll sit down for a minute before we start on the kitchen.",
       "extraWords": [
         "i've"
@@ -5440,8 +5443,7 @@
       "leakedWords": [],
       "missingWords": [
         "i"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.8-flash-lite-tts-direct",
@@ -5461,6 +5463,7 @@
       "audioSec": 10.2,
       "rtf": 0.46,
       "costUsd": 0.001981,
+      "costEstimated": true,
       "transcript": "I've finished the last of the boxes. I think I'll sit down for a minute before we start on the kitchen.",
       "extraWords": [
         "i've"
@@ -5468,8 +5471,7 @@
       "leakedWords": [],
       "missingWords": [
         "i"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5488,6 +5490,7 @@
       "audioSec": 25.68,
       "rtf": 0.6,
       "costUsd": 0.016524,
+      "costEstimated": true,
       "transcript": "Before you move the backups, check two things. First, whether the new drive has room. It needs about 40 gigabytes, which, if you've kept the old photo library, it probably doesn't. Second, that none of your connected accounts—calendar, email, and the shared drive from last spring—is still syncing, because a copy made mid-sync looks complete, and isn't.",
       "extraWords": [
         "40"
@@ -5495,8 +5498,7 @@
       "leakedWords": [],
       "missingWords": [
         "forty"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5591,6 +5593,7 @@
       "audioSec": 11,
       "rtf": 0.71,
       "costUsd": 0.007076,
+      "costEstimated": true,
       "transcript": "Lucía said, and I quote, \"El martes es imposible.\" Klaus just replied, \"Naja, Donnerstag geht auch.\" Et la réservation? C'est déjà fait.",
       "extraWords": [
         "naja"
@@ -5599,8 +5602,7 @@
       "missingWords": [
         "na",
         "ja"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5619,11 +5621,11 @@
       "audioSec": 4.32,
       "rtf": 0.98,
       "costUsd": 0.002797,
+      "costEstimated": true,
       "transcript": "It was really a Schnapsidee, cooked up at the Stammtisch.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5643,11 +5645,11 @@
       "audioSec": 4.6,
       "rtf": 0.77,
       "costUsd": 0.003014,
+      "costEstimated": true,
       "transcript": "It was really a schnapsidee, cooked up at the Stammtisch.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5666,11 +5668,11 @@
       "audioSec": 4.72,
       "rtf": 0.92,
       "costUsd": 0.003059,
+      "costEstimated": true,
       "transcript": "Thanks for updating the spreadsheet. I can tell you put a lot of care into it.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5690,11 +5692,11 @@
       "audioSec": 7.72,
       "rtf": 0.78,
       "costUsd": 0.005017,
+      "costEstimated": true,
       "transcript": "Thanks for updating the spreadsheet. I can tell you put a lot of care into it.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5713,11 +5715,11 @@
       "audioSec": 8.92,
       "rtf": 0.88,
       "costUsd": 0.005744,
+      "costEstimated": true,
       "transcript": "It worked! After three weeks of broken builds, the whole thing ran start to finish every single test green.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5737,11 +5739,11 @@
       "audioSec": 10.76,
       "rtf": 0.65,
       "costUsd": 0.006937,
+      "costEstimated": true,
       "transcript": "It worked! After three weeks of broken builds, the whole thing ran start to finish, every single test green!",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5760,11 +5762,11 @@
       "audioSec": 6.12,
       "rtf": 0.85,
       "costUsd": 0.003947,
+      "costEstimated": true,
       "transcript": "I asked for the report on Monday. It's Thursday. I'm going to need it by the end of today.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5784,11 +5786,11 @@
       "audioSec": 12.44,
       "rtf": 0.64,
       "costUsd": 0.008039,
+      "costEstimated": true,
       "transcript": "I asked for the report on Monday. It's Thursday. I'm going to need it by the end of today.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5807,11 +5809,11 @@
       "audioSec": 6.32,
       "rtf": 0.82,
       "costUsd": 0.004086,
+      "costEstimated": true,
       "transcript": "I finished the last of the boxes. I think I'll sit down for a minute before we start on the kitchen.",
       "extraWords": [],
       "leakedWords": [],
-      "missingWords": [],
-      "costEstimated": true
+      "missingWords": []
     },
     {
       "model": "gemini-3.1-flash-tts-preview-direct",
@@ -5831,6 +5833,7 @@
       "audioSec": 10.52,
       "rtf": 0.65,
       "costUsd": 0.006788,
+      "costEstimated": true,
       "transcript": "I'm bone tired, barely getting a word out. I think I'll sit down for a minute before we start on the kitchen.",
       "extraWords": [
         "i'm",
@@ -5857,8 +5860,7 @@
         "boxes",
         "i",
         "the"
-      ],
-      "costEstimated": true
+      ]
     },
     {
       "model": "voxtral-mini-tts-3",
