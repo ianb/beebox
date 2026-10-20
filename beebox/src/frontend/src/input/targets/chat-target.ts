@@ -25,9 +25,9 @@ import type { ChatEvent } from "../../machines/chat-types";
 import { assembleChatMessage, type ChatWitness } from "./chat-assemble";
 import { expectReceipt, type Receipt } from "./receipts";
 import { beginChatSendDiagnostic } from "../../lib/chat-send-diagnostics";
+import type { ChatSendContext } from "@core/chat/card-activity.js";
 
-type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
-type CardFields = Pick<SendEvent, "openCard" | "openQuestion" | "cardActivity" | "cardState">;
+type CardFields = ChatSendContext;
 
 /**
  * `ready`/`busy` map directly onto the chat machine's idle vs.

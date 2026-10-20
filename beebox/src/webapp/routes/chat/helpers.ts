@@ -17,7 +17,7 @@ import {
   SUPPORTED_IMAGE_MEDIA_TYPES,
   isSupportedImageMediaType,
 } from "../../../services/claude-chat-content.js";
-import { isActivityKind, type CardStateDetails } from "../../../core/chat/card-activity.js";
+import { isActivityKind, type CardStateDetails, type ChatSendContextWithView } from "../../../core/chat/card-activity.js";
 import type { ChatSendInput } from "../../../core/chat/session/run/core.js";
 import { readJpegOrientation, ORIENTATION_NORMAL } from "../../../shared/image-orientation.js";
 import { CHAT_CHANNELS, type ChatChannel } from "../../../shared/chat-channel.js";
@@ -123,8 +123,8 @@ export const sendBodySchema = z.object({
 
 export type SendBody = z.infer<typeof sendBodySchema>;
 
-/** The per-send context fields a body carries into `ChatSendInput`. */
-export type SendCardFields = Pick<ChatSendInput, "openCard" | "openQuestion" | "cardActivity" | "cardState" | "viewContext">;
+/** The per-send context fields a body carries into `ChatSendInput` (`ChatSendContext` plus the attention snapshot). */
+export type SendCardFields = ChatSendContextWithView;
 
 export const selfNoteBodySchema = z.object({
   body: z.string({ error: "body is required" }).refine((v) => v.trim().length > 0, "body is required"),

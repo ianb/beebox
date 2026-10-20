@@ -15,7 +15,7 @@ import { assertNever } from "../../../shared/invariant.js";
 import { buildChatContentBlocks } from "../../../shared/chat-content-blocks.js";
 import type { ChatContentBlock } from "../../../services/claude-chat/core.js";
 import type { ChatBackendMessage } from "../../../services/claude-chat-types.js";
-import type { ActivityKind, CardStateDetails } from "../card-activity.js";
+import type { ChatSendContext } from "../card-activity.js";
 import type { ChatChannel } from "../../../shared/chat-channel.js";
 import type {
   SDKMessage,
@@ -78,7 +78,7 @@ export interface ChatImage {
   dataBase64: string;
 }
 
-export interface ChatSendInput {
+export interface ChatSendInput extends ChatSendContext {
   /** Send-time presentation context, independent of the conversation directory. */
   viewContext?: AttentionSnapshot;
   text: string;
@@ -90,33 +90,8 @@ export interface ChatSendInput {
    * Omitted when the transport doesn't know.
    */
   channel?: ChatChannel;
-  /**
-   * Box-relative path of the card open in the chat's companion pane when
-   * this message was sent. Surfaces to the agent as the read-only
-   * `open-card` snapshot attribute. Omitted when no card is open.
-   */
-  openCard?: string;
-  /**
-   * Box-relative path of the pending question card the root chat is asking
-   * (docs/plans/front-door.md, Track A). The client sends it on every message
-   * while the card is pending, so an agent that missed it on one turn sees it
-   * on the next. Surfaces as the read-only `open-question` snapshot attribute.
-   * Omitted when the chat shows no question.
-   */
-  openQuestion?: string;
-  /**
-   * What the user did to the companion-pane card since the agent's last
-   * reply (see `ActivityKind`). Unioned across queued sends and surfaced as
-   * the read-only `card-activity` snapshot attribute. Omitted when empty.
-   */
-  cardActivity?: ActivityKind[];
-  /**
-   * Per-kind free-text detail for the companion-pane activity (e.g. the
-   * embedding query typed, the path modified). Latest-wins per kind across
-   * queued sends; surfaced as the text of the read-only `<card-activity>`
-   * snapshot child elements.
-   */
-  cardState?: CardStateDetails;
+  // `openCard`, `openQuestion`, `cardActivity`, `cardState`: `ChatSendContext`
+  // (`core/chat/card-activity.ts`), the one list of per-send context fields.
   /**
    * The turn carries text the person at the composer did not type (a script's
    * self-note, a fired schedule). Delivered as the SDK's `client_composed`, so

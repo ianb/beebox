@@ -42,7 +42,6 @@ import { useChatActions } from "./actions";
 import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./view";
 import type { ChatBodyProps } from "./body-props";
-import type { ViewTarget } from "../../../../lib/view-url";
 import { createInputStoreAdapter, InputStoreProvider } from "../../input-store";
 import type { EmissionStore } from "../../../../input/emission-store";
 import { useCaptureBubbles } from "../../useCaptureBubbles";
@@ -86,7 +85,7 @@ function useChatBinding(params: {
   sessionId: string | null;
   unstarted: boolean;
   contextDir: string | undefined;
-}): { contextDir: string | null; openers: string[]; openQuestion: OpenQuestion | null } {
+}): { contextDir: string | null; openers: string[]; openQuestion: OpenQuestion | null; questionActions: OpenQuestionActions } {
   const query = trpc.chat.directoryFor.useQuery(
     { sessionId: params.sessionId ?? "" },
     { enabled: Boolean(params.sessionId) },
@@ -107,8 +106,10 @@ function useChatBinding(params: {
     () => (contextDir === "" && questionsQuery.data !== undefined ? pickOpenQuestion(questionsQuery.data.items) : null),
     [contextDir, questionsQuery.data],
   );
-  return { contextDir, openers: landmark?.openers ?? [], openQuestion };
+  return { contextDir, openers: landmark?.openers ?? [], openQuestion, questionActions: useOpenQuestionActions() };
 }
+
+type OpenQuestionActions = Pick<ChatBodyProps, "onQuestionNotNow" | "onOpenQuestions" | "onFocusComposer">;
 
 /**
  * What the empty root chat's question line can do: "Not now" dismisses the
@@ -117,7 +118,9 @@ function useChatBinding(params: {
  * the line puts the cursor in whichever composer is on screen (the desktop
  * row and the phone row are different textareas).
  */
-function useOpenQuestionActions(workspace: { open: (target: ViewTarget, hint: { label: string }) => void }): Pick<ChatBodyProps, "onQuestionNotNow" | "onOpenQuestions" | "onFocusComposer"> {
+function useOpenQuestionActions(): OpenQuestionActions {
+  const workspace = useWorkspace();
+  invariant(workspace, "InteractiveChat requires WorkspaceProvider");
   const utils = trpc.useUtils();
   const dismiss = trpc.actions.dismiss.useMutation({ onSuccess: () => void utils.status.questions.invalidate() });
   const onQuestionNotNow = useCallback((path: string) => { dismiss.mutate({ questionPath: path }); }, [dismiss]);
@@ -245,7 +248,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     input: { sessionInput, contextDir, startEngine, startModel, initial }, onSessionAssignment,
   });
   const { messages, pendingMessages, streamText, streamTools, error, replyLost, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
-  const { contextDir: effectiveContextDir, openers, openQuestion } = useChatBinding({ sessionId, unstarted, contextDir });
+  const { contextDir: effectiveContextDir, openers, openQuestion, questionActions } = useChatBinding({ sessionId, unstarted, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   // First-load milestones: the conversation chosen, then its history shown (not the placeholder's).
   useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, conversationSelection?.kind === "ready");
@@ -278,7 +281,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const mute = useChatMute();
   const tabs = useWorkspace();
   invariant(tabs, "InteractiveChat requires WorkspaceProvider");
-  const { activeView } = tabs; const questionActions = useOpenQuestionActions(tabs);
+  const { activeView } = tabs;
   const cardSend = useCompanionCard({ focusedRef: attention?.focusedRef, activeView });
   const schedules = useChatSchedules({ messages, loaded: !snapshot.matches("loading"), isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.filter((entry) => entry.pending === true).length, sessionId, send });

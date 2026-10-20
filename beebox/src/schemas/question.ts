@@ -106,6 +106,16 @@ const STATE_TIMESTAMPS = ["answered-at", "dismissed-at", "expired-at"] as const;
 const ANSWER_FIELDS = ["answer", "answered-via"] as const;
 
 /**
+ * Where an answer came from. `web` is the Questions page or a deep link,
+ * `cli` is `bbx answer`, and `chat` is the agent recording an answer the
+ * person gave in a conversation, which writes no follow-up job
+ * (`core/commands/answer.ts`). The one definition: the answer command and
+ * triage's confirm step import it.
+ */
+export const AnsweredVia = z.enum(["web", "cli", "chat"]);
+export type AnsweredViaValue = z.infer<typeof AnsweredVia>;
+
+/**
  * Parse-time coherence of the lifecycle fields: at most one of `answered-at`,
  * `dismissed-at` and `expired-at`; `answered-at` requires `answer`; `answer`
  * and `answered-via` appear only with `answered-at`. Answering a dismissed or
@@ -147,7 +157,7 @@ export const QuestionSchema = cardSchema("question", {
     urgency: z.enum(["time-bound"]).optional(),
     answer: QuestionAnswer.optional(),
     "answered-at": z.string().datetime({ offset: true }).optional(),
-    "answered-via": z.enum(["web", "cli", "chat"]).optional(),
+    "answered-via": AnsweredVia.optional(),
     "dismissed-at": z.string().datetime({ offset: true }).optional(),
     "expired-at": z.string().datetime({ offset: true }).optional(),
   },

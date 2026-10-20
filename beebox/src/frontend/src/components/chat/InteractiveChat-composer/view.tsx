@@ -13,10 +13,11 @@ import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
-import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart, type VoiceSegmentSend } from "../InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "../InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "../input-store";
 import { useComposerCaret } from "../composer-caret";
 import type { AddFiles } from "../InteractiveChat-attachments/attachments";
+import type { ComposerRowProps } from "../composer-row-props";
 import type { TranscriptionState } from "../../../hooks/useRealtimeTranscription/hook";
 import { segmentCapturing } from "../../../machines/transcription-events";
 import type { FinalWord } from "../../../machines/transcription-events";
@@ -87,23 +88,11 @@ function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend, onPaste, onDrop, includeControlIds, placeholder,
-}: {
-  textareaRef: React.RefObject<HTMLTextAreaElement>; placeholder?: string | undefined;
+}: ComposerRowProps & {
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
-  isTranscribing: boolean;
-  transcription: TranscriptionHandle;
-  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
-  targetBusy: boolean;
-  sendDisabledReason?: string;
   handleKeyDown: (e: React.KeyboardEvent) => void;
-  handleSend: () => void;
-  handleCancelTranscription: () => void;
-  clearDraft: () => void;
-  onStopDictation: () => void;
-  onVoiceSegmentSend: VoiceSegmentSend;
-  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
-  onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
   includeControlIds: boolean;
 }) {
   const noteTyped = useComposerCaret({ textareaRef, text: input });
@@ -200,27 +189,14 @@ export function ChatInputArea({
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
   narrationEnabled, includeControlIds, placeholder,
-}: {
+}: ComposerRowProps & {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
-  isTranscribing: boolean;
-  transcription: TranscriptionHandle;
-  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
-  targetBusy: boolean;
-  sendDisabledReason?: string;
   handleKeyDown: (e: React.KeyboardEvent) => void;
-  handleSend: () => void;
-  handleCancelTranscription: () => void;
-  /** Drops the persisted dictation draft when transcript is moved to input or sent. */
-  clearDraft: () => void;
   onKeyboard: () => void;
   onVoice: () => void;
-  onStopDictation: () => void;
-  onVoiceSegmentSend: VoiceSegmentSend;
   voicePaused: boolean;
   onUnpause: () => void;
-  hideMobile?: boolean; placeholder?: string | undefined; // the open question's prompt, in place of "Type a message..."
-  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
-  onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
+  hideMobile?: boolean;
   /** Open the file picker behind the Add menu's one file entry. */
   onAddFiles: () => void;
   /** Ingest files into the composer (shared with picker/paste/drop) — feeds the "Send screenshot…" item. */
@@ -331,7 +307,8 @@ export function ChatInputArea({
           onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={onPaste}
           onDrop={onDrop}
-          includeControlIds={hasControlIds} placeholder={placeholder}
+          includeControlIds={hasControlIds}
+          placeholder={placeholder}
         />
 
         {/* Mobile: spacer */}

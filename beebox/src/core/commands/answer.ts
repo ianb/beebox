@@ -19,18 +19,11 @@ import {
 } from "../command-types.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { assertNever } from "../../shared/invariant.js";
-import { type QuestionFields } from "../../schemas/question.js";
+import { AnsweredVia, type AnsweredViaValue, type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
 import { withQuestionTransition, resolveContainedQuestionPath } from "../question-transition.js";
 import { getBoxDir } from "../../lib/paths/core.js";
 
-/**
- * Where an answer came from. `chat` is the agent recording an answer the
- * person gave in a conversation (docs/plans/front-door.md, Track A): the agent
- * has already done the directive there, so no follow-up job is written.
- */
-const AnswerVia = z.enum(["web", "cli", "chat"]);
-type AnswerViaValue = z.infer<typeof AnswerVia>;
 
 const AnswerArgsSchema = z.object({
   question: z.string().optional(),
@@ -38,7 +31,7 @@ const AnswerArgsSchema = z.object({
   selectedId: z.string().optional(),
   // Validated here (a Zod enum) rather than cast at the write site — a junk
   // `via` is rejected at the dispatch boundary, not silently recorded.
-  via: AnswerVia.optional(),
+  via: AnsweredVia.optional(),
 });
 export type AnswerArgs = z.infer<typeof AnswerArgsSchema>;
 
@@ -225,7 +218,7 @@ async function executeAnswer(
     return { success: false, error: "Answer or selectedId is required" };
   }
 
-  const via: AnswerViaValue = answerArgs.via ?? "cli";
+  const via: AnsweredViaValue = answerArgs.via ?? "cli";
   const question = answerArgs.question;
 
   const contained = resolveContainedQuestionPath(ctx.boxRoot, question);

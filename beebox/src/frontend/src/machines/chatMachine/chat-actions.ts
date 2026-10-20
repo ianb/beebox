@@ -12,6 +12,7 @@ import { queueMessageToBackend } from "./chat-actors";
 import { toastError } from "../../components/ui/toast-store";
 import { MAX_RETAINED_MESSAGES, type ChatContext, type ChatEvent } from "../chat-types";
 import { observeChatSendHistory } from "../../lib/chat-send-diagnostics";
+import type { ChatSendContext } from "@core/chat/card-activity.js";
 
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
 
@@ -31,7 +32,7 @@ export function sendInterrupt(sessionId: string): void {
 
 /** Pull the companion-card fields off a SEND event, omitting empties — shared
  *  by the streaming input builder and the queued-send dispatcher. */
-export function cardFieldsFromEvent(event: SendEvent): Pick<SendEvent, "openCard" | "openQuestion" | "cardActivity" | "cardState" | "binding" | "startup"> {
+export function cardFieldsFromEvent(event: SendEvent): ChatSendContext & Pick<SendEvent, "binding" | "startup"> {
   return {
     ...(event.startup !== undefined ? { startup: event.startup } : {}),
     ...(event.binding !== undefined ? { binding: event.binding } : {}),

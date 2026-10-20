@@ -29,7 +29,7 @@ import { RequestError } from "./lib/errors";
 import { getApiBase } from "./api-core";
 import { trpcClient } from "./lib/trpc/client";
 import { mobileAuthHeaders } from "./lib/mobile-auth";
-import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
+import type { ChatSendContext } from "@core/chat/card-activity.js";
 import type { TranscriptState } from "@core/chat/session/availability.js";
 import { chatSendReasonKind, recordChatSendEvent } from "./lib/chat-send-diagnostics";
 import { maintenanceRetryDelayMs } from "./lib/maintenance-retry";
@@ -343,15 +343,7 @@ export async function startChatTurn(params: {
    */
   engine?: string;
   model?: string;
-  /** Box-relative path of the card open in the companion pane at send time. */
-  openCard?: string;
-  /** Box-relative path of the pending question the root chat is asking. */
-  openQuestion?: string;
-  /** What the user did to the companion-pane card since the last reply. */
-  cardActivity?: ActivityKind[];
-  /** Per-kind free-text detail for that activity (e.g. the query typed). */
-  cardState?: CardStateDetails;
-}): Promise<ChatTurnStart> {
+} & ChatSendContext): Promise<ChatTurnStart> {
   const { session, message, images, contextDir, seedFeatures, engine, model, openCard, openQuestion, cardActivity, cardState } = params;
   const apiBase = getApiBase();
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
