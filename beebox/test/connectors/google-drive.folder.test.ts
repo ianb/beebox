@@ -548,7 +548,7 @@ void test("A Doc found by a newly mounted folder opens the diagnosis on that fir
     kind: "scope-insufficient",
     message:
       "1 Google Doc is syncing without revision tracking or lossy-content details: " +
-      "the Google token lacks the documents.readonly scope. Run 'bbx engine google-auth' to grant it.",
+      "the Google sign-in lacks the documents.readonly scope. Re-authorize Google in Settings, under Google services, to grant it.",
     link: null,
     docs: 1,
     since: any(String),

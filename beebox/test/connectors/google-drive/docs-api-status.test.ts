@@ -2,8 +2,8 @@
 //
 // `nextDocsApiDiagnosis` holds every open/clear decision for the stored Docs
 // API problem; `readDocsApiDiagnosis` is the one reader the health check,
-// settings and chat use, and it hides the problem as soon as Drive stops
-// syncing, before any further pass could clear the file.
+// settings and chat use, and it hides the problem as soon as Drive is disabled
+// or Google disconnected, before any further pass could clear the file.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -61,14 +61,17 @@ void test("A fixable failure opens the problem; a later pass keeps its start and
 void test("Only evidence clears it", async (t) => {
   const next = (outcomes: DocsApiOutcome[], passComplete: boolean) =>
     nextDocsApiDiagnosis({ previous: open, outcomes, passComplete, now: LATER });
-  // A pull that reached the Docs API clears it, even on a pass with other failures.
-  t.check(next([ok], false), null);
+  // A complete pass whose every Doc reached the Docs API clears it.
+  t.check(next([ok, ok], true), null);
   // No Docs at all on a complete pass: the last Doc card is gone.
   t.check(next([], true), null);
-  // No Docs on an incomplete pass (a failure or a folder cap): unknown, kept.
+  // An incomplete pass (a failure or a folder cap) may have skipped a Doc that
+  // still fails, so even a successful pull there clears nothing.
+  t.check(next([ok], false), open);
   t.check(next([], false), open);
-  // A transient failure says nothing either way.
+  // A transient failure leaves that Doc unchecked, so nothing clears.
   t.check(next([transient], true), open);
+  t.check(next([ok, transient], true), open);
   t.check(nextDocsApiDiagnosis({ previous: null, outcomes: [transient], passComplete: true, now: NOW }), null);
 });
 
@@ -79,16 +82,17 @@ void test("The reader hides a stored problem once Drive stops syncing, before an
   await saveGoogleTokens({ refreshToken: "rt-1", accessToken: "at-1" });
   await recordDocsApiDiagnosis(box.root, () => open);
 
-  t.check(await readDocsApiDiagnosis(box.root), open);
+  t.check(await readDocsApiDiagnosis(box.root), { ...open, drivePaused: false });
 
   // Drive turned off for this box.
   await box.write("_config/box.json", JSON.stringify({ googleServices: { drive: false } }));
   t.check(await readDocsApiDiagnosis(box.root), null);
   await box.write("_config/box.json", JSON.stringify({ googleServices: { drive: true } }));
 
-  // The grant needs reauthorizing: Drive is paused, and google-auth says so.
+  // The grant needs reauthorizing: Drive is paused, but nothing has fixed the
+  // Docs API, so the problem stays shown (no dismissal), marked paused.
   await markGoogleAuthDead({ reason: "invalid_grant" });
-  t.check(await readDocsApiDiagnosis(box.root), null);
+  t.check(await readDocsApiDiagnosis(box.root), { ...open, drivePaused: true });
 
   // Google disconnected.
   await rm(tokensFile);

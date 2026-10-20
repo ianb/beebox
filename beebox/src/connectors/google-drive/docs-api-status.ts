@@ -80,11 +80,11 @@ function describe(failure: FixableFailure, docs: number): string {
  *
  * - A fixable failure on any pull opens (or continues) the problem. A
  *   disabled API is preferred over a missing scope: it is the one to fix first.
- * - Otherwise a pull that reached the Docs API clears it.
- * - Otherwise a complete pass with no Doc pulls clears it: no Docs are syncing,
+ * - Otherwise a complete pass whose every Doc pull reached the Docs API clears
+ *   it. That includes a complete pass with no Doc pulls: no Docs are syncing,
  *   so none sync at reduced fidelity (the last Doc card was deleted).
- * - Otherwise — an incomplete pass, or only transient (`other`) failures —
- *   nothing is known, and the previous value stands.
+ * - Otherwise — an incomplete pass, or any transient (`other`) failure among
+ *   the pulls — some Doc went unchecked, and the previous value stands.
  */
 export function nextDocsApiDiagnosis(input: {
   previous: DocsApiDiagnosis | null;
@@ -105,8 +105,7 @@ export function nextDocsApiDiagnosis(input: {
       since: previous?.since ?? now.toISOString(),
     };
   }
-  if (outcomes.some((outcome) => outcome.ok)) return null;
-  if (outcomes.length === 0 && passComplete) return null;
+  if (passComplete && outcomes.every((outcome) => outcome.ok)) return null;
   return previous;
 }
 
@@ -138,16 +137,31 @@ export async function recordDocsApiDiagnosis(
   }
 }
 
+/** The open problem as a reader shows it. */
+export interface DocsApiProblem extends DocsApiDiagnosis {
+  /**
+   * The Google grant needs reauthorizing, so Drive is paused: the diagnosis
+   * describes its last sync. It stays shown (no dismissal), worded for that.
+   */
+  drivePaused: boolean;
+}
+
 /**
  * The open problem as the boxholder should see it: null while Drive is not
- * enabled for this box, Google is not connected, or the grant needs
- * reauthorizing (the `google-auth` check covers that, and Drive is paused).
- * Those states end Drive syncing at once, before any pass could clear the file.
+ * enabled for this box or Google is disconnected. Those end Drive syncing at
+ * once, before any pass could clear the file. A grant that needs
+ * reauthorizing only pauses Drive, so the problem stays, marked `drivePaused`.
  * Throws {@link DocsApiStatusInvalidError} for a damaged file.
  */
-export async function readDocsApiDiagnosis(boxRoot: string): Promise<DocsApiDiagnosis | null> {
+export async function readDocsApiDiagnosis(boxRoot: string): Promise<DocsApiProblem | null> {
   if (!(await isGoogleServiceAllowed(boxRoot, "drive"))) return null;
   const auth = await readGoogleAuthStatus(boxRoot);
-  if (!auth.connected || auth.needsReauthSince !== null) return null;
-  return loadDocsApiDiagnosis(boxRoot);
+  if (!auth.connected) return null;
+  const diagnosis = await loadDocsApiDiagnosis(boxRoot);
+  return diagnosis === null ? null : { ...diagnosis, drivePaused: auth.needsReauthSince !== null };
+}
+
+/** The reader's one-line lead: what Drive is doing now. */
+export function docsApiProblemLead(problem: DocsApiProblem): string {
+  return problem.drivePaused ? "Google Drive (paused until Google is re-authorized; at its last sync)" : "Google Drive";
 }

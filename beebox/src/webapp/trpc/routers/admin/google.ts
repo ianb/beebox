@@ -16,18 +16,24 @@ import { loadBoxConfig } from "../../../../core/box/config.js";
 import { baseServerUrl } from "../../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../../lib/public-url.js";
 import { getBoxDir } from "../../../../lib/paths/core.js";
-import { readDocsApiDiagnosis } from "../../../../connectors/google-drive/docs-api-status.js";
+import { docsApiProblemLead, readDocsApiDiagnosis } from "../../../../connectors/google-drive/docs-api-status.js";
 import { errorMessage } from "../../../../shared/error-guards.js";
 
 /**
- * The open Docs API problem for the settings Drive line, or null. A damaged
- * status file must not break the settings page; the `google-docs-api` health
- * check already reports it.
+ * The open Docs API problem for the settings Drive line, or null. The page
+ * renders `link` as its own control, so a message that ends with the link
+ * drops it there and the URL shows once. A damaged status file must not break
+ * the settings page; the `google-docs-api` health check already reports it.
  */
 async function driveDocsApi(boxRoot: string): Promise<{ message: string; link: string | null } | null> {
   try {
     const diagnosis = await readDocsApiDiagnosis(boxRoot);
-    return diagnosis === null ? null : { message: diagnosis.message, link: diagnosis.link };
+    if (diagnosis === null) return null;
+    const { link } = diagnosis;
+    const text = link !== null && diagnosis.message.endsWith(link)
+      ? `${diagnosis.message.slice(0, -link.length).replace(/[\s:]+$/, "")}.`
+      : diagnosis.message;
+    return { message: `${docsApiProblemLead(diagnosis)}: ${text}`, link };
   } catch (e) {
     console.error(`[admin] could not read the Google Docs API status for ${boxRoot}: ${errorMessage(e)}`);
     return null;

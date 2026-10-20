@@ -126,7 +126,7 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
             </div>
             {status.driveDocsApi !== null ? (
               <div id="bbx-admin-google-drive-docs-api" className="mt-2 p-3 bg-warning-50 border border-warning-light rounded text-sm text-warning-dark space-y-1">
-                <p>Drive: {status.driveDocsApi.message}</p>
+                <p>{status.driveDocsApi.message}</p>
                 {status.driveDocsApi.link !== null ? (
                   <ExternalLink id="bbx-admin-google-drive-enable-docs-api" href={status.driveDocsApi.link}>
                     Enable the Docs API

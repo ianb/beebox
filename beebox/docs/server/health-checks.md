@@ -233,15 +233,16 @@ link) or a grant without `documents.readonly` — the Doc still syncs, without
 revision tracking or the `lossy:` check. The Drive connector folds each pass's
 outcomes into one diagnosis in `_bookkeeping/connectors/google-docs-api.state.json`
 (`connectors/google-drive/docs-api-status.ts`): a fixable failure opens it; a
-pull that reaches the API, or a complete pass with no Doc cards, clears it; a
-pass with failures or a folder cap, or only transient failures, leaves it as it
-was. On-demand syncs (`bbx drive mount`, `bbx drive add`, Settings "Sync now")
+complete pass whose every Doc pull reached the API (or that found no Doc cards)
+clears it; a pass with failures, a folder cap, or any transient failure leaves
+it as it was. On-demand syncs (`bbx drive mount`, `bbx drive add`, Settings "Sync now")
 do not write it; the next connector pass does.
 
 The check is one `google-docs-api` warning with the fix. There is no dismissal:
 it lasts until the API answers or Drive stops syncing. Every reader hides it at
-once when Drive is disabled for the box, Google is disconnected, or the grant
-needs reauthorizing. The same diagnosis is the Drive line in the Google settings
+once when Drive is disabled for the box or Google is disconnected. While the
+grant needs reauthorizing, Drive is paused and the warning stays, worded as its
+last sync. The same diagnosis is the Drive line in the Google settings
 section, and on the first send of each chat session it rides in the `<chat-app
 health>` attribute so the agent mentions it. A file that fails its schema shows
 as the warning's text and is never reset.

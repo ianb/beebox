@@ -45,8 +45,9 @@ void test("The Drive line follows the stored diagnosis, and Drive being off hide
     docs: 1,
     since: "2026-10-20T12:00:00.000Z",
   }));
+  // The link is its own control on the page, so the text drops it: the URL shows once.
   t.check(await driveLine(), {
-    message: "1 Google Doc is syncing without revision tracking or lossy-content details: the Google Docs API is disabled: https://enable",
+    message: "Google Drive: 1 Google Doc is syncing without revision tracking or lossy-content details: the Google Docs API is disabled.",
     link: "https://enable",
   });
 

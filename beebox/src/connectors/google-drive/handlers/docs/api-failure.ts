@@ -73,8 +73,10 @@ export function describeGoogleFailure(google: GoogleApiError): DocsApiFailure {
     return {
       kind: "scope-insufficient",
       message:
-        "the Google token lacks the documents.readonly scope. " +
-        "Run 'bbx engine google-auth' to grant it.",
+        // The boxholder reads this (health, settings, `bbx drive inspect`):
+        // the settings Re-authorize button is their path, not an operator command.
+        "the Google sign-in lacks the documents.readonly scope. " +
+        "Re-authorize Google in Settings, under Google services, to grant it.",
       link: null,
     };
   }

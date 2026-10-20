@@ -79,7 +79,7 @@ No decision depends on an external premise. Google's `ErrorInfo` reasons were ve
 - **Docs API outcome** (new, `api-failure.ts`): `{ok: true} | {ok: false; failure: DocsApiFailure}`, one `getDocument` call in `pull()`.
 - **`DocsApiFailure.link`** (new field): the enable or library URL for `service-disabled`; null otherwise.
 - **Docs API diagnosis** (new, `connectors/google-drive/docs-api-status.ts`): `{kind, message, link, docs: number, since: datetime} | null`. It is stored as `{version: 1, diagnosis}`. It is the box's open Docs API problem; it is not a per-file record and not an episode.
-- **`readDocsApiDiagnosis(boxRoot)`**: the one reader. It returns null when Drive is not allowed, Google is not connected, or the grant needs reauthorization (the `google-auth` check already covers that case).
+- **`readDocsApiDiagnosis(boxRoot)`**: the one reader. It returns null when Drive is not allowed or Google is not connected. While the grant needs reauthorization it keeps the problem, marked `drivePaused` (implementation review: no dismissal means reauth must not hide it).
 
 ## Tracks / scope
 
@@ -87,9 +87,8 @@ No decision depends on an external premise. Google's `ErrorInfo` reasons were ve
 
 - **What:** `tryGetDocument` returns `{doc, outcome}`. `push()`'s conflict check uses only `.doc` (`handler.ts:396`), so push outcomes are never collected; the pull that follows is the evidence. `PullResult` gains an optional `docsApi` (Docs handler only). `syncDriveFile` takes a required `docsApiOutcomes: DocsApiOutcome[]` and pushes the pull's outcome into it. `createFolderSyncDeps` takes the same array and passes it to `syncFile`, so the live-card loop and folder discovery feed one collector per pass. `FolderSyncResult` gains `capped: boolean`, set when a non-cycle refusal left part of the tree unmirrored (`folder-sync.ts:160-162`) and passed up from nested folders. At the end of `syncUnderLock`, the pure function `nextDocsApiDiagnosis({previous, outcomes, passComplete: failures.length === 0 && !capped, now})` decides:
   - any fixable failure gives `on`: the first `service-disabled` failure is preferred, `docs` is the count, and `since` is kept from `previous`;
-  - else any `ok` gives null;
-  - else an empty collector on a complete pass gives null (no live Docs remain);
-  - else the previous value is kept (an incomplete pass, or only `other` failures).
+  - else a complete pass whose every outcome is `ok` gives null, including an empty collector (no live Docs remain);
+  - else the previous value is kept (an incomplete pass, or any `other` failure). (Implementation review: a success on an incomplete pass, or beside a transient failure, does not clear.)
 
   The connector writes the file only when the value changes. Its skip branches (`connector.ts:86-99`) also write null.
 - **On-demand syncs do not write** (adjudicated, round 2). `bbx drive mount`, Settings "Sync now" (`mount-sync.ts:41-66`) and `bbx drive add` (`add-file.ts:124`, a direct `pull()`) discard their outcomes. The delay is accepted: the next scheduled connector pass pulls every Doc card, which writes or clears the diagnosis. So a first on-demand sync shows its warning after one connector interval, and a successful retry clears an old warning after the same interval. No new writers.

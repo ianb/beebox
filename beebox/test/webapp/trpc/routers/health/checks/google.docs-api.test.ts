@@ -14,7 +14,7 @@ import { mkdtemp } from "node:fs/promises";
 import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 import { googleDocsApiHealthChecks } from "../../../../../../src/webapp/trpc/routers/health/checks/google.js";
 import { recordDocsApiDiagnosis } from "../../../../../../src/connectors/google-drive/docs-api-status.js";
-import { saveGoogleTokens } from "../../../../../../src/google/token-store.js";
+import { markGoogleAuthDead, saveGoogleTokens } from "../../../../../../src/google/token-store.js";
 
 process.env.BBX_GOOGLE_TOKENS_FILE = path.join(await mkdtemp(path.join(os.tmpdir(), "health-docs-api-")), "google-tokens.json");
 
@@ -41,9 +41,20 @@ void test("An open Docs API problem is one warning; none without it; a damaged f
   }]);
 
   // Drive turned off: the warning goes at once, with no sync in between.
+  // (Checked before the reauth case below, which is permanent for this file.)
   await box.write("_config/box.json", JSON.stringify({ googleServices: { drive: false } }));
   t.check(await googleDocsApiHealthChecks(box.root), []);
   await box.write("_config/box.json", JSON.stringify({ googleServices: { drive: true } }));
+
+  // A grant that needs reauthorizing pauses Drive; the warning stays, worded
+  // for the last sync.
+  await markGoogleAuthDead({ reason: "invalid_grant" });
+  t.check(await googleDocsApiHealthChecks(box.root), [{
+    name: "google-docs-api",
+    ok: false,
+    message: "Google Drive (paused until Google is re-authorized; at its last sync): 2 Google Docs are syncing without revision tracking or lossy-content details: the Google Docs API is disabled: https://enable",
+    severity: "warning",
+  }]);
 
   await box.write("_bookkeeping/connectors/google-docs-api.state.json", "{\"version\": 2}");
   t.check(await googleDocsApiHealthChecks(box.root), [{

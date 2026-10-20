@@ -77,7 +77,7 @@ void test("a missing scope keeps the reauthorize advice", async (t) => {
   })));
   t.check(failure, {
     kind: "scope-insufficient",
-    message: "the Google token lacks the documents.readonly scope. Run 'bbx engine google-auth' to grant it.",
+    message: "the Google sign-in lacks the documents.readonly scope. Re-authorize Google in Settings, under Google services, to grant it.",
     link: null,
   });
 });
