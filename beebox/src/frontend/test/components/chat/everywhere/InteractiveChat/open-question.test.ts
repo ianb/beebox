@@ -24,7 +24,7 @@ void test("The newest pending question by asked-at is chosen; invalid pending ca
   const items = [
     card("A", { askedAt: "2026-10-20T10:00:00Z", memo: "Why I ask." }),
     card("B", { askedAt: "2026-10-19T10:00:00Z" }),
-    card("Broken", { invalid: true, prompt: undefined, inputType: undefined }),
+    card("Broken", { invalid: true, prompt: undefined, inputType: undefined, state: undefined }),
     card("Done", { state: "answered", askedAt: "2026-10-21T10:00:00Z" }),
   ];
   t.check(pickOpenQuestion(items), {
@@ -33,6 +33,7 @@ void test("The newest pending question by asked-at is chosen; invalid pending ca
     memo: "Why I ask.",
     inputType: "text",
     options: [],
+    optionsBeyond: 0,
     more: 2,
   });
   // Without asked-at, the later path wins, and a blank memo is no memo.
@@ -41,19 +42,26 @@ void test("The newest pending question by asked-at is chosen; invalid pending ca
   // Nothing pending, or only a broken pending card: nothing to ask.
   t.check(pickOpenQuestion([card("Done", { state: "answered" })]), null);
   t.check(pickOpenQuestion([card("Broken", { invalid: true, prompt: undefined })]), null);
+  // Past six options the line keeps six and says how many more the Questions page holds.
+  const many = pickOpenQuestion([card("Pick", { inputType: "select", options: ["A", "B", "C", "D", "E", "F", "G", "H"] })]);
+  t.check({ options: many?.options, beyond: many?.optionsBeyond }, { options: ["A", "B", "C", "D", "E", "F"], beyond: 2 });
 });
 
 void test("A select question lists its options in the line; the count reads 'and N more'", async (t) => {
   t.check({
-    select: openQuestionLine({ prompt: "Where do receipts go?", inputType: "select", options: ["Finance", "Personal"] }),
-    one: openQuestionLine({ prompt: "Where do receipts go?", inputType: "select", options: ["Finance"] }),
-    text: openQuestionLine({ prompt: "What do you want to keep track of here?", inputType: "text", options: [] }),
-    confirm: openQuestionLine({ prompt: "Is the stove back?", inputType: "confirm", options: [] }),
+    select: openQuestionLine({ prompt: "Where do receipts go?", inputType: "select", options: ["Finance", "Personal", "Taxes"], optionsBeyond: 0 }),
+    two: openQuestionLine({ prompt: "Where do receipts go?", inputType: "select", options: ["Finance", "Personal"], optionsBeyond: 0 }),
+    one: openQuestionLine({ prompt: "Where do receipts go?", inputType: "select", options: ["Finance"], optionsBeyond: 0 }),
+    many: openQuestionLine({ prompt: "Which room?", inputType: "select", options: ["A", "B", "C", "D", "E", "F"], optionsBeyond: 2 }),
+    text: openQuestionLine({ prompt: "What do you want to keep track of here?", inputType: "text", options: [], optionsBeyond: 0 }),
+    confirm: openQuestionLine({ prompt: "Is the stove back?", inputType: "confirm", options: [], optionsBeyond: 0 }),
     none: moreQuestionsLabel(0),
     some: moreQuestionsLabel(38),
   }, {
-    select: "Where do receipts go? Finance, Personal, or something else?",
-    one: "Where do receipts go? Finance or something else?",
+    select: "Where do receipts go? Finance, Personal, or Taxes?",
+    two: "Where do receipts go? Finance or Personal?",
+    one: "Where do receipts go? Finance?",
+    many: "Which room? A, B, C, D, E, F, or one of 2 more?",
     text: "What do you want to keep track of here?",
     confirm: "Is the stove back?",
     none: null,

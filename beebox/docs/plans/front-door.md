@@ -629,6 +629,46 @@ filesystem root. Evaluated-only; no acknowledgement entry.
   case, and the place-chat quiet case. The removal of the stock summary is
   the first commit, so the tree never carries both.
 
+- **As implemented (2026-10-20).** Commits `5b4f34771` (stock summary out)
+  and `6bfcaa16b` (the question-based front door), plus the review fixes
+  below. Deviations from the direction above, each with its reason:
+  - The chat prompt section "An open question in this chat" is five
+    sentences: the always-loaded context budget
+    (`core/agent-guide/ledger.yaml`, `always_loaded_words: 10880`, checked by
+    `test/core/agent-guide/lint.test.ts`) had 92 words of headroom. The
+    rules the prompt does not carry live where the agent reads them with the
+    card: the question schema's instructions (`schemas/question.ts`,
+    `answered-via`) carry the select label, yes/no, shared-chat attribution,
+    and answer-from-briefing rules; the root question's own `directive:`
+    carries "reflect it back, then offer two or three things for *that*,
+    nothing about what the box can do before this". An existing box's other
+    pending questions get no ideas step, which is right.
+  - The seed lives in `core/box/structure/root-question.ts` (a new module
+    beside `defaults.ts`, which is at its size limit) under a fixed filename,
+    `what-to-keep-track-of.question.card`; the once-only rule is "no
+    `.question.card` in the box", checked on fresh init only.
+  - A select question lists at most six options; past that the line ends
+    "or one of N more" and an "All the choices" action opens the Questions
+    page. The line offers no "or something else": `bbx answer` records only
+    an option's label for a select card, so that choice could not be
+    recorded.
+  - An invalid card counts toward "and N more" when the scan found no
+    `state` for it (a card that failed to load has none).
+  - "and N more" opens the Questions page through `workspace.open`, the way
+    the chat opens any card beside itself; `useOpenBeside` returns null
+    outside a workspace pane, which the chat shell is.
+  - The root chat refreshes `status.questions` on the bus events the
+    Questions page watches (`question-answered`, `question-dismissed`,
+    `question-expired`, `card-created`, `file-change`), so the agent's
+    `bbx answer --via chat` stops the send field and the empty-state line
+    without that page being mounted; the prompt also says to ignore an
+    already answered card.
+  - `core/triage/decisions/confirm.ts` parses `answered-via` with its own
+    enum; it gains `chat` so a triage question answered from the chat still
+    applies its correction.
+  - One rule for narration: a `narration="on"` message never answers a card
+    (the edge case below said "when it clearly answers"; the prompt wins).
+
 ### Track B — Root arrival always opens the root page
 
 - **What.** `arrivalTarget` returns the landmark card when `relDir === ""`.
@@ -865,9 +905,9 @@ are accepted with the reason beside them.
   the truth; if it is not an answer, it does not mark the card and replies
   to what was said. The question shows again next time.
 - **Narration on** (`narration="on"`): the open question is still shown, but
-  the agent's reply follows the narration rule (silent by default,
-  `prompts.ts:200`); it marks the card when the narration clearly answers
-  it, else leaves it.
+  the agent never answers a card from a narration message (the person is
+  thinking aloud, `prompts.ts:200`); the question shows again next time and
+  a later reply answers it.
 - **Validation error UX:** `createLandmarkTemplate({ body })` produces a card
   the landmark schema already accepts (body is free markdown). ADDRESSED.
 - **Transition state:** boxes created before this plan have no stock body
@@ -1121,7 +1161,14 @@ disposable copy of the clone): `front-door-stock-summary` and
 run answered first, then offered "a page that shows what's out" in one
 sentence and said it would ask, not build; its first run failed only on a
 too-narrow "does not build" pattern, loosened after reading the transcript.
-`front-door-answer-in-chat` has not run yet.
+`front-door-answer-in-chat`, 2026-10-20 (Claude, the same kind of copy):
+passes with no file reads. The agent wrote the purpose into the briefing as
+a quoted `user-stated` fact, put the same words on the Box page, committed,
+then ran `bbx answer … --via chat` last and said a chat answer creates no
+follow-up job; its reply reflected the answer and offered three lending
+ideas. Its first run failed only on a negative pattern that matched that
+very sentence ("doesn't create a follow-up job"); the pattern now requires a
+verb of creation.
 
 ## What will hold this after it ships
 

@@ -2,8 +2,10 @@
 //
 // The chat system prompt tells the agent what `open-question` on the snapshot
 // means (the section is the attribute's documentation) and the order of operations when a message answers a pending card:
-// directive and learning first, `bbx answer --via chat` last, ideas only after
-// hearing (docs/plans/front-door.md, Track A). This pins the rule's presence
+// directive and learning first, `bbx answer --via chat` last, an unrelated
+// message leaves the card pending (docs/plans/front-door.md, Track A). The
+// onboarding step of offering ideas after hearing rides on the root question's
+// directive, not here, so the always-loaded prompt stays within its budget. This pins the rule's presence
 // and its two anchors, the attribute and the command, so a prompt edit that
 // drops either fails here rather than in a box.
 
@@ -19,12 +21,14 @@ void test("The chat prompt explains open-question and the answer order", async (
     order: sentence(/answering is the last step/),
     noJob: sentence(/a chat answer writes no follow-up job/),
     narration: sentence(/Never answer a card from a `narration="on"` message/),
-    ideasAfter: sentence(/Nothing about what the box can do before you have heard them\./),
+    unrelated: sentence(/If it is about something else, reply to it and leave the card pending/),
+    answered: sentence(/if the card is already answered, ignore the attribute/),
   }, {
     command: '`bbx answer <path> --via chat "<their words>"`',
     order: "answering is the last step",
     noJob: "a chat answer writes no follow-up job",
     narration: 'Never answer a card from a `narration="on"` message',
-    ideasAfter: "Nothing about what the box can do before you have heard them.",
+    unrelated: "If it is about something else, reply to it and leave the card pending",
+    answered: "if the card is already answered, ignore the attribute",
   });
 });

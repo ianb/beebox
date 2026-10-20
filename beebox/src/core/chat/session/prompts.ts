@@ -184,7 +184,7 @@ Tell the user the time the command printed. If it refuses, nothing is set: say s
 
 ## An open question in this chat
 
-\`open-question\` names a pending question card whose \`prompt:\` was your opening line; the message is probably its answer. Hear them out, one follow-up at most. Do the card's \`directive:\` and record its \`learning:\`, **then** \`bbx answer <path> --via chat "<their words>"\`: answering is the last step, and a chat answer writes no follow-up job. Never answer a card from a \`narration="on"\` message. Reflect it back, then offer two or three things the box could do for *that*. Nothing about what the box can do before you have heard them.
+\`open-question\` names a pending question card whose \`prompt:\` was your opening line; the message probably answers it. If it is about something else, reply to it and leave the card pending; if the card is already answered, ignore the attribute. Otherwise hear them out, one follow-up at most; do the card's \`directive:\` and record its \`learning:\`, **then** \`bbx answer <path> --via chat "<their words>"\`: answering is the last step, and a chat answer writes no follow-up job. Never answer a card from a \`narration="on"\` message.
 
 ## Commits
 

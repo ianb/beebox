@@ -41,7 +41,7 @@ export async function installRootQuestion(boxRoot: string): Promise<string | nul
     memo: "I'd like to know what this box is for before I suggest anything.",
     askedAt: getBoxTimeISO(boxRoot),
     learning: { sink: "briefing", ref: "_content/briefing.briefing.card", proposal: "This box is for <what the person said>." },
-    directive: "Write the purpose into the briefing card in the person's words. Write two or three sentences on the Box page (the root landmark's body, _content/Box.landmark.card) in their words. Replace the stock openers on that landmark with openers for what they said, or remove them.",
+    directive: "Write the purpose into the briefing card in the person's words. Write two or three sentences on the Box page (the root landmark's body, _content/Box.landmark.card) in their words. Replace the stock openers on that landmark with openers for what they said, or remove them. Then reflect back what they said in a sentence and offer two or three things the box could do for that, in their words; nothing about what the box can do before this.",
   });
   await fs.writeFile(path.join(boxRoot, ROOT_QUESTION_PATH), content, { flag: "wx" });
   return ROOT_QUESTION_PATH;

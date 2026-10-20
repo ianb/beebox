@@ -165,3 +165,46 @@ Reviewer: codex gpt-6-sol, effort high, 134 s. Prompt:
 
 Seeding one question for a new box as the fit for the boxholder's
 direction; the fresh-box schedule facts; the agent-audience `bbx answer`.
+
+
+# Implementation review — the revised Track A (2026-10-20)
+
+Codex (gpt-6-sol, high) reviewed commits `5b4f34771` and `6bfcaa16b` against
+the plan, tracing every `openQuestion` hop, `bbx answer --via chat`, the
+seed, the empty state, the stock-summary removal, the lint-size packing, and
+the budget-trimmed prompt (`scratch/cross-model/front-door-trackA.prompt.md`,
+answer `scratch/cross-model/2026-10-20T11-51-36-436Z-codex.md`).
+
+## Findings and adjudication
+
+1. **Blocker: an answered question stays attached to later sends.** The chat
+   shell queried `status.questions` but refreshed it only after its own "Not
+   now"; the bus invalidation lived in the Questions page. Accepted: the root
+   chat subscribes to the same bus events, and the prompt says to ignore an
+   already answered card.
+2. **Blocker: an unrelated message could be treated as the answer.** The
+   prompt said the message is "probably" the answer and gave the procedure,
+   without the plan's rule for a message about something else. Accepted:
+   "If it is about something else, reply to it and leave the card pending."
+3. **Blocker: chat answers broke triage correction.** `confirm.ts` parsed
+   `answered-via` with an enum of `web` and `cli`. Accepted; `chat` added.
+4. **"and N more" was inert.** `useOpenBeside` is null outside a workspace
+   pane. Accepted (fixed during the review): the shell opens the Questions
+   page with `workspace.open`, as the chat opens any card.
+5. **Invalid cards could vanish from the count.** A card that failed to load
+   has no `state`. Accepted: an invalid card with no state counts.
+6. **No limit on a long select list.** Accepted: six options in the line,
+   then "or one of N more" and an "All the choices" action.
+7. **"Something else" could not be recorded.** Accepted: the choice is gone
+   from the line.
+8. **Narration rule conflicted with the plan's edge case.** Accepted: the
+   plan's edge case now matches the prompt (never from narration).
+
+## Things the reviewer checked and found clean
+
+Every client and server `openQuestion` hop, streaming and queued; the native
+path with the field absent; `--via chat` commits the card alone; the seed on
+fresh init only; root-only and unstarted-only showing with the query kept
+on; no stock-summary references in runtime code; the repair path; the
+lint-size packing (no behavioral effect; a named props type and a separate
+hook would remove it); the budget check and where the trimmed rules live.

@@ -115,8 +115,8 @@ export interface ChatBodyProps {
   openQuestion: OpenQuestion | null;
   /** "Not now" on the shown question: dismisses the card (`actions.dismiss`). */
   onQuestionNotNow: (path: string) => void;
-  /** Open the Questions page beside the chat ("and N more"); null where nothing can open beside. */
-  onOpenQuestions: (() => void) | null;
+  /** Open the Questions page beside the chat ("and N more"). */
+  onOpenQuestions: () => void;
   /** Put the cursor in the composer: clicking the question is an invitation to answer it. */
   onFocusComposer: () => void;
   /** The conversation was created for this tab and has no committed turn (`ResolvedConversation.unstarted`). */

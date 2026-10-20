@@ -62,6 +62,7 @@ const ROOT_QUESTION: OpenQuestion = {
   memo: "I'd like to know what this box is for before I suggest anything.",
   inputType: "text",
   options: [],
+  optionsBeyond: 0,
   more: 0,
 };
 
@@ -91,10 +92,10 @@ void test("A new box's empty root chat asks its one question", async (t) => {
 // memo line when the card has none, and "and N more" opens the Questions page.
 void test("A select question lists its options; 'and N more' opens the Questions page", async (t) => {
   const log: string[] = [];
-  const view = await mountEmpty(emptyChat({ openQuestion: { path: "_bookkeeping/questions/Receipt.question.card", prompt: "Where do receipts go?", memo: null, inputType: "select", options: ["Finance", "Personal"], more: 38 }, log }));
+  const view = await mountEmpty(emptyChat({ openQuestion: { path: "_bookkeeping/questions/Receipt.question.card", prompt: "Where do receipts go?", memo: null, inputType: "select", options: ["Finance", "Personal"], optionsBeyond: 0, more: 38 }, log }));
   t.teardown(() => view.unmount());
   t.check(shown(view.container), {
-    question: ["Where do receipts go? Finance, Personal, or something else?", "and 38 more · Not now", "and 38 more", "Not now"],
+    question: ["Where do receipts go? Finance or Personal?", "and 38 more · Not now", "and 38 more", "Not now"],
     openers: [],
     label: "Start a conversation.",
   });

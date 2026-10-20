@@ -146,8 +146,9 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
 /**
  * The question the empty root chat asks, as the agent's opening line
  * (docs/plans/front-door.md, Track A): the prompt (a select question lists its
- * options in the sentence), the card's memo under it in the quiet style, then
- * "and N more" to the Questions page and a quiet "Not now". Clicking the line
+ * options in the sentence, "All the choices" when it has more than fit), the
+ * card's memo under it in the quiet style, then "and N more" to the Questions
+ * page and a quiet "Not now". Clicking the line
  * puts the cursor in the composer, whose placeholder is the prompt. Text for
  * every input type: the person answers by typing or speaking.
  */
@@ -155,7 +156,7 @@ function OpenQuestionLine({ question, onFocusComposer, onNotNow, onOpenQuestions
   question: OpenQuestion;
   onFocusComposer: () => void;
   onNotNow: (path: string) => void;
-  onOpenQuestions: (() => void) | null;
+  onOpenQuestions: () => void;
 }) {
   const more = moreQuestionsLabel(question.more);
   return (
@@ -165,8 +166,8 @@ function OpenQuestionLine({ question, onFocusComposer, onNotNow, onOpenQuestions
       </button>
       {question.memo === null ? null : <p className="text-warm-600 text-sm">{question.memo}</p>}
       <p className="text-warm-500 text-sm">
-        {more === null || onOpenQuestions === null ? null : <><InlineAction intent="subtle" onClick={onOpenQuestions}>{more}</InlineAction>{" · "}</>}
-        {more !== null && onOpenQuestions === null ? <>{more}{" · "}</> : null}
+        {question.optionsBeyond > 0 ? <><InlineAction intent="subtle" onClick={onOpenQuestions}>All the choices</InlineAction>{" · "}</> : null}
+        {more === null ? null : <><InlineAction intent="subtle" onClick={onOpenQuestions}>{more}</InlineAction>{" · "}</>}
         <InlineAction intent="subtle" onClick={() => onNotNow(question.path)}>Not now</InlineAction>
       </p>
     </div>
@@ -180,7 +181,7 @@ function EmptyChat({ openers, onSendOpener, openQuestion, onFocusComposer, onQue
   openQuestion: OpenQuestion | null;
   onFocusComposer: () => void;
   onQuestionNotNow: (path: string) => void;
-  onOpenQuestions: (() => void) | null;
+  onOpenQuestions: () => void;
 }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
@@ -240,7 +241,7 @@ function MessageListInner({
   onSendOpener: (text: string) => OpenerSendOutcome;
   /** The pending question the empty root chat asks; null elsewhere (see `OpenQuestionLine`). */
   openQuestion: OpenQuestion | null;
-  onFocusComposer: () => void; onQuestionNotNow: (path: string) => void; onOpenQuestions: (() => void) | null;
+  onFocusComposer: () => void; onQuestionNotNow: (path: string) => void; onOpenQuestions: () => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   // Also gated on the retained-window ceiling: past it the machine drops what
