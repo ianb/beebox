@@ -7,6 +7,10 @@ export const NAVIGATION_SCRIPT = `
   const base = document.body.dataset.siteBase;
   const page = () => document.querySelector('#site-workspace');
   if (!base || !page()) return;
+  // One player at a time: starting one pauses the others.
+  document.addEventListener('play', event => {
+    for (const audio of document.querySelectorAll('audio')) if (audio !== event.target) audio.pause();
+  }, true);
   const visited = new Set();
   const offsets = new Map();
   const entries = new Map();

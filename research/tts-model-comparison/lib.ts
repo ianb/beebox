@@ -57,6 +57,8 @@ const clipSchema = z.strictObject({
   title: z.string(),
   listenFor: z.string(),
   text: z.string(),
+  /** How the non-English words sound, in English spelling, with a gloss. */
+  pronounce: z.string().optional(),
   direction: directionSchema.optional(),
 });
 export type Clip = z.infer<typeof clipSchema>;
@@ -88,7 +90,11 @@ const renderSchema = z.strictObject({
   costUsd: z.number().optional(),
   /** True when costUsd is list price × characters, not a billed amount. */
   costEstimated: z.boolean().optional(),
-  /** Only the first successful take of each model/clip/variant is transcribed. */
+  /**
+   * Only the first successful take of each model/clip/variant is transcribed.
+   * The page shows only leakedWords: the other differences were mostly the
+   * transcriber's (numbers as digits, foreign phrases respelled).
+   */
   transcript: z.string().optional(),
   extraWords: z.array(z.string()).optional(),
   leakedWords: z.array(z.string()).optional(),

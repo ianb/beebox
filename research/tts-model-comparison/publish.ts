@@ -3,12 +3,16 @@
  * site/assets/tts-comparison/, then write the page card from
  * page-template.md and results.json.
  *
+ * The page plays one take per model, clip, and variant: for a clip read
+ * several times, the take closest to the median length. Only those takes are
+ * published; the rest stay in results.json and the original audio.
+ *
  *   node --import tsx research/tts-model-comparison/publish.ts [--prune]
  *
  * A take whose .webm is already newer than its source is not transcoded
  * again, and one whose source is missing keeps its .webm, so the page can be
  * regenerated on a machine without the original audio. --prune deletes .webm
- * files no render names; without it they are listed and the run fails.
+ * files the page does not play; without it they are listed and the run fails.
  */
 
 import { execFileSync } from "node:child_process";
@@ -27,16 +31,36 @@ import {
   type Results,
   SITE_AUDIO_DIR,
   TEMPLATE_PATH,
+  VARIANTS,
 } from "./lib.ts";
 
 /** Mono Opus at 32 kbit/s: clean speech at about 4 KB per second. */
 const OPUS_ARGS = ["-vn", "-ac", "1", "-c:a", "libopus", "-b:a", "32k", "-map_metadata", "-1", "-fflags", "+bitexact", "-flags:a", "+bitexact"];
 
-function transcode(results: Results): { made: number; kept: number } {
+/** Of several takes, the successful one closest to the median length. */
+function representative(takes: readonly Render[]): Render | undefined {
+  const done = takes.filter((r) => r.file !== undefined).toSorted((a, b) => (a.audioSec ?? 0) - (b.audioSec ?? 0) || a.repeat - b.repeat);
+  return done[Math.floor((done.length - 1) / 2)];
+}
+
+/** The takes the page plays, by group of model, clip, and variant. */
+function shown(results: Results): Render[] {
+  const groups = new Map<string, Render[]>();
+  for (const r of results.renders) {
+    const key = `${r.model}__${r.clip}__${r.variant}`;
+    groups.set(key, [...(groups.get(key) ?? []), r]);
+  }
+  return [...groups.values()].flatMap((takes) => {
+    const take = representative(takes);
+    return take === undefined ? [] : [take];
+  });
+}
+
+function transcode(takes: readonly Render[]): { made: number; kept: number } {
   mkdirSync(SITE_AUDIO_DIR, { recursive: true });
   let made = 0;
   let kept = 0;
-  for (const r of results.renders) {
+  for (const r of takes) {
     if (r.file === undefined) continue;
     const source = join(audioDir(), r.file);
     const target = join(SITE_AUDIO_DIR, publishedName(r.file));
@@ -52,8 +76,8 @@ function transcode(results: Results): { made: number; kept: number } {
   return { made, kept };
 }
 
-function orphans(results: Results): string[] {
-  const named = new Set(results.renders.flatMap((r) => (r.file === undefined ? [] : [publishedName(r.file)])));
+function orphans(takes: readonly Render[]): string[] {
+  const named = new Set(takes.flatMap((r) => (r.file === undefined ? [] : [publishedName(r.file)])));
   return readdirSync(SITE_AUDIO_DIR).filter((f) => !named.has(f));
 }
 
@@ -89,16 +113,31 @@ function modelsSection(results: Results): string {
     .join("\n");
 }
 
-function check(r: Render): string {
-  if (r.file === undefined) return `The request failed (${r.error ?? `status ${r.status}`}).`;
-  if (r.transcript === undefined) return "Not transcribed.";
-  const parts: string[] = [];
-  const quote = (ws: readonly string[]) => ws.map((w) => `“${w}”`).join(", ");
-  if (r.leakedWords?.length) parts.push(`Direction words in the transcript: ${quote(r.leakedWords)}.`);
-  const extra = (r.extraWords ?? []).filter((w) => !(r.leakedWords ?? []).includes(w));
-  if (r.missingWords?.length) parts.push(`Missing from the transcript: ${quote(r.missingWords)}.`);
-  if (extra.length) parts.push(`In the transcript, not the text: ${quote(extra)}.`);
-  return parts.length === 0 ? "The transcript matches the text." : parts.join(" ");
+function failure(r: Render): string {
+  if (r.error?.startsWith("TimeoutError") === true) return "timed out";
+  return r.error ?? `status ${r.status}`;
+}
+
+/** Direction the transcript shows was read aloud, or nothing. */
+function leak(r: Render): string {
+  if (!r.leakedWords?.length) return "";
+  return ` **Read direction aloud:** ${r.leakedWords.map((w) => `“${w}”`).join(", ")}.`;
+}
+
+/** Backslash-escape text so Markdoc shows it literally. */
+function literal(text: string): string {
+  return text.replace(/[\\`*_[\]{}<>#|]/g, "\\$&");
+}
+
+/** The sent request fields as a blockquote, one field per line. */
+function sentQuote(sent: string): string {
+  return sent
+    .split(" | ")
+    .map((field) => {
+      const colon = field.indexOf(": ");
+      return colon === -1 ? `> ${literal(field)}` : `> **${literal(field.slice(0, colon))}:** ${literal(field.slice(colon + 2))}`;
+    })
+    .join("\n>\n");
 }
 
 function player(r: Render): string {
@@ -107,35 +146,88 @@ function player(r: Render): string {
 
 const VARIANT_LABEL = { plain: "Plain", directed: "Directed", markup: "Markup" } as const;
 
+/** How several takes of one text varied, and which one plays. */
+function takesNote(takes: readonly Render[]): string {
+  const done = takes.filter((r) => r.file !== undefined);
+  const failed = takes.filter((r) => r.file === undefined);
+  const parts: string[] = [];
+  if (done.length > 1) {
+    const secs = done.map((r) => r.audioSec ?? 0);
+    parts.push(`Middle-length take of ${done.length}; they ran ${Math.min(...secs).toFixed(1)}–${Math.max(...secs).toFixed(1)} s.`);
+  }
+  if (failed.length > 0) parts.push(`${failed.length} of ${takes.length} takes failed (${[...new Set(failed.map(failure))].join("; ")}).`);
+  return parts.join(" ");
+}
+
+/** One take, or why there is none. */
+function take(takes: readonly Render[]): { note: string; render?: Render } {
+  const r = representative(takes);
+  if (r === undefined) return { note: `The request failed (${[...new Set(takes.map(failure))].join("; ")}).` };
+  const note = [takes.length > 1 ? takesNote(takes) : "", leak(r).trim()].filter(Boolean).join(" ");
+  return { note, render: r };
+}
+
 /** One list item: a model's takes of one clip. */
 function modelTakes(model: Model, renders: readonly Render[]): string {
   const blocks: string[] = [];
-  const plain = renders.filter((r) => r.variant === "plain");
-  if (plain.length > 1) {
-    blocks.push(`${pill(model)} **Plain**, ${plain.length} takes.`);
-    for (const r of plain) blocks.push(`Take ${r.repeat + 1}. ${check(r)}\n${player(r)}`);
-  } else if (plain[0] !== undefined) {
-    blocks.push(`${pill(model)} **Plain.** ${check(plain[0])}\n${player(plain[0])}`);
-  }
-  for (const r of renders.filter((x) => x.variant !== "plain")) {
+  for (const variant of VARIANTS) {
+    const takes = renders.filter((r) => r.variant === variant);
+    if (takes.length === 0) continue;
+    const { note, render } = take(takes);
     const lead = blocks.length === 0 ? `${pill(model)} ` : "";
-    blocks.push(`${lead}**${VARIANT_LABEL[r.variant]}**, ${r.channel}. ${check(r)}`);
-    if (r.sent !== undefined) blocks.push(`\`\`\`\n${r.sent}\n\`\`\``);
-    blocks.push(player(r));
+    const channel = variant === "plain" ? "" : `, ${takes[0]?.channel ?? ""}`;
+    blocks.push(`${lead}${variant === "plain" ? "**Plain.**" : `**${VARIANT_LABEL[variant]}**${channel}.`}${note === "" ? "" : ` ${note}`}`);
+    const sent = (render ?? takes[0])?.sent;
+    if (sent !== undefined) blocks.push(sentQuote(sent));
+    if (render !== undefined) blocks.push(player(render));
   }
-  return `- ${blocks.filter((b) => b !== "").join("\n\n").replace(/\n/g, "\n  ").replace(/\n {2}\n/g, "\n\n")}`;
+  return `- ${indent(blocks.filter((b) => b !== "").join("\n\n"))}`;
 }
 
 function clipSection(results: Results, clip: Clip): string {
   const number = clip.id.split("-")[0] ?? clip.id;
   const spec = [`**Text:** ${clip.text}`, `**Listen for:** ${clip.listenFor}`];
-  if (clip.direction !== undefined) spec.push(`**Direction, as prose:** ${clip.direction.prose}.`);
+  if (clip.pronounce !== undefined) spec.push(`**Roughly how it sounds:** ${clip.pronounce}`);
+  spec.push(clip.direction === undefined ? "**Direction:** none; every model read it plain." : `**Direction, as prose:** ${clip.direction.prose}.`);
   const lines = [`### ${clip.title}`, "", `{% sample title="Clip ${number} · ${clip.title}" %}`, spec.join("\n\n"), "{% /sample %}", ""];
   for (const model of results.models) {
     const renders = results.renders.filter((r) => r.model === model.id && r.clip === clip.id);
     if (renders.length > 0) lines.push(modelTakes(model, renders), "");
   }
   return lines.join("\n").trimEnd();
+}
+
+/** Every take in which the transcript shows direction read aloud. */
+function leaksSection(results: Results): string {
+  const leaked = results.renders.filter((r) => r.leakedWords?.length);
+  const models = new Map(results.models.map((m) => [m.id, m]));
+  const clips = new Map(results.clips.map((c) => [c.id, c]));
+  return leaked
+    .map((r) => {
+      const model = models.get(r.model);
+      const clip = clips.get(r.clip);
+      if (model === undefined || clip === undefined) throw new Error(`render of ${r.model} ${r.clip} has no model or clip`);
+      const head = `${pill(model)} [${clip.title}](#${slug(clip.title)}), **${VARIANT_LABEL[r.variant]}**, ${r.channel}.${leak(r)}`;
+      const blocks = [head, ...(r.sent === undefined ? [] : [sentQuote(r.sent)]), player(r)].filter((b) => b !== "");
+      return `- ${indent(blocks.join("\n\n"))}`;
+    })
+    .join("\n");
+}
+
+/** The id site/workspace-model.ts headingIds() gives a heading. */
+function slug(heading: string): string {
+  return heading.toLowerCase().replace(/[^\da-z]+/g, "-").replace(/^-|-$/g, "");
+}
+
+/** A contents list of the page's second- and third-level headings. */
+function contents(page: string): string {
+  return [...page.matchAll(/^(#{2,3}) (.+)$/gm)]
+    .map(([, hashes = "", title = ""]) => `${hashes.length === 3 ? "  " : ""}- [${title}](#${slug(title)})`)
+    .join("\n");
+}
+
+function indent(text: string): string {
+  return text.replace(/\n/g, "\n  ").replace(/\n {2}\n/g, "\n\n");
 }
 
 function fillTemplate(template: string, sections: Record<string, string>): string {
@@ -153,17 +245,22 @@ function fillTemplate(template: string, sections: Record<string, string>): strin
 function main(): void {
   const { values } = parseArgs({ options: { prune: { type: "boolean", default: false } } });
   const results = loadResults();
-  const { made, kept } = transcode(results);
-  const extra = orphans(results);
+  const takes = shown(results);
+  const { made, kept } = transcode(takes);
+  const extra = orphans(takes);
   if (extra.length > 0 && !values.prune) {
     throw new Error(`files no render names (rerun with --prune to delete):\n  ${extra.join("\n  ")}`);
   }
   for (const f of extra) unlinkSync(join(SITE_AUDIO_DIR, f));
-  const card = fillTemplate(readFileSync(TEMPLATE_PATH, "utf8"), {
+  const template = readFileSync(TEMPLATE_PATH, "utf8");
+  const sections = {
     models: modelsSection(results),
+    leaks: leaksSection(results),
     clips: results.clips.map((c) => clipSection(results, c)).join("\n\n"),
-  });
-  writeFileSync(CARD_PATH, card);
+  };
+  // The contents list is made from the headings of the filled page.
+  const headings = fillTemplate(template, { ...sections, contents: "" });
+  writeFileSync(CARD_PATH, fillTemplate(template, { ...sections, contents: contents(headings) }));
   const bytes = readdirSync(SITE_AUDIO_DIR).reduce((sum, f) => sum + statSync(join(SITE_AUDIO_DIR, f)).size, 0);
   console.log(
     `publish: ${made} transcoded, ${kept} up to date, ${extra.length} pruned; ${(bytes / 1e6).toFixed(1)} MB in ${relative(REPO_ROOT, SITE_AUDIO_DIR)}; wrote ${relative(REPO_ROOT, CARD_PATH)}`,

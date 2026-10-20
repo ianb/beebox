@@ -16,7 +16,7 @@ import { parseArgs } from "node:util";
 import { audioDir, type Clip, loadResults, type Model, type Render, saveResults, secret, transcriptCheck } from "./lib.ts";
 
 /** Takes of the pacing clip; other clips get one per variant. */
-const PACING_REPEATS = 5;
+const PACING_REPEATS = 3;
 
 interface Direction {
   /** How direction reaches the model, shown on the page. */
