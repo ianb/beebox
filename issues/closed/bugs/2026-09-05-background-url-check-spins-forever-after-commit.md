@@ -18,7 +18,9 @@ discovered-in: main session — "where is memory going?"
 > prints "Another URL check is running for this box", and exits 0. The lock
 > also serializes the verdict cache's read-modify-write. A spinning holder
 > stops refreshing the lock, so it goes stale after five minutes and the alarm
-> kills the holder at ten.
+> kills the holder at ten. So up to two spinning checks can overlap for five
+> minutes. Accepted: closing that needs a third lock stale profile or a
+> shorter alarm, and the spin is no longer reached from the test suite.
 >
 > Fix 2, the root cause of the deleted-cwd spin, was not pursued: with the
 > outside bound and the guard, a spinning check is bounded in time and in

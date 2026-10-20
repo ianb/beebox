@@ -195,10 +195,9 @@ const docsHandler: DriveTypeHandler = {
   cardType: "gdoc",
 
   async inspect(file: DriveFile, service: GoogleDriveService): Promise<InspectResult> {
-    const [doc, comments] = await Promise.all([
-      requireDocument(service, file),
-      service.listComments(file.id),
-    ]);
+    // In turn, so a Docs API failure (the boxholder's to fix) wins over a comments one.
+    const doc = await requireDocument(service, file);
+    const comments = await service.listComments(file.id);
     // Comments aren't lossy — they're captured to a sidecar on sync. Report
     // the count separately so the preview can mention it accurately.
     const lossy = tallyLossyFromDocument(doc);

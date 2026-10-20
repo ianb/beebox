@@ -9,7 +9,7 @@ discovered-in: worktree-journey-walks-oct — B-inventory journey walk, 2026-10-
 resolution: implemented
 ---
 
-Closed by this workstream's fix commit: journey run directories (walker notes, shots, before/after JSON) moved from `beebox/test/user-stories/work/journeys/` to `user-stories-work/journeys/` at the monorepo root, outside `beebox/`, so the box's `node_modules/beebox` link no longer reaches them. `JOURNEY_WORK` in `beebox/test/user-stories/journeys/provisioning.ts` names the path, and a test checks it stays outside `beebox/`. The rest of the dev tree under `beebox/` is still readable through that link; [cross-box filesystem isolation](../../features/2026-09-04-cross-box-filesystem-isolation.md) tracks that.
+Closed by `027bb6473`: journey run directories (walker notes, shots, before/after JSON) moved from `beebox/test/user-stories/work/journeys/` to `user-stories-work/journeys/` at the monorepo root, outside `beebox/`, so the box's `node_modules/beebox` link no longer reaches them. `JOURNEY_WORK` in `beebox/test/user-stories/journeys/provisioning.ts` names the path, and a test checks it stays outside `beebox/`. The rest of the dev tree under `beebox/` is still readable through that link; [cross-box filesystem isolation](../../features/2026-09-04-cross-box-filesystem-isolation.md) tracks that.
 
 The journey box's `node_modules/beebox` links into the dev worktree's
 `beebox/` directory. That directory holds `beebox/test/user-stories/work/`

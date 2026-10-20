@@ -14,7 +14,7 @@ labels: [sdk-update]
 > now sends the system prompt and timezone context on every run, resumes
 > included. The prompt is also carried inside the agent: an invoke that omits
 > `systemPrompt` reuses the agent's last explicit one, the way the model is
-> already carried (`beebox/src/core/agent/invoke/model-carry.ts`). This covers
+> already carried (`beebox/src/core/agent/model-carry.ts`). This covers
 > the commit-nudge retry in `ensureAgentCommitted`. The procedure review retry
 > (`retryRunAgent`) is a new agent object resuming the first pass's session,
 > so it rebuilds and passes the step's system prompt. The Codex agent got the

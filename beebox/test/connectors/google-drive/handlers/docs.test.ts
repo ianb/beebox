@@ -509,6 +509,9 @@ void test("inspect() turns a SERVICE_DISABLED 403 into a diagnosed DocsApiUnavai
     });
     throw new Error("unreachable: the request above fails");
   };
+  // The comments request fails too, and first: the Docs diagnosis still wins,
+  // because it is the failure the boxholder can act on.
+  drive.listComments = () => Promise.reject(new Error("comments request failed"));
 
   const file = await drive.getFile("doc-8");
   await t.checkThrows(

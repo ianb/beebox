@@ -9,7 +9,7 @@ labels: [worktrees, data-loss]
 priority: normal
 ---
 
-**Closed 2026-10-20:** fixed by this workstream's fix commit, which takes the
+**Closed 2026-10-20:** fixed by `144367fdd`, which takes the
 first direction below. When `.beebox/events.db` carries an event-schema
 generation newer than the engine's, `createEventBus` throws
 `NewerEventSchemaError` (box written by a newer engine; this engine is older;
@@ -23,6 +23,13 @@ wiping each other. The other two directions (a cross-process lock on the box,
 engine-identity tagging of `.beebox/` state) were not implemented. Two engines
 with the SAME generation sharing a box remain unguarded, as
 `boxes-as-packages-v2.md` accepted.
+
+Residual (cross-model review, codex gpt-6-sol): the read-only check runs
+before startup kills the previous server, but nothing serializes the two
+engines. If a newer engine starts serving the box between an older engine's
+check and its kill, the older engine kills it and then refuses at
+`createEventBus`, leaving the box with no server. No data is lost. Closing it
+needs cross-process takeover coordination, which is the boxholder's decision.
 
 `event-bus.ts` opens `.beebox/events.db` and reconciles against an
 in-process `EVENT_SCHEMA_GENERATION` constant (`event-bus.ts:47-51`), **dropping

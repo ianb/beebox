@@ -9,7 +9,7 @@ priority: important
 resolution: implemented
 ---
 
-Fixed in this workstream's fix commit (bug-burndown-4, 2026-10-20). Box audits
+Fixed in `3b784c975` (bug-burndown-4, 2026-10-20). Box audits
 now run through `runBoxAudits` (`beebox/src/dev/lib/box-audits.ts`). Before each
 audit it checks the box is clean, regenerates docs, and passes that audit's own
 setup status to `runTest`. The CLI still refuses a dirty box once at start.
