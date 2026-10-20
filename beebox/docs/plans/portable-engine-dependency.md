@@ -96,7 +96,7 @@ asks the public registry for `beebox`, a name anyone can register.
   (`ln -sfn`, then check usable) and `verify <box>` (after install:
   `node_modules/beebox/package.json` names `beebox` and `node_modules/.bin/bbx`
   exists). The one check every shell install path runs.
-- **Portable spec**: `link:.beebox/engine`, constant `ENGINE_LINK_SPEC` in `src/lib/box-identity.ts`.
+- **Portable spec**: `link:.beebox/engine`, constant `ENGINE_LINK_SPEC` in `src/core/box/engine-link.ts`.
 - `BBX_INIT_BEEBOX_SPEC` stays the explicit pin for release smoke tests (tarballs).
 
 ## Tracks / scope

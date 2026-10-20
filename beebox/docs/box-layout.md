@@ -60,6 +60,19 @@ v2→v3 migration was deleted on 2026-09-14 once the v2 population reached zero,
 so a v2 box can only come from an old backup and cannot be opened. See
 `docs/implemented-plans/one-root-box-layout.md` for that history.
 
+The `beebox` dependency is `"link:.beebox/engine"`, the same value on every
+machine. `.beebox/engine` is a gitignored symlink to the engine this machine
+runs the box with: `bbx init` points it at the running engine, deploy at
+`/opt/beebox/beebox`, worktree setup at the worktree's `beebox/`, and the
+docker entrypoint at `/app/node_modules/beebox`. Each install path runs
+`bin/box-engine-link` to make the link before `pnpm install` and to check
+`node_modules/beebox` after. A clone needs the link before its first install
+(`ln -sfn <engine checkout>/beebox .beebox/engine`); without it `pnpm install`
+succeeds with no usable engine, and the `engine-link` health check names the
+repair. The `engine-link-spec-2026-10` migration converted the older
+machine-local `link:` specs; a pinned engine (a `file:` tarball) is left as
+it is. See `docs/plans/portable-engine-dependency.md`.
+
 `getBoxShape` recognizes a box when `<root>/package.json` declares a `beebox`
 dependency beside `<root>/_config/` and records `shapeVersion: 3` (or, during
 the transition, `<root>/.beebox/box.json` does). A box with neither record is
@@ -71,7 +84,7 @@ says which the engine writes, which the box owns, and when each is refreshed.
 
 ```
 <box-root>/                        THE box root — one root, closed vocabulary
-├── package.json                   { "dependencies": { "beebox": "^x.y.z" } }, private
+├── package.json                   { "dependencies": { "beebox": "link:.beebox/engine" } }, private
 ├── pnpm-lock.yaml, tsconfig.json  npm namespace
 ├── node_modules/                  gitignored; beebox resolves here
 ├── .git/                          git repository
@@ -150,6 +163,7 @@ completion signal, and `tmp-upload/` must not accumulate either. Plan:
 
 | File | Purpose |
 |------|---------|
+| `.beebox/engine` | Gitignored symlink to this machine's engine; the `beebox` dependency links through it (see above). |
 | `.beebox/box.json` | Transitional, gitignored shape marker (`shapeVersion`, `created`). Read only when `package.json` has no `beebox` block; see above. |
 | `.bbx-reactor.lock` | Reactor lock. JSON with `pid` and `startedAt`. Removed on clean exit. |
 | `.bbx-serve.pid` | Web-server PID file when `bbx serve` is running. |
