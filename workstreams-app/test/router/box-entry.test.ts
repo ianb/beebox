@@ -45,6 +45,25 @@ test("v3 one-root box: the entry is the box and carries its own name", async () 
   }
 });
 
+test("migrated or cloned one-root box (no marker): the entry is the box and carries its own name", async () => {
+  // After box-shape-record-2026-10 a box's shape lives in its tracked
+  // package.json, and a clone has no gitignored .beebox/box.json at all. The
+  // router reads no package.json; the no-marker fallback already resolves the
+  // entry to itself, and this pins that.
+  const dir = await makeFixtureDir();
+  try {
+    const boxRoot = path.join(dir, "test1");
+    await fs.mkdir(path.join(boxRoot, "_config"), { recursive: true });
+    await fs.writeFile(path.join(boxRoot, "package.json"),
+      JSON.stringify({ dependencies: { beebox: "*" }, beebox: { shapeVersion: 3, created: "2026-01-01T00:00:00.000Z" } }));
+    const resolved = await resolveBoxEntry(boxRoot);
+    assert.equal(resolved.contentDir, boxRoot);
+    assert.equal(resolved.slug, "test1");
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test("v2 content dir passed directly: slug comes from the package root basename", async () => {
   const dir = await makeFixtureDir();
   try {

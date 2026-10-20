@@ -151,13 +151,9 @@ ENV DISABLE_AUTOUPDATER=1
 # Docling's PyTorch: the CPU build. A container has no GPU, and the default
 # CUDA build makes the uv cache 5.9 GB instead of 1.4 GB.
 ENV UV_TORCH_BACKEND=cpu
-# Pin the box's beebox dependency to the baked-in tarball. `bbx init`
-# only defaults to `link:<checkout>` for a SOURCE checkout; an installed
-# engine (under node_modules, as here) would fall back to a bare `^version`
-# range that 404s (src/core/box/package.ts defaultBeeBoxSpec), so the
-# box-local `pnpm install` must be told to use the tarball — same as
-# src/scripts/smoke-external-box.ts does.
-ENV BBX_INIT_BEEBOX_SPEC=file:/app/beebox.tgz
+# A box's beebox dependency is the portable `link:.beebox/engine`; the
+# entrypoint points that gitignored link at /app/node_modules/beebox on every
+# start. Boxes made before this keep their `file:/app/beebox.tgz` pin.
 
 USER node
 WORKDIR /app

@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# The engine-link check every shell install path runs around a box's
+# `pnpm install` (deploy, worktree setup, the docker entrypoint).
+#
+# A box commits `"beebox": "link:.beebox/engine"`; `.beebox/engine` is a
+# gitignored symlink to this machine's engine. pnpm accepts a missing or dead
+# link and exits 0 with no usable engine, so the caller checks both sides:
+#
+#   box-engine-link link <box> <engine>   point <box>/.beebox/engine at <engine>
+#                                         (an engine package outside the box)
+#   box-engine-link verify <box>          a completed install: node_modules/beebox
+#                                         is an engine, .bin/bbx exists, and every
+#                                         declared dependency is present
+#
+# Each prints one line naming the box and the problem and exits 1 on failure.
+# The TypeScript side of the same rule is src/core/box/engine-link.ts.
+set -euo pipefail
+
+usage() {
+  echo "usage: box-engine-link link <box> <engine> | verify <box>" >&2
+  exit 2
+}
+
+# The real path of $1 when it is an engine package (package.json named beebox).
+engine_real() {
+  node -e '
+    const fs = require("fs"), path = require("path");
+    let real;
+    try { real = fs.realpathSync(process.argv[1]); } catch { process.exit(1); }
+    let pkg;
+    try { pkg = JSON.parse(fs.readFileSync(path.join(real, "package.json"), "utf8")); } catch { process.exit(1); }
+    if (pkg === null || pkg.name !== "beebox") process.exit(1);
+    console.log(real);
+  ' "$1"
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  link)
+    [[ $# -eq 3 ]] || usage
+    box="$2" engine="$3"
+    if ! real=$(engine_real "$engine"); then
+      echo "box-engine-link: $box: $engine is not a beebox engine package; not linking." >&2
+      exit 1
+    fi
+    box_real=$(cd "$box" && pwd -P)
+    case "$real/" in
+      "$box_real"/*)
+        echo "box-engine-link: $box: $engine is inside the box; the next install could remove it." >&2
+        exit 1 ;;
+    esac
+    mkdir -p "$box/.beebox"
+    ln -sfn "$engine" "$box/.beebox/engine"
+    if ! engine_real "$box/.beebox/engine" >/dev/null; then
+      echo "box-engine-link: $box: .beebox/engine does not resolve after linking." >&2
+      exit 1
+    fi
+    ;;
+  verify)
+    [[ $# -eq 2 ]] || usage
+    box="$2"
+    # A completed install: node_modules/beebox is an engine (through the
+    # engine link when the box declares the portable spec), .bin/bbx exists,
+    # and every declared dependency is present. Install paths also use this
+    # to decide whether an install is needed (a fresh `bbx engine init` makes
+    # node_modules/beebox and nothing else).
+    if ! problem=$(node -e '
+      const fs = require("fs"), path = require("path");
+      const box = process.argv[1], nm = path.join(box, "node_modules");
+      const pkg = JSON.parse(fs.readFileSync(path.join(box, "package.json"), "utf8"));
+      const fail = (m) => { console.log(m); process.exit(1); };
+      let engine;
+      try { engine = JSON.parse(fs.readFileSync(path.join(nm, "beebox", "package.json"), "utf8")); } catch { engine = null; }
+      if (engine === null || engine.name !== "beebox") fail("node_modules/beebox is not a beebox engine after install.");
+      const spec = (pkg.dependencies || {}).beebox ?? (pkg.devDependencies || {}).beebox;
+      if (spec === "link:.beebox/engine") {
+        let target = null;
+        try { target = fs.readlinkSync(path.join(nm, "beebox")); } catch {}
+        if (target !== "../.beebox/engine") fail("node_modules/beebox does not go through .beebox/engine; rerun pnpm install.");
+      }
+      try { fs.accessSync(path.join(nm, ".bin", "bbx"), fs.constants.X_OK); } catch { fail("node_modules/.bin/bbx is missing after install; rerun pnpm install with .beebox/engine in place."); }
+      const missing = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })
+        .filter((d) => !fs.existsSync(path.join(nm, d, "package.json")));
+      if (missing.length > 0) fail("declared dependencies are not installed: " + missing.join(", ") + ".");
+    ' "$box"); then
+      echo "box-engine-link: $box: $problem" >&2
+      exit 1
+    fi
+    ;;
+  *) usage ;;
+esac

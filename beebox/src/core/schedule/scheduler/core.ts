@@ -9,7 +9,7 @@ import { withBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { BOX_MARKER } from "../../../lib/paths/core.js";
+import { isBoxRoot } from "../../../lib/box-identity.js";
 import { runTick, type TickResult } from "../../../cli/commands/tick.js";
 import { getStatus, isRepo } from "../../../lib/git/core/operations.js";
 import { drainBoxGitLocks, GIT_DRAIN_MS } from "../../../lib/git-lock.js";
@@ -43,16 +43,23 @@ export async function loadSchedulerConfig(): Promise<SchedulerConfig> {
 }
 
 /**
- * Validate that a path is a box (has .beebox/box.json marker).
+ * Validate that a path is a box: a `package.json` declaring `beebox` beside
+ * `_config/` (`isBoxRoot`). A broken `package.json` there throws.
  */
 export async function isBox(boxPath: string): Promise<boolean> {
+  return isBoxRoot(boxPath);
+}
+
+/**
+ * `isBox` for one entry of a list: a check that throws (an unparseable
+ * `package.json` beside `_config/`) becomes that entry's problem, so the
+ * listing goes on to the next box. Returns null for a box.
+ */
+export async function boxEntryProblem(boxPath: string): Promise<string | null> {
   try {
-    await fs.access(path.join(boxPath, BOX_MARKER));
-    return true;
-  } catch (_e) {
-    // access() throwing is the expected "not a box" signal (marker absent or
-    // unreadable); the boolean return IS how we report it, no info to log.
-    return false;
+    return (await isBoxRoot(boxPath)) ? null : "not a box: needs package.json declaring beebox and _config/";
+  } catch (e) {
+    return errorMessage(e);
   }
 }
 
@@ -188,7 +195,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
         currentPass = withBoxWork({ boxRoot: boxPath, reason: "scheduler pass" }, async () => {
           try {
             if (!(await isBox(boxPath))) {
-              console.error(`[${new Date().toISOString()}] ${boxPath}: not a valid box (missing ${BOX_MARKER})`);
+              console.error(`[${new Date().toISOString()}] ${boxPath}: not a valid box (needs package.json declaring beebox and _config/)`);
               return;
             }
 

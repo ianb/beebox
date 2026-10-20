@@ -13,6 +13,7 @@ import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import { scaffoldBoxRoot } from "../../src/core/box/package.js";
+import { BOX_MARKER, setShapeBlock } from "../../src/lib/box-identity.js";
 import { AGENTS_MD_MIGRATION } from "../../src/core/agent-instruction-files.js";
 import { MANIFEST_PATH, MIGRATIONS } from "../../src/core/migrations.js";
 import { annexNewBox } from "../../src/core/annex/new-box.js";
@@ -162,4 +163,42 @@ export function bodyField(body: unknown, ...path: Array<string | number>): unkno
     value = Reflect.get(value, key);
   }
   return value;
+}
+
+/**
+ * Write the tracked files that make `root` a box by identity and record its
+ * shape (`src/lib/box-identity.ts`): a `package.json` declaring `beebox` with a
+ * `beebox` block, and `_config/`. For fixtures that need a box without the
+ * cost of `makeTmpBox`'s scaffold. `shapeVersion: null` omits the block.
+ */
+export async function writeBoxFiles(
+  root: string,
+  opts?: { shapeVersion?: number | null; created?: string; name?: string }
+): Promise<void> {
+  const shapeVersion = opts?.shapeVersion === undefined ? 3 : opts.shapeVersion;
+  const pkg = {
+    name: opts?.name ?? "fixture-box",
+    dependencies: { beebox: "*" },
+    ...(shapeVersion === null ? {} : { beebox: { shapeVersion, created: opts?.created ?? "2026-01-01T00:00:00.000Z" } }),
+  };
+  await mkdir(join(root, "_config"), { recursive: true });
+  await writeFile(join(root, "package.json"), JSON.stringify(pkg, null, 2) + "\n");
+}
+
+/**
+ * Make `root` record its shape only in the fallback marker, as a box from
+ * before `box-shape-record-2026-10` does: drop the `package.json` block and
+ * write `markerText` (verbatim) to `.beebox/box.json`. `null` deletes the
+ * marker too, leaving no record at all (an uninitialized package).
+ */
+export async function useMarkerOnly(root: string, markerText: string | null): Promise<void> {
+  const pkgPath = join(root, "package.json");
+  await writeFile(pkgPath, setShapeBlock(await readFile(pkgPath, "utf-8"), null));
+  const markerPath = join(root, BOX_MARKER);
+  if (markerText === null) {
+    await rm(markerPath, { force: true });
+    return;
+  }
+  await mkdir(dirname(markerPath), { recursive: true });
+  await writeFile(markerPath, markerText);
 }

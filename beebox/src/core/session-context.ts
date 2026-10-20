@@ -24,6 +24,7 @@ import {
   summarizeScheduleHealth,
 } from "./schedule/health-box.js";
 import { computeTodoAmbientLine } from "./todo/ambient-summary.js";
+import { docsApiChatLine, readDocsApiDiagnosis } from "../connectors/google-drive/docs-api-status.js";
 
 function phaseOfDay(hour: number): string {
   if (hour >= 5 && hour < 12) return "morning";
@@ -262,6 +263,22 @@ export async function buildSnapshotContext(
       if (admit && health !== null) out.health = health;
     } catch (e) {
       console.warn(`[session-context] schedule health summary failed: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
+  // The open Drive problem rides on the first send of each chat session, apart
+  // from the schedule-health gate (boxholder decision, 2026-10-20: the agent
+  // introduces it at chat start). Drive only; other box checks stay in
+  // `bbx health`.
+  if (sessionStart) {
+    try {
+      const problem = await readDocsApiDiagnosis(boxRoot);
+      if (problem !== null) {
+        const line = docsApiChatLine(problem);
+        out.health = out.health === undefined ? line : `${out.health}; ${line}`;
+      }
+    } catch (e) {
+      console.warn(`[session-context] Google Docs API status read failed: ${e instanceof Error ? e.message : e}`);
     }
   }
 

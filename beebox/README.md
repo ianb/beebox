@@ -47,9 +47,9 @@ use itself.
 
 ```
 my-box/                    the box: one root, also its npm package and git repo
-├── .beebox/box.json        marker (shapeVersion 3) and generated agent guide
+├── .beebox/                generated agent guide and runtime state (gitignored)
 ├── AGENTS.md               the agent's instructions; includes the agent guide
-├── package.json            declares a "beebox" dependency; private
+├── package.json            declares a "beebox" dependency; its "beebox" block records the shape (shapeVersion 3)
 ├── node_modules/           gitignored; also holds the engine's reference docs
 ├── src/
 │   ├── schemas/            box-local card-type definitions (optional)

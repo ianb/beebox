@@ -10,6 +10,7 @@ import * as path from "node:path";
 import { installTemplateFile, listParkedTemplateUpdates } from "../../src/core/install-template-file.js";
 import { readTemplateUpdate, resolveTemplateUpdate, recordAutomatedTemplateRewrite } from "../../src/core/template-update.js";
 import { templateCommand } from "../../src/cli/commands/template.js";
+import { writeBoxFiles } from "../helpers/test-helpers.js";
 
 const boxes: string[] = [];
 async function box() {
@@ -162,8 +163,7 @@ void test("The box-agent command displays the comparison and accepts the parked 
     }
   });
   const root = await box();
-  await fs.mkdir(path.join(root, ".beebox"));
-  await fs.writeFile(path.join(root, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
+  await writeBoxFiles(root);
   await seed(root);
   await write(root, v1.replace("local line", "box edit"));
   await installTemplateFile({ boxRoot: root, relPath: rel, templateContent: v1.replace("local line", "upstream edit") });

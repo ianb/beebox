@@ -1,16 +1,19 @@
 ---
 title: "The box marker lives in the gitignored `.beebox/`, so a clone of a box is not a box"
-workstream: unattached
+workstream: bug-burndown-4
 area: beebox
 priority: important
 labels: [box-shape, git]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-bug-burndown-4 — split from the rename/gitignore issue, 2026-10-20
+resolution: implemented
 ---
 
+**Closed:** Implemented per `beebox/docs/implemented-plans/box-shape-in-package-json.md` (c634cdd67, b5019ff09, 1c5e90e8a). Divergence from the recorded decision: the migration does not `git rm --cached` the marker and does not delete it; the boxholder chose to keep the file on disk for a month for rollback. `issues/deferred/2026-10-20-drop-box-marker-fallback.md` (activates 2026-11-20) deletes it with the fallback. Rollout prerequisite: a clone is recognized only after its source box is migrated.
+
 Split from
-[the rename/gitignore issue](../closed/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md),
+[the rename/gitignore issue](2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md),
 which carries the full history. The decision below was made there on
 2026-09-13 ("The marker decision"); this issue is its implementation.
 
@@ -23,7 +26,7 @@ the scheduler do not treat it as a box. `bbx init` on such a clone refuses
 with "already has a package.json". `bin/lib/worktree-create.sh` copies
 `box.json` into worktree clones to hide this; a hand-made disposable copy
 does not get one
-([knowledge-audit clone issue](../closed/bugs/2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md)).
+([knowledge-audit clone issue](2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md)).
 
 The marker's fields are not machine-local: `version: "1.0.0"` is a literal
 shown on the dashboard as "v1.0.0", `created` is the box's birth date, and
@@ -79,3 +82,12 @@ tracked-file write on a lazily invoked resolver path that autocommit sweeps.
 
 Verification must include a fresh `git clone` of a box being recognized as a
 box, as well as unit tests.
+
+> 2026-10-20 (bug-burndown-4): implemented on the worktree branch, not yet
+> merged; plan `beebox/docs/implemented-plans/box-shape-in-package-json.md`. When closing:
+> clone recognition holds only once the SOURCE box has run
+> `box-shape-record-2026-10` and committed it (production through the deploy
+> sweep, local boxes through `bbx engine migrate --sweep`). A clone made
+> before that gets `MissingShapeRecordError` with a recovery line. The marker
+> fallback and its removal are tracked in
+> `issues/deferred/2026-10-20-drop-box-marker-fallback.md`.

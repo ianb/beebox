@@ -9,11 +9,10 @@ import { mkdtemp, mkdir, readFile, readlink, writeFile } from "node:fs/promises"
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { generateAgentContextMirrors } from "../../src/core/agent-context-mirrors.js";
+import { writeBoxFiles } from "../helpers/test-helpers.js";
 
 const root = await mkdtemp(join(tmpdir(), "bbx-context-"));
-await mkdir(join(root, ".beebox"), { recursive: true });
-await writeFile(join(root, "package.json"), JSON.stringify({ dependencies: { "beebox": "*" } }));
-await writeFile(join(root, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
+await writeBoxFiles(root);
 await mkdir(join(root, ".claude/skills/calendar"), { recursive: true });
 await mkdir(join(root, ".claude/rules"), { recursive: true });
 await mkdir(join(root, "node_modules/beebox/plugins/beebox-codex/hooks"), { recursive: true });

@@ -45,6 +45,7 @@ void test("SERVICE_DISABLED uses Google's activation link", async (t) => {
       "the Google Docs API is disabled for the Google Cloud project the box's Google sign-in uses, " +
       "and reauthorizing will not fix that. Enable the API in Cloud Console, wait a few minutes, " +
       "and try again: https://console.developers.google.com/apis/api/docs.googleapis.com/overview?project=123456",
+    link: "https://console.developers.google.com/apis/api/docs.googleapis.com/overview?project=123456",
   });
 });
 
@@ -56,10 +57,12 @@ void test("SERVICE_DISABLED without a link builds one from the project, else the
   t.check(describeGoogleFailure(parseGoogleApiError(403, serviceDisabledBody({ consumer: "projects/987" }))), {
     kind: "service-disabled",
     message: lead + "https://console.developers.google.com/apis/api/docs.googleapis.com/overview?project=987",
+    link: "https://console.developers.google.com/apis/api/docs.googleapis.com/overview?project=987",
   });
   t.check(describeGoogleFailure(parseGoogleApiError(403, serviceDisabledBody({}))), {
     kind: "service-disabled",
     message: lead + "https://console.cloud.google.com/apis/library/docs.googleapis.com",
+    link: "https://console.cloud.google.com/apis/library/docs.googleapis.com",
   });
 });
 
@@ -74,7 +77,8 @@ void test("a missing scope keeps the reauthorize advice", async (t) => {
   })));
   t.check(failure, {
     kind: "scope-insufficient",
-    message: "the Google token lacks the documents.readonly scope. Run 'bbx engine google-auth' to grant it.",
+    message: "the Google sign-in lacks the documents.readonly scope. Re-authorize Google in Settings, under Google services, to grant it.",
+    link: null,
   });
 });
 
@@ -83,14 +87,14 @@ void test("other failures report status and Google's message, no scope advice", 
     await diagnoseDocsApiFailure(await kyFailure(404, JSON.stringify({
       error: { code: 404, message: "Requested entity was not found.", status: "NOT_FOUND" },
     }))),
-    { kind: "other", message: "Google answered HTTP 404: Requested entity was not found." },
+    { kind: "other", message: "Google answered HTTP 404: Requested entity was not found.", link: null },
   );
   t.check(
     await diagnoseDocsApiFailure(await kyFailure(500, "")),
-    { kind: "other", message: "Google answered HTTP 500" },
+    { kind: "other", message: "Google answered HTTP 500", link: null },
   );
   t.check(
     await diagnoseDocsApiFailure(new TypeError("fetch failed")),
-    { kind: "other", message: "fetch failed" },
+    { kind: "other", message: "fetch failed", link: null },
   );
 });

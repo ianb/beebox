@@ -1,16 +1,19 @@
 ---
 title: "In a new chat, a turn stream that drops before the session id arrives can leave the warning up"
-workstream: unattached
+workstream: bug-burndown-4
 area: beebox
 labels: [chat, ui-sensibility]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-error-severity — cross-model review of the chat status-bar severity change, 2026-10-17
 priority: normal
+resolution: implemented
 ---
 
+**Closed:** Fixed in f8a37022e, 93187d95f and 73bef8b7a. Accepted residual: the server keeps a turn's session id only in memory for 60 s after the turn finishes; a page that cannot refresh within that window, or a box restart, still shows the warning until the next send, dismiss or reload.
+
 Split from the
-[one-pink-bar issue](../closed/bugs/2026-08-25-one-pink-bar-three-severities.md)'s
+[one-pink-bar issue](2026-08-25-one-pink-bar-three-severities.md)'s
 residuals. Reported by the reviewer, not reproduced.
 
 In a new chat, if the live turn stream fails before the box assigns the

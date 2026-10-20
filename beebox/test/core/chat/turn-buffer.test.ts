@@ -116,3 +116,17 @@ void test("waitForChange resolves immediately once complete", async (t) => {
   await b.waitForChange(undefined, v);
   t.pass("resolved on complete");
 });
+
+// ## The turn's session id comes from its `system/init` frame
+//
+// `events.turnSession` reads it, so a new chat whose live view dropped before
+// init can still learn its id. It sits outside the ring: eviction keeps it.
+void test("The session id is null before init and recorded from it", async (t) => {
+  const b = new TurnBuffer("t9");
+  b.push(msg("stream_event"));
+  t.check(b.sessionId, null);
+  b.push({ type: "system", subtype: "init", session_id: "s-init" });
+  b.push(msgWithPayload(5 * 1024 * 1024));
+  b.push(msgWithPayload(5 * 1024 * 1024));
+  t.check({ sessionId: b.sessionId, initEvicted: b.hasGapAfter(2) }, { sessionId: "s-init", initEvicted: true });
+});

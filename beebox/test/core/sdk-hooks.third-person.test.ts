@@ -15,10 +15,10 @@ import { join } from "node:path";
 import type { HookJSONOutput } from "@anthropic-ai/claude-agent-sdk";
 import { cardValidatorHook } from "../../src/core/sdk-hooks.js";
 import { thirdPersonPhrases } from "../../src/core/card-lint/third-person.js";
+import { writeBoxFiles } from "../helpers/test-helpers.js";
 
 const box = await mkdtemp(join(tmpdir(), "third-person-"));
-await mkdir(join(box, ".beebox"), { recursive: true });
-await writeFile(join(box, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
+await writeBoxFiles(box);
 await mkdir(join(box, "_content"), { recursive: true });
 await mkdir(join(box, "_bookkeeping/jobs"), { recursive: true });
 const { hooks } = cardValidatorHook();

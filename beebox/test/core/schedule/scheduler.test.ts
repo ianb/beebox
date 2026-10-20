@@ -11,8 +11,8 @@ import * as path from "node:path";
 
 // ## isBox
 //
-// ### Directory with .beebox/box.json marker is a box
-void test("Directory with .beebox/box.json marker is a box", async (t) => {
+// ### A scaffolded box is a box (package.json declaring beebox beside _config/)
+void test("A scaffolded box is a box", async (t) => {
   t.teardown(async () => {
     try {
       await box.cleanup();
@@ -21,9 +21,6 @@ void test("Directory with .beebox/box.json marker is a box", async (t) => {
     }
   });
   const box = await makeTmpBox();
-  // Create the .beebox/box.json marker that isBox() looks for
-  await fs.mkdir(path.join(box.root, ".beebox"), { recursive: true });
-  await fs.writeFile(path.join(box.root, ".beebox/box.json"), "");
   const result = await isBox(box.root);
   t.check(result, true);
 });

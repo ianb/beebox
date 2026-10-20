@@ -200,7 +200,7 @@ program
     const engine = options.engine;
 
     // `--box` names a path at or below the box's one root; resolve to that
-    // root (where `.beebox/box.json`, cards, and AGENTS.md live) so
+    // root (where `package.json`, cards, and AGENTS.md live) so
     // docs generation and runTest target the box itself, and derive a stable ledger
     // identity. See resolveAuditBox. assertStandaloneBox verifies the git
     // repo is that same root.

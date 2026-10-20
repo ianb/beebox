@@ -10,13 +10,13 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { any, isoDate, not } from "@ianbicking/tap-check/check";
-import { strict as assert } from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { isValidBox, getBoxMetadata, initBox } from "../../src/core/box/structure/core.js";
+import { isValidBox, initBox } from "../../src/core/box/structure/core.js";
 import { scaffoldBoxRoot } from "../../src/core/box/package.js";
-import { findBoxRoot, BOX_MARKER } from "../../src/lib/paths/core.js";
+import { findBoxRoot } from "../../src/lib/paths/core.js";
+import { BOX_MARKER, readShapeRecord } from "../../src/lib/box-identity.js";
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), "bbx-test-"));
@@ -90,10 +90,17 @@ _content/todos
 _publish
 _tmp`);
 
-  // The box marker file contains version metadata:
+  // The shape is recorded in the tracked package.json, not in a marker under
+  // the gitignored state directory, so a clone of the box is a box:
 
-  const marker = JSON.parse(await fs.readFile(path.join(boxRoot, BOX_MARKER), "utf-8"));
-  t.check(marker, { version: "1.0.0", shapeVersion: 3, created: isoDate() });
+  const pkg = JSON.parse(await fs.readFile(path.join(boxRoot, "package.json"), "utf-8"));
+  t.check(pkg.beebox, { shapeVersion: 3, created: isoDate() });
+
+  // During the transition the gitignored marker is still written, in the shape
+  // older engines read, so a rollback or an older checkout's hook still sees a
+  // box. This engine reads the block.
+
+  t.check(JSON.parse(await fs.readFile(path.join(boxRoot, BOX_MARKER), "utf-8")), { version: "1.0.0", shapeVersion: 3, created: pkg.beebox.created });
 
   // A properly initialized directory is recognized as a valid box:
 
@@ -125,18 +132,15 @@ void test("findBoxRoot walks up from any subdirectory to find the nearest box ro
 
 // ## Metadata and idempotent initialization
 //
-// `getBoxMetadata` reads the marker file. Running `initBox` again preserves the original created timestamp:
-void test("getBoxMetadata reads the marker file.", async (t) => {
+// `readShapeRecord` reads the recorded shape. Running `initBox` again preserves the original created timestamp:
+void test("readShapeRecord reads the package.json block; re-init keeps it.", async (t) => {
   const tmp = await makeTmpDir();
   const { boxRoot } = await scaffoldBoxRoot(tmp);
-  const meta1 = await getBoxMetadata(boxRoot);
-  assert.ok(meta1);
-  t.check(meta1, { version: "1.0.0", created: isoDate() });
+  const record1 = await readShapeRecord(boxRoot);
+  t.check(record1, { shapeVersion: 3, created: isoDate(), source: "package" });
 
   await initBox(boxRoot, { skipGit: true });
-  const meta2 = await getBoxMetadata(boxRoot);
-  assert.ok(meta2);
-  t.check(meta2, meta1);
+  t.check(await readShapeRecord(boxRoot), record1);
 
   t.check(await isValidBox(boxRoot), true);
 });

@@ -146,8 +146,8 @@ export function defaultHubConfigPath(): string {
  * (e.g. a symlink) compare as different strings and both pass the check,
  * letting two `bbx serve` processes start against one box's `events.db`.
  *
- * Resolution failures (e.g. a misconfigured entry with no `.beebox/box.json`
- * anywhere) do NOT throw here -- `loadHubConfig` stays a load-time
+ * Resolution failures (e.g. a misconfigured entry that is not a box
+ * at all) do NOT throw here -- `loadHubConfig` stays a load-time
  * validator that a single bad entry shouldn't take down; a box that can't
  * resolve is reported "unhealthy" once the supervisor actually tries to
  * launch it (see `cli/commands/hub.ts`'s best-effort `boxEntries` handling).

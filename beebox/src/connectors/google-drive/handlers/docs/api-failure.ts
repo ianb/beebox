@@ -21,7 +21,12 @@ export interface DocsApiFailure {
   kind: DocsApiFailureKind;
   /** A complete sentence for the boxholder, without the file name. */
   message: string;
+  /** Where the boxholder fixes it (the Docs API enable page), when there is one place. */
+  link: string | null;
 }
+
+/** What one `getDocument` call in a pull found. */
+export type DocsApiOutcome = { ok: true } | { ok: false; failure: DocsApiFailure };
 
 const DOCS_API_LIBRARY_URL = "https://console.cloud.google.com/apis/library/docs.googleapis.com";
 
@@ -47,31 +52,36 @@ export function isBoxholderFixable(error: DocsApiUnavailableError): boolean {
 /** Classify a thrown `getDocument` failure. */
 export async function diagnoseDocsApiFailure(error: unknown): Promise<DocsApiFailure> {
   const google = await readGoogleApiError(error);
-  if (google === null) return { kind: "other", message: errorMessage(error) };
+  if (google === null) return { kind: "other", message: errorMessage(error), link: null };
   return describeGoogleFailure(google);
 }
 
 /** The diagnosis for a parsed Google error. Exported for tests. */
 export function describeGoogleFailure(google: GoogleApiError): DocsApiFailure {
   if (google.reason === "SERVICE_DISABLED") {
+    const link = activationLink(google);
     return {
       kind: "service-disabled",
       message:
         "the Google Docs API is disabled for the Google Cloud project the box's Google sign-in uses, " +
         "and reauthorizing will not fix that. Enable the API in Cloud Console, wait a few minutes, " +
-        `and try again: ${activationLink(google)}`,
+        `and try again: ${link}`,
+      link,
     };
   }
   if (isScopeInsufficient(google)) {
     return {
       kind: "scope-insufficient",
       message:
-        "the Google token lacks the documents.readonly scope. " +
-        "Run 'bbx engine google-auth' to grant it.",
+        // The boxholder reads this (health, settings, `bbx drive inspect`):
+        // the settings Re-authorize button is their path, not an operator command.
+        "the Google sign-in lacks the documents.readonly scope. " +
+        "Re-authorize Google in Settings, under Google services, to grant it.",
+      link: null,
     };
   }
   const said = google.message === null ? "" : `: ${google.message}`;
-  return { kind: "other", message: `Google answered HTTP ${String(google.httpStatus)}${said}` };
+  return { kind: "other", message: `Google answered HTTP ${String(google.httpStatus)}${said}`, link: null };
 }
 
 /**

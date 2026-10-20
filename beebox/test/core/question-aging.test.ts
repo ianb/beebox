@@ -26,7 +26,7 @@ import { generateContext } from "../../src/webapp/context.js";
 import { addSubscription } from "../../src/core/push-subscriptions.js";
 import { createFakePush } from "../../src/services/push.js";
 import { readRecent } from "../../src/core/notification/log.js";
-import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
 
 const storeDir = path.join(os.tmpdir(), `bbx-qaging-${process.pid}-${Date.now()}`);
 process.env.BBX_PUSH_STORE_DIR = storeDir;
@@ -34,14 +34,6 @@ process.env.BBX_PUSH_STORE_DIR = storeDir;
 const SUB = { endpoint: "https://push.example/qaging", keys: { p256dh: "p", auth: "a" } };
 
 const ASKED_AT = new Date("2026-01-01T00:00:00Z");
-const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: ASKED_AT.toISOString() });
-
-// makeTmpBox writes a shapeVersion-3 marker with no version/created; ageQuestions
-// calls getSystemState → getBoxMetadata, which parses those, so seed a marker
-// carrying both (it must keep shapeVersion 3 or getBoxShape rejects the box).
-async function seedBox(box: TmpBox) {
-  await box.seed(".beebox/box.json", MARKER);
-}
 
 function addMs(date: Date, ms: number) {
   return new Date(date.getTime() + ms);
@@ -76,7 +68,6 @@ void test("No nudge before the default 7-day threshold", async (t) => {
     }
   });
   const box = await makeTmpBox({ git: true });
-  await seedBox(box);
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: ASKED_AT });
   await box.write(
     "_bookkeeping/questions/Color.question.card",
@@ -153,7 +144,6 @@ void test("No push subscription exists here:", async (t) => {
     }
   });
   const box = await makeTmpBox({ git: true });
-  await seedBox(box);
   await box.write(
     "_bookkeeping/questions/Stale.question.card",
     question({ prompt: "Still relevant?", askedAt: ASKED_AT.toISOString() })
@@ -218,7 +208,6 @@ void test("A 10-day override nudges at 5 days (half), not the default 7:", async
     }
   });
   const box = await makeTmpBox({ git: true });
-  await seedBox(box);
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: ASKED_AT });
   const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
   await box.write(
@@ -266,7 +255,6 @@ void test("A pending question with no asked-at (shouldn't exist post-migration, 
     }
   });
   const box = await makeTmpBox({ git: true });
-  await seedBox(box);
   await box.write(
     "_bookkeeping/questions/NoAskedAt.question.card",
     "---\nprompt: When was this asked?\ninput:\n  type: text\n---\n"
@@ -305,7 +293,6 @@ void test("The shared withQuestionTransition primitive (question-transition.ts) 
     }
   });
   const box = await makeTmpBox({ git: true });
-  await seedBox(box);
   await box.write(
     "_bookkeeping/questions/AlreadyAnswered.question.card",
     question({ prompt: "Still open?", askedAt: ASKED_AT.toISOString() })

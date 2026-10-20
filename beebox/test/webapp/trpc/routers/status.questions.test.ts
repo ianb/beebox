@@ -20,10 +20,6 @@ function contextFor(box: TmpBox) {
   return statusRouter.createCaller(ctx);
 }
 
-// makeTmpBox writes a shapeVersion-3 marker with no version/created;
-// status.questions calls getSystemState → getBoxMetadata, which parses those,
-// so seed a marker carrying both (keeping shapeVersion 3 for getBoxShape).
-const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
 
 const VALID = `---
 prompt: Where does this receipt go?
@@ -51,7 +47,6 @@ void test("line 46", async (t) => {
     }
   });
   const box = await makeTmpBox({ git: true });
-  await box.seed(".beebox/box.json", MARKER);
   await box.write("_bookkeeping/questions/Receipt.question.card", VALID);
   await box.write("_bookkeeping/questions/Broken.question.card", MALFORMED);
 

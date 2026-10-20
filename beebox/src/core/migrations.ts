@@ -142,6 +142,23 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // nothing written) on a field it does not map or an ambiguous recording.
   // Legacy support to remove: issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md.
   { name: "retire-memo-2026-10", script: "src/scripts/migrate/retire-memo/run.ts" },
+  // Replaces a machine-local `link:` beebox dependency (deploy's
+  // link:/opt/beebox/beebox, a laptop checkout path, a worktree override) with
+  // the portable "link:.beebox/engine" and points the gitignored .beebox/engine
+  // at the old target. Leaves a pinned engine (file: tarball, semver range, a
+  // link into the box) alone. Refreshes a tracked lockfile offline; a failed
+  // refresh restores both files and exits 1, so it stays pending. It runs
+  // before box-shape-record so that migration's package.json commit does not
+  // carry the machine path again.
+  // Plan: docs/implemented-plans/portable-engine-dependency.md.
+  { name: "engine-link-spec-2026-10", script: "src/scripts/migrate/engine-link-spec/run.ts" },
+  // Copies shapeVersion and created from the gitignored .beebox/box.json into a
+  // "beebox" block in the box's tracked package.json, so a clone of the box is
+  // a box. Leaves the marker on disk (and tracked where it was) so an older
+  // engine still opens the box after a rollback. Fails closed (exit 1, nothing
+  // written) on a marker without both fields. Legacy support to remove:
+  // issues/deferred/2026-10-20-drop-box-marker-fallback.md.
+  { name: "box-shape-record-2026-10", script: "src/scripts/migrate/box-shape-record/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

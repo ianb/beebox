@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-20T20:24:10Z
-Total documents: 549
+Generated: 2026-10-20T23:05:27Z
+Total documents: 552
 
 ## Issues
 
@@ -136,7 +136,7 @@ Referenced by:
 - docs/README.md:89 (mention) — `AGENTS.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
 - docs/agent-guide.md:12 (mention) — `AGENTS.md`. Every word in it is paid on every turn, so each rule in it must
 - docs/box-guidance.md:14 (mention) — root `AGENTS.md` and its `@` includes), `situational` (when the agent works on
-- docs/box-layout.md:9 (mention) — A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working t
+- docs/box-layout.md:9 (mention) — A box is a directory whose tracked `package.json` declares the `beebox` dependency, with `_config/` beside it (`isBoxRoo
 - docs/box-work.md:14 (mention) — inherits this repo's `AGENTS.md`. `bbx engine init` refuses a nested target
 - docs/box-work.md:28 (link) — for that change ([behavioral notes](../AGENTS.md#behavioral-notes)). At a
 - docs/cards/schemas.md:365 (mention) — 5. The agent guide is `@`-included in `AGENTS.md`, so agents always see the card type list
@@ -722,6 +722,7 @@ Referenced by:
 - docs/implemented-plans/acknowledgements-backfill.md:78 (mention) — | tracked `CLAUDE.md`, `AGENTS.md`, `README.md` files | all packages |
 - docs/implemented-plans/bbx-agent-surface.md:405 (mention) — command-line interface" and `README.md:5` says "the `bbx` CLI is the interface".
 - docs/implemented-plans/box-docs-in-package.md:93 (mention) — - `README.md`: an index, one line per doc: filename and a one-line "read this
+- docs/implemented-plans/box-shape-in-package-json.md:81 (mention) — `README.md:46`, `dev/lib/context-assembly/assembly.ts:119`.
 - docs/implemented-plans/boxes-as-packages-v2.md:501 (mention) — (a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
 - docs/implemented-plans/cards-as-markdown-rfc.md:82 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
@@ -852,6 +853,7 @@ References:
 Title: "Docker packaging" | 31 lines
 
 Referenced by:
+- docs/implemented-plans/portable-engine-dependency.md:163 (mention) — `docs/box-layout.md` (dependency and repair), `docker/README.md`.
 - docs/plans/container-first.md:591 (mention) — `bbx serve /data/box/content` (`docker/README.md:11`). The root
 
 References:
@@ -928,7 +930,7 @@ Title: "Box guidance" | 171 lines | current reference
 
 Referenced by:
 - docs/agent-guide.md:6 (link) — [box guidance](box-guidance.md); this page covers the guide itself.
-- docs/box-layout.md:60 (link) — `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
+- docs/box-layout.md:82 (link) — `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
 - docs/box-work.md:7 (link) — [box guidance](box-guidance.md).
 - docs/guides.md:33 (link) — | Box guidance: the instruction files a box agent reads, and who writes each | [box-guidance](box-guidance.md) |
 - docs/implemented-plans/agent-guide-spec.md:515 (mention) — - The weekly review line added to `docs/box-guidance.md` in phase two, which
@@ -953,7 +955,7 @@ References:
 
 #### docs/box-layout.md
 
-Title: "Box Layout" | 303 lines | current reference
+Title: "Box Layout" | 326 lines | current reference
 
 Referenced by:
 - AGENTS.md:48 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
@@ -969,6 +971,7 @@ Referenced by:
 - docs/implemented-plans/box-docs-in-package.md:184 (mention) — 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
 - docs/implemented-plans/box-growth-health-checks.md:454 (mention) — **What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
 - docs/implemented-plans/box-retrospectives.md:422 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
+- docs/implemented-plans/box-shape-in-package-json.md:80 (mention) — - Readers the issue missed: `docs/box-layout.md:9,45,55,73,144,229`,
 - docs/implemented-plans/boxes-as-packages-v2.md:43 (mention) — - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
 - docs/implemented-plans/bulk-file-upload.md:117 (mention) — - **Landing-zone convention** — `docs/box-layout.md:88-91` (`tmp-capture/`
 - docs/implemented-plans/clerk-quick-send.md:471 (mention) — `docs/mobile-contract.md` §5.11, security report §3, `box-layout.md`).
@@ -983,6 +986,7 @@ Referenced by:
 - docs/implemented-plans/named-places.md:184 (mention) — but no `places`), keeping `docs/box-layout.md` and the box-shape agent guide
 - docs/implemented-plans/one-root-box-layout.md:140 (mention) — | Layout spec + drift-guarded doc tables | `src/lib/box-layout-spec.ts` (moved to `beebox/src/lib/paths/box-layout-spec.
 - docs/implemented-plans/plugins.md:102 (mention) — - `docs/box-layout.md:259`: *"No Bee Box application/server code"* in a box.
+- docs/implemented-plans/portable-engine-dependency.md:163 (mention) — `docs/box-layout.md` (dependency and repair), `docker/README.md`.
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
 - docs/implemented-plans/remove-box-shape-v1.md:79 (mention) — - **1e — Docs** (was Track 3): `box-layout.md`, `migrations.md`, `box-layout-spec`
 - docs/implemented-plans/secret-custody.md:36 (mention) — (`docs/box-layout.md:160`). Residual exposure is backups of the box
@@ -1013,6 +1017,7 @@ References:
 - → docs/agent-guide.md (mention)
 - → AGENTS.md (mention)
 - → docs/implemented-plans/one-root-box-layout.md (mention)
+- → docs/implemented-plans/portable-engine-dependency.md (mention)
 - → docs/box-guidance.md (link)
 - → docs/implemented-plans/capture-mode.md (mention)
 - → docs/implemented-plans/bulk-file-upload.md (mention)
@@ -1100,7 +1105,7 @@ Title: "Client Debug Log" | 107 lines | current reference
 
 Referenced by:
 - AGENTS.md:60 (link) — - For frontend or iOS failures, inspect the box's `.beebox/client-debug.log`; `[ios]` identifies native entries. See the
-- docs/box-layout.md:231 (mention) — | `client-debug.log` | Browser console errors and tagged native iOS diagnostics. See `docs/client-debug-log.md`. |
+- docs/box-layout.md:254 (mention) — | `client-debug.log` | Browser console errors and tagged native iOS diagnostics. See `docs/client-debug-log.md`. |
 - docs/box-work.md:58 (mention) — log](client-debug-log.md)).
 - docs/guides.md:47 (link) — | Client debug log | [client-debug-log](client-debug-log.md) |
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
@@ -1252,6 +1257,7 @@ Referenced by:
 - docs/implemented-plans/box-host-packages.md:73 (mention) — - **Principle 3, validate at boundaries** (`docs/engineering-principles.md:37`).
 - docs/implemented-plans/box-maintenance-no-wedge.md:61 (mention) — (`docs/engineering-principles.md:49`): the box degrades to "open with
 - docs/implemented-plans/box-root-paths.md:25 (mention) — - `docs/engineering-principles.md` — #3 validate-at-boundaries (refs are
+- docs/implemented-plans/box-shape-in-package-json.md:37 (mention) — `docs/engineering-principles.md` §8 (one way): two `BOX_MARKER` constants and
 - docs/implemented-plans/browser-task-card.md:63 (mention) — degradation is not"* allowed, `beebox/docs/engineering-principles.md:51`).
 - docs/implemented-plans/bulk-file-upload.md:30 (mention) — - `docs/engineering-principles.md` — chiefly **#1 types are structure** (a
 - docs/implemented-plans/canvas-loop-figure.md:20 (mention) — - `docs/engineering-principles.md`: #2 exhaustiveness (the runtime union
@@ -1271,6 +1277,7 @@ Referenced by:
 - docs/implemented-plans/delivered-user-message-codec.md:21 (mention) — - Engineering principle 1, Types are structure. `docs/engineering-principles.md:12-18` says: *"Prefer types that make il
 - docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - docs/implemented-plans/doc-structure.md:60 (mention) — (`docs/engineering-principles.md`), and 8, *one way to do each thing*: this
+- docs/implemented-plans/drive-docs-api-health.md:52 (mention) — - `engineering-principles.md` §4, *"invisible degradation is not"* allowed: this is the reason for the work.
 - docs/implemented-plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
 - docs/implemented-plans/exhibit-comments.md:66 (mention) — - `beebox/docs/engineering-principles.md` **8** (one way to do each thing):
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
@@ -1294,6 +1301,7 @@ Referenced by:
 - docs/implemented-plans/one-root-box-layout.md:113 (mention) — boundaries)** — `docs/engineering-principles.md:12,37`: the box path
 - docs/implemented-plans/openrouter-chat-models.md:404 (mention) — (`beebox/docs/engineering-principles.md`, validate at the boundary).
 - docs/implemented-plans/plugins-slice-3.md:126 (mention) — (`docs/engineering-principles.md:87`): the plugins plan chose the stub
+- docs/implemented-plans/portable-engine-dependency.md:32 (mention) — `docs/engineering-principles.md` §4 (never silent): a missing link is named by
 - docs/implemented-plans/publication-card-home.md:36 (mention) — - **Consolidate over blast-radius fear** (`beebox/docs/engineering-principles.md`, principle 8, quoted in the earlier pl
 - docs/implemented-plans/questions-end-to-end.md:64 (mention) — - `docs/engineering-principles.md` — findings trace to: **1** (types are
 - docs/implemented-plans/refresh-maps-convergence.md:67 (link) — - **[`docs/engineering-principles.md`](../engineering-principles.md) #4
@@ -1734,7 +1742,7 @@ References:
 Title: "Which model a box thinks with" | 202 lines | current reference
 
 Referenced by:
-- docs/box-layout.md:211 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
+- docs/box-layout.md:234 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
 - docs/chat.md:19 (link) — - Which engine and model a chat thinks with, fixed at the chat's birth: [model policy](model-policy.md).
 - docs/design/identity.md:27 (link) — engine's own store ([`../model-policy.md`](../model-policy.md)).
 - docs/guides.md:45 (link) — | Model policy: which engine and model a box thinks with | [model-policy](model-policy.md) |
@@ -1814,7 +1822,7 @@ References:
 Title: "Plugins" | 190 lines | current reference
 
 Referenced by:
-- docs/box-layout.md:273 (link) — - **No plugin code.** A plugin ships inside the engine package (`beebox/plugins/<name>`); the box holds only its activat
+- docs/box-layout.md:296 (link) — - **No plugin code.** A plugin ships inside the engine package (`beebox/plugins/<name>`); the box holds only its activat
 - docs/design/extensibility.md:13 (link) — What does exist (2026-10, [plugins](../plugins.md)): a **plugin** is a typed
 - docs/guides.md:34 (link) — | Plugins: typed in-repo libraries a box activates through stubs | [plugins](plugins.md) |
 - docs/implemented-plans/boxes-as-packages-v2.md:373 (mention) — (`docs/plugins.md`, "Health") print under `Plugin health after upgrade:`. Report-only too.
@@ -2018,7 +2026,7 @@ Title: "Secrets: the machine-level store" | 541 lines | current reference
 Referenced by:
 - AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
-- docs/box-layout.md:212 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
+- docs/box-layout.md:235 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
 - docs/box-work.md:46 (link) — ([secrets](secrets.md#worktree-boxes-have-their-own-store)). In a worktree,
 - docs/connectors.md:13 (link) — from the machine-level secret store ([`docs/secrets.md`](secrets.md)). Some
 - docs/design/privacy-and-egress.md:11 (link) — ([`../secrets.md`](../secrets.md)).
@@ -2337,7 +2345,7 @@ References:
 Title: "Triage" | 128 lines | current reference
 
 Referenced by:
-- docs/box-layout.md:159 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
+- docs/box-layout.md:182 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
 - docs/connectors.md:131 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:33 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:40 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
@@ -2597,7 +2605,7 @@ Title: "Writing Box-Local Schemas" | 301 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:140 (link) — [schemas](box/schemas.md)). A tracked nested `AGENTS.md` holds a pointer to it
-- docs/box-layout.md:255 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
+- docs/box-layout.md:278 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
 - docs/cards/validation.md:56 (link) — `markdocTags` (see [schemas](../box/schemas.md)). Findings are warnings; a tag the type does not
 - docs/implemented-plans/place-shows-cards.md:215 (mention) — schemas can define it (`docs/box/schemas.md:185-205`, the `plant` example
 - docs/implemented-plans/plugins-slice-2.md:137 (mention) — (`docs/box/schemas.md:236-262`); the loader reads it at
@@ -3875,6 +3883,20 @@ References:
 - → docs/cards/schemas.md (mention)
 - → docs/agent-guide.md (mention)
 
+#### docs/implemented-plans/box-shape-in-package-json.md
+
+Title: "Box identity and shape version from tracked package.json" | 321 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-10-20-box-marker-in-gitignored-state-dir.md:13 (mention) — **Closed:** Implemented per `beebox/docs/implemented-plans/box-shape-in-package-json.md` (c634cdd67, b5019ff09, 1c5e90e8
+- ../issues/deferred/2026-10-20-drop-box-marker-fallback.md:8 (frontmatter) — design: ../../beebox/docs/implemented-plans/box-shape-in-package-json.md
+
+References:
+- → ../issues/closed/bugs/2026-10-20-box-marker-in-gitignored-state-dir.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → docs/box-layout.md (mention)
+- → README.md (mention)
+
 #### docs/implemented-plans/boxes-as-packages-v2.md
 
 Title: "Boxes as Packages v2 — beebox as a library" | 728 lines | shipped history | implemented
@@ -3951,7 +3973,7 @@ References:
 Title: "Bulk file upload" | 468 lines | shipped history | implemented
 
 Referenced by:
-- docs/box-layout.md:137 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
+- docs/box-layout.md:159 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
 - docs/mobile-contract.md:1019 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
 - docs/plans/chat-photo-batch-upload.md:36 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
@@ -3982,7 +4004,7 @@ References:
 Title: "Capture mode — unifying capture into the input" | 671 lines | shipped history | implemented
 
 Referenced by:
-- docs/box-layout.md:126 (mention) — `docs/implemented-plans/capture-mode.md`; agent duties:
+- docs/box-layout.md:148 (mention) — `docs/implemented-plans/capture-mode.md`; agent duties:
 - docs/implemented-plans/bulk-file-upload.md:43 (mention) — - **Shipped precedent: capture mode** (`docs/implemented-plans/capture-mode.md`,
 - docs/implemented-plans/resilient-voice-recording.md:146 (mention) — - `docs/implemented-plans/capture-mode.md`: server-side staging, crash-resumable
 - docs/plans/cli-restructure.md:13 (mention) — **2026-07 update:** the capture-processing commands this plan discusses renaming/grouping (`bbx transcribe-captures`, `b
@@ -4921,6 +4943,19 @@ References:
 - → ../issues/closed/bugs/2026-09-29-pnpm-test-unrecognized-path-runs-full-suite.md (link)
 - → README.md (mention)
 
+#### docs/implemented-plans/drive-docs-api-health.md
+
+Title: "Docs API unavailable reaches the boxholder" | 192 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/features/2026-10-20-drive-sync-problems-reach-the-boxholder.md:13 (mention) — **Closed:** Implemented per `beebox/docs/implemented-plans/drive-docs-api-health.md` (7b255426b through ef95483d0): a he
+
+References:
+- → ../issues/closed/features/2026-10-20-drive-sync-problems-reach-the-boxholder.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → src/core/agent-guide/guide.md (mention)
+- → docs/server/health-checks.md (mention)
+
 #### docs/implemented-plans/drive-folder-mounts.md
 
 Title: "Drive mounts: pointers, synced files, synced folders" | 450 lines | shipped history | implemented
@@ -5151,7 +5186,7 @@ References:
 Title: "The front door: what a person meets when they open their box" | 1255 lines | shipped history | implemented
 
 Referenced by:
-- docs/box-layout.md:294 (mention) — does; a folder the person made never folds (`docs/implemented-plans/front-door.md`,
+- docs/box-layout.md:317 (mention) — does; a folder the person made never folds (`docs/implemented-plans/front-door.md`,
 - docs/landmarks.md:34 (mention) — A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a
 - docs/mobile-contract.md:995 (mention) — (`docs/implemented-plans/front-door.md`, Track A), sent by the web composer on every message while it is
 - docs/questions.md:258 (mention) — - **The empty root chat** (`docs/implemented-plans/front-door.md`, Track A) — an
@@ -6031,6 +6066,21 @@ References:
 - → docs/implemented-plans/plugins.md (mention)
 - → docs/implemented-plans/plugins.design.md (mention)
 - → AGENTS.md (mention)
+
+#### docs/implemented-plans/portable-engine-dependency.md
+
+Title: "Portable beebox dependency in box package.json" | 240 lines | shipped history | implemented
+
+Referenced by:
+- docs/box-layout.md:74 (mention) — it is. See `docs/implemented-plans/portable-engine-dependency.md`.
+- ../issues/bugs/2026-10-20-bbx-upgrade-writes-tarball-path-into-box-package-json.md:9 (frontmatter) — design: ../../beebox/docs/implemented-plans/portable-engine-dependency.md
+- ../issues/closed/bugs/2026-10-20-deploy-beebox-link-reaches-box-history.md:12 (mention) — **Closed:** Implemented per `beebox/docs/implemented-plans/portable-engine-dependency.md` (f9de5b6cc through bbdb1f575):
+
+References:
+- → ../issues/closed/bugs/2026-10-20-deploy-beebox-link-reaches-box-history.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → docs/box-layout.md (mention)
+- → docker/README.md (mention)
 
 #### docs/implemented-plans/private-issues-shadow-repo.md
 
@@ -9085,7 +9135,7 @@ Referenced by:
 Title: "TTS backend selection, and per-backend style direction" | 584 lines | proposal | partial
 
 Referenced by:
-- docs/box-layout.md:219 (mention) — | `_config/tts.json` | Which backend speaks chat replies (`openai` or `gemini`); see `docs/plans/tts-backend-selection.m
+- docs/box-layout.md:242 (mention) — | `_config/tts.json` | Which backend speaks chat replies (`openai` or `gemini`); see `docs/plans/tts-backend-selection.m
 - docs/implemented-plans/tts-comparison-page.md:223 (mention) — numbers in `tts-backend-selection.md` are the measured ones; repeating
 - docs/implemented-plans/tts-streamed-playback.md:44 (mention) — `docs/plans/tts-backend-selection.md` and the services table. Not a BIG CHANGE.
 - ../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md:6 (frontmatter) — design: ../../../beebox/docs/plans/tts-backend-selection.md
@@ -9572,7 +9622,7 @@ References:
 
 #### docs/server/health-checks.md
 
-Title: "Health Checks" | 297 lines | current reference
+Title: "Health Checks" | 319 lines | current reference
 
 Referenced by:
 - docs/cards/schemas.md:206 (link) — [`health-checks.md`](../server/health-checks.md#template-updates-a-fix-that-never-reached-the-box).
@@ -9582,6 +9632,7 @@ Referenced by:
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
 - docs/implemented-plans/doc-structure-install-server.md:14 (mention) — and `health-checks.md`, and they disagree with each other in three places.
 - docs/implemented-plans/docs-reorg.md:181 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
+- docs/implemented-plans/drive-docs-api-health.md:116 (mention) — - `docs/server/health-checks.md` gets a `google-docs-api` section, and its stale claim that connector episodes send push
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
 - docs/implemented-plans/hub-healthz-box-aggregation.md:408 (mention) — `deploy/README.md`, and `docs/server/health-checks.md`.
 - docs/implemented-plans/tailscale-expose-and-protect.md:408 (mention) — on the server plus a short runbook note in `docs/server/health-checks.md`'s style
@@ -10167,6 +10218,7 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:171 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
 - docs/implemented-plans/bbx-remind.md:60 (mention) — - No channel can reach the person at the chosen loudness: the command refuses and says how to turn a channel on. The age
 - docs/implemented-plans/box-agents-md.md:157 (mention) — - **Agent-facing text naming `CLAUDE.md`** — `agent-guide/guide.md:372`
+- docs/implemented-plans/drive-docs-api-health.md:114 (mention) — - `guide.md:448` becomes *"`bbx health` — scheduled-task and box health, including connector problems; yours to run."* (
 - docs/implemented-plans/front-door.md:94 (mention) — | "Landmarks page" with no on-screen path (B row 25) | The page exists; the only route is the place menu's "Find a landm
 - docs/implemented-plans/place-shows-cards.md:184 (mention) — when the agent edits a landmark (`src/core/agent-guide/guide.md:393`).
 - docs/implemented-plans/place-shows-cards.review.md:12 (link) — 1. **The agent has no reliable trigger to maintain the body.** Track C says the agent updates it whenever it changes wha

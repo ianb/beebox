@@ -463,7 +463,7 @@ RSYNC_OPTS=(-az --delete
   # machine's) numeric uid/gid by default. Without this, /opt/beebox ends
   # up owned by the deploying laptop's local uid — harmless for reads, but
   # `beebox` (the account every box's `pnpm install` runs as, via the
-  # `link:/opt/beebox/beebox` dependency — see docs/box-layout.md)
+  # box's `.beebox/engine` → /opt/beebox/beebox link — see docs/box-layout.md)
   # can't chmod a bin file it doesn't own, so pnpm's redundant "make sure
   # this bin is executable" step during `_linkBins` throws EPERM and the
   # whole install exits nonzero even though every real package resolved.
@@ -727,27 +727,31 @@ queue_remote stdin bash -s <<'REMOTE'
     [[ -f "$pj" ]] || continue   # shapeVersion 1 (legacy) boxes have none — skip
     name=$(basename "$box")
 
-    # The beebox dependency ships as a bare semver range (meaningless —
-    # there's no registry for it yet), which makes a plain `pnpm install` fail
-    # outright trying to resolve it. Normalize it to `link:`, pointing at this
-    # same server install, idempotently (a no-op once already rewritten).
-    node -e "
-      const fs = require('fs');
-      const p = JSON.parse(fs.readFileSync('$pj', 'utf-8'));
-      const want = 'link:/opt/beebox/beebox';
-      if (p.dependencies && p.dependencies['beebox'] !== want) {
-        p.dependencies['beebox'] = want;
-        fs.writeFileSync('$pj', JSON.stringify(p, null, 2) + '\n');
-      }
-    "
+    # The box commits the portable `"beebox": "link:.beebox/engine"`; the
+    # gitignored `.beebox/engine` link holds this server's engine path, so no
+    # deploy writes a tracked file (docs/implemented-plans/portable-engine-dependency.md).
+    # A box not yet migrated still names /opt/beebox/beebox directly; the
+    # link is harmless there. A failed box prints ERROR and the deploy moves
+    # on to the next box, as the converge step does.
+    link_check=/opt/beebox/beebox/bin/box-engine-link
+    if ! sudo -u beebox -H bash -lc '"$0" link "$1" /opt/beebox/beebox' "$link_check" "$box"; then
+      echo "  ERROR $name: could not link .beebox/engine; skipping its install." >&2
+      continue
+    fi
 
     marker="$box/node_modules/react"
-    if [[ ! -e "$marker" || "$pj" -nt "$marker" ]]; then
+    # Reinstall too when the box shows no completed install: the engine-link
+    # migration changes the spec without reinstalling, so a node_modules/beebox
+    # that does not go through the link is stale.
+    if [[ ! -e "$marker" || "$pj" -nt "$marker" ]] || ! "$link_check" verify "$box" 2>/dev/null; then
       echo "  $name: installing (package.json newer than last install, or never installed)..."
       if ! sudo -u beebox -H bash -lc "cd '$box' && pnpm install"; then
         echo "  $name: pnpm install exited nonzero — check for real dependency errors above" \
              "(a lone EPERM on .bin linking is a known-harmless pnpm quirk, everything else isn't)"
       fi
+    fi
+    if ! "$link_check" verify "$box"; then
+      echo "  ERROR $name: the box has no usable engine after install." >&2
     fi
   done
 REMOTE

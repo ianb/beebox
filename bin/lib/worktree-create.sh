@@ -23,9 +23,9 @@
 #     /<wt>/test1/... swap cleanly across worktrees — true whether the clone
 #     is a legacy box or a v2 package, see box-entry.ts)
 #     (kept outside the monorepo so the box doesn't inherit monorepo AGENTS.md)
-#   - for a v2 (package-layout) clone, points its "beebox" dependency
-#     at THIS worktree's own engine checkout (pnpm.overrides link:) and
-#     installs the box's own node_modules — see Track G in
+#   - for a v2 (package-layout) clone, points its `.beebox/engine` link
+#     at THIS worktree's own engine checkout and installs the box's own
+#     node_modules — see Track G in
 #     docs/implemented-plans/boxes-as-packages-v2.md. Legacy clones are untouched.
 #   - commits a fresh clone's setup changes in the clone, so it starts clean.
 #   - runs pnpm install at the worktree root (root husky), beebox, and
@@ -109,30 +109,56 @@ wt_create_restore_box_ref() {
   git -C "$box_dest" reset --hard FETCH_HEAD >&2
 }
 
-# Point a package-layout box at the engine in this worktree. During the Bee Box
-# rename, existing box repositories can still declare the retired
-# `callback-box` package name; migrate that dependency at the same boundary
-# where we already install the worktree-local override.
+# Point a package-layout box at the engine in this worktree: the gitignored
+# `.beebox/engine` link (beebox/bin/box-engine-link) holds the worktree path,
+# and the tracked dependency is the portable `link:.beebox/engine`. A box that
+# has not run `engine-link-spec-2026-10` gets the portable spec and loses its
+# engine override here. During the Bee Box rename, existing box repositories
+# can still declare the retired `callback-box` package name; migrate that
+# dependency at the same boundary.
 wt_create_repoint_box_engine() {
-  local package_json="$1" worktree_path="$2" tmp_pkg
+  local package_json="$1" worktree_path="$2" tmp_pkg box_dir spec
+  box_dir=$(cd "$(dirname "$package_json")" && pwd -P) || return 1
+  # Only a machine-local `link:` outside the box is this machine's choice to
+  # replace. A pinned engine (a `file:` tarball, a semver range, a link into
+  # the box) stays, and the clone runs that engine, not this worktree's.
+  spec=$(jq -r '.pnpm.overrides["beebox"] // .dependencies["beebox"] // .devDependencies["beebox"] // ""' "$package_json") || return 1
+  if [ -n "$spec" ] && [ "$spec" != "link:.beebox/engine" ] && {
+      [ "${spec#link:}" = "$spec" ] || node -e '
+        const p = require("path");
+        const rel = p.relative(process.argv[1], p.resolve(process.argv[1], process.argv[2]));
+        process.exit(rel === "" || (!rel.startsWith("..") && !p.isAbsolute(rel)) ? 0 : 1);
+      ' "$box_dir" "${spec#link:}"; }; then
+    echo "[worktree-create] WARNING: $box_dir keeps its pinned engine ($spec); it will not run this worktree's engine" >&2
+    return 0
+  fi
+  "$worktree_path/beebox/bin/box-engine-link" link "$box_dir" "$worktree_path/beebox" || return 1
   tmp_pkg=$(mktemp)
-  if ! jq --arg link "link:$worktree_path/beebox" '
+  if ! jq '
     if (.dependencies["beebox"] // .devDependencies["beebox"] //
         .dependencies["callback-box"] // .devDependencies["callback-box"]) == null then
       error("not a Bee Box package")
     else
       .dependencies = (.dependencies // {}) |
-      .dependencies["beebox"] = $link |
+      .dependencies["beebox"] = "link:.beebox/engine" |
+      del(.devDependencies["beebox"]) |
       del(.dependencies["callback-box"]) |
       del(.devDependencies["callback-box"]) |
-      .pnpm = (.pnpm // {}) |
-      .pnpm.overrides = (.pnpm.overrides // {}) |
-      .pnpm.overrides["beebox"] = $link |
-      del(.pnpm.overrides["callback-box"])
+      if .pnpm.overrides then
+        del(.pnpm.overrides["beebox"], .pnpm.overrides["callback-box"]) |
+        if .pnpm.overrides == {} then del(.pnpm.overrides) else . end |
+        if .pnpm == {} then del(.pnpm) else . end
+      else . end |
+      if .devDependencies == {} then del(.devDependencies) else . end
     end
   ' "$package_json" > "$tmp_pkg"; then
     rm -f "$tmp_pkg"
     return 1
+  fi
+  # A migrated box already commits the portable spec: leave its bytes alone.
+  if [ "$(jq -S . "$tmp_pkg")" = "$(jq -S . "$package_json")" ]; then
+    rm -f "$tmp_pkg"
+    return 0
   fi
   mv "$tmp_pkg" "$package_json"
 }
@@ -326,12 +352,12 @@ wt_create_locked() {
         fi
       fi
 
-      # Carry over the box marker. Since the 2026-08-30 rename it lives in the
-      # gitignored state directory (`.beebox/box.json`), so a clone has none —
-      # and without it `bbx engine init` below sees "a directory with a package.json"
-      # and refuses instead of refreshing hooks (broke every worktree launch on
-      # 2026-09-05; moving the marker to tracked files is
-      # issues/bugs/2026-10-20-box-marker-in-gitignored-state-dir.md).
+      # Carry over the box marker (`.beebox/box.json`, gitignored, so a clone
+      # has none). A box that has run box-shape-record-2026-10 records its shape
+      # in its tracked package.json and needs no marker; this copy covers a
+      # source box that has not migrated yet, whose clone would otherwise be
+      # refused with MissingShapeRecordError. Removed by
+      # issues/deferred/2026-10-20-drop-box-marker-fallback.md.
       if [ -f "$box_src_state/box.json" ] && [ ! -f "$box_dest_state/box.json" ]; then
         mkdir -p "$box_dest_state"
         cp "$box_src_state/box.json" "$box_dest_state/box.json"
@@ -373,23 +399,22 @@ wt_create_locked() {
         echo "[worktree-create] WARNING: git-annex not installed; worktree box has no asset content" >&2
       fi
 
-      # v2 (package-layout) box: redirect its "beebox" dependency at
-      # THIS worktree's own beebox checkout via a pnpm.overrides
-      # `link:` entry — a live symlink that never installs the target's own
-      # deps, revertible without touching `dependencies` (see "Prior art" /
-      # Track G in docs/implemented-plans/boxes-as-packages-v2.md). Without this the
-      # clone would resolve beebox from whatever the box's lockfile
-      # pins — never this worktree's in-progress engine code, defeating the
-      # whole point of a worktree. Legacy clones have no package.json here
-      # and are left untouched.
+      # v2 (package-layout) box: link its engine at THIS worktree's own
+      # beebox checkout through the gitignored `.beebox/engine` (a live
+      # symlink that never installs the target's own deps). Without this the
+      # clone would resolve beebox to whatever engine the source box links —
+      # never this worktree's in-progress engine code, defeating the whole
+      # point of a worktree. Legacy clones have no package.json here and are
+      # left untouched.
       if [ -f "$BOX_DEST/package.json" ] && jq -e '
         (.dependencies["beebox"] // .devDependencies["beebox"] //
          .dependencies["callback-box"] // .devDependencies["callback-box"]) != null
       ' "$BOX_DEST/package.json" >/dev/null; then
         echo "[worktree-create] v2 box detected — pointing beebox at $worktree_path/beebox" >&2
-        wt_create_repoint_box_engine "$BOX_DEST/package.json" "$worktree_path"
+        wt_create_repoint_box_engine "$BOX_DEST/package.json" "$worktree_path" || return 1
         echo "[worktree-create] running pnpm install in $BOX_DEST..." >&2
         (exec 198>&-; cd "$BOX_DEST" && pnpm install >&2)
+        "$worktree_path/beebox/bin/box-engine-link" verify "$BOX_DEST" || return 1
       fi
     else
       echo "[worktree-create] warning: $BOX_SRC not found; router will fall back to defaults" >&2

@@ -39,7 +39,6 @@ async function lastLogged(box: TmpBox) {
   return [`${n.intent.loudness} → ${n.intent.target}`, ...deliveries].join("\n");
 }
 
-const MARKER = JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: NOW.toISOString() });
 
 // ## A newly-pending question notifies once, then latches
 void test("A newly-pending question notifies once, then latches", async (t) => {
@@ -52,7 +51,6 @@ void test("A newly-pending question notifies once, then latches", async (t) => {
     }
   });
   const box = await makeTmpBox({ git: true });
-  await box.seed(".beebox/box.json", MARKER);
   await addSubscription({ boxSlug: await boxSlug(box.root), subscription: SUB, now: NOW });
   await box.seed("_bookkeeping/questions/Color.question.card", question("What color?"));
   box.commitAll("seed question");
@@ -120,7 +118,6 @@ void test("No reachable channel → no sweep", async (t) => {
     }
   });
   const box = await makeTmpBox({ git: true });
-  await box.seed(".beebox/box.json", MARKER);
   await box.seed("_bookkeeping/questions/Color.question.card", question("What color?"));
   box.commitAll("seed");
 

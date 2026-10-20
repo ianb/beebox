@@ -124,6 +124,10 @@ does carry, such as nested lists and checkboxes, which markdown holds
 only in whitespace and indentation. Never read an empty \`lossy:\` as
 permission to edit or reformat.
 
+A card without \`drive.revision\` may have synced while the Docs API was
+unavailable; then \`lossy:\` was not checked at all. Run \`bbx health\`
+before relying on an empty \`lossy:\`.
+
 ## Moving docs
 Moving the card moves its attach scope (and the \`.md\` inside)
 atomically — the \`drive.id\` field maintains the link to Google Drive.`,

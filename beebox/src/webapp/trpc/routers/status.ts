@@ -206,7 +206,6 @@ export const statusRouter = router({
     ]);
     return {
       boxRoot: state.boxRoot,
-      boxVersion: state.boxVersion,
       created: state.created,
       git: state.git,
       counts: {
