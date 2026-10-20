@@ -26,6 +26,13 @@ import {
 } from "../../src/connectors/google-drive/folder-plan.js";
 import { extractDriveFileId } from "../../src/connectors/google-drive/types.js";
 import { createGfolderTemplate } from "../../src/schemas/gfolder.js";
+import ky from "ky";
+import { any } from "@ianbicking/tap-check/check";
+import {
+  loadDocsApiDiagnosis,
+  recordDocsApiDiagnosis,
+  type DocsApiDiagnosis,
+} from "../../src/connectors/google-drive/docs-api-status.js";
 
 // Importing the connector registers the docs/sheets handlers, which is what
 // makes a Doc or Sheet child "syncable" rather than pointer-only.
@@ -493,4 +500,82 @@ last-sync: «stamped»
 
   const again = await connector.sync();
   t.check(again, { success: true, created: [], updated: ["_content/drive/recipes/Recipes.gfolder.card"] });
+});
+
+// ## Docs API diagnosis — folder discovery counts, and a capped pass proves nothing
+//
+// A Doc that folder discovery creates is pulled through the folder pass, not
+// the card loop; its Docs API outcome must still reach the diagnosis. And a
+// pass that hit a folder cap left part of the tree unscanned, so finding no
+// Docs there cannot clear an open problem.
+
+async function scopeInsufficientError(): Promise<unknown> {
+  const body = JSON.stringify({
+    error: {
+      code: 403,
+      message: "Request had insufficient authentication scopes.",
+      status: "PERMISSION_DENIED",
+      details: [{ "@type": "type.googleapis.com/google.rpc.ErrorInfo", reason: "ACCESS_TOKEN_SCOPE_INSUFFICIENT" }],
+    },
+  });
+  try {
+    await ky.get("https://docs.googleapis.com/v1/documents/x", { retry: 0, fetch: async () => new Response(body, { status: 403 }) });
+  } catch (e) {
+    return e;
+  }
+  throw new Error("expected the request to fail");
+}
+
+void test("A Doc found by a newly mounted folder opens the diagnosis on that first sync", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await initBox(box.root);
+  await box.seed("_content/drive/notes/Notes.gfolder.card", createGfolderTemplate({ driveId: "folder-1" }));
+  box.commitAll("mount the Notes folder");
+  const drive = createFakeGoogleDrive({
+    files: [
+      driveFile({ id: "folder-1", name: "Notes", mimeType: FOLDER_MIME }),
+      driveFile({ id: "doc-1", name: "Plan", mimeType: DOC_MIME, parent: "folder-1" }),
+    ],
+    documents: new Map([["doc-1", documentFor({ id: "doc-1", name: "Plan" })]]),
+  });
+  const missingScope = await scopeInsufficientError();
+  drive.getDocument = async () => { throw missingScope; };
+
+  const result = await createGoogleDriveConnector(box.root, drive).sync();
+  t.check(result.created, ["_content/drive/notes/Plan.attach/Plan.md", "_content/drive/notes/Plan.gdoc.card"]);
+  t.check(await loadDocsApiDiagnosis(box.root), {
+    kind: "scope-insufficient",
+    message:
+      "1 Google Doc is syncing without revision tracking or lossy-content details: " +
+      "the Google token lacks the documents.readonly scope. Run 'bbx engine google-auth' to grant it.",
+    link: null,
+    docs: 1,
+    since: any(String),
+  });
+});
+
+void test("A pass that hit the folder depth cap keeps an open diagnosis, though it found no Docs", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await initBox(box.root);
+  await box.seed("_content/drive/deep/Deep.gfolder.card", createGfolderTemplate({ driveId: "folder-0" }));
+  box.commitAll("mount a deep folder");
+  // folder-0 … folder-9, each inside the last: the mirror stops at the 8-level cap.
+  const files = Array.from({ length: MAX_FOLDER_DEPTH + 2 }, (_, i) =>
+    driveFile({ id: `folder-${String(i)}`, name: `Level ${String(i)}`, mimeType: FOLDER_MIME, ...(i === 0 ? {} : { parent: `folder-${String(i - 1)}` }) }),
+  );
+  const open: DocsApiDiagnosis = {
+    kind: "service-disabled",
+    message: "1 Google Doc is syncing without revision tracking or lossy-content details: disabled",
+    link: "https://enable",
+    docs: 1,
+    since: "2026-10-20T12:00:00.000Z",
+  };
+  await recordDocsApiDiagnosis(box.root, () => open);
+
+  const result = await createGoogleDriveConnector(box.root, createFakeGoogleDrive({ files })).sync();
+  // The cap is a note, not a failure: the sync succeeds.
+  t.check(result.success, true);
+  t.check(await loadDocsApiDiagnosis(box.root), open);
 });

@@ -63,7 +63,9 @@ async function mirrorUnderLock(opts: {
   // that is what makes its Drive ID claimed and its directory's membership
   // visible to the planner.
   const tracking = await findDriveCardTracking(boxRoot);
-  const deps = createFolderSyncDeps({ boxRoot, service, state, tracking });
+  // An on-demand mirror is not a full pass, so it writes no Docs API
+  // diagnosis; the next connector pass pulls every Doc card and does.
+  const deps = createFolderSyncDeps({ boxRoot, service, state, tracking, docsApiOutcomes: [] });
   const mirror = await syncFolderCard({ driveId, cardPath, depth: 0 }, deps);
   await commitDriveStateDelta({ boxRoot, snapshot, working: state });
   return mirror;

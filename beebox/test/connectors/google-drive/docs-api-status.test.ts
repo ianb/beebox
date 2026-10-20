@@ -1,0 +1,107 @@
+// # The box's Google Docs API diagnosis
+//
+// `nextDocsApiDiagnosis` holds every open/clear decision for the stored Docs
+// API problem; `readDocsApiDiagnosis` is the one reader the health check,
+// settings and chat use, and it hides the problem as soon as Drive stops
+// syncing, before any further pass could clear the file.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import * as os from "node:os";
+import * as path from "node:path";
+import { mkdtemp, rm } from "node:fs/promises";
+import { instanceOf } from "@ianbicking/tap-check/check";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import {
+  DocsApiStatusInvalidError,
+  loadDocsApiDiagnosis,
+  nextDocsApiDiagnosis,
+  readDocsApiDiagnosis,
+  recordDocsApiDiagnosis,
+  type DocsApiDiagnosis,
+} from "../../../src/connectors/google-drive/docs-api-status.js";
+import type { DocsApiOutcome } from "../../../src/connectors/google-drive/handlers/docs/api-failure.js";
+import { markGoogleAuthDead, saveGoogleTokens } from "../../../src/google/token-store.js";
+
+const tokensFile = path.join(await mkdtemp(path.join(os.tmpdir(), "docs-api-status-")), "google-tokens.json");
+process.env.BBX_GOOGLE_TOKENS_FILE = tokensFile;
+
+const NOW = new Date("2026-10-20T12:00:00.000Z");
+const LATER = new Date("2026-10-21T12:00:00.000Z");
+
+const disabled: DocsApiOutcome = {
+  ok: false,
+  failure: { kind: "service-disabled", message: "the Google Docs API is disabled: https://enable", link: "https://enable" },
+};
+const noScope: DocsApiOutcome = {
+  ok: false,
+  failure: { kind: "scope-insufficient", message: "the Google token lacks the documents.readonly scope.", link: null },
+};
+const transient: DocsApiOutcome = { ok: false, failure: { kind: "other", message: "Google answered HTTP 500", link: null } };
+const ok: DocsApiOutcome = { ok: true };
+
+const open: DocsApiDiagnosis = {
+  kind: "service-disabled",
+  message: "1 Google Doc is syncing without revision tracking or lossy-content details: the Google Docs API is disabled: https://enable",
+  link: "https://enable",
+  docs: 1,
+  since: NOW.toISOString(),
+};
+
+void test("A fixable failure opens the problem; a later pass keeps its start and recounts", async (t) => {
+  t.check(nextDocsApiDiagnosis({ previous: null, outcomes: [disabled], passComplete: true, now: NOW }), open);
+  // A disabled API outranks a missing scope, and the count covers both.
+  t.check(nextDocsApiDiagnosis({ previous: open, outcomes: [noScope, disabled], passComplete: false, now: LATER }), {
+    ...open,
+    message: "2 Google Docs are syncing without revision tracking or lossy-content details: the Google Docs API is disabled: https://enable",
+    docs: 2,
+  });
+});
+
+void test("Only evidence clears it", async (t) => {
+  const next = (outcomes: DocsApiOutcome[], passComplete: boolean) =>
+    nextDocsApiDiagnosis({ previous: open, outcomes, passComplete, now: LATER });
+  // A pull that reached the Docs API clears it, even on a pass with other failures.
+  t.check(next([ok], false), null);
+  // No Docs at all on a complete pass: the last Doc card is gone.
+  t.check(next([], true), null);
+  // No Docs on an incomplete pass (a failure or a folder cap): unknown, kept.
+  t.check(next([], false), open);
+  // A transient failure says nothing either way.
+  t.check(next([transient], true), open);
+  t.check(nextDocsApiDiagnosis({ previous: null, outcomes: [transient], passComplete: true, now: NOW }), null);
+});
+
+void test("The reader hides a stored problem once Drive stops syncing, before any pass", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await box.write("_config/box.json", JSON.stringify({ googleServices: { drive: true } }));
+  await saveGoogleTokens({ refreshToken: "rt-1", accessToken: "at-1" });
+  await recordDocsApiDiagnosis(box.root, () => open);
+
+  t.check(await readDocsApiDiagnosis(box.root), open);
+
+  // Drive turned off for this box.
+  await box.write("_config/box.json", JSON.stringify({ googleServices: { drive: false } }));
+  t.check(await readDocsApiDiagnosis(box.root), null);
+  await box.write("_config/box.json", JSON.stringify({ googleServices: { drive: true } }));
+
+  // The grant needs reauthorizing: Drive is paused, and google-auth says so.
+  await markGoogleAuthDead({ reason: "invalid_grant" });
+  t.check(await readDocsApiDiagnosis(box.root), null);
+
+  // Google disconnected.
+  await rm(tokensFile);
+  t.check(await readDocsApiDiagnosis(box.root), null);
+
+  // The stored value itself is untouched; only the readers hide it.
+  t.check(await loadDocsApiDiagnosis(box.root), open);
+});
+
+void test("A damaged file is reported, not reset", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await box.write("_bookkeeping/connectors/google-docs-api.state.json", JSON.stringify({ version: 1, diagnosis: { kind: "nope" } }));
+  const readError: unknown = await loadDocsApiDiagnosis(box.root).catch((e: unknown) => e);
+  t.check(readError, instanceOf(DocsApiStatusInvalidError));
+});
