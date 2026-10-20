@@ -86,7 +86,10 @@ workstream_preserve_keep() {
       return 1
     fi
     preserved=$(git -C "$scratch/keep" rev-parse HEAD)
-    git -C "$clone" worktree remove --force "$scratch/keep" >/dev/null 2>&1 || true
+    if ! git -C "$clone" worktree remove --force "$scratch/keep" >/dev/null 2>&1; then
+      echo "[workstream] could not remove the temporary worktree $scratch/keep from $name's clone" >&2
+      return 1
+    fi
     rm -rf "$scratch"
   fi
   git -C "$clone" push "$WT_BOX_SRC" \
