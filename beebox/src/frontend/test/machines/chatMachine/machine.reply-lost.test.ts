@@ -180,3 +180,24 @@ void test("REFRESH during a refresh with no lost reply is ignored", async (t) =>
   t.check(await settled(actor), { replyLost: false, error: null });
   t.check(reads.map((history) => history.total), [2]);
 });
+
+// ## chat-complete during a read whose history is stale but status is idle
+//
+// History and status are read concurrently, so history can predate the reply
+// while status already says the box is idle. Settled alone, that read shows
+// "the box stopped before it answered". With a held REFRESH it settles
+// nothing; the extra fetch finds the reply, and no error shows at any point.
+void test("A held REFRESH keeps a stale idle read from showing the no-reply error", async (t) => {
+  const { actor, release } = await gatedChat();
+  const errors: Array<string | null> = [];
+  actor.subscribe((snapshot) => { errors.push(snapshot.context.error); });
+  dropMidTurn(actor);
+  await fetchWaiting(actor);
+  actor.send({ type: "REFRESH" });
+  release({ ...stillWorking, running: false, busy: false });
+  await eventually(() => actor.getSnapshot().value === "refreshing" && !actor.getSnapshot().context.refreshAgain, { label: "second fetch in flight" });
+  t.check(actor.getSnapshot().context.replyLost, true);
+  release(answered);
+  t.check(await settled(actor), { replyLost: false, error: null });
+  t.check(errors.filter((error) => error !== null), []);
+});
