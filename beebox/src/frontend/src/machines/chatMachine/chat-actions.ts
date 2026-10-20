@@ -141,6 +141,19 @@ export function applyStreamError(
   };
 }
 
+/**
+ * A chat that started as "new" learned its session id (SESSION_ASSIGNED, or a
+ * refresh that looked the accepted turn up). Lock sends and history fetches
+ * onto the real id, and drop the in-memory landmark binding: the backend has
+ * persisted it to chat-session-history by now. (Pending seedFeatures are inert
+ * from here: sessionInput is the real id, so they are never re-sent.)
+ */
+export function adoptSession(
+  sessionId: string,
+): Pick<ChatContext, "sessionInput" | "sessionId" | "contextDir" | "newChatTurnId"> {
+  return { sessionInput: sessionId, sessionId, contextDir: undefined, newChatTurnId: undefined };
+}
+
 /** Shown when a turn's live view dropped and the box went idle with no reply. */
 export const NO_REPLY_ERROR = "The box stopped before it answered. Send your message again.";
 

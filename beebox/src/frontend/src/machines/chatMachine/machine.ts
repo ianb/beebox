@@ -36,7 +36,7 @@ import {
   applyStreamError,
   untrackLastSend,
   clearInterrupt, settleLostReply, markTurnRefresh, sendInterrupt,
-  reconcilePendingWithDiagnostics,
+  reconcilePendingWithDiagnostics, adoptSession,
 } from "./chat-actions";
 
 export { chatTailSlice };
@@ -122,19 +122,14 @@ export const chatMachine = setup({
         : {}),
     },
     // Global handler: backend assigned an id to a session that started as
-    // "new". Lock subsequent sends and history fetches onto the real id so
-    // we don't accidentally start another fresh session, and so refreshing
-    // mid-stream uses the correct sessionInput rather than the "new" branch.
-    SESSION_ASSIGNED: {
-      actions: assign(({ event }) => ({
-        sessionInput: event.sessionId,
-        sessionId: event.sessionId,
-        // Drop the in-memory binding now that the backend has persisted
-        // it to chat-session-history; future resumes look it up there.
-        // (Pending seedFeatures, if any, are now inert: sessionInput is the
-        // real id so they're never re-sent, and toggles go through the server.)
-        contextDir: undefined,
-      })),
+    // "new" (the turn stream's `system/init`). Adopt it so we don't
+    // accidentally start another fresh session, and so refreshing mid-stream
+    // uses the real id rather than the "new" branch.
+    SESSION_ASSIGNED: { actions: assign(({ event }) => adoptSession(event.sessionId)) },
+    // Global handler: a "new" chat's send was accepted as this turn. Held so
+    // a refresh can look up the session id if init never reached us.
+    TURN_ACCEPTED: {
+      actions: assign(({ context, event }) => context.sessionInput === "new" ? { newChatTurnId: event.turnId } : {}),
     },
   },
   states: {
@@ -353,16 +348,19 @@ export const chatMachine = setup({
       },
       invoke: {
         src: "fetchHistory",
-        input: ({ context }) => ({ sessionInput: context.sessionInput }),
+        input: ({ context }) => ({ sessionInput: context.sessionInput, turnId: context.newChatTurnId }),
         onDone: {
           target: "idle",
           actions: assign(({ context, event }) => {
-            // "new" session: server has no id yet, so fetchHistory returned
-            // empty. Roll up whatever streamed for this turn into a synthetic
-            // assistant entry so the completed response stays visible — the
-            // chat-session-assigned SSE / URL navigation eventually loads
-            // the authoritative copy and replaces this on remount.
-            if (context.sessionInput === "new") {
+            // A "new" chat whose id came from the accepted turn's lookup
+            // (fetchHistory) adopts it, as SESSION_ASSIGNED would, and
+            // reconciles below like any other session.
+            const adopted = context.sessionInput === "new" ? event.output.sessionId : null;
+            // Still "new" with no id: fetchHistory returned empty. Roll up
+            // whatever streamed for this turn into a synthetic assistant entry
+            // so the completed response stays visible until a later refresh
+            // or a remount loads the authoritative copy.
+            if (context.sessionInput === "new" && adopted === null) {
               const synthetic = rollupStreamToEntry(context.streamText, context.streamTools);
               const messages = synthetic ? [...context.messages, synthetic] : context.messages;
               return {
@@ -378,6 +376,7 @@ export const chatMachine = setup({
               pendingMessages: context.pendingMessages,
             });
             return {
+              ...(adopted !== null ? adoptSession(adopted) : {}),
               ...settleLostReply({ context, messages: reconciled.messages, busy: event.output.busy }),
               messages: reconciled.messages,
               pendingMessages: reconciled.pendingMessages,

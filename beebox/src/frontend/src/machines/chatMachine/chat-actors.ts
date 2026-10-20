@@ -35,8 +35,8 @@ import {
   chatTailSlice,
   logFsm,
   type ChatEvent,
+  type HistoryInput,
   type InitialSessionInput,
-  type SessionInput,
 } from "../chat-types";
 import { runFakeStream, runScrollDebugToggle } from "./chat-actors-fakestream";
 import { settleFromTurnStart, settleRejectedTurnStart } from "./chat-receipt-settlement";
@@ -86,14 +86,21 @@ export const fetchInitialActor = fromPromise<
 
 export const fetchHistoryActor = fromPromise<
   { sessionId: string | null; entries: SessionEntry[]; total: number; running: boolean; busy: boolean },
-  SessionInput
+  HistoryInput
 >(async ({ input }) => {
-  if (input.sessionInput === "new") {
-    return { sessionId: null, entries: [], total: 0, running: false, busy: false };
+  let sessionId = input.sessionInput;
+  if (sessionId === "new") {
+    // A "new" chat has no history of its own. If a turn was accepted, the box
+    // may know its session id even though this client never saw `system/init`.
+    const assigned = input.turnId === undefined
+      ? null
+      : (await trpcClient.events.turnSession.query({ turnId: input.turnId })).sessionId;
+    if (assigned === null) return { sessionId: null, entries: [], total: 0, running: false, busy: false };
+    sessionId = assigned;
   }
   const [history, status] = await Promise.all([
-    getChatHistory({ sessionId: input.sessionInput, slice: chatTailSlice() }),
-    getChatStatus({ sessionId: input.sessionInput }),
+    getChatHistory({ sessionId, slice: chatTailSlice() }),
+    getChatStatus({ sessionId }),
   ]);
   return {
     sessionId: history.sessionId ?? status.sessionId,
@@ -108,9 +115,10 @@ export const fetchHistoryActor = fromPromise<
  * The SDK's `system/init` message is the first frame of every stream and
  * carries the session id this turn is running under (possibly different from
  * what we sent — the SDK rotates on resume in some paths). Forward it onto
- * the machine immediately so the URL update / id pinning doesn't have to wait
- * for the side-channel `chat-session-assigned` event on /events, which can be
- * lost across a backend restart and leave the frontend stuck on `session=new`.
+ * the machine immediately so the URL update and id pinning happen mid-turn.
+ * The `chat-session-assigned` bus event never reaches the machine; if this
+ * frame is missed, a refresh looks the accepted turn up instead
+ * (`fetchHistoryActor`).
  */
 function handleSystemInit(
   msg: { subtype?: string; session_id?: string },
@@ -307,6 +315,7 @@ export const streamActor = fromCallback(
           return;
         }
 
+        if (input.sessionInput === "new") sendBack({ type: "TURN_ACCEPTED", turnId: result.turnId });
         // Subscribe to the turn's output. wsLink resumes this automatically on a
         // dropped connection (lastEventId = last seq), so partial text survives.
         const sub = trpcClient.events.turnStream.subscribe(

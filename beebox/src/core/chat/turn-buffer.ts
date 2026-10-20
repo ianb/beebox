@@ -49,6 +49,12 @@ export class TurnBuffer {
   /** Terminal error, if the turn failed before producing a result. */
   errored: string | null = null;
   /**
+   * The session id this turn runs under, from its `system/init` frame. Kept
+   * apart from the ring so eviction can't lose it: a client whose live view
+   * dropped before init asks for it (`events.turnSession`) to leave "new".
+   */
+  sessionId: string | null = null;
+  /**
    * Bumped on every state change (push / finish / fail). A reader captures it
    * before draining, then passes it to `waitForChange`, which returns
    * immediately if anything changed in between — closing the drain-then-wait
@@ -62,6 +68,7 @@ export class TurnBuffer {
   }
 
   push(msg: ChatMessage): void {
+    if (msg.type === "system" && msg.session_id) this.sessionId = msg.session_id;
     this.seqCounter += 1;
     this.frames.push({ seq: this.seqCounter, msg });
     const bytes = Buffer.byteLength(JSON.stringify(msg), "utf8");

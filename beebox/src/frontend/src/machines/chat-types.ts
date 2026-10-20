@@ -42,7 +42,10 @@ export type ChatEvent =
   | { type: "INJECTED_USER_MESSAGE"; message: string; timestamp: string }
   | { type: "PREPEND_MESSAGES"; messages: SessionEntry[] }
   | { type: "SET_SEED_FEATURE"; feature: string; value: string }
-  | { type: "SESSION_ASSIGNED"; sessionId: string };
+  | { type: "SESSION_ASSIGNED"; sessionId: string }
+  // The box accepted a "new" chat's send as this turn. Lets a refresh ask the
+  // box for the turn's session id when the live view dropped before init.
+  | { type: "TURN_ACCEPTED"; turnId: string };
 
 // -- Context --
 
@@ -116,6 +119,13 @@ export interface ChatContext {
    */
   sessionInput: string;
   sessionId: string | null;
+  /**
+   * The accepted turn of a still-`"new"` chat, cleared once the session id is
+   * assigned. A refresh looks up the turn's session id with it
+   * (`events.turnSession`), because a live view that drops before the
+   * `system/init` frame never delivers SESSION_ASSIGNED.
+   */
+  newChatTurnId?: string;
   /**
    * Box-relative landmark directory this chat is bound to, set only when
    * the chat was opened from a landmark with `sessionInput === "new"`.
@@ -225,6 +235,11 @@ export interface ChatMachineInput {
 export interface SessionInput {
   /** Either a known session id or the "new" sentinel. Null/undefined means brand-new shell with no history. */
   sessionInput: string;
+}
+
+export interface HistoryInput extends SessionInput {
+  /** A "new" chat's accepted turn, to look up its session id by. */
+  turnId?: string | undefined;
 }
 
 export interface InitialSessionInput extends SessionInput {
