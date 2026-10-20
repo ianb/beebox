@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# The engine-link check every shell install path runs around a box's
+# `pnpm install` (deploy, worktree setup, the docker entrypoint).
+#
+# A box commits `"beebox": "link:.beebox/engine"`; `.beebox/engine` is a
+# gitignored symlink to this machine's engine. pnpm accepts a missing or dead
+# link and exits 0 with no usable engine, so the caller checks both sides:
+#
+#   box-engine-link link <box> <engine>   point <box>/.beebox/engine at <engine>
+#                                         (an engine package outside the box)
+#   box-engine-link verify <box>          after install: node_modules/beebox is an
+#                                         engine and node_modules/.bin/bbx exists
+#
+# Each prints one line naming the box and the problem and exits 1 on failure.
+# The TypeScript side of the same rule is src/core/box/engine-link.ts.
+set -euo pipefail
+
+usage() {
+  echo "usage: box-engine-link link <box> <engine> | verify <box>" >&2
+  exit 2
+}
+
+# The real path of $1 when it is an engine package (package.json named beebox).
+engine_real() {
+  node -e '
+    const fs = require("fs"), path = require("path");
+    let real;
+    try { real = fs.realpathSync(process.argv[1]); } catch { process.exit(1); }
+    let pkg;
+    try { pkg = JSON.parse(fs.readFileSync(path.join(real, "package.json"), "utf8")); } catch { process.exit(1); }
+    if (pkg === null || pkg.name !== "beebox") process.exit(1);
+    console.log(real);
+  ' "$1"
+}
+
+cmd="${1:-}"
+case "$cmd" in
+  link)
+    [[ $# -eq 3 ]] || usage
+    box="$2" engine="$3"
+    if ! real=$(engine_real "$engine"); then
+      echo "box-engine-link: $box: $engine is not a beebox engine package; not linking." >&2
+      exit 1
+    fi
+    box_real=$(cd "$box" && pwd -P)
+    case "$real/" in
+      "$box_real"/*)
+        echo "box-engine-link: $box: $engine is inside the box; the next install could remove it." >&2
+        exit 1 ;;
+    esac
+    mkdir -p "$box/.beebox"
+    ln -sfn "$engine" "$box/.beebox/engine"
+    if ! engine_real "$box/.beebox/engine" >/dev/null; then
+      echo "box-engine-link: $box: .beebox/engine does not resolve after linking." >&2
+      exit 1
+    fi
+    ;;
+  verify)
+    [[ $# -eq 2 ]] || usage
+    box="$2"
+    if ! engine_real "$box/node_modules/beebox" >/dev/null; then
+      echo "box-engine-link: $box: node_modules/beebox is not a beebox engine after install." >&2
+      exit 1
+    fi
+    if [[ ! -x "$box/node_modules/.bin/bbx" ]]; then
+      echo "box-engine-link: $box: node_modules/.bin/bbx is missing after install; rerun pnpm install with .beebox/engine in place." >&2
+      exit 1
+    fi
+    ;;
+  *) usage ;;
+esac

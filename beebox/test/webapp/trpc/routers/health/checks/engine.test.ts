@@ -139,3 +139,32 @@ void test("(A fake engine directory outside any beebox-worktrees path — linkin
 
   t.check(boxSchemaFieldsCheck([shelf]).ok, true);
 });
+
+// ## Through the engine link
+//
+// A box on the portable spec has `node_modules/beebox → ../.beebox/engine`,
+// and `.beebox/engine` holds this machine's engine path. The check reports and
+// repairs that link: a missing link, a dead one, and one pinned to a worktree.
+void test("engine-link reports the .beebox/engine link a portable box resolves through", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  const boxRoot = await scaffoldV3(box);
+  const engineLink = box.path("pkg/.beebox/engine");
+  await mkdir(box.path("pkg/node_modules"), { recursive: true });
+  await mkdir(box.path("pkg/.beebox"), { recursive: true });
+  await symlink("../.beebox/engine", box.path("pkg/node_modules/beebox"));
+  const message = async (): Promise<string | undefined> => byName(await engineHealthChecks(boxRoot), "engine-link")?.message;
+
+  const missing = await message();
+  await symlink(box.path("gone/beebox"), engineLink);
+  const dead = await message();
+  await box.write("beebox-worktrees/feature/beebox/package.json", JSON.stringify({ name: "beebox", version: "0.1.0" }));
+  await unlink(engineLink);
+  await symlink(box.path("beebox-worktrees/feature/beebox"), engineLink);
+  const pinned = await message();
+  t.check({ missing, dead, pinned }, {
+    missing: `the engine link ${engineLink} is missing — box-local schemas and templates will not load. Create it: ln -sfn <engine-checkout>/beebox ${engineLink}`,
+    dead: `.beebox/engine is a dead symlink (→ ${box.path("gone/beebox")}) — box-local schemas and templates will not load. Repoint it: ln -sfn <engine-checkout>/beebox ${engineLink}`,
+    pinned: `.beebox/engine points into a worktree (→ ${box.path("beebox-worktrees/feature/beebox")}) — it will go dead when that worktree is removed. Repoint at the main checkout.`,
+  });
+});

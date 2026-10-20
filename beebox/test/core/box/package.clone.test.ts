@@ -51,7 +51,8 @@ async function quietly<T>(fn: () => Promise<T>): Promise<T> {
 // ## A clone of a current box
 //
 // Every predicate accepts the clone, and `bbx init` on it takes the update path
-// instead of refusing "already has a package.json".
+// instead of refusing "already has a package.json". It also links the clone's
+// portable `beebox` dependency to the running engine.
 void test("A clone of a box is recognized as a box and re-inits", async (t) => {
   const box = await makeTmpBox({ git: true });
   const clone = await cloneOf(box.root);
@@ -67,7 +68,10 @@ void test("A clone of a box is recognized as a box and re-inits", async (t) => {
     findBoxRoot: await findBoxRoot(path.join(clone, "_content", "inbox")),
     detectBoxTarget: (await detectBoxTarget(clone)).mode,
     init: await quietly(() => runInit(clone, { branch: "main" })).then(() => "completed"),
+    // The clone has no gitignored engine link; the re-init makes it.
+    engineLink: await fs.readlink(path.join(clone, ".beebox/engine")),
   }, {
+    engineLink: PACKAGE_ROOT,
     marker: "absent",
     isValidBox: true,
     isBox: true,

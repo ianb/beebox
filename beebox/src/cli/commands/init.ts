@@ -10,6 +10,8 @@
 import { Command } from "commander";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/structure/core.js";
 import { detectBoxTarget, scaffoldBoxRoot } from "../../core/box/package.js";
+import { ensurePortableEngineLink } from "../../core/box/engine-link.js";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import * as path from "node:path";
 import { stageAll, commit, initRepo, isRepo, repoRootOf } from "../../lib/git/core/operations.js";
 import { fileExists } from "../../lib/file-exists.js";
@@ -130,6 +132,8 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
     await announceAndInitGit({ boxRoot, annex, options });
   } else {
     await initBox(boxRoot, { skipGit: true, branch: options.branch });
+    // A clone of a box has no engine link yet; a usable one is kept.
+    await ensurePortableEngineLink(boxRoot, PACKAGE_ROOT);
     // A re-init annexes too, and this is not optional. `initBox` rewrote the
     // box `.gitignore` with the un-ignore block unconditionally — there is only
     // one block now — so on a box whose annex was never initialized, skipping
