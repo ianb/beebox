@@ -36,7 +36,8 @@ deploy rollback (boxholder decision, 2026-10-20).
   untrack it: an untrack that keeps the file on disk is invisible to
   `changedMigrationPaths` and would be left staged.)
 - Tests that write markers on purpose to exercise the fallback
-  (`useMarkerOnly` in `beebox/test/helpers/test-helpers.ts` and its callers).
+  (`useMarkerOnly` in `beebox/test/helpers/test-helpers.ts` and its callers),
+  and `diagnoseStrayMarker` if no pre-v3 marker still needs a diagnosis.
 
 ## Safe to remove when
 

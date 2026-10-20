@@ -52,21 +52,21 @@ async function readPinnedSpec(boxRoot: string): Promise<string> {
   return JSON.parse(raw).dependencies["beebox"];
 }
 
-/** A real git repo shaped like a shapeVersion-3 box: `.beebox/box.json`,
- *  package.json pinning beebox, and a (gitignored, like a real box)
+/** A real git repo shaped like a shapeVersion-3 box: `_config/`,
+ *  package.json pinning beebox and recording the shape, and a (gitignored, like a real box)
  *  node_modules/beebox/package.json standing in for the installed
  *  engine. */
 async function makeV3Fixture() {
   const boxRoot = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-upgrade-fixture-"));
-  await fs.mkdir(path.join(boxRoot, ".beebox"), { recursive: true });
-  await fs.writeFile(path.join(boxRoot, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
+  await fs.mkdir(path.join(boxRoot, "_config/schedules"), { recursive: true });
+  await fs.writeFile(path.join(boxRoot, "_config/schedules/.gitkeep"), "");
   // Real boxes gitignore .beebox/ at the box root (box.ts's own
   // .gitignore template) — without it, the revert's log write below would
   // read as working-tree dirt and fail the "clean again" assertion for a
   // reason that isn't the thing under test.
   await fs.writeFile(
     path.join(boxRoot, "package.json"),
-    JSON.stringify({ name: "fixture-box", dependencies: { "beebox": OLD_VERSION } }, null, 2),
+    JSON.stringify({ name: "fixture-box", dependencies: { "beebox": OLD_VERSION }, beebox: { shapeVersion: 3, created: "2026-01-01T00:00:00.000Z" } }, null, 2),
   );
   await writeInstalledVersion(boxRoot, OLD_VERSION);
   // node_modules is gitignored, same as a real box (scaffoldBoxRoot's

@@ -9,6 +9,7 @@ import { execSync } from "node:child_process";
 import { Command } from "commander";
 import {
   loadSchedulerConfig,
+  boxEntryProblem,
   isBox,
   runScheduler,
   type LogEntry,
@@ -99,8 +100,8 @@ schedulerCommand
       return;
     }
     for (const box of config.boxes) {
-      const valid = await isBox(box);
-      console.log(`${valid ? "  " : "! "}${box}${valid ? "" : " (not a box: needs package.json declaring beebox and _config/)"}`);
+      const problem = await boxEntryProblem(box);
+      console.log(problem === null ? `  ${box}` : `! ${box} (${problem})`);
     }
   });
 
@@ -111,8 +112,8 @@ schedulerCommand
     const config = await loadSchedulerConfig();
     console.log(`Configured boxes: ${config.boxes.length}`);
     for (const box of config.boxes) {
-      const valid = await isBox(box);
-      console.log(`  ${valid ? "✓" : "✗"} ${box}`);
+      const problem = await boxEntryProblem(box);
+      console.log(problem === null ? `  ✓ ${box}` : `  ✗ ${box} (${problem})`);
     }
 
     // Check launchd status

@@ -96,18 +96,6 @@ export class UnreadablePackageJsonError extends BoxShapeError {
   }
 }
 
-/** The box's `package.json` doesn't declare a `beebox` dependency. */
-export class MissingBeeBoxDependencyError extends BoxShapeError {
-  constructor(boxRoot: string, packageJsonPath: string) {
-    super(
-      "Box at " + boxRoot + " has a box marker, but " +
-        packageJsonPath + " doesn't declare a \"beebox\" dependency (checked dependencies " +
-        "and devDependencies)."
-    );
-    this.name = "MissingBeeBoxDependencyError";
-  }
-}
-
 /** A box `package.json` that parses but is not a JSON object, so no block can be set in it. */
 export class PackageJsonNotObjectError extends BoxShapeError {
   constructor() {

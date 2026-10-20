@@ -16,7 +16,7 @@ import {
   addBoxToManifest,
   removeBoxFromManifest,
 } from "../../core/box/boxes-config.js";
-import { isBox } from "../../core/schedule/scheduler/core.js";
+import { boxEntryProblem, isBox } from "../../core/schedule/scheduler/core.js";
 
 export const boxesCommand = new Command("boxes")
   .description("Manage the box manifest used by serve and scheduler");
@@ -64,7 +64,7 @@ boxesCommand
       return;
     }
     for (const box of config.boxes) {
-      const valid = await isBox(box);
-      console.log(`${valid ? "  " : "! "}${box}${valid ? "" : " (not a box: needs package.json declaring beebox and _config/)"}`);
+      const problem = await boxEntryProblem(box);
+      console.log(problem === null ? `  ${box}` : `! ${box} (${problem})`);
     }
   });

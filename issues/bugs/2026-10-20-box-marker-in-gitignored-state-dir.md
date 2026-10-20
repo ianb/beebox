@@ -79,3 +79,12 @@ tracked-file write on a lazily invoked resolver path that autocommit sweeps.
 
 Verification must include a fresh `git clone` of a box being recognized as a
 box, as well as unit tests.
+
+> 2026-10-20 (bug-burndown-4): implemented on the worktree branch, not yet
+> merged; plan `beebox/docs/plans/box-shape-in-package-json.md`. When closing:
+> clone recognition holds only once the SOURCE box has run
+> `box-shape-record-2026-10` and committed it (production through the deploy
+> sweep, local boxes through `bbx engine migrate --sweep`). A clone made
+> before that gets `MissingShapeRecordError` with a recovery line. The marker
+> fallback and its removal are tracked in
+> `issues/deferred/2026-10-20-drop-box-marker-fallback.md`.

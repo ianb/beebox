@@ -37,11 +37,11 @@ export const BOX_MARKER = ".beebox/box.json";
 const MIN_KNOWN_SHAPE_VERSION = 3;
 
 /** The highest shape version this build of beebox understands. */
-export const MAX_KNOWN_SHAPE_VERSION = 3;
+const MAX_KNOWN_SHAPE_VERSION = 3;
 
 /** The `beebox` block in a box's `package.json`. */
 export const shapeBlockSchema = z.object({ shapeVersion: z.number().int(), created: z.string() });
-export type ShapeBlock = z.infer<typeof shapeBlockSchema>;
+type ShapeBlock = z.infer<typeof shapeBlockSchema>;
 
 const markerSchema = z.object({ shapeVersion: z.number().optional(), created: z.string().optional() });
 type Marker = z.infer<typeof markerSchema>;
@@ -61,11 +61,21 @@ export interface ShapeRecord {
   source: "package" | "marker";
 }
 
+/** Whether `target` is a directory. A regular file named `_config` is not a structural sibling. */
+async function isDirectory(target: string): Promise<boolean> {
+  try {
+    return (await fs.stat(target)).isDirectory();
+  } catch (e) {
+    if (errnoCode(e) === "ENOENT" || errnoCode(e) === "ENOTDIR") return false;
+    throw e;
+  }
+}
+
 /**
  * Read `<dir>/package.json`, or null when there is none. A file that is there
  * but does not parse is an `UnreadablePackageJsonError`.
  */
-export async function readBoxPackageJson(dir: string): Promise<PackageJson | null> {
+async function readBoxPackageJson(dir: string): Promise<PackageJson | null> {
   const packageJsonPath = path.join(dir, "package.json");
   let raw: string;
   try {
@@ -82,7 +92,7 @@ export async function readBoxPackageJson(dir: string): Promise<PackageJson | nul
 }
 
 /** Whether `pkg` declares `beebox` (or the retired package name) as a dependency. */
-export function declaresBeeBox(pkg: PackageJson): boolean {
+function declaresBeeBox(pkg: PackageJson): boolean {
   const deps = { ...pkg.devDependencies, ...pkg.dependencies };
   return "beebox" in deps || LEGACY_PACKAGE_NAME in deps;
 }
@@ -95,7 +105,7 @@ export function declaresBeeBox(pkg: PackageJson): boolean {
  * @throws UnreadablePackageJsonError when the directory check passes but `package.json` does not parse
  */
 export async function isBoxRoot(dir: string): Promise<boolean> {
-  const hasSibling = (await fileExists(path.join(dir, "_config"))) || (await fileExists(path.join(dir, "content", "config")));
+  const hasSibling = (await isDirectory(path.join(dir, "_config"))) || (await isDirectory(path.join(dir, "content", "config")));
   if (!hasSibling) return false;
   const pkg = await readBoxPackageJson(dir);
   return pkg !== null && declaresBeeBox(pkg);
@@ -108,9 +118,9 @@ export async function isBoxRoot(dir: string): Promise<boolean> {
  * @throws V2PackageRootError for a v2 package root
  */
 export async function refuseV2(dir: string): Promise<void> {
-  if (await fileExists(path.join(dir, "_config"))) return;
+  if (await isDirectory(path.join(dir, "_config"))) return;
   if (await fileExists(path.join(dir, "content", BOX_MARKER))) throw new V2PackageRootError(dir);
-  if (!(await fileExists(path.join(dir, "content", "config")))) return;
+  if (!(await isDirectory(path.join(dir, "content", "config")))) return;
   const pkg = await readBoxPackageJson(dir);
   if (pkg !== null && declaresBeeBox(pkg)) throw new V2PackageRootError(dir);
 }
@@ -168,6 +178,20 @@ export async function readShapeRecord(dir: string): Promise<ShapeRecord> {
 }
 
 /**
+ * A `.beebox/box.json` at a directory that fails `isBoxRoot` does not make it a
+ * box: identity is the dependency plus the sibling. It is still evidence of
+ * an old or broken box, so a marker that is malformed, predates v3, or is
+ * newer than this build throws its diagnosis (a v1 box had no package.json; a
+ * v2 `content/` root had no `_config/`). A valid v3 marker there is ignored.
+ *
+ * @throws BoxShapeError for a marker that is malformed or not shape 3
+ */
+export async function diagnoseStrayMarker(dir: string): Promise<void> {
+  const marker = await readMarker(path.join(dir, BOX_MARKER));
+  if (marker !== null) checkRange(dir, marker.shapeVersion);
+}
+
+/**
  * One level of upward box discovery (`findBoxRoot`). Returns true when `dir`
  * is a box root, false when there is nothing box-like here.
  *
@@ -184,7 +208,10 @@ export async function probeBoxLevel(dir: string): Promise<boolean> {
     return true;
   }
   await refuseV2(dir);
-  if (!hasMarker && !(await isBoxRoot(dir))) return false;
+  if (!(await isBoxRoot(dir))) {
+    await diagnoseStrayMarker(dir);
+    return false;
+  }
   await readShapeRecord(dir);
   return true;
 }
@@ -224,9 +251,4 @@ export async function writeShapeBlock(dir: string, block: ShapeBlock | null): Pr
     throw new UnreadablePackageJsonError(dir, { packageJsonPath, cause: e });
   }
   await fs.writeFile(packageJsonPath, setShapeBlock(raw, block));
-}
-
-/** Whether `dir` has the fallback marker. */
-export async function hasBoxMarker(dir: string): Promise<boolean> {
-  return fileExists(path.join(dir, BOX_MARKER));
 }

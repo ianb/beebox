@@ -17,12 +17,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { migrateBoxState } from "./state-migration.js";
-import {
-  NotABoxError,
-  UnreadablePackageJsonError,
-  MissingBeeBoxDependencyError,
-} from "./box-shape-errors.js";
-import { declaresBeeBox, hasBoxMarker, isBoxRoot, readBoxPackageJson, readShapeRecord, refuseV2 } from "./box-identity.js";
+import { NotABoxError } from "./box-shape-errors.js";
+import { diagnoseStrayMarker, isBoxRoot, readShapeRecord, refuseV2 } from "./box-identity.js";
 
 export { BoxShapeError } from "./box-shape-errors.js";
 
@@ -38,8 +34,7 @@ export interface BoxShape {
  * Determine a box's physical layout.
  *
  * A box is identified by its `package.json` declaring `beebox` plus `_config/`
- * at the same root, or by the fallback marker `.beebox/box.json`
- * (`box-identity.ts`). Its shape version comes from the `package.json`
+ * at the same root (`isBoxRoot` in `box-identity.ts`). Its shape version comes from the `package.json`
  * `beebox` block, else from the marker. A v2 package root, a shape version
  * that predates 3 or is newer than this build, and a box with no recorded
  * version are each a `BoxShapeError`.
@@ -52,11 +47,11 @@ export async function getBoxShape(boxRoot: string): Promise<BoxShape> {
   const resolvedRoot = path.resolve(boxRoot);
   await migrateBoxState(resolvedRoot);
   await refuseV2(resolvedRoot);
-  if (!(await hasBoxMarker(resolvedRoot)) && !(await isBoxRoot(resolvedRoot))) {
+  if (!(await isBoxRoot(resolvedRoot))) {
+    await diagnoseStrayMarker(resolvedRoot);
     throw new NotABoxError(resolvedRoot);
   }
   const { shapeVersion } = await readShapeRecord(resolvedRoot);
-  await requireBeeBoxDependency(resolvedRoot);
   return { shapeVersion, boxRoot: resolvedRoot };
 }
 
@@ -108,19 +103,6 @@ export async function requireBoxRoot(inputPath: string): Promise<string> {
   const lookup = await getBoxShapeIfPresent(resolved);
   if (lookup.found) return lookup.shape.boxRoot;
   throw new NotABoxError(resolved);
-}
-
-async function requireBeeBoxDependency(boxRoot: string): Promise<void> {
-  const packageJsonPath = path.join(boxRoot, "package.json");
-  const pkg = await readBoxPackageJson(boxRoot);
-  if (pkg === null) {
-    throw new UnreadablePackageJsonError(boxRoot, { packageJsonPath, cause: "the file does not exist" });
-  }
-  // Existing boxes can reach this boundary before their package manifest is
-  // upgraded, so `declaresBeeBox` also accepts the retired dependency name.
-  if (!declaresBeeBox(pkg)) {
-    throw new MissingBeeBoxDependencyError(boxRoot, packageJsonPath);
-  }
 }
 
 /** The three code directories a box's engine-facing loaders read: schemas, views, tricks. */

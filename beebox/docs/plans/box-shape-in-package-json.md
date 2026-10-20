@@ -288,11 +288,12 @@ mention of the marker in the box agent guide.
   is a box); and the real sweep on a box that tracks its marker (commit holds
   `package.json` and the manifest, tree clean, marker still tracked).
 - Fixtures: `writeBoxFiles` and `useMarkerOnly` in `test/helpers/test-helpers.ts`.
-  *Implementation:* the hand-written marker fixtures were not converted: the
-  marker fallback still reads them, so they pass unchanged and go with the
-  fallback (named in the deferred issue). Tests that seeded markers for the
-  dashboard's `version`/`created` lost the seed; tests that provoke a bad
-  shape write it through `useMarkerOnly`.
+  *Implementation:* the hand-written marker fixtures now write `_config/` and
+  the block (`writeBoxFiles`), because a valid marker alone no longer makes a
+  box (identity is required on the marker path too; a marker that is not
+  shape 3 is still diagnosed). Tests that seeded markers for the dashboard's
+  `version`/`created` lost the seed; tests that provoke a bad shape write it
+  through `useMarkerOnly`.
 
 ## Implementation order
 
@@ -306,6 +307,12 @@ mention of the marker in the box agent guide.
    diff is only the block. Then change-selected tests and typecheck.
 
 ## Rollout shape
+
+**Prerequisite:** a clone is recognized only when its source box has run
+`box-shape-record-2026-10` and committed it. Production boxes migrate in the
+deploy sweep; a local box must run `bbx engine migrate --sweep` before anyone
+relies on cloning it (the worktree's `test1` clone did, commit `c1bf7fc5`).
+Until then a clone gets `MissingShapeRecordError` with its recovery line.
 
 Done when the unit, clone, migration, and router tests pass, and the
 change-selected suite passes. The migration is scripted and atomic per box

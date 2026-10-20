@@ -17,13 +17,13 @@ import { invalidateBoxSchemas } from "../../../../../../src/schemas.js";
 import { makeTmpBox } from "../../../../../helpers/test-helpers.js";
 
 // Hand-scaffold a v3 (one-root) shape inside a tmp box: package.json
-// declaring a beebox dependency and the marker, both at the same root.
+// declaring a beebox dependency and recording the shape, beside `_config/`.
 async function scaffoldV3(box: Awaited<ReturnType<typeof makeTmpBox>>): Promise<string> {
   await box.write(
     "pkg/package.json",
-    JSON.stringify({ name: "tmp-box", private: true, dependencies: { "beebox": "^0.1.0" } }),
+    JSON.stringify({ name: "tmp-box", private: true, dependencies: { "beebox": "^0.1.0" }, beebox: { shapeVersion: 3, created: "2026-01-01T00:00:00.000Z" } }),
   );
-  await box.write("pkg/.beebox/box.json", JSON.stringify({ shapeVersion: 3 }));
+  await box.write("pkg/_config/.gitkeep", "");
   return box.path("pkg");
 }
 

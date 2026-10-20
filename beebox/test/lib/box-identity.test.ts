@@ -15,6 +15,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { isBoxRoot, probeBoxLevel, readShapeRecord, refuseV2 } from "../../src/lib/box-identity.js";
 import { LEGACY_BOX_MARKER, LEGACY_BOX_STATE_DIR } from "../../src/lib/state-migration.js";
+import { getBoxShape } from "../../src/lib/box-shape.js";
 import { writeBoxFiles } from "../helpers/test-helpers.js";
 
 async function tmpDir(t: Test): Promise<string> {
@@ -49,6 +50,10 @@ void test("isBoxRoot needs the beebox dependency and a structural sibling", asyn
   const broken = await tmpDir(t);
   await fs.mkdir(path.join(broken, "_config"));
   await fs.writeFile(path.join(broken, "package.json"), "{not json");
+  // The sibling must be a directory: a regular file named `_config` is not one.
+  const configFile = await tmpDir(t);
+  await fs.writeFile(path.join(configFile, "_config"), "");
+  await fs.writeFile(path.join(configFile, "package.json"), JSON.stringify({ dependencies: { beebox: "*" }, beebox: { shapeVersion: 3, created: "x" } }));
 
   t.check({
     box: await isBoxRoot(box),
@@ -58,6 +63,7 @@ void test("isBoxRoot needs the beebox dependency and a structural sibling", asyn
     v2: await isBoxRoot(v2),
     empty: await isBoxRoot(await tmpDir(t)),
     broken: await outcome(isBoxRoot(broken)),
+    configFile: await isBoxRoot(configFile),
   }, {
     box: true,
     noSibling: false,
@@ -66,6 +72,7 @@ void test("isBoxRoot needs the beebox dependency and a structural sibling", asyn
     v2: true,
     empty: false,
     broken: "UnreadablePackageJsonError",
+    configFile: false,
   });
 });
 
@@ -156,6 +163,9 @@ void test("refuseV2 recognizes both v2 forms and leaves v3 alone", async (t) => 
 // `probeBoxLevel` is what `findBoxRoot` asks of each directory. The
 // retired-name marker alone still counts, so `requireBoxRoot` can reach the
 // state migration that moves it; a retired-name STATE directory alone does not.
+// A valid `.beebox/box.json` alone does not make a box: identity is the
+// dependency plus the sibling. A marker that predates v3 is still diagnosed
+// there (a v1 box had no package.json).
 void test("probeBoxLevel: identity, marker, retired-name marker, and nothing", async (t) => {
   const identity = await tmpDir(t);
   await writeBoxFiles(identity);
@@ -168,6 +178,13 @@ void test("probeBoxLevel: identity, marker, retired-name marker, and nothing", a
   await fs.mkdir(path.join(legacyStateOnly, LEGACY_BOX_STATE_DIR));
   const unrecorded = await tmpDir(t);
   await writeBoxFiles(unrecorded, { shapeVersion: null });
+  const unrelatedWithMarker = await tmpDir(t);
+  await fs.writeFile(path.join(unrelatedWithMarker, "package.json"), JSON.stringify({ name: "some-app", dependencies: { lodash: "1" } }));
+  await fs.mkdir(path.join(unrelatedWithMarker, ".beebox"));
+  await fs.writeFile(path.join(unrelatedWithMarker, ".beebox/box.json"), JSON.stringify({ shapeVersion: 3 }));
+  const v1 = await tmpDir(t);
+  await fs.mkdir(path.join(v1, ".beebox"));
+  await fs.writeFile(path.join(v1, ".beebox/box.json"), JSON.stringify({ version: "1.0.0" }));
   t.check({
     identity: await probeBoxLevel(identity),
     markerOnly: await probeBoxLevel(markerOnly),
@@ -175,12 +192,18 @@ void test("probeBoxLevel: identity, marker, retired-name marker, and nothing", a
     legacyStateOnly: await probeBoxLevel(legacyStateOnly),
     nothing: await probeBoxLevel(await tmpDir(t)),
     unrecorded: await outcome(probeBoxLevel(unrecorded)),
+    unrelatedWithMarker: await probeBoxLevel(unrelatedWithMarker),
+    unrelatedGetBoxShape: await outcome(getBoxShape(unrelatedWithMarker)),
+    v1: await outcome(probeBoxLevel(v1)),
   }, {
     identity: true,
-    markerOnly: true,
+    markerOnly: false,
     legacyMarker: true,
     legacyStateOnly: false,
     nothing: false,
     unrecorded: "MissingShapeRecordError",
+    unrelatedWithMarker: false,
+    unrelatedGetBoxShape: "NotABoxError",
+    v1: "PreV3ShapeError",
   });
 });

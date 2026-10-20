@@ -50,6 +50,19 @@ export async function isBox(boxPath: string): Promise<boolean> {
   return isBoxRoot(boxPath);
 }
 
+/**
+ * `isBox` for one entry of a list: a check that throws (an unparseable
+ * `package.json` beside `_config/`) becomes that entry's problem, so the
+ * listing goes on to the next box. Returns null for a box.
+ */
+export async function boxEntryProblem(boxPath: string): Promise<string | null> {
+  try {
+    return (await isBoxRoot(boxPath)) ? null : "not a box: needs package.json declaring beebox and _config/";
+  } catch (e) {
+    return errorMessage(e);
+  }
+}
+
 // -- JSONL logging with rotation --
 
 export interface LogEntry {
