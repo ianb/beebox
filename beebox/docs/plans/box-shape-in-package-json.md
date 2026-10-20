@@ -131,12 +131,23 @@ Why: two resolvers keep separate minimum-version constants in lockstep.
 
 ### B. `bbx init` writes the block
 
-`scaffoldPackageRoot` (`package.ts:215`) adds `beebox: { shapeVersion: 3,
-created: getBoxTimeISO(boxRoot) }`. `initBox`'s fresh path
-(`structure/core.ts:109-115`) stops writing the marker and creates `_config/`
-before the fail-fast `getBoxShape` (`:124`); the rollback (`:131`) removes the
-`_config/` it created. `isUpdate` comes from `isBoxRoot`, so a clone takes the
-update path.
+`initBox`'s fresh path (`structure/core.ts:109-115`) writes the block with
+`writeShapeBlock` (the pure `setShapeBlock` in `box-identity.ts`, shared with
+the migration) and creates `_config/` before the fail-fast `getBoxShape`
+(`:124`). A failed seed removes the block (`:131`), so a retry is fresh again.
+Fresh or update is decided by the shape record (`recordedShapeSource`), not by
+identity: a repo with commits but no record (a clone of an unmigrated box) is
+refused with `MissingShapeRecordError`. `detectBoxTarget` uses identity, so a
+clone takes the update path.
+
+*Implementation (2026-10-20):* the plan put the block in `scaffoldPackageRoot`
+and keyed `isUpdate` on identity. That broke fresh-init retry: identity holds
+as soon as `_config/` exists, and removing `_config/` on rollback would delete
+authored notes (`migration-run.canonical-interface-cards.test.ts`). Fresh init
+also still writes the marker, in the shape older engines read (`version`,
+`created`), because a box's git hooks can run an older checkout's `bbx`
+(`resolveStableCheckoutBbx`), and that engine needs the marker; the same
+write keeps a box made after deploy openable on rollback.
 
 ### C. Drop `version`
 
@@ -153,14 +164,20 @@ marker text → new package.json text or a refusal) and `run.ts`; entry after
 
 1. Valid block present → no write. Else set `pkg.beebox = { shapeVersion,
    created }` from the marker; write `JSON.stringify(pkg, null, 2) + "\n"`.
-2. `git ls-files --error-unmatch .beebox/box.json` succeeds →
-   `git rm --cached --quiet -- .beebox/box.json`.
-3. Leave the marker file on disk (boxholder decision, 2026-10-20), so a
+2. Leave the marker file on disk (boxholder decision, 2026-10-20), so a
    rollback to an older engine still opens the box during the transition.
-4. Verify `readShapeRecord(...).source === "package"`.
+3. Verify `readShapeRecord(...).source === "package"`.
 
 Exit 1 with nothing written when there is neither block nor marker, or the
-marker's `shapeVersion` is not 3, or it lacks `created`. No exit-2 case. Same
+marker's `shapeVersion` is not 3, or it lacks `created`. No exit-2 case.
+
+*Implementation (2026-10-20):* the decided `git rm --cached` is not done here.
+The sweep commits the paths whose working-tree content changed
+(`changedMigrationPaths`, `migration-recovery.ts:91`), and an untrack that
+keeps the file on disk changes no content, so the removal would stay staged
+and land in the next unrelated agent commit. The marker stays tracked where it
+was; the deferred cleanup deletes the file, which the sweep does commit,
+untracking it in the same commit. Same
 commit: `issues/deferred/2026-10-20-drop-box-marker-fallback.md`
 (`activate-on: 2026-11-20`, `category: code-quality`) naming the marker branch
 of `readShapeRecord`, the marker clause of `refuseV2`, and
@@ -233,8 +250,8 @@ none
 - Wrong file (`_config/box.json` edited for the shape): ADDRESSED, the block is
   in `package.json` and `docs/box-layout.md` says so.
 - Hand-edit drift (block deleted): ADDRESSED, the error names its exact form.
-- Partial migration (block written, `git rm --cached` failed): ADDRESSED, the
-  block wins on read and a rerun finishes.
+- Partial migration (block written, sweep commit failed): ADDRESSED, the
+  block wins on read and the sweep retries the commit.
 - Mixed fleet: each engine reads block or marker. Cards, tags, concurrent
   agents: not applicable.
 
@@ -266,19 +283,22 @@ mention of the marker in the box agent guide.
   returns 3; `findBoxRoot(<clone>/_content)` is the clone; `detectBoxTarget`
   is `"update"`; `runInit` completes. Second case: a pre-migration box (marker,
   no block) cloned gets `MissingShapeRecordError` with the recovery line.
-- The migration test: build a box with a force-tracked marker and no block.
-  Run `run.ts --apply`. Assert that the block has `created`, that the marker
-  is gone from `git ls-files` but still on disk, and that a second run reports
-  "already converted". Then clone the box and repeat the clone checks.
-- Fixtures: add `writeBoxFiles(root, { shapeVersion?, created?, dependency? })`
-  to `test/helpers/test-helpers.ts`. Convert the 18 hand-written marker
-  writes to it (`grep -rn "\.beebox.*box\.json" beebox/test`). Tests of the
-  fallback keep writing markers on purpose.
+- The migration test: the decision cases; the runner on a box with the
+  marker only (block written, marker kept, rerun "already converted", clone
+  is a box); and the real sweep on a box that tracks its marker (commit holds
+  `package.json` and the manifest, tree clean, marker still tracked).
+- Fixtures: `writeBoxFiles` and `useMarkerOnly` in `test/helpers/test-helpers.ts`.
+  *Implementation:* the hand-written marker fixtures were not converted: the
+  marker fallback still reads them, so they pass unchanged and go with the
+  fallback (named in the deferred issue). Tests that seeded markers for the
+  dashboard's `version`/`created` lost the seed; tests that provoke a bad
+  shape write it through `useMarkerOnly`.
 
 ## Implementation order
 
-1. Track A, fixture helper, fixture conversion (`initBox` still writes the marker).
-2. Track B and the clone tests. 3. Track C. 4. Track D and the deferred issue.
+1. Track A and the fixture helper (`initBox` still writes the marker).
+2. Tracks B and C together (dropping `getBoxMetadata` had to land with the
+   block) and the clone tests. 3. Track D and the deferred issue.
 5. Track E with the router regression test.
 6. On the worktree's box clone: `bbx engine migrate --box
    ~/src/box-worktrees/bug-burndown-4/test1`, commit, `git clone` it into the

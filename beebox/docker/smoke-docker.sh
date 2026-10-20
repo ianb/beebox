@@ -101,8 +101,8 @@ echo "smoke: ok — empty volume refused with init instructions (exit $empty_cod
 if ! dc run --rm box bbx engine init /data/box > "$LOG_DIR/init.log" 2>&1; then
   fail "bbx engine init /data/box" "$LOG_DIR/init.log"
 fi
-if [[ ! -f "$WORK_DIR/data/box/.beebox/box.json" ]]; then
-  fail "bbx engine init did not create .beebox/box.json" "$LOG_DIR/init.log"
+if ! grep -q '"shapeVersion": 3' "$WORK_DIR/data/box/package.json" 2>/dev/null; then
+  fail "bbx engine init did not record the beebox shape block in package.json" "$LOG_DIR/init.log"
 fi
 echo "smoke: ok — bbx engine init scaffolded a v2 box"
 

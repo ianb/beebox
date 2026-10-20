@@ -326,12 +326,12 @@ wt_create_locked() {
         fi
       fi
 
-      # Carry over the box marker. Since the 2026-08-30 rename it lives in the
-      # gitignored state directory (`.beebox/box.json`), so a clone has none —
-      # and without it `bbx engine init` below sees "a directory with a package.json"
-      # and refuses instead of refreshing hooks (broke every worktree launch on
-      # 2026-09-05; moving the marker to tracked files is
-      # issues/bugs/2026-10-20-box-marker-in-gitignored-state-dir.md).
+      # Carry over the box marker (`.beebox/box.json`, gitignored, so a clone
+      # has none). A box that has run box-shape-record-2026-10 records its shape
+      # in its tracked package.json and needs no marker; this copy covers a
+      # source box that has not migrated yet, whose clone would otherwise be
+      # refused with MissingShapeRecordError. Removed by
+      # issues/deferred/2026-10-20-drop-box-marker-fallback.md.
       if [ -f "$box_src_state/box.json" ] && [ ! -f "$box_dest_state/box.json" ]; then
         mkdir -p "$box_dest_state"
         cp "$box_src_state/box.json" "$box_dest_state/box.json"

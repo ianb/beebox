@@ -112,8 +112,8 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   const annex = createGitAnnexService();
   await requireGitAnnex(annex);
 
-  // Detects what's already at `targetPath`: an existing box (marker at the
-  // target itself) or nothing yet. A fresh init always scaffolds the
+  // Detects what's already at `targetPath`: an existing box (a beebox
+  // package.json beside `_config/`, which a clone of a box has) or nothing yet. A fresh init always scaffolds the
   // one-root layout — see `docs/implemented-plans/one-root-box-layout.md`.
   const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";

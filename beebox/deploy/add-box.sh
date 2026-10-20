@@ -307,7 +307,7 @@ if [[ -n "$CREATE" ]]; then
   BOX_STAGE="$STAGING/$BOX_NAME"
 
   echo "Scaffolding a new box in a temp directory..."
-  # `bbx engine init` scaffolds the v2 package (content/.beebox/box.json, package.json, ...)
+  # `bbx engine init` scaffolds the box (package.json with its beebox shape block, _config/, ...)
   # AND makes the initial git commit — no --skip-git here, that commit is what
   # gets pushed.
   "$BBX_BIN" init "$BOX_STAGE"
@@ -372,16 +372,14 @@ if ! su - $BBX_USER -c "cd '$BOX_PATH' && bbx engine init ." 2>&1; then
   exit 1
 fi
 
-# A v2 box is a package whose operational content lives in content/ — so
-# config/ is under content/, not at the package root. Resolve it the same way
-# the hub does (.beebox/box.json marks the content dir; see src/hub/supervisor/child-spawn.ts's
-# resolveBoxRoot), instead of assuming either layout.
-if [[ -f "$BOX_PATH/content/.beebox/box.json" ]]; then
-  CONTENT_DIR="$BOX_PATH/content"
-elif [[ -f "$BOX_PATH/.beebox/box.json" ]]; then
+# A box has one root: package.json, _config/, and every operational area live
+# at $BOX_PATH (src/lib/box-identity.ts's isBoxRoot checks the same _config/).
+# The gitignored .beebox/box.json is not a signal: a clone has none. A v2 box
+# (operational tree under content/) can no longer be opened.
+if [[ -d "$BOX_PATH/_config" ]]; then
   CONTENT_DIR="$BOX_PATH"
 else
-  echo "Could not find .beebox/box.json in $BOX_PATH or $BOX_PATH/content — is this a box?"
+  echo "Could not find _config/ in $BOX_PATH — is this a box? (A v2 box with content/ cannot be opened.)"
   exit 1
 fi
 
@@ -433,12 +431,11 @@ chown -R $BBX_USER:$BBX_USER "$BOX_PATH"
 #                             resolves either form itself). This is what makes
 #                             the box reachable.
 #   ~/.config/beebox/boxes.json — the scheduler's box list (bbx engine scheduler start /
-#                             bbx tick). Takes the BOX ROOT, i.e. content/ —
-#                             that is where .beebox/box.json lives and what every
-#                             existing entry holds. See
+#                             bbx tick). Takes the BOX ROOT — for a one-root box
+#                             the same directory. See
 #                             src/core/box/boxes-config.ts.
-# Passing the package root to 'bbx engine boxes add' fails its .beebox/box.json check, so use
-# the content dir resolved above. Neither file is hot-reloaded, hence the
+# 'bbx engine boxes add' checks the box root (package.json declaring beebox
+# beside _config/), so use the directory resolved above. Neither file is hot-reloaded, hence the
 # restart below.
 #
 # The hub goes first: it is the step with real validation behind it, so if

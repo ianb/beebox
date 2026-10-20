@@ -116,7 +116,7 @@ export async function assembleContext(
 
 class NotABoxError extends Error {
   constructor(path: string) {
-    super(`No box found at ${path} (no .beebox/box.json marker at or below it)`);
+    super(`No box found at ${path} (no package.json declaring beebox beside _config/ at or above it)`);
     this.name = "NotABoxError";
   }
 }

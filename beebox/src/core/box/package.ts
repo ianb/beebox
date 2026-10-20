@@ -77,14 +77,15 @@ export const BOX_BUILT_DEPENDENCIES = [
 
 export interface BoxTarget {
   mode: BoxInitMode;
-  /** The box root — the ONE root; `.beebox/box.json`, `_content/`,
-   * `_config/`, `package.json`/`node_modules`/`src/` all live here (or will). */
+  /** The box root — the ONE root; `package.json` (with its `beebox` shape
+   * block), `_content/`, `_config/`, `node_modules`/`src/` all live here (or will). */
   boxRoot: string;
 }
 
 /**
- * Decide what `bbx engine init <path>` is looking at: an existing box (marker at
- * the target itself) or nothing yet.
+ * Decide what `bbx engine init <path>` is looking at: an existing box
+ * (`isValidBox`: a beebox package.json beside `_config/`, so a clone counts)
+ * or nothing yet.
  */
 export async function detectBoxTarget(targetPath: string): Promise<BoxTarget> {
   const resolvedRoot = path.resolve(targetPath);
@@ -280,7 +281,7 @@ export async function scaffoldPackageRoot(
 /** A scaffolded shapeVersion-3 box: one root. */
 export interface ScaffoldedBox {
   /** The box root — where `package.json`/`node_modules`/`src/`,
-   * `.beebox/box.json`, and every `_`-prefixed operational area live. */
+   * and every `_`-prefixed operational area live. */
   boxRoot: string;
 }
 

@@ -66,7 +66,7 @@ schedulerCommand
     deprecationNotice("add");
     const resolved = path.resolve(boxPath);
     if (!(await isBox(resolved))) {
-      console.error(`Not a valid box (missing .beebox/box.json): ${resolved}`);
+      console.error(`Not a valid box (needs a package.json declaring beebox and _config/): ${resolved}`);
       process.exit(1);
     }
     const added = await addBoxToManifest(resolved);
@@ -100,7 +100,7 @@ schedulerCommand
     }
     for (const box of config.boxes) {
       const valid = await isBox(box);
-      console.log(`${valid ? "  " : "! "}${box}${valid ? "" : " (missing .beebox/box.json)"}`);
+      console.log(`${valid ? "  " : "! "}${box}${valid ? "" : " (not a box: needs package.json declaring beebox and _config/)"}`);
     }
   });
 

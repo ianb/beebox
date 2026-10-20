@@ -38,12 +38,12 @@ fi
 
 # ── No arguments: readiness check, then serve ────────────────────────────
 #
-# A box is ready only when all three hold. Checking just the marker would
-# accept a partial init (bbx engine init writes the marker early but commits at the
+# A box is ready only when all three hold. Checking just _config/ would
+# accept a partial init (bbx engine init creates it early but commits at the
 # end — a crash between the two leaves a box that looks initialized but has no
 # HEAD commit).
 ready=1
-[[ -f "$BOX_ROOT/.beebox/box.json" ]] || ready=0
+[[ -d "$BOX_ROOT/_config" ]] || ready=0
 [[ -f "$BOX_ROOT/package.json" ]] || ready=0
 git -C "$BOX_ROOT" rev-parse HEAD >/dev/null 2>&1 || ready=0
 
