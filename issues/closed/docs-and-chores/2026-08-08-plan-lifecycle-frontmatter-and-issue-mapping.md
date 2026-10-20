@@ -70,7 +70,7 @@ they're the fastest-growing category of prose in the repo (0 → 64k lines in
 three months, more than double all actual documentation). The value is real:
 `implemented-plans/boxes-as-packages-v2.md` is where the `events.db` two-engine
 hazard was documented, and that's how
-[the events.db bug](../../bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md)
+[the events.db bug](../bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md)
 got filed. But an unqueryable pile of 44 in-flight plans has the same failure
 mode as the session/worktree problem: things accumulate and nothing says what's
 outstanding.

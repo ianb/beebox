@@ -29,8 +29,9 @@
  * `unknownEventRow`, mirroring `unknownChatMessage`), so one bad row degrades
  * visibly without breaking dispatch of its siblings.
  *
- * Persisted rows are a reconnect bridge, not a source of truth. On bus open a
- * {@link EVENT_SCHEMA_GENERATION} mismatch truncates the events table, so
+ * Persisted rows are a reconnect bridge, not a source of truth. On bus open an
+ * older stored {@link EVENT_SCHEMA_GENERATION} truncates the events table (a
+ * newer one refuses to open — see `NewerEventSchemaError`), so
  * clients reconnecting across a deploy hit the existing full-resync path
  * instead of replaying stale-shaped rows — "everything persisted is valid
  * against current schemas" is an invariant, not a hope.
@@ -45,11 +46,60 @@ export type { BusEventName, EventMap } from "./schemas.js";
 
 /**
  * Bumped whenever ANY event payload shape in `event-bus-schemas.ts` changes.
- * Stored in the one-row `event_meta` table; on bus open a mismatch truncates
- * the persisted events (see `createEventBus`). All processes of one deploy
+ * Stored in the one-row `event_meta` table; on bus open an older stored
+ * generation truncates the persisted events and a newer one refuses to open
+ * (see `reconcileSchemaGeneration`). All processes of one deploy
  * share this constant, so a startup race converges regardless.
  */
 export const EVENT_SCHEMA_GENERATION = 10;
+
+/**
+ * The box's events.db carries an event-schema generation newer than this
+ * engine's: a newer engine (another checkout or deploy) wrote it. Opening it
+ * here would truncate that engine's events, so the open refuses instead.
+ */
+export class NewerEventSchemaError extends Error {
+  constructor(dbPath: string, options: { onDiskGeneration: number; engineGeneration: number }) {
+    super(
+      "Refusing to open " + dbPath + ": it was written by a newer beebox engine (event-schema generation " +
+        String(options.onDiskGeneration) + "), and this engine is older (generation " +
+        String(options.engineGeneration) + "). Opening it here would delete the newer engine's events. " +
+        "Use the newer engine for this box."
+    );
+    this.name = "NewerEventSchemaError";
+  }
+}
+
+/**
+ * Throw {@link NewerEventSchemaError} when the box's events.db was written by
+ * a newer engine; a no-op when it is absent, unstamped, or not newer. Opens the
+ * DB read-only and changes nothing, so `bbx serve` can run it before it stops
+ * the box's previous server — an older engine must refuse before it kills the
+ * newer engine's server, not after.
+ */
+export function assertEventSchemaNotNewer(boxRoot: string): void {
+  const dbPath = path.join(boxRoot, ".beebox/events.db");
+  if (!fs.existsSync(dbPath)) return;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    const table = db
+      .prepare<[], { name: string }>("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'event_meta'")
+      .get();
+    if (table === undefined) return;
+    const meta = db
+      .prepare<[], { gen: number }>("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
+      .get();
+    if (meta !== undefined) throwIfNewer(dbPath, meta.gen);
+  } finally {
+    db.close();
+  }
+}
+
+function throwIfNewer(dbPath: string, onDiskGeneration: number): void {
+  if (onDiskGeneration > EVENT_SCHEMA_GENERATION) {
+    throw new NewerEventSchemaError(dbPath, { onDiskGeneration, engineGeneration: EVENT_SCHEMA_GENERATION });
+  }
+}
 
 /**
  * An event whose payload matched its event's schema. A union over event names,
@@ -103,12 +153,14 @@ interface EventRow {
  * Reconcile the persisted schema generation against {@link EVENT_SCHEMA_GENERATION}.
  * Persisted rows bridge reconnects only, so rows written by an older payload
  * shape are worthless — drop them wholesale rather than replaying stale-shaped
- * data into current consumers. Meta read + truncate + meta write run in one
- * transaction so a startup race between processes of one deploy is unambiguous
- * (they share the constant, so it converges anyway — the transaction just
- * removes the interleaving).
+ * data into current consumers. A NEWER on-disk generation throws
+ * {@link NewerEventSchemaError} and leaves the rows alone: an older engine
+ * opening a box a newer engine serves must not wipe that engine's history.
+ * Meta read + truncate + meta write run in one transaction so a startup race
+ * between processes of one deploy is unambiguous (they share the constant, so
+ * it converges anyway — the transaction just removes the interleaving).
  */
-function reconcileSchemaGeneration(db: Database.Database): void {
+function reconcileSchemaGeneration(db: Database.Database, dbPath: string): void {
   const reconcile = db.transaction(() => {
     const meta = db
       .prepare<[], { gen: number }>("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
@@ -130,6 +182,10 @@ function reconcileSchemaGeneration(db: Database.Database): void {
       }
       return;
     }
+    // A newer engine wrote these rows. Truncating would wipe that engine's
+    // live history, and the two would then take turns wiping each other on
+    // every open. Refuse instead; the transaction rolls back untouched.
+    throwIfNewer(dbPath, meta.gen);
     if (meta.gen !== EVENT_SCHEMA_GENERATION) {
       const deleted = db.prepare("DELETE FROM events").run().changes;
       db.prepare("UPDATE event_meta SET schema_generation = ? WHERE id = 1").run(
@@ -268,7 +324,12 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     CREATE INDEX IF NOT EXISTS idx_events_event_id ON events (event, id);
   `);
 
-  reconcileSchemaGeneration(db);
+  try {
+    reconcileSchemaGeneration(db, dbPath);
+  } catch (e) {
+    db.close();
+    throw e;
+  }
 
   const insertStmt = db.prepare(
     "INSERT INTO events (event, data) VALUES (?, ?)"
