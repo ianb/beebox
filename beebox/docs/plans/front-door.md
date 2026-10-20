@@ -941,6 +941,17 @@ Later the same day, after seeing the shipped stock summary (Revision, above):
   me about talking instead of typing."; "What can you do?" and "Let me tell
   you what this box is for." go.
 
+On 2026-10-20 the boxholder settled questions 8–13:
+
+- **Question 8:** the agent marks the card answered.
+- **Question 9:** no follow-up job; the agent handles the answer in the
+  conversation ("the agent just chats").
+- **Question 10:** whatever happens naturally in existing boxes is fine: they
+  show their newest pending question, no seeding.
+- **Question 11:** newest first.
+- **Question 12:** not discussed; the lean (the snapshot) stands.
+- **Question 13:** no opinion; the lean (text only) stands.
+
 1. **What the first page says on an empty box.** A "stock summary" is a
    short paragraph the box ships with in the root place's body; the agent
    replaces it when it learns the box's purpose.
