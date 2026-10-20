@@ -13,7 +13,7 @@ import { Fragment, type ReactNode } from "react";
 import { InlineAction } from "../ui/InlineAction";
 import { summaryParts, type SummaryPart, type SummaryReduction } from "./summary";
 
-/** What the line's control ("N on your plate", or "N later" when nothing is on the plate) does; `null` when it has nothing to do (a box view, no pane to open in), and then the count is plain text. */
+/** What the line's control ("N now", or "N later" when nothing is due now) does; `null` when it has nothing to do (a box view, no pane to open in), and then the count is plain text. */
 export interface OpenAction {
   onClick: () => void;
   title: string;
@@ -49,7 +49,7 @@ export function TodoSummaryLine({ reduction, openAction }: {
       className="px-[var(--bbx-content-padding,1rem)] pt-2 text-xs text-warm-500 print:hidden"
       data-card-section="todo-summary"
     >
-      {/* The control is whichever of "on your plate" and "later" `summaryParts` marks. */}
+      {/* The control is whichever of "now" and "later" `summaryParts` marks. */}
       <CountsLine parts={parts} actions={{ open: openAction, later: openAction }} />
     </p>
   );

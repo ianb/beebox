@@ -24,7 +24,7 @@ async function seedBox() {
   return box;
 }
 
-// ## Nothing on the plate: no line at all
+// ## Nothing due now: no line at all
 //
 // A box with no todos, or only quiet/done/dropped/parked ones, gets `null` —
 // not an empty string, not a "0 todos" line.
@@ -39,14 +39,14 @@ void test("A box with no todos, or only quiet/done/dropped/parked ones, gets nul
   );
   t.check(await computeTodoAmbientLine(box.root), null);
 
-  // ## Open todos on the plate: counts, singular/plural, and the escalated note
+  // ## Open todos due now: counts, singular/plural, and the overdue note
 
   const box2 = await seedBox();
   await box2.write(
     "store/b.doc.card",
     doc('{% todo id="one" %}Solo undated todo{% /todo %}\n')
   );
-  t.check(await computeTodoAmbientLine(box2.root), "1 open todo on the plate — `bbx query todos`");
+  t.check(await computeTodoAmbientLine(box2.root), "1 todo now — `bbx query todos`");
 
   // Escalated (past-due) todos get called out separately, and the count is
   // plural once there's more than one:
@@ -59,5 +59,5 @@ void test("A box with no todos, or only quiet/done/dropped/parked ones, gets nul
       '{% todo id="on-plate" %}Also on the plate{% /todo %}\n'
     )
   );
-  t.check(await computeTodoAmbientLine(box3.root), "2 open todos on the plate (1 escalated) — `bbx query todos`");
+  t.check(await computeTodoAmbientLine(box3.root), "2 todos now (1 overdue) — `bbx query todos`");
 });

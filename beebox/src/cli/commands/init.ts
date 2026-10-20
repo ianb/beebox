@@ -191,7 +191,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   const briefingInstalled = await installBriefing(boxRoot);
   if (briefingInstalled) changes.push("Installed _content/briefing.briefing.card");
 
-  // Install the box-wide todo-view stock instance ("the plate")
+  // Install the box-wide todo-view stock instance (the Todos page)
   const todoViewInstalled = await installTodoView(boxRoot);
   if (todoViewInstalled) changes.push("Installed _content/plate.todo-view.card");
 

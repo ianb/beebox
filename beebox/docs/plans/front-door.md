@@ -962,8 +962,13 @@ alternatives.
   boxholder does not like the plate metaphor and said it is a term the
   agent focuses on more than they do. The line reads "3 to do · 1 overdue ·
   2 questions waiting". Renaming the stock todo view ("The Plate") and the
-  "on your plate" summary wording elsewhere is a separate issue, not this
-  plan.
+  "on your plate" summary wording elsewhere was deferred, then done in this
+  workstream on 2026-10-20 at the boxholder's request: the page is "Todos",
+  the state pair is "now" and "later" (overdue called out separately), the
+  date strip says "Started on this day" and "Starts on this day", the CLI
+  flag is `--now` and the grouping `--group status`; the root line keeps "to
+  do". The code's `plateState` field, its values, and the card's filename
+  are unchanged (`docs/glossary.md`, "now / later").
 - **Question 4:** Browse always starts at the person's content (Track D).
   Stated as a principle: the content root is where a person spends all
   their time; the other areas are for jumping out, an escape hatch, and

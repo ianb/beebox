@@ -84,6 +84,9 @@ to change a user-facing word, change it here first. Decisions recorded
 **place** — The app bar's notion of where the user is: the pill's label plus the directory it resolves to (`src/frontend/src/lib/place-label.ts`).
 *User-facing:* internal — the pill shows the place's *name*; the word "place" itself appears in no label. The root place is named for the box (its slug); **"Home"** labels a chat bound to no place.
 
+**now / later** — The two states of an open todo a person sees: *now* (past its `due`, past its `start`, or undated) and *later* (before its `start`). Counts read "3 now · 1 later"; overdue is called out separately. The code's field is `plateState` with values `escalated | on-plate | quiet`, an older metaphor the screen no longer uses (`docs/box/todos.md`). The box-wide list is the **Todos** page, the stock `todo-view` card at `_content/plate.todo-view.card`.
+*User-facing:* "now", "later", "overdue", "Todos"; never "plate".
+
 **question** — A `*.question.card` in `_bookkeeping/questions/`: something the box is waiting to hear from the person, with a `prompt`, a `memo` saying why, and a `directive` for the answer (`docs/questions.md`). The newest pending one is the empty root chat's opening line; a new box starts with one.
 *User-facing:* "a question" or "something I wanted to ask you"; never "question card". The Questions page is "the questions waiting for you".
 

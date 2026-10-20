@@ -30,7 +30,7 @@ interface QueryCliOptions {
   json?: boolean;
   status?: string[];
   assigned?: string;
-  onPlate?: boolean;
+  now?: boolean;
 }
 
 export const queryCommand = new Command("query")
@@ -38,12 +38,12 @@ export const queryCommand = new Command("query")
   .description("Query a collection over the box's cards, scoped to a place")
   .option("--here <path>", "The place to ask about: a directory, a card, or omitted for the whole box")
   .option("--glob <pattern>", "Override the scope glob that --here implies")
-  .option("--group <name>", "Grouping: place (default) or plate")
+  .option("--group <name>", "Grouping: place (default) or status")
   .option("--no-referring", "Skip items written elsewhere that link into --here")
   .option("--json", "The full CollectionResult as JSON")
   .option("--status <status...>", "Todo status filter: open, done, dropped, parked (default: open, parked)")
   .option("--assigned <name>", "Filter by the `assigned` attribute (exact match)")
-  .option("--on-plate", "Only escalated / on-plate todos (excludes quiet)")
+  .option("--now", "Only todos due now: overdue, started, or undated (excludes later)")
   .action(async (collection: string, options: QueryCliOptions) => {
     try {
       const boxRoot = await requireBoxRoot();
@@ -76,7 +76,7 @@ export async function runQueryForBox(
     scope: "all",
     ...(options.status !== undefined && { status: options.status }),
     ...(options.assigned !== undefined && { assigned: options.assigned }),
-    ...(options.onPlate === true && { onPlate: true }),
+    ...(options.now === true && { onPlate: true }),
   });
   if (!params.success) {
     console.error(`Error: ${params.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ")}`);
@@ -111,7 +111,7 @@ function isKnownCollection(name: string): boolean {
 function printResult(result: TodoQueryResult): void {
   const lines: string[] = [];
   for (const group of result.groups) {
-    // `place` is one group whose label would only repeat the command; `plate`
+    // `place` is one group whose label would only repeat the command; `status`
     // names a real distinction, so only it gets a heading.
     if (result.query.group !== "place") {
       const total = group.reduction.open + group.reduction.parked + group.reduction.done + group.reduction.dropped;

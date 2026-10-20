@@ -29,7 +29,7 @@ function DatedLine({ dated, boxSlug }: { dated: DatedTodo; boxSlug: string | und
   const openBeside = useOpenBeside();
   const name = <Text material size="xs" tone="muted">{dated.cardTitle}</Text>;
   const word = dated.kind === "due" ? "due" : startPrefix({ plateState: dated.item.plateState, startIso: dated.date });
-  const title = word === "due" ? "Due" : word === "since" ? "On your plate since this day" : "Joins your plate on this day";
+  const title = word === "due" ? "Due" : word === "since" ? "Started on this day" : "Starts on this day";
   return (
     <Row gap="sm" wrap align="baseline">
       <Badge size="sm" tone={dated.kind === "due" ? "warning" : "info"} title={title}>

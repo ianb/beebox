@@ -67,9 +67,9 @@ export function CardRow({ row }: { row: TodoRow }) {
   return (
     <Stack gap="sm" className="py-3" {...bbxSource("card", row.card.path)}>
       <Row gap="sm" align="start" justify="between" wrap={false}>
-        {/* Title only: The Plate is read by people, and the path was noise (as on the place page). */}
+        {/* Title only: the todo page is read by people, and the path was noise (as on the place page). */}
         <FileEntry summary={row.card} hidePath onOpen={open} onPanel={open} className="flex-1 min-w-0" />
-        {/* Capped and wrapping: the counts name their set ("7 on your plate · 1 later · …") and must not squeeze the title out. */}
+        {/* Capped and wrapping: the counts name their set ("7 now · 1 later · …") and must not squeeze the title out. */}
         <Stack gap="none" align="end" className="max-w-[50%] min-w-0 pt-1.5 text-right">
           <RowReduction reduction={row.reduction} />
           {row.via === "reference" ? (

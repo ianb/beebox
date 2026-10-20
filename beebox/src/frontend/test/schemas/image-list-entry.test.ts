@@ -1,7 +1,7 @@
 // # Image card list row: the path follows the list's choice
 //
 // `src/schemas/image/list-entry.tsx` draws an image card's list row: a thumbnail,
-// the title, and the file path under it. The Plate shows titles only, so its rows
+// the title, and the file path under it. The Todos page shows titles only, so its rows
 // pass `hidePath` to `FileEntry`. An image card renders through this custom list
 // entry, not `FileEntry`'s default slot, and it used to print the path anyway
 // (`issues/closed/bugs/2026-10-09-plate-card-rows-show-file-paths.md`).

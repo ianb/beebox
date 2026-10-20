@@ -1,6 +1,6 @@
 /**
  * The place summary for one card (`docs/plans/todos-ui.md`, Track 4):
- * "3 on your plate · 1 later · 1 overdue · 2 done" — the plate's own split, so
+ * "3 now · 1 later · 1 overdue · 2 done" — the plate's own split, so
  * the numbers agree with the plate and its badge. It is the collection's reduction, rendered —
  * boxholder scope, so an agent follow-up never counts here — and the
  * reduction is complete regardless of the status filter
@@ -29,10 +29,10 @@ export interface SummaryPart {
 /**
  * The line's parts, or `null` when the card has nothing to summarize.
  *
- * The open todos are split as the plate splits them: "on your plate" is
- * always named once there is a line ("0 on your plate · 2 done" says the card
+ * The open todos are split as the todo page splits them: "now" is
+ * always named once there is a line ("0 now · 2 done" says the card
  * is finished), and "later" (open, waiting for a `start`) and the rest appear
- * only when non-zero. The control is "on your plate" when it counts any,
+ * only when non-zero. The control is "now" when it counts any,
  * else "later", so it never names a set it does not lead to. Dropped todos are
  * not counted: they are deliberately not being done, and a card of only
  * dropped todos gets no line.
@@ -41,7 +41,7 @@ export function summaryParts(reduction: SummaryReduction): SummaryPart[] | null 
   const { open, onPlate, done, parked, escalated } = reduction;
   if (open + parked + done === 0) return null;
   const later = open - onPlate;
-  const parts: SummaryPart[] = [{ key: "open", count: onPlate, text: `${String(onPlate)} on your plate`, action: onPlate > 0 }];
+  const parts: SummaryPart[] = [{ key: "open", count: onPlate, text: `${String(onPlate)} now`, action: onPlate > 0 }];
   if (later > 0) parts.push({ key: "later", count: later, text: `${String(later)} later`, action: onPlate === 0 });
   if (escalated > 0) parts.push({ key: "overdue", count: escalated, text: `${String(escalated)} overdue`, action: false });
   if (parked > 0) parts.push({ key: "parked", count: parked, text: `${String(parked)} parked`, action: false });

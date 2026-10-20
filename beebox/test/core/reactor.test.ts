@@ -61,12 +61,12 @@ void test("Ambient todo line, when given, leads the prompt", async (t) => {
     ["_bookkeeping/jobs/only.job.card"],
     {
       jobDescriptions: ["### _bookkeeping/jobs/only.job.card\n```\nsolo task\n```"],
-      ambientLine: "3 open todos on the plate (1 escalated) — `bbx query todos`",
+      ambientLine: "3 todos now (1 overdue) — `bbx query todos`",
     },
   );
   t.check(
     promptWithAmbient,
-    `3 open todos on the plate (1 escalated) — \`bbx query todos\`
+    `3 todos now (1 overdue) — \`bbx query todos\`
 
 Please process the following 1 job(s):
 

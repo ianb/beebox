@@ -306,7 +306,7 @@ export async function installTodoView(boxRoot: string): Promise<boolean> {
   const result = await installTemplateFile({
     boxRoot,
     relPath: PLATE_CARD_PATH,
-    templateContent: createTodoViewTemplate({ glob: "**", title: "The Plate" }),
+    templateContent: createTodoViewTemplate({ glob: "**", title: "Todos" }),
   });
   return result.outcome === "fresh";
 }
@@ -415,7 +415,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
   {
     name: "todo-review",
     description:
-      "Daily todo review: an agent gives each escalated, newly-on-plate, or stale todo a status change or a recheck date",
+      "Daily todo review: an agent gives each overdue, newly started, or stale todo a status change or a recheck date",
     cron: "30 6 * * *",
     notBefore: "20h",
     onWakeup: false,

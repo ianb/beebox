@@ -247,7 +247,7 @@ void test("params is the collection's own zod schema (TodoParamsSchema), so the 
 
   const plate = await c.collections.query({
     collection: "todos",
-    query: { here: "_content/a.doc.card", group: "plate", params: { status: ["open"] } },
+    query: { here: "_content/a.doc.card", group: "status", params: { status: ["open"] } },
   });
 
   t.check(plate.groups.map((g) => `${g.key}=${String(g.reduction.open)}`), [
