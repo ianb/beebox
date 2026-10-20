@@ -15,7 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxShape } from "../../../../../lib/box-shape.js";
 import { getInstalledEngineVersion } from "../../../../../core/engine-version.js";
-import { ENGINE_LINK } from "../../../../../core/box/engine-link.js";
+import { ENGINE_LINK, ENGINE_LINK_SPEC, engineRealPath, readBeeBoxSpec } from "../../../../../core/box/engine-link.js";
 import { loadBoxSchemas } from "../../../../../schemas.js";
 import { listSchemaLoadFailures } from "../../../../../schema-load-status.js";
 import { reservedFieldProblems } from "../../../../../cards/reserved-fields.js";
@@ -51,13 +51,16 @@ export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]
     let linkPath = path.join(shape.boxRoot, "node_modules", "beebox");
     let target = await readLinkOrNull(linkPath);
     // The portable spec links through `.beebox/engine`; that link holds the
-    // machine's engine path, so it is the one to report and repair.
+    // machine's engine path, so it is the one to report and repair. A box on
+    // the portable spec needs it even while node_modules/beebox still points
+    // at an older engine directly: the next install goes through the link.
     const engineLink = path.join(shape.boxRoot, ENGINE_LINK);
-    if (target !== null && path.resolve(path.dirname(linkPath), target) === engineLink) {
+    const portable = (await readBeeBoxSpec(shape.boxRoot)) === ENGINE_LINK_SPEC;
+    if (portable || (target !== null && path.resolve(path.dirname(linkPath), target) === engineLink)) {
       linkPath = engineLink;
       target = await readLinkOrNull(engineLink);
     }
-    const installed = await getInstalledEngineVersion(boxRoot);
+    const installed = portable && (await engineRealPath(engineLink)) === null ? null : await getInstalledEngineVersion(boxRoot);
     if (installed === null) {
       checks.push({
         name: "engine-link",

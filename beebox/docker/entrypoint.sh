@@ -81,15 +81,14 @@ if [[ "${BBX_SKIP_CONVERGE:-}" != "1" ]]; then
 set -euo pipefail
 BOX_ROOT="$1"
 # A v2 box is a package: it needs its own `pnpm install` before serving so
-# schemas/views resolve (mirrors src/scripts/smoke-external-box.ts). It runs on
-# first start, and again when the box declares the portable engine spec but
-# node_modules/beebox does not go through the engine link (a migration changed
-# the spec, which does not reinstall).
+# schemas/views resolve (mirrors src/scripts/smoke-external-box.ts). It runs
+# unless the box shows a completed install (box-engine-link verify: every
+# declared dependency present, .bin/bbx, and node_modules/beebox through the
+# engine link for the portable spec). A fresh `bbx engine init` leaves only
+# node_modules/beebox, and a migration that changes the spec does not
+# reinstall; both get a real install here.
 box_install() {
-  local portable linked
-  portable=$(node -e 'const p = require(process.argv[1]); console.log((p.dependencies || {}).beebox === "link:.beebox/engine")' "$BOX_ROOT/package.json")
-  linked=$(readlink "$BOX_ROOT/node_modules/beebox" 2>/dev/null || true)
-  if [[ -d "$BOX_ROOT/node_modules" && ( "$portable" != true || "$linked" == ../.beebox/engine ) ]]; then
+  if /app/node_modules/beebox/bin/box-engine-link verify "$BOX_ROOT" 2>/dev/null; then
     return 0
   fi
   echo "beebox: installing box dependencies..." >&2

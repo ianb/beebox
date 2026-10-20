@@ -168,3 +168,38 @@ void test("engine-link reports the .beebox/engine link a portable box resolves t
     pinned: `.beebox/engine points into a worktree (→ ${box.path("beebox-worktrees/feature/beebox")}) — it will go dead when that worktree is removed. Repoint at the main checkout.`,
   });
 });
+
+// ## A portable box needs its engine link even while the old install works
+//
+// After the engine-link migration, `node_modules/beebox` can still point
+// straight at the old engine until the next install. That install goes
+// through `.beebox/engine`, so a portable box without a usable link is an
+// error now, not after the install.
+void test("engine-link checks .beebox/engine for a portable box whose install still points elsewhere", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await box.write(
+    "pkg/package.json",
+    JSON.stringify({ name: "tmp-box", private: true, dependencies: { beebox: "link:.beebox/engine" }, beebox: { shapeVersion: 3, created: "2026-01-01T00:00:00.000Z" } }),
+  );
+  await box.write("pkg/_config/.gitkeep", "");
+  await box.write("engines/main/beebox/package.json", JSON.stringify({ name: "beebox", version: "9.9.9" }));
+  await mkdir(box.path("pkg/node_modules"), { recursive: true });
+  await symlink(box.path("engines/main/beebox"), box.path("pkg/node_modules/beebox"));
+  const boxRoot = box.path("pkg");
+  const engineLink = box.path("pkg/.beebox/engine");
+
+  const missing = byName(await engineHealthChecks(boxRoot), "engine-link");
+  await mkdir(box.path("pkg/.beebox"), { recursive: true });
+  await symlink(box.path("engines/main/beebox"), engineLink);
+  const linked = byName(await engineHealthChecks(boxRoot), "engine-link");
+  t.check({ missing, linked }, {
+    missing: {
+      name: "engine-link",
+      ok: false,
+      message: `the engine link ${engineLink} is missing — box-local schemas and templates will not load. Create it: ln -sfn <engine-checkout>/beebox ${engineLink}`,
+      severity: "error",
+    },
+    linked: { name: "engine-link", ok: true, message: "engine dependency resolves (beebox 9.9.9)", severity: "warning" },
+  });
+});

@@ -55,6 +55,42 @@ void test("Worktree setup links the worktree engine and commits only the portabl
   );
 });
 
+// A cloned box with a pinned engine (a `file:` tarball, a semver range, a link
+// into the box) keeps it: worktree setup replaces only a machine-local link
+// outside the box, and warns that the clone will not run the worktree engine.
+void test("Worktree setup leaves a pinned engine in place and says so", async (t) => {
+  const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "box-engine-pinned-")));
+  t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
+  const worktree = path.join(root, "wt");
+  await fs.mkdir(path.join(worktree, "beebox/bin"), { recursive: true });
+  await fs.writeFile(path.join(worktree, "beebox/package.json"), JSON.stringify({ name: "beebox" }));
+  await fs.copyFile(path.join(repoRoot, "beebox/bin/box-engine-link"), path.join(worktree, "beebox/bin/box-engine-link"));
+  const results: Record<string, { stderr: string; packageJson: string; link: string }> = {};
+  for (const [name, spec] of [["tarball", "file:/app/beebox.tgz"], ["range", "^1.0.0"], ["inBox", "link:./vendor/beebox"]] as const) {
+    const box = path.join(root, name);
+    await fs.mkdir(box);
+    const text = JSON.stringify({ dependencies: { beebox: spec } });
+    await fs.writeFile(path.join(box, "package.json"), text);
+    const run = spawnSync("bash", ["-c", '. bin/lib/worktree-create.sh; wt_create_repoint_box_engine "$PACKAGE_JSON" "$WORKTREE"'], {
+      cwd: repoRoot,
+      env: { ...process.env, PACKAGE_JSON: path.join(box, "package.json"), WORKTREE: worktree },
+      encoding: "utf8",
+    });
+    results[name] = {
+      stderr: run.stderr.trim(),
+      packageJson: (await fs.readFile(path.join(box, "package.json"), "utf8")) === text ? "unchanged" : "rewritten",
+      link: await fs.lstat(path.join(box, ".beebox/engine")).then(() => "present", () => "absent"),
+    };
+  }
+  const warning = (name: string, spec: string): string =>
+    `[worktree-create] WARNING: ${path.join(root, name)} keeps its pinned engine (${spec}); it will not run this worktree's engine`;
+  t.check(results, {
+    tarball: { stderr: warning("tarball", "file:/app/beebox.tgz"), packageJson: "unchanged", link: "absent" },
+    range: { stderr: warning("range", "^1.0.0"), packageJson: "unchanged", link: "absent" },
+    inBox: { stderr: warning("inBox", "link:./vendor/beebox"), packageJson: "unchanged", link: "absent" },
+  });
+});
+
 // An existing clone with the tracked pre-rename box marker is made recognizable
 // to the renamed engine without modifying the source box.
 void test("An existing clone with the tracked pre-rename box marker is made recognizable...", async (t) => {

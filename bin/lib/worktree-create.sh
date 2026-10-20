@@ -117,8 +117,22 @@ wt_create_restore_box_ref() {
 # can still declare the retired `callback-box` package name; migrate that
 # dependency at the same boundary.
 wt_create_repoint_box_engine() {
-  local package_json="$1" worktree_path="$2" tmp_pkg
-  "$worktree_path/beebox/bin/box-engine-link" link "$(dirname "$package_json")" "$worktree_path/beebox" || return 1
+  local package_json="$1" worktree_path="$2" tmp_pkg box_dir spec
+  box_dir=$(cd "$(dirname "$package_json")" && pwd -P) || return 1
+  # Only a machine-local `link:` outside the box is this machine's choice to
+  # replace. A pinned engine (a `file:` tarball, a semver range, a link into
+  # the box) stays, and the clone runs that engine, not this worktree's.
+  spec=$(jq -r '.pnpm.overrides["beebox"] // .dependencies["beebox"] // .devDependencies["beebox"] // ""' "$package_json") || return 1
+  if [ -n "$spec" ] && [ "$spec" != "link:.beebox/engine" ] && {
+      [ "${spec#link:}" = "$spec" ] || node -e '
+        const p = require("path");
+        const rel = p.relative(process.argv[1], p.resolve(process.argv[1], process.argv[2]));
+        process.exit(rel === "" || (!rel.startsWith("..") && !p.isAbsolute(rel)) ? 0 : 1);
+      ' "$box_dir" "${spec#link:}"; }; then
+    echo "[worktree-create] WARNING: $box_dir keeps its pinned engine ($spec); it will not run this worktree's engine" >&2
+    return 0
+  fi
+  "$worktree_path/beebox/bin/box-engine-link" link "$box_dir" "$worktree_path/beebox" || return 1
   tmp_pkg=$(mktemp)
   if ! jq '
     if (.dependencies["beebox"] // .devDependencies["beebox"] //

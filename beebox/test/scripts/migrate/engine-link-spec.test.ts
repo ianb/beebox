@@ -14,11 +14,11 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { planEngineSpec } from "../../../src/scripts/migrate/engine-link-spec/plan.js";
+import { lockfileIsPortable, planEngineSpec } from "../../../src/scripts/migrate/engine-link-spec/plan.js";
 import { runEngineLinkSpec } from "../../../src/scripts/migrate/engine-link-spec/run.js";
 import { sweepMigrations } from "../../../src/core/migration-sweep.js";
 import { MANIFEST_PATH, MIGRATIONS } from "../../../src/core/migrations.js";
-import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
+import { makeTmpBox, useMarkerOnly, type TmpBox } from "../../helpers/test-helpers.js";
 
 const git = (root: string, ...args: string[]): string => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
 const pkg = (beebox: string, extra?: Record<string, unknown>): string =>
@@ -186,4 +186,106 @@ void test("run refreshes the lockfile, and restores both files when that fails",
     passed: 0,
     lockfile: "lockfileVersion: '9.0'\n# refreshed\n",
   });
+});
+
+// ## The lockfile decides "already converted"
+//
+// pnpm v9 records the root importer's specifier and any top-level override.
+// Only a lockfile with the portable specifier and no beebox override agrees
+// with a converted manifest.
+void test("lockfileIsPortable reads the importer specifier and overrides", async (t) => {
+  const importer = (spec: string): string => `importers:\n\n  .:\n    dependencies:\n      beebox:\n        specifier: ${spec}\n        version: ${spec}\n`;
+  t.check({
+    portable: lockfileIsPortable(`lockfileVersion: '9.0'\n\n${importer("link:.beebox/engine")}`),
+    machine: lockfileIsPortable(`lockfileVersion: '9.0'\n\n${importer("link:/opt/beebox/beebox")}`),
+    overridden: lockfileIsPortable(`lockfileVersion: '9.0'\n\noverrides:\n  react: 18.3.1\n  beebox: link:/w/beebox\n\n${importer("link:.beebox/engine")}`),
+    empty: lockfileIsPortable("lockfileVersion: '9.0'\n"),
+  }, { portable: true, machine: false, overridden: false, empty: false });
+});
+
+// ## A failed spawn, then the rerun
+//
+// When pnpm cannot even start (not on PATH), both files are restored as for a
+// nonzero exit. A box left with a converted manifest and a stale lockfile (an
+// interrupted earlier run) is not "already converted": the rerun refreshes
+// the lockfile first, and a failure there keeps it pending.
+void test("run restores both files when the refresh cannot spawn, and a rerun refreshes a stale lockfile", async (t) => {
+  const engine = await fakeEngine(t);
+  const stale = `lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies:\n      beebox:\n        specifier: link:${engine}\n        version: link:${engine}\n`;
+  const box = await boxWith(t, { spec: `link:${engine}` });
+  await box.write("pnpm-lock.yaml", stale);
+  const before = await box.read("package.json");
+  const spawnFailed = await runEngineLinkSpec({
+    boxRoot: box.root,
+    mode: "apply",
+    refreshLockfile: async () => { throw new Error("spawn pnpm ENOENT"); },
+  });
+  const restored = { packageJson: await box.read("package.json"), lockfile: await box.read("pnpm-lock.yaml") };
+
+  // The interrupted state: manifest converted, lockfile still stale.
+  await box.write("package.json", JSON.stringify({ ...JSON.parse(before), dependencies: { ...JSON.parse(before).dependencies, beebox: "link:.beebox/engine" } }, null, 2) + "\n");
+  const rerunFailed = await runEngineLinkSpec({ boxRoot: box.root, mode: "apply", refreshLockfile: async () => ({ code: 1, output: "offline" }) });
+  const rerun = await runEngineLinkSpec({
+    boxRoot: box.root,
+    mode: "apply",
+    refreshLockfile: async (boxRoot) => {
+      await fs.writeFile(path.join(boxRoot, "pnpm-lock.yaml"), stale.replaceAll(`link:${engine}`, "link:.beebox/engine"));
+      return { code: 0, output: "" };
+    },
+  });
+  const after = await runEngineLinkSpec({ boxRoot: box.root, mode: "apply" });
+  t.check({ spawnFailed: spawnFailed.lines[0], restored, rerunFailed: rerunFailed.code, rerun, after }, {
+    spawnFailed: `engine-link-spec: \`pnpm install --lockfile-only --offline\` failed in ${box.root} (exit 1); package.json and pnpm-lock.yaml restored, the migration stays pending.`,
+    restored: { packageJson: before, lockfile: stale },
+    rerunFailed: 1,
+    rerun: { code: 0, lines: ["engine-link-spec: refreshed pnpm-lock.yaml for \"link:.beebox/engine\"."] },
+    after: { code: 0, lines: ["engine-link-spec: already converted."] },
+  });
+});
+
+// ## A dead in-box pin stays a pin
+//
+// `link:./vendor/beebox` points into the box. It is a pin by where it points,
+// even when the vendored engine is gone and deploy has made a usable
+// `.beebox/engine`.
+void test("run leaves a dead in-box link pinned when the engine link works", async (t) => {
+  const engine = await fakeEngine(t);
+  const box = await boxWith(t, { spec: "link:./vendor/beebox" });
+  await fs.mkdir(box.path(".beebox"), { recursive: true });
+  await fs.symlink(engine, box.path(".beebox/engine"));
+  t.check({
+    result: await runEngineLinkSpec({ boxRoot: box.root, mode: "apply" }),
+    spec: JSON.parse(await box.read("package.json")).dependencies.beebox,
+  }, {
+    result: { code: 0, lines: ["engine-link-spec: skipped: pinned engine (link:./vendor/beebox is inside the box)."] },
+    spec: "link:./vendor/beebox",
+  });
+});
+
+// ## Order: the spec converts before box-shape-record commits package.json
+//
+// Both migrations write `package.json`. If box-shape-record ran first, its
+// commit would carry the machine path into history once more. With both
+// pending, no commit the sweep makes contains the old link.
+void test("the sweep converts the spec before box-shape-record commits package.json", async (t) => {
+  const engine = await fakeEngine(t);
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  const current = JSON.parse(await box.read("package.json"));
+  await box.write("package.json", JSON.stringify({ ...current, dependencies: { ...current.dependencies, beebox: `link:${engine}` } }, null, 2) + "\n");
+  await useMarkerOnly(box.root, JSON.stringify({ version: "1.0.0", shapeVersion: 3, created: "2026-01-30T23:37:19.468Z" }));
+  const pending = new Set(["engine-link-spec-2026-10", "box-shape-record-2026-10"]);
+  await box.write(MANIFEST_PATH, MIGRATIONS.filter((m) => !pending.has(m.name))
+    .map((m) => JSON.stringify({ name: m.name, "applied-at": "2026-10-01T00:00:00Z" })).join("\n") + "\n");
+  box.commitAll("before both");
+  const base = git(box.root, "rev-parse", "HEAD");
+  await sweepMigrations({ boxRoot: box.root });
+  const commits = git(box.root, "log", "--format=%H %s", `${base}..HEAD`).split("\n").toReversed();
+  t.check(commits.map((line) => {
+    const [sha = "", ...subject] = line.split(" ");
+    return { subject: subject.join(" "), machinePath: git(box.root, "show", `${sha}:package.json`).includes(engine) };
+  }), [
+    { subject: "Apply migration: engine-link-spec-2026-10", machinePath: false },
+    { subject: "Apply migration: box-shape-record-2026-10", machinePath: false },
+  ]);
 });

@@ -8,8 +8,9 @@
 #
 #   box-engine-link link <box> <engine>   point <box>/.beebox/engine at <engine>
 #                                         (an engine package outside the box)
-#   box-engine-link verify <box>          after install: node_modules/beebox is an
-#                                         engine and node_modules/.bin/bbx exists
+#   box-engine-link verify <box>          a completed install: node_modules/beebox
+#                                         is an engine, .bin/bbx exists, and every
+#                                         declared dependency is present
 #
 # Each prints one line naming the box and the problem and exits 1 on failure.
 # The TypeScript side of the same rule is src/core/box/engine-link.ts.
@@ -58,12 +59,30 @@ case "$cmd" in
   verify)
     [[ $# -eq 2 ]] || usage
     box="$2"
-    if ! engine_real "$box/node_modules/beebox" >/dev/null; then
-      echo "box-engine-link: $box: node_modules/beebox is not a beebox engine after install." >&2
-      exit 1
-    fi
-    if [[ ! -x "$box/node_modules/.bin/bbx" ]]; then
-      echo "box-engine-link: $box: node_modules/.bin/bbx is missing after install; rerun pnpm install with .beebox/engine in place." >&2
+    # A completed install: node_modules/beebox is an engine (through the
+    # engine link when the box declares the portable spec), .bin/bbx exists,
+    # and every declared dependency is present. Install paths also use this
+    # to decide whether an install is needed (a fresh `bbx engine init` makes
+    # node_modules/beebox and nothing else).
+    if ! problem=$(node -e '
+      const fs = require("fs"), path = require("path");
+      const box = process.argv[1], nm = path.join(box, "node_modules");
+      const pkg = JSON.parse(fs.readFileSync(path.join(box, "package.json"), "utf8"));
+      const fail = (m) => { console.log(m); process.exit(1); };
+      let engine;
+      try { engine = JSON.parse(fs.readFileSync(path.join(nm, "beebox", "package.json"), "utf8")); } catch { engine = null; }
+      if (engine === null || engine.name !== "beebox") fail("node_modules/beebox is not a beebox engine after install.");
+      if ((pkg.dependencies || {}).beebox === "link:.beebox/engine") {
+        let target = null;
+        try { target = fs.readlinkSync(path.join(nm, "beebox")); } catch {}
+        if (target !== "../.beebox/engine") fail("node_modules/beebox does not go through .beebox/engine; rerun pnpm install.");
+      }
+      try { fs.accessSync(path.join(nm, ".bin", "bbx"), fs.constants.X_OK); } catch { fail("node_modules/.bin/bbx is missing after install; rerun pnpm install with .beebox/engine in place."); }
+      const missing = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies })
+        .filter((d) => !fs.existsSync(path.join(nm, d, "package.json")));
+      if (missing.length > 0) fail("declared dependencies are not installed: " + missing.join(", ") + ".");
+    ' "$box"); then
+      echo "box-engine-link: $box: $problem" >&2
       exit 1
     fi
     ;;

@@ -129,9 +129,19 @@ never disagrees with the tracked lockfile; (5) verify the spec reads back
 portable and the link is usable. The real install happens at the next install
 path below; until then `node_modules/beebox` still points at the old target.
 
+Implementation review (2026-10-20) added: a failed spawn restores like a
+failed exit; a rerun with a converted manifest refreshes a lockfile whose
+importer specifier is not portable before reporting "already converted"; an
+in-box target is a pin by its path, even when dead; the migration runs before
+`box-shape-record-2026-10`, so that migration's commit never carries the
+machine path.
+
 ### C. Install paths
 Each supported path runs `box-engine-link link` before `pnpm install` and
-`box-engine-link verify` after, and fails loudly naming the box.
+`box-engine-link verify` after, and fails loudly naming the box. `verify`
+passes only for a completed install (every declared dependency, `.bin/bbx`,
+and the portable link), so deploy and docker also use it to decide whether to
+install. Worktree setup leaves a pinned engine in place with a warning.
 - `deploy.sh:734-741`: replace the rewrite with `box-engine-link link <box>
   /opt/beebox/beebox` as `beebox`; reinstall also when `node_modules/beebox` is
   not the portable link; a failed box prints `ERROR` and the deploy continues

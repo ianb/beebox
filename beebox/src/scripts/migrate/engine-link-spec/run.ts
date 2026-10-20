@@ -26,8 +26,8 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { ENGINE_LINK, ENGINE_LINK_SPEC, engineRealPath, ensureEngineLink, isWithin, readBeeBoxSpec } from "../../../core/box/engine-link.js";
 import { runCollectedChild, type CollectedChildResult } from "../../../lib/run-child.js";
-import { errnoCode } from "../../../shared/error-guards.js";
-import { planEngineSpec } from "./plan.js";
+import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
+import { lockfileIsPortable, planEngineSpec } from "./plan.js";
 
 export type RunMode = "plan" | "apply";
 
@@ -50,6 +50,35 @@ async function readOptional(file: string): Promise<string | null> {
 
 const PREFIX = "engine-link-spec:";
 
+/**
+ * Refresh the lockfile against the manifest now on disk. On a nonzero exit or
+ * a failed spawn (no pnpm on PATH), restore both files to their snapshots and
+ * return the exit-1 result, so the migration stays pending.
+ */
+async function refreshOrRestore({ boxRoot, packageJson, lockfile, refreshLockfile }: {
+  boxRoot: string;
+  packageJson: string;
+  lockfile: string;
+  refreshLockfile: RefreshLockfile | undefined;
+}): Promise<{ code: number; lines: string[] } | null> {
+  let refreshed: CollectedChildResult;
+  try {
+    refreshed = await (refreshLockfile ?? refreshWithPnpm)(boxRoot);
+  } catch (e) {
+    refreshed = { code: 1, output: errorMessage(e) };
+  }
+  if (refreshed.code === 0) return null;
+  await fs.writeFile(path.join(boxRoot, "package.json"), packageJson);
+  await fs.writeFile(path.join(boxRoot, "pnpm-lock.yaml"), lockfile);
+  return {
+    code: 1,
+    lines: [
+      `${PREFIX} \`pnpm ${REFRESH_ARGS.join(" ")}\` failed in ${boxRoot} (exit ${String(refreshed.code)}); package.json and pnpm-lock.yaml restored, the migration stays pending.`,
+      ...refreshed.output.trim().split("\n").slice(-5),
+    ],
+  };
+}
+
 /** One run over one box. Returns the exit code and the lines it printed. */
 export async function runEngineLinkSpec({ boxRoot, mode, refreshLockfile }: {
   boxRoot: string;
@@ -61,15 +90,26 @@ export async function runEngineLinkSpec({ boxRoot, mode, refreshLockfile }: {
   if (packageJson === null) return { code: 1, lines: [`${PREFIX} ${packageJsonPath} is missing; nothing written.`] };
   const plan = planEngineSpec(packageJson);
   if (plan.kind === "refuse") return { code: 1, lines: [`${PREFIX} ${plan.reason} Nothing written.`] };
-  if (plan.kind === "already-portable") return { code: 0, lines: [`${PREFIX} already converted.`] };
   if (plan.kind === "pinned") return { code: 0, lines: [`${PREFIX} skipped: pinned engine (${plan.spec}).`] };
+  const lockfilePath = path.join(boxRoot, "pnpm-lock.yaml");
+  const lockfile = await readOptional(lockfilePath);
+  if (plan.kind === "already-portable") {
+    // A refresh that failed after an earlier run wrote the manifest leaves the
+    // lockfile behind; it is not converted until the lockfile agrees.
+    if (lockfile === null || lockfileIsPortable(lockfile)) return { code: 0, lines: [`${PREFIX} already converted.`] };
+    if (mode === "plan") return { code: 0, lines: ["would refresh pnpm-lock.yaml (dry run; pass --apply)"] };
+    const failure = await refreshOrRestore({ boxRoot, packageJson, lockfile, refreshLockfile });
+    return failure ?? { code: 0, lines: [`${PREFIX} refreshed pnpm-lock.yaml for "${ENGINE_LINK_SPEC}".`] };
+  }
 
   const linkPath = path.join(boxRoot, ENGINE_LINK);
   const linkUsable = (await engineRealPath(linkPath)) !== null;
   if (plan.linkTarget !== null) {
     const target = path.resolve(boxRoot, plan.linkTarget);
     const engine = await engineRealPath(target);
-    if (engine !== null && isWithin(await fs.realpath(boxRoot), engine)) {
+    // An in-box target is a pin by where it points, whether or not it resolves now.
+    const boxReal = await fs.realpath(boxRoot);
+    if (isWithin(boxReal, path.resolve(boxReal, plan.linkTarget)) || (engine !== null && isWithin(boxReal, engine))) {
       return { code: 0, lines: [`${PREFIX} skipped: pinned engine (link:${plan.linkTarget} is inside the box).`] };
     }
     if (engine === null && !linkUsable) {
@@ -83,22 +123,10 @@ export async function runEngineLinkSpec({ boxRoot, mode, refreshLockfile }: {
     return { code: 0, lines: ["would drop the beebox override (dry run; pass --apply)"] };
   }
 
-  const lockfilePath = path.join(boxRoot, "pnpm-lock.yaml");
-  const lockfile = await readOptional(lockfilePath);
   await fs.writeFile(packageJsonPath, plan.packageJson);
   if (lockfile !== null) {
-    const refreshed = await (refreshLockfile ?? refreshWithPnpm)(boxRoot);
-    if (refreshed.code !== 0) {
-      await fs.writeFile(packageJsonPath, packageJson);
-      await fs.writeFile(lockfilePath, lockfile);
-      return {
-        code: 1,
-        lines: [
-          `${PREFIX} \`pnpm ${REFRESH_ARGS.join(" ")}\` failed in ${boxRoot} (exit ${String(refreshed.code)}); package.json and pnpm-lock.yaml restored, the migration stays pending.`,
-          ...refreshed.output.trim().split("\n").slice(-5),
-        ],
-      };
-    }
+    const failure = await refreshOrRestore({ boxRoot, packageJson, lockfile, refreshLockfile });
+    if (failure !== null) return failure;
   }
   if ((await readBeeBoxSpec(boxRoot)) !== ENGINE_LINK_SPEC || (await engineRealPath(linkPath)) === null) {
     return { code: 1, lines: [`${PREFIX} verify failed: the spec or ${ENGINE_LINK} did not read back.`] };

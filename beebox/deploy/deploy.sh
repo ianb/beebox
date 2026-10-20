@@ -740,11 +740,10 @@ queue_remote stdin bash -s <<'REMOTE'
     fi
 
     marker="$box/node_modules/react"
-    # The engine-link migration changes the spec without reinstalling, so a
-    # node_modules/beebox that does not go through the link is stale too.
-    portable=$(node -e "const p = require('$pj'); console.log((p.dependencies || {}).beebox === 'link:.beebox/engine')")
-    linked=$(readlink "$box/node_modules/beebox" 2>/dev/null || true)
-    if [[ ! -e "$marker" || "$pj" -nt "$marker" || ( "$portable" == true && "$linked" != ../.beebox/engine ) ]]; then
+    # Reinstall too when the box shows no completed install: the engine-link
+    # migration changes the spec without reinstalling, so a node_modules/beebox
+    # that does not go through the link is stale.
+    if [[ ! -e "$marker" || "$pj" -nt "$marker" ]] || ! "$link_check" verify "$box" 2>/dev/null; then
       echo "  $name: installing (package.json newer than last install, or never installed)..."
       if ! sudo -u beebox -H bash -lc "cd '$box' && pnpm install"; then
         echo "  $name: pnpm install exited nonzero — check for real dependency errors above" \

@@ -62,3 +62,15 @@ export function planEngineSpec(packageJson: string): EngineSpecPlan {
   const linkTarget = effective === ENGINE_LINK_SPEC ? null : effective.slice("link:".length);
   return { kind: "convert", linkTarget, packageJson: JSON.stringify(next, null, 2) + "\n" };
 }
+
+/**
+ * Whether a pnpm (v9) lockfile already records the portable spec: the root
+ * importer's `beebox` specifier is `link:.beebox/engine` and no top-level
+ * `overrides:` entry names `beebox`. A rerun after a failed refresh finds the
+ * manifest converted but this false, and refreshes before calling it done.
+ */
+export function lockfileIsPortable(lockfile: string): boolean {
+  const specifier = /\n {6}beebox:\n {8}specifier: (\S+)/.exec(lockfile)?.[1];
+  const overridden = /^overrides:\n(?: {2}\S.*\n)*? {2}beebox:/m.test(lockfile);
+  return specifier === ENGINE_LINK_SPEC && !overridden;
+}
