@@ -68,8 +68,8 @@ The box now speaks with OpenAI's gpt-4o-mini-tts by default, or with Gemini
 
 Each model used one voice from its provider's standard list, named above. A
 different voice of the same model can sound quite different, so a take shows
-the model with that voice, not the model at its best. Cost per minute comes from the takes
-on this page: for models reached through OpenRouter, the amount OpenRouter
+the model with that voice, not the model at its best. Cost per minute comes from every
+successful take in the run, including pacing takes not on this page: for models reached through OpenRouter, the amount OpenRouter
 billed; for the others, the list price applied to what was sent (characters,
 or for Gemini on Google's API, the token counts the API returned).
 
@@ -266,7 +266,7 @@ transcriber dropped is not listed.
 
 **Listen for:** Accent and prosody at each switch into Spanish, German, and French; the name Lucía.
 
-**Roughly how it sounds:** Lucía is loo-SEE-ah. Spanish “el martes es imposible” (“Tuesday is impossible”): el MAR-tess ess eem-po-SEE-bleh. German “na ja, Donnerstag geht auch” (“oh well, Thursday works too”): NAH-yah, a shrug, often run together as one word; then DON-ers-tahk gate OWKH, the final ch a breathy sound as in Scottish “loch”. French “Et la réservation ? C'est déjà fait.” (“And the reservation? It's already done.”): ay lah ray-zair-vah-SYOHN? say day-ZHAH FEH.
+**Roughly how it sounds:** Lucía is loo-SEE-ah. Spanish “el martes es imposible” (“Tuesday is impossible”): el MAR-tess ess eem-po-SEE-bleh. German “na ja, Donnerstag geht auch” (“oh well, Thursday works too”): NAH-yah, a shrug, often run together as one word; then DON-ers-tahk gate OWKH, the final ch a breathy sound as in Scottish “loch”. French “Et la réservation ? C'est déjà fait.” (“And the reservation? It's already done.”): ay lah ray-zair-vah-SYOHN, the final n not sounded, only a nasal vowel; then say day-ZHAH FEH.
 
 **Direction:** none; every model read it plain.
 {% /sample %}

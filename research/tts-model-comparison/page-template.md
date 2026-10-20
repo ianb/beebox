@@ -40,8 +40,8 @@ The box now speaks with OpenAI's gpt-4o-mini-tts by default, or with Gemini
 
 Each model used one voice from its provider's standard list, named above. A
 different voice of the same model can sound quite different, so a take shows
-the model with that voice, not the model at its best. Cost per minute comes from the takes
-on this page: for models reached through OpenRouter, the amount OpenRouter
+the model with that voice, not the model at its best. Cost per minute comes from every
+successful take in the run, including pacing takes not on this page: for models reached through OpenRouter, the amount OpenRouter
 billed; for the others, the list price applied to what was sent (characters,
 or for Gemini on Google's API, the token counts the API returned).
 
