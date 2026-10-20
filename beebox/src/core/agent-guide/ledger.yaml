@@ -24,8 +24,10 @@ budget:
   # it already measured 5692 / 10785 (drift from merges since 2026-10-07);
   # +51 / +95 for SPEAKING's invisible-plumbing passage and the chat prompt's
   # silent machinery work (user-facing-language workstream).
+  # Raised 2026-10-20 (+48) to the post-merge measurement: the chat prompt's
+  # `google-drive:` health line (Docs-API-unavailable notice, drive-docs-api-health).
   guide_words: 5743
-  always_loaded_words: 10880
+  always_loaded_words: 10928
   uncited_words_per_section: 60
 
 lint:
