@@ -50,4 +50,5 @@ left phantom parse and `max-lines` errors that `eslint` on the same files did
 not report; `finish-verify` labeled the failure "unchanged from main", which
 pointed away from the cache (`bug-burndown-3/20261019T185933Z-landed.md`).
 Deleting the cache directory cleared both. `beebox/AGENTS.md` now names that
-step; the cache key is still the fix.
+step; the cache key is still the fix. The `backlog` priority may be stale now
+that it recurs.

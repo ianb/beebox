@@ -28,4 +28,5 @@ every commit while one worker had an unregistered or half-finished file, and
 bug-burndown-3/20261019T131455Z-implemented.md,
 flaky-tests/20261019T025021Z-implemented.md,
 turn-feedback/20261019T010859Z-implemented.md. Root `AGENTS.md` "Commit and
-land" now says the hooks read the whole working tree.
+land" now says the hooks read the whole working tree. Its priority may be
+stale now that it recurs.
