@@ -59,6 +59,25 @@ async function stepModel(boxRoot: string, name: ProcedureModelName | undefined):
   return (await loadTierResolver(boxRoot))(name);
 }
 
+/** The system prompt a run agent gets: the step's context block, then its own prompt. */
+async function runAgentSystemPrompt(params: RunPhaseParams, agentPrompt: string): Promise<string> {
+  const { boxRoot, step, procedureCardPath, runCardPath, relProcedurePath } = params;
+  // Set only when a scheduled `runs:` started this procedure and the run can take a summary.
+  const scheduleName = process.env[MEMORY_ENV.summaryFile] ? process.env[MEMORY_ENV.scheduleName] : undefined;
+  const stepLineRange = await getStepLineRange(procedureCardPath, step.id);
+  const contextBlock = buildContextBlock({
+    boxRoot,
+    runCardPath: path.relative(boxRoot, runCardPath),
+    stepId: step.id,
+    procedurePath: relProcedurePath,
+    ...(stepLineRange !== undefined && { stepLineRange }),
+    ...(params.precheckOutput !== undefined && { precheckOutput: params.precheckOutput }),
+    ...(params.directive !== undefined && { directive: params.directive }),
+    ...(scheduleName !== undefined && { scheduleName }),
+  });
+  return `${contextBlock}\n\n${agentPrompt}`;
+}
+
 async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
   const { ctx, boxRoot, step, procedure } = params;
   invariant(step.run, "retryRunAgent requires a run phase");
@@ -77,6 +96,8 @@ async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
   });
   const invokeOpts: AgentInvokeOptions = {
     boxRoot,
+    // Resent on the resumed session, the same prompt the first pass ran with.
+    systemPrompt: await runAgentSystemPrompt(params, agentDef.prompt),
     prompt: params.retry.failureContext,
     maxTurns: agentDef.maxTurns ?? 20,
     maxBudgetUsd: REVIEW_RETRY_BUDGET_USD,
@@ -92,20 +113,9 @@ async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
 /** Run all initial agents, stopping only on engine-level failure. */
 export async function runRunAgents(params: RunPhaseParams): Promise<RunAgentOutcome> {
   if (params.retry !== undefined) return retryRunAgent(params);
-  const {
-    ctx,
-    boxRoot,
-    step,
-    procedure,
-    procedureCardPath,
-    runCardPath,
-    relProcedurePath,
-  } = params;
+  const { ctx, boxRoot, step, procedure } = params;
   invariant(step.run, "runRunAgents requires a run phase");
   const agentFactory = params.createAgent ?? realCreateAgent;
-  const relRunCardPath = path.relative(boxRoot, runCardPath);
-  // Set only when a scheduled `runs:` started this procedure and the run can take a summary.
-  const scheduleName = process.env[MEMORY_ENV.summaryFile] ? process.env[MEMORY_ENV.scheduleName] : undefined;
   let sessionId: string | undefined;
 
   for (const agentDef of step.run.agents) {
@@ -113,24 +123,13 @@ export async function runRunAgents(params: RunPhaseParams): Promise<RunAgentOutc
     ctx.writeLine(
       fmt.dim(`  Running agent${modelId === undefined ? "" : ` (${agentDef.model ?? "box default"} → ${modelId})`}...`),
     );
-    const stepLineRange = await getStepLineRange(procedureCardPath, step.id);
-    const contextBlock = buildContextBlock({
-      boxRoot,
-      runCardPath: relRunCardPath,
-      stepId: step.id,
-      procedurePath: relProcedurePath,
-      ...(stepLineRange !== undefined && { stepLineRange }),
-      ...(params.precheckOutput !== undefined && { precheckOutput: params.precheckOutput }),
-      ...(params.directive !== undefined && { directive: params.directive }),
-      ...(scheduleName !== undefined && { scheduleName }),
-    });
     const agent = agentFactory({
       name: `procedure-${procedure.name}-${step.id}`,
       onOutput: (text) => ctx.write(text),
     });
     const result = await agent.invoke({
       boxRoot,
-      systemPrompt: `${contextBlock}\n\n${agentDef.prompt}`,
+      systemPrompt: await runAgentSystemPrompt(params, agentDef.prompt),
       prompt: `Execute the ${step.id} step of the ${procedure.name} procedure. Follow the instructions in your system prompt.`,
       maxTurns: agentDef.maxTurns ?? 20,
       ...(modelId !== undefined && { model: modelId }),

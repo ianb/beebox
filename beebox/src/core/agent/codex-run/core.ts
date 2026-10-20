@@ -93,7 +93,7 @@ export async function runCodexAgent(
   try {
     await checkCodexAuth();
     await ensureCodexPluginInstalled();
-    const tzContext = options.resumeSessionId === undefined ? await buildTimezoneContext(options.boxRoot) : "";
+    const tzContext = await buildTimezoneContext(options.boxRoot);
     const loadBoxContext = options.loadBoxContext !== false;
     const includedContext = await includedBoxContext(options.boxRoot, loadBoxContext);
     const readOnly = isPromptOnly(options.tools);

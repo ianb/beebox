@@ -3,6 +3,7 @@
 import type { z } from "zod";
 import { toJSONSchema } from "zod";
 import { appendSessionManifest } from "./manifest.js";
+import { createCarrier } from "./model-carry.js";
 import { validateStructuredResult } from "./json.js";
 import {
   runCodexAgent,
@@ -31,6 +32,8 @@ export function createCodexAgent(options: CreateCodexAgentOptions): Agent {
     : null;
   let invocationCount = options.resume === true ? 1 : 0;
   let manifestWritten = false;
+  // See model-carry.ts: a resumed run resends the last explicit prompt.
+  const systemPromptCarrier = createCarrier();
 
   const runOptions = (invoke: AgentInvokeOptions): CodexRunOptions => {
     const isResume = invocationCount > 0;
@@ -40,7 +43,7 @@ export function createCodexAgent(options: CreateCodexAgentOptions): Agent {
       env: invoke.env,
       signal: invoke.signal,
       task: options.name,
-      systemPrompt: invoke.systemPrompt ?? "",
+      systemPrompt: systemPromptCarrier.resolve(invoke.systemPrompt) ?? "",
       prompt: invoke.prompt,
       onOutput: options.onOutput,
       onActivity: options.onActivity,
