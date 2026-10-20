@@ -84,7 +84,7 @@ export const BUILTIN_TEMPLATES: TemplateDefinition[] = [
 
   eraseTemplateArgs({
     name: "todo-view",
-    description: "A todos display surface — the box-wide plate, or a project-local subtree instance",
+    description: "A todos display surface — the box-wide Todos page, or a project-local subtree instance",
     cardTypes: ["todo-view"],
     defaultForTypes: ["todo-view"],
     argsSchema: z.object({

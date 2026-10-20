@@ -69,7 +69,7 @@ strip. Below that the list is grouped by card and, inside each card, by the
 headings the todos sit under, with nested todos under their parents — which
 is why where you write a todo decides how it reads back. A card whose todos
 merely link into this place is included and says so. The reader can switch
-the grouping to plate-state or show finished todos; neither is a card field.
+the grouping to status or show finished todos; neither is a card field.
 Cards that couldn't be read (parse/validate/load failures) show in their own
 muted section rather than silently vanishing — the same "never hide a
 failure" rule every todo surface follows.`,
