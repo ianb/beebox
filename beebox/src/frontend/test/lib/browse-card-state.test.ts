@@ -16,10 +16,26 @@ function detailPath(target: ViewTarget): string | undefined {
   return typeof path === "string" ? path : undefined;
 }
 
-// Root and explicit state take precedence over a directory seed. Invalid paths
-// and mismatched detail are errors, never root fallbacks.
-void test("Root and explicit state take precedence over a directory seed.", async (t) => {
+// With no directory, Browse opens on the content root; an explicit `""` is
+// still the box root (`docs/implemented-plans/front-door.md`, Track D). Explicit state
+// takes precedence over a directory seed. Invalid paths and mismatched detail
+// are errors, never root fallbacks.
+void test("Content root by default; explicit state takes precedence over a directory seed.", async (t) => {
   t.check(parseBrowseState({}), {
+    ok: true,
+    state: {
+      directory: "_content",
+    },
+  });
+
+  t.check(parseBrowseState({ params: { dir: "" } }), {
+    ok: true,
+    state: {
+      directory: "",
+    },
+  });
+
+  t.check(parseBrowseState({ viewState: { directory: "" } }), {
     ok: true,
     state: {
       directory: "",

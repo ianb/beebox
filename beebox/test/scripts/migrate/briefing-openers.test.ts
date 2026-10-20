@@ -63,9 +63,9 @@ void test("The seed a box got before this change, and the seed it gets now, are 
 
 // ## Case 1: an untouched stock briefing gives the root landmark the stock openers
 //
-// The old seed becomes the current seed, and the root landmark gets the two
-// onboarding openers, which is what a new box gets.
-void test("The old seed becomes the current seed, and the root landmark gets the two onb...", async (t) => {
+// The old seed becomes the current seed, and the root landmark gets the stock
+// onboarding opener, which is what a new box gets.
+void test("The old seed becomes the current seed, and the root landmark gets the stock onb...", async (t) => {
   const r = plan({ path: ROOT, text: OLD_SEED, landmark: { path: ROOT_LM, text: OLD_ROOT_LANDMARK } });
   t.check(r, {
     writes: {
@@ -74,8 +74,7 @@ void test("The old seed becomes the current seed, and the root landmark gets the
 navigation:
   label: kitchen
   openers:
-    - Let me tell you what this box is for.
-    - What can you do?
+    - Tell me about talking instead of typing.
 symbol:
   glyph: 📦
 ---
@@ -98,8 +97,7 @@ void test("The new seed (template sync ran first) lands in the same place:", asy
 navigation:
   label: kitchen
   openers:
-    - Let me tell you what this box is for.
-    - What can you do?
+    - Tell me about talking instead of typing.
 symbol:
   glyph: 📦
 ---
@@ -483,7 +481,7 @@ void test("(i) The migrator on an old box:", async (t) => {
   await writeVersions(box.root, { [ROOT]: { sha256: sha(OLD_SEED), "installed-at": "2026-09-01T00:00:00.000Z", stock: OLD_SEED } });
   const run = await runBriefingOpeners({ boxRoot: box.root, mode: "apply" });
   t.check(run.code, 0);
-  t.check(openersOf(await box.read(ROOT_LM)), ["Let me tell you what this box is for.", "What can you do?"]);
+  t.check(openersOf(await box.read(ROOT_LM)), ["Tell me about talking instead of typing."]);
   t.check(await box.read(ROOT), createBriefingTemplate());
   t.check((await readVersions(box.root))[ROOT]?.sha256, TEMPLATE_STOCK_HASHES["briefing-seed"].current);
 
@@ -505,7 +503,7 @@ void test("(ii) Template sync first:", async (t) => {
   t.check(await box.read(ROOT), createBriefingTemplate());
   const run = await runBriefingOpeners({ boxRoot: box.root, mode: "apply" });
   t.check(run.code, 0);
-  t.check(openersOf(await box.read(ROOT_LM)), ["Let me tell you what this box is for.", "What can you do?"]);
+  t.check(openersOf(await box.read(ROOT_LM)), ["Tell me about talking instead of typing."]);
   t.check((await readVersions(box.root))[ROOT]?.sha256, TEMPLATE_STOCK_HASHES["briefing-seed"].current);
 });
 

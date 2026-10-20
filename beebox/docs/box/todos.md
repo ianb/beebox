@@ -1,5 +1,5 @@
 ---
-read-when: Capturing, annotating, closing, querying, or reviewing a todo — the `{% todo %}` tag's attributes, `start`/`due` and the plate, your own follow-ups, `bbx query todos`, and the review sweep.
+read-when: Capturing, annotating, closing, querying, or reviewing a todo — the `{% todo %}` tag's attributes, `start`/`due` and what is due now, your own follow-ups, `bbx query todos`, and the review sweep.
 ---
 
 # Todos
@@ -19,7 +19,7 @@ todos:
 ```
 
 A bare `{% todo %}…{% /todo %}` with no attributes is a valid, honest open
-todo — it just means "on the plate now, no date opinion." Absence of an
+todo — it just means "due now, no date opinion." Absence of an
 attribute is never a fabrication; only set what you actually know.
 
 Attributes, all optional: `id` (a short slug for `{% see-also %}` cross-
@@ -27,11 +27,11 @@ reference — never a UUID), `status` (`open`/`done`/`dropped`/`parked`;
 absent = `open`), `assigned` (absent = the boxholder; `"agent"` = yours to
 chase; any other value names a person — a plain name such as `"Dana"` is
 fine, and whether it should become a ref is not settled. Only the
-boxholder's todos are on the plate and in its counts. Never write `user`,
+boxholder's todos are due now and in its counts. Never write `user`,
 `me`, `boxholder`, `you`, or `owner` for the boxholder: leave `assigned` off,
 or lint warns), `by` (absent = boxholder-authored; `"agent"` = you wrote it), `due`,
 and `start` (an absolute date or `-3d`/`-2w` relative to `due` — this is
-the *surfacing* trigger: a todo is *later* before `start` and on the plate
+the *surfacing* trigger: a todo is *later* before `start` and *now*
 from `start` on, regardless of `due`; the person sees "later · Oct 23" on it.
 Say "later", not "starts" or "quiet": `start` is not when the work begins.
 In `bbx query todos` JSON the state is `plateState: "quiet"`, and a past-due
@@ -47,7 +47,7 @@ You may open a todo for yourself — `by="agent" assigned="agent"`, with
 `created` — whenever you notice work worth doing that isn't this turn's
 job: a card that wants a second pass, a gap you spotted while doing
 something else, a cleanup the boxholder never asked for. You don't need
-permission for these and they don't go on the boxholder's plate, so they
+permission for these and they don't count among the boxholder's todos due now, so they
 cost the person nothing. Close your own with `done` and a
 `{% see-also %}` pointing at the evidence, or `dropped` when you've
 decided against it — and say why in the text.
@@ -62,8 +62,8 @@ and the `todo-review` sweep brings the stale ones back to you.
 
 `bbx query todos` is your query path. `--here <dir>` asks about one
 project: its own todos, plus todos elsewhere that link into it.
-`--group plate` groups by status (overdue, on your plate, later, …), `--assigned agent` your own follow-ups;
-also `--status`, `--glob`, `--on-plate`, and `--json`. There is no
+`--group status` groups by status (overdue, now, later, …), `--assigned agent` your own follow-ups;
+also `--status`, `--glob`, `--now`, and `--json`. There is no
 mutation command: to change a todo, edit its `{% todo %}` tag or frontmatter
 entry directly, like any other card content — normal validation, git
 history, and file-locking apply, nothing special.
@@ -76,7 +76,7 @@ in a todo makes it show up on the linked place as well as its own.
 ## Tending
 
 You may run a review pass yourself, and the daily `todo-review` procedure
-also hands you a brief of overdue / newly on your plate / stale todos to look
+also hands you a brief of overdue / newly started / stale todos to look
 at. Either way, the same rule: **you judge, the boxholder decides.**
 Suggest completion when you see evidence a todo is done; propose merging
 duplicates; flag a stale one for `parked`/`dropped`/a real date — but
@@ -87,7 +87,7 @@ pointing at the evidence you did the work.
 
 `recheck` is the review's bookkeeping: an ISO date before which the review
 will not list the todo again, or `never` once it has stopped reviewing it.
-It is not a reminder and changes nothing the boxholder sees on the plate.
+It is not a reminder and changes nothing the boxholder sees on the Todos page.
 You write it only while working a todo review, and there it is the one
 attribute you may set on the boxholder's todos without asking. Never
 write `never` yourself; the review sets it when a todo was pushed three

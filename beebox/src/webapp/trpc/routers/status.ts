@@ -15,6 +15,7 @@ import { isInBoxNamespace } from "../../../shared/ref-path/box-namespace.js";
 import { verifyBoxNamespaceOnDisk } from "../../../lib/box-namespace-resolve.js";
 import { detectDisplayFormPath, displayFormPathMessage } from "../../../shared/display-path.js";
 import { BOX_ROOT_VOCABULARY } from "../../../shared/box-root-vocabulary.js";
+import { BOX_LAYOUT } from "../../../lib/paths/box-layout-spec.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas.js";
 import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
@@ -39,6 +40,8 @@ export interface QuestionInfo extends QuestionCardInfo {
   options?: string[] | undefined;
   learning?: QuestionFields["learning"] | undefined;
   answer?: QuestionFields["answer"] | undefined;
+  /** The card's `asked-at`, so a caller can order pending questions by when the box asked them. */
+  askedAt?: string | undefined;
   /**
    * Set when the card failed to parse against `QuestionSchema` (bad
    * frontmatter, a superRefine violation, …). An invalid card carries only
@@ -53,11 +56,29 @@ export interface QuestionInfo extends QuestionCardInfo {
 export interface BrowseDir {
   name: string;
   fileCount: number;
-  /** The pruned-subtree rollup (`docs/implemented-plans/card-prominence.md`, Track B): does anything under it lead? */
-  summary: DirectorySummary;
+  /**
+   * The pruned-subtree rollup (`docs/implemented-plans/card-prominence.md`, Track B): does anything under it lead?
+   * `cardCount` is the same recursive `.card` count as `fileCount`, `null` when the count failed.
+   */
+  summary: DirectorySummary & { cardCount: number | null };
   /** This subdirectory's OWN landmark identity, when it holds a landmark card directly. */
   landmark?: BrowseDirLandmark | undefined;
+  /** The path is a `_content` folder the box layout creates (`docs/implemented-plans/front-door.md`, Track D). */
+  seeded: boolean;
 }
+
+/**
+ * The `_content` template folders a new box is seeded with: every
+ * `box-layout-spec.ts` path under `_content/`, plus the intermediate folders
+ * creating it makes (`_content/reviews` for `_content/reviews/retro`).
+ */
+const SEEDED_CONTENT_PATHS: ReadonlySet<string> = new Set(
+  BOX_LAYOUT.flatMap((entry): string[] => {
+    const segments = entry.path.split("/");
+    if (segments[0] !== "_content" || segments.length < 2) return [];
+    return segments.slice(2).map((_, i) => segments.slice(0, i + 2).join("/")).concat(entry.path);
+  })
+);
 
 export interface BrowseCard {
   relativePath: string;
@@ -107,12 +128,12 @@ async function buildBrowseDir(walk: ProminenceWalkContext, { resolved, entryName
   const { boxRoot } = walk;
   const dirFullPath = path.join(resolved, entryName);
   const dirRelPath = path.relative(boxRoot, dirFullPath);
-  let fileCount = 0;
+  let cardCount: number | null = null;
   try {
     const subEntries = await fs.readdir(dirFullPath, { recursive: true });
-    fileCount = subEntries.filter((f) => typeof f === "string" && f.endsWith(".card")).length;
+    cardCount = subEntries.filter((f) => typeof f === "string" && f.endsWith(".card")).length;
   } catch (e) {
-    // Can't read subdirectory — leave fileCount at 0 rather than failing the whole listing.
+    // Can't read subdirectory — show 0 cards rather than failing the whole listing; `cardCount: null` keeps it from folding.
     if (errnoCode(e) !== "ENOENT") {
       console.warn(`browse: cannot count cards in ${dirFullPath}:`, e);
     }
@@ -121,7 +142,13 @@ async function buildBrowseDir(walk: ProminenceWalkContext, { resolved, entryName
     directorySummary(walk, dirRelPath),
     subdirLandmarkIdentity(boxRoot, dirRelPath),
   ]);
-  return { name: entryName, fileCount, summary, ...(landmark !== undefined && { landmark }) };
+  return {
+    name: entryName,
+    fileCount: cardCount ?? 0,
+    summary: { ...summary, cardCount },
+    ...(landmark !== undefined && { landmark }),
+    seeded: SEEDED_CONTENT_PATHS.has(dirRelPath.split(path.sep).join("/")),
+  };
 }
 
 /**
@@ -214,6 +241,7 @@ export const statusRouter = router({
             options: fields.input.options?.map((o) => o.label),
             learning: fields.learning,
             answer: fields.answer,
+            askedAt: fields["asked-at"],
           };
         } catch (e) {
           console.warn(`Question card failed to parse, surfacing as invalid: ${q.path}:`, e);

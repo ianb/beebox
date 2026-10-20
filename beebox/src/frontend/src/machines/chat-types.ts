@@ -12,12 +12,12 @@ import type {
   ChatImageAttachment,
 } from "../api";
 import type { HistorySlice } from "../api-chat";
-import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
+import type { ChatSendContext } from "@core/chat/card-activity.js";
 
 // -- Events --
 
 export type ChatEvent =
-  | { type: "SEND"; binding?: SendBinding; startup?: boolean; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }
+  | ({ type: "SEND"; binding?: SendBinding; startup?: boolean; message: string; messageId: string; images?: ChatImageAttachment[] } & ChatSendContext)
   | { type: "INTERRUPT" }
   | { type: "DISMISS_ERROR" }
   | { type: "STREAM_TEXT"; text: string }

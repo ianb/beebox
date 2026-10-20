@@ -36,7 +36,7 @@ At the root, show the name once. The prefix exists to anchor nested
 landmarks ("Box ▸ Lending"), so it can be dropped when the place is the
 root. The pill's other wording problems ("Here: /", the box emoji, "Find a
 landmark") belong to
-[First screen says nothing about what this is](../../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md).
+[First screen says nothing about what this is](../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md).
 
 ## Related
 

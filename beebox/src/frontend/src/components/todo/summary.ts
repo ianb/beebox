@@ -1,12 +1,13 @@
 /**
  * The place summary for one card (`docs/implemented-plans/todos-ui.md`, Track 4):
- * "3 on your plate · 1 later · 1 overdue · 2 done" — the plate's own split, so
- * the numbers agree with the plate and its badge. It is the collection's reduction, rendered —
+ * "3 now · 1 later · 1 overdue · 2 done" — the todo page's own split, so
+ * the numbers agree with the todo page and its badge. It is the collection's reduction, rendered —
  * boxholder scope, so an agent follow-up never counts here — and the
  * reduction is complete regardless of the status filter
  * (`core/collection/types.ts`).
  */
 
+import type { NavCounts } from "@core/nav-counts";
 import { PLATE_CARD_PATH } from "@shared/todo-model";
 
 export interface SummaryReduction {
@@ -17,8 +18,8 @@ export interface SummaryReduction {
   escalated: number;
 }
 
-interface SummaryPart {
-  key: "open" | "later" | "overdue" | "parked" | "done";
+export interface SummaryPart {
+  key: "open" | "later" | "overdue" | "parked" | "done" | "questions";
   count: number;
   text: string;
   /** This count is the control that goes to the todos (`OpenAction`). */
@@ -28,10 +29,10 @@ interface SummaryPart {
 /**
  * The line's parts, or `null` when the card has nothing to summarize.
  *
- * The open todos are split as the plate splits them: "on your plate" is
- * always named once there is a line ("0 on your plate · 2 done" says the card
+ * The open todos are split as the todo page splits them: "now" is
+ * always named once there is a line ("0 now · 2 done" says the card
  * is finished), and "later" (open, waiting for a `start`) and the rest appear
- * only when non-zero. The control is "on your plate" when it counts any,
+ * only when non-zero. The control is "now" when it counts any,
  * else "later", so it never names a set it does not lead to. Dropped todos are
  * not counted: they are deliberately not being done, and a card of only
  * dropped todos gets no line.
@@ -40,12 +41,34 @@ export function summaryParts(reduction: SummaryReduction): SummaryPart[] | null 
   const { open, onPlate, done, parked, escalated } = reduction;
   if (open + parked + done === 0) return null;
   const later = open - onPlate;
-  const parts: SummaryPart[] = [{ key: "open", count: onPlate, text: `${String(onPlate)} on your plate`, action: onPlate > 0 }];
+  const parts: SummaryPart[] = [{ key: "open", count: onPlate, text: `${String(onPlate)} now`, action: onPlate > 0 }];
   if (later > 0) parts.push({ key: "later", count: later, text: `${String(later)} later`, action: onPlate === 0 });
   if (escalated > 0) parts.push({ key: "overdue", count: escalated, text: `${String(escalated)} overdue`, action: false });
   if (parked > 0) parts.push({ key: "parked", count: parked, text: `${String(parked)} parked`, action: false });
   if (done > 0) parts.push({ key: "done", count: done, text: `${String(done)} done`, action: false });
   return parts;
+}
+
+/**
+ * The root place page's line (`docs/implemented-plans/front-door.md`, Track C): "3 to do ·
+ * 1 overdue · 2 questions waiting", from the nav's own counts, so the page and
+ * the nav badge agree. `null` when every count is zero. Questions show on
+ * their own when nothing is to do. It does not use the word "plate" (decision,
+ * 2026-10-19), and it does not call `summaryParts`: the nav counts carry no
+ * `open`, `done`, or `parked`.
+ */
+export function rootLineParts(counts: NavCounts): SummaryPart[] | null {
+  const { onPlateTodos, escalatedTodos, pendingQuestions } = counts;
+  const parts: SummaryPart[] = [];
+  if (onPlateTodos > 0) {
+    parts.push({ key: "open", count: onPlateTodos, text: `${String(onPlateTodos)} to do`, action: true });
+    if (escalatedTodos > 0) parts.push({ key: "overdue", count: escalatedTodos, text: `${String(escalatedTodos)} overdue`, action: true });
+  }
+  if (pendingQuestions > 0) {
+    const noun = pendingQuestions === 1 ? "question" : "questions";
+    parts.push({ key: "questions", count: pendingQuestions, text: `${String(pendingQuestions)} ${noun} waiting`, action: true });
+  }
+  return parts.length === 0 ? null : parts;
 }
 
 /**

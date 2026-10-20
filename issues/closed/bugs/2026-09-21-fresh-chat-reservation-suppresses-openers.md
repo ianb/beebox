@@ -37,7 +37,7 @@ between fresh-session reservation and opener gating, not missing briefing
 content. Preserve the difference between a fresh empty reservation and an
 existing conversation when repairing it. No product fix was attempted.
 
-Related: [the broader first-screen design issue](../../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)
+Related: [the broader first-screen design issue](../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)
 and [first-run experience](../../features/2026-07-20-first-run-experience.md).
 
 ## Re-encounter 2026-10-08 (journey walks)

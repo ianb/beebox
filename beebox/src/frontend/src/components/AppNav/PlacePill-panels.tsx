@@ -17,6 +17,7 @@ import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
 import { Button } from "../ui/Button";
+import { Text } from "../ui/Text";
 import { href } from "../../lib/routing";
 import { withBase } from "../../api";
 import { LandmarkList, type SwitchLandmark } from "./PlacePill-landmarks";
@@ -87,7 +88,11 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
       <MenuItem id="bbx-switch-menu-box" href={withBase(`/${boxSlug}/box`)}>
         <span className="block min-w-0 truncate">Box: {boxName}</span>
       </MenuItem>
-      <MenuItem id="bbx-switch-menu-landmarks" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.landmarks}`)}>Find a landmark</MenuItem>
+      <MenuItem id="bbx-switch-menu-landmarks" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.landmarks}`)}>
+        <span className="block">Find a landmark</span>
+        {/* The glossary's gloss, where a newcomer first meets the word (docs/implemented-plans/front-door.md, Track E). */}
+        <Text as="span" size="xs" tone="muted" className="block">the places you jump to most</Text>
+      </MenuItem>
       <MenuDivider />
       <div className="flex items-center justify-between pr-2"><SectionHeader>Switch to</SectionHeader>
         {landmarks !== null && landmarks.length > 20 ? (

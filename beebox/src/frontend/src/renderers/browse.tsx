@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { RendererEntry, RendererProps } from "../file-type-registry";
 import { SystemCardBoundary } from "../components/system-cards/SystemCardBoundary";
 import { BrowseLocationError } from "../pages/browse/components/BrowseLocationError";
-import { legacyBrowseTarget, parseBrowseState, type BrowseMissingKind, type BrowseState } from "../lib/browse-card-state";
+import { BROWSE_DEFAULT_DIRECTORY, browseDirectoryLabel, legacyBrowseTarget, parseBrowseState, type BrowseMissingKind, type BrowseState } from "../lib/browse-card-state";
 import { trpc } from "../lib/trpc/client";
 import { type ViewState, type ViewTarget } from "../lib/view-url";
 import { BrowseLoading } from "../pages/browse/components/BrowseLoading";
@@ -51,7 +51,7 @@ function BrowseLocation({ state, onChange }: { state: BrowseState; onChange: (ne
     hasDetail: state.detail !== undefined,
     detailKind: detail.data?.kind,
   });
-  useAppBarPlace(visible && focused && valid ? { dir: state.directory, label: state.directory ? `Browse: ${state.directory}` : "Browse" } : null);
+  useAppBarPlace(visible && focused && valid ? { dir: state.directory, label: state.directory === BROWSE_DEFAULT_DIRECTORY ? "Browse" : `Browse: ${browseDirectoryLabel(state.directory)}` } : null);
   useEffect(() => {
     setNavigationError(null);
     return () => { navigationVersion.current += 1; };

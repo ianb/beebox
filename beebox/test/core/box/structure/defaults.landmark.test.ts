@@ -10,6 +10,7 @@ import "@ianbicking/tap-check/tap";
 import { mkdir } from "node:fs/promises";
 import { installRootLandmark } from "../../../../src/core/box/structure/defaults.js";
 import { parseLandmarkFields } from "../../../../src/schemas/landmark.js";
+import { splitCardContent } from "../../../../src/cards/frontmatter.js";
 import { stageFiles, commitPaths } from "../../../../src/lib/git/core/operations.js";
 import { mkdtemp, writeFile, readFile, readdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
@@ -50,13 +51,18 @@ void test("A box with no landmark gets one installed under content/ (returns its
 
   t.check(await rootLabel(A), basename(A));
 
-  // The root place carries the box's two onboarding openers, so a new box's first
-  // chat offers them (they moved here from the briefing seed).
+  // The root place carries the box's one onboarding opener, the voice
+  // walkthrough, which sits under the box's first question in the empty chat
+  // (docs/implemented-plans/front-door.md, Track A).
 
   t.check(parseLandmarkFields(await readFile(join(A, "_content/Box.landmark.card"), "utf8"))?.navigation?.openers, [
-    "Let me tell you what this box is for.",
-    "What can you do?",
+    "Tell me about talking instead of typing.",
   ]);
+
+  // Its body, the place summary the root page shows first, starts empty: the
+  // agent writes it once the root question is answered (docs/implemented-plans/front-door.md).
+  const { body } = splitCardContent(await readFile(join(A, "_content/Box.landmark.card"), "utf8"));
+  t.check(body.trim(), "");
 });
 
 // An inert root landmark — here the legacy XML-body shape, which the frontmatter
@@ -69,10 +75,23 @@ void test("An inert root landmark — here the legacy XML-body shape, which the 
   t.check(rB, "_content/Box.landmark.card");
 
   t.check(await rootLabel(B), basename(B));
+
+  // The legacy XML body is not a summary anyone can read, so it is dropped.
+  t.check(splitCardContent(await readFile(join(B, "_content", "Box.landmark.card"), "utf8")).body.trim(), "");
+});
+
+// An inert root landmark with an empty body stays empty after repair; one with a
+// written body keeps it (next test).
+void test("An inert root landmark with an empty body stays empty after repair; one with a...", async (t) => {
+  const E = await makeContentBox();
+  await writeFile(join(E, "_content", "Box.landmark.card"), "---\nsymbol:\n  glyph: 📦\n---\n\n");
+  await installRootLandmark(E);
+  t.check(splitCardContent(await readFile(join(E, "_content", "Box.landmark.card"), "utf8")).body.trim(), "");
 });
 
 // A repair keeps the place summary. An inert landmark whose body the agent
-// wrote gets the stock frontmatter back, and its body survives:
+// wrote gets the stock frontmatter back, and its body survives with no stock
+// summary added above it:
 void test("A repair keeps the place summary.", async (t) => {
   const S = await makeContentBox();
   await writeFile(join(S, "_content", "Box.landmark.card"), "---\nsymbol:\n  glyph: 📦\n---\nTwo lists so far: groceries and the landlord.\n");
@@ -82,8 +101,7 @@ void test("A repair keeps the place summary.", async (t) => {
 navigation:
   label: ${basename(S)}
   openers:
-    - Let me tell you what this box is for.
-    - What can you do?
+    - Tell me about talking instead of typing.
 symbol:
   glyph: 📦
 ---
@@ -93,7 +111,7 @@ Two lists so far: groceries and the landlord.
   t.check(parseLandmarkFields(repaired), {
     navigation: {
       label: basename(S),
-      openers: ["Let me tell you what this box is for.", "What can you do?"],
+      openers: ["Tell me about talking instead of typing."],
     },
     symbol: { glyph: "📦" },
   });

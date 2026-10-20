@@ -26,7 +26,7 @@ to change a user-facing word, change it here first. Decisions recorded
 ## Storage and files
 
 **box** — A single user's working directory under `~/src/boxes/` (or `/home/beebox/boxes/` on the server). Contains the user's cards, config, and state, and is also its own npm package (`package.json`, `src/`) and git repo — one root, `boxRoot` — see `docs/box-layout.md`.
-*User-facing:* same — "your box" is the user's box, the totality of their stuff. Never the app's name for itself (no "box assistant"), and never a bare place label (the root place is "Home").
+*User-facing:* same — "your box" is the user's box, the totality of their stuff. Never the app's name for itself (no "box assistant"), and never a bare place label: the root place is named for the box (its slug, so a fleet's tabs differ). "Home" is the pill's label for a chat bound to no place (`HOME_PLACE` in `src/frontend/src/lib/place-label.ts`).
 
 **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "users" of the system). See AGENTS.md note on avoiding personal names.
 *User-facing:* internal — never shown. The agent addresses the boxholder as "you".
@@ -79,10 +79,16 @@ to change a user-facing word, change it here first. Decisions recorded
 *User-facing:* internal — never shown. The UI says "Thinking…" for a busy turn, and the assistant speaks as "I", never "the agent" or "your box assistant".
 
 **landmark** — A curated navigation anchor for a box directory (`*.landmark.card`): symbol, label, bookmarks, routing destinations. See `docs/landmarks.md`.
-*User-facing:* same — kept deliberately (boxholder decision, pending a better word); the agent introduces it with a gloss the first time ("your Landmarks page — the short list of places you jump to most").
+*User-facing:* same — kept deliberately (boxholder decision, pending a better word); the agent introduces it with a gloss the first time ("your Landmarks page — the short list of places you jump to most"). The menu row and the Landmarks page carry the same gloss: "the places you jump to most".
 
 **place** — The app bar's notion of where the user is: the pill's label plus the directory it resolves to (`src/frontend/src/lib/place-label.ts`).
-*User-facing:* internal — the pill shows the place's *name*; the word "place" itself appears in no label. The root landing place is labeled **"Home"**.
+*User-facing:* internal — the pill shows the place's *name*; the word "place" itself appears in no label. The root place is named for the box (its slug); **"Home"** labels a chat bound to no place.
+
+**now / later** — The two states of an open todo a person sees: *now* (past its `due`, past its `start`, or undated) and *later* (before its `start`). Counts read "3 now · 1 later"; overdue is called out separately. The code's field is `plateState` with values `escalated | on-plate | quiet`, an older metaphor the screen no longer uses (`docs/box/todos.md`). The box-wide list is the **Todos** page, the stock `todo-view` card at `_content/plate.todo-view.card`.
+*User-facing:* "now", "later", "overdue", "Todos"; never "plate".
+
+**question** — A `*.question.card` in `_bookkeeping/questions/`: something the box is waiting to hear from the person, with a `prompt`, a `memo` saying why, and a `directive` for the answer (`docs/questions.md`). The newest pending one is the empty root chat's opening line; a new box starts with one.
+*User-facing:* "a question" or "something I wanted to ask you"; never "question card". The Questions page is "the questions waiting for you".
 
 **companion pane** — The chat page's split view: a card opened beside the conversation (full-screen flip on mobile). Tab-shaped and transient (`CompanionViewPanel`, `useChatTabs`).
 *User-facing:* no coined noun — say "the tab" or the card's own name ("open it beside the chat").

@@ -8,7 +8,7 @@
  */
 
 import { Command } from "commander";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/structure/core.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, installRootQuestion, symlinkClaudeMemory } from "../../core/box/structure/core.js";
 import { detectBoxTarget, scaffoldBoxRoot } from "../../core/box/package.js";
 import * as path from "node:path";
 import { stageAll, commit, initRepo, isRepo, repoRootOf } from "../../lib/git/core/operations.js";
@@ -191,7 +191,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   const briefingInstalled = await installBriefing(boxRoot);
   if (briefingInstalled) changes.push("Installed _content/briefing.briefing.card");
 
-  // Install the box-wide todo-view stock instance ("the plate")
+  // Install the box-wide todo-view stock instance (the Todos page)
   const todoViewInstalled = await installTodoView(boxRoot);
   if (todoViewInstalled) changes.push("Installed _content/plate.todo-view.card");
 
@@ -203,6 +203,14 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
     // Fresh init commits everything below; a re-init refill is left for the
     // next wakeup to commit (see runHousekeeping).
     changes.push(`Installed ${rootLandmarkInstalled} (edit to customize the root landmark)`);
+  }
+
+  // A new box starts with one question, which its first chat asks
+  // (docs/implemented-plans/front-door.md, Track A). Fresh init only: a re-init is not a
+  // new box, and the seed never asks a box that already holds any question.
+  if (isFresh) {
+    const rootQuestion = await installRootQuestion(boxRoot);
+    if (rootQuestion !== null) changes.push(`Installed ${rootQuestion} (the box's first question; its chat asks it)`);
   }
 
   // Install default scheduled scripts

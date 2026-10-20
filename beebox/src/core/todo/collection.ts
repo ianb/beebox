@@ -27,7 +27,7 @@ import type { CollectionDef, CollectionIssue, DeriveContext, GroupKey } from "..
 /** A collected todo plus the one thing that needs a baseline rather than a clock. */
 export interface DerivedTodo extends CollectedTodo {
   /**
-   * Open, on the plate, and its `start` was crossed since the caller's
+   * Open, due now, and its `start` was crossed since the caller's
    * `since` baseline — the review sweep's "stirring" set. Always `false` when
    * the caller has no baseline.
    */
@@ -68,20 +68,20 @@ export interface TodoReduction {
 }
 
 /**
- * The plate grouping ("By status"): the six states in the list's order, with
+ * The status grouping ("By status"): the six states in the list's order, with
  * the person's words — `escalated` reads "Overdue" like its date chip, and
- * `quiet` reads "Later" like the plate headline and the start chip.
+ * `quiet` reads "Later" like the todo page's headline and the start chip.
  */
 const PLATE_GROUPS: ReadonlyArray<{ state: TodoPlateState; label: string }> = [
   { state: "escalated", label: "Overdue" },
-  { state: "on-plate", label: "On your plate" },
+  { state: "on-plate", label: "Now" },
   { state: "quiet", label: "Later" },
   { state: "parked", label: "Parked" },
   { state: "done", label: "Done" },
   { state: "dropped", label: "Dropped" },
 ];
 
-function plateGroup(item: DerivedTodo): GroupKey {
+function statusGroup(item: DerivedTodo): GroupKey {
   const index = PLATE_GROUPS.findIndex((group) => group.state === item.plateState);
   const group = PLATE_GROUPS[index];
   if (group === undefined) return { key: item.plateState, label: item.plateState, order: PLATE_GROUPS.length };
@@ -115,7 +115,7 @@ function deriveTodoItem(item: TodoItem, ctx: DeriveContext): DerivedTodo {
  * `CollectionDef.inScope`. `all` is the one escape hatch: the agent's own
  * surfaces (`bbx query todos`, `bbx todos`), the review sweep, and the
  * ambient line all pass it so an agent follow-up stays visible to the code
- * that has to work it or count it, without inflating the boxholder's plate.
+ * that has to work it or count it, without inflating the boxholder's count.
  */
 function inScopeForTodoParams(item: DerivedTodo, params: TodoParams): boolean {
   return params.scope === "all" || isBoxholderTodo(item);
@@ -227,5 +227,5 @@ export const todoCollection: CollectionDef<TodoItem, DerivedTodo, TodoParams, To
   sectionOf: (item) => item.sectionPath,
   reduce: reduceTodos,
   crossCardIssues: duplicateIdIssues,
-  groupings: { place: placeGroup, plate: plateGroup },
+  groupings: { place: placeGroup, status: statusGroup },
 };

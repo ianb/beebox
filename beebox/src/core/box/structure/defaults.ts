@@ -236,9 +236,11 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
   // header, the browser tab -- so a fleet scaffolded with one hardcoded label
   // is a fleet whose boxes all look alike in a tab strip. The boxholder
   // renames it by editing the card, like any other box fact.
-  // The root place carries the box's onboarding openers; the agent fades them
+  // The root place carries the box's onboarding opener; the agent fades it
   // as the box comes into use (docs/implemented-plans/landmark-arrival.md, Track B).
-  const templateContent = createLandmarkTemplate({ label: await boxSlug(boxRoot), symbol: "📦", openers: STOCK_ROOT_OPENERS });
+  // Its body (the place summary) starts empty: the agent writes it once the
+  // root question is answered (docs/implemented-plans/front-door.md, Track A).
+  const template = { label: await boxSlug(boxRoot), symbol: "📦", openers: STOCK_ROOT_OPENERS };
   const existing = entries.find((name) => name.endsWith(".landmark.card"));
   if (existing !== undefined) {
     const existingRelPath = path.join("_content", existing);
@@ -253,16 +255,17 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
       return null;
     }
     if (hasRole) return null; // a real landmark — leave the user's content alone
-    // Inert/unparseable — repair in place, keeping the filename and any place summary (not legacy XML).
-    const { body, hasFrontmatter } = splitCardContent(content);
-    await fs.writeFile(path.join(contentDir, existing), templateContent + (hasFrontmatter && !/^\s*(<landmark|$)/.test(body) ? body : ""));
+    // Inert/unparseable — repair in place, keeping the filename and any place summary
+    // (not legacy XML, which nobody can read), with or without frontmatter.
+    const { body } = splitCardContent(content);
+    await fs.writeFile(path.join(contentDir, existing), createLandmarkTemplate(template) + (/^\s*<landmark/.test(body) ? "" : body));
     return existingRelPath;
   }
 
   const result = await installTemplateFile({
     boxRoot,
     relPath: "_content/Box.landmark.card",
-    templateContent,
+    templateContent: createLandmarkTemplate(template),
   });
   return result.outcome === "fresh" ? "_content/Box.landmark.card" : null;
 }
@@ -303,7 +306,7 @@ export async function installTodoView(boxRoot: string): Promise<boolean> {
   const result = await installTemplateFile({
     boxRoot,
     relPath: PLATE_CARD_PATH,
-    templateContent: createTodoViewTemplate({ glob: "**", title: "The Plate" }),
+    templateContent: createTodoViewTemplate({ glob: "**", title: "Todos" }),
   });
   return result.outcome === "fresh";
 }
@@ -412,7 +415,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
   {
     name: "todo-review",
     description:
-      "Daily todo review: an agent gives each escalated, newly-on-plate, or stale todo a status change or a recheck date",
+      "Daily todo review: an agent gives each overdue, newly started, or stale todo a status change or a recheck date",
     cron: "30 6 * * *",
     notBefore: "20h",
     onWakeup: false,

@@ -37,8 +37,8 @@ function payload(overrides?: Partial<PlacePayload>): PlacePayload {
   };
 }
 
-/** Render the page inside a router, a query client that never answers, and (optionally) a chat. */
-async function render(props: Omit<React.ComponentProps<typeof PlacePage>, "cardPath" | "onNavigate" | "onGoToPlace">, chat?: PlaceChat | null) {
+/** Render the page (the Lending place unless `cardPath` says otherwise) inside a router, a query client that never answers, and (optionally) a chat. */
+async function render(props: Omit<React.ComponentProps<typeof PlacePage>, "cardPath" | "onNavigate" | "onGoToPlace"> & { cardPath?: string }, chat?: PlaceChat | null) {
   const page = React.createElement(PlacePage, { cardPath: "_content/lending/Lending.landmark.card", onNavigate: () => {}, onGoToPlace: () => {}, ...props });
   const withChat = React.createElement(PlaceChatContext.Provider, { value: chat ?? null }, page);
   const element = React.createElement(BoxSlugProvider, { boxSlug: "test1", children: withChat });
@@ -66,18 +66,20 @@ function sections(html: string) {
 
 const startedLending: PlaceChat = { contextDir: "_content/lending", showsOwnOpeners: false, busy: false, sendOpener: () => "accepted" };
 
-// ## An empty place says so and names its folder
+// ## An empty place says so and offers its folder
 //
-// No links and no groups: "No cards to show here yet." and the folder, which
-// opens in Browse. It does not say the folder is empty: the place skips
-// background cards and cards of unknown types. A place with no openers shows no "Start something".
+// No links and no groups: "Nothing to show here yet." and a quiet line that
+// opens the folder in Browse (docs/implemented-plans/front-door.md, Track E). It does not
+// say the folder is empty: the place skips background cards and cards of
+// unknown types. It names no path and does not say "card". A place with no
+// openers shows no "Start something".
 void test("No links and no groups:", async (t) => {
   const html = await render({ payload: payload({ openers: [] }) }, startedLending);
   t.check(({ sections: sections(html), text: text(html) }), {
     sections: [
       "empty",
     ],
-    text: "No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card.",
+    text: "Nothing to show here yet. Tell me about something in the chat and I'll keep it here. Open Lending in Browse",
   });
 });
 
@@ -106,7 +108,7 @@ void test("A blank body shows no summary section, and no \"No body content\" lin
     sections: [
       "empty",
     ],
-    text: "No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card.",
+    text: "Nothing to show here yet. Tell me about something in the chat and I'll keep it here. Open Lending in Browse",
   });
 });
 
@@ -277,8 +279,42 @@ void test("In a pane or on its own page the card header already names the place;
       embed: text(await render({ payload: payload({ openers: [] }), heading: true })),
     }),
     {
-    pane: "No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card.",
-    embed: "🤝 Lending No cards to show here yet. This place is the folder lending/ . Ask in the chat to add the first card.",
+    pane: "Nothing to show here yet. Tell me about something in the chat and I'll keep it here. Open Lending in Browse",
+    embed: "🤝 Lending Nothing to show here yet. Tell me about something in the chat and I'll keep it here. Open Lending in Browse",
   },
+  );
+});
+
+// ## The root place's count line sits under the summary
+//
+// On the root place the page shows "3 to do · 1 overdue · 2 questions
+// waiting" after the summary and before "Start something"
+// (docs/implemented-plans/front-door.md, Track C). The counts come from `PlaceView`;
+// `view.root-counts.test.ts` covers when it passes them. A failed count query
+// shows "Counts unavailable" with a retry; zero shows no line.
+void test("On the root place the page shows the count line after the summary", async (t) => {
+  const rootPage = (rootCounts: React.ComponentProps<typeof PlacePage>["rootCounts"]) => render({
+    payload: payload({ path: "_content/test1.landmark.card", dir: "", label: "test1" }),
+    cardPath: "_content/test1.landmark.card",
+    body: "Your box keeps what you tell it.\n",
+    ...(rootCounts === undefined ? {} : { rootCounts }),
+    onRetryCounts: () => {},
+  }, { ...startedLending, contextDir: "" });
+  const counted = await rootPage({ onPlateTodos: 3, escalatedTodos: 1, pendingQuestions: 2 });
+  const failed = await rootPage("unavailable");
+  const zero = await rootPage({ onPlateTodos: 0, escalatedTodos: 0, pendingQuestions: 0 });
+  t.check(
+    ({
+      sections: sections(counted),
+      counts: sectionText(counted, "counts"),
+      failed: sectionText(failed, "counts"),
+      zero: sectionText(zero, "counts"),
+    }),
+    {
+      sections: ["summary", "counts", "start-something", "empty"],
+      counts: "3 to do · 1 overdue · 2 questions waiting",
+      failed: "Counts unavailable. Retry",
+      zero: null,
+    },
   );
 });

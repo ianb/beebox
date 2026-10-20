@@ -15,8 +15,9 @@ import { loadSessionHistory } from "../../chat/session/load-history.js";
 import { isRealUserMessage } from "../../../cli/lib/session.js";
 import { readDecisionReceipt, saveDecisionReceipt, containedPath, receiptRef, withDecisionReceiptLock, TriageReceiptError, type DecisionReceipt } from "./storage.js";
 import { applyDecision } from "./apply.js";
+import { AnsweredVia } from "../../../schemas/question.js";
 
-const answeredQuestion = z.object({ "answered-at": z.string().datetime({ offset: true }), "answered-via": z.enum(["web", "cli"]).optional(), answer: z.object({ text: z.string().optional(), selected: z.string().optional() }) });
+const answeredQuestion = z.object({ "answered-at": z.string().datetime({ offset: true }), "answered-via": AnsweredVia.optional(), answer: z.object({ text: z.string().optional(), selected: z.string().optional() }) });
 async function humanTurn(boxRoot: string, ref: string): Promise<string> {
   const parsed = parseRef(ref);
   if (!parsed.fragment || !parsed.path.endsWith(".chat.card")) throw new TriageReceiptError({ detail: "Human source must be a chat.card#turn-id reference" });

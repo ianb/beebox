@@ -22,6 +22,11 @@ import { groupMessages } from "../../ChatMessages/view";
 import { useCurrentUser } from "../../../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../../../lib/trpc/client";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { cardTarget } from "../../workspace/use-open-beside/hook";
+import { pickOpenQuestion, type OpenQuestion } from "./open-question";
+import { useBusSubscription } from "../../../../hooks/useBusSubscription";
+
 import { useEmissionDispatch } from "./dispatch";
 import { useEmissionPersistence } from "../../../../hooks/useEmissionPersistence";
 import { useRecoveryWidgets } from "./recovery";
@@ -36,6 +41,7 @@ import { useChatWs } from "./ws";
 import { useChatActions } from "./actions";
 import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./view";
+import type { ChatBodyProps } from "./body-props";
 import { createInputStoreAdapter, InputStoreProvider } from "../../input-store";
 import type { EmissionStore } from "../../../../input/emission-store";
 import { useCaptureBubbles } from "../../useCaptureBubbles";
@@ -49,6 +55,8 @@ import { ErrorText } from "../../../ui/ErrorText";
 import { useFirstLoadMark } from "../../../../lib/first-load-marks";
 import { SelectedTranscriptRegion } from "../../ambient/selected-transcript";
 import { FIRST_LOAD_MARKS } from "@shared/first-load-marks";
+/** Bus events after which the pending-question list may have changed (the Questions page watches the same set). */
+const QUESTION_EVENTS = new Set(["question-answered", "question-dismissed", "question-expired", "card-created", "file-change"]);
 
 function sendDisabledReasonFor(selection: ConversationSelection | undefined): string | undefined {
   return selection === undefined || selection.kind === "ready" ? undefined : selection.kind === "resolving" ? "Choosing conversation…" : selection.reason;
@@ -66,12 +74,18 @@ function sendDisabledReasonFor(selection: ConversationSelection | undefined): st
  * only for an unstarted conversation (one this tab created and nobody has
  * written in): an existing session with no messages is a different state, and
  * offering openers there would read as an invitation to start over.
+ *
+ * `openQuestion` is the newest pending question card, for the root chat only
+ * (docs/implemented-plans/front-door.md, Track A): the empty state asks it, and every send
+ * names it while it stays pending, so it is read for a started root chat too.
+ * The query is refreshed on the bus events that change the list and by
+ * "Not now" here.
  */
 function useChatBinding(params: {
   sessionId: string | null;
   unstarted: boolean;
   contextDir: string | undefined;
-}): { contextDir: string | null; openers: string[] } {
+}): { contextDir: string | null; openers: string[]; openQuestion: OpenQuestion | null; questionActions: OpenQuestionActions } {
   const query = trpc.chat.directoryFor.useQuery(
     { sessionId: params.sessionId ?? "" },
     { enabled: Boolean(params.sessionId) },
@@ -79,7 +93,44 @@ function useChatBinding(params: {
   const queried = query.data ? query.data.contextDir : undefined;
   const contextDir = params.contextDir ?? queried ?? null;
   const placeQuery = trpc.landmarks.forDir.useQuery({ dir: contextDir ?? "" }, { enabled: params.unstarted && contextDir !== null });
-  return { contextDir, openers: params.unstarted ? placeQuery.data?.landmark?.openers ?? [] : [] };
+  const landmark = params.unstarted ? placeQuery.data?.landmark ?? null : null;
+  const questionsQuery = trpc.status.questions.useQuery(undefined, { enabled: contextDir === "" });
+  // The agent answers from the CLI (`bbx answer --via chat`), which this tab
+  // sees only through the bus; without this an answered card would keep
+  // riding later sends and showing in an unstarted chat.
+  const utils = trpc.useUtils();
+  useBusSubscription({ onEvent: (event) => {
+    if (contextDir === "" && QUESTION_EVENTS.has(event.event)) void utils.status.questions.invalidate();
+  } });
+  const openQuestion = useMemo(
+    () => (contextDir === "" && questionsQuery.data !== undefined ? pickOpenQuestion(questionsQuery.data.items) : null),
+    [contextDir, questionsQuery.data],
+  );
+  return { contextDir, openers: landmark?.openers ?? [], openQuestion, questionActions: useOpenQuestionActions() };
+}
+
+type OpenQuestionActions = Pick<ChatBodyProps, "onQuestionNotNow" | "onOpenQuestions" | "onFocusComposer">;
+
+/**
+ * What the empty root chat's question line can do: "Not now" dismisses the
+ * card and refreshes the list, "and N more" opens the Questions page beside
+ * the chat (the way the chat opens any card, `workspace.open`), and clicking
+ * the line puts the cursor in whichever composer is on screen (the desktop
+ * row and the phone row are different textareas).
+ */
+function useOpenQuestionActions(): OpenQuestionActions {
+  const workspace = useWorkspace();
+  invariant(workspace, "InteractiveChat requires WorkspaceProvider");
+  const utils = trpc.useUtils();
+  const dismiss = trpc.actions.dismiss.useMutation({ onSuccess: () => void utils.status.questions.invalidate() });
+  const onQuestionNotNow = useCallback((path: string) => { dismiss.mutate({ questionPath: path }); }, [dismiss]);
+  const onOpenQuestions = useCallback(() => { workspace.open(cardTarget(SYSTEM_CARD_PATHS.questions), { label: "Questions" }); }, [workspace]);
+  const onFocusComposer = useCallback(() => {
+    const composer = [document.getElementById("bbx-composer-input-mobile"), document.getElementById("bbx-composer-input")]
+      .find((el): el is HTMLElement => el instanceof HTMLElement && el.offsetParent !== null);
+    composer?.focus();
+  }, []);
+  return { onQuestionNotNow, onOpenQuestions, onFocusComposer };
 }
 
 interface InteractiveChatProps {
@@ -197,7 +248,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     input: { sessionInput, contextDir, startEngine, startModel, initial }, onSessionAssignment,
   });
   const { messages, pendingMessages, streamText, streamTools, error, replyLost, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
-  const { contextDir: effectiveContextDir, openers } = useChatBinding({ sessionId, unstarted, contextDir });
+  const { contextDir: effectiveContextDir, openers, openQuestion, questionActions } = useChatBinding({ sessionId, unstarted, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   // First-load milestones: the conversation chosen, then its history shown (not the placeholder's).
   useFirstLoadMark(FIRST_LOAD_MARKS.conversationReady, conversationSelection?.kind === "ready");
@@ -227,8 +278,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
 
   const logicalConversation = pool.conversationIdentity(target);
   const model = useChatModelFeatures({ conversationKey: logicalConversation, sessionId, contextDir: effectiveContextDir, groupCount: groups.length, send, startEngine, startModel });
-  const mute = useChatMute();
-  const tabs = useWorkspace();
+  const mute = useChatMute(); const tabs = useWorkspace();
   invariant(tabs, "InteractiveChat requires WorkspaceProvider");
   const { activeView } = tabs;
   const cardSend = useCompanionCard({ focusedRef: attention?.focusedRef, activeView });
@@ -252,6 +302,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
   const { captureEmissionDispatch, dispatchNativeEmission, sendVoiceSegment, sendStopSend, failedRegion } = useEmissionDispatch({
     send, pool, target, selection: conversationSelection, attention,
     captureCardSend: cardSend.capture, acceptCardSend: cardSend.accepted, boxSlug, activeView, messages, emissionStore,
+    ...(openQuestion === null ? {} : { openQuestion: openQuestion.path }),
     selections: selections.selections, resetSelections: selections.resetSelections,
     resetAttachments: attach.resetAttachments, awaitPendingUploads: attach.awaitPendingUploads,
     onSent: bumpSendSignal,
@@ -311,8 +362,6 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     captureEmissionDispatch, sendDisabledReason: sendDisabledReasonFor(conversationSelection),
   });
 
-  // Loading changes the transcript, never the input service owner.
-
   return (
     <InputStoreProvider value={inputStore}>
       <InteractiveChatBody
@@ -367,7 +416,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!usesNativeShell} captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
       screenshots={screenshots}
       audioOverlayStore={audioOverlayStore}
-      openers={openers} unstarted={unstarted}
+      openers={openers} unstarted={unstarted} openQuestion={unstarted ? openQuestion : null} {...questionActions}
       />
       <ChatModeOverlays captureMode={captureMode} usesNativeShell={usesNativeShell} sessionId={sessionId} onExitCapture={exitCapture} />
     </InputStoreProvider>

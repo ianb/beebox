@@ -191,9 +191,9 @@ void test("A directory scopes to its subtree and turns the reference pass on; a 
   // sections and parents inside each row. `plate` is the six plate states, in the
   // list's order, with rows formed again inside each group.
 
-  const byPlate = await run({ here: KITCHEN, includeReferring: false, group: "plate", params: params({ status: ["open", "parked", "done", "dropped"] }) });
+  const byPlate = await run({ here: KITCHEN, includeReferring: false, group: "status", params: params({ status: ["open", "parked", "done", "dropped"] }) });
   t.check(byPlate.groups.map((g) => ({ key: g.key, label: g.label, reduction: g.reduction, cards: g.rows.map((r) => r.card.title) })), [
-    { key: "on-plate", label: "On your plate", reduction: { open: 3, done: 0, dropped: 0, parked: 0, onPlate: 3, escalated: 0, next: "2026-07-27" }, cards: ["Cabinet plan", "Supplies"] },
+    { key: "on-plate", label: "Now", reduction: { open: 3, done: 0, dropped: 0, parked: 0, onPlate: 3, escalated: 0, next: "2026-07-27" }, cards: ["Cabinet plan", "Supplies"] },
     { key: "parked", label: "Parked", reduction: { open: 0, done: 0, dropped: 0, parked: 1, onPlate: 0, escalated: 0, next: null }, cards: ["Cabinet plan"] },
     { key: "done", label: "Done", reduction: { open: 0, done: 2, dropped: 0, parked: 0, onPlate: 0, escalated: 0, next: null }, cards: ["Cabinet plan"] },
     { key: "dropped", label: "Dropped", reduction: { open: 0, done: 0, dropped: 1, parked: 0, onPlate: 0, escalated: 0, next: null }, cards: ["Supplies"] },

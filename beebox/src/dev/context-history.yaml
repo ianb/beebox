@@ -8268,6 +8268,44 @@ audit-box:
       peak: 42246
       added: 857
       turns: 6
+  front-door-stock-summary:
+    - date: 2026-10-19T18:31:05.755Z
+      boxCommit: 2366277ed6093b408cdc633181dc7f33176824b8
+      repoCommit: 9176760832cfdcadc8e108f3bda7d240ca290136
+      initial: 41633
+      peak: 41633
+      added: 0
+      turns: 2
+  front-door-offer-a-page:
+    - date: 2026-10-19T18:31:05.755Z
+      boxCommit: 2366277ed6093b408cdc633181dc7f33176824b8
+      repoCommit: 9176760832cfdcadc8e108f3bda7d240ca290136
+      initial: 41651
+      peak: 41651
+      added: 0
+      turns: 2
+  front-door-answer-in-chat:
+    - date: 2026-10-20T11:52:25.031Z
+      boxCommit: cc9d84050ff08337c2597a0aec05b6a4e1ef5087
+      repoCommit: 6bfcaa16beb70892d62f1f1357c8d482c2fde5bd
+      initial: 41916
+      peak: 41916
+      added: 0
+      turns: 2
+    - date: 2026-10-20T11:55:25.830Z
+      boxCommit: f326f34d8aaf93ace7f6e88c29cc4620028d3f57
+      repoCommit: 6bfcaa16beb70892d62f1f1357c8d482c2fde5bd
+      initial: 41916
+      peak: 41916
+      added: 0
+      turns: 2
+    - date: 2026-10-20T11:59:16.180Z
+      boxCommit: f326f34d8aaf93ace7f6e88c29cc4620028d3f57
+      repoCommit: 6bfcaa16beb70892d62f1f1357c8d482c2fde5bd
+      initial: 41928
+      peak: 41928
+      added: 0
+      turns: 2
 dev-checkout:
   dev-spirit-doc:
     - date: 2026-10-08T04:37:43.997Z

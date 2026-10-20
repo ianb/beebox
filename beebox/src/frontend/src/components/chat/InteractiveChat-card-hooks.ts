@@ -8,16 +8,13 @@
 import { useRef, useCallback } from "react";
 import { serializeViewUrl } from "../../lib/view-url";
 import { CardActivityStore } from "./conversation/card-activity-store";
-import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
+import type { ActivityKind, ChatSendContext } from "@core/chat/card-activity.js";
 import type { PanelTab } from "./InteractiveChat-controls";
 
-/** What `useCardSend` carries on a SEND event: open card + activity since the
- *  last reply + per-kind detail. All omitted when empty. */
-export interface CardSendFields {
-  openCard?: string;
-  cardActivity?: ActivityKind[];
-  cardState?: CardStateDetails;
-}
+/** What `useCardSend` carries on a SEND event: the companion card's part of
+ *  `ChatSendContext` (open card + activity since the last reply + per-kind
+ *  detail); the open question is the chat shell's. All omitted when empty. */
+export type CardSendFields = Omit<ChatSendContext, "openQuestion">;
 
 export interface CardSend {
   /** Report activity on the open card with an optional free-text detail (e.g.

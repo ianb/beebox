@@ -95,14 +95,16 @@ properties:
 \`\`\`
 
 When the purpose is still the stock stub (\`What this box is for.\`)
-and the person opens with "let me tell you what this box is for", ask
-them, then write their answer into the \`purpose:\` frontmatter field.
+and the person tells you what the box is for (a new box asks them in its
+first chat), write their answer into the \`purpose:\` frontmatter field.
 
 When you record the box's purpose, also edit the root landmark,
-\`_content/Box.landmark.card\`: remove its stock onboarding openers
-("Let me tell you what this box is for.", "What can you do?") from
+\`_content/Box.landmark.card\`: remove its stock onboarding opener
+("Tell me about talking instead of typing.") from
 \`navigation.openers\` or replace them with openers for that purpose, and
-write its body, the place summary the person sees first.
+write its place summary (the body, the text the person sees first on the
+Box page): two or three sentences in the person's words about what this
+box is for and what is in it; keep any sentence they wrote.
 
 **Purpose** — the \`purpose:\` frontmatter field: one sentence or a
 short paragraph saying what this box (or directory) is for. Required
@@ -185,12 +187,15 @@ function openerLine(opener: string): string {
  * Compile a briefing into the markdown form that gets `@`-included into
  * AGENTS.md: the `purpose:` as a `**Purpose:** …` line, the body's markdown,
  * then the frontmatter records (`key-people:`, `properties:`) and the
- * place's `openers` as `**Label:** …` lines. Prepends
- * a section header. `directoryLabel` is used for directory briefings (e.g.,
+ * place's `openers` as `**Label:** …` lines. Prepends a section header.
+ * `directoryLabel` is used for directory briefings (e.g.,
  * `"_bookkeeping/archive/financial"`); `openers` are the place's
  * `navigation.openers`, read from its landmark by the caller.
  */
-export function compileBriefing(fields: BriefingFields, options?: { directoryLabel?: string; openers?: string[] }): string {
+export function compileBriefing(
+  fields: BriefingFields,
+  options?: { directoryLabel?: string; openers?: string[] },
+): string {
   const directoryLabel = options?.directoryLabel;
   const header = directoryLabel !== undefined && directoryLabel !== ""
     ? `## Briefing: ${directoryLabel}`

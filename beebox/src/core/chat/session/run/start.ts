@@ -206,6 +206,9 @@ export async function composeTurnContent(
   const openCard = rawInput.openCard !== undefined && rawInput.openCard !== ""
     ? rawInput.openCard
     : undefined;
+  const openQuestion = rawInput.openQuestion !== undefined && rawInput.openQuestion !== ""
+    ? rawInput.openQuestion
+    : undefined;
   const activityChildren = renderActivityChildren({
     kinds: rawInput.cardActivity ?? [],
     details: rawInput.cardState ?? {},
@@ -217,6 +220,7 @@ export async function composeTurnContent(
     sessionStart,
     ...(rawInput.channel !== undefined ? { channel: rawInput.channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
+    ...(openQuestion !== undefined ? { openQuestion } : {}),
     ...(activityChildren !== "" ? { activityChildren } : {}),
     ...(healthGate !== undefined ? { healthGate } : {}),
   });

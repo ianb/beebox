@@ -82,6 +82,7 @@ void test("line 46", async (t) => {
       options: undefined,
       learning: undefined,
       answer: undefined,
+      askedAt: undefined,
     },
   ]);
 

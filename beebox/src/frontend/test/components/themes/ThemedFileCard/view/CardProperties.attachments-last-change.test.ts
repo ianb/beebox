@@ -64,7 +64,7 @@ function listing(answer: RouterOutput["status"]["browse"]) {
 void test("The scope listing becomes one list of links:", async (t) => {
   t.check(
     attachmentEntries("_content/projects/Porch.attach", {
-      dirs: [{ name: "scans", fileCount: 2, summary: { background: false, hasEntryPoint: false, primaryCount: 0 } }],
+      dirs: [{ name: "scans", fileCount: 2, summary: { background: false, hasEntryPoint: false, primaryCount: 0, cardCount: 2 }, seeded: false }],
       cards: [{ relativePath: "_content/projects/Porch.attach/Quote.doc.card", name: "Quote", type: "doc", prominence: "ordinary" }],
       files: [{ relativePath: "_content/projects/Porch.attach/photo.jpg", name: "photo.jpg" }],
     }),

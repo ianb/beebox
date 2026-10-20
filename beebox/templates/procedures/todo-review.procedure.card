@@ -1,7 +1,7 @@
 ---
 name: todo-review
 description: |-
-  Daily review of open todos: escalated (past due), newly on the plate
+  Daily review of open todos: overdue (past due), newly started
   (crossed start), and stale (undated, over 45 days old). The precheck
   sweeps the box and prints a brief of those todos; an agent works it,
   giving every item a status change (its own todos only) or a recheck
@@ -22,8 +22,8 @@ steps:
           # exits CHECK_SKIP_CODE (75) when no todo needs review.
       whys:
         - |-
-          No need to invoke an agent when no open todo is escalated, newly
-          on the plate, or stale, or every such todo has a recheck date
+          No need to invoke an agent when no open todo is overdue, newly
+          started, or stale, or every such todo has a recheck date
           still ahead.
       pass-output: true
     run:

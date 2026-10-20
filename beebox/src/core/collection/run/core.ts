@@ -120,7 +120,7 @@ export async function runCollection<
   // consumer, so the web list, `bbx query` and `bbx todos` agree — and so a
   // card from elsewhere in the box cannot sort above the project's own work
   // just because its path starts with an earlier letter. `rows.ts` walks
-  // `cards` in this order for every group, so the `plate` grouping gets the
+  // `cards` in this order for every group, so the `status` grouping gets the
   // same rule inside each of its groups.
   cards.sort((a, b) => viaOrder(a.via) - viaOrder(b.via) || a.relPath.localeCompare(b.relPath));
   const everything = cards.flatMap((card) => card.inScope);

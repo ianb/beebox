@@ -53,12 +53,12 @@ void test("An out-of-enum `todo-status` value is rejected", async (t) => {
 void test("Template generation: omitted `glob` (subtree default) vs. explicit `glob: \"**\"` (the stock box-wide instance)", async (t) => {
   const subtree = createTodoViewTemplate({ title: "Kitchen Remodel" });
   t.check(subtree, "---\ntitle: Kitchen Remodel\n---\n");
-  const boxWide = createTodoViewTemplate({ glob: "**", title: "The Plate" });
-  t.check(boxWide, "---\ntitle: The Plate\nglob: \"**\"\n---\n");
+  const boxWide = createTodoViewTemplate({ glob: "**", title: "Todos" });
+  t.check(boxWide, "---\ntitle: Todos\nglob: \"**\"\n---\n");
 
   // A card generated from the box-wide template round-trips through
   // `parseCardText`:
 
   const parsedBoxWide = parseCardText(boxWide, { source: "_content/plate.todo-view.card", schemas, type: "todo-view" });
-  t.check(parsedBoxWide.fields, { type: "todo-view", glob: "**", title: "The Plate" });
+  t.check(parsedBoxWide.fields, { type: "todo-view", glob: "**", title: "Todos" });
 });

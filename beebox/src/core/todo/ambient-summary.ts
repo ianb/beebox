@@ -7,7 +7,7 @@
  * immediate-children set changing; see `src/core/maps/precheck.ts`, and
  * the plan's "NOT in scope" entry on this).
  *
- * "On the plate" means `escalated` or `on-plate` plate-state — the same
+ * "Now" means `escalated` or `on-plate` plate-state — the same
  * grouping `bbx query todos --on-plate` uses; `quiet` and terminal states
  * don't count. It counts ALL todos, agent-assigned included. Consumed by both the reactor prompt (`reactor/prompts.ts`) and
  * the chat per-turn snapshot (`session-context.ts`), each choosing its own
@@ -16,7 +16,7 @@
 
 import { runTodoQuery } from "./query.js";
 
-/** `null` when there's nothing on the plate — callers omit the line entirely. */
+/** `null` when nothing is due now — callers omit the line entirely. */
 export async function computeTodoAmbientLine(boxRoot: string): Promise<string | null> {
   // The box-wide reduction already counts exactly these two, over every open
   // todo in the box — so the line is a read, not a second filter that could
@@ -30,7 +30,7 @@ export async function computeTodoAmbientLine(boxRoot: string): Promise<string | 
   });
   if (reduction.onPlate === 0) return null;
 
-  const escalatedNote = reduction.escalated > 0 ? ` (${String(reduction.escalated)} escalated)` : "";
+  const overdueNote = reduction.escalated > 0 ? ` (${String(reduction.escalated)} overdue)` : "";
   const noun = reduction.onPlate === 1 ? "todo" : "todos";
-  return `${String(reduction.onPlate)} open ${noun} on the plate${escalatedNote} — \`bbx query todos\``;
+  return `${String(reduction.onPlate)} ${noun} now${overdueNote} — \`bbx query todos\``;
 }

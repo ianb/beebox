@@ -11,8 +11,8 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { TodoSummaryLine } from "../../../src/components/todo/TodoSummaryLine.js";
-import { controlTargetSelector, directoryListPath, type SummaryReduction } from "../../../src/components/todo/summary.js";
+import { CountsLine, TodoSummaryLine } from "../../../src/components/todo/TodoSummaryLine.js";
+import { controlTargetSelector, directoryListPath, rootLineParts, type SummaryReduction } from "../../../src/components/todo/summary.js";
 
 globalThis.React = React;
 
@@ -37,10 +37,10 @@ void test("No todos, no line", async (t) => {
 
 // ## All done
 //
-// The card is finished; the line still says so, and "0 on your plate" is not a
+// The card is finished; the line still says so, and "0 now" is not a
 // control.
 void test("The card is finished; the line still says so, and \"0 on your plate\" is not a...", async (t) => {
-  t.check(text(line({ done: 2 }, noop)), "0 on your plate · 2 done");
+  t.check(text(line({ done: 2 }, noop)), "0 now · 2 done");
 });
 
 // ## Overdue
@@ -49,29 +49,29 @@ void test("The card is finished; the line still says so, and \"0 on your plate\"
 // With an open todo rendered below, the first count is a button that scrolls
 // to it.
 void test("escalated is the server's word for past due; the line calls it overdue.", async (t) => {
-  await t.checkText(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 }, noop)), "[3 on your plate] · 1 overdue · 2 done");
+  await t.checkText(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 }, noop)), "[3 now] · 1 overdue · 2 done");
 });
 
 // In a box view nothing is drawn to scroll to, so the same counts are plain
 // text rather than a button that does nothing:
 void test("In a box view nothing is drawn to scroll to, so the same counts are plain tex...", async (t) => {
-  t.check(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 })), "3 on your plate · 1 overdue · 2 done");
+  t.check(text(line({ open: 3, onPlate: 3, escalated: 1, done: 2 })), "3 now · 1 overdue · 2 done");
 });
 
 // Parked todos are named when there are any:
 void test("Parked todos are named when there are any:", async (t) => {
-  t.check(text(line({ open: 1, onPlate: 1, parked: 2 })), "1 on your plate · 2 parked");
+  t.check(text(line({ open: 1, onPlate: 1, parked: 2 })), "1 now · 2 parked");
 });
 
 // ## Later
 //
-// An open todo whose `start` has not come yet is not on the plate; the line
+// An open todo whose `start` has not come yet is not due now; the line
 // names it "later", as the plate's headline does. The control is the count
-// of the todos it goes to: "on your plate" when any are, else "later".
-void test("An open todo whose start has not come yet is not on the plate; the line names...", async (t) => {
-  await t.checkText(text(line({ open: 3, onPlate: 2 }, noop)), "[2 on your plate] · 1 later");
+// of the todos it goes to: "now" when any are, else "later".
+void test("An open todo whose start has not come yet is not due now; the line names...", async (t) => {
+  await t.checkText(text(line({ open: 3, onPlate: 2 }, noop)), "[2 now] · 1 later");
 
-  t.check(text(line({ open: 1, onPlate: 0 }, noop)), "0 on your plate · [1 later]");
+  t.check(text(line({ open: 1, onPlate: 0 }, noop)), "0 now · [1 later]");
 });
 
 // On a card, the control scrolls to the first todo in the set it names. A todo
@@ -105,4 +105,45 @@ void test("A directory's browse page shows the same line for every card under it
   );
 
   t.check(directoryListPath([{ relativePath: "_content/projects/porch-rebuild/budget.doc.card", type: "doc" }]), "_content/plate.todo-view.card");
+});
+
+// ## The root place's line
+//
+// The root place page shows one line from the nav badge's own counts
+// (`docs/implemented-plans/front-door.md`, Track C): "3 to do · 1 overdue · 2 questions
+// waiting". It never says "plate". `rootLineParts` builds it; `CountsLine`
+// draws it, with the todo count and the questions count as controls that open
+// their surfaces beside the chat.
+function rootLine(counts: { onPlateTodos?: number; escalatedTodos?: number; pendingQuestions?: number }) {
+  const parts = rootLineParts({ onPlateTodos: 0, escalatedTodos: 0, pendingQuestions: 0, ...counts });
+  if (parts === null) return null;
+  const action = { onClick: noop, title: "Open" };
+  return text(renderToStaticMarkup(React.createElement(CountsLine, { parts, actions: { open: action, overdue: action, questions: action } })));
+}
+
+// Nothing to do and nothing asked: no line at all.
+void test("Nothing to do and nothing asked: no line at all.", async (t) => {
+  t.check(rootLine({}), null);
+});
+
+// Todos only. The overdue count is named when there is one; it opens the same
+// todo view as "to do", so every count on the line opens its surface.
+void test("Todos only. The overdue count is named when there is one and opens the todo view.", async (t) => {
+  t.check([rootLine({ onPlateTodos: 3, escalatedTodos: 1 }), rootLine({ onPlateTodos: 2 })], [
+    "[3 to do] · [1 overdue]",
+    "[2 to do]",
+  ]);
+});
+
+// Questions only: the line does not vanish when nothing is to do.
+void test("Questions only: the line does not vanish when nothing is to do.", async (t) => {
+  t.check([rootLine({ pendingQuestions: 2 }), rootLine({ pendingQuestions: 1 })], [
+    "[2 questions waiting]",
+    "[1 question waiting]",
+  ]);
+});
+
+// Both:
+void test("Both:", async (t) => {
+  t.check(rootLine({ onPlateTodos: 3, escalatedTodos: 1, pendingQuestions: 2 }), "[3 to do] · [1 overdue] · [2 questions waiting]");
 });
