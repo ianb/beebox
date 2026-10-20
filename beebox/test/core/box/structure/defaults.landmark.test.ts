@@ -9,7 +9,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { mkdir } from "node:fs/promises";
 import { installRootLandmark } from "../../../../src/core/box/structure/defaults.js";
-import { parseLandmarkFields, STOCK_ROOT_SUMMARY } from "../../../../src/schemas/landmark.js";
+import { parseLandmarkFields } from "../../../../src/schemas/landmark.js";
 import { splitCardContent } from "../../../../src/cards/frontmatter.js";
 import { stageFiles, commitPaths } from "../../../../src/lib/git/core/operations.js";
 import { mkdtemp, writeFile, readFile, readdir } from "node:fs/promises";
@@ -59,11 +59,10 @@ void test("A box with no landmark gets one installed under content/ (returns its
     "What can you do?",
   ]);
 
-  // Its body, the place summary the root page shows first, is the stock
-  // summary the agent replaces once it learns what the box is for, written
-  // after the frontmatter with one blank line.
+  // Its body, the place summary the root page shows first, starts empty: the
+  // agent writes it once the root question is answered (docs/plans/front-door.md).
   const { body } = splitCardContent(await readFile(join(A, "_content/Box.landmark.card"), "utf8"));
-  t.check(body, `\n${STOCK_ROOT_SUMMARY}\n`);
+  t.check(body.trim(), "");
 });
 
 // An inert root landmark — here the legacy XML-body shape, which the frontmatter
@@ -77,18 +76,17 @@ void test("An inert root landmark — here the legacy XML-body shape, which the 
 
   t.check(await rootLabel(B), basename(B));
 
-  // The legacy XML body is not a summary anyone can read, so it is dropped and
-  // the repaired card gets the stock summary in its place.
-  t.check(splitCardContent(await readFile(join(B, "_content", "Box.landmark.card"), "utf8")).body.trim(), STOCK_ROOT_SUMMARY);
+  // The legacy XML body is not a summary anyone can read, so it is dropped.
+  t.check(splitCardContent(await readFile(join(B, "_content", "Box.landmark.card"), "utf8")).body.trim(), "");
 });
 
-// An inert root landmark with an empty body gets the stock summary; one with a
-// written body keeps it and gets no stock text (next test).
-void test("An inert root landmark with an empty body gets the stock summary; one with a...", async (t) => {
+// An inert root landmark with an empty body stays empty after repair; one with a
+// written body keeps it (next test).
+void test("An inert root landmark with an empty body stays empty after repair; one with a...", async (t) => {
   const E = await makeContentBox();
   await writeFile(join(E, "_content", "Box.landmark.card"), "---\nsymbol:\n  glyph: 📦\n---\n\n");
   await installRootLandmark(E);
-  t.check(splitCardContent(await readFile(join(E, "_content", "Box.landmark.card"), "utf8")).body.trim(), STOCK_ROOT_SUMMARY);
+  t.check(splitCardContent(await readFile(join(E, "_content", "Box.landmark.card"), "utf8")).body.trim(), "");
 });
 
 // A repair keeps the place summary. An inert landmark whose body the agent

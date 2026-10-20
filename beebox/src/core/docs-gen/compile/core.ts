@@ -22,8 +22,6 @@ import { readConfigGuides, readPersonality, type GuideSummary } from "../config-
 import { errnoCode } from "../../../shared/error-guards.js";
 import { rootLandmarkRelPath } from "../../landmark/box-identity.js";
 import { parseLandmarkFields } from "../../../schemas/landmark.js";
-import { splitCardContent } from "../../../cards/frontmatter.js";
-import { isStockRootSummary } from "../../../shared/stock-root-summary.js";
 import { getBoxDir, BOX_DIRS } from "../../../lib/paths/core.js";
 
 /**
@@ -74,17 +72,16 @@ export async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[
 /**
  * What the compiled briefing says about the root place: its openers
  * (`navigation.openers` on the root landmark), so the briefing names what the
- * root chat suggests, and whether its body is still `STOCK_ROOT_SUMMARY`. No
- * root landmark, or one that does not parse (the Landmarks page reports that),
- * compiles neither.
+ * root chat suggests. No root landmark, or one that does not parse (the
+ * Landmarks page reports that), compiles none.
  */
-async function readRootPlace(boxRoot: string): Promise<{ openers: string[]; stockSummary: boolean }> {
+async function readRootPlace(boxRoot: string): Promise<{ openers: string[] }> {
   const relPath = await rootLandmarkRelPath(boxRoot);
-  if (relPath === null) return { openers: [], stockSummary: false };
+  if (relPath === null) return { openers: [] };
   const content = await readFile(join(boxRoot, relPath), "utf-8");
   const fields = parseLandmarkFields(content);
-  if (fields === null) return { openers: [], stockSummary: false };
-  return { openers: fields.navigation?.openers ?? [], stockSummary: isStockRootSummary(splitCardContent(content).body) };
+  if (fields === null) return { openers: [] };
+  return { openers: fields.navigation?.openers ?? [] };
 }
 
 /**

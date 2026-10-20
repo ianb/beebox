@@ -33,7 +33,6 @@ function payload(overrides?: Partial<PlacePayload>): PlacePayload {
     features: {},
     openers: ["Who has what right now?", "Log a new loan"],
     arrival: "_content/lending/Lending.landmark.card",
-    stockSummary: false,
     ...overrides,
   };
 }

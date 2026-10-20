@@ -8626,32 +8626,12 @@ tests:
     tags: [dev-guidance, testing]
 
   # === Front door (docs/plans/front-door.md) ===
-  # Two agent-facing rules: replacing the root place's stock summary when
-  # the purpose is recorded, and offering a page when a kind of card grows.
-  # Status (2026-10-19, Claude, disposable copy of the worktree's test1
-  # clone): both pass, 0 reads, 0 searches, 42k ctx. stock-summary named the
-  # root landmark's summary and the retired opener. offer-a-page answered
-  # first, then offered "a page that shows what's out" in one sentence and
-  # said it would ask, not build; its first run failed only on a too-narrow
-  # "does not build" pattern, loosened after reading the transcript.
-  - id: front-door-stock-summary
-    chat_mode: true
-    prompt: >
-      You just recorded the box's purpose in the briefing card, from what the
-      person told you in this chat. What else do you change, and where?
-      Explain only; do not read files, use tools, or change anything.
-    expected_level: knows_directly
-    watch_for: >
-      Names the root landmark card: remove its stock openers and replace its
-      stock summary (the body, the text the front page shows) with two or
-      three sentences in the person's words about what this box is for.
-      FAILS if it only mentions the briefing, or only the openers.
-    correct_matches:
-      - '(?:root|box|home)[\s\S]{0,80}landmark|landmark[\s\S]{0,80}(?:root|box|home)'
-      - '(?:summary|body|front page|stock text)[\s\S]{0,160}(?:replace|rewrite|their words|the person.s words|own words)|(?:replace|rewrite)[\s\S]{0,160}(?:summary|body|stock)'
-      - 'opener'
-    tags: [front-door, landmark]
-
+  # Offering a page when a kind of card grows. Status (2026-10-19, Claude,
+  # disposable copy of the worktree's test1 clone): passes, 0 reads, 0
+  # searches, 42k ctx; answered first, then offered "a page that shows
+  # what's out" in one sentence and said it would ask, not build. Its first
+  # run failed only on a too-narrow "does not build" pattern, loosened after
+  # reading the transcript. The answer-in-chat audit joins it with Track A.
   - id: front-door-offer-a-page
     chat_mode: true
     prompt: >

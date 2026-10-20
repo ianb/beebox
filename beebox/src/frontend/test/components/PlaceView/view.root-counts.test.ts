@@ -34,7 +34,7 @@ notifyManager.setScheduler((callback) => { callback(); });
 function payload(dir: string, path: string): PlacePayload {
   return {
     path, dir, label: dir === "" ? "test1" : "Lending", symbol: { glyph: "📦" }, prominence: null,
-    links: [], groups: [], depth: 0, features: {}, openers: [], arrival: path, stockSummary: false,
+    links: [], groups: [], depth: 0, features: {}, openers: [], arrival: path,
   };
 }
 

@@ -135,7 +135,7 @@ function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
     debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, sendSignal, captureSignal, liveTurnId,
-    captureBubbles, captureVerbs, audioOverlayStore, openers, stockSummaryLead,
+    captureBubbles, captureVerbs, audioOverlayStore, openers,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHq, sendHqLive } = voice;
@@ -171,7 +171,6 @@ function MessageListRegion(props: ChatBodyProps) {
       captureVerbs={captureVerbs}
       audioOverlayStore={audioOverlayStore}
       openers={openers}
-      stockSummaryLead={stockSummaryLead}
       onSendOpener={actions.handleSendOpener}
       />
     </ChatRenderProfiler>

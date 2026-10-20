@@ -18,8 +18,6 @@ import { readLandmarkFeatures } from "../../../../core/landmark/features.js";
 import { expandLabel } from "../../../../core/landmark/expand-label.js";
 import type { DerivedReadProblem } from "../../../../core/landmark/summaries.js";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../../../schemas/landmark.js";
-import { splitCardContent } from "../../../../cards/frontmatter.js";
-import { isStockRootSummary } from "../../../../shared/stock-root-summary.js";
 import { readLandmarkSymbol } from "../../../../core/landmark/symbol.js";
 import { normalizeLandmarkDir, landmarkScanRelDir } from "../../../../core/landmark/root-dir.js";
 import { readLandmarkCard } from "../../../../core/landmark/card-cache.js";
@@ -73,11 +71,6 @@ export interface LandmarkPayload {
    * (`derive: false`) there is no subtree to look in, so it is the landmark card.
    */
   arrival: string;
-  /**
-   * The root place's body is still `STOCK_ROOT_SUMMARY`: the phone's empty
-   * root chat shows its first two sentences. False for every other place.
-   */
-  stockSummary: boolean;
 }
 
 /**
@@ -172,7 +165,6 @@ export async function loadLandmarkPayload(
       features: readLandmarkFeatures(navigation),
       openers: (navigation?.openers ?? []).map((opener) => opener.trim()),
       arrival: arrivalTarget({ derived, relPath, dir }),
-      stockSummary: dir === "" && isStockRootSummary(splitCardContent(content).body),
     },
     derivedProblems,
   };

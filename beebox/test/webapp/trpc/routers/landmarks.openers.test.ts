@@ -15,7 +15,7 @@ import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
 import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
-import { createLandmarkTemplate, LandmarkNavigation, STOCK_ROOT_OPENERS, STOCK_ROOT_SUMMARY } from "../../../../src/schemas/landmark.js";
+import { LandmarkNavigation } from "../../../../src/schemas/landmark.js";
 
 function caller(boxRoot: string) {
   const ctx: TrpcContext = trpcContext({ boxRoot, actor: "none" });
@@ -113,25 +113,4 @@ void test("The validation, case by case.", async (t) => {
     long: false,
   },
   );
-});
-
-// ## The payload says whether the root's summary is still stock
-//
-// The phone's empty root chat shows the stock summary's first two sentences
-// above the openers, and only while the root landmark's body is the text a new
-// box ships with (docs/plans/front-door.md, Track A). `stockSummary` rides on
-// the same `forDir` payload as the openers. A one-word edit makes the body the
-// person's, and a nested place is never the front door, whatever its body says.
-void test("The phone's empty root chat shows the stock summary's first two sentences abo...", async (t) => {
-  const box = await makeTmpBox();
-  await box.write("_content/Box.landmark.card", createLandmarkTemplate({ label: "test", openers: STOCK_ROOT_OPENERS, body: STOCK_ROOT_SUMMARY }));
-  await box.write("_content/lending/Lending.landmark.card", createLandmarkTemplate({ label: "Lending", body: STOCK_ROOT_SUMMARY }));
-  const stockFor = async (dir: string) => (await caller(box.root).landmarks.forDir({ dir })).landmark?.stockSummary;
-  const fresh = { root: await stockFor(""), lending: await stockFor("_content/lending") };
-  await box.write("_content/Box.landmark.card", createLandmarkTemplate({ label: "test", body: STOCK_ROOT_SUMMARY.replace("This is your box.", "This is our box.") }));
-  t.check({ ...fresh, edited: await stockFor("") }, {
-    root: true,
-    lending: false,
-    edited: false,
-  });
 });

@@ -95,17 +95,16 @@ properties:
 \`\`\`
 
 When the purpose is still the stock stub (\`What this box is for.\`)
-and the person opens with "let me tell you what this box is for", ask
-them, then write their answer into the \`purpose:\` frontmatter field.
+and the person tells you what the box is for (a new box asks them in its
+first chat), write their answer into the \`purpose:\` frontmatter field.
 
 When you record the box's purpose, also edit the root landmark,
 \`_content/Box.landmark.card\`: remove its stock onboarding openers
 ("Let me tell you what this box is for.", "What can you do?") from
 \`navigation.openers\` or replace them with openers for that purpose, and
-replace its stock summary (the body, the place summary the person sees
-first) with two or three sentences in the person's words about what this
-box is for and what is in it; keep any sentence they wrote. While the body
-is still the stock text, this briefing shows a \`**Front page:**\` line.
+write its place summary (the body, the text the person sees first on the
+Box page): two or three sentences in the person's words about what this
+box is for and what is in it; keep any sentence they wrote.
 
 **Purpose** — the \`purpose:\` frontmatter field: one sentence or a
 short paragraph saying what this box (or directory) is for. Required
@@ -179,9 +178,6 @@ function propertyLine(entry: PropertyRecord): string {
   return `**Property:** **${heading}**${addrStr}${notesStr}`;
 }
 
-/** The compiled line that says the root place's summary is still `STOCK_ROOT_SUMMARY`. */
-export const FRONT_PAGE_STOCK_LINE = "**Front page:** still the stock text.";
-
 /** Emit one `**Opener:** …` line, so the agent sees what it is suggesting. */
 function openerLine(opener: string): string {
   return `**Opener:** ${opener.trim()}`;
@@ -191,16 +187,14 @@ function openerLine(opener: string): string {
  * Compile a briefing into the markdown form that gets `@`-included into
  * AGENTS.md: the `purpose:` as a `**Purpose:** …` line, the body's markdown,
  * then the frontmatter records (`key-people:`, `properties:`) and the
- * place's `openers` as `**Label:** …` lines, and a `**Front page:**` line
- * while the root place's summary is still `STOCK_ROOT_SUMMARY`. Prepends
- * a section header. `directoryLabel` is used for directory briefings (e.g.,
+ * place's `openers` as `**Label:** …` lines. Prepends a section header.
+ * `directoryLabel` is used for directory briefings (e.g.,
  * `"_bookkeeping/archive/financial"`); `openers` are the place's
- * `navigation.openers`, read from its landmark by the caller; `stockSummary`
- * says the root landmark's body is still the stock text.
+ * `navigation.openers`, read from its landmark by the caller.
  */
 export function compileBriefing(
   fields: BriefingFields,
-  options?: { directoryLabel?: string; openers?: string[]; stockSummary?: boolean },
+  options?: { directoryLabel?: string; openers?: string[] },
 ): string {
   const directoryLabel = options?.directoryLabel;
   const header = directoryLabel !== undefined && directoryLabel !== ""
@@ -219,9 +213,6 @@ export function compileBriefing(
     // Openers ride the same `**Label:** …` shape: the agent owns them, so it
     // has to see its current suggestions on every turn to curate them.
     ...(options?.openers ?? []).filter((o) => o.trim() !== "").map(openerLine),
-    // The stock state shows every turn, the way the openers do, so the agent
-    // that learns the box's purpose sees the page it still has to write.
-    ...(options?.stockSummary === true ? [FRONT_PAGE_STOCK_LINE] : []),
   ];
   if (records.length > 0) sections.push(records.join("\n\n"));
 
