@@ -176,7 +176,7 @@ void test("With two entry points arrival does not guess; with none there is noth
 // The root is the logical directory `""`; its landmark lives under `_content/`.
 // The front door is the root's page, so a root with exactly one entry point
 // still arrives on its landmark card; the entry point leads the page instead
-// (docs/plans/front-door.md, Track B). A nested place with one entry point
+// (docs/implemented-plans/front-door.md, Track B). A nested place with one entry point
 // keeps the rule and opens that card.
 void test("The front door is the root's page, so a root with exactly one entry point sti...", async (t) => {
   const box = await makeTmpBox();

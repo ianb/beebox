@@ -110,7 +110,7 @@ void test("A directory's browse page shows the same line for every card under it
 // ## The root place's line
 //
 // The root place page shows one line from the nav badge's own counts
-// (`docs/plans/front-door.md`, Track C): "3 to do · 1 overdue · 2 questions
+// (`docs/implemented-plans/front-door.md`, Track C): "3 to do · 1 overdue · 2 questions
 // waiting". It never says "plate". `rootLineParts` builds it; `CountsLine`
 // draws it, with the todo count and the questions count as controls that open
 // their surfaces beside the chat.

@@ -14,7 +14,7 @@
  * `PlaceView` fetches `landmarks.forDir` for the card's folder and owns the
  * loading and error states; `PlacePage` renders a loaded payload. On the root
  * place it also reads `status.navStatus`, the nav badge's query, for the count
- * line under the summary (docs/plans/front-door.md, Track C).
+ * line under the summary (docs/implemented-plans/front-door.md, Track C).
  */
 
 import { useContext, type ReactNode } from "react";
@@ -65,7 +65,7 @@ function SectionHeading({ children }: { children: ReactNode }) {
 /**
  * No links and no groups: say so, and offer the folder in Browse. It does not
  * claim the folder is empty: the walk skips background cards and unknown
- * types, so the folder may still hold files (docs/plans/front-door.md, Track E).
+ * types, so the folder may still hold files (docs/implemented-plans/front-door.md, Track E).
  */
 function EmptyPlace({ folder, label, onNavigate }: { folder: string; label: string; onNavigate: (target: ViewTarget) => void }) {
   return (

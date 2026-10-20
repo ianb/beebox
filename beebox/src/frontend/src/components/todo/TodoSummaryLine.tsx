@@ -6,7 +6,7 @@
  *
  * `CountsLine` is the shared part: a row of counts, where a part marked
  * `action` is a control when `actions` has an entry for its key. The root
- * place page uses it for its own line (`docs/plans/front-door.md`, Track C).
+ * place page uses it for its own line (`docs/implemented-plans/front-door.md`, Track C).
  */
 
 import { Fragment, type ReactNode } from "react";

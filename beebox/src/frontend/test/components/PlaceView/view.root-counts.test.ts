@@ -2,7 +2,7 @@
 //
 // The root place page shows what is due and what the box is asking, under the
 // summary: "3 to do · 1 overdue · 2 questions waiting"
-// (docs/plans/front-door.md, Track C). It reads `status.navStatus`, the query
+// (docs/implemented-plans/front-door.md, Track C). It reads `status.navStatus`, the query
 // the nav badge reads, so the two agree. A nested place shows no line. When
 // the query fails, the page says "Counts unavailable" with a retry, which looks
 // different from zero (no line).

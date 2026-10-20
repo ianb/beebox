@@ -50,7 +50,7 @@ export function summaryParts(reduction: SummaryReduction): SummaryPart[] | null 
 }
 
 /**
- * The root place page's line (`docs/plans/front-door.md`, Track C): "3 to do ·
+ * The root place page's line (`docs/implemented-plans/front-door.md`, Track C): "3 to do ·
  * 1 overdue · 2 questions waiting", from the nav's own counts, so the page and
  * the nav badge agree. `null` when every count is zero. Questions show on
  * their own when nothing is to do. It does not use the word "plate" (decision,

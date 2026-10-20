@@ -145,7 +145,7 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
 
 /**
  * The question the empty root chat asks, as the agent's opening line
- * (docs/plans/front-door.md, Track A): the prompt (a select question lists its
+ * (docs/implemented-plans/front-door.md, Track A): the prompt (a select question lists its
  * options in the sentence, "All the choices" when it has more than fit), the
  * card's memo under it in the quiet style, then "and N more" to the Questions
  * page and a quiet "Not now". Clicking the line

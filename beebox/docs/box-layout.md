@@ -291,7 +291,7 @@ opens on `_content/`, where a person's time goes; the box root with its five
 areas is one step away through the "Whole box" row at the bottom of the
 content listing, or a direct link to directory `""`. In the content listing,
 a seeded template folder that holds no cards folds behind "N more" until it
-does; a folder the person made never folds (`docs/plans/front-door.md`,
+does; a folder the person made never folds (`docs/implemented-plans/front-door.md`,
 Track D).
 
 Fresh initialization seeds these files before recording migrations; every

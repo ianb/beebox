@@ -1,7 +1,7 @@
 // # Which pending question the empty root chat asks
 //
 // `pickOpenQuestion` chooses the newest pending question by `asked-at`, then by
-// path, and counts the others (docs/plans/front-door.md, Track A). A pending
+// path, and counts the others (docs/implemented-plans/front-door.md, Track A). A pending
 // card that failed to parse has no prompt to ask: it is never chosen, but it
 // counts, so "and N more" still reaches it on the Questions page. Answered,
 // dismissed, and expired cards take no part. `openQuestionLine` lists a select

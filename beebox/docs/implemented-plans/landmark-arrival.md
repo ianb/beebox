@@ -28,7 +28,7 @@ does not close them:
   the place page lists the landmark's existing resolved links; it is not a collection view.
 - [A chat binds to a landmark once and never moves](../../../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md):
   arrival keys on the chat's existing binding and does not change it.
-- [The front door is an empty text box](../../../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)
+- [The front door is an empty text box](../../../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)
   and [First-run experience](../../../issues/features/2026-07-20-first-run-experience.md):
   the openers fix restores the two stock openers on a new box's first chat.
 - [A course landmark in the attach folder shows twice](../../../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md):

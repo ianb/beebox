@@ -44,7 +44,7 @@ void test("line 12", async (t) => {
 
 // The pending question the root chat is asking rides every send as
 // `openQuestion` and surfaces as `open-question`, next to `open-card`
-// (docs/plans/front-door.md, Track A). It survives a captured attention
+// (docs/implemented-plans/front-door.md, Track A). It survives a captured attention
 // snapshot without a focused card (the branch that drops activity fields),
 // an empty string is dropped, and across queued sends the latest wins while
 // a later send without it keeps the earlier one: the client sends it on

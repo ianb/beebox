@@ -106,7 +106,7 @@ void test("Nothing prominent: compact renders identically to raw, no disclosure"
 
 // ## The content root ends with a quiet "Whole box" row; other folders do not
 //
-// `docs/plans/front-door.md`, Track D: Browse opens on `_content`, and the box
+// `docs/implemented-plans/front-door.md`, Track D: Browse opens on `_content`, and the box
 // root's areas are one row away at the bottom, in both modes. Seeded empty
 // folders fold behind "N more" while the cards lead.
 void test("The content root ends with a quiet Whole box row; other folders do not", async (t) => {

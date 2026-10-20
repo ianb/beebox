@@ -76,7 +76,7 @@ function sendDisabledReasonFor(selection: ConversationSelection | undefined): st
  * offering openers there would read as an invitation to start over.
  *
  * `openQuestion` is the newest pending question card, for the root chat only
- * (docs/plans/front-door.md, Track A): the empty state asks it, and every send
+ * (docs/implemented-plans/front-door.md, Track A): the empty state asks it, and every send
  * names it while it stays pending, so it is read for a started root chat too.
  * The query is refreshed on the bus events that change the list and by
  * "Not now" here.

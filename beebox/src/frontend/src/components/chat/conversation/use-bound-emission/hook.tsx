@@ -79,7 +79,7 @@ export function useBoundEmission(opts: {
   emissionStore: EmissionStore;
   captureCardSend: () => CardSendFields;
   acceptCardSend?: (fields: CardSendFields) => void;
-  /** The pending question this chat is asking; rides on every send while set (docs/plans/front-door.md, Track A). */
+  /** The pending question this chat is asking; rides on every send while set (docs/implemented-plans/front-door.md, Track A). */
   openQuestion?: string;
   getWitness: () => ChatWitness;
   onSent: () => void;

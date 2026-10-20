@@ -189,7 +189,7 @@ function labelUnnamedExpands(navigation: LandmarkNavigationData | undefined): La
  * The single entry-point card in the subtree, else the landmark card
  * (`LandmarkPayload.arrival`). The root (`dir` "") always opens its own page:
  * the front door is the page, with any entry point under "Start here"
- * (docs/plans/front-door.md, Track B).
+ * (docs/implemented-plans/front-door.md, Track B).
  */
 function arrivalTarget({ derived, relPath, dir }: { derived: PrunedSubtree | undefined; relPath: string; dir: string }): string {
   if (dir === "") return relPath;

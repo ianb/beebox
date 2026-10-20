@@ -239,7 +239,7 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
   // The root place carries the box's onboarding opener; the agent fades it
   // as the box comes into use (docs/implemented-plans/landmark-arrival.md, Track B).
   // Its body (the place summary) starts empty: the agent writes it once the
-  // root question is answered (docs/plans/front-door.md, Track A).
+  // root question is answered (docs/implemented-plans/front-door.md, Track A).
   const template = { label: await boxSlug(boxRoot), symbol: "📦", openers: STOCK_ROOT_OPENERS };
   const existing = entries.find((name) => name.endsWith(".landmark.card"));
   if (existing !== undefined) {

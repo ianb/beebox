@@ -992,7 +992,7 @@ See §1.3 (full request/response/errors).
 - **Request:** `{ "Content-Type": "application/json", ...mobileAuthHeaders() }`; body
   `{ session, message, messageId, images?, contextDir?, seedFeatures?, openCard?, openQuestion?, cardActivity?, cardState?, channel? }`.
   `openQuestion` is the box-relative path of the pending question card the root chat is asking
-  (`docs/plans/front-door.md`, Track A), sent by the web composer on every message while it is
+  (`docs/implemented-plans/front-door.md`, Track A), sent by the web composer on every message while it is
   pending and surfaced to the agent as the `open-question` snapshot attribute; the native shell
   sends nothing, and a body without it means the chat shows no question.
   `channel` is the client's own reading of the surface — `web-desktop | web-mobile | ios-native`

@@ -90,7 +90,7 @@ export function SwitchMenuBody(props: SwitchMenuProps): ReactNode {
       </MenuItem>
       <MenuItem id="bbx-switch-menu-landmarks" to={href(`/${boxSlug}/views/${SYSTEM_CARD_PATHS.landmarks}`)}>
         <span className="block">Find a landmark</span>
-        {/* The glossary's gloss, where a newcomer first meets the word (docs/plans/front-door.md, Track E). */}
+        {/* The glossary's gloss, where a newcomer first meets the word (docs/implemented-plans/front-door.md, Track E). */}
         <Text as="span" size="xs" tone="muted" className="block">the places you jump to most</Text>
       </MenuItem>
       <MenuDivider />

@@ -17,7 +17,7 @@ function detailPath(target: ViewTarget): string | undefined {
 }
 
 // With no directory, Browse opens on the content root; an explicit `""` is
-// still the box root (`docs/plans/front-door.md`, Track D). Explicit state
+// still the box root (`docs/implemented-plans/front-door.md`, Track D). Explicit state
 // takes precedence over a directory seed. Invalid paths and mismatched detail
 // are errors, never root fallbacks.
 void test("Content root by default; explicit state takes precedence over a directory seed.", async (t) => {

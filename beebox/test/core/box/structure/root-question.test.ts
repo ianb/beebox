@@ -1,7 +1,7 @@
 // # installRootQuestion — the one question a new box starts with
 //
 // A fresh box's first screen is a question the chat asks, not a tour
-// (docs/plans/front-door.md, Track A). `bbx init` seeds one pending text
+// (docs/implemented-plans/front-door.md, Track A). `bbx init` seeds one pending text
 // question with the prompt the chat shows, a memo, a directive, and a learning
 // aimed at the root briefing. The seed runs once: a box that already holds any
 // question card, answered or not, is left alone.

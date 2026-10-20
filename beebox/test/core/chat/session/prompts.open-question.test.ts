@@ -3,7 +3,7 @@
 // The chat system prompt tells the agent what `open-question` on the snapshot
 // means (the section is the attribute's documentation) and the order of operations when a message answers a pending card:
 // directive and learning first, `bbx answer --via chat` last, an unrelated
-// message leaves the card pending (docs/plans/front-door.md, Track A). The
+// message leaves the card pending (docs/implemented-plans/front-door.md, Track A). The
 // onboarding step of offering ideas after hearing rides on the root question's
 // directive, not here, so the always-loaded prompt stays within its budget. This pins the rule's presence
 // and its two anchors, the attribute and the command, so a prompt edit that

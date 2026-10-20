@@ -1,9 +1,9 @@
 ---
 title: "The front door: what a person meets when they open their box"
-status: draft
+status: implemented
 workstream: front-door
 issues:
-  - ../../../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md
+  - ../../../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md
 ---
 # The front door: what a person meets when they open their box
 
@@ -15,10 +15,9 @@ waiting questions on the root page, makes Browse open on the person's
 content, fixes the words the walks tripped on, and tells people the box can
 build them a page.
 
-**Proposal stage.** The boxholder asked to "investigate, propose, then we'll
-discuss." The decisions below are proposals with a lean; nothing is settled
-until the discussion. Reviewed once by `codex gpt-6-sol` (plan mode,
-2026-10-19); the findings and what changed are in
+**Status.** All tracks are implemented, including the revised Track A
+(see the 2026-10-19 revision below). Reviewed twice by `codex` during
+implementation; the findings and what changed are in
 [front-door.review.md](front-door.review.md).
 
 **Issues addressed:** the frontmatter issue. Related, not closed here:

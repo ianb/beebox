@@ -3,7 +3,7 @@
 // An unstarted root chat with a pending question shows it as the agent's
 // opening line, with the card's memo under it, "and N more" to the Questions
 // page, and a quiet "Not now"; the openers and "Start a conversation." follow
-// (docs/plans/front-door.md, Track A). Clicking the line is an invitation to
+// (docs/implemented-plans/front-door.md, Track A). Clicking the line is an invitation to
 // answer, so it focuses the composer. A chat with no question shows the openers
 // alone, as before. This mounts `MessageList` in its empty state.
 

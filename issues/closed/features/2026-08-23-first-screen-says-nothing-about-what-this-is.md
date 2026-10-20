@@ -1,11 +1,14 @@
 ---
 title: "The front door is an empty text box"
 workstream: front-door
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-in: worktree-user-stories-refresh — journey B, a first-time user with no orientation
 priority: important
 ---
+
+**Closed:** resolved by the front-door branch (merge commit on `main`; see `beebox/docs/implemented-plans/front-door.md`). The root place page now carries a summary and counts, and the empty root chat asks the box's first question, rather than adding only a welcome text.
 
 A person opening a box for the first time, told only that this is an AI-powered
 app for organising their life, recorded:
@@ -23,7 +26,7 @@ it" — which the assistant gave them free the moment they asked, and the app
 never did.
 
 Directly relevant to gate 7 (first-hour experience) in
-[the soft-launch posture](../decisions/2026-07-20-soft-launch-posture.md).
+[the soft-launch posture](../../decisions/2026-07-20-soft-launch-posture.md).
 
 > 2026-09-02 (vocab-sweep): the vocabulary underneath this issue is now
 > settled — `beebox/docs/glossary.md` has a user-facing register per term
@@ -55,7 +58,7 @@ obvious and they already had a concrete goal; this run does not establish what
 a person without a goal would do. The generated journey slug in the header is
 fixture naming, not a new product vocabulary finding.
 
-Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 1-3. No onboarding implementation attempted.
 
 
@@ -89,7 +92,7 @@ Related evidence on the same walk: the browse sidebar's empty skeleton
 none of it theirs, none explained): "Suddenly this feels less like an assistant
 and more like someone handed me the keys to a filing cabinet." That is the
 first-run-experience half of this cluster
-([first-run-experience](2026-07-20-first-run-experience.md)).
+([first-run-experience](../../features/2026-07-20-first-run-experience.md)).
 
 ## Re-encounter, 2026-09-21 - journey F
 
@@ -108,14 +111,14 @@ which redirects to `/chat`; it did not supply an existing session. The synthetic
 run slug is fixture naming, not a product vocabulary defect. Asking chat still
 produced useful examples and ultimately valued Spanish practice.
 
-Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
-The [concrete reservation regression](../closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md)
+Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+The [concrete reservation regression](../bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md)
 is tracked separately from this broader orientation design question.
 
 ## Re-encounter 2026-10-08 (journey walks)
 
-More evidence from five walks. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1, 41): only "Start a conversation." on the first screen, and "Open /" lists Bookkeeping, Config, Content, Publish and Tmp, none in the person's words. [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (rows 10, 61): "the box" is unexplained; Browse shows the same folder names. [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 1) and [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 2, 7, 31, 87): no welcome; the first pitch was vague; Browse shows many empty template folders; the box menu offers "Find a landmark", and "landmark" means nothing to the walker. [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 12): the seed folders (recipes, people, places) read as a life organiser with nothing about study. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 2): the folder `/` control looks like a file browser. The missing openers (see the fresh-chat reservation issue) contribute to the blank first view.
+More evidence from five walks. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1, 41): only "Start a conversation." on the first screen, and "Open /" lists Bookkeeping, Config, Content, Publish and Tmp, none in the person's words. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (rows 10, 61): "the box" is unexplained; Browse shows the same folder names. [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 1) and [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 2, 7, 31, 87): no welcome; the first pitch was vague; Browse shows many empty template folders; the box menu offers "Find a landmark", and "landmark" means nothing to the walker. [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 12): the seed folders (recipes, people, places) read as a life organiser with nothing about study. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 2): the folder `/` control looks like a file browser. The missing openers (see the fresh-chat reservation issue) contribute to the blank first view.
 
 ## Re-encounter 2026-10-09 (journey walks)
 
-Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) shot 01; [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) row 12). Missing: the place page says "Nothing here yet" for the whole walk and nothing about what the app is for ([C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 14, [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 65); Browse still lists Bookkeeping, Config, Content, Publish and Tmp ([C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 44, "a filing cabinet, not a place for friendships"); vocabulary is still opaque: "card" ([B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 2, [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 3), "Landmarks page" with no on-screen path ([B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 25), "This place is the folder /" reads like a computer ([F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 3, empty-state copy at `PlaceView/view.tsx:55-66`), "The Plate" and "Things to do" as two names for one list ([F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 28). [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 5): "the page is empty; nothing to do but chat". [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 7): the empty-box suggestions lead with hobby collections and say nothing of reminders.
+Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) shot 01; [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) row 12). Missing: the place page says "Nothing here yet" for the whole walk and nothing about what the app is for ([C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 14, [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 65); Browse still lists Bookkeeping, Config, Content, Publish and Tmp ([C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 44, "a filing cabinet, not a place for friendships"); vocabulary is still opaque: "card" ([B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 2, [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 3), "Landmarks page" with no on-screen path ([B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 25), "This place is the folder /" reads like a computer ([F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 3, empty-state copy at `PlaceView/view.tsx:55-66`), "The Plate" and "Things to do" as two names for one list ([F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 28). [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 5): "the page is empty; nothing to do but chat". [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 7): the empty-box suggestions lead with hobby collections and say nothing of reminders.

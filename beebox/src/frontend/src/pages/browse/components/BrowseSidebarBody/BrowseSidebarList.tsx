@@ -10,7 +10,7 @@
  *
  * The content root (`_content`) ends with a quiet "Whole box" row that opens
  * the box root, the one way out to the other areas
- * (`docs/plans/front-door.md`, Track D).
+ * (`docs/implemented-plans/front-door.md`, Track D).
  */
 
 import { bbxSource } from "../../../../lib/source-tag";

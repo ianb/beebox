@@ -69,7 +69,7 @@ const startedLending: PlaceChat = { contextDir: "_content/lending", showsOwnOpen
 // ## An empty place says so and offers its folder
 //
 // No links and no groups: "Nothing to show here yet." and a quiet line that
-// opens the folder in Browse (docs/plans/front-door.md, Track E). It does not
+// opens the folder in Browse (docs/implemented-plans/front-door.md, Track E). It does not
 // say the folder is empty: the place skips background cards and cards of
 // unknown types. It names no path and does not say "card". A place with no
 // openers shows no "Start something".
@@ -289,7 +289,7 @@ void test("In a pane or on its own page the card header already names the place;
 //
 // On the root place the page shows "3 to do · 1 overdue · 2 questions
 // waiting" after the summary and before "Start something"
-// (docs/plans/front-door.md, Track C). The counts come from `PlaceView`;
+// (docs/implemented-plans/front-door.md, Track C). The counts come from `PlaceView`;
 // `view.root-counts.test.ts` covers when it passes them. A failed count query
 // shows "Counts unavailable" with a retry; zero shows no line.
 void test("On the root place the page shows the count line after the summary", async (t) => {

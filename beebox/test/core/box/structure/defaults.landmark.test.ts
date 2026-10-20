@@ -53,14 +53,14 @@ void test("A box with no landmark gets one installed under content/ (returns its
 
   // The root place carries the box's one onboarding opener, the voice
   // walkthrough, which sits under the box's first question in the empty chat
-  // (docs/plans/front-door.md, Track A).
+  // (docs/implemented-plans/front-door.md, Track A).
 
   t.check(parseLandmarkFields(await readFile(join(A, "_content/Box.landmark.card"), "utf8"))?.navigation?.openers, [
     "Tell me about talking instead of typing.",
   ]);
 
   // Its body, the place summary the root page shows first, starts empty: the
-  // agent writes it once the root question is answered (docs/plans/front-door.md).
+  // agent writes it once the root question is answered (docs/implemented-plans/front-door.md).
   const { body } = splitCardContent(await readFile(join(A, "_content/Box.landmark.card"), "utf8"));
   t.check(body.trim(), "");
 });

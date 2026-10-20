@@ -8625,7 +8625,7 @@ tests:
       - 'suggested|any\(String\)|shasum|sha256sum|FIPS|NIST|test vector|published'
     tags: [dev-guidance, testing]
 
-  # === Front door (docs/plans/front-door.md) ===
+  # === Front door (docs/implemented-plans/front-door.md) ===
   # Two agent-facing rules. answer-in-chat: a message under `open-question`
   # answers a pending card; the agent does the directive first and answers
   # the card last, with `--via chat`, and offers ideas only after hearing.

@@ -1,7 +1,7 @@
 /**
  * The root question: the one pending question a new box starts with, so its
  * first screen is the start of a conversation rather than a tour of the tool
- * (docs/plans/front-door.md, Track A). The empty root chat shows the newest
+ * (docs/implemented-plans/front-door.md, Track A). The empty root chat shows the newest
  * pending question as the agent's opening line; on a fresh box that is this
  * card. The agent answers it from the chat (`bbx answer --via chat`) after
  * doing what its directive says.

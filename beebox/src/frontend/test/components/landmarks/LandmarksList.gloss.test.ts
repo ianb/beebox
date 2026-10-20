@@ -2,7 +2,7 @@
 //
 // "Landmark" is kept as a word (glossary, "landmark"); the page says what it
 // means under its title: "The places you jump to most." The app bar's "Find a
-// landmark" row carries the same gloss (docs/plans/front-door.md, Track E;
+// landmark" row carries the same gloss (docs/implemented-plans/front-door.md, Track E;
 // `AppNav/PlacePill.menus.test.ts`). These render the page with its two
 // queries already answered.
 

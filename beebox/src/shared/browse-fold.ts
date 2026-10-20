@@ -18,7 +18,7 @@
  *   (`seeded`), with no landmark of its own and no `.card` anywhere below
  *   it (`summary.cardCount === 0`; `null`, a failed count, never folds).
  *   It is not dimmed. A person's own folder is never seeded
- *   (`docs/plans/front-door.md`, Track D).
+ *   (`docs/implemented-plans/front-door.md`, Track D).
  * - A listing with nothing prominent anywhere (no lead candidates, and the
  *   listing's own directory isn't itself background) returns `lead: []`
  *   and `more` in TODAY'S order — dirs, then cards, then files, each

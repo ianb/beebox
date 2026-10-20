@@ -140,7 +140,7 @@ void test("Sorting is natural order within every tier", async (t) => {
 
 // ## Seeded empty folders fold behind "N more"
 //
-// `docs/plans/front-door.md`, Track D. A new box's `_content` holds the box
+// `docs/implemented-plans/front-door.md`, Track D. A new box's `_content` holds the box
 // layout's template folders, all empty, and the person's first cards. The
 // cards lead in today's order; the empty template folders fold, not dimmed.
 const TEMPLATE_FOLDERS = ["inbox", "incoming", "recipes", "todos", "drive", "calendar", "chat", "reviews", "people", "places"];

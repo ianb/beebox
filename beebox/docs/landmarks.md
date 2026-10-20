@@ -31,7 +31,7 @@ Both can coexist in the same directory. Chat openers belong to the landmark (`na
 
 ## Card schema
 
-A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a few agent-written lines on where things stand, shown first on the place page. The agent writes it when it makes a place and updates it when it changes the place's cards (`landmarks.summary-on-change` in the agent guide). The root landmark of a new box ships with no summary; the landmark rule that removes the stock openers also has the agent write it, in the person's own words, once the box's root question is answered (`docs/plans/front-door.md`, Track A). The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/triage.md` for the destination role.
+A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a few agent-written lines on where things stand, shown first on the place page. The agent writes it when it makes a place and updates it when it changes the place's cards (`landmarks.summary-on-change` in the agent guide). The root landmark of a new box ships with no summary; the landmark rule that removes the stock openers also has the agent write it, in the person's own words, once the box's root question is answered (`docs/implemented-plans/front-door.md`, Track A). The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/triage.md` for the destination role.
 
 ```yaml
 ---
@@ -281,7 +281,7 @@ tab for the first time. The card that opens is the **arrival target**
 in the place's pruned subtree when there is exactly one, else the landmark
 card, which shows the place page. The box root is the exception: arrival at
 the root always opens the root place page, and a single entry point there
-leads the page under "Start here" (`docs/plans/front-door.md`, Track B).
+leads the page under "Start here" (`docs/implemented-plans/front-door.md`, Track B).
 
 On the phone layout, arrival opens no card. One card or the chat fits on the
 screen, and the chat has priority.

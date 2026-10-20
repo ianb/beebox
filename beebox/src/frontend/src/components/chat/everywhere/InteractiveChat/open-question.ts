@@ -1,5 +1,5 @@
 /**
- * Which pending question the empty root chat asks (docs/plans/front-door.md,
+ * Which pending question the empty root chat asks (docs/implemented-plans/front-door.md,
  * Track A). The box starts with one question; any box with pending questions
  * shows its newest in the empty root chat, one at a time, with the count of
  * the others. Pure, so the choice is testable without a DOM.

@@ -273,7 +273,7 @@ void test("Text", async (t) => {
 // ## A chat answer writes no follow-up job
 //
 // `--via chat` is the agent recording an answer the person gave in a
-// conversation (docs/plans/front-door.md, Track A). The agent did the directive
+// conversation (docs/implemented-plans/front-door.md, Track A). The agent did the directive
 // there before answering, so only the card changes: `answered-via: chat`, no
 // job file, and a commit of the card alone. A web answer still writes the job.
 void test("A chat answer writes no follow-up job", async (t) => {

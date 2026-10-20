@@ -255,7 +255,7 @@ evidence model.
 
 ## Surfacing
 
-- **The empty root chat** (`docs/plans/front-door.md`, Track A) — an
+- **The empty root chat** (`docs/implemented-plans/front-door.md`, Track A) — an
   unstarted chat at the box root shows the newest pending question (by
   `asked-at`, then path) as the agent's opening line: the `prompt`, the
   `memo` under it, "and N more" to the Questions page, and a quiet "Not now"

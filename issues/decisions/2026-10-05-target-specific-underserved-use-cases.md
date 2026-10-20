@@ -13,7 +13,7 @@ priority: important
 Bee Box is general: cards, chat, connectors, schedules, views. A new user meets
 an empty box and must invent their own use for it
 ([first-run experience](../features/2026-07-20-first-run-experience.md),
-[front door](../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)).
+[front door](../closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)).
 The boxholder wants to pick a few specific use cases and serve them well.
 
 Criteria from the boxholder:

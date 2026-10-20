@@ -63,7 +63,7 @@ export interface BrowseDir {
   summary: DirectorySummary & { cardCount: number | null };
   /** This subdirectory's OWN landmark identity, when it holds a landmark card directly. */
   landmark?: BrowseDirLandmark | undefined;
-  /** The path is a `_content` folder the box layout creates (`docs/plans/front-door.md`, Track D). */
+  /** The path is a `_content` folder the box layout creates (`docs/implemented-plans/front-door.md`, Track D). */
   seeded: boolean;
 }
 

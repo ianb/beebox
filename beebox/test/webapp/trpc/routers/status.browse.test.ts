@@ -103,7 +103,7 @@ void test("A subdirectory holding a primary card reports it in its summary; one 
 // ## A box-layout template folder is `seeded`; a person's own folder is not
 //
 // `seeded` marks the `_content` folders the box layout creates
-// (`docs/plans/front-door.md`, Track D), including the intermediate
+// (`docs/implemented-plans/front-door.md`, Track D), including the intermediate
 // `reviews/` that `reviews/retro` makes. Browse folds a seeded folder only
 // when nothing is below it.
 void test("A box-layout template folder is seeded; a person's own folder is not", async (t) => {

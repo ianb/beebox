@@ -109,7 +109,7 @@ export interface ChatBodyProps {
   openers: string[];
   /**
    * The pending question the empty root chat asks as the agent's opening line
-   * (docs/plans/front-door.md, Track A); null for a place chat, a started chat,
+   * (docs/implemented-plans/front-door.md, Track A); null for a place chat, a started chat,
    * and a box with nothing pending. The composer's placeholder is its prompt.
    */
   openQuestion: OpenQuestion | null;

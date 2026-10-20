@@ -106,7 +106,7 @@ export const OpenerEntry = z
 /**
  * The root place's onboarding opener, installed on a new box's root landmark
  * (`installRootLandmark`). It sits under the box's first question in the
- * empty root chat (docs/plans/front-door.md, Track A) and is phrased from the
+ * empty root chat (docs/implemented-plans/front-door.md, Track A) and is phrased from the
  * person's side; the agent rewrites and eventually removes it as the box
  * comes into regular use. Talking is the box's least obvious input, so the
  * one stock opener is a walkthrough of it (the `what-can-you-do` skill).
