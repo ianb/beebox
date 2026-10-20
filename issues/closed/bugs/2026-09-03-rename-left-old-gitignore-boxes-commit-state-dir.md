@@ -20,6 +20,13 @@ discovered-in: main session — a `git reset --hard` on a local box reverted its
 > which carries the decision and current pointers. Rotating the secrets that
 > one box committed to its history, and whether to rewrite that history, is
 > the boxholder's call; no progress note records either.
+>
+> **2026-10-20, secrets:** the mobile-session signing secret on the affected box
+> was still the committed value, so it was replaced with a new random one. Live
+> mobile cookies stop verifying and devices renew through their device tokens.
+> The committed device store holds only hashes of device tokens, which cannot
+> be used to authenticate; the boxholder reports the devices were likely
+> re-paired since. The box's history was not rewritten.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 
