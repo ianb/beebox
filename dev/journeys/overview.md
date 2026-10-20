@@ -18,14 +18,14 @@ The plan's central prediction is that the usual outcome is not wrong behavior bu
 | Step | What happens | Where | Tracked? |
 |---|---|---|---|
 | Define | `journey.yaml`: the box's starting state, assets, the situation in the person's words, a closing ask, and `watch_for` notes that only the reader sees | `journeys/<id>/journey.yaml` | yes; B's two tray photos committed |
-| Prepare | builds a fresh box with its own git history, registers it with the router, places assets, composes the prompt from the walker template, snapshots the box, checks the app renders; refuses to run while an earlier walk has notes but no report | `journeys/prepare/core.ts` | script yes; output under `work/` no |
+| Prepare | builds a fresh box with its own git history, registers it with the router, places assets, composes the prompt from the walker template, snapshots the box, checks the app renders; refuses to run while an earlier walk has notes but no report | `journeys/prepare/core.ts` | script yes; output under `user-stories-work/` no |
 | Walk | an agent drives `bin/browse` for the budget (50 to 60 actions), screenshots each step, appends notes as it goes; may read one clock script and nothing else in the repo | the agent, `walker-prompt.md` | notes and shots no |
 | Collect | reads the box's own commits and the screenshot timestamps "independently of what the walker says"; timing never comes from the notes | `collect.ts`, `agent-time.ts` | script yes |
 | After-action | one row per claim; each classified product, harness, environment or unverified; harness checklist first; investigate survivors to a file and line or a reproduction; file; a last pass asking "is every claim in there?" | `after-action.md` | yes |
 | Report | run table, what landed, timing, the findings table, harness defects, not verified. "The only part of a run that is tracked." | `<id>/reports/<date>.md` | yes |
 | Issues | real findings filed; a wrong one is corrected in place; a later walk that hits an existing issue adds a dated re-encounter note, which can set a `discuss` action for the human | `issues/` | yes |
 
-The report is the durable record. Once a run's `work/` directory is pruned, the report and the issues are what is left.
+The report is the durable record. Once a run's `user-stories-work/` directory is pruned, the report and the issues are what is left.
 
 ## 3. The choices, and what each one bought
 

@@ -22,13 +22,12 @@ import { parse } from "yaml";
 import { errorMessage } from "../../../../src/shared/error-guards.ts";
 import { isRecord } from "../../../../src/shared/is-record.ts";
 import { runHealthChecks } from "../../../../src/webapp/trpc/routers/health/router.ts";
-import { assertPreviousRunsReported, allocateRun } from "../provisioning.ts";
+import { JOURNEY_WORK as WORK, assertPreviousRunsReported, allocateRun } from "../provisioning.ts";
 
 const JOURNEYS = resolve(import.meta.dirname, "..");
 const MONO_ROOT = resolve(JOURNEYS, "../../../..");
 const WORKTREE = basename(MONO_ROOT);
 const BOXES_ROOT = join(homedir(), "src", "box-worktrees", WORKTREE);
-const WORK = join(JOURNEYS, "../work/journeys");
 
 interface Asset { file: string, described_as: string }
 interface Journey {

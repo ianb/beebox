@@ -70,8 +70,10 @@ Then:
 pnpm exec tsx beebox/test/user-stories/journeys/collect.ts B-inventory-<date>
 ```
 
-Runs land in `../work/journeys/<id>-<date>/` (gitignored): the prompt as given, the
-notes, screenshots, and before/after snapshots of the box.
+Runs land in `user-stories-work/journeys/<id>-<date>/` at the monorepo root (gitignored): the
+prompt as given, the notes, screenshots, and before/after snapshots of the box. It sits outside
+`beebox/` because a box's `node_modules/beebox` links to this checkout's `beebox/`, and the box
+agent must not find the walker's notes.
 
 Then read the walk and write it up — **[after-action.md](after-action.md)** is the
 procedure, and `<journey>/reports/<date>.md` is where it goes. That report is the only part of
