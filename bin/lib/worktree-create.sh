@@ -27,6 +27,7 @@
 #     at THIS worktree's own engine checkout (pnpm.overrides link:) and
 #     installs the box's own node_modules — see Track G in
 #     docs/implemented-plans/boxes-as-packages-v2.md. Legacy clones are untouched.
+#   - commits a fresh clone's setup changes in the clone, so it starts clean.
 #   - runs pnpm install at the worktree root (root husky), beebox, and
 #     beebox/src/frontend. After this the worktree is ready for the
 #     dev router to serve.
@@ -198,6 +199,7 @@ wt_create_resume_ready() {
 
 wt_create_locked() {
   local NAME="$1" base_ref="$2" worktree_path="${3:-}" box_ref="${4:-}" state_file state rc worktree_parent
+  local box_cloned=0
 
   wt_paths_init || return 1
   # Same rule as removal: a name becomes a path, and a name with a slash in it
@@ -295,6 +297,7 @@ wt_create_locked() {
     if [ -d "$BOX_SRC" ]; then
       echo "[worktree-create] cloning $BOX_SRC -> $BOX_DEST" >&2
       git clone --quiet "$BOX_SRC" "$BOX_DEST"
+      box_cloned=1
       wt_create_restore_box_ref "$BOX_DEST" "$box_ref"
 
       # Where a box keeps its config and its state directory depends on its
@@ -327,8 +330,8 @@ wt_create_locked() {
       # gitignored state directory (`.beebox/box.json`), so a clone has none —
       # and without it `bbx engine init` below sees "a directory with a package.json"
       # and refuses instead of refreshing hooks (broke every worktree launch on
-      # 2026-09-05; the marker question itself is
-      # issues/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md).
+      # 2026-09-05; moving the marker to tracked files is
+      # issues/bugs/2026-10-20-box-marker-in-gitignored-state-dir.md).
       if [ -f "$box_src_state/box.json" ] && [ ! -f "$box_dest_state/box.json" ]; then
         mkdir -p "$box_dest_state"
         cp "$box_src_state/box.json" "$box_dest_state/box.json"
@@ -463,6 +466,17 @@ EOF
     # (issues/closed/bugs/2026-07-10-box-hook-stale-cross-checkout-bbx.md).
     (exec 198>&-; BBX_HOOK_BIN="$worktree_path/beebox/bin/bbx" \
       "$worktree_path/beebox/bin/bbx" engine init "$BOX_DEST" >/dev/null)
+  fi
+
+  # 6. Commit the clone's setup changes (the engine link, its lockfile, what
+  # `engine init` refreshed), so the clone starts clean: knowledge audits refuse
+  # a dirty box, and their reset after each test returns to this commit with the
+  # link intact. Only a clone made in this run: a reused one may hold the
+  # developer's own uncommitted edits.
+  if [ "$box_cloned" = 1 ] && [ -n "$(git -C "$BOX_DEST" status --porcelain)" ]; then
+    { git -C "$BOX_DEST" add -A \
+      && BBX_NO_URLCHECK=1 git -C "$BOX_DEST" commit -q -m "Worktree setup: link the beebox engine to worktree $NAME"; } >&2 \
+      || echo "[worktree-create] WARNING: could not commit the box clone's setup changes; knowledge audits will refuse $BOX_DEST until they are committed" >&2
   fi
 
   if ! printf 'ready\t%s\n' "$worktree_path" > "$state_file"; then

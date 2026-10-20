@@ -23,7 +23,7 @@ the scheduler do not treat it as a box. `bbx init` on such a clone refuses
 with "already has a package.json". `bin/lib/worktree-create.sh` copies
 `box.json` into worktree clones to hide this; a hand-made disposable copy
 does not get one
-([knowledge-audit clone issue](2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md)).
+([knowledge-audit clone issue](../closed/bugs/2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md)).
 
 The marker's fields are not machine-local: `version: "1.0.0"` is a literal
 shown on the dashboard as "v1.0.0", `created` is the box's birth date, and

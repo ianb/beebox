@@ -1,12 +1,25 @@
 ---
 title: "Knowledge audits refuse a fresh worktree box clone because of its own linking changes"
-workstream: unattached
+workstream: bug-burndown-4
+resolution: implemented
 area: beebox
 labels: [knowledge-audit, worktrees]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
 ---
+
+> **Closed 2026-10-20 (bug-burndown-4):** the boxholder chose the first option.
+> `bin/lib/worktree-create.sh` now commits a fresh clone's setup changes in the
+> clone (step 6: the engine link, its lockfile, and what `engine init`
+> refreshed), so the clone starts clean and the audit's reset after each test
+> returns to that commit with the link intact. A reused clone is never
+> committed, since it may hold the developer's own edits. A clone made before
+> this change needs it once by hand:
+> `git -C ~/src/box-worktrees/<name>/test1 add -A && git -C ~/src/box-worktrees/<name>/test1 commit -m "Worktree setup"`
+> (check `git status` first for edits of your own). The `.beebox/box.json` trap
+> for hand-made copies stays with the
+> [marker issue](../../bugs/2026-10-20-box-marker-in-gitignored-state-dir.md).
 
 `pnpm knowledge-audit run --box ~/src/box-worktrees/<name>/test1` refuses the
 worktree's own clone:
@@ -21,7 +34,7 @@ Refusing to audit …/test1: its Git working tree has pre-existing changes.
 These changes are made by worktree creation, which points the clone's
 `beebox` dependency at the worktree engine. So every fresh clone is dirty, and
 the guard added for
-[the reset-discards-edits bug](../closed/bugs/2026-09-28-knowledge-audit-resets-preexisting-box-edits.md)
+[the reset-discards-edits bug](2026-09-28-knowledge-audit-resets-preexisting-box-edits.md)
 blocks the case `beebox/docs/box-work.md` names first ("the worktree's
 clone"). Its advice, "commit the box's changes or use a clean disposable box",
 means committing linking state into the clone or copying it by hand.
