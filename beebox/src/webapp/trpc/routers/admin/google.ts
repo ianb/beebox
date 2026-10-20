@@ -16,6 +16,23 @@ import { loadBoxConfig } from "../../../../core/box/config.js";
 import { baseServerUrl } from "../../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../../lib/public-url.js";
 import { getBoxDir } from "../../../../lib/paths/core.js";
+import { readDocsApiDiagnosis } from "../../../../connectors/google-drive/docs-api-status.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
+
+/**
+ * The open Docs API problem for the settings Drive line, or null. A damaged
+ * status file must not break the settings page; the `google-docs-api` health
+ * check already reports it.
+ */
+async function driveDocsApi(boxRoot: string): Promise<{ message: string; link: string | null } | null> {
+  try {
+    const diagnosis = await readDocsApiDiagnosis(boxRoot);
+    return diagnosis === null ? null : { message: diagnosis.message, link: diagnosis.link };
+  } catch (e) {
+    console.error(`[admin] could not read the Google Docs API status for ${boxRoot}: ${errorMessage(e)}`);
+    return null;
+  }
+}
 
 export const googleAdminProcedures = {
   googleStatus: ownerProcedure.query(async ({ ctx }) => {
@@ -28,6 +45,7 @@ export const googleAdminProcedures = {
         needsReauthSince: null,
         scopes: GOOGLE_SCOPES,
         enabledServices,
+        driveDocsApi: null,
       };
     }
     const tokens = await loadGoogleTokens(ctx.boxRoot);
@@ -44,6 +62,8 @@ export const googleAdminProcedures = {
       needsReauthSince: tokens?.needsReauthSince ?? null,
       scopes: GOOGLE_SCOPES,
       enabledServices,
+      // Drive is syncing Google Docs without the Docs API; see connectors/google-drive/docs-api-status.ts.
+      driveDocsApi: await driveDocsApi(ctx.boxRoot),
     };
   }),
 

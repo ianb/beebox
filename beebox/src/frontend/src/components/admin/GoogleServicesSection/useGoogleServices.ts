@@ -20,6 +20,12 @@ export interface GoogleStatus {
   needsReauthSince: string | null;
   scopes: string[];
   enabledServices: Record<string, boolean>;
+  /**
+   * Drive is syncing Google Docs without the Docs API, for a reason the
+   * boxholder can fix (`link` is where), or null. Shown under the Drive toggle
+   * until the API answers again or Drive stops syncing.
+   */
+  driveDocsApi: { message: string; link: string | null } | null;
 }
 
 export interface GoogleServicesState {
