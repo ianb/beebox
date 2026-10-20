@@ -44,7 +44,7 @@ const CATALOG = `${ROOT}/beebox/user-stories/catalog`;
 // A per-run directory, not one shared bucket. Leftovers from an earlier recheck sitting in a
 // fixed directory would be merged by the next one, silently updating stories nobody asked about.
 const RUN = args.run || "latest";
-const OUT = `${ROOT}/beebox/user-stories/work/recheck/${RUN}`;
+const OUT = `${ROOT}/user-stories-work/discovery/recheck/${RUN}`;
 
 /** Ids contain a slash; filenames cannot. */
 const safe = (id: string) => id.replace(/\//g, "__");

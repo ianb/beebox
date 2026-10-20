@@ -1,12 +1,35 @@
 ---
 title: "Two engine checkouts on one box silently truncate each other's events.db"
-workstream: unknown
+workstream: bug-burndown-4
+resolution: implemented
 area: beebox
 filed-by: agent
 discovered-in: main session — while scoping the worktree workflow redesign
 labels: [worktrees, data-loss]
 priority: normal
 ---
+
+**Closed 2026-10-20:** fixed by `144367fdd`, which takes the
+first direction below. When `.beebox/events.db` carries an event-schema
+generation newer than the engine's, `createEventBus` throws
+`NewerEventSchemaError` (box written by a newer engine; this engine is older;
+use the newer engine) and leaves the rows and stored generation untouched.
+`bbx serve` runs the same check read-only (`assertEventSchemaNotNewer`) before
+it takes the startup lease or stops the box's previous server, so an older
+checkout refuses without killing the newer engine's server. An older on-disk
+generation still truncates as before, so a newer engine opening an older box
+resets once and then the older engine refuses; the two no longer take turns
+wiping each other. The other two directions (a cross-process lock on the box,
+engine-identity tagging of `.beebox/` state) were not implemented. Two engines
+with the SAME generation sharing a box remain unguarded, as
+`boxes-as-packages-v2.md` accepted.
+
+Residual (cross-model review, codex gpt-6-sol): the read-only check runs
+before startup kills the previous server, but nothing serializes the two
+engines. If a newer engine starts serving the box between an older engine's
+check and its kill, the older engine kills it and then refuses at
+`createEventBus`, leaving the box with no server. No data is lost. Closing it
+needs cross-process takeover coordination, which is the boxholder's decision.
 
 `event-bus.ts` opens `.beebox/events.db` and reconciles against an
 in-process `EVENT_SCHEMA_GENERATION` constant (`event-bus.ts:47-51`), **dropping
@@ -42,5 +65,5 @@ Possible directions, none decided:
   checkouts — the lock paths are box-relative and engine-agnostic.
 - Tag shared `.beebox/` state with the engine identity that wrote it.
 
-Related: [workstream real-box attachment](../features/2026-08-14-workstream-real-box-attachment.md),
+Related: [workstream real-box attachment](../../features/2026-08-14-workstream-real-box-attachment.md),
 which wants running new engine code against real boxes and is blocked on this.

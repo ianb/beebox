@@ -12,7 +12,7 @@ import fastifyCookie from "@fastify/cookie";
 import { registerBoxAdmission, boxRequestsAreIdle } from "./box-admission.js";
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { createEventBus } from "../../core/event-bus/core.js";
+import { assertEventSchemaNotNewer, createEventBus } from "../../core/event-bus/core.js";
 import { registerAuthSurface } from "../routes/auth/register.js";
 import { registerGoogleServicesCallback } from "../routes/admin.js";
 import { isHubMode } from "../auth.js";
@@ -283,6 +283,10 @@ export async function startServer(options?: InternalServerOptions): Promise<void
   maybeArmFirstRunSetup({ publicUrl: getPublicUrl(`http://${host}:${port}`), openAccess: false });
 
   const boxes = await resolveBoxes(options);
+  // An older engine must refuse a box a newer engine wrote before it takes the
+  // startup lease or kills that engine's server (createEventBus would refuse
+  // too, but only after both).
+  for (const box of boxes) assertEventSchemaNotNewer(box.boxRoot);
 
   const startup = new Map<string, BoxWork>();
   try {

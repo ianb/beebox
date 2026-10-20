@@ -1,6 +1,7 @@
 ---
 title: "thread.ts and run.ts omit the system prompt on resume and rely on the SDK retaining it — a default that flipped twice in a week"
-workstream: unattached
+workstream: bug-burndown-4
+resolution: implemented
 area: beebox
 priority: normal
 filed-by: agent
@@ -8,6 +9,29 @@ discovered-by: agent
 discovered-in: worktree-sdk-update — reviewing Agent SDK 0.3.267's system-prompt recording change
 labels: [sdk-update]
 ---
+
+> **Closed 2026-10-20 (bug-burndown-4):** `runAgent` (`beebox/src/core/agent/invoke/run.ts`)
+> now sends the system prompt and timezone context on every run, resumes
+> included. The prompt is also carried inside the agent: an invoke that omits
+> `systemPrompt` reuses the agent's last explicit one, the way the model is
+> already carried (`beebox/src/core/agent/model-carry.ts`). This covers
+> the commit-nudge retry in `ensureAgentCommitted`. The procedure review retry
+> (`retryRunAgent`) is a new agent object resuming the first pass's session,
+> so it rebuilds and passes the step's system prompt. The Codex agent got the
+> same carry, and `runCodexAgent` sends the timezone context on resume. The
+> `AgentInvokeOptions.systemPrompt` doc comment now describes this.
+>
+> The chat-thread half is moot: `thread.ts` and `ChatThreadSession` were
+> removed with the Telegram code in `da6d70df9`. Reactor sessions as described
+> below no longer exist either; the reactor batch agent passes its prompt on
+> its one invoke.
+>
+> Not decided here, and left for the next SDK pin review: the `snapshot`
+> question in "Suggested shape" step 2 and in item 2 of the 2026-09-12 note. A
+> changed append on a resumed session still does not take effect while the
+> SDK records the prompt. For the procedure retry and the commit nudge the
+> prompt is the same text, so this does not affect them.
+
 
 Two beebox paths build their appended system prompt **only for a fresh
 session** and pass nothing on resume:

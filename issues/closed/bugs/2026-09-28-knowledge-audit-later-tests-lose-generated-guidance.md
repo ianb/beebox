@@ -1,12 +1,20 @@
 ---
 title: "Later knowledge audits can lose freshly generated guidance"
-workstream: unattached
+workstream: bug-burndown-4
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-jev-triage — reviewing test harness safety fixes
 priority: important
+resolution: implemented
 ---
+
+Fixed in `3b784c975` (bug-burndown-4, 2026-10-20). Box audits
+now run through `runBoxAudits` (`beebox/src/dev/lib/box-audits.ts`). Before each
+audit it checks the box is clean, regenerates docs, and passes that audit's own
+setup status to `runTest`. The CLI still refuses a dirty box once at start.
+`beebox/test/dev/lib/box-audits.test.ts` runs two audits on a legacy box with a
+fake agent; both see the same generated `CLAUDE.md`.
 
 The audit CLI forces docs generation once before its test loop. The runner
 resets and cleans the box after each test. Generated guidance that is not
@@ -14,7 +22,7 @@ part of the saved commit can therefore disappear before the second test.
 Later tests can audit different guidance from the first test.
 
 This is separate from
-[discarding pre-existing box edits](../closed/bugs/2026-09-28-knowledge-audit-resets-preexisting-box-edits.md).
+[discarding pre-existing box edits](2026-09-28-knowledge-audit-resets-preexisting-box-edits.md).
 The clean-tree admission check fixes that data-loss bug; it does not preserve
 generated setup across the audit suite.
 

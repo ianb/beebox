@@ -53,6 +53,7 @@ steps:
   let runCount = 0;
   let validateCount = 0;
   let retryPrompt = "";
+  const systemPrompts: (string | undefined)[] = [];
   const createAgent: AgentFactory = (opts) => createFakeAgent({
     name: opts.name,
     act: async ({ prompt }) => {
@@ -71,13 +72,28 @@ steps:
   });
 
   const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+  // Record the system prompt of every run-phase invoke (the judge uses invokeStructured).
+  const recordingCreateAgent: AgentFactory = (opts) => {
+    const agent = createAgent(opts);
+    const invoke = agent.invoke.bind(agent);
+    agent.invoke = async (invokeOpts) => {
+      systemPrompts.push(invokeOpts.systemPrompt);
+      return invoke(invokeOpts);
+    };
+    return agent;
+  };
   const result = await startProcedure({
     ctx,
     procedureNameOrPath: "heal",
-    options: { createAgent },
+    options: { createAgent: recordingCreateAgent },
   });
   // The retry invocation's prompt (a large generated text) carries the failure context.
   t.check(retryPrompt, any(String).includes("<validation-failure>"));
+
+  // The retry resumes the first pass's session and resends its system prompt,
+  // rather than relying on the SDK to have kept it
+  // (issues/closed/bugs/2026-09-10-resumed-sessions-drop-appended-system-prompt.md).
+  t.check(systemPrompts, [any(String).includes("Do the work."), systemPrompts[0]]);
 
   const runs = await box.list("_bookkeeping/procedure/runs");
   const runDir = runs.split("\n").find(f => f.includes("heal_"));

@@ -17,7 +17,7 @@ import "@ianbicking/tap-check/tap";
 import { any } from "@ianbicking/tap-check/check";
 import Database from "better-sqlite3";
 import { join } from "node:path";
-import { createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";
+import { assertEventSchemaNotNewer, createEventBus, EVENT_SCHEMA_GENERATION } from "../../src/core/event-bus/core.js";
 import { eventSchemas, isBusEventName } from "../../src/core/event-bus/schemas.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 
@@ -216,6 +216,75 @@ void test("Persist two rows, then simulate a deploy that bumped the schema gener
 
   const bus2 = createEventBus(box.root);
   t.check(bus2.readSince(0), []);
+});
+
+// ## A newer generation on disk refuses to open and keeps its rows
+//
+// Two engine checkouts can serve one box. When the stored generation is newer
+// than this engine's, a newer engine wrote these rows; truncating them would
+// wipe that engine's history on every open. The open throws instead, and the
+// rows and stored generation are left as they were:
+void test("Two engine checkouts can serve one box. When the stored generation is newer...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const dbPath = join(box.root, ".beebox/events.db");
+  const bus1 = createEventBus(box.root);
+  bus1.emit("cards-changed", { source: "a" });
+  bus1.close();
+
+  const raw = new Database(dbPath);
+  raw.prepare("UPDATE event_meta SET schema_generation = ? WHERE id = 1").run(EVENT_SCHEMA_GENERATION + 1);
+  raw.close();
+
+  const expected =
+    "NewerEventSchemaError: Refusing to open " + dbPath + ": it was written by a newer beebox engine " +
+    "(event-schema generation " + String(EVENT_SCHEMA_GENERATION + 1) + "), and this engine is older " +
+    "(generation " + String(EVENT_SCHEMA_GENERATION) + "). Opening it here would delete the newer " +
+    "engine's events. Use the newer engine for this box.";
+  await t.checkThrows(() => createEventBus(box.root), expected);
+
+  // `bbx serve` runs the read-only check before it stops the box's previous
+  // server, so it refuses the same way:
+  await t.checkThrows(() => {
+    assertEventSchemaNotNewer(box.root);
+  }, expected);
+
+  const after = new Database(dbPath, { readonly: true });
+  t.check(after.prepare("SELECT schema_generation AS gen FROM event_meta").all(), [{ gen: EVENT_SCHEMA_GENERATION + 1 }]);
+  t.check(after.prepare("SELECT id, event, data FROM events").all(), [
+    { id: 1, event: "cards-changed", data: JSON.stringify({ source: "a" }) },
+  ]);
+  after.close();
+});
+
+// ## The same generation on disk reopens with its rows intact
+//
+// The read-only check passes, and a second open replays what the first wrote:
+void test("The read-only check passes, and a second open replays what the first wrote", async (t) => {
+  t.teardown(async () => {
+    try {
+      bus2.close();
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  // No events.db yet: nothing to refuse.
+  assertEventSchemaNotNewer(box.root);
+  const bus1 = createEventBus(box.root);
+  bus1.emit("cards-changed", { source: "a" });
+  bus1.close();
+
+  assertEventSchemaNotNewer(box.root);
+  const bus2 = createEventBus(box.root);
+  t.check(bus2.readSince(0), [{ id: 1, event: "cards-changed", data: { source: "a" }, createdAt }]);
 });
 
 // ## A legacy DB (no meta row) drops its pre-generation rows on first open

@@ -70,7 +70,7 @@ reaches finalize. Everything else is severity, not deadlock.
 - **#1 (types are structure)** — the listing helper cannot express "unknown", so
   callers cannot branch on it.
 - **#5 (failure paths visible in signatures)** — precheck genuinely dispatches on
-  *why* a listing is unavailable. [`src/lib/result.ts`](../../src/lib/result.ts)
+  *why* a listing is unavailable. [`src/lib/result.ts`](../../src/shared/result.ts)
   is the one Result convention.
 - **#3 (validate at boundaries)** — `git` subprocess output is an input boundary.
 - **#6 (right-sized defensiveness)** — checks go at the subprocess boundary, not

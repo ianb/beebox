@@ -1,6 +1,7 @@
 ---
 title: "One pink bar flattens unrelated status and error states"
 workstream: error-severity
+resolution: implemented
 area: beebox
 labels: [journey-findings, ui-sensibility]
 filed-by: agent
@@ -9,13 +10,20 @@ discovered-in: worktree-user-stories-refresh — journey A, 2026-08-25 walk
 priority: important
 ---
 
+> **Closed 2026-10-20 (bug-burndown-4):** fixed by `d820b66ab` ("Chat status
+> bar shows errors and warnings at their real severity", on `main`), per the
+> plan and outcome below. The unreproduced new-chat session-id residual is
+> filed as
+> [its own issue](../../bugs/2026-10-20-new-chat-dropped-stream-warning-can-stick.md).
+> The other residuals stay as recorded in the outcome.
+
 ## Recovery assessment (2026-09-21)
 
 The shared error banner remains: `InteractiveChat-layout.tsx:26-44` combines
 plain chat and transcription error strings under the same danger styling.
 The original first-run navigation error-counter subclaim is outdated:
 `AppNav.tsx:239-249` now gates that counter on opening Debug Log, as recorded in
-the [closed vocabulary sweep](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md).
+the [closed vocabulary sweep](2026-08-08-implementation-vocab-leaks-into-ui.md).
 This is not the schedule-alert surface fixed in September. The mic interaction is excluded from the product finding. No current browser
 comparison of the remaining auth and connection states was performed.
 
@@ -54,7 +62,7 @@ not surface at all once the reply lands — code-style's logging-levels policy
 Also observed, same family: each of these increments the red nav error counter,
 so by evening's end the badge read 3+ with nothing wrong.
 
-Related: [implementation-vocab-leaks-into-ui](../closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md)
+Related: [implementation-vocab-leaks-into-ui](2026-08-08-implementation-vocab-leaks-into-ui.md)
 (the wording of 1); the debug-log badge notes appended there on 2026-08-23.
 
 ## Plan (2026-10-17, worktree-error-severity)

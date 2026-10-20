@@ -344,7 +344,7 @@ None. A non-git durable transcript store would be one; it is out of scope.
 - Moving the review journal onto the husk — unnecessary once review is
   origin-claimed; it would add four machine fields to a card.
 - `events-db` generation truncation across checkouts
-  (`issues/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md`) —
+  (`issues/closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md`) —
   same per-checkout-state family, different subsystem; untouched.
 - Port-hygiene items 1, 2, 4.
 - Mirroring Claude Code's 200-char project-dir truncation.

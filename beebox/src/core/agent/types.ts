@@ -20,7 +20,10 @@ export interface AgentInvokeOptions {
   boxRoot: string;
   /** Per-invocation subprocess additions, without changing the parent environment. */
   env?: Record<string, string> | undefined;
-  /** System prompt — provided on first invoke, omitted on resume. */
+  /**
+   * System prompt, sent on every run including resumes. A later invoke that
+   * omits it reuses the agent's last explicit one.
+   */
   systemPrompt?: string;
   /** User prompt for this invocation. */
   prompt: string;

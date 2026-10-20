@@ -1,12 +1,15 @@
 ---
 title: "Google Docs 403 SERVICE_DISABLED crashes inspect and is misdiagnosed as a scope problem"
-workstream: unattached
+workstream: bug-burndown-4
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: main — production box feedback triage (bbx feedback)
 priority: normal
+resolution: implemented
 ---
+
+Closed by `560c946aa`: the Docs handler now reads Google's error reason. `SERVICE_DISABLED` says the Docs API is off on the Cloud project and gives the enable link; a missing scope keeps the `bbx engine google-auth` advice; other failures report the HTTP status and Google's message. `inspect()` throws a diagnosed `DocsApiUnavailableError`, which `bbx drive inspect` reports as the boxholder's to fix. `pull()` still degrades, with the diagnosis in its warning; that warning still reaches only `console.warn`, because a pull result has no channel to the boxholder.
 
 A box's Google Doc inspect/sync call failed with HTTP 403
 `SERVICE_DISABLED` — the Docs API was never enabled on the connected GCP

@@ -9,15 +9,15 @@
  * Usage: pnpm exec tsx beebox/src/scripts/user-stories/apply-consolidation.ts
  */
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 
 import { errorMessage } from "../../shared/error-guards.js";
 import { invariant } from "../../shared/invariant.js";
 
 import { readJson } from "./json-io.js";
+import { DISCOVERY_WORK } from "./work-dir.js";
 
-
-const BASE = resolve(import.meta.dirname, "../../../user-stories/work");
+const BASE = DISCOVERY_WORK;
 
 interface Story {
   id: string
@@ -154,4 +154,4 @@ if (notes.length > 0) {
   console.log("");
   for (const n of notes) console.log(`  ! ${n}`);
 }
-console.log("\nOK — wrote user-stories/work/stories.final.json");
+console.log("\nOK — wrote user-stories-work/discovery/stories.final.json");

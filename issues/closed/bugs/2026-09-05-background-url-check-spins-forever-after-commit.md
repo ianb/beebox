@@ -1,6 +1,7 @@
 ---
 title: "The post-commit background URL check can spin at 90% CPU for hours; 82 orphans were pinning a 16 GB machine"
-workstream: unattached
+workstream: bug-burndown-4
+resolution: implemented
 area: beebox
 priority: normal
 labels: [hooks, performance]
@@ -8,6 +9,22 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — "where is memory going?"
 ---
+
+> **Closed 2026-10-20 (bug-burndown-4):** both parts of fix 1 are in place.
+> The bound and `BBX_NO_URLCHECK` landed on 2026-09-05 (the hook block in
+> `beebox/src/core/install-validation-hooks.ts`). This workstream added the
+> single-instance guard: `checkExternalUrls` takes a per-box file lock at
+> `.beebox/url-check.lock`, and a check that finds it held checks nothing,
+> prints "Another URL check is running for this box", and exits 0. The lock
+> also serializes the verdict cache's read-modify-write. A spinning holder
+> stops refreshing the lock, so it goes stale after five minutes and the alarm
+> kills the holder at ten. So up to two spinning checks can overlap for five
+> minutes. Accepted: closing that needs a third lock stale profile or a
+> shorter alarm, and the spin is no longer reached from the test suite.
+>
+> Fix 2, the root cause of the deleted-cwd spin, was not pursued: with the
+> outside bound and the guard, a spinning check is bounded in time and in
+> count, and the test suite no longer starts any.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 

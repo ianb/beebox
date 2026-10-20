@@ -6,11 +6,11 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { createModelCarrier } from "../../../../src/core/agent/invoke/model-carry.js";
+import { createCarrier } from "../../../src/core/agent/model-carry.js";
 
 // ## Omitted models ride the first explicit one
 void test("Omitted models ride the first explicit one", async (t) => {
-  const carrier = createModelCarrier();
+  const carrier = createCarrier();
   carrier.resolve("glm-5.3");
   t.check(carrier.resolve(undefined), "glm-5.3");
 
@@ -27,6 +27,6 @@ void test("Omitted models ride the first explicit one", async (t) => {
 // An agent whose callers never named a model keeps the harness default — the
 // carry must not invent one.
 void test("An agent whose callers never named a model keeps the harness default — the ca...", async (t) => {
-  const bare = createModelCarrier();
+  const bare = createCarrier();
   t.check(bare.resolve(undefined), undefined);
 });

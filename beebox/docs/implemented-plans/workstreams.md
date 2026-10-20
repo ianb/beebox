@@ -32,7 +32,7 @@ checkout currently attached to it. See Vocabulary lock-ins.)
   [manual-testing flag overuse](../../../issues/decisions/2026-07-29-manual-testing-flag-overuse.md)
   stays open; nothing here assumes more `manual-testing` items (see NOT in
   scope). The
-  [events.db two-engine bug](../../../issues/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md)
+  [events.db two-engine bug](../../../issues/closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md)
   and box forking stay in the redesign issue's territory, untouched here.
 
 ## Jobs to be done
