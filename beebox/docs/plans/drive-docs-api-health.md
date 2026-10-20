@@ -85,13 +85,14 @@ No decision depends on an external premise. Google's `ErrorInfo` reasons were ve
 
 ### Track 1: collect and store (Drive)
 
-- **What:** `tryGetDocument` returns `{doc, outcome}`, and `pull()` pushes the outcome into a collector. `syncDriveFile` takes a required `docsApiOutcomes: DocsApiOutcome[]`, and `createFolderSyncDeps` takes the same array and passes it to `syncFile`. Both paths therefore feed one collector per pass. CLI callers of `createFolderSyncDeps` pass their own array and discard it, because a CLI mount is not a full pass. At the end of `syncUnderLock`, the pure function `nextDocsApiDiagnosis({previous, outcomes, passComplete: failures.length === 0, now})` decides:
+- **What:** `tryGetDocument` returns `{doc, outcome}`. `push()`'s conflict check uses only `.doc` (`handler.ts:396`), so push outcomes are never collected; the pull that follows is the evidence. `PullResult` gains an optional `docsApi` (Docs handler only). `syncDriveFile` takes a required `docsApiOutcomes: DocsApiOutcome[]` and pushes the pull's outcome into it. `createFolderSyncDeps` takes the same array and passes it to `syncFile`, so the live-card loop and folder discovery feed one collector per pass. `FolderSyncResult` gains `capped: boolean`, set when a non-cycle refusal left part of the tree unmirrored (`folder-sync.ts:160-162`) and passed up from nested folders. At the end of `syncUnderLock`, the pure function `nextDocsApiDiagnosis({previous, outcomes, passComplete: failures.length === 0 && !capped, now})` decides:
   - any fixable failure gives `on`: the first `service-disabled` failure is preferred, `docs` is the count, and `since` is kept from `previous`;
   - else any `ok` gives null;
   - else an empty collector on a complete pass gives null (no live Docs remain);
   - else the previous value is kept (an incomplete pass, or only `other` failures).
 
   The connector writes the file only when the value changes. Its skip branches (`connector.ts:86-99`) also write null.
+- **On-demand syncs do not write** (adjudicated, round 2). `bbx drive mount`, Settings "Sync now" (`mount-sync.ts:41-66`) and `bbx drive add` (`add-file.ts:124`, a direct `pull()`) discard their outcomes. The delay is accepted: the next scheduled connector pass pulls every Doc card, which writes or clears the diagnosis. So a first on-demand sync shows its warning after one connector interval, and a successful retry clears an old warning after the same interval. No new writers.
 - **Why:** this is the only signal that clears when the API is enabled, covers newly discovered Docs, and ignores deleted cards.
 - **First chunk:** the collector, `DocsApiFailure.link`, `docs-api-status.ts` (schema, `nextDocsApiDiagnosis`, writer, `readDocsApiDiagnosis`). Tests 1–4.
 
@@ -108,8 +109,8 @@ No decision depends on an external premise. Google's `ErrorInfo` reasons were ve
 ### Track 4: the agent
 
 - **What:**
-  - `buildSnapshotContext` joins the schedule summary and a Drive line with `"; "`. The Drive line is *"google-drive: Google Docs are syncing without the Docs API (no revision tracking or lossy check); `bbx health` has the fix"*. The joined value goes through the unchanged `admitHealth` gate. It is Drive only; no other box checks are added.
-  - **What "once" means, with existing mechanisms:** the attribute appears on the first send of each chat session while the problem is open, then stays silent for that session (same value). It appears again after 10 days, or 10 turns after the value changes. No new seen-tracking state.
+  - On `sessionStart` only, `buildSnapshotContext` adds the Drive line to `health`, after any admitted schedule summary and separated by `"; "`. The Drive line is *"google-drive: Google Docs are syncing without the Docs API (no revision tracking or lossy check); `bbx health` has the fix"*. It is added independently of the `admitHealth` gate, which still sees only the schedule summary, so a schedule change can neither repeat nor delay the Drive line (round-2 finding). It is Drive only; no other box checks are added.
+  - **What "once" means:** once per chat session, on its first send. No new seen-tracking state. The boxholder accepted that each new session repeats it while the problem is open.
   - `prompts.ts:128` adds: *"It may also carry a `google-drive:` line. Mention it the first time you see it in a conversation, explain the fix from `bbx health`, and don't repeat it."*
   - `guide.md:448` becomes *"`bbx health` — scheduled-task and box health, including connector problems; yours to run."* (update ledger `commands.health`).
   - The gdoc instructions' Lossy section gets: *"A card without `drive.revision` may have synced while the Docs API was unavailable; then `lossy:` was not checked. Run `bbx health` before relying on an empty `lossy:`."*
@@ -129,6 +130,9 @@ None.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | A Doc found by folder discovery fails and is not counted | Test 3 | Collector passed through `createFolderSyncDeps` | Clear |
+| A recursion cap leaves Docs unscanned, and an empty collector clears a real problem | Test 3 | `capped` makes the pass incomplete | Clear |
+| A locally edited Doc's push path breaks on the new return shape | Test 1 | `push()` reads `.doc` | Clear |
+| An on-demand mount or add hits the failure | No | The next connector pass writes it | Delayed by one interval; accepted |
 | The last Doc is deleted and the warning stays | Test 2 | An empty collector on a complete pass clears | Clear |
 | A pass with card failures clears a real problem | Test 2 | An incomplete pass keeps the prior value | Clear |
 | A transient 500 opens or clears the problem | Test 2 | `other` is not evidence | Clear |
@@ -144,7 +148,7 @@ None.
 - Hand-edit drift: the file is parsed; an invalid file is reported, not reset. ADDRESSED.
 - Fabricated value / validation UX: only code writes the file. Not applicable.
 - Transition state: no file means no problem; the first pass after deploy writes it. ADDRESSED.
-- A new chat session mentions it again while the problem is open. ACCEPTED: that is the existing gate's per-session meaning of "once".
+- A new chat session mentions it again while the problem is open. ACCEPTED by the boxholder.
 
 ## NOT in scope
 
@@ -177,12 +181,12 @@ Unit tests on the pure `nextDocsApiDiagnosis`, plus connector-level tests throug
 
 Done when these pass:
 
-1. `docs.test.ts`: a 403 `SERVICE_DISABLED` ky error gives a sync that still succeeds and a stored diagnosis `{kind: "service-disabled", docs: 1, link: <activationUrl>, …}`. With `getDocument` restored, the next sync clears it. The existing non-HTTP-error test keeps its exact result, and no file is written.
+1. `docs.test.ts`: a 403 `SERVICE_DISABLED` ky error gives a sync that still succeeds and a stored diagnosis `{kind: "service-disabled", docs: 1, link: <activationUrl>, …}`. With `getDocument` restored, the next sync clears it. The existing non-HTTP-error test keeps its exact result, and no file is written. A locally edited Doc (push, then pull) still pushes and records the pull's outcome.
 2. `nextDocsApiDiagnosis` table: fixable failure gives `on` with `since` kept; `ok` gives null; empty and complete gives null (last Doc deleted); empty and incomplete keeps; only `other` keeps; two failures give `docs: 2`.
-3. `mounts.test.ts`: a newly mounted folder containing one Doc, with `getDocument` returning `SERVICE_DISABLED`, gives a stored diagnosis on that first sync.
+3. `mounts.test.ts`: a newly mounted folder containing one Doc, with `getDocument` returning `SERVICE_DISABLED`, gives a stored diagnosis on that first sync. Separately: with a prior diagnosis and a folder pass that hits the recursion cap and finds no Docs, the diagnosis is kept.
 4. `docs-api-status.test.ts`: with a stored diagnosis and no further sync, `readDocsApiDiagnosis` returns null after Drive is disabled in box config, after tokens are removed, and while `needsReauthSince` is set.
 5. `checks/google.test.ts`: the diagnosis gives one `google-docs-api` warning; no file gives none; an invalid file gives a warning naming it.
 6. `admin.google-status.test.ts`: `driveDocsApi` is set from the diagnosis, null when suppressed, and null with a log line for an invalid file.
-7. `session-context` test: with a gate, the first send carries the Drive line, the second send does not, and a session without the problem has no Drive line.
+7. `session-context` test: with a gate, the first send carries the Drive line and later sends do not, even when schedule health changes between sends. A session without the problem has no Drive line.
 
 No data migration: a missing file means no problem.
