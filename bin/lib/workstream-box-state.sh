@@ -69,6 +69,26 @@ workstream_preserve_keep() {
     return 0
   fi
   WORKSTREAM_PRESERVED_BOX_REF="keep/$name-$(date -u +%Y-%m-%d)"
+  # Worktree creation committed the clone's engine link ("Worktree setup: …",
+  # bin/lib/worktree-create.sh step 6). It points at this worktree, so it must
+  # not reach the source box: push keep replayed without it. A replay that
+  # conflicts refuses, which keeps the clone for a human.
+  local setup_sha preserved="refs/heads/keep" scratch
+  setup_sha=$(git -C "$clone" log --format=%H -n 1 --grep='^Worktree setup: link the beebox engine to worktree ' refs/heads/keep 2>/dev/null || true)
+  if [ -n "$setup_sha" ]; then
+    scratch=$(mktemp -d) || return 1
+    if ! { git -C "$clone" worktree add -q --detach "$scratch/keep" refs/heads/keep \
+        && git -C "$scratch/keep" rebase -q --onto "$setup_sha^" "$setup_sha"; } >/dev/null 2>&1; then
+      git -C "$scratch/keep" rebase --abort >/dev/null 2>&1 || true
+      git -C "$clone" worktree remove --force "$scratch/keep" >/dev/null 2>&1 || true
+      rm -rf "$scratch"
+      echo "[workstream] cannot drop the worktree setup commit from $name's keep branch; preserve it by hand" >&2
+      return 1
+    fi
+    preserved=$(git -C "$scratch/keep" rev-parse HEAD)
+    git -C "$clone" worktree remove --force "$scratch/keep" >/dev/null 2>&1 || true
+    rm -rf "$scratch"
+  fi
   git -C "$clone" push "$WT_BOX_SRC" \
-    "refs/heads/keep:refs/heads/$WORKSTREAM_PRESERVED_BOX_REF" >/dev/null
+    "$preserved:refs/heads/$WORKSTREAM_PRESERVED_BOX_REF" >/dev/null
 }

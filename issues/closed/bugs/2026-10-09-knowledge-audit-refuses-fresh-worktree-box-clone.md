@@ -20,6 +20,14 @@ discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
 > (check `git status` first for edits of your own). The `.beebox/box.json` trap
 > for hand-made copies stays with the
 > [marker issue](../../bugs/2026-10-20-box-marker-in-gitignored-state-dir.md).
+>
+> Teardown's `keep` preservation replays the branch without the setup commit,
+> so the clone's engine link never reaches `test1`; a replay that conflicts
+> refuses the cull. Residuals from cross-model review (codex gpt-6-sol),
+> accepted: a creation interrupted before step 6 and then retried reuses the
+> clone and does not commit, and a setup commit the box's own pre-commit hook
+> rejects is only a warning. Either way the clone stays dirty and the audit
+> refuses it, as before this change; the one-time command above fixes it.
 
 `pnpm knowledge-audit run --box ~/src/box-worktrees/<name>/test1` refuses the
 worktree's own clone:

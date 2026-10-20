@@ -238,6 +238,53 @@ void test("Preservation pushes a dated, recreatable ref.", async (t) => {
   await t.checkText(await fs.readFile(path.join(clone, "state"), "utf8"), "kept");
 });
 
+// Preservation leaves out the clone's worktree-setup commit. Creation commits
+// the clone's engine link (bin/lib/worktree-create.sh step 6); it points at a
+// worktree that will be gone, so the preserved ref replays keep without it.
+void test("Preservation drops the worktree setup commit from the preserved ref", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "keep-preserve-setup-"));
+  t.teardown(async () => await fs.rm(root, { recursive: true, force: true }));
+  const source = path.join(root, "source");
+  const clone = path.join(root, "boxes", "seam", "test1");
+  await fs.mkdir(source);
+  git(source, ["init", "-q", "-b", "main"]);
+  git(source, ["config", "user.email", "test@example.com"]);
+  git(source, ["config", "user.name", "Test"]);
+  await fs.writeFile(path.join(source, "package.json"), "source link\n");
+  await fs.writeFile(path.join(source, "state"), "base\n");
+  git(source, ["add", "."]);
+  git(source, ["commit", "-qm", "base"]);
+  await fs.mkdir(path.dirname(clone), { recursive: true });
+  git(root, ["clone", "-q", source, clone]);
+  git(clone, ["config", "user.email", "test@example.com"]);
+  git(clone, ["config", "user.name", "Test"]);
+  await fs.writeFile(path.join(clone, "package.json"), "worktree link\n");
+  git(clone, ["commit", "-qam", "Worktree setup: link the beebox engine to worktree seam"]);
+  git(clone, ["checkout", "-qb", "keep"]);
+  await fs.writeFile(path.join(clone, "state"), "kept\n");
+  git(clone, ["commit", "-qam", "kept"]);
+  const result = spawnSync("bash", ["-c", [
+    ". bin/lib/workstream-box-state.sh",
+    "workstream_preserve_keep seam || exit",
+    "printf '%s' \"$WORKSTREAM_PRESERVED_BOX_REF\"",
+  ].join("; ")], { cwd: repoRoot, env: { ...process.env, WT_BOX_ROOT: path.join(root, "boxes"), WT_BOX_SRC: source }, encoding: "utf8" });
+  const show = (spec: string): string => execFileSync("git", ["show", spec], { cwd: source, encoding: "utf8" });
+  t.check({
+    status: result.status,
+    subjects: execFileSync("git", ["log", "--format=%s", result.stdout], { cwd: source, encoding: "utf8" }),
+    packageJson: show(`${result.stdout}:package.json`),
+    state: show(`${result.stdout}:state`),
+    cloneWorktrees: execFileSync("git", ["worktree", "list", "--porcelain"], { cwd: clone, encoding: "utf8" }).split("\n").filter((line) => line.startsWith("worktree ")),
+  }, {
+    status: 0,
+    subjects: "kept\nbase\n",
+    packageJson: "source link\n",
+    state: "kept\n",
+    // The replay's temporary worktree is gone.
+    cloneWorktrees: [`worktree ${await fs.realpath(clone)}`],
+  });
+});
+
 // Recreation fetches the preserved ref, checks out clone `main`, and resets its
 // content to that ref.
 void test("Recreation fetches the preserved ref, checks out clone main, and resets its c...", async (t) => {
