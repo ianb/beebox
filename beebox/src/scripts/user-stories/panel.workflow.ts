@@ -32,7 +32,7 @@ const ARGS_ERR = {
 
 const ROOT = args && args.root;
 if (!ROOT) throw new WorkflowArgsError(ARGS_ERR.root);
-const OUT = `${ROOT}/beebox/user-stories/work`;
+const OUT = `${ROOT}/user-stories-work/discovery`;
 
 // args: { root: string, flagged: string[], browserFailed: string[] }
 // `flagged` = a code verifier called it inaccurate; those go to the three-lens panel first.

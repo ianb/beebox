@@ -13,9 +13,10 @@ import { join, resolve } from "node:path";
 
 import { parseJsonLine, readJson } from "./json-io.js";
 import { resolveId } from "./stable-id.js";
+import { DISCOVERY_WORK } from "./work-dir.js";
 
 const CATALOG = resolve(import.meta.dirname, "../../../docs/user-stories/catalog");
-const RECHECK_ROOT = resolve(import.meta.dirname, "../../../user-stories/work/recheck");
+const RECHECK_ROOT = join(DISCOVERY_WORK, "recheck");
 
 const argv = process.argv.slice(2);
 const date = argv.find((a) => /^\d{4}-\d{2}-\d{2}$/u.test(a));
