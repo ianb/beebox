@@ -92,15 +92,38 @@ enum UploadNotifications {
         }
     }
 
-    /// "on", "off" (denied or turned off in System Settings), or "not asked".
-    static func status() async -> String {
+    enum Status: String {
+        case on, off, undecided, unknown
+
+        /// What the General tab says about it.
+        var sentence: String {
+            switch self {
+            case .on: "Notifications are on."
+            case .off: "Notifications are turned off in System Settings."
+            case .undecided: "You haven't allowed notifications yet."
+            case .unknown: "Notification status is unknown."
+            }
+        }
+    }
+
+    static func status() async -> Status {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         switch settings.authorizationStatus {
-        case .authorized, .provisional, .ephemeral: return "on"
-        case .denied: return "off"
-        case .notDetermined: return "not asked"
-        @unknown default: return "unknown"
+        case .authorized, .provisional, .ephemeral: return .on
+        case .denied: return .off
+        case .notDetermined: return .undecided
+        @unknown default: return .unknown
         }
+    }
+
+    /// Shows the system prompt (only while undecided) and returns the outcome.
+    static func requestAndReport() async -> Status {
+        do {
+            _ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+        } catch {
+            appLog("notification permission request failed: \(error)")
+        }
+        return await status()
     }
 
     /// Bee Box's page in System Settings → Notifications.

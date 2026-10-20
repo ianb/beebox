@@ -22,7 +22,9 @@ detect and refuse unsafe concurrent ownership.
 
 Two known blockers define the initial design boundary:
 
-- [Two engine checkouts can truncate each other's events database](../bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md).
+- [Two engine checkouts can truncate each other's events database](../closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md).
+  Closed 2026-10-20: an older engine now refuses a box a newer engine wrote;
+  two engines of the same generation on one box are still unguarded.
 - Box-local schemas can resolve `beebox` through the box package's own
   `node_modules` link while the serving command comes from a worktree. That can
   load two engine builds into one process.

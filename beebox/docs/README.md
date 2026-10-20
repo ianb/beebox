@@ -64,9 +64,14 @@ relative to the doc's directory, its package root, `beebox/`, or the monorepo
 root. Placeholders (`<x>`, `*`, `{}`, `...`), fenced code, gitignored paths,
 and box-facing docs (`docs/box/`) are skipped, and a `:line` suffix is
 ignored. Historical records (implemented and unimplemented plans, reports,
-user-story catalogs, closed issues, `research/`, changelogs) are exempt. Plans
-and open issues name files they propose, so in them only an issue that moved to
-`issues/closed/` is reported; `--fix` rewrites that case everywhere. A
+user-story catalogs, closed issues, `research/`, changelogs) are exempt. A
+plan or issue path whose file moved to another lifecycle directory (plans to
+`implemented-plans/`, an issue to `issues/closed/`) is a fixable finding when
+exactly one plan or issue file has its basename; two matches are reported.
+Code and YAML files (`.ts`, `.yaml`; not `*.test.ts`) are scanned for these
+plan and issue mentions, bare or backticked. Plans and open issues name files
+they propose, so in them only these moved or ambiguous findings are reported;
+`--fix` rewrites the moves everywhere. A
 deliberate mention of a file outside the repo goes in `ALLOWED_MISSING_PATHS`
 with a reason. Mechanism: `src/dev/doc-check/file-paths.ts`.
 
@@ -84,10 +89,12 @@ excluding the intentionally-per-directory `NON_UNIQUE_BASENAMES` —
 `AGENTS.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
 current location. It never guesses: a basename with no match (a true
 rename/delete) or 2+ matches is reported for manual handling, not rewritten.
-Links inside code spans / fenced blocks (syntax illustrations) and generated
-emitter outputs are left untouched. It does not see path mentions in code,
-YAML, or test fixtures (`site/docs-links.test.ts`,
-`bin/*.test.ts`), so grep for the old path before committing a move. It also prints a non-fatal report of
+A broken link to a non-`.md` file (a moved file's own `../src/x.ts`) is
+matched by its path below the leading `../` against tracked files, under the
+same never-guess rule. Links inside code spans / fenced blocks (syntax
+illustrations) and generated emitter outputs are left untouched. Test
+fixtures (`*.test.ts`) are not scanned, so grep them for the old path before
+committing a move. It also prints a non-fatal report of
 repo-wide duplicate basenames — the gap toward making basenames globally
 unique. Mechanism: `src/dev/doc-check/link-repair.ts`.
 

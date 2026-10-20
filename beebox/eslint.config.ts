@@ -138,7 +138,7 @@ export default [
     // FST_ERR_REP_ALREADY_SENT — the rule would introduce the exact bug
     // class it exists to prevent, so this directory is carved out rather
     // than the rule being weakened project-wide (measured 2026-07,
-    // issues/2026-07-06-deferred-lint-rules.md).
+    // issues/closed/code-quality/2026-07-06-deferred-lint-rules.md).
     files: ["src/webapp/routes/**/*.ts"],
     rules: {
       "@typescript-eslint/return-await": "off",

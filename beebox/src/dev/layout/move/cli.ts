@@ -5,7 +5,7 @@
  * specifier the move touches (modules, tests, and `bin/**\/*.ts`). By default it also rewrites every confidently-resolvable
  * non-import mention of a moved path (`mention-rewrite.ts`) and reports the
  * rest as "needs review"; `--no-rewrite-mentions` reverts to printing every
- * mention for hand repair instead. See docs/plans/file-layout.moves.subplan.md.
+ * mention for hand repair instead. See docs/implemented-plans/file-layout.moves.subplan.md.
  *
  * Move list shape: `{ "moves": [{ "from": "<repo-relative>", "to": "<repo-relative>" }] }`.
  *

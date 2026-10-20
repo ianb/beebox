@@ -4,7 +4,7 @@
  * Gemini speech is always requested as a stream. Each audio chunk goes on to
  * the MP3 encoder as it arrives, so the browser starts playing at the
  * provider's first audio, about 0.7 s, rather than at the end of the clip
- * (`docs/plans/tts-streamed-playback.md`).
+ * (`docs/implemented-plans/tts-streamed-playback.md`).
  *
  * The stream is server-sent events. Audio arrives as `step.delta` events whose
  * `delta` holds base64 16-bit PCM; everything else (`interaction.created`,

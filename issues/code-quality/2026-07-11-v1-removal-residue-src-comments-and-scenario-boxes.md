@@ -11,7 +11,7 @@ priority: important
 > deleted with the manifest scheme, so that stale comment cannot be fixed and
 > needs no fix. The other sites still stand.
 
-Fallout from the box-shape v1 removal (`docs/plans/remove-box-shape-v1.md`,
+Fallout from the box-shape v1 removal (`docs/implemented-plans/remove-box-shape-v1.md`,
 steps 1a–1d). Step 1e (docs + layout-spec cleanup) handled the docs and the
 `box-layout-spec.ts`/`box-layout-types.ts` `shapeNotes` field, but two kinds of
 residue remain and were deliberately left out of that docs-scoped pass:

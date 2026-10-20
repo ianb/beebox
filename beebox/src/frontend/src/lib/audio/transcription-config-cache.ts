@@ -1,6 +1,6 @@
 /**
  * Which live transcription service a segment connects to
- * (`docs/plans/resilient-voice-recording.md`, Track 3). The last-known
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 3). The last-known
  * choice is cached per box in `localStorage`: a segment that starts while
  * the box is restarting would otherwise block its live preview on the config
  * query; with a cached choice it tries the socket at once while the query

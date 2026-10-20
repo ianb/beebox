@@ -2,8 +2,8 @@
 //
 // The handle stage looks at each `inbox/triaged/<category>/` bucket,
 // finds the category's landmark, and invokes its handler procedure with
-// the bucket of items passed via `TRIAGE_ITEMS`. Tests inject a stubbed
-// procedure runner so we don't exercise the live procedure engine.
+// the bucket of items passed via `TRIAGE_ITEMS`. Most tests inject a stubbed
+// procedure runner; the last one runs the live procedure engine.
 //
 // See `docs/triage.md` §Handle (stage 3) and `src/core/handle.ts`.
 
@@ -206,4 +206,57 @@ void test("bbx handle used to exit 0 whether a handler failed, reached no verdic
   // dropped rather than trusted:
 
   t.check(readHandlingResults([...unjudged, { category: "junk", outcome: "who-knows" }, "nope"]), unjudged);
+});
+
+// ## A live handler receives every item in its bucket
+//
+// The live runner hands the bucket to the procedure through the `TRIAGE_ITEMS`
+// environment variable. It used to join the paths with NUL bytes, and an
+// environment variable ends at its first NUL, so the spawned shell step saw
+// only the first item. Paths are now one per line. This run uses the real
+// procedure engine: its shell step reads `TRIAGE_ITEMS` with the recipe the
+// generated triage guide documents and records each path it got, including
+// one with spaces.
+void test("The live runner hands the bucket to the procedure through the TRIAGE_ITEMS en...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await box.write("_content/recipes/Recipes.landmark.card", landmark("Recipes", procedureRef("/_config/procedures/collect.procedure.card")));
+  await box.write("_config/procedures/collect.procedure.card", `---
+name: collect
+description: Record the bucket's items
+steps:
+  - id: collect
+    description: Write each item on its own bracketed line
+    run:
+      shells:
+        - |
+          printf '%s\\n' "$TRIAGE_ITEMS" | while IFS= read -r item; do
+            printf '[%s]\\n' "$item"
+          done > _bookkeeping/output/items.txt
+---
+`);
+  await box.write("_bookkeeping/output/.gitkeep", "");
+  await box.write("_content/inbox/triaged/recipes/Bread.doc.card", "<doc>bread</doc>");
+  await box.write("_content/inbox/triaged/recipes/Pasta Salad.doc.card", "<doc>pasta</doc>");
+  box.commitAll("Add handler and bucket");
+
+  const { ctx } = createCollectorContext(box.root);
+  const results = await runHandle({ ctx });
+  t.check({ results, seen: await box.read("_bookkeeping/output/items.txt") }, {
+    results: [
+      {
+        category: "recipes",
+        items: ["Bread.doc.card", "Pasta Salad.doc.card"],
+        outcome: "ran",
+        procedurePath: "_config/procedures/collect.procedure.card",
+      },
+    ],
+    seen: "[_content/inbox/triaged/recipes/Bread.doc.card]\n[_content/inbox/triaged/recipes/Pasta Salad.doc.card]\n",
+  });
 });

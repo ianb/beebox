@@ -68,7 +68,7 @@ export interface Emission {
   readonly spokenStart?: number;
   /**
    * Set when the committed text came from an HQ transcription pass, which
-   * every dictated message gets when it can (docs/plans/hq-always.md). A
+   * every dictated message gets when it can (docs/implemented-plans/hq-always.md). A
    * voice emission without it is live text — HQ failed, timed out, was
    * skipped, or never ran — and the assembler stamps `stt="live"` on it.
    * Mutually exclusive with `words`: an HQ pass drops the realtime words it

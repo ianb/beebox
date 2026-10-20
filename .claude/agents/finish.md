@@ -44,8 +44,7 @@ fixture that affect this work; mere possibility is not a reason to rerun.
 Run only affected checks: save a `bin/finish-preflight --json --no-merge` sheet
 (re-save after any edit), pass it to each `bin/finish-verify --sheet <file> --only
 tests|typecheck|lint|smoke|site` one at a time (parallel preflights contend), or named tests.
-Docs-only close-out needs its pre-commit doc-check, not application tests. Report
-which evidence was reused, the intervening delta, and why it remains applicable.
+Report which evidence was reused, the intervening delta, and why it still applies.
 
 The verifier reruns failing test files once in isolation. Green proceeds; a named flake (passes alone at the same
 content hash) is green: report it, no flake issue (`beebox/test/careful.txt` owns
@@ -95,9 +94,9 @@ reconcile each plan in `plan.docs` this branch introduced or modified:
 - abandoned/superseded → `git mv` to `docs/unimplemented-plans/` + a row in its
   README's disposition table.
 - Set frontmatter `status:` (`implemented`/`partial`/`superseded`/`parked`), no
-  duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
-  `pnpm --dir beebox doc-check --fix` and `pnpm --dir beebox doc-graph`. `--fix` only
-  repairs `.md` links and closed-issue backticks: grep the old path; check moved files' links.
+  duplicate prose line; renames follow `beebox/docs/README.md`. After a move run
+  `doc-check --fix` and `doc-graph` (`pnpm --dir beebox`), then `git grep` the old
+  basename: `--fix` skips tests and misses some paths in code comments and strings.
 
 ## 6. Close resolved issues
 Start with the sheet's `issues`, the plan's frontmatter `issues:`, the briefing,

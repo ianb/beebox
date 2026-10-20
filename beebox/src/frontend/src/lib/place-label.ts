@@ -3,7 +3,7 @@
  *
  * The pill names the current *place* (box ▸ landmark). On a chat page the
  * chat itself publishes its session's context dir (Track C2 of
- * docs/plans/top-nav-ia.md); until then — and on every non-chat page, which
+ * docs/implemented-plans/top-nav-ia.md); until then — and on every non-chat page, which
  * never publishes — the bar derives the place from the route alone. That
  * fallback is this module: a pure pathname → `{ label, dir }` map, so it can
  * be tested without a router.

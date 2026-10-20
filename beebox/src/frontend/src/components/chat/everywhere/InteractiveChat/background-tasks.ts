@@ -1,12 +1,15 @@
 /**
- * Live background-task state: the pure reducer and types behind the in-flight
- * task strip. Background tasks (e.g. a backgrounded shell command) report a
- * lifecycle over the event bus — `started`, `progress`, `updated`, `settled` —
- * and this folds that stream into the small list of tasks currently running.
+ * Live background-task state: the pure reducers and types behind the in-flight
+ * task strip. Membership comes only from the CLI's level signal
+ * (`background_tasks_changed`, forwarded as `chat-task-level`): each payload
+ * replaces the set, so a missed `settled` bookend cannot leave a pill running.
+ * The `started` / `progress` / `updated` / `settled` edge stream only adds
+ * detail (last tool, elapsed time, summary) to a task already in the set. The
+ * SDK leaves the order of the two streams unspecified, so they are never
+ * paired.
  *
- * Terminal tasks drop out of the live list: their settled
- * `<task-notification>` already lands in the transcript as a permanent marker,
- * so keeping them here too would double them up.
+ * A finished task's settled `<task-notification>` lands in the transcript as
+ * a permanent marker.
  */
 
 /** Wire shape of a background-task event, mirroring the backend `TaskEvent`. */
@@ -30,39 +33,44 @@ export interface LiveTask {
   elapsedMs?: number;
 }
 
-const TERMINAL_STATUSES = new Set(["completed", "failed", "stopped", "killed"]);
+/** One entry of the level signal, mirroring the backend `LiveTaskEntry`. */
+export interface LiveTaskEntry {
+  taskId: string;
+  description: string;
+}
 
 /**
- * Fold one task event into the live list. `started` registers a task;
- * `progress`/`updated` merge into an existing one (ignored if we never saw it
- * start — e.g. ambient `skip_transcript` tasks); `settled` (or any terminal
- * status) removes it.
+ * Replace the live set with a level payload. Detail already gathered from
+ * edge events is kept for tasks that remain; tasks absent from the payload
+ * drop out.
+ */
+export function applyTaskLevel(tasks: LiveTask[], level: LiveTaskEntry[]): LiveTask[] {
+  return level.map((entry) => {
+    const existing = tasks.find((t) => t.taskId === entry.taskId);
+    if (existing === undefined) return { taskId: entry.taskId, description: entry.description, status: "running" };
+    return { ...existing, description: entry.description };
+  });
+}
+
+/**
+ * Merge one edge event's detail into a task already in the live set. Edge
+ * events never add or remove tasks (see the module comment), so an event for
+ * a task outside the set is a no-op.
  */
 export function applyTaskEvent(tasks: LiveTask[], event: TaskEvent): LiveTask[] {
-  if (event.phase === "settled" || (event.status !== undefined && TERMINAL_STATUSES.has(event.status))) {
-    return tasks.filter((t) => t.taskId !== event.taskId);
-  }
-
   const existing = tasks.find((t) => t.taskId === event.taskId);
-  if (existing === undefined && event.phase !== "started") {
-    // Progress/updated for a task we never registered — skip it.
-    return tasks;
-  }
+  if (existing === undefined) return tasks;
 
   const merged: LiveTask = {
     taskId: event.taskId,
-    description: event.description ?? existing?.description ?? "Background task",
-    status: event.status ?? existing?.status ?? "running",
+    description: event.description ?? existing.description,
+    status: event.status ?? existing.status,
   };
-  const summary = event.summary ?? existing?.summary;
+  const summary = event.summary ?? existing.summary;
   if (summary !== undefined) merged.summary = summary;
-  const lastToolName = event.lastToolName ?? existing?.lastToolName;
+  const lastToolName = event.lastToolName ?? existing.lastToolName;
   if (lastToolName !== undefined) merged.lastToolName = lastToolName;
-  const elapsedMs = event.elapsedMs ?? existing?.elapsedMs;
+  const elapsedMs = event.elapsedMs ?? existing.elapsedMs;
   if (elapsedMs !== undefined) merged.elapsedMs = elapsedMs;
-
-  if (existing !== undefined) {
-    return tasks.map((t) => (t.taskId === event.taskId ? merged : t));
-  }
-  return [...tasks, merged];
+  return tasks.map((t) => (t.taskId === event.taskId ? merged : t));
 }

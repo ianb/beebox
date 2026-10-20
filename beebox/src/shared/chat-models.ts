@@ -12,7 +12,7 @@ export interface ChatModelOption {
  * An OpenRouter model the box owner added in admin (`openrouterModels` in box
  * config). These bill per use, so they exist only by that act: the static
  * menu below never lists one, and a key alone offers nothing
- * (`docs/plans/openrouter-chat-models.md`).
+ * (`docs/implemented-plans/openrouter-chat-models.md`).
  */
 export interface AddedModel {
   /** OpenRouter's own id, sent to it verbatim — `author/slug[:variant]`. */

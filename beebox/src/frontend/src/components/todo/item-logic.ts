@@ -1,5 +1,5 @@
 /**
- * Pure rules behind `TodoItem` (`docs/plans/todos-ui.md`, Track 2): how a
+ * Pure rules behind `TodoItem` (`docs/implemented-plans/todos-ui.md`, Track 2): how a
  * todo's words are treated, which todos a reading view leaves out, and how a
  * date chip reads. Split from the component so each rule is testable
  * without rendering (`src/frontend/test/components/todo/TodoItem.todo-item.test.ts`).
@@ -15,12 +15,17 @@ import {
   type TodoStatus,
 } from "@shared/todo-model";
 
-/** Status treatment for a todo's own words, the same in a card body, in frontmatter, and in the list. */
+/**
+ * Status treatment for a todo's own words, the same in a card body, in
+ * frontmatter, and in the list. Colors come from the card theme's ink
+ * (`card-ink`, `card-soft`), so a todo reads on light and dark themes alike;
+ * outside a themed card they fall back to the warm palette.
+ */
 const STATUS_TEXT_CLASS: Record<TodoStatus, string> = {
-  open: "text-warm-800",
-  done: "text-warm-400 line-through",
-  parked: "text-warm-400",
-  dropped: "text-warm-400 line-through",
+  open: "text-card-ink",
+  done: "text-card-soft bbx-struck",
+  parked: "text-card-soft",
+  dropped: "text-card-soft bbx-struck",
 };
 
 /** The status word: the name of a checkbox whose todo's words are not known, and the prefix for a parked or dropped one. */

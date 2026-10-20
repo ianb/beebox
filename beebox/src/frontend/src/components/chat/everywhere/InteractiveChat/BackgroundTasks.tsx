@@ -2,23 +2,31 @@
  * The live background-task strip: a row of pills above the composer showing
  * tasks the agent has running in the background (e.g. a backgrounded shell
  * command), each with a pulsing dot, its label, the last tool it touched, and
- * elapsed time. Pills appear when a task starts and disappear when it settles —
- * the settled result then shows as a permanent marker in the transcript.
+ * elapsed time. Pills follow the CLI's live background-task set; a finished
+ * task's result then shows as a permanent marker in the transcript.
  */
 
 import { useState, useCallback } from "react";
-import { applyTaskEvent, type LiveTask, type TaskEvent } from "./background-tasks";
+import { applyTaskEvent, applyTaskLevel, type LiveTask, type LiveTaskEntry, type TaskEvent } from "./background-tasks";
 
 /**
  * Hold the live-task list for one chat session. Returns the current tasks plus
- * the handler that folds in events arriving over SSE.
+ * the handlers that fold in the level signal (membership) and edge events
+ * (detail) arriving over the event bus.
  */
-export function useBackgroundTasks(): { tasks: LiveTask[]; onTaskEvent: (event: TaskEvent) => void } {
+export function useBackgroundTasks(): {
+  tasks: LiveTask[];
+  onTaskEvent: (event: TaskEvent) => void;
+  onTaskLevel: (level: LiveTaskEntry[]) => void;
+} {
   const [tasks, setTasks] = useState<LiveTask[]>([]);
   const onTaskEvent = useCallback((event: TaskEvent) => {
     setTasks((prev) => applyTaskEvent(prev, event));
   }, []);
-  return { tasks, onTaskEvent };
+  const onTaskLevel = useCallback((level: LiveTaskEntry[]) => {
+    setTasks((prev) => applyTaskLevel(prev, level));
+  }, []);
+  return { tasks, onTaskEvent, onTaskLevel };
 }
 
 function formatElapsed(ms: number): string {

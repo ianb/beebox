@@ -1,6 +1,6 @@
 /**
  * Finishing a voice send that a reload interrupted while it waited for its HQ
- * transcript (`docs/plans/resilient-voice-recording.md`, Track 4). The saved
+ * transcript (`docs/implemented-plans/resilient-voice-recording.md`, Track 4). The saved
  * row holds the realtime emission staged when the segment ended; the user
  * picks "Send HQ transcript" (claim) or "Send live text" (fallBack, which
  * answers with the HQ result instead if it is already ready). Nothing here

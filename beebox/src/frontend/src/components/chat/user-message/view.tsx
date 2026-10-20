@@ -163,7 +163,7 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
     currentUserName,
   });
 
-  // Live text is the exception (docs/plans/hq-always.md) and gets a static
+  // Live text is the exception (docs/implemented-plans/hq-always.md) and gets a static
   // label; a late HQ result stays on the box, reachable only through
   // `bbx chat retranscribe`.
   const hqStatus = isLiveTranscriptMessage(firstEntry)

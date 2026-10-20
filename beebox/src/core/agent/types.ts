@@ -20,7 +20,10 @@ export interface AgentInvokeOptions {
   boxRoot: string;
   /** Per-invocation subprocess additions, without changing the parent environment. */
   env?: Record<string, string> | undefined;
-  /** System prompt — provided on first invoke, omitted on resume. */
+  /**
+   * System prompt, sent on every run including resumes. A later invoke that
+   * omits it reuses the agent's last explicit one.
+   */
   systemPrompt?: string;
   /** User prompt for this invocation. */
   prompt: string;
@@ -34,15 +37,18 @@ export interface AgentInvokeOptions {
    * Set false for a small structured pass whose inputs are all in its prompt:
    * on a real box that context is ~9,700 words on EVERY invocation
    * (measured on the test box, 2026-08-26), and a judge emitting a verdict
-   * cannot use it. Claude-only — the Codex harness has no equivalent lever, so
-   * a Codex box still pays it.
+   * cannot use it. On Codex, false skips both Bee Box's `AGENTS.md` expansion
+   * and Codex's own project-doc load.
    */
   loadBoxContext?: boolean;
   /**
    * The built-in tools this run may use. Omitted means the harness default
-   * (every built-in). `[]` gives a pass that works only from its prompt:
-   * no tools, so it cannot read or change the box. Claude-only, like
-   * `loadBoxContext`.
+   * (every built-in). `[]` gives a pass that works only from its prompt.
+   * On Claude it has no tools, so it cannot read or change the box. On Codex,
+   * which cannot list tools, `[]` runs the `read-only` sandbox with web search
+   * off: the pass cannot change the box or reach the network, but it CAN still
+   * read files through its shell (accepted 2026-10-19). Any other list leaves a
+   * Codex run unrestricted.
    */
   tools?: string[];
   /** Maximum agent turns (default: 20). */

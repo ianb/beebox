@@ -14,7 +14,7 @@
  * directly — the key's meaning used to be decided in three places (the box
  * wall, the tRPC context, and by omission in capture/chat-send), and none of
  * them could say "for this box, the owner". Design:
- * `docs/plans/agent-browsing-owner.md`.
+ * `docs/implemented-plans/agent-browsing-owner.md`.
  */
 
 import { loadBoxConfig } from "../core/box/config.js";

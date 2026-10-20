@@ -1,5 +1,5 @@
 /**
- * The field-test operator session (`docs/plans/agent-field-tests.md`, Track 3).
+ * The field-test operator session (`docs/implemented-plans/agent-field-tests.md`, Track 3).
  *
  * One persistent conversation for a whole run — "a person is a single
  * identity" — built on the `ChatBackend` service (`src/services/claude-chat/core.ts`)

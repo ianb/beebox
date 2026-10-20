@@ -29,9 +29,16 @@ export const DEPLOYED_PATHS_PATTERN =
  * lookahead, so the second alternative spells "a first segment other than
  * `box`". The hooks apply it as `grep -vE` before the deployed test, and
  * `bin/deployed-paths.test.ts` checks the package `files` list against it.
+ *
+ * Agent guidance files (`AGENTS.md`/`CLAUDE.md`) at a package root or under
+ * `beebox/src/` and `beebox/deploy/` are also development documentation: none
+ * is in the package `files` or the bundle. Guidance that ships to boxes lives
+ * under `templates/`, `plugins/`, `.agents/` and `docs/box/`, which this
+ * leaves alone.
  */
 export const NOT_SHIPPED_PATTERN =
-  "^beebox/docs/([^/]+$|([^b/][^/]*|b[^o/][^/]*|bo[^x/][^/]*|box[^/]+)/)";
+  "^beebox/docs/([^/]+$|([^b/][^/]*|b[^o/][^/]*|bo[^x/][^/]*|box[^/]+)/)"
+  + "|^beebox/((src|deploy)/(.*/)?)?(AGENTS|CLAUDE)\\.md$|^(tap-check|personal-vibe-check)/(AGENTS|CLAUDE)\\.md$";
 const DEPLOYED_PATHS = new RegExp(DEPLOYED_PATHS_PATTERN);
 const NOT_SHIPPED = new RegExp(NOT_SHIPPED_PATTERN);
 

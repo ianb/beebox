@@ -124,6 +124,6 @@ box root through the same private helper. The memory-symlink and task-output
 route tests now build their fixtures at the resolved path; both fail without
 the fix. The stray `-var-folders-*` directories in the real
 `~/.claude/projects` are filed separately:
-[stray test directories in the real Claude projects store](../../code-quality/2026-10-18-stray-test-dirs-in-real-claude-projects.md).
+[stray test directories in the real Claude projects store](../code-quality/2026-10-18-stray-test-dirs-in-real-claude-projects.md).
 A closed issue with the same root cause, fixed locally at the time:
 [knowledge audit symlink cwd](2026-09-29-knowledge-audit-symlink-cwd-misses-claude-transcript.md).

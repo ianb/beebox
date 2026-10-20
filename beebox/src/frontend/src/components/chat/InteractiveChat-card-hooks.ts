@@ -2,7 +2,7 @@
  * Companion-pane card hooks: URL persistence of the open card and the
  * per-turn activity accumulator. Split out of `InteractiveChat-hooks.ts` to
  * keep that file under the line budget; both are about the card in the
- * two-pane companion layout (see `docs/plans/companion-pane-card-activity.md`).
+ * two-pane companion layout (see `docs/implemented-plans/companion-pane-card-activity.md`).
  */
 
 import { useRef, useCallback } from "react";

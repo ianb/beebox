@@ -20,7 +20,7 @@
  * deliberate skip with a reason. Without it a forced run reports "0 errors"
  * for a service it never contacted, which is the invisible-nothing-happened
  * failure the 2026-09-14 incident was made of
- * (`docs/plans/agent-capability-delegation.md`).
+ * (`docs/implemented-plans/agent-capability-delegation.md`).
  *
  * Emission is opt-in via `BBX_WAKEUP_OUTCOME=1` so an interactive `bbx wakeup`
  * prints nothing extra — routine success should be quiet.

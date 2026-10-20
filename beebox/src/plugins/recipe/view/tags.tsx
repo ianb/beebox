@@ -27,7 +27,7 @@ export const RecipeScaleContext = createContext<number>(1);
  * Display forms for units. Never the single-letter forms: "1 T" vs "1 t" is
  * a 3× misread hazard, so long forms compact only to `Tbsp`/`tsp`, `cup`
  * stays a word, and stored single letters EXPAND to the safe form
- * (issues/bugs/2026-08-09-recipe-view-abbreviates-units.md).
+ * (issues/closed/bugs/2026-08-09-recipe-view-abbreviates-units.md).
  */
 const UNIT_DISPLAY: Record<string, string> = {
   teaspoon: "tsp", teaspoons: "tsp", tsp: "tsp",

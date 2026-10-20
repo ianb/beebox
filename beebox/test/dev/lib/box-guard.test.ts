@@ -123,9 +123,9 @@ void test("This runs the actual CLI against a disposable synthetic box.", async 
 // ## CLI-generated setup baseline passes the guard, then cleanup restores clean status
 //
 // The CLI's forced docs generation can create untracked guidance. Its exact
-// post-generation status is the baseline supplied to the first runner call;
-// cleanup returns the synthetic box to clean status, which later runner calls
-// require. This exercises the guard's baseline contract around actual generation.
+// post-generation status is the baseline supplied to that test's runner call;
+// cleanup returns the synthetic box to clean status, which the next test's
+// generation starts from. This exercises the guard's baseline contract around actual generation.
 // The box is one made before `agents-md-2026-10` (`legacyInstructions`), whose
 // generated root `CLAUDE.md` is an owned file the generation commit leaves
 // untracked. (In a converted box the `**/AGENTS.md` mirror row still matches the

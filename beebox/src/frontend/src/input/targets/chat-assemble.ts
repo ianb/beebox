@@ -107,7 +107,7 @@ export function assembleChatMessage(
   const text = missingTokens.length === 0
     ? emission.text
     : [emission.text, ...missingTokens].filter((s) => s.length > 0).join(" ");
-  // <unsure> marking (Track 3, docs/plans/transcript-confidence.md) runs on
+  // <unsure> marking (Track 3, docs/implemented-plans/transcript-confidence.md) runs on
   // `text` — before selections fold in — so the words-stream alignment never
   // has to reason about `<user-selection>` markup, and never risks landing a
   // wrap partway through one. Selection anchor-matching (below) still works
@@ -142,7 +142,7 @@ export function assembleChatMessage(
   } else {
     const diarizedAttr = emission.diarized ? " diarized=\"1\"" : "";
     // Every dictated message gets the HQ pass when it can
-    // (docs/plans/hq-always.md), so the marker is on the exception:
+    // (docs/implemented-plans/hq-always.md), so the marker is on the exception:
     // `stt="live"` says this text is the live transcript — HQ failed, timed
     // out, was skipped by the user, the box has no HQ key, or there was no
     // recording. HQ text carries no `stt`, only `stt-service` naming the

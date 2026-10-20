@@ -7,7 +7,7 @@
  * boxholder (via notifyBoxholder) about the newly-pending ones: a `dot` (a
  * badge), or `quiet` when one of them carries `urgency: time-bound`. Each question is notified once while it stays pending;
  * when it's answered it leaves the pending set and the latch, so a later
- * question can notify again. See docs/plans/web-push-notifications.md (Track D).
+ * question can notify again. See docs/implemented-plans/web-push-notifications.md (Track D).
  */
 
 import * as fs from "node:fs/promises";

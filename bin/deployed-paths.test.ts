@@ -46,6 +46,31 @@ test("development docs under beebox/docs/ do not ship; docs/box/ does", () => {
   }
 });
 
+test("agent guidance files do not ship unless they sit in a shipped box-facing tree", () => {
+  for (const path of [
+    "beebox/AGENTS.md",
+    "beebox/CLAUDE.md",
+    "beebox/src/hub/AGENTS.md",
+    "beebox/src/frontend/src/components/chat/AGENTS.md",
+    "beebox/deploy/AGENTS.md",
+    "personal-vibe-check/AGENTS.md",
+    "tap-check/CLAUDE.md",
+  ]) {
+    assert.equal(isDeployedPath(path), false, path);
+  }
+  for (const path of [
+    "beebox/templates/box/AGENTS.md",
+    "beebox/plugins/courseware/AGENTS.md",
+    "beebox/.agents/skills/x/AGENTS.md",
+    "beebox/docs/box/AGENTS.md",
+    "beebox/src/hub/AGENTS.md.ts",
+    "beebox/src/hub/NOTES.md",
+    "personal-vibe-check/src/AGENTS.md",
+  ]) {
+    assert.equal(isDeployedPath(path), true, path);
+  }
+});
+
 test("every docs/ entry in beebox's package files list still ships", () => {
   // The package `files` list is what reaches a box; a docs/ entry added there
   // must not fall under NOT_SHIPPED_PATTERN, or its edits would never deploy.

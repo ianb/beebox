@@ -15,7 +15,7 @@
  * chat the window lasts until the engine assigns a session id — a cold spawn is
  * allowed ten minutes — so the reload lands on a blank chat with no sign the
  * message was ever sent
- * (`issues/bugs/2026-08-09-reload-loses-in-flight-question.md`).
+ * (`issues/closed/bugs/2026-08-09-reload-loses-in-flight-question.md`).
  *
  * This reads the other record. It deliberately does NOT decide what is already
  * durable: it hands back a recent, bounded slice of what was accepted, and the

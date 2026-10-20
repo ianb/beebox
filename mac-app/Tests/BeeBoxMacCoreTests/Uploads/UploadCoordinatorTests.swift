@@ -67,18 +67,23 @@ final class UploadCoordinatorTests: XCTestCase {
 
         let problem = await rig.coordinator.addFolder(path: directory.path, box: rig.box, disposition: .keep)
 
+        await rig.coordinator.sweepAll()
+
         XCTAssertNil(problem)
         XCTAssertEqual(rig.scanTokens.tokens[rig.box.id], "scan-1")
         XCTAssertNotNil(rig.folders.scanTokenNames[rig.box.id])
         XCTAssertEqual(rig.sweeper.targets.map(\.scanToken), ["scan-1"])
         let folder = try XCTUnwrap(rig.folders.folders.first)
         XCTAssertEqual(rig.coordinator.statuses[folder.id]?.totalSent, 2)
+        XCTAssertEqual(rig.coordinator.statuses[folder.id]?.lastSentCount, 2)
+        XCTAssertEqual(rig.coordinator.statuses[folder.id]?.sweeping, false)
         XCTAssertEqual(rig.notices.items.map(\.uploaded), [2])
 
         // A second folder for the same box reuses the token.
         let second = directory.appendingPathComponent("photos")
         try FileManager.default.createDirectory(at: second, withIntermediateDirectories: true)
         _ = await rig.coordinator.addFolder(path: second.path, box: rig.box, disposition: .keep)
+        await rig.coordinator.sweepAll()
         XCTAssertEqual(rig.tokenTransport.requests.count, 1)
     }
 
@@ -88,7 +93,9 @@ final class UploadCoordinatorTests: XCTestCase {
 
         let problem = await rig.coordinator.addFolder(path: directory.path, box: rig.box, disposition: .keep)
 
-        XCTAssertEqual(problem, .notOwner)
+        await rig.coordinator.sweepAll()
+
+        XCTAssertEqual(problem, .pairedByNobody)
         XCTAssertTrue(rig.folders.folders.isEmpty)
     }
 
@@ -99,6 +106,8 @@ final class UploadCoordinatorTests: XCTestCase {
         rig.tokenTransport.queue(200, #"{"result":{"data":{"ok":true}}}"#)
 
         let problem = await rig.coordinator.addFolder(path: directory.path, box: rig.box, disposition: .keep)
+
+        await rig.coordinator.sweepAll()
 
         XCTAssertEqual(problem, .credentialNotSaved)
         XCTAssertEqual(rig.tokenTransport.requests.compactMap(\.url?.lastPathComponent), ["scanTokens.create", "scanTokens.revoke"])
@@ -112,6 +121,8 @@ final class UploadCoordinatorTests: XCTestCase {
         let rig = try await makeRig(oldUploaderPlist: plist)
 
         let problem = await rig.coordinator.addFolder(path: directory.path, box: rig.box, disposition: .keep)
+
+        await rig.coordinator.sweepAll()
 
         XCTAssertEqual(problem, .oldUploaderWatching)
         XCTAssertTrue(rig.tokenTransport.requests.isEmpty)
@@ -129,6 +140,7 @@ final class UploadCoordinatorTests: XCTestCase {
         rig.tokenTransport.queue(200, mintedBody("scan-1"))
         rig.sweeper.summary = SweepSummary.empty.with(problem: .boxUnavailable)
         _ = await rig.coordinator.addFolder(path: directory.path, box: rig.box, disposition: .keep)
+        await rig.coordinator.sweepAll()
         let folder = try XCTUnwrap(rig.folders.folders.first)
         XCTAssertEqual(rig.coordinator.statuses[folder.id]?.problem, .sweep(.boxUnavailable))
         XCTAssertTrue(rig.coordinator.hasStandingProblem)
@@ -144,6 +156,7 @@ final class UploadCoordinatorTests: XCTestCase {
         let rig = try await makeRig()
         rig.tokenTransport.queue(200, mintedBody("scan-1"))
         _ = await rig.coordinator.addFolder(path: directory.path, box: rig.box, disposition: .keep)
+        await rig.coordinator.sweepAll()
         let folder = try XCTUnwrap(rig.folders.folders.first)
 
         rig.tokenTransport.queue(500, #"{"error":{"message":"boom"}}"#)
@@ -164,6 +177,7 @@ final class UploadCoordinatorTests: XCTestCase {
         let rig = try await makeRig()
         rig.tokenTransport.queue(200, mintedBody("scan-1"))
         _ = await rig.coordinator.addFolder(path: directory.path, box: rig.box, disposition: .keep)
+        await rig.coordinator.sweepAll()
 
         let result = await rig.coordinator.removeBox(rig.box, force: true)
 
@@ -224,6 +238,8 @@ final class UploadReviewFixTests: XCTestCase {
 
         let problem = await coordinator.addFolder(path: directory.path, box: box, disposition: .keep)
 
+        await coordinator.sweepAll()
+
         XCTAssertNotNil(problem)
         XCTAssertNil(folders.scanTokenNames[box.id])
     }
@@ -239,6 +255,8 @@ final class UploadReviewFixTests: XCTestCase {
 
         let problem = await coordinator.addFolder(path: directory.path, box: box, disposition: .keep)
 
+        await coordinator.sweepAll()
+
         XCTAssertNil(problem)
         XCTAssertEqual(tokens.requests.compactMap(\.url?.lastPathComponent), ["scanTokens.revoke", "scanTokens.create"])
         XCTAssertNotEqual(folders.scanTokenNames[box.id], "mac-left-over")
@@ -253,6 +271,8 @@ final class UploadReviewFixTests: XCTestCase {
         let (coordinator, _, box) = try await pairedRig(sweeper: sweeper, tokens: tokens, clock: clock)
 
         _ = await coordinator.addFolder(path: directory.path, box: box, disposition: .keep)
+
+        await coordinator.sweepAll()
         XCTAssertEqual(sweeper.targets.count, 1)
 
         await coordinator.sweepAll()
@@ -274,6 +294,8 @@ final class UploadReviewFixTests: XCTestCase {
         let (coordinator, folders, box) = try await pairedRig(sweeper: sweeper, tokens: tokens, clock: MutableClock())
 
         _ = await coordinator.addFolder(path: directory.path, box: box, disposition: .keep)
+
+        await coordinator.sweepAll()
 
         let folder = try XCTUnwrap(folders.folders.first)
         XCTAssertEqual(coordinator.statuses[folder.id]?.failedInFolder, 1)

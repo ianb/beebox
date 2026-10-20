@@ -1,5 +1,5 @@
 /**
- * Hard-assert check scripts (`docs/plans/agent-field-tests.md`, Track 2/4).
+ * Hard-assert check scripts (`docs/implemented-plans/agent-field-tests.md`, Track 2/4).
  *
  * A scenario item names scripts in its scenario's `checks/`; the harness runs
  * each in the operational box root after the box goes quiet. Exit 0 is a pass.

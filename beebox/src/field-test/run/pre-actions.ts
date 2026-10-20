@@ -1,6 +1,6 @@
 /**
  * Checklist-item `pre` actions — the world changing between activities
- * (`docs/plans/agent-field-tests.md`, Track 2).
+ * (`docs/implemented-plans/agent-field-tests.md`, Track 2).
  *
  * Two exist, and they use DIFFERENT wakeups on purpose (they are not
  * interchangeable — `bbx wakeup --connector <name>` skips on-wakeup scripts by

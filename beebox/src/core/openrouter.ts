@@ -1,6 +1,6 @@
 /**
  * OpenRouter as a FALLBACK route for the box's optional model-backed services
- * (`issues/exploration/2026-08-31-openrouter-optional-services-consolidation.md`).
+ * (`issues/closed/exploration/2026-08-31-openrouter-optional-services-consolidation.md`).
  *
  * The product shape is one secret and no configuration: grant a box an
  * `openrouter` key and the services that can run through OpenRouter simply do.

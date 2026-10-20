@@ -1,7 +1,7 @@
 /**
  * Raw-AST walk for `{% todo %}` tags inside one card's markdown body, keeping
  * each todo's POSITION (heading path, enclosing list item) and its REFERENCES
- * (`{% see-also %}` refs, markdown links) — `docs/plans/todo-collection.md`
+ * (`{% see-also %}` refs, markdown links) — `docs/implemented-plans/todo-collection.md`
  * Track 2.
  *
  * Parses the body once, runs `Markdoc.validate` once, then walks the RAW
@@ -27,7 +27,7 @@
  * Todo identity (`TodoLocator`) and the pass that assigns it
  * (`assignLocators`) live in `shared/todo-locators.ts`, not here — the
  * frontend render path needs the same numbering, so one function serves
- * both (`docs/plans/todos-ui.md`, Track 2).
+ * both (`docs/implemented-plans/todos-ui.md`, Track 2).
  */
 
 import Markdoc from "@markdoc/markdoc";

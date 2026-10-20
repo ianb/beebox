@@ -6,7 +6,7 @@
  * them by calling `defineRegistry`. The call is also the declaration the
  * layout check reads: `directory` names the set, `entry` names the entry
  * module of a directory member, and `members` must be exactly the imports
- * from that directory. Rules: docs/plans/file-layout.md, rule 4.
+ * from that directory. Rules: docs/implemented-plans/file-layout.md, rule 4.
  *
  * Two member forms. A list with a `key` function derives each key from the
  * member (`(command) => command.name()`); a record gives keys literally and

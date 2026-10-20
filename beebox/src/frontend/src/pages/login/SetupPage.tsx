@@ -2,7 +2,7 @@
  * `/auth/setup` — first-run account creation. The setup token lives only in
  * the URL query string (`?token=...`), printed to the server console at
  * boot; it is never fetched, displayed, or linked-to from any page (see
- * docs/plans/local-password-auth.md Track C). Without a token in the URL,
+ * docs/implemented-plans/local-password-auth.md Track C). Without a token in the URL,
  * this renders the same console/CLI pointer as a dead form would otherwise
  * need, rather than a form nobody can submit.
  *

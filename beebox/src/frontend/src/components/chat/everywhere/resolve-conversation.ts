@@ -27,7 +27,7 @@ export interface ResolvedConversation {
    * The resolver created this conversation for this tab and nobody has written
    * in it yet: a `start` target, or a session that still holds this tab's
    * reservation receipt. An existing session with no entries and no receipt is
-   * not unstarted (issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md).
+   * not unstarted (issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md).
    */
   unstarted: boolean;
 }

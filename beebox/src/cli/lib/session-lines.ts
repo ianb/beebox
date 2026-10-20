@@ -7,7 +7,7 @@
  * image use has lines of ~1.3 MB, and the parse builds an object graph several
  * times that. None was on the web hot path, so none of them caused the 2026-08
  * incident, but they were the same fuel behind slower readers
- * (`issues/code-quality/2026-08-25-transcript-readers-without-the-oversize-guard.md`).
+ * (`issues/closed/code-quality/2026-08-25-transcript-readers-without-the-oversize-guard.md`).
  *
  * So the guard moved here, and every reader takes it by construction rather than
  * by remembering to. A caller sees one of two things per line:

@@ -1,6 +1,6 @@
 /**
  * One card in, its todos out — the PURE stage of the todo collection
- * (`docs/plans/todo-collection.md`, Track 2).
+ * (`docs/implemented-plans/todo-collection.md`, Track 2).
  *
  * `extractCardTodos` reads no clock, no timezone, and no other card. Its
  * whole input is the card's own text plus the box's schema map, which is

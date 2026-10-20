@@ -76,6 +76,30 @@ details > summary {
   cursor: pointer;
 }
 
+/* Struck text is still read: a done or dropped todo, or `~~text~~` in
+   Markdown. A thin line in a fainter tint of the text color keeps the glyph
+   shapes visible; the text color stays at its readable contrast. */
+.bbx-struck,
+del,
+s {
+  text-decoration-line: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 55%, transparent);
+}
+
+/* Revealed `{% redacted %}` text keeps an iris cast so it still reads as
+   "this was hidden". Mixing iris into the surrounding text color, instead of
+   a fixed iris shade, keeps the contrast of whatever surface it sits on:
+   dark ink on a light card, light ink on a dark one. */
+.bbx-redacted-revealed {
+  color: color-mix(in srgb, currentColor 50%, #7b6fb0);
+  background-color: color-mix(in srgb, #7b6fb0 14%, transparent);
+  border-radius: 2px;
+  padding-inline: 0.15em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 /* ===== Elegant print styles for Markdown / prose in the browse view ===== */
 
 @media print {

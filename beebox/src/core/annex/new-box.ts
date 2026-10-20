@@ -15,7 +15,7 @@
  *    nothing to commit, so `git commit` exits 1 and the conversion reports
  *    failure over a box it actually converted correctly. A fresh box is the
  *    zero-asset case by definition. See
- *    `issues/bugs/2026-09-14-to-annex-fails-on-zero-asset-box.md`.
+ *    `issues/closed/bugs/2026-09-14-to-annex-fails-on-zero-asset-box.md`.
  *
  * The box `.gitignore` is NOT written here. `initBox` writes it — once, and
  * unconditionally, since there is only one block a box can have. What still

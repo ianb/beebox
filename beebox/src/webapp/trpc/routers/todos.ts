@@ -1,5 +1,5 @@
 /**
- * Todo writes from the web UI (`docs/plans/todos-ui.md`, Track 3).
+ * Todo writes from the web UI (`docs/implemented-plans/todos-ui.md`, Track 3).
  *
  * `todos.setStatus` ticks one todo off, or reopens it. The client addresses
  * the todo by card path + locator, and also sends the text and status it

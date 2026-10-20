@@ -7,9 +7,9 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import { encodeProjectDir } from "../../src/core/chat/session/transcript-paths.ts";
-import { assertPreviousRunsReported, allocateRun } from "./journeys/provisioning.ts";
+import { JOURNEY_WORK, assertPreviousRunsReported, allocateRun } from "./journeys/provisioning.ts";
 
 void test("line 14", async (t) => {
   t.teardown(async () => {
@@ -57,4 +57,11 @@ void test("line 14", async (t) => {
   t.check(existsSync(join(retainedTranscript, "old-session.jsonl")), true);
 
   await t.checkThrows(async () => (allocateRun({ work, boxes, id: "../real-box" })), "InvalidJourneyIdError");
+});
+
+void test("journey run directories sit outside beebox/, which a box's node_modules links to", async (t) => {
+  const beebox = resolve(import.meta.dirname, "../..");
+  t.check(relative(beebox, JOURNEY_WORK).split(sep)[0], "..");
+
+  t.check(JOURNEY_WORK, join(resolve(beebox, ".."), "user-stories-work", "journeys"));
 });

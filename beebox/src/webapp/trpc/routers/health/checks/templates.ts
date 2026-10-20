@@ -8,7 +8,7 @@
  * the definition of what `bbx health` answers. Its absence here let five correct
  * upstream fixes ship without one of them reaching the box — the failing task
  * and its parked fix were both on screen, in different commands
- * (issues/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
+ * (issues/closed/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
  *
  * Severity: `warning` normally — drift is a pending choice, not a defect, and
  * must not fail a deploy. It escalates to `error` when a parked path is the

@@ -54,6 +54,8 @@ struct UploadsTab: View {
         .sheet(item: $adding) { model in
             AddUploadSheet(model: model, boxes: pairedBoxes) { adding = nil } add: { box in
                 await add(model, box: box)
+            } sweep: {
+                await coordinator.sweepAll()
             }
         }
         .alert(
@@ -198,11 +200,15 @@ enum UploadStatusText {
     static func line(for status: FolderStatus?) -> String {
         guard let status else { return "Waiting for the first sweep" }
         if let problem = status.problem { return problem.message }
+        if status.sweeping { return "Checking for new files and sending them…" }
         var parts: [String] = []
         if let sent = status.lastSentAt {
-            parts.append("last sent \(sent.formatted(date: .omitted, time: .shortened))")
+            parts.append("Sent \(files(status.lastSentCount)) at \(sent.formatted(date: .omitted, time: .shortened))")
+            if status.totalSent > status.lastSentCount {
+                parts.append("\(files(status.totalSent)) since Bee Box Desktop started")
+            }
         } else if let swept = status.lastSweepAt {
-            parts.append("checked \(swept.formatted(date: .omitted, time: .shortened)), nothing new")
+            parts.append("Checked \(swept.formatted(date: .omitted, time: .shortened)), nothing new")
         }
         if status.rejectedInFolder > 0 {
             parts.append("\(status.rejectedInFolder) refused by the box, left in the folder")
@@ -211,6 +217,10 @@ enum UploadStatusText {
             parts.append("\(status.failedInFolder) could not be sent and will be tried again")
         }
         return parts.joined(separator: " · ")
+    }
+
+    private static func files(_ count: Int) -> String {
+        count == 1 ? "1 file" : "\(count) files"
     }
 }
 
@@ -239,6 +249,7 @@ private struct AddUploadSheet: View {
     let boxes: [PairedBox]
     let close: () -> Void
     let add: (PairedBox) async -> String?
+    let sweep: () async -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -276,6 +287,10 @@ private struct AddUploadSheet: View {
                 Text(failure).foregroundStyle(.red)
             }
             HStack {
+                if model.working {
+                    ProgressView().controlSize(.small)
+                    Text("Setting up the scanner credential on the box…").font(.caption).foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button("Cancel", action: close).keyboardShortcut(.cancelAction)
                 Button("Start Watching") {
@@ -289,6 +304,7 @@ private struct AddUploadSheet: View {
                         } else {
                             UploadNotifications.requestPermission()
                             close()
+                            await sweep()
                         }
                     }
                 }

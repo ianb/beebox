@@ -28,7 +28,7 @@ public enum FolderProblem: Error, Equatable, Sendable {
     case boxMissing
     case boxNotPaired
     case deviceRefused
-    case notOwner
+    case pairedByNobody
     case scanTokenUnavailable(String)
     case credentialNotSaved
     case oldUploaderWatching
@@ -44,7 +44,7 @@ public enum FolderProblem: Error, Equatable, Sendable {
         case .boxMissing: "Its box is no longer paired."
         case .boxNotPaired: "Pair this Mac with the box first."
         case .deviceRefused: "The box no longer accepts this Mac. Pair again."
-        case .notOwner: "Only the box owner's pairing can send scans."
+        case .pairedByNobody: "The box does not know who paired this Mac. Remove the box, then pair again."
         case .scanTokenUnavailable(let detail): "Could not set up the scanner credential: \(detail)"
         case .credentialNotSaved: "Could not save the scanner credential in the Keychain."
         case .oldUploaderWatching: "The command-line uploader already watches this folder. Remove it with `bin/scan-uploader schedule uninstall` first."
@@ -57,7 +57,12 @@ public enum FolderProblem: Error, Equatable, Sendable {
 
 public struct FolderStatus: Equatable, Sendable {
     public var lastSweepAt: Date?
+    /// True while a sweep of this folder runs.
+    public var sweeping = false
     public var lastSentAt: Date?
+    /// Files the last sweep that sent anything sent.
+    public var lastSentCount = 0
+    /// Files sent since the app started.
     public var totalSent = 0
     public var rejectedInFolder = 0
     /// Files the last sweep could not send (too large, a server error); they
@@ -150,7 +155,8 @@ public final class UploadCoordinator: ObservableObject {
     }
 
     /// Adds a folder after checking for the old uploader, and sets up the box's
-    /// scan token if it has none.
+    /// scan token if it has none. It does not send anything: the caller starts
+    /// a sweep, so the add sheet can close before a full folder uploads.
     public func addFolder(
         path: String,
         box: PairedBox,
@@ -167,7 +173,6 @@ public final class UploadCoordinator: ObservableObject {
         let folder = UploadFolder(id: UUID(), folderPath: path, boxID: box.id, disposition: disposition, photosAlbum: photosAlbum)
         guard folders.add(folder) else { return .credentialNotSaved }
         log.info("watched folder added folder=\(folder.folder.lastPathComponent) box=\(box.displayHost) after=\(disposition.rawValue) photos=\(photosAlbum != nil)")
-        await sweepAll()
         return nil
     }
 
@@ -225,6 +230,9 @@ public final class UploadCoordinator: ObservableObject {
 
     private func sweep(_ folder: UploadFolder) async {
         var status = statuses[folder.id] ?? FolderStatus()
+        status.sweeping = true
+        statuses[folder.id] = status
+        status.sweeping = false
         defer { statuses[folder.id] = status }
         guard let box = boxes.boxes.first(where: { $0.id == folder.boxID }) else {
             status.problem = .boxMissing
@@ -254,6 +262,7 @@ public final class UploadCoordinator: ObservableObject {
         }
         if summary.uploaded > 0 {
             status.lastSentAt = now()
+            status.lastSentCount = summary.uploaded
             status.totalSent += summary.uploaded
         }
         let problem = summary.standingProblem.map(FolderProblem.sweep) ?? photosProblem.map(FolderProblem.photos)
@@ -368,8 +377,8 @@ public final class UploadCoordinator: ObservableObject {
     private func problem(for error: ScanTokenError, box: PairedBox) -> FolderProblem {
         log.warning("scan token request failed host=\(box.displayHost) error=\(error)")
         switch error {
-        case .notOwner:
-            return .notOwner
+        case .pairedByNobody:
+            return .pairedByNobody
         case .deviceRefused:
             boxes.markCredentialRefused(box)
             return .deviceRefused

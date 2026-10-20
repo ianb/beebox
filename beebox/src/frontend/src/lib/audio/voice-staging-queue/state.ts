@@ -1,7 +1,7 @@
 /**
  * Mutable state and the low-level mutators for the voice-staging queue
  * (`voice-staging-queue.ts`, Track 2 of
- * `docs/plans/resilient-voice-recording.md`). Split out to keep the queue
+ * `docs/implemented-plans/resilient-voice-recording.md`). Split out to keep the queue
  * module's own line budget — this half owns "what does the queue contain and
  * how does a write to it get persisted"; the drain loop
  * (`voice-staging-drainer.ts`) owns "what does the queue do about it".

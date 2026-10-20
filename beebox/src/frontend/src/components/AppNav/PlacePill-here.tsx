@@ -1,5 +1,5 @@
 /**
- * The `PlacePill`'s folder ("here") menu, reduced form (docs/plans/top-nav-ia.md
+ * The `PlacePill`'s folder ("here") menu, reduced form (docs/implemented-plans/top-nav-ia.md
  * Track C1, docs/plans/box-screen.md track 3): "Open <dir>/", "Search", and
  * the landmark's curated links and groups, rendered as plain navigations to
  * the card route. The landmark card itself is not a row: the agent edits it,

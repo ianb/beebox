@@ -1,7 +1,7 @@
 /**
  * Rule 6 (no `index`; re-export modules are public surfaces only, kept in
  * `src/exports/`) and principle 4 (a name is never repeated: a file name
- * does not repeat its directory's name). Rules: docs/plans/file-layout.md.
+ * does not repeat its directory's name). Rules: docs/implemented-plans/file-layout.md.
  */
 import type { Finding, LayoutRule, PackageLayout, PublicSurface } from "../../model.js";
 import { baseOf, dirOf, isWithin, stemOf } from "../../graph.js";

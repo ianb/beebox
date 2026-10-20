@@ -4,7 +4,7 @@
  * first message exists.
  *
  * This is the walk that would have caught the filed issue
- * (`issues/features/2026-08-20-cannot-capture-into-a-new-chat.md`): capture used
+ * (`issues/closed/features/2026-08-20-cannot-capture-into-a-new-chat.md`): capture used
  * to render as "Capture… (send a message first)" until the harness had named the
  * chat, which made the most natural way to start a conversation — open a chat,
  * put the photos in — impossible.

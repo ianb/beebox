@@ -40,7 +40,7 @@ export type RouterInput = inferRouterInputs<AppRouter>;
  * happened and offers the login page — and the 401 is returned so callers fail
  * normally. The person chooses when to leave the page.
  *
- * See `issues/bugs/2026-08-25-one-401-ejects-the-whole-app-to-a-login-form.md`.
+ * See `issues/closed/bugs/2026-08-25-one-401-ejects-the-whole-app-to-a-login-form.md`.
  */
 function reportSessionEnded(): void {
   const returnTo = encodeURIComponent(window.location.pathname + window.location.search);

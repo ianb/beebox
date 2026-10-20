@@ -1,7 +1,7 @@
 /**
- * The place summary for one card (`docs/plans/todos-ui.md`, Track 4):
- * "3 now · 1 later · 1 overdue · 2 done" — the plate's own split, so
- * the numbers agree with the plate and its badge. It is the collection's reduction, rendered —
+ * The place summary for one card (`docs/implemented-plans/todos-ui.md`, Track 4):
+ * "3 now · 1 later · 1 overdue · 2 done" — the todo page's own split, so
+ * the numbers agree with the todo page and its badge. It is the collection's reduction, rendered —
  * boxholder scope, so an agent follow-up never counts here — and the
  * reduction is complete regardless of the status filter
  * (`core/collection/types.ts`).

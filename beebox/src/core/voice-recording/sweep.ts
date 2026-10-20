@@ -1,5 +1,5 @@
 /**
- * Voice-recording GC sweep (`docs/plans/resilient-voice-recording.md`,
+ * Voice-recording GC sweep (`docs/implemented-plans/resilient-voice-recording.md`,
  * Track 1). Runs on the same awake-timeout cadence as the capture
  * abandonment sweep (`core/capture/sweep.ts`'s `scheduleAbandonmentSweep`,
  * wired from `webapp/routes/voice-lifecycle.ts`).

@@ -8,7 +8,7 @@
  * each (capture-image and tool payloads), one `chat.history` request cost
  * ~50 MB of transient heap, and concurrent identical requests stacked linearly
  * into the 1.9 GB V8 cap — four `bbx serve` OOMs on 2026-08-03/04
- * (`issues/bugs/2026-08-04-chat-history-parse-transient-oom.md`).
+ * (`issues/closed/bugs/2026-08-04-chat-history-parse-transient-oom.md`).
  *
  * A line past the threshold is never parsed. It is either dropped (when the
  * head shows it is a record the scan would have dropped anyway) or becomes a

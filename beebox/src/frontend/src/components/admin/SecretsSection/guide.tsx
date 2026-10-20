@@ -1,7 +1,7 @@
 /**
  * The per-name guide panel shown above the Value field once a name resolves
  * to a server-owned guide (`trpc.secrets.guides`, Track 2/3 of
- * `docs/plans/secret-entry-guidance.md`) — what the credential is, what the
+ * `docs/implemented-plans/secret-entry-guidance.md`) — what the credential is, what the
  * box uses it for, and how to get one, as numbered
  * setup steps. Also the post-save message
  * builder: what the key now does is the truth the boxholder is waiting for

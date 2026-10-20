@@ -8,7 +8,7 @@
  * Readers branch on `tooling` and nothing else. A missing or unrecognized
  * value is `unset`, which every caller must treat exactly like `agent` — a
  * spawn site that forgets the marker gets delegation or a refusal, never local
- * credential use. See `docs/plans/agent-capability-delegation.md`.
+ * credential use. See `docs/implemented-plans/agent-capability-delegation.md`.
  */
 
 export type SpawnProfile = "agent" | "tooling" | "unset";

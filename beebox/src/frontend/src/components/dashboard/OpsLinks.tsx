@@ -1,7 +1,7 @@
 /**
  * Page-level launcher row for the Dashboard's sibling ops-plane surfaces.
  *
- * The Dashboard is no longer the landing page (docs/plans/top-nav-ia.md) —
+ * The Dashboard is no longer the landing page (docs/implemented-plans/top-nav-ia.md) —
  * it is reached from the app bar's Box submenu, and Browse/History sit
  * beside it there. This row repeats that adjacency on the page itself so
  * the ops plane is navigable once you are inside it. RecentActivity's

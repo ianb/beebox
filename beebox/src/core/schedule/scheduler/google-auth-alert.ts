@@ -13,7 +13,7 @@
  * A dead grant is a health entry (the `google-auth` check, with the reconnect
  * link) and never notifies on its own (docs/implemented-plans/notifications.md, Track E).
  * A boxholder-requested schedule it stops is promoted separately
- * (`promotion.ts`). See docs/plans/google-auth-reauth-health.md.
+ * (`promotion.ts`). See docs/implemented-plans/google-auth-reauth-health.md.
  */
 
 import { probeGoogleAuthIfStale } from "../../../google/auth-status.js";

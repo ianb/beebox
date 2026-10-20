@@ -1,6 +1,6 @@
 /**
  * The app bar's session chip — chat fiddling, named by its object
- * (docs/plans/top-nav-ia.md Track C2). Reshaped from the chat header's `⋯`
+ * (docs/implemented-plans/top-nav-ia.md Track C2). Reshaped from the chat header's `⋯`
  * ChatMenu: same menu machinery (New session, Model ›, Advanced ›, the
  * panel-swap idiom).
  *

@@ -255,7 +255,7 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
     url: `/api/trpc/files.kind?input=${encodeURIComponent(JSON.stringify({ path: "_content" }))}`,
     headers: browseHeaders,
   });
-  const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/scanTokens.list", headers: browseHeaders });
+  const ownerCall = await plain.request({ method: "GET", url: "/api/trpc/voice.capabilities", headers: browseHeaders });
 
   // The inventory summary is a large generated report; the status shows the call reached the procedure.
   t.check(authedCall.statusCode, 200);
@@ -266,7 +266,7 @@ void test("createContext (server-box-scope.ts) resolves identity through resolve
       error: {
         message: "Owner access required",
         code: -32003,
-        data: { code: "FORBIDDEN", httpStatus: 403, path: "scanTokens.list", recovery: null },
+        data: { code: "FORBIDDEN", httpStatus: 403, path: "voice.capabilities", recovery: null },
       },
     },
   });

@@ -1,5 +1,5 @@
 /**
- * The todos the server found in the card being shown (`docs/plans/todos-ui.md`,
+ * The todos the server found in the card being shown (`docs/implemented-plans/todos-ui.md`,
  * Tracks 2 and 4). `FileView` provides it from the per-card summary query
  * (`CardTodos.tsx`); a rendered todo reads its plate state from it by
  * locator, since plate state depends on the box timezone and only the server

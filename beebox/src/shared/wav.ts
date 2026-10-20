@@ -2,7 +2,7 @@
  * WAV header builder for 16-bit PCM audio.
  *
  * One header layout, shared by every WAV byte this codebase writes (#8,
- * `docs/plans/resilient-voice-recording.md`): the server's HQ piece cutter
+ * `docs/implemented-plans/resilient-voice-recording.md`): the server's HQ piece cutter
  * (`core/voice-recording/pieces.ts`, which wraps each ≤300 s piece of a voice
  * recording before sending it to the transcription provider). The browser
  * stages raw PCM and never builds a WAV. Isomorphic — no Node/DOM-only APIs —

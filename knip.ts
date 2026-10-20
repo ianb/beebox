@@ -33,7 +33,7 @@ const config: KnipConfig = {
         "src/webapp/server-main.ts",
         "src/dev/gen-image.ts",
         // Declarative-only `defineRegistry` completeness declaration
-        // (docs/plans/file-layout.md rule 1/4): `appRouter` is built from the
+        // (docs/implemented-plans/file-layout.md rule 1/4): `appRouter` is built from the
         // same `routerMembers` object, but nothing imports the registry
         // module for its own sake.
         "src/webapp/trpc/routers.ts",

@@ -22,6 +22,7 @@ import { createFakeGoogleDrive, type DriveFile, type FakeSpreadsheet } from "../
 import { mountDriveFolder, type MountFolderResult } from "../../../../src/connectors/google-drive/mounts/core.js";
 import { inspectDriveItem, type DriveInspectResult } from "../../../../src/connectors/google-drive/inspect.js";
 import { dispatchDrive, localDriveService } from "../../../../src/cli/commands/drive/dispatch.js";
+import { DocsApiUnavailableError } from "../../../../src/connectors/google-drive/handlers/docs/api-failure.js";
 import {
   reportRefusal,
   runCredentialedVerb,
@@ -314,6 +315,42 @@ Who can fix it: the caller — adjust the command and run it again.`);
       cardType: null,
       claimedBy: ["_content/drive/recipes/Recipes.gfolder.card"],
       details: null,
+    },
+  });
+});
+
+// ## A Docs API refusal the boxholder can fix is attributed to the boxholder
+//
+// A Doc's inspect throws `DocsApiUnavailableError` when the Docs API refuses.
+// A disabled API or a missing scope is the boxholder's to fix, on the in-process
+// path as on the delegated one (the server's PRECONDITION_FAILED); any other
+// Docs API failure stays the machine's.
+void test("a Docs API refusal the boxholder can fix is the boxholder's", async (t) => {
+  t.teardown(restoreEnv);
+  setEnv({ BBX_SPAWN_PROFILE: "tooling" });
+  const refuse = (kind: "service-disabled" | "other") =>
+    dispatchDrive<never>({
+      local: async () => {
+        throw new DocsApiUnavailableError({ fileName: "Notes", failure: { kind, message: "it said no" } });
+      },
+      remote: async () => {
+        throw new Error("unreachable: the tooling profile runs in-process");
+      },
+    });
+  t.check(await refuse("service-disabled"), {
+    ok: false,
+    error: {
+      kind: "PRECONDITION_FAILED",
+      message: "Could not read Google Doc \"Notes\" through the Docs API: it said no",
+      fix: "boxholder",
+    },
+  });
+  t.check(await refuse("other"), {
+    ok: false,
+    error: {
+      kind: "INTERNAL_SERVER_ERROR",
+      message: "Could not read Google Doc \"Notes\" through the Docs API: it said no",
+      fix: "machine",
     },
   });
 });

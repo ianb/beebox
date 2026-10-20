@@ -61,7 +61,7 @@ const TRIGGER_TRAILER_KEYS = [
  * Attribution is optional at the operation level because a test (or a future
  * caller that genuinely has no actor) should not have to invent one — but a
  * surface a person or an agent reaches through always has one, so the git log
- * can answer "who mounted this" (`docs/plans/agent-capability-delegation.md`).
+ * can answer "who mounted this" (`docs/implemented-plans/agent-capability-delegation.md`).
  */
 export function triggeredByTrailer(actor: string | undefined): Record<string, string> {
   return actor === undefined ? {} : { "Triggered-By": actor };

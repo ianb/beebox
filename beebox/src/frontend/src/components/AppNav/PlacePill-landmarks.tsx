@@ -1,10 +1,11 @@
 import { createPortal } from "react-dom";
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { CardSymbolData } from "@shared/card-symbol";
 import { MenuItem } from "../ui/dropdown-menu-item";
 import { TextField } from "../ui/fields/field";
 import { Button } from "../ui/Button";
 import { CardMark } from "../ui/CardMark";
+import { useIsomorphicLayoutEffect } from "../../hooks/use-isomorphic-layout-effect";
 
 /** One landmark row's data — the subset of `chat.byLandmark` this menu reads. */
 export interface SwitchLandmark {
@@ -121,7 +122,7 @@ export function LandmarkList({
   const { mobileViewport, visibleViewport } = useSearchViewport(searchOpen);
   const searchable = landmarks !== null && landmarks.length > 20;
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!searchOpen) {
       queryRef.current = "";
       setQuery("");

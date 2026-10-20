@@ -12,7 +12,7 @@ import { ConversationControllerPool, conversationKey, type SessionAssignment } f
  * `model` is as much a part of a start choice as `engine`. Dropping it here
  * left a cross-engine pick landing on the new engine's DEFAULT model — the
  * two-step switch of
- * `issues/bugs/2026-08-30-engine-switch-forces-default-model-first.md`, which
+ * `issues/closed/bugs/2026-08-30-engine-switch-forces-default-model-first.md`, which
  * survived the picker fix because the other construction site
  * (`everywhere/resolve-conversation.ts`) carries the model and this one did
  * not. Exported so that stays covered.

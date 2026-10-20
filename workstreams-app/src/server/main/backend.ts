@@ -27,7 +27,7 @@ const serverEnvSchema = z.object({
   WORKSTREAMS_APP_ROUTER_CAPABILITY: z.string().min(16),
   WORKSTREAMS_APP_BUILD_ID: z.string().min(1).default("dev"),
   // The exhibits surface is a second listener on its own origin (Track B of
-  // docs/plans/workstream-exhibits.md). Its token is minted and persisted by
+  // docs/implemented-plans/workstream-exhibits.md). Its token is minted and persisted by
   // the supervisor; a standalone run must supply one too — this origin serves
   // agent-written script, so it never runs unauthenticated.
   EXHIBITS_PORT: z.coerce.number().int().positive().max(65_535).default(3230),

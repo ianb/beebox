@@ -2,7 +2,7 @@
  * Admin → OpenRouter models: the owner's act that lets a box run a model
  * OpenRouter carries, and the one place the box says what those models cost.
  *
- * Adding a model is the gate (`docs/plans/openrouter-chat-models.md`): a key
+ * Adding a model is the gate (`docs/implemented-plans/openrouter-chat-models.md`): a key
  * alone runs nothing. An add is validated against OpenRouter's public catalog
  * — the id must exist and support tool calling — so a typo fails here, not in
  * someone's chat turn. Owner-only; every change commits the box config.

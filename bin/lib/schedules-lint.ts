@@ -11,7 +11,7 @@
  * report through `bin/schedules alert`. Shell scripts go to shellcheck, and
  * TypeScript scripts to eslint under the personal-vibe-check preset.
  *
- * Design: beebox/docs/plans/scheduled-workstreams.md (Track E).
+ * Design: beebox/docs/implemented-plans/scheduled-workstreams.md (Track E).
  */
 
 import * as fs from "node:fs/promises";

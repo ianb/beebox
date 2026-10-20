@@ -165,6 +165,25 @@ void test("Seed the fake with a single recurring weekly event in America/NewYork
   ]));
 });
 
+// ## An event's time is written in its own zone, whatever offset Google sent
+//
+// Google returns `dateTime` at the calendar's offset (here Los Angeles, -07:00)
+// or in UTC (after a push), while `timeZone` names the event's zone. The file
+// gives the instant's wall time in the event's zone: 11:00-07:00 and 19:00Z
+// are 14:00 and 15:00 in New York.
+void test("A dateTime whose offset differs from its timeZone lands at that zone's wall time", async (t) => {
+  const box = await newBox();
+  const calendar = primaryCalendar([
+    evt("evt-offset", { summary: "Call", start: { dateTime: "2026-06-01T11:00:00-07:00", timeZone: "America/New_York" }, end: { dateTime: "2026-06-01T19:00:00Z", timeZone: "America/New_York" } }),
+  ]);
+  await connect(box, calendar).sync();
+  const files = await icsNames(box);
+  t.check((await icsLines(box, files[0] ?? "")).filter((l) => /^(DTSTART|DTEND);/.test(l)), [
+    "DTSTART;TZID=America/New_York:20260601T140000",
+    "DTEND;TZID=America/New_York:20260601T150000",
+  ]);
+});
+
 // ## A locally-created .ics file gets pushed to Google
 //
 // Drop an unrecognized `.ics` into `_content/calendar/`. The connector parses it,
@@ -205,8 +224,12 @@ void test("Sync an event, edit the local .ics, then sync again with Google's upd
       updated: isoDate(),
     },
   ]);
-  // Kept narrow: the rewritten file labels the pushed 16:00Z as 16:00 America/New_York, which looks wrong (reported, not pinned).
-  t.check((await icsLines(box, file)).filter((l) => l.startsWith("SUMMARY:")), ["SUMMARY:Lunch MINE"]);
+  // The pushed copy holds 16:00Z; the rewritten file still says 12:00 New York.
+  t.check((await icsLines(box, file)).filter((l) => /^(SUMMARY:|DTSTART;|DTEND;)/.test(l)), [
+    "SUMMARY:Lunch MINE",
+    "DTSTART;TZID=America/New_York:20260603T120000",
+    "DTEND;TZID=America/New_York:20260603T130000",
+  ]);
 });
 
 // ## A remote change beats a local edit (remote wins)

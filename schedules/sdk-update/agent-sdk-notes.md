@@ -40,12 +40,13 @@ Codex entries here are labeled as such; they carry their own pin.
   fixed 2026-09-04**: the rewritten updater now reads the manifest pin, so
   `--check` is honest, but the `(binary: 2.1.226)` parenthetical still resolves
   the root copy and `bin/` tooling still imports it.
-- **Latest reviewed upstream version:** `0.3.303` (SDK), `2.1.303` (Claude Code), `0.163.0` (Codex)
+- **Latest reviewed upstream version:** `0.3.304` (SDK), `2.1.304` (Claude Code), `0.163.0` (Codex)
 - **Ledger floor:** `0.3.220` (earlier releases are out of scope)
 - **Current recommendation:** Agent SDK moved to `0.3.302` on 2026-10-18
   after its fork-subagent check. The 2026-10-17 landing (`0.3.301`, Codex
   `0.163.0`) reached production on 2026-10-19 once the deploy breakage from the
-  ts7 merge was fixed. Next: `0.3.303` (settles 2026-10-20T21:15Z). Open:
+  ts7 merge was fixed. Next: `0.3.303` (settles 2026-10-20T21:15Z), `0.3.304`
+  (2026-10-21T19:48Z). Open:
   `issues/code-quality/2026-09-28-sonnet-alias-still-pins-sonnet-5.md`.
 - **No landing on 2026-09-24.** That run bumped Codex to `0.156.0` and passed its
   deploy gate, but could not commit: `main` failed `doc-check` on a link to an
@@ -72,6 +73,27 @@ inheriting the binary's default. `0.153.4` is not held back: take it when it
 settles (`issues/closed/decisions/2026-09-04-codex-default-model-becomes-astra.md`).
 
 ## Release ledger
+
+### 0.3.304 / Claude Code 2.1.304 — pending (published 2026-10-19T19:48Z, ~8h at this turn)
+
+- **HARNESS, data-loss fix:** *"Fixed `claude --worktree` removing the worktree
+  and its branch without asking at exit when HEAD was detached or on another
+  branch, which could lose commits."* Native `--worktree` sessions are one of
+  this repo's worktree paths. The laptop already runs Claude Code 2.1.304, so
+  worker sessions have it; the pin does not carry the harness.
+- **RUNTIME:** model switches, messages and interrupts no longer wait behind a
+  context-usage check in SDK sessions (beebox chat steers mid-turn); a
+  PreToolUse deny reason is no longer replaced by a timeout error when an SDK
+  callback hook on the same call times out (beebox registers PreToolUse
+  callbacks, `core/sdk-hooks.ts:159`); subagents no longer forget their latest
+  work when messaged right after finishing; lower memory in long or resumed
+  conversations; auto-mode classifier context no longer stored per request.
+- **SDK:** `startup()` no longer counts SessionStart/Setup hook time toward its
+  60 s limit, and keeps only the newest `hook_progress` per hook (beebox calls
+  `query()`, not `startup()`); `getContextUsage()` row ids; browser-SDK
+  `suspendSseStream` / `resumeSseStream`.
+- **Action:** Settled path; takeable 2026-10-21T19:48Z.
+- **Sources:** [SDK 0.3.304](https://github.com/anthropics/claude-agent-sdk-typescript/blob/main/CHANGELOG.md#03304), [Claude Code 2.1.304](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md#21304)
 
 ### 0.3.303 / Claude Code 2.1.303 — pending, unitemized (published 2026-10-18T21:15Z)
 

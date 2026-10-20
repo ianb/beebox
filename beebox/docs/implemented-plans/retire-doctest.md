@@ -405,7 +405,7 @@ Decided with the boxholder on 2026-10-18, after the generative review:
     phase 1 gate. The notices give it as an absolute date.
   - **The notice reads:**
     > **Testing cutover (since <date>).** Write new tests as `.test.ts` with
-    > `t.check` ([docs/testing/check.md](…)). Do not create `.doctest.md`
+    > `t.check` ([docs/testing/check.md](../testing/check.md)). Do not create `.doctest.md`
     > files; pre-commit rejects them. Existing doctests are being converted
     > (plan `retire-doctest`). If your change affects an existing doctest,
     > edit the doctest in place; the conversion picks up your edit. If git

@@ -57,7 +57,7 @@ async function hasOwningCard(sourcePath: string, root: string): Promise<boolean>
   // literal `Cube.card`, which is a positional card of type "Cube" and exists
   // in no box: every figure in every box was refused with "Attach scope has no
   // owning card" while the card sat right beside its attach directory
-  // (issues/bugs/2026-09-05-figure-module-attach-scope-has-no-owning-card.md).
+  // (issues/closed/bugs/2026-09-05-figure-module-attach-scope-has-no-owning-card.md).
   // Case-insensitive because a case-insensitive filesystem would otherwise let
   // the same path resolve differently here than when opened.
   return entries.some(

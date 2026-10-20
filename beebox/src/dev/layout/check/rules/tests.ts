@@ -4,7 +4,7 @@
  * tests, and a test directory that does not mirror source must be a scenario
  * group: directly under the test root, with no source counterpart. Scenario
  * tests name a scenario, not a module, and may import anything for setup.
- * `docs/plans/file-layout.md` rule 8 is the spec.
+ * `docs/implemented-plans/file-layout.md` rule 8 is the spec.
  */
 import { baseOf, dirOf, isWithin, stemOf, tests, commonDir } from "../../graph.js";
 import type { Finding, LayoutRule, PackageLayout } from "../../model.js";

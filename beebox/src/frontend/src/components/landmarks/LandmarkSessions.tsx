@@ -5,7 +5,7 @@
  *
  * Replaces the old resume-or-start Chat button on this surface — with every
  * session listed, "resume" is a row you pick rather than a guess. The switch
- * menu keeps the resume-or-start action (docs/plans/top-nav-ia.md Track D).
+ * menu keeps the resume-or-start action (docs/implemented-plans/top-nav-ia.md Track D).
  */
 
 import { useState } from "react";

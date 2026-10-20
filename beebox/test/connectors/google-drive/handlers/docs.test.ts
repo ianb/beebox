@@ -5,6 +5,7 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { join } from "node:path";
+import ky from "ky";
 import { execSync } from "node:child_process";
 import { access, unlink } from "node:fs/promises";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -476,6 +477,50 @@ void test("The inspect() preview (used by bbx drive inspect) reports the comment
     lossy: { comments: 0, footnotes: 1, images: 0, equations: 0, suggestions: 0, tables: 0 },
     comments: 4,
   });
+});
+
+// ## Inspect — a Docs API refusal is an explicit, diagnosed error
+//
+// A 403 SERVICE_DISABLED means the Docs API is off on the Cloud project, which
+// reauthorizing cannot fix. `inspect()` throws an error that says so and names
+// the enable link, instead of letting the raw HTTP error escape.
+void test("inspect() turns a SERVICE_DISABLED 403 into a diagnosed DocsApiUnavailableError", async (t) => {
+  const drive = docDrive({
+    id: "doc-8",
+    name: "Disabled",
+    document: makeDoc({ id: "doc-8", title: "Disabled", markdown: "Body.\n" }),
+  });
+  const activationUrl = "https://console.developers.google.com/apis/api/docs.googleapis.com/overview?project=123456";
+  drive.getDocument = async () => {
+    await ky.get("https://docs.googleapis.com/v1/documents/doc-8", {
+      retry: 0,
+      fetch: async () => new Response(JSON.stringify({
+        error: {
+          code: 403,
+          message: "Google Docs API has not been used in project 123456 before or it is disabled.",
+          status: "PERMISSION_DENIED",
+          details: [{
+            "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+            reason: "SERVICE_DISABLED",
+            metadata: { consumer: "projects/123456", activationUrl },
+          }],
+        },
+      }), { status: 403 }),
+    });
+    throw new Error("unreachable: the request above fails");
+  };
+  // The comments request fails too, and first: the Docs diagnosis still wins,
+  // because it is the failure the boxholder can act on.
+  drive.listComments = () => Promise.reject(new Error("comments request failed"));
+
+  const file = await drive.getFile("doc-8");
+  await t.checkThrows(
+    () => docsHandler.inspect(file, drive),
+    "DocsApiUnavailableError: Could not read Google Doc \"Disabled\" through the Docs API: " +
+      "the Google Docs API is disabled for the Google Cloud project the box's Google sign-in uses, " +
+      "and reauthorizing will not fix that. Enable the API in Cloud Console, wait a few minutes, " +
+      `and try again: ${activationUrl}`,
+  );
 });
 
 // ## Stripped trailing whitespace — refused, not pushed

@@ -5,7 +5,7 @@
  * syncs external state with the repo (pull + push) and transforms between
  * external formats and cards. The contract itself (`Connector`, `SyncResult`,
  * `ConnectorFatalError`, ...) lives in `./connector.js`, not here — a set
- * member may not import its own registry (rule 1, docs/plans/file-layout.md),
+ * member may not import its own registry (rule 1, docs/implemented-plans/file-layout.md),
  * so the types every member needs live in a module the registry can import
  * without creating a cycle back into itself.
  *

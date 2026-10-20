@@ -3,7 +3,7 @@
  * (`src/core/todo/review-sweep.ts`, `docs/implemented-plans/todo-annotation.md`
  * Track 5b) used to queue for the wakeup reactor.
  *
- * Since `docs/plans/todos-ui.md` Track 7 nothing writes these cards: the
+ * Since `docs/implemented-plans/todos-ui.md` Track 7 nothing writes these cards: the
  * stock `todo-review` procedure's precheck (`bbx engine todo-review check`)
  * prints the same brief — these item shapes and {@link TODO_REVIEW_INSTRUCTIONS}
  * — straight to its agent, so no card exists for the reactor to pick up too.

@@ -1,6 +1,6 @@
 /**
  * Health evaluation for scheduled tasks (see
- * issues/2026-05-19-scheduled-task-health-surfacing.md).
+ * issues/closed/features/2026-05-19-scheduled-task-health-surfacing.md).
  *
  * A task's run state already records when it was last *attempted*
  * (lastRun) and last *succeeded* (lastSuccess); the divergence is the
@@ -108,7 +108,7 @@ export interface EvaluateTaskInput {
  * budget) is the more actionable thing to say. It is emphatically not
  * "failing" — a checker that ran out of budget has not found anything wrong,
  * and reporting it as a failure is what taught readers to discount the signal
- * (issues/bugs/2026-08-12-health-masks-review-step-turn-cap.md).
+ * (issues/closed/bugs/2026-08-12-health-masks-review-step-turn-cap.md).
  */
 export function evaluateTaskHealth(input: EvaluateTaskInput): TaskHealth {
   const { name, parsed, state, now, cardMtime, missingConnectors } = input;

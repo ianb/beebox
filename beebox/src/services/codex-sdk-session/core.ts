@@ -32,6 +32,18 @@ export interface CodexSdkSessionOptions {
   turnTimeoutMs?: number | undefined;
   /** The box's `codexTelemetry` choice. Required so no caller forgets it. */
   analytics: boolean;
+  /**
+   * False stops Codex from loading `AGENTS.md` project docs from `cwd` on its
+   * own (`project_doc_max_bytes = 0`). Omitted means Codex's default: load them.
+   */
+  loadProjectDocs?: boolean | undefined;
+  /**
+   * True runs the thread in Codex's `read-only` sandbox with web search off,
+   * for a pass that works only from its prompt: the session, not the prompt,
+   * stops it from changing the box or reaching the network. Omitted means the
+   * box sandbox ({@link CODEX_BOX_SANDBOX}).
+   */
+  readOnly?: boolean | undefined;
 }
 
 export interface CodexSdkTurnResult {
@@ -147,8 +159,9 @@ function failedTurnMessage(event: Extract<ThreadEvent, { type: "turn.failed" }>)
 export function codexSdkThreadOptions(options: CodexSdkSessionOptions): ThreadOptions {
   return {
     workingDirectory: options.cwd,
-    sandboxMode: CODEX_BOX_SANDBOX,
+    sandboxMode: options.readOnly === true ? "read-only" : CODEX_BOX_SANDBOX,
     approvalPolicy: "never",
+    ...(options.readOnly === true ? { webSearchMode: "disabled" } : {}),
     ...(options.model === undefined ? {} : { model: options.model }),
     ...(options.additionalDirectories === undefined ? {} : { additionalDirectories: options.additionalDirectories }),
   };
@@ -163,13 +176,17 @@ function definedEnv(env: Record<string, string | undefined> | undefined): Record
 
 /**
  * The `--config` overrides every Codex run gets. Analytics follow the box
- * setting. The update check and feedback upload are always off: the box pins
- * Codex's version and never files feedback.
+ * setting; a run without box context also skips Codex's own project docs.
+ * The update check and feedback upload are always off: the box pins Codex's
+ * version and never files feedback.
  */
-export function codexSdkConfig(options: Pick<CodexSdkSessionOptions, "systemPrompt" | "analytics">) {
+export function codexSdkConfig(
+  options: Pick<CodexSdkSessionOptions, "systemPrompt" | "analytics" | "loadProjectDocs">,
+) {
   return {
     developer_instructions: options.systemPrompt,
     analytics: { enabled: options.analytics },
+    ...(options.loadProjectDocs === false ? { project_doc_max_bytes: 0 } : {}),
     ...CODEX_FIXED_CONFIG,
   };
 }

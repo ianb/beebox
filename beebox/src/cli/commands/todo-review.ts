@@ -1,7 +1,7 @@
 /**
  * bbx engine todo-review — the two deterministic halves of the stock
  * `todo-review` procedure (`templates/procedures/todo-review.procedure.card`,
- * `docs/plans/todos-ui.md` Track 7).
+ * `docs/implemented-plans/todos-ui.md` Track 7).
  *
  *   bbx engine todo-review check    The precheck. Sweeps, saves the items,
  *                                   and prints the brief the agent works

@@ -83,7 +83,7 @@ export interface FakeChatBackend extends ChatBackend {
    * When set, the next `start()` throws this instead of opening a run, then
    * clears itself. Models an SDK subprocess spawn that fails outright — the
    * `EBADF` at the heart of
-   * `issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md` — so a
+   * `issues/closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md` — so a
    * test can exercise run-start failure without an unspawnable environment.
    */
   failNextStart: Error | null;

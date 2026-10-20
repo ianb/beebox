@@ -1,5 +1,5 @@
 /**
- * One way to ask the box about its todos (`docs/plans/todo-collection.md`,
+ * One way to ask the box about its todos (`docs/implemented-plans/todo-collection.md`,
  * Track 4).
  *
  * `runCollection` is generic and stateless, which means every consumer would

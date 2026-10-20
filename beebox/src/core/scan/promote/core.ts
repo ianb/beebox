@@ -1,6 +1,6 @@
 /**
  * The scan promote worker (Track 2 chunk 2 / Track 3 of
- * `docs/plans/scanner-ingest.md`).
+ * `docs/implemented-plans/scanner-ingest.md`).
  *
  * One pass drives everything quarantine owes the box: pending entries through
  * `bbx upload --as scan` into the inbox, rejected ones into question cards, the

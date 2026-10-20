@@ -5,7 +5,7 @@
  * A map whose correct result is "no change" — an existing map with no state
  * entry, or an update whose only addition is a plain file the map should not
  * list — could then never be stamped, and came back in every run
- * (`issues/bugs/2026-09-16-refresh-maps-reports-existing-maps-as-create-forever.md`).
+ * (`issues/closed/bugs/2026-09-16-refresh-maps-reports-existing-maps-as-create-forever.md`).
  * This check proves a map correct directly, so finalize can stamp it without a
  * change.
  *

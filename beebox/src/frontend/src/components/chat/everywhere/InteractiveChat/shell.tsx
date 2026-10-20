@@ -181,7 +181,7 @@ interface InteractiveChatProps {
   initial?: ChatInitialLoad;
   /**
    * The session's display name, from the same `chat.bootstrap` call — the app
-   * bar's session chip face (docs/plans/top-nav-ia.md Track C2). Null for a
+   * bar's session chip face (docs/implemented-plans/top-nav-ia.md Track C2). Null for a
    * fresh chat (and until bootstrap settles); the chip then reads "New chat".
    */
   sessionLabel: string | null;
@@ -197,7 +197,7 @@ interface InteractiveChatProps {
  * This was two overlays until the composer stopped sending files to the
  * bulk-upload batch: routing now attaches them to the message being written
  * instead, so nothing opened the bulk one any more
- * (`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
+ * (`issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
  */
 // Capture mode is rare and opens full screen; its code loads when it opens.
 const CaptureOverlay = lazyOverlay(() => import("../../../capture/CaptureOverlay/view"), (m) => m.CaptureOverlay);
@@ -278,8 +278,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
 
   const logicalConversation = pool.conversationIdentity(target);
   const model = useChatModelFeatures({ conversationKey: logicalConversation, sessionId, contextDir: effectiveContextDir, groupCount: groups.length, send, startEngine, startModel });
-  const mute = useChatMute();
-  const tabs = useWorkspace();
+  const mute = useChatMute(); const tabs = useWorkspace();
   invariant(tabs, "InteractiveChat requires WorkspaceProvider");
   const { activeView } = tabs;
   const cardSend = useCompanionCard({ focusedRef: attention?.focusedRef, activeView });
@@ -344,6 +343,7 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     sessionId, sessionInput, boxSlug, currentUser, isStreaming, send,
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
     onTaskEvent: backgroundTasks.onTaskEvent,
+    onTaskLevel: backgroundTasks.onTaskLevel,
     onCaptureStatus: applyCaptureStatus,
     onScreenshotRequest: screenshots.onScreenshotRequest,
     shellManaged: true,
@@ -361,8 +361,6 @@ export function InteractiveChat({ sessionInput, unstarted, contextDir, startEngi
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
     captureEmissionDispatch, sendDisabledReason: sendDisabledReasonFor(conversationSelection),
   });
-
-  // Loading changes the transcript, never the input service owner.
 
   return (
     <InputStoreProvider value={inputStore}>

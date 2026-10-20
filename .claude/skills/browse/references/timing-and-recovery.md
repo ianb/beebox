@@ -22,11 +22,8 @@ up after 15s with a note on stderr and captures anyway, and `--no-wait` skips
 it outright. `BROWSE_READY_TIMEOUT_MS` raises the ceiling for a genuinely slow
 page.
 
-A corollary worth internalizing: if you are timing something and every arm of
-your experiment comes back looking identical and suspiciously settled, suspect
-the instrument before the code. Confirm your probe can produce a negative
-result at all — run the arm you expect to *fail* first, and only trust the
-passing arm once the failing one has actually failed.
+If every arm of a timing experiment looks identical and settled, suspect the
+probe: run the arm you expect to fail first, and trust a pass only after that.
 
 ## Common failure modes
 
@@ -40,10 +37,5 @@ passing arm once the failing one has actually failed.
 - **Refs from a prior snapshot don't work** — page changed (navigation, viewport, dialog). Re-snapshot.
 - **You land on `/auth/login`** — work [authentication](authentication.md) in order. Usually a box slug written into the path, or a request for an owner-session-only surface — not a bad key.
 - **You navigated somewhere you didn't ask for** — check `bin/browse get url` before concluding anything about the page. A path that resolves to no route redirects rather than erroring, so a typo reads as "the app is behaving strangely."
-- **A stray Chrome is eating CPU after a session ends** — `bin/workstreams panic`
-  reclaims tracked agent-browser daemons, but affects the shared router:
-  **ask the boxholder before using it from a worktree.** Its matching covers
-  the daemon binary under `node_modules/agent-browser/`, not manually launched
-  Chrome under `~/.agent-browser/browsers/`. For manual cleanup, establish the
-  exact orphan PID belongs to this task before terminating it; never use a
-  broad process-name kill that could affect another session.
+- **`screenshot` times out while `eval` and `snapshot` respond** — check non-visual state with `eval` or `snapshot` and report the visual check as not done.
+- **`Resource temporarily unavailable (os error 35)`, or a stray Chrome eating CPU** — `close --all` does not clear a wedged daemon. `bin/workstreams panic` reclaims project-scoped daemons but affects the shared router: **ask the boxholder before using it from a worktree.** Otherwise kill this worktree's daemon (its binary under this worktree's `node_modules/agent-browser/`) and its Chrome by PID, after confirming each PID belongs to this task and not another live session; never a broad process-name kill.

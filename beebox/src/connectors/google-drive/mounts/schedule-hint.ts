@@ -7,7 +7,7 @@
  * verified will not stay in step with Drive until someone enables it. The
  * moment that matters is the mount itself, so the mount result carries the
  * sentence and the settings page shows the same state
- * (`docs/plans/agent-capability-delegation.md`).
+ * (`docs/implemented-plans/agent-capability-delegation.md`).
  *
  * Enabling is deliberately not something this hint tells a caller to do on its
  * own: turning a seeded schedule on is the boxholder's, unless they asked in

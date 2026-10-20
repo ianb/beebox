@@ -6,7 +6,7 @@
  * right and the *state* was wrong — a server that 404s page navigations, a
  * place menu killed by broken global Codex state, a chat turn that crashed on
  * an unknown SDK item. Only a real box on the real machine shows those. See
- * issues/exploration/2026-08-26-merge-time-smoke-tier.md and
+ * issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md and
  * issues/exploration/2026-08-26-post-test-economics-retro.md.
  *
  *   bin/smoke                 # walk this worktree's box through the dev router

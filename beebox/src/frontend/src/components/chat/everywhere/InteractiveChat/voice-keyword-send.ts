@@ -43,7 +43,7 @@ export interface RunKeywordSendOpts {
  * segment's staged recording; every exit below seals it exactly once.
  *
  * Every segment with a recording is sealed with an HQ request and the send
- * waits for the box's HQ job (docs/plans/hq-always.md;
+ * waits for the box's HQ job (docs/implemented-plans/hq-always.md;
  * docs/implemented-plans/resilient-voice-recording.md, Track 4): the HQ text if it
  * arrives within the budget, otherwise the live text. A box with no usable HQ
  * key fails the job at once, so its sends fall back without a long wait. The

@@ -1,5 +1,5 @@
 /**
- * One card's block in a `todo-view` list (`docs/plans/todo-collection.md`,
+ * One card's block in a `todo-view` list (`docs/implemented-plans/todo-collection.md`,
  * Track 4): the card itself as a header, what it amounts to, then its todos
  * under the headings they were written beneath.
  *
@@ -61,7 +61,7 @@ function SectionHead({ label, path, reduction }: { label: string; path: string[]
 export function CardRow({ row }: { row: TodoRow }) {
   const sections = buildRowSections(row);
   // In a workspace pane the title opens the card in the other pane
-  // (`docs/plans/todos-ui.md`, Track 5); the peek still previews in place.
+  // (`docs/implemented-plans/todos-ui.md`, Track 5); the peek still previews in place.
   const openBeside = useOpenBeside();
   const open = openBeside === null ? undefined : (): void => openBeside(cardTarget(row.card.path));
   return (

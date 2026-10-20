@@ -9,7 +9,7 @@
  * Only link/image *targets* (`](view:…)`) are touched; other query params
  * (`?view=`, figure params) are preserved, the `zoom` flag is dropped. Bare
  * plain paths and external URLs are left byte-identical. See
- * docs/plans/normalize-chat-links.md.
+ * docs/implemented-plans/normalize-chat-links.md.
  */
 
 import * as fs from "node:fs/promises";

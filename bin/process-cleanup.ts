@@ -266,7 +266,7 @@ function readLiveness(entry: unknown): AgentLiveness {
  * In every branch that reaps an UNVOUCHED process, `ageSec` gates it: a daemon
  * younger than MIN_ORPHAN_AGE_SEC has not had time to write its pidfile, so
  * "not vouched for" carries no information about it yet. That window is the
- * whole of issues/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md
+ * whole of issues/closed/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md
  * — two agents in one worktree, and the one that runs second kills the
  * still-starting daemon of the first.
  * - `unknown` — spare unconditionally, vouched or not. This is stricter than

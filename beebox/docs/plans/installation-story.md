@@ -29,7 +29,7 @@ sequencing, several citation corrections).
 *(Adjacent, out of this plan's scope: the stand-alone `scan-uploader/`
 package has its own minimal install story — clean clone + filtered install +
 self-contained bundle, verified by `scan-uploader/smoke-install.sh` — see
-`scan-uploader/README.md` "Setup" and `docs/plans/scan-uploader-pairing.md`
+`scan-uploader/README.md` "Setup" and `docs/implemented-plans/scan-uploader-pairing.md`
 Track C.)*
 
 ## Stated preferences this plan trades against

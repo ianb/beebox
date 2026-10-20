@@ -2,7 +2,7 @@
  * "Can this box actually use service X right now" — the question the
  * HQ-transcription and TTS pickers need answered so they can mark an option
  * unavailable instead of offering a choice whose only outcome is a failed
- * pass (`docs/plans/secret-entry-guidance.md`, Track 5).
+ * pass (`docs/implemented-plans/secret-entry-guidance.md`, Track 5).
  *
  * **The truth table below MIRRORS the dispatchers and MUST change with
  * them.** It is not derived by calling into `transcription/index.ts` or

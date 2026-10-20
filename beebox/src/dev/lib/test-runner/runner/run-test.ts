@@ -111,7 +111,7 @@ export interface RunTestOptions {
   boxRoot: string;
   engine?: AgentEngine;
   onOutput?: (text: string) => void;
-  /** Exact status produced by CLI docs setup; accepted only for its first test. */
+  /** Exact status this test's docs setup produced (see runBoxAudits); the box must show exactly this. */
   cliSetupStatus?: string;
 }
 

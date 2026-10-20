@@ -3,10 +3,10 @@
  * mute/narration/transcribing state, and whose menu holds the I/O voice
  * controls (Mute speech, Narration mode, Voice settings) — moved here from
  * `ChatMenu`/`MuteButton`/`NarrationStatusBadge` by chunk 3 of
- * docs/plans/chat-header-chips.md. Model selection moved out to the session
- * chip in the chip polish round (docs/plans/chat-header-chips.md follow-up)
+ * docs/implemented-plans/chat-header-chips.md. Model selection moved out to the session
+ * chip in the chip polish round (docs/implemented-plans/chat-header-chips.md follow-up)
  * — this chip is purely I/O now. Since Track C2 of
- * docs/plans/top-nav-ia.md it renders in the app bar's chip slot rather than
+ * docs/implemented-plans/top-nav-ia.md it renders in the app bar's chip slot rather than
  * a chat header row; the chip itself is unchanged.
  *
  * `VoiceChipFace` is exported separately so it can be rendered in a test
@@ -173,7 +173,7 @@ export interface VoiceChipProps {
 
 /**
  * The voice dropdown menu, now portaled into the app bar's chip slot
- * (`ChatBarChrome`, Track C2 of docs/plans/top-nav-ia.md) rather than
+ * (`ChatBarChrome`, Track C2 of docs/implemented-plans/top-nav-ia.md) rather than
  * rendered in a chat header row. `React.memo` because the publishing tree
  * re-renders on every streaming token and the bar must not — its five props
  * are primitives and `useCallback`s, so the memo holds.

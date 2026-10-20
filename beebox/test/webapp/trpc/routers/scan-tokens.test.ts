@@ -1,8 +1,9 @@
 // # `scanTokens` tRPC procedures: mint once, list without secrets, revoke by name
 //
-// The boxholder's surface for the scan upload credential. Owner-only, like the
-// mobile pairing procedures beside it: minting a credential is not something a box
-// member — let alone a machine credential — may do.
+// The surface for the scan upload credential. Anyone with access to the box can
+// add files through the web app, so anyone signed in may set up an uploader, as
+// with pairing a phone: a person manages the uploaders they made, and the owner
+// manages all of them.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
@@ -12,10 +13,10 @@ import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { verifyScanToken } from "../../../../src/core/scan/tokens.js";
 
-function caller(boxRoot: string, { isOwner }: { isOwner: boolean }) {
+function caller(boxRoot: string, { isOwner, email }: { isOwner: boolean; email: string | null }) {
   return appRouter.createCaller(trpcContext({
     boxRoot,
-    user: { email: "owner@example.com", name: "Owner" },
+    user: email === null ? null : { email, name: email },
     isOwner,
   }));
 }
@@ -30,7 +31,7 @@ void test("create returns the secret once, and it really authenticates", async (
     }
   });
   const box = await makeTmpBox({ git: true });
-  const owner = caller(box.root, { isOwner: true });
+  const owner = caller(box.root, { isOwner: true, email: "owner@example.com" });
   const created = await owner.scanTokens.create({ name: "laptop-scansnap" });
   t.check(created, { name: "laptop-scansnap", token: any(String), createdAt: isoDate() });
 
@@ -70,17 +71,24 @@ void test("create returns the secret once, and it really authenticates", async (
 
   t.check(await owner.scanTokens.create({ name: "../../etc/passwd" }).then(() => "no error", (e) => e.code), "BAD_REQUEST");
 
-  // ## Every procedure is owner-only
+  // ## A member sets up and revokes their own uploader, and only their own
 
-  const member = caller(box.root, { isOwner: false });
-  const codes = await Promise.all([
-    member.scanTokens.create({ name: "sneaky" }).then(() => "no error", (e) => e.code),
-    member.scanTokens.list().then(() => "no error", (e) => e.code),
-    member.scanTokens.revoke({ name: "desk-scanner" }).then(() => "no error", (e) => e.code),
-  ]);
-  t.check(codes, [
-    "FORBIDDEN",
-    "FORBIDDEN",
-    "FORBIDDEN",
-  ]);
+  const member = caller(box.root, { isOwner: false, email: "member@example.com" });
+  const minted = await member.scanTokens.create({ name: "member-mac" });
+  t.check((await verifyScanToken(box.root, minted.token))?.createdBy, "member@example.com");
+
+  // The member's list holds only their own; the owner's holds every uploader.
+  t.check((await member.scanTokens.list()).map((token) => token.name), ["member-mac"]);
+  t.check((await owner.scanTokens.list()).map((token) => token.name), ["laptop-scansnap", "desk-scanner", "member-mac"]);
+
+  // Somebody else's uploader reads as missing, so its name is not confirmed.
+  t.check(await member.scanTokens.revoke({ name: "desk-scanner" }).then(() => "no error", (e) => e.code), "NOT_FOUND");
+  t.check(await member.scanTokens.revoke({ name: "member-mac" }), { ok: true });
+
+  // ## A caller with no person behind it cannot mint
+  //
+  // Its token would be recorded against nobody, and so be unrevocable by it.
+
+  const machine = caller(box.root, { isOwner: false, email: null });
+  t.check(await machine.scanTokens.create({ name: "orphan" }).then(() => "no error", (e) => e.code), "FORBIDDEN");
 });

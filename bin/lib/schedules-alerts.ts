@@ -6,7 +6,7 @@
  * of it. Split out of schedules-runner.ts so the launcher can raise alerts
  * without an import cycle back into the runner that calls it.
  *
- * Design: beebox/docs/plans/scheduled-workstreams.md (Track C).
+ * Design: beebox/docs/implemented-plans/scheduled-workstreams.md (Track C).
  */
 
 import { spawn } from "node:child_process";

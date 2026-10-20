@@ -61,7 +61,7 @@ export const TEMPLATE_UPDATES_DIR = "_config/_template-updates";
  * Shared by every surface that reports them (`bbx status`, the `template-updates`
  * health check) so the instruction can't drift between them — a parked update
  * that says nothing about how to resolve it is what let five upstream fixes sit
- * unread (issues/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
+ * unread (issues/closed/bugs/2026-08-24-parked-template-updates-are-invisible-in-health.md).
  */
 export const PARKED_TEMPLATE_RESOLUTION =
   "Run bbx template diff <path>, then bbx template accept <path> or keep/merge the local file and run bbx template resolve <path>.";

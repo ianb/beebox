@@ -1,6 +1,6 @@
 /**
  * One voice recording's side of the staging queue
- * (`docs/plans/resilient-voice-recording.md`, Track 3): the recording is
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 3): the recording is
  * staged to the box from its first PCM frame, whether or not a live
  * transcription socket exists.
  *

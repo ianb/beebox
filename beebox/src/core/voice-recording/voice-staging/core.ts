@@ -3,7 +3,7 @@
  * (`./state.ts`) and the on-disk staging session
  * (`core/capture/staging-store.ts`), plus the seal + terminal-detection logic
  * the finalize route and the voice sweep both need
- * (`docs/plans/resilient-voice-recording.md`, Track 1).
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1).
  *
  * Every persisted voice transition goes through {@link applyVoiceEvent} —
  * read-modify-write under the session's existing per-session lock, so a

@@ -110,7 +110,7 @@ export class MicCapture {
     // it failed the whole module under Node — and with it everything that
     // transitively imports this file: the transcription machine, its actor,
     // and `useRealtimeTranscription`, none of which could be tested at all
-    // (issues/code-quality/2026-08-15-transcription-machine-untestable-worklet-import.md).
+    // (issues/closed/code-quality/2026-08-15-transcription-machine-untestable-worklet-import.md).
     // Deferring it to mic start means Node only ever resolves it if a test
     // actually opens a microphone, which no test does.
     const { default: pcmProcessorUrl } = await import("../../lib/audio/pcm-processor.worklet.js?url");

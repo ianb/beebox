@@ -11,7 +11,7 @@
  * `metadata:` (pages/title/author).
  *
  * The type is `pdf` because that is the only format the pipeline reads
- * today; `format:` still records it. See `docs/plans/scanner-ingest.md`
+ * today; `format:` still records it. See `docs/implemented-plans/scanner-ingest.md`
  * (Track 4) and `docs/plans/scanner-ingest-docling-decisions.md`.
  *
  * Example file layout:

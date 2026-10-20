@@ -29,7 +29,7 @@ Everything below is for contributors modifying this repo (adding rules, adjustin
 
 ### Repo layout
 
-- `preset.ts` — the exported flat config (`vibeCheck()` function). All third-party rule choices live here with per-rule rationale comments. **Not** named `eslint.config.*`: ESLint would then pick it up as this package's own config and crash, since its default export is a factory function.
+- `preset.ts` — the exported flat config (`vibeCheck()` function). It only assembles the modules in `preset/`, where all third-party rule choices live with per-rule rationale comments (`enabled-rules.ts`, `disabled-rules.ts`, `react-rules.ts`, `global-overrides.ts`, `tsx-overrides.ts`). **Not** named `eslint.config.*`: ESLint would then pick it up as this package's own config and crash, since its default export is a factory function.
 - `types.d.ts` — the public type surface consumers resolve through the `exports` map (`vibeCheck`'s options and return type). `preset.ts` binds its implementation to this declaration, so the two cannot drift.
 - `eslint.config.ts` — this package's OWN lint config, applying `preset.ts` to itself.
 - `plugin.ts` — ESLint plugin bundling this repo's own rules. Every rule in `rules/` must be registered here.
@@ -52,7 +52,7 @@ A rule change is not done until **all** of these hold:
    - Invalid cases: at minimum covers every error path the rule can produce, plus mixed-valid-and-invalid, plus any prefix/suffix handling
    - Dynamic / unparseable input: explicit test that it's skipped (not errored on)
 3. **Registered** in `plugin.ts` under the correct name.
-4. **Wired** in `preset.ts` (and its options declared in `types.d.ts`) — either always-on (rare) or opt-in via a new `vibeCheck()` option. If opt-in, the option name should match the rule name.
+4. **Wired** in `preset.ts` / `preset/` (and its options declared in `types.d.ts`) — either always-on (rare) or opt-in via a new `vibeCheck()` option. If opt-in, the option name should match the rule name.
 5. **Documented** in `conventions.md` with a usage snippet, the full options shape, and a Limitations subsection. Downstream authors read this file, not the source.
 6. **`pnpm test`, `pnpm lint`, and `pnpm typecheck` all pass** (this package lints and type-checks itself — that only became true once the preset moved out of `eslint.config.mjs`).
 7. **Committed as its own commit** with a message explaining *why* the rule exists — the commit log is the historical record of why each rule was added.

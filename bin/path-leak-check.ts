@@ -11,7 +11,7 @@
  * "Evidence: <file>" citation carries the full `/Users/<name>/src/...` prefix.
  * There is no single generator to fix (reports come from ad-hoc multi-agent
  * workflows), so this generator-agnostic guard is the durable backstop. See
- * issues/2026-07-05-report-workflows-emit-relative-paths.md.
+ * issues/closed/bugs/2026-07-05-report-workflows-emit-relative-paths.md.
  *
  * Fail-closed: a name that isn't a known service account or placeholder trips
  * the guard. Fix a violation, don't suppress it — use a repo-relative path, or

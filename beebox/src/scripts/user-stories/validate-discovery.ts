@@ -15,9 +15,10 @@ import { join, resolve } from "node:path";
 import { errorMessage } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
 
+import { DISCOVERY_WORK } from "./work-dir.js";
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
-const BASE = resolve(import.meta.dirname, "../../../user-stories/work");
+const BASE = DISCOVERY_WORK;
 const AREAS_DIR = join(BASE, "areas");
 
 const GROUPS = new Set([
@@ -183,4 +184,4 @@ writeFileSync(
   join(BASE, "stories.json"),
   `${JSON.stringify({ stories }, null, 2)}\n`,
 );
-console.log(`\nOK — wrote user-stories/work/stories.json (${stories.length} stories)`);
+console.log(`\nOK — wrote user-stories-work/discovery/stories.json (${stories.length} stories)`);

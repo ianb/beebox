@@ -1,6 +1,6 @@
 /**
  * The field-test operator's system prompt, in four deliberately separated
- * layers (`docs/plans/agent-field-tests.md`, Track 3).
+ * layers (`docs/implemented-plans/agent-field-tests.md`, Track 3).
  *
  * The layers are separate exported functions rather than one blob because they
  * have different owners: the persona is scenario content (verbatim

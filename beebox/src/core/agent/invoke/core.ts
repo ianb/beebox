@@ -13,7 +13,7 @@ import { toJSONSchema } from "zod";
 import { validateStructuredResult } from "../json.js";
 import { appendSessionManifest } from "../manifest.js";
 import { runAgent, type RunAgentOptions } from "./run.js";
-import { createModelCarrier } from "./model-carry.js";
+import { createCarrier } from "../model-carry.js";
 import { createCodexAgent } from "../codex-agent.js";
 import { loadAgentEngine } from "../../box/config.js";
 import type {
@@ -85,9 +85,10 @@ export function createClaudeAgent(options: {
   let sessionId: string | null = options.sessionId ?? null;
   let invocationCount = options.resume ? 1 : 0;
   let manifestWritten = false;
-  // See model-carry.ts: a session's provider must not change mid-life, so
-  // re-invocations that omit a model reuse the last explicit one.
-  const modelCarrier = createModelCarrier();
+  // See ../model-carry.ts: re-invocations that omit a model or a system prompt
+  // reuse the last explicit one, so a resumed session keeps both.
+  const modelCarrier = createCarrier();
+  const systemPromptCarrier = createCarrier();
 
   const onSessionId = (boxRoot: string): ((id: string) => void) =>
     makeSessionIdHandler({
@@ -110,7 +111,7 @@ export function createClaudeAgent(options: {
       boxRoot: opts.boxRoot,
       env: opts.env,
       signal: opts.signal,
-      systemPrompt: opts.systemPrompt ?? "",
+      systemPrompt: systemPromptCarrier.resolve(opts.systemPrompt) ?? "",
       prompt: opts.prompt,
       onOutput: options.onOutput,
       model,

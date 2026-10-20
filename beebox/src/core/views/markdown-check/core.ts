@@ -3,7 +3,7 @@
  *
  * Card text renders through `Markdown` from `beebox/view-widgets`, the app's
  * own renderer, so Markdoc tags, refs, images, and todos behave the same in a
- * box view as on the card's page (`docs/plans/todos-ui.md`, Track 6). A view
+ * box view as on the card's page (`docs/implemented-plans/todos-ui.md`, Track 6). A view
  * that splits a body into paragraphs, strips `{% … %}` tags with a regex, or
  * brings its own Markdown library loses all of that without anyone noticing.
  *

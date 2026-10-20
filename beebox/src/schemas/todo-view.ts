@@ -1,5 +1,5 @@
 /**
- * `todo-view` card schema (`docs/plans/todo-collection.md`, Track 4) — a
+ * `todo-view` card schema (`docs/implemented-plans/todo-collection.md`, Track 4) — a
  * frontmatter-only card that IS a todos display surface: its fields are a
  * query over the todo collection (`src/core/todo/collection.ts`), rendered by
  * `TodoViewCard` (`src/frontend/src/components/TodoViewCard.tsx`) via the

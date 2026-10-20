@@ -10,8 +10,9 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { parseJsonLine, readJson } from "../json-io.js";
+import { DISCOVERY_WORK } from "../work-dir.js";
 
-const BASE = resolve(import.meta.dirname, "../../../../user-stories/work");
+const BASE = DISCOVERY_WORK;
 const CATALOG = resolve(import.meta.dirname, "../../../../docs/user-stories/catalog");
 
 export interface Story {

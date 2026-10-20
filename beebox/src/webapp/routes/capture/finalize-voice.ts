@@ -1,6 +1,6 @@
 /**
  * `POST /api/capture/sessions/:id/finalize` — the voice-recording branch
- * (`docs/plans/resilient-voice-recording.md`, Track 1). Split out of
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1). Split out of
  * `capture.ts` to keep its route-registration function under the line budget,
  * mirroring `capture-create.ts`.
  *

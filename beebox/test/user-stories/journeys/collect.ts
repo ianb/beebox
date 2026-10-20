@@ -14,13 +14,11 @@ import { join } from "node:path";
 
 import { readJson } from "../../../src/scripts/user-stories/json-io.ts";
 import { agentTiming } from "./agent-time.ts";
-
-const HERE = import.meta.dirname;
-const WORK = join(HERE, "../work/journeys");
+import { JOURNEY_WORK as WORK } from "./provisioning.ts";
 
 const runId = process.argv[2];
 if (runId === undefined) {
-  console.error("usage: collect.ts <run-id>   (a directory under user-stories/work/journeys/)");
+  console.error("usage: collect.ts <run-id>   (a directory under user-stories-work/journeys/ at the repo root)");
   process.exit(1);
 }
 

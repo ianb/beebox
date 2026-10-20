@@ -25,7 +25,7 @@ export function isCaptureAudioFormatError(
 
 /**
  * `pcm-000001.raw`, `pcm-000002.raw`, … — the voice-recording chunk filename
- * (`docs/plans/resilient-voice-recording.md`, Track 1). 1-indexed, 6-digit
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1). 1-indexed, 6-digit
  * zero-padded, matching the finalize contiguity check
  * (`webapp/routes/capture-finalize-voice.ts`), which rebuilds this exact list
  * for `1..chunkCount` and compares it against the manifest's staged chunks.

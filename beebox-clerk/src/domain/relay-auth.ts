@@ -1,6 +1,6 @@
 /**
  * Pure authorization + match-pattern helpers for the box-relay content script
- * (Track C of docs/plans/see-as-the-user.md).
+ * (Track C of docs/implemented-plans/see-as-the-user.md).
  *
  * Two distinct URL notions live here, and the difference is load-bearing:
  *

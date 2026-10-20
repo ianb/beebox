@@ -2,7 +2,7 @@
  * `bbx auth` — manage local username/password accounts (`src/webapp/local-users.ts`).
  *
  * The headless twin of the browser setup flow (plan Track F,
- * `docs/plans/local-password-auth.md`): every subcommand operates directly on
+ * `docs/implemented-plans/local-password-auth.md`): every subcommand operates directly on
  * the auth file, no HTTP involved, so it works over SSH/CI and needs no setup
  * token — running as the file's owner already is the authority.
  *

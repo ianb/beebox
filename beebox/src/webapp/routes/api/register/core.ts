@@ -20,6 +20,7 @@ import { registerProxyImageRoutes } from "../proxy-image.js";
 import { registerApiFilesWriteRoutes } from "./files-write.js";
 import { errnoCode } from "../../../../shared/error-guards.js";
 import { isTaskOutputPathForBox } from "../../../../core/chat/session/transcript-paths.js";
+import { loadHistoryEntries } from "../../../../core/chat/session/history.js";
 import { registerApiAdapterRoutes } from "./adapters.js";
 import { registerApiExternalRoute } from "./external.js";
 import { registerApiImageRoutes } from "./image.js";
@@ -94,12 +95,16 @@ export async function registerApiRoutes(
       }
 
       // Security: only this box's own background-task output files — see
-      // isTaskOutputPathForBox for the exact shape (tmp root, /tasks/, and
-      // THIS box's encoded-cwd segment). Checked on the literal path before
+      // isTaskOutputPathForBox for the exact shape (tmp root, /tasks/, and an
+      // encoded-cwd segment naming THIS box's root or one of its chats'
+      // landmark directories, from the chat history). Checked on the literal path before
       // any filesystem access, then again on the realpath'd target below so a
       // symlink inside an otherwise-valid path can't point the read at
       // another box's task output.
-      if (!isTaskOutputPathForBox({ boxRoot, filePath })) {
+      const contextDirs = [
+        ...new Set((await loadHistoryEntries(boxRoot)).flatMap((entry) => (entry.contextDir ? [entry.contextDir] : []))),
+      ];
+      if (!isTaskOutputPathForBox({ boxRoot, contextDirs, filePath })) {
         return reply.status(403).send({ error: "Access denied" });
       }
 
@@ -112,7 +117,7 @@ export async function registerApiRoutes(
         }
         return reply.status(404).send({ error: "Output file not found" });
       }
-      if (!isTaskOutputPathForBox({ boxRoot, filePath: realResolved })) {
+      if (!isTaskOutputPathForBox({ boxRoot, contextDirs, filePath: realResolved })) {
         return reply.status(403).send({ error: "Access denied" });
       }
 
