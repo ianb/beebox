@@ -142,6 +142,13 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // nothing written) on a field it does not map or an ambiguous recording.
   // Legacy support to remove: issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md.
   { name: "retire-memo-2026-10", script: "src/scripts/migrate/retire-memo/run.ts" },
+  // Copies shapeVersion and created from the gitignored .beebox/box.json into a
+  // "beebox" block in the box's tracked package.json, so a clone of the box is
+  // a box. Leaves the marker on disk (and tracked where it was) so an older
+  // engine still opens the box after a rollback. Fails closed (exit 1, nothing
+  // written) on a marker without both fields. Legacy support to remove:
+  // issues/deferred/2026-10-20-drop-box-marker-fallback.md.
+  { name: "box-shape-record-2026-10", script: "src/scripts/migrate/box-shape-record/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";
