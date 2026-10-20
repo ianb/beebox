@@ -103,6 +103,12 @@ export interface ChatContext {
    */
   replyLost: boolean;
   /**
+   * A REFRESH arrived during a `replyLost` refresh. `refreshing` ignores
+   * REFRESH so the in-flight fetch isn't restarted; this flag makes `idle`
+   * fetch once more if that fetch read history before the reply landed.
+   */
+  refreshAgain: boolean;
+  /**
    * Why the machine is (or last was) in `refreshing`. `"turn"` is set on every
    * `streaming → refreshing` edge — the agent just worked; `"resync"` by the
    * global REFRESH (WS (re)connect, idle-chat `chat-complete`, status poll).

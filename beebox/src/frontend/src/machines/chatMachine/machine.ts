@@ -23,7 +23,6 @@ import {
   fetchInitialActor,
   fetchHistoryActor,
   streamActor,
-  rollupStreamToEntry,
 } from "./chat-actors";
 import {
   appendQueuedSend,
@@ -35,8 +34,8 @@ import {
   promoteLastToPending,
   applyStreamError,
   untrackLastSend,
-  clearInterrupt, settleLostReply, markTurnRefresh, sendInterrupt,
-  reconcilePendingWithDiagnostics, adoptSession,
+  clearInterrupt, markTurnRefresh, sendInterrupt,
+  reconcilePendingWithDiagnostics, adoptSession, applyRefreshedHistory,
 } from "./chat-actions";
 
 export { chatTailSlice };
@@ -184,6 +183,12 @@ export const chatMachine = setup({
         msgs: context.messages.length,
         pending: context.pendingMessages.length,
       }),
+      // A REFRESH held during a lost-reply refresh (see `refreshing`): fetch
+      // once more if the warning is still up, else just drop the flag.
+      always: [
+        { guard: ({ context }) => context.refreshAgain && context.replyLost, target: "refreshing", actions: assign({ refreshAgain: false, refreshCause: "resync" as const }) },
+        { guard: ({ context }) => context.refreshAgain, actions: assign({ refreshAgain: false }) },
+      ],
       on: {
         SEND: {
           target: "streaming",
@@ -343,7 +348,13 @@ export const chatMachine = setup({
         // (core/chat/session/transcript-sync.ts) holds `result`/`done` until
         // the turn is durable, and onDone swaps messages in + clears streamText
         // atomically. See src/frontend/test/machines/chatMachine/machine.chat-machine-finalize.test.ts.
-        REFRESH: { actions: () => logFsm("refresh-ignored-refreshing") },
+        // Exception: while a dropped reply is unsettled, the in-flight read may
+        // predate the reply, and this `chat-complete` is the last signal that
+        // it landed. Hold it (not restart the fetch); `idle` fetches once more.
+        REFRESH: [
+          { guard: ({ context }) => context.replyLost, actions: [() => logFsm("refresh-held-refreshing"), assign({ refreshAgain: true })] },
+          { actions: () => logFsm("refresh-ignored-refreshing") },
+        ],
         SEND: { actions: { type: "queueSend", params: { from: "refreshing" } } },
       },
       invoke: {
@@ -351,43 +362,7 @@ export const chatMachine = setup({
         input: ({ context }) => ({ sessionInput: context.sessionInput, turnId: context.newChatTurnId }),
         onDone: {
           target: "idle",
-          actions: assign(({ context, event }) => {
-            // A "new" chat whose id came from the accepted turn's lookup
-            // (fetchHistory) adopts it, as SESSION_ASSIGNED would, and
-            // reconciles below like any other session.
-            const adopted = context.sessionInput === "new" ? event.output.sessionId : null;
-            // Still "new" with no id: fetchHistory returned empty. Roll up
-            // whatever streamed for this turn into a synthetic assistant entry
-            // so the completed response stays visible until a later refresh
-            // or a remount loads the authoritative copy.
-            if (context.sessionInput === "new" && adopted === null) {
-              const synthetic = rollupStreamToEntry(context.streamText, context.streamTools);
-              const messages = synthetic ? [...context.messages, synthetic] : context.messages;
-              return {
-                // No history to check: nothing streamed stays a warning until remount.
-                ...(synthetic ? settleLostReply({ context, messages, busy: false }) : {}),
-                messages,
-                streamText: "",
-                streamTools: [],
-              };
-            }
-            const reconciled = reconcilePendingWithDiagnostics({
-              serverMessages: event.output.entries,
-              pendingMessages: context.pendingMessages,
-            });
-            return {
-              ...(adopted !== null ? adoptSession(adopted) : {}),
-              ...settleLostReply({ context, messages: reconciled.messages, busy: event.output.busy }),
-              messages: reconciled.messages,
-              pendingMessages: reconciled.pendingMessages,
-              sessionId: event.output.sessionId,
-              totalEntries: event.output.total,
-              processRunning: event.output.running,
-              processBusy: event.output.busy,
-              streamText: "",
-              streamTools: [],
-            };
-          }),
+          actions: assign(({ context, event }) => applyRefreshedHistory({ context, output: event.output })),
         },
         onError: {
           target: "idle",

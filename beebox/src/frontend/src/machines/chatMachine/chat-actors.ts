@@ -8,8 +8,8 @@ import { boundTurnFields } from "./chat-bound-turn.js";
  * `fetchInitialActor` / `fetchHistoryActor` load session history + status;
  * `streamActor` runs the SSE turn in a callback closure. Kept separate from
  * the machine wiring in `chatMachine.ts` to keep both files under the
- * line budget. `rollupStreamToEntry` is consumed by the machine's
- * refreshing-onDone action and is therefore exported.
+ * line budget. `rollupStreamToEntry` is consumed by the refreshing-onDone
+ * reducer (`applyRefreshedHistory` in chat-actions) and is therefore exported.
  */
 
 import { fromCallback, fromPromise } from "xstate";

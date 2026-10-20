@@ -8,7 +8,8 @@
 
 import { interruptChat, type PendingSessionEntry, type SessionEntry } from "../../api";
 import { buildOptimisticContent, entryText, reconcilePending } from "./chat-shared";
-import { queueMessageToBackend } from "./chat-actors";
+import type { OutputFrom } from "xstate";
+import { queueMessageToBackend, rollupStreamToEntry, type fetchHistoryActor } from "./chat-actors";
 import { toastError } from "../../components/ui/toast-store";
 import { MAX_RETAINED_MESSAGES, type ChatContext, type ChatEvent } from "../chat-types";
 import { observeChatSendHistory } from "../../lib/chat-send-diagnostics";
@@ -245,5 +246,49 @@ export function promoteLastToPending(
     pendingMessages: alreadyTracked
       ? context.pendingMessages.map((entry) => entry.uuid === active.uuid ? promoted : entry)
       : [...context.pendingMessages, promoted],
+  };
+}
+
+/**
+ * `refreshing`'s onDone: swap fetched history in. A still-"new" chat with no
+ * id has no history, so the streamed reply is rolled up in place instead.
+ */
+export function applyRefreshedHistory(
+  { context, output }: { context: ChatContext; output: OutputFrom<typeof fetchHistoryActor> },
+): Partial<ChatContext> {
+  // A "new" chat whose id came from the accepted turn's lookup
+  // (fetchHistory) adopts it, as SESSION_ASSIGNED would, and
+  // reconciles below like any other session.
+  const adopted = context.sessionInput === "new" ? output.sessionId : null;
+  // Still "new" with no id: fetchHistory returned empty. Roll up
+  // whatever streamed for this turn into a synthetic assistant entry
+  // so the completed response stays visible until a later refresh
+  // or a remount loads the authoritative copy.
+  if (context.sessionInput === "new" && adopted === null) {
+    const synthetic = rollupStreamToEntry(context.streamText, context.streamTools);
+    const messages = synthetic ? [...context.messages, synthetic] : context.messages;
+    return {
+      // No history to check: nothing streamed stays a warning until remount.
+      ...(synthetic ? settleLostReply({ context, messages, busy: false }) : {}),
+      messages,
+      streamText: "",
+      streamTools: [],
+    };
+  }
+  const reconciled = reconcilePendingWithDiagnostics({
+    serverMessages: output.entries,
+    pendingMessages: context.pendingMessages,
+  });
+  return {
+    ...(adopted !== null ? adoptSession(adopted) : {}),
+    ...settleLostReply({ context, messages: reconciled.messages, busy: output.busy }),
+    messages: reconciled.messages,
+    pendingMessages: reconciled.pendingMessages,
+    sessionId: output.sessionId,
+    totalEntries: output.total,
+    processRunning: output.running,
+    processBusy: output.busy,
+    streamText: "",
+    streamTools: [],
   };
 }
