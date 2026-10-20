@@ -135,7 +135,7 @@ runs: bbx wakeup --connector notes
   t.check((await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false })).health, undefined);
 
   // The `todos` extra (Track 5a's ambient line) rides on every send, unlike
-  // `health` — no gate — but only when there's actually something on the plate.
+  // `health` — no gate — but only when there's actually something due now.
 
   t.check((await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false })).todos, undefined);
 
@@ -144,7 +144,7 @@ runs: bbx wakeup --connector notes
     '---\ntitle: Errand\n---\n{% todo id="call-vet" %}Call the vet{% /todo %}\n'
   );
 
-  t.check((await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false })).todos, "1 open todo on the plate — `bbx query todos`");
+  t.check((await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false })).todos, "1 todo now — `bbx query todos`");
 });
 
 // ## admitHealth — the schedule-health rate limit

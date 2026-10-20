@@ -31,7 +31,7 @@ interface TodosCliOptions {
   status?: string;
   assigned?: string;
   glob?: string;
-  onPlate?: boolean;
+  now?: boolean;
   json?: boolean;
 }
 
@@ -40,7 +40,7 @@ export const todosCommand = new Command("todos")
   .option("--status <status>", "Filter by status: open, done, dropped, parked (default: open)")
   .option("--assigned <name>", "Filter by the `assigned` attribute (exact match)")
   .option("--glob <pattern>", "Restrict which cards are scanned (default: every card)")
-  .option("--on-plate", "Only overdue (escalated) / on-plate todos (excludes later, plate state quiet)")
+  .option("--now", "Only todos due now: overdue, started, or undated (excludes later)")
   .option("--json", "Full structured records as JSON, `{todos, issues}`")
   .action(async (options: TodosCliOptions) => {
     try {
@@ -77,7 +77,7 @@ export async function runTodosForBox(boxRoot: string, options: TodosCliOptions):
         // (Track 1).
         scope: "all",
         ...(options.assigned !== undefined && { assigned: options.assigned }),
-        ...(options.onPlate === true && { onPlate: true }),
+        ...(options.now === true && { onPlate: true }),
       },
     },
     since: null,
@@ -103,7 +103,7 @@ export async function runTodosForBox(boxRoot: string, options: TodosCliOptions):
 /** Section order for the default human listing — only non-empty groups print. */
 const PLATE_GROUPS: { state: TodoPlateState; label: string }[] = [
   { state: "escalated", label: "OVERDUE" },
-  { state: "on-plate", label: "ON YOUR PLATE" },
+  { state: "on-plate", label: "NOW" },
   { state: "quiet", label: "LATER" },
   { state: "parked", label: "PARKED" },
   { state: "done", label: "DONE" },

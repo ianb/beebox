@@ -347,6 +347,7 @@ export {
   installTodoView,
   installSchedules,
 } from "./defaults.js";
+export { installRootQuestion } from "./root-question.js";
 
 /**
  * Ensure `.claude/memory/` exists (at the box root — see "Where Claude Code

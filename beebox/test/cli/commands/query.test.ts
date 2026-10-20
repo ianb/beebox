@@ -118,7 +118,7 @@ Errands  _content/Errands.doc.card (refers here)  — 1 open, 0 done
   // Only `plate` gets group headings: `place` is a single group whose label would
   // just repeat the command.
 
-  await t.checkText(await run({ here: PORCH, referring: false, group: "plate", status: ["open", "done"] }), `On your plate (2)
+  await t.checkText(await run({ here: PORCH, referring: false, group: "status", status: ["open", "done"] }), `Now (2)
 Porch plan  _content/projects/Porch/Plan.doc.card  — 2 open, 1 done, next 2026-08-10
  § Demolition
   _content/projects/Porch/Plan.doc.card:8  Pull the permit  (context)

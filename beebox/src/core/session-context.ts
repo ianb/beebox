@@ -197,11 +197,12 @@ export function admitHealth(
  */
 export async function composeSendSnapshot(
   boxRoot: string,
-  { features, sessionStart, channel, openCard, viewContext, activityChildren, healthGate, lastActivityAt }: {
+  { features, sessionStart, channel, openCard, openQuestion, viewContext, activityChildren, healthGate, lastActivityAt }: {
     features?: FeatureMap;
     sessionStart: boolean;
     channel?: ChatChannel;
     openCard?: string;
+    openQuestion?: string;
     viewContext?: AttentionSnapshot;
     activityChildren?: string;
     healthGate?: HealthGate;
@@ -225,6 +226,7 @@ export async function composeSendSnapshot(
     ...context,
     ...(channel !== undefined ? { channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
+    ...(openQuestion !== undefined ? { openQuestion } : {}),
     ...(viewContext !== undefined ? { viewContext } : {}),
     ...(activityChildren !== undefined ? { activityChildren } : {}),
   });

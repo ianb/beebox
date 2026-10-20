@@ -85,6 +85,7 @@ void test("A subdirectory holding a primary card reports it in its summary; one 
     hasEntryPoint: false,
     primaryCount: 1,
     background: false,
+    cardCount: 2,
   });
 
   t.check(byName.get("Cookbook")?.landmark?.label, "Cookbook");
@@ -93,9 +94,33 @@ void test("A subdirectory holding a primary card reports it in its summary; one 
     hasEntryPoint: false,
     primaryCount: 0,
     background: false,
+    cardCount: 1,
   });
 
   t.check(byName.get("Plain")?.landmark, undefined);
+});
+
+// ## A box-layout template folder is `seeded`; a person's own folder is not
+//
+// `seeded` marks the `_content` folders the box layout creates
+// (`docs/implemented-plans/front-door.md`, Track D), including the intermediate
+// `reviews/` that `reviews/retro` makes. Browse folds a seeded folder only
+// when nothing is below it.
+void test("A box-layout template folder is seeded; a person's own folder is not", async (t) => {
+  t.teardown(async () => {
+    try {
+      await server.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const server = await makeTestServer();
+  await server.seed("_content/taxes/.keep", "");
+  await server.seed("_content/reviews/retro/.keep", "");
+  const listing = await statusRouter.createCaller(ctxFor(server.boxRoot)).browse({ path: "_content" });
+  const byName = new Map(listing.dirs.map((d) => [d.name, d]));
+  t.check(["recipes", "reviews", "taxes"].map((name) => `${name}:${String(byName.get(name)?.seeded)}:${String(byName.get(name)?.summary.cardCount)}`).join(" "),
+    "recipes:true:0 reviews:true:0 taxes:false:0");
 });
 
 // ## The listed directory's own `background` cascade

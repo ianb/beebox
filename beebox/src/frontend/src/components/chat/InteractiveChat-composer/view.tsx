@@ -13,10 +13,11 @@ import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
-import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart, type VoiceSegmentSend } from "../InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "../InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "../input-store";
 import { useComposerCaret } from "../composer-caret";
 import type { AddFiles } from "../InteractiveChat-attachments/attachments";
+import type { ComposerRowProps } from "../composer-row-props";
 import type { TranscriptionState } from "../../../hooks/useRealtimeTranscription/hook";
 import { segmentCapturing } from "../../../machines/transcription-events";
 import type { FinalWord } from "../../../machines/transcription-events";
@@ -86,24 +87,12 @@ export function ComposerSendButton({
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, includeControlIds,
-}: {
+  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, includeControlIds, placeholder,
+}: ComposerRowProps & {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
-  isTranscribing: boolean;
-  transcription: TranscriptionHandle;
-  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
-  targetBusy: boolean;
-  sendDisabledReason?: string;
   handleKeyDown: (e: React.KeyboardEvent) => void;
-  handleSend: () => void;
-  handleCancelTranscription: () => void;
-  clearDraft: () => void;
-  onStopDictation: () => void;
-  onVoiceSegmentSend: VoiceSegmentSend;
-  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
-  onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
   includeControlIds: boolean;
 }) {
   const noteTyped = useComposerCaret({ textareaRef, text: input });
@@ -120,7 +109,7 @@ function DesktopComposerRow({
         onPaste={onPaste}
         onDrop={onDrop}
         readOnly={isTranscribing}
-        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
+        placeholder={isTranscribing ? "Listening..." : placeholder ?? "Type a message..."}
         className={composerTextareaClasses({ mobile: false, isTranscribing })}
         minRows={1}
         maxRows={8}
@@ -199,28 +188,15 @@ export function ChatInputArea({
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
-  narrationEnabled, includeControlIds,
-}: {
+  narrationEnabled, includeControlIds, placeholder,
+}: ComposerRowProps & {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
-  isTranscribing: boolean;
-  transcription: TranscriptionHandle;
-  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
-  targetBusy: boolean;
-  sendDisabledReason?: string;
   handleKeyDown: (e: React.KeyboardEvent) => void;
-  handleSend: () => void;
-  handleCancelTranscription: () => void;
-  /** Drops the persisted dictation draft when transcript is moved to input or sent. */
-  clearDraft: () => void;
   onKeyboard: () => void;
   onVoice: () => void;
-  onStopDictation: () => void;
-  onVoiceSegmentSend: VoiceSegmentSend;
   voicePaused: boolean;
   onUnpause: () => void;
   hideMobile?: boolean;
-  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
-  onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
   /** Open the file picker behind the Add menu's one file entry. */
   onAddFiles: () => void;
   /** Ingest files into the composer (shared with picker/paste/drop) — feeds the "Send screenshot…" item. */
@@ -332,6 +308,7 @@ export function ChatInputArea({
           onPaste={onPaste}
           onDrop={onDrop}
           includeControlIds={hasControlIds}
+          placeholder={placeholder}
         />
 
         {/* Mobile: spacer */}

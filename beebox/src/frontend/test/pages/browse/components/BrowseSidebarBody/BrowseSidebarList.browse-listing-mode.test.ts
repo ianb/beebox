@@ -23,10 +23,11 @@ const mixedData: BrowseData = {
     {
       name: "Cookbook",
       fileCount: 2,
-      summary: { hasEntryPoint: false, primaryCount: 1, background: false },
+      summary: { hasEntryPoint: false, primaryCount: 1, background: false, cardCount: 2 },
       landmark: { label: "Cookbook", symbol: { glyph: "🍳" } },
+      seeded: false,
     },
-    { name: "Logs", fileCount: 3, summary: { hasEntryPoint: false, primaryCount: 0, background: true } },
+    { name: "Logs", fileCount: 3, summary: { hasEntryPoint: false, primaryCount: 0, background: true, cardCount: 3 }, seeded: false },
   ],
   cards: [
     { relativePath: "Plan.doc.card", name: "Plan", type: "doc", hasAttachments: false, prominence: "entry-point" },
@@ -36,10 +37,11 @@ const mixedData: BrowseData = {
   files: [{ relativePath: "readme.txt", name: "readme.txt" }],
 };
 
-function renderList(data: BrowseData, mode: "compact" | "raw"): string {
+function renderList(data: BrowseData, options: { mode: "compact" | "raw"; dirPath?: string }): string {
+  const { mode, dirPath } = options;
   return renderToStaticMarkup(React.createElement(BrowseSidebarList, {
     data,
-    dirPath: "",
+    dirPath: dirPath ?? "",
     loading: false,
     onNavigate: () => {},
     selectedFilePath: null,
@@ -50,7 +52,7 @@ function renderList(data: BrowseData, mode: "compact" | "raw"): string {
 
 // ## Compact: the entry-point card and the primary-carrying directory lead, with its landmark identity; everything else folds behind "4 more"
 void test("Compact: the entry-point card and the primary-carrying directory lead, with its landmark identity; everything else folds behind \"4 more\"", async (t) => {
-  const compact = renderList(mixedData, "compact");
+  const compact = renderList(mixedData, { mode: "compact" });
   t.check(
     [
       compact.includes(">Plan<"),
@@ -67,7 +69,7 @@ void test("Compact: the entry-point card and the primary-carrying directory lead
 
 // ## Raw: every item renders flat, prominence ignored, no disclosure
 void test("Raw: every item renders flat, prominence ignored, no disclosure", async (t) => {
-  const raw = renderList(mixedData, "raw");
+  const raw = renderList(mixedData, { mode: "raw" });
   t.check(
     [
       raw.includes(">Plan<"),
@@ -87,11 +89,11 @@ void test("Nothing prominent: compact renders identically to raw, no disclosure"
   const plainData: BrowseData = {
     path: "",
     background: false,
-    dirs: [{ name: "Sub", fileCount: 0, summary: { hasEntryPoint: false, primaryCount: 0, background: false } }],
+    dirs: [{ name: "Sub", fileCount: 0, summary: { hasEntryPoint: false, primaryCount: 0, background: false, cardCount: 0 }, seeded: false }],
     cards: [{ relativePath: "X.doc.card", name: "X", type: "doc", hasAttachments: false, prominence: "ordinary" }],
     files: [],
   };
-  const plainCompact = renderList(plainData, "compact");
+  const plainCompact = renderList(plainData, { mode: "compact" });
   t.check(
     [
       plainCompact.includes(">X<"),
@@ -99,5 +101,34 @@ void test("Nothing prominent: compact renders identically to raw, no disclosure"
       plainCompact.includes("more"),
     ].join(" "),
     "true true false",
+  );
+});
+
+// ## The content root ends with a quiet "Whole box" row; other folders do not
+//
+// `docs/implemented-plans/front-door.md`, Track D: Browse opens on `_content`, and the box
+// root's areas are one row away at the bottom, in both modes. Seeded empty
+// folders fold behind "N more" while the cards lead.
+void test("The content root ends with a quiet Whole box row; other folders do not", async (t) => {
+  const contentRoot: BrowseData = {
+    path: "_content",
+    background: false,
+    dirs: [{ name: "recipes", fileCount: 0, summary: { hasEntryPoint: false, primaryCount: 0, background: false, cardCount: 0 }, seeded: true }],
+    cards: [{ relativePath: "_content/X.doc.card", name: "X", type: "doc", hasAttachments: false, prominence: "ordinary" }],
+    files: [],
+  };
+  const compact = renderList(contentRoot, { mode: "compact", dirPath: "_content" });
+  const raw = renderList(contentRoot, { mode: "raw", dirPath: "_content" });
+  const nested = renderList(contentRoot, { mode: "compact", dirPath: "_content/projects" });
+  t.check(
+    [
+      compact.includes(">Whole box<"),
+      compact.includes(">X<"),
+      compact.includes("1 more"),
+      compact.includes("recipes"),
+      raw.includes(">Whole box<"),
+      nested.includes("Whole box"),
+    ].join(" "),
+    "true true true false true false",
   );
 });

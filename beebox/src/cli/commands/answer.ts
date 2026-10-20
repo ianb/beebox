@@ -48,5 +48,5 @@ export const answerCommand = new Command("answer")
   .description("Answer a pending question")
   .argument("<question>", "Question card path (relative to box root)")
   .argument("<answer>", "Answer text or option ID (a, b, c, etc.)")
-  .option("--via <source>", "Answer source", "cli")
+  .option("--via <source>", "Answer source: cli, web, or chat (a chat answer writes no follow-up job)", "cli")
   .action(actionWrapper);

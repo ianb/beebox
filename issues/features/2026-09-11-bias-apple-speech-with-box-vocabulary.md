@@ -72,3 +72,26 @@ finished recording (`ios-app/BeeBox/Services/OnDeviceHqTranscriber.swift`;
 [ios-on-device-hq-transcription](2026-10-06-ios-on-device-hq-transcription.md)).
 That text becomes the sent message, so a vocabulary context applied there
 affects the final message and not only the live preview.
+
+## 2026-10-20: Voxtral 3 takes context too, in a wider form
+
+Voxtral 3's `context_bias`
+([docs](https://docs.mistral.ai/studio/audio/speech-to-text/bias-context-and-vocabulary))
+is a list of strings. Each entry is a term ("Alder Creek Design") or a
+sentence describing the recording. Mistral's guidance: list every term that
+must come out right, and add a description when the subject is clear. It
+works on the file models and on the realtime model, where it goes in
+`session.update` before the first audio and cannot change after. Entries share
+the model's context window (65,536 tokens) with the audio. Mistral reports
+keyphrase recall rising from 81.4% to 94.6% with context.
+
+Today the box sends `context_bias` only when a caller passes a prompt
+(`beebox/src/core/transcription/voxtral/request.ts`). The one caller found is
+re-transcription, which sends the existing text
+(`beebox/src/core/preactions/transcribe.ts:113`). The live proxy sends none.
+
+The developer sees context as its own feature, separate from any one
+recognizer. That points at one box-level context source, served to every
+recognizer in the form it takes: terms and a description for Voxtral, terms
+only for Apple. Related:
+[move to Voxtral 3](2026-10-20-upgrade-transcription-to-voxtral-3.md).

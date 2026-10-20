@@ -35,7 +35,7 @@ const QuerySchema = z
     here: z.string(),
     glob: z.string().optional(),
     includeReferring: z.boolean().optional(),
-    group: z.enum(["place", "plate"]).optional(),
+    group: z.enum(["place", "status"]).optional(),
     params: TodoParamsSchema,
   })
   .superRefine((val, ctx) => {

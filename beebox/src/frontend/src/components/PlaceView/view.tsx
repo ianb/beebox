@@ -12,7 +12,9 @@
  * docs/implemented-plans/place-shows-cards.md, Track C.
  *
  * `PlaceView` fetches `landmarks.forDir` for the card's folder and owns the
- * loading and error states; `PlacePage` renders a loaded payload.
+ * loading and error states; `PlacePage` renders a loaded payload. On the root
+ * place it also reads `status.navStatus`, the nav badge's query, for the count
+ * line under the summary (docs/implemented-plans/front-door.md, Track C).
  */
 
 import { useContext, type ReactNode } from "react";
@@ -20,7 +22,9 @@ import { trpc } from "../../lib/trpc/client";
 import { useBoxSlug } from "../../lib/box-slug";
 import { browseCardTarget } from "../../lib/browse-card-state";
 import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
-import { toDisplayPath } from "@shared/display-path";
+import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
+import { PLATE_CARD_PATH } from "@shared/todo-model";
+import type { NavCounts } from "@core/nav-counts";
 import { Text } from "../ui/Text";
 import { Heading } from "../ui/Heading";
 import { Hint } from "../ui/Hint";
@@ -35,6 +39,9 @@ import { bbxSource } from "../../lib/source-tag";
 import { useRefetchOnFileChange } from "../../hooks/useRefetchOnFileChange";
 import { placeSections, type PlacePayload, type PlaceTier } from "./sections";
 import { PlaceChatContext, startSomething } from "../openers/place-chat";
+import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside/hook";
+import { CountsLine } from "../todo/TodoSummaryLine";
+import { rootLineParts } from "../todo/summary";
 import type { RendererProps } from "../../file-type-registry";
 import type { ViewTarget } from "../../lib/view-url";
 
@@ -56,17 +63,52 @@ function SectionHeading({ children }: { children: ReactNode }) {
 }
 
 /**
- * No links and no groups: say so, and name the folder the place is. The walk
- * skips background cards and unknown types, so the folder may still hold files.
+ * No links and no groups: say so, and offer the folder in Browse. It does not
+ * claim the folder is empty: the walk skips background cards and unknown
+ * types, so the folder may still hold files (docs/implemented-plans/front-door.md, Track E).
  */
-function EmptyPlace({ folder, onNavigate }: { folder: string; onNavigate: (target: ViewTarget) => void }) {
+function EmptyPlace({ folder, label, onNavigate }: { folder: string; label: string; onNavigate: (target: ViewTarget) => void }) {
   return (
     <div className="flex flex-col gap-1" data-place-section="empty">
-      <Text as="p">No cards to show here yet.</Text>
+      <Text as="p">Nothing to show here yet. Tell me about something in the chat and I&apos;ll keep it here.</Text>
       <Text as="p" size="sm" tone="subtle">
-        This place is the folder{" "}
-        <InlineAction onClick={() => onNavigate(browseCardTarget({ directory: folder }))}>{`${toDisplayPath(folder)}/`}</InlineAction>
-        . Ask in the chat to add the first card.
+        <InlineAction intent="subtle" onClick={() => onNavigate(browseCardTarget({ directory: folder }))}>{`Open ${label} in Browse`}</InlineAction>
+      </Text>
+    </div>
+  );
+}
+
+/**
+ * The root page's count line: "3 to do · 1 overdue · 2 questions waiting".
+ * Each count opens its surface beside the chat. Zero renders nothing; a failed
+ * query says so, with a retry, so the two look different.
+ */
+function RootCounts({ counts, onRetry }: { counts: NavCounts | "unavailable"; onRetry: (() => void) | undefined }) {
+  const openBeside = useOpenBeside();
+  if (counts === "unavailable") {
+    return (
+      <div data-place-section="counts">
+        <Text as="p" size="sm" tone="subtle">
+          {"Counts unavailable. "}
+          {onRetry === undefined ? null : <InlineAction intent="subtle" onClick={onRetry}>Retry</InlineAction>}
+        </Text>
+      </div>
+    );
+  }
+  const parts = rootLineParts(counts);
+  if (parts === null) return null;
+  const open = (path: string, title: string) => (openBeside === null ? null : { onClick: () => openBeside(cardTarget(path)), title });
+  return (
+    <div data-place-section="counts">
+      <Text as="p" size="sm" tone="subtle">
+        <CountsLine
+          parts={parts}
+          actions={{
+            open: open(PLATE_CARD_PATH, "Open your todo list"),
+            overdue: open(PLATE_CARD_PATH, "Open your todo list"),
+            questions: open(SYSTEM_CARD_PATHS.questions, "Open the questions waiting for you"),
+          }}
+        />
       </Text>
     </div>
   );
@@ -77,11 +119,15 @@ function EmptyPlace({ folder, onNavigate }: { folder: string; onNavigate: (targe
  * the folder's landmark is a different card (two landmarks in one folder), the
  * page names both rather than show the other card's links as this one's.
  */
-export function PlacePage({ cardPath, payload, body, onNavigate, onGoToPlace, heading }: {
+export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, onNavigate, onGoToPlace, heading }: {
   cardPath: string;
   payload: PlacePayload;
   /** The landmark card's body, the place summary; blank shows nothing. */
   body?: string;
+  /** The root place's todo and question counts; absent on a nested place or while loading. */
+  rootCounts?: NavCounts | "unavailable";
+  /** Retry a failed count query. */
+  onRetryCounts?: () => void;
   /** Draw the place's mark and label: an embed has no card header that shows them. */
   heading?: boolean;
   onNavigate: (target: ViewTarget) => void;
@@ -116,6 +162,8 @@ export function PlacePage({ cardPath, payload, body, onNavigate, onGoToPlace, he
         </div>
       ) : null}
 
+      {rootCounts === undefined ? null : <RootCounts counts={rootCounts} onRetry={onRetryCounts} />}
+
       {start.openers.length > 0 && chat !== null && handleSendOpener !== undefined ? (
         <div className="flex flex-col gap-2" data-place-section="start-something">
           <SectionHeading>Start something</SectionHeading>
@@ -132,7 +180,7 @@ export function PlacePage({ cardPath, payload, body, onNavigate, onGoToPlace, he
         </div>
       ) : null}
 
-      {sections.kind === "empty" ? <EmptyPlace folder={folder} onNavigate={onNavigate} /> : sections.sections.map((section) =>
+      {sections.kind === "empty" ? <EmptyPlace folder={folder} label={payload.label} onNavigate={onNavigate} /> : sections.sections.map((section) =>
         section.kind === "links" ? (
           <div key={section.tier} className="flex flex-col gap-2" data-place-section={section.tier}>
             <SectionHeading>{TIER_HEADINGS[section.tier]}</SectionHeading>
@@ -164,6 +212,12 @@ export function PlaceView({ data, onNavigate, mode }: RendererProps) {
   const boxSlug = useBoxSlug();
   const openLandmarkChat = useOpenLandmarkChat(boxSlug ?? "");
   const landmark = query.data?.landmark;
+  // Same query and cache entry as the nav badge, which invalidates it on card
+  // and question events, so the page and the badge cannot disagree.
+  const isRoot = landmark !== undefined && landmark !== null && landmark.dir === "";
+  const counts = trpc.status.navStatus.useQuery(undefined, { enabled: isRoot });
+  let rootCounts: NavCounts | "unavailable" | undefined;
+  if (isRoot) rootCounts = counts.isError ? "unavailable" : counts.data?.counts;
 
   let content: ReactNode;
   if (query.isError) {
@@ -183,6 +237,7 @@ export function PlaceView({ data, onNavigate, mode }: RendererProps) {
         cardPath={cardPath}
         payload={landmark}
         {...(data.body === undefined ? {} : { body: data.body })}
+        {...(rootCounts === undefined ? {} : { rootCounts, onRetryCounts: () => { void counts.refetch(); } })}
         heading={mode === "embed"}
         onNavigate={(target) => onNavigate(target)}
         {...(boxSlug === undefined ? {} : { onGoToPlace: () => { void openLandmarkChat(landmark.dir); } })}

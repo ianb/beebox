@@ -189,7 +189,7 @@ export function progressOf(reduction: TodoReduction): { done: number; total: num
 }
 
 /**
- * "15 on your plate · 4 later" — the plate headline's two numbers, both from
+ * "15 now · 4 later" — the headline's two numbers, both from
  * the reduction of a boxholder-scope query. `later` is `quiet`: open minus
  * what's already on the plate. There is no `quiet` field on the reduction —
  * it doesn't need one, since `open` and `onPlate` already say it.

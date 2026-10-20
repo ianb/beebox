@@ -7,10 +7,11 @@
 import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart, type VoiceSegmentSend } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, routeComposerSend, spokenTextStart } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
 import { useComposerCaret } from "./composer-caret";
-import { ComposerSendButton, type TranscriptionHandle } from "./InteractiveChat-composer/view";
+import { ComposerSendButton } from "./InteractiveChat-composer/view";
+import type { ComposerRowProps } from "./composer-row-props";
 import { segmentCapturing } from "../../machines/transcription-events";
 
 /**
@@ -20,21 +21,8 @@ export function MobileTextareaRow({
   isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend,
-  onPaste, onDrop, includeControlIds,
-}: {
-  isTranscribing: boolean;
-  transcription: TranscriptionHandle;
-  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
-  targetBusy: boolean;
-  sendDisabledReason?: string;
-  handleSend: () => void;
-  handleCancelTranscription: () => void;
-  /** Drops the persisted dictation draft when transcript is moved to input or sent. */
-  clearDraft: () => void;
-  onStopDictation: () => void;
-  onVoiceSegmentSend: VoiceSegmentSend;
-  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
-  onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
+  onPaste, onDrop, includeControlIds, placeholder,
+}: ComposerRowProps & {
   /** Omit authored addresses when rendered repeatedly in a development gallery. */
   includeControlIds?: boolean;
 }) {
@@ -63,7 +51,7 @@ export function MobileTextareaRow({
         onDrop={onDrop}
         readOnly={isTranscribing}
         enterKeyHint="enter"
-        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
+        placeholder={isTranscribing ? "Listening..." : placeholder ?? "Type a message..."}
         className={composerTextareaClasses({ mobile: true, isTranscribing })}
         minRows={2}
         maxRows={8}

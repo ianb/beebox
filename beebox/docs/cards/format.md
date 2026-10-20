@@ -48,12 +48,12 @@ todo. Full vocabulary:
 - `id` — a short, human-scale slug for cross-reference (unique box-wide,
   enforced by the collector, not per-card lint). Never a UUID.
 - `status` — one of `open` (absence = `open`), `done`, `dropped`, `parked`.
-  `done`/`dropped` render struck; `parked` is deliberately off the plate
+  `done`/`dropped` render struck; `parked` is deliberately out of the now/later split
   (excluded from default surfaces, present in the full list).
 - `assigned` — plain string; absence = the boxholder. `"agent"` marks work
   the agent itself is chasing. Any other value names a person (`"Dana"`); a
   plain name is acceptable, and whether it should be a ref is not settled yet.
-  Only the boxholder's todos count on the plate; the agent's and another
+  Only the boxholder's todos count as due now; the agent's and another
   person's render on their card with an assignee badge.
   A placeholder for the boxholder (`user`, `me`, `boxholder`, `you`, `owner`,
   any case) draws a lint warning: the boxholder's todos leave `assigned` off.
@@ -63,9 +63,9 @@ todo. Full vocabulary:
 - `due` — ISO date; past due escalates the todo (the "oh shit" line).
 - `start` — ISO date, or a relative interval (`-3d`, `-2w`) meaning
   due-minus-that-interval (an error if relative with no `due`). This is the
-  primary surfacing trigger: the todo is "on the plate" from `start`
+  primary surfacing trigger: the todo is "now" from `start`
   onward, quiet before it. An undated todo (no `start`, no `due`) is on the
-  plate immediately — quiet states are always explicit, never an accident
+  now immediately — quiet states are always explicit, never an accident
   of missing metadata.
 - `recheck` — ISO date, or `never`. The daily `todo-review` procedure's
   bookkeeping: it does not list the todo before that date, and never lists it
@@ -73,7 +73,7 @@ todo. Full vocabulary:
   review's verify step (`never`, after three unchanged rechecks, reported by
   the `todos-unreviewed` health warning). A retired todo that is edited
   comes back into review; a `never` set by hand is respected. It never
-  affects plate state, the badge, counts, or order.
+  affects the now/later state, the badge, counts, or order.
 
 `see-also` nests inside a `todo` (zero or more) and points at supporting
 context: exactly one of `ref` (an in-box card, tracked by `bbx mv`) or `href`
@@ -100,7 +100,7 @@ human browsing directly. Mutating a todo is an ordinary card edit — there is
 no write subcommand. A `todo-view` card (see `src/schemas/todo-view.ts`) is
 the human-facing display surface: it's the same query (a `glob` plus optional
 `todo-status`/`assigned` filters), and — per "views attach to cards" — dropping one
-in a directory gives that subtree its own plate.
+in a directory gives that subtree its own todo page.
 `_content/plate.todo-view.card` is the box-wide instance. Design record:
 `docs/implemented-plans/todo-annotation.md` and
 `docs/implemented-plans/todo-collection.md`.

@@ -270,6 +270,39 @@ void test("Text", async (t) => {
   t.check(r, answered({ question: "Name.question.card", card: answeredCard(NAME_HEAD, "  text: Phoenix\n"), job: nameJob("Name.question.card") }));
 });
 
+// ## A chat answer writes no follow-up job
+//
+// `--via chat` is the agent recording an answer the person gave in a
+// conversation (docs/implemented-plans/front-door.md, Track A). The agent did the directive
+// there before answering, so only the card changes: `answered-via: chat`, no
+// job file, and a commit of the card alone. A web answer still writes the job.
+void test("A chat answer writes no follow-up job", async (t) => {
+  const chat = await answerOn({ name: "Name.question.card", content: TEXT, args: { answer: "Phoenix", via: "chat" } });
+  const web = await answerOn({ name: "Name.question.card", content: TEXT, args: { answer: "Phoenix", via: "web" } });
+  t.check(chat, {
+    success: true,
+    error: undefined,
+    card: str`---
+${NAME_HEAD}answer:
+  text: Phoenix
+answered-at: ${isoDate()}
+answered-via: chat
+---
+`,
+    job: null,
+    jobFiles: [],
+    committed: [`${QUESTIONS}/Name.question.card`],
+  });
+  t.check(web.jobFiles, [JOB_FILE]);
+  t.check(web.card, str`---
+${NAME_HEAD}answer:
+  text: Phoenix
+answered-at: ${isoDate()}
+answered-via: web
+---
+`);
+});
+
 // ## Expired and dismissed are answerable; answered is terminal
 //
 // An expired question still accepts an answer (expiry demotes visibility, it does

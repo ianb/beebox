@@ -3,7 +3,7 @@
 // `src/cli/commands/todos.ts` is a thin presentation layer over the todo
 // collection (`core/todo/query.ts`, the same runner `bbx query todos` and the
 // web list use): filters (`--status`, `--assigned`, `--glob`,
-// `--on-plate`), a human listing grouped by plate-state, and `--json` for the
+// `--now`), a human listing grouped by plate-state, and `--json` for the
 // full structured records. `runTodosForBox(boxRoot, options)` is exercised
 // directly (same approach as `test/cli/commands/auth.test.ts`) rather than
 // spawning the CLI as a subprocess.
@@ -64,7 +64,7 @@ void test("Default filter is `--status open` (escalated, on-plate, and quiet all
   });
   await t.checkText(await run(), `OVERDUE (1)
   _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
-ON YOUR PLATE (1)
+NOW (1)
   _content/plate.doc.card:6  [on-plate-one] Undated, on the plate now
 LATER (1)
   _content/plate.doc.card:8  [quiet-one] Not yet  (due=2026-08-01 start=2026-07-30)`);
@@ -79,11 +79,11 @@ LATER (1)
   await t.checkText(await run({ status: "parked" }), `PARKED (1)
   _content/plate.doc.card:10  [parked-one] Parked`);
 
-  // ## `--on-plate` narrows the default (open) filter further, excluding quiet
+  // ## `--now` narrows the default (open) filter further, excluding quiet
 
-  await t.checkText(await run({ onPlate: true }), `OVERDUE (1)
+  await t.checkText(await run({ now: true }), `OVERDUE (1)
   _content/plate.doc.card:4  [escalated-one] Overdue vet call  (assigned=Dana due=2026-07-27)
-ON YOUR PLATE (1)
+NOW (1)
   _content/plate.doc.card:6  [on-plate-one] Undated, on the plate now`);
 
   // ## `--assigned`

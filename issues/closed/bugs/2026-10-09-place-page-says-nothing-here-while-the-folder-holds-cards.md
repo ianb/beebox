@@ -54,7 +54,7 @@ Option 1 matches what the person expects of a "place". The tiers were designed
 so a place stays short ([landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md),
 Track C), so the choice is a design call.
 
-Related: [first-screen-says-nothing-about-what-this-is](../../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)
+Related: [first-screen-says-nothing-about-what-this-is](../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md)
 (partly met by arrival; this is what the arrival page then shows).
 
 Reports: [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) row 26,

@@ -1,6 +1,6 @@
 ---
 title: What you could do with your box
-read-when: The user asks what the box can do, what to try, what it is for, or how to get started — or clicks the stock "What can you do?" opener.
+read-when: The user asks what the box can do, what to try, what it is for, or how to get started — or clicks the stock "Tell me about talking instead of typing." opener.
 ---
 # What you could do with your box
 
@@ -171,7 +171,10 @@ that need nothing: photos, voice, typing.
 
 Plans and lists are things a person keeps track of, and the same freedom
 applies: their own properties, their own way of noting progress, kept as
-records or as a type of their own. Behind it all is a persistent record:
+records or as a type of their own. What you've lent out, what you owe and
+what's due, who said they'd do what: each is a kind of thing to keep, and
+once it has grown the box can build a page that shows it the way the
+person wants. Behind it all is a persistent record:
 every change is a commit, so "what did you do overnight" and "why did you
 move that" have answers you can trace.
 

@@ -52,7 +52,7 @@ purpose, not an auto-remover.
 
 Related: [landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md)
 (Track B introduced the fading openers);
-[first-screen-says-nothing-about-what-this-is](../../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md).
+[first-screen-says-nothing-about-what-this-is](../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md).
 
 Reports: [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) row 45,
 [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 12,

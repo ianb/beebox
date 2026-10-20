@@ -41,7 +41,7 @@ void test("Fresh box: installs `_content/plate.todo-view.card` with `glob: \"**\
 
   const content = await fs.readFile(path.join(box, "_content/plate.todo-view.card"), "utf-8");
   t.check(content, `---
-title: The Plate
+title: Todos
 glob: "**"
 ---
 `);
@@ -49,10 +49,10 @@ glob: "**"
   const versions = await readVersions(box);
   t.check(versions, {
     "_content/plate.todo-view.card": {
-      sha256: "9e14e97104db92412879a91a7b9931affc6bd827cf019f2c297d87a1d253b71b",
+      sha256: "1225ed2082487191bb6596ffd1a672c9db460593317c86d06cd71854dd6a7758",
       "installed-at": isoDate(),
       stock: `---
-title: The Plate
+title: Todos
 glob: "**"
 ---
 `,

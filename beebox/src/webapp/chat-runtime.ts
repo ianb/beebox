@@ -16,6 +16,7 @@ import type { ChatScheduleManager } from "../core/chat/schedules/core.js";
 import type { AgentEngine } from "../core/box/config.js";
 import type { ChatChannel } from "../shared/chat-channel.js";
 import type { SessionUser } from "./auth.js";
+import type { ChatSendContextWithView } from "../core/chat/card-activity.js";
 
 /** The status + body one `/api/chat/send` request answers with. */
 export interface SendOutcome {
@@ -55,7 +56,7 @@ export interface UserMessageSendArgs {
   user: SessionUser | null;
   channel: ChatChannel | undefined;
   images?: ChatSendInput["images"];
-  cardFields?: Pick<ChatSendInput, "openCard" | "cardActivity" | "cardState" | "viewContext">;
+  cardFields?: ChatSendContextWithView;
 }
 
 /** The send route's body after target and identity resolution (routes/chat/user-message-sender.ts). */

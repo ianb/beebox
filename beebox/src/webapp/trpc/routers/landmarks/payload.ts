@@ -66,8 +66,9 @@ export interface LandmarkPayload {
   /**
    * Box-relative path of the card arriving at this place opens: the single
    * `entry-point` card in the pruned subtree when there is exactly one, else
-   * the landmark card itself. Without derivation (`derive: false`) there is
-   * no subtree to look in, so it is the landmark card.
+   * the landmark card itself. The root place always opens its landmark card;
+   * a single entry point leads its page instead. Without derivation
+   * (`derive: false`) there is no subtree to look in, so it is the landmark card.
    */
   arrival: string;
 }
@@ -118,8 +119,9 @@ export async function loadLandmarkPayload(
   }
   const absPath = ns.resolved;
   let fields;
+  let content;
   try {
-    const content = await fs.readFile(absPath, "utf-8");
+    content = await fs.readFile(absPath, "utf-8");
     fields = parseLandmarkFields(content);
   } catch (e) {
     console.warn(`landmarks: failed to read ${relPath}: ${errorMessage(e)}`);
@@ -162,7 +164,7 @@ export async function loadLandmarkPayload(
       depth: 0,
       features: readLandmarkFeatures(navigation),
       openers: (navigation?.openers ?? []).map((opener) => opener.trim()),
-      arrival: arrivalTarget(derived, relPath),
+      arrival: arrivalTarget({ derived, relPath, dir }),
     },
     derivedProblems,
   };
@@ -183,8 +185,14 @@ function labelUnnamedExpands(navigation: LandmarkNavigationData | undefined): La
   return { ...navigation, expand };
 }
 
-/** The single entry-point card in the subtree, else the landmark card (`LandmarkPayload.arrival`). */
-function arrivalTarget(derived: PrunedSubtree | undefined, relPath: string): string {
+/**
+ * The single entry-point card in the subtree, else the landmark card
+ * (`LandmarkPayload.arrival`). The root (`dir` "") always opens its own page:
+ * the front door is the page, with any entry point under "Start here"
+ * (docs/implemented-plans/front-door.md, Track B).
+ */
+function arrivalTarget({ derived, relPath, dir }: { derived: PrunedSubtree | undefined; relPath: string; dir: string }): string {
+  if (dir === "") return relPath;
   const entryPoints = (derived?.entries ?? []).filter((e) => e.kind === "card" && e.level === "entry-point");
   const only = entryPoints.length === 1 ? entryPoints[0] : undefined;
   return only === undefined ? relPath : only.boxPath.slice(1);

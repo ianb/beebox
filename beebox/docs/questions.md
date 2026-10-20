@@ -128,6 +128,9 @@ pending ──answer──> answered
 - **`answered`** (`answered-at`) — terminal: the card no longer accepts a fresh answer
   (`answer.ts` allows answering only from `pending`, `expired`, or
   `dismissed`). A new question is asked instead of reopening one.
+  `answered-via` records `web`, `cli`, or `chat`; a `chat` answer is the agent
+  recording what the person said in a conversation, and writes no follow-up
+  job (see "The answer round-trip").
 - **`dismissed`** (`dismissed-at`) — the boxholder declined to answer via the Dismiss
   affordance (`bbx dismiss` / `actions.dismiss`). Only a `pending` question
   can be dismissed. Dismissed questions **remain answerable** — an
@@ -252,11 +255,23 @@ evidence model.
 
 ## Surfacing
 
+- **The empty root chat** (`docs/implemented-plans/front-door.md`, Track A) — an
+  unstarted chat at the box root shows the newest pending question (by
+  `asked-at`, then path) as the agent's opening line: the `prompt`, the
+  `memo` under it, "and N more" to the Questions page, and a quiet "Not now"
+  (`actions.dismiss`). Text for every input type: a `select` question lists
+  its options in the sentence, and the person answers by typing or speaking;
+  the composer's placeholder is the prompt. A card that fails to parse is
+  never shown there but counts toward N. The send carries the card's path
+  as `openQuestion`, which the agent sees as the `open-question` snapshot
+  attribute on every message while the card is pending; the agent does the
+  directive in the conversation, then records the answer with
+  `bbx answer --via chat`. A new box seeds one such question
+  (`installRootQuestion`): "What do you want to keep track of here?"
 - **Header badge** — retired 2026-08 with the nav link row
   (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
   pending-question count, and Questions has no nav presence unless a box
-  pins `/questions` in its `nav.card`. The intended replacement is inline
-  questions in chat (not built). Until then the Dashboard's attention cards
+  pins `/questions` in its `nav.card`. The Dashboard's attention cards
   (fed by the same `status.questions` tRPC query, invalidated on
   `question-answered`/`card-created`/`question-expired` bus events) are the
   in-app "there is activity" signal.
@@ -316,11 +331,13 @@ agent-guide context:
 
 ## NOT in scope
 
-- **In-chat interactive questions.** Rejected, not deferred
+- **An in-chat question tag.** Rejected, not deferred
   (`issues/closed/features/2026-06-09-in-chat-interactive-questions.md`): synchronous
   chat is a different situation from the async queue — the agent just asks
   in prose, and retrospectives convert chat into learning. `_bookkeeping/questions/`
-  is the only structured-question primitive.
+  is the only structured-question primitive. What the empty root chat adds
+  (above) is a surface for a *pending card*, answered in words; it creates
+  no cards from chat and adds no structured in-chat control.
 - **Web-push action buttons.** Chromium-only across browsers; revisit with
   the iOS app's push story.
 - **Question batching** (one card covering several held items at once).

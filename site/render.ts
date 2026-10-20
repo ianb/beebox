@@ -136,9 +136,17 @@ interface RewriteContext {
   targets: string[];
 }
 
-/** Walk the renderable tree, rewrite internal <a href> against base, collect targets. */
+/** Walk the renderable tree, rewrite internal <a href> and <audio src> against base, collect targets. */
 function rewriteLinks(node: RenderableTreeNode, ctx: RewriteContext): void {
   if (!Tag.isTag(node)) return;
+  if (node.name === "audio") {
+    const src = node.attributes["src"];
+    if (typeof src === "string") {
+      const resolved = resolveInternalHref({ href: src, pageSitePath: ctx.pageSitePath, base: ctx.base });
+      node.attributes["src"] = resolved.href;
+      ctx.targets.push(resolved.target);
+    }
+  }
   if (node.name === "a") {
     const href = node.attributes["href"];
     if (typeof href === "string" && classifyHref(href) === "internal") {

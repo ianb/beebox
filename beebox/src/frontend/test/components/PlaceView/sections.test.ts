@@ -78,7 +78,7 @@ void test("A place may list its own entry point in links:.", async (t) => {
 // ## A group that matches nothing still makes the place non-empty
 //
 // The place expects such cards, so the page shows the group with "None yet"
-// rather than "No cards to show here yet."
+// rather than "Nothing to show here yet."
 void test("The place expects such cards, so the page shows the group with \"None yet\" rat...", async (t) => {
   t.check(outline(placeSections({ links: [], groups: [{ label: "Every loan card here", count: 0, children: [] }] })), [
     "Every loan card here (0)",

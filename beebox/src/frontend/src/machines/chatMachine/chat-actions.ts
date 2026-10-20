@@ -13,6 +13,7 @@ import { queueMessageToBackend, rollupStreamToEntry, type fetchHistoryActor } fr
 import { toastError } from "../../components/ui/toast-store";
 import { MAX_RETAINED_MESSAGES, type ChatContext, type ChatEvent } from "../chat-types";
 import { observeChatSendHistory } from "../../lib/chat-send-diagnostics";
+import type { ChatSendContext } from "@core/chat/card-activity.js";
 
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
 
@@ -32,11 +33,12 @@ export function sendInterrupt(sessionId: string): void {
 
 /** Pull the companion-card fields off a SEND event, omitting empties — shared
  *  by the streaming input builder and the queued-send dispatcher. */
-export function cardFieldsFromEvent(event: SendEvent): Pick<SendEvent, "openCard" | "cardActivity" | "cardState" | "binding" | "startup"> {
+export function cardFieldsFromEvent(event: SendEvent): ChatSendContext & Pick<SendEvent, "binding" | "startup"> {
   return {
     ...(event.startup !== undefined ? { startup: event.startup } : {}),
     ...(event.binding !== undefined ? { binding: event.binding } : {}),
     ...(event.openCard !== undefined ? { openCard: event.openCard } : {}),
+    ...(event.openQuestion !== undefined ? { openQuestion: event.openQuestion } : {}),
     ...(event.cardActivity && event.cardActivity.length > 0 ? { cardActivity: event.cardActivity } : {}),
     ...(event.cardState && Object.keys(event.cardState).length > 0 ? { cardState: event.cardState } : {}),
   };
