@@ -44,7 +44,7 @@ interface SnapshotLike {
  * transcription / playback handles.
  */
 interface VoiceDevices {
-  transcription: { start: (o?: { earcon?: boolean }) => void; cancel: () => void } | null;
+  transcription: { start: (o?: { earcon?: boolean }) => void; hold: (held: boolean) => void } | null;
   speechPlayback: {
     playSegments: (o: { messageId: string; segments: SpeechSegment[]; baseIndex: number }) => void;
     stop: () => void;
@@ -115,9 +115,9 @@ export function useChatVoice(opts: {
     const sub = composerActor.on("command", ({ command }) => {
       const d = devicesRef.current;
       switch (command.type) {
-        case "startMic": d.transcription?.start({ earcon: true }); break;
-        case "resumeMic": d.transcription?.start(); break;
-        case "cancelMic": d.transcription?.cancel(); break;
+        case "startMic": d.transcription?.hold(false); d.transcription?.start({ earcon: true }); break;
+        case "resumeMic": d.transcription?.hold(false); break;
+        case "holdMic": d.transcription?.hold(true); break;
         case "stopSpeech": d.speechPlayback?.stop(); break;
         case "playSpeech": d.speechPlayback?.playSegments({ messageId: command.messageId, segments: command.segments, baseIndex: command.baseIndex }); break;
         case "markPlayed": d.speechPlayback?.markAsPlayed(command.messageId); break;
@@ -197,9 +197,9 @@ export function useChatVoice(opts: {
 
   useComposerMirrors({
     composerSend,
-    // `recording` gates pausing the mic for speech (a CANCEL, which discards
-    // the segment's audio); only live text makes that decision safe.
-    recording: transcription.state === "recording",
+    // `recording` gates holding the mic for speech: any open mic, so the
+    // speech is neither recorded nor allowed to end the segment.
+    recording: transcription.state === "connecting" || segmentCapturing(transcription.state),
     // With live text paused, the user may be mid-sentence with nothing on
     // screen: treat it as talking so the box doesn't speak over them.
     transcriptNonEmpty: transcription.transcript.trim().length > 0 || transcription.state === "recordingLocal",

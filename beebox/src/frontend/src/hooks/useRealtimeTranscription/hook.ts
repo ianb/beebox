@@ -95,6 +95,12 @@ export interface UseRealtimeTranscriptionResult {
    */
   submitSegment: (opts: { closeMic: boolean }) => boolean;
   cancel: () => void;
+  /**
+   * Hold the open segment while speech plays (`true`), recording silence so
+   * the mic doesn't take down the speech; `false` puts the mic back. The
+   * segment keeps its text and recording. A no-op once the segment has ended.
+   */
+  hold: (held: boolean) => void;
   dismissError: () => void;
 }
 
@@ -220,7 +226,7 @@ export function useRealtimeTranscription(
   const prevEarconStateRef = useRef<TranscriptionState>("idle");
 
   const state = transcriptionStateOf(snapshot);
-  const { finalTranscript, finalWords, interimTranscript, error, errorLevel, recording } = snapshot.context;
+  const { finalTranscript, finalWords, interimTranscript, error, errorLevel, recording, held } = snapshot.context;
   const transcript = combine(finalTranscript, interimTranscript);
 
   const startEvent = useCallback(
@@ -246,14 +252,14 @@ export function useRealtimeTranscription(
   const keywordSpotting = useKeywordSpotting({ state, finalTranscript, interimTranscript, fireKeyword });
 
   // Idle cue: subtle earcon every 10s while recording if there's text but
-  // no new updates have arrived
+  // no new updates have arrived (not while held: speech is playing)
   useEffect(() => {
-    if (state !== "recording" || !transcript) return;
+    if (state !== "recording" || !transcript || held) return;
     const interval = setInterval(() => {
       stillListening.play();
     }, STILL_LISTENING_DELAY_MS);
     return () => clearInterval(interval);
-  }, [state, transcript]);
+  }, [state, transcript, held]);
 
   // Recording-start earcon: fire when capture goes live, armed only by
   // start({ earcon: true }). getUserMedia resolves inside `connecting`, so a
@@ -292,6 +298,10 @@ export function useRealtimeTranscription(
     keywordSpotting.reset();
     send({ type: "CANCEL" });
   }, [send, keywordSpotting]);
+
+  const hold = useCallback((value: boolean) => {
+    send({ type: "HOLD", held: value });
+  }, [send]);
 
   const submitSegment = useCallback((opts: { closeMic: boolean }): boolean => {
     // A send is already parked (a spoken keyword fired moments before the
@@ -343,6 +353,7 @@ export function useRealtimeTranscription(
     stop,
     submitSegment,
     cancel,
+    hold,
     dismissError,
   };
 }

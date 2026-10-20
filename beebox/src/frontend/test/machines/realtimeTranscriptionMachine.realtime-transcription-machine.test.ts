@@ -52,9 +52,9 @@ function segment(opts?: { delays?: Record<string, number>; autoDone?: boolean; c
   const emitted: string[] = [];
   const fake = fromCallback<TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent>(({ sendBack, receive, input }) => {
     toMachine = sendBack;
-    log.push(`actor start target=${String(input.targetSessionId)}`);
+    log.push(`actor start target=${String(input.targetSessionId)}${input.held ? " held" : ""}`);
     receive((event) => {
-      log.push(event.type);
+      log.push(event.type === "HOLD" ? `HOLD ${String(event.held)}` : event.type);
       if (event.type === "STOP" && opts?.autoDone !== false) sendBack({ type: "TRANSCRIPTION_DONE", recording });
       if (event.type === "CANCEL") recording.discard();
     });
@@ -93,6 +93,7 @@ const contextWith = (over: Partial<Ctx>): Ctx => ({
   recording: null,
   liveTextCue: "none",
   targetSessionId: "chat-1",
+  held: false,
   ...over,
 });
 
@@ -114,6 +115,66 @@ void test("START passes the chat's session id to the actor.", async (t) => {
 
   s.emit({ type: "WS_CONNECTED" });
   t.check(s.state(), "recording");
+});
+
+// ## Holding the mic for speech keeps the segment
+//
+// While the agent's speech plays, the mic is held: the actor records silence,
+// and the segment keeps its text and its recording. Ending the segment later
+// hands over one recording that covers the words from before the hold, for the
+// HQ pass (issues/closed/bugs/2026-10-20-replaying-agent-audio-drops-the-recording.md).
+void test("HOLD keeps the open segment, its text, and its recording.", async (t) => {
+  const s = segment();
+  s.emit({ type: "MIC_LIVE" });
+  s.emit({ type: "WS_CONNECTED" });
+  s.emit({ type: "TEXT_UPDATE", finalText: "before the replay", interimText: "", finalWords: null });
+  s.actor.send({ type: "HOLD", held: true });
+  t.check(s.state(), "recording");
+
+  t.check(s.context(), contextWith({ finalTranscript: "before the replay", held: true }));
+
+  s.actor.send({ type: "HOLD", held: false });
+  s.actor.send({ type: "STOP" });
+  t.check(s.state(), "idle");
+
+  t.check(s.log, ["actor start target=chat-1", "HOLD true", "HOLD false", "STOP", "actor stopped"]);
+  t.check(s.context(), contextWith({ finalTranscript: "before the replay", recording: s.recording }));
+});
+
+// Speech longer than the silence timeout does not auto-stop a held segment;
+// releasing the hold starts the silence timer over.
+void test("A held segment outlasts the silence timeout, which restarts on release.", async (t) => {
+  const s = segment({ delays: { SILENCE_TIMEOUT: 80 } });
+  s.emit({ type: "MIC_LIVE" });
+  s.emit({ type: "WS_CONNECTED" });
+  s.actor.send({ type: "HOLD", held: true });
+  await sleep(160);
+  t.check(s.state(), "recording");
+
+  s.actor.send({ type: "HOLD", held: false });
+  t.check(s.state(), "recording");
+
+  await sleep(200);
+  t.check(s.state(), "idle");
+});
+
+// The hold belongs to the mic, not the segment: a segment that starts while
+// speech still plays (a send re-arms the mic) starts held.
+void test("A segment started while held starts held.", async (t) => {
+  const s = segment();
+  s.emit({ type: "MIC_LIVE" });
+  s.actor.send({ type: "HOLD", held: true });
+  s.actor.send({ type: "STOP" });
+  t.check(s.state(), "idle");
+
+  t.check(s.context().held, true);
+
+  s.actor.send({ type: "START", targetSessionId: "chat-1" });
+  t.check(s.log.at(-1), "actor start target=chat-1 held");
+
+  s.actor.send({ type: "STOP" });
+  s.actor.send({ type: "HOLD", held: false });
+  t.check(s.context().held, false);
 });
 
 // ## A socket that never opens leaves the segment recording
