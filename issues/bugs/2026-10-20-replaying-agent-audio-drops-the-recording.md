@@ -1,6 +1,6 @@
 ---
 title: "Replaying the agent's audio while recording drops the recording made so far"
-workstream: unattached
+workstream: replay-recording
 area: beebox
 filed-by: agent
 discovered-by: Ian

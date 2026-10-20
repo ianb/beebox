@@ -39,24 +39,24 @@ void test("STARTDICTATION marks a turn active and commands the mic.", async (t) 
   t.check(calls.join(","), "startMic");
 });
 
-// ## Speech while recording pauses the mic (playback → recording)
+// ## Speech while recording holds the mic (playback → recording)
 //
-// With the mic recording (empty transcript), a queued segment cancels the mic
+// With the mic recording (empty transcript), a queued segment holds the mic
 // and plays — landing in `pausedForSpeech`, which remembers to resume.
-void test("With the mic recording (empty transcript), a queued segment cancels the mic a...", async (t) => {
+void test("With the mic recording (empty transcript), a queued segment holds the mic and plays.", async (t) => {
   const { actor, calls } = mk();
   actor.send({ type: "RECORDING", value: true });
   actor.send(queued);
   t.check(actor.getSnapshot().matches({ voice: "pausedForSpeech" }), true);
 
-  t.check(calls.join(","), "cancelMic,playSpeech");
+  t.check(calls.join(","), "holdMic,playSpeech");
 
   // When playback finishes, the mic auto-resumes (the whole point of `voicePaused`):
 
   actor.send({ type: "SPEECH_DONE" });
   t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
 
-  t.check(calls.join(","), "cancelMic,playSpeech,resumeMic");
+  t.check(calls.join(","), "holdMic,playSpeech,resumeMic");
 });
 
 // ## Stopping speech from the paused state resumes the mic
@@ -70,7 +70,7 @@ void test("STOPSPEECH (e.g.", async (t) => {
   actor.send({ type: "STOP_SPEECH" });
   t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
 
-  t.check(calls.join(","), "cancelMic,playSpeech,stopSpeech,resumeMic");
+  t.check(calls.join(","), "holdMic,playSpeech,stopSpeech,resumeMic");
 });
 
 // `RESUME` (tapping the pulsing mic) does the same:
@@ -81,7 +81,7 @@ void test("RESUME (tapping the pulsing mic) does the same:", async (t) => {
   actor.send({ type: "RESUME" });
   t.check(actor.getSnapshot().matches({ voice: "idle" }), true);
 
-  t.check(calls.join(","), "cancelMic,playSpeech,stopSpeech,resumeMic");
+  t.check(calls.join(","), "holdMic,playSpeech,stopSpeech,resumeMic");
 });
 
 // ## Talking suppresses the agent's voice (recording → speech output)
@@ -183,17 +183,32 @@ void test("A user-driven STOPDICTATION ends turn-taking (so the agent won't auto
   t.check(calls.join(","), "startMic");
 });
 
-// ## Manual replay pauses the mic without re-playing
+// ## Manual replay holds the mic without re-playing
 //
-// `SPEECH_EXTERNAL` (the SpeechMenu Replay, which plays on its own) pauses an
-// active recording — `pausedForSpeech` with no `playSpeech` call.
-void test("SPEECHEXTERNAL (the SpeechMenu Replay, which plays on its own) pauses an acti...", async (t) => {
+// `SPEECH_EXTERNAL` (the SpeechMenu Replay, which plays on its own) holds an
+// active recording — `pausedForSpeech` with no `playSpeech` call. Holding keeps
+// the segment, its text, and its recording; a cancel here once discarded what
+// the person had said (issues/bugs/2026-10-20-replaying-agent-audio-drops-the-recording.md).
+void test("SPEECHEXTERNAL (the SpeechMenu Replay, which plays on its own) holds an active recording.", async (t) => {
   const { actor, calls } = mk();
   actor.send({ type: "RECORDING", value: true });
   actor.send({ type: "SPEECH_EXTERNAL" });
   t.check(actor.getSnapshot().matches({ voice: "pausedForSpeech" }), true);
 
-  t.check(calls.join(","), "cancelMic");
+  t.check(calls.join(","), "holdMic");
+});
+
+// The replay is allowed with words already on screen (unlike queued speech,
+// which never talks over them); it holds the mic and releases it when it ends:
+void test("A replay over a non-empty transcript holds the mic, then releases it.", async (t) => {
+  const { actor, calls } = mk();
+  actor.send({ type: "RECORDING", value: true });
+  actor.send({ type: "TRANSCRIPT", nonEmpty: true });
+  actor.send({ type: "SPEECH_EXTERNAL" });
+  t.check(actor.getSnapshot().matches({ voice: "pausedForSpeech" }), true);
+
+  actor.send({ type: "SPEECH_DONE" });
+  t.check(calls.join(","), "holdMic,resumeMic");
 });
 
 // From an idle mic it just reflects that speech is playing:

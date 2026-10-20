@@ -21,6 +21,8 @@
  * which carries the recording's sealing obligation (`PendingRecording`) —
  * except CANCEL, which tells the actor to discard it.
  *
+ * HOLD (not a state) records silence while speech plays; the segment goes on.
+ *
  * The callback actor branches by transcription service (configured per box):
  * "voxtral" (WS proxy through the backend), "deepgram" (direct, temp key),
  * "openai-realtime" (direct, ephemeral secret). All feed the same events:
@@ -35,7 +37,7 @@
  * test provides a fake.
  */
 
-import { setup, assign, emit, enqueueActions, fromCallback, not, stateIn, type SnapshotFrom } from "xstate";
+import { setup, assign, emit, enqueueActions, forwardTo, fromCallback, not, stateIn, type SnapshotFrom } from "xstate";
 import { recordingStop, recordingError, micLost, recordingResumed, liveTextPaused, liveTextResumed } from "../lib/audio/earcons";
 import type { PendingRecording } from "../lib/audio/voice-stager";
 import {
@@ -120,6 +122,8 @@ export const realtimeTranscriptionMachine = setup({
       recording: PendingRecording | null;
       /** Chat the segment started in, passed to the actor as input. */
       targetSessionId: string | null;
+      /** The mic is held while speech plays (HOLD); outlives a segment. */
+      held: boolean;
     },
     events: {} as TranscriptionEvent,
     emitted: {} as MaxDurationReached,
@@ -197,6 +201,7 @@ export const realtimeTranscriptionMachine = setup({
     sendCancelToTranscriber: ({ system }) => {
       system.get("transcriber")?.send({ type: "CANCEL" });
     },
+    setHeld: assign(({ event }) => ({ held: requireEvent(event, { type: "HOLD", action: "setHeld" }).held })),
     playMicOffSound: () => {
       recordingStop.play();
     },
@@ -226,10 +231,11 @@ export const realtimeTranscriptionMachine = setup({
 }).createMachine({
   id: "realtimeTranscription",
   initial: "idle",
-  context: { ...EMPTY_SEGMENT, targetSessionId: null },
+  context: { ...EMPTY_SEGMENT, targetSessionId: null, held: false },
   states: {
     idle: {
       on: {
+        HOLD: { actions: "setHeld" },
         START: { target: "active", actions: "beginSegment" },
         DISMISS_ERROR: { actions: assign({ error: null }) },
       },
@@ -239,7 +245,10 @@ export const realtimeTranscriptionMachine = setup({
         id: "transcriber",
         systemId: "transcriber",
         src: "transcriptionActor",
-        input: ({ context }) => ({ targetSessionId: context.targetSessionId }),
+        input: ({ context }) => ({ targetSessionId: context.targetSessionId, held: context.held }),
+      },
+      on: {
+        HOLD: { actions: ["setHeld", forwardTo("transcriber")] },
       },
       after: {
         // The segment is SUBMITTED, not folded: the emitted event lets the
