@@ -9,7 +9,7 @@
  * it is stored: `_bookkeeping/connectors/google-docs-api.state.json`, written
  * only by the Drive connector at the end of a full pass. It lives in its own
  * file, outside the strict connector-activity record, so an older binary never
- * reads it. See docs/plans/drive-docs-api-health.md.
+ * reads it. See docs/implemented-plans/drive-docs-api-health.md.
  *
  * There is no dismissal (boxholder decision, 2026-10-20). The problem clears
  * when the Docs API answers again, when a complete pass finds no Docs, or —

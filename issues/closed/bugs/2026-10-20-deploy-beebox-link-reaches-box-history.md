@@ -1,12 +1,15 @@
 ---
 title: "Deploy's server-local `beebox` link dependency reaches box Git history"
-workstream: unattached
+workstream: bug-burndown-4
 area: beebox
 labels: [box-shape, git, deploy]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-bug-burndown-4 — cross-model review of the box-marker plan
+resolution: implemented
 ---
+
+**Closed:** Implemented per `beebox/docs/implemented-plans/portable-engine-dependency.md` (f9de5b6cc through bbdb1f575): box `package.json` commits `link:.beebox/engine`, and a per-machine gitignored symlink points at the engine.
 
 Every deploy rewrites each production box's `package.json` so that the
 `beebox` dependency is `link:/opt/beebox/beebox`

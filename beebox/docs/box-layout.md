@@ -71,7 +71,7 @@ docker entrypoint at `/app/node_modules/beebox`. Each install path runs
 succeeds with no usable engine, and the `engine-link` health check names the
 repair. The `engine-link-spec-2026-10` migration converted the older
 machine-local `link:` specs; a pinned engine (a `file:` tarball) is left as
-it is. See `docs/plans/portable-engine-dependency.md`.
+it is. See `docs/implemented-plans/portable-engine-dependency.md`.
 
 `getBoxShape` recognizes a box when `<root>/package.json` declares a `beebox`
 dependency beside `<root>/_config/` and records `shapeVersion: 3` (or, during

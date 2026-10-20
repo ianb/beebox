@@ -4,7 +4,7 @@
 // syncing without the Docs API and where to fix it. The line comes from the
 // diagnosis the Drive connector stored; it is hidden once Drive is off, and a
 // damaged status file leaves the settings page working (the health check
-// reports the damage). See docs/plans/drive-docs-api-health.md.
+// reports the damage). See docs/implemented-plans/drive-docs-api-health.md.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

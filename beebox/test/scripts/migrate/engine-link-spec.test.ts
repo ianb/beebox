@@ -6,7 +6,7 @@
 // with `link:.beebox/engine` and points the gitignored `.beebox/engine` at the
 // old target. A pinned engine (a `file:` tarball, a semver range, a link into
 // the box) is left alone.
-// Plan: `docs/plans/portable-engine-dependency.md`, Track B.
+// Plan: `docs/implemented-plans/portable-engine-dependency.md`, Track B.
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";

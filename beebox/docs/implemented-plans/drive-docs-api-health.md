@@ -1,9 +1,9 @@
 ---
 title: "Docs API unavailable reaches the boxholder"
-status: active
+status: implemented
 workstream: bug-burndown-4
 issues:
-  - ../../../issues/features/2026-10-20-drive-sync-problems-reach-the-boxholder.md
+  - ../../../issues/closed/features/2026-10-20-drive-sync-problems-reach-the-boxholder.md
 ---
 # Docs API unavailable reaches the boxholder
 

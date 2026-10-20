@@ -5,7 +5,7 @@
 // `package.json`, so a clone of the box is a box. It leaves the marker on disk,
 // and tracked where it was tracked, so an engine from before the block still
 // opens the box after a deploy rollback (boxholder decision, 2026-10-20).
-// Plan: `docs/plans/box-shape-in-package-json.md`, Track D.
+// Plan: `docs/implemented-plans/box-shape-in-package-json.md`, Track D.
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";

@@ -4,7 +4,7 @@
 // boxholder can fix, the dashboard and `bbx health` carry one warning with the
 // fix. It reads the diagnosis the Drive connector stored, hides it once Drive
 // stops syncing, and reports a damaged file instead of resetting it. See
-// docs/plans/drive-docs-api-health.md.
+// docs/implemented-plans/drive-docs-api-health.md.
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";

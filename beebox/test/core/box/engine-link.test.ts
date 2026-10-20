@@ -4,7 +4,7 @@
 // gitignored symlink to this machine's engine. `ensureEngineLink` makes it in
 // TypeScript (`bbx engine init`, the migration); `bin/box-engine-link` is the
 // shell side every install path runs around `pnpm install`.
-// Plan: `docs/plans/portable-engine-dependency.md`.
+// Plan: `docs/implemented-plans/portable-engine-dependency.md`.
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";

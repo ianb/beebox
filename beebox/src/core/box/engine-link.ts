@@ -5,7 +5,7 @@
  * value on every machine, so no install path writes a machine path into box
  * history. Each install path makes the link before `pnpm install`; the shell
  * paths use `bin/box-engine-link`, which applies the same usability rule.
- * Plan: `docs/plans/portable-engine-dependency.md`.
+ * Plan: `docs/implemented-plans/portable-engine-dependency.md`.
  */
 
 import * as fs from "node:fs/promises";

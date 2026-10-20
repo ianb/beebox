@@ -6,7 +6,7 @@
 // `package.json` `beebox` block first, then from the gitignored
 // `.beebox/box.json` marker that boxes carry until the
 // `box-shape-record-2026-10` migration
-// (`docs/plans/box-shape-in-package-json.md`).
+// (`docs/implemented-plans/box-shape-in-package-json.md`).
 
 import { test, type Test } from "tap";
 import "@ianbicking/tap-check/tap";

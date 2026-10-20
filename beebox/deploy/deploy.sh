@@ -729,7 +729,7 @@ queue_remote stdin bash -s <<'REMOTE'
 
     # The box commits the portable `"beebox": "link:.beebox/engine"`; the
     # gitignored `.beebox/engine` link holds this server's engine path, so no
-    # deploy writes a tracked file (docs/plans/portable-engine-dependency.md).
+    # deploy writes a tracked file (docs/implemented-plans/portable-engine-dependency.md).
     # A box not yet migrated still names /opt/beebox/beebox directly; the
     # link is harmless there. A failed box prints ERROR and the deploy moves
     # on to the next box, as the converge step does.

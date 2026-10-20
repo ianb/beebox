@@ -14,7 +14,7 @@ priority: important
 > bar shows errors and warnings at their real severity", on `main`), per the
 > plan and outcome below. The unreproduced new-chat session-id residual is
 > filed as
-> [its own issue](../../bugs/2026-10-20-new-chat-dropped-stream-warning-can-stick.md).
+> [its own issue](2026-10-20-new-chat-dropped-stream-warning-can-stick.md).
 > The other residuals stay as recorded in the outcome.
 
 ## Recovery assessment (2026-09-21)

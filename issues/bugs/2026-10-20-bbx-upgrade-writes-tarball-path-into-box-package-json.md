@@ -6,7 +6,7 @@ labels: [box-shape, git]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-bug-burndown-4 — portable engine dependency plan
-design: ../../beebox/docs/plans/portable-engine-dependency.md
+design: ../../beebox/docs/implemented-plans/portable-engine-dependency.md
 ---
 
 `bbx upgrade --to <spec>` writes `<spec>` into the box's `package.json` as the

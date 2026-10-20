@@ -1,9 +1,9 @@
 ---
 title: "Portable beebox dependency in box package.json"
-status: draft
+status: implemented
 workstream: bug-burndown-4
 issues:
-  - ../../../issues/bugs/2026-10-20-deploy-beebox-link-reaches-box-history.md
+  - ../../../issues/closed/bugs/2026-10-20-deploy-beebox-link-reaches-box-history.md
 ---
 # Portable beebox dependency in box package.json
 

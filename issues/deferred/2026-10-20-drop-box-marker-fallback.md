@@ -5,7 +5,7 @@ activate-on: 2026-11-20
 category: code-quality
 area: beebox
 labels: [box-shape]
-design: ../../beebox/docs/plans/box-shape-in-package-json.md
+design: ../../beebox/docs/implemented-plans/box-shape-in-package-json.md
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-bug-burndown-4 — registering the box-shape-record-2026-10 migration (plan Track D)

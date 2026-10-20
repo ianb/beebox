@@ -150,7 +150,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // refresh restores both files and exits 1, so it stays pending. It runs
   // before box-shape-record so that migration's package.json commit does not
   // carry the machine path again.
-  // Plan: docs/plans/portable-engine-dependency.md.
+  // Plan: docs/implemented-plans/portable-engine-dependency.md.
   { name: "engine-link-spec-2026-10", script: "src/scripts/migrate/engine-link-spec/run.ts" },
   // Copies shapeVersion and created from the gitignored .beebox/box.json into a
   // "beebox" block in the box's tracked package.json, so a clone of the box is

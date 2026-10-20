@@ -10,7 +10,7 @@
  *
  * This file is the only reader of either record; `getBoxShape`
  * (`box-shape.ts`) and `findBoxRoot` (`paths/core.ts`) both go through it.
- * See `docs/box-layout.md` and `docs/plans/box-shape-in-package-json.md`.
+ * See `docs/box-layout.md` and `docs/implemented-plans/box-shape-in-package-json.md`.
  */
 
 import * as fs from "node:fs/promises";

@@ -1,18 +1,21 @@
 ---
 title: "Google Drive sync problems reach only the server log, not the boxholder"
-workstream: unattached
+workstream: bug-burndown-4
 area: beebox
 labels: [google-drive, connectors]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-bug-burndown-4 — fixing the Docs API 403 misdiagnosis, 2026-10-20
 priority: normal
+resolution: implemented
 ---
+
+**Closed:** Implemented per `beebox/docs/implemented-plans/drive-docs-api-health.md` (7b255426b through ef95483d0): a health check, a settings line, and a once-per-chat-session mention by the agent; no dismiss. Scope: only the Docs-API-unavailable case. Push refusals and folder-sync notes are not covered and remain open as future work. On-demand syncs update the diagnosis at the next scheduled pass.
 
 When a Google Doc syncs but the Docs API call fails, `pull()` still writes the
 doc with less detail (no revision tracking, no lossy-content report). The
 cause is now diagnosed correctly
-([Docs API 403 issue](../closed/bugs/2026-09-21-gdoc-inspect-403-misattributed-to-scope.md)),
+([Docs API 403 issue](../bugs/2026-09-21-gdoc-inspect-403-misattributed-to-scope.md)),
 for example "the Docs API is disabled for the Cloud project, enable it here".
 But it goes only to `console.warn` in `tryGetDocument`
 (`beebox/src/connectors/google-drive/handlers/docs/handler.ts`). The

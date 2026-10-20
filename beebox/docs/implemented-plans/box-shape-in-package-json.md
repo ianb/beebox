@@ -1,9 +1,9 @@
 ---
 title: "Box identity and shape version from tracked package.json"
-status: draft
+status: implemented
 workstream: bug-burndown-4
 issues:
-  - ../../../issues/bugs/2026-10-20-box-marker-in-gitignored-state-dir.md
+  - ../../../issues/closed/bugs/2026-10-20-box-marker-in-gitignored-state-dir.md
 ---
 # Box identity and shape version from tracked package.json
 
