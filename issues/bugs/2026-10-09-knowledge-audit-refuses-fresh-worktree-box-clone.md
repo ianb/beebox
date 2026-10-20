@@ -42,3 +42,26 @@ user-facing-language/20261009T120548Z-implemented.md. The last adds a second
 trap for disposable copies: `.beebox/box.json` is gitignored, so `git clone`
 omits it, and the failed run had already rewritten the seed briefing through
 template sync before it crashed.
+
+**2026-10-20 (bug-burndown-4, fix stopped for a decision):** worktree creation
+(`bin/lib/worktree-create.sh`) changes more than the three linking paths. Step 2
+repoints `package.json` and runs `pnpm install`, which writes `pnpm-lock.yaml`.
+Step 5 runs `bbx engine init` against the clone. That rewrites
+`.claude/settings.json` (validation hook path), and it also applies any
+template or directory drift between the source box and the worktree engine. The
+bug-burndown-4 clone, made today from `~/src/boxes/test1` at the same HEAD, also
+has ` M _config/template-versions.json` (a new `stock` entry for
+`_content/plate.todo-view.card`) and `?? _content/incoming/.gitkeep` (from
+`ensureDirectories`). File mtimes put both inside the creation run. So if the
+guard ignores only the three linking paths, it still refuses this clone.
+
+Decision needed: either worktree creation commits everything it changes in the
+clone (the first option above; this also covers init drift), or the guard
+ignores the linking paths and init drift is committed or accepted some other way.
+If the guard ignores paths, the runner must also preserve them. Its post-test
+`git reset --hard` reverts `package.json` and `.claude/settings.json`, and
+`git clean -fd` deletes the untracked `pnpm-lock.yaml`.
+
+The second trap is still present: `.beebox/` is gitignored in boxes, so a plain
+`git clone` copy has no `.beebox/box.json`. Worktree creation copies the marker
+explicitly, but a hand-made disposable copy does not. The marker work tracks this.
