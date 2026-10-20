@@ -149,6 +149,14 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // written) on a marker without both fields. Legacy support to remove:
   // issues/deferred/2026-10-20-drop-box-marker-fallback.md.
   { name: "box-shape-record-2026-10", script: "src/scripts/migrate/box-shape-record/run.ts" },
+  // Replaces a machine-local `link:` beebox dependency (deploy's
+  // link:/opt/beebox/beebox, a laptop checkout path, a worktree override) with
+  // the portable "link:.beebox/engine" and points the gitignored .beebox/engine
+  // at the old target. Leaves a pinned engine (file: tarball, semver range, a
+  // link into the box) alone. Refreshes a tracked lockfile offline; a failed
+  // refresh restores both files and exits 1, so it stays pending.
+  // Plan: docs/plans/portable-engine-dependency.md.
+  { name: "engine-link-spec-2026-10", script: "src/scripts/migrate/engine-link-spec/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";
