@@ -18,6 +18,7 @@ import {
   nextDocsApiDiagnosis,
   readDocsApiDiagnosis,
   recordDocsApiDiagnosis,
+  renderDocsApiProblem,
   type DocsApiDiagnosis,
 } from "../../../src/connectors/google-drive/docs-api-status.js";
 import type { DocsApiOutcome } from "../../../src/connectors/google-drive/handlers/docs/api-failure.js";
@@ -100,6 +101,23 @@ void test("The reader hides a stored problem once Drive stops syncing, before an
 
   // The stored value itself is untouched; only the readers hide it.
   t.check(await loadDocsApiDiagnosis(box.root), open);
+});
+
+void test("One rendering for health and settings: present tense, or past while Drive is paused", async (t) => {
+  t.check(renderDocsApiProblem({ ...open, drivePaused: false }, { linkShownSeparately: false }), `Google Drive: ${open.message}`);
+  t.check(
+    renderDocsApiProblem({ ...open, drivePaused: false }, { linkShownSeparately: true }),
+    "Google Drive: 1 Google Doc is syncing without revision tracking or lossy-content details: the Google Docs API is disabled.",
+  );
+  t.check(
+    renderDocsApiProblem({ ...open, drivePaused: true }, { linkShownSeparately: false }),
+    "Google Drive is paused until Google is re-authorized. At its last sync, 1 Google Doc synced without revision tracking or lossy-content details: the Google Docs API is disabled: https://enable",
+  );
+  // A hand-edited message still reads as the last sync.
+  t.check(
+    renderDocsApiProblem({ ...open, message: "something else", link: null, drivePaused: true }, { linkShownSeparately: true }),
+    "Google Drive is paused until Google is re-authorized. At its last sync: something else",
+  );
 });
 
 void test("A damaged file is reported, not reset", async (t) => {

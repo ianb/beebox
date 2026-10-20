@@ -20,7 +20,7 @@ import {
 } from "../../src/core/session-context.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
 import { recordDocsApiDiagnosis } from "../../src/connectors/google-drive/docs-api-status.js";
-import { saveGoogleTokens } from "../../src/google/token-store.js";
+import { markGoogleAuthDead, saveGoogleTokens } from "../../src/google/token-store.js";
 import * as os from "node:os";
 import * as path from "node:path";
 import { mkdtemp } from "node:fs/promises";
@@ -229,6 +229,13 @@ runs: bbx wakeup --connector notes
   t.check(
     (await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true, healthGate: createHealthGate() })).health,
     `sync-notes: failing ×4 (last success 2d ago); ${driveLine}`,
+  );
+
+  // Paused for reauthorization: the line speaks of the last sync.
+  await markGoogleAuthDead({ reason: "invalid_grant" });
+  t.check(
+    (await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true, healthGate: createHealthGate() })).health,
+    "sync-notes: failing ×4 (last success 2d ago); google-drive: paused until Google is re-authorized; at its last sync, Google Docs synced without the Docs API (no revision tracking or lossy check); `bbx health` has the fix",
   );
 });
 

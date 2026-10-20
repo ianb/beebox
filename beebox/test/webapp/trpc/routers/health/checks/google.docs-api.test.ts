@@ -52,7 +52,7 @@ void test("An open Docs API problem is one warning; none without it; a damaged f
   t.check(await googleDocsApiHealthChecks(box.root), [{
     name: "google-docs-api",
     ok: false,
-    message: "Google Drive (paused until Google is re-authorized; at its last sync): 2 Google Docs are syncing without revision tracking or lossy-content details: the Google Docs API is disabled: https://enable",
+    message: "Google Drive is paused until Google is re-authorized. At its last sync, 2 Google Docs synced without revision tracking or lossy-content details: the Google Docs API is disabled: https://enable",
     severity: "warning",
   }]);
 

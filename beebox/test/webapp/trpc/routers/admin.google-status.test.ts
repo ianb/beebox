@@ -15,7 +15,7 @@ import { appRouter } from "../../../../src/webapp/trpc/routers.js";
 import { trpcContext } from "../../../helpers/trpc-context.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
 import { recordDocsApiDiagnosis } from "../../../../src/connectors/google-drive/docs-api-status.js";
-import { saveGoogleTokens } from "../../../../src/google/token-store.js";
+import { markGoogleAuthDead, saveGoogleTokens } from "../../../../src/google/token-store.js";
 import { grantSecret, setSecret } from "../../../../src/core/secrets/lifecycle.js";
 import { boxSlug } from "../../../../src/lib/box-slug.js";
 
@@ -54,6 +54,13 @@ void test("The Drive line follows the stored diagnosis, and Drive being off hide
   await box.write("_config/box.json", JSON.stringify({ googleServices: { drive: false } }));
   t.check(await driveLine(), null);
   await box.write("_config/box.json", JSON.stringify({ googleServices: { drive: true } }));
+
+  // Paused for reauthorization: still shown, in the past tense.
+  await markGoogleAuthDead({ reason: "invalid_grant" });
+  t.check(await driveLine(), {
+    message: "Google Drive is paused until Google is re-authorized. At its last sync, 1 Google Doc synced without revision tracking or lossy-content details: the Google Docs API is disabled.",
+    link: "https://enable",
+  });
 
   await box.write("_bookkeeping/connectors/google-docs-api.state.json", "{\"version\": 2}");
   t.check(await driveLine(), null);

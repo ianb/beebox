@@ -16,7 +16,7 @@ import { loadBoxConfig } from "../../../../core/box/config.js";
 import { baseServerUrl } from "../../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../../lib/public-url.js";
 import { getBoxDir } from "../../../../lib/paths/core.js";
-import { docsApiProblemLead, readDocsApiDiagnosis } from "../../../../connectors/google-drive/docs-api-status.js";
+import { readDocsApiDiagnosis, renderDocsApiProblem } from "../../../../connectors/google-drive/docs-api-status.js";
 import { errorMessage } from "../../../../shared/error-guards.js";
 
 /**
@@ -29,11 +29,7 @@ async function driveDocsApi(boxRoot: string): Promise<{ message: string; link: s
   try {
     const diagnosis = await readDocsApiDiagnosis(boxRoot);
     if (diagnosis === null) return null;
-    const { link } = diagnosis;
-    const text = link !== null && diagnosis.message.endsWith(link)
-      ? `${diagnosis.message.slice(0, -link.length).replace(/[\s:]+$/, "")}.`
-      : diagnosis.message;
-    return { message: `${docsApiProblemLead(diagnosis)}: ${text}`, link };
+    return { message: renderDocsApiProblem(diagnosis, { linkShownSeparately: true }), link: diagnosis.link };
   } catch (e) {
     console.error(`[admin] could not read the Google Docs API status for ${boxRoot}: ${errorMessage(e)}`);
     return null;

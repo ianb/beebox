@@ -12,7 +12,7 @@
  */
 
 import { readGoogleAuthStatus } from "../../../../../google/auth-status.js";
-import { docsApiProblemLead, readDocsApiDiagnosis } from "../../../../../connectors/google-drive/docs-api-status.js";
+import { readDocsApiDiagnosis, renderDocsApiProblem } from "../../../../../connectors/google-drive/docs-api-status.js";
 import { errorMessage } from "../../../../../shared/error-guards.js";
 import { boxSlug } from "../../../../../lib/box-slug.js";
 import { formatDurationShort } from "../../../../../core/schedule/health-box.js";
@@ -82,5 +82,5 @@ export async function googleDocsApiHealthChecks(boxRoot: string): Promise<Health
     return [{ name: "google-docs-api", ok: false, message: errorMessage(e), severity: "warning" }];
   }
   if (diagnosis === null) return [];
-  return [{ name: "google-docs-api", ok: false, message: `${docsApiProblemLead(diagnosis)}: ${diagnosis.message}`, severity: "warning" }];
+  return [{ name: "google-docs-api", ok: false, message: renderDocsApiProblem(diagnosis, { linkShownSeparately: false }), severity: "warning" }];
 }

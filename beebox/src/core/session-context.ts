@@ -24,7 +24,7 @@ import {
   summarizeScheduleHealth,
 } from "./schedule/health-box.js";
 import { computeTodoAmbientLine } from "./todo/ambient-summary.js";
-import { readDocsApiDiagnosis } from "../connectors/google-drive/docs-api-status.js";
+import { docsApiChatLine, readDocsApiDiagnosis } from "../connectors/google-drive/docs-api-status.js";
 
 function phaseOfDay(hour: number): string {
   if (hour >= 5 && hour < 12) return "morning";
@@ -123,10 +123,6 @@ export function describeElapsed(ms: number): string {
 function plural(n: number, unit: string): string {
   return `${n} ${unit}${n === 1 ? "" : "s"}`;
 }
-
-/** The chat-start line for an open Docs API problem; `bbx health` carries the message and the fix. */
-const DRIVE_DOCS_API_LINE =
-  "google-drive: Google Docs are syncing without the Docs API (no revision tracking or lossy check); `bbx health` has the fix";
 
 /** Snapshot attribute values computed per send. */
 interface SnapshotContext {
@@ -274,8 +270,10 @@ export async function buildSnapshotContext(
   // `bbx health`.
   if (sessionStart) {
     try {
-      if ((await readDocsApiDiagnosis(boxRoot)) !== null) {
-        out.health = out.health === undefined ? DRIVE_DOCS_API_LINE : `${out.health}; ${DRIVE_DOCS_API_LINE}`;
+      const problem = await readDocsApiDiagnosis(boxRoot);
+      if (problem !== null) {
+        const line = docsApiChatLine(problem);
+        out.health = out.health === undefined ? line : `${out.health}; ${line}`;
       }
     } catch (e) {
       console.warn(`[session-context] Google Docs API status read failed: ${e instanceof Error ? e.message : e}`);

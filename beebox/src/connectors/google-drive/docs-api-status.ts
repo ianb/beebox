@@ -69,9 +69,19 @@ function isFixable(failure: DocsApiFailure): failure is FixableFailure {
   return failure.kind !== "other";
 }
 
+const DETAIL = "without revision tracking or lossy-content details: ";
+
+function docsCount(docs: number): string {
+  return docs === 1 ? "1 Google Doc" : `${String(docs)} Google Docs`;
+}
+
+/** The stored sentence: present tense, written by the connector pass that saw it. */
+function syncingSentence(docs: number): string {
+  return `${docsCount(docs)} ${docs === 1 ? "is" : "are"} syncing ${DETAIL}`;
+}
+
 function describe(failure: FixableFailure, docs: number): string {
-  const subject = docs === 1 ? "1 Google Doc is" : `${String(docs)} Google Docs are`;
-  return `${subject} syncing without revision tracking or lossy-content details: ${failure.message}`;
+  return `${syncingSentence(docs)}${failure.message}`;
 }
 
 /**
@@ -161,7 +171,28 @@ export async function readDocsApiDiagnosis(boxRoot: string): Promise<DocsApiProb
   return diagnosis === null ? null : { ...diagnosis, drivePaused: auth.needsReauthSince !== null };
 }
 
-/** The reader's one-line lead: what Drive is doing now. */
-export function docsApiProblemLead(problem: DocsApiProblem): string {
-  return problem.drivePaused ? "Google Drive (paused until Google is re-authorized; at its last sync)" : "Google Drive";
+/**
+ * The problem as one line for the boxholder (health, settings). While Drive is
+ * paused for reauthorization it is past tense — Drive is not syncing now — and
+ * the stored diagnosis is left as written. `linkShownSeparately` drops a
+ * trailing enable link from the text, for a surface that renders the link as
+ * its own control, so the URL shows once.
+ */
+export function renderDocsApiProblem(problem: DocsApiProblem, opts: { linkShownSeparately: boolean }): string {
+  const { link } = problem;
+  const text = opts.linkShownSeparately && link !== null && problem.message.endsWith(link)
+    ? `${problem.message.slice(0, -link.length).replace(/[\s:]+$/, "")}.`
+    : problem.message;
+  if (!problem.drivePaused) return `Google Drive: ${text}`;
+  const paused = "Google Drive is paused until Google is re-authorized.";
+  const present = syncingSentence(problem.docs);
+  if (!text.startsWith(present)) return `${paused} At its last sync: ${text}`;
+  return `${paused} At its last sync, ${docsCount(problem.docs)} synced ${DETAIL}${text.slice(present.length)}`;
+}
+
+/** The chat-start line; `bbx health` carries the full message and the fix. */
+export function docsApiChatLine(problem: DocsApiProblem): string {
+  return problem.drivePaused
+    ? "google-drive: paused until Google is re-authorized; at its last sync, Google Docs synced without the Docs API (no revision tracking or lossy check); `bbx health` has the fix"
+    : "google-drive: Google Docs are syncing without the Docs API (no revision tracking or lossy check); `bbx health` has the fix";
 }
