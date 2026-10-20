@@ -97,6 +97,14 @@ export interface ChatSendInput {
    */
   openCard?: string;
   /**
+   * Box-relative path of the pending question card the root chat is asking
+   * (docs/plans/front-door.md, Track A). The client sends it on every message
+   * while the card is pending, so an agent that missed it on one turn sees it
+   * on the next. Surfaces as the read-only `open-question` snapshot attribute.
+   * Omitted when the chat shows no question.
+   */
+  openQuestion?: string;
+  /**
    * What the user did to the companion-pane card since the agent's last
    * reply (see `ActivityKind`). Unioned across queued sends and surfaced as
    * the read-only `card-activity` snapshot attribute. Omitted when empty.

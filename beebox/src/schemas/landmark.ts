@@ -104,14 +104,15 @@ export const OpenerEntry = z
   );
 
 /**
- * The root place's onboarding openers, installed on a new box's root landmark
- * (`installRootLandmark`). Both are phrased from the person's side, so the
- * agent is never asked something it cannot answer on turn one; the agent
- * rewrites and eventually removes them as the box comes into regular use.
+ * The root place's onboarding opener, installed on a new box's root landmark
+ * (`installRootLandmark`). It sits under the box's first question in the
+ * empty root chat (docs/plans/front-door.md, Track A) and is phrased from the
+ * person's side; the agent rewrites and eventually removes it as the box
+ * comes into regular use. Talking is the box's least obvious input, so the
+ * one stock opener is a walkthrough of it (the `what-can-you-do` skill).
  */
 export const STOCK_ROOT_OPENERS: readonly string[] = [
-  "Let me tell you what this box is for.",
-  "What can you do?",
+  "Tell me about talking instead of typing.",
 ];
 
 /**

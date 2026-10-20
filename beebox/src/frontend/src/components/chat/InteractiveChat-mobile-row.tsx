@@ -20,8 +20,10 @@ export function MobileTextareaRow({
   isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend,
-  onPaste, onDrop, includeControlIds,
+  onPaste, onDrop, includeControlIds, placeholder,
 }: {
+  /** Replaces "Type a message..." while the chat is asking a question (its prompt). */
+  placeholder?: string | undefined;
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
   /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
@@ -63,7 +65,7 @@ export function MobileTextareaRow({
         onDrop={onDrop}
         readOnly={isTranscribing}
         enterKeyHint="enter"
-        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
+        placeholder={isTranscribing ? "Listening..." : placeholder ?? "Type a message..."}
         className={composerTextareaClasses({ mobile: true, isTranscribing })}
         minRows={2}
         maxRows={8}

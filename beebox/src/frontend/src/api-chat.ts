@@ -345,12 +345,14 @@ export async function startChatTurn(params: {
   model?: string;
   /** Box-relative path of the card open in the companion pane at send time. */
   openCard?: string;
+  /** Box-relative path of the pending question the root chat is asking. */
+  openQuestion?: string;
   /** What the user did to the companion-pane card since the last reply. */
   cardActivity?: ActivityKind[];
   /** Per-kind free-text detail for that activity (e.g. the query typed). */
   cardState?: CardStateDetails;
 }): Promise<ChatTurnStart> {
-  const { session, message, images, contextDir, seedFeatures, engine, model, openCard, cardActivity, cardState } = params;
+  const { session, message, images, contextDir, seedFeatures, engine, model, openCard, openQuestion, cardActivity, cardState } = params;
   const apiBase = getApiBase();
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -373,6 +375,7 @@ export async function startChatTurn(params: {
         ...(engine !== undefined ? { engine } : {}),
         ...(model !== undefined ? { model } : {}),
         ...(openCard !== undefined ? { openCard } : {}),
+        ...(openQuestion !== undefined ? { openQuestion } : {}),
         ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
         ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
         // Ambient, not a caller-supplied field: only the browser can tell the

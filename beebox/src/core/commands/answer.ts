@@ -24,7 +24,12 @@ import { createQuestionFollowupJobTemplate } from "../../schemas/question-follow
 import { withQuestionTransition, resolveContainedQuestionPath } from "../question-transition.js";
 import { getBoxDir } from "../../lib/paths/core.js";
 
-const AnswerVia = z.enum(["web", "cli"]);
+/**
+ * Where an answer came from. `chat` is the agent recording an answer the
+ * person gave in a conversation (docs/plans/front-door.md, Track A): the agent
+ * has already done the directive there, so no follow-up job is written.
+ */
+const AnswerVia = z.enum(["web", "cli", "chat"]);
 type AnswerViaValue = z.infer<typeof AnswerVia>;
 
 const AnswerArgsSchema = z.object({
@@ -194,6 +199,19 @@ function buildJobFilename(boxRoot: string, questionRef: string): string {
   return `${timestamp}-${slug}-${suffix}.question-followup.job.card`;
 }
 
+/** The follow-up job a web or CLI answer writes beside the answered card. */
+function followupJob({ boxRoot, questionRef, fields, answer }: { boxRoot: string; questionRef: string; fields: QuestionFields; answer: string }): { absPath: string; content: string } {
+  const absPath = path.join(getBoxDir(boxRoot, "jobs"), buildJobFilename(boxRoot, questionRef));
+  const content = createQuestionFollowupJobTemplate({
+    description: `Follow up on answered question: ${fields.prompt}`,
+    questionRef,
+    directive: fields.directive ?? "Process the answer to this question",
+    answer,
+    ...(fields.learning !== undefined && { learning: fields.learning }),
+  });
+  return { absPath, content };
+}
+
 async function executeAnswer(
   ctx: CommandContext,
   args: Record<string, unknown>
@@ -249,16 +267,10 @@ async function executeAnswer(
       const split = splitCardContent(content);
       const cardContent = renderFrontmatterBlock(fields, split.body);
 
-      const jobFilename = buildJobFilename(ctx.boxRoot, relativePath);
-      const jobAbsPath = path.join(getBoxDir(ctx.boxRoot, "jobs"), jobFilename);
-      jobRelative = path.relative(ctx.boxRoot, jobAbsPath);
-      const jobContent = createQuestionFollowupJobTemplate({
-        description: `Follow up on answered question: ${fields.prompt}`,
-        questionRef: relativePath,
-        directive: fields.directive ?? "Process the answer to this question",
-        answer: r.jobAnswer,
-        ...(fields.learning !== undefined && { learning: fields.learning }),
-      });
+      // A chat answer writes no job: the agent did the directive in the
+      // conversation before answering (a fresh box has no wakeup to run one).
+      const job = via === "chat" ? null : followupJob({ boxRoot: ctx.boxRoot, questionRef: relativePath, fields, answer: r.jobAnswer });
+      if (job !== null) jobRelative = path.relative(ctx.boxRoot, job.absPath);
 
       return {
         ok: true,
@@ -269,7 +281,7 @@ async function executeAnswer(
           // two writes leaves job+pending-question (recoverable), never an
           // answered card with no job.
           writes: [
-            { absPath: jobAbsPath, content: jobContent },
+            ...(job === null ? [] : [{ absPath: job.absPath, content: job.content }]),
             { absPath: fullPath, content: cardContent },
           ],
           commit: {
@@ -339,7 +351,7 @@ export const answerCommand: CommandDefinition = {
     },
     {
       name: "via",
-      description: "Answer source (web or cli)",
+      description: "Answer source (web, cli, or chat; a chat answer writes no follow-up job)",
       required: false,
       default: "cli",
       type: "string",

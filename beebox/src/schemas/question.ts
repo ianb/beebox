@@ -147,7 +147,7 @@ export const QuestionSchema = cardSchema("question", {
     urgency: z.enum(["time-bound"]).optional(),
     answer: QuestionAnswer.optional(),
     "answered-at": z.string().datetime({ offset: true }).optional(),
-    "answered-via": z.enum(["web", "cli"]).optional(),
+    "answered-via": z.enum(["web", "cli", "chat"]).optional(),
     "dismissed-at": z.string().datetime({ offset: true }).optional(),
     "expired-at": z.string().datetime({ offset: true }).optional(),
   },
@@ -176,7 +176,7 @@ A question card asks the user something and routes the answer back for processin
 After the user answers, the system fills in:
 - \`answer:\` — \`{text, selected?}\` where \`selected\` is the option id for select questions.
 - \`answered-at:\` — ISO 8601 timestamp.
-- \`answered-via:\` — \`web\` or \`cli\`.
+- \`answered-via:\` — \`web\`, \`cli\`, or \`chat\`. A \`chat\` answer (\`bbx answer <path> --via chat "<their words>"\`) is one you record from a conversation in which the person answered a pending card; it writes no follow-up job, because you do the directive yourself, in that conversation, before you answer the card. Answering is the last step: while the work is not done the card stays pending, and the pending card is the work item. For a select question pass the option's label; for a confirm question pass yes or no. If the briefing already holds the answer, answer the card from it without asking again. In a shared chat the message's \`user\` attribute names who answered; put it in the answer text ("Juni: mostly lending").
 
 Dismissing sets \`dismissed-at:\`; the aging sweep expiring a question sets \`expired-at:\`.
 

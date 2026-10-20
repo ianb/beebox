@@ -11,6 +11,8 @@
 import { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef, memo } from "react";
 import { ChatOpeners } from "../../../openers/ChatOpeners";
 import type { OpenerSendOutcome } from "../../../openers/opener-send";
+import { InlineAction } from "../../../ui/InlineAction";
+import { moreQuestionsLabel, openQuestionLine, type OpenQuestion } from "./open-question";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../../ChatMessages/view";
@@ -141,13 +143,50 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
   );
 }
 
-/** An empty chat: the openers, then the plain empty-state line. */
-function EmptyChat({ openers, onSendOpener }: {
+/**
+ * The question the empty root chat asks, as the agent's opening line
+ * (docs/plans/front-door.md, Track A): the prompt (a select question lists its
+ * options in the sentence), the card's memo under it in the quiet style, then
+ * "and N more" to the Questions page and a quiet "Not now". Clicking the line
+ * puts the cursor in the composer, whose placeholder is the prompt. Text for
+ * every input type: the person answers by typing or speaking.
+ */
+function OpenQuestionLine({ question, onFocusComposer, onNotNow, onOpenQuestions }: {
+  question: OpenQuestion;
+  onFocusComposer: () => void;
+  onNotNow: (path: string) => void;
+  onOpenQuestions: (() => void) | null;
+}) {
+  const more = moreQuestionsLabel(question.more);
+  return (
+    <div className="flex flex-col items-center gap-1 max-w-md text-center" data-testid="chat-open-question">
+      <button type="button" className="text-left text-warm-900 text-lg leading-snug" onClick={onFocusComposer} data-question-path={question.path}>
+        {openQuestionLine(question)}
+      </button>
+      {question.memo === null ? null : <p className="text-warm-600 text-sm">{question.memo}</p>}
+      <p className="text-warm-500 text-sm">
+        {more === null || onOpenQuestions === null ? null : <><InlineAction intent="subtle" onClick={onOpenQuestions}>{more}</InlineAction>{" · "}</>}
+        {more !== null && onOpenQuestions === null ? <>{more}{" · "}</> : null}
+        <InlineAction intent="subtle" onClick={() => onNotNow(question.path)}>Not now</InlineAction>
+      </p>
+    </div>
+  );
+}
+
+/** An empty chat: the question the root chat asks when one is pending, the openers, then the plain empty-state line. */
+function EmptyChat({ openers, onSendOpener, openQuestion, onFocusComposer, onQuestionNotNow, onOpenQuestions }: {
   openers: string[];
   onSendOpener: (text: string) => OpenerSendOutcome;
+  openQuestion: OpenQuestion | null;
+  onFocusComposer: () => void;
+  onQuestionNotNow: (path: string) => void;
+  onOpenQuestions: (() => void) | null;
 }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-3 px-4">
+      {openQuestion === null ? null : (
+        <OpenQuestionLine question={openQuestion} onFocusComposer={onFocusComposer} onNotNow={onQuestionNotNow} onOpenQuestions={onOpenQuestions} />
+      )}
       <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
       <div className="bbx-chat-empty-label text-warm-500 text-sm">Start a conversation.</div>
     </div>
@@ -159,6 +198,7 @@ function MessageListInner({
   debugView, currentUserEmail, currentUserName, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, sendSignal, captureSignal, liveTurnId, proseEnabled, pendingHq, onHqSendLive,
   captureBubbles, captureVerbs, audioOverlayStore, openers, onSendOpener,
+  openQuestion, onFocusComposer, onQuestionNotNow, onOpenQuestions,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -198,6 +238,9 @@ function MessageListInner({
   openers: string[];
   /** Send an opener as the person's message — the typed-and-entered path. */
   onSendOpener: (text: string) => OpenerSendOutcome;
+  /** The pending question the empty root chat asks; null elsewhere (see `OpenQuestionLine`). */
+  openQuestion: OpenQuestion | null;
+  onFocusComposer: () => void; onQuestionNotNow: (path: string) => void; onOpenQuestions: (() => void) | null;
 }) {
   const { boxSlug } = useParams({ strict: false });
   // Also gated on the retained-window ceiling: past it the machine drops what
@@ -303,7 +346,10 @@ function MessageListInner({
 
   // A first capture into an empty chat still shows its pending bubble.
   if (messages.length === 0 && !isStreaming && captureBubbles.length === 0) {
-    return <EmptyChat openers={openers} onSendOpener={onSendOpener} />;
+    return (
+      <EmptyChat openers={openers} onSendOpener={onSendOpener} openQuestion={openQuestion}
+        onFocusComposer={onFocusComposer} onQuestionNotNow={onQuestionNotNow} onOpenQuestions={onOpenQuestions} />
+    );
   }
 
   // Newest assistant group's index, for the now-playing speech-highlight match.

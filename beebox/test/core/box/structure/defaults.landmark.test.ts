@@ -51,12 +51,12 @@ void test("A box with no landmark gets one installed under content/ (returns its
 
   t.check(await rootLabel(A), basename(A));
 
-  // The root place carries the box's two onboarding openers, so a new box's first
-  // chat offers them (they moved here from the briefing seed).
+  // The root place carries the box's one onboarding opener, the voice
+  // walkthrough, which sits under the box's first question in the empty chat
+  // (docs/plans/front-door.md, Track A).
 
   t.check(parseLandmarkFields(await readFile(join(A, "_content/Box.landmark.card"), "utf8"))?.navigation?.openers, [
-    "Let me tell you what this box is for.",
-    "What can you do?",
+    "Tell me about talking instead of typing.",
   ]);
 
   // Its body, the place summary the root page shows first, starts empty: the
@@ -101,8 +101,7 @@ void test("A repair keeps the place summary.", async (t) => {
 navigation:
   label: ${basename(S)}
   openers:
-    - Let me tell you what this box is for.
-    - What can you do?
+    - Tell me about talking instead of typing.
 symbol:
   glyph: 📦
 ---
@@ -112,7 +111,7 @@ Two lists so far: groceries and the landlord.
   t.check(parseLandmarkFields(repaired), {
     navigation: {
       label: basename(S),
-      openers: ["Let me tell you what this box is for.", "What can you do?"],
+      openers: ["Tell me about talking instead of typing."],
     },
     symbol: { glyph: "📦" },
   });

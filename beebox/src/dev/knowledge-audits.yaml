@@ -8626,12 +8626,42 @@ tests:
     tags: [dev-guidance, testing]
 
   # === Front door (docs/plans/front-door.md) ===
-  # Offering a page when a kind of card grows. Status (2026-10-19, Claude,
-  # disposable copy of the worktree's test1 clone): passes, 0 reads, 0
-  # searches, 42k ctx; answered first, then offered "a page that shows
-  # what's out" in one sentence and said it would ask, not build. Its first
-  # run failed only on a too-narrow "does not build" pattern, loosened after
-  # reading the transcript. The answer-in-chat audit joins it with Track A.
+  # Two agent-facing rules. answer-in-chat: a message under `open-question`
+  # answers a pending card; the agent does the directive first and answers
+  # the card last, with `--via chat`, and offers ideas only after hearing.
+  # offer-a-page: offering a page when a kind of card grows. Status
+  # (2026-10-19, Claude, disposable copy of the worktree's test1 clone):
+  # offer-a-page passes, 0 reads, 0 searches, 42k ctx; answered first, then
+  # offered "a page that shows what's out" in one sentence and said it would
+  # ask, not build. Its first run failed only on a too-narrow "does not
+  # build" pattern, loosened after reading the transcript.
+  - id: front-door-answer-in-chat
+    chat_mode: true
+    prompt: >
+      The message you just received carries the snapshot attribute
+      open-question="_bookkeeping/questions/what-to-keep-track-of.question.card",
+      a pending text question whose prompt is "What do you want to keep track
+      of here?", with a directive to write the purpose into the briefing and
+      the Box page in the person's words and a learning with sink briefing.
+      The person wrote: "Mostly what I've lent out to friends, and whether
+      it came back." Describe what you do, in what order, and what you say.
+      Explain only; do not read files, use tools, or change anything.
+    expected_level: knows_directly
+    watch_for: >
+      Does the directive and records the learning before answering the card,
+      and answers it with bbx answer --via chat, quoting the person's words;
+      names no follow-up job. Reflects the answer back and offers two or
+      three things for lending, not a general capabilities list. FAILS if it
+      answers the card first, creates a job or a new question card, or opens
+      with what the box can do.
+    correct_matches:
+      - 'bbx answer[^\n]{0,120}--via chat|--via chat[^\n]{0,120}bbx answer'
+      - '(?:briefing|purpose)[\s\S]{0,400}(?:then|last|after|finally|only then)[\s\S]{0,160}(?:answer|bbx answer)|(?:before|prior to)[\s\S]{0,80}(?:answer(?:ing)? the (?:card|question))'
+      - 'lent|lend|loan|borrow'
+    response_not_matches:
+      - 'question-followup|follow-up job|followup job|create (?:a )?(?:new )?question card'
+    tags: [front-door, question]
+
   - id: front-door-offer-a-page
     chat_mode: true
     prompt: >

@@ -90,6 +90,13 @@ export const sendBodySchema = z.object({
    * attribute. Omitted when no card is open.
    */
   openCard: z.string().optional(),
+  /**
+   * Box-relative path of the pending question card the root chat is showing
+   * (its empty state asks it), sent on every message while it is pending and
+   * surfaced to the agent as the `open-question` snapshot attribute. Omitted
+   * when the chat shows none.
+   */
+  openQuestion: z.string().optional(),
   /** Frozen content attention at the send gesture; never a session target. */
   viewContext: attentionSnapshotSchema.optional(),
   /**
@@ -115,6 +122,9 @@ export const sendBodySchema = z.object({
 });
 
 export type SendBody = z.infer<typeof sendBodySchema>;
+
+/** The per-send context fields a body carries into `ChatSendInput`. */
+export type SendCardFields = Pick<ChatSendInput, "openCard" | "openQuestion" | "cardActivity" | "cardState" | "viewContext">;
 
 export const selfNoteBodySchema = z.object({
   body: z.string({ error: "body is required" }).refine((v) => v.trim().length > 0, "body is required"),
@@ -167,14 +177,15 @@ export function resolveChannel(
 
 /**
  * Normalize the companion-pane fields off a send body into the shape
- * `ChatSendInput` wants: `openCard` (non-empty path), `cardActivity` (valid
- * kinds only), `cardState` (per-kind detail strings). Everything is filtered
+ * `ChatSendInput` wants: `openCard` and `openQuestion` (non-empty paths),
+ * `cardActivity` (valid kinds only), `cardState` (per-kind detail strings). Everything is filtered
  * defensively at this parse boundary; absent/invalid fields are simply omitted.
  */
 export function extractCardFields(
-  body: Pick<SendBody, "openCard" | "cardActivity" | "cardState" | "viewContext">,
-): Pick<ChatSendInput, "openCard" | "cardActivity" | "cardState" | "viewContext"> {
-  const out: Pick<ChatSendInput, "openCard" | "cardActivity" | "cardState" | "viewContext"> = {};
+  body: Pick<SendBody, "openCard" | "openQuestion" | "cardActivity" | "cardState" | "viewContext">,
+): SendCardFields {
+  const out: SendCardFields = {};
+  if (typeof body.openQuestion === "string" && body.openQuestion !== "") out.openQuestion = body.openQuestion;
   if (body.viewContext !== undefined) {
     out.viewContext = body.viewContext;
     if (body.viewContext.focusedRef !== undefined) out.openCard = parseRef(body.viewContext.focusedRef).path;
@@ -202,7 +213,7 @@ export function buildSendInput(
     text: string;
     images: SendBody["images"];
     channel: ChatChannel | undefined;
-    cardFields: Pick<ChatSendInput, "openCard" | "cardActivity" | "cardState" | "viewContext">;
+    cardFields: SendCardFields;
   },
 ): ChatSendInput {
   return {

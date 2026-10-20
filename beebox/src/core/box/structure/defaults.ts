@@ -236,7 +236,7 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
   // header, the browser tab -- so a fleet scaffolded with one hardcoded label
   // is a fleet whose boxes all look alike in a tab strip. The boxholder
   // renames it by editing the card, like any other box fact.
-  // The root place carries the box's onboarding openers; the agent fades them
+  // The root place carries the box's onboarding opener; the agent fades it
   // as the box comes into use (docs/implemented-plans/landmark-arrival.md, Track B).
   // Its body (the place summary) starts empty: the agent writes it once the
   // root question is answered (docs/plans/front-door.md, Track A).

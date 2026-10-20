@@ -1,6 +1,6 @@
 ---
 title: What you could do with your box
-read-when: The user asks what the box can do, what to try, what it is for, or how to get started — or clicks the stock "What can you do?" opener.
+read-when: The user asks what the box can do, what to try, what it is for, or how to get started — or clicks the stock "Tell me about talking instead of typing." opener.
 ---
 # What you could do with your box
 

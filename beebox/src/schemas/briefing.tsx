@@ -99,8 +99,8 @@ and the person tells you what the box is for (a new box asks them in its
 first chat), write their answer into the \`purpose:\` frontmatter field.
 
 When you record the box's purpose, also edit the root landmark,
-\`_content/Box.landmark.card\`: remove its stock onboarding openers
-("Let me tell you what this box is for.", "What can you do?") from
+\`_content/Box.landmark.card\`: remove its stock onboarding opener
+("Tell me about talking instead of typing.") from
 \`navigation.openers\` or replace them with openers for that purpose, and
 write its place summary (the body, the text the person sees first on the
 Box page): two or three sentences in the person's words about what this

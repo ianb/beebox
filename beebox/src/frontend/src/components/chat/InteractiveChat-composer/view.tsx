@@ -86,9 +86,9 @@ export function ComposerSendButton({
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription, targetBusy, sendDisabledReason,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, includeControlIds,
+  onStopDictation, onVoiceSegmentSend, onPaste, onDrop, includeControlIds, placeholder,
 }: {
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement>; placeholder?: string | undefined;
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
   isTranscribing: boolean;
@@ -120,7 +120,7 @@ function DesktopComposerRow({
         onPaste={onPaste}
         onDrop={onDrop}
         readOnly={isTranscribing}
-        placeholder={isTranscribing ? "Listening..." : "Type a message..."}
+        placeholder={isTranscribing ? "Listening..." : placeholder ?? "Type a message..."}
         className={composerTextareaClasses({ mobile: false, isTranscribing })}
         minRows={1}
         maxRows={8}
@@ -199,7 +199,7 @@ export function ChatInputArea({
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAddFiles, addFiles, onEnterCapture, captureEnabled, captureDisabledReason,
-  narrationEnabled, includeControlIds,
+  narrationEnabled, includeControlIds, placeholder,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
@@ -218,7 +218,7 @@ export function ChatInputArea({
   onVoiceSegmentSend: VoiceSegmentSend;
   voicePaused: boolean;
   onUnpause: () => void;
-  hideMobile?: boolean;
+  hideMobile?: boolean; placeholder?: string | undefined; // the open question's prompt, in place of "Type a message..."
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
   /** Open the file picker behind the Add menu's one file entry. */
@@ -331,7 +331,7 @@ export function ChatInputArea({
           onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={onPaste}
           onDrop={onDrop}
-          includeControlIds={hasControlIds}
+          includeControlIds={hasControlIds} placeholder={placeholder}
         />
 
         {/* Mobile: spacer */}

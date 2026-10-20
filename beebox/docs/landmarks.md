@@ -71,7 +71,7 @@ For character-driven scenarios where the face is the bookmark, the image form ma
 
 **`expand`** (zero or more) — templated fan-out. Runs a query, applies a template per match, generates links. See below.
 
-**`openers`** (zero or more strings) — one-line first moves, phrased from the person's side. They show as buttons on an unstarted chat in this place and in the place page's "Start something" group; a click sends the line as the person's message. Each is one non-blank line of at most 120 characters; an invalid opener makes the landmark fail to parse, which shows as a parse warning. A place with no `openers` shows none and does not inherit the root's. The root landmark of a new box carries two onboarding openers (`STOCK_ROOT_OPENERS` in `src/schemas/landmark.ts`); the retrospective procedure removes them once the box is in regular use.
+**`openers`** (zero or more strings) — one-line first moves, phrased from the person's side. They show as buttons on an unstarted chat in this place and in the place page's "Start something" group; a click sends the line as the person's message. Each is one non-blank line of at most 120 characters; an invalid opener makes the landmark fail to parse, which shows as a parse warning. A place with no `openers` shows none and does not inherit the root's. The root landmark of a new box carries one onboarding opener, "Tell me about talking instead of typing." (`STOCK_ROOT_OPENERS` in `src/schemas/landmark.ts`), shown under the box's first question in the empty root chat (`docs/questions.md`, "Surfacing"); the agent removes it when it records what the box is for, and the retrospective procedure removes it once the box is in regular use.
 
 ### Why no `description` / `purpose` / `intent`
 

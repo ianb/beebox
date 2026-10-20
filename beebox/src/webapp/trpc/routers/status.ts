@@ -40,6 +40,8 @@ export interface QuestionInfo extends QuestionCardInfo {
   options?: string[] | undefined;
   learning?: QuestionFields["learning"] | undefined;
   answer?: QuestionFields["answer"] | undefined;
+  /** The card's `asked-at`, so a caller can order pending questions by when the box asked them. */
+  askedAt?: string | undefined;
   /**
    * Set when the card failed to parse against `QuestionSchema` (bad
    * frontmatter, a superRefine violation, …). An invalid card carries only
@@ -239,6 +241,7 @@ export const statusRouter = router({
             options: fields.input.options?.map((o) => o.label),
             learning: fields.learning,
             answer: fields.answer,
+            askedAt: fields["asked-at"],
           };
         } catch (e) {
           console.warn(`Question card failed to parse, surfacing as invalid: ${q.path}:`, e);

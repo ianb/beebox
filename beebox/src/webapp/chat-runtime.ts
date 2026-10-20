@@ -55,7 +55,7 @@ export interface UserMessageSendArgs {
   user: SessionUser | null;
   channel: ChatChannel | undefined;
   images?: ChatSendInput["images"];
-  cardFields?: Pick<ChatSendInput, "openCard" | "cardActivity" | "cardState" | "viewContext">;
+  cardFields?: Pick<ChatSendInput, "openCard" | "openQuestion" | "cardActivity" | "cardState" | "viewContext">;
 }
 
 /** The send route's body after target and identity resolution (routes/chat/user-message-sender.ts). */

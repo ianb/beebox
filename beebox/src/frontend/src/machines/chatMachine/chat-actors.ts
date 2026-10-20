@@ -231,7 +231,7 @@ export const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { binding?: SendBinding; startup?: boolean; sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; engine?: string; model?: string; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
+    input: { binding?: SendBinding; startup?: boolean; sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; engine?: string; model?: string; openCard?: string; openQuestion?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
   }) => {
     let terminalFired = false;
     let msgCount = 0;
@@ -277,6 +277,7 @@ export const streamActor = fromCallback(
       ...(input.engine !== undefined ? { engine: input.engine } : {}),
       ...(input.model !== undefined ? { model: input.model } : {}),
       ...(input.openCard !== undefined ? { openCard: input.openCard } : {}),
+      ...(input.openQuestion !== undefined ? { openQuestion: input.openQuestion } : {}),
       ...(input.cardActivity && input.cardActivity.length > 0 ? { cardActivity: input.cardActivity } : {}),
       ...(input.cardState && Object.keys(input.cardState).length > 0 ? { cardState: input.cardState } : {}),
       ...boundTurnFields(input.binding),
@@ -387,14 +388,15 @@ export function rollupStreamToEntry(
  * the receipt registry so the dispatcher's `Promise<Receipt>` settles for a
  * mid-turn queued send, same as the idle-path send in `streamActor`.
  */
-export function queueMessageToBackend(opts: { binding?: SendBinding; startup?: boolean; session: string; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }): void {
-  const { session, message, messageId, images, openCard, cardActivity, cardState } = opts;
+export function queueMessageToBackend(opts: { binding?: SendBinding; startup?: boolean; session: string; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; openQuestion?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }): void {
+  const { session, message, messageId, images, openCard, openQuestion, cardActivity, cardState } = opts;
   startChatTurn({
     session,
     message,
     messageId,
     ...(images && images.length > 0 ? { images } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
+    ...(openQuestion !== undefined ? { openQuestion } : {}),
     ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
     ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
     ...boundTurnFields(opts.binding),

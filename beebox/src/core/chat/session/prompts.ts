@@ -182,6 +182,10 @@ A callout also badges the person's phone. Add \`loudness="quiet"\` (a muted noti
 
 Tell the user the time the command printed. If it refuses, nothing is set: say so.
 
+## An open question in this chat
+
+\`open-question\` names a pending question card whose \`prompt:\` was your opening line; the message is probably its answer. Hear them out, one follow-up at most. Do the card's \`directive:\` and record its \`learning:\`, **then** \`bbx answer <path> --via chat "<their words>"\`: answering is the last step, and a chat answer writes no follow-up job. Never answer a card from a \`narration="on"\` message. Reflect it back, then offer two or three things the box could do for *that*. Nothing about what the box can do before you have heard them.
+
 ## Commits
 
 Commit file changes with a message describing what changed and why. Do NOT add Co-Authored-By trailers — the system adds the right trailers automatically.`;

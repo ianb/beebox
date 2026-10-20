@@ -27,7 +27,7 @@ import { expectReceipt, type Receipt } from "./receipts";
 import { beginChatSendDiagnostic } from "../../lib/chat-send-diagnostics";
 
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
-type CardFields = Pick<SendEvent, "openCard" | "cardActivity" | "cardState">;
+type CardFields = Pick<SendEvent, "openCard" | "openQuestion" | "cardActivity" | "cardState">;
 
 /**
  * `ready`/`busy` map directly onto the chat machine's idle vs.
