@@ -12,9 +12,9 @@ Reported by the developer: while the recorder is on, replaying one of the
 agent's spoken replies drops the recording up to that point. The person loses
 what they had already said.
 
-Not established when filed: which client (web or the iOS app), whether the
-recording stops or continues after the replay, and whether the lost audio is
-gone or only detached from the message. The expected behaviour is that
+Details from the developer: this is the web client (iOS not checked). After
+the replay the recorder comes back, but reset: it starts over from empty. The
+HQ transcription pass does not recover the earlier audio either, so it is lost. The expected behaviour is that
 recording and playback can happen together, or that playback is refused or
 paused while recording, with the recording kept either way.
 
