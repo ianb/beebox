@@ -1,6 +1,6 @@
 ---
 title: "Publish the TTS model comparison on beebox.run"
-status: draft
+status: implemented
 workstream: tts-comparison-page
 issues: []
 ---
@@ -128,7 +128,7 @@ and ~13 MB of audio. Not a BIG CHANGE.
   file in `dist/`. The twin strips the tag (catch-all) and keeps the text.
 - Vocabulary lock-ins: tag name `audio`, attribute `src`.
 - First chunk: tag, rewrite, build check, tests in `evaluation-tags.test.ts`
-  and `build.test.ts`.
+  and `box-export.test.ts`.
 
 ### 2. Research directory
 
