@@ -6,8 +6,15 @@ labels: [box-shape, git]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-bug-burndown-4 — portable engine dependency plan
-design: ../../beebox/docs/implemented-plans/portable-engine-dependency.md
+design: ../../../beebox/docs/implemented-plans/portable-engine-dependency.md
+resolution: wontfix
 ---
+
+Closed 2026-10-20 as accepted (boxholder decision). The only callers of
+`bbx upgrade --to <tarball>` are the release smoke test, on throwaway boxes,
+and Docker images, whose `file:/app/beebox.tgz` path is the same in every
+container. Real boxes upgrade through deploy, which commits the portable
+`link:.beebox/engine`. A tarball upgrade stays an explicit pin.
 
 `bbx upgrade --to <spec>` writes `<spec>` into the box's `package.json` as the
 `beebox` dependency (`bumpBeeBoxDependency`,
