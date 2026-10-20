@@ -26,7 +26,7 @@
 import { contentHash } from "../../../../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode, errorMessage } from "../../../../shared/error-guards.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
 import type {
   DriveTypeHandler,
   InspectResult,
@@ -43,6 +43,7 @@ import type { GdocLossyType } from "../../../../schemas/gdoc.js";
 import { preserveAgentFields } from "../../../../preserve-agent-fields.js";
 import { reconcileCommentsSidecar } from "../../comments-sidecar.js";
 import { stripsUpstreamTrailingWhitespace } from "./whitespace.js";
+import { DocsApiUnavailableError, diagnoseDocsApiFailure } from "./api-failure.js";
 
 const DOC_MIME = "application/vnd.google-apps.document";
 const MARKDOWN_MIME = "text/markdown";
@@ -158,10 +159,11 @@ function lossyToTemplateItems(
 }
 
 /**
- * Call `getDocument`, but degrade gracefully if the auth token lacks the
- * `documents.readonly` scope (HTTP 403). Returns null on failure so the
- * caller can keep pulling with reduced fidelity (no revisionId for
- * conflict detection, lossy detection limited to comment count).
+ * Call `getDocument`, but degrade gracefully when the Docs API refuses (a
+ * missing scope, the API disabled on the Cloud project, an outage). Returns
+ * null on failure so the caller can keep pulling with reduced fidelity (no
+ * revisionId for conflict detection, lossy detection limited to comment
+ * count). The warning names the diagnosed cause.
  */
 async function tryGetDocument(
   service: GoogleDriveService,
@@ -170,13 +172,21 @@ async function tryGetDocument(
   try {
     return await service.getDocument(opts.fileId);
   } catch (e) {
-    const msg = errorMessage(e);
+    const failure = await diagnoseDocsApiFailure(e);
     console.warn(
-      "[google-drive] Could not fetch Docs API metadata for " +
-        opts.fileName + ": " + msg +
-        ". If this is a 403, run 'bbx engine google-auth' to grant the documents.readonly scope.",
+      `[google-drive] Could not fetch Docs API metadata for ${opts.fileName} ` +
+        `(syncing without revision tracking or lossy details): ${failure.message}`,
     );
     return null;
+  }
+}
+
+/** `getDocument` for `inspect()`: a failure is an explicit, diagnosed error. */
+async function requireDocument(service: GoogleDriveService, file: DriveFile): Promise<DocumentStructure> {
+  try {
+    return await service.getDocument(file.id);
+  } catch (e) {
+    throw new DocsApiUnavailableError({ fileName: file.name, failure: await diagnoseDocsApiFailure(e) });
   }
 }
 
@@ -186,7 +196,7 @@ const docsHandler: DriveTypeHandler = {
 
   async inspect(file: DriveFile, service: GoogleDriveService): Promise<InspectResult> {
     const [doc, comments] = await Promise.all([
-      service.getDocument(file.id),
+      requireDocument(service, file),
       service.listComments(file.id),
     ]);
     // Comments aren't lossy — they're captured to a sidecar on sync. Report

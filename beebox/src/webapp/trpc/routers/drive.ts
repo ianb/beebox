@@ -24,6 +24,10 @@ import { inspectDriveItem } from "../../../connectors/google-drive/inspect.js";
 import { loadDriveConfig } from "../../../connectors/google-drive/config.js";
 import { listFolderMounts } from "../../../connectors/google-drive/mount-list.js";
 import { DriveMountError } from "../../../connectors/google-drive/mount-errors.js";
+import {
+  DocsApiUnavailableError,
+  isBoxholderFixable,
+} from "../../../connectors/google-drive/handlers/docs/api-failure.js";
 import { syncFolderMount } from "../../../connectors/google-drive/mount-sync.js";
 import {
   linkDriveItem,
@@ -62,8 +66,10 @@ async function driveConnected(ctx: DriveCtx): Promise<boolean> {
  *
  * A `DriveMountError` is something the person who asked has to fix — a URL
  * that is not a Drive link, a directory that already mirrors something else —
- * so it is a BAD_REQUEST carrying the refusal's own message. Anything else
- * (Drive down, git wedged) is ours, and stays a 500 with a generic shape.
+ * so it is a BAD_REQUEST carrying the refusal's own message. A Docs API
+ * refusal the boxholder can fix (the API disabled on the Cloud project, a
+ * missing scope) is a PRECONDITION_FAILED carrying the diagnosis. Anything
+ * else (Drive down, git wedged) is ours, and stays a 500 with a generic shape.
  */
 async function mountWrite<T>(operation: Promise<T>): Promise<T> {
   try {
@@ -71,6 +77,9 @@ async function mountWrite<T>(operation: Promise<T>): Promise<T> {
   } catch (error) {
     if (error instanceof DriveMountError) {
       throw new TRPCError({ code: "BAD_REQUEST", message: error.message, cause: error });
+    }
+    if (error instanceof DocsApiUnavailableError && isBoxholderFixable(error)) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: error.message, cause: error });
     }
     throw error;
   }

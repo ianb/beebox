@@ -16,6 +16,10 @@ import {
 } from "../../lib/credentialed-verb.js";
 import type { Result } from "../../../shared/result.js";
 import { DriveMountError } from "../../../connectors/google-drive/mount-errors.js";
+import {
+  DocsApiUnavailableError,
+  isBoxholderFixable,
+} from "../../../connectors/google-drive/handlers/docs/api-failure.js";
 import { resolveDriveService } from "../../../google/access.js";
 import type { GoogleDriveService } from "../../../services/google-drive/core.js";
 import type { AppRouter } from "../../../webapp/trpc/routers.js";
@@ -33,14 +37,25 @@ export async function localDriveService(boxRoot: string): Promise<GoogleDriveSer
 
 /**
  * Run a Drive verb where it belongs. A `DriveMountError` — a bad URL, an
- * occupied directory, a path that climbs out of the box — is the caller's.
+ * occupied directory, a path that climbs out of the box — is the caller's. A
+ * Docs API refusal the boxholder can fix (API disabled, scope missing) is
+ * theirs, as the server's PRECONDITION_FAILED says on the delegated path.
  */
 export async function dispatchDrive<T>(options: {
   local: () => Promise<T>;
   remote: (client: TRPCClient<AppRouter>) => Promise<T>;
 }): Promise<Result<T, VerbRefusal>> {
   return dispatchCredentialed({
-    local: options.local,
+    local: async () => {
+      try {
+        return await options.local();
+      } catch (error) {
+        if (error instanceof DocsApiUnavailableError && isBoxholderFixable(error)) {
+          throw new CredentialGapError({ kind: "auth-gap", message: error.message });
+        }
+        throw error;
+      }
+    },
     remote: options.remote,
     callerFault: (error) => error instanceof DriveMountError,
   });
