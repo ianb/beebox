@@ -10,7 +10,7 @@ import { REMAINING_SYSTEM_CARD_MIGRATION, SEARCH_SYSTEM_CARD_MIGRATION } from ".
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_DIRS, boxPath } from "../../../lib/paths/core.js";
-import { BOX_MARKER, isBoxRoot, recordedShapeSource } from "../../../lib/box-identity.js";
+import { BOX_MARKER, isBoxRoot, recordedShapeSource, writeShapeBlock } from "../../../lib/box-identity.js";
 import { MissingShapeRecordError } from "../../../lib/box-shape-errors.js";
 import { hasCommits, initRepo, isRepo } from "../../../lib/git/core/operations.js";
 import { getBoxShape } from "../../../lib/box-shape.js";
@@ -20,7 +20,6 @@ import { MIGRATIONS } from "../../migrations.js";
 import { UNIGNORE_BLOCK } from "../../attachments-gitignore.js";
 import { installTricksPackageJson } from "../templates.js";
 import { syncBoxGuidance } from "../guidance-sync/core.js";
-import { z } from "zod";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { migrateBoxState } from "../../../lib/state-migration.js";
 
@@ -35,8 +34,6 @@ import { migrateBoxState } from "../../../lib/state-migration.js";
  * hand-kept rules.
  */
 const MIGRATED_SECTION_HEADER = "# Migrated local rules (from the v2 box's .gitignore/.gitattributes)";
-
-const BoxMarkerSchema = z.object({ version: z.string(), created: z.string() });
 
 /**
  * Finding 4 (Track E hardening review, round 3): `initBox` regenerates
@@ -101,42 +98,46 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // no record was initialized before and lost it — a clone of a box that has
   // not run `box-shape-record-2026-10` — so it is refused with a recovery
   // line, not re-initialized with a guessed version and birth date.
-  const markerPath = path.join(resolvedRoot, BOX_MARKER);
   const isUpdate = (await recordedShapeSource(resolvedRoot)) !== null;
   if (!isUpdate && (await isRepo(resolvedRoot)) && (await hasCommits(resolvedRoot))) {
     throw new MissingShapeRecordError(resolvedRoot);
   }
 
   if (!isUpdate) {
-    // Create the marker. Every box is shapeVersion 3 (the one-root layout):
-    // `package.json`, `src/`, and every `_`-prefixed operational area all
-    // live at this same root. A fresh init requires the npm-package half to
-    // already exist (`package.json` declaring `beebox`), so direct callers
-    // go through `scaffoldBoxRoot` (`./package.js`), which lays that down
-    // first.
-    const marker = {
-      version: "1.0.0",
-      shapeVersion: 3,
-      created: getBoxTimeISO(resolvedRoot),
-    };
-    await fs.mkdir(path.dirname(markerPath), { recursive: true });
-    await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
+    // Record the shape in the tracked `package.json`, so a clone of this box
+    // is a box. Every box is shapeVersion 3 (the one-root layout): a fresh
+    // init requires the npm-package half to already exist (`package.json`
+    // declaring `beebox`), so direct callers go through `scaffoldBoxRoot`
+    // (`./package.js`), which lays that down first. `_config/` is the other
+    // half of box identity (`isBoxRoot`).
+    const created = getBoxTimeISO(resolvedRoot);
+    await writeShapeBlock(resolvedRoot, { shapeVersion: 3, created });
+    await fs.mkdir(path.join(resolvedRoot, BOX_DIRS.config), { recursive: true });
+    // Transition only: also write the gitignored marker, in the shape older
+    // engines read (they require `version` and `created`), so an engine from
+    // before the block — a deploy rollback, or the main checkout's `bbx` run
+    // by this box's git hooks — still sees a box. This engine never reads it
+    // once the block exists. Removed with the marker fallback:
+    // issues/deferred/2026-10-20-drop-box-marker-fallback.md.
+    await fs.mkdir(path.join(resolvedRoot, path.dirname(BOX_MARKER)), { recursive: true });
+    await fs.writeFile(path.join(resolvedRoot, BOX_MARKER), JSON.stringify({ version: "1.0.0", shapeVersion: 3, created }, null, 2) + "\n");
   }
 
-  // Fail fast: validate the box is well-formed (marker + its own package.json
-  // declaring beebox) BEFORE creating directories, the migration manifest,
-  // config, or `.gitignore`. A missing/invalid package half or a stale
-  // pre-v3 marker throws here, before any of those mutations land — so a bad
-  // init can't leave a half-written box behind. Called for that throw; the
-  // returned shape has no reader here since the annex probe went away.
+  // Fail fast: validate the box is well-formed (recorded shape + its own
+  // package.json declaring beebox) BEFORE creating directories, the
+  // migration manifest, config, or `.gitignore`. A missing/invalid package
+  // half or a stale pre-v3 record throws here, before any of those mutations
+  // land — so a bad init can't leave a half-written box behind. Called for
+  // that throw; the returned shape has no reader here.
   await getBoxShape(resolvedRoot);
   if (!isUpdate) {
     try {
       await seedSystemCards(resolvedRoot, REMAINING_SYSTEM_CARD_MIGRATION);
       await seedSystemCards(resolvedRoot, SEARCH_SYSTEM_CARD_MIGRATION);
     } catch (error) {
-      // This invocation created the marker; a failed bootstrap must remain a fresh-init retry.
-      await fs.rm(markerPath);
+      // This invocation recorded the shape; a failed bootstrap must remain a fresh-init retry.
+      await writeShapeBlock(resolvedRoot, null);
+      await fs.rm(path.join(resolvedRoot, BOX_MARKER));
       throw error;
     }
   }
@@ -332,30 +333,6 @@ async function ensureDirectories(boxRoot: string): Promise<void> {
  */
 export async function isValidBox(boxRoot: string): Promise<boolean> {
   return isBoxRoot(boxRoot);
-}
-
-/**
- * Get box metadata from the marker file.
- *
- * @param boxRoot - The box root directory
- * @returns Box metadata or null if not a valid box
- */
-export async function getBoxMetadata(
-  boxRoot: string
-): Promise<{ version: string; created: string } | null> {
-  const markerPath = path.join(boxRoot, BOX_MARKER);
-  try {
-    const content = await fs.readFile(markerPath, "utf-8");
-    return BoxMarkerSchema.parse(JSON.parse(content));
-  } catch (e) {
-    // Missing marker is the normal "not a box" case; a malformed marker is
-    // worth surfacing. Either way we report no metadata, but log so a
-    // corrupt marker doesn't vanish silently.
-    if (errnoCode(e) !== "ENOENT") {
-      console.warn(`Could not read box marker at ${markerPath}:`, e);
-    }
-    return null;
-  }
 }
 
 // Default-card installers (procedures, guides, personality, landmark,

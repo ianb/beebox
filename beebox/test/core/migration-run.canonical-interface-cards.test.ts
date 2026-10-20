@@ -13,7 +13,7 @@ import { containing, isoDate } from "@ianbicking/tap-check/check";
 import { initBox } from "../../src/core/box/structure/core.js";
 import { rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { makeTmpBox, type TmpBox } from "../helpers/test-helpers.js";
+import { makeTmpBox, useMarkerOnly, type TmpBox } from "../helpers/test-helpers.js";
 import { appendManifestEntry, writeManifest } from "../../src/core/migration-run.js";
 import { readManifest } from "../../src/core/migration-manifest.js";
 import { markMigrationApplied } from "../../src/cli/commands/migrate.js";
@@ -166,7 +166,7 @@ void test("Fresh initialization verifies cards before marking its completion.", 
     }
   });
   const fresh = await makeTmpBox();
-  await rm(fresh.path(".beebox/box.json"));
+  await useMarkerOnly(fresh.root, null);
   await rm(fresh.path(MANIFEST_PATH));
   await fresh.write(SYSTEM_CARD_PATHS.settings, "---\ntype: doc\n---\nKeep this conflict.\n");
   await t.checkThrows(async () => (await initBox(fresh.root)), "SystemCardInvariantError");

@@ -10,7 +10,7 @@ import { any, str } from "@ianbicking/tap-check/check";
 import assert from "node:assert";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { makeTmpBox, useMarkerOnly } from "../../helpers/test-helpers.js";
 import {
   boxGrowthStatePath,
   acknowledgeCurrentBoxGrowth,
@@ -198,7 +198,7 @@ void test("Box-shape failure degrades only Git history", async (t) => {
   const badShape = await makeTmpBox();
   const badShapeBaseline = await measureBoxGrowth(badShape.root, { now: at("2026-08-05T11:00:00Z") });
   await badShape.write("plain.txt", "content");
-  await fs.writeFile(badShape.path(".beebox/box.json"), JSON.stringify({ shapeVersion: 1 }));
+  await useMarkerOnly(badShape.root, JSON.stringify({ shapeVersion: 1 }));
   const badShapeMeasurement = await measureBoxGrowth(badShape.root, {
     now: at("2026-08-05T12:00:00Z"),
   });

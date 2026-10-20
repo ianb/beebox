@@ -91,8 +91,6 @@ void test("Answered and dismissed questions are resolved; they don't belong on t
   // nav and the dashboard can't disagree.
 
   await box.write("_bookkeeping/questions/Broken.question.card", "---\ninput: not-a-mapping\n---\n");
-  // `status.status` reads box metadata, so give the marker its full contents.
-  await box.write(".beebox/box.json", JSON.stringify({ shapeVersion: 3, version: "1.0.0", created: "2026-01-01T00:00:00Z" }));
 
   const navCount = (await caller(box).navStatus()).counts.pendingQuestions;
   const dashboardCount = (await caller(box).status()).counts.pendingQuestions;

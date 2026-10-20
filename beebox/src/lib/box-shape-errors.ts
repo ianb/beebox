@@ -108,6 +108,14 @@ export class MissingBeeBoxDependencyError extends BoxShapeError {
   }
 }
 
+/** A box `package.json` that parses but is not a JSON object, so no block can be set in it. */
+export class PackageJsonNotObjectError extends BoxShapeError {
+  constructor() {
+    super("The box package.json is not a JSON object, so its \"beebox\" block cannot be written.");
+    this.name = "PackageJsonNotObjectError";
+  }
+}
+
 function describeError(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }

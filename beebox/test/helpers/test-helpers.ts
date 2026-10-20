@@ -13,6 +13,7 @@ import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import { scaffoldBoxRoot } from "../../src/core/box/package.js";
+import { BOX_MARKER, setShapeBlock } from "../../src/lib/box-identity.js";
 import { AGENTS_MD_MIGRATION } from "../../src/core/agent-instruction-files.js";
 import { MANIFEST_PATH, MIGRATIONS } from "../../src/core/migrations.js";
 import { annexNewBox } from "../../src/core/annex/new-box.js";
@@ -182,4 +183,22 @@ export async function writeBoxFiles(
   };
   await mkdir(join(root, "_config"), { recursive: true });
   await writeFile(join(root, "package.json"), JSON.stringify(pkg, null, 2) + "\n");
+}
+
+/**
+ * Make `root` record its shape only in the fallback marker, as a box from
+ * before `box-shape-record-2026-10` does: drop the `package.json` block and
+ * write `markerText` (verbatim) to `.beebox/box.json`. `null` deletes the
+ * marker too, leaving no record at all (an uninitialized package).
+ */
+export async function useMarkerOnly(root: string, markerText: string | null): Promise<void> {
+  const pkgPath = join(root, "package.json");
+  await writeFile(pkgPath, setShapeBlock(await readFile(pkgPath, "utf-8"), null));
+  const markerPath = join(root, BOX_MARKER);
+  if (markerText === null) {
+    await rm(markerPath, { force: true });
+    return;
+  }
+  await mkdir(dirname(markerPath), { recursive: true });
+  await writeFile(markerPath, markerText);
 }

@@ -18,11 +18,13 @@ import * as path from "node:path";
 import { z } from "zod";
 import { errnoCode } from "../shared/error-guards.js";
 import { fileExists } from "./file-exists.js";
+import { isRecord } from "../shared/is-record.js";
 import { LEGACY_BOX_MARKER, LEGACY_PACKAGE_NAME } from "./state-migration.js";
 import {
   BoxShapeError,
   MissingShapeRecordError,
   NewerShapeRequiredError,
+  PackageJsonNotObjectError,
   PreV3ShapeError,
   UnreadablePackageJsonError,
   V2PackageRootError,
@@ -196,6 +198,32 @@ export async function recordedShapeSource(dir: string): Promise<ShapeRecord["sou
   const pkg = await readBoxPackageJson(dir);
   if (pkg?.beebox !== undefined) return "package";
   return (await fileExists(path.join(dir, BOX_MARKER))) ? "marker" : null;
+}
+
+/**
+ * `packageJsonText` with its `beebox` block set to `block`, or removed when
+ * `block` is null. Other keys keep their order; the block goes last. Pure, so
+ * `initBox` and the `box-shape-record-2026-10` migration write it one way.
+ *
+ * @throws PackageJsonNotObjectError when the text is not a JSON object
+ */
+export function setShapeBlock(packageJsonText: string, block: ShapeBlock | null): string {
+  const parsed: unknown = JSON.parse(packageJsonText);
+  if (!isRecord(parsed)) throw new PackageJsonNotObjectError();
+  const { beebox: _previous, ...rest } = parsed;
+  return JSON.stringify(block === null ? rest : { ...rest, beebox: block }, null, 2) + "\n";
+}
+
+/** Write `block` into `<dir>/package.json` (null removes it). */
+export async function writeShapeBlock(dir: string, block: ShapeBlock | null): Promise<void> {
+  const packageJsonPath = path.join(dir, "package.json");
+  let raw: string;
+  try {
+    raw = await fs.readFile(packageJsonPath, "utf-8");
+  } catch (e) {
+    throw new UnreadablePackageJsonError(dir, { packageJsonPath, cause: e });
+  }
+  await fs.writeFile(packageJsonPath, setShapeBlock(raw, block));
 }
 
 /** Whether `dir` has the fallback marker. */
