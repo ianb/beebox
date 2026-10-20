@@ -42,7 +42,7 @@ A bare "go ahead" after a proposal means **do** for that proposal. Destructive o
 
 ## Implement and verify
 
-Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/AGENTS.md](beebox/AGENTS.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks. Write code in TypeScript; a `.js` or `.mjs` file is only a thin loader for TypeScript. A foreground `sleep` is blocked; to wait on a condition, run an `until` loop in the background or use the Monitor tool.
+Use the package's test guidance. For beebox changes, run change-selected tests; the full suite is scheduled hourly on `main`. See [beebox/AGENTS.md](beebox/AGENTS.md#development) and [finish](.claude/skills/finish/SKILL.md) for the applicable checks. Write code in TypeScript; a `.js` or `.mjs` file is only a thin loader for TypeScript. A foreground `sleep` is blocked; to wait on a condition, run an `until` loop in the background or use the Monitor tool. A check piped through `tail` or `head` reports the pipe's exit status and can hide the failure; redirect output to a file and read it. On macOS, in-place `sed` needs `sed -i ''`.
 
 Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys your test box is granted before assuming you cannot, and ask before sending real box content out or spending real money: [real model calls](beebox/docs/testing/real-models.md).
 
@@ -66,7 +66,7 @@ Show useful UI screenshot evidence as one labeled exhibit. Write its prose and c
 
 ## Commit and land
 
-Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is that ask). Parallel agents in one worktree share its git index: one agent commits, and the others return the paths to stage. Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lfs wrappers; subprojects opt out with `prepare: ":"`. Root `pnpm install` wires them up. Docs-only commits run fast doc, path-leak, and personal blocklist checks. Use repo-relative or `~/` paths in tracked content. [Doc-check guidance](beebox/docs/README.md#enforcement-pnpm-doc-check) and [guard mechanics](bin/AGENTS.md).
+Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is that ask). Parallel agents in one worktree share its git index: one agent commits, and the others return the paths to stage. The doc-check and layout-check hooks read the whole working tree, so one agent's unfinished file blocks every commit; commit after all agents finish, or give each its own worktree. Commit docs with hooks; do not use `--no-verify`. Root `.husky/` owns hooks, including package-check dispatch and git-lfs wrappers; subprojects opt out with `prepare: ":"`. Root `pnpm install` wires them up. Docs-only commits run fast doc, path-leak, and personal blocklist checks. Use repo-relative or `~/` paths in tracked content. [Doc-check guidance](beebox/docs/README.md#enforcement-pnpm-doc-check) and [guard mechanics](bin/AGENTS.md).
 
 Hooks add `Workstream` and, when exactly one plan matches, `Plan` trailers. An optional `Issue: <bare-basename>` identifies a public issue; omit directories and `.md`, repeat for multiple issues, and never name a private issue. A nonexistent issue name blocks the commit. [Provenance details](bin/AGENTS.md#commit-provenance-trailers-commit-provenancets).
 

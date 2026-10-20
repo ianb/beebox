@@ -42,3 +42,12 @@ Not urgent for correctness of what's already landed — the full-tree `pnpm lint
 on a cold cache is unaffected — but it costs real confusion at the moment
 someone changes a shared signature, which is exactly when they need lint to be
 truthful.
+
+**2026-10-19 (retrospective 20261019-230412):** Two more cases. A reverted
+tsconfig `exclude` left the cache replaying parse errors for unchanged files
+(`ts7/20261017T223802Z-implemented.md`). Parallel workers sharing one worktree
+left phantom parse and `max-lines` errors that `eslint` on the same files did
+not report; `finish-verify` labeled the failure "unchanged from main", which
+pointed away from the cache (`bug-burndown-3/20261019T185933Z-landed.md`).
+Deleting the cache directory cleared both. `beebox/AGENTS.md` now names that
+step; the cache key is still the fix.
