@@ -88,40 +88,66 @@ asks the public registry for `beebox`, a name anyone can register.
 ## Ontology
 
 - **Engine link**: `<box>/.beebox/engine`, gitignored symlink to an engine
-  package root; one per box per machine. Not `node_modules/beebox`.
+  package root outside the box; one per box per machine. Not `node_modules/beebox`.
+  It is *usable* when it resolves to a directory whose `package.json` is named `beebox`.
+- **Pinned engine**: any other spec (`file:` tarball, semver range, a link into
+  the box). The migration leaves it alone.
+- **`bin/box-engine-link`** (shipped in the engine's `bin/`): `link <box> <engine>`
+  (`ln -sfn`, then check usable) and `verify <box>` (after install:
+  `node_modules/beebox/package.json` names `beebox` and `node_modules/.bin/bbx`
+  exists). The one check every shell install path runs.
 - **Portable spec**: `link:.beebox/engine`, constant `ENGINE_LINK_SPEC` in `src/lib/box-identity.ts`.
 - `BBX_INIT_BEEBOX_SPEC` stays the explicit pin for release smoke tests (tarballs).
 
 ## Tracks / scope
 
 ### A. Engine link helper, init, health check
-`ensureEngineLink(boxRoot, { target, replace })` in `src/core/box/package.ts`
-creates `.beebox/engine`, replacing an existing link only with `replace`.
-`defaultBeeBoxSpec` returns `ENGINE_LINK_SPEC` for every engine. Fresh and
-update-mode `bbx engine init` call it with `PACKAGE_ROOT`, `replace: false`, so
-the main checkout's `bbx` never repoints a worktree clone. The `node_modules/beebox`
-bootstrap links `../.beebox/engine`. `engine-link` health reads `.beebox/engine`;
-its repair text becomes `ln -sfn <engine> .beebox/engine`.
+`ensureEngineLink(boxRoot, target)` in `src/core/box/engine-link.ts` creates
+`.beebox/engine` when it is missing or not usable, and never replaces a usable
+link, so the main checkout's `bbx` never repoints a worktree clone. It throws
+`EngineLinkError` (with the `ln -sfn` repair) when the result is not usable.
+`defaultBeeBoxSpec` returns `ENGINE_LINK_SPEC` for every engine. Fresh `bbx
+engine init` calls it with `PACKAGE_ROOT`; the `node_modules/beebox` bootstrap
+links `../.beebox/engine`. Update-mode init calls it when the spec is portable.
+`engine-link` health reads `.beebox/engine`; its repair text becomes `ln -sfn
+<engine> .beebox/engine`.
 
 ### B. Migration `engine-link-spec-2026-10`
-Pure `plan.ts` over `package.json` text: `already-portable`; `write` (sets the
-portable spec, deletes `pnpm.overrides.beebox` and an emptied `pnpm.overrides`);
-or `refuse` when no dependency field names `beebox`. `run.ts`: (1)
-`ensureEngineLink` without replace, to the realpath of `node_modules/beebox` when
-it lies outside the box, else `PACKAGE_ROOT` (a docker `file:` copy lies inside);
-(2) write `package.json`; (3) if `pnpm-lock.yaml` exists, `pnpm install
---lockfile-only --offline`; a failure prints one line and does not block later
-migrations, since the next install converges the lockfile; (4) verify the spec
-and that `.beebox/engine` resolves.
+Converts only a machine-local `link:` spec whose target is outside the box.
+Pure `plan.ts` over `package.json` text, with the effective spec being
+`pnpm.overrides.beebox` over the dependency: `already-portable`; `pinned`
+(any non-`link:` spec: exit 0, "skipped: pinned engine", recorded as done);
+`convert` (sets the portable spec in the field that held it, deletes
+`pnpm.overrides.beebox` and an emptied `overrides`/`pnpm`); or `refuse` when no
+dependency names `beebox`. `run.ts`: (1) a link target that resolves inside
+the box is `pinned` too: no in-box link target ever; (2) `ensureEngineLink` to
+the old link target, which keeps a usable existing link; a dead target exits 1
+with the repair; (3) write `package.json`; (4) if `pnpm-lock.yaml` exists, `pnpm
+install --lockfile-only --offline`; on failure restore `package.json` and exit 1
+naming the box and command, so the migration stays pending and the manifest
+never disagrees with the tracked lockfile; (5) verify the spec reads back
+portable and the link is usable. The real install happens at the next install
+path below; until then `node_modules/beebox` still points at the old target.
 
 ### C. Install paths
-- `deploy.sh:734-741`: replace the rewrite with `ln -sfn /opt/beebox/beebox
-  .beebox/engine` as `beebox`, before the install; fix the `:464-466` comment.
-- `wt_create_repoint_box_engine`: `ln -sfn <worktree>/beebox .beebox/engine`;
-  write the portable spec (unmigrated box) and drop `pnpm.overrides.beebox`.
-- `docker/entrypoint.sh`: `ln -sfn /app/node_modules/beebox .beebox/engine` on
-  every start, before the install. `Dockerfile:154-160`: drop `BBX_INIT_BEEBOX_SPEC`.
+Each supported path runs `box-engine-link link` before `pnpm install` and
+`box-engine-link verify` after, and fails loudly naming the box.
+- `deploy.sh:734-741`: replace the rewrite with `box-engine-link link <box>
+  /opt/beebox/beebox` as `beebox`; reinstall also when `node_modules/beebox` is
+  not the portable link; a failed box prints `ERROR` and the deploy continues
+  with the next box, as the converge step does (`:855`); fix the `:464-466` comment.
+- `wt_create_repoint_box_engine`: `box-engine-link link` to the worktree engine;
+  write the portable spec (unmigrated box) and drop `pnpm.overrides.beebox`;
+  verify after the clone's install.
+- `docker/entrypoint.sh`: link to `/app/node_modules/beebox` before argument
+  dispatch when `package.json` exists; a real install when `node_modules` is
+  missing or `node_modules/beebox` is not the portable link, before and after
+  migrations; verify. `Dockerfile:154-160`: drop `BBX_INIT_BEEBOX_SPEC`.
 - `add-box.sh`: no change; server-side `bbx engine init .` creates the link.
+
+Residual, accepted: a raw agent `pnpm install`/`pnpm add` with a missing link
+still exits 0 with a dead `node_modules/beebox`, as today's committed link does
+on a machine without its target. The health check names it.
 
 ### D. Docs
 `docs/box-layout.md` (dependency and repair), `docker/README.md`.
@@ -146,10 +172,12 @@ none
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Clone installs before the link exists: no `.bin/bbx` | planned (engine.test.ts) | health `engine-link` names it | clear |
-| Main checkout's `bbx engine init` repoints a worktree clone | planned (init-v2) | `replace: false` | n/a |
-| Migration on a docker `file:` copy links into the box's own `.pnpm` | planned (migration) | target `PACKAGE_ROOT` | clear |
-| Offline lockfile refresh fails | planned (migration) | one line; next install converges | clear |
+| Supported install without a usable link | planned (box-engine-link test) | `link` refuses before pnpm | clear |
+| Raw agent `pnpm add` without a link | planned (engine.test.ts) | health `engine-link` names it | clear after the fact (accepted) |
+| Main checkout's `bbx engine init` repoints a worktree clone | planned (engine-link test) | a usable link is never replaced | n/a |
+| Docker `file:` pin or in-box target | planned (migration) | `pinned`, left alone | clear |
+| Old link target is dead | planned (migration) | exit 1 with `ln -sfn` repair | clear |
+| Offline lockfile refresh fails | planned (migration) | restore, exit 1, stays pending | clear |
 | Rollback: old `deploy.sh` writes `/opt` back | none | old behavior returns; migration already recorded | silent, accepted |
 
 ## Agent-flow / user-flow edge cases
@@ -162,13 +190,16 @@ none
 
 - `bbx upgrade --to` (`upgrade.ts:151-159` `bumpBeeBoxDependency`) still writes
   its spec, a tarball path, into `package.json`: the explicit pin for installed
-  engines. File an issue at implementation.
+  engines. Filed as an issue. Existing `file:` pins (docker boxes) stay too.
+- Guarding a raw `pnpm` run inside a box: needs install-time machinery.
 - Removing the setup-commit drop: after source boxes migrate.
 - An engine registry (Track F of boxes-as-packages-v2).
 
 ## Open design questions
 
-None; decided in Tracks.
+None. The cross-model review (2026-10-20) found an in-box link target, an
+unguarded install, docker's stale install, a soft lockfile failure, and pin
+conversion; Tracks B and C now carry the adjudicated fixes.
 
 ## Knowledge audits
 
@@ -176,11 +207,12 @@ Skip: infrastructure; the only agent-facing text is the health repair line.
 
 ## What will hold this after it ships
 
-t.check tests. `test/scripts/migrate/engine-link-spec.test.ts`: "plan rewrites
-an absolute link, a file: tarball, and a range", "plan drops the beebox
-override", "plan refuses without a beebox dependency", "run links an outside
-realpath, else PACKAGE_ROOT", "run keeps package.json when the lockfile refresh
-fails". `test/core/box/structure.init-v2.test.ts`: "fresh init writes the
+t.check tests. `test/scripts/migrate/engine-link-spec.test.ts`: "plan converts
+link specs and leaves pins", "run converts a box and a clone with a link
+installs", "run skips an in-box target", "run exits 1 on a dead target", "run
+restores package.json when the lockfile refresh fails".
+`test/core/box/engine-link.test.ts`: "a usable link is kept, a dead one
+replaced", "bin/box-engine-link refuses a non-engine and verifies an install". `test/core/box/structure.init-v2.test.ts`: "fresh init writes the
 portable spec and the engine link", "update init keeps an existing engine link".
 `.../health/checks/engine.test.ts`: "dead .beebox/engine names the ln -sfn
 repair", "worktree pin is seen through .beebox/engine". `bin/test/lib/workstream-box-state.test.ts`:
