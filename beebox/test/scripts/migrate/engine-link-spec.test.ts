@@ -21,6 +21,7 @@ import { MANIFEST_PATH, MIGRATIONS } from "../../../src/core/migrations.js";
 import { makeTmpBox, useMarkerOnly, type TmpBox } from "../../helpers/test-helpers.js";
 
 const git = (root: string, ...args: string[]): string => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+const PORTABLE_LOCK = "lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies:\n      beebox:\n        specifier: link:.beebox/engine\n        version: link:.beebox/engine\n";
 const pkg = (beebox: string, extra?: Record<string, unknown>): string =>
   JSON.stringify({ name: "a-box", dependencies: { beebox, react: "^18.3.1" }, ...extra });
 
@@ -163,7 +164,7 @@ void test("run refreshes the lockfile, and restores both files when that fails",
     boxRoot: passing.root,
     mode: "apply",
     refreshLockfile: async (boxRoot) => {
-      await fs.writeFile(path.join(boxRoot, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n# refreshed\n");
+      await fs.writeFile(path.join(boxRoot, "pnpm-lock.yaml"), PORTABLE_LOCK);
       return { code: 0, output: "" };
     },
   });
@@ -184,7 +185,7 @@ void test("run refreshes the lockfile, and restores both files when that fails",
     packageRestored: before,
     lockfileRestored: "lockfileVersion: '9.0'\n",
     passed: 0,
-    lockfile: "lockfileVersion: '9.0'\n# refreshed\n",
+    lockfile: PORTABLE_LOCK,
   });
 });
 
@@ -200,7 +201,8 @@ void test("lockfileIsPortable reads the importer specifier and overrides", async
     machine: lockfileIsPortable(`lockfileVersion: '9.0'\n\n${importer("link:/opt/beebox/beebox")}`),
     overridden: lockfileIsPortable(`lockfileVersion: '9.0'\n\noverrides:\n  react: 18.3.1\n  beebox: link:/w/beebox\n\n${importer("link:.beebox/engine")}`),
     empty: lockfileIsPortable("lockfileVersion: '9.0'\n"),
-  }, { portable: true, machine: false, overridden: false, empty: false });
+    machineVersion: lockfileIsPortable("lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies:\n      beebox:\n        specifier: link:.beebox/engine\n        version: link:/opt/beebox/beebox\n"),
+  }, { portable: true, machine: false, overridden: false, empty: false, machineVersion: false });
 });
 
 // ## A failed spawn, then the rerun
@@ -240,6 +242,36 @@ void test("run restores both files when the refresh cannot spawn, and a rerun re
     rerunFailed: 1,
     rerun: { code: 0, lines: ["engine-link-spec: refreshed pnpm-lock.yaml for \"link:.beebox/engine\"."] },
     after: { code: 0, lines: ["engine-link-spec: already converted."] },
+  });
+});
+
+// ## A refresh that exits 0 but leaves another engine
+//
+// The run checks the lockfile after the refresh. One that still records a
+// machine path is a failure: both files are restored and the run exits 1.
+void test("run restores both files when the refreshed lockfile is still not portable", async (t) => {
+  const engine = await fakeEngine(t);
+  const box = await boxWith(t, { spec: `link:${engine}` });
+  await box.write("pnpm-lock.yaml", "lockfileVersion: '9.0'\n");
+  const before = await box.read("package.json");
+  const result = await runEngineLinkSpec({
+    boxRoot: box.root,
+    mode: "apply",
+    refreshLockfile: async (boxRoot) => {
+      await fs.writeFile(path.join(boxRoot, "pnpm-lock.yaml"), PORTABLE_LOCK.replace("version: link:.beebox/engine", "version: link:/opt/beebox/beebox"));
+      return { code: 0, output: "" };
+    },
+  });
+  t.check({ result, packageJson: await box.read("package.json"), lockfile: await box.read("pnpm-lock.yaml") }, {
+    result: {
+      code: 1,
+      lines: [
+        `engine-link-spec: \`pnpm install --lockfile-only --offline\` failed in ${box.root} (exit 1); package.json and pnpm-lock.yaml restored, the migration stays pending.`,
+        "pnpm-lock.yaml still does not record \"beebox\": \"link:.beebox/engine\" after the refresh.",
+      ],
+    },
+    packageJson: before,
+    lockfile: "lockfileVersion: '9.0'\n",
   });
 });
 

@@ -111,3 +111,23 @@ void test("bin/box-engine-link refuses a non-engine and verifies an install", as
     verified: { code: 0, stderr: "" },
   });
 });
+
+// ## The portable spec in devDependencies
+//
+// The migration converts `beebox` in either dependency field, so `verify`
+// reads both: a portable devDependency with an old direct
+// `node_modules/beebox` link is not a completed install.
+void test("bin/box-engine-link verify reads the beebox spec from devDependencies too", async (t) => {
+  const dir = await scratch(t);
+  const box = path.join(dir, "box");
+  const engine = await fakeEngine(path.join(dir, "engine"));
+  await fs.mkdir(path.join(box, "node_modules/.bin"), { recursive: true });
+  await fs.writeFile(path.join(box, "package.json"), JSON.stringify({ devDependencies: { beebox: "link:.beebox/engine" } }));
+  await fs.symlink(engine, path.join(box, "node_modules/beebox"));
+  await fs.symlink("../beebox/bin/bbx", path.join(box, "node_modules/.bin/bbx"));
+  const r = spawnSync(path.join(PACKAGE_ROOT, "bin/box-engine-link"), ["verify", box], { encoding: "utf8" });
+  t.check({ code: r.status, stderr: r.stderr.trim() }, {
+    code: 1,
+    stderr: `box-engine-link: ${box}: node_modules/beebox does not go through .beebox/engine; rerun pnpm install.`,
+  });
+});

@@ -51,8 +51,8 @@ async function readOptional(file: string): Promise<string | null> {
 const PREFIX = "engine-link-spec:";
 
 /**
- * Refresh the lockfile against the manifest now on disk. On a nonzero exit or
- * a failed spawn (no pnpm on PATH), restore both files to their snapshots and
+ * Refresh the lockfile against the manifest now on disk. On a nonzero exit, a
+ * failed spawn (no pnpm on PATH), or a lockfile that still names another engine, restore both files to their snapshots and
  * return the exit-1 result, so the migration stays pending.
  */
 async function refreshOrRestore({ boxRoot, packageJson, lockfile, refreshLockfile }: {
@@ -67,7 +67,12 @@ async function refreshOrRestore({ boxRoot, packageJson, lockfile, refreshLockfil
   } catch (e) {
     refreshed = { code: 1, output: errorMessage(e) };
   }
-  if (refreshed.code === 0) return null;
+  if (refreshed.code === 0) {
+    // pnpm can exit 0 and still record another engine (an override from
+    // elsewhere); the migration is done only when the lockfile agrees.
+    if (lockfileIsPortable(await fs.readFile(path.join(boxRoot, "pnpm-lock.yaml"), "utf-8"))) return null;
+    refreshed = { code: 1, output: `pnpm-lock.yaml still does not record "beebox": "${ENGINE_LINK_SPEC}" after the refresh.` };
+  }
   await fs.writeFile(path.join(boxRoot, "package.json"), packageJson);
   await fs.writeFile(path.join(boxRoot, "pnpm-lock.yaml"), lockfile);
   return {

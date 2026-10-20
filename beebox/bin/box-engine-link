@@ -72,7 +72,8 @@ case "$cmd" in
       let engine;
       try { engine = JSON.parse(fs.readFileSync(path.join(nm, "beebox", "package.json"), "utf8")); } catch { engine = null; }
       if (engine === null || engine.name !== "beebox") fail("node_modules/beebox is not a beebox engine after install.");
-      if ((pkg.dependencies || {}).beebox === "link:.beebox/engine") {
+      const spec = (pkg.dependencies || {}).beebox ?? (pkg.devDependencies || {}).beebox;
+      if (spec === "link:.beebox/engine") {
         let target = null;
         try { target = fs.readlinkSync(path.join(nm, "beebox")); } catch {}
         if (target !== "../.beebox/engine") fail("node_modules/beebox does not go through .beebox/engine; rerun pnpm install.");
