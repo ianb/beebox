@@ -55,8 +55,8 @@ and the listed migration write the block.
 - `src/core/box/structure/core.ts:37` `z.object({ version: z.string(), created:
   z.string() })`; `:109-115` fresh init writes the marker; `:131` seed-failure
   rollback; `:323` `isValidBox`; `:341` `getBoxMetadata`. `getSystemState`
-  throws `InvalidBoxError` without metadata (`core/state.ts:134-137`), so every
-  box that opens today has `created`. The test box clone's marker:
+  throws `InvalidBoxError` without metadata (`core/state.ts:134-137`), so a box whose
+  dashboard or `bbx status` works has `created`. The test box clone's marker:
   `version`, `created`, `shapeVersion: 3`, `migrated-at`.
 - `src/core/box/package.ts:89` `detectBoxTarget`; `:206-210` the "already has
   a package.json" refusal a clone hits; `:215` the scaffold literal.
@@ -93,7 +93,9 @@ unknown top-level `package.json` keys.
   "package" | "marker" }`; block first, then marker; no writes.
 - **`beebox` block**: `{ "shapeVersion": 3, "created": "<ISO>" }`, zod
   `z.object({ shapeVersion: z.number().int(), created: z.string() })`.
-  `created` is required: every box that opens today has one.
+  `created` is required: `getSystemState` refuses a marker without it, and
+  the test box clone's marker has it. Unverified against production markers;
+  the migration's exit 1 on a missing value is the recovery signal.
 - **Marker**: read-only transition fallback; its parse now keeps `created`.
 - **v2 probe**, `refuseV2(dir)`: no `_config/`, and `content/config/` or
   `content/.beebox/box.json` → `V2PackageRootError`.
@@ -119,8 +121,8 @@ Why: two resolvers keep separate minimum-version constants in lockstep.
   `requireBeeBoxDependency` → `readShapeRecord`. `getBoxShapeIfPresent`
   returns `found: false` on `NotABoxError` (`box-shape.ts:138` is the only
   ENOENT reliance among `getBoxShape(` callers).
-- `findBoxRoot`, per level: a legacy marker or legacy state dir returns the
-  root as today (`:124-127`), so `requireBoxRoot` still reaches
+- `findBoxRoot`, per level: a legacy marker (not a state dir alone) returns
+  the root as today (`:124-127`), so `requireBoxRoot` still reaches
   `migrateBoxState`; otherwise `isBoxRoot` or a v2 sibling → `probeBox`. From
   inside a v2 `content/`, the walk reaches the package root and throws
   `V2PackageRootError`.
@@ -153,7 +155,8 @@ marker text → new package.json text or a refusal) and `run.ts`; entry after
    created }` from the marker; write `JSON.stringify(pkg, null, 2) + "\n"`.
 2. `git ls-files --error-unmatch .beebox/box.json` succeeds →
    `git rm --cached --quiet -- .beebox/box.json`.
-3. `fs.rm` the marker (ENOENT is fine).
+3. Leave the marker file on disk (boxholder decision, 2026-10-20), so a
+   rollback to an older engine still opens the box during the transition.
 4. Verify `readShapeRecord(...).source === "package"`.
 
 Exit 1 with nothing written when there is neither block nor marker, or the
@@ -161,7 +164,8 @@ marker's `shapeVersion` is not 3, or it lacks `created`. No exit-2 case. Same
 commit: `issues/deferred/2026-10-20-drop-box-marker-fallback.md`
 (`activate-on: 2026-11-20`, `category: code-quality`) naming the marker branch
 of `readShapeRecord`, the marker clause of `refuseV2`, and
-`bin/lib/worktree-create.sh:335-337`; trigger: every local and production box
+`bin/lib/worktree-create.sh:335-337`, and adds a listed migration that deletes
+the now-unused `.beebox/box.json`; trigger: every local and production box
 lists `box-shape-record-2026-10` in `_config/migrations.jsonl`.
 
 ### E. Readers outside the engine, text, docs
@@ -186,8 +190,7 @@ lists `box-shape-record-2026-10` in `_config/migrations.jsonl`.
   `dev/lib/audit-box.ts:15`, `hub/config.ts:149`, `core/box/package.ts:80,283`.
 - `bin/lib/worktree-create.sh:330-339`: keep the `cp`; its comment names the
   deferred issue.
-- Docs: `docs/box-layout.md`, `README.md:46` (box anatomy), and the rollback
-  recovery line in `deploy/README.md`.
+- Docs: `docs/box-layout.md` and `README.md:46` (box anatomy).
 
 ## Could this be simpler?
 
@@ -213,20 +216,17 @@ none
 | `bbx migrate` from inside a v2 `content/` | new: paths test | `refuseV2` in `findBoxRoot` | clear |
 | Legacy marker only | existing `state-migration.test.ts`, extended | legacy discovery kept | clear |
 | Block malformed (`shapeVersion: "3"`) | new | zod → `BoxShapeError` | clear |
-| Block and marker disagree | new | block wins; migration deletes the marker | clear by rule |
+| Block and marker disagree | new | block wins; the marker is unread once a block exists | clear by rule |
 | A broken `package.json` beside `_config/` above a box path | new: paths test | `UnreadablePackageJsonError` | clear |
 | Setup rerun after a partial init | none (no setup harness) | HEAD gate | clear |
-| Deploy rollback to an engine from before this change, after the migration | none | none | clear (the old engine says "not a box") |
+| Deploy rollback to an engine from before this change, after the migration | migration test asserts the marker stays | marker kept on disk until the deferred cleanup | clear |
 | Leak scan resolves a migrated box to `<path>/content` | new: host-audit test | track E | was silent; fixed |
 
-> **Accepted risk:** a deploy rollback past this change leaves migrated boxes
-> without the marker the old engine needs. Recovery, in `deploy/README.md`:
-> one `node -e` per box that writes `.beebox/box.json` from the block.
->
-> **Rollout order:** a clone made before its source migrated gets
-> `MissingShapeRecordError`. The deploy sweep migrates production boxes; local
-> boxes migrate on their next `bbx engine migrate`; the worktree `cp` covers
-> worktree clones meanwhile.
+> **Rollout prerequisite:** clone recognition holds only for a clone of a
+> box that has run `box-shape-record-2026-10` and committed it. The deploy
+> sweep migrates production boxes; a local box must run `bbx engine migrate`
+> before it is cloned. Before that, a clone gets `MissingShapeRecordError`
+> with its recovery line, and the worktree `cp` covers worktree clones.
 
 ## Agent-flow / user-flow edge cases
 
@@ -243,7 +243,8 @@ none
 - Removing the marker fallback and the worktree `cp`: the deferred issue does this.
 - Retiring `LEGACY_BOX_MARKER` handling: separate legacy cleanup; discovery keeps it.
 - Keeping deploy's server-local `link:` dependency out of box history: this
-  predates the change and agent commits already include it; filing is the coordinator's call.
+  predates the change, and agent commits already include it. Filed as
+  `issues/bugs/2026-10-20-deploy-beebox-link-reaches-box-history.md`.
 - Showing the shape version on the dashboard: nobody asked for it.
 
 ## Open design questions
@@ -267,7 +268,7 @@ mention of the marker in the box agent guide.
   no block) cloned gets `MissingShapeRecordError` with the recovery line.
 - The migration test: build a box with a force-tracked marker and no block.
   Run `run.ts --apply`. Assert that the block has `created`, that the marker
-  is gone from `git ls-files` and from disk, and that a second run reports
+  is gone from `git ls-files` but still on disk, and that a second run reports
   "already converted". Then clone the box and repeat the clone checks.
 - Fixtures: add `writeBoxFiles(root, { shapeVersion?, created?, dependency? })`
   to `test/helpers/test-helpers.ts`. Convert the 18 hand-written marker
