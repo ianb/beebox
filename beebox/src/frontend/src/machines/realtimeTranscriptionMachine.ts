@@ -324,6 +324,8 @@ export const realtimeTranscriptionMachine = setup({
         recording: {
           after: {
             SILENCE_TIMEOUT: {
+              // Held: the silence is ours, not the person's.
+              guard: ({ context }) => !context.held,
               target: "finalizing",
               actions: [
                 () => console.info("[realtime-transcription] Silence timeout — auto-stopping"),
@@ -334,6 +336,8 @@ export const realtimeTranscriptionMachine = setup({
           },
           on: {
             TEXT_UPDATE: { target: "recording", reenter: true, actions: "applyTextUpdate" },
+            // Re-entering restarts the silence timer when the hold ends.
+            HOLD: { target: "recording", reenter: true, actions: ["setHeld", forwardTo("transcriber")] },
             CONNECTION_DEGRADED: [
               { guard: "micDrop", target: "reconnecting", actions: ["playMicLost", "setMicInterrupted"] },
               // Network: the audio keeps staging, only live text pauses.

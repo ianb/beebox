@@ -141,6 +141,23 @@ void test("HOLD keeps the open segment, its text, and its recording.", async (t)
   t.check(s.context(), contextWith({ finalTranscript: "before the replay", recording: s.recording }));
 });
 
+// Speech longer than the silence timeout does not auto-stop a held segment;
+// releasing the hold starts the silence timer over.
+void test("A held segment outlasts the silence timeout, which restarts on release.", async (t) => {
+  const s = segment({ delays: { SILENCE_TIMEOUT: 80 } });
+  s.emit({ type: "MIC_LIVE" });
+  s.emit({ type: "WS_CONNECTED" });
+  s.actor.send({ type: "HOLD", held: true });
+  await sleep(160);
+  t.check(s.state(), "recording");
+
+  s.actor.send({ type: "HOLD", held: false });
+  t.check(s.state(), "recording");
+
+  await sleep(200);
+  t.check(s.state(), "idle");
+});
+
 // The hold belongs to the mic, not the segment: a segment that starts while
 // speech still plays (a send re-arms the mic) starts held.
 void test("A segment started while held starts held.", async (t) => {
