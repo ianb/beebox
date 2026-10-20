@@ -1,12 +1,13 @@
 // Markup for pages that compare models on a set of samples: a pill per model,
-// a graded verdict, and a box stating what a sample is and what it tests.
+// a graded verdict, a box stating what a sample is and what it tests, and a
+// player for a sample's audio.
 import Markdoc from "@markdoc/markdoc";
 import type { Config, Node, RenderableTreeNode } from "@markdoc/markdoc";
 
 // eslint-disable-next-line import-x/no-named-as-default-member -- CJS interop: only the default namespace carries these at runtime
 const { Tag } = Markdoc;
 
-const VENDORS = ["google", "openai"] as const;
+const VENDORS = ["google", "openai", "microsoft", "fish", "minimax", "elevenlabs", "cartesia", "deepgram", "xai", "mistral"] as const;
 export const VERDICTS = { correct: "Correct", okay: "Okay", failed: "Failed" } as const;
 const VERDICT_ICONS: Record<keyof typeof VERDICTS, string> = { correct: "✅", okay: "🟡", failed: "❌" };
 
@@ -41,6 +42,17 @@ export const evaluationTags = {
         new Tag("span", { "aria-hidden": "true" }, [VERDICT_ICONS[value]]),
         ` ${VERDICTS[value]}`,
       ]);
+    },
+  },
+  audio: {
+    // Inline in a list item beside the model's name, or a line of its own.
+    selfClosing: true,
+    // Site files only: the page makes no external requests. The build
+    // rewrites the path against the base and fails if the file is missing.
+    attributes: { src: { type: String, required: true, matches: /^\/assets\/(?:[\w-]+\/)*[\w-]+(?:\.[\w-]+)*\.webm$/ } },
+    transform(node: Node, config: Config): RenderableTreeNode {
+      const src = String(node.transformAttributes(config)["src"] ?? "");
+      return new Tag("audio", { controls: "", preload: "none", src }, []);
     },
   },
   sample: {

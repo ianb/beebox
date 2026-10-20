@@ -43,3 +43,15 @@ test("the twin finds attributes in any order and keeps names literal", () => {
   assert.match(twinMarkdown('{% model vendor="google" name="X" /%} said so.', refs), /^\*\*X\*\* said so\./);
   assert.match(twinMarkdown('{% model name="X [help](https://example.org)" vendor="google" /%}', refs), /\*\*X \\\[help\\]\(https:\/\/example\.org\)\*\*/);
 });
+
+test("an audio player plays a site file from the page's base, loading nothing until asked", () => {
+  const html = renderBody('{% audio src="/assets/tts/a.webm" /%}', { ...context, base: "/beebox/" }).html;
+  assert.match(html, /<audio controls="" preload="none" src="\/beebox\/assets\/tts\/a\.webm"><\/audio>/);
+});
+
+test("an audio source off the site fails the build", () => {
+  assert.throws(() => renderBody('{% audio src="https://example.org/a.webm" /%}', context), /malformed markup/);
+  assert.throws(() => renderBody('{% audio src="a.webm" /%}', context), /malformed markup/);
+  assert.throws(() => renderBody('{% audio src="/assets/../index.site-page.card" /%}', context), /malformed markup/);
+  assert.throws(() => renderBody('{% audio src="/assets/tts/../../x.webm" /%}', context), /malformed markup/);
+});

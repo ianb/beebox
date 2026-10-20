@@ -21,6 +21,6 @@
     "lib": ["ES2023"],
     "types": ["node", "@fastify/cookie"]
   },
-  "include": ["feedback-review/**/*.ts", "eslint.config.ts", "bin/**/*.ts", "schedules/**/*.ts", "workstreams-app/src/router/**/*.ts", "research/audio-understanding-bakeoff/*.ts"],
+  "include": ["feedback-review/**/*.ts", "eslint.config.ts", "bin/**/*.ts", "schedules/**/*.ts", "workstreams-app/src/router/**/*.ts", "research/audio-understanding-bakeoff/*.ts", "research/tts-model-comparison/*.ts"],
   "exclude": ["node_modules", "beebox", "cardworks", "tap-check", "canvas-loop", "beebox-clerk", "browse"]
 }

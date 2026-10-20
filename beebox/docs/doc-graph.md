@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-20T14:24:00Z
-Total documents: 548
+Generated: 2026-10-20T20:24:10Z
+Total documents: 549
 
 ## Issues
 
@@ -69,6 +69,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
 - **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
+- **docs/implemented-plans/tts-comparison-page.md** — "Publish the TTS model comparison on beebox.run" (268 lines) · shipped history · implemented
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
 - **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (156 lines) · plan review
 - **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (161 lines) · proposal · partial
@@ -239,6 +240,7 @@ Referenced by:
 - docs/implemented-plans/todos-ui.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/top-nav-ia.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/transcript-confidence.md:13 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/tts-comparison-page.md:58 (mention) — - Root `AGENTS.md`: *"Write code in TypeScript"*. The scripts are `.ts` run
 - docs/implemented-plans/user-location.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/view-render-testing.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/web-push-notifications.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -7256,6 +7258,14 @@ Title: "Plan Engineering Review — triage todo question" | 109 lines | implemen
 
 No references in or out.
 
+#### docs/implemented-plans/tts-comparison-page.md **[ORPHAN]**
+
+Title: "Publish the TTS model comparison on beebox.run" | 268 lines | shipped history | implemented
+
+References:
+- → AGENTS.md (mention)
+- → docs/plans/tts-backend-selection.md (mention)
+
 #### docs/implemented-plans/tts-streamed-playback.md
 
 Title: "Stream speech audio from the provider to the browser" | 399 lines | shipped history | implemented
@@ -9076,10 +9086,13 @@ Title: "TTS backend selection, and per-backend style direction" | 584 lines | pr
 
 Referenced by:
 - docs/box-layout.md:219 (mention) — | `_config/tts.json` | Which backend speaks chat replies (`openai` or `gemini`); see `docs/plans/tts-backend-selection.m
+- docs/implemented-plans/tts-comparison-page.md:223 (mention) — numbers in `tts-backend-selection.md` are the measured ones; repeating
 - docs/implemented-plans/tts-streamed-playback.md:44 (mention) — `docs/plans/tts-backend-selection.md` and the services table. Not a BIG CHANGE.
 - ../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md:6 (frontmatter) — design: ../../../beebox/docs/plans/tts-backend-selection.md
 - ../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md:53 (link) — **Designed:** [tts-backend-selection](../../../beebox/docs/plans/tts-backend-selection.md).
 - ../issues/closed/features/2026-10-04-gemini-tts-streamed-playback.md:21 (mention) — (`beebox/docs/plans/tts-backend-selection.md`, 2026-10-04).
+- ../issues/exploration/2026-10-20-tts-inline-delivery-markup.md:70 (mention) — `beebox/docs/plans/tts-backend-selection.md`.
+- ../research/tts-model-comparison/README.md:3 (link) — A comparison of text-to-speech models, kept for choosing the box's voice backend (`beebox/src/shared/tts-backends.ts`; t
 
 References:
 - → ../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md (frontmatter)

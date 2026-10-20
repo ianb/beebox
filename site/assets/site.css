@@ -98,8 +98,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .bbx-card-content .agent-prompt pre { font: 15px/1.55 "Avenir Next", Avenir, sans-serif; }
 .agent-prompt code { font: inherit; }
 
-/* Model comparisons: a pill per model, a graded verdict, and a sample box. */
-.model-pill { display: inline-block; padding: 0 0.5em; border: 1px solid; border-radius: 999px; font: 700 0.82em/1.6 "Avenir Next", Avenir, sans-serif; white-space: nowrap; vertical-align: 0.05em; }
+/* Model comparisons: a pill per model, a graded verdict, a sample box, and a player.
+   Vendors without their own color keep the neutral pill. */
+.model-pill { display: inline-block; padding: 0 0.5em; border: 1px solid #b9ad94; border-radius: 999px; background: #efe9dc; color: #3b3222; font: 700 0.82em/1.6 "Avenir Next", Avenir, sans-serif; white-space: nowrap; vertical-align: 0.05em; }
 .model-google { background: #dfe8f6; border-color: #9fb4d6; color: #1f3a66; }
 .model-openai { background: #dcefe6; border-color: #93c2ab; color: #1d4a37; }
 .verdict { font: 700 0.78em/1.7 "Avenir Next", Avenir, sans-serif; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
@@ -108,4 +109,5 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .verdict-failed { color: #8a2a18; }
 .sample-spec { margin: 0.6rem 0 1rem; padding: 12px 16px; border-left: 4px solid #8a7a5c; border-radius: 4px; background: #f6efe0; color: #3b3222; }
 .sample-spec p { margin: 0.35em 0; }
+.bbx-card-content audio { display: block; width: 100%; max-width: 24rem; height: 2.25rem; margin: 0.25em 0; }
 .sample-title { font: 600 0.8em/1.4 "Avenir Next", Avenir, sans-serif; text-transform: uppercase; letter-spacing: 0.05em; color: #6b5a3a; }

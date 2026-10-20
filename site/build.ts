@@ -33,6 +33,10 @@ import { flattenEvaluationTags } from "./evaluation-tags.js";
 
 const SITE_DIR = import.meta.dirname;
 
+async function isFile(file: string): Promise<boolean> {
+  return (await fs.stat(file).catch(() => null))?.isFile() === true;
+}
+
 /**
  * The development-process talk ships as a static page at /talks/devprocess/:
  * the explorer, the data it fetches, and its WebP figures. Nothing else from
@@ -252,11 +256,12 @@ export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteRes
   await writeThemeAssets({ beeboxDir: BEEBOX_DIR, distDir });
   await copyTalk(distDir);
 
-  // Link-check: every internal link target must correspond to an emitted page.
+  // Link-check: every internal link target must be an emitted page or a file
+  // copied into dist (an audio sample under assets/).
   const broken: string[] = [];
   for (const page of built) {
     for (const { target } of page.linkTargets) {
-      if (!emitted.has(target)) broken.push(`${page.stem}.md → ${target}`);
+      if (!emitted.has(target) && !(await isFile(path.join(distDir, target)))) broken.push(`${page.stem}.md → ${target}`);
     }
   }
   if (broken.length > 0) {

@@ -141,6 +141,19 @@ test("malformed authorship and links outside the selected graph fail before writ
   );
 });
 
+test("an audio file the site does not hold fails the build", async (t) => {
+  const setup = await fixture(t);
+  await fs.writeFile(path.join(setup.stagingDir, "index.site-page.card"), pageCard({
+    title: "Home",
+    navigation: true,
+    body: '# Home\n\n{% audio src="/assets/tts-comparison/missing.webm" /%}',
+  }));
+  await assert.rejects(
+    exportBoxCards({ boxDir: setup.boxDir, destinationDir: setup.destinationDir }),
+    /broken internal link\(s\):\n {2}index\.md → assets\/tts-comparison\/missing\.webm/,
+  );
+});
+
 test("staging symlinks and unsupported files fail closed", async (t) => {
   const setup = await fixture(t);
   await fs.symlink(
