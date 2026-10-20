@@ -56,3 +56,27 @@ legacy routes.
 Move one real site into a test box (the real ones are tracked privately) and
 list what blocks it: domain, blog structure, redirects, the build. Decide the
 domain model before building blog features.
+
+## Direction, 2026-10-20
+
+The developer expects to start with static and built sites. That brings
+deployment with it, probably a separate git repository per site. The agent can
+work with a repository and a deploy step without help. The open part is how
+the box represents the site, so it is not a hidden folder only the agent
+knows about.
+
+Questions this raises:
+
+- **Where the repository lives.** A nested repository inside the box (the box
+  is itself a git repository with annex), a submodule, or a checkout outside
+  the box that a card points to. Each choice changes what box history, backup
+  and search see.
+- **What the box shows.** Probably one card per site: its repository, its
+  domain, where it deploys, the last deploy and whether it succeeded, and
+  whether there are changes that are not deployed. The `publication` card
+  already holds settings for box-built sites; decide whether this extends it or
+  is a sibling type.
+- **Who deploys.** The current publisher builds inside the box and uploads to
+  the box's Cloudflare connection. A site with its own repository may already
+  deploy somewhere else (another host, or GitHub Actions). The box may only
+  start and report the deploy, not own it.
