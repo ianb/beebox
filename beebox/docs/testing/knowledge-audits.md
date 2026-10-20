@@ -88,6 +88,12 @@ to pass, and the context-history ledger keys off its basename
 name like `test1`, which would resolve inside the monorepo and be refused by the
 nested-box guard.
 
+`--filter` takes one value, matched as an audit id, an id substring, or a tag;
+repeated flags keep only the last. The runner resets and cleans the box between
+tests, so it refuses a box with uncommitted changes. A worktree's test1 clone
+usually has such changes from ordinary dev use (an engine install sync, for
+example). Copy it to a scratch directory, commit there, and audit the copy.
+
 By default the runner uses the box's configured engine. `--engine` overrides
 that choice for the audit only, so the same definitions can be exercised
 against Claude and Codex without editing `_config/box.json`. Reports include the

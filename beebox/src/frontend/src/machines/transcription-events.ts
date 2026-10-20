@@ -64,6 +64,13 @@ export type TranscriptionEvent =
   | { type: "START"; targetSessionId: string | null }
   | { type: "STOP" }
   | { type: "CANCEL" }
+  /**
+   * Hold the mic while speech plays: the open segment stays open and records
+   * silence, so it keeps its text and its one recording (which the HQ pass
+   * covers) without taking down the speech. A segment started while held
+   * starts held. `held: false` puts the mic back.
+   */
+  | { type: "HOLD"; held: boolean }
   | { type: "DISMISS_ERROR" }
   /** The mic is capturing and audio is staging; sent before any socket exists. */
   | { type: "MIC_LIVE" }
@@ -89,7 +96,9 @@ export interface MaxDurationReached {
 /** Input the machine hands the actor for one segment. */
 export interface TranscriptionActorInput {
   targetSessionId: string | null;
+  /** Start recording silence (the mic is held; see the HOLD event). */
+  held: boolean;
 }
 
 /** Commands the machine sends the actor. */
-export type TranscriptionActorCommand = { type: "STOP" } | { type: "CANCEL" };
+export type TranscriptionActorCommand = { type: "STOP" } | { type: "CANCEL" } | { type: "HOLD"; held: boolean };
