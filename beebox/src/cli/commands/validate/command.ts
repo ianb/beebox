@@ -26,7 +26,7 @@ import { lintProminenceBudget, type ProminenceLintWarning } from "../../../core/
 import { lintCardsDispatch } from "../../../core/card-lint/core/lint-cards.js";
 import { lintAllInstructionFiles } from "../../../core/instruction-file-lint.js";
 import { buildLoadContext } from "../../../core/load-context.js";
-import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../../core/external/url-check/core.js";
+import { checkExternalUrls, formatUrlReport, UrlCheckRunningError, type UrlCheckMode, type UrlCheckReport } from "../../../core/external/url-check/core.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../../core/card-io.js";
 import { checkLegacyInstructionErrors, checkLegacySchemaPath, checkPresentationErrors, checkReservedSegmentErrors, checkRootStrayErrors, boxSchemaFieldWarnings } from "./box-checks.js";
@@ -109,7 +109,15 @@ async function runUrlCheck(
   options: { all?: boolean; staged?: boolean; urlsSince?: string; json?: boolean }
 ): Promise<never> {
   const boxRoot = await requireBoxRoot();
-  const report = await checkExternalUrls(boxRoot, { mode: urlCheckMode(options), now: new Date().toISOString() });
+  let report: UrlCheckReport;
+  try {
+    report = await checkExternalUrls(boxRoot, { mode: urlCheckMode(options), now: new Date().toISOString() });
+  } catch (e) {
+    // A skip, not a broken URL: the running check covers this box.
+    if (!(e instanceof UrlCheckRunningError)) throw e;
+    console.log(e.message);
+    process.exit(0);
+  }
   if (options.json === true) {
     console.log(JSON.stringify(report, null, 2));
   } else {

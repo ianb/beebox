@@ -7,7 +7,9 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { checkExternalUrls } from "../../../src/core/external/url-check/core.js";
+import * as path from "node:path";
+import { checkExternalUrls, UrlCheckRunningError } from "../../../src/core/external/url-check/core.js";
+import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
 import { makeTmpBox } from "../../helpers/test-helpers.js";
 import type { UrlVerdict } from "../../../src/core/external/url-check/fetch.js";
 
@@ -107,6 +109,36 @@ void test("Commit a doc with one URL, then add a second URL without committing."
   });
 
   await box.cleanup();
+});
+
+// ## One check per box at a time
+//
+// The post-commit hook starts a detached check on every commit. A check that
+// finds another one running for the same box checks nothing and says so, so a
+// burst of commits cannot pile them up (82 at once on 2026-09-05,
+// issues/closed/bugs/2026-09-05-background-url-check-spins-forever-after-commit.md).
+void test("A second concurrent check for the same box does not start", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.teardown(() => box.cleanup());
+  await box.write("notes.md", "no links yet\n");
+  box.commitAll("seed");
+  await box.write("notes.md", "[a](https://host-a.linkcheck.dev/a)\n");
+
+  const lockPath = path.join(box.root, ".beebox/url-check.lock");
+  await acquireLock(lockPath, { purpose: "url-check" });
+  const log: string[][] = [];
+  const blocked = await checkExternalUrls(box.root, { mode: { kind: "working" }, now: NOW, check: stubChecker(new Set(), log) })
+    .then(() => "ran", (e: unknown) => e instanceof UrlCheckRunningError ? e.message : e);
+  t.check({ blocked, log }, {
+    blocked: `Another URL check is running for this box (pid ${String(process.pid)}); not starting a second.`,
+    log: [],
+  });
+
+  // Once the other check releases, the next one runs:
+
+  await releaseLock(lockPath);
+  const report = await checkExternalUrls(box.root, { mode: { kind: "working" }, now: NOW, check: stubChecker(new Set(), log) });
+  t.check({ checked: report.checked, log }, { checked: 1, log: [["https://host-a.linkcheck.dev/a"]] });
 });
 
 // </content>
