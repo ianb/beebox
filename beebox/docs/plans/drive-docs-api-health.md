@@ -1,6 +1,6 @@
 ---
 title: "Docs API unavailable reaches the boxholder"
-status: draft
+status: active
 workstream: bug-burndown-4
 issues:
   - ../../../issues/features/2026-10-20-drive-sync-problems-reach-the-boxholder.md
@@ -168,7 +168,7 @@ Add `gdoc-without-revision` (`knows_directly`): *"`_content/drive/Plan.gdoc.card
 
 ## What will hold this after it ships
 
-Unit tests on the pure `nextDocsApiDiagnosis`, plus connector-level tests through the existing fake Drive (`test/connectors/google-drive/handlers/docs.test.ts` stubs `getDocument`; the folder fixtures are in `test/connectors/google-drive/mounts.test.ts`). The ky `HTTPError` helper already exists in `handlers/docs/api-failure.test.ts:25`. No new tier and no new mock.
+Unit tests on the pure `nextDocsApiDiagnosis`, plus connector-level tests through the existing fake Drive (`test/connectors/google-drive/handlers/docs.test.ts` stubs `getDocument`; the folder fixtures are in `test/connectors/google-drive.folder.test.ts`). The ky `HTTPError` helper already exists in `handlers/docs/api-failure.test.ts:25`. No new tier and no new mock.
 
 ## Implementation order
 
@@ -181,11 +181,11 @@ Unit tests on the pure `nextDocsApiDiagnosis`, plus connector-level tests throug
 
 Done when these pass:
 
-1. `docs.test.ts`: a 403 `SERVICE_DISABLED` ky error gives a sync that still succeeds and a stored diagnosis `{kind: "service-disabled", docs: 1, link: <activationUrl>, …}`. With `getDocument` restored, the next sync clears it. The existing non-HTTP-error test keeps its exact result, and no file is written. A locally edited Doc (push, then pull) still pushes and records the pull's outcome.
+1. `docs.test.ts`: a 403 `SERVICE_DISABLED` ky error gives a sync that still succeeds and a stored diagnosis `{kind: "service-disabled", docs: 1, link: <activationUrl>, …}`. With `getDocument` restored, the next sync clears it. The existing non-HTTP-error test keeps its exact result, and no diagnosis is stored. A locally edited Doc (push, then pull) still pushes and records the pull's outcome.
 2. `nextDocsApiDiagnosis` table: fixable failure gives `on` with `since` kept; `ok` gives null; empty and complete gives null (last Doc deleted); empty and incomplete keeps; only `other` keeps; two failures give `docs: 2`.
-3. `mounts.test.ts`: a newly mounted folder containing one Doc, with `getDocument` returning `SERVICE_DISABLED`, gives a stored diagnosis on that first sync. Separately: with a prior diagnosis and a folder pass that hits the recursion cap and finds no Docs, the diagnosis is kept.
+3. `google-drive.folder.test.ts` (the connector-level folder fixtures; `mounts.test.ts` covers the CLI commands): a newly mounted folder containing one Doc, with `getDocument` returning `SERVICE_DISABLED`, gives a stored diagnosis on that first sync. Separately: with a prior diagnosis and a folder pass that hits the recursion cap and finds no Docs, the diagnosis is kept.
 4. `docs-api-status.test.ts`: with a stored diagnosis and no further sync, `readDocsApiDiagnosis` returns null after Drive is disabled in box config, after tokens are removed, and while `needsReauthSince` is set.
-5. `checks/google.test.ts`: the diagnosis gives one `google-docs-api` warning; no file gives none; an invalid file gives a warning naming it.
+5. `checks/google.docs-api.test.ts`: the diagnosis gives one `google-docs-api` warning; no file gives none; an invalid file gives a warning naming it.
 6. `admin.google-status.test.ts`: `driveDocsApi` is set from the diagnosis, null when suppressed, and null with a log line for an invalid file.
 7. `session-context` test: with a gate, the first send carries the Drive line and later sends do not, even when schedule health changes between sends. A session without the problem has no Drive line.
 
