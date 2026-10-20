@@ -7297,6 +7297,14 @@ test1:
       peak: 43883
       added: 3366
       turns: 9
+  gdoc-without-revision:
+    - date: 2026-10-20T19:57:56.352Z
+      boxCommit: 2a4533e2f3e680dceb923b3f4973d2845cfc75b4
+      repoCommit: 713eccbcc0c6dddc8828a4f4bd3a7a704776255e
+      initial: 31437
+      peak: 33410
+      added: 1973
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

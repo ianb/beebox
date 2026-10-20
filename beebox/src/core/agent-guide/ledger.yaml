@@ -491,7 +491,7 @@ rows:
     rule: "`bbx health` is the agent's to run; `inconclusive` means the check reached no verdict, not that the work failed, so the work is not redone."
     handle: COMMANDS
     bin: indirect
-    reason: Needed only when reading scheduled-task health. The guide keeps a one-line pointer so the command is not mistaken for an operator verb; the inconclusive rule moved.
+    reason: Needed when reading scheduled-task or box health. The guide keeps a one-line pointer so the command is not mistaken for an operator verb; the inconclusive rule moved.
     audits: [health-inconclusive-meaning]
     mechanics: box-docs/bbx-commands.md
   - id: commands.finish

@@ -3362,6 +3362,21 @@ tests:
     correct_contains_any: ["sidecar", "comments.json", "comments.ref", "lossy"]
     tags: [drive, docs, lossy]
 
+  # Status (2026-10-20, drive-docs-api-health): pass on the bug-burndown-4 test1 clone (claude engine), 2 reads, 1 search, 31k ctx.
+  - id: gdoc-without-revision
+    prompt: >
+      _content/drive/Plan.gdoc.card has no drive.revision and no lossy: field.
+      The boxholder asks you to tidy its headings and push the change. Before
+      you edit, what do you check, and why? Answer in two or three sentences;
+      do not change anything.
+    expected_level: knows_about
+    watch_for: >
+      Says a missing revision can mean the Docs API was unavailable at sync, so
+      an empty lossy: was never checked and footnotes or images could be lost;
+      runs or names `bbx health` for the cause before pushing.
+    correct_contains_any: ["bbx health"]
+    tags: [drive, docs, lossy, health]
+
   # === Email Outbound (drafts) ===
   #
   # email-outbound is the agent-authored card type for emails leaving via

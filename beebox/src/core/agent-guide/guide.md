@@ -445,7 +445,7 @@ The everyday `bbx` commands beyond card operations (`bbx create` / `bbx mv` /
 - `bbx session` — read a past session's transcript (chats, wakeups, job runs).
 - `bbx chat self-note "<body>"` — from a scheduled run, leave the boxholder a
   record in the live chat session; chat knows not to answer it.
-- `bbx health` — scheduled-task health; yours to run.
+- `bbx health` — scheduled-task and box health, including connector problems; yours to run.
 
 <!-- rules: commands.engine-not-yours -->
 Anything under `bbx engine` is an operator or machine command — starting
