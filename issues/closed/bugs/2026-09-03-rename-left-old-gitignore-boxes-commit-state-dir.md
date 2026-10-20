@@ -1,6 +1,7 @@
 ---
 title: "The rename moved the state directory to `.beebox/` but left every box's pre-rename `.gitignore`, so boxes now commit their state dir, locks, pid file, and secrets"
 workstream: box-state-not-tracked
+resolution: implemented
 area: beebox
 priority: important
 labels: [box-shape, git, privacy]
@@ -8,6 +9,17 @@ filed-by: agent
 discovered-by: Ian
 discovered-in: main session — a `git reset --hard` on a local box reverted its chat registry and broke the open chat
 ---
+
+> **Closed 2026-10-20 (bug-burndown-4):** the defect is fixed. The
+> `gitignore-2026-09` and `hooks-2026-09` migrations landed 2026-09-03 and
+> every box converged; unknown-session resilience landed 2026-09-13; the
+> `.migrations.jsonl` residue was removed 2026-09-13. The marker change decided
+> on 2026-09-13 is not implemented: `BOX_MARKER` is still `.beebox/box.json`.
+> It moved to
+> [its own issue](../../bugs/2026-10-20-box-marker-in-gitignored-state-dir.md),
+> which carries the decision and current pointers. Rotating the secrets that
+> one box committed to its history, and whether to rewrite that history, is
+> the boxholder's call; no progress note records either.
 
 > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 

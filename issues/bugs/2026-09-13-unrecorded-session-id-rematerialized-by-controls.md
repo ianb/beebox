@@ -10,7 +10,7 @@ priority: backlog
 ---
 
 The chat reads now refuse to route an unrecorded session id to a guessed engine
-(`resolveRecordedChatEngine`, `issues/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md`).
+(`resolveRecordedChatEngine`, `issues/closed/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md`).
 Two other doors reach the same hazard and were left alone as out of scope. Both
 predate that fix; neither was introduced by it.
 
