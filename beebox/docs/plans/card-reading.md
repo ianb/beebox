@@ -1,6 +1,6 @@
 ---
 title: "Card reading: print, contents menu, image-link lightbox, include lines"
-status: draft
+status: active
 workstream: card-reading
 issues:
   - ../../../issues/features/2026-10-01-printable-cards.md

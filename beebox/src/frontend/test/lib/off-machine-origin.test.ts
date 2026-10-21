@@ -18,8 +18,9 @@ void test("loopback origins are this machine only", async (t) => {
 });
 
 void test("LAN, tailnet and public origins can be reached from a phone", async (t) => {
-  const urls = ["http://192.168.1.20:3000/kitchen", "http://box.tail1234.ts.net/", "https://kitchen.example.org/", "http://[fd00::2]/"];
-  t.check(urls.map((u) => isOffMachineOrigin(new URL(u))), [true, true, true, true]);
+  // `::ffff:7f00:1:1` is an ordinary IPv6 address, not a mapped loopback.
+  const urls = ["http://192.168.1.20:3000/kitchen", "http://box.tail1234.ts.net/", "https://kitchen.example.org/", "http://[fd00::2]/", "http://[::ffff:7f00:1:1]/"];
+  t.check(urls.map((u) => isOffMachineOrigin(new URL(u))), [true, true, true, true, true]);
 });
 
 void test("a non-web origin is not an address to print", async (t) => {
