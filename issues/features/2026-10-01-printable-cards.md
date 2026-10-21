@@ -1,6 +1,6 @@
 ---
 title: "Printable cards: a print button, and a way back to the card that is not `/_content/`"
-workstream: unattached
+workstream: card-reading
 area: beebox
 filed-by: agent
 discovered-by: Ian
