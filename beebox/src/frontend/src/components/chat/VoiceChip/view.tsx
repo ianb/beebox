@@ -29,6 +29,7 @@ import {
 import { useVoiceCapabilities } from "./capabilities";
 import { VoiceNoticeList, useVoiceNotices } from "./VoiceNotices";
 import { ConversationIcon, SpeakerIcon, FloorIcon } from "./icons";
+import { VoiceChipButtonFace } from "../../app-bar-faces/VoiceChipButtonFace";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
@@ -245,19 +246,9 @@ export const VoiceChip = memo(function VoiceChip({
       panelIndex={panel === "root" ? 0 : 1}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
-        <button
-          type="button"
-          id="bbx-nav-voice"
-          data-bbx-reveal
-          data-bbx-does="opens the voice menu — mute, narration mode, transcription services"
-          onClick={toggle}
-          className="min-h-[40px] px-2 sm:px-[11px] flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-          title={label}
-          aria-label={label}
-          {...ariaProps}
-        >
+        <VoiceChipButtonFace label={label} onClick={toggle} ariaProps={ariaProps}>
           <VoiceChipFace muted={muted} narrationEnabled={narrationEnabled} hqInFlight={hqInFlight} alert={alert} diarizationEnabled={diarizationEnabled} />
-        </button>
+        </VoiceChipButtonFace>
       )}
     >
       <VoiceChipBody
