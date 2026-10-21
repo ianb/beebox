@@ -18,3 +18,8 @@ Headings already get the same ids there (`makeHeadingNode`). The open question
 is whether a published-page reader wants it, and where it sits on the page.
 The app's rule (four or more headings at levels 1–3) is in
 `frontend/src/components/CardContents/outline.ts`.
+
+## Boxholder's lean (2026-10-20)
+
+Probably wanted, possibly as an option rather than always on; not settled.
+Left for later.
