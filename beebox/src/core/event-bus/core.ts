@@ -58,7 +58,7 @@ export const EVENT_SCHEMA_GENERATION = 10;
  * engine's: a newer engine (another checkout or deploy) wrote it. Opening it
  * here would truncate that engine's events, so the open refuses instead.
  */
-export class NewerEventSchemaError extends Error {
+class NewerEventSchemaError extends Error {
   constructor(dbPath: string, options: { onDiskGeneration: number; engineGeneration: number }) {
     super(
       "Refusing to open " + dbPath + ": it was written by a newer beebox engine (event-schema generation " +

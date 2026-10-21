@@ -16,7 +16,7 @@ function unquote(value: string): string {
  * `cd dir && cat file` (or `;`). Each word after the `cd` is also tried
  * joined to its directory. Anything more is left unresolved.
  */
-export function readMentionsFile(read: string, file: string): boolean {
+function readMentionsFile(read: string, file: string): boolean {
   const vars = new Map<string, string>();
   for (const [, name, value] of read.matchAll(ASSIGNMENT)) {
     if (name !== undefined && value !== undefined) vars.set(name, unquote(value));

@@ -70,7 +70,7 @@ function trpcCode(e: unknown): string | undefined {
 }
 
 /** Whether the check-in's duration is acceptable before asking the server; the refusal sentence if not. */
-export function checkInDurationProblem(duration: string): string | null {
+function checkInDurationProblem(duration: string): string | null {
   let ms: number;
   try {
     ms = parseDuration(duration.trim());

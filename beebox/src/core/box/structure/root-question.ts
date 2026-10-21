@@ -14,7 +14,7 @@ import { getBoxTimeISO } from "../../../lib/time.js";
 import { createTextQuestionTemplate } from "../../../schemas/question.js";
 
 /** What the box asks first. The chat shows it verbatim and uses it as the composer's placeholder. */
-export const ROOT_QUESTION_PROMPT = "What do you want to keep track of here?";
+const ROOT_QUESTION_PROMPT = "What do you want to keep track of here?";
 
 /** Box-relative path of the seeded card. A fixed name: the seed runs once, on a box with no questions. */
 export const ROOT_QUESTION_PATH = "_bookkeeping/questions/what-to-keep-track-of.question.card";

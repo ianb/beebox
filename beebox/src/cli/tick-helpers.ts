@@ -80,7 +80,7 @@ export function effectiveBusyBlockers(
 /** Blockers that a `notify:` card does not wait for: an active chat. A
  * reminder runs no agent and no shell, so it cannot race the chat's writes
  * (the housekeeping commit re-checks for chats itself, see handlePostSuccess). */
-export function isChatBlocker(blocker: string): boolean {
+function isChatBlocker(blocker: string): boolean {
   return blocker.startsWith("chat:");
 }
 
