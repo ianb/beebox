@@ -1,7 +1,8 @@
 /**
- * The contents menu of a long Markdown card: a "Contents" button at the top
- * right of the card front that stays in view while the reader scrolls, and
- * opens a list of the document's headings. Choosing one scrolls to it.
+ * The contents menu of a long Markdown card: a button at the top right of the
+ * card front that stays in view while the reader scrolls, names the section
+ * at the top of the card ("Contents" above the first heading), and opens a
+ * list of the document's headings. Choosing one scrolls to it.
  *
  * Headings come from the rendered DOM: the document renderers mark their
  * prose wrapper `data-card-outline` (`Markdown`'s `outline` prop), and the
@@ -77,7 +78,29 @@ export function CardContentsMenu({ id, frontRef }: { id: string; frontRef: RefOb
     setCurrent(currentSection(tops, line));
   }, [frontRef, outline]);
 
+  // Follow the reader: recompute on the card's own scroll, once per frame.
+  useEffect(() => {
+    const front = frontRef.current;
+    if (front === null || outline === null) return;
+    findCurrent();
+    const scroller = scrollerOf(front) ?? window;
+    let frame = 0;
+    const onScroll = () => {
+      if (frame !== 0) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        findCurrent();
+      });
+    };
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(frame);
+    };
+  }, [frontRef, outline, findCurrent]);
+
   if (outline === null) return null;
+  const currentText = outline.items.find((item) => item.id === current)?.text;
 
   function jump(headingId: string) {
     const heading = outline?.headings.get(headingId);
@@ -101,14 +124,14 @@ export function CardContentsMenu({ id, frontRef }: { id: string; frontRef: RefOb
             intent="secondary"
             size="sm"
             icon={<ContentsIcon />}
-            title="Contents: jump to a section"
+            title={currentText === undefined ? "Contents: jump to a section" : `In ${currentText}. Contents: jump to a section`}
             onClick={(event) => {
               findCurrent();
               toggle(event);
             }}
             {...ariaProps}
           >
-            <span className="bbx-card-contents-label">Contents</span>
+            <span className="bbx-card-contents-label">{currentText ?? "Contents"}</span>
           </Button>
         )}
       >
