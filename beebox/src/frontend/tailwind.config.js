@@ -28,7 +28,8 @@ const palette = {
     100: "#F2DDE1",
   },
   plum: {
-    DEFAULT: "#9B6BA6",
+    // White text on it meets 4.5:1 (the other person's bubble); #9B6BA6 was 4.16.
+    DEFAULT: "#9562A1",
     light: "#B88DC0",
     dark: "#7B4F8A",
     50: "#F3ECF5",

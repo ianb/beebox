@@ -35,6 +35,7 @@ import { formatAgo, formatElapsed } from "../../lib/relative-time";
 import { useNow } from "../../lib/use-now";
 import { Button } from "../ui/Button";
 import { MaterialContext } from "../ui/material";
+import { QUEUED_EDGE } from "./user-message/view";
 
 /** Live refinement from a `capture-status` bus event (more granular than the query state). */
 export type CaptureLiveStatus = "preparing" | "transcribing" | "delivered" | "failed";
@@ -232,7 +233,7 @@ export function CaptureBubbleView(props: {
       <MaterialContext.Provider value>
         <div className="bbx-chat-pending-material flex flex-col items-end gap-1">
           <div
-            className={`flex items-center gap-1.5 text-sm rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words ${phase === "resolved" ? "opacity-90" : "opacity-60"}`}
+            className={`flex items-center gap-1.5 text-sm rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words ${phase === "resolved" ? "" : QUEUED_EDGE}`}
             title={failed ? "Capture delivery failed" : "Capture is being prepared…"}
           >
             <CameraIcon />

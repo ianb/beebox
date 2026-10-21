@@ -87,7 +87,7 @@ function bobBubble(parts: { badge: { label: string; icon: string } | null; text:
 
 const hqMarker = (service: string): string =>
   `<span role="img" aria-label="HQ transcript — ${service}" title="HQ transcript — ${service}" class="text-white/40 text-[9px] font-medium leading-none tracking-wide">HQ</span>`;
-const LIVE_STATUS = '<div role="status" class="bbx-chat-user-status text-xs text-white/70 mt-1 italic">Live text — HQ transcript unavailable</div>';
+const LIVE_STATUS = '<div role="status" class="bbx-chat-user-status text-xs mt-1 italic">Live text — HQ transcript unavailable</div>';
 
 // ## Retranscription: label includes the resolved service
 void test("Retranscription: label includes the resolved service", async (t) => {

@@ -87,7 +87,7 @@ export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, esca
         key="plate"
         id="bbx-nav-todo"
         to={href(`${base}/views/${PLATE_CARD_PATH}`)}
-        className={`${SEGMENT} relative`}
+        className={SEGMENT}
         title={
           escalatedTodos > 0
             ? `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} now, ${escalatedTodos} overdue`
@@ -99,13 +99,16 @@ export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, esca
             : `${onPlateTodos} todo${onPlateTodos !== 1 ? "s" : ""} now`
         }
       >
-        <PlateIcon />
-        {onPlateTodos}
         {/* A dot, not a second number: the badge stays one number (boxholder:
-            "Badge is fine") and the dot is what says some of it is overdue. */}
-        {escalatedTodos > 0 ? (
-          <span aria-hidden="true" className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-danger" />
-        ) : null}
+            "Badge is fine") and the dot is what says some of it is overdue.
+            It sits on the plate's rim, clear of the number it qualifies. */}
+        <span className="relative inline-flex shrink-0">
+          <PlateIcon />
+          {escalatedTodos > 0 ? (
+            <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-danger" />
+          ) : null}
+        </span>
+        {onPlateTodos}
       </Link>
     ) : null,
     showErrors ? (
@@ -117,7 +120,7 @@ export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, esca
         // The one segment that keeps a background of its own: an error count is
         // not the same kind of waiting as a question or a todo, and the red has
         // to survive being pulled into a shared container.
-        className={`${SEGMENT} bg-danger/80 hover:bg-danger-dark`}
+        className={`${SEGMENT} bg-danger-dark text-white hover:brightness-90`}
         title={`${errorCount} error${errorCount !== 1 ? "s" : ""}`}
         aria-label={`Open debug log (${errorCount} error${errorCount !== 1 ? "s" : ""})`}
       >
@@ -129,7 +132,7 @@ export function AttentionBadgesFace({ base, pendingQuestions, onPlateTodos, esca
 
   if (segments.length === 0) return null;
   return (
-    <div className="flex items-stretch text-xs text-white bg-white/20 rounded-full overflow-hidden shrink-0">
+    <div className="flex items-stretch text-xs bg-white/10 rounded-full overflow-hidden shrink-0">
       {segments.map((segment, index) => (
         // The key is the segment's own; this fragment only carries the divider
         // that precedes it, and the segment list is built in a fixed order.

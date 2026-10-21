@@ -6,6 +6,7 @@ import type { CardSymbolData } from "@shared/card-symbol";
 import { CardMark } from "../../ui/CardMark";
 import { Text } from "../../ui/Text";
 import { CardContentsMenu } from "../../CardContents/CardContentsMenu";
+import { MaterialContext } from "../../ui/material";
 
 export interface CardThemeSurfaceProps {
   theme: ResolvedCardTheme;
@@ -120,7 +121,8 @@ export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, 
         {children}
       </div>
       <section id={backId} className="bbx-card-back" hidden={!back} aria-label="Card properties">
-        {back ? <ShowFrontContext.Provider value={showFront}>{properties}</ShowFrontContext.Provider> : null}
+        {/* The back of the card is its own paper: everything on it sits on the material. */}
+        {back ? <MaterialContext.Provider value><ShowFrontContext.Provider value={showFront}>{properties}</ShowFrontContext.Provider></MaterialContext.Provider> : null}
       </section>
     </article>
   );

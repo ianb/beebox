@@ -11,7 +11,6 @@ import { CardFacts, CardMentions } from "./CardProperties";
 import { CardAttachments } from "./CardAttachments";
 import { CardLastChange } from "./CardLastChange";
 import { Text } from "../../../ui/Text";
-import { MaterialContext } from "../../../ui/material";
 import { ThemeSwatchPicker } from "../ThemeSwatchPicker";
 import { LandmarkSystemThemePicker } from "../../SystemThemePicker";
 import { isCardPath } from "../../../file-view-data";
@@ -43,8 +42,8 @@ export interface ThemedFileCardPropertiesProps {
 export function ThemedFileCardProperties(props: ThemedFileCardPropertiesProps) {
   const { data, theme, boxSlug, onNavigate, actions } = props;
   const isCard = isCardPath(data.path);
-  // The back of the card is its own paper: everything on it sits on the material.
-  return <MaterialContext.Provider value>
+  // MaterialContext comes from the back of the card (CardThemeSurface).
+  return <>
     <h2>Properties</h2>
     {isCard ? <>
       <CardFacts data={data} boxSlug={boxSlug} onNavigate={onNavigate} />
@@ -55,7 +54,7 @@ export function ThemedFileCardProperties(props: ThemedFileCardPropertiesProps) {
     <Appearance data={data} theme={theme} isCard={isCard} boxSlug={boxSlug} />
     <ViewChooser {...props} />
     {actions === null ? null : <div className="mt-6">{actions}</div>}
-  </MaterialContext.Provider>;
+  </>;
 }
 
 /**

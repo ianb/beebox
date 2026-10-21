@@ -4,7 +4,7 @@
   font-family:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;--bbx-selection:#a5ffad;--bbx-selection-ink:#061009;--bbx-focus-ring:#a5ffad;--bbx-desk-background:#020b05;--bbx-desk-pattern:repeating-linear-gradient(0deg,#7eff8c0c 0 1px,transparent 1px 4px);--bbx-desk-edge:#237038;--bbx-bar-paper:#031008;--bbx-bar-edge:#237038;
 }
 [data-chrome-theme="phosphor"],.bbx-card-theme[data-card-theme="phosphor"]{font-family:"IBM Plex Mono","SFMono-Regular",Consolas,monospace!important;}
-[data-chrome-theme="phosphor"] :is(.bbx-conversation-desk,.bbx-companion-desk[data-active-card],.bbx-interface-card-desk[data-card-content="card"],.bbx-interface-browse-panel[data-card-content="card"],.bbx-interface-tabstrip > [role="none"]::before,.bbx-interface-tabstrip > [role="none"]::after,.bbx-app-nav > div){background:transparent;}
+[data-chrome-theme="phosphor"] :is(.bbx-conversation-desk,.bbx-companion-desk[data-active-card],.bbx-interface-card-desk[data-card-content="card"],.bbx-interface-tabstrip > [role="none"]::before,.bbx-interface-tabstrip > [role="none"]::after,.bbx-app-nav > div){background:transparent;}
 [data-chrome-theme="phosphor"] .bbx-interface-card-desk[data-card-content="neutral"]{background:#06130a;}
 [data-chrome-theme="phosphor"] :is(.bbx-chat-meta-material,.bbx-chat-pending-material,.bbx-chat-empty-label){color:#60bb70;background:#06130a;}
 [data-chrome-theme="phosphor"] #bbx-chat-load-older{color:#80f58d;background:#06130a;border:1px solid #237038;}
@@ -26,6 +26,8 @@
 [data-chrome-theme="phosphor"] .bbx-app-nav button:not(#bbx-nav-errors)::after{content:" ]";color:#3baa55;}
 [data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-callout,.bbx-composer-material){color:#82ed91;background:#03130a;border:0;box-shadow:none;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material{background:#03130a;}
+/* Chat material ink, read by text in the reply, pending and meta materials. */
+[data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-pending-material,.bbx-chat-meta-material){--bbx-ink:#82ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#b5ffc0;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material::before{content:"┌─ INCOMING ─────────────────────────────────────────────";display:block;color:#51c468;font:11px/1 monospace;white-space:nowrap;overflow:hidden;margin:0 0 12px;}
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper{color:#a7ffb1;background:#071a0c;border:0;box-shadow:none;}
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper::before{content:"> ";color:#44d45d;font-weight:700;}

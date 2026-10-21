@@ -19,7 +19,7 @@ import { ComposerSpecimen } from "../ComposerStatesHarness";
 
 function noop() { /* The specimen never sends a message or opens a card. */ }
 
-/** The composer at rest, then in the states themes style: a draft, dictation, dictation paused for speech, narration, the phone keyboard. */
+/** The composer at rest, then in the states themes style: a draft, dictation, dictation paused for speech, narration, the phone keyboard with a draft and empty (send disabled). */
 const RESTING = {
   input: "",
   isTranscribing: false, transcript: "", speechPlaying: false,
@@ -33,6 +33,7 @@ const COMPOSER_STATES = [
   { ...RESTING, speechPlaying: true, voicePaused: true },
   { ...RESTING, narrationEnabled: true, badge: true },
   { ...RESTING, input: DRAFT, typingMode: true },
+  { ...RESTING, typingMode: true },
 ];
 
 const OPEN_QUESTION = {

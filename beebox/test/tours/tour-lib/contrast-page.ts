@@ -191,9 +191,14 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     // A 3×3 grid of probes: all covered drops the box; some covered makes
     // the run unmeasurable, since the cover's pixels would enter its samples.
     const probes = [l + 1, (l + ri) / 2, ri - 1].flatMap((x) => [t + 1, (t + b) / 2, b - 1].map((y) => [x, y]));
+    // Hit testing on a line snaps a point near a text edge to the adjacent
+    // inline (the next word's span) even when that box lies beside the point,
+    // so a hit counts as cover only when its box contains the point.
     const covered = probes.filter(([x, y]) => {
       const hit = document.elementFromPoint(x, y);
-      return hit !== null && hit !== el && !el.contains(hit) && !hit.contains(el);
+      if (hit === null || hit === el || el.contains(hit) || hit.contains(el)) return false;
+      const box = hit.getBoundingClientRect();
+      return x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
     }).length;
     if (covered === probes.length) return null;
     return { x: l, y: t, w: ri - l, h: b - t, partial: covered > 0 };

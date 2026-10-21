@@ -71,17 +71,20 @@ export function PlacePillFace({ boxSlug, boxName, place, landmark, menu, onOpen 
     <div className="bbx-place-pill flex items-stretch min-w-0 rounded-full bg-white/10 border border-white/22 text-white text-xs overflow-hidden">
       {menu({
         half: "switch",
-        className: "min-w-0 flex",
+        className: "min-w-0 flex overflow-hidden",
         trigger: ({ open, toggle, ariaProps }) => (
           // w-full is load-bearing on a Dropdown trigger — measured in-browser
           // on the retired ContextChip: the native <button> doesn't stretch to
           // its wrapper on its own, and without it a long label overflows
           // instead of truncating.
+          // overflow-hidden (here and on the wrapper): when the bar is too
+          // crowded for any label, the half clips its mark instead of drawing
+          // it under the here half beside it; so the focus ring is inset.
           <button
             type="button"
             id="bbx-nav-place"
             onClick={(e) => { if (!open) onOpen?.("switch"); toggle(e); }}
-            className="min-h-[40px] w-full min-w-0 pl-2 pr-1 sm:pl-3 sm:pr-2 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+            className="min-h-[40px] w-full min-w-0 overflow-hidden pl-2 pr-1 sm:pl-3 sm:pr-2 flex items-center gap-1.5 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/40"
             title={title}
             aria-label={`Where you are: ${faceLabel}`}
             {...ariaProps}
@@ -89,7 +92,7 @@ export function PlacePillFace({ boxSlug, boxName, place, landmark, menu, onOpen 
             {/* The prefix anchors a nested place ("Box ▸ Lending"). At the root
                 the face label already names the box (by default it is the box
                 name itself), so printing both reads as a path. */}
-            {place.dir === "" ? null : <span className="hidden sm:inline shrink-0 opacity-65">{boxName} ▸</span>}
+            {place.dir === "" ? null : <span className="hidden sm:inline shrink-0">{boxName} ▸</span>}
             {landmark !== null ? (
               <CardMark symbol={landmark.symbol} size="xs" boxSlug={boxSlug} />
             ) : place.dir === "" ? (
@@ -115,7 +118,7 @@ export function PlacePillFace({ boxSlug, boxName, place, landmark, menu, onOpen 
                 id="bbx-nav-here"
                 data-bbx-does="opens the here menu — open the current folder, plus its landmark's bookmarks"
                 onClick={(e) => { if (!open) onOpen?.("here"); toggle(e); }}
-                className="min-h-[40px] px-2.5 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                className="min-h-[40px] px-2.5 flex items-center gap-1.5 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                 title={`Here: ${landmark.dir === "" ? "/" : `${landmark.dir}/`}`}
                 aria-label={`Here: ${dirBasename(landmark.dir)}`}
                 {...ariaProps}

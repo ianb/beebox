@@ -8,14 +8,14 @@
   --bbx-chat-user-paper: #242424;
   --bbx-chat-user-ink: #fff;
 }
-[data-chrome-theme="doodlebit"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"], .bbx-interface-browse-panel[data-card-content="card"]),
+[data-chrome-theme="doodlebit"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]),
 [data-chrome-theme="doodlebit"] .bbx-interface-tabstrip > [role="none"]::before,
 [data-chrome-theme="doodlebit"] .bbx-interface-tabstrip > [role="none"]::after,
 [data-chrome-theme="doodlebit"] .bbx-app-nav > div { background: transparent; }
 [data-chrome-theme="doodlebit"] .bbx-interface-card-desk[data-card-content="neutral"] { background: #fbf5ee; }
 [data-chrome-theme="doodlebit"] .bbx-app-nav :is(button, a):focus-visible { outline: 2px solid #202020; outline-offset: 2px; }
-[data-chrome-theme="doodlebit"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #202020; }
-[data-chrome-theme="doodlebit"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r { background: #fff; color: #202020; }
+[data-chrome-theme="doodlebit"] .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: #202020; }
+[data-chrome-theme="doodlebit"] .bbx-composer-material > .bbx-composer-mobile-row { background: #fff; color: #202020; }
 [data-chrome-theme="doodlebit"] .bbx-chat-user-paper { --bbx-selection: #b9ef38; --bbx-selection-ink: #202020; }
 [data-chrome-theme="doodlebit"] .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) { color: #fff; }
 [data-chrome-theme="doodlebit"] .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) { background: #ffffff45; color: #fff; }
@@ -77,7 +77,7 @@
   border: 0;
   box-shadow: none;
 }
-[data-chrome-theme="doodlebit"] .bbx-app-nav div:has(> :is(#bbx-nav-questions, #bbx-nav-todo, #bbx-nav-errors)) + div {
+[data-chrome-theme="doodlebit"] .bbx-app-nav div:has(> :is(#bbx-nav-questions, #bbx-nav-todo)) + div {
   border-left: 2px solid #202020;
 }
 .bbx-interface-tab[data-card-theme="doodlebit"] {

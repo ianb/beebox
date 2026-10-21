@@ -33,7 +33,7 @@ export function ProfileButtonFace({ user, onClick, ariaProps }: {
         name={user ? user.name : null}
         email={user ? user.email : null}
         picture={user ? user.picture : null}
-        fallbackClassName="bg-white/20 text-white"
+        fallbackClassName="bg-white/10"
       />
     </button>
   );

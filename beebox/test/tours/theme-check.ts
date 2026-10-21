@@ -126,7 +126,8 @@ async function checkScreen(session: BrowseSession, { c, screen, coverage }: { c:
 }
 
 function reportCoverage(coverage: Coverage): number {
-  const uncovered = [...coverage.all.values()].filter((t) => !coverage.matched.has(t.key));
+  // A member of a list in a selector that matches nothing is that selector's miss, reported once.
+  const uncovered = [...coverage.all.values()].filter((t) => !coverage.matched.has(t.key) && (t.whole === null || coverage.matched.has(t.whole)));
   if (uncovered.length === 0) return 0;
   process.stdout.write(`${String(uncovered.length)} theme rules match nothing in the studio at any screen: render what they style in ThemeStudioHarness.tsx, delete them if no component renders it, or exempt them in theme-check.ts with a reason\n`);
   for (const target of uncovered) process.stdout.write(`  ${describeUncoveredRule(target, { unparsable: coverage.unparsable.has(target.key) })}\n`);

@@ -23,6 +23,14 @@ export interface RuleTarget extends RuleProbe {
   sheet: string;
   /** As written, for the report. */
   original: string;
+  /**
+   * For one member of an `:is()` or `:where()` list: the member, tested in
+   * place of its list. A dead hook in a list otherwise hides behind the live
+   * members beside it.
+   */
+  member: string | null;
+  /** For a member, the key of its whole selector's target. */
+  whole: string | null;
 }
 
 /** Split a selector list at its top-level commas. */
@@ -92,6 +100,42 @@ export function reduceSelector(selector: string): string {
     .trim();
 }
 
+/** The `:is()` and `:where()` lists in a selector, outside `:not()`, nested ones included. */
+function selectorLists(selector: string): { start: number; end: number; members: string[] }[] {
+  const lists: { start: number; end: number; members: string[] }[] = [];
+  const pattern = /:(is|where|not)\(/g;
+  for (let m = pattern.exec(selector); m !== null; m = pattern.exec(selector)) {
+    let depth = 0;
+    let end = m.index + m[0].length - 1;
+    for (; end < selector.length; end++) {
+      if (selector[end] === "(") depth++;
+      if (selector[end] === ")" && --depth === 0) break;
+    }
+    if (m[1] === "not") { pattern.lastIndex = end + 1; continue; }
+    lists.push({ start: m.index, end, members: splitSelectorList(selector.slice(m.index + m[0].length, end)) });
+  }
+  return lists;
+}
+
+/**
+ * Each member of a selector's `:is()`/`:where()` lists that names a theme
+ * hook (`bbx-`), with the selector it stands in: its list replaced by the
+ * member alone. A member scoped to a theme not under test is left out.
+ */
+export function listMembers(selector: string, { themes }: { themes: readonly string[] }): { member: string; selector: string }[] {
+  const out: { member: string; selector: string }[] = [];
+  for (const { start, end, members } of selectorLists(selector)) {
+    if (members.length < 2) continue;
+    for (const member of members) {
+      if (!member.includes("bbx-")) continue;
+      const named = themesNamed(member);
+      if (named.length > 0 && !named.some((name) => themes.includes(name))) continue;
+      out.push({ member, selector: `${selector.slice(0, start)}:is(${member})${selector.slice(end + 1)}` });
+    }
+  }
+  return out;
+}
+
 /** Print styles apply to paper, which the studio does not render. */
 export function isPrintOnly(media: readonly string[]): boolean {
   return media.some((m) => /\bprint\b/.test(m) && !/\bnot\s+print\b/.test(m));
@@ -99,8 +143,9 @@ export function isPrintOnly(media: readonly string[]): boolean {
 
 /**
  * The selectors to look for: each top-level selector of a rule that names
- * one of `themes`, outside print media and not exempt. Duplicates (the same
- * selector under the same media in the same sheet) collapse to one.
+ * one of `themes`, outside print media and not exempt, and each hook member
+ * of its `:is()` lists (`listMembers`). Duplicates (the same selector under
+ * the same media in the same sheet) collapse to one.
  */
 export function ruleTargets(rules: readonly PageRule[], { themes, exemptions }: { themes: readonly string[]; exemptions: readonly RuleExemption[] }): RuleTarget[] {
   const targets = new Map<string, RuleTarget>();
@@ -110,7 +155,12 @@ export function ruleTargets(rules: readonly PageRule[], { themes, exemptions }: 
       if (!themesNamed(original).some((name) => themes.includes(name))) continue;
       if (exemptions.some((e) => original.includes(e.selector))) continue;
       const key = `${rule.sheet}\n${rule.media.join(" and ")}\n${original}`;
-      if (!targets.has(key)) targets.set(key, { key, sheet: rule.sheet, original, selector: reduceSelector(original), media: rule.media });
+      if (targets.has(key)) continue;
+      targets.set(key, { key, sheet: rule.sheet, original, selector: reduceSelector(original), media: rule.media, member: null, whole: null });
+      for (const { member, selector } of listMembers(original, { themes })) {
+        if (exemptions.some((e) => member.includes(e.selector))) continue;
+        targets.set(`${key}\n${member}`, { key: `${key}\n${member}`, sheet: rule.sheet, original, selector: reduceSelector(selector), media: rule.media, member, whole: key });
+      }
     }
   }
   return [...targets.values()];
@@ -118,6 +168,11 @@ export function ruleTargets(rules: readonly PageRule[], { themes, exemptions }: 
 
 export function describeUncoveredRule(target: RuleTarget, { unparsable }: { unparsable: boolean }): string {
   const media = target.media.length === 0 ? "" : ` in @media ${target.media.join(" and ")}`;
+  if (target.member !== null) {
+    return unparsable
+      ? `rule selector could not be tested: ${target.member} in ${target.original}${media} (${target.sheet})`
+      : `list member matches nothing in the studio: ${target.member} in ${target.original}${media} (${target.sheet})`;
+  }
   return unparsable
     ? `rule selector could not be tested: ${target.original}${media} (${target.sheet})`
     : `rule matches nothing in the studio: ${target.original}${media} (${target.sheet})`;

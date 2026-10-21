@@ -8,14 +8,14 @@
   --bbx-chat-user-paper: #622b2b;
   --bbx-chat-user-ink: #fff0d8;
 }
-[data-chrome-theme="gilt"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"], .bbx-interface-browse-panel[data-card-content="card"]),
+[data-chrome-theme="gilt"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]),
 [data-chrome-theme="gilt"] .bbx-interface-tabstrip > [role="none"]::before,
 [data-chrome-theme="gilt"] .bbx-interface-tabstrip > [role="none"]::after,
 [data-chrome-theme="gilt"] .bbx-app-nav > div { background: transparent; }
 [data-chrome-theme="gilt"] .bbx-interface-card-desk[data-card-content="neutral"] { background: #fbf5ee; }
 [data-chrome-theme="gilt"] .bbx-app-nav :is(button, a):focus-visible { outline: 2px solid #f6ecd3; outline-offset: 2px; }
-[data-chrome-theme="gilt"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #1b3037; }
-[data-chrome-theme="gilt"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r { background: #173f50; color: #f6ecd3; }
+[data-chrome-theme="gilt"] .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: #1b3037; }
+[data-chrome-theme="gilt"] .bbx-composer-material > .bbx-composer-mobile-row { background: #173f50; color: #f6ecd3; }
 [data-chrome-theme="gilt"] .bbx-chat-user-paper { --bbx-selection: #fff0d8; --bbx-selection-ink: #622b2b; }
 [data-chrome-theme="gilt"] .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) { color: #fff0d8; }
 [data-chrome-theme="gilt"] .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) { background: #ffffff18; color: #fff0d8; }

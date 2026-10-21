@@ -27,8 +27,7 @@
 }
 .bbx-box-presentation[data-chrome-theme="deck"] :is(
   .bbx-conversation-desk, .bbx-companion-desk[data-active-card],
-  .bbx-interface-card-desk[data-card-content="card"],
-  .bbx-interface-browse-panel[data-card-content="card"]
+  .bbx-interface-card-desk[data-card-content="card"]
 ) { background: transparent; }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-interface-tabstrip > [role="none"]::before,
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-interface-tabstrip > [role="none"]::after {
@@ -44,7 +43,7 @@
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav :is(
 #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
-  #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat
+  #bbx-nav-todo, #bbx-nav-questions
 ) {
   background-color: #293e40;
   color: #d8f4ef;
@@ -68,7 +67,7 @@
   background: transparent;
   border-top: 0;
 }
-.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r,
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material > .bbx-composer-mobile-row,
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material textarea {
   background: #29312e;
   color: #d8f4ef;
@@ -251,7 +250,7 @@
   border-radius: 10px 10px 5px 5px;
   box-shadow: 0 2px 0 #163c3b;
 }
-.bbx-box-presentation[data-chrome-theme="deck"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #173e42; }
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: #173e42; }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-composer-material {
   color-scheme: dark;
   border: 1px solid #608b83;
@@ -285,7 +284,7 @@
 }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-app-nav :is(
   #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
-  #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, .bbx-place-pill
+  #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill
 ) {
   background-image: url("./deck-weave.svg");
   border-color: #608b83;

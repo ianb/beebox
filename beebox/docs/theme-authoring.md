@@ -46,7 +46,8 @@ artwork to fill: `cover`, or `auto max(920px, 100%)` to keep a chosen scale.
 An SVG pattern may tile.
 
 At the same screens it lists every rule of the theme's CSS (scoped by
-`data-chrome-theme` or `data-card-theme`) that matches nothing in the studio:
+`data-chrome-theme` or `data-card-theme`) that matches nothing in the studio,
+and each `bbx-` member of an `:is()` list that matches nothing in its place:
 a surface the studio lacks, or dead CSS. Render the surface in
 `pages/dev/components/ThemeStudioHarness/` with the real component, delete a
 rule no component can match, or exempt it in `test/tours/theme-check.ts` with

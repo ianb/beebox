@@ -71,8 +71,8 @@ export function VoiceChipFace(props: VoiceChipFaceState) {
               spare (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`).
               Below `sm:` the same fact is a pulse on the chip; the accessible
               name says "transcribing" at every width either way. */}
-          <span aria-hidden="true" className="sm:hidden w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />
-          <span className="hidden sm:inline text-xs opacity-80">transcribing…</span>
+          <span aria-hidden="true" className="sm:hidden w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+          <span className="hidden sm:inline text-xs">transcribing…</span>
         </>
       ) : null}
       {alert === true ? <span aria-hidden="true" className="w-2 h-2 rounded-full bg-warning" /> : null}

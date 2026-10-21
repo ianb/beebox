@@ -26,6 +26,9 @@ import {
 import { UserEntryContent, originalDisplayText } from "./user-entry-content";
 import { isOtherChatUser } from "./chat-message-sender";
 
+/** A message not yet sent: a dashed edge inside the bubble, in its own ink. */
+export const QUEUED_EDGE = "outline-dashed outline-1 outline-current -outline-offset-4";
+
 /**
  * Map a settled task's status to its dot color and an optional label. The SDK's
  * terminal statuses are `completed | failed | stopped | killed` ("error" is
@@ -167,11 +170,13 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
   // label; a late HQ result stays on the box, reachable only through
   // `bbx chat retranscribe`.
   const hqStatus = isLiveTranscriptMessage(firstEntry)
-    ? <div role="status" className="bbx-chat-user-status text-xs text-white/70 mt-1 italic">Live text — HQ transcript unavailable</div>
+    ? <div role="status" className="bbx-chat-user-status text-xs mt-1 italic">Live text — HQ transcript unavailable</div>
     : null;
 
   const isPending = entries.every((e) => e.pending === true);
-  const pendingClass = isPending ? " opacity-60" : "";
+  // Queued is drawn as a dashed edge in the bubble's own ink, with the
+  // "queued" line inside: fading the bubble would fade its text below AA.
+  const pendingClass = isPending ? ` ${QUEUED_EDGE}` : "";
   const pendingTitle = isPending ? "Queued — sends when the current reply finishes" : undefined;
 
   if (isOtherUser) {
@@ -253,6 +258,6 @@ export function UserMessage({ entries, debugView, currentUserEmail, currentUserN
 
 function PendingIndicator() {
   return (
-    <div className="bbx-chat-user-status text-xs text-white/70 mt-1 italic">queued — waiting</div>
+    <div className="bbx-chat-user-status text-xs mt-1 italic">queued — waiting</div>
   );
 }

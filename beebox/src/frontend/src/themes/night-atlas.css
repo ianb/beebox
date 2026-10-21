@@ -29,8 +29,7 @@
 }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(
   .bbx-conversation-desk, .bbx-companion-desk[data-active-card],
-  .bbx-interface-card-desk[data-card-content="card"],
-  .bbx-interface-browse-panel[data-card-content="card"]
+  .bbx-interface-card-desk[data-card-content="card"]
 ) { background: transparent; }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-interface-tabstrip > [role="none"]::before,
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-interface-tabstrip > [role="none"]::after {
@@ -46,7 +45,7 @@
 }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-app-nav :is(
   #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
-  #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat
+  #bbx-nav-todo, #bbx-nav-questions
 ) {
   background-color: #174d53;
   color: #e0f5e9;
@@ -70,7 +69,7 @@
   background: transparent;
   border-top: 0;
 }
-.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r,
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material > .bbx-composer-mobile-row,
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material textarea {
   background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
   color: #e0f5e9;
@@ -254,7 +253,7 @@
   border-radius: 8px;
   box-shadow: inset 0 1px #b1e9d51a;
 }
-.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #174b4d; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: #174b4d; }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material {
   color-scheme: dark;
   border: 1px solid #5caaa4;

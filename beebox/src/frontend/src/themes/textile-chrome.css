@@ -7,7 +7,7 @@
   --bbx-bar-edge: var(--textile-edge);
   --bbx-chat-user-ink: var(--textile-user-ink);
 }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"], .bbx-interface-browse-panel[data-card-content="card"]) { background: transparent; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]) { background: transparent; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-interface-tabstrip > [role="none"]::before,
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-interface-tabstrip > [role="none"]::after { background: transparent; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-interface-card-desk[data-card-content="neutral"] { background: #fbf5ee; }
@@ -16,8 +16,8 @@
   outline: 2px solid var(--textile-bar-ink);
   outline-offset: 2px;
 }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: var(--textile-bar-ink); }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r {
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: var(--textile-bar-ink); }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-composer-material > .bbx-composer-mobile-row {
   background: var(--textile-paper);
   color: var(--textile-ink);
 }
