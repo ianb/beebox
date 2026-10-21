@@ -151,6 +151,26 @@
     max-width: 8rem;
   }
 }
+/* At rest (not scrolling, not in use): icon only, faint. */
+.bbx-card-contents {
+  transition: opacity 0.25s ease;
+}
+.bbx-card-contents-label {
+  transition: max-width 0.25s ease, margin 0.25s ease;
+}
+.bbx-card-contents[data-resting]:not(:hover, :focus-within, :has([aria-expanded="true"])) {
+  opacity: 0.4;
+}
+.bbx-card-contents[data-resting]:not(:hover, :focus-within, :has([aria-expanded="true"])) .bbx-card-contents-label {
+  max-width: 0;
+  margin-left: -0.3rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bbx-card-contents,
+  .bbx-card-contents-label {
+    transition: none;
+  }
+}
 .bbx-card-content {
   padding: var(--bbx-content-padding, 1rem);
   max-width: 54rem;
