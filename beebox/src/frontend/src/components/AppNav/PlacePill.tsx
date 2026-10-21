@@ -41,8 +41,9 @@
  * to reconsider this split, not to quietly widen the payload.
  */
 
-import { useEffect } from "react";
-import { Dropdown } from "../ui/Dropdown";
+import { useEffect, type ReactNode } from "react";
+import { Dropdown, type DropdownTriggerProps } from "../ui/Dropdown";
+import type { LandmarkIdentity } from "@backend/trpc/routers/landmarks/router.js";
 import { trpc } from "../../lib/trpc/client";
 import { dirBasename, type Place } from "../../lib/place-label";
 import { useOpenLandmarkChat } from "../../hooks/useOpenLandmarkChat";
@@ -134,11 +135,6 @@ export function PlacePill({
     }
   }, [switchError]);
 
-  // `|| place.label`: an empty landmark label must not blank the face (the
-  // backend falls back to the card's filename, but this face must render
-  // something even against an older server).
-  const faceLabel = landmark === null ? place.label : landmark.label || place.label;
-
   // The box root is always a switchable place, landmark card or not. With no
   // root card there is no root row to render, so the menu synthesizes one —
   // otherwise a root chat has no row to be "current" on and the bar reads as a
@@ -154,15 +150,86 @@ export function PlacePill({
     };
     return [root, ...switchData.landmarks];
   })();
-  const title = place.dir === null ? faceLabel : `${boxName} — ${place.dir === "" ? "/" : `${place.dir}/`}`;
+  return (
+    <PlacePillFace
+      boxSlug={boxSlug}
+      boxName={boxName}
+      place={place}
+      landmark={landmark}
+      onOpen={(half) => { if (half === "switch") switchMenu.open(); else hereMenu.open(); }}
+      menu={({ half, className, trigger }) => (
+        <Dropdown align="left" width="w-[20rem]" className={className} trigger={trigger}>
+          {half === "switch" ? (
+            <SwitchMenuBody
+              boxSlug={boxSlug}
+              boxName={boxName}
+              currentDir={place.dir}
+              landmarks={switchRows}
+              landmarksFailed={switchError !== null}
+              onRetryLandmarks={() => { void switchQuery.refetch(); }}
+              problemCount={switchData === undefined ? 0 : switchData.problems.length}
+              onSelectLandmark={(dir) => { void openLandmarkChat(dir); }}
+            />
+          ) : hereClaimed ? (
+            // Two providers for one menu (plan Track C1/C2). On a chat page
+            // the body is the chat's own — it needs `messages` and the
+            // companion-pane zoom the bar can't reach — so we render the
+            // portal target INSIDE the open Dropdown and the chat fills it.
+            // Keeping the container here (rather than a permanently-mounted
+            // hidden one elsewhere) leaves Dropdown's open/close, focus
+            // restore, and click-outside semantics completely untouched; the
+            // registration lands in the same commit as the open, so the
+            // chat's portal fills it before paint. Everywhere else — and
+            // before the chat mounts — the reduced body below is the menu.
+            <AppBarHereSlot />
+          ) : landmark === null ? null : (
+            <HereMenuBody dir={landmark.dir} boxSlug={boxSlug} links={hereLinks} groups={hereGroups} />
+          )}
+        </Dropdown>
+      )}
+    />
+  );
+}
 
+/** What the face shows of a landmark. */
+export type PlacePillLandmark = Pick<LandmarkIdentity, "dir" | "label" | "symbol">;
+
+/**
+ * Where one half's menu opens. The face supplies the trigger and the wrapper's
+ * layout classes; the live pill wraps them in a `Dropdown` with its menu body,
+ * the theme studio with a fixed one.
+ */
+export type PlacePillMenu = (half: {
+  half: "switch" | "here";
+  className: string;
+  trigger: (props: DropdownTriggerProps) => ReactNode;
+}) => ReactNode;
+
+/**
+ * The pill as drawn: container, the switch half and (with a landmark) the
+ * here half. Presentational, so the theme studio renders this same face with
+ * fixed props.
+ */
+export function PlacePillFace({ boxSlug, boxName, place, landmark, menu, onOpen }: {
+  boxSlug: string;
+  boxName: string;
+  place: Place;
+  landmark: PlacePillLandmark | null;
+  menu: PlacePillMenu;
+  /** Called when a half's menu is about to open. */
+  onOpen?: (half: "switch" | "here") => void;
+}) {
+  // `|| place.label`: an empty landmark label must not blank the face (the
+  // backend falls back to the card's filename, but this face must render
+  // something even against an older server).
+  const faceLabel = landmark === null ? place.label : landmark.label || place.label;
+  const title = place.dir === null ? faceLabel : `${boxName} — ${place.dir === "" ? "/" : `${place.dir}/`}`;
   return (
     <div className="bbx-place-pill flex items-stretch min-w-0 rounded-full bg-white/10 border border-white/22 text-white text-xs overflow-hidden">
-      <Dropdown
-        align="left"
-        width="w-[20rem]"
-        className="min-w-0 flex"
-        trigger={({ open, toggle, ariaProps }) => (
+      {menu({
+        half: "switch",
+        className: "min-w-0 flex",
+        trigger: ({ open, toggle, ariaProps }) => (
           // w-full is load-bearing on a Dropdown trigger — measured in-browser
           // on the retired ContextChip: the native <button> doesn't stretch to
           // its wrapper on its own, and without it a long label overflows
@@ -170,7 +237,7 @@ export function PlacePill({
           <button
             type="button"
             id="bbx-nav-place"
-            onClick={(e) => { if (!open) switchMenu.open(); toggle(e); }}
+            onClick={(e) => { if (!open) onOpen?.("switch"); toggle(e); }}
             className="min-h-[40px] w-full min-w-0 pl-2 pr-1 sm:pl-3 sm:pr-2 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
             title={title}
             aria-label={`Where you are: ${faceLabel}`}
@@ -190,33 +257,21 @@ export function PlacePill({
             <span className="min-w-0 truncate">{faceLabel}</span>
             <CaretIcon />
           </button>
-        )}
-      >
-        <SwitchMenuBody
-          boxSlug={boxSlug}
-          boxName={boxName}
-          currentDir={place.dir}
-          landmarks={switchRows}
-          landmarksFailed={switchError !== null}
-          onRetryLandmarks={() => { void switchQuery.refetch(); }}
-          problemCount={switchData === undefined ? 0 : switchData.problems.length}
-          onSelectLandmark={(dir) => { void openLandmarkChat(dir); }}
-        />
-      </Dropdown>
+        ),
+      })}
 
       {landmark === null ? null : (
         <>
           <span aria-hidden="true" className="w-px my-2 bg-white/22 shrink-0" />
-          <Dropdown
-            align="left"
-            width="w-[20rem]"
-            className="shrink-0 flex"
-            trigger={({ open, toggle, ariaProps }) => (
+          {menu({
+            half: "here",
+            className: "shrink-0 flex",
+            trigger: ({ open, toggle, ariaProps }) => (
               <button
                 type="button"
                 id="bbx-nav-here"
                 data-bbx-does="opens the here menu — open the current folder, plus its landmark's bookmarks"
-                onClick={(e) => { if (!open) hereMenu.open(); toggle(e); }}
+                onClick={(e) => { if (!open) onOpen?.("here"); toggle(e); }}
                 className="min-h-[40px] px-2.5 flex items-center gap-1.5 hover:bg-white/10 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
                 title={`Here: ${landmark.dir === "" ? "/" : `${landmark.dir}/`}`}
                 aria-label={`Here: ${dirBasename(landmark.dir)}`}
@@ -226,29 +281,8 @@ export function PlacePill({
                 <span className="hidden sm:inline max-w-[8rem] truncate">{dirBasename(landmark.dir)}</span>
                 <CaretIcon />
               </button>
-            )}
-          >
-            {/* Two providers for one menu (plan Track C1/C2). On a chat page
-                the body is the chat's own — it needs `messages` and the
-                companion-pane zoom the bar can't reach — so we render the
-                portal target INSIDE the open Dropdown and the chat fills it.
-                Keeping the container here (rather than a permanently-mounted
-                hidden one elsewhere) leaves Dropdown's open/close, focus
-                restore, and click-outside semantics completely untouched; the
-                registration lands in the same commit as the open, so the
-                chat's portal fills it before paint. Everywhere else — and
-                before the chat mounts — the reduced body below is the menu. */}
-            {hereClaimed ? (
-              <AppBarHereSlot />
-            ) : (
-              <HereMenuBody
-                dir={landmark.dir}
-                boxSlug={boxSlug}
-                links={hereLinks}
-                groups={hereGroups}
-              />
-            )}
-          </Dropdown>
+            ),
+          })}
         </>
       )}
     </div>
