@@ -455,6 +455,14 @@ checkbox beside Print, unticked, and only when `isOffMachineOrigin` holds;
 hides the QR code and its hint without that mark. Richer print choices belong
 to `issues/features/2026-10-20-print-options-and-printable-forms.md`.
 
+## Contents button follow-up (2026-10-20)
+
+The button names the section at the top of the card ("Contents" above the
+first heading), tracked on the card's scroll. Scrolling is when the reader
+wants their position, so the button is full while the card scrolls; 1.2 s
+after scrolling stops it rests as a faint icon, and hover, focus, or opening
+the menu brings it back.
+
 ## Review record
 
 Cross-model plan review, codex `gpt-6-sol`, 2026-10-20. Accepted: print scope
