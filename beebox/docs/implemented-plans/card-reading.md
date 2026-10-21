@@ -1,12 +1,12 @@
 ---
 title: "Card reading: print, contents menu, image-link lightbox, include lines"
-status: active
+status: implemented
 workstream: card-reading
 issues:
-  - ../../../issues/features/2026-10-01-printable-cards.md
-  - ../../../issues/features/2026-10-05-markdown-toc-navigation.md
-  - ../../../issues/features/2026-10-07-image-card-link-opens-lightbox.md
-  - ../../../issues/features/2026-10-20-at-include-lines-render-as-a-file-widget.md
+  - ../../../issues/closed/features/2026-10-01-printable-cards.md
+  - ../../../issues/closed/features/2026-10-05-markdown-toc-navigation.md
+  - ../../../issues/closed/features/2026-10-07-image-card-link-opens-lightbox.md
+  - ../../../issues/closed/features/2026-10-20-at-include-lines-render-as-a-file-widget.md
 ---
 # Card reading: print, contents menu, image-link lightbox, include lines
 

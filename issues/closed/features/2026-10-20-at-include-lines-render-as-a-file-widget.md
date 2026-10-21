@@ -1,12 +1,15 @@
 ---
 title: "An @-include line in an instruction file renders as stray text; show it as an included-file link"
-workstream: unattached
+workstream: card-reading
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main-checkout conversation, 2026-10-20
 priority: normal
+resolution: implemented
 ---
+
+**Closed:** Implemented on worktree-card-reading. Include lines render as link, missing or not-viewable rows in AGENTS.md/CLAUDE.md files the app can open (such as _content/AGENTS.md). The box's root AGENTS.md is not viewable in the app by design; that is accepted, not a gap.
 
 Agent instruction files (`AGENTS.md`, `CLAUDE.md`) include other files with a
 line that starts with `@` and a path. The stock test box's `AGENTS.md` opens
