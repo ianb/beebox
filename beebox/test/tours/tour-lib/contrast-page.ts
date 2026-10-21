@@ -43,9 +43,9 @@ export interface PageRuns {
   height: number;
   runs: TextRun[];
   materials: Material[];
-  /** Text runs (by element) that are visible but outside the viewport, so not measured. */
+  /** Text runs (by element) with a line outside the viewport, so not fully measured. */
   offscreen: number;
-  /** Runs in a faded group over an image: the capture cannot separate group from backdrop. */
+  /** Runs the capture cannot score: in a faded group over an image, or partly covered by another element. */
   unmeasured: number;
 }
 
@@ -174,35 +174,44 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     if (ri - l < 2 || b - t < 4) return null;
     // Text under another element (a menu, a sticky bar, a decoration) is not
     // what the reader sees. Hit testing is on for everything while collecting.
-    const hit = document.elementFromPoint((l + ri) / 2, (t + b) / 2);
-    if (hit !== null && hit !== el && !el.contains(hit) && !hit.contains(el)) return null;
-    return { x: l, y: t, w: ri - l, h: b - t };
+    // Three probes: all covered drops the box; some covered makes the run
+    // unmeasurable, since the cover's pixels would enter its samples.
+    const y = (t + b) / 2;
+    const covered = [l + 1, (l + ri) / 2, ri - 1].filter((x) => {
+      const hit = document.elementFromPoint(x, y);
+      return hit !== null && hit !== el && !el.contains(hit) && !hit.contains(el);
+    }).length;
+    if (covered === 3) return null;
+    return { x: l, y: t, w: ri - l, h: b - t, partial: covered > 0 };
   };
+  // A previous audit's outlines would cover the text they mark.
+  document.querySelector(".bbx-contrast-overlay")?.remove();
   const hitAll = document.createElement("style");
+  hitAll.id = "bbx-contrast-hit-all";
   hitAll.textContent = "*, *::before, *::after { pointer-events: auto !important; }";
   document.head.append(hitAll);
   const byElement = new Map();
   const offscreen = new Set();
-  let unmeasured = 0;
+  const unmeasurable = new Set();
   const add = (el, { text, color, boxes }) => {
     const cs = getComputedStyle(el);
     if (cs.visibility !== "visible" || el.closest(":disabled, [aria-disabled='true'], [inert], .bbx-contrast-overlay") !== null) return;
     const own = el.getBoundingClientRect();
     if (own.width <= 1 || own.height <= 1) return;
-    if (own.top >= vh || own.bottom <= 0) {
-      offscreen.add(el);
-      return;
-    }
+    // Any line outside the capture is text the audit did not see.
+    if (boxes.some((r) => r.height > 0 && (r.top < -0.5 || r.bottom > vh + 0.5))) offscreen.add(el);
+    if (own.top >= vh || own.bottom <= 0) return;
     const fill = cs.webkitTextFillColor;
     const raw = parse(fill !== "" && fill !== cs.color ? fill : color);
     if (raw === null) return;
-    const rects = boxes.map((r) => visible(el, r)).filter((r) => r !== null);
-    if (rects.length === 0) return;
+    const seen = boxes.map((r) => visible(el, r)).filter((r) => r !== null);
+    if (seen.length === 0) return;
     const { below, group, overImage } = layering(el);
-    if (overImage) {
-      unmeasured++;
+    if (overImage || seen.some((r) => r.partial)) {
+      unmeasurable.add(el);
       return;
     }
+    const rects = seen.map(({ x, y, w, h }) => ({ x, y, w, h }));
     let run = byElement.get(el);
     if (run === void 0) {
       const size = Number.parseFloat(cs.fontSize);
@@ -251,7 +260,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   style.id = "bbx-contrast-hide-text";
   style.textContent = "*, *::before, *::after, ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; text-decoration-color: transparent !important; caret-color: transparent !important; }";
   document.head.append(style);
-  return { width: vw, height: vh, runs: [...byElement.values()], materials, offscreen: offscreen.size, unmeasured };
+  return { width: vw, height: vh, runs: [...byElement.values()], materials, offscreen: offscreen.size, unmeasured: unmeasurable.size };
 })())`;
 
 export interface OverlayMark {
@@ -259,10 +268,11 @@ export interface OverlayMark {
   label: string;
 }
 
-/** Restore the glyphs, then outline each mark (`OverlayMark[]`, spliced in as JSON). */
+/** Restore the glyphs and hit testing (also after a failed collection), then outline each mark (`OverlayMark[]`, spliced in as JSON). */
 export function restoreAndMarkScript(marks: readonly OverlayMark[]): string {
   return String.raw`((marks) => {
   document.getElementById("bbx-contrast-hide-text")?.remove();
+  document.getElementById("bbx-contrast-hit-all")?.remove();
   document.querySelector(".bbx-contrast-overlay")?.remove();
   if (marks.length === 0) return 0;
   const layer = document.createElement("div");

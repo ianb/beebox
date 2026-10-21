@@ -66,7 +66,7 @@ async function checkCase(session: BrowseSession, { c, vp, outDir }: { c: StudioC
   const lines = result.failures.map((f) => `  ${describeContrastFailure(f)}\n`);
   // Missed coverage counts as a miss: an unmeasured run is not a passing one.
   if (result.offscreen > 0) lines.push(`  ${String(result.offscreen)} text runs below the ${String(vp.height)}px capture were not measured\n`);
-  if (result.unmeasured > 0) lines.push(`  ${String(result.unmeasured)} text runs in a faded group over an image were not measured\n`);
+  if (result.unmeasured > 0) lines.push(`  ${String(result.unmeasured)} text runs were not measurable (partly covered, or in a faded group over an image)\n`);
   const misses = result.failures.length + result.offscreen + result.unmeasured;
   process.stdout.write(`${caseName(c)} ${vp.name}: ${misses === 0 ? "ok" : `${String(misses)} to fix`} (${String(result.runs)} text runs)\n${lines.join("")}  → ${shot}\n`);
   return misses;

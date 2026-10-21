@@ -161,13 +161,17 @@ export function touchesSiteInput(paths: string[]): boolean {
 }
 
 /**
- * Theme styles, the studio that stages them, the theme catalog, and the
- * contrast checker: what `bin/theme-check --all` measures or runs.
+ * Theme styles, the primitives and palette that pick ink and surfaces, the
+ * studio that stages them, the theme catalog, and the contrast checker: what
+ * `bin/theme-check --all` measures or runs.
  */
 export function touchesThemeSurface(paths: string[]): boolean {
   const prefixes = [
     "beebox/src/frontend/src/themes/",
     "beebox/src/frontend/src/components/themes/",
+    // The primitives that choose ink and surface, and the palette.
+    "beebox/src/frontend/src/components/ui/",
+    "beebox/src/frontend/tailwind.config.js",
     "beebox/src/frontend/src/pages/dev/theme-studio",
     "beebox/src/frontend/src/pages/dev/ThemeStudioPage.tsx",
     "beebox/src/frontend/src/pages/dev/components/ThemeStudioHarness.tsx",

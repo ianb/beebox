@@ -1,6 +1,6 @@
-// finish-preflight-lib: a landing that touches theme styles, the studio, the
-// theme catalog or the contrast checker runs `bin/theme-check --all`, and a
-// docs-only landing lists it as skipped.
+// finish-preflight-lib: a landing that touches theme styles, the UI primitives
+// or palette, the studio, the theme catalog or the contrast checker runs
+// `bin/theme-check --all`, and a docs-only landing lists it as skipped.
 
 import { test } from "tap";
 import { touchesThemeSurface, verificationCommands } from "../finish-preflight-lib.js";
@@ -23,6 +23,8 @@ void test("theme paths are recognized; neighbouring frontend paths are not", (t)
     "beebox/src/shared/card-theme/catalog.ts",
     "beebox/test/tours/tour-lib/contrast-page.ts",
     "bin/theme-check",
+    "beebox/src/frontend/src/components/ui/Card.tsx",
+    "beebox/src/frontend/tailwind.config.js",
     "beebox/src/frontend/src/pages/SettingsPage.tsx",
     "beebox/test/tours/tour-lib/axe.ts",
   ];
@@ -34,6 +36,8 @@ void test("theme paths are recognized; neighbouring frontend paths are not", (t)
     ["beebox/src/shared/card-theme/catalog.ts", true],
     ["beebox/test/tours/tour-lib/contrast-page.ts", true],
     ["bin/theme-check", true],
+    ["beebox/src/frontend/src/components/ui/Card.tsx", true],
+    ["beebox/src/frontend/tailwind.config.js", true],
     ["beebox/src/frontend/src/pages/SettingsPage.tsx", false],
     ["beebox/test/tours/tour-lib/axe.ts", false],
   ]);
@@ -42,7 +46,7 @@ void test("theme paths are recognized; neighbouring frontend paths are not", (t)
 
 void test("a theme change runs the catalog check; docs-only skips it", (t) => {
   t.check(themeCommand(["beebox/src/frontend/src/themes/deck.css"]), [{ command: "bin/theme-check --all" }]);
-  t.check(themeCommand(["beebox/src/frontend/src/components/ui/Card.tsx"]), []);
+  t.check(themeCommand(["beebox/src/frontend/src/pages/SettingsPage.tsx"]), []);
   t.check(themeCommand(["beebox/src/frontend/src/themes/README.md"]), [{ command: "bin/theme-check --all", skip: "docs-only diff" }]);
   t.end();
 });
