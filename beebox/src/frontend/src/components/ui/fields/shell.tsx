@@ -26,7 +26,7 @@ interface FieldShellProps {
 export function useFieldInk(): { label: string; helper: string } {
   return useMaterial(undefined)
     ? { label: "text-card-ink", helper: "text-card-soft" }
-    : { label: "text-warm-700", helper: "text-warm-500" };
+    : { label: "text-warm-700", helper: "text-warm-700" };
 }
 
 export function FieldShell({ id, label, hideLabel, required, error, helper, children, className }: FieldShellProps) {

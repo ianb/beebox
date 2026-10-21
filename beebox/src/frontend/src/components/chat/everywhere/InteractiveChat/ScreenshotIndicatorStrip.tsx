@@ -44,7 +44,7 @@ function IndicatorRow({ indicator, onDismiss }: {
   }, [indicator.requestId, indicator.thumbnailUrl, onDismiss]);
 
   return (
-    <div className="flex items-center gap-2 text-xs text-warm-600 bg-warm-50 border border-warm-200 rounded-full px-3 py-1">
+    <div className="flex items-center gap-2 text-xs text-warm-700 bg-warm-50 border border-warm-200 rounded-full px-3 py-1">
       <span aria-hidden="true">📸</span>
       <Text size="xs" tone="subtle">
         screenshot added to the chat

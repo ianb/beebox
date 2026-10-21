@@ -66,7 +66,7 @@ function CompactView({ value }: { value: CompactValue }): ReactNode {
         : isHttpUrl(value.text) ? <a href={value.text} target="_blank" rel="noreferrer" className="bbx-theme-link">{value.text}</a>
         : value.text}
       {/* The label's soft ink, so a card theme mutes the aside as it mutes the labels. */}
-      {value.aside === undefined ? null : <span className="text-warm-500 bbx-card-field-label"> ({value.aside})</span>}
+      {value.aside === undefined ? null : <span className="text-warm-700 bbx-card-field-label"> ({value.aside})</span>}
     </span>
   );
 }
@@ -93,7 +93,7 @@ function FieldValue({ value }: { value: unknown }): ReactNode {
     return <span className="whitespace-pre-wrap [overflow-wrap:anywhere]">{formatScalar(value)}</span>;
   }
   if (Array.isArray(value)) {
-    if (value.length === 0) return <span className="text-warm-500 italic">empty</span>;
+    if (value.length === 0) return <span className="text-warm-700 italic">empty</span>;
     if (value.every(isScalar)) {
       return (
         <ul className="min-w-0 list-disc list-outside ml-5 space-y-0.5 marker:text-warm-400">
@@ -161,7 +161,7 @@ function FieldRow({ name, value, root }: { name: string; value: unknown; root: b
   if (todos !== null && todos.length === 0) return null;
   return (
     <div className="contents">
-      <dt className="min-w-0 max-w-32 text-warm-500 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">{fieldLabel(name)}</dt>
+      <dt className="min-w-0 max-w-32 text-warm-700 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">{fieldLabel(name)}</dt>
       <dd className="min-w-0 max-w-full">
         {todos !== null ? (
           <ul className="min-w-0 space-y-1">

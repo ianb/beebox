@@ -39,7 +39,7 @@ function formatElapsed(ms: number): string {
 
 function TaskPill({ task }: { task: LiveTask }) {
   return (
-    <div className="flex items-center gap-2 text-xs text-warm-600 bg-warm-50 border border-warm-200 rounded-full px-3 py-1">
+    <div className="flex items-center gap-2 text-xs text-warm-700 bg-warm-50 border border-warm-200 rounded-full px-3 py-1">
       <span className="inline-block w-2 h-2 rounded-full bg-info animate-pulse flex-shrink-0" />
       <span className="font-medium truncate">{task.description}</span>
       {task.lastToolName ? (

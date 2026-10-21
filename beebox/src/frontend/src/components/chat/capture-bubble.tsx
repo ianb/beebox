@@ -155,7 +155,7 @@ const PHASE_DOT: Record<CaptureBubblePhase, string> = {
 };
 
 const PHASE_TEXT: Record<CaptureBubblePhase, string> = {
-  working: "text-warm-500",
+  working: "text-warm-700",
   resolved: "text-success-dark",
   "failed-fresh": "text-danger-dark",
   "failed-aged": "text-danger-dark",
@@ -190,7 +190,7 @@ function FailedActions(props: {
   if (confirming) {
     return (
       <div className="flex flex-col items-end gap-1">
-        <div className="text-xs text-warm-600 pr-2">Discard {props.summary}? They never reached the chat.</div>
+        <div className="text-xs text-warm-700 pr-2">Discard {props.summary}? They never reached the chat.</div>
         <div className="flex gap-1.5">
           <Button size="sm" intent="destructive" onClick={props.onDiscard} loadingLabel="discarding…">Discard</Button>
           <Button size="sm" intent="ghost" onClick={() => setConfirming(false)}>Keep</Button>

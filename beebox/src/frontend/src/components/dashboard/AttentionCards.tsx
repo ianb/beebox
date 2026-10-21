@@ -55,7 +55,7 @@ export function AttentionCards({ questions, inboxCount, dueBrowserTasks }: Atten
               </li>
             ))}
             {pendingQuestions.length > 5 && (
-              <li className="text-xs text-warm-600">
+              <li className="text-xs text-warm-700">
                 +{pendingQuestions.length - 5} more
               </li>
             )}
@@ -78,11 +78,11 @@ export function AttentionCards({ questions, inboxCount, dueBrowserTasks }: Atten
                 <Link to={href(`/${boxSlug}/browse/${t.path}`)} className="text-primary hover:text-primary-dark hover:underline">
                   {t.title}
                 </Link>
-                <span className="text-xs text-warm-600 ml-2">{t.stateLabel}</span>
+                <span className="text-xs text-warm-700 ml-2">{t.stateLabel}</span>
               </li>
             ))}
             {dueTasks.length > 5 && (
-              <li className="text-xs text-warm-600">
+              <li className="text-xs text-warm-700">
                 +{dueTasks.length - 5} more
               </li>
             )}

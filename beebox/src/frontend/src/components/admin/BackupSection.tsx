@@ -32,7 +32,7 @@ function formatBytes(bytes: number): string {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-3 text-sm py-1">
-      <span className="text-warm-600 w-32 shrink-0">{label}</span>
+      <span className="text-warm-700 w-32 shrink-0">{label}</span>
       <span className="text-warm-800 min-w-0 break-words">{children}</span>
     </div>
   );
@@ -44,7 +44,7 @@ export function BackupSection() {
 
   return (
     <AdminSectionCard id="backup" description={DESCRIPTION} busy={query.isLoading}>
-      {query.isLoading ? <p className="text-sm text-warm-600">Checking…</p> : null}
+      {query.isLoading ? <p className="text-sm text-warm-700">Checking…</p> : null}
 
       {query.error != null ? (
         <p className="text-sm text-danger">Could not read backup status: {query.error.message}</p>
@@ -65,14 +65,14 @@ export function BackupSection() {
               <>
                 <span className="font-mono text-xs">{status.remote.url}</span>
                 {status.upstream.state === "none" ? (
-                  <span className="text-warm-600"> · no tracking branch</span>
+                  <span className="text-warm-700"> · no tracking branch</span>
                 ) : status.upstream.state === "stale" ? (
                   // Configured but its remote-tracking ref is gone — a deleted
                   // remote branch or a clone that has never fetched. Saying "no
                   // tracking branch" here would hide a state worth acting on.
                   <span className="text-warning"> · upstream configured but never fetched</span>
                 ) : status.upstream.ahead === 0 ? (
-                  <span className="text-warm-600"> · in sync</span>
+                  <span className="text-warm-700"> · in sync</span>
                 ) : (
                   <span className="text-warning">
                     {" "}

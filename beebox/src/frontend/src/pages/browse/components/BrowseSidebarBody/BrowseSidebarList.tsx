@@ -117,7 +117,7 @@ function CardRow({
             <div className="font-medium text-warm-900 text-sm truncate">{card.name}</div>
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className="text-xs text-warm-500">{card.type}</span>
+            <span className="text-xs text-warm-700">{card.type}</span>
             {card.conflict === true ? <Badge tone="danger" size="sm">conflict</Badge> : null}
           </div>
         </div>
@@ -235,14 +235,14 @@ export function BrowseSidebarList({
   mode,
 }: BrowseSidebarListProps) {
   if (loading) {
-    return <div className="p-4 text-warm-600 text-sm">Loading...</div>;
+    return <div className="p-4 text-warm-700 text-sm">Loading...</div>;
   }
 
   const cards = data.cards.filter((card) => card.relativePath !== omitCardPath);
   const wholeBox = dirPath === BROWSE_DEFAULT_DIRECTORY ? <WholeBoxRow onNavigate={onNavigate} /> : null;
   if (data.dirs.length === 0 && cards.length === 0 && data.files.length === 0) {
     return <div>
-      <div className="p-4 text-warm-600 text-sm text-center">Empty directory</div>
+      <div className="p-4 text-warm-700 text-sm text-center">Empty directory</div>
       {wholeBox}
     </div>;
   }

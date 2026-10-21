@@ -37,7 +37,7 @@ const foundBy = (prominence: string, extraRows: string): string =>
   `<div class="mt-6" data-card-section="found-by"><h3 class="text-sm font-semibold mb-2">Found by</h3><dl><dt>Prominence</dt><dd>${prominence}, the type&#x27;s default</dd>${extraRows}</dl></div>`;
 /** The "Fields" section holding one row. */
 const fieldsSection = (label: string, value: string): string =>
-  `<div class="mt-6" data-card-section="fields"><h3 class="text-sm font-semibold mb-2">Fields</h3><dl class="min-w-0 max-w-full grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm text-warm-800 bbx-card-fields"><div class="contents"><dt class="min-w-0 max-w-32 text-warm-500 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">${label}</dt><dd class="min-w-0 max-w-full"><span class="whitespace-pre-wrap [overflow-wrap:anywhere]">${value}</span></dd></div></dl></div>`;
+  `<div class="mt-6" data-card-section="fields"><h3 class="text-sm font-semibold mb-2">Fields</h3><dl class="min-w-0 max-w-full grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-sm text-warm-800 bbx-card-fields"><div class="contents"><dt class="min-w-0 max-w-32 text-warm-700 text-right whitespace-pre-wrap [overflow-wrap:anywhere] bbx-card-field-label">${label}</dt><dd class="min-w-0 max-w-full"><span class="whitespace-pre-wrap [overflow-wrap:anywhere]">${value}</span></dd></div></dl></div>`;
 
 const doc = render({
   path: "_content/projects/Porch.doc.card",

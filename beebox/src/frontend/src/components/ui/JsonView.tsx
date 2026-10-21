@@ -65,7 +65,7 @@ function JsonObject({ entries }: { entries: [string, unknown][] }) {
     <div className="flex flex-col gap-0.5">
       {entries.map(([key, val]) => (
         <div key={key}>
-          <div className="text-warm-600 font-medium break-all">{key}:</div>
+          <div className="text-warm-700 font-medium break-all">{key}:</div>
           <div className="pl-3">
             <JsonNode value={val} />
           </div>

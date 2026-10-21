@@ -13,5 +13,5 @@ export interface StatusMessageProps {
  * `ErrorText`.
  */
 export function StatusMessage({ children, className }: StatusMessageProps) {
-  return <div role="status" className={cn("p-8 text-warm-600", className)}>{children}</div>;
+  return <div role="status" className={cn("p-8 text-warm-700", className)}>{children}</div>;
 }

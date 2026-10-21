@@ -121,7 +121,7 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
 }) {
   const close = useDropdownClose();
   if (state.kind === "loading") {
-    return <div className="px-3 py-2 text-sm text-warm-500">Searching…</div>;
+    return <div className="px-3 py-2 text-sm text-warm-700">Searching…</div>;
   }
   if (state.kind === "error") {
     return (
@@ -134,7 +134,7 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
     );
   }
   if (state.results.length === 0) {
-    return <div className="px-3 py-2 text-sm text-warm-500">No chats match.</div>;
+    return <div className="px-3 py-2 text-sm text-warm-700">No chats match.</div>;
   }
   const labelFor = (hit: ChatSearchHitInfo): string => {
     const live = sessions.find((s) => s.sessionId === hit.sessionId)?.label;
@@ -162,9 +162,9 @@ export function ChatSearchRows({ query, state, sessions, boxSlug, currentSession
               <span className={`flex-1 truncate ${isViewing ? "font-medium text-warm-900" : "text-warm-800"}`}>
                 {label}
               </span>
-              {idHint === null ? null : <span className="text-xs text-warm-500 flex-shrink-0 font-mono">{idHint}</span>}
+              {idHint === null ? null : <span className="text-xs text-warm-700 flex-shrink-0 font-mono">{idHint}</span>}
             </div>
-            <div className="mt-0.5 text-xs text-warm-500 line-clamp-2">
+            <div className="mt-0.5 text-xs text-warm-700 line-clamp-2">
               <Highlight text={hit.snippet} query={query} />
             </div>
             <div className="mt-0.5 text-xs text-warm-400">{relativeTime(hit.created)}</div>

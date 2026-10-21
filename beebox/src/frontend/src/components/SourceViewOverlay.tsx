@@ -233,7 +233,7 @@ function SelectedPanel({ selected, copied, onCopy }: { selected: SelectedSource;
         ))}
         {selected.item ? (
           <div className="pt-1 border-t border-warm-100">
-            <span className="text-xs text-warm-500">Item: </span>
+            <span className="text-xs text-warm-700">Item: </span>
             <span className="text-sm text-warm-700">{selected.item}</span>
           </div>
         ) : null}

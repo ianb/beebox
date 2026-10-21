@@ -134,14 +134,14 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
             <span className="flex justify-between gap-2 w-full">
               <span className="min-w-0">
                 Voice settings
-                <span className="block text-xs text-warm-500 truncate">
+                <span className="block text-xs text-warm-700 truncate">
                   Live: {transcriptionServiceLabel(currentService)}
                 </span>
-                <span className="block text-xs text-warm-500 truncate">
+                <span className="block text-xs text-warm-700 truncate">
                   HQ: {hqTranscriptionServiceLabel(currentHqService)}
                 </span>
               </span>
-              <span className="text-warm-500">›</span>
+              <span className="text-warm-600">›</span>
             </span>
           </MenuItem>
         </>

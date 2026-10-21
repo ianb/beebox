@@ -37,7 +37,7 @@ function QuoteSpeakersLine({
 }): ReactNode {
   if (speakers.length === 0) return null;
   return (
-    <div className="text-xs text-warm-500 mb-3 bbx-quote-speakers">
+    <div className="text-xs text-warm-700 mb-3 bbx-quote-speakers">
       <span className="font-medium">Direct quotes from:</span>{" "}
       {speakers.map((speaker, i) => {
         const display = speakerDisplay(speaker);
@@ -118,7 +118,7 @@ export function CardBody({
           </Markdown>
         </div>
       ) : hideEmptyBody ? null : (
-        <div className="text-sm text-warm-500 italic">No body content</div>
+        <div className="text-sm text-warm-700 italic">No body content</div>
       )}
     </>
   );

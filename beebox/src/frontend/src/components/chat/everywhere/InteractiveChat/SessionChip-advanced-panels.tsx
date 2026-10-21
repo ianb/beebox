@@ -41,7 +41,7 @@ export function AdvancedPanel({
   return (
     <>
       <MenuItem id="bbx-session-advanced-back" onClick={onBack} keepOpen>
-        <span className="text-warm-500">‹ Advanced</span>
+        <span className="text-warm-700">‹ Advanced</span>
       </MenuItem>
       <MenuDivider />
       <MenuItem id="bbx-session-debug-view" onClick={onToggleDebugView}>{debugView ? "✓ " : "  "}Debug View</MenuItem>
@@ -59,7 +59,7 @@ export function AdvancedPanel({
         Stop Process
       </MenuItem>
       <MenuDivider />
-      <div className="px-3 py-1.5 text-xs text-warm-500">
+      <div className="px-3 py-1.5 text-xs text-warm-700">
         <div>Chat ID: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
         <div>Process: {running ? (busy ? "busy" : "idle") : "stopped"}</div>
       </div>

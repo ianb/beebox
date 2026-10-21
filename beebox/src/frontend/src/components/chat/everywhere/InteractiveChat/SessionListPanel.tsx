@@ -130,7 +130,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
   onToggleAll: () => void;
 }) {
   if (state.kind === "loading") {
-    return <div className="px-3 py-2 text-sm text-warm-500">Loading...</div>;
+    return <div className="px-3 py-2 text-sm text-warm-700">Loading...</div>;
   }
   if (state.kind === "error") {
     return (
@@ -144,7 +144,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
   }
   const { sessions, dead } = state;
   if (sessions.length === 0 && dead.length === 0) {
-    return <div className="px-3 py-2 text-sm text-warm-500">No chats yet</div>;
+    return <div className="px-3 py-2 text-sm text-warm-700">No chats yet</div>;
   }
 
   // Prefer the current session's own row over the `contextDir` prop: a resumed
@@ -167,7 +167,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
   return (
     <>
       {liveCount === 0 && !showAll ? (
-        <div className="px-3 py-2 text-sm text-warm-500">No current chats</div>
+        <div className="px-3 py-2 text-sm text-warm-700">No current chats</div>
       ) : null}
       {layout.kind === "flat" ? (
         <SessionRows sessions={layout.sessions} showLandmark={layout.showLandmark} muted={false} {...rowProps} />
@@ -189,7 +189,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
       {showAll ? <DeadSessionGroups dead={dead} boxSlug={boxSlug} allRows={rowProps.allRows} /> : null}
       {hiddenCount === 0 ? null : (
         <MenuItem id="bbx-session-list-all" onClick={onToggleAll} keepOpen>
-          <span className="text-warm-500">
+          <span className="text-warm-700">
             {showAll ? "Show current chats only" : `All chats (${String(hiddenCount)} done or expired)`}
           </span>
         </MenuItem>
@@ -222,7 +222,7 @@ function DeadSessionGroups({ dead, boxSlug, allRows }: { dead: DeadChatInfo[]; b
                 to={href(`/${boxSlug}/browse/${s.huskPath}`)}
                 onClick={close}
                 title={`Session ${s.sessionId}`}
-                className="block px-3 py-2 text-sm text-warm-500 hover:bg-warm-100"
+                className="block px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
               >
                 <div className="flex items-baseline gap-2">
                   <span className="flex-1 truncate">{s.label}</span>
@@ -247,7 +247,7 @@ function SessionGroup({ label, children }: { label: string; children: React.Reac
     <div role="group" aria-label={label}>
       <div
         aria-hidden="true"
-        className="px-3 py-1 bg-warm-50 border-y border-warm-100 text-xs font-medium uppercase tracking-wide text-warm-500 truncate"
+        className="px-3 py-1 bg-warm-50 border-y border-warm-100 text-xs font-medium uppercase tracking-wide text-warm-700 truncate"
       >
         {label}
       </div>
@@ -291,18 +291,18 @@ function SessionRows({
             className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50" : ""}`}
           >
             <div className="flex items-baseline gap-2">
-              <span className={`flex-1 truncate ${isViewing ? "font-medium" : ""} ${muted ? "text-warm-500" : isViewing ? "text-warm-900" : "text-warm-800"}`}>
+              <span className={`flex-1 truncate ${isViewing ? "font-medium" : ""} ${muted ? "text-warm-700" : isViewing ? "text-warm-900" : "text-warm-800"}`}>
                 {s.label}
               </span>
-              {idHint === null ? null : <span className="text-xs text-warm-500 flex-shrink-0 font-mono">{idHint}</span>}
+              {idHint === null ? null : <span className="text-xs text-warm-700 flex-shrink-0 font-mono">{idHint}</span>}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               {s.isActive ? (
                 <span className="text-xs text-success-dark">active</span>
               ) : null}
-              <span className="text-xs text-warm-500">{relativeTime(s.lastUsedAt)}</span>
+              <span className="text-xs text-warm-700">{relativeTime(s.lastUsedAt)}</span>
               {showLandmark ? (
-                <span className="text-xs text-warm-500 truncate">in {s.landmarkLabel}</span>
+                <span className="text-xs text-warm-700 truncate">in {s.landmarkLabel}</span>
               ) : null}
             </div>
           </Link>

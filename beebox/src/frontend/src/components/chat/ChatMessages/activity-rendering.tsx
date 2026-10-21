@@ -27,7 +27,7 @@ function RawToolDetail({ block }: { block: SessionContentBlock }) {
       ) : null}
       {result ? (
         <>
-          <div className="text-[10px] uppercase tracking-wider text-warm-500 ml-3 mt-1">result</div>
+          <div className="text-[10px] uppercase tracking-wider text-warm-700 ml-3 mt-1">result</div>
           <Pre size="xs" boxed scroll="sm" className="bbx-scroll-fade-bottom mt-0.5 mb-1 ml-3">
             {result}
           </Pre>
@@ -43,15 +43,15 @@ function ExcerptView({ excerpt }: { excerpt: Excerpt }) {
     case "change":
       return (
         <span className="block mb-1 ml-3 space-y-0.5 whitespace-pre-wrap break-words">
-          {excerpt.before ? <span className="block text-warm-500 line-through">{excerpt.before}</span> : null}
+          {excerpt.before ? <span className="block text-warm-700 line-through">{excerpt.before}</span> : null}
           {excerpt.after ? <span className="block text-warm-800">{excerpt.after}</span> : null}
-          {excerpt.everywhere ? <span className="block text-warm-500 italic">(every place it appeared)</span> : null}
+          {excerpt.everywhere ? <span className="block text-warm-700 italic">(every place it appeared)</span> : null}
         </span>
       );
     case "text":
       return (
         <span className="block mb-1 ml-3">
-          <span className="text-warm-500">{excerpt.label}: </span>
+          <span className="text-warm-700">{excerpt.label}: </span>
           <span className="text-warm-800 whitespace-pre-wrap break-words">{excerpt.text}</span>
         </span>
       );
@@ -101,10 +101,10 @@ function ToolDetail({ block, excerptInline }: { block: SessionContentBlock; exce
     <details className="group/tool">
       <summary className="cursor-pointer list-none hover:text-warm-700 py-0.5">
         <span className="flex flex-wrap items-center gap-x-1">
-          <span className="text-warm-500 group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
+          <span className="text-warm-600 group-open/tool:rotate-90 transition-transform text-[10px]">&#9654;</span>
           <ToolSentence description={description} opens={opens} />
-          {place ? <span className="text-warm-500">· {place}</span> : null}
-          {failed ? <span className="text-warm-500">· didn’t go through</span> : null}
+          {place ? <span className="text-warm-700">· {place}</span> : null}
+          {failed ? <span className="text-warm-700">· didn’t go through</span> : null}
         </span>
         {excerpt && excerptInline ? <ExcerptView excerpt={excerpt} /> : null}
       </summary>
@@ -139,10 +139,10 @@ function ActivityGroupInner({ parts, excerptInline }: { parts: ActivityParts; ex
             return (
               <details key={i} className="group/think">
                 <summary className="cursor-pointer list-none flex items-center gap-1 text-primary hover:text-primary-dark py-0.5">
-                  <span className="text-warm-500 group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
+                  <span className="text-warm-600 group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
                   <span>thought it over</span>
                 </summary>
-                <div className="mt-0.5 mb-1 ml-3 text-xs text-warm-600 italic whitespace-pre-wrap">
+                <div className="mt-0.5 mb-1 ml-3 text-xs text-warm-700 italic whitespace-pre-wrap">
                   {part.text}
                 </div>
               </details>
@@ -167,7 +167,7 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
   // Single item: render directly without the collapsible group wrapper
   if (totalItems === 1) {
     return (
-      <div className="text-xs text-warm-600 leading-tight my-1 ml-2 pl-2 border-l border-warm-300">
+      <div className="text-xs text-warm-700 leading-tight my-1 ml-2 pl-2 border-l border-warm-300">
         <ActivityGroupInner parts={parts} excerptInline={false} />
       </div>
     );
@@ -177,11 +177,11 @@ export function ActivityGroup({ parts }: { parts: ActivityParts }) {
 
   return (
     <details className="group my-1 ml-2 pl-2 border-l border-warm-300">
-      <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-warm-600 hover:text-warm-700">
-        <span className="text-warm-500 group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
+      <summary className="cursor-pointer list-none flex items-center gap-1 text-xs text-warm-700 hover:text-warm-900">
+        <span className="text-warm-600 group-open:rotate-90 transition-transform text-[10px]">&#9654;</span>
         <span>{summary}</span>
       </summary>
-      <div className="mt-1 text-xs text-warm-600 leading-tight ml-1">
+      <div className="mt-1 text-xs text-warm-700 leading-tight ml-1">
         <ActivityGroupInner parts={parts} excerptInline />
       </div>
     </details>

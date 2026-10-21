@@ -114,7 +114,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     return <FigureError message={error} />;
   }
   if (loading || mod === null) {
-    return <div className="p-4 text-warm-600">Loading figure…</div>;
+    return <div className="p-4 text-warm-700">Loading figure…</div>;
   }
   const sketch = mod.default;
   if (typeof sketch !== "function") {
@@ -148,7 +148,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     return (
       <figure className="my-2">
         {figureEl}
-        <figcaption className="text-xs text-warm-500 mt-1 text-center">{caption}</figcaption>
+        <figcaption className="text-xs text-warm-700 mt-1 text-center">{caption}</figcaption>
       </figure>
     );
   }

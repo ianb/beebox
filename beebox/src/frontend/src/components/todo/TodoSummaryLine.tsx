@@ -46,7 +46,7 @@ export function TodoSummaryLine({ reduction, openAction }: {
   if (parts === null) return null;
   return (
     <p
-      className="px-[var(--bbx-content-padding,1rem)] pt-2 text-xs text-warm-500 print:hidden"
+      className="px-[var(--bbx-content-padding,1rem)] pt-2 text-xs text-warm-700 print:hidden"
       data-card-section="todo-summary"
     >
       {/* The control is whichever of "now" and "later" `summaryParts` marks. */}

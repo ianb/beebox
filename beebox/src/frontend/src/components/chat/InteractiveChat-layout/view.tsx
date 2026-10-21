@@ -102,7 +102,7 @@ export function ExpiredAttachmentsNotice(props: { names: string[]; onDismiss: ()
       <span>
         {names.length} expired attachment{names.length === 1 ? "" : "s"} removed: {names.join(", ")}
       </span>
-      <button id="bbx-chat-expired-attachments-dismiss" onClick={onDismiss} className="flex-shrink-0 text-warm-600 hover:text-warm-900 underline">
+      <button id="bbx-chat-expired-attachments-dismiss" onClick={onDismiss} className="flex-shrink-0 text-warm-700 hover:text-warm-900 underline">
         dismiss
       </button>
     </div>

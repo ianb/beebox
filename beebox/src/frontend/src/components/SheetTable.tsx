@@ -47,13 +47,13 @@ export function SheetTable({ rows }: SheetTableProps) {
       <table className="border-collapse text-xs font-mono w-full">
         <thead>
           <tr className="bg-warm-100 sticky top-0 z-10">
-            <th className="border-r border-b border-warm-300 px-2 py-1 text-warm-500 font-normal w-10 text-right sticky left-0 bg-warm-100 z-20">
+            <th className="border-r border-b border-warm-300 px-2 py-1 text-warm-700 font-normal w-10 text-right sticky left-0 bg-warm-100 z-20">
               {/* row number column header */}
             </th>
             {Array.from({ length: maxCols }, (_, i) => (
               <th
                 key={i}
-                className="border-r border-b border-warm-300 px-2 py-1 text-warm-500 font-normal text-center min-w-[60px]"
+                className="border-r border-b border-warm-300 px-2 py-1 text-warm-700 font-normal text-center min-w-[60px]"
               >
                 {columnLetter(i)}
               </th>

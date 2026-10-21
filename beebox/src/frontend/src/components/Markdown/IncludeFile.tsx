@@ -18,7 +18,7 @@ export interface IncludeFileContext {
   Link: ComponentType<{ href?: string; children?: ReactNode }>;
 }
 
-const ROW_CLASS = "bbx-include-file my-1 text-sm text-warm-600";
+const ROW_CLASS = "bbx-include-file my-1 text-sm text-warm-700";
 
 export function makeIncludeFileComponent(ctx: IncludeFileContext): (props: { path?: string }) => ReactNode {
   return function IncludeFile({ path }: { path?: string }): ReactNode {

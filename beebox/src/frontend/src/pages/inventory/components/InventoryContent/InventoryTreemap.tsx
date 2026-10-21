@@ -56,7 +56,7 @@ export function InventoryTreemap({ items, metric }: { items: Summary[]; metric: 
           </div>
         )}
       </div>
-      <figcaption className="mt-2 text-xs text-warm-600">
+      <figcaption className="mt-2 text-xs text-warm-700">
         Tiny types may be unlabeled in the map; the table below always contains every value.
       </figcaption>
     </figure>

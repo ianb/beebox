@@ -180,14 +180,14 @@ function CommitRow({
       }`}
     >
       <div className="flex items-center gap-1.5 mb-0.5">
-        <code className="text-[10px] text-warm-500">
+        <code className="text-[10px] text-warm-700">
           {commit.hash.substring(0, 7)}
         </code>
-        <span className="text-[10px] text-warm-500">
+        <span className="text-[10px] text-warm-700">
           {relativeTime(commit.date)}
         </span>
         {phase ? <PhaseBadge phase={phase} /> : null}
-        {duration ? <span className="text-[10px] text-warm-500 font-mono">{duration}</span> : null}
+        {duration ? <span className="text-[10px] text-warm-700 font-mono">{duration}</span> : null}
       </div>
       <div className="text-sm text-warm-800 truncate">
         {commit.subject}
@@ -195,12 +195,12 @@ function CommitRow({
       <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
         {commit.fileStat ? <FileStatBadges stat={commit.fileStat} /> : null}
         {triggers.map((trigger) => (
-          <span key={trigger.id} className="text-[10px] text-warm-500">
+          <span key={trigger.id} className="text-[10px] text-warm-700">
             {triggerLabel(trigger)}
           </span>
         ))}
         {step === undefined ? null : (
-          <span className="text-[10px] text-warm-500">step {step}</span>
+          <span className="text-[10px] text-warm-700">step {step}</span>
         )}
       </div>
     </button>
@@ -284,7 +284,7 @@ export function CommitTimeline({
         ));
       })}
 
-      {loading ? <div className="p-3 text-sm text-warm-500 text-center">Loading...</div> : null}
+      {loading ? <div className="p-3 text-sm text-warm-700 text-center">Loading...</div> : null}
 
       {hasMore && !loading ? <button
           id={`${idPrefix}-load-more`}
@@ -295,7 +295,7 @@ export function CommitTimeline({
         </button> : null}
 
       {!loading && commits.length === 0 && (
-        <div className="p-4 text-sm text-warm-500 text-center">
+        <div className="p-4 text-sm text-warm-700 text-center">
           No commits found
         </div>
       )}

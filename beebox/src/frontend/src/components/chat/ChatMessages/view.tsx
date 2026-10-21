@@ -226,7 +226,7 @@ export function AssistantMessage({
               />
             )
           ) : !showProse ? null : group.kind === "update" ? (
-            <p key={i} className="my-1 text-sm text-warm-600 whitespace-pre-wrap">{group.text}</p>
+            <p key={i} className="my-1 text-sm text-warm-700 whitespace-pre-wrap">{group.text}</p>
           ) : (
             <ActivityGroup key={i} parts={group.parts} />
           )
@@ -247,12 +247,12 @@ export function CompactionMessage({ entries }: { entries: SessionEntry[] }) {
 
   return (
     <div className="flex justify-center py-2">
-      <details className="bbx-chat-meta-material text-xs text-warm-500 max-w-[80%]">
-        <summary className="cursor-pointer text-center hover:text-warm-600">
+      <details className="bbx-chat-meta-material text-xs text-warm-700 max-w-[80%]">
+        <summary className="cursor-pointer text-center hover:text-warm-900">
           Context compacted
         </summary>
         {text && text !== "Conversation compacted" ? (
-          <div className="mt-2 text-left bg-warm-50 rounded p-3 text-warm-600 whitespace-pre-wrap max-h-60 overflow-auto">
+          <div className="mt-2 text-left bg-warm-50 rounded p-3 text-warm-700 whitespace-pre-wrap max-h-60 overflow-auto">
             {text}
           </div>
         ) : null}
@@ -267,7 +267,7 @@ export function CompactionMessage({ entries }: { entries: SessionEntry[] }) {
 export function InterruptedMessage() {
   return (
     <div className="flex justify-center py-2">
-      <span className="bbx-chat-meta-material text-xs text-warm-500">Request interrupted</span>
+      <span className="bbx-chat-meta-material text-xs text-warm-700">Request interrupted</span>
     </div>
   );
 }
@@ -281,16 +281,16 @@ export function SelfNoteMessage({ note }: { note: SelfNoteInfo }) {
   return (
     <div className="py-2 px-3 sm:px-6">
       <div className="bbx-chat-meta-material mx-auto max-w-2xl border-l-2 border-warm-300 bg-warm-50/60 rounded-r px-3 py-2 text-sm text-warm-700">
-        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-warm-500 mb-1">
+        <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-warm-700 mb-1">
           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M9 12h6M9 16h6M9 8h6M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-7-3-7 3z" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <span>self-note</span>
           {note.ref ? (
-            <span className="normal-case tracking-normal text-warm-500 truncate">· {note.ref}</span>
+            <span className="normal-case tracking-normal text-warm-700 truncate">· {note.ref}</span>
           ) : null}
           {commitShort ? (
-            <span className="normal-case tracking-normal text-warm-500 font-mono">· {commitShort}</span>
+            <span className="normal-case tracking-normal text-warm-700 font-mono">· {commitShort}</span>
           ) : null}
         </div>
         <div className="whitespace-pre-wrap break-words">{note.body}</div>
