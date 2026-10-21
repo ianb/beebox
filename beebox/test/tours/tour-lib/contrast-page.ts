@@ -174,14 +174,14 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     if (ri - l < 2 || b - t < 4) return null;
     // Text under another element (a menu, a sticky bar, a decoration) is not
     // what the reader sees. Hit testing is on for everything while collecting.
-    // Three probes: all covered drops the box; some covered makes the run
-    // unmeasurable, since the cover's pixels would enter its samples.
-    const y = (t + b) / 2;
-    const covered = [l + 1, (l + ri) / 2, ri - 1].filter((x) => {
+    // A 3×3 grid of probes: all covered drops the box; some covered makes
+    // the run unmeasurable, since the cover's pixels would enter its samples.
+    const probes = [l + 1, (l + ri) / 2, ri - 1].flatMap((x) => [t + 1, (t + b) / 2, b - 1].map((y) => [x, y]));
+    const covered = probes.filter(([x, y]) => {
       const hit = document.elementFromPoint(x, y);
       return hit !== null && hit !== el && !el.contains(hit) && !hit.contains(el);
     }).length;
-    if (covered === 3) return null;
+    if (covered === probes.length) return null;
     return { x: l, y: t, w: ri - l, h: b - t, partial: covered > 0 };
   };
   // A previous audit's outlines would cover the text they mark.
