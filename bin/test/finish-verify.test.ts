@@ -19,7 +19,7 @@ const verify = path.join(repo, "bin/finish-verify.ts");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "finish-verify-"));
 execFileSync("git", ["init", "-q", "-b", "main"], { cwd: root });
 
-const USAGE = `usage: bin/finish-verify [--sheet <file>] [--only tests|typecheck|lint|smoke|site|apple]
+const USAGE = `usage: bin/finish-verify [--sheet <file>] [--only tests|typecheck|lint|smoke|site|apple|theme]
 
 Runs the checks bin/finish-preflight's sheet names and prints VERDICT: green|red.
 Without --sheet it runs bin/finish-preflight --json first, which merges main.
@@ -83,7 +83,7 @@ void test("An unknown flag and an unknown --only kind are usage errors:", async 
   ]);
 
   t.checkText(unknown.stderr, `finish-verify: bad arguments: Unknown option '--sheeet'\n${USAGE}`);
-  t.checkText(badKind.stderr, `finish-verify: bad arguments: --only takes tests, typecheck, lint, smoke, site, apple; got 'test'\n${USAGE}`);
+  t.checkText(badKind.stderr, `finish-verify: bad arguments: --only takes tests, typecheck, lint, smoke, site, apple, theme; got 'test'\n${USAGE}`);
 });
 
 // ## Interruption stops the checks' whole process tree
