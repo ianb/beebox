@@ -8,6 +8,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { BrowseSession } from "./browse.js";
 import { runAxe } from "./axe.js";
+import { auditContrast, describeContrastFailure } from "./contrast.js";
 import type { CheckpointArtifact, Finding, ViewportSpec } from "./types.js";
 
 export interface CaptureInput {
@@ -70,6 +71,8 @@ export async function captureCheckpoint(input: CaptureInput): Promise<CaptureRes
     });
   }
 
+  await auditCheckpointContrast({ ...input, reportPath: path.join(artifactsDir, `${name}.${viewport.name}.contrast.json`) });
+
   return {
     url,
     title,
@@ -81,4 +84,26 @@ export async function captureCheckpoint(input: CaptureInput): Promise<CaptureRes
       axeViolationCount: violationCount,
     },
   };
+}
+
+/**
+ * The pixel contrast audit stands in for axe's color-contrast rule, which
+ * declines to measure themed text (see axe.ts). One finding per checkpoint
+ * names the first misses; the report holds them all.
+ */
+async function auditCheckpointContrast(input: CaptureInput & { reportPath: string }): Promise<void> {
+  const { name, viewport, session, pushFinding, reportPath } = input;
+  try {
+    const result = await auditContrast(session, { outline: false });
+    await writeFile(reportPath, JSON.stringify(result, null, 2), "utf8");
+    const misses = result.failures.length + result.unmeasured;
+    if (misses === 0) return;
+    const shown = result.failures.slice(0, 6).map((f) => `\n  - ${describeContrastFailure(f)}`).join("");
+    const more = misses > 6 ? `\n  - … ${String(misses - 6)} more in ${path.basename(reportPath)}` : "";
+    pushFinding({ severity: "fail", checkpoint: name, viewport: viewport.name, message: `${String(misses)} contrast or material misses${shown}${more}` });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    await writeFile(reportPath, JSON.stringify({ error: message }, null, 2), "utf8");
+    pushFinding({ severity: "warn", checkpoint: name, viewport: viewport.name, message: `contrast audit failed (no contrast result for this checkpoint): ${message}` });
+  }
 }

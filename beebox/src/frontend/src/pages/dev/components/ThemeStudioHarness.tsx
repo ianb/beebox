@@ -5,6 +5,12 @@ import { Markdown } from "../../../components/Markdown/body";
 import { Button } from "../../../components/ui/Button";
 import { CalloutStack } from "../../../components/chat/CalloutBlock";
 import { ComposerSpecimen } from "./ComposerStatesHarness";
+import { Card } from "../../../components/ui/Card";
+import { Heading } from "../../../components/ui/Heading";
+import { Hint } from "../../../components/ui/Hint";
+import { Stack } from "../../../components/ui/Stack";
+import { Text } from "../../../components/ui/Text";
+import { SystemThemeSwatches } from "../../../components/themes/SystemThemePicker";
 
 import { useDoodlebitMotion } from "../../../components/themes/useDoodlebitMotion";
 
@@ -23,6 +29,19 @@ const SAMPLE = `A small collection of ideas for a neighborhood seed exchange. **
 - Save a few extras for visitors
 
 > Small beginnings deserve a little space to grow.
+
+{% quote from="Dana" treatment="layered" %}
+Context: notes from the planning call. **Dana** asked for *shorter* labels.
+
+### Aug 1
+- **Dana:** Can we open at ten?
+- **Lee:** Yes, and bring \`tape\`.
+{% /quote %}
+
+> **Reminder:** the hall closes at noon.
+>
+> - Sweep the tables
+> - Return the keys
 
 | Variety | Packets |
 | --- | ---: |
@@ -93,7 +112,10 @@ export function ThemeStudioHarness() {
       <NavigationSample />
       <div className="grid lg:grid-cols-2 gap-4 p-3 sm:p-5 items-start">
         <ConversationSample />
-        <CardSample name={cardName} stock={search.cardStock} />
+        <div className="min-w-0 space-y-4">
+          <CardSample name={cardName} stock={search.cardStock} />
+          <InterfaceSample name={cardName} stock={search.cardStock} />
+        </div>
       </div>
     </div>
   </div>;
@@ -132,6 +154,21 @@ function CardSample({ name, stock }: { name: string; stock: string }) {
       <ReadingSample />
     </CardThemeSurface>
   </div>;
+}
+
+function InterfaceSample({ name, stock }: { name: string; stock: string }) {
+  // Interface cards (Settings) render app panels inside the card material.
+  return <CardThemeSurface theme={{ choice: { name, stock }, origin: { kind: "engine" }, problem: null }}
+    title="Settings" detail="Interface card" symbol={null} boxSlug={undefined} mode="companion" properties={null}>
+    <div className="bbx-card-content">
+      <Card as="section" shadow aria-label="System theme"><Stack gap="sm">
+        <Heading level={2}>System theme</Heading>
+        <Hint>Choose the toolbar and workspace surface for this box.</Hint>
+        <SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled={false} idPrefix="bbx-studio-system-theme" onSelect={noop} />
+        <Text size="xs" tone="muted">This box has its own system theme.</Text>
+      </Stack></Card>
+    </div>
+  </CardThemeSurface>;
 }
 
 function NavigationSample() {

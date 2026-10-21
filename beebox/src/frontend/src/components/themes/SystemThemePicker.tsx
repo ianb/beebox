@@ -72,7 +72,7 @@ const STOCK_LABELS: Record<string, string> = {
   blue: "Blue",
 };
 
-function SystemThemeSwatches({ busy, choice, disabled, idPrefix, onSelect }: {
+export function SystemThemeSwatches({ busy, choice, disabled, idPrefix, onSelect }: {
   busy: boolean;
   choice: ResolvedThemeChoice;
   disabled: boolean;
