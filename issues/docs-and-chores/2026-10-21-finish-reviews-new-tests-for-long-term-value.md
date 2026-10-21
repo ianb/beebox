@@ -26,6 +26,16 @@ boundaries, migrations, external input, cross-system contracts) are a starting
 point. They were written for old tests with failure history. New tests have no
 failure history, so the criteria need adjustment.
 
+## Boxholder decisions (2026-10-21)
+
+- The analysis runs headless and decides. It never returns BLOCKED.
+- It needs discernment, so it runs on a most-capable model, not a small one.
+- It has two steps: an enumeration of every in-scope test, then an analysis
+  of each.
+- The evidence goes in git history, not the repository head. The removals land
+  as one dedicated commit; its message records each test considered and its
+  disposition with the reason.
+
 ## What the design must specify
 
 - **Analysis procedure.** Which tests are in scope (added files, added
@@ -37,15 +47,16 @@ failure history, so the criteria need adjustment.
   it scaffolding: it only re-proves straight-line code, it duplicates another
   example, it checks an intermediate step that the final behavior already
   covers, it would pass with the code deleted.
-- **Disposition.** Remove, merge into an existing example, or keep. Whether a
-  removed test leaves any record (commit message, plan note).
-- **Who decides.** The finish agent
-  ([.claude/agents/finish.md](../../.claude/agents/finish.md)) runs headless and
-  cannot ask mid-run. Options: the agent removes tests on clear criteria and
-  reports them; the agent proposes removals and returns BLOCKED; the analysis
-  runs in the implementing session before `/finish`; or the cross-model diff
-  review (Track O) gets the job. Each option has a different cost in
-  boxholder attention.
+- **Disposition.** Remove, merge into an existing example, or keep. The
+  commit message format for the dedicated commit, including kept tests, so
+  `git log` can answer "why is this test gone" and "was this test reviewed".
+- **Where it runs.** The finish agent
+  ([.claude/agents/finish.md](../../.claude/agents/finish.md)) runs on its own
+  model. The design must say whether the analysis is a step in that agent or a
+  separate worker it spawns on a most-capable model, and how it fits with the
+  cross-model diff review (Track O).
+- **Enumeration.** A script can list the in-scope tests from the diff, so the
+  model step starts from a complete list and cannot skip one.
 - **Verification after removal.** Removing a test changes the branch after
   `bin/finish-verify` ran. The design must say whether removal invalidates the
   pass, and which checks rerun.
@@ -56,6 +67,7 @@ A test that looks like scaffolding can be the only guard on a rule. The
 [expected-value rule](../closed/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md)
 asks each example to state why its value is right; that prose is input for the
 analysis, but it is not a keep signal by itself. A strict analyzer removes real
-guards; a lax one is a rubber stamp. A sample of real branches, with the
-boxholder's keep/remove call on each test, would calibrate the criteria before
-the step becomes automatic.
+guards; a lax one is a rubber stamp. Because the step decides without a
+human, the criteria carry all the weight. A sample of real branches, with the
+boxholder's keep/remove call on each test, would calibrate them before the step
+goes live. The dedicated commit makes a wrong removal easy to find and revert.
