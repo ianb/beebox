@@ -1,5 +1,5 @@
 ---
-title: "Printing from the browser menu prints the workspace tabs, transcript and desk color"
+title: "Printing from the browser menu prints the workspace tabs, the desk color and blank pages"
 workstream: unattached
 area: beebox
 filed-by: agent
@@ -9,12 +9,14 @@ discovered-in: worktree-card-reading — printable cards
 
 The card's Print control prints that card alone. The browser's own print
 (Cmd-P) does not go through it. In a check with a chat workspace open, Cmd-P
-printed the workspace tab strip, the card on the grey desk color, and the chat
-transcript, over six pages for a three-page card.
+printed the workspace tab strip and the card on the grey desk color, followed by
+three blank pages: six pages for a three-page card. The blank pages come from
+the workspace's screen-height flex and grid boxes; the Print control's scoped
+rules make those ancestors plain blocks.
 
 The print rules hide the composer and some chrome (`themes/chrome.css`,
-`themes/interface.css`, `index.css`) but not the tab strip, the transcript, or
-the desk backgrounds (`.bbx-companion-desk`, `.bbx-conversation-desk`,
+`themes/interface.css`, `index.css`) but not the tab strip or the desk
+backgrounds (`.bbx-companion-desk`, `.bbx-conversation-desk`,
 `.bbx-box-presentation`). The scoped rules for the Print control are in
 `themes/card-themes.css` (`html[data-print-scope="card"]`).
 
