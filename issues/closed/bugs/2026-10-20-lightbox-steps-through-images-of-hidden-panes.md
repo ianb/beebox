@@ -6,7 +6,10 @@ labels: [ui]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-card-reading — image-card links open the lightbox
+resolution: wontfix
 ---
+
+Closed 2026-10-20: the boxholder accepts images from minimized cards in the viewer's list, since the viewer shows each one at full size.
 
 Opening an image collects every `[data-image-src]` marker in the whole
 document (`LightboxProvider.tsx` `collectImages`). Cards in a minimized

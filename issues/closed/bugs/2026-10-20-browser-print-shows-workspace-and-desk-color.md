@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-card-reading — printable cards
+resolution: superseded
 ---
+
+Closed 2026-10-20: the boxholder cares about deliberate printable forms, not printing the screen with Cmd-P. Superseded by [print options](../../features/2026-10-20-print-options-and-printable-forms.md).
 
 The card's Print control prints that card alone. The browser's own print
 (Cmd-P) does not go through it. In a check with a chat workspace open, Cmd-P

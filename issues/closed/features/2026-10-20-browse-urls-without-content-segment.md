@@ -5,7 +5,10 @@ area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: worktree-card-reading — printable cards
+resolution: wontfix
 ---
+
+Closed 2026-10-20: the boxholder is fine with `_content/` in URLs. What matters is text a person reads in the interface, which the card-reading work fixed.
 
 Every card URL in the app is `/<box>/browse/_content/<path>`. The `_content/`
 segment is a correct address, but it is noise to a person who reads or shares
