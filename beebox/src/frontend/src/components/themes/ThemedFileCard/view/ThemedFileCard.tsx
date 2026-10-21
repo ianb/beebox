@@ -60,7 +60,7 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
       actions={isCard ? <CardActions target={target} onTrashed={onClose} vertical="above" /> : null} />}
     actions={mode === "chat" || onOpenInPanel ? <CardSurfaceActions mode={mode} path={data.path} onOpenInPanel={onOpenInPanel} /> : null}
     problem={error ? <div className="bbx-card-problem" role="status">Appearance could not be applied: {error}{presentation ? <Button size="sm" intent="ghost" onClick={handlePresentationRetry}>Retry</Button> : null}</div> : null}
-  >{children}<CardPrintFooter boxSlug={boxSlug} path={data.path} /></CardThemeSurface>;
+  >{children}<CardPrintFooter boxSlug={boxSlug} path={data.path} here={new URL(window.location.href)} /></CardThemeSurface>;
 }
 
 function CardSurfaceActions({ mode, path, onOpenInPanel }: {

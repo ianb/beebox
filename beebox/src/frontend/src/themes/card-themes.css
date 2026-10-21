@@ -382,6 +382,15 @@
   html[data-print-scope="card"] body :not([data-print-path], [data-print-target], [data-print-target] *) {
     display: none !important;
   }
+  /* The workspace around the card: no desk colour, and plain blocks, since
+     its screen-height flex and grid boxes add a blank page after the card. */
+  html[data-print-scope="card"] [data-print-path] {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
   .bbx-card-print-footer {
     clear: both;
     align-items: center;

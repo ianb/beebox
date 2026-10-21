@@ -11,10 +11,15 @@ import { encodePathForUrl } from "../../../../lib/view-url";
 import { isOffMachineOrigin } from "../../../../lib/off-machine-origin";
 import { qrSvg } from "../../../../lib/qr-svg";
 
-export function CardPrintFooter({ boxSlug, path }: { boxSlug: string | undefined; path: string }) {
-  const here = new URL(window.location.href);
-  const address = new URL(withBase(`/${boxSlug ?? ""}/browse/${encodePathForUrl(path.replace(/^\//, ""))}`), here.origin).toString();
-  const qr = isOffMachineOrigin(here) ? qrSvg(address, 3) : null;
+/** The card's page at `origin`, for the QR code: the browse URL, each path segment encoded. */
+export function cardAddress(origin: string, card: { boxSlug: string; path: string }): string {
+  const { boxSlug, path } = card;
+  return new URL(withBase(`/${boxSlug}/browse/${encodePathForUrl(path.replace(/^\//, ""))}`), origin).toString();
+}
+
+/** `here` is the page's own URL; its origin decides the QR code. */
+export function CardPrintFooter({ boxSlug, path, here }: { boxSlug: string | undefined; path: string; here: URL }) {
+  const qr = isOffMachineOrigin(here) ? qrSvg(cardAddress(here.origin, { boxSlug: boxSlug ?? "", path }), 3) : null;
   return (
     <footer className="bbx-card-print-footer hidden print:flex">
       {qr === null ? null : <div className="bbx-card-print-qr" role="img" aria-label="QR code for this card" dangerouslySetInnerHTML={{ __html: qr }} />}
