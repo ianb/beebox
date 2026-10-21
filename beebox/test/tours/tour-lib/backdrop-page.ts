@@ -1,10 +1,9 @@
 /**
  * Browser half of the backdrop audit, as script text for `bin/browse eval`
- * (see contrast-page.ts for why it is a string). It resolves every raster
- * background image layer, on elements and their ::before and ::after, to the
- * tile the browser paints. Raster images are the themes' painted artwork;
- * SVG and inline images are patterns, textures, icons and underlines, which
- * tile by design, so it leaves them out.
+ * (see contrast-page.ts for why it is a string). It resolves every
+ * file-backed background image layer, on elements and their ::before and
+ * ::after, to the tile the browser paints. Inline `data:` images are
+ * textures, icons and underlines, so it leaves them out.
  */
 
 interface Size { w: number; h: number }
@@ -12,6 +11,10 @@ interface Size { w: number; h: number }
 export interface BackdropLayer {
   selector: string;
   image: string;
+  /** Painted artwork (WebP, PNG, JPEG); an SVG may be a pattern drawn to tile. */
+  raster: boolean;
+  /** The image's own size, before background-size. */
+  natural: Size;
   /** The background positioning area: the padding box, or the viewport for a fixed background. */
   box: Size;
   tile: Size;
@@ -127,7 +130,7 @@ export const COLLECT_BACKDROPS_SCRIPT = String.raw`(async () => {
         const attachments = splitTop(cs.backgroundAttachment, ",");
         for (let i = 0; i < images.length; i++) {
           const m = /^url\("?(.*?)"?\)$/.exec(images[i]);
-          if (!m || !/\.(webp|png|jpe?g|avif|gif)(\?.*)?$/i.test(m[1])) continue;
+          if (!m || m[1].startsWith("data:")) continue;
           const url = m[1];
           const nat = await load(url);
           const image = url.split("/").pop().split("?")[0];
@@ -137,6 +140,8 @@ export const COLLECT_BACKDROPS_SCRIPT = String.raw`(async () => {
           layers.push({
             selector: name(el, pseudo),
             image,
+            raster: /\.(webp|png|jpe?g|avif|gif)$/i.test(image),
+            natural: nat,
             box,
             tile,
             offset: { x: resolveLinear(xs[i % xs.length], box.w - tile.w), y: resolveLinear(ys[i % ys.length], box.h - tile.h) },

@@ -27,10 +27,11 @@ struggle with, each labelled:
   dark side (`surface #ffffff`), such as a white app panel in a dark card.
 
 It then loads the studio at phone, tablet and desktop screen sizes and lists
-painted artwork (WebP, PNG, JPEG) that repeats or leaves a bare strip in its
-box, such as a backdrop shorter than a tall phone. Size artwork to fill:
-`cover`, or `auto max(920px, 100%)` to keep a chosen scale. SVG patterns may
-tile.
+artwork that leaves a bare strip in its box, and painted artwork (WebP, PNG,
+JPEG) that is stretched or repeats, such as a backdrop shorter than a tall
+phone. Cropping is fine; a bare strip or a stretch is worse than a seam. Size
+artwork to fill: `cover`, or `auto max(920px, 100%)` to keep a chosen scale.
+An SVG pattern may tile.
 
 It prints the same list with colors and selectors, and exits 0: it is the
 preview, not a gate. Read the captures before showing the theme.

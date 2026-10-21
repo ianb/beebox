@@ -1,7 +1,10 @@
 /**
- * Backdrop audit: a theme's artwork must fill the box it paints, with no
- * repeat seam and no bare strip, at the screen sizes the app runs at. The
- * browser half is in backdrop-page.ts.
+ * Backdrop audit: a theme's artwork must fill the box it paints, at the
+ * screen sizes the app runs at. An image set not to repeat must leave no bare
+ * strip, and painted (raster) artwork must keep its aspect ratio. Cropping is
+ * fine. A repeat seam is a lesser fault than either, so painted artwork that
+ * repeats is reported too, but an SVG that repeats is a pattern drawn to
+ * tile. The browser half is in backdrop-page.ts.
  */
 
 import { COLLECT_BACKDROPS_SCRIPT, type BackdropLayer, type BackdropPage } from "./backdrop-page.js";
@@ -9,7 +12,7 @@ import { COLLECT_BACKDROPS_SCRIPT, type BackdropLayer, type BackdropPage } from 
 export type { BackdropLayer, BackdropPage } from "./backdrop-page.js";
 
 export interface BackdropFailure {
-  kind: "repeats" | "gap";
+  kind: "repeats" | "gap" | "distorts";
   axis: "x" | "y";
   layer: BackdropLayer;
 }
@@ -20,12 +23,15 @@ const SLACK = 1;
 export function scoreBackdrops(layers: readonly BackdropLayer[]): BackdropFailure[] {
   const failures: BackdropFailure[] = [];
   for (const layer of layers) {
+    // An SVG keeps its own aspect ratio inside the tile unless it says otherwise.
+    const stretch = (layer.tile.w / layer.tile.h) / (layer.natural.w / layer.natural.h);
+    if (layer.raster && Math.abs(stretch - 1) > 0.01) failures.push({ kind: "distorts", axis: stretch > 1 ? "x" : "y", layer });
     for (const axis of ["x", "y"] as const) {
       const box = axis === "x" ? layer.box.w : layer.box.h;
       const tile = axis === "x" ? layer.tile.w : layer.tile.h;
       const start = layer.offset[axis];
       if (layer.repeat[axis]) {
-        if (tile < box - SLACK) failures.push({ kind: "repeats", axis, layer });
+        if (layer.raster && tile < box - SLACK) failures.push({ kind: "repeats", axis, layer });
       } else if (start > SLACK || start + tile < box - SLACK) {
         failures.push({ kind: "gap", axis, layer });
       }
@@ -39,6 +45,9 @@ export function describeBackdropFailure(f: BackdropFailure): string {
   const box = f.axis === "x" ? layer.box.w : layer.box.h;
   const tile = f.axis === "x" ? layer.tile.w : layer.tile.h;
   const px = (n: number): string => `${String(Math.round(n))}px`;
+  if (f.kind === "distorts") {
+    return `${layer.image} is stretched in ${layer.selector}: ${px(layer.natural.w)}×${px(layer.natural.h)} painted at ${px(layer.tile.w)}×${px(layer.tile.h)}`;
+  }
   if (f.kind === "repeats") {
     return `${layer.image} repeats ${f.axis === "x" ? "across" : "down"} ${layer.selector}: ${px(tile)} tile in a ${px(box)} box`;
   }
