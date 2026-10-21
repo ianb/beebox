@@ -25,7 +25,7 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: url("./bloom-cutouts.svg") center / 100% 100% no-repeat;
+  background: url("./bloom-cutouts.svg") center / cover no-repeat;
 }
 .bbx-box-presentation[data-chrome-theme="bloom"] :is(
   .bbx-conversation-desk, .bbx-companion-desk[data-active-card],
@@ -217,10 +217,11 @@
   border-color: #c5bda7;
   box-shadow: 2px 2px 0 #b8d9df;
 }
-.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-meta-material {
+.bbx-box-presentation[data-chrome-theme="bloom"] :is(.bbx-chat-meta-material, .bbx-chat-empty-label) {
   color: #344957;
   background: #fffdf5;
 }
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-empty-label { padding: 6px 10px; }
 @media print {
   .bbx-card-theme[data-card-theme="bloom"] :is(.bbx-blockquote, .bbx-quote-block) {
     background: transparent;

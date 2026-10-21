@@ -23,7 +23,7 @@
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: url("./ribbon-flow.svg") center / 100% 100% no-repeat,
+  background: url("./ribbon-flow.svg") center / cover no-repeat,
     linear-gradient(125deg, #efd7a5, #fff0c9 60%, #f6e4b9);
 }
 .bbx-box-presentation[data-chrome-theme="ribbon"] :is(

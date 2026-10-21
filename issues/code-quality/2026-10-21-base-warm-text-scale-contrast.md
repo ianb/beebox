@@ -1,5 +1,5 @@
 ---
-title: "Base secondary text (warm-500/600) is below WCAG AA on light surfaces"
+title: "Base secondary text (warm-500/600) is below WCAG AA on light surfaces; move it to warm-700"
 workstream: unattached
 area: beebox
 filed-by: agent
@@ -24,3 +24,11 @@ the boxholder's:
 The theme-audit exhibit shows the composer placeholder at warm-500 and at
 warm-700. Text on themed cards no longer depends on this scale where it
 uses the `Card` material (`text-card-soft`).
+
+## Decision (2026-10-21)
+
+The boxholder approved the lean: direction 2, move secondary text to
+warm-700 and keep 400–600 for borders and fills. The theme-audit branch
+moved the two surfaces the theme studio shows, the empty-chat line and the
+composer placeholder. The other `text-warm-500` and `text-warm-600` text call
+sites remain. Tour checkpoints report each one a tour reaches.

@@ -23,7 +23,7 @@
 }
 [data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-back-to-chat, #bbx-studio-nav-chat, #bbx-studio-nav-notes, #bbx-studio-nav-more) {
   background-color: #d9bd7f;
-  background-image: var(--gilt-leaf);
+  background-image: linear-gradient(#f3e2b8cc, #e9d6a6cc), var(--gilt-art);
   background-size: auto, 480px auto;
   background-position: center, 45% 52%;
   color: #1b3037;
@@ -128,7 +128,7 @@
 /* The heading is a worn gilded strip, with dark lettering over the leaf. */
 .bbx-card-theme[data-card-theme="gilt"] .bbx-card-heading {
   background-color: #e3ca90;
-  background-image: var(--gilt-leaf);
+  background-image: linear-gradient(#f3e2b8d9, #e9d6a6d9), var(--gilt-art);
   background-position: center, 55% 55%;
   background-size: auto, max(850px, 100%) auto;
   color: #192c34;
@@ -139,7 +139,7 @@
 
 @media (hover: hover) {
   [data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-back-to-chat, #bbx-studio-nav-chat, #bbx-studio-nav-notes, #bbx-studio-nav-more):hover {
-    --gilt-leaf: linear-gradient(#f4d87599, #e7be5899), var(--gilt-art);
+    background-image: linear-gradient(#f7ebc9cc, #efdfb4cc), var(--gilt-art);
     border-color: #dec990;
     border-bottom-color: #8a693c;
   }

@@ -51,7 +51,7 @@ export function EmptyChat({ openers, onSendOpener, openQuestion, onFocusComposer
         <OpenQuestionLine question={openQuestion} onFocusComposer={onFocusComposer} onNotNow={onQuestionNotNow} onOpenQuestions={onOpenQuestions} />
       )}
       <ChatOpeners openers={openers} onSendOpener={onSendOpener} />
-      <div className="bbx-chat-empty-label text-warm-500 text-sm">Start a conversation.</div>
+      <div className="bbx-chat-empty-label text-warm-700 text-sm">Start a conversation.</div>
     </div>
   );
 }

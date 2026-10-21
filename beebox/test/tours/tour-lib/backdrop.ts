@@ -1,10 +1,10 @@
 /**
  * Backdrop audit: a theme's artwork must fill the box it paints, at the
  * screen sizes the app runs at. An image set not to repeat must leave no bare
- * strip, and painted (raster) artwork must keep its aspect ratio. Cropping is
- * fine. A repeat seam is a lesser fault than either, so painted artwork that
- * repeats is reported too, but an SVG that repeats is a pattern drawn to
- * tile. The browser half is in backdrop-page.ts.
+ * strip, and no image may be stretched out of its aspect ratio. Cropping is
+ * fine. A repeat seam is a lesser fault than either, so painted (raster)
+ * artwork that repeats is reported too, but an SVG that repeats is a pattern
+ * drawn to tile. The browser half is in backdrop-page.ts.
  */
 
 import { COLLECT_BACKDROPS_SCRIPT, type BackdropLayer, type BackdropPage } from "./backdrop-page.js";
@@ -23,9 +23,12 @@ const SLACK = 1;
 export function scoreBackdrops(layers: readonly BackdropLayer[]): BackdropFailure[] {
   const failures: BackdropFailure[] = [];
   for (const layer of layers) {
-    // An SVG keeps its own aspect ratio inside the tile unless it says otherwise.
-    const stretch = (layer.tile.w / layer.tile.h) / (layer.natural.w / layer.natural.h);
-    if (layer.raster && Math.abs(stretch - 1) > 0.01) failures.push({ kind: "distorts", axis: stretch > 1 ? "x" : "y", layer });
+    // An SVG with preserveAspectRatio="none" has no ratio of its own; the
+    // browser reports it as 300×150 and stretches it, so it is caught here.
+    // A `#view` fragment shows part of a sprite sheet, whose size is all the
+    // browser reports, so its ratio cannot be checked.
+    const height = layer.tile.w * layer.natural.h / layer.natural.w;
+    if (!layer.image.includes("#") && Math.abs(layer.tile.h - height) > SLACK) failures.push({ kind: "distorts", axis: layer.tile.h > height ? "y" : "x", layer });
     for (const axis of ["x", "y"] as const) {
       const box = axis === "x" ? layer.box.w : layer.box.h;
       const tile = axis === "x" ? layer.tile.w : layer.tile.h;
