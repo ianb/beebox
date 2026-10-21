@@ -434,8 +434,8 @@ navigates as before when it is `false`. So a click never does nothing.
 - Contents menu on the published site: the publish renderer emits no
   JavaScript (`markdown-page.ts`), and no published-page reader asked. File an
   issue for a static contents list there.
-- Removing `_content/` from browse URLs: a routing change with redirects; file
-  as its own issue (the printable-cards issue names it).
+- Removing `_content/` from browse URLs: not wanted. The boxholder
+  (2026-10-20) is fine with it in URLs; only displayed text matters.
 - A configured public URL for the box in the frontend (`box.json`
   `publicUrl`): the origin rule meets the decision without a new API.
 - Links to raw image files (`photo.jpg`): the issue names image cards; the
