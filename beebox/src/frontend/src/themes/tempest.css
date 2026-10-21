@@ -56,7 +56,7 @@
   --tw-prose-links: #bacdff;
   color: var(--tempest-ink);
 }
-[data-chrome-theme="tempest"] .bbx-chat-callout > .text-accent-dark { color: #b8c6e7; }
+[data-chrome-theme="tempest"] .bbx-chat-callout > .bbx-chat-callout-context { color: #b8c6e7; }
 [data-chrome-theme="tempest"] .bbx-composer-material > section { background: transparent; border: 0; }
 [data-chrome-theme="tempest"] .bbx-composer-material { backdrop-filter: none; }
 [data-chrome-theme="tempest"] .bbx-composer-material textarea { background: transparent; color: #e0eef4; }
@@ -74,6 +74,8 @@
   border-radius: 12px;
 }
 .bbx-card-theme[data-card-theme="tempest"] {
+  --bbx-slip-light: #ffffff0c;
+  --bbx-slip-edge-light: #ffffff26;
   --bbx-paper: #0b1b2b;
   --bbx-ink: #e0eef4;
   --bbx-ink-soft: #a4bac8;

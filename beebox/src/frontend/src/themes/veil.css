@@ -48,7 +48,7 @@
   --tw-prose-pre-code: #eaf4d9;
   color: #263f37;
 }
-[data-chrome-theme="veil"] .bbx-chat-callout > .text-accent-dark { color: #49674c; }
+[data-chrome-theme="veil"] .bbx-chat-callout > .bbx-chat-callout-context { color: #49674c; }
 [data-chrome-theme="veil"] .bbx-composer-material > section { background: transparent; border: 0; }
 [data-chrome-theme="veil"] .bbx-composer-material textarea { color: #263f37; background: #edf3e4; border-color: #91a78a; }
 [data-chrome-theme="veil"] .bbx-composer-material textarea::placeholder { color: #5d7461; }
@@ -69,7 +69,7 @@
 .bbx-card-theme[data-card-theme="veil"] {
   --bbx-paper: #eff1dc;
   --bbx-ink: #2c4436;
-  --bbx-ink-soft: #647257;
+  --bbx-ink-soft: #4d5843;
   --bbx-pen: #8e2b55;
   --bbx-edge: #8a9b73;
   --bbx-underlay: #bdcd9b;

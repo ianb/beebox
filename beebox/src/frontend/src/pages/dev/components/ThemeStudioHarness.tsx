@@ -161,7 +161,7 @@ function InterfaceSample({ name, stock }: { name: string; stock: string }) {
   return <CardThemeSurface theme={{ choice: { name, stock }, origin: { kind: "engine" }, problem: null }}
     title="Settings" detail="Interface card" symbol={null} boxSlug={undefined} mode="companion" properties={null}>
     <div className="bbx-card-content">
-      <Card as="section" shadow aria-label="System theme"><Stack gap="sm">
+      <Card as="section" shadow material aria-label="System theme"><Stack gap="sm">
         <Heading level={2}>System theme</Heading>
         <Hint>Choose the toolbar and workspace surface for this box.</Hint>
         <SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled={false} idPrefix="bbx-studio-system-theme" onSelect={noop} />

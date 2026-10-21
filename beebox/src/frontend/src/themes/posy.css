@@ -18,7 +18,7 @@
 [data-chrome-theme="posy"] :is(.bbx-chat-reply-material,.bbx-chat-callout,.bbx-composer-material){color:var(--posy-ink);background:#fff7f0;border:4px solid transparent;border-image:var(--posy-frame) 24 / 4px / 0 stretch;box-shadow:0 2px 5px #52374720;}
 [data-chrome-theme="posy"] .bbx-chat-user-paper{color:#fff8ef;background:#ef2679;border:1px solid #b99eb1;border-radius:2px;box-shadow:2px 2px 0 #c8b9cf;}
 [data-chrome-theme="posy"] :is(.bbx-chat-reply-material,.bbx-chat-callout) .prose:not(.bbx-card-theme *){color:var(--posy-ink);--tw-prose-body:var(--posy-ink);--tw-prose-headings:var(--posy-ink);--tw-prose-bold:var(--posy-ink);--tw-prose-links:#ad1557;}
-[data-chrome-theme="posy"] .bbx-chat-callout>.text-accent-dark{color:#67467b;}
+[data-chrome-theme="posy"] .bbx-chat-callout>.bbx-chat-callout-context{color:#67467b;}
 [data-chrome-theme="posy"] .bbx-composer-material>section{background:transparent;border:0;}
 [data-chrome-theme="posy"] .bbx-composer-material>div.bg-gradient-to-r{background:transparent;}
 [data-chrome-theme="posy"] .bbx-composer-material textarea{background:#fff7f0;color:var(--posy-ink);border:1px solid #b8a8c2;}

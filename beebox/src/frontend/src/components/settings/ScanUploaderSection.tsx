@@ -74,14 +74,14 @@ function UploaderRow({ uploader }: { uploader: UploaderToken }) {
 function InstallInstructions() {
   return (
     <details>
-      <summary className="cursor-pointer text-sm font-medium text-warm-700 hover:text-warm-900">
+      <summary className="cursor-pointer text-sm font-medium text-card-soft hover:text-card-ink">
         First-time setup on a new machine
       </summary>
       <Stack gap="xs" className="mt-2">
         <Hint>
           On the machine connected to the scanner, one time:
         </Hint>
-        <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800 whitespace-pre">
+        <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-900 whitespace-pre">
           {"git clone <repo>\n" + "pnpm install --filter scan-uploader...  # from the repo root"}
         </code>
         <Hint>
@@ -130,7 +130,7 @@ export function ScanUploaderSection() {
   };
 
   return (
-    <Card as="section" aria-label="Scan uploaders" shadow>
+    <Card as="section" aria-label="Scan uploaders" shadow material>
       <Stack gap="md">
         <Stack gap="xs">
           <Heading level={2}>
@@ -175,7 +175,7 @@ export function ScanUploaderSection() {
             <Hint>
               This token is shown once — copy it now. It won't be shown again.
             </Hint>
-            <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800">
+            <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-900">
               {minted.token}
             </code>
             <Row gap="sm" wrap>
@@ -191,7 +191,7 @@ export function ScanUploaderSection() {
             ) : null}
             <Stack gap="xs">
               <Hint>Paste-ready setup command:</Hint>
-              <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800 whitespace-pre">
+              <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-900 whitespace-pre">
                 {configureCommand(minted.name)}
               </code>
               <Hint>then paste the token when prompted</Hint>

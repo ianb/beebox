@@ -151,7 +151,7 @@
   border: 1px solid #44959a;
   border-radius: 28px;
 }
-.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-callout > .text-accent-dark { color: #d8f4ef; }
+.bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-callout > .bbx-chat-callout-context { color: #d8f4ef; }
 .bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-meta-material {
   color: #b2cbc5;
   background: #29312e;
@@ -189,6 +189,8 @@
 }
 .bbx-card-theme[data-card-theme="deck"] {
   color-scheme: dark;
+  --bbx-slip-light: #ffffff0c;
+  --bbx-slip-edge-light: #ffffff26;
   --bbx-sheet: #3b4944;
   --bbx-tint: #35413b;
   --bbx-code-paper: #10272d;
@@ -321,7 +323,7 @@
     color: #000;
   }
   .bbx-card-theme[data-card-theme="deck"] :is(.bbx-blockquote, .bbx-quote-block),
-  .bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-callout > .text-accent-dark,
+  .bbx-box-presentation[data-chrome-theme="deck"] .bbx-chat-callout > .bbx-chat-callout-context,
   .bbx-box-presentation[data-chrome-theme="deck"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) {
     color: #333; background: transparent; box-shadow: none;
   }

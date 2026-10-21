@@ -78,9 +78,6 @@
 .bbx-card-theme[data-card-theme="gold-thread"],
 [data-chrome-theme="gold-thread"] .bbx-composer-material { color-scheme: dark; }
 .bbx-card-theme:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]) { --bbx-font: ui-sans-serif, system-ui, sans-serif; --bbx-quote-edge: 2px; }
-/* Box settings sit on pale paper, landmark settings inherit the card surface. */
-.bbx-card-theme[data-card-theme="gold-thread"] .bbx-system-theme-button { color: #202c3b; }
-.bbx-card-theme[data-card-theme="gold-thread"] .bbx-landmark-system-theme .bbx-system-theme-button { color: #f1e9d7; }
 .bbx-interface-tab:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]) {
   background-color: var(--textile-sheet);
   border-top-color: var(--textile-edge);

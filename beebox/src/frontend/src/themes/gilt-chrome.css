@@ -57,10 +57,8 @@
 .bbx-system-theme-preview[data-chrome-theme="gilt"] .bbx-system-theme-toolbar { background: #173f50; border-bottom: 2px solid #a68b4e; }
 .bbx-system-theme-preview[data-chrome-theme="gilt"] .bbx-system-theme-toolbar i { background: #f6ecd3; }
 .bbx-system-theme-preview[data-chrome-theme="gilt"] .bbx-system-theme-desk > span { background: #173f50; border-color: #667d79; border-radius: 6px; box-shadow: 0 3px 6px #3b858530; }
-/* Dark content uses native dark controls, while neutral settings stay readable. */
+/* Dark content uses native dark controls. */
 .bbx-card-theme[data-card-theme="gilt"], [data-chrome-theme="gilt"] .bbx-composer-material { color-scheme: dark; }
-.bbx-card-theme[data-card-theme="gilt"] .bbx-system-theme-button { color: #1b3037; }
-.bbx-card-theme[data-card-theme="gilt"] .bbx-landmark-system-theme .bbx-system-theme-button { color: #f6ecd3; }
 [data-chrome-theme="gilt"] .bbx-chat-reply-material .bg-warm-50:not(.bbx-card-theme *) { color: #302f2d; }
 @media print {
   .bbx-card-theme[data-card-theme="gilt"] .bbx-card-heading { background: transparent; color: #000; --bbx-ink: #000; --bbx-ink-soft: #333; }

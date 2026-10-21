@@ -158,7 +158,7 @@
   border: 1px solid #a48c60;
   border-radius: 15px;
 }
-.bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-chat-callout > .text-accent-dark { color: #173f35; }
+.bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-chat-callout > .bbx-chat-callout-context { color: #173f35; }
 .bbx-box-presentation[data-chrome-theme="ribbon"] .bbx-chat-meta-material {
   color: #514a34;
   background: #fff6df;

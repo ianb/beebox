@@ -88,6 +88,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     ["ink-soft", "paper"],
     ["pen", "paper"],
     ["ink", "sheet"],
+    ["ink-soft", "sheet"],
     ["ink", "tint"],
     ["ink", "quote-paper"],
     ["ink", "quote-layer-paper"],
@@ -152,18 +153,33 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   };
   const visible = (el, r) => {
     let [l, t, ri, b] = [r.left, r.top, r.right, r.bottom];
-    for (let cur = el.parentElement; cur !== null; cur = cur.parentElement) {
-      const cs = getComputedStyle(cur);
-      if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
-      const c = cur.getBoundingClientRect();
-      [l, t, ri, b] = [Math.max(l, c.left), Math.max(t, c.top), Math.min(ri, c.right), Math.min(b, c.bottom)];
+    // Only ancestors on the containing-block chain clip: an absolute box
+    // escapes overflow until its positioned ancestor, a fixed box escapes all.
+    let escaping = getComputedStyle(el).position === "absolute";
+    if (getComputedStyle(el).position !== "fixed") {
+      for (let cur = el.parentElement; cur !== null; cur = cur.parentElement) {
+        const cs = getComputedStyle(cur);
+        if (escaping && cs.position === "static") continue;
+        escaping = false;
+        if (cs.overflowX !== "visible" || cs.overflowY !== "visible") {
+          const c = cur.getBoundingClientRect();
+          [l, t, ri, b] = [Math.max(l, c.left), Math.max(t, c.top), Math.min(ri, c.right), Math.min(b, c.bottom)];
+        }
+        if (cs.position === "fixed") break;
+        if (cs.position === "absolute") escaping = true;
+      }
     }
     [l, t, ri, b] = [Math.max(l, 0), Math.max(t, 0), Math.min(ri, vw), Math.min(b, vh)];
     if (ri - l < 2 || b - t < 4) return null;
+    // Text under another element (a menu, a sticky bar, a decoration) is not
+    // what the reader sees. Hit testing is on for everything while collecting.
     const hit = document.elementFromPoint((l + ri) / 2, (t + b) / 2);
     if (hit !== null && hit !== el && !el.contains(hit) && !hit.contains(el)) return null;
     return { x: l, y: t, w: ri - l, h: b - t };
   };
+  const hitAll = document.createElement("style");
+  hitAll.textContent = "*, *::before, *::after { pointer-events: auto !important; }";
+  document.head.append(hitAll);
   const byElement = new Map();
   const offscreen = new Set();
   let unmeasured = 0;
@@ -225,6 +241,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     const t = px("border-top-width") + px("padding-top");
     add(input, { text: showing, color, boxes: [new DOMRect(box.left + l, box.top + t, box.width - l - px("border-right-width") - px("padding-right"), box.height - t - px("border-bottom-width") - px("padding-bottom"))] });
   }
+  hitAll.remove();
   const style = document.createElement("style");
   style.id = "bbx-contrast-hide-text";
   style.textContent = "*, *::before, *::after, ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; text-decoration-color: transparent !important; caret-color: transparent !important; }";

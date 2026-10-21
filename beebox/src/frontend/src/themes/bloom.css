@@ -151,7 +151,7 @@
   border: 1px solid #9bbbc6;
   border-radius: 16px;
 }
-.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-callout > .text-accent-dark {
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-callout > .bbx-chat-callout-context {
   color: #344957;
 }
 /* This material resets on every card, including a card on another system. */

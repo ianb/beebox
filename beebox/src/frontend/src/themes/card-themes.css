@@ -292,7 +292,8 @@
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 0.8rem;
   font-style: normal;
-  color: var(--bbx-ink-soft, #625e58);
+  /* Small type on the quote's own paper: pull the soft ink toward the ink. */
+  color: color-mix(in srgb, var(--bbx-ink-soft, #625e58) 60%, var(--bbx-ink, #302f2d));
   margin-top: 0.6em;
 }
 .bbx-quote-inline {

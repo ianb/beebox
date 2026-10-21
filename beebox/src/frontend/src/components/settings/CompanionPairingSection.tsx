@@ -147,7 +147,7 @@ export function CompanionPairingSection() {
   };
 
   return (
-    <Card as="section" aria-label="Companion app pairing" shadow>
+    <Card as="section" aria-label="Companion app pairing" shadow material>
       <Stack gap="md">
         <Stack gap="xs">
           <Heading level={2}>

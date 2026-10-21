@@ -57,7 +57,7 @@
   --tw-prose-links: var(--gilt-accent);
   color: var(--gilt-ink);
 }
-[data-chrome-theme="gilt"] .bbx-chat-callout > .text-accent-dark {
+[data-chrome-theme="gilt"] .bbx-chat-callout > .bbx-chat-callout-context {
   color: var(--gilt-soft);
 }
 [data-chrome-theme="gilt"] .bbx-composer-material > section {
@@ -90,6 +90,8 @@
   border-radius: 5px;
 }
 .bbx-card-theme[data-card-theme="gilt"] {
+  --bbx-slip-light: #ffffff0c;
+  --bbx-slip-edge-light: #ffffff26;
   --bbx-paper: var(--gilt-paper);
   --bbx-ink: var(--gilt-ink);
   --bbx-ink-soft: var(--gilt-soft);
