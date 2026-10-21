@@ -34,8 +34,11 @@ import { makeSourceComponents } from "./Source";
 import { RedactedInline, RedactedBlock } from "./Redacted";
 import { makeTodoComponents } from "./Todo";
 import { makeSeeAlsoComponent } from "./SeeAlso";
+import { makeIncludeFileComponent } from "./IncludeFile";
+import { isInstructionFile, rewriteIncludeLines } from "../../lib/include-lines";
 import { assignLocators, stampLocators } from "@shared/todo-locators";
 import { makeLink, type LinkContext } from "../markdown-link/link";
+import { useOptionalLightbox } from "../LightboxProvider";
 import { Button } from "../ui/Button";
 import { Image } from "../ui/Image";
 import { VideoEmbed } from "../ui/VideoEmbed";
@@ -183,12 +186,20 @@ interface RenderConfigBundle {
   components: Record<string, React.ComponentType<Record<string, unknown>>>;
 }
 
-function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath: string | null; tags: Readonly<Record<string, Schema>> | undefined }): RenderConfigBundle {
+// Render-only: `rewriteIncludeLines` writes it for an instruction file's
+// include lines. It is not in the shared tag table, so no agent writes it.
+const includeFileTag: Schema = {
+  render: "IncludeFile",
+  selfClosing: true,
+  attributes: { path: { type: String, required: true } },
+};
+
+function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags, includes }: { cardPath: string | null; tags: Readonly<Record<string, Schema>> | undefined; includes: boolean }): RenderConfigBundle {
   const base = withScopedTags(tags);
   const config: Config = {
     ...base,
     // An HTML `<p>` renders as `Para`, the same `<div>` a Markdown paragraph gets.
-    tags: { ...base.tags, html: makeHtmlTag({ paragraph: "Para" }) },
+    tags: { ...base.tags, html: makeHtmlTag({ paragraph: "Para" }), ...(includes ? { "include-file": includeFileTag } : {}) },
     nodes: {
       ...base.nodes,
       document: { render: "Fragment" },
@@ -229,6 +240,7 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
   const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath });
   const SeeAlso = makeSeeAlsoComponent({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath });
+  const IncludeFile = makeIncludeFileComponent({ basePath: linkCtx.basePath, Link });
   const Task = ({ done }: { done?: boolean }) => (
     <input
       type="checkbox"
@@ -264,6 +276,7 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
     TodoInline: cast(TodoInline),
     TodoBlock: cast(TodoBlock),
     SeeAlso: cast(SeeAlso),
+    IncludeFile: cast(IncludeFile),
     UnknownTagInline: cast(UnknownTagInline),
     UnknownTagBlock: cast(UnknownTagBlock),
   };
@@ -300,6 +313,11 @@ interface MarkdownProps {
    * body (chat, commit messages, a body excerpt): no locators, no controls.
    */
   card?: { path: string; bodyLineOffset: number };
+  /**
+   * This Markdown is the card's document, so its headings fill the card's
+   * contents menu (`CardContents/CardContentsMenu.tsx`). Needs `prose="block"`.
+   */
+  outline?: boolean;
 }
 
 export function Markdown({
@@ -311,15 +329,18 @@ export function Markdown({
   basePath,
   onJumpToQuote,
   card,
+  outline,
 }: MarkdownProps) {
   prose = prose ?? false;
   const boxSlug = useBoxSlug();
   const cardPath = card?.path ?? null;
   const bodyLineOffset = card?.bodyLineOffset ?? null;
+  const openImageLink = useOptionalLightbox()?.openFromElement;
   const { tree, mergedComponents } = useMemo(() => {
-    const ctx: LinkContext = { onNavigate, basePath, boxSlug, onJumpToQuote };
-    const { config, components: defaults } = buildRenderConfig(ctx, { cardPath, tags });
-    const ast = parseMarkdown(children);
+    const ctx: LinkContext = { onNavigate, basePath, boxSlug, onJumpToQuote, openImageLink };
+    const includes = isInstructionFile(basePath);
+    const { config, components: defaults } = buildRenderConfig(ctx, { cardPath, tags, includes });
+    const ast = parseMarkdown(includes ? rewriteIncludeLines(children) : children);
     rewriteUnknownTags(ast, config);
     // The collector's own numbering, so a rendered todo and the todo a write
     // addresses cannot disagree about which one `line#2` is.
@@ -333,14 +354,14 @@ export function Markdown({
       if (override !== undefined) merged[name] = override;
     }
     return { tree: t, mergedComponents: merged };
-  }, [children, onNavigate, basePath, boxSlug, components, tags, onJumpToQuote, cardPath, bodyLineOffset]);
+  }, [children, onNavigate, basePath, boxSlug, components, tags, onJumpToQuote, cardPath, bodyLineOffset, openImageLink]);
 
   const rendered = renderers.react(tree, React, {
     components: mergedComponents,
   });
 
   if (prose === "block") {
-    return <div className="prose prose-sm max-w-none bbx-theme-prose">{rendered}</div>;
+    return <div className="prose prose-sm max-w-none bbx-theme-prose" data-card-outline={outline === true ? "" : undefined}>{rendered}</div>;
   }
   if (prose === "inline") {
     return <span className="prose prose-sm inline max-w-none bbx-theme-prose">{rendered}</span>;

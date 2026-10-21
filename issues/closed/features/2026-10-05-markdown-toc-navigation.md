@@ -1,13 +1,16 @@
 ---
 title: "Markdown cards: table-of-contents navigation for long documents"
-workstream: unattached
+workstream: card-reading
 area: beebox
 labels: [markdown]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request
 priority: normal
+resolution: implemented
 ---
+
+**Closed:** Implemented on worktree-card-reading as the card contents menu (desktop, phone width, dark theme). A contents list on published pages is tracked in 2026-10-20-published-page-contents-list.
 
 A long Markdown card has no way to see its structure or jump to a section.
 The reader scrolls.

@@ -1,12 +1,15 @@
 ---
 title: "A link to an image card should open the image in the lightbox, not navigate to the card"
-workstream: unattached
+workstream: card-reading
 area: beebox
 labels: [ui]
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request
+resolution: implemented
 ---
+
+**Closed:** Implemented on worktree-card-reading: links to image cards in chat, Markdown cards and custom views open the lightbox, with an Open card action.
 
 When a chat message or a card links to an image card as an ordinary link (not
 an inline embed), clicking it navigates to the image card's page. What the

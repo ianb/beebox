@@ -185,7 +185,7 @@ export function PdfCardView({ data, onNavigate, params, mode }: RendererProps) {
   });
 
   const components = useMemo(
-    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined }),
+    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined, openImageLink: undefined }),
     [onNavigate, data.path, boxSlug],
   );
 

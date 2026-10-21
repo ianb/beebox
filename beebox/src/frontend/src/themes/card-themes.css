@@ -120,6 +120,28 @@
 .bbx-card-front {
   min-width: 0;
 }
+/* The contents menu floats at the front's top right, below the header and so
+   clear of the Properties corner, and sticks there while the card scrolls. */
+.bbx-card-contents {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 3;
+  float: right;
+  margin: 0.5rem var(--bbx-content-padding, 1rem) 0 0.5rem;
+}
+.bbx-card-front [data-card-outline] :is(h1, h2, h3)[id] {
+  scroll-margin-top: 3rem;
+}
+@media (max-width: 520px) {
+  .bbx-card-contents-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
 .bbx-card-content {
   padding: var(--bbx-content-padding, 1rem);
   max-width: 54rem;
@@ -354,6 +376,43 @@
   }
   .bbx-quote-block {
     box-shadow: none;
+  }
+  /* The Print control (lib/print-card.ts) marks one card and its ancestors;
+     everything else on screen stays off the page. */
+  html[data-print-scope="card"] body :not([data-print-path], [data-print-target], [data-print-target] *) {
+    display: none !important;
+  }
+  /* The workspace around the card: no desk colour, and plain blocks, since
+     its screen-height flex and grid boxes add a blank page after the card. */
+  html[data-print-scope="card"] [data-print-path] {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
+  .bbx-card-print-footer {
+    clear: both;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.5rem var(--bbx-content-padding, 1rem) 0;
+    padding-top: 0.5rem;
+    border-top: 1px solid #999;
+    font: 9pt/1.4 ui-sans-serif, system-ui, sans-serif;
+    color: #333;
+    break-inside: avoid;
+  }
+  /* Opt-in: the QR code and its hint print only from Print with "Add QR code". */
+  .bbx-card-surface:not([data-print-qr]) :is(.bbx-card-print-qr, .bbx-card-print-hint) {
+    display: none;
+  }
+  .bbx-card-print-qr svg {
+    display: block;
+    width: 0.9in;
+    height: 0.9in;
+  }
+  .bbx-card-print-hint {
+    color: #666;
   }
 }
 .bbx-theme-swatch-group {

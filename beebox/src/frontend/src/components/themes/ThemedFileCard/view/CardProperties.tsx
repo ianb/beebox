@@ -7,6 +7,7 @@ import { cardTitle } from "../../../../lib/card-title";
 import { withoutHeaderName } from "../../../../lib/readable-fields";
 import { CardMark } from "../../../ui/CardMark";
 import { isRecord } from "@shared/is-record";
+import { toDisplayPath } from "@shared/display-path";
 import { readCardSymbol } from "@shared/card-symbol";
 import { Prominence, effectiveLevel } from "@shared/prominence";
 import { PropertyLink, PropertyProblem } from "./property-section";
@@ -52,7 +53,7 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
   const hasFoundBy = typeof contains === "string" || prominence !== null || symbolSource !== null || typeof evidence === "string";
   return <>
     <dl className="mt-4">
-      <dt>Filed at</dt><dd>{data.path}</dd>
+      <dt>Filed at</dt><dd>{toDisplayPath(data.path)}</dd>
       <dt>Card type</dt><dd>{data.type}</dd>
     </dl>
     {hasFoundBy ? <div className="mt-6" data-card-section="found-by">
