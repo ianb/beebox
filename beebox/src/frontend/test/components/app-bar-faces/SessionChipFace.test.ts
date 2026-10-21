@@ -8,7 +8,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { SessionChipFace } from "../../../../../src/components/chat/everywhere/InteractiveChat/SessionChip-face.js";
+import { SessionChipFace } from "../../../src/components/app-bar-faces/SessionChipFace.js";
 
 globalThis.React = React;
 

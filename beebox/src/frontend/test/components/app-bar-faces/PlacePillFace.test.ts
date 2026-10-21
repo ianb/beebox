@@ -8,7 +8,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { PlacePillFace, type PlacePillMenu } from "../../../src/components/AppNav/PlacePill.js";
+import { PlacePillFace, type PlacePillMenu } from "../../../src/components/app-bar-faces/PlacePillFace.js";
 
 globalThis.React = React;
 

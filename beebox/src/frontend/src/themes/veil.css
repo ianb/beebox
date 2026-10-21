@@ -19,11 +19,6 @@
   border-radius: 24px 18px 25px 15px;
   box-shadow: 2px 2px 0 #123e35;
 }
-[data-chrome-theme="veil"] .bbx-app-nav button[aria-pressed="true"]:not(#bbx-nav-errors) {
-  color: #253d31;
-  background: #cfde79;
-  border-color: #d8e9a2;
-}
 [data-chrome-theme="veil"] :is(.bbx-chat-reply-material, .bbx-chat-callout, .bbx-composer-material) {
   color: #263f37;
   background: linear-gradient(110deg, #eef3deed, #e8f2e9f7 58%, #e0efe7ed), url("./veil-pigment.webp") center / auto max(1067px, 100%);

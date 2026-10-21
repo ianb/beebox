@@ -1,10 +1,9 @@
 /**
  * The session chip's face, apart from its menu so the theme studio renders
- * the same face with fixed props (see `SessionChip`).
+ * the same face with fixed props (see `chat/everywhere/InteractiveChat/SessionChip.tsx`).
  */
 
-import type { DropdownTriggerProps } from "../../../ui/Dropdown";
-import type { modelDrift } from "./model-drift";
+import type { DropdownTriggerProps } from "../ui/Dropdown";
 
 /**
  * Chat properties. From `sm:` up the adjacent "Chat" label supplies the
@@ -59,7 +58,7 @@ function CaretIcon() {
  */
 export function SessionChipFace({ label, drift, offEngine, accessibleName, onClick, ariaProps }: {
   label: string | null;
-  drift: ReturnType<typeof modelDrift>;
+  drift: "above" | "below" | "same" | null;
   offEngine: boolean;
   accessibleName: string;
   onClick: DropdownTriggerProps["toggle"];

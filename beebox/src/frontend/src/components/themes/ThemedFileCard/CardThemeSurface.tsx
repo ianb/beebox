@@ -21,6 +21,8 @@ export interface CardThemeSurfaceProps {
   properties: ReactNode;
   actions?: ReactNode;
   problem?: ReactNode;
+  /** The side shown first; the theme studio shows a back. Default `"front"`. */
+  initialSide?: "front" | "back";
 }
 
 /** Provided around the back face; exported so a test can render the face alone. */
@@ -41,8 +43,8 @@ export function useShowCardFront(): () => void {
 }
 
 /** Front stays mounted while turned over, retaining authored view state. */
-export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, children, properties, actions, problem }: CardThemeSurfaceProps) {
-  const [back, setBack] = useState(false);
+export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, children, properties, actions, problem, initialSide }: CardThemeSurfaceProps) {
+  const [back, setBack] = useState(initialSide === "back");
   const [turn, setTurn] = useState<"out" | "in" | null>(null);
   // React's `useId` spells its values with colons, which the control address
   // grammar has no room for, so the instance key is encoded rather than

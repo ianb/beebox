@@ -24,7 +24,6 @@
 }
 [data-chrome-theme="phosphor"] .bbx-app-nav button:not(#bbx-nav-errors)::before{content:"[ ";color:#3baa55;}
 [data-chrome-theme="phosphor"] .bbx-app-nav button:not(#bbx-nav-errors)::after{content:" ]";color:#3baa55;}
-[data-chrome-theme="phosphor"] .bbx-app-nav button[aria-pressed="true"]:not(#bbx-nav-errors){color:#b0ffb7;background:#092b13;text-shadow:0 0 9px #54ff70;}
 [data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-callout,.bbx-composer-material){color:#82ed91;background:#03130a;border:0;box-shadow:none;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material{background:#03130a;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material::before{content:"┌─ INCOMING ─────────────────────────────────────────────";display:block;color:#51c468;font:11px/1 monospace;white-space:nowrap;overflow:hidden;margin:0 0 12px;}

@@ -28,7 +28,7 @@
 
 import { memo, useState, type ReactNode } from "react";
 import { Dropdown } from "../../../ui/Dropdown";
-import { SessionChipFace } from "./SessionChip-face";
+import { SessionChipFace } from "../../../app-bar-faces/SessionChipFace";
 import { MenuItem, MenuDivider } from "../../../ui/dropdown-menu-item";
 import { AdvancedPanel } from "./SessionChip-advanced-panels";
 import { DeleteChatDialog } from "../../../chat-delete/DeleteChatDialog";

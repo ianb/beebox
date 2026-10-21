@@ -21,7 +21,7 @@
   color: #fff0c9;
   padding-block: 8px;
 }
-[data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-back-to-chat, #bbx-studio-nav-chat, #bbx-studio-nav-notes, #bbx-studio-nav-more) {
+[data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-back-to-chat) {
   background-color: #d9bd7f;
   background-image: linear-gradient(#f3e2b8cc, #e9d6a6cc), var(--gilt-art);
   background-size: auto, 480px auto;
@@ -138,7 +138,7 @@
 }
 
 @media (hover: hover) {
-  [data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-back-to-chat, #bbx-studio-nav-chat, #bbx-studio-nav-notes, #bbx-studio-nav-more):hover {
+  [data-chrome-theme="gilt"] .bbx-app-nav :is(#bbx-nav-place, #bbx-nav-here, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-back-to-chat):hover {
     background-image: linear-gradient(#f7ebc9cc, #efdfb4cc), var(--gilt-art);
     border-color: #dec990;
     border-bottom-color: #8a693c;

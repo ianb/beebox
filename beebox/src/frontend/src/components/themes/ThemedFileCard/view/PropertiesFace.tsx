@@ -12,7 +12,7 @@ import { CardAttachments } from "./CardAttachments";
 import { CardLastChange } from "./CardLastChange";
 import { Text } from "../../../ui/Text";
 import { MaterialContext } from "../../../ui/material";
-import { ThemeSwatchPicker } from "./ThemeSwatchPicker";
+import { ThemeSwatchPicker } from "../ThemeSwatchPicker";
 import { LandmarkSystemThemePicker } from "../../SystemThemePicker";
 import { isCardPath } from "../../../file-view-data";
 import { isRecord } from "@shared/is-record";

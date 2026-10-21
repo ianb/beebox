@@ -35,11 +35,6 @@
   border-radius: 18px 18px 14px 14px;
   box-shadow: 0 2px #518d8b24;
 }
-[data-chrome-theme="goldfish"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, .bbx-place-pill)[aria-pressed="true"] {
-  color: #fff8ee;
-  background: #626aab;
-  border-color: #aeb6df;
-}
 [data-chrome-theme="goldfish"] :is(.bbx-chat-reply-material, .bbx-chat-callout, .bbx-composer-material) {
   color: #294d4b;
   background: #f6f8ed;

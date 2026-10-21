@@ -28,11 +28,6 @@
   border: 1px solid #6376b0;
   border-radius: 5px 3px 5px 3px;
 }
-[data-chrome-theme="tempest"] .bbx-app-nav button[aria-pressed="true"]:not(#bbx-nav-errors) {
-  background: #b2e0ed;
-  color: #101d40;
-  border-color: #d0daff;
-}
 [data-chrome-theme="tempest"] :is(.bbx-chat-reply-material,.bbx-chat-callout,.bbx-composer-material) {
   color: var(--tempest-ink);
   background: linear-gradient(135deg,#102c40a8,#06172bb5 75%);
@@ -105,11 +100,6 @@
 
 }
 .bbx-card-theme[data-card-theme="tempest"] .bbx-card-heading { background: transparent; border-bottom: 0; }
-.bbx-card-theme[data-card-theme="tempest"] .bbx-themed-action {
-  color: #0b1b2b;
-  background: #a8d4e5;
-  border-radius: 12px 5px 12px 5px;
-}
 [data-chrome-theme="tempest"] :is(button,textarea,input):focus-visible:not(.bbx-card-theme *) {
   outline: 2px solid #d4dfff;
   outline-offset: 3px;

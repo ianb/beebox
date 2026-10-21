@@ -7,8 +7,10 @@ import { useBoxConversation } from "../chat/everywhere/conversation-context/cont
 
 import { useDoodlebitMotion } from "./useDoodlebitMotion";
 
+export type PresentationData = RouterOutput["presentation"]["get"];
+
 interface PresentationState {
-  data: RouterOutput["presentation"]["get"] | undefined;
+  data: PresentationData | undefined;
   error: string | null;
   retry: () => void;
 }
@@ -52,6 +54,12 @@ export function BoxPresentationProvider({ boxSlug, children }: { boxSlug: string
       </div>
     </PresentationContext.Provider>
   );
+}
+
+/** A fixed presentation, without the box query, for the theme studio's specimens. */
+export function PresentationSnapshot({ data, error, children }: { data: PresentationData; error: string | null; children: ReactNode }) {
+  const state = useMemo(() => ({ data, error, retry: () => {} }), [data, error]);
+  return <PresentationContext.Provider value={state}>{children}</PresentationContext.Provider>;
 }
 
 export function useBoxPresentation(): PresentationState | null { return useContext(PresentationContext); }
