@@ -45,7 +45,7 @@ export function ArchiveChatSection({ sessionId, huskPath, busy, onArchived }: {
       <h3 className="font-semibold text-warm-900">Archive instead</h3>
       <p className="mt-1">
         {dead
-          ? "Moves this chat’s card to _content/chat/archive/; nothing is deleted."
+          ? "Moves this chat’s card to the chat archive (chat/archive); nothing is deleted."
           : "This conversation can still be opened, so there is nothing to archive yet."}
       </p>
       {mutation.error ? (

@@ -229,8 +229,8 @@ which the issue asks for.
     `printCard(article)`: marks the card's `<article>` `data-print-target`,
     marks each ancestor `data-print-path`, sets
     `document.documentElement.dataset.printScope = "card"`, calls
-    `window.print()`, and removes every mark on `afterprint` (and in a
-    `finally`, since `print()` blocks in Chrome). Print CSS:
+    `window.print()`, and removes every mark on `afterprint` (not in a
+    `finally`: Firefox's `print()` returns before the page is printed). Print CSS:
     `html[data-print-scope="card"] body :not([data-print-path], [data-print-target], [data-print-target] *) { display: none !important; }`.
     Cmd-P without the button keeps today's behavior.
   - `components/themes/ThemedFileCard/view/CardPrintFooter.tsx`:
@@ -397,7 +397,7 @@ none
 | QR printed for a `localhost` origin | `isOffMachineOrigin` test | Footer omits QR | Clear (no QR) |
 | QR printed for a LAN IP the phone cannot reach | — | Accepted: path text still printed | Clear (scan fails) |
 | Print from a chat workspace prints transcript and other cards | Manual PDF with two open cards | `printCard` scope | Visible in preview |
-| Print marks left behind after print | — | `afterprint` + `finally` cleanup | Silent if broken → manual check |
+| Print marks left behind after print | `print-card.test.ts` | `afterprint` cleanup; the next Print clears stale marks first | Silent if broken → test |
 | Embed/bulk list wins dedup, link loses "Open card" | Provider collect test | Merge `cardPath` | Silent if broken → test |
 | `files.kind` query error | — | "(could not check)" state | Clear |
 | Contents button overlaps the Properties corner on a theme | Screenshot check, 2 themes | Sticky row starts below header | Visible |

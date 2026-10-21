@@ -1,6 +1,6 @@
 import { THEME_CATALOG, type ResolvedCardTheme } from "@shared/card-theme/core";
 import { themeOriginLabel } from "../../../../themes/registry";
-import { useState, type ReactNode } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import type { FileData, FileRenderer } from "../../../../file-type-registry";
 import { rendererDisplayLabel } from "../../../../lib/renderer-display-label";
 import { Button } from "../../../ui/Button";
@@ -17,6 +17,7 @@ import { isCardPath } from "../../../file-view-data";
 import { isRecord } from "@shared/is-record";
 import { resolveRelativePath } from "../../../../lib/view-url";
 import { copyFileText, copyImageFile } from "../../../../lib/copy-file-to-clipboard";
+import { printCard } from "../../../../lib/print-card";
 
 export interface ThemedFileCardPropertiesProps {
   data: FileData;
@@ -125,11 +126,18 @@ function imageCardFile(data: FileData): string | null {
   return typeof ref === "string" ? resolveRelativePath(data.path, ref) : null;
 }
 
-/** Copy the file's whole original text, and for an image card the image too. */
+/** Prints the card's front alone, from whichever card this Properties face belongs to. */
+function handlePrint(event: MouseEvent<HTMLButtonElement>) {
+  const card = event.currentTarget.closest<HTMLElement>(".bbx-card-surface");
+  if (card !== null) printCard(card);
+}
+
+/** Copy the file's whole original text, and for an image card the image too; or print the card. */
 function CopyContents({ data }: { data: FileData }) {
   const image = imageCardFile(data);
   return <div className="mt-2 flex flex-wrap gap-2">
     <CopyButton label="Copy original text" copy={() => copyFileText(data.path)} />
     {image === null ? null : <CopyButton label="Copy image" copy={() => copyImageFile(image)} />}
+    <Button size="sm" intent="ghost" onClick={handlePrint}>Print</Button>
   </div>;
 }
