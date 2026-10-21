@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type MouseEvent, type ReactNode } from "react";
 import { cn } from "../../lib/cn";
+import { useMaterial } from "./material";
 
 export type ButtonIntent =
   | "primary"
@@ -73,6 +74,9 @@ const INTENT_CLASSES: Record<ButtonIntent, string> = {
   ghost: "bg-transparent text-warm-700 hover:bg-warm-100",
 };
 
+/** A ghost button paints nothing, so on a card's material it takes the material's ink. */
+const MATERIAL_GHOST = "bg-transparent text-card-ink hover:bg-card-tint";
+
 const RECT_SIZE: Record<ButtonSize, string> = {
   sm: "px-2.5 py-1 text-sm gap-1",
   md: "px-4 py-2 text-base gap-1.5",
@@ -101,9 +105,10 @@ interface ClassBuildOpts {
   iconOnly: boolean;
   fullWidth: boolean;
   extra: string | undefined;
+  material: boolean;
 }
 
-function buildClasses({ intent, shape, size, iconOnly, fullWidth, extra }: ClassBuildOpts): string {
+function buildClasses({ intent, shape, size, iconOnly, fullWidth, extra, material }: ClassBuildOpts): string {
   const shapeClass = shape === "circle" ? "rounded-full" : "rounded";
   const sizeClass =
     shape === "circle"
@@ -112,7 +117,8 @@ function buildClasses({ intent, shape, size, iconOnly, fullWidth, extra }: Class
         ? ICON_ONLY_RECT_SIZE[size]
         : RECT_SIZE[size];
   const widthClass = fullWidth && shape === "rect" ? "w-full" : "";
-  return cn(BASE_CLASSES, INTENT_CLASSES[intent], shapeClass, sizeClass, widthClass, extra);
+  const intentClass = intent === "ghost" && material ? MATERIAL_GHOST : INTENT_CLASSES[intent];
+  return cn(BASE_CLASSES, intentClass, shapeClass, sizeClass, widthClass, extra);
 }
 
 // ---------- spinner ----------
@@ -270,6 +276,7 @@ export function Button(props: ButtonProps) {
     children,
   });
 
+  const material = useMaterial(undefined);
   const ariaLabel = label !== undefined ? label : undefined;
   const titleFallback = iconOnly && label !== undefined ? label : undefined;
 
@@ -281,7 +288,7 @@ export function Button(props: ButtonProps) {
       aria-label={ariaLabel}
       aria-busy={loading || undefined}
       title={"title" in rest && rest.title !== undefined ? rest.title : titleFallback}
-      className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className })}
+      className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className, material })}
       onClick={(e) => void handleClick(e)}
     >
       {content}

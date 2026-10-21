@@ -81,7 +81,7 @@
   --tw-prose-links: #5c42b5;
   color: #202020;
 }
-[data-chrome-theme="doodlebit"] .bbx-chat-callout > .text-accent-dark { color: #555; }
+[data-chrome-theme="doodlebit"] .bbx-chat-callout > .bbx-chat-callout-context { color: #555; }
 [data-chrome-theme="doodlebit"] .bbx-composer-material > section { background: transparent; border: 0; }
 [data-chrome-theme="doodlebit"] .bbx-composer-material textarea { color: #202020; background: #fff; }
 .bbx-card-theme[data-card-theme="doodlebit"] {

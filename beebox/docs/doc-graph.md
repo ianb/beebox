@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-21T01:56:08Z
-Total documents: 553
+Generated: 2026-10-21T18:12:20Z
+Total documents: 554
 
 ## Issues
 
@@ -16,7 +16,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/bloom-theme.md** — "Bloom system and card theme" (213 lines) · shipped history · implemented
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (679 lines) · shipped history · implemented
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
-- **docs/implemented-plans/card-reading.md** — "Card reading: print, contents menu, image-link lightbox, include lines" (508 lines) · shipped history · implemented
+- **docs/implemented-plans/card-reading.md** — "Card reading: print, contents menu, image-link lightbox, include lines" (516 lines) · shipped history · implemented
 - **docs/implemented-plans/card-self-refs.md** — "Card self-refs: attach-scope repair, bbx mv fixes, lock guard vocabulary" (367 lines) · shipped history · implemented
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (163 lines) · shipped history · implemented
 - **docs/implemented-plans/codex-diagnostic-parity.md** — "Provider-aware agent diagnostics" (168 lines) · shipped history · implemented
@@ -657,7 +657,7 @@ References:
 
 #### frontend.md
 
-Title: "Frontend Conventions" | 237 lines
+Title: "Frontend Conventions" | 245 lines
 
 Referenced by:
 - AGENTS.md:43 (link) — - React UI: `src/frontend/`; read [frontend.md](frontend.md) before UI work. It owns primitives, semantic colors, source
@@ -687,7 +687,7 @@ Referenced by:
 - docs/plans/narration-mode.md:199 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - docs/plans/operator-member-password-reset.md:103 (mention) — - **Frontend primitives.** `frontend.md:32-43` requires existing `Button`,
 - docs/plans/publish-sites-admin.md:165 (mention) — **Direction:** The starter is a conventional site-local React/Tailwind project with pinned own dependencies and its own
-- frontend.md:219 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
+- frontend.md:227 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
 - ../dev/devprocess-talk/inventory.md:821 (mention) — | Craft skills bbx-debug, bbx-frontend, bbx-guide-testing | 2026-06-20 | 2026-10-07 19e261eb9 | "Current models debug an
 - ../dev/devprocess-talk/reports/sweep-instructions.md:25 (mention) — - **Appeared:** 2026-03-06 bedf968cf "Rewrite CLAUDE.md for clarity and add self-improvement meta-instruction" (body: "A
 - ../dev/devprocess-talk/slides/04b-meta-instruction.md:16 (mention) — CLAUDE.md for an area, code-style.md or frontend.md for coding contracts, and
@@ -1115,7 +1115,7 @@ Referenced by:
 - docs/implemented-plans/remove-bbx-render.md:555 (mention) — errors (`docs/client-debug-log.md`).
 - docs/server/operations.md:176 (link) — For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox/client-debug.log`. See [`client-debug-l
 - docs/testing.md:95 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
-- frontend.md:135 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
+- frontend.md:143 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
 - ../.claude/skills/bbx-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:152 (mention) — - **Lives in:** `.claude/skills/field-probe/SKILL.md`; house pattern `beebox/src/frontend/src/lib/scroll-diagnostics/dia
 - ../issues/closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md:83 (mention) — entries land in the same sink tagged `[ios]` (`docs/client-debug-log.md`). If
@@ -2302,10 +2302,11 @@ References:
 
 #### docs/theme-authoring.md
 
-Title: "Authoring themes" | 57 lines | current reference
+Title: "Authoring themes" | 77 lines | current reference
 
 Referenced by:
-- frontend.md:222 (link) — [theme authoring studio](docs/theme-authoring.md).
+- docs/implemented-plans/theme-contrast-audit.md:54 (mention) — About 850 lines plus docs (theme-authoring.md, bbx-theme skill, tours doc:
+- frontend.md:230 (link) — [theme authoring studio](docs/theme-authoring.md).
 - ../.claude/skills/bbx-theme/SKILL.md:8 (mention) — Read `beebox/docs/theme-authoring.md` for the studio and material hooks.
 
 References:
@@ -2503,7 +2504,7 @@ Title: "Card themes" | 285 lines | current reference
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
 - docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
-- docs/theme-authoring.md:44 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
+- docs/theme-authoring.md:62 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
 - frontend.md:13 (link) — Properties; see [`docs/box/card-themes.md`](docs/box/card-themes.md) for the
 
 #### docs/box/history.md
@@ -4071,7 +4072,7 @@ References:
 
 #### docs/implemented-plans/card-reading.md **[ORPHAN]**
 
-Title: "Card reading: print, contents menu, image-link lightbox, include lines" | 508 lines | shipped history | implemented
+Title: "Card reading: print, contents menu, image-link lightbox, include lines" | 516 lines | shipped history | implemented
 
 References:
 - → ../issues/closed/features/2026-10-01-printable-cards.md (frontmatter)
@@ -7176,6 +7177,17 @@ References:
 - → ../issues/closed/code-quality/2026-10-15-themed-file-card-unit-layout.md (frontmatter)
 - → frontend.md (mention)
 
+#### docs/implemented-plans/theme-contrast-audit.md
+
+Title: "Theme contrast audit in the theme loop" | 347 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md:45 (mention) — `beebox/docs/implemented-plans/theme-contrast-audit.md`). The theme misses it found are
+
+References:
+- → ../issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md (frontmatter)
+- → docs/theme-authoring.md (mention)
+
 #### docs/implemented-plans/todo-annotation.md
 
 Title: "`{% todo %}` — universal todo annotation" | 599 lines | shipped history | implemented
@@ -9858,7 +9870,7 @@ References:
 
 #### docs/testing/tours.md
 
-Title: "Tours" | 166 lines | current reference
+Title: "Tours" | 168 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/card-themes.md:84 (mention) — | `docs/tours.md`, Running/Artifacts: `bin/tour`; tours "are still not a test gate" | Reuse the scripted browser tour fr
@@ -9868,7 +9880,7 @@ Referenced by:
 - docs/plans/agent-points-at-ui.md:135 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
 - docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
 - docs/testing.md:50 (link) — | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of second
-- frontend.md:137 (link) — Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `dupl
+- frontend.md:145 (link) — Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `dupl
 - ../.claude/skills/bbx-plan/TEMPLATE.md:166 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
 - ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:231 (mention) — - **Lives in:** `beebox/docs/testing/tours.md`, `beebox/docs/testing/smoke.md`, `schedules/smoke-review/`, `schedules/to
 - ../dev/devprocess-talk/reports/sweep-quality.md:107 (mention) — - **Lives in:** `beebox/test/tours/` (10 `.tour.` files: `git ls-files beebox | grep -c '\.tour\.'`), `beebox/docs/testi

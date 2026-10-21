@@ -5,6 +5,14 @@ import { Markdown } from "../../../components/Markdown/body";
 import { Button } from "../../../components/ui/Button";
 import { CalloutStack } from "../../../components/chat/CalloutBlock";
 import { ComposerSpecimen } from "./ComposerStatesHarness";
+import { Card } from "../../../components/ui/Card";
+import { Heading } from "../../../components/ui/Heading";
+import { Hint } from "../../../components/ui/Hint";
+import { Stack } from "../../../components/ui/Stack";
+import { Text } from "../../../components/ui/Text";
+import { SystemThemeSwatches } from "../../../components/themes/SystemThemePicker";
+import { EmptyChat } from "../../../components/chat/EmptyChat";
+
 
 import { useDoodlebitMotion } from "../../../components/themes/useDoodlebitMotion";
 
@@ -23,6 +31,19 @@ const SAMPLE = `A small collection of ideas for a neighborhood seed exchange. **
 - Save a few extras for visitors
 
 > Small beginnings deserve a little space to grow.
+
+{% quote from="Dana" treatment="layered" %}
+Context: notes from the planning call. **Dana** asked for *shorter* labels.
+
+### Aug 1
+- **Dana:** Can we open at ten?
+- **Lee:** Yes, and bring \`tape\`.
+{% /quote %}
+
+> **Reminder:** the hall closes at noon.
+>
+> - Sweep the tables
+> - Return the keys
 
 | Variety | Packets |
 | --- | ---: |
@@ -93,14 +114,26 @@ export function ThemeStudioHarness() {
       <NavigationSample />
       <div className="grid lg:grid-cols-2 gap-4 p-3 sm:p-5 items-start">
         <ConversationSample />
-        <CardSample name={cardName} stock={search.cardStock} />
+        <div className="min-w-0 space-y-4">
+          <CardSample name={cardName} stock={search.cardStock} />
+          <InterfaceSample name={cardName} stock={search.cardStock} />
+        </div>
       </div>
     </div>
   </div>;
 }
 
+const OPEN_QUESTION = {
+  path: "_content/questions/seed-table.question.card", prompt: "Should the welcome table go by the door or the window?",
+  memo: "The hall opens at ten.", inputType: "select" as const, options: ["Door", "Window"], optionsBeyond: 0, more: 2,
+};
+
 function ConversationSample() {
   return <section aria-label="Conversation styling sample" className="min-w-0">
+    <div className="flex py-4">
+      <EmptyChat openers={["Plan the seed exchange"]} onSendOpener={() => "accepted"} openQuestion={OPEN_QUESTION}
+        onFocusComposer={noop} onQuestionNotNow={noop} onOpenQuestions={noop} />
+    </div>
     <div className="space-y-4 pb-4">
       <UserMessageSample />
       <div className="bbx-chat-reply-material bg-white rounded-lg px-4 py-3 text-warm-900">
@@ -132,6 +165,21 @@ function CardSample({ name, stock }: { name: string; stock: string }) {
       <ReadingSample />
     </CardThemeSurface>
   </div>;
+}
+
+function InterfaceSample({ name, stock }: { name: string; stock: string }) {
+  // Interface cards (Settings) render app panels inside the card material.
+  return <CardThemeSurface theme={{ choice: { name, stock }, origin: { kind: "engine" }, problem: null }}
+    title="Settings" detail="Interface card" symbol={null} boxSlug={undefined} mode="companion" properties={null}>
+    <div className="bbx-card-content">
+      <Card as="section" shadow material aria-label="System theme"><Stack gap="sm">
+        <Heading level={2}>System theme</Heading>
+        <Hint>Choose the toolbar and workspace surface for this box.</Hint>
+        <SystemThemeSwatches busy={false} choice={{ name: "plain", stock: "neutral" }} disabled={false} idPrefix="bbx-studio-system-theme" onSelect={noop} />
+        <Text size="xs" tone="muted">This box has its own system theme.</Text>
+      </Stack></Card>
+    </div>
+  </CardThemeSurface>;
 }
 
 function NavigationSample() {

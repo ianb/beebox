@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/cn";
+import { useMaterial } from "./material";
 
 export type TextSize = "xs" | "sm" | "base" | "lg" | "xl" | "2xl";
 export type TextTone = "default" | "muted" | "subtle" | "emphasis" | "strong" | "danger";
@@ -30,7 +31,7 @@ export interface TextProps {
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
   className?: string;
   title?: string;
-  /** Take the colour from the enclosing card's material (`card-ink`/`card-soft`) instead of the app palette. */
+  /** Take the colour from the enclosing card's material (`card-ink`/`card-soft`) instead of the app palette. Defaults to the nearest Card's. */
   material?: boolean;
 }
 
@@ -88,6 +89,7 @@ export function Text({
   title,
   material,
 }: TextProps) {
+  material = useMaterial(material);
   tone = tone ?? "default";
   size = size ?? "base";
   weight = weight ?? "normal";

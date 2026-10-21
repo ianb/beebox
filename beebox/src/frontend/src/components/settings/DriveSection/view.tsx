@@ -17,6 +17,7 @@ import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
 import { Hint } from "../../ui/Hint";
 import { Heading } from "../../ui/Heading";
+import { Card } from "../../ui/Card";
 import { GoogleConnectLink } from "../GoogleConnectLink";
 import { DriveMountRow } from "./DriveMountRow";
 import { AddPointerForm, MountFolderForm } from "./DriveMountForms";
@@ -24,10 +25,10 @@ import { DriveScheduleLine } from "./DriveScheduleLine";
 
 function DriveShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-lg font-semibold text-warm-800 mb-2">Google Drive</h2>
+    <Card material padding="lg" border="none" shadow>
+      <Heading level={2} className="mb-2">Google Drive</Heading>
       {children}
-    </div>
+    </Card>
   );
 }
 

@@ -68,8 +68,6 @@
   }
 }
 .bbx-card-theme[data-card-theme="tempest"], [data-chrome-theme="tempest"] .bbx-composer-material { color-scheme: dark; }
-.bbx-card-theme[data-card-theme="tempest"] .bbx-system-theme-button { color: #173345; }
-.bbx-card-theme[data-card-theme="tempest"] .bbx-landmark-system-theme .bbx-system-theme-button { color: #e0eef4; }
 [data-chrome-theme="tempest"] .bbx-chat-reply-material .bg-warm-50:not(.bbx-card-theme *) { color: #302f2d; }
 @media print {
  .bbx-card-theme[data-card-theme="tempest"], [data-chrome-theme="tempest"] .bbx-composer-material { color-scheme: light; backdrop-filter: none; }

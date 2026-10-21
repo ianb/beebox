@@ -9,6 +9,8 @@ const palette = {
     DEFAULT: "#E8A838",
     light: "#F0C56E",
     dark: "#C98A20",
+    // Gold as text on light paper (5:1 on gold-50); `dark` is for fills.
+    700: "#8A6417",
     50: "#FDF6E8",
     100: "#FBE9C5",
   },
@@ -33,7 +35,8 @@ const palette = {
     100: "#E4D6E9",
   },
   iris: {
-    DEFAULT: "#7B6FB0",
+    // White text on it meets 4.5:1 (the user bubble); #7B6FB0 was 4.43.
+    DEFAULT: "#776BAC",
     light: "#9B92C8",
     dark: "#5E5490",
     50: "#EEEDF5",

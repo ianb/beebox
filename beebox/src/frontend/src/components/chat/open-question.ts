@@ -5,7 +5,7 @@
  * the others. Pure, so the choice is testable without a DOM.
  */
 
-import type { QuestionInfo } from "../../../questions/QuestionForm";
+import type { QuestionInfo } from "../questions/QuestionForm";
 
 /** What the empty chat shows and the send carries: one pending question card. */
 export interface OpenQuestion {

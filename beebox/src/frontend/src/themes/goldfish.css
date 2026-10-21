@@ -61,7 +61,7 @@
   --tw-prose-links: #27686c;
   color: #294d4b;
 }
-[data-chrome-theme="goldfish"] .bbx-chat-callout > .text-accent-dark {
+[data-chrome-theme="goldfish"] .bbx-chat-callout > .bbx-chat-callout-context {
   color: #566b58;
 }
 [data-chrome-theme="goldfish"] .bbx-composer-material > section {
@@ -89,7 +89,7 @@
 .bbx-card-theme[data-card-theme="goldfish"] {
   --bbx-paper: #f6f8ed;
   --bbx-ink: #294d4b;
-  --bbx-ink-soft: #617364;
+  --bbx-ink-soft: #56675a;
   --bbx-pen: #27686c;
   --bbx-edge: #93bfaf;
   --bbx-underlay: #b1d8c6;
@@ -135,7 +135,7 @@
   position: relative;
   isolation: isolate;
   overflow: clip;
-  background: linear-gradient(110deg, #174e65e8, #247d83d9 58%, #525e97e3), url("./goldfish-underwater.webp") center 12% / 1300px auto;
+  background: linear-gradient(110deg, #174e65e8, #247d83d9 58%, #525e97e3), url("./goldfish-underwater.webp") center 12% / max(1300px, 100%) auto;
 }
 [data-chrome-theme="goldfish"] .bbx-app-nav::before {
   content: "";

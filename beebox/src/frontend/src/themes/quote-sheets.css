@@ -15,12 +15,14 @@
   z-index: -1;
   pointer-events: none;
   border: 1px solid #6b573223;
-  border-top-color: #ffffffcc;
+  /* A light catch on the top edge and corner. Dark papers set a fainter
+     one: white at these strengths greys a dark slip. */
+  border-top-color: var(--bbx-slip-edge-light, #ffffffcc);
   border-radius: var(--bbx-sheet-radius, 8px);
   background-color: var(--bbx-quote-layer-paper, #fff);
   background-image:
     var(--bbx-slip-grain, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='fiber'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' seed='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.1' filter='url(%23fiber)'/%3E%3C/svg%3E")),
-    linear-gradient(175deg, #ffffff35, transparent 65%, #8467350c);
+    linear-gradient(175deg, var(--bbx-slip-light, #ffffff35), transparent 65%, #8467350c);
   background-size: 160px 160px, auto;
   transform: rotate(var(--bbx-slip-angle, -0.25deg));
   transform-origin: 45% 15%;

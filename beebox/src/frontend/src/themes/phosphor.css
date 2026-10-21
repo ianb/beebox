@@ -32,7 +32,7 @@
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper::before{content:"> ";color:#44d45d;font-weight:700;}
 [data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-callout) .prose:not(.bbx-card-theme *){color:#82ed91;--tw-prose-body:#82ed91;--tw-prose-bold:#b5ffc0;--tw-prose-headings:#a4ffb0;--tw-prose-links:#b5ffc0;--tw-prose-code:#b5ffc0;font-family:inherit;}
 [data-chrome-theme="phosphor"] .bbx-chat-callout{background:#05170a;}
-[data-chrome-theme="phosphor"] .bbx-chat-callout>.text-accent-dark{color:#58be6d;}
+[data-chrome-theme="phosphor"] .bbx-chat-callout>.bbx-chat-callout-context{color:#58be6d;}
 [data-chrome-theme="phosphor"] .bbx-composer-material{position:relative;background:#03130a;}
 [data-chrome-theme="phosphor"] .bbx-composer-material::before{content:"┌─ COMMAND ──────────────────────────────────────────────";display:block;color:#51c468;font:11px/1 monospace;white-space:nowrap;overflow:hidden;margin-bottom:9px;}
 [data-chrome-theme="phosphor"] .bbx-composer-material>div.bg-gradient-to-r{background:transparent;}
@@ -60,7 +60,7 @@
 [data-chrome-theme="phosphor"] :is(#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic,#bbx-composer-dictation-cancel,#bbx-composer-dictation-edit,#bbx-composer-dictation-cancel-mobile,#bbx-composer-dictation-edit-mobile):enabled{color:#a7ffb1;background:#092313;}
 [data-chrome-theme="phosphor"] :is(#bbx-composer-send,#bbx-composer-send-mobile):disabled{color:#3f7a4a;background:transparent;}
 .bbx-card-theme[data-card-theme="phosphor"]{
-  --bbx-paper:#041108;--bbx-ink:#83ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#a7ffb1;--bbx-edge:#328646;--bbx-underlay:#020804;--bbx-tint:#082311;--bbx-sheet:#082311;--bbx-quote-paper:#082311;--bbx-quote-layer-paper:#082311;--bbx-blockquote-paper:#082311;--bbx-blockquote-padding:.6em 1em;--bbx-blockquote-edge:0;--bbx-code-paper:#020804;--bbx-code-ink:#a7ffb1;--bbx-sheet-radius:0;--bbx-selection:#a7ffb1;--bbx-selection-ink:#020804;--bbx-bullet:#70ec83;--bbx-counter:#70ec83;color-scheme:dark;
+  --bbx-paper:#041108;--bbx-ink:#83ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#a7ffb1;--bbx-edge:#328646;--bbx-underlay:#020804;--bbx-tint:#082311;--bbx-sheet:#082311;--bbx-quote-paper:#082311;--bbx-quote-layer-paper:#082311;--bbx-blockquote-paper:#082311;--bbx-blockquote-padding:.6em 1em;--bbx-blockquote-edge:0;--bbx-code-paper:#020804;--bbx-code-ink:#a7ffb1;--bbx-sheet-radius:0;--bbx-slip-light:#ffffff0c;--bbx-slip-edge-light:#ffffff26;--bbx-selection:#a7ffb1;--bbx-selection-ink:#020804;--bbx-bullet:#70ec83;--bbx-counter:#70ec83;color-scheme:dark;
   font-family:"IBM Plex Mono","SFMono-Regular",Consolas,monospace;
 }
 .bbx-card-surface[data-card-theme="phosphor"]{background:#041108;border:0;box-shadow:none;}

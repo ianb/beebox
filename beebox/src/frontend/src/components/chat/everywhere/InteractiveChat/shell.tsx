@@ -24,7 +24,7 @@ import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../../../lib/trpc/client";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import { cardTarget } from "../../workspace/use-open-beside/hook";
-import { pickOpenQuestion, type OpenQuestion } from "./open-question";
+import { pickOpenQuestion, type OpenQuestion } from "../../open-question";
 import { useBusSubscription } from "../../../../hooks/useBusSubscription";
 
 import { useEmissionDispatch } from "./dispatch";

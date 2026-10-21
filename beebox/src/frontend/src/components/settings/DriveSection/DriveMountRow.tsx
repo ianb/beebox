@@ -152,7 +152,7 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
   return (
     <Stack
       gap="xs"
-      className="px-3 py-3 rounded bg-warm-50"
+      className="px-3 py-3 rounded bg-card-tint"
       {...bbxSource("card", mount.cardPath)}
     >
       <Row gap="sm" align="center" wrap>
