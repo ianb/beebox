@@ -94,7 +94,7 @@ export function CardBody({
   const { boxSlug } = useParams({ strict: false });
   // Inline figure embeds: `![](view:…figure.card)` renders the figure in place.
   const components = useMemo(
-    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined }),
+    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined, openImageLink: undefined }),
     [onNavigate, data.path, boxSlug],
   );
 
