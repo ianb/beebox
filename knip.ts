@@ -89,6 +89,10 @@ const config: KnipConfig = {
         "react-compiler-runtime",
         // Config block lives here, runner is the root .husky/pre-commit.
         "lint-staged",
+        // Never imported: test/helpers/dom-globals.ts imports
+        // @happy-dom/global-registrator, which takes happy-dom as ^20.14.6.
+        // Listing it here pins the shim itself (docs/implemented-plans/frontend-dom-harness.md).
+        "happy-dom",
       ],
     },
   },
@@ -118,6 +122,8 @@ const config: KnipConfig = {
     "tail",
     // box-growth/bytes.ts measures disk use with `du -sk`.
     "du",
+    // test/lib/typescript/syntax.test.ts counts its own child processes with `pgrep -P`.
+    "pgrep",
     // beebox's own bin, invoked as an installed command by the smoke test.
     "bbx",
     // beebox package scripts, invoked across the workspace boundary:
