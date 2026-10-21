@@ -2,7 +2,7 @@
 // tolerates texture but not a band, faded groups, and material surfaces.
 
 import { test } from "tap";
-import { composite, contrastRatio, scoreMaterials, scoreRuns, type RawImage } from "./tour-lib/contrast.js";
+import { composite, contrastRatio, mergeContrastSteps, scoreMaterials, scoreRuns, type ContrastFailure, type RawImage } from "./tour-lib/contrast.js";
 import type { Material, TextRun } from "./tour-lib/contrast-page.js";
 
 type Rgb = [number, number, number];
@@ -89,5 +89,30 @@ void test("readable text on an undeclared surface that inverts the paper is a su
 
 void test("token pairs below AA are named by token", (t) => {
   t.check(scoreMaterials([dark]).map((f) => f.kind === "token" && `${f.fg} on ${f.bg} ${String(f.ratio)}`), ["--bbx-ink on --bbx-sheet 2.68"]);
+  t.end();
+});
+
+void test("audits at several scroll positions merge by run and line", (t) => {
+  const text = (id: number, ratio: number): ContrastFailure => ({ kind: "text", run: id, selector: "p", text: "Sample", fg: "#777777", bg: "#ffffff", ratio, required: 4.5 });
+  const token: ContrastFailure = { kind: "token", material: 0, theme: "gilt/leaf", fg: "--bbx-ink-soft", bg: "--bbx-paper", ratio: 3.9, required: 4.5 };
+  const merged = mergeContrastSteps([
+    // Top of the page: run 1 whole; run 2's second line cut by the bottom edge; runs 3 and 5 below.
+    { failures: [text(2, 4.1), token], runs: [1, 2], lines: [{ id: 1, total: 1, whole: [0] }, { id: 2, total: 2, whole: [0] }, { id: 3, total: 3, whole: [] }, { id: 5, total: 1, whole: [] }], unmeasured: [] },
+    // One step down: run 2's second line, failing lower; run 3 taller than the screen; run 4 covered.
+    { failures: [text(2, 3.8), token], runs: [2, 3], lines: [{ id: 2, total: 2, whole: [1] }, { id: 3, total: 3, whole: [0, 1] }, { id: 4, total: 1, whole: [] }], unmeasured: [4] },
+    // Last step: run 3's last line, so every line of it was seen; run 5 never was.
+    { failures: [], runs: [3], lines: [{ id: 3, total: 3, whole: [2] }, { id: 4, total: 1, whole: [] }], unmeasured: [4] },
+  ]);
+  t.check(merged, { failures: [text(2, 3.8), token], runs: 3, offscreen: 1, unmeasured: 1 });
+  t.end();
+});
+
+void test("a line box with a fractional edge samples only the pixels it covers whole", (t) => {
+  // Row 0 is the panel above a scroller; the line starts 0.6px into it.
+  const width = 100;
+  const data = new Uint8Array(width * 10 * 3).fill(255);
+  data.fill(0xa0, 0, width * 3);
+  const edge: RawImage = { data, width, height: 10, channels: 3 };
+  t.check(scoreRuns(edge, page([run({ fg: [0x76, 0x76, 0x76, 1], rects: [{ x: 0, y: 0.6, w: 100, h: 4.4 }] })])), []);
   t.end();
 });

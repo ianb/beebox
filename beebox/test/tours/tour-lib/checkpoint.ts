@@ -9,7 +9,7 @@ import path from "node:path";
 import type { BrowseSession } from "./browse.js";
 import { runAxe } from "./axe.js";
 import { auditBackdrops, describeBackdropFailure } from "./backdrop.js";
-import { auditContrast, describeContrastFailure } from "./contrast.js";
+import { auditContrast, describeContrastFailure, mergeContrastSteps } from "./contrast.js";
 import type { CheckpointArtifact, Finding, ViewportSpec } from "./types.js";
 
 export interface CaptureInput {
@@ -96,7 +96,7 @@ export async function captureCheckpoint(input: CaptureInput): Promise<CaptureRes
 async function auditCheckpointContrast(input: CaptureInput & { reportPath: string }): Promise<void> {
   const { name, viewport, session, pushFinding, reportPath } = input;
   try {
-    const result = await auditContrast(session, { outline: false });
+    const result = mergeContrastSteps([await auditContrast(session, { outline: false })]);
     await writeFile(reportPath, JSON.stringify(result, null, 2), "utf8");
     const misses = result.failures.length + result.unmeasured;
     if (misses === 0) return;
