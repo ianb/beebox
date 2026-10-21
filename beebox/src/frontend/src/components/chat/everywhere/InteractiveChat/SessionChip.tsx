@@ -70,21 +70,21 @@ function RootPanel({
       <MenuItem id="bbx-session-recent" onClick={onOpenSessions} keepOpen>
         <span className="flex justify-between gap-2 w-full">
           <span>Recent chats</span>
-          <span className="text-warm-500">›</span>
+          <span className="text-warm-600">›</span>
         </span>
       </MenuItem>
       <MarkDoneItem sessionId={sessionId} />
       <MenuItem id="bbx-session-model" onClick={onOpenModel} keepOpen disabled={modelSelectionDisabled}>
         <span className="flex justify-between gap-2 w-full">
           <span>Model</span>
-          <span className="text-warm-500 truncate">{currentModelLabel} ›</span>
+          <span className="text-warm-700 truncate">{currentModelLabel} ›</span>
         </span>
       </MenuItem>
       <MenuDivider />
       <MenuItem id="bbx-session-advanced" onClick={onOpenAdvanced} keepOpen>
         <span className="flex justify-between gap-2 w-full">
           <span>Advanced</span>
-          <span className="text-warm-500">›</span>
+          <span className="text-warm-600">›</span>
         </span>
       </MenuItem>
     </>
@@ -96,7 +96,7 @@ function SessionsPanel({ onBack, contextDir }: { onBack: () => void; contextDir:
   return (
     <>
       <MenuItem id="bbx-session-recent-back" onClick={onBack} keepOpen>
-        <span className="text-warm-500">‹ Recent chats</span>
+        <span className="text-warm-700">‹ Recent chats</span>
       </MenuItem>
       <MenuDivider />
       <SessionListPanel contextDir={contextDir} />
