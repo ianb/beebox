@@ -10,5 +10,7 @@ export function isOffMachineOrigin(url: URL): boolean {
   if (host === "localhost" || host.endsWith(".localhost")) return false;
   if (host === "::1" || host === "0.0.0.0" || host === "") return false;
   if (/^127(?:\.\d{1,3}){3}$/.test(host)) return false;
+  // An IPv4-mapped loopback (`[::ffff:127.0.0.1]`) parses to `::ffff:7f..:..`.
+  if (/^::ffff:(?:7f[\da-f]{2}:|127\.)/.test(host)) return false;
   return url.protocol === "http:" || url.protocol === "https:";
 }

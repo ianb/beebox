@@ -28,6 +28,12 @@ void test("lines that only look like includes stay text", async (t) => {
   t.check(rewriteIncludeLines(source), source);
 });
 
+void test("an indented fence marker four spaces in does not close the fence", async (t) => {
+  // Four spaces is code-block text, not a closing fence (CommonMark: at most three).
+  const source = "```\n    ```\n@MAP.md\n```\n";
+  t.check(rewriteIncludeLines(source), source);
+});
+
 void test("include lines inside fenced code are left alone", async (t) => {
   const source = "```text\n@MAP.md\n```\n@MAP.md\n~~~~\n@x.md\n~~~~\n";
   t.check(

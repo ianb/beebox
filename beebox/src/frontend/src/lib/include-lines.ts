@@ -17,6 +17,12 @@ const INCLUDE_LINE = /^@([^\s"%'\\{}]+)\s*$/;
 
 const FENCE_OPEN = /^ {0,3}(`{3,}|~{3,})/;
 
+/** A closing fence: up to three spaces, then at least the opening run of the same character, then nothing. */
+function closesFence(line: string, open: string): boolean {
+  const close = /^ {0,3}(`+|~+)\s*$/.exec(line)?.[1];
+  return close !== undefined && close[0] === open[0] && close.length >= open.length;
+}
+
 /** Whether `path` names an agent instruction file, whose include lines render as includes. */
 export function isInstructionFile(path: string | undefined): boolean {
   return path !== undefined && INSTRUCTION_FILE.test(path);
@@ -30,7 +36,7 @@ export function rewriteIncludeLines(source: string): string {
   let fence: string | null = null;
   return source.split("\n").map((line) => {
     if (fence !== null) {
-      if (line.trimStart().startsWith(fence) && line.trim().replace(/[`~]/g, "") === "") fence = null;
+      if (closesFence(line, fence)) fence = null;
       return line;
     }
     const open = FENCE_OPEN.exec(line);

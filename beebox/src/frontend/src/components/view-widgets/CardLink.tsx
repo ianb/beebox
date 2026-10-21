@@ -58,7 +58,7 @@ export function CardLink({ cardRef, view, params, children }: CardLinkProps) {
     );
   }
   const href = `/${host.boxSlug}/views/${serializeViewUrl(target)}`;
-  const imageSrc = lightbox === null || view !== undefined ? null : imageLinkSrc(host.boxSlug, target.path);
+  const imageSrc = lightbox === null || view !== undefined || target.viewer !== null ? null : imageLinkSrc(host.boxSlug, target.path);
   const openThis = () => {
     host.openCard(cardRef, {
       label: typeof label === "string" ? label : undefined,

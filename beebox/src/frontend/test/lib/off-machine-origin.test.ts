@@ -12,8 +12,9 @@ void test("loopback origins are this machine only", async (t) => {
     "http://127.4.5.6/",
     "http://[::1]:3000/",
     "http://0.0.0.0:3000/",
+    "http://[::ffff:127.0.0.1]:3000/",
   ];
-  t.check(urls.map((u) => isOffMachineOrigin(new URL(u))), [false, false, false, false, false, false]);
+  t.check(urls.map((u) => isOffMachineOrigin(new URL(u))), [false, false, false, false, false, false, false]);
 });
 
 void test("LAN, tailnet and public origins can be reached from a phone", async (t) => {
