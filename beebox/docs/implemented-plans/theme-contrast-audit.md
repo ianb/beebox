@@ -1,6 +1,6 @@
 ---
 title: "Theme contrast audit in the theme loop"
-status: draft
+status: implemented
 workstream: theme-audit
 issues:
   - ../../../issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md
@@ -12,6 +12,8 @@ selector patch. This plan adds a contrast audit that measures what a reader
 sees, puts it in the theme author's screenshot step, runs it on every tour
 checkpoint and at landing, and fixes the defects it finds that keep a theme's
 look. Changes that shift a theme's identity go to the boxholder as decisions.
+
+**Landed beyond this plan:** a backdrop audit (`bin/theme-check` and tour checkpoints) that flags artwork that repeats, leaves a bare strip, or is stretched; artwork is cropped, not stretched. The audit and its decisions are in the code under `beebox/test/tours/`.
 
 **Issues addressed:** `issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md`
 (re-measures and supersedes its axe-only inventory). Related, not closed here:

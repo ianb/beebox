@@ -42,6 +42,6 @@ axe's rule stays off because it declines to measure themed text (it marks
 text over images and gradients "incomplete"). Every tour checkpoint and
 `bin/theme-check` now run a pixel contrast audit instead
 (`beebox/test/tours/tour-lib/contrast.ts`; plan
-`beebox/docs/plans/theme-contrast-audit.md`). The theme misses it found are
+`beebox/docs/implemented-plans/theme-contrast-audit.md`). The theme misses it found are
 fixed or presented as decisions. The base warm-scale choice (directions 1
 and 2 above) moved to `issues/code-quality/2026-10-21-base-warm-text-scale-contrast.md`.
