@@ -7,8 +7,8 @@
  */
 import type { CaptureRecord } from "./store.js";
 
-export const FILING_SETTLE_MS = 2 * 60 * 1000;
-export const FILING_MAX_KICKS = 6;
+const FILING_SETTLE_MS = 2 * 60 * 1000;
+const FILING_MAX_KICKS = 6;
 export const PLACEHOLDER_TITLE = "Saved capture";
 export const FILING_WAITING_ERROR = "Filing is waiting for the box's next cycle.";
 const CAPTURES_PREFIX = "_content/captures/";
@@ -40,7 +40,7 @@ export interface FilingPlan {
   exhausted: string[];
 }
 
-export function isFiled(doc: FilingDoc): boolean {
+function isFiled(doc: FilingDoc): boolean {
   return doc === null || !doc.ref.startsWith(CAPTURES_PREFIX) || doc.title !== PLACEHOLDER_TITLE;
 }
 

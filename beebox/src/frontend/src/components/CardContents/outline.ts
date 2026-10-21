@@ -21,7 +21,7 @@ export interface OutlineItem extends OutlineEntry {
  * Fewer headings than this and the document is short enough to scroll; the
  * menu stays out of the way.
  */
-export const MIN_OUTLINE_ENTRIES = 4;
+const MIN_OUTLINE_ENTRIES = 4;
 
 /** Deeper headings than this are detail, not structure. */
 const MAX_OUTLINE_LEVEL = 3;

@@ -76,7 +76,7 @@ export function errorMessage(e: unknown): string {
  * value is preserved as `.cause` for inspection; the message is a best-effort
  * rendering of it.
  */
-export class NonError extends Error {
+class NonError extends Error {
   constructor(value: unknown) {
     super(describeThrowable(value), { cause: value });
     this.name = "NonError";

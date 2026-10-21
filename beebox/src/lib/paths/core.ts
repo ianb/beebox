@@ -182,17 +182,6 @@ export function parseCardName(filename: string): { name: string; type: string } 
 }
 
 /**
- * Build a card filename from components.
- *
- * @param name - The card name (e.g., "Meeting_Tomorrow")
- * @param type - The card type (e.g., "email-thread")
- * @returns The card filename (e.g., "Meeting_Tomorrow.email-thread.card")
- */
-export function buildCardName(name: string, type: string): string {
-  return `${name}.${type}.card`;
-}
-
-/**
  * Check if a path is a card file.
  *
  * @param filePath - The path to check
