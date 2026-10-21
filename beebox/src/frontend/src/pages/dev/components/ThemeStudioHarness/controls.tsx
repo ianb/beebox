@@ -94,7 +94,7 @@ function ThemeFields({ idPrefix, label, names, theme, stock, onChange }: {
     <OtherPicker id={`${idPrefix}-theme`} label="Theme" options={names} value={theme} labelOf={(name) => THEME_CATALOG.find((item) => item.name === name)?.label}
       // A typed name outside the catalog and the studies keeps the stock, so a draft can try one.
       onChange={(name) => onChange(name, names.includes(name) ? defaultStockOf(name) : stock)} />
-    <OtherPicker id={`${idPrefix}-stock`} label="Stock" options={stocks} value={stock} onChange={(next) => onChange(theme, next)} />
+    <OtherPicker key={theme} id={`${idPrefix}-stock`} label="Stock" options={stocks} value={stock} onChange={(next) => onChange(theme, next)} />
     {notice === null ? null : <p role="status" className="text-danger-dark">{notice}</p>}
   </fieldset>;
 }
