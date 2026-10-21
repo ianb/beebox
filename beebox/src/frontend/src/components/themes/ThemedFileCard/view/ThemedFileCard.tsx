@@ -6,6 +6,7 @@ import { resolveCardTheme } from "@shared/card-theme/core";
 import { CardThemeSurface } from "../CardThemeSurface";
 import { ThemedFileCardProperties } from "./PropertiesFace";
 import { CardPrintFooter } from "./CardPrintFooter";
+import { isOffMachineOrigin } from "../../../../lib/off-machine-origin";
 import { useBoxPresentation } from "../../BoxPresentationProvider";
 import type { FileData, FileRenderer } from "../../../../file-type-registry";
 import type { FileViewMode } from "../../../file-view-types";
@@ -52,15 +53,17 @@ export function ThemedFileCard({ data, mode, renderers, active, target, hasExpli
   const symbol = isCard ? readCardSymbol(data.frontmatter?.symbol, { cardPath: data.path.replace(/^\//, "") }) : null;
   const error = presentation?.error ?? theme.problem?.message;
   function handlePresentationRetry() { presentation?.retry(); }
+  const here = new URL(window.location.href);
   return <CardThemeSurface
     theme={theme} title={title} detail={data.detail} symbol={symbol} boxSlug={boxSlug} mode={mode}
     properties={<ThemedFileCardProperties
       data={data} theme={theme} boxSlug={boxSlug} renderers={renderers} active={active}
       hasExplicitView={hasExplicitView} onSelect={onSelect} onNavigate={onNavigate}
-      actions={isCard ? <CardActions target={target} onTrashed={onClose} vertical="above" /> : null} />}
+      actions={isCard ? <CardActions target={target} onTrashed={onClose} vertical="above" /> : null}
+      qrReachable={isOffMachineOrigin(here)} />}
     actions={mode === "chat" || onOpenInPanel ? <CardSurfaceActions mode={mode} path={data.path} onOpenInPanel={onOpenInPanel} /> : null}
     problem={error ? <div className="bbx-card-problem" role="status">Appearance could not be applied: {error}{presentation ? <Button size="sm" intent="ghost" onClick={handlePresentationRetry}>Retry</Button> : null}</div> : null}
-  >{children}<CardPrintFooter boxSlug={boxSlug} path={data.path} here={new URL(window.location.href)} /></CardThemeSurface>;
+  >{children}<CardPrintFooter boxSlug={boxSlug} path={data.path} here={here} /></CardThemeSurface>;
 }
 
 function CardSurfaceActions({ mode, path, onOpenInPanel }: {

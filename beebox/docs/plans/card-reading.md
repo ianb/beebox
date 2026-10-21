@@ -447,6 +447,14 @@ navigates as before when it is `false`. So a click never does nothing.
 - Including the included file's content in the widget: the issue says it need
   not.
 
+## Boxholder follow-up (2026-10-20)
+
+The QR code is opt-in, never the default. Properties shows an "Add QR code"
+checkbox beside Print, unticked, and only when `isOffMachineOrigin` holds;
+`printCard(card, { qr })` marks the card `data-print-qr`, and the print CSS
+hides the QR code and its hint without that mark. Richer print choices belong
+to `issues/features/2026-10-20-print-options-and-printable-forms.md`.
+
 ## Review record
 
 Cross-model plan review, codex `gpt-6-sol`, 2026-10-20. Accepted: print scope

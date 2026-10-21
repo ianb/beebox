@@ -1,8 +1,9 @@
 /**
  * The way back from a printed card: at the foot of the printed page, the box
- * and the card's path as the person knows it (no `_content/`), and a QR code
- * of the card's address when a phone could reach it. Print only; nothing on
- * screen.
+ * and the card's path as the person knows it (no `_content/`), and, when the
+ * person asks for it at Print and a phone could reach the address, a QR code
+ * of the card's address (shown by `[data-print-qr]`, `lib/print-card.ts`).
+ * Print only; nothing on screen.
  */
 
 import { withBase } from "../../../../api-core";

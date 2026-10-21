@@ -402,6 +402,10 @@
     color: #333;
     break-inside: avoid;
   }
+  /* Opt-in: the QR code and its hint print only from Print with "Add QR code". */
+  .bbx-card-surface:not([data-print-qr]) :is(.bbx-card-print-qr, .bbx-card-print-hint) {
+    display: none;
+  }
   .bbx-card-print-qr svg {
     display: block;
     width: 0.9in;
