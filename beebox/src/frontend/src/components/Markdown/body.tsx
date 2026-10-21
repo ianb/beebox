@@ -313,6 +313,11 @@ interface MarkdownProps {
    * body (chat, commit messages, a body excerpt): no locators, no controls.
    */
   card?: { path: string; bodyLineOffset: number };
+  /**
+   * This Markdown is the card's document, so its headings fill the card's
+   * contents menu (`CardContents/CardContentsMenu.tsx`). Needs `prose="block"`.
+   */
+  outline?: boolean;
 }
 
 export function Markdown({
@@ -324,6 +329,7 @@ export function Markdown({
   basePath,
   onJumpToQuote,
   card,
+  outline,
 }: MarkdownProps) {
   prose = prose ?? false;
   const boxSlug = useBoxSlug();
@@ -355,7 +361,7 @@ export function Markdown({
   });
 
   if (prose === "block") {
-    return <div className="prose prose-sm max-w-none bbx-theme-prose">{rendered}</div>;
+    return <div className="prose prose-sm max-w-none bbx-theme-prose" data-card-outline={outline === true ? "" : undefined}>{rendered}</div>;
   }
   if (prose === "inline") {
     return <span className="prose prose-sm inline max-w-none bbx-theme-prose">{rendered}</span>;

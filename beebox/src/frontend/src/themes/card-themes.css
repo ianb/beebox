@@ -120,6 +120,28 @@
 .bbx-card-front {
   min-width: 0;
 }
+/* The contents menu floats at the front's top right, below the header and so
+   clear of the Properties corner, and sticks there while the card scrolls. */
+.bbx-card-contents {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 3;
+  float: right;
+  margin: 0.5rem var(--bbx-content-padding, 1rem) 0 0.5rem;
+}
+.bbx-card-front [data-card-outline] :is(h1, h2, h3)[id] {
+  scroll-margin-top: 3rem;
+}
+@media (max-width: 520px) {
+  .bbx-card-contents-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
 .bbx-card-content {
   padding: var(--bbx-content-padding, 1rem);
   max-width: 54rem;

@@ -108,6 +108,7 @@ export function CardBody({
         <div data-card-section="body">
           <Markdown
             prose="block"
+            outline
             onNavigate={onNavigate}
             basePath={data.path}
             components={components}
