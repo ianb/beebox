@@ -5,6 +5,7 @@ import type { FileViewMode } from "../../file-view-types";
 import type { CardSymbolData } from "@shared/card-symbol";
 import { CardMark } from "../../ui/CardMark";
 import { Text } from "../../ui/Text";
+import { CardContentsMenu } from "../../CardContents/CardContentsMenu";
 
 export interface CardThemeSurfaceProps {
   theme: ResolvedCardTheme;
@@ -53,6 +54,7 @@ export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, 
   const propertiesId = controlAddress("bbx-card-properties", instance);
   const frontId = controlAddress("bbx-card-front", instance);
   const backId = controlAddress("bbx-card-back", instance);
+  const contentsId = controlAddress("bbx-card-contents", instance);
   const descriptor = THEME_CATALOG.find((item) => item.name === theme.choice.name);
   useEffect(() => {
     front.current?.toggleAttribute("inert", back);
@@ -112,6 +114,7 @@ export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, 
       </header>
       {problem}
       <div ref={front} id={frontId} className="bbx-card-front" data-card-mode={mode} hidden={back} aria-hidden={back}>
+        <CardContentsMenu id={contentsId} frontRef={front} />
         {children}
       </div>
       <section id={backId} className="bbx-card-back" hidden={!back} aria-label="Card properties">

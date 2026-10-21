@@ -1,11 +1,14 @@
 ---
 title: "Printable cards: a print button, and a way back to the card that is not `/_content/`"
-workstream: unattached
+workstream: card-reading
 area: beebox
 filed-by: agent
 discovered-by: Ian
 discovered-in: main — boxholder request
+resolution: implemented
 ---
+
+**Closed:** Implemented on worktree-card-reading: Print control on the card, card-only print, printed footer with the card address; the QR code is opt-in and shown only at a non-loopback origin (verified by DOM tests only). Print options and printable forms remain in 2026-10-20-print-options-and-printable-forms.
 
 A card has no print action. The boxholder wants a print button on the card
 page, and a printed card that leads back to its live card.

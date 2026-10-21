@@ -23,7 +23,7 @@ export interface OpenQuestion {
 }
 
 /** A select question lists at most this many options in its line; the rest are on the Questions page. */
-export const OPTIONS_SHOWN = 6;
+const OPTIONS_SHOWN = 6;
 
 /**
  * The newest pending question with a prompt, by `asked-at` then by path, and

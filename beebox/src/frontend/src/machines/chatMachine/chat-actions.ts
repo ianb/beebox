@@ -158,7 +158,7 @@ export function adoptSession(
 }
 
 /** Shown when a turn's live view dropped and the box went idle with no reply. */
-export const NO_REPLY_ERROR = "The box stopped before it answered. Send your message again.";
+const NO_REPLY_ERROR = "The box stopped before it answered. Send your message again.";
 
 /**
  * Settle a dropped live view (`replyLost`) against refreshed history. The
@@ -171,7 +171,7 @@ export const NO_REPLY_ERROR = "The box stopped before it answered. Send your mes
 // warning for a reply already in history. A held REFRESH (`refreshAgain`) means
 // the reply may have landed after this read (history and status are read
 // concurrently), so no error yet: the extra fetch decides.
-export function settleLostReply(
+function settleLostReply(
   { context, messages, busy }: { context: ChatContext; messages: SessionEntry[]; busy: boolean },
 ): Partial<Pick<ChatContext, "replyLost" | "error">> {
   if (!context.replyLost) return {};

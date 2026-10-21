@@ -92,7 +92,7 @@ export class GeminiEmptyResponseError extends Error {
  * Gemini *did* return, so callers can tell "the API failed" apart from "the
  * API answered but the shape was unusable."
  */
-export class GeminiResponseShapeError extends Error {
+class GeminiResponseShapeError extends Error {
   constructor(reason: string) {
     super(["Gemini response was not the expected shape", reason].join(": "));
     this.name = "GeminiResponseShapeError";

@@ -14,6 +14,7 @@
  * renders like the rest of the page and can say what unmounting actually does.
  */
 
+import { toDisplayPath } from "@shared/display-path";
 import { useState } from "react";
 import { Link, useParams } from "@tanstack/react-router";
 import { trpc, type RouterOutput } from "../../../lib/trpc/client";
@@ -155,14 +156,14 @@ export function DriveMountRow({ mount }: { mount: DriveMount }) {
       {...bbxSource("card", mount.cardPath)}
     >
       <Row gap="sm" align="center" wrap>
-        <Text weight="semibold">{mount.name ?? mount.cardPath}</Text>
+        <Text weight="semibold">{mount.name ?? toDisplayPath(mount.cardPath)}</Text>
         {mount.error !== null ? <Badge tone="danger">error</Badge> : null}
         {mount.error === null && mount.lastSync !== null ? <Badge tone="success">synced</Badge> : null}
         {mount.error === null && mount.lastSync === null ? <Badge tone="neutral">never synced</Badge> : null}
       </Row>
 
       <Hint>
-        mirrors into {mount.dir === "" ? "the box root" : mount.dir} · {childSummary(mount.children)}
+        mirrors into {mount.dir === "" ? "the box root" : toDisplayPath(mount.dir)} · {childSummary(mount.children)}
         {problemSummary(mount.problems) === null ? null : <>{" · "}{problemSummary(mount.problems)}</>}
         {mount.lastSync === null ? null : (
           <>

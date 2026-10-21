@@ -63,7 +63,7 @@ const doc = render({
 // elsewhere and are not repeated:
 void test("A doc with no declared prominence shows its type's default and says so.", async (t) => {
   t.check(rows(doc), [
-    "Filed at = _content/projects/Porch.doc.card",
+    "Filed at = projects/Porch.doc.card",
     "Card type = doc",
     "Contains = Porch repair quotes",
     "Prominence = ordinary, the type's default",
@@ -87,7 +87,7 @@ void test("The fields table reads its keys as labels and small objects as one va
       body: "Borrowed for the lake trip.\n",
     })),
     [
-    "Filed at = _content/lending/Camp_stove.record.card",
+    "Filed at = lending/Camp_stove.record.card",
     "Card type = record",
     "Prominence = ordinary, the type's default",
     "Location = With Idris",
@@ -104,7 +104,7 @@ void test("The evidence for contains sits under a closed disclosure:", async (t)
 // A declared level shows as declared:
 void test("A declared level shows as declared:", async (t) => {
   t.check(rows(render({ path: "_content/Plan.doc.card", type: "doc", schema: docSchema, frontmatter: { prominence: "primary" } })), [
-    "Filed at = _content/Plan.doc.card",
+    "Filed at = Plan.doc.card",
     "Card type = doc",
     "Prominence = primary",
   ]);
@@ -117,13 +117,13 @@ void test("A declared level shows as declared:", async (t) => {
 void test("A card that failed validation has no schema facts (schema:", async (t) => {
   const broken = { path: "_content/Broken.doc.card", type: "doc", schema: null };
   t.check(rows(render({ ...broken, frontmatter: { prominence: "global", status: [1, 2] } })), [
-    "Filed at = _content/Broken.doc.card",
+    "Filed at = Broken.doc.card",
     "Card type = doc",
     "Prominence = global",
   ]);
 
   t.check(rows(render({ ...broken, frontmatter: { status: [1, 2] } })), [
-    "Filed at = _content/Broken.doc.card",
+    "Filed at = Broken.doc.card",
     "Card type = doc",
   ]);
 });
@@ -143,7 +143,7 @@ void test("A landmark's body is the place summary, and most landmarks have none.
     frontmatter: { symbol: { glyph: "🤝" }, navigation: { label: "Lending" } },
     body,
   });
-  const expected = filedAs("_content/lending/Lending.landmark.card", "landmark")
+  const expected = filedAs("lending/Lending.landmark.card", "landmark")
     + foundBy("background", '<dt>Symbol</dt><dd class="flex items-center gap-2"><span class="inline-flex items-center justify-center flex-shrink-0 overflow-hidden w-5 h-5 text-sm" aria-hidden="true">🤝</span><span>glyph: 🤝</span></dd>')
     + fieldsSection("Navigation", "Lending");
   t.check([landmark(undefined), landmark("The stove is with Idris.\n")], [expected, expected]);
@@ -153,7 +153,7 @@ void test("A landmark's body is the place summary, and most landmarks have none.
 void test("Other body-less types keep their fields on the front.", async (t) => {
   const bodiless: Schema = { hasBodyField: false, defaultProminence: "ordinary" };
   const question = render({ path: "_content/Q.question.card", type: "question", schema: bodiless, frontmatter: { question: "Which?" } });
-  t.check(question, filedAs("_content/Q.question.card", "question") + foundBy("ordinary", ""));
+  t.check(question, filedAs("Q.question.card", "question") + foundBy("ordinary", ""));
 });
 
 // ## An empty body leaves the type fields on the front
@@ -167,7 +167,7 @@ void test("With no body text, the front shows the type fields (test/lib/card-fie
     path: "_content/projects/Porch.doc.card", type: "doc", schema: docSchema,
     frontmatter: { title: "Porch", "share-id": "porch-quotes" }, body,
   });
-  const front = filedAs("_content/projects/Porch.doc.card", "doc") + foundBy("ordinary", "");
+  const front = filedAs("projects/Porch.doc.card", "doc") + foundBy("ordinary", "");
   t.check([emptyDoc(undefined), emptyDoc("# Porch\n"), emptyDoc("Quotes.\n")], [
     front,
     front,

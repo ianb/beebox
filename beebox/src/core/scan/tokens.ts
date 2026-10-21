@@ -77,7 +77,7 @@ export class DuplicateScanTokenNameError extends Error {
 }
 
 /** Thrown when a requested token name is outside `SCAN_TOKEN_NAME_PATTERN`. */
-export class InvalidScanTokenNameError extends Error {
+class InvalidScanTokenNameError extends Error {
   constructor(readonly tokenName: string) {
     super(
       `Scan token name ${JSON.stringify(tokenName)} is invalid: use 1-64 characters of ` +
