@@ -267,7 +267,7 @@
 }
 @media (max-width: 639px) {
   .bbx-box-presentation[data-chrome-theme="deck"]:not(.bbx-system-theme-preview)::before {
-    background-size: auto 1000px;
+    background-size: auto max(1000px, 100%);
     background-position: left top;
   }
 }

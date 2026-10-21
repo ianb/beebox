@@ -145,7 +145,8 @@ Each run writes `test/tours/.artifacts/<tour>/<runId>/` (gitignored):
   color-contrast rule is off: it skips text over images and gradients.
 - `<checkpoint>.<viewport>.contrast.json` — the pixel contrast and
   material audit (`tour-lib/contrast.ts`, also behind `bin/theme-check`).
-  Misses become one ❌ finding per checkpoint.
+  Misses become one ❌ finding per checkpoint. Theme artwork that repeats or
+  stops short at the viewport (`tour-lib/backdrop.ts`) becomes another.
 
 A capture-time degradation (page-readiness timeout, axe crash) is
 recorded as a ⚠️ finding rather than silently producing a

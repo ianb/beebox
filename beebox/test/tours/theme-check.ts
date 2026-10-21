@@ -1,7 +1,8 @@
 /**
  * `bin/theme-check`: theme studio captures at desktop and phone width with
- * every contrast or material miss outlined and labelled. With one theme it is
- * the theme loop's screenshot step and always exits 0; `--all` walks the
+ * every contrast or material miss outlined and labelled, then a check at
+ * common screen sizes that each theme image fills its box. With one theme it
+ * is the theme loop's screenshot step and always exits 0; `--all` walks the
  * catalog and exits 1 on any miss, for landing.
  */
 
@@ -10,6 +11,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { THEME_CATALOG } from "../../src/shared/card-theme/core.js";
 import { BrowseSession } from "./tour-lib/browse.js";
+import { auditBackdrops, describeBackdropFailure } from "./tour-lib/backdrop.js";
 import { auditContrast, describeContrastFailure } from "./tour-lib/contrast.js";
 
 interface StudioCase {
@@ -52,6 +54,24 @@ const VIEWPORTS = [
 ] as const;
 type Viewport = (typeof VIEWPORTS)[number];
 
+/** Small and large phones, a portrait tablet, and laptop to large desktop. */
+const SCREENS = [
+  { width: 375, height: 667 },
+  { width: 430, height: 932 },
+  { width: 768, height: 1024 },
+  { width: 1366, height: 768 },
+  { width: 1920, height: 1200 },
+  { width: 2560, height: 1440 },
+] as const;
+type Screen = (typeof SCREENS)[number];
+
+/**
+ * The app's presentation is the height of the screen and scrolls inside; the
+ * studio's grows with its samples. Fit it to the screen so its backdrop is
+ * measured as the app paints it.
+ */
+const FIT_STUDIO_SCRIPT = "document.querySelector('.bbx-theme-studio > .bbx-box-presentation').style.cssText += ';height:100dvh;min-height:0;overflow:hidden'";
+
 function caseName(c: StudioCase): string {
   const system = `${c.system}-${c.systemStock}`;
   return c.system === c.card && c.systemStock === c.cardStock ? system : `${system}+${c.card}-${c.cardStock}`;
@@ -69,6 +89,17 @@ async function checkCase(session: BrowseSession, { c, vp, outDir }: { c: StudioC
   if (result.unmeasured > 0) lines.push(`  ${String(result.unmeasured)} text runs were not measurable (partly covered, or in a faded group over an image)\n`);
   const misses = result.failures.length + result.offscreen + result.unmeasured;
   process.stdout.write(`${caseName(c)} ${vp.name}: ${misses === 0 ? "ok" : `${String(misses)} to fix`} (${String(result.runs)} text runs)\n${lines.join("")}  → ${shot}\n`);
+  return misses;
+}
+
+async function checkBackdrops(session: BrowseSession, { c, screen }: { c: StudioCase; screen: Screen }): Promise<number> {
+  await session.open(`/dev/theme-studio?${new URLSearchParams({ ...c }).toString()}`);
+  await session.eval(FIT_STUDIO_SCRIPT);
+  const result = await auditBackdrops(session);
+  const lines = result.failures.map((f) => `  ${describeBackdropFailure(f)}\n`);
+  for (const image of result.unloaded) lines.push(`  ${image} did not load, so it was not measured\n`);
+  const misses = lines.length;
+  if (misses > 0) process.stdout.write(`${caseName(c)} ${String(screen.width)}×${String(screen.height)}: ${String(misses)} backdrop misses\n${lines.join("")}`);
   return misses;
 }
 
@@ -98,10 +129,14 @@ async function main(): Promise<number> {
       await session.setViewport(vp.width, vp.height);
       for (const c of cases) misses += await checkCase(session, { c, vp, outDir });
     }
+    for (const screen of SCREENS) {
+      await session.setViewport(screen.width, screen.height);
+      for (const c of cases) misses += await checkBackdrops(session, { c, screen });
+    }
   } finally {
     await session.close();
   }
-  process.stdout.write(misses === 0 ? "No contrast or material misses measured.\n" : `${String(misses)} misses.\n`);
+  process.stdout.write(misses === 0 ? "No contrast, material or backdrop misses measured.\n" : `${String(misses)} misses.\n`);
   return values.all && misses > 0 ? 1 : 0;
 }
 

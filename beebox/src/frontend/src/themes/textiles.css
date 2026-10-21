@@ -140,7 +140,7 @@
 }
 @media (max-width: 639px) {
   .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) {
-    background-size: auto 1000px;
+    background-size: auto max(1000px, 100%);
     background-position: center top;
   }
 }

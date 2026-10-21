@@ -10,7 +10,7 @@ Read `beebox/docs/theme-authoring.md` for the studio and material hooks.
 The boxholder's rule: **do not run tests when showing a theme; wait for landing.**
 During exploration and implementation for feedback:
 
-- Edit the theme, capture it with `bin/theme-check`, fix what it outlines, and
+- Edit the theme, capture it with `bin/theme-check`, fix what it reports, and
   show a labeled exhibit.
 - Do not run tests, tours, change-selected suites, typecheck/lint sweeps,
   knowledge audits, or formal cross-model reviews before showing the result.

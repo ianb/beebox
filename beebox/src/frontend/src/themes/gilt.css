@@ -13,7 +13,7 @@
   --bbx-focus-ring: #f4d389;
 }
 .bbx-box-presentation[data-chrome-theme="gilt"] {
-  background: url("./gilt-panorama.webp") center top / 100% auto repeat-y, #9d742f;
+  background: url("./gilt-panorama.webp") center top / cover no-repeat, #9d742f;
 }
 [data-chrome-theme="gilt"] .bbx-app-nav {
   background: linear-gradient(90deg, #172f39e8, #3c3c32c9 65%, #4f302dd9), var(--gilt-art) center 24% / cover;
@@ -124,19 +124,13 @@
   outline: 2px solid #f5d88e;
   outline-offset: 3px;
 }
-@media (max-width: 639px) {
-  .bbx-box-presentation[data-chrome-theme="gilt"] {
-    background-size: 620px auto;
-    background-position: center top;
-  }
-}
 
 /* The heading is a worn gilded strip, with dark lettering over the leaf. */
 .bbx-card-theme[data-card-theme="gilt"] .bbx-card-heading {
   background-color: #e3ca90;
   background-image: var(--gilt-leaf);
   background-position: center, 55% 55%;
-  background-size: auto, 850px auto;
+  background-size: auto, max(850px, 100%) auto;
   color: #192c34;
   --bbx-ink: #192c34;
   --bbx-ink-soft: #304047;

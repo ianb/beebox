@@ -33,7 +33,7 @@
 .bbx-card-surface[data-card-theme="posy"]>.bbx-card-properties{background:#dff2e8;color:#36584d;border:1px solid #b8ccc3;border-radius:2px;box-shadow:1px 1px 0 #d5c8d7;}
 .bbx-card-theme[data-card-theme="posy"] .bbx-themed-action{background:#ffedaa;color:#514632;border:1px solid #d9cda1;border-radius:2px;box-shadow:1px 1px 0 #d5c8d7;}
 [data-chrome-theme="posy"] :is(button,textarea):focus-visible:not(.bbx-card-theme *){outline:3px solid #201525;outline-offset:3px;}
-@media(max-width:639px){.bbx-box-presentation[data-chrome-theme="posy"]{background-position:center top;background-size:auto,auto 920px;}}
+@media(max-width:639px){.bbx-box-presentation[data-chrome-theme="posy"]{background-position:center top;background-size:auto,auto max(920px, 100%);}}
 
 [data-chrome-theme="posy"] .bbx-chat-reply-material{position:relative;}
 [data-chrome-theme="posy"] .bbx-chat-reply-material::after{content:"";position:absolute;right:14px;bottom:12px;width:36px;height:36px;pointer-events:none;opacity:.17;mix-blend-mode:multiply;background:var(--posy-art) 74% 58%/210px auto no-repeat;clip-path:polygon(10% 8%,24% 13%,34% 0,45% 11%,61% 7%,69% 21%,90% 19%,83% 38%,100% 48%,84% 61%,88% 78%,68% 74%,55% 100%,43% 81%,23% 88%,25% 68%,0 56%,16% 41%);}

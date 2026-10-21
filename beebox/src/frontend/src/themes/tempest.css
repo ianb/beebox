@@ -120,7 +120,7 @@
 }
 @media (max-width:639px) {
   .bbx-box-presentation[data-chrome-theme="tempest"] {
-    background-size: auto 1100px;
+    background-size: auto max(1100px, 100%);
     background-position: 25% top;
     background-repeat: no-repeat;
 
