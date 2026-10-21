@@ -9,8 +9,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { moreQuestionsLabel, openQuestionLine, pickOpenQuestion } from "../../../../../src/components/chat/everywhere/InteractiveChat/open-question.js";
-import type { QuestionInfo } from "../../../../../src/components/questions/QuestionForm.js";
+import { moreQuestionsLabel, openQuestionLine, pickOpenQuestion } from "../../../src/components/chat/open-question.js";
+import type { QuestionInfo } from "../../../src/components/questions/QuestionForm.js";
 
 const DIR = "_bookkeeping/questions";
 function card(name: string, extra: Partial<QuestionInfo>): QuestionInfo {

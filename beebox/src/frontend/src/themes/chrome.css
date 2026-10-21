@@ -168,7 +168,8 @@
   #bbx-nav-todo, #bbx-nav-back-to-chat
 ) {
   border-radius: 9999px;
-  background-color: color-mix(in srgb, var(--bbx-bar-paper) 85%, white);
+  /* Light enough to lift off the bar, dark enough for white labels. */
+  background-color: color-mix(in srgb, var(--bbx-bar-paper) 93%, white);
   box-shadow: inset 0 1px 0 #ffffff70, inset 0 -1px 0 #00000030,
     0 2px 0 var(--bbx-bar-edge), 0 4px 5px #00000035;
 }

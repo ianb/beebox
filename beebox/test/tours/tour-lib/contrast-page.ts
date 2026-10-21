@@ -66,7 +66,8 @@ export interface PageRuns {
  * - WCAG exempts inactive controls; visually hidden text is clipped to a
  *   pixel. Inputs are measured over their content box.
  * - Text shadows stay in the capture: a halo is part of what is read against.
- * - Controls draw their own surfaces by design, so they get no material.
+ * - Controls draw their own surfaces by design, and a region that sets its
+ *   own `--bbx-ink` declares its own material, so neither gets a surface check.
  */
 export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   const ctx = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
@@ -205,7 +206,11 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     let run = byElement.get(el);
     if (run === void 0) {
       const size = Number.parseFloat(cs.fontSize);
-      const card = el.closest("button, a, [role=button], input, textarea, select, summary") === null ? el.closest(".bbx-card-theme[data-card-theme]") : null;
+      const control = el.closest("button, a, [role=button], input, textarea, select, summary") !== null;
+      const themed = el.closest(".bbx-card-theme[data-card-theme]");
+      // A region that sets its own ink (a heading strip over artwork) is its own material.
+      const ownInk = themed !== null && getComputedStyle(el).getPropertyValue("--bbx-ink") !== getComputedStyle(themed).getPropertyValue("--bbx-ink");
+      const card = control || ownInk ? null : themed;
       run = {
         id: byElement.size,
         selector: describe(el),

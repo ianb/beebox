@@ -13,7 +13,7 @@ import { mount } from "../../../../helpers/dom-harness.js";
 import { createElement as h, type ComponentProps } from "react";
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from "@tanstack/react-router";
 import { MessageList } from "../../../../../src/components/chat/everywhere/InteractiveChat/messages.js";
-import type { OpenQuestion } from "../../../../../src/components/chat/everywhere/InteractiveChat/open-question.js";
+import type { OpenQuestion } from "../../../../../src/components/chat/open-question.js";
 import { createAudioOverlayStore } from "../../../../../src/components/chat/audio-overlay-store.js";
 import { BoxSlugProvider } from "../../../../../src/lib/box-slug.js";
 

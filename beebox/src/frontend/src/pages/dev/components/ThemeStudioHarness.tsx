@@ -11,6 +11,8 @@ import { Hint } from "../../../components/ui/Hint";
 import { Stack } from "../../../components/ui/Stack";
 import { Text } from "../../../components/ui/Text";
 import { SystemThemeSwatches } from "../../../components/themes/SystemThemePicker";
+import { EmptyChat } from "../../../components/chat/EmptyChat";
+
 
 import { useDoodlebitMotion } from "../../../components/themes/useDoodlebitMotion";
 
@@ -121,8 +123,17 @@ export function ThemeStudioHarness() {
   </div>;
 }
 
+const OPEN_QUESTION = {
+  path: "_content/questions/seed-table.question.card", prompt: "Should the welcome table go by the door or the window?",
+  memo: "The hall opens at ten.", inputType: "select" as const, options: ["Door", "Window"], optionsBeyond: 0, more: 2,
+};
+
 function ConversationSample() {
   return <section aria-label="Conversation styling sample" className="min-w-0">
+    <div className="flex py-4">
+      <EmptyChat openers={["Plan the seed exchange"]} onSendOpener={() => "accepted"} openQuestion={OPEN_QUESTION}
+        onFocusComposer={noop} onQuestionNotNow={noop} onOpenQuestions={noop} />
+    </div>
     <div className="space-y-4 pb-4">
       <UserMessageSample />
       <div className="bbx-chat-reply-material bg-white rounded-lg px-4 py-3 text-warm-900">
