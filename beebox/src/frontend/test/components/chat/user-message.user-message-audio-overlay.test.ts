@@ -82,7 +82,7 @@ function ownBubble(parts: { badge: { label: string; icon: string } | null; hq: s
 
 /** Bob's bubble as Alice sees it. */
 function bobBubble(parts: { badge: { label: string; icon: string } | null; text: string }): string {
-  return `<div class="pr-12 sm:pr-24 py-1"><div class="bbx-chat-meta-material text-xs text-warm-700 ml-3 sm:ml-6 mb-0.5">Bob</div><div class="relative ml-3 sm:ml-6 w-fit">${badgeCluster(parts.badge)}<span class="absolute top-px right-px z-10"></span><div class="rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words"><div class="text-sm whitespace-pre-wrap">${parts.text}</div></div></div></div>`;
+  return `<div class="pr-12 sm:pr-24 py-1"><div class="bbx-chat-meta-material text-xs text-card-soft ml-3 sm:ml-6 mb-0.5">Bob</div><div class="relative ml-3 sm:ml-6 w-fit">${badgeCluster(parts.badge)}<span class="absolute top-px right-px z-10"></span><div class="rounded-r-2xl bg-primary text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] w-fit break-words"><div class="text-sm whitespace-pre-wrap">${parts.text}</div></div></div></div>`;
 }
 
 const hqMarker = (service: string): string =>

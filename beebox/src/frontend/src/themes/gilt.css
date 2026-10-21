@@ -72,7 +72,7 @@
 [data-chrome-theme="gilt"] .bbx-composer-material textarea::placeholder {
   color: var(--gilt-soft);
 }
-[data-chrome-theme="gilt"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+[data-chrome-theme="gilt"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background-color: #d9bd7f;
   background-image: var(--gilt-leaf);
   background-size: auto, 460px auto;

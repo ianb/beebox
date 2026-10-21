@@ -22,9 +22,6 @@
 [data-chrome-theme="tempest"] .bbx-chat-user-attachment:hover { background: #ffffff80; }
 [data-chrome-theme="tempest"] .bbx-chat-user-unsure { text-decoration-color: #bacdff; }
 [data-chrome-theme="tempest"] .bbx-chat-reply-material {
-  --bbx-ink: #e0eef4;
-  --bbx-ink-soft: #a4bac8;
-  --bbx-pen: #bacdff;
   --bbx-edge: #456477;
 }
 [data-chrome-theme="tempest"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
@@ -42,7 +39,7 @@
 }
 [data-chrome-theme="tempest"] :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) { color: #a4bac8; background: #10273d; border-radius: 8px; }
 [data-chrome-theme="tempest"] :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
-[data-chrome-theme="tempest"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) { color: #a4bac8; }
+[data-chrome-theme="tempest"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: #e0eef4; --bbx-ink-soft: #a4bac8; --bbx-pen: #bacdff; }
 [data-chrome-theme="tempest"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: #e0eef4; }
 [data-chrome-theme="tempest"] #bbx-chat-load-older { background: #10273d; color: #bacdff; border-radius: 8px; }
 [data-chrome-theme="tempest"] #bbx-chat-load-older:enabled:hover { text-decoration: underline; }
@@ -68,7 +65,6 @@
   }
 }
 .bbx-card-theme[data-card-theme="tempest"], [data-chrome-theme="tempest"] .bbx-composer-material { color-scheme: dark; }
-[data-chrome-theme="tempest"] .bbx-chat-reply-material .bg-warm-50:not(.bbx-card-theme *) { color: #302f2d; }
 @media print {
  .bbx-card-theme[data-card-theme="tempest"], [data-chrome-theme="tempest"] .bbx-composer-material { color-scheme: light; backdrop-filter: none; }
 }

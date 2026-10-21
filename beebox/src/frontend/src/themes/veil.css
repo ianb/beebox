@@ -47,7 +47,7 @@
 [data-chrome-theme="veil"] .bbx-composer-material > section { background: transparent; border: 0; }
 [data-chrome-theme="veil"] .bbx-composer-material textarea { color: #263f37; background: #edf3e4; border-color: #91a78a; }
 [data-chrome-theme="veil"] .bbx-composer-material textarea::placeholder { color: #5d7461; }
-[data-chrome-theme="veil"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+[data-chrome-theme="veil"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   color: #edfaf1;
   background: linear-gradient(125deg, #287b75, #225e62);
   border: 1px solid #214c4d;
@@ -103,7 +103,7 @@
 [data-chrome-theme="veil"] .bbx-app-nav button:focus-visible { outline-color: #e9efb3; }
 @media (hover: hover) {
   [data-chrome-theme="veil"] .bbx-app-nav button:hover:not(#bbx-nav-errors) { background: #3c7158; }
-  [data-chrome-theme="veil"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled:hover { background: #287b75; }
+  [data-chrome-theme="veil"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled:hover { background: #287b75; }
 }
 @media (max-width: 639px) {
   .bbx-box-presentation[data-chrome-theme="veil"] { background-size: auto max(1100px, 100%); background-position: 58% top; }

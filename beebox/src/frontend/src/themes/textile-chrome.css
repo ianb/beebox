@@ -34,9 +34,6 @@
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-user-unsure { text-decoration-color: var(--textile-user-ink); }
 /* Nested cards supply their own material tokens. */
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-reply-material {
-  --bbx-ink: var(--textile-ink);
-  --bbx-ink-soft: var(--textile-soft);
-  --bbx-pen: var(--textile-accent);
   --bbx-edge: var(--textile-edge);
 }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
@@ -58,9 +55,8 @@
   border-radius: 8px;
 }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) { color: var(--textile-soft); }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: var(--textile-ink); --bbx-ink-soft: var(--textile-soft); --bbx-pen: var(--textile-accent); }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: var(--textile-ink); }
-.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-reply-material .bg-warm-50:not(.bbx-card-theme *) { color: #302f2d; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) #bbx-chat-load-older {
   background: var(--textile-paper);
   color: var(--textile-accent);

@@ -29,6 +29,9 @@ export function VoiceToggleButton({
   return (
     <button
       id={hasControlId ? "bbx-composer-mic" : undefined}
+      // The state as data, so a theme styles the idle mic without keying on
+      // a utility class (themes/*.css, `[data-mic="idle"]`).
+      data-mic={voicePaused ? "paused" : isTranscribing ? "recording" : "idle"}
       // Four states, one address: the description tracks the same four the
       // `title` below does, so a scan reports what the mic does *now* rather
       // than a static catalogue entry.

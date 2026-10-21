@@ -66,6 +66,9 @@ Scope every draft selector to `.bbx-theme-studio` and its draft attribute: lazy
 CSS stays loaded after navigation. Keep draft CSS under `pages/dev/`, out of
 `main/app.tsx` and the product catalog. Use the material tokens in
 `themes/materials.css` and chrome hooks in `themes/chrome.css` (frontend-relative).
+Chat text reads the same tokens: set `--bbx-ink`, `--bbx-ink-soft` and `--bbx-pen`
+on the chat material hooks (reply, pending, meta), never a rule keyed on a
+utility class such as `.text-warm-700`.
 Inspect reading surfaces, controls, card backs and phone layouts, then make a
 labeled exhibit with comment controls for feedback.
 

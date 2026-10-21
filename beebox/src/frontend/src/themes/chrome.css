@@ -150,6 +150,16 @@
   outline: 2px solid #fff8ec;
   outline-offset: 3px;
 }
+/* A light plate inside a chat material (raw tool input and result, debug
+   text) keeps the app palette in every theme: it resets the material tokens
+   the theme set on the chat material, and its bare text takes the base ink.
+   Zero specificity, so a utility color on the plate still wins. */
+:where(.bbx-chat-plate) {
+  --bbx-ink: initial;
+  --bbx-ink-soft: initial;
+  --bbx-pen: initial;
+  color: #302f2d;
+}
 .bbx-box-presentation .bbx-conversation-desk {
   background: var(--bbx-desk-pattern, none), var(--bbx-desk-background);
 }

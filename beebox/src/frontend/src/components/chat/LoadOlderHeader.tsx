@@ -11,7 +11,7 @@ export function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
         id="bbx-chat-load-older"
         onClick={onLoadOlder}
         disabled={loadingOlder}
-        className="bbx-chat-meta-material text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
+        className="bbx-chat-meta-material text-sm text-card-pen hover:text-card-ink disabled:text-warm-400"
       >
         {loadingOlder ? "Loading..." : "Show earlier messages"}
       </button>

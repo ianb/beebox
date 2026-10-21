@@ -106,10 +106,11 @@ export default {
         // alias) — warm-50..900 is self-documenting as a shade scale.
         warm: palette.warm,
 
-        // ─── Card material ─────────────────────────────────────────
-        // Inside a themed card these follow the card theme's material
-        // (themes/materials.css); elsewhere they fall back to the app
-        // palette. CSS variables, so no opacity modifiers (`/50`).
+        // ─── Material ──────────────────────────────────────────────
+        // These read the nearest material: a themed card's
+        // (themes/materials.css) or a chat material's (reply, pending and
+        // meta roots, set by the system theme). Elsewhere they fall back to
+        // the app palette. CSS variables, so no opacity modifiers (`/50`).
         card: {
           paper: "var(--bbx-paper, #FFFFFF)",
           sheet: "var(--bbx-sheet, #FFFFFF)",

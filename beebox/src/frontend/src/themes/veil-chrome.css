@@ -22,9 +22,6 @@
 [data-chrome-theme="veil"] .bbx-chat-user-attachment:hover { background: #ffffff80; }
 [data-chrome-theme="veil"] .bbx-chat-user-unsure { text-decoration-color: #8e2b55; }
 [data-chrome-theme="veil"] .bbx-chat-reply-material {
-  --bbx-ink: #263f37;
-  --bbx-ink-soft: #647257;
-  --bbx-pen: #8e2b55;
   --bbx-edge: #8a9b73;
 }
 [data-chrome-theme="veil"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
@@ -42,7 +39,7 @@
 }
 [data-chrome-theme="veil"] :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) { color: #647257; background: #edf3e4; border-radius: 8px; }
 [data-chrome-theme="veil"] :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
-[data-chrome-theme="veil"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) { color: #647257; }
+[data-chrome-theme="veil"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: #263f37; --bbx-ink-soft: #647257; --bbx-pen: #8e2b55; }
 [data-chrome-theme="veil"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: #263f37; }
 [data-chrome-theme="veil"] #bbx-chat-load-older { background: #edf3e4; color: #8e2b55; border-radius: 8px; }
 [data-chrome-theme="veil"] #bbx-chat-load-older:enabled:hover { text-decoration: underline; }

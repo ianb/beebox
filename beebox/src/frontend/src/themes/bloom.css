@@ -104,7 +104,7 @@
 /* Only the idle mic has bg-primary; recording and paused states keep their
    danger/pulsing colors from InteractiveChat-voice-button. */
 .bbx-box-presentation[data-chrome-theme="bloom"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled,
-.bbx-box-presentation[data-chrome-theme="bloom"] #bbx-composer-mic.bg-primary {
+.bbx-box-presentation[data-chrome-theme="bloom"] #bbx-composer-mic[data-mic="idle"] {
   background-color: #a7d6dc;
   color: #284b58;
   border: 1px solid #739da7;

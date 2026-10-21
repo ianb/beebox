@@ -22,9 +22,6 @@
 [data-chrome-theme="gilt"] .bbx-chat-user-attachment:hover { background: #ffffff30; }
 [data-chrome-theme="gilt"] .bbx-chat-user-unsure { text-decoration-color: #e5c77e; }
 [data-chrome-theme="gilt"] .bbx-chat-reply-material {
-  --bbx-ink: #f6ecd3;
-  --bbx-ink-soft: #c3cbbf;
-  --bbx-pen: #e5c77e;
   --bbx-edge: #667d79;
 }
 [data-chrome-theme="gilt"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
@@ -42,7 +39,7 @@
 }
 [data-chrome-theme="gilt"] :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) { color: #c3cbbf; background: #173f50; border-radius: 8px; }
 [data-chrome-theme="gilt"] :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
-[data-chrome-theme="gilt"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) { color: #c3cbbf; }
+[data-chrome-theme="gilt"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: #f6ecd3; --bbx-ink-soft: #c3cbbf; --bbx-pen: #e5c77e; }
 [data-chrome-theme="gilt"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: #f6ecd3; }
 [data-chrome-theme="gilt"] #bbx-chat-load-older { background: #173f50; color: #e5c77e; border-radius: 8px; }
 [data-chrome-theme="gilt"] #bbx-chat-load-older:enabled:hover { text-decoration: underline; }
@@ -59,7 +56,6 @@
 .bbx-system-theme-preview[data-chrome-theme="gilt"] .bbx-system-theme-desk > span { background: #173f50; border-color: #667d79; border-radius: 6px; box-shadow: 0 3px 6px #3b858530; }
 /* Dark content uses native dark controls. */
 .bbx-card-theme[data-card-theme="gilt"], [data-chrome-theme="gilt"] .bbx-composer-material { color-scheme: dark; }
-[data-chrome-theme="gilt"] .bbx-chat-reply-material .bg-warm-50:not(.bbx-card-theme *) { color: #302f2d; }
 @media print {
   .bbx-card-theme[data-card-theme="gilt"] .bbx-card-heading { background: transparent; color: #000; --bbx-ink: #000; --bbx-ink-soft: #333; }
   .bbx-card-theme[data-card-theme="gilt"] { color-scheme: light; --gilt-paper: #fff; --gilt-ink: #000; --gilt-soft: #333; --gilt-accent: #000; --gilt-sheet: #fff; --bbx-code-paper: #fff; --bbx-code-ink: #000; }

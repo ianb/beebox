@@ -93,7 +93,7 @@
 :is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-composer-material textarea::placeholder {
   color: var(--textile-soft);
 }
-:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background: var(--textile-accent);
   color: var(--textile-accent-ink);
 }
@@ -161,7 +161,7 @@
   border-radius: 27px 9px 27px 9px;
   box-shadow: 2px 3px 0 #b37f6a55;
 }
-[data-chrome-theme="rose-trellis"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+[data-chrome-theme="rose-trellis"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background: linear-gradient(135deg, #762c4d, #b84e65 65%, #c37962);
 }
 
@@ -179,7 +179,7 @@
   box-shadow: none;
 }
 [data-chrome-theme="gold-thread"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-back-to-chat) { padding-inline: 14px; }
-[data-chrome-theme="gold-thread"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+[data-chrome-theme="gold-thread"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background: #486787;
   color: #fff5df;
   border: 1px solid #859bb1;
