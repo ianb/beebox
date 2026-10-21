@@ -35,6 +35,16 @@ failure history, so the criteria need adjustment.
 - The evidence goes in git history, not the repository head. The removals land
   as one dedicated commit; its message records each test considered and its
   disposition with the reason.
+- The developing session runs the analysis, as a first step of the `/finish`
+  skill before it dispatches the finish agent. That session knows the intent of
+  each test, and that knowledge is a legitimate input. The dedicated commit then
+  exists before `bin/finish-verify` runs, so verification covers it and nothing
+  reruns.
+- The finish agent's pinned model (`model: sonnet` in
+  [.claude/agents/finish.md](../../.claude/agents/finish.md), and "Do not run
+  it on the session's own model" in the skill) is probably unnecessary. The
+  skill can instruct the session to use a subagent for the merge churn without
+  forcing a model.
 
 ## What the design must specify
 
@@ -50,16 +60,13 @@ failure history, so the criteria need adjustment.
 - **Disposition.** Remove, merge into an existing example, or keep. The
   commit message format for the dedicated commit, including kept tests, so
   `git log` can answer "why is this test gone" and "was this test reviewed".
-- **Where it runs.** The finish agent
-  ([.claude/agents/finish.md](../../.claude/agents/finish.md)) runs on its own
-  model. The design must say whether the analysis is a step in that agent or a
-  separate worker it spawns on a most-capable model, and how it fits with the
-  cross-model diff review (Track O).
+- **Track O.** How the analysis relates to the cross-model diff review, which
+  later sees the branch with the removals applied.
 - **Enumeration.** A script can list the in-scope tests from the diff, so the
   model step starts from a complete list and cannot skip one.
-- **Verification after removal.** Removing a test changes the branch after
-  `bin/finish-verify` ran. The design must say whether removal invalidates the
-  pass, and which checks rerun.
+- **Prior verification.** The developing session may have run checks before
+  the removal commit. The finish agent must treat that commit as a change
+  since the tested revision.
 
 ## Tension
 
