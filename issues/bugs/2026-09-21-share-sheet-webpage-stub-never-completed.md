@@ -50,3 +50,7 @@ Defuddle + `single-file-core` pipeline), `share.saveTextual` should call it
 for `kind: "url"` instead of writing the bare link. Until then, the stub is a
 dead end with no visible signal that it is incomplete, so it is not obvious
 without reading `share.ts` that anything is missing.
+
+## Audit 2026-10-22
+
+Still true. The stub write is now at `beebox/src/webapp/trpc/routers/share/router.ts:50-62`. The template field is `url`, not `source`, and the title is escaped. A reader of `share-id` now exists only for captures saved with no words under `_content/captures/`: the intake job instructions (`beebox/src/schemas/intake-job.tsx:51`) tell the agent to read the page and fill the card. A shared URL saved to another destination still stays a bare link. The server-side capture feature stays open.
