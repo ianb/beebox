@@ -185,7 +185,12 @@ writeFileSync(join(runDir, "before.json"), `${JSON.stringify({
   box: boxDir,
   url: `http://localhost:3210/${WORKTREE}/${boxSlug}/`,
   headBefore: head,
+  harnessCommit: execFileSync("git", ["-C", MONO_ROOT, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+  harnessDirty: execFileSync("git", ["-C", MONO_ROOT, "status", "--porcelain", "--", journeyDir], { encoding: "utf8" }).trim() !== "",
 }, null, 2)}\n`);
+// The spec as it was when this box was built: a journey edited after the walk
+// would otherwise be read against a box it did not make.
+cpSync(specPath, join(runDir, "journey.yaml"));
 
 // Boxes accumulate, one per run, and nothing prunes them — a past walk's box holds
 // the commits that walk produced, and deciding they are worth less than the disk is

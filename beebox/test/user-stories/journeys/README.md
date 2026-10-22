@@ -76,7 +76,8 @@ pnpm exec tsx beebox/test/user-stories/journeys/collect.ts B-inventory-<date>
 ```
 
 Runs land in `user-stories-work/journeys/<id>-<date>/` at the monorepo root (gitignored): the
-prompt as given, the notes, screenshots, and before/after snapshots of the box. It sits outside
+prompt as given, the `journey.yaml` it was built from, the notes, screenshots, and before/after
+snapshots of the box (`before.json` also names the harness commit). It sits outside
 `beebox/` because a box's `node_modules/beebox` links to this checkout's `beebox/`, and the box
 agent must not find the walker's notes.
 

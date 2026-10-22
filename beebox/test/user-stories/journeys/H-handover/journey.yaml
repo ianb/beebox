@@ -49,6 +49,15 @@ box:
     - {% todo created="2026-08-24" %}Fix the sticking back door{% /todo %}
     - {% todo created="2026-08-24" status="parked" %}Replace the kitchen tap{% /todo %}
     CARD
+    # A box used for five weeks has been told what it is for: answer the root
+    # question and record the purpose, as the question's follow-up would have.
+    q=_bookkeeping/questions/what-to-keep-track-of.question.card
+    awk 'NR > 1 && /^---$/ { exit } /^asked-at:/ { print "asked-at: 2026-08-24T19:55:00.000Z"; next } { print }' "$q" > "$q.tmp"
+    printf '%s\n' 'answer:' '  text: House jobs and the family stuff that keeps slipping.' \
+      'answered-at: 2026-08-24T20:10:00.000Z' 'answered-via: web' '---' >> "$q.tmp"
+    mv "$q.tmp" "$q"
+    sed -i '' 's/^purpose: What this box is for\.$/purpose: House jobs and the family stuff that keeps slipping./' _content/briefing.briefing.card
+    git add "$q"
     commit 2026-08-24 "House jobs list"
 
     cat > _content/people/Mateo_Duarte.person.card <<'CARD'

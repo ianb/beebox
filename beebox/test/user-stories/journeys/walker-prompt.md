@@ -47,7 +47,7 @@ bin/browse open <path>        # e.g. bin/browse open /            (paths are app
 bin/browse snapshot -i        # what is on screen; each control shows [ref=e3] and, usually, id=bbx-…
 bin/browse click bbx-some-id   # act by the id when the line shows one
 bin/browse click @e3          # by ref only when it shows no id
-bin/browse fill bbx-some-id "text"
+bin/browse fill bbx-some-id 'text'   # single quotes: in double quotes the shell eats "$1,850"
 bin/browse upload @e5 <file>  # file input
 bin/browse scroll down [px]   # also up/left/right
 bin/browse scroll down [px] --selector "<scrollable-pane-css>"  # target an inner pane
