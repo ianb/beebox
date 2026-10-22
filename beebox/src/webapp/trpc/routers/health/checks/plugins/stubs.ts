@@ -21,6 +21,7 @@ import * as path from "node:path";
 import { glob } from "glob";
 import { boxCodePaths, getBoxShape } from "../../../../../../lib/box-shape.js";
 import type { SchemaLoadFailure } from "../../../../../../schema-load-status.js";
+import { isErrnoException } from "../../../../../../shared/error-guards.js";
 import type { HealthCheck } from "../../router.js";
 
 export interface StubImport {
@@ -33,7 +34,7 @@ export interface StubImport {
 /** One static `import`/`export ... from` statement whose specifier starts with `beebox/plugins/`. */
 const PLUGIN_IMPORT = /^\s*(?:import|export)\s[^;]*?["']beebox\/plugins\/([^"'/]+)[^"']*["']/gm;
 
-/** Every plugin import in the box's stub files, in file order. */
+/** Every plugin import in the box's stub files, in file order. An unreadable file has none. */
 export async function scanStubImports(boxRoot: string): Promise<StubImport[]> {
   const shape = await getBoxShape(boxRoot);
   const { schemasDir, viewsDir, tricksDir } = boxCodePaths(shape);
@@ -45,7 +46,14 @@ export async function scanStubImports(boxRoot: string): Promise<StubImport[]> {
   const imports: StubImport[] = [];
   for (const abs of files) {
     const file = path.relative(shape.boxRoot, abs).split(path.sep).join("/");
-    const content = await readFile(abs, "utf8");
+    let content: string;
+    try {
+      content = await readFile(abs, "utf8");
+    } catch (e) {
+      // A dangling symlink, a file removed since the glob, or no permission: no imports.
+      if (!isErrnoException(e)) throw e;
+      continue;
+    }
     for (const match of content.matchAll(PLUGIN_IMPORT)) {
       const plugin = match[1];
       if (plugin !== undefined) imports.push({ file, plugin });
