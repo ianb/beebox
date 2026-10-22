@@ -67,6 +67,8 @@
 }
 .bbx-card-surface[data-card-theme="phosphor"]{background:#041108;border:0;box-shadow:none;}
 .bbx-card-theme[data-card-theme="phosphor"] .bbx-card-heading{background:#061a0b;border:0;}
+/* The bracketed Properties button is wider than the default fold; the title, the line beside it, wraps clear of it. */
+.bbx-card-theme[data-card-theme="phosphor"] > .bbx-card-heading h2{margin-right:4rem;}
 .bbx-card-theme[data-card-theme="phosphor"] .bbx-card-heading h2{font:600 14px/1.4 "IBM Plex Mono","SFMono-Regular",Consolas,monospace;text-shadow:0 0 7px #55ed6c55;}
 .bbx-card-theme[data-card-theme="phosphor"] .bbx-card-heading h2::before{content:"./ ";color:#51c468;}
 .bbx-card-theme[data-card-theme="phosphor"]>.bbx-card-properties{display:flex;align-items:center;justify-content:center;width:auto;min-width:84px;height:30px;top:8px;right:8px;padding:4px 7px;background:#082311;border:0;box-shadow:none;}
