@@ -253,7 +253,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     const id = runId(el);
     // Number the lines; a line scrolled out of view, wholly or in part, is left for another audit.
     const [top, bottom] = scrollClip(el);
-    const lines = linesOf.get(el) ?? { id, label: describe(el) + ' "' + text.trim().slice(0, 40) + '"', total: 0, whole: [] };
+    const lines = linesOf.get(el) ?? { id, label: describe(el) + ' "' + text.trim().slice(0, 40) + '" [data-bbx-audit-run=' + id + ']', total: 0, whole: [] };
     linesOf.set(el, lines);
     const whole = [];
     for (const r of boxes) {
