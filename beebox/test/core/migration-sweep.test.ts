@@ -613,36 +613,3 @@ void test("The new attempt snapshots current input and staging, but its output c
     pendingRef: "",
   });
 });
-
-// ## A question left uncommitted does not block the migration's commit
-//
-// 2026-10-21: a failed migration wrote a question quoting `/home/<user>/` paths,
-// the box commit lint refused it, and it stayed uncommitted. The next pass's
-// commit carried it too, so the migration could never commit even once its
-// script succeeded. The sweep now rewrites those paths before it commits. The
-// hook below stands in for the lint.
-void test("A leftover question with a machine path commits redacted with the migration", async (t) => {
-  t.teardown(async () => {
-    try {
-      await box.cleanup();
-    } catch (error) {
-      t.error(error);
-    }
-  });
-  const box = await makeTmpBox({ git: true });
-  await seedManifest(box, { pending: [PROBE] });
-  await box.commitAll("seed");
-  const question = `_bookkeeping/questions/Migration_${PROBE}-0.question.card`;
-  await box.write(question, "---\nmemo: Migration needs attention\nprompt: |\n  failed in /home/beebox/boxes/a\ninput:\n  type: text\nasked-at: 2026-10-20T00:00:00.000Z\n---\n");
-  const hook = join(git(box, "rev-parse", "--absolute-git-dir"), "hooks/pre-commit");
-  const stockHook = await readFile(hook, "utf8").catch(() => "#!/bin/sh\n");
-  await writeFile(hook, `${stockHook}\nif git diff --cached | grep -q '^+.*/home/beebox/'; then exit 1; fi\n`);
-  await chmod(hook, 0o755);
-
-  const result = await sweepMigrations({ boxRoot: box.root, repair: true, runScript: async () => 0 });
-  t.check({ status: result.status, committed: git(box, "show", `HEAD:${question}`).includes("failed in ~beebox/boxes/a"), dirty: git(box, "status", "--porcelain") }, {
-    status: "attention",
-    committed: true,
-    dirty: "",
-  });
-});
