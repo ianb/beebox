@@ -103,7 +103,7 @@ interface BoundedAttempt {
  * never finished writes the next question instead of running again; a failed
  * attempt writes the next question. Only a finished attempt clears the receipt.
  */
-export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: number; question?: string | undefined; sessionId?: string | undefined }> {
+export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: number; question?: string | undefined; sessionId?: string | undefined; stale?: true | undefined }> {
   let attempt = 0;
   let answer = "";
   let file: string;
@@ -111,7 +111,8 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
     file = `${directory}/Migration_${opts.name}-${String(attempt)}.question.card`;
     const existing = await question(opts.boxRoot, file);
     if (!existing) break;
-    if ("malformed" in existing || questionState(existing.fields) !== "answered") return { code: opts.code, question: file };
+    // `stale`: the question predates this run and does not carry its output.
+    if ("malformed" in existing || questionState(existing.fields) !== "answered") return { code: opts.code, question: file, stale: true };
     answer = `Previous answered question (${file}):\n${existing.content}`;
     attempt += 1;
   }

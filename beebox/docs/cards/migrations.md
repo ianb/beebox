@@ -206,8 +206,9 @@ with the script's output. The runner then reruns the script. When the rerun
 exits 0, the migration is recorded as done. When the rerun still exits 2, the
 migration is recorded with a `Migration_<name>-N` question for the boxholder.
 The question carries the rerun's output, so the leftover is still on record,
-and later migrations continue. A warning with exit 0
-bypasses all of this. The migration is recorded as done, the warning reaches
+and later migrations continue. While an earlier question for that migration is
+still open, an exit 2 records nothing, and the next pass runs it again. A
+warning with exit 0 bypasses all of this. The migration is recorded as done, the warning reaches
 only a deploy log nobody reads, and the box stays broken.
 
 **Exit 0 means nothing is left, not that the script continued.** A check that

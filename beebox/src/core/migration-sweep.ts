@@ -242,7 +242,8 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
     return code;
   };
   const code = await convert();
-  if (code === SOFT_FAILURE_EXIT && !repaired?.question) {
+  // An earlier open question does not carry this run's leftovers, so it cannot record the migration.
+  if (code === SOFT_FAILURE_EXIT && (!repaired?.question || repaired.stale === true)) {
     return { status: "deferred-repair", failed: migration.name, recoveryRef: recovery.ref, applied };
   }
   if (code !== 0 && code !== SOFT_FAILURE_EXIT) {
