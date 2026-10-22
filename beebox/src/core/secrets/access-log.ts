@@ -97,7 +97,13 @@ export function accessLogSegmentPath(iso: string): string {
  * failed sweep is retried by the next one.
  */
 export async function pruneSecretAccessLog(now: Date): Promise<string[]> {
-  const dir = secretsLogDir();
+  let dir: string;
+  try {
+    dir = secretsLogDir();
+  } catch (e) {
+    console.warn(`[secrets] could not locate the access log for pruning: ${errorMessage(e)}`);
+    return [];
+  }
   const cutoff = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - ACCESS_LOG_RETENTION_MONTHS, 1));
   const cutoffMonth = cutoff.toISOString().slice(0, 7);
   let names: string[];
@@ -123,8 +129,11 @@ export async function pruneSecretAccessLog(now: Date): Promise<string[]> {
 
 /** Append one event. Never throws — a broken log must not break a resolve. */
 export async function appendSecretAccessEvent(event: SecretAccessEvent): Promise<void> {
-  const segment = accessLogSegmentPath(event.ts);
+  // Built inside the try: the store refuses to name its path in some
+  // processes (`RealSecretStoreInTestError`), and that must not escape either.
+  let segment = "(path unavailable)";
   try {
+    segment = accessLogSegmentPath(event.ts);
     await fs.mkdir(path.dirname(segment), { recursive: true, mode: 0o700 });
     await fs.appendFile(segment, `${JSON.stringify(event)}\n`, { mode: 0o600 });
   } catch (e) {

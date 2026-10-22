@@ -33,6 +33,7 @@ import { appendSecretAccessEvent, stampSecretUse } from "./access-log.js";
 import {
   DanglingSecretGrantError,
   EmptySecretSlotError,
+  RealSecretStoreInTestError,
   SecretAgentAccessNotGrantedError,
   SecretNotGrantedError,
   SecretStoreUnreadableError,
@@ -124,12 +125,8 @@ export async function resolveSecret(opts: ResolveSecretOptions): Promise<Result<
     return err(refusal);
   };
 
-  const loaded = await loadSecretStore();
-  if (!loaded.ok) {
-    return refuse(
-      new SecretStoreUnreadableError({ secretName: name, storePath: secretsFilePath(), detail: loaded.error }),
-    );
-  }
+  const loaded = await readStore(name);
+  if (!loaded.ok) return refuse(loaded.error);
 
   const refusal = accessRefusal({ store: loaded.value, slug, name, access });
   if (refusal !== null) return refuse(refusal);
@@ -149,10 +146,32 @@ export async function resolveSecret(opts: ResolveSecretOptions): Promise<Result<
  * use the credential resolves it then, and that resolve is logged.
  */
 export async function secretIsResolvable(opts: Omit<ResolveSecretOptions, "purpose" | "observe">): Promise<boolean> {
-  const loaded = await loadSecretStore();
+  const loaded = await readStore(opts.name);
   if (!loaded.ok) return false;
   const slug = opts.slug ?? (await boxSlug(opts.boxRoot));
   return accessRefusal({ store: loaded.value, slug, name: opts.name, access: opts.access }) === null;
+}
+
+/**
+ * The store, or the store-unreadable refusal. That includes a store whose path
+ * is refused (`RealSecretStoreInTestError`: a test process whose HOME is the
+ * real home, such as a program a test started), because neither caller may throw.
+ */
+async function readStore(name: string): Promise<Result<SecretStoreData, SecretStoreUnreadableError>> {
+  let storePath: string;
+  try {
+    storePath = secretsFilePath();
+  } catch (e) {
+    if (!(e instanceof RealSecretStoreInTestError)) throw e;
+    return err(new SecretStoreUnreadableError({
+      secretName: name,
+      storePath: e.storePath,
+      detail: "this is a test process and HOME is the real home directory; set BBX_SECRETS_FILE",
+    }));
+  }
+  const loaded = await loadSecretStore();
+  if (!loaded.ok) return err(new SecretStoreUnreadableError({ secretName: name, storePath, detail: loaded.error }));
+  return ok(loaded.value);
 }
 
 /** Why this box may not have this secret's value, or null when it may. */
