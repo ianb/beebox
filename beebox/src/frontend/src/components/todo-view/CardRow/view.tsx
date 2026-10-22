@@ -14,6 +14,7 @@
 
 import { FileEntry } from "../../ui/FileEntry";
 import { Badge } from "../../ui/Badge";
+import { FriendlyDate } from "../../ui/FriendlyDate";
 import { Row } from "../../ui/Row";
 import { Stack } from "../../ui/Stack";
 import { Text } from "../../ui/Text";
@@ -22,10 +23,12 @@ import { ItemTree } from "./ItemTree";
 import { cardTarget, useOpenBeside } from "../../chat/workspace/use-open-beside/hook";
 import { buildRowSections, progressOf, type TodoReduction, type TodoRow } from "../../todo-view-card-logic";
 import { summaryParts } from "../../todo/summary";
+import { nextDateOf } from "../../todo/item-logic";
 
 /** What a card amounts to, in the words of the card's own todo line, and the next date it carries. */
-function RowReduction({ reduction }: { reduction: TodoReduction }) {
+function RowReduction({ reduction, items }: { reduction: TodoReduction; items: TodoRow["items"] }) {
   const parts = summaryParts(reduction);
+  const next = reduction.next === null ? null : nextDateOf(items);
   return (
     <Row gap="xs" wrap align="baseline" justify="end">
       {parts === null ? null : (
@@ -34,7 +37,9 @@ function RowReduction({ reduction }: { reduction: TodoReduction }) {
         </Text>
       )}
       {reduction.next === null ? null : (
-        <Badge size="sm" tone="info" title="Next date on this card">next {reduction.next}</Badge>
+        <Badge size="sm" tone={next?.word === "overdue" ? "warning" : "info"} title="Earliest date among this card's open todos">
+          {next === null ? "next" : next.word} <FriendlyDate iso={next?.iso ?? reduction.next} mode="date" />
+        </Badge>
       )}
     </Row>
   );
@@ -71,7 +76,7 @@ export function CardRow({ row }: { row: TodoRow }) {
         <FileEntry summary={row.card} hidePath onOpen={open} onPanel={open} className="flex-1 min-w-0" />
         {/* Capped and wrapping: the counts name their set ("7 now · 1 later · …") and must not squeeze the title out. */}
         <Stack gap="none" align="end" className="max-w-[50%] min-w-0 pt-1.5 text-right">
-          <RowReduction reduction={row.reduction} />
+          <RowReduction reduction={row.reduction} items={row.items} />
           {row.via === "reference" ? (
             <Text material size="xs" tone="muted" italic title="This card is outside the scope; its todos link into it">
               refers here

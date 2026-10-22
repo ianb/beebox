@@ -29,6 +29,35 @@ export function refLabel(ref: string): string {
   return humanised === "" ? ref : humanised;
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** `_content/chat/web/2026-10-22_0bda0c7a.chat.card`: the chat's date is in the file name. */
+const CHAT_REF = /^\/?_content\/chat\/(?:[^#/]+\/)*(\d{4})-(\d{2})-(\d{2})[^#/]*\.chat\.card(?:#.*)?$/;
+
+/**
+ * Label for a ref to a chat card, from the file name alone (no card read):
+ * `{ label: "chat, Oct 22", isoDate: "2026-10-22" }`. `null` for any other ref,
+ * or a chat card whose name carries no valid date.
+ */
+export function chatRefLabel(ref: string): { label: string; isoDate: string } | null {
+  const match = CHAT_REF.exec(ref);
+  if (match === null) return null;
+  const [, year, month, day] = match;
+  const monthName = MONTHS[Number(month) - 1];
+  if (monthName === undefined || Number(day) < 1 || Number(day) > 31) return null;
+  return { label: `chat, ${monthName} ${String(Number(day))}`, isoDate: `${String(year)}-${String(month)}-${String(day)}` };
+}
+
+/** What a `{% source %}` `usage` word means for a quote from a chat, in plain words; others pass through. */
+export function chatUsageWords(usage: string): string {
+  switch (usage) {
+    case "verbatim": return "your words";
+    case "paraphrase": case "paraphrased": return "paraphrased";
+    case "summary": case "summarized": return "summarized";
+    default: return usage;
+  }
+}
+
 /** Short label from an external `href` — basename of the file:/URL path. */
 export function externalLabel(href: string): string {
   const noFrag = href.split("#")[0] ?? href;

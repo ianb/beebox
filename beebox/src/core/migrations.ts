@@ -159,6 +159,12 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // written) on a marker without both fields. Legacy support to remove:
   // issues/deferred/2026-10-20-drop-box-marker-fallback.md.
   { name: "box-shape-record-2026-10", script: "src/scripts/migrate/box-shape-record/run.ts" },
+  // Repairs the seeded root question card: `learning.ref` gains its leading `/`
+  // (the bare form fails `bbx validate`), and a still-pending card's template
+  // proposal "This box is for <what the person said>." becomes a belief
+  // sentence. Touches only lines that match the stock text; an answered,
+  // dismissed, or expired card keeps its proposal.
+  { name: "root-question-2026-10", script: "src/scripts/migrate/root-question/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

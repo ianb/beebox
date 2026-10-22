@@ -70,11 +70,14 @@ export async function titleChatAfterTurn(
     throw e;
   }
   // A title model run appends its session to the tracked usage manifest and
-  // commits nothing else, so it commits that line itself. The husk's title
-  // stays uncommitted like the rest of an active chat's husk.
-  if (outcome.kind === "titled" || outcome.reason === "not-titled") {
+  // commits nothing else, so it commits that line itself, with the session's
+  // husk (new, or carrying the title just written). A chat below the title gate
+  // still has its new husk to commit; a scoped commit of unchanged paths is a
+  // no-op, so later turns of that chat commit nothing.
+  if (outcome.kind === "titled" || outcome.reason === "not-titled" || outcome.reason === "below-gate") {
     try {
-      await commitSessionManifest(boxRoot);
+      const husk = await findChatHuskEntry(boxRoot, args.sessionId);
+      await commitSessionManifest(boxRoot, husk === null ? [] : [husk.path]);
     } catch (e) {
       console.warn(`chat-review: could not commit the usage manifest after titling ${args.sessionId}:`, e);
     }

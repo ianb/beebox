@@ -56,6 +56,11 @@ name in the \`First_Last\` form ABOUT_CARDS describes, not a slug or alias.
 **Body (markdown):** freeform notes / context about the person — and the
 home for contact details that don't fit the three fields above.
 
+**Drafts:** a message drafted for the person lives in the body. When the
+person says it was sent, replace the draft with the text that was sent,
+edited as the person said, and note when and how; never leave only a
+reference to a draft you removed.
+
 **When to create a person card:**
 - When adding someone to a briefing's \`key-people:\` — always create
   the person card if it doesn't exist.

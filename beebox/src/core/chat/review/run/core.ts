@@ -179,6 +179,7 @@ export async function titleOneSession(
  * thrown away.
  */
 export async function runChatReview(boxRoot: string, options: RunOptions): Promise<RunSummary> {
+  const huskPaths: string[] = [];
   const result = await withChatReviewLock(boxRoot, {
     holder: "chat-review",
     fn: async () => {
@@ -189,6 +190,7 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
         state,
       });
       const planned = discovery.qualified.slice(0, options.maxSessions);
+      huskPaths.push(...planned.map((session) => session.huskPath));
       const summary = emptySummary();
       summary.overflow = discovery.qualified.length - planned.length;
       // Seeded before the loop, not assigned after it: the per-session steps
@@ -226,10 +228,10 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
     },
   });
   // Each model pass appended its session to the tracked usage manifest, and the
-  // husk writes are not committed here, so the run commits that file itself —
-  // after the review lock is released, since the commit takes the box git lock.
+  // run wrote the husks of the sessions it reviewed (an unchanged one commits nothing), so the run commits both itself — after the review lock is
+  // released, since the commit takes the box git lock.
   try {
-    await commitSessionManifest(boxRoot);
+    await commitSessionManifest(boxRoot, huskPaths);
   } catch (e) {
     console.warn("chat-review: could not commit the usage manifest after the run:", e);
   }

@@ -10,7 +10,7 @@ import { Hint } from "../../../ui/Hint";
 import { Accordion } from "../../../ui/Accordion";
 import { CalloutStack } from "../../CalloutBlock";
 import { AckBadgeCluster } from "../../ack-badge";
-import { projectAmbientReply, observeAmbientReply, recordAmbientCompletion } from "../projection";
+import { projectAmbientReply, observeAmbientReply, recordAmbientCompletion, ambientPanelHidden } from "../projection";
 import { readAttention, writeAttention } from "./attention-store";
 import { useBoxConversation } from "../../everywhere/conversation-context/context";
 import { useSelectedTranscript } from "../selected-transcript";
@@ -67,17 +67,17 @@ function useAmbientSessionReply(props: Props) {
     if (completion !== null && completion !== attention.lastCompletion) return;
     if (loaded) onActivity(session.sessionId, busy || attention.attention);
   }, [loaded, busy, attention.attention, attention.lastCompletion, completion, session.sessionId, onActivity]);
-  const hidden = (selected && props.transcriptVisible) || (!attention.attention && !busy && !error);
+  const hidden = ambientPanelHidden({ selected, transcriptVisible, attention: attention.attention, busy, error: Boolean(error) });
   const label = busy ? "Working" : reply.complete ? "Reply ready" : "Activity available";
   const loading = !loaded && (history.isLoading || status.isLoading);
-  return { session, reply, selected, error, label, loading, transcript, acknowledge, retry, hidden };
+  return { session, reply, error, label, loading, transcript, acknowledge, retry, hidden };
 }
 
 export function AmbientSessionReply(props: Props) {
-  const { session, reply, selected, error, label, loading, transcript, acknowledge, retry, hidden } = useAmbientSessionReply(props);
-  // The selected conversation already has its own transcript and composer.
-  // Ambient panels are only for other conversations while the user works elsewhere.
-  if (selected || hidden) return null;
+  const { session, reply, error, label, loading, transcript, acknowledge, retry, hidden } = useAmbientSessionReply(props);
+  // The selected conversation has its own panel only while its transcript is off screen
+  // (focus layout, or cards in both panes); `hidden` covers the visible case.
+  if (hidden) return null;
   return (
     <section aria-label={`${session.label} conversation activity`} {...bbxSource("session", session.sessionId)} className="p-2">
       <Accordion title={<Text size="sm">{session.label} · {label}</Text>}>
@@ -86,6 +86,7 @@ export function AmbientSessionReply(props: Props) {
           {Boolean(error) && <ErrorText>Could not refresh conversation: {error?.message}</ErrorText>}
           {!loading && !error && !transcript?.entries.length && <Hint>Conversation history is unavailable.</Hint>}
           {Boolean(reply.earlier) && <Hint>Earlier responses in conversation</Hint>}
+          {reply.preview !== "" && <div className="text-sm whitespace-pre-wrap line-clamp-3">{reply.preview}</div>}
           {<CalloutStack callouts={reply.callouts} onZoomView={({ target }) => props.onInspectCard(target)} />}
           {<AckBadgeCluster acks={reply.acks} onZoomView={({ target }) => props.onInspectCard(target)} />}
           <div className="flex gap-2 flex-wrap mt-2">
