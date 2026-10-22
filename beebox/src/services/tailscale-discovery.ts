@@ -25,7 +25,7 @@ import { resolveTarget, type TargetResolution } from "./tailscale.js";
 export { defaultHubConfigPath } from "../hub/config.js";
 
 /** A per-line logger so the discovery announcement threads through the CLI's
- *  own `console.log` (and is capturable in doctests) rather than being emitted
+ *  own `console.log` (and is capturable in tests) rather than being emitted
  *  from deep in the module. */
 export type LogLine = (line: string) => void;
 

@@ -1,0 +1,419 @@
+// # Oversize transcript lines are stubbed, not parsed
+//
+// Bounded *retention* (`test/cli/lib/session-retention.test.ts`) does not bound *allocation*:
+// `parseSessionLog` still `JSON.parse`d every line to decide what to keep. A production
+// box's session was 15.5 MB across 1 587 lines with **14 lines over 1 MB**
+// each (capture-image and tool payloads), so one `chat.history` request cost
+// ~50 MB of transient heap, and concurrent requests stacked linearly into the
+// 1.9 GB V8 cap — four `bbx serve` OOMs on 2026-08-03/04.
+//
+// So the scan refuses to parse a line longer than `MAX_SESSION_LINE_BYTES` and
+// records a placeholder entry instead.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { any, str } from "@ianbicking/tap-check/check";
+import { parseSessionLog, MAX_SESSION_LINE_BYTES } from "../../../src/cli/lib/session.js";
+import { isRealUserMessage } from "../../../src/cli/lib/session-real-user.js";
+import { writeGiantLineSessionLog } from "./session-log-fixture.js";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import { parseInChild } from "./parse-in-child.js";
+import fs from "node:fs/promises";
+
+// The threshold is far above any human-authored turn and far below the ~1.3 MB
+// capture payloads that caused the incident:
+void test("The threshold is far above any human-authored turn and far below the ~1.3 MB...", async (t) => {
+  t.check(MAX_SESSION_LINE_BYTES, 262144);
+});
+
+// ## A transcript of 1 MB+ lines parses without retaining its giant payloads
+//
+// 40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64 inflation
+// is counted), interleaved with normal-sized turns. `tail: 200` covers the whole
+// file, so retention bounds nothing here — only the per-line byte bound keeps the
+// giant payloads out of the result. The child measures the live heap after a
+// forced GC: what the parse result holds (`retainedMb`) and the largest sample
+// taken while the parse runs (`peakLiveMb`). Measured on 2026-10-18: 0 and 3 MB
+// bounded, 31 and 33 MB with the byte bound removed. (A heap cap on the child was
+// the assertion once, and flaked under load — see `parse-in-child.ts`.)
+void test("40 giant lines of ~1.2 MB payload each (~65 MB of payload once base64 inflati...", async (t) => {
+  // Without the bound the same parse retained 30 MB.
+  //
+  // Twenty of the forty giant lines are stubs, not all forty. The fixture alternates
+  // two kinds: giant *assistant* turns, whose bulk is one enormous text block, and
+  // giant *user* turns, whose bulk is a base64 image beside the person's actual
+  // message. The image payload is strippable and the rest of that turn is ordinary,
+  // so those twenty are now read normally — see
+  // [Image payloads are dropped, not the turn](#image-payloads-are-dropped-not-the-turn).
+  // The heap assertion is what matters here and it is unchanged: dropping the bytes
+  // before parsing costs no more than refusing to parse did.
+  //
+  // Not parsing the line is only half of it: the stub must not *hold on to* the line
+  // either. `line.slice(0, n)` and the regex captures taken from it are sliced
+  // strings that keep the whole 1.3 MB parent alive, so a first cut of this guard
+  // still ended the scan holding ~64 MB in 40 stubs. `session-oversize.ts` copies
+  // the sniffed head out with a Buffer round-trip; this same test caught that.
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const logPath = box.path("giant.jsonl");
+  await writeGiantLineSessionLog({ logPath, giantLines: 40, giantBytes: 1_200_000, normalLinesBetween: 3 });
+
+  const out = await parseInChild({ logPath, slice: { mode: "tail", tail: 200, minRealUserMessages: 2 } });
+  t.check(out, {
+    entries: 120,
+    total: 120,
+    hasMore: false,
+    stubs: 20,
+    stubSample: str`[message too large to display: ~${any(String).matches(/^\d+$/)} KB]`,
+    retainedMb: any(Number).below(8),
+    peakLiveMb: any(Number).below(8),
+  });
+});
+
+// ## What a stub is, and what it is not
+//
+// A stub is a normal `SessionEntry` — there is no new `SessionEntry.type`, because
+// the frontend's union is closed and narrows on it. The entry type is sniffed out
+// of the head of the raw line; the content is one text block, mirroring the
+// unknown-block placeholder `session-content.ts` already renders.
+void test("A stub is a normal SessionEntry — there is no new SessionEntry.type, because...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const fat = "z".repeat(MAX_SESSION_LINE_BYTES);
+  await box.write("log.jsonl", [
+    JSON.stringify({
+      type: "user",
+      uuid: "u1",
+      timestamp: "2026-01-01T00:00:00Z",
+      message: { role: "user", content: [{ type: "text", text: "<typed>hello</typed>" }] },
+    }),
+    JSON.stringify({
+      type: "assistant",
+      uuid: "a-huge",
+      timestamp: "2026-01-01T00:01:00Z",
+      message: { role: "assistant", content: [{ type: "tool_use", id: "toolu_1", name: "Write", input: { content: fat } }] },
+    }),
+    JSON.stringify({
+      type: "user",
+      uuid: "u-huge",
+      timestamp: "2026-01-01T00:02:00Z",
+      message: { role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/png", data: fat } }] },
+    }),
+  ].join("\n"));
+
+  const result = await parseSessionLog({
+    logPath: box.path("log.jsonl"),
+    slice: { mode: "tail", tail: 200 },
+  });
+  t.check(result, {
+    entries: [
+    { uuid: "u1", type: "user", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "<typed>hello</typed>" }] },
+    { uuid: "a-huge", type: "assistant", timestamp: "2026-01-01T00:01:00Z", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] },
+  ],
+    total: 2,
+    hasMore: false,
+  });
+
+  // `u-huge` is missing on purpose. It is a user turn whose only content is an
+  // image, which `classifyUserEntry` drops as PDF-reading plumbing — and always
+  // did, for a normally-sized image. An oversize one used to survive that filter by
+  // accident: stripping its payload left a text placeholder behind, and a text block
+  // is exactly what the filter looks for. Now that a stripped image comes back as an
+  // image again (see [Image payloads are dropped, not the
+  // turn](#image-payloads-are-dropped-not-the-turn)), the two sizes are classified
+  // the same way. Nothing a person sends is affected — chat wraps every message in
+  // `<typed>`/`<speech>` before it reaches the log, so a real photo turn carries
+  // text whether or not the sender wrote a caption.
+  //
+  // The uuid and timestamp are sniffed too, so a stub still sorts and identifies
+  // like the entry it stands for:
+
+  // A stub counts as **one displayable entry** toward `total`, so `total`/`hasMore`
+  // stay honest about how much transcript exists:
+
+  // A stub is **never** a real user message, even when the line it replaced was a
+  // typed one — the tail-window floor (`minRealUserMessages`) stays anchored to
+  // genuinely-parsed user text rather than to a placeholder that shows the human
+  // nothing:
+
+  t.check(result.entries.map(isRealUserMessage), [
+    true,
+    false,
+  ]);
+
+  // So widening the tail to cover two real user messages keeps only the one real
+  // message this transcript has, and the ceiling stops the widening rather than the
+  // stubs satisfying it:
+
+  const widened = await parseSessionLog({
+    logPath: box.path("log.jsonl"),
+    slice: { mode: "tail", tail: 1, minRealUserMessages: 2 },
+  });
+  t.check(widened.entries, [
+    { uuid: "u1", type: "user", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "<typed>hello</typed>" }] },
+    { uuid: "a-huge", type: "assistant", timestamp: "2026-01-01T00:01:00Z", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] },
+  ]);
+  t.check(widened.entries.map(isRealUserMessage), [true, false]);
+});
+
+// ## Oversize plumbing is dropped, not shown
+//
+// The length check runs before `buildEntry`, so without care an oversize line
+// would bypass every filter `buildEntry` applies and appear as a message the
+// parsed version never was — an oversize `tool_result` (the commonest fat line of
+// all) turning into a visible user turn that also inflates `total`. The head sniff
+// recognizes the shapes the scan drops anyway: system records, SDK meta prompts,
+// synthetic assistant turns, and tool_result plumbing.
+void test("The length check runs before buildEntry, so without care an oversize line wou...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const fat = "z".repeat(MAX_SESSION_LINE_BYTES);
+  await box.write("log.jsonl", [
+    JSON.stringify({
+      type: "user",
+      uuid: "u1",
+      timestamp: "2026-01-01T00:00:00Z",
+      message: { role: "user", content: [{ type: "text", text: "<typed>hello</typed>" }] },
+    }),
+    JSON.stringify({
+      type: "user",
+      uuid: "plumbing",
+      timestamp: "2026-01-01T00:01:00Z",
+      message: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", content: fat }] },
+    }),
+    JSON.stringify({
+      type: "system",
+      subtype: "compact_boundary",
+      uuid: "sys",
+      timestamp: "2026-01-01T00:02:00Z",
+      payload: fat,
+    }),
+    JSON.stringify({
+      type: "user",
+      uuid: "meta",
+      isMeta: true,
+      timestamp: "2026-01-01T00:03:00Z",
+      message: { role: "user", content: [{ type: "text", text: fat }] },
+    }),
+    JSON.stringify({
+      type: "assistant",
+      uuid: "synth",
+      timestamp: "2026-01-01T00:04:00Z",
+      message: { role: "assistant", model: "<synthetic>", content: [{ type: "text", text: fat }] },
+    }),
+  ].join("\n"));
+
+  const result = await parseSessionLog({
+    logPath: box.path("log.jsonl"),
+    slice: { mode: "tail", tail: 200 },
+  });
+  t.check(result, { entries: [{ uuid: "u1", type: "user", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "<typed>hello</typed>" }] }], total: 1, hasMore: false });
+
+  // A shape the sniff does not recognize still becomes a stub. An unexplained gap in
+  // the transcript is the worse failure, so the fallback is visible rather than
+  // silent. With no `uuid` in the head, the stub falls back to a synthesized
+  // per-line identity (`oversize-<line number>`) rather than an empty string —
+  // several empty-uuid stubs in one scan would otherwise collide as React keys:
+
+  await box.write("mystery.jsonl", JSON.stringify({ payload: fat }));
+  const mystery = await parseSessionLog({
+    logPath: box.path("mystery.jsonl"),
+    slice: { mode: "tail", tail: 200 },
+  });
+  t.check(mystery.entries, [{ uuid: "oversize-1", type: "assistant", timestamp: "", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] }]);
+
+  // Two mystery lines in the same file get distinct fallback ids, so they don't
+  // collide:
+
+  await box.write("mystery2.jsonl", [
+    JSON.stringify({ payload: fat }),
+    JSON.stringify({ payload: fat }),
+  ].join("\n"));
+  const mystery2 = await parseSessionLog({
+    logPath: box.path("mystery2.jsonl"),
+    slice: { mode: "tail", tail: 200 },
+  });
+  t.check(mystery2.entries, [
+    { uuid: "oversize-1", type: "assistant", timestamp: "", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] },
+    { uuid: "oversize-2", type: "assistant", timestamp: "", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] },
+  ]);
+
+  // The threshold is UTF-8 bytes, not characters, so a payload of multi-byte
+  // characters can't slip under it. This line is 100 000 characters — well under the
+  // 262 144 threshold as a code-unit count — but 300 KB encoded:
+
+  const cjk = "漢".repeat(100_000);
+  await box.write("cjk.jsonl", JSON.stringify({
+    type: "assistant",
+    uuid: "cjk",
+    timestamp: "2026-01-01T00:00:00Z",
+    message: { role: "assistant", content: [{ type: "text", text: cjk }] },
+  }));
+  const wide = await parseSessionLog({
+    logPath: box.path("cjk.jsonl"),
+    slice: { mode: "tail", tail: 200 },
+  });
+  t.check(wide.entries, [{ uuid: "cjk", type: "assistant", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "[message too large to display: ~293 KB]" }] }]);
+});
+
+// ## An oversize tool call loses its grafted result
+//
+// `graftToolResults` matches a `tool_result` to the `tool_use` block of a recent
+// assistant entry. A stub has no `tool_use` block, so the result stays on its own
+// turn ungrafted — the same accepted degradation as a call whose entry was evicted
+// by retention (`session-retention.ts`). Deliberate: the alternative is parsing the
+// line we refused to parse.
+void test("graftToolResults matches a toolresult to the tooluse block of a recent assist...", async (t) => {
+  // The `tool_result` turn itself is still dropped as plumbing, exactly as it is
+  // when the call parsed normally — nothing new appears in the transcript, the
+  // result summary is simply not shown next to the call.
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const fat = "z".repeat(MAX_SESSION_LINE_BYTES);
+  await box.write("log.jsonl", [
+    JSON.stringify({
+      type: "assistant",
+      uuid: "a1",
+      timestamp: "2026-01-01T00:00:00Z",
+      message: { role: "assistant", content: [{ type: "tool_use", id: "toolu_1", name: "Write", input: { content: fat } }] },
+    }),
+    JSON.stringify({
+      type: "user",
+      uuid: "u1",
+      timestamp: "2026-01-01T00:00:01Z",
+      message: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", content: "File created successfully." }] },
+    }),
+  ].join("\n"));
+
+  const result = await parseSessionLog({
+    logPath: box.path("log.jsonl"),
+    slice: { mode: "tail", tail: 200 },
+  });
+  t.check(result.entries, [{ uuid: "a1", type: "assistant", timestamp: "2026-01-01T00:00:00Z", content: [{ type: "text", text: "[message too large to display: ~256 KB]" }] }]);
+});
+
+// ## Image payloads are dropped, not the turn
+//
+// The byte bound was written for "capture-image and tool payloads" — pathological
+// lines. But a single photo attached in chat produces a line of roughly 0.7-1.3 MB,
+// four to five times the bound, so *every* message carrying a photo came back from
+// history as a placeholder. The text the person typed alongside the photo went with
+// it, the entry landed out of order relative to the reply, and a walkthrough of the
+// app in 2026-08 recorded someone nearly re-sending their photos because a
+// successful upload looked like a failure.
+//
+// The bytes are the problem; the turn is not. So an oversize line has its base64
+// payloads removed and is then parsed like any other.
+void test("The byte bound was written for \"capture-image and tool payloads\" — pathologic...", async (t) => {
+  const box2 = await makeTmpBox();
+  const logPath2 = box2.path("photo-turn.jsonl");
+
+  // One turn: what the person typed, plus a photo far past the bound.
+  const photo = Buffer.from("p".repeat(900_000)).toString("base64");
+  const turn = JSON.stringify({
+    parentUuid: null,
+    type: "user",
+    uuid: "uuid-1",
+    timestamp: "2026-08-22T21:12:00.000Z",
+    message: {
+      role: "user",
+      content: [
+        { type: "text", text: "<typed user=\"Rosa Okafor\" user-email=\"rosa@example.com\">here is the drawer</typed>" },
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: photo } },
+      ],
+    },
+  });
+  await fs.writeFile(logPath2, `${turn}\n`, "utf-8");
+
+  const parsed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
+  t.check(Buffer.byteLength(turn, "utf8"), any(Number).between(MAX_SESSION_LINE_BYTES + 1, Infinity));
+  t.check(parsed, {
+    entries: [{
+      uuid: "uuid-1",
+      type: "user",
+      timestamp: "2026-08-22T21:12:00.000Z",
+      content: [
+        { type: "text", text: "<typed user=\"Rosa Okafor\" user-email=\"rosa@example.com\">here is the drawer</typed>" },
+        { type: "image", imageRef: "photo-turn/uuid-1/0", mediaType: "image/jpeg" },
+      ],
+      user: "Rosa Okafor",
+      userEmail: "rosa@example.com",
+    }],
+    total: 1,
+    hasMore: false,
+  });
+
+  // A turn can carry both kinds of image at once — a photo that was stripped, and
+  // one whose bytes never arrived. They are different facts and get different
+  // answers: only the first has anything to fetch. Keying the decision on "this line
+  // had something stripped from it" would hand the failed upload a URL that could
+  // only 404, so the guard marks each payload it removes and the reader keys on the
+  // mark:
+
+  const failed = JSON.stringify({
+    parentUuid: null,
+    type: "user",
+    uuid: "uuid-2",
+    timestamp: "2026-08-22T21:14:00.000Z",
+    message: {
+      role: "user",
+      content: [
+        { type: "text", text: "<typed>one of these did not upload</typed>" },
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: photo } },
+        { type: "image", source: { type: "base64", media_type: "image/png", data: "" } },
+      ],
+    },
+  });
+  await fs.writeFile(logPath2, `${failed}\n`, "utf-8");
+
+  const mixed = await parseSessionLog({ logPath: logPath2, slice: { mode: "tail", tail: 50 } });
+  t.check(mixed, {
+    entries: [{
+      uuid: "uuid-2",
+      type: "user",
+      timestamp: "2026-08-22T21:14:00.000Z",
+      content: [
+        { type: "text", text: "<typed>one of these did not upload</typed>" },
+        { type: "image", imageRef: "photo-turn/uuid-2/0", mediaType: "image/jpeg" },
+        { type: "text", text: "[image not displayed]" },
+      ],
+    }],
+    total: 1,
+    hasMore: false,
+  });
+});
+
+// The person's words survive, in order, in a real entry. The bytes still do not
+// travel with them — that is the whole point of the bound — but the entry now
+// carries the photo's address instead of a sentence about its absence: the
+// session named by the transcript's filename, the entry's own uuid, and the
+// image's ordinal within the turn (`shared/session-media.ts`). The client turns
+// that into a lazy `<img src>` and fetches the photograph only if someone scrolls
+// to it.
+//
+// A line still too large once its images are gone — a genuinely enormous text turn
+// — is stubbed exactly as before. Stripping is an attempt, not a guarantee.

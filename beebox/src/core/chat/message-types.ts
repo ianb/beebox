@@ -85,6 +85,7 @@ export type ChatMessage =
   | ChatMessageStreamEvent
   | ChatMessageResult
   | ChatMessageTask
+  | ChatMessageTaskLevel
   | ChatMessageUnknown;
 
 /** `system` init message — carries the assigned session id. */
@@ -164,6 +165,25 @@ export interface ChatMessageTask {
   session_id: string;
   uuid: string;
   task: TaskEvent;
+}
+
+/** One background task the CLI reports as live, from its level signal. */
+export interface LiveTaskEntry {
+  taskId: string;
+  description: string;
+}
+
+/**
+ * The full set of live background tasks, from the SDK's
+ * `background_tasks_changed` level signal, with ambient (housekeeping) tasks
+ * already removed. Consumers replace their set with `tasks`; they do not pair
+ * it with the `task` edge events.
+ */
+export interface ChatMessageTaskLevel {
+  type: "task-level";
+  session_id: string;
+  uuid: string;
+  tasks: LiveTaskEntry[];
 }
 
 /**

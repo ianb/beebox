@@ -36,7 +36,7 @@ export interface TagCtx {
  * `ref=` rendering when no explicit alias is supplied.
  *   `/box/people/dana.person.card` → "dana"
  *   `people/dana`                  → "dana"
- *   `Voice_2026-03-15.memo.card`   → "Voice 2026-03-15"
+ *   `Voice_2026-03-15.doc.card`    → "Voice 2026-03-15"
  */
 export function displayFromRef(ref: string): string {
   if (ref === "") return "(missing)";

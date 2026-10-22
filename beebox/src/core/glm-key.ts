@@ -16,7 +16,7 @@
  * key refuses, loudly, with the two setup commands.
  */
 
-import { resolveSecret } from "./secrets/resolve.js";
+import { resolveSecret, secretIsResolvable } from "./secrets/resolve.js";
 import type { SecretRefusal } from "./secrets/errors.js";
 import { ProviderSetupError } from "./provider-setup-error.js";
 
@@ -52,14 +52,13 @@ export function glmEnvAdditions(key: string): GlmEnvAdditions {
 
 /**
  * Can this box run a GLM model right now? A cheap, non-spending presence
- * check (observed neither in `lastUsed` nor `purposes`) backing the chat
+ * check (no value read, no access-log line, store metadata unmoved) backing the chat
  * model picker: GLM rows are only offered when this says true. The run path
  * re-checks and refuses with the setup commands — the picker is a courtesy,
  * the refusal is the gate.
  */
 export async function glmKeyUsable(boxRoot: string): Promise<boolean> {
-  const resolved = await resolveSecret({ boxRoot, name: GLM_SECRET_NAME, purpose: "menu-availability", access: "server", observe: false });
-  return resolved.ok;
+  return secretIsResolvable({ boxRoot, name: GLM_SECRET_NAME, access: "server" });
 }
 
 /** Thrown when a GLM-model run has no usable key. Names the setup commands. */

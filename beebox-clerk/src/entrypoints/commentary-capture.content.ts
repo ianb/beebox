@@ -1,4 +1,4 @@
-// On-demand capture script for the "comment on this page" flow. It is NOT
+// On-demand capture script for the "Send to box" and "Comment on this page" flows. It is NOT
 // registered in the manifest (registration: "runtime") — the background
 // injects it into the active tab via chrome.scripting only when the user
 // invokes the action. This keeps Defuddle + single-file-core (the bulk of the
@@ -7,7 +7,11 @@
 // background (executeScript with a file can't return the value directly).
 import { extractReadable } from "../platform/extract-readable.js";
 import { freezePage } from "../platform/freeze-page.js";
-import { CAPTURE_RESULT, type CaptureResultMessage } from "../domain/capture-messages.js";
+import {
+  CAPTURE_RESULT,
+  takeCaptureRequestId,
+  type CaptureResultMessage,
+} from "../domain/capture-messages.js";
 
 export default defineContentScript({
   // Built but NOT registered in the manifest; the background injects it via
@@ -18,6 +22,10 @@ export default defineContentScript({
   registration: "runtime",
   matches: [],
   async main() {
+    // First, before any await: take the id the background set for THIS
+    // injection, so the result can be matched to its request (see
+    // capture-messages.ts).
+    const requestId = takeCaptureRequestId(globalThis);
     let result: CaptureResultMessage;
     try {
       // Extract first (cheap, clones the DOM); then freeze so freezing's side
@@ -31,9 +39,9 @@ export default defineContentScript({
         `[clerk] capture: extract ${Math.round(t1 - t0)}ms, freeze ${Math.round(t2 - t1)}ms` +
           `${frozenHtml === null ? " (no snapshot)" : ""}`,
       );
-      result = { type: CAPTURE_RESULT, capture: { page, frozenHtml } };
+      result = { type: CAPTURE_RESULT, requestId, capture: { page, frozenHtml } };
     } catch (err) {
-      result = { type: CAPTURE_RESULT, error: err instanceof Error ? err.message : String(err) };
+      result = { type: CAPTURE_RESULT, requestId, error: err instanceof Error ? err.message : String(err) };
     }
     chrome.runtime.sendMessage(result).catch((err: unknown) => {
       // No UI surface from a content script -- console is the only signal,

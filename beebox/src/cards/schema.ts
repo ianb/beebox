@@ -385,7 +385,7 @@ export interface CardSchema<
    * it survives `cardSchema()` so runtime code reaches it through the schema
    * map rather than a side registry.
    *
-   * Declared with method syntax, deliberately: a `CardSchema<"memo", …>` has
+   * Declared with method syntax, deliberately: a `CardSchema<"doc", …>` has
    * to stay assignable to a plain `CardSchema` (the schema map holds them all
    * as one type), and a property-position callback taking the schema's own
    * field type would make that fail on the contravariant parameter. The caller

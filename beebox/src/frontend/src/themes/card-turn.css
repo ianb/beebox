@@ -4,9 +4,15 @@
   transform-origin: top right;
   transition: transform 160ms ease-out;
 }
+/* The label hangs outside the fold, over whatever the heading paints, so it
+   carries the card's paper and soft ink with it. */
 .bbx-card-properties-label {
   position: absolute;
   pointer-events: none;
+  color: var(--bbx-ink-soft);
+  background: var(--bbx-paper);
+  padding: 0.15rem 0.3rem;
+  border-radius: 3px;
   font: 600 0.68rem/1 ui-sans-serif, system-ui, sans-serif;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -14,14 +20,8 @@
 .bbx-card-surface[data-card-side="front"] .bbx-card-properties-label {
   top: calc(100% + 0.35rem);
   right: 0.25rem;
-  opacity: 0.28;
   transform: rotate(-90deg) translateY(-100%);
   transform-origin: top right;
-  transition: opacity 160ms ease-out;
-}
-.bbx-card-surface[data-card-side="front"] .bbx-card-properties:hover .bbx-card-properties-label,
-.bbx-card-surface[data-card-side="front"] .bbx-card-properties:focus-visible .bbx-card-properties-label {
-  opacity: 0.78;
 }
 .bbx-card-surface[data-card-side="back"] .bbx-card-properties-label {
   right: calc(100% + 0.75rem);

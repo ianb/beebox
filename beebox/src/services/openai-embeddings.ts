@@ -6,7 +6,7 @@
  * Fake derives deterministic unit vectors from each text so tests never need a
  * real key.
  *
- * Provider decision (sticky, see docs/plans/semantic-search.md § Direction):
+ * Provider decision (sticky, see docs/implemented-plans/semantic-search.md § Direction):
  * text-embedding-3-small at 512 dims via Matryoshka truncation. Model + dims
  * are code constants, not per-box config — a config knob would let boxes
  * drift apart for no benefit; changing the model is a code change whose cost
@@ -72,7 +72,7 @@ export interface EmbeddingsService {
  * `data`, null items, wrong `index`, absent/misshapen/non-finite
  * `embedding` — becomes a typed EmbeddingsError, never a raw TypeError:
  * the refresh and query layers degrade on EmbeddingsError specifically.
- * Exported for doctests (no real key can exercise this boundary in CI).
+ * Exported for tests (no real key can exercise this boundary in CI).
  */
 export function parseEmbeddingsResponse(body: unknown, expectedCount: number): number[][] {
   const data = isRecord(body) ? body["data"] : undefined;
@@ -111,7 +111,7 @@ export function parseEmbeddingsResponse(body: unknown, expectedCount: number): n
 
 /**
  * Split texts into request chunks respecting both input-count and char
- * budgets. Exported for doctests only — the real service applies it inside
+ * budgets. Exported for tests only — the real service applies it inside
  * embed().
  */
 export function chunkTexts(texts: string[]): string[][] {

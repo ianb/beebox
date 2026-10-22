@@ -2,7 +2,7 @@
  * `POST /api/capture/sessions` — create a new staging session.
  *
  * Also the voice-recording entry point
- * (`docs/plans/resilient-voice-recording.md`): `kind: "voice"` with a
+ * (`docs/implemented-plans/resilient-voice-recording.md`): `kind: "voice"` with a
  * client-generated `id` lets the browser start staging before the box
  * confirms the session exists, and a repeat of the same id/kind/owner is
  * idempotent rather than 409ing. Capture sessions (the default) keep

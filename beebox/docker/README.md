@@ -8,7 +8,7 @@ of what's in this directory.
 | File | What it is |
 |---|---|
 | `Dockerfile` | Multi-stage build. Build stage packs the engine tarball from the workspace (build context = the **monorepo root**); runtime stage is `node:24-bookworm-slim` + the external tools the agent expects (`pandoc`, `imagemagick`, `poppler-utils`, `git`, `git-lfs`) + the Claude Code CLI + the engine installed from the baked tarball. |
-| `entrypoint.sh` | Args → `exec "$@"` (so `docker compose run --rm box <anything>` works literally). No args → v2-box readiness check (marker, package.json, HEAD commit), first-run box-local `pnpm install`, then `bbx engine serve /data/box/content`. |
+| `entrypoint.sh` | Args → `exec "$@"` (so `docker compose run --rm box <anything>` works literally). Before either, points the box's gitignored `.beebox/engine` at `/app/node_modules/beebox`. No args → v2-box readiness check (marker, package.json, HEAD commit), box-local `pnpm install` on first run or when `node_modules/beebox` does not go through the engine link, then `bbx engine serve /data/box/content`. |
 | `compose.yaml` | The `box` service (loopback-only `127.0.0.1:3210`, `restart: unless-stopped`, bind-mounted box + persistent Claude-credentials volume) and a `caddy` service behind `--profile public` for VPS TLS. |
 | `Caddyfile.example` | Two-line reverse proxy for the public profile (`BBX_DOMAIN` → `box:3210`). |
 | `compose.tailscale.yaml` | Override adding a `tailscale` sidecar service (tailnet-only HTTPS, zero open ports) — load with `-f compose.yaml -f compose.tailscale.yaml`. |

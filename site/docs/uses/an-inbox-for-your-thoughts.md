@@ -13,11 +13,13 @@ it becomes.
 **What you do.** Open the chat, or the capture page on your phone, and talk.
 Five seconds or twenty minutes. Pauses are expected, and so are false starts:
 "no, I didn't mean that" drops the abandoned thought and keeps the corrected
-one. Or type. With a card open you can select a passage and talk about it, and
+one. Or type. On an iPhone you can also tell Siri "Save a thought in Bee Box" without
+opening the app (see [phone capture](../capabilities/phone-capture.md) for what
+has and has not been tried on a real phone). With a card open you can select a passage and talk about it, and
 the selection arrives with what you said.
 
-**What the box does.** A spoken note becomes a memo card carrying its
-transcription; a photographed or typed one becomes a memo too. The agent reads
+**What the box does.** A spoken note becomes a doc card with its
+recording and transcript attached; a photographed or typed one becomes a doc too. The agent reads
 it later and decides what it is: a todo, a record card for a thing you keep
 track of, a note appended to a card that already exists, or a question back to
 you when it cannot tell. Your own words are kept quoted and are not rewritten
@@ -45,6 +47,6 @@ own that a thought you left needs acting on.
 - **Room for what does not fit yet** ([dump it in now, shape it later](../capabilities/shape-it-later.md)): facts that have no field yet stay on the card in your words, so the structure can be decided after the pile is in, and reshaped later without losing anything.
 
 **Read next.** [Questions](../capabilities/questions.md),
-[memo](../reference/cards/memo.md), [audio](../reference/cards/audio.md),
+[doc](../reference/cards/doc.md), [audio](../reference/cards/audio.md),
 [record](../reference/cards/record.md),
 [todo-view](../reference/cards/todo-view.md).

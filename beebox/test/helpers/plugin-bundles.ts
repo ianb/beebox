@@ -3,7 +3,7 @@
  * engine's `dist/` the way `build:cli` does: staged under `dist/`, then renamed
  * into place so a concurrent reader (another test resolving
  * `beebox/plugins/<name>/view` through a box's `node_modules/beebox` symlink)
- * never sees a half-written file. A doctest that imports a plugin view through
+ * never sees a half-written file. A test that imports a plugin view through
  * the package `exports` map calls this first, so it does not depend on
  * `pretest` having run.
  */

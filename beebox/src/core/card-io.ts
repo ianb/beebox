@@ -21,6 +21,7 @@ import { renderFrontmatterBlock, splitCardContent, type CardSchema, type InferCa
 import { parseCardFileName } from "../shared/card-name.js";
 import { errorMessage } from "../shared/error-guards.js";
 import { isRecord } from "../shared/is-record.js";
+import { retiredTypeHint } from "../cards/retired-types.js";
 
 /**
  * Errors raised by the card IO layer. Caller code can catch this specifically
@@ -117,7 +118,7 @@ export function parseCardText(
   const resolved = resolveCardType({ fm, source, type });
   const schema = schemas.get(resolved);
   if (schema === undefined) {
-    throw new CardIOError(source, `no schema registered for type "${resolved}"`);
+    throw new CardIOError(source, `no schema registered for type "${resolved}"${retiredTypeHint(resolved)}`);
   }
 
   // cardworks bakes `type: z.literal(...)` into frontmatterSchema, so we

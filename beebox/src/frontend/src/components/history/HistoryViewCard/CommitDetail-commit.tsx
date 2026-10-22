@@ -46,7 +46,7 @@ function TrailerChip({ label, value, onClick, title }: TrailerChipProps) {
   const base = "text-xs px-1.5 py-0.5 rounded inline-flex items-center gap-1";
   const display = label ? (
     <>
-      <span className="text-warm-500">{label}:</span>
+      <span className="text-warm-700">{label}:</span>
       <span className="font-medium">{value}</span>
     </>
   ) : (
@@ -105,7 +105,7 @@ export function CommitTab({
         <code className="text-xs bg-warm-100 px-1.5 py-0.5 rounded text-warm-700">
           {commit.hash.substring(0, 8)}
         </code>
-        <span className="text-xs text-warm-500">
+        <span className="text-xs text-warm-700">
           {new Date(commit.date).toLocaleString()}
         </span>
         {phase ? <PhaseBadge phase={phase} /> : null}

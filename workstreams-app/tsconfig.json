@@ -15,9 +15,11 @@
     "declaration": false,
     "sourceMap": true,
     "outDir": "dist",
+    // The program reaches into ../beebox/src; nothing emits from it.
+    "rootDir": "..",
     "lib": ["ES2023"],
     "types": ["node", "@fastify/cookie"]
   },
-  "include": ["eslint.frontend.config.ts", "eslint.config.ts", "src/router/**/*", "src/server/**/*", "src/shared/**/*", "test/router/**/*"],
+  "include": ["eslint.frontend.config.ts", "eslint.config.ts", "src/router/**/*", "src/server/**/*", "src/shared/**/*", "test/router/**/*", "test/scenarios/**/*", "test/server/**/*", "test/shared/**/*"],
   "exclude": ["node_modules", "dist", "src/frontend"]
 }

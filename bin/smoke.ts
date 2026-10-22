@@ -6,7 +6,7 @@
  * right and the *state* was wrong — a server that 404s page navigations, a
  * place menu killed by broken global Codex state, a chat turn that crashed on
  * an unknown SDK item. Only a real box on the real machine shows those. See
- * issues/exploration/2026-08-26-merge-time-smoke-tier.md and
+ * issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md and
  * issues/exploration/2026-08-26-post-test-economics-retro.md.
  *
  *   bin/smoke                 # walk this worktree's box through the dev router
@@ -42,13 +42,12 @@
 import { BrowseSession } from "../beebox/test/tours/tour-lib/browse.js";
 import { VIEWPORTS } from "../beebox/test/tours/tour-lib/types.js";
 import { invariant } from "../beebox/src/shared/invariant.js";
-import { findCardRow } from "./smoke-card-open.js";
 import {
   BrowseListEmptyError,
-  CardRefUnresolvedError,
   CardViewMissingError,
   ChatShellMissingError,
   LandmarkRefUnresolvedError,
+  NoCardToOpenError,
   NoLandmarkToSwitchToError,
   PageErrorsRaisedError,
   SmokeFailureError,
@@ -57,6 +56,7 @@ import {
 import {
   BUDGET_MS,
   Budget,
+  contentListing,
   faultInjection,
   generationAge,
   git,
@@ -71,7 +71,7 @@ import {
   worktreeName,
   type Options,
 } from "./smoke-harness.js";
-import { isFreshGeneration } from "./smoke-probe.js";
+import { contentCardPath, isFreshGeneration } from "./smoke-probe.js";
 import { formatStepTime, type SmokeStepRecord } from "./smoke-lib.js";
 import {
   cardViewRendered,
@@ -242,27 +242,21 @@ function buildSteps(input: {
     id: "card-open",
     name: "a card opens and renders",
     run: async () => {
-      const { listing, row } = await findCardRow(session);
-      const ref = refFor(listing, row);
-      if (ref === null) {
-        throw new CardRefUnresolvedError({ role: row.role, name: row.name, listing });
-      }
-      // clickRef's click is a box-center CDP event with no actionability
-      // check, so a row below the fold (routine in a directory with many
-      // siblings) fails outright rather than auto-scrolling.
-      await session.run(["scrollintoview", `@${ref}`]);
-      const { stdout: source } = await session.run(["get", "attr", `@${ref}`, "data-bbx-source"]);
-      invariant(source.trim().startsWith("card:"), "selected Browse row lacks card provenance");
-      const expectedPath = source.trim().slice("card:".length);
-      await session.clickRef(ref);
-      await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('[data-workspace-card]')).some(node => !node.hidden && node.getAttribute('data-workspace-card') === ${JSON.stringify(expectedPath)})`]);
-      await session.waitForReady();
-      const { stdout: detail } = await session.run(["snapshot", "-s", `[data-workspace-card=${JSON.stringify(expectedPath)}] [role="tabpanel"]`]);
+      // Opened by URL, not by clicking through Browse: the click path cost
+      // sixteen browser commands at about a second each, and its failures were
+      // its own (offscreen and covered rows, a box layout change), not the app's.
+      // `browse-list` above still proves Browse renders the box's content.
+      const listing = await contentListing({ baseUrl, key });
+      const path = contentCardPath(listing);
+      if (path === null) throw new NoCardToOpenError(listing);
+      await session.open(`${baseUrl}/chat?card=${encodeURIComponent(path)}`);
+      await session.run(["wait", "--fn", `Array.from(document.querySelectorAll('[data-workspace-card]')).some(node => !node.hidden && node.getAttribute('data-workspace-card') === ${JSON.stringify(path)})`]);
+      const { stdout: detail } = await session.run(["snapshot", "-s", `[data-workspace-card=${JSON.stringify(path)}] [role="tabpanel"]`]);
       if (!cardViewRendered(detail)) {
         // The whole-page snapshot is failure evidence only. Taken on every
         // walk it cost ~10s of the two-minute budget: an unscoped snapshot
         // looks up each unmatched control's id in a separate browser call.
-        throw new CardViewMissingError({ name: row.name, url: await session.getUrl(), snapshot: await session.snapshot() });
+        throw new CardViewMissingError({ path, url: await session.getUrl(), snapshot: await session.snapshot() });
       }
     },
   });

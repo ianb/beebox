@@ -5,7 +5,7 @@
  * serves both the canonical Landmarks card and authored `view: landmarks` cards
  * (docs/plans/interface-as-cards.md) — a `view: landmarks` card shows the
  * sessions too, which is the point: one full picture of the box's activity
- * (docs/plans/top-nav-ia.md Track D).
+ * (docs/implemented-plans/top-nav-ia.md Track D).
  *
  * Two queries: `landmarks.list` for link data, `chat.byLandmark` for the
  * chat buckets, joined by directory. Order and nesting come from `list`
@@ -116,6 +116,7 @@ export function LandmarksList() {
   const shown = filterLandmarks(landmarks, filter);
   return (
     <Stack gap="md">
+      <Text as="p" size="sm" tone="subtle">The places you jump to most.</Text>
       <TextField
         id="bbx-landmarks-filter"
         label="Find a landmark"

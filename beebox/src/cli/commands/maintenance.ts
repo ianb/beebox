@@ -8,7 +8,7 @@ import { defaultHubConfigPath, loadHubConfig } from "../../hub/config.js";
 import { errorMessage } from "../../shared/error-guards.js";
 import {
   closeBoxMaintenance, boxMaintenanceStatus, boxWorkEnvironment, type BoxMaintenance,
-} from "../../lib/box-maintenance.js";
+} from "../../lib/box-maintenance/admission.js";
 import { captureMigrationSnapshot } from "../../core/migration-recovery.js";
 import { invariant } from "../../shared/invariant.js";
 

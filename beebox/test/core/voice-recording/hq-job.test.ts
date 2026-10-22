@@ -1,0 +1,328 @@
+// # The HQ transcription job
+//
+// `runHqJob` (`docs/plans/resilient-voice-recording.md`, Track 1) concatenates a
+// voice recording's staged PCM chunks, transcribes them piece by piece, retries
+// a transient/piece-too-long failure, and persists every transition through
+// `nextVoiceState` — emitting `voice-recording-status` on the event bus each
+// time. `clock` and `transcribePiece` are injectable so these tests never wait
+// a real backoff or reach a real HQ service.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import type { TmpBox } from "../../helpers/test-helpers.js";
+import { createEventBus } from "../../../src/core/event-bus/core.js";
+import type { EventBus } from "../../../src/core/event-bus/core.js";
+import type { EventMap } from "../../../src/core/event-bus/schemas.js";
+import type { StagingSession } from "../../../src/core/capture/staging-schema.js";
+import type { HqTranscriptionService } from "../../../src/shared/transcription-services.js";
+import { invariant } from "../../../src/shared/invariant.js";
+import { createStagingSession, addAudioChunk, readStagingSession } from "../../../src/core/capture/staging-store/core.js";
+import { sealVoiceSession, applyVoiceEvent } from "../../../src/core/voice-recording/voice-staging/core.js";
+import { runHqJob } from "../../../src/core/voice-recording/hq-job/core.js";
+import type { HqJobClock, TranscribePieceFn } from "../../../src/core/voice-recording/hq-job/core.js";
+
+const GITIGNORE = ["_tmp/", ".beebox/"].join("\n") + "\n";
+
+async function configureBox(box: TmpBox) {
+  await box.write(".gitignore", GITIGNORE);
+  box.commitAll("configure");
+}
+
+// A no-op clock: `now()` is fixed unless advanced, `wait()` resolves
+// immediately so a scripted backoff never actually sleeps in a test.
+function fakeClock(startIso: string): HqJobClock & { advance(ms: number): void } {
+  let current = new Date(startIso);
+  return {
+    now: () => current,
+    wait: async (_ms: number) => {},
+    advance(ms: number) {
+      current = new Date(current.getTime() + ms);
+    },
+  };
+}
+
+// Scripts a sequence of transcribePiece outcomes, consumed in call order.
+// An entry is `{ error }` (thrown, error carries permanent/status/body) or a
+// success result `{ text, diarized? }`.
+type ScriptEntry = { error: Error } | { text: string; diarized?: boolean };
+function scriptedTranscribe(script: ScriptEntry[]): TranscribePieceFn {
+  let i = 0;
+  return async () => {
+    const entry = script[i];
+    if (entry === undefined) throw new Error(`scriptedTranscribe: no more scripted outcomes (call ${i + 1})`);
+    i++;
+    if ("error" in entry) throw entry.error;
+    return entry;
+  };
+}
+
+class ScriptedTranscriptionError extends Error {
+  override name = "ScriptedTranscriptionError";
+  declare permanent: boolean | undefined;
+  declare status?: number;
+  declare body?: string;
+  constructor(message: string, { permanent, status, body }: { permanent: boolean | undefined; status?: number; body?: string }) {
+    super(message);
+    this.permanent = permanent;
+    if (status !== undefined) this.status = status;
+    if (body !== undefined) this.body = body;
+  }
+}
+
+async function stageVoiceRecording(box: TmpBox, { targetSessionId, bytes }: { targetSessionId: string; bytes: number }) {
+  const session = await createStagingSession({ boxRoot: box.root, targetSessionId, createdBy: null, kind: "voice" });
+  await addAudioChunk({
+    boxRoot: box.root, id: session.id, segmentId: session.id, segmentStartedAt: "2026-09-10T18:00:00.000Z",
+    filename: "pcm-000001.raw", buffer: Buffer.alloc(bytes), audioFormat: "pcm-s16le-16k",
+  });
+  return session;
+}
+
+async function requestHq({ box, session, requestedAt, service }: { box: TmpBox; session: StagingSession; requestedAt?: string | undefined; service?: HqTranscriptionService | undefined }) {
+  invariant(session.voice, "staged recording carries voice state");
+  const seal = await sealVoiceSession({
+    boxRoot: box.root, id: session.id, emissionId: "emission-1",
+    hq: { emissionId: "emission-1", sessionId: session.voice.targetSessionId, service: service ?? "whisper", requestedAt: requestedAt ?? "2026-09-10T18:00:00.000Z" },
+  });
+  return seal;
+}
+
+type VoiceStatusEvent = EventMap["voice-recording-status"];
+function collectBusEvents(eventBus: EventBus) {
+  const events: VoiceStatusEvent[] = [];
+  eventBus.subscribe({ listener: (e) => { if (e.event === "voice-recording-status") events.push(e.data); } });
+  return events;
+}
+
+// Stage a recording of `bytes` PCM bytes, request HQ, run the job against the
+// scripted transcriber at `now`, and return the persisted `voice.hq` state,
+// the bus events, and the box (for the example's `cleanup`).
+async function runJob({ bytes, script, now, requestedAt, service }: { bytes: number; script: ScriptEntry[] | TranscribePieceFn; now?: string; requestedAt?: string; service?: HqTranscriptionService }) {
+  const box = await makeTmpBox({ git: true });
+  await configureBox(box);
+  const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes });
+  await requestHq({ box, session, requestedAt, service });
+  const eventBus = createEventBus(box.root);
+  const events = collectBusEvents(eventBus);
+  const transcribePiece = typeof script === "function" ? script : scriptedTranscribe(script);
+  await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock: fakeClock(now ?? "2026-09-10T18:01:00.000Z"), transcribePiece });
+  const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+  invariant(after?.voice, "job leaves the voice recording in place");
+  return { box, hq: after.voice.hq, events };
+}
+
+// ## A transient failure retries the same piece, then succeeds
+//
+// A `voice-recording-status` event is emitted for each transition: the first
+// attempt, the retry, the second attempt, and the final ready state.
+void test("A voice-recording-status event is emitted for each transition:", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const run = await runJob({
+    bytes: 1000,
+    script: [
+      { error: new ScriptedTranscriptionError("network blip", { permanent: undefined }) },
+      { text: "hello world" },
+    ],
+  });
+  const { box } = run;
+  t.check(({ hq: run.hq, events: run.events.length, last: run.events[run.events.length - 1]?.hq.state }), {
+    hq: {
+      state: "ready",
+      result: {
+        text: "hello world",
+        diarized: false,
+        service: "whisper",
+        pieces: 1,
+      },
+    },
+    events: 4,
+    last: "ready",
+  });
+});
+
+// ## A piece-too-long failure halves the piece length and restarts
+//
+// 12,000,000 bytes at the default 300 s piece length (9,600,000 bytes/piece) is
+// two pieces; a 413 on the first attempt halves to 150 s and restarts from
+// piece 1 — three pieces at the new length, all of which succeed:
+void test("12,000,000 bytes at the default 300 s piece length (9,600,000 bytes/piece) is...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const run = await runJob({
+    bytes: 12_000_000,
+    script: [
+      { error: new ScriptedTranscriptionError("too long", { permanent: false, status: 413 }) },
+      { text: "one" },
+      { text: "two" },
+      { text: "three" },
+    ],
+  });
+  const { box } = run;
+  t.check(run.hq, {
+    state: "ready",
+    result: {
+      text: `one
+
+two
+
+three`,
+      diarized: false,
+      service: "whisper",
+      pieces: 3,
+    },
+  });
+});
+
+// ## A permanent failure fails the recording; the HQ badge gets a reason
+void test("A permanent failure fails the recording; the HQ badge gets a reason", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const run = await runJob({
+    bytes: 1000,
+    script: [{ error: new ScriptedTranscriptionError("missing key", { permanent: true, status: 401, body: "no api key" }) }],
+  });
+  const { box } = run;
+  t.check(run.hq, {
+    state: "failed",
+    failure: {
+      kind: "permanent",
+      code: "http_401",
+      message: "missing key",
+      upstreamStatus: 401,
+      upstreamBody: "no api key",
+    },
+  });
+});
+
+// ## 24h without a result gives up, even before the first attempt on a fresh restart
+//
+// `hqRequest.requestedAt` is checked before every attempt — including the very
+// first one on a resumed job — so a request that's already 25h old expires
+// without ever calling `transcribePiece`:
+void test("hqRequest.requestedAt is checked before every attempt — including the very fi...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const run = await runJob({
+    bytes: 1000,
+    requestedAt: "2026-09-09T18:00:00.000Z",
+    now: "2026-09-10T19:00:01.000Z", // 25h + 1s later
+    script: async () => { throw new Error("must not be called"); },
+  });
+  const { box } = run;
+  t.check(run.hq, {
+    state: "failed",
+    failure: {
+      kind: "exhausted",
+      code: "hq_retry_exhausted",
+      message: "HQ transcription retry window elapsed",
+    },
+  });
+});
+
+// ## Diarized multi-piece results are relabeled per piece with part markers
+//
+// 20,000,000 bytes is three pieces at 300 s (9,600,000 + 9,600,000 + 800,000).
+// With no prior transcript, speaker letters start at A and advance per piece:
+void test("20,000,000 bytes is three pieces at 300 s (9,600,000 + 9,600,000 + 800,000).", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const run = await runJob({
+    bytes: 20_000_000,
+    service: "mai-diarized",
+    script: [
+      { text: "Speaker 0: hi", diarized: true },
+      { text: "Speaker 0: there", diarized: true },
+      { text: "Speaker 0: bye", diarized: true },
+    ],
+  });
+  const { box } = run;
+  t.check(run.hq, {
+    state: "ready",
+    result: {
+      text: `— part 1 of 3 —
+Speaker 1A: hi
+
+— part 2 of 3 —
+Speaker 1B: there
+
+— part 3 of 3 —
+Speaker 1C: bye`,
+      diarized: true,
+      service: "mai-diarized",
+      pieces: 3,
+    },
+  });
+});
+
+// ## A resumed job continues the attempt counter, not just the piece length
+//
+// If a process restart interrupts a `retrying` job, `runHqJob`'s backoff must
+// pick up where the attempt counter left off — re-warming from attempt 1 after
+// every restart would retry faster than `jitteredBackoff`'s exponential curve
+// intends. Drive the manifest straight to `retrying` at attempt 5 (as if four
+// prior attempts already failed), then resume it:
+void test("If a process restart interrupts a retrying job, runHqJob's backoff must pick...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await configureBox(box);
+  const session = await stageVoiceRecording(box, { targetSessionId: "chat-1", bytes: 1000 });
+  await requestHq({ box, session });
+  await applyVoiceEvent({
+    boxRoot: box.root, id: session.id,
+    event: { type: "pieceStarted", piece: 1, pieces: 1, attempt: 5, pieceSeconds: 300 },
+  });
+  await applyVoiceEvent({
+    boxRoot: box.root, id: session.id,
+    event: {
+      type: "pieceFailed", classification: "transient", pieceSeconds: 300, attempt: 5,
+      nextAttemptAt: "2026-09-10T18:00:00.000Z", // already past — the resumed job needn't wait
+      failure: { code: "network_error", message: "blip" },
+    },
+  });
+
+  const eventBus = createEventBus(box.root);
+  const events = collectBusEvents(eventBus);
+
+  const transcribePiece = scriptedTranscribe([{ text: "resumed" }]);
+  const clock = fakeClock("2026-09-10T18:05:00.000Z"); // well past nextAttemptAt
+  await runHqJob({ boxRoot: box.root, id: session.id, eventBus, clock, transcribePiece });
+
+  await t.checkText(
+    // The resumed attempt should be 6 (continuing from the persisted 5), not 1.
+    JSON.stringify({ resumedAttempt: events[0]?.hq.state === "transcribing" ? events[0].hq.attempt : null }),
+    "{\"resumedAttempt\":6}",
+  );
+});

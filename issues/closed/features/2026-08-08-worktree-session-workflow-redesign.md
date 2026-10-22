@@ -109,4 +109,4 @@ summarized above.
   module-resolution split-brain (box-local schemas resolve `beebox` through
   the box's own `node_modules` symlink, so a worktree's `bbx serve` can load a
   _second_ engine build in-process), and the `events.db` truncation hazard filed
-  as [two engines on one box truncate each other's events](../../bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md).
+  as [two engines on one box truncate each other's events](../bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md).

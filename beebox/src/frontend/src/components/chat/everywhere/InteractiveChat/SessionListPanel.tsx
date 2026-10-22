@@ -45,7 +45,7 @@ import { bbxSource } from "../../../../lib/source-tag";
 import { useDropdownClose } from "../../../ui/Dropdown";
 import { TextField } from "../../../ui/fields/field";
 import { MenuItem } from "../../../ui/dropdown-menu-item";
-import { layoutSessionList } from "./session-list-grouping";
+import { layoutSessionList, sessionIdHint } from "./session-list-grouping";
 import { relativeTime, useChatSearch, ChatSearchRows } from "./session-search";
 
 type LoadState =
@@ -130,7 +130,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
   onToggleAll: () => void;
 }) {
   if (state.kind === "loading") {
-    return <div className="px-3 py-2 text-sm text-warm-500">Loading...</div>;
+    return <div className="px-3 py-2 text-sm text-warm-700">Loading...</div>;
   }
   if (state.kind === "error") {
     return (
@@ -144,7 +144,7 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
   }
   const { sessions, dead } = state;
   if (sessions.length === 0 && dead.length === 0) {
-    return <div className="px-3 py-2 text-sm text-warm-500">No chats yet</div>;
+    return <div className="px-3 py-2 text-sm text-warm-700">No chats yet</div>;
   }
 
   // Prefer the current session's own row over the `contextDir` prop: a resumed
@@ -158,14 +158,16 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
     sessions,
     contextDir: activeRow?.contextDir ?? contextDir,
   });
-  const rowProps = { boxSlug, currentSessionId };
+  // The rows on screen: a hidden done or expired chat does not make a
+  // visible title ambiguous.
+  const rowProps = { boxSlug, currentSessionId, allRows: showAll ? [...sessions, ...dead] : sessions.filter((s) => !s.done) };
   const hiddenCount = layout.done.length + dead.length;
   const liveCount = layout.kind === "flat" ? layout.sessions.length : layout.here.length + layout.elsewhere.length;
 
   return (
     <>
       {liveCount === 0 && !showAll ? (
-        <div className="px-3 py-2 text-sm text-warm-500">No current chats</div>
+        <div className="px-3 py-2 text-sm text-warm-700">No current chats</div>
       ) : null}
       {layout.kind === "flat" ? (
         <SessionRows sessions={layout.sessions} showLandmark={layout.showLandmark} muted={false} {...rowProps} />
@@ -184,10 +186,10 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
           <SessionRows sessions={layout.done} showLandmark muted {...rowProps} />
         </SessionGroup>
       ) : null}
-      {showAll ? <DeadSessionGroups dead={dead} boxSlug={boxSlug} /> : null}
+      {showAll ? <DeadSessionGroups dead={dead} boxSlug={boxSlug} allRows={rowProps.allRows} /> : null}
       {hiddenCount === 0 ? null : (
         <MenuItem id="bbx-session-list-all" onClick={onToggleAll} keepOpen>
-          <span className="text-warm-500">
+          <span className="text-warm-700">
             {showAll ? "Show current chats only" : `All chats (${String(hiddenCount)} done or expired)`}
           </span>
         </MenuItem>
@@ -204,27 +206,31 @@ function SessionListBody({ state, load, contextDir, currentSessionId, boxSlug, s
  *
  * Each row goes to the husk card: there is nothing at `/chat?session=` to open.
  */
-function DeadSessionGroups({ dead, boxSlug }: { dead: DeadChatInfo[]; boxSlug: string }) {
+function DeadSessionGroups({ dead, boxSlug, allRows }: { dead: DeadChatInfo[]; boxSlug: string; allRows: readonly { label: string }[] }) {
   const close = useDropdownClose();
   if (dead.length === 0) return null;
   return (
     <>
       {groupByTranscriptState(dead).map((group) => (
         <SessionGroup key={group.label} label={group.label}>
-          {group.rows.map((s) => (
-            <Link
-              key={s.sessionId}
-              role="menuitem"
-              to={href(`/${boxSlug}/browse/${s.huskPath}`)}
-              onClick={close}
-              className="block px-3 py-2 text-sm text-warm-500 hover:bg-warm-100"
-            >
-              <div className="flex items-baseline gap-2">
-                <span className="flex-1 truncate">{s.label}</span>
-                <span className="text-xs flex-shrink-0 font-mono">{s.sessionId.slice(0, 8)}</span>
-              </div>
-            </Link>
-          ))}
+          {group.rows.map((s) => {
+            const idHint = sessionIdHint(s, allRows);
+            return (
+              <Link
+                key={s.sessionId}
+                role="menuitem"
+                to={href(`/${boxSlug}/browse/${s.huskPath}`)}
+                onClick={close}
+                title={`Session ${s.sessionId}`}
+                className="block px-3 py-2 text-sm text-warm-700 hover:bg-warm-100"
+              >
+                <div className="flex items-baseline gap-2">
+                  <span className="flex-1 truncate">{s.label}</span>
+                  {idHint === null ? null : <span className="text-xs flex-shrink-0 font-mono">{idHint}</span>}
+                </div>
+              </Link>
+            );
+          })}
         </SessionGroup>
       ))}
     </>
@@ -241,7 +247,7 @@ function SessionGroup({ label, children }: { label: string; children: React.Reac
     <div role="group" aria-label={label}>
       <div
         aria-hidden="true"
-        className="px-3 py-1 bg-warm-50 border-y border-warm-100 text-xs font-medium uppercase tracking-wide text-warm-500 truncate"
+        className="px-3 py-1 bg-warm-50 border-y border-warm-100 text-xs font-medium uppercase tracking-wide text-warm-700 truncate"
       >
         {label}
       </div>
@@ -256,8 +262,11 @@ function SessionRows({
   currentSessionId,
   showLandmark,
   muted,
+  allRows,
 }: {
   sessions: ChatSessionInfo[];
+  /** Every row the list shows, so a duplicate label is caught across groups. */
+  allRows: readonly { label: string }[];
   boxSlug: string;
   currentSessionId: string | null;
   showLandmark: boolean;
@@ -269,7 +278,7 @@ function SessionRows({
     <>
       {sessions.map((s) => {
         const isViewing = currentSessionId === s.sessionId;
-        const idSuffix = s.sessionId.slice(0, 8);
+        const idHint = sessionIdHint(s, allRows);
         return (
           <Link
             key={s.sessionId}
@@ -277,22 +286,23 @@ function SessionRows({
             to={href(`/${boxSlug}/chat`)}
             search={toSearch({ session: s.sessionId })}
             onClick={close}
+            title={`Session ${s.sessionId}`}
             {...bbxSource("session", s.sessionId)}
             className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50" : ""}`}
           >
             <div className="flex items-baseline gap-2">
-              <span className={`flex-1 truncate ${isViewing ? "font-medium" : ""} ${muted ? "text-warm-500" : isViewing ? "text-warm-900" : "text-warm-800"}`}>
+              <span className={`flex-1 truncate ${isViewing ? "font-medium" : ""} ${muted ? "text-warm-700" : isViewing ? "text-warm-900" : "text-warm-800"}`}>
                 {s.label}
               </span>
-              <span className="text-xs text-warm-500 flex-shrink-0 font-mono">{idSuffix}</span>
+              {idHint === null ? null : <span className="text-xs text-warm-700 flex-shrink-0 font-mono">{idHint}</span>}
             </div>
             <div className="flex items-center gap-2 mt-0.5">
               {s.isActive ? (
                 <span className="text-xs text-success-dark">active</span>
               ) : null}
-              <span className="text-xs text-warm-500">{relativeTime(s.lastUsedAt)}</span>
+              <span className="text-xs text-warm-700">{relativeTime(s.lastUsedAt)}</span>
               {showLandmark ? (
-                <span className="text-xs text-warm-500 truncate">in {s.landmarkLabel}</span>
+                <span className="text-xs text-warm-700 truncate">in {s.landmarkLabel}</span>
               ) : null}
             </div>
           </Link>

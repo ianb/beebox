@@ -26,7 +26,7 @@ import { loadEnv, serverEnvSchema } from "../../lib/env.js";
 
 /**
  * `<slug>=<boxRoot>` argv encoding `server-main.ts` expects. Exported so
- * `--dev`'s spawn args (below) and its doctest build it the same way a
+ * `--dev`'s spawn args (below) and its test build it the same way a
  * resolved `BoxSpec[]` always does — the explicit slug is what lets a caller
  * override `path.basename` (server-main.ts's bare-dir fallback), same gap
  * `--slug`/`resolveBoxes` exist to close for the non-dev path.
@@ -35,7 +35,7 @@ export function toBoxArgs(boxes: BoxSpec[]): string[] {
   return boxes.map((box) => `${box.slug}=${box.boxRoot}`);
 }
 
-/** Fail-closed production decision, shared with its direct doctest. */
+/** Fail-closed production decision, shared with its direct test. */
 export function devSurfacesEnabled(env: { BBX_DEV_SURFACES?: string | undefined }): boolean {
   return env.BBX_DEV_SURFACES === "1";
 }
@@ -59,7 +59,7 @@ export function devServerEnvironment(
  * `../../lib/box-shape.js`) throws `BoxShapeError` (naming a v2 shape and
  * pointing at `bbx migrate`, or plain "not a box") for anything that isn't a
  * v3 box — this turns that into the CLI's usual print-and-exit instead of an
- * uncaught stack trace at startup. Exported for its doctest.
+ * uncaught stack trace at startup. Exported for its test.
  */
 async function resolveServableBoxRoot(dir: string): Promise<string> {
   try {
@@ -75,7 +75,7 @@ async function resolveServableBoxRoot(dir: string): Promise<string> {
  * Resolve directory arguments into a `BoxSpec` array. `slugOverride` (from
  * `--slug`) only applies when there's exactly one dir — passing it with
  * multiple dirs is an ambiguous request, not a "apply to all" default.
- * Exported for `--dev`'s arg building above and its doctest.
+ * Exported for `--dev`'s arg building above and its test.
  */
 export async function resolveBoxes(dirs: string[], slugOverride: string | undefined): Promise<BoxSpec[]> {
   if (slugOverride !== undefined && dirs.length > 1) {

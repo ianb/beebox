@@ -4,7 +4,7 @@
  */
 
 // Relative (not `@shared/…`): this file is imported directly by Node/tsx in
-// doctests (no Vite bundler in that path to resolve the aliased specifier),
+// tests (no Vite bundler in that path to resolve the aliased specifier),
 // same reasoning as components/view-widgets/node-entry.tsx.
 import { buildChatContentBlocks, IMAGE_NOT_DISPLAYED } from "../../../../shared/chat-content-blocks";
 import type {
@@ -166,4 +166,47 @@ export function reconcilePending(params: {
     messages: [...serverMessages, ...stillPending],
     pendingMessages: stillPending,
   };
+}
+
+/**
+ * Show a message the box injected into this chat (a delivered `<capture>` or
+ * `<upload>`) from the moment it is announced, rather than from the moment the
+ * transcript has it.
+ *
+ * The box announces the message once its turn is dispatched; the agent writes
+ * it to the transcript a little later. The refresh the announcement triggers
+ * can land in that gap, and the next refresh comes only when the turn ends, so
+ * the message was missing for the whole reply (20 to 50 seconds in a
+ * 2026-10-16 trace). Holding it as pending is what a page load already does
+ * with the box's record of accepted messages (`mergeAcceptedIntoPending`);
+ * `reconcilePending` retires it once the transcript catches up.
+ *
+ * The baseline is every message already shown, so only a new transcript entry
+ * retires it. A message the transcript already holds is left alone: with that
+ * entry in the baseline it could never be retired.
+ */
+export function holdInjectedMessage(params: {
+  messages: SessionEntry[];
+  pendingMessages: PendingSessionEntry[];
+  message: string;
+  timestamp: string;
+}): { messages: SessionEntry[]; pendingMessages: PendingSessionEntry[] } {
+  const { messages, pendingMessages, message, timestamp } = params;
+  const unchanged = { messages, pendingMessages };
+  const text = normalizeForCompare(message);
+  if (text === "") return unchanged;
+  const pendingUuids = new Set(pendingMessages.map((pm) => pm.uuid));
+  const landed = messages.some((entry) => entry.type === "user" && !pendingUuids.has(entry.uuid)
+    && normalizeForCompare(entryText(entry)).includes(text));
+  if (landed) return unchanged;
+  const entry: PendingSessionEntry = {
+    uuid: `injected-${timestamp}`,
+    type: "user",
+    timestamp,
+    content: [{ type: "text", text: message }],
+    reconcileKnownUuids: messages.map((m) => m.uuid),
+  };
+  const merged = mergeAcceptedIntoPending({ pendingMessages, accepted: [entry] });
+  if (merged.length === pendingMessages.length) return unchanged;
+  return { messages: [...messages, entry], pendingMessages: merged };
 }

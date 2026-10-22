@@ -116,6 +116,15 @@ machine-wide key. Worktree creation copies main's file minus `BOXES=` so an
 isolated checkout cannot serve real boxes. Older worktrees need the same exact
 filter when copying by hand.
 
+Secret stores: each worktree's processes use their own store file. `main`
+uses the machine store (`~/.config/beebox/secrets.json`) for the boxes it
+serves, except boxes listed in main's `TEST_BOXES=` line (same entry syntax
+as `BOXES=`). Each of those gets its own store file under the router state
+directory (`secrets/main/<slug>.json`), passed to that box's hub child only,
+so a test box never shares an entry with the boxholder's real boxes. A new
+test box store starts empty. `TEST_BOXES=` needs the hub: the no-hub mode
+refuses to start with it.
+
 ## Activity and reloads
 
 Only HTTP cold-starts or refreshes activity. WS upgrades to a cold worktree
@@ -126,8 +135,8 @@ reload and recover history on focus. HMR uses the page origin.
 Frontend code uses Vite HMR. If an edit does not show, compare `curl` of the
 module URL with and without `?t=<now>`; a difference means the file watcher
 missed the change (Vite polls on macOS for this reason). The hub runs checkout TypeScript without reload:
-backend changes are reported `ready (stale)`, and the human uses
-`bin/workstreams down <name>` at a safe moment. Bundled box children watch the
+backend changes are reported `ready (stale)`; the agent runs
+`bin/workstreams down <name>` and the next HTTP request starts fresh code. Bundled box children watch the
 exact CLI artifact identity, stop mutations, drain requests/chat/scheduled
 delivery, and exit for replacement. Timers re-arm from persisted state. After
 ten minutes an incomplete drain reopens mutations and keeps old code with a

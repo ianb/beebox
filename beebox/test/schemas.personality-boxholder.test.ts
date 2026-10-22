@@ -1,0 +1,85 @@
+// # Personality boxholder identity
+//
+// Who the boxholder is lives on `people/*.person.card` files flagged
+// `boxholder: true` — the single, plural-capable source of truth. The
+// personality card carries only the relational notes (`boxholder.relationships`).
+// `loadBoxholders` reads the flagged person cards; `compilePersonality` bakes the
+// resulting "Your boxholder is …" line into the agent guide.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { compilePersonality } from "../src/schemas/personality/schema.js";
+import { loadBoxholders } from "../src/core/docs-gen/config-cards/boxholder-cards.js";
+import { makeTmpBox } from "./helpers/test-helpers.js";
+
+const base = { type: "personality", version: "1.0.0", body: "" } as const;
+
+// ## One boxholder — name and called
+void test("One boxholder — name and called", async (t) => {
+  const md = compilePersonality({ ...base }, { boxholders: [{ name: "Priya Marlowe", called: "Priya" }] });
+  t.check(md, `## Personality
+
+<!-- Source: _config/main.personality.card — edit this file to change personality -->
+
+Your boxholder is **Priya Marlowe** (Priya).
+`);
+});
+
+// ## A boxholder with no alias omits the parenthetical
+void test("A boxholder with no alias omits the parenthetical", async (t) => {
+  const md = compilePersonality({ ...base }, { boxholders: [{ name: "Priya Marlowe" }] });
+  t.check(md, `## Personality
+
+<!-- Source: _config/main.personality.card — edit this file to change personality -->
+
+Your boxholder is **Priya Marlowe**.
+`);
+});
+
+// ## Several boxholders — an oxford-joined sentence
+void test("Several boxholders — an oxford-joined sentence", async (t) => {
+  const md = compilePersonality({ ...base }, {
+    boxholders: [{ name: "Priya", called: "A" }, { name: "Juniper" }, { name: "Odette" }],
+  });
+  t.check(md, `## Personality
+
+<!-- Source: _config/main.personality.card — edit this file to change personality -->
+
+Your boxholders are **Priya** (A), **Juniper**, and **Odette**.
+`);
+});
+
+// ## No boxholders — no identity line, relationships still emit
+void test("No boxholders — no identity line, relationships still emit", async (t) => {
+  const md = compilePersonality(
+    { ...base, boxholder: { relationships: [{ text: "Prefers terse replies", confidence: "confirmed", basis: "user-stated" }] } },
+    { boxholders: [] },
+  );
+  t.check(md, `## Personality
+
+<!-- Source: _config/main.personality.card — edit this file to change personality -->
+
+Prefers terse replies
+`);
+});
+
+// ## `loadBoxholders` reads flagged, active person cards only
+void test("`loadBoxholders` reads flagged, active person cards only", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  await box.write("people/Priya_Marlowe.person.card", "---\nname: Priya Marlowe\naliases:\n  - Priya\nboxholder: true\n---\n");
+  await box.write("people/Jo_Smith.person.card", "---\nname: Jo Smith\nboxholder: true\narchived: true\n---\n");
+  await box.write("people/Pat_Lee.person.card", "---\nname: Pat Lee\n---\n");
+  t.check(await loadBoxholders(box.root), [
+    {
+      name: "Priya Marlowe",
+      called: "Priya",
+    },
+  ]);
+});

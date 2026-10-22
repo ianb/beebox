@@ -12,7 +12,7 @@
  * with one narrow exception — `submit.recording` carries the segment's
  * staged recording as a live handle (`PendingRecording`: its id plus the
  * seal/discard obligation), by reference. The audio itself is on the box
- * (`docs/plans/resilient-voice-recording.md`), never in this shape.
+ * (`docs/implemented-plans/resilient-voice-recording.md`), never in this shape.
  */
 
 import type { ChatImageAttachment } from "../api-chat";
@@ -64,8 +64,8 @@ export type VoiceIntent =
  * after the freeze never reaches this function — the caller snapshots and
  * clears it before the HQ round-trip starts, so it lands in the NEXT
  * emission instead. This is the one piece of `runKeywordSend`'s submit
- * logic that's pure enough to doctest headlessly (see
- * `src/frontend/test/input/voice-intent.doctest.md`).
+ * logic that's pure enough to test headlessly (see
+ * `src/frontend/test/input/voice-intent.test.ts`).
  */
 export function buildVoiceSubmitEmission(opts: {
   priorInput: string;
@@ -129,7 +129,7 @@ export function sendKeywordOf(intent: Extract<VoiceIntent, { kind: "submit" }>):
 /**
  * The emission a voice send finally dispatches, from the realtime emission
  * staged when its segment ended and the outcome of its HQ wait
- * (docs/plans/resilient-voice-recording.md, Track 4). The id and the frozen
+ * (docs/implemented-plans/resilient-voice-recording.md, Track 4). The id and the frozen
  * composer context (typed prefix, selections, attachments) never change;
  * composer input added during the wait belongs to the next message.
  *

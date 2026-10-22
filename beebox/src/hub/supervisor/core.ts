@@ -32,7 +32,7 @@ import { runtimeStatus, type BoxRunStatus, type BoxRuntimeStatus, type LaunchTim
 
 // `buildChildEnv` (env allowlist) and the child-spawn primitives moved to
 // sibling files to keep this one under the 300-line cap; `buildChildEnv` is
-// re-exported here so existing importers (`test/hub/supervisor.doctest.md`)
+// re-exported here so existing importers (`test/hub/supervisor.test.ts`)
 // don't need to change their import path. Box-path resolution is
 // `requireBoxRoot` (`../lib/box-shape.js`) — the one resolver.
 export { buildChildEnv };
@@ -90,12 +90,12 @@ export interface SupervisorOptions {
    *  unless a test overrides it. See `CheckReadyFn`. */
   checkReady?: CheckReadyFn;
   /** Injectable clock (defaults to `Date.now`), shared with `HubState`, so
-   *  doctests can drive idle/keep-set ordering deterministically instead of
-   *  waiting out real timers. See `test/hub/supervisor.doctest.md`. */
+   *  tests can drive idle/keep-set ordering deterministically instead of
+   *  waiting out real timers. See `test/hub/supervisor.test.ts`. */
   now?: () => number;
   /**
    * First crash-loop retry delay, defaulting to {@link BASE_BACKOFF_MS}.
-   * Injectable for the same reason as `now`: a doctest that drives a launch
+   * Injectable for the same reason as `now`: a test that drives a launch
    * failure has a LIVE retry timer running behind its assertions, and at the
    * production 1s it only has to spend a second anywhere later in the block —
    * one slow `makeTmpBox`, one loaded machine — for the retry to land and
@@ -288,7 +288,7 @@ export class Supervisor implements EndpointProvider {
   }
 
   /**
-   * The idle-timer's decision, factored out of the timer callback so doctests
+   * The idle-timer's decision, factored out of the timer callback so tests
    * can drive it deterministically (the real `setTimeout` just calls this).
    * A running box that's in the keep-set -- the `config.keepRecent`
    * most-recently-active running boxes -- stays alive and re-arms its timer,
@@ -316,7 +316,7 @@ export class Supervisor implements EndpointProvider {
 
   /** The current keep-set: the `config.keepRecent` most-recently-active
    *  running boxes (by in-memory `lastActivity`). Empty when `keepRecent` is
-   *  0. Exposed for `evaluateIdle` and its doctests. */
+   *  0. Exposed for `evaluateIdle` and its tests. */
   keepSetSlugs(): string[] {
     if (this.config.keepRecent <= 0) return [];
     return Array.from(this.boxes.values())
@@ -409,6 +409,7 @@ export class Supervisor implements EndpointProvider {
     try {
       const { child, port, boxRoot } = await spawnBoxChild({
         root: box.entry.path, slug: box.slug, hubSecret: this.hubSecret, spawn: this.spawnChild,
+        ...(box.entry.secretsFile !== undefined && { secretsFile: box.entry.secretsFile }),
       });
       const spawnMs = Math.round(performance.now() - launchStart);
       // Swallow the execa promise rejection here (not just via .on("exit")) --

@@ -1,13 +1,13 @@
 /**
  * The durable voice-staging upload queue
- * (`docs/plans/resilient-voice-recording.md`, Track 2): enqueue* is what
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 2): enqueue* is what
  * Track 3's recorder and Track 4's submit flow call. State lives in
  * `voice-staging-queue-state.ts`; the drain loop that turns queued ops into
  * HTTP calls, with bounded retry, lives in `voice-staging-drainer.ts`. This
  * file is the public factory plus the app-wide singleton.
  *
  * `createVoiceStagingQueue` is the pure-injection factory
- * (`src/frontend/test/lib/audio/voice-staging-queue/queue.doctest.md` drives it with an
+ * (`src/frontend/test/lib/audio/voice-staging-queue/queue.test.ts` drives it with an
  * in-memory store and a fake `send`); the exported functions below are thin
  * wrappers around one real singleton, created (and its drain started) the
  * moment this module is imported. `startVoiceStagingDrainer()` is the
@@ -89,7 +89,7 @@ function enqueue(ctx: Ctx, opts: { recordingId: string; payload: VoiceOpPayload 
 }
 
 /**
- * Build one queue instance. Exported for the doctest, which injects an
+ * Build one queue instance. Exported for the test, which injects an
  * in-memory `VoiceStagingStorage` and a fake `send` instead of touching
  * IndexedDB or the network; the app's own singleton (below) is the only
  * caller in production.
@@ -133,7 +133,7 @@ let singleton: VoiceStagingQueue | null = null;
 
 /**
  * IndexedDB when it's usable, in-memory when it isn't or is missing (private
- * browsing, blocked site data, plain Node under a doctest). Opening the
+ * browsing, blocked site data, plain Node under a test). Opening the
  * database is itself lazy (`voice-staging-storage.ts`), so choosing this
  * synchronously costs nothing; the state layer's `downgradeToInMemory` covers
  * the case where the first real use throws. `persistent` reflects the choice
@@ -191,7 +191,7 @@ let drainerWired = false;
  * Merely importing this module already starts the singleton and its first
  * drain pass (the module-load call at the bottom of this file); this
  * additionally wires the `online`/`visibilitychange` re-triggers, which need
- * real browser globals a doctest doesn't have. Idempotent.
+ * real browser globals a test doesn't have. Idempotent.
  */
 export function startVoiceStagingDrainer(): void {
   getSingleton();

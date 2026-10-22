@@ -5,12 +5,21 @@
  *   view:_content/notes/foo.md?view=markdown&zoom
  *
  * The path is always a file path relative to the box root.
+ *
+ * Reserved query keys — never passthrough `params`:
+ *  - `view`: the viewer override.
+ *  - `viewState`: authored-view navigation state (JSON).
+ *  - `fragment`: a place inside the target (`ViewTarget.fragment`), the
+ *    serialized form of a ref's `#…` suffix. Reserved 2026-10-18; before that
+ *    it was a passthrough param, and no code read `params.fragment`.
+ * A ref's `#fragment` is carried as the `fragment` key, not a URL `#`, so a
+ * file name containing `#` keeps working wherever targets are stored.
  */
 
-// Relative (not the `@shared` alias) so this lib resolves under the doctest
-// runner's Node resolution too — view-url is unit-doctested outside the bundler.
+// Relative (not the `@shared` alias) so this lib resolves under the test
+// runner's Node resolution too — view-url is unit-tested outside the bundler.
 import { boxRelativePath } from "../../../shared/box-path.js";
-import { resolveRefPath } from "../../../shared/ref-path/core.js";
+import { parseRef, resolveRefPath } from "../../../shared/ref-path/core.js";
 import type { ControlAction } from "./ui-scan/types.js";
 import { assertViewState, validateViewState, type ViewState } from "@shared/view-state";
 
@@ -26,6 +35,19 @@ export interface ViewTarget {
   params: Record<string, string>;
   /** Authored-view navigation state from the reserved `viewState` key. */
   viewState: ViewState | null;
+  /**
+   * A place inside the target, as written after `#` in a ref: an element id
+   * (`where-things-stand`, a rendered heading id) or a search section path
+   * (starts with `/`: `/Plan/Status`, `~N` on repeats). Absent: the top.
+   * Resolved by `lib/fragment-target.ts`.
+   */
+  fragment?: string;
+}
+
+/** The target without its fragment (`exactOptionalPropertyTypes` forbids `fragment: undefined`). */
+export function withoutFragment(target: ViewTarget): ViewTarget {
+  const { fragment: _fragment, ...rest } = target;
+  return rest;
 }
 
 /**
@@ -55,8 +77,7 @@ export function parseViewUrl(raw: string): ViewTarget {
   // mount (card.get tolerates it) but never matches a `file-change` event, so the
   // companion pane silently stops live-updating. See src/shared/box-path.ts.
   const path = boxRelativePath(rawPath);
-  const { viewer, params, viewState } = parseViewQuery(qIndex === -1 ? "" : value.slice(qIndex + 1));
-  return { path, viewer, params, viewState };
+  return { path, ...parseViewQuery(qIndex === -1 ? "" : value.slice(qIndex + 1)) };
 }
 
 /**
@@ -65,10 +86,11 @@ export function parseViewUrl(raw: string): ViewTarget {
  * `parseViewUrl` (box-root-normalized) and `resolveContentTarget`
  * (document-relative), which differ only in how they treat the path part.
  */
-function parseViewQuery(query: string): Pick<ViewTarget, "viewer" | "params" | "viewState"> {
+function parseViewQuery(query: string): Omit<ViewTarget, "path"> {
   const params: Record<string, string> = {};
   let viewer: string | null = null;
   let viewState: ViewState | null = null;
+  let fragment = "";
   if (query !== "") {
     const search = new URLSearchParams(query);
     for (const [key, val] of search.entries()) {
@@ -76,12 +98,14 @@ function parseViewQuery(query: string): Pick<ViewTarget, "viewer" | "params" | "
         viewer = val;
       } else if (key === "viewState") {
         viewState = parseViewState(val);
+      } else if (key === "fragment") {
+        fragment = val;
       } else {
         params[key] = val;
       }
     }
   }
-  return { viewer, params, viewState };
+  return { viewer, params, viewState, ...(fragment === "" ? {} : { fragment }) };
 }
 
 function parseViewState(value: string): ViewState | null {
@@ -125,22 +149,37 @@ export function normalizeMarkdownLink(url: string, encode: (url: string) => stri
 
 /**
  * Turn a markdown link/image href — a box path that may be leading-slash
- * absolute or document-relative, and may carry `?view=`/params — into a
- * ViewTarget, resolving the path part against `basePath`. The query is split off
- * BEFORE resolution so a leading slash stays meaningful (absolute vs relative);
- * routing the whole href through `parseViewUrl` would strip it (`boxRelativePath`)
- * and mis-resolve absolute paths as document-relative.
+ * absolute or document-relative, and may carry `?view=`/params and a
+ * `#fragment` — into a ViewTarget, resolving the path part against `basePath`.
+ * The ref is split (`parseRef`) BEFORE resolution so a leading slash stays
+ * meaningful (absolute vs relative); routing the whole href through
+ * `parseViewUrl` would strip it (`boxRelativePath`) and mis-resolve absolute
+ * paths as document-relative.
+ *
+ * The `#fragment` is percent-decoded once (markdown-it leaves it encoded, see
+ * `normalizeMarkdownLink`), so `#notes%2D1` names the id `notes-1`. It wins over
+ * a `?fragment=` in the same href: `#` is the ref form, the query key only its
+ * serialization.
  *
  * `null` when the path escapes the box root — there is no target to navigate to
  * or embed; see `resolveRelativePath`.
  */
 export function resolveContentTarget(basePath: string | undefined, href: string): ViewTarget | null {
-  const qIndex = href.indexOf("?");
-  const pathPart = qIndex === -1 ? href : href.slice(0, qIndex);
-  const path = resolveRelativePath(basePath, pathPart);
+  const ref = parseRef(href);
+  const path = resolveRelativePath(basePath, ref.path);
   if (path === null) return null;
-  const { viewer, params, viewState } = parseViewQuery(qIndex === -1 ? "" : href.slice(qIndex + 1));
-  return { path, viewer, params, viewState };
+  const target: ViewTarget = { path, ...parseViewQuery(ref.query ?? "") };
+  const fragment = ref.fragment === undefined ? "" : decodeFragment(ref.fragment);
+  return fragment === "" ? target : { ...target, fragment };
+}
+
+function decodeFragment(raw: string): string {
+  try {
+    return decodeURIComponent(raw);
+  } catch (_e) {
+    // A malformed escape (`#100%`) is not an escape at all: keep the text.
+    return raw;
+  }
 }
 
 /**
@@ -153,6 +192,7 @@ export function serializeViewUrl(target: ViewTarget): string {
     assertViewState(target.viewState);
     parts.push(`viewState=${encodeURIComponent(JSON.stringify(target.viewState))}`);
   }
+  if (target.fragment !== undefined && target.fragment !== "") parts.push(`fragment=${encodeURIComponent(target.fragment)}`);
   for (const [k, v] of Object.entries(target.params)) {
     parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
   }

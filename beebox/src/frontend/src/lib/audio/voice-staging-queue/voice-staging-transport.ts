@@ -1,6 +1,6 @@
 /**
  * HTTP transport for the voice-staging queue's ops
- * (`docs/plans/resilient-voice-recording.md`, Track 2) — the raw capture
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 2) — the raw capture
  * routes (`webapp/routes/capture*.ts`), called the same way `capture-api.ts`
  * calls them, but returning an `OpOutcome` for `nextDrainStep` instead of
  * throwing.
@@ -117,7 +117,7 @@ async function sendChunk(op: StoredVoiceOp, payload: VoiceChunkOp): Promise<OpOu
  * The wire body of a voice finalize request, isolated from the op shape so a
  * contract test can build it with the real client code and parse it with the
  * server's own `VoiceFinalizeBodySchema` (`capture-finalize-voice.ts`) —
- * `src/frontend/test/lib/audio/voice-staging-queue/voice-staging-transport.capture-finalize-voice-contract.doctest.md`.
+ * `src/frontend/test/lib/audio/voice-staging-queue/voice-staging-transport.capture-finalize-voice-contract.test.ts`.
  */
 export function buildVoiceFinalizeBody(payload: VoiceFinalizeOp): { chunkCount: number; emissionId: string | null; hq: { emissionId: string; sessionId: string | null } | null } {
   return { chunkCount: payload.chunkCount, emissionId: payload.emissionId, hq: payload.hq };

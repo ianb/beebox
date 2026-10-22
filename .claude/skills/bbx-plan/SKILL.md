@@ -60,8 +60,8 @@ writing and when reviewing.
 
 - **Cite, don't assert.** Any claim about existing code or behaviour quotes
   `file:line` plus verbatim text — including claims of safety ("Y handles this"
-  cites where). "AGENTS.md says to read before writing" is a paraphrase;
-  `beebox/AGENTS.md:101`: *"Read before writing…"* is a citation.
+  cites where). "AGENTS.md says to parse and reserialize" is a paraphrase;
+  `beebox/AGENTS.md:31`: *"parse, change, and reserialize it"* is a citation.
   "Probably" / "likely" / "I think" are guesses: verify or mark unverified.
 - **Explain actual tradeoffs against stated preferences.** Cite the relevant
   human decision, engineering principle, repo rule, or shipped precedent when
@@ -93,11 +93,13 @@ change that fixes the reported problem, the chosen tracks/subprojects, and
 estimated source and test lines. Explain what the fuller approach buys.
 Compare like-for-like during implementation: additions plus deletions, not net
 growth. Report documentation and generated output separately so the size is clear.
+The plan file and its review artifacts are not part of the change: leave them
+out of every line count, estimate, and size report.
 
 **Over 2,000 changed lines is a BIG CHANGE.** Label it **BIG CHANGE**, explain
 what drives the size, and obtain the boxholder's approval before proceeding at
 that scale. Count the full proposed change, including source, tests, and authored
-documentation; identify generated output separately rather than concealing it.
+documentation other than the plan itself; identify generated output separately rather than concealing it.
 If that size and scope are already approved, continue without asking again.
 
 When work grows substantially, show the revised estimate and check whether the

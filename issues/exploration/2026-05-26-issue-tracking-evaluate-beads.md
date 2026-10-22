@@ -5,6 +5,8 @@ needs: [decision]
 area: monorepo
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This top-level `issues/` tree (one `YYYY-MM-DD-slug.md` file per item, which replaced a single giant `ideas.md`) plus scattered TODOs across the monorepo is the current state of issue tracking. One-file-per-item already fixed the every-session-loads-the-whole-file problem, but the rest of the weaknesses this entry originally called out still apply: no dependency graph, no "what's ready to pick up next" query, parallel worktrees can't safely claim work, closed items (moved to `issues/closed/`) don't fold into a summary.
 
 [Beads](https://github.com/steveyegge/beads) (Steve Yegge, late 2025) is the most-developed entrant in the "issue tracker designed for coding agents" space. Shape: a `bd` CLI backed by Dolt (SQL with git-style branching) in `.beads/`, with a JSONL changelog at `.beads/issues.jsonl` that's the git-tracked, human-diffable layer. Distinctive bits for agent workflows:

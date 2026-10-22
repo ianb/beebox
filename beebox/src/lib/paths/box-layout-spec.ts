@@ -11,7 +11,7 @@
  *   - `directoryLayoutRows()` (agent-guide/box-shape.ts) looks up entries
  *     by key for its path/description text.
  *   - `docs/box-layout.md`'s per-area tables are checked against this spec by
- *     `test/lib/paths/box-layout-spec.doctest.md` (a doc that drifts fails the
+ *     `test/lib/paths/box-layout-spec.test.ts` (a doc that drifts fails the
  *     test rather than silently going stale).
  *
  * shapeVersion 3 (the one-root layout — `docs/implemented-plans/one-root-box-layout.md`):
@@ -79,6 +79,15 @@ export const BOX_LAYOUT = [
     area: "content",
     description: "Low-confidence triage results; paired with a question card.",
     agentDescription: "Held low-confidence items, paired with a question card.",
+  },
+  {
+    boxDirsKey: "incoming",
+    path: "_content/incoming",
+    area: "content",
+    description:
+      "Pages sent from the Clerk and phone captures with words, waiting for the chat that quick chat chose to file them. " +
+      "Git-ignored by its own `.gitignore`; a card enters git when it is filed. Not triaged.",
+    agentDescription: "Pages and captures sent to the box, not filed yet (git-ignored until filed)",
   },
   {
     boxDirsKey: "recipes",

@@ -29,21 +29,28 @@ desktop and phone.
 - **Browse** — a file-and-card browser over the whole box, with a workspace of tabs so several things stay open at once.
 - **Todos**: a todo shows a live checkbox on its card and in lists, so you can tick it where you read it (any member of the box can) or add it to the chat you are typing. A card and a directory each show a one-line count of what is open there. Todos assigned to the agent stay out of your default view, and a daily review the box runs proposes changes to your todos and makes none itself.
 - **Questions** — the queue of things the agent is asking you.
-- **Landmarks** — a curated map of the box's notable places.
+- **Landmarks** — a curated map of the box's notable places. Opening a place
+  shows a place page: a few lines the agent keeps current on where things stand
+  there, suggested first moves for a chat, the place's important cards in
+  tiers, and an "Also here" list of its other recent cards.
 - **History** — every change, drawn from git, with diffs and the files touched.
 - **Storage** — how much space the box is using and where.
 - **Settings** — pairing a phone, connectors, and other account controls.
 - **Admin**: host-wide controls, owner only, in six tabs: an overview of each section's state, agents (which agent is running and which extra OpenRouter models a box may run), people (allowed users and invites), connections, secrets (each key a collapsed row showing what uses it), and the host, which holds notifications: browser push on or off, a three-day list of what each channel did, and the paired phones.
 
 Each kind of card gets its own display: a recipe with scalable amounts, a
-course with its lessons and your progress, a dashboard or a todo list, a
-document, a spreadsheet, a PDF, a photo, a person, or a folder. A card shows
+dashboard or a todo list, a document, a spreadsheet, a PDF, a photo, a person,
+or a folder. A card shows
 its content on the front; turning it over shows its properties, such as the
 fields of its type, how it was found, its attachments, and its last change.
-Cards can also carry a paper theme and a card stock (plain, paper, sticky
-note, or letter set), so a recipe or a letter looks distinct from a plain
-note. The interface as a whole has its own theme, which also sets the colour
-of selected text. When you have more than twenty landmarks, the landmark menu
+Cards can also carry a card theme and a stock: plain, paper, sticky note, or
+letter set, plus a number of material-led themes (fabric, theatre, gouache, and
+others), so a recipe or a letter looks distinct from a plain note. The
+interface as a whole has its own theme, which also sets the colour of selected
+text, and each interface theme names the card themes that go with it, so a card
+with no theme of its own follows whichever interface theme it is shown under.
+Turning a card over also offers to copy its original text, or for a photo the
+image itself. When you have more than twenty landmarks, the landmark menu
 gains a search field.
 
 **On a phone**

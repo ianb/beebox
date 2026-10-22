@@ -13,16 +13,17 @@ import type { HealthCheck } from "../../../../shared/health-check.js";
 import type { ClaudeCliService } from "../../../../services/claude-cli.js";
 import { claudeAuthCheck } from "./checks/claude-auth.js";
 import { router, publicProcedure } from "../../procedures.js";
-import { getMistralApiKey } from "../../../../core/mistral-key.js";
+import { MISTRAL_SECRET_NAME } from "../../../../core/mistral-key.js";
+import { secretIsResolvable } from "../../../../core/secrets/resolve.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../../core/deepgram-key.js";
-import { getOpenAiThinkingKey } from "../../../../core/openai-thinking-key.js";
+import { OPENAI_THINKING_SECRET_NAME } from "../../../../core/openai-thinking-key.js";
 import { loadTranscriptionConfig } from "../../../../core/transcription/dispatch/core.js";
 import { getBoxShape } from "../../../../lib/box-shape.js";
 import { isRecord } from "../../../../shared/is-record.js";
 import { getBoxDir } from "../../../../lib/paths/core.js";
 import { engineHealthChecks } from "./checks/engine.js";
-import { googleAuthHealthChecks } from "./checks/google.js";
+import { googleAuthHealthChecks, googleDocsApiHealthChecks } from "./checks/google.js";
 import { getBoxTime } from "../../../../lib/time.js";
 import { getHealthSnapshot } from "./checks/snapshot.js";
 import { checkSchedulerHeartbeat, loadScheduleHealth, type BoxScheduleHealth } from "../../../../core/schedule/health-box.js";
@@ -143,7 +144,7 @@ export interface RunHealthChecksOptions {
    * itself, so the dashboard and `/api/health` escalate the same way.
    */
   scheduleHealth?: BoxScheduleHealth | undefined;
-  /** Installed plugins for the plugin checks; defaults to the registry. A doctest seam. */
+  /** Installed plugins for the plugin checks; defaults to the registry. A test seam. */
   plugins?: ReadonlyArray<PluginDefinition> | undefined;
 }
 
@@ -271,21 +272,22 @@ export async function runHealthChecks(
 
   // --- API key checks ---
   //
-  // Every key read below passes `observe: false` (`core/secrets/resolve.ts`):
-  // these resolves answer "is this configured?" and never spend the key. The
-  // access log still records them — a probe did read the value — but the
-  // entry's `lastUsed`/`purposes` do not move, so a dashboard polling health
-  // cannot make an unused grant look busy.
+  // These checks answer "is this configured?" and never spend a key, so they
+  // use `secretIsResolvable` (`core/secrets/resolve.ts`): no value read, no
+  // access-log line, and `lastUsed`/`purposes` do not move, so a dashboard
+  // polling health cannot make an unused grant look busy. Deepgram is the
+  // exception: its value is JSON that must parse, so it is read with
+  // `observe: false` and logged.
 
   // Transcription service (Voxtral / Deepgram / Whisper). Only require the
   // key for the configured service; the others are optional.
   const transcriptionConfig = await loadTranscriptionConfig(boxRoot);
   if (transcriptionConfig.service === "voxtral") {
-    const mistralKey = await getMistralApiKey(boxRoot, { observe: false });
+    const hasMistral = await secretIsResolvable({ boxRoot, name: MISTRAL_SECRET_NAME, access: "server" });
     checks.push({
       name: "mistral-api-key",
-      ok: mistralKey !== null,
-      message: mistralKey !== null
+      ok: hasMistral,
+      message: hasMistral
         ? "Mistral API key configured (Voxtral)"
         : 'Mistral API key not found — voice transcription will not work. Grant the "mistral" secret to this box',
       severity: "warning",
@@ -301,7 +303,7 @@ export async function runHealthChecks(
       severity: "warning",
     });
   } else if (transcriptionConfig.service === "openai-realtime") {
-    const hasKey = (await getOpenAiThinkingKey(boxRoot, { observe: false })) !== null;
+    const hasKey = await secretIsResolvable({ boxRoot, name: OPENAI_THINKING_SECRET_NAME, access: "server" });
     checks.push({
       name: "openai-api-key",
       ok: hasKey,
@@ -313,12 +315,12 @@ export async function runHealthChecks(
   }
 
   // OpenAI / Whisper key (needed for TTS, and Whisper transcription if selected)
-  const openaiKey = await getOpenAiThinkingKey(boxRoot, { observe: false });
+  const hasOpenai = await secretIsResolvable({ boxRoot, name: OPENAI_THINKING_SECRET_NAME, access: "server" });
   const openaiRequired = transcriptionConfig.service === "whisper";
   checks.push({
     name: "openai-api-key",
-    ok: openaiKey !== null,
-    message: openaiKey !== null
+    ok: hasOpenai,
+    message: hasOpenai
       ? 'OpenAI API key configured ("openai-thinking")'
       : openaiRequired
         ? 'OpenAI API key not found — Whisper transcription and TTS will not work. Grant the "openai-thinking" secret to this box'
@@ -339,6 +341,7 @@ export async function runHealthChecks(
   checks.push(await claudeAuthCheck(options?.claudeCli));
 
   checks.push(...(await googleAuthHealthChecks(boxRoot, { now: getBoxTime(boxRoot) })));
+  checks.push(...(await googleDocsApiHealthChecks(boxRoot)));
 
   checks.push(...(await engineHealthChecks(boxRoot)));
 

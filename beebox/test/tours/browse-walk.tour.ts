@@ -3,7 +3,7 @@
  * checkpoint at each step. Useful for catching list/tree a11y issues
  * and for visual review of dense data UI.
  *
- * Directory rows name their item count ("Content directory, 791 items"), which
+ * Directory rows name their item count ("Content directory, 791 cards, including subfolders"), which
  * is box content — locators here match the directory name only. The content
  * root is `_content/`, which Browse labels "Content".
  */

@@ -9,8 +9,10 @@ discovered-in: worktree-test-selection — sized while planning change-based tes
 priority: important
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Every test file pays a fixed cost before it runs a single assertion: Node
-process boot, the tsx import hook, the doctest loader, and — for the 37 files
+process boot, the tsx import hook, the doctest loader (removed 2026-10-18 with the doctest format), and — for the 37 files
 that call `makeTestServer()` — a cold template-box build.
 
 The measured figures come from the profiling in
@@ -20,7 +22,7 @@ The measured figures come from the profiling in
 - Cold template-box build: **1,023 ms**. Warm clones after it: 387 ms mean,
   332 ms median. Cleanup: 69.6 ms.
 - The fastest file in the whole run is
-  `test/core/external-url-fetch.doctest.md` (moved to `beebox/test/core/external/url-check/fetch.doctest.md`) at **0.828 s**, which is close to
+  `test/core/external-url-fetch.doctest.md` (moved to `beebox/test/core/external/url-check/fetch.test.ts`) at **0.828 s**, which is close to
   pure floor — it does almost no work.
 - At roughly 0.9 s × 480 files, the floor is about **430 file-seconds against a
   3,374.8 file-second aggregate: 12–13%**.

@@ -1,7 +1,7 @@
 /**
  * The two things a field run needs from the developer's machine rather than
  * from the scenario: the browse wrapper and the browse API key
- * (`docs/plans/agent-field-tests.md`, Track 2).
+ * (`docs/implemented-plans/agent-field-tests.md`, Track 2).
  *
  * Both are resolved up front and fail loudly. A run that discovers at minute
  * three that `bin/browse` is not where it thought has already spent a box, a

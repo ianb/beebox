@@ -7,8 +7,8 @@ allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 # bbx-migration
 
 A migration is a **one-shot transform of card data already on disk** — renames,
-field strips, format flips, refactors. The full how-to (the `bbx engine migrate` runner,
-the per-box `_config/migrations.jsonl` manifest, the harness, the migrator table)
+field strips, format flips, refactors. The full how-to (the `bbx engine migrate` runner and the per-box
+`_config/migrations.jsonl` manifest)
 lives in **`beebox/docs/cards/migrations.md`** — read it before writing one.
 This skill is the part the runbook can't enforce: deciding *whether* you need a
 migration, *which kind*, and not repeating the scars.
@@ -61,8 +61,7 @@ because the change is *unspecifiable*.
 `docs/cards/migrations.md` has the full steps; these are the rules that bite if you
 skip them:
 
-- **Restore the harness** (`_harness.ts`, `_warnings.ts`) from git history; it
-  was deleted with the retired migrators (2026-10-08).
+- **Restore the harness** (`_harness.ts`, `_warnings.ts`) from git history (2026-10-08).
 - **Be noisy about data loss — non-negotiable.** Declare the fields you map and
   warn about anything outside them. **A
   warning is data the migrator silently drops** — the response is almost always
@@ -72,9 +71,9 @@ skip them:
   personality migrator dropped `<boxholder>`; an `email-outbound` type had *no*
   migrator and was left in XML; landmark variants with fields outside
   `<navigation>` slipped through. Every one was a silently-unmapped field.)
-- **Be idempotent.** Detect the post-migration shape and skip it — a second run
-  reports "already migrated N", never re-does or errors. `bbx engine migrate` re-runs
-  partial migrations on retry, and admins run scripts standalone to debug.
+- **Be idempotent and resumable.** Skip the post-migration shape ("already migrated
+  N"), and recognise every partial state an interrupted run leaves (a move renamed
+  but its links or annex pointers not yet repaired); `bbx engine migrate` re-runs it.
 - **Register append-only.** Add `{ name, script }` at the **end** of `MIGRATIONS`
   in `src/core/migrations.ts`. **Never reorder/rename/remove** existing entries —
   the `name` is the per-box manifest key; touching the order silently rewrites

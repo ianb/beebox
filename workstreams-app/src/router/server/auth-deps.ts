@@ -1,6 +1,6 @@
 // The REAL RouterAuthDeps the dev router injects into the pure authorization
 // core (workstreams-app/src/router/server/auth.ts). Track B, chunk 2a of
-// beebox/docs/plans/expose-dev-router.md.
+// beebox/docs/implemented-plans/expose-dev-router.md.
 //
 // Every resolver runs beebox's CURRENT code against the TARGET box — the
 // finding-4 fix: the front door authenticates with main's auth even when it

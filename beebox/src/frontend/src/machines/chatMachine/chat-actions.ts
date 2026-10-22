@@ -8,10 +8,12 @@
 
 import { interruptChat, type PendingSessionEntry, type SessionEntry } from "../../api";
 import { buildOptimisticContent, entryText, reconcilePending } from "./chat-shared";
-import { queueMessageToBackend } from "./chat-actors";
+import type { OutputFrom } from "xstate";
+import { queueMessageToBackend, rollupStreamToEntry, type fetchHistoryActor } from "./chat-actors";
 import { toastError } from "../../components/ui/toast-store";
 import { MAX_RETAINED_MESSAGES, type ChatContext, type ChatEvent } from "../chat-types";
 import { observeChatSendHistory } from "../../lib/chat-send-diagnostics";
+import type { ChatSendContext } from "@core/chat/card-activity.js";
 
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
 
@@ -31,11 +33,12 @@ export function sendInterrupt(sessionId: string): void {
 
 /** Pull the companion-card fields off a SEND event, omitting empties — shared
  *  by the streaming input builder and the queued-send dispatcher. */
-export function cardFieldsFromEvent(event: SendEvent): Pick<SendEvent, "openCard" | "cardActivity" | "cardState" | "binding" | "startup"> {
+export function cardFieldsFromEvent(event: SendEvent): ChatSendContext & Pick<SendEvent, "binding" | "startup"> {
   return {
     ...(event.startup !== undefined ? { startup: event.startup } : {}),
     ...(event.binding !== undefined ? { binding: event.binding } : {}),
     ...(event.openCard !== undefined ? { openCard: event.openCard } : {}),
+    ...(event.openQuestion !== undefined ? { openQuestion: event.openQuestion } : {}),
     ...(event.cardActivity && event.cardActivity.length > 0 ? { cardActivity: event.cardActivity } : {}),
     ...(event.cardState && Object.keys(event.cardState).length > 0 ? { cardState: event.cardState } : {}),
   };
@@ -141,6 +144,42 @@ export function applyStreamError(
   };
 }
 
+/**
+ * A chat that started as "new" learned its session id (SESSION_ASSIGNED, or a
+ * refresh that looked the accepted turn up). Lock sends and history fetches
+ * onto the real id, and drop the in-memory landmark binding: the backend has
+ * persisted it to chat-session-history by now. (Pending seedFeatures are inert
+ * from here: sessionInput is the real id, so they are never re-sent.)
+ */
+export function adoptSession(
+  sessionId: string,
+): Pick<ChatContext, "sessionInput" | "sessionId" | "contextDir" | "newChatTurnId"> {
+  return { sessionInput: sessionId, sessionId, contextDir: undefined, newChatTurnId: undefined };
+}
+
+/** Shown when a turn's live view dropped and the box went idle with no reply. */
+const NO_REPLY_ERROR = "The box stopped before it answered. Send your message again.";
+
+/**
+ * Settle a dropped live view (`replyLost`) against refreshed history. The
+ * reply landed (history ends in assistant text): clear it with nothing shown,
+ * since that drop was a transient. The box is still working: keep it, shown as
+ * a warning, for the next refresh (chat-complete) to settle. The box is idle
+ * with no reply: the turn really failed, so it becomes an error.
+ */
+// Reply first: busy is session-wide, so a queued next turn must not hold a
+// warning for a reply already in history. A held REFRESH (`refreshAgain`) means
+// the reply may have landed after this read (history and status are read
+// concurrently), so no error yet: the extra fetch decides.
+function settleLostReply(
+  { context, messages, busy }: { context: ChatContext; messages: SessionEntry[]; busy: boolean },
+): Partial<Pick<ChatContext, "replyLost" | "error">> {
+  if (!context.replyLost) return {};
+  const last = messages.at(-1);
+  if (last?.type === "assistant" && entryText(last).length > 0) return { replyLost: false };
+  return busy || context.refreshAgain ? {} : { replyLost: false, error: NO_REPLY_ERROR };
+}
+
 /** A legacy STREAM_BUSY rejects the active send before it can be persisted. */
 export function untrackLastSend(
   { context }: { context: ChatContext },
@@ -156,8 +195,8 @@ export function untrackLastSend(
  * error is a user-initiated abort, not a failure — drop it and clear the
  * interrupt flag. streamText is left for `refreshing` to swap into history.
  */
-export function clearInterrupt(): Pick<ChatContext, "interrupting" | "error"> {
-  return { interrupting: false, error: null };
+export function clearInterrupt(): Pick<ChatContext, "interrupting" | "error" | "replyLost"> {
+  return { interrupting: false, error: null, replyLost: false };
 }
 
 /** Every `streaming → refreshing` edge: this refresh reconciles a turn the agent just ran. */
@@ -211,5 +250,49 @@ export function promoteLastToPending(
     pendingMessages: alreadyTracked
       ? context.pendingMessages.map((entry) => entry.uuid === active.uuid ? promoted : entry)
       : [...context.pendingMessages, promoted],
+  };
+}
+
+/**
+ * `refreshing`'s onDone: swap fetched history in. A still-"new" chat with no
+ * id has no history, so the streamed reply is rolled up in place instead.
+ */
+export function applyRefreshedHistory(
+  { context, output }: { context: ChatContext; output: OutputFrom<typeof fetchHistoryActor> },
+): Partial<ChatContext> {
+  // A "new" chat whose id came from the accepted turn's lookup
+  // (fetchHistory) adopts it, as SESSION_ASSIGNED would, and
+  // reconciles below like any other session.
+  const adopted = context.sessionInput === "new" ? output.sessionId : null;
+  // Still "new" with no id: fetchHistory returned empty. Roll up
+  // whatever streamed for this turn into a synthetic assistant entry
+  // so the completed response stays visible until a later refresh
+  // or a remount loads the authoritative copy.
+  if (context.sessionInput === "new" && adopted === null) {
+    const synthetic = rollupStreamToEntry(context.streamText, context.streamTools);
+    const messages = synthetic ? [...context.messages, synthetic] : context.messages;
+    return {
+      // No history to check: nothing streamed stays a warning until remount.
+      ...(synthetic ? settleLostReply({ context, messages, busy: false }) : {}),
+      messages,
+      streamText: "",
+      streamTools: [],
+    };
+  }
+  const reconciled = reconcilePendingWithDiagnostics({
+    serverMessages: output.entries,
+    pendingMessages: context.pendingMessages,
+  });
+  return {
+    ...(adopted !== null ? adoptSession(adopted) : {}),
+    ...settleLostReply({ context, messages: reconciled.messages, busy: output.busy }),
+    messages: reconciled.messages,
+    pendingMessages: reconciled.pendingMessages,
+    sessionId: output.sessionId,
+    totalEntries: output.total,
+    processRunning: output.running,
+    processBusy: output.busy,
+    streamText: "",
+    streamTools: [],
   };
 }

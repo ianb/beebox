@@ -91,7 +91,7 @@ export interface TapFileResult {
 /**
  * Path prefixes (relative to `beebox/`, where tap runs) of the test files tap
  * reports. Mirrors the `include` globs in `beebox/.taprc`: `test/`,
- * `src/frontend/test/` and the root dev-tooling doctests, which tap names
+ * `src/frontend/test/` and the root dev-tooling tests, which tap names
  * `../bin/test/...`. A root outside this list has its results dropped, so add
  * it here whenever `.taprc` gains an `include` root.
  */
@@ -99,7 +99,7 @@ export const TEST_FILE_ROOTS = ["test/", "src/frontend/test/", "../bin/test/"] a
 
 /**
  * Graph paths are repo-relative; the beebox runner takes paths relative to
- * beebox. A root-infrastructure doctest (`bin/test/…`) runs from the package
+ * beebox. A root-infrastructure test (`bin/test/…`) runs from the package
  * as `../bin/test/…`, so it gets beebox's loaders (bin/AGENTS.md). Passed
  * through unprefixed, it named no file in the package, and the runner refused
  * the whole selection.
@@ -116,7 +116,7 @@ export function repoRelative(tapName: string): string {
 /**
  * Per-file results from raw TAP.
  *
- * tap emits one line per test file: `ok 3 - test/foo.doctest.md # time=1234ms`.
+ * tap emits one line per test file: `ok 3 - test/foo.test.ts # time=1234ms`.
  * Only top-level (unindented) lines are file results; indented ones are
  * subtests within a file and would double-count.
  */

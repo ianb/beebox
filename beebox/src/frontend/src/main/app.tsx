@@ -16,17 +16,27 @@ import "../themes/candy.css";
 import "../themes/system-theme-picker.css";
 import "../themes/chat-material.css";
 import "../themes/interface.css";
-import "../themes/expressive.css";
-import "../themes/control-shapes.css";
-import "../themes/retired-theme-a.css";
-import "../themes/retired-theme-b.css";
-import "../themes/retired-theme-c.css";
-import "../themes/retired-theme-d.css";
-import "../themes/retired-theme-e.css";
-import "../themes/retired-theme-f.css";
-import "../themes/retired-theme-g.css";
-import "../themes/retired-theme-h.css";
-import "../themes/retired-theme-i.css";
+import "../themes/bloom.css";
+import "../themes/ribbon.css";
+import "../themes/deck.css";
+import "../themes/night-atlas.css";
+import "../themes/night-atlas-motion.css";
+import "../themes/textiles.css";
+import "../themes/textile-chrome.css";
+import "../themes/phosphor.css";
+import "../themes/overprint.css";
+import "../themes/posy.css";
+import "../themes/goldfish.css";
+import "../themes/goldfish-chrome.css";
+import "../themes/tempest.css";
+import "../themes/tempest-chrome.css";
+import "../themes/veil.css";
+import "../themes/veil-chrome.css";
+import "../themes/gilt.css";
+import "../themes/gilt-chrome.css";
+import "../themes/doodlebit.css";
+import "../themes/doodlebit-controls.css";
+import "../themes/doodlebit-chrome.css";
 import { withBase } from "../api";
 import { invariant } from "@shared/invariant";
 import { installUiScanHook } from "../lib/ui-scan/window-hook";
@@ -41,7 +51,7 @@ markFirstLoad(FIRST_LOAD_MARKS.entry);
  * Wires up the built-in file-type list UI (`file-types/builtins.ts`).
  * Imported dynamically, not statically: `file-types/builtins.tsx` has a
  * Vite-only `@schemas/*.list-entry` alias import (see its header) that does
- * not resolve outside Vite, so a static import here would break any doctest
+ * not resolve outside Vite, so a static import here would break any test
  * that reaches this module. `installRenderers` (`renderers.ts`) has no such
  * alias and is imported statically above; the layout check no longer
  * misclassifies a registry-declaring module as a private two-file unit

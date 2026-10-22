@@ -1,0 +1,26 @@
+/* The wide atlas drifts from fields through city to harbor, then returns.
+   A constant slow horizontal pan avoids mid-flight acceleration; the small
+   vertical drift stays gentle. Only the decorative compositor layer moves. */
+.bbx-box-presentation[data-chrome-theme="night-atlas"]:not(.bbx-system-theme-preview)::before {
+  animation: night-atlas-map-east 1800s linear infinite alternate,
+    night-atlas-map-north 900s ease-in-out -450s infinite alternate;
+}
+@keyframes night-atlas-map-east {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(100vw + 72px - 100%)); }
+}
+@keyframes night-atlas-map-north {
+  from { translate: 0 -24px; }
+  to { translate: 0 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bbx-box-presentation[data-chrome-theme="night-atlas"]:not(.bbx-system-theme-preview)::before {
+    animation: none;
+    transform: translateX(calc((100vw + 72px - 100%) / 2));
+  }
+}
+@media print {
+  .bbx-box-presentation[data-chrome-theme="night-atlas"]:not(.bbx-system-theme-preview)::before {
+    animation: none;
+  }
+}

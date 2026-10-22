@@ -1,7 +1,7 @@
 /**
  * `briefing-openers-2026-10`: move `openers:` from briefing cards to the
  * place's landmark (`navigation.openers`). The whole decision, as a pure
- * function of the files' text, so a doctest reaches every case with no box on
+ * function of the files' text, so a test reaches every case with no box on
  * disk; `run.ts` is the IO around it (docs/implemented-plans/landmark-arrival.md, Track B).
  *
  * Per briefing, in order:

@@ -29,7 +29,6 @@ export const statusCommand = new Command("status")
 
       // Header
       console.log(`Bee Box: ${boxRoot}`);
-      console.log(`Version: ${state.boxVersion}`);
 
       // Engine version: the process serving this box vs. the version a v2
       // box has pinned in its own node_modules (null/legacy for shapeVersion

@@ -25,6 +25,7 @@
 
 import { execa } from "execa";
 import { mkdtemp, mkdir, writeFile, rm, readdir, stat } from "node:fs/promises";
+import { removeTempCwdTranscripts } from "../core/chat/session/transcript-paths.js";
 import * as os from "node:os";
 import * as path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -133,13 +134,21 @@ async function findTarball(): Promise<string> {
 }
 
 /** The `beebox` package's own exports map — every key here is a public
- *  export the gate must prove importable, except the non-JS tsconfig entry. */
-async function publicExportSpecifiers(): Promise<string[]> {
+ *  export the gate must prove importable, except the non-JS tsconfig entry.
+ *  A wildcard key (`./plugins/*` and its `/view` form) expands to each plugin
+ *  directory the installed package ships (imported literally, `*` names no
+ *  module). The map promises a `plugin` and a `view` module for each, so a
+ *  plugin missing either fails the import. */
+async function publicExportSpecifiers(boxDir: string): Promise<string[]> {
   const raw: unknown = await import(path.join(PACKAGE_ROOT, "package.json"), { with: { type: "json" } });
   const rawDefault = isRecord(raw) ? raw["default"] : undefined;
   const exportsMap = isRecord(rawDefault) && isRecord(rawDefault["exports"]) ? rawDefault["exports"] : {};
+  const pluginsDir = path.join(boxDir, "node_modules", "beebox", "dist", "plugins");
+  const plugins = (await readdir(pluginsDir)).toSorted();
+  invariant(plugins.length > 0, "the installed package ships no plugins under " + pluginsDir);
   return Object.keys(exportsMap)
     .filter((key) => key !== "./tsconfig.base.json")
+    .flatMap((key) => (key.includes("*") ? plugins.map((name) => key.replace("*", name)) : [key]))
     .map((key) => (key === "." ? "beebox" : "beebox" + key.slice(1)));
 }
 
@@ -234,7 +243,7 @@ async function scaffold(args: { tarball: string; boxDir: string }): Promise<void
  */
 async function packageDocsShipped(boxDir: string): Promise<void> {
   const dir = path.join(boxDir, BOX_PACKAGE_DOCS);
-  for (const file of ["README.md", "bbx-commands.md", "card-memo.md", ".hash"]) {
+  for (const file of ["README.md", "bbx-commands.md", "card-doc.md", ".hash"]) {
     const p = path.join(dir, file);
     if (!(await fileExists(p))) {
       throw new PackageDocsMissingError(path.relative(boxDir, p));
@@ -244,7 +253,7 @@ async function packageDocsShipped(boxDir: string): Promise<void> {
 }
 
 async function importEveryPublicExport(boxDir: string): Promise<void> {
-  const specifiers = await publicExportSpecifiers();
+  const specifiers = await publicExportSpecifiers(boxDir);
   const importScript = specifiers.map((s) => "await import(" + JSON.stringify(s) + ");").join("\n");
   const scriptPath = path.join(boxDir, "_smoke-imports.mjs");
   await writeFile(scriptPath, importScript);
@@ -308,7 +317,7 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
     "node_modules/.bin/bbx",
     // No directory arg needed: `bbx engine serve` with no positional dirs defaults
     // to the current directory, and a v3 box's root IS its operational root.
-    ["serve", "--port", String(args.port)],
+    ["engine", "serve", "--port", String(args.port)],
     { cwd: args.boxDir, env: { ...strangerEnv(), BBX_DIAG_API_KEY: diagKey }, extendEnv: false, reject: false, all: true }
   );
   try {
@@ -392,6 +401,7 @@ async function main(): Promise<void> {
     );
   } finally {
     await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempCwdTranscripts(tmpRoot);
   }
 }
 

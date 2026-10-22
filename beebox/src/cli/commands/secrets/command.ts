@@ -24,7 +24,7 @@
  *   one the command is standing in. Neither discloses a value, but a map of
  *   every credential on the machine is not an agent's view of the store.
  *
- * Each subcommand body is an exported plain function so doctests call it
+ * Each subcommand body is an exported plain function so tests call it
  * directly instead of spawning the CLI (the `bbx auth` precedent).
  */
 

@@ -154,7 +154,7 @@ Use the guidance for the area you are changing:
 - **Chrome extension:** [beebox-clerk/AGENTS.md](../../../beebox-clerk/AGENTS.md).
 - **Native iOS companion:** [ios-app/AGENTS.md](../../../ios-app/AGENTS.md). It shares an [HTTP/bridge contract](../../../beebox/docs/mobile-contract.md) with the web/backend; use [bbx-ios-overlap](../../../.claude/skills/bbx-ios-overlap/SKILL.md) when changing those shared surfaces.
 - **Shared ESLint/TypeScript/Prettier preset:** [personal-vibe-check/AGENTS.md](../../../personal-vibe-check/AGENTS.md). Edit it here; the old standalone checkout is stale.
-- **Doctest framework:** [agent-doctest/README.md](../../../agent-doctest/README.md); application tests live in their packages.
+- **Doctest framework:** [agent-doctest/README.md](../../../tap-check/README.md) (now `tap-check/`); application tests live in their packages.
 - **Experimental deterministic Canvas2D sandbox:** [canvas-loop/README.md](../../../canvas-loop/README.md); use `canvas-loop-sketch` (removed 2026-10-07) for sketches and gallery work.
 - **Dev dashboard and shared router:** `workstreams-app/`. Thin lifecycle launchers live in `bin/`; [bin/AGENTS.md](../../../bin/AGENTS.md) documents their mechanics.
 - **External-tool research:** [research/AGENTS.md](../../../research/AGENTS.md).

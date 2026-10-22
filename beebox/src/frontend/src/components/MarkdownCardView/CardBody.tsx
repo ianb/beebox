@@ -37,7 +37,7 @@ function QuoteSpeakersLine({
 }): ReactNode {
   if (speakers.length === 0) return null;
   return (
-    <div className="text-xs text-warm-500 mb-3 bbx-quote-speakers">
+    <div className="text-xs text-warm-700 mb-3 bbx-quote-speakers">
       <span className="font-medium">Direct quotes from:</span>{" "}
       {speakers.map((speaker, i) => {
         const display = speakerDisplay(speaker);
@@ -94,7 +94,7 @@ export function CardBody({
   const { boxSlug } = useParams({ strict: false });
   // Inline figure embeds: `![](view:…figure.card)` renders the figure in place.
   const components = useMemo(
-    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined }),
+    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined, openImageLink: undefined }),
     [onNavigate, data.path, boxSlug],
   );
 
@@ -108,6 +108,7 @@ export function CardBody({
         <div data-card-section="body">
           <Markdown
             prose="block"
+            outline
             onNavigate={onNavigate}
             basePath={data.path}
             components={components}
@@ -117,7 +118,7 @@ export function CardBody({
           </Markdown>
         </div>
       ) : hideEmptyBody ? null : (
-        <div className="text-sm text-warm-500 italic">No body content</div>
+        <div className="text-sm text-warm-700 italic">No body content</div>
       )}
     </>
   );

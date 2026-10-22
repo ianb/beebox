@@ -1,6 +1,6 @@
 /**
  * `todos-unreviewed` — open todos the todo-review has stopped listing
- * (`recheck="never"`, `docs/plans/todos-ui.md` Track 7).
+ * (`recheck="never"`, `docs/implemented-plans/todos-ui.md` Track 7).
  *
  * The review's verify step retires a todo that was pushed three times with
  * nothing about it changing. That todo then never comes back on its own, so

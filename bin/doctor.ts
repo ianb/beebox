@@ -26,6 +26,7 @@
  *   - System `claude` on PATH and `claude auth status` reports logged in
  *     (mirrors `beebox/src/services/claude-cli.ts`'s invocation and its
  *     tolerant non-JSON-output parsing).
+ *   - `tsc` is TypeScript 7 and `tsc6` the 6.0 package typescript-eslint loads.
  *   - The Agent SDK resolves a bundled Claude Code binary for this platform
  *     (`beebox/src/core/sdk-binary-path.ts`, imported directly — the
  *     workspace import works cleanly from a root tsx script; see below).
@@ -34,7 +35,7 @@
  *     production disk truncated every large response with nothing saying so.
  *   - The scheduler heartbeat (`<store>/state.json`) is under an hour old and
  *     the `com.beebox.schedules` launchd job is loaded — the anti-silence
- *     check for beebox/docs/plans/scheduled-workstreams.md.
+ *     check for beebox/docs/implemented-plans/scheduled-workstreams.md.
  *   - The frontend build output exists (`beebox/src/frontend/dist`,
  *     Vite's `build.outDir`), else "run `pnpm --dir beebox
  *     build:frontend`".
@@ -85,13 +86,14 @@ import {
   checkProductionDisk,
   checkSchedulesTick,
   checkSdkBinary,
+  checkTypescriptCompilers,
   checkWorkspaceInstalled,
 } from "./doctor-checks.js";
 
 // ─── Runner ───────────────────────────────────────────────────────────────
 
 export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
-  const [pnpmResult, workspaceResult, nativeSqliteResult, externalTools, gitLfsResult, claudeResult] =
+  const [pnpmResult, workspaceResult, nativeSqliteResult, externalTools, gitLfsResult, claudeResult, typescriptResult] =
     await Promise.all([
       checkPnpm(deps),
       Promise.resolve(checkWorkspaceInstalled(deps)),
@@ -99,6 +101,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
       checkExternalTools(deps),
       checkGitLfs(deps),
       checkClaudeAuth(deps),
+      checkTypescriptCompilers(deps),
     ]);
   const deployResult = await checkDeployCurrency(deps);
   const diskResult = await checkProductionDisk(deps);
@@ -112,6 +115,7 @@ export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
     gitLfsResult,
     claudeResult,
     checkSdkBinary(deps),
+    typescriptResult,
     checkFrontendBuild(deps),
     deployResult,
     diskResult,

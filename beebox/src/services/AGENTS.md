@@ -26,7 +26,7 @@ export interface FakeFooOptions {
 export function createFakeFoo(opts?: FakeFooOptions): FakeFooService { ... }
 
 // Fake extends the interface with whatever state tests want to observe.
-// Always include describe() so doctests can print a stable snapshot.
+// Always include describe() so tests can check a stable snapshot.
 export interface FakeFooService extends FooService {
   items: Item[];
   sent: Message[];
@@ -38,10 +38,10 @@ export interface FakeFooService extends FooService {
 
 - **Always named-params, never positional.** Even for one-input fakes — call `createFakeFoo({ items: [...] })`, not `createFakeFoo([...])`. Keeps call sites uniform and lets you add fields later without breaking callers.
 - **Extend the interface as tests need it.** If tests want to inspect what happened (sent messages, fetched URLs, written files), declare a `FakeFooService extends FooService` with the relevant fields. If tests don't need it, returning the bare `FooService` is fine.
-- **Provide a `describe(): string` method on the fake.** Returns a multi-line, stable, human-readable snapshot of the fake's current state. Doctests then `print(fake.describe())` and match. Avoids per-test `JSON.stringify` boilerplate and makes failures legible.
+- **Provide a `describe(): string` method on the fake.** Returns a multi-line, stable, human-readable snapshot of the fake's current state. Tests then `t.checkText(fake.describe(), ...)`. Avoids per-test `JSON.stringify` boilerplate and makes failures legible.
 - **Fakes are domain-specific**, not generic `Partial<T>` overrides. Constructor params reflect what the service needs to function (e.g. `createFakeClaudeCli({ loggedIn: true })` takes the login state because `authStatus()` returns it).
 - **Optional `| undefined`** — all service fields in the `Services` container and in route option interfaces must use `?: T | undefined` (not just `?: T`) because of `exactOptionalPropertyTypes` in tsconfig.
-- **No `!.` in doctests** — the doctest runner doesn't support TypeScript's non-null assertion. Use `?.` instead: `svc.items[0]?.name`.
+- **No `!.` in tests.** Use `?.` instead: `svc.items[0]?.name`.
 
 ## Services container
 
@@ -75,7 +75,7 @@ export function createGmailConnector(boxRoot: string, service?: GoogleGmailServi
 
 ## Testing with fakes
 
-Route tests use `makeTestServer()` from `test/helpers/doctest-server.ts`:
+Route tests use `makeTestServer()` from `test/helpers/test-route-server.ts`:
 
 ```typescript
 const cal = createFakeGoogleCalendar({ calendars: [...] });
@@ -84,7 +84,7 @@ const ctx = await makeTestServer({ services: { calendar: cal } });
 await ctx.cleanup();
 ```
 
-Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake API.
+Each service's tests (for example `test/connectors/google-calendar.test.ts`) show the fake API.
 
 ## File inventory
 

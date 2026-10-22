@@ -1,5 +1,4 @@
 import type { KnipConfig } from "knip";
-import { doctestImports } from "./beebox/src/scripts/knip-doctest-imports.js";
 
 /**
  * Knip runs from the MONOREPO ROOT, not from beebox.
@@ -13,17 +12,15 @@ import { doctestImports } from "./beebox/src/scripts/knip-doctest-imports.js";
  *
  * One run also means the workspaces can see each other: bin/ imports
  * beebox/src by relative path, the frontend imports src/shared via
- * @shared/*, and beebox's doctests exercise frontend machines. Analyzed
+ * @shared/*, and beebox's tests exercise frontend machines. Analyzed
  * separately, each side reads the others' live code as dead.
  */
 const config: KnipConfig = {
   workspaces: {
     // Monorepo tooling: bin/ (the dev router, hooks, generators) and dev/.
     ".": {
-      // bin/test doctests are consumers the same way beebox's are: an export
-      // reached only from one is used.
-      entry: ["bin/*.ts", "bin/**/*.test.ts", "bin/test/**/*.doctest.md"],
-      project: ["bin/**/*.ts", "bin/test/**/*.doctest.md"],
+      entry: ["bin/*.ts", "bin/**/*.test.ts"],
+      project: ["bin/**/*.ts"],
       // Invoked through bin/browse, a shell script knip does not read.
       ignoreDependencies: ["agent-browser"],
     },
@@ -36,7 +33,7 @@ const config: KnipConfig = {
         "src/webapp/server-main.ts",
         "src/dev/gen-image.ts",
         // Declarative-only `defineRegistry` completeness declaration
-        // (docs/plans/file-layout.md rule 1/4): `appRouter` is built from the
+        // (docs/implemented-plans/file-layout.md rule 1/4): `appRouter` is built from the
         // same `routerMembers` object, but nothing imports the registry
         // module for its own sake.
         "src/webapp/trpc/routers.ts",
@@ -46,9 +43,8 @@ const config: KnipConfig = {
         // its Vite config names.
         //
         // The suite is a consumer too: an export reached only from a test is
-        // used. Doctests are markdown — see `compilers` below.
+        // used.
         "test/**/*.ts",
-        "test/**/*.doctest.md",
         "src/scripts/**/*.ts",
       ],
       project: [
@@ -56,7 +52,6 @@ const config: KnipConfig = {
         "!src/frontend/**",
         "!src/schemas/*/list-entry.tsx",
         "test/**/*.ts",
-        "test/**/*.doctest.md",
         "src/scripts/**/*.ts",
       ],
       ignoreDependencies: [
@@ -72,36 +67,7 @@ const config: KnipConfig = {
         // Its config block lives in beebox/package.json, but the runner
         // is the monorepo-root .husky/pre-commit — knip sees neither end.
         "lint-staged",
-        // Frontend dep, reached from test/frontend/*.doctest.md.
-        "@ianbicking/canvas-loop",
-        // Not dependencies: test/core/views/markdown-check.doctest.md passes
-        // view source importing these to the checker as a string, and
-        // test/dev/layout/move/mention-annotate.pipeline.doctest.md shows an
-        // `import x from "pkg/src/a.ts"` line as expected output. The doctest
-        // compiler lifts import statements by regex and cannot tell fixture
-        // text from the fence's own imports.
-        "react-markdown",
-        "remark-parse",
         "markdown-it",
-        "pkg",
-      ],
-      // Three doctests import modules from inside a template literal that a
-      // spawned subprocess evaluates, so the specifier is relative to the
-      // package root rather than to the .md file. The edge is real; only
-      // knip's resolution of it from this location fails. The last three are
-      // test/core/chat/session/deliver-user-message.doctest.md's child script.
-      //
-      // `./old.js` and `./new.js` are the same fixture-string case as the
-      // markdown libraries above: test/dev/layout/move/ts-edit.doctest.md
-      // feeds source text containing those specifiers to `rewriteTsFile`.
-      ignoreUnresolved: [
-        "./src/webapp/auth-capabilities.ts",
-        "./src/webapp/box-config-write.ts",
-        "./src/core/chat/session/deliver-user-message.ts",
-        "./src/core/chat/session/registry/core.ts",
-        "./src/services/claude-chat/core.ts",
-        "./old.js",
-        "./new.js",
       ],
     },
     "beebox/src/frontend": {
@@ -111,11 +77,10 @@ const config: KnipConfig = {
         // beebox/src/scripts/build-deploy-page.ts, which names it by path.
         "src/deploy-page/poll.ts",
         // The suite is a consumer too: an export reached only from a test is
-        // used. Doctests are markdown — see the root `compilers` config.
+        // used.
         "test/**/*.ts",
-        "test/**/*.doctest.md",
       ],
-      project: ["src/**/*.{ts,tsx}", "../schemas/*/list-entry.tsx", "test/**/*.{ts,tsx}"],
+      project: ["src/**/*.{ts,tsx,css}", "../schemas/*/list-entry.tsx", "test/**/*.{ts,tsx}"],
       ignoreDependencies: [
         // Named as a plain string in vite.config.ts's babel plugin list, and
         // the runtime it injects is never imported by hand (React 18 needs it;
@@ -124,13 +89,17 @@ const config: KnipConfig = {
         "react-compiler-runtime",
         // Config block lives here, runner is the root .husky/pre-commit.
         "lint-staged",
+        // Never imported: test/helpers/dom-globals.ts imports
+        // @happy-dom/global-registrator, which takes happy-dom as ^20.14.6.
+        // Listing it here pins the shim itself (docs/implemented-plans/frontend-dom-harness.md).
+        "happy-dom",
       ],
     },
   },
   // Out of scope for this config. Each is its own package with its own
   // backlog; folding them in is a separate piece of work, not a config line.
   ignoreWorkspaces: [
-    "agent-doctest",
+    "tap-check",
     "browse",
     "browse/**",
     "beebox/pub-worker",
@@ -143,24 +112,20 @@ const config: KnipConfig = {
   ],
   ignoreBinaries: [
     // System tools, not npm packages — there is no dependency to declare.
-    // launchctl (bin/schedules install) and claude (the headless launcher's
-    // install-time probe) are the same kind.
-    "launchctl",
-    "claude",
+    // (knip 6 no longer reports launchctl, claude, tar, ps or lsof.)
     "pdfinfo",
     "pdftotext",
     "pdftoppm",
     "qpdf",
     "uvx",
-    "tar",
-    "ps",
-    "lsof",
+    // bin/deploy-lock.test.ts reads the deploy log with `tail`.
+    "tail",
     // box-growth/bytes.ts measures disk use with `du -sk`.
     "du",
+    // test/lib/typescript/syntax.test.ts counts its own child processes with `pgrep -P`.
+    "pgrep",
     // beebox's own bin, invoked as an installed command by the smoke test.
     "bbx",
-    // A tracked executable in this repo, run by the root `dev` script.
-    "bin/workstreams",
     // beebox package scripts, invoked across the workspace boundary:
     // bin/deferred-issues.ts and bin/lib/manual-testing.sh run
     // `pnpm --dir beebox doc-check`, and the root postinstall runs
@@ -177,9 +142,6 @@ const config: KnipConfig = {
   // the graph cannot show. Carried at the declaration, naming the consumer, so
   // the exemption is auditable there rather than as a list in this file.
   tags: ["-public"],
-  // Doctests are markdown; knip parses TypeScript. Without this every export
-  // whose only consumer is a doctest reads as dead. See the module's header.
-  compilers: { md: doctestImports },
 };
 
 export default config;

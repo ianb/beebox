@@ -29,6 +29,12 @@ struct QuickChatView: Codable, Equatable, Identifiable, Sendable {
         var id: String { candidateId }
     }
 
+    /// A page sent from the Clerk; `message` is then the person's note and may be empty.
+    struct Page: Codable, Equatable, Sendable {
+        var title: String
+        var url: String
+    }
+
     var id: UUID
     var message: String
     var createdAt: String
@@ -45,6 +51,8 @@ struct QuickChatView: Codable, Equatable, Identifiable, Sendable {
     var choices: [Choice]?
     /// `sending` past the six-day delivery limit: only Open chat and Discard.
     var expired: Bool?
+    /// Present on a page sent from the Clerk: the row shows its title, linked.
+    var page: Page?
 }
 
 struct QuickChatRecentChat: Codable, Equatable, Identifiable, Sendable {

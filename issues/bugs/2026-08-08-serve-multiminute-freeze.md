@@ -8,6 +8,8 @@ labels: [field-test-findings, code-error]
 priority: backlog
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > `reconfirm?` checked 2026-09-05: still live. Nothing since the 2026-08-18 checkpoint touched `bulk-upload.ts`, `bulk-upload/worker.ts`, `git.ts`, or `git-lock.ts`. The remaining suspects (git-index contention vs. a tab hang) need what the checkpoint already named: a credentialed identity driving bulk upload concurrently with a chat turn under `node --cpu-prof` plus a heartbeat curl.
 
 > **Checked 2026-08-18 — still live, and today's git-lock work argues *against*
@@ -16,7 +18,7 @@ priority: backlog
 > `0a9b0be5` (today) takes the box git lock in every index mutator, replacing
 > the old best-effort single 2s retry — which is exactly hypothesis (a), index
 > contention between a chat-turn commit and `stageAndCommitPaths`. It is gated
-> by a 5-writer race test (`test/lib/git-concurrent-commit.doctest.md` (moved to `beebox/test/lib/git.concurrent-commit.doctest.md`)).
+> by a 5-writer race test (`test/lib/git-concurrent-commit.doctest.md` (moved to `beebox/test/lib/git.concurrent-commit.test.ts`)).
 >
 > **That fix probably does not explain the freeze**, though it fixes a real
 > correctness bug (dropped commits). `src/lib/git-lock.ts` states its design

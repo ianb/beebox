@@ -1,5 +1,5 @@
 /**
- * tRPC router for collections — query only (`docs/plans/todo-collection.md`,
+ * tRPC router for collections — query only (`docs/implemented-plans/todo-collection.md`,
  * Track 4). It replaces `todos.list`.
  *
  * The shape is the collection's, not the todo's: `collections.query` names a
@@ -35,7 +35,7 @@ const QuerySchema = z
     here: z.string(),
     glob: z.string().optional(),
     includeReferring: z.boolean().optional(),
-    group: z.enum(["place", "plate"]).optional(),
+    group: z.enum(["place", "status"]).optional(),
     params: TodoParamsSchema,
   })
   .superRefine((val, ctx) => {

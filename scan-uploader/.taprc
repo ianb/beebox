@@ -2,11 +2,9 @@ plugin:
   - "!@tapjs/typescript"
 node-arg:
   - --import=tsx
-  - --import=agent-doctest/tap
-  - --import=agent-doctest/loader
+  - --import=@ianbicking/tap-check/tap
 include:
   - test/**/*.test.ts
-  - test/**/*.doctest.md
 reporter: tap
 color: false
 disable-coverage: true

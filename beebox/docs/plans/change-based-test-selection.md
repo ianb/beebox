@@ -7,6 +7,10 @@ issues:
 ---
 # Test failure ledger, and change-based selection on the iteration loop
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+>
+> The doctest esbuild hooks this plan builds on (`agent-doctest/hooks`, `doctest-hooks.ts`) were deleted with the format. The test graph now resolves `.test.ts` imports directly in `bin/test-graph.ts`, with shared rules in `bin/lib/resolve-rules.ts`; read the sections that cite the hooks as history, and the scope paths `agent-doctest/` as `tap-check/`.
+
 Two things, in this order of importance:
 
 1. **A ledger of test runs**, one appended line each, green ones included —
@@ -368,7 +372,7 @@ worktree, so one ledger serves them all.
   "changed": ["beebox/src/..."],
   "ranFiles": "sha256:ab12…",                  // key into the sidecar manifest
   "implicated": "sha256:ef56…",                // what the graph alone points at
-  "durations": { "test/webapp/routes/scan-upload.doctest.md": 58177 },
+  "durations": { "test/webapp/routes/scan-upload.test.ts": 58177 },
   "failures": [{ "file": "test/...", "class": "attached" }] }
 ```
 
@@ -831,7 +835,7 @@ full-suite schedule runs since 2026-10-01 with `concurrency: 0`.
   files. The graph now has 1,016 entrypoints. The sum of per-file medians is
   4,654 s, which is about 13 minutes at 6 jobs.
 - **190 source files have 300 or more test importers.** Examples:
-  `src/core/box/package.ts` (467), `test/helpers/doctest-helpers.ts` (393),
+  `src/core/box/package.ts` (467), `test/helpers/test-helpers.ts` (393),
   and most of `src/schemas/` and `src/shared/`. A change to any of them
   selects about half of the suite.
 
@@ -847,10 +851,10 @@ JSX text contents are masked does not select its importers.
   changed code, so the filter would not change them.
 - **It drops tests that fail on text edits.** In user-facing-language, a
   text-only edit to `briefing.tsx` failed
-  `test/core/template-stock-hashes.doctest.md` (the template's stock hash
-  changed) and `test/scripts/migrate/briefing-openers.doctest.md`. Both import
+  `test/core/template-stock-hashes.test.ts` (the template's stock hash
+  changed) and `test/scripts/migrate/briefing-openers.test.ts`. Both import
   the changed file directly, so a "keep direct importers" exception would keep
-  them. `test/core/agent-guide/lint.doctest.md` failed on four branches whose
+  them. `test/core/agent-guide/lint.test.ts` failed on four branches whose
   landing diffs had text-only edits. It reads text through generated docs, so
   no import-depth rule finds it. The exception would become a hand-maintained
   list of tests that read text. Track 3 avoided that kind of list.
@@ -859,8 +863,8 @@ JSX text contents are masked does not select its importers.
   "beebox" && !selectorFailed ? "test:changed" : "test";"*). Only the hourly
   full run on `main` would catch a failure that the filter skipped. Since
   2026-10-09, almost every hourly run has been red: 15 of 68 runs since
-  2026-10-05 failed `test/hub/supervisor.doctest.md`, and 12 failed
-  `test/scripts/release.manifest.doctest.md`. A new failure there would be
+  2026-10-05 failed `test/hub/supervisor.test.ts`, and 12 failed
+  `test/scripts/release.manifest.test.ts`. A new failure there would be
   hard to see among the old ones.
 
 ### Mechanism — the estimate line
@@ -926,7 +930,7 @@ not changed: two places to keep in step are enough.
 after the command exits (`bin/finish-verify.ts:141`, `:182`). During a
 12-minute run, it shows nothing. The `finish-tooling` workstream is editing
 that file now, so this revision does not change it. The request is filed as
-`issues/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md`
+`issues/closed/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md`
 with `workstream: finish-tooling`.
 
 ### Could this be simpler?

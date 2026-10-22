@@ -55,7 +55,7 @@ import { execa } from "execa";
 import { cwdOf, etimeToSeconds, psRows, type PsRow } from "./process-table.js";
 
 // `etimeToSeconds` is re-exported because it is part of this module's tested
-// surface (bin/test/process-cleanup.liveness.doctest.md).
+// surface (bin/test/process-cleanup.liveness.test.ts).
 export { etimeToSeconds };
 
 // Mirror workstreams-app/src/router/server/listener.ts's roots (including the BBX_MAIN_ROOT override) so
@@ -266,7 +266,7 @@ function readLiveness(entry: unknown): AgentLiveness {
  * In every branch that reaps an UNVOUCHED process, `ageSec` gates it: a daemon
  * younger than MIN_ORPHAN_AGE_SEC has not had time to write its pidfile, so
  * "not vouched for" carries no information about it yet. That window is the
- * whole of issues/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md
+ * whole of issues/closed/bugs/2026-08-21-browse-reaper-kills-other-sessions-daemons.md
  * — two agents in one worktree, and the one that runs second kills the
  * still-starting daemon of the first.
  * - `unknown` — spare unconditionally, vouched or not. This is stricter than

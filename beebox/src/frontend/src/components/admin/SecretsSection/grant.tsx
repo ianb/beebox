@@ -1,6 +1,6 @@
 /**
  * Grant an existing machine-level name to this box — the advanced case
- * (`docs/plans/secret-entry-guidance.md`, Track 1): a grant is real machinery
+ * (`docs/implemented-plans/secret-entry-guidance.md`, Track 1): a grant is real machinery
  * (one store, many boxes), but for the box in front of the boxholder, pasting
  * a key and having it work (`SecretsSection-forms.tsx`'s `SecretValueForm`
  * with `grantBox` set) is the whole job. This form is what a second box

@@ -49,7 +49,7 @@ export interface BoxConfig {
   /**
    * OpenRouter models the owner added in admin. The only way one becomes
    * selectable: they bill per use, and holding an `openrouter` key enables
-   * nothing for chat on its own (`docs/plans/openrouter-chat-models.md`).
+   * nothing for chat on its own (`docs/implemented-plans/openrouter-chat-models.md`).
    * Missing means none.
    */
   openrouterModels?: AddedModel[];
@@ -262,9 +262,10 @@ async function readConfiguredModel(
   const config = await loadBoxConfig(boxRoot);
   const model = config[field];
   if (model === undefined) return null;
-  // An added OpenRouter model may be the box default, never the small-pass
-  // model: cheap structured passes stay on a tier (boxholder, 2026-09-19).
-  if (field === "agentModel" && typeof model === "string" && (await isConfigurableModel(boxRoot, model))) {
+  // An added OpenRouter model may fill either slot. On an OpenRouter-default
+  // box the small slot is what efficient and balanced work runs on
+  // (boxholder, 2026-10-15; `resolveTierModel`).
+  if (typeof model === "string" && (await isConfigurableModel(boxRoot, model))) {
     return normalizeModelId(model);
   }
   if (typeof model !== "string" || modelTier(normalizeModelId(model)) === null) {

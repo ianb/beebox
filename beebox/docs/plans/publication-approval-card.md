@@ -6,6 +6,8 @@ issues: []
 ---
 # Publication approval cards
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > **Superseded shape:** [publication-card-home.md](../implemented-plans/publication-card-home.md) replaces the `src/publications/<name>/` source folder and the reference card described here. A publication is now one `publication` card with its files in the card's attach folder.
 
 When an agent prepares a publication, the boxholder should open that publication's card to review its candidate and control serving. The card is a stable reference to the publication; server-owned binding and serving state remain the authority.

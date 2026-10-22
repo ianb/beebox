@@ -24,7 +24,7 @@
  * need one.
  */
 
-import { boxWorkEnvironment } from "../../box-maintenance.js";
+import { boxWorkEnvironment } from "../../box-maintenance/admission.js";
 import { simpleGit, CleanOptions } from "simple-git";
 
 import {
@@ -71,6 +71,8 @@ export interface GitCommitOptions {
 
 export interface GitPathCommitOptions extends GitCommitOptions {
   paths: string[];
+  /** Leave any of `paths` over the auto-stage size limit unstaged, as `stageAll` does. */
+  excludeOversized?: boolean;
 }
 
 export interface GitLogEntry {
@@ -374,6 +376,7 @@ export async function stageAndCommitPaths(
     // empty path list also lands here — nothing to stage or commit).
     if (!(await pathsHaveChanges(boxRoot, paths))) return null;
     await stageFiles(boxRoot, paths);
+    if (options.excludeOversized === true) await unstageOversizedBlobs(boxRoot, paths);
     const staged = await stagedPaths(boxRoot, paths);
     if (staged.length === 0) return null;
     try {

@@ -4,6 +4,7 @@
  */
 
 import { isRecord } from "./is-record.js";
+import type { SendOutcome } from "./send.js";
 
 export interface CommentOnPageMessage {
   type: "commentOnPage";
@@ -27,7 +28,30 @@ export interface GetLatestTabTransferMessage {
   type: "getLatestTabTransfer";
 }
 
+/** Capture the tab and send it with the note to the active box. */
+export interface SendToBoxMessage {
+  type: "sendToBox";
+  tabId: number;
+  note: string;
+}
+
+/** Resend a kept send under the same id, to the box it first went to. */
+export interface RetrySendMessage {
+  type: "retrySend";
+  id: string;
+}
+
+/** Choose where a send that needs a choice goes. */
+export interface ChooseSendMessage {
+  type: "chooseSend";
+  id: string;
+  candidateId: string;
+}
+
 export type ClerkMessage =
+  | SendToBoxMessage
+  | RetrySendMessage
+  | ChooseSendMessage
   | CommentOnPageMessage
   | ShareTabsMessage
   | OpenTabOrganizerMessage
@@ -48,10 +72,30 @@ export interface SharedTabsResult {
   organizerOpened?: boolean | undefined;
 }
 
-export type ActionResponse = { ok: true; result?: SharedTabsResult | undefined } | ActionFailure;
+/** The answer to sendToBox, retrySend, and chooseSend. */
+export interface SendActionResult {
+  kind: "send";
+  id: string;
+  /** The box this send went to (it may no longer be the active box). */
+  boxUrl: string;
+  outcome: SendOutcome;
+}
+
+export type ActionResult = SharedTabsResult | SendActionResult;
+
+export type ActionResponse = { ok: true; result?: ActionResult | undefined } | ActionFailure;
 
 export function isClerkMessage(value: unknown): value is ClerkMessage {
   if (!isRecord(value)) return false;
+  if (value["type"] === "sendToBox") {
+    return typeof value["tabId"] === "number" && typeof value["note"] === "string";
+  }
+  if (value["type"] === "retrySend") {
+    return typeof value["id"] === "string";
+  }
+  if (value["type"] === "chooseSend") {
+    return typeof value["id"] === "string" && typeof value["candidateId"] === "string";
+  }
   if (value["type"] === "commentOnPage") {
     return typeof value["tabId"] === "number";
   }

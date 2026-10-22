@@ -1,0 +1,155 @@
+// # Native companion emissions
+//
+// The iOS companion sends native composer input into the embedded web chat via a
+// browser event. The web app must convert that payload into the same `Emission`
+// shape used by the web composer, so the visible chat session owns the send.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { nativeEmissionFromDetail, parseNativeEmissionDetail } from "../../../../../src/components/chat/everywhere/InteractiveChat/native-emission.js";
+
+void test("line 11", async (t) => {
+  const typed = nativeEmissionFromDetail({
+    id: "ios-typed-1",
+    text: " hello ",
+    origin: "typed",
+    diarized: false,
+    images: [{ id: 1, mimeType: "image/png", dataBase64: "abc" }],
+  });
+  t.check(
+    {
+      id: typed?.id,
+      origin: typed?.origin,
+      text: typed?.text,
+      imageCount: typed?.images.length,
+      files: typed?.files.length,
+    },
+    {
+    id: "ios-typed-1",
+    origin: "typed",
+    text: "hello",
+    imageCount: 1,
+    files: 0,
+  },
+  );
+
+  const voice = nativeEmissionFromDetail({
+    id: "ios-voice-1",
+    text: " dictated ",
+    origin: "voice",
+    diarized: true,
+    images: [],
+  });
+  t.check(
+    {
+      id: voice?.id,
+      origin: voice?.origin,
+      text: voice?.text,
+      diarized: voice?.diarized,
+    },
+    {
+    id: "ios-voice-1",
+    origin: "voice",
+    text: "dictated",
+    diarized: true,
+  },
+  );
+
+  t.check(nativeEmissionFromDetail({ text: "   ", images: [] }), null);
+
+  // V2 carries the complete emission. Unlike legacy payloads, every field and item
+  // is strict so files or selections cannot disappear silently:
+
+  const complete = nativeEmissionFromDetail({
+    version: 2,
+    id: "ios-v2-1",
+    origin: "typed",
+    text: "See [file2] and [selection3]",
+    diarized: false,
+    images: [],
+    files: [{ id: 2, path: "_tmp/report.pdf", originalName: "report.pdf", size: 42, mimetype: "application/pdf" }],
+    selections: [{ id: 3, ref: "/notes/plan.md", text: "the plan", position: "paragraph 2", anchor: null, spokenWords: null }],
+  });
+  t.check({ files: complete?.files, selections: complete?.selections }, {
+    files: [
+      {
+        id: 2,
+        path: "_tmp/report.pdf",
+        originalName: "report.pdf",
+        size: 42,
+        mimetype: "application/pdf",
+      },
+    ],
+    selections: [
+      {
+        id: 3,
+        ref: "/notes/plan.md",
+        text: "the plan",
+        position: "paragraph 2",
+        anchor: null,
+        spokenWords: null,
+      },
+    ],
+  });
+
+  // HQ provenance from native survives the bridge so chat history can render the
+  // same persistent marker as a web-composer HQ send:
+
+  const hqVoice = nativeEmissionFromDetail({
+    version: 2,
+    id: "ios-hq-1",
+    origin: "voice",
+    text: "clean transcript",
+    diarized: false,
+    hqText: true,
+    hqService: "whisper",
+    images: [],
+    files: [],
+    selections: [],
+  });
+  t.check({ hqText: hqVoice?.hqText, hqService: hqVoice?.hqService }, {
+    hqText: true,
+    hqService: "whisper",
+  });
+
+  // Unknown versions and malformed V2 items reject with a receipt-ready reason:
+
+  const unknown = parseNativeEmissionDetail({ version: 9, id: "future-1" });
+  t.check(unknown.ok ? null : { id: unknown.emissionId, reason: unknown.reason }, {
+    id: "future-1",
+    reason: "Unsupported native emission version: 9",
+  });
+});
+
+// ## An image entry may carry the uploaded original's `path`
+//
+// The native composer uploads each inline image's original and sends its box
+// path on the image entry (contract §4.1). Optional — an older build never
+// sends it — but when present it must be a string; anything else is a
+// malformed image and rejects the payload like any other V2 shape error.
+void test("The native composer uploads each inline image's original and sends its box pa...", async (t) => {
+  const withPath = nativeEmissionFromDetail({
+    version: 2, id: "ios-img-path", origin: "typed", text: "receipt [image#1]", diarized: false,
+    images: [{ id: 1, mimeType: "image/jpeg", dataBase64: "abc", path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg" }],
+    files: [], selections: [],
+  });
+  t.check(withPath?.images, [
+    {
+      id: 1,
+      mimeType: "image/jpeg",
+      dataBase64: "abc",
+      path: "_tmp/2026-09-16T10-00-00.000Z_IMG_0001.jpg",
+    },
+  ]);
+
+  const badPath = parseNativeEmissionDetail({
+    version: 2, id: "ios-img-bad-path", origin: "typed", text: "x", diarized: false,
+    images: [{ id: 1, mimeType: "image/jpeg", dataBase64: "abc", path: 7 }],
+    files: [], selections: [],
+  });
+  t.check(badPath, {
+    ok: false,
+    emissionId: "ios-img-bad-path",
+    reason: "Invalid native emission V2: malformed image, file, or selection",
+  });
+});

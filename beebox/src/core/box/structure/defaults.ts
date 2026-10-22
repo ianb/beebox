@@ -143,7 +143,7 @@ const GUIDE_DOMAINS = ["intake", "calendar"];
 /**
  * Earlier stock guide hashes, keyed by filename: from before experiments lost
  * `status`, and (intake, the one with triage rules) from before a rule's
- * `source` became `basis` (both 2026-09). A tracked box needs none of these:
+ * `source` became `basis` (both 2026-09), and before memo cards (2026-10). A tracked box needs none of these:
  * its recorded hash already marks an old stock copy as ours, and the
  * `status-fields-2026-09` and `source-fields-2026-09` migrations turn an old
  * stock copy into exactly the current template. They cover an untracked box
@@ -154,9 +154,9 @@ const GUIDE_DOMAINS = ["intake", "calendar"];
 const PRIOR_STOCK_GUIDE_HASHES: Readonly<Record<string, string[]>> = {
   "intake.guide.card": [
     "02e0c866f365c6898d4983851492fa1573c9bbd9a91503c3d31078cca541e30a",
-    "1e172c1d28b95e21c2a3fd721b87f5fe51f459fb2125356540064f1c09a3cb42",
+    "1e172c1d28b95e21c2a3fd721b87f5fe51f459fb2125356540064f1c09a3cb42", "0bfc5cf3eb2d0539f24ed7932d7a9be76386a41223bac285d0986a823e629eff",
   ],
-  "calendar.guide.card": ["cba0c1ae68ff656611b5b9b6b3be9ca65233b1bf1c913b3ce62d395bf234da99"],
+  "calendar.guide.card": ["cba0c1ae68ff656611b5b9b6b3be9ca65233b1bf1c913b3ce62d395bf234da99", "d6a4c6698da5ccf977f361f71a2841b81e7e2cb044ace795aa72359e32633412"],
 };
 
 /**
@@ -236,9 +236,11 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
   // header, the browser tab -- so a fleet scaffolded with one hardcoded label
   // is a fleet whose boxes all look alike in a tab strip. The boxholder
   // renames it by editing the card, like any other box fact.
-  // The root place carries the box's onboarding openers; the agent fades them
+  // The root place carries the box's onboarding opener; the agent fades it
   // as the box comes into use (docs/implemented-plans/landmark-arrival.md, Track B).
-  const templateContent = createLandmarkTemplate({ label: await boxSlug(boxRoot), symbol: "📦", openers: STOCK_ROOT_OPENERS });
+  // Its body (the place summary) starts empty: the agent writes it once the
+  // root question is answered (docs/implemented-plans/front-door.md, Track A).
+  const template = { label: await boxSlug(boxRoot), symbol: "📦", openers: STOCK_ROOT_OPENERS };
   const existing = entries.find((name) => name.endsWith(".landmark.card"));
   if (existing !== undefined) {
     const existingRelPath = path.join("_content", existing);
@@ -253,16 +255,17 @@ export async function installRootLandmark(boxRoot: string): Promise<string | nul
       return null;
     }
     if (hasRole) return null; // a real landmark — leave the user's content alone
-    // Inert/unparseable — repair in place, keeping the filename and any place summary (not legacy XML).
-    const { body, hasFrontmatter } = splitCardContent(content);
-    await fs.writeFile(path.join(contentDir, existing), templateContent + (hasFrontmatter && !/^\s*(<landmark|$)/.test(body) ? body : ""));
+    // Inert/unparseable — repair in place, keeping the filename and any place summary
+    // (not legacy XML, which nobody can read), with or without frontmatter.
+    const { body } = splitCardContent(content);
+    await fs.writeFile(path.join(contentDir, existing), createLandmarkTemplate(template) + (/^\s*<landmark/.test(body) ? "" : body));
     return existingRelPath;
   }
 
   const result = await installTemplateFile({
     boxRoot,
     relPath: "_content/Box.landmark.card",
-    templateContent,
+    templateContent: createLandmarkTemplate(template),
   });
   return result.outcome === "fresh" ? "_content/Box.landmark.card" : null;
 }
@@ -303,7 +306,7 @@ export async function installTodoView(boxRoot: string): Promise<boolean> {
   const result = await installTemplateFile({
     boxRoot,
     relPath: PLATE_CARD_PATH,
-    templateContent: createTodoViewTemplate({ glob: "**", title: "The Plate" }),
+    templateContent: createTodoViewTemplate({ glob: "**", title: "Todos" }),
   });
   return result.outcome === "fresh";
 }
@@ -412,11 +415,11 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
   {
     name: "todo-review",
     description:
-      "Daily todo review: an agent gives each escalated, newly-on-plate, or stale todo a status change or a recheck date",
+      "Daily todo review: an agent gives each overdue, newly started, or stale todo a status change or a recheck date",
     cron: "30 6 * * *",
     notBefore: "20h",
     onWakeup: false,
-    // Seeded ENABLED (boxholder, 2026-09-24, docs/plans/todos-ui.md Track 7).
+    // Seeded ENABLED (boxholder, 2026-09-24, docs/implemented-plans/todos-ui.md Track 7).
     // Like process-retrospective, the precheck exits CHECK_SKIP when no todo
     // needs review, so a quiet box runs no agent.
     enabled: true,

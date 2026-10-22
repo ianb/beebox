@@ -1,0 +1,227 @@
+// # scheduler.setEnabled / scheduler.trigger
+//
+// `scheduler.setEnabled` toggles a schedule card's `enabled` flag (adding
+// `enabled: false` to disable, deleting the key to re-enable) and commits the one
+// card. The read-modify-write is wrapped in `withCardLock` so overlapping toggles
+// on the same card serialize
+// (`issues/closed/bugs/2026-07-04-webapp-mutation-concurrency.md`).
+// `scheduler.trigger` runs a schedule on demand; the precondition failures it
+// throws are covered here (running a real script is exercised elsewhere).
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
+import { appRouter } from "../../../../src/webapp/trpc/routers.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
+import { getLog } from "../../../../src/lib/git/core/operations.js";
+import { parse as parseYaml } from "yaml";
+import assert from "node:assert/strict";
+import { TRPCError } from "@trpc/server";
+import type { TmpBox } from "../../../helpers/test-helpers.js";
+
+function caller(boxRoot: string) {
+  const ctx: TrpcContext = trpcContext({ boxRoot, isAuthenticatedOwner: true });
+  return appRouter.createCaller(ctx);
+}
+
+async function newestCommit(boxRoot: string) {
+  const [entry] = await getLog(boxRoot, 1);
+  assert.ok(entry);
+  return entry;
+}
+
+async function code(p: Promise<unknown>): Promise<string> {
+  return p.then(() => "none", (e: unknown) => (e instanceof TRPCError ? e.code : String(e)));
+}
+
+// Read a schedule card's frontmatter as an object.
+async function frontmatter(box: TmpBox, name: string) {
+  const text = await box.read(`_config/schedules/${name}.scheduled-script.card`);
+  const inner = text.replace(/^---\n/, "").replace(/---\n?$/, "");
+  return parseYaml(inner);
+}
+
+const SCHED = `---
+cron: "0 6 * * *"
+description: Morning digest
+runs: "true"
+---
+`;
+
+// ## Disable then re-enable: the flag flips and each change commits
+//
+// Disabling writes `enabled: false` and commits with the webapp trailers;
+// re-enabling removes the key again. Sibling fields (`cron`, `runs`) survive both
+// rewrites.
+void test("Disabling writes enabled:", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await box.write("_config/schedules/digest.scheduled-script.card", SCHED);
+  box.commitAll("seed");
+  const c = caller(box.root);
+
+  const off = await c.scheduler.setEnabled({ name: "digest", enabled: false });
+  t.check(off, {
+    enabled: false,
+  });
+
+  const fmOff = await frontmatter(box, "digest");
+  // enabled explicitly false; sibling fields untouched.
+  t.check(fmOff, { cron: "0 6 * * *", description: "Morning digest", runs: "true", enabled: false });
+
+  const head = (await newestCommit(box.root));
+  t.check(head.subject, "Disable schedule: digest");
+
+  t.check(head.trailers, {
+    Source: "webapp",
+    Endpoint: "scheduler.setEnabled",
+  });
+
+  const on = await c.scheduler.setEnabled({ name: "digest", enabled: true });
+  t.check(on, {
+    enabled: true,
+  });
+
+  // Re-enabling drops the key entirely (absence == enabled).
+  t.check(await frontmatter(box, "digest"), { cron: "0 6 * * *", description: "Morning digest", runs: "true" });
+
+  t.check((await newestCommit(box.root)).subject, "Enable schedule: digest");
+});
+
+// ## Idempotent no-op: re-enabling an already-enabled schedule doesn't commit
+//
+// A second `setEnabled(true)` on an already-enabled card produces byte-identical
+// frontmatter. `stageAndCommitPaths` tolerates the nothing-to-commit case: the
+// call still returns the state, but HEAD doesn't move. (The first enable can
+// re-serialize the seed's YAML into canonical form and commit that; the second is
+// the true no-op.)
+void test("A second setEnabled(true) on an already-enabled card produces byte-identical...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await box.write("_config/schedules/digest.scheduled-script.card", SCHED);
+  box.commitAll("seed");
+  const c = caller(box.root);
+
+  // First enable settles the card into its canonical serialized form.
+  await c.scheduler.setEnabled({ name: "digest", enabled: true });
+  const before = (await newestCommit(box.root)).hash;
+
+  // Second enable changes nothing on disk — no new commit.
+  const res = await c.scheduler.setEnabled({ name: "digest", enabled: true });
+  const after = (await newestCommit(box.root)).hash;
+
+  t.check(res, {
+    enabled: true,
+  });
+
+  t.check(after, before);
+});
+
+// ## setEnabled failure paths: missing schedule, empty name
+void test("setEnabled failure paths: missing schedule, empty name", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  const c = caller(box.root);
+
+  t.check(
+    // No such schedule card.
+    await code(c.scheduler.setEnabled({ name: "ghost", enabled: false })),
+    "NOT_FOUND",
+  );
+
+  t.check(
+    // Empty name rejected by input validation.
+    await code(c.scheduler.setEnabled({ name: "", enabled: false })),
+    "BAD_REQUEST",
+  );
+});
+
+// ## trigger precondition failures: disabled and missing schedules
+//
+// A disabled schedule can't be triggered (`BAD_REQUEST`); a missing one is
+// `NOT_FOUND`. Both throw before any script runs.
+void test("A disabled schedule can't be triggered (BADREQUEST); a missing one is NOTFOUND.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await box.write(
+    "_config/schedules/off.scheduled-script.card",
+    "---\nenabled: false\nruns: \"true\"\n---\n",
+  );
+  box.commitAll("seed");
+  const c = caller(box.root);
+
+  const disabled = await c.scheduler.trigger({ name: "off" }).then(() => "none", (e) => `${e.code}:${e.message}`);
+  t.check(disabled, "BAD_REQUEST:Schedule \"off\" is disabled");
+
+  t.check(await code(c.scheduler.trigger({ name: "ghost" })), "NOT_FOUND");
+});
+
+// ## Concurrency: overlapping enable + disable serialize
+//
+// Enable and disable launched together against the same card. `withCardLock`
+// serializes the two read-modify-writes, so each completes its full
+// read→write→commit atomically: both commits land (one `Enable`, one `Disable`),
+// and the on-disk `enabled` state matches whichever committed last. Unlocked, the
+// two writes and commits could interleave and leave disk disagreeing with the
+// recorded history.
+void test("Enable and disable launched together against the same card.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await box.write("_config/schedules/race.scheduled-script.card", SCHED);
+  box.commitAll("seed");
+  const c = caller(box.root);
+
+  const [ra, rb] = await Promise.all([
+    c.scheduler.setEnabled({ name: "race", enabled: false }),
+    c.scheduler.setEnabled({ name: "race", enabled: true }),
+  ]);
+  // Both calls resolved without a concurrent-write crash.
+  t.check([ra, rb], [{ enabled: false }, { enabled: true }]);
+
+  // Both RMWs ran to completion: an Enable and a Disable commit both landed.
+  const subjects = (await getLog(box.root, 2)).map((l) => l.subject).toSorted();
+  t.check(subjects, [
+    "Disable schedule: race",
+    "Enable schedule: race",
+  ]);
+
+  // Serialization invariant, whichever call won: the on-disk enabled state
+  // agrees with the newest commit's action. If the newest commit enabled the
+  // schedule the key is absent; if it disabled, the key is false. A mismatch
+  // would mean one call's write and another's commit interleaved.
+  const newest = (await newestCommit(box.root)).subject;
+  const fm = await frontmatter(box, "race");
+  const enabledFm = { cron: "0 6 * * *", description: "Morning digest", runs: "true" };
+  t.check(fm, newest === "Enable schedule: race" ? enabledFm : { ...enabledFm, enabled: false });
+});

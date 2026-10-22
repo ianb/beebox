@@ -1,0 +1,269 @@
+// # Chat Features: Persistence
+//
+// Feature flags live on `SessionHistoryEntry` in
+// `.beebox/chat-session-history.json`. `updateFeaturesForSession`
+// writes a partial update; `getFeaturesForSession` reads what's there.
+// Pre-existing sessions without a `features` field continue working —
+// missing means "all defaults," resolved at read time by `resolveFeatures`
+// (covered in `test/core/chat/features.test.ts`).
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import {
+  appendHistory,
+  getFeaturesForSession,
+  loadHistoryEntries,
+  updateFeaturesForSession,
+} from "../../../../src/core/chat/session/history.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { FeatureStore } from "../../../../src/core/chat/session/run/features.js";
+import { resolveRecordedChatEngine } from "../../../../src/core/chat/session/engine.js";
+import { reserveChatSession, ChatReservationStore } from "../../../../src/core/chat/session/reserve.js";
+import { clearBoxConfigCache, loadAgentEngine } from "../../../../src/core/box/config.js";
+import { recordSessionStart } from "../../../../src/core/chat/session/registry/start-record.js";
+import { createReservationFeatureHandoff } from "../../../../src/core/chat/session/registry/reservations.js";
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+
+// ## Reading from an unknown session
+void test("Reading from an unknown session", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  t.check(await getFeaturesForSession(box.root, "sess-1"), null);
+});
+
+// ## Writing then reading
+//
+// `updateFeaturesForSession` creates the entry if it doesn't exist yet.
+// This matters for the agent-delta path: the agent might emit a
+// `<chat-app>` mutation in its first turn, before any explicit toggle.
+//
+// Creating the entry WRITES the session's engine, so `engine` is a required
+// argument rather than something this function decides — see "A toggle does not
+// restamp the engine" below for what filling it in by default cost.
+void test("updateFeaturesForSession creates the entry if it doesn't exist yet.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  await updateFeaturesForSession(box.root, {
+    sessionId: "sess-1",
+    updates: { narration: "on" },
+    engine: "claude",
+  });
+  t.check(await getFeaturesForSession(box.root, "sess-1"), {
+    narration: "on",
+  });
+});
+
+// ## Partial updates merge
+//
+// Only the keys passed to `updateFeaturesForSession` change; existing
+// keys not in the update are preserved.
+void test("Only the keys passed to updateFeaturesForSession change; existing keys not in...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  await updateFeaturesForSession(box.root, {
+    sessionId: "sess-1",
+    updates: { narration: "on", prose: "off" },
+    engine: "claude",
+  });
+  await updateFeaturesForSession(box.root, {
+    sessionId: "sess-1",
+    updates: { prose: "on" },
+    engine: "claude",
+  });
+  t.check(await getFeaturesForSession(box.root, "sess-1"), {
+    narration: "on",
+    prose: "on",
+  });
+});
+
+// ## Coexists with contextDir
+//
+// Existing sessions added via `appendHistory` keep their `contextDir` —
+// updating features doesn't disturb it, and vice versa.
+void test("Existing sessions added via appendHistory keep their contextDir — updating fe...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  await appendHistory(box.root, { sessionId: "sess-1", contextDir: "_content/recipes" });
+  await updateFeaturesForSession(box.root, {
+    sessionId: "sess-1",
+    updates: { narration: "on" },
+    engine: "claude",
+  });
+  const entries = await loadHistoryEntries(box.root);
+  t.check(entries[0], {
+    id: "sess-1",
+    engine: "claude",
+    contextDir: "_content/recipes",
+    features: {
+      narration: "on",
+    },
+  });
+});
+
+// ## A toggle does not restamp the engine
+//
+// Creating an entry writes an engine, and this function cannot know which one.
+// It used to fill the gap with the box default, which overwrote the answer the
+// session already had.
+//
+// The reachable case: a chat reserved as `claude` on a **codex-default** box. The
+// reservation is its only record before the first message, and
+// `resolveRecordedChatEngine` prefers a history row over a reservation — so the
+// row this toggle creates decides the engine from then on. Stamping the box
+// default flipped a Claude chat to Codex, permanently, on its first feature
+// toggle, and coined chats must be Claude.
+void test("Creating an entry writes an engine, and this function cannot know which one.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  await mkdir(join(box.root, "_config"), { recursive: true });
+  await writeFile(join(box.root, "_config/box.json"), JSON.stringify({ agentEngine: "codex", engines: { claude: true, codex: true } }));
+  clearBoxConfigCache(box.root);
+
+  const store = new ChatReservationStore(() => Date.now());
+  const coined = randomUUID();
+  const reserved = await reserveChatSession({
+    boxRoot: box.root, store, sessionId: coined,
+    contextDir: null, seedFeatures: {}, requestedEngine: "claude",
+  });
+  t.check(
+    { reserved, recordedBefore: await resolveRecordedChatEngine(box.root, { sessionId: coined }) },
+    { reserved: { kind: "reserved", sessionId: coined }, recordedBefore: "claude" },
+  );
+
+  // The caller resolves the engine the way every reader does and passes it in, so
+  // the reservation's answer survives:
+
+  const engine = (await resolveRecordedChatEngine(box.root, { sessionId: coined }))
+    ?? (await loadAgentEngine(box.root));
+  await updateFeaturesForSession(box.root, { sessionId: coined, updates: { narration: "on" }, engine });
+
+  t.check(
+    { recordedAfter: await resolveRecordedChatEngine(box.root, { sessionId: coined }), featuresKept: await getFeaturesForSession(box.root, coined) },
+    { recordedAfter: "claude", featuresKept: { narration: "on" } },
+  );
+});
+
+// ## An unrecorded session's flags are not written under a guess
+//
+// `FeatureStore.persist` is the other way a row gets created, and it is not a
+// client control — an agent `<chat-app>` delta in its own turn reaches it. So the
+// `NOT_FOUND` that `chat.setFeature` answers for an unrecorded id does not cover
+// it, and resolving "recorded engine, else the box default" here would reintroduce
+// the restamping above one layer up.
+//
+// It declines instead. A session nothing recorded keeps its flags in memory for
+// the session rather than writing a row whose invented engine would then outrank
+// the real answer if the records came back.
+void test("FeatureStore.persist is the other way a row gets created, and it is not a cli...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const store = new FeatureStore({
+    boxRoot: box.root,
+    getSessionId: () => "77777777-7777-4777-8777-777777777777",
+    onChange: () => {},
+  });
+
+  await store.set("narration", "on");
+  t.check(
+    { inMemory: store.get(), written: await getFeaturesForSession(box.root, "77777777-7777-4777-8777-777777777777") },
+    { inMemory: { narration: "on", prose: "on" }, written: null },
+  );
+
+  // A recorded session persists as it always did:
+
+  const recorded = "66666666-6666-4666-8666-666666666666";
+  await appendHistory(box.root, { sessionId: recorded, engine: "codex" });
+  const recordedStore = new FeatureStore({
+    boxRoot: box.root,
+    getSessionId: () => recorded,
+    onChange: () => {},
+  });
+  await recordedStore.set("narration", "on");
+  t.check(
+    { written: await getFeaturesForSession(box.root, recorded), history: await loadHistoryEntries(box.root) },
+    { written: { narration: "on" }, history: [{ id: recorded, engine: "codex", features: { narration: "on" } }] },
+  );
+});
+
+// ## A toggle while the start writes its seed is not lost
+//
+// A reserved chat's pre-start toggles fold into its feature seed, and the start
+// writes that seed into the new history row. The handoff between the two closes
+// when the start takes the seed for its write. It once closed only after the
+// write returned. The atomic write fsyncs the directory after the new file is
+// visible, so a toggle in that window folded into a seed that had already been
+// written, and the chat came back with the seed value. The full suite hit this
+// under load in what is now `test/webapp/trpc/routers/chat.reserved-features.test.ts`. Toggling the moment the seed is
+// visible lost the toggle every time.
+//
+// The poll below checks on every event-loop turn rather than with `eventually`,
+// whose interval can step over the fsync window:
+void test("A reserved chat's pre-start toggles fold into its feature seed, and the start...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const sessionId = "55555555-5555-4555-8555-555555555555";
+  const seed = { narration: "on" };
+  const handoff = createReservationFeatureHandoff(seed);
+  const store = new FeatureStore({
+    boxRoot: box.root,
+    getSessionId: () => sessionId,
+    seedFeatures: seed,
+    persistPending: handoff.persist,
+    onChange: () => {},
+  });
+  await store.ensureLoaded();
+
+  const started = recordSessionStart(box.root, { sessionId, seedFeatures: seed, engine: "claude", onSeedTaken: handoff.close });
+  while ((await getFeaturesForSession(box.root, sessionId))?.narration !== "on") {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  await store.set("narration", "off");
+  await started;
+  t.check(await getFeaturesForSession(box.root, sessionId), {
+    narration: "off",
+  });
+});

@@ -18,14 +18,14 @@
  *
  * No `Command` objects here. `surface-build.ts` is the only module that maps a
  * name to a registration, so a test can import this table without loading the
- * CLI (`test/cli/entry.surface.doctest.md`).
+ * CLI (`test/cli/entry.surface.test.ts`).
  */
 
 /** Who can invoke a verb: the box agent, or only a person or a unit file. */
 export type Audience = "agent" | "engine";
 
 /**
- * How the agent-surface doctest exercises a verb. Exactly one arm, so an entry
+ * How the agent-surface test exercises a verb. Exactly one arm, so an entry
  * cannot silently have neither — a verb with no safe invocation has to say why
  * rather than just omit the field.
  */
@@ -102,7 +102,7 @@ export const SURFACE: readonly SurfaceEntry[] = [
   { name: "run-summary", audience: "agent", smoke: { run: ["run-summary", "smoke"] } },
   // Asks Jev about stdin through an authored judgment card; `judge --dry-run`
   // sends nothing but still needs a card to read, which a smoke box lacks.
-  { name: "judge", audience: "agent", smoke: { skip: "needs a judgment card fixture; test/cli/commands/judge/command.doctest.md runs --dry-run" } },
+  { name: "judge", audience: "agent", smoke: { skip: "needs a judgment card fixture; test/cli/commands/judge/command.test.ts runs --dry-run" } },
   { name: "session", audience: "agent", smoke: { run: ["session", "--list"] } },
   { name: "usage", audience: "agent", smoke: { run: ["usage", "--schema"] } },
   { name: "docs", audience: "agent", smoke: { skip: "`refresh` rewrites generated docs and commits" } },
@@ -115,6 +115,8 @@ export const SURFACE: readonly SurfaceEntry[] = [
   // ---- Talking to the boxholder ----------------------------------------
   { name: "chat", audience: "agent", smoke: { run: ["chat", "whats-changed"] } },
   { name: "notify", audience: "agent", smoke: { skip: "sends a notification; `--check` exits 1 on a box with no channel" } },
+  // Sets a check-in or writes a reminder card; `--help` is the read-only form.
+  { name: "remind", audience: "agent", smoke: { run: ["remind", "--help"] } },
   { name: "pairing", audience: "agent", smoke: MUTATES },
 
   // ---- Credentialed: these delegate to the box's server under the agent

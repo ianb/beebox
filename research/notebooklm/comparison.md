@@ -66,7 +66,7 @@ The honest comparison is that a landmark is a place in a house and a notebook is
 
 Notebook's September 2026 release is aimed entirely at study: live voice tutoring, a lecture recorder, learning overviews that bundle a summary, quiz and flashcards, more quiz formats, "ask the chat about your quiz performance", and a free year of AI Pro for US college students. Its Learning Guide preset asks questions instead of answering.
 
-The chemistry journey (`beebox/test/user-stories/journeys/D-chemistry/`) is this use case without the sources: a learner with no textbook upload and no photographs, who wants continuity across evenings. Box's courseware answers with a concept map, a lesson plan, an exposition plan, and a progress card whose levels carry a basis (observed, inferred, self-report) and keep the wrong first model visible after correction (`S/schemas/progress.ts`). Spaced review and numeric mastery were rejected on purpose; retrieval practice is named for Phase 2.
+The chemistry journey (`beebox/test/plugins/courseware/journeys/D-chemistry/`, retired with the move of courses to the courseware plugin) is this use case without the sources: a learner with no textbook upload and no photographs, who wants continuity across evenings. Box's courseware answers with a concept map, a lesson plan, an exposition plan, and a progress card whose levels carry a basis (observed, inferred, self-report) and keep the wrong first model visible after correction (`S/schemas/progress.ts`). Spaced review and numeric mastery were rejected on purpose; retrieval practice is named for Phase 2.
 
 | | Notebook | Box |
 |---|---|---|

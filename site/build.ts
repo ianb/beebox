@@ -32,6 +32,29 @@ import { publishedPageBody } from "./page-publication.js";
 import { flattenEvaluationTags } from "./evaluation-tags.js";
 
 const SITE_DIR = import.meta.dirname;
+
+async function isFile(file: string): Promise<boolean> {
+  return (await fs.stat(file).catch(() => null))?.isFile() === true;
+}
+
+/**
+ * The development-process talk ships as a static page at /talks/devprocess/:
+ * the explorer, the data it fetches, and its WebP figures. Nothing else from
+ * dev/devprocess-talk/ (notes, reports, generators, the reference sheet) goes.
+ */
+async function copyTalk(distDir: string): Promise<void> {
+  const src = path.join(SITE_DIR, "..", "dev", "devprocess-talk");
+  const dest = path.join(distDir, "talks", "devprocess");
+  await fs.mkdir(path.join(dest, "data"), { recursive: true });
+  await fs.mkdir(path.join(dest, "figures"), { recursive: true });
+  await fs.copyFile(path.join(src, "explorer.html"), path.join(dest, "index.html"));
+  for (const name of await fs.readdir(path.join(src, "data"))) {
+    if (name.endsWith(".json")) await fs.copyFile(path.join(src, "data", name), path.join(dest, "data", name));
+  }
+  for (const name of await fs.readdir(path.join(src, "figures"))) {
+    if (name.endsWith(".webp")) await fs.copyFile(path.join(src, "figures", name), path.join(dest, "figures", name));
+  }
+}
 const CARDS_DIR = path.join(SITE_DIR, "cards");
 const NUGGETS_DIR = path.join(SITE_DIR, "nuggets");
 const REPO_ROOT = path.resolve(SITE_DIR, "..");
@@ -231,12 +254,14 @@ export async function buildSite(options: BuildSiteOptions): Promise<BuildSiteRes
   await fs.writeFile(path.join(distDir, "assets/navigation.js"), NAVIGATION_SCRIPT, "utf8");
   await fs.writeFile(path.join(distDir, "assets/day-theme.js"), dayThemeScript(dayRotation()), "utf8");
   await writeThemeAssets({ beeboxDir: BEEBOX_DIR, distDir });
+  await copyTalk(distDir);
 
-  // Link-check: every internal link target must correspond to an emitted page.
+  // Link-check: every internal link target must be an emitted page or a file
+  // copied into dist (an audio sample under assets/).
   const broken: string[] = [];
   for (const page of built) {
     for (const { target } of page.linkTargets) {
-      if (!emitted.has(target)) broken.push(`${page.stem}.md → ${target}`);
+      if (!emitted.has(target) && !(await isFile(path.join(distDir, target)))) broken.push(`${page.stem}.md → ${target}`);
     }
   }
   if (broken.length > 0) {

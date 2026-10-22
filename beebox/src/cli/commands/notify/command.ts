@@ -26,8 +26,8 @@ import * as fs from "node:fs/promises";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../../lib/paths/core.js";
 import { errorMessage } from "../../../shared/error-guards.js";
-import { notificationReached, notifyBoxholder, notifyChannels, type NotificationInput, type NotifyResult, type NotifyServices } from "../../../core/notify-boxholder.js";
-import { describeRoute, notifyRoute, onServer, type NotifyRoute } from "./route.js";
+import { notificationReached, notifyBoxholder, type NotificationInput, type NotifyResult, type NotifyServices } from "../../../core/notify-boxholder.js";
+import { channelReach, describeRoute, notifyRoute, onServer, type NotifyRoute } from "../../lib/notify-route.js";
 import { CHANNELS, LOUDNESS, type ChannelName, type Delivery, type Loudness } from "../../../core/notification/intent.js";
 import { formatTarget, InvalidTargetError, parseTarget, type Target } from "../../../core/notification/target.js";
 import { printDryRun } from "./dry-run.js";
@@ -172,11 +172,7 @@ function describe(delivery: Delivery): string {
 }
 
 async function check(boxRoot: string, opts: { route: NotifyRoute; services: NotifyServices | undefined }): Promise<number> {
-  const { route, services } = opts;
-  const can =
-    route.kind === "server"
-      ? (await onServer(() => route.client.notifications.channels.query())).reach
-      : await notifyChannels(boxRoot, { services });
+  const can = await channelReach(boxRoot, opts);
   const byChannel: Record<ChannelName, boolean> = { apns: can.apns, "web-push": can.webPush };
   for (const channel of CHANNELS) console.log(`${channel}: ${byChannel[channel] ? "yes" : "no"}`);
   return CHANNELS.some((channel) => byChannel[channel]) ? 0 : 1;
@@ -227,7 +223,7 @@ async function send(boxRoot: string, opts: { route: NotifyRoute; run: NotifyRun 
   return exitCode;
 }
 
-/** The command's logic with `boxRoot` given, returning the exit code: the seam `test/cli/commands/notify/command.doctest.md` drives. */
+/** The command's logic with `boxRoot` given, returning the exit code: the seam `test/cli/commands/notify/command.test.ts` drives. */
 export async function runNotify(boxRoot: string, run: NotifyRun): Promise<number> {
   const route = notifyRoute();
   if (run.options.verbose === true) console.error(describeRoute(route));

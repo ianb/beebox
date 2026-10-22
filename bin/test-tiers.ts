@@ -23,7 +23,7 @@ const CAREFUL_LIST = "test/careful.txt";
 
 /** A tier list that cannot be trusted. Never silently narrows a run. */
 /** An argument shaped like a test file the package could include. */
-const TEST_FILE = /^[^-].*\.(?:doctest\.md|test\.tsx?)$/;
+const TEST_FILE = /^[^-].*\.test\.tsx?$/;
 
 export class TierListError extends Error {
   constructor(message: string) {
@@ -81,7 +81,7 @@ interface TaprcPatterns {
 export function taprcPatterns(packageRoot: string): TaprcPatterns {
   const path = join(packageRoot, ".taprc");
   const fallback: TaprcPatterns = {
-    include: ["test/**/*.test.ts", "test/**/*.doctest.md"],
+    include: ["test/**/*.test.ts"],
     exclude: ["test/manual/**"],
   };
   if (!existsSync(path)) return fallback;
@@ -202,7 +202,7 @@ export function tierCommand(input: {
   const known = [...input.taprcFiles, ...input.careful];
   const isFile = input.isFile ?? packageFile(PACKAGE_ROOT);
   // An argument shaped like a test file that names no file is a mistake, most
-  // often a monorepo-relative path (`beebox/test/x.doctest.md`) given inside
+  // often a monorepo-relative path (`beebox/test/x.test.ts`) given inside
   // the package. Treated as "no files named", it would append the whole tier:
   // three agents doing this at once ran three full suites (2026-09-29).
   const missing = args.filter((arg) => TEST_FILE.test(arg) && !known.includes(arg) && !isFile(arg));

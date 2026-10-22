@@ -1,7 +1,7 @@
 /**
  * "Recent files" sub-panel body for the context chip's menu — extracted from
  * the retired `RecentFilesButton` trigger (chunk 4 of
- * docs/plans/chat-header-chips.md). Derives entries from the session's
+ * docs/implemented-plans/chat-header-chips.md). Derives entries from the session's
  * messages via `useRecentFiles`; peek / panel / page escalate from there.
  *
  * Empty state renders an explicit "No recent files yet" row rather than a
@@ -33,7 +33,7 @@ export function RecentFilesPanel({ entries, onPanel }: RecentFilesPanelProps) {
 
   if (files.length === 0) {
     return (
-      <div className="px-3 py-4 text-warm-500 italic flex items-center gap-2">
+      <div className="px-3 py-4 text-warm-700 italic flex items-center gap-2">
         <DirectoryIcon size={16} />
         {isLoading ? "Loading…" : "No recent files yet"}
       </div>

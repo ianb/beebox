@@ -1,0 +1,26 @@
+{
+  // Typecheck-only. This package has no build step and never emits: its
+  // `exports` map serves the TypeScript sources directly (`"./check":
+  // "./src/tap-check/text/compare.ts"`), and there is no `build` script. The tsconfig used to
+  // carry `outDir`/`rootDir`/`declaration` anyway, describing an emit nobody
+  // ran.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": ["eslint.config.ts", "src/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -7,6 +7,12 @@ which is a different question and the catalog is structurally blind to it.
 
 Design and rationale: [`docs/plans/user-story-journeys.md`](../../../docs/plans/user-story-journeys.md).
 
+Journeys cover core Bee Box. A journey must not depend on a plugin such as
+courseware: a plugin is opt-in, and the boxholder turns it on. The chemistry
+journey (D) was retired for that reason; its definition and reports are kept
+with the plugin at
+[`test/plugins/courseware/journeys/D-chemistry/`](../../plugins/courseware/journeys/D-chemistry/README.md).
+
 ## Writing one
 
 A directory with a `journey.yaml`, and `assets/` if the person carries anything:
@@ -37,7 +43,7 @@ a few contacts they would already have, last month's receipts, a half-finished n
 Use it rather than reaching for a richer `base`: a journey should meet *this person's*
 box, and a base box full of someone else's life reads as confusing rather than
 realistic. That was observed, not assumed — the first pilot opened mid-sentence inside
-a stranger's chemistry course and spent its first ten seconds there.
+a stranger's course and spent its first ten seconds there.
 
 Each box also gets a **fresh git history** rather than inheriting the base's. History is
 a feature of this product; the first thing in theirs should be their own arrival. It
@@ -64,8 +70,10 @@ Then:
 pnpm exec tsx beebox/test/user-stories/journeys/collect.ts B-inventory-<date>
 ```
 
-Runs land in `../work/journeys/<id>-<date>/` (gitignored): the prompt as given, the
-notes, screenshots, and before/after snapshots of the box.
+Runs land in `user-stories-work/journeys/<id>-<date>/` at the monorepo root (gitignored): the
+prompt as given, the notes, screenshots, and before/after snapshots of the box. It sits outside
+`beebox/` because a box's `node_modules/beebox` links to this checkout's `beebox/`, and the box
+agent must not find the walker's notes.
 
 Then read the walk and write it up — **[after-action.md](after-action.md)** is the
 procedure, and `<journey>/reports/<date>.md` is where it goes. That report is the only part of
@@ -88,7 +96,7 @@ needed for this check.
 Screenshots need an awake display. With the Mac's display asleep (an
 unattended or overnight run), `bin/browse screenshot` hangs on
 `Page.captureScreenshot` while every other action works, and the walk comes back
-with no screenshots (D-chemistry, 2026-10-09). Hold the display awake for the
+with no screenshots (the retired chemistry journey, 2026-10-09). Hold the display awake for the
 whole run before starting walkers.
 
 Timing reads the Claude transcripts of the box's root chat and place chats and

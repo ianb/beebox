@@ -1,5 +1,6 @@
-// Tests for the selected run's time estimate. A `.test.ts` for the same reason
-// as bin/test-select.test.ts: it is part of choosing which doctests run.
+// Tests for the selected run's time estimate. A `node:test` file for the
+// same reason as bin/test-select.test.ts: it is part of choosing which tap
+// tests run.
 //
 //   node --import tsx --test bin/test-estimate.test.ts
 
@@ -32,38 +33,38 @@ test("per-file medians of recent completed runs, a typical file for one with no 
   const records = [
     run({
       ts: "2026-10-10T00:00:00Z",
-      durations: { "test/a.doctest.md": 10_000, "test/b.doctest.md": 2_000 },
+      durations: { "test/a.test.ts": 10_000, "test/b.test.ts": 2_000 },
     }),
     run({
       ts: "2026-10-11T00:00:00Z",
-      durations: { "test/a.doctest.md": 20_000, "test/b.doctest.md": 4_000 },
+      durations: { "test/a.test.ts": 20_000, "test/b.test.ts": 4_000 },
     }),
     run({
       ts: "2026-10-11T01:00:00Z",
-      durations: { "test/a.doctest.md": 30_000 },
+      durations: { "test/a.test.ts": 30_000 },
     }),
     // Outside the 30 days, killed, or a marker: none of them is a measurement.
     run({
       ts: "2026-08-01T00:00:00Z",
-      durations: { "test/a.doctest.md": 900_000 },
+      durations: { "test/a.test.ts": 900_000 },
     }),
     run({
       ts: "2026-10-11T02:00:00Z",
-      durations: { "test/a.doctest.md": 900_000 },
+      durations: { "test/a.test.ts": 900_000 },
       exitCode: 143,
     }),
     run({
       ts: "2026-10-11T03:00:00Z",
-      durations: { "test/a.doctest.md": 900_000 },
+      durations: { "test/a.test.ts": 900_000 },
       marker: true,
     }),
     // A line tap printed without `time=` is recorded as 0, not as a fast run.
-    run({ ts: "2026-10-11T04:00:00Z", durations: { "test/b.doctest.md": 0 } }),
+    run({ ts: "2026-10-11T04:00:00Z", durations: { "test/b.test.ts": 0 } }),
   ];
   // a: median of 10/20/30 s is 20 s. b: median of 2/4 s is 4 s (upper middle).
   // new: the median of those per-file medians, 20 s. (20 + 4 + 20) / 2 jobs.
   const seconds = estimateSeconds({
-    files: ["test/a.doctest.md", "test/b.doctest.md", "test/new.doctest.md"],
+    files: ["test/a.test.ts", "test/b.test.ts", "test/new.test.ts"],
     records,
     jobs: 2,
     now: NOW,
@@ -75,11 +76,11 @@ test("a run is never shorter than its slowest file", () => {
   const records = [
     run({
       ts: "2026-10-11T00:00:00Z",
-      durations: { "test/slow.doctest.md": 60_000, "test/a.doctest.md": 1_000 },
+      durations: { "test/slow.test.ts": 60_000, "test/a.test.ts": 1_000 },
     }),
   ];
   const seconds = estimateSeconds({
-    files: ["test/slow.doctest.md", "test/a.doctest.md"],
+    files: ["test/slow.test.ts", "test/a.test.ts"],
     records,
     jobs: 6,
     now: NOW,
@@ -88,8 +89,8 @@ test("a run is never shorter than its slowest file", () => {
 });
 
 test("history for under half the files gives no estimate rather than a guess", () => {
-  const one = [run({ ts: "2026-10-11T00:00:00Z", durations: { "test/a.doctest.md": 1_000 } })];
-  const files = ["test/a.doctest.md", "test/new1.doctest.md", "test/new2.doctest.md"];
+  const one = [run({ ts: "2026-10-11T00:00:00Z", durations: { "test/a.test.ts": 1_000 } })];
+  const files = ["test/a.test.ts", "test/new1.test.ts", "test/new2.test.ts"];
   assert.equal(estimateSeconds({ files, records: one, jobs: 6, now: NOW }), null);
 });
 
@@ -97,12 +98,12 @@ test("no recent history gives no estimate rather than a guess", () => {
   const old = [
     run({
       ts: "2026-08-01T00:00:00Z",
-      durations: { "test/a.doctest.md": 1_000 },
+      durations: { "test/a.test.ts": 1_000 },
     }),
   ];
   assert.equal(
     estimateSeconds({
-      files: ["test/a.doctest.md"],
+      files: ["test/a.test.ts"],
       records: old,
       jobs: 6,
       now: NOW,

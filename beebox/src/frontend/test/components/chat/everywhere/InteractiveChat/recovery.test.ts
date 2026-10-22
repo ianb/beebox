@@ -1,0 +1,44 @@
+// # Recovered Dictation Minimum Size
+//
+// Recovered dictation is worth surfacing only when its trimmed text is longer
+// than 20 characters. Short scraps are classified for silent removal by the
+// recovery hook instead of rendering its recovery affordance.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import {
+  dropSmallRecoveredDictation,
+  RECOVERED_DICTATION_MIN_CHARACTERS,
+  shouldSurfaceRecoveredDictation,
+} from "../../../../../src/components/chat/everywhere/InteractiveChat/recovery.js";
+
+// The hook's drop path uses the same decision and clears a short persisted draft:
+void test("The hook's drop path uses the same decision and clears a short persisted draft:", async (t) => {
+  let clearedDrafts = 0;
+  const dropped = dropSmallRecoveredDictation("just mumbling", () => { clearedDrafts += 1; });
+  t.check(({ dropped, clearedDrafts }), {
+    dropped: true,
+    clearedDrafts: 1,
+  });
+});
+
+// Whitespace does not inflate the recovered draft's size, and exactly 20
+// characters is still below the strict threshold:
+void test("Whitespace does not inflate the recovered draft's size, and exactly 20 charac...", async (t) => {
+  t.check(shouldSurfaceRecoveredDictation(`  ${"x".repeat(RECOVERED_DICTATION_MIN_CHARACTERS)}  `), false);
+});
+
+// A longer recovery is surfaced:
+void test("A longer recovery is surfaced:", async (t) => {
+  t.check(shouldSurfaceRecoveredDictation("This recovered draft is useful."), true);
+
+  let clearedDrafts = 0;
+  const dropped = dropSmallRecoveredDictation(
+    "This recovered draft is useful.",
+    () => { clearedDrafts += 1; },
+  );
+  t.check(({ dropped, clearedDrafts }), {
+    dropped: false,
+    clearedDrafts: 0,
+  });
+});

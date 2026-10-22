@@ -1,6 +1,6 @@
 /**
  * OpenRouter models on the claude engine — the one OpenRouter use that needs
- * an owner act in admin (`docs/plans/openrouter-chat-models.md`).
+ * an owner act in admin (`docs/implemented-plans/openrouter-chat-models.md`).
  *
  * `core/openrouter.ts` routes optional services through a granted key with no
  * configuration, because they cost cents. A chat or agent turn is a different

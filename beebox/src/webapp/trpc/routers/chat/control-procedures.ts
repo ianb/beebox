@@ -200,8 +200,12 @@ export const chatControlProcedures = {
    */
   archive: ownerProcedure.input(z.object({ sessionId: sdkSessionIdSchema })).mutation(async ({ input, ctx }) => {
     try {
-      const { registry } = requireRuntime(ctx.boxRoot);
-      return await archiveChatSession({ boxRoot: ctx.boxRoot, sessionId: input.sessionId, registry });
+      const { registry, scheduleManager } = requireRuntime(ctx.boxRoot);
+      const result = await archiveChatSession({ boxRoot: ctx.boxRoot, sessionId: input.sessionId, registry });
+      // An archived chat has ended, so its check-ins end with it. A leftover
+      // entry would stay silent anyway: the fire refuses a chat it cannot resume.
+      if (result.status === "archived") await scheduleManager.detachForSession(input.sessionId);
+      return result;
     } catch (error) {
       if (error instanceof LockHeldError) {
         throw new TRPCError({ code: "CONFLICT", message: "Chat review is running; try again in a moment" });
@@ -246,7 +250,7 @@ export const chatControlProcedures = {
    * `status` cannot give (it reports on one id, and reports *idle* for an id it
    * has never heard of, so an outside process cannot tell "quiet" from
    * "unknown"). The field-test harness polls this for its quiescence gate
-   * (`docs/plans/agent-field-tests.md`, Track 2) with the diagnostic key, which
+   * (`docs/implemented-plans/agent-field-tests.md`, Track 2) with the diagnostic key, which
    * is why it is on the diag whitelist in `webapp/auth.ts`.
    *
    * A box whose chat runtime was never initialized reports `initialized: false`

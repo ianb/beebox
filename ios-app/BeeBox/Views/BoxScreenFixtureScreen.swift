@@ -95,7 +95,7 @@ struct BoxScreenFixtureScreen: View {
         await draftStore.activate(boxID: box.id)
         let open: [QuickChatView] = switch fixture {
         case "needs-choice": [FixtureQuickChatClient.needsChoice]
-        case "not-delivered": [FixtureQuickChatClient.notDelivered]
+        case "not-delivered": [FixtureQuickChatClient.notDelivered, FixtureQuickChatClient.pageNotDelivered]
         default: []
         }
         let sent: [QuickChatView] = fixture == "sent" ? FixtureQuickChatClient.sent : []
@@ -145,6 +145,17 @@ private struct FixtureQuickChatClient: QuickChatClient {
         state: .sending,
         destination: .init(label: "Household", sessionId: "3c9e1a7b-5d2f-4e6a-8b0c-4d2f6a8c0e10"),
         lastError: "Chat is not running on the box. Retry in a moment."
+    )
+
+    /// A page sent from the Clerk with no note.
+    static let pageNotDelivered = QuickChatView(
+        id: UUID(),
+        message: "",
+        createdAt: "2026-10-06T13:45:00.000Z",
+        state: .sending,
+        destination: .init(label: "Garden raised beds", sessionId: "7e1f3a5c-9b2d-4f6a-8c0e-2a4c6e8a0b30"),
+        lastError: "Chat is not running on the box. Retry in a moment.",
+        page: .init(title: "Cedar raised bed kits", url: "https://example.com/garden/cedar-beds")
     )
 
     static let sent: [QuickChatView] = [
@@ -206,6 +217,10 @@ private struct FixtureQuickChatClient: QuickChatClient {
 
     func discard(id: UUID) async throws -> QuickChatView {
         QuickChatView(id: id, message: "", createdAt: "", state: .discarded)
+    }
+
+    func retry(id: UUID) async throws -> QuickChatView {
+        throw URLError(.notConnectedToInternet)
     }
 
     func home() async throws -> QuickChatHome {

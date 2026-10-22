@@ -1,6 +1,6 @@
 /**
  * The geometry behind the pointer's ring — the pure half, so it can be
- * doctested under plain Node. The drawing lives in
+ * tested under plain Node. The drawing lives in
  * `components/ui/ControlRing.tsx`, where appearance belongs (frontend.md).
  *
  * The ring is an overlay drawn *around* the target's border box, so it must not

@@ -39,7 +39,7 @@ screen continues below the fold and the button lights up
    ordinary scrolling never looks like reflow. A send ease owns writes while
    active; reconciliation still measures geometry but cannot cancel it. The pure
    dispatcher is `decideReconcile` in `scroll-reconcile.ts`, unit-checked in
-   `src/frontend/test/components/chat/chat-scroll/scroll-reconcile.chat-scroll-reconcile.doctest.md`.
+   `src/frontend/test/components/chat/chat-scroll/scroll-reconcile.chat-scroll-reconcile.test.ts`.
 
 The live spacer uses `100cqh` inside the size-contained scroller. Do not mirror
 viewport height through React state: the delayed spacer update permits a
@@ -112,7 +112,7 @@ back to my message" bug, fixed 2026-07-29). The extra fetch bought nothing —
 `waitForTranscriptEntry` (`core/chat/session/transcript-sync.ts`) holds
 `result`/`done` until the turn is durable, so the in-flight read is already
 authoritative. Locked down in
-`src/frontend/test/machines/chatMachine/machine.chat-machine-finalize.doctest.md`.
+`src/frontend/test/machines/chatMachine/machine.chat-machine-finalize.test.ts`.
 
 **Invariant: don't render the streaming turn as a separate bubble/component and
 swap in the finalized one** — that remount is the "shudder" this design removed
@@ -140,8 +140,7 @@ writes with `set()` — neither subscribes, so a keystroke never re-renders them
 a prop through the body.** New code that needs the text reads `useInputValue()`
 (reactive, composer-only) or takes the `InputStore` and calls `get()`/`set()`.
 `MessageList` is also wrapped in `React.memo` as a second line of defense; the
-store is the first. Verify with the render-count probe (commit-hook +
-`actualDuration`) that a keystroke re-renders only the composer subtree.
+store is the first. Check render counts with a DOM test's `renders()`.
 
 ## Workspace card roots survive presentation changes
 

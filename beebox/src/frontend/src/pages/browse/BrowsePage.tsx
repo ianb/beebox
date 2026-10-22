@@ -19,7 +19,7 @@ import { Stack } from "../../components/ui/Stack";
 import { ErrorText } from "../../components/ui/ErrorText";
 import { BrowseSidebarBody } from "./components/BrowseSidebarBody/view";
 import { RequestError } from "../../lib/errors";
-import type { BrowseMissingKind, BrowseState } from "../../lib/browse-card-state";
+import { BROWSE_DEFAULT_DIRECTORY, browseDirectoryLabel, type BrowseMissingKind, type BrowseState } from "../../lib/browse-card-state";
 
 interface BrowseBodyProps {
   state: BrowseState;
@@ -134,9 +134,9 @@ export function BrowseBody({ state, onNavigate, onFileNavigate, onLinkNavigate }
   return (
     <Stack gap="none" className="h-full">
       {deleteError ? <ErrorText className="p-3">{deleteError}</ErrorText> : null}
-      <Sidebar title="Browse" headingLevel="h2" subtitle={dirPath || "/"} fill idPrefix="bbx-browse-sidebar">
+      <Sidebar title="Browse" headingLevel="h2" subtitle={browseDirectoryLabel(dirPath)} fill idPrefix="bbx-browse-sidebar">
         <Stack gap="none">
-          <BrowseBreadcrumbs dirPath={dirPath} onNavigate={(path) => onNavigate(path, { kind: "directory" })} />
+          <BrowseBreadcrumbs dirPath={dirPath} rootPath={BROWSE_DEFAULT_DIRECTORY} onNavigate={(path) => onNavigate(path, { kind: "directory" })} />
           <BrowseSidebarBody
             data={data}
             loading={loading}

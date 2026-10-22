@@ -1,4 +1,5 @@
 /** Browse is one instrument; directory and selected detail belong to its state. */
+import { toDisplayPath } from "@shared/display-path";
 import { isRecord } from "@shared/is-record";
 import { parseRef, resolveRefPath } from "@shared/ref-path/core";
 import { validateViewState, type ViewState } from "@shared/view-state";
@@ -46,10 +47,27 @@ function parseDetail(value: unknown): ViewTarget | null {
   return { path, viewer, params: strings, viewState };
 }
 
+/**
+ * Where Browse opens with no directory given: the content root, where a
+ * person spends their time. The box root (`""`) stays reachable by an
+ * explicit `""` (`docs/implemented-plans/front-door.md`, Track D).
+ */
+export const BROWSE_DEFAULT_DIRECTORY = "_content";
+
+/**
+ * What a person reads for a Browse directory: never the storage name. The box
+ * root is "Whole box", the content root is "/", and anything else is its
+ * display path ("recipes", "Config: connectors").
+ */
+export function browseDirectoryLabel(directory: string): string {
+  if (directory === "") return "Whole box";
+  return toDisplayPath(directory) || "/";
+}
+
 export function parseBrowseState(input: { viewState?: ViewState | null; params?: Record<string, string> }): BrowseStateResult {
   const raw = input.viewState;
-  const directory = canonicalPath(raw ? raw["directory"] : input.params?.["dir"] ?? "");
-  if (directory === null) return { ok: false, error: `Invalid Browse directory: ${String(raw?.["directory"] ?? input.params?.["dir"] ?? "")}` };
+  const directory = canonicalPath(raw ? raw["directory"] : input.params?.["dir"] ?? BROWSE_DEFAULT_DIRECTORY);
+  if (directory === null) return { ok: false, error: `Invalid Browse directory: ${String(raw?.["directory"] ?? input.params?.["dir"] ?? BROWSE_DEFAULT_DIRECTORY)}` };
   if (raw?.["detail"] === undefined) return { ok: true, state: { directory } };
   const detail = parseDetail(raw["detail"]);
   if (!detail || browseParent(detail.path) !== directory) return { ok: false, error: "Invalid Browse detail: expected a file target inside the current directory." };

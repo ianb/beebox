@@ -9,7 +9,7 @@
  *
  * Failure is a return value, not an exception: the caller falls back to filing
  * the original bytes verbatim with an `error:`, so a Docling
- * crash never blocks intake (`docs/plans/scanner-ingest.md`, Track 4).
+ * crash never blocks intake (`docs/implemented-plans/scanner-ingest.md`, Track 4).
  */
 
 import * as fs from "node:fs/promises";

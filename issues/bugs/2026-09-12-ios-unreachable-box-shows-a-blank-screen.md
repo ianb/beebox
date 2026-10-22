@@ -94,3 +94,17 @@ appearance and the loopback copy want a real look. `UnreachableBoxView` lives
 in `RootView.swift` rather than its own file because the Xcode project uses
 explicit `project.pbxproj` references and a new file needs registering in three
 places by hand.
+
+## Re-encounter 2026-10-16 (dev router, box in maintenance)
+
+The boxholder's phone opened a box while it was closed for a docs refresh
+(see [docs refresh re-hashes every annexed file](../closed/bugs/2026-10-16-docs-refresh-rehashes-every-annexed-file-while-box-is-closed.md)).
+The dev router's mobile-session bootstrap retries a transient failure twice,
+600 ms apart, then answers a plain-text 503 page
+(`workstreams-app/src/router/server/proxy.ts:262-267`: "Mobile session
+bootstrap failed: box returned 503: Box is closed for docs refresh"). The app
+rendered that text as its whole page, with "Waiting for the conversation."
+under the composer. Relaunching the app hit the same closure. The web client
+already had the page loaded and kept working. Two gaps: the router gives up in
+about a second on a closure the box says will end, and the app has no retry
+from that page.

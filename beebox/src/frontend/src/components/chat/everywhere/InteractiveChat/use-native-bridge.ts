@@ -84,7 +84,7 @@ function useNativeNarrationBridge(opts: { enabled: boolean; narrationEnabled: bo
  * the server path), and the state is re-posted when it answers.
  *
  * `enabled` is always true: every dictated message gets the HQ pass
- * (docs/plans/hq-always.md). Current native builds ignore it; it is still sent
+ * (docs/implemented-plans/hq-always.md). Current native builds ignore it; it is still sent
  * so builds from before that change, which read it, keep running HQ. Native
  * resets this state on session change, so it is re-posted per session.
  */

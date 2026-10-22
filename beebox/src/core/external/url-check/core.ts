@@ -21,10 +21,15 @@ import { listBoxCardFiles, listBoxMarkdownFiles } from "../../list-cards.js";
 import { checkUrls, extractExternalUrls, isCheckableUrl, type UrlVerdict } from "./fetch.js";
 import { errnoCode } from "../../../shared/error-guards.js";
 import { isRecord } from "../../card-io.js";
+import { acquireLock, LockHeldError, releaseLock, type LockHolder } from "../../../lib/file-lock.js";
 
 const execFileP = promisify(execFile);
 
 const CACHE_REL = ".beebox/url-checks.json";
+// One check per box at a time. The post-commit hook starts one per commit,
+// detached; without this, a burst of commits stacks them up (82 at once on
+// 2026-09-05). Also serializes the cache's read-modify-write.
+const LOCK_REL = ".beebox/url-check.lock";
 // POSIX ERE for `git grep` — the same shape as the JS URL regex, minus the
 // chars that wrap URLs in markdown. Normalization happens in JS afterward.
 const GIT_GREP_PATTERN = "https?://[^[:space:]\"'()<>]+";
@@ -222,9 +227,42 @@ function pruneUnreferenced(cache: UrlCheckCache, current: Set<string>): void {
  * a report of currently-referenced broken URLs. `now` is injected so callers
  * (and tests) control the timestamp.
  */
-export async function checkExternalUrls(
+/** Another URL check holds this box's lock; this one did not start. */
+export class UrlCheckRunningError extends Error {
+  constructor(readonly holder: LockHolder) {
+    super(`Another URL check is running for this box (pid ${String(holder.pid)}); not starting a second.`);
+    this.name = "UrlCheckRunningError";
+  }
+}
+
+interface UrlCheckOptions {
+  mode: UrlCheckMode;
+  now: string;
+  check?: (urls: string[]) => Promise<UrlVerdict[]>;
+}
+
+/**
+ * Check the URLs new under `mode`. Throws {@link UrlCheckRunningError} without
+ * checking anything when another check for this box is running.
+ */
+export async function checkExternalUrls(boxRoot: string, options: UrlCheckOptions): Promise<UrlCheckReport> {
+  const lockPath = path.join(boxRoot, LOCK_REL);
+  try {
+    await acquireLock(lockPath, { purpose: "url-check" });
+  } catch (e) {
+    if (e instanceof LockHeldError) throw new UrlCheckRunningError(e.holder);
+    throw e;
+  }
+  try {
+    return await checkExternalUrlsLocked(boxRoot, options);
+  } finally {
+    await releaseLock(lockPath);
+  }
+}
+
+async function checkExternalUrlsLocked(
   boxRoot: string,
-  { mode, now, check }: { mode: UrlCheckMode; now: string; check?: (urls: string[]) => Promise<UrlVerdict[]> }
+  { mode, now, check }: UrlCheckOptions,
 ): Promise<UrlCheckReport> {
   // The real network checker; tests inject a deterministic stub so the git-based
   // detection + cache behavior is exercised offline (the SSRF guard would block a

@@ -53,7 +53,7 @@ export function todoAssignedWarning(assigned: string | undefined): TodoValidatio
   };
 }
 
-/** The stock box-wide `todo-view` card, "The Plate" (`core/box/defaults.ts`, `installTodoView`). */
+/** The stock box-wide `todo-view` card, titled "Todos" (`core/box/defaults.ts`, `installTodoView`); the file keeps its original name. */
 export const PLATE_CARD_PATH = "_content/plate.todo-view.card";
 
 /**
@@ -180,7 +180,7 @@ export interface TodoValidationError {
 
 /**
  * The `recheck` value that retires a todo from the todo-review sweep for good
- * (`docs/plans/todos-ui.md`, Track 7). Any other `recheck` is an ISO date.
+ * (`docs/implemented-plans/todos-ui.md`, Track 7). Any other `recheck` is an ISO date.
  */
 export const RECHECK_NEVER = "never";
 

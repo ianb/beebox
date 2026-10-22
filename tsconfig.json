@@ -16,11 +16,11 @@
     "noEmit": true,
     // bin/ runs under tsx / native type stripping, where an explicit `.ts`
     // specifier is the thing that actually resolves (see bin/test-graph.ts
-    // importing agent-doctest's resolve-rules).
+    // importing ./lib/resolve-rules.ts).
     "allowImportingTsExtensions": true,
     "lib": ["ES2023"],
     "types": ["node", "@fastify/cookie"]
   },
-  "include": ["feedback-review/**/*.ts", "eslint.config.ts", "bin/**/*.ts", "schedules/**/*.ts", "workstreams-app/src/router/**/*.ts", "research/audio-understanding-bakeoff/*.ts"],
-  "exclude": ["node_modules", "beebox", "cardworks", "agent-doctest", "canvas-loop", "beebox-clerk", "browse"]
+  "include": ["feedback-review/**/*.ts", "eslint.config.ts", "bin/**/*.ts", "schedules/**/*.ts", "workstreams-app/src/router/**/*.ts", "research/audio-understanding-bakeoff/*.ts", "research/tts-model-comparison/*.ts"],
+  "exclude": ["node_modules", "beebox", "cardworks", "tap-check", "canvas-loop", "beebox-clerk", "browse"]
 }

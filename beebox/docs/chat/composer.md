@@ -41,13 +41,18 @@ segment follows these rules:
 |---|---|
 | muted | mark the segment played without playback |
 | transcript has text | mark the segment played without playback |
-| microphone is recording | cancel the mic, play speech, enter `pausedForSpeech` |
+| microphone is open | hold the mic, play speech, enter `pausedForSpeech` |
 | otherwise | play speech and enter `speaking` |
 
 When ordinary playback finishes, the machine returns to `idle` and restarts the
 mic if `turnTaking` is set. When playback finishes or is stopped in
-`pausedForSpeech`, it returns to `idle` and resumes the mic. Starting dictation
+`pausedForSpeech`, it returns to `idle` and releases the hold. Starting dictation
 while speech plays stops speech first.
+
+A held mic records silence in place of what it hears. The segment stays open, so
+its text and its one recording continue, and the HQ pass covers the words from
+before the speech. A manual Replay (`SPEECH_EXTERNAL`) holds the mic even when
+the transcript has text; queued speech never plays over text.
 
 The rendered `voicePaused` flag is
 `composerSnapshot.matches({ voice: "pausedForSpeech" })`. Recording appearance
@@ -91,12 +96,12 @@ keyboard (initial: closed)
 
 The current React view still owns `typingMode` and `typingLocked` and renders
 the mobile typing row when `typingMode || isTranscribing`. The keyboard region
-therefore records the intended transitions and has doctest coverage, but the
+therefore records the intended transitions and has test coverage, but the
 view has not yet been wired to read it.
 
 ### Tests
 
-`src/frontend/test/machines/composerMachine.composer-machine.doctest.md` covers
+`src/frontend/test/machines/composerMachine.composer-machine.test.ts` covers
 voice, HQ, and keyboard transitions. The React wiring lives in
 `src/frontend/src/components/chat/everywhere/InteractiveChat/voice.ts`, and the
 remaining component-owned keyboard state lives in `InteractiveChat/shell.tsx`
@@ -245,12 +250,13 @@ the dictation):
 Mic button is a **pulsing mic with a pause badge** ("Resume recording (stops
 speech)") — the mic is the action (tap to get it back), the badge is the state —
 and the **Stop speaking** speaker-x shows. Reached when the agent speaks while
-you were recording — the mic is cancelled and TTS plays.
+you were recording — the mic is held (it records silence) and TTS plays. The
+transcript and its Cancel/Edit/Send controls stay.
 
 ![desktop paused](composer/desktop-paused.png)
 
-→ **playback ends** → auto-resume mic (`resumeMic`) · **Resume** tap / **Stop
-speaking** → resume mic. This state replaced the old `voicePaused` boolean; it
+→ **playback ends** → release the hold (`resumeMic`) · **Resume** tap / **Stop
+speaking** → release the hold. This state replaced the old `voicePaused` boolean; it
 should *not* flicker between the agent's sentences.
 
 #### Speaking, not paused (`speaking`)
@@ -314,19 +320,18 @@ Speaking — Stop-speaking speaker-x + plain mic:
 | idle | recording | — | St | stop-square + **Stop agent** (post-voice-send, agent replying) |
 | speaking | idle | playing | — | mic; **Stop speaking** |
 | speaking | idle | playing | St | mic; **Stop speaking** + **Stop agent** (mid-stream speech) |
-| pausedForSpeech | idle (cancelled) | playing | — | **mic + pause badge**; **Stop speaking** |
-| pausedForSpeech | idle (cancelled) | playing | St | mic + pause badge; Stop speaking + Stop agent |
+| pausedForSpeech | recording (held) | playing | — | **mic + pause badge**; **Stop speaking**; Cancel/Edit/Send |
+| pausedForSpeech | recording (held) | playing | St | mic + pause badge; Stop speaking + Stop agent |
 
 × narration (badge + mic-bubble icon) and × muted (mute icon; forces TTS off)
 overlay the rows above, except where excluded below.
 
 ### Impossible combinations
 
-- **recording + (speaking | pausedForSpeech)** — speech queued *while recording*
-  cancels the mic and enters `pausedForSpeech`; you can't be capturing and have
-  the machine in a TTS state at once. (`isTranscribing && speechPlaying` was a
-  latent edge in the old code; the overlay machine makes it unreachable — entering
-  recording from `speaking` stops playback first.)
+- **recording + speaking** — speech that starts with the mic open holds the mic
+  and enters `pausedForSpeech`, and entering recording from `speaking` stops
+  playback first. The mic only records alongside speech while held, and a held
+  mic records silence.
 - **muted + (speaking | pausedForSpeech)** — muted makes every queued segment
   `markPlayed` (never played), so no TTS state is entered, and muting in-flight
   speech sends `STOP_SPEECH`.

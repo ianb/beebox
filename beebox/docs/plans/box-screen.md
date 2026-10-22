@@ -7,6 +7,8 @@ issues:
 ---
 # Box screen: a thought goes in before the box loads
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 When I open the app with a thought in my head, I want to type or say it at once, so that it is safe in the box before any chat has loaded. When the box knows where the thought belongs, I want it posted there without a question. When the box does not know, I want a short list to pick from, and I want the thought kept if I walk away.
 
 Today the iOS app loads the full web chat and the last conversation first. Quick chat sits behind that load, as a web form in a sheet. The web Quick chat page skips the box load, but its send and recovery behavior loses messages and overwrites drafts. This plan adds a box screen with an inline composer on iOS and web, moves routing and delivery to one server operation, and reshapes the app bar's menus so that the box screen holds what concerns the whole box.
@@ -26,7 +28,7 @@ The chosen design has four tracks.
 | 1. Server: one submit operation, disposition policy, records | 450 | 400 | includes extracting the send-route body |
 | 2. Web: the box screen | 350 | 150 | replaces the Quick chat page; deletes the client-side send and the draft staging |
 | 3. Web: app bar menus | 250 | 150 | landmark menu, folder menu, landmark search page |
-| 4. iOS: box screen, outbox, launch rule | 1,300 | 400 | replaces the Quick chat button, the sheet, and the "+" menu's box list |
+| 4. iOS: box screen, outbox, launch rule | 1,300 | 400 | replaces the Quick chat button and the sheet |
 | Authored docs | 300 | | quick-chat.md, landmarks and navigation docs, mobile-contract.md, ios-app/AGENTS.md, security report |
 
 What the size buys: a thought is stored by the server in one request; every caller (web, the phone, later Siri and the share sheet) gets the same routing and the same recovery; the phone shows a composer before any web content loads; box-wide navigation has one home on both platforms.
@@ -71,7 +73,7 @@ Paths are monorepo-relative.
 - `beebox/src/frontend/src/components/BoxSelectionTiles.tsx:75`: `to={href(`/${box.slug}/quick-chat`)}` under the label "Quick chat". **Change** the target to the box screen.
 - `ios-app/BeeBox/Views/ChatWebView.swift:506`: `decidePolicyFor navigationAction` already decides every main-frame navigation and cancels those outside the box's origin. **Reuse** to catch the navigation to `/<box>/box`.
 - `ios-app/BeeBox/Views/ChatWebView.swift:90`: `struct NavigationRequest` carries a path for the web view to open; notification taps use it (`RootView.swift:293`). **Reuse** to open a box-wide page from the native box screen.
-- `ios-app/BeeBox/Views/ComposerActionsView.swift:84`: `Section("Boxes")` lists paired boxes and calls `store.select(box)`. **Move** the list to the box screen; reuse the selection call.
+- `ios-app/BeeBox/Views/ComposerActionsView.swift:84`: `Section("Boxes")` lists paired boxes and calls `store.select(box)`. **Copy** the list to the box screen; reuse the selection call. The + menu keeps its list (boxholder, 2026-10-15: the removal was not wanted).
 - `beebox/src/webapp/server-box-scope.ts:302`: a paired device's bearer token passes `authedProcedure` (`mobileOk`). The share extension calls `share.destinations` and `share.saveTextual` this way. **Reuse**; no new auth.
 - `ios-app/BeeBox/Views/RootView.swift:306`: `ChatWebView(` is constructed whenever a box is selected. `ChatWebView.swift:219` creates a new `WKWebView` in `makeUIView` and line 224 loads it. **Change**: construct it only when a chat is shown.
 - `ios-app/BeeBox/Views/RootView.swift:439`: `showingQuickChat = true`, and the `QuickChatSheet` struct near line 797. **Delete**; the landmark menu's box row replaces them.
@@ -353,7 +355,7 @@ The agent-facing navigation description changes: where Dashboard, Browse, Histor
 ## What will hold this after it ships
 
 - Pure doctests: `routingDisposition`, the record reader, the box screen reducer, the landmarks filter.
-- Router doctests with the fake Jev service (`createFakeJev`, `jev.ts:135`) and the caller pattern in `test/webapp/trpc/routers/quick-chat.doctest.md`: every row of the failure table that names one.
+- Router doctests with the fake Jev service (`createFakeJev`, `jev.ts:135`) and the caller pattern in `test/webapp/trpc/routers/quick-chat.test.ts`: every row of the failure table that names one.
 - Send-route doctests, unchanged, cover the route after the extraction. They do not cover the shared state, so one new doctest sends the same message id through `POST /api/chat/send` and through `quickChat.submit` against one runtime, in both orders, and expects one chat message.
 - Mobile-contract fixtures for the four procedures, parsed by both the Swift and TypeScript sides, and a `ChatWebViewRequestTests` case for the intercepted navigation.
 - XCTest: `initialSurface`, `QuickChatOutbox`, `QuickChatAPI` request shapes, the two draft stores.

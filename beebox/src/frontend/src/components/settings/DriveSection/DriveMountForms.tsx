@@ -10,6 +10,7 @@
 
 import { useState } from "react";
 import { trpc } from "../../../lib/trpc/client";
+import { fromDisplayPath, toDisplayPath } from "@shared/display-path";
 import { Button } from "../../ui/Button";
 import { Row } from "../../ui/Row";
 import { Stack } from "../../ui/Stack";
@@ -39,8 +40,8 @@ export function MountFolderForm() {
   const submit = async () => {
     if (!ready) return;
     try {
-      const result = await mountMutation.mutateAsync({ url: url.trim(), dir: dir.trim() });
-      setMounted(`Mirroring ${result.name} into ${result.cardPath}`);
+      const result = await mountMutation.mutateAsync({ url: url.trim(), dir: fromDisplayPath(dir.trim()) });
+      setMounted(`Mirroring ${result.name} into ${toDisplayPath(result.cardPath)}`);
       setUrl("");
       setDir("");
       void utils.drive.mounts.invalidate();
@@ -71,7 +72,7 @@ export function MountFolderForm() {
           value={dir}
           onChange={setDir}
           required
-          helper="e.g. _content/drive/recipes"
+          helper="e.g. drive/recipes"
           className="flex-1 min-w-64"
         />
         <Button
@@ -104,8 +105,8 @@ export function AddPointerForm() {
   const submit = async () => {
     if (!ready) return;
     try {
-      const result = await linkMutation.mutateAsync({ url: url.trim(), path: path.trim() });
-      setLinked(`Pointing at ${result.name} from ${result.cardPath}`);
+      const result = await linkMutation.mutateAsync({ url: url.trim(), path: fromDisplayPath(path.trim()) });
+      setLinked(`Pointing at ${result.name} from ${toDisplayPath(result.cardPath)}`);
       setUrl("");
       setPath("");
       void utils.drive.mounts.invalidate();
@@ -137,7 +138,7 @@ export function AddPointerForm() {
           value={path}
           onChange={setPath}
           required
-          helper="e.g. _content/tax/Receipt_2026"
+          helper="e.g. tax/Receipt_2026"
           className="flex-1 min-w-64"
         />
         <Button

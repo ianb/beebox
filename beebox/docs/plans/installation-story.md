@@ -6,6 +6,8 @@ issues: []
 ---
 # Installation story, phase 1: developer install + local Docker
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Make beebox installable by an outside developer: one pinned Node version
 enforced at install time, a preflight doctor that makes every missing
 prerequisite loud, a verified clone-to-running-box quickstart, and a Docker
@@ -27,7 +29,7 @@ sequencing, several citation corrections).
 *(Adjacent, out of this plan's scope: the stand-alone `scan-uploader/`
 package has its own minimal install story — clean clone + filtered install +
 self-contained bundle, verified by `scan-uploader/smoke-install.sh` — see
-`scan-uploader/README.md` "Setup" and `docs/plans/scan-uploader-pairing.md`
+`scan-uploader/README.md` "Setup" and `docs/implemented-plans/scan-uploader-pairing.md`
 Track C.)*
 
 ## Stated preferences this plan trades against

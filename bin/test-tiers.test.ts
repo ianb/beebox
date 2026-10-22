@@ -1,8 +1,8 @@
 // Tests for the ordinary/careful tiers — list parsing, the argv the ledger
-// wrapper builds, and the selector's exclusion of careful files. A `.test.ts`
-// rather than the doctest this directory's AGENTS.md asks for, for the same
-// reason bin/test-select.test.ts is one: the thing under test decides which
-// doctests run, so exercising it from inside that suite is circular.
+// wrapper builds, and the selector's exclusion of careful files. A `node:test`
+// file rather than a tap test, for the same reason bin/test-select.test.ts is
+// one: the thing under test decides which tap tests run, so exercising it from
+// inside that suite is circular.
 //
 //   node --import tsx --test bin/test-tiers.test.ts
 
@@ -40,27 +40,27 @@ function fixture(files: Record<string, string>): { root: string; cleanup: () => 
 // ── the careful list ────────────────────────────────────────────────────────
 
 test("comments, trailing comments and blank lines are not test paths", () => {
-  const text = ["# why this tier exists", "", "test/a.doctest.md", "  test/b.doctest.md  ", ""];
-  assert.deepEqual(parseCarefulList(text.join("\n")), ["test/a.doctest.md", "test/b.doctest.md"]);
+  const text = ["# why this tier exists", "", "test/a.test.ts", "  test/b.test.ts  ", ""];
+  assert.deepEqual(parseCarefulList(text.join("\n")), ["test/a.test.ts", "test/b.test.ts"]);
 });
 
 test("a listed path that does not exist fails loudly", () => {
   // Silently shrinking the tier is the failure the list exists to prevent: the
   // run would stay green while testing less than it claims to.
   const fx = fixture({
-    "test/careful.txt": "test/here.doctest.md\ntest/gone.doctest.md\n",
-    "test/here.doctest.md": "# here\n",
+    "test/careful.txt": "test/here.test.ts\ntest/gone.test.ts\n",
+    "test/here.test.ts": "\n",
   });
   try {
     assert.throws(() => readCarefulList(fx.root), TierListError);
-    assert.throws(() => readCarefulList(fx.root), /test\/gone\.doctest\.md/);
+    assert.throws(() => readCarefulList(fx.root), /test\/gone\.test\.ts/);
   } finally {
     fx.cleanup();
   }
 });
 
 test("no careful.txt at all is an empty tier, not an error", () => {
-  const fx = fixture({ "test/a.doctest.md": "# a\n" });
+  const fx = fixture({ "test/a.test.ts": "\n" });
   try {
     assert.deepEqual(readCarefulList(fx.root), []);
   } finally {
@@ -79,13 +79,13 @@ test("the repo's own careful.txt exists and every path in it is real", () => {
 
 test("taprc include/exclude are read, not restated", () => {
   const fx = fixture({
-    ".taprc": "include:\n  - test/**/*.doctest.md\nexclude:\n  - test/skipme/**\n",
-    "test/a.doctest.md": "# a\n",
-    "test/skipme/b.doctest.md": "# b\n",
-    "test/c.test.ts": "",
+    ".taprc": "include:\n  - test/**/*.test.ts\nexclude:\n  - test/skipme/**\n",
+    "test/a.test.ts": "\n",
+    "test/skipme/b.test.ts": "\n",
+    "test/helper.ts": "",
   });
   try {
-    assert.deepEqual(taprcTestFiles(fx.root), ["test/a.doctest.md"]);
+    assert.deepEqual(taprcTestFiles(fx.root), ["test/a.test.ts"]);
   } finally {
     fx.cleanup();
   }
@@ -93,7 +93,7 @@ test("taprc include/exclude are read, not restated", () => {
 
 test("taprc jobs is read, and absent means tap's own default", () => {
   const fx = fixture({ ".taprc": "jobs: 6\n" });
-  const bare = fixture({ ".taprc": "include:\n  - test/**/*.doctest.md\n" });
+  const bare = fixture({ ".taprc": "include:\n  - test/**/*.test.ts\n" });
   try {
     assert.equal(taprcJobs(fx.root), 6);
     assert.equal(taprcJobs(bare.root), null);
@@ -105,20 +105,20 @@ test("taprc jobs is read, and absent means tap's own default", () => {
 
 // ── argv ────────────────────────────────────────────────────────────────────
 
-const TAPRC_FILES = ["test/a.doctest.md", "test/flaky.doctest.md", "test/b.test.ts"];
-const CAREFUL = ["test/flaky.doctest.md"];
+const TAPRC_FILES = ["test/a.test.ts", "test/flaky.test.ts", "test/b.test.ts"];
+const CAREFUL = ["test/flaky.test.ts"];
 
 test("the ordinary tier runs everything the careful tier does not", () => {
   assert.deepEqual(
     tierCommand({ command: ["tap"], tier: "ordinary", taprcFiles: TAPRC_FILES, careful: CAREFUL }),
-    ["tap", "test/a.doctest.md", "test/b.test.ts"],
+    ["tap", "test/a.test.ts", "test/b.test.ts"],
   );
 });
 
 test("the careful tier runs its own list, one job at a time", () => {
   assert.deepEqual(
     tierCommand({ command: ["tap"], tier: "careful", taprcFiles: TAPRC_FILES, careful: CAREFUL }),
-    ["tap", "-j1", "test/flaky.doctest.md"],
+    ["tap", "-j1", "test/flaky.test.ts"],
   );
 });
 
@@ -130,19 +130,19 @@ test("a caller's own -j wins over the tier's", () => {
       taprcFiles: TAPRC_FILES,
       careful: CAREFUL,
     }),
-    ["tap", "-j2", "test/flaky.doctest.md"],
+    ["tap", "-j2", "test/flaky.test.ts"],
   );
 });
 
 test("explicit files pass through — that is how test:changed runs a selection", () => {
   assert.deepEqual(
     tierCommand({
-      command: ["tap", "test/a.doctest.md"],
+      command: ["tap", "test/a.test.ts"],
       tier: "ordinary",
       taprcFiles: TAPRC_FILES,
       careful: CAREFUL,
     }),
-    ["tap", "test/a.doctest.md"],
+    ["tap", "test/a.test.ts"],
   );
 });
 
@@ -157,7 +157,7 @@ test("an option's value is not a file list, and does not suppress the tier", () 
   ]) {
     assert.deepEqual(
       tierCommand({ command, tier: "ordinary", taprcFiles: TAPRC_FILES, careful: CAREFUL, isFile: never }),
-      [...command, "test/a.doctest.md", "test/b.test.ts"],
+      [...command, "test/a.test.ts", "test/b.test.ts"],
     );
   }
 });
@@ -176,19 +176,19 @@ test("a real path after an option is still an explicit file list", () => {
 });
 
 test("a test-file path that names no file is refused, not widened to the whole tier", () => {
-  // `pnpm test beebox/test/x.doctest.md` run inside beebox/: the path is
+  // `pnpm test beebox/test/x.test.ts` run inside beebox/: the path is
   // monorepo-relative, so it names nothing, and the old behaviour appended
   // every file in the tier.
   assert.throws(
     () =>
       tierCommand({
-        command: ["tap", "beebox/test/x.doctest.md"],
+        command: ["tap", "beebox/test/x.test.ts"],
         tier: "ordinary",
         taprcFiles: TAPRC_FILES,
         careful: CAREFUL,
         isFile: () => false,
       }),
-    (e: unknown) => e instanceof TierListError && /no such test file in this package: beebox\/test\/x\.doctest\.md/.test(e.message),
+    (e: unknown) => e instanceof TierListError && /no such test file in this package: beebox\/test\/x\.test\.ts/.test(e.message),
   );
 });
 
@@ -219,7 +219,7 @@ test("the selector drops careful files unless the branch changed one", () => {
   const graph: TestGraph = {
     tests: new Map([
       [member, new Set([`${box}src/shared.ts`])],
-      [`${box}test/ordinary.doctest.md`, new Set([`${box}src/shared.ts`])],
+      [`${box}test/ordinary.test.ts`, new Set([`${box}src/shared.ts`])],
     ]),
     universe: new Set([`${box}src/shared.ts`]),
     unresolved: new Set(),
@@ -229,7 +229,7 @@ test("the selector drops careful files unless the branch changed one", () => {
   };
   assert.deepEqual(
     selectTests({ graph, changed: [`${box}src/shared.ts`], exclude: careful }).selected,
-    [`${box}test/ordinary.doctest.md`],
+    [`${box}test/ordinary.test.ts`],
   );
   assert.deepEqual(selectTests({ graph, changed: [member], exclude: careful }).selected, [member]);
 });
@@ -314,6 +314,6 @@ test("capJobs: a long-form --jobs is respected rather than contradicted", () => 
 test("tierCommand: a caller's explicit --jobs is not overridden by the careful tier's -j1", () => {
   assert.deepEqual(
     tierCommand({ command: ["tap", "--jobs=4"], tier: "careful", taprcFiles: TAPRC_FILES, careful: CAREFUL }),
-    ["tap", "--jobs=4", "test/flaky.doctest.md"],
+    ["tap", "--jobs=4", "test/flaky.test.ts"],
   );
 });

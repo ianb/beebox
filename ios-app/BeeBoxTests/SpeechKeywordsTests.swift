@@ -91,7 +91,7 @@ final class SpeechKeywordsTests: XCTestCase {
 
     /// The keyword vectors are shared golden fixtures under
     /// `beebox/test/mobile-contract/fixtures/speech-keywords/`, consumed
-    /// here and by the TS `beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.mobile-contract-fixtures.doctest.md`. Editing a
+    /// here and by the TS `beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/native-emission.mobile-contract-fixtures.test.ts`. Editing a
     /// vector once fails both suites until they agree — see
     /// `beebox/docs/implemented-plans/mobile-parity-sync.md`.
     func testSpeechKeywordFixturesMatchSharedVectors() throws {
@@ -385,7 +385,7 @@ final class SpeechKeywordsTests: XCTestCase {
 /// Decodes the web→native golden fixtures (receipt, location result) through the
 /// real `ChatWebView.dictionaryPayload(from:)` seam — crossing the JSON-string
 /// neutral transport exactly as the web layer posts them. Shares the fixtures
-/// under `beebox/test/mobile-contract/fixtures/` with the TS doctest.
+/// under `beebox/test/mobile-contract/fixtures/` with the TS test.
 final class MobileContractFixtureDecodeTests: XCTestCase {
     func testConversationBindingFixtures() throws {
         for (name, fixture) in try MobileContractFixtures.load("composer-binding") {
@@ -519,7 +519,7 @@ final class MobileContractFixtureDecodeTests: XCTestCase {
     }
 
     /// Native is the *encoder* for the barge-in command (contract §4.9), so the
-    /// fixture pins what this app puts on the wire; the web doctest checks its
+    /// fixture pins what this app puts on the wire; the web test checks its
     /// decoder against the same file. The rejected fixtures exist for the web
     /// side — native has no way to emit them — so they are only asserted to be
     /// unlike what we send.

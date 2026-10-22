@@ -13,7 +13,7 @@
  * frontmatter mapping (`readFrontmatterCached`), one for a landmark card's
  * typed fields (`readLandmarkFieldsCached`) — the pruned walk reads both
  * kinds of file. A module-level counter (`getParseCount`/`resetParseCount`)
- * tracks real reads across both, purely for the doctest's "a warm second
+ * tracks real reads across both, purely for the test's "a warm second
  * call parses nothing" assertion; nothing in production code reads it, so it
  * costs one integer increment and is otherwise inert.
  */

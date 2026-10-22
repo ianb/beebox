@@ -1,0 +1,89 @@
+// # `todo-review-job` card schema
+//
+// The compact brief the wakeup sweep used to queue for the reactor
+// (`core/todo/review-sweep.ts`). Since `docs/plans/todos-ui.md` Track 7 nothing
+// writes these cards (the todo-review procedure prints the brief instead), but
+// the schema stays so a card still pending on a box validates and drains. Each item is deliberately terse: a locator, the
+// todo's text, whichever date drove it into its set — and, since
+// `docs/plans/todo-collection.md` Track 4, where it was written.
+//
+// `card` and `section` are OPTIONAL. A job card queued before those fields
+// existed is still sitting in some box's `_bookkeeping/jobs/`, and it has to
+// keep validating.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { TodoReviewJobSchema, createTodoReviewJobTemplate } from "../../src/schemas/todo-review-job.js";
+import { cardFields, parseCardText } from "../../src/core/card-io.js";
+
+const schemas = new Map([["todo-review-job", TodoReviewJobSchema]]);
+
+function parse(card: string) {
+  return parseCardText(card, { source: "job.todo-review-job.card", schemas, type: "todo-review-job" });
+}
+
+// ## An item carrying `card` and `section` round-trips
+void test("An item carrying `card` and `section` round-trips", async (t) => {
+  const card = createTodoReviewJobTemplate({
+    escalated: [{
+      locator: "_content/projects/Porch/Plan.doc.card:8",
+      text: "Order lumber",
+      detail: "due 2026-07-01",
+      card: "Porch rebuild",
+      section: "Build › Decking",
+    }],
+    stirring: [],
+    actionable: [{
+      locator: "_content/projects/Porch/Plan.doc.card:12",
+      text: "Review the delivery note",
+      assigned: "agent",
+      detail: "agent follow-up",
+    }],
+    stale: [],
+  });
+
+  const parsed = parse(card);
+  const fields = cardFields(parsed, TodoReviewJobSchema);
+  t.check(fields.escalated[0], {
+    locator: "_content/projects/Porch/Plan.doc.card:8",
+    text: "Order lumber",
+    detail: "due 2026-07-01",
+    card: "Porch rebuild",
+    section: "Build › Decking",
+  });
+
+  t.check(fields.actionable[0], {
+    locator: "_content/projects/Porch/Plan.doc.card:12",
+    text: "Review the delivery note",
+    assigned: "agent",
+    detail: "agent follow-up",
+  });
+
+  // ## An older item without them still validates
+  //
+  // A todo written under no heading omits `section` rather than carrying an empty
+  // one, so the same shape covers both "queued before the fields existed" and
+  // "there was nothing to say".
+
+  const older = parse([
+    "---",
+    "status: pending",
+    "priority: normal",
+    "description: 'Todo review sweep: 1 escalated.'",
+    "escalated:",
+    "  - locator: store/a.doc.card:5",
+    "    text: An older item",
+    "    detail: due 2026-07-01",
+    "stirring: []",
+    "actionable: []",
+    "stale: []",
+    "---",
+    "",
+  ].join("\n"));
+
+  t.check(cardFields(older, TodoReviewJobSchema).escalated[0], {
+    locator: "store/a.doc.card:5",
+    text: "An older item",
+    detail: "due 2026-07-01",
+  });
+});

@@ -22,8 +22,8 @@ defaults to `--status open`, and `bbx query todos` defaults to open plus parked.
 
 - `beebox/src/cli/commands/todos.ts` and its registration.
 - The smoke entry in `beebox/src/cli/entry/surface-data.ts` and
-  `beebox/test/cli/entry.surface.doctest.md`.
-- `beebox/test/cli/commands/todos.doctest.md`.
+  `beebox/test/cli/entry.surface.test.ts`.
+- `beebox/test/cli/commands/todos.test.ts`.
 - Comments in `beebox/src/core/todo/` and `beebox/src/shared/todo-model.ts`.
 - `beebox/src/schemas/todo-review-job.ts` instructions, if they still name it.
 - `beebox/docs/cards/format.md` and the implemented todo-annotation plan

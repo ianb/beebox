@@ -1,7 +1,7 @@
 /**
  * Landmark links + groups section of the context chip's menu — extracted
  * from the retired `LandmarkLinksButton` trigger (chunk 4 of
- * docs/plans/chat-header-chips.md). Owns the `trpc.landmarks.forDir` query.
+ * docs/implemented-plans/chat-header-chips.md). Owns the `trpc.landmarks.forDir` query.
  *
  * When the chat is scoped to a directory whose landmark carries
  * `navigation.links` (or `expand` fan-out), this surfaces those resolved
@@ -128,7 +128,7 @@ function MenuGroup({ group, onPanel }: { group: ResolvedGroup; onPanel: (link: R
       >
         <GroupChevron open={open} />
         <span className="truncate font-medium">{group.label}</span>
-        <span className="text-xs text-warm-500 shrink-0 ml-auto">{group.count}</span>
+        <span className="text-xs text-warm-700 shrink-0 ml-auto">{group.count}</span>
       </button>
       {open ? (
         <div className="border-l border-warm-200 ml-5">
@@ -136,7 +136,7 @@ function MenuGroup({ group, onPanel }: { group: ResolvedGroup; onPanel: (link: R
             <MenuLink key={link.ref} link={link} onPanel={onPanel} />
           ))}
           {overflow > 0 ? (
-            <div className="px-3 py-2 text-xs text-warm-500">+{overflow} more</div>
+            <div className="px-3 py-2 text-xs text-warm-700">+{overflow} more</div>
           ) : null}
         </div>
       ) : null}

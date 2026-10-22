@@ -73,9 +73,9 @@ pnpm --dir <worktree>/beebox bbx engine init /abs/throwaway/box
 `HOME` keeps the box manifests, hub config, and engine state the CLI keeps
 under home (`src/lib/state-dir.ts`) away from the real ones. A throwaway
 `HOME` also hides the Claude Code login, so a box whose agents must run keeps
-the real `HOME` and only the two file overrides. Doctests already do all of
+the real `HOME` and only the two file overrides. Tests already do all of
 this (`makeTmpBox()` and the test preloads; see [testing](testing.md)); prefer
-a doctest when the bug fits one.
+a test when the bug fits one.
 
 ## Auditing what a box agent knows
 

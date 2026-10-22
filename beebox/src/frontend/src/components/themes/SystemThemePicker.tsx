@@ -1,4 +1,3 @@
-import { themeComposition } from "@shared/card-theme/catalog";
 import { THEME_CATALOG, type ResolvedThemeChoice, type ThemeChoice } from "@shared/card-theme/core";
 import { useId, useState } from "react";
 import { trpc } from "../../lib/trpc/client";
@@ -73,7 +72,7 @@ const STOCK_LABELS: Record<string, string> = {
   blue: "Blue",
 };
 
-function SystemThemeSwatches({ busy, choice, disabled, idPrefix, onSelect }: {
+export function SystemThemeSwatches({ busy, choice, disabled, idPrefix, onSelect }: {
   busy: boolean;
   choice: ResolvedThemeChoice;
   disabled: boolean;
@@ -93,7 +92,7 @@ function SystemThemeSwatches({ busy, choice, disabled, idPrefix, onSelect }: {
         className="bbx-system-theme-button" aria-label={label} aria-pressed={selected}
         disabled={disabled} onClick={() => onSelect({ name: theme.name, stock })}>
         <span className="bbx-box-presentation bbx-system-theme-preview"
-          data-theme-composition={themeComposition(theme.name)} data-chrome-theme={theme.name} data-chrome-stock={stock} aria-hidden="true">
+          data-chrome-theme={theme.name} data-chrome-stock={stock} aria-hidden="true">
           <span className="bbx-system-theme-toolbar"><i /><i /><i /></span>
           <span className="bbx-system-theme-desk"><span /></span>
         </span>
@@ -156,7 +155,7 @@ function PickerBody({ input }: { input: SystemThemeScope }) {
 }
 
 export function BoxSystemThemePicker({ boxKey }: { boxKey: string }) {
-  return <Card as="section" shadow aria-label="System theme"><Stack gap="sm">
+  return <Card as="section" shadow material aria-label="System theme"><Stack gap="sm">
     <Heading level={2}>System theme</Heading>
     <Hint>Choose the toolbar and workspace surface for this box.</Hint>
     <PickerBody input={{ scope: "box", boxKey }} />

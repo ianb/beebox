@@ -36,20 +36,20 @@ export interface TestGraph {
  *
  * Prose markdown inside the package is also out, and that one is load-bearing
  * rather than obvious: counting it drops the per-commit accounted rate from
- * 63% to 27%. It is safe because no doctest in the suite reads the
+ * 63% to 27%. It is safe because no test in the suite reads the
  * repository's own prose — real-doc validation is `doc-check`, a pre-commit
- * hook outside tap. A `.doctest.md` is of course a test, not prose.
+ * hook outside tap.
  */
 export function scopedChanges(changed: string[]): string[] {
   return changed.filter((path) => {
     const inScope =
       path.startsWith("beebox/") ||
-      path.startsWith("agent-doctest/") ||
+      path.startsWith("tap-check/") ||
       path === "package.json" ||
       path === "pnpm-lock.yaml" ||
       path === "pnpm-workspace.yaml";
     if (!inScope) return false;
-    return !path.endsWith(".md") || path.endsWith(".doctest.md");
+    return !path.endsWith(".md");
   });
 }
 

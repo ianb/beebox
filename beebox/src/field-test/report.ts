@@ -1,6 +1,6 @@
 /**
  * `report.md` — the human-readable rollup of a field run
- * (`docs/plans/agent-field-tests.md`, Track 5).
+ * (`docs/implemented-plans/agent-field-tests.md`, Track 5).
  *
  * `renderReport` is a pure function over `FieldRunResult` (`results.ts`) —
  * everything it needs is already on disk after `runFieldScenario`, so it never

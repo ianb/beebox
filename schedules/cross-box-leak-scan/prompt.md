@@ -7,7 +7,7 @@ of the HTTP surface (a caller-supplied path-like field/param joined onto
 `boxRoot` with no containment helper), `host` lines from an audit of shared
 host state (file modes, shared logs, per-cwd transcript keying, nested box
 roots, undocumented files under `~/.config/beebox` / `~/.local/share/beebox`),
-and possibly a `probe` line if the dynamic cross-box doctest is missing.
+and possibly a `probe` line if the dynamic cross-box probe test is missing.
 **If this is the schedule's first run**, there is no prior baseline to diff
 against, so your briefing is the WHOLE standing report instead of a diff —
 every line is unadjudicated, not just what looks new. Treat it the same way:
@@ -24,7 +24,7 @@ Decide one of three things:
 - **Real leak.** Fix it by reusing the existing containment helpers named in
   `static-sweep.ts`'s doc comment (`containWithinBox`, `resolveCardPath`, etc.
   — don't invent a new one unless none fits). Add a regression assertion to
-  `beebox/test/scenarios/cross-box-probe.doctest.md` proving the fix (create it
+  `beebox/test/scenarios/cross-box-probe.test.ts` proving the fix (create it
   with one such assertion if it doesn't exist yet — the run script's `probe`
   line means it's missing). Report at `important`.
 - **False positive.** The sweep's regex over-matched. Say concretely why the
@@ -35,12 +35,12 @@ Decide one of three things:
   is a real leak you're deferring, not an accepted one.
 
 Work in batches; typecheck (`pnpm typecheck` at repo root, `pnpm -C beebox
-typecheck`) and run the doctest suite after each. Commit per batch, on this
+typecheck`) and run the tests for the changed area after each. Commit per batch, on this
 worktree's branch.
 
 ## Authority
 
-You may edit code, write/extend doctests, file `issues/bugs/` items
+You may edit code, write/extend tests, file `issues/bugs/` items
 (`filed-by: agent`, `workstream: cross-box-leak-scan`, `labels: [security]`),
 and commit. You must **not** merge, push, or edit
 `beebox/docs/security-report.md` — that report is human-reviewed (the

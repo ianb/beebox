@@ -5,7 +5,7 @@
  *
  * ## The recording outlives the socket
  *
- * (`docs/plans/resilient-voice-recording.md`, Track 3.) The segment starts in
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 3.) The segment starts in
  * this order: mint a recording id and enqueue its staging `create` (the
  * durable upload queue does not wait for the box); start the mic and send
  * MIC_LIVE; only then look up the live service and open a socket. Every PCM
@@ -129,6 +129,8 @@ class TranscriptionSession {
   private liveAbandoned = false;
   /** Last time the worklet delivered a PCM frame (mic liveness watchdog). */
   private lastPcmAt = 0;
+  /** Speech is playing: frames are recorded and sent as silence (HOLD). */
+  held = false;
   /** An intentional stop is in progress: a close now is the end of stream. */
   private stopping = false;
   private watchdogId: ReturnType<typeof setInterval> | null = null;
@@ -151,8 +153,9 @@ class TranscriptionSession {
     },
   };
 
-  constructor(opts: { sendBack: SendBack; targetSessionId: string | null }) {
+  constructor(opts: { sendBack: SendBack; targetSessionId: string | null; held: boolean }) {
     this.sendBack = opts.sendBack;
+    this.held = opts.held;
     this.recording = startStagedRecording({
       recordingId: crypto.randomUUID(),
       targetSessionId: opts.targetSessionId,
@@ -330,8 +333,11 @@ class TranscriptionSession {
   async start(): Promise<void> {
     try {
       this.mic = new MicCapture({
-        onPcm: (samples) => {
+        onPcm: (captured) => {
           this.lastPcmAt = performance.now();
+          // Held: same-length silence keeps the recording's timeline and the
+          // live socket going without the speech the mic hears.
+          const samples = this.held ? new ArrayBuffer(captured.byteLength) : captured;
           // The stager and the ring copy the frame; forwarding may transfer it.
           if (!this.handedOff) this.recording.push(samples);
           this.replay.push(samples.slice(0));
@@ -414,11 +420,12 @@ class TranscriptionSession {
 
 export const transcriptionActor = fromCallback<TranscriptionActorCommand, TranscriptionActorInput, TranscriptionEvent>(
   ({ sendBack, receive, input }) => {
-    const session = new TranscriptionSession({ sendBack, targetSessionId: input.targetSessionId });
+    const session = new TranscriptionSession({ sendBack, targetSessionId: input.targetSessionId, held: input.held });
     void session.start();
 
     receive((event) => {
       if (event.type === "STOP") session.stop();
+      else if (event.type === "HOLD") session.held = event.held;
       else session.cancel();
     });
 

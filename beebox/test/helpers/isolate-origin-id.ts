@@ -11,10 +11,10 @@
  * A test that sets `BBX_ORIGIN_ID_FILE` itself keeps its own path.
  */
 
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { processTempDir } from "./process-temp-dir.js";
+
 if (process.env["BBX_ORIGIN_ID_FILE"] === undefined) {
-  process.env["BBX_ORIGIN_ID_FILE"] = join(mkdtempSync(join(tmpdir(), "bbx-test-origin-")), "origin-id");
+  process.env["BBX_ORIGIN_ID_FILE"] = join(processTempDir("bbx-test-origin-"), "origin-id");
 }

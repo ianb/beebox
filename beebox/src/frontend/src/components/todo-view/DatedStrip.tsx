@@ -1,11 +1,11 @@
 /**
  * The dated strip at the top of a `todo-view` list
- * (`docs/plans/todo-collection.md`, Track 4).
+ * (`docs/implemented-plans/todo-collection.md`, Track 4).
  *
  * Most todos in a working box carry no date at all, so the few that do are
  * the ones a calendar-shaped reading is actually about. They come first, in
  * date order, out of whatever card they were written in — and the strip says
- * whether a date is a deadline or a start, because "starts Monday" and "due
+ * whether a date is a deadline or a start, because "later · Monday" and "due
  * Monday" are not the same news.
  *
  * It does not render when nothing is dated.
@@ -21,16 +21,19 @@ import { InlineAction } from "../ui/InlineAction";
 import { href } from "../../lib/routing";
 import { cardTarget, useOpenBeside } from "../chat/workspace/use-open-beside/hook";
 import type { DatedTodo } from "../todo-view-card-logic";
+import { startPrefix } from "../todo/item-logic";
 
 function DatedLine({ dated, boxSlug }: { dated: DatedTodo; boxSlug: string | undefined }) {
   const cardHref = boxSlug === undefined ? undefined : href(`/${boxSlug}/browse/${dated.cardPath}`);
-  // In a workspace pane the card opens in the other pane (`docs/plans/todos-ui.md`, Track 5).
+  // In a workspace pane the card opens in the other pane (`docs/implemented-plans/todos-ui.md`, Track 5).
   const openBeside = useOpenBeside();
   const name = <Text material size="xs" tone="muted">{dated.cardTitle}</Text>;
+  const word = dated.kind === "due" ? "due" : startPrefix({ plateState: dated.item.plateState, startIso: dated.date });
+  const title = word === "due" ? "Due" : word === "since" ? "Started on this day" : "Starts on this day";
   return (
     <Row gap="sm" wrap align="baseline">
-      <Badge size="sm" tone={dated.kind === "due" ? "warning" : "info"} title={dated.kind === "due" ? "Due" : "Starts"}>
-        {dated.kind === "due" ? "due" : "starts"} <FriendlyDate iso={dated.date} mode="date" />
+      <Badge size="sm" tone={dated.kind === "due" ? "warning" : "info"} title={title}>
+        {word} <FriendlyDate iso={dated.date} mode="date" />
       </Badge>
       <Text material size="sm">{dated.item.text}</Text>
       {openBeside !== null ? (

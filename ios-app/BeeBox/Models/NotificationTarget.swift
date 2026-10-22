@@ -6,8 +6,8 @@ import Foundation
 /// The APNs payload carries the target string, not a URL (contract §5.10), so
 /// the phone renders it against the paired box. `boxPath` is `targetUrl` with
 /// the leading `/<slug>/` removed, because a paired box's `baseURL` already
-/// ends in the slug. `NotificationTargetTests` runs the TypeScript doctest's
-/// cases (`beebox/test/core/notification/target.doctest.md`); a change to the
+/// ends in the slug. `NotificationTargetTests` runs the TypeScript test's
+/// cases (`beebox/test/core/notification/target.test.ts`); a change to the
 /// rules there changes them here.
 ///
 /// One rule is looser than the box's: a card path must normalize to a path

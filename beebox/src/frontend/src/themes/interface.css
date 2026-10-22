@@ -1,29 +1,12 @@
 /* Shared framing for cards where the surrounding interface is part of the
-   reading surface: browse detail, sidecar panels, and their tabs. */
-.bbx-interface-card-desk[data-card-content="card"],
-.bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
+   reading surface: sidecar panels and their tabs. */
+.bbx-interface-card-desk[data-card-content="card"] {
   background: var(--bbx-desk-pattern, none), var(--bbx-desk-background, #e4e0d9);
   padding: 20px;
 }
 
-.bbx-interface-card-desk[data-card-content="card"] > .bbx-card-surface,
-.bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk > .bbx-card-surface {
+.bbx-interface-card-desk[data-card-content="card"] > .bbx-card-surface {
   min-height: 0;
-}
-
-.bbx-interface-browse-panel[data-card-content="card"] {
-  border-radius: 12px;
-  background: var(--bbx-desk-pattern, none), var(--bbx-desk-background, #e4e0d9);
-}
-
-.bbx-interface-browse-panel > .bbx-interface-card-desk {
-  border-radius: 0 0 12px 12px;
-}
-
-.bbx-interface-card-toolbar {
-  border-radius: 12px 12px 0 0;
-  border-bottom: 1px solid #d2ccc2;
-  background: #f5f2ec;
 }
 
 .bbx-interface-tabstrip > [role="none"] {
@@ -31,7 +14,7 @@
   /* The compact row must not lose label height to a horizontal scrollbar. */
   scrollbar-width: none;
   gap: 3px;
-  padding: 6px 3px 0;
+  padding: 6px calc(3px + var(--bbx-tab-trailing, 0px)) 0 3px;
 }
 
 .bbx-interface-tabstrip > [role="none"]::-webkit-scrollbar {
@@ -48,6 +31,17 @@
   background-color: color-mix(in srgb, var(--bbx-paper) 88%, #e8e3da);
   border-right: 1px solid color-mix(in srgb, var(--bbx-edge) 75%, #cbc4b9);
   border-bottom: 3px solid transparent;
+}
+
+/* A narrow unpinned tab gives its width to the label: pin and close show
+   again on hover or keyboard focus, and always on the active tab. */
+.bbx-interface-tab:not([data-pinned]) {
+  container-type: inline-size;
+}
+@container (max-width: 8rem) {
+  .bbx-interface-tab:not([data-active], [data-pinned], :hover, :focus-within) .bbx-interface-tab-action {
+    display: none;
+  }
 }
 
 .bbx-interface-tab[data-card-theme="paper"],
@@ -86,18 +80,25 @@
 }
 
 @media (max-width: 640px) {
-  .bbx-interface-card-desk[data-card-content="card"],
-  .bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
+  .bbx-interface-card-desk[data-card-content="card"] {
     padding: 12px;
   }
 }
 
 @media print {
-  .bbx-interface-card-desk[data-card-content="card"],
-  .bbx-interface-browse-panel[data-card-content="card"] > .bbx-interface-card-desk {
+  .bbx-interface-card-desk[data-card-content="card"] {
     padding: 0;
     background: transparent;
   }
+}
+
+/* "Updating…" while a chat turn edits the open document. Empty otherwise,
+   so the live region stays mounted without showing a blank pill. */
+.bbx-companion-updating[data-editing] {
+  padding: 4px 12px;
+  color: var(--bbx-ink-soft);
+  background: var(--bbx-paper);
+  border: 1px solid var(--bbx-edge);
 }
 
 /* A selected card's tab grows from the sheet's top edge. The desk surrounds
@@ -119,7 +120,7 @@
   padding: 0;
   /* Leave a sliver of breathing room after the final tab. Without it the
      scroller clips the tab's outer edge exactly where the controls begin. */
-  padding-right: 2px;
+  padding-right: calc(2px + var(--bbx-tab-trailing, 0px));
   background: transparent;
   border-right: 0;
   gap: 4px;

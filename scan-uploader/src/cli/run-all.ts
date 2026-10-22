@@ -31,7 +31,7 @@ import { exportPhotos } from "./photos-export.js";
 const MAX_SETTLE_RETRIES = 3;
 const SETTLE_RETRY_WAIT_MS = SETTLE_WINDOW_MS + 2_000;
 
-/** Seams for the doctest: real runs use `runTarget` and a real sleep, the test
+/** Seams for the test: real runs use `runTarget` and a real sleep, the test
  * substitutes a scripted runner and a no-op wait so it can assert the retry
  * policy without spending the settle window. */
 export interface RunAllDeps {
@@ -42,7 +42,7 @@ export interface RunAllDeps {
 const DEFAULT_RUN_ALL_DEPS: RunAllDeps = { runOne: runTarget, wait: sleep };
 
 export interface RunAllOptions extends RunOptions {
-  /** Omitted in production; the doctest supplies scripted seams. */
+  /** Omitted in production; the test supplies scripted seams. */
   readonly deps?: RunAllDeps;
 }
 

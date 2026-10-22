@@ -15,13 +15,14 @@
  *    render with `view:` / relative-path / lightbox routing baked in.
  *  - The `{% quote %}` tag becomes `QuoteInline` or `QuoteBlock` (see
  *    `markdoc-config.ts` and `Quote.tsx`).
+ *  - A fenced code block becomes `Fence`: the block plus a Copy button.
  *
  * Callers can pass `components` to override or extend the map. The most
  * common case is chat, which replaces `Link`, `Img`, and `Para` to render
  * file previews, sized inline images, and lone-image grid layouts.
  */
 
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useRef } from "react";
 import * as React from "react";
 import Markdoc, { type Config, type RenderableTreeNode, type Schema } from "@markdoc/markdoc";
 import { makeHeadingNode } from "@shared/markdoc-config/tags/core";
@@ -33,8 +34,12 @@ import { makeSourceComponents } from "./Source";
 import { RedactedInline, RedactedBlock } from "./Redacted";
 import { makeTodoComponents } from "./Todo";
 import { makeSeeAlsoComponent } from "./SeeAlso";
+import { makeIncludeFileComponent } from "./IncludeFile";
+import { isInstructionFile, rewriteIncludeLines } from "../../lib/include-lines";
 import { assignLocators, stampLocators } from "@shared/todo-locators";
 import { makeLink, type LinkContext } from "../markdown-link/link";
+import { useOptionalLightbox } from "../LightboxProvider";
+import { Button } from "../ui/Button";
 import { Image } from "../ui/Image";
 import { VideoEmbed } from "../ui/VideoEmbed";
 import { detectVideoEmbed } from "../../lib/video-url";
@@ -51,7 +56,7 @@ import type { ReactNode } from "react";
 
 // Named value imports don't resolve from this CommonJS module under Node's ESM loader.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
-const { transform, renderers } = Markdoc;
+const { transform, renderers, Tag, nodes: markdocNodes } = Markdoc;
 
 // Parsing goes through `parseMarkdown` (linkify-enabled) rather than the raw
 // `parse` — see lib/markdoc-parse.ts.
@@ -154,23 +159,61 @@ function Para({ children, align, title, lang, dir }: { children?: ReactNode; ali
   );
 }
 
+/**
+ * A fenced code block with a Copy button. An agent puts a drafted message in a
+ * fence for the person to paste elsewhere; the button copies the block's text
+ * as rendered, without selecting by hand. The button floats inside the block
+ * so wrapped lines flow around it; the text is read from its own span so the
+ * button's label is never copied.
+ */
+function Fence({ children, "data-language": language }: { children?: ReactNode; "data-language"?: string }) {
+  const textRef = useRef<HTMLSpanElement>(null);
+  const copy = async (): Promise<void> => {
+    await navigator.clipboard.writeText(textRef.current?.textContent ?? "");
+  };
+  return (
+    <pre data-language={language}>
+      <Button size="sm" intent="secondary" className="float-right ml-2 mb-1 print:hidden" flash={{ label: "Copied" }} aria-live="polite" onClick={copy}>
+        Copy
+      </Button>
+      <span ref={textRef}>{children}</span>
+    </pre>
+  );
+}
+
 interface RenderConfigBundle {
   config: Config;
   components: Record<string, React.ComponentType<Record<string, unknown>>>;
 }
 
-function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath: string | null; tags: Readonly<Record<string, Schema>> | undefined }): RenderConfigBundle {
+// Render-only: `rewriteIncludeLines` writes it for an instruction file's
+// include lines. It is not in the shared tag table, so no agent writes it.
+const includeFileTag: Schema = {
+  render: "IncludeFile",
+  selfClosing: true,
+  attributes: { path: { type: String, required: true } },
+};
+
+function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags, includes }: { cardPath: string | null; tags: Readonly<Record<string, Schema>> | undefined; includes: boolean }): RenderConfigBundle {
   const base = withScopedTags(tags);
   const config: Config = {
     ...base,
     // An HTML `<p>` renders as `Para`, the same `<div>` a Markdown paragraph gets.
-    tags: { ...base.tags, html: makeHtmlTag({ paragraph: "Para" }) },
+    tags: { ...base.tags, html: makeHtmlTag({ paragraph: "Para" }), ...(includes ? { "include-file": includeFileTag } : {}) },
     nodes: {
       ...base.nodes,
       document: { render: "Fragment" },
       // Fresh per render config so the duplicate-slug set is scoped to this pass.
       heading: makeHeadingNode(),
       paragraph: { render: "Para", children: ["inline"] },
+      // Markdoc's own fence transform hardcodes `pre`; this one emits `Fence`.
+      fence: {
+        ...markdocNodes.fence,
+        transform(node, cfg) {
+          const children = node.children.length > 0 ? node.transformChildren(cfg) : [node.attributes.content];
+          return new Tag("Fence", node.transformAttributes(cfg), children);
+        },
+      },
       blockquote: { render: "Blockquote", children: ["paragraph", "tag", "blockquote", "list", "heading", "fence"] },
       link: {
         render: "Link",
@@ -197,6 +240,7 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
   const { TodoInline, TodoBlock } = makeTodoComponents({ cardPath });
   const SeeAlso = makeSeeAlsoComponent({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath });
+  const IncludeFile = makeIncludeFileComponent({ basePath: linkCtx.basePath, Link });
   const Task = ({ done }: { done?: boolean }) => (
     <input
       type="checkbox"
@@ -218,6 +262,7 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
   const components: Record<string, React.ComponentType<Record<string, unknown>>> = {
     Fragment: cast(Fragment),
     Para: cast(Para),
+    Fence: cast(Fence),
     Blockquote: cast(({ children }: { children?: ReactNode }) => <blockquote className="bbx-blockquote">{children}</blockquote>),
     Link: cast(Link),
     Img: cast(Img),
@@ -231,6 +276,7 @@ function buildRenderConfig(linkCtx: LinkContext, { cardPath, tags }: { cardPath:
     TodoInline: cast(TodoInline),
     TodoBlock: cast(TodoBlock),
     SeeAlso: cast(SeeAlso),
+    IncludeFile: cast(IncludeFile),
     UnknownTagInline: cast(UnknownTagInline),
     UnknownTagBlock: cast(UnknownTagBlock),
   };
@@ -267,6 +313,11 @@ interface MarkdownProps {
    * body (chat, commit messages, a body excerpt): no locators, no controls.
    */
   card?: { path: string; bodyLineOffset: number };
+  /**
+   * This Markdown is the card's document, so its headings fill the card's
+   * contents menu (`CardContents/CardContentsMenu.tsx`). Needs `prose="block"`.
+   */
+  outline?: boolean;
 }
 
 export function Markdown({
@@ -278,15 +329,18 @@ export function Markdown({
   basePath,
   onJumpToQuote,
   card,
+  outline,
 }: MarkdownProps) {
   prose = prose ?? false;
   const boxSlug = useBoxSlug();
   const cardPath = card?.path ?? null;
   const bodyLineOffset = card?.bodyLineOffset ?? null;
+  const openImageLink = useOptionalLightbox()?.openFromElement;
   const { tree, mergedComponents } = useMemo(() => {
-    const ctx: LinkContext = { onNavigate, basePath, boxSlug, onJumpToQuote };
-    const { config, components: defaults } = buildRenderConfig(ctx, { cardPath, tags });
-    const ast = parseMarkdown(children);
+    const ctx: LinkContext = { onNavigate, basePath, boxSlug, onJumpToQuote, openImageLink };
+    const includes = isInstructionFile(basePath);
+    const { config, components: defaults } = buildRenderConfig(ctx, { cardPath, tags, includes });
+    const ast = parseMarkdown(includes ? rewriteIncludeLines(children) : children);
     rewriteUnknownTags(ast, config);
     // The collector's own numbering, so a rendered todo and the todo a write
     // addresses cannot disagree about which one `line#2` is.
@@ -300,14 +354,14 @@ export function Markdown({
       if (override !== undefined) merged[name] = override;
     }
     return { tree: t, mergedComponents: merged };
-  }, [children, onNavigate, basePath, boxSlug, components, tags, onJumpToQuote, cardPath, bodyLineOffset]);
+  }, [children, onNavigate, basePath, boxSlug, components, tags, onJumpToQuote, cardPath, bodyLineOffset, openImageLink]);
 
   const rendered = renderers.react(tree, React, {
     components: mergedComponents,
   });
 
   if (prose === "block") {
-    return <div className="prose prose-sm max-w-none bbx-theme-prose">{rendered}</div>;
+    return <div className="prose prose-sm max-w-none bbx-theme-prose" data-card-outline={outline === true ? "" : undefined}>{rendered}</div>;
   }
   if (prose === "inline") {
     return <span className="prose prose-sm inline max-w-none bbx-theme-prose">{rendered}</span>;

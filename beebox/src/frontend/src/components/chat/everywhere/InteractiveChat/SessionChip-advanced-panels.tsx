@@ -1,9 +1,9 @@
 /**
  * The session chip's "Advanced" sub-panel — split out of its host file to
  * keep that under the 300-line cap (the host was `ChatMenu` until the app
- * bar's `SessionChip` replaced it, docs/plans/top-nav-ia.md Track C2). Debug toggles + process controls only; Model,
+ * bar's `SessionChip` replaced it, docs/implemented-plans/top-nav-ia.md Track C2). Debug toggles + process controls only; Model,
  * Voice settings, and Narration mode moved to the voice chip's own panels
- * (`VoiceChip-panels.tsx`) in chunk 3 of docs/plans/chat-header-chips.md.
+ * (`VoiceChip-panels.tsx`) in chunk 3 of docs/implemented-plans/chat-header-chips.md.
  */
 
 import { MenuItem, MenuDivider } from "../../../ui/dropdown-menu-item";
@@ -41,7 +41,7 @@ export function AdvancedPanel({
   return (
     <>
       <MenuItem id="bbx-session-advanced-back" onClick={onBack} keepOpen>
-        <span className="text-warm-500">‹ Advanced</span>
+        <span className="text-warm-700">‹ Advanced</span>
       </MenuItem>
       <MenuDivider />
       <MenuItem id="bbx-session-debug-view" onClick={onToggleDebugView}>{debugView ? "✓ " : "  "}Debug View</MenuItem>
@@ -59,7 +59,7 @@ export function AdvancedPanel({
         Stop Process
       </MenuItem>
       <MenuDivider />
-      <div className="px-3 py-1.5 text-xs text-warm-500">
+      <div className="px-3 py-1.5 text-xs text-warm-700">
         <div>Chat ID: {sessionId ? sessionId.slice(0, 12) + "..." : "none"}</div>
         <div>Process: {running ? (busy ? "busy" : "idle") : "stopped"}</div>
       </div>

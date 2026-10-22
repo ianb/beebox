@@ -54,7 +54,7 @@ never establish that the conversion actually happened.
 ## Admission, snapshots, and failures
 
 Migration, generated-docs refresh, supervised reload, and deployment share the
-box admission gate in `src/lib/box-maintenance.ts`. Maintenance closes admission
+box admission gate in `src/lib/box-maintenance/admission.ts`. Maintenance closes admission
 before waiting up to ten minutes for already accepted work to finish. New
 requests, independent CLI actions, queued chat turns, and scheduled deliveries
 cannot extend that drain. Accepted agents and scripts retain a validated,
@@ -86,7 +86,9 @@ since <time> (pid <n>)`); `boxWorkHolders(boxRoot)` reads them from another
 process. A closed box refuses with the maintenance that closed it and, while
 draining, the expected wait (`Box is closed for migration; expected to reopen within 10
 min`); the HTTP 503 carries `Retry-After`, and the chat client waits it out
-once before reporting the refusal.
+once before reporting the refusal. Docs refresh and the migration sweep name
+their current step with `maintenance.step(name)` (for example `<migration>:
+finding changed files`); the hub's closed page shows it and when it began.
 
 A dirty tree is normal input. Before a mutation phase, the runner retains
 `refs/bbx/migrations/<name>/snapshots/<attempt-id>` using a temporary Git index.
@@ -192,14 +194,53 @@ convergence does not overwrite them merely to make a ledger look current.
 
 ## Writing a new migration
 
-1. **Write the script** at `src/scripts/migrate/<name>.ts`. `bbx engine migrate` runs it as `<script> <boxRoot> --apply`. Exit 0 on success, 2 when it ran but some cards could not be converted (the migration is recorded and those cards are reported), anything else for a hard failure that stops the queue (`runMigrationScript` in `src/core/migration-run.ts`). The old card-walking harness was deleted on 2026-10-08. For an all-or-nothing migration, copy `src/scripts/migrate/briefing-openers/run.ts` (plan the whole box, apply, verify, exit 1 without writing on a plan failure); a migration that converts cards independently keeps the exit-2 contract above.
+### Leftover work exits 2
+
+> **Rule: a migration that leaves work undone exits 2 and prints each path it
+> left. It never prints a warning and exits 0.**
+
+Exit 2 is how leftover work gets done. The hourly sweep (`--sweep --repair`)
+gives a migration that exits 2 one bounded agent repair. The agent is briefed
+with the script's output. The runner then reruns the script. When the rerun
+exits 0, the migration is recorded as done. When the rerun still exits 2, the
+migration is recorded with a `Migration_<name>-N` question for the boxholder.
+The question carries the rerun's output, so the leftover is still on record,
+and later migrations continue. A warning with exit 0
+bypasses all of this. The migration is recorded as done, the warning reaches
+only a deploy log nobody reads, and the box stays broken.
+
+**Exit 0 means nothing is left, not that the script continued.** A check that
+prints a problem and then exits 0 is the same as `|| true`.
+
+This covers more than cards that fail to convert. It also covers anything the
+migration finds but cannot fix itself: box code (`src/` views and schemas) or a
+card field that still names the old shape. `retire-memo-2026-10` first shipped
+with a warning for these and exited 0. A production view and a mockup card's
+styling rules stayed broken until someone fixed them by hand.
+
+Three requirements make the repair work:
+
+- **The rerun must find the same leftover.** Check for it on every run,
+  including a run with nothing left to convert. Otherwise the rerun exits 0
+  without checking that the agent fixed it.
+- **Print the leftovers last.** The agent sees only the last 32,000 characters
+  of output (`migration-sweep.ts`, `failure`).
+- **Name the path and the change**, so the agent can act without rereading the
+  migration (`leftover: <path> …; change it to doc cards`).
+
+Exit 1 stays for a plan that must not be applied at all: the queue stops, and
+nothing is written.
+
+### Steps
+
+1. **Write the script** at `src/scripts/migrate/<name>.ts`. `bbx engine migrate` runs it as `<script> <boxRoot> --apply`. Exit 0 when nothing is left. Exit 2 when it ran but left work: cards it could not convert, or leftovers as above. A repair-enabled pass then repairs it, or records it with a question; without repair it stays pending. Exit anything else for a hard failure that stops the queue (`runMigrationScript` in `src/core/migration-run.ts`). The old card-walking harness was deleted on 2026-10-08. For an all-or-nothing migration, copy `src/scripts/migrate/briefing-openers/run.ts` (plan the whole box, apply, verify, exit 1 without writing on a plan failure); a migration that converts cards independently keeps the exit-2 contract above.
 
 2. **Be idempotent.** Detect the post-migration shape and skip cards already in it — second runs should report "already migrated N" rather than re-doing work or erroring. Two patterns we use:
    - Filename-based: skip cards whose name already has the new extension.
    - Content-based: skip cards whose frontmatter already has the target shape (e.g., a specific key present, or matching a regex marker).
    `bbx engine migrate` re-runs partially-applied migrations on retry, and admins occasionally run individual scripts manually for debugging — idempotency makes both safe.
 
-3. **Be noisy about data loss.** Declare which fields the migrator knows how to map and warn, with file path and field path, about anything outside that allow-list. A warning means data the migrator silently drops. When you see one against real data, the response is normally **extend the migrator**: map the field and extend the target schema in `src/schemas/`, then re-run from a clean baseline. Accepting silent loss is rarely the right call.
+3. **Be noisy about data loss.** Declare which fields the migrator knows how to map and report, with file path and field path, anything outside that allow-list. An unmapped field fails the card (exit 2), or, in an all-or-nothing migration, fails the plan before anything is written (exit 1). Only a drop the boxholder decided on is printed with exit 0. When an unmapped field shows up in real data, the response is normally **extend the migrator**: map the field and extend the target schema in `src/schemas/`, then re-run from a clean baseline. Accepting silent loss is rarely the right call.
 
 4. **Register it.** Append a `{name, script}` entry to `MIGRATIONS` at the bottom of `src/core/migrations.ts`. **Never reorder, rename, or remove** existing entries — the `name` is the manifest key, so reordering changes which migrations a box thinks it has applied. New entries always go at the end.
 

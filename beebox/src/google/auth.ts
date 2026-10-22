@@ -8,7 +8,7 @@
  */
 
 import { OAuth2Client } from "google-auth-library";
-import { resolveSecret } from "../core/secrets/resolve.js";
+import { resolveSecret, secretIsResolvable } from "../core/secrets/resolve.js";
 import {
   loadGoogleTokens,
   saveGoogleTokens,
@@ -73,6 +73,17 @@ export async function getBoxGoogleClientCreds(
   ]);
   if (id.ok && secret.ok) return { clientId: id.value.value, clientSecret: secret.value.value };
   return null;
+}
+
+/**
+ * Does this box hold both client-credential grants that
+ * {@link getBoxGoogleClientCreds} would resolve? For "is Google configured?"
+ * checks that never use the values: it writes no access-log line.
+ */
+export async function hasBoxGoogleClientCreds(boxRoot: string): Promise<boolean> {
+  const names = [GOOGLE_CLIENT_ID_SECRET_NAME, GOOGLE_CLIENT_SECRET_SECRET_NAME];
+  const present = await Promise.all(names.map((name) => secretIsResolvable({ boxRoot, name, access: "server" })));
+  return present.every(Boolean);
 }
 
 /**

@@ -3,10 +3,10 @@
  *
  * The pill names the current *place* (box ▸ landmark). On a chat page the
  * chat itself publishes its session's context dir (Track C2 of
- * docs/plans/top-nav-ia.md); until then — and on every non-chat page, which
+ * docs/implemented-plans/top-nav-ia.md); until then — and on every non-chat page, which
  * never publishes — the bar derives the place from the route alone. That
  * fallback is this module: a pure pathname → `{ label, dir }` map, so it can
- * be doctested without a router.
+ * be tested without a router.
  *
  * `dir` is the box-relative directory the place sits in (`""` = box root,
  * `null` = the route has no directory at all). It's what the pill hands to
@@ -15,6 +15,7 @@
  */
 
 import { toDisplayPath } from "@shared/display-path";
+import { ATTACH_SUFFIX, isAttachDirName } from "@shared/attach-path";
 
 /** A place the bar can name: a display label plus the dir it lives in. */
 export interface Place {
@@ -96,4 +97,16 @@ export function placeLabel({ pathname, boxSlug }: { pathname: string; boxSlug: s
   }
 
   return CHAT_PLACE;
+}
+
+/**
+ * Last segment of a box path, as the pill's folder half names it; the root
+ * reads as "/". A card's attach folder reads without its `.attach` suffix:
+ * "Intro_Chemistry", not "Intro_Chemistry.attach".
+ */
+export function dirBasename(dir: string): string {
+  if (dir === "") return "/";
+  const segments = dir.split("/");
+  const last = segments[segments.length - 1] ?? dir;
+  return isAttachDirName(last) ? last.slice(0, -ATTACH_SUFFIX.length) : last;
 }

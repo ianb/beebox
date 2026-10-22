@@ -4,6 +4,8 @@ workstream: siri-app-intents
 ---
 # iOS quick capture implementation review
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Driver: Codex gpt-6-sol. Independent implementation reviewer: Claude
 claude-opus-5-5, via cross-model review. Scope: approved Siri, retained voice,
 composite share and later context behavior; no landing or deployment.

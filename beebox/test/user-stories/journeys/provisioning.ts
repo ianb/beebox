@@ -1,8 +1,15 @@
 /** Filesystem-only boundaries for preparing disposable journey boxes. */
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { claudeProjectsRoot, encodeProjectDir } from "../../../src/core/chat/session/transcript-paths.ts";
+
+/**
+ * Run directories (walker notes, shots, before/after JSON) live at the monorepo root, outside
+ * `beebox/`. A box's `node_modules/beebox` links to the dev checkout's `beebox/`, so anything
+ * under it is one `grep` away from the box agent the walk is measuring.
+ */
+export const JOURNEY_WORK = resolve(import.meta.dirname, "../../../..", "user-stories-work", "journeys");
 
 class UnreportedJourneyError extends Error {
   constructor({ name, notes, report }: { name: string; notes: string; report: string }) {

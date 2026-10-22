@@ -1,0 +1,235 @@
+// # The worktree sweep outlives the session that triggered it
+//
+// `.claude/hooks/auto-sweep.sh` fires a global worktree sweep on every session
+// start and end. The sweep must not block its caller, must not run twice at once,
+// and — the part that was broken — must survive the teardown of the session whose
+// exit triggered it.
+//
+// The old form was `( … ) & disown`, which is not detachment: `disown` drops the
+// job from bash's table but leaves the child in the caller's process group, so a
+// group-wide kill at session exit took the sweep with it. It showed up in
+// `worktree-cleanup.log` as a `START` line with nothing after it — 15 of 109
+// SessionEnd sweeps, against zero of the 44 SessionStart and 72 codex ones, which
+// is exactly the population whose caller is dying.
+//
+// Everything below runs against a fake main checkout and a scratch `HOME`, with a
+// stand-in `bin/workstreams` that just sleeps, so no real worktree is ever at risk.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { execFile, spawn } from "node:child_process";
+import { existsSync } from "node:fs";
+import { chmod, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+const repoRoot = resolve(process.cwd(), "..");
+
+const root = await mkdtemp(join(tmpdir(), "auto-sweep-test-"));
+const home = join(root, "home");
+const fakeRepo = join(root, "repo");
+const log = join(home, ".cache/beebox/worktree-cleanup.log");
+const lock = join(home, ".cache/beebox/sweep.lock");
+
+// A main-checkout shape: the hook gates itself out when its own repo is under
+// beebox-worktrees, so the scratch copy must not look like a worktree.
+await mkdir(join(fakeRepo, ".claude/hooks"), { recursive: true });
+await mkdir(join(fakeRepo, "bin/lib"), { recursive: true });
+await mkdir(join(home, ".cache/beebox"), { recursive: true });
+await cp(join(repoRoot, ".claude/hooks/auto-sweep.sh"), join(fakeRepo, ".claude/hooks/auto-sweep.sh"));
+await cp(join(repoRoot, "bin/lib/detach.ts"), join(fakeRepo, "bin/lib/detach.ts"));
+
+/** Stand-in for `bin/workstreams sweep`: takes `seconds`, touches nothing. */
+async function fakeSweep(seconds: number) {
+  const p = join(fakeRepo, "bin/workstreams");
+  await writeFile(p, `#!/bin/sh\necho "sweeping"\nsleep ${seconds}\n`);
+  await chmod(p, 0o755);
+}
+
+/**
+ * Stand-in for `bin/workstreams sweep` that cannot finish until the test
+ * creates `gate`. A caller that waited for the sweep cannot return before the
+ * gate opens, so a return while it is closed proves the caller did not wait.
+ */
+async function gatedSweep(gate: string) {
+  const p = join(fakeRepo, "bin/workstreams");
+  await writeFile(p, `#!/bin/sh\necho "sweeping"\nwhile [ ! -e '${gate}' ]; do sleep 0.05; done\n`);
+  await chmod(p, 0o755);
+}
+
+const hook = join(fakeRepo, ".claude/hooks/auto-sweep.sh");
+const env = { ...process.env, HOME: home };
+
+async function readLog() {
+  return readFile(log, "utf8").catch(() => "");
+}
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+/** Wait until `pred` holds over the log, or give up after ~10s. */
+async function until(pred: (s: string) => boolean) {
+  for (let i = 0; i < 100; i++) {
+    const s = await readLog();
+    if (pred(s)) return s;
+    await sleep(100);
+  }
+  return readLog();
+}
+
+// ## The caller returns immediately, and the sweep runs on its own
+void test("The caller returns immediately, and the sweep runs on its own", async (t) => {
+  t.teardown(async () => {
+    try {
+      await rm(root, { recursive: true, force: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const gate = join(root, "release-sweep");
+  await gatedSweep(gate);
+  const order: string[] = [];
+  // Only a broken (blocking) hook ever needs this: it opens the gate so the
+  // caller can return and the order check below fails instead of hanging.
+  const fallback = setTimeout(() => {
+    order.push("gate opened");
+    void writeFile(gate, "");
+  }, 60_000);
+  await execFileAsync(hook, ["session-end"], { env });
+  order.push("caller returned");
+  if (!order.includes("gate opened")) {
+    clearTimeout(fallback);
+    order.push("gate opened");
+    await writeFile(gate, "");
+  }
+
+  const finished = await until((s) => s.includes("END"));
+  // The hook returned while its sweep was still held at the gate: it does not wait.
+  t.check(order, ["caller returned", "gate opened"]);
+  t.checkText(finished, `«date» auto-sweep trigger=session-end START
+  sweeping
+«date» auto-sweep trigger=session-end END`);
+
+  // ## Killing the caller's process group does not kill the sweep
+  //
+  // This is the regression. The launcher is started in a session of its own and then
+  // killed group-wide, which is what happens to a hook when its Claude session tears
+  // down.
+
+  await rm(log, { force: true });
+  await fakeSweep(2);
+  const launcher = spawn(hook, ["session-end"], { env, detached: true, stdio: "ignore" });
+  await new Promise((r) => launcher.on("exit", r));
+  await sleep(300);
+  try { process.kill(-launcher.pid!, "SIGKILL"); } catch (_error) { /* already gone */ }
+
+  const afterKill = await until((s) => s.includes("END"));
+  t.checkText(afterKill, `«date» auto-sweep trigger=session-end START
+  sweeping
+«date» auto-sweep trigger=session-end END`);
+
+  // ## One sweep at a time
+  //
+  // A second trigger while one is running is skipped, not queued: it would only
+  // contend for the same git work, and there is always another session start or end
+  // to run it.
+
+  await rm(log, { force: true });
+  await fakeSweep(3);
+  await execFileAsync(hook, ["session-end"], { env });
+  await until((s) => s.includes("START"));
+  await execFileAsync(hook, ["session-start"], { env });
+
+  const both = await until((s) => s.includes("SKIPPED"));
+  t.checkText(both, `«date» auto-sweep trigger=session-end START
+«date» auto-sweep trigger=session-start SKIPPED (sweep «int» already running)`);
+
+  // A lock left behind by a killed sweep is reclaimed rather than wedging every
+  // later run — the failure this whole file is about is a sweep being killed, so the
+  // lock must not turn that into a permanent one.
+
+  await until((s) => s.includes("END"));
+  // An END in the log is not proof the sweep that wrote it has EXITED — and a
+  // still-running holder makes the next run log "SKIPPED (sweep N already
+  // running)" instead of reclaiming anything. That is how this block failed on
+  // 2026-08-24 with noticed:false / ranAnyway:true: the END came from the
+  // previous sweep, and the new run skipped rather than reclaiming. Wait for the
+  // lock to be RELEASED, so the stale lock planted below is the only one there
+  // is.
+  await until(() => !existsSync(lock));
+  await rm(log, { force: true });
+  await mkdir(lock, { recursive: true });
+  await writeFile(join(lock, "pid"), "999999\n"); // a pid that cannot be alive
+  await fakeSweep(0);
+  await execFileAsync(hook, ["session-end"], { env });
+
+  // One predicate, not two sequential waits: the notice is written BEFORE the
+  // sweep runs (auto-sweep.sh), so any log containing END must already contain
+  // it. Waiting for them separately let a stale END satisfy the first wait.
+  const reclaimed = await until((s) => s.includes("END") && s.includes("reclaiming stale lock"));
+  t.checkText(reclaimed, `«date» auto-sweep trigger=session-end reclaiming stale lock (holder='999999')
+«date» auto-sweep trigger=session-end START
+  sweeping
+«date» auto-sweep trigger=session-end END`);
+
+  // ## An interrupted sweep says so
+  //
+  // A `START` with nothing after it used to be ambiguous between "still running" and
+  // "was killed". A caught signal now names itself; SIGKILL still cannot be caught,
+  // so a `START` with neither `END` nor `INTERRUPTED` means exactly that, which is
+  // the diagnosis rather than a mystery.
+
+  await rm(log, { force: true });
+  await fakeSweep(1);
+  await execFileAsync(hook, ["session-end"], { env });
+  await until((s) => s.includes("START"));
+  const sweepPid = Number((await readFile(join(lock, "pid"), "utf8")).trim());
+  process.kill(sweepPid, "SIGTERM");
+
+  const interrupted = await until((s) => s.includes("INTERRUPTED"));
+  t.checkText(interrupted, `«date» auto-sweep trigger=session-end START
+  sweeping
+«date» auto-sweep trigger=session-end INTERRUPTED sig=TERM`);
+
+  // ## The SessionEnd hook triggers it from every exit path
+  //
+  // The hook does two jobs: tear down the worktree this session owned, and fire the
+  // global sweep. The sweep call used to sit inline above the teardown, with a
+  // comment saying it had to be there or it would not fire in the common case —
+  // which was true of the *reachability*, since the teardown ends in a wall of early
+  // `exit 0`s. An `EXIT` trap is reached from all of them and still runs last, so
+  // the cheap specific job goes first and the two stop overlapping their git work.
+  //
+  // The case below is the commonest early exit of all — a session that did not
+  // belong to any worktree — driven against a scratch checkout so nothing real is
+  // in scope.
+
+  const fakeMono = join(root, "mono");
+  await mkdir(join(fakeMono, "beebox"), { recursive: true });
+  await execFileAsync("git", ["init", "-q"], { cwd: fakeMono });
+  await cp(join(repoRoot, ".claude/hooks"), join(fakeMono, ".claude/hooks"), { recursive: true });
+  await cp(join(repoRoot, "bin/lib"), join(fakeMono, "bin/lib"), { recursive: true });
+  await fakeSweep(0);
+  await cp(join(fakeRepo, "bin/workstreams"), join(fakeMono, "bin/workstreams"));
+
+  await rm(log, { force: true });
+  const hookInput = JSON.stringify({
+    cwd: fakeMono,
+    session_id: "no-worktree",
+    transcript_path: join(tmpdir(), "nowhere.jsonl"),
+    reason: "prompt_input_exit",
+  });
+  await execFileAsync(
+    "bash",
+    ["-c", 'printf "%s" "$1" | "$2"', "hook-test", hookInput, join(fakeMono, ".claude/hooks/session-end.sh")],
+    { env: { ...env, BBX_STATE_DIR: join(home, ".cache/beebox") } },
+  ).catch(() => null);
+
+  const fromEarlyExit = await until((s) => s.includes("END"));
+  t.checkText(fromEarlyExit, `«date» pid=«int» SessionEnd event: session=no-worktree reason=prompt_input_exit cwd=«*»/mono
+«date» pid=«int» SessionEnd decision=skip:not-a-worktree-session resolved=''
+«date» auto-sweep trigger=session-end START
+  sweeping
+«date» auto-sweep trigger=session-end END`);
+});

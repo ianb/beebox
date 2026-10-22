@@ -1,5 +1,5 @@
 /**
- * The recheck history's view of `recheck="never"` (`docs/plans/todos-ui.md`,
+ * The recheck history's view of `recheck="never"` (`docs/implemented-plans/todos-ui.md`,
  * Track 7), used by `check` (`review-check.ts`).
  *
  * `never` means two different things. Written by the review's own `verify`

@@ -79,8 +79,8 @@ const SCRIPT_ENV_ALLOWLIST: readonly string[] = [
   // --- Claude Agent SDK / codex config knobs (not credentials) ---
   "CODEX_HOME", // Keep explicit agent env aligned with auth preflight and plugin installation.
   "CLAUDE_CONFIG_DIR", // relocates the ~/.claude/ credentials dir the SDK reads.
-  "BBX_CLAUDE_PROJECTS_DIR", // src/core/chat/session/transcript-paths.ts, delete-storage.ts -- transcript-dir override doctests rely on.
-  "BBX_ORIGIN_ID_FILE", // src/core/chat/session/origin.ts -- machine-id file override doctests rely on.
+  "BBX_CLAUDE_PROJECTS_DIR", // src/core/chat/session/transcript-paths.ts, delete-storage.ts -- transcript-dir override tests rely on.
+  "BBX_ORIGIN_ID_FILE", // src/core/chat/session/origin.ts -- machine-id file override tests rely on.
   "BBX_CODEX_BINARY", // services/codex-sdk-session.ts and codex-binary.ts -- diagnostic binary override.
   "DISABLE_TELEMETRY",
   "DISABLE_ERROR_REPORTING",

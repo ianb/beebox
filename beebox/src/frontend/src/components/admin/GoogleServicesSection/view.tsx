@@ -15,6 +15,7 @@ import { adminArrivalKey, shouldAcknowledgeAdminArrival, shouldConsumeAdminArriv
 import { useCardVisible } from "../../chat/everywhere/card-context/context";
 import { CheckboxField } from "../../ui/fields/field";
 import { Button } from "../../ui/Button";
+import { ExternalLink } from "../../ui/ExternalLink";
 import { useGoogleServices } from "./useGoogleServices";
 import { AdminSectionCard } from "../AdminSectionCard";
 import { adminSectionElementId } from "../sections";
@@ -75,7 +76,7 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
     return (
       <AdminSectionCard id="google-services" description={DESCRIPTION} busy>
         <ArrivalNotice arrival={notice} />
-        <p className="text-sm text-warm-600">Checking status...</p>
+        <p className="text-sm text-warm-700">Checking status...</p>
       </AdminSectionCard>
     );
   }
@@ -84,7 +85,7 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
     return (
       <AdminSectionCard id="google-services" description={DESCRIPTION}>
         <ArrivalNotice arrival={notice} />
-        <p className="text-sm text-warm-600">Google OAuth is not configured on this host.</p>
+        <p className="text-sm text-warm-700">Google OAuth is not configured on this host.</p>
       </AdminSectionCard>
     );
   }
@@ -123,6 +124,16 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
                 />
               ))}
             </div>
+            {status.driveDocsApi !== null ? (
+              <div id="bbx-admin-google-drive-docs-api" className="mt-2 p-3 bg-warning-50 border border-warning-light rounded text-sm text-warning-dark space-y-1">
+                <p>{status.driveDocsApi.message}</p>
+                {status.driveDocsApi.link !== null ? (
+                  <ExternalLink id="bbx-admin-google-drive-enable-docs-api" href={status.driveDocsApi.link}>
+                    Enable the Docs API
+                  </ExternalLink>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
           <div className="flex gap-3">

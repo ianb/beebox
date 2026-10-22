@@ -25,7 +25,7 @@ migrate when you touch the area.
 
 ## Gotchas that bite
 
-- Route doctests: `makeTestServer()` prefixes every URL with `/test`;
+- Route tests: `makeTestServer()` prefixes every URL with `/test`;
   use `rootRequest()` for root-level routes.
 - A box's `.claude/settings.json` permissions do NOT gate engine-spawned
   agents (`bypassPermissions` is hardcoded) — don't design an endpoint

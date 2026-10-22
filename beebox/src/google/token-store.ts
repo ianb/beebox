@@ -8,7 +8,7 @@
  * centralized case means ONE refresh token is shared by gmail/calendar/drive
  * across every box on the server — which is why the "this grant is dead" state
  * lives here, with the credential, rather than in per-connector or per-box
- * state. See docs/plans/google-auth-reauth-health.md.
+ * state. See docs/implemented-plans/google-auth-reauth-health.md.
  */
 
 import * as fs from "node:fs/promises";

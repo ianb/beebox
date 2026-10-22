@@ -6,6 +6,8 @@ issues: []
 ---
 # Invite links and self-service password change
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan adds the complete no-password-sharing lifecycle for member accounts.
 An owner can invite one person to one box. The invitee chooses their own
 password, and a signed-in local-password user can later rotate that password.
@@ -190,7 +192,7 @@ owner-only Admin mutation that mints one invite for the current box.
 **Vocabulary lock-ins.** `/auth/invite`; `AuthInviteStatus`; fixed 15-minute
 TTL; one invite grants one member identity access to exactly one box.
 
-**First implementation chunk.** Write `test/webapp/auth-capabilities.doctest.md`
+**First implementation chunk.** Write `test/webapp/auth-capabilities.test.ts`
 first: hash-at-rest, expiry, box binding, corruption, permissions, cap,
 concurrent consume, replay, owner/local-auth prerequisites, and pinned conflicts.
 Then implement the store and minting service; no route or UI yet.
@@ -255,7 +257,7 @@ to the box.
   ACL write succeed. Redirect using the existing validated worktree/box URL
   helper. The partial-failure page does not sign a session.
 
-**First implementation chunk.** Write `test/webapp/invite-accept.doctest.md` (moved to `beebox/test/webapp/routes/auth.invite-accept.doctest.md`)
+**First implementation chunk.** Write `test/webapp/invite-accept.doctest.md` (moved to `beebox/test/webapp/routes/auth.invite-accept.test.ts`)
 first: headers/forms, fixed validation, throttle, all collisions, pinned/open,
 target resolution, single-use concurrency, account/ACL ordering, cross-process
 ACL contention, cache refresh, Git degradation, injected write failures, and
@@ -318,7 +320,7 @@ sessions, and sets a fresh cookie in the same response.
   recent-OAuth/recovery design.
 
 **First implementation chunk.** Write
-`test/webapp/password-change.doctest.md` (moved to `beebox/test/webapp/routes/auth/password-change.doctest.md`) first: success plus fresh cookie, old
+`test/webapp/password-change.doctest.md` (moved to `beebox/test/webapp/routes/auth/password-change.test.ts`) first: success plus fresh cookie, old
 cookie revocation, wrong current password, no client-selected email, Google-only
 and machine/open rejection, throttle, scrypt cap, bounds, and store failure.
 

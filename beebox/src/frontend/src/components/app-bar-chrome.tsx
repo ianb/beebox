@@ -1,5 +1,5 @@
 /**
- * The unified app bar's chrome channel (docs/plans/top-nav-ia.md Track C2).
+ * The unified app bar's chrome channel (docs/implemented-plans/top-nav-ia.md Track C2).
  *
  * The bar is global (`AppLayout` renders `AppNav` above the route `Outlet`),
  * but two of the things it shows are *page* state: the place a page is in,

@@ -120,7 +120,7 @@ function condense(text: string): string {
 
 /**
  * Build the CLI invocation. Split out so the decisions log has one place to
- * point at and the doctests can assert the exact argv without running anything.
+ * point at and the tests can assert the exact argv without running anything.
  */
 export function doclingArgs(sourcePath: string, options: DoclingExtractOptions): string[] {
   const args = [

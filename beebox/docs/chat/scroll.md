@@ -5,7 +5,7 @@ procedure, the on-device trace, and what only a real phone can show.
 
 ## What it is
 
-The chat message list's scroll behavior is layout behavior that doctests can't
+The chat message list's scroll behavior is layout behavior that tests can't
 exercise ([dev stubs](../testing/dev-stubs.md)). Two instruments cover it, and a change to
 `chat-scroll.ts`, `InteractiveChat-messages.tsx` (the list, the send anchor, the
 spacer, the button) or the `/fakestream` stub should run both:
@@ -234,7 +234,7 @@ bin/browse eval 'JSON.stringify(window.__m)'
 
 Finalize must not briefly remove the assistant turn and restore it after the
 history request. That transient collapse is the regression
-`chat-machine-finalize.doctest.md` guards. The send spacer remains after completion; a short reply must leave the sent
+`machine.chat-machine-finalize.test.ts` guards. The send spacer remains after completion; a short reply must leave the sent
 message at the top. Scrolling upward consumes only spacer below the viewport.
 A height decrease by itself is not proof of a content-collapse bug.
 

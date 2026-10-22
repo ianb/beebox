@@ -3,7 +3,7 @@
  *
  * A registered renderer's `name` is its identity — the `?view=` URL param and
  * `onSelect` argument — and never changes here. This module only maps that
- * identity to friendlier tab text (docs/plans/vocab-glossary-sweep.md Track
+ * identity to friendlier tab text (docs/implemented-plans/vocab-glossary-sweep.md Track
  * C item 8): the generic "Card" renderer shows the card's own type ("Recipe")
  * when nothing more specific is registered, or "Details" when a
  * type-specific renderer (Concept Map, …) already claims the

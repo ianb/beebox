@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visual treatments</title>
+<style>
+  :root { --bg:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --mute:#a3a29c; --line:#e6e5e0; --blue:#2a78d6; --blue-l:#9ec5f4; --orange:#eb6834; --aqua:#1baf7a; --red:#d03b3b; }
+  body { margin:0; background:#eceae4; color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .wrap { max-width:1180px; margin:0 auto; padding:28px 16px 80px; }
+  h1 { font-size:1.6em; margin:0 0 .2em; }
+  .lede { color:var(--ink2); max-width:72ch; margin:0 0 1.6em; }
+  .slide { background:var(--bg); border-radius:14px; box-shadow:0 2px 14px rgba(0,0,0,.08); margin:0 0 36px; overflow:hidden; }
+  .slide svg { width:100%; height:auto; display:block; }
+  .cap { padding:10px 18px 14px; color:var(--ink2); font-size:.92em; border-top:1px solid var(--line); }
+  .cap b { color:var(--ink); }
+  svg text { font-family: system-ui,-apple-system,"Segoe UI",sans-serif; fill:var(--ink); }
+  .t-title { font-size:34px; font-weight:700; }
+  .t-eyebrow { font-size:17px; fill:var(--ink2); letter-spacing:.04em; text-transform:uppercase; }
+  .t-lab { font-size:16px; }
+  .t-small { font-size:13px; fill:var(--ink2); }
+  .t-num { font-size:44px; font-weight:700; }
+  .t-mono { font-family: ui-monospace,Menlo,monospace; font-size:12.5px; }
+  .grid { stroke:var(--line); }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Visual treatments for the supporting slides</h1>
+<p class="lede">Six prototypes, each a 16:9 panel at slide proportions, static SVG, one accent color. Numbers are the verified ones from the inventory. The point of each is stated under it; react to the shape, not the polish.</p>
+
+<!-- 1. The ladder -->
+<div class="slide"><svg viewBox="0 0 960 540" role="img" aria-label="Eight steps rising across the months, each labeled with the constraint it hit and the thing built past it; commit volume per month as faint bars behind">
+  <text x="48" y="52" class="t-eyebrow">The pattern, in eight moves</text>
+  <text x="48" y="92" class="t-title">Each fix moves the bottleneck</text>
+  <!-- month axis -->
+  <g class="t-small">
+    <text x="78" y="520">Jan</text><text x="176" y="520">Feb</text><text x="274" y="520">Mar</text><text x="372" y="520">Apr</text><text x="470" y="520">May</text><text x="568" y="520">Jun</text><text x="666" y="520">Jul</text><text x="764" y="520">Aug</text><text x="862" y="520">Sep</text>
+  </g>
+  <!-- faint commit bars: Jan 25 Feb 201 Mar 266 Apr 214 May 482 Jun 748 Jul 1510 Aug 2305 Sep 2268 (scale: 2305 -> 300px) -->
+  <g fill="#eef1f6">
+    <rect x="60" y="497" width="60" height="3"/><rect x="158" y="474" width="60" height="26"/><rect x="256" y="465" width="60" height="35"/><rect x="354" y="472" width="60" height="28"/>
+    <rect x="452" y="437" width="60" height="63"/><rect x="550" y="403" width="60" height="97"/><rect x="648" y="303" width="60" height="197"/><rect x="746" y="200" width="60" height="300"/><rect x="844" y="205" width="60" height="295"/>
+  </g>
+  <text x="904" y="496" class="t-small" text-anchor="end">bars: commits per month</text>
+  <!-- staircase: 8 treads -->
+  <g stroke="var(--blue)" stroke-width="3" fill="none">
+    <path d="M60 470 H150 V430 H250 V390 H480 V340 H580 V300 H680 V250 H790 V200 H870 V150 H940"/>
+  </g>
+  <!-- step labels: riser = constraint (orange), tread = built (blue) -->
+  <g class="t-lab">
+    <g><text x="64" y="462" fill="var(--orange)">forgets</text><text x="64" y="446" class="t-small">CLAUDE.md, lint hook, doctests</text></g>
+    <g><text x="154" y="422" fill="var(--orange)">bloat</text><text x="154" y="406" class="t-small">halve it, nested files</text></g>
+    <g><text x="254" y="382" fill="var(--orange)">one agent</text><text x="254" y="366" class="t-small">worktrees, router, skills</text></g>
+    <g><text x="330" y="332" fill="var(--orange)">bigger tasks</text><text x="330" y="316" class="t-small">plans, cross-model review</text></g>
+    <g><text x="500" y="292" fill="var(--orange)">findings</text><text x="500" y="276" class="t-small">one file per issue</text></g>
+    <g><text x="600" y="242" fill="var(--orange)">attention</text><text x="600" y="226" class="t-small">workstreams, suite, schedules</text></g>
+    <g><text x="700" y="192" fill="var(--orange)">size, noise</text><text x="700" y="176" class="t-small">calibration, budgets</text></g>
+    <g><text x="800" y="142" fill="var(--orange)">measure</text><text x="800" y="126" class="t-small">retrospective, dev audits</text></g>
+  </g>
+  <!-- plateau label -->
+  <text x="365" y="406" class="t-small" font-style="italic" text-anchor="middle">quiet stretch: shipping</text>
+</svg><div class="cap"><b>1. The thesis as one picture.</b> A staircase over the calendar: the riser names the constraint (orange), the tread names what got built (gray). The plateau is visible as a long flat tread. Commit volume per month sits behind it in a tint so the pace reads without a second chart. Reused as a progress marker: on each bottleneck's main slide, the same staircase with that step lit.</div></div>
+
+<!-- 2. Cut, regrow, budget -->
+<div class="slide"><svg viewBox="0 0 960 540" role="img" aria-label="Three small step charts: package CLAUDE.md lines, root CLAUDE.md words, and the box agent guide words; the first two regrow after each cut, the third has a budget line and stays under it">
+  <text x="48" y="52" class="t-eyebrow">Supporting · motif</text>
+  <text x="48" y="92" class="t-title">Cut, regrow, budget</text>
+  <!-- panel A: package file lines 217,222,118,114,146,165,184,67,71 over Jan..Oct -->
+  <g transform="translate(48,130)">
+    <text x="0" y="0" class="t-lab" font-weight="700">Package CLAUDE.md</text><text x="0" y="20" class="t-small">lines</text>
+    <g class="grid"><line x1="0" y1="260" x2="260" y2="260"/></g>
+    <!-- x: Jan30=0 .. Oct8=260 ; y: 0 lines at 260, 230 lines at 60 -> scale 0.87px/line -->
+    <path d="M0 71 L18 67 L58 67 L60 157 L64 161 L120 133 L160 116 L220 100 L224 202 L255 198" fill="none" stroke="var(--blue)" stroke-width="3"/>
+    <text x="22" y="58" class="t-small">217</text>
+    <text x="80" y="150" class="t-small">118</text>
+    <text x="186" y="94" class="t-small">184</text>
+    <text x="228" y="218" class="t-small">67</text>
+    <text x="40" y="180" class="t-small" fill="var(--orange)">Mar 3 cut</text>
+    <text x="196" y="236" class="t-small" fill="var(--orange)">Sep 12 cut</text>
+  </g>
+  <!-- panel B: root words 65,1393,807,2242,850,1277 over May26..Oct8 -->
+  <g transform="translate(350,130)">
+    <text x="0" y="0" class="t-lab" font-weight="700">Root CLAUDE.md</text><text x="0" y="20" class="t-small">words</text>
+    <g class="grid"><line x1="0" y1="260" x2="260" y2="260"/></g>
+    <!-- x: May26=0, Oct8=260 (135 days -> 1.93px/day). y: 2300 words = 60 -> 0.087px/word; y = 260 - w*0.087 -->
+    <path d="M0 254 L75 139 L76 190 L200 65 L201 186 L252 149" fill="none" stroke="var(--blue)" stroke-width="3"/>
+    <text x="8" y="270" class="t-small">65</text>
+    <text x="160" y="60" class="t-small">2,242</text>
+    <text x="205" y="206" class="t-small">850</text>
+    <text x="222" y="140" class="t-small">1,277</text>
+    <text x="100" y="236" class="t-small" fill="var(--orange)">two cuts, two regrowths</text>
+  </g>
+  <!-- panel C: box guide words 3355 (Apr) -> 11435 (Sep 26) -> 5555; budget line 5595 -->
+  <g transform="translate(652,130)">
+    <text x="0" y="0" class="t-lab" font-weight="700">Box agent guide</text><text x="0" y="20" class="t-small">rendered words · the one with a budget</text>
+    <g class="grid"><line x1="0" y1="260" x2="260" y2="260"/></g>
+    <!-- x: Apr27=0 .. Oct9=260 (165 days, 1.58px/day). y: 12000 words -> 60: 0.0167px/word; y=260-w*0.0167 -->
+    <path d="M0 204 L240 69 L242 167 L260 167" fill="none" stroke="var(--blue)" stroke-width="3"/>
+    <line x1="236" y1="166" x2="260" y2="166" stroke="var(--aqua)" stroke-width="3" stroke-dasharray="6 4"/>
+    <text x="8" y="222" class="t-small">3,355</text>
+    <text x="150" y="64" class="t-small">11,435</text>
+    <text x="178" y="186" class="t-small" fill="var(--aqua)">budget 5,595</text>
+    <text x="110" y="236" class="t-small" fill="var(--orange)">held; caught one breach</text>
+  </g>
+  <text x="48" y="470" class="t-lab">Same shape three times. The two surfaces cut by hand regrew. The one with a line did not.</text>
+</svg><div class="cap"><b>2. The motif as small multiples.</b> Three tiny step charts in one row, identical scale logic, one accent. The eye compares shapes, not numbers; the labels carry the only four numbers that matter. The budget is the only green line on the slide, so "the one with a line held" is literally visible.</div></div>
+
+<!-- 3. The sweep's decisions -->
+<div class="slide"><svg viewBox="0 0 960 540" role="img" aria-label="A flow from one sweep into five outcomes sized by count: removed 144, live 793, pinned 238, unmerged 1017, unknown 0">
+  <text x="48" y="52" class="t-eyebrow">Supporting · fail closed</text>
+  <text x="48" y="92" class="t-title">Forty days of unattended cleanup</text>
+  <!-- source block -->
+  <rect x="60" y="180" width="150" height="220" rx="10" fill="var(--blue)"/>
+  <text x="135" y="270" class="t-lab" fill="#fff" text-anchor="middle" font-weight="700">184 sweeps</text>
+  <text x="135" y="294" class="t-small" fill="#dfe9f8" text-anchor="middle">session end, start,</text>
+  <text x="135" y="312" class="t-small" fill="#dfe9f8" text-anchor="middle">Codex exit, post-merge</text>
+  <!-- outcome bars (total 2192 decisions; height 360 -> 0.164px each) -->
+  <g>
+    <!-- unmerged 1017 -> 167 -->
+    <path d="M210 190 C330 190 330 120 450 120 L450 287 C330 287 330 400 210 400 Z" fill="#dde7f5"/>
+    <rect x="450" y="120" width="26" height="167" fill="var(--blue-l)"/>
+    <text x="490" y="150" class="t-lab" font-weight="700">1,017 skipped: unmerged work</text>
+    <text x="490" y="172" class="t-small">the sweep reports, a human decides</text>
+    <!-- live 793 -> 130 -->
+    <rect x="450" y="297" width="26" height="130" fill="var(--blue)"/>
+    <text x="490" y="330" class="t-lab" font-weight="700">793 skipped: an agent is live</text>
+    <text x="490" y="352" class="t-small">liveness check; --force cannot override it</text>
+    <!-- pinned 238 -> 39 -->
+    <rect x="450" y="437" width="26" height="39" fill="var(--blue)"/>
+    <text x="490" y="455" class="t-lab" font-weight="700">238 skipped: pinned for manual testing</text>
+    <!-- removed 144 -> 24 -->
+    <rect x="450" y="486" width="26" height="24" fill="var(--aqua)"/>
+    <text x="490" y="504" class="t-lab" font-weight="700" fill="var(--aqua)">144 removed, no human step</text>
+  </g>
+  <!-- the zero -->
+  <g transform="translate(748,112)">
+    <rect x="0" y="0" width="160" height="110" rx="10" fill="none" stroke="var(--red)" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="80" y="60" class="t-num" fill="var(--red)" text-anchor="middle">0</text>
+    <text x="80" y="88" class="t-small" text-anchor="middle">deleted on "unknown"</text>
+  </g>
+</svg><div class="cap"><b>3. A decision as a flow.</b> Instead of the raw log lines, one source and the outcomes sized by count; the number that proves the rule (zero on unknown) is the only red on the slide and sits in an empty dashed box. The log excerpt can stay on the next supporting slide for the people who want the text.</div></div>
+
+<!-- 4. Where finds come from, and whether they get fixed -->
+<div class="slide"><svg viewBox="0 0 960 540" role="img" aria-label="Paired horizontal bars per source: closed to the right, still open to the left; full suite nearly all closed, journey walks half open">
+  <text x="48" y="52" class="t-eyebrow">Supporting · the queue</text>
+  <text x="48" y="92" class="t-title">Who finds the bugs, and whether they get fixed</text>
+  <!-- center axis at x=560; scale 2.6px per issue -->
+  <line x1="560" y1="130" x2="560" y2="470" stroke="var(--line)"/>
+  <text x="552" y="122" class="t-small" text-anchor="end">still open</text>
+  <text x="568" y="122" class="t-small">closed</text>
+  <g class="t-lab">
+    <!-- the developer 112 / 132 -->
+    <text x="60" y="176">The developer</text>
+    <rect x="269" y="156" width="291" height="26" fill="var(--blue-l)"/><rect x="560" y="156" width="343" height="26" fill="var(--blue)"/>
+    <text x="262" y="175" class="t-small" text-anchor="end">112</text><text x="910" y="175" class="t-small">132</text>
+    <!-- journey walks 43 / 39 -->
+    <text x="60" y="246">Journey walks</text>
+    <rect x="448" y="226" width="112" height="26" fill="var(--blue-l)"/><rect x="560" y="226" width="101" height="26" fill="var(--blue)"/>
+    <text x="441" y="245" class="t-small" text-anchor="end">43</text><text x="668" y="245" class="t-small">39</text>
+    <!-- cross-model review 13 / 40 -->
+    <text x="60" y="316">Cross-model review</text>
+    <rect x="526" y="296" width="34" height="26" fill="var(--blue-l)"/><rect x="560" y="296" width="104" height="26" fill="var(--blue)"/>
+    <text x="519" y="315" class="t-small" text-anchor="end">13</text><text x="671" y="315" class="t-small">40</text>
+    <!-- hourly suite 3 / 35 -->
+    <text x="60" y="386">Hourly full suite</text>
+    <rect x="552" y="366" width="8" height="26" fill="var(--blue-l)"/><rect x="560" y="366" width="91" height="26" fill="var(--blue)"/>
+    <text x="545" y="385" class="t-small" text-anchor="end">3</text><text x="658" y="385" class="t-small">35</text>
+  </g>
+  <text x="60" y="450" class="t-lab">Suite finds are regressions an agent fixes. Walk finds are product questions a person decides.</text>
+</svg><div class="cap"><b>4. Open vs closed as paired bars.</b> One axis in the middle; what agents can fix lands almost entirely on the right, what needs a human decision splits. The sentence at the bottom is the slide's claim; the shape makes it before you read it.</div></div>
+
+<!-- 5. The shrink -->
+<div class="slide"><svg viewBox="0 0 960 540" role="img" aria-label="A dense block of small gray text on the left labeled before, an arrow, and three large lines on the right labeled after, with word counts">
+  <text x="48" y="52" class="t-eyebrow">Supporting · calibration</text>
+  <text x="48" y="92" class="t-title">Remove attempts to convince a capable reader</text>
+  <!-- before block: tiny gray mono text -->
+  <g transform="translate(48,130)">
+    <text x="0" y="0" class="t-lab" font-weight="700">Before</text><text x="60" y="0" class="t-small">the lint rule, 160 words</text>
+    <rect x="0" y="12" width="400" height="300" rx="8" fill="#f1f1ee"/>
+    <g class="t-mono" fill="var(--ink2)" font-size="10.5">
+      <text x="12" y="34">**NEVER disable or weaken a lint rule to make code pass. Ask</text>
+      <text x="12" y="48">first.** Every rule in the preset is a deliberate choice, and</text>
+      <text x="12" y="62">several restate code-style.md. Do not — without the user's</text>
+      <text x="12" y="76">explicit, in-the-moment permission — turn a rule "off"/"warn",</text>
+      <text x="12" y="90">loosen its options (raise a max-*, lower a threshold), delete</text>
+      <text x="12" y="104">a rule from a config, add a blanket /* eslint-disable */, or</text>
+      <text x="12" y="118">sprinkle // eslint-disable-next-line to dodge violations.</text>
+      <text x="12" y="132">This is exactly how the configs silently drifted out of sync</text>
+      <text x="12" y="146">with our own style for months (see the suppression audit).</text>
+      <text x="12" y="160">Instead: **fix the code.** If a rule genuinely seems wrong for</text>
+      <text x="12" y="174">the codebase, *stop and raise it with the user* — don't decide</text>
+      <text x="12" y="188">unilaterally. The only pre-approved exception is a single-line</text>
+      <text x="12" y="202">justified eslint-disable-next-line for a true narrow false</text>
+      <text x="12" y="216">positive — and even then the justifying comment is mandatory.</text>
+      <text x="12" y="230">When in doubt, ask; a failing lint rule is a prompt to change</text>
+      <text x="12" y="244">the code, not the rule.</text>
+      <text x="12" y="272" fill="var(--orange)">history · rhetoric · repeated "ask" · the same list twice</text>
+    </g>
+  </g>
+  <path d="M470 270 L520 270" stroke="var(--blue)" stroke-width="4"/><path d="M512 258 L530 270 L512 282" fill="none" stroke="var(--blue)" stroke-width="4"/>
+  <!-- after block -->
+  <g transform="translate(550,130)">
+    <text x="0" y="0" class="t-lab" font-weight="700">After</text><text x="52" y="0" class="t-small">67 words</text>
+    <g class="t-lab" font-size="17">
+      <text x="0" y="48" font-weight="700">Do not disable or weaken lint rules to make</text>
+      <text x="0" y="72" font-weight="700">code pass without explicit permission.</text>
+      <text x="0" y="110">This includes rule removal, lower severity,</text>
+      <text x="0" y="134">looser options, and suppressions.</text>
+      <text x="0" y="172">Fix the code; ask if the rule needs changing.</text>
+      <text x="0" y="210">The one exception: a single justified</text>
+      <text x="0" y="234">eslint-disable-next-line for a narrow false positive.</text>
+      <text x="0" y="284" class="t-small" fill="var(--aqua)">scope kept · exception kept · the why moved to code-style.md</text>
+    </g>
+  </g>
+  <text x="48" y="500" class="t-lab">Root file that day: 2,242 → 850 words. Package file: 184 → 67 lines.</text>
+</svg><div class="cap"><b>5. Before and after as mass, not text.</b> The before is deliberately set too small to read: it is a gray wall. The after is set large. Two annotation lines in color say what was removed and what was kept. For the talk, the before can fade in first and then collapse into the after.</div></div>
+
+<!-- 6. Old plans are read -->
+<div class="slide"><svg id="dots" viewBox="0 0 960 540" role="img" aria-label="Dots along a timeline of days after a plan shipped, one per read; a band after seven days holds more than half of them; a strip below shows what the reads were for">
+  <text x="48" y="52" class="t-eyebrow">Supporting · plans</text>
+  <text x="48" y="92" class="t-title">Do agents read old plans? 479 reads, by age</text>
+  <g class="t-small">
+    <text x="90" y="300" text-anchor="middle">while landing</text>
+    <text x="236" y="300" text-anchor="middle">same day</text>
+    <text x="356" y="300" text-anchor="middle">1–7 days</text>
+    <text x="522" y="300" text-anchor="middle">8–30 days</text>
+    <text x="760" y="300" text-anchor="middle">over 30 days</text>
+  </g>
+  <line x1="48" y1="280" x2="912" y2="280" stroke="var(--line)"/>
+  <!-- band -->
+  <rect x="430" y="130" width="482" height="150" fill="#eaf2fc" rx="6"/>
+  <text x="912" y="122" class="t-lab" text-anchor="end" fill="var(--blue)" font-weight="700">269 of 479 a week or more later</text>
+  <g id="dotlayer"></g>
+  <!-- purpose strip for the 204 late reads -->
+  <text x="48" y="360" class="t-lab" font-weight="700">What the late reads were for</text>
+  <g transform="translate(48,376)">
+    <!-- total 204 over 864px -> 4.24px each: audits 115, question 60, research 15, pickup 8, mechanics 6 -->
+    <rect x="0" y="0" width="487" height="34" fill="var(--blue-l)"/><text x="10" y="23" class="t-lab">repo-wide audits · 115</text>
+    <rect x="489" y="0" width="254" height="34" fill="var(--blue)"/><text x="499" y="23" class="t-lab" fill="#fff">a question asked now · 60</text>
+    <rect x="745" y="0" width="63" height="34" fill="var(--aqua)"/><text x="749" y="23" class="t-small" fill="#fff">new plan</text>
+    <rect x="810" y="0" width="54" height="34" fill="var(--mute)"/>
+  </g>
+  <text x="48" y="470" class="t-lab">"Is this a regression?" — "No. The feature's own design doc says the + never worked on transcript text."</text>
+</svg><div class="cap"><b>6. A count as dots, a breakdown as a strip.</b> Each read is a dot, jittered within its age bucket, so 479 is felt rather than stated; the band tints the part the claim is about. The strip below answers "what for" with lengths, and one quoted exchange at the bottom makes it concrete. The same dot-and-strip shape works for closed issues on the next slide.</div></div>
+
+</div>
+<script>
+  // dots for panel 6: counts per bucket (x range), total 479
+  const buckets = [[139,56,124],[20,206,266],[34,310,402],[113,440,604],[156,620,900]];
+  const g = document.getElementById('dotlayer'); const NS='http://www.w3.org/2000/svg';
+  let seed = 11; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  for (const [n,x0,x1] of buckets) {
+    for (let i=0;i<n;i++){
+      const c=document.createElementNS(NS,'circle');
+      c.setAttribute('cx', (x0 + rnd()*(x1-x0)).toFixed(1));
+      c.setAttribute('cy', (150 + rnd()*120).toFixed(1));
+      c.setAttribute('r','4'); c.setAttribute('fill', x0>=440 ? '#2a78d6' : '#9ec5f4'); c.setAttribute('fill-opacity','0.85');
+      g.appendChild(c);
+    }
+  }
+</script>
+</body>
+</html>

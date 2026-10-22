@@ -7,6 +7,8 @@ issues:
 ---
 # Search recent chats by what was said in them
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 When the boxholder remembers discussing something in a chat but not which
 chat, they want to search the conversations themselves and land in the right
 one — finding a chat by what was said, not just its title.
@@ -401,7 +403,7 @@ Done-when, as tests:
   metadata failure → Claude-only + warning.
 - `chat-search query` doctest: fixture index → match ordering, per-chat
   dedupe, recency tiebreak, snippet generation. **Delivered inside
-  `test/core/chat-search/refresh.doctest.md`** (same fixture box, assertions
+  `test/core/chat-search/refresh.test.ts`** (same fixture box, assertions
   on `searchChats` results), not as a separate file.
 - `chat.search` router doctest: input validation, result shape, stale flag.
   **Still future** — the result shape and stale flag are covered at the

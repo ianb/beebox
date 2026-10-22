@@ -11,13 +11,13 @@ effect.
 | Field | What it decides |
 |---|---|
 | `agentModel` | The box default model — what chat and the reactor use when nothing more specific applies. |
-| `smallModel` | The model for the cheap structured passes (chat review, retro observation, triage). Missing means the `efficient` tier for whichever engine runs the pass. |
+| `smallModel` | The model for the cheap structured passes (chat review, retro observation, triage). Missing means the `efficient` tier for whichever engine runs the pass, or the box default when that is an OpenRouter model. There is no admin control; set it in the file or ask the box agent. |
 | `engines` | Which harnesses a new chat may be started on. Missing means only `agentEngine`; the default engine can never be disabled. |
 
 ## Two levels
 
 **The box default** is `agentModel` in `_config/box.json`, beside `agentEngine`.
-It holds a concrete model id (`claude-sonnet-5`, `gpt-5.6-terra`, …). Missing
+It holds a concrete model id (`claude-sonnet-5-5`, `gpt-5.6-terra`, …). Missing
 means the **`strong` tier for the box's engine** — Opus on Claude, Sol on Codex
 — not "whatever the harness picks". A box always has a default it can name, so
 the chat UI can say what a follower will run and the model dial has something to
@@ -36,11 +36,12 @@ default changes what every unopinionated chat starts on.
 |---|---|---|
 | A chat | `agentModel` | When its subprocess starts (cold start or restart). |
 | The reactor | `agentModel` | Once per run, before its agents are created. |
+| A procedure step with no `model:`, triage research, migration repair | `agentModel` | Per agent run. An unpinned box leaves these to the harness default. |
+| A procedure step with a tier, the procedure review judge | the tier table, or both slots on an OpenRouter box (below) | Per agent run. |
 | Chat review, retro observation, triage | `smallModel` | Per run. |
 
-Everything else is unchanged: a caller that names a model still gets that model,
-and a procedure step that omits `model:` still means "the harness default" — the
-policy is read at the call sites above, not inside `createAgent`. (Why:
+A caller that names a concrete model still gets that model. The policy is read
+at the call sites above, not inside `createAgent`. (Why:
 `docs/implemented-plans/model-engine-policy.md`.)
 
 The small passes used to name `"haiku"`, a Claude nickname the Codex harness
@@ -155,14 +156,22 @@ each model in **Admin → OpenRouter models**, which writes `openrouterModels:
 [{ id, label }]` to `_config/box.json`. The add is checked against OpenRouter's
 public catalog: the id must exist and support tool calling.
 
-- **Where an added model can run:** a chat's model dial, and `agentModel` (the
-  box default). It cannot be the `smallModel`. It has no tier, so a tiered
-  procedure step (`model: strong`) and the cheap structured passes stay on
-  first-party Claude even when the box default is an OpenRouter model.
+- **Where an added model can run:** a chat's model dial, `agentModel` (the
+  box default), and `smallModel`.
+- **Background work on an OpenRouter default** (boxholder, 2026-10-15): an
+  added model has no tier, so the two slots stand in for the tier table.
+  `efficient` and `balanced` steps and the cheap passes run on `smallModel`;
+  `strong` and `strongest` run on the default. An unset `smallModel` means the
+  default. The box then needs no Claude login for background work. What still
+  uses Claude: a chat set to a Claude model, a `smallModel` set to a Claude
+  model, and scan import's photo reading unless `BBX_SCAN_VISION=gemini`. The
+  admin's Default model shows this when the default is an OpenRouter model.
+  Before 2026-10-15, tiered steps and the cheap passes stayed on first-party
+  Claude (`docs/implemented-plans/openrouter-chat-models.md`).
 - **The gate at every spawn** (`core/provider-env.ts`): the model must be in
   the added list, and the box must hold a granted `openrouter` key. Either
   missing fails the run with the fix. Nothing falls back to first-party.
-- **Removal:** refused while the model is the box default. A chat that picked
+- **Removal:** refused while the model is the box default or `smallModel`. A chat that picked
   a model explicitly keeps the pick after removal, and its next turn refuses,
   including a turn on an already-running subprocess. It does not follow the
   box default. A scheduled message for that chat is dropped rather than
@@ -172,6 +181,10 @@ public catalog: the id must exist and support tool calling.
   OpenRouter updates it a minute or more late. The SDK's `total_cost_usd`
   prices these runs as Claude and overstated them roughly 5–20×, so chat
   results on third-party models (OpenRouter and GLM) carry no cost figure.
+  The same figure drives each background run's `maxBudgetUsd` cap, so a cap
+  trips early on these models. Chat title and review passes on
+  `deepseek/deepseek-v3.2` stayed under their $0.25 cap at the 40,000-character
+  transcript ceiling (2026-10-15); longer tool-using runs were not measured.
 - **Data:** Claude Code sends the requests, so the per-request host pin that
   the optional OpenRouter services use cannot apply. Host choice and data
   retention follow the OpenRouter account's privacy settings. Every

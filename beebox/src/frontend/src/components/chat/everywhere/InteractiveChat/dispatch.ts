@@ -36,6 +36,8 @@ export function useEmissionDispatch(opts: {
   send: (event: ChatEvent) => void;
   captureCardSend: () => CardSendFields;
   acceptCardSend?: (fields: CardSendFields) => void;
+  /** The pending question the root chat is asking, sent with every message while pending. */
+  openQuestion?: string;
   boxSlug: string | undefined;
   activeView: { target: ViewTarget } | null;
   messages: SessionEntry[];
@@ -82,6 +84,7 @@ export function useEmissionDispatch(opts: {
   const { captureEmissionDispatch, dispatchNativeEmission, failedRegion } = useBoundEmission({
     pool: opts.pool, target: opts.target, selection: opts.selection, attention: opts.attention,
     emissionStore, captureCardSend, acceptCardSend: opts.acceptCardSend, getWitness,
+    ...(opts.openQuestion === undefined ? {} : { openQuestion: opts.openQuestion }),
     // A `chat:new` notification rides along with the first message only.
     onSent: () => { clearOpenedNotification(); onSent(); },
   });
@@ -93,7 +96,7 @@ export function useEmissionDispatch(opts: {
   // Recovered dictation: a segment that survived a page drop (screen sleep,
   // tab eviction, reload) with no live composer state around it to fold in —
   // plain <speech>, no selections, not diarized (historical shape, pinned by
-  // emission-assemble.doctest.md's "site 5").
+  // test/components/chat.emission-assemble.test.ts's "site 5").
   const sendVoiceSegment = useCallback(
     (text: string) => {
       const emission = createVoiceEmission({ text, selections: [], diarized: false });
@@ -133,7 +136,7 @@ export function useEmissionDispatch(opts: {
       const { images, files } = captured.attachments;
       const emission = buildVoiceSubmitEmission({
         priorInput: captured.draft.text, finalText: text, imagesSnapshot: images, filesSnapshot: files, selectionsSnapshot: captured.draft.selections, diarized: false,
-        // Fix D (docs/plans/transcript-confidence.md): the tap-send path
+        // Fix D (docs/implemented-plans/transcript-confidence.md): the tap-send path
         // now carries the hook's realtime words too, same as a keyword
         // send — the interim tail (if any) simply has no words, which the
         // aligner tolerates (fail-open per word).

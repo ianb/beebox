@@ -16,7 +16,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { runScanPromotePass } from "../../../core/scan/promote/core.js";
-import { withBoxWork, withoutBoxWork } from "../../../lib/box-maintenance.js";
+import { withBoxWork, withoutBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError } from "../../../lib/box-maintenance-error.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
 import { createPromoteDebouncer, SCAN_SETTLE_MS, type PromoteDebouncer } from "../../../core/scan/promote-debounce.js";

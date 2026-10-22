@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-12T22:08:00Z
-Total documents: 527
+Generated: 2026-10-22T02:39:01Z
+Total documents: 555
 
 ## Issues
 
@@ -12,14 +12,18 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/acknowledgements-backfill.md** — "Acknowledgements backfill: credit adopted external ideas" (319 lines) · shipped history · implemented
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines) · implementation review
 - **docs/implemented-plans/authored-view-history-state.md** — "Browser-like history state for authored views" (211 lines) · shipped history · implemented
+- **docs/implemented-plans/bbx-remind.md** — "bbx remind: one command for check-ins and reminders" (290 lines) · shipped history · implemented
+- **docs/implemented-plans/bloom-theme.md** — "Bloom system and card theme" (213 lines) · shipped history · implemented
 - **docs/implemented-plans/box-growth-health-checks.md** — "Box-growth health checks" (679 lines) · shipped history · implemented
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (360 lines) · shipped history · implemented
+- **docs/implemented-plans/card-reading.md** — "Card reading: print, contents menu, image-link lightbox, include lines" (516 lines) · shipped history · implemented
 - **docs/implemented-plans/card-self-refs.md** — "Card self-refs: attach-scope repair, bbx mv fixes, lock guard vocabulary" (367 lines) · shipped history · implemented
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (163 lines) · shipped history · implemented
 - **docs/implemented-plans/codex-diagnostic-parity.md** — "Provider-aware agent diagnostics" (168 lines) · shipped history · implemented
 - **docs/implemented-plans/codex-sdk-backend.review.md** — "Plan Engineering Review — Codex SDK backend" (162 lines) · implementation review
 - **docs/implemented-plans/companion-pane-card-activity.md** — "Companion-pane card activity awareness for chat" (372 lines) · shipped history · implemented
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (351 lines) · shipped history · implemented
+- **docs/implemented-plans/deck-theme.md** — "Deck system and card theme" (186 lines) · shipped history · implemented
 - **docs/implemented-plans/delivered-user-message-codec.md** — "Exhaustive delivered-user-message codec" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-lifecycle-clarity.md** — "Make current documentation and historical records distinguishable" (125 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-cards.md** — "Documentation structured like code: cards" (162 lines) · shipped history · implemented
@@ -29,9 +33,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/doc-structure-install-server.md** — "Documentation structured like code: install and the production server" (211 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-media.md** — "Documentation structured like code: media" (130 lines) · shipped history · implemented
 - **docs/implemented-plans/doc-structure-prompts.md** — "Documentation structured like code: the prompt surface" (163 lines) · shipped history · implemented
-- **docs/implemented-plans/engine-aware-chat-models.md** — "Engine-aware chat model selection" (109 lines) · shipped history · implemented
 - **docs/implemented-plans/exhibit-html-controls.md** — "Comment and reply controls on raw `index.html` exhibits" (250 lines) · shipped history · implemented
-- **docs/implemented-plans/expressive-themes.md** — "Expressive theme collections" (140 lines) · shipped history · implemented
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (723 lines) · shipped history · implemented
 - **docs/implemented-plans/feedback-as-cards.md** — "Agent feedback as doc cards" (116 lines) · shipped history · implemented
 - **docs/implemented-plans/file-layout.check.subplan.md** — "Layout check: the script that enforces the file-layout rules" (184 lines) · shipped history · implemented
@@ -50,9 +52,9 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/plugins-slice-2.review.md** — "Plan Engineering Review — plugins slice 2" (109 lines) · implementation review
 - **docs/implemented-plans/plugins-slice-3.review.md** — "Plan review — plugins slice 3" (70 lines) · implementation review
 - **docs/implemented-plans/procedure-validation-completion.md** — "Procedure validation completion (D5)" (449 lines) · shipped history · implemented
+- **docs/implemented-plans/purge-agent-doctest.md** — "Purge agent-doctest: rename the check library, drop doctest leftovers" (253 lines) · shipped history · implemented
 - **docs/implemented-plans/readable-card-fields.md** — "Readable card fields" (276 lines) · shipped history · implemented
 - **docs/implemented-plans/refresh-maps-convergence.review.md** — "Plan Engineering Review — refresh-maps convergence" (382 lines) · implementation review
-- **docs/implemented-plans/remove-bbx-render.review.md** — "Plan Engineering Review — remove-bbx-render" (53 lines) · implementation review
 - **docs/implemented-plans/remove-box-shape-v1.core-review.md** — "1a+1b core review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (63 lines) · shipped history · implemented
 - **docs/implemented-plans/remove-box-shape-v1.final-review.md** — "Final review — remove-box-shape-v1 (Codex, gpt-5.6-sol, 2026-07-11)" (55 lines) · shipped history · implemented
 - **docs/implemented-plans/remove-cardworks-deletion.md** — "Remove cardworks — final deletion phase" (630 lines) · shipped history · implemented
@@ -61,44 +63,43 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/resilient-voice-recording.review.md** — "Cross-model review — resilient-voice-recording (round 1)" (139 lines) · implementation review
 - **docs/implemented-plans/responsive-figures.md** — "Responsive Figures" (412 lines) · shipped history · implemented
 - **docs/implemented-plans/retire-type-specific-core-tags.review.md** — "Plan Engineering Review — retire-type-specific-core-tags" (66 lines) · implementation review
+- **docs/implemented-plans/ribbon-theme.md** — "Ribbon system and card theme" (214 lines) · shipped history · implemented
 - **docs/implemented-plans/scan-uploader-version-drift.md** — "The scan uploader learns when it has drifted from the box" (587 lines) · shipped history · implemented
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (382 lines) · shipped history · implemented
 - **docs/implemented-plans/secret-trick-runtime-delivery.md** — "Make granted secrets available through the standard trick runtime" (323 lines) · shipped history · implemented
-- **docs/implemented-plans/seven-material-themes.md** — "Six material-led theme collections" (205 lines) · shipped history · implemented
 - **docs/implemented-plans/sticky-hq-transcription-preference.md** — "Sticky HQ transcription preference" (108 lines) · shipped history · implemented
+- **docs/implemented-plans/theme-authoring-studio.md** — "Theme authoring studio" (171 lines) · shipped history · implemented
 - **docs/implemented-plans/triage-todo-question.review.md** — "Plan Engineering Review — triage todo question" (109 lines) · implementation review
+- **docs/implemented-plans/tts-comparison-page.md** — "Publish the TTS model comparison on beebox.run" (268 lines) · shipped history · implemented
 - **docs/plans/chat-routing.review.md** — "Plan Engineering Review — chat routing" (104 lines) · plan review
-- **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (154 lines) · plan review
-- **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (159 lines) · proposal · partial
-- **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (534 lines) · plan review
-- **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (802 lines) · plan review
-- **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (116 lines) · proposal · draft
+- **docs/plans/chat-session-delete.review.md** — "Plan Engineering Review — Chat Session Delete" (156 lines) · plan review
+- **docs/plans/codex-session-startup-auth.md** — "Production Codex session startup and authentication" (161 lines) · proposal · partial
+- **docs/plans/container-first-pass2.review.md** — "Plan Engineering Review 2 — container-first" (536 lines) · plan review
+- **docs/plans/container-first.review.md** — "Plan Engineering Review — container-first" (804 lines) · plan review
+- **docs/plans/display-path-guard.subplan.md** — "Display-form path guard" (118 lines) · proposal · draft
 - **docs/plans/gmail-admission-and-preparation.review.md** — "Plan Engineering Review — Gmail admission and preparation" (88 lines) · plan review
-- **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (310 lines) · proposal · partial
-- **docs/plans/ios-app-intent-capture.review.md** — "Plan Engineering Review — iOS App Intent capture" (148 lines) · plan review
-- **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (470 lines) · plan review
+- **docs/plans/google-owner-member-credentials.md** — "Google owners can administer local member credentials" (312 lines) · proposal · partial
+- **docs/plans/ios-app-intent-capture.implementation.review.md** — "iOS quick capture implementation review" (100 lines) · plan review
+- **docs/plans/ios-app-intent-capture.review.md** — "Plan Engineering Review — iOS quick capture" (118 lines) · plan review
+- **docs/plans/ios-native-capture-mode.review.md** — "Plan Engineering Review — Native iOS capture mode" (472 lines) · plan review
 - **docs/plans/jev-document-triage.review.md** — "Plan Engineering Review — Replayable document triage" (212 lines) · plan review
 - **docs/plans/migration-reliability.review.md** — "Plan Engineering Review — migration reliability" (242 lines) · plan review
-- **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (711 lines) · proposal · partial
-- **docs/plans/pdf-render-webp.review.md** — "Plan Engineering Review — PDF render WebP" (104 lines) · plan review
+- **docs/plans/operator-member-password-reset.md** — "Operator-driven member password reset" (713 lines) · proposal · partial
+- **docs/plans/pdf-render-webp.review.md** — "Plan Engineering Review — PDF render WebP" (106 lines) · plan review
 - **docs/plans/publish-custom-domain-admin.review.md** — "Plan Engineering Review — custom hostname assignment" (91 lines) · plan review
 - **docs/plans/publish-sites-admin.review.md** — "Plan Engineering Review — publish-sites-admin" (156 lines) · plan review
 - **docs/plans/scan-guide-card.review.md** — "Plan Engineering Review — scan-guide-card (codex cross-model, 2026-08-01)" (105 lines) · plan review
-- **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (432 lines) · proposal · partial
-- **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (140 lines) · plan review
-- **docs/plans/search-card.md** — "Search cards and quick search" (480 lines) · proposal · draft
-- **docs/plans/workspace-pane-controls.review.md** — "Plan Engineering Review — workspace pane controls" (233 lines) · plan review
+- **docs/plans/scan-retry-and-document-route.md** — "Bound the promote retry, and stop routing documents into the photo flow" (434 lines) · proposal · partial
+- **docs/plans/scan-vision-claude.review.md** — "Plan Engineering Review — scan-vision-claude" (142 lines) · plan review
+- **docs/plans/workspace-pane-controls.review.md** — "Plan Engineering Review — workspace pane controls" (235 lines) · plan review
 - **docs/unimplemented-plans/sticky-hq-ios-parity.md** — "Sticky HQ dictation on iOS" (105 lines) · past proposal · superseded
 - **field-tests/onboarding-first-days/README.md** — "onboarding-first-days" (60 lines)
 - **field-tests/onboarding-first-days/persona.md** — "Priya Marlowe" (22 lines)
 - **field-tests/spine/persona.md** — "Priya Marlowe" (22 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (21 lines)
 - **src/plugins/README.md** — "Plugins" (13 lines)
-- **src/plugins/courseware/README.md** — "Courseware" (168 lines)
 - **src/plugins/recipe/README.md** — "Recipe" (98 lines)
 - **test/manual/README.md** — "Manual tests" (44 lines)
-- **test/user-stories/journeys/B-inventory/reports/2026-08-23-2.md** — "B-inventory, 2026-08-23 (run 2)" (54 lines)
-- **test/user-stories/journeys/B-inventory/reports/2026-08-23-6.md** — "B-inventory, 2026-08-23 (run 6)" (49 lines)
 
 ### Broken References
 
@@ -108,7 +109,7 @@ These references point to files that don't exist.
   Context: `[x](/store/foo/bar.md)`. What does the leading slash mean?"*;
 - **docs/reports/stack-decisions-2026-09-04.md:775** → `../../agent-doctest/docs/syntax.md` (link)
   Context: - Wildcards in expected values: `«*»` (anything), `«int»`, `«date»`, `«codeblock»` (a fenced block), `«blankline»`, plus
-- **docs/testing/knowledge-audits.md:158** → `MAP.md` (at-include)
+- **docs/testing/knowledge-audits.md:166** → `MAP.md` (at-include)
   Context: - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `
 - **docs/user-stories/catalog/2026-06-26.md:5348** → `MAP.md` (at-include)
   Context: - Ensure per-dir CLAUDE.md includes are correct: IMPLEMENTED in finalize.ts lines 58-79 with `ensureClaudeMdInDir()` tha
@@ -127,16 +128,16 @@ These references point to files that don't exist.
 
 #### AGENTS.md
 
-Title: "Bee Box" | 72 lines
+Title: "Bee Box" | 73 lines
 
 Referenced by:
-- AGENTS.md:65 (mention) — When a correction exposes missing durable guidance, put a short rule at the narrowest accurate owner: this file for pack
+- AGENTS.md:66 (mention) — When a correction exposes missing durable guidance, put a short rule at the narrowest accurate owner: this file for pack
 - README.md:36 (mention) — (`package.json`, `tsconfig.json`), the root `AGENTS.md`, the operational areas,
 - code-style.md:41 (mention) — - **`console.debug`** — routine diagnostics; prefer none. Routine success prints nothing (per AGENTS.md, noisy output is
-- docs/README.md:84 (mention) — `AGENTS.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
+- docs/README.md:89 (mention) — `AGENTS.md` / `README.md` / `SKILL.md`) `--fix` rewrites the path to the file's
 - docs/agent-guide.md:12 (mention) — `AGENTS.md`. Every word in it is paid on every turn, so each rule in it must
 - docs/box-guidance.md:14 (mention) — root `AGENTS.md` and its `@` includes), `situational` (when the agent works on
-- docs/box-layout.md:9 (mention) — A box is a directory marked by `.beebox/box.json`. It's a git repository (`bbx init` initialises one), and the working t
+- docs/box-layout.md:9 (mention) — A box is a directory whose tracked `package.json` declares the `beebox` dependency, with `_config/` beside it (`isBoxRoo
 - docs/box-work.md:14 (mention) — inherits this repo's `AGENTS.md`. `bbx engine init` refuses a nested target
 - docs/box-work.md:28 (link) — for that change ([behavioral notes](../AGENTS.md#behavioral-notes)). At a
 - docs/cards/schemas.md:365 (mention) — 5. The agent guide is `@`-included in `AGENTS.md`, so agents always see the card type list
@@ -161,10 +162,12 @@ Referenced by:
 - docs/implemented-plans/box-search.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/boxes-as-packages-v2.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/capture-mode.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/card-reading.md:53 (mention) — | Include line | Show a label and link | The Markdown body of an `AGENTS.md` / `CLAUDE.md` file | Background, inline |
 - docs/implemented-plans/card-view-widgets.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/cards-as-markdown-rfc.md:8 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/chat-composer-rerender.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/chat-stream-finalize-unify.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/clerk-quick-send.md:136 (mention) — - Lint: no rule changes (root `AGENTS.md`).
 - docs/implemented-plans/clerk-webpage-capture.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/codex-box-engine.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/codex-sdk-backend.md:134 (mention) — generated `AGENTS.md` and installed plugin. If the public SDK cannot preserve this role,
@@ -189,6 +192,7 @@ Referenced by:
 - docs/implemented-plans/file-layout.check.subplan.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/file-layout.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/first-run-openers.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/frontend-dom-harness.md:68 (mention) — - Monorepo rule on dependencies (`AGENTS.md`, *"Treat unsolicited tool output
 - docs/implemented-plans/ios-audio-session-routing.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/ios-per-box-device-lock.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/link-validation-fix.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -213,6 +217,7 @@ Referenced by:
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/prompt-calibration.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/publication-card-home.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/purge-agent-doctest.md:65 (mention) — `beebox/src/dev/doc-check/file-paths.ts:27`; `AGENTS.md`, `README.md`,
 - docs/implemented-plans/questions-end-to-end.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/refresh-clerk.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/refresh-maps-convergence.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -224,6 +229,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-deletion.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/remove-cardworks-package.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/rest-to-trpc-consolidation.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/retire-doctest.md:108 (mention) — the boxholder (repo `AGENTS.md`, "Do not disable or weaken lint rules").
 - docs/implemented-plans/retire-type-specific-core-tags.md:110 (mention) — **Why.** The two tags exist only to be compiled into AGENTS.md and styled on the card page. A frontmatter string and a m
 - docs/implemented-plans/scanner-ingest.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/scheduled-workstreams.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -236,6 +242,7 @@ Referenced by:
 - docs/implemented-plans/todos-ui.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/top-nav-ia.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/transcript-confidence.md:13 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- docs/implemented-plans/tts-comparison-page.md:58 (mention) — - Root `AGENTS.md`: *"Write code in TypeScript"*. The scripts are `.ts` run
 - docs/implemented-plans/user-location.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/view-render-testing.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/implemented-plans/web-push-notifications.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -244,31 +251,32 @@ Referenced by:
 - docs/implemented-plans/workstream-exhibits.md:123 (mention) — - Root `AGENTS.md`: worktree URLs use the short name; never restart the shared
 - docs/implemented-plans/workstream-routing.md:276 (mention) — AGENTS.md and mirrored skill are the enforcement surface; a beebox agent
 - docs/implemented-plans/workstreams.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
-- docs/model-policy.md:105 (mention) — one lever: `loadBoxContext`. The SDK loads the box's `AGENTS.md`, generated agent
+- docs/model-policy.md:106 (mention) — one lever: `loadBoxContext`. The SDK loads the box's `AGENTS.md`, generated agent
 - docs/plans/README.md:24 (mention) — findable without masquerading as current docs. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this
 - docs/plans/agent-docs.md:377 (mention) — directory's `AGENTS.md` marks the rest as steering docs).
-- docs/plans/asset-offbox-storage.md:363 (mention) — remote (`AGENTS.md`). Asset push belongs in the same place, so the
-- docs/plans/box-commentary-surface.md:381 (mention) — (AGENTS.md exempts "per-box config, throwaway replies, and personal memory"),
-- docs/plans/change-based-test-selection.md:334 (mention) — per-worktree `AGENTS.md` mirrors regenerate from it.
-- docs/plans/chat-photo-batch-upload.md:51 (link) — - [`beebox/AGENTS.md`](../../AGENTS.md):101 — *"Read before writing. Don't
+- docs/plans/asset-offbox-storage.md:365 (mention) — remote (`AGENTS.md`). Asset push belongs in the same place, so the
+- docs/plans/box-commentary-surface.md:383 (mention) — (AGENTS.md exempts "per-box config, throwaway replies, and personal memory"),
+- docs/plans/change-based-test-selection.md:338 (mention) — per-worktree `AGENTS.md` mirrors regenerate from it.
+- docs/plans/chat-photo-batch-upload.md:53 (link) — - [`beebox/AGENTS.md`](../../AGENTS.md):101 — *"Read before writing. Don't
 - docs/plans/chat-scroll-model.md:217 (mention) — harness, all scenarios green, `decideScroll` deleted, nested AGENTS.md and
-- docs/plans/chat-search.md:251 (mention) — scroll" invariant, `frontend chat AGENTS.md`). One-shot like `companion`;
-- docs/plans/codex-session-startup-auth.md:21 (mention) — - `AGENTS.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, br
-- docs/plans/container-first.md:79 (mention) — - `AGENTS.md`, Time discipline: *"Long-running timeouts must count only awake
-- docs/plans/container-first.review.md:711 (mention) — **Issue:** The monorepo root `AGENTS.md` enumerates the projects that live in
-- docs/plans/document-comments.md:73 (mention) — - `AGENTS.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
-- docs/plans/general-browser.md:78 (mention) — - `AGENTS.md` (monorepo root) — the dev-page casualness carve-out applies to
-- docs/plans/ios-companion-app.md:29 (mention) — - `beebox/AGENTS.md` — the tRPC-vs-raw-Fastify boundary (`AGENTS.md`: *"Raw Fastify routes … are only for … file upload/
-- docs/plans/ios-input-plane-parity.md:31 (mention) — - `AGENTS.md`: keep the change scoped to the native input plane and its bridge;
-- docs/plans/operator-member-password-reset.md:87 (mention) — - **HTTP route boundary.** `AGENTS.md` says: *“HTTP endpoints go in tRPC by
-- docs/plans/prompt-surface-cleanup-evaluation.md:394 (mention) — section files, `@`-included into AGENTS.md; **every box agent loads it**
+- docs/plans/chat-search.md:253 (mention) — scroll" invariant, `frontend chat AGENTS.md`). One-shot like `companion`;
+- docs/plans/codex-session-startup-auth.md:23 (mention) — - `AGENTS.md` says: *"Reproduce complete user-visible paths; distinguish focused success from host flakes, simulator, br
+- docs/plans/container-first.md:81 (mention) — - `AGENTS.md`, Time discipline: *"Long-running timeouts must count only awake
+- docs/plans/container-first.review.md:713 (mention) — **Issue:** The monorepo root `AGENTS.md` enumerates the projects that live in
+- docs/plans/document-comments.md:75 (mention) — - `AGENTS.md` (monorepo root) — "**Treat noisy command output as a bug**" and the
+- docs/plans/general-browser.md:80 (mention) — - `AGENTS.md` (monorepo root) — the dev-page casualness carve-out applies to
+- docs/plans/ios-companion-app.md:31 (mention) — - `beebox/AGENTS.md` — the tRPC-vs-raw-Fastify boundary (`AGENTS.md`: *"Raw Fastify routes … are only for … file upload/
+- docs/plans/ios-input-plane-parity.md:33 (mention) — - `AGENTS.md`: keep the change scoped to the native input plane and its bridge;
+- docs/plans/mac-app-shell.md:299 (mention) — The script is TypeScript with a thin loader, per root `AGENTS.md`.
+- docs/plans/operator-member-password-reset.md:89 (mention) — - **HTTP route boundary.** `AGENTS.md` says: *“HTTP endpoints go in tRPC by
+- docs/plans/prompt-surface-cleanup-evaluation.md:396 (mention) — section files, `@`-included into AGENTS.md; **every box agent loads it**
 - docs/plans/public-site-box-authoring-export.md:71 (mention) — - **The box workbench spaces now exist.** The authoring box's `AGENTS.md` defines
-- docs/plans/public-site-story-extraction.subplan.md:59 (mention) — per AGENTS.md ("Sonnet 5 is good at subagent work"; extraction is
+- docs/plans/public-site-story-extraction.subplan.md:61 (mention) — per AGENTS.md ("Sonnet 5 is good at subagent work"; extraction is
 - docs/plans/public-site.md:31 (mention) — - Root `AGENTS.md`: the deploy-hook path scoping ("Auto-deploy is `main`-only,
-- docs/plans/publish-sites-admin.md:111 (mention) — AGENTS.md             # lazy pointer to installed box-docs/publishing.md
-- docs/plans/scan-vision-claude.md:494 (mention) — | Box AGENTS.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` —
-- docs/plans/source-available-release.md:394 (mention) — it now adds features beyond the task (`AGENTS.md` Behavioral Notes).
-- docs/plans/worktree-control-surface.md:144 (mention) — (`:236-242`), runs the workspace install (`:252`), generates the Codex AGENTS.md
+- docs/plans/publish-sites-admin.md:113 (mention) — AGENTS.md             # lazy pointer to installed box-docs/publishing.md
+- docs/plans/scan-vision-claude.md:496 (mention) — | Box AGENTS.md / settings leaking into the vision call | covered by construction | `settingSources: []`, `tools: []` —
+- docs/plans/source-available-release.md:396 (mention) — it now adds features beyond the task (`AGENTS.md` Behavioral Notes).
+- docs/plans/worktree-control-surface.md:146 (mention) — (`:236-242`), runs the workspace install (`:252`), generates the Codex AGENTS.md
 - docs/prompts/logging.md:7 (mention) — When agents run in a beebox (via `bbx wakeup`, `bbx reactor`, procedures, etc.), you can capture the full API traffic —
 - docs/prompts/review.md:23 (mention) — **Boxes go stale.** The box-side layers (AGENTS.md, agent guide, skills, rules) are what `bbx init` last wrote — re-run
 - docs/questions.md:62 (mention) — # the box AGENTS.md — see below)
@@ -284,23 +292,36 @@ Referenced by:
 - docs/user-stories/catalog/2026-06-26.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - docs/user-stories/catalog/2026-08-21.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - src/plugins/courseware/README.md:129 (mention) — `AGENTS.md` (see Migration). Nothing reads the field.
-- test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md:142 (mention) — | R5 | The template sync committed everything it wrote. | P+ | `0b068be` holds `briefing.md`, the exposition rule, its s
+- test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md:142 (mention) — | R5 | The template sync committed everything it wrote. | P+ | `0b068be` holds `briefing.md`, the exposition rule, its s
 - ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions →
 - ../.claude/skills/bbx-context/SKILL.md:3 (mention) — description: Design or troubleshoot durable guidance loaded by box agents, including box AGENTS.md files, path rules, sc
 - ../.claude/skills/bbx-issue-actions/SKILL.md:106 (mention) — `AGENTS.md`), so query that first; the `-S` guess is the fallback for
-- ../.claude/skills/bbx-plan/SKILL.md:64 (mention) — `beebox/AGENTS.md:101`: *"Read before writing…"* is a citation.
-- ../.claude/skills/bbx-plan/TEMPLATE.md:37 (mention) — - beebox/AGENTS.md — conventions, validation contract, "no features
+- ../.claude/skills/bbx-plan/SKILL.md:64 (mention) — `beebox/AGENTS.md:31`: *"parse, change, and reserialize it"* is a citation.
+- ../.claude/skills/bbx-plan/TEMPLATE.md:38 (mention) — - beebox/AGENTS.md — conventions, validation contract, "no features
 - ../.claude/skills/browse/references/authentication.md:54 (mention) — live sessions (`beebox/AGENTS.md`). If you cannot get one, say which findings
 - ../.claude/skills/knowledge-audit/SKILL.md:3 (mention) — description: Test what a real agent learned from its guidance. Box audits cover box-loaded guidance (box AGENTS.md, gene
 - ../.claude/skills/launch-worktree-session/SKILL.md:65 (mention) — `/finish` or `$finish` in prose. Both agents read `AGENTS.md`. Pass handoff
 - ../AGENTS.md:7 (link) — - **Main system:** [beebox/AGENTS.md](beebox/AGENTS.md).
 - ../bin/docs/worktree-lifecycle.md:79 (mention) — Both agents read the tracked `AGENTS.md` files directly.
-- ../issues/AGENTS.md:250 (mention) — long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; the
-- ../issues/bugs/2026-09-28-knowledge-audit-later-tests-lose-generated-guidance.md:29 (mention) — `AGENTS.md` includes and generate context mirrors without committing them.
-- ../issues/bugs/2026-10-09-codex-title-runs-keep-tools-and-box-context.md:20 (mention) — - `runCodexAgent` always expands the box `AGENTS.md` into the system prompt
-- ../issues/bugs/2026-10-09-knowledge-audit-read-matcher-misses-cd-and-variable-paths.md:8 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
-- ../issues/bugs/2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md:8 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
+- ../dev/devprocess-talk/bottlenecks.md:109 (mention) — 2. **Prose rule → measured failure → check.** Sigils (rule Sep 20, refusal Oct 7 after 83 sessions); Codex guidance (han
+- ../dev/devprocess-talk/chapters.md:298 (mention) — file: AGENTS.md
+- ../dev/devprocess-talk/chunks/README.md:102 (mention) — | CLAUDE.md / AGENTS.md, the root file, the package file | "the instruction file every agent reads first" |
+- ../dev/devprocess-talk/chunks/grows-unless-pruned.md:5 (mention) — source: root AGENTS.md; inventory.md "Mechanics into scripts" (rule 2026-10-07 059746c23)
+- ../dev/devprocess-talk/chunks/how-much-to-do-ladder.md:5 (mention) — source: inventory.md "How much to do"; AGENTS.md
+- ../dev/devprocess-talk/chunks/no-disable-lint-rule.md:5 (mention) — source: root AGENTS.md; inventory.md "No-disable lint guardrail" (since 2026-05-31 8965f1d36; 172 of 190 disables justif
+- ../dev/devprocess-talk/inventory.md:217 (mention) — - **Where:** `beebox/AGENTS.md` (71 lines; named CLAUDE.md until 2026-10-09) plus an `@`-import of `beebox/code-style.md
+- ../dev/devprocess-talk/lanes.md:40 (mention) — 2026-10-09 — AGENTS.md — All 20 instruction files are renamed so both Claude and Codex read them directly. The generated
+- ../dev/devprocess-talk/reports/sweep-infra-and-sweeps.md:74 (mention) — - 2026-10-09 47556b30a: Boxes author AGENTS.md instead of CLAUDE.md (agents-md migration).
+- ../dev/devprocess-talk/reports/sweep-instructions.md:92 (mention) — ## Codex mirrors: generated AGENTS.md, .agents/skills links, .codex/agents
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:3 (mention) — All commands run from the worktree root unless noted. Out-of-git store counts (`~/src/workstream-exhibits`, `~/src/dev-c
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:343 (mention) — ## AGENTS.md / skill / agent mirrors for Codex
+- ../dev/devprocess-talk/slides/12a-codex-mirrors.md:5 (mention) — * A committed AGENTS.md produced by find-replace rotted for a month and was
+- ../dev/devprocess-talk/slides/15a-false-starts-table.md:5 (mention) — | Committed AGENTS.md mirror | May 26 | May 26 | "a stale partial duplicate of CLAUDE.md" |
+- ../dev/devprocess-talk/slides/README.md:5 (mention) — Every number and excerpt is from git or a local store on 2026-10-09; the command behind each number is in [the sweep rep
+- ../dev/devprocess-talk/timeline.md:111 (mention) — - **One instruction file both agents read (Oct 9):** every CLAUDE.md renamed to AGENTS.md; the generated mirrors for Cod
+- ../issues/AGENTS.md:252 (mention) — long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; the
+- ../issues/bugs/2026-09-06-eslint-cache-stale-for-cross-file-type-rules.md:52 (mention) — Deleting the cache directory cleared both. `beebox/AGENTS.md` now names that
 - ../issues/closed/bugs/2026-07-15-box-packageify-doubled-subtrees.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -316,8 +337,12 @@ Referenced by:
 - ../issues/closed/bugs/2026-09-21-validate-hook-warning-vs-error-exit-code.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-09-26-maps-finalizer-shims-over-tracked-guides.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-09-27-file-watcher-doctest-stale-box-listing.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- ../issues/closed/bugs/2026-09-28-knowledge-audit-later-tests-lose-generated-guidance.md:37 (mention) — `AGENTS.md` includes and generate context mirrors without committing them.
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md:42 (mention) — - `ensureAgentContext` (`:411`), which writes `AGENTS.md`, the
+- ../issues/closed/bugs/2026-10-09-codex-title-runs-keep-tools-and-box-context.md:23 (mention) — - `runCodexAgent` always expands the box `AGENTS.md` into the system prompt
+- ../issues/closed/bugs/2026-10-09-knowledge-audit-read-matcher-misses-cd-and-variable-paths.md:8 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
+- ../issues/closed/bugs/2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md:9 (mention) — discovered-in: worktree-agents-md — auditing the box AGENTS.md migration
 - ../issues/closed/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md:2 (mention) — title: "Landmark chats exclude the box's own root AGENTS.md and rules since the host-isolation fix"
 - ../issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md:7 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-07-16-personal-vibe-check-typecheck-no-inputs.md:7 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -326,6 +351,8 @@ Referenced by:
 - ../issues/closed/code-quality/2026-08-17-bbx-init-prints-a-screenful-on-every-run.md:13 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-08-25-mjs-files-should-be-typescript.md:12 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/code-quality/2026-09-26-generated-guidance-families-without-pruning.md:2 (mention) — title: "Two generated guidance families still leave orphans: guides-for-<type> rules and dangling AGENTS.md symlinks"
+- ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:14 (mention) — Doctests are this repository's default test form (`beebox/AGENTS.md`), and
+- ../issues/closed/code-quality/2026-10-13-typecheck-and-lint-generated-doctest-modules.md:65 (mention) — boxholder's approval (root `AGENTS.md` on lint changes).
 - ../issues/closed/decisions/2026-05-27-bin-browse-wrapper-future.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/decisions/2026-07-07-categorize-issues-into-subdirectories.md:8 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -352,19 +379,22 @@ Referenced by:
 - ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:11 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/features/2026-08-04-crossmodel-review-skill-bidirectional.md:10 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../issues/closed/features/2026-08-23-choose-the-engine-for-a-new-chat.md:13 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- ../issues/closed/features/2026-10-20-at-include-lines-render-as-a-file-widget.md:12 (mention) — **Closed:** Implemented on worktree-card-reading. Include lines render as link, missing or not-viewable rows in AGENTS.m
 - ../issues/code-quality/2026-07-04-logging-consolidation.md:23 (mention) — Related: the noisy-output policy in the root AGENTS.md (routine-success
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:8 (mention) — it spawns an agent with a box cwd and box AGENTS.md context and checks
 - ../issues/code-quality/2026-08-08-extract-bbx-serve-from-the-box-cli.md:55 (mention) — `beebox/AGENTS.md`.
-- ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:11 (mention) — Doctests are this repository's default test form (`beebox/AGENTS.md`), and
+- ../issues/code-quality/2026-10-10-pre-commit-checks-read-the-working-tree.md:30 (mention) — turn-feedback/20261019T010859Z-implemented.md. Root `AGENTS.md` "Commit and
+- ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:49 (mention) — needs the boxholder's approval (root `AGENTS.md`).
 - ../issues/decisions/2026-08-25-issue-relationship-fields.md:41 (mention) — context, which lives in AGENTS.md/docs here. Not needed.
-- ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:14 (mention) — `AGENTS.md`. The engine updates before a box's migration runs, and the
-- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:30 (mention) — - **Decide which directories get their own AGENTS.md.** Candidates that
+- ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:16 (mention) — `AGENTS.md`. The engine updates before a box's migration runs, and the
+- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:32 (mention) — - **Decide which directories get their own AGENTS.md.** Candidates that
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:22 (mention) — AGENTS.md files) and spot-check their concrete claims against code —
 - ../issues/docs-and-chores/2026-07-07-box-docs-reference-node-modules.md:30 (mention) — them). The box's AGENTS.md already `@`-includes the agent guide by path
 - ../issues/docs-and-chores/2026-08-12-work-summary-for-the-boxholder.md:62 (mention) — - **Root `AGENTS.md`** — a general expectation on every agent, at the cost of
 - ../issues/docs-and-chores/2026-09-16-remove-claude-isms-from-repo-docs.md:43 (mention) — 1. **Sweep.** Rewrite hits in present-tense reference docs, AGENTS.md files,
 - ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md:35 (mention) — - **Always referenced, from the same directory.** The `AGENTS.md` in the
 - ../issues/docs-and-chores/2026-10-09-codex-launch-overrides-force-embedded-mode.md:34 (mention) — AGENTS.md.
+- ../issues/docs-and-chores/2026-10-14-guidance-on-commit-count-per-landed-branch.md:14 (mention) — `AGENTS.md` says only "Commit verified work at good checkpoints without
 - ../issues/exploration/2026-03-04-claude-code-memory-concerns.md:15 (mention) — Durable project knowledge should go in repo files (AGENTS.md, docs/), not auto-memory.
 - ../issues/exploration/2026-05-28-before-you-build-this.md:12 (mention) — Convention to make it stick: a short rule in `AGENTS.md` ("before writing a new component / helper / schema, run `bbx re
 - ../issues/exploration/2026-05-28-doc-usage-mining.md:14 (mention) — - **High-read + outer-ring** → mis-classified by the rings. Should be promoted closer to always-loaded, or linked from a
@@ -376,7 +406,7 @@ Referenced by:
 - ../issues/exploration/2026-09-23-agent-over-centers-general-questions-on-the-box.md:18 (mention) — box AGENTS.md and agent guide describe the box in detail, and nothing tells the
 - ../issues/exploration/2026-09-25-diataxis-for-agent-facing-docs.md:62 (mention) — and AGENTS.md files.
 - ../issues/exploration/2026-09-30-codeword-for-questions-the-agent-should-decide.md:27 (mention) — the root `AGENTS.md` asks for confirmation before hard-to-reverse or
-- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:21 (mention) — - `beebox/AGENTS.md` and `beebox/code-style.md`;
+- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:23 (mention) — - `beebox/AGENTS.md` and `beebox/code-style.md`;
 - ../issues/features/2026-05-28-retrospective-session-scan.md:9 (mention) — Closely related to the doc-usage miner: instead of mining transcripts for *what was read*, mine them for *what the user
 - ../issues/features/2026-06-20-context-size-measurement-legibility.md:14 (mention) — - **Compositional breakdown.** The most *actionable* and the most work: split the baseline into system prompt vs. agent-
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:16 (mention) — and what else to sweep. The knowledge is scattered across box AGENTS.md-equivalents,
@@ -385,17 +415,20 @@ Referenced by:
 - ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md:25 (mention) — Options: let the course's `AGENTS.md` or landmark name a first message the
 - ../issues/features/2026-10-09-citation-conventions-and-kept-copies-of-sources.md:60 (mention) — context (a landmark or course whose `AGENTS.md` says so, a research
 - ../issues/watch/2026-08-28-ws-upgrade-touches-worktree-activity.md:12 (mention) — upgrade. The router contract (root `AGENTS.md`, `bin/AGENTS.md`) says only HTTP
+- ../issues/watch/2026-10-18-pi-third-engine.md:16 (mention) — reads walk-up `AGENTS.md` (with `CLAUDE.md` fallback) and `.agents/skills`,
 - ../research/AGENTS.md:6 (mention) — ideas and validate or challenge our own bets. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this r
 - ../research/agentic-workflows-survey.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/backend-alternatives/2026-07-18-alt-harnesses.md:32 (mention) — 1 ✅ (permission.json, external_directory) · 2 ✅ (AGENTS.md, globbed instructions,
 - ../research/backend-alternatives/2026-07-18-sdk-coupling-audit.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/backend-alternatives/2026-07-18-synthesis.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/backend-alternatives/2026-08-25-oh-my-pi.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- ../research/backend-alternatives/2026-10-18-pi.md:9 (mention) — boxholder: is plain pi complete enough on its own, in particular "can pi read AGENTS.md
 - ../research/beads-vs-issues.md:9 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/claude-code-hooks-patterns.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/claude-elixir-phoenix/README.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/claude-elixir-phoenix/enforcement-and-hooks.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/external-skills-harvest.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
+- ../research/fabric-review.md:3 (link) — *Reviewed 2026-10-17 from public material only: fabric.so feature, guide, pricing, privacy, terms, connections and chang
 - ../research/gstack/README.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/gstack/notes/design-consultation.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
 - ../research/gstack/notes/design-shotgun.md:3 (mention) — > **Naming note (2026-10-09):** agent instruction files in this repository and in boxes were renamed from `CLAUDE.md` to
@@ -441,7 +474,8 @@ Referenced by:
 References:
 - → docs/architecture/spirit.md (link)
 - → docs/design/README.md (link)
-- → ../agent-doctest/docs/syntax.md (link)
+- → docs/implemented-plans/file-layout.md (link)
+- → docs/testing/check.md (link)
 - → docs/testing.md (link)
 - → docs/server/deploying.md (link)
 - → docs/cards/format.md (link)
@@ -476,8 +510,8 @@ References:
 Title: "Code Style" | 119 lines
 
 Referenced by:
-- AGENTS.md:55 (link) — - Follow [code-style.md](code-style.md). Preserve typed contracts and validate untrusted boundaries; do not add silent f
-- AGENTS.md:71 (at-include) — @code-style.md
+- AGENTS.md:56 (link) — - Follow [code-style.md](code-style.md). Preserve typed contracts and validate untrusted boundaries; do not add silent f
+- AGENTS.md:72 (at-include) — @code-style.md
 - docs/development/agent-coding.md:13 (mention) — files carry the working rules, `code-style.md` and `frontend.md` the coding
 - docs/development/agent-coding.md:32 (link) — behind each of these live in [code-style.md](../../code-style.md).
 - docs/engineering-principles.md:4 (link) — They sit above the mechanical rules: [`code-style.md`](../code-style.md) says
@@ -564,32 +598,38 @@ Referenced by:
 - docs/implemented-plans/websocket-chat-transport.md:81 (mention) — - `beebox/code-style.md:` no `any`, no default params, max 2 positional
 - docs/implemented-plans/workstream-launch-liveness.md:36 (mention) — - `beebox/code-style.md:30` says, *"Never silently ignore errors"*. A
 - docs/plans/agent-docs.md:398 (mention) — (`beebox/AGENTS.md`, `code-style.md`, `frontend.md`), which are the most
-- docs/plans/agent-points-at-ui.md:64 (mention) — - `beebox/code-style.md` — no default parameters, max two positional
-- docs/plans/android-companion-app.md:33 (mention) — - `code-style.md`: the box side of Track 0 (TypeScript) follows the usual
-- docs/plans/asset-annex.md:82 (mention) — - `beebox/code-style.md` — no `any`, max 2 positional params,
-- docs/plans/asset-offbox-storage.md:88 (mention) — - `code-style.md` — no `any`, max 2 positional params, `Result<T,E>`
-- docs/plans/box-commentary-surface.md:98 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional
-- docs/plans/chat-photo-batch-upload.md:55 (link) — - [`code-style.md`](../../code-style.md) — no default parameters, max 2
-- docs/plans/chat-session-delete.md:75 (mention) — - **`code-style.md`:** exceptions carry causal detail for infrastructure
-- docs/plans/document-comments.md:78 (mention) — - `beebox/code-style.md` — the mechanical rules (max 2 positional
-- docs/plans/email-tracking.md:43 (mention) — - `beebox/code-style.md` requires validated boundary data, explicit errors, typed results where callers branch, and no s
-- docs/plans/invite-links-and-password-change.md:54 (mention) — - `code-style.md:24-51`: use typed failures, minimal catches, and the shared
-- docs/plans/ios-companion-app.md:30 (mention) — - `beebox/code-style.md` — standard mechanical rules for the box-side TS.
-- docs/plans/ios-input-plane-parity.md:34 (mention) — - `code-style.md`: TypeScript uses validated `unknown` boundaries, exhaustive
-- docs/plans/ios-native-capture-mode.md:27 (mention) — - `code-style.md`: standard TypeScript validation, Result/error, exhaustiveness,
-- docs/plans/operator-member-password-reset.md:97 (mention) — - **Failure visibility.** `code-style.md:67-69` requires every non-rethrowing
-- docs/plans/prompt-surface-cleanup-evaluation.md:379 (mention) — - **`beebox/code-style.md`** — no default params, ≤2 positional params, no
-- docs/plans/scan-guide-card.md:31 (mention) — - `beebox/code-style.md`: no default parameters, max 2 positional
-- docs/plans/scan-vision-claude.md:36 (mention) — - `beebox/code-style.md` — custom error classes; fail-closed
-- docs/plans/source-available-release.md:50 (mention) — - `beebox/code-style.md` — style rules for any code touched by deploy
-- docs/plans/workstreams-app.md:59 (mention) — - `beebox/AGENTS.md` and `beebox/code-style.md` remain the coding,
+- docs/plans/agent-points-at-ui.md:66 (mention) — - `beebox/code-style.md` — no default parameters, max two positional
+- docs/plans/android-companion-app.md:35 (mention) — - `code-style.md`: the box side of Track 0 (TypeScript) follows the usual
+- docs/plans/asset-annex.md:84 (mention) — - `beebox/code-style.md` — no `any`, max 2 positional params,
+- docs/plans/asset-offbox-storage.md:90 (mention) — - `code-style.md` — no `any`, max 2 positional params, `Result<T,E>`
+- docs/plans/box-commentary-surface.md:100 (mention) — - `beebox/code-style.md` — no default parameters, max 2 positional
+- docs/plans/chat-photo-batch-upload.md:57 (link) — - [`code-style.md`](../../code-style.md) — no default parameters, max 2
+- docs/plans/chat-session-delete.md:77 (mention) — - **`code-style.md`:** exceptions carry causal detail for infrastructure
+- docs/plans/document-comments.md:80 (mention) — - `beebox/code-style.md` — the mechanical rules (max 2 positional
+- docs/plans/email-tracking.md:45 (mention) — - `beebox/code-style.md` requires validated boundary data, explicit errors, typed results where callers branch, and no s
+- docs/plans/invite-links-and-password-change.md:56 (mention) — - `code-style.md:24-51`: use typed failures, minimal catches, and the shared
+- docs/plans/ios-companion-app.md:32 (mention) — - `beebox/code-style.md` — standard mechanical rules for the box-side TS.
+- docs/plans/ios-input-plane-parity.md:36 (mention) — - `code-style.md`: TypeScript uses validated `unknown` boundaries, exhaustive
+- docs/plans/ios-native-capture-mode.md:29 (mention) — - `code-style.md`: standard TypeScript validation, Result/error, exhaustiveness,
+- docs/plans/operator-member-password-reset.md:99 (mention) — - **Failure visibility.** `code-style.md:67-69` requires every non-rethrowing
+- docs/plans/prompt-surface-cleanup-evaluation.md:381 (mention) — - **`beebox/code-style.md`** — no default params, ≤2 positional params, no
+- docs/plans/scan-guide-card.md:33 (mention) — - `beebox/code-style.md`: no default parameters, max 2 positional
+- docs/plans/scan-vision-claude.md:38 (mention) — - `beebox/code-style.md` — custom error classes; fail-closed
+- docs/plans/source-available-release.md:52 (mention) — - `beebox/code-style.md` — style rules for any code touched by deploy
+- docs/plans/workstreams-app.md:61 (mention) — - `beebox/AGENTS.md` and `beebox/code-style.md` remain the coding,
 - docs/unimplemented-plans/publish-pages-superseded.md:32 (mention) — - `beebox/code-style.md` — mechanical rules for all box-side TS and the Worker package.
 - docs/unimplemented-plans/query-cards.md:40 (mention) — - `beebox/code-style.md` — strict types, no `any`, custom errors,
 - frontend.md:3 (mention) — UI palette, primitives, data wiring, addressable ids, and the `className` rule. Backend code never needs to load this; c
-- ../.claude/skills/bbx-plan/TEMPLATE.md:39 (mention) — - beebox/code-style.md — the mechanical rules
+- ../.claude/skills/bbx-plan/TEMPLATE.md:40 (mention) — - beebox/code-style.md — the mechanical rules
+- ../dev/devprocess-talk/inventory.md:217 (mention) — - **Where:** `beebox/AGENTS.md` (71 lines; named CLAUDE.md until 2026-10-09) plus an `@`-import of `beebox/code-style.md
+- ../dev/devprocess-talk/reports/sweep-instructions.md:18 (mention) — - It still `@`-imports `code-style.md` (118 lines), so the loaded total is ~189 lines (`wc -l beebox/code-style.md`).
+- ../dev/devprocess-talk/reports/sweep-instructions.md:63 (at-include) — - **One line:** `beebox/CLAUDE.md` ends with `@code-style.md`, so the coding contract loads with the package file but is
+- ../dev/devprocess-talk/slides/04b-meta-instruction.md:16 (mention) — CLAUDE.md for an area, code-style.md or frontend.md for coding contracts, and
+- ../dev/devprocess-talk/slides/06d-no-disable-rule.md:8 (mention) — rule in the preset is a deliberate choice, and several restate code-style.md.
+- ../dev/devprocess-talk/slides/15a-false-starts-table.md:14 (mention) — | bbx-codehealth | Jul 4 | Oct 7 | "promoted index.ts barrels against code-style.md"; its probes already ran weekly |
 - ../dev/skills-review-2026-10.md:45 (mention) — 1. **bbx-codehealth contradicts a boxholder decision.** Lines 27-35, 154 and 204 call an `index.ts` re-export surface "t
-- ../issues/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md:67 (mention) — Related: code-style.md defensiveness rule 5 is this exact rule at the UI layer
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:94 (mention) — standing `code-style.md`/CLAUDE.md decision ("don't roll your own with
+- ../issues/closed/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md:81 (mention) — Related: code-style.md defensiveness rule 5 is this exact rule at the UI layer
 - ../issues/closed/code-quality/2026-07-04-knip-exports-enforcement.md:35 (mention) — per the no-barrels decision. `code-style.md` now states that a missing `export`
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:18 (mention) — helpers. See `code-style.md`'s "Type Checking and Linting" section for the
 - ../issues/closed/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:38 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
@@ -603,9 +643,9 @@ Referenced by:
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:17 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/code-quality/2026-09-14-principles-to-rules-loop.md:29 (mention) — mechanical rules — its own words, *"`code-style.md` says how to write a line,
 - ../issues/code-quality/2026-09-14-what-can-we-remove-sweep.md:39 (mention) — - **`code-style.md`'s defensiveness rules** and principle 6 already say what
-- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
+- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:12 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:27 (mention) — >   line in `code-style.md`, or both; not whether to adopt the idea.
-- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:21 (mention) — - `beebox/AGENTS.md` and `beebox/code-style.md`;
+- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:23 (mention) — - `beebox/AGENTS.md` and `beebox/code-style.md`;
 - ../research/external-skills-harvest.md:17 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
@@ -617,10 +657,10 @@ References:
 
 #### frontend.md
 
-Title: "Frontend Conventions" | 234 lines
+Title: "Frontend Conventions" | 245 lines
 
 Referenced by:
-- AGENTS.md:42 (link) — - React UI: `src/frontend/`; read [frontend.md](frontend.md) before UI work. It owns primitives, semantic colors, source
+- AGENTS.md:43 (link) — - React UI: `src/frontend/`; read [frontend.md](frontend.md) before UI work. It owns primitives, semantic colors, source
 - code-style.md:3 (mention) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
 - docs/development/agent-coding.md:13 (mention) — files carry the working rules, `code-style.md` and `frontend.md` the coding
 - docs/implemented-plans/architectural-review.md:600 (mention) — gray→warm, `DebugLog.tsx:145`) and amend frontend.md's capture-surface
@@ -637,27 +677,32 @@ Referenced by:
 - docs/implemented-plans/responsive-figures.md:43 (mention) — writing"; frontend rules via frontend.md (`className` conventions).
 - docs/implemented-plans/selection-commentary.md:112 (mention) — semantic palette.** Read frontend.md before writing UI."* The pill and
 - docs/implemented-plans/stack-and-text-roles.md:39 (mention) — | Docs (`beebox/frontend.md`) | ~30, reported separately |
+- docs/implemented-plans/theme-authoring-studio.md:128 (mention) — and a pointer in frontend.md, so no context or skill audit is needed.
 - docs/implemented-plans/top-nav-ia.md:120 (mention) — palette. Read frontend.md before writing UI"; components own their
 - docs/implemented-plans/user-location.md:72 (mention) — - `beebox/frontend.md` — UI primitives + the `className`-only-for-
 - docs/plans/agent-docs.md:398 (mention) — (`beebox/AGENTS.md`, `code-style.md`, `frontend.md`), which are the most
-- docs/plans/agent-points-at-ui.md:66 (mention) — - `beebox/frontend.md` — primitives own appearance, `className` is
-- docs/plans/chat-session-delete.md:78 (mention) — - **`frontend.md`:** destructive appearance uses the semantic `danger` role,
-- docs/plans/invite-links-and-password-change.md:59 (mention) — - `frontend.md:32-85`: use existing primitives and cover loading, errors,
-- docs/plans/narration-mode.md:197 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
-- docs/plans/operator-member-password-reset.md:101 (mention) — - **Frontend primitives.** `frontend.md:32-43` requires existing `Button`,
-- docs/plans/publish-sites-admin.md:163 (mention) — **Direction:** The starter is a conventional site-local React/Tailwind project with pinned own dependencies and its own
-- frontend.md:219 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
-- ../issues/bugs/2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md:138 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
+- docs/plans/agent-points-at-ui.md:68 (mention) — - `beebox/frontend.md` — primitives own appearance, `className` is
+- docs/plans/chat-session-delete.md:80 (mention) — - **`frontend.md`:** destructive appearance uses the semantic `danger` role,
+- docs/plans/invite-links-and-password-change.md:61 (mention) — - `frontend.md:32-85`: use existing primitives and cover loading, errors,
+- docs/plans/narration-mode.md:199 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
+- docs/plans/operator-member-password-reset.md:103 (mention) — - **Frontend primitives.** `frontend.md:32-43` requires existing `Button`,
+- docs/plans/publish-sites-admin.md:165 (mention) — **Direction:** The starter is a conventional site-local React/Tailwind project with pinned own dependencies and its own
+- frontend.md:227 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
+- ../dev/devprocess-talk/inventory.md:821 (mention) — | Craft skills bbx-debug, bbx-frontend, bbx-guide-testing | 2026-06-20 | 2026-10-07 19e261eb9 | "Current models debug an
+- ../dev/devprocess-talk/reports/sweep-instructions.md:25 (mention) — - **Appeared:** 2026-03-06 bedf968cf "Rewrite CLAUDE.md for clarity and add self-improvement meta-instruction" (body: "A
+- ../dev/devprocess-talk/slides/04b-meta-instruction.md:16 (mention) — CLAUDE.md for an area, code-style.md or frontend.md for coding contracts, and
+- ../issues/bugs/2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md:140 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../issues/closed/bugs/2026-07-19-landmark-menu-overflows-mobile.md:72 (mention) — read `frontend.md` before reaching for utility classes.
 - ../issues/closed/bugs/2026-08-03-landmark-menu-items-too-tight-mobile.md:28 (mention) — (`restrict-component-classes`), not a wrapper — read `docs/frontend.md`. Verify on a
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:58 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/closed/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md:75 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../issues/closed/features/2026-08-10-card-view-context-menu-and-missing-card-state.md:96 (mention) — - Read `frontend.md` before building — `restrict-component-classes` applies, and
-- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
+- ../issues/code-quality/2026-10-13-component-reuse-review.md:13 (link) — ([frontend guidance](../../beebox/frontend.md#frontend-ui-primitives)). The
+- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:12 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
 - ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md:87 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
-- ../issues/exploration/2026-08-12-evaluate-impeccable-skill.md:46 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
+- ../issues/exploration/2026-08-12-evaluate-impeccable-skill.md:48 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../issues/exploration/2026-09-30-evaluate-incident-investigation-skill.md:75 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
-- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:22 (mention) — - the root `AGENTS.md`, nested `AGENTS.md` files, and `frontend.md`;
+- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:24 (mention) — - the root `AGENTS.md`, nested `AGENTS.md` files, and `frontend.md`;
 - ../research/external-skills-harvest.md:17 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 - ../research/openui/beebox-fit.md:115 (mention) — palette and primitive boundary (`beebox/frontend.md`) would have to wrap or
 
@@ -668,6 +713,7 @@ References:
 - → docs/client-debug-log.md (link)
 - → docs/testing/tours.md (link)
 - → frontend.md (mention)
+- → docs/theme-authoring.md (link)
 
 #### README.md
 
@@ -678,6 +724,7 @@ Referenced by:
 - docs/implemented-plans/acknowledgements-backfill.md:78 (mention) — | tracked `CLAUDE.md`, `AGENTS.md`, `README.md` files | all packages |
 - docs/implemented-plans/bbx-agent-surface.md:405 (mention) — command-line interface" and `README.md:5` says "the `bbx` CLI is the interface".
 - docs/implemented-plans/box-docs-in-package.md:93 (mention) — - `README.md`: an index, one line per doc: filename and a one-line "read this
+- docs/implemented-plans/box-shape-in-package-json.md:81 (mention) — `README.md:46`, `dev/lib/context-assembly/assembly.ts:119`.
 - docs/implemented-plans/boxes-as-packages-v2.md:501 (mention) — (a real converted v2 box); `README.md`, `docs/server/boxes.md`, and `deploy/README.md` are
 - docs/implemented-plans/cards-as-markdown-rfc.md:82 (mention) — - `README.md` — plain markdown, not a card
 - docs/implemented-plans/courseware-lesson-plan.md:19 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
@@ -685,16 +732,20 @@ Referenced by:
 - docs/implemented-plans/doctest-usability.md:543 (mention) — `README.md` "Custom serializers"). Run today's `matchWithWildcards` on that
 - docs/implemented-plans/plugins-slice-2.md:302 (mention) — (`bbx-recipe-body`, `bbx-recipe-step` counters), `README.md`. Core deletes
 - docs/implemented-plans/private-issues-shadow-repo.md:160 (mention) — `.gitkeep`; `README.md` (loud "separate repo" note, one-way link rule,
+- docs/implemented-plans/purge-agent-doctest.md:65 (mention) — `beebox/src/dev/doc-check/file-paths.ts:27`; `AGENTS.md`, `README.md`,
 - docs/implemented-plans/refresh-maps-correctness.md:193 (mention) — - Every child that is an anchor file (`README.md`, `*.briefing.card`,
 - docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
+- docs/implemented-plans/retire-doctest.md:1056 (mention) — `CONTRIBUTING.md:28,56`, and `README.md:48`.
 - docs/implemented-plans/workstreams.md:758 (mention) — — `README.md` and `*.review.md` are exempt (reviews are artifacts about
 - docs/server/boxes.md:32 (link) — see the root [`README.md`](../../README.md) for that path. This doc is about
 - docs/testing/knowledge-audits.md:73 (mention) — - **Referenced but not loaded** → *knows about*: engine reference docs in `node_modules/beebox/box-docs/*.md` (full card
 - docs/user-stories/catalog/2026-08-21.md:2640 (mention) — **Code check** — lib/markdoc-parse.ts constructs `new Tokenizer({ linkify: true })` and then sets fuzzyLink:false (plus
 - src/core/agent-guide/guide.md:140 (mention) — `node_modules/beebox/box-docs/`; its `README.md` has one line per doc saying
 - ../.claude/skills/security-report/SKILL.md:274 (mention) — `beebox/README.md` keeps a short "What leaves your machine" section
+- ../dev/devprocess-talk/slides/index.md:3 (link) — Draft deck for the development-practice talk; one file per slide. Main slides are numbered, supporting slides carry a le
 - ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:17 (mention) — **Place chats are skipped.** A place chat writes to a different transcript directory (for example `…--content-inventory`
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:125 (mention) — - `README.md:3` — "the `bbx` CLI is the interface"
+- ../issues/closed/code-quality/2026-09-12-vibe-check-installs-circular-check-that-counts-type-imports.md:11 (mention) — **Closed 2026-10-17:** fixed on the bug-burndown-2 branch ("vibe-init writes a .madgerc that skips type imports"). `vibe
 - ../issues/closed/decisions/2026-08-19-bee-box-rename.md:27 (mention) — moved to Discord, and `README.md` links the Bee Box server there.
 - ../issues/closed/docs-and-chores/2026-07-21-community-forum-zulip.md:22 (mention) — the root `README.md` under Community. This is a small **findability** chore, not a
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:83 (mention) — root `CLAUDE.md`, so nothing moved into `CLAUDE.md`. The root `README.md`
@@ -723,6 +774,7 @@ Referenced by:
 - ../research/openui/beebox-fit.md:7 (link) — [README](README.md) carries the disposition table; this note is the reasoning.
 - ../research/openui/beebox-surfaces.md:4 (link) — this date; see [README](README.md) for the comparison and dispositions.
 - ../research/pai/telos.md:7 (mention) — - `$PAI/PAI/USER/TELOS/` — nine source files + `README.md` + generated summary + `CURRENT_STATE/`/`IDEAL_STATE/` dirs
+- ../research/web-search-fetch/oss-fetch-and-feeds.md:3 (link) — Context: a box agent keeps a per-box list of sources to re-check on each pass (a pottery-scene box: potters' own event p
 
 References:
 - → docs/implemented-plans/boxes-as-packages-v2.md (link)
@@ -770,18 +822,18 @@ Referenced by:
 - docs/implemented-plans/tailscale-expose-and-protect.md:104 (mention) — `bbx hub` on the live server (hand-migrated; `deploy/README.md:85` records
 - docs/implemented-plans/web-push-notifications.md:192 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/implemented-plans/webapp-production-mode.md:236 (mention) — `deploy/README.md` to document the temporary unit override plus the durable
-- docs/plans/codex-session-startup-auth.md:35 (mention) — - `deploy/README.md:329-339` documents service-account Claude subscription login. Add the parallel Codex operator proced
-- docs/plans/container-first.md:136 (mention) — device flow (`deploy/README.md:417-419`) works in-container today. Missing:
-- docs/plans/installation-story.md:285 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
-- docs/plans/migration-reliability.md:760 (link) — and the [deployment guide](../../deploy/README.md).
-- docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
-- docs/security-report.md:389 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
+- docs/plans/codex-session-startup-auth.md:37 (mention) — - `deploy/README.md:329-339` documents service-account Claude subscription login. Add the parallel Codex operator proced
+- docs/plans/container-first.md:138 (mention) — device flow (`deploy/README.md:417-419`) works in-container today. Missing:
+- docs/plans/installation-story.md:287 (mention) — enumeration is `deploy/README.md` prose, which wrongly lists
+- docs/plans/migration-reliability.md:762 (link) — and the [deployment guide](../../deploy/README.md).
+- docs/plans/operator-member-password-reset.md:491 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
+- docs/security-report.md:405 (mention) — | Deploy drift | `setup-server.sh` (nginx/systemd) is not re-run by `deploy.sh` | gap | low | — | Infra changes require
 - docs/server.md:7 (link) — in `beebox/deploy/` ([map](../deploy/README.md)); nothing there runs until a
 - docs/user-stories/catalog/2026-08-21.md:4618 (mention) — **Code check** — NotificationsSection.tsx (rendered from src/frontend/src/pages/AdminPage.tsx line 44) runs detectSuppor
 - ../AGENTS.md:73 (link) — When the human asks to finish or land work, use [finish](.claude/skills/finish/SKILL.md). Auto-deploy runs only on `main
 - ../bin/AGENTS.md:187 (link) — [deploy README](../beebox/deploy/README.md#checking-deploy-state).
 - ../issues/bugs/2026-07-18-canvas-loop-figure-post-merge-followup.md:87 (mention) — succeeded via `deploy/README.md`'s health runbook).
-- ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:38 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
+- ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:40 (mention) — the box. `deploy/README.md:119-126` documents this as a known gap and says to
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:43 (mention) — (`beebox/deploy/README.md:91-101`, `:243-248`). The hub copies
 - ../issues/closed/code-quality/2026-04-11-switch-deploy-rsync-to-git-push.md:18 (mention) — once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
 - ../issues/code-quality/2026-08-07-deploy-infra-drift-setup-server-not-rerun.md:12 (mention) — (`deploy/README.md` documents this as a known gap). So a change to the
@@ -803,7 +855,8 @@ References:
 Title: "Docker packaging" | 31 lines
 
 Referenced by:
-- docs/plans/container-first.md:589 (mention) — `bbx serve /data/box/content` (`docker/README.md:11`). The root
+- docs/implemented-plans/portable-engine-dependency.md:163 (mention) — `docs/box-layout.md` (dependency and repair), `docker/README.md`.
+- docs/plans/container-first.md:591 (mention) — `bbx serve /data/box/content` (`docker/README.md:11`). The root
 
 References:
 - → docs/install/docker.md (link)
@@ -816,13 +869,13 @@ References:
 Title: "Adding API Endpoints" | 250 lines | current reference
 
 Referenced by:
-- AGENTS.md:41 (link) — - HTTP and tRPC: `src/webapp/`; use the [API guide](docs/adding-api-endpoints.md). tRPC is the default, including WebSoc
+- AGENTS.md:42 (link) — - HTTP and tRPC: `src/webapp/`; use the [API guide](docs/adding-api-endpoints.md). tRPC is the default, including WebSoc
 - docs/guides.md:31 (link) — | Adding an API endpoint (tRPC by default) | [adding-api-endpoints](adding-api-endpoints.md) |
 - docs/implemented-plans/docs-reorg.gap-analysis.md:166 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
 - docs/implemented-plans/docs-reorg.md:151 (mention) — - **Skill-promotion candidates**: `adding-api-endpoints.md` (tRPC-vs-REST
-- docs/plans/chat-search.md:216 (mention) — (`docs/adding-api-endpoints.md`); chat search is chat-domain, not
-- docs/plans/ios-native-capture-mode.md:30 (mention) — - `docs/adding-api-endpoints.md`: capture uploads remain raw Fastify because
-- docs/plans/search-card.md:97 (mention) — point. `beebox/docs/adding-api-endpoints.md` specifies tRPC for normal read
+- docs/plans/chat-search.md:218 (mention) — (`docs/adding-api-endpoints.md`); chat search is chat-domain, not
+- docs/plans/ios-native-capture-mode.md:32 (mention) — - `docs/adding-api-endpoints.md`: capture uploads remain raw Fastify because
+- docs/plans/search-card.md:99 (mention) — point. `beebox/docs/adding-api-endpoints.md` specifies tRPC for normal read
 - ../.claude/skills/bbx-guide-api/SKILL.md:9 (mention) — checklist lives in `beebox/docs/adding-api-endpoints.md` — follow
 - ../issues/closed/docs-and-chores/2026-07-30-skill-description-triggering-conditions.md:32 (mention) — > checklist in docs/adding-api-endpoints.md.
 - ../research/claude-elixir-phoenix/authoring-craft.md:28 (mention) — > checklist in docs/adding-api-endpoints.md.
@@ -845,6 +898,7 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:14 (mention) — The always-loaded agent guide (`.beebox/agent-guide.md`, rendered from
 - docs/implemented-plans/box-docs-in-package.md:31 (mention) — | `.beebox/agent-guide.md` | engine text plus the box's procedures, personality, shape | partly |
 - docs/implemented-plans/box-search.md:115 (mention) — `.beebox/agent-guide.md` (always loaded) and per-type
+- docs/implemented-plans/card-reading.md:81 (mention) — `.beebox/agent-guide.md`) reads "includes .beebox/agent-guide.md (not
 - docs/implemented-plans/doc-structure-box-guidance.md:261 (mention) — | `.beebox/agent-guide.md` (11,081 words) | always | generated | `agent-guide/index.ts` | yes | no (ignored) |
 - docs/implemented-plans/user-location.md:128 (mention) — `.beebox/agent-guide.md`. Sections are **not** gated on box
 - docs/plans/agent-docs.md:415 (mention) — - The box-specific agent guide (`.beebox/agent-guide.md`) needs a box to
@@ -855,6 +909,8 @@ Referenced by:
 - src/core/agent-guide/guide.md:5 (mention) — comment and every rules comment. Spec: docs/agent-guide.md. Ledger: ledger.yaml.
 - test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md:137 (mention) — | 45 | Note 9: the briefing is readable and useful; "the boxholder" is a funny name for me. | P+ / P | The briefing open
 - test/user-stories/journeys/B-inventory/reports/2026-10-08.md:143 (mention) — | 42 | Note 4: the page says "the user confirmed"; the walker is "the user". | P | The box agent guide says to address t
+- ../dev/devprocess-talk/inventory.md:537 (mention) — - **Where:** `beebox/src/core/agent-guide/`, `pnpm lint:guide`, `beebox/docs/agent-guide.md`.
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:45 (mention) — - **Lives in:** `beebox/src/core/agent-guide/{guide.md,ledger.yaml,ledger-schema.ts,lint.ts,render.ts}`, `beebox/src/dev
 - ../issues/closed/bugs/2026-08-21-generated-agent-guide-sends-box-agents-to-config-schema.md:12 (mention) — **What is wrong.** Box-local card types are loaded only from the package root's `src/schemas/`. `schemas/registry.ts` re
 - ../issues/closed/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:23 (mention) — `.beebox/agent-guide.md:103`):
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:36 (mention) — the box's `CLAUDE.md`, `.beebox/agent-guide.md`, `_content/briefing.md` and
@@ -877,7 +933,7 @@ Title: "Box guidance" | 171 lines | current reference
 
 Referenced by:
 - docs/agent-guide.md:6 (link) — [box guidance](box-guidance.md); this page covers the guide itself.
-- docs/box-layout.md:60 (link) — `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
+- docs/box-layout.md:82 (link) — `.agents/`, `.codex/`) are guidance surfaces; [box guidance](box-guidance.md)
 - docs/box-work.md:7 (link) — [box guidance](box-guidance.md).
 - docs/guides.md:33 (link) — | Box guidance: the instruction files a box agent reads, and who writes each | [box-guidance](box-guidance.md) |
 - docs/implemented-plans/agent-guide-spec.md:515 (mention) — - The weekly review line added to `docs/box-guidance.md` in phase two, which
@@ -885,6 +941,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-box-guidance.md:647 (mention) — 4. **Where `docs/box-guidance.md` sits in the developer docs.** Lean: a new
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
 - docs/prompts/logging.md:131 (link) — nothing to enable. [Box guidance](../box-guidance.md) says which files carry
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:55 (mention) — - **Lives in:** `.claude/skills/bbx-context/SKILL.md`, `beebox/src/core/init-rules.ts`, `beebox/docs/box-guidance.md` (r
 - ../issues/closed/bugs/2026-09-26-maps-finalizer-shims-over-tracked-guides.md:55 (mention) — `beebox/docs/box-guidance.md`. Either way, `test/core/box-guidance-sync.doctest.md` (moved to `beebox/test/core/box/guid
 - ../issues/closed/code-quality/2026-09-26-generated-guidance-families-without-pruning.md:22 (mention) — (`beebox/docs/box-guidance.md`, "Generated files carry a marker"). Two
 
@@ -901,10 +958,10 @@ References:
 
 #### docs/box-layout.md
 
-Title: "Box Layout" | 295 lines | current reference
+Title: "Box Layout" | 326 lines | current reference
 
 Referenced by:
-- AGENTS.md:47 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
+- AGENTS.md:48 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
 - README.md:66 (link) — `AGENTS.md`; see [box layout](docs/box-layout.md) for the full vocabulary.
 - docs/box-work.md:6 (link) — [box layout](box-layout.md); what a box agent reads is in
 - docs/cards.md:17 (link) — - Where cards live on disk: [box layout](box-layout.md).
@@ -917,18 +974,22 @@ Referenced by:
 - docs/implemented-plans/box-docs-in-package.md:184 (mention) — 7. **Docs.** `docs/box-layout.md`, `docs/knowledge-taxonomy.md`,
 - docs/implemented-plans/box-growth-health-checks.md:454 (mention) — **What.** Extend `docs/server/health-checks.md` and `docs/box-layout.md` with the scan
 - docs/implemented-plans/box-retrospectives.md:422 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
+- docs/implemented-plans/box-shape-in-package-json.md:80 (mention) — - Readers the issue missed: `docs/box-layout.md:9,45,55,73,144,229`,
 - docs/implemented-plans/boxes-as-packages-v2.md:43 (mention) — - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
 - docs/implemented-plans/bulk-file-upload.md:117 (mention) — - **Landing-zone convention** — `docs/box-layout.md:88-91` (`tmp-capture/`
+- docs/implemented-plans/clerk-quick-send.md:471 (mention) — `docs/mobile-contract.md` §5.11, security report §3, `box-layout.md`).
 - docs/implemented-plans/design-reconciliation.md:597 (mention) — `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
 - docs/implemented-plans/doc-structure-box-guidance.md:172 (mention) — engine owns. `docs/box-layout.md:65-68` draws `CLAUDE.md`, `.claude/`,
 - docs/implemented-plans/doc-structure-cards.md:88 (mention) — `box-layout.md` (its own subject), `docs/box/` card docs (box-facing),
 - docs/implemented-plans/docs-reorg.gap-analysis.md:47 (mention) — `docs/box-layout.md`.
 - docs/implemented-plans/docs-reorg.md:91 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/implemented-plans/file-layout.md:812 (mention) — The box-side layout (`docs/box-layout.md`) is a separate contract and is not
+- docs/implemented-plans/front-door.md:224 (mention) — it; Raw does, and `bbx validate` already reports it (`box-layout.md`, "The
 - docs/implemented-plans/model-engine-policy.md:745 (mention) — `chat-models/<sessionId>.json` named in `docs/box-layout.md`. The plan itself
 - docs/implemented-plans/named-places.md:184 (mention) — but no `places`), keeping `docs/box-layout.md` and the box-shape agent guide
 - docs/implemented-plans/one-root-box-layout.md:140 (mention) — | Layout spec + drift-guarded doc tables | `src/lib/box-layout-spec.ts` (moved to `beebox/src/lib/paths/box-layout-spec.
 - docs/implemented-plans/plugins.md:102 (mention) — - `docs/box-layout.md:259`: *"No Bee Box application/server code"* in a box.
+- docs/implemented-plans/portable-engine-dependency.md:163 (mention) — `docs/box-layout.md` (dependency and repair), `docker/README.md`.
 - docs/implemented-plans/publication-card-home.md:166 (mention) — - `docs/publishing.md` section at line 156; `docs/box-layout.md:78,197,256,262`; `docs/box-guidance.md:43,46`; `docs/box
 - docs/implemented-plans/remove-box-shape-v1.md:79 (mention) — - **1e — Docs** (was Track 3): `box-layout.md`, `migrations.md`, `box-layout-spec`
 - docs/implemented-plans/secret-custody.md:36 (mention) — (`docs/box-layout.md:160`). Residual exposure is backups of the box
@@ -937,11 +998,11 @@ Referenced by:
 - docs/implemented-plans/web-push-notifications.md:67 (mention) — `web-push` card + connector (Track C). `docs/box-layout.md:57` already lists
 - docs/implemented-plans/web-push-notifications.review-codex.md:41 (mention) — for delivery (push notifications, replies)" (`docs/box-layout.md:57`), Telegram cards
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
-- docs/plans/installation-story.md:132 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
-- docs/plans/prompt-surface-cleanup-evaluation.md:150 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
+- docs/plans/installation-story.md:134 (mention) — (`docs/box-layout.md:194`), Telegram validate-then-persist
+- docs/plans/prompt-surface-cleanup-evaluation.md:152 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
 - docs/plans/public-site-box-authoring-export.md:68 (mention) — (`beebox/docs/cards/format.md:22-24`, `beebox/docs/box-layout.md:240-250`).
-- docs/plans/publish-sites-admin.md:165 (mention) — Add one optional box-owned plain-text notes file at shared `src/publications/NOTES.md`, scoped with readable `All sites`
-- docs/plans/source-available-release.md:66 (mention) — and documented at `beebox/docs/box-layout.md:194`. No credential values
+- docs/plans/publish-sites-admin.md:167 (mention) — Add one optional box-owned plain-text notes file at shared `src/publications/NOTES.md`, scoped with readable `All sites`
+- docs/plans/source-available-release.md:68 (mention) — and documented at `beebox/docs/box-layout.md:194`. No credential values
 - docs/server/boxes.md:17 (link) — [`docs/box-layout.md`](../box-layout.md) for the full shape. `bbx init <path>`
 - docs/user-stories/catalog/2026-06-26.md:4941 (mention) — The user story is accurately implemented across both claimed files. `beebox/src/cli/commands/init.ts` provides the CLI o
 - docs/user-stories/catalog/2026-08-21.md:7679 (mention) — Files: `beebox/src/lib/box-shape.ts`, `beebox/docs/box-layout.md`
@@ -959,6 +1020,7 @@ References:
 - → docs/agent-guide.md (mention)
 - → AGENTS.md (mention)
 - → docs/implemented-plans/one-root-box-layout.md (mention)
+- → docs/implemented-plans/portable-engine-dependency.md (mention)
 - → docs/box-guidance.md (link)
 - → docs/implemented-plans/capture-mode.md (mention)
 - → docs/implemented-plans/bulk-file-upload.md (mention)
@@ -969,20 +1031,23 @@ References:
 - → docs/client-debug-log.md (mention)
 - → docs/box/schemas.md (link)
 - → docs/plugins.md (link)
+- → docs/implemented-plans/front-door.md (mention)
 
 #### docs/box-work.md
 
 Title: "Box work from the dev repo" | 110 lines | current reference
 
 Referenced by:
-- AGENTS.md:47 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
+- AGENTS.md:48 (link) — Boxes live outside this repository. A box is one package and operational root with `shapeVersion: 3`; box code imports o
 - docs/guides.md:35 (link) — | Box work: running against the test box, throwaway boxes, and production from the dev repo | [box-work](box-work.md) |
 - docs/implemented-plans/remove-telegram.md:95 (mention) — - **Keep data, drop code** (`docs/box-work.md`, and the boxholder's standing
-- docs/testing.md:102 (link) — each lives and what not to touch: [box work](box-work.md).
-- docs/testing/knowledge-audits.md:121 (mention) — (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
+- docs/testing.md:104 (link) — each lives and what not to touch: [box work](box-work.md).
+- docs/testing/knowledge-audits.md:127 (mention) — (`.claude/skills/bbx-design/SKILL.md`, `beebox/docs/box-work.md`). The text
 - ../.claude/skills/box-work/SKILL.md:8 (mention) — Read `beebox/docs/box-work.md` for the task at hand. Three rules apply before anything runs:
 - ../AGENTS.md:20 (link) — Boxes live outside this repo at `~/src/boxes/` so they do not inherit dev-repo instructions. The primary test box is `~/
-- ../issues/bugs/2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md:25 (mention) — blocks the case `beebox/docs/box-work.md` names first ("the worktree's
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:39 (mention) — - **Lives in:** `bin/lib/worktree-create.sh`, `bin/workstreams reset-test`, root `CLAUDE.md`, `beebox/docs/box-work.md`,
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:59 (mention) — - **Lives in:** `beebox/docs/box-work.md:51-55`; boxholder memory note.
+- ../issues/closed/bugs/2026-10-09-knowledge-audit-refuses-fresh-worktree-box-clone.md:46 (mention) — blocks the case `beebox/docs/box-work.md` names first ("the worktree's
 
 References:
 - → docs/box-layout.md (link)
@@ -1042,16 +1107,17 @@ References:
 Title: "Client Debug Log" | 107 lines | current reference
 
 Referenced by:
-- AGENTS.md:59 (link) — - For frontend or iOS failures, inspect the box's `.beebox/client-debug.log`; `[ios]` identifies native entries. See the
-- docs/box-layout.md:229 (mention) — | `client-debug.log` | Browser console errors and tagged native iOS diagnostics. See `docs/client-debug-log.md`. |
+- AGENTS.md:60 (link) — - For frontend or iOS failures, inspect the box's `.beebox/client-debug.log`; `[ios]` identifies native entries. See the
+- docs/box-layout.md:254 (mention) — | `client-debug.log` | Browser console errors and tagged native iOS diagnostics. See `docs/client-debug-log.md`. |
 - docs/box-work.md:58 (mention) — log](client-debug-log.md)).
 - docs/guides.md:47 (link) — | Client debug log | [client-debug-log](client-debug-log.md) |
 - docs/implemented-plans/ios-log-forwarding.md:91 (mention) — - `docs/client-debug-log.md` — the doc to extend.
 - docs/implemented-plans/remove-bbx-render.md:555 (mention) — errors (`docs/client-debug-log.md`).
 - docs/server/operations.md:176 (link) — For SSH-only debugging: `ssh root@<server> tail /home/beebox/boxes/<box>/.beebox/client-debug.log`. See [`client-debug-l
-- docs/testing.md:93 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
-- frontend.md:135 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
+- docs/testing.md:95 (link) — - **The [client debug log](client-debug-log.md)**: browser console errors and
+- frontend.md:143 (link) — Check changed UI in a browser with the browse skill, including the console errors in the [client debug log](docs/client-
 - ../.claude/skills/bbx-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:152 (mention) — - **Lives in:** `.claude/skills/field-probe/SKILL.md`; house pattern `beebox/src/frontend/src/lib/scroll-diagnostics/dia
 - ../issues/closed/bugs/2026-08-20-cannot-switch-landmarks-from-chat.md:83 (mention) — entries land in the same sink tagged `[ios]` (`docs/client-debug-log.md`). If
 
 References:
@@ -1079,16 +1145,17 @@ Referenced by:
 - docs/implemented-plans/plugins-slice-3.review.md:49 (mention) — `box-docs/connectors.md`; the remaining drift risk is in Failure modes with
 - docs/implemented-plans/remove-telegram.md:158 (mention) — `docs/connectors.md`, `docs/notifications.md`, `docs/security-overview.md`,
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
-- docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
+- docs/plans/email-tracking.md:292 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
 - docs/prompts/lenses.md:66 (link) — convention: [freshness metadata](../connectors.md#freshness-metadata).
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:146 (mention) — - **Expected level: Discoverable** — the agent would need to look at `_config/connectors/` and/or `node_modules/beebox/b
 - docs/server/health-checks.md:204 (link) — The connector activity record (see [connectors.md](../connectors.md#activity-record))
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:27 (mention) — - **Filesystem is state.** `beebox/docs/connectors.md:8`: *"External service → Connector.sync() → Writes/reads card file
 - docs/user-stories/catalog/2026-08-21.md:6008 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
-- src/core/agent-guide/guide.md:550 (mention) — procedure step resolves one by name at call time (`connectors.md`,
+- src/core/agent-guide/guide.md:551 (mention) — procedure step resolves one by name at call time (`connectors.md`,
 - ../issues/closed/features/2026-04-27-gmail-sync-improvements.md:8 (mention) — **Closed:** Fully implemented: uncapped Gmail-id dedup checked before fetch, no date filters, incremental sync via the h
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:57 (mention) — > has 64 files and none in the USE genre — `connectors.md` explains the
 - ../issues/features/2026-10-08-cross-tool-todo-as-a-target-use-case.md:35 (mention) — the connector pattern (`beebox/docs/connectors.md`).
+- ../research/fabric-review.md:75 (mention) — - **Connectors cover more than copying.** Gmail, Calendar and Drive copy content into cards and commit it (`beebox/docs/
 - ../research/imbue-studio/comparison.md:197 (mention) — **What Bee Box has.** Connectors sync into cards and commit (`docs/connectors.md`);
 
 References:
@@ -1112,7 +1179,7 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:77 (mention) — Report-Only, as documented in `docs/content-security-policy.md:3-6`.
 - docs/plans/agent-docs.md:380 (mention) — `content-security-policy.md`, `adding-schemas.md`, `card-validation.md`,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- docs/security-report.md:363 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
+- docs/security-report.md:379 (link) — | CSP | `src/lib/csp.ts`, [content-security-policy.md](content-security-policy.md) | accepted | Single policy builder; F
 - docs/unimplemented-plans/publish-pages-superseded.md:46 (mention) — - **CSP machinery — precedent only; the Worker sets its own.** `src/lib/csp.ts` (`buildCspPolicy`) is the single source
 - src/dev/AGENTS.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:19 (mention) — > `src/webapp/auth.ts` (the trust-model comment) and `docs/content-security-policy.md`
@@ -1126,8 +1193,8 @@ Title: "Data Source Tagging Convention" | 89 lines | current reference
 
 Referenced by:
 - docs/guides.md:48 (link) — | Data-source tagging in the UI | [data-source-tagging](data-source-tagging.md) |
-- docs/plans/document-comments.md:380 (mention) — structured identifier"* (`beebox/docs/data-source-tagging.md:28`), and
-- docs/plans/general-browser.md:100 (mention) — | `data-bbx-source` provenance tagging | `beebox/src/frontend/src/lib/source-tag.ts:7`, `beebox/docs/data-source-tagging
+- docs/plans/document-comments.md:382 (mention) — structured identifier"* (`beebox/docs/data-source-tagging.md:28`), and
+- docs/plans/general-browser.md:102 (mention) — | `data-bbx-source` provenance tagging | `beebox/src/frontend/src/lib/source-tag.ts:7`, `beebox/docs/data-source-tagging
 - frontend.md:18 (mention) — UI elements that display data from a known source (card, commit, session, etc.) must be tagged with `data-cb-source` att
 - ../issues/features/2026-07-08-selection-provenance-canonical-anchors.md:11 (mention) — `docs/data-source-tagging.md`) and text-selection capture (`SelectionCapture.tsx` +
 - ../research/hoversource-review.md:13 (mention) — - **`data-bbx-source`** (`src/frontend/src/lib/source-tag.ts`, `docs/data-source-tagging.md`) tags rendered elements wit
@@ -1164,9 +1231,10 @@ Referenced by:
 - docs/implemented-plans/remove-bbx-render.md:361 (mention) — **Regenerated, not hand-edited:** `docs/doc-graph.md` (and
 - docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - docs/plans/agent-docs.md:71 (mention) — `doc-graph.md` mentions `private-issues`. `box-docs/` has two benign hits
-- docs/plans/source-available-release.md:438 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
+- docs/plans/source-available-release.md:440 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
 - docs/user-stories/catalog/2026-08-21.md:8711 (mention) — **Code check** — beebox/package.json defines both scripts: "doc-graph": tsx src/dev/doc-graph.ts > docs/doc-graph.md and
 - src/dev/AGENTS.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/development/
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:102 (mention) — - **Lives in:** `beebox/src/dev/doc-graph.ts`, `beebox/docs/doc-graph.md` (generated, tracked), `beebox/docs/doc-graph.h
 - ../issues/closed/code-quality/2026-10-10-append-only-and-generated-files-conflict-on-every-merge.md:17 (mention) — append. `doc-graph.md` is regenerated from the merged tree. The `union`
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:10 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts` (move
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:44 (mention) — - **Docs:** `beebox/docs/doc-graph.md` (regenerate it),
@@ -1177,7 +1245,7 @@ Referenced by:
 Title: "Engineering Principles" | 175 lines | current reference
 
 Referenced by:
-- AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
+- AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - code-style.md:3 (link) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
 - docs/guides.md:29 (link) — | Engineering principles | [engineering-principles](engineering-principles.md) |
 - docs/implemented-plans/agent-browsing-owner.md:32 (mention) — - `docs/engineering-principles.md` #8 *One way to do each thing* — identity is
@@ -1192,6 +1260,7 @@ Referenced by:
 - docs/implemented-plans/box-host-packages.md:73 (mention) — - **Principle 3, validate at boundaries** (`docs/engineering-principles.md:37`).
 - docs/implemented-plans/box-maintenance-no-wedge.md:61 (mention) — (`docs/engineering-principles.md:49`): the box degrades to "open with
 - docs/implemented-plans/box-root-paths.md:25 (mention) — - `docs/engineering-principles.md` — #3 validate-at-boundaries (refs are
+- docs/implemented-plans/box-shape-in-package-json.md:37 (mention) — `docs/engineering-principles.md` §8 (one way): two `BOX_MARKER` constants and
 - docs/implemented-plans/browser-task-card.md:63 (mention) — degradation is not"* allowed, `beebox/docs/engineering-principles.md:51`).
 - docs/implemented-plans/bulk-file-upload.md:30 (mention) — - `docs/engineering-principles.md` — chiefly **#1 types are structure** (a
 - docs/implemented-plans/canvas-loop-figure.md:20 (mention) — - `docs/engineering-principles.md`: #2 exhaustiveness (the runtime union
@@ -1211,10 +1280,12 @@ Referenced by:
 - docs/implemented-plans/delivered-user-message-codec.md:21 (mention) — - Engineering principle 1, Types are structure. `docs/engineering-principles.md:12-18` says: *"Prefer types that make il
 - docs/implemented-plans/doc-structure-development.md:44 (mention) — touch-triggered tools). `engineering-principles.md` and `module-map.md` are
 - docs/implemented-plans/doc-structure.md:60 (mention) — (`docs/engineering-principles.md`), and 8, *one way to do each thing*: this
+- docs/implemented-plans/drive-docs-api-health.md:52 (mention) — - `engineering-principles.md` §4, *"invisible degradation is not"* allowed: this is the reason for the work.
 - docs/implemented-plans/emission-model.md:102 (mention) — - `docs/engineering-principles.md` — resilient-not-silent (wedges must
 - docs/implemented-plans/exhibit-comments.md:66 (mention) — - `beebox/docs/engineering-principles.md` **8** (one way to do each thing):
 - docs/implemented-plans/expose-dev-router.md:27 (mention) — - `docs/engineering-principles.md` — **fail-closed / resilient-not-silent** is
 - docs/implemented-plans/file-layout.md:50 (mention) — (`docs/engineering-principles.md:87-93`): *"a cluster that encodes its
+- docs/implemented-plans/file-wordless-captures.md:104 (mention) — - `beebox/docs/engineering-principles.md`: reuse over new machinery. The plan adds no card type, no capture state and no
 - docs/implemented-plans/hq-dictation-switch.md:29 (mention) — `docs/engineering-principles.md` #8: no new attribute, no new registry —
 - docs/implemented-plans/hub-healthz-box-aggregation.md:32 (mention) — - **Principle 1, types are structure** (`docs/engineering-principles.md:12`):
 - docs/implemented-plans/ios-audio-session-routing.md:34 (mention) — - `beebox/docs/engineering-principles.md:49` — **4. Resilient AND never
@@ -1231,8 +1302,9 @@ Referenced by:
 - docs/implemented-plans/notifications.md:132 (mention) — - **Resilient and never silent** (`docs/engineering-principles.md:49`). An
 - docs/implemented-plans/on-demand-image-thumbnails.md:21 (mention) — - Principle 3 requires HTTP query input to be validated once at the boundary: `docs/engineering-principles.md:37`: *"Val
 - docs/implemented-plans/one-root-box-layout.md:113 (mention) — boundaries)** — `docs/engineering-principles.md:12,37`: the box path
-- docs/implemented-plans/openrouter-chat-models.md:402 (mention) — (`beebox/docs/engineering-principles.md`, validate at the boundary).
+- docs/implemented-plans/openrouter-chat-models.md:404 (mention) — (`beebox/docs/engineering-principles.md`, validate at the boundary).
 - docs/implemented-plans/plugins-slice-3.md:126 (mention) — (`docs/engineering-principles.md:87`): the plugins plan chose the stub
+- docs/implemented-plans/portable-engine-dependency.md:32 (mention) — `docs/engineering-principles.md` §4 (never silent): a missing link is named by
 - docs/implemented-plans/publication-card-home.md:36 (mention) — - **Consolidate over blast-radius fear** (`beebox/docs/engineering-principles.md`, principle 8, quoted in the earlier pl
 - docs/implemented-plans/questions-end-to-end.md:64 (mention) — - `docs/engineering-principles.md` — findings trace to: **1** (types are
 - docs/implemented-plans/refresh-maps-convergence.md:67 (link) — - **[`docs/engineering-principles.md`](../engineering-principles.md) #4
@@ -1243,6 +1315,7 @@ Referenced by:
 - docs/implemented-plans/remove-telegram.md:87 (mention) — (`docs/engineering-principles.md:87`), and the file-layout rule that
 - docs/implemented-plans/resilient-voice-recording.md:119 (mention) — - `docs/engineering-principles.md`:
 - docs/implemented-plans/responsive-figures.md:34 (mention) — - `docs/engineering-principles.md` — **#6 Right-sized defensiveness** (the
+- docs/implemented-plans/retire-doctest.md:94 (mention) — - **Principle 8, "One way to do each thing"** (`beebox/docs/engineering-principles.md:95`).
 - docs/implemented-plans/retire-type-specific-core-tags.md:65 (mention) — Source plus tests about 830 changed lines. Authored docs and instructions about 120 lines (schema instruction strings, `
 - docs/implemented-plans/retranscription-in-chat.md:30 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: two precise
 - docs/implemented-plans/router-transient-failure-resilience.md:62 (mention) — - **Principle 4 — resilient AND never silent** (`beebox/docs/engineering-principles.md:49`):
@@ -1250,6 +1323,7 @@ Referenced by:
 - docs/implemented-plans/scan-uploader-version-drift.md:100 (mention) — **Principle 4 — resilient AND never silent** (`docs/engineering-principles.md:49`):
 - docs/implemented-plans/scanner-ingest.md:33 (mention) — - `docs/engineering-principles.md` — findings trace to: **#3
 - docs/implemented-plans/scheduled-workstreams.md:41 (mention) — - `beebox/docs/engineering-principles.md:37` — *3. Validate at
+- docs/implemented-plans/search-section-destination.md:78 (mention) — - `docs/engineering-principles.md` §8, *"One way to do each thing"*: one
 - docs/implemented-plans/secret-custody.md:148 (mention) — - `docs/engineering-principles.md` — validate-at-boundaries (grant checks at
 - docs/implemented-plans/secret-entry-guidance.md:39 (mention) — (`docs/engineering-principles.md:151`): *"An affordance may display only what
 - docs/implemented-plans/see-as-the-user.md:28 (mention) — - `beebox/docs/engineering-principles.md` — traced by number below.
@@ -1259,55 +1333,56 @@ Referenced by:
 - docs/implemented-plans/top-nav-ia.md:117 (mention) — - `beebox/docs/engineering-principles.md` — reuse-over-rebuild,
 - docs/implemented-plans/transcript-confidence.md:68 (mention) — - `docs/engineering-principles.md` — #1 (types are structure: confidence rides
 - docs/implemented-plans/tts-streamed-playback.md:73 (mention) — (`docs/engineering-principles.md:49`). Streaming moves the moment of failure
+- docs/implemented-plans/typescript-7.md:63 (mention) — - `beebox/docs/engineering-principles.md` §8 "One way to do each thing": every
 - docs/implemented-plans/webapp-production-mode.md:31 (mention) — - `docs/engineering-principles.md:37-44`: environment variables are validated
 - docs/implemented-plans/workstream-exhibits.md:97 (mention) — - Principle 3, **validate at boundaries** (`docs/engineering-principles.md:37`):
 - docs/implemented-plans/workstream-launch-liveness.md:18 (mention) — `beebox/docs/engineering-principles.md:51` says, *"invisible
 - docs/implemented-plans/workstream-routing.md:39 (mention) — (`beebox/docs/engineering-principles.md:49`): *"Degradation is allowed
 - docs/implemented-plans/workstreams.md:61 (mention) — - `docs/engineering-principles.md` §4 (resilient AND never silent — the
-- docs/plans/agent-points-at-ui.md:43 (mention) — - `docs/engineering-principles.md`
-- docs/plans/android-companion-app.md:22 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
-- docs/plans/asset-annex.md:74 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent),
-- docs/plans/asset-offbox-storage.md:79 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent —
-- docs/plans/change-based-test-selection.md:70 (mention) — - `docs/engineering-principles.md` **#4 — "Resilient AND never silent."** The
-- docs/plans/change-based-test-selection.review.md:153 (mention) — > The real test runner is Tap plus `.taprc` node args, includes, excludes, and the doctest loader (`beebox/.taprc:7-14`)
-- docs/plans/chat-everywhere.md:43 (link) — - Principles [1, 3, 4, 8, 9, 10, 13](../engineering-principles.md): typed navigation intent; validation at the native/ne
-- docs/plans/chat-photo-batch-upload.md:44 (link) — - [`docs/engineering-principles.md`](../engineering-principles.md) — chiefly
-- docs/plans/chat-session-delete.md:58 (mention) — - **`docs/engineering-principles.md`:**
-- docs/plans/clerk-tab-arrangements.md:65 (mention) — - Engineering principle 1, **Types are structure**, applies to transfer IDs, tab UUIDs, proposal states, and apply resul
-- docs/plans/container-first-pass2.review.md:216 (mention) — **Traces to preference:** `docs/engineering-principles.md` 3 (validate at
-- docs/plans/container-first.md:52 (mention) — - `docs/engineering-principles.md` 3 (validate at boundaries), 4 (resilient
-- docs/plans/container-first.review.md:89 (mention) — "**Read before writing**" and the `docs/engineering-principles.md` 4
-- docs/plans/document-comments.md:68 (mention) — - `beebox/docs/engineering-principles.md` — principles traced below by
-- docs/plans/general-browser.md:71 (mention) — - `beebox/docs/engineering-principles.md` — **3** (validate at
-- docs/plans/google-owner-member-credentials.md:23 (mention) — `docs/engineering-principles.md:14` says: *"Prefer types that make illegal
-- docs/plans/installation-story.md:43 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
-- docs/plans/interface-as-cards.md:60 (link) — [Engineering principles](../engineering-principles.md): §1 type structure,
-- docs/plans/interface-cards-consolidation.md:47 (link) — - [Engineering principles](../engineering-principles.md) §8, “One way to do
-- docs/plans/invite-links-and-password-change.md:36 (mention) — - `docs/engineering-principles.md:37-47`: validate disk, form, OAuth, and config
-- docs/plans/ios-app-intent-capture.md:70 (mention) — - `beebox/docs/engineering-principles.md` principle 4 (“Resilient AND never silent”) informs explicit failure dialogs an
-- docs/plans/ios-companion-app.md:23 (mention) — - `beebox/docs/engineering-principles.md` — the ones this plan leans on:
-- docs/plans/ios-input-plane-parity.md:17 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (draft items,
-- docs/plans/ios-native-capture-mode.md:17 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
-- docs/plans/ios-share-extension-capture.md:36 (mention) — - `docs/engineering-principles.md` principle 3, validate at boundaries. The extension validates provider values, and the
-- docs/plans/migration-reliability.md:72 (mention) — `beebox/docs/engineering-principles.md:51`: “Degradation is allowed for failures that can genuinely happen; invisible
-- docs/plans/operator-member-password-reset.md:50 (mention) — - **Principle 1, types are structure.** `docs/engineering-principles.md:12-21`
+- docs/plans/agent-points-at-ui.md:45 (mention) — - `docs/engineering-principles.md`
+- docs/plans/android-companion-app.md:24 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (bridge messages,
+- docs/plans/asset-annex.md:76 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent),
+- docs/plans/asset-offbox-storage.md:81 (mention) — - `docs/engineering-principles.md` **#4** (resilient AND never silent —
+- docs/plans/change-based-test-selection.md:74 (mention) — - `docs/engineering-principles.md` **#4 — "Resilient AND never silent."** The
+- docs/plans/change-based-test-selection.review.md:155 (mention) — > The real test runner is Tap plus `.taprc` node args, includes, excludes, and the doctest loader (`beebox/.taprc:7-14`)
+- docs/plans/chat-everywhere.md:45 (link) — - Principles [1, 3, 4, 8, 9, 10, 13](../engineering-principles.md): typed navigation intent; validation at the native/ne
+- docs/plans/chat-photo-batch-upload.md:46 (link) — - [`docs/engineering-principles.md`](../engineering-principles.md) — chiefly
+- docs/plans/chat-session-delete.md:60 (mention) — - **`docs/engineering-principles.md`:**
+- docs/plans/clerk-tab-arrangements.md:67 (mention) — - Engineering principle 1, **Types are structure**, applies to transfer IDs, tab UUIDs, proposal states, and apply resul
+- docs/plans/container-first-pass2.review.md:218 (mention) — **Traces to preference:** `docs/engineering-principles.md` 3 (validate at
+- docs/plans/container-first.md:54 (mention) — - `docs/engineering-principles.md` 3 (validate at boundaries), 4 (resilient
+- docs/plans/container-first.review.md:91 (mention) — "**Read before writing**" and the `docs/engineering-principles.md` 4
+- docs/plans/document-comments.md:70 (mention) — - `beebox/docs/engineering-principles.md` — principles traced below by
+- docs/plans/general-browser.md:73 (mention) — - `beebox/docs/engineering-principles.md` — **3** (validate at
+- docs/plans/google-owner-member-credentials.md:25 (mention) — `docs/engineering-principles.md:14` says: *"Prefer types that make illegal
+- docs/plans/installation-story.md:45 (mention) — - `docs/engineering-principles.md` #4 (validate at boundaries) and #6
+- docs/plans/interface-as-cards.md:62 (link) — [Engineering principles](../engineering-principles.md): §1 type structure,
+- docs/plans/interface-cards-consolidation.md:49 (link) — - [Engineering principles](../engineering-principles.md) §8, “One way to do
+- docs/plans/invite-links-and-password-change.md:38 (mention) — - `docs/engineering-principles.md:37-47`: validate disk, form, OAuth, and config
+- docs/plans/ios-companion-app.md:25 (mention) — - `beebox/docs/engineering-principles.md` — the ones this plan leans on:
+- docs/plans/ios-input-plane-parity.md:19 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (draft items,
+- docs/plans/ios-native-capture-mode.md:19 (mention) — - `docs/engineering-principles.md`: **#1 types are structure** (native capture
+- docs/plans/ios-share-extension-capture.md:38 (mention) — - `docs/engineering-principles.md` principle 3, validate at boundaries. The extension validates provider values, and the
+- docs/plans/migration-reliability.md:74 (mention) — `beebox/docs/engineering-principles.md:51`: “Degradation is allowed for failures that can genuinely happen; invisible
+- docs/plans/operator-member-password-reset.md:52 (mention) — - **Principle 1, types are structure.** `docs/engineering-principles.md:12-21`
 - docs/plans/public-site-box-authoring-export.md:37 (mention) — (`beebox/docs/engineering-principles.md:37-47`). The export command validates
-- docs/plans/public-site-story-extraction.subplan.md:39 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
+- docs/plans/public-site-story-extraction.subplan.md:41 (mention) — - `docs/engineering-principles.md`: **3** (validate at boundaries — spans
 - docs/plans/public-site.md:24 (mention) — - `docs/engineering-principles.md` — traced below by number, chiefly:
-- docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Validate at boundaries.** Manifests, candidate destinations, slug pointers, and hostname configuration remain strict
-- docs/plans/publish-sites-admin.md:38 (mention) — - **One way to do each thing.** Engineering principle 8 says “Competing idioms are drift generators” and “Consolidate ov
-- docs/plans/scan-guide-card.md:21 (mention) — - `docs/engineering-principles.md` — traced by number below:
-- docs/plans/scan-retry-and-document-route.md:31 (mention) — (`docs/engineering-principles.md:49`): *"Degradation is allowed for failures
-- docs/plans/scan-vision-claude.md:25 (mention) — - `beebox/docs/engineering-principles.md` — especially
-- docs/plans/tts-backend-selection.md:31 (mention) — - **Principle 4, resilient AND never silent** (`docs/engineering-principles.md:49`):
-- docs/plans/workspace-pane-controls.md:46 (link) — applications. [Engineering principles](../engineering-principles.md) supply the
-- docs/plans/workstreams-app.md:44 (mention) — (`docs/engineering-principles.md:37-47`): validate every app API input and
-- docs/plans/worktree-control-surface.md:111 (mention) — - `beebox/docs/engineering-principles.md` §7 *Hierarchy is a
+- docs/plans/publish-shared-host-per-box.md:27 (mention) — - **Validate at boundaries.** Manifests, candidate destinations, slug pointers, and hostname configuration remain strict
+- docs/plans/publish-sites-admin.md:40 (mention) — - **One way to do each thing.** Engineering principle 8 says “Competing idioms are drift generators” and “Consolidate ov
+- docs/plans/scan-guide-card.md:23 (mention) — - `docs/engineering-principles.md` — traced by number below:
+- docs/plans/scan-retry-and-document-route.md:33 (mention) — (`docs/engineering-principles.md:49`): *"Degradation is allowed for failures
+- docs/plans/scan-vision-claude.md:27 (mention) — - `beebox/docs/engineering-principles.md` — especially
+- docs/plans/tts-backend-selection.md:33 (mention) — - **Principle 4, resilient AND never silent** (`docs/engineering-principles.md:49`):
+- docs/plans/workspace-pane-controls.md:48 (link) — applications. [Engineering principles](../engineering-principles.md) supply the
+- docs/plans/workstreams-app.md:46 (mention) — (`docs/engineering-principles.md:37-47`): validate every app API input and
+- docs/plans/worktree-control-surface.md:113 (mention) — - `beebox/docs/engineering-principles.md` §7 *Hierarchy is a
 - docs/unimplemented-plans/publish-custom-domain-admin.md:30 (mention) — - **Validate at boundaries.** A hostname, zone list, Worker-domain list, and Cloudflare API response are untrusted input
 - docs/unimplemented-plans/publish-pages-superseded.md:22 (mention) — - `beebox/docs/engineering-principles.md` — the principles this plan leans on:
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions →
-- ../.claude/skills/bbx-plan/TEMPLATE.md:36 (mention) — - beebox/docs/engineering-principles.md — the twelve principles, by number
-- ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:110 (mention) — - **Written up as a principle.** `beebox/docs/engineering-principles.md`
+- ../.claude/skills/bbx-plan/TEMPLATE.md:37 (mention) — - beebox/docs/engineering-principles.md — the principles, by number
+- ../dev/devprocess-talk/chapters.md:164 (mention) — file: beebox/docs/engineering-principles.md
+- ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:112 (mention) — - **Written up as a principle.** `beebox/docs/engineering-principles.md`
 - ../issues/closed/bugs/2026-08-08-worktree-remove-now-silent-mv-failure.md:36 (mention) — removal. Violates `docs/engineering-principles.md` §4 (resilient AND never
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:46 (mention) — `docs/engineering-principles.md`).
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:17 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
@@ -1338,19 +1413,19 @@ Referenced by:
 Title: "Example names" | 53 lines | current reference
 
 Referenced by:
-- AGENTS.md:61 (link) — - Keep shared source, prompts, schemas, rules, and docs generic. Use “the user” or “the boxholder”; personal names belon
+- AGENTS.md:62 (link) — - Keep shared source, prompts, schemas, rules, and docs generic. Use “the user” or “the boxholder”; personal names belon
 - docs/guides.md:57 (link) — | Example names for docs and tests | [example-names](example-names.md) |
 - docs/implemented-plans/agent-field-tests.md:332 (mention) — - `persona.md` — who the operator is (drawn from `docs/example-names.md`,
 - docs/implemented-plans/card-prominence.md:629 (mention) — from `docs/example-names.md` (a plan card marked primary beside unmarked
 - docs/implemented-plans/todo-annotation.md:60 (mention) — hardcode personal names" (examples below use the `docs/example-names.md`
 - docs/plans/agent-docs.md:486 (mention) — from `example-names.md`, not a real box; bare (non-link) mentions of
-- docs/plans/source-available-release.md:71 (mention) — - **Fictional example roster — reuse.** `docs/example-names.md` and
+- docs/plans/source-available-release.md:73 (mention) — - **Fictional example roster — reuse.** `docs/example-names.md` and
 - ../.claude/skills/bbx-design/SKILL.md:22 (mention) — Name people from `beebox/docs/example-names.md`.
 - ../issues/features/2026-07-22-modeled-demo-family-box.md:36 (mention) — (`beebox/docs/example-names.md`) — never real names — and kept
 
 #### docs/glossary.md
 
-Title: "Glossary" | 92 lines | current reference
+Title: "Glossary" | 101 lines | current reference
 
 Referenced by:
 - docs/design/representation.md:63 (link) — holds those terms ([`../glossary.md`](../glossary.md#user-facing-register)).
@@ -1359,18 +1434,20 @@ Referenced by:
 - docs/implemented-plans/design-reconciliation.md:28 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/implemented-plans/docs-reorg.gap-analysis.md:149 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
 - docs/implemented-plans/docs-reorg.md:92 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
+- docs/implemented-plans/front-door.md:332 (mention) — - **Glossary, user-facing register** (`docs/glossary.md`): "card" is
 - docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
 - docs/implemented-plans/vocab-glossary-sweep.md:37 (mention) — editing a label has one place to check. `docs/glossary.md` already claims
 - docs/plans/agent-docs.md:369 (mention) — - concepts: `glossary.md`, `cards-as-markdown.md`, `connectors.md`,
 - docs/plans/pdf-intake-design.md:61 (link) — **Intake-time extraction.** When a PDF arrives (`bbx import`, capture endpoint, email connector), the intake path runs d
+- ../dev/devprocess-talk/reports/sweep-instructions.md:342 (mention) — - **Lives in:** `beebox/docs/glossary.md` (91 lines).
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:18 (mention) — > glossary's new user-facing register (`beebox/docs/glossary.md`). UI copy
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:50 (mention) — and mostly needs a line in `docs/glossary.md` so the next agent chooses
 - ../issues/closed/docs-and-chores/2026-05-21-fill-out-the-glossary.md:12 (mention) — > apply and kept current through planning, replace `docs/glossary.md`. Its
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:45 (mention) — shows actual state with pending shown explicitly (`docs/glossary.md`,
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:32 (mention) — > settled — `beebox/docs/glossary.md` has a user-facing register per term
 - ../issues/closed/features/2026-10-08-invisible-plumbing-reference-for-box-replies.md:41 (mention) — glossary's user-facing register (`beebox/docs/glossary.md`), the agent
-- ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:47 (mention) — and mostly needs a line in `docs/glossary.md` so the next agent chooses
 - ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md:17 (mention) — them reached a shared document. `beebox/docs/glossary.md` has 25 entries and
 - ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:100 (mention) — checking against the glossary (`beebox/docs/glossary.md`) — the codebase
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:29 (mention) — > settled — `beebox/docs/glossary.md` has a user-facing register per term
 - ../research/external-skills-harvest.md:96 (mention) — Markdown), the CONTEXT.md/ADR coupling (→ `docs/glossary.md` + git history +
 - ../research/imbue-studio/architecture.md:239 (mention) — Cloud vs local: one template, different create templates (`docker`, `lima`, `modal`, `vultr`, `ovh`, `aws`, `gcp`, `azur
 - ../research/opencode/README.md:43 (mention) — - `beebox/docs/glossary.md` carried two `asset` definitions; the superseded manifest one removed.
@@ -1382,7 +1459,6 @@ References:
 - → ../issues/decisions/2026-05-21-glossary-proper-nouns.md (link)
 - → docs/box-layout.md (mention)
 - → AGENTS.md (mention)
-- → docs/chat/schedules.md (mention)
 - → docs/cards/schemas.md (mention)
 - → docs/cards/format.md (mention)
 - → docs/media/assets.md (mention)
@@ -1397,13 +1473,15 @@ References:
 - → docs/implemented-plans/box-retrospectives.md (mention)
 - → docs/chat/sessions.md (mention)
 - → docs/landmarks.md (mention)
+- → docs/box/todos.md (mention)
+- → docs/questions.md (mention)
 
 #### docs/guides.md
 
 Title: "Guide index" | 63 lines | current reference
 
 Referenced by:
-- AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
+- AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/implemented-plans/doc-structure.md:535 (mention) — - `guides.md`, the hand-maintained topic index: once subjects are
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:307 (link) — Manual review restored the on-demand [guide index](../guides.md), the atomic-write
 - docs/install.md:28 (link) — listed in the [guide index](guides.md).
@@ -1448,7 +1526,7 @@ References:
 - → docs/mobile-parity.md (link)
 - → docs/scan-upload-contract.md (link)
 - → deploy/README.md (link)
-- → ../agent-doctest/docs/syntax.md (link)
+- → docs/testing/check.md (link)
 - → docs/glossary.md (link)
 - → docs/example-names.md (link)
 - → ../ACKNOWLEDGEMENTS.md (link)
@@ -1464,7 +1542,7 @@ Referenced by:
 - docs/guides.md:11 (link) — | Installing beebox: Docker, from source, with an agent | [install](install.md) |
 - docs/implemented-plans/doc-structure-install-server.md:75 (mention) — | (new) | `install.md`: which path for whom; what every path shares |
 - docs/implemented-plans/remove-telegram.md:160 (mention) — `docs/glossary.md`, `docs/install.md`, `README.md`,
-- ../issues/code-quality/2026-09-12-vibe-check-installs-circular-check-that-counts-type-imports.md:11 (mention) — ts,tsx src/"` into every project it bootstraps (`install.md`, and its own
+- ../issues/closed/code-quality/2026-09-12-vibe-check-installs-circular-check-that-counts-type-imports.md:11 (mention) — **Closed 2026-10-17:** fixed on the bug-burndown-2 branch ("vibe-init writes a .madgerc that skips type imports"). `vibe
 
 References:
 - → docs/install/docker.md (link)
@@ -1475,15 +1553,17 @@ References:
 
 #### docs/landmarks.md
 
-Title: "Landmarks" | 327 lines | current reference
+Title: "Landmarks" | 334 lines | current reference
 
 Referenced by:
 - docs/design/representation.md:115 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
-- docs/glossary.md:78 (mention) — **landmark** — A curated navigation anchor for a box directory (`*.landmark.card`): symbol, label, bookmarks, routing de
+- docs/glossary.md:81 (mention) — **landmark** — A curated navigation anchor for a box directory (`*.landmark.card`): symbol, label, bookmarks, routing de
 - docs/guides.md:44 (link) — | Landmarks: the navigation surface | [landmarks](landmarks.md) |
 - docs/implemented-plans/architectural-review.md:832 (mention) — `docs/landmarks.md` cites never-built renderer paths; a clerk docstring
 - docs/implemented-plans/card-prominence.md:67 (mention) — row (`docs/landmarks.md`: "Parse warnings — a row naming any
 - docs/implemented-plans/clerk-webpage-capture.md:271 (mention) — destinations API, extension UI labels, docs/landmarks.md, knowledge audits.
+- docs/implemented-plans/front-door.md:87 (mention) — | First view is an empty chat (B, C, F, A) | Met. The box index redirects to `/chat` (`main/router.tsx:105`); on the des
+- docs/implemented-plans/front-door.review.md:10 (mention) — (`docs/landmarks.md`), "Also here", the stock openers and their briefing
 - docs/implemented-plans/landmark-arrival.design.md:68 (link) — This changes one line of the current definition. [`landmarks.md`](../landmarks.md)
 - docs/implemented-plans/landmark-arrival.md:140 (mention) — Authored documentation: about 230 lines (`docs/landmarks.md` rendering,
 - docs/implemented-plans/nav-card.md:142 (mention) — links (see `docs/landmarks.md`).
@@ -1492,7 +1572,7 @@ Referenced by:
 - docs/implemented-plans/place-shows-cards.review.md:32 (mention) — Additional files opened beyond the first-hop list: `beebox/src/core/lint-prominence/core.ts`, `beebox/src/shared/browse-
 - docs/implemented-plans/top-nav-ia.md:204 (mention) — - **No landmark full form exists.** `docs/landmarks.md:119-134`
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
-- docs/plans/box-screen.md:508 (mention) — - **Agent guidance.** The `nav.card` instructions (`src/schemas/nav.ts`) name the avatar menu for the box-wide pages and
+- docs/plans/box-screen.md:510 (mention) — - **Agent guidance.** The `nav.card` instructions (`src/schemas/nav.ts`) name the avatar menu for the box-wide pages and
 - docs/unimplemented-plans/design-vision-superseded.md:13 (mention) — > retired (ruling 17; `../landmarks.md`); extensibility-through-knowledge →
 - docs/unimplemented-plans/query-cards.md:20 (mention) — planned in docs/landmarks.md long before this, useful for any list-shaped
 - docs/user-stories/catalog/2026-06-26.md:746 (mention) — The file src/core/frontmatter-field.ts exports two functions that implement the exact capability described. lookupField(
@@ -1507,7 +1587,9 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/card-prominence.md (mention)
+- → docs/implemented-plans/front-door.md (mention)
 - → docs/triage.md (mention)
+- → docs/questions.md (mention)
 - → docs/implemented-plans/top-nav-ia.md (mention)
 - → docs/chat/quick-chat.md (link)
 - → docs/implemented-plans/landmark-arrival.md (mention)
@@ -1529,17 +1611,20 @@ References:
 
 #### docs/mobile-contract.md
 
-Title: "Cross-Platform Mobile Contract" | 1719 lines | current reference
+Title: "Cross-Platform Mobile Contract" | 1899 lines | current reference
 
 Referenced by:
-- AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
+- AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/chat.md:20 (link) — - The HTTP endpoints a client uses (send, upload, transcribe, default session): [mobile contract](mobile-contract.md).
-- docs/chat/quick-chat.md:76 (link) — [mobile contract §5.11](../mobile-contract.md).
+- docs/chat/quick-chat.md:79 (link) — [mobile contract §5.11](../mobile-contract.md).
 - docs/client-debug-log.md:54 (mention) — timestamp (that's still receipt time). See `docs/mobile-contract.md` §5.7 for the
 - docs/guides.md:51 (link) — | Mobile contract: what the native apps and a box agree on | [mobile-contract](mobile-contract.md) |
 - docs/implemented-plans/chat-image-files.md:143 (mention) — says `_tmp/` (`docs/mobile-contract.md:880-881`), so every `[file#N]` line
+- docs/implemented-plans/clerk-quick-send.md:471 (mention) — `docs/mobile-contract.md` §5.11, security report §3, `box-layout.md`).
 - docs/implemented-plans/doc-structure.md:237 (mention) — are cited by number (`mobile-contract.md`).
 - docs/implemented-plans/emission-model.md:30 (mention) — verdict from elapsed time (`docs/mobile-contract.md` §4.2).
+- docs/implemented-plans/file-wordless-captures.md:243 (mention) — 4. Reference docs: `beebox/docs/mobile-contract.md` ("Material without authored input is saved without inventing an agen
+- docs/implemented-plans/front-door.md:419 (mention) — contract (`docs/mobile-contract.md:993`), where an optional field is an
 - docs/implemented-plans/ios-log-forwarding.md:56 (mention) — machinery); the mobile-contract sync rule (`docs/mobile-contract.md` header).
 - docs/implemented-plans/ios-per-box-device-lock.md:265 (mention) — no `docs/mobile-contract.md` change because nothing crosses the wire. Commits
 - docs/implemented-plans/ios-quick-chat-hq.md:121 (mention) — `docs/mobile-contract.md` §4.2): the engine that produced HQ text. New on
@@ -1549,29 +1634,32 @@ Referenced by:
 - docs/implemented-plans/notifications-design-notes.md:52 (mention) — record from pairing (`docs/mobile-contract.md`, `pairing.devices`), which
 - docs/implemented-plans/notifications.md:263 (mention) — - **Mobile contract.** `docs/mobile-contract.md:8` the sync rule; the
 - docs/implemented-plans/resilient-voice-recording.md:900 (mention) — - `mobile-contract.md` gains a voice staging section. §5.2 is marked "legacy,
+- docs/implemented-plans/retire-memo.md:222 (mention) — `docs/mobile-contract.md:1396-1411` prose changes from "memo" to "doc"; no
 - docs/implemented-plans/router-transient-failure-resilience.md:774 (mention) — paired to a dev-router URL at all (`beebox/docs/mobile-contract.md:21-23`).
 - docs/implemented-plans/scan-uploader-version-drift.md:193 (mention) — `docs/mobile-contract.md:1088-1105` states the server never branches on it —
 - docs/implemented-plans/secret-entry-guidance.md:533 (mention) — `permanent` and `code` for its remaining caller (iOS, `mobile-contract.md` H1).
 - docs/mobile-parity.md:5 (mention) — detail lives in `docs/mobile-contract.md`. Cell values: **done**,
-- docs/notifications.md:185 (link) — ([mobile contract §5.9](mobile-contract.md)).
+- docs/notifications.md:189 (link) — ([mobile contract §5.9](mobile-contract.md)).
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
-- docs/plans/agent-points-at-ui.md:75 (mention) — - `docs/mobile-contract.md` — the anchor-manifest discipline any bridge
-- docs/plans/android-companion-app.md:14 (mention) — implements **exactly** the contract in `docs/mobile-contract.md`; it adds no new
-- docs/plans/box-screen.md:30 (mention) — | Authored docs | 300 | | quick-chat.md, landmarks and navigation docs, mobile-contract.md, ios-app/AGENTS.md, security
-- docs/plans/capture-fast-landing.md:300 (mention) — (`docs/mobile-contract.md` unaffected).
-- docs/plans/chat-everywhere.md:575 (mention) — `mobile-contract.md`, and parity docs together. Audit other wrapper consumers
-- docs/plans/chat-photo-batch-upload.md:25 (mention) — > cross-platform rule is stated in `docs/mobile-contract.md` §8.
-- docs/plans/chat-photo-batch-upload.md:84 (link) — [`docs/mobile-contract.md`](../mobile-contract.md):479 §5.6, which already
-- docs/plans/document-comments.md:270 (mention) — `lib/chat-send-diagnostics.ts:150`, and on the wire at `docs/mobile-contract.md:262`
-- docs/plans/invite-links-and-password-change.md:126 (mention) — `mobile-contract.md` change is required.
-- docs/plans/ios-app-intent-capture.md:92 (mention) — - `beebox/docs/mobile-contract.md:1268-1305` documents quick-chat request shapes, stored origin, idempotency, and outbox
-- docs/plans/ios-input-plane-parity.md:95 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
-- docs/plans/ios-share-extension-capture.md:52 (mention) — - Swift already demonstrates direct non-batched tRPC calls. `ios-app/BeeBox/Services/LogForwarder.swift:283` posts to `t
-- docs/plans/workspace-pane-controls.md:84 (mention) — | `docs/mobile-contract.md:285-290`: attention carries “focusedRef, and visible/hidden transcript”; “ordinary route move
+- docs/plans/agent-points-at-ui.md:77 (mention) — - `docs/mobile-contract.md` — the anchor-manifest discipline any bridge
+- docs/plans/android-companion-app.md:16 (mention) — implements **exactly** the contract in `docs/mobile-contract.md`; it adds no new
+- docs/plans/box-screen.md:32 (mention) — | Authored docs | 300 | | quick-chat.md, landmarks and navigation docs, mobile-contract.md, ios-app/AGENTS.md, security
+- docs/plans/capture-fast-landing.md:302 (mention) — (`docs/mobile-contract.md` unaffected).
+- docs/plans/chat-everywhere.md:577 (mention) — `mobile-contract.md`, and parity docs together. Audit other wrapper consumers
+- docs/plans/chat-photo-batch-upload.md:27 (mention) — > cross-platform rule is stated in `docs/mobile-contract.md` §8.
+- docs/plans/chat-photo-batch-upload.md:86 (link) — [`docs/mobile-contract.md`](../mobile-contract.md):479 §5.6, which already
+- docs/plans/document-comments.md:272 (mention) — `lib/chat-send-diagnostics.ts:150`, and on the wire at `docs/mobile-contract.md:262`
+- docs/plans/invite-links-and-password-change.md:128 (mention) — `mobile-contract.md` change is required.
+- docs/plans/ios-input-plane-parity.md:97 (mention) — | Bridge contract | Web `Emission` supports files and selections | Native payload carries only text/origin/diarized/imag
+- docs/plans/ios-share-extension-capture.md:54 (mention) — - Swift already demonstrates direct non-batched tRPC calls. `ios-app/BeeBox/Services/LogForwarder.swift:283` posts to `t
+- docs/plans/mac-app-shell.md:213 (mention) — `beebox/docs/mobile-contract.md` §1.1.
+- docs/plans/workspace-pane-controls.md:86 (mention) — | `docs/mobile-contract.md:285-290`: attention carries “focusedRef, and visible/hidden transcript”; “ordinary route move
+- docs/triage.md:28 (link) — ([mobile contract](mobile-contract.md), quick capture; `src/core/quick-capture/filing.ts`).
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:21 (mention) — The boxholder requires the setting to work on iOS. The existing mobile contract requires web/native wire changes to upda
 - ../.claude/skills/bbx-ios-overlap/SKILL.md:13 (mention) — The reference is `beebox/docs/mobile-contract.md`: §7 Contract Surface Index,
 - ../AGENTS.md:9 (link) — - **Native iOS companion:** [ios-app/AGENTS.md](ios-app/AGENTS.md). It shares an [HTTP/bridge contract](beebox/docs/mobi
-- ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:39 (mention) — This is deliberate and documented — `beebox/docs/mobile-contract.md` §4.5:
+- ../dev/devprocess-talk/reports/sweep-quality.md:275 (mention) — - **One line:** Pre-commit records when a contract-surface anchor file is staged without a `beebox/docs/mobile-contract.
+- ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:41 (mention) — This is deliberate and documented — `beebox/docs/mobile-contract.md` §4.5:
 - ../issues/bugs/2026-09-20-ios-composer-has-no-keyword-hints.md:76 (mention) — (`beebox/docs/mobile-contract.md:487-495`): native detects over its own
 - ../issues/bugs/2026-09-29-ios-record-button-does-not-show-mode-or-state.md:31 (link) — Web posts `beeboxNarrationState {enabled}` ([mobile contract](../../beebox/docs/mobile-contract.md) §4.4). `ChatWebView.
 - ../issues/closed/bugs/2026-07-17-mobile-device-store-unlocked-rmw.md:18 (mention) — `async`. Tests: `test/core/mobile/pairing-store-concurrency.doctest.md` (moved to `beebox/test/core/mobile/pairing.store
@@ -1587,17 +1675,20 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:23 (mention) — (contract row S3 in `docs/mobile-contract.md` §5.5), which belongs with the
 - ../issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md:54 (mention) — ceiling). `docs/mobile-contract.md` carries the shared statement of the rule
 - ../issues/closed/bugs/2026-09-12-non-owner-cannot-see-or-revoke-their-own-paired-device.md:50 (mention) — `beebox/docs/mobile-contract.md` §1.2.
+- ../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md:17 (mention) — (`beebox/src/core/quick-capture/source.ts:28-35`; `beebox/docs/mobile-contract.md`,
 - ../issues/closed/code-quality/2026-07-19-mobile-contract-small-cleanups.md:14 (mention) — silently falling back to `"new"`. Docs (`docs/mobile-contract.md`) and tests updated to match.
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:27 (mention) — `docs/mobile-contract.md:262` (*"an unknown/absent `origin` coerces to
 - ../issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md:78 (mention) — (`docs/mobile-contract.md` §8 and the iOS mirror updated with it).
 - ../issues/closed/features/2026-08-03-ios-self-screenshot.md:66 (mention) — into the native bridge + `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:266 (mention) — where it matters most. See `docs/mobile-contract.md`.
 - ../issues/closed/features/2026-08-21-capture-confirmation-misses-a-user-who-left.md:50 (mention) — rather than invent a second one; see `docs/mobile-contract.md`.
+- ../issues/closed/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md:30 (link) — shape is in [mobile contract §5.11](../../../beebox/docs/mobile-contract.md).
 - ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md:31 (mention) — web (`docs/mobile-contract.md` §2).
-- ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:24 (mention) — `docs/mobile-contract.md:262` (*"an unknown/absent `origin` coerces to
 - ../issues/decisions/2026-09-15-dev-router-is-load-bearing-and-cannot-survive-its-own-restart.md:59 (mention) — `docs/mobile-contract.md:21-23` records the shape: *"A paired box's `baseURL`
+- ../issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md:40 (mention) — - `docs/mobile-contract.md`: the sentence on `migration-pending`.
 - ../issues/docs-and-chores/2026-08-03-mobile-contract-missing-capture-bulk-rows.md:10 (mention) — `docs/mobile-contract.md` presents itself as the canonical Contract Surface
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:13 (mention) — - **Contract infrastructure live** — `docs/mobile-contract.md` (with the
-- ../issues/features/2026-07-19-ios-input-plane-parity.md:104 (mention) — `ios-app/AGENTS.md`, `beebox/docs/mobile-contract.md`, and the linked
+- ../issues/features/2026-07-19-ios-input-plane-parity.md:106 (mention) — `ios-app/AGENTS.md`, `beebox/docs/mobile-contract.md`, and the linked
 - ../issues/features/2026-08-03-detect-server-update-prompt-client-reload.md:49 (mention) — reload path (`docs/mobile-contract.md`; bbx-ios-overlap territory).
 - ../issues/features/2026-09-11-bias-apple-speech-with-box-vocabulary.md:53 (mention) — (`beebox/docs/mobile-contract.md`) is where that would live.
 - ../issues/features/2026-09-12-most-recent-conversation-should-be-per-person.md:26 (mention) — the owner (see `docs/mobile-contract.md` §2.3). Shared boxes with distinct
@@ -1605,7 +1696,7 @@ Referenced by:
 - ../issues/features/2026-09-28-private-chat-sessions-search-gating.md:21 (mention) — (`docs/mobile-contract.md` §2.3), so shared boxes with distinct identities
 - ../issues/features/2026-09-29-tailscale-onboarding-without-auth-key.md:41 (mention) — (`beebox/docs/mobile-contract.md` §1.1).
 - ../issues/features/2026-10-06-ios-on-device-hq-transcription.md:16 (mention) — (`POST /api/chat/transcribe-audio`, `beebox/docs/mobile-contract.md` §5.2), and
-- ../issues/features/2026-10-07-mac-companion-app.md:28 (mention) — the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
+- ../issues/features/2026-10-07-mac-companion-app.md:30 (mention) — the selections the iOS composer already carries (`beebox/docs/mobile-contract.md`,
 - ../issues/features/2026-10-08-web-warns-when-ios-app-is-out-of-date.md:35 (mention) — (`beebox/docs/mobile-contract.md`) should also count, since a contract change
 - ../research/installable-app/tailscale.md:103 (mention) — (`beebox/docs/mobile-contract.md` §1.1). A box-owned node gives that URL a
 - ../research/omi-review.md:175 (link) — as our [mobile contract](../beebox/docs/mobile-contract.md) drift table.
@@ -1619,9 +1710,11 @@ References:
 - → docs/plans/agent-points-at-ui.md (mention)
 - → docs/implemented-plans/ios-audio-retranscription.md (mention)
 - → docs/model-policy.md (mention)
+- → docs/implemented-plans/front-door.md (mention)
 - → docs/plans/chat-photo-batch-upload.md (mention)
 - → docs/implemented-plans/bulk-file-upload.md (mention)
 - → docs/implemented-plans/ios-quick-chat-hq.md (mention)
+- → docs/chat/quick-chat.md (mention)
 - → docs/plans/ios-companion-review-2026-07-17.md (mention)
 - → docs/implemented-plans/mobile-token-handshake.md (mention)
 
@@ -1634,8 +1727,8 @@ Referenced by:
 - docs/implemented-plans/bulk-file-upload.md:320 (mention) — `docs/mobile-parity.md` row (also correct its stale "≤4 photos" cell — the
 - docs/implemented-plans/ios-per-box-device-lock.md:263 (mention) — **Direction.** Add **Per-box local device lock** to `docs/mobile-parity.md` as
 - docs/implemented-plans/mobile-parity-sync.md:98 (mention) — ### 3. `docs/mobile-parity.md` — the parity matrix (to build)
-- docs/plans/android-companion-app.md:590 (mention) — - The parity matrix (`docs/mobile-parity.md`, owned by the sync plan) lists each
-- docs/plans/chat-photo-batch-upload.md:479 (mention) — caller anchor, a threshold row), `docs/mobile-parity.md`, and the
+- docs/plans/android-companion-app.md:592 (mention) — - The parity matrix (`docs/mobile-parity.md`, owned by the sync plan) lists each
+- docs/plans/chat-photo-batch-upload.md:481 (mention) — caller anchor, a threshold row), `docs/mobile-parity.md`, and the
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:14 (mention) — tripwire anchor manifest), `docs/mobile-parity.md`, shared golden fixtures
 - ../issues/features/2026-07-20-android-per-box-device-lock-parity.md:36 (mention) — acceptance. Close only when the Android cell in `docs/mobile-parity.md` can be
 
@@ -1649,34 +1742,38 @@ References:
 
 #### docs/model-policy.md
 
-Title: "Which model a box thinks with" | 189 lines | current reference
+Title: "Which model a box thinks with" | 202 lines | current reference
 
 Referenced by:
-- docs/box-layout.md:209 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
+- docs/box-layout.md:234 (mention) — | `_config/box.json` | Per-box settings: timezone, allowed emails, `agentEngine`/`agentModel` (see `docs/model-policy.md
 - docs/chat.md:19 (link) — - Which engine and model a chat thinks with, fixed at the chat's birth: [model policy](model-policy.md).
 - docs/design/identity.md:27 (link) — engine's own store ([`../model-policy.md`](../model-policy.md)).
 - docs/guides.md:45 (link) — | Model policy: which engine and model a box thinks with | [model-policy](model-policy.md) |
+- docs/implemented-plans/background-runs-follow-openrouter-default.md:46 (mention) — - Track 3 — docs: `docs/model-policy.md`, `docs/security-report.md` §3.
 - docs/implemented-plans/doc-structure-prompts.md:83 (mention) — `model-policy.md` (a box configuration subject), the agent guide sources,
 - docs/implemented-plans/model-engine-policy.md:48 (mention) — passes. The reference doc is `docs/model-policy.md`.
-- docs/implemented-plans/openrouter-chat-models.md:387 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
-- docs/mobile-contract.md:982 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
+- docs/implemented-plans/openrouter-chat-models.md:389 (mention) — - `docs/model-policy.md` gains an OpenRouter section covering: what adding a
+- docs/mobile-contract.md:985 (mention) — > (`docs/model-policy.md`). Both are optional and absence means the box's
 - docs/plans/agent-docs.md:371 (mention) — `model-policy.md`, `chat-schedules.md`.
-- docs/plans/box-glm-provider.md:76 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
+- docs/plans/box-glm-provider.md:78 (mention) — prevent (`docs/model-policy.md`: "the resolver … cannot produce a name the
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:375 (mention) — - **Lives in:** `beebox/src/shared/agent-models.ts`, `beebox/src/shared/model-ids.ts`, `beebox/src/shared/chat-models.ts
 - ../issues/closed/bugs/2026-10-06-third-party-engine-privacy-telemetry-and-security-report.md:45 (mention) — `beebox/docs/model-policy.md:175-177`). Host choice, training, and retention
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:72 (mention) — (`docs/model-policy.md`). [medium]
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:35 (mention) — an unpinned box uses the strong tier (`docs/model-policy.md`).
+- ../research/fabric-review.md:77 (mention) — - **Data and cost.** Plain files on the person's host, git, `bbx`; the person's own model subscription and keys (`beebox
 - ../research/imbue-studio/comparison.md:17 (mention) — | Model switching | Provider = harness; same-harness account rebind restarts the agent; cross-harness switch is a summar
 
 References:
 - → docs/implemented-plans/model-engine-policy.md (mention)
 - → AGENTS.md (mention)
+- → docs/implemented-plans/openrouter-chat-models.md (mention)
 
 #### docs/module-map.md
 
 Title: "Module map: where shared code lives" | 62 lines | current reference
 
 Referenced by:
-- AGENTS.md:40 (link) — - Generic dependency-light helpers: `src/lib/`; browser/server shared code: `src/shared/`; CLI-domain helpers: `src/cli/
+- AGENTS.md:41 (link) — - Generic dependency-light helpers: `src/lib/`; browser/server shared code: `src/shared/`; CLI-domain helpers: `src/cli/
 - docs/guides.md:30 (link) — | Module map: the shared-code directory boundary | [module-map](module-map.md) |
 - docs/implemented-plans/box-root-paths.md:176 (mention) — hand-roll `path.resolve`/string-splitting on a ref"), `docs/module-map.md`
 - docs/implemented-plans/clerk-contract-and-import-boundary.md:115 (mention) — against `docs/module-map.md` and update that doc if it's silent on
@@ -1695,23 +1792,25 @@ Title: "Name history" | 38 lines | history
 Referenced by:
 - docs/README.md:13 (link) — to park a proposal or a finished plan. The deliberate exception is [name history](name-history.md),
 - docs/guides.md:59 (link) — | Name history | [name-history](name-history.md) |
-- ../issues/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md:26 (mention) — to the `.bbx-*` prefix; the former names are in `docs/name-history.md`. The
+- ../dev/devprocess-talk/inventory.md:6 (mention) — Naming note: the product was renamed on 2026-08-30 (see `beebox/docs/name-history.md`). Pre-rename paths and the old nam
+- ../issues/closed/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md:47 (mention) — to the `.bbx-*` prefix; the former names are in `docs/name-history.md`. The
 - ../issues/docs-and-chores/2026-08-30-bee-box-external-cutover-checklist.md:14 (link) — order. The [name history](../../beebox/docs/name-history.md) owns the mapping
 
 #### docs/notifications.md
 
-Title: "Notifications" | 240 lines | current reference
+Title: "Notifications" | 244 lines | current reference
 
 Referenced by:
 - docs/design/interaction-model.md:37 (link) — [`../notifications.md`](../notifications.md) are implementation, not design,
 - docs/guides.md:40 (link) — | Notifications, reminders, and watches (`bbx notify`, `notify:` schedules, `bbx changes`, `bbx judge`) | [notifications
+- docs/implemented-plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - docs/implemented-plans/notifications.md:20 (mention) — > walk"](../notifications.md#verification-walk) — has not run; it is gated
 - docs/implemented-plans/remove-telegram.md:38 (mention) — so I am told. The channel rule (`docs/notifications.md`, *Channels*) has
 - docs/implemented-plans/retire-type-specific-core-tags.md:148 (mention) — The sentences at `briefing.tsx:95-97` ("write their answer into `{% purpose %}`") and `:129-130` change to match. `docs/
 - docs/server/configuration.md:71 (link) — [notifications](../notifications.md).
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:25 (mention) — is present (`docs/notifications.md`, the root briefing's "Reaching me").
 - ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:46 (mention) — (`docs/notifications.md`).
-- ../issues/features/2026-09-25-notifications-and-proactive-design.md:25 (mention) — walk"](../../beebox/docs/notifications.md#verification-walk) on a real
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:27 (mention) — walk"](../../beebox/docs/notifications.md#verification-walk) on a real
 - ../research/imbue-studio/chat-app.md:289 (mention) — P8) vs `bbx notify` (`beebox/docs/notifications.md`). **Adopt** the
 
 References:
@@ -1726,7 +1825,7 @@ References:
 Title: "Plugins" | 190 lines | current reference
 
 Referenced by:
-- docs/box-layout.md:271 (link) — - **No plugin code.** A plugin ships inside the engine package (`beebox/plugins/<name>`); the box holds only its activat
+- docs/box-layout.md:296 (link) — - **No plugin code.** A plugin ships inside the engine package (`beebox/plugins/<name>`); the box holds only its activat
 - docs/design/extensibility.md:13 (link) — What does exist (2026-10, [plugins](../plugins.md)): a **plugin** is a typed
 - docs/guides.md:34 (link) — | Plugins: typed in-repo libraries a box activates through stubs | [plugins](plugins.md) |
 - docs/implemented-plans/boxes-as-packages-v2.md:373 (mention) — (`docs/plugins.md`, "Health") print under `Plugin health after upgrade:`. Report-only too.
@@ -1746,8 +1845,8 @@ References:
 Title: "Procedures" | 267 lines | current reference
 
 Referenced by:
-- AGENTS.md:51 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
-- docs/glossary.md:58 (mention) — **procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `_config/pr
+- AGENTS.md:52 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
+- docs/glossary.md:61 (mention) — **procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `_config/pr
 - docs/guides.md:38 (link) — | Procedures: multi-step workflows as cards | [procedure-implementation](procedure-implementation.md) |
 - docs/implemented-plans/agent-applied-migrations.md:35 (mention) — general write-up landed in `docs/procedure-implementation.md` ("Checklists"
 - docs/implemented-plans/browser-task-card.md:496 (mention) — (`beebox/docs/procedure-implementation.md:214-222`), so a run that stops
@@ -1755,8 +1854,8 @@ Referenced by:
 - docs/implemented-plans/procedure-validation-completion.md:18 (mention) — > `docs/procedure-implementation.md` and the generated procedure guide. Two
 - docs/implemented-plans/todos-ui.md:204 (mention) — `docs/procedure-implementation.md:110`), prechecks, and validate phases.
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
-- docs/plans/email-tracking.md:63 (mention) — - `docs/procedure-implementation.md` remains the reference for shell prechecks,
-- docs/scheduler.md:41 (mention) — review runs out of turns — see `docs/procedure-implementation.md`; `bbx handle`
+- docs/plans/email-tracking.md:65 (mention) — - `docs/procedure-implementation.md` remains the reference for shell prechecks,
+- docs/scheduler.md:49 (mention) — review runs out of turns — see `docs/procedure-implementation.md`; `bbx handle`
 - docs/server/health-checks.md:40 (mention) — cases — see `docs/procedure-implementation.md` → Instructions.
 - docs/user-stories/catalog/2026-06-26.md:5746 (mention) — **Verifier (flagged):** The code implements multi-phase procedure definitions and execution with progress tracking, but
 - ../issues/closed/code-quality/2026-06-26-procedure-validation-completion-d5.md:8 (mention) — **Closed:** Done: model-judged instruction validation, `severity: review` auto-retry, and resumable runs (`bbx procedure
@@ -1793,14 +1892,17 @@ References:
 
 #### docs/questions.md
 
-Title: "Questions" | 336 lines | current reference
+Title: "Questions" | 353 lines | current reference
 
 Referenced by:
 - docs/design/trust.md:37 (link) — answer there as a `basis: user-stated` belief — [`../questions.md`](../questions.md).) Keep this as the umbrella princip
+- docs/glossary.md:90 (mention) — **question** — A `*.question.card` in `_bookkeeping/questions/`: something the box is waiting to hear from the person, w
 - docs/guides.md:43 (link) — | Questions: the question subsystem | [questions](questions.md) |
 - docs/implemented-plans/doc-structure.md:549 (mention) — Results) fit subsystem docs like `questions.md` as well as it fits tiers?
+- docs/implemented-plans/front-door.md:160 (mention) — for questions (`docs/questions.md`, "Where questions live"). It is answered
 - docs/implemented-plans/questions-end-to-end.md:468 (mention) — **What.** `docs/questions.md` (the subsystem's design doc: purpose frame,
 - docs/implemented-plans/todo-annotation.md:68 (mention) — (`docs/questions.md`) as the in-house proof that a pending-intent mechanism
+- docs/landmarks.md:74 (mention) — **`openers`** (zero or more strings) — one-line first moves, phrased from the person's side. They show as buttons on an
 - docs/plans/agent-docs.md:370 (mention) — `triage.md`, `questions.md`, `landmarks.md`, `procedure-implementation.md`,
 - docs/reports/triage-design-2026-09-13.md:154 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:21 (mention) — dismissed questions are not re-asked (`docs/questions.md`).
@@ -1816,15 +1918,16 @@ References:
 - → docs/implemented-plans/questions-end-to-end.md (mention)
 - → docs/implemented-plans/box-retrospectives.md (mention)
 - → AGENTS.md (mention)
+- → docs/implemented-plans/front-door.md (mention)
 - → docs/implemented-plans/top-nav-ia.md (mention)
 - → src/core/agent-guide/guide.md (mention)
 
 #### docs/README.md
 
-Title: "docs/ — map and naming conventions" | 161 lines | current reference
+Title: "docs/ — map and naming conventions" | 168 lines | current reference
 
 Referenced by:
-- AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
+- AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/README.md:26 (mention) — Each entry in the directory's `README.md` disposition table says what
 - docs/guides.md:4 (link) — them; walk in from the parent. [Documentation organization](README.md) says
 - docs/implemented-plans/agent-guide-spec.md:71 (mention) — - **Organizing principles** (`docs/README.md`): one home per fact, pointer
@@ -1843,8 +1946,10 @@ Referenced by:
 - docs/plans/agent-docs.md:285 (mention) — `docs/README.md`'s own taxonomy. The manifest line is where a human judged
 - docs/plugins.md:45 (mention) — README.md     What it is · Setup · Conventions · Migration · Uninstall
 - src/dev/AGENTS.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs, live-area orphans, duplicate `issues/` b
-- ../.claude/agents/finish.md:99 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move:
+- ../.claude/agents/finish.md:97 (mention) — duplicate prose line; renames follow `beebox/docs/README.md`. After a move run
 - ../AGENTS.md:69 (link) — Commit verified work at good checkpoints without asking; merge to `main` only when the human asks (the finish skill is t
+- ../dev/devprocess-talk/reports/sweep-instructions.md:322 (mention) — - **Lives in:** `beebox/src/dev/doc-check/` (check.ts, file-paths.ts, frontmatter.ts, link-repair.ts, private-link.ts) +
+- ../dev/devprocess-talk/reports/sweep-quality.md:227 (mention) — - **Lives in:** `beebox/src/dev/doc-check/`, `.husky/pre-commit` ("Any commit touching markdown runs the fast doc refere
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:27 (mention) — - **`docs/README.md` is deleted.** It is a documentation map that mostly
 - ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:18 (mention) — > as the search path) now live in `beebox/docs/README.md` "Organizing
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:38 (mention) — addressed (`docs/README.md` says so), so an invitee browsing `docs/`
@@ -1863,7 +1968,7 @@ References:
 
 #### docs/scan-upload-contract.md
 
-Title: "Scan Upload Wire Contract" | 267 lines | current reference
+Title: "Scan Upload Wire Contract" | 272 lines | current reference
 
 Referenced by:
 - docs/guides.md:53 (link) — | Scan upload wire contract | [scan-upload-contract](scan-upload-contract.md) |
@@ -1872,11 +1977,13 @@ Referenced by:
 - docs/implemented-plans/scan-uploader-version-drift.md:42 (mention) — Docs reported separately: `docs/scan-upload-contract.md` (the version's
 - docs/implemented-plans/scanner-ingest.md:280 (mention) — `docs/scan-upload-contract.md`, the single coordination point named in
 - docs/plans/agent-docs.md:379 (mention) — - contracts: `box-layout.md`, `mobile-contract.md`, `scan-upload-contract.md`,
+- docs/plans/mac-app-shell.md:636 (mention) — 10. Docs: `mac-app/README.md`, `ios-app/AGENTS.md`, `scan-uploader/README.md`, `scan-upload-contract.md`; ACKNOWLEDGEMEN
 - docs/plans/pdf-intake-design.md:23 (link) — [scan-upload contract](../scan-upload-contract.md) covers scanner clients. The sections below
-- docs/plans/scan-guide-card.md:184 (mention) — - `buildScanPrompt` and the wire contract (`docs/scan-upload-contract.md`)
-- docs/scan-upload-contract.md:9 (mention) — // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
+- docs/plans/scan-guide-card.md:186 (mention) — - `buildScanPrompt` and the wire contract (`docs/scan-upload-contract.md`)
+- docs/scan-upload-contract.md:10 (mention) — // WIRE CONTRACT (scan-upload): must match docs/scan-upload-contract.md — change both sides together.
 - ../AGENTS.md:10 (link) — - **Stand-alone scan uploader (laptop client):** [scan-uploader/AGENTS.md](scan-uploader/AGENTS.md). Zero runtime depend
-- ../issues/features/2026-10-07-mac-companion-app.md:32 (mention) — `beebox/docs/scan-upload-contract.md`), so it is part of the app instead of
+- ../dev/devprocess-talk/reports/sweep-quality.md:286 (mention) — - **Lives in:** `scan-uploader/src/cli/contract-version.ts`, `beebox/src/core/scan/contract-version.ts`, `beebox/docs/sc
+- ../issues/features/2026-10-07-mac-companion-app.md:34 (mention) — `beebox/docs/scan-upload-contract.md`), so it is part of the app instead of
 
 References:
 - → docs/scan-upload-contract.md (mention)
@@ -1884,14 +1991,14 @@ References:
 
 #### docs/scheduler.md
 
-Title: "Scheduler" | 118 lines | current reference
+Title: "Scheduler" | 126 lines | current reference
 
 Referenced by:
-- AGENTS.md:51 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
+- AGENTS.md:52 (link) — `bbx wakeup` preprocesses intake, runs housekeeping and wakeup scripts, syncs connectors, runs the reactor over pending
 - docs/design/README.md:34 (link) — [`../connectors/calendar.md`](../connectors/calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:9 (link) — (`bbx tick`, see [`../scheduler.md`](../scheduler.md)), a connector pulls new
 - docs/design/processing.md:25 (link) — ([`../scheduler.md`](../scheduler.md)) and agent-set timers
-- docs/glossary.md:52 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
+- docs/glossary.md:55 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
 - docs/guides.md:39 (link) — | Scheduler: the `bbx tick` daemon | [scheduler](scheduler.md) |
 - docs/implemented-plans/chat-review.md:714 (mention) — `docs/scheduler.md`'s example set.
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
@@ -1903,7 +2010,8 @@ Referenced by:
 - docs/implemented-plans/notifications.md:1133 (mention) — | Reminder fires while the scheduler is down | existing catch-up (`docs/scheduler.md` sleep recovery) | fires on next ti
 - docs/implemented-plans/scanner-ingest.md:128 (mention) — - **Scheduler daemon on prod** — `docs/scheduler.md:21`: *"The daemon runs `bbx
 - docs/plans/agent-docs.md:69 (mention) — - Leak scan of the candidate set: `scheduler.md` names a real box in an
-- docs/plans/asset-annex.md:595 (mention) — `docs/scheduler.md`) rather than inline in wakeup. Read-only means
+- docs/plans/asset-annex.md:597 (mention) — `docs/scheduler.md`) rather than inline in wakeup. Read-only means
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:49 (mention) — - **Lives in:** `beebox/docs/scheduler.md`; box `_config/schedules/`.
 - ../issues/closed/exploration/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:27 (mention) — `docs/scheduler.md`). Is the latency gap real for the user, and could it be closed
 - ../issues/docs-and-chores/2026-07-04-box-registry-manifests.md:32 (mention) — Refs: `beebox/docs/scheduler.md`, `beebox/docs/server/boxes.md`,
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:88 (mention) — (`docs/scheduler.md` / the scheduled-task health state at
@@ -1919,9 +2027,9 @@ References:
 Title: "Secrets: the machine-level store" | 541 lines | current reference
 
 Referenced by:
-- AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
+- AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - docs/adding-api-endpoints.md:19 (mention) — that discloses a stored secret to box code (`secrets.md`).
-- docs/box-layout.md:210 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
+- docs/box-layout.md:235 (mention) — | `_config/connectors/` | Per-connector config: `<name>.json`. Connector credentials live in the machine secret store (`
 - docs/box-work.md:46 (link) — ([secrets](secrets.md#worktree-boxes-have-their-own-store)). In a worktree,
 - docs/connectors.md:13 (link) — from the machine-level secret store ([`docs/secrets.md`](secrets.md)). Some
 - docs/design/privacy-and-egress.md:11 (link) — ([`../secrets.md`](../secrets.md)).
@@ -1935,18 +2043,19 @@ Referenced by:
 - docs/implemented-plans/secret-entry-guidance.md:85 (mention) — - **Access default.** `docs/secrets.md:52`: *"`server` (default, and all
 - docs/implemented-plans/secret-trick-runtime-delivery.md:172 (mention) — Update `beebox/docs/secrets.md` to retain the HTTP route only as a low-level
 - docs/plans/agent-docs.md:290 (mention) — Promoted docs link each other relatively (`../plans/foo.md`, `secrets.md`).
-- docs/plans/document-comments.md:504 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
-- docs/plans/publish-sites-admin.md:53 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
-- docs/security-report.md:286 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
+- docs/plans/document-comments.md:506 (mention) — unchanged; only this dev surface reuses the name. `beebox/docs/secrets.md`
+- docs/plans/publish-sites-admin.md:55 (mention) — - The machine secret store holds credentials outside box trees and applies per-box grants (`beebox/docs/secrets.md:1-16,
+- docs/security-report.md:302 (mention) — | Google OAuth client — login surface: `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` env vars (`getLoginGoogleCl
 - docs/server.md:23 (link) — - Connector credentials: the machine [secret store](secrets.md); a box gets one by grant.
 - docs/server/boxes.md:102 (link) — one through a **grant** — see [`docs/secrets.md`](../secrets.md) for the full
 - docs/server/configuration.md:51 (link) — per machine with a per-box grant. See [`../docs/secrets.md`](../secrets.md).
-- docs/testing/doctests.md:121 (mention) — Connector tests use `makeTmpBox({ git: true })` to create a temp box with git, seed config files, inject a service fake,
+- docs/testing/check.md:248 (link) — ([secrets](../secrets.md)): `setSecret` and `grantSecret`
 - docs/testing/real-models.md:31 (link) — the secret ([secrets](../secrets.md)). Grants are keyed by box slug, so a
 - ../issues/closed/bugs/2026-09-09-hq-transcription-fails-silently.md:21 (mention) — > `setHqService`/`setBackend`). See `beebox/docs/secrets.md#picking-a-service-the-box-cannot-reach-yet`.
 - ../issues/closed/features/2026-09-09-secrets-add-form-hides-the-names-that-work.md:18 (mention) — > `beebox/docs/secrets.md` and
 - ../issues/features/2026-10-08-agent-files-a-grant-request.md:23 (mention) — (`beebox/docs/secrets.md`) and OAuth scopes on the connector, and does not add
 - ../research/imbue-studio/comparison.md:15 (mention) — | Default-deny per-action permissions | Every third-party call leaves through a gateway with detent rules; the agent fil
+- ../research/web-search-fetch/README.md:40 (link) — | Exa as a second search engine for scouring the web | **adopt** | Best freshness and forum recall in the probes. WebSea
 
 References:
 - → docs/implemented-plans/secret-custody.md (link)
@@ -1965,11 +2074,12 @@ Referenced by:
 - docs/implemented-plans/webapp-production-mode.md:242 (mention) — `security-overview.md` alone unless the rubric finds a reader-facing posture
 - docs/plans/agent-docs.md:298 (mention) — them; `security-overview.md` and `scheduler.md` both carry such links
 - docs/plans/public-site.md:281 (mention) — `llms.txt` indexing the machine-facing files (agent-install.md, security-overview.md
-- docs/plans/publish-sites-admin.md:41 (mention) — - **Human control of public content.** The existing plan says a publication bundle is “fully public content” regardless
-- docs/security-report.md:130 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
+- docs/plans/publish-sites-admin.md:43 (mention) — - **Human control of public content.** The existing plan says a publication bundle is “fully public content” regardless
+- docs/security-report.md:145 (link) — The exhaustive accounting behind [security-overview.md](security-overview.md). An agent
 - docs/server.md:26 (link) — - The security posture of the whole: [security overview](security-overview.md).
 - docs/todo-security.md:10 (link) — and [security-overview.md](security-overview.md) (the readable report).
 - ../.claude/skills/security-report/SKILL.md:14 (mention) — - **`beebox/docs/security-overview.md`** — the *readable overview*: the human-facing
+- ../dev/devprocess-talk/reports/sweep-quality.md:266 (mention) — - **Lives in:** `.claude/skills/security-report/SKILL.md` (277 lines), `beebox/docs/security-report.md` (630 lines, 8 se
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:37 (mention) — `beebox/docs/todo-security.md` for the security-overview.md security report.
 - ../issues/closed/bugs/2026-10-06-third-party-engine-privacy-telemetry-and-security-report.md:54 (mention) — residual risk. Update `beebox/docs/security-overview.md` to match.
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:15 (mention) — a cadence** — Agent SDK updates, the security-overview.md regeneration, manual testing,
@@ -1996,34 +2106,38 @@ References:
 
 #### docs/security-report.md
 
-Title: "Security report — structured version" | 627 lines | current reference
+Title: "Security report — structured version" | 651 lines | current reference
 
 Referenced by:
-- docs/chat/quick-chat.md:255 (link) — recent conversation text. See [security report §3](../security-report.md#3-data-egress).
+- docs/chat/quick-chat.md:285 (link) — page's title, site, and URL, but not its text. See [security report §3](../security-report.md#3-data-egress).
 - docs/design/privacy-and-egress.md:27 (link) — box ([`../security-report.md`](../security-report.md#3-data-egress)).
 - docs/guides.md:50 (link) — | Security overview, and the structured report behind it | [security-overview](security-overview.md), [security-report](
 - docs/implemented-plans/agent-browsing-owner.md:189 (mention) — - `docs/security-report.md:127` browse-key row: scope now "full app access;
+- docs/implemented-plans/background-runs-follow-openrouter-default.md:46 (mention) — - Track 3 — docs: `docs/model-policy.md`, `docs/security-report.md` §3.
 - docs/implemented-plans/box-host-packages.md:136 (mention) — - **Security posture.** `docs/security-report.md:234` records that the agent
+- docs/implemented-plans/clerk-quick-send.md:124 (mention) — - **Data egress**, `docs/security-report.md` §3: routing a page with no note
 - docs/implemented-plans/doc-structure-install-server.md:176 (mention) — | 3 | yes | 4 | security-report.md#Auth architecture | 3: also security-overview and server/configuration.md; the securi
 - docs/implemented-plans/jev-document-triage.md:552 (mention) — `security-report.md` and `security-overview.md`. It does not re-audit unrelated
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
 - docs/implemented-plans/remove-telegram.md:159 (mention) — `docs/security-report.md`, `docs/secrets.md`, `docs/chat*.md`,
 - docs/implemented-plans/webapp-production-mode.md:230 (mention) — `docs/security-report.md:107` says `/api/external` is never mounted on a
 - docs/plans/agent-docs.md:385 (mention) — `security-report.md`, `prompt-*.md`, `chat-scroll-testing.md`,
-- docs/plans/publication-approval-card.md:21 (mention) — The card schema adds a new vocabulary, so follow `beebox/docs/cards/schemas.md` and the additive-schema rule in `bbx-gui
+- docs/plans/publication-approval-card.md:23 (mention) — The card schema adds a new vocabulary, so follow `beebox/docs/cards/schemas.md` and the additive-schema rule in `bbx-gui
 - docs/security-overview.md:57 (link) — [`security-report.md`](security-report.md).
 - docs/todo-security.md:9 (link) — [docs/security-report.md](security-report.md) (structured accounting)
 - ../.claude/skills/security-report/SKILL.md:10 (mention) — - **`beebox/docs/security-report.md`** — the *structured version*: an
+- ../dev/devprocess-talk/reports/sweep-quality.md:266 (mention) — - **Lives in:** `.claude/skills/security-report/SKILL.md` (277 lines), `beebox/docs/security-report.md` (630 lines, 8 se
 - ../issues/bugs/2026-10-05-codex-hook-failures-show-no-output.md:103 (mention) — `beebox/docs/security-report.md`, which the lint hook skips. So a different
-- ../issues/bugs/2026-10-05-secret-fields-trigger-save-password.md:57 (mention) — `beebox/docs/security-report.md` (security-report skill). Each successful Show
-- ../issues/bugs/2026-10-06-thread-runs-skip-live-provider-check.md:21 (mention) — current behavior (`beebox/docs/security-report.md`, third-party models row).
+- ../issues/bugs/2026-10-05-secret-fields-trigger-save-password.md:59 (mention) — `beebox/docs/security-report.md` (security-report skill). Each successful Show
 - ../issues/closed/bugs/2026-08-21-trpc-errors-return-a-server-stack-trace.md:36 (mention) — (`beebox/src/webapp/routes/api.ts:73` (moved to `beebox/src/webapp/routes/api/register/core.ts`)). `docs/security-report
 - ../issues/closed/bugs/2026-10-06-third-party-engine-privacy-telemetry-and-security-report.md:37 (mention) — `beebox/docs/security-report.md:316` has one "OpenRouter" egress row. It
+- ../issues/closed/bugs/2026-10-06-thread-runs-skip-live-provider-check.md:24 (mention) — current behavior (`beebox/docs/security-report.md`, third-party models row).
 - ../issues/closed/exploration/2026-09-17-typesafe-system-one-judgments.md:66 (mention) — section (`beebox/docs/security-report.md`, §3) is the place that has to
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:13 (mention) — `/security-report` skill as the committed rubric, `beebox/docs/security-report.md`,
 - ../issues/closed/features/2026-08-30-cross-box-leak-scan.md:15 (mention) — section below for the full list. `security-report.md` §7b and
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:122 (link) — [security-report.md](../../beebox/docs/security-report.md). The root
 - ../issues/exploration/2026-08-11-encryption-at-rest.md:57 (mention) — - **Credentials are already hashed at rest** (`docs/security-report.md` §2:
+- ../issues/features/2026-10-14-show-privacy-implications-of-this-box-setup.md:18 (link) — [the security report](../../beebox/docs/security-report.md) lists every
 
 References:
 - → docs/security-overview.md (link)
@@ -2035,7 +2149,6 @@ References:
 - → ../issues/features/2026-07-28-google-auth-policy-proxy.md (link)
 - → ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md (link)
 - → docs/implemented-plans/secret-custody.md (mention)
-- → ../issues/bugs/2026-10-06-thread-runs-skip-live-provider-check.md (link)
 - → ../issues/decisions/2026-07-20-git-push-confirmation.md (link)
 - → ../issues/closed/bugs/2026-08-07-ios-cloud-speech-fallback-no-optout.md (link)
 - → docs/content-security-policy.md (link)
@@ -2059,7 +2172,7 @@ References:
 Title: "The production server" | 27 lines | current reference
 
 Referenced by:
-- AGENTS.md:69 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
+- AGENTS.md:70 (link) — Use the [topic index](docs/guides.md) to find a guide, and [docs/README.md](docs/README.md) for documentation organizati
 - deploy/README.md:10 (link) — under [`../docs/server.md`](../docs/server.md); this file is a map of the
 - docs/guides.md:19 (link) — | The production server: provisioning, configuration, deploying, boxes, operations, health checks | [server](server.md)
 - docs/implemented-plans/doc-structure-install-server.md:79 (mention) — | (new) | `server.md`: one operator's pipeline, not the install path; members; owned elsewhere |
@@ -2081,10 +2194,10 @@ References:
 
 #### docs/testing.md
 
-Title: "Testing" | 119 lines | current reference
+Title: "Testing" | 121 lines | current reference
 
 Referenced by:
-- AGENTS.md:19 (link) — - Doctests are the default test form. Read the [syntax](../agent-doctest/docs/syntax.md) before authoring one; the broad
+- AGENTS.md:20 (link) — - Write tests as `.test.ts` files that use `t.check` ([reference](docs/testing/check.md)). The [testing guide](docs/test
 - docs/README.md:11 (link) — (see [testing](testing.md) and `testing/`) keeps its parent file flat and
 - docs/box-work.md:77 (link) — this (`makeTmpBox()` and the test preloads; see [testing](testing.md)); prefer
 - docs/development.md:17 (link) — **[Testing](testing.md)** has the philosophy and one page per verification
@@ -2111,6 +2224,7 @@ Referenced by:
 - docs/implemented-plans/docs-reorg.gap-analysis.md:59 (mention) — `docs/testing.md:80` lists the helper without the prefixing.
 - docs/implemented-plans/docs-reorg.md:91 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/implemented-plans/figure-card-type.md:87 (mention) — - **`docs/testing.md`** — tests as a design tool, on substantial codepaths.
+- docs/implemented-plans/frontend-dom-harness.md:40 (mention) — | A. DOM harness + compiler load hook | ~170 (3 helper files, `.taprc`, `package.json`) | — | ~60 (`docs/testing/doctest
 - docs/implemented-plans/hub-healthz-box-aggregation.md:430 (mention) — **Test posture.** Per `docs/testing.md`, tests come first as a design tool.
 - docs/implemented-plans/input-extraction.md:36 (mention) — - `docs/testing.md` via the bbx-plan template: tests first as a design tool;
 - docs/implemented-plans/ios-per-box-device-lock.md:36 (mention) — - `docs/testing.md` says tests first force useful decomposition, then document
@@ -2124,6 +2238,7 @@ Referenced by:
 - docs/implemented-plans/remove-bbx-render.md:509 (mention) — than a deferral. `docs/testing.md` scopes tests to substantial codepaths, not
 - docs/implemented-plans/responsive-figures.md:404 (mention) — doctest tiers exercise (`docs/testing.md` posture: don't test for coverage's
 - docs/implemented-plans/rest-to-trpc-consolidation.md:392 (mention) — - **Test posture** (`docs/testing.md` — tests as design tool, not coverage): a
+- docs/implemented-plans/retire-doctest.md:418 (mention) — - `beebox/docs/testing.md`, replacing line 21;
 - docs/implemented-plans/router-transient-failure-resilience.md:893 (mention) — Tests first, per `beebox/docs/testing.md`. Done-when is the following passing:
 - docs/implemented-plans/scan-uploader-version-drift.md:567 (mention) — **Tests first**, per `docs/testing.md` and this contract's own clause that the
 - docs/implemented-plans/see-as-the-user.md:580 (mention) — - **Tests first as design tool** (`docs/testing.md`): B0's extraction is
@@ -2133,43 +2248,45 @@ Referenced by:
 - docs/implemented-plans/view-render-testing.md:40 (mention) — - `beebox/docs/testing.md` — tests as a design tool; doctests are the
 - docs/implemented-plans/web-push-notifications.md:491 (mention) — - **Test posture.** Doctests as a design tool (`docs/testing.md`): the load-bearing
 - docs/plans/agent-docs.md:383 (mention) — - held back (dev process or internal record): `testing.md`, `tours.md`,
-- docs/plans/asset-annex.md:1028 (mention) — **Test posture.** Per `docs/testing.md`, tests come first as a design
-- docs/plans/asset-offbox-storage.md:556 (mention) — **Test posture.** Per `docs/testing.md`, tests come first as a design
-- docs/plans/change-based-test-selection.md:425 (mention) — implication about worth. `docs/testing.md:5-11` puts decomposition and
-- docs/plans/change-based-test-selection.review.md:249 (mention) — > The plan says a never-failed test is either load-bearing or dead weight and "there is no way to tell them apart", then
-- docs/plans/clerk-tab-arrangements.md:437 (mention) — - **Package gates.** Run Clerk test/typecheck/lint/build and the focused beebox doctests/typecheck/lint. Run the full be
-- docs/plans/interface-as-cards.md:509 (link) — Use the existing tiers in [testing](../testing.md). Implemented test files include:
-- docs/plans/ios-companion-app.md:216 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
-- docs/plans/ios-input-plane-parity.md:38 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
-- docs/plans/ios-native-capture-mode.md:36 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
-- docs/plans/scan-retry-and-document-route.md:417 (mention) — Tests first, per `docs/testing.md`. Done-when, by track:
-- docs/plans/tts-backend-selection.md:560 (mention) — Tests named while designing, per `docs/testing.md`:
-- docs/plans/workspace-pane-controls.md:476 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
+- docs/plans/asset-annex.md:1030 (mention) — **Test posture.** Per `docs/testing.md`, tests come first as a design
+- docs/plans/asset-offbox-storage.md:558 (mention) — **Test posture.** Per `docs/testing.md`, tests come first as a design
+- docs/plans/change-based-test-selection.md:429 (mention) — implication about worth. `docs/testing.md:5-11` puts decomposition and
+- docs/plans/change-based-test-selection.review.md:251 (mention) — > The plan says a never-failed test is either load-bearing or dead weight and "there is no way to tell them apart", then
+- docs/plans/clerk-tab-arrangements.md:439 (mention) — - **Package gates.** Run Clerk test/typecheck/lint/build and the focused beebox doctests/typecheck/lint. Run the full be
+- docs/plans/interface-as-cards.md:511 (link) — Use the existing tiers in [testing](../testing.md). Implemented test files include:
+- docs/plans/ios-companion-app.md:218 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
+- docs/plans/ios-input-plane-parity.md:40 (mention) — - `docs/testing.md`: pure draft and protocol behavior gets doctests/XCTest;
+- docs/plans/ios-native-capture-mode.md:38 (mention) — - `docs/testing.md`: route and filesystem behavior gets doctests; pure state
+- docs/plans/scan-retry-and-document-route.md:419 (mention) — Tests first, per `docs/testing.md`. Done-when, by track:
+- docs/plans/tts-backend-selection.md:562 (mention) — Tests named while designing, per `docs/testing.md`:
+- docs/plans/workspace-pane-controls.md:478 (mention) — `docs/testing.md:710` assigns component-state checks to a “Dev harness route”;
 - docs/unimplemented-plans/publish-pages-superseded.md:277 (mention) — - **Test posture (tests as the design tool, per `docs/testing.md`):**
-- ../.claude/skills/bbx-plan/TEMPLATE.md:176 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the doctest for each
+- ../.claude/skills/bbx-plan/TEMPLATE.md:177 (mention) — <!-- Tests first, as a design tool (docs/testing.md): name the test for each
 - ../.claude/skills/cross-model/SKILL.md:31 (mention) — branches, parsing, money, or security gets none (`docs/testing.md`). A new
-- ../.claude/skills/doctest/SKILL.md:10 (link) — right instrument at all: [choosing an instrument](../../../beebox/docs/testing.md#choosing-an-instrument).
 - ../.claude/skills/field-probe/SKILL.md:3 (mention) — description: Diagnose bugs confined to an inaccessible environment, such as a phone, production, or real-device gestures
 - ../.claude/skills/field-probe/SKILL.md:13 (link) — end. It is the field arm of [reproducing a bug](../../../beebox/docs/testing.md#reproducing-a-bug):
+- ../.claude/skills/tests/SKILL.md:10 (link) — instrument fits a change: [choosing an instrument](../../../beebox/docs/testing.md#choosing-an-instrument).
+- ../dev/devprocess-talk/inventory.md:821 (mention) — | Craft skills bbx-debug, bbx-frontend, bbx-guide-testing | 2026-06-20 | 2026-10-07 19e261eb9 | "Current models debug an
+- ../dev/devprocess-talk/reports/sweep-quality.md:11 (mention) — - **Lives in:** `agent-doctest/` (src, `docs/syntax.md`, `docs/check-reference.md`, `docs/getting-started.md`); `.claude
 - ../dev/skills-review-2026-10.md:34 (mention) — | bbx-guide-testing | 79 | 1 | 2 | 10-06 | merge with doctest; it duplicates the table in `beebox/docs/testing.md` and i
-- ../issues/bugs/2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md:138 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
+- ../issues/bugs/2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md:140 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../issues/closed/docs-and-chores/2026-09-30-attribution-for-adopted-ideas.md:75 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../issues/closed/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:32 (mention) — writes the code and its test. Nothing in `beebox/docs/testing.md`,
 - ../issues/closed/features/2026-03-04-session-output-critique-tool.md:8 (mention) — **Closed:** Implemented as `bbx session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Sess
 - ../issues/closed/features/2026-08-06-agent-driven-integration-tests.md:71 (mention) — `docs/testing.md`) already does multi-step end-to-end fixtures with checkpoints and
 - ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:55 (mention) — (`content/`-nested, `shapeVersion: 2`) layout. `docs/testing.md` was updated to
-- ../issues/code-quality/2026-08-09-src-untested-by-import.md:55 (mention) — `beebox/docs/testing.md` is explicit that tests are not for coverage
-- ../issues/code-quality/2026-10-08-test-volume-sweep.md:22 (mention) — Policy changed the same day (`docs/testing.md`, cross-model skill): no test
-- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:24 (mention) — `docs/testing.md`): which doctest tier to choose, what to fake vs. let run
+- ../issues/code-quality/2026-08-09-src-untested-by-import.md:57 (mention) — `beebox/docs/testing.md` is explicit that tests are not for coverage
+- ../issues/code-quality/2026-10-08-test-volume-sweep.md:24 (mention) — Policy changed the same day (`docs/testing.md`, cross-model skill): no test
+- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:26 (mention) — `docs/testing.md`): which doctest tier to choose, what to fake vs. let run
 - ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md:87 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
-- ../issues/exploration/2026-08-12-evaluate-impeccable-skill.md:46 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
+- ../issues/exploration/2026-08-12-evaluate-impeccable-skill.md:48 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:61 (mention) — - **Failing test before the fix** — `docs/testing.md` gestures at test-first for
 - ../issues/exploration/2026-09-30-evaluate-incident-investigation-skill.md:75 (mention) — **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific conte
 - ../research/external-skills-harvest.md:292 (mention) — - [x] **X1 — reconcile bbx-plan's test posture with `docs/testing.md`. DONE →
 
 References:
+- → docs/testing/check.md (link)
 - → docs/development/workflow.md (link)
-- → docs/testing/doctests.md (link)
 - → docs/testing/tap-tests.md (link)
 - → docs/testing/real-models.md (link)
 - → docs/testing/knowledge-audits.md (link)
@@ -2183,6 +2300,21 @@ References:
 - → docs/client-debug-log.md (link)
 - → docs/box-work.md (link)
 
+#### docs/theme-authoring.md
+
+Title: "Authoring themes" | 95 lines | current reference
+
+Referenced by:
+- docs/implemented-plans/theme-contrast-audit.md:54 (mention) — About 850 lines plus docs (theme-authoring.md, bbx-theme skill, tours doc:
+- docs/implemented-plans/theme-studio.md:124 (mention) — `docs/theme-authoring.md`, "chrome hooks").
+- frontend.md:230 (link) — [theme authoring studio](docs/theme-authoring.md).
+- ../.claude/skills/bbx-theme/SKILL.md:8 (mention) — Read `beebox/docs/theme-authoring.md` for the studio and material hooks.
+
+References:
+- → ../.claude/skills/bbx-theme/SKILL.md (link)
+- → docs/box/card-themes.md (link)
+- → ../bin/docs/router-operations.md (link)
+
 #### docs/todo-security.md
 
 Title: "Security TODOs (dissolved)" | 31 lines | current reference
@@ -2191,17 +2323,18 @@ Referenced by:
 - docs/guides.md:60 (link) — | Security TODOs, dissolved into the report and the issue queue | [todo-security](todo-security.md) |
 - docs/implemented-plans/docs-reorg.md:80 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
 - docs/implemented-plans/local-password-auth.md:540 (mention) — `docs/todo-security.md` records the new posture; the issue file moves to
-- docs/plans/invite-links-and-password-change.md:353 (mention) — - Update `docs/todo-security.md`: hashes at rest, single use, open-link email
-- docs/plans/operator-member-password-reset.md:189 (mention) — - **Security documentation.** `docs/todo-security.md:20-28` records hashed,
+- docs/plans/invite-links-and-password-change.md:355 (mention) — - Update `docs/todo-security.md`: hashes at rest, single use, open-link email
+- docs/plans/operator-member-password-reset.md:191 (mention) — - **Security documentation.** `docs/todo-security.md:20-28` records hashed,
+- ../dev/devprocess-talk/reports/sweep-queue-planning.md:14 (mention) — - **Lives in:** `<old-package>/docs/ideas.md` (deleted); no TODO.md ever existed (`git log --all --diff-filter=A -- 'TOD
 - ../issues/closed/bugs/2026-07-19-google-oauth-callback-unauthenticated.md:41 (mention) — owner. Relates to `docs/todo-security.md` ("shared Google token with broad
 - ../issues/closed/bugs/2026-07-21-file-lock-empty-window-race.md:37 (mention) — `beebox/docs/todo-security.md` for the security-overview.md security report.
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:96 (mention) — Touches the same surface as `docs/todo-security.md` (accepted security gaps) and
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:48 (link) — [todo-security.md](../../../beebox/docs/todo-security.md) is the seed —
 - ../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md:56 (mention) — have the host. The subagent breakdown of `todo-security.md` classified
-- ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:43 (mention) — Broken out of `beebox/docs/todo-security.md` ("No true socket-level WS-auth
+- ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:45 (mention) — Broken out of `beebox/docs/todo-security.md` ("No true socket-level WS-auth
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:103 (mention) — was accepted as near-nil-reachability and documented in `todo-security.md`).
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:119 (link) — [todo-security.md](../../beebox/docs/todo-security.md)), producing
-- ../issues/features/2026-07-28-google-auth-policy-proxy.md:213 (mention) — `beebox/docs/todo-security.md` fold in here rather than standing as their
+- ../issues/features/2026-07-28-google-auth-policy-proxy.md:215 (mention) — `beebox/docs/todo-security.md` fold in here rather than standing as their
 
 References:
 - → ../issues/closed/features/2026-07-20-agent-maintained-security-report.md (link)
@@ -2214,10 +2347,10 @@ References:
 
 #### docs/triage.md
 
-Title: "Triage" | 117 lines | current reference
+Title: "Triage" | 128 lines | current reference
 
 Referenced by:
-- docs/box-layout.md:158 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
+- docs/box-layout.md:182 (mention) — | `_content/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the forma
 - docs/connectors.md:131 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:33 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:40 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
@@ -2227,6 +2360,7 @@ Referenced by:
 - docs/guides.md:42 (link) — | Triage: the intake pipeline | [triage](triage.md) |
 - docs/implemented-plans/box-docs-in-package.md:27 (mention) — | `bbx-commands.md`, `connectors.md`, `views.md`, `chat-voice.md`, `narration-mode.md`, `reducing-claude-md.md`, `proced
 - docs/implemented-plans/docs-reorg.md:342 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
+- docs/implemented-plans/file-wordless-captures.md:243 (mention) — 4. Reference docs: `beebox/docs/mobile-contract.md` ("Material without authored input is saved without inventing an agen
 - docs/implemented-plans/mvp-implementation-guide.md:21 (mention) — > intake→triage→handle pipeline now, `../triage.md`), and the
 - docs/implemented-plans/one-root-box-layout.md:468 (mention) — (`docs/triage.md`).
 - docs/implemented-plans/questions-end-to-end.md:40 (mention) — ask time). `docs/triage.md:131` already demands this: *"needing to carry both
@@ -2234,7 +2368,7 @@ Referenced by:
 - docs/landmarks.md:34 (mention) — A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a
 - docs/plans/agent-docs.md:50 (mention) — `bbx-commands.md`, `connectors.md`, `procedures.md`, `triage.md`,
 - docs/plans/cli-restructure.md:95 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `bbx intake`, but the bare `bbx intake` is now
-- docs/plans/gmail-admission-and-preparation.md:14 (link) — already exist in [`triage.md`](../triage.md) and the
+- docs/plans/gmail-admission-and-preparation.md:16 (link) — already exist in [`triage.md`](../triage.md) and the
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:39 (mention) — | `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-tr
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:184 (mention) — - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-c
 - docs/reports/plan-directory-migration-history-2026-09-13.md:23 (mention) — operation is in `docs/triage.md` and the mixed design record is in
@@ -2243,16 +2377,18 @@ Referenced by:
 - docs/user-stories/catalog/2026-06-26.md:1672 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including
 - docs/user-stories/catalog/2026-08-21.md:6008 (mention) — **Code check** — core/docs-gen/index.ts generateDocs writes .beebox/agent-guide.md (via generateAgentGuide from core/age
 - src/core/agent-guide/guide.md:421 (mention) — both paths are in `node_modules/beebox/box-docs/triage.md`. What a capture
-- ../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md:40 (mention) — `beebox/docs/triage.md` aligned with the corrected transport.
+- ../issues/closed/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md:41 (mention) — `beebox/docs/triage.md` aligned with the corrected transport.
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:28 (mention) — (`docs/triage.md`).
 - ../issues/decisions/2026-08-01-scan-handler-move-into-place.md:9 (mention) — `docs/triage.md`, the handle stage needs a `procedure:` (inline or
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:80 (mention) — role with a handler procedure (`docs/triage.md`). Could the admin landmark host
 - ../issues/features/2026-07-20-clerk-import-dispatch-by-url.md:89 (mention) — (`docs/triage.md`) or a Drive-specific destination — the Drive connector may
+- ../research/fabric-review.md:72 (mention) — - **Organization is explicit and inspectable.** Cards in directories with git history; landmarks mark places; the intake
 - ../research/imbue-studio/comparison.md:200 (mention) — work (`docs/triage.md`). There is no Slack connector, and the todo sweep and
 - ../research/pai/README.md:63 (mention) — | Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle i
 
 References:
 - → docs/reports/triage-design-2026-09-13.md (link)
+- → docs/mobile-contract.md (link)
 - → docs/box/triage-instructions.md (link)
 
 ### docs/architecture/
@@ -2267,6 +2403,7 @@ Referenced by:
 - docs/implemented-plans/design-reconciliation.md:42 (mention) — - **Reality/tension** — architecture/01-what-is-this.md:11: "This group chat is
 - docs/plans/agent-docs.md:376 (mention) — - architecture: `01-what-is-this.md`, `02-cards-and-memory.md` only (the
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:14 (mention) — spirit-phrased last row, in `01-what-is-this.md`, `02-cards-and-memory.md`,
+- ../research/fabric-review.md:92 (mention) — | Several named agents with personalities per account | **Reject.** One box, one agent, one personality is deliberate; s
 - ../research/lifeos-review.md:51 (mention) — - **The dashboard is operations**, not a life view (`beebox/src/frontend/src/pages/DashboardPage.tsx`): questions, inbox
 
 #### docs/architecture/02-cards-and-memory.md
@@ -2305,7 +2442,7 @@ Title: "The Lund-Vega Family" | 95 lines | current reference
 Referenced by:
 - docs/architecture/AGENTS.md:14 (mention) — - **`family.md`** — Character reference for the Lund-Vega family used in all examples. Detailed bios, relationships, hou
 - docs/architecture/outline.md:5 (mention) — Supporting docs (not user-facing): `spirit.md` (values compass), `family.md` (character reference), `image-gen.yaml` (il
-- docs/plans/source-available-release.md:72 (mention) — `docs/architecture/family.md` (Lund-Vega roster) are the sanctioned
+- docs/plans/source-available-release.md:74 (mention) — `docs/architecture/family.md` (Lund-Vega roster) are the sanctioned
 
 #### docs/architecture/outline.md
 
@@ -2336,14 +2473,17 @@ Referenced by:
 - docs/design/identity.md:7 (mention) — not an app you open (ruling 3; the feel is `../architecture/spirit.md`'s
 - docs/design/trust.md:48 (mention) — for a person (spirit.md's "nothing should just disappear";
 - docs/development/workflow.md:89 (link) — [spirit.md](../architecture/spirit.md) it serves and risks.
+- docs/implemented-plans/activity-detail.md:55 (mention) — Serves "see the gears" (`beebox/docs/architecture/spirit.md`) at the depth
 - docs/implemented-plans/design-reconciliation.md:27 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/implemented-plans/docs-reorg.md:335 (mention) — `docs/design/` (8 topic files + README acknowledging spirit.md),
 - docs/implemented-plans/live-gap-marker.md:56 (mention) — (`docs/architecture/spirit.md:79`) by sending a known hole as unsure.
 - docs/implemented-plans/questions-end-to-end.md:376 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
+- docs/plans/ios-app-intent-capture.md:46 (mention) — - **Serves:** `architecture/spirit.md`, “The best stuff comes from the people”: “The box's job is to collect, preserve,
 - ../.claude/skills/bbx-design/SKILL.md:18 (mention) — `beebox/docs/architecture/spirit.md`, all of it. Design serves it: "If
 - ../.claude/skills/bbx-design/TEMPLATE.md:34 (mention) — <!-- The spirit.md section this serves and the one it risks, one line each.
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:15 (mention) — `outline.md`, `spirit.md`, and `writing-style.md`: capture pages became the
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:64 (mention) — covers proactivity as ambition but never states the question; spirit.md
+- ../issues/decisions/2026-10-17-captures-that-fit-no-place.md:23 (mention) — - Asking about each one nags. Random screenshots arrive often, and a question per item is the kind of tracking `beebox/d
 
 #### docs/architecture/writing-style.md
 
@@ -2360,11 +2500,12 @@ References:
 
 #### docs/box/card-themes.md
 
-Title: "Card themes" | 186 lines | current reference
+Title: "Card themes" | 285 lines | current reference
 
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
-- docs/implemented-plans/card-reading-properties.md:408 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
+- docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
+- docs/theme-authoring.md:80 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
 - frontend.md:13 (link) — Properties; see [`docs/box/card-themes.md`](docs/box/card-themes.md) for the
 
 #### docs/box/history.md
@@ -2380,7 +2521,7 @@ Title: "Interface cards" | 95 lines | current reference
 
 Referenced by:
 - docs/README.md:41 (link) — [interface cards](box/interface-cards.md).
-- docs/plans/interface-as-cards.md:617 (mention) — | E: guidance/audits and removal of replaced routed adapters | MET | `docs/box/interface-cards.md`, `src/dev/knowledge-a
+- docs/plans/interface-as-cards.md:619 (mention) — | E: guidance/audits and removal of replaced routed adapters | MET | `docs/box/interface-cards.md`, `src/dev/knowledge-a
 - ../issues/closed/bugs/2026-09-21-landmark-curation-doc-not-shipped-to-boxes.md:25 (mention) — only 4 files (`card-themes.md`, `interface-cards.md`, `quick-chat.md`,
 
 #### docs/box/landmark-curation.md
@@ -2446,6 +2587,8 @@ Referenced by:
 - docs/implemented-plans/publication-card-home.md:165 (mention) — - `docs/box/publishing.md`: rewrite sections at lines 14, 80, 82, 129, 542 and 645. One example card plus `static/`; the
 - docs/publishing.md:5 (link) — [`docs/box/publishing.md`](box/publishing.md); this page covers server custody,
 - ../issues/closed/features/2026-10-02-static-publications-render-markdown.md:11 (mention) — Closed: implemented on branch worktree-static-markdown-publish (commits db822652d, 407ea84bf, 058ab8a32). Open questions
+- ../issues/features/2026-10-20-host-real-websites-from-a-box.md:24 (link) — [Publishing](../../beebox/docs/box/publishing.md) serves a `publication`
+- ../research/fabric-review.md:94 (mention) — | Streaming desktop drive, canvas, Kanban, client portals with link analytics | **Reject.** The box is already files on
 - ../research/notebooklm/README.md:27 (mention) — | Public "chat with my collection" links, featured notebooks, analytics | **reject** | an agent running for strangers at
 - ../research/openui/beebox-fit.md:101 (mention) — (`beebox/docs/box/publishing.md`). A Markdoc data tag would publish as a
 - ../research/openui/beebox-surfaces.md:71 (mention) — Worker; `index.md` becomes HTML (`beebox/docs/box/publishing.md`). Published
@@ -2455,9 +2598,11 @@ Referenced by:
 Title: "Quick chat routing rules" | 47 lines | current reference
 
 Referenced by:
-- docs/chat/quick-chat.md:219 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
-- docs/plans/box-screen.md:374 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
+- docs/chat/quick-chat.md:248 (link) — Box agents have [packaged rubric instructions](../box/quick-chat.md).
+- docs/implemented-plans/clerk-quick-send.md:73 (mention) — the chat in the person's words (`docs/box/quick-chat.md`: *"A posted thought
+- docs/plans/box-screen.md:376 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
 - ../issues/features/2026-09-25-quick-drop-entry-points.md:20 (mention) — or recent conversation (`beebox/docs/box/quick-chat.md`), but **it does not
+- ../issues/features/2026-10-15-clerk-send-to-box-sorted-like-quick-chat.md:34 (mention) — (`beebox/docs/chat/quick-chat.md`, `beebox/docs/box/quick-chat.md`). The
 
 #### docs/box/schemas.md
 
@@ -2465,7 +2610,7 @@ Title: "Writing Box-Local Schemas" | 301 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:140 (link) — [schemas](box/schemas.md)). A tracked nested `AGENTS.md` holds a pointer to it
-- docs/box-layout.md:253 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
+- docs/box-layout.md:278 (link) — | `src/schemas/` | Box-local card-type definitions (Zod + `beebox/cards`). Has its own AGENTS.md, which points at the [s
 - docs/cards/validation.md:56 (link) — `markdocTags` (see [schemas](../box/schemas.md)). Findings are warnings; a tag the type does not
 - docs/implemented-plans/place-shows-cards.md:215 (mention) — schemas can define it (`docs/box/schemas.md:185-205`, the `plant` example
 - docs/implemented-plans/plugins-slice-2.md:137 (mention) — (`docs/box/schemas.md:236-262`); the loader reads it at
@@ -2477,11 +2622,11 @@ References:
 
 #### docs/box/siri-shortcuts.md
 
-Title: "Use Bee Box with Siri and Shortcuts" | 32 lines | current reference
+Title: "Use Bee Box with Siri, voice notes, and sharing" | 94 lines | current reference
 
 Referenced by:
-- docs/plans/ios-app-intent-capture.md:217 (mention) — The `external-input-arrival-tag` audit verifies direct understanding of the wrapper: real human text, box-level routing,
-- ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md:30 (mention) — The usage guide `beebox/docs/box/siri-shortcuts.md` says to unlock a protected box before using Siri. This is inaccurate
+- ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md:31 (mention) — The usage guide `beebox/docs/box/siri-shortcuts.md` says to unlock a protected box before using Siri. This is inaccurate
+- ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md:64 (link) — The [usage guide](../../beebox/docs/box/siri-shortcuts.md) gives installed action
 
 #### docs/box/speaking-to-the-person.md
 
@@ -2493,18 +2638,19 @@ Referenced by:
 
 #### docs/box/todos.md
 
-Title: "Todos" | 92 lines | current reference
+Title: "Todos" | 95 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:150 (link) — [todos](box/todos.md) holds the `{% todo %}` attributes, querying, and review
+- docs/glossary.md:87 (mention) — **now / later** — The two states of an open todo a person sees: *now* (past its `due`, past its `start`, or undated) and
 - docs/implemented-plans/doc-structure-box-guidance.md:444 (mention) — TODOS mechanics → `box-docs/todos.md` (the one-paragraph "what a todo is"
-- docs/plans/gmail-admission-and-preparation.md:88 (mention) — - `beebox/docs/box/todos.md:39`: `by="agent" assigned="agent"` already represents
+- docs/plans/gmail-admission-and-preparation.md:90 (mention) — - `beebox/docs/box/todos.md:39`: `by="agent" assigned="agent"` already represents
 - src/core/agent-guide/guide.md:345 (mention) — Mechanics: `node_modules/beebox/box-docs/todos.md`, before adding attributes,
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md:89 (mention) — | 14 | Every todo shows a grey "user" tag | Product. The agent wrote `assigned="user"`, a value the todo docs do not def
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md:29 (mention) — - `9791d3a` added two todos: "Reply to Marisol about Sunday lunch" (`due` 2026-10-09) and "Check in on this list" (`due`
 - test/user-stories/journeys/F-newcomer/reports/2026-10-08.md:96 (mention) — | 21 | "starts Oct 17" chip; the person never said 17 | Product. The agent wrote `start="-2w"` (`1d8a151`) and did not s
-- ../issues/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md:12 (mention) — leaves quiet and joins the plate (`beebox/box-docs/todos.md:26-28`, "the
 - ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:14 (mention) — `beebox/docs/box/todos.md`, `beebox/docs/cards/format.md`, and the todo tag
+- ../issues/closed/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md:11 (mention) — Closed 2026-10-16 on worktree-plate-wording (8eaccd8ac, 3597a62e6): the human chose "later" as the one word. A todo befo
 - ../issues/features/2026-10-08-cross-tool-todo-as-a-target-use-case.md:27 (mention) — (`beebox/docs/box/todos.md`); Gmail and Calendar already sync into cards and
 - ../research/imbue-studio/comparison.md:18 (mention) — | Integrations, cross-tool to-do | ~35 latchkey services by browser-captured credentials; per-app JSON stores; task-inbo
 
@@ -2514,13 +2660,13 @@ Title: "Triage instructions and replay" | 133 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/jev-document-triage.md:405 (mention) — is on-demand `docs/box/triage-instructions.md`, with short discoverability pointers
-- docs/triage.md:94 (link) — Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
+- docs/triage.md:105 (link) — Use the [instruction and replay guide](box/triage-instructions.md) for CLI trials,
 - src/core/agent-guide/guide.md:426 (link) — Triage repair: [instructions and replay](../../../docs/box/triage-instructions.md).
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:153 (link) — The [agent-facing guide](../../beebox/docs/box/triage-instructions.md) covers
 
 #### docs/box/tricks.md
 
-Title: "Tricks" | 122 lines | current reference
+Title: "Tricks" | 127 lines | current reference
 
 Referenced by:
 - docs/box-guidance.md:139 (link) — `docs/box/` (for example [tricks](box/tricks.md) or
@@ -2528,21 +2674,23 @@ Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:621 (mention) — | trick auto-commit and trailer | 6 | `tricks.md` | 5 |
 - docs/implemented-plans/box-agents-md.md:347 (mention) — (`docs/box-guidance.md`, `docs/box-layout.md`, `docs/box/tricks.md`), the
 - docs/implemented-plans/doc-structure-box-guidance.md:395 (mention) — | tricks | new `tricks.md` (execution model, auto-commit, parent process, deps, from the issue) | pointer + box conventi
-- src/core/agent-guide/guide.md:549 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
+- src/core/agent-guide/guide.md:550 (mention) — (`node_modules/beebox/box-docs/tricks.md`), and a scheduled script or
+- ../issues/closed/bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md:160 (mention) — `beebox/docs/box/tricks.md`.
 - ../issues/closed/docs-and-chores/2026-09-21-tricks-claude-md-missing-commit-and-process-model-docs.md:14 (mention) — **Closed:** `beebox/docs/box/tricks.md` ("How the engine runs a trick") now
 
 #### docs/box/what-you-could-do.md
 
-Title: "What you could do with your box" | 218 lines | current reference
+Title: "What you could do with your box" | 221 lines | current reference
 
 Referenced by:
 - docs/README.md:40 (link) — [what you could do with your box](box/what-you-could-do.md) and
+- docs/implemented-plans/front-door.md:96 (mention) — | Empty-box suggestions lead with hobby collections, nothing about reminders (F row 7) | By design today: the `what-can-
 - docs/implemented-plans/retire-type-specific-core-tags.md:65 (mention) — Source plus tests about 830 changed lines. Authored docs and instructions about 120 lines (schema instruction strings, `
-- docs/plans/publish-shared-host-per-box.md:153 (mention) — Update `beebox/docs/box/publishing.md` and the relevant `beebox/docs/box/what-you-could-do.md` entry to teach agents tha
+- docs/plans/publish-shared-host-per-box.md:155 (mention) — Update `beebox/docs/box/publishing.md` and the relevant `beebox/docs/box/what-you-could-do.md` entry to teach agents tha
+- test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md:69 (mention) — | 6 | Note 1: three suggestions; "a class you're taking" felt like an invitation; "Once Google is connected …". | P+ | T
+- test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md:62 (mention) — | 9 | Note 1: three suggestions; mentions web research and "Google calendar/email". | P+ | Transcript 05:45:37: "Once Go
 - test/user-stories/journeys/A-lending/reports/2026-10-08.md:72 (mention) — | 12 | Note 3: mid-turn the chat said "Now the schema." — the walker does not know what a schema is. | P | Transcript 10
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md:62 (mention) — | 9 | Note 1: three things to try, web research, and calendar/email "once Google is connected". | P+ | Transcript 11:40:
-- test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md:69 (mention) — | 6 | Note 1: three suggestions; "a class you're taking" felt like an invitation; "Once Google is connected …". | P+ | T
-- test/user-stories/journeys/D-chemistry/reports/2026-10-09.md:62 (mention) — | 9 | Note 1: three suggestions; mentions web research and "Google calendar/email". | P+ | Transcript 05:45:37: "Once Go
 - ../issues/closed/bugs/2026-09-21-landmark-curation-doc-not-shipped-to-boxes.md:26 (mention) — `what-you-could-do.md`). `landmark-curation.md` lives at `beebox/docs/`
 - ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:20 (mention) — (`beebox/box-docs/what-you-could-do.md:90`). Creating a card type mid-chat is
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:79 (mention) — > `beebox/docs/box/what-you-could-do.md`, written for box agents (not the
@@ -2558,13 +2706,13 @@ References:
 
 #### docs/cards/format.md
 
-Title: "Card format" | 158 lines | current reference
+Title: "Card format" | 160 lines | current reference
 
 Referenced by:
-- AGENTS.md:29 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
+- AGENTS.md:30 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
 - README.md:102 (link) — - [`docs/cards/format.md`](docs/cards/format.md) — the card format
 - docs/cards.md:10 (link) — | [Format](cards/format.md) | The file format: naming, frontmatter and body, the shared Markdoc tags, attachments, refs,
-- docs/cards/migrations.md:376 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:417 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/schemas.md:82 (link) — - The filename's `.<type>.card` segment is the discriminator ([format](format.md#format)). A `type:` frontmatter key is
 - docs/cards/validation.md:99 (link) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/design/README.md:41 (link) — - **§3 File formats and envelopes** — taught the XML envelope; cards are YAML frontmatter + markdown ([`../cards/format.
@@ -2597,10 +2745,10 @@ References:
 
 #### docs/cards/migrations.md
 
-Title: "Card migrations" | 419 lines | current reference
+Title: "Card migrations" | 460 lines | current reference
 
 Referenced by:
-- AGENTS.md:29 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
+- AGENTS.md:30 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
 - README.md:105 (link) — - [`docs/cards/migrations.md`](docs/cards/migrations.md) — the data-migration runbook
 - docs/cards.md:13 (link) — | [Migrations](cards/migrations.md) | Changing cards already on disk: applying, the admission gate, writing a migrator,
 - docs/cards/validation.md:100 (link) — Migrators and their field-loss rules: [migrations](migrations.md).
@@ -2627,15 +2775,16 @@ Referenced by:
 - docs/implemented-plans/remove-box-shape-v1.review.md:47 (mention) — entries." `migrations.md:80-84`: "Never reorder, rename, or remove."
 - docs/implemented-plans/remove-cardworks-deletion.md:465 (mention) — `docs/cards/migrations.md` (retire deleted-migrator references).
 - docs/implemented-plans/remove-cardworks-package.md:333 (mention) — it now means "from `src/cards/`"); retire `docs/cards/migrations.md` references to
+- docs/implemented-plans/retire-memo.md:291 (mention) — (`docs/cards/migrations.md:95-110`).
 - docs/implemented-plans/retire-type-specific-core-tags.md:65 (mention) — Source plus tests about 830 changed lines. Authored docs and instructions about 120 lines (schema instruction strings, `
 - docs/implemented-plans/standard-card-fields.md:110 (mention) — (`docs/cards/migrations.md`, "Automatic convergence"), and a card the
 - docs/implemented-plans/vocab-glossary-sweep.md:59 (mention) — - `scripts/migrate/_harness.ts` (moved to `beebox/src/scripts/migrate/_harness.ts`) + `docs/cards/migrations.md` — migra
 - docs/install/docker.md:100 (link) — [`migrations.md`](../cards/migrations.md).
 - docs/plans/agent-docs.md:381 (mention) — `migrations.md`, `scheduler.md` (after its example loses the real box
-- docs/plans/asset-annex.md:761 (mention) — since it accurately records a system that existed. `docs/cards/migrations.md`
-- docs/plans/asset-offbox-storage.md:577 (mention) — nothing in `docs/cards/migrations.md`. The only state change is Track A2
-- docs/plans/migration-reliability.md:759 (link) — [migrations](../cards/migrations.md), [server operations](../server/operations.md),
-- docs/plans/scan-guide-card.md:88 (mention) — script + procedure kinds; `docs/cards/migrations.md`). NOT used — see
+- docs/plans/asset-annex.md:763 (mention) — since it accurately records a system that existed. `docs/cards/migrations.md`
+- docs/plans/asset-offbox-storage.md:579 (mention) — nothing in `docs/cards/migrations.md`. The only state change is Track A2
+- docs/plans/migration-reliability.md:761 (link) — [migrations](../cards/migrations.md), [server operations](../server/operations.md),
+- docs/plans/scan-guide-card.md:90 (mention) — script + procedure kinds; `docs/cards/migrations.md`). NOT used — see
 - docs/reports/migration-rollout-2026-05-23.md:3 (mention) — Frozen 2026-09-25 from `docs/migrations.md`. The 2026-05-23 production
 - docs/reports/migration-rollout-2026-05-23.md:6 (link) — runbook is [card migrations](../cards/migrations.md). Do not update in place.
 - docs/server.md:24 (link) — - Box data migrations and recovery: [migrations](cards/migrations.md).
@@ -2645,10 +2794,11 @@ Referenced by:
 - ../issues/closed/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md:21 (mention) — and it is written down in `docs/cards/migrations.md` and in the migration script's own
 - ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:52 (mention) — stay registered forever (append-only `MIGRATIONS`, per `docs/cards/migrations.md`)
 - ../issues/closed/code-quality/2026-09-04-remove-one-root-v2-bootstrap.md:11 (mention) — Resolved 2026-10-08. The bootstrap modules, `resolveTopPathOrBootstrap`, and the one-root script were already deleted wi
+- ../issues/closed/code-quality/2026-10-16-migration-leftover-work-must-exit-partial.md:22 (mention) — `convert`; `docs/cards/migrations.md`, "Exit 2 means per-card partial
 - ../issues/closed/exploration/2026-08-19-plugins-and-the-medium-content-line.md:98 (mention) — definitions come from. `docs/cards/migrations.md` step 7 applies: whatever moves,
 - ../issues/closed/features/2026-07-29-retire-todo-list-schema.md:19 (mention) — test1 via `bbx migrate --apply` (see `docs/cards/migrations.md`'s `todo-list-to-doc`
 - ../issues/decisions/2026-07-20-release-discipline-and-update-story.md:26 (mention) — (`docs/cards/migrations.md` is currently a maintainer runbook, not an
-- ../issues/docs-and-chores/2026-07-19-questions-end-to-end-followups.md:15 (mention) — `~/src/boxes/test1`** per `beebox/docs/cards/migrations.md`
+- ../issues/docs-and-chores/2026-07-19-questions-end-to-end-followups.md:17 (mention) — `~/src/boxes/test1`** per `beebox/docs/cards/migrations.md`
 - ../issues/features/2026-08-25-shellcheck-shell-in-box-cards.md:22 (mention) — gate for agent-applied migrations, per `docs/cards/migrations.md`), and any `runs:`
 
 References:
@@ -2666,16 +2816,16 @@ References:
 Title: "Card schemas" | 379 lines | current reference
 
 Referenced by:
-- AGENTS.md:29 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
+- AGENTS.md:30 (link) — Cards use YAML frontmatter plus a Markdown body and are named `Name.<type>.card`; the filename determines the schema. At
 - README.md:103 (link) — - [`docs/cards/schemas.md`](docs/cards/schemas.md) — adding a new card type
 - docs/cards.md:11 (link) — | [Schemas](cards/schemas.md) | Adding a card type: the schema file, its hooks, registration, templates, the generated i
 - docs/cards/format.md:9 (link) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:377 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
+- docs/cards/migrations.md:418 (link) — - [Schemas](schemas.md), when a schema change rather than a migrator is the right move.
 - docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
 - docs/implemented-plans/box-schema-reload.md:253 (mention) — - Mirror in `docs/cards/schemas.md` if it implies `bbx init` re-registers.
 - docs/implemented-plans/box-search.md:54 (mention) — - `docs/cards/schemas.md`: the checklist any schema-surface change follows
 - docs/implemented-plans/card-prominence.md:102 (mention) — `.claude/skills/bbx-guide-schemas/SKILL.md` and `docs/cards/schemas.md`
-- docs/implemented-plans/card-reading-properties.md:408 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
+- docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
 - docs/implemented-plans/card-symbol.md:246 (mention) — see the fields, the enumerations in `docs/cards/schemas.md:72` and the
 - docs/implemented-plans/chat-titles.md:484 (mention) — Codex-revision note); `docs/cards/schemas.md` and the
 - docs/implemented-plans/docs-reorg.gap-analysis.md:50 (mention) — prime retrieval field. `docs/cards/schemas.md` never mentions it and
@@ -2705,12 +2855,13 @@ References:
 Title: "Card validation" | 101 lines | current reference
 
 Referenced by:
-- AGENTS.md:31 (link) — Cards validate on load. When mutating existing card text, parse, change, and reserialize it; serialization follows schem
+- AGENTS.md:32 (link) — Cards validate on load. When mutating existing card text, parse, change, and reserialize it; serialization follows schem
 - docs/cards.md:12 (link) — | [Validation](cards/validation.md) | How `bbx validate` reaches agents and commits: the hooks and the canonical ref rew
-- docs/cards/format.md:149 (link) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
+- docs/cards/format.md:151 (link) — Cards validate on load (a Zod parse failure is a hard error — the card can't be used) and again at commit time via the p
 - docs/implemented-plans/doc-structure-cards.md:63 (mention) — | `card-validation.md` | `cards/validation.md` |
 - docs/implemented-plans/docs-reorg.md:321 (mention) — `docs/cards/validation.md`); findability quick wins (Guides rows,
 - docs/testing.md:52 (link) — | [Card validator hook](cards/validation.md) | Does a card still validate after an agent edit? Runs on its own during ag
+- ../dev/devprocess-talk/reports/sweep-quality.md:137 (mention) — - **Lives in:** `beebox/src/core/install-validation-hooks.ts`, `beebox/src/core/sdk-hooks.ts` (`cardValidatorHook`), `be
 - ../issues/closed/bugs/2026-09-21-validate-hook-warning-vs-error-exit-code.md:21 (mention) — the agent harness's PostToolUse hook (`beebox/docs/cards/validation.md:13`):
 
 References:
@@ -2727,7 +2878,7 @@ References:
 
 #### docs/chat/composer.md
 
-Title: "Composer" | 364 lines | current reference
+Title: "Composer" | 369 lines | current reference
 
 Referenced by:
 - docs/chat.md:14 (link) — | [Composer](chat/composer.md) | The input bar: its coordination machine and a map of its rendered states. |
@@ -2735,8 +2886,8 @@ Referenced by:
 - docs/implemented-plans/architectural-review.md:184 (mention) — docs in sync (`docs/chat/composer.md`). xstate's home; not to be
 - docs/implemented-plans/doc-structure-chat.md:73 (mention) — | `composer-input-machine.md` + `composer-states.md` (+ `composer-states/` images) | `chat/composer.md` (+ `chat/compose
 - docs/implemented-plans/docs-reorg.gap-analysis.md:121 (mention) — 10. `docs/chat/composer.md` leads with an unshipped 5-state
-- docs/implemented-plans/live-gap-marker.md:105 (mention) — `docs/chat/composer.md`.
-- docs/plans/composer-child-actors.md:10 (link) — [current composer guide](../chat/composer.md). It is not authorized runtime work. The
+- docs/implemented-plans/live-gap-marker.md:108 (mention) — `docs/chat/composer.md`.
+- docs/plans/composer-child-actors.md:12 (link) — [current composer guide](../chat/composer.md). It is not authorized runtime work. The
 - docs/testing/dev-stubs.md:18 (link) — [composer states](../chat/composer.md)), `/dev/chat-scroll`. Tours walk the
 - ../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md:81 (mention) — 3. **Cost.** Noted in the plan, `docs/chat/composer.md`, and contract §4.4a:
 
@@ -2755,22 +2906,26 @@ Referenced by:
 
 #### docs/chat/quick-chat.md
 
-Title: "Quick chat" | 298 lines | current reference
+Title: "Quick chat" | 330 lines | current reference
 
 Referenced by:
 - docs/chat.md:13 (link) — | [Quick chat](chat/quick-chat.md) | Routing a captured thought to the right conversation, and the rubric that steers it
 - docs/design/trust.md:49 (link) — [`../chat/quick-chat.md`](../chat/quick-chat.md)). The record is kept so an
-- docs/landmarks.md:230 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
-- docs/plans/box-screen.md:374 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
-- docs/plans/chat-routing.md:18 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
-- docs/plans/gmail-admission-and-preparation.md:24 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
+- docs/implemented-plans/clerk-quick-send.md:54 (mention) — today (`docs/chat/quick-chat.md`, "The box screen"). The page toast says
+- docs/landmarks.md:235 (link) — [Quick chat](chat/quick-chat.md#the-box-screen)). Next is **Find a
+- docs/mobile-contract.md:1302 (mention) — `page: {title,url}`: a page sent from the Clerk (`clerk.send`, `docs/chat/quick-chat.md`),
+- docs/plans/box-screen.md:376 (mention) — 9. Docs: `docs/chat/quick-chat.md`, `docs/box/quick-chat.md`, the landmarks and navigation references, `mobile-contract.
+- docs/plans/chat-routing.md:20 (link) — [Quick chat](../chat/quick-chat.md). Live evaluation of routing quality is
+- docs/plans/gmail-admission-and-preparation.md:26 (link) — [`chat/quick-chat.md`](../chat/quick-chat.md); the older combined issue should be
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:31 (mention) — (`docs/chat/quick-chat.md`).
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:102 (link) — and is documented at [`beebox/docs/chat/quick-chat.md`](../../beebox/docs/chat/quick-chat.md);
 - ../issues/features/2026-09-25-quick-drop-entry-points.md:92 (link) — [Quick chat](../../beebox/docs/chat/quick-chat.md).
+- ../issues/features/2026-10-15-clerk-send-to-box-sorted-like-quick-chat.md:34 (mention) — (`beebox/docs/chat/quick-chat.md`, `beebox/docs/box/quick-chat.md`). The
 - ../research/imbue-studio/chat-app.md:299 (mention) — (`beebox/docs/chat/quick-chat.md`). **Adapt** the draft-vs-send distinction
 
 References:
 - → docs/mobile-contract.md (link)
+- → docs/implemented-plans/clerk-quick-send.md (link)
 - → docs/box/quick-chat.md (link)
 - → docs/security-report.md (link)
 
@@ -2795,19 +2950,20 @@ References:
 
 #### docs/chat/schedules.md
 
-Title: "Chat schedules" | 82 lines | current reference
+Title: "Chat check-ins" | 102 lines | current reference
 
 Referenced by:
-- docs/chat.md:11 (link) — | [Schedules](chat/schedules.md) | Agent-set timers from a `<schedule>` tag: lifecycle, targeting, persistence. |
+- docs/chat.md:11 (link) — | [Check-ins](chat/schedules.md) | Agent-set timers that come back to one conversation (`bbx remind --here`): lifecycle,
 - docs/design/README.md:35 (link) — and [`../chat/schedules.md`](../chat/schedules.md).
 - docs/design/processing.md:26 (link) — ([`../chat/schedules.md`](../chat/schedules.md)).
-- docs/glossary.md:34 (mention) — **card** — A typed file validated by a schema from `beebox/cards`. The atomic unit of data in a box. Named `Title.type.c
+- docs/implemented-plans/bbx-remind.md:160 (mention) — - **What:** the chat prompt's Scheduling section (`prompts.ts:175-183`) is rewritten around `bbx remind`; `guide.md:482`
 - docs/implemented-plans/design-reconciliation.md:579 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat/schedules.md).
 - docs/implemented-plans/doc-structure-chat.md:70 (mention) — | `chat-schedules.md` | `chat/schedules.md` | |
 - docs/implemented-plans/mvp-implementation-guide.md:248 (mention) — See `docs/scheduler.md` and `docs/chat/schedules.md` for scheduling examples.
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:103 (mention) — Approved destinations, now applied: `bin/docs/commit-guards.md`, `bin/docs/router-operations.md`, `bin/docs/worktree-lif
-- docs/notifications.md:91 (link) — within hours ([chat timers](chat/schedules.md)).
-- ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:64 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
+- docs/notifications.md:95 (link) — ([chat check-ins](chat/schedules.md)).
+- ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md:67 (mention) — Also fixed alongside this filing: `docs/chat/schedules.md` documented the
+- ../research/fabric-review.md:73 (mention) — - **One agent per box, with the whole box.** The agent is Claude Code or Codex with a shell, procedures and schedules (`
 - ../research/lifeos-review.md:68 (mention) — | Weekly review that shows last week's "next step" and freezes a snapshot | **Adapt**, as a scheduled procedure that ope
 
 References:
@@ -2815,7 +2971,7 @@ References:
 
 #### docs/chat/scroll.md
 
-Title: "Chat scroll" | 385 lines | current reference
+Title: "Chat scroll" | 401 lines | current reference
 
 Referenced by:
 - docs/chat.md:15 (link) — | [Scroll](chat/scroll.md) | Verifying the message list's scroll behavior: the harness, the browser procedure, the trace
@@ -2827,7 +2983,7 @@ Referenced by:
 - docs/plans/chat-scroll-model.md:235 (link) — opening during a live reply. See [the current verification record](../chat/scroll.md).
 - docs/reports/chat-scroll-investigation-2026-09-04.md:9 (link) — [chat scroll](../chat/scroll.md); the model is in the chat component's
 - docs/testing/dev-stubs.md:58 (link) — [chat-scroll-testing.md](../chat/scroll.md). Note that `/fakestream`
-- src/frontend/src/components/chat/AGENTS.md:85 (mention) — PASS) **and the browser procedure in `docs/chat/scroll.md`**, and verify
+- src/frontend/src/components/chat/AGENTS.md:87 (mention) — PASS) **and the browser procedure in `docs/chat/scroll.md`**, and verify
 - ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:43 (link) — [chat scroll testing](../../beebox/docs/chat/scroll.md).
 - ../issues/closed/bugs/2026-07-19-scroll-up-history-false-new-messages.md:20 (mention) — `docs/chat/scroll.md`. See the commit referenced in the closing note.
 - ../research/chat-scroll-comparison-2026-09-04.md:4 (link) — [local reproduction protocol](../beebox/docs/chat/scroll.md).
@@ -2845,14 +3001,14 @@ Title: "Chat sessions" | 90 lines | current reference
 Referenced by:
 - docs/chat.md:9 (link) — | [Sessions](chat/sessions.md) | The backend session lifecycle: phases, queue and drain, park and evict, the shared SDK
 - docs/design/interaction-model.md:15 (link) — chat ([`../chat/sessions.md`](../chat/sessions.md)). The current design direction makes chat the
-- docs/glossary.md:72 (mention) — **session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/
+- docs/glossary.md:75 (mention) — **session** — One resumable chat thread: the Agent SDK session behind it, its transcript, its registry entry (`src/core/
 - docs/implemented-plans/architectural-review-followups.md:272 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat/sessions.md`
 - docs/implemented-plans/architectural-review.md:713 (mention) — then a `docs/chat/sessions.md` protocol doc for the
 - docs/implemented-plans/doc-structure-chat.md:68 (mention) — | `chat-session-lifecycle.md` "Phases", "The contract", "Shared code" | `chat/sessions.md` | |
 - docs/implemented-plans/top-nav-ia.md:420 (mention) — bar). `docs/chat/sessions.md` if it references the Chats page.
 - docs/implemented-plans/workstreams.md:123 (mention) — full conversation (v2.1.223+; code.claude.com/docs/en/sessions.md). Codex
-- ../issues/code-quality/2026-07-06-chat-session-shared-core.md:51 (mention) — `beebox/docs/chat/sessions.md`.
-- ../issues/code-quality/2026-09-03-steering-probe-timeout-reads-as-behavior-change.md:16 (mention) — docs/chat/sessions.md and the chat steering design are reconciled.
+- ../issues/closed/code-quality/2026-09-03-steering-probe-timeout-reads-as-behavior-change.md:19 (mention) — docs/chat/sessions.md and the chat steering design are reconciled.
+- ../issues/code-quality/2026-07-06-chat-session-shared-core.md:53 (mention) — `beebox/docs/chat/sessions.md`.
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:53 (mention) — (See `docs/chat/sessions.md`.)
 - ../issues/features/2026-08-02-mcp-launch-into-chat.md:72 (link) — - [Chat session lifecycle](../../beebox/docs/chat/sessions.md) — how
 - ../research/imbue-studio/chat-app.md:274 (mention) — `sessions.md` queue/drain. **Adopt** the states table, "never swallowed",
@@ -2877,7 +3033,7 @@ Referenced by:
 - docs/plans/agent-docs.md:374 (mention) — `calendar.md`.
 - docs/user-stories/catalog/2026-06-26.md:2281 (mention) — Key limitation from docs/connectors/calendar.md (line 77): "One-way only. Local .ics edits are not detected or pushed ba
 - ../issues/exploration/2026-09-17-caldir-calendar-as-a-directory.md:21 (mention) — (`beebox/docs/connectors/calendar.md`, `beebox/src/connectors/google-calendar-*.ts`).
-- ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:60 (mention) — `beebox/docs/connectors/calendar.md`: **no existing file is ever renamed, so no rename
+- ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:62 (mention) — `beebox/docs/connectors/calendar.md`: **no existing file is ever renamed, so no rename
 
 References:
 - → docs/connectors/google-auth.md (link)
@@ -2892,6 +3048,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-connectors.md:61 (mention) — | `google-drive.md` | `connectors/drive.md` |
 - docs/implemented-plans/drive-folder-mounts.md:109 (mention) — after migration, `docs/connectors/drive.md:141-150` "Folder Mounts" section.
 - docs/user-stories/catalog/2026-06-26.md:2716 (mention) — The implementation is complete and accurate. The google-drive.ts connector's syncFolder() method (lines 260-312) fully i
+- ../research/fabric-review.md:75 (mention) — - **Connectors cover more than copying.** Gmail, Calendar and Drive copy content into cards and commit it (`beebox/docs/
 
 References:
 - → docs/connectors/google-auth.md (link)
@@ -2904,8 +3061,9 @@ Referenced by:
 - docs/connectors.md:36 (link) — | Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | [Gmail](conne
 - docs/implemented-plans/doc-structure-connectors.md:60 (mention) — | `gmail-setup.md` | `connectors/gmail.md` |
 - docs/implemented-plans/gmail-explicit-action.md:110 (mention) — `docs/connectors/gmail.md` (the shorthand section currently describes it as legacy),
-- docs/plans/email-tracking.md:290 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
+- docs/plans/email-tracking.md:292 (mention) — - Update `docs/connectors.md` and `docs/connectors/gmail.md` to describe current code after implementation.
 - docs/user-stories/catalog/2026-06-26.md:2057 (mention) — - docs/connectors/gmail.md lines 37-41 (user documentation with examples)
+- ../research/fabric-review.md:75 (mention) — - **Connectors cover more than copying.** Gmail, Calendar and Drive copy content into cards and commit it (`beebox/docs/
 
 References:
 - → docs/connectors/google-auth.md (link)
@@ -2976,7 +3134,7 @@ Referenced by:
 - docs/design/README.md:21 (link) — - [`identity.md`](identity.md) — what this is: OS as the ambition, shared boxes (one sharing granularity each), web UI a
 - docs/design/privacy-and-egress.md:9 (mention) — a group that needs a smaller circle needs another box (`identity.md`). A box
 - docs/plans/agent-docs.md:104 (mention) — on me. Shared boxes are a design ruling (`design/identity.md`); what
-- docs/plans/publish-shared-host-per-box.md:24 (mention) — - **Keep one box sharing granularity.** The identity design says a box has one granularity of sharing (`beebox/docs/desi
+- docs/plans/publish-shared-host-per-box.md:26 (mention) — - **Keep one box sharing granularity.** The identity design says a box has one granularity of sharing (`beebox/docs/desi
 - docs/unimplemented-plans/README.md:21 (mention) — | `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../implemented-
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > `../design/identity.md` (ruling 3); landmarks — the shipped role-bearing-card
 - docs/unimplemented-plans/publish-pages-superseded.md:49 (mention) — - **Identity ruling constraining the design.** `docs/design/identity.md:31-36`: *"A box has exactly **one granularity of
@@ -3000,6 +3158,7 @@ Referenced by:
 - docs/design/README.md:22 (link) — - [`interaction-model.md`](interaction-model.md) — idle-by-default background engine AND definitely also a chatbot; proa
 - docs/design/identity.md:25 (mention) — continuous presence (see `interaction-model.md`). A chat's engine is fixed
 - docs/design/teaching.md:35 (mention) — (see `interaction-model.md` on proactivity) but not built.
+- docs/implemented-plans/front-door.md:928 (mention) — - **Reminders and notifications**: undesigned (`interaction-model.md`); the
 - ../.claude/skills/bbx-design/SKILL.md:21 (mention) — current shape; `interaction-model.md` and `trust.md` matter most here.
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:63 (mention) — attention tier) is stated only in the bbx-design skill. `interaction-model.md`
 
@@ -3018,8 +3177,8 @@ Title: "Interface as cards — earlier design background" | 485 lines | design r
 
 Referenced by:
 - docs/design/README.md:18 (link) — - [Interface-as-cards background](interface-as-cards-background.md) — earlier exploration preserved for context; the lin
-- docs/plans/interface-as-cards.md:25 (link) — The [earlier design](../design/interface-as-cards-background.md) preserves the
-- docs/plans/interface-cards-consolidation.md:152 (mention) — (`docs/design/interface-as-cards-background.md:299`: `Permission boundary`).
+- docs/plans/interface-as-cards.md:27 (link) — The [earlier design](../design/interface-as-cards-background.md) preserves the
+- docs/plans/interface-cards-consolidation.md:154 (mention) — (`docs/design/interface-as-cards-background.md:299`: `Permission boundary`).
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:25 (mention) — `identity.md` (Admin card), and `interface-as-cards-background.md` (stale
 
 References:
@@ -3051,7 +3210,7 @@ Title: "Processing — wakeup, the reactor, and the question loop" | 69 lines | 
 Referenced by:
 - docs/design/README.md:23 (link) — - [`processing.md`](processing.md) — what `bbx wakeup` and the reactor actually do (verified against code), what "proces
 - docs/design/interaction-model.md:12 (mention) — and load-bearing for the engine (see `processing.md`).
-- docs/glossary.md:52 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
+- docs/glossary.md:55 (mention) — **wakeup cycle** — One full sync-and-process pass. `bbx wakeup` preprocesses inbox items → housekeeping + on-wakeup scri
 
 References:
 - → docs/scheduler.md (link)
@@ -3136,12 +3295,15 @@ Referenced by:
 - docs/design/README.md:25 (link) — - [`trust.md`](trust.md) — two axes: trust to act (question → confirmation → automatic, question rules) and trust to kee
 - docs/design/representation.md:71 (mention) — ladder instead (`trust.md`).
 - docs/implemented-plans/design-md-retired-sections.md:55 (mention) — process-fields; see `../design/trust.md`.*
+- docs/implemented-plans/file-wordless-captures.md:52 (mention) — `beebox/docs/design/trust.md` names as what *"lets the box act forward on some
 - docs/implemented-plans/plugins.design.md:66 (mention) — Per `design/trust.md`, question then confirmation then automatic:
-- docs/plans/ios-app-intent-capture.md:70 (mention) — - `beebox/docs/engineering-principles.md` principle 4 (“Resilient AND never silent”) informs explicit failure dialogs an
+- docs/plans/ios-app-intent-capture.md:76 (mention) — - `docs/design/trust.md`, “capture must cost nothing in the moment, or the thought is not captured.” Local persistence p
+- docs/plans/ios-app-intent-capture.product-shape.review.md:40 (mention) — - `beebox/docs/design/trust.md:56-61` says “Quick chat is a compromise, not a pattern to copy” and that “capture must co
 - ../.claude/skills/bbx-design/SKILL.md:21 (mention) — current shape; `interaction-model.md` and `trust.md` matter most here.
 - ../.claude/skills/bbx-design/TEMPLATE.md:42 (mention) — <!-- design/trust.md: question → confirmation → automatic. Per action the box
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:24 (mention) — `trust.md` (optional `memo`/`directive`; full vocabulary list),
 - ../issues/closed/docs-and-chores/2026-10-08-product-rules-missing-from-design-layer.md:53 (mention) — - **Vocabularies `trust.md` omits**: belief basis
+- ../issues/decisions/2026-10-17-captures-that-fit-no-place.md:32 (mention) — 2. When several no-fit captures look alike (three recipes, two receipts), the agent proposes one change: a new landmark
 
 References:
 - → docs/design/durability-and-provenance.md (mention)
@@ -3180,8 +3342,8 @@ Title: "Code Maintenance" | 102 lines | current reference
 
 Referenced by:
 - code-style.md:13 (mention) — pnpm lint:knip    # Dead code detector — run from the MONOREPO ROOT (see docs/development/maintenance.md)
-- docs/README.md:135 (link) — ([maintenance](development/maintenance.md), `schedules/`): the subject owns *what* and
-- docs/cards/migrations.md:378 (link) — - [Maintenance](../development/maintenance.md), where `bbx engine migrate` and `clean-broken-refs.ts` sit among the peri
+- docs/README.md:142 (link) — ([maintenance](development/maintenance.md), `schedules/`): the subject owns *what* and
+- docs/cards/migrations.md:419 (link) — - [Maintenance](../development/maintenance.md), where `bbx engine migrate` and `clean-broken-refs.ts` sit among the peri
 - docs/development.md:41 (link) — | [Maintenance](development/maintenance.md) | Periodic tasks: what runs on its own, what is not yet enrolled, what to ru
 - docs/implemented-plans/box-retrospectives.md:422 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/development/maintenance.md` +
 - docs/implemented-plans/doc-structure-development.md:53 (mention) — | Enrolled schedules | maintenance.md "four enrolled today"; development-workflow.md lists eleven | contradiction; the n
@@ -3203,7 +3365,7 @@ Referenced by:
 - ../issues/closed/exploration/2026-07-25-opengrep-self-cve-scanner.md:11 (mention) — > Closed 2026-09-05 (`fixed?` confirmed): `security/opengrep/`, `pnpm security:opengrep`, and the `docs/development/main
 - ../issues/closed/features/2026-08-12-monitor-message-queue.md:175 (mention) — - Cadence declared in the registry (this read) vs in `docs/development/maintenance.md`
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:17 (mention) — `~/src/boxes/test1`; `docs/development/maintenance.md` has the details). Every fragment has
-- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:10 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
+- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:12 (mention) — folded into `code-style.md`, `frontend.md`, `docs/development/maintenance.md`, and
 - ../issues/docs-and-chores/2026-07-04-doc-refresh-cadence.md:17 (mention) — `beebox/docs/development/maintenance.md` with a cadence, or a scheduled routine):
 - ../issues/features/2026-07-15-admin-landmark-maintenance-owner.md:64 (mention) — `docs/development/maintenance.md` already owns **dev/code** maintenance (audits, sweeps, SDK
 
@@ -3230,7 +3392,7 @@ Referenced by:
 
 #### docs/development/technologies.md
 
-Title: "Technologies and AI services" | 44 lines | current reference
+Title: "Technologies and AI services" | 45 lines | current reference
 
 Referenced by:
 - docs/development.md:31 (link) — **[Technologies and AI services](development/technologies.md)** names the stack and the
@@ -3238,6 +3400,9 @@ Referenced by:
 - docs/development/workflow.md:5 (mention) — services](technologies.md).
 - docs/implemented-plans/doc-structure-development.md:64 (mention) — | `technologies.md` | `development/technologies.md` |
 - docs/implemented-plans/doc-structure-install-server.md:174 (mention) — | 1 | yes | 8 | install/developer.md#Prerequisites | 1 (technologies.md names the version without the enforcement) |
+- docs/implemented-plans/purge-agent-doctest.md:67 (mention) — `beebox/docs/development/technologies.md`, `site/docs/dev/README.md`,
+- ../issues/docs-and-chores/2026-10-17-public-provider-list-drifts-from-code.md:13 (mention) — `beebox/docs/development/technologies.md` ("AI services used"). Page
+- ../research/fabric-review.md:96 (mention) — | Subprocessor list that names one vendor while the product offers ten; training on content unless the person opts out |
 
 References:
 - → docs/development.md (link)
@@ -3257,6 +3422,7 @@ Referenced by:
 - docs/development/technologies.md:5 (mention) — workflow](workflow.md), and [testing](../testing.md).
 - docs/implemented-plans/doc-structure-development.md:63 (mention) — | `development-workflow.md` | `development/workflow.md` |
 - docs/testing.md:28 (link) — ([recurring work](development/workflow.md#recurring-work)), bisected to the
+- ../dev/devprocess-talk/reports/sweep-instructions.md:243 (mention) — - **Lives in:** `issues/CLAUDE.md:195`; `beebox/docs/development/workflow.md:40`; `.claude/skills/issues/SKILL.md:16`; `
 
 References:
 - → docs/development.md (link)
@@ -3277,6 +3443,17 @@ References:
 - → AGENTS.md (mention)
 - → README.md (mention)
 
+#### docs/implemented-plans/activity-detail.md
+
+Title: "Expanded chat activity lines say what changed" | 295 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/features/2026-10-15-expanded-activity-lines-say-too-little.md:12 (link) — Closed by 1271301ff (plan [activity-detail](../../../beebox/docs/implemented-plans/activity-detail.md)): expanded activi
+
+References:
+- → ../issues/closed/features/2026-10-15-expanded-activity-lines-say-too-little.md (frontmatter)
+- → docs/architecture/spirit.md (mention)
+
 #### docs/implemented-plans/agent-applied-migrations.md
 
 Title: "Agent-applied migrations (via procedure checklists)" | 551 lines | shipped history | implemented
@@ -3296,8 +3473,9 @@ Title: "Agent browsing as the owner: a box opts in, the browse key becomes a per
 
 Referenced by:
 - docs/testing/tours.md:78 (mention) — (`docs/implemented-plans/agent-browsing-owner.md`). A healthy tour takes tens of seconds — both
-- docs/user-stories/README.md:266 (mention) — `docs/implemented-plans/agent-browsing-owner.md` the browse key acts as the owner on a box whose
+- docs/user-stories/README.md:267 (mention) — `docs/implemented-plans/agent-browsing-owner.md` the browse key acts as the owner on a box whose
 - ../.claude/skills/browse/references/authentication.md:57 (mention) — Mechanism: `beebox/docs/implemented-plans/agent-browsing-owner.md`.
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:240 (mention) — - **Lives in:** `beebox/docs/implemented-plans/agent-browsing-owner.md`.
 - ../issues/closed/bugs/2026-08-26-chat-load-logs-resumable-capture-list-error.md:13 (mention) — agent browsing as its owner", `docs/plans/agent-browsing-owner.md` →
 
 References:
@@ -3344,7 +3522,8 @@ References:
 Title: "The agent guide is built from a spec" | 694 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/prompt-surface-cleanup-evaluation.md:650 (link) — **Superseded** by [the agent guide spec](../implemented-plans/agent-guide-spec.md) for
+- docs/plans/prompt-surface-cleanup-evaluation.md:652 (link) — **Superseded** by [the agent guide spec](../implemented-plans/agent-guide-spec.md) for
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:45 (mention) — - **Lives in:** `beebox/src/core/agent-guide/{guide.md,ledger.yaml,ledger-schema.ts,lint.ts,render.ts}`, `beebox/src/dev
 - ../issues/closed/docs-and-chores/2026-07-04-instruction-surface-size-budget.md:10 (link) — **Closed:** Resolved by [the agent guide spec](../../../beebox/docs/implemented-plans/agent-guide-spec.md):
 - ../issues/closed/exploration/2026-06-12-knowledge-budget-always-loaded-context.md:11 (link) — **Closed:** Resolved by [the agent guide spec](../../../beebox/docs/implemented-plans/agent-guide-spec.md)
 
@@ -3452,14 +3631,14 @@ References:
 Title: "Asset Manifests" | 333 lines | shipped history | implemented
 
 Referenced by:
-- docs/glossary.md:48 (mention) — **asset manifest** — the *superseded* mechanism: a `manifest.json` in each `.attach/` directory recording every asset's
+- docs/glossary.md:51 (mention) — **asset manifest** — the *superseded* mechanism: a `manifest.json` in each `.attach/` directory recording every asset's
 - docs/implemented-plans/annex-at-init.md:180 (mention) — the competing idiom, and `docs/implemented-plans/asset-manifests.md` opens with
 - docs/implemented-plans/attach-directories-superseded.md:15 (mention) — > `docs/asset-manifests.md` is historical rather than "the living doc". Attach
 - docs/implemented-plans/bulk-file-upload.md:12 (mention) — > `docs/asset-manifests.md` reference below all describe code that is gone. The
 - docs/implemented-plans/design-md-retired-sections.md:10 (mention) — > design did *not* survive as `asset-manifests.md`, which is now historical —
 - docs/implemented-plans/docs-reorg.gap-analysis.md:166 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
-- docs/plans/asset-annex.md:27 (mention) — `docs/asset-manifests.md` describes a system we built in May: assets
-- docs/plans/asset-offbox-storage.md:36 (mention) — attachments tracked by `docs/asset-manifests.md`) currently exist on
+- docs/plans/asset-annex.md:29 (mention) — `docs/asset-manifests.md` describes a system we built in May: assets
+- docs/plans/asset-offbox-storage.md:38 (mention) — attachments tracked by `docs/asset-manifests.md`) currently exist on
 - docs/plans/pdf-intake-design.md:124 (link) — All the binaries are assets — tracked via the asset manifest, not committed to git. The card itself, the manifest, and t
 - docs/reports/plan-directory-migration-history-2026-09-13.md:45 (mention) — to `implemented-plans/` (superseded by `docs/asset-manifests.md`, now
 - docs/user-stories/catalog/2026-06-26.md:727 (mention) — 1. **Pre-commit hook integration missing**: The design doc (docs/asset-manifests.md) says "A pre-commit hook keeps the m
@@ -3494,11 +3673,28 @@ Title: "Browser-like history state for authored views" | 211 lines | shipped his
 References:
 - → docs/engineering-principles.md (link)
 
+#### docs/implemented-plans/background-runs-follow-openrouter-default.md
+
+Title: "Background runs follow an OpenRouter box default" | 287 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/openrouter-chat-models.md:82 (mention) — *Superseded 2026-10-15 by `docs/implemented-plans/background-runs-follow-openrouter-default.md`:
+- ../issues/closed/bugs/2026-10-15-background-runs-ignore-box-openrouter-default.md:12 (mention) — **Closed 2026-10-15** by commits 64dc34fa7 and 7916dfedf (plan: `beebox/docs/implemented-plans/background-runs-follow-op
+- ../issues/features/2026-10-15-small-model-picker-in-admin.md:14 (link) — procedure steps ([background runs follow an OpenRouter default](../../beebox/docs/implemented-plans/background-runs-foll
+
+References:
+- → ../issues/closed/bugs/2026-10-15-background-runs-ignore-box-openrouter-default.md (frontmatter)
+- → docs/model-policy.md (mention)
+- → docs/security-report.md (mention)
+- → docs/implemented-plans/openrouter-chat-models.md (mention)
+
 #### docs/implemented-plans/bbx-agent-surface.md
 
 Title: "bbx is the box agent's surface; everything else moves under `bbx engine`" | 716 lines | shipped history | implemented
 
 Referenced by:
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:94 (mention) — - **Lives in:** cited in plans, e.g. `beebox/docs/plans/document-comments.md:636`, `implemented-plans/doc-structure.md:7
+- ../dev/devprocess-talk/reports/sweep-instructions.md:264 (mention) — - **Appeared:** `git log -S'Altitude matches use' | tail -1` → 2026-10-07 2505aba8c (moved from memory into tracked guid
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:9 (frontmatter) — design: ../../../beebox/docs/implemented-plans/bbx-agent-surface.md
 
 References:
@@ -3512,6 +3708,25 @@ References:
 - → README.md (mention)
 - → docs/implemented-plans/agent-field-tests.md (mention)
 - → docs/testing/knowledge-audits.md (mention)
+
+#### docs/implemented-plans/bbx-remind.md **[ORPHAN]**
+
+Title: "bbx remind: one command for check-ins and reminders" | 290 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (frontmatter)
+- → ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
+- → ../issues/closed/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
+- → src/core/agent-guide/guide.md (mention)
+- → src/hub/AGENTS.md (mention)
+- → docs/chat/schedules.md (mention)
+- → docs/notifications.md (mention)
+
+#### docs/implemented-plans/bloom-theme.md **[ORPHAN]**
+
+Title: "Bloom system and card theme" | 213 lines | shipped history | implemented
+
+No references in or out.
 
 #### docs/implemented-plans/box-agents-md.md
 
@@ -3577,7 +3792,7 @@ References:
 Title: "Box agents install distro packages on their host" | 579 lines | shipped history | implemented
 
 Referenced by:
-- docs/security-report.md:387 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
+- docs/security-report.md:403 (mention) — | Box package installs (root) | `bbx host install` → `sudo -n /usr/local/sbin/bbx-host-apt` (`deploy/server-bin/bbx-host
 - docs/server/provisioning.md:131 (mention) — `docs/implemented-plans/box-host-packages.md`. After changing the wrapper, run
 - ../issues/closed/features/2026-09-16-box-installs-distro-packages.md:14 (mention) — `docs/implemented-plans/box-host-packages.md`. Not resolved here: Python
 
@@ -3592,7 +3807,7 @@ References:
 Title: "A box closure cannot outlive its maintenance owner" | 342 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/migration-reliability.md:236 (link) — [box-maintenance-no-wedge.md](../implemented-plans/box-maintenance-no-wedge.md):** a phase record
+- docs/plans/migration-reliability.md:238 (link) — [box-maintenance-no-wedge.md](../implemented-plans/box-maintenance-no-wedge.md):** a phase record
 - ../issues/closed/bugs/2026-09-17-ios-app-503-box-closed-rendering-unverified.md:30 (mention) — `beebox/docs/implemented-plans/box-maintenance-no-wedge.md`), a closed box
 
 References:
@@ -3604,7 +3819,7 @@ References:
 Title: "Box migration to frontmatter (subplan of remove-cardworks-package)" | 288 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/source-available-release.md:199 (mention) — `docs/implemented-plans/box-migration.subplan.md:162`; domain in source comments
+- docs/plans/source-available-release.md:201 (mention) — `docs/implemented-plans/box-migration.subplan.md:162`; domain in source comments
 
 References:
 - → docs/implemented-plans/remove-cardworks-package.md (mention)
@@ -3618,7 +3833,7 @@ Title: "Box Retrospectives" | 442 lines | shipped history | implemented
 
 Referenced by:
 - docs/design/teaching.md:19 (mention) — cards (`../implemented-plans/box-retrospectives.md`).
-- docs/glossary.md:64 (mention) — **retrospective** — The `process-retrospective` procedure (driven by `bbx retro`): mines recent chat sessions for what t
+- docs/glossary.md:67 (mention) — **retrospective** — The `process-retrospective` procedure (driven by `bbx retro`): mines recent chat sessions for what t
 - docs/implemented-plans/chat-review.md:72 (mention) — (`docs/implemented-plans/box-retrospectives.md`, `src/core/retro/`). The same
 - docs/implemented-plans/questions-end-to-end.md:28 (mention) — belief (the evidence model of `docs/implemented-plans/box-retrospectives.md`:
 - docs/questions.md:34 (mention) — `docs/implemented-plans/box-retrospectives.md`: inferred beliefs cap at
@@ -3664,7 +3879,7 @@ Title: "Box search (`bbx search`) and the global `contains` field" | 576 lines |
 
 Referenced by:
 - docs/implemented-plans/semantic-search.md:18 (mention) — (`docs/implemented-plans/box-search.md` § NOT in scope), which pre-committed
-- docs/plans/chat-search.md:89 (mention) — `docs/implemented-plans/box-search.md` (shipped card search; the text-mode
+- docs/plans/chat-search.md:91 (mention) — `docs/implemented-plans/box-search.md` (shipped card search; the text-mode
 - ../issues/closed/features/2026-05-11-box-search.md:10 (mention) — `docs/implemented-plans/box-search.md`), as the body already records.
 
 References:
@@ -3672,6 +3887,20 @@ References:
 - → code-style.md (mention)
 - → docs/cards/schemas.md (mention)
 - → docs/agent-guide.md (mention)
+
+#### docs/implemented-plans/box-shape-in-package-json.md
+
+Title: "Box identity and shape version from tracked package.json" | 321 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-10-20-box-marker-in-gitignored-state-dir.md:13 (mention) — **Closed:** Implemented per `beebox/docs/implemented-plans/box-shape-in-package-json.md` (c634cdd67, b5019ff09, 1c5e90e8
+- ../issues/deferred/2026-10-20-drop-box-marker-fallback.md:8 (frontmatter) — design: ../../beebox/docs/implemented-plans/box-shape-in-package-json.md
+
+References:
+- → ../issues/closed/bugs/2026-10-20-box-marker-in-gitignored-state-dir.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → docs/box-layout.md (mention)
+- → README.md (mention)
 
 #### docs/implemented-plans/boxes-as-packages-v2.md
 
@@ -3686,15 +3915,15 @@ Referenced by:
 - docs/implemented-plans/plugins.md:117 (link) — - Shipped precedent: [boxes-as-packages-v2](../implemented-plans/boxes-as-packages-v2.md)
 - docs/implemented-plans/remove-box-shape-v1.md:80 (mention) — `shapeNotes`, H4 check-off in `boxes-as-packages-v2.md`.
 - docs/implemented-plans/remove-box-shape-v1.review.md:99 (mention) — `boxes-as-packages-v2.md:532-538` prior-art citation IS accurate.)
-- docs/plans/container-first.md:57 (mention) — - `docs/implemented-plans/boxes-as-packages-v2.md:26`: *"Versioning — per-box
-- docs/plans/container-first.review.md:79 (mention) — - `boxes-as-packages-v2.md:26` — *"**Versioning** — per-box pinning is the
-- docs/plans/source-available-release.md:393 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
+- docs/plans/container-first.md:59 (mention) — - `docs/implemented-plans/boxes-as-packages-v2.md:26`: *"Versioning — per-box
+- docs/plans/container-first.review.md:81 (mention) — - `boxes-as-packages-v2.md:26` — *"**Versioning** — per-box pinning is the
+- docs/plans/source-available-release.md:395 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server/boxes.md:8 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](../implemented-plans/boxes-as-packages-v2.md)
 - docs/server/operations.md:68 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
 - docs/server/provisioning.md:146 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why retiring that
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - docs/user-stories/catalog/2026-08-21.md:9058 (mention) — - **Keep the box I have open from being stopped underneath me** — Code is fine; the story's scope is wrong. The server h
-- ../issues/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md:32 (mention) — (`beebox/docs/implemented-plans/boxes-as-packages-v2.md:579-585`: "two
+- ../issues/closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md:25 (mention) — `boxes-as-packages-v2.md` accepted.
 - ../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md:71 (mention) — `implemented-plans/boxes-as-packages-v2.md` is where the `events.db` two-engine
 - ../issues/docs-and-chores/2026-07-04-box-registry-manifests.md:34 (mention) — `beebox/docs/implemented-plans/boxes-as-packages-v2.md`.
 - ../issues/features/2026-07-19-installation-remaining-work.md:53 (mention) — (Roadmap: `beebox/docs/implemented-plans/boxes-as-packages-v2.md`
@@ -3724,6 +3953,7 @@ Referenced by:
 - ../issues/closed/features/2026-09-13-browser-task-history-and-subject.md:31 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/closed/features/2026-09-13-browser-task-inbox-table-view.md:32 (mention) — - `beebox/docs/implemented-plans/browser-task-card.md`
 - ../issues/features/2026-09-17-box-as-mcp-server-hands-out-tasks.md:107 (link) — - [browser-task card](../../beebox/docs/implemented-plans/browser-task-card.md)
+- ../research/web-search-fetch/README.md:57 (link) — | Logged-in persistent profile | **later** | The only route to content behind the boxholder's own accounts (including pa
 
 References:
 - → ../issues/features/2026-08-13-dead-drop-ingress-for-external-automations.md (frontmatter)
@@ -3748,9 +3978,9 @@ References:
 Title: "Bulk file upload" | 468 lines | shipped history | implemented
 
 Referenced by:
-- docs/box-layout.md:136 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
-- docs/mobile-contract.md:1012 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
-- docs/plans/chat-photo-batch-upload.md:34 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
+- docs/box-layout.md:159 (mention) — `docs/implemented-plans/bulk-file-upload.md`; agent duties:
+- docs/mobile-contract.md:1019 (mention) — `docs/implemented-plans/bulk-file-upload.md` §4 deferred). Neither may assume it is the only
+- docs/plans/chat-photo-batch-upload.md:36 (link) — [bulk-file-upload](../implemented-plans/bulk-file-upload.md) — the iOS native
 - ../issues/closed/bugs/2026-07-27-bulk-upload-arbitrary-ext-gitignore.md:16 (mention) — Surfaced building Track 1 chunk 1 of `docs/plans/bulk-file-upload.md`.
 
 References:
@@ -3779,13 +4009,13 @@ References:
 Title: "Capture mode — unifying capture into the input" | 671 lines | shipped history | implemented
 
 Referenced by:
-- docs/box-layout.md:125 (mention) — `docs/implemented-plans/capture-mode.md`; agent duties:
+- docs/box-layout.md:148 (mention) — `docs/implemented-plans/capture-mode.md`; agent duties:
 - docs/implemented-plans/bulk-file-upload.md:43 (mention) — - **Shipped precedent: capture mode** (`docs/implemented-plans/capture-mode.md`,
 - docs/implemented-plans/resilient-voice-recording.md:146 (mention) — - `docs/implemented-plans/capture-mode.md`: server-side staging, crash-resumable
 - docs/plans/cli-restructure.md:13 (mention) — **2026-07 update:** the capture-processing commands this plan discusses renaming/grouping (`bbx transcribe-captures`, `b
-- docs/plans/input-widget.md:532 (link) — [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)
-- docs/plans/ios-native-capture-mode.md:39 (mention) — - Shipped precedent: `docs/implemented-plans/capture-mode.md` owns the capture
-- docs/plans/ios-native-capture-mode.review.md:72 (mention) — - Doc references exist: `docs/implemented-plans/capture-mode.md`,
+- docs/plans/input-widget.md:534 (link) — [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)
+- docs/plans/ios-native-capture-mode.md:41 (mention) — - Shipped precedent: `docs/implemented-plans/capture-mode.md` owns the capture
+- docs/plans/ios-native-capture-mode.review.md:74 (mention) — - Doc references exist: `docs/implemented-plans/capture-mode.md`,
 - docs/unimplemented-plans/capture-pipeline-redesign.md:9 (link) — **Superseded by [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)** — that plan retired the `
 - ../issues/closed/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md:55 (mention) — capture-mode work (`beebox/docs/implemented-plans/capture-mode.md`):
 - ../issues/closed/docs-and-chores/2026-10-08-architecture-narrative-rot.md:40 (mention) — (`implemented-plans/capture-mode.md`). [high]
@@ -3806,7 +4036,7 @@ Title: "Card prominence: visibility lives on the card, landmarks derive from it"
 Referenced by:
 - docs/implemented-plans/card-themes.md:20 (link) — [card prominence](../implemented-plans/card-prominence.md).
 - docs/landmarks.md:19 (mention) — - **A place you can visit.** The landmark card is `background` by type: Browse folds it and draws the directory's identi
-- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
+- docs/plans/chat-everywhere.md:28 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
 - ../issues/closed/bugs/2026-09-06-landmark-symbol-migration-reflows-long-lines.md:13 (mention) — > Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/doc
 - ../issues/closed/bugs/2026-09-06-prominence-attach-scope-lint-misses-own-landmark-exception.md:13 (mention) — > Closed 2026-09-06 (card-visibility, Track E): fixed in the same worktree with doctest cases — see the plan `beebox/doc
 - ../issues/closed/features/2026-06-12-card-level-prominence.md:10 (mention) — > Closed 2026-09-06 (card-visibility): implemented by `docs/implemented-plans/card-prominence.md` — the `prominence` fro
@@ -3825,7 +4055,7 @@ References:
 
 #### docs/implemented-plans/card-reading-properties.md
 
-Title: "Card fronts show the content; Properties shows the card" | 425 lines | shipped history | implemented
+Title: "Card fronts show the content; Properties shows the card" | 426 lines | shipped history | implemented
 
 Referenced by:
 - ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:13 (link) — **Closed:** implemented by the card-reading-properties plan (commits 31cebfecd to 4481c0246, merged to main): card front
@@ -3840,6 +4070,18 @@ References:
 - → docs/box/card-themes.md (mention)
 - → docs/cards/schemas.md (mention)
 - → ../issues/docs-and-chores/2026-09-23-test1-lacks-theme-tour-fixtures.md (link)
+
+#### docs/implemented-plans/card-reading.md **[ORPHAN]**
+
+Title: "Card reading: print, contents menu, image-link lightbox, include lines" | 516 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/features/2026-10-01-printable-cards.md (frontmatter)
+- → ../issues/closed/features/2026-10-05-markdown-toc-navigation.md (frontmatter)
+- → ../issues/closed/features/2026-10-07-image-card-link-opens-lightbox.md (frontmatter)
+- → ../issues/closed/features/2026-10-20-at-include-lines-render-as-a-file-widget.md (frontmatter)
+- → AGENTS.md (mention)
+- → docs/agent-guide.md (mention)
 
 #### docs/implemented-plans/card-self-refs.md **[ORPHAN]**
 
@@ -3926,10 +4168,10 @@ Title: "RFC: Cards as Markdown + YAML Frontmatter" | 2563 lines | shipped histor
 
 Referenced by:
 - docs/cards/format.md:9 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For
-- docs/cards/migrations.md:376 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
+- docs/cards/migrations.md:417 (link) — - [Card format](format.md), the shape these migrators target; the [RFC](../implemented-plans/cards-as-markdown-rfc.md) f
 - docs/cards/validation.md:99 (mention) — Format reference: [format](format.md); design history and migration phases: `docs/implemented-plans/cards-as-markdown-rf
 - docs/implemented-plans/remove-cardworks-and-xml.md:126 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
-- docs/plans/public-site-story-extraction.subplan.md:184 (mention) — `beebox/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
+- docs/plans/public-site-story-extraction.subplan.md:186 (mention) — `beebox/docs/implemented-plans/cards-as-markdown-rfc.md` (2555-line
 - docs/reports/stack-decisions-2026-09-04.md:809 (mention) — > **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Ma
 - ../issues/features/2026-07-22-embed-json-schema-in-card-docs.md:6 (mention) — discovered-in: worktree-github-pages-site — story-extraction triage of cards-as-markdown-rfc.md
 
@@ -4056,7 +4298,7 @@ References:
 Title: "Chat streaming/finalize unification: one stably-keyed assistant turn" | 388 lines | shipped history | implemented
 
 Referenced by:
-- src/frontend/src/components/chat/AGENTS.md:117 (mention) — (`docs/implemented-plans/chat-stream-finalize-unify.md`). `liveTurnId` is held
+- src/frontend/src/components/chat/AGENTS.md:119 (mention) — (`docs/implemented-plans/chat-stream-finalize-unify.md`). `liveTurnId` is held
 
 References:
 - → AGENTS.md (mention)
@@ -4095,6 +4337,30 @@ Referenced by:
 References:
 - → docs/module-map.md (mention)
 
+#### docs/implemented-plans/clerk-quick-send.md
+
+Title: "Clerk: send a page to the box, sorted like quick chat" | 483 lines | shipped history | implemented
+
+Referenced by:
+- docs/chat/quick-chat.md:208 (link) — [clerk-quick-send](../implemented-plans/clerk-quick-send.md)). The send's UUID, made by
+- ../issues/closed/features/2026-10-15-ios-box-screen-shows-clerk-page-sends.md:16 (link) — ([plan](../../../beebox/docs/implemented-plans/clerk-quick-send.md)). The web box screen
+- ../issues/closed/features/2026-10-15-ios-quick-capture-to-ignored-incoming.md:20 (link) — ([plan](../../../beebox/docs/implemented-plans/clerk-quick-send.md)).
+- ../issues/features/2026-10-15-clerk-send-to-box-sorted-like-quick-chat.md:93 (link) — plan at [clerk-quick-send](../../beebox/docs/implemented-plans/clerk-quick-send.md).
+
+References:
+- → ../issues/features/2026-10-15-clerk-send-to-box-sorted-like-quick-chat.md (link)
+- → ../research/feed-item-capture-2026-10-15.md (link)
+- → ../issues/features/2026-09-25-quick-drop-entry-points.md (link)
+- → ../issues/features/2026-08-30-chat-input-everywhere.md (link)
+- → ../issues/features/2026-10-04-fetch-blocked-pages.md (link)
+- → docs/chat/quick-chat.md (mention)
+- → docs/box/quick-chat.md (mention)
+- → docs/security-report.md (mention)
+- → AGENTS.md (mention)
+- → ../issues/closed/bugs/2026-10-15-quick-chat-sent-when-run-never-starts.md (link)
+- → docs/mobile-contract.md (mention)
+- → docs/box-layout.md (mention)
+
 #### docs/implemented-plans/clerk-webpage-capture.md
 
 Title: "Web-page commentary capture" | 568 lines | shipped history | implemented
@@ -4115,6 +4381,7 @@ Referenced by:
 - ../issues/closed/decisions/2026-08-13-codex-as-an-alternative-engine.md:12 (link) — Resolved by the [implemented Codex box engine plan](../../../beebox/docs/implemented-plans/codex-box-engine.md).
 - ../issues/closed/exploration/2026-07-18-codex-sdk-second-backend.md:10 (link) — Superseded by the [Codex box engine plan](../../../beebox/docs/implemented-plans/codex-box-engine.md)
 - ../research/backend-alternatives/2026-08-25-oh-my-pi.md:10 (link) — [Codex box engine](../../beebox/docs/implemented-plans/codex-box-engine.md) established
+- ../research/backend-alternatives/2026-10-18-pi.md:7 (link) — the contract the [Codex box engine](../../beebox/docs/implemented-plans/codex-box-engine.md)
 - ../research/opencode/README.md:21 (mention) — | Third engine adapter | **later** | [engine.md](engine.md); `beebox/docs/implemented-plans/codex-box-engine.md` is the
 - ../research/opencode/engine.md:7 (mention) — `beebox/docs/implemented-plans/codex-box-engine.md` (its capability-probe table and
 
@@ -4157,6 +4424,7 @@ References:
 Title: "Codex worktree sessions" | 212 lines | shipped history | implemented
 
 Referenced by:
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:139 (mention) — - **Lives in:** `bin/workstreams`, `bin/lib/worktree-create.sh`, `bin/lib/worktree-teardown.sh`, `bin/codex-session-end`
 - ../issues/closed/features/2026-08-04-crossmodel-review-skill-bidirectional.md:82 (mention) — - `beebox/docs/implemented-plans/codex-worktree-sessions.md` — the codex
 
 References:
@@ -4182,6 +4450,7 @@ Title: "Commit provenance trailers" | 364 lines | shipped history | implemented
 
 Referenced by:
 - ../bin/docs/commit-guards.md:47 (mention) — Background: `beebox/docs/implemented-plans/commit-provenance-trailers.md`.
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:219 (mention) — - **Lives in:** `bin/commit-provenance.ts`, `bin/commit-provenance.test.ts`, `.husky/prepare-commit-msg`, `.husky/commit
 - ../issues/closed/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md:19 (mention) — `beebox/docs/implemented-plans/commit-provenance-trailers.md`).
 
 References:
@@ -4203,6 +4472,7 @@ References:
 Title: "Serialize Git worktree attachment during concurrent launches" | 176 lines | shipped history | implemented
 
 Referenced by:
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:89 (mention) — - **Lives in:** `bin/lib/worktree-create.sh`, `bin/workstreams`, `beebox/docs/implemented-plans/concurrent-workstream-cr
 - ../issues/closed/bugs/2026-08-20-concurrent-workstream-launches-race.md:4 (frontmatter) — design: ../../../beebox/docs/implemented-plans/concurrent-workstream-creation.md
 
 References:
@@ -4276,6 +4546,12 @@ References:
 - → docs/media/assets.md (link)
 - → code-style.md (mention)
 - → docs/testing.md (mention)
+
+#### docs/implemented-plans/deck-theme.md **[ORPHAN]**
+
+Title: "Deck system and card theme" | 186 lines | shipped history | implemented
+
+No references in or out.
 
 #### docs/implemented-plans/deferred-recoverable-agent-failures.md
 
@@ -4389,7 +4665,7 @@ Title: "Make current documentation and historical records distinguishable" | 125
 References:
 - → docs/README.md (mention)
 - → docs/plans/README.md (mention)
-- → ../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md (link)
+- → ../issues/closed/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md (link)
 
 #### docs/implemented-plans/doc-structure-box-guidance.md
 
@@ -4543,6 +4819,7 @@ Title: "Documentation structured like code" | 651 lines | shipped history | impl
 Referenced by:
 - docs/implemented-plans/doc-structure-chat.md:13 (link) — that the [testing pilot](../implemented-plans/doc-structure.md) established.
 - docs/implemented-plans/file-layout.md:64 (mention) — (`docs/implemented-plans/doc-structure.md`, principles 1 to 9). Four of its
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:94 (mention) — - **Lives in:** cited in plans, e.g. `beebox/docs/plans/document-comments.md:636`, `implemented-plans/doc-structure.md:7
 - ../issues/closed/exploration/2026-09-15-prompts-as-code-mece-structure.md:14 (link) — > [`doc-structure`](../../../beebox/docs/implemented-plans/doc-structure.md)
 - ../issues/exploration/2026-09-25-diataxis-for-agent-facing-docs.md:36 (link) — The [doc-structure plan](../../beebox/docs/implemented-plans/doc-structure.md)
 
@@ -4564,7 +4841,6 @@ References:
 - → docs/testing/knowledge-audits.md (mention)
 - → docs/development/maintenance.md (mention)
 - → docs/mobile-contract.md (mention)
-- → docs/testing/doctests.md (mention)
 - → docs/testing/tap-tests.md (mention)
 - → docs/testing/session-critiques.md (mention)
 - → docs/testing/dev-stubs.md (mention)
@@ -4582,7 +4858,7 @@ Title: "Docs-reorg companion: gap analysis — non-obvious, undocumented convent
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:360 (mention) — - Unanswered from the gap analysis (docs-reorg.gap-analysis.md B6–B9):
 - docs/implemented-plans/remove-bbx-render.md:354 (mention) — - `docs/plans/docs-reorg.gap-analysis.md:57-59` — cites the SSR `window`-guard
-- docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
+- docs/implemented-plans/remove-bbx-render.review.md:29 (link) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:45 (mention) — `beebox/docs/implemented-plans/docs-reorg.gap-analysis.md`,
 
 References:
@@ -4668,20 +4944,34 @@ References:
 Title: "Doctest usability" | 855 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/retire-doctest.md:111 (mention) — - `beebox/docs/implemented-plans/doctest-usability.md:95-97`: *"The doctest
+- ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:52 (link) — The [doctest usability review](../../../beebox/docs/implemented-plans/doctest-usability.md)
 - ../issues/closed/exploration/2026-09-27-doctest-usability-review.md:13 (mention) — Closed: the review is done and its runner, guidance and test-runner changes land with the branch merge of `worktree-doct
-- ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:49 (link) — The [doctest usability review](../../beebox/docs/implemented-plans/doctest-usability.md)
 
 References:
 - → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (frontmatter)
 - → AGENTS.md (mention)
 - → ../issues/closed/exploration/2026-09-27-doctest-usability-review.md (link)
-- → ../issues/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
-- → ../issues/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
+- → ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (link)
+- → ../issues/closed/code-quality/2026-08-25-beebox-scripts-and-test-untypechecked.md (link)
 - → ../issues/closed/bugs/2026-09-29-hash-stream-to-file-leaves-partial-file.md (link)
 - → ../issues/closed/bugs/2026-09-29-namespace-fence-traversal-doctest-flake.md (link)
 - → ../issues/closed/bugs/2026-09-29-bin-test-doctests-not-run.md (link)
 - → ../issues/closed/bugs/2026-09-29-pnpm-test-unrecognized-path-runs-full-suite.md (link)
 - → README.md (mention)
+
+#### docs/implemented-plans/drive-docs-api-health.md
+
+Title: "Docs API unavailable reaches the boxholder" | 192 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/features/2026-10-20-drive-sync-problems-reach-the-boxholder.md:13 (mention) — **Closed:** Implemented per `beebox/docs/implemented-plans/drive-docs-api-health.md` (7b255426b through ef95483d0): a he
+
+References:
+- → ../issues/closed/features/2026-10-20-drive-sync-problems-reach-the-boxholder.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → src/core/agent-guide/guide.md (mention)
+- → docs/server/health-checks.md (mention)
 
 #### docs/implemented-plans/drive-folder-mounts.md
 
@@ -4718,11 +5008,12 @@ References:
 - → docs/mobile-contract.md (mention)
 - → docs/engineering-principles.md (mention)
 
-#### docs/implemented-plans/engine-aware-chat-models.md **[ORPHAN]**
+#### docs/implemented-plans/engine-aware-chat-models.md
 
 Title: "Engine-aware chat model selection" | 109 lines | shipped history | implemented
 
-No references in or out.
+Referenced by:
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:375 (mention) — - **Lives in:** `beebox/src/shared/agent-models.ts`, `beebox/src/shared/model-ids.ts`, `beebox/src/shared/chat-models.ts
 
 #### docs/implemented-plans/exhibit-comments.md
 
@@ -4766,7 +5057,8 @@ Title: "Make the shared dev router safely exposable over Tailscale" | 566 lines 
 Referenced by:
 - docs/implemented-plans/expose-dev-router.review.md:4 (mention) — `expose-dev-router.md`, 2026-07-21. **Verdict: unsafe as written — do not
 - docs/install/docker.md:297 (mention) — router's auth model and `docs/implemented-plans/expose-dev-router.md` for the
-- ../bin/docs/router-operations.md:147 (link) — Background: [router exposure design](../../beebox/docs/implemented-plans/expose-dev-router.md).
+- ../bin/docs/router-operations.md:156 (link) — Background: [router exposure design](../../beebox/docs/implemented-plans/expose-dev-router.md).
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:59 (mention) — - **Lives in:** `bin/docs/router-operations.md` "Authentication and exposure"; `beebox/docs/implemented-plans/expose-dev
 - ../issues/closed/bugs/2026-07-20-dev-router-login-page-broken.md:11 (mention) — `expose-dev-router` plan (`beebox/docs/implemented-plans/expose-dev-router.md`),
 - ../issues/closed/features/2026-07-21-expose-dev-checkout-over-tailscale.md:13 (mention) — (`beebox/docs/implemented-plans/expose-dev-router.md`): the shared
 - ../issues/features/2026-07-22-bbx-tailscale-dev-router-operational-polish.md:11 (mention) — The dev-router Tailscale exposure (`docs/implemented-plans/expose-dev-router.md`)
@@ -4785,12 +5077,6 @@ Referenced by:
 
 References:
 - → docs/implemented-plans/expose-dev-router.md (mention)
-
-#### docs/implemented-plans/expressive-themes.md **[ORPHAN]**
-
-Title: "Expressive theme collections" | 140 lines | shipped history | implemented
-
-No references in or out.
 
 #### docs/implemented-plans/external-url-validation.md
 
@@ -4846,11 +5132,13 @@ References:
 Title: "Source file layout: principles, rules, and what a check can verify" | 834 lines | shipped history | implemented
 
 Referenced by:
+- AGENTS.md:19 (link) — - `pnpm layout-check` enforces the [file layout rules](docs/implemented-plans/file-layout.md) for module directories, re
 - code-style.md:112 (link) — - **File naming: PascalCase for a single-React-component file, kebab-case otherwise.** A file whose primary export is on
 - docs/implemented-plans/file-layout.check.subplan.md:13 (link) — Step 3 of [the file-layout plan](file-layout.md): a repo script that reads
 - docs/implemented-plans/file-layout.moves.subplan.md:10 (link) — Step 4 of [the file-layout plan](file-layout.md): move and rename files,
 - ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:14 (mention) — four requested steps shipped: `beebox/docs/implemented-plans/file-layout.md`
 - ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md:119 (link) — [the file-layout plan](../../../beebox/docs/implemented-plans/file-layout.md): five
+- ../issues/closed/code-quality/2026-10-16-layout-check-unit-message-omits-the-small-fixes.md:12 (mention) — **Closed 2026-10-17:** fixed on the bug-burndown branch ("Layout check's unit message names the smaller fixes and its ru
 
 References:
 - → ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (frontmatter)
@@ -4861,7 +5149,6 @@ References:
 - → docs/engineering-principles.md (mention)
 - → docs/module-map.md (mention)
 - → docs/implemented-plans/doc-structure.md (mention)
-- → docs/testing/doctests.md (mention)
 - → src/connectors/AGENTS.md (mention)
 - → src/services/AGENTS.md (mention)
 - → src/hub/AGENTS.md (mention)
@@ -4878,6 +5165,26 @@ References:
 - → ../issues/closed/code-quality/2026-09-26-source-file-layout-review-and-enforcement.md (frontmatter)
 - → docs/implemented-plans/file-layout.md (link)
 
+#### docs/implemented-plans/file-wordless-captures.md
+
+Title: "File phone captures that arrive with no words" | 252 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md:13 (mention) — **Closed 2026-10-17:** implemented on `worktree-fabric-research` (commits fa73c9c10 through 854813bb, plan `beebox/docs/
+- ../issues/decisions/2026-10-17-captures-that-fit-no-place.md:12 (link) — The [filing plan](../../beebox/docs/implemented-plans/file-wordless-captures.md) has the
+
+References:
+- → ../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md (frontmatter)
+- → ../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md (link)
+- → ../issues/decisions/2026-10-17-captures-that-fit-no-place.md (link)
+- → ../issues/features/2026-09-25-quick-drop-entry-points.md (link)
+- → ../issues/bugs/2026-08-20-capture-success-is-invisible.md (link)
+- → docs/design/trust.md (mention)
+- → docs/engineering-principles.md (mention)
+- → docs/plans/ios-app-intent-capture.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/triage.md (mention)
+
 #### docs/implemented-plans/first-run-openers.md
 
 Title: "First-run openers" | 120 lines | shipped history | implemented
@@ -4889,6 +5196,65 @@ Referenced by:
 
 References:
 - → ../issues/features/2026-07-20-first-run-experience.md (frontmatter)
+- → AGENTS.md (mention)
+
+#### docs/implemented-plans/front-door.md
+
+Title: "The front door: what a person meets when they open their box" | 1255 lines | shipped history | implemented
+
+Referenced by:
+- docs/box-layout.md:317 (mention) — does; a folder the person made never folds (`docs/implemented-plans/front-door.md`,
+- docs/landmarks.md:34 (mention) — A landmark's YAML frontmatter carries one or more **roles**, and its optional markdown body is the **place summary**: a
+- docs/mobile-contract.md:995 (mention) — (`docs/implemented-plans/front-door.md`, Track A), sent by the web composer on every message while it is
+- docs/questions.md:258 (mention) — - **The empty root chat** (`docs/implemented-plans/front-door.md`, Track A) — an
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:11 (mention) — **Closed:** resolved by the front-door branch (merge commit on `main`; see `beebox/docs/implemented-plans/front-door.md`
+
+References:
+- → ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (frontmatter)
+- → docs/implemented-plans/front-door.review.md (link)
+- → ../issues/features/2026-07-20-first-run-experience.md (link)
+- → ../issues/features/2026-10-08-starter-manifest-and-scripted-first-turn.md (link)
+- → ../issues/decisions/2026-10-05-target-specific-underserved-use-cases.md (link)
+- → ../issues/features/2026-08-08-no-visible-search-or-home.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+- → ../issues/features/2026-05-11-today-view.md (link)
+- → ../issues/features/2026-10-05-box-agent-interface-screenshots.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
+- → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
+- → docs/landmarks.md (mention)
+- → docs/implemented-plans/place-shows-cards.md (mention)
+- → src/core/agent-guide/guide.md (mention)
+- → docs/box/what-you-could-do.md (mention)
+- → docs/questions.md (mention)
+- → docs/box-layout.md (mention)
+- → docs/glossary.md (mention)
+- → docs/mobile-contract.md (mention)
+- → docs/implemented-plans/frontend-dom-harness.md (mention)
+- → docs/design/interaction-model.md (mention)
+- → docs/plans/user-story-journeys.md (mention)
+
+#### docs/implemented-plans/front-door.review.md
+
+Title: "Plan Engineering Review — front door" | 211 lines | implementation review
+
+Referenced by:
+- docs/implemented-plans/front-door.md:21 (link) — [front-door.review.md](front-door.review.md).
+
+References:
+- → docs/landmarks.md (mention)
+- → docs/implemented-plans/place-shows-cards.md (mention)
+
+#### docs/implemented-plans/frontend-dom-harness.md
+
+Title: "DOM doctests for frontend effects, events, and render counts" | 383 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/front-door.md:722 (mention) — (`docs/implemented-plans/frontend-dom-harness.md`) that the line renders on
+
+References:
+- → ../issues/closed/code-quality/2026-10-10-frontend-has-no-dom-effect-test-harness.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-08-chat-message-list-rerenders-per-token.md (frontmatter)
+- → docs/testing.md (mention)
 - → AGENTS.md (mention)
 
 #### docs/implemented-plans/gmail-explicit-action.md
@@ -4940,15 +5306,15 @@ References:
 Title: "HQ transcription for every dictated message" | 109 lines | shipped history | implemented
 
 Referenced by:
-- docs/chat/composer.md:67 (mention) — Every voice send with a recording requests the HQ pass (`docs/implemented-plans/hq-always.md`);
+- docs/chat/composer.md:72 (mention) — Every voice send with a recording requests the HQ pass (`docs/implemented-plans/hq-always.md`);
 - docs/implemented-plans/ios-quick-chat-hq.md:11 (link) — ([hq-always](hq-always.md)). The iOS box-screen quick chat composer is the one
-- docs/mobile-contract.md:406 (mention) — `<speech stt="live">` (`docs/implemented-plans/hq-always.md`). `hqFallback:true` is still accepted and
+- docs/mobile-contract.md:409 (mention) — `<speech stt="live">` (`docs/implemented-plans/hq-always.md`). `hqFallback:true` is still accepted and
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:4 (frontmatter) — superseded-by: ../implemented-plans/hq-always.md
 - docs/unimplemented-plans/sticky-hq-ios-parity.md:11 (link) — > **Superseded 2026-10-09** by [hq-always](../implemented-plans/hq-always.md): every
-- ../issues/bugs/2026-09-21-typed-text-lost-when-hq-lands-after-a-recording-error.md:13 (mention) — > the HQ pass (`beebox/docs/plans/hq-always.md`), so the HQ wait this bug lives
+- ../issues/bugs/2026-09-21-typed-text-lost-when-hq-lands-after-a-recording-error.md:13 (mention) — > the HQ pass (`beebox/docs/implemented-plans/hq-always.md`), so the HQ wait this bug lives
 - ../issues/closed/features/2026-08-26-sticky-hq-transcription-preference.md:14 (mention) — > (`beebox/docs/plans/hq-always.md`): the HQ dictation setting and its chat,
 - ../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md:67 (link) — Built on `worktree-hq-always` per [the plan](../../beebox/docs/implemented-plans/hq-always.md).
-- ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:13 (mention) — (`beebox/docs/plans/hq-always.md`). The iOS quick chat composer on the box
+- ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:13 (mention) — (`beebox/docs/implemented-plans/hq-always.md`). The iOS quick chat composer on the box
 
 References:
 - → ../issues/features/2026-09-18-hq-dictation-default-when-a-key-exists.md (frontmatter)
@@ -4987,7 +5353,7 @@ Title: "Input extraction — isolating the composer behind the Emission/Input/Ta
 
 Referenced by:
 - docs/implemented-plans/capture-mode.md:43 (mention) — (`docs/implemented-plans/input-extraction.md`) for how composer work
-- docs/plans/ios-input-plane-parity.md:41 (mention) — - Shipped precedent: `docs/implemented-plans/input-extraction.md` establishes
+- docs/plans/ios-input-plane-parity.md:43 (mention) — - Shipped precedent: `docs/implemented-plans/input-extraction.md` establishes
 - ../issues/closed/features/2026-08-06-keyword-finish-and-hq-transcribe-fixup.md:55 (mention) — - `docs/implemented-plans/input-extraction.md` (chunk 5) — the keyword-spotter design.
 
 References:
@@ -5005,7 +5371,7 @@ No references in or out.
 Title: "iOS audio retranscription" | 170 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:764 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
+- docs/mobile-contract.md:767 (mention) — `docs/implemented-plans/ios-audio-retranscription.md`.
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:6 (frontmatter) — design: ../../../beebox/docs/implemented-plans/ios-audio-retranscription.md
 - ../issues/closed/bugs/2026-08-19-ios-dictated-messages-cannot-be-retranscribed.md:104 (link) — [iOS audio retranscription](../../../beebox/docs/implemented-plans/ios-audio-retranscription.md).
 
@@ -5078,7 +5444,7 @@ Title: "On-device HQ for iOS quick chat thoughts" | 236 lines | shipped history 
 
 Referenced by:
 - docs/implemented-plans/hq-always.md:83 (link) — | iOS quick chat (box screen) | on-device HQ, else live (`<speech source="box-screen" stt="live">`); no recording reache
-- docs/mobile-contract.md:1285 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
+- docs/mobile-contract.md:1293 (mention) — the phone's live transcript (`docs/implemented-plans/ios-quick-chat-hq.md`). The record keeps origin, source,
 - ../issues/features/2026-10-09-ios-quick-chat-on-device-hq.md:40 (link) — should use it." Built per [the plan](../../beebox/docs/implemented-plans/ios-quick-chat-hq.md):
 
 References:
@@ -5096,7 +5462,7 @@ Referenced by:
 
 References:
 - → ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md (frontmatter)
-- → ../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md (link)
+- → ../issues/closed/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md (link)
 - → docs/engineering-principles.md (link)
 - → docs/reports/jev-document-triage-experiment-2026-09-28.md (link)
 - → docs/reports/jev-instruction-experiment-2026-09-28.md (link)
@@ -5109,7 +5475,7 @@ References:
 Title: "Job-Card XML Purge (subplan)" | 226 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/prompt-surface-cleanup-evaluation.md:548 (mention) — scrub, and is split out to **`job-xml-purge.subplan.md`** — executed in its own
+- docs/plans/prompt-surface-cleanup-evaluation.md:550 (mention) — scrub, and is split out to **`job-xml-purge.subplan.md`** — executed in its own
 
 References:
 - → docs/plans/prompt-surface-cleanup-evaluation.md (mention)
@@ -5127,7 +5493,7 @@ References:
 - → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (frontmatter)
 - → test/user-stories/journeys/A-lending/reports/2026-10-08.md (link)
 - → test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md (link)
-- → test/user-stories/journeys/D-chemistry/reports/2026-10-08.md (link)
+- → test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md (link)
 - → docs/landmarks.md (link)
 - → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
 - → ../issues/features/2026-09-08-landmark-scoped-pinned-card-baseline.md (link)
@@ -5137,8 +5503,8 @@ References:
 Title: "Landmark arrival" | 940 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards/migrations.md:322 (mention) — Track B of `docs/implemented-plans/landmark-arrival.md`. Chat openers moved from briefing
-- docs/landmarks.md:302 (mention) — history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
+- docs/cards/migrations.md:363 (mention) — Track B of `docs/implemented-plans/landmark-arrival.md`. Chat openers moved from briefing
+- docs/landmarks.md:309 (mention) — history entry. See `docs/implemented-plans/landmark-arrival.md`, Track D.
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
 - ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
 - ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:12 (mention) — **Closed (implemented):** resolved by the landmark-arrival work on branch worktree-journey-walks-oct (plan: beebox/docs/
@@ -5158,7 +5524,7 @@ References:
 - → ../issues/features/2026-09-08-landmark-scoped-pinned-card-baseline.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
 - → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
-- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
+- → ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
 - → ../issues/features/2026-07-20-first-run-experience.md (link)
 - → ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md (link)
 - → ../issues/features/2026-07-28-directories-as-viewable-things.md (link)
@@ -5194,10 +5560,10 @@ References:
 
 #### docs/implemented-plans/live-gap-marker.md
 
-Title: "Mark gaps in the live transcript" | 293 lines | shipped history | implemented
+Title: "Mark gaps in the live transcript" | 296 lines | shipped history | implemented
 
 Referenced by:
-- docs/chat/composer.md:74 (mention) — words are missing (`docs/implemented-plans/live-gap-marker.md`). A reconnect that replays
+- docs/chat/composer.md:79 (mention) — words are missing (`docs/implemented-plans/live-gap-marker.md`). A reconnect that replays
 
 References:
 - → docs/architecture/spirit.md (mention)
@@ -5210,7 +5576,7 @@ Title: "Local password auth, default-on" | 703 lines | shipped history | impleme
 Referenced by:
 - docs/implemented-plans/local-password-auth.review.md:3 (mention) — Adversarial review of `local-password-auth.md` by OpenAI Codex
 - docs/implemented-plans/remove-open-mode.md:22 (mention) — - Precedent: `docs/implemented-plans/local-password-auth.md` (auth default-on;
-- docs/plans/invite-links-and-password-change.md:56 (mention) — - `docs/implemented-plans/local-password-auth.md`: preserve global email
+- docs/plans/invite-links-and-password-change.md:58 (mention) — - `docs/implemented-plans/local-password-auth.md`: preserve global email
 - ../issues/closed/features/2026-07-16-local-password-auth-default-on.md:4 (frontmatter) — design: ../../../beebox/docs/implemented-plans/local-password-auth.md
 - ../issues/closed/features/2026-08-07-web-password-reset-account-recovery.md:52 (mention) — (`docs/implemented-plans/local-password-auth.md`, NOT-in-scope: "requires outbound
 - ../issues/code-quality/2026-07-19-browse-agent-token-argv-env-exposure.md:39 (mention) — `../../beebox/docs/implemented-plans/local-password-auth.md`.
@@ -5299,7 +5665,7 @@ Referenced by:
 - docs/implemented-plans/ios-per-box-device-lock.md:46 (mention) — (`docs/implemented-plans/mobile-parity-sync.md:115-134`). This feature changes
 - docs/mobile-contract.md:14 (mention) — contract change — is defined in `docs/implemented-plans/mobile-parity-sync.md`.
 - docs/mobile-parity.md:4 (mention) — Maintained under the process in `docs/implemented-plans/mobile-parity-sync.md`; wire-level
-- docs/plans/android-companion-app.md:574 (mention) — **What.** Consume the shared golden fixtures the parallel `docs/implemented-plans/mobile-parity-sync.md`
+- docs/plans/android-companion-app.md:576 (mention) — **What.** Consume the shared golden fixtures the parallel `docs/implemented-plans/mobile-parity-sync.md`
 
 References:
 - → AGENTS.md (mention)
@@ -5313,7 +5679,7 @@ References:
 Title: "Mobile device token: replace `?mobileToken=` with a box-scoped session cookie" | 513 lines | shipped history | implemented
 
 Referenced by:
-- docs/mobile-contract.md:1556 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
+- docs/mobile-contract.md:1720 (mention) — `docs/implemented-plans/mobile-token-handshake.md`.
 - ../issues/closed/bugs/2026-07-17-mobile-token-in-url-query.md:11 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`. The query-param carrier is gone: the
 - ../issues/closed/code-quality/2026-07-17-mobile-auth-parser-plumbing-cleanups.md:13 (mention) — `../../../beebox/docs/implemented-plans/mobile-token-handshake.md`; the single resolver every mobile
 - ../issues/closed/decisions/2026-07-19-boxes-share-one-origin.md:42 (mention) — The mobile-token work (`docs/implemented-plans/mobile-token-handshake.md`) ran into this and deliberately
@@ -5332,7 +5698,8 @@ References:
 Title: "Box model/engine policy" | 747 lines | shipped history | implemented
 
 Referenced by:
-- docs/model-policy.md:44 (mention) — `docs/implemented-plans/model-engine-policy.md`.)
+- docs/model-policy.md:45 (mention) — `docs/implemented-plans/model-engine-policy.md`.)
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:375 (mention) — - **Lives in:** `beebox/src/shared/agent-models.ts`, `beebox/src/shared/model-ids.ts`, `beebox/src/shared/chat-models.ts
 - ../issues/closed/bugs/2026-08-25-haiku-nickname-reaches-codex-verbatim.md:12 (mention) — **Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (commit `d61bb7ec0`, found in cross-model rev
 - ../issues/closed/code-quality/2026-07-30-structured-output-passes-load-full-box-context.md:12 (mention) — **Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track H, commit `d0dbbd1c0`): triage, chat r
 - ../issues/closed/features/2026-07-17-chat-model-pin-default.md:11 (mention) — **Resolved 2026-08-26** by `docs/implemented-plans/model-engine-policy.md` (Track D, commit `ba5f53255`): the chat model
@@ -5521,9 +5888,11 @@ References:
 
 #### docs/implemented-plans/openrouter-chat-models.md
 
-Title: "OpenRouter chat models, added by the owner in admin" | 588 lines | shipped history | implemented
+Title: "OpenRouter chat models, added by the owner in admin" | 590 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/background-runs-follow-openrouter-default.md:53 (mention) — - **Boxholder decision, 2026-09-19** (`docs/implemented-plans/openrouter-chat-models.md:79-81`):
+- docs/model-policy.md:170 (mention) — Claude (`docs/implemented-plans/openrouter-chat-models.md`).
 - ../issues/closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md:13 (link) — > [openrouter-chat-models](../../../beebox/docs/implemented-plans/openrouter-chat-models.md)
 - ../issues/features/2026-07-18-provider-endpoint-config.md:28 (link) — > [openrouter-chat-models](../../beebox/docs/implemented-plans/openrouter-chat-models.md)
 
@@ -5532,6 +5901,7 @@ References:
 - → ../issues/closed/features/2026-09-19-openrouter-chat-models-added-in-admin.md (link)
 - → ../issues/features/2026-07-18-provider-endpoint-config.md (link)
 - → docs/plans/box-glm-provider.md (mention)
+- → docs/implemented-plans/background-runs-follow-openrouter-default.md (mention)
 - → docs/model-policy.md (mention)
 - → docs/engineering-principles.md (mention)
 
@@ -5551,6 +5921,9 @@ References:
 Title: "A place shows the person's cards" | 587 lines | shipped history | implemented
 
 Referenced by:
+- docs/implemented-plans/front-door.md:89 (mention) — | The page says nothing about what the app is for (A row 5, F row 65) | Open. The root landmark ships with no body (`def
+- docs/implemented-plans/front-door.review.md:101 (mention) — **Citation:** `place-shows-cards.md`, Track A: "cannot promise the folder is empty"
+- docs/implemented-plans/place-shows-cards.review.md:12 (link) — 1. **The agent has no reliable trigger to maintain the body.** Track C says the agent updates it whenever it changes wha
 - docs/implemented-plans/readable-card-fields.md:15 (link) — [place-shows-cards](../implemented-plans/place-shows-cards.md) exhibit, after
 
 References:
@@ -5558,7 +5931,7 @@ References:
 - → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (frontmatter)
 - → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (frontmatter)
 - → ../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md (frontmatter)
-- → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
+- → ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
 - → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
 - → ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md (link)
 - → ../issues/code-quality/2026-09-20-fold-search-and-browse-summaries-onto-summarize.md (link)
@@ -5574,7 +5947,9 @@ References:
 Title: "Plan review — place-shows-cards" | 64 lines | implementation review
 
 References:
-- → src/core/agent-guide/guide.md (mention)
+- → docs/implemented-plans/place-shows-cards.md (link)
+- → src/core/agent-guide/guide.md (link)
+- → test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md (link)
 - → docs/landmarks.md (mention)
 
 #### docs/implemented-plans/plugins-design-notes.md
@@ -5630,6 +6005,7 @@ Title: "Plugins slice 3: connectors stay core" | 390 lines | shipped history | i
 Referenced by:
 - docs/implemented-plans/plugins-design-notes.md:198 (link) — ([plugins-slice-3.md](plugins-slice-3.md)).
 - docs/plugins.md:83 (mention) — `docs/implemented-plans/plugins-slice-3.md`. A source a box is *about* (a
+- ../issues/features/2026-10-15-connectors-as-plugins.md:13 (link) — [the slice 3 plan](../../beebox/docs/implemented-plans/plugins-slice-3.md),
 
 References:
 - → ../issues/features/2026-10-10-a-calendar-is-a-card-with-its-events-under-it.md (link)
@@ -5708,12 +6084,28 @@ References:
 - → docs/implemented-plans/plugins.design.md (mention)
 - → AGENTS.md (mention)
 
+#### docs/implemented-plans/portable-engine-dependency.md
+
+Title: "Portable beebox dependency in box package.json" | 240 lines | shipped history | implemented
+
+Referenced by:
+- docs/box-layout.md:74 (mention) — it is. See `docs/implemented-plans/portable-engine-dependency.md`.
+- ../issues/closed/bugs/2026-10-20-bbx-upgrade-writes-tarball-path-into-box-package-json.md:9 (frontmatter) — design: ../../../beebox/docs/implemented-plans/portable-engine-dependency.md
+- ../issues/closed/bugs/2026-10-20-deploy-beebox-link-reaches-box-history.md:12 (mention) — **Closed:** Implemented per `beebox/docs/implemented-plans/portable-engine-dependency.md` (f9de5b6cc through bbdb1f575):
+
+References:
+- → ../issues/closed/bugs/2026-10-20-deploy-beebox-link-reaches-box-history.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+- → docs/box-layout.md (mention)
+- → docker/README.md (mention)
+
 #### docs/implemented-plans/private-issues-shadow-repo.md
 
 Title: "Private issues: a shadow repo mounted at `<checkout>/private-issues/`" | 447 lines | shipped history | implemented
 
 Referenced by:
 - ../bin/AGENTS.md:170 (mention) — `beebox/docs/implemented-plans/private-issues-shadow-repo.md`.
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:239 (mention) — - **Lives in:** `bin/private-issues`, `bin/CLAUDE.md` "Private-issues shadow repo", `issues/CLAUDE.md`, `beebox/docs/imp
 
 References:
 - → AGENTS.md (mention)
@@ -5724,7 +6116,7 @@ References:
 Title: "Procedure migrations converge unattended" | 239 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/migration-reliability.md:312 (link) — [procedure-migration-convergence.md](../implemented-plans/procedure-migration-convergence.md):**
+- docs/plans/migration-reliability.md:314 (link) — [procedure-migration-convergence.md](../implemented-plans/procedure-migration-convergence.md):**
 - ../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md:16 (link) — [procedure-migration-convergence.md](../../../beebox/docs/implemented-plans/procedure-migration-convergence.md),
 
 References:
@@ -5748,6 +6140,7 @@ Title: "Skill bodies and operational guidance" | 388 lines | shipped history | i
 
 Referenced by:
 - docs/implemented-plans/prompt-calibration.md:214 (link) — The separately approved [skill bodies and operational guidance](prompt-calibration-bodies.subplan.md) covers the later b
+- ../dev/devprocess-talk/reports/sweep-instructions.md:74 (mention) — - **Lives in:** `beebox/docs/implemented-plans/prompt-calibration.md`, `beebox/docs/implemented-plans/prompt-calibration
 
 References:
 - → AGENTS.md (mention)
@@ -5755,7 +6148,6 @@ References:
 - → docs/reports/prompt-calibration-pilot-2026-09-12.md (link)
 - → docs/chat/schedules.md (mention)
 - → ../.claude/skills/cross-model/SKILL.md (link)
-- → ../agent-doctest/docs/syntax.md (link)
 - → docs/guides.md (link)
 
 #### docs/implemented-plans/prompt-calibration.md
@@ -5764,6 +6156,9 @@ Title: "Calibrate skill discovery and the root agent instructions" | 282 lines |
 
 Referenced by:
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:12 (link) — Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. T
+- ../dev/devprocess-talk/inventory.md:245 (mention) — - **Where:** `beebox/docs/implemented-plans/prompt-calibration.md`, `beebox/docs/reports/prompt-calibration-pilot-2026-0
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:221 (mention) — - **Lives in:** `beebox/docs/reports/prompt-calibration-pilot-2026-09-12.md` (+ `.results.json`), `beebox/docs/implement
+- ../dev/devprocess-talk/reports/sweep-instructions.md:47 (mention) — - **New bottleneck exposed:** Same growth as the package file: 65 words (05-26) → 1393 (07-04) → 2242 (09-04). The 2026-
 - ../issues/closed/docs-and-chores/2026-09-27-retire-root-docs-directory.md:46 (mention) — `beebox/docs/implemented-plans/prompt-calibration.md`.
 
 References:
@@ -5779,7 +6174,7 @@ References:
 - → ../beebox/docs/mobile-contract.md (link)
 - → ../.claude/skills/bbx-ios-overlap/SKILL.md (link)
 - → ../personal-vibe-check/AGENTS.md (link)
-- → ../agent-doctest/README.md (link)
+- → ../tap-check/README.md (link)
 - → ../canvas-loop/README.md (link)
 - → ../bin/AGENTS.md (link)
 - → ../research/AGENTS.md (link)
@@ -5814,8 +6209,8 @@ References:
 Title: "The publication card is the publication" | 315 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/publication-approval-card.md:9 (link) — > **Superseded shape:** [publication-card-home.md](../implemented-plans/publication-card-home.md) replaces the `src/publ
-- docs/plans/publish-sites-admin.md:10 (link) — > **Superseded shape:** [publication-card-home.md](../implemented-plans/publication-card-home.md) replaces the `src/publ
+- docs/plans/publication-approval-card.md:11 (link) — > **Superseded shape:** [publication-card-home.md](../implemented-plans/publication-card-home.md) replaces the `src/publ
+- docs/plans/publish-sites-admin.md:12 (link) — > **Superseded shape:** [publication-card-home.md](../implemented-plans/publication-card-home.md) replaces the `src/publ
 - ../issues/closed/decisions/2026-10-02-publication-source-and-card-split.md:13 (mention) — **Closed (implemented).** The boxholder chose "the card is the publication" on 2026-10-06; resolved by the `publication-
 
 References:
@@ -5832,6 +6227,17 @@ References:
 - → docs/box/markdown.md (mention)
 - → docs/plans/publish-sites-admin.md (mention)
 - → docs/plans/publication-approval-card.md (mention)
+
+#### docs/implemented-plans/purge-agent-doctest.md **[ORPHAN]**
+
+Title: "Purge agent-doctest: rename the check library, drop doctest leftovers" | 253 lines | shipped history | implemented
+
+References:
+- → docs/implemented-plans/retire-doctest.md (mention)
+- → AGENTS.md (mention)
+- → README.md (mention)
+- → docs/development/technologies.md (mention)
+- → docs/plans/source-available-release.md (mention)
 
 #### docs/implemented-plans/questions-end-to-end.md
 
@@ -5870,7 +6276,7 @@ References:
 Title: "Refresh beebox-clerk" | 450 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/clerk-tab-arrangements.md:131 (mention) — An older tab-sync experiment was removed because the box did not consume it. The current refresh record describes the re
+- docs/plans/clerk-tab-arrangements.md:133 (mention) — An older tab-sync experiment was removed because the box did not consume it. The current refresh record describes the re
 
 References:
 - → AGENTS.md (mention)
@@ -5929,7 +6335,9 @@ Title: "Remove `bbx render` and the SSR machinery" | 608 lines | shipped history
 
 Referenced by:
 - docs/implemented-plans/remove-bbx-render.review.md:8 (mention) — revised. All seven were real. The plan at `remove-bbx-render.md` has been updated
+- docs/implemented-plans/remove-bbx-render.review.md:17 (link) — 1. **High — Track 3 is incomplete and can break ESLint outright.** [Track 3](remove-bbx-render.md) deletes `XSTATE_USE_M
 - docs/unimplemented-plans/publish-pages-superseded.md:42 (mention) — - **SSR rendering — REMOVED 2026-08-01; this plan can no longer build on it.** `bbx render` and `src/frontend/src/ssr/`
+- ../dev/devprocess-talk/chunks/review-file-audit-trail.md:11 (mention) — revised. All seven were real. The plan at `remove-bbx-render.md` has been updated
 - ../issues/closed/decisions/2026-07-07-bbx-render-vs-bin-browse.md:15 (link) — > [remove-bbx-render](../../../beebox/docs/implemented-plans/remove-bbx-render.md)
 
 References:
@@ -5947,14 +6355,20 @@ References:
 - → docs/client-debug-log.md (mention)
 - → ../issues/closed/bugs/2026-08-01-chat-turn-stream-never-arrives-ws.md (link)
 
-#### docs/implemented-plans/remove-bbx-render.review.md **[ORPHAN]**
+#### docs/implemented-plans/remove-bbx-render.review.md
 
 Title: "Plan Engineering Review — remove-bbx-render" | 53 lines | implementation review
 
+Referenced by:
+- ../dev/devprocess-talk/chunks/review-file-audit-trail.md:5 (mention) — source: slide 07c; beebox/docs/implemented-plans/remove-bbx-render.review.md; 35 review files per inventory.md "bbx-plan
+- ../dev/devprocess-talk/slides/07c-review-file.md:23 (mention) — Path: beebox/docs/implemented-plans/remove-bbx-render.review.md. 35 review files have been committed; most reviews are a
+
 References:
 - → docs/implemented-plans/remove-bbx-render.md (mention)
-- → docs/implemented-plans/docs-reorg.gap-analysis.md (mention)
-- → docs/plans/cli-restructure.md (mention)
+- → docs/implemented-plans/remove-bbx-render.md (link)
+- → docs/implemented-plans/docs-reorg.gap-analysis.md (link)
+- → docs/plans/cli-restructure.md (link)
+- → ../issues/exploration/2026-07-27-roku-tv-dashboard-display.md (link)
 - → docs/doc-graph.md (mention)
 
 #### docs/implemented-plans/remove-box-shape-v1.core-review.md **[ORPHAN]**
@@ -5978,7 +6392,7 @@ Referenced by:
 - docs/implemented-plans/one-root-box-layout.md:204 (mention) — converts. (Precedent: `remove-box-shape-v1.md` — clear-refusal beats silent
 - docs/implemented-plans/remove-box-shape-v1.review.md:3 (mention) — Cross-model review of the draft `remove-box-shape-v1.md`. Findings verbatim
 - docs/reports/migration-rollout-2026-05-23.md:36 (mention) — `docs/implemented-plans/remove-box-shape-v1.md`).
-- ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:14 (mention) — Fallout from the box-shape v1 removal (`docs/plans/remove-box-shape-v1.md`,
+- ../issues/code-quality/2026-07-11-v1-removal-residue-src-comments-and-scenario-boxes.md:14 (mention) — Fallout from the box-shape v1 removal (`docs/implemented-plans/remove-box-shape-v1.md`,
 
 References:
 - → docs/implemented-plans/remove-box-shape-v1.review.md (mention)
@@ -6035,7 +6449,7 @@ References:
 Title: "Remove the cardworks package" | 512 lines | shipped history | implemented
 
 Referenced by:
-- docs/glossary.md:62 (mention) — **cardworks** — A former standalone card library, now removed. Its frontmatter-card primitives (`cardSchema()`, parsing,
+- docs/glossary.md:65 (mention) — **cardworks** — A former standalone card library, now removed. Its frontmatter-card primitives (`cardSchema()`, parsing,
 - docs/implemented-plans/box-migration.subplan.md:10 (mention) — the gated box-local-XML removal (`remove-cardworks-package.md`, task #11) and
 - docs/implemented-plans/box-migration.subplan.md:14 (link) — Parent plan: [remove-cardworks-package.md](./remove-cardworks-package.md). Both
 - docs/implemented-plans/remove-cardworks-deletion.md:12 (mention) — The execution plan for the last phase of `remove-cardworks-package.md`: sever
@@ -6064,7 +6478,7 @@ References:
 Title: "Remove Telegram" | 390 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/ios-companion-app.md:13 (mention) — When this plan was written, the lowest-hassle way to reach a box from a phone was the Telegram connector; it was removed
+- docs/plans/ios-companion-app.md:15 (mention) — When this plan was written, the lowest-hassle way to reach a box from a phone was the Telegram connector; it was removed
 - ../issues/closed/features/2026-10-11-remove-the-telegram-connector-and-chat-channel.md:11 (mention) — **Closed:** implemented on branch worktree-plugins-planning (commits titled "Remove Telegram: ..."; plan `beebox/docs/im
 
 References:
@@ -6143,12 +6557,166 @@ References:
 - → code-style.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/implemented-plans/retire-doctest.md
+
+Title: "Retire doctest: TypeScript tests with a typed check()" | 1286 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/purge-agent-doctest.md:9 (mention) — The doctest format is gone (`beebox/docs/implemented-plans/retire-doctest.md`),
+- docs/plans/README.md:24 (mention) — findable without masquerading as current docs. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this
+- docs/plans/agent-points-at-ui.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/android-companion-app.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/asset-annex.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/asset-offbox-storage.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/box-commentary-surface.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/box-glm-provider.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/box-screen.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/capture-fast-landing.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/change-based-test-selection.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/change-based-test-selection.review.md:2 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/chat-everywhere.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/chat-photo-batch-upload.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/chat-routing.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/chat-search.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/chat-session-delete.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/chat-session-delete.review.md:3 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/clerk-tab-arrangements.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/codex-session-startup-auth.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/composer-child-actors.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/container-first-pass2.review.md:3 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/container-first.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/container-first.review.md:3 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/display-path-guard.subplan.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/document-comments.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/email-tracking.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/general-browser.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/gmail-admission-and-preparation.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/google-owner-member-credentials.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/input-widget.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/installation-story.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/interface-as-cards.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/interface-cards-consolidation-removal-report.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/interface-cards-consolidation.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/invite-links-and-password-change.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/ios-app-intent-capture.implementation.review.md:7 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/ios-app-intent-capture.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/ios-companion-app.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/ios-companion-review-2026-07-17.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/ios-input-plane-parity.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/ios-native-capture-mode.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/ios-native-capture-mode.review.md:3 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/ios-share-extension-capture.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/mac-app-shell.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/migration-reliability.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/narration-mode.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/operator-member-password-reset.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/pdf-render-webp.review.md:3 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/prompt-surface-cleanup-evaluation.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/public-site-story-extraction.subplan.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/publication-approval-card.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/publish-shared-host-per-box.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/publish-sites-admin.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/scan-guide-card.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/scan-retry-and-document-route.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/scan-vision-claude.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/scan-vision-claude.review.md:3 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/search-card.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/source-available-release.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/tts-backend-selection.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/workspace-pane-controls.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/workspace-pane-controls.review.md:3 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/workstreams-app.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- docs/plans/worktree-control-surface.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/AGENTS.md:252 (mention) — long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; the
+- ../issues/bugs/2026-08-03-capture-upload-error-retry-affordance-weak.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/bugs/2026-08-06-sent-message-disappears-reappears-late-deferred-resync.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/bugs/2026-08-08-chat-composer-attach-ux.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/bugs/2026-08-08-serve-multiminute-freeze.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/bugs/2026-08-20-ios-record-button-silently-waits-for-speech.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/bugs/2026-08-22-batch-cancel-loses-folded-composer-photos.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/bugs/2026-10-05-secret-fields-trigger-save-password.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/closed/bugs/2026-08-09-transcript-flush-wait-full-timeout-real-sdk.md:14 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/closed/bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md:15 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/closed/bugs/2026-09-03-rename-left-old-gitignore-boxes-commit-state-dir.md:31 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/closed/bugs/2026-09-05-background-url-check-spins-forever-after-commit.md:29 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md:12 (mention) — Superseded by the opposite decision: `beebox/docs/implemented-plans/retire-doctest.md` converted every doctest to a `.te
+- ../issues/closed/code-quality/2026-10-08-landmark-menu-ssr-layout-effect-warning.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-06-26-model-switch-verification-deferred.md:7 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-07-06-chat-session-shared-core.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-08-07-no-socket-level-ws-auth-test.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-08-09-src-untested-by-import.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-08-25-field-test-models-chat-is-now-a-box-pin.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-10-08-remove-tests-that-never-earn-their-keep.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-10-08-test-volume-sweep.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-10-10-doctests-use-real-types-as-generic-fixtures.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-10-13-shared-helper-spawn-bin-ts-from-doctest.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/code-quality/2026-10-16-narrow-types-to-remove-doctest-casts.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/decisions/2026-07-10-boxes-dead-beebox-symlinks.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/decisions/2026-07-29-manual-testing-flag-overuse.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/decisions/2026-08-30-rethink-box-autocommit.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/decisions/2026-09-05-disallow-dots-in-card-names.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:6 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/docs-and-chores/2026-07-19-questions-end-to-end-followups.md:8 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/docs-and-chores/2026-10-14-guidance-on-commit-count-per-landed-branch.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/exploration/2026-05-11-cli-design-for-agents.md:8 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/exploration/2026-05-26-issue-tracking-evaluate-beads.md:8 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/exploration/2026-07-15-claude-code-cloud-environment.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/exploration/2026-08-12-evaluate-impeccable-skill.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/exploration/2026-08-24-more-tripwires-with-auditable-overrides.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/exploration/2026-08-26-post-test-economics-retro.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/exploration/2026-09-16-openspec-vs-bbx-plan.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/features/2026-07-19-ios-input-plane-parity.md:9 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/features/2026-07-28-google-auth-policy-proxy.md:10 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/features/2026-09-04-cross-box-filesystem-isolation.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/features/2026-09-17-calendar-ics-filenames-carry-the-title.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/features/2026-09-23-smoke-gate-skipped-by-scheduled-and-direct-landings.md:12 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:13 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+- ../issues/watch/2026-10-17-move-typescript-eslint-to-typescript-7.md:11 (mention) — > **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory
+
+References:
+- → ../issues/closed/code-quality/2026-09-27-convert-test-ts-files-to-doctests.md (frontmatter)
+- → ../issues/code-quality/2026-10-13-try-ai-deslop-rules-and-lint-doctest-code.md (frontmatter)
+- → docs/implemented-plans/typescript-7.md (mention)
+- → docs/engineering-principles.md (mention)
+- → AGENTS.md (mention)
+- → docs/implemented-plans/doctest-usability.md (mention)
+- → docs/testing/check.md (link)
+- → docs/testing.md (mention)
+- → docs/testing/tap-tests.md (mention)
+- → src/services/AGENTS.md (mention)
+- → README.md (mention)
+
+#### docs/implemented-plans/retire-memo.md
+
+Title: "Retire the memo card type into doc" | 400 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:14 (mention) — **Closed:** Closed by the retire-memo branch. No memo `source` field remains; the glossary records `via` vs `origin`. Pl
+- ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md:14 (mention) — **Closed:** Closed by the retire-memo branch (merge of worktree-retire-memo). The memo card type is removed; migration `
+- ../issues/deferred/2026-10-16-retire-memo-legacy-source-guard.md:7 (frontmatter) — design: ../../beebox/docs/implemented-plans/retire-memo.md
+
+References:
+- → ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (frontmatter)
+- → ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md (frontmatter)
+- → ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
+- → ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md (link)
+- → docs/implemented-plans/standard-card-fields.md (link)
+- → docs/mobile-contract.md (mention)
+- → src/core/agent-guide/guide.md (mention)
+- → docs/cards/migrations.md (mention)
+
 #### docs/implemented-plans/retire-type-specific-core-tags.md
 
 Title: "Retire the four type-specific core Markdoc tags" | 312 lines | shipped history | implemented
 
 Referenced by:
-- docs/cards/migrations.md:345 (mention) — `docs/implemented-plans/retire-type-specific-core-tags.md`, Track 4. The four
+- docs/cards/migrations.md:386 (mention) — `docs/implemented-plans/retire-type-specific-core-tags.md`, Track 4. The four
 
 References:
 - → docs/implemented-plans/plugins-slice-2.md (mention)
@@ -6179,6 +6747,13 @@ References:
 - → ../issues/features/2026-08-12-show-retranscription-in-chat.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 
+#### docs/implemented-plans/ribbon-theme.md **[ORPHAN]**
+
+Title: "Ribbon system and card theme" | 214 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/code-quality/2026-10-15-themed-file-card-unit-layout.md (frontmatter)
+
 #### docs/implemented-plans/router-state-formalization.md
 
 Title: "Router Phase 2 — WorktreeState Formalization" | 262 lines | shipped history | implemented
@@ -6192,6 +6767,7 @@ Referenced by:
 Title: "Dev router: survive load, and leave a record" | 929 lines | shipped history | implemented
 
 Referenced by:
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:299 (mention) — - **Lives in:** `bin/docs/router-operations.md` "Startup failures and automatic retry"; `beebox/docs/implemented-plans/r
 - ../issues/closed/bugs/2026-08-18-failed-worktree-reports-owner-session-required.md:14 (mention) — `beebox/docs/implemented-plans/router-transient-failure-resilience.md`
 - ../issues/closed/bugs/2026-09-15-dev-router-transient-failures-are-permanent-and-unlogged.md:12 (mention) — **Closed 2026-09-15:** resolved by `beebox/docs/implemented-plans/router-transient-failure-resilience.md`
 - ../issues/decisions/2026-09-15-dev-router-is-load-bearing-and-cannot-survive-its-own-restart.md:9 (frontmatter) — design: ../../beebox/docs/implemented-plans/router-transient-failure-resilience.md
@@ -6209,7 +6785,7 @@ References:
 Title: "Scan-uploader setup UI + minimal install story" | 341 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/installation-story.md:30 (mention) — `scan-uploader/README.md` "Setup" and `docs/plans/scan-uploader-pairing.md`
+- docs/plans/installation-story.md:32 (mention) — `scan-uploader/README.md` "Setup" and `docs/implemented-plans/scan-uploader-pairing.md`
 
 References:
 - → docs/implemented-plans/scan-uploader-pairing.review.md (mention)
@@ -6243,12 +6819,12 @@ Title: "Scanner Ingest" | 766 lines | shipped history | implemented
 Referenced by:
 - docs/implemented-plans/scan-uploader-version-drift.md:21 (mention) — deferrals: `docs/implemented-plans/scanner-ingest.md:636-664` (NOT in scope) and
 - docs/implemented-plans/scanner-ingest.review.md:3 (mention) — Cross-model review of `scanner-ingest.md`, run 2026-08-01 with OpenAI Codex
-- docs/plans/scan-guide-card.md:17 (mention) — This is a subplan of `docs/implemented-plans/scanner-ingest.md` (Track 6 reshaped).
+- docs/plans/scan-guide-card.md:19 (mention) — This is a subplan of `docs/implemented-plans/scanner-ingest.md` (Track 6 reshaped).
 - docs/plans/scan-guide-card.review.md:13 (mention) — (`scanner-ingest.md:510`); the minimal version keeps `readScanContextFile`
-- docs/plans/scan-retry-and-document-route.md:110 (link) — [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md), because Track 3 depends on them.
-- docs/plans/scan-vision-claude.md:443 (mention) — scan section of `docs/implemented-plans/scanner-ingest.md`.
+- docs/plans/scan-retry-and-document-route.md:112 (link) — [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md), because Track 3 depends on them.
+- docs/plans/scan-vision-claude.md:445 (mention) — scan section of `docs/implemented-plans/scanner-ingest.md`.
 - docs/plans/scanner-ingest-docling-decisions.md:13 (link) — decision changes. Parent plan: [`scanner-ingest.md`](../implemented-plans/scanner-ingest.md).
-- docs/scan-upload-contract.md:16 (link) — history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
+- docs/scan-upload-contract.md:19 (link) — history: [`implemented-plans/scanner-ingest.md`](implemented-plans/scanner-ingest.md).
 - ../issues/closed/bugs/2026-09-06-pdf-text-layer-trusted-without-quality-check.md:8 (mention) — Resolved by `e09cd6d23` ("pdf: judge the text layer, and stop OCRing at weak defaults"): added `assessTextLayer`/`PdfPro
 - ../issues/closed/bugs/2026-09-06-pdf-text-layer-trusted-without-quality-check.md:96 (link) — [`implemented-plans/scanner-ingest.md`](../../../beebox/docs/implemented-plans/scanner-ingest.md) records
 - ../issues/closed/code-quality/2026-08-24-remove-document-card-legacy-tolerance.md:34 (mention) — > `docs/plans/scanner-ingest.md`'s Track 4 already carries the dated note
@@ -6284,6 +6860,8 @@ Title: "Schedule alerts: priority decides delivery, one daily digest, conditions
 
 Referenced by:
 - docs/implemented-plans/connector-silence.md:99 (mention) — (`docs/implemented-plans/schedule-alert-signal.md`). That covers
+- ../dev/devprocess-talk/reports/sweep-queue-planning.md:264 (mention) — - **Lives in:** `schedules/alert-filing/` (runs `bin/schedules file-standing`); plan `beebox/docs/implemented-plans/sche
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:109 (mention) — - **Lives in:** `bin/docs/schedules.md#results-and-writer-boundary`, `schedules/alert-filing/run` (calls `bin/schedules
 - ../issues/closed/features/2026-09-18-schedule-alert-noise-daily-cadence.md:13 (link) — [schedule-alert-signal.md](../../../beebox/docs/implemented-plans/schedule-alert-signal.md),
 - ../issues/closed/features/2026-09-18-schedule-alert-severity-and-presentation.md:13 (link) — [schedule-alert-signal.md](../../../beebox/docs/implemented-plans/schedule-alert-signal.md),
 - ../issues/features/2026-09-18-deploy-notifications-bypass-alert-priorities.md:13 (link) — ([plan](../../beebox/docs/implemented-plans/schedule-alert-signal.md)). The deploy path
@@ -6301,6 +6879,8 @@ Title: "Scheduled workstreams" | 734 lines | shipped history | implemented
 Referenced by:
 - docs/development/maintenance.md:38 (mention) — <name> --dry-run`. Design: `docs/implemented-plans/scheduled-workstreams.md`.
 - ../bin/docs/schedules.md:231 (mention) — Background: `beebox/docs/implemented-plans/scheduled-workstreams.md`.
+- ../dev/devprocess-talk/inventory.md:709 (mention) — - **Where:** `schedules/*/`, `bin/schedules.ts`, `bin/docs/schedules.md`, `beebox/docs/implemented-plans/scheduled-works
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:42 (mention) — - **New bottleneck exposed:** `beebox/docs/implemented-plans/scheduled-workstreams.md`: "Recurring jobs in this repo ...
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/scheduled-workstreams.md
 - ../issues/closed/features/2026-08-12-monitor-message-queue.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/scheduled-workstreams.md
 - ../issues/closed/features/2026-08-25-sdk-update-in-a-worktree.md:41 (mention) — The problems, from the review of `scheduled-workstreams.md`:
@@ -6322,6 +6902,17 @@ References:
 - → docs/cards/schemas.md (mention)
 - → code-style.md (mention)
 
+#### docs/implemented-plans/search-section-destination.md
+
+Title: "Search section results open at their heading" | 377 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md:15 (mention) — > `beebox/docs/implemented-plans/search-section-destination.md`. gdoc hits stay card-level.
+
+References:
+- → ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md (frontmatter)
+- → docs/engineering-principles.md (mention)
+
 #### docs/implemented-plans/secret-custody.md
 
 Title: "Secret custody" | 803 lines | shipped history | implemented
@@ -6329,10 +6920,10 @@ Title: "Secret custody" | 803 lines | shipped history | implemented
 Referenced by:
 - docs/implemented-plans/agent-browsing-owner.md:144 (mention) — one test box's opt-in must not unlock it (`docs/plans/secret-custody.md`).
 - docs/implemented-plans/secret-entry-guidance.md:53 (mention) — (`docs/implemented-plans/secret-custody.md:439-444`): *"Guidance: the capture
-- docs/plans/box-glm-provider.md:81 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
-- docs/plans/publish-sites-admin.md:195 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
+- docs/plans/box-glm-provider.md:83 (mention) — - `docs/implemented-plans/secret-custody.md` — the defended line is
+- docs/plans/publish-sites-admin.md:197 (mention) — A signed-in box member action and server-side connection write are the actual controls. Reuse box membership checks (`be
 - docs/secrets.md:6 (link) — rationale: [`plans/secret-custody.md`](implemented-plans/secret-custody.md). This page is
-- docs/security-report.md:300 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
+- docs/security-report.md:316 (mention) — level down (Track 1 of `docs/implemented-plans/secret-custody.md`, 2026-08-17): a box
 - docs/user-stories/catalog/2026-08-21.md:9047 (mention) — - **Box subprocesses get a fail-closed environment** — The mechanism the story names is real and unconditional: pickBoxS
 - ../issues/closed/bugs/2026-08-07-connector-secret-file-modes.md:13 (mention) — (`docs/implemented-plans/secret-custody.md`), not fixed the way this issue
 - ../issues/closed/code-quality/2026-08-17-remove-legacy-secret-support.md:55 (mention) — (`beebox/docs/implemented-plans/secret-custody.md`) and the data
@@ -6422,7 +7013,7 @@ References:
 Title: "Selection Commentary — referencing document text in chat input" | 715 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/box-commentary-surface.md:102 (mention) — selection-commentary feature (`docs/implemented-plans/selection-commentary.md`) and the
+- docs/plans/box-commentary-surface.md:104 (mention) — selection-commentary feature (`docs/implemented-plans/selection-commentary.md`) and the
 - docs/reports/plan-directory-migration-history-2026-09-13.md:14 (mention) — - → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-plan.md`
 - ../issues/closed/features/2026-09-11-select-transcript-text-into-the-composer.md:24 (mention) — `beebox/docs/implemented-plans/selection-commentary.md`: "a way to attach a text
 
@@ -6438,19 +7029,13 @@ Title: "Semantic search (box-search phase 3): hybrid BM25 + vector retrieval" | 
 
 Referenced by:
 - docs/implemented-plans/chat-review.md:844 (mention) — the validation in `docs/plans/semantic-search.md` § Rollout rather than appending
-- docs/plans/chat-search.md:88 (mention) — - Prior art in-tree: `docs/implemented-plans/semantic-search.md` and
+- docs/plans/chat-search.md:90 (mention) — - Prior art in-tree: `docs/implemented-plans/semantic-search.md` and
 
 References:
 - → AGENTS.md (mention)
 - → docs/implemented-plans/box-search.md (mention)
 - → docs/engineering-principles.md (mention)
 - → src/services/AGENTS.md (mention)
-
-#### docs/implemented-plans/seven-material-themes.md **[ORPHAN]**
-
-Title: "Six material-led theme collections" | 205 lines | shipped history | implemented
-
-No references in or out.
 
 #### docs/implemented-plans/shared-frontend-backend-code.subplan.md
 
@@ -6469,7 +7054,7 @@ References:
 Title: "Sidecar shell: survive a transient failure, keep tabs, pin one" | 624 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
+- docs/plans/chat-everywhere.md:28 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
 
 References:
 - → ../issues/closed/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md (frontmatter)
@@ -6530,12 +7115,13 @@ Title: "Standard card fields" | 635 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/chat-titles.md:80 (mention) — - **Standard card fields (`docs/implemented-plans/standard-card-fields.md`).**
+- docs/implemented-plans/retire-memo.md:21 (link) — [standard card fields](../implemented-plans/standard-card-fields.md) plan
 - ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md:13 (link) — Closed: implemented by [the standard card fields plan](../../../beebox/docs/implemented-plans/standard-card-fields.md) (
 
 References:
 - → ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md (frontmatter)
 - → ../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md (link)
-- → ../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
+- → ../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md (link)
 - → ../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md (link)
 - → ../issues/closed/features/2026-09-27-card-properties-design-session.md (link)
 - → docs/cards/schemas.md (mention)
@@ -6561,7 +7147,7 @@ References:
 Title: "System theme selection and landmark overrides" | 147 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/workspace-pane-controls.md:579 (link) — [implemented system-theme subplan](../implemented-plans/system-theme-selection.subplan.md).
+- docs/plans/workspace-pane-controls.md:581 (link) — [implemented system-theme subplan](../implemented-plans/system-theme-selection.subplan.md).
 
 #### docs/implemented-plans/tailscale-expose-and-protect.md
 
@@ -6583,6 +7169,44 @@ References:
 - → docs/plans/installation-story.md (mention)
 - → docs/server/health-checks.md (mention)
 - → docs/install/agent.md (mention)
+
+#### docs/implemented-plans/theme-authoring-studio.md **[ORPHAN]**
+
+Title: "Theme authoring studio" | 171 lines | shipped history | implemented
+
+References:
+- → ../issues/closed/code-quality/2026-10-15-themed-file-card-unit-layout.md (frontmatter)
+- → frontend.md (mention)
+
+#### docs/implemented-plans/theme-contrast-audit.md
+
+Title: "Theme contrast audit in the theme loop" | 347 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md:45 (mention) — `beebox/docs/implemented-plans/theme-contrast-audit.md`). The theme misses it found are
+
+References:
+- → ../issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md (frontmatter)
+- → docs/theme-authoring.md (mention)
+
+#### docs/implemented-plans/theme-studio.md
+
+Title: "Theme studio: show what the app shows, at screen scale" | 389 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/code-quality/2026-10-21-base-warm-text-scale-contrast.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). Direction
+- ../issues/closed/code-quality/2026-10-21-chat-material-themed-by-utility-class-overrides.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). Chat root
+- ../issues/closed/code-quality/2026-10-21-theme-check-captures-paint-backdrops-at-capture-height.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). The studi
+- ../issues/closed/features/2026-10-21-theme-studio-lacks-app-nav-specimen.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). The studi
+- ../issues/features/2026-10-21-theme-studio-live-contrast-overlay.md:7 (mention) — discovered-in: worktree-theme-audit — plan theme-studio.md, "NOT in scope"
+
+References:
+- → ../issues/closed/features/2026-10-21-theme-studio-lacks-app-nav-specimen.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-21-theme-check-captures-paint-backdrops-at-capture-height.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-21-chat-material-themed-by-utility-class-overrides.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-21-base-warm-text-scale-contrast.md (frontmatter)
+- → docs/theme-authoring.md (mention)
+- → docs/testing/tours.md (mention)
 
 #### docs/implemented-plans/todo-annotation.md
 
@@ -6645,6 +7269,7 @@ Title: "Todos in the UI — one experience of what is open here and what to do a
 Referenced by:
 - ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md:14 (mention) — (`beebox/docs/implemented-plans/todos-ui.md`), completing the plate
 - ../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md:16 (mention) — `beebox/docs/implemented-plans/todos-ui.md` Track 3.
+- ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:11 (mention) — Closed 2026-10-16 on worktree-plate-wording (8eaccd8ac, 61de22bd4): card, folder and list-row todo lines now split open
 - ../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md:14 (mention) — scope prefilter, `beebox/docs/implemented-plans/todos-ui.md`). A person
 - ../issues/features/2026-07-29-verify-todo-annotation-rendering.md:42 (link) — The [todos-ui plan](../../beebox/docs/implemented-plans/todos-ui.md) (2026-09-25) replaced
 - ../issues/features/2026-08-30-todos-inline-things-to-think-about.md:49 (mention) — `todos-ui` (`beebox/docs/implemented-plans/todos-ui.md`) built ask 1: cards
@@ -6677,11 +7302,11 @@ Title: "Unified app bar: one nav for chat and everything else" | 542 lines | shi
 Referenced by:
 - docs/implemented-plans/chat-header-chips.md:9 (mention) — **Superseded surface (2026-08-02, `docs/implemented-plans/top-nav-ia.md`).** The chat
 - docs/implemented-plans/nav-card.md:18 (mention) — **Where the entries render changed (2026-08, `docs/implemented-plans/top-nav-ia.md`
-- docs/landmarks.md:181 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
-- docs/plans/box-screen.md:43 (mention) — - This changes shipped navigation from `beebox/docs/implemented-plans/top-nav-ia.md`: line 296 puts Dashboard, Browse, H
-- docs/questions.md:256 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
+- docs/landmarks.md:186 (mention) — landmark-keyed page projected twice (`docs/implemented-plans/top-nav-ia.md` Track D).
+- docs/plans/box-screen.md:45 (mention) — - This changes shipped navigation from `beebox/docs/implemented-plans/top-nav-ia.md`: line 296 puts Dashboard, Browse, H
+- docs/questions.md:272 (mention) — (`docs/implemented-plans/top-nav-ia.md`): the app bar no longer carries a
 - docs/user-stories/catalog/2026-08-21.md:9051 (mention) — - **Nav bar with live pending counts** — The pending-questions badge was deliberately retired, so the story describes a
-- ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:43 (mention) — That is a reasonable IA decision (`docs/plans/top-nav-ia.md` Track C), but it
+- ../issues/bugs/2026-08-23-no-consistent-way-back-to-chat.md:43 (mention) — That is a reasonable IA decision (`docs/implemented-plans/top-nav-ia.md` Track C), but it
 - ../issues/closed/bugs/2026-08-23-agent-guide-example-puts-landmarks-in-a-sidebar.md:42 (link) — [top-nav-ia](../../../beebox/docs/implemented-plans/top-nav-ia.md) — which
 - ../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md:6 (mention) — discovered-in: worktree-top-nav-ia — unified app bar (docs/implemented-plans/top-nav-ia.md)
 - ../issues/closed/code-quality/2026-08-21-nav-counts-questions-nothing-renders.md:17 (mention) — `eaa86c79` (Track C3 of `docs/implemented-plans/top-nav-ia.md`, 2026-08-02)
@@ -6715,7 +7340,7 @@ References:
 Title: "Destination questions create triage follow-up todos" | 240 lines | shipped history | implemented
 
 Referenced by:
-- docs/plans/gmail-admission-and-preparation.md:15 (link) — [implemented todo plan](../implemented-plans/triage-todo-question.md). This plan
+- docs/plans/gmail-admission-and-preparation.md:17 (link) — [implemented todo plan](../implemented-plans/triage-todo-question.md). This plan
 - ../issues/features/2026-09-24-agent-assigned-todos-have-no-pickup.md:63 (link) — The [triage todo question plan](../../beebox/docs/implemented-plans/triage-todo-question.md)
 
 References:
@@ -6730,6 +7355,14 @@ Title: "Plan Engineering Review — triage todo question" | 109 lines | implemen
 
 No references in or out.
 
+#### docs/implemented-plans/tts-comparison-page.md **[ORPHAN]**
+
+Title: "Publish the TTS model comparison on beebox.run" | 268 lines | shipped history | implemented
+
+References:
+- → AGENTS.md (mention)
+- → docs/plans/tts-backend-selection.md (mention)
+
 #### docs/implemented-plans/tts-streamed-playback.md
 
 Title: "Stream speech audio from the provider to the browser" | 399 lines | shipped history | implemented
@@ -6741,6 +7374,20 @@ References:
 - → ../issues/closed/features/2026-10-04-gemini-tts-streamed-playback.md (frontmatter)
 - → ../issues/closed/features/2026-10-04-gemini-tts-streamed-playback.md (link)
 - → docs/plans/tts-backend-selection.md (mention)
+- → docs/engineering-principles.md (mention)
+
+#### docs/implemented-plans/typescript-7.md
+
+Title: "Move the repo to TypeScript 7, except typescript-eslint" | 407 lines | shipped history | implemented
+
+Referenced by:
+- docs/implemented-plans/retire-doctest.md:46 (mention) — move (`beebox/docs/implemented-plans/typescript-7.md`) left
+- ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md:12 (mention) — **Closed:** implemented on branch worktree-ts7 (plan `beebox/docs/implemented-plans/typescript-7.md`). The repo uses Typ
+- ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md:171 (link) — [TypeScript 7 plan](../../../beebox/docs/implemented-plans/typescript-7.md). The tools that
+- ../issues/watch/2026-10-17-move-typescript-eslint-to-typescript-7.md:13 (link) — The [TypeScript 7 plan](../../beebox/docs/implemented-plans/typescript-7.md) moves every
+
+References:
+- → ../issues/closed/exploration/2026-10-17-try-typescript-7-native-compiler.md (frontmatter)
 - → docs/engineering-principles.md (mention)
 
 #### docs/implemented-plans/user-location.md
@@ -6791,9 +7438,10 @@ Title: "Vocabulary sweep: glossary, UI copy, record quantity/measurements" | 353
 
 Referenced by:
 - docs/glossary.md:22 (mention) — 2026-09-02 (`docs/implemented-plans/vocab-glossary-sweep.md`).
+- ../dev/devprocess-talk/reports/sweep-instructions.md:343 (mention) — - **Appeared:** 2026-05-21 dbfc2335e "Add docs/glossary.md with starter Proper-Noun set"; user-facing register decisions
 - ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md:15 (mention) — > branch (see `beebox/docs/implemented-plans/vocab-glossary-sweep.md`, Track
 - ../issues/closed/bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md:15 (mention) — > `beebox/docs/implemented-plans/vocab-glossary-sweep.md`), migration
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:35 (mention) — > Details: `beebox/docs/implemented-plans/vocab-glossary-sweep.md`.
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:38 (mention) — > Details: `beebox/docs/implemented-plans/vocab-glossary-sweep.md`.
 
 References:
 - → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (frontmatter)
@@ -6811,7 +7459,7 @@ Referenced by:
 - docs/implemented-plans/notifications.md:94 (mention) — (`docs/implemented-plans/web-push-notifications.md`, Track C). Several
 - docs/implemented-plans/web-push-notifications.review-codex.md:2 (mention) — title: "Codex review — web-push-notifications.md"
 - ../issues/code-quality/2026-07-04-web-push-followup-testing.md:6 (frontmatter) — design: ../../beebox/docs/implemented-plans/web-push-notifications.md
-- ../issues/features/2026-09-25-notifications-and-proactive-design.md:48 (mention) — (plan: `beebox/docs/implemented-plans/web-push-notifications.md`), but prod has no
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:50 (mention) — (plan: `beebox/docs/implemented-plans/web-push-notifications.md`), but prod has no
 
 References:
 - → AGENTS.md (mention)
@@ -6879,8 +7527,9 @@ Title: "Workstream exhibits" | 759 lines | shipped history | implemented
 
 Referenced by:
 - docs/implemented-plans/exhibits-rethink.md:105 (link) — - **The original design** ([workstream-exhibits](../implemented-plans/workstream-exhibits.md),
-- docs/plans/document-comments.md:80 (mention) — - **Precedent: the exhibits store** — `beebox/docs/implemented-plans/workstream-exhibits.md:236`:
-- docs/plans/general-browser.md:143 (mention) — stays one directory per workstream (`workstream-exhibits.md:231`) — that layout
+- docs/plans/document-comments.md:82 (mention) — - **Precedent: the exhibits store** — `beebox/docs/implemented-plans/workstream-exhibits.md:236`:
+- docs/plans/general-browser.md:145 (mention) — stays one directory per workstream (`workstream-exhibits.md:231`) — that layout
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:189 (mention) — - **Lives in:** `bin/exhibits`, `workstreams-app/docs/exhibits.md` (213 lines), `workstreams-app/src/server/exhibits/`,
 - ../issues/closed/features/2026-07-24-dev-scripted-apps-separate-origin.md:13 (mention) — > `beebox/docs/plans/workstream-exhibits.md`). The separate origin this
 - ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md:31 (link) — ([workstream-exhibits](../../beebox/docs/implemented-plans/workstream-exhibits.md):265).
 
@@ -6897,6 +7546,7 @@ References:
 Title: "Protect a workstream while its agent launches" | 327 lines | shipped history | implemented
 
 Referenced by:
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:89 (mention) — - **Lives in:** `bin/lib/worktree-create.sh`, `bin/workstreams`, `beebox/docs/implemented-plans/concurrent-workstream-cr
 - ../issues/closed/bugs/2026-08-20-workstream-launch-liveness-gap.md:4 (frontmatter) — design: ../../../beebox/docs/implemented-plans/workstream-launch-liveness.md
 
 References:
@@ -6909,6 +7559,7 @@ References:
 Title: "Route new work to an existing workstream" | 415 lines | shipped history | implemented
 
 Referenced by:
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:109 (mention) — - **Lives in:** `bin/workstreams` (`list --json`, `resume`), `beebox/docs/implemented-plans/workstream-routing.md`, laun
 - ../issues/closed/bugs/2026-08-19-one-bad-workstream-row-blanks-the-issues-page.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/workstream-routing.md
 - ../issues/closed/features/2026-08-20-no-way-to-know-what-a-workstream-covers.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/workstream-routing.md
 
@@ -6923,6 +7574,9 @@ References:
 Title: "The /workstreams/ app and disposable sessions" | 1355 lines | shipped history | implemented
 
 Referenced by:
+- ../dev/devprocess-talk/inventory.md:91 (mention) — - **Where:** `bin/workstreams` (1,080 lines: list, create, resume, remove, release, cull state, liveness), `~/.cache/bee
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:99 (mention) — - **Lives in:** `bin/workstreams` (1080 lines; `list`, `create`, `resume`, `remove`, `close`, `release`, `reset-test`, `
+- ../dev/devprocess-talk/slides/09a-redesign-issue.md:22 (mention) — Path: issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md. The plan that closed it (implemented-plan
 - ../issues/closed/code-quality/2026-08-22-remove-legacy-issue-deep-link-routes.md:26 (link) — ([workstreams](../../../beebox/docs/implemented-plans/workstreams.md):629),
 - ../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/workstreams.md
 - ../issues/closed/exploration/2026-08-09-staging-slot-for-premerge-testing.md:5 (frontmatter) — design: ../../../beebox/docs/implemented-plans/workstreams.md
@@ -6941,7 +7595,7 @@ References:
 - → docs/plans/worktree-control-surface.md (link)
 - → ../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md (link)
 - → ../issues/decisions/2026-07-29-manual-testing-flag-overuse.md (link)
-- → ../issues/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md (link)
+- → ../issues/closed/bugs/2026-08-08-events-db-truncates-across-engine-checkouts.md (link)
 - → docs/engineering-principles.md (mention)
 - → docs/chat/sessions.md (mention)
 - → docs/plans/README.md (mention)
@@ -6961,7 +7615,7 @@ Referenced by:
 - docs/implemented-plans/tailscale-expose-and-protect.md:545 (mention) — surface is `docs/install/agent.md`'s existing "widening exposure is a real
 - docs/install.md:11 (link) — | With an AI agent | A person who has asked their assistant to install it for them; the page is written for the assistan
 - docs/plans/agent-docs.md:47 (mention) — `raw.githubusercontent.com/.../install/agent.md`.
-- docs/plans/container-first.md:586 (mention) — does the same; `docs/install/agent.md:28-29` says the engine is *"this
+- docs/plans/container-first.md:588 (mention) — does the same; `docs/install/agent.md:28-29` says the engine is *"this
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:53 (mention) — - `docs/install/developer.md`, `docs/install/docker.md`, `docs/install/agent.md`
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:28 (link) — handing [the agent install guide](../../beebox/docs/install/agent.md)
 - ../issues/exploration/2026-08-24-agent-md-article-ideas.md:2 (mention) — title: "Check out Fabien Sanglard's `agent.md` piece for practices worth adopting"
@@ -6982,9 +7636,9 @@ Referenced by:
 - docs/implemented-plans/local-password-auth.md:536 (mention) — **What.** `docs/install/developer.md` + `docs/install/docker.md` +
 - docs/install.md:10 (link) — | From source | Hacking on the engine itself. | [Developer](install/developer.md) |
 - docs/install/agent.md:45 (link) — ([developer-install.md](developer.md)) is the one. Ask which
-- docs/plans/container-first.md:587 (mention) — repository (or a Docker image built from it)"*; `docs/install/developer.md:1-6`
-- docs/plans/installation-story.md:124 (mention) — in `docs/install/developer.md`.
-- docs/plans/operator-member-password-reset.md:490 (mention) — `docs/install/developer.md` where they describe invite/password lifecycle.
+- docs/plans/container-first.md:589 (mention) — repository (or a Docker image built from it)"*; `docs/install/developer.md:1-6`
+- docs/plans/installation-story.md:126 (mention) — in `docs/install/developer.md`.
+- docs/plans/operator-member-password-reset.md:492 (mention) — `docs/install/developer.md` where they describe invite/password lifecycle.
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:80 (mention) — gotcha `docs/install/developer.md` has to warn about — a real argument for a
 - ../issues/closed/features/2026-07-28-excel-reader-standard-install.md:53 (mention) — - `docs/install/developer.md`, `docs/install/docker.md`, `docs/install/agent.md`
 - ../issues/features/2026-07-19-installation-remaining-work.md:16 (mention) — - From-source developer install: `beebox/docs/install/developer.md`,
@@ -7008,10 +7662,10 @@ Referenced by:
 - docs/install.md:9 (link) — | Docker | Running a box, locally or on a VPS, without touching the source. The image bakes in every host dependency. |
 - docs/install/agent.md:43 (link) — ([docker-install.md](docker.md)) is simpler and bundles every
 - docs/install/developer.md:7 (link) — [docker-install.md](docker.md).
-- docs/plans/container-first.md:325 (mention) — `docs/install/docker.md`; it leaves the `beebox/docs` tree and the docs
-- docs/plans/container-first.review.md:714 (mention) — *"Docker install (local + VPS) | `docs/install/docker.md`"* points at the file
-- docs/plans/installation-story.md:423 (mention) — - **Guide**: `docs/install/docker.md` — local usage first (init, auth,
-- docs/plans/operator-member-password-reset.md:489 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
+- docs/plans/container-first.md:327 (mention) — `docs/install/docker.md`; it leaves the `beebox/docs` tree and the docs
+- docs/plans/container-first.review.md:716 (mention) — *"Docker install (local + VPS) | `docs/install/docker.md`"* points at the file
+- docs/plans/installation-story.md:425 (mention) — - **Guide**: `docs/install/docker.md` — local usage first (init, auth,
+- docs/plans/operator-member-password-reset.md:491 (mention) — - Update `deploy/README.md`, `docs/install/docker.md`, and
 - docs/server.md:6 (link) — shape; the supported install is [Docker](install/docker.md). The scripts live
 - docs/server/configuration.md:167 (link) — [box login](../install/docker.md#box-login-on-by-default); owner recovery is
 - docs/server/provisioning.md:9 (link) — > [`../docs/docker-install.md`](../install/docker.md). Read that one.
@@ -7036,7 +7690,7 @@ Title: "Assets" | 239 lines | current reference
 
 Referenced by:
 - docs/cards.md:20 (link) — - Media that cards attach: [assets](media/assets.md).
-- docs/glossary.md:45 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
+- docs/glossary.md:48 (mention) — **asset** — a photo, scan, audio, or video file inside a `.attach/` directory, tracked by git-annex: git records a small
 - docs/implemented-plans/annex-at-init.md:156 (mention) — against the budget: `docs/media/assets.md`, `docs/box-layout.md`, install docs, and
 - docs/implemented-plans/asset-manifests.md:19 (link) — > [`assets.md`](../media/assets.md).
 - docs/implemented-plans/attach-directories-superseded.md:17 (link) — > [`assets.md`](../media/assets.md).
@@ -7048,12 +7702,12 @@ Referenced by:
 - docs/implemented-plans/workstream-exhibits.md:67 (mention) — (collides with box media assets, `docs/media/assets.md`) and "artifact" (collides
 - docs/media.md:11 (link) — | [Assets](media/assets.md) | git-annex: the model, the extension allowlist, absent content, configuration, commands, fa
 - docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
-- docs/plans/asset-annex.md:16 (link) — > is the storage design itself. Current model: [`../assets.md`](../media/assets.md).
-- docs/plans/asset-offbox-storage.md:15 (link) — > [`../assets.md`](../media/assets.md).
-- docs/plans/capture-fast-landing.md:14 (link) — > Current model: [`../assets.md`](../media/assets.md).
-- docs/plans/container-first-pass2.review.md:91 (mention) — `docs/media/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
-- docs/plans/container-first.md:155 (mention) — - **git-annex, not LFS.** `docs/media/assets.md:10` (*"no LFS, `annex.thin=false`"*)
-- docs/plans/container-first.review.md:57 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/media/assets.md:6-21`
+- docs/plans/asset-annex.md:18 (link) — > is the storage design itself. Current model: [`../assets.md`](../media/assets.md).
+- docs/plans/asset-offbox-storage.md:17 (link) — > [`../assets.md`](../media/assets.md).
+- docs/plans/capture-fast-landing.md:16 (link) — > Current model: [`../assets.md`](../media/assets.md).
+- docs/plans/container-first-pass2.review.md:93 (mention) — `docs/media/assets.md:168` (`git annex fix`); `src/lib/git-stale-lock.ts` exists;
+- docs/plans/container-first.md:157 (mention) — - **git-annex, not LFS.** `docs/media/assets.md:10` (*"no LFS, `annex.thin=false`"*)
+- docs/plans/container-first.review.md:59 (mention) — - **git-lfs prior art is aimed at the wrong mechanism.** `docs/media/assets.md:6-21`
 - docs/plans/pdf-intake-design.md:14 (link) — > design are live. Current model: [`../assets.md`](../media/assets.md).
 - docs/reports/git-annex-conversion-2026-08-01.md:7 (link) — > report addresses. Current model: [`../assets.md`](../media/assets.md).
 - docs/server/operations.md:214 (link) — [`assets.md`](../media/assets.md). Periodic operational checks belong in
@@ -7072,11 +7726,8 @@ Title: "Image orientation" | 55 lines | current reference
 Referenced by:
 - docs/implemented-plans/doc-structure-media.md:47 (mention) — | `image-orientation.md` | `media/image-orientation.md` |
 - docs/media.md:12 (link) — | [Image orientation](media/image-orientation.md) | The invariant that an image at rest is upright with no EXIF orientat
-- docs/plans/asset-annex.md:643 (mention) — renamed, re-encoded, and EXIF-rotated (`docs/media/image-orientation.md`)
+- docs/plans/asset-annex.md:645 (mention) — renamed, re-encoded, and EXIF-rotated (`docs/media/image-orientation.md`)
 - ../issues/closed/bugs/2026-07-17-image-orientation-exif-boundaries.md:19 (mention) — what's normalized vs. left: `docs/media/image-orientation.md`.
-
-References:
-- → ../beebox/test/shared/image-orientation.doctest.md (link)
 
 #### docs/media/image-transforms.md
 
@@ -7094,6 +7745,7 @@ Referenced by:
 Title: "Agent documentation" | 586 lines | proposal | active
 
 Referenced by:
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:201 (mention) — - **Lives in:** `schedules/agent-docs-refresh/{schedule.yaml,prompt.md,run.ts}`; design `beebox/docs/plans/agent-docs.md
 - ../issues/features/2026-09-12-agent-documentation.md:30 (link) — [the plan](../../beebox/docs/plans/agent-docs.md). Shares `site/`'s build
 
 References:
@@ -7138,11 +7790,11 @@ References:
 
 #### docs/plans/agent-points-at-ui.md
 
-Title: "The agent sees the interface and points at controls in it" | 1306 lines | proposal | partial
+Title: "The agent sees the interface and points at controls in it" | 1308 lines | proposal | partial
 
 Referenced by:
-- docs/mobile-contract.md:648 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
-- ../issues/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:15 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
+- docs/mobile-contract.md:651 (mention) — UI scan (`docs/plans/agent-points-at-ui.md`, Track 5) rides.
+- ../issues/closed/bugs/2026-08-23-composer-states-gallery-duplicates-bbx-ids.md:18 (mention) — (`docs/plans/agent-points-at-ui.md`, Track 4), the gallery puts ~20 copies of
 - ../issues/closed/bugs/2026-08-23-share-extension-sends-classify-as-web-desktop.md:25 (link) — [agent-points-at-ui](../../../beebox/docs/plans/agent-points-at-ui.md).
 - ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md:5 (frontmatter) — design: ../../../beebox/docs/plans/agent-points-at-ui.md
 - ../issues/features/2026-10-08-modify-this-view-from-the-context-menu.md:27 (mention) — - The agent-points-at-ui plan (`beebox/docs/plans/agent-points-at-ui.md`) is
@@ -7150,6 +7802,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/features/2026-08-14-agent-can-see-and-point-at-the-interface.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → frontend.md (mention)
@@ -7159,16 +7812,17 @@ References:
 
 #### docs/plans/android-companion-app.md
 
-Title: "Native Android companion app" | 761 lines | proposal | partial
+Title: "Native Android companion app" | 763 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/mobile-token-handshake.md:349 (mention) — - **Android.** No Android client exists yet; `docs/plans/android-companion-app.md` describes
-- docs/mobile-contract.md:262 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
+- docs/mobile-contract.md:265 (mention) — 2026-07-17, Track 0 of `docs/plans/android-companion-app.md`): each shell's document-start script
 - docs/mobile-parity.md:9 (mention) — Android columns reflect `docs/plans/android-companion-app.md` — a plan, not
-- docs/plans/agent-points-at-ui.md:155 (mention) — cross-platform shape (`docs/plans/android-companion-app.md`, Track 0).
+- docs/plans/agent-points-at-ui.md:157 (mention) — cross-platform shape (`docs/plans/android-companion-app.md`, Track 0).
 - ../issues/features/2026-07-18-android-companion-track1-unblocked.md:7 (mention) — `beebox/docs/plans/android-companion-app.md` is build-ready and its
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/mobile-contract.md (mention)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
@@ -7180,17 +7834,18 @@ References:
 
 #### docs/plans/asset-annex.md
 
-Title: "Assets on git-annex" | 1085 lines | proposal | active
+Title: "Assets on git-annex" | 1087 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/asset-manifests.md:35 (link) — [`../plans/asset-annex.md`](../plans/asset-annex.md); the short version is that
 - docs/implemented-plans/publication-card-home.md:57 (mention) — - **Annexed assets are ordinary files.** `docs/plans/asset-annex.md:117`: "Working-tree files are ordinary files, not sy
-- docs/plans/asset-offbox-storage.md:17 (link) — **Status: SUPERSEDED by [`asset-annex.md`](asset-annex.md).** Nothing
+- docs/plans/asset-offbox-storage.md:19 (link) — **Status: SUPERSEDED by [`asset-annex.md`](asset-annex.md).** Nothing
 - ../issues/closed/bugs/2026-08-01-prod-photo-uploads-bypass-annex.md:65 (mention) — `docs/plans/asset-annex.md` names it as the silent bulk failure mode. It is not
 - ../issues/closed/bugs/2026-08-18-stale-annex-largefiles-never-reapplies.md:24 (mention) — the alternative considered here (`docs/plans/asset-annex.md:458` specifies it and
 - ../issues/closed/code-quality/2026-08-18-retire-remaining-asset-manifest-writers.md:13 (mention) — `docs/plans/asset-annex.md` retires the asset-manifest system: *"**Retired**,
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/media/assets.md (link)
 - → docs/implemented-plans/asset-manifests.md (mention)
 - → docs/plans/asset-offbox-storage.md (mention)
@@ -7205,14 +7860,15 @@ References:
 
 #### docs/plans/asset-offbox-storage.md
 
-Title: "Off-Box Asset Storage — Content-Addressable Backup to R2" | 597 lines | proposal | active
+Title: "Off-Box Asset Storage — Content-Addressable Backup to R2" | 599 lines | proposal | active
 
 Referenced by:
 - docs/media/assets.md:235 (link) — [`plans/asset-offbox-storage.md`](../plans/asset-offbox-storage.md).
-- docs/plans/asset-annex.md:52 (mention) — The earlier plan (`asset-offbox-storage.md`) proposed keeping manifests
+- docs/plans/asset-annex.md:54 (mention) — The earlier plan (`asset-offbox-storage.md`) proposed keeping manifests
 - ../issues/closed/docs-and-chores/2026-07-19-tech-talk-box-not-in-hub-config.md:38 (mention) — Historical mentions in `docs/plans/asset-offbox-storage.md`,
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/media/assets.md (link)
 - → docs/plans/asset-annex.md (link)
 - → docs/implemented-plans/asset-manifests.md (mention)
@@ -7225,7 +7881,7 @@ References:
 
 #### docs/plans/box-commentary-surface.md
 
-Title: "In-box Commentary Surface for Out-of-Box Files" | 785 lines | proposal | partial
+Title: "In-box Commentary Surface for Out-of-Box Files" | 787 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:46 (mention) — plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
@@ -7233,6 +7889,7 @@ Referenced by:
 - ../issues/features/2026-08-09-pdf-url-into-the-commentary-path.md:89 (link) — [commentary surface](../../beebox/docs/plans/box-commentary-surface.md)
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → code-style.md (mention)
 - → docs/implemented-plans/selection-commentary.md (mention)
 - → docs/prompts/lenses.md (mention)
@@ -7240,7 +7897,7 @@ References:
 
 #### docs/plans/box-glm-provider.md
 
-Title: "Box-side GLM: Z.ai models on the claude engine" | 487 lines | proposal | partial
+Title: "Box-side GLM: Z.ai models on the claude engine" | 489 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/openrouter-chat-models.md:71 (mention) — the GLM precedent (`docs/plans/box-glm-provider.md`, "Stated preferences").
@@ -7249,6 +7906,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/exploration/2026-07-18-model-backend-pluggability.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/closed/exploration/2026-07-18-model-backend-pluggability.md (link)
 - → ../issues/features/2026-07-18-provider-endpoint-config.md (link)
 - → ../issues/closed/bugs/2026-09-15-scan-vision-integration-fails-when-not-logged-in.md (link)
@@ -7257,15 +7915,16 @@ References:
 
 #### docs/plans/box-screen.md
 
-Title: "Box screen: a thought goes in before the box loads" | 512 lines | proposal | partial
+Title: "Box screen: a thought goes in before the box loads" | 514 lines | proposal | partial
 
 Referenced by:
-- docs/plans/chat-routing.md:12 (link) — **Superseded in part by [box-screen.md](box-screen.md).** The catalog, the
+- docs/plans/chat-routing.md:14 (link) — **Superseded in part by [box-screen.md](box-screen.md).** The catalog, the
 - ../issues/features/2026-09-25-quick-drop-entry-points.md:11 (frontmatter) — design: ../../beebox/docs/plans/box-screen.md
 - ../issues/features/2026-09-25-quick-drop-entry-points.md:90 (link) — The [box screen plan](../../beebox/docs/plans/box-screen.md) is implemented on
 
 References:
 - → ../issues/features/2026-09-25-quick-drop-entry-points.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/mobile-contract.md (mention)
 - → docs/implemented-plans/top-nav-ia.md (mention)
 - → docs/plans/chat-routing.md (mention)
@@ -7275,43 +7934,51 @@ References:
 
 #### docs/plans/capture-fast-landing.md
 
-Title: "Capture fast landing — deliver first, process behind the message" | 320 lines | proposal | active
+Title: "Capture fast landing — deliver first, process behind the message" | 322 lines | proposal | active
 
 Referenced by:
 - ../issues/closed/bugs/2026-08-04-tmp-capture-glob-swallows-child-cards.md:36 (mention) — from `beebox/docs/plans/capture-fast-landing.md`, which makes the
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/media/assets.md (link)
 - → docs/mobile-contract.md (mention)
 
 #### docs/plans/change-based-test-selection.md
 
-Title: "Test failure ledger, and change-based selection on the iteration loop" | 1175 lines | proposal | partial
+Title: "Test failure ledger, and change-based selection on the iteration loop" | 1179 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/router-transient-failure-resilience.md:51 (mention) — `beebox/docs/plans/change-based-test-selection.md`. No generated output. This is
-- docs/plans/change-based-test-selection.review.md:19 (mention) — was `change-based-test-selection.md` at commit `4f9001b6`. Line references below
+- docs/plans/change-based-test-selection.review.md:21 (mention) — was `change-based-test-selection.md` at commit `4f9001b6`. Line references below
+- ../dev/devprocess-talk/chunks/not-verification-ritual.md:5 (mention) — source: beebox/docs/plans/change-based-test-selection.md, quoted on slide 10a; inventory.md "Change-based test selection
+- ../dev/devprocess-talk/inventory.md:382 (mention) — - **Where:** `bin/test-select.ts`, `beebox/docs/plans/change-based-test-selection.md`.
+- ../dev/devprocess-talk/reports/sweep-quality.md:27 (mention) — - **Lives in:** `bin/test-select.ts`, `bin/test-git.ts`, `beebox/package.json` (`test:changed`), `beebox/docs/plans/chan
+- ../dev/devprocess-talk/slides/10a-measured-miss.md:20 (mention) — Path: beebox/docs/plans/change-based-test-selection.md. The planned "unaccounted path forces the full suite" rule was ne
 - ../issues/closed/code-quality/2026-08-25-lint-runs-contend-like-tests.md:13 (mention) — (`bin/test-locks.ts`, plan `change-based-test-selection.md` mechanism A)
 - ../issues/closed/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md:10 (frontmatter) — design: ../../../beebox/docs/plans/change-based-test-selection.md
 - ../issues/closed/exploration/2026-08-08-run-less-of-the-test-suite.md:7 (frontmatter) — design: ../../../beebox/docs/plans/change-based-test-selection.md
 - ../issues/closed/exploration/2026-08-08-run-less-of-the-test-suite.md:12 (link) — [change-based test selection](../../../beebox/docs/plans/change-based-test-selection.md),
-- ../issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md:67 (link) — Related: [change-based test selection](../../beebox/docs/plans/change-based-test-selection.md)
-- ../issues/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md:9 (frontmatter) — design: ../../beebox/docs/plans/change-based-test-selection.md
+- ../issues/closed/features/2026-10-12-finish-verify-shows-no-progress-during-a-long-run.md:9 (frontmatter) — design: ../../../beebox/docs/plans/change-based-test-selection.md
+- ../issues/code-quality/2026-08-09-test-suite-per-file-cost-floor.md:69 (link) — Related: [change-based test selection](../../beebox/docs/plans/change-based-test-selection.md)
+- ../issues/features/2026-10-16-test-select-says-why-each-test-was-selected.md:9 (frontmatter) — design: ../../beebox/docs/plans/change-based-test-selection.md
 
 References:
 - → ../issues/closed/code-quality/2026-10-10-test-changed-selects-500-files-for-broad-text-edits.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
 - → docs/testing.md (mention)
 
 #### docs/plans/change-based-test-selection.review.md
 
-Title: "Cross-model review — change-based test selection" | 308 lines | plan review
+Title: "Cross-model review — change-based test selection" | 310 lines | plan review
 
 Referenced by:
-- docs/plans/change-based-test-selection.review.md:147 (mention) — > The plan admits the critical gap for unimported source (`change-based-test-selection.md:553-560`) but still defaults t
+- docs/plans/change-based-test-selection.review.md:149 (mention) — > The plan admits the critical gap for unimported source (`change-based-test-selection.md:553-560`) but still defaults t
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/change-based-test-selection.md (mention)
 - → docs/plans/change-based-test-selection.review.md (mention)
 - → docs/engineering-principles.md (mention)
@@ -7319,19 +7986,20 @@ References:
 
 #### docs/plans/chat-everywhere.md
 
-Title: "Chat everywhere: one input, explicit conversational focus" | 914 lines | proposal | partial
+Title: "Chat everywhere: one input, explicit conversational focus" | 916 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/card-themes.md:19 (link) — [chat everywhere](../plans/chat-everywhere.md), and
 - docs/implemented-plans/notifications-design-notes.md:88 (mention) — `docs/plans/chat-everywhere.md`, Track C). A notification whose target is on
 - docs/mobile-parity.md:25 (link) — | Conversation-bound input across box pages | done in [chat-everywhere](plans/chat-everywhere.md) worktree — V3 destinat
 - docs/plans/chat-everywhere.review.md:3 (link) — Review of [Chat everywhere](chat-everywhere.md), 2026-09-07. The independent
-- docs/plans/interface-cards-consolidation.md:27 (link) — and the conversation lifecycle in [chat everywhere](chat-everywhere.md).
-- docs/plans/workspace-pane-controls.md:50 (link) — The existing [chat-everywhere plan](chat-everywhere.md) is the recipient/attention
+- docs/plans/interface-cards-consolidation.md:29 (link) — and the conversation lifecycle in [chat everywhere](chat-everywhere.md).
+- docs/plans/workspace-pane-controls.md:52 (link) — The existing [chat-everywhere plan](chat-everywhere.md) is the recipient/attention
 - ../issues/features/2026-08-30-chat-input-everywhere.md:17 (link) — Planning is in [Chat everywhere](../../beebox/docs/plans/chat-everywhere.md)
 
 References:
 - → ../issues/features/2026-08-30-chat-input-everywhere.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/features/2026-08-30-chat-input-everywhere.md (link)
 - → ../issues/features/2026-07-23-mobile-modal-not-split-pane.md (link)
 - → ../issues/features/2026-07-19-ios-input-plane-parity.md (link)
@@ -7355,7 +8023,7 @@ References:
 Title: "Plan Engineering Review — Chat everywhere" | 299 lines | plan review
 
 Referenced by:
-- docs/plans/chat-everywhere.md:762 (link) — Plan validation record: documentation checks passed; the [engineering review](chat-everywhere.review.md) records cross-m
+- docs/plans/chat-everywhere.md:764 (link) — Plan validation record: documentation checks passed; the [engineering review](chat-everywhere.review.md) records cross-m
 
 References:
 - → docs/plans/chat-everywhere.md (link)
@@ -7373,16 +8041,17 @@ Referenced by:
 
 #### docs/plans/chat-photo-batch-upload.md
 
-Title: "Chat photo batch upload" | 513 lines | proposal | active
+Title: "Chat photo batch upload" | 515 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1011 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
+- docs/mobile-contract.md:1018 (mention) — (`docs/plans/chat-photo-batch-upload.md`, the Track 3 that
 - ../issues/closed/bugs/2026-07-30-capture-teardown-race.md:15 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)):
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:8 (frontmatter) — design: ../../../beebox/docs/plans/chat-photo-batch-upload.md
 - ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md:23 (link) — [chat-photo-batch-upload](../../../beebox/docs/plans/chat-photo-batch-upload.md)).
 - ../issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md:30 (mention) — `use-bulk-upload-launch.ts`; `docs/implemented-plans/chat-photo-batch-upload.md`
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/mobile-contract.md (mention)
 - → docs/implemented-plans/bulk-file-upload.md (link)
 - → ../issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md (link)
@@ -7396,15 +8065,16 @@ References:
 
 #### docs/plans/chat-routing.md
 
-Title: "Quick chat destination routing" | 234 lines | proposal | partial
+Title: "Quick chat destination routing" | 236 lines | proposal | partial
 
 Referenced by:
-- docs/plans/box-screen.md:44 (mention) — - This reverses two lines of `beebox/docs/plans/chat-routing.md`: "There is no ask-me outcome" and "Automatic iOS cold-s
+- docs/plans/box-screen.md:46 (mention) — - This reverses two lines of `beebox/docs/plans/chat-routing.md`: "There is no ask-me outcome" and "Automatic iOS cold-s
 - ../issues/closed/features/2026-06-28-triage-agent-session-routing.md:57 (link) — The [Quick chat plan](../../../beebox/docs/plans/chat-routing.md) owns the active
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:166 (mention) — Checked "fixed?": partly. Quick capture: Quick chat routes through a Jev choice (`beebox/docs/chat/quick-chat.md`; plan
 
 References:
 - → ../issues/closed/features/2026-06-28-triage-agent-session-routing.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/box-screen.md (link)
 - → docs/chat/quick-chat.md (link)
 
@@ -7436,7 +8106,7 @@ References:
 
 #### docs/plans/chat-search.md
 
-Title: "Search recent chats by what was said in them" | 421 lines | proposal | partial
+Title: "Search recent chats by what was said in them" | 423 lines | proposal | partial
 
 Referenced by:
 - ../issues/closed/features/2026-09-28-search-recent-chats.md:5 (frontmatter) — design: ../../../beebox/docs/plans/chat-search.md
@@ -7444,6 +8114,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/features/2026-09-28-search-recent-chats.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/implemented-plans/semantic-search.md (mention)
 - → docs/implemented-plans/box-search.md (mention)
 - → docs/adding-api-endpoints.md (mention)
@@ -7451,14 +8122,15 @@ References:
 
 #### docs/plans/chat-session-delete.md
 
-Title: "Chat Session Delete — Plan" | 772 lines | proposal | partial
+Title: "Chat Session Delete — Plan" | 774 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/chat-session-identity.md:45 (mention) — - Precedent: `docs/plans/chat-session-delete.md` — validate `session` as the
 - docs/implemented-plans/notifications.md:1166 (mention) — deleted-session state (`docs/plans/chat-session-delete.md`).
-- docs/plans/chat-session-delete.review.md:4 (mention) — fenced to `chat-session-delete.md`, both linked issues, the installed SDK
+- docs/plans/chat-session-delete.review.md:6 (mention) — fenced to `chat-session-delete.md`, both linked issues, the installed SDK
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/closed/features/2026-07-20-chat-thread-management.md (link)
 - → ../issues/closed/features/2026-07-29-stale-husks-outlive-their-transcripts.md (link)
 - → docs/engineering-principles.md (mention)
@@ -7467,19 +8139,21 @@ References:
 
 #### docs/plans/chat-session-delete.review.md **[ORPHAN]**
 
-Title: "Plan Engineering Review — Chat Session Delete" | 154 lines | plan review
+Title: "Plan Engineering Review — Chat Session Delete" | 156 lines | plan review
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/chat-session-delete.md (mention)
 
 #### docs/plans/clerk-tab-arrangements.md
 
-Title: "Clerk tab arrangements" | 480 lines | proposal | partial
+Title: "Clerk tab arrangements" | 482 lines | proposal | partial
 
 Referenced by:
 - ../issues/features/2026-08-04-clerk-tab-arrangement-groups.md:5 (frontmatter) — design: ../../beebox/docs/plans/clerk-tab-arrangements.md
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → docs/implemented-plans/refresh-clerk.md (mention)
 - → ../issues/features/2026-08-04-clerk-tab-arrangement-groups.md (link)
@@ -7492,8 +8166,8 @@ Title: "`bbx` CLI Restructure — Plan" | 177 lines | proposal | active
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:78 (mention) — `cli-restructure.md` (verified unimplemented; says "delete this doc when
 - docs/implemented-plans/remove-bbx-render.md:353 (mention) — - `docs/plans/cli-restructure.md:51` — lists it in a command table.
-- docs/implemented-plans/remove-bbx-render.review.md:29 (mention) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
-- docs/plans/email-tracking.md:65 (mention) — - `docs/plans/cli-restructure.md` already proposes a `bbx connector` command group. The Gmail commands in this plan use
+- docs/implemented-plans/remove-bbx-render.review.md:29 (link) — 7. **Medium — the prose done-condition cannot pass as written.** The plan updates `publish-pages.md` but misses live ref
+- docs/plans/email-tracking.md:67 (mention) — - `docs/plans/cli-restructure.md` already proposes a `bbx connector` command group. The Gmail commands in this plan use
 
 References:
 - → docs/implemented-plans/capture-mode.md (mention)
@@ -7504,9 +8178,10 @@ References:
 
 #### docs/plans/codex-session-startup-auth.md **[ORPHAN]**
 
-Title: "Production Codex session startup and authentication" | 159 lines | proposal | partial
+Title: "Production Codex session startup and authentication" | 161 lines | proposal | partial
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → AGENTS.md (mention)
 - → deploy/README.md (mention)
 
@@ -7532,6 +8207,7 @@ Title: "Commit performance: make box commits fast" | 148 lines | proposal | acti
 
 Referenced by:
 - docs/cards/validation.md:39 (mention) — paid the CLI startup cost — see `docs/plans/commit-performance.md`):
+- ../dev/devprocess-talk/reports/sweep-quality.md:140 (mention) — - **New bottleneck exposed:** Commit-time cost of multiple CLI calls; validation.md: "That one invocation is the whole c
 - ../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md:4 (frontmatter) — design: ../../../beebox/docs/plans/commit-performance.md
 - ../issues/closed/bugs/2026-08-18-box-precommit-hook-costs-seconds-per-commit.md:20 (link) — > [the plan doc](../../../beebox/docs/plans/commit-performance.md),
 
@@ -7541,32 +8217,35 @@ References:
 
 #### docs/plans/composer-child-actors.md
 
-Title: "Composer child-actor ownership" | 138 lines | proposal | draft
+Title: "Composer child-actor ownership" | 140 lines | proposal | draft
 
 Referenced by:
 - docs/chat/composer.md:11 (link) — [`plans/composer-child-actors.md`](../plans/composer-child-actors.md).
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/chat/composer.md (link)
 
 #### docs/plans/container-first-pass2.review.md **[ORPHAN]**
 
-Title: "Plan Engineering Review 2 — container-first" | 534 lines | plan review
+Title: "Plan Engineering Review 2 — container-first" | 536 lines | plan review
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/media/assets.md (mention)
 - → docs/engineering-principles.md (mention)
 
 #### docs/plans/container-first.md
 
-Title: "Container-first install" | 908 lines | proposal | draft
+Title: "Container-first install" | 910 lines | proposal | draft
 
 Referenced by:
 - docs/implemented-plans/doc-structure-install-server.md:20 (link) — [installation story](../plans/installation-story.md) and [container-first](../plans/container-first.md)
-- docs/plans/container-first.review.md:3 (mention) — Reviewed `beebox/docs/plans/container-first.md` at draft status. Every
+- docs/plans/container-first.review.md:5 (mention) — Reviewed `beebox/docs/plans/container-first.md` at draft status. Every
 
 References:
 - → ../issues/features/2026-09-06-container-install-is-the-primary-path.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/features/2026-09-06-container-install-is-the-primary-path.md (link)
 - → ../issues/features/2026-07-19-installation-remaining-work.md (link)
 - → ../issues/decisions/2026-07-20-release-discipline-and-update-story.md (link)
@@ -7587,9 +8266,10 @@ References:
 
 #### docs/plans/container-first.review.md **[ORPHAN]**
 
-Title: "Plan Engineering Review — container-first" | 802 lines | plan review
+Title: "Plan Engineering Review — container-first" | 804 lines | plan review
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/container-first.md (mention)
 - → docs/media/assets.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
@@ -7600,25 +8280,30 @@ References:
 
 #### docs/plans/display-path-guard.subplan.md **[ORPHAN]**
 
-Title: "Display-form path guard" | 116 lines | proposal | draft
+Title: "Display-form path guard" | 118 lines | proposal | draft
 
-No references in or out.
+References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 
 #### docs/plans/document-comments.md
 
-Title: "Document comments" | 945 lines | proposal | active
+Title: "Document comments" | 947 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/exhibit-comments.md:55 (mention) — about (the plan's job to be done in `document-comments.md`), and it can be
-- docs/plans/general-browser.md:17 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
+- docs/plans/general-browser.md:19 (mention) — This plan is a dependency of `document-comments.md`. Comments attach to whatever
 - ../bin/AGENTS.md:102 (link) — Background: [document comments design](../beebox/docs/plans/document-comments.md).
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:94 (mention) — - **Lives in:** cited in plans, e.g. `beebox/docs/plans/document-comments.md:636`, `implemented-plans/doc-structure.md:7
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:179 (mention) — - **Lives in:** `bin/comments`, `bin/comments.ts`, `workstreams-app/src/server/comments-service.ts`, `workstreams-app/sr
+- ../issues/closed/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:42 (link) — [document-comments](../../../beebox/docs/plans/document-comments.md) plan
 - ../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md:70 (link) — - [document-comments](../../../beebox/docs/plans/document-comments.md) — the
-- ../issues/code-quality/2026-08-22-memo-source-vs-emission-origin-vocabulary.md:39 (link) — [document-comments](../../beebox/docs/plans/document-comments.md) plan
 - ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md:19 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) writes
 - ../issues/features/2026-08-22-orphaned-comment-namespaces-after-a-cull.md:14 (link) — ([document-comments](../../beebox/docs/plans/document-comments.md)) is
+- ../issues/features/2026-10-13-suggested-edits-tracked-changes.md:80 (link) — - [Document comments](../../beebox/docs/plans/document-comments.md) is the
 
 References:
 - → ../issues/code-quality/2026-08-22-rename-drive-comments-sidecar-to-gcomments.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
 - → code-style.md (mention)
@@ -7631,7 +8316,7 @@ References:
 
 #### docs/plans/email-tracking.md
 
-Title: "Email tracking instead of mailbox mirroring" | 453 lines | proposal | partial
+Title: "Email tracking instead of mailbox mirroring" | 455 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/gmail-explicit-action.md:11 (link) — Follows [email tracking instead of mailbox mirroring](../plans/email-tracking.md), which
@@ -7640,6 +8325,7 @@ Referenced by:
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:11 (link) — surface with [email tracking instead of mailbox mirroring](../plans/email-tracking.md):
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → code-style.md (mention)
 - → docs/procedure-implementation.md (mention)
 - → docs/plans/cli-restructure.md (mention)
@@ -7648,16 +8334,17 @@ References:
 
 #### docs/plans/general-browser.md
 
-Title: "One browser" | 655 lines | proposal | active
+Title: "One browser" | 657 lines | proposal | active
 
 Referenced by:
-- docs/plans/document-comments.md:332 (mention) — - The document viewer route, which is **defined by `general-browser.md`**, not
+- docs/plans/document-comments.md:334 (mention) — - The document viewer route, which is **defined by `general-browser.md`**, not
 - ../issues/closed/code-quality/2026-08-22-retire-doc-browser-dead-code.md:29 (link) — ([general-browser](../../../beebox/docs/plans/general-browser.md), Track 5),
 - ../issues/closed/features/2026-08-22-file-asks-agent-flagged-attention.md:73 (link) — - [general-browser](../../../beebox/docs/plans/general-browser.md) — its
-- ../issues/features/2026-08-22-issues-browser-has-no-workstream-filter.md:22 (link) — ([general-browser](../../beebox/docs/plans/general-browser.md)), which
+- ../issues/closed/features/2026-08-22-issues-browser-has-no-workstream-filter.md:25 (link) — ([general-browser](../../../beebox/docs/plans/general-browser.md)), which
 
 References:
 - → ../issues/closed/docs-and-chores/2026-08-22-exhibits-doc-overstates-container-chrome.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/document-comments.md (mention)
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
@@ -7667,7 +8354,7 @@ References:
 
 #### docs/plans/gmail-admission-and-preparation.md
 
-Title: "Gmail admission and email preparation" | 306 lines | proposal | partial
+Title: "Gmail admission and email preparation" | 308 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/triage-todo-question.md:32 (mention) — `gmail-admission-and-preparation.md:203` says the sweep must select newly
@@ -7675,6 +8362,7 @@ Referenced by:
 References:
 - → ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md (frontmatter)
 - → ../issues/closed/code-quality/2026-09-28-passing-tests-start-chat-warmup-after-tempdir-removal.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/triage.md (link)
 - → docs/implemented-plans/triage-todo-question.md (link)
 - → docs/chat/quick-chat.md (link)
@@ -7688,15 +8376,16 @@ No references in or out.
 
 #### docs/plans/google-owner-member-credentials.md **[ORPHAN]**
 
-Title: "Google owners can administer local member credentials" | 310 lines | proposal | partial
+Title: "Google owners can administer local member credentials" | 312 lines | proposal | partial
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/closed/bugs/2026-08-08-google-owner-invites-require-local-owner.md (link)
 - → docs/engineering-principles.md (mention)
 
 #### docs/plans/input-widget.md
 
-Title: "The input — interface design" | 682 lines | proposal | active
+Title: "The input — interface design" | 684 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/capture-mode.md:13 (link) — [input-widget.md](../plans/input-widget.md): capture stops being a separate app
@@ -7705,26 +8394,28 @@ Referenced by:
 - ../research/openui/beebox-surfaces.md:88 (link) — - [The input](../../beebox/docs/plans/input-widget.md): the composer design,
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/interface-as-cards.md (mention)
 - → ../issues/closed/features/2026-06-28-triage-agent-session-routing.md (link)
 - → docs/implemented-plans/capture-mode.md (link)
 
 #### docs/plans/installation-story.md
 
-Title: "Installation story, phase 1: developer install + local Docker" | 614 lines | proposal | partial
+Title: "Installation story, phase 1: developer install + local Docker" | 616 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/doc-structure-install-server.md:20 (link) — [installation story](../plans/installation-story.md) and [container-first](../plans/container-first.md)
 - docs/implemented-plans/scan-uploader-pairing.md:198 (mention) — profile; `docs/plans/installation-story.md` gets a pointer sentence.
 - docs/implemented-plans/tailscale-expose-and-protect.md:359 (mention) — `docs/plans/installation-story.md`'s failure-modes table, which treats the
-- docs/plans/container-first.md:69 (mention) — - `docs/plans/installation-story.md:434`: the entrypoint contract, *"args =
-- docs/plans/container-first.review.md:86 (mention) — - `installation-story.md:434` — the entrypoint contract quote is verbatim.
-- docs/plans/source-available-release.md:277 (mention) — (preflight + health half) by `docs/plans/installation-story.md` Track B
+- docs/plans/container-first.md:71 (mention) — - `docs/plans/installation-story.md:434`: the entrypoint contract, *"args =
+- docs/plans/container-first.review.md:88 (mention) — - `installation-story.md:434` — the entrypoint contract quote is verbatim.
+- docs/plans/source-available-release.md:279 (mention) — (preflight + health half) by `docs/plans/installation-story.md` Track B
 - ../issues/closed/features/2026-07-20-tailscale-expose-and-protect.md:40 (mention) — first-class alternative in `beebox/docs/plans/installation-story.md` and
 - ../issues/decisions/2026-07-20-soft-launch-posture.md:16 (link) — [the installation story](../../beebox/docs/plans/installation-story.md)
 - ../issues/features/2026-07-19-installation-remaining-work.md:4 (frontmatter) — design: ../../beebox/docs/plans/installation-story.md
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/source-available-release.md (mention)
 - → docs/implemented-plans/scan-uploader-pairing.md (mention)
 - → docs/engineering-principles.md (mention)
@@ -7735,7 +8426,7 @@ References:
 
 #### docs/plans/interface-as-cards.md
 
-Title: "Interface as cards — canonical Dashboard, Settings, and Browse" | 631 lines | proposal | partial
+Title: "Interface as cards — canonical Dashboard, Settings, and Browse" | 633 lines | proposal | partial
 
 Referenced by:
 - docs/design/identity.md:17 (link) — [interface-as-cards](../plans/interface-as-cards.md) direction built entirely
@@ -7746,10 +8437,10 @@ Referenced by:
 - docs/implemented-plans/design-reconciliation.md:29 (mention) — `docs/stack-decisions.md`, `docs/plans/interface-as-cards.md`,
 - docs/implemented-plans/docs-reorg.md:44 (mention) — files are genuinely active plans** (`input-widget.md`, `interface-as-cards.md`,
 - docs/implemented-plans/nav-card.md:26 (mention) — First implementation slice of `docs/plans/interface-as-cards.md`. Small on
-- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
-- docs/plans/input-widget.md:11 (mention) — the frame-model notes in `docs/plans/interface-as-cards.md` ("The input
+- docs/plans/chat-everywhere.md:28 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
+- docs/plans/input-widget.md:13 (mention) — the frame-model notes in `docs/plans/interface-as-cards.md` ("The input
 - docs/plans/interface-as-cards.review.md:5 (link) — are adjudicated against the final [plan](interface-as-cards.md), not instructions
-- docs/plans/interface-cards-consolidation.md:24 (link) — This follows [canonical interface cards](interface-as-cards.md). It supersedes
+- docs/plans/interface-cards-consolidation.md:26 (link) — This follows [canonical interface cards](interface-as-cards.md). It supersedes
 - docs/unimplemented-plans/README.md:19 (mention) — | `query-cards.md` | Parked 2026-07-03; vocabulary explored but not planned for implementation. Parent design lives on i
 - docs/unimplemented-plans/email-volume-and-materialization-superseded.md:58 (mention) — - The repository has a materialization precedent. `beebox/docs/plans/interface-as-cards.md:248-253`: *"Addressing is fre
 - docs/unimplemented-plans/query-cards.md:28 (mention) — species deferred from `docs/plans/interface-as-cards.md` — the piece that
@@ -7759,6 +8450,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/features/2026-09-08-dashboard-workspace-tab.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/closed/features/2026-09-08-dashboard-workspace-tab.md (link)
 - → ../issues/features/2026-07-28-directories-as-viewable-things.md (link)
 - → ../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md (link)
@@ -7777,34 +8469,36 @@ References:
 Title: "Plan Engineering Review — interface as cards" | 195 lines | plan review
 
 Referenced by:
-- docs/plans/interface-as-cards.md:34 (link) — [Engineering review and dispositions](interface-as-cards.review.md) record the design review.
+- docs/plans/interface-as-cards.md:36 (link) — [Engineering review and dispositions](interface-as-cards.review.md) record the design review.
 
 References:
 - → docs/plans/interface-as-cards.md (link)
 
 #### docs/plans/interface-cards-consolidation-removal-report.md
 
-Title: "Interface card consolidation — removal report" | 350 lines | proposal | partial
+Title: "Interface card consolidation — removal report" | 352 lines | proposal | partial
 
 Referenced by:
-- docs/plans/interface-cards-consolidation.md:363 (link) — **Direction:** Maintain the [removal report](interface-cards-consolidation-removal-report.md)
+- docs/plans/interface-cards-consolidation.md:365 (link) — **Direction:** Maintain the [removal report](interface-cards-consolidation-removal-report.md)
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/interface-cards-consolidation.md (link)
 
 #### docs/plans/interface-cards-consolidation.md
 
-Title: "One workspace for interface cards — retire parallel page UI" | 598 lines | proposal | partial
+Title: "One workspace for interface cards — retire parallel page UI" | 600 lines | proposal | partial
 
 Referenced by:
-- docs/plans/chat-everywhere.md:26 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
-- docs/plans/interface-as-cards.md:36 (link) — The follow-on [workspace consolidation plan](interface-cards-consolidation.md)
-- docs/plans/interface-cards-consolidation-removal-report.md:9 (link) — The [consolidation plan](interface-cards-consolidation.md) replaces separate page and
-- docs/plans/workspace-pane-controls.md:250 (link) — [interface-card consolidation plan](interface-cards-consolidation.md); the
+- docs/plans/chat-everywhere.md:28 (link) — - [Sidecar shell](../implemented-plans/sidecar-shell.md), [card prominence](../implemented-plans/card-prominence.md), [i
+- docs/plans/interface-as-cards.md:38 (link) — The follow-on [workspace consolidation plan](interface-cards-consolidation.md)
+- docs/plans/interface-cards-consolidation-removal-report.md:11 (link) — The [consolidation plan](interface-cards-consolidation.md) replaces separate page and
+- docs/plans/workspace-pane-controls.md:252 (link) — [interface-card consolidation plan](interface-cards-consolidation.md); the
 - ../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md:11 (link) — > Closed by the [interface-card consolidation](../../../beebox/docs/plans/interface-cards-consolidation.md), starting at
 
 References:
 - → ../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/closed/code-quality/2026-08-02-card-vs-views-route-consolidation.md (link)
 - → ../issues/features/2026-08-30-chat-input-everywhere.md (link)
 - → ../issues/features/2026-07-23-mobile-modal-not-split-pane.md (link)
@@ -7822,16 +8516,17 @@ References:
 Title: "Plan Engineering Review — One workspace for interface cards" | 139 lines | plan review
 
 Referenced by:
-- docs/plans/interface-cards-consolidation.md:31 (link) — [Engineering review and dispositions](interface-cards-consolidation.review.md)
+- docs/plans/interface-cards-consolidation.md:33 (link) — [Engineering review and dispositions](interface-cards-consolidation.review.md)
 
 #### docs/plans/invite-links-and-password-change.md
 
-Title: "Invite links and self-service password change" | 547 lines | proposal | partial
+Title: "Invite links and self-service password change" | 549 lines | proposal | partial
 
 Referenced by:
-- docs/plans/operator-member-password-reset.md:109 (mention) — - **Shipped precedent.** `docs/plans/invite-links-and-password-change.md:59-123`
+- docs/plans/operator-member-password-reset.md:111 (mention) — - **Shipped precedent.** `docs/plans/invite-links-and-password-change.md:59-123`
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/user-stories/catalog/2026-06-26.md (mention)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
@@ -7840,39 +8535,70 @@ References:
 - → docs/mobile-contract.md (mention)
 - → docs/todo-security.md (mention)
 
+#### docs/plans/ios-app-intent-capture.implementation.review.md **[ORPHAN]**
+
+Title: "iOS quick capture implementation review" | 100 lines | plan review
+
+References:
+- → docs/implemented-plans/retire-doctest.md (mention)
+
 #### docs/plans/ios-app-intent-capture.md
 
-Title: "iOS hands-free text capture with App Intents" | 241 lines | proposal | partial
+Title: "iOS quick capture: Siri, voice, and sharing with context" | 311 lines | proposal | partial
 
 Referenced by:
-- docs/plans/ios-app-intent-capture.review.md:42 (mention) — **Location in plan:** Tracks 3, paragraphs “Direction” and “First implementation chunk”; `beebox/docs/plans/ios-app-inte
+- docs/implemented-plans/file-wordless-captures.md:106 (mention) — - `beebox/docs/plans/ios-app-intent-capture.md:23`: save *"without inventing a task now"*. Kept: filing reads and places
+- docs/plans/ios-app-intent-capture.product-shape.review.md:72 (mention) — **Citation:** “this plan does not settle … share-sheet, or media capture” (`ios-app-intent-capture.md:14`).
+- docs/plans/ios-app-intent-capture.review.md:3 (link) — Reviewed 2026-10-12 by Codex, with independent **Claude Fable** cross-model review. Target: [revised plan](ios-app-inten
+- ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md:35 (link) — The reviewed [quick-capture plan](../../beebox/docs/plans/ios-app-intent-capture.md)
+- ../issues/closed/bugs/2026-10-17-captures-without-words-are-never-processed.md:24 (mention) — `beebox/docs/plans/ios-app-intent-capture.md:23`: save the screenshot "without
 
 References:
 - → ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md (frontmatter)
-- → docs/engineering-principles.md (mention)
+- → docs/implemented-plans/retire-doctest.md (mention)
+- → ../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md (link)
+- → ../issues/features/2026-09-25-quick-drop-entry-points.md (link)
+- → ../issues/bugs/2026-09-21-share-sheet-webpage-stub-never-completed.md (link)
+- → ../research/ios-quick-capture-2026-10-12.md (link)
+- → docs/plans/ios-app-intent-capture.product-shape.review.md (link)
+- → docs/architecture/spirit.md (mention)
 - → docs/design/trust.md (mention)
-- → docs/mobile-contract.md (mention)
-- → docs/box/siri-shortcuts.md (mention)
+
+#### docs/plans/ios-app-intent-capture.product-shape.review.md
+
+Title: "Plan Engineering Review — iOS capture and accompanying context" | 206 lines | plan review
+
+Referenced by:
+- docs/plans/ios-app-intent-capture.md:16 (link) — The [dated iOS research](../../../research/ios-quick-capture-2026-10-12.md) supports the techniques below. The [earlier
+- docs/plans/ios-app-intent-capture.review.md:3 (link) — Reviewed 2026-10-12 by Codex, with independent **Claude Fable** cross-model review. Target: [revised plan](ios-app-inten
+- ../research/ios-quick-capture-2026-10-12.md:3 (link) — Research snapshot: 2026-10-12. Recommendations for `siri-app-intents`, before implementation. This follows the [product-
+
+References:
+- → docs/design/trust.md (mention)
+- → docs/plans/ios-app-intent-capture.md (mention)
 
 #### docs/plans/ios-app-intent-capture.review.md **[ORPHAN]**
 
-Title: "Plan Engineering Review — iOS App Intent capture" | 148 lines | plan review
+Title: "Plan Engineering Review — iOS quick capture" | 118 lines | plan review
 
 References:
-- → docs/plans/ios-app-intent-capture.md (mention)
+- → docs/plans/ios-app-intent-capture.md (link)
+- → docs/plans/ios-app-intent-capture.product-shape.review.md (link)
+- → ../research/ios-quick-capture-2026-10-12.md (link)
 
 #### docs/plans/ios-companion-app.md
 
-Title: "iOS Companion App for Bee Box" | 220 lines | proposal | active
+Title: "iOS Companion App for Bee Box" | 222 lines | proposal | active
 
 Referenced by:
-- docs/plans/android-companion-app.md:36 (mention) — - Shipped precedent: `docs/plans/ios-companion-app.md` (umbrella), the native
-- docs/plans/ios-companion-review-2026-07-09.md:21 (mention) — Cross-referencing the plan (`ios-companion-app.md`): this work is **Tracks A, C, D, G, H partially built ahead of their
-- docs/plans/ios-companion-review-2026-07-17.md:150 (mention) — - **The plan's hardest question is still unresolved.** `ios-companion-app.md` named **device-token/web-session convergen
+- docs/plans/android-companion-app.md:38 (mention) — - Shipped precedent: `docs/plans/ios-companion-app.md` (umbrella), the native
+- docs/plans/ios-companion-review-2026-07-09.md:23 (mention) — Cross-referencing the plan (`ios-companion-app.md`): this work is **Tracks A, C, D, G, H partially built ahead of their
+- docs/plans/ios-companion-review-2026-07-17.md:152 (mention) — - **The plan's hardest question is still unresolved.** `ios-companion-app.md` named **device-token/web-session convergen
 - docs/unimplemented-plans/publish-pages-superseded.md:33 (mention) — - **Precedents (denser than docs):** the Telegram webhook (`src/webapp/routes/telegram.ts`) as the "external service wit
 - ../issues/closed/bugs/2026-07-17-mobile-chat-unattributed.md:24 (mention) — The `ios-companion-app.md` plan already calls identity unification the hardest problem in its
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/implemented-plans/remove-telegram.md (mention)
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
@@ -7881,23 +8607,24 @@ References:
 
 #### docs/plans/ios-companion-review-2026-07-09.md
 
-Title: "iOS Companion — code review (2026-07-09)" | 173 lines | proposal | active
+Title: "iOS Companion — code review (2026-07-09)" | 175 lines | proposal | active
 
 Referenced by:
-- docs/plans/ios-companion-review-2026-07-17.md:10 (mention) — **Scope:** everything under `ios-app/` re-reviewed against the July-9 punch list (`ios-companion-review-2026-07-09.md`),
+- docs/plans/ios-companion-review-2026-07-17.md:12 (mention) — **Scope:** everything under `ios-app/` re-reviewed against the July-9 punch list (`ios-companion-review-2026-07-09.md`),
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/ios-companion-review-2026-07-17.md (mention)
 - → docs/plans/ios-companion-app.md (mention)
 
 #### docs/plans/ios-companion-review-2026-07-17.md
 
-Title: "iOS Companion — follow-up code review (2026-07-17)" | 155 lines | proposal | active
+Title: "iOS Companion — follow-up code review (2026-07-17)" | 157 lines | proposal | active
 
 Referenced by:
-- docs/mobile-contract.md:1550 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
-- docs/plans/android-companion-app.md:38 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
-- docs/plans/ios-companion-review-2026-07-09.md:9 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
+- docs/mobile-contract.md:1714 (mention) — reproduction, proposed fixes) is in `docs/plans/ios-companion-review-2026-07-17.md`.
+- docs/plans/android-companion-app.md:40 (mention) — `docs/plans/ios-companion-review-2026-07-17.md`. This plan ports the iOS
+- docs/plans/ios-companion-review-2026-07-09.md:11 (mention) — **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the
 - ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-hub-mobile-auth-presence-only.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
 - ../issues/closed/bugs/2026-07-17-ios-hq-transcription-window-unlocked.md:7 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
@@ -7911,21 +8638,23 @@ Referenced by:
 - ../issues/code-quality/2026-07-17-ios-small-cleanups.md:6 (mention) — discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-companion-review-2026-07-17.md
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/ios-companion-review-2026-07-09.md (mention)
 - → docs/plans/ios-companion-app.md (mention)
 
 #### docs/plans/ios-input-plane-parity.md
 
-Title: "iOS input-plane parity" | 556 lines | proposal | partial
+Title: "iOS input-plane parity" | 558 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/chat-header-chips.md:304 (mention) — (`docs/plans/ios-input-plane-parity.md`); no native contract changes here.
 - ../issues/bugs/2026-09-20-ios-composer-has-no-keyword-hints.md:103 (mention) — (`beebox/docs/plans/ios-input-plane-parity.md`, still `status: partial`) or
 - ../issues/features/2026-07-19-ios-input-plane-parity.md:4 (frontmatter) — design: ../../beebox/docs/plans/ios-input-plane-parity.md
-- ../issues/features/2026-07-19-ios-input-plane-parity.md:26 (link) — [`ios-input-plane-parity.md`](../../beebox/docs/plans/ios-input-plane-parity.md).
+- ../issues/features/2026-07-19-ios-input-plane-parity.md:28 (link) — [`ios-input-plane-parity.md`](../../beebox/docs/plans/ios-input-plane-parity.md).
 - ../issues/features/2026-08-18-ios-support-all-interface-orientations.md:50 (mention) — - `docs/plans/ios-input-plane-parity.md:461-463` says landscape and the
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
 - → code-style.md (mention)
@@ -7936,17 +8665,18 @@ References:
 
 #### docs/plans/ios-native-capture-mode.md
 
-Title: "Native iOS capture mode" | 622 lines | proposal | partial
+Title: "Native iOS capture mode" | 624 lines | proposal | partial
 
 Referenced by:
 - docs/mobile-parity.md:37 (mention) — | Capture mode | done (`docs/plans/ios-native-capture-mode.md`; recorder silent-stop tracked in `issues/bugs/`) | not pl
-- docs/plans/android-companion-app.md:674 (mention) — (`docs/plans/ios-native-capture-mode.md`); Android follows once it ships.
-- docs/plans/ios-input-plane-parity.md:44 (mention) — - Active precedent: `docs/plans/ios-native-capture-mode.md` keeps capture media
-- docs/plans/ios-native-capture-mode.review.md:3 (mention) — Review of `docs/plans/ios-native-capture-mode.md`, performed against the shipped
+- docs/plans/android-companion-app.md:676 (mention) — (`docs/plans/ios-native-capture-mode.md`); Android follows once it ships.
+- docs/plans/ios-input-plane-parity.md:46 (mention) — - Active precedent: `docs/plans/ios-native-capture-mode.md` keeps capture media
+- docs/plans/ios-native-capture-mode.review.md:5 (mention) — Review of `docs/plans/ios-native-capture-mode.md`, performed against the shipped
 - ../issues/exploration/2026-09-29-omi-pendant-as-a-capture-source.md:38 (mention) — (`beebox/docs/plans/ios-native-capture-mode.md`). This is local-first and
 - ../research/omi-review.md:246 (mention) — (`beebox/docs/plans/ios-native-capture-mode.md`). Local-first and no
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → docs/adding-api-endpoints.md (mention)
@@ -7955,21 +8685,23 @@ References:
 
 #### docs/plans/ios-native-capture-mode.review.md **[ORPHAN]**
 
-Title: "Plan Engineering Review — Native iOS capture mode" | 470 lines | plan review
+Title: "Plan Engineering Review — Native iOS capture mode" | 472 lines | plan review
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/ios-native-capture-mode.md (mention)
 - → docs/implemented-plans/capture-mode.md (mention)
 
 #### docs/plans/ios-share-extension-capture.md
 
-Title: "iOS Share Extension Capture" | 358 lines | proposal | partial
+Title: "iOS Share Extension Capture" | 360 lines | proposal | partial
 
 Referenced by:
 - ../issues/closed/features/2026-03-05-share-to-box-images-files.md:8 (mention) — > Closed 2026-09-05 as `superseded` by the native share extension (`beebox/docs/plans/ios-share-extension-capture.md`, w
 - ../issues/closed/features/2026-05-11-ios-share-sheet-capture.md:5 (frontmatter) — design: ../../../beebox/docs/plans/ios-share-extension-capture.md
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → docs/mobile-contract.md (mention)
 
@@ -7979,9 +8711,43 @@ Title: "Plan Engineering Review — Replayable document triage" | 212 lines | pl
 
 No references in or out.
 
+#### docs/plans/mac-app-shell.design.md
+
+Title: "Bee Box for Mac as a shell around a box: design" | 191 lines | proposal | active
+
+Referenced by:
+- docs/plans/mac-app-shell.md:42 (link) — for it). Tracks D–G are designed in [mac-app-shell.design.md](mac-app-shell.design.md):
+
+References:
+- → docs/plans/mac-app-shell.md (link)
+
+#### docs/plans/mac-app-shell.md
+
+Title: "Bee Box for Mac as a shell around a box" | 665 lines | proposal | active
+
+Referenced by:
+- docs/plans/mac-app-shell.design.md:9 (link) — **Parent plan:** [mac-app-shell.md](mac-app-shell.md), Tracks D–G.
+- ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md:10 (link) — **2026-10-17 note (partly resolved):** iOS pairing now goes through the shared `apple-shared` package: one redeem per ti
+- ../issues/code-quality/2026-10-17-ios-bridge-message-routing-untested.md:8 (mention) — discovered-in: worktree-app-shell — iOS testing review for beebox/docs/plans/mac-app-shell.md
+- ../issues/features/2026-10-07-mac-companion-app.md:12 (link) — **2026-10-17 note (partly resolved):** the Mac app now pairs through a `beebox://pair` link, has a Preferences window, o
+
+References:
+- → ../issues/features/2026-10-07-mac-companion-app.md (frontmatter)
+- → ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
+- → ../issues/features/2026-10-07-mac-companion-app.md (link)
+- → ../issues/bugs/2026-07-17-ios-pairing-flow-robustness.md (link)
+- → ../issues/bugs/2026-09-12-ios-unreachable-box-shows-a-blank-screen.md (link)
+- → ../issues/features/2026-10-10-mac-app-engine-updates-without-app-release.md (link)
+- → ../issues/code-quality/2026-07-19-mobile-device-token-no-expiry.md (link)
+- → docs/plans/mac-app-shell.design.md (link)
+- → docs/mobile-contract.md (mention)
+- → AGENTS.md (mention)
+- → docs/scan-upload-contract.md (mention)
+
 #### docs/plans/migration-reliability.md
 
-Title: "Reliable box maintenance and migration with Git recovery" | 794 lines | proposal | partial
+Title: "Reliable box maintenance and migration with Git recovery" | 796 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/box-maintenance-no-wedge.md:14 (link) — [migration-reliability.md](../plans/migration-reliability.md), which chose to keep a box
@@ -7990,6 +8756,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/closed/features/2026-09-11-local-boxes-never-converge-on-migrations.md (link)
 - → ../issues/closed/features/2026-08-24-parked-template-resolution-path.md (link)
 - → ../issues/docs-and-chores/2026-07-19-template-parks-recurrence-check.md (link)
@@ -8011,7 +8778,7 @@ No references in or out.
 
 #### docs/plans/narration-mode.md
 
-Title: "Narration Mode — Design" | 469 lines | proposal | active
+Title: "Narration Mode — Design" | 471 lines | proposal | active
 
 Referenced by:
 - docs/box/provenance.md:61 (mention) — See `node_modules/beebox/box-docs/narration-mode.md`.
@@ -8027,15 +8794,17 @@ Referenced by:
 - ../research/omi-review.md:184 (mention) — (`beebox/docs/plans/narration-mode.md`, "file todos"), and diarized speech in
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/reports/activities-retrospective-2026-05-14.md (link)
 - → frontend.md (mention)
 - → docs/reports/activities-design-2026-04-19.md (mention)
 
 #### docs/plans/operator-member-password-reset.md **[ORPHAN]**
 
-Title: "Operator-driven member password reset" | 711 lines | proposal | partial
+Title: "Operator-driven member password reset" | 713 lines | proposal | partial
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → AGENTS.md (mention)
 - → code-style.md (mention)
@@ -8066,13 +8835,14 @@ References:
 
 #### docs/plans/pdf-render-webp.review.md **[ORPHAN]**
 
-Title: "Plan Engineering Review — PDF render WebP" | 104 lines | plan review
+Title: "Plan Engineering Review — PDF render WebP" | 106 lines | plan review
 
-No references in or out.
+References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 
 #### docs/plans/prompt-surface-cleanup-evaluation.md
 
-Title: "Prompt Surface Cleanup — Evaluation" | 1000 lines | proposal | active
+Title: "Prompt Surface Cleanup — Evaluation" | 1002 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/agent-guide-spec.md:92 (mention) — - **Prompt surface cleanup evaluation** (`docs/plans/prompt-surface-cleanup-evaluation.md`,
@@ -8082,6 +8852,7 @@ Referenced by:
 - docs/prompts/review.md:78 (link) — Prior art: [plans/prompt-surface-cleanup-evaluation.md](../plans/prompt-surface-cleanup-evaluation.md) is the worked exa
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/box-layout.md (mention)
 - → code-style.md (mention)
 - → AGENTS.md (mention)
@@ -8094,7 +8865,7 @@ References:
 Title: "Author public-site cards in a box and export them to the repository" | 394 lines | proposal | partial
 
 Referenced by:
-- docs/plans/publish-sites-admin.md:54 (mention) — - The older plan's view direction inlined card data in HTML (`beebox/docs/unimplemented-plans/publish-pages-superseded.m
+- docs/plans/publish-sites-admin.md:56 (mention) — - The older plan's view direction inlined card data in HTML (`beebox/docs/unimplemented-plans/publish-pages-superseded.m
 
 References:
 - → ../issues/exploration/2026-08-19-site-authored-in-a-box.md (frontmatter)
@@ -8123,13 +8894,14 @@ References:
 
 #### docs/plans/public-site-story-extraction.subplan.md
 
-Title: "Story extraction: rubric, prompts, and the A/B review loop" | 297 lines | proposal | active
+Title: "Story extraction: rubric, prompts, and the A/B review loop" | 299 lines | proposal | active
 
 Referenced by:
 - docs/plans/public-site-orientation.md:16 (link) — [the extraction subplan](public-site-story-extraction.subplan.md).
 - docs/plans/public-site.md:375 (link) — [public-site-story-extraction.subplan.md](public-site-story-extraction.subplan.md)
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/features/2026-07-05-writing-skill.md (link)
 - → docs/engineering-principles.md (mention)
 - → docs/plans/public-site.md (link)
@@ -8145,7 +8917,7 @@ Referenced by:
 - docs/plans/agent-docs.md:18 (link) — ([public-site.md](public-site.md)); it is the machine layer that site's
 - docs/plans/public-site-box-authoring-export.md:27 (mention) — site is generated from repository content (`beebox/docs/plans/public-site.md:9-20`).
 - docs/plans/public-site-orientation.md:15 (link) — [the site plan](public-site.md) and
-- docs/plans/public-site-story-extraction.subplan.md:52 (link) — format ([public-site.md](public-site.md), Track E). Eval runs add
+- docs/plans/public-site-story-extraction.subplan.md:54 (link) — format ([public-site.md](public-site.md), Track E). Eval runs add
 - ../issues/docs-and-chores/2026-07-21-pages-site-go-live.md:13 (link) — [plan doc](../../beebox/docs/plans/public-site.md)) builds and deploys through
 - ../issues/features/2026-07-20-public-site.md:39 (link) — and [plan checkpoint](../../beebox/docs/plans/public-site.md).
 
@@ -8165,13 +8937,14 @@ References:
 
 #### docs/plans/publication-approval-card.md
 
-Title: "Publication approval cards" | 128 lines | proposal | partial
+Title: "Publication approval cards" | 130 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:168 (mention) — - Mark `publish-sites-admin.md` and `publication-approval-card.md` with a note that this plan supersedes their source an
 - ../issues/closed/decisions/2026-10-02-publication-source-and-card-split.md:35 (mention) — `beebox/docs/plans/publication-approval-card.md` added the card so review would
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/implemented-plans/publication-card-home.md (link)
 - → docs/security-report.md (mention)
 
@@ -8184,15 +8957,16 @@ References:
 
 #### docs/plans/publish-shared-host-per-box.md
 
-Title: "Serve box publications from one shared hostname" | 170 lines | proposal | partial
+Title: "Serve box publications from one shared hostname" | 172 lines | proposal | partial
 
 Referenced by:
-- docs/security-report.md:618 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
+- docs/security-report.md:642 (link) — boxes have separate hostnames. [Shared-host plan](plans/publish-shared-host-per-box.md).
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 - docs/unimplemented-plans/publish-custom-domain-admin.md:6 (frontmatter) — superseded-by: ../plans/publish-shared-host-per-box.md
 - docs/unimplemented-plans/publish-custom-domain-admin.md:12 (link) — **Superseded (2026-09-26):** The boxholder chose one Admin-configured hostname per box and shared Worker instead of per-
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/unimplemented-plans/publish-custom-domain-admin.md (link)
 - → docs/plans/publish-sites-admin.md (mention)
 - → docs/design/identity.md (mention)
@@ -8201,12 +8975,12 @@ References:
 
 #### docs/plans/publish-sites-admin.md
 
-Title: "Static site publishing with admin setup and human approval" | 294 lines | proposal | partial
+Title: "Static site publishing with admin setup and human approval" | 296 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/publication-card-home.md:168 (mention) — - Mark `publish-sites-admin.md` and `publication-approval-card.md` with a note that this plan supersedes their source an
-- docs/plans/publish-shared-host-per-box.md:23 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
-- docs/security-report.md:611 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
+- docs/plans/publish-shared-host-per-box.md:25 (mention) — - **Preserve member control of a public destination.** The publication plan requires a signed-in member to approve befor
+- docs/security-report.md:635 (link) — [managed-site publishing plan](plans/publish-sites-admin.md). (§1, §2, §6a)
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - docs/unimplemented-plans/publish-custom-domain-admin.md:14 (mention) — **Issues addressed:** none found in `issues/` for custom-domain assignment. This extends the approved publishing work in
 - docs/unimplemented-plans/publish-pages-superseded.md:11 (link) — > [publish-sites-admin](../plans/publish-sites-admin.md). The laptop-side
@@ -8214,6 +8988,7 @@ Referenced by:
 
 References:
 - → ../issues/closed/features/2026-07-19-pub-access-setup-via-api-not-dashboard.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/implemented-plans/publication-card-home.md (link)
 - → docs/engineering-principles.md (mention)
 - → docs/security-overview.md (mention)
@@ -8245,17 +9020,19 @@ Referenced by:
 - docs/implemented-plans/workstreams.md:709 (mention) — status encodings would drift (§8). `docs/plans/README.md` is rewritten to
 - docs/plans/README.md:36 (mention) — Every plan (including `*.subplan.md`, excluding `README.md` and review
 - docs/plans/agent-docs.md:52 (mention) — (55 types), the prose docs from `docs/box/`, and a `README.md` index whose
-- docs/plans/asset-annex.md:1080 (mention) — the server. See that directory's `README.md` for the restore
-- docs/plans/container-first.md:322 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
+- docs/plans/asset-annex.md:1082 (mention) — the server. See that directory's `README.md` for the restore
+- docs/plans/container-first.md:324 (mention) — `tailscale.env.example`, `.gitignore`, `README.md`),
 - docs/plans/public-site.md:325 (mention) — `research/`, root `README.md` — enforced by the generator), `span` (a
-- docs/plans/scan-guide-card.md:92 (mention) — `README.md` install table. Reshaped in place to guide-card form.
-- docs/plans/source-available-release.md:76 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
+- docs/plans/scan-guide-card.md:94 (mention) — `README.md` install table. Reshaped in place to guide-card form.
+- docs/plans/source-available-release.md:78 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
 - docs/reports/plan-directory-migration-history-2026-09-13.md:5 (link) — locations. Use the [current plan conventions](../plans/README.md) when working
 - ../.claude/skills/bbx-plan/SKILL.md:29 (mention) — Subplans: `<topic>.subplan.md`. Frontmatter per `docs/plans/README.md`:
+- ../dev/devprocess-talk/reports/sweep-queue-planning.md:304 (mention) — - **Lives in:** `beebox/docs/plans/README.md`, `beebox/docs/implemented-plans/`, `beebox/docs/unimplemented-plans/`, `.c
 - ../issues/closed/docs-and-chores/2026-08-08-plan-lifecycle-frontmatter-and-issue-mapping.md:23 (mention) — `docs/plans/README.md` (`**Status:** implemented YYYY-MM …`), which can't be
 
 References:
 - → AGENTS.md (mention)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/README.md (mention)
 - → ../.claude/agents/finish.md (link)
 - → docs/README.md (link)
@@ -8270,15 +9047,16 @@ Referenced by:
 
 #### docs/plans/scan-guide-card.md
 
-Title: "Scan Guide Card — scanner priors via the guide system" | 393 lines | proposal | active
+Title: "Scan Guide Card — scanner priors via the guide system" | 395 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/scanner-ingest.md:96 (mention) — deprecated, warning-logged fallback. Reshaped by the `scan-guide-card.md`
-- docs/plans/scan-guide-card.md:178 (mention) — docs/plans/scan-guide-card.md)` via `ctx.writeLine`.
+- docs/plans/scan-guide-card.md:180 (mention) — docs/plans/scan-guide-card.md)` via `ctx.writeLine`.
 - docs/plans/scan-guide-card.review.md:7 (mention) — `scan-guide-card.md`.
 - ../issues/docs-and-chores/2026-08-01-test1-real-people-data.md:11 (mention) — fictional demo cast — see `docs/plans/scan-guide-card.md`, test1 amendment)
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/implemented-plans/scanner-ingest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
@@ -8297,10 +9075,11 @@ References:
 
 #### docs/plans/scan-retry-and-document-route.md **[ORPHAN]**
 
-Title: "Bound the promote retry, and stop routing documents into the photo flow" | 432 lines | proposal | partial
+Title: "Bound the promote retry, and stop routing documents into the photo flow" | 434 lines | proposal | partial
 
 References:
 - → ../issues/closed/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/closed/bugs/2026-09-05-scan-import-textless-pdf-photo-taxonomy.md (link)
 - → ../issues/features/2026-03-04-agent-give-up-mechanism.md (link)
 - → docs/engineering-principles.md (mention)
@@ -8309,15 +9088,16 @@ References:
 
 #### docs/plans/scan-vision-claude.md
 
-Title: "Scan vision: Claude Sonnet default, Gemini opt-in" | 613 lines | proposal | active
+Title: "Scan vision: Claude Sonnet default, Gemini opt-in" | 615 lines | proposal | active
 
 Referenced by:
 - docs/implemented-plans/scanner-ingest.md:81 (mention) — > `docs/plans/scan-vision-claude.md`. Mentions of "Gemini analysis" for the
-- docs/plans/scan-vision-claude.review.md:3 (mention) — Cross-model review of `scan-vision-claude.md`, run 2026-08-01 with `codex exec`
+- docs/plans/scan-vision-claude.review.md:5 (mention) — Cross-model review of `scan-vision-claude.md`, run 2026-08-01 with `codex exec`
 - ../issues/closed/bugs/2026-08-01-gemini-scan-oversized-originals.md:27 (mention) — found during the codex review of `beebox/docs/plans/scan-vision-claude.md`
 - ../issues/exploration/2026-08-01-scan-vision-minimal-system-prompt.md:14 (mention) — Codex's review of `beebox/docs/plans/scan-vision-claude.md` suggested a
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → src/services/AGENTS.md (mention)
@@ -8327,9 +9107,10 @@ References:
 
 #### docs/plans/scan-vision-claude.review.md **[ORPHAN]**
 
-Title: "Plan Engineering Review — scan-vision-claude" | 140 lines | plan review
+Title: "Plan Engineering Review — scan-vision-claude" | 142 lines | plan review
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/scan-vision-claude.md (mention)
 
 #### docs/plans/scanner-ingest-docling-decisions.md
@@ -8337,26 +9118,31 @@ References:
 Title: "Docling Decisions Log — scanner-ingest" | 274 lines | proposal | active
 
 Referenced by:
-- docs/plans/scan-vision-claude.md:464 (mention) — `scanner-ingest-docling-decisions.md`.
+- docs/plans/scan-vision-claude.md:466 (mention) — `scanner-ingest-docling-decisions.md`.
 
 References:
 - → docs/implemented-plans/scanner-ingest.md (link)
 
-#### docs/plans/search-card.md **[ORPHAN]**
+#### docs/plans/search-card.md
 
-Title: "Search cards and quick search" | 480 lines | proposal | draft
+Title: "Search cards and quick search" | 482 lines | proposal | draft
+
+Referenced by:
+- ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md:54 (mention) — - `beebox/docs/plans/search-card.md` (lines 117-121, 282-286) chose card-level
 
 References:
 - → ../issues/features/2026-08-08-no-visible-search-or-home.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/adding-api-endpoints.md (mention)
 
 #### docs/plans/source-available-release.md
 
-Title: "Source-available release of beebox" | 536 lines | proposal | active
+Title: "Source-available release of beebox" | 538 lines | proposal | active
 
 Referenced by:
+- docs/implemented-plans/purge-agent-doctest.md:104 (mention) — (`beebox/docs/plans/source-available-release.md` and others found by
 - docs/implemented-plans/remove-telegram.review.md:73 (mention) — `source-available-release.md` cites the removed admin flow as history;
-- docs/plans/installation-story.md:17 (mention) — Coordinates with `docs/plans/source-available-release.md`: this plan
+- docs/plans/installation-story.md:19 (mention) — Coordinates with `docs/plans/source-available-release.md`: this plan
 - ../issues/closed/bugs/2026-07-05-report-workflows-emit-relative-paths.md:41 (mention) — (`beebox/docs/plans/source-available-release.md`) records the leak
 - ../issues/closed/decisions/2026-07-08-release-cloud-provider-honesty.md:21 (mention) — feature gap. Two things to settle in `docs/plans/source-available-release.md`:
 - ../issues/closed/features/2026-07-12-bbx-doctor-preflight.md:27 (mention) — `beebox/docs/plans/source-available-release.md` (preflight + actionable
@@ -8368,6 +9154,7 @@ Referenced by:
 - ../research/rowboat-review.md:39 (mention) — - **Local-model option (Ollama/LM Studio).** We hard-require a configured Claude key (deliberately — bill safety, `feedb
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → code-style.md (mention)
 - → docs/box-layout.md (mention)
 - → docs/server/boxes.md (mention)
@@ -8392,17 +9179,21 @@ Referenced by:
 
 #### docs/plans/tts-backend-selection.md
 
-Title: "TTS backend selection, and per-backend style direction" | 582 lines | proposal | partial
+Title: "TTS backend selection, and per-backend style direction" | 584 lines | proposal | partial
 
 Referenced by:
-- docs/box-layout.md:217 (mention) — | `_config/tts.json` | Which backend speaks chat replies (`openai` or `gemini`); see `docs/plans/tts-backend-selection.m
+- docs/box-layout.md:242 (mention) — | `_config/tts.json` | Which backend speaks chat replies (`openai` or `gemini`); see `docs/plans/tts-backend-selection.m
+- docs/implemented-plans/tts-comparison-page.md:223 (mention) — numbers in `tts-backend-selection.md` are the measured ones; repeating
 - docs/implemented-plans/tts-streamed-playback.md:44 (mention) — `docs/plans/tts-backend-selection.md` and the services table. Not a BIG CHANGE.
 - ../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md:6 (frontmatter) — design: ../../../beebox/docs/plans/tts-backend-selection.md
 - ../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md:53 (link) — **Designed:** [tts-backend-selection](../../../beebox/docs/plans/tts-backend-selection.md).
 - ../issues/closed/features/2026-10-04-gemini-tts-streamed-playback.md:21 (mention) — (`beebox/docs/plans/tts-backend-selection.md`, 2026-10-04).
+- ../issues/exploration/2026-10-20-tts-inline-delivery-markup.md:70 (mention) — `beebox/docs/plans/tts-backend-selection.md`.
+- ../research/tts-model-comparison/README.md:3 (link) — A comparison of text-to-speech models, kept for choosing the box's voice backend (`beebox/src/shared/tts-backends.ts`; t
 
 References:
 - → ../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/closed/features/2026-09-06-gemini-tts-over-openrouter.md (link)
 - → ../issues/exploration/2026-09-06-openrouter-diarizing-stt-backend.md (link)
 - → ../issues/deferred/2026-09-06-openai-batch-stt-retirement.md (link)
@@ -8412,27 +9203,35 @@ References:
 
 #### docs/plans/user-story-journeys.md
 
-Title: "User-story journeys" | 295 lines | proposal | draft
+Title: "User-story journeys" | 299 lines | proposal | draft
 
 Referenced by:
+- docs/implemented-plans/front-door.md:1190 (mention) — - The journey walks (`docs/plans/user-story-journeys.md`) are the tour; they
 - test/user-stories/journeys/README.md:8 (link) — Design and rationale: [`docs/plans/user-story-journeys.md`](../../../docs/plans/user-story-journeys.md).
+- ../dev/devprocess-talk/chapters.md:397 (mention) — file: beebox/docs/plans/user-story-journeys.md
+- ../dev/devprocess-talk/inventory.md:572 (mention) — - **Where:** `beebox/test/user-stories/journeys/` (five journeys, walker prompt, provisioning), `beebox/docs/plans/user-
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:125 (mention) — - **New bottleneck exposed:** (a) panel voting bug: "shipped three stories with a ✅ directly above their own panel note…
+- ../dev/journeys/overview.md:5 (link) — Sources: [the design plan](../../beebox/docs/plans/user-story-journeys.md), [the journeys README](../../beebox/test/user
+- ../dev/journeys/reports/sweep-walks.md:8 (mention) — - `PLAN` = `beebox/docs/plans/user-story-journeys.md` (no `.review.md` exists beside it)
 - ../issues/closed/bugs/2026-08-22-exhibits-add-silently-drops-markdown-content.md:21 (mention) — `user-story-journeys.md`, the manifest had no `figures` key, and the page showed
 - ../issues/closed/docs-and-chores/2026-08-22-doc-check-skips-untracked-docs.md:19 (mention) — Observed: `docs/plans/user-story-journeys.md` written with `status: proposed`.
 
 References:
 - → docs/user-stories/catalog/2026-08-21.md (link)
+- → test/plugins/courseware/journeys/D-chemistry/README.md (link)
 
 #### docs/plans/workspace-pane-controls.md
 
-Title: "Workspace panes, focus, and conversation" | 580 lines | proposal | partial
+Title: "Workspace panes, focus, and conversation" | 582 lines | proposal | partial
 
 Referenced by:
-- docs/plans/interface-cards-consolidation.md:26 (link) — It preserves the pane mechanisms in [workspace controls](workspace-pane-controls.md)
-- docs/plans/workspace-pane-controls.review.md:4 (link) — against source and revised [the plan](workspace-pane-controls.md). The reviewer
+- docs/plans/interface-cards-consolidation.md:28 (link) — It preserves the pane mechanisms in [workspace controls](workspace-pane-controls.md)
+- docs/plans/workspace-pane-controls.review.md:6 (link) — against source and revised [the plan](workspace-pane-controls.md). The reviewer
 - ../issues/closed/features/2026-09-08-dashboard-workspace-tab.md:30 (link) — This is deferred from the [workspace pane plan](../../../beebox/docs/plans/workspace-pane-controls.md).
 - ../issues/features/2026-07-28-directories-as-viewable-things.md:43 (link) — The [workspace pane plan](../../beebox/docs/plans/workspace-pane-controls.md)
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/features/2026-07-23-mobile-modal-not-split-pane.md (link)
 - → ../issues/features/2026-08-30-chat-input-everywhere.md (link)
 - → ../issues/closed/bugs/2026-09-08-new-chat-card-navigation-resets-start.md (link)
@@ -8453,32 +9252,36 @@ References:
 
 #### docs/plans/workspace-pane-controls.review.md **[ORPHAN]**
 
-Title: "Plan Engineering Review — workspace pane controls" | 233 lines | plan review
+Title: "Plan Engineering Review — workspace pane controls" | 235 lines | plan review
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/plans/workspace-pane-controls.md (link)
 - → ../issues/closed/bugs/2026-09-08-view-test-invalid-card-diagnostic-missing-under-load.md (link)
 
 #### docs/plans/workstreams-app.md
 
-Title: "Resident workstreams application" | 463 lines | proposal | partial
+Title: "Resident workstreams application" | 465 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/workstream-exhibits.md:147 (mention) — `docs/plans/workstreams-app.md`). The exhibits surface lives inside this
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:159 (mention) — - **Lives in:** `workstreams-app/` (pages: `WorkstreamsPage`, `WorkstreamDetailPage`, `IssuesPage`, `PlansPage`, `Testin
 - ../issues/closed/code-quality/2026-08-13-resident-workstreams-app.md:10 (frontmatter) — design: ../../../beebox/docs/plans/workstreams-app.md
 
 References:
 - → ../issues/closed/code-quality/2026-08-13-resident-workstreams-app.md (frontmatter)
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 
 #### docs/plans/worktree-control-surface.md
 
-Title: "An agent-neutral worktree control surface" | 704 lines | proposal | partial
+Title: "An agent-neutral worktree control surface" | 706 lines | proposal | partial
 
 Referenced by:
 - docs/implemented-plans/workstreams.md:28 (link) — ([the worktree control surface](../plans/worktree-control-surface.md)) deferred.
 - ../bin/docs/worktree-lifecycle.md:121 (link) — Background: [worktree control-surface design](../../beebox/docs/plans/worktree-control-surface.md).
+- ../dev/devprocess-talk/reports/sweep-parallel-work.md:99 (mention) — - **Lives in:** `bin/workstreams` (1080 lines; `list`, `create`, `resume`, `remove`, `close`, `release`, `reset-test`, `
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:7 (frontmatter) — design: ../../../beebox/docs/plans/worktree-control-surface.md
 - ../issues/closed/bugs/2026-08-04-sweep-live-agent-guard-fails-open.md:21 (link) — > [the worktree control surface plan](../../../beebox/docs/plans/worktree-control-surface.md)
 - ../issues/closed/code-quality/2026-08-01-derive-public-worktree-paths.md:7 (frontmatter) — design: ../../../beebox/docs/plans/worktree-control-surface.md
@@ -8487,6 +9290,7 @@ Referenced by:
 - ../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md:65 (link) — [The agent-neutral worktree control surface](../../../beebox/docs/plans/worktree-control-surface.md)
 
 References:
+- → docs/implemented-plans/retire-doctest.md (mention)
 - → ../issues/closed/features/2026-08-08-worktree-session-workflow-redesign.md (link)
 - → ../issues/closed/code-quality/2026-08-01-derive-public-worktree-paths.md (link)
 - → ../issues/closed/docs-and-chores/2026-05-26-dev-scripts-into-bin.md (link)
@@ -8504,8 +9308,9 @@ Title: "Prompt lenses" | 214 lines | current reference
 Referenced by:
 - docs/connectors.md:98 (link) — [prompt lens](prompts/lenses.md#cache-freshness-surfaced-conditionally).
 - docs/implemented-plans/doc-structure-prompts.md:59 (mention) — | `prompt-audits.md` | `prompts/lenses.md`; gains the three lenses the review page held alone; the cache-freshness lens
-- docs/plans/box-commentary-surface.md:113 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompts/lenses.md:184`:
+- docs/plans/box-commentary-surface.md:115 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompts/lenses.md:184`:
 - docs/prompts/review.md:7 (link) — The workflow for reviewing or engineering beebox's agent-facing prompt surface — the agent guide, chat/reactor system pr
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:85 (mention) — - **Lives in:** `beebox/docs/prompts/review.md`, `beebox/docs/prompts/lenses.md`, `beebox/docs/prompts/logging.md`.
 - ../issues/exploration/2026-05-19-introspectable-feedback-storage.md:21 (link) — - *Park ignored proactive observations* in [prompt-audits.md](../../beebox/docs/prompts/lenses.md#park-ignored-proactive
 - ../issues/exploration/2026-05-19-subagent-strategy.md:20 (link) — - Multi-perspective drafting, *only if* the perspectives are grounded in different sources or different roles. Same-mode
 - ../issues/exploration/2026-05-19-universal-confidence-rubric.md:16 (link) — Universality is the point: the same rubric applies wherever the agent commits to something below fact level — hypotheses
@@ -8526,6 +9331,7 @@ Referenced by:
 - docs/implemented-plans/box-docs-in-package.md:100 (mention) — `docs/prompts/logging.md` says so.
 - docs/implemented-plans/doc-structure-prompts.md:60 (mention) — | `prompt-logging.md` | `prompts/logging.md`; DOCID markers become a top-level heading |
 - docs/user-stories/catalog/2026-06-26.md:1340 (mention) — 6. **Supporting documentation**: `docs/prompts/logging.md` provides detailed guidance on using the feature, confirming t
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:85 (mention) — - **Lives in:** `beebox/docs/prompts/review.md`, `beebox/docs/prompts/lenses.md`, `beebox/docs/prompts/logging.md`.
 
 References:
 - → AGENTS.md (mention)
@@ -8542,6 +9348,8 @@ Referenced by:
 - src/dev/AGENTS.md:10 (mention) — | `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reacto
 - ../.claude/skills/bbx-context/SKILL.md:9 (mention) — Route one durable piece of box-agent guidance to the right surface. Scope: a box's surfaces (`AGENTS.md`, nested `AGENTS
 - ../.claude/skills/bbx-guide-schemas/SKILL.md:63 (mention) — `docs/prompts/review.md` before writing more than a couple of
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:55 (mention) — - **Lives in:** `.claude/skills/bbx-context/SKILL.md`, `beebox/src/core/init-rules.ts`, `beebox/docs/box-guidance.md` (r
+- ../dev/devprocess-talk/reports/sweep-instructions.md:263 (mention) — - **Lives in:** `beebox/docs/prompts/review.md:60` ("**Altitude matches use.**"); referenced in many implemented plans a
 - ../issues/closed/docs-and-chores/2026-08-06-chat-agent-narrates-internal-bookkeeping.md:59 (mention) — - `beebox/docs/prompts/review.md` — the workflow for reasoning about
 - ../issues/docs-and-chores/2026-03-16-review-all-prompts.md:25 (link) — [prompt-surface-review.md](../../beebox/docs/prompts/review.md)
 - ../research/openclaw-hermes/README.md:77 (mention) — | 5a | **Full automatic prompt serialization + committed snapshots.** OpenClaw commits full assembled-prompt snapshots (
@@ -8559,7 +9367,7 @@ References:
 Title: "Migration reliability implementation scope checkpoint" | 102 lines | dated report
 
 Referenced by:
-- docs/plans/migration-reliability.md:42 (link) — The [scope checkpoint](../reports/2026-09-14-migration-implementation-scope.md)
+- docs/plans/migration-reliability.md:44 (link) — The [scope checkpoint](../reports/2026-09-14-migration-implementation-scope.md)
 
 #### docs/reports/activities-design-2026-04-19.md
 
@@ -8567,7 +9375,7 @@ Title: "Activities — Design Proposal" | 318 lines | dated report
 
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:231 (mention) — `activities-design-2026-04-19.md` + `activities-retrospective-2026-05-14.md` pair (the model for
-- docs/plans/narration-mode.md:337 (mention) — - **Activities** (`docs/reports/activities-design-2026-04-19.md`): being phased out in favor of composable feature flags
+- docs/plans/narration-mode.md:339 (mention) — - **Activities** (`docs/reports/activities-design-2026-04-19.md`): being phased out in favor of composable feature flags
 - docs/reports/activities-retrospective-2026-05-14.md:14 (link) — An "Activity" was a reusable container for non-default chat shapes (language learning, notebook, guided journaling, etc.
 - docs/reports/plan-directory-migration-history-2026-09-13.md:35 (mention) — reference-vs-proposal before moving: `activities-design-2026-04-19.md`,
 
@@ -8584,7 +9392,7 @@ Referenced by:
 - docs/design/extensibility.md:27 (link) — ([Activities retrospective](../reports/activities-retrospective-2026-05-14.md)).
 - docs/implemented-plans/design-reconciliation.md:31 (mention) — `docs/reports/activities-retrospective-2026-05-14.md`).
 - docs/implemented-plans/docs-reorg.md:231 (mention) — `activities-design-2026-04-19.md` + `activities-retrospective-2026-05-14.md` pair (the model for
-- docs/plans/narration-mode.md:9 (link) — > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phase
+- docs/plans/narration-mode.md:11 (link) — > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phase
 - docs/reports/activities-design-2026-04-19.md:10 (link) — > **Status: removed.** The Activities system was built and then removed in May 2026 in favor of piecemeal opt-in feature
 - ../research/openclaw-hermes/deep-bbx-retro.md:14 (mention) — line-by-line below). Note: `beebox/docs/reports/activities-retrospective-2026-05-14.md` is an
 
@@ -8600,7 +9408,7 @@ References:
 Title: "Chat scroll investigation, 2026-09-04" | 260 lines | dated report
 
 Referenced by:
-- docs/chat/scroll.md:244 (link) — [the investigation report](../reports/chat-scroll-investigation-2026-09-04.md).
+- docs/chat/scroll.md:260 (link) — [the investigation report](../reports/chat-scroll-investigation-2026-09-04.md).
 - docs/implemented-plans/doc-structure-chat.md:75 (mention) — | `chat-scroll-testing.md` dated sections (send-failure results, native reproduction, deeper web checks, controller fix
 
 References:
@@ -8644,6 +9452,7 @@ Title: "Jev instruction experiment — 2026-09-28" | 114 lines | dated report
 
 Referenced by:
 - docs/implemented-plans/jev-document-triage.md:151 (link) — [instruction experiment](../reports/jev-instruction-experiment-2026-09-28.md)
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:221 (mention) — - **Lives in:** `beebox/docs/reports/prompt-calibration-pilot-2026-09-12.md` (+ `.results.json`), `beebox/docs/implement
 - ../issues/features/2026-09-21-jev-triage-and-quick-capture-routing.md:138 (link) — [paired report](../../beebox/docs/reports/jev-instruction-experiment-2026-09-28.md)
 
 References:
@@ -8656,6 +9465,8 @@ Title: "Knowledge-audit full rerun — 2026-07-03" | 468 lines | dated report
 Referenced by:
 - docs/implemented-plans/docs-reorg.md:116 (mention) — `knowledge-audit-rerun-2026-07-03.md` (orphaned), `user-stories.md`
 - docs/testing/knowledge-audits.md:20 (mention) — [maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:11 (mention) — - **Appeared:** 2026-02-23 2c69ec73e "Add knowledge testing framework and expand agent knowledge taxonomy" (same day 678
+- ../dev/devprocess-talk/slides/03c-audit-rerun.md:17 (mention) — Path: beebox/docs/reports/knowledge-audit-rerun-2026-07-03.md. The exposed problem: audits go stale when guidance moves,
 
 References:
 - → AGENTS.md (mention)
@@ -8668,7 +9479,8 @@ Title: "Knowledge audit prompt catalog and run notes (frozen 2026-02-23)" | 434 
 
 Referenced by:
 - docs/implemented-plans/doc-structure.md:350 (mention) — | Areas 1 to 9 prompt lists, Extension test prompts, Chat-specific view knowledge, Expected levels summary | superseded
-- docs/plans/source-available-release.md:178 (mention) — test data), `docs/reports/knowledge-taxonomy-catalog-2026-02-23.md` (the personality run notes) (agent inferring the rea
+- docs/plans/source-available-release.md:180 (mention) — test data), `docs/reports/knowledge-taxonomy-catalog-2026-02-23.md` (the personality run notes) (agent inferring the rea
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:11 (mention) — - **Appeared:** 2026-02-23 2c69ec73e "Add knowledge testing framework and expand agent knowledge taxonomy" (same day 678
 - ../research/openclaw-hermes/compare-skills-tools.md:87 (mention) — explicitly not agent-editable (`docs/reports/knowledge-taxonomy-catalog-2026-02-23.md`). There is no plugin manifest, no
 
 References:
@@ -8682,7 +9494,7 @@ References:
 Title: "Migration rollout, May 2026, and retired migrators" | 80 lines | dated report
 
 Referenced by:
-- docs/cards/migrations.md:316 (link) — history; the early rollout is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
+- docs/cards/migrations.md:357 (link) — history; the early rollout is in [the rollout report](../reports/migration-rollout-2026-05-23.md).
 - docs/implemented-plans/doc-structure-cards.md:65 (mention) — | `migrations.md` "Production rollout history" and the two retired migrators | `reports/migration-rollout-2026-05-23.md`
 
 References:
@@ -8723,6 +9535,10 @@ Title: "Prompt-calibration decision pilot" | 130 lines | dated report
 Referenced by:
 - docs/implemented-plans/prompt-calibration-bodies.subplan.md:12 (link) — Assess the next five instruction surfaces using purpose, necessity, compact wording, grouping, and document hierarchy. T
 - docs/implemented-plans/prompt-calibration.md:29 (link) — [pilot](../reports/prompt-calibration-pilot-2026-09-12.md) complete the authorized calibration scope.
+- ../dev/devprocess-talk/inventory.md:245 (mention) — - **Where:** `beebox/docs/implemented-plans/prompt-calibration.md`, `beebox/docs/reports/prompt-calibration-pilot-2026-0
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:221 (mention) — - **Lives in:** `beebox/docs/reports/prompt-calibration-pilot-2026-09-12.md` (+ `.results.json`), `beebox/docs/implement
+- ../dev/devprocess-talk/reports/sweep-instructions.md:74 (mention) — - **Lives in:** `beebox/docs/implemented-plans/prompt-calibration.md`, `beebox/docs/implemented-plans/prompt-calibration
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:389 (mention) — - **Evidence:** example use: `beebox/docs/reports/prompt-calibration-pilot-2026-09-12.md` (Astra, Sol, Fable, Opus on 12
 - ../issues/docs-and-chores/2026-07-30-run-skill-trigger-evals.md:20 (link) — repository; do not assume the old eval tools are available. The [four-model decision pilot](../../beebox/docs/reports/pr
 
 References:
@@ -8736,6 +9552,8 @@ Title: "Stack Decisions" | 1216 lines | dated report
 Referenced by:
 - docs/architecture/AGENTS.md:5 (mention) — **Role:** this series is the onboarding narrative — the canonical human-facing "what is this." Engineering rationale liv
 - docs/design/README.md:4 (link) — decisions log, is frozen as a dated report: [`../reports/stack-decisions-2026-09-04.md`](../reports/stack-decisions-2026
+- ../dev/devprocess-talk/chapters.md:100 (mention) — file: beebox/docs/reports/stack-decisions-2026-09-04.md
+- ../dev/devprocess-talk/reports/sweep-instructions.md:352 (mention) — - **Lives in:** `beebox/docs/reports/stack-decisions-2026-09-04.md` (was `<old-package>/docs/stack-decisions.md`, then `
 - ../issues/closed/code-quality/2026-07-04-xstate-store-never-adopted.md:7 (mention) — > Closed 2026-09-24 as moot: no living document claims `@xstate/store` is adopted. `stack-decisions.md` became a frozen
 - ../research/lifeos-review.md:65 (mention) — | MCP server as the agent's interface to the app | **Reject.** Bee Box's in-box agent is the better bet; Life OS's laggi
 
@@ -8796,10 +9614,10 @@ Referenced by:
 - docs/implemented-plans/remove-box-shape-v1.md:250 (mention) — `docs/cards/migrations.md` (remove box-packageify section), `docs/server/boxes.md:91`,
 - docs/implemented-plans/secret-custody.md:540 (mention) — "copy the grant list", not the files. Update `docs/server/boxes.md`. New-box
 - docs/plans/cli-restructure.md:133 (mention) — (see `docs/server/boxes.md`), `bbx upgrade` is the per-box engine-upgrade
-- docs/plans/source-available-release.md:68 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/server/boxes.md:6-8`
+- docs/plans/source-available-release.md:70 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/server/boxes.md:6-8`
 - docs/server.md:17 (link) — | [Boxes](server/boxes.md) | Adding a box to the hub, by hand or with `add-box.sh`; the box's push credential; troublesh
 - docs/server/operations.md:121 (link) — ([boxes](boxes.md#one-command-add-boxsh)). To register a box that is already on disk,
-- ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:73 (mention) — - **Reconcile the docs.** `docs/server/boxes.md` describes the generic shape
+- ../issues/bugs/2026-08-17-add-box-script-targets-a-service-that-no-longer-exists.md:75 (mention) — - **Reconcile the docs.** `docs/server/boxes.md` describes the generic shape
 - ../issues/closed/decisions/2026-03-15-per-box-secret-management.md:23 (mention) — For now: manually copy secret files to new boxes. See `docs/server/boxes.md`'s "Connector secrets" section.
 - ../issues/closed/features/2026-08-17-no-surface-for-changing-who-can-use-a-box.md:68 (link) — [`docs/server/boxes.md`](../../../beebox/docs/server/boxes.md) says so.
 - ../issues/docs-and-chores/2026-07-04-box-registry-manifests.md:32 (mention) — Refs: `beebox/docs/scheduler.md`, `beebox/docs/server/boxes.md`,
@@ -8819,7 +9637,7 @@ Title: "Server configuration" | 213 lines | current reference
 Referenced by:
 - docs/implemented-plans/doc-structure-connectors.md:87 (mention) — `server/configuration.md`'s Google OAuth env vars.
 - docs/implemented-plans/doc-structure-install-server.md:81 (mention) — | `deploy/README.md` Environment variables, Web Push, Authentication, Google OAuth, Per-box access control; `server-oper
-- docs/notifications.md:181 (link) — are in [server configuration](server/configuration.md#web-push-vapid-keys). The
+- docs/notifications.md:185 (link) — are in [server configuration](server/configuration.md#web-push-vapid-keys). The
 - docs/server.md:15 (link) — | [Configuration](server/configuration.md) | `/home/beebox/.env`, the service user's Claude and Codex logins, box login
 - docs/server/boxes.md:96 (link) — owner-only when absent: [per-box access control](configuration.md#per-box-access-control).
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:33 (mention) — (`beebox/docs/server/configuration.md`), so its box agents likely see that
@@ -8836,9 +9654,9 @@ References:
 Title: "Deploying" | 134 lines | current reference
 
 Referenced by:
-- AGENTS.md:25 (link) — Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.
+- AGENTS.md:26 (link) — Production runs bundled `dist/cli.mjs`, not tsx. Resolve package assets through `PACKAGE_ROOT` in `src/lib/package-root.
 - deploy/README.md:20 (link) — | `deploy.sh` | Deploy a commit: build in the persistent detached checkout, stage on the server, activate under the main
-- docs/cards/migrations.md:171 (link) — instead of waiting for the next hourly pass. See [deployment operations](../server/deploying.md).
+- docs/cards/migrations.md:173 (link) — instead of waiting for the next hourly pass. See [deployment operations](../server/deploying.md).
 - docs/implemented-plans/doc-structure-install-server.md:82 (mention) — | `deploy/README.md` deploy.sh; `server-operations.md` Maintenance and replacement, Prod runs the bundle, Rolling back |
 - docs/implemented-plans/retire-type-specific-core-tags.md:86 (mention) — - Migration runner: `src/core/migrations.ts` (append-only `MIGRATIONS`, manifest `_config/migrations.jsonl`), `bbx engin
 - docs/server.md:16 (link) — | [Deploying](server/deploying.md) | `deploy.sh`, the maintenance boundary, the deploy page, rollback, what production a
@@ -8851,7 +9669,7 @@ References:
 
 #### docs/server/health-checks.md
 
-Title: "Health Checks" | 297 lines | current reference
+Title: "Health Checks" | 319 lines | current reference
 
 Referenced by:
 - docs/cards/schemas.md:206 (link) — [`health-checks.md`](../server/health-checks.md#template-updates-a-fix-that-never-reached-the-box).
@@ -8861,12 +9679,13 @@ Referenced by:
 - docs/implemented-plans/deferred-recoverable-agent-failures.md:415 (mention) — 8. **Docs + issue reconciliation** — `docs/scheduler.md`, `docs/server/health-checks.md`
 - docs/implemented-plans/doc-structure-install-server.md:14 (mention) — and `health-checks.md`, and they disagree with each other in three places.
 - docs/implemented-plans/docs-reorg.md:181 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
+- docs/implemented-plans/drive-docs-api-health.md:116 (mention) — - `docs/server/health-checks.md` gets a `google-docs-api` section, and its stale claim that connector episodes send push
 - docs/implemented-plans/google-auth-reauth-health.md:129 (mention) — 7. **Docs** — `docs/connectors/google-auth.md` troubleshooting, `docs/server/health-checks.md`.
 - docs/implemented-plans/hub-healthz-box-aggregation.md:408 (mention) — `deploy/README.md`, and `docs/server/health-checks.md`.
 - docs/implemented-plans/tailscale-expose-and-protect.md:408 (mention) — on the server plus a short runbook note in `docs/server/health-checks.md`'s style
 - docs/implemented-plans/top-nav-ia.md:451 (mention) — | Health warnings unseen (Dashboard off all bars) | No | Server-side runbooks (`docs/server/health-checks.md`); Overview
 - docs/plans/agent-docs.md:382 (mention) — name), `health-checks.md`, `assets.md`, `adding-a-box.md`.
-- docs/plans/asset-annex.md:488 (mention) — the deploy runbooks (`docs/server/health-checks.md`) without touching
+- docs/plans/asset-annex.md:490 (mention) — the deploy runbooks (`docs/server/health-checks.md`) without touching
 - docs/reports/git-annex-conversion-2026-08-01.md:14 (link) — > and [`../server/health-checks.md`](../server/health-checks.md) for current health checks.
 - docs/server.md:19 (link) — | [Health checks](server/health-checks.md) | The runbooks: hub endpoints, engine quota, box growth, template updates, co
 - docs/server/deploying.md:40 (link) — localhost (see [`../docs/health-checks.md`](health-checks.md)): it polls
@@ -8896,7 +9715,7 @@ Referenced by:
 - docs/implemented-plans/doc-structure-box-guidance.md:571 (mention) — > `docs/server/operations.md` to check parks after the deploy that carries
 - docs/implemented-plans/doc-structure-install-server.md:84 (mention) — | `deploy/README.md` prod-ssh, Production app diagnostics; `server-operations.md` Connecting, Writing scripts, Nightly u
 - docs/implemented-plans/scanner-ingest.md:210 (mention) — `docs/server/operations.md`.
-- docs/plans/migration-reliability.md:759 (link) — [migrations](../cards/migrations.md), [server operations](../server/operations.md),
+- docs/plans/migration-reliability.md:761 (link) — [migrations](../cards/migrations.md), [server operations](../server/operations.md),
 - docs/reports/git-annex-conversion-2026-08-01.md:13 (link) — > [`../server/operations.md`](../server/operations.md) for current operations,
 - docs/server.md:18 (link) — | [Operations](server/operations.md) | Connecting, running `bbx` on the server, scripts that run there, diagnostics, the
 - docs/server/health-checks.md:56 (link) — - `GET /api/trpc/health.check?input={"fresh":true}` (URL-encoded) — bypasses the cache, computes now, and re-seeds the s
@@ -8931,6 +9750,27 @@ References:
 
 ### docs/testing/
 
+#### docs/testing/check.md
+
+Title: "Tests with `t.check`" | 313 lines | current reference
+
+Referenced by:
+- AGENTS.md:20 (link) — - Write tests as `.test.ts` files that use `t.check` ([reference](docs/testing/check.md)). The [testing guide](docs/test
+- docs/guides.md:55 (link) — | Test syntax (`t.check`) | [check](testing/check.md) |
+- docs/implemented-plans/retire-doctest.md:408 (link) — > `t.check` ([docs/testing/check.md](../testing/check.md)). Do not create `.doctest.md`
+- docs/testing.md:21 (link) — - **`.test.ts` with `t.check` is the test form** ([reference](testing/check.md)). Each check compares a whole value, and
+- docs/testing/tap-tests.md:4 (mention) — `t.check`](check.md). This page covers how the runner is set up.
+- docs/testing/tours.md:35 (link) — [tests](check.md); "does the app boot at all" is the
+- ../.claude/skills/tests/SKILL.md:8 (link) — The reference is [testing with t.check](../../../beebox/docs/testing/check.md):
+- ../AGENTS.md:12 (link) — - **Tests:** `.test.ts` files with `t.check` ([reference](beebox/docs/testing/check.md)); [tap-check/README.md](tap-chec
+- ../bin/AGENTS.md:9 (link) — ([reference](../beebox/docs/testing/check.md)) under `bin/test/`, mirroring the
+- ../dev/devprocess-talk/inventory.md:373 (mention) — - **Where:** `agent-doctest/`, the `doctest` skill, and the doctests testing page (the skill and page were replaced by `
+- ../issues/closed/bugs/2026-09-02-fixed-timeout-budgets-fail-under-host-load.md:13 (mention) — Closed 2026-10-19 (flaky-tests): every recurring victim file is fixed, deleted, already fixed, or shown not test-caused
+
+References:
+- → src/services/AGENTS.md (mention)
+- → docs/secrets.md (link)
+
 #### docs/testing/dev-stubs.md
 
 Title: "Dev stubs" | 64 lines | current reference
@@ -8945,22 +9785,6 @@ References:
 - → docs/chat/composer.md (link)
 - → docs/chat/scroll.md (link)
 
-#### docs/testing/doctests.md
-
-Title: "Doctests" | 140 lines | current reference
-
-Referenced by:
-- docs/implemented-plans/doc-structure.md:295 (mention) — doctests.md            does this function, route, or box operation behave?
-- docs/implemented-plans/file-layout.md:130 (mention) — - `docs/testing/doctests.md:20`: *"Create `test/<area>/<name>.doctest.md`
-- docs/testing.md:43 (link) — | [Doctests](testing/doctests.md) | Does this function, route, or box operation behave? Includes service fakes for every
-- docs/testing/tours.md:35 (link) — [doctests](doctests.md); "does the app boot at all" is the
-- ../issues/closed/docs-and-chores/2026-10-11-tests-state-why-each-expected-value-is-right.md:33 (mention) — `beebox/docs/testing/doctests.md`, the agent-doctest docs, the finish skill or
-
-References:
-- → ../agent-doctest/docs/syntax.md (link)
-- → src/services/AGENTS.md (mention)
-- → docs/secrets.md (mention)
-
 #### docs/testing/field-testing.md
 
 Title: "Field tests" | 55 lines | current reference
@@ -8969,13 +9793,14 @@ Referenced by:
 - docs/implemented-plans/agent-field-tests.md:9 (link) — **Current operation:** see the [field-testing runbook](../testing/field-testing.md).
 - docs/implemented-plans/doc-structure.md:310 (mention) — field-testing.md       is it discoverable end to end through the real UI?
 - docs/testing.md:51 (link) — | [Field tests](testing/field-testing.md) | Is it discoverable and usable end to end, through the real UI? | no | expens
+- ../dev/devprocess-talk/reports/sweep-quality.md:127 (mention) — - **Lives in (historical):** `src/scenario/` (deleted); successor `beebox/src/field-test/`, `beebox/field-tests/*/scenar
 
 References:
 - → docs/implemented-plans/agent-field-tests.md (link)
 
 #### docs/testing/knowledge-audits.md
 
-Title: "Knowledge audits" | 245 lines | current reference
+Title: "Knowledge audits" | 253 lines | current reference
 
 Referenced by:
 - docs/box-work.md:82 (link) — Use the knowledge-audit skill and [knowledge audits](testing/knowledge-audits.md#running-it).
@@ -8985,9 +9810,9 @@ Referenced by:
 - docs/implemented-plans/doc-structure.md:103 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
 - docs/implemented-plans/docs-reorg.md:120 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
 - docs/implemented-plans/workstreams.md:1241 (mention) — box agents, whom knowledge audits test (`docs/knowledge-audits.md`). The
-- docs/plans/document-comments.md:839 (mention) — by prompting a real box agent (`beebox/docs/knowledge-audits.md`). Every
-- docs/plans/general-browser.md:590 (mention) — what it recalls (`beebox/docs/knowledge-audits.md`). This browser is dev-repo
-- docs/plans/public-site-story-extraction.subplan.md:183 (mention) — `beebox/docs/knowledge-audits.md` (distinctive-practice doc),
+- docs/plans/document-comments.md:841 (mention) — by prompting a real box agent (`beebox/docs/knowledge-audits.md`). Every
+- docs/plans/general-browser.md:592 (mention) — what it recalls (`beebox/docs/knowledge-audits.md`). This browser is dev-repo
+- docs/plans/public-site-story-extraction.subplan.md:185 (mention) — `beebox/docs/knowledge-audits.md` (distinctive-practice doc),
 - docs/reports/knowledge-taxonomy-catalog-2026-02-23.md:9 (link) — [knowledge audits](../testing/knowledge-audits.md). What remains here is the
 - docs/testing.md:46 (link) — | [Knowledge audits](testing/knowledge-audits.md) | Does the box agent know X, from what it is given? | no | model turns
 - docs/user-stories/catalog/2026-06-26.md:5684 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
@@ -8995,12 +9820,14 @@ Referenced by:
 - ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't
 - ../.claude/skills/bbx-guide-schemas/SKILL.md:79 (mention) — (`docs/testing/knowledge-audits.md`).
 - ../.claude/skills/knowledge-audit/SKILL.md:12 (mention) — `beebox/docs/testing/knowledge-audits.md`; read it before writing an entry.
+- ../dev/devprocess-talk/inventory.md:517 (mention) — - **Where:** `beebox/src/dev/knowledge-audit.ts`, `beebox/src/dev/knowledge-audits.yaml`, `beebox/docs/testing/knowledge
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:10 (mention) — - **Lives in:** `beebox/src/dev/knowledge-audit.ts` (`pnpm knowledge-audit run|list`), `beebox/src/dev/knowledge-audits.
 - ../issues/closed/bugs/2026-07-15-knowledge-audit-box-nesting.md:19 (mention) — `docs/knowledge-audits.md`. See the commit in the closing note.
 - ../issues/closed/code-quality/2026-08-08-audit-bbx-subcommand-surface.md:104 (mention) — harness (`docs/knowledge-audits.md`) is the tool for catching that.
 - ../issues/closed/docs-and-chores/2026-08-08-maintenance-cadence-framework.md:56 (mention) — for someone to remember (`beebox/docs/knowledge-audits.md`).
 - ../issues/closed/features/2026-07-20-agent-maintained-security-report.md:53 (link) — ([docs](../../../beebox/docs/testing/knowledge-audits.md)) and the doc-generation
 - ../issues/code-quality/2026-09-14-principles-to-rules-loop.md:67 (link) — ([`docs/knowledge-audits.md`](../../beebox/docs/testing/knowledge-audits.md)) when the
-- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:11 (mention) — `docs/knowledge-audits.md` over several passes). What's left:
+- ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:13 (mention) — `docs/knowledge-audits.md` over several passes). What's left:
 - ../research/openclaw-hermes/compare-context-memory.md:95 (mention) — **Layered instruction files, narrowed by role, is universal.** bbx's always-loaded/conditionally-loaded/referenced-but-n
 - ../research/pai/information-layout.md:12 (mention) — bbx's comparable thinking is `docs/testing/knowledge-audits.md` (the knows-directly /
 
@@ -9015,12 +9842,13 @@ References:
 
 #### docs/testing/real-models.md
 
-Title: "Real model calls" | 57 lines | current reference
+Title: "Real model calls" | 56 lines | current reference
 
 Referenced by:
 - docs/box-work.md:56 (mention) — calls](testing/real-models.md#where-the-keys-are). Frontend and iOS evidence
 - docs/testing.md:45 (link) — | [Real model calls](testing/real-models.md) | How does the real model or API behave, beyond what a fake shows? Experime
 - ../AGENTS.md:47 (link) — Real model and API calls are allowed for experiments and verification; Jev and small models are cheap. Check which keys
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:385 (mention) — - **Lives in:** `beebox/docs/testing/real-models.md`; root `CLAUDE.md` ("Real model and API calls are allowed ... Jev an
 
 References:
 - → docs/secrets.md (link)
@@ -9033,47 +9861,60 @@ Referenced by:
 - docs/development/maintenance.md:49 (mention) — | Session critiques | `@session-critique <id>` | After a session that seemed slow or worked around the CLI; periodically
 - docs/implemented-plans/doc-structure.md:305 (mention) — session-critiques.md   did the tools serve the agent in a real session?
 - docs/testing.md:47 (link) — | [Session critiques](testing/session-critiques.md) | Did the CLI tools help or hinder the agent in a real session? | no
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:211 (mention) — - **Lives in:** `beebox/src/dev/lib/session-report/`, `beebox/docs/testing/session-critiques.md`.
+- ../issues/features/2026-10-13-revive-session-critiques.md:15 (link) — concrete fix. See [session critiques](../../beebox/docs/testing/session-critiques.md)
 
 #### docs/testing/smoke.md
 
-Title: "Smoke" | 102 lines | current reference
+Title: "Smoke" | 103 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure.md:308 (mention) — smoke.md               does the app boot and walk at all? (the merge gate)
 - docs/testing.md:49 (link) — | [Smoke](testing/smoke.md) | Does the app boot and walk at all? | merge, for deployed paths | about 30 s |
 - docs/testing/tours.md:27 (link) — [smoke review](smoke.md), which files and never edits, is by design.
+- ../dev/devprocess-talk/inventory.md:423 (mention) — - **Where:** `bin/smoke*.ts`, `beebox/docs/testing/smoke.md`, `schedules/smoke-review/`.
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:231 (mention) — - **Lives in:** `beebox/docs/testing/tours.md`, `beebox/docs/testing/smoke.md`, `schedules/smoke-review/`, `schedules/to
+- ../dev/devprocess-talk/reports/sweep-quality.md:97 (mention) — - **Lives in:** `bin/smoke*.ts`, `beebox/docs/testing/smoke.md`, `schedules/smoke-review/`, `beebox/deploy/deploy.sh` (p
 
 #### docs/testing/tap-tests.md
 
-Title: "TAP tests" | 45 lines | current reference
+Title: "The tap runner" | 45 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/doc-structure.md:299 (mention) — tap-tests.md           what a doctest cannot test without circularity
-- docs/testing.md:44 (link) — | [TAP tests](testing/tap-tests.md) | Does the test infrastructure itself work? What a doctest cannot test without circu
+- docs/implemented-plans/retire-doctest.md:1053 (mention) — - `docs/testing/tap-tests.md`.
+- docs/testing.md:44 (link) — | [The tap runner](testing/tap-tests.md) | How is the test runner set up, and why does it fail the way it does? | merge
+
+References:
+- → docs/testing/check.md (mention)
 
 #### docs/testing/tours.md
 
-Title: "Tours" | 166 lines | current reference
+Title: "Tours" | 168 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/card-themes.md:84 (mention) — | `docs/tours.md`, Running/Artifacts: `bin/tour`; tours "are still not a test gate" | Reuse the scripted browser tour fr
 - docs/implemented-plans/card-themes.md:564 (link) — exhibit. Check contrast independently because [tours](../testing/tours.md) documents that
 - docs/implemented-plans/doc-structure.md:103 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
+- docs/implemented-plans/theme-studio.md:380 (mention) — added), `docs/testing/tours.md` if theme-check output changes.
 - docs/plans/agent-docs.md:383 (mention) — - held back (dev process or internal record): `testing.md`, `tours.md`,
-- docs/plans/agent-points-at-ui.md:133 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
+- docs/plans/agent-points-at-ui.md:135 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
 - docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if
 - docs/testing.md:50 (link) — | [Tours](testing/tours.md) | Does each page render and pass axe at both viewports? | no; walked weekly | tens of second
-- frontend.md:137 (link) — Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `dupl
-- ../.claude/skills/bbx-plan/TEMPLATE.md:165 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
+- frontend.md:145 (link) — Every static interactive control carries a stable `id="bbx-<area>-<control>"`: kebab-case and unique app-wide (axe `dupl
+- ../.claude/skills/bbx-plan/TEMPLATE.md:166 (mention) — (docs/testing/tours.md), not a regression anchor for behaviour — put behaviour
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:231 (mention) — - **Lives in:** `beebox/docs/testing/tours.md`, `beebox/docs/testing/smoke.md`, `schedules/smoke-review/`, `schedules/to
+- ../dev/devprocess-talk/reports/sweep-quality.md:107 (mention) — - **Lives in:** `beebox/test/tours/` (10 `.tour.` files: `git ls-files beebox | grep -c '\.tour\.'`), `beebox/docs/testi
+- ../dev/devprocess-talk/reports/sweep-unattended-multimodel.md:219 (mention) — - **Lives in:** `schedules/tour-check/`, `beebox/docs/testing/tours.md`.
 - ../issues/closed/code-quality/2026-07-10-tour-lib-lint-debt.md:46 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
 - ../issues/closed/code-quality/2026-08-26-repair-tours-and-check-them-weekly.md:27 (mention) — (`beebox/docs/tours.md` keeps them out of pre-commit and the suite on
 - ../issues/docs-and-chores/2026-07-20-day-to-day-usage-docs.md:58 (mention) — > `Connector` interface to a contributor, `tours.md` is test tooling, the
-- ../issues/exploration/2026-07-15-claude-code-cloud-environment.md:195 (mention) — (`agent-browser` / `bin/browse`) and **tours** (`docs/tours.md` — scripted browser
+- ../issues/exploration/2026-07-15-claude-code-cloud-environment.md:197 (mention) — (`agent-browser` / `bin/browse`) and **tours** (`docs/tours.md` — scripted browser
 - ../issues/features/2026-07-17-regenerable-app-demo-video.md:24 (mention) — 375×800) + a11y snapshots, not video (`docs/tours.md`). The interaction-scripting
 
 References:
 - → docs/testing/smoke.md (link)
-- → docs/testing/doctests.md (link)
+- → docs/testing/check.md (link)
 - → docs/testing/dev-stubs.md (link)
 - → docs/implemented-plans/agent-browsing-owner.md (mention)
 
@@ -9162,8 +10003,8 @@ Title: "Assign a custom hostname to a prepared publication in Admin" | 159 lines
 
 Referenced by:
 - docs/plans/publish-custom-domain-admin.review.md:3 (mention) — Independent Fable review of `publish-custom-domain-admin.md`, followed by source verification and adjudication. The user
-- docs/plans/publish-shared-host-per-box.md:11 (link) — **Issues addressed:** none found in `issues/` for shared-host publication routing. This supersedes the [per-publication
-- docs/plans/publish-sites-admin.md:249 (link) — - Exact custom-hostname assignment for an existing disabled public or secret publication is covered by the approved sibl
+- docs/plans/publish-shared-host-per-box.md:13 (link) — **Issues addressed:** none found in `issues/` for shared-host publication routing. This supersedes the [per-publication
+- docs/plans/publish-sites-admin.md:251 (link) — - Exact custom-hostname assignment for an existing disabled public or secret publication is covered by the approved sibl
 - docs/unimplemented-plans/README.md:24 (mention) — | `publish-custom-domain-admin.md` | Superseded 2026-09-26 by `../plans/publish-shared-host-per-box.md`: the boxholder c
 
 References:
@@ -9177,7 +10018,7 @@ References:
 Title: "Publish Pages — External Static Publishing via Cloudflare Workers" | 288 lines | past proposal | superseded
 
 Referenced by:
-- docs/plans/publish-sites-admin.md:54 (mention) — - The older plan's view direction inlined card data in HTML (`beebox/docs/unimplemented-plans/publish-pages-superseded.m
+- docs/plans/publish-sites-admin.md:56 (mention) — - The older plan's view direction inlined card data in HTML (`beebox/docs/unimplemented-plans/publish-pages-superseded.m
 - docs/plans/publish-sites-admin.review.md:53 (mention) — **Citation:** Secret `PubId` is the capability token (`beebox/src/publish/manifest.ts:76-79`); the earlier plan says “se
 - docs/unimplemented-plans/README.md:25 (mention) — | `publish-pages-superseded.md` | Superseded by server-managed publishing (`../plans/publish-sites-admin.md`, `../plans/
 - ../issues/closed/bugs/2026-08-21-published-pages-can-never-carry-a-submit-form-nothing-s.md:13 (mention) — The publish "drop box" (Track F of `beebox/docs/unimplemented-plans/publish-pages-superseded.md`) is complete on the rec
@@ -9270,12 +10111,13 @@ References:
 
 #### docs/user-stories/README.md
 
-Title: "User stories" | 279 lines | current reference
+Title: "User stories" | 280 lines | current reference
 
 Referenced by:
 - docs/testing.md:53 (link) — | [User-stories catalog](user-stories/README.md) | What can the software actually do? Claims read from the source by age
 - docs/user-stories/README.md:24 (mention) — README.md                this file
 - docs/user-stories/catalog/2026-08-21.md:10 (link) — method are in [the pipeline README](../README.md). The underlying
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:122 (mention) — - **Lives in:** `beebox/docs/user-stories/README.md`, `beebox/docs/user-stories/catalog/{2026-06-26.md,2026-08-21.md,.js
 - ../issues/bugs/2026-08-21-rotated-image-cards-overflow-and-misplace-bbox.md:73 (link) — [the pipeline README](../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-capture-session-cards-never-record-the-transcription-fa.md:43 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
 - ../issues/closed/bugs/2026-08-21-drive-folder-mounts-cannot-be-configured-from-anywhere.md:62 (link) — [the pipeline README](../../../beebox/docs/user-stories/README.md).
@@ -9302,8 +10144,8 @@ Referenced by:
 - docs/implemented-plans/questions-end-to-end.md:625 (mention) — `bin/browse` checks, per `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`
 - docs/implemented-plans/remove-bbx-render.md:368 (mention) — `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`), and the closed issues
 - docs/implemented-plans/user-story-audit-followups.md:9 (mention) — This plan triages the 95 `IAN:` comments left on `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-storie
-- docs/plans/invite-links-and-password-change.md:31 (mention) — `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) is corrected because th
-- docs/plans/source-available-release.md:179 (mention) — name), `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) (real email).
+- docs/plans/invite-links-and-password-change.md:33 (mention) — `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) is corrected because th
+- docs/plans/source-available-release.md:181 (mention) — name), `user-stories/catalog/2026-06-26.md` (moved to `beebox/docs/user-stories/catalog/2026-06-26.md`) (real email).
 - docs/user-stories/README.md:30 (mention) — 2026-06-26.md           the superseded predecessor, kept for its item
 
 References:
@@ -9399,8 +10241,8 @@ No references in or out.
 Title: "Connectors" | 26 lines
 
 Referenced by:
-- AGENTS.md:43 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/AGENTS.md). Connectors live in `src/conn
-- docs/glossary.md:56 (mention) — **connector** — Code that syncs an external service (Gmail, Google Calendar, Google Drive) with the box filesystem. Impl
+- AGENTS.md:44 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/AGENTS.md). Connectors live in `src/conn
+- docs/glossary.md:59 (mention) — **connector** — Code that syncs an external service (Gmail, Google Calendar, Google Drive) with the box filesystem. Impl
 - docs/implemented-plans/chat-review.md:214 (mention) — re-injected before a connector sync rebuilds a card. `src/connectors/AGENTS.md:19`:
 - docs/implemented-plans/doc-structure-connectors.md:50 (mention) — | calendar.md "Auth" | "unlike Gmail, which accepts app passwords" | Gmail uses the shared Google OAuth API (`gmail-setu
 - docs/implemented-plans/docs-reorg.gap-analysis.md:26 (mention) — module's own comment — not in `src/connectors/AGENTS.md` or
@@ -9415,27 +10257,32 @@ References:
 
 #### src/core/agent-guide/guide.md
 
-Title: "Bee Box Agent Guide" | 632 lines
+Title: "Bee Box Agent Guide" | 633 lines
 
 Referenced by:
 - docs/agent-guide.md:19 (mention) — - `guide.md` holds the text, written by hand as one document. Its header
 - docs/design/README.md:30 (mention) — The Laws (Saving, Cards, Checking, and Quoting, with its tiebreak: when unsure whether a change is a fix or a reword, it
 - docs/glossary.md:20 (mention) — Language" section (SPEAKING in `src/core/agent-guide/guide.md`) defer to these lines;
 - docs/implemented-plans/agent-guide-spec.md:171 (mention) — - **Document**: `src/core/agent-guide/guide.md`, the hand-written guide,
+- docs/implemented-plans/bbx-remind.md:60 (mention) — - No channel can reach the person at the chosen loudness: the command refuses and says how to turn a channel on. The age
 - docs/implemented-plans/box-agents-md.md:157 (mention) — - **Agent-facing text naming `CLAUDE.md`** — `agent-guide/guide.md:372`
+- docs/implemented-plans/drive-docs-api-health.md:114 (mention) — - `guide.md:448` becomes *"`bbx health` — scheduled-task and box health, including connector problems; yours to run."* (
+- docs/implemented-plans/front-door.md:94 (mention) — | "Landmarks page" with no on-screen path (B row 25) | The page exists; the only route is the place menu's "Find a landm
 - docs/implemented-plans/place-shows-cards.md:184 (mention) — when the agent edits a landmark (`src/core/agent-guide/guide.md:393`).
-- docs/implemented-plans/place-shows-cards.review.md:32 (mention) — Additional files opened beyond the first-hop list: `beebox/src/core/lint-prominence/core.ts`, `beebox/src/shared/browse-
+- docs/implemented-plans/place-shows-cards.review.md:12 (link) — 1. **The agent has no reliable trigger to maintain the body.** Track C says the agent updates it whenever it changes wha
 - docs/implemented-plans/publication-card-home.md:143 (mention) — - Old-shape text in `docs/security-report.md:205-207`, `src/core/agent-guide/guide.md:365`, and `src/core/agent-guide/le
 - docs/implemented-plans/remove-telegram.md:152 (mention) — - **Agent-facing text:** `src/core/agent-guide/guide.md:309, 405`,
-- docs/plans/prompt-surface-cleanup-evaluation.md:653 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
+- docs/implemented-plans/retire-memo.md:230 (mention) — memo mentions in `agent-guide/guide.md:79,285,406`, `capture-session.tsx:84`,
+- docs/plans/prompt-surface-cleanup-evaluation.md:655 (mention) — moot (the prose moved into `src/core/agent-guide/guide.md`). The rest of this
 - docs/prompts/review.md:67 (mention) — - **Elevate only the inviolable.** A truly inviolable rule moves into The Laws (the `## THE_LAWS` section of `src/core/a
-- docs/questions.md:294 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
+- docs/questions.md:309 (mention) — the QUESTIONS section of `src/core/agent-guide/guide.md`, which is always-on
 - test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md:84 (mention) — | 31 | Note 4: it offered to remind the person this evening; "it offered, didn't do it". | P | Transcript 11:45:15: "I c
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:44 (mention) — - **One line:** the always-loaded box agent guide is a hand-written `guide.md` backed by `ledger.yaml` — one row per rul
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:52 (mention) — Seen again in three walks, in two forms. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R
-- ../issues/bugs/2026-10-08-box-agent-can-read-journey-walk-notes.md:30 (mention) — (`beebox/src/core/agent-guide/guide.md:368`), but not as off limits to read.
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:20 (mention) — The agent guide already forbids this. `beebox/src/core/agent-guide/guide.md:153-158`
-- ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:58 (mention) — `{{instruction_file}}` at `src/core/agent-guide/guide.md:372`,
-- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:24 (mention) — - the agent guide (`beebox/src/core/agent-guide/guide.md`), whose box-side
+- ../issues/closed/bugs/2026-10-08-box-agent-can-read-journey-walk-notes.md:33 (mention) — (`beebox/src/core/agent-guide/guide.md:368`), but not as off limits to read.
+- ../issues/deferred/2026-10-09-retire-claude-md-box-compat.md:60 (mention) — `{{instruction_file}}` at `src/core/agent-guide/guide.md:372`,
+- ../issues/exploration/2026-09-30-replace-or-back-prompt-rules-with-lints.md:26 (mention) — - the agent guide (`beebox/src/core/agent-guide/guide.md`), whose box-side
 - ../issues/features/2026-09-29-transcript-to-structure-fidelity-rules.md:37 (mention) — (`recording.*` rules in `beebox/src/core/agent-guide/guide.md`) avoids three
 - ../research/notebooklm/comparison.md:17 (mention) — | Grounding | Only selected sources plus the conversation; the FAQ says it does not answer when the answer is not in the
 - ../research/omi-review.md:198 (mention) — (`beebox/src/core/agent-guide/guide.md`, `recording.routing`). Git gives
@@ -9472,15 +10319,17 @@ References:
 Title: "Reactor Design" | 103 lines
 
 Referenced by:
-- AGENTS.md:39 (link) — - Backend domain and orchestration: `src/core/`; reactor details: [reactor design](src/core/reactor/DESIGN.md).
+- AGENTS.md:40 (link) — - Backend domain and orchestration: `src/core/`; reactor details: [reactor design](src/core/reactor/DESIGN.md).
 - docs/design/processing.md:30 (mention) — `runReactor` (`src/core/reactor/DESIGN.md`): sync (`bbx wakeup` as its step
-- docs/glossary.md:54 (mention) — **reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `_bookkeeping/jobs/` → agent pr
+- docs/glossary.md:57 (mention) — **reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `_bookkeeping/jobs/` → agent pr
 - docs/implemented-plans/design-reconciliation.md:134 (mention) — (src/core/reactor/DESIGN.md, "Two Processing Paths"), and the current design
 - docs/implemented-plans/docs-reorg.gap-analysis.md:39 (mention) — hint today is `reactor/DESIGN.md:78`).
 - docs/implemented-plans/docs-reorg.md:205 (mention) — `DESIGN.md`/`IMPLEMENTATION.md` — never cross-referenced. Decide canonical
 - docs/implemented-plans/remove-telegram.md:260 (mention) — *Chat jobs* section of `src/core/reactor/DESIGN.md:37`; the thread helpers
 - docs/user-stories/catalog/2026-08-21.md:934 (mention) — Files: `beebox/src/core/reactor/chat-jobs.ts`, `beebox/src/core/chat/reactor-sessions.ts`, `beebox/src/core/reactor/DESI
 - src/core/reactor/AGENTS.md:3 (link) — See [DESIGN.md](DESIGN.md) for the full architecture, flow, and rationale.
+- ../dev/devprocess-talk/reports/sweep-instructions.md:13 (mention) — - **Bottleneck relieved:** Without it, each session rediscovered layout, test commands, and card format. The March 3 con
+- ../dev/devprocess-talk/slides/04a-condense-diff.md:3 (mention) — - The reasoning moved behind a pointer to docs/DESIGN.md; the summary stayed
 - ../research/gstack/notes/design-consultation.md:6 (mention) — Six-phase conversation that ends with a written DESIGN.md and a CLAUDE.md update telling the agent to always read it. Th
 - ../research/gstack/notes/design-shotgun.md:51 (mention) — > "Pre-fill what you inferred from the codebase, DESIGN.md, and office-hours output. Then ask for what's missing. Frame
 
@@ -9520,7 +10369,7 @@ No references in or out.
 
 #### src/frontend/src/components/chat/AGENTS.md
 
-Title: "Chat UI" | 169 lines
+Title: "Chat UI" | 170 lines
 
 Referenced by:
 - docs/chat.md:21 (mention) — - The chat component's invariants for code changes (scroll model, streaming to finalize, the input store): `src/frontend
@@ -9543,8 +10392,9 @@ References:
 Title: "Hub" | 70 lines
 
 Referenced by:
-- AGENTS.md:44 (link) — - Hub routing: `src/hub/`; read [hub guidance](src/hub/AGENTS.md). Tests mirror source paths under `test/` and use helpe
-- docs/chat/schedules.md:81 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
+- AGENTS.md:45 (link) — - Hub routing: `src/hub/`; read [hub guidance](src/hub/AGENTS.md). Tests mirror source paths under `test/` and use helpe
+- docs/chat/schedules.md:101 (mention) — Schedules persist to `.beebox/chat-schedules.json` and are re-armed when a box's `bbx serve` process boots (overdue-unfi
+- docs/implemented-plans/bbx-remind.md:85 (mention) — chat schedule is pending (`src/hub/AGENTS.md:55`, *"Chat schedules override
 - docs/implemented-plans/docs-reorg.md:320 (mention) — conventions documented at colocated homes (new `src/hub/AGENTS.md`,
 - docs/implemented-plans/file-layout.md:134 (mention) — `src/services/AGENTS.md`, `src/hub/AGENTS.md`, `src/dev/AGENTS.md`,
 - docs/implemented-plans/mobile-token-handshake.md:82 (mention) — unacceptable."* `src/hub/AGENTS.md` reinforces it: `CHILD_ENV_ALLOWLIST` deliberately
@@ -9565,9 +10415,12 @@ References:
 
 ### src/plugins/courseware/
 
-#### src/plugins/courseware/README.md **[ORPHAN]**
+#### src/plugins/courseware/README.md
 
 Title: "Courseware" | 168 lines
+
+Referenced by:
+- test/plugins/courseware/journeys/D-chemistry/README.md:6 (link) — ([`src/plugins/courseware/README.md`](../../../../../src/plugins/courseware/README.md)).
 
 References:
 - → AGENTS.md (mention)
@@ -9587,19 +10440,20 @@ No references in or out.
 Title: "Services" | 104 lines
 
 Referenced by:
-- AGENTS.md:43 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/AGENTS.md). Connectors live in `src/conn
+- AGENTS.md:44 (link) — - External dependencies: `src/services/`; read [services guidance](src/services/AGENTS.md). Connectors live in `src/conn
 - docs/connectors.md:113 (mention) — See `src/services/AGENTS.md` for the full service layer documentation.
-- docs/glossary.md:60 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
+- docs/glossary.md:63 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/implemented-plans/agent-field-tests.md:42 (mention) — the services real/fake pattern (`src/services/AGENTS.md`).
 - docs/implemented-plans/capture-mode.md:624 (mention) — `src/services/AGENTS.md`). Scripted word timestamps + fixture image
 - docs/implemented-plans/file-layout.md:134 (mention) — `src/services/AGENTS.md`, `src/hub/AGENTS.md`, `src/dev/AGENTS.md`,
 - docs/implemented-plans/remove-open-mode.md:57 (mention) — services convention, `src/services/AGENTS.md`.)
 - docs/implemented-plans/remove-telegram.md:161 (mention) — `src/connectors/AGENTS.md`, `src/services/AGENTS.md`,
+- docs/implemented-plans/retire-doctest.md:1055 (mention) — `scan-uploader/AGENTS.md`, `src/services/AGENTS.md:44,78,87`,
 - docs/implemented-plans/semantic-search.md:41 (mention) — - `src/services/AGENTS.md`: *"if a library or function touches external
 - docs/implemented-plans/web-push-notifications.md:203 (mention) — `src/services/AGENTS.md`): `sendNotification(subscription, payload)` →
-- docs/plans/asset-offbox-storage.md:255 (mention) — `src/services/AGENTS.md`.
-- docs/plans/scan-vision-claude.md:361 (mention) — `src/services/AGENTS.md` named-params + describe rules.
-- docs/testing/doctests.md:78 (mention) — External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full s
+- docs/plans/asset-offbox-storage.md:257 (mention) — `src/services/AGENTS.md`.
+- docs/plans/scan-vision-claude.md:363 (mention) — `src/services/AGENTS.md` named-params + describe rules.
+- docs/testing/check.md:225 (mention) — in-memory fakes. The service layer is documented in `src/services/AGENTS.md`.
 - src/connectors/AGENTS.md:15 (mention) — See `src/services/AGENTS.md` for the full service layer documentation: interfaces, fakes, call logging, and testing patt
 
 ### test/fixtures/theme-tour/
@@ -9659,569 +10513,63 @@ Title: "Manual test: selection commentary (capture in the companion pane)" | 73 
 Referenced by:
 - docs/implemented-plans/selection-commentary.md:50 (mention) — >   `test/manual/selection-commentary.manual.md` — the natural-language
 
-### test/user-stories/journeys/
+### test/plugins/courseware/journeys/D-chemistry/
 
-#### test/user-stories/journeys/after-action.md
+#### test/plugins/courseware/journeys/D-chemistry/README.md
 
-Title: "After-action: turning a walk into findings" | 175 lines
-
-Referenced by:
-- test/user-stories/journeys/B-inventory/reports/2026-10-08.md:219 (mention) — | R10 | `after-action.md` says the browse key is not the box owner and that `prepare.ts` reports `captureBlind`. Both ar
-- test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md:158 (mention) — - **Stale after-action guidance.** `after-action.md` step 3 says the browse
-- test/user-stories/journeys/D-chemistry/reports/2026-10-08.md:168 (mention) — - **H5 — prepare's provisioning check failed on the warm worktree server.** Already known; a worktree cold start fixed i
-- test/user-stories/journeys/README.md:70 (link) — Then read the walk and write it up — **[after-action.md](after-action.md)** is the
-
-References:
-- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
-- → test/user-stories/journeys/B-inventory/reports/2026-08-24.md (mention)
-
-#### test/user-stories/journeys/README.md
-
-Title: "Journeys" | 139 lines
+Title: "Chemistry journey (retired)" | 18 lines
 
 Referenced by:
-- ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md:80 (mention) — Seen again in [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H1) and [A](../../beebox/t
+- docs/plans/user-story-journeys.md:50 (link) — [`test/plugins/courseware/journeys/D-chemistry/`](../../test/plugins/courseware/journeys/D-chemistry/README.md).
+- test/user-stories/journeys/README.md:14 (link) — [`test/plugins/courseware/journeys/D-chemistry/`](../../plugins/courseware/journeys/D-chemistry/README.md).
 
 References:
-- → docs/user-stories/catalog/2026-08-21.md (link)
-- → docs/plans/user-story-journeys.md (link)
-- → test/user-stories/journeys/walker-prompt.md (mention)
-- → test/user-stories/journeys/after-action.md (link)
-- → test/user-stories/journeys/A-lending/reports/2026-08-25.md (link)
+- → src/plugins/courseware/README.md (link)
 
-#### test/user-stories/journeys/walker-prompt.md
+### test/plugins/courseware/journeys/D-chemistry/reports/
 
-Title: "You are trying out an app" | 168 lines
-
-Referenced by:
-- test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md:195 (mention) — them, and show an absolute path in the `walker-prompt.md` example. Fixed:
-- test/user-stories/journeys/README.md:53 (mention) — places the assets, composes the prompt from `walker-prompt.md`, and snapshots the box
-
-### test/user-stories/journeys/A-lending/reports/
-
-#### test/user-stories/journeys/A-lending/reports/2026-08-25.md
-
-Title: "A-lending, 2026-08-25" | 107 lines
-
-Referenced by:
-- test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md:11 (link) — The [original report](2026-08-25.md) and journey definition are now under
-- test/user-stories/journeys/README.md:137 (link) — served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
-
-References:
-- → test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md (link)
-- → ../issues/code-quality/2026-08-25-router-failure-page-addresses-nobody.md (link)
-- → ../issues/closed/bugs/2026-08-23-auth-preflight-blocks-new-chats-when-claude-not-on-path.md (link)
-- → ../issues/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
-- → ../issues/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
-- → ../issues/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md (link)
-- → ../issues/bugs/2026-08-25-one-pink-bar-three-severities.md (link)
-- → ../issues/closed/bugs/2026-08-25-mic-misfire-wipes-the-composer-draft.md (link)
-- → ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md (link)
-- → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
-- → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
-- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
-- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-- → ../issues/bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md (link)
-
-#### test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md
-
-Title: "Recovering journey A's August 25 evidence" | 116 lines
-
-Referenced by:
-- test/user-stories/journeys/A-lending/reports/2026-08-25.md:6 (link) — > describe the old version. See [recovery assessment](2026-09-21-recovery.md)
-- test/user-stories/journeys/A-lending/reports/2026-10-08.md:173 (link) — Status of the issues that the [recovery report](2026-09-21-recovery.md) assessed:
-
-References:
-- → test/user-stories/journeys/A-lending/reports/2026-08-25.md (link)
-- → ../issues/closed/bugs/2026-08-25-mic-misfire-wipes-the-composer-draft.md (link)
-
-#### test/user-stories/journeys/A-lending/reports/2026-10-08.md
-
-Title: "A-lending, 2026-10-08" | 193 lines
-
-Referenced by:
-- docs/implemented-plans/landmark-arrival.design.md:12 (link) — ([A-lending](../../test/user-stories/journeys/A-lending/reports/2026-10-08.md),
-- ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md:66 (link) — Still present in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 64).
-- ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md:31 (link) — Seen in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R3, R4). After th
-- ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:16 (link) — [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 54),
-- ../issues/bugs/2026-10-08-open-card-silently-follows-into-trash.md:17 (link) — ([report](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 14, 81).
-- ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:14 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 56),
-- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
-- ../issues/closed/bugs/2026-10-08-bare-ack-kind-tag-renders-as-text.md:15 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row 21, shot 06). The agent
-- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:16 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 7, 19),
-- ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:17 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 12, 20, 70, 74).
-- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:40 (link) — | [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R2) | 5 | About 0.5 s after t
-- ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:18 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 29, 33, 58),
-- ../issues/closed/bugs/2026-10-08-landmark-links-titled-from-filename.md:17 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row 35, shots 10 and 25).
-- ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:19 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 63),
-- ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:16 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 1),
-- ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md:17 (link) — walks saw it: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 24, 31,
-- ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md:16 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 55),
-- ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md:19 (link) — ([A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) row 9,
-- ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md:24 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), R3).
-- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:23 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 37, 38, 78).
-- ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md:18 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row R5); a later agent may.
-- ../issues/features/2026-08-19-collection-views-are-badly-defined.md:548 (link) — The missing primitive came up again in three walks. [A-lending](../../beebox/test/user-stories/journeys/A-lending/report
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:117 (link) — More evidence from five walks. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1
-- ../issues/features/2026-09-25-notifications-and-proactive-design.md:91 (link) — Wishes and gaps from three walks, none of them a recurrence of the manual-testing items above (the walk boxes had no del
-- ../issues/features/2026-09-27-ack-badge-design-review.md:60 (link) — Seen in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 45, 79) and
-
-References:
-- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
-- → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
-- → ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md (link)
-- → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
-- → docs/box/what-you-could-do.md (mention)
-- → ../issues/bugs/2026-10-08-open-card-silently-follows-into-trash.md (link)
-- → ../issues/closed/bugs/2026-10-08-bare-ack-kind-tag-renders-as-text.md (link)
-- → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (link)
-- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
-- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-- → ../issues/closed/bugs/2026-10-08-landmark-links-titled-from-filename.md (link)
-- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
-- → ../issues/features/2026-09-27-ack-badge-design-review.md (link)
-- → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
-- → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
-- → ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
-- → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
-- → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
-- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
-- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
-- → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (link)
-- → ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md (link)
-- → ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md (link)
-- → test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md (link)
-
-#### test/user-stories/journeys/A-lending/reports/2026-10-09.md
-
-Title: "A-lending, 2026-10-09" | 204 lines
-
-Referenced by:
-- ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md:70 (link) — Seen again in two walks, now through the go-to line. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-
-- ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md:80 (link) — Seen again in [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H1) and [A](../../beebox/t
-- ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:52 (link) — Seen again in three walks, in two forms. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R
-- ../issues/bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md:82 (link) — Seen in [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R1). The agent tested its own read
-- ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
-- ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:44 (link) — Seen again in two walks. [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 45): "Co
-- ../issues/bugs/2026-10-09-chat-link-to-a-moved-card-dead-ends.md:37 (link) — Report: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R5.
-- ../issues/bugs/2026-10-09-recent-chats-show-session-id-prefix.md:35 (link) — Reports: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 50,
-- ../issues/bugs/2026-10-09-reloaded-new-chat-labelled-conversation.md:35 (link) — Report: [A-lending](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R7.
-- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
-- ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 15): "Se
-- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../beebox/te
-- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](../../.
-- ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:46 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R4,
-- ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md:39 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) rows 24, 37, and 62,
-- ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:49 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 3,
-- ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md:49 (link) — Report: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 46.
-- ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:58 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 12,
-- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a l
-- ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:49 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R6,
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:121 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../beebox/tes
-- ../issues/features/2026-09-25-notifications-and-proactive-design.md:95 (link) — The gaps repeat; the manual-testing items (real APNs delivery, tap-to-target, badge clearing on a physical iPhone) were
-
-References:
-- → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
-- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
-- → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
-- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
-- → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
-- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
-- → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
-- → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
-- → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
-- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
-- → ../issues/closed/bugs/2026-10-08-landmark-links-titled-from-filename.md (link)
-- → ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md (link)
-- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
-- → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
-- → ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md (link)
-- → ../issues/bugs/2026-10-09-recent-chats-show-session-id-prefix.md (link)
-- → ../issues/bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md (link)
-- → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (link)
-- → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
-- → ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md (link)
-- → ../issues/bugs/2026-10-09-chat-link-to-a-moved-card-dead-ends.md (link)
-- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
-- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-- → ../issues/bugs/2026-10-09-reloaded-new-chat-labelled-conversation.md (link)
-- → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (link)
-- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
-- → ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md (link)
-- → ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md (link)
-- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
-- → ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md (link)
-- → ../issues/bugs/2026-10-08-open-card-silently-follows-into-trash.md (link)
-- → ../issues/closed/bugs/2026-10-08-bare-ack-kind-tag-renders-as-text.md (link)
-- → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (link)
-- → ../issues/features/2026-09-27-ack-badge-design-review.md (link)
-- → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
-- → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
-- → ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
-- → ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md (link)
-- → ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md (link)
-- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
-
-### test/user-stories/journeys/B-inventory/reports/
-
-#### test/user-stories/journeys/B-inventory/reports/2026-08-23-2.md **[ORPHAN]**
-
-Title: "B-inventory, 2026-08-23 (run 2)" | 54 lines
-
-References:
-- → ../issues/closed/bugs/2026-08-23-webp-paste-rejected-though-the-app-emits-webp.md (link)
-- → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
-
-#### test/user-stories/journeys/B-inventory/reports/2026-08-23-6.md **[ORPHAN]**
-
-Title: "B-inventory, 2026-08-23 (run 6)" | 49 lines
-
-References:
-- → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
-
-#### test/user-stories/journeys/B-inventory/reports/2026-08-24.md
-
-Title: "B-inventory, 2026-08-24" | 133 lines
-
-Referenced by:
-- test/user-stories/journeys/B-inventory/reports/2026-10-08.md:263 (link) — Issues the [2026-08-24 report](2026-08-24.md) linked:
-- test/user-stories/journeys/after-action.md:140 (mention) — One file, `<journey>/reports/<date>.md` — `B-inventory/reports/2026-08-24.md` —
-
-References:
-- → ../issues/closed/bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md (link)
-- → ../issues/closed/bugs/2026-08-24-reloaded-conversation-hides-the-photos-you-sent.md (link)
-- → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
-- → ../issues/closed/bugs/2026-08-25-one-401-ejects-the-whole-app-to-a-login-form.md (link)
-- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-
-#### test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
-
-Title: "B-inventory, 2026-10-08 (second walk)" | 251 lines
-
-Referenced by:
-- docs/implemented-plans/landmark-arrival.design.md:13 (link) — [B-inventory](../../test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md),
-- test/user-stories/journeys/B-inventory/reports/2026-10-08.md:20 (link) — [2026-10-08-2](2026-10-08-2.md), ran with the restored photos and is the photo
-- test/user-stories/journeys/B-inventory/reports/2026-10-09.md:226 (link) — Against [2026-10-08-2](2026-10-08-2.md), the valid photo-intake walk.
-- ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md:35 (link) — Seen in the [B2 walk](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 64): searching "
-- ../issues/bugs/2026-10-08-capture-finalized-with-nothing-landed-says-nothing.md:37 (link) — Report: [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 13, shot 06).
-- ../issues/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md:26 (link) — [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R2).
-- ../issues/bugs/2026-10-08-unreadable-picked-file-reported-as-format-or-network-fault.md:30 (link) — Report: [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 7).
-- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
-- ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:36 (link) — [walk 2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 45).
-- ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:91 (link) — More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
-- ../issues/closed/bugs/2026-10-08-chat-image-alt-text-numbers-content-blocks.md:23 (link) — Report: [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 20; first report R8).
-- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:46 (link) — The [second B-inventory walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R5)
-- ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md:32 (link) — [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R7).
-- ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md:48 (link) — [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 36, 60, 68),
-- ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:20 (link) — [B-inventory, second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 39).
-- ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md:20 (link) — [second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) row 39). The D-chemistry
-- ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md:18 (link) — [B-inventory second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 63:
-- ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:18 (link) — [second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 2),
-- ../issues/features/2026-08-19-collection-views-are-badly-defined.md:548 (link) — The missing primitive came up again in three walks. [A-lending](../../beebox/test/user-stories/journeys/A-lending/report
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:117 (link) — More evidence from five walks. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1
-
-References:
-- → test/user-stories/journeys/B-inventory/reports/2026-10-08.md (link)
-- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
-- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
-- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
-- → ../issues/bugs/2026-10-08-unreadable-picked-file-reported-as-format-or-network-fault.md (link)
-- → ../issues/bugs/2026-10-08-capture-finalized-with-nothing-landed-says-nothing.md (link)
-- → ../issues/closed/bugs/2026-10-08-chat-image-alt-text-numbers-content-blocks.md (link)
-- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
-- → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
-- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
-- → ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (link)
-- → docs/agent-guide.md (mention)
-- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-- → ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md (link)
-- → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (link)
-- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
-- → ../issues/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md (link)
-- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
-- → ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md (link)
-- → ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md (link)
-- → test/user-stories/journeys/walker-prompt.md (mention)
-
-#### test/user-stories/journeys/B-inventory/reports/2026-10-08.md
-
-Title: "B-inventory, 2026-10-08" | 284 lines
-
-Referenced by:
-- test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md:17 (link) — [first walk](2026-10-08.md) sent photos that were damaged in the repository.
-- ../issues/bugs/2026-08-08-chat-composer-attach-ux.md:119 (link) — Walker reaction, not a recurrence. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.
-- ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:104 (link) — Related observation, desktop. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (
-- ../issues/bugs/2026-10-08-box-agent-can-read-journey-walk-notes.md:33 (link) — Report: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (R6, harness defect 2).
-- ../issues/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md:25 (link) — Reports: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 13),
-- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
-- ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:35 (link) — [walk 1](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 42),
-- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:41 (link) — | [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (R2) | 3 | Each after a tu
-- ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md:31 (link) — Reports: [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 11),
-- ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md:47 (link) — [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (rows 44, 46),
-- ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:19 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 26) and
-- ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md:19 (link) — ([first walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) rows 60 and 79,
-- ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:17 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 1) and
-- ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md:36 (link) — ([report](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md),
-- ../issues/features/2026-08-19-collection-views-are-badly-defined.md:548 (link) — The missing primitive came up again in three walks. [A-lending](../../beebox/test/user-stories/journeys/A-lending/report
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:117 (link) — More evidence from five walks. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1
-
-References:
-- → test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md (link)
-- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
-- → ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md (link)
-- → ../issues/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md (link)
-- → ../issues/bugs/2026-08-08-chat-composer-attach-ux.md (link)
-- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
-- → ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (link)
-- → docs/agent-guide.md (mention)
-- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
-- → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
-- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
-- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
-- → ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md (link)
-- → test/user-stories/journeys/after-action.md (mention)
-- → ../issues/bugs/2026-10-08-box-agent-can-read-journey-walk-notes.md (link)
-- → test/user-stories/journeys/B-inventory/reports/2026-08-24.md (link)
-
-#### test/user-stories/journeys/B-inventory/reports/2026-10-09.md
-
-Title: "B-inventory, 2026-10-09" | 281 lines
-
-Referenced by:
-- ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md:70 (link) — Seen again in two walks, now through the go-to line. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-
-- ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
-- ../issues/bugs/2026-10-09-capture-delivery-does-not-anchor-like-a-send.md:16 (link) — Report: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 17, shot 06).
-- ../issues/bugs/2026-10-09-capture-shows-no-preview-of-added-photos.md:16 (link) — Report: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 13).
-- ../issues/bugs/2026-10-09-image-lightbox-has-no-dialog-role.md:16 (link) — Report: [B](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R7, row 66).
-- ../issues/bugs/2026-10-09-recent-chats-show-session-id-prefix.md:36 (link) — [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 65.
-- ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:58 (link) — Seen again in three walks. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the i
-- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
-- ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 15): "Se
-- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../beebox/te
-- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](../../.
-- ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:47 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) R4,
-- ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:50 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 1,
-- ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:64 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 23.
-- ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:59 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) R9,
-- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a l
-- ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:50 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 57,
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:121 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../beebox/tes
-- ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:37 (link) — Improved by agent behaviour, not by the product, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/20
-
-References:
-- → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
-- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
-- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
-- → ../issues/bugs/2026-10-09-capture-shows-no-preview-of-added-photos.md (link)
-- → ../issues/bugs/2026-10-09-capture-delivery-does-not-anchor-like-a-send.md (link)
-- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
-- → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
-- → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
-- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
-- → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
-- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
-- → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
-- → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
-- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
-- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
-- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
-- → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
-- → ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md (link)
-- → ../issues/bugs/2026-10-09-recent-chats-show-session-id-prefix.md (link)
-- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
-- → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
-- → ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md (link)
-- → ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md (link)
-- → ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (link)
-- → ../issues/bugs/2026-10-09-image-lightbox-has-no-dialog-role.md (link)
-- → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
-- → ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md (link)
-- → ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md (link)
-- → test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md (link)
-- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
-- → ../issues/bugs/2026-10-08-unreadable-picked-file-reported-as-format-or-network-fault.md (link)
-- → ../issues/bugs/2026-10-08-capture-finalized-with-nothing-landed-says-nothing.md (link)
-- → ../issues/closed/bugs/2026-10-08-chat-image-alt-text-numbers-content-blocks.md (link)
-- → ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md (link)
-- → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (link)
-- → ../issues/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md (link)
-- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
-- → ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md (link)
-- → ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md (link)
-
-### test/user-stories/journeys/C-reconnecting/reports/
-
-#### test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md
-
-Title: "C-reconnecting, 2026-09-21" | 151 lines
-
-Referenced by:
-- ../issues/bugs/2026-09-21-search-section-results-drop-their-destination.md:28 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
-- ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md:29 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
-- ../issues/closed/bugs/2026-09-21-browse-name-guard-refuses-visible-search-results.md:98 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
-- ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:38 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
-- ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:42 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:58 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
-
-#### test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md
-
-Title: "C-reconnecting, 2026-10-08" | 209 lines
-
-Referenced by:
-- ../issues/bugs/2026-08-08-chat-composer-attach-ux.md:119 (link) — Walker reaction, not a recurrence. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.
-- ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:48 (link) — Seen in two walks. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (rows
-- ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:38 (link) — Still present. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 44) a
-- ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:15 (link) — [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 30),
-- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
-- ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:91 (link) — More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
-- ../issues/closed/bugs/2026-10-08-browse-ref-click-checks-only-geometry.md:51 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 37).
-- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:17 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 7, which also
-- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:42 (link) — | [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 49) | 1 | One s
-- ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md:21 (link) — ([report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md), row 33).
-- ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:19 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 3),
-- ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md:18 (link) — 53), [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 26,
-- ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md:17 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 27),
-- ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md:20 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) row 17).
-- ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:47 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md).
-- ../issues/closed/bugs/2026-10-08-todo-checkbox-name-is-its-status.md:27 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md).
-- ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:59 (link) — Still relevant. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 26)
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:117 (link) — More evidence from five walks. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1
-- ../issues/features/2026-09-25-notifications-and-proactive-design.md:91 (link) — Wishes and gaps from three walks, none of them a recurrence of the manual-testing items above (the walk boxes had no del
-- ../issues/features/2026-10-08-drafted-message-has-no-copy-control.md:22 (link) — Report: [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (shot 07, turn 4).
-
-References:
-- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
-- → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
-- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
-- → ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md (link)
-- → docs/box/todos.md (mention)
-- → ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md (link)
-- → ../issues/features/2026-10-08-drafted-message-has-no-copy-control.md (link)
-- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
-- → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (link)
-- → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
-- → ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
-- → ../issues/closed/bugs/2026-10-08-todo-checkbox-name-is-its-status.md (link)
-- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
-- → ../issues/closed/bugs/2026-10-08-browse-ref-click-checks-only-geometry.md (link)
-- → test/user-stories/journeys/after-action.md (mention)
-- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (mention)
-- → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (mention)
-- → ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md (mention)
-- → ../issues/features/2026-09-25-notifications-and-proactive-design.md (mention)
-- → ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md (mention)
-- → ../issues/features/2026-08-23-card-chrome-controls-have-no-bbx-ids.md (mention)
-- → ../issues/bugs/2026-08-08-chat-composer-attach-ux.md (mention)
-- → ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md (mention)
-- → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (mention)
-- → ../issues/bugs/2026-09-21-search-section-results-drop-their-destination.md (mention)
-
-#### test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md
-
-Title: "C-reconnecting, 2026-10-09" | 231 lines
-
-Referenced by:
-- ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:52 (link) — Seen again in three walks, in two forms. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R
-- ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
-- ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:44 (link) — Seen again in two walks. [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 45): "Co
-- ../issues/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md:35 (link) — Evidence from [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 61): the walker rea
-- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
-- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../beebox/te
-- ../issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md:36 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md).
-- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](../../.
-- ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:48 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R2,
-- ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:51 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 3,
-- ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:62 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) rows 14 and 69,
-- ../issues/closed/bugs/2026-10-09-plate-card-rows-show-file-paths.md:45 (link) — Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R8,
-- ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:60 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R6,
-- ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:51 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 46.
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:121 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../beebox/tes
-- ../issues/features/2026-09-25-notifications-and-proactive-design.md:95 (link) — The gaps repeat; the manual-testing items (real APNs delivery, tap-to-target, badge clearing on a physical iPhone) were
-- ../issues/features/2026-09-27-ack-badge-design-review.md:64 (link) — Seen again in four walks. The ack popover prints `ack.ref` as the link text (`beebox/src/frontend/src/components/chat/ac
-- ../issues/features/2026-10-08-drafted-message-has-no-copy-control.md:26 (link) — Seen again in [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 28): the walker fou
-
-References:
-- → docs/box/todos.md (mention)
-- → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
-- → docs/box/what-you-could-do.md (mention)
-- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
-- → src/core/agent-guide/guide.md (mention)
-- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
-- → ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md (link)
-- → ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md (link)
-- → ../issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md (link)
-- → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
-- → ../issues/closed/bugs/2026-10-09-plate-card-rows-show-file-paths.md (link)
-- → ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md (link)
-- → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (mention)
-- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (mention)
-- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (mention)
-- → ../issues/features/2026-09-27-ack-badge-design-review.md (mention)
-- → ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md (mention)
-- → ../issues/features/2026-10-08-drafted-message-has-no-copy-control.md (mention)
-- → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (mention)
-- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (mention)
-- → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (mention)
-- → ../issues/features/2026-09-25-notifications-and-proactive-design.md (mention)
-- → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (mention)
-- → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (mention)
-- → ../issues/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md (mention)
-- → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (mention)
-- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (mention)
-- → ../issues/closed/docs-and-chores/2026-09-21-bbx-create-template-args-hard-to-discover.md (mention)
-- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (mention)
-- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (mention)
-- → ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md (mention)
-- → ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (mention)
-- → ../issues/closed/bugs/2026-10-08-browse-ref-click-checks-only-geometry.md (mention)
-- → ../issues/closed/bugs/2026-10-08-todo-checkbox-name-is-its-status.md (mention)
-- → ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md (mention)
-
-### test/user-stories/journeys/D-chemistry/reports/
-
-#### test/user-stories/journeys/D-chemistry/reports/2026-09-21.md
+#### test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md
 
 Title: "D-chemistry, 2026-09-21" | 236 lines
 
 Referenced by:
-- ../issues/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md:33 (link) — Evidence and limits: [journey D report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md).
-- ../issues/bugs/2026-09-21-chemistry-progress-summary-retains-completed-exercise.md:37 (link) — Evidence: [journey D report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md).
-- ../issues/bugs/2026-09-21-course-link-visible-before-lesson-target-exists.md:28 (link) — Evidence: [journey D report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
-- ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md:77 (link) — Evidence: [D chemistry report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
-- ../issues/closed/bugs/2026-09-21-chemistry-tutor-teaches-neutral-isotope-rule.md:15 (link) — has no charge.” Screenshot 05 in the [journey D report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2
-- ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:69 (link) — Evidence: [D chemistry report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
-- ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:38 (link) — Evidence: [D chemistry report](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-09-21.md),
+- ../issues/bugs/2026-09-21-chat-chemistry-formula-markup-renders-literally.md:33 (link) — Evidence and limits: [journey D report](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md)
+- ../issues/bugs/2026-09-21-chemistry-progress-summary-retains-completed-exercise.md:37 (link) — Evidence: [journey D report](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md).
+- ../issues/bugs/2026-09-21-course-link-visible-before-lesson-target-exists.md:28 (link) — Evidence: [journey D report](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md),
+- ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md:77 (link) — Evidence: [D chemistry report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md),
+- ../issues/closed/bugs/2026-09-21-chemistry-tutor-teaches-neutral-isotope-rule.md:15 (link) — has no charge.” Screenshot 05 in the [journey D report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/rep
+- ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:69 (link) — Evidence: [D chemistry report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md),
+- ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:38 (link) — Evidence: [D chemistry report](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-09-21.md),
 
-#### test/user-stories/journeys/D-chemistry/reports/2026-10-08.md
+#### test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md
 
 Title: "D-chemistry, 2026-10-08" | 191 lines
 
 Referenced by:
-- docs/implemented-plans/landmark-arrival.design.md:14 (link) — [D-chemistry](../../test/user-stories/journeys/D-chemistry/reports/2026-10-08.md)).
-- test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md:159 (link) — Against [2026-10-08](2026-10-08.md). The morning walk ([2026-10-09](2026-10-09.md)) built no course; its filed issues ar
-- ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:17 (link) — [D-chemistry](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 11),
-- ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md:37 (link) — Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (rows 65, 70).
+- docs/implemented-plans/landmark-arrival.design.md:14 (link) — [D-chemistry](../../test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md)).
+- test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md:159 (link) — Against [2026-10-08](2026-10-08.md). The morning walk ([2026-10-09](2026-10-09.md)) built no course; its filed issues ar
+- ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md:37 (link) — Report: [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (rows 65, 70).
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
-- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:19 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 15),
-- ../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md:34 (link) — Report: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 56, shot 19).
-- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:43 (link) — | [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (R4) | 7 in 5 root-chat tu
-- ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md:49 (link) — [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 63),
-- ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:20 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 71).
-- ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md:23 (link) — ([report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md), row 65).
-- ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md:16 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 32, shots 08 to 09;
-- ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:20 (link) — [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 6),
-- ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md:26 (link) — ([report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md), R1).
-- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:27 (link) — ([report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md), row 30).
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:117 (link) — More evidence from five walks. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1
-- ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:43 (link) — Partly met in the [D-chemistry walk](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (closing
-- ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md:30 (link) — Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 67, shot 22).
-- ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:33 (link) — Report: [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 20).
+- ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:20 (link) — [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 11),
+- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:19 (link) — [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 15),
+- ../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md:34 (link) — Report: [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 56, shot 19).
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:43 (link) — | [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (R4) | 7 in 5 root-c
+- ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md:49 (link) — [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 63),
+- ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:20 (link) — [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 71).
+- ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md:23 (link) — ([report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md), row 65).
+- ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md:16 (link) — [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 32, shots 08 to 0
+- ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:20 (link) — [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 6),
+- ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md:26 (link) — ([report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md), R1).
+- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:27 (link) — ([report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md), row 30).
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:120 (link) — More evidence from five walks. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row
+- ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:43 (link) — Partly met in the [D-chemistry walk](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (c
+- ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md:30 (link) — Report: [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 67, shot 22).
+- ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:33 (link) — Report: [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 20).
 
 References:
 - → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
-- → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
+- → ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
 - → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
 - → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
 - → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
@@ -10237,28 +10585,30 @@ References:
 - → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → test/user-stories/journeys/after-action.md (mention)
 
-#### test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md
+#### test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md
 
 Title: "D-chemistry, 2026-10-09 (second walk)" | 213 lines
 
 Referenced by:
+- ../dev/journeys/reports/sweep-issues.md:305 (mention) — What the October-9 walks confirmed from the October-8 fixes (the "Since 2026-10-08" tables): `fresh-chat-reservation` fi
+- ../dev/journeys/reports/sweep-walks.md:181 (mention) — | D | 2026-10-09-2 | ~78 of 84 (`D/reports/2026-10-09-2.md:62-147`) | ~4 | 1 filed | course built; place chat never titl
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
-- ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md:41 (link) — Re-checked in [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (row 47; reproduced in `
-- ../issues/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md:24 (link) — Seen again in two walks, as a second overflow symptom: with four or five tabs the first tabs lose their labels and show
+- ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md:41 (link) — Re-checked in [D2](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (row 47; reproduce
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:58 (link) — Seen again in three walks. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the i
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
-- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../beebox/te
-- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](../../.
-- ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:50 (link) — [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) R3.
-- ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md:40 (link) — [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) row 40.
-- ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:48 (link) — [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) rows 2 and 41,
-- ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:61 (link) — [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) row 15,
-- ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:62 (link) — [D-chemistry second walk](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) R4.
+- ../issues/closed/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md:27 (link) — Seen again in two walks, as a second overflow symptom: with four or five tabs the first tabs lose their labels and show
+- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../bee
+- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](.
+- ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:50 (link) — [D-chemistry second walk](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) R3.
+- ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md:40 (link) — [D-chemistry second walk](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) row 40.
+- ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:48 (link) — [D-chemistry second walk](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) rows 2 a
+- ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:61 (link) — [D-chemistry second walk](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) row 15,
+- ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:62 (link) — [D-chemistry second walk](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) R4.
 - ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a l
-- ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:47 (link) — Partly met, less than on 2026-10-08, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.m
+- ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:47 (link) — Partly met, less than on 2026-10-08, per [D2](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-
 - ../issues/features/2026-09-27-ack-badge-design-review.md:64 (link) — Seen again in four walks. The ack popover prints `ack.ref` as the link text (`beebox/src/frontend/src/components/chat/ac
-- ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md:34 (link) — Mostly met, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows 46, 49, 67-68).
-- ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:37 (link) — Improved by agent behaviour, not by the product, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/20
+- ../issues/features/2026-10-08-course-session-cannot-open-with-the-tutor.md:34 (link) — Mostly met, per [D2](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (rows 46, 49, 67
+- ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:37 (link) — Improved by agent behaviour, not by the product, per [D2](../../beebox/test/plugins/courseware/journeys/D-chemistry/repo
 
 References:
 - → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
@@ -10274,7 +10624,7 @@ References:
 - → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
 - → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
 - → ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md (link)
-- → ../issues/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md (link)
+- → ../issues/closed/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md (link)
 - → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
 - → ../issues/bugs/2026-10-08-course-landmark-in-attach-folder-shows-twice.md (link)
 - → ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md (link)
@@ -10286,8 +10636,8 @@ References:
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
 - → ../issues/closed/docs-and-chores/2026-09-21-bbx-create-template-args-hard-to-discover.md (link)
 - → ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md (link)
-- → test/user-stories/journeys/D-chemistry/reports/2026-10-08.md (link)
-- → test/user-stories/journeys/D-chemistry/reports/2026-10-09.md (link)
+- → test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md (link)
+- → test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
 - → ../issues/closed/bugs/2026-10-08-chat-card-embed-puts-every-field-before-the-body.md (link)
 - → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
@@ -10296,28 +10646,28 @@ References:
 - → ../issues/bugs/2026-09-21-chemistry-progress-summary-retains-completed-exercise.md (link)
 - → ../issues/bugs/2026-09-21-course-link-visible-before-lesson-target-exists.md (link)
 
-#### test/user-stories/journeys/D-chemistry/reports/2026-10-09.md
+#### test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md
 
 Title: "D-chemistry, 2026-10-09" | 190 lines
 
 Referenced by:
-- test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md:159 (link) — Against [2026-10-08](2026-10-08.md). The morning walk ([2026-10-09](2026-10-09.md)) built no course; its filed issues ar
-- ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md:80 (link) — Seen again in [D](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H1) and [A](../../beebox/t
+- test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md:159 (link) — Against [2026-10-08](2026-10-08.md). The morning walk ([2026-10-09](2026-10-09.md)) built no course; its filed issues ar
+- ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md:80 (link) — Seen again in [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H1) and [A](../../be
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
-- ../issues/bugs/2026-10-09-cards-refer-to-the-person-as-they.md:32 (mention) — (`beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md`, row
+- ../issues/bugs/2026-10-09-cards-refer-to-the-person-as-they.md:32 (mention) — (`beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md`, row
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:58 (link) — Seen again in three walks. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the i
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
 - ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:57 (link) — A fourth case sits on the closed [chat-agent-narrates-internal-bookkeeping](../docs-and-chores/2026-08-06-chat-agent-nar
-- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../beebox/te
-- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](../../.
-- ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:45 (link) — Reports: [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) R4,
-- ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:47 (link) — Reports: [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) row 4,
-- ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:60 (link) — Reports: [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) row 26,
-- ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:57 (link) — Reports: [D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) row 45,
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:121 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../beebox/tes
-- ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:47 (link) — Partly met, less than on 2026-10-08, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.m
+- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../bee
+- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](.
+- ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:45 (link) — Reports: [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) R4,
+- ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:47 (link) — Reports: [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) row 4,
+- ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:60 (link) — Reports: [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) row 26,
+- ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:57 (link) — Reports: [D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) row 45,
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:124 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../../beebox/
+- ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md:47 (link) — Partly met, less than on 2026-10-08, per [D2](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-
 - ../issues/features/2026-09-27-ack-badge-design-review.md:64 (link) — Seen again in four walks. The ack popover prints `ack.ref` as the link text (`beebox/src/frontend/src/components/chat/ac
-- ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:37 (link) — Improved by agent behaviour, not by the product, per [D2](../../beebox/test/user-stories/journeys/D-chemistry/reports/20
+- ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:37 (link) — Improved by agent behaviour, not by the product, per [D2](../../beebox/test/plugins/courseware/journeys/D-chemistry/repo
 
 References:
 - → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
@@ -10339,8 +10689,8 @@ References:
 - → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md (link)
 - → ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md (link)
-- → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
-- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
+- → ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
+- → ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
 - → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
 - → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
 - → ../issues/features/2026-09-21-course-study-home-last-next-uncertain.md (link)
@@ -10356,6 +10706,548 @@ References:
 - → ../issues/bugs/2026-09-21-chemistry-progress-summary-retains-completed-exercise.md (link)
 - → ../issues/bugs/2026-09-21-course-link-visible-before-lesson-target-exists.md (link)
 
+### test/user-stories/journeys/
+
+#### test/user-stories/journeys/after-action.md
+
+Title: "After-action: turning a walk into findings" | 175 lines
+
+Referenced by:
+- test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md:168 (mention) — - **H5 — prepare's provisioning check failed on the warm worktree server.** Already known; a worktree cold start fixed i
+- test/user-stories/journeys/B-inventory/reports/2026-10-08.md:219 (mention) — | R10 | `after-action.md` says the browse key is not the box owner and that `prepare.ts` reports `captureBlind`. Both ar
+- test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md:158 (mention) — - **Stale after-action guidance.** `after-action.md` step 3 says the browse
+- test/user-stories/journeys/README.md:78 (link) — Then read the walk and write it up — **[after-action.md](after-action.md)** is the
+- ../dev/devprocess-talk/chunks/after-action-verify.md:5 (mention) — source: beebox/test/user-stories/journeys/after-action.md (42a74680b); slide 01d
+- ../dev/devprocess-talk/reports/sweep-agent-knowledge.md:142 (mention) — - **Lives in:** `beebox/test/user-stories/journeys/after-action.md`, `collect.ts`; reports under `<journey>/reports/`; `
+- ../dev/devprocess-talk/slides/01d-after-action-rule.md:19 (mention) — Path: beebox/test/user-stories/journeys/after-action.md, commit 42a74680b. Reports now also get a cross-model review bef
+- ../dev/journeys/overview.md:5 (link) — Sources: [the design plan](../../beebox/docs/plans/user-story-journeys.md), [the journeys README](../../beebox/test/user
+- ../dev/journeys/reports/sweep-issues.md:151 (mention) — The after-action procedure requires every walker claim to be classified before filing (`beebox/test/user-stories/journey
+- ../dev/journeys/reports/sweep-walks.md:26 (mention) — | **Notes in character, loose, structured by five prompts.** "Loose prose invites a travelogue. Structure prompts the us
+
+References:
+- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
+- → test/user-stories/journeys/B-inventory/reports/2026-08-24.md (mention)
+
+#### test/user-stories/journeys/README.md
+
+Title: "Journeys" | 147 lines
+
+Referenced by:
+- ../dev/journeys/overview.md:5 (link) — Sources: [the design plan](../../beebox/docs/plans/user-story-journeys.md), [the journeys README](../../beebox/test/user
+- ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md:80 (mention) — Seen again in [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H1) and [A](../../be
+
+References:
+- → docs/user-stories/catalog/2026-08-21.md (link)
+- → docs/plans/user-story-journeys.md (link)
+- → test/plugins/courseware/journeys/D-chemistry/README.md (link)
+- → test/user-stories/journeys/walker-prompt.md (mention)
+- → test/user-stories/journeys/after-action.md (link)
+- → test/user-stories/journeys/A-lending/reports/2026-08-25.md (link)
+
+#### test/user-stories/journeys/walker-prompt.md
+
+Title: "You are trying out an app" | 168 lines
+
+Referenced by:
+- test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md:195 (mention) — them, and show an absolute path in the `walker-prompt.md` example. Fixed:
+- test/user-stories/journeys/README.md:59 (mention) — places the assets, composes the prompt from `walker-prompt.md`, and snapshots the box
+- ../dev/devprocess-talk/chunks/walker-props-prompt.md:5 (mention) — source: beebox/test/user-stories/journeys/walker-prompt.md (260955f1d); slide 01b
+- ../dev/journeys/overview.md:5 (link) — Sources: [the design plan](../../beebox/docs/plans/user-story-journeys.md), [the journeys README](../../beebox/test/user
+- ../dev/journeys/reports/sweep-walks.md:22 (mention) — | **One sentence of knowledge.** "That this is an AI-powered app for organising their life. That is the whole briefing"
+
+### test/user-stories/journeys/A-lending/reports/
+
+#### test/user-stories/journeys/A-lending/reports/2026-08-25.md
+
+Title: "A-lending, 2026-08-25" | 107 lines
+
+Referenced by:
+- test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md:11 (link) — The [original report](2026-08-25.md) and journey definition are now under
+- test/user-stories/journeys/README.md:145 (link) — served. The recovered [lending report](A-lending/reports/2026-08-25.md) observed
+- ../dev/journeys/reports/sweep-issues.md:102 (mention) — | `2026-08-23-auth-preflight-blocks-new-chats-when-claude-not-on-path` | BUG | 08-23 | 08-29 | 6 | impl. | `ba64fc852` (
+- ../dev/journeys/reports/sweep-walks.md:25 (mention) — | **No self-judged success.** "They do not judge their own success. `collect.ts` reads the box to see what actually land
+
+References:
+- → test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md (link)
+- → ../issues/code-quality/2026-08-25-router-failure-page-addresses-nobody.md (link)
+- → ../issues/closed/bugs/2026-08-23-auth-preflight-blocks-new-chats-when-claude-not-on-path.md (link)
+- → ../issues/closed/bugs/2026-08-25-chat-timer-over-25-days-fires-instantly.md (link)
+- → ../issues/closed/bugs/2026-08-25-agent-narrated-an-invented-root-cause.md (link)
+- → ../issues/closed/bugs/2026-08-25-a-turn-that-does-work-can-say-nothing.md (link)
+- → ../issues/closed/bugs/2026-08-25-one-pink-bar-three-severities.md (link)
+- → ../issues/closed/bugs/2026-08-25-mic-misfire-wipes-the-composer-draft.md (link)
+- → ../issues/closed/bugs/2026-08-25-plate-badge-is-a-bare-number.md (link)
+- → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
+- → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
+- → ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+- → ../issues/closed/bugs/2026-08-25-companion-doc-shows-no-sign-it-is-being-edited.md (link)
+
+#### test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md
+
+Title: "Recovering journey A's August 25 evidence" | 116 lines
+
+Referenced by:
+- test/user-stories/journeys/A-lending/reports/2026-08-25.md:6 (link) — > describe the old version. See [recovery assessment](2026-09-21-recovery.md)
+- test/user-stories/journeys/A-lending/reports/2026-10-08.md:173 (link) — Status of the issues that the [recovery report](2026-09-21-recovery.md) assessed:
+- ../dev/journeys/reports/sweep-issues.md:207 (mention) — **Still open, needs a human — `chats-bind-to-a-landmark-once-and-never-move`.** A 2026-08-25 row 9: "Lending landmark sa
+- ../dev/journeys/reports/sweep-walks.md:58 (mention) — ### A-lending, 2026-09-21-recovery (`A/reports/2026-09-21-recovery.md`)
+
+References:
+- → test/user-stories/journeys/A-lending/reports/2026-08-25.md (link)
+- → ../issues/closed/bugs/2026-08-25-mic-misfire-wipes-the-composer-draft.md (link)
+
+#### test/user-stories/journeys/A-lending/reports/2026-10-08.md
+
+Title: "A-lending, 2026-10-08" | 193 lines
+
+Referenced by:
+- docs/implemented-plans/landmark-arrival.design.md:12 (link) — ([A-lending](../../test/user-stories/journeys/A-lending/reports/2026-10-08.md),
+- ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md:66 (link) — Still present in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 64).
+- ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md:31 (link) — Seen in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R3, R4). After th
+- ../issues/bugs/2026-10-08-open-card-silently-follows-into-trash.md:17 (link) — ([report](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 14, 81).
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
+- ../issues/closed/bugs/2026-10-08-bare-ack-kind-tag-renders-as-text.md:15 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row 21, shot 06). The agent
+- ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:19 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 54),
+- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:16 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 7, 19),
+- ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:17 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 12, 20, 70, 74).
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:40 (link) — | [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (R2) | 5 | About 0.5 s after t
+- ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:18 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 29, 33, 58),
+- ../issues/closed/bugs/2026-10-08-landmark-links-titled-from-filename.md:17 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row 35, shots 10 and 25).
+- ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md:19 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 63),
+- ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:16 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 1),
+- ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md:17 (link) — walks saw it: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 24, 31,
+- ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:17 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 56),
+- ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md:16 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 55),
+- ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md:19 (link) — ([A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) row 9,
+- ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md:24 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), R3).
+- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:23 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), rows 37, 38, 78).
+- ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md:18 (link) — ([report](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md), row R5); a later agent may.
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:120 (link) — More evidence from five walks. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row
+- ../issues/features/2026-08-19-collection-views-are-badly-defined.md:548 (link) — The missing primitive came up again in three walks. [A-lending](../../beebox/test/user-stories/journeys/A-lending/report
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:93 (link) — Wishes and gaps from three walks, none of them a recurrence of the manual-testing items above (the walk boxes had no del
+- ../issues/features/2026-09-27-ack-badge-design-review.md:60 (link) — Seen in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 45, 79) and
+
+References:
+- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
+- → ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
+- → docs/box/what-you-could-do.md (mention)
+- → ../issues/bugs/2026-10-08-open-card-silently-follows-into-trash.md (link)
+- → ../issues/closed/bugs/2026-10-08-bare-ack-kind-tag-renders-as-text.md (link)
+- → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-links-titled-from-filename.md (link)
+- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
+- → ../issues/features/2026-09-27-ack-badge-design-review.md (link)
+- → ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
+- → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
+- → ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
+- → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (link)
+- → ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md (link)
+- → ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md (link)
+- → test/user-stories/journeys/A-lending/reports/2026-09-21-recovery.md (link)
+
+#### test/user-stories/journeys/A-lending/reports/2026-10-09.md
+
+Title: "A-lending, 2026-10-09" | 204 lines
+
+Referenced by:
+- ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md:70 (link) — Seen again in two walks, now through the go-to line. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-
+- ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md:80 (link) — Seen again in [D](../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H1) and [A](../../be
+- ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:52 (link) — Seen again in three walks, in two forms. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R
+- ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
+- ../issues/closed/bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md:85 (link) — Seen in [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R1). The agent tested its own r
+- ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:47 (link) — Seen again in two walks. [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 45):
+- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
+- ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 15): "Se
+- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../bee
+- ../issues/closed/bugs/2026-10-09-chat-link-to-a-moved-card-dead-ends.md:42 (link) — Report: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R5.
+- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](.
+- ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:46 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R4,
+- ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md:39 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) rows 24, 37, and 62,
+- ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:49 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 3,
+- ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md:49 (link) — Report: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 46.
+- ../issues/closed/bugs/2026-10-09-recent-chats-show-session-id-prefix.md:38 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 50,
+- ../issues/closed/bugs/2026-10-09-reloaded-new-chat-labelled-conversation.md:38 (link) — Report: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R7.
+- ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:58 (link) — [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) row 12,
+- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a l
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:124 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../../beebox/
+- ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:49 (link) — Reports: [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) R6,
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:97 (link) — The gaps repeat; the manual-testing items (real APNs delivery, tap-to-target, badge clearing on a physical iPhone) were
+
+References:
+- → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
+- → ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
+- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
+- → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
+- → ../issues/features/2026-09-25-notifications-and-proactive-design.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-links-titled-from-filename.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-go-to-line-reads-as-an-error.md (link)
+- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
+- → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md (link)
+- → ../issues/closed/bugs/2026-10-09-recent-chats-show-session-id-prefix.md (link)
+- → ../issues/closed/bugs/2026-09-21-trick-auto-commit-whole-tree-race-and-secrets.md (link)
+- → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (link)
+- → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
+- → ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md (link)
+- → ../issues/closed/bugs/2026-10-09-chat-link-to-a-moved-card-dead-ends.md (link)
+- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+- → ../issues/closed/bugs/2026-10-09-reloaded-new-chat-labelled-conversation.md (link)
+- → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md (link)
+- → ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
+- → ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md (link)
+- → ../issues/bugs/2026-10-08-open-card-silently-follows-into-trash.md (link)
+- → ../issues/closed/bugs/2026-10-08-bare-ack-kind-tag-renders-as-text.md (link)
+- → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (link)
+- → ../issues/features/2026-09-27-ack-badge-design-review.md (link)
+- → ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
+- → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
+- → ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
+- → ../issues/bugs/2026-09-30-docs-refresh-misses-box-local-schema-changes.md (link)
+- → ../issues/closed/docs-and-chores/2026-10-08-schemas-guide-example-has-escaped-backticks.md (link)
+- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
+
+### test/user-stories/journeys/B-inventory/reports/
+
+#### test/user-stories/journeys/B-inventory/reports/2026-08-23-2.md
+
+Title: "B-inventory, 2026-08-23 (run 2)" | 54 lines
+
+Referenced by:
+- ../dev/journeys/reports/sweep-walks.md:24 (mention) — | **Push through.** "Confusion gets noted and then worked around, not surrendered to … Giving up is a last resort, not a
+
+References:
+- → ../issues/closed/bugs/2026-08-23-webp-paste-rejected-though-the-app-emits-webp.md (link)
+- → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
+
+#### test/user-stories/journeys/B-inventory/reports/2026-08-23-6.md
+
+Title: "B-inventory, 2026-08-23 (run 6)" | 49 lines
+
+Referenced by:
+- ../dev/journeys/reports/sweep-walks.md:22 (mention) — | **One sentence of knowledge.** "That this is an AI-powered app for organising their life. That is the whole briefing"
+
+References:
+- → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
+
+#### test/user-stories/journeys/B-inventory/reports/2026-08-24.md
+
+Title: "B-inventory, 2026-08-24" | 133 lines
+
+Referenced by:
+- test/user-stories/journeys/B-inventory/reports/2026-10-08.md:263 (link) — Issues the [2026-08-24 report](2026-08-24.md) linked:
+- test/user-stories/journeys/after-action.md:140 (mention) — One file, `<journey>/reports/<date>.md` — `B-inventory/reports/2026-08-24.md` —
+- ../dev/journeys/reports/sweep-issues.md:171 (mention) — - **Harness** 53 rows. The after-action doc records the early ratio: "three of the seven bugs a walk reported were ours"
+- ../dev/journeys/reports/sweep-walks.md:25 (mention) — | **No self-judged success.** "They do not judge their own success. `collect.ts` reads the box to see what actually land
+
+References:
+- → ../issues/closed/bugs/2026-08-24-agent-records-counts-in-prose-though-measures-exists.md (link)
+- → ../issues/closed/bugs/2026-08-24-reloaded-conversation-hides-the-photos-you-sent.md (link)
+- → ../issues/closed/bugs/2026-08-08-implementation-vocab-leaks-into-ui.md (link)
+- → ../issues/closed/bugs/2026-08-25-one-401-ejects-the-whole-app-to-a-login-form.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+
+#### test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
+
+Title: "B-inventory, 2026-10-08 (second walk)" | 251 lines
+
+Referenced by:
+- docs/implemented-plans/landmark-arrival.design.md:13 (link) — [B-inventory](../../test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md),
+- test/user-stories/journeys/B-inventory/reports/2026-10-08.md:20 (link) — [2026-10-08-2](2026-10-08-2.md), ran with the restored photos and is the photo
+- test/user-stories/journeys/B-inventory/reports/2026-10-09.md:226 (link) — Against [2026-10-08-2](2026-10-08-2.md), the valid photo-intake walk.
+- ../dev/journeys/reports/sweep-issues.md:103 (mention) — | `2026-08-23-webp-paste-rejected-though-the-app-emits-webp` | BUG | 08-23 | 09-13 | 21 | wontfix | `dc1fa06b1` (no trai
+- ../dev/journeys/reports/sweep-walks.md:24 (mention) — | **Push through.** "Confusion gets noted and then worked around, not surrendered to … Giving up is a last resort, not a
+- ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md:35 (link) — Seen in the [B2 walk](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 64): searching "
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
+- ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:36 (link) — [walk 2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 45).
+- ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:91 (link) — More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
+- ../issues/closed/bugs/2026-10-08-capture-finalized-with-nothing-landed-says-nothing.md:40 (link) — Report: [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 13, shot 06).
+- ../issues/closed/bugs/2026-10-08-chat-image-alt-text-numbers-content-blocks.md:23 (link) — Report: [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 20; first report R8).
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:46 (link) — The [second B-inventory walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R5)
+- ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md:32 (link) — [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R7).
+- ../issues/closed/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md:29 (link) — [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (R2).
+- ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md:48 (link) — [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 36, 60, 68),
+- ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:20 (link) — [B-inventory, second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 39).
+- ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md:20 (link) — [second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) row 39). The D-chemistry
+- ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md:18 (link) — [B-inventory second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 63:
+- ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:18 (link) — [second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 2),
+- ../issues/closed/bugs/2026-10-08-unreadable-picked-file-reported-as-format-or-network-fault.md:33 (link) — Report: [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 7).
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:120 (link) — More evidence from five walks. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row
+- ../issues/features/2026-08-19-collection-views-are-badly-defined.md:548 (link) — The missing primitive came up again in three walks. [A-lending](../../beebox/test/user-stories/journeys/A-lending/report
+
+References:
+- → test/user-stories/journeys/B-inventory/reports/2026-10-08.md (link)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
+- → ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
+- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
+- → ../issues/closed/bugs/2026-10-08-unreadable-picked-file-reported-as-format-or-network-fault.md (link)
+- → ../issues/closed/bugs/2026-10-08-capture-finalized-with-nothing-landed-says-nothing.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-image-alt-text-numbers-content-blocks.md (link)
+- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
+- → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
+- → ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (link)
+- → docs/agent-guide.md (mention)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+- → ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md (link)
+- → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (link)
+- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
+- → ../issues/closed/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md (link)
+- → ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md (link)
+- → test/user-stories/journeys/walker-prompt.md (mention)
+
+#### test/user-stories/journeys/B-inventory/reports/2026-10-08.md
+
+Title: "B-inventory, 2026-10-08" | 284 lines
+
+Referenced by:
+- test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md:17 (link) — [first walk](2026-10-08.md) sent photos that were damaged in the repository.
+- ../dev/devprocess-talk/slides/01c-walk-report-row.md:19 (mention) — Path: beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md. The box agent inside the product got the diag
+- ../issues/bugs/2026-08-08-chat-composer-attach-ux.md:121 (link) — Walker reaction, not a recurrence. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.
+- ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:104 (link) — Related observation, desktop. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
+- ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:35 (link) — [walk 1](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 42),
+- ../issues/closed/bugs/2026-10-08-box-agent-can-read-journey-walk-notes.md:36 (link) — Report: [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (R6, harness defect 2).
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:41 (link) — | [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (R2) | 3 | Each after a tu
+- ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md:31 (link) — Reports: [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 11),
+- ../issues/closed/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md:28 (link) — Reports: [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 13),
+- ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md:47 (link) — [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (rows 44, 46),
+- ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md:19 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 26) and
+- ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md:19 (link) — ([first walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) rows 60 and 79,
+- ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:17 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 1) and
+- ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md:36 (link) — ([report](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md),
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:120 (link) — More evidence from five walks. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row
+- ../issues/features/2026-08-19-collection-views-are-badly-defined.md:548 (link) — The missing primitive came up again in three walks. [A-lending](../../beebox/test/user-stories/journeys/A-lending/report
+
+References:
+- → test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md (link)
+- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
+- → ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md (link)
+- → ../issues/closed/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md (link)
+- → ../issues/bugs/2026-08-08-chat-composer-attach-ux.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
+- → ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (link)
+- → docs/agent-guide.md (mention)
+- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
+- → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md (link)
+- → test/user-stories/journeys/after-action.md (mention)
+- → ../issues/closed/bugs/2026-10-08-box-agent-can-read-journey-walk-notes.md (link)
+- → test/user-stories/journeys/B-inventory/reports/2026-08-24.md (link)
+
+#### test/user-stories/journeys/B-inventory/reports/2026-10-09.md
+
+Title: "B-inventory, 2026-10-09" | 281 lines
+
+Referenced by:
+- ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md:70 (link) — Seen again in two walks, now through the go-to line. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-
+- ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
+- ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:58 (link) — Seen again in three walks. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the i
+- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
+- ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 15): "Se
+- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../bee
+- ../issues/closed/bugs/2026-10-09-capture-delivery-does-not-anchor-like-a-send.md:19 (link) — Report: [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 17, shot 06).
+- ../issues/closed/bugs/2026-10-09-capture-shows-no-preview-of-added-photos.md:19 (link) — Report: [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (row 13).
+- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](.
+- ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:47 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) R4,
+- ../issues/closed/bugs/2026-10-09-image-lightbox-has-no-dialog-role.md:19 (link) — Report: [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R7, row 66).
+- ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:50 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 1,
+- ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:64 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 23.
+- ../issues/closed/bugs/2026-10-09-recent-chats-show-session-id-prefix.md:39 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 65.
+- ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:59 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) R9,
+- ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 27): a l
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:124 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../../beebox/
+- ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:50 (link) — [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) row 57,
+- ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md:37 (link) — Improved by agent behaviour, not by the product, per [D2](../../beebox/test/plugins/courseware/journeys/D-chemistry/repo
+
+References:
+- → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
+- → ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (link)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (link)
+- → ../issues/closed/bugs/2026-10-09-capture-shows-no-preview-of-added-photos.md (link)
+- → ../issues/closed/bugs/2026-10-09-capture-delivery-does-not-anchor-like-a-send.md (link)
+- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
+- → ../issues/features/2026-10-08-long-turn-gives-no-sign-of-progress.md (link)
+- → ../issues/closed/decisions/2026-10-08-structured-card-front-hides-its-facts.md (link)
+- → ../issues/closed/bugs/2026-10-08-nested-landmark-row-opens-the-landmark-file.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-switch-opens-empty-chat-not-the-place.md (link)
+- → ../issues/closed/bugs/2026-10-08-landmark-card-shows-its-config-not-its-places.md (link)
+- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
+- → ../issues/features/2026-08-19-collection-views-are-badly-defined.md (link)
+- → ../issues/bugs/2026-08-25-chats-bind-to-a-landmark-once-and-never-move.md (link)
+- → ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md (link)
+- → ../issues/closed/bugs/2026-10-09-recent-chats-show-session-id-prefix.md (link)
+- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
+- → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (link)
+- → ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md (link)
+- → ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md (link)
+- → ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (link)
+- → ../issues/closed/bugs/2026-10-09-image-lightbox-has-no-dialog-role.md (link)
+- → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
+- → ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md (link)
+- → ../issues/bugs/2026-09-20-browse-screenshot-hangs-while-snapshot-works.md (link)
+- → test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md (link)
+- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
+- → ../issues/closed/bugs/2026-10-08-unreadable-picked-file-reported-as-format-or-network-fault.md (link)
+- → ../issues/closed/bugs/2026-10-08-capture-finalized-with-nothing-landed-says-nothing.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-image-alt-text-numbers-content-blocks.md (link)
+- → ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md (link)
+- → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (link)
+- → ../issues/closed/bugs/2026-10-08-composer-attachments-listed-in-reverse-order.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-composer-add-description-names-retired-menu-items.md (link)
+- → ../issues/closed/bugs/2026-10-08-rename-damaged-binaries-still-in-tree.md (link)
+
+### test/user-stories/journeys/C-reconnecting/reports/
+
+#### test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md
+
+Title: "C-reconnecting, 2026-09-21" | 151 lines
+
+Referenced by:
+- ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md:29 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+- ../issues/closed/bugs/2026-09-21-browse-name-guard-refuses-visible-search-results.md:98 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+- ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:38 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+- ../issues/closed/bugs/2026-09-21-search-section-results-drop-their-destination.md:34 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:61 (link) — Evidence: [journey C report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+- ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:42 (link) — Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
+
+#### test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md
+
+Title: "C-reconnecting, 2026-10-08" | 209 lines
+
+Referenced by:
+- ../issues/bugs/2026-08-08-chat-composer-attach-ux.md:121 (link) — Walker reaction, not a recurrence. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.
+- ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:48 (link) — Seen in two walks. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (rows
+- ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:38 (link) — Still present. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 44) a
+- ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
+- ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:91 (link) — More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
+- ../issues/closed/bugs/2026-10-08-browse-ref-click-checks-only-geometry.md:51 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 37).
+- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:17 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 7, which also
+- ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:42 (link) — | [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 49) | 1 | One s
+- ../issues/closed/bugs/2026-10-08-place-pill-loses-the-chat-place-after-browse-closes.md:21 (link) — ([report](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md), row 33).
+- ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:19 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 3),
+- ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md:18 (link) — 53), [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 26,
+- ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:18 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 30),
+- ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md:17 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 27),
+- ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md:20 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) row 17).
+- ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md:47 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md).
+- ../issues/closed/bugs/2026-10-08-todo-checkbox-name-is-its-status.md:27 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md).
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:120 (link) — More evidence from five walks. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row
+- ../issues/closed/features/2026-10-08-drafted-message-has-no-copy-control.md:27 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (shot 07, turn 4).
+- ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:59 (link) — Still relevant. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 26)
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:93 (link) — Wishes and gaps from three walks, none of them a recurrence of the manual-testing items above (the walk boxes had no del
+
+References:
+- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
+- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (link)
+- → ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md (link)
+- → docs/box/todos.md (mention)
+- → ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md (link)
+- → ../issues/closed/features/2026-10-08-drafted-message-has-no-copy-control.md (link)
+- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
+- → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (link)
+- → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
+- → ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
+- → ../issues/closed/bugs/2026-10-08-todo-checkbox-name-is-its-status.md (link)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-browse-ref-click-checks-only-geometry.md (link)
+- → test/user-stories/journeys/after-action.md (mention)
+- → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (mention)
+- → ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md (mention)
+- → ../issues/features/2026-09-25-notifications-and-proactive-design.md (mention)
+- → ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md (mention)
+- → ../issues/features/2026-08-23-card-chrome-controls-have-no-bbx-ids.md (mention)
+- → ../issues/bugs/2026-08-08-chat-composer-attach-ux.md (mention)
+- → ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md (mention)
+- → ../issues/bugs/2026-09-21-search-sections-repeat-the-card-summary.md (mention)
+
+#### test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md
+
+Title: "C-reconnecting, 2026-10-09" | 231 lines
+
+Referenced by:
+- docs/implemented-plans/place-shows-cards.review.md:12 (link) — 1. **The agent has no reliable trigger to maintain the body.** Track C says the agent updates it whenever it changes wha
+- ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:52 (link) — Seen again in three walks, in two forms. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R
+- ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
+- ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:47 (link) — Seen again in two walks. [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 45):
+- ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
+- ../issues/closed/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md:38 (link) — Evidence from [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 61): the walker
+- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../bee
+- ../issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md:36 (link) — Report: [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md).
+- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](.
+- ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:48 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R2,
+- ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:51 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 3,
+- ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:62 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) rows 14 and 69,
+- ../issues/closed/bugs/2026-10-09-plate-card-rows-show-file-paths.md:45 (link) — Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R8,
+- ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:60 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R6,
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:124 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../../beebox/
+- ../issues/closed/features/2026-10-08-drafted-message-has-no-copy-control.md:31 (link) — Seen again in [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 28): the walker
+- ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md:51 (link) — [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) row 46.
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:97 (link) — The gaps repeat; the manual-testing items (real APNs delivery, tap-to-target, badge clearing on a physical iPhone) were
+- ../issues/features/2026-09-27-ack-badge-design-review.md:64 (link) — Seen again in four walks. The ack popover prints `ack.ref` as the link text (`beebox/src/frontend/src/components/chat/ac
+
+References:
+- → docs/box/todos.md (mention)
+- → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
+- → docs/box/what-you-could-do.md (mention)
+- → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
+- → src/core/agent-guide/guide.md (mention)
+- → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
+- → ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md (link)
+- → ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md (link)
+- → ../issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md (link)
+- → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
+- → ../issues/closed/bugs/2026-10-09-plate-card-rows-show-file-paths.md (link)
+- → ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md (link)
+- → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (mention)
+- → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (mention)
+- → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (mention)
+- → ../issues/features/2026-09-27-ack-badge-design-review.md (mention)
+- → ../issues/closed/bugs/2026-10-08-sidecar-tab-accessible-names-are-paths.md (mention)
+- → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (mention)
+- → ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (mention)
+- → ../issues/features/2026-09-25-notifications-and-proactive-design.md (mention)
+- → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (mention)
+- → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (mention)
+- → ../issues/closed/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md (mention)
+- → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (mention)
+- → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (mention)
+- → ../issues/closed/docs-and-chores/2026-09-21-bbx-create-template-args-hard-to-discover.md (mention)
+- → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (mention)
+- → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (mention)
+- → ../issues/closed/bugs/2026-10-08-todo-assigned-accepts-undefined-values-and-shows-them.md (mention)
+- → ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (mention)
+- → ../issues/closed/bugs/2026-10-08-browse-ref-click-checks-only-geometry.md (mention)
+- → ../issues/closed/bugs/2026-10-08-todo-checkbox-name-is-its-status.md (mention)
+- → ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md (mention)
+
 ### test/user-stories/journeys/F-newcomer/reports/
 
 #### test/user-stories/journeys/F-newcomer/reports/2026-09-21.md
@@ -10368,9 +11260,9 @@ Referenced by:
 - ../issues/closed/bugs/2026-09-21-document-metadata-displaces-the-reading-view.md:51 (link) — Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:17 (link) — [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md)
 - ../issues/closed/bugs/2026-09-21-todo-copy-promises-unavailable-tick-controls.md:38 (link) — Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:114 (link) — Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 - ../issues/closed/features/2026-09-21-hide-completed-agent-todos-from-boxholder-cards.md:35 (link) — Evidence: [journey F report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:55 (link) — Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:111 (link) — Evidence: [journey F report](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-09-21.md).
 
 #### test/user-stories/journeys/F-newcomer/reports/2026-10-08.md
 
@@ -10381,42 +11273,41 @@ Referenced by:
 - ../issues/bugs/2026-09-04-chat-scroll-still-bad-after-rewrite.md:104 (link) — Related observation, desktop. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:48 (link) — Seen in two walks. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (rows
 - ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:38 (link) — Still present. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 44) a
-- ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:18 (link) — [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 22, 29).
-- ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:16 (link) — [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 32: "DATED, ON THE
-- ../issues/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md:20 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md).
-- ../issues/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md:31 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (shots 05, 07, 08, 28).
 - ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md:45 (link) — Still present in every 2026-10-08 walk: [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md)
 - ../issues/closed/bugs/2026-10-08-admin-overview-secrets-id-collides.md:27 (link) — Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (R2).
 - ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md:91 (link) — More sessions loaded the connectors. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md
+- ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:21 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 22, 29).
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:20 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (rows 9, 73).
 - ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md:44 (link) — | [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (R1) | 2 | One second after
 - ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md:50 (link) — [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 83).
 - ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md:21 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 1).
 - ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md:19 (link) — reproduced) and [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 27,
+- ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:19 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 32: "DATED, ON THE
 - ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md:18 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 30).
 - ../issues/closed/bugs/2026-10-08-seed-briefing-reaching-me-speaks-agent-commands.md:29 (link) — Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (shot 10).
+- ../issues/closed/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md:23 (link) — Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md).
 - ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md:29 (link) — ([report](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md), row 96). A person reads
+- ../issues/closed/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md:34 (link) — Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (shots 05, 07, 08, 28).
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:120 (link) — More evidence from five walks. [B2](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:59 (link) — Still relevant. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 26)
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:117 (link) — More evidence from five walks. [B2](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (rows 1
-- ../issues/features/2026-09-25-notifications-and-proactive-design.md:91 (link) — Wishes and gaps from three walks, none of them a recurrence of the manual-testing items above (the walk boxes had no del
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:93 (link) — Wishes and gaps from three walks, none of them a recurrence of the manual-testing items above (the walk boxes had no del
 - ../issues/features/2026-09-27-ack-badge-design-review.md:60 (link) — Seen in the [A-lending walk](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (rows 45, 79) and
 
 References:
 - → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (link)
 - → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (link)
-- → ../issues/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md (link)
+- → ../issues/closed/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md (link)
 - → docs/box/todos.md (mention)
-- → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
+- → ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (link)
 - → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (link)
 - → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (link)
-- → ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
+- → ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (link)
 - → ../issues/closed/bugs/2026-10-08-seed-briefing-reaching-me-speaks-agent-commands.md (link)
-- → ../issues/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md (link)
+- → ../issues/closed/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md (link)
 - → ../issues/closed/bugs/2026-10-08-conversation-keeps-placeholder-title.md (link)
 - → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (link)
 - → ../issues/closed/bugs/2026-10-08-admin-overview-secrets-id-collides.md (link)
-- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (mention)
 - → ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md (mention)
 - → ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md (mention)
 - → ../issues/features/2026-09-25-notifications-and-proactive-design.md (mention)
@@ -10436,49 +11327,48 @@ Referenced by:
 - ../issues/bugs/2026-09-21-agent-promises-unconfigured-calendar-delivery.md:52 (link) — Seen again in three walks, in two forms. [A](../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (R
 - ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md:42 (link) — Seen again in [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 44, shot 15): the Googl
 - ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md:38 (link) — Present in every walk of the round: `userEmail` in the box agent's session context in all of [A](../../beebox/test/user-
-- ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:44 (link) — Seen again in two walks. [C](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 45): "Co
-- ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:37 (link) — Seen again in [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 58): "By date" does not
-- ../issues/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md:24 (link) — Seen again in two walks, as a second overflow symptom: with four or five tabs the first tabs lose their labels and show
-- ../issues/bugs/2026-10-09-admin-notifications-copy-omits-reminders.md:14 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 49, shot 17).
 - ../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md:30 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 42, 55, 81; harness note H3)
-- ../issues/bugs/2026-10-09-callout-renders-below-prose-that-follows-it.md:18 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 72, 73).
 - ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md:58 (link) — Seen again in three walks. [B](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-09.md) (R5): the i
+- ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md:47 (link) — Seen again in two walks. [C](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) (row 45):
 - ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md:64 (link) — Seen again in five walks, all with the activity row showing "used a tool, ran a command" or a Bash description. [A](../.
 - ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md:55 (link) — Seen again in three walks. [A](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-09.md) (row 15): "Se
+- ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md:40 (link) — Seen again in [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 58): "By date" does
 - ../issues/closed/bugs/2026-10-08-seed-briefing-reaching-me-speaks-agent-commands.md:47 (link) — Seen again in [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 16, shot 05): the se
-- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../beebox/te
-- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](../../.
+- ../issues/closed/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md:27 (link) — Seen again in two walks, as a second overflow symptom: with four or five tabs the first tabs lose their labels and show
+- ../issues/closed/bugs/2026-10-09-admin-notifications-copy-omits-reminders.md:17 (link) — Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 49, shot 17).
+- ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md:24 (link) — Reports: [D](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09.md) (H3), [D2](../../../bee
+- ../issues/closed/bugs/2026-10-09-callout-renders-below-prose-that-follows-it.md:21 (link) — Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 72, 73).
+- ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md:34 (link) — Reports: [D2](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-09-2.md) (rows R1, R2), [C](.
 - ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md:49 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) R4,
 - ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md:52 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 2.
 - ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md:63 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 65,
 - ../issues/closed/bugs/2026-10-09-plate-card-rows-show-file-paths.md:46 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) row 24.
 - ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md:61 (link) — [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) R5,
+- ../issues/closed/docs-and-chores/2026-10-09-box-docs-do-not-say-how-to-turn-on-notifications.md:23 (link) — Report: [F](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 33-36).
+- ../issues/closed/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:124 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../../beebox/
 - ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md:63 (link) — Still relevant, per [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 29, 71). Row 29:
-- ../issues/docs-and-chores/2026-10-09-box-docs-do-not-say-how-to-turn-on-notifications.md:18 (link) — Report: [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (rows 33-36).
-- ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md:121 (link) — Partly met after the landmark-arrival work. Met: the first view now shows openers and a place page ([C](../../beebox/tes
-- ../issues/features/2026-09-25-notifications-and-proactive-design.md:95 (link) — The gaps repeat; the manual-testing items (real APNs delivery, tap-to-target, badge clearing on a physical iPhone) were
+- ../issues/features/2026-09-25-notifications-and-proactive-design.md:97 (link) — The gaps repeat; the manual-testing items (real APNs delivery, tap-to-target, badge clearing on a physical iPhone) were
 - ../issues/features/2026-09-27-ack-badge-design-review.md:64 (link) — Seen again in four walks. The ack popover prints `ack.ref` as the link text (`beebox/src/frontend/src/components/chat/ac
 
 References:
 - → ../issues/closed/bugs/2026-10-09-place-page-heading-uses-filename-not-label.md (link)
 - → ../issues/closed/bugs/2026-10-09-plate-card-rows-show-file-paths.md (link)
-- → ../issues/docs-and-chores/2026-10-09-box-docs-do-not-say-how-to-turn-on-notifications.md (link)
-- → ../issues/bugs/2026-10-09-admin-notifications-copy-omits-reminders.md (link)
+- → ../issues/closed/docs-and-chores/2026-10-09-box-docs-do-not-say-how-to-turn-on-notifications.md (link)
+- → ../issues/closed/bugs/2026-10-09-admin-notifications-copy-omits-reminders.md (link)
 - → ../issues/closed/bugs/2026-10-09-place-page-says-nothing-here-while-the-folder-holds-cards.md (link)
-- → ../issues/bugs/2026-10-09-callout-renders-below-prose-that-follows-it.md (link)
+- → ../issues/closed/bugs/2026-10-09-callout-renders-below-prose-that-follows-it.md (link)
 - → ../issues/closed/bugs/2026-10-09-chat-title-run-is-a-full-agent-session.md (link)
 - → ../issues/closed/bugs/2026-10-09-box-chat-agent-has-host-schedule-and-push-tools.md (link)
 - → ../issues/closed/bugs/2026-10-09-chat-title-run-leaves-usage-manifest-uncommitted.md (link)
 - → ../issues/closed/bugs/2026-10-09-root-onboarding-openers-outlive-the-purpose.md (link)
-- → ../issues/bugs/2026-10-09-recent-chats-show-session-id-prefix.md (link)
-- → ../issues/bugs/2026-10-09-reloaded-new-chat-labelled-conversation.md (link)
+- → ../issues/closed/bugs/2026-10-09-recent-chats-show-session-id-prefix.md (link)
+- → ../issues/closed/bugs/2026-10-09-reloaded-new-chat-labelled-conversation.md (link)
 - → ../issues/closed/features/2026-10-09-place-page-tiles-omit-the-card-summary.md (link)
 - → ../issues/closed/bugs/2026-10-09-place-page-openers-stay-disabled-after-one-send.md (link)
 - → ../issues/closed/bugs/2026-10-09-agent-time-miscounts-journey-turns.md (link)
 - → ../issues/bugs/2026-10-09-browse-key-is-not-a-signed-in-owner.md (link)
 - → test/user-stories/journeys/F-newcomer/reports/2026-10-08.md (link)
 - → ../issues/closed/bugs/2026-10-08-place-pill-repeats-box-name-at-root.md (mention)
-- → ../issues/features/2026-08-23-first-screen-says-nothing-about-what-this-is.md (mention)
 - → ../issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md (mention)
 - → ../issues/closed/bugs/2026-10-08-chat-activity-row-speaks-in-commands-and-files.md (mention)
 - → ../issues/closed/bugs/2026-10-08-box-chat-agent-inherits-host-claude-account-connectors.md (mention)
@@ -10489,16 +11379,16 @@ References:
 - → ../issues/closed/bugs/2026-10-08-agent-writes-the-user-on-boxholder-pages.md (mention)
 - → ../issues/closed/bugs/2026-10-08-plate-badge-opens-browse-and-hides-chat.md (mention)
 - → ../issues/closed/bugs/2026-10-08-plate-header-prints-scope-glob.md (mention)
-- → ../issues/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (mention)
+- → ../issues/closed/bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md (mention)
 - → ../issues/decisions/2026-09-08-sidecar-preview-replacement-policy.md (mention)
 - → ../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md (mention)
-- → ../issues/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md (mention)
+- → ../issues/closed/bugs/2026-10-08-sidecar-tab-strip-runs-under-pane-controls.md (mention)
 - → ../issues/bugs/2026-09-21-calendar-setup-surfaces-raw-host-and-box-config.md (mention)
-- → ../issues/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (mention)
+- → ../issues/closed/bugs/2026-10-08-plate-by-date-tab-groups-by-state.md (mention)
 - → ../issues/features/2026-09-27-ack-badge-design-review.md (mention)
 - → ../issues/bugs/2026-10-08-box-agent-context-carries-host-login-email.md (mention)
 - → ../issues/closed/bugs/2026-10-08-admin-overview-secrets-id-collides.md (mention)
 - → ../issues/closed/bugs/2026-10-08-client-max-update-depth-after-chat-turns.md (mention)
 - → ../issues/closed/bugs/2026-10-08-template-sync-commit-precedes-agent-skill-mirrors.md (mention)
-- → ../issues/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md (mention)
+- → ../issues/closed/bugs/2026-10-08-todo-start-chip-does-not-say-it-surfaces.md (mention)
 

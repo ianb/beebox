@@ -1,5 +1,5 @@
 /**
- * The real wiring for `hq-wait.ts` (`docs/plans/resilient-voice-recording.md`,
+ * The real wiring for `hq-wait.ts` (`docs/implemented-plans/resilient-voice-recording.md`,
  * Track 4): `voiceRecording` tRPC calls, the `voice-recording-status` bus
  * event on the shared `events.subscribe` stream, and a sleep-immune budget.
  * Also the registry the pending bubble's "Send live text now" control reaches

@@ -46,6 +46,10 @@ bin/browse wait @e1                             # until element appears
 bin/browse wait --text "Success"                # until text appears
 bin/browse wait --url "**/dashboard"            # until URL matches glob
 bin/browse wait --load networkidle              # post-navigation catch-all
+bin/browse wait --text "Filed" --timeout 180000 # every wait ends: --timeout ms, default 30 s
+
+# Clerk extension (BROWSE_CLERK=1 loads its localhost test build, rebuilt when stale)
+BROWSE_CLERK=1 bin/browse clerk-popup feed      # popup acting on tab "feed", in tab "clerk-popup"
 
 # Lifecycle
 bin/browse close                                # close this browser

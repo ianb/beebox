@@ -20,6 +20,8 @@ export interface Fixture {
 
 /** Write a fixture package: `files` maps package-relative path -> contents. */
 export function fixture(files: Record<string, string>): Fixture {
+  // Not realpath'd: macOS's tmpdir is a symlink, so the fixture also covers a
+  // checkout reached through one.
   const root = mkdtempSync(join(tmpdir(), "test-graph-"));
   const packageRoot = join(root, "pkg");
   for (const [rel, contents] of Object.entries(files)) {

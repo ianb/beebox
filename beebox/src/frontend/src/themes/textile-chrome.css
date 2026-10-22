@@ -1,0 +1,120 @@
+/* Production integration for the two approved textile palettes. */
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) {
+  --bbx-desk-background: var(--textile-desk);
+  --bbx-desk-pattern: none;
+  --bbx-desk-edge: var(--textile-edge);
+  --bbx-bar-paper: var(--textile-bar);
+  --bbx-bar-edge: var(--textile-edge);
+  --bbx-chat-user-ink: var(--textile-user-ink);
+}
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]) { background: transparent; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-interface-tabstrip > [role="none"]::before,
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-interface-tabstrip > [role="none"]::after { background: transparent; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-interface-card-desk[data-card-content="neutral"] { background: #fbf5ee; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-app-nav > div { background: transparent; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-app-nav :is(button, a):focus-visible {
+  outline: 2px solid var(--textile-bar-ink);
+  outline-offset: 2px;
+}
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: var(--textile-bar-ink); }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-composer-material > .bbx-composer-mobile-row {
+  background: var(--textile-paper);
+  color: var(--textile-ink);
+}
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-user-paper {
+  --bbx-selection: var(--textile-user-ink);
+  --bbx-selection-ink: var(--textile-user);
+}
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) { color: var(--textile-user-ink); }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) {
+  background: #ffffff18;
+  color: var(--textile-user-ink);
+}
+.bbx-box-presentation[data-chrome-theme="gold-thread"] .bbx-chat-user-paper .bbx-chat-user-attachment-badge { background: #00000040; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-user-attachment:hover { background: #ffffff30; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-user-unsure { text-decoration-color: var(--textile-user-ink); }
+/* Nested cards supply their own material tokens. */
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-reply-material {
+  --bbx-edge: var(--textile-edge);
+}
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
+  --tw-prose-quotes: var(--textile-ink);
+  --tw-prose-code: var(--textile-ink);
+  --tw-prose-counters: var(--textile-soft);
+  --tw-prose-captions: var(--textile-soft);
+  --tw-prose-bullets: var(--textile-accent);
+  --tw-prose-quote-borders: var(--textile-edge);
+  --tw-prose-hr: var(--textile-edge);
+  --tw-prose-th-borders: var(--textile-edge);
+  --tw-prose-td-borders: var(--textile-edge);
+  --tw-prose-pre-bg: var(--textile-code);
+  --tw-prose-pre-code: var(--textile-code-ink);
+}
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) {
+  color: var(--textile-soft);
+  background: var(--textile-paper);
+  border-radius: 8px;
+}
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: var(--textile-ink); --bbx-ink-soft: var(--textile-soft); --bbx-pen: var(--textile-accent); }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: var(--textile-ink); }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) #bbx-chat-load-older {
+  background: var(--textile-paper);
+  color: var(--textile-accent);
+  border-radius: 8px;
+}
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) #bbx-chat-load-older:enabled:hover { text-decoration: underline; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) #bbx-chat-load-older:disabled { color: var(--textile-soft); opacity: .6; }
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) [aria-label="Pane controls"] button {
+  background: var(--textile-bar);
+  color: var(--textile-bar-ink);
+  border: 1px solid var(--textile-edge);
+  border-radius: 8px;
+}
+.bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) [aria-label="Pane controls"] button:hover { background: var(--textile-sheet); color: var(--textile-ink); }
+.bbx-card-theme[data-card-theme="gold-thread"],
+[data-chrome-theme="gold-thread"] .bbx-composer-material { color-scheme: dark; }
+.bbx-card-theme:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]) { --bbx-font: ui-sans-serif, system-ui, sans-serif; --bbx-quote-edge: 2px; }
+.bbx-interface-tab:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]) {
+  background-color: var(--textile-sheet);
+  border-top-color: var(--textile-edge);
+  border-left-color: var(--textile-edge);
+  border-right-color: var(--textile-edge);
+  border-radius: 14px 14px 0 0;
+}
+.bbx-interface-tab:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]):not([data-active="true"]):hover {
+  background-color: color-mix(in srgb, var(--textile-paper) 78%, white);
+}
+.bbx-interface-tab:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"])[data-active="true"] { background: var(--textile-paper); }
+.bbx-system-theme-preview:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) {
+  background: var(--textile-art) center / cover, var(--textile-desk);
+}
+.bbx-system-theme-preview:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-system-theme-toolbar {
+  background: var(--textile-bar);
+  border-bottom: 2px solid var(--textile-edge);
+}
+.bbx-system-theme-preview:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-system-theme-toolbar i { background: var(--textile-bar-ink); }
+.bbx-system-theme-preview:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-system-theme-desk > span {
+  background: var(--textile-paper);
+  border-color: var(--textile-edge);
+  border-radius: var(--textile-radius);
+  box-shadow: var(--textile-shadow);
+}
+@media print {
+  .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]), .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-user-paper, .bbx-chat-reply-material, .bbx-chat-callout, .bbx-chat-pending-material, .bbx-chat-meta-material), .bbx-card-theme:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]) {
+    background: transparent; color: #000; border: 0; box-shadow: none;
+    --textile-paper: #fff; --textile-ink: #000; --textile-soft: #333; --textile-accent: #000;
+    --textile-sheet: #fff; --textile-code: #fff; --textile-code-ink: #000;
+    --textile-user: #fff; --textile-user-ink: #000;
+  }
+  .bbx-card-theme:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]), .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
+    color-scheme: light;
+    --bbx-paper: #fff; --bbx-ink: #000; --bbx-ink-soft: #333; --bbx-pen: #000;
+    --tw-prose-body: #000; --tw-prose-bold: #000; --tw-prose-headings: #000;
+    --tw-prose-quotes: #000; --tw-prose-counters: #333; --tw-prose-bullets: #333; --tw-prose-captions: #333;
+    color: #000;
+  }
+  .bbx-card-surface:is([data-card-theme="rose-trellis"], [data-card-theme="gold-thread"]) {
+    background: #fff; box-shadow: none;
+  }
+}

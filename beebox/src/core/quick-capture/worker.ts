@@ -10,6 +10,7 @@ import { readQuickChatRecord } from "../chat/routing/quick-chat-store.js";
 import { deliveryExpired, type QuickChatRecord } from "../chat/routing/quick-chat-record.js";
 import { submitQuickChat, submitQuickChatFollowup, type QuickChatContext } from "../chat/routing/quick-chat-submit/submit.js";
 import { materializeCaptureSource, writeSourceTranscription, reconcileCaptureSource } from "./source.js";
+import { isWordless, FILING_WAITING_ERROR } from "./filing.js";
 import { captureDirectory, listCaptures, readCapture, withCaptureLock, writeCapture, requireCaptureOwner, QuickCaptureError, type CaptureRecord } from "./store.js";
 
 const RETRY_HORIZON_MS = 7 * 24 * 60 * 60 * 1000;
@@ -82,12 +83,14 @@ async function prepareVoice(ctx: CaptureWorkerContext, record: CaptureRecord): P
       filename: `recording${mimetypeToExtension(material.mimeType)}`,
     });
     if (result.text.trim() === "") throw new QuickCaptureError({ reason: "empty-transcript" });
+    // The record counts as transcribed only once the card holds the transcript, so a failed write is retried.
+    await writeSourceTranscription({ boxRoot: ctx.boxRoot, record, text: result.text, attemptedAt: record.transcriptionAttemptedAt });
     delete record.transcriptionTerminal;
     record.transcript = result.text;
     record.transcriptionLanguage = result.language;
-    await writeSourceTranscription({ boxRoot: ctx.boxRoot, sourceRef, text: result.text, language: result.language, attemptedAt: record.transcriptionAttemptedAt });
   } catch (error) {
-    await writeSourceTranscription({ boxRoot: ctx.boxRoot, sourceRef, attemptedAt: record.transcriptionAttemptedAt, error: errorMessage(error), permanent: error instanceof QuickCaptureError && error.reason === "empty-transcript" });
+    try { await writeSourceTranscription({ boxRoot: ctx.boxRoot, record, attemptedAt: record.transcriptionAttemptedAt, error: errorMessage(error), permanent: error instanceof QuickCaptureError && error.reason === "empty-transcript" }); }
+    catch (writeError) { console.warn(`[quick-capture] could not record the transcription failure for ${record.id}:`, errorMessage(writeError)); }
     throw error;
   }
 }
@@ -108,6 +111,13 @@ async function prepareOriginal(ctx: CaptureWorkerContext, record: CaptureRecord)
   }
   return undefined;
 }
+/** Saved material with no words is requested for filing; Retry starts a fresh set of filing wakeups. */
+function markSaved(ctx: CaptureWorkerContext, record: CaptureRecord): void {
+  record.state = "saved";
+  if (!isWordless(record)) return;
+  record.filingRequested = true;
+  if (ctx.manualRetry === true) { delete record.filingKicks; delete record.filingKickAt; if (record.error === FILING_WAITING_ERROR) delete record.error; }
+}
 function automaticRetryExpired(ctx: CaptureWorkerContext, record: CaptureRecord): boolean {
   return ctx.manualRetry !== true && record.state !== "sent" && record.state !== "saved" && record.state !== "needs-choice"
     && getBoxTime(ctx.boxRoot).getTime() - Date.parse(record.acceptedAt) > RETRY_HORIZON_MS;
@@ -122,7 +132,7 @@ async function processLocked(ctx: CaptureWorkerContext, record: CaptureRecord): 
     transcriptionProblem = await prepareOriginal(ctx, record);
     const input = record.declaration.input?.trim() || record.transcript?.trim();
     if (input === undefined || input === "") {
-      record.state = "saved";
+      markSaved(ctx, record);
     } else {
       let sourceRef = record.sourceRef;
       let retainedRecording = record.declaration.material?.kind === "audio";

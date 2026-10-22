@@ -27,7 +27,7 @@ export interface ResolvedConversation {
    * The resolver created this conversation for this tab and nobody has written
    * in it yet: a `start` target, or a session that still holds this tab's
    * reservation receipt. An existing session with no entries and no receipt is
-   * not unstarted (issues/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md).
+   * not unstarted (issues/closed/bugs/2026-09-21-fresh-chat-reservation-suppresses-openers.md).
    */
   unstarted: boolean;
 }
@@ -100,7 +100,8 @@ function restoreTarget(input: { target: ConversationTarget; label: string | unde
 /** A bootstrapped session is unstarted only when it is empty and still holds this tab's receipt (read after `retireUsedReceipt`). */
 function resumed(data: Extract<Bootstrap, { kind: "resumable" }>, receipts: ReservationReceipts | null): ResolvedConversation {
   const unstarted = data.history.total === 0 && receipts?.get(data.sessionId) !== undefined;
-  return { unstarted, selection: { kind: "ready", label: data.label ?? "Conversation", target: {
+  const label = data.label ?? (unstarted ? "New conversation" : "Conversation");
+  return { unstarted, selection: { kind: "ready", label, target: {
     kind: "session", sessionId: data.sessionId, contextDir: data.contextDir,
   } }, initial: preload(data) };
 }

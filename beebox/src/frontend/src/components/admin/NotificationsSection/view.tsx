@@ -7,7 +7,7 @@
  * Add-to-Home-Screen instead of showing a dead button. We never call
  * subscription.unsubscribe() to disable (it traps Safari into refusing a new
  * subscribe without a fresh gesture) — disabling removes the endpoint
- * server-side only. See docs/plans/web-push-notifications.md (Track E).
+ * server-side only. See docs/implemented-plans/web-push-notifications.md (Track E).
  */
 
 import { useState, useEffect } from "react";
@@ -24,7 +24,7 @@ import { RecentNotifications } from "./RecentNotifications";
 import { PhonePushDevices } from "./PhonePushDevices";
 
 const DESCRIPTION =
-  "Get a push notification on this device when the box needs you — health alerts and questions waiting for an answer.";
+  "Get a push notification on this device when the box needs you — reminders, notes from the agent, health alerts, and questions waiting for an answer.";
 
 // iOS Safari's non-standard `navigator.standalone` (whether the page is
 // running as an installed Home-Screen app) isn't in the DOM lib types.

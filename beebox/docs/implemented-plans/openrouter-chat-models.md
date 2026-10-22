@@ -79,6 +79,8 @@ for spend visibility (2026-09-19).
   - Scope: an added model may be a chat's pick and the box default. Tiered
     procedure steps (`model: strong`) stay on subscription Claude, because
     an added model has no tier.
+    *Superseded 2026-10-15 by `docs/implemented-plans/background-runs-follow-openrouter-default.md`:
+    tiered steps and the small passes now follow the box's OpenRouter slots.*
   - Removal: a chat whose explicit pick was removed refuses its next turn; it
     does not follow the box default.
   - A paid test of a few cents per model is authorized.

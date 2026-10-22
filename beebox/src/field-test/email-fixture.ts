@@ -1,5 +1,5 @@
 /**
- * Inbound-email fixtures (`docs/plans/agent-field-tests.md`, Track 1).
+ * Inbound-email fixtures (`docs/implemented-plans/agent-field-tests.md`, Track 1).
  *
  * A scenario's `emails/<name>.yaml` describes one message the way a person
  * would — who it is from, what it says, what is attached — and this module

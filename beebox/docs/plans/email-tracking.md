@@ -6,6 +6,8 @@ issues: []
 ---
 # Email tracking instead of mailbox mirroring
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan changes Gmail from a mailbox mirror into a remote source with an explicit tracked working set. Gmail remains the complete archive. An email thread enters Git only when a person, an agent, a procedure, or a bounded automatic rule chooses to track it.
 
 An Opus cross-model review was run after the boxholder explicitly requested it. Its eight findings are addressed in the implementation: delta-only tracked refresh, legacy-state migration, resumable history bounds, safe Message-ID handling, delete-during-sync protection, connector serialization, shared procedure-trigger orchestration, and distinct baseline/overflow counts.
@@ -428,11 +430,11 @@ Implementation completed the tracks below with these deliberate boundaries:
 ## Rollout shape
 
 - **Test posture:** tests come first for each substantial boundary.
-  - `test/connectors/gmail-tracking.doctest.md` (moved to `beebox/test/connectors/gmail/tracking.doctest.md`) covers live-card discovery,
+  - `test/connectors/gmail-tracking.doctest.md` (moved to `beebox/test/connectors/gmail/tracking.test.ts`, with its rules, history discovery, and `gws` sections in `beebox/test/connectors/gmail/tracking.rules-and-discovery.test.ts`) covers live-card discovery,
     explicit and concurrent tracking, deletion, tracked-only refresh, history
     expiry, resumable bounds, config validation, rolling budgets, pending
     summaries, and the read-only `gws` gate.
-  - `test/core/commands/connector-sync.doctest.md` covers post-sync procedure
+  - `test/core/commands/connector-sync.test.ts` covers post-sync procedure
     execution and failure reporting.
   - `test/services/service-google-gmail.doctest.md` (moved to `beebox/test/services/google-gmail-fake.doctest.md`) covers full-thread retrieval
     and bounded thread/history list behavior.

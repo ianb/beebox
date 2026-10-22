@@ -6,6 +6,8 @@ issues: []
 ---
 # Operator-driven member password reset
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The operator and member flows described below are implemented. Automated tests
 cover capability migration/isolation, authorization, reset redemption, session
 revocation, replay, throttling, scrypt capacity, and failure pages. The isolated
@@ -191,9 +193,9 @@ Those closed issues remain precedent. This plan does not reopen them.
   login throttle, the scrypt cap, and generation revocation. The plan updates
   this section to include member reset and removes the line 40 statement that
   no password reset exists.
-- **Tests.** `test/webapp/auth-capabilities.doctest.md` verifies hash-at-rest,
+- **Tests.** `test/webapp/auth-capabilities.test.ts` verifies hash-at-rest,
   mode 0600, expiry metadata, and single use. Lines 112-164 verify corruption,
-  symlinks, capacity, and cross-process consume. `test/webapp/invite-accept.doctest.md:30-109` (moved to `beebox/test/webapp/routes/auth.invite-accept.doctest.md`)
+  symlinks, capacity, and cross-process consume. `test/webapp/invite-accept.doctest.md:30-109` (moved to `beebox/test/webapp/routes/auth.invite-accept.test.ts`)
   verifies public headers, mismatch retry, success, and replay. These are the
   closest store and route precedents.
 
@@ -286,8 +288,8 @@ duplicate the lock, expiry, hashing, corruption, and capacity rules.
 TTL; the legacy on-disk filename remains `.invites.json`.
 
 **First implementation chunk.** Extend and rename
-`test/webapp/auth-capabilities.doctest.md` to
-`test/webapp/auth-capabilities.doctest.md`. Add failing cases for v1 read and v2
+`test/webapp/auth-capabilities.test.ts` to
+`test/webapp/auth-capabilities.test.ts`. Add failing cases for v1 read and v2
 write, kind isolation, required reset email, global 100-record cap, latest-link
 replacement including replacement while the store starts at cap, all-links
 invalidation on consume, expiry, hash-at-rest, permissions, corruption,
@@ -330,7 +332,7 @@ nonexistent account, or member outside the current box.
 `passwordResetEligibleEmails`; `resetPath`.
 
 **First implementation chunk.** Extend
-`test/webapp/trpc-admin-box-config.doctest.md` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.doctest.md`) with failing cases for the
+`test/webapp/trpc-admin-box-config.doctest.md` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.test.ts`) with failing cases for the
 eligibility intersection, owner and Google-only exclusion, stale local user,
 other-box-only member, concrete owner requirement, canonical email, capacity,
 store failure, and replacement of an older reset for the same account. Then
@@ -411,7 +413,7 @@ safely replace an existing member credential based on a reset bearer.
 `passwordReset=1`; reset never creates a session.
 
 **First implementation chunk.** Add
-`test/webapp/password-reset.doctest.md` (moved to `beebox/test/webapp/routes/auth/password-reset.doctest.md`) first. Cover public headers, pinned
+`test/webapp/password-reset.doctest.md` (moved to `beebox/test/webapp/routes/auth/password-reset.test.ts`) first. Cover public headers, pinned
 identity, wrong content type, malformed and mismatched form retry, wrong-kind
 token, success, old-password rejection, new-password login, revocation of every
 old cookie, absence of a reset-created cookie, replay, multiple-link

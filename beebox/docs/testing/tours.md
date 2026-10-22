@@ -32,7 +32,7 @@ pre-commit runs them. A gate has one response to intended UI change —
 go red — so a soft-finding instrument makes a permanently red gate that
 gets ignored; the weekly session asks the other question, *drift or new
 truth?*, which a gate cannot. Behavior belongs in
-[doctests](doctests.md); "does the app boot at all" is the
+[tests](check.md); "does the app boot at all" is the
 [smoke walk](smoke.md), a merge gate on the same browser library with
 different failure semantics, deliberately not the same walk.
 
@@ -42,7 +42,7 @@ different failure semantics, deliberately not the same walk.
   tour and review `summary.md` before calling the work done — the
   visual/a11y counterpart to running tests. This catches
   "renders broken at mobile width", "lost its h1", "landmark
-  disappeared" — things no doctest can see.
+  disappeared" — things no test can see.
 - **A11y sweeps.** The axe reports across `bin/tour --all` are the
   box's accessibility audit surface (a real sweep once fixed four
   structural violation classes across the app).
@@ -53,7 +53,7 @@ different failure semantics, deliberately not the same walk.
 ### When not to use tours
 
 - **Not as a gate** — see above.
-- **Not for logic or state-machine behavior** — doctests own that.
+- **Not for logic or state-machine behavior** — tests own that.
 - **Not for states that need fabricated backend conditions** — that is
   the dev-harness pattern in [dev stubs](dev-stubs.md). The line:
   **tours walk the real app; harnesses fabricate states.** A tour shows
@@ -96,7 +96,7 @@ and even then the other pass still runs and reports.
   `capture`, `new-chat`) clicks through one surface; write one when the
   walk itself is what you want the next person to have. Extend the
   surface's tour when you add UI to it — the same duty as adding a
-  doctest for a new codepath. A tour whose surface is gone gets deleted,
+  test for a new codepath. A tour whose surface is gone gets deleted,
   not repaired.
 - **Navigate by clicking** (`t.click({ role, name })`) so the tour
   exercises real navigation; use `t.go(path)` only when the deep link
@@ -141,10 +141,12 @@ Each run writes `test/tours/.artifacts/<tour>/<runId>/` (gitignored):
   violation counts.
 - `<checkpoint>.<viewport>.png` — screenshot.
 - `<checkpoint>.<viewport>.ax.txt` — full accessibility-tree snapshot.
-- `<checkpoint>.<viewport>.axe.json` — axe violations (color-contrast
-  is suppressed at run time pending
-  `issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md`; edit
-  `tour-lib/axe.ts` `SUPPRESS_RULES` to re-enable).
+- `<checkpoint>.<viewport>.axe.json` — axe violations. axe's
+  color-contrast rule is off: it skips text over images and gradients.
+- `<checkpoint>.<viewport>.contrast.json` — the pixel contrast and
+  material audit (`tour-lib/contrast.ts`, also behind `bin/theme-check`).
+  Misses become one ❌ finding per checkpoint. Theme artwork that repeats or
+  stops short at the viewport (`tour-lib/backdrop.ts`) becomes another.
 
 A capture-time degradation (page-readiness timeout, axe crash) is
 recorded as a ⚠️ finding rather than silently producing a

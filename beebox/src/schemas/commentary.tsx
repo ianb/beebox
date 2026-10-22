@@ -1,6 +1,6 @@
 /**
  * Commentary card schema — review-and-comment on a host card from inside a box.
- * See `docs/plans/box-commentary-surface.md` and `docs/plans/extfile-card.md`.
+ * See `docs/plans/box-commentary-surface.md` and `docs/implemented-plans/extfile-card.md`.
  *
  * **Attach-only:** a commentary card lives in a host card's `.attach/` scope and
  * its bare `{% source %}` anchors target the containing card — an `extfile`
@@ -22,7 +22,7 @@ import { markdocConfig } from "../shared/markdoc-config/tags/core.js";
 import { parseMarkdown } from "../shared/markdoc-config/parse/core.js";
 
 // Value named imports (`{ validate }`) don't resolve from this CommonJS
-// module under Node's ESM loader (used by tsx / the doctest runner). Destructure
+// module under Node's ESM loader (used by tsx / the test runner). Destructure
 // off the default import — same pattern as `markdoc-config.ts` / `card-lint.ts`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- the rule's suggested named import is exactly what the comment above says does not resolve here.
 const { validate: markdocValidate } = Markdoc;

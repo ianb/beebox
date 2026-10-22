@@ -1,26 +1,26 @@
-# TAP tests
+# The tap runner
 
-Traditional `.test.ts` files for what a doctest cannot test without
-circularity.
+Every test is a `.test.ts` file run by tap. How to write one: [testing with
+`t.check`](check.md). This page covers how the runner is set up.
 
 ## What it is
 
-**Location:** `test/*.test.ts`
+**Location:** `test/**/*.test.ts`
 **Runner:** [tap](https://node-tap.org/) v21 with tsx
 **Run:** `pnpm test`
 
-Reserved for things that would be circular as doctests: testing the test infrastructure itself.
+Each package has a `.taprc`. It loads tsx and the `@ianbicking/tap-check/tap` plugin
+(`t.check`) with `--import`.
 
-The files themselves are the catalog: `ls test/*.test.ts`. Create
-`test/<name>.test.ts` and import from `tap`.
+The files themselves are the catalog: `ls test/**/*.test.ts`.
 
 ## Failure modes
 
 **The tap plugin set is built at install time.**
 
 `.taprc` disables `@tapjs/typescript` (`plugin: - "!@tapjs/typescript"`) because
-tsx and the doctest loader resolve TypeScript here, and the typescript plugin's
-loader runs ahead of them and cannot resolve an extensionless directory import
+tsx resolves TypeScript here, and the typescript plugin's
+loader runs ahead of tsx and cannot resolve an extensionless directory import
 (`ERR_UNSUPPORTED_DIR_IMPORT` on `src/frontend/src/lib/trpc`).
 
 That configured set only takes effect after `tap build`, which regenerates the

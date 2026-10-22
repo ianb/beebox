@@ -8,8 +8,10 @@
  */
 
 import { Command } from "commander";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, symlinkClaudeMemory } from "../../core/box/structure/core.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installTodoView, installRootLandmark, installRootQuestion, symlinkClaudeMemory } from "../../core/box/structure/core.js";
 import { detectBoxTarget, scaffoldBoxRoot } from "../../core/box/package.js";
+import { ensurePortableEngineLink } from "../../core/box/engine-link.js";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import * as path from "node:path";
 import { stageAll, commit, initRepo, isRepo, repoRootOf } from "../../lib/git/core/operations.js";
 import { fileExists } from "../../lib/file-exists.js";
@@ -112,8 +114,8 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   const annex = createGitAnnexService();
   await requireGitAnnex(annex);
 
-  // Detects what's already at `targetPath`: an existing box (marker at the
-  // target itself) or nothing yet. A fresh init always scaffolds the
+  // Detects what's already at `targetPath`: an existing box (a beebox
+  // package.json beside `_config/`, which a clone of a box has) or nothing yet. A fresh init always scaffolds the
   // one-root layout — see `docs/implemented-plans/one-root-box-layout.md`.
   const { mode, boxRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
@@ -130,6 +132,8 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
     await announceAndInitGit({ boxRoot, annex, options });
   } else {
     await initBox(boxRoot, { skipGit: true, branch: options.branch });
+    // A clone of a box has no engine link yet; a usable one is kept.
+    await ensurePortableEngineLink(boxRoot, PACKAGE_ROOT);
     // A re-init annexes too, and this is not optional. `initBox` rewrote the
     // box `.gitignore` with the un-ignore block unconditionally — there is only
     // one block now — so on a box whose annex was never initialized, skipping
@@ -191,7 +195,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   const briefingInstalled = await installBriefing(boxRoot);
   if (briefingInstalled) changes.push("Installed _content/briefing.briefing.card");
 
-  // Install the box-wide todo-view stock instance ("the plate")
+  // Install the box-wide todo-view stock instance (the Todos page)
   const todoViewInstalled = await installTodoView(boxRoot);
   if (todoViewInstalled) changes.push("Installed _content/plate.todo-view.card");
 
@@ -203,6 +207,14 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
     // Fresh init commits everything below; a re-init refill is left for the
     // next wakeup to commit (see runHousekeeping).
     changes.push(`Installed ${rootLandmarkInstalled} (edit to customize the root landmark)`);
+  }
+
+  // A new box starts with one question, which its first chat asks
+  // (docs/implemented-plans/front-door.md, Track A). Fresh init only: a re-init is not a
+  // new box, and the seed never asks a box that already holds any question.
+  if (isFresh) {
+    const rootQuestion = await installRootQuestion(boxRoot);
+    if (rootQuestion !== null) changes.push(`Installed ${rootQuestion} (the box's first question; its chat asks it)`);
   }
 
   // Install default scheduled scripts

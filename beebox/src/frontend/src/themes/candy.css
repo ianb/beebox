@@ -25,7 +25,7 @@
 }
 .bbx-box-presentation[data-chrome-theme="candy"] .bbx-app-nav :is(
   .bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
-  #bbx-nav-todo, #bbx-nav-back-to-chat
+  #bbx-nav-todo, #bbx-nav-questions
 ) {
   border-radius: 9999px;
   border-color: #ffffffa0;
@@ -34,7 +34,8 @@
   box-shadow: inset 0 2px 0 #ffffff60, 0 2px 0 var(--bbx-candy-bar-edge);
 }
 .bbx-box-presentation[data-chrome-theme="candy"] .bbx-app-nav :is(
-  #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-back-to-chat
+  #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo,
+  #bbx-nav-questions
 ):active {
   transform: translateY(1px);
   box-shadow: inset 0 1px 2px #00000025, 0 1px 0 var(--bbx-candy-bar-edge);

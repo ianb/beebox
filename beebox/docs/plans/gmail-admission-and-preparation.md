@@ -8,6 +8,8 @@ issues:
 ---
 # Gmail admission and email preparation
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Keep unrelated incoming mail out of box content while preparing enough evidence
 to judge messages with HTML, PDFs, and images. The admitted-document triage
 harness, common evidence preparation, and destination-question todo annotation
@@ -81,7 +83,7 @@ filing returned no-match. Preserve this distinction in instructions and output.
 - `beebox/src/core/triage/evidence/core.ts` starts format preparation; the `.eml`
   branch records `mime-unparsed`. Gmail `mime.ts:154` extracts from an API MIME
   tree, not raw RFC822. No raw MIME parser dependency was found in the workspace.
-- `beebox/test/webapp/trpc/routers/chat.model-policy.doctest.md:93` constructs
+- `beebox/test/webapp/trpc/routers/chat.model-policy.test.ts:93` constructs
   `makeTestServer()` without a fake; line 120 calls `reserveSession`.
   `core/chat/session/registry/warm.ts:85` starts `void prewarmBackend`.
   This is a concrete accidental live-backend path in a metadata test.

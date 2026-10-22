@@ -3,7 +3,7 @@
  * the frame it should always render — the Primary nav landmark, the card's own
  * heading, and the regions that structure it — plus a screenshot/a11y capture per
  * page. The cheapest way to get a full-app a11y survey in one pass. Not every
- * page is reachable from the app bar any more (`docs/plans/top-nav-ia.md`) —
+ * page is reachable from the app bar any more (`docs/implemented-plans/top-nav-ia.md`) —
  * the list is the route set, not the menu.
  *
  * The `dashboard` tour was folded in here (retired 2026-08-26). Its extra value

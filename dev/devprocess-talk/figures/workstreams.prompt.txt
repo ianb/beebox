@@ -1,0 +1,5 @@
+Use the reference sheet for the robot character and draw in exactly its style: loose, raw 1970s underground outsider comic, black and white pen-and-ink, scratchy quick hatching, wobbly lines, heavy blacks where needed. Pure white paper background, no panel border, no frame.
+
+A toy-store shelf of giant action-figure packages, each a cardboard backing card with a clear plastic blister, and inside each blister one of the teenage robots in a hoodie, standing patiently like a packaged toy, a few waving or holding a small prop (a wrench, a notebook, a paintbrush). Every package has a hand-lettered name along the top, one per package: "FLAKY TESTS", "NOTIFICATIONS", "PAPER CARDS", "TODOS UI", "PUBLISH PAGES", "DRIVE FOLDERS". Below each robot a hand-lettered label reads "RELEASE IN CASE OF:" followed by a scrawled fill-in line, e.g. "UI issue", "recurring bug", "nobody remembers why", "Tuesday". One package at the end is open and empty, its blister torn, with the robot gone. The lettering is wobbly hand lettering, like the rest of the drawing.
+
+Only the package lettering is readable; nothing else carries text.

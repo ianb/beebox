@@ -7,6 +7,8 @@ area: dev-infra
 priority: backlog
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Claude Code can run agents in a hosted cloud sandbox (claude.ai/code / the Agent
 tool's `isolation: "remote"`): an ephemeral Linux container that clones the repo,
 runs a setup/bootstrap step, then hands an agent a shell with (optionally
@@ -91,7 +93,7 @@ there — and must **no-op cleanly outside the cloud** (guard on
 The full `install → typecheck → lint → test` chain runs from the **repo alone**
 — no external box, no network at test time (verified against the test setup):
 
-- **Tests are self-contained.** `makeTmpBox()` (`beebox/test/helpers/doctest-helpers.ts:39`)
+- **Tests are self-contained.** `makeTmpBox()` (`beebox/test/helpers/test-helpers.ts:39`)
   builds throwaway boxes in the OS tmpdir; route doctests boot Fastify against
   tmp git repos; agents/services are faked (`test/helpers/fake-agent.ts` (moved to `beebox/test/core/fake-agent.ts`),
   `src/services/`). The scenario loader that defaults to `~/src/boxes/scenarios`

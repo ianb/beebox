@@ -10,7 +10,7 @@
   border-radius: 0.5rem;
   text-align: left;
 }
-.bbx-system-theme-button:hover { background: #ffffff55; }
+.bbx-system-theme-button:hover { background: var(--bbx-tint, #ffffff55); }
 .bbx-system-theme-button:focus-visible { outline: 2px solid var(--bbx-focus-ring, #59489a); outline-offset: 2px; }
 .bbx-system-theme-button[aria-pressed="true"] { border-color: var(--bbx-focus-ring, #59489a); }
 .bbx-system-theme-button:disabled { cursor: progress; opacity: 0.6; }

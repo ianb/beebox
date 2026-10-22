@@ -7297,6 +7297,14 @@ test1:
       peak: 43883
       added: 3366
       turns: 9
+  gdoc-without-revision:
+    - date: 2026-10-20T19:57:56.352Z
+      boxCommit: 2a4533e2f3e680dceb923b3f4973d2845cfc75b4
+      repoCommit: 713eccbcc0c6dddc8828a4f4bd3a7a704776255e
+      initial: 31437
+      peak: 33410
+      added: 1973
+      turns: 5
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z
@@ -8133,6 +8141,14 @@ box:
       peak: 43538
       added: 5372
       turns: 8
+  clerk-send-no-note:
+    - date: 2026-10-15T20:56:07.337Z
+      boxCommit: 33853a22d1fd6b2da8a8911b2babc92842eaf335
+      repoCommit: 7c925eb84de86a6b0f085caa830c1287326ce3b6
+      initial: 39888
+      peak: 39888
+      added: 0
+      turns: 2
 audit-box:
   quick-chat-rubric-maintenance:
     - date: 2026-10-06T18:18:41.782Z
@@ -8242,6 +8258,60 @@ audit-box:
       repoCommit: a0cc3ddea6eb2de868760d7d6d130ac2cedea3d3
       initial: 33400
       peak: 33400
+      added: 0
+      turns: 2
+  remind-check-in:
+    - date: 2026-10-19T01:01:04.814Z
+      boxCommit: 6f309f921ebb0aa921a8ad444ff21b7f11d3ee41
+      repoCommit: 1e580f3c45b18842c0c378580411683e3b217f0c
+      initial: 41390
+      peak: 42034
+      added: 644
+      turns: 6
+  remind-vs-schedule:
+    - date: 2026-10-19T01:01:40.546Z
+      boxCommit: 8dd0f1b30b9502fccac380ce204f20c7a9aafd58
+      repoCommit: 1e580f3c45b18842c0c378580411683e3b217f0c
+      initial: 41389
+      peak: 42246
+      added: 857
+      turns: 6
+  front-door-stock-summary:
+    - date: 2026-10-19T18:31:05.755Z
+      boxCommit: 2366277ed6093b408cdc633181dc7f33176824b8
+      repoCommit: 9176760832cfdcadc8e108f3bda7d240ca290136
+      initial: 41633
+      peak: 41633
+      added: 0
+      turns: 2
+  front-door-offer-a-page:
+    - date: 2026-10-19T18:31:05.755Z
+      boxCommit: 2366277ed6093b408cdc633181dc7f33176824b8
+      repoCommit: 9176760832cfdcadc8e108f3bda7d240ca290136
+      initial: 41651
+      peak: 41651
+      added: 0
+      turns: 2
+  front-door-answer-in-chat:
+    - date: 2026-10-20T11:52:25.031Z
+      boxCommit: cc9d84050ff08337c2597a0aec05b6a4e1ef5087
+      repoCommit: 6bfcaa16beb70892d62f1f1357c8d482c2fde5bd
+      initial: 41916
+      peak: 41916
+      added: 0
+      turns: 2
+    - date: 2026-10-20T11:55:25.830Z
+      boxCommit: f326f34d8aaf93ace7f6e88c29cc4620028d3f57
+      repoCommit: 6bfcaa16beb70892d62f1f1357c8d482c2fde5bd
+      initial: 41916
+      peak: 41916
+      added: 0
+      turns: 2
+    - date: 2026-10-20T11:59:16.180Z
+      boxCommit: f326f34d8aaf93ace7f6e88c29cc4620028d3f57
+      repoCommit: 6bfcaa16beb70892d62f1f1357c8d482c2fde5bd
+      initial: 41928
+      peak: 41928
       added: 0
       turns: 2
 dev-checkout:
@@ -8401,14 +8471,6 @@ dev-checkout:
       peak: 14046
       added: 0
       turns: 1
-  expressive-theme-choices:
-    - date: 2026-10-08T22:21:56.271Z
-      boxCommit: 9550fa6e39f52188c64da7aaa47c29edf417274a
-      repoCommit: 9550fa6e39f52188c64da7aaa47c29edf417274a
-      initial: 14763
-      peak: 27370
-      added: 12607
-      turns: 2
   dev-doctest-oracle-check:
     - date: 2026-10-11T19:10:54.365Z
       boxCommit: 8fdcdc2bedb9db68194ba50dc63bd769e10e596f
@@ -8549,3 +8611,19 @@ bbx-siri-capture-audit-20261012:
       peak: 42077
       added: 2885
       turns: 5
+box1:
+  captured-voice-note-shape:
+    - date: 2026-10-16T17:12:52.067Z
+      boxCommit: 186b451e4c6f3c37e5f24828a06ebddfc6254ca4
+      repoCommit: 025ec7285c9f87225b73add2258d529c750e5c1f
+      initial: 31628
+      peak: 31628
+      added: 0
+      turns: 2
+    - date: 2026-10-16T17:14:11.677Z
+      boxCommit: 3c2f29e7971341499f07d365cd347142992507cd
+      repoCommit: 025ec7285c9f87225b73add2258d529c750e5c1f
+      initial: 31625
+      peak: 40880
+      added: 9255
+      turns: 16

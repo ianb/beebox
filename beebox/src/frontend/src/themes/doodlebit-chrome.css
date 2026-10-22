@@ -1,0 +1,96 @@
+/* Production surfaces retain independent card themes and semantic status colors. */
+.bbx-box-presentation[data-chrome-theme="doodlebit"] {
+  --bbx-desk-background: #f8f8f4;
+  --bbx-desk-pattern: none;
+  --bbx-desk-edge: #202020;
+  --bbx-bar-paper: #fff;
+  --bbx-bar-edge: #202020;
+  --bbx-chat-user-paper: #242424;
+  --bbx-chat-user-ink: #fff;
+}
+[data-chrome-theme="doodlebit"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]),
+[data-chrome-theme="doodlebit"] .bbx-interface-tabstrip > [role="none"]::before,
+[data-chrome-theme="doodlebit"] .bbx-interface-tabstrip > [role="none"]::after,
+[data-chrome-theme="doodlebit"] .bbx-app-nav > div { background: transparent; }
+[data-chrome-theme="doodlebit"] .bbx-interface-card-desk[data-card-content="neutral"] { background: #fbf5ee; }
+[data-chrome-theme="doodlebit"] .bbx-app-nav :is(button, a):focus-visible { outline: 2px solid #202020; outline-offset: 2px; }
+[data-chrome-theme="doodlebit"] .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: #202020; }
+[data-chrome-theme="doodlebit"] .bbx-composer-material > .bbx-composer-mobile-row { background: #fff; color: #202020; }
+[data-chrome-theme="doodlebit"] .bbx-chat-user-paper { --bbx-selection: #b9ef38; --bbx-selection-ink: #202020; }
+[data-chrome-theme="doodlebit"] .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) { color: #fff; }
+[data-chrome-theme="doodlebit"] .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) { background: #ffffff45; color: #fff; }
+/* A light badge on the light attachment would stack two tints; a dark one keeps white text legible. */
+[data-chrome-theme="doodlebit"] .bbx-chat-user-paper .bbx-chat-user-attachment-badge { background: #00000040; }
+[data-chrome-theme="doodlebit"] .bbx-chat-user-attachment:hover { background: #ffffff80; }
+[data-chrome-theme="doodlebit"] .bbx-chat-user-unsure { text-decoration-color: #5c42b5; }
+[data-chrome-theme="doodlebit"] .bbx-chat-reply-material {
+  --bbx-edge: #202020;
+}
+[data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
+  --tw-prose-quotes: #202020;
+  --tw-prose-code: #202020;
+  --tw-prose-counters: #565656;
+  --tw-prose-captions: #565656;
+  --tw-prose-bullets: #5c42b5;
+  --tw-prose-quote-borders: #202020;
+  --tw-prose-hr: #202020;
+  --tw-prose-th-borders: #202020;
+  --tw-prose-td-borders: #202020;
+  --tw-prose-pre-bg: #242424;
+  --tw-prose-pre-code: #fff;
+}
+[data-chrome-theme="doodlebit"] :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) { color: #565656; background: #fff; border-radius: 8px; }
+[data-chrome-theme="doodlebit"] :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
+[data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: #202020; --bbx-ink-soft: #565656; --bbx-pen: #5c42b5; }
+[data-chrome-theme="doodlebit"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: #202020; }
+[data-chrome-theme="doodlebit"] #bbx-chat-load-older { background: #fff; color: #5c42b5; border-radius: 8px; }
+[data-chrome-theme="doodlebit"] #bbx-chat-load-older:enabled:hover { text-decoration: underline; }
+[data-chrome-theme="doodlebit"] #bbx-chat-load-older:disabled { color: #565656; opacity: .6; }
+[data-chrome-theme="doodlebit"] [aria-label="Pane controls"] button { background: #fff; color: #202020; border: 1px solid #202020; border-radius: 8px; }
+[data-chrome-theme="doodlebit"] [aria-label="Pane controls"] button:hover { background: #b9ef38; }
+.bbx-card-theme[data-card-theme="doodlebit"] { --bbx-font: ui-sans-serif, system-ui, sans-serif; --bbx-quote-edge: 3px; }
+.bbx-interface-tab[data-card-theme="doodlebit"] { background: #f3f3ee; border-color: #202020; border-radius: 0; }
+.bbx-interface-tab[data-card-theme="doodlebit"]:not([data-active="true"]):hover { background: #ecece6; }
+.bbx-interface-tab[data-card-theme="doodlebit"][data-active="true"] { background: #fff; }
+.bbx-system-theme-preview[data-chrome-theme="doodlebit"] { background: url("./doodlebit.svg") center / 240px auto, #f8f8f4; }
+.bbx-system-theme-preview[data-chrome-theme="doodlebit"] .bbx-system-theme-toolbar { background: #fff; border-bottom: 2px solid #202020; }
+.bbx-system-theme-preview[data-chrome-theme="doodlebit"] .bbx-system-theme-toolbar i { background: #202020; }
+.bbx-system-theme-preview[data-chrome-theme="doodlebit"] .bbx-system-theme-desk > span { background: #fff; border-color: #202020; border-radius: 0; box-shadow: 2px 2px 0 #202020; }
+@media print {
+  .bbx-box-presentation[data-chrome-theme="doodlebit"]::before, .bbx-box-presentation[data-chrome-theme="doodlebit"]::after, [data-chrome-theme="doodlebit"] .bbx-app-nav::before { display: none; animation: none; }
+  .bbx-box-presentation[data-chrome-theme="doodlebit"], [data-chrome-theme="doodlebit"] :is(.bbx-chat-user-paper, .bbx-chat-reply-material, .bbx-chat-callout, .bbx-chat-pending-material, .bbx-chat-meta-material), .bbx-card-surface[data-card-theme="doodlebit"] { background: transparent; color: #000; border: 0; box-shadow: none; filter: none; }
+  .bbx-card-theme[data-card-theme="doodlebit"], [data-chrome-theme="doodlebit"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
+    --bbx-paper: #fff; --bbx-ink: #000; --bbx-ink-soft: #333; --bbx-pen: #000;
+    --tw-prose-body: #000; --tw-prose-bold: #000; --tw-prose-headings: #000;
+    --tw-prose-quotes: #000; --tw-prose-counters: #333; --tw-prose-bullets: #333; --tw-prose-captions: #333;
+    color: #000;
+  }
+}
+
+/* Shared badge segments form one square counter, without rounded clipping. */
+[data-chrome-theme="doodlebit"] .bbx-app-nav div:has(> div > :is(#bbx-nav-questions, #bbx-nav-todo, #bbx-nav-errors)) {
+  border: 2px solid #202020;
+  border-radius: 0;
+  overflow: visible;
+  background: #fff;
+  color: #202020;
+}
+[data-chrome-theme="doodlebit"] .bbx-app-nav :is(#bbx-nav-questions, #bbx-nav-todo) {
+  border: 0;
+  box-shadow: none;
+}
+[data-chrome-theme="doodlebit"] .bbx-app-nav div:has(> :is(#bbx-nav-questions, #bbx-nav-todo)) + div {
+  border-left: 2px solid #202020;
+}
+.bbx-interface-tab[data-card-theme="doodlebit"] {
+  --bbx-tab-top-border: 3px;
+  border-inline: 3px solid #202020;
+  border-bottom: 0;
+}
+/* Keep the composer frame inside its clipped pane; no notches or outer shadow. */
+[data-chrome-theme="doodlebit"] .bbx-composer-material {
+  border: 3px solid #202020;
+  border-image: none;
+  box-shadow: none;
+  background-clip: border-box;
+}

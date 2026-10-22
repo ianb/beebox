@@ -8,6 +8,8 @@ discovered-by: Ian
 discovered-in: main — boxholder report
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > **⏳ Awaiting manual testing** — fix landed in `956ce3b2b` (secret-field-masking); set a machine secret in real Chrome and Safari with the built-in password manager on and confirm neither offers to save it. Only the developer clears this.
 
 When the boxholder sets a secret in Admin, the browser offers to save the

@@ -1,6 +1,6 @@
 /**
  * `bbx engine todo-review verify` — the validate phase of the stock
- * `todo-review` procedure (`docs/plans/todos-ui.md`, Track 7). It judges the
+ * `todo-review` procedure (`docs/implemented-plans/todos-ui.md`, Track 7). It judges the
  * items `check` saved in the sweep state (`review-check.ts`).
  *
  * Every item must end settled:

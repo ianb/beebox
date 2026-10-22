@@ -102,7 +102,7 @@ function ErrorPlaceholder({ alt, size, bordered, extraClass }: { alt: string; si
   const borderClass = bordered ? "border border-warm-300" : "border border-warm-200";
   return (
     <div
-      className={cn(errorSizeClass(size), borderClass, "rounded bg-warm-100 flex flex-col items-center justify-center text-warm-500 text-xs p-2 gap-1", extraClass)}
+      className={cn(errorSizeClass(size), borderClass, "rounded bg-warm-100 flex flex-col items-center justify-center text-warm-700 text-xs p-2 gap-1", extraClass)}
       role="img"
       aria-label={`Failed to load image: ${alt}`}
     >
@@ -218,7 +218,7 @@ function wrapInFigure({ node, caption, stretch, extraClass }: { node: ReactNode;
   return (
     <figure className={cn("inline-flex flex-col items-center", stretch ? "w-full" : "", extraClass)}>
       {node}
-      <figcaption className="mt-1 max-w-full text-xs text-warm-600 italic text-center">
+      <figcaption className="mt-1 max-w-full text-xs text-warm-700 italic text-center">
         {caption}
       </figcaption>
     </figure>

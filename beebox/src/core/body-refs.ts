@@ -226,7 +226,7 @@ function stripListMarker(line: string): { rest: string; stripped: number } {
  * spaces, per CommonMark); a continuation destination is only recognized on
  * the immediately following line (a blank line in between means no
  * definition, matching CommonMark and this codebase's Markdoc parser — see
- * `body-refs.doctest.md`). Returns the destination's line index (the label
+ * `test/core/body-refs.test.ts`). Returns the destination's line index (the label
  * line, or the line after it for the continuation form) and its character
  * offset within that line, with any angle-bracket delimiters already
  * stripped, so a rewriter can splice a replacement in without disturbing the

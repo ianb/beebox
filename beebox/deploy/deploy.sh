@@ -411,7 +411,7 @@ if [[ "$NEED_CLEAN_INSTALL" == true ]]; then
   step "Lockfile/patches changed (or first install) — wiping checkout node_modules for a clean reinstall..."
   rm -rf "$CHECKOUT/node_modules" \
          "$CHECKOUT/personal-vibe-check/node_modules" \
-         "$CHECKOUT/agent-doctest/node_modules" \
+         "$CHECKOUT/tap-check/node_modules" \
          "$CHECKOUT/beebox/node_modules" \
          "$CHECKOUT/beebox/src/frontend/node_modules"
 fi
@@ -463,7 +463,7 @@ RSYNC_OPTS=(-az --delete
   # machine's) numeric uid/gid by default. Without this, /opt/beebox ends
   # up owned by the deploying laptop's local uid — harmless for reads, but
   # `beebox` (the account every box's `pnpm install` runs as, via the
-  # `link:/opt/beebox/beebox` dependency — see docs/box-layout.md)
+  # box's `.beebox/engine` → /opt/beebox/beebox link — see docs/box-layout.md)
   # can't chmod a bin file it doesn't own, so pnpm's redundant "make sure
   # this bin is executable" step during `_linkBins` throws EPERM and the
   # whole install exits nonzero even though every real package resolved.
@@ -500,15 +500,17 @@ RSYNC_OPTS=(-az --delete
 # Sync monorepo packages FROM THE BUILD CHECKOUT. These are pnpm workspace
 # members linked via `workspace:*` deps, so they must all be present alongside
 # beebox on the server for the root `pnpm install` to resolve.
-# personal-vibe-check and agent-doctest are devDeps of beebox (the server
+# personal-vibe-check and tap-check are devDeps of beebox (the server
 # install is non-prod because the runtime uses tsx, itself a devDep).
 # browse/agent-browser-typed are deliberately NOT synced — they're dev-only
 # tooling and a partial workspace installs fine (pnpm ignores absent members).
-for repo in personal-vibe-check agent-doctest beebox; do
+for repo in personal-vibe-check tap-check beebox; do
   local_path="$CHECKOUT/$repo/"
   if [[ ! -d "$local_path" ]]; then
-    echo "  $repo: not found at $local_path, skipping"
-    continue
+    # Fatal, not skipped: beebox's frozen install needs every workspace dep,
+    # and it runs after the hub stops. Failing here keeps the site up.
+    echo "ERROR: $repo not found at $local_path (renamed? update this list)" >&2
+    exit 1
   fi
   step "Syncing $repo..."
   rsync "${RSYNC_OPTS[@]}" "$local_path" "$SSH_TARGET:$STAGE_DIR/$repo/"
@@ -626,6 +628,15 @@ queue_remote stdin bash -s <<'REMOTE'
     echo "  Removing stale /opt/beebox/cardworks (package removed)..."
     rm -rf /opt/beebox/cardworks
   fi
+  # pub-worker is excluded from the sync (see RSYNC_OPTS), but a copy synced
+  # before that exclude lingers, and `--delete` never removes an excluded path.
+  # pnpm then reads its stale package.json as a workspace member, and the
+  # frozen install fails as soon as the checkout's pub-worker manifest changes
+  # (2026-10-18, TypeScript 7). Drop it idempotently.
+  if [[ -d /opt/beebox/beebox/pub-worker ]]; then
+    echo "  Removing stale /opt/beebox/beebox/pub-worker (excluded from the sync)..."
+    rm -rf /opt/beebox/beebox/pub-worker
+  fi
   # One-time cutover from the old per-subdir installs to a single workspace
   # install. Before this change each subdir had its own isolated node_modules;
   # the workspace uses a hoisted node_modules at the root. Remove the legacy
@@ -636,7 +647,7 @@ queue_remote stdin bash -s <<'REMOTE'
     echo "  First workspace deploy: clearing legacy per-package node_modules..."
     rm -rf /opt/beebox/cardworks/node_modules \
            /opt/beebox/personal-vibe-check/node_modules \
-           /opt/beebox/agent-doctest/node_modules \
+           /opt/beebox/tap-check/node_modules \
            /opt/beebox/beebox/node_modules \
            /opt/beebox/beebox/src/frontend/node_modules
   fi
@@ -716,27 +727,31 @@ queue_remote stdin bash -s <<'REMOTE'
     [[ -f "$pj" ]] || continue   # shapeVersion 1 (legacy) boxes have none — skip
     name=$(basename "$box")
 
-    # The beebox dependency ships as a bare semver range (meaningless —
-    # there's no registry for it yet), which makes a plain `pnpm install` fail
-    # outright trying to resolve it. Normalize it to `link:`, pointing at this
-    # same server install, idempotently (a no-op once already rewritten).
-    node -e "
-      const fs = require('fs');
-      const p = JSON.parse(fs.readFileSync('$pj', 'utf-8'));
-      const want = 'link:/opt/beebox/beebox';
-      if (p.dependencies && p.dependencies['beebox'] !== want) {
-        p.dependencies['beebox'] = want;
-        fs.writeFileSync('$pj', JSON.stringify(p, null, 2) + '\n');
-      }
-    "
+    # The box commits the portable `"beebox": "link:.beebox/engine"`; the
+    # gitignored `.beebox/engine` link holds this server's engine path, so no
+    # deploy writes a tracked file (docs/implemented-plans/portable-engine-dependency.md).
+    # A box not yet migrated still names /opt/beebox/beebox directly; the
+    # link is harmless there. A failed box prints ERROR and the deploy moves
+    # on to the next box, as the converge step does.
+    link_check=/opt/beebox/beebox/bin/box-engine-link
+    if ! sudo -u beebox -H bash -lc '"$0" link "$1" /opt/beebox/beebox' "$link_check" "$box"; then
+      echo "  ERROR $name: could not link .beebox/engine; skipping its install." >&2
+      continue
+    fi
 
     marker="$box/node_modules/react"
-    if [[ ! -e "$marker" || "$pj" -nt "$marker" ]]; then
+    # Reinstall too when the box shows no completed install: the engine-link
+    # migration changes the spec without reinstalling, so a node_modules/beebox
+    # that does not go through the link is stale.
+    if [[ ! -e "$marker" || "$pj" -nt "$marker" ]] || ! "$link_check" verify "$box" 2>/dev/null; then
       echo "  $name: installing (package.json newer than last install, or never installed)..."
       if ! sudo -u beebox -H bash -lc "cd '$box' && pnpm install"; then
         echo "  $name: pnpm install exited nonzero — check for real dependency errors above" \
              "(a lone EPERM on .bin linking is a known-harmless pnpm quirk, everything else isn't)"
       fi
+    fi
+    if ! "$link_check" verify "$box"; then
+      echo "  ERROR $name: the box has no usable engine after install." >&2
     fi
   done
 REMOTE
@@ -1112,6 +1127,13 @@ if [[ -d "$install_dir/node_modules" ]] && cmp -s "$stage_dir/pnpm-lock.yaml" "$
 else
   echo "  Lockfile changed (or no live install): installing the staged dependencies..."
   (cd "$stage_dir" && HUSKY=0 CI=true pnpm install --frozen-lockfile)
+fi
+# The view Markdown check and `bbx view typecheck` run TypeScript 7's Go
+# binary, which arrives as an optional per-platform dependency. Prove it runs
+# from the staged install before activating anything.
+if ! "$stage_dir/node_modules/.bin/tsc" --version >/dev/null; then
+  echo "The TypeScript 7 binary did not run from the staged install; not activating. Uploaded artifacts remain staged." >&2
+  exit 1
 fi
 boxes=()
 for box in /home/beebox/boxes/*/; do

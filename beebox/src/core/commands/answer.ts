@@ -6,7 +6,7 @@
  * atomic commit (see `question-transition.ts`).
  */
 
-import { withBoxWork } from "../../lib/box-maintenance.js";
+import { withBoxWork } from "../../lib/box-maintenance/admission.js";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import { renderFrontmatterBlock, splitCardContent } from "../../exports/cards.js";
@@ -19,13 +19,11 @@ import {
 } from "../command-types.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { assertNever } from "../../shared/invariant.js";
-import { type QuestionFields } from "../../schemas/question.js";
+import { AnsweredVia, type AnsweredViaValue, type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
 import { withQuestionTransition, resolveContainedQuestionPath } from "../question-transition.js";
 import { getBoxDir } from "../../lib/paths/core.js";
 
-const AnswerVia = z.enum(["web", "cli"]);
-type AnswerViaValue = z.infer<typeof AnswerVia>;
 
 const AnswerArgsSchema = z.object({
   question: z.string().optional(),
@@ -33,7 +31,7 @@ const AnswerArgsSchema = z.object({
   selectedId: z.string().optional(),
   // Validated here (a Zod enum) rather than cast at the write site — a junk
   // `via` is rejected at the dispatch boundary, not silently recorded.
-  via: AnswerVia.optional(),
+  via: AnsweredVia.optional(),
 });
 export type AnswerArgs = z.infer<typeof AnswerArgsSchema>;
 
@@ -194,6 +192,19 @@ function buildJobFilename(boxRoot: string, questionRef: string): string {
   return `${timestamp}-${slug}-${suffix}.question-followup.job.card`;
 }
 
+/** The follow-up job a web or CLI answer writes beside the answered card. */
+function followupJob({ boxRoot, questionRef, fields, answer }: { boxRoot: string; questionRef: string; fields: QuestionFields; answer: string }): { absPath: string; content: string } {
+  const absPath = path.join(getBoxDir(boxRoot, "jobs"), buildJobFilename(boxRoot, questionRef));
+  const content = createQuestionFollowupJobTemplate({
+    description: `Follow up on answered question: ${fields.prompt}`,
+    questionRef,
+    directive: fields.directive ?? "Process the answer to this question",
+    answer,
+    ...(fields.learning !== undefined && { learning: fields.learning }),
+  });
+  return { absPath, content };
+}
+
 async function executeAnswer(
   ctx: CommandContext,
   args: Record<string, unknown>
@@ -207,7 +218,7 @@ async function executeAnswer(
     return { success: false, error: "Answer or selectedId is required" };
   }
 
-  const via: AnswerViaValue = answerArgs.via ?? "cli";
+  const via: AnsweredViaValue = answerArgs.via ?? "cli";
   const question = answerArgs.question;
 
   const contained = resolveContainedQuestionPath(ctx.boxRoot, question);
@@ -249,16 +260,10 @@ async function executeAnswer(
       const split = splitCardContent(content);
       const cardContent = renderFrontmatterBlock(fields, split.body);
 
-      const jobFilename = buildJobFilename(ctx.boxRoot, relativePath);
-      const jobAbsPath = path.join(getBoxDir(ctx.boxRoot, "jobs"), jobFilename);
-      jobRelative = path.relative(ctx.boxRoot, jobAbsPath);
-      const jobContent = createQuestionFollowupJobTemplate({
-        description: `Follow up on answered question: ${fields.prompt}`,
-        questionRef: relativePath,
-        directive: fields.directive ?? "Process the answer to this question",
-        answer: r.jobAnswer,
-        ...(fields.learning !== undefined && { learning: fields.learning }),
-      });
+      // A chat answer writes no job: the agent did the directive in the
+      // conversation before answering (a fresh box has no wakeup to run one).
+      const job = via === "chat" ? null : followupJob({ boxRoot: ctx.boxRoot, questionRef: relativePath, fields, answer: r.jobAnswer });
+      if (job !== null) jobRelative = path.relative(ctx.boxRoot, job.absPath);
 
       return {
         ok: true,
@@ -269,7 +274,7 @@ async function executeAnswer(
           // two writes leaves job+pending-question (recoverable), never an
           // answered card with no job.
           writes: [
-            { absPath: jobAbsPath, content: jobContent },
+            ...(job === null ? [] : [{ absPath: job.absPath, content: job.content }]),
             { absPath: fullPath, content: cardContent },
           ],
           commit: {
@@ -339,7 +344,7 @@ export const answerCommand: CommandDefinition = {
     },
     {
       name: "via",
-      description: "Answer source (web or cli)",
+      description: "Answer source (web, cli, or chat; a chat answer writes no follow-up job)",
       required: false,
       default: "cli",
       type: "string",

@@ -8,7 +8,7 @@
  *   const ctx = await createTestServer();
  *   try {
  *     const res = await ctx.server.inject({ method: "GET", url: "/test/api/status" });
- *     t.equal(res.statusCode, 200);
+ *     t.check(res.statusCode, 200);
  *   } finally {
  *     await ctx.cleanup();
  *   }
@@ -63,11 +63,11 @@ export interface TestServerOptions {
   /** Explicitly enable the local-only external-file and mock-TTS facilities. */
   devSurfaces?: boolean | undefined;
   /**
-   * Serve without an auth wall. Defaults to `true` — most route doctests are
+   * Serve without an auth wall. Defaults to `true` — most route tests are
    * deliberately open (they exercise routes, not auth), which the in-process
    * `openAccess` construction option makes honest (it replaced the old
    * module-scope `BBX_ALLOW_UNAUTHENTICATED` env opt-out). An auth-exercising
-   * doctest passes `openAccess: false` to turn the wall on.
+   * test passes `openAccess: false` to turn the wall on.
    */
   openAccess?: boolean | undefined;
   /**
@@ -84,27 +84,16 @@ export interface TestServerOptions {
    * Chat backend for every session this server creates. Pass
    * `createFakeChatBackend()` to exercise the chat-send path (including a run
    * start that fails) without spawning a real Claude subprocess. Omit and the
-   * server builds the real one — which no route doctest should provoke.
+   * server builds the real one — which no route test should provoke.
    */
   chatBackend?: ChatBackend | undefined;
   /** Replace scan promotion work while route tests exercise HTTP validation. */
   scanPromoteRun?: ((boxRoot: string) => Promise<void>) | undefined;
 }
 
-// Filter chat-history backfill noise: every makeTestServer() boots a fresh
-// box, which triggers the one-time "Scanning JSONLs / Done — added N
-// session(s)" log pair from chat-session-history.ts. Production-useful but
-// pure noise across hundreds of route tests.
-const _origLog = console.log;
-console.log = (...args: unknown[]) => {
-  const first = args[0];
-  if (typeof first === "string" && first.startsWith("[chat-history:")) return;
-  _origLog(...args);
-};
-
 // A fully-initialized box (directories + git repo + initial commit) is
 // expensive to stamp out: `initBox` plus two `git` subprocess spawns. Route
-// doctests boot a server many times per file, and those serialized git spawns
+// tests boot a server many times per file, and those serialized git spawns
 // are exactly what blocks long enough under heavy machine load to trip tap's
 // per-file timeout. So build the box ONCE per test process and clone it per
 // boot with `fs.cp` (pure libuv, no fork) — each file pays the git cost once
@@ -127,7 +116,7 @@ function getTemplateBox(): Promise<string> {
       // metadata import + node-target render). `scaffoldBoxRoot({deps})` only
       // symlinks beebox, so simulate the box's react dependency by
       // symlinking the engine's copy beside it — the same trick `bbx view test`
-      // and the view doctests use. Without this, view-metadata import fails to
+      // and the view tests use. Without this, view-metadata import fails to
       // resolve react and returns empty dependencies (a view matches no cards).
       const reactNodeModules = dirname(dirname(createRequire(import.meta.url).resolve("react/package.json")));
       for (const mod of ["react", "react-dom"]) {
@@ -210,7 +199,7 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
   const eventBus = createEventBus(boxRoot, { pollInterval: 1000 });
 
   // Create server pointing at this temp box. Open by default (see
-  // TestServerOptions.openAccess); an auth-exercising doctest passes false.
+  // TestServerOptions.openAccess); an auth-exercising test passes false.
   const server = await createServer({
     boxes: [{ slug: TEST_SLUG, boxRoot, eventBus }],
     services: opts?.services,
@@ -238,7 +227,7 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
 
 /**
  * One box's handle within a `createTwoBoxTestServer` fixture: the same
- * `{ slug, boxRoot, eventBus }` shape route doctests already know, plus
+ * `{ slug, boxRoot, eventBus }` shape route tests already know, plus
  * small credential-minting helpers so a cross-box auth test doesn't have to
  * re-derive them. Named generally (not "leak"/"probe") because this fixture
  * is meant to carry more than one kind of cross-box test.

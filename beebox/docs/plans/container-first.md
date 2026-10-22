@@ -7,6 +7,8 @@ issues:
 ---
 # Container-first install
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 A new user installs Bee Box by pulling a published image. They never clone
 the repository. Three things move at different speeds on their machine: the
 image (engine, tools, and container logic, one version number), the

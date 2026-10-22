@@ -1,5 +1,5 @@
 /**
- * File-backed fake Gmail state (`docs/plans/agent-field-tests.md`, Track 1).
+ * File-backed fake Gmail state (`docs/implemented-plans/agent-field-tests.md`, Track 1).
  *
  * Email intake happens in CLI SUBPROCESSES (`bbx wakeup` → connector sync →
  * intake → reactor), so the in-process injection
@@ -39,7 +39,7 @@ import type {
 
 /** Bumped only for a breaking change to the document shape. A run's state file
  *  is disposable, so there is no migration path — an old file is rejected. */
-export const FAKE_GMAIL_STATE_VERSION = 1;
+const FAKE_GMAIL_STATE_VERSION = 1;
 
 const headerSchema = z.strictObject({ name: z.string(), value: z.string() });
 

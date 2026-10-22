@@ -6,7 +6,7 @@
  * under `BBX_SPAWN_PROFILE=tooling`, otherwise this box's own server does the
  * credentialed half and hands back the same typed result. `gmail pending` reads
  * the box's transient state and needs nothing from Google, so it stays
- * in-process in every profile (`docs/plans/agent-capability-delegation.md`).
+ * in-process in every profile (`docs/implemented-plans/agent-capability-delegation.md`).
  */
 
 import { Command } from "commander";

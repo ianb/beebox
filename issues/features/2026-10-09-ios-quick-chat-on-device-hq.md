@@ -10,7 +10,7 @@ needs: [manual-testing]
 ---
 
 Every dictated conversation message now gets the HQ pass
-(`beebox/docs/plans/hq-always.md`). The iOS quick chat composer on the box
+(`beebox/docs/implemented-plans/hq-always.md`). The iOS quick chat composer on the box
 screen (`NativeComposerSubmitTarget.quickChat`) is the one dictation path left
 on live text: a quick chat thought is text only, its recording is deleted in
 `NativeComposerView.submitQuickChat`, and no recording reaches the box, so the

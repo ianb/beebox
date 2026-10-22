@@ -25,6 +25,7 @@ import { RouteError } from "../components/RouteError";
 import { LoginPage } from "../pages/login/LoginPage";
 import { SetupPage } from "../pages/login/SetupPage";
 import { historyLookupFailureSearch, historyViewRedirectSearch, legacyHistoryState, normalizeHistoryViewRouteTarget } from "../components/history/card-state";
+import { themeStudioSearchSchema } from "../lib/theme-studio-search";
 import { DEV_HARNESS_PATHS } from "../lib/box-route-layout";
 
 // --- Root route ---
@@ -92,7 +93,7 @@ const devHarnessLayoutRoute = createRoute({
 // --- Box child routes ---
 
 // The box index lands on chat — the conversation is the primary surface
-// (docs/plans/top-nav-ia.md Track A). A redirect rather than mounting
+// (docs/implemented-plans/top-nav-ia.md Track A). A redirect rather than mounting
 // ChatPage here: the chat flows canonicalize onto /chat (ChatPage rewrites
 // the resolved session there), so a root-mounted chat would immediately
 // navigate away from itself.
@@ -295,12 +296,10 @@ const devChatScrollRoute = createRoute({
   component: lazyRouteComponent(() => import("../pages/dev/ChatScrollHarness"), "ChatScrollPage"),
 });
 
-// Deterministic production message rendering against expressive materials.
-const devChatMaterialsRoute = createRoute({
-  staticData: { title: "Chat materials" },
-  getParentRoute: () => devHarnessLayoutRoute,
-  path: DEV_HARNESS_PATHS.chatMaterials,
-  component: lazyRouteComponent(() => import("../pages/dev/ChatMaterialsPage"), "ChatMaterialsPage"),
+const devThemeStudioRoute = createRoute({
+  staticData: { title: "Theme studio" }, getParentRoute: () => devHarnessLayoutRoute,
+  path: DEV_HARNESS_PATHS.themeStudio, validateSearch: themeStudioSearchSchema,
+  component: lazyRouteComponent(() => import("../pages/dev/ThemeStudioPage"), "ThemeStudioPage"),
 });
 
 // Catch-all for unknown paths under a box
@@ -348,7 +347,7 @@ const routeTree = rootRoute.addChildren([
     // and the literal `import.meta.env.DEV` shape has to stay intact for Vite's
     // static DCE, ruling out the honest-cast pattern `lib/view-url.ts` uses instead.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see comment above
-    (import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute, devChatScrollRoute, devChatMaterialsRoute] : [],
+    (import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute, devChatScrollRoute, devThemeStudioRoute] : [],
     ),
   ]),
 ]);

@@ -17,13 +17,8 @@
 
 import { z } from "zod";
 import { createAgent as realCreateAgent } from "../agent/invoke/core.js";
-import { loadAgentEngine } from "../box/config.js";
-import { loadEffectiveBoxModel } from "../model-policy.js";
-import {
-  providerOf,
-  resolveProcedureModel,
-  type ProcedureModelName,
-} from "../../shared/agent-models.js";
+import { loadTierResolver } from "../model-policy.js";
+import type { ProcedureModelName } from "../../shared/agent-models.js";
 import type { StructuredAgentResult } from "../agent/types.js";
 import type { AgentFactory } from "./engine-types.js";
 import {
@@ -136,7 +131,7 @@ the diff).`;
  * InstructionEvaluation} `inconclusive`, not as `passed: false` — the old
  * fail-closed collapse made a budget problem indistinguishable from wrong
  * work, and readers learned to discount the signal
- * (`issues/bugs/2026-08-12-health-masks-review-step-turn-cap.md`). Nothing
+ * (`issues/closed/bugs/2026-08-12-health-masks-review-step-turn-cap.md`). Nothing
  * silently passes either: an inconclusive check is carried as its own state
  * all the way to `bbx health`.
  */
@@ -144,10 +139,8 @@ export async function evaluateInstructions(
   params: EvaluateInstructionsParams
 ): Promise<InstructionEvaluation> {
   const { boxRoot, instructions, whys, diff, name } = params;
-  const engine = await loadAgentEngine(boxRoot);
   // Provider-aware like procedure execute: judge on the provider the box runs.
-  const provider = providerOf((await loadEffectiveBoxModel(boxRoot)) ?? "");
-  const modelId = resolveProcedureModel({ engine, model: params.model ?? DEFAULT_REVIEW_MODEL, provider });
+  const modelId = (await loadTierResolver(boxRoot))(params.model ?? DEFAULT_REVIEW_MODEL);
   const factory = params.createAgent ?? realCreateAgent;
   const systemPrompt = buildJudgePrompt({ instructions, whys, diff });
 

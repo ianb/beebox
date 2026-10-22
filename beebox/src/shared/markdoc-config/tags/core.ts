@@ -66,7 +66,7 @@ import { unknownTag } from "./unknown-tag.js";
 import { footnoteTags, imageNode, makeHtmlTag } from "./html-schema.js";
 
 // Value named imports (`{ Tag, nodes }`) don't resolve from this CommonJS
-// module under Node's ESM loader (used by the doctest runner); the frontend
+// module under Node's ESM loader (used by the test runner); the frontend
 // bundler tolerates them but the backend/test path does not. Destructure off
 // the default import instead — same pattern, and same lint exception, as
 // `body-refs.ts` / `markdoc/emit.ts`.
@@ -298,9 +298,10 @@ const seeAlso: Schema = {
 /**
  * `item` node override that recognises GFM task-list markers. If the first
  * rendered child is a string starting with `[ ] ` / `[x] ` / `[X] `, that
- * prefix is stripped and a `Task` tag is prepended in its place. Runs after
- * the markdown-it tokenizer, so code-fence content is never mistaken for a
- * task item.
+ * prefix is stripped and a `Task` tag is prepended in its place. The task and
+ * its inline text are wrapped in a `label` so the checkbox has an accessible
+ * name; a nested list stays outside it. Runs after the markdown-it tokenizer,
+ * so code-fence content is never mistaken for a task item.
  */
 const item: Schema = {
   ...baseNodes.item,
@@ -322,9 +323,15 @@ function rewriteTaskPrefix(children: RenderableTreeNode[]): RenderableTreeNode[]
   const done = match[1] !== " ";
   const remainder = first.slice(match[0].length);
   const taskTag = new Tag("Task", { done }, []);
-  const rest = children.slice(1);
-  return remainder === "" ? [taskTag, ...rest] : [taskTag, remainder, ...rest];
+  const rest = remainder === "" ? children.slice(1) : [remainder, ...children.slice(1)];
+  const blockAt = rest.findIndex((child) => Tag.isTag(child) && TASK_BLOCK_CHILDREN.has(child.name));
+  const inline = blockAt === -1 ? rest : rest.slice(0, blockAt);
+  const blocks = blockAt === -1 ? [] : rest.slice(blockAt);
+  return [new Tag("label", {}, [taskTag, ...inline]), ...blocks];
 }
+
+/** Block children a tight list item can carry after its text; they stay outside the task's label. */
+const TASK_BLOCK_CHILDREN = new Set(["ul", "ol", "pre", "blockquote", "table", "hr"]);
 
 export const markdocConfig: Config = {
   tags: {

@@ -1,6 +1,6 @@
 /**
  * Renders a single `<callout>` block — durable, self-contained content
- * the user must see. `context` renders as a small eyebrow above the body.
+ * the user must see. `context` renders as a quiet label above the body.
  * The body renders as markdown so the agent can use formatting.
  *
  * See `lib/structured-output-parsing.ts` for the data model and
@@ -14,7 +14,7 @@ import type { OnZoomView } from "./ChatMessages/view";
 import type { ViewTarget } from "../../lib/view-url";
 import { cn } from "../../lib/cn";
 
-function CalloutBlock({
+export function CalloutBlock({
   callout,
   onZoomView,
   className,
@@ -37,7 +37,7 @@ function CalloutBlock({
         className,
       )}
     >
-      <div className="text-xs uppercase tracking-wide text-accent-dark mb-1">
+      <div className="bbx-chat-callout-context text-xs font-medium text-accent-700 mb-1">
         {callout.context}
       </div>
       <div className="prose prose-sm max-w-none">

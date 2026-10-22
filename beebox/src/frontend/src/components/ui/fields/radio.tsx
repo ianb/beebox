@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { useFieldInk } from "./shell";
 
 export interface RadioOption {
   value: string;
@@ -52,6 +53,7 @@ export function RadioGroup({
   const groupId = id !== undefined ? id : autoId;
   const groupName = name !== undefined ? name : groupId;
   const hasError = error !== undefined;
+  const ink = useFieldInk();
 
   return (
     <div
@@ -61,7 +63,7 @@ export function RadioGroup({
       aria-required={required ? true : undefined}
       className={className}
     >
-      <div id={`${groupId}-label`} className="block text-sm font-medium text-warm-700 mb-1">
+      <div id={`${groupId}-label`} className={`block text-sm font-medium ${ink.label} mb-1`}>
         {label}
         {required ? <span className="text-danger ml-0.5" aria-hidden="true">*</span> : null}
       </div>
@@ -73,7 +75,7 @@ export function RadioGroup({
       {error !== undefined ? (
         <div className="text-danger-dark text-sm mt-1" role="alert">{error}</div>
       ) : helper !== undefined ? (
-        <div className="text-xs text-warm-500 mt-1">{helper}</div>
+        <div className={`text-xs ${ink.helper} mt-1`}>{helper}</div>
       ) : null}
     </div>
   );
@@ -89,13 +91,14 @@ interface RadioInternalProps {
 }
 
 function RadioList({ name, idPrefix, value, options, disabled, onChange }: RadioInternalProps) {
+  const ink = useFieldInk();
   return (
     <div className="space-y-2">
       {options.map((opt) => {
         const isDisabled = disabled || opt.disabled === true;
         const labelClass = isDisabled
-          ? "flex items-center gap-2 text-sm text-warm-500 opacity-70"
-          : "flex items-center gap-2 text-sm text-warm-800 cursor-pointer";
+          ? `flex items-center gap-2 text-sm ${ink.helper} opacity-70`
+          : `flex items-center gap-2 text-sm ${ink.label} cursor-pointer`;
         return (
           <label key={opt.value} className={labelClass}>
             <input
@@ -130,11 +133,12 @@ function RadioCards({ name, idPrefix, value, options, disabled, onChange }: Radi
         // browse page whose window scrolled 43px). The label as containing
         // block keeps the input where its card is.
         const baseClass = "relative block p-3 border rounded transition-colors";
+        // Every state paints its own field, so the option text reads on any material.
         const stateClass = isDisabled
           ? "border-warm-200 bg-warm-50 opacity-60 cursor-not-allowed"
           : isSelected
             ? "border-primary bg-info-50 cursor-pointer"
-            : "border-warm-300 hover:border-warm-400 cursor-pointer";
+            : "border-warm-300 bg-white hover:border-warm-400 cursor-pointer";
         return (
           <label key={opt.value} className={`${baseClass} ${stateClass}`}>
             <input
@@ -149,7 +153,7 @@ function RadioCards({ name, idPrefix, value, options, disabled, onChange }: Radi
             />
             <div className="text-warm-900">{opt.label}</div>
             {opt.description !== undefined ? (
-              <div className="text-xs text-warm-600 mt-1">{opt.description}</div>
+              <div className="text-xs text-warm-700 mt-1">{opt.description}</div>
             ) : null}
           </label>
         );

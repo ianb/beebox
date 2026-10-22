@@ -14,7 +14,7 @@ export interface PreProps {
   scroll?: PreScroll;
   /** Red error coloring. When `boxed`, also applies a red-tinted background. */
   error?: boolean;
-  /** Muted color (text-warm-500) — for secondary output. */
+  /** Muted color (text-warm-700) — for secondary output. */
   muted?: boolean;
   title?: string;
   /** Outer-layout classes (margin, padding, flex item, sizing, position). */
@@ -48,7 +48,7 @@ export function Pre({
   scroll = scroll ?? false;
   error = error ?? false;
   muted = muted ?? false;
-  const colorClass = error ? "text-danger-dark" : muted ? "text-warm-500" : "text-warm-800";
+  const colorClass = error ? "text-danger-dark" : muted ? "text-warm-700" : "text-warm-800";
   const boxClass = boxed
     ? error
       ? "bg-danger-50 border border-danger-100 rounded p-3"

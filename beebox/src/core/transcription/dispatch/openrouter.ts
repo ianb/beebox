@@ -36,7 +36,7 @@
  * ~6-minute recording (~15 MB JSON) succeeds. So the JSON path has a size
  * ceiling somewhere between those, not "no cap" — the earlier claim that only
  * the documented 25 MB multipart cap applied was wrong (the incident this
- * measurement traces to: `docs/plans/resilient-voice-recording.md`, "The
+ * measurement traces to: `docs/implemented-plans/resilient-voice-recording.md`, "The
  * incident this plan answers"). The HQ job (`core/voice-recording/hq-job.ts`)
  * keeps every piece it sends at or under `HQ_PIECE_SECONDS` (300 s, ~9.6 MB
  * WAV / ~12.8 MB JSON) specifically to stay under this ceiling. Multipart

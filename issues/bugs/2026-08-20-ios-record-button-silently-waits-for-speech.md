@@ -10,6 +10,8 @@ discovered-in: main session — boxholder pressed record during speech playback 
 priority: normal
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > **⏳ Awaiting manual testing** — fix landed in `bd8b5bb4`; on a real phone,
 > press record while the box is speaking and check that dictation starts at once
 > and the speech stops. Only the developer clears this.

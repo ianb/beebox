@@ -1,6 +1,6 @@
 /**
- * Helpers for `test/core/chat/session/run.with-spawner.doctest.md`. Kept out of the
- * doctest itself because the doctest loader has trouble with top-level
+ * Helpers for `test/core/chat/session/run.with-spawner.test.ts`. Kept out of the
+ * test itself because the test loader has trouble with top-level
  * function declarations that return inline object literals.
  */
 

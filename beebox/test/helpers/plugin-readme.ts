@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 import { isRecord } from "../../src/shared/is-record.js";
-import { makeTmpBox, type TmpBox } from "./doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "./test-helpers.js";
 
 const exec = promisify(execFile);
 

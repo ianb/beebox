@@ -1,7 +1,7 @@
 /**
- * Build a `ScanElement` tree from an HTML fixture, for the `ui-scan` doctests.
+ * Build a `ScanElement` tree from an HTML fixture, for the `ui-scan` tests.
  *
- * The frontend doctests run under plain Node with no jsdom, which is why
+ * The frontend tests run under plain Node with no jsdom, which is why
  * `ui-scan` walks the structural {@link ScanElement} view rather than `Element`
  * (see `src/frontend/src/lib/ui-scan/types.ts`). This helper is the test-side
  * counterpart of `live-dom.ts`: cheerio — already a dependency — parses the

@@ -21,19 +21,19 @@ export function PasswordSection() {
   const [message, setMessage] = useState<string | null>(null);
 
   if (userQuery.isLoading) {
-    return <Card as="section" aria-label="Password"><Text tone="muted">Loading account…</Text></Card>;
+    return <Card as="section" aria-label="Password" material><Text tone="muted">Loading account…</Text></Card>;
   }
   const user = userQuery.data;
   if (!user) {
     return (
-      <Card as="section" aria-label="Password">
+      <Card as="section" aria-label="Password" material>
         <Text tone="muted">Sign in to manage a local password.</Text>
       </Card>
     );
   }
   if (!user.hasPassword) {
     return (
-      <Card as="section" aria-label="Password" shadow>
+      <Card as="section" aria-label="Password" shadow material>
         <Stack gap="xs">
           <Heading level={2}>Password</Heading>
           <Hint>This account signs in with Google; no local password is set.</Hint>
@@ -80,7 +80,7 @@ export function PasswordSection() {
   };
 
   return (
-    <Card as="section" aria-label="Change password" shadow>
+    <Card as="section" aria-label="Change password" shadow material>
       <form onSubmit={(event) => void submit(event)}>
         <Stack gap="md">
           <Stack gap="xs">

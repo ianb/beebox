@@ -7,6 +7,8 @@ issues:
 ---
 # One workspace for interface cards — retire parallel page UI
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Open a card, inspect History, or change an Admin setting without leaving the
 workspace or resetting the conversation. Replace the remaining parallel page
 implementations with card targets, then remove their separate chat and preview
@@ -502,8 +504,8 @@ Use existing doctest tiers; no new framework. Extend
 `test/frontend/lib/view-url.doctest.md`,
 `test/frontend/workspace-pane-navigation.doctest.md`,
 `test/frontend/workspace-panes.doctest.md`,
-`test/shared/system-card-paths.doctest.md`, and
-`test/cli/commands/validate-system-cards.doctest.md` (moved to `beebox/test/cli/commands/validate/pre-commit.system-cards.doctest.md`) for their respective decisions.
+`test/shared/system-card-paths.test.ts`, and
+`test/cli/commands/validate-system-cards.doctest.md` (moved to `beebox/test/cli/commands/validate/pre-commit.system-cards.test.ts`) for their respective decisions.
 Add focused `test/frontend/history-card-state.doctest.md` and
 `test/frontend/interface-route-consolidation.doctest.md` for state/legacy routes,
 old overlay entries, and explicit chat-about behavior. Test the real adapters;

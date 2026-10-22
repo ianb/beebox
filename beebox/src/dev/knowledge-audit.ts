@@ -14,13 +14,13 @@ import { Command, InvalidArgumentError } from "commander";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
-import { loadTests, getTestsPath, runTest, KnowledgeAuditTranscriptError } from "./lib/test-runner/runner/run-test.js";
-import { assertStandaloneBox, assertCleanAuditBox, auditBoxStatus, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
+import { loadTests, getTestsPath, KnowledgeAuditTranscriptError } from "./lib/test-runner/runner/run-test.js";
+import { runBoxAudits } from "./lib/box-audits.js";
+import { assertStandaloneBox, assertCleanAuditBox, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
 import { resolveAuditBox } from "./lib/audit-box.js";
 import { generateReport } from "./lib/report.js";
 import { automatedChecksPassed } from "./lib/audit-checks.js";
 import { recordRun, loadHistory, type RunMeasurement } from "./lib/context-history.js";
-import { generateDocs } from "../core/docs-gen/generate/core.js";
 import { DEFAULT_DEV_AUDIT_MODEL, devRepoRoot, runDevTest } from "./lib/test-runner/dev-session.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import type { AgentEngine } from "../core/box/config.js";
@@ -46,21 +46,6 @@ function describeRunTarget(boxRoot: string, engine: AgentEngine | undefined): st
   return engine === undefined
     ? `${boxRoot} using its configured engine`
     : `${boxRoot} with ${engine}`;
-}
-
-function auditRunOptions(options: {
-  test: AuditTest;
-  boxRoot: string;
-  engine: AgentEngine | undefined;
-  cliSetupStatus?: string;
-}) {
-  const { test, boxRoot, engine, cliSetupStatus } = options;
-  return {
-    test,
-    boxRoot,
-    ...(engine !== undefined && { engine }),
-    ...(cliSetupStatus !== undefined && { cliSetupStatus }),
-  };
 }
 
 function reportEngine(results: Array<{ engine: AgentEngine }>, override: AgentEngine | undefined): string {
@@ -215,8 +200,8 @@ program
     const engine = options.engine;
 
     // `--box` names a path at or below the box's one root; resolve to that
-    // root (where `.beebox/box.json`, cards, and AGENTS.md live) so
-    // generateDocs/runTest target the box itself, and derive a stable ledger
+    // root (where `package.json`, cards, and AGENTS.md live) so
+    // docs generation and runTest target the box itself, and derive a stable ledger
     // identity. See resolveAuditBox. assertStandaloneBox verifies the git
     // repo is that same root.
     const { operationalRoot: resolvedBox, boxName } = await resolveAuditBox(boxRoot);
@@ -247,32 +232,18 @@ program
     // repoCommit it still pins the exact audited context.
     const boxCommit = gitHead(resolvedBox);
 
-    // Always regenerate docs before running audits. The fast-path cache in
-    // generateDocs keys off git commits, so uncommitted source edits would
-    // otherwise leave stale generated docs in the box and silently invalidate
-    // results — exactly the scenario where the agent answers from a doc that
-    // doesn't match current source. Force is cheap; staleness is expensive.
-    console.log(`Regenerating docs in ${resolvedBox}...`);
-    await generateDocs(resolvedBox, { force: true });
-    // generateDocs may leave generated guidance as untracked output. Only the
-    // first runTest may accept this exact setup status; later tests must see
-    // the clean state restored by the runner's finalizer.
-    const cliSetupStatus = auditBoxStatus(resolvedBox);
-
-    console.log(`Running ${tests.length} knowledge audits against ${describeRunTarget(resolvedBox, engine)}\n`);
-
-    const results: TestResult[] = [];
-    for (const test of tests) {
-      printAuditHeader(test);
-      const result = await runTest(auditRunOptions({
-        test,
-        boxRoot: resolvedBox,
-        engine,
-        ...(results.length === 0 && cliSetupStatus && { cliSetupStatus }),
-      }));
-      results.push(result);
-      printAuditSummary(result);
-    }
+    // Every audit regenerates docs first and accepts only the setup status its
+    // own generation produced: the runner's post-test reset and clean remove
+    // untracked generated guidance, so one generation before the loop would
+    // leave later audits with different guidance. See runBoxAudits.
+    console.log(`Running ${tests.length} knowledge audits against ${describeRunTarget(resolvedBox, engine)}, regenerating docs before each\n`);
+    const results = await runBoxAudits({
+      tests,
+      boxRoot: resolvedBox,
+      engine,
+      onTestStart: printAuditHeader,
+      onTestDone: printAuditSummary,
+    });
 
     // The box is reset between tests, so its HEAD is stable across the run.
     await writeRunOutputs({

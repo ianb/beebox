@@ -34,7 +34,7 @@ import {
 import { resumeStagingSessions } from "../../../core/capture/resume.js";
 import { sweepAbandonedCaptures } from "../../../core/capture/sweep.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../../shared/awake-timeout.js";
-import { withoutBoxWork } from "../../../lib/box-maintenance.js";
+import { withoutBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
 import { handleCaptureUpload } from "./upload.js";
 import { handleCreateCaptureSession } from "./create.js";
@@ -205,7 +205,7 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
   // worker writes + commits the capture document under the target chat's
   // `tmp-capture/`, then delivers a `<capture>` message.
   //
-  // A voice session (`docs/plans/resilient-voice-recording.md`) branches to
+  // A voice session (`docs/implemented-plans/resilient-voice-recording.md`) branches to
   // `handleVoiceFinalize` instead: contiguity check, seal, and (if `hq` was
   // requested) fire the HQ job rather than capture preparation.
   server.post<{ Params: { id: string } }>(

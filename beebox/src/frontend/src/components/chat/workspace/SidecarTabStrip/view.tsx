@@ -1,4 +1,3 @@
-import { themeComposition } from "@shared/card-theme/catalog";
 /**
  * The sidecar's tab strip: the row of open documents beside chat.
  *
@@ -51,16 +50,50 @@ function nextTabIndex(key: string, position: { index: number; length: number }):
   return key === "End" ? length - 1 : null;
 }
 
+/**
+ * Where to scroll so the strip's left edge starts on a whole tab. Scrolling
+ * only as far as the revealed tab needs cut the leftmost tab through its
+ * middle: its label went under the fade and only its "×" showed (journey
+ * walks, 2026-10-08/09). Moves on to the next tab start at or past `from`,
+ * never past `limit` (the revealed tab's own start).
+ */
+function wholeTabStart({ scroller, from, limit }: { scroller: HTMLElement; from: number; limit: number }): number {
+  for (const child of scroller.children) {
+    const start = scrollPosition(scroller, child);
+    if (start >= from) return Math.min(start, limit);
+  }
+  return limit;
+}
+
+/**
+ * An element's left edge in the scroller's scroll coordinates. Not
+ * `offsetLeft`: the scroller is the offset parent only on a themed card
+ * (interface.css positions it there), so on a neutral card that value
+ * includes the pane's own position on the page.
+ */
+function scrollPosition(scroller: HTMLElement, el: Element): number {
+  return el.getBoundingClientRect().left - scroller.getBoundingClientRect().left - scroller.clientLeft + scroller.scrollLeft;
+}
+
 function revealTab({ activePath, tabRefs, setOverflow }: { activePath: string; tabRefs: { current: Map<string, HTMLElement> }; setOverflow: (value: { left: boolean; right: boolean }) => void }) {
   const el = tabRefs.current.get(activePath);
   const scroller = el?.parentElement;
   if (scroller === null || scroller === undefined || el === undefined) return;
-  const left = el.offsetLeft;
+  const left = scrollPosition(scroller, el);
   const right = left + el.offsetWidth;
+  const trailing = parseFloat(scroller.style.getPropertyValue("--bbx-tab-trailing")) || 0;
+  if (trailing > 0 && scroller.scrollWidth - trailing <= scroller.clientWidth) scroller.style.removeProperty("--bbx-tab-trailing");
   if (left < scroller.scrollLeft) {
     scroller.scrollTo({ left, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   } else if (right > scroller.scrollLeft + scroller.clientWidth) {
-    scroller.scrollTo({ left: right - scroller.clientWidth, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    const target = wholeTabStart({ scroller, from: right - scroller.clientWidth, limit: left });
+    // Near the end the browser clamps the scroll to the last tab's edge, which
+    // would cut the leftmost tab again; give the strip just enough trailing
+    // room (`--bbx-tab-trailing`, interface.css). It stays until the next
+    // reveal that scrolls right, so a later no-op reveal cannot clamp it away.
+    const short = target + scroller.clientWidth - (scroller.scrollWidth - trailing);
+    scroller.style.setProperty("--bbx-tab-trailing", `${Math.max(0, short)}px`);
+    scroller.scrollTo({ left: target, behavior: prefersReducedMotion() ? "auto" : "smooth" });
   }
   setOverflow({ left: scroller.scrollLeft > 1, right: scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 1 });
 }
@@ -133,10 +166,13 @@ export function SidecarTabStrip({ id, tabs, activePath, identities, boxSlug, onS
           "bbx-card-theme bbx-interface-tab group flex items-center",
           // A pinned tab is compact, the way a browser's is: it is there to hold
           // its place, not to be read. The full path is still in its title.
-          tab.pinned ? "flex-shrink-0 max-w-[7rem]" : "w-56 min-w-[9rem] max-w-[14rem] shrink",
+          // Unpinned tabs shrink well below their label before the strip
+          // scrolls; a narrow one tucks its actions away (interface.css).
+          tab.pinned ? "flex-shrink-0 max-w-[7rem]" : "w-56 min-w-[5.5rem] max-w-[14rem] shrink",
         )}
         data-active={isActive || undefined}
-        data-theme-composition={themeComposition(theme.name)} data-card-theme={theme.name}
+        data-pinned={tab.pinned || undefined}
+        data-card-theme={theme.name}
         data-card-stock={theme.stock}
       >
         <button

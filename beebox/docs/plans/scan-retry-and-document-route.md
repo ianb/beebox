@@ -7,6 +7,8 @@ issues:
 ---
 # Bound the promote retry, and stop routing documents into the photo flow
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Two defects found while setting up scanner ingest on a real laptop, one of
 which ran in production. A box whose Google authorization had expired put the
 scan promote worker into an unbounded retry loop that ran a full agent every
@@ -381,7 +383,7 @@ gets a `knows_directly` entry before it ships.
   part is the policy, not the I/O. Keep the policy a pure function over
   (attempt count, last outcome) so a doctest reaches it directly, the same
   shape used for the uploader's settle-retry policy in
-  `scan-uploader/test/settle-retry.doctest.md` (moved to `scan-uploader/test/cli/settle.retry.doctest.md`). No new tier, no mock.
+  `scan-uploader/test/settle-retry.doctest.md` (moved to `scan-uploader/test/cli/settle.retry.test.ts`). No new tier, no mock.
 - **Track 2** is covered by the existing route doctests plus a new case
   asserting that a wakeup reporting connector errors, with intake drained, is
   *not* retried.

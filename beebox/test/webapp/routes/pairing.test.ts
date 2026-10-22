@@ -18,7 +18,7 @@ t.test("pairing redeem URL matcher accepts only bare and box-prefixed routes", (
 // non-owner paired it. `resolveMobileBearerIdentity` is the seam that carries
 // `createdBy` out to the context, so this pins that contract.
 t.test("a paired device resolves to the person who paired it", async (st) => {
-  const { makeTmpBox } = await import("../../helpers/doctest-helpers.js");
+  const { makeTmpBox } = await import("../../helpers/test-helpers.js");
   const { createMobilePairingTicket, redeemMobilePairingTicket, resolveMobileBearerIdentity } =
     await import("../../../src/core/mobile/pairing.js");
 

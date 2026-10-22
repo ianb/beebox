@@ -2,8 +2,7 @@
  * The weekly cross-box leak scan: two mechanical legs — a static sweep of
  * beebox's HTTP surface (`static-sweep.ts`) and a host-state audit
  * (`host-audit.ts`), run both locally and against the deployed server — plus
- * a presence check for the dynamic probe doctest another workstream is
- * authoring. Only what is NEW against last week's report gets handed off,
+ * a presence check for the dynamic probe test. Only what is NEW against last week's report gets handed off,
  * knip-sweep style — except the very first run, which has no baseline to
  * diff against and hands off the whole standing report (see
  * {@link describeFirstRun}).
@@ -44,7 +43,7 @@ const REPO_ROOT = path.resolve(SCHEDULE_DIR, "..", "..");
 const PROD_AUDIT_FILES = ["host-audit.ts", "box-manifest.ts"] as const;
 const SCHEDULES_CLI = path.join(REPO_ROOT, "bin", "schedules");
 const DRY_RUN = process.env["SCHEDULE_DRY_RUN"] === "1";
-const PROBE_DOCTEST = path.join(REPO_ROOT, "beebox", "test", "scenarios", "cross-box-probe.doctest.md");
+const PROBE_TEST = path.join(REPO_ROOT, "beebox", "test", "scenarios", "cross-box-probe.test.ts");
 
 function refuse(message: string): never {
   process.stderr.write(`cross-box-leak-scan: ${message}\n`);
@@ -122,9 +121,9 @@ async function runProdHostAudit(): Promise<string[]> {
   return (result.all ?? "").split("\n").filter((line) => line !== "");
 }
 
-async function checkProbeDoctest(): Promise<string[]> {
-  if (await fileExists(PROBE_DOCTEST)) return [];
-  return ["probe  missing  beebox/test/scenarios/cross-box-probe.doctest.md"];
+async function checkProbeTest(): Promise<string[]> {
+  if (await fileExists(PROBE_TEST)) return [];
+  return ["probe  missing  beebox/test/scenarios/cross-box-probe.test.ts"];
 }
 
 /**
@@ -172,7 +171,7 @@ async function main(): Promise<void> {
   const staticLines = await runStaticSweep(REPO_ROOT);
   const localHostLines = (await runLocalHostAudit()).map((line) => `local ${line}`);
   const prodHostLines = (await runProdHostAudit()).map((line) => `prod ${line}`);
-  const probeLines = await checkProbeDoctest();
+  const probeLines = await checkProbeTest();
 
   const current = [...staticLines, ...localHostLines, ...prodHostLines, ...probeLines].toSorted();
 

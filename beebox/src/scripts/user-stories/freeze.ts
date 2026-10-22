@@ -17,8 +17,9 @@ import { join, resolve } from "node:path";
 
 import { readJson } from "./json-io.js";
 import { assignIds } from "./stable-id.js";
+import { DISCOVERY_WORK } from "./work-dir.js";
 
-const BASE = resolve(import.meta.dirname, "../../../user-stories/work");
+const BASE = DISCOVERY_WORK;
 const CATALOG = resolve(import.meta.dirname, "../../../docs/user-stories/catalog");
 
 const date = process.argv[2];

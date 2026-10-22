@@ -28,7 +28,7 @@ result needs a preview that distinguishes its matching content.
 
 Evidence: [journey C report](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-09-21.md),
 actions 37 and 44, screenshots 20 and 25. Related:
-[section navigation](2026-09-21-search-section-results-drop-their-destination.md).
+[section navigation](../closed/bugs/2026-09-21-search-section-results-drop-their-destination.md).
 
 ## Re-encounter 2026-10-08 (journey walks)
 

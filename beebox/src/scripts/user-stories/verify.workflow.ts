@@ -32,7 +32,7 @@ const ARGS_ERR = {
 
 const ROOT = args && args.root;
 if (!ROOT) throw new WorkflowArgsError(ARGS_ERR.root);
-const OUT = `${ROOT}/beebox/user-stories/work`;
+const OUT = `${ROOT}/user-stories-work/discovery`;
 
 // args: { root: string, batchCount: number, pages?: {slug, path, ids}[] }
 // Batch membership lives in batches.json rather than in args — each verifier reads its own entry,

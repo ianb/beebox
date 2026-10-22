@@ -23,7 +23,7 @@
 
 import { mkdir, readFile, writeFile, cp } from "node:fs/promises";
 import { join, resolve, dirname } from "node:path";
-import { makeTmpBox, type TmpBox } from "./doctest-helpers.js";
+import { makeTmpBox, type TmpBox } from "./test-helpers.js";
 
 export interface FixtureReplayOptions {
   /** Directory containing input fixtures (e.g., capture session files). */

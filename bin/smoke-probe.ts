@@ -7,7 +7,7 @@
  * a real box on purpose. bin/smoke-harness.ts owns the I/O and calls into this;
  * the run log lives in bin/smoke-lib.ts.
  *
- * See issues/exploration/2026-08-26-merge-time-smoke-tier.md.
+ * See issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md.
  */
 
 import { isRecord } from "../beebox/src/shared/is-record.js";
@@ -263,4 +263,32 @@ export function isFreshGeneration(input: {
 }): boolean {
   if (input.now === null) return false;
   return input.now !== input.before;
+}
+
+// ── the box's content listing ───────────────────────────────────────────────
+
+/**
+ * The card the walk opens: the first one in the box's content area, read from
+ * the same `status.browse` query the Browse page uses
+ * (`beebox/src/frontend/src/directory-listing.tsx`). A background card (the
+ * area's own landmark card) is a last resort, since an ordinary card is what a
+ * person opens. `null` when the listing carries no card at all, or is not the
+ * tRPC shape — the caller shows the body either way.
+ */
+export function contentCardPath(body: string): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch (_e) {
+    return null;
+  }
+  const data = isRecord(parsed) && isRecord(parsed["result"]) ? parsed["result"]["data"] : undefined;
+  const listed: unknown = isRecord(data) ? data["cards"] : undefined;
+  const cards: readonly unknown[] = Array.isArray(listed) ? listed : [];
+  const paths = cards.flatMap((card) =>
+    isRecord(card) && typeof card["relativePath"] === "string"
+      ? [{ path: card["relativePath"], background: card["prominence"] === "background" }]
+      : [],
+  );
+  return (paths.find((card) => !card.background) ?? paths[0])?.path ?? null;
 }

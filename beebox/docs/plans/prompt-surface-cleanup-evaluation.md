@@ -6,6 +6,8 @@ issues: []
 ---
 # Prompt Surface Cleanup — Evaluation
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan acts on the boxholder's commentary on the beebox chat/agent
 **prompt and output-vocabulary surface** (the `ia-review` box review). It now
 integrates **two commentary rounds**: round 1 (chat + reactor system prompts,

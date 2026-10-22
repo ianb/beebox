@@ -9,7 +9,7 @@
  * `registries[].directory`), which rule 1 governs at its own top level.
  * Only `module` files are siblings and importers here; tests never count
  * as importers for this rule (tests import internals freely).
- * Rules: docs/plans/file-layout.md, rules 3 and 5.
+ * Rules: docs/implemented-plans/file-layout.md, rules 3 and 5.
  */
 import type { Finding, LayoutRule, ModuleFile, PackageLayout } from "../../model.js";
 import { baseOf, childrenOf, dirOf, isWithin, modules, stemOf } from "../../graph.js";
@@ -23,7 +23,7 @@ interface UnitsContext {
    * source of one of its members (a file member, or a directory member's
    * `<dir>/<name>/<entry>.ts`). Such a module is always an entry of its
    * directory and never a unit-directory or shared-infrastructure move
-   * candidate (docs/plans/file-layout.md, Ontology).
+   * candidate (docs/implemented-plans/file-layout.md, Ontology).
    */
   fixedEntries: Set<string>;
 }
@@ -133,7 +133,9 @@ function unitMessage(spec: UnitMessageSpec): string {
   const helperNames = helpers.map((helper) => baseOf(helper.path)).toSorted().join(", ");
   return (
     `${baseOf(entry.path)} and its helpers ${helperNames} are one unit beside other units in ${dir}; ` +
-    `make ${dir}/${stem}/ and move them in, dropping the ${stem}- prefix`
+    `make ${dir}/${stem}/ and move them in, dropping the ${stem}- prefix, and rename their mirrored tests to match. ` +
+    `If a new import of one of these helpers made this a unit, importing through ${baseOf(entry.path)} instead may be the smaller fix ` +
+    "(beebox/docs/implemented-plans/file-layout.md, rule 5)"
   );
 }
 

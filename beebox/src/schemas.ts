@@ -25,7 +25,6 @@ import { HistorySchema } from "./schemas/history.js";
 import { InventorySchema } from "./schemas/inventory.js";
 import { AdminSchema } from "./schemas/admin.js";
 import { SearchSchema } from "./schemas/search.js";
-import { MemoSchema } from "./schemas/memo.js";
 import { QuestionSchema } from "./schemas/question.js";
 import { FeedbackSchema } from "./schemas/feedback.js";
 import { ProcedureSchema } from "./schemas/procedure.js";
@@ -96,7 +95,6 @@ export const cardSchemas = defineRegistry<CardSchema>({
     // authored — everyday recording types first
     DocSchema,
     RecordSchema,
-    MemoSchema,
     PersonSchema,
     PlaceSchema,
     TodoViewSchema,
@@ -254,9 +252,9 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   // its card types.
   unregisterBoxTemplates(boxRoot);
 
-  // A path that isn't a box (no `.beebox/box.json`) has no box-local schemas; a
-  // malformed/pre-v2 marker or a broken parent package.json still throws
-  // (getBoxShapeIfPresent rethrows non-ENOENT).
+  // A path that isn't a box (no beebox package.json beside `_config/`, no
+  // marker) has no box-local schemas; a malformed or pre-v3 shape record or a
+  // broken package.json still throws (getBoxShapeIfPresent rethrows them).
   const lookup = await getBoxShapeIfPresent(boxRoot);
   if (!lookup.found) return noBoxSchemas();
   const schemasDir = boxCodePaths(lookup.shape).schemasDir;

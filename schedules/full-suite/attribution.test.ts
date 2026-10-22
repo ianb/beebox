@@ -42,27 +42,27 @@ test("a baseline run keeps every new red visible as unattributed", () => {
 });
 
 test("a failing file named the way tap reports it maps back to its graph path", () => {
-  // TAP reports `src/frontend/test/...` relative to beebox and a root doctest
+  // TAP reports `src/frontend/test/...` relative to beebox and a root test
   // as `../bin/test/...`; the graph keys are repo-relative.
   const g = graph();
-  g.tests.set("beebox/src/frontend/test/f.doctest.md", new Set(["beebox/src/frontend/x.ts"]));
-  g.tests.set("bin/test/b.doctest.md", new Set(["beebox/src/a.ts"]));
+  g.tests.set("beebox/src/frontend/test/f.test.ts", new Set(["beebox/src/frontend/x.ts"]));
+  g.tests.set("bin/test/b.test.ts", new Set(["beebox/src/a.ts"]));
   const frontend = (changed: string[]): boolean =>
-    landingReachesFile({ graph: g, spawnEdges: new Map(), cliBundleInputs: new Set(), changed, file: "src/frontend/test/f.doctest.md" });
+    landingReachesFile({ graph: g, spawnEdges: new Map(), cliBundleInputs: new Set(), changed, file: "src/frontend/test/f.test.ts" });
   assert.equal(frontend(["beebox/src/frontend/x.ts"]), true);
   assert.equal(frontend(["beebox/src/a.ts"]), false);
-  const root = landingReachesFile({ graph: g, spawnEdges: new Map(), cliBundleInputs: new Set(), changed: ["beebox/src/a.ts"], file: "../bin/test/b.doctest.md" });
+  const root = landingReachesFile({ graph: g, spawnEdges: new Map(), cliBundleInputs: new Set(), changed: ["beebox/src/a.ts"], file: "../bin/test/b.test.ts" });
   assert.equal(root, true);
 });
 
 test("a bin/ landing reaches a test that spawns that script, but not unresolved or unrelated ones", () => {
   const g = graph();
-  g.tests.set("bin/test/ws.doctest.md", new Set<string>());
-  const spawnEdges = new Map([["bin/test/ws.doctest.md", new Set(["bin/workstreams"])]]);
+  g.tests.set("bin/test/ws.test.ts", new Set<string>());
+  const spawnEdges = new Map([["bin/test/ws.test.ts", new Set(["bin/workstreams"])]]);
   const bin = (changed: string[], file: string): boolean =>
     landingReachesFile({ graph: g, spawnEdges, cliBundleInputs: new Set(), changed, file });
-  assert.equal(bin(["bin/lib/session-registry.sh"], "../bin/test/ws.doctest.md"), true);
-  assert.equal(bin(["bin/workstreams"], "../bin/test/ws.doctest.md"), true);
-  assert.equal(bin(["bin/land"], "../bin/test/ws.doctest.md"), false);
+  assert.equal(bin(["bin/lib/session-registry.sh"], "../bin/test/ws.test.ts"), true);
+  assert.equal(bin(["bin/workstreams"], "../bin/test/ws.test.ts"), true);
+  assert.equal(bin(["bin/land"], "../bin/test/ws.test.ts"), false);
   assert.equal(bin(["bin/workstreams"], "test/unresolved.test.ts"), false);
 });

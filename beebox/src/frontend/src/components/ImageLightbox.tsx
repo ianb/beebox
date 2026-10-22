@@ -9,7 +9,7 @@
  * arrow keys navigate (wrapping at the ends).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CloseButton } from "./ui/CloseButton";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
@@ -36,6 +36,8 @@ export interface LightboxImage {
   src: string;
   alt: string;
   caption?: string;
+  /** Box path of the image card this image came from, when the marker named one. */
+  cardPath?: string | undefined;
 }
 
 interface ImageLightboxProps {
@@ -43,9 +45,11 @@ interface ImageLightboxProps {
   index: number;
   onIndexChange: (index: number) => void;
   onClose: () => void;
+  /** Given, an image with a `cardPath` gets an "Open card" control. */
+  onOpenCard?: ((cardPath: string) => void) | undefined;
 }
 
-export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLightboxProps) {
+export function ImageLightbox({ images, index, onIndexChange, onClose, onOpenCard }: ImageLightboxProps) {
   const total = images.length;
   const safeIndex = total === 0 ? 0 : ((index % total) + total) % total;
   // images can be empty; the frontend tsconfig lacks noUncheckedIndexedAccess,
@@ -106,6 +110,26 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
     return () => document.removeEventListener("keydown", handleKey, { capture: true });
   }, [onClose, onIndexChange, safeIndex, total, hasMany]);
 
+  // A native modal <dialog>: showModal() puts it in the top layer, makes the
+  // page behind it inert (the focus trap), and the cleanup returns focus to
+  // whatever opened it. Escape stays with the capture-phase handler above,
+  // whose preventDefault also stops the dialog's own cancel.
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const hasCurrent = current !== undefined;
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!hasCurrent || dialog === null) return;
+    const priorFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialog.showModal();
+    // showModal focuses the first control, the full-screen backdrop button,
+    // which rings the whole viewport; start on the visible close button.
+    dialog.querySelector<HTMLElement>("#bbx-lightbox-close")?.focus();
+    return () => {
+      if (dialog.open) dialog.close();
+      priorFocus?.focus();
+    };
+  }, [hasCurrent]);
+
   if (!current) return null;
 
   const captionText = captionOf(current);
@@ -113,9 +137,15 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
   const goNext = () => onIndexChange(step(1));
 
   return createPortal(
+    <dialog
+      ref={dialogRef}
+      aria-label={`${current.alt.trim() === "" ? "Image" : current.alt}${hasMany ? ` (${safeIndex + 1} of ${total})` : ""}`}
+      className="fixed inset-0 m-0 h-full max-h-none w-full max-w-none border-0 bg-transparent p-0 backdrop:bg-transparent"
+      onCancel={(event) => event.preventDefault()}
+    >
     <div
       ref={rootRef}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 touch-none select-none"
+      className="absolute inset-0 flex items-center justify-center bg-black/70 touch-none select-none"
     >
       {/* Full-screen backdrop button. It stays behind the content by DOCUMENT
           ORDER (it's the first child, z-0) rather than by a competing z-index,
@@ -202,6 +232,9 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
               {safeIndex + 1} / {total}
             </span>
           ) : null}
+          {onOpenCard !== undefined && current.cardPath !== undefined ? (
+            <OpenCardButton cardPath={current.cardPath} onOpenCard={onOpenCard} onClose={onClose} />
+          ) : null}
           <ExternalIconLink id="bbx-lightbox-full-size" href={current.src} label="Open full size in new tab" onDark size="sm" />
           <CloseButton id="bbx-lightbox-close" onClick={onClose} onDark size="sm" />
         </div>
@@ -209,8 +242,28 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
       {hasMany ? (
         <NavButton direction="next" onClick={goNext} />
       ) : null}
-    </div>,
+    </div>
+    </dialog>,
     document.body
+  );
+}
+
+/** Closes the lightbox and opens the image's card where the clicked link would have. */
+function OpenCardButton({ cardPath, onOpenCard, onClose }: { cardPath: string; onOpenCard: (cardPath: string) => void; onClose: () => void }) {
+  function handleClick() {
+    onClose();
+    onOpenCard(cardPath);
+  }
+  return (
+    <button
+      id="bbx-lightbox-open-card"
+      type="button"
+      className="text-xs text-white bg-black/40 hover:bg-black/60 rounded px-2 py-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
+      title={`Open the card ${cardPath}`}
+      onClick={handleClick}
+    >
+      Open card
+    </button>
   );
 }
 

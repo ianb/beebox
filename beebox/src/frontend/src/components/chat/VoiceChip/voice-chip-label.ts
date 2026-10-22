@@ -1,7 +1,7 @@
 /**
  * Accessible-name builder for the voice chip trigger — a pure function so the
- * mute × narration × hqInFlight state space is doctestable without React
- * (see src/frontend/test/components/chat/VoiceChip/view.voice-chip-face.doctest.md).
+ * mute × narration × hqInFlight state space is testable without React
+ * (see src/frontend/test/components/chat/VoiceChip/view.voice-chip-face.test.ts).
  */
 
 export interface VoiceChipState {

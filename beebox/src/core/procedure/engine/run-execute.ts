@@ -5,9 +5,8 @@ import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../../a
 import { invariant } from "../../../shared/invariant.js";
 import { MEMORY_ENV } from "../../schedule/memory.js";
 import { fmt } from "../../../lib/format.js";
-import { loadAgentEngine } from "../../box/config.js";
-import { loadEffectiveBoxModel } from "../../model-policy.js";
-import { providerOf, resolveProcedureModel } from "../../../shared/agent-models.js";
+import { loadEffectiveBoxModel, loadTierResolver } from "../../model-policy.js";
+import type { ProcedureModelName } from "../../../shared/agent-models.js";
 import type { ExecuteStepParams } from "./step.js";
 import {
   buildContextBlock,
@@ -49,15 +48,44 @@ function failedAgentOutcome(
   return { sessionId };
 }
 
+/**
+ * The model one run agent uses. A tier resolves through the box policy, so a
+ * GLM- or OpenRouter-defaulted box keeps the step on its own provider. A step
+ * that names no model takes the box default, as the admin's Default model
+ * says; only an unpinned box leaves it to the harness.
+ */
+async function stepModel(boxRoot: string, name: ProcedureModelName | undefined): Promise<string | undefined> {
+  if (name === undefined) return (await loadEffectiveBoxModel(boxRoot)) ?? undefined;
+  return (await loadTierResolver(boxRoot))(name);
+}
+
+/** The system prompt a run agent gets: the step's context block, then its own prompt. */
+async function runAgentSystemPrompt(params: RunPhaseParams, agentPrompt: string): Promise<string> {
+  const { boxRoot, step, procedureCardPath, runCardPath, relProcedurePath } = params;
+  // Set only when a scheduled `runs:` started this procedure and the run can take a summary.
+  const scheduleName = process.env[MEMORY_ENV.summaryFile] ? process.env[MEMORY_ENV.scheduleName] : undefined;
+  const stepLineRange = await getStepLineRange(procedureCardPath, step.id);
+  const contextBlock = buildContextBlock({
+    boxRoot,
+    runCardPath: path.relative(boxRoot, runCardPath),
+    stepId: step.id,
+    procedurePath: relProcedurePath,
+    ...(stepLineRange !== undefined && { stepLineRange }),
+    ...(params.precheckOutput !== undefined && { precheckOutput: params.precheckOutput }),
+    ...(params.directive !== undefined && { directive: params.directive }),
+    ...(scheduleName !== undefined && { scheduleName }),
+  });
+  return `${contextBlock}\n\n${agentPrompt}`;
+}
+
 async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
   const { ctx, boxRoot, step, procedure } = params;
   invariant(step.run, "retryRunAgent requires a run phase");
   invariant(params.retry, "retryRunAgent requires retry context");
   const [agentDef] = step.run.agents;
   invariant(agentDef !== undefined, "review retry requires exactly one run agent");
-  const engine = await loadAgentEngine(boxRoot);
-  // Same provider rule as the main pass: the retry resumes the same step.
-  const provider = providerOf((await loadEffectiveBoxModel(boxRoot)) ?? "");
+  // Same model rule as the main pass: the retry resumes the same step.
+  const modelId = await stepModel(boxRoot, agentDef.model);
   const agentFactory = params.createAgent ?? realCreateAgent;
   ctx.writeLine(fmt.dim("  Re-running agent with validation feedback..."));
   const agent = agentFactory({
@@ -68,12 +96,12 @@ async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
   });
   const invokeOpts: AgentInvokeOptions = {
     boxRoot,
+    // Resent on the resumed session, the same prompt the first pass ran with.
+    systemPrompt: await runAgentSystemPrompt(params, agentDef.prompt),
     prompt: params.retry.failureContext,
     maxTurns: agentDef.maxTurns ?? 20,
     maxBudgetUsd: REVIEW_RETRY_BUDGET_USD,
-    ...(agentDef.model !== undefined && {
-      model: resolveProcedureModel({ engine, model: agentDef.model, provider }),
-    }),
+    ...(modelId !== undefined && { model: modelId }),
   };
   const result = await agent.invoke(invokeOpts);
   const sessionId = agent.sessionId ?? params.retry.sessionId;
@@ -85,51 +113,23 @@ async function retryRunAgent(params: RunPhaseParams): Promise<RunAgentOutcome> {
 /** Run all initial agents, stopping only on engine-level failure. */
 export async function runRunAgents(params: RunPhaseParams): Promise<RunAgentOutcome> {
   if (params.retry !== undefined) return retryRunAgent(params);
-  const {
-    ctx,
-    boxRoot,
-    step,
-    procedure,
-    procedureCardPath,
-    runCardPath,
-    relProcedurePath,
-  } = params;
+  const { ctx, boxRoot, step, procedure } = params;
   invariant(step.run, "runRunAgents requires a run phase");
   const agentFactory = params.createAgent ?? realCreateAgent;
-  const engine = await loadAgentEngine(boxRoot);
-  // Tier resolution is provider-aware: a GLM-defaulted box's `model: strong`
-  // step resolves to GLM, not silently to first-party Opus.
-  const provider = providerOf((await loadEffectiveBoxModel(boxRoot)) ?? "");
-  const relRunCardPath = path.relative(boxRoot, runCardPath);
-  // Set only when a scheduled `runs:` started this procedure and the run can take a summary.
-  const scheduleName = process.env[MEMORY_ENV.summaryFile] ? process.env[MEMORY_ENV.scheduleName] : undefined;
   let sessionId: string | undefined;
 
   for (const agentDef of step.run.agents) {
-    const modelId = agentDef.model === undefined
-      ? undefined
-      : resolveProcedureModel({ engine, model: agentDef.model, provider });
+    const modelId = await stepModel(boxRoot, agentDef.model);
     ctx.writeLine(
-      fmt.dim(`  Running agent${modelId === undefined ? "" : ` (${agentDef.model} → ${modelId})`}...`),
+      fmt.dim(`  Running agent${modelId === undefined ? "" : ` (${agentDef.model ?? "box default"} → ${modelId})`}...`),
     );
-    const stepLineRange = await getStepLineRange(procedureCardPath, step.id);
-    const contextBlock = buildContextBlock({
-      boxRoot,
-      runCardPath: relRunCardPath,
-      stepId: step.id,
-      procedurePath: relProcedurePath,
-      ...(stepLineRange !== undefined && { stepLineRange }),
-      ...(params.precheckOutput !== undefined && { precheckOutput: params.precheckOutput }),
-      ...(params.directive !== undefined && { directive: params.directive }),
-      ...(scheduleName !== undefined && { scheduleName }),
-    });
     const agent = agentFactory({
       name: `procedure-${procedure.name}-${step.id}`,
       onOutput: (text) => ctx.write(text),
     });
     const result = await agent.invoke({
       boxRoot,
-      systemPrompt: `${contextBlock}\n\n${agentDef.prompt}`,
+      systemPrompt: await runAgentSystemPrompt(params, agentDef.prompt),
       prompt: `Execute the ${step.id} step of the ${procedure.name} procedure. Follow the instructions in your system prompt.`,
       maxTurns: agentDef.maxTurns ?? 20,
       ...(modelId !== undefined && { model: modelId }),

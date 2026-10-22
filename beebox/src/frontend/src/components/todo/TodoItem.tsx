@@ -1,5 +1,5 @@
 /**
- * One todo, rendered the same wherever it appears (`docs/plans/todos-ui.md`,
+ * One todo, rendered the same wherever it appears (`docs/implemented-plans/todos-ui.md`,
  * Track 2): a `{% todo %}` in a card body (`Todo.tsx`, inline or block), an
  * entry of a card's frontmatter `todos:` (`FrontmatterFields.tsx`), and a line
  * of the todo list (`todo-view/ItemTree.tsx`).
@@ -163,10 +163,11 @@ function Chips({ props }: { props: TodoItemProps }) {
 export function TodoItem(props: TodoItemProps): ReactNode {
   const { assigned, layout, locator, muted, children } = props;
   const controls = useControls(props);
-  const textClass = muted ? "text-warm-400" : todoTextClass({ status: controls.status, assigned });
+  const textClass = muted ? "text-card-soft" : todoTextClass({ status: controls.status, assigned });
   const data = {
     "data-todo-status": props.status,
     "data-todo-assigned": assigned,
+    "data-todo-plate-state": props.plateState ?? undefined,
     "data-todo-locator": locatorAttr(locator),
   };
   const chips = muted ? null : <Chips props={props} />;

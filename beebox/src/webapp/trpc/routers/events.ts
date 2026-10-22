@@ -9,7 +9,7 @@
  * are not resumable, matching the prior SSE behavior.
  *
  * `turnStream` is the resumable per-turn agent output stream (see
- * chat-turn-buffer).
+ * chat-turn-buffer); `turnSession` reports the session id a turn runs under.
  */
 
 import { z } from "zod";
@@ -35,7 +35,7 @@ export type { EventMap, BusEventName } from "../../../core/event-bus/core.js";
 const MAX_BUS_QUEUE = 1000;
 
 /** Wire shape delivered to subscribers — matches the old SSEEvent `{event,data}`. */
-interface BusPayload {
+export interface BusPayload {
   event: string;
   data: unknown;
 }
@@ -176,4 +176,12 @@ export const eventsRouter = router({
         await buffer.waitForChange(signal, version);
       }
     }),
+  // The session id an accepted turn runs under, once its `system/init` frame
+  // arrived; null before then and for an unknown/GC'd turn. A new chat whose
+  // turn stream dropped before init uses this to learn its id.
+  turnSession: publicProcedure
+    .input(z.object({ turnId: z.string().min(1) }))
+    .query(({ input }): { sessionId: string | null } => ({
+      sessionId: getTurnBuffer(input.turnId)?.sessionId ?? null,
+    })),
 });

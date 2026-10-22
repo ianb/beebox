@@ -28,6 +28,11 @@ export interface FileViewProps {
   viewState?: ViewState | null;
   /** True only when this mount owns a browser URL and can push history. */
   canPushViewState?: boolean;
+  /**
+   * A place inside the file to bring into view after it renders
+   * (`ViewTarget.fragment`). Only the workspace pane passes one.
+   */
+  fragment?: string | undefined;
   /** Persist state in the owner; omission keeps it local to this FileView. */
   onViewStateChange?: (next: ViewState, method: "push" | "replace") => void;
   caption?: string;

@@ -14,7 +14,7 @@
  * Every storage access is guarded (quota, private-mode SecurityError —
  * persistence is a convenience, never a failure source; pattern:
  * lib/location-share.ts saveLocationShareState). Framework-free; takes a
- * minimal Storage so doctests use a Map-backed fake.
+ * minimal Storage so tests use a Map-backed fake.
  *
  * Images are size-gated: base64 payloads persist only while the total
  * serialized size stays under PERSIST_BYTE_BUDGET — text, files, and
@@ -30,11 +30,11 @@
 import { uploadedPath } from "./emission-store";
 import type { EmissionDraft, ImageItem, FileItem, FileTransferState } from "./emission-store";
 import type { SelectionItem } from "../lib/selection/serialize";
-// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
+// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx test
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
 import { isRecord } from "../../../shared/is-record.js";
 
-/** The subset of Storage this module touches (fakeable in doctests). */
+/** The subset of Storage this module touches (fakeable in tests). */
 export interface KeyValueStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
@@ -73,7 +73,7 @@ const LEGACY_COMPOSER_PREFIX = "bbx-composer-draft";
  * serves every checkout from one origin and two worktrees can each have a
  * `test1`. Sharing that slot handed one clone the other's text AND its
  * `tmp/…` attachment paths, which the receiving clone then reported as expired
- * (issues/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md).
+ * (issues/closed/bugs/2026-09-08-draft-storage-crosses-development-worktrees.md).
  */
 export function emissionKey(input: { boxSlug: string | undefined; scope: string }): string {
   return `${KEY_PREFIX}:${input.scope === "" ? input.boxSlug ?? "default" : input.scope}`;
@@ -220,7 +220,7 @@ export function isEmptyEmissionDraft(
  * than on the debounce. Saving an empty payload instead would be nearly
  * equivalent on restore, but it leaves the key sitting there, and the
  * recovery bug this fixes was diagnosed by looking for exactly that key
- * (issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md):
+ * (issues/closed/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md):
  * gone means gone.
  */
 export function commitPersistedEmission(

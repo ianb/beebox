@@ -35,7 +35,7 @@ import { Prominence } from "../shared/prominence.js";
 import { SystemThemeChoiceSchema } from "../shared/card-theme/core.js";
 
 /** Sort order for `expand` fan-out results. */
-export const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);
+const LandmarkOrder = z.enum(["alphabetical", "modified-desc", "modified-asc"]);
 export type LandmarkOrderType = z.infer<typeof LandmarkOrder>;
 
 /**
@@ -66,7 +66,7 @@ export type LandmarkLinkData = z.infer<typeof LandmarkLink>;
  * title + a child count) instead of flattening into the landmark's flat
  * link list. When omitted, results flatten inline as before.
  */
-export const LandmarkExpand = z.object({
+const LandmarkExpand = z.object({
   query: z.string(),
   group: z.string().optional(),
   order: LandmarkOrder.optional(),
@@ -104,14 +104,15 @@ export const OpenerEntry = z
   );
 
 /**
- * The root place's onboarding openers, installed on a new box's root landmark
- * (`installRootLandmark`). Both are phrased from the person's side, so the
- * agent is never asked something it cannot answer on turn one; the agent
- * rewrites and eventually removes them as the box comes into regular use.
+ * The root place's onboarding opener, installed on a new box's root landmark
+ * (`installRootLandmark`). It sits under the box's first question in the
+ * empty root chat (docs/implemented-plans/front-door.md, Track A) and is phrased from the
+ * person's side; the agent rewrites and eventually removes it as the box
+ * comes into regular use. Talking is the box's least obvious input, so the
+ * one stock opener is a walkthrough of it (the `what-can-you-do` skill).
  */
 export const STOCK_ROOT_OPENERS: readonly string[] = [
-  "Let me tell you what this box is for.",
-  "What can you do?",
+  "Tell me about talking instead of typing.",
 ];
 
 /**
@@ -218,7 +219,7 @@ navigation:
     - What can I cook tonight?
 \`\`\`
 
-**Openers.** \`navigation.openers\` are one-line first moves, phrased from the person's side, shown as buttons on an unstarted chat in this place (and on the place's page); clicking one sends it as their message. Each is a single non-blank line of at most 120 characters. A place with no \`openers\` shows none; it does not inherit the root's. When you build a place for a recurring job, you may add up to three for its standing first moves ("Log a new loan"). The root landmark's onboarding openers fade as the box is used: remove them once the person knows what the box is for. Openers never go on a briefing card.
+**Openers.** \`navigation.openers\` are one-line first moves, phrased from the person's side, shown as buttons on an unstarted chat in this place (and on the place's page); clicking one sends it as their message. Each is a single non-blank line of at most 120 characters. A place with no \`openers\` shows none; it does not inherit the root's. When you build a place for a recurring job, you may add up to three for its standing first moves ("Log a new loan"). The root landmark's onboarding openers fade as the box is used: remove them once the person knows what the box is for, and in the same edit write its place summary (the body): two or three sentences in the person's words about what the box is for and what is in it. Openers never go on a briefing card.
 
 \`ref\` and \`symbol.src\` are **box paths — write them with a leading \`/\`, from the box root**. A path relative to the landmark's directory still resolves (older landmarks are written that way), but new ones use the box path. \`expand\` \`query\` globs are the exception: they are queries, not refs, and always run relative to the landmark's directory.
 
@@ -304,13 +305,16 @@ export function parseLandmarkFields(content: string): LandmarkFields | null {
  *
  * Pass `symbol` for an emoji/text mark, or `symbolSrc` for an image box path
  * (leading `/`; a landmark-dir-relative path also resolves). `openers` become
- * `navigation.openers` (the root landmark gets `STOCK_ROOT_OPENERS`).
+ * `navigation.openers` (the root landmark gets `STOCK_ROOT_OPENERS`). `body`
+ * is the place summary, written after the frontmatter block with one blank
+ * line.
  */
 export function createLandmarkTemplate(options: {
   label: string;
   symbol?: string;
   symbolSrc?: string;
   openers?: readonly string[];
+  body?: string;
 }): string {
   const navigation: Record<string, unknown> = { label: options.label };
   if (options.openers !== undefined) navigation["openers"] = [...options.openers];
@@ -320,5 +324,5 @@ export function createLandmarkTemplate(options: {
   } else if (typeof options.symbol === "string" && options.symbol !== "") {
     fields["symbol"] = { glyph: options.symbol };
   }
-  return renderFrontmatterBlock(fields);
+  return renderFrontmatterBlock(fields, options.body === undefined ? undefined : `\n${options.body}\n`);
 }

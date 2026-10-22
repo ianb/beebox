@@ -19,6 +19,7 @@ import { validateHookPathsResult } from "../../cli/validate-hook/command.js";
 import {
   appendCodexTurnUsage,
   codexUsageDelta,
+  codexUsageModel,
   totalCodexSessionUsage,
 } from "../../core/codex-usage.js";
 import { codexSdkItemId, codexSdkToolChatMessage } from "../codex-tool-activity.js";
@@ -187,7 +188,12 @@ function createRun(opts: ChatBackendStartOptions, createSession: CodexSdkSession
               turnId: randomUUID(),
               task: "web-chat",
               timestamp: new Date().toISOString(),
-              model: opts.model ?? "codex-default",
+              model: await codexUsageModel({
+                threadId: sessionId,
+                requested: opts.model,
+                env: opts.env,
+                warn: (text) => console.warn(`[CodexChat:usage] ${text}`),
+              }),
               usage: codexUsageDelta(codexSdkUsage(completed.usage), previous),
             });
           } catch (error) {

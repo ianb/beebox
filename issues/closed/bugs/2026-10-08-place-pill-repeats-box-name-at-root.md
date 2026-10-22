@@ -17,7 +17,7 @@ walker said it "reads like a file path". Reports:
 [B-inventory](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 1) and
 [second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) (row 2),
 [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 3),
-[D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 6),
+[D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 6),
 [F-newcomer](../../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-08.md) (row 1).
 
 ## Mechanism
@@ -36,7 +36,7 @@ At the root, show the name once. The prefix exists to anchor nested
 landmarks ("Box ▸ Lending"), so it can be dropped when the place is the
 root. The pill's other wording problems ("Here: /", the box emoji, "Find a
 landmark") belong to
-[First screen says nothing about what this is](../../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md).
+[First screen says nothing about what this is](../features/2026-08-23-first-screen-says-nothing-about-what-this-is.md).
 
 ## Related
 

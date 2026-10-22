@@ -2,7 +2,7 @@
  * Add and remove the owner's OpenRouter chat models in `_config/box.json`.
  *
  * Adding is the act that lets a box spend per use on a model, so these are the
- * only writers of `openrouterModels` (`docs/plans/openrouter-chat-models.md`).
+ * only writers of `openrouterModels` (`docs/implemented-plans/openrouter-chat-models.md`).
  * Both run inside the config write lock: the "still the default?" check on
  * removal must see the same file the write replaces.
  */
@@ -11,10 +11,15 @@ import { isRecord } from "../../../../shared/is-record.js";
 import type { AddedModel } from "../../../../shared/chat-models.js";
 import { mutateConfig, type BoxConfigMutationResult } from "../../../box-config-write.js";
 
-/** Removing the box's default model would leave followers on nothing they chose. */
+/**
+ * Removing the box's default or small model would leave work on nothing the
+ * owner chose — background runs would quietly fall back to first-party Claude.
+ */
 export class OpenRouterModelInUseError extends Error {
-  constructor(readonly id: string) {
-    super(`${id} is this box's default model. Change the default model first, then remove it.`);
+  constructor(readonly id: string, slot: "agentModel" | "smallModel") {
+    super(slot === "agentModel"
+      ? `${id} is this box's default model. Change the default model first, then remove it.`
+      : `${id} is this box's small model (smallModel in _config/box.json), used for chat titles, reviews and other quick background passes. Change it first, then remove it.`);
     this.name = "OpenRouterModelInUseError";
   }
 }
@@ -49,7 +54,7 @@ export async function addOpenRouterModel(params: { boxRoot: string; model: Added
 }
 
 /**
- * Remove a model. Refuses while it is the box default. A chat that picked it
+ * Remove a model. Refuses while it is the box default or small model. A chat that picked it
  * explicitly keeps the pick and refuses its next turn — deliberate, see
  * `resolveEffectiveModel`.
  */
@@ -59,7 +64,8 @@ export async function removeOpenRouterModel(params: { boxRoot: string; id: strin
     boxRoot: params.boxRoot,
     message: `Remove OpenRouter chat model ${id}`,
     mutate(config) {
-      if (config.agentModel === id) throw new OpenRouterModelInUseError(id);
+      if (config.agentModel === id) throw new OpenRouterModelInUseError(id, "agentModel");
+      if (config.smallModel === id) throw new OpenRouterModelInUseError(id, "smallModel");
       const entries = storedEntries(config).filter((entry) => entryId(entry) !== id);
       if (entries.length === 0) delete config.openrouterModels;
       else config.openrouterModels = entries;

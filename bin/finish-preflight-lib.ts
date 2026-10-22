@@ -15,7 +15,7 @@ import { touchesDeployedPath } from "./deployed-paths.js";
 
 /** One thing finish-verify runs, with everything it needs to run it. */
 export interface VerificationCommand {
-  kind: "tests" | "typecheck" | "lint" | "smoke" | "site";
+  kind: "tests" | "typecheck" | "lint" | "smoke" | "site" | "apple" | "theme";
   /** What the agent would type; also the display name in finish-verify output. */
   command: string;
   /** Repo-root-relative directory to run in. */
@@ -48,7 +48,6 @@ const NONE_DIRS = new Set([
   "docs",
   "exhibits",
   "feedback-review",
-  "ios-app",
   "issues",
   "notes",
   "private-issues",
@@ -56,6 +55,9 @@ const NONE_DIRS = new Set([
   "scratch",
   "workstream-exhibits",
 ]);
+
+/** Top-level directories checked together by bin/apple-test. */
+const APPLE_DIRS = new Set(["apple-shared", "ios-app", "mac-app"]);
 
 /** Root files that change what the root scripts check. */
 const ROOT_FILES = new Set([
@@ -71,6 +73,7 @@ export type PathGroup =
   | { kind: "package"; name: string }
   | { kind: "root" }
   | { kind: "none" }
+  | { kind: "apple" }
   | { kind: "unknown"; name: string };
 
 /**
@@ -95,6 +98,7 @@ export function groupOf(path: string, workspacePackages: Set<string>): PathGroup
     if (workspacePackages.has(dir)) return { kind: "package", name: dir };
   }
   if (ROOT_DIRS.has(head)) return { kind: "root" };
+  if (APPLE_DIRS.has(head)) return { kind: "apple" };
   if (NONE_DIRS.has(head)) return { kind: "none" };
   // Fail toward more verification, and say so: an unclassified directory is a
   // gap in this map, not a licence to skip checks.
@@ -130,36 +134,57 @@ export function groupPaths(
   };
 }
 
-/** A `.doctest.md` is executable behaviour, never prose. */
-export function isDoctest(path: string): boolean {
-  return path.endsWith(".doctest.md");
-}
-
 export function isDocPath(path: string): boolean {
-  return path.endsWith(".md") && !isDoctest(path);
+  return path.endsWith(".md");
 }
 
 export function isTestPath(path: string): boolean {
-  return isDoctest(path) || /\.test\.tsx?$/.test(path) || /(^|\/)test\//.test(path);
+  return /\.test\.tsx?$/.test(path) || /(^|\/)test\//.test(path);
 }
 
 /**
- * The docs-only rule: every changed path is either a non-doctest `.md`
- * anywhere (an issue note, README, CONTRIBUTING, a plan) or sits under a
- * `docs/` directory (which admits images and other doc assets), and none is
- * a `.doctest.md`. Broadened 2026-09-12 from "under docs/ only": the
+ * The docs-only rule: every changed path is either a `.md` anywhere (an
+ * issue note, README, CONTRIBUTING, a plan) or sits under a `docs/`
+ * directory (which admits images and other doc assets). Broadened 2026-09-12 from "under docs/ only": the
  * checkpoint note finish appends under `issues/` was flipping every
  * docs-only landing into the full test tier plus the smoke walk. This
  * matches `hasCodeChange`, which already treats any `.md` as a doc.
  */
 export function isDocsOnly(paths: string[]): boolean {
   if (paths.length === 0) return false;
-  return paths.every((path) => isDocPath(path) || (path.split("/").includes("docs") && !isDoctest(path)));
+  return paths.every((path) => isDocPath(path) || path.split("/").includes("docs"));
 }
 
 /** Anything the public site build reads: site/ itself, or any markdown (the docs manifest promotes repo docs). */
 export function touchesSiteInput(paths: string[]): boolean {
   return paths.some((path) => path.startsWith("site/") || isDocPath(path));
+}
+
+/**
+ * Theme styles, the primitives and palette that pick ink and surfaces, the
+ * studio that stages them, the theme catalog, and the contrast checker: what
+ * `bin/theme-check --all` measures or runs.
+ */
+export function touchesThemeSurface(paths: string[]): boolean {
+  const prefixes = [
+    "beebox/src/frontend/src/themes/",
+    "beebox/src/frontend/src/components/themes/",
+    // The primitives that choose ink and surface, and the palette.
+    "beebox/src/frontend/src/components/ui/",
+    "beebox/src/frontend/tailwind.config.js",
+    "beebox/src/frontend/src/pages/dev/theme-studio",
+    "beebox/src/frontend/src/pages/dev/ThemeStudioPage.tsx",
+    "beebox/src/frontend/src/pages/dev/components/ThemeStudio",
+    "beebox/src/shared/card-theme/",
+    "beebox/src/shared/theme-screens.ts",
+    "beebox/src/shared/theme-studio-case.ts",
+    "beebox/test/tours/theme-check.ts",
+    "beebox/test/tours/tour-lib/contrast",
+    "beebox/test/tours/tour-lib/backdrop",
+    "beebox/test/tours/tour-lib/rules",
+    "bin/theme-check",
+  ];
+  return paths.some((path) => prefixes.some((prefix) => path.startsWith(prefix)));
 }
 
 /** Any non-test, non-doc source in the diff — what Track O and lint exist for. */
@@ -241,7 +266,7 @@ function isolateFor(pkg: string): VerificationCommand["isolate"] | undefined {
  * Typecheck stays whole-tree (it is incremental now, and cheap warm).
  */
 export function verificationCommands(input: CommandInput): VerificationCommand[] {
-  const { packages, root } = groupPaths(input.paths, input.workspacePackages);
+  const { packages, root, groups } = groupPaths(input.paths, input.workspacePackages);
   const docsOnly = isDocsOnly(input.paths);
   const commands: VerificationCommand[] = [];
   const skipTypeLint = docsOnly
@@ -254,7 +279,8 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
     // Tests and the smoke walk answer for behaviour, so only a docs-only diff
     // excuses them; typecheck and lint additionally skip on the
     // nothing-changed-since-verified rule.
-    const behavioural = command.kind === "tests" || command.kind === "smoke";
+    const behavioural =
+      command.kind === "tests" || command.kind === "smoke" || command.kind === "apple" || command.kind === "theme";
     const skip = docsOnly ? "docs-only diff" : undefined;
     const reason = behavioural ? skip : skipTypeLint;
     commands.push(reason === undefined ? command : { ...command, skip: reason });
@@ -293,6 +319,23 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
     add({ kind: "typecheck", command: "pnpm typecheck", cwd: ".", argv: ["pnpm", "typecheck"] });
   }
 
+  // Apple code: one check for ios-app/, mac-app/ and apple-shared/. The argv
+  // carries the changed paths so bin/apple-test picks its steps (the iOS
+  // simulator run only for ios-app/ or apple-shared/). A prose .md among them
+  // is no reason to run tests. With only docs under the Apple dirs there is no
+  // check, except in an all-docs diff, where add() lists it as skipped.
+  const applePaths = groups["(apple)"] ?? [];
+  const appleCodePaths = applePaths.filter((path) => !isDocPath(path));
+  if (appleCodePaths.length > 0 || (docsOnly && applePaths.length > 0)) {
+    const argvPaths = appleCodePaths.length > 0 ? appleCodePaths : applePaths;
+    add({
+      kind: "apple",
+      command: `bin/apple-test --changed ${argvPaths.join(" ")}`,
+      cwd: ".",
+      argv: ["bin/apple-test", "--changed", ...argvPaths],
+    });
+  }
+
   // The smoke tier: a code-related landing boots a real box and walks it
   // before it merges. "Code-related" is the deploy hook's own rule — what
   // ships is what owes an answer here (bin/deployed-paths.ts). Docs-only
@@ -300,6 +343,12 @@ export function verificationCommands(input: CommandInput): VerificationCommand[]
   // ios-app/ changes nothing a running box would show.
   if (touchesDeployedPath(input.paths)) {
     add({ kind: "smoke", command: "bin/smoke", cwd: ".", argv: ["bin/smoke"] });
+  }
+
+  // Every catalog theme in the studio, measured for contrast. Needs the dev
+  // router, like the tours it shares its audit with.
+  if (touchesThemeSurface(input.paths)) {
+    add({ kind: "theme", command: "bin/theme-check --all", cwd: ".", argv: ["bin/theme-check", "--all"] });
   }
 
   // The public site's canonical build: what Cloudflare runs on every push of

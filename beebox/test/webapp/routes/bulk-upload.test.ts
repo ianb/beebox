@@ -1,0 +1,662 @@
+// # Bulk-upload routes
+//
+// The bulk routes stage a batch of files into the box: create binds a required
+// target chat, uploads stream one registered item at a time (hash + byte-count
+// computed server-side as the body streams), and a status/resume endpoint lists
+// registered vs received items. Finalize returns immediately after sealing; the
+// full prepare→deliver worker (retry, at-most-once, reconciliation) is covered in
+// `test/core/bulk-upload/worker.test.ts`.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { any, isoDate, not, str, uuid } from "@ianbicking/tap-check/check";
+import { createHash } from "node:crypto";
+import { z } from "zod";
+import { makeTestServer, type TestServer } from "../../helpers/test-route-server.js";
+import { StagingSessionSchema, type StagingSession } from "../../../src/core/capture/staging-schema.js";
+import { readStagingSession, writeStagingSession, sealStagingSession, setStagingState } from "../../../src/core/capture/staging-store/core.js";
+import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
+import { appendHistory, getDirectoryForSession } from "../../../src/core/chat/session/history.js";
+
+// Bind a session→dir in history. The server fires a one-shot history backfill at
+// boot that can clobber a single append; re-append until it sticks (the backfill
+// writes `migrated: true` once, after which the binding is durable).
+// Response bodies of the bulk routes; every field is optional because success
+// and error responses carry different keys.
+const BulkBody = z.looseObject({
+  sessionId: z.string().optional(),
+  error: z.string().optional(),
+  success: z.boolean().optional(),
+  staged: z.boolean().optional(),
+  registered: z.unknown().optional(),
+  capabilities: z.looseObject({ acceptedUploadEncodings: z.unknown() }).optional(),
+  state: z.unknown().optional(),
+  size: z.unknown().optional(),
+  sha256: z.unknown().optional(),
+  itemId: z.unknown().optional(),
+});
+
+// The status/resume response: registered vs received items.
+const StatusBody = z.object({
+  state: z.unknown(),
+  registered: z.array(z.looseObject({ id: z.string() })),
+  received: z.array(z.looseObject({ itemId: z.string(), size: z.number() })),
+});
+
+async function send(ctx: TestServer, opts: Parameters<TestServer["request"]>[0]) {
+  const res = await ctx.request(opts);
+  return { statusCode: res.statusCode, body: BulkBody.parse(res.body) };
+}
+
+// The id of a created session; fails the test when the response carried none.
+function sessionIdOf(res: { body: { sessionId?: string | undefined } }): string {
+  if (res.body.sessionId === undefined) throw new Error("response carried no sessionId");
+  return res.body.sessionId;
+}
+
+async function manifestOf(ctx: TestServer, id: string) {
+  return StagingSessionSchema.parse(JSON.parse(await ctx.read(`_tmp/capture-staging/${id}/session.json`)));
+}
+
+async function bindSession({ ctx, sessionId, contextDir }: { ctx: TestServer; sessionId: string; contextDir: string }) {
+  for (let i = 0; i < 100; i++) {
+    await appendHistory(ctx.boxRoot, { sessionId, contextDir });
+    if ((await getDirectoryForSession(ctx.boxRoot, sessionId)) === contextDir) return;
+    await new Promise((r) => setTimeout(r, 20));
+  }
+  throw new Error(`could not bind ${sessionId} in history`);
+}
+
+// The manifest keys every bulk session has; the timestamps come from the real clock.
+function bulkManifest(id: string) {
+  return {
+    id,
+    createdAt: isoDate(),
+    lastActivityAt: isoDate(),
+    createdBy: null,
+    kind: "bulk" as const,
+    segments: [],
+    photos: [],
+    state: "open" as const,
+    files: [],
+    totalBytes: 0,
+  };
+}
+
+function sha256(text: string) {
+  return createHash("sha256").update(Buffer.from(text)).digest("hex");
+}
+
+async function createBatch(ctx: TestServer, body: object) {
+  return send(ctx, { method: "POST", url: "/api/bulk/sessions", payload: body });
+}
+
+async function uploadItem(ctx: TestServer, opts: {
+  sessionId: string; itemId: string; filename: string; data: Buffer; originalName?: string; headers?: Record<string, string>;
+}) {
+  return send(ctx, {
+    method: "POST",
+    url: `/api/bulk/sessions/${opts.sessionId}/items/${opts.itemId}/upload`,
+    payload: opts.data,
+    headers: {
+      "content-type": "application/octet-stream",
+      "x-upload-filename": opts.filename,
+      ...(opts.originalName ? { "x-upload-original-name": opts.originalName } : {}),
+      ...opts.headers,
+    },
+  });
+}
+
+// Finalize starts the prepare→deliver worker detached from the request, so it
+// outlives the response. Every test that finalizes waits here for the worker to
+// stop before cleanup deletes the box: a worker still running `git add` (through
+// git-annex) when the box directory vanishes hangs forever, and the file then
+// dies at tap's whole-file timeout instead of failing an assertion. Bounded, and
+// the error names the state the worker stalled in.
+async function waitForWorkerToSettle(ctx: TestServer, sessionId: string) {
+  let session: StagingSession | null = null;
+  for (let i = 0; i < 600; i++) {
+    session = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+    if (session === null || session.state === "delivered" || session.state.startsWith("failed:")) return session?.state ?? "gone";
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  throw new Error(`bulk worker for ${sessionId} did not settle within 30s; last state was ${String(session?.state)}`);
+}
+
+// ## Create requires a target chat, then registers the initial item set
+//
+// A create with no `targetSessionId` is rejected loudly (400) — a bulk batch with
+// no chat to deliver into is invalid at creation:
+void test("A create with no targetSessionId is rejected loudly (400) — a bulk batch with...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const noTarget = await createBatch(ctx, { items: [] });
+  t.check(noTarget, {
+    statusCode: 400,
+    body: { error: "A bulk upload requires a target chat session id" },
+  });
+
+  // With a target chat + an initial registry, create returns the new session id and
+  // its upload capabilities. The batch's context dir is NOT taken from the request —
+  // it's derived server-side from the target chat's recorded binding:
+
+  await bindSession({ ctx, sessionId: "chat-abc", contextDir: "_content/photos" });
+  const created = await createBatch(ctx, {
+    targetSessionId: "chat-abc",
+    items: [
+      { id: "a", name: "report.pdf", size: 6, mimetype: "application/pdf" },
+      { id: "b", name: "photo.png", size: 5, mimetype: "image/png" },
+    ],
+  });
+  const sessionId = sessionIdOf(created);
+  t.check(created, {
+    statusCode: 200,
+    body: {
+      sessionId: uuid(),
+      capabilities: { acceptedUploadEncodings: ["raw-body-v1"] },
+      startedAt: isoDate(),
+    },
+  });
+
+  // The staging manifest is a `kind: "bulk"` session carrying the registry + the
+  // server-derived target context dir:
+
+  const manifest = await manifestOf(ctx, sessionId);
+  t.check(manifest, {
+    ...bulkManifest(sessionId),
+    targetSessionId: "chat-abc",
+    expectedItems: [
+      { id: "a", name: "report.pdf", size: 6, mimetype: "application/pdf" },
+      { id: "b", name: "photo.png", size: 5, mimetype: "image/png" },
+    ],
+    contextDir: "_content/photos",
+  });
+
+  // A client-supplied `contextDir` in the body is ignored (path-traversal defense):
+  // a target with no recorded binding lands at the box root regardless of what the
+  // body claims:
+
+  const sneaky = await createBatch(ctx, {
+    targetSessionId: "chat-unbound",
+    contextDir: "../../../etc",
+    items: [{ id: "a", name: "x.pdf" }],
+  });
+  const sneakyManifest = await manifestOf(ctx, sessionIdOf(sneaky));
+  t.check(sneaky.statusCode, 200);
+  t.check(sneakyManifest, {
+    ...bulkManifest(sessionIdOf(sneaky)),
+    targetSessionId: "chat-unbound",
+    expectedItems: [{ id: "a", name: "x.pdf" }],
+    contextDir: "",
+  });
+});
+
+// ## Duplicate item ids are rejected at creation and registration (400)
+//
+// The registry is keyed by id, so a duplicate id in one request — or a new id
+// colliding with one already registered — is refused (an update-in-place would
+// silently overwrite the earlier item's claims):
+void test("The registry is keyed by id, so a duplicate id in one request — or a new id c...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const dupeCreate = await createBatch(ctx, {
+    targetSessionId: "chat-1",
+    items: [{ id: "a", name: "x.pdf" }, { id: "a", name: "y.pdf" }],
+  });
+  t.check(dupeCreate, { statusCode: 400, body: { error: "Duplicate item id in registry: a" } });
+
+  const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
+  const collide = await send(ctx, {
+    method: "POST", url: `/api/bulk/sessions/${sessionIdOf(created)}/items`,
+    payload: { items: [{ id: "a", name: "again.pdf" }, { id: "a", name: "again2.pdf" }] },
+  });
+  t.check(collide, { statusCode: 400, body: { error: "Duplicate item id in registry: a" } });
+
+  // Re-registering an EXISTING id (idempotent append while the picker streams) is
+  // still fine:
+
+  const reAdd = await send(ctx, {
+    method: "POST", url: `/api/bulk/sessions/${sessionIdOf(created)}/items`,
+    payload: { items: [{ id: "a", name: "x.pdf" }] },
+  });
+  t.check(reAdd, { statusCode: 200, body: { registered: 1 } });
+});
+
+// ## Streaming an upload records a server-computed size + sha256
+//
+// The bytes stream to disk; the manifest entry carries the server-computed size
+// and sha256 (never a client-claimed size), and the response echoes them:
+void test("The bytes stream to disk; the manifest entry carries the server-computed size...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const created = await createBatch(ctx, {
+    targetSessionId: "chat-1",
+    items: [{ id: "a", name: "report.pdf" }],
+  });
+  const sessionId = sessionIdOf(created);
+
+  const res = await uploadItem(ctx, {
+    sessionId, itemId: "a", filename: "staged-a.bin", originalName: "report.pdf",
+    data: Buffer.from("PDFPDF"),
+  });
+  t.check(res, {
+    statusCode: 200,
+    body: { success: true, size: 6, sha256: sha256("PDFPDF"), itemId: "a", filename: "staged-a.bin" },
+  });
+
+  // The staged file entry on the manifest carries the same server-computed values
+  // and links back to the registry item, and `totalBytes` accumulates:
+
+  const manifest = await manifestOf(ctx, sessionId);
+  t.check(manifest, {
+    ...bulkManifest(sessionId),
+    targetSessionId: "chat-1",
+    files: [
+      {
+        filename: "staged-a.bin",
+        uploadedAt: isoDate(),
+        originalName: "report.pdf",
+        mimeType: "application/octet-stream",
+        itemId: "a",
+        size: 6,
+        sha256: sha256("PDFPDF"),
+      },
+    ],
+    expectedItems: [{ id: "a", name: "report.pdf" }],
+    contextDir: "",
+    totalBytes: 6,
+  });
+
+  // An exact retry (same filename + bytes) is idempotent; the same filename with
+  // different bytes is a 409 conflict:
+
+  const replay = await uploadItem(ctx, {
+    sessionId, itemId: "a", filename: "staged-a.bin", data: Buffer.from("PDFPDF"),
+  });
+  const conflict = await uploadItem(ctx, {
+    sessionId, itemId: "a", filename: "staged-a.bin", data: Buffer.from("DIFFERENT"),
+  });
+  t.check({ replay, conflict }, {
+    replay: {
+      statusCode: 200,
+      body: { success: true, size: 6, sha256: sha256("PDFPDF"), itemId: "a", filename: "staged-a.bin" },
+    },
+    conflict: {
+      statusCode: 409,
+      body: { error: "Capture filename is already staged with different bytes: staged-a.bin" },
+    },
+  });
+});
+
+// ## An upload naming an unregistered item is rejected (400)
+//
+// The item registry is the record of what was supposed to arrive, so an upload
+// whose `itemId` was never registered is refused before any bytes are staged:
+void test("The item registry is the record of what was supposed to arrive, so an upload...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
+  const sessionId = sessionIdOf(created);
+
+  const res = await uploadItem(ctx, {
+    sessionId, itemId: "ghost", filename: "staged.bin", data: Buffer.from("X"),
+  });
+  t.check(res, { statusCode: 400, body: { error: "No registered item ghost in this bulk batch" } });
+
+  // Registering it afterward (append while the picker streams) lets the upload land:
+
+  const reg = await send(ctx, {
+    method: "POST", url: `/api/bulk/sessions/${sessionId}/items`,
+    payload: { items: [{ id: "ghost", name: "ghost.pdf" }] },
+  });
+  const ok = await uploadItem(ctx, { sessionId, itemId: "ghost", filename: "staged.bin", data: Buffer.from("X") });
+  t.check({ reg, ok }, {
+    reg: { statusCode: 200, body: { registered: 2 } },
+    ok: {
+      statusCode: 200,
+      body: { success: true, size: 1, sha256: sha256("X"), itemId: "ghost", filename: "staged.bin" },
+    },
+  });
+});
+
+// ## Reserved control-file names are rejected (400)
+//
+// The staging filename (`X-Upload-Filename`) can't claim the session's own control
+// files: `session.json` (the manifest — overwriting it would silently substitute
+// content), a `session.json.`-prefixed sibling, `.gitignore`, or any dot-leading
+// hidden name is refused before any bytes land.
+void test("The staging filename (X-Upload-Filename) can't claim the session's own contro...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "x.pdf" }] });
+  const sessionId = sessionIdOf(created);
+
+  const names = ["session.json", "session.json.corrupt", ".gitignore", ".hidden"];
+  const codes = [];
+  for (const name of names) codes.push((await uploadItem(ctx, { sessionId, itemId: "a", filename: name, data: Buffer.from("X") })).statusCode);
+  t.check(codes, [
+    400,
+    400,
+    400,
+    400,
+  ]);
+
+  // The manifest is untouched — the upload never overwrote it:
+
+  const manifest = await manifestOf(ctx, sessionId);
+  t.check(manifest, {
+    ...bulkManifest(sessionId),
+    targetSessionId: "chat-1",
+    expectedItems: [{ id: "a", name: "x.pdf" }],
+    contextDir: "",
+  });
+});
+
+// ## Exceeding the per-session byte cap returns 413
+//
+// Seeding the accumulated bytes to the cap makes a single-byte upload tip it over,
+// mapped to 413 (the same staging cap capture enforces):
+void test("Seeding the accumulated bytes to the cap makes a single-byte upload tip it ov...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "big.bin" }] });
+  const sessionId = sessionIdOf(created);
+  const session = await manifestOf(ctx, sessionId);
+  session.totalBytes = MAX_STAGED_BYTES;
+  await writeStagingSession({ boxRoot: ctx.boxRoot, session });
+
+  const res = await uploadItem(ctx, { sessionId, itemId: "a", filename: "big.bin", data: Buffer.from("X") });
+  t.check(res, { statusCode: 413, body: { error: "Capture exceeds the staging byte limit" } });
+});
+
+// ## Status/resume lists registered vs received items
+//
+// After a partial upload, the status endpoint reports what was registered and what
+// actually arrived — enough for a client to resume the missing items:
+void test("After a partial upload, the status endpoint reports what was registered and w...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const created = await createBatch(ctx, {
+    targetSessionId: "chat-1",
+    items: [{ id: "a", name: "a.pdf" }, { id: "b", name: "b.pdf" }],
+  });
+  const sessionId = sessionIdOf(created);
+  await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.pdf", data: Buffer.from("AAAA") });
+
+  const status = { body: StatusBody.parse((await ctx.request({ method: "GET", url: `/api/bulk/sessions/${sessionId}` })).body) };
+  t.check(status.body, {
+    state: "open",
+    registered: [{ id: "a", name: "a.pdf" }, { id: "b", name: "b.pdf" }],
+    received: [{ itemId: "a", size: 4, name: "a.pdf" }],
+  });
+});
+
+// ## Uploading to an unknown session returns 404
+void test("Uploading to an unknown session returns 404", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const res = await uploadItem(ctx, { sessionId: "no-such", itemId: "a", filename: "x.bin", data: Buffer.from("X") });
+  t.check(res.statusCode, 404);
+});
+
+// ## Finalize seals the session and returns staged
+//
+// Finalize returns immediately with `staged: true` (the prepare→deliver worker
+// runs in the background) and CAS-seals the session so it stops accepting uploads:
+void test("Finalize returns immediately with staged:", async (t) => {
+  t.teardown(async () => {
+    try {
+      await waitForWorkerToSettle(ctx, sessionId);
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const created = await createBatch(ctx, { targetSessionId: "chat-1", items: [{ id: "a", name: "a.pdf" }] });
+  const sessionId = sessionIdOf(created);
+  await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.pdf", data: Buffer.from("AAAA") });
+
+  const done = await send(ctx, {
+    method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
+    payload: { failedItems: [] },
+  });
+  t.check(done, { statusCode: 200, body: { sessionId, staged: true } });
+
+  // The seal happens before the response, not later in the worker: read first
+  // thing after the response, the batch is already out of `open`. The worker may
+  // have moved it on to any later state, so the check is only that it is not open.
+
+  t.check((await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId }))?.state, not("open"));
+
+  // A further upload after finalize is refused — the session is no longer open:
+
+  const late = await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-late.bin", data: Buffer.from("X") });
+  t.check(late, {
+    statusCode: 409,
+    body: { error: str`Session is ${any(String)}; uploads are only accepted while it is open` },
+  });
+});
+
+// ## Finalize records the batch's introduction inside the seal
+//
+// The composer text the boxholder submitted the batch with rides IN the CAS seal,
+// so a resume rebuilds the same batch with the same introduction — there is no
+// window in which a sealed batch exists without its note.
+void test("The composer text the boxholder submitted the batch with rides IN the CAS sea...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const created = await createBatch(ctx, { targetSessionId: "chat-note", items: [{ id: "a", name: "a.jpg" }] });
+  const sessionId = sessionIdOf(created);
+  await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
+
+  const done = await send(ctx, {
+    method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
+    payload: { note: "Receipts from the Tokyo trip" },
+  });
+  // The worker runs to its end before the read, so the read cannot race it.
+  // "chat-note" has no recorded binding, so the worker leaves the batch retryable
+  // as `failed:deliver` — and the note is still there for the resume to use.
+  const settled = await waitForWorkerToSettle(ctx, sessionId);
+  const sealed = await manifestOf(ctx, sessionId);
+  t.check({ done, settled, sealed }, {
+    done: { statusCode: 200, body: { sessionId, staged: true } },
+    settled: "failed:deliver",
+    sealed: {
+      ...bulkManifest(sessionId),
+      state: "failed:deliver",
+      targetSessionId: "chat-note",
+      files: [
+        {
+          filename: "s-a.bin",
+          uploadedAt: isoDate(),
+          originalName: "a.jpg",
+          mimeType: "application/octet-stream",
+          itemId: "a",
+          size: 4,
+          sha256: sha256("AAAA"),
+        },
+      ],
+      expectedItems: [{ id: "a", name: "a.jpg" }],
+      contextDir: "",
+      note: "Receipts from the Tokyo trip",
+      totalBytes: 4,
+    },
+  });
+});
+
+// ## A whitespace-only note is recorded as no note at all
+//
+// An empty composer must produce a batch indistinguishable from one that never
+// carried an introduction — that is what keeps the `<upload>` message byte-identical
+// to its pre-note form.
+void test("An empty composer must produce a batch indistinguishable from one that never...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const created = await createBatch(ctx, { targetSessionId: "chat-blank", items: [{ id: "a", name: "a.jpg" }] });
+  const sessionId = sessionIdOf(created);
+  await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
+
+  await send(ctx, {
+    method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
+    payload: { note: "   \n\t " },
+  });
+  await waitForWorkerToSettle(ctx, sessionId);
+  const sealed = await manifestOf(ctx, sessionId);
+  t.check(sealed, {
+    ...bulkManifest(sessionId),
+    state: "failed:deliver",
+    targetSessionId: "chat-blank",
+    files: [
+      {
+        filename: "s-a.bin",
+        uploadedAt: isoDate(),
+        originalName: "a.jpg",
+        mimeType: "application/octet-stream",
+        itemId: "a",
+        size: 4,
+        sha256: sha256("AAAA"),
+      },
+    ],
+    expectedItems: [{ id: "a", name: "a.jpg" }],
+    contextDir: "",
+    totalBytes: 4,
+  });
+});
+
+// ## An oversized note is rejected at the boundary
+//
+// The note is untrusted client prose, so it is length-capped where it enters
+// rather than trusted downstream.
+void test("The note is untrusted client prose, so it is length-capped where it enters ra...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const created = await createBatch(ctx, { targetSessionId: "chat-big", items: [{ id: "a", name: "a.jpg" }] });
+  const sessionId = sessionIdOf(created);
+
+  const tooBig = await send(ctx, {
+    method: "POST", url: `/api/bulk/sessions/${sessionId}/finalize`,
+    payload: { note: "x".repeat(10_001) },
+  });
+  const stillOpen = await manifestOf(ctx, sessionId);
+  t.check({ tooBig, stillOpen }, {
+    tooBig: { statusCode: 400, body: { error: "Invalid finalize body" } },
+    stillOpen: {
+      ...bulkManifest(sessionId),
+      targetSessionId: "chat-big",
+      expectedItems: [{ id: "a", name: "a.jpg" }],
+      contextDir: "",
+    },
+  });
+});
+
+// ## A sealed batch cannot be cancelled out from under its worker
+//
+// Cancel is the uploader's affordance for a batch it still owns. Once finalize
+// seals one, the background worker owns it — deleting the staging directory then
+// makes the worker read `null` and quietly return, so no `<upload>` message ever
+// arrives while the client, which already saw finalize succeed, reports success.
+// That is the "client says done, server shows nothing" failure this feature exists
+// to remove, so a post-seal cancel is refused rather than raced.
+//
+// The batch is sealed and stepped through the worker's states in the store,
+// without the finalize route, so no live worker races the DELETE: a real one can
+// finish (staging gone, 404) or fail (`failed:*`, cancellable, 200) before the
+// request lands. Every state the worker holds the batch in refuses the cancel:
+void test("Cancel is the uploader's affordance for a batch it still owns.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await ctx.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const ctx = await makeTestServer();
+  const created = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "a", name: "a.jpg" }] });
+  const sessionId = sessionIdOf(created);
+  await uploadItem(ctx, { sessionId, itemId: "a", filename: "s-a.bin", originalName: "a.jpg", data: Buffer.from("AAAA") });
+  await sealStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+
+  const codes: Record<string, number> = {};
+  for (const state of ["sealed", "preparing", "delivering"] as const) {
+    await setStagingState({ boxRoot: ctx.boxRoot, id: sessionId, state });
+    codes[state] = (await send(ctx, { method: "DELETE", url: `/api/bulk/sessions/${sessionId}` })).statusCode;
+  }
+  t.check(codes, {
+    sealed: 409,
+    preparing: 409,
+    delivering: 409,
+  });
+
+  // An open batch still cancels normally:
+
+  const open = await createBatch(ctx, { targetSessionId: "chat-cancel", items: [{ id: "b", name: "b.jpg" }] });
+  const cancelled = await send(ctx, { method: "DELETE", url: `/api/bulk/sessions/${sessionIdOf(open)}` });
+  t.check(cancelled, { statusCode: 200, body: { success: true } });
+});

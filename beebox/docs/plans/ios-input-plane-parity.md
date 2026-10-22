@@ -6,6 +6,8 @@ issues: []
 ---
 # iOS input-plane parity
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan brings the native iOS composer to semantic parity with the web input
 plane while preserving native keyboard, camera, picker, and speech behavior. It
 extends the native draft and bridge to carry the complete web `Emission`, makes

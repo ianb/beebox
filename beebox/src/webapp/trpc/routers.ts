@@ -3,7 +3,7 @@
  *
  * `src/webapp/trpc/routers/` is a set directory: one member per router, a
  * flat `<name>.ts` file or a `<name>/router.ts` unit when a router needs more
- * than one file. Per the plan's "Record keys" rule (`docs/plans/file-layout.md`,
+ * than one file. Per the plan's "Record keys" rule (`docs/implemented-plans/file-layout.md`,
  * rule 4), a record-form registry's keys must equal each member's file or
  * directory name in camelCase — the same identifier tRPC's public procedure
  * names already use (`quick-chat.ts` -> `quickChat`). `routerMembers` is the

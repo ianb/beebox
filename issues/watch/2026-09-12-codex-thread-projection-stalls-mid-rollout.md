@@ -41,7 +41,7 @@ Worth recording, because the symptom points here first:
   idle (`IDLE_CLOSE_MS`), so a reload usually spawns a new server and asks
   again. It faithfully reported what Codex told it.
 - A `[chat-session] transcript flush wait timed out` warning fired on the same
-  turn ([the flush-timeout issue](../bugs/2026-08-09-transcript-flush-wait-full-timeout-real-sdk.md)).
+  turn ([the flush-timeout issue](../closed/bugs/2026-08-09-transcript-flush-wait-full-timeout-real-sdk.md)).
   That is a real bug but a red herring here: it would cost one turn's final
   message, not 175 unindexed lines reaching back to the previous afternoon.
 

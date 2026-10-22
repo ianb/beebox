@@ -23,7 +23,7 @@ import { parseMarkdown } from "../../../shared/markdoc-config/parse/core.js";
 import { escapeHtml } from "../../../lib/escape-html.js";
 
 // Named value imports (`{ parse, transform, renderers }`) don't resolve from
-// this CommonJS module under Node's ESM loader (the doctest/CLI backend path);
+// this CommonJS module under Node's ESM loader (the test/CLI backend path);
 // destructure off the default import instead — same pattern and lint exception
 // as `markdoc/emit.ts` / `markdoc-config.ts`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module

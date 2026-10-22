@@ -6,7 +6,7 @@
  * assembled at the throw site. Split out of bin/smoke-probe.ts because there are
  * enough of them to be their own module.
  *
- * See issues/exploration/2026-08-26-merge-time-smoke-tier.md.
+ * See issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md.
  */
 
 /** A step that failed, with enough context to act on without re-running. */
@@ -284,22 +284,15 @@ export class BrowseListEmptyError extends SmokeFailureError {
 
 export class NoCardToOpenError extends SmokeFailureError {
   constructor(readonly listing: string) {
-    super("the browse listing offered no card to open", listing);
+    super("the box's content area lists no card to open", listing);
     this.name = "NoCardToOpenError";
   }
 }
 
-export class CardRefUnresolvedError extends SmokeFailureError {
-  constructor(input: { role: string; name: string; listing: string }) {
-    super(`could not resolve a ref for ${input.role} "${input.name}"`, input.listing);
-    this.name = "CardRefUnresolvedError";
-  }
-}
-
 export class CardViewMissingError extends SmokeFailureError {
-  constructor(input: { name: string; url: string; snapshot: string }) {
+  constructor(input: { path: string; url: string; snapshot: string }) {
     super(
-      `opening the card "${input.name}" did not render a card view (at ${input.url})`,
+      `opening the card ${input.path} did not render a card view (at ${input.url})`,
       input.snapshot,
     );
     this.name = "CardViewMissingError";

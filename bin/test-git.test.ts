@@ -1,7 +1,7 @@
-// Tests for the working-state hash the ledger records. A `.test.ts` rather
-// than a doctest for the same reason bin/test-graph.test.ts is one: this is
-// part of the machinery that decides which doctests run, so testing it from
-// inside that suite is circular.
+// Tests for the working-state hash the ledger records. A `node:test`
+// file rather than a tap test for the same reason bin/test-graph.test.ts is
+// one: this is part of the machinery that decides which tap tests run, so
+// testing it from inside that suite is circular.
 //
 //   node --import tsx --test bin/test-git.test.ts
 

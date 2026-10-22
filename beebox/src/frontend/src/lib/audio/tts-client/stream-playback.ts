@@ -44,7 +44,10 @@ class SourceBufferAppendError extends Error {
  * alone resolved that as success, and the clip hung or failed late. Now it
  * rejects, and the segment fails at once.
  */
-export function appendChunk(sourceBuffer: SourceBuffer, chunk: Uint8Array): Promise<void> {
+/** The part of a `SourceBuffer` that {@link appendChunk} uses. */
+export type ChunkSink = Pick<SourceBuffer, "appendBuffer" | "addEventListener" | "removeEventListener">;
+
+export function appendChunk(sourceBuffer: ChunkSink, chunk: Uint8Array): Promise<void> {
   return new Promise((resolve, reject) => {
     const settle = (outcome: "updateend" | "error" | "abort") => () => {
       sourceBuffer.removeEventListener("updateend", onUpdateEnd);

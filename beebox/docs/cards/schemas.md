@@ -10,7 +10,7 @@ How to add a new card type to beebox. Reference: `src/schemas/briefing.tsx` (fro
 ## When to Create a New Card Type
 
 Create a new schema when:
-- The data has a distinct structure that doesn't fit `record` or `memo`
+- The data has a distinct structure that doesn't fit `record` or `doc`
 - You need specific validation (typed fields, required values)
 - The agent needs domain-specific instructions for handling the data
 
@@ -307,7 +307,7 @@ there, and readers expect it to mean something. Before adding one:
 2. **Don't use a reserved name.** Global field names (`title`, `contains`, …)
    and the banned names `status`, `created`, `summary`, `date`, `modified` and
    `source` are rejected: `reservedFieldProblems` (`src/cards/reserved-fields.ts`)
-   fails the built-in registry test (`test/cards/reserved-fields.doctest.md`)
+   fails the built-in registry test (`test/cards/reserved-fields.test.ts`)
    and gives box-local schemas a `box-schema-fields` health warning. Each
    message says what to write instead. The one allowed redeclaration is
    `title: z.string()`, which makes the title required.

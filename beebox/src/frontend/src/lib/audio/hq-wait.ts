@@ -1,6 +1,6 @@
 /**
  * Waiting for a voice message's HQ transcript
- * (`docs/plans/resilient-voice-recording.md`, Track 4). A voice send with HQ
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 4). A voice send with HQ
  * seals its recording with an HQ request, then waits here, within a bounded
  * budget, for the box's HQ job. The wait ends one of three ways:
  *
@@ -15,7 +15,7 @@
  * `bbx chat retranscribe`; it is never delivered as a later message.
  *
  * This module is the decision logic plus a waiter over injected IO, so the
- * doctest drives it with a fake status source; `await-hq.ts` wires the real
+ * test drives it with a fake status source; `await-hq.ts` wires the real
  * tRPC calls, event stream and sleep-immune budget.
  */
 

@@ -7,6 +7,8 @@ issues:
 ---
 # Reliable box maintenance and migration with Git recovery
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Bring configured boxes onto the shipped migrations automatically, including
 boxes with unfinished edits. Use Git for recovery, the box's agent for bounded
 repair, and existing questions and alerts for decisions that need a person.
@@ -595,7 +597,7 @@ No silent failure listed below is accepted as the intended behavior.
 | New work races gate closure | Planned cross-process fixture | Atomic registration versus closure | Deferred before mutation |
 | Accepted agent needs CLI tools during drain | Planned descendant fixture | Retained validated lease | Completes, no deadlock |
 | Timer fires while closed | Planned timer fixture | Admission before consuming, resume pending delivery | Pending, not lost |
-| Deploy/reload controller dies | `test/lib/box-maintenance.doctest.md` (amended 2026-09-17) | Record stays; box reopens when the owner lock is gone | Health and hub 503 name the record |
+| Deploy/reload controller dies | `test/lib/box-maintenance.test.ts` (amended 2026-09-17) | Record stays; box reopens when the owner lock is gone | Health and hub 503 name the record |
 | Busy task never finishes | Planned drain-timeout fixture | Abort before mutation, report blocker | No forced migration |
 | Concurrent maintenance or recursive repair call | Planned process fixture | Shared ownership and reentry refusal | Busy/error |
 | External editor writes during migration | External tools are outside admission | Git recovery; no filesystem transaction claim | Explicit scope limit |
@@ -672,9 +674,9 @@ This plan-only change does not yet introduce or run that agent prompt.
 ## What will hold this after it ships
 
 Use the existing filesystem doctest tier and real Git repos, with the existing
-annex fixture conventions. Extend `beebox/test/core/migration-sweep.doctest.md`;
-add `beebox/test/core/migration-recovery.doctest.md` for recoverable dirty/index/
-untracked input and `beebox/test/core/migration-repair.doctest.md` for fake-agent
+annex fixture conventions. Extend `beebox/test/core/migration-sweep.test.ts`;
+add `beebox/test/core/migration-recovery.test.ts` for recoverable dirty/index/
+untracked input and `beebox/test/core/migration-repair.test.ts` for fake-agent
 failure/retry/questions. Add cross-process admission/lifecycle fixtures and extend the existing reload,
 chat-schedule, and webhook tests for lifetime transfer and deferred delivery.
 Keep activity, result-format, and fleet-selection policy

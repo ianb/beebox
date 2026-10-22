@@ -16,6 +16,25 @@ import { loadBoxConfig } from "../../../../core/box/config.js";
 import { baseServerUrl } from "../../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../../lib/public-url.js";
 import { getBoxDir } from "../../../../lib/paths/core.js";
+import { readDocsApiDiagnosis, renderDocsApiProblem } from "../../../../connectors/google-drive/docs-api-status.js";
+import { errorMessage } from "../../../../shared/error-guards.js";
+
+/**
+ * The open Docs API problem for the settings Drive line, or null. The page
+ * renders `link` as its own control, so a message that ends with the link
+ * drops it there and the URL shows once. A damaged status file must not break
+ * the settings page; the `google-docs-api` health check already reports it.
+ */
+async function driveDocsApi(boxRoot: string): Promise<{ message: string; link: string | null } | null> {
+  try {
+    const diagnosis = await readDocsApiDiagnosis(boxRoot);
+    if (diagnosis === null) return null;
+    return { message: renderDocsApiProblem(diagnosis, { linkShownSeparately: true }), link: diagnosis.link };
+  } catch (e) {
+    console.error(`[admin] could not read the Google Docs API status for ${boxRoot}: ${errorMessage(e)}`);
+    return null;
+  }
+}
 
 export const googleAdminProcedures = {
   googleStatus: ownerProcedure.query(async ({ ctx }) => {
@@ -28,6 +47,7 @@ export const googleAdminProcedures = {
         needsReauthSince: null,
         scopes: GOOGLE_SCOPES,
         enabledServices,
+        driveDocsApi: null,
       };
     }
     const tokens = await loadGoogleTokens(ctx.boxRoot);
@@ -40,10 +60,12 @@ export const googleAdminProcedures = {
       hasTokens: !!(tokens && tokens.refreshToken),
       // A stored refresh token that Google has since rejected — the tokens are
       // present but dead, so "Connected" would be a lie. See
-      // docs/plans/google-auth-reauth-health.md.
+      // docs/implemented-plans/google-auth-reauth-health.md.
       needsReauthSince: tokens?.needsReauthSince ?? null,
       scopes: GOOGLE_SCOPES,
       enabledServices,
+      // Drive is syncing Google Docs without the Docs API; see connectors/google-drive/docs-api-status.ts.
+      driveDocsApi: await driveDocsApi(ctx.boxRoot),
     };
   }),
 

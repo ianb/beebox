@@ -4,14 +4,14 @@ import { tour } from "./tour-lib/registry.js";
 tour(
   { name: "card-theme-previews", description: "Inspect linked cards in the workspace, including long content." },
   async (t) => {
-    await t.go("/views/_content/theme-tour/Theme_Tour.memo.card");
+    await t.go("/views/_content/theme-tour/Theme_Tour.doc.card");
     await t.expect.heading("Card themes tour", { level: 2 });
     const cards = [
-      { name: "Paper / cream", path: "comparison-paper.memo.card", theme: "paper", stock: "cream" },
-      { name: "Paper / manila", path: "comparison-manila.memo.card", theme: "paper", stock: "manila" },
-      { name: "Post-it / yellow", path: "comparison-post-it.memo.card", theme: "post-it", stock: "yellow" },
-      { name: "Plain / neutral", path: "comparison-plain.memo.card", theme: "plain", stock: "neutral" },
-      { name: "Long content", path: "long-form.memo.card", theme: "paper", stock: "manila" },
+      { name: "Paper / cream", path: "comparison-paper.doc.card", theme: "paper", stock: "cream" },
+      { name: "Paper / manila", path: "comparison-manila.doc.card", theme: "paper", stock: "manila" },
+      { name: "Post-it / yellow", path: "comparison-post-it.doc.card", theme: "post-it", stock: "yellow" },
+      { name: "Plain / neutral", path: "comparison-plain.doc.card", theme: "plain", stock: "neutral" },
+      { name: "Long content", path: "long-form.doc.card", theme: "paper", stock: "manila" },
     ];
     for (const card of cards) {
       await t.eval(`(() => {
@@ -54,7 +54,7 @@ tour(
         await t.expect.custom("both quote forms follow the selected theme", () => quotes.trim() === "true");
       }
       await t.expect.noPageErrors();
-      await t.go("/views/_content/theme-tour/Theme_Tour.memo.card");
+      await t.go("/views/_content/theme-tour/Theme_Tour.doc.card");
       await t.expect.heading("Card themes tour", { level: 2 });
     }
   },

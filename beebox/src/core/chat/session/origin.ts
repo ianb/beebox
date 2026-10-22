@@ -42,7 +42,7 @@ class CorruptOriginIdError extends Error {
 
 const originIdSchema = z.uuid();
 
-/** Test/doctest override, so a run never mints or reads the real machine id. */
+/** Test/test override, so a run never mints or reads the real machine id. */
 function originIdFile(): string {
   return process.env["BBX_ORIGIN_ID_FILE"] ?? path.join(BBX_STATE_DIR, "origin-id");
 }
@@ -65,7 +65,7 @@ function parseOriginId(raw: string, filePath: string): string {
  * already stamped. With `wx` exactly one creator wins and the loser reads the
  * winner's id, so concurrent first runs converge.
  *
- * Exported for the doctest that runs two first calls at once — `localOrigin`
+ * Exported for the test that runs two first calls at once — `localOrigin`
  * memoizes per path, so there is no other way to reach the race.
  */
 export async function readOrCreateOriginId(filePath: string): Promise<string> {

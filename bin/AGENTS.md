@@ -5,13 +5,13 @@ contracts live in `bin/docs/`; read the indicated reference before editing.
 
 ## Tests for `bin/` tooling
 
-New root-infrastructure tests are doctests under `bin/test/`, mirroring the
-file they test (`bin/lib/<name>.ts` → `bin/test/lib/<name>.doctest.md`), including shell
-fixtures and CLI behavior. They run in beebox's suite, under its home and
-secret isolation: `cd beebox && pnpm exec tap ../bin/test/<path>.doctest.md`
-(`doc-check` and `layout-check` also run from `beebox/`). Existing `bin/*.test.ts`
-files are not precedent; use a traditional test only when a doctest would be
-circular, and say why. Router unit tests live in `workstreams-app/test/router/`.
+New root-infrastructure tests are `.test.ts` files with `t.check`
+([reference](../beebox/docs/testing/check.md)) under `bin/test/`, mirroring the
+file they test (`bin/lib/<name>.ts` → `bin/test/lib/<name>.test.ts`), including
+shell fixtures and CLI behavior. They run in beebox's
+suite, under its home and secret isolation: `cd beebox && pnpm exec tap
+../bin/test/<path>.test.ts` (`doc-check` and `layout-check` also run from
+`beebox/`). The `node:test` files at `bin/*.test.ts` are not precedent. Router unit tests live in `workstreams-app/test/router/`.
 
 ## Commit safety
 

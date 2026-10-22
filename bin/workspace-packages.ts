@@ -25,7 +25,7 @@ import { parse } from "yaml";
  *
  * `beebox/src/frontend` is its own package, but beebox runs its
  * checks: `lint:frontend` and `typecheck:frontend` shell into it, and its tests
- * are beebox doctests under `beebox/test/frontend/`. Attributing a
+ * are beebox tests under `beebox/test/frontend/`. Attributing a
  * frontend path to it would run its (nonexistent) `test` script and skip all
  * three.
  */
@@ -40,7 +40,7 @@ const VERIFICATION_SCRIPTS = ["test", "typecheck", "lint"];
  * A package that defines none cannot own a path: `browse/packages/agent-browser-typed`
  * is a workspace package with no scripts at all, and what checks it is
  * `browse`'s own whole-tree `tsc --noEmit`, `eslint .`, and now `tap` (its
- * doctest lives under `browse/`'s own `.taprc`, not a `.taprc` of its own).
+ * test lives under `browse/`'s own `.taprc`, not a `.taprc` of its own).
  * Attributing a path to it would run nothing.
  */
 function verifiesItself(root: string, dir: string): boolean {

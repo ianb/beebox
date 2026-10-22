@@ -85,21 +85,47 @@ export function buildBasenameLookup(files: string[]): Map<string, string[]> {
   return lookup;
 }
 
+// Tracked files whose repo-relative path ends with a relative suffix
+// (`src/foo.ts` matches `beebox/src/foo.ts`). Re-depths a moved file's own
+// links to non-`.md` targets.
+export type SuffixMatches = (suffix: string) => readonly string[];
+
+export function buildSuffixMatcher(files: readonly string[]): SuffixMatches {
+  return (suffix) => files.filter((f) => f === suffix || f.endsWith(`/${suffix}`));
+}
+
+interface DecideContext {
+  fromDir: string;
+  fileExists: (repoRelPath: string) => boolean;
+  basenameLookup: Map<string, string[]>;
+  suffixMatches: SuffixMatches | undefined;
+}
+
 type LinkDecision =
   | { kind: "leave" }
   | { kind: "rewrite"; to: string }
   | { kind: "unfixable"; reason: UnfixableReason };
 
+// Re-depthing changes only the number of leading `../`, so a candidate's path
+// above the suffix must be one of the source directory's ancestors. A file
+// with the same suffix in another package is a different file.
+function redepthCandidates(pathPart: string, ctx: DecideContext): readonly string[] | undefined {
+  const suffix = path.posix.normalize(pathPart).replace(/^(?:\.\.\/)+/, "");
+  const fromDir = `${ctx.fromDir}/`;
+  return ctx.suffixMatches?.(suffix).filter((c) => fromDir.startsWith(c.slice(0, c.length - suffix.length)));
+}
+
 // Decide the fate of one link target, given the source file's directory and
 // the lookup context. `leave` covers non-file, external, absolute, anchor-only,
 // repo-escaping, and already-resolving targets.
-function decideLink(
-  target: string,
-  ctx: { fromDir: string; fileExists: (repoRelPath: string) => boolean; basenameLookup: Map<string, string[]> },
-): LinkDecision {
+// A non-`.md` target (`../src/foo.ts`) is matched by its path below the
+// leading `../` segments, which keeps more of the path than a basename does;
+// it is only considered when `suffixMatches` is supplied.
+function decideLink(target: string, ctx: DecideContext): LinkDecision {
   const { pathPart, anchor } = splitAnchor(target);
   if (!pathPart || pathPart.startsWith("#") || pathPart.startsWith("/") || hasUriScheme(pathPart)) return { kind: "leave" };
-  if (!pathPart.endsWith(".md")) return { kind: "leave" };
+  const markdown = pathPart.endsWith(".md");
+  if (!markdown && (ctx.suffixMatches === undefined || pathPart.endsWith("/") || /\s/.test(pathPart))) return { kind: "leave" };
 
   const intended = path.posix.normalize(path.posix.join(ctx.fromDir, pathPart));
   if (intended.startsWith("..")) return { kind: "leave" }; // escapes the repo — not ours to fix
@@ -107,7 +133,7 @@ function decideLink(
 
   const base = path.posix.basename(pathPart);
   if (NON_UNIQUE_BASENAMES.has(base)) return { kind: "unfixable", reason: "non-unique-basename" };
-  const candidates = ctx.basenameLookup.get(base);
+  const candidates = markdown ? ctx.basenameLookup.get(base) : redepthCandidates(pathPart, ctx);
   if (!candidates || candidates.length === 0) return { kind: "unfixable", reason: "no-basename-match" };
   if (candidates.length >= 2) return { kind: "unfixable", reason: "ambiguous-basename" };
 
@@ -134,21 +160,24 @@ function inlineCodeRanges(line: string): Array<[number, number]> {
 // A link is only touched when its literal relative target does NOT resolve on
 // disk. Links that resolve, external/absolute/anchor-only links, links
 // escaping the repo, and links inside inline-code spans or fenced code blocks
-// are all left untouched.
+// are all left untouched. With `suffixMatches`, broken links to non-`.md`
+// files are repaired too (see decideLink).
 export function repairLinks({
   fromRel,
   content,
   fileExists,
   basenameLookup,
+  suffixMatches,
 }: {
   fromRel: string;
   content: string;
   fileExists: (repoRelPath: string) => boolean;
   basenameLookup: Map<string, string[]>;
+  suffixMatches?: SuffixMatches;
 }): RepairResult {
   const rewrites: LinkRewrite[] = [];
   const unfixable: UnfixableLink[] = [];
-  const ctx = { fromDir: path.posix.dirname(fromRel), fileExists, basenameLookup };
+  const ctx: DecideContext = { fromDir: path.posix.dirname(fromRel), fileExists, basenameLookup, suffixMatches };
 
   let inFence = false;
   const outLines = content.split("\n").map((line, i) => {
@@ -204,7 +233,7 @@ export function repairFrontmatterPaths({
   if (!content.startsWith("---\n")) return { content, rewrites: [], unfixable: [] };
   const rewrites: LinkRewrite[] = [];
   const unfixable: UnfixableLink[] = [];
-  const ctx = { fromDir: path.posix.dirname(fromRel), fileExists, basenameLookup };
+  const ctx: DecideContext = { fromDir: path.posix.dirname(fromRel), fileExists, basenameLookup, suffixMatches: undefined };
   let inFrontmatter = true;
   let issuesList = false;
   const lines = content.split("\n").map((line, index) => {

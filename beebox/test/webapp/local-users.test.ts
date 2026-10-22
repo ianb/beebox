@@ -1,0 +1,329 @@
+// # Local credential store (`local-users.ts`)
+//
+// The scrypt-hashed username/password store behind `~/.bbx-auth.json`. These are
+// pure-function tests: each runs against a throwaway `BBX_AUTH_FILE` in a tmp dir,
+// with a small scrypt work factor (`BBX_AUTH_SCRYPT_N`) so the suite stays fast —
+// that env var is a test-only seam, inert in every real deployment.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { any, instanceOf, isoDate, not } from "@ianbicking/tap-check/check";
+import { mkdtemp, rm, writeFile, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  createFirstUser,
+  addInvitedMember,
+  addUser,
+  verifyPassword,
+  setPassword,
+  setPasswordWithPasswordHash,
+  removeUser,
+  listUsers,
+  getLocalUser,
+  getLocalOwnerEmail,
+  isLocalAuthStoreInitialized,
+} from "../../src/webapp/local-users.js";
+import { hashPassword } from "../../src/webapp/local-users-scrypt.js";
+import { AuthFileLockError, AuthStoreUnavailableError } from "../../src/webapp/local-users-errors.js";
+
+/** A public user record as the store returns it. */
+function publicUser(fields: { email: string; name: string; role: "owner" | "member"; gen: number }) {
+  return { ...fields, created: isoDate() };
+}
+
+// Small work factor keeps scrypt fast in tests (2^14 vs the 2^17 prod default).
+process.env.BBX_AUTH_SCRYPT_N = String(2 ** 14);
+
+const dir = await mkdtemp(join(tmpdir(), "bbx-auth-"));
+const AUTH_FILE = join(dir, "auth.json");
+process.env.BBX_AUTH_FILE = AUTH_FILE;
+delete process.env.BBX_OWNER_EMAIL;
+
+// `=> throws` only catches synchronous throws; async calls reject, so assert on
+// the rejected error's name instead.
+async function rejectName(fn: () => Promise<unknown>) {
+  try {
+    await fn();
+    return "no-throw";
+  } catch (e) {
+    return e instanceof Error ? e.name : String(e);
+  }
+}
+
+// ## Create the first user: owner, gen 1, mode 0600, hashed on disk
+void test("Create the first user: owner, gen 1, mode 0600, hashed on disk", async (t) => {
+  t.teardown(async () => {
+    try {
+      await rm(dir, { recursive: true, force: true });
+      delete process.env.BBX_AUTH_FILE;
+      delete process.env.BBX_AUTH_SCRYPT_N;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const owner = await createFirstUser({ email: "Boxholder@Example.com", name: "Boxholder", password: "correct horse" });
+  t.check(owner, {
+    email: "boxholder@example.com",
+    name: "Boxholder",
+    role: "owner",
+    gen: 1,
+    created: isoDate(),
+  });
+
+  // Credential lock exhaustion is part of the store-unavailable contract, so every
+  // route that already fails closed on an unavailable store also handles it.
+
+  const lockError: Error = new AuthFileLockError("/redacted/auth.lock");
+  t.check(lockError, instanceOf(AuthStoreUnavailableError));
+
+  // The email is canonicalized (trim + lowercase); the owner email is discoverable.
+
+  t.check(getLocalOwnerEmail(), "boxholder@example.com");
+
+  // The file is 0600, and the plaintext password never appears in it.
+
+  const info = await stat(AUTH_FILE);
+  t.check(info.mode & 0o777, 0o600);
+
+  const raw = await import("node:fs/promises").then((fs) => fs.readFile(AUTH_FILE, "utf-8"));
+  t.check(raw, not(any(String).includes("correct horse")));
+
+  // ## Verify: right password succeeds, wrong password returns null
+  //
+  // Email match is case-insensitive; verification returns the public user.
+
+  const ok = await verifyPassword({ email: "  BOXHOLDER@example.com ", password: "correct horse" });
+  t.check(ok, publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }));
+
+  t.check(await verifyPassword({ email: "boxholder@example.com", password: "wrong" }), null);
+
+  // An unknown email returns null too (no enumeration — same shape as a bad password).
+
+  t.check(await verifyPassword({ email: "nobody@example.com", password: "correct horse" }), null);
+
+  // ## A second owner creation fails without replacing the first
+
+  t.check(await rejectName(() => createFirstUser({ email: "other@example.com", name: "Other", password: "hunter2" })), "UserExistsError");
+
+  // ## Add a member, then verify and list
+
+  const member = await addUser({ email: "Member@Example.com", name: "Member", password: "s3cret", role: "member" });
+  t.check(member, publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }));
+
+  t.check(await verifyPassword({ email: "member@example.com", password: "s3cret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }));
+
+  t.check(listUsers(), [publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 })]);
+
+  // Adding a duplicate, or a second owner, is refused.
+
+  t.check(await rejectName(() => addUser({ email: "member@example.com", name: "Dup", password: "x", role: "member" })), "UserExistsError");
+
+  t.check(await rejectName(() => addUser({ email: "second@example.com", name: "Second", password: "x", role: "owner" })), "OwnerExistsError");
+
+  // ## Set password bumps `gen` (revokes outstanding sessions)
+
+  t.check(getLocalUser("member@example.com"), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }));
+  t.check(await setPassword({ email: "member@example.com", password: "n3wsecret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 2 }));
+
+  // The old password no longer verifies; the new one does.
+
+  t.check(await verifyPassword({ email: "member@example.com", password: "s3cret" }), null);
+
+  t.check(await verifyPassword({ email: "member@example.com", password: "n3wsecret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 2 }));
+
+  // The reset flow can do expensive hashing before entering the credential-store
+  // lock, while preserving the same generation bump and user metadata.
+
+  const resetHash = await hashPassword("reset-secret");
+  const resetUser = await setPasswordWithPasswordHash({ email: " MEMBER@example.com ", scrypt: resetHash });
+  t.check(resetUser, publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 3 }));
+
+  t.check(await verifyPassword({ email: "member@example.com", password: "n3wsecret" }), null);
+
+  t.check(await verifyPassword({ email: "member@example.com", password: "reset-secret" }), publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 3 }));
+
+  t.check(await rejectName(() => setPassword({ email: "ghost@example.com", password: "x" })), "NoSuchUserError");
+
+  // ## Remove a member; refuse to remove the owner
+
+  await removeUser({ email: "member@example.com" });
+  t.check(listUsers(), [publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 })]);
+
+  t.check(await rejectName(() => removeUser({ email: "boxholder@example.com" })), "LastOwnerRemovalError");
+
+  t.check(await rejectName(() => removeUser({ email: "ghost@example.com" })), "NoSuchUserError");
+
+  // ## Rehash-on-verify: a changed work factor transparently rewrites the record
+  //
+  // The owner was hashed at N=2^14. Lower the current factor to 2^13; a successful
+  // verify should rewrite the stored record with the new parameters.
+
+  t.check(JSON.parse(raw).users[0].scrypt, { N: 16384, r: 8, p: 1, salt: any(String), hash: any(String) });
+
+  process.env.BBX_AUTH_SCRYPT_N = String(2 ** 13);
+  t.check(await verifyPassword({ email: "boxholder@example.com", password: "correct horse" }), publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }));
+
+  const rehashed = await import("node:fs/promises").then((fs) => fs.readFile(AUTH_FILE, "utf-8"));
+  t.check(JSON.parse(rehashed).users[0].scrypt, { N: 8192, r: 8, p: 1, salt: any(String), hash: any(String) });
+
+  // `gen` is unchanged by a rehash (it's not a credential change).
+
+  t.check(getLocalUser("boxholder@example.com"), publicUser({ email: "boxholder@example.com", name: "Boxholder", role: "owner", gen: 1 }));
+});
+
+// ## A corrupt file is a hard failure — never a silent fall-open
+void test("A corrupt file is a hard failure — never a silent fall-open", async (t) => {
+  t.teardown(async () => {
+    try {
+      await rm(dir2, { recursive: true, force: true });
+      delete process.env.BBX_AUTH_FILE;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const dir2 = await mkdtemp(join(tmpdir(), "bbx-auth-bad-"));
+  process.env.BBX_AUTH_FILE = join(dir2, "auth.json");
+
+  await writeFile(process.env.BBX_AUTH_FILE, "{ not valid json", { mode: 0o600 });
+  await t.checkThrows(async () => (listUsers()), "AuthFileCorruptError");
+
+  // A well-formed-JSON-but-wrong-shape file (here: zero users) is corrupt too — the
+  // login path refuses it rather than treating it as an empty store.
+
+  await writeFile(process.env.BBX_AUTH_FILE, JSON.stringify({ version: 2, users: [] }), { mode: 0o600 });
+  t.check(await rejectName(() => verifyPassword({ email: "boxholder@example.com", password: "x" })), "AuthFileCorruptError");
+});
+
+// ## Missing file is the first-run state, not an error
+void test("Missing file is the first-run state, not an error", async (t) => {
+  t.teardown(async () => {
+    try {
+      await rm(dir3, { recursive: true, force: true });
+      delete process.env.BBX_AUTH_FILE;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const dir3 = await mkdtemp(join(tmpdir(), "bbx-auth-empty-"));
+  process.env.BBX_AUTH_FILE = join(dir3, "auth.json");
+
+  t.check(listUsers(), []);
+
+  t.check(getLocalOwnerEmail(), null);
+
+  t.check(getLocalUser("anyone@example.com"), null);
+
+  t.check(await verifyPassword({ email: "anyone@example.com", password: "x" }), null);
+
+  t.check(await rejectName(() => addUser({ email: "member@example.com", name: "Member", password: "member-password", role: "member" })), "NoOwnerError");
+});
+
+// ## An invited member can initialize the store before a local owner exists
+//
+// Google-authenticated owners do not need a local password. The first invited
+// member can therefore create a valid member-only credential file.
+void test("Google-authenticated owners do not need a local password.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await rm(memberFirstDir, { recursive: true, force: true });
+      delete process.env.BBX_AUTH_FILE;
+      delete process.env.BBX_AUTH_SCRYPT_N;
+      delete process.env.BBX_OWNER_EMAIL;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const memberFirstDir = await mkdtemp(join(tmpdir(), "bbx-auth-member-first-"));
+  process.env.BBX_AUTH_FILE = join(memberFirstDir, "auth.json");
+  process.env.BBX_AUTH_SCRYPT_N = String(2 ** 14);
+  process.env.BBX_OWNER_EMAIL = "owner@example.com";
+
+  await addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" });
+  t.check({ owner: getLocalOwnerEmail(), users: listUsers().map((user) => `${user.email}:${user.role}`) }, {
+    owner: null,
+    users: [
+      "member@example.com:member",
+    ],
+  });
+
+  // Removing the only member keeps an empty credential-store tombstone. First-run
+  // setup must not reopen after local auth has been initialized once.
+
+  await removeUser({ email: "member@example.com" });
+  t.check(listUsers(), []);
+
+  t.check({ file: await stat(process.env.BBX_AUTH_FILE).then(() => "exists"), initialized: isLocalAuthStoreInitialized() }, {
+    file: "exists",
+    initialized: true,
+  });
+
+  // The CLI owner-creation path can add the configured owner after members exist.
+
+  await addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" });
+  const laterOwner = await createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" });
+  t.check(laterOwner, publicUser({ email: "owner@example.com", name: "Owner", role: "owner", gen: 1 }));
+
+  t.check(listUsers(), [publicUser({ email: "member@example.com", name: "Member", role: "member", gen: 1 }), publicUser({ email: "owner@example.com", name: "Owner", role: "owner", gen: 1 })]);
+});
+
+// ## Concurrent first owner and first member creation preserve both accounts
+//
+// Both initialization paths share the credential-file lock. Either operation can
+// win, but neither can overwrite the other.
+void test("Both initialization paths share the credential-file lock.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await rm(raceDir, { recursive: true, force: true });
+      delete process.env.BBX_AUTH_FILE;
+      delete process.env.BBX_AUTH_SCRYPT_N;
+      delete process.env.BBX_OWNER_EMAIL;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const raceDir = await mkdtemp(join(tmpdir(), "bbx-auth-first-race-"));
+  process.env.BBX_AUTH_FILE = join(raceDir, "auth.json");
+  process.env.BBX_AUTH_SCRYPT_N = String(2 ** 12);
+  process.env.BBX_OWNER_EMAIL = "owner@example.com";
+
+  const raceResults = await Promise.allSettled([
+    createFirstUser({ email: "owner@example.com", name: "Owner", password: "owner-password" }),
+    addInvitedMember({ email: "member@example.com", name: "Member", password: "member-password" }),
+  ]);
+  t.check({ results: raceResults.map((result) => result.status), users: listUsers().map((user) => user.role).toSorted() }, {
+    results: [
+      "fulfilled",
+      "fulfilled",
+    ],
+    users: [
+      "member",
+      "owner",
+    ],
+  });
+});
+
+// ## `BBX_OWNER_EMAIL` pins the first owner's identity
+void test("`BBX_OWNER_EMAIL` pins the first owner's identity", async (t) => {
+  t.teardown(async () => {
+    try {
+      await rm(dir4, { recursive: true, force: true });
+      delete process.env.BBX_AUTH_FILE;
+      delete process.env.BBX_AUTH_SCRYPT_N;
+      delete process.env.BBX_OWNER_EMAIL;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const dir4 = await mkdtemp(join(tmpdir(), "bbx-auth-owner-"));
+  process.env.BBX_AUTH_FILE = join(dir4, "auth.json");
+  process.env.BBX_AUTH_SCRYPT_N = String(2 ** 14);
+  process.env.BBX_OWNER_EMAIL = "configured@example.com";
+
+  t.check(await rejectName(() => createFirstUser({ email: "someone-else@example.com", name: "X", password: "p" })), "OwnerEmailMismatchError");
+
+  // A matching (case-insensitively) email is accepted.
+
+  const owner = await createFirstUser({ email: "Configured@Example.com", name: "Cfg", password: "p" });
+  t.check(owner, publicUser({ email: "configured@example.com", name: "Cfg", role: "owner", gen: 1 }));
+});

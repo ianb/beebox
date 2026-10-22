@@ -8,6 +8,8 @@ discovered-by: Ian
 discovered-in: main — boxholder shared openspec.dev
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 [OpenSpec](https://openspec.dev/) ([repo](https://github.com/Fission-AI/OpenSpec),
 [concepts](https://github.com/Fission-AI/OpenSpec/blob/main/docs/concepts.md))
 is a spec-driven workflow for coding agents. It supports Claude Code, Codex,

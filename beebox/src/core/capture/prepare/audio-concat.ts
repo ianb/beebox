@@ -7,7 +7,7 @@
  * concatenating across two recordings does not (two headers). Each recording
  * start is a "segment", so we concat strictly within a segment.
  *
- * Pure (buffers in, buffers out) so it doctests without touching disk.
+ * Pure (buffers in, buffers out) so it tests without touching disk.
  */
 
 export interface SegmentChunks {

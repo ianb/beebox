@@ -19,6 +19,7 @@ export interface IssueFilters {
   category?: string | undefined;
   priority?: Priority | undefined;
   needs?: string | undefined;
+  workstream?: string | undefined;
 }
 
 type IssueSearch = IssueFilters & {
@@ -26,7 +27,7 @@ type IssueSearch = IssueFilters & {
   issueVisibility?: Visibility | undefined;
 };
 
-type SortableIssue = Pick<Issue, "slug"> & { frontmatter: Pick<Issue["frontmatter"], "priority"> };
+type SortableIssue = Pick<Issue, "slug"> & { frontmatter: Pick<Issue["frontmatter"], "priority" | "workstream"> };
 
 export function issuePassesStatusFilter(issue: Pick<Issue, "closed">, filter: { status: IssueFilters["status"]; selected: boolean }): boolean {
   const { status, selected } = filter;
@@ -36,8 +37,8 @@ export function issuePassesStatusFilter(issue: Pick<Issue, "closed">, filter: { 
   return selected || !issue.closed;
 }
 
-export function filterAndSortIssues<T extends SortableIssue>(issues: T[], filters: Pick<IssueFilters, "priority" | "sort">): T[] {
-  return issues.filter((issue) => !filters.priority || issue.frontmatter.priority === filters.priority).toSorted((a, b) => filters.sort === "priority" ? PRIORITY_ORDER[a.frontmatter.priority] - PRIORITY_ORDER[b.frontmatter.priority] || b.slug.localeCompare(a.slug) : b.slug.localeCompare(a.slug));
+export function filterAndSortIssues<T extends SortableIssue>(issues: T[], filters: Pick<IssueFilters, "priority" | "sort" | "workstream">): T[] {
+  return issues.filter((issue) => (!filters.priority || issue.frontmatter.priority === filters.priority) && (!filters.workstream || issue.frontmatter.workstream === filters.workstream)).toSorted((a, b) => filters.sort === "priority" ? PRIORITY_ORDER[a.frontmatter.priority] - PRIORITY_ORDER[b.frontmatter.priority] || b.slug.localeCompare(a.slug) : b.slug.localeCompare(a.slug));
 }
 
 export function issueChangeKey(issue: Pick<Issue, "relPath" | "visibility">): string {
@@ -62,6 +63,7 @@ function asFilters(search: Record<string, unknown>): IssueSearch {
     ...(typeof search.category === "string" ? { category: search.category } : {}),
     ...(isPriority(search.priority) ? { priority: search.priority } : {}),
     ...(typeof search.needs === "string" ? { needs: search.needs } : {}),
+    ...(typeof search.workstream === "string" ? { workstream: search.workstream } : {}),
     ...(typeof search.issue === "string" ? { issue: search.issue } : {}),
     ...(search.issueVisibility === "public" || search.issueVisibility === "private" ? { issueVisibility: search.issueVisibility } : {}),
   };
@@ -80,7 +82,7 @@ function editedChange(issue: Issue, priority: Priority): IssueChange {
   };
 }
 
-function FilterMenu({ filters, categories, needs, onFilters }: { filters: IssueFilters; categories: string[]; needs: string[]; onFilters: (filters: IssueFilters) => void }) {
+function FilterMenu({ filters, categories, needs, workstreams, onFilters }: { filters: IssueFilters; categories: string[]; needs: string[]; workstreams: string[]; onFilters: (filters: IssueFilters) => void }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
@@ -93,7 +95,7 @@ function FilterMenu({ filters, categories, needs, onFilters }: { filters: IssueF
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [open]);
-  function without(field: "category" | "priority" | "needs"): IssueFilters {
+  function without(field: "category" | "priority" | "needs" | "workstream"): IssueFilters {
     const { [field]: _removed, ...remaining } = filters;
     return remaining;
   }
@@ -109,6 +111,7 @@ function FilterMenu({ filters, categories, needs, onFilters }: { filters: IssueF
     <label>Category <select value={filters.category ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, category: event.target.value } : without("category"))}><option value="">Every category</option>{categories.map((category) => <option value={category} key={category}>{category}</option>)}</select></label>
     <label>Priority <select value={filters.priority ?? ""} onChange={(event) => onFilters(isPriority(event.target.value) ? { ...filters, priority: event.target.value } : without("priority"))}><option value="">Any priority</option><option value="important">Important</option><option value="normal">Normal</option><option value="backlog">Backlog</option><option value="uncategorized">Uncategorized</option></select></label>
     <label>Needs <select value={filters.needs ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, needs: event.target.value } : without("needs"))}><option value="">Every need</option>{needs.map((need) => <option value={need} key={need}>{need}</option>)}</select></label>
+    <label>Workstream <select value={filters.workstream ?? ""} onChange={(event) => onFilters(event.target.value ? { ...filters, workstream: event.target.value } : without("workstream"))}><option value="">Every workstream</option>{workstreams.map((workstream) => <option value={workstream} key={workstream}>{workstream}</option>)}</select></label>
   </div></details>;
 }
 
@@ -183,6 +186,7 @@ export function IssuesPane({ issues, changes, saving, onReset, onSave, onChange 
   const missing = missingIssueRelPath({ requested: search.issue, selected });
   const categories = [...new Set(issues.map((issue) => issue.category))].toSorted();
   const needs = [...new Set(issues.flatMap((issue) => issue.frontmatter.needs))].toSorted();
+  const workstreams = [...new Set(issues.map((issue) => issue.frontmatter.workstream))].toSorted();
   const visible = filterAndSortIssues(issues.filter((issue) => issuePassesStatusFilter(issue, { status: search.status, selected: selected === issue })).filter((issue) => !search.category || issue.category === search.category).filter((issue) => !search.needs || issue.frontmatter.needs.includes(search.needs)), search);
   const selectedKey = selected ? issueChangeKey(selected) : null;
   const selectedVisibleIndex = selectedKey ? visible.findIndex((issue) => issueChangeKey(issue) === selectedKey) : -1;
@@ -198,5 +202,5 @@ export function IssuesPane({ issues, changes, saving, onReset, onSave, onChange 
   function setFilters(next: IssueFilters): void { void navigate({ to: "/issues", search: { ...next, ...(search.issue ? { issue: search.issue, issueVisibility: search.issueVisibility === "private" ? "private" : undefined } : {}) } }); }
   function select(issue: Issue): void { void navigate({ to: "/issues", search: { ...search, ...issueSearchParams(issue) } }); }
   function back(): void { void navigate({ to: "/issues", search: { ...search, issue: undefined, issueVisibility: undefined } }); }
-  return <main className="issues-page"><header className="issues-header"><div className="issue-breadcrumb"><a href="/">/</a><Link to="/">workstreams</Link><span>/</span><h1>issues</h1></div><FilterMenu filters={search} categories={categories} needs={needs} onFilters={setFilters} /><div className="active-filters">{search.status && search.status !== "open" ? <Pill>{`status: ${search.status}`}</Pill> : null}{search.sort === "priority" ? <Pill>sort: priority</Pill> : <Pill>sort: newest filed</Pill>}{search.category ? <Pill>{`category: ${search.category}`}</Pill> : null}{search.priority ? <Pill>{`priority: ${search.priority}`}</Pill> : null}{search.needs ? <Pill tone={search.needs === "manual-testing" ? "manual" : "neutral"}>{`needs: ${search.needs}`}</Pill> : null}</div><div className="issue-save-actions"><span>{saving ? "Saving issue changes…" : `${changes.size} unsaved issue${changes.size === 1 ? "" : "s"}`}</span><Button disabled={changes.size === 0 || saving} onClick={onReset}>Reset</Button><Button intent="primary" disabled={changes.size === 0 || saving} onClick={onSave}>{saving ? "Saving…" : "Save"}</Button></div></header><div className="issue-browser"><section className="issue-list-pane" aria-label="Issues" ref={listPaneRef}>{visible.length > 0 ? <><IssueCategoryNav categories={[...byCategory.entries()].map(([name, records]) => ({ name, count: records.length }))} scrollRoot={listPaneRef} />{[...byCategory.entries()].map(([category, records]) => <section className="issue-category" id={issueCategoryId(category)} data-issue-category={category} tabIndex={-1} key={category}><h2 className="issue-category-heading">{category} <small>{records.length}</small></h2><ul className="issue-list">{records.map((issue) => { const key = issueChangeKey(issue); const isSelected = selectedKey === key; return <IssueRow key={key} issue={issue} selected={isSelected} change={changes.get(key)} rowRef={isSelected ? selectedRowRef : undefined} onSelect={() => select(issue)} onChange={onChange} />; })}</ul></section>)}</> : <p className="empty-state">No issues match these filters.</p>}</section><IssueDetail issue={selected} missing={missing} onBack={back} /></div></main>;
+  return <main className="issues-page"><header className="issues-header"><div className="issue-breadcrumb"><a href="/">/</a><Link to="/">workstreams</Link><span>/</span><h1>issues</h1></div><FilterMenu filters={search} categories={categories} needs={needs} workstreams={workstreams} onFilters={setFilters} /><div className="active-filters">{search.status && search.status !== "open" ? <Pill>{`status: ${search.status}`}</Pill> : null}{search.sort === "priority" ? <Pill>sort: priority</Pill> : <Pill>sort: newest filed</Pill>}{search.category ? <Pill>{`category: ${search.category}`}</Pill> : null}{search.priority ? <Pill>{`priority: ${search.priority}`}</Pill> : null}{search.needs ? <Pill tone={search.needs === "manual-testing" ? "manual" : "neutral"}>{`needs: ${search.needs}`}</Pill> : null}{search.workstream ? <Pill>{`workstream: ${search.workstream}`}</Pill> : null}</div><div className="issue-save-actions"><span>{saving ? "Saving issue changes…" : `${changes.size} unsaved issue${changes.size === 1 ? "" : "s"}`}</span><Button disabled={changes.size === 0 || saving} onClick={onReset}>Reset</Button><Button intent="primary" disabled={changes.size === 0 || saving} onClick={onSave}>{saving ? "Saving…" : "Save"}</Button></div></header><div className="issue-browser"><section className="issue-list-pane" aria-label="Issues" ref={listPaneRef}>{visible.length > 0 ? <><IssueCategoryNav categories={[...byCategory.entries()].map(([name, records]) => ({ name, count: records.length }))} scrollRoot={listPaneRef} />{[...byCategory.entries()].map(([category, records]) => <section className="issue-category" id={issueCategoryId(category)} data-issue-category={category} tabIndex={-1} key={category}><h2 className="issue-category-heading">{category} <small>{records.length}</small></h2><ul className="issue-list">{records.map((issue) => { const key = issueChangeKey(issue); const isSelected = selectedKey === key; return <IssueRow key={key} issue={issue} selected={isSelected} change={changes.get(key)} rowRef={isSelected ? selectedRowRef : undefined} onSelect={() => select(issue)} onChange={onChange} />; })}</ul></section>)}</> : <p className="empty-state">No issues match these filters.</p>}</section><IssueDetail issue={selected} missing={missing} onBack={back} /></div></main>;
 }

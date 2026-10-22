@@ -12,7 +12,7 @@ import type { ChatEvent } from "../../../../machines/chat-types";
  * `chat-complete` broadcast on an idle chat, a status poll that read idle).
  * Only the former is the agent working; a resync on an idle chat is a plain
  * history round-trip and must never paint the strip. The reported flash
- * (issues/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md) was
+ * (issues/closed/bugs/2026-08-05-open-chat-flashes-agent-working-no-send.md) was
  * exactly that: the reconnect gate's trailing timer fires a REFRESH ~5s
  * after every mount.
  */
@@ -48,7 +48,7 @@ const STREAM_WATCHDOG_IDLE_POLLS = 3;
 /**
  * One watchdog poll result folded into the running idle count. `busy` resets
  * the count (the server is genuinely working); an idle poll increments it;
- * `recover` fires at the threshold. Pure so the policy is doctestable apart
+ * `recover` fires at the threshold. Pure so the policy is testable apart
  * from the timers.
  */
 export function streamWatchdogAdvance(input: { busy: boolean; idlePolls: number }): {

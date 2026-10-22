@@ -8,7 +8,7 @@
  * Manual and unattended application share the recovery-backed core runner.
  */
 
-import { boxWorkEnvironment, describeWorkHolders, withBoxWork } from "../../lib/box-maintenance.js";
+import { boxWorkEnvironment, describeWorkHolders, withBoxWork } from "../../lib/box-maintenance/admission.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runMigrationProcess } from "../../core/migration-process.js";
@@ -43,7 +43,7 @@ class ProcedureGateError extends Error {
       `procedure migration "${procedure}" has no step with validate.shells + severity:abort. ` +
         "An agent migration must be machine-verified (validate.instructions is a no-op and an " +
         "agent that does nothing still 'completes' the step), so bbx migrate refuses to run a " +
-        "gateless procedure. See docs/plans/agent-applied-migrations.md.",
+        "gateless procedure. See docs/implemented-plans/agent-applied-migrations.md.",
     );
     this.name = "ProcedureGateError";
   }

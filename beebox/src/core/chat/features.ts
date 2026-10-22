@@ -50,7 +50,7 @@ const FEATURE_LIST: readonly FeatureDescriptor[] = [
 /**
  * Features that no longer exist but may still sit in stored session state or
  * landmark seeds. Dropped without a warning. `hq-dictation` went away when
- * every dictated message got the HQ pass (docs/plans/hq-always.md).
+ * every dictated message got the HQ pass (docs/implemented-plans/hq-always.md).
  */
 const RETIRED_FEATURES = new Set(["hq-dictation"]);
 
@@ -173,6 +173,8 @@ export function composeChatAppSnapshot(input: {
   health?: string;
   todos?: string;
   openCard?: string;
+  /** The pending question card the root chat is asking (`open-question`). */
+  openQuestion?: string;
   viewContext?: AttentionSnapshot;
   /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
   activityChildren?: string;
@@ -193,6 +195,7 @@ export function composeChatAppSnapshot(input: {
     ["health", input.health],
     ["todos", input.todos],
     ["open-card", input.openCard],
+    ["open-question", input.openQuestion],
     ["surface", input.viewContext?.surface],
     ["transcript", input.viewContext?.transcript],
   ];

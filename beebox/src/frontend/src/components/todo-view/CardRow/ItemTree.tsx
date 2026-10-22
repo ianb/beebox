@@ -1,9 +1,9 @@
 /**
  * One todo, and whatever nests under it, inside a `todo-view` list
- * (`docs/plans/todo-collection.md`, Track 4).
+ * (`docs/implemented-plans/todo-collection.md`, Track 4).
  *
  * The item reads the same here as it does in the card it was written in: both
- * render through `todo/TodoItem.tsx` (`docs/plans/todos-ui.md`, Track 2), so
+ * render through `todo/TodoItem.tsx` (`docs/implemented-plans/todos-ui.md`, Track 2), so
  * a done item is struck through, a parked one dimmed, and an overdue one
  * flagged by one rule rather than by several that can drift.
  *
@@ -47,7 +47,7 @@ function Annotation({ annotation }: { annotation: string }) {
 function ItemLine({ node }: { node: TodoNode }) {
   const { item } = node;
   // In a workspace pane the words open the todo's card in the other pane
-  // (`docs/plans/todos-ui.md`, Track 5). Nothing yet carries a todo's
+  // (`docs/implemented-plans/todos-ui.md`, Track 5). Nothing yet carries a todo's
   // locator across an open, so the card opens at its top.
   const openBeside = useOpenBeside();
   return (

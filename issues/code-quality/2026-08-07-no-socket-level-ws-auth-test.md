@@ -7,10 +7,12 @@ discovered-in: main session — todo-security breakdown for the security-overvie
 priority: backlog
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The tRPC WebSocket adapter (`useWSS`, the per-box plugin) hands `createContext`
 (`beebox/src/webapp/trpc/context.ts`) a raw `http.IncomingMessage`. The
 raw-`Cookie`-header identity fallback that `createContext` relies on is covered
-only at the **resolver** level by `test/webapp/ws-auth.doctest.md` (moved to `beebox/test/webapp/auth.ws.doctest.md`) — no test
+only at the **resolver** level by `test/webapp/ws-auth.doctest.md` (moved to `beebox/test/webapp/auth.ws.test.ts`) — no test
 opens a real WebSocket, upgrades a tRPC subscription, and asserts the resolved
 identity end to end.
 

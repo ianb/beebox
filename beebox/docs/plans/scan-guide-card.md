@@ -6,6 +6,8 @@ issues: []
 ---
 # Scan Guide Card — scanner priors via the guide system
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Replace the bespoke `CLAUDE_SCANS.md` scanner-priors file with a
 `config/scan.guide.card` guide card. The scan-import photo flow consumes the
 COMPILED guide text in its per-page vision prompt; `CLAUDE_SCANS.md` becomes a

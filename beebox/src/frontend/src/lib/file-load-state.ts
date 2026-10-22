@@ -7,7 +7,7 @@
  * returned cached data, so one background refetch that failed — a 502 while the
  * box restarted — replaced a card the person was reading with an error, and
  * nothing brought it back while they kept looking at the page
- * (`issues/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md`).
+ * (`issues/closed/bugs/2026-08-31-card-sidecar-stays-failed-after-transient-502.md`).
  *
  * The rule: an error may only take content away when there is no content. A
  * failed *refresh* keeps the last good body and reports it as not up to date —

@@ -1,0 +1,73 @@
+/* Production surfaces retain independent card themes and semantic status colors. */
+.bbx-box-presentation[data-chrome-theme="tempest"] {
+  --bbx-desk-background: #041039;
+  --bbx-desk-pattern: none;
+  --bbx-desk-edge: #456477;
+  --bbx-bar-paper: #0b1b2b;
+  --bbx-bar-edge: #456477;
+  --bbx-chat-user-paper: #20485c;
+  --bbx-chat-user-ink: #e0eef4;
+}
+[data-chrome-theme="tempest"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]),
+[data-chrome-theme="tempest"] .bbx-interface-tabstrip > [role="none"]::before,
+[data-chrome-theme="tempest"] .bbx-interface-tabstrip > [role="none"]::after,
+[data-chrome-theme="tempest"] .bbx-app-nav > div { background: transparent; }
+[data-chrome-theme="tempest"] .bbx-interface-card-desk[data-card-content="neutral"] { background: #fbf5ee; }
+[data-chrome-theme="tempest"] .bbx-app-nav :is(button, a):focus-visible { outline: 2px solid #e0eef4; outline-offset: 2px; }
+[data-chrome-theme="tempest"] .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: #e0eef4; }
+[data-chrome-theme="tempest"] .bbx-composer-material > .bbx-composer-mobile-row { background: #10273d; color: #e0eef4; }
+[data-chrome-theme="tempest"] .bbx-chat-user-paper { --bbx-selection: #e0eef4; --bbx-selection-ink: #10273d; }
+[data-chrome-theme="tempest"] .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) { color: #e0eef4; }
+[data-chrome-theme="tempest"] .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) { background: #00000026; color: #e0eef4; }
+[data-chrome-theme="tempest"] .bbx-chat-user-paper .bbx-chat-user-attachment-badge { background: #00000040; }
+[data-chrome-theme="tempest"] .bbx-chat-user-attachment:hover { background: #00000040; }
+[data-chrome-theme="tempest"] .bbx-chat-user-unsure { text-decoration-color: #bacdff; }
+[data-chrome-theme="tempest"] .bbx-chat-reply-material {
+  --bbx-edge: #456477;
+}
+[data-chrome-theme="tempest"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
+  --tw-prose-quotes: #e0eef4;
+  --tw-prose-code: #e0eef4;
+  --tw-prose-counters: #a4bac8;
+  --tw-prose-captions: #a4bac8;
+  --tw-prose-bullets: #edb49f;
+  --tw-prose-quote-borders: #456477;
+  --tw-prose-hr: #456477;
+  --tw-prose-th-borders: #456477;
+  --tw-prose-td-borders: #456477;
+  --tw-prose-pre-bg: #080f24;
+  --tw-prose-pre-code: #e0eef4;
+}
+[data-chrome-theme="tempest"] :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) { color: #a4bac8; background: #10273d; border-radius: 8px; }
+[data-chrome-theme="tempest"] :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
+[data-chrome-theme="tempest"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: #e0eef4; --bbx-ink-soft: #a4bac8; --bbx-pen: #bacdff; }
+[data-chrome-theme="tempest"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: #e0eef4; }
+[data-chrome-theme="tempest"] #bbx-chat-load-older { background: #10273d; color: #bacdff; border-radius: 8px; }
+[data-chrome-theme="tempest"] #bbx-chat-load-older:enabled:hover { text-decoration: underline; }
+[data-chrome-theme="tempest"] #bbx-chat-load-older:disabled { color: #a4bac8; opacity: .6; }
+[data-chrome-theme="tempest"] [aria-label="Pane controls"] button { background: #0b1b2b; color: #e0eef4; border: 1px solid #456477; border-radius: 8px; }
+[data-chrome-theme="tempest"] [aria-label="Pane controls"] button:hover { background: #edb49f; color: #152044; }
+.bbx-card-theme[data-card-theme="tempest"] { --bbx-font: ui-sans-serif, system-ui, sans-serif; --bbx-quote-edge: 3px; }
+.bbx-interface-tab[data-card-theme="tempest"] { background: #142b40; border-color: #456477; border-radius: 6px 6px 0 0; }
+.bbx-interface-tab[data-card-theme="tempest"]:not([data-active="true"]):hover { background: #20485c; }
+.bbx-interface-tab[data-card-theme="tempest"][data-active="true"] { background: #10273d; }
+.bbx-system-theme-preview[data-chrome-theme="tempest"] { background: url("./tempest-surge.webp") center bottom / cover, #041039; }
+.bbx-system-theme-preview[data-chrome-theme="tempest"] .bbx-system-theme-toolbar { background: #0b1b2b; border-bottom: 2px solid #456477; }
+.bbx-system-theme-preview[data-chrome-theme="tempest"] .bbx-system-theme-toolbar i { background: #e0eef4; }
+.bbx-system-theme-preview[data-chrome-theme="tempest"] .bbx-system-theme-desk > span { background: #10273d; border-color: #456477; border-radius: 12px; box-shadow: 0 3px 6px #3b858530; }
+@media print {
+  .bbx-box-presentation[data-chrome-theme="tempest"]::before, [data-chrome-theme="tempest"] .bbx-app-nav::before { display: none; animation: none; }
+  .bbx-box-presentation[data-chrome-theme="tempest"], [data-chrome-theme="tempest"] :is(.bbx-chat-user-paper, .bbx-chat-reply-material, .bbx-chat-callout, .bbx-chat-pending-material, .bbx-chat-meta-material, .bbx-card-surface[data-card-theme="tempest"]) { background: transparent; color: #000; border: 0; box-shadow: none; backdrop-filter: none; }
+  .bbx-card-theme[data-card-theme="tempest"], [data-chrome-theme="tempest"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
+    --bbx-paper: #fff; --bbx-ink: #000; --bbx-ink-soft: #333; --bbx-pen: #000;
+    --tw-prose-body: #000; --tw-prose-bold: #000; --tw-prose-headings: #000;
+    --tw-prose-quotes: #000; --tw-prose-counters: #333; --tw-prose-bullets: #333; --tw-prose-captions: #333;
+    color: #000;
+  }
+}
+.bbx-card-theme[data-card-theme="tempest"], [data-chrome-theme="tempest"] .bbx-composer-material { color-scheme: dark; }
+@media print {
+ .bbx-card-theme[data-card-theme="tempest"], [data-chrome-theme="tempest"] .bbx-composer-material { color-scheme: light; backdrop-filter: none; }
+}
+
+[data-chrome-theme="tempest"] :is(#bbx-composer-send, #bbx-composer-send-mobile):disabled { background: #173345; color: #8faab8; border: 0; border-radius: 6px; }

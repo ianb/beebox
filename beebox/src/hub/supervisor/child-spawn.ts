@@ -9,7 +9,7 @@
  */
 
 import getPorts from "get-port";
-import { acquireBoxStartup } from "../../lib/box-maintenance.js";
+import { acquireBoxStartup } from "../../lib/box-maintenance/admission.js";
 import { buildChildEnv } from "./child-env.js";
 import * as path from "node:path";
 import { execa, type ResultPromise } from "execa";
@@ -31,7 +31,7 @@ export interface ChildSpawnParams {
 /**
  * Injectable child-process spawner. Real `execa` by default; tests override
  * it to simulate a child that never becomes ready, deterministically and
- * without a real process -- see `test/hub/supervisor.doctest.md`'s restart
+ * without a real process -- see `test/hub/supervisor.test.ts`'s restart
  * race coverage.
  */
 export type SpawnChildFn = (params: ChildSpawnParams) => ChildProc;
@@ -52,7 +52,7 @@ export function defaultSpawnChild(params: ChildSpawnParams): ChildProc {
 /** Injectable readiness probe -- real `waitForHttp` by default; tests
  *  override it to fail immediately instead of waiting out
  *  `READY_TIMEOUT_MS` for real, so the restart race in
- *  `test/hub/supervisor.doctest.md` runs in milliseconds. */
+ *  `test/hub/supervisor.test.ts` runs in milliseconds. */
 export type CheckReadyFn = (params: { port: number; label: string }) => Promise<void>;
 
 const READY_TIMEOUT_MS = 30_000;
@@ -74,7 +74,7 @@ async function resolveBbxBinary(shape: BoxShape): Promise<string> {
 
 /** Admit resolution before spawning; the child independently admits startup. */
 export async function spawnBoxChild(args: {
-  root: string; slug: string; hubSecret: string; spawn: SpawnChildFn;
+  root: string; slug: string; hubSecret: string; spawn: SpawnChildFn; secretsFile?: string;
 }): Promise<{ child: ChildProc; port: number; boxRoot: string }> {
   const startup = await acquireBoxStartup(args.root);
   let boxRoot: string;
@@ -83,7 +83,15 @@ export async function spawnBoxChild(args: {
   const shape = await getBoxShape(boxRoot);
   const bbxBinary = await resolveBbxBinary(shape);
   const port = await getPorts();
-  const env = buildChildEnv({ sourceEnv: process.env, hubExtras: { BBX_BIN: bbxBinary, BBX_HUB_SECRET: args.hubSecret } });
+  const env = buildChildEnv({
+    sourceEnv: process.env,
+    hubExtras: {
+      BBX_BIN: bbxBinary,
+      BBX_HUB_SECRET: args.hubSecret,
+      // A box with its own store (a dev test box) reads only that file.
+      ...(args.secretsFile !== undefined && { BBX_SECRETS_FILE: args.secretsFile, BBX_SECRETS_STORE_ISOLATED: "1" }),
+    },
+  });
   const child = args.spawn({ bbxBinary, args: ["engine", "serve", boxRoot, "--slug", args.slug, "--port", String(port)], cwd: shape.boxRoot, env });
   return { child, port, boxRoot };
 }

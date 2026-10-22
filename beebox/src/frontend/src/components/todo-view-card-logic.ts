@@ -1,6 +1,6 @@
 /**
- * Pure logic for `TodoViewCard` (`docs/plans/todo-collection.md`, Track 4),
- * split out of the `.tsx` component so it's doctestable without a React
+ * Pure logic for `TodoViewCard` (`docs/implemented-plans/todo-collection.md`, Track 4),
+ * split out of the `.tsx` component so it's testable without a React
  * render harness (this repo has no component-render test setup — see
  * sibling pure-logic modules like `chat/scroll-reconcile.ts`).
  *
@@ -10,12 +10,12 @@
  * strip across the whole result, and the "5 of 7" a section header shows.
  */
 
-// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
+// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx test
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW
 // in src/frontend/eslint.config.ts.
 import { isTodoStatus, resolveStartEpoch } from "../../../shared/todo-model.js";
 import type { TodoStatus } from "../../../shared/todo-model.js";
-// Type-only, so nothing of the tRPC client is loaded when the doctest runner
+// Type-only, so nothing of the tRPC client is loaded when the test runner
 // imports this module. The router's OUTPUT type rather than the core
 // `CollectionResult` on purpose: what reaches the browser has been through
 // JSON, where an `x: string | undefined` field becomes `x?: string`.
@@ -81,7 +81,7 @@ export function hereForCard(cardPath: string): string {
  * the `#2` suffix their locator's `nth` gives them.
  *
  * It restates `core/todo/collect-types.ts`'s `formatTodoLocation` rather than
- * importing it: this module is loaded outside Vite by the doctest runner,
+ * importing it: this module is loaded outside Vite by the test runner,
  * where `@core/…` resolves for TYPES only. The two must agree — the keys here
  * are matched against `parent` locators the backend produced.
  */
@@ -189,7 +189,7 @@ export function progressOf(reduction: TodoReduction): { done: number; total: num
 }
 
 /**
- * "15 on your plate · 4 later" — the plate headline's two numbers, both from
+ * "15 now · 4 later" — the headline's two numbers, both from
  * the reduction of a boxholder-scope query. `later` is `quiet`: open minus
  * what's already on the plate. There is no `quiet` field on the reduction —
  * it doesn't need one, since `open` and `onPlate` already say it.

@@ -26,7 +26,7 @@
 import { contentHash } from "../../../../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { errnoCode, errorMessage } from "../../../../shared/error-guards.js";
+import { errnoCode } from "../../../../shared/error-guards.js";
 import type {
   DriveTypeHandler,
   InspectResult,
@@ -43,6 +43,7 @@ import type { GdocLossyType } from "../../../../schemas/gdoc.js";
 import { preserveAgentFields } from "../../../../preserve-agent-fields.js";
 import { reconcileCommentsSidecar } from "../../comments-sidecar.js";
 import { stripsUpstreamTrailingWhitespace } from "./whitespace.js";
+import { DocsApiUnavailableError, diagnoseDocsApiFailure, type DocsApiOutcome } from "./api-failure.js";
 
 const DOC_MIME = "application/vnd.google-apps.document";
 const MARKDOWN_MIME = "text/markdown";
@@ -158,25 +159,35 @@ function lossyToTemplateItems(
 }
 
 /**
- * Call `getDocument`, but degrade gracefully if the auth token lacks the
- * `documents.readonly` scope (HTTP 403). Returns null on failure so the
- * caller can keep pulling with reduced fidelity (no revisionId for
- * conflict detection, lossy detection limited to comment count).
+ * Call `getDocument`, but degrade gracefully when the Docs API refuses (a
+ * missing scope, the API disabled on the Cloud project, an outage). `doc` is
+ * null on failure so the caller can keep pulling with reduced fidelity (no
+ * revisionId for conflict detection, lossy detection limited to comment
+ * count). The warning names the diagnosed cause; `outcome` carries it to the
+ * connector, which turns a pass's outcomes into the box's Docs API diagnosis.
  */
 async function tryGetDocument(
   service: GoogleDriveService,
   opts: { fileId: string; fileName: string },
-): Promise<DocumentStructure | null> {
+): Promise<{ doc: DocumentStructure | null; outcome: DocsApiOutcome }> {
   try {
-    return await service.getDocument(opts.fileId);
+    return { doc: await service.getDocument(opts.fileId), outcome: { ok: true } };
   } catch (e) {
-    const msg = errorMessage(e);
+    const failure = await diagnoseDocsApiFailure(e);
     console.warn(
-      "[google-drive] Could not fetch Docs API metadata for " +
-        opts.fileName + ": " + msg +
-        ". If this is a 403, run 'bbx engine google-auth' to grant the documents.readonly scope.",
+      `[google-drive] Could not fetch Docs API metadata for ${opts.fileName} ` +
+        `(syncing without revision tracking or lossy details): ${failure.message}`,
     );
-    return null;
+    return { doc: null, outcome: { ok: false, failure } };
+  }
+}
+
+/** `getDocument` for `inspect()`: a failure is an explicit, diagnosed error. */
+async function requireDocument(service: GoogleDriveService, file: DriveFile): Promise<DocumentStructure> {
+  try {
+    return await service.getDocument(file.id);
+  } catch (e) {
+    throw new DocsApiUnavailableError({ fileName: file.name, failure: await diagnoseDocsApiFailure(e) });
   }
 }
 
@@ -185,10 +196,9 @@ const docsHandler: DriveTypeHandler = {
   cardType: "gdoc",
 
   async inspect(file: DriveFile, service: GoogleDriveService): Promise<InspectResult> {
-    const [doc, comments] = await Promise.all([
-      service.getDocument(file.id),
-      service.listComments(file.id),
-    ]);
+    // In turn, so a Docs API failure (the boxholder's to fix) wins over a comments one.
+    const doc = await requireDocument(service, file);
+    const comments = await service.listComments(file.id);
     // Comments aren't lossy — they're captured to a sidecar on sync. Report
     // the count separately so the preview can mention it accurately.
     const lossy = tallyLossyFromDocument(doc);
@@ -218,7 +228,7 @@ const docsHandler: DriveTypeHandler = {
     // `documents.readonly` scope; if it's missing we still want pull to
     // succeed with reduced fidelity (no revisionId, no lossy details
     // beyond the comment count).
-    const [doc, comments, markdown] = await Promise.all([
+    const [{ doc, outcome }, comments, markdown] = await Promise.all([
       tryGetDocument(service, { fileId: file.id, fileName: file.name }),
       service.listComments(file.id),
       service.exportFile(file.id, MARKDOWN_MIME),
@@ -326,7 +336,7 @@ const docsHandler: DriveTypeHandler = {
       changed = true;
     }
 
-    return { written, changed };
+    return { written, changed, docsApi: outcome };
   },
 
   async push(opts): Promise<PushResult> {
@@ -384,7 +394,8 @@ const docsHandler: DriveTypeHandler = {
     // both pull-time and push-time). modifiedTime always works.
     const rawStoredRevision = state.extra["headRevisionId"];
     const storedRevision = typeof rawStoredRevision === "string" ? rawStoredRevision : undefined;
-    const doc = await tryGetDocument(service, { fileId: file.id, fileName: file.name });
+    // Only the pull that follows reports the Docs API outcome; this read is the conflict check's.
+    const { doc } = await tryGetDocument(service, { fileId: file.id, fileName: file.name });
     const remoteDiverged =
       file.modifiedTime !== state.lastModified ||
       (storedRevision !== undefined && doc !== null && doc.revisionId !== storedRevision);

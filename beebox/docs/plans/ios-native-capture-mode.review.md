@@ -1,5 +1,7 @@
 # Plan Engineering Review — Native iOS capture mode
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Review of `docs/plans/ios-native-capture-mode.md`, performed against the shipped
 capture implementation and the current iOS code. Every citation below was
 re-read from source; the plan's own citations were checked line-by-line rather
@@ -139,7 +141,7 @@ binary content-type parser is registered anywhere.
 `src/webapp/server.ts:94-98` (moved to `beebox/src/webapp/server/app.ts`) registers only `@fastify/multipart`; the sole
 `addContentTypeParser` in the codebase is scoped to CSP report types
 (`src/webapp/routes/api-csp-report.ts:87-99`). Every capture upload test sends
-multipart (`test/webapp/routes/capture-routes.doctest.md:32-34` (moved to `beebox/test/webapp/routes/capture.doctest.md`)).
+multipart (`test/webapp/routes/capture-routes.doctest.md:32-34` (moved to `beebox/test/webapp/routes/capture.test.ts`)).
 **Issue:** Fastify rejects a POST whose content type has no registered parser
 with 415 before the handler runs. A native `URLSessionUploadTask` sending
 `Content-Type: image/jpeg` (or `application/octet-stream`) never reaches
@@ -386,7 +388,7 @@ recording cleanly), which is worth stating as the rationale.
   still exercise it with the fake service keyed on an `.m4a` filename.)
 - **tRPC `resumableSessions` removal blast radius** — exactly two usages
   (`useCaptureResume.ts:39`, `trpc/routers/capture.ts:37`) plus one doctest
-  (`test/webapp/capture-resumable-sessions.doctest.md` (moved to `beebox/test/webapp/trpc/routers/capture.resumable-sessions.doctest.md`)); `pendingSessions` is
+  (`test/webapp/capture-resumable-sessions.doctest.md` (moved to `beebox/test/webapp/trpc/routers/capture.resumable-sessions.test.ts`)); `pendingSessions` is
   a fully independent consumer chain (`useCaptureBubbles.ts`). The plan's
   remove-one-keep-the-other split is correct and cheap.
 - **Count-based filename collision premise** — real

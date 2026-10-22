@@ -1,6 +1,6 @@
 /**
  * Field-test server lifecycle — the "dedicated `bbx serve`" half of a run
- * (`docs/plans/agent-field-tests.md`, Track 2).
+ * (`docs/implemented-plans/agent-field-tests.md`, Track 2).
  *
  * A run owns one server on a port nobody else has: allocate a free port, spawn
  * `bbx serve` on it with the run's env overlay (`BBX_TIME`,
@@ -266,7 +266,7 @@ function describeExit(exit: ChildExit, failure: string | null): string {
 }
 
 /** Whether a stopped server's process is really gone. Exported for the
- *  lifecycle doctest's teardown assertion. */
+ *  lifecycle test's teardown assertion. */
 export function serverProcessAlive(server: FieldServer): boolean {
   return server.pid !== undefined && pidAlive(server.pid);
 }

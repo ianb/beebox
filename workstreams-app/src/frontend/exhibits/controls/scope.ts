@@ -3,7 +3,7 @@
 // The exhibits origin serves a page at /<workstream>/<exhibit>/ (or
 // /apps/<name>/ for a committed app), so the scope the comment and focus
 // routes take is the first two path segments. This is the one decision the
-// controls mount makes; it is a pure function so a doctest reaches it.
+// controls mount makes; it is a pure function so a test reaches it.
 
 /** `<workstream>/<exhibit>` from a page path, or null when the path has fewer than two segments. */
 export function scopeFromPath(pathname: string): string | null {

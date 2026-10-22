@@ -19,8 +19,7 @@ export function SystemInfo({ status, version }: SystemInfoProps) {
   const deploy = version?.commits["beebox"] ?? null;
 
   return (
-    <section aria-label="System info" className="px-3 sm:px-4 py-2 sm:py-3 text-xs text-warm-600 flex flex-wrap items-center gap-x-4 gap-y-1 border-t bg-warm-50">
-      <span>v{status.boxVersion}</span>
+    <section aria-label="System info" className="px-3 sm:px-4 py-2 sm:py-3 text-xs text-warm-700 flex flex-wrap items-center gap-x-4 gap-y-1 border-t bg-warm-50">
       <span>Created: {new Date(status.created).toLocaleDateString()}</span>
       <span>
         Git: {status.git.clean ? (

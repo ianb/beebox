@@ -8,10 +8,12 @@
  * fresh runs about daily from the scheduler tick, so health queries stay cheap
  * and can be run as often as anyone likes.
  *
- * See docs/plans/google-auth-reauth-health.md.
+ * See docs/implemented-plans/google-auth-reauth-health.md.
  */
 
 import { readGoogleAuthStatus } from "../../../../../google/auth-status.js";
+import { readDocsApiDiagnosis, renderDocsApiProblem } from "../../../../../connectors/google-drive/docs-api-status.js";
+import { errorMessage } from "../../../../../shared/error-guards.js";
 import { boxSlug } from "../../../../../lib/box-slug.js";
 import { formatDurationShort } from "../../../../../core/schedule/health-box.js";
 import type { HealthCheck } from "../router.js";
@@ -62,4 +64,23 @@ export async function googleAuthHealthChecks(
     message: `Google authorization is live (${verified})`,
     severity: "warning",
   }];
+}
+
+/**
+ * One `google-docs-api` warning while Drive syncs Google Docs at reduced
+ * fidelity for a reason the boxholder can fix, or none at all. A pure reader
+ * of the diagnosis the Drive connector stores after each pass
+ * (`connectors/google-drive/docs-api-status.ts`); there is no dismissal — the
+ * warning lasts until the Docs API answers or Drive stops syncing.
+ */
+export async function googleDocsApiHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
+  let diagnosis;
+  try {
+    diagnosis = await readDocsApiDiagnosis(boxRoot);
+  } catch (e) {
+    // A damaged file is reported, not reset.
+    return [{ name: "google-docs-api", ok: false, message: errorMessage(e), severity: "warning" }];
+  }
+  if (diagnosis === null) return [];
+  return [{ name: "google-docs-api", ok: false, message: renderDocsApiProblem(diagnosis, { linkShownSeparately: false }), severity: "warning" }];
 }

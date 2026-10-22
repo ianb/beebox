@@ -1,0 +1,222 @@
+// # `bbx changes`: what changed in the box since a commit
+//
+// `runChanges(boxRoot, { options, env })` is the command with the box and the
+// environment given; it prints to stdout and returns the exit code. The
+// comparison is a tree diff between `--since` and HEAD, so a card added and then
+// moved inside the window appears once, at its final path, and a card that only
+// moved is not "added". See docs/implemented-plans/notifications.md (Track D).
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import * as fs from "node:fs/promises";
+import * as os from "node:os";
+import * as path from "node:path";
+import { execSync } from "node:child_process";
+import { runChanges, type ChangesOptions } from "../../../src/cli/commands/changes.js";
+import { makeTmpBox, type TmpBox } from "../../helpers/test-helpers.js";
+
+const card = (title: string) => `---\ntitle: ${title}\n---\n${title} body\n`;
+
+/** Run with output captured; returns stdout, stderr lines, and the exit code. */
+async function changes(box: TmpBox, options: Partial<ChangesOptions> & { env?: NodeJS.ProcessEnv }) {
+  const { env, ...rest } = options;
+  const out: string[] = [];
+  const origLog = console.log;
+  const origErr = console.error;
+  console.log = (...args) => { out.push(args.join(" ")); };
+  console.error = (...args) => { out.push(`stderr: ${args.join(" ")}`); };
+  let code: number | undefined;
+  try {
+    code = await runChanges(box.root, { options: { match: [], ...rest }, env: env ?? {} });
+  } finally {
+    console.log = origLog;
+    console.error = origErr;
+  }
+  return [...out, `exit ${code}`].join("\n");
+}
+
+// ## Three commits add three cards; one of them is moved
+//
+// Before the window, the box holds an old email and a note. In the window: an
+// email arrives, then a second email and a doc arrive and the note is edited,
+// then triage moves the first email (added in the window) and the old one
+// (added before it) into a folder.
+void test("Before the window, the box holds an old email and a note.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await fs.rm(deferDir, { recursive: true, force: true });
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  await box.write("_content/inbox/old.email-message.card", card("Old"));
+  await box.write("_content/notes/plan.doc.card", card("Plan"));
+  box.commitAll("before the window");
+  const since = execSync("git rev-parse HEAD", { cwd: box.root }).toString().trim();
+
+  await box.write("_content/inbox/trip.email-message.card", card("Field trip"));
+  box.commitAll("Intake: trip email");
+  await box.write("_content/inbox/receipt.email-message.card", card("Receipt"));
+  await box.write("_content/notes/groceries.doc.card", card("Groceries"));
+  await box.write("_content/notes/plan.doc.card", card("Plan, revised"));
+  box.commitAll("Intake: receipt; groceries note");
+  execSync("mkdir -p _content/school && git mv _content/inbox/trip.email-message.card _content/school/ && git mv _content/inbox/old.email-message.card _content/school/ && git commit -qm 'Triage: file school mail'", { cwd: box.root });
+
+  // By default it lists the paths added since the commit. The moved email appears
+  // once, at its final path; the old email, which only moved, does not.
+
+  await t.checkText(await changes(box, { since }), `_content/inbox/receipt.email-message.card
+_content/notes/groceries.doc.card
+_content/school/trip.email-message.card
+exit 0`);
+
+  // `--match` selects by box-relative glob, and may repeat. `--kind modified`
+  // lists edited cards, and `--kind any` everything, the old email's move included.
+
+  await t.checkText(await changes(box, { since, match: ["_content/**/*.email-message.card"] }), `_content/inbox/receipt.email-message.card
+_content/school/trip.email-message.card
+exit 0`);
+
+  await t.checkText(await changes(box, { since, match: ["_content/notes/*", "_content/school/*"] }), `_content/notes/groceries.doc.card
+_content/school/trip.email-message.card
+exit 0`);
+
+  await t.checkText(await changes(box, { since, kind: "modified" }), `_content/notes/plan.doc.card
+exit 0`);
+
+  await t.checkText(await changes(box, { since, kind: "any", match: ["_content/school/*"] }), `_content/school/old.email-message.card
+_content/school/trip.email-message.card
+exit 0`);
+
+  // `--cat` prints each card after a `=== <path>` line, so whatever reads the
+  // output keeps the path with the text. `--cat --all` prints every card matching
+  // the globs, changed or not.
+
+  await t.checkText(await changes(box, { since, match: ["_content/**/*.email-message.card"], cat: true }), `=== _content/inbox/receipt.email-message.card
+---
+title: Receipt
+---
+Receipt body
+=== _content/school/trip.email-message.card
+---
+title: Field trip
+---
+Field trip body
+exit 0`);
+
+  await t.checkText((await changes(box, { since, match: ["_content/school/*"], cat: true, all: true })).split("\n").filter((l) => l.startsWith("===")).join("\n"), `=== _content/school/old.email-message.card
+=== _content/school/trip.email-message.card`);
+
+  // `--log` prints the commit subjects in the window, oldest first.
+
+  await t.checkText(await changes(box, { since, log: true }), `Intake: trip email
+Intake: receipt; groceries note
+Triage: file school mail
+exit 0`);
+
+  // A glob whose last segment names a card type the box has no schema for can
+  // never match a real card, so it warns on stderr. The Gmail connector writes
+  // `email-thread` and `email-message` cards; there is no `email` type.
+
+  await t.checkText(await changes(box, { since, match: ["_content/**/*.email.card"] }), `stderr: bbx changes: warning: --match _content/**/*.email.card names card type "email", which this box has no schema for; it matches no cards
+exit 0`);
+
+  // ## `--since` defaults to the schedule's cursor
+  //
+  // Inside a scheduled script the tick sets `BBX_SINCE_COMMIT`; outside one, a
+  // missing `--since` exits 2 rather than guessing.
+
+  await t.checkText(await changes(box, { match: ["_content/notes/*"], env: { BBX_SINCE_COMMIT: since } }), `_content/notes/groceries.doc.card
+exit 0`);
+
+  await t.checkText(await changes(box, {}), `stderr: Error: no since: pass --since or run from a schedule
+exit 2`);
+
+  await t.checkText(await changes(box, { since: "0000000000000000000000000000000000000000" }), `stderr: Error: could not compare 0000000000000000000000000000000000000000 with HEAD: «*»
+exit 1`);
+
+  await t.checkText(await changes(box, { since, kind: "renamed" }), `stderr: Error: --kind must be one of added, modified, any (got "renamed")
+exit 2`);
+
+  await t.checkText(await changes(box, { since, all: true }), `stderr: Error: --all applies only with --cat
+exit 2`);
+
+  // ## `--or-skip`: nothing changed means exit 75 and a defer marker
+  //
+  // With nothing new under the globs, `--or-skip` writes `{ "reason": "no-change" }`
+  // to `$BBX_DEFER_FILE` and exits 75, the procedure skip code. With `--cat --all`
+  // it still keys on whether anything changed, not on what it would print.
+
+  const deferDir = await fs.mkdtemp(path.join(os.tmpdir(), "bbx-changes-"));
+  const BBX_DEFER_FILE = path.join(deferDir, "defer.json");
+  t.check(await changes(box, { match: ["_content/photos/**"], orSkip: true, env: { BBX_SINCE_COMMIT: since, BBX_DEFER_FILE } }), "exit 75");
+
+  await t.checkText(await fs.readFile(BBX_DEFER_FILE, "utf-8"), "{\"reason\":\"no-change\"}");
+
+  t.check(await changes(box, { since: "HEAD", match: ["_content/school/*"], cat: true, all: true, orSkip: true }), "exit 75");
+
+  await t.checkText(await changes(box, { since, match: ["_content/notes/*"], orSkip: true, env: { BBX_DEFER_FILE: path.join(deferDir, "second.json") } }), `_content/notes/groceries.doc.card
+exit 0`);
+
+  t.check(await fs.access(path.join(deferDir, "second.json")).then(() => "written", () => "absent"), "absent");
+});
+
+// ## `--cat` appends an email's body
+//
+// An email-message card keeps its body in a `body-file` sidecar in its attach
+// scope, where the Gmail connector writes it. `--cat` prints the sidecar after a
+// `--- body ---` line, capped at 4,000 characters; a missing sidecar is a one-line
+// note.
+void test("An email-message card keeps its body in a body-file sidecar in its attach sco...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await mail.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const mail = await makeTmpBox({ git: true });
+  const thread = "_content/inbox/email/Field-trip.email-thread.attach";
+  const message = (n: number) => `---\ntype: email-message\nemail:\n  subject: Trip ${n}\nbody-file:\n  ref: attach/msg-00${n}.body.txt\n---\n`;
+  const start = execSync("git rev-parse HEAD", { cwd: mail.root }).toString().trim();
+  await mail.write(`${thread}/msg-001.email-message.card`, message(1));
+  await mail.write(`${thread}/msg-001.attach/msg-001.body.txt`, "Sign the permission form by Friday.\n");
+  await mail.write(`${thread}/msg-002.email-message.card`, message(2));
+  await mail.write(`${thread}/msg-002.attach/msg-002.body.txt`, "x".repeat(4005));
+  await mail.write(`${thread}/msg-003.email-message.card`, message(3));
+  mail.commitAll("Intake: field trip thread");
+
+  await t.checkText((await changes(mail, { since: start, match: ["_content/inbox/**/*.email-message.card"], cat: true })).replace(/x{4000}/, "x…x"), `=== _content/inbox/email/Field-trip.email-thread.attach/msg-001.email-message.card
+---
+type: email-message
+email:
+  subject: Trip 1
+body-file:
+  ref: attach/msg-001.body.txt
+---
+--- body ---
+Sign the permission form by Friday.
+=== _content/inbox/email/Field-trip.email-thread.attach/msg-002.email-message.card
+---
+type: email-message
+email:
+  subject: Trip 2
+body-file:
+  ref: attach/msg-002.body.txt
+---
+--- body ---
+x…x
+[… truncated; the body is 4005 characters]
+=== _content/inbox/email/Field-trip.email-thread.attach/msg-003.email-message.card
+---
+type: email-message
+email:
+  subject: Trip 3
+body-file:
+  ref: attach/msg-003.body.txt
+---
+--- body: attach/msg-003.body.txt is missing ---
+exit 0`);
+});

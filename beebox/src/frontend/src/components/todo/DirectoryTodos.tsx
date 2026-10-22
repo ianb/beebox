@@ -1,6 +1,8 @@
 /**
- * A directory's todo line on its browse page (`docs/plans/todos-ui.md`,
- * Track 4): "3 open · 1 overdue · 2 done" for every card under it.
+ * A directory's todo line on its browse page (`docs/implemented-plans/todos-ui.md`,
+ * Track 4): "3 now · 1 later · 2 done" for every card under it.
+ * The list it opens can count more: it also shows todos elsewhere that link
+ * into the folder, which this line skips (below), so the hover text says so.
  *
  * One `collections.query` with `here` = the directory (its scope glob is then
  * the directory's subtree, escaped, `core/collection/here.ts`), boxholder
@@ -9,7 +11,7 @@
  * reduction counts every status regardless. The box root gets no line —
  * its summary is the plate and the nav badge.
  *
- * "N open" opens the directory's list (`directoryListPath`) beside the
+ * The first count opens the directory's list (`directoryListPath`) beside the
  * browse card (Track 5). Nothing renders when the directory has no
  * boxholder todos, or while the query is loading or has failed (logged).
  */
@@ -59,7 +61,7 @@ export function DirectoryTodos({ dir, cards }: {
   return (
     <TodoSummaryLine
       reduction={query.data.reduction}
-      openAction={openBeside === null ? null : { onClick: () => openBeside(cardTarget(listPath)), title: "Open the todo list" }}
+      openAction={openBeside === null ? null : { onClick: () => openBeside(cardTarget(listPath)), title: "Todos written in this folder; open its todo list" }}
     />
   );
 }

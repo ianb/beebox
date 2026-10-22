@@ -75,12 +75,12 @@ test(
   }),
 );
 
-const TAPRC = ["test/a.doctest.md", "test/b.doctest.md"];
+const TAPRC = ["test/a.test.ts", "test/b.test.ts"];
 
 test("only a bare tap that names no file is a whole-tier run", () => {
   const base = { taprcFiles: TAPRC, careful: [], isFile: () => false };
   assert.equal(runsWholeTier({ ...base, command: ["tap"] }), true);
   assert.equal(runsWholeTier({ ...base, command: ["tap", "-j1"] }), true);
-  assert.equal(runsWholeTier({ ...base, command: ["tap", "test/a.doctest.md"] }), false);
+  assert.equal(runsWholeTier({ ...base, command: ["tap", "test/a.test.ts"] }), false);
   assert.equal(runsWholeTier({ ...base, command: ["echo", "hi"] }), false);
 });

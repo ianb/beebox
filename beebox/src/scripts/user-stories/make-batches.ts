@@ -8,15 +8,16 @@
  * source units, by round-robin over units. Deterministic (no RNG — workflow scripts forbid it).
  *
  * Usage: pnpm exec tsx beebox/src/scripts/user-stories/make-batches.ts
- * Writes user-stories/work/batches.json and prints a summary.
+ * Writes user-stories-work/discovery/batches.json and prints a summary.
  */
 import { writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 
 import { readJson } from "./json-io.js";
+import { DISCOVERY_WORK } from "./work-dir.js";
 import { invariant } from "../../shared/invariant.js";
 
-const BASE = resolve(import.meta.dirname, "../../../user-stories/work");
+const BASE = DISCOVERY_WORK;
 
 interface Story { id: string, sourceFile: string, audience: string }
 

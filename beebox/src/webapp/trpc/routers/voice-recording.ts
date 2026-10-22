@@ -1,6 +1,6 @@
 /**
  * tRPC router for the client half of the voice-recording handoff
- * (`docs/plans/resilient-voice-recording.md`, Track 1's `voiceRecording`
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1's `voiceRecording`
  * router). `status` is the pending bubble's server-derived ground truth;
  * `claim`/`fallBack` are the two ways a client
  * resolves a sealed recording's handoff. Both mutations apply one
@@ -36,7 +36,7 @@ import { toError } from "../../../shared/error-guards.js";
 import type { TrpcContext } from "../context.js";
 
 /** The DTO `status` returns. */
-interface VoiceStatusDto {
+export interface VoiceStatusDto {
   recordingId: string;
   hq: VoiceHqState;
   handoff: VoiceHandoff;

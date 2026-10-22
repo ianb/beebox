@@ -15,7 +15,7 @@ runs in a terminal under no supervisor, and is the path the boxholder's phone
 takes to a dev box. On 2026-09-15 a single worktree's startup timeout took every
 box under `main` offline for three hours, the phone included.
 
-`docs/plans/router-transient-failure-resilience.md` makes that failure rarer and
+`docs/implemented-plans/router-transient-failure-resilience.md` makes that failure rarer and
 makes it diagnosable. It does not make the router less load-bearing, and the
 boxholder asked directly whether it would. It does not, in three distinct ways.
 

@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How I (currently) develop software with coding agents · Ian Bicking</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 3 29 10 16 17 3 10z' fill='%232a78d6'/><path d='M3 10 16 17v12L3 22z' fill='%231baf7a'/><path d='M29 10 16 17v12l13-7z' fill='%23eb6834'/><path d='M8 10.5 16 6l8 4.5' fill='none' stroke='%23fff' stroke-width='1.6' stroke-linecap='round'/><circle cx='12' cy='8.3' r='1.4' fill='%23fff'/><circle cx='20' cy='8.3' r='1.4' fill='%23fff'/></svg>">
+<style>
+  :root { --ink: #1f2933; --muted: #6b7280; --rule: #d9dde3; --blue: #2a78d6; --band: #f3f6fa; }
+  html, body { margin: 0; height: 100%; background: #fff; color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  /* The header is one quiet band: a title, then grouped controls of one height. */
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 16px; background: var(--band); border-bottom: 1px solid var(--rule); font-size: 12px; }
+  header h1 { font-size: 13px; font-weight: 600; letter-spacing: .01em; margin: 0 8px 0 0; }
+  .group { display: flex; align-items: center; gap: 0; }
+  .group .name { color: var(--muted); margin-right: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  header button, header select { font: inherit; font-size: 12px; height: 26px; padding: 0 9px; border: 1px solid var(--rule); border-radius: 6px; background: #fff; cursor: pointer; user-select: none; color: var(--ink); line-height: 24px; }
+  header select { padding-right: 6px; }
+  header button:hover, header select:hover { border-color: var(--blue); color: var(--blue); }
+  header button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  /* Steppers: bare arrows either side of the thing they step. */
+  .group > button.step { border: 0; background: none; padding: 0 6px; font-size: 16px; color: var(--muted); }
+  .group > button.step:hover { color: var(--blue); }
+  .group > button.step:disabled { color: var(--rule); cursor: default; }
+  #cdpos { color: var(--muted); font-variant-numeric: tabular-nums; }
+  #cdtitle { margin-left: 8px; color: var(--ink); max-width: 36ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #add { max-width: 120px; color: var(--muted); }
+  /* What is turned on, as chips; one select adds more. */
+  .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 4px 12px; font-size: 12px; min-height: 22px; }
+  .chips .name { color: var(--muted); margin-right: 4px; }
+  #chips-events { border-top: 1px solid var(--rule); }
+  .check { order: 1; margin-left: auto; color: var(--muted); cursor: pointer; user-select: none; }
+  .check input { vertical-align: -1px; margin: 0 3px 0 0; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 3px 1px 8px; border: 1px solid var(--rule); border-radius: 999px; background: #fff; line-height: 18px; }
+  /* Swatches read like the mark: a line for a line stat, a bar for bars, a dot for events. */
+  .chip .sw.dot { width: 8px; height: 8px; border-radius: 50%; }
+  .chip .sw.line { width: 14px; height: 0; border-top: 2.5px solid; }
+  .chip .sw.dash { width: 14px; height: 0; border-top: 2.5px dashed; }
+  .chip .sw.dotted { width: 14px; height: 0; border-top: 2.5px dotted; }
+  .chip .sw.bar { width: 8px; height: 10px; border-radius: 1px; opacity: .5; }
+  .chip .note { color: var(--muted); margin-left: -1px; }
+  .chip .x { border: 0; background: none; padding: 0 4px; font-size: 14px; line-height: 1; color: var(--muted); cursor: pointer; }
+  .chip .x:hover { color: var(--ink); }
+  .spacer { flex: 1; }
+  #stage { flex: 1; position: relative; overflow: hidden; cursor: grab; }
+  #stage.dragging { cursor: grabbing; }
+  svg { display: block; width: 100%; height: 100%; }
+  svg text { pointer-events: none; }
+  svg .ev { pointer-events: all; cursor: pointer; }
+  svg .strip { cursor: default; }
+  #detail { position: absolute; display: none; background: rgba(255,255,255,.96); border: 1px solid var(--rule); border-radius: 8px; padding: 14px 18px; font-size: 14px; line-height: 1.5; box-shadow: 0 2px 12px rgba(0,0,0,.08); overflow: auto; box-sizing: border-box; }
+  #detail .kind { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  #detail h2 { font-size: 18px; margin: 2px 0 6px; }
+  #detail .date { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+  #detail .stats { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--muted); }
+  #detail .stats b { color: var(--ink); }
+  #detail .nav { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .showme { font: inherit; font-size: 12px; padding: 2px 9px; border: 1px solid var(--blue); border-radius: 6px; background: #fff; color: var(--blue); cursor: pointer; }
+  .showme:hover { background: var(--blue); color: #fff; }
+  /* Outside a graph card the timeline controls are hidden: the cards are the page. */
+  body:not(.graph) .chips, body:not(.graph) #zoom, body:not(.graph) #add { display: none; }
+  #cdpos { color: var(--muted); min-width: 72px; text-align: center; }
+  #cdtitle { color: var(--muted); max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  header button:disabled { opacity: .35; cursor: default; }
+  #keys { position: absolute; display: none; right: 12px; top: 6px; z-index: 2; background: #fff; border: 1px solid var(--rule); border-radius: 8px; padding: 10px 14px; font-size: 12px; line-height: 1.7; box-shadow: 0 2px 12px rgba(0,0,0,.1); }
+  #keys.on { display: block; }
+  #keys kbd { font: inherit; padding: 0 5px; border: 1px solid var(--rule); border-radius: 4px; background: var(--band); }
+  .close { position: sticky; float: right; top: 0; z-index: 1; margin: -14px -20px 0 8px; border: 0; background: none; font-size: 20px; line-height: 1; color: var(--muted); cursor: pointer; padding: 2px 6px; }
+  .close:hover { color: var(--ink); }
+  #chapters select { font: inherit; font-size: 13px; padding: 3px 6px; border: 1px solid var(--rule); border-radius: 6px; background: #fff; max-width: 260px; }
+  /* A veil behind the card or sub-card, over the graph. */
+  #veil { position: absolute; inset: 0; display: none; background: rgba(255,255,255,.92); }
+  #veil.on { display: block; }
+  #card { position: absolute; display: none; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(1240px, 94%); max-height: 94%; overflow: auto; background: #fff; border: 1px solid var(--rule); border-radius: 12px; padding: 28px 36px; box-shadow: 0 8px 40px rgba(0,0,0,.14); box-sizing: border-box; }
+  #card .eyebrow { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  #card h2 { font-size: 34px; margin: 4px 0 18px; line-height: 1.15; }
+  #card ul { margin: 0; padding-left: 0; list-style: none; }
+  #card li { font-size: 21px; line-height: 1.45; margin: 0 0 14px; }
+  #card li b { color: var(--blue); }
+  #card .nav { margin-top: 18px; font-size: 13px; color: var(--muted); }
+  .shade { fill: #fff; opacity: .72; pointer-events: none; }
+  #card .exhibits { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+  #card .exhibits button { font: inherit; font-size: 13px; padding: 3px 10px; border: 1px solid var(--blue); border-radius: 6px; background: #fff; color: var(--blue); cursor: pointer; }
+  #card .exhibits button:hover { background: var(--blue); color: #fff; }
+  #card .exhibits button b { font-weight: 700; margin-right: 5px; }
+  #subcard { position: absolute; display: none; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(1240px, 94%); max-height: 94%; overflow: auto; background: #fff; border: 1px solid var(--rule); border-radius: 12px; padding: 24px 32px; box-shadow: 0 8px 40px rgba(0,0,0,.14); box-sizing: border-box; }
+  #subcard .eyebrow { font-size: 13px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+  #subcard h2 { font-size: 28px; margin: 4px 0 12px; line-height: 1.15; }
+  #subcard p { font-size: 17px; line-height: 1.5; margin: 0 0 12px; color: var(--ink); }
+  #subcard pre { margin: 0; padding: 14px 16px; background: var(--band); border: 1px solid var(--rule); border-radius: 8px; font-size: 14px; line-height: 1.45; overflow: auto; white-space: pre; }
+  #subcard .file { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  #subcard .shots { margin-top: 16px; }
+  #subcard .shots.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  #subcard img.shot { display: block; width: 100%; border: 1px solid var(--rule); border-radius: 8px; }
+  /* A single image fits the sub-card without scrolling: the card is a column,
+     the image area takes what the heading leaves, and the image stays inside it. */
+  #subcard.fit, #card.fit { flex-direction: column; height: 94%; }
+  #subcard.fit .close { position: absolute; float: none; top: 16px; right: 16px; }
+  #subcard.fit .shots, #card.fit .shots { flex: 1; min-height: 0; position: relative; }
+  #subcard.fit img.shot, #card.fit img.shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; border: 0; }
+  /* The title card: the chapter's name, and its comic when it has one. */
+  #card.title { text-align: center; }
+  #card.title h2 { font-size: 54px; margin: 8px 0 12px; }
+  #card.title .shots { margin-top: 8px; }
+  #card.title .tagline { font-size: 26px; color: var(--muted); margin: 0 0 12px; }
+  /* The overview: every chapter and its cards, with the current one marked. */
+  #overview { position: absolute; inset: 0; display: none; z-index: 5; background: #fff; overflow: auto; padding: 18px 28px; box-sizing: border-box; font-size: 13px; }
+  #overview.on { display: block; }
+  #overview .row { display: flex; align-items: baseline; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--band); }
+  #overview .row.here { background: var(--band); margin: 0 -10px; padding: 3px 10px; border-radius: 6px; }
+  #overview .num { width: 2.2em; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+  #overview .ttl { width: 22em; flex: none; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #overview .row.appendix .ttl { font-weight: 400; color: var(--muted); }
+  #overview .cards { display: flex; flex-wrap: wrap; gap: 4px; }
+  #overview .cd { padding: 1px 7px; border: 1px solid var(--rule); border-radius: 999px; background: #fff; cursor: pointer; color: var(--muted); max-width: 18em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #overview .cd:hover { border-color: var(--blue); color: var(--blue); }
+  #overview .cd.here { background: var(--ink); color: #fff; border-color: var(--ink); }
+  #overview .hint { color: var(--muted); margin: 0 0 10px; }
+  #subcard ul { margin: 0; padding-left: 0; list-style: none; columns: 2; column-gap: 32px; }
+  /* A Markdown file exhibit renders as a document, not as source. */
+  #subcard .md { padding: 14px 20px; background: var(--band); border: 1px solid var(--rule); border-radius: 8px; font-size: 16px; line-height: 1.5; }
+  #subcard .md h1, #subcard .md h2, #subcard .md h3, #subcard .md h4 { line-height: 1.2; margin: 14px 0 6px; }
+  #subcard .md h1 { font-size: 24px; } #subcard .md h2 { font-size: 21px; } #subcard .md h3 { font-size: 18px; } #subcard .md h4 { font-size: 16px; }
+  #subcard .md > :first-child { margin-top: 0; }
+  #subcard .md p { font-size: 16px; margin: 0 0 10px; }
+  #subcard .md ul, #subcard .md ol { columns: auto; list-style: disc; padding-left: 24px; margin: 0 0 10px; }
+  #subcard .md ol { list-style: decimal; }
+  #subcard .md li { margin: 2px 0; }
+  #subcard .md pre { margin: 0 0 10px; background: #fff; }
+  #subcard .md code { font-size: 14px; background: rgba(0,0,0,.05); padding: 1px 4px; border-radius: 3px; }
+  #subcard .md pre code { background: none; padding: 0; }
+  #subcard .md table { border-collapse: collapse; margin: 0 0 12px; font-size: 14px; }
+  #subcard .md th, #subcard .md td { border: 1px solid var(--rule); padding: 4px 8px; text-align: left; vertical-align: top; }
+  #subcard .md th { background: #fff; }
+  #subcard .md blockquote { margin: 0 0 10px; padding: 2px 14px; border-left: 3px solid var(--rule); color: var(--muted); }
+  #subcard .md hr { border: 0; border-top: 1px solid var(--rule); margin: 14px 0; }
+  #subcard .md a { color: inherit; text-decoration: underline dotted; }
+  #subcard li { font-size: 16px; line-height: 1.45; margin: 0 0 10px; break-inside: avoid; }
+  #subcard li b { color: var(--blue); }
+  #subcard li:has(> b:only-child) { break-after: avoid; }
+  #tip { position: absolute; pointer-events: none; background: #fff; border: 1px solid var(--rule); border-radius: 6px; padding: 6px 9px; font-size: 12px; line-height: 1.5; box-shadow: 0 2px 8px rgba(0,0,0,.08); display: none; white-space: nowrap; }
+  #tip b { font-weight: 600; }
+</style>
+</head>
+<body>
+<header>
+  <h1>How I (currently) develop software with coding agents</h1>
+  <select id="add" title="turn something on"><option value="">add…</option></select>
+  <span class="spacer"></span>
+  <div class="group" id="chapters"><span class="name">chapter</span>
+    <button id="chprev" class="step" title="previous chapter ([)">‹</button>
+    <select id="chsel"></select>
+    <button id="chnext" class="step" title="next chapter (])">›</button>
+  </div>
+  <div class="group" id="cards"><span class="name">card</span>
+    <button id="cdprev" class="step" title="previous card (←)">‹</button>
+    <span id="cdpos">–</span>
+    <button id="cdnext" class="step" title="next card (→)">›</button>
+    <span id="cdtitle"></span>
+  </div>
+  <div class="group" id="zoom"><button id="zout" class="step" title="zoom out (−)">−</button><select id="scale" title="zoom to"><option value="year">year</option><option value="quarter">quarter</option><option value="month">month</option></select><button id="zin" class="step" title="zoom in (+)">+</button></div>
+  <button id="aside" title="open the timeline as an aside (t)">timeline</button>
+  <button id="mapbtn" title="overview: where am I (tab)">overview</button>
+  <button id="keysbtn" title="keyboard shortcuts">keys</button>
+</header>
+<div class="chips" id="chips-stats"><span class="name">stats</span></div>
+<div id="stage"><svg id="svg"></svg><div id="tip"></div><div id="detail"></div><div id="veil"></div><div id="card"></div><div id="subcard"></div><div id="overview"></div>
+  <div id="keys"><b>Keys</b><br><kbd>←</kbd> <kbd>→</kbd> <kbd>space</kbd> previous and next card, on into the next chapter · <kbd>[</kbd> <kbd>]</kbd> chapters<br><kbd>1</kbd>…<kbd>9</kbd> a card of this chapter · <kbd>0</kbd> the chapter card · <kbd>t</kbd> the timeline as an aside, and back · <kbd>tab</kbd> the overview<br>on a graph card: drag to pan · <kbd>+</kbd> <kbd>−</kbd> zoom · click an event, then <kbd>↑</kbd> <kbd>↓</kbd> step through events · <kbd>Esc</kbd> closes the event</div>
+</div>
+<div class="chips" id="chips-events"><span class="name">events</span><label class="check" id="alllayer"><input type="checkbox"> all events, not only key ones</label></div>
+<script>
+(async () => {
+  const [lanes, size, chapters, transcripts] = await Promise.all([
+    fetch("data/lanes.json").then((r) => r.json()),
+    fetch("data/size-history.json").then((r) => r.json()),
+    fetch("data/chapters.json").then((r) => r.json()),
+    fetch("data/transcript-stats.json").then((r) => r.json()),
+  ]);
+  // Transcript counts exist only as far back as local retention; a week
+  // before that reads null and leaves a gap in the line.
+  const tx = new Map(transcripts.weeks.map((w) => [w.date, w]));
+  const txGet = (field) => (w) => (tx.has(w.date) ? tx.get(w.date)[field] : null);
+  const INK = "#1f2933", MUTED = "#6b7280", RULE = "#d9dde3", BAND = "#f3f6fa";
+  const DAY = 86400000;
+  const day = (iso) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / DAY;
+  const iso = (d) => new Date(d * DAY).toISOString().slice(0, 10);
+  const fmt = (n) => n.toLocaleString("en-US");
+
+  // Stats: each series is a path over the weekly checkpoints. Series with the
+  // same unit share one 0..max scale, so open and closed issues, or code and
+  // test lines, are comparable; each unit's scale is drawn as 0..100% of its
+  // max. With one unit showing the axis carries real values.
+  const STATS = [
+    // Ordered and colored to match the lanes row: process blue, sweeps
+    // orange, product green, infrastructure purple. A stat sits with the
+    // events that move it.
+    { id: "tests", unit: "lines", name: "test lines", color: "#2a78d6", get: (w) => w.lines.tests },
+    { id: "docs", unit: "lines", name: "doc lines", color: "#eb6834", get: (w) => w.lines.docs },
+    { id: "code", unit: "lines", name: "code lines", color: "#1baf7a", get: (w) => w.lines.code },
+    { id: "commits", unit: "commits / week", name: "commits / week", color: "#7c5cbf", get: (w) => w.commits, bars: true },
+    // Secondary series carry a line style as well as a color, so any two
+    // shown together stay apart for every kind of color vision.
+    { id: "open", unit: "issues", name: "open issues", color: "#1f2933", dash: "8 5", get: (w) => w.openIssues },
+    { id: "closed", unit: "issues", name: "closed issues", color: "#0891b2", dash: "8 5", get: (w) => w.closedIssues },
+    { id: "testFiles", unit: "files", name: "test files", color: "#a16207", dash: "2 5", get: (w) => w.testFiles },
+    { id: "skills", unit: "skills", name: "skills", color: "#db2777", dash: "2 5", get: (w) => w.skills },
+    { id: "instructionLines", unit: "lines", name: "instruction lines", color: "#1f2933", dash: "2 5", get: (w) => w.instructionLines },
+    { id: "skillLines", unit: "lines", name: "skill lines", color: "#db2777", dash: "8 5", get: (w) => w.skillLines },
+    // Test lines split three ways, for the doctest story.
+    { id: "doctestCode", unit: "lines", name: "doctest code lines", color: "#2a78d6", dash: "8 5", get: (w) => w.doctestCode },
+    { id: "doctestProse", unit: "lines", name: "doctest prose lines", color: "#2a78d6", dash: "2 5", get: (w) => w.doctestProse },
+    { id: "otherTestLines", unit: "lines", name: "non-doctest test lines", color: "#7c5cbf", dash: "8 5", get: (w) => w.otherTestLines },
+    // Obscure, kept for one story: the layout moves.
+    { id: "totalFiles", unit: "files", name: "files", color: "#a16207", dash: "8 5", get: (w) => w.totalFiles, more: true },
+    { id: "totalDirs", unit: "directories", name: "directories", color: "#0891b2", dash: "2 5", get: (w) => w.totalDirs, more: true },
+    { id: "dirMax", unit: "files", name: "files in the largest directory", color: "#a16207", dash: "2 5", get: (w) => w.dirMax, more: true },
+    { id: "dirTop3", unit: "files", name: "files in the three largest directories", color: "#eb6834", dash: "8 5", get: (w) => w.dirTop3, more: true },
+    { id: "dirMean", unit: "files / directory", name: "files per directory, mean", color: "#1f2933", dash: "8 5", get: (w) => w.dirMean, more: true },
+    // Codebase share: how much of a week's commits served the making of the product rather than the product.
+    { id: "logCalls", unit: "call sites", name: "logging call sites", color: "#eb6834", dash: "8 5", get: (w) => w.logCalls },
+    // From the test ledger, which began August 30: estimated wall-clock minutes per complete full run, median for the week.
+    { id: "auditPrompts", unit: "prompts", name: "knowledge-audit prompts", color: "#7c3aed", get: (w) => w.auditPrompts },
+    { id: "journeyWalks", unit: "walks", name: "journey walks", color: "#0f766e", get: (w) => w.journeyWalks },
+    { id: "journeyIssues", unit: "issues", name: "issues found on a walk", color: "#b45309", dash: "8 5", get: (w) => w.journeyIssues },
+    { id: "schedules", unit: "schedules", name: "schedules defined", color: "#0f766e", get: (w) => w.schedules },
+    { id: "scheduledCommits", unit: "commits / week", name: "commits from scheduled sessions", color: "#b45309", dash: "8 5", get: (w) => w.scheduledCommits },
+    { id: "planEdits", unit: "edits / week", name: "plan-document edits a week", color: "#0f766e", get: (w) => w.planEdits },
+    { id: "suiteMinutes", unit: "minutes", name: "full suite, estimated minutes per run", color: "#b91c1c", get: (w) => (w.suiteMinutes === undefined ? null : w.suiteMinutes) },
+    { id: "codebaseShare", unit: "%", name: "codebase share of commits, %", color: "#1f2933", get: (w) => w.codebaseShare },
+    // From transcripts: browser-driving tool calls and the sessions that made them.
+    { id: "browserCalls", unit: "calls / week", name: "browser calls / week", color: "#1baf7a", get: txGet("browserCalls"), bars: true },
+    { id: "browserSessions", unit: "sessions / week", name: "sessions using the browser", color: "#1baf7a", dash: "2 5", get: txGet("browserSessions") },
+    { id: "exhibitScreenshots", unit: "screenshots / week", name: "screenshots published / week", color: "#1baf7a", dash: "8 5", get: txGet("exhibitScreenshots") },
+    { id: "bashCalls", unit: "calls / week", name: "shell calls / week", color: "#a16207", get: txGet("bashCalls"), bars: true, more: true },
+  ];
+  const peakOf = (s) => Math.max(...weeks.map(s.get).filter((v) => v !== null));
+  // The axis and the chip note share one window: the whole year by default,
+  // so pace reads across chapters, or the weeks on screen when a card says
+  // scale: view, for an early chapter whose values would otherwise sit at zero.
+  const inView = () => (state.scale === "view" ? weeks.filter((w) => day(w.date) >= state.from - 7 && day(w.date) <= state.to + 7) : weeks);
+  const peakInView = (s) => { const vals = inView().map(s.get).filter((v) => v !== null); return vals.length ? Math.max(...vals) : peakOf(s); };
+  const weeks = size.weeks;
+  const KINDS = Object.keys(lanes.kinds);
+  const first = day(weeks[0].date) - 7, last = day(weeks[weeks.length - 1].date) + 3;
+
+  const state = {
+    stats: new Set(["code", "commits"]),
+    kinds: new Set(["process", "product"]),
+    layer: "key",
+    scale: "global",
+    phases: false,
+    from: first, to: last,
+    selected: null, // pinned event, index into lanes.events
+    hovered: null, // event nearest the pointer
+    chapter: null, // index into chapters; null explores the bare timeline
+    card: 0, // index into the chapter's cards: title, chapter, then exhibits
+    back: null, // {chapter, card} to return to when the timeline aside closes
+  };
+  lanes.events.forEach((e, i) => { e.idx = i; });
+  try {
+    const saved = JSON.parse(localStorage.getItem("timeline-explorer") || "null");
+    if (saved) { state.stats = new Set(saved.stats); state.kinds = new Set(saved.kinds); state.layer = saved.layer; state.phases = !!saved.phases; }
+  } catch {}
+  const save = () => { try { localStorage.setItem("timeline-explorer", JSON.stringify({ stats: [...state.stats], kinds: [...state.kinds], layer: state.layer, phases: state.phases })); } catch {} };
+
+  // ---- controls: everything turned on is a chip with an ×; the "add…"
+  // select lists what is off. Stats, lanes, the all-events layer and the
+  // phase bands are all the same kind of thing here.
+  const ITEMS = [
+    ...STATS.map((s) => ({ id: `stat:${s.id}`, group: s.more ? "more stats" : "stats", name: s.name, color: s.color,
+      note: () => (state.scale === "view" ? `peak in view ${fmt(peakInView(s))}` : `year's peak ${fmt(peakOf(s))}`),
+      row: "stats", sw: s.bars ? "bar" : s.dash === "8 5" ? "dash" : s.dash === "2 5" ? "dotted" : "line",
+      on: () => state.stats.has(s.id), set: (v) => { v ? state.stats.add(s.id) : state.stats.delete(s.id); } })),
+    ...KINDS.map((k) => ({ id: `kind:${k}`, group: "lanes", name: `${k} events`, color: lanes.kinds[k].color, row: "events", sw: "dot",
+      on: () => state.kinds.has(k), set: (v) => { v ? state.kinds.add(k) : state.kinds.delete(k); } })),
+    { id: "phases", group: "display", name: "phase bands", color: null, row: "stats", sw: "",
+      on: () => state.phases, set: (v) => { state.phases = v; } },
+  ];
+  const rows = { stats: document.getElementById("chips-stats"), events: document.getElementById("chips-events") }, addEl = document.getElementById("add");
+  const manual = (item, v) => { item.set(v); save(); renderChips(); draw(); };
+  const allLayer = document.querySelector("#alllayer input");
+  allLayer.addEventListener("change", () => { state.layer = allLayer.checked ? "all" : "key"; save(); draw(); });
+  function renderChips() {
+    allLayer.checked = state.layer === "all";
+    for (const r of Object.values(rows)) for (const c of [...r.querySelectorAll(".chip")]) c.remove();
+    for (const it of ITEMS) {
+      if (!it.on()) continue;
+      const c = document.createElement("span"); c.className = "chip";
+      const sw = it.color ? `<span class="sw ${it.sw}" style="${it.sw === "dot" || it.sw === "bar" ? "background" : "border-color"}:${it.color}"></span>` : "";
+      c.innerHTML = `${sw}${it.name}${it.note ? `<span class="note" data-note="${it.id}">${it.note()}</span>` : ""}<button class="x" title="turn off">×</button>`;
+      c.querySelector(".x").onclick = () => manual(it, false);
+      rows[it.row].appendChild(c);
+    }
+    addEl.replaceChildren(new Option("add…", ""));
+    for (const group of ["stats", "more stats", "lanes", "display"]) {
+      const og = document.createElement("optgroup"); og.label = group;
+      for (const it of ITEMS) if (it.group === group && !it.on()) og.appendChild(new Option(it.name, it.id));
+      if (og.children.length) addEl.appendChild(og);
+    }
+  }
+  addEl.addEventListener("change", () => {
+    const it = ITEMS.find((x) => x.id === addEl.value);
+    addEl.value = ""; addEl.blur();
+    if (it) manual(it, true);
+  });
+  renderChips();
+  const keysEl = document.getElementById("keys"), keysBtn = document.getElementById("keysbtn");
+  keysBtn.onclick = () => { keysEl.classList.toggle("on"); keysBtn.classList.toggle("on", keysEl.classList.contains("on")); };
+  // The overview lists every chapter and card and marks the current one; tab toggles it.
+  const overviewEl = document.getElementById("overview"), mapBtn = document.getElementById("mapbtn");
+  function renderOverview() {
+    const rows = chapters.map((c, i) => {
+      const cards = cardsOf(c).map((k, j) => `<span class="cd${state.chapter === i && state.card === j ? " here" : ""}" data-ch="${i}" data-cd="${j}" title="${i + 1}.${j + 1}">${i + 1}.${j + 1} ${k.kind === "title" ? "title" : k.kind === "chapter" ? "the chapter" : mdInline(k.title)}</span>`).join("");
+      return `<div class="row${state.chapter === i ? " here" : ""}${c.title.startsWith("Appendix") ? " appendix" : ""}"><span class="num">${i + 1}</span><span class="ttl">${mdInline(c.title.replace(/^Appendix · /, ""))}</span><span class="cards">${cards}</span></div>`;
+    });
+    overviewEl.innerHTML = `<div class="hint">Every chapter and its cards. The dark pill is where you are. Click a card to go there; tab or Esc closes.</div>${rows.join("")}`;
+    for (const el of overviewEl.querySelectorAll(".cd")) el.onclick = () => { toggleOverview(false); setChapter(Number(el.dataset.ch), { card: Number(el.dataset.cd) }); };
+  }
+  function toggleOverview(on) {
+    const want = on === undefined ? !overviewEl.classList.contains("on") : on;
+    if (want) renderOverview();
+    overviewEl.classList.toggle("on", want);
+    mapBtn.classList.toggle("on", want);
+  }
+  mapBtn.onclick = () => toggleOverview();
+  const scaleEl = document.getElementById("scale");
+  const syncButtons = () => {
+    const span = state.to - state.from;
+    scaleEl.value = span > 200 ? "year" : span > 50 ? "quarter" : "month";
+  };
+  scaleEl.addEventListener("change", () => {
+    const mid = (state.from + state.to) / 2;
+    const span = { year: last - first, quarter: 92, month: 31 }[scaleEl.value];
+    setRange(mid - span / 2, mid + span / 2); draw();
+    scaleEl.blur();
+  });
+
+  const setRange = (a, b) => {
+    let span = Math.max(14, Math.min(last - first, b - a));
+    a = Math.max(first, Math.min(a, last - span)); state.from = a; state.to = a + span;
+  };
+
+  // ---- cards: a chapter is a row of cards: its title card, the chapter
+  // card, then its exhibits. A graph card shows the timeline with the card's
+  // own filters; every other card covers the timeline.
+  const cardsOf = (c) => [{ kind: "title", title: c.title }, { kind: "chapter", title: "the chapter" }, ...c.exhibits];
+  const currentCard = () => (state.chapter === null ? null : cardsOf(chapters[state.chapter])[state.card] || null);
+  const isGraph = () => { const k = currentCard(); return !k || k.kind === "graph"; };
+  function showMe(spec) {
+    if (spec.stats && spec.stats.length) { state.stats.clear(); for (const id of spec.stats) state.stats.add(id); }
+    if (spec.kinds && spec.kinds.length) { state.kinds.clear(); for (const k of spec.kinds) state.kinds.add(k); }
+    if (spec.layer) state.layer = spec.layer;
+    state.scale = spec.scale === "view" ? "view" : "global";
+    renderChips(); draw();
+  }
+  // A graph card may carry its own span; every other card uses the chapter's.
+  const spanOf = (c, k) => (k && k.kind === "graph" && k.from ? { from: k.from, to: k.to } : { from: c.from, to: c.to });
+  function viewSpan(c, k) {
+    const sp = spanOf(c, k), a = day(sp.from), b = day(sp.to), pad = Math.max(4, (b - a) * 0.12);
+    setRange(a - pad, b + pad);
+  }
+  function setCard(i) {
+    const c = state.chapter === null ? null : chapters[state.chapter];
+    if (!c) return;
+    const cards = cardsOf(c);
+    state.card = Math.max(0, Math.min(cards.length - 1, i));
+    state.selected = null;
+    const k = cards[state.card];
+    viewSpan(c, k);
+    if (k.kind === "graph") showMe({ stats: k.stats, kinds: k.kinds, layer: k.events, scale: k.scale }); else draw();
+  }
+  // Step through cards like slides, crossing into the next or previous chapter at the ends.
+  function stepCard(dir) {
+    if (state.chapter === null) { stepChapter(dir); return; }
+    const n = cardsOf(chapters[state.chapter]).length;
+    const i = state.card + dir;
+    if (i < 0) { if (state.chapter > 0) setChapter(state.chapter - 1, { card: -1 }); }
+    else if (i >= n) { if (state.chapter < chapters.length - 1) setChapter(state.chapter + 1); }
+    else setCard(i);
+  }
+
+  // ---- chapters
+  const chsel = document.getElementById("chsel");
+  chapters.forEach((c, i) => { const o = document.createElement("option"); o.value = String(i); o.textContent = `${i + 1}. ${c.title}`; chsel.appendChild(o); });
+  const card = document.getElementById("card");
+  // Enter a chapter on one of its cards (-1 for the last); the view zooms to the chapter's span.
+  function setChapter(i, { card: which = 0 } = {}) {
+    state.chapter = i;
+    state.selected = null;
+    chsel.value = i === null ? "" : String(i);
+    chsel.disabled = i === null;
+    asideBtn.textContent = i === null ? (state.back ? `back to card ${state.back.chapter + 1}.${state.back.card + 1}` : "back to the cards") : "timeline";
+    asideBtn.classList.toggle("on", i === null);
+    if (i === null) { state.card = 0; draw(); return; }
+    const c = chapters[i];
+    setCard(which < 0 ? cardsOf(c).length - 1 : which);
+  }
+  function stepChapter(dir) {
+    if (chapters.length === 0) return;
+    const i = state.chapter === null ? (dir > 0 ? 0 : chapters.length - 1) : Math.max(0, Math.min(chapters.length - 1, state.chapter + dir));
+    setChapter(i);
+  }
+  chsel.addEventListener("change", () => { setChapter(Number(chsel.value)); chsel.blur(); });
+  // The timeline as an aside: the bare explorer, with the way back to the card it was opened from.
+  const asideBtn = document.getElementById("aside");
+  function toggleAside() {
+    if (state.chapter === null) { const b = state.back || { chapter: 0, card: 0 }; state.back = null; setChapter(b.chapter, { card: b.card }); }
+    else { state.back = { chapter: state.chapter, card: state.card }; setChapter(null); }
+  }
+  asideBtn.onclick = toggleAside;
+  document.getElementById("chprev").onclick = () => stepChapter(-1);
+  document.getElementById("chnext").onclick = () => stepChapter(1);
+  document.getElementById("cdprev").onclick = () => stepCard(-1);
+  document.getElementById("cdnext").onclick = () => stepCard(1);
+  // A bare site name or GitHub path in a tagline becomes a link.
+  const linkify = (h) => h.replace(/\b((?:github\.com\/)?[\w-]+(?:\.[\w-]+)*\.(?:org|run|com)(?:\/[\w./-]*)?|github\.com\/[\w./-]+)/g, (m) => `<a href="https://${m}" target="_blank" rel="noopener">${m}</a>`);
+  const mdInline = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`(.+?)`/g, "<code>$1</code>");
+  // A small block-level Markdown renderer for file exhibits: headings, fenced
+  // code, tables, lists, quotes, rules, paragraphs; links keep their text.
+  const mdSpan = (t) => mdInline(t)
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "<a>$1</a>")
+    .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, "$1<i>$2</i>")
+    .replace(/(^|[^_\w])_([^_\n]+)_(?!\w)/g, "$1<i>$2</i>");
+  function mdBlock(text) {
+    const lines = text.replace(/\r/g, "").split("\n");
+    let i = 0;
+    if (lines[0] === "---") { const j = lines.indexOf("---", 1); if (j > 0) i = j + 1; } // frontmatter
+    const out = [];
+    const cell = (row) => row.replace(/^\||\|$/g, "").split("|").map((c) => mdSpan(c.trim()));
+    while (i < lines.length) {
+      const l = lines[i];
+      if (/^\s*$/.test(l)) { i++; continue; }
+      let m;
+      if ((m = /^(`{3,}|~{3,})/.exec(l))) {
+        const fence = m[1]; const buf = []; i++;
+        while (i < lines.length && !lines[i].startsWith(fence)) buf.push(lines[i++]);
+        i++; out.push(`<pre><code>${buf.join("\n").replace(/&/g, "&amp;").replace(/</g, "&lt;")}</code></pre>`); continue;
+      }
+      if ((m = /^(#{1,6})\s+(.*)$/.exec(l))) { const n = Math.min(4, m[1].length); out.push(`<h${n}>${mdSpan(m[2])}</h${n}>`); i++; continue; }
+      if (/^(-{3,}|\*{3,}|_{3,})\s*$/.test(l)) { out.push("<hr>"); i++; continue; }
+      if (l.startsWith("|")) {
+        const rows = []; while (i < lines.length && lines[i].startsWith("|")) rows.push(lines[i++]);
+        const head = cell(rows[0]); const body = rows.slice(/^\|?\s*:?-+/.test(rows[1] || "") ? 2 : 1);
+        out.push(`<table><thead><tr>${head.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>${body.map((r) => `<tr>${cell(r).map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`); continue;
+      }
+      if (l.startsWith(">")) {
+        const buf = []; while (i < lines.length && lines[i].startsWith(">")) buf.push(lines[i++].replace(/^>\s?/, ""));
+        out.push(`<blockquote>${mdBlock(buf.join("\n"))}</blockquote>`); continue;
+      }
+      if ((m = /^(\s*)([-*+]|\d+[.)])\s+/.exec(l))) {
+        const ordered = /\d/.test(m[2]); const items = [];
+        while (i < lines.length && (m = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(lines[i]))) {
+          let item = m[3]; i++;
+          while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !/^\s*([-*+]|\d+[.)])\s+/.test(lines[i])) item += " " + lines[i++].trim();
+          items.push(`<li>${mdSpan(item)}</li>`);
+          // A blank line between items keeps the list going when another item follows.
+          if (i < lines.length && /^\s*$/.test(lines[i]) && i + 1 < lines.length && /^\s*([-*+]|\d+[.)])\s+/.test(lines[i + 1])) i++;
+        }
+        out.push(`<${ordered ? "ol" : "ul"}>${items.join("")}</${ordered ? "ol" : "ul"}>`); continue;
+      }
+      const buf = [];
+      while (i < lines.length && !/^\s*$/.test(lines[i]) && !/^(#{1,6}\s|`{3}|~{3}|\||>|\s*[-*+]\s|\s*\d+[.)]\s)/.test(lines[i])) buf.push(lines[i++]);
+      if (!buf.length) buf.push(lines[i++]);
+      out.push(`<p>${buf.map((b, k) => (k && /^\*\*[^*]+:\*\*/.test(b) ? "<br>" : k ? " " : "") + mdSpan(b)).join("")}</p>`); // a run of "**Label:** value" lines keeps its lines
+    }
+    return out.join("");
+  }
+  function roughSpan(from, to) {
+    const part = (d) => { const [, m, day] = d.split("-").map(Number); const when = day <= 10 ? "early" : day <= 20 ? "mid" : "late"; return { when, month: MONTHS[m - 1] }; };
+    const a = part(from), b = part(to);
+    const text = a.month === b.month ? (a.when === b.when ? `${a.when} ${a.month}` : `${a.when} to ${b.when} ${a.month}`) : `${a.when} ${a.month} to ${b.when} ${b.month}`;
+    return text[0].toUpperCase() + text.slice(1);
+  }
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  function drawCard() {
+    const c = state.chapter === null ? null : chapters[state.chapter];
+    const k = currentCard();
+    const pos = document.getElementById("cdpos"), ttl = document.getElementById("cdtitle");
+    document.getElementById("cdprev").disabled = !c ? true : state.chapter === 0 && state.card === 0;
+    document.getElementById("cdnext").disabled = !c ? true : state.chapter === chapters.length - 1 && state.card === cardsOf(c).length - 1;
+    if (!c || !k) { pos.textContent = "–"; ttl.textContent = ""; card.style.display = "none"; card.className = ""; return; }
+    const cards = cardsOf(c);
+    pos.textContent = `${state.chapter + 1}.${state.card + 1} of ${state.chapter + 1}.${cards.length}`;
+    ttl.textContent = k.kind === "title" ? "" : k.title;
+    const sp = spanOf(c, k);
+    const eyebrow = `${state.chapter + 1}.${state.card + 1} · ${roughSpan(sp.from, sp.to)}`;
+    if (k.kind === "title") {
+      card.className = c.comic ? "title fit" : "title";
+      card.innerHTML = `<div class="eyebrow">${eyebrow}</div><h2>${mdInline(c.title)}</h2>${c.tagline ? `<div class="tagline">${linkify(mdInline(c.tagline))}</div>` : ""}${c.comic ? `<div class="shots"><img class="shot" src="${c.comic}" alt=""></div>` : ""}`;
+      card.style.display = c.comic ? "flex" : "block";
+      return;
+    }
+    if (k.kind === "chapter") {
+      card.className = "";
+      const list = cards.map((x, i) => (i < 2 ? "" : `<button class="showme" data-i="${i}" title="card ${state.chapter + 1}.${i + 1} (key ${i + 1})"><b>${state.chapter + 1}.${i + 1}</b>${mdInline(x.title)}</button>`)).join("");
+      card.innerHTML = `<div class="eyebrow">${eyebrow}</div><h2>${mdInline(c.title)}</h2><ul>${c.body.map((b) => `<li>${mdInline(b)}</li>`).join("")}</ul>${list ? `<div class="exhibits">${list}</div>` : ""}`;
+      for (const b of card.querySelectorAll(".showme")) b.onclick = () => setCard(Number(b.dataset.i));
+      card.style.display = "block";
+      return;
+    }
+    card.style.display = "none"; card.className = "";
+  }
+  const subcard = document.getElementById("subcard");
+  function drawSubcard() {
+    const c = state.chapter === null ? null : chapters[state.chapter];
+    const ex = currentCard();
+    if (!c || !ex || ex.kind === "graph" || ex.kind === "title" || ex.kind === "chapter") { subcard.style.display = "none"; return; }
+    const escText = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+    const head = `<button class="close" title="the chapter card (0)">×</button><div class="eyebrow">${state.chapter + 1}.${state.card + 1} · ${mdInline(c.title)}</div><h2>${mdInline(ex.title)}</h2>`;
+    subcard.innerHTML = ex.kind === "code"
+      ? `${head}${ex.body.map((b) => `<p>${mdInline(b)}</p>`).join("")}${/\.md(,|$)/.test(ex.file) ? `<div class="md">${mdBlock(ex.code)}</div>` : `<pre>${escText(ex.code)}</pre>`}<div class="file">${escText(ex.file)} · <a href="${ex.href}" target="_blank" rel="noopener">source on GitHub</a></div>`
+      : `${head}<ul>${ex.body.map((b) => `<li>${mdInline(b)}</li>`).join("")}</ul>`;
+    if (ex.images && ex.images.length) subcard.insertAdjacentHTML("beforeend", `<div class="shots${ex.images.length > 1 ? " grid" : ""}">${ex.images.map((src) => `<img class="shot" src="${src}" alt="">`).join("")}</div>`);
+    subcard.querySelector(".close").onclick = () => setCard(1);
+    const fit = (ex.images || []).length === 1; // a lone image fits the screen
+    subcard.classList.toggle("fit", fit); subcard.style.display = fit ? "flex" : "block";
+  }
+
+  // ---- drawing
+  const svg = document.getElementById("svg"), stage = document.getElementById("stage"), tip = document.getElementById("tip");
+  const NS = "http://www.w3.org/2000/svg";
+  const el = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text !== undefined) e.textContent = text; return e; };
+  const PHASES = [
+    ["2026-01-25", "2026-04-01", "checks before trust"], ["2026-04-01", "2026-05-01", "quiet"], ["2026-05-01", "2026-06-01", "checkouts"],
+    ["2026-06-01", "2026-07-01", "second model"], ["2026-07-01", "2026-08-01", "the queue"], ["2026-08-01", "2026-09-01", "runs unattended"],
+    ["2026-09-01", "2026-10-01", "instructions"], ["2026-10-01", "2026-10-15", "measured"],
+  ];
+  let geom = null;
+
+  function draw() {
+    document.body.classList.toggle("graph", isGraph());
+    syncButtons();
+    const W = stage.clientWidth, H = stage.clientHeight;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.replaceChildren();
+    const LEFT = 56, RIGHT = W - 24, TOP = state.phases ? 58 : 38;
+    const span = state.to - state.from;
+    const x = (d) => LEFT + ((d - state.from) / span) * (RIGHT - LEFT);
+    const F = span > 200 ? 11 : span > 50 ? 13 : 15, LINE = F * 2, CHAR = F * 0.58;
+    const events = lanes.events.filter((e) => state.kinds.has(e.kind) && (state.layer === "all" || e.key));
+    const visible = (e) => x(day(e.date)) > LEFT - 200 && x(day(e.date)) < RIGHT + 20;
+    // A label sits to the right of its dot, or flips to the left when it would
+    // run past the right edge. Each row keeps the spans it holds.
+    const place = (evs) => {
+      const sorted = [...evs].sort((a, b) => day(a.date) - day(b.date));
+      const rows = [];
+      return sorted.map((e) => {
+        const x1 = x(day(e.date)), w = e.label.length * CHAR + F;
+        const flip = x1 + w > RIGHT;
+        const s0 = flip ? x1 - w : x1, s1 = flip ? x1 : x1 + w;
+        let row = 0;
+        while (row < rows.length && rows[row].some(([a, b]) => a < s1 + F && b > s0 - F)) row++;
+        (rows[row] ||= []).push([s0, s1]);
+        return { ...e, row, flip };
+      });
+    };
+    // Code events go up and product events down. When both kinds on screen
+    // belong to one lane, they split up and down by kind instead of stacking.
+    const shownKinds = KINDS.filter((k) => state.kinds.has(k));
+    const oneLane = new Set(shownKinds.map((k) => lanes.kinds[k].lane)).size === 1 && shownKinds.length === 2;
+    const isUp = (e) => (oneLane ? e.kind === shownKinds[0] : lanes.kinds[e.kind].lane === "code");
+    let up = place(events.filter((e) => isUp(e) && visible(e)));
+    let down = place(events.filter((e) => !isUp(e) && visible(e)));
+    let upRows = Math.max(1, ...up.map((e) => e.row + 1)), downRows = Math.max(1, ...down.map((e) => e.row + 1));
+    const axisBottom = H - 28;
+    // The stats keep at least a third of the height. Rows the lanes cannot
+    // fit are dropped from the top of each stack; zooming in brings them back.
+    const hasStats = state.stats.size > 0;
+    const minPlot = hasStats ? Math.max(150, H * 0.34) : 0;
+    const maxRows = Math.max(2, Math.floor((axisBottom - TOP - 12 - minPlot - F * 3) / LINE));
+    if (upRows + downRows > maxRows) {
+      const capUp = Math.max(1, Math.round((maxRows * upRows) / (upRows + downRows)));
+      const capDown = Math.max(1, maxRows - capUp);
+      up = up.filter((e) => e.row < capUp); down = down.filter((e) => e.row < capDown);
+      upRows = Math.min(upRows, capUp); downRows = Math.min(downRows, capDown);
+    }
+    const laneH = (upRows + downRows) * LINE + F * 3;
+    const laneTop = axisBottom - laneH;
+    const axisY = laneTop + upRows * LINE + F * 1.5;
+    const plotTop = TOP, plotBottom = laneTop - 12;
+
+    // Phase bands
+    if (state.phases) for (const [a, b, label] of PHASES.map((p, i) => [...p, i])) {
+      const x1 = Math.max(LEFT, x(day(a))), x2 = Math.min(RIGHT, x(day(b)));
+      if (x2 <= x1) continue;
+      svg.appendChild(el("rect", { x: x1, y: TOP - 40, width: x2 - x1, height: axisBottom - TOP + 40, fill: PHASES.indexOf(PHASES.find((p) => p[2] === label)) % 2 === 0 ? BAND : "#fff" }));
+      svg.appendChild(el("text", { x: (x1 + x2) / 2, y: TOP - 26, "font-size": 11, fill: MUTED, "text-anchor": "middle", "font-weight": 600 }, label));
+    }
+    // Time grid: months always; weeks at month scale.
+    const d0 = new Date(state.from * DAY), d1 = new Date(state.to * DAY);
+    const monthXs = [];
+    for (let m = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), 1)); m <= d1; m.setUTCMonth(m.getUTCMonth() + 1)) {
+      const gx = x(m.getTime() / DAY);
+      if (gx < LEFT || gx > RIGHT) continue;
+      monthXs.push(gx);
+      svg.appendChild(el("line", { x1: gx, y1: TOP, x2: gx, y2: axisBottom, stroke: RULE, "stroke-dasharray": "2 4" }));
+      svg.appendChild(el("text", { x: gx + 4, y: axisBottom + 16, "font-size": 12, fill: MUTED }, m.toLocaleString("en-US", { month: "short", timeZone: "UTC" })));
+    }
+    if (span <= 50) for (const w of weeks) {
+      const gx = x(day(w.date));
+      if (gx < LEFT || gx > RIGHT) continue;
+      svg.appendChild(el("line", { x1: gx, y1: plotBottom, x2: gx, y2: axisBottom, stroke: RULE }));
+      if (monthXs.some((mx) => Math.abs(mx - gx) < 34)) continue; // the month label already names this spot
+      svg.appendChild(el("text", { x: gx + 3, y: axisBottom + 16, "font-size": 10, fill: MUTED }, w.date.slice(5)));
+    }
+
+    // Stats
+    if (hasStats) {
+      const y = (v, peak) => plotBottom - (v / peak) * (plotBottom - plotTop);
+      // One scale per unit among the shown stats: its max is the largest value
+      // any of them reaches in the weeks on screen, so a zoomed view fills the plot.
+      const scale = {};
+      const visible = inView();
+      for (const n of document.querySelectorAll("[data-note]")) { const it = ITEMS.find((x) => x.id === n.dataset.note); if (it) n.textContent = it.note(); }
+      for (const s of STATS) if (state.stats.has(s.id)) {
+        const vals = (visible.length ? visible : weeks).map(s.get).filter((v) => v !== null);
+        // A percentage is always drawn against 100, never against its own peak.
+        scale[s.unit] = s.unit === "%" ? 100 : Math.max(scale[s.unit] || 0, vals.length ? Math.max(...vals) : peakOf(s));
+      }
+      const units = Object.keys(scale);
+      const oneUnit = units.length === 1 ? units[0] : null;
+      for (let i = 0; i <= 4; i++) {
+        const gy = plotTop + ((plotBottom - plotTop) * i) / 4;
+        svg.appendChild(el("line", { x1: LEFT, y1: gy, x2: RIGHT, y2: gy, stroke: RULE }));
+        const label = oneUnit ? fmt(Math.round((scale[oneUnit] * (4 - i)) / 4)) : `${100 - i * 25}%`;
+        svg.appendChild(el("text", { x: LEFT - 6, y: gy + 4, "font-size": 10, fill: MUTED, "text-anchor": "end" }, label));
+      }
+      svg.appendChild(el("text", { x: LEFT - 6, y: plotTop - 8, "font-size": 10, fill: MUTED, "text-anchor": "end" }, oneUnit || (state.scale === "view" ? "% in view" : "% of peak")));
+      // The hover strip: values for a week show only while the pointer is on
+      // this band above the plot, anchored to that week's column.
+      svg.appendChild(el("rect", { x: LEFT, y: plotTop - 18, width: RIGHT - LEFT, height: 14, fill: "transparent", class: "strip" }));
+      for (const w of weeks) {
+        const wx = x(day(w.date));
+        if (wx < LEFT || wx > RIGHT) continue;
+        svg.appendChild(el("rect", { x: wx - 1, y: plotTop - 15, width: 2, height: 8, fill: RULE, rx: 1, class: "strip" }));
+      }
+      const slot = ((RIGHT - LEFT) / span) * 7;
+      const defs = el("defs", {}); const clip = el("clipPath", { id: "plot" });
+      clip.appendChild(el("rect", { x: LEFT, y: plotTop - 2, width: RIGHT - LEFT, height: plotBottom - plotTop + 3 }));
+      defs.appendChild(clip); svg.appendChild(defs);
+      const plot = el("g", { "clip-path": "url(#plot)" }); svg.appendChild(plot);
+      for (const s of STATS) {
+        if (!state.stats.has(s.id)) continue;
+        const peak = scale[s.unit];
+        if (s.bars) {
+          for (const w of weeks) {
+            const bx = x(day(w.date)) - slot + 1;
+            if (bx + slot < LEFT || bx > RIGHT) continue;
+            const v = s.get(w);
+            if (v === null) continue;
+            plot.appendChild(el("rect", { x: bx, y: y(v, peak), width: Math.max(1, slot - 2), height: plotBottom - y(v, peak), fill: s.color, opacity: 0.35, rx: 1 }));
+          }
+        } else {
+          let pen = false;
+          const d = weeks.map((w) => { const v = s.get(w); if (v === null) { pen = false; return ""; } const c = `${pen ? "L" : "M"}${x(day(w.date)).toFixed(1)},${y(v, peak).toFixed(1)}`; pen = true; return c; }).join(" ");
+          plot.appendChild(el("path", { d, fill: "none", stroke: s.color, "stroke-width": 2.5, "stroke-linejoin": "round", "stroke-linecap": "round", ...(s.dash ? { "stroke-dasharray": s.dash } : {}) }));
+        }
+      }
+    }
+
+    // Lanes: central axis, code up, product down.
+    svg.appendChild(el("line", { x1: LEFT, y1: axisY, x2: RIGHT, y2: axisY, stroke: INK, "stroke-width": 1.5 }));
+    const stems = [], labels = [], selectedEls = [], hits = [];
+    const mark = (e, ex, ey, c) => {
+      const sel = state.selected === e.idx, hov = state.hovered === e.idx;
+      const g = el("g", { class: "ev" });
+      if (sel || hov) g.appendChild(el("circle", { cx: ex, cy: ey, r: F * (sel ? 0.9 : 0.75), fill: c, opacity: sel ? 0.25 : 0.15 }));
+      g.appendChild(el("circle", { cx: ex, cy: ey, r: sel ? F * 0.5 : hov ? F * 0.4 : F * 0.28, fill: c, stroke: sel || hov ? "#fff" : "none", "stroke-width": 2 }));
+      const off = F * 0.5 + (sel ? F * 0.2 : 0), w = e.label.length * CHAR + F;
+      g.appendChild(el("text", { x: e.flip ? ex - off : ex + off, y: ey + F * 0.35, "text-anchor": e.flip ? "end" : "start", "font-size": F, fill: INK, "font-weight": sel || hov ? 700 : 400, "paint-order": "stroke", stroke: "#fff", "stroke-width": 5, "stroke-linejoin": "round" }, e.label));
+      hits.push({ idx: e.idx, x: ex, y: ey, x0: e.flip ? ex - w : ex - F, x1: e.flip ? ex + F : ex + w });
+      (sel || hov ? selectedEls : labels).push(g);
+    };
+    for (const e of up) {
+      const ex = x(day(e.date)), ey = axisY - F - e.row * LINE, c = lanes.kinds[e.kind].color;
+      stems.push(el("line", { x1: ex, y1: ey, x2: ex, y2: axisY, stroke: c, "stroke-width": state.selected === e.idx ? 3 : 1.5 }));
+      mark(e, ex, ey, c);
+    }
+    for (const e of down) {
+      const ex = x(day(e.date)), ey = axisY + F + e.row * LINE, c = lanes.kinds[e.kind].color;
+      stems.push(el("line", { x1: ex, y1: axisY, x2: ex, y2: ey, stroke: c, "stroke-width": state.selected === e.idx ? 3 : 1.5 }));
+      mark(e, ex, ey, c);
+    }
+    for (const s of stems) svg.appendChild(s);
+    for (const l of labels) svg.appendChild(l);
+    for (const l of selectedEls) svg.appendChild(l);
+    // Faint stems from the axis up through the stats plot, for key events, so
+    // a stat's bend can be read against what happened then.
+    if (hasStats) for (const e of [...up, ...down]) if (e.key) {
+      svg.appendChild(el("line", { x1: x(day(e.date)), y1: plotTop, x2: x(day(e.date)), y2: plotBottom, stroke: lanes.kinds[e.kind].color, "stroke-width": 1, opacity: 0.25 }));
+    }
+    if (state.chapter !== null) {
+      const sp = spanOf(chapters[state.chapter], currentCard());
+      const x1 = x(day(sp.from)), x2 = x(day(sp.to));
+      if (x1 > LEFT) svg.appendChild(el("rect", { class: "shade", x: LEFT, y: TOP - 40, width: x1 - LEFT, height: axisBottom - TOP + 40 }));
+      if (x2 < RIGHT) svg.appendChild(el("rect", { class: "shade", x: x2, y: TOP - 40, width: RIGHT - x2, height: axisBottom - TOP + 40 }));
+      svg.appendChild(el("line", { x1, y1: TOP - 40, x2: x1, y2: axisBottom, stroke: INK, "stroke-width": 1, opacity: 0.4 }));
+      svg.appendChild(el("line", { x1: x2, y1: TOP - 40, x2, y2: axisBottom, stroke: INK, "stroke-width": 1, opacity: 0.4 }));
+    }
+    geom = { LEFT, RIGHT, x, plotTop, plotBottom, hits, F, strip: hasStats ? [plotTop - 18, plotTop - 4] : null };
+    drawDetail();
+    drawCard();
+    drawSubcard();
+    syncHash();
+    document.getElementById("veil").classList.toggle("on", card.style.display !== "none" || subcard.style.display !== "none");
+    // Hover line (updated on mousemove)
+    svg.appendChild(el("line", { id: "hover", x1: 0, y1: plotTop, x2: 0, y2: axisBottom, stroke: INK, "stroke-width": 1, opacity: 0 }));
+  }
+
+  // ---- event hover, selection, detail panel
+  const detail = document.getElementById("detail");
+  const kindName = (k) => k === "product" ? "feature" : k;
+  // Generous hit testing: anywhere over an event's label row, or within a
+  // radius of its dot, counts; the nearest wins.
+  function hitTest(px, py) {
+    if (!geom) return null;
+    let best = null, bestD = Infinity;
+    const F = geom.F;
+    for (const h of geom.hits) {
+      const inLabel = px >= h.x0 && px <= h.x1 && Math.abs(py - h.y) <= F * 0.9;
+      const d = inLabel ? Math.abs(py - h.y) : Math.hypot(px - h.x, py - h.y);
+      if ((inLabel || d <= 36) && d < bestD) { best = h.idx; bestD = d; }
+    }
+    return best;
+  }
+  const shownEvents = () => lanes.events.filter((e) => state.kinds.has(e.kind) && (state.layer === "all" || e.key)).sort((a, b) => day(a.date) - day(b.date) || a.idx - b.idx);
+  function select(idx) {
+    state.selected = idx;
+    if (idx !== null) state.hovered = null;
+    if (idx !== null) {
+      const d = day(lanes.events[idx].date);
+      if (d < state.from || d > state.to) { const span = state.to - state.from; setRange(d - span / 2, d + span / 2); }
+    }
+    draw();
+  }
+  function step(dir) {
+    const list = shownEvents();
+    if (list.length === 0) return;
+    if (state.selected === null) { select(list[dir > 0 ? 0 : list.length - 1].idx); return; }
+    const i = list.findIndex((e) => e.idx === state.selected);
+    const next = list[Math.max(0, Math.min(list.length - 1, (i < 0 ? 0 : i) + dir))];
+    select(next.idx);
+  }
+  function drawDetail() {
+    const show = state.selected;
+    if (show === null || !geom || !isGraph()) { detail.style.display = "none"; return; }
+    const e = lanes.events[show];
+    const pinned = true;
+    detail.style.borderColor = lanes.kinds[e.kind].color;
+    const ex = geom.x(day(e.date));
+    const mid = (geom.LEFT + geom.RIGHT) / 2;
+    const w = (geom.RIGHT - geom.LEFT) / 2 - 12;
+    detail.style.left = `${ex < mid ? mid + 12 : geom.LEFT}px`;
+    detail.style.top = `${geom.plotTop}px`;
+    detail.style.width = `${w}px`;
+    // The panel covers the far half of the stats plot; when that plot is
+    // short it extends down over the lanes instead of cramping the text.
+    detail.style.height = `${Math.max(geom.plotBottom - geom.plotTop, 230)}px`;
+    let w0 = weeks[0];
+    for (const c of weeks) if (day(c.date) <= day(e.date) + 6) w0 = c;
+    const i0 = weeks.indexOf(w0);
+    const prev = weeks[Math.max(0, i0 - 4)];
+    const rows = [];
+    for (const s of STATS) if (state.stats.has(s.id)) {
+      const v = s.get(w0), p = s.get(prev);
+      rows.push(`<span style="color:${s.color}">●</span> ${s.name}: <b>${fmt(v)}</b>${w0 !== prev ? ` <span>(${v >= p ? "+" : ""}${fmt(v - p)} over the prior four weeks)</span>` : ""}`);
+    }
+    const list = shownEvents();
+    const i = list.findIndex((x) => x.idx === e.idx);
+    detail.innerHTML = `<button class="close" title="close (Esc)">×</button><div class="kind" style="color:${lanes.kinds[e.kind].color}">${kindName(e.kind)}</div><h2>${e.label}</h2><div class="date">${e.date}</div><div>${e.detail || "<span style='color:#6b7280'>No detail written yet.</span>"}</div>${rows.length ? `<div class="stats">That week: ${rows.join(" · ")}</div>` : ""}<div class="nav">${e.show && e.show.length ? `<button class="showme">show me</button> (s) · ` : ""}${i + 1} of ${list.length} shown · ↑ ↓ to step · Esc closes</div>`;
+    detail.querySelector(".close").onclick = () => select(null);
+    const sm = detail.querySelector(".showme");
+    if (sm) sm.onclick = (ev) => { ev.stopPropagation(); showMe({ stats: e.show }); };
+    detail.style.display = "block";
+  }
+  stage.addEventListener("click", (ev) => {
+    if (moved || (ev.target.closest && (ev.target.closest("#detail") || ev.target.closest("#card") || ev.target.closest("#subcard")))) return;
+    const r = stage.getBoundingClientRect();
+    const hit = hitTest(ev.clientX - r.left, ev.clientY - r.top);
+    select(hit !== null && hit !== state.selected ? hit : null);
+  });
+
+  // ---- interaction
+  let drag = null;
+  let moved = false;
+  stage.addEventListener("pointerdown", (e) => { if (e.target.closest && (e.target.closest("#detail") || e.target.closest("#card") || e.target.closest("#subcard"))) return; moved = false; drag = { x: e.clientX, from: state.from, to: state.to }; stage.classList.add("dragging"); stage.setPointerCapture(e.pointerId); });
+  stage.addEventListener("pointermove", (e) => {
+    if (drag) {
+      if (Math.abs(e.clientX - drag.x) > 3) moved = true;
+      if (!moved) return;
+      const dx = (e.clientX - drag.x) / (geom.RIGHT - geom.LEFT) * (drag.to - drag.from);
+      setRange(drag.from - dx, drag.to - dx); draw(); return;
+    }
+    if (!geom) return;
+    const rb = stage.getBoundingClientRect();
+    const overPanel = e.target.closest && e.target.closest("#detail");
+    const hit = overPanel ? state.hovered : hitTest(e.clientX - rb.left, e.clientY - rb.top);
+    if (hit !== state.hovered) { state.hovered = hit; draw(); }
+    if (hit !== null) { tip.style.display = "none"; document.getElementById("hover").setAttribute("opacity", 0); return; }
+    const px = e.clientX - rb.left, py = e.clientY - rb.top;
+    const d = state.from + ((px - geom.LEFT) / (geom.RIGHT - geom.LEFT)) * (state.to - state.from);
+    const hover = document.getElementById("hover");
+    const onStrip = geom.strip && py >= geom.strip[0] && py <= geom.strip[1] + 2;
+    if (!onStrip || px < geom.LEFT || px > geom.RIGHT) { hover.setAttribute("opacity", 0); tip.style.display = "none"; return; }
+    let w = weeks[0];
+    for (const c of weeks) if (day(c.date) <= d) w = c;
+    const wx = geom.x(day(w.date));
+    hover.setAttribute("x1", wx); hover.setAttribute("x2", wx); hover.setAttribute("opacity", 0.5);
+    const rows = [`<b>week of ${w.date}</b>`];
+    for (const s of STATS) if (state.stats.has(s.id)) rows.push(`<span style="color:${s.color}">●</span> ${s.name}: <b>${s.get(w) === null ? "no transcripts kept" : fmt(s.get(w))}</b>`);
+    const near = lanes.events.filter((ev) => state.kinds.has(ev.kind) && Math.abs(day(ev.date) - day(w.date)) < 7 && day(ev.date) >= day(w.date) - 7);
+    for (const ev of near) rows.push(`<span style="color:${lanes.kinds[ev.kind].color}">●</span> ${ev.date.slice(5)} ${ev.label}`);
+    tip.innerHTML = rows.join("<br>");
+    tip.style.display = "block";
+    // Anchored to the week's column, just under the strip, not to the pointer.
+    const tw = tip.offsetWidth;
+    tip.style.left = `${wx + 10 + tw > stage.clientWidth ? wx - tw - 10 : wx + 10}px`;
+    tip.style.top = `${geom.plotTop + 4}px`;
+  });
+  stage.addEventListener("pointerup", () => { drag = null; stage.classList.remove("dragging"); });
+  stage.addEventListener("pointerleave", () => { tip.style.display = "none"; if (state.hovered !== null) { state.hovered = null; draw(); } });
+  // Horizontal wheel or trackpad swipe pans; vertical wheel does nothing, so
+  // a pan cannot turn into a zoom by accident. Zoom is buttons and keys.
+  stage.addEventListener("wheel", (e) => {
+    if (!geom || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    const dx = (e.deltaX / (geom.RIGHT - geom.LEFT)) * (state.to - state.from);
+    setRange(state.from + dx, state.to + dx);
+    draw();
+  }, { passive: false });
+  const zoom = (k) => { const mid = (state.from + state.to) / 2, half = ((state.to - state.from) / 2) * k; setRange(mid - half, mid + half); draw(); };
+  const pan = (frac) => { const dx = (state.to - state.from) * frac; setRange(state.from + dx, state.to + dx); draw(); };
+  document.getElementById("zin").onclick = () => zoom(1 / 1.5);
+  document.getElementById("zout").onclick = () => zoom(1.5);
+  window.addEventListener("keydown", (e) => {
+    if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) { if (e.key !== "Escape") return; e.target.blur(); }
+    // Cards step like slides; panning the timeline is by mouse drag only.
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === " " || e.key === "PageDown" || e.key === "PageUp") {
+      e.preventDefault();
+      stepCard(e.key === "ArrowLeft" || e.key === "PageUp" ? -1 : 1);
+      return;
+    }
+    if (e.key === "Tab") { e.preventDefault(); toggleOverview(); return; }
+    if (e.key === "Escape" && overviewEl.classList.contains("on")) { toggleOverview(false); return; }
+    if (e.key === "t") toggleAside();
+    else if (e.key === "[") stepChapter(-1);
+    else if (e.key === "]") stepChapter(1);
+    else if (/^[1-9]$/.test(e.key) && state.chapter !== null) setCard(Number(e.key) - 1);
+    else if (e.key === "0" && state.chapter !== null) setCard(1); // 0: the chapter card
+    else if (e.key === "+" || e.key === "=") zoom(1 / 1.5);
+    else if (e.key === "-") zoom(1.5);
+    else if (e.key === "ArrowDown" && isGraph()) { step(1); e.preventDefault(); }
+    else if (e.key === "ArrowUp" && isGraph()) { step(-1); e.preventDefault(); }
+    else if (e.key === "Escape") { if (state.selected !== null) select(null); }
+  });
+  window.addEventListener("resize", draw);
+  // The chapter and card live in the URL hash, so a reload or a shared link
+  // lands on the same card. No hash means chapter 1; #explore is the bare timeline.
+  let hashRead = false; // the first draw must not write over a hash we have not read yet
+  function syncHash() {
+    if (!hashRead) return;
+    const next = state.chapter === null ? "#explore" : `#chapter=${state.chapter + 1}&card=${state.card + 1}`;
+    if (next !== location.hash) history.replaceState(null, "", `${location.pathname}${location.search}${next}`);
+  }
+  function applyHash() {
+    hashRead = true;
+    if (location.hash === "#explore") { if (state.chapter !== null) { state.back = { chapter: state.chapter, card: state.card }; setChapter(null); } else syncHash(); return; }
+    const q = new URLSearchParams(location.hash.slice(1));
+    const ch = Number(q.get("chapter")), cd = Number(q.get("card")), ex = Number(q.get("exhibit")); // exhibit= is the old form: exhibit n is card n+1
+    const i = ch >= 1 && ch <= chapters.length ? ch - 1 : 0;
+    const which = ex >= 1 ? ex + 1 : cd >= 1 ? cd - 1 : 0;
+    if (state.chapter === i) setCard(which); else setChapter(i, { card: which });
+  }
+  draw();
+  applyHash();
+  window.addEventListener("hashchange", applyHash);
+})();
+</script>
+</body>
+</html>

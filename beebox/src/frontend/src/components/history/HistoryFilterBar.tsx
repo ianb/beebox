@@ -111,7 +111,7 @@ export function HistoryFilterBar({ filter, facets, onChange, idPrefix }: History
             id={`${idPrefix}-clear`}
             type="button"
             onClick={clearAll}
-            className="text-[11px] text-warm-500 hover:text-warm-700 underline ml-auto"
+            className="text-[11px] text-warm-700 hover:text-warm-900 underline ml-auto"
           >
             Clear
           </button>
@@ -217,12 +217,12 @@ function MultiSelectPopover({ id, label, options, groupOrder, selected, onToggle
       {open ? (
         <div className="absolute left-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-warm-200 py-1 z-50 w-60 max-h-72 overflow-auto">
           {options.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-warm-500 italic">No values</div>
+            <div className="px-3 py-2 text-xs text-warm-700 italic">No values</div>
           ) : (
             sections.map((section) => (
               <div key={section.heading ?? ""}>
                 {section.heading === null ? null : (
-                  <div className="px-3 pt-1.5 pb-0.5 text-[10px] uppercase tracking-wide text-warm-500">
+                  <div className="px-3 pt-1.5 pb-0.5 text-[10px] uppercase tracking-wide text-warm-700">
                     {section.heading}
                   </div>
                 )}
@@ -261,7 +261,7 @@ function ToggleChip({ id, label, checked, onChange }: ToggleChipProps) {
   return (
     <span className="inline-flex items-center gap-1.5">
       <Toggle id={id} checked={checked} onChange={onChange} label={label} />
-      <span className={cn("text-xs", checked ? "text-warm-800 font-medium" : "text-warm-600")}>
+      <span className={cn("text-xs", checked ? "text-warm-800 font-medium" : "text-warm-700")}>
         {label}
       </span>
     </span>

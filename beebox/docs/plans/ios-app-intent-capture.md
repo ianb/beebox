@@ -7,6 +7,8 @@ issues:
 ---
 # iOS quick capture: Siri, voice, and sharing with context
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan gives a person fast ways to get words and material into a predictable box. Siri thoughts, voice notes, and shares with instructions use one durable acceptance and recovery path, followed by processing when appropriate.
 
 **Issues addressed:** [Siri capture failure](../../../issues/bugs/2026-08-08-ios-siri-app-intent-capture.md). This implements the iOS portion of [quick-drop entry points](../../../issues/features/2026-09-25-quick-drop-entry-points.md); that umbrella remains open for other platforms and broader routing design. [Incomplete shared webpages](../../../issues/bugs/2026-09-21-share-sheet-webpage-stub-never-completed.md) remains separate: preserving a URL is not claiming its page was downloaded.
@@ -273,7 +275,7 @@ Doctests cover acceptance completeness, conflict/replay, worker resume, role fra
 
 ## Rollout shape
 
-Tests first during implementation: new `test/webapp/routes/quick-capture.doctest.md` for all declared bytes and owner replay; `test/core/quick-capture/acceptance.doctest.md` for seal/source crash recovery; `test/core/quick-capture/worker.context.doctest.md` for original-ID ordering and moves/deletion; `test/core/quick-capture/worker.dispatch.doctest.md` for save-only and material framing. Extend existing quick-chat submit tests for referenced capture dispatch/choice/expiry and existing media writer tests for reuse. Add `QuickCaptureStoreTests`, `CaptureDestinationTests`, `VoiceNoteCoordinatorTests`; update shared mobile fixtures. Exact filenames may follow repository module ownership; cases and boundaries are required.
+Tests first during implementation: new `test/webapp/routes/quick-capture.test.ts` for all declared bytes and owner replay; `test/core/quick-capture/acceptance.test.ts` for seal/source crash recovery; `test/core/quick-capture/worker.context.test.ts` for original-ID ordering and moves/deletion; `test/core/quick-capture/worker.dispatch.test.ts` for save-only and material framing. Extend existing quick-chat submit tests for referenced capture dispatch/choice/expiry and existing media writer tests for reuse. Add `QuickCaptureStoreTests`, `CaptureDestinationTests`, `VoiceNoteCoordinatorTests`; update shared mobile fixtures. Exact filenames may follow repository module ownership; cases and boundaries are required.
 
 Add capability negotiation for version 1 before clients switch. Keep old quick-chat and share APIs; do not reinterpret historic data. New optional memo fields need no rewrite of legacy cards. Implement new native manifest version independently from old outbox. Do not change old native composer emission or capture staging meaning. If existing cards' meaning needs change, apply bbx-migration and revise this plan first.
 

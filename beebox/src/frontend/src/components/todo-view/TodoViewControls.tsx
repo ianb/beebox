@@ -1,7 +1,7 @@
 /**
  * `TodoViewCard`'s view-state shape and the small controls/headline pieces
  * that read it — split out to keep `TodoViewCard.tsx` under the file-size
- * budget (`docs/plans/todo-collection.md`, Track 4; the headline is Track 1).
+ * budget (`docs/implemented-plans/todo-collection.md`, Track 4; the headline is Track 1).
  */
 
 import { Card } from "../ui/Card";
@@ -13,7 +13,7 @@ import { TabBar } from "../ui/TabBar";
 import { plateHeadline, scopeLineText, type TodoResult } from "../todo-view-card-logic";
 import type { RendererProps } from "../../file-type-registry";
 
-export type Grouping = "place" | "plate";
+export type Grouping = "place" | "status";
 /**
  * Which slice of `assigned` this render is showing. `boxholder` is the
  * default every card with no `assigned` field starts on; `agent` is what "K
@@ -32,7 +32,7 @@ export interface ViewOptions {
 export function optionsFrom(viewState: RendererProps["viewState"]): ViewOptions {
   const view = viewState ?? {};
   return {
-    group: view["group"] === "plate" ? "plate" : "place",
+    group: view["group"] === "status" ? "status" : "place",
     showFinished: view["showFinished"] === true,
     assignedView: view["assignedView"] === "agent" ? "agent" : "boxholder",
   };
@@ -76,7 +76,7 @@ export function Controls({ options, onChange }: { options: ViewOptions; onChange
         onChange={(group: Grouping) => onChange({ group })}
         tabs={[
           { value: "place", label: "By place" },
-          { value: "plate", label: "By date" },
+          { value: "status", label: "By status" },
         ]}
       />
     </Row>
@@ -84,11 +84,12 @@ export function Controls({ options, onChange }: { options: ViewOptions; onChange
 }
 
 /**
- * "15 on your plate · 4 later · 3 for the agent" — the reduction's own
- * numbers, so the first one is the nav badge's number by construction. "for
+ * "15 now · 4 later · 3 for the agent" — the reduction's own
+ * numbers, so the first one is the nav badge's number by construction. "later"
+ * is left out at zero: "0 later" only raised "later than what?". "for
  * the agent" toggles `assignedView` in place, in the URL like every other
  * view control; while viewing the agent's own slice the headline names that
- * and offers the way back, rather than showing plate numbers that would no
+ * and offers the way back, rather than showing now/later numbers that would no
  * longer describe what the list below is showing.
  */
 export function PlateHeadline({ result, agentCount, viewingAgent, onChange }: {
@@ -101,8 +102,8 @@ export function PlateHeadline({ result, agentCount, viewingAgent, onChange }: {
     return (
       <Row gap="xs" wrap align="baseline">
         <Text material as="span" weight="semibold">Agent follow-ups</Text>
-        <InlineAction material id="bbx-todo-view-back-to-plate" intent="subtle" onClick={() => onChange({ assignedView: "boxholder" })}>
-          back to your plate
+        <InlineAction material id="bbx-todo-view-back-to-todos" intent="subtle" onClick={() => onChange({ assignedView: "boxholder" })}>
+          back to your todos
         </InlineAction>
       </Row>
     );
@@ -110,8 +111,8 @@ export function PlateHeadline({ result, agentCount, viewingAgent, onChange }: {
   const { onPlate, later } = plateHeadline(result.reduction);
   return (
     <Row gap="xs" wrap align="baseline">
-      <Text material as="span" weight="semibold">{onPlate} on your plate</Text>
-      <Text material as="span" tone="muted">· {later} later</Text>
+      <Text material as="span" weight="semibold">{onPlate} now</Text>
+      {later > 0 ? <Text material as="span" tone="muted">· {later} later</Text> : null}
       {agentCount > 0 ? (
         <InlineAction material id="bbx-todo-view-for-the-agent" intent="subtle" onClick={() => onChange({ assignedView: "agent" })}>
           · {agentCount} for the agent

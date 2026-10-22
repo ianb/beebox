@@ -1,5 +1,5 @@
 /**
- * The `PlacePill`'s folder ("here") menu, reduced form (docs/plans/top-nav-ia.md
+ * The `PlacePill`'s folder ("here") menu, reduced form (docs/implemented-plans/top-nav-ia.md
  * Track C1, docs/plans/box-screen.md track 3): "Open <dir>/", "Search", and
  * the landmark's curated links and groups, rendered as plain navigations to
  * the card route. The landmark card itself is not a row: the agent edits it,
@@ -86,7 +86,7 @@ function HereGroupRows({ group, boxSlug }: { group: HereGroup; boxSlug: string }
       >
         <GroupChevron open={open} />
         <span className="truncate font-medium">{group.label}</span>
-        <span className="text-xs text-warm-500 shrink-0 ml-auto">{group.count}</span>
+        <span className="text-xs text-warm-700 shrink-0 ml-auto">{group.count}</span>
       </button>
       {open ? (
         <div className="border-l border-warm-200 ml-5">
@@ -94,7 +94,7 @@ function HereGroupRows({ group, boxSlug }: { group: HereGroup; boxSlug: string }
             <HereLinkRow key={link.ref} link={link} boxSlug={boxSlug} />
           ))}
           {overflow > 0 ? (
-            <div className="px-3 py-2 text-xs text-warm-500">+{overflow} more</div>
+            <div className="px-3 py-2 text-xs text-warm-700">+{overflow} more</div>
           ) : null}
         </div>
       ) : null}

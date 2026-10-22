@@ -5,7 +5,7 @@
 // Duplicated from the server's file-index.ts rather than imported: the frontend
 // and server tsconfigs are separate graphs, and the resident-app precedent is to
 // share patterns, not source (src/server/exhibits/store.ts:9-12). The behaviour
-// is pinned by a doctest on the server copy; if the two ever disagree, that test
+// is pinned by a test on the server copy; if the two ever disagree, that test
 // is what says so.
 
 import type { DocumentKind } from "../../shared/documents.js";

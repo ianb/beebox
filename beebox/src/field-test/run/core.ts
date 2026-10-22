@@ -1,5 +1,5 @@
 /**
- * `runFieldScenario` — one whole field run (`docs/plans/agent-field-tests.md`,
+ * `runFieldScenario` — one whole field run (`docs/implemented-plans/agent-field-tests.md`,
  * Track 2, the activity loop).
  *
  * Everything a run owns is created here and torn down here: the run directory,
@@ -67,7 +67,7 @@ export interface RunFieldScenarioOptions {
   runsRoot?: string | undefined;
   /** Run directory name. Defaults to `<scenario>-<timestamp>`. */
   runDirName?: string | undefined;
-  /** Chat backend for the operator. Defaults to the real SDK one; doctests
+  /** Chat backend for the operator. Defaults to the real SDK one; tests
    *  pass the fake, which is the whole reason this is injectable. */
   backend?: ChatBackend | undefined;
   browseCommand?: string | undefined;
@@ -192,7 +192,7 @@ export async function runFieldScenario(options: RunFieldScenarioOptions): Promis
   // The run's simulated clock. It is passed explicitly everywhere it matters
   // (`BBX_TIME` for children, `now` for an email fixture's arrival date) rather
   // than set on this process's environment — a harness that mutated its own
-  // `BBX_TIME` would reach into anything else sharing the process, doctests
+  // `BBX_TIME` would reach into anything else sharing the process, tests
   // included.
   const state: { boxTime: Date; server: FieldServer } = {
     boxTime: new Date(scenario.startTime),

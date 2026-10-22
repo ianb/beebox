@@ -6,6 +6,8 @@ issues: []
 ---
 # iOS Companion — code review (2026-07-09)
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 **Superseded:** follow-up review at `ios-companion-review-2026-07-17.md` (2026-07-17) — most iOS findings closed by the composer redesign; server findings S1–S3 still open there.
 
 **Reviewer:** Claude (Fable), with three Opus sub-reviewers (iOS Swift, server auth, native-emission bridge). Spot-checked the load-bearing findings against the code directly.

@@ -40,6 +40,10 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "PATH",
   "HOME",
   "USERPROFILE", // Windows HOME equivalent -- src/core/box.ts's homeDir fallback.
+  // macOS Claude Code finds its login in the keychain under the account named by
+  // $USER; without it, it looks under "unknown" and every chat run fails its auth
+  // preflight (clerk-quick-send, 2026-10-15). An OS basic, not a credential.
+  "USER",
   "TMPDIR",
   "TEMP",
   "TMP",
@@ -96,7 +100,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
  * `sourceEnv` (normally the hub's own `process.env`), plus `hubExtras`
  * (currently just `BBX_HUB_SECRET`)
  * layered on top. Pure and exported so it can be pinning-tested directly
- * without spawning anything real -- see `test/hub/supervisor.doctest.md`.
+ * without spawning anything real -- see `test/hub/supervisor.test.ts`.
  */
 export function buildChildEnv(params: {
   sourceEnv: NodeJS.ProcessEnv;

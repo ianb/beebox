@@ -1,6 +1,6 @@
 /**
  * TodoViewCard — card renderer for `todo-view` cards
- * (`docs/plans/todo-collection.md`, Track 4).
+ * (`docs/implemented-plans/todo-collection.md`, Track 4).
  *
  * A `todo-view` card is a live query, not authored content: its own directory
  * is the query's `here`, its frontmatter supplies `glob`/`todo-status`/`assigned`,
@@ -16,7 +16,7 @@
  *
  * `place` is the default because in a working box almost nothing is dated:
  * the heading a todo sits under and the todo it nests beneath are what make
- * it mean anything. `plate` is there for the days when dates are the question.
+ * it mean anything. `status` is there for the days when dates are the question.
  */
 
 import { useCallback } from "react";
@@ -90,8 +90,8 @@ function TodoViewBody({ data, result, agentCount, viewingAgent, options, onChang
           {result.groups.map((group) => (
             <Stack key={group.key} gap="sm">
               {/* `place` is a single group whose label would only repeat the
-                  control above it; `plate` names a real distinction. */}
-              {options.group === "plate" ? (
+                  control above it; `status` names a real distinction. */}
+              {options.group === "status" ? (
                 <Text material size="xs" tone="muted" uppercase weight="semibold">
                   {group.label} ({group.reduction.open + group.reduction.parked + group.reduction.done + group.reduction.dropped})
                 </Text>

@@ -4,5 +4,10 @@
 <dict>
 	<key>com.apple.security.virtualization</key>
 	<true/>
+	<!-- Photos album export. Under the hardened runtime (every Developer ID
+	     build) a Photos request without this is denied with no prompt, and the
+	     app never appears in System Settings → Privacy & Security → Photos. -->
+	<key>com.apple.security.personal-information.photos-library</key>
+	<true/>
 </dict>
 </plist>

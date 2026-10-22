@@ -134,8 +134,8 @@ function BarChromeRegion(props: ChatBodyProps) {
 function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
-    debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, sendSignal, liveTurnId,
-    captureBubbles, captureVerbs, audioOverlayStore, openers,
+    debugView, currentUserEmail, currentUserName, snapshot, totalEntries, loadingOlder, sendSignal, captureSignal, liveTurnId,
+    captureBubbles, captureVerbs, audioOverlayStore, openers, openQuestion, onFocusComposer, onQuestionNotNow, onOpenQuestions,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHq, sendHqLive } = voice;
@@ -162,6 +162,7 @@ function MessageListRegion(props: ChatBodyProps) {
       onLoadOlder={handleLoadOlder}
       loadingOlder={loadingOlder}
       sendSignal={sendSignal}
+      captureSignal={captureSignal}
       liveTurnId={liveTurnId}
       proseEnabled={model.chatFeatures.prose !== "off"}
       pendingHq={pendingHq}
@@ -171,6 +172,10 @@ function MessageListRegion(props: ChatBodyProps) {
       audioOverlayStore={audioOverlayStore}
       openers={openers}
       onSendOpener={actions.handleSendOpener}
+      openQuestion={openQuestion}
+      onFocusComposer={onFocusComposer}
+      onQuestionNotNow={onQuestionNotNow}
+      onOpenQuestions={onOpenQuestions}
       />
     </ChatRenderProfiler>
   );
@@ -213,6 +218,7 @@ function ComposerRegion(props: ChatBodyProps) {
       inputArea={
         <ChatInputArea
           hideMobile={typingMode}
+          placeholder={props.openQuestion?.prompt}
           textareaRef={textareaRef}
           isTranscribing={isTranscribing}
           transcription={transcription}
@@ -240,6 +246,7 @@ function ComposerRegion(props: ChatBodyProps) {
       }
       mobileRow={
         <MobileTextareaRow
+          placeholder={props.openQuestion?.prompt}
           isTranscribing={isTranscribing}
           transcription={transcription}
           targetBusy={targetBusy}
@@ -270,11 +277,15 @@ function usePlaceChat(props: ChatBodyProps): PlaceChat {
   return useMemo(() => ({ contextDir, showsOwnOpeners, busy, sendOpener }), [contextDir, showsOwnOpeners, busy, sendOpener]);
 }
 
+/** The live reply stopped arriving while the box is still working on it. */
+const REPLY_LOST_WARNING = "Lost the live reply. It will appear here when the box finishes.";
+
 export function InteractiveChatBody(props: ChatBodyProps) {
   const { voice, selections, schedules, error, pendingCount, showAgentWorking, actions, showDebugLog, setShowDebugLog, send, nativeComposer } = props;
   const { handleAddSelection, nativeCommandError, dismissNativeCommandError } = useCompanionSelection({ nativeComposer, selections, voice });
   const placeChat = usePlaceChat(props);
   const cancelArrival = useWorkspace()?.cancelArrival;
+  const transcriptionIsError = voice.transcription.errorLevel === "error";
   return (
     <ChatRenderProfiler id="chat-root">
       <ChatView
@@ -282,7 +293,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
       ambientRegion={props.ambientRegion} selectionNotice={props.selectionNotice} failedRegion={props.failedRegion}
       // Native input replaces only the composer; landmark and settings menus remain web-owned.
       barChrome={<BarChromeRegion {...props} />}
-      workspace={<PlaceChatContext.Provider value={placeChat}><WorkspaceCanvas onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
+      workspace={<PlaceChatContext.Provider value={placeChat}><WorkspaceCanvas turnActive={props.isStreaming} turnTools={props.streamTools} onAddSelection={handleAddSelection} reportActivity={props.reportCardActivity}>
         <MessageListRegion key={props.conversationKey} {...props} />
       </WorkspaceCanvas></PlaceChatContext.Provider>}
       statusBanners={
@@ -290,15 +301,16 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           <BackgroundTasks tasks={props.backgroundTasks} />
           <ScreenshotRequestUI controller={props.screenshots} />
           <ChatStatusBanners
-            error={nativeCommandError ?? error}
-            transcriptionError={voice.transcription.error}
+            error={nativeCommandError ?? error ?? (transcriptionIsError ? voice.transcription.error : null)}
+            warning={props.replyLost ? REPLY_LOST_WARNING : transcriptionIsError ? null : voice.transcription.error}
+            // Dismiss only the source shown (same precedence as above), so a
+            // hidden message surfaces next.
             onDismissError={() => {
-              if (nativeCommandError !== null) {
-                dismissNativeCommandError();
-              } else {
-                send({ type: "DISMISS_ERROR" });
-                voice.transcription.dismissError();
-              }
+              if (nativeCommandError !== null) dismissNativeCommandError();
+              else if (error) send({ type: "DISMISS_ERROR" });
+              else if (transcriptionIsError && voice.transcription.error) voice.transcription.dismissError();
+              else if (props.replyLost) send({ type: "DISMISS_ERROR" });
+              else voice.transcription.dismissError();
             }}
             activeSchedules={schedules.activeSchedules}
             onCancelSchedule={schedules.handleCancelSchedule}

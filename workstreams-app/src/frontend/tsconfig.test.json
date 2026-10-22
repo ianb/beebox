@@ -1,0 +1,6 @@
+{
+  // The frontend program plus its tap tests under test/frontend/, typed as
+  // frontend code. tsconfig.json stays the app's own config for Vite.
+  "extends": "./tsconfig.json",
+  "include": ["./**/*", "../shared/**/*", "../server/api/router.ts", "../server/api/trpc.ts", "../server/services.ts", "../../test/frontend/**/*"]
+}

@@ -6,6 +6,8 @@ issues: []
 ---
 # Serve box publications from one shared hostname
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 When a box publishes several sites, it should serve them as paths on one Admin-configured hostname. The shared Worker uses the box's existing publishing connection and content bucket. New publications keep member approval, and existing per-publication Workers and URLs continue to work.
 
 **Issues addressed:** none found in `issues/` for shared-host publication routing. This supersedes the [per-publication custom-domain plan](../unimplemented-plans/publish-custom-domain-admin.md); existing Worker bindings and URL compatibility remain, but its setup UI/API are removed. No live Cloudflare hostname or DNS changes are part of this work.

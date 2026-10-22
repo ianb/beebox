@@ -17,7 +17,7 @@ conversation." screen. The list was not shown. The panels they had open
 earlier were gone. The D-chemistry walk saw the same: "the left panels were
 gone in the new chat". Reports:
 [A-lending](../../../beebox/test/user-stories/journeys/A-lending/reports/2026-10-08.md) (row 63),
-[D-chemistry](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md) (row 71).
+[D-chemistry](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md) (row 71).
 
 ## Mechanism
 

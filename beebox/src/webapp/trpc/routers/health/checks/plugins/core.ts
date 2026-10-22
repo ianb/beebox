@@ -37,7 +37,7 @@ import { legacyExpositionRulesChecks } from "./legacy-exposition-rules.js";
 import { scanStubImports, stubImportChecks } from "./stubs.js";
 
 export interface PluginHealthOptions {
-  /** The installed plugins; defaults to the registry. A doctest seam for fixture plugins. */
+  /** The installed plugins; defaults to the registry. A test seam for fixture plugins. */
   readonly plugins?: ReadonlyArray<PluginDefinition> | undefined;
 }
 

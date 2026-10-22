@@ -25,9 +25,10 @@ one is cheap.
 ## Make the change
 
 Read the relevant code and existing tests before writing new code; this
-codebase has conventions that differ from generic defaults. Doctests are the
-primary test format: markdown files whose code blocks run as executable
-examples. See [the testing guide](beebox/docs/testing.md) for the tiers and syntax. The lint
+codebase has conventions that differ from generic defaults. Tests are
+`.test.ts` files that compare whole values with `t.check`. See [the testing
+guide](beebox/docs/testing.md) for the tiers and
+[testing with t.check](beebox/docs/testing/check.md) for the syntax. The lint
 preset is strict on purpose, and rules are never disabled to make code pass;
 fix the code instead.
 
@@ -53,7 +54,7 @@ the same change.
 - `src/webapp/`: the Fastify server and tRPC routers
 - `src/frontend/`: the React UI
 - `src/schemas/`: card type definitions
-- `test/`: doctests, mirroring `src/` paths
+- `test/`: tests, mirroring `src/` paths
 - `deploy/`: server provisioning and deployment scripts
 
 See [the module map](beebox/docs/module-map.md) for the fuller `lib`/`shared`/`types`

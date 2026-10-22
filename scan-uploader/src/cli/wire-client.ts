@@ -100,7 +100,7 @@ export async function checkHashes(
   return { states, contractVersion: parseContractVersion(body.contractVersion) };
 }
 
-/** Exported for the doctest: a box answering with a non-number is a case worth
+/** Exported for the test: a box answering with a non-number is a case worth
  * asserting directly, and faking it over real HTTP would mean lying about the
  * fake's own typed contract.
  *

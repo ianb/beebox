@@ -5,7 +5,7 @@
  *
  * Split out of bin/smoke.ts for size; behaviour is unchanged.
  *
- * See issues/exploration/2026-08-26-merge-time-smoke-tier.md.
+ * See issues/closed/exploration/2026-08-26-merge-time-smoke-tier.md.
  */
 
 import { appendFileSync, readFileSync } from "node:fs";
@@ -15,6 +15,7 @@ import { homedir } from "node:os";
 import { parseEnv } from "node:util";
 import { request as httpRequest } from "node:http";
 import { invariant } from "../beebox/src/shared/invariant.js";
+import { LANDMARK_CONTENT_DIR } from "../beebox/src/core/landmark/root-dir.js";
 import {
   BudgetExhaustedError,
   MissingBoxSlugError,
@@ -35,7 +36,9 @@ import {
 } from "./smoke-probe.js";
 import {
   formatSmokeReport,
+  mergeSmokeLogs,
   smokeLogPath,
+  smokeLogReadPaths,
   summarizeSmokeLog,
   type SmokeRunRecord,
   type SmokeSummary,
@@ -88,12 +91,12 @@ export function faultInjection(): string | null {
   return reason === undefined || reason.trim() === "" ? null : reason.trim();
 }
 
-function logPath(): string {
+function gitCommonDir(): string {
   const common = git(["rev-parse", "--git-common-dir"]);
   // A path relative to the checkout is what `--git-common-dir` returns in the
   // main checkout (a bare `.git`); resolve it so every worktree appends to the
   // same file rather than to one of its own.
-  return smokeLogPath(common.startsWith("/") ? common : join(REPO_ROOT, common));
+  return common.startsWith("/") ? common : join(REPO_ROOT, common);
 }
 
 /**
@@ -105,7 +108,7 @@ function logPath(): string {
  */
 export function record(entry: SmokeRunRecord): void {
   try {
-    appendFileSync(logPath(), `${JSON.stringify(entry)}\n`);
+    appendFileSync(smokeLogPath(gitCommonDir()), `${JSON.stringify(entry)}\n`);
   } catch (e) {
     process.stdout.write(
       `smoke: could not append to the run log (${e instanceof Error ? e.message : String(e)})\n`,
@@ -114,13 +117,16 @@ export function record(entry: SmokeRunRecord): void {
 }
 
 function logSummary(): SmokeSummary {
-  let lines: string[] = [];
-  try {
-    lines = readFileSync(logPath(), "utf-8").split("\n");
-  } catch (_e) {
-    // No log yet is a legitimate state, and summarize says so.
-  }
-  return summarizeSmokeLog(lines);
+  const texts = smokeLogReadPaths(gitCommonDir()).map((path) => {
+    try {
+      return readFileSync(path, "utf-8");
+    } catch (_e) {
+      // No log yet is a legitimate state, and summarize says so; a retired
+      // name is absent on any machine that never ran under it.
+      return "";
+    }
+  });
+  return summarizeSmokeLog(mergeSmokeLogs(texts));
 }
 
 export function report(): number {
@@ -269,6 +275,21 @@ async function probe(input: { url: string; key: string | null; timeoutMs: number
     signal: AbortSignal.timeout(input.timeoutMs),
   });
   return { status: response.status, body: await response.text() };
+}
+
+/**
+ * The box's content-area listing, as the Browse page's own query returns it.
+ * Read over HTTP, not through the browser: each browser command costs about a
+ * second, and finding a card by clicking through Browse took sixteen of them.
+ */
+export async function contentListing(input: { baseUrl: string; key: string | null }): Promise<string> {
+  const query = encodeURIComponent(JSON.stringify({ path: LANDMARK_CONTENT_DIR }));
+  const { status, body } = await probe({
+    url: `${input.baseUrl}/api/trpc/status.browse?input=${query}`,
+    key: input.key,
+    timeoutMs: 10_000,
+  });
+  return status === 200 ? body : `HTTP ${String(status)}\n${body}`;
 }
 
 /** A router that is not listening at all, told apart from a box that is broken. */

@@ -29,7 +29,8 @@ import {
   type SpeechSegmentState,
 } from "./speech-segment-states";
 
-type TTSClient = ReturnType<typeof getTTSClient>;
+/** The TTS client methods playback calls. The app passes the real client. */
+export type SpeechClient = Pick<ReturnType<typeof getTTSClient>, "speak" | "prefetch" | "stop">;
 
 class EmptySpeechQueueError extends Error {
   constructor() {
@@ -67,14 +68,14 @@ interface SpeechPlaybackContext {
   /** Items waiting to play. The current one sits at [0] during playback. */
   queue: QueueItem[];
   /** Captured when the first PLAY arrives; reused across self-transitions. */
-  ttsClient: TTSClient | null;
+  ttsClient: SpeechClient | null;
   onComplete?: () => void;
 }
 
 type SpeechPlaybackEvent =
-  | { type: "PLAY"; messageId: string; segments: SpeechSegment[]; baseIndex: number; ttsClient: TTSClient }
+  | { type: "PLAY"; messageId: string; segments: SpeechSegment[]; baseIndex: number; ttsClient: SpeechClient }
   | { type: "SEGMENT_PLAYING"; index: number }
-  | { type: "STOP"; ttsClient: TTSClient };
+  | { type: "STOP"; ttsClient: SpeechClient };
 
 function speechOptions(segment: SpeechSegment) {
   return {
@@ -95,7 +96,7 @@ function speechOptions(segment: SpeechSegment) {
  */
 function buildQueueItems(
   segments: SpeechSegment[],
-  { ttsClient, queueOffset, baseIndex }: { ttsClient: TTSClient; queueOffset: number; baseIndex: number },
+  { ttsClient, queueOffset, baseIndex }: { ttsClient: SpeechClient; queueOffset: number; baseIndex: number },
 ): QueueItem[] {
   const prefetchEnabled = shouldPrefetchSpeech();
   return segments.map((segment, i) => ({
@@ -126,7 +127,7 @@ const playOneActor = fromPromise(
   }: {
     input: {
       item: QueueItem;
-      ttsClient: TTSClient;
+      ttsClient: SpeechClient;
       onPlaybackStarted: () => void;
     };
   }) => {

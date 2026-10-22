@@ -38,7 +38,7 @@ export interface GeneratedFragment {
   suffix?: string;
 }
 
-/** Exported for the round-trip doctest: these two must be exact inverses. */
+/** Exported for the round-trip test: these two must be exact inverses. */
 export function serializeFragment(fragment: GeneratedFragment): string {
   const encode = (value: string) => encodeURIComponent(value);
   const parts: string[] = [];

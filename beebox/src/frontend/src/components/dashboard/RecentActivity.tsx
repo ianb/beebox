@@ -49,7 +49,7 @@ function CommitRow({ commit }: { commit: LogEntry }) {
           </Link>
         </div>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-warm-500 font-mono">
+          <span className="text-xs text-warm-700 font-mono">
             {commit.hash.substring(0, 7)}
           </span>
           {phase ? (
@@ -59,7 +59,7 @@ function CommitRow({ commit }: { commit: LogEntry }) {
           ) : null}
         </div>
       </div>
-      <span className="text-xs text-warm-500 whitespace-nowrap">
+      <span className="text-xs text-warm-700 whitespace-nowrap">
         {timeAgo(commit.date)}
       </span>
     </div>
@@ -80,7 +80,7 @@ function scriptStatusStyle(status: NonNullable<SchedulerLogEntry["result"]>["scr
   if (status === "error") return { className: "text-danger-dark", glyph: "", title: "Failed" };
   if (status === "inconclusive") {
     return {
-      className: "text-warm-600",
+      className: "text-warm-700",
       glyph: "? ",
       title: "Inconclusive — work ran; the check reached no verdict",
     };
@@ -108,7 +108,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
                 {style.glyph}
                 {s.name}
                 {s.durationMs != null ? (
-                  <span className="text-warm-500 ml-0.5">
+                  <span className="text-warm-700 ml-0.5">
                     {s.durationMs < 1000 ? `${s.durationMs}ms` : `${(s.durationMs / 1000).toFixed(1)}s`}
                   </span>
                 ) : null}
@@ -117,7 +117,7 @@ function TickRow({ tick }: { tick: SchedulerLogEntry }) {
           })}
         </div>
       </div>
-      <span className="text-xs text-warm-500 whitespace-nowrap">
+      <span className="text-xs text-warm-700 whitespace-nowrap">
         {timeAgo(tick.ts)}
       </span>
     </div>
@@ -157,11 +157,11 @@ export function RecentActivity({ commits, ticks, loading, error }: RecentActivit
       </div>
 
       {loading ? (
-        <p className="text-sm text-warm-500 animate-pulse">Loading...</p>
+        <p className="text-sm text-warm-700 animate-pulse">Loading...</p>
       ) : error ? (
         <p className="text-sm text-danger-dark">Failed to load: {error.message}</p>
       ) : display.length === 0 ? (
-        <p className="text-sm text-warm-500">No recent activity</p>
+        <p className="text-sm text-warm-700">No recent activity</p>
       ) : (
         <div className="divide-y divide-warm-200">
           {display.map((item, i) =>

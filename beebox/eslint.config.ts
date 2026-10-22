@@ -7,6 +7,7 @@
 // ("Lint rule suppression") has the rules and that history.
 import { builtinModules } from "node:module";
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
+import tapCheck from "@ianbicking/tap-check/eslint";
 
 // Session creation has one owner. Four call sites used to reach
 // `registry.createNew()` independently — the send route, capture and bulk
@@ -137,7 +138,7 @@ export default [
     // FST_ERR_REP_ALREADY_SENT — the rule would introduce the exact bug
     // class it exists to prevent, so this directory is carved out rather
     // than the rule being weakened project-wide (measured 2026-07,
-    // issues/2026-07-06-deferred-lint-rules.md).
+    // issues/closed/code-quality/2026-07-06-deferred-lint-rules.md).
     files: ["src/webapp/routes/**/*.ts"],
     rules: {
       "@typescript-eslint/return-await": "off",
@@ -325,6 +326,20 @@ export default [
             "Box-request handlers must not use host os.tmpdir(). Use ensureBoxTmpDir(boxRoot) / boxTmpDir(boxRoot) from src/lib/box-tmp.ts — the box-scoped, swept <boxRoot>/tmp/.",
         },
       ],
+    },
+  },
+  {
+    // Tests compare whole values with t.check (docs/testing/check.md). These
+    // rules flag the lossy shapes agents write (a length, a JSON string, a
+    // boolean, a comparison), a `void` that drops a check's promise, and tap's
+    // own asserts.
+    // src/frontend/eslint.config.ts sets the same rules for the frontend's tests.
+    files: ["test/**/*.ts"],
+    plugins: { "tap-check": tapCheck },
+    rules: {
+      "tap-check/check-whole-value": "error",
+      "tap-check/no-voided-check": "error",
+      "tap-check/no-tap-assert": "error",
     },
   },
 ];

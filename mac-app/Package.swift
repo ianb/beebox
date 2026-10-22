@@ -19,11 +19,15 @@ let package = Package(
         // Pre-1.0 and changing between minor releases; pin exactly. The app
         // pulls the matching vminit image (ghcr.io/apple/containerization/vminit).
         .package(url: "https://github.com/apple/containerization.git", exact: "0.48.0"),
+        // Code shared with the iOS app: pairing, the credential store.
+        .package(path: "../apple-shared"),
     ],
     targets: [
         .executableTarget(
             name: "BeeBoxMac",
             dependencies: [
+                "BeeBoxMacCore",
+                .product(name: "BeeBoxShared", package: "apple-shared"),
                 .product(name: "Containerization", package: "containerization"),
                 .product(name: "ContainerizationOS", package: "containerization"),
                 "Sparkle",
@@ -33,6 +37,12 @@ let package = Package(
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])
             ]
         ),
+        // The app's logic without AppKit or the VM, so `swift test` reaches it.
+        .target(
+            name: "BeeBoxMacCore",
+            dependencies: [.product(name: "BeeBoxShared", package: "apple-shared")]
+        ),
+        .testTarget(name: "BeeBoxMacCoreTests", dependencies: ["BeeBoxMacCore"]),
         // Sparkle 2.10.0, fetched by scripts/fetch-sparkle.sh (pinned by
         // SHA-256) instead of SwiftPM's binary download, which hung here.
         .binaryTarget(name: "Sparkle", path: "Vendor/Sparkle.xcframework"),

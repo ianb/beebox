@@ -68,7 +68,7 @@ before it landed?**
   valuable thing this review produces. Name the step that would have caught it.
 - If it needed a model turn, a real agent session, or hardware the walk cannot
   drive, it is out of scope by design. Say so and move on.
-- If it is only visible in a unit or doctest tier, it is not this tier's job.
+- If it is only visible in a unit test tier, it is not this tier's job.
 
 Two known holes, already understood — do not re-file them, but do note if the
 window produced more evidence for either:

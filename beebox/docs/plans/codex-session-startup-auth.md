@@ -6,6 +6,8 @@ issues: []
 ---
 # Production Codex session startup and authentication
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Bee Box production cannot start a Codex chat because the service account has no Codex CLI. After that prerequisite is fixed, the same account also needs a supported Codex login and an actionable run-path preflight. This plan makes the complete startup path provisioned, tested, and diagnosable without widening secret custody.
 
 **Issues addressed:** none. Searches for `codex`, `plugin`, `authentication`, and the exact user-visible error found related completed issues and the open intermittent thread-start issue, but no queue item for the deterministic production provisioning failure.
@@ -25,7 +27,7 @@ Bee Box production cannot start a Codex chat because the service account has no 
 
 - `src/core/agent/ensure-codex-plugin.ts:58-68` defines `CodexPluginInstallError` and runs `execFileAsync("codex", args)`. Reuse the installer and its injected `CodexCommand` seam.
 - `src/core/agent/ensure-codex-plugin.ts:85-154` distinguishes unreadable, absent, and installed plugin state, repairs global marketplace registration, then wraps any terminal failure. Preserve that decision core; improve prerequisite validation and error detail around it.
-- `test/core/agent/ensure-codex-plugin.doctest.md:1-185` covers global marketplace ownership, repair, cachebuster versions, and typed terminal failure. Extend it rather than creating another plugin test tier.
+- `test/core/agent/ensure-codex-plugin.test.ts:1-185` covers global marketplace ownership, repair, cachebuster versions, and typed terminal failure. Extend it rather than creating another plugin test tier.
 - `src/core/agent/auth-preflight.ts:105-122` has the shared chat preflight, but line 112 explicitly returns early for Codex: `if (params.engine === "codex" || params.backend.requiresClaudeAuth !== true) return true;`. Generalize this provider boundary without copying Claude-specific behavior.
 - `src/services/claude-cli.ts:21-69` puts CLI status behind an injectable service; `src/core/agent/auth-preflight.ts:52-60` injects it and caches successful probes. Follow that shape with Codex-specific parsing, commands, and a positive-result TTL.
 - `src/services/codex-chat.ts:93-120` (moved to `beebox/src/services/claude-chat/codex-chat.ts`) installs the plugin before creating the SDK session and reports failures as phase `session-start`. Keep the phase contract; make its underlying message actionable.

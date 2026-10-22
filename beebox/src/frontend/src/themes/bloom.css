@@ -1,0 +1,239 @@
+/* Bloom: pastel cutouts, a striped blue toolbar, and cream stationery.
+   The desk artwork is painted once; nested workspace surfaces reveal it. */
+.bbx-box-presentation[data-chrome-theme="bloom"] {
+  --bbx-desk-background: #eaf3ee;
+  --bbx-desk-pattern: none;
+  --bbx-desk-edge: #9bb4b6;
+  --bbx-bar-paper: #d5ebec;
+  --bbx-bar-edge: #9c91b1;
+  --bbx-focus-ring: #754374;
+  --bbx-selection: #754374;
+  --bbx-selection-ink: #fffdf5;
+  --bbx-selection-code: #d8cbe9;
+  --bbx-selection-code-ink: #344957;
+  --bbx-chat-user-paper: #f9cbd6;
+  --bbx-chat-user-ink: #344957;
+  --bbx-bloom-stripes: repeating-linear-gradient(110deg, #abdbe3 0 60px, #f9cbd6 60px 120px, #ffdc94 120px 145px, #b9dfd1 145px 205px, #d8cbe9 205px 265px);
+}
+.bbx-box-presentation[data-chrome-theme="bloom"]:not(.bbx-system-theme-preview) {
+  position: relative;
+  isolation: isolate;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"]:not(.bbx-system-theme-preview)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url("./bloom-cutouts.svg") center / cover no-repeat;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] :is(
+  .bbx-conversation-desk, .bbx-companion-desk[data-active-card],
+  .bbx-interface-card-desk[data-card-content="card"]
+) {
+  background: transparent;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-app-nav {
+  position: relative;
+  background: var(--bbx-bar-paper);
+  color: #344957;
+  border: 0;
+  padding-bottom: 7px;
+  box-shadow: 0 3px 0 #fff4df;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-app-nav > div {
+  background: var(--bbx-bar-paper);
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-app-nav::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 7px;
+  pointer-events: none;
+  background: var(--bbx-bloom-stripes);
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-app-nav :is(
+  .bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
+  #bbx-nav-todo, #bbx-nav-questions
+) {
+  background-color: #e4daef;
+  color: #344957;
+  border-color: #9c91b1;
+  border-radius: 5px;
+  box-shadow: 2px 2px 0 #fff4df;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-app-nav button:active {
+  box-shadow: none;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-app-nav :is(button, a):focus-visible {
+  outline: 2px solid var(--bbx-focus-ring);
+  outline-offset: 2px;
+}
+/* Keep the real composer's structure and keyboard behavior intact. */
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-composer-material {
+  background: #fffdf5;
+  color: #344957;
+  border: 1px solid #9bb4b6;
+  border-radius: 23px 23px 0 0;
+  box-shadow: 4px 4px 0 #aacfd2;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-composer-material > section {
+  background: transparent;
+  border-top: 0;
+}
+/* ChatComposerSection mobile typing/transcribing subpanel. */
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-composer-material > .bbx-composer-mobile-row {
+  background: #fffdf5;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-composer-material textarea {
+  color: #344957;
+  background-color: #fffdf5;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-composer-material textarea::placeholder {
+  color: #596c71;
+}
+/* Only the idle mic has bg-primary; recording and paused states keep their
+   danger/pulsing colors from InteractiveChat-voice-button. */
+.bbx-box-presentation[data-chrome-theme="bloom"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled,
+.bbx-box-presentation[data-chrome-theme="bloom"] #bbx-composer-mic[data-mic="idle"] {
+  background-color: #a7d6dc;
+  color: #284b58;
+  border: 1px solid #739da7;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] #bbx-composer-add {
+  background-color: #e4daef;
+  color: #344957;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-user-paper {
+  background: var(--bbx-chat-user-paper);
+  color: var(--bbx-chat-user-ink);
+  border: 1px solid #b98294;
+  border-radius: 23px 23px 5px 23px;
+  box-shadow: 3px 3px 0 #fff4df;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-user-paper :is(
+  .bbx-chat-user-status, .bbx-chat-user-attachment-summary
+) {
+  color: #344957;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-user-paper :is(
+  .bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge
+) {
+  background: #fff4df80;
+  color: #344957;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-user-attachment:hover {
+  background: #fff4df;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-user-unsure {
+  text-decoration-color: #754374;
+}
+/* An opaque foreground sheet keeps cutouts out of the reading surface.
+   No overflow clipping: the real reply's speech control is sticky. */
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-reply-material {
+  background: #fffdf5;
+  color: #344957;
+  border: 1px solid #c5bda7;
+  border-radius: 23px;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-callout {
+  background: #dfedf3;
+  color: #344957;
+  border: 1px solid #9bbbc6;
+  border-radius: 16px;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-callout > .bbx-chat-callout-context {
+  color: #344957;
+}
+/* This material resets on every card, including a card on another system. */
+.bbx-card-theme[data-card-theme="bloom"] {
+  --bbx-paper: #fffdf5;
+  --bbx-ink: #344957;
+  --bbx-ink-soft: #596c71;
+  --bbx-pen: #a33d54;
+  --bbx-edge: #c5bda7;
+  --bbx-underlay: #e4daef;
+  --bbx-font: ui-rounded, "SF Pro Rounded", ui-sans-serif, system-ui, sans-serif;
+  --bbx-sheet-radius: 23px;
+  --bbx-quote-paper: #e9e0f1;
+  --bbx-quote-layer-paper: #e9e0f1;
+  --bbx-quote-edge: 3px;
+  --bbx-blockquote-paper: #e9e0f1;
+  --bbx-blockquote-edge: 3px;
+  --bbx-blockquote-padding: 0.65em 1em;
+  --bbx-selection: #754374;
+  --bbx-selection-ink: #fffdf5;
+  --bbx-selection-code: #d8cbe9;
+  --bbx-selection-code-ink: #344957;
+}
+.bbx-card-surface[data-card-theme="bloom"] {
+  box-shadow: 5px 6px 0 #b8d9df;
+}
+.bbx-card-surface[data-card-theme="bloom"]::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 23px;
+  right: 44px;
+  height: 7px;
+  pointer-events: none;
+  background: linear-gradient(90deg, #e9a0af 0 33%, #f6d889 33% 66%, #a4d8dd 66%);
+}
+.bbx-card-surface[data-card-theme="bloom"] > .bbx-card-properties {
+  border-radius: 0 23px 0 12px;
+}
+.bbx-interface-tab[data-card-theme="bloom"] {
+  background: #e4daef;
+  border-radius: 12px 12px 0 0;
+}
+.bbx-interface-tab[data-card-theme="bloom"][data-active="true"] {
+  background: #fffdf5;
+}
+.bbx-interface-tab[data-card-theme="bloom"]:not([data-active="true"]):hover {
+  background: #f1eaf6;
+}
+/* Swatches have their own small composition, not a full-page pseudo layer. */
+.bbx-system-theme-preview[data-chrome-theme="bloom"] {
+  background: url("./bloom-cutouts.svg") center / cover, #eaf3ee;
+}
+.bbx-system-theme-preview[data-chrome-theme="bloom"] .bbx-system-theme-toolbar {
+  background: #d5ebec;
+  border-bottom: 3px solid #f9cbd6;
+}
+.bbx-system-theme-preview[data-chrome-theme="bloom"] .bbx-system-theme-toolbar i {
+  background: #344957;
+}
+.bbx-system-theme-preview[data-chrome-theme="bloom"] .bbx-system-theme-desk > span {
+  background: #fffdf5;
+  border-color: #c5bda7;
+  box-shadow: 2px 2px 0 #b8d9df;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] :is(.bbx-chat-meta-material, .bbx-chat-empty-label) {
+  color: #344957;
+  background: #fffdf5;
+}
+.bbx-box-presentation[data-chrome-theme="bloom"] .bbx-chat-empty-label { padding: 6px 10px; }
+@media print {
+  .bbx-card-theme[data-card-theme="bloom"] :is(.bbx-blockquote, .bbx-quote-block) {
+    background: transparent;
+    color: #000;
+    box-shadow: none;
+  }
+  .bbx-box-presentation[data-chrome-theme="bloom"] {
+    background: transparent;
+  }
+  .bbx-box-presentation[data-chrome-theme="bloom"]::before,
+  .bbx-box-presentation[data-chrome-theme="bloom"] .bbx-app-nav::after,
+  .bbx-card-surface[data-card-theme="bloom"]::before {
+    display: none;
+  }
+  .bbx-box-presentation[data-chrome-theme="bloom"] :is(
+    .bbx-chat-user-paper, .bbx-chat-reply-material, .bbx-chat-callout
+  ),
+  .bbx-card-surface[data-card-theme="bloom"] {
+    background: transparent;
+    color: #000;
+    border: 0;
+    box-shadow: none;
+  }
+}

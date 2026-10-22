@@ -7,7 +7,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { chatModelOptions, parseChatAgentEngine, type AddedModel } from "@shared/chat-models.js";
-import { AGENT_ENGINES } from "@shared/agent-models.js";
+import { AGENT_ENGINES, providerOf } from "@shared/agent-models.js";
 import { AdminSectionCard } from "./AdminSectionCard";
 
 const DESCRIPTION =
@@ -23,6 +23,16 @@ const CODEX_TELEMETRY_HELPER =
   "Codex reports turns, tool calls, the model, and your login type. It also sends hashes of the lines each change " +
   "adds, which OpenAI's documentation does not mention, so this is off unless you turn it on. Takes effect when " +
   "a Codex run next starts.";
+
+/**
+ * What an OpenRouter default does to background work, and what still needs a
+ * Claude login (issues/closed/bugs/2026-10-15-background-runs-ignore-box-openrouter-default.md).
+ */
+const OPENROUTER_BACKGROUND_HINT =
+  "Background work follows this model too: wakeups, procedures, and chat titles and reviews run on OpenRouter " +
+  "and need no Claude login. Still on Claude: a chat someone switches to a Claude model, quick passes when the " +
+  "box's smallModel is set to a Claude model, and reading photos during scan import (unless the server sets " +
+  "BBX_SCAN_VISION=gemini).";
 
 const ENGINE_LABELS: Record<string, string> = { claude: "Claude Code", codex: "Codex" };
 
@@ -122,6 +132,9 @@ export function AgentEngineSection() {
             disabled={update.isPending}
             onChange={(agentModel) => { update.mutate({ agentModel: agentModel === "" ? null : agentModel }); }}
           />
+          {engine === "claude" && model !== null && providerOf(model) === "openrouter"
+            ? <Hint>{OPENROUTER_BACKGROUND_HINT}</Hint>
+            : null}
           <CheckboxField
             id="bbx-admin-claude-code-telemetry"
             label="Let Claude Code send usage data to Anthropic"

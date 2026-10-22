@@ -1,6 +1,6 @@
 /**
  * The below-root reserved-name rule
- * (`issues/features/2026-09-05-disallow-underscore-area-names-below-root.md`):
+ * (`issues/closed/features/2026-09-05-disallow-underscore-area-names-below-root.md`):
  * the underscore-area names are reserved words, legal only as a path's FIRST
  * segment — a nested `_content`, `_config`, `_bookkeeping`, or `_publish`
  * (directory or file) reads like machinery but isn't, and confuses the

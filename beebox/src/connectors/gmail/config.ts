@@ -7,7 +7,7 @@
  *
  * `action` is required whenever the shorthand is used. It used to be implied
  * (as `track`), which meant every filter a boxholder could express through the
- * admin form silently created cards; see docs/plans/gmail-explicit-action.md.
+ * admin form silently created cards; see docs/implemented-plans/gmail-explicit-action.md.
  */
 
 import { z } from "zod";

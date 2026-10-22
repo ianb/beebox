@@ -11,13 +11,13 @@
  * something else (revoked scope, wrong account, API not enabled) and must not
  * produce a "click here to re-authorize" call to action that can't fix it.
  *
- * See docs/plans/google-auth-reauth-health.md.
+ * See docs/implemented-plans/google-auth-reauth-health.md.
  */
 
 import type { OAuth2Client } from "google-auth-library";
 import { isRecord } from "../shared/is-record.js";
 import { errorMessage } from "../shared/error-guards.js";
-import { getGoogleAuth, getBoxGoogleClientCreds } from "./auth.js";
+import { getGoogleAuth, hasBoxGoogleClientCreds } from "./auth.js";
 import {
   loadGoogleTokens,
   markGoogleAuthDead,
@@ -94,7 +94,7 @@ export interface GoogleAuthStatus {
 export async function readGoogleAuthStatus(boxRoot?: string): Promise<GoogleAuthStatus> {
   // Box-less callers have no grants to check, so nothing is configured for
   // them — the connector is per-box even when the status read is not.
-  const configured = boxRoot !== undefined && (await getBoxGoogleClientCreds(boxRoot)) !== null;
+  const configured = boxRoot !== undefined && (await hasBoxGoogleClientCreds(boxRoot));
   const tokens = await loadGoogleTokens(boxRoot);
   return {
     configured,

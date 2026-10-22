@@ -23,10 +23,10 @@
  *                          the mic when playback ends.
  *
  * The machine commands the real mic/TTS devices through named action seams
- * (`startMic`, `resumeMic`, `cancelMic`, `stopSpeech`, `playSpeech`,
+ * (`startMic`, `resumeMic`, `holdMic`, `stopSpeech`, `playSpeech`,
  * `markPlayed`) that the wiring provides via `.provide()`. Guards are pure
  * functions of context, so the decision logic is unit-testable with no React
- * (see `composerMachine.doctest.md`).
+ * (see `test/machines/composerMachine.composer-machine.test.ts`).
  */
 
 import { setup, assign, emit } from "xstate";
@@ -41,8 +41,8 @@ import type { SpeechSegment } from "../lib/audio/speech-parsing/parse";
  */
 type DeviceCommand =
   | { type: "startMic" } // fresh recording segment, with the recording-start earcon
-  | { type: "resumeMic" } // resume recording quietly (no earcon), after a pause
-  | { type: "cancelMic" } // pause/tear down the current segment without finalizing
+  | { type: "resumeMic" } // release the hold: the mic records again, same segment
+  | { type: "holdMic" } // record silence while speech plays; the segment and its recording continue
   | { type: "stopSpeech" } // stop TTS playback immediately
   | { type: "playSpeech"; messageId: string; segments: SpeechSegment[]; baseIndex: number }
   | { type: "markPlayed"; messageId: string } // mark queued speech played without playing it
@@ -50,7 +50,7 @@ type DeviceCommand =
 
 /**
  * A voice message waiting for its HQ transcript
- * (docs/plans/resilient-voice-recording.md, Track 4): rendered as a pending
+ * (docs/implemented-plans/resilient-voice-recording.md, Track 4): rendered as a pending
  * bubble with a status line and a "Send live text now" control. Several can
  * wait at once; they dispatch in segment order.
  */
@@ -148,7 +148,7 @@ export const composerMachine = setup({
     // --- device commands: emitted for the wiring layer to execute ---
     startMic: emit({ type: "command", command: { type: "startMic" } }),
     resumeMic: emit({ type: "command", command: { type: "resumeMic" } }),
-    cancelMic: emit({ type: "command", command: { type: "cancelMic" } }),
+    holdMic: emit({ type: "command", command: { type: "holdMic" } }),
     stopSpeech: emit({ type: "command", command: { type: "stopSpeech" } }),
     playSpeech: emit(({ event }) => ({
       type: "command",
@@ -205,11 +205,11 @@ export const composerMachine = setup({
             SPEECH_QUEUED: [
               { guard: "isMuted", actions: "markPlayed" },
               { guard: "transcriptNonEmpty", actions: "markPlayed" }, // talking → don't speak over the user
-              { guard: "recording", target: "pausedForSpeech", actions: ["cancelMic", "playSpeech"] },
+              { guard: "recording", target: "pausedForSpeech", actions: ["holdMic", "playSpeech"] },
               { target: "speaking", actions: "playSpeech" },
             ],
             SPEECH_EXTERNAL: [
-              { guard: "recording", target: "pausedForSpeech", actions: "cancelMic" },
+              { guard: "recording", target: "pausedForSpeech", actions: "holdMic" },
               { target: "speaking" },
             ],
           },

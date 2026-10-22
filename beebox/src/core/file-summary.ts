@@ -64,7 +64,7 @@ export type FileLoader<T> = (raw: LoaderInput) => FileSummary<T>;
 
 /**
  * Strip extensions and replace separators to produce a readable title from a path.
- * "Meeting_Notes.memo.card" → "Meeting Notes"
+ * "Meeting_Notes.doc.card" → "Meeting Notes"
  * "photo-001.jpg" → "photo 001"
  */
 export function titleFromFilename(filePath: string): string {

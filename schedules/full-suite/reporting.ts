@@ -23,6 +23,25 @@ export async function report(args: string[]): Promise<boolean> {
 }
 
 /**
+ * Conditions this run found still true that a test verdict must not resolve:
+ * the typecheck's, which tests passing does not clear.
+ */
+const held = new Set<string>();
+
+export function holdCondition(condition: string): void {
+  held.add(condition);
+}
+
+function exceptHeld(): string[] {
+  return [...held].flatMap((condition) => ["--except", condition]);
+}
+
+/** A green verdict: every condition this schedule raised has cleared, except held ones. */
+export async function resolveAll(): Promise<void> {
+  await report(["resolve", ...exceptHeld()]);
+}
+
+/**
  * Raise this run's finding under its condition. The store turns a repeat into
  * an update of the open alert, so an unchanged condition is one record with a
  * count rather than an alert per hourly run.
@@ -44,5 +63,5 @@ export async function raiseCondition(input: {
   await report([
     "alert", "--priority", input.priority, "--condition", condition, "--title", input.title, "--message", input.message,
   ]);
-  if (input.verdict) await report(["resolve", "--except", condition]);
+  if (input.verdict) await report(["resolve", "--except", condition, ...exceptHeld()]);
 }

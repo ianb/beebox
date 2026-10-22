@@ -15,6 +15,7 @@ import { syncDriveFile } from "./file-sync.js";
 import type { FolderSyncDeps } from "./folder-types.js";
 import type { DriveCardTracking } from "./tracking.js";
 import type { DriveTransientState } from "./state.js";
+import type { DocsApiOutcome } from "./handlers/docs/api-failure.js";
 
 /** Every Drive ID some card on the box already speaks for. */
 function claimedDriveIds(tracking: DriveCardTracking): Set<string> {
@@ -68,8 +69,10 @@ export function createFolderSyncDeps(options: {
   service: GoogleDriveService;
   state: DriveTransientState;
   tracking: DriveCardTracking;
+  /** Where each synced Doc's Docs API outcome goes; a caller that writes no diagnosis passes its own and drops it. */
+  docsApiOutcomes: DocsApiOutcome[];
 }): FolderSyncDeps {
-  const { boxRoot, service, state, tracking } = options;
+  const { boxRoot, service, state, tracking, docsApiOutcomes } = options;
   const restorable = restorableDriveIds({ state, tracking });
   return {
     boxRoot,
@@ -78,9 +81,9 @@ export function createFolderSyncDeps(options: {
     restorable,
     visitedFolders: new Set<string>(),
     liveCards: tracking.liveCards,
-    budget: { foldersMirrored: 0 },
+    budget: { foldersMirrored: 0, capped: false },
     syncFile: (opts) =>
-      syncDriveFile({ driveId: opts.driveId, cardPath: opts.cardPath, boxRoot, service, state }),
+      syncDriveFile({ driveId: opts.driveId, cardPath: opts.cardPath, boxRoot, service, state, docsApiOutcomes }),
     forgetFileState: (driveId) => {
       delete state.files[driveId];
     },

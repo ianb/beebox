@@ -9,8 +9,8 @@
  * before any use. In that space the keep-a-point-fixed identity
  * `t' = p − (p − t)·(s'/s)` holds for both double-tap and pinch.
  *
- * Every function is pure and doctested in
- * `src/frontend/test/lib/lightbox-gesture-math.doctest.md`.
+ * Every function is pure and tested in
+ * `src/frontend/test/lib/lightbox-gesture-math.test.ts`.
  */
 
 export interface Point {

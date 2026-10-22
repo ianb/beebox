@@ -68,7 +68,7 @@ Run from the `beebox/` directory.
      counts). For each, judge:
      - a **legitimate** browser consumer (a new external image host, API, or
        embed origin) → recommend the specific allowlist edit in
-       `beebox/src/lib/csp.ts` (and its `test/lib/csp.doctest.md` update);
+       `beebox/src/lib/csp.ts` (and its `test/lib/csp.test.ts` update);
      - a **real bug or unexpected exfiltration** → flag it for investigation.
      Do **not** harden while any violation is unresolved.
 

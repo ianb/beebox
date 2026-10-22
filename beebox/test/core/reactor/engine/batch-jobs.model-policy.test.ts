@@ -1,0 +1,79 @@
+// # The reactor runs on the box's pinned model
+//
+// A box can pin the model it thinks with (`agentModel` in `_config/box.json`). The
+// reactor reads it once per run and passes it to every agent invocation in that
+// run, so "which model does my box think with" has the same answer for autonomous
+// work as it does for chat.
+//
+// The seam is deliberately narrow: the reactor asks for the policy, rather than
+// `createAgent` silently supplying it to every unpinned agent run in the system
+// (`docs/implemented-plans/model-engine-policy.md`, Track B).
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { processBatchJobs } from "../../../../src/core/reactor/engine/batch-jobs.js";
+import type { JobWithContent } from "../../../../src/core/reactor/types.js";
+import { createFakeAgent } from "../../fake-agent.js";
+import { makeTmpBox } from "../../../helpers/test-helpers.js";
+import { clearBoxConfigCache } from "../../../../src/core/box/config.js";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import { resolveProcedureModel } from "../../../../src/shared/agent-models.js";
+
+const job: JobWithContent = { card: { file: "j.job.card", priority: "normal", createdAt: null }, relPath: "jobs/j.job.card", content: "do a thing" };
+
+/** Model ids rotate; name a model by engine and tier instead. */
+const tierId = (engine: "claude" | "codex", model: "efficient" | "balanced" | "strong") => resolveProcedureModel({ engine, model });
+const tierOf = (model: string | undefined) =>
+  (["claude", "codex"] as const).flatMap((engine) => (["efficient", "balanced", "strong"] as const).map((tier) => ({ engine, tier })))
+    .find(({ engine, tier }) => tierId(engine, tier) === model);
+
+/** Run one batch pass against `boxRoot`, returning the model it invoked with. */
+async function modelUsedBy(boxRoot: string): Promise<string | undefined> {
+  const agent = createFakeAgent({ name: "reactor-batch", act: async () => ({ success: true }) });
+  await processBatchJobs({ jobs: [job], boxRoot, dryRun: false, createAgent: () => agent });
+  return agent.invocations[0]?.options.model;
+}
+
+async function pin(boxRoot: string, config: Record<string, unknown>): Promise<void> {
+  await fs.mkdir(path.join(boxRoot, "config"), { recursive: true });
+  await fs.writeFile(path.join(boxRoot, "_config/box.json"), JSON.stringify(config));
+  clearBoxConfigCache(boxRoot);
+}
+
+// An unpinned box keeps today's behavior — no model, so the harness picks.
+void test("An unpinned box keeps today's behavior — no model, so the harness picks.", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  t.check(await modelUsedBy(box.root), undefined);
+
+  // A pinned model reaches the invocation.
+
+  await pin(box.root, { agentModel: tierId("claude", "balanced") });
+  t.check(tierOf(await modelUsedBy(box.root)), {
+    engine: "claude",
+    tier: "balanced",
+  });
+
+  // A pin the box's engine cannot run resolves to that engine's model at the same
+  // tier, rather than disappearing: a Codex box pinned to the Claude balanced model runs the Codex balanced one.
+
+  await pin(box.root, { agentEngine: "codex", agentModel: tierId("claude", "balanced") });
+  t.check(tierOf(await modelUsedBy(box.root)), {
+    engine: "codex",
+    tier: "balanced",
+  });
+
+  // A retired id is carried forward instead of failing the registry check and
+  // reading as "no policy".
+
+  await pin(box.root, { agentModel: "claude-opus-4-8" });
+  t.check(tierOf(await modelUsedBy(box.root)), {
+    engine: "claude",
+    tier: "strong",
+  });
+
+  await pin(box.root, { agentModel: "not-a-model" });
+  t.check(await modelUsedBy(box.root), undefined);
+
+  await box.cleanup();
+});

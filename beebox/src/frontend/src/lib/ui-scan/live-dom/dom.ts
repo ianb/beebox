@@ -2,7 +2,7 @@
  * The real-DOM adapter: the one place `ui-scan` touches browser globals.
  *
  * Everything else in this directory walks {@link ScanElement}, a structural view
- * of an element, so the walk and the name computation are exercised by doctests
+ * of an element, so the walk and the name computation are exercised by tests
  * under plain Node. This module is the thin lazy wrapper that makes the live
  * document satisfy that view — attributes eagerly (cheap), children and computed
  * style through getters, so a subtree the walk prunes is never converted and

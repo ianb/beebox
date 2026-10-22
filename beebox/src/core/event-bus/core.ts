@@ -29,8 +29,9 @@
  * `unknownEventRow`, mirroring `unknownChatMessage`), so one bad row degrades
  * visibly without breaking dispatch of its siblings.
  *
- * Persisted rows are a reconnect bridge, not a source of truth. On bus open a
- * {@link EVENT_SCHEMA_GENERATION} mismatch truncates the events table, so
+ * Persisted rows are a reconnect bridge, not a source of truth. On bus open an
+ * older stored {@link EVENT_SCHEMA_GENERATION} truncates the events table (a
+ * newer one refuses to open — see `NewerEventSchemaError`), so
  * clients reconnecting across a deploy hit the existing full-resync path
  * instead of replaying stale-shaped rows — "everything persisted is valid
  * against current schemas" is an invariant, not a hope.
@@ -45,23 +46,97 @@ export type { BusEventName, EventMap } from "./schemas.js";
 
 /**
  * Bumped whenever ANY event payload shape in `event-bus-schemas.ts` changes.
- * Stored in the one-row `event_meta` table; on bus open a mismatch truncates
- * the persisted events (see `createEventBus`). All processes of one deploy
+ * Stored in the one-row `event_meta` table; on bus open an older stored
+ * generation truncates the persisted events and a newer one refuses to open
+ * (see `reconcileSchemaGeneration`). All processes of one deploy
  * share this constant, so a startup race converges regardless.
  */
 export const EVENT_SCHEMA_GENERATION = 10;
 
-export interface BusEvent {
+/**
+ * The box's events.db carries an event-schema generation newer than this
+ * engine's: a newer engine (another checkout or deploy) wrote it. Opening it
+ * here would truncate that engine's events, so the open refuses instead.
+ */
+class NewerEventSchemaError extends Error {
+  constructor(dbPath: string, options: { onDiskGeneration: number; engineGeneration: number }) {
+    super(
+      "Refusing to open " + dbPath + ": it was written by a newer beebox engine (event-schema generation " +
+        String(options.onDiskGeneration) + "), and this engine is older (generation " +
+        String(options.engineGeneration) + "). Opening it here would delete the newer engine's events. " +
+        "Use the newer engine for this box."
+    );
+    this.name = "NewerEventSchemaError";
+  }
+}
+
+/**
+ * Throw {@link NewerEventSchemaError} when the box's events.db was written by
+ * a newer engine; a no-op when it is absent, unstamped, or not newer. Opens the
+ * DB read-only and changes nothing, so `bbx serve` can run it before it stops
+ * the box's previous server — an older engine must refuse before it kills the
+ * newer engine's server, not after.
+ */
+export function assertEventSchemaNotNewer(boxRoot: string): void {
+  const dbPath = path.join(boxRoot, ".beebox/events.db");
+  if (!fs.existsSync(dbPath)) return;
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
+  try {
+    const table = db
+      .prepare<[], { name: string }>("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'event_meta'")
+      .get();
+    if (table === undefined) return;
+    const meta = db
+      .prepare<[], { gen: number }>("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
+      .get();
+    if (meta !== undefined) throwIfNewer(dbPath, meta.gen);
+  } finally {
+    db.close();
+  }
+}
+
+function throwIfNewer(dbPath: string, onDiskGeneration: number): void {
+  if (onDiskGeneration > EVENT_SCHEMA_GENERATION) {
+    throw new NewerEventSchemaError(dbPath, { onDiskGeneration, engineGeneration: EVENT_SCHEMA_GENERATION });
+  }
+}
+
+/**
+ * An event whose payload matched its event's schema. A union over event names,
+ * so narrowing on `event` types `data`.
+ */
+export type KnownBusEvent<K extends BusEventName = BusEventName> = BusEventByName[K];
+
+type BusEventByName = {
+  [P in BusEventName]: { id: number; event: P; data: EventMap[P]; createdAt: string };
+};
+
+/** One event, its name and payload paired by `K`. */
+function knownBusEvent<K extends BusEventName>(
+  fields: { id: number; event: K; data: EventMap[K]; createdAt: string },
+): KnownBusEvent<K> {
+  // eslint-disable-next-line no-restricted-syntax -- TypeScript cannot relate a generic { event: K; data: EventMap[K] } to the union over event names indexed by K (a correlated union); the parameter's type pairs the two.
+  return fields as KnownBusEvent<K>;
+}
+
+/** Whether a value matches `event`'s payload schema. */
+function isPayloadOf<K extends BusEventName>(event: K, value: unknown): value is EventMap[K] {
+  return eventSchemas[event].safeParse(value).success;
+}
+
+/** A stored row that failed read validation (see `unknownEventRow`). */
+export interface UnknownBusEvent {
   id: number;
-  event: string;
-  /**
-   * Read-side payload, validated against the per-event schema in `parseRows`.
-   * Typed `unknown` because a bad row degrades to the `event: "unknown"`
-   * sentinel — consumers narrow on `event` before reading `data`.
-   */
-  data: unknown;
+  event: "unknown";
+  data: { originalEvent: string; raw: unknown; error: string };
   createdAt: string;
 }
+
+/**
+ * What subscribers receive. A bad row degrades to the `"unknown"` sentinel,
+ * so consumers narrow on `event` before reading `data`.
+ */
+export type BusEvent = KnownBusEvent | UnknownBusEvent;
 
 /** Count of persisted rows surfaced as `unknown` sentinels this process. */
 let unknownEventCount = 0;
@@ -78,12 +153,14 @@ interface EventRow {
  * Reconcile the persisted schema generation against {@link EVENT_SCHEMA_GENERATION}.
  * Persisted rows bridge reconnects only, so rows written by an older payload
  * shape are worthless — drop them wholesale rather than replaying stale-shaped
- * data into current consumers. Meta read + truncate + meta write run in one
- * transaction so a startup race between processes of one deploy is unambiguous
- * (they share the constant, so it converges anyway — the transaction just
- * removes the interleaving).
+ * data into current consumers. A NEWER on-disk generation throws
+ * {@link NewerEventSchemaError} and leaves the rows alone: an older engine
+ * opening a box a newer engine serves must not wipe that engine's history.
+ * Meta read + truncate + meta write run in one transaction so a startup race
+ * between processes of one deploy is unambiguous (they share the constant, so
+ * it converges anyway — the transaction just removes the interleaving).
  */
-function reconcileSchemaGeneration(db: Database.Database): void {
+function reconcileSchemaGeneration(db: Database.Database, dbPath: string): void {
   const reconcile = db.transaction(() => {
     const meta = db
       .prepare<[], { gen: number }>("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
@@ -105,6 +182,10 @@ function reconcileSchemaGeneration(db: Database.Database): void {
       }
       return;
     }
+    // A newer engine wrote these rows. Truncating would wipe that engine's
+    // live history, and the two would then take turns wiping each other on
+    // every open. Refuse instead; the transaction rolls back untouched.
+    throwIfNewer(dbPath, meta.gen);
     if (meta.gen !== EVENT_SCHEMA_GENERATION) {
       const deleted = db.prepare("DELETE FROM events").run().changes;
       db.prepare("UPDATE event_meta SET schema_generation = ? WHERE id = 1").run(
@@ -125,7 +206,7 @@ function reconcileSchemaGeneration(db: Database.Database): void {
  * so silently. Consumers narrowing on `event` ignore `"unknown"`, so one bad
  * row degrades visibly without breaking dispatch of its siblings.
  */
-function unknownEventRow(row: EventRow, { reason, raw }: { reason: string; raw?: unknown }): BusEvent {
+function unknownEventRow(row: EventRow, { reason, raw }: { reason: string; raw?: unknown }): UnknownBusEvent {
   unknownEventCount++;
   console.warn(
     `[EventBus] Row id=${row.id} event="${row.event}" failed read validation: ${reason} (count=${unknownEventCount}). Surfaced as an "unknown" sentinel; downstream consumers ignore it.`,
@@ -156,12 +237,11 @@ function validateRow(row: EventRow): BusEvent {
   if (!isBusEventName(row.event)) {
     return unknownEventRow(row, { reason: `unknown event name "${row.event}"`, raw: parsed });
   }
-  const schema = eventSchemas[row.event];
-  const result = schema.safeParse(parsed);
-  if (!result.success) {
-    return unknownEventRow(row, { reason: result.error.message, raw: parsed });
+  if (!isPayloadOf(row.event, parsed)) {
+    const reason = eventSchemas[row.event].safeParse(parsed).error?.message ?? "schema mismatch";
+    return unknownEventRow(row, { reason, raw: parsed });
   }
-  return { id: row.id, event: row.event, data: parsed, createdAt: row.createdAt };
+  return knownBusEvent({ id: row.id, event: row.event, data: parsed, createdAt: row.createdAt });
 }
 
 type BusListener = (event: BusEvent) => void;
@@ -190,7 +270,7 @@ export interface EventBus {
    * of one event type. Used by `chat.bootstrap` to report the messages the box
    * has accepted but not yet written into a transcript.
    */
-  readRecent(options: { event: BusEventName; limit: number }): BusEvent[];
+  readRecent<K extends BusEventName>(options: { event: K; limit: number }): Array<KnownBusEvent<K> | UnknownBusEvent>;
 
   /** Replay missed events then stream live ones. */
   subscribe(options: { afterId?: number; listener: BusListener }): Subscription;
@@ -244,7 +324,12 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     CREATE INDEX IF NOT EXISTS idx_events_event_id ON events (event, id);
   `);
 
-  reconcileSchemaGeneration(db);
+  try {
+    reconcileSchemaGeneration(db, dbPath);
+  } catch (e) {
+    db.close();
+    throw e;
+  }
 
   const insertStmt = db.prepare(
     "INSERT INTO events (event, data) VALUES (?, ?)"
@@ -290,12 +375,12 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     const result = insertStmt.run(event, payload);
     const id = Number(result.lastInsertRowid);
 
-    const busEvent: BusEvent = {
+    const busEvent = knownBusEvent({
       id,
       event,
       data,
       createdAt: new Date().toISOString(),
-    };
+    });
 
     // Update high-water mark so the poll loop doesn't re-dispatch this
     highWaterMark = id;
@@ -305,12 +390,12 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
 
   function emitTransient<K extends BusEventName>(event: K, data: EventMap[K]): void {
     transientCounter--;
-    const busEvent: BusEvent = {
+    const busEvent = knownBusEvent({
       id: transientCounter, // negative IDs for transient events
       event,
       data,
       createdAt: new Date().toISOString(),
-    };
+    });
     notifyListeners(busEvent);
   }
 
@@ -323,9 +408,13 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
    * forwards. A row that fails validation is dropped by `parseRows`, same as
    * on every other read path.
    */
-  function readRecent(request: { event: BusEventName; limit: number }): BusEvent[] {
+  function readRecent<K extends BusEventName>(request: { event: K; limit: number }): Array<KnownBusEvent<K> | UnknownBusEvent> {
     const rows = readRecentStmt.all(request.event, request.limit);
-    return parseRows(rows.toReversed());
+    // The query selected only `request.event`; a row read back as another
+    // event cannot occur, and dropping one keeps the type honest.
+    const ofRequested = (event: BusEvent): event is KnownBusEvent<K> | UnknownBusEvent =>
+      event.event === request.event || event.event === "unknown";
+    return parseRows(rows.toReversed()).filter(ofRequested);
   }
 
   function readSince(afterId: number): BusEvent[] {

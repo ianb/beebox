@@ -25,7 +25,7 @@
  *    JWTs, and a catch-all long base64/hex run).
  *  - **absolute `http(s)://` references** — the self-containment check, which
  *    doubles as a "the publication CSP (`connect-src 'none'`) will block this"
- *    warning. This is the same scan `render-docs`'s doctest performs inline;
+ *    warning. This is the same scan `render-docs`'s test performs inline;
  *    the notion is centralized here.
  *
  * ## Blind spots (plan finding #8 — stated explicitly, on purpose)

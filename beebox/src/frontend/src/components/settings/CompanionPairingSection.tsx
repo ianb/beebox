@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import qrcode from "qrcode-generator";
+import { qrSvg } from "../../lib/qr-svg";
 import { getApiBase } from "../../api";
 import { useBoxName } from "../../hooks/useBoxName";
 import { trpc, type RouterOutput } from "../../lib/trpc/client";
@@ -11,6 +11,7 @@ import { Text } from "../ui/Text";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
+import { errorMessage } from "@shared/error-guards";
 
 type MobileDevice = RouterOutput["pairing"]["devices"]["devices"][number];
 type DeviceScope = RouterOutput["pairing"]["devices"]["scope"];
@@ -39,13 +40,6 @@ function pairingDeepLink(token: string, boxName: string): string {
     pairingToken: token,
   });
   return `beebox://pair?${params.toString()}`;
-}
-
-function qrSvg(value: string): string {
-  const qr = qrcode(0, "M");
-  qr.addData(value);
-  qr.make();
-  return qr.createSvgTag({ cellSize: 5, margin: 3 });
 }
 
 /** The list is scoped to what the caller may reach, so the heading says which
@@ -99,63 +93,90 @@ export function CompanionPairingSection() {
   const devicesQuery = trpc.pairing.devices.useQuery();
   const createMutation = trpc.pairing.createTicket.useMutation();
   const [ticket, setTicket] = useState<PairingTicket | null>(null);
+  const [showQr, setShowQr] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ticket) return;
     const delay = Math.max(0, new Date(ticket.expiresAt).getTime() - Date.now());
-    const timeout = setTimeout(() => setTicket(null), delay);
+    const timeout = setTimeout(() => {
+      setTicket(null);
+      setShowQr(false);
+    }, delay);
     return () => clearTimeout(timeout);
   }, [ticket]);
 
-  const createTicket = async () => {
+  /** The current ticket, unless it has under a minute left: not worth handing out. */
+  const usableTicket = (): PairingTicket | null =>
+    ticket !== null && new Date(ticket.expiresAt).getTime() - Date.now() > 60_000 ? ticket : null;
+
+  const mintTicket = async (): Promise<PairingTicket> => {
     const next = await createMutation.mutateAsync();
-    setTicket({ deepLink: pairingDeepLink(next.token, boxName), expiresAt: next.expiresAt });
+    const made = { deepLink: pairingDeepLink(next.token, boxName), expiresAt: next.expiresAt };
+    setTicket(made);
+    return made;
   };
 
+  const showQrCode = async () => {
+    if (usableTicket() === null) await mintTicket();
+    setShowQr(true);
+  };
+
+  /** One click mints (when needed) and copies. Safari drops a click's
+   * permission to write the clipboard across an await; a ClipboardItem built
+   * from a promise keeps it. */
   const copyLink = async () => {
-    if (!ticket) return;
-    await navigator.clipboard.writeText(ticket.deepLink);
+    setCopyError(null);
+    const current = usableTicket();
+    const link = current ? Promise.resolve(current.deepLink) : mintTicket().then((made) => made.deepLink);
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ "text/plain": link.then((text) => new Blob([text], { type: "text/plain" })) }),
+      ]);
+    } catch (e) {
+      console.warn("[pairing] copy link failed:", e);
+      setCopyError(`The link could not be copied: ${errorMessage(e)}`);
+    }
   };
 
   return (
-    <Card as="section" aria-label="iOS companion pairing" shadow>
+    <Card as="section" aria-label="Companion app pairing" shadow material>
       <Stack gap="md">
         <Stack gap="xs">
           <Heading level={2}>
-            iOS Companion
+            Companion Apps
           </Heading>
           <Hint>
-            Pair the native app with this box using a short-lived QR code.
+            On an iPhone: Show QR Code, then scan it in the Bee Box app. On a Mac: Copy Link, then in the Bee Box
+            menu choose Pair with a Box… and paste it. Each code works once and expires after a few minutes.
           </Hint>
         </Stack>
 
         <Row gap="sm" wrap>
           <Button
             id="bbx-settings-pairing-create-qr"
-            intent="primary"
-            loading={createMutation.isPending}
+            loading={createMutation.isPending ? !showQr : false}
             loadingLabel="Creating..."
-            onClick={createTicket}
+            onClick={showQrCode}
           >
-            Create QR
+            Show QR Code (iPhone)
           </Button>
-          {ticket ? (
-            <Button id="bbx-settings-pairing-copy-link" onClick={copyLink} flash={{ label: "Copied" }}>
-              Copy Link
-            </Button>
-          ) : null}
+          <Button id="bbx-settings-pairing-copy-link" onClick={copyLink} flash={{ label: "Copied" }}>
+            Copy Link (Mac)
+          </Button>
         </Row>
 
         {createMutation.error ? (
           <ErrorText>{createMutation.error.message}</ErrorText>
         ) : null}
+        {copyError ? <ErrorText>{copyError}</ErrorText> : null}
 
-        {ticket ? (
+        {ticket !== null && showQr ? (
           <Stack gap="sm">
             <div
               className="w-fit rounded border border-warm-200 bg-white p-3"
               aria-label="iOS pairing QR code"
-              dangerouslySetInnerHTML={{ __html: qrSvg(ticket.deepLink) }}
+              dangerouslySetInnerHTML={{ __html: qrSvg(ticket.deepLink, 5) }}
             />
             <Text size="xs" tone="muted">Expires {formatDate(ticket.expiresAt)}</Text>
             <code className="block max-w-full overflow-auto rounded bg-warm-100 px-2 py-1 text-xs text-warm-800">

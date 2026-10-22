@@ -3,11 +3,11 @@
  *
  * Card text renders through `Markdown` from `beebox/view-widgets`, the app's
  * own renderer, so Markdoc tags, refs, images, and todos behave the same in a
- * box view as on the card's page (`docs/plans/todos-ui.md`, Track 6). A view
+ * box view as on the card's page (`docs/implemented-plans/todos-ui.md`, Track 6). A view
  * that splits a body into paragraphs, strips `{% … %}` tags with a regex, or
  * brings its own Markdown library loses all of that without anyone noticing.
  *
- * A TypeScript-AST check (the compiler API, not regexes over source) of three
+ * A TypeScript-AST check (the compiler's syntax tree, not regexes over source) of three
  * rules. A view fails when it:
  *
  * 1. imports a Markdown library (`MARKDOWN_LIBRARIES`, any subpath, by
@@ -41,10 +41,17 @@
 
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import type * as TS from "typescript";
+import type * as TS from "../../../lib/typescript/syntax.js";
+import { errorMessage } from "../../../shared/error-guards.js";
 import { localImportClosure } from "./local-imports.js";
 
 type Ts = typeof TS;
+
+/** The syntax module and the parser one check uses. */
+interface Syntax {
+  ts: Ts;
+  parse: TS.Parse;
+}
 
 /** Package names (and families, with a trailing `-`) a view may not import. */
 const MARKDOWN_LIBRARIES = [
@@ -78,7 +85,7 @@ function importedSpecifier(ts: Ts, node: TS.Node): string | null {
     const callee = node.expression;
     const isLoader = callee.kind === ts.SyntaxKind.ImportKeyword || (ts.isIdentifier(callee) && callee.text === "require");
     const first = node.arguments[0];
-    if (isLoader && first !== undefined && ts.isStringLiteralLike(first)) return first.text;
+    if (isLoader && first !== undefined && ts.isStringLiteralLikeNode(first)) return first.text;
   }
   return null;
 }
@@ -168,7 +175,7 @@ function isDocument(ts: Ts, node: TS.Expression): boolean {
 /** A `.body` / `["body"]` read (not an assignment target), on something other than `document`. */
 function isBodyAccess(ts: Ts, node: TS.Node): boolean {
   const isAccess = (ts.isPropertyAccessExpression(node) && node.name.text === "body")
-    || (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression) && node.argumentExpression.text === "body");
+    || (ts.isElementAccessExpression(node) && ts.isStringLiteralLikeNode(node.argumentExpression) && node.argumentExpression.text === "body");
   if (!isAccess || isDocument(ts, node.expression)) return false;
   const outer = outermost(ts, node);
   const parent = outer.parent;
@@ -183,9 +190,12 @@ function destructuredBodyNames(ts: Ts, file: TS.SourceFile): Set<string> {
       const key = node.propertyName ?? node.name;
       const declaration = node.parent.parent;
       const fromDocument = ts.isVariableDeclaration(declaration) && declaration.initializer !== undefined && isDocument(ts, declaration.initializer);
-      if (ts.isIdentifier(key) && key.text === "body" && ts.isIdentifier(node.name) && !fromDocument) names.add(node.name.text);
+      const local = node.name;
+      if (key !== undefined && local !== undefined && ts.isIdentifier(key) && key.text === "body" && ts.isIdentifier(local) && !fromDocument) {
+        names.add(local.text);
+      }
     }
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   };
   visit(file);
   return names;
@@ -194,17 +204,17 @@ function destructuredBodyNames(ts: Ts, file: TS.SourceFile): Set<string> {
 /** An identifier that reads a local (not a declaration, property name, or JSX attribute name). */
 function isLocalRead(ts: Ts, node: TS.Identifier): boolean {
   const parent = node.parent;
-  if (ts.isBindingElement(parent) || ts.isVariableDeclaration(parent) || ts.isParameter(parent)) return false;
+  if (ts.isBindingElement(parent) || ts.isVariableDeclaration(parent) || ts.isParameterDeclaration(parent)) return false;
   if (ts.isPropertyAccessExpression(parent) && parent.name === node) return false;
   if (ts.isPropertyAssignment(parent) && parent.name === node) return false;
-  if (ts.isJsxAttribute(parent) || ts.isPropertySignature(parent) || ts.isImportSpecifier(parent)) return false;
+  if (ts.isJsxAttribute(parent) || ts.isPropertySignatureDeclaration(parent) || ts.isImportSpecifier(parent)) return false;
   if (ts.isFunctionDeclaration(parent) || ts.isMethodDeclaration(parent) || ts.isPropertyDeclaration(parent)) return false;
   return true;
 }
 
 /** Every problem in one view's source. */
-function findProblems(ts: Ts, source: string): ViewMarkdownProblem[] {
-  const file = ts.createSourceFile("view.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+function findProblems({ ts, parse }: Syntax, source: string): ViewMarkdownProblem[] {
+  const file = parse({ fileName: "view.tsx", sourceText: source });
   const tagNames = markdownTagNames(ts, file);
   const bodyLocals = destructuredBodyNames(ts, file);
   const problems: ViewMarkdownProblem[] = [];
@@ -222,31 +232,61 @@ function findProblems(ts: Ts, source: string): ViewMarkdownProblem[] {
     if (ts.isIdentifier(node) && bodyLocals.has(node.text) && isLocalRead(ts, node)) {
       bodyUse(node, `uses \`${node.text}\` (a card's destructured \`body\`) outside \`<Markdown>\``);
     }
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   };
   visit(file);
   return problems;
 }
 
-/** Problems in a view's source text. Loads the TypeScript compiler on first use. */
+/**
+ * Loaded here, not at module scope: the CLI imports every command module
+ * eagerly (see view-typecheck.ts), and the parser starts a TypeScript process.
+ */
+async function loadSyntax(): Promise<Ts> {
+  return import("../../../lib/typescript/syntax.js");
+}
+
+/** Problems in a view's source text. */
 export async function checkViewMarkdown(source: string): Promise<ViewMarkdownProblem[]> {
-  // Loaded here, not at module scope: the compiler is ~8 MB of JS, and the
-  // CLI imports every command module eagerly (see view-typecheck.ts).
-  const ts = await import("typescript");
-  return findProblems(ts, source);
+  const ts = await loadSyntax();
+  const parser = ts.createParser();
+  try {
+    return findProblems({ ts, parse: parser.parse }, source);
+  } finally {
+    parser.close();
+  }
 }
 
 /** Every module specifier a source imports (`import`, `export … from`, `import()`, `require()`). */
-function listSpecifiers(ts: Ts, source: string): string[] {
-  const file = ts.createSourceFile("view.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+function listSpecifiers({ ts, parse }: Syntax, source: string): string[] {
+  const file = parse({ fileName: "view.tsx", sourceText: source });
   const out: string[] = [];
   const visit = (node: TS.Node): void => {
     const specifier = importedSpecifier(ts, node);
     if (specifier !== null) out.push(specifier);
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   };
   visit(file);
   return out;
+}
+
+/** One line per problem in the view and the local files it imports. */
+async function problemLines(viewAbsPath: string, root: string): Promise<string[]> {
+  const ts = await loadSyntax();
+  const parser = ts.createParser();
+  const syntax = { ts, parse: parser.parse };
+  const lines: string[] = [];
+  try {
+    const files = await localImportClosure(viewAbsPath, { root, listSpecifiers: (source) => listSpecifiers(syntax, source) });
+    const realRoot = await fs.realpath(root);
+    for (const [index, file] of files.entries()) {
+      const where = index === 0 ? "" : `${path.relative(realRoot, file.path)} `;
+      for (const p of findProblems(syntax, file.source)) lines.push(`  ${where}line ${String(p.line)}: ${p.what}`);
+    }
+  } finally {
+    parser.close();
+  }
+  return lines;
 }
 
 /**
@@ -254,16 +294,17 @@ function listSpecifiers(ts: Ts, source: string): string[] {
  * path): null when it and every local file it imports (transitively, under
  * `root`) render card text only through `Markdown`, else the problems and the
  * rule. A helper's problems name its path relative to `root`. An unreadable
- * file is the compile check's concern and passes here.
+ * file is the compile check's concern and passes here. When the check itself
+ * fails (the TypeScript process did not start or died), the error says so:
+ * the hooks show this string to the agent, and a throw there would show
+ * nothing.
  */
 export async function lintViewMarkdown(viewAbsPath: string, { root }: { root: string }): Promise<string | null> {
-  const ts = await import("typescript");
-  const files = await localImportClosure(viewAbsPath, { root, listSpecifiers: (source) => listSpecifiers(ts, source) });
-  const realRoot = await fs.realpath(root);
-  const lines: string[] = [];
-  for (const [index, file] of files.entries()) {
-    const where = index === 0 ? "" : `${path.relative(realRoot, file.path)} `;
-    for (const p of findProblems(ts, file.source)) lines.push(`  ${where}line ${String(p.line)}: ${p.what}`);
+  let lines: string[];
+  try {
+    lines = await problemLines(viewAbsPath, root);
+  } catch (e) {
+    return `The Markdown check could not run: ${errorMessage(e)}`;
   }
   if (lines.length === 0) return null;
   return ["View renders Markdown by hand:", ...lines, VIEW_MARKDOWN_MESSAGE].join("\n");

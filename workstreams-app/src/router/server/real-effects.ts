@@ -76,7 +76,8 @@ export async function resolveWorktree(name: string): Promise<ResolvedWorktree | 
       backendCwd: path.join(MAIN_ROOT, "beebox"),
       frontendCwd,
       viteBin: await frontendViteBin(frontendCwd),
-      boxes: (await readBoxes(path.join(MAIN_ROOT, "beebox", ".env"))) ?? MAIN_BOX_DEFAULTS,
+      boxes: (await readBoxes(path.join(MAIN_ROOT, "beebox", ".env"), "BOXES")) ?? MAIN_BOX_DEFAULTS,
+      testBoxes: (await readBoxes(path.join(MAIN_ROOT, "beebox", ".env"), "TEST_BOXES")) ?? [],
     };
   }
   const root = path.join(WORKTREES_ROOT, name);
@@ -87,7 +88,7 @@ export async function resolveWorktree(name: string): Promise<ResolvedWorktree | 
     return null;
   }
   const envPath = path.join(root, "beebox", ".env");
-  const boxes = await readBoxes(envPath);
+  const boxes = await readBoxes(envPath, "BOXES");
   const frontendCwd = path.join(root, "beebox", "src", "frontend");
   return {
     name,
@@ -96,15 +97,16 @@ export async function resolveWorktree(name: string): Promise<ResolvedWorktree | 
     frontendCwd,
     viteBin: await frontendViteBin(frontendCwd),
     boxes: boxes ?? [path.join(BOXES_ROOT, name, "test1")],
+    testBoxes: [],
   };
 }
 
-async function readBoxes(envPath: string): Promise<string[] | null> {
+async function readBoxes(envPath: string, key: "BOXES" | "TEST_BOXES"): Promise<string[] | null> {
   try {
     const text = await fs.readFile(envPath, "utf8");
-    const line = text.split("\n").find((l) => l.startsWith("BOXES="));
+    const line = text.split("\n").find((l) => l.startsWith(`${key}=`));
     if (!line) return null;
-    return line.slice("BOXES=".length).trim().split(/\s+/).filter(Boolean);
+    return line.slice(`${key}=`.length).trim().split(/\s+/).filter(Boolean);
   } catch (_e) {
     // No .env in this checkout (or unreadable) — fall back to the defaults.
     return null;
@@ -178,8 +180,11 @@ async function writeWorktreeHubConfig(params: {
   const { name, backendPort, resolvedBoxes } = params;
   await fs.mkdir(HUB_CONFIG_DIR, { recursive: true });
   const configPath = path.join(HUB_CONFIG_DIR, `${name}.json`);
-  const boxes: Record<string, { path: string }> = {};
-  for (const { slug, contentDir } of resolvedBoxes) boxes[slug] = { path: contentDir };
+  const boxes: Record<string, { path: string; secretsFile?: string }> = {};
+  for (const { slug, contentDir, secretsFile } of resolvedBoxes) {
+    if (secretsFile !== undefined) await fs.mkdir(path.dirname(secretsFile), { recursive: true });
+    boxes[slug] = { path: contentDir, ...(secretsFile !== undefined && { secretsFile }) };
+  }
   await fs.writeFile(
     configPath,
     JSON.stringify({ port: backendPort, host: "127.0.0.1", lazy: true, idleMs: IDLE_TIMEOUT_MS, boxes }, null, 2),

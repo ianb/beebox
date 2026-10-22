@@ -1,0 +1,124 @@
+// # A box behind a hub trusts ONLY hub-injected, secret-gated identity headers (Track D, chunk D2)
+//
+// `BBX_HUB_SECRET` set in a box's env switches it into hub mode
+// (`src/webapp/auth.ts`'s `isHubMode`): the box's own auth preHandler
+// (`server-box-scope.ts`'s `addBoxAuthHook`) stops trusting its session
+// cookie entirely and instead trusts `x-bbx-authenticated-email` IFF
+// `x-bbx-hub-secret` matches. The per-box `allowedEmails` ACL still runs
+// against whatever email that resolves to — auth (identity) and
+// authorization (per-box ACL) stay two separate checks. The box's own
+// `/auth/*` also goes dead (404) in hub mode, since the hub owns login.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { makeTestServer } from "../helpers/test-route-server.js";
+import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
+
+process.env.BBX_HUB_SECRET = "test-hub-secret-xyz";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-hub-mode-auth-test";
+
+const server = await makeTestServer();
+await server.seed("_config/box.json", JSON.stringify({ allowedEmails: [" Allowed@Example.COM "] }));
+
+// ## No hub headers at all -> 401 (fails closed, not open)
+void test("No hub headers at all -> 401 (fails closed, not open)", async (t) => {
+  t.teardown(async () => {
+    try {
+      delete process.env.BBX_HUB_SECRET;
+      delete process.env.BBX_SESSION_SECRET;
+      await server.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const noHeaders = await server.request({ method: "GET", url: "/api/trpc/health.check" });
+  t.check(noHeaders.statusCode, 401);
+
+  // ## A spoofed email header without the secret is ignored -> still 401
+
+  const spoofedNoSecret = await server.request({
+    method: "GET",
+    url: "/api/trpc/health.check",
+    headers: { "x-bbx-authenticated-email": "attacker@evil.com" },
+  });
+  t.check(spoofedNoSecret.statusCode, 401);
+
+  // ## A spoofed email header with the WRONG secret is also ignored -> 401
+
+  const spoofedWrongSecret = await server.request({
+    method: "GET",
+    url: "/api/trpc/health.check",
+    headers: { "x-bbx-authenticated-email": "attacker@evil.com", "x-bbx-hub-secret": "not-the-real-secret" },
+  });
+  t.check(spoofedWrongSecret.statusCode, 401);
+
+  // ## A session cookie presented directly to a hub-mode box is ignored -- no cookie fallback
+  //
+  // The whole point of D2: a box that could still fall back to verifying its
+  // own cookie would let anyone who reaches it directly (bypassing the hub)
+  // back in with a self-issued or stolen cookie signed by the SAME symmetric
+  // secret every sibling box would also accept.
+
+  const cookieValue = signSession({ email: "allowed@example.com", name: "Allowed User" });
+  const cookiePresented = await server.request({
+    method: "GET",
+    url: "/api/trpc/health.check",
+    headers: { cookie: `${COOKIE_NAME}=${cookieValue}` },
+  });
+  t.check(cookiePresented.statusCode, 401);
+
+  // ## Valid secret + email NOT on the box's allowedEmails -> 403 (identity ok, authorization denied)
+
+  const validButNotAllowed = await server.request({
+    method: "GET",
+    url: "/api/trpc/health.check",
+    headers: { "x-bbx-authenticated-email": "stranger@example.com", "x-bbx-hub-secret": "test-hub-secret-xyz" },
+  });
+  t.check(validButNotAllowed.statusCode, 403);
+
+  // ## Valid secret + an allowedEmails email -> 200
+
+  const validAndAllowed = await server.request({
+    method: "GET",
+    url: "/api/trpc/health.check",
+    headers: { "x-bbx-authenticated-email": "allowed@example.com", "x-bbx-hub-secret": "test-hub-secret-xyz" },
+  });
+  t.check(validAndAllowed.statusCode, 200);
+
+  // ## Valid secret + `x-bbx-hub-auth: off` (hub-wide auth disabled) bypasses the ACL entirely
+
+  const hubAuthOff = await server.request({
+    method: "GET",
+    url: "/api/trpc/health.check",
+    headers: { "x-bbx-hub-secret": "test-hub-secret-xyz", "x-bbx-hub-auth": "off" },
+  });
+  t.check(hubAuthOff.statusCode, 200);
+
+  // ## The box's own `/auth/login` is dead in hub mode -- 404, not a redirect loop
+
+  const ownAuthLogin = await server.rootRequest({ method: "GET", url: "/auth/login" });
+  t.check(ownAuthLogin.statusCode, 404);
+});
+
+// ## A box with no `BBX_HUB_SECRET` (standalone / non-hub) ignores the hub headers entirely
+//
+// Same headers that would grant access above do nothing here — the test-server
+// helper constructs with `openAccess: true` (standalone open mode), so the auth
+// hook isn't even installed and every request passes through regardless of what
+// `x-bbx-*` headers it carries.
+void test("Same headers that would grant access above do nothing here — the test-server...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await openServer.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const openServer = await makeTestServer();
+  const openWithSpoofedHeaders = await openServer.request({
+    method: "GET",
+    url: "/api/trpc/health.check",
+    headers: { "x-bbx-authenticated-email": "attacker@evil.com", "x-bbx-hub-secret": "irrelevant" },
+  });
+  t.check(openWithSpoofedHeaders.statusCode, 200);
+});

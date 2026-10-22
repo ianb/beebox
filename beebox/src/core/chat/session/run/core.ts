@@ -1,4 +1,4 @@
-import { acquireBoxWork } from "../../../../lib/box-maintenance.js";
+import { acquireBoxWork } from "../../../../lib/box-maintenance/admission.js";
 /**
  * ChatSession — Manages a long-lived SDK chat run for interactive chat.
  *
@@ -32,7 +32,7 @@ import {
 import { pumpSessionRun } from "./consume.js";
 import { resolveSessionModel } from "../model.js";
 import { preflightChatBackend } from "../../../agent/auth-preflight.js";
-import { liveProviderRefusal } from "../../../provider-env/core.js";
+import { sendReadiness } from "./start-refusal.js";
 import { createRunLockHolder, withChatRunAdmission } from "./lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
@@ -82,9 +82,7 @@ export class ChatSession extends EventEmitter {
   /** The chat-active lock held while a run is in flight (`lock.ts`). */
   private readonly runLock = createRunLockHolder(() => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }));
   /** Holds each turn's `result` until the transcript flush lands on disk. */
-  private readonly durability = createTurnDurabilityGate(
-    () => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }),
-  );
+  private readonly durability = createTurnDurabilityGate(() => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }));
 
   constructor(boxRoot: string, options?: ChatSessionOptions) {
     super();
@@ -194,6 +192,7 @@ export class ChatSession extends EventEmitter {
     });
     this.transition({ phase: "ready", run });
     this.coined.noteRunStarted(this.sessionId, this.options);
+    this.emit("task-level", []); // The live-task level is per-process; the CLI sends none at startup.
 
     // Background loop: pump SDK messages into handleMessage. Capture errors
     // and emit as "error" events.
@@ -233,7 +232,7 @@ export class ChatSession extends EventEmitter {
       toIdle: () => { if (this.state.phase !== "idle") this.transition({ phase: "idle" }); },
       releaseRunLock: () => this.runLock.release(),
       emitError: (err) => { this.emit("error", err); },
-      emitClose: (code) => { this.emit("close", code); },
+      emitClose: (code) => { this.emit("task-level", []); this.emit("close", code); }, // its tasks ended with it
       queueLength: () => this.messageQueue.length,
       drainQueue: () => this.drainQueue(),
       log,
@@ -254,6 +253,7 @@ export class ChatSession extends EventEmitter {
     // Background-task events fire between turns (no per-turn SSE attached), so
     // wireSession bridges them to the global event bus, not the per-turn stream.
     if (msg.type === "task") { this.emit("task", msg.task); return; }
+    if (msg.type === "task-level") { this.emit("task-level", msg.tasks); return; }
     // Accumulate assistant text for schedule parsing
     this.turnText = accumulateAssistantText(this.turnText, msg);
 
@@ -306,28 +306,26 @@ export class ChatSession extends EventEmitter {
    *
    * Accepts either a plain string (back-compat) or a ChatSendInput object
    * carrying the text plus any image attachments referenced by `[imageN]`
-   * tokens in the text.
+   * tokens in the text. `onAdmitted` runs synchronously once this send holds the turn; a throw abandons it.
    */
-  async send(message: string | ChatSendInput, options?: { independent: boolean }): Promise<boolean> {
+  async send(message: string | ChatSendInput, options?: { independent?: boolean; onAdmitted?: () => void; onRefused?: (reason: string) => void }): Promise<boolean> {
     const opening = (async () => {
-      const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent ? { inherited: null } : {}) });
-      try { return await work.run(() => this.sendAdmitted(message)); }
+      const work = await acquireBoxWork(this.boxRoot, { reason: "chat send", ...(options?.independent === true ? { inherited: null } : {}) });
+      try { return await work.run(() => this.sendAdmitted(message, { onAdmitted: options?.onAdmitted, onRefused: options?.onRefused })); }
       finally { await work.release(); }
     })();
     this.opening.add(opening);
     try { return await opening; } finally { this.opening.delete(opening); }
   }
 
-  private async sendAdmitted(message: string | ChatSendInput): Promise<boolean> {
-    if (this.isBusy()) {
-      log("send", "Rejected — busy");
-      return false;
-    }
+  private async sendAdmitted(message: string | ChatSendInput, { onAdmitted, onRefused }: { onAdmitted: (() => void) | undefined; onRefused: ((reason: string) => void) | undefined }): Promise<boolean> {
+    if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
+    // A run that cannot start, or a live one whose provider setup is gone, is refused before admission (see start-refusal.ts); the awaits let a concurrent send in.
+    const live = this.liveRun() !== null;
+    if (!(await sendReadiness({ boxRoot: this.boxRoot, backend: this.backend, explicitModel: this.explicitModel, liveModel: live ? this.resolvedModel : null, startOptions: live ? null : await this.buildBackendStartOptions(), session: this, onRefused }))) { if (live) this.restart(); return false; }
+    if (this.isBusy()) { log("send", "Rejected — busy"); return false; }
 
-    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try {
-
-    // A live third-party run keeps the provider env it started with; re-check so a removed model or revoked key stops at this turn.
-    const refusal = await liveProviderRefusal({ boxRoot: this.boxRoot, model: this.liveRun() === null ? null : this.resolvedModel }); if (refusal !== null) { this.emit("error", refusal); this.restart(); return false; }
+    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message; this.preparingTurn = true; try { onAdmitted?.();
 
     // Composed BEFORE the run starts (it does filesystem I/O), and awaited
     // before run creation: observers of "a run exists" (drain-path tests,

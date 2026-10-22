@@ -6,9 +6,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
+import tapCheck from "@ianbicking/tap-check/eslint";
 
 // --- Frontend import-boundary contract (project-local; see
-// docs/plans/clerk-contract-and-import-boundary.md Track 2, and the paths
+// docs/implemented-plans/clerk-contract-and-import-boundary.md Track 2, and the paths
 // comment in tsconfig.json). The frontend must not import backend source by a
 // raw relative path that escapes src/frontend/: type imports go through the
 // @core/@schemas/@backend type-only aliases; value imports go through @shared
@@ -67,7 +68,7 @@ const BOUNDARY_PATTERNS = [
 ];
 // src/shared/ is bundler-safe, so a raw `../shared/…` bundles nothing harmful —
 // but the convention is the @shared alias. Banned raw EXCEPT for modules that
-// run OUTSIDE Vite where @shared can't resolve: the tap/tsx DOCTEST runner uses
+// run OUTSIDE Vite where @shared can't resolve: the tap/tsx test runner uses
 // the ROOT tsconfig (no @shared path), and the view-widgets esbuild bundle
 // externalizes packages and can't resolve the alias.
 // Those files — proven by the 2026-07-12 probe — must import shared by raw
@@ -95,7 +96,7 @@ const BACKEND_LIB_BAN_MESSAGE =
 const SHARED_ALIAS_PATTERN = {
   group: ["**/shared/**"],
   message:
-    "Import shared modules via the @shared/* alias, not a raw relative path. (Raw relative is reserved for the few modules that run outside Vite — doctests and the view-widgets bundle — where @shared can't resolve; those are exempted in eslint.config.ts.)",
+    "Import shared modules via the @shared/* alias, not a raw relative path. (Raw relative is reserved for the few modules that run outside Vite — tests and the view-widgets bundle — where @shared can't resolve; those are exempted in eslint.config.ts.)",
 };
 // Modules exercised outside the Vite bundler that legitimately import src/shared/
 // by raw relative path (@shared unresolvable there — see SHARED_ALIAS_PATTERN).
@@ -108,10 +109,10 @@ const OUTSIDE_VITE_SHARED_RAW = [
   "src/lib/audio/speech-parsing/parse.ts",
   "src/machines/chatMachine/chat-shared.ts",
   "src/exports/view-widgets.tsx",
-  // Transitively loaded by the tap/tsx doctest runner via input/emission +
+  // Transitively loaded by the tap/tsx test runner via input/emission +
   // input/voice-intent (root tsconfig, no @shared resolution).
   "src/components/chat/InteractiveChat-helpers.ts",
-  // Loaded outside Vite by their own doctests (root tsconfig, no @shared
+  // Loaded outside Vite by their own tests (root tsconfig, no @shared
   // resolution): each imports @shared/is-record by raw relative path.
   "src/input/emission-persist.ts",
   "src/lib/dictation-draft.ts",
@@ -119,19 +120,23 @@ const OUTSIDE_VITE_SHARED_RAW = [
   "src/lib/location-share.ts",
   "src/components/chat/everywhere/InteractiveChat/native-emission.ts",
   "src/machines/chatMachine/chat-actors.ts",
-  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // Loaded outside Vite by its own test (root tsconfig, no @shared
   // resolution): imports @shared/todo-model by raw relative path.
   "src/components/todo-view-card-logic.ts",
-  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // Loaded outside Vite by its own test (root tsconfig, no @shared
   // resolution): imports @shared/invariant by raw relative path.
   "src/components/history/HistoryViewCard/CommitDetail-diff.ts",
-  // Loaded outside Vite by its own doctest (root tsconfig, no @shared
+  // Loaded outside Vite by its own test (root tsconfig, no @shared
   // resolution): imports @shared/result by raw relative path.
   "src/lib/ui-scan/resolve.ts",
 ];
 
 export default [
-  ...vibeCheck({ react: true }),
+  // `test` in roots (boxholder decision, 2026-10-16): test/ is held to the same
+  // reviewed ruleset as src/, matching ../../eslint.config.ts. Outside the
+  // roots, files fall through to eslint-config-agent's unreviewed base, whose
+  // extra bans (`??`, inline unions, fs-filename) are not house style.
+  ...vibeCheck({ react: true, roots: ["src", "test"] }),
   // Base import-boundary ban: every frontend source file. no-restricted-imports
   // does NOT merge across flat configs (last match wins), so any later block
   // that sets this rule must restate every pattern it still wants — see the
@@ -194,6 +199,8 @@ export default [
       // resets, etc.) that are flagged but not actually wrong for our usage.
       // Disable until/unless we do a real audit.
       "react-hooks/set-state-in-effect": "off",
+      // Check the SSR-safe layout effect's dependency list like useLayoutEffect's.
+      "react-hooks/exhaustive-deps": ["error", { additionalHooks: "^useIsomorphicLayoutEffect$" }],
     },
   },
   // Outside any components/ subdirectory: every JSX element's className must
@@ -223,6 +230,19 @@ export default [
           allow: [{ from: "package", name: "Redirect", package: "@tanstack/router-core" }],
         },
       ],
+    },
+  },
+  {
+    // Tests compare whole values with t.check (../../docs/testing/check.md),
+    // as in ../../eslint.config.ts. tap-check resolves from beebox's
+    // node_modules, as it does for these tests' tap preloads; declaring it
+    // here would make pnpm install a second set of its tap peers.
+    files: ["test/**/*.{ts,tsx}"],
+    plugins: { "tap-check": tapCheck },
+    rules: {
+      "tap-check/check-whole-value": "error",
+      "tap-check/no-voided-check": "error",
+      "tap-check/no-tap-assert": "error",
     },
   },
 ];

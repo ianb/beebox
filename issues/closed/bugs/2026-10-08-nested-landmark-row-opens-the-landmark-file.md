@@ -20,7 +20,7 @@ index
 [second walk](../../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md) row 39). The D-chemistry
 walk saw "Intro Chemistry" and "Chemistry" as separate rows in the box
 section; the "Chemistry" row's path is the landmark file
-([report](../../../beebox/test/user-stories/journeys/D-chemistry/reports/2026-10-08.md), row 65).
+([report](../../../beebox/test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md), row 65).
 
 ## Mechanism
 

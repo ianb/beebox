@@ -5,7 +5,8 @@
  * `beebox/docs/mobile-contract.md` (mechanism 5 of
  * `beebox/docs/implemented-plans/mobile-parity-sync.md`):
  *
- *   pre-commit  (default mode)   — reads the staged file list and the anchor
+ *   pre-commit  (default mode)   — reads the staged file list (in a merge, only
+ *     files whose merged content differs from every parent) and the anchor
  *     manifest (the ```anchors block in the contract doc). If a staged file
  *     matches an anchor (exact or directory-prefix) while the contract doc
  *     itself is NOT staged, that is a pending violation: it is recorded to a
@@ -145,13 +146,30 @@ function repoRoot(): string {
   return execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
 }
 
-function stagedFiles(root: string): string[] {
+function changedFromIndex(root: string, commit: string): string[] {
   // No --diff-filter: deletions count too (removing an anchor is a contract change).
-  const out = execFileSync("git", ["diff", "--cached", "--name-only"], {
+  const out = execFileSync("git", ["diff", "--cached", "--name-only", commit], {
     cwd: root,
     encoding: "utf8",
   });
   return out.split("\n").filter((line) => line !== "");
+}
+
+/**
+ * The staged files this commit changes. In a merge, a file counts only when the
+ * staged content differs from every parent: a conflict resolution or an edit
+ * made during the merge. A file staged only because the other branch changed
+ * it is that branch's change, already checked when it was committed there.
+ */
+export function stagedFiles(root: string): string[] {
+  const staged = changedFromIndex(root, "HEAD");
+  const mergeHeadPath = gitPath(root, "MERGE_HEAD");
+  if (!existsSync(mergeHeadPath)) return staged;
+  const mergeHeads = readFileSync(mergeHeadPath, "utf8").split("\n").filter((line) => line !== "");
+  return mergeHeads.reduce((remaining, head) => {
+    const differs = new Set(changedFromIndex(root, head));
+    return remaining.filter((file) => differs.has(file));
+  }, staged);
 }
 
 function loadAnchors(root: string): string[] {

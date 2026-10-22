@@ -1,7 +1,7 @@
 /**
  * The debounce state machine behind `hooks/usePersistScheduler` — pure, with
  * timers injected, so its schedule/supersede/flush/cancel semantics are
- * doctestable without React or a browser (src/frontend/test/lib/persist-scheduler.doctest.md).
+ * testable without React or a browser (src/frontend/test/lib/persist-scheduler.test.ts).
  *
  * The one rule that isn't obvious: a `flush()` runs the LATEST scheduled
  * write and only that one. Each `schedule()` supersedes the previous pending
@@ -10,7 +10,7 @@
  * failure mode the unmount flush would otherwise introduce.
  */
 
-/** The timer surface this needs — `window` in the app, a fake list in doctests. */
+/** The timer surface this needs — `window` in the app, a fake list in tests. */
 export interface SchedulerTimers {
   setTimeout(fn: () => void, ms: number): number;
   clearTimeout(id: number): void;

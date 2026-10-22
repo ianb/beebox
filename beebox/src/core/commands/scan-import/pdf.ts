@@ -9,7 +9,7 @@
  * `error:` field and the original PDF as its only asset.
  * That is exactly what this flow did before Docling existed, so a Docling
  * problem degrades to the old behavior instead of blocking intake
- * (`docs/plans/scanner-ingest.md`, Track 4).
+ * (`docs/implemented-plans/scanner-ingest.md`, Track 4).
  */
 
 import * as fs from "node:fs/promises";

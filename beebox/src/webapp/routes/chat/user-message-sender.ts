@@ -9,7 +9,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { acquireBoxWork } from "../../../lib/box-maintenance.js";
+import { acquireBoxWork } from "../../../lib/box-maintenance/admission.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 import type { SendOutcome, UserMessageSender } from "../../chat-runtime.js";
 import type { ChatRoutesContext } from "./context.js";
@@ -59,12 +59,11 @@ export function createUserMessageSender(
     try {
       // Broadcast the user message to other clients via the event bus. This is a
       // *persisted* event — the user's turn in the conversation history — and
-      // recording it IS acceptance: it happens on both paths immediately before
-      // the ack, whether the message was queued or is about to be handed to the
-      // engine. A run that then fails to start no longer contradicts it: the
+      // recording it IS acceptance: it happens on both paths before the ack,
+      // once the message is queued or the session has taken its turn. A run that then fails to start no longer contradicts it: the
       // failure reaches the client on the turn stream instead of as a 500 that
       // invited a retry which recorded the message a second time
-      // (issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
+      // (issues/closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md).
       // For pending-new sessions, sessionId is still unknown; subscribers will
       // see it once `session-assigned` fires.
       //
@@ -122,21 +121,29 @@ export function createUserMessageSender(
       const turnId = randomUUID();
       capture = captureTurn(chatSession, { turnId, releasePin });
 
-      // Record, ack, THEN start the run — the busy path's shape, extended to the
-      // idle one. The response means "the box durably has your message", not "the
+      // Record when the session takes the turn, ack, and let the run start
+      // after. The response means "the box durably has your message", not "the
       // engine started": a cold spawn takes minutes, and waiting for it left every
       // client (and every retry timer) parked in a pending state for that whole
       // window. The turn buffer is already wired, so no frame the run emits is
       // lost between the ack and the client's subscribe, and a start failure
       // surfaces on that stream instead of as an HTTP status
-      // (see startAckedRun; docs/plans/emission-model.md, Track A).
-      recordUserMessage();
+      // (see startAckedRun; docs/implemented-plans/emission-model.md, Track A).
+      //
+      // The record waits for admission because the busy check above is not
+      // the last word: the awaits since then let a concurrent send take the
+      // turn, and this one is then refused. Recorded before that refusal, the
+      // message sat in history and the dedup map, undelivered and unretryable
+      // (issues/bugs/2026-10-14-busy-rejected-send-recorded-then-orphaned.md).
+      // Now the refusal is a 409 with nothing recorded.
       const work = await acquireBoxWork(boxRoot, { reason: "chat send" });
-      startAckedRun(chatSession, {
+      const admission = await startAckedRun(chatSession, {
         work,
         input: buildSendInput({ text: fullMessage, images, channel, cardFields: fields }),
         capture,
+        onAdmitted: recordUserMessage,
       });
+      if (!admission.admitted) return respond({ status: 409, body: { error: admission.reason } });
       return respond({ status: 200, body: { turnId } });
     } catch (e) {
       console.error("[chat] send failed after the message id was claimed:", e);

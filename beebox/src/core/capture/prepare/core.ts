@@ -10,7 +10,7 @@
  * Pipeline: resolve destination → write cards → transcribe clips (word
  * timestamps + `.timing.json` sidecars) → assemble the timeline body → validate
  * the written cards → commit → deliver. Transcription is deterministic in tests
- * via the `fake` service, so the whole worker doctests end-to-end.
+ * via the `fake` service, so the whole worker tests end-to-end.
  *
  * One concurrency guard lives at module scope: `inFlightIds`, a set of staging
  * ids currently being prepared in THIS process, so a startup resume can't race

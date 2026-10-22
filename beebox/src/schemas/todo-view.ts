@@ -1,5 +1,5 @@
 /**
- * `todo-view` card schema (`docs/plans/todo-collection.md`, Track 4) — a
+ * `todo-view` card schema (`docs/implemented-plans/todo-collection.md`, Track 4) — a
  * frontmatter-only card that IS a todos display surface: its fields are a
  * query over the todo collection (`src/core/todo/collection.ts`), rendered by
  * `TodoViewCard` (`src/frontend/src/components/TodoViewCard.tsx`) via the
@@ -19,7 +19,7 @@ import { TODO_STATUSES } from "../shared/todo-model.js";
 
 export const TodoViewSchema = cardSchema("todo-view", {
   brief: "A scoped list of todos",
-  description: "A todos display surface scoped to a glob — the box-wide plate, or a project-local subtree instance",
+  description: "A todos display surface scoped to a glob — the box-wide Todos page, or a project-local subtree instance",
   category: "authored",
   fields: {
     glob: z.string().optional(),
@@ -40,11 +40,11 @@ same question from the command line.
   \`"_content/projects/kitchen-remodel/**"\`). **Omit it** to scope the view to
   this card's own directory subtree, plus todos written elsewhere that link
   into that directory — that's the common case for a
-  project-local plate. The box-wide instance
+  project-local todo page. The box-wide instance
   (\`_content/plate.todo-view.card\`) sets \`glob: "**"\` explicitly.
 - \`todo-status:\` — restrict to todos with specific statuses (\`open\`, \`done\`, \`dropped\`,
-  \`parked\`). **Omit** to see \`open\` + \`parked\` — every plate-state group
-  (escalated / on-plate / quiet / parked); \`done\`/\`dropped\` stay out of
+  \`parked\`). **Omit** to see \`open\` + \`parked\` — every group of the list's
+  "By status" tab (Overdue / Now / Later / Parked); \`done\`/\`dropped\` stay out of
   the default view. List them explicitly to include them.
 - \`assigned:\` — restrict to todos with a matching \`assigned\` attribute
   (exact match, e.g. \`"agent"\`).
@@ -52,13 +52,13 @@ same question from the command line.
 ## When to create one
 
 Drop a \`todo-view\` card in a project directory to give that project its own
-plate — every todo captured anywhere under that directory shows up there,
+todo page — every todo captured anywhere under that directory shows up there,
 subtree-scoped by the omitted-\`glob\` rule above. Link to it like any other
 card (a plain card ref — chat, another card's body, a landmark). Tend these
 freely: create one when a directory's todos deserve their own surface,
 rename/move it with the directory, delete it when the project's done. There
 is exactly one box-wide instance (the stock \`_content/plate.todo-view.card\`,
-"The plate") — everything else is as many project-local instances as are
+titled "Todos") — everything else is as many project-local instances as are
 useful.
 
 ## Rendering
@@ -69,7 +69,7 @@ strip. Below that the list is grouped by card and, inside each card, by the
 headings the todos sit under, with nested todos under their parents — which
 is why where you write a todo decides how it reads back. A card whose todos
 merely link into this place is included and says so. The reader can switch
-the grouping to plate-state or show finished todos; neither is a card field.
+the grouping to status or show finished todos; neither is a card field.
 Cards that couldn't be read (parse/validate/load failures) show in their own
 muted section rather than silently vanishing — the same "never hide a
 failure" rule every todo surface follows.`,
@@ -79,7 +79,7 @@ export type TodoViewFields = InferCardFields<typeof TodoViewSchema>;
 
 /**
  * Generate a `todo-view` card's frontmatter. `glob` is optional — omit it
- * for a subtree-scoped project plate; the box-wide stock instance
+ * for a subtree-scoped project todo page; the box-wide stock instance
  * (`installTodoView`, `src/core/box/structure/defaults.ts`) passes `"**"` explicitly.
  */
 export function createTodoViewTemplate(options?: {

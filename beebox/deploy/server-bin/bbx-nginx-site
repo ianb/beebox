@@ -15,7 +15,7 @@
 # this run changed something and the test fails, both site directories are
 # restored exactly as they were and nothing is reloaded.
 #
-# Paths are overridable for test/deploy/nginx-site.doctest.md only.
+# Paths are overridable for test/deploy/nginx-site.test.ts only.
 set -euo pipefail
 shopt -s nullglob
 

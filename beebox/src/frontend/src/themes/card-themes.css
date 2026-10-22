@@ -104,7 +104,6 @@
 .bbx-card-surface[data-card-theme="paper"] > .bbx-card-heading {
   padding-top: 1.875rem;
 }
-.bbx-card-heading h1,
 .bbx-card-heading h2 {
   margin: 0;
   color: var(--bbx-ink);
@@ -113,12 +112,62 @@
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
-.bbx-card-surface[data-card-theme="paper"] > .bbx-card-heading h1,
 .bbx-card-surface[data-card-theme="paper"] > .bbx-card-heading h2 {
   font-size: 1.6rem;
 }
 .bbx-card-front {
   min-width: 0;
+}
+/* The contents menu floats at the front's top right, below the header and so
+   clear of the Properties corner, and sticks there while the card scrolls. */
+.bbx-card-contents {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 3;
+  float: right;
+  margin: 0.5rem 1.25rem 0 0.5rem;
+}
+.bbx-card-contents button[aria-haspopup] {
+  min-height: 0;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.75rem;
+  gap: 0.3rem;
+}
+.bbx-card-contents-label {
+  display: inline-block;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.bbx-card-front [data-card-outline] :is(h1, h2, h3)[id] {
+  scroll-margin-top: 3rem;
+}
+@media (max-width: 520px) {
+  .bbx-card-contents-label {
+    max-width: 8rem;
+  }
+}
+/* At rest (not scrolling, not in use): icon only, faint. */
+.bbx-card-contents {
+  transition: opacity 0.25s ease;
+}
+.bbx-card-contents-label {
+  transition: max-width 0.25s ease, margin 0.25s ease;
+}
+.bbx-card-contents[data-resting]:not(:hover, :focus-within, :has([aria-expanded="true"])) {
+  opacity: 0.4;
+}
+.bbx-card-contents[data-resting]:not(:hover, :focus-within, :has([aria-expanded="true"])) .bbx-card-contents-label {
+  max-width: 0;
+  margin-left: -0.3rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bbx-card-contents,
+  .bbx-card-contents-label {
+    transition: none;
+  }
 }
 .bbx-card-content {
   padding: var(--bbx-content-padding, 1rem);
@@ -292,7 +341,8 @@
   font-family: ui-sans-serif, system-ui, sans-serif;
   font-size: 0.8rem;
   font-style: normal;
-  color: var(--bbx-ink-soft, #625e58);
+  /* Small type on the quote's own paper: pull the soft ink toward the ink. */
+  color: color-mix(in srgb, var(--bbx-ink-soft, #625e58) 60%, var(--bbx-ink, #302f2d));
   margin-top: 0.6em;
 }
 .bbx-quote-inline {
@@ -355,6 +405,43 @@
   .bbx-quote-block {
     box-shadow: none;
   }
+  /* The Print control (lib/print-card.ts) marks one card and its ancestors;
+     everything else on screen stays off the page. */
+  html[data-print-scope="card"] body :not([data-print-path], [data-print-target], [data-print-target] *) {
+    display: none !important;
+  }
+  /* The workspace around the card: no desk colour, and plain blocks, since
+     its screen-height flex and grid boxes add a blank page after the card. */
+  html[data-print-scope="card"] [data-print-path] {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: transparent !important;
+  }
+  .bbx-card-print-footer {
+    clear: both;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.5rem var(--bbx-content-padding, 1rem) 0;
+    padding-top: 0.5rem;
+    border-top: 1px solid #999;
+    font: 9pt/1.4 ui-sans-serif, system-ui, sans-serif;
+    color: #333;
+    break-inside: avoid;
+  }
+  /* Opt-in: the QR code and its hint print only from Print with "Add QR code". */
+  .bbx-card-surface:not([data-print-qr]) :is(.bbx-card-print-qr, .bbx-card-print-hint) {
+    display: none;
+  }
+  .bbx-card-print-qr svg {
+    display: block;
+    width: 0.9in;
+    height: 0.9in;
+  }
+  .bbx-card-print-hint {
+    color: #666;
+  }
 }
 .bbx-theme-swatch-group {
   margin: 0.75rem 0 0.5rem;
@@ -379,16 +466,17 @@
   text-align: left;
   min-width: 0;
 }
+/* Pressed and hover change the edge only: a light wash under the label would
+   lift a dark back's paper past what its soft ink was chosen for. */
 .bbx-theme-swatch-button[aria-pressed="true"] {
   border-color: var(--bbx-pen);
-  background: #ffffff40;
 }
 .bbx-theme-swatch-button:focus-visible {
   outline: 2px solid var(--bbx-pen);
   outline-offset: 2px;
 }
-.bbx-theme-swatch-button:hover {
-  background: #ffffff50;
+.bbx-theme-swatch-button:not([aria-pressed="true"]):hover {
+  border-color: var(--bbx-rule-strong);
 }
 .bbx-theme-swatch-button:disabled {
   opacity: 0.6;

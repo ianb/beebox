@@ -1,0 +1,88 @@
+// # `.git/info/attributes` — the annex filter's scope on disk
+//
+// git-annex claims the whole repository (`* filter=annex`); we narrow it to the
+// asset extensions so a text-only commit never starts the filter-process. See
+// `src/core/annex/info-attributes.ts`.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { makeTmpBox } from "../../helpers/test-helpers.js";
+import {
+  annexInfoAttributesPath,
+  readAnnexInfoAttributes,
+  uncoveredAnnexedPaths,
+  writeAnnexInfoAttributes,
+} from "../../../src/core/annex/info-attributes.js";
+import { assetAnnexAttributes } from "../../../src/lib/asset-extensions.js";
+
+// The file is absent until something writes it, and an absent file reads as
+// `null` rather than throwing — a repository that has never run `git annex init`
+// is a normal state, not an error:
+void test("The file is absent until something writes it, and an absent file reads as nul...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  t.check(await readAnnexInfoAttributes(box.root), null);
+
+  // Writing replaces whatever was there — git-annex owns this path and writes a
+  // fixed one-line file, so there is no hand-authored content to merge with, and a
+  // merge would have to guess which of two conflicting `filter=annex` claims wins:
+
+  const fs = await import("node:fs/promises");
+  const path = await import("node:path");
+  await fs.mkdir(path.dirname(annexInfoAttributesPath(box.root)), { recursive: true });
+  await fs.writeFile(annexInfoAttributesPath(box.root), "\n* filter=annex\n");
+  await writeAnnexInfoAttributes(box.root);
+  t.check(await readAnnexInfoAttributes(box.root), assetAnnexAttributes());
+
+  // Idempotent, because `bbx init` runs the repair on every invocation:
+
+  await writeAnnexInfoAttributes(box.root);
+  t.check(await readAnnexInfoAttributes(box.root), assetAnnexAttributes());
+});
+
+// ## The coverage check that makes scoping safe
+//
+// Narrowing the filter is only safe while every already-annexed path has an
+// extension on the list. One that does not keeps its pointer in git but loses the
+// smudge filter, so the next checkout writes `/annex/objects/…` text where the
+// bytes were. `uncoveredAnnexedPaths` is what turns that into a loud error
+// instead of silent breakage:
+void test("Narrowing the filter is only safe while every already-annexed path has an ext...", async (t) => {
+  t.check(uncoveredAnnexedPaths(["a.attach/photo.jpg", "a.attach/clip.mov", "a.attach/page.frozen"]), []);
+
+  t.check(uncoveredAnnexedPaths(["a.attach/photo.jpg", "a.attach/scan.psd", "a.attach/notes"]), [
+    "a.attach/scan.psd",
+    "a.attach/notes",
+  ]);
+});
+
+// Case-insensitive, matching the character classes the rendered lines use — an
+// iOS `.HEIC` is covered even though `annex.largefiles`' `include=*.heic` would
+// not match it:
+void test("Case-insensitive, matching the character classes the rendered lines use — an...", async (t) => {
+  t.check(uncoveredAnnexedPaths(["a.attach/IMG_0001.HEIC", "a.attach/CLIP.MOV"]), []);
+});
+
+// A bulk batch's scope holds arbitrary types, so any file in it counts as
+// covered: the current `<slug>.attach` name (wherever the card was moved, since
+// the slug travels with it) and the pre-2026-10 `Batch.upload-batch.attach`. A
+// `.zip` outside either scope is still a gap:
+void test("A bulk batch's scope holds arbitrary types, so any file in it counts as covered:", async (t) => {
+  t.check(
+    uncoveredAnnexedPaths([
+      "_content/tmp-upload/upload-20261006T0627-d8f4fda6/upload-20261006T0627-d8f4fda6.attach/a.zip",
+      "_content/.trash/upload-20261006T0627-d8f4fda6.attach/b.zip",
+      "_tmp/stranded/upload-20260912T0800-0a1b2c3d/Batch.upload-batch.attach/c.csv",
+      "_content/projects/upload-notes.zip",
+    ]),
+    [
+    "_content/projects/upload-notes.zip",
+  ],
+  );
+});

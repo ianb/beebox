@@ -24,7 +24,6 @@ export function registerBuiltinFileTypes(): void {
   if (registered) return;
   registered = true;
 
-  registerFileType({ type: "memo" }, { listUI: { icon: DocumentIcon } });
   registerFileType({ type: "image" }, {
     listUI: { icon: ImageIcon, ListComponent: ImageCardListEntry },
   });

@@ -37,7 +37,7 @@ export function encodeProjectDir(cwd: string): string {
 
 /**
  * Root of Claude Code's per-project transcript storage. Honors the
- * `BBX_CLAUDE_PROJECTS_DIR` env override so doctests (and unusual
+ * `BBX_CLAUDE_PROJECTS_DIR` env override so tests (and unusual
  * installs) can point session discovery at a fixture directory instead
  * of the real `~/.claude/projects`.
  */
@@ -71,20 +71,79 @@ export function containedSessionCwd(boxRoot: string, contextDir: string | undefi
 }
 
 /**
+ * The cwd as the Claude CLI records it. The CLI keys a transcript by its own
+ * `process.cwd()`, which the OS reports with symlinks resolved: a box under
+ * macOS's `/var/folders` (a link to `/private/var/folders`) has its
+ * transcripts under `-private-var-folders-...`. When the cwd does not exist
+ * (a deleted landmark), its nearest existing ancestor is resolved and the
+ * rest re-appended, so it keeps the same prefix as its box root.
+ */
+function cliCwd(cwd: string): string {
+  const absolute = path.resolve(cwd);
+  try {
+    return fs.realpathSync(absolute);
+  } catch (e) {
+    const code = errnoCode(e);
+    if (code !== "ENOENT" && code !== "ENOTDIR") throw e;
+    const parent = path.dirname(absolute);
+    return parent === absolute ? absolute : path.join(cliCwd(parent), path.basename(absolute));
+  }
+}
+
+/**
  * Get the path to a Claude Code session log file. `cwd` is whatever
  * was passed as the SDK's `cwd` for the run — usually the box root,
  * but a landmark-bound chat or audit uses a subdirectory.
  */
 export function getSessionLogPath(cwd: string, sessionId: string): string {
-  const claudeDir = path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
-  return path.join(claudeDir, `${sessionId}.jsonl`);
+  return path.join(getSessionDir(cwd), `${sessionId}.jsonl`);
 }
 
 /**
  * Get the Claude Code projects directory for a given SDK cwd.
  */
 export function getSessionDir(cwd: string): string {
-  return path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
+  return path.join(claudeProjectsRoot(), encodeProjectDir(cliCwd(cwd)));
+}
+
+class NotATempCwdError extends Error {
+  constructor(cwd: string, temp: string) {
+    super(`${cwd} is not under the temp directory ${temp}; refusing to remove its transcripts`);
+    this.name = "NotATempCwdError";
+  }
+}
+
+/**
+ * Remove the Claude CLI's transcript directories for a throwaway cwd: the one
+ * named for `tempCwd` and those of its subdirectories. A test or probe that
+ * runs the real CLI against a temp directory calls this when it finishes,
+ * because the CLI writes under the real `~/.claude/projects` when `HOME` is
+ * the developer's, and nothing else removes them. By 2026-10-18 about 5,900
+ * such directories had collected there.
+ *
+ * Only for a cwd under the OS temp directory; anything else throws. The
+ * subdirectory match is a `-` prefix of the encoded cwd, which could also
+ * match a sibling whose name extends this one; a `mkdtemp` name has a random
+ * suffix, so no sibling extends it.
+ */
+export async function removeTempCwdTranscripts(tempCwd: string): Promise<void> {
+  const cwd = cliCwd(tempCwd);
+  const temp = cliCwd(os.tmpdir());
+  if (!cwd.startsWith(`${temp}${path.sep}`)) throw new NotATempCwdError(tempCwd, temp);
+  const encoded = encodeProjectDir(cwd);
+  const root = claudeProjectsRoot();
+  let names: string[];
+  try {
+    names = await fs.promises.readdir(root);
+  } catch (e) {
+    const code = errnoCode(e);
+    if (code === "ENOENT" || code === "ENOTDIR") return;
+    throw e;
+  }
+  for (const name of names) {
+    if (name !== encoded && !name.startsWith(`${encoded}-`)) continue;
+    await fs.promises.rm(path.join(root, name), { recursive: true, force: true });
+  }
 }
 
 /**
@@ -99,21 +158,31 @@ export function getSessionDir(cwd: string): string {
  *
  * (`/tmp/...` on hosts where `/tmp` isn't a `/private/tmp` symlink.) The
  * `<encoded agent cwd>` segment is `encodeProjectDir` of whatever cwd the
- * agent process ran with — the box root itself, or a landmark-bound
- * subdirectory of it, which `encodeProjectDir`'s all-non-alnum-to-`-`
- * encoding turns into `encodeProjectDir(boxRoot)` followed by a literal
- * `-` and more encoded characters (a `/` in the real path becomes that
- * same `-`). So this box's own segment is an EXACT match or a `-`-prefixed
- * extension of it — never a bare string-prefix match, which would also
- * accept an unrelated box whose encoded root happens to start with the
- * same characters.
+ * agent process ran with: the box root itself, or a landmark subdirectory a
+ * chat is bound to. The segment must EXACTLY equal one of those encodings,
+ * taken from the box root and the `contextDirs` its chat history records. A
+ * prefix rule ("the root, or the root plus `-`") is not safe: the encoding
+ * turns every non-alphanumeric character into `-`, so a sibling box
+ * `/srv/boxes/alpha-other` encodes to `-srv-boxes-alpha` plus `-other` and
+ * passed that rule for `/srv/boxes/alpha`. One collision remains: a landmark
+ * `alpha/other` and a sibling box `alpha-other` encode the same, and the
+ * history cannot tell them apart.
  *
- * Pure path-string logic only — no filesystem access, so it's safe to call
- * before any `stat`/`realpath` (and the caller re-checks it AFTER
+ * Path-string logic on `filePath` — the only filesystem access resolves the
+ * box root and its landmark cwds the way the CLI does — so it's safe to call before any
+ * `stat`/`realpath` of `filePath` (and the caller re-checks it AFTER
  * `realpath`, so a symlink inside an otherwise-valid path can't point the
  * read at another box's task output).
  */
-export function isTaskOutputPathForBox({ boxRoot, filePath }: { boxRoot: string; filePath: string }): boolean {
+export function isTaskOutputPathForBox({
+  boxRoot,
+  contextDirs,
+  filePath,
+}: {
+  boxRoot: string;
+  contextDirs: readonly string[];
+  filePath: string;
+}): boolean {
   const resolved = path.resolve(filePath);
   const tmpRoot = ["/private/tmp/", "/tmp/"].find((root) => resolved.startsWith(root));
   if (!tmpRoot) return false;
@@ -128,8 +197,14 @@ export function isTaskOutputPathForBox({ boxRoot, filePath }: { boxRoot: string;
   // Exactly one segment after `tasks/` — a plain output file, not a nested path.
   if (fileSegments.length !== 1 || fileSegments[0] === "") return false;
 
-  const encodedBoxRoot = encodeProjectDir(boxRoot);
-  return encodedCwd === encodedBoxRoot || encodedCwd.startsWith(`${encodedBoxRoot}-`);
+  // The CLI names this segment after its own cwd, symlinks resolved. A
+  // landmark that resolves outside the box (a symlink into another box) does
+  // not count.
+  const root = cliCwd(boxRoot);
+  const landmarks = contextDirs
+    .map((contextDir) => cliCwd(containedSessionCwd(boxRoot, contextDir)))
+    .filter((cwd) => cwd.startsWith(`${root}${path.sep}`));
+  return [root, ...landmarks].some((cwd) => encodeProjectDir(cwd) === encodedCwd);
 }
 
 /** One session JSONL discovered on disk in a single encoded project dir. */

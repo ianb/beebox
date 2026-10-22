@@ -51,7 +51,7 @@ export function printScheduleHelp(): void {
 }
 
 /** Parses a positive-integer minute count for `--interval`. A plain
- * function (no process globals) so it's directly doctestable, mirroring
+ * function (no process globals) so it's directly testable, mirroring
  * `configure-cli.ts`'s `parseDisposition`. */
 export function parseIntervalMinutes(value: string | undefined): number {
   if (value === undefined) return DEFAULT_INTERVAL_MINUTES;

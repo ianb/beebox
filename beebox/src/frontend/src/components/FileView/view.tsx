@@ -19,7 +19,7 @@
  *                     provides its own header).
  */
 
-import { ThemedFileCard } from "../themes/ThemedFileCard/view";
+import { ThemedFileCard } from "../themes/ThemedFileCard/view/ThemedFileCard";
 import { useVisibleCardSelectionSink, selectionReceiver } from "../chat/everywhere/card-context/context";
 import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
@@ -45,6 +45,8 @@ import { CardTodos } from "../todo/CardTodos";
 import { TodoActionsProvider } from "../todo/TodoActionsProvider";
 import type { FileViewProps } from "../file-view-types";
 import type { ViewTarget } from "../../lib/view-url";
+import { FRAGMENT_ROOT_ATTRIBUTE } from "../../lib/fragment-target";
+import { useFragmentJump } from "../../hooks/useFragmentJump";
 
 export type { FileViewMode } from "../file-view-types";
 
@@ -104,8 +106,8 @@ function ChatHeader({
     <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{title ?? displayName(path)}</div>
-        {detail === undefined ? null : <div className="text-xs text-warm-600 truncate" title={detail}>{detail}</div>}
-        <div className="text-xs text-warm-500 truncate" title={toDisplayPath(path)}>{toDisplayPath(path)}</div>
+        {detail === undefined ? null : <div className="text-xs text-warm-700 truncate" title={detail}>{detail}</div>}
+        <div className="text-xs text-warm-700 truncate" title={toDisplayPath(path)}>{toDisplayPath(path)}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact path={path} />
       <CardActions target={target} onTrashed={onTrashed} />
@@ -167,6 +169,42 @@ function pendingFileViewLabel({ loading, followingMove }: { loading: boolean; fo
   return null;
 }
 
+/** The text a view renders and search indexed: a card's body, else a file's content. */
+function fragmentSource(data: FileData | null): string | null {
+  if (data === null) return null;
+  return data.body ?? data.content ?? null;
+}
+
+/**
+ * The fragment root scopes section lookup to this view (`lib/fragment-target.ts`):
+ * an embedded card's headings sit under the embed's own root, not the host's.
+ */
+function fragmentRootFor({ mode, workspacePdf, onRoot }: {
+  mode: FileViewProps["mode"]; workspacePdf: boolean | undefined; onRoot: (element: HTMLDivElement | null) => void;
+}, content: ReactNode): ReactNode {
+  const attribute = { [FRAGMENT_ROOT_ATTRIBUTE]: "" };
+  if (mode === "embed") return <div {...attribute} className="contents">{content}</div>;
+  return <div ref={onRoot} {...attribute} className={workspacePdf ? "h-full" : undefined}>{content}</div>;
+}
+
+/** One-line markers above the body: a stale load, a section that could not be found. */
+function withBodyNotices({ stale, onRefresh, sectionMissed }: {
+  stale: LoadFailure | null; onRefresh: () => void; sectionMissed: boolean;
+}, content: ReactNode): ReactNode {
+  if (stale === null && !sectionMissed) return content;
+  return (
+    <>
+      {stale === null ? null : <FileStaleNotice failure={stale} onRefresh={onRefresh} />}
+      {sectionMissed ? (
+        <div role="status" className="flex-shrink-0 px-3 py-1.5 border-b border-accent/30 bg-accent-50 text-xs text-warm-700 print:hidden">
+          Couldn't find that section in this card.
+        </div>
+      ) : null}
+      {content}
+    </>
+  );
+}
+
 /* ---------- main component ---------- */
 
 /**
@@ -185,13 +223,17 @@ function captureFileContent({ enabled, onCapture, rendered, workspacePdf }: {
   return enabled ? <SelectionCapture onCapture={onCapture} extract={extractSelection} className={workspacePdf ? "h-full" : undefined}>{rendered}</SelectionCapture> : rendered;
 }
 
-export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose }: FileViewProps) {
+export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onSelectRenderer, onNavigate, onMoved, onAddSelection: suppliedAddSelection, reportActivity, onOpenInPanel, params, viewState: ownedViewState, canPushViewState: canPushArg, onViewStateChange: ownedStateChange, caption, onClose, fragment }: FileViewProps) {
   const mode = modeProp ?? "companion";
   const [userSelection, setUserSelection] = useState<{ path: string; name: string | null } | null>(null);
   const visibleSelectionSink = useVisibleCardSelectionSink();
   const onAddSelection = selectionReceiver(suppliedAddSelection, mode === "embed" ? undefined : visibleSelectionSink);
   const { data, loading, error, stale, recovery, refresh } = useFileData(path, { recoverMoved: onMoved !== undefined });
   const followingMove = useMovedCardRecovery({ path, recovery, onMoved, hasData: data !== null });
+  // Any renderer of the body gets section jumps: the hook resolves against the
+  // DOM this view renders (`lib/fragment-target.ts`). Embeds never jump.
+  const [fragmentRoot, setFragmentRoot] = useState<HTMLDivElement | null>(null);
+  const sectionMissed = useFragmentJump({ root: fragmentRoot, fragment: mode === "embed" ? undefined : fragment, source: fragmentSource(data), path });
 
   const handleCapture = useCallback((selection: { text: string; position: string }) => {
     if (onAddSelection === undefined) return;
@@ -218,11 +260,11 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
   }, [path, data, binding]);
 
   const pendingLabel = pendingFileViewLabel({ loading, followingMove });
-  if (pendingLabel !== null) return <div className="p-4 text-warm-600">{pendingLabel}</div>;
+  if (pendingLabel !== null) return <div className="p-4 text-warm-700">{pendingLabel}</div>;
   // A missing card is not an error state: it falls through to MissingCardState,
   // which offers to create or close it.
   if (error !== null && !isMissingCardFailure(path, error)) return <FileErrorState path={path} failure={error} onRetry={refresh} />;
-  if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-600">File not found: {toDisplayPath(path)}</div>;
+  if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-700">File not found: {toDisplayPath(path)}</div>;
 
   const hasUserSelection = userSelection?.path === path;
   const requested = hasUserSelection ? userSelection.name : rendererName ?? null;
@@ -233,7 +275,7 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
   const active = (requested ? renderers.find(r => r.name === requested) : undefined) ?? renderers.at(0);
 
   if (!active) {
-    return <div className="p-4 text-warm-600">No renderer available for this file.</div>;
+    return <div className="p-4 text-warm-700">No renderer available for this file.</div>;
   }
   const target = selectedTarget({ path, viewer: requested, params, viewState: ownedViewState });
 
@@ -257,16 +299,11 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
     />
   );
   const selectable = captureFileContent({ enabled: onAddSelection !== undefined, onCapture: handleCapture, rendered, workspacePdf });
-  const captured = withCardTodos({ mode, path: data.path, onAddSelection }, selectable);
-  // The marker rides with the body rather than with each mode's chrome, so a
+  const captured = fragmentRootFor({ mode, workspacePdf, onRoot: setFragmentRoot }, withCardTodos({ mode, path: data.path, onAddSelection }, selectable));
+  // The markers ride with the body rather than with each mode's chrome, so a
   // card reports the same state wherever it renders — in chat, in the sidecar,
   // and on its own page.
-  const body = stale === null ? captured : (
-    <>
-      <FileStaleNotice failure={stale} onRefresh={refresh} />
-      {captured}
-    </>
-  );
+  const body = withBodyNotices({ stale, onRefresh: refresh, sectionMissed }, captured);
 
   if (mode === "embed") {
     // Frameless: just the renderer output, no header/toggle/border. For figures

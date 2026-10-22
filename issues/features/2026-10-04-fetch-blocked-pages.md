@@ -1,6 +1,6 @@
 ---
 title: "Agents cannot read pages from sites that block them (Reddit, Instagram, …): find a general fetch approach"
-workstream: unattached
+workstream: web-search-fetch
 area: dev-tooling
 filed-by: agent
 discovered-by: Ian
@@ -75,3 +75,27 @@ should report on both.
 ## Decision (2026-10-06)
 
 The developer: "This shouldn't actually be so specific, but the general issue of fetching blocked pages (also Instagram, for instance)." Renamed to the general problem. The work starts with a large survey and web search of what people do: this is a common problem for agent tools, so tools and approaches likely exist (fetch MCP servers, reader services, archive APIs, logged-in browser profiles, per-site adapters). The Reddit findings below are one data point. Stealth-browser and residential-proxy fetchers stay out (they evade bot detection).
+
+## Survey findings (2026-10-15)
+
+Full survey and probes: [research/web-search-fetch](../../research/web-search-fetch/README.md).
+
+- Reddit announced on 2026-09-30 that RSS ends 2026-11-13 and public Data API
+  access closes in phases through March 2027
+  ([TechCrunch](https://techcrunch.com/2026/09/30/reddit-is-killing-rss-feeds-ending-public-api-access-because-of-ai-bots/)).
+  Drop step 2 of the proposal. Arctic Shift ingests from Reddit, so its
+  coverage after March 2027 is uncertain.
+- The scope note above says the box ships `agent-browser`. It does not:
+  `beebox/docker/Dockerfile` installs no Chromium, and `deploy.sh` marks
+  `agent-browser` dev-only. A box has no headless render path today.
+- Five hosts now have working free per-host routes: Reddit (Arctic Shift), X
+  (`api.fxtwitter.com`, syndication, oEmbed), YouTube (oEmbed, `yt-dlp`
+  transcripts), TikTok (oEmbed), Medium (author RSS). That meets the "second
+  host" condition for a general `fetch` entry point with adapters.
+- WebFetch refuses reddit.com, nytimes.com, wsj.com and ft.com client-side.
+  For general pages, curl with a Chrome user agent, Jina Reader and a headless
+  browser each reached pages the others missed; no path reached NYT, WSJ, FT,
+  Quora or a Cloudflare challenge page.
+- The "no stealth or proxy" line above was an agent's judgment, not a
+  boxholder decision. The survey lays out the facts and leaves it as an open
+  decision ([the line](../../research/web-search-fetch/README.md#the-no-stealth-or-proxy-line)).

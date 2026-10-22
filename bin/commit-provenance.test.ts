@@ -5,8 +5,8 @@
 //   node --import tsx --test bin/commit-provenance.test.ts
 // (or `pnpm test` at the repo root, which runs every bin/*.test.ts this way).
 //
-// bin/AGENTS.md points new bin/ tests at beebox/test/dev/*.doctest.md.
-// This one stays a .test.ts because it must fork a git repo per case and drive
+// bin/AGENTS.md points new bin/ tests at bin/test/ (t.check).
+// This one stays a node:test file because it must fork a git repo per case and drive
 // hooks end to end; it sits beside the sibling bin/*.test.ts files it matches.
 
 import assert from "node:assert/strict";

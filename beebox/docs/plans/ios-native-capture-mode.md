@@ -6,6 +6,8 @@ issues: []
 ---
 # Native iOS capture mode
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan adds a native, full-screen capture mode to the iOS companion app. It
 reuses the box's existing capture staging, preparation, delivery, and pending
 chat UI; adds the smallest server contract needed for native AAC audio and

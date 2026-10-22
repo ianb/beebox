@@ -29,6 +29,7 @@ entry; that entry names the handler \`procedure\` for the bucket.
 Two sorting mechanisms process items that land in \`_content/inbox/\`. Don't confuse a **job** (a card in \`_bookkeeping/jobs/\` that tells the reactor to do a unit of work) with a **triaged item** (an inbox item routed to a category to await its handler) — they're different things that happen to share the word "intake":
 
 - **Jobs → reactor** — the primary routing path: the wakeup cycle and the connectors create job cards in \`_bookkeeping/jobs/\`, and the reactor processes them one cycle per wakeup.
+  An intake job can also hold phone captures that arrived with no words (refs under \`_content/captures/\`). They are filed by the landmark \`destinations\` directly; they never enter the intake → triage → handle buckets.
 - **The intake → triage → handle pipeline** — runs when invoked directly (\`bbx intake\` / \`bbx triage\` / \`bbx handle\`), moving items through \`_content/inbox/intake/\` → \`staged/\` → \`triaged/<category>/\`.
 
 ## Confidence levels
@@ -48,19 +49,21 @@ numeric score, and never a "wrong"/"unknown" level):
 ## Writing a handler procedure
 
 \`bbx handle\` invokes a category's handler procedure once per bucket, passing the
-bucket's items through the **\`TRIAGE_ITEMS\` environment variable** — a
-null-delimited (\`\\0\`) list of box-relative paths. It's set in the process env
-and forwarded into the procedure's shell steps, so a handler reads its work from
-there rather than scanning a directory:
+bucket's items through the **\`TRIAGE_ITEMS\` environment variable** — one
+box-relative path per line. It's set in the process env and forwarded into the
+procedure's shell steps, so a handler reads its work from there rather than
+scanning a directory:
 
 \`\`\`sh
 # In a shell step of the handler procedure:
-printf '%s' "$TRIAGE_ITEMS" | xargs -0 -I{} sh -c 'process "{}"'
+printf '%s\\n' "$TRIAGE_ITEMS" | while IFS= read -r item; do
+  process "$item"
+done
 \`\`\`
 
-Use \`xargs -0\` (or split on NUL) — the paths are NUL-delimited so filenames with
-spaces survive. When the handler finishes, it moves each item out of the bucket
-(\`bbx mv\` to its destination, or \`bbx rm\` to trash); the bucket is empty when done.
+Split on newlines and quote \`"$item"\` — paths may contain spaces. When the
+handler finishes, it moves each item out of the bucket (\`bbx mv\` to its
+destination, or \`bbx rm\` to trash); the bucket is empty when done.
 
 \`bbx handle\` reports its worst bucket: exit 1 if a handler procedure failed,
 exit 3 if one finished its work but its review reached no verdict (one

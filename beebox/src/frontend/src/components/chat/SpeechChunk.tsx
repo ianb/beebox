@@ -45,7 +45,7 @@ export function SpeechChunk({
     >
       {description === undefined ? null : <span className="sr-only">{description}</span>}
       {name !== undefined && name.length > 0 ? (
-        <div className="-ml-1 text-[10px] font-semibold uppercase tracking-wide text-warm-600 mb-0.5">{name}</div>
+        <div className="-ml-1 text-[10px] font-semibold uppercase tracking-wide text-card-soft mb-0.5">{name}</div>
       ) : null}
       {children}
       {state === "failed" && failureReason !== undefined ? (

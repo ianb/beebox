@@ -2,7 +2,7 @@
  * `defineRegistry` call extraction: reads the declaration a set directory is
  * enumerated by (rule 4 of the layout plan) out of a module's parsed AST.
  */
-import ts from "typescript";
+import * as ts from "../../../../lib/typescript/syntax.js";
 import type { Finding, ImportEdge, RegistryDecl, RegistryMember } from "../../model.js";
 import { resolveRepoRelative } from "../resolve.js";
 
@@ -81,7 +81,7 @@ function findCalls(sourceFile: ts.SourceFile, bindings: RegistryBindings): ts.Ca
   const calls: ts.CallExpression[] = [];
   const visit = (node: ts.Node): void => {
     if (isDefineRegistryCall(node, bindings)) calls.push(node);
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   };
   visit(sourceFile);
   return calls;

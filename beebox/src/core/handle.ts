@@ -4,7 +4,7 @@
  * For each category bucket in `inbox/triaged/<category>/`, find the
  * landmark that defines the category, read the matching `destinations:`
  * entry's `procedure` ref, and invoke that procedure with the bucket of
- * items passed via the `TRIAGE_ITEMS` env var (null-delimited
+ * items passed via the `TRIAGE_ITEMS` env var (newline-delimited
  * box-relative paths).
  *
  * Inline procedures aren't supported yet — only `procedure: { ref }`
@@ -87,8 +87,16 @@ function describeInconclusiveSteps(items: ProcedureInconclusive[]): string {
  * plumbing path.
  */
 const liveRunProcedure: ProcedureRunner = async ({ procedurePath, triageItems, ctx }) => {
+  // One path per line. Not NUL: an environment variable ends at its first NUL
+  // byte, so a NUL-joined bucket reached the handler as its first item only. A
+  // path holding a newline can't be carried, so it fails the bucket rather
+  // than splitting into two bogus items.
+  const unsplittable = triageItems.find((item) => item.includes("\n"));
+  if (unsplittable !== undefined) {
+    return { outcome: "failed", detail: `item path contains a newline: ${JSON.stringify(unsplittable)}` };
+  }
   const previous = process.env[TRIAGE_ITEMS_ENV];
-  process.env[TRIAGE_ITEMS_ENV] = triageItems.join("\0");
+  process.env[TRIAGE_ITEMS_ENV] = triageItems.join("\n");
   try {
     const result = await startProcedure({
       ctx,

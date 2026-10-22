@@ -17,6 +17,8 @@ export function initialChatContext(input: ChatMachineInput): ChatContext {
     streamNeedsSeparator: false,
     error: null,
     interrupting: false,
+    replyLost: false,
+    refreshAgain: false,
     sessionInput: input.sessionInput,
     sessionId: input.sessionInput === "new" ? null : input.sessionInput,
     ...(input.sessionInput === "new" && input.contextDir !== undefined

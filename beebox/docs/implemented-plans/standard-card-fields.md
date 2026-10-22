@@ -18,7 +18,7 @@ fields.
 **Issues addressed:**
 [review the standard card fields](../../../issues/closed/code-quality/2026-09-27-review-standard-card-fields.md).
 Related, not resolved here:
-[retire memo](../../../issues/code-quality/2026-09-27-retire-memo-card-type-into-doc.md)
+[retire memo](../../../issues/closed/code-quality/2026-09-27-retire-memo-card-type-into-doc.md)
 (owns memo's `status`, `created`, `source`, and its body-derived title),
 [codebase ontology files](../../../issues/docs-and-chores/2026-09-27-codebase-ontology-files.md)
 (a name with two meanings is a collision; this plan removes several),
@@ -131,7 +131,7 @@ keeps teaching it.
 - **`{% source %}` shape:** `record.sources` is an array of
   `{ref|href, time?, note?}`, and `record.tsx:20-24` says it deliberately
   mirrors the tag. Track C adopts this shape.
-- **Properties panel:** `CardFacts` (`src/frontend/src/components/themes/ThemedFileCard/CardProperties.tsx:12-23`)
+- **Properties panel:** `CardFacts` (`src/frontend/src/components/themes/ThemedFileCard/view/CardProperties.tsx:35`)
   shows `fm.created` and `fm.source` for any card type. This is the only
   generic reader of either name.
 - **Search `created`:** stored per document (`src/core/search/extract/core.ts:132`,

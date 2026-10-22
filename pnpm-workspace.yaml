@@ -19,7 +19,7 @@ packages:
   - beebox/pub-worker
   - beebox-clerk
   - personal-vibe-check
-  - agent-doctest
+  - tap-check
   - canvas-loop
   - scan-uploader
   - workstreams-app

@@ -8,6 +8,8 @@ issues:
 
 # One browser
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 A single reading surface in the workstreams app for everything the developer
 reads about the work: repository markdown, source code, dev artifacts, plans,
 issues, and an index of exhibits. It replaces a set of surfaces that grew
@@ -250,7 +252,7 @@ browser; the `kind` union members.
 union, containment re-checked after realpath, the text-size and binary
 refusals), wired through `DocumentsService.readDocument` and the
 `documents.read` tRPC query. Covered by
-`workstreams-app/test/document-read.doctest.md` (moved to `workstreams-app/test/server/document-read.doctest.md`) and driven over HTTP against a
+`workstreams-app/test/document-read.doctest.md` (moved to `workstreams-app/test/server/document-read.test.ts`) and driven over HTTP against a
 standalone app.
 
 ### Track 2 — Renderers
@@ -332,7 +334,7 @@ rather than as "changed nothing". `documents.read` carries `changedIn` and
 `changesUnavailable`; `documents.changedFiles` answers the other direction and
 distinguishes a quiet workstream from one that does not exist. The viewer shows
 "changed in …" with each name linking to that workstream's version of the same
-address. Covered by `workstreams-app/test/workstream-changes.doctest.md` (moved to `workstreams-app/test/server/workstream-changes.doctest.md`).
+address. Covered by `workstreams-app/test/workstream-changes.doctest.md` (moved to `workstreams-app/test/server/workstream-changes.test.ts`).
 
 ### Track 3 — Finding things
 
@@ -378,7 +380,7 @@ same reason.
 from every page and inherits the current workstream lens. The corpus is fetched
 once per lens and filtered in the browser — a few thousand paths is nothing to
 filter locally, and a round trip per keystroke would feel worse than the surface
-it replaces. Covered by `workstreams-app/test/file-index.doctest.md` (moved to `beebox/test/dev/doc-graph-data/document-lifecycle.file-index.doctest.md`). Port the
+it replaces. Covered by `workstreams-app/test/file-index.doctest.md` (moved to `beebox/test/dev/doc-graph-data/document-lifecycle.file-index.test.ts`). Port the
 affordances that work, in React:
 - Quick-open over every browsable path (`renderDocQuickOpen`, `router-docs.ts:519`).
 - A sidebar grouped by area, with path and recently-edited sorts
@@ -399,7 +401,7 @@ reach a session to focus or resume). All three views land together: aggregate,
 `?workstream=` filtered, and the distribution. A branch is asked only for
 `main..HEAD` — asking a worktree for "everything recent" returns main's month
 again under the workstream's name, which made every workstream look identically
-busy. Covered by `workstreams-app/test/recency.doctest.md` (moved to `workstreams-app/test/server/main/recency.doctest.md`). Quick-open and the
+busy. Covered by `workstreams-app/test/recency.doctest.md` (moved to `workstreams-app/test/server/main/recency.test.ts`). Quick-open and the
 sidebar are still to come.
 
 ### Track 4 — `file:` provenance, and the source overlay

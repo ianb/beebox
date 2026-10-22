@@ -1,4 +1,3 @@
-import { themeComposition } from "@shared/card-theme/catalog";
 import { createContext, useContext, useEffect, useRef, useMemo, useCallback, type ReactNode } from "react";
 import { trpc, type RouterOutput } from "../../lib/trpc/client";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
@@ -6,8 +5,12 @@ import { isRecord } from "@shared/is-record";
 import { useLocation, useParams } from "@tanstack/react-router";
 import { useBoxConversation } from "../chat/everywhere/conversation-context/context";
 
+import { useDoodlebitMotion } from "./useDoodlebitMotion";
+
+export type PresentationData = RouterOutput["presentation"]["get"];
+
 interface PresentationState {
-  data: RouterOutput["presentation"]["get"] | undefined;
+  data: PresentationData | undefined;
   error: string | null;
   retry: () => void;
 }
@@ -43,13 +46,20 @@ export function BoxPresentationProvider({ boxSlug, children }: { boxSlug: string
   });
   const state = useMemo(() => ({ data: query.data, error: query.error?.message ?? null, retry }), [query.data, query.error, retry]);
   const chrome = query.data?.chrome;
+  const surface = useDoodlebitMotion(chrome?.choice.name === "doodlebit");
   return (
     <PresentationContext.Provider value={state}>
-      <div className="bbx-box-presentation h-full" data-theme-composition={themeComposition(chrome?.choice.name)} data-chrome-theme={chrome?.choice.name ?? "plain"} data-chrome-stock={chrome?.choice.stock ?? "neutral"}>
+      <div ref={surface} className="bbx-box-presentation h-full" data-chrome-theme={chrome?.choice.name ?? "plain"} data-chrome-stock={chrome?.choice.stock ?? "neutral"}>
         {children}
       </div>
     </PresentationContext.Provider>
   );
+}
+
+/** A fixed presentation, without the box query, for the theme studio's specimens. */
+export function PresentationSnapshot({ data, error, children }: { data: PresentationData; error: string | null; children: ReactNode }) {
+  const state = useMemo(() => ({ data, error, retry: () => {} }), [data, error]);
+  return <PresentationContext.Provider value={state}>{children}</PresentationContext.Provider>;
 }
 
 export function useBoxPresentation(): PresentationState | null { return useContext(PresentationContext); }

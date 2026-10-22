@@ -71,3 +71,18 @@ interval leaves an old directory alone, proving the stamp gate holds.
 One stale comment fixed alongside: the exit handler claimed a HOME held open by
 a child "is deleted by the next run's sweep" — no sweep existed when that was
 written.
+
+## Re-encounter 2026-10-16 — the other isolation preloads leaked
+
+The developer's machine was slow. The temp root held about 774,000 entries,
+about 735,000 of them `bbx-test-*`, about 100,000 created in the previous 24
+hours. A listing of the temp root took minutes, and `fseventsd` held 2–6 GB.
+
+Cause: three later preloads, `isolate-auth-file.ts`, `isolate-secret-store.ts`
+and `isolate-origin-id.ts`, each made a per-process `mkdtemp` with no exit
+hook, and the sweep matched only `bbx-doctest-` and `bbx-test-home-`.
+
+Fix: `beebox/test/helpers/process-temp-dir.ts` makes the directory and removes
+it on exit; the three preloads use it. The sweep prefix is now `bbx-test-`,
+which covers every preload's directory. The backlog older than 2 hours was
+deleted by hand, with the developer's approval.

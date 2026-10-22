@@ -109,12 +109,11 @@ elif git -C "$REPO_DIR" diff --cached --name-only -- beebox/src | grep -q .; the
 fi
 
 # Source file layout (beebox/docs/plans/file-layout.md): every package root
-# must stay at zero findings. Runs before the docs-only exit because a
-# doctest is a `.md` file. The whole repo scans in a few seconds; there is no
+# must stay at zero findings. The whole repo scans in a few seconds; there is no
 # changed-files mode, since a change in one directory can create a finding in
 # another. Also runs on deletions: removing a file can leave a registry stale.
 layout_staged="$(git -C "$REPO_DIR" diff --cached --name-only --diff-filter=ACMRD)"
-if echo "$layout_staged" | grep -qE '\.(ts|tsx|mts|cts|js|mjs|cjs)$|\.doctest\.md$|(^|/)package\.json$'; then
+if echo "$layout_staged" | grep -qE '\.(ts|tsx|mts|cts|js|mjs|cjs)$|(^|/)package\.json$'; then
   run_in beebox pnpm --silent layout-check
 fi
 
@@ -180,6 +179,12 @@ if echo "$staged" | grep -q '^workstreams-app/'; then
   ws_app_typechecked=1
 fi
 
+# The shared lint preset lints and type-checks itself
+# (issues/code-quality/2026-07-29-personal-vibe-check-no-self-lint.md).
+if echo "$staged" | grep -q '^personal-vibe-check/'; then
+  run_pair personal-vibe-check "pnpm --silent lint" "pnpm --silent typecheck"
+fi
+
 # Cross-package imports escape the per-subproject gating above. `workstreams-app`
 # imports beebox SOURCE directly — the router takes `webapp/auth.ts`,
 # `webapp/box-access.ts`, `core/mobile/request-auth.ts` and `webapp/base-prefix.ts`;
@@ -192,14 +197,23 @@ fi
 # So typecheck the importers whenever the imported package's source is staged.
 # `bin/` imports beebox source too (`deferred-issues.ts`, `commit-provenance.ts`,
 # `base-prefix-injection.test.ts`) and is NOT a workspace package, so only the
-# root tsconfig covers it — the bin/ branch below lints but does not typecheck.
-# Both run in ~2.7s and only on a beebox/src commit.
+# root tsconfig covers it. Both run in ~2.7s and only on a beebox/src commit.
 if echo "$staged" | grep -q '^beebox/src/'; then
   if [ -z "${ws_app_typechecked:-}" ]; then
     echo "[pre-commit] workstreams-app: typecheck (imports beebox source)"
     run_in workstreams-app pnpm typecheck
   fi
   echo "[pre-commit] .: pnpm typecheck (bin/ imports beebox source)"
+  (cd "$REPO_DIR" && pnpm --silent typecheck)
+  root_typechecked=1
+fi
+
+# The root program (tsconfig.json `include`) is the only typecheck of bin/ and
+# schedules/ TypeScript. tap strips types, so a type error there otherwise
+# passes its own tests too
+# (issues/code-quality/2026-10-18-bin-typescript-is-not-typechecked-at-commit.md).
+if [ -z "${root_typechecked:-}" ] && echo "$staged" | grep -qE '^(bin|schedules)/.*\.(ts|tsx)$'; then
+  echo "[pre-commit] .: pnpm typecheck (bin/ or schedules/ TypeScript)"
   (cd "$REPO_DIR" && pnpm --silent typecheck)
 fi
 

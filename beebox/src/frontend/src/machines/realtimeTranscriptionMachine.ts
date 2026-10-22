@@ -4,7 +4,7 @@
  * States: idle → connecting → recordingLocal ⇄ recording → finalizing → idle
  *
  * The recording is independent of the live socket
- * (`docs/plans/resilient-voice-recording.md`, Track 3). `connecting` covers
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 3). `connecting` covers
  * only mic permission and worklet startup; once the mic is live (`MIC_LIVE`)
  * every frame stages to the box, and the live transcription socket is a
  * preview that may come and go:
@@ -21,6 +21,8 @@
  * which carries the recording's sealing obligation (`PendingRecording`) —
  * except CANCEL, which tells the actor to discard it.
  *
+ * HOLD (not a state) records silence while speech plays; the segment goes on.
+ *
  * The callback actor branches by transcription service (configured per box):
  * "voxtral" (WS proxy through the backend), "deepgram" (direct, temp key),
  * "openai-realtime" (direct, ephemeral secret). All feed the same events:
@@ -32,10 +34,10 @@
  *
  * This module does not import the real actor (it pulls in the audio worklet
  * and the network): `realtime-transcription-live.ts` provides it, and a
- * doctest provides a fake.
+ * test provides a fake.
  */
 
-import { setup, assign, emit, enqueueActions, fromCallback, not, stateIn, type SnapshotFrom } from "xstate";
+import { setup, assign, emit, enqueueActions, forwardTo, fromCallback, not, stateIn, type SnapshotFrom } from "xstate";
 import { recordingStop, recordingError, micLost, recordingResumed, liveTextPaused, liveTextResumed } from "../lib/audio/earcons";
 import type { PendingRecording } from "../lib/audio/voice-stager";
 import {
@@ -75,6 +77,7 @@ const EMPTY_SEGMENT = {
   interimTranscript: "",
   finalWords: null,
   error: null,
+  errorLevel: "error",
   recording: null,
   liveTextCue: "none",
 } as const;
@@ -86,6 +89,8 @@ const EMPTY_SEGMENT = {
  */
 type LiveTextCue = "none" | "dropped" | "announced";
 
+export type TranscriptionErrorLevel = "error" | "warning";
+
 // -- Machine --
 
 export const realtimeTranscriptionMachine = setup({
@@ -96,13 +101,19 @@ export const realtimeTranscriptionMachine = setup({
       /**
        * Finalized words with confidence, aligned with finalTranscript —
        * updated in the same transitions so a reconnect can never drift the
-       * two out of step (docs/plans/transcript-confidence.md). `null` means
+       * two out of step (docs/implemented-plans/transcript-confidence.md). `null` means
        * no confidence data has been captured for this segment
        * (Voxtral/OpenAI realtime, or nothing finalized yet) — distinct from
        * `[]` (Deepgram captured words but none exist yet/anymore).
        */
       finalWords: FinalWord[] | null;
       error: string | null;
+      /**
+       * How the chat bar shows `error`: `error` when nothing was recorded
+       * (the person must act), `warning` when recording kept going or kept
+       * its text.
+       */
+      errorLevel: TranscriptionErrorLevel;
       liveTextCue: LiveTextCue;
       /**
        * The ended segment's staged recording, set on TRANSCRIPTION_DONE. The
@@ -111,6 +122,8 @@ export const realtimeTranscriptionMachine = setup({
       recording: PendingRecording | null;
       /** Chat the segment started in, passed to the actor as input. */
       targetSessionId: string | null;
+      /** The mic is held while speech plays (HOLD); outlives a segment. */
+      held: boolean;
     },
     events: {} as TranscriptionEvent,
     emitted: {} as MaxDurationReached,
@@ -138,7 +151,9 @@ export const realtimeTranscriptionMachine = setup({
         const message = `setError: event "${event.type}" has no message field`;
         throw new MachineActionError(message);
       }
-      return { error: event.message };
+      // SETUP_ERROR ends the start with nothing recorded; a live-socket error
+      // leaves the recording running.
+      return { error: event.message, errorLevel: event.type === "SETUP_ERROR" ? "error" as const : "warning" as const };
     }),
     setFinalTranscript: assign(({ context, event }) => {
       const e = requireEvent(event, { type: "TRANSCRIPTION_DONE", action: "setFinalTranscript" });
@@ -153,9 +168,9 @@ export const realtimeTranscriptionMachine = setup({
         recording: e.recording,
       };
     }),
-    setTimeoutWarning: assign({ error: "Transcription timed out — partial text preserved" }),
-    setMicInterrupted: assign({ error: "Microphone interrupted — recovering…" }),
-    setMicDropEnded: assign({ error: "Recording stopped — the microphone was taken away" }),
+    setTimeoutWarning: assign({ error: "Transcription timed out — partial text preserved", errorLevel: "warning" as const }),
+    setMicInterrupted: assign({ error: "Microphone interrupted — recovering…", errorLevel: "warning" as const }),
+    setMicDropEnded: assign({ error: "Recording stopped — the microphone was taken away", errorLevel: "warning" as const }),
     clearError: assign({ error: null }),
     playMicLost: () => {
       micLost.play();
@@ -177,7 +192,7 @@ export const realtimeTranscriptionMachine = setup({
       if (context.liveTextCue === "announced") enqueue("playLiveTextResumed");
       enqueue.assign({ liveTextCue: "none" });
     }),
-    setStartFailedError: assign({ error: "Recording didn't start. Please try again." }),
+    setStartFailedError: assign({ error: "Recording didn't start. Please try again.", errorLevel: "error" as const }),
     sendStopToTranscriber: ({ system }) => {
       // systemId (below) makes the actor reachable here; `id` alone is
       // invocation-scoped and system.get would return undefined.
@@ -186,6 +201,7 @@ export const realtimeTranscriptionMachine = setup({
     sendCancelToTranscriber: ({ system }) => {
       system.get("transcriber")?.send({ type: "CANCEL" });
     },
+    setHeld: assign(({ event }) => ({ held: requireEvent(event, { type: "HOLD", action: "setHeld" }).held })),
     playMicOffSound: () => {
       recordingStop.play();
     },
@@ -215,10 +231,11 @@ export const realtimeTranscriptionMachine = setup({
 }).createMachine({
   id: "realtimeTranscription",
   initial: "idle",
-  context: { ...EMPTY_SEGMENT, targetSessionId: null },
+  context: { ...EMPTY_SEGMENT, targetSessionId: null, held: false },
   states: {
     idle: {
       on: {
+        HOLD: { actions: "setHeld" },
         START: { target: "active", actions: "beginSegment" },
         DISMISS_ERROR: { actions: assign({ error: null }) },
       },
@@ -228,7 +245,10 @@ export const realtimeTranscriptionMachine = setup({
         id: "transcriber",
         systemId: "transcriber",
         src: "transcriptionActor",
-        input: ({ context }) => ({ targetSessionId: context.targetSessionId }),
+        input: ({ context }) => ({ targetSessionId: context.targetSessionId, held: context.held }),
+      },
+      on: {
+        HOLD: { actions: ["setHeld", forwardTo("transcriber")] },
       },
       after: {
         // The segment is SUBMITTED, not folded: the emitted event lets the
@@ -304,6 +324,8 @@ export const realtimeTranscriptionMachine = setup({
         recording: {
           after: {
             SILENCE_TIMEOUT: {
+              // Held: the silence is ours, not the person's.
+              guard: ({ context }) => !context.held,
               target: "finalizing",
               actions: [
                 () => console.info("[realtime-transcription] Silence timeout — auto-stopping"),
@@ -314,6 +336,8 @@ export const realtimeTranscriptionMachine = setup({
           },
           on: {
             TEXT_UPDATE: { target: "recording", reenter: true, actions: "applyTextUpdate" },
+            // Re-entering restarts the silence timer when the hold ends.
+            HOLD: { target: "recording", reenter: true, actions: ["setHeld", forwardTo("transcriber")] },
             CONNECTION_DEGRADED: [
               { guard: "micDrop", target: "reconnecting", actions: ["playMicLost", "setMicInterrupted"] },
               // Network: the audio keeps staging, only live text pauses.

@@ -7,6 +7,7 @@ protocol QuickChatClient {
     func submit(id: UUID, message: String, origin: QuickChatOrigin?, source: String?, hqService: String?) async throws -> QuickChatView
     func choose(id: UUID, candidateId: String) async throws -> QuickChatView
     func discard(id: UUID) async throws -> QuickChatView
+    func retry(id: UUID) async throws -> QuickChatView
     func home() async throws -> QuickChatHome
 }
 
@@ -311,10 +312,17 @@ final class BoxScreenStore: ObservableObject {
         }
     }
 
-    /// Retry a `sending` record: `submit` with the same id delivers again.
+    /// Retry a `sending` record through `quickChat.retry`. A box from before
+    /// that procedure retries through a repeated `submit` of the same id,
+    /// which needs the message: a page sent with no note cannot fall back.
     func retry(_ view: QuickChatView, boxID: UUID) async {
         await act(on: view, boxID: boxID, name: "retry", follows: true) { client in
-            try await client.submit(id: view.id, message: view.message, origin: nil, source: nil, hqService: nil)
+            do {
+                return try await client.retry(id: view.id)
+            } catch let error as QuickChatAPI.APIError where error.isUnknownProcedure && view.message.isEmpty == false {
+                BoxLog.info("quick chat retry unavailable; resubmitting", category: .net, targetBoxID: boxID)
+                return try await client.submit(id: view.id, message: view.message, origin: nil, source: nil, hqService: nil)
+            }
         }
     }
 

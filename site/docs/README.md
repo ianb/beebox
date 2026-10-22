@@ -29,7 +29,7 @@ description: "Documentation for Bee Box: a personal assistant built from a codin
 > its own, so you can always tell the two apart.
 > Email is handled from within the box, with replies drafted for you. Recipes
 > scale; people and places are recognized; a project gets a working memory;
-> something you are learning gets a course built for it. And what you correct
+> something you are learning can get a course, with the courses add-on. And what you correct
 > stays corrected. Each of these has a page under "uses" below, including what
 > is still rough.
 >
@@ -61,8 +61,8 @@ description: "Documentation for Bee Box: a personal assistant built from a codin
 > is early: self-hosted, one maintainer, changing fast. The AI services it
 > uses are all ones you set up yourself: the coding agent's own model
 > provider, and optionally transcription (Mistral, Deepgram, or OpenAI),
-> spoken replies (OpenAI, or Gemini through OpenRouter), embeddings for search
-> (OpenAI), and Gemini for a few audio and scanning tasks; the contributor
+> spoken replies (OpenAI or Gemini), embeddings for search (OpenAI), and
+> Gemini for a few audio and scanning tasks; the contributor
 > pages list them in full. It is also developed
 > in an unusually agentic way, with coding agents doing much of the work
 > under the maintainer's direction, and the plans, issues, and process kept
@@ -119,11 +119,14 @@ the ones that bear on what the person is asking and open the pages named.
   [representation](design/representation.md))
 - **It extends itself.** How a kind of card is displayed, what kinds exist,
   what runs on a schedule: the agent can build those inside the box, and read
-  them to understand how the box works.
+  them to understand how the box works. Recipes and courses are the first
+  bundled add-ons a box switches on, but there are only two.
   ([making it yours](13-making-it-yours.md), [views](capabilities/views.md),
   [procedures](capabilities/procedures.md))
 - **Expressive capture.** A way in suited to each kind of thing, and the
-  distinctive ones are long-form voice and mixed voice-and-camera.
+  distinctive ones are long-form voice and mixed voice-and-camera. On an
+  iPhone it now also reaches Siri, the Action Button, and the share sheet, not
+  yet tried on a real phone.
   ([voice](capabilities/voice.md), [phone capture](capabilities/phone-capture.md),
   [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md))
 - **It asks instead of guessing.** Lacking confidence or authority the agent

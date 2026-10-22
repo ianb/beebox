@@ -78,7 +78,7 @@ Components reach for **semantic color roles**, not brand names. Defined in `src/
 | Role | Use for | Shades |
 |------|---------|--------|
 | `primary` | Main brand actions, links, selected state | DEFAULT, dark (hover), light, 50, 100 |
-| `accent` | Highlights, CTAs, focus rings, warning-lite | DEFAULT, dark, light, 50, 100 |
+| `accent` | Highlights, CTAs, focus rings, warning-lite | DEFAULT, dark, light, 700 (text on light paper), 50, 100 |
 | `info` | Informational callouts, metadata badges | DEFAULT, dark, light, muted, 50, 100 |
 | `danger` | Destructive actions, error messages | DEFAULT, dark, light, 50, 100 |
 | `success` | Positive confirmations, connected state | DEFAULT, dark, light, 50, 100 |
@@ -92,6 +92,14 @@ Components reach for **semantic color roles**, not brand names. Defined in `src/
 - **Never** add new colors to `tailwind.config.js` without a semantic role. If you need a new color category, define a new role.
 - **For shade variation** on an existing color, use opacity syntax (`bg-primary/50`, `text-danger/70`) before reaching for additional numeric shades.
 - **Components in `components/`** own their appearance — they reference these semantic names directly. Page-level code (outside `components/`) can only use *outer-layout* classes via `className` (enforced by `restrict-component-classes` ESLint rule).
+
+**Panels inside a card theme.** A `Card` either paints the card's material
+(`Card material`) or its own app surface, and it tells the text primitives
+inside it which (`components/ui/material.ts`): `Text`, `Hint`, `Heading` and
+field labels follow it unless given `material` explicitly. A panel that paints
+its own light background with a raw class inside a material `Card` must also
+set its own ink. Theme CSS hooks a component by a `bbx-` class, never by a
+Tailwind utility class: changing the utility silently drops the override.
 
 When a color role doesn't feel right for a use case, that's usually a sign that a new semantic role is warranted — discuss before inventing a one-off color.
 
@@ -218,6 +226,9 @@ What fails lint:
 
 New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic role in frontend.md.
 
+For a fixed development preview and repeatable screenshots, use the
+[theme authoring studio](docs/theme-authoring.md).
+
 The generic theme gallery is installed explicitly into a development box from
 `test/fixtures/theme-tour`. From the monorepo root:
 
@@ -229,5 +240,5 @@ bin/tour card-theme-interface
 ```
 
 The installer leaves changed files alone and reports conflicts. Its entry card
-is `_content/theme-tour/Theme_Tour.memo.card`. Knowledge audits reset their test
+is `_content/theme-tour/Theme_Tour.doc.card`. Knowledge audits reset their test
 box; reinstall the gallery afterward if that box was used for an audit.

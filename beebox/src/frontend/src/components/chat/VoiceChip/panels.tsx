@@ -2,7 +2,7 @@
  * `VoiceChip`'s "Voice settings" sub-panel — split out of VoiceChip.tsx to
  * keep that file under the 300-line cap. Moved here from
  * `SessionChip-advanced-panels.tsx` by chunk 3 of
- * docs/plans/chat-header-chips.md; the mutation handlers (with rollback +
+ * docs/implemented-plans/chat-header-chips.md; the mutation handlers (with rollback +
  * toast on rejection) stay owned by VoiceChip.tsx, which passes them in.
  * (The Model sub-panel that used to live here moved to `ChatMenu` — see
  * `SessionChip-model-panel.tsx` — in the chip polish round, since Model isn't
@@ -27,7 +27,7 @@ function formatSecretNeeds(needs: readonly string[]): string {
 /**
  * The reason line for an unusable option, or null when it's usable (or the
  * capability is unknown — loading/forbidden queries never block a picker).
- * Pure so it's doctestable without rendering: `src/frontend/test/components/chat/VoiceChip/panels.voice-chip-capability-reason.doctest.md`.
+ * Pure so it's testable without rendering: `src/frontend/test/components/chat/VoiceChip/panels.voice-chip-capability-reason.test.ts`.
  */
 export function capabilityReason(state: ServiceCapability | undefined): string | null {
   if (state === undefined || state.usable) return null;
@@ -39,7 +39,7 @@ export function capabilityReason(state: ServiceCapability | undefined): string |
  * inventing a second rendering. */
 function CapabilityNote({ needs }: { needs: readonly string[] }) {
   return (
-    <span className="block pl-4 text-xs text-warm-500">
+    <span className="block pl-4 text-xs text-warm-700">
       needs the <code className="font-mono">{formatSecretNeeds(needs)}</code> secret — Admin → Secrets
     </span>
   );
@@ -139,17 +139,17 @@ export function VoicePanel({
   return (
     <>
       <MenuItem id="bbx-voice-settings-back" onClick={onBack} keepOpen>
-        <span className="text-warm-500">‹ Voice settings</span>
+        <span className="text-warm-700">‹ Voice settings</span>
       </MenuItem>
       <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">While you speak</div>
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-700">While you speak</div>
       {TRANSCRIPTION_OPTIONS.map((opt) => (
         <MenuItem key={opt.service} id={`bbx-voice-live-${opt.service}`} onClick={() => onSelectTranscriptionService(opt.service)} keepOpen>
           {currentService === opt.service ? "✓ " : "  "}{opt.label}
         </MenuItem>
       ))}
       <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Final transcript (after recording)</div>
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-700">Final transcript (after recording)</div>
       {HQ_TRANSCRIPTION_OPTIONS.map((opt) => {
         const isSelected = currentHqService === opt.service;
         const cap = capabilities?.hq[opt.service];
@@ -170,7 +170,7 @@ export function VoicePanel({
         );
       })}
           <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">When the box speaks</div>
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-700">When the box speaks</div>
       {TTS_BACKEND_OPTIONS.map((opt) => {
         const isSelected = currentTtsBackend === opt.backend;
         const cap = capabilities?.tts[opt.backend];
@@ -185,7 +185,7 @@ export function VoicePanel({
           >
             <span>
               {isSelected ? "✓ " : "  "}{opt.label}
-              {opt.note !== undefined && <span className="block pl-4 text-xs text-warm-500">{opt.note}</span>}
+              {opt.note !== undefined && <span className="block pl-4 text-xs text-warm-700">{opt.note}</span>}
               {reason !== null && cap !== undefined && <CapabilityNote needs={cap.needs} />}
             </span>
           </MenuItem>

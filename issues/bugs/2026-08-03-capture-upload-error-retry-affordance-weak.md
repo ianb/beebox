@@ -8,6 +8,8 @@ priority: important
 needs: [manual-testing]
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 > **⏳ Awaiting manual testing on a real device** — fix landed in `9e6caef8`.
 > The failed-upload banner is now a full-width, thumb-sized Retry that shows it
 > started and reports how the batch ended. A simulator cannot settle a

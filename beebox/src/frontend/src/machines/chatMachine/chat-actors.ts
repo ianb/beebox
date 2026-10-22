@@ -8,8 +8,8 @@ import { boundTurnFields } from "./chat-bound-turn.js";
  * `fetchInitialActor` / `fetchHistoryActor` load session history + status;
  * `streamActor` runs the SSE turn in a callback closure. Kept separate from
  * the machine wiring in `chatMachine.ts` to keep both files under the
- * line budget. `rollupStreamToEntry` is consumed by the machine's
- * refreshing-onDone action and is therefore exported.
+ * line budget. `rollupStreamToEntry` is consumed by the refreshing-onDone
+ * reducer (`applyRefreshedHistory` in chat-actions) and is therefore exported.
  */
 
 import { fromCallback, fromPromise } from "xstate";
@@ -23,20 +23,20 @@ import {
   type PendingSessionEntry,
 } from "../../api";
 import { trpcClient } from "../../lib/trpc/client";
-// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
+// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx test
 // runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
 import { isRecord } from "../../../../shared/is-record.js";
 import { settleReceipt } from "../../input/targets/receipts";
 import { buildStreamEntry } from "../../lib/stream-entry";
 import type { ChatMessage } from "@core/chat/session/messages.js";
-import type { ActivityKind, CardStateDetails } from "@core/chat/card-activity.js";
+import type { ChatSendContext } from "@core/chat/card-activity.js";
 import {
   ChatInitialLoadError,
   chatTailSlice,
   logFsm,
   type ChatEvent,
+  type HistoryInput,
   type InitialSessionInput,
-  type SessionInput,
 } from "../chat-types";
 import { runFakeStream, runScrollDebugToggle } from "./chat-actors-fakestream";
 import { settleFromTurnStart, settleRejectedTurnStart } from "./chat-receipt-settlement";
@@ -86,14 +86,21 @@ export const fetchInitialActor = fromPromise<
 
 export const fetchHistoryActor = fromPromise<
   { sessionId: string | null; entries: SessionEntry[]; total: number; running: boolean; busy: boolean },
-  SessionInput
+  HistoryInput
 >(async ({ input }) => {
-  if (input.sessionInput === "new") {
-    return { sessionId: null, entries: [], total: 0, running: false, busy: false };
+  let sessionId = input.sessionInput;
+  if (sessionId === "new") {
+    // A "new" chat has no history of its own. If a turn was accepted, the box
+    // may know its session id even though this client never saw `system/init`.
+    const assigned = input.turnId === undefined
+      ? null
+      : (await trpcClient.events.turnSession.query({ turnId: input.turnId })).sessionId;
+    if (assigned === null) return { sessionId: null, entries: [], total: 0, running: false, busy: false };
+    sessionId = assigned;
   }
   const [history, status] = await Promise.all([
-    getChatHistory({ sessionId: input.sessionInput, slice: chatTailSlice() }),
-    getChatStatus({ sessionId: input.sessionInput }),
+    getChatHistory({ sessionId, slice: chatTailSlice() }),
+    getChatStatus({ sessionId }),
   ]);
   return {
     sessionId: history.sessionId ?? status.sessionId,
@@ -108,9 +115,10 @@ export const fetchHistoryActor = fromPromise<
  * The SDK's `system/init` message is the first frame of every stream and
  * carries the session id this turn is running under (possibly different from
  * what we sent — the SDK rotates on resume in some paths). Forward it onto
- * the machine immediately so the URL update / id pinning doesn't have to wait
- * for the side-channel `chat-session-assigned` event on /events, which can be
- * lost across a backend restart and leave the frontend stuck on `session=new`.
+ * the machine immediately so the URL update and id pinning happen mid-turn.
+ * The `chat-session-assigned` bus event never reaches the machine; if this
+ * frame is missed, a refresh looks the accepted turn up instead
+ * (`fetchHistoryActor`).
  */
 function handleSystemInit(
   msg: { subtype?: string; session_id?: string },
@@ -231,7 +239,7 @@ export const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { binding?: SendBinding; startup?: boolean; sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; engine?: string; model?: string; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails };
+    input: { binding?: SendBinding; startup?: boolean; sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; engine?: string; model?: string } & ChatSendContext;
   }) => {
     let terminalFired = false;
     let msgCount = 0;
@@ -277,6 +285,7 @@ export const streamActor = fromCallback(
       ...(input.engine !== undefined ? { engine: input.engine } : {}),
       ...(input.model !== undefined ? { model: input.model } : {}),
       ...(input.openCard !== undefined ? { openCard: input.openCard } : {}),
+      ...(input.openQuestion !== undefined ? { openQuestion: input.openQuestion } : {}),
       ...(input.cardActivity && input.cardActivity.length > 0 ? { cardActivity: input.cardActivity } : {}),
       ...(input.cardState && Object.keys(input.cardState).length > 0 ? { cardState: input.cardState } : {}),
       ...boundTurnFields(input.binding),
@@ -307,6 +316,7 @@ export const streamActor = fromCallback(
           return;
         }
 
+        if (input.sessionInput === "new") sendBack({ type: "TURN_ACCEPTED", turnId: result.turnId });
         // Subscribe to the turn's output. wsLink resumes this automatically on a
         // dropped connection (lastEventId = last seq), so partial text survives.
         const sub = trpcClient.events.turnStream.subscribe(
@@ -336,7 +346,7 @@ export const streamActor = fromCallback(
               recordChatSendEvent(input.messageId, { event: "turn-stream-error", detail: { errorLength: err.message.length } });
               console.error(`[chat] turn stream subscription failed: ${err.message}`);
               logFsm("stream-throw", { msg: err.message, msgCount });
-              if (!terminalFired) sendBack({ type: "STREAM_FAILED", error: err.message, accepted: true });
+              if (!terminalFired) sendBack({ type: "STREAM_LOST", reason: err.message });
             },
             onComplete: () => {
               recordChatSendEvent(input.messageId, { event: "turn-stream-complete", detail: { terminalFired } });
@@ -344,7 +354,7 @@ export const streamActor = fromCallback(
               // result frame) — fall back to a history refresh.
               if (!terminalFired) {
                 logFsm("stream-eof-no-terminal", { msgCount });
-                sendBack({ type: "STREAM_FAILED", error: "Stream ended without result", accepted: true });
+                sendBack({ type: "STREAM_LOST", reason: "Stream ended without result" });
               }
             },
           },
@@ -387,14 +397,15 @@ export function rollupStreamToEntry(
  * the receipt registry so the dispatcher's `Promise<Receipt>` settles for a
  * mid-turn queued send, same as the idle-path send in `streamActor`.
  */
-export function queueMessageToBackend(opts: { binding?: SendBinding; startup?: boolean; session: string; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }): void {
-  const { session, message, messageId, images, openCard, cardActivity, cardState } = opts;
+export function queueMessageToBackend(opts: { binding?: SendBinding; startup?: boolean; session: string; message: string; messageId: string; images?: ChatImageAttachment[] } & ChatSendContext): void {
+  const { session, message, messageId, images, openCard, openQuestion, cardActivity, cardState } = opts;
   startChatTurn({
     session,
     message,
     messageId,
     ...(images && images.length > 0 ? { images } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
+    ...(openQuestion !== undefined ? { openQuestion } : {}),
     ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
     ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
     ...boundTurnFields(opts.binding),

@@ -1,5 +1,5 @@
 import { fmt } from "../../../lib/format.js";
-import { appendCodexTurnUsage, type CodexTokenUsage } from "../../codex-usage.js";
+import { appendCodexTurnUsage, codexUsageModel, type CodexTokenUsage } from "../../codex-usage.js";
 
 export async function recordCodexAgentUsage(options: {
   boxRoot: string;
@@ -7,6 +7,8 @@ export async function recordCodexAgentUsage(options: {
   invocationId: string;
   task?: string | undefined;
   model?: string | undefined;
+  /** The session's environment, for its `CODEX_HOME`. */
+  env?: Record<string, string | undefined> | undefined;
   usage: CodexTokenUsage | null;
   onOutput?: ((text: string) => void) | undefined;
 }): Promise<void> {
@@ -19,7 +21,12 @@ export async function recordCodexAgentUsage(options: {
     turnId: options.invocationId,
     task: options.task ?? "unknown",
     timestamp: new Date().toISOString(),
-    model: options.model ?? "codex-default",
+    model: await codexUsageModel({
+      threadId: options.threadId,
+      requested: options.model,
+      env: options.env,
+      warn: (text) => options.onOutput?.(`${fmt.warn(text)}\n`),
+    }),
     usage: options.usage,
   });
 }

@@ -170,7 +170,7 @@ replacement, and the README's Migration section names the script to run.
 
 ## Conventions
 
-`test/plugins.doctest.md` loops every registered plugin and checks the rules
+`test/plugins.test.ts` loops every registered plugin and checks the rules
 marked (checked). The rest are convention only.
 
 - **name**: equals the directory under `src/plugins/`, kebab-case (checked).
@@ -182,7 +182,7 @@ marked (checked). The rest are convention only.
 - **CSS**: classes are prefixed `bbx-<plugin>-` (convention).
 - **tricks**: a trick a README asks the agent to write is named `<plugin>-<verb>` (convention).
 - **tags on a type**: a box-local type or plugin base declares tags on the schema with `markdocTags`. They validate only in that type's body and render as components only through a view passing `tags` to `Markdown`; elsewhere they show as authored text.
-- **setup doctest**: each plugin's setup doctest writes the README stubs into a temp box (`readmeStubs(name)` in `test/helpers/plugin-readme.ts`) and runs `bbx validate`, so the docs cannot drift from what compiles.
+- **setup test**: each plugin's setup test writes the README stubs into a temp box (`readmeStubs(name)` in `test/helpers/plugin-readme.ts`) and runs `bbx validate`, so the docs cannot drift from what compiles.
 - **migration**: manual and agent-run. A plugin may ship a mechanical update script; the README tells the agent to run it.
 - **skill**: the body lives in `skill.ts`, exported as a string; the engine writes the frontmatter.
 - **types**: default type names are what cross-card checks rely on. A box may rename a type; the README says which checks that disables.

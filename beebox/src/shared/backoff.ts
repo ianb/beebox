@@ -4,7 +4,7 @@
  * two recovery paths (initial connect-with-retry and the mid-recording
  * reconnect loop); moved to `shared/` (from `frontend/src/machines/`) so the
  * server's HQ job (`core/voice-recording/hq-job.ts`, a later chunk of
- * `docs/plans/resilient-voice-recording.md`) can reuse the same helper
+ * `docs/implemented-plans/resilient-voice-recording.md`) can reuse the same helper
  * instead of a second backoff idiom (#8).
  */
 

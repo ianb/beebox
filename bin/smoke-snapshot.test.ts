@@ -4,11 +4,9 @@ import type { SmokeFailureError } from "./smoke-errors.js";
 import {
   MENU_ERROR_TEXT,
   cardViewRendered,
-  contentAreaRow,
   currentPlaceLabel,
   directoryRowCount,
   expandedState,
-  firstCardRow,
   refForDomId,
   hasDomId,
   menuItemNames,
@@ -280,30 +278,13 @@ test("cardViewRendered: a mounted frame with no card in it is not a rendered car
   assert.equal(cardViewRendered('- heading "Browse" [level=1, ref=e3]'), false);
 });
 
-test("directoryRowCount / firstCardRow: counted rows come from real box content", () => {
+test("directoryRowCount: counted rows come from real box content", () => {
   assert.equal(directoryRowCount(BROWSE_SNAPSHOT), 2);
-  assert.deepEqual(firstCardRow(BROWSE_SNAPSHOT), { role: "button", name: "Box, landmark card" });
   assert.equal(directoryRowCount("- button \"/\" [ref=e1]"), 0);
-  assert.equal(firstCardRow("- button \"AGENTS.md\" [ref=e1]"), null);
 });
 
 test("refForDomId: finds a stable control without depending on its accessible copy", () => {
   const listing = '- switch "Showing compact listing — switch to raw" [checked=false, ref=e14, id=bbx-browse-listing-mode]';
   assert.equal(refForDomId(listing, "bbx-browse-listing-mode"), "e14");
   assert.equal(refForDomId(listing, "missing"), null);
-});
-
-test("contentAreaRow: finds the one-root content area when a listing has no card row", () => {
-  const oneRootRoot = `- button "/" [ref=e16, id=bbx-browse-crumb-root]
-- button "Bookkeeping directory, 659 items" [ref=e11]
-- button "Config directory, 28 items" [ref=e12]
-- button "Content directory, 184 items" [ref=e13]
-- button "Publish directory" [ref=e14]
-- button "Tmp directory" [ref=e15]`;
-  assert.deepEqual(contentAreaRow(oneRootRoot), {
-    role: "button",
-    name: "Content directory, 184 items",
-  });
-  // A pre-one-root box's listing carries no `Content` row at all.
-  assert.equal(contentAreaRow(BROWSE_SNAPSHOT), null);
 });

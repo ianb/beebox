@@ -10,16 +10,16 @@
  * same reason it lives in `.taprc` rather than a box helper: isolation has to
  * be the process default, not a convention each new test remembers.
  *
- * A test that sets either variable itself (the auth doctests, which point at
+ * A test that sets either variable itself (the auth tests, which point at
  * fixture stores) keeps its own value.
  */
 
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { processTempDir } from "./process-temp-dir.js";
+
 if (process.env["BBX_AUTH_FILE"] === undefined) {
-  process.env["BBX_AUTH_FILE"] = join(mkdtempSync(join(tmpdir(), "bbx-test-auth-")), "auth.json");
+  process.env["BBX_AUTH_FILE"] = join(processTempDir("bbx-test-auth-"), "auth.json");
 }
 if (process.env["BBX_SESSION_SECRET"] === undefined) {
   process.env["BBX_SESSION_SECRET"] = "test-session-secret";

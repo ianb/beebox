@@ -38,7 +38,7 @@ function SpeakerGlyph({ playing }: { playing: boolean }) {
       strokeLinejoin="round"
       aria-hidden="true"
       className={`inline-block w-4 h-4 align-text-bottom ${
-        playing ? "text-primary animate-pulse" : "text-primary opacity-40"
+        playing ? "text-card-pen animate-pulse" : "text-card-pen opacity-40"
       }`}
     >
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />

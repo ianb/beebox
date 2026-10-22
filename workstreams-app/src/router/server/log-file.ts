@@ -5,7 +5,7 @@
 // Why this exists: every `[router …]` line used to live only in the terminal
 // scrollback of whoever started the router, so the line explaining the
 // 2026-09-15 three-hour outage had to be pasted in by hand
-// (issues/bugs/2026-09-15-dev-router-transient-failures-are-permanent-and-unlogged.md).
+// (issues/closed/bugs/2026-09-15-dev-router-transient-failures-are-permanent-and-unlogged.md).
 // `grep -c "\[router " ~/.cache/beebox/logs/main.log` returned 0. Post-mortems
 // here are routine, so the bar is that a future agent can find this file and
 // read it cold; bin/docs/router-operations.md names the path and the line shapes.

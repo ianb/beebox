@@ -16,8 +16,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "baseUrl": ".",
-    // Cross-boundary import aliases. Two contracts, by design:
+    // Cross-boundary import aliases, relative to this file. Two contracts, by design:
     //   @shared/*  -> ../shared/*   VALUE-safe: also aliased in vite.config.ts,
     //                so runtime value imports resolve in the client bundle.
     //                src/shared/ is isomorphic + bundler-safe.
@@ -34,7 +33,7 @@
     // will execute a value import through @core/@schemas/@backend that the Vite
     // build rejects — so tsx is not a guard, the eslint rule is (it bans value
     // imports through these aliases via allowTypeImports). Only the tap/tsx
-    // DOCTEST runner uses the ROOT tsconfig
+    // test runner uses the ROOT tsconfig
     // (no paths), where @core/@schemas/@shared are unresolvable; frontend
     // modules exercised there import cross-boundary code by raw relative path,
     // not by alias (see the lint-rule exemptions).

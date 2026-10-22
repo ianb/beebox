@@ -14,15 +14,15 @@ rather than mandates, and the other model family reviewing anything bigger
 than a small fix. The first page below describes all of that.
 
 The repository is a monorepo: the Bee Box engine, a Chrome extension
-(beebox-clerk) that talks to a hosted box, an iOS companion app, a doctest
-framework extracted for reuse (agent-doctest), a shared lint and TypeScript
+(beebox-clerk) that talks to a hosted box, an iOS companion app, the
+`t.check` test plugin extracted for reuse (tap-check), a shared lint and TypeScript
 preset (personal-vibe-check), and the generator for this site. All of it is
 TypeScript, managed as pnpm workspaces from one root install. Running it
 from source is a pnpm install and a `bbx engine init` of your own box; the
 developer install page has the sequence and prerequisites.
 
-Tests are doctests: markdown files under test/ whose fenced code blocks run
-as executable examples, in three tiers (pure functions, HTTP routes, and
+Tests are `.test.ts` files under test/ that compare whole values with
+`t.check`, in three tiers (pure functions, HTTP routes, and
 filesystem operations on a temporary box). `pnpm test:changed` runs only
 the tests your change implicates; a pre-commit hook runs typecheck, lint,
 and documentation link checks. Work happens on branches that merge into

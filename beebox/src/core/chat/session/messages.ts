@@ -15,7 +15,7 @@ import { assertNever } from "../../../shared/invariant.js";
 import { buildChatContentBlocks } from "../../../shared/chat-content-blocks.js";
 import type { ChatContentBlock } from "../../../services/claude-chat/core.js";
 import type { ChatBackendMessage } from "../../../services/claude-chat-types.js";
-import type { ActivityKind, CardStateDetails } from "../card-activity.js";
+import type { ChatSendContext } from "../card-activity.js";
 import type { ChatChannel } from "../../../shared/chat-channel.js";
 import type {
   SDKMessage,
@@ -23,6 +23,7 @@ import type {
   SDKTaskProgressMessage,
   SDKTaskStartedMessage,
   SDKTaskUpdatedMessage,
+  SDKBackgroundTasksChangedMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
 import type {
@@ -33,6 +34,8 @@ import type {
   ChatMessageUnknown,
   ChatMessageUser,
   ChatMessageContent,
+  ChatMessageTaskLevel,
+  LiveTaskEntry,
   TaskEvent,
 } from "../message-types.js";
 
@@ -47,7 +50,9 @@ export type {
   ChatMessageStreamEvent,
   ChatMessageResult,
   ChatMessageTask,
+  ChatMessageTaskLevel,
   ChatMessageUnknown,
+  LiveTaskEntry,
   TaskEvent,
 } from "../message-types.js";
 
@@ -78,7 +83,7 @@ export interface ChatImage {
   dataBase64: string;
 }
 
-export interface ChatSendInput {
+export interface ChatSendInput extends ChatSendContext {
   /** Send-time presentation context, independent of the conversation directory. */
   viewContext?: AttentionSnapshot;
   text: string;
@@ -90,25 +95,8 @@ export interface ChatSendInput {
    * Omitted when the transport doesn't know.
    */
   channel?: ChatChannel;
-  /**
-   * Box-relative path of the card open in the chat's companion pane when
-   * this message was sent. Surfaces to the agent as the read-only
-   * `open-card` snapshot attribute. Omitted when no card is open.
-   */
-  openCard?: string;
-  /**
-   * What the user did to the companion-pane card since the agent's last
-   * reply (see `ActivityKind`). Unioned across queued sends and surfaced as
-   * the read-only `card-activity` snapshot attribute. Omitted when empty.
-   */
-  cardActivity?: ActivityKind[];
-  /**
-   * Per-kind free-text detail for the companion-pane activity (e.g. the
-   * embedding query typed, the path modified). Latest-wins per kind across
-   * queued sends; surfaced as the text of the read-only `<card-activity>`
-   * snapshot child elements.
-   */
-  cardState?: CardStateDetails;
+  // `openCard`, `openQuestion`, `cardActivity`, `cardState`: `ChatSendContext`
+  // (`core/chat/card-activity.ts`), the one list of per-send context fields.
   /**
    * The turn carries text the person at the composer did not type (a script's
    * self-note, a fired schedule). Delivered as the SDK's `client_composed`, so
@@ -119,10 +107,29 @@ export interface ChatSendInput {
 }
 
 /**
+ * True for a task the CLI does not surface as the person's work. `ambient` is
+ * a superset of `skip_transcript` (it adds live-update watchers); both are
+ * checked because a CLI that predates `ambient` sets only `skip_transcript`.
+ */
+function isAmbientTask(msg: { skip_transcript?: boolean; ambient?: boolean }): boolean {
+  return msg.skip_transcript === true || msg.ambient === true;
+}
+
+/**
+ * Normalize the SDK's `background_tasks_changed` level signal into a
+ * `task-level` ChatMessage carrying only the non-ambient live tasks.
+ */
+function adaptTaskLevel(msg: SDKBackgroundTasksChangedMessage): ChatMessageTaskLevel {
+  const tasks: LiveTaskEntry[] = msg.tasks
+    .filter((entry) => entry.ambient !== true)
+    .map((entry) => ({ taskId: entry.task_id, description: entry.description }));
+  return { type: "task-level", session_id: msg.session_id, uuid: msg.uuid, tasks };
+}
+
+/**
  * Normalize one of the SDK's four `task_*` system messages into a `task`
- * ChatMessage. Returns null for ambient/housekeeping tasks (`skip_transcript`)
- * so they don't clutter the inline transcript — progress/updated ticks for
- * such tasks are dropped downstream because no `started` ever registered them.
+ * ChatMessage. Returns null for ambient/housekeeping tasks (see
+ * `isAmbientTask`) so they never read as the person's work.
  */
 function adaptTaskMessage(
   msg:
@@ -134,7 +141,7 @@ function adaptTaskMessage(
   const base = { type: "task" as const, session_id: msg.session_id, uuid: msg.uuid };
   switch (msg.subtype) {
     case "task_started": {
-      if (msg.skip_transcript === true) return null;
+      if (isAmbientTask(msg)) return null;
       const task: TaskEvent = { phase: "started", taskId: msg.task_id, status: "running" };
       if (msg.tool_use_id !== undefined) task.toolUseId = msg.tool_use_id;
       if (msg.description) task.description = msg.description;
@@ -156,7 +163,7 @@ function adaptTaskMessage(
       return { ...base, task };
     }
     case "task_notification": {
-      if (msg.skip_transcript === true) return null;
+      if (isAmbientTask(msg)) return null;
       const task: TaskEvent = { phase: "settled", taskId: msg.task_id, status: msg.status };
       if (msg.tool_use_id !== undefined) task.toolUseId = msg.tool_use_id;
       if (msg.summary) task.summary = msg.summary;
@@ -196,6 +203,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       ) {
         return adaptTaskMessage(msg);
       }
+      if (msg.subtype === "background_tasks_changed") return adaptTaskLevel(msg);
       return null;
     }
     case "assistant": {
@@ -292,7 +300,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
  *
  * A run on a third-party model (GLM, an added OpenRouter model) loses its
  * `total_cost_usd`: the SDK prices every turn as Claude, which overstated
- * OpenRouter spend 5–20× when measured (`docs/plans/openrouter-chat-models.md`,
+ * OpenRouter spend 5–20× when measured (`docs/implemented-plans/openrouter-chat-models.md`,
  * Track 1 (h)). No figure is better than a wrong one; the real spend is the
  * provider's own.
  */

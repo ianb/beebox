@@ -1,0 +1,191 @@
+// # Intake Job Creation
+//
+// `createOrAppendIntakeJob` manages intake job files in a box. It creates new job cards or appends items to the pending one with the same batching key, `(connector, priority)`.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { any, not, str, unordered } from "@ianbicking/tap-check/check";
+import assert from "node:assert/strict";
+import { makeTmpBox } from "../helpers/test-helpers.js";
+import { createOrAppendIntakeJob } from "../../src/job-cards/intake-utils.js";
+
+// ## Creating a new job
+//
+// When no matching job exists, a new `.intake.job.card` file is created under `_bookkeeping/jobs/`:
+void test("When no matching job exists, a new .intake.job.card file is created under boo...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const path = await createOrAppendIntakeJob({
+    boxRoot: box.root,
+    connector: "test-connector",
+    items: ["_content/inbox/item1.doc.card"],
+    description: "Triage 1 item",
+  });
+  t.check(path, str`_bookkeeping/jobs/${any(String)}-test-connector.intake.job.card`);
+
+  await t.checkText(await box.read(path), `---
+connector: test-connector
+priority: normal
+description: Triage 1 item
+items:
+  - ref: _content/inbox/item1.doc.card
+---`);
+});
+
+// ## Appending to an existing job
+//
+// A second call with the same connector and priority appends to the existing job file rather than creating a new one:
+void test("A second call with the same connector and priority appends to the existing jo...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const path1 = await createOrAppendIntakeJob({
+    boxRoot: box.root,
+    connector: "test-connector",
+    items: ["_content/inbox/item1.doc.card"],
+    description: "Triage 1 item",
+  });
+  const path2 = await createOrAppendIntakeJob({
+    boxRoot: box.root,
+    connector: "test-connector",
+    items: ["_content/inbox/item2.doc.card"],
+    description: "Triage 2 items",
+  });
+  t.check(path1, path2);
+
+  // The updated file contains both items with the new description:
+
+  await t.checkText(await box.read(path2), `---
+connector: test-connector
+priority: normal
+description: Triage 2 items
+items:
+  - ref: _content/inbox/item1.doc.card
+  - ref: _content/inbox/item2.doc.card
+---`);
+});
+
+// ## Different connectors or priorities get separate jobs
+//
+// Calls with a different connector, no connector, or a different priority create
+// separate job files. The filename stem is the connector's name, or `inbox`
+// without one, with `-low` for low priority; the card itself carries no field
+// for the no-connector case:
+void test("Calls with a different connector, no connector, or a different priority creat...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const created = [
+    await createOrAppendIntakeJob({ boxRoot: box.root, connector: "connector-a", items: ["_content/inbox/a.doc.card"], description: "From A" }),
+    await createOrAppendIntakeJob({ boxRoot: box.root, connector: "connector-b", items: ["_content/inbox/b.doc.card"], description: "From B" }),
+    await createOrAppendIntakeJob({ boxRoot: box.root, items: ["_content/inbox/c.doc.card"], description: "Inbox" }),
+    await createOrAppendIntakeJob({ boxRoot: box.root, items: ["_content/inbox/d.image.card"], priority: "low", description: "Captures" }),
+  ];
+  t.check(created.map((p) => p.replace(/^.*T(?:\d{2}-){3}/, "")), [
+    "connector-a.intake.job.card",
+    "connector-b.intake.job.card",
+    "inbox.intake.job.card",
+    "inbox-low.intake.job.card",
+  ]);
+
+  const lowJob = created[3];
+  assert.ok(lowJob !== undefined);
+  await t.checkText(await box.read(lowJob), `---
+priority: low
+description: Captures
+items:
+  - ref: _content/inbox/d.image.card
+---`);
+});
+
+// ## Concurrent appends to one job keep every item
+//
+// The find/read/append/write span is a read-modify-write of one card that two
+// *processes* genuinely race: the scan promote worker appends to the unscoped
+// job from inside `bbx serve` while a full wakeup appends its own inbox items.
+// An unlocked append re-renders the whole card, so the loser's items would
+// simply vanish. Serializing per batching key (cross-process file lock, plus the
+// in-process card lock a PID-blind file lock cannot substitute for) is what
+// keeps all eight here.
+void test("The find/read/append/write span is a read-modify-write of one card that two p...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const paths = await Promise.all(
+    Array.from({ length: 8 }, (_, i) =>
+      createOrAppendIntakeJob({
+        boxRoot: box.root,
+        items: [`_content/inbox/scan-${String(i)}.capture-session.card`],
+        description: "Concurrent scan batch",
+      })
+    )
+  );
+  const firstPath = paths[0];
+  assert.ok(firstPath !== undefined);
+  const card = await box.read(firstPath);
+  t.check(paths, Array.from({ length: 8 }, () => firstPath));
+  // Append order follows lock acquisition, so the eight item lines match in any order.
+  const lines = card.split("\n");
+  t.check(
+    { head: lines.slice(0, 4), items: lines.slice(4, -2), tail: lines.slice(-2) },
+    {
+      head: ["---", "priority: normal", "description: Concurrent scan batch", "items:"],
+      items: unordered<string>(Array.from({ length: 8 }, (_, i) => `  - ref: _content/inbox/scan-${String(i)}.capture-session.card`)),
+      tail: ["---", ""],
+    },
+  );
+});
+
+// ## Different batching keys don't wait on each other
+//
+// The lock is per batching key, so a `gmail`-scoped sync and a scan import
+// (no connector) proceed in parallel and neither lands in the other's job card.
+void test("The lock is per batching key, so a gmail-scoped sync and a scan import (no co...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox();
+  const [scanJob, gmailJob] = await Promise.all([
+    createOrAppendIntakeJob({ boxRoot: box.root, items: ["_content/inbox/a.doc.card"], description: "Scan" }),
+    createOrAppendIntakeJob({ boxRoot: box.root, connector: "gmail", items: ["_content/inbox/b.doc.card"], description: "Mail" }),
+  ]);
+  t.check(scanJob, not(gmailJob));
+  t.checkText(await box.read(scanJob), `---
+priority: normal
+description: Scan
+items:
+  - ref: _content/inbox/a.doc.card
+---`);
+  t.checkText(await box.read(gmailJob), `---
+connector: gmail
+priority: normal
+description: Mail
+items:
+  - ref: _content/inbox/b.doc.card
+---`);
+});

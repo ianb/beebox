@@ -9,6 +9,8 @@ needs: [decision]
 priority: important
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 While approving the /finish edits (2026-07-29), Ian noted that
 `needs: [manual-testing]` "is probably being overused right now — I don't want
 to do that much manual testing." The flag is load-bearing: the finish agent

@@ -1,7 +1,7 @@
 /**
  * Raw 24 kHz PCM in, MP3 out, as it arrives — so streamed Gemini speech can
  * reach the browser's MediaSource player, which plays MP3 and not raw PCM or
- * WAV (`docs/plans/tts-streamed-playback.md`).
+ * WAV (`docs/implemented-plans/tts-streamed-playback.md`).
  *
  * One `ffmpeg` child per clip. ffmpeg is a required runtime tool already
  * (`deploy/deploy.sh` checks it at deploy; the server setup and the Docker

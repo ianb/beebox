@@ -44,8 +44,8 @@ export interface FakeChatBackendRun extends ChatBackendRun {
   emitMessage(msg: SDKMessage): void;
   /** Push a `system/init` message with a session_id. */
   emitSessionInit(sessionId: string): void;
-  /** Push a plain assistant text turn. */
-  emitAssistantText(text: string): void;
+  /** Push a plain assistant text turn; `uuid` is the transcript entry it stands for. */
+  emitAssistantText(text: string, opts?: { uuid?: string }): void;
   /** Push an end-of-turn `result` message. */
   emitResult(opts?: { isError?: boolean; result?: string }): void;
   /** Whether `interrupt()` was called. */
@@ -63,6 +63,8 @@ export interface FakeChatBackend extends ChatBackend {
   prewarmCount: number;
   /** How many times `closeWarm()` has been called. */
   closeWarmCount: number;
+  /** Whether a warm slot is held or a prewarm is in flight; always defined on the fake. */
+  hasWarm(): boolean;
   /**
    * When true (default), each `prewarm()` installs its warm slot
    * synchronously. Set false to hold warm-ups in flight so a test can
@@ -81,11 +83,11 @@ export interface FakeChatBackend extends ChatBackend {
    * When set, the next `start()` throws this instead of opening a run, then
    * clears itself. Models an SDK subprocess spawn that fails outright — the
    * `EBADF` at the heart of
-   * `issues/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md` — so a
+   * `issues/closed/bugs/2026-08-03-intermittent-spawn-ebadf-sdk-chat-run.md` — so a
    * test can exercise run-start failure without an unspawnable environment.
    */
   failNextStart: Error | null;
-  /** Stable, human-readable snapshot of warm-pool state for doctests. */
+  /** Stable, human-readable snapshot of warm-pool state for tests. */
   describe(): string;
 }
 
@@ -180,9 +182,10 @@ export function createFakeChatBackend(): FakeChatBackend {
             // The remaining fields aren't used by ChatSession's handler.
           }));
         },
-        emitAssistantText(text: string): void {
+        emitAssistantText(text: string, textOpts?: { uuid?: string }): void {
           run.emitMessage(fakeSdkMessage({
             type: "assistant",
+            ...(textOpts?.uuid === undefined ? {} : { uuid: textOpts.uuid }),
             message: { role: "assistant", content: [{ type: "text", text }] },
             session_id: opts.resumeSessionId ?? "",
             parent_tool_use_id: null,

@@ -7,7 +7,7 @@ workflow](workflow.md), and [testing](../testing.md).
 ## Specific technologies
 
 TypeScript throughout; JavaScript files exist only as thin loaders. Node 24 and
-pnpm 10 workspaces across `beebox`, its frontend, `agent-doctest`,
+pnpm 10 workspaces across `beebox`, its frontend, `tap-check`,
 `personal-vibe-check`, `workstreams-app`, `site`, and others.
 
 The backend is Fastify 5 with tRPC 11, including WebSocket subscriptions; raw
@@ -15,7 +15,7 @@ Fastify routes are reserved for transports that do not fit tRPC. Zod 4 validates
 untrusted boundaries. SQLite through `better-sqlite3` backs usage accounting,
 the event bus, box packaging, and hub health. The frontend is React 18 with
 Vite, TanStack Query and Router, XState 5, and Tailwind. Markdoc renders card
-markdown. Tests run on tap, with `agent-doctest` layered on top.
+markdown. Tests run on tap, with the `tap-check` plugin (`t.check`) layered on top.
 
 Every box is a git repository, and its media is tracked with git-annex rather
 than Git LFS: git holds a pointer, annex holds the bytes. A Dockerfile and
@@ -32,7 +32,8 @@ documented in [secrets.md](../secrets.md).
 
 Transcription has four backends: OpenAI Whisper, Mistral's Voxtral, Deepgram,
 and Microsoft's diarized service, the last reachable only through OpenRouter.
-Text to speech uses OpenAI, or Gemini through OpenRouter. Search embeddings use
+Text to speech uses OpenAI, or Gemini on Google's own API (OpenRouter proved too
+slow and unreliable as a proxy for it, and drops speaking style). Search embeddings use
 OpenAI. Scan and image understanding defaults to Claude, with a Gemini backend
 available, and Gemini also handles audio questions. Google OAuth and
 an R2 publish target are connector credentials rather than model services. The

@@ -1,0 +1,17 @@
+// # Versioned file URLs
+//
+// PDF viewers may retain a document by URL, independently of ordinary HTTP
+// revalidation. The PDF renderers append the current file ETag to force a new
+// viewer document when the file is reopened.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { versionedFileUrl } from "../../src/hooks/useVersionedFileUrl.js";
+
+void test("line 11", async (t) => {
+  t.check(versionedFileUrl("/test1/api/files/_content/report.pdf", 'W/"abc-123"'), "/test1/api/files/_content/report.pdf?v=W%2F%22abc-123%22");
+
+  t.check(versionedFileUrl("/test1/api/files/_content/report.pdf", null), "/test1/api/files/_content/report.pdf");
+
+  t.check(versionedFileUrl("/test1/api/files/_content/report.pdf?download=1", 'W/"abc-123"'), "/test1/api/files/_content/report.pdf?download=1&v=W%2F%22abc-123%22");
+});

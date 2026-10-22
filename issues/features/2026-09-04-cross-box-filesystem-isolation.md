@@ -9,6 +9,8 @@ discovered-by: Ian
 discovered-in: worktree-cross-box-leak-scan — reviewing security-report §7b
 ---
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Every box on a host runs as the same OS user, so any box process — the
 `bbx serve` child, the box's agent, a scheduled script — can read a sibling
 box's files and the shared host state (`~/.bbx-session-secret`,
@@ -36,7 +38,7 @@ What "fixed" means is the design question. Candidates, not exclusive:
   and expressible only in what Claude Code's settings can enforce.
 
 Whatever lands: the two-box fixture and
-`test/webapp/cross-box-probe.doctest.md` (moved to `beebox/test/scenarios/cross-box-probe.doctest.md`) are the regression anchor for the
+`test/webapp/cross-box-probe.doctest.md` (moved to `beebox/test/scenarios/cross-box-probe.test.ts`) are the regression anchor for the
 network channel; this needs its own probe for the filesystem channel (a
 box-A process attempting a read of box B on disk, asserted to fail), and the
 `schedules/cross-box-leak-scan` host audit should then assert the

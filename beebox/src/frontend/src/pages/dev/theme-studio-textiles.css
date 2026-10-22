@@ -1,0 +1,205 @@
+/* Textile studies: independent card palettes keep explicit nested themes intact. */
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], .bbx-card-theme[data-card-theme="rose-trellis-study"]) {
+  --textile-paper: #fff7e9;
+  --textile-ink: #542939;
+  --textile-soft: #785563;
+  --textile-edge: #c9aa91;
+  --textile-accent: #973c59;
+  --textile-accent-ink: #fff6e9;
+  --textile-sheet: #f5e8d8;
+  --textile-underlay: #d5b5a4;
+  --textile-code: #492b35;
+  --textile-code-ink: #fff2da;
+  --textile-radius: 24px 12px 28px 14px;
+  --textile-shadow: 0 7px 22px #662d3929, 2px 3px 0 #ae82723d;
+  --textile-desk: #d9a58f;
+  --textile-art: url("./rose-trellis-study.webp");
+  --textile-bar: #843650;
+  --textile-bar-ink: #fff3df;
+  --textile-user: #f5c3b7;
+  --textile-user-ink: #592c3b;
+}
+.bbx-theme-studio :is([data-chrome-theme="gold-thread-study"], .bbx-card-theme[data-card-theme="gold-thread-study"]) {
+  --textile-paper: #182a3e;
+  --textile-ink: #f1e9d7;
+  --textile-soft: #c4bda9;
+  --textile-edge: #4c6279;
+  --textile-accent: #c9c09f;
+  --textile-accent-ink: #202c3b;
+  --textile-sheet: #243950;
+  --textile-underlay: #0c192a;
+  --textile-code: #0e1c2d;
+  --textile-code-ink: #efe3c7;
+  --textile-radius: 14px;
+  --textile-shadow: 0 8px 24px #040e2244;
+  --textile-desk: #0e2038;
+  --textile-art: url("./gold-thread-matte-study.webp");
+  --textile-bar: #142238;
+  --textile-bar-ink: #eadbc1;
+  --textile-user: #304d6c;
+  --textile-user-ink: #f7e9cb;
+}
+.bbx-theme-studio .bbx-box-presentation:is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) {
+  background: var(--textile-art) center top / cover, var(--textile-desk);
+  --bbx-selection: var(--textile-accent);
+  --bbx-selection-ink: var(--textile-accent-ink);
+  --bbx-focus-ring: var(--textile-accent);
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) .bbx-app-nav {
+  background: var(--textile-bar);
+  color: var(--textile-bar-ink);
+  border-bottom: 2px solid var(--textile-edge);
+  padding-block: 7px;
+}
+.bbx-theme-studio [data-chrome-theme="rose-trellis-study"] .bbx-app-nav {
+  background: linear-gradient(110deg, #7b304c, #9a4059 65%, #ad554f);
+  border-bottom-color: #aba478;
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) .bbx-app-nav button {
+  background: transparent;
+  color: var(--textile-bar-ink);
+  border: 1px solid color-mix(in srgb, var(--textile-bar-ink) 45%, transparent);
+  border-radius: 12px 8px 12px 8px;
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) :is(.bbx-chat-reply-material, .bbx-chat-callout, .bbx-composer-material) {
+  background: var(--textile-paper);
+  color: var(--textile-ink);
+  border: 1px solid var(--textile-edge);
+  border-radius: var(--textile-radius);
+  box-shadow: var(--textile-shadow);
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) .bbx-chat-user-paper {
+  background: var(--textile-user);
+  color: var(--textile-user-ink);
+  border: 1px solid var(--textile-edge);
+  border-radius: 22px 18px 6px 24px;
+  box-shadow: var(--textile-shadow);
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
+  --tw-prose-body: var(--textile-ink);
+  --tw-prose-bold: var(--textile-ink);
+  --tw-prose-headings: var(--textile-ink);
+  --tw-prose-links: var(--textile-accent);
+  color: var(--textile-ink);
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) .bbx-chat-callout > .text-accent-dark {
+  color: var(--textile-soft);
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) .bbx-composer-material > section {
+  background: transparent;
+  border: 0;
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) .bbx-composer-material textarea {
+  background: var(--textile-paper);
+  color: var(--textile-ink);
+  border-color: var(--textile-edge);
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) .bbx-composer-material textarea::placeholder {
+  color: var(--textile-soft);
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
+  background: var(--textile-accent);
+  color: var(--textile-accent-ink);
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) :is(#bbx-composer-add, #bbx-composer-capture, #bbx-composer-keyboard):enabled {
+  background: var(--textile-sheet);
+  color: var(--textile-ink);
+  border-color: var(--textile-edge);
+}
+.bbx-theme-studio .bbx-card-theme:is([data-card-theme="rose-trellis-study"], [data-card-theme="gold-thread-study"]) {
+  --bbx-paper: var(--textile-paper);
+  --bbx-ink: var(--textile-ink);
+  --bbx-ink-soft: var(--textile-soft);
+  --bbx-pen: var(--textile-accent);
+  --bbx-edge: var(--textile-edge);
+  --bbx-underlay: var(--textile-underlay);
+  --bbx-tint: var(--textile-sheet);
+  --bbx-sheet: var(--textile-sheet);
+  --bbx-quote-paper: var(--textile-sheet);
+  --bbx-quote-layer-paper: var(--textile-sheet);
+  --bbx-blockquote-paper: var(--textile-sheet);
+  --bbx-blockquote-padding: 0.6em 1em;
+  --bbx-blockquote-edge: 2px;
+  --bbx-code-paper: var(--textile-code);
+  --bbx-code-ink: var(--textile-code-ink);
+  --bbx-sheet-radius: var(--textile-radius);
+  --bbx-selection: var(--textile-accent);
+  --bbx-selection-ink: var(--textile-accent-ink);
+  --bbx-selection-code: var(--textile-code-ink);
+  --bbx-selection-code-ink: var(--textile-code);
+}
+.bbx-theme-studio .bbx-card-surface:is([data-card-theme="rose-trellis-study"], [data-card-theme="gold-thread-study"]) {
+  box-shadow: var(--textile-shadow);
+}
+.bbx-theme-studio .bbx-card-theme[data-card-theme="rose-trellis-study"] {
+  --bbx-bullet: #787642;
+  --bbx-counter: #787642;
+}
+.bbx-theme-studio .bbx-card-surface:is([data-card-theme="rose-trellis-study"], [data-card-theme="gold-thread-study"]) > .bbx-card-properties {
+  border-radius: 0 12px 0 12px;
+}
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) :is(button, textarea):focus-visible:not(.bbx-card-theme *) {
+  outline: 2px solid var(--textile-accent);
+  outline-offset: 3px;
+}
+@media (max-width: 639px) {
+  .bbx-theme-studio .bbx-box-presentation:is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) {
+    background-size: auto 1000px;
+    background-position: center top;
+  }
+}
+
+/* Carry the textile gestures into the chrome, not just the desk. */
+.bbx-theme-studio [data-chrome-theme="rose-trellis-study"] .bbx-app-nav {
+  background: linear-gradient(100deg, #702a48ee, #933b58d9 55%, #ac574cbd),
+    var(--textile-art) center 36% / cover;
+  border-bottom: 3px solid #c8ba79;
+}
+.bbx-theme-studio [data-chrome-theme="rose-trellis-study"] .bbx-app-nav button {
+  border-radius: 24px 7px 24px 7px;
+  padding-inline: 18px;
+  border-color: #f2ccad99;
+  box-shadow: 2px 3px 0 #53203855;
+}
+.bbx-theme-studio [data-chrome-theme="rose-trellis-study"] :is(#bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic, #bbx-composer-capture, #bbx-composer-keyboard) {
+  border-radius: 27px 9px 27px 9px;
+  box-shadow: 2px 3px 0 #b37f6a55;
+}
+.bbx-theme-studio [data-chrome-theme="rose-trellis-study"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
+  background: linear-gradient(135deg, #762c4d, #b84e65 65%, #c37962);
+}
+
+/* Matte ink and flax: expression belongs to the cloth, controls stay quiet. */
+.bbx-theme-studio [data-chrome-theme="gold-thread-study"] .bbx-app-nav {
+  background: linear-gradient(100deg, #102139d9, #1b395899 55%, #18233dc9),
+    var(--textile-art) center 60% / cover;
+  border-bottom: 1px solid #63768a;
+}
+.bbx-theme-studio [data-chrome-theme="gold-thread-study"] .bbx-app-nav button {
+  border-radius: 8px;
+  border: 1px solid #6b7f96;
+  background: #172c43;
+  color: #ede7d9;
+  box-shadow: none;
+  padding-inline: 14px;
+}
+.bbx-theme-studio [data-chrome-theme="gold-thread-study"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
+  background: #486787;
+  color: #fff5df;
+  border: 1px solid #859bb1;
+  box-shadow: none;
+}
+.bbx-theme-studio [data-chrome-theme="gold-thread-study"] :is(#bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic, #bbx-composer-capture, #bbx-composer-keyboard) {
+  border-radius: 10px;
+}
+.bbx-theme-studio [data-chrome-theme="gold-thread-study"] :is(.bbx-chat-reply-material, .bbx-chat-callout, .bbx-composer-material),
+.bbx-theme-studio .bbx-card-surface[data-card-theme="gold-thread-study"] {
+  background-image: linear-gradient(125deg, #25415e50, transparent 60%);
+  border-color: #4c6279;
+}
+.bbx-theme-studio [data-chrome-theme="gold-thread-study"] .bbx-chat-user-paper {
+  background: var(--textile-user);
+  border-color: #647f9a;
+  border-radius: 14px 14px 5px 14px;
+  box-shadow: none;
+}

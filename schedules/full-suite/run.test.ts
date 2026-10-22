@@ -327,8 +327,8 @@ test("renderIssue names the landing, the workstream, the files and the excerpt",
   const text = renderIssue({
     date: "2026-08-25",
     landing,
-    files: ["test/core/box/file-watcher.doctest.md"],
-    excerpt: `not ok 12 - test/core/box/file-watcher.doctest.md\n  command: ${homedir()}/.nvm/bin/node`,
+    files: ["test/core/box/file-watcher.test.ts"],
+    excerpt: `not ok 12 - test/core/box/file-watcher.test.ts\n  command: ${homedir()}/.nvm/bin/node`,
     testedCommit: "1".repeat(40),
     baseCommit: "2".repeat(40),
   });
@@ -337,8 +337,8 @@ test("renderIssue names the landing, the workstream, the files and the excerpt",
   assert.match(text, /^priority: important$/mu);
   assert.match(text, /^discovered-in: worktree-scanner-ingest — /mu);
   assert.match(text, /abcdef12/u);
-  assert.match(text, /test\/core\/box\/file-watcher\.doctest\.md/u);
-  assert.match(text, /^title: "Full-suite red: test\/core\/box\/file-watcher\.doctest\.md"$/mu);
+  assert.match(text, /test\/core\/box\/file-watcher\.test\.ts/u);
+  assert.match(text, /^title: "Full-suite red: test\/core\/box\/file-watcher\.test\.ts"$/mu);
   assert.match(text, /not ok 12/u);
   // The excerpt's home paths are written as `~`, or path-leak-check refuses the report.
   assert.match(text, /command: ~\/\.nvm\/bin\/node/u);
@@ -364,7 +364,7 @@ test("renderIssue on a direct commit to main claims no workstream", () => {
 
 const TAP = [
   "ok 1 - test/a.test.ts # time=10ms",
-  "not ok 2 - test/b.doctest.md # time=20ms",
+  "not ok 2 - test/b.test.ts # time=20ms",
   "  ---",
   "  error: expected 1 got 2",
   "  ...",
@@ -372,8 +372,8 @@ const TAP = [
 ].join("\n");
 
 test("failureExcerpt takes one file's block and stops at the next result", () => {
-  const excerpt = failureExcerpt({ raw: TAP, file: "test/b.doctest.md" });
-  assert.match(excerpt, /not ok 2 - test\/b\.doctest\.md/u);
+  const excerpt = failureExcerpt({ raw: TAP, file: "test/b.test.ts" });
+  assert.match(excerpt, /not ok 2 - test\/b\.test\.ts/u);
   assert.match(excerpt, /expected 1 got 2/u);
   assert.doesNotMatch(excerpt, /test\/c\.test\.ts/u);
 });
@@ -383,7 +383,7 @@ test("failureExcerpt says so rather than inventing a block", () => {
 });
 
 test("failureExcerpt matches the whole path, not a prefix of it", () => {
-  // `test/b.doctest.md` must not answer for `test/b.doctest.md.bak`.
-  const raw = "not ok 2 - test/b.doctest.md.bak\n  ---\n  boom\n";
-  assert.match(failureExcerpt({ raw, file: "test/b.doctest.md" }), /no TAP block found/u);
+  // `test/b.test.ts` must not answer for `test/b.test.ts.bak`.
+  const raw = "not ok 2 - test/b.test.ts.bak\n  ---\n  boom\n";
+  assert.match(failureExcerpt({ raw, file: "test/b.test.ts" }), /no TAP block found/u);
 });

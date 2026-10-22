@@ -1,0 +1,1064 @@
+{
+ "kinds": {
+  "process": {
+   "lane": "code",
+   "color": "#2a78d6"
+  },
+  "sweeps": {
+   "lane": "code",
+   "color": "#eb6834"
+  },
+  "product": {
+   "lane": "product",
+   "color": "#1baf7a"
+  },
+  "infrastructure": {
+   "lane": "product",
+   "color": "#7c5cbf"
+  }
+ },
+ "events": [
+  {
+   "date": "2026-02-13",
+   "label": "lint preset",
+   "kind": "process",
+   "key": false,
+   "detail": "I put one shared set of lint, formatting and strict type rules in a package every project uses. A wrong move by an agent now fails a check instead of passing quietly.",
+   "show": []
+  },
+  {
+   "date": "2026-02-17",
+   "label": "lint on every write",
+   "kind": "process",
+   "key": true,
+   "detail": "After each file an agent writes, the linter runs on it and the errors go straight back to the agent. Mistakes show up in seconds, which let me stop watching every edit.",
+   "show": []
+  },
+  {
+   "date": "2026-02-21",
+   "label": "frozen clock",
+   "kind": "process",
+   "key": false,
+   "detail": "Scenario tests start, and with them one rule: the app reads time from one function that an environment variable can pin, never from the system clock directly. 19 doctests freeze time today.",
+   "show": []
+  },
+  {
+   "date": "2026-02-26",
+   "label": "knowledge audits",
+   "kind": "process",
+   "key": true,
+   "detail": "A test prompts a real box agent, watches what it reads, and checks what it knew. 423 prompts today, and nine named levels of knowing.",
+   "show": [
+    "instructionLines",
+    "skillLines"
+   ]
+  },
+  {
+   "date": "2026-03-02",
+   "label": "the stack, written down",
+   "kind": "process",
+   "key": true,
+   "detail": "In one day, 23 technology decisions in one document, each with the choice, the runner-up, the alternatives and why: 1,065 lines. The next two days adopted five of them.",
+   "show": [
+    "code",
+    "commits"
+   ]
+  },
+  {
+   "date": "2026-03-03",
+   "label": "doctests; first instruction cut",
+   "kind": "process",
+   "key": true,
+   "detail": "Tests become Markdown documents an agent can read and run. The same day the main instruction file drops from 218 lines to 118, with area rules moved into files loaded only in their directory.",
+   "show": [
+    "doctestCode",
+    "doctestProse",
+    "otherTestLines"
+   ]
+  },
+  {
+   "date": "2026-05-26",
+   "label": "monorepo, worktrees",
+   "kind": "process",
+   "key": true,
+   "detail": "Five repositories become one, and each task gets its own separate checkout with its own copy of the test data. Two agents in one tree had clobbered each other. This allows several sessions at once.",
+   "show": [
+    "commits",
+    "code"
+   ]
+  },
+  {
+   "date": "2026-05-29",
+   "label": "the plan skill",
+   "kind": "process",
+   "key": true,
+   "detail": "A plan is designed end to end before implementation and ships as one piece. The template's sections are the failure modes; filling them is the review. 1,071 commits since name their plan.",
+   "show": []
+  },
+  {
+   "date": "2026-05-27",
+   "label": "browser agent",
+   "kind": "process",
+   "key": true,
+   "detail": "An agent can drive the app in a real browser from the command line: open a page, click, read it, take a screenshot. The loop of change, look, fix, look again is what made the agent good at frontend work; browser commits peak in August at 59, and in the week of August 17 agents made 1,569 browser calls in 45 sessions.",
+   "show": [
+    "browserCalls",
+    "browserSessions"
+   ]
+  },
+  {
+   "date": "2026-05-31",
+   "label": "no-weakening rule for lint",
+   "kind": "process",
+   "key": false,
+   "detail": "Agents may not turn off or loosen a lint rule to make code pass. It went in the day the count of silently disabled violations hit zero, so it protects that result.",
+   "show": []
+  },
+  {
+   "date": "2026-06-04",
+   "label": "cross-model review",
+   "kind": "process",
+   "key": true,
+   "detail": "A second model family, Codex, reviews what Claude built before I look, because a model cannot catch blind spots it shares with itself. 216 commits mention it, and it has the most recorded catches.",
+   "show": []
+  },
+  {
+   "date": "2026-06-20",
+   "label": "craft skills",
+   "kind": "process",
+   "key": true,
+   "detail": "In one day I write five reusable instruction files: debugging, code health, frontend, context, and a vendored kit that writes skills, 1,300 lines of Markdown on its own. Most were retired by October because agents never reached for them.",
+   "show": [
+    "skillLines",
+    "skills"
+   ]
+  },
+  {
+   "date": "2026-07-03",
+   "label": "headless finisher",
+   "kind": "process",
+   "key": true,
+   "detail": "Landing a branch on main moves to a background agent that merges, runs the checks and stops if it needs a human. The merge and test churn leaves the main chat. 659 merges have gone through it since.",
+   "show": []
+  },
+  {
+   "date": "2026-07-04",
+   "label": "issues tree; doc check",
+   "kind": "process",
+   "key": true,
+   "detail": "One file per issue replaces a single ideas file that had grown to 1,681 lines, so agents file problems as they go. A check on every docs commit ended skipping hooks on docs.",
+   "show": [
+    "open",
+    "closed"
+   ]
+  },
+  {
+   "date": "2026-07-19",
+   "label": "catch-up list",
+   "kind": "process",
+   "key": false,
+   "detail": "Code was landing faster than I could try it, so I tag landed-but-untried work. That list is my catch-up queue. 35 items are open and 27 closed.",
+   "show": []
+  },
+  {
+   "date": "2026-08-04",
+   "label": "Codex as 2nd engine",
+   "kind": "process",
+   "key": true,
+   "detail": "I can launch OpenAI's Codex in the same kind of separate checkout as Claude, for review and for spare capacity when my Claude allowance is tight. It exposed a cleanup step that never fired, leaving ten checkouts.",
+   "show": []
+  },
+  {
+   "date": "2026-08-09",
+   "label": "workstreams; test ledger",
+   "kind": "process",
+   "key": true,
+   "detail": "A unit of work now outlives its checkout: checkouts are disposable and resumed on demand. A log of every test run lets me ask which tests have ever failed in a way that mattered.",
+   "show": []
+  },
+  {
+   "date": "2026-08-13",
+   "label": "dashboard",
+   "kind": "process",
+   "key": false,
+   "detail": "A dashboard lists every task in flight, since that list had lived only in terminal tabs, with each one's checkout, session and exhibits.",
+   "show": []
+  },
+  {
+   "date": "2026-08-15",
+   "label": "exhibits",
+   "kind": "process",
+   "key": true,
+   "detail": "An agent shows me its work as a page the app renders: labeled screenshots, a document, or a small page of its own, kept in a store that outlives the checkout. 187 exhibits and 784 screenshots since.",
+   "show": [
+    "exhibitScreenshots",
+    "browserCalls"
+   ]
+  },
+  {
+   "date": "2026-08-22",
+   "label": "simulated users",
+   "kind": "process",
+   "key": true,
+   "detail": "An agent plays one person with one goal, knowing only \"an AI-powered app for organising your life\", and walks a fresh copy of the app. 74 issues trace to these walks.",
+   "show": [
+    "open",
+    "closed"
+   ]
+  },
+  {
+   "date": "2026-08-24",
+   "label": "schedules; trailers",
+   "kind": "process",
+   "key": true,
+   "detail": "One tick of the Mac's job scheduler runs every timed job, replacing four hand-made ones. Each commit also gets a tag naming its task and plan, since a task had been only a name on a branch.",
+   "show": []
+  },
+  {
+   "date": "2026-10-07",
+   "label": "retrospective on a schedule",
+   "kind": "process",
+   "key": true,
+   "detail": "Every three days an agent reads the feedback other sessions left behind and turns it into guidance changes. Eight landed so far.",
+   "show": []
+  },
+  {
+   "date": "2026-08-25",
+   "label": "tests sized to change",
+   "kind": "process",
+   "key": true,
+   "detail": "Tests run only where the change reaches, a failing test is rerun once alone, and a job runs every test hourly on main. Full runs had been red for reasons the branch did not cause.",
+   "show": [
+    "doctestCode",
+    "doctestProse",
+    "otherTestLines"
+   ]
+  },
+  {
+   "date": "2026-08-26",
+   "label": "smoke tier",
+   "kind": "process",
+   "key": false,
+   "detail": "Before a change lands, a two-minute walk through the real app. Three bad changes in two days had passed every check while the app was broken. It has run 517 times, 101 of them red.",
+   "show": []
+  },
+  {
+   "date": "2026-09-12",
+   "label": "calibration rewrite",
+   "kind": "process",
+   "key": true,
+   "detail": "I cut the root instruction file from 2,242 words to 850 and the package file from 184 lines to 67, after testing on four models what they did against what the text said. Earlier manual cuts had regrown.",
+   "show": [
+    "instructionLines"
+   ]
+  },
+  {
+   "date": "2026-09-18",
+   "label": "alerts, digest",
+   "kind": "process",
+   "key": false,
+   "detail": "Timed jobs report through automatic warnings. Urgent ones interrupt me and the rest wait for one daily summary. The same problem had been reported three days running.",
+   "show": []
+  },
+  {
+   "date": "2026-10-10",
+   "label": "exhibits: show, do not ask",
+   "kind": "process",
+   "key": false,
+   "detail": "The question-and-answer form on every exhibit and the queue of unanswered ones are removed. An exhibit shows; questions go in chat. The finished notification opens the page, and one button brings up the session's terminal.",
+   "show": [
+    "exhibitScreenshots"
+   ]
+  },
+  {
+   "date": "2026-10-07",
+   "label": "skills measured",
+   "kind": "process",
+   "key": true,
+   "detail": "A script counts which instruction files sessions actually use. Six were retired in a day, three added, and lines in skill files fell from a peak of 3,126 to 1,894.",
+   "show": [
+    "skillLines",
+    "skills"
+   ]
+  },
+  {
+   "date": "2026-10-08",
+   "label": "do/land ladder",
+   "kind": "process",
+   "key": false,
+   "detail": "Four named levels, discuss, plan, do and land, set how much an agent may do, and my wording sets the ceiling. \"Go ahead\" had meant four different things.",
+   "show": []
+  },
+  {
+   "date": "2026-10-09",
+   "label": "AGENTS.md",
+   "kind": "process",
+   "key": false,
+   "detail": "All 20 instruction files are renamed so both Claude and Codex read them directly. The generated copies for Codex go away.",
+   "show": []
+  },
+  {
+   "date": "2026-02-25",
+   "label": "one color palette, 42 files",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "Ad hoc colors across the frontend are replaced by one systematic palette in a single commit.",
+   "show": []
+  },
+  {
+   "date": "2026-03-04",
+   "label": "tRPC migration complete",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "Every frontend component moves to typed tRPC hooks, 51 files in the closing commit.",
+   "show": []
+  },
+  {
+   "date": "2026-04-17",
+   "label": "UI primitives; semantic palette",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "A typed primitive library takes over appearance, and a lint rule confines page code to layout classes. Colors switch to a semantic palette the same day; 132 files over two commits.",
+   "show": []
+  },
+  {
+   "date": "2026-05-14",
+   "label": "Activities system removed",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "A whole subsystem is deleted in one commit of 46 files.",
+   "show": []
+  },
+  {
+   "date": "2026-05-22",
+   "label": "schemas to frontmatter; news deleted",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "Every card schema migrates to YAML frontmatter in 19 commits in one day, 236 files, and the news subsystem is deleted.",
+   "show": []
+  },
+  {
+   "date": "2026-05-27",
+   "label": "accessibility sweep",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "Three rounds driven by an axe-core tour: landmark roles, labels and accessible names across the app shell, 31 files.",
+   "show": []
+  },
+  {
+   "date": "2026-05-30",
+   "label": "fakes beside the real services",
+   "kind": "sweeps",
+   "key": true,
+   "detail": "A fake chat model, a fake Drive and a fake speech service live in the product next to the real ones, so a test or a developer can run the app with no outside call. Nine more follow through October.",
+   "show": [
+    "doctestCode",
+    "code"
+   ]
+  },
+  {
+   "date": "2026-05-30",
+   "label": "lint suppressions, 1,000 to 0",
+   "kind": "sweeps",
+   "key": true,
+   "detail": "Merging the repositories revealed about 1,000 silently disabled lint violations across 158 files. A cap that could only go down took them to zero in two days.",
+   "show": [
+    "commits"
+   ]
+  },
+  {
+   "date": "2026-06-19",
+   "label": "old card parser deleted",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "I delete the old XML card-parsing package, 101 files, after notes moved to Markdown, along with a data migration for existing data stores.",
+   "show": []
+  },
+  {
+   "date": "2026-06-21",
+   "label": "doctests regrouped, 300 files",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "Every test document declares its language, 147 files, and 152 files move into subdirectories. The test runner now enforces the language tag.",
+   "show": []
+  },
+  {
+   "date": "2026-06-26",
+   "label": "user-story catalog",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "Agents read the source and list 413 things the product can do, then check each against the code and the running app. I annotate the result. It later seeded the simulated user walks.",
+   "show": []
+  },
+  {
+   "date": "2026-07-03",
+   "label": "knowledge audits rerun",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "I rerun the whole quiz of what the app's agents know, in nine batches. It found real gaps in the instructions they are handed, and I closed them.",
+   "show": []
+  },
+  {
+   "date": "2026-07-04",
+   "label": "docs reorg; one file per issue",
+   "kind": "sweeps",
+   "key": true,
+   "detail": "I restructure the docs in eight tracks and sort plans by status, 165 files. The single ideas file splits into one file per issue.",
+   "show": []
+  },
+  {
+   "date": "2026-07-05",
+   "label": "architectural review",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "Seventeen scans of the codebase for structural problems, followed by a written engineering-principles document. Follow-up rounds added caps in the lint rules.",
+   "show": []
+  },
+  {
+   "date": "2026-07-10",
+   "label": "issues sorted into folders",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "167 issue files are sorted into category folders with titles in their headers, so the issue browser can rely on the layout.",
+   "show": []
+  },
+  {
+   "date": "2026-08-03",
+   "label": "first skills review",
+   "kind": "sweeps",
+   "key": true,
+   "detail": "The skill-writing kit and the prompt-review skill are deleted, the review procedure moved into a doc. Skill lines drop by a fifth; the next three skills written are for issues, doctests and knowledge audits.",
+   "show": [
+    "skillLines",
+    "skills"
+   ]
+  },
+  {
+   "date": "2026-08-09",
+   "label": "frontmatter on 613 files",
+   "kind": "sweeps",
+   "key": true,
+   "detail": "Plans and issues get a standard header block, applied to 613 files. A check now enforces it.",
+   "show": []
+  },
+  {
+   "date": "2026-08-24",
+   "label": "knip backlog 342 to 4",
+   "kind": "sweeps",
+   "key": true,
+   "detail": "A tool that finds unused code listed 342 unused exports. I cleared them down to 4 across 151 files, and a weekly timed job now keeps watch.",
+   "show": []
+  },
+  {
+   "date": "2026-08-25",
+   "label": "last .mjs to TypeScript",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "The last logic files in plain JavaScript and every lint config move to TypeScript. The rule now: a JavaScript file may only be a thin loader.",
+   "show": []
+  },
+  {
+   "date": "2026-08-28",
+   "label": "bin/ under lint",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "The scripts that run the process itself sat outside the lint rules. I brought them under the same rules and fixed the backlog across 133 files.",
+   "show": []
+  },
+  {
+   "date": "2026-08-30",
+   "label": "rename, 4,188 files",
+   "kind": "sweeps",
+   "key": true,
+   "detail": "The product is renamed across 4,188 files, plus migrations for every machine's manifest. A check on every commit now blocks the old name.",
+   "show": []
+  },
+  {
+   "date": "2026-09-02",
+   "label": "UI vocabulary sweep",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "I align the words on the app's screens, such as chat and thinking, to one glossary across 33 files.",
+   "show": []
+  },
+  {
+   "date": "2026-09-04",
+   "label": "one-root paths, 527 files",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "A data store's layout collapses to a single root folder. 527 files that used the old paths are re-pointed in one pass.",
+   "show": []
+  },
+  {
+   "date": "2026-09-12",
+   "label": "instructions rewritten",
+   "kind": "sweeps",
+   "key": true,
+   "detail": "The rewrite itself: I decided each instruction's purpose and where it belongs, then tested routing on four models. Total lines in skill files fell from 3,766 to 3,092.",
+   "show": [
+    "instructionLines"
+   ]
+  },
+  {
+   "date": "2026-09-24",
+   "label": "docs restructured like code",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "Documentation areas are split into sections the way code is split into modules, with a hash check in each plan. Eight areas, from chat to media, were done over three days.",
+   "show": []
+  },
+  {
+   "date": "2026-09-27",
+   "label": "layout moves, 8 commits",
+   "kind": "sweeps",
+   "key": true,
+   "detail": "Eight commits move 154 to 736 files each to fix where source files live. A layout check now runs before every commit, because path moves had broken code that computed paths at runtime.",
+   "show": [
+    "totalDirs",
+    "dirMax",
+    "dirMean"
+   ]
+  },
+  {
+   "date": "2026-10-06",
+   "label": "oxlint warnings cleared",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "I clear the 21 standing warnings from a second linter across 17 files.",
+   "show": []
+  },
+  {
+   "date": "2026-10-07",
+   "label": "skills review",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "Usage counts from 60 days of transcripts drive the review: six skills retired, the largest ones halved, and 85 stale doc references fixed along the way.",
+   "show": [
+    "skillLines",
+    "skills"
+   ]
+  },
+  {
+   "date": "2026-10-08",
+   "label": "migrations retired, 133 files",
+   "kind": "sweeps",
+   "key": false,
+   "detail": "Every data migration for existing data stores is retired, 133 files, once every store had converged to the current shape.",
+   "show": []
+  },
+  {
+   "date": "2026-10-09",
+   "label": "CLAUDE.md to AGENTS.md",
+   "kind": "sweeps",
+   "key": true,
+   "detail": "The sweep behind the rename touches 355 and 321 files across the repository. A check now fails on any leftover CLAUDE.md, because one stray file makes Claude skip every AGENTS.md.",
+   "show": []
+  },
+  {
+   "date": "2026-01-28",
+   "label": "cards in a git repo",
+   "kind": "product",
+   "key": true,
+   "detail": "Notes are stored as typed text files with fields, links and validation, in a git repository. Everything else in the product builds on this.",
+   "show": []
+  },
+  {
+   "date": "2026-02-01",
+   "label": "daily news brief",
+   "kind": "product",
+   "key": false,
+   "detail": "An agent reads feeds each day and writes a curated edition with excerpts and sources. It was the first real workflow.",
+   "show": []
+  },
+  {
+   "date": "2026-02-07",
+   "label": "Chrome extension",
+   "kind": "product",
+   "key": true,
+   "detail": "A popup and side panel save the current page into your notes. Saving to the brief and page capture followed within the next week.",
+   "show": []
+  },
+  {
+   "date": "2026-02-17",
+   "label": "Gmail, Calendar",
+   "kind": "product",
+   "key": false,
+   "detail": "Email threads become notes, and Google Calendar syncs in. Calendar later gained two-way edits.",
+   "show": []
+  },
+  {
+   "date": "2026-02-24",
+   "label": "talk to the box",
+   "kind": "product",
+   "key": true,
+   "detail": "Live speech-to-text in chat, then spoken replies and turn-taking, so you can talk to your notes.",
+   "show": []
+  },
+  {
+   "date": "2026-03-06",
+   "label": "capture page",
+   "kind": "product",
+   "key": true,
+   "detail": "A page that records audio and takes photos straight into your notes. Full-resolution photos and retries followed in March.",
+   "show": []
+  },
+  {
+   "date": "2026-03-19",
+   "label": "agent-written views",
+   "kind": "product",
+   "key": false,
+   "detail": "Agents write small interface pages that you open in the app.",
+   "show": []
+  },
+  {
+   "date": "2026-04-14",
+   "label": "images, files in chat",
+   "kind": "product",
+   "key": false,
+   "detail": "You can paste or drop images into chat, and upload files into capture and then into chat.",
+   "show": []
+  },
+  {
+   "date": "2026-04-19",
+   "label": "activities",
+   "kind": "product",
+   "key": false,
+   "detail": "Guided, reusable sessions with their own chat screen. A language-practice session shipped first.",
+   "show": []
+  },
+  {
+   "date": "2026-05-04",
+   "label": "landmarks",
+   "kind": "product",
+   "key": true,
+   "detail": "A curated set of entry points to your notes, each with its own linked chats.",
+   "show": []
+  },
+  {
+   "date": "2026-05-13",
+   "label": "narration mode",
+   "kind": "product",
+   "key": true,
+   "detail": "You dictate while the app listens and answers with short acknowledgments. A higher-accuracy transcript is swapped in afterward.",
+   "show": []
+  },
+  {
+   "date": "2026-05-22",
+   "label": "cards become Markdown",
+   "kind": "product",
+   "key": true,
+   "detail": "Notes change from XML to readable Markdown with a header block.",
+   "show": []
+  },
+  {
+   "date": "2026-06-09",
+   "label": "full-text search",
+   "kind": "product",
+   "key": true,
+   "detail": "Search across all your notes, from the command line first. Quick search from anywhere came later.",
+   "show": []
+  },
+  {
+   "date": "2026-06-15",
+   "label": "clipper with commentary",
+   "kind": "product",
+   "key": false,
+   "detail": "The web clipper keeps a frozen copy of the page along with your own commentary, and a chip jumps to the quoted passage.",
+   "show": []
+  },
+  {
+   "date": "2026-06-23",
+   "label": "figures; courseware",
+   "kind": "product",
+   "key": false,
+   "detail": "Interactive diagrams and sketches embed in notes and chat. Courseware adds concept maps, lesson plans and a skill that builds a course.",
+   "show": []
+  },
+  {
+   "date": "2026-07-06",
+   "label": "iOS app",
+   "kind": "product",
+   "key": true,
+   "detail": "A native iPhone companion app. Secure pairing followed the next day, and offline capture with background uploads on July 17.",
+   "show": []
+  },
+  {
+   "date": "2026-07-31",
+   "label": "chats grouped by place",
+   "kind": "product",
+   "key": true,
+   "detail": "The chat history groups by landmark, the first of many reworkings of how you get around: a place chip and switch menu in the top bar on August 2, a way back to chat on August 23, important cards first in September, arrival at a landmark in October.",
+   "show": []
+  },
+  {
+   "date": "2026-07-15",
+   "label": "publishing",
+   "kind": "product",
+   "key": true,
+   "detail": "You can put selected notes on the web as a static site, with a scan that stops private content leaking, and account tiers.",
+   "show": []
+  },
+  {
+   "date": "2026-07-19",
+   "label": "password login",
+   "kind": "product",
+   "key": false,
+   "detail": "Password login and first-run setup, with authentication on by default.",
+   "show": []
+  },
+  {
+   "date": "2026-08-06",
+   "label": "invites",
+   "kind": "product",
+   "key": false,
+   "detail": "You can invite other people to your data store and manage invites and passwords in the app.",
+   "show": []
+  },
+  {
+   "date": "2026-08-17",
+   "label": "secrets manager",
+   "kind": "product",
+   "key": true,
+   "detail": "API keys and credentials move into one machine-level store, with an Admin section and per-agent grants.",
+   "show": []
+  },
+  {
+   "date": "2026-08-30",
+   "label": "renamed Bee Box",
+   "kind": "product",
+   "key": true,
+   "detail": "The product gets its name, Bee Box. Until then it carried a working name.",
+   "show": []
+  },
+  {
+   "date": "2026-09-08",
+   "label": "card themes",
+   "kind": "product",
+   "key": true,
+   "detail": "Paper surfaces and themed card workspaces in chat change how notes look.",
+   "show": []
+  },
+  {
+   "date": "2026-09-10",
+   "label": "resilient voice",
+   "kind": "product",
+   "key": true,
+   "detail": "Voice recordings upload in pieces, survive disconnects, and get a late high-accuracy correction.",
+   "show": []
+  },
+  {
+   "date": "2026-09-21",
+   "label": "quick chat",
+   "kind": "product",
+   "key": false,
+   "detail": "A fast, lightweight path for short thoughts that captures and routes them, using a small model.",
+   "show": []
+  },
+  {
+   "date": "2026-10-05",
+   "label": "spoken replies stream",
+   "kind": "product",
+   "key": false,
+   "detail": "Spoken replies start playing as they are generated, with a clear error when speech fails. Voice had been reworked every month since February: 959 commits mention it.",
+   "show": []
+  },
+  {
+   "date": "2026-10-06",
+   "label": "box home",
+   "kind": "product",
+   "key": true,
+   "detail": "A home page for each data store on the web, and later on iOS.",
+   "show": []
+  },
+  {
+   "date": "2026-10-08",
+   "label": "theme sets",
+   "kind": "product",
+   "key": false,
+   "detail": "Ten theme collections, seven material-inspired and three expressive, with composition and material controls.",
+   "show": []
+  },
+  {
+   "date": "2026-10-10",
+   "label": "plugins",
+   "kind": "product",
+   "key": true,
+   "detail": "Installable extensions for a data store. The first slice moves a set of note tags and the recipe type out of the core and into a plugin.",
+   "show": []
+  },
+  {
+   "date": "2026-01-28",
+   "label": "schema registry",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "A registry validates every note against its type when it loads.",
+   "show": []
+  },
+  {
+   "date": "2026-02-21",
+   "label": "job reactor",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Queued work stored as notes is picked up and run in the background, so the app works through inbox items and questions on its own.",
+   "show": []
+  },
+  {
+   "date": "2026-02-24",
+   "label": "one server, many boxes",
+   "kind": "infrastructure",
+   "key": true,
+   "detail": "One server process serves several data stores. Scripted work auto-commits with tags recording its origin.",
+   "show": []
+  },
+  {
+   "date": "2026-02-25",
+   "label": "Cloudflare tunnel",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "The server runs behind a Cloudflare Tunnel, with trusted proxy headers and no wildcard cross-origin access.",
+   "show": []
+  },
+  {
+   "date": "2026-02-28",
+   "label": "Google sign-in",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Google sign-in gates access to the cloud-hosted server, and deploy scripts provision that server.",
+   "show": []
+  },
+  {
+   "date": "2026-03-03",
+   "label": "tRPC API layer",
+   "kind": "infrastructure",
+   "key": true,
+   "detail": "Frontend and server share one typed API layer. All frontend calls had moved over by the next day.",
+   "show": []
+  },
+  {
+   "date": "2026-03-04",
+   "label": "Git LFS for media",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Audio and image files are tracked with Git LFS. git-annex replaced it in September.",
+   "show": []
+  },
+  {
+   "date": "2026-03-08",
+   "label": "SQLite event bus",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Events between parts of the app move onto an event bus backed by SQLite.",
+   "show": []
+  },
+  {
+   "date": "2026-03-30",
+   "label": "central OAuth tokens",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Google sign-in tokens are stored centrally, with a per-data-store service policy.",
+   "show": []
+  },
+  {
+   "date": "2026-04-12",
+   "label": "git lock collisions",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "A fix for lock collisions on git's index file, caused by Git LFS post-commit hooks. It was the first of a long line of git-locking fixes.",
+   "show": []
+  },
+  {
+   "date": "2026-05-16",
+   "label": "attach manifests",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "A scheme of manifests tracks large files by walking directories. It was replaced in September.",
+   "show": []
+  },
+  {
+   "date": "2026-03-10",
+   "label": "browser log to the server",
+   "kind": "infrastructure",
+   "key": true,
+   "detail": "The web app forwards console errors and warnings to the server, into a rolling log file per box, so a bug on a phone leaves a record an agent can read. The iOS app forwards into the same file from August.",
+   "show": [
+    "code"
+   ]
+  },
+  {
+   "date": "2026-05-22",
+   "label": "cards to Markdown",
+   "kind": "infrastructure",
+   "key": true,
+   "detail": "Storage moves from XML to Markdown with YAML headers, and a dispatcher reads both formats during the move.",
+   "show": []
+  },
+  {
+   "date": "2026-05-31",
+   "label": "pnpm workspace",
+   "kind": "infrastructure",
+   "key": true,
+   "detail": "The merged repository switches from file-path dependencies to a pnpm workspace.",
+   "show": []
+  },
+  {
+   "date": "2026-06-08",
+   "label": "WebSocket transport",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Chat and events move to a WebSocket transport on the same API layer.",
+   "show": []
+  },
+  {
+   "date": "2026-06-21",
+   "label": "agent-applied migrations",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "A migration of existing data can be a checklist an agent follows instead of a script.",
+   "show": []
+  },
+  {
+   "date": "2026-06-28",
+   "label": "schema hot reload",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Note types specific to one data store reload in the running server without a restart.",
+   "show": []
+  },
+  {
+   "date": "2026-06-30",
+   "label": "content security policy",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "An app-wide Content-Security-Policy, first set to only report violations to a log.",
+   "show": []
+  },
+  {
+   "date": "2026-07-02",
+   "label": "REST into tRPC",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Remaining REST routes are folded into the typed API layer.",
+   "show": []
+  },
+  {
+   "date": "2026-07-04",
+   "label": "hub; boxes as packages",
+   "kind": "infrastructure",
+   "key": true,
+   "detail": "Many data stores run behind one hub that handles login, and stores become installable packages.",
+   "show": []
+  },
+  {
+   "date": "2026-07-12",
+   "label": "Docker image",
+   "kind": "infrastructure",
+   "key": true,
+   "detail": "The server ships as a Docker image with a compose file and an entrypoint.",
+   "show": []
+  },
+  {
+   "date": "2026-07-19",
+   "label": "auth on by default",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Local password login with first-run setup and a login throttle makes authentication on by default.",
+   "show": []
+  },
+  {
+   "date": "2026-08-12",
+   "label": "scroll trace by flag",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "A flag in the composer records every scroll event and reconcile cycle on a phone and flushes it through the browser log, numbers only, for a feel bug no devtools could reach.",
+   "show": []
+  },
+  {
+   "date": "2026-08-15",
+   "label": "Codex SDK backend",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Codex runs in chat through its official SDK, beside Claude.",
+   "show": []
+  },
+  {
+   "date": "2026-08-17",
+   "label": "secrets store",
+   "kind": "infrastructure",
+   "key": true,
+   "detail": "A machine-level secrets store with a resolver, and every connector reads its keys from it.",
+   "show": []
+  },
+  {
+   "date": "2026-08-18",
+   "label": "box git lock",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "A lock serializes everything that writes to a data store's git repository, so two writers cannot collide on its index.",
+   "show": []
+  },
+  {
+   "date": "2026-08-19",
+   "label": "migrations on deploy",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Pending data migrations now apply automatically on deploy.",
+   "show": []
+  },
+  {
+   "date": "2026-08-23",
+   "label": "connector sync isolation",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "A connector whose sync fails no longer stops the others.",
+   "show": []
+  },
+  {
+   "date": "2026-09-04",
+   "label": "one-root box layout",
+   "kind": "infrastructure",
+   "key": true,
+   "detail": "A data store's layout collapses to one root folder, with a conversion for existing stores. The separate package root no longer exists.",
+   "show": []
+  },
+  {
+   "date": "2026-09-14",
+   "label": "git-annex replaces LFS",
+   "kind": "infrastructure",
+   "key": true,
+   "detail": "Large media moves from Git LFS to git-annex, replacing the manifest scheme too. New stores are created annex-shaped.",
+   "show": []
+  },
+  {
+   "date": "2026-09-17",
+   "label": "host packages via root wrapper",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Agents inside a data store can install system packages through a wrapper that runs as root.",
+   "show": []
+  },
+  {
+   "date": "2026-09-18",
+   "label": "maintenance page on deploy",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "A maintenance page is served while production restarts, and deploy timings are recorded.",
+   "show": []
+  },
+  {
+   "date": "2026-09-26",
+   "label": "push delivery channels",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Push-notification delivery channels for iPhone and web, with their key setup.",
+   "show": []
+  },
+  {
+   "date": "2026-10-10",
+   "label": "plugins: tags move out",
+   "kind": "infrastructure",
+   "key": false,
+   "detail": "Four core note tags and the recipe type move into a plugin, and a migration retires the core tags from all notes.",
+   "show": []
+  }
+ ]
+}

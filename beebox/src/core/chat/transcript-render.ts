@@ -78,7 +78,7 @@ export function renderEntries(entries: SessionEntry[]): string {
  * Reads an explicit first page of at most {@link MAX_SESSION_ENTRIES} entries:
  * a transcript longer than that renders only its first page, as it did under
  * the old 10,000-entry default. See
- * issues/bugs/2026-07-28-parse-session-log-silent-page-truncation.md.
+ * issues/closed/bugs/2026-07-28-parse-session-log-silent-page-truncation.md.
  */
 export async function renderSessionCompact(logPath: string): Promise<string> {
   const { entries, total } = await parseSessionLog({

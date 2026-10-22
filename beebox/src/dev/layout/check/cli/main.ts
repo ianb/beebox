@@ -1,7 +1,7 @@
 #!/usr/bin/env node --import tsx
 /**
  * `pnpm layout-check`: report every breach of the file-layout rules
- * (docs/plans/file-layout.md) in one or more package roots.
+ * (docs/implemented-plans/file-layout.md) in one or more package roots.
  *
  *   --root <pkg>   package root, repo-relative; repeatable. Default: every
  *                  package root in the repo that has a `src/` directory.

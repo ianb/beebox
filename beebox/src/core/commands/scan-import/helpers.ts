@@ -7,7 +7,7 @@
  * `ScanVisionBatchError.retry` classification the ScanVision service attaches
  * (`src/services/scan-vision.ts`). Pair reconciliation and bundling live in
  * `scan-import-reconcile.ts`. Both are re-exported here so the command and
- * its doctest keep importing from one place.
+ * its test keep importing from one place.
  */
 
 import { invariant } from "../../../shared/invariant.js";

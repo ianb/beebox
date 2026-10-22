@@ -6,6 +6,8 @@ issues: []
 ---
 # An agent-neutral worktree control surface
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The repo's worktree logic works, but it lives behind a Claude Code hook
 interface. Any other frontend must impersonate Claude Code to use it. This plan
 moves that logic into `bin/workstreams` as ordinary CLI subcommands and makes every

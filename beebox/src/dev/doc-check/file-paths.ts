@@ -11,8 +11,17 @@
  * `{a,b}`, `...`) are skipped; a trailing `:line` or `:start-end` suffix is
  * stripped before resolution. A token resolves if it exists relative to the
  * doc's directory, the doc's package root, the beebox package, or the
- * monorepo root. An unresolved `issues/<cat>/<name>.md` whose
- * `issues/closed/<cat>/<name>.md` exists is a fixable moved-to-closed finding.
+ * monorepo root. An unresolved plan or issue path whose file moved to another
+ * lifecycle directory is a fixable `moved` finding: an
+ * `issues/<cat>/<name>.md` whose `issues/closed/<cat>/<name>.md` exists, or a
+ * plan or issue whose basename matches exactly one plan or issue file (the
+ * unique-basename rule link-repair.ts uses, limited to those directories). Two
+ * or more matches is an `ambiguous` finding, reported and never guessed.
+ *
+ * Code and YAML files (source comments, schedule configs,
+ * `knowledge-audits.yaml`) name `.md` files bare as often as backticked;
+ * `findMovedPathMentions` finds those mentions and reports only the moved and
+ * ambiguous ones, since a missing path there may be a fixture or a proposal.
  *
  * Pure logic (fs injected as a callback) so it is unit-testable;
  * `check.ts` wires it to the real tree.
@@ -24,7 +33,7 @@ import * as path from "node:path";
 // root) and end in a file extension. bin/skill-lint.ts shares the list.
 export const REPO_PATH_DIRS = [
   "beebox", "bin", "docs", "src", "test", "schedules", "workstreams-app", "ios-app", "canvas-loop", "issues",
-  ".claude", "agent-doctest", "deploy", "scan-uploader", "beebox-clerk", "personal-vibe-check", "research", "dev",
+  ".claude", "tap-check", "deploy", "scan-uploader", "beebox-clerk", "personal-vibe-check", "research", "dev",
 ];
 const CANDIDATE_RE = /^[^\s/]+\/\S*\.[A-Za-z]{1,5}$/;
 const PLACEHOLDER_RE = /[*<>{}…]|\.{3}/;
@@ -41,15 +50,19 @@ const BOX_FACING_PREFIXES = ["beebox/docs/box/", "beebox/box-docs/"];
 // conventionally name its files package-relative (`src/core/x.ts`).
 const MAIN_PACKAGE = "beebox";
 
-export type FilePathProblemKind = "missing" | "moved-to-closed";
+export type FilePathProblemKind = "missing" | "moved" | "ambiguous";
 
 export interface FilePathProblem {
   line: number;
-  token: string; // the backticked text as written (including any :line suffix)
+  token: string; // the text as written (including any :line suffix)
   kind: FilePathProblemKind;
-  suggestion?: string; // replacement token for moved-to-closed
+  suggestion?: string; // replacement token for moved
+  candidates?: string[]; // repo-relative matches for ambiguous
   tried: string[]; // repo-relative paths the token was resolved against
 }
+
+// basename -> repo-relative paths (link-repair.ts `buildBasenameLookup`).
+export type BasenameLookup = ReadonlyMap<string, readonly string[]>;
 
 // The repo-relative path the token names, or undefined when it is not a
 // candidate. Exported for tests.
@@ -68,6 +81,60 @@ function resolutionCandidates(file: string, docRel: string): string[] {
   const bases = [path.posix.dirname(docRel), docRel.split("/")[0] ?? ".", MAIN_PACKAGE, "."];
   const joined = bases.map((base) => path.posix.normalize(path.posix.join(base, file)));
   return [...new Set(joined)].filter((p) => !p.startsWith(".."));
+}
+
+// Write `newPath` (repo-relative) in the same style as the token's `file`: the
+// first resolution base that contains `newPath` and under which the new path
+// starts with the token's first segment. A root-relative path otherwise.
+function rewrittenFile({ file, newPath, docRel }: { file: string; newPath: string; docRel: string }): string {
+  const first = file.split("/")[0];
+  for (const base of [path.posix.dirname(docRel), docRel.split("/")[0] ?? ".", MAIN_PACKAGE]) {
+    if (!newPath.startsWith(`${base}/`)) continue;
+    const rel = newPath.slice(base.length + 1);
+    if (rel.split("/")[0] === first) return rel;
+  }
+  return newPath;
+}
+
+type Relocation = { kind: "moved"; newPath: string } | { kind: "ambiguous"; candidates: string[] } | { kind: "missing" };
+
+// Plans and issues move between lifecycle directories (plans/ to
+// implemented-plans/, bugs/ to closed/bugs/) and keep their basename. Only
+// those moves are relocated: a generic basename (`summary.md`, `index.md`)
+// elsewhere in the tree is too often a different file.
+const LIFECYCLE_RE = /^(?:beebox\/docs\/(?:plans|implemented-plans|unimplemented-plans)|issues)\//;
+// The same directories as a token names them: monorepo- or package-relative.
+const LIFECYCLE_TOKEN_RE = /^(?:(?:beebox\/)?docs\/(?:plans|implemented-plans|unimplemented-plans)|issues)\//;
+
+// Where an unresolved plan or issue path lives now: its closed/ copy, else
+// the one plan or issue file with its basename.
+function relocate({ file, fileExists, basenameLookup }: {
+  file: string; fileExists: (repoRel: string) => boolean; basenameLookup: BasenameLookup | undefined;
+}): Relocation {
+  const issue = OPEN_ISSUE_RE.exec(file);
+  const closed = issue ? `issues/closed/${issue[1]}/${issue[2]}` : undefined;
+  if (closed !== undefined && fileExists(closed)) return { kind: "moved", newPath: closed };
+  if (!file.endsWith(".md") || basenameLookup === undefined || !LIFECYCLE_TOKEN_RE.test(file)) return { kind: "missing" };
+  const candidates = (basenameLookup.get(path.posix.basename(file)) ?? []).filter((c) => LIFECYCLE_RE.test(c));
+  const [only] = candidates;
+  if (candidates.length === 1 && only !== undefined) return { kind: "moved", newPath: only };
+  if (candidates.length >= 2) return { kind: "ambiguous", candidates };
+  return { kind: "missing" };
+}
+
+function problemFor(params: {
+  text: string; file: string; line: number; docRel: string;
+  fileExists: (repoRel: string) => boolean; basenameLookup: BasenameLookup | undefined;
+}): FilePathProblem | undefined {
+  const { text, file, line, docRel, fileExists, basenameLookup } = params;
+  const tried = resolutionCandidates(file, docRel);
+  if (tried.some(fileExists)) return undefined;
+  const found = relocate({ file, fileExists, basenameLookup });
+  if (found.kind === "moved") {
+    return { line, token: text, kind: "moved", suggestion: text.replace(file, rewrittenFile({ file, newPath: found.newPath, docRel })), tried };
+  }
+  if (found.kind === "ambiguous") return { line, token: text, kind: "ambiguous", candidates: found.candidates, tried };
+  return { line, token: text, kind: "missing", tried };
 }
 
 // A line that starts a new inline block: a blank line, heading, table row,
@@ -109,41 +176,89 @@ function singleBacktickSpans(text: string): Array<{ text: string; line: number }
   return spans;
 }
 
+// Backticked repo paths in a Markdown doc. `basenameLookup` (tracked `.md`
+// files) enables the unique-basename relocation; without it only the closed/
+// relocation applies.
 export function findFilePathProblems({
   docRel,
   content,
   fileExists,
+  basenameLookup,
 }: {
   docRel: string;
   content: string;
   fileExists: (repoRel: string) => boolean;
+  basenameLookup?: BasenameLookup;
 }): FilePathProblem[] {
   const problems: FilePathProblem[] = [];
   for (const block of inlineBlocks(content.split("\n"))) {
     for (const { text, line } of singleBacktickSpans(block.text)) {
       const file = candidatePath(text, docRel);
       if (file === undefined) continue;
-      const tried = resolutionCandidates(file, docRel);
-      if (tried.some(fileExists)) continue;
-      const issue = OPEN_ISSUE_RE.exec(file);
-      const closed = issue ? `issues/closed/${issue[1]}/${issue[2]}` : undefined;
-      const lineNum = block.start + line + 1;
-      if (closed !== undefined && fileExists(closed)) {
-        problems.push({ line: lineNum, token: text, kind: "moved-to-closed", suggestion: text.replace(file, closed), tried });
-      } else {
-        problems.push({ line: lineNum, token: text, kind: "missing", tried });
-      }
+      const problem = problemFor({ text, file, line: block.start + line + 1, docRel, fileExists, basenameLookup });
+      if (problem) problems.push(problem);
     }
   }
   return problems;
 }
 
-// Rewrite every moved-to-closed token in `content` to its suggestion. Other
-// problems are left for a human.
-export function repairFilePaths(content: string, problems: FilePathProblem[]): string {
+// A bare or backticked `.md` path in code or YAML: starts with a repo
+// directory, is not preceded by a path character (so `../docs/x.md` and URLs
+// do not match), and may carry a `:line` suffix.
+const MENTION_RE = /(?<![\w./:@-])((?:[\w-]+|\.claude)\/[\w./-]*\.md(?::L?\d+(?:-L?\d+)?)?)(?![\w/-])/g;
+
+// `.md` path mentions in a code or YAML file whose target moved (fixable) or
+// matches 2+ files by basename (reported). Missing paths are not reported.
+export function findMovedPathMentions({
+  docRel,
+  content,
+  fileExists,
+  basenameLookup,
+}: {
+  docRel: string;
+  content: string;
+  fileExists: (repoRel: string) => boolean;
+  basenameLookup: BasenameLookup;
+}): FilePathProblem[] {
+  const problems: FilePathProblem[] = [];
+  for (const [i, line] of content.split("\n").entries()) {
+    for (const m of line.matchAll(MENTION_RE)) {
+      const text = m[1] ?? "";
+      const file = candidatePath(text, docRel);
+      if (file === undefined) continue;
+      const problem = problemFor({ text, file, line: i + 1, docRel, fileExists, basenameLookup });
+      if (problem && problem.kind !== "missing") problems.push(problem);
+    }
+  }
+  return problems;
+}
+
+// Characters that continue a path on either side of a bare token.
+const PATH_CHAR_BEFORE = /[\w./:@-]/;
+const PATH_CHAR_AFTER = /[\w/-]/;
+
+// Replace each occurrence of `token` in `line` that is not part of a longer
+// path.
+function replaceBareToken({ line, token, replacement }: { line: string; token: string; replacement: string }): string {
+  let out = "";
+  let cursor = 0;
+  for (let at = line.indexOf(token); at !== -1; at = line.indexOf(token, at + token.length)) {
+    const before = line[at - 1] ?? "";
+    const after = line[at + token.length] ?? "";
+    if (PATH_CHAR_BEFORE.test(before) || PATH_CHAR_AFTER.test(after)) continue;
+    out += line.slice(cursor, at) + replacement;
+    cursor = at + token.length;
+  }
+  return out + line.slice(cursor);
+}
+
+// Rewrite every moved token in `content` to its suggestion. Other problems
+// are left for a human. `bare` also rewrites un-backticked mentions (code and
+// YAML sources), bounded so a token never matches inside a longer path.
+export function repairFilePaths({ content, problems, bare }: { content: string; problems: FilePathProblem[]; bare?: boolean }): string {
   const byLine = new Map<number, FilePathProblem[]>();
   for (const p of problems) {
-    if (p.kind !== "moved-to-closed") continue;
+    if (p.kind !== "moved") continue;
     byLine.set(p.line, [...(byLine.get(p.line) ?? []), p]);
   }
   return content
@@ -151,7 +266,11 @@ export function repairFilePaths(content: string, problems: FilePathProblem[]): s
     .map((line, i) => {
       let out = line;
       for (const p of byLine.get(i + 1) ?? []) {
-        if (p.suggestion !== undefined) out = out.replaceAll(`\`${p.token}\``, `\`${p.suggestion}\``);
+        const { suggestion } = p;
+        if (suggestion === undefined) continue;
+        out = bare === true
+          ? replaceBareToken({ line: out, token: p.token, replacement: suggestion })
+          : out.replaceAll(`\`${p.token}\``, `\`${suggestion}\``);
       }
       return out;
     })
@@ -159,7 +278,7 @@ export function repairFilePaths(content: string, problems: FilePathProblem[]): s
 }
 
 export function describeFilePathProblem(docRel: string, p: FilePathProblem): string {
-  return p.kind === "moved-to-closed"
-    ? `moved to closed: ${docRel}:${p.line} \`${p.token}\` -> \`${p.suggestion ?? ""}\` (pnpm doc-check --fix rewrites it)`
-    : `missing file path: ${docRel}:${p.line} \`${p.token}\``;
+  if (p.kind === "moved") return `moved file path: ${docRel}:${p.line} \`${p.token}\` -> \`${p.suggestion ?? ""}\` (pnpm doc-check --fix rewrites it)`;
+  if (p.kind === "ambiguous") return `ambiguous file path: ${docRel}:${p.line} \`${p.token}\` matches ${(p.candidates ?? []).join(", ")}`;
+  return `missing file path: ${docRel}:${p.line} \`${p.token}\``;
 }

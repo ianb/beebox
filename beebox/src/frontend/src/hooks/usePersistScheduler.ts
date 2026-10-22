@@ -14,9 +14,9 @@
  * (a route change, a session switch) unmounts the hook with the tab still
  * visible, and canceling the pending write there is how a send's
  * persisted-draft clear went missing and resurfaced as an "unsent" recovery
- * draft (issues/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
+ * draft (issues/closed/bugs/2026-07-23-voice-send-lingers-as-unsent-recovery-draft.md).
  * The debounce machine itself is `lib/persist-scheduler.ts` — pure, timers
- * injected, doctested.
+ * injected, tested.
  */
 
 import { useCallback, useEffect, useRef } from "react";

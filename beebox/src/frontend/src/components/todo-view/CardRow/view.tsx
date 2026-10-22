@@ -1,5 +1,5 @@
 /**
- * One card's block in a `todo-view` list (`docs/plans/todo-collection.md`,
+ * One card's block in a `todo-view` list (`docs/implemented-plans/todo-collection.md`,
  * Track 4): the card itself as a header, what it amounts to, then its todos
  * under the headings they were written beneath.
  *
@@ -21,14 +21,18 @@ import { bbxSource } from "../../../lib/source-tag";
 import { ItemTree } from "./ItemTree";
 import { cardTarget, useOpenBeside } from "../../chat/workspace/use-open-beside/hook";
 import { buildRowSections, progressOf, type TodoReduction, type TodoRow } from "../../todo-view-card-logic";
+import { summaryParts } from "../../todo/summary";
 
-/** What a card amounts to: what is open, what is finished, and the next date it carries. */
+/** What a card amounts to, in the words of the card's own todo line, and the next date it carries. */
 function RowReduction({ reduction }: { reduction: TodoReduction }) {
+  const parts = summaryParts(reduction);
   return (
-    <Row gap="xs" wrap align="baseline" className="flex-shrink-0">
-      <Text material size="xs" tone="muted">
-        {reduction.open} open · {reduction.done} done
-      </Text>
+    <Row gap="xs" wrap align="baseline" justify="end">
+      {parts === null ? null : (
+        <Text material size="xs" tone="muted">
+          {parts.map((part) => part.text).join(" · ")}
+        </Text>
+      )}
       {reduction.next === null ? null : (
         <Badge size="sm" tone="info" title="Next date on this card">next {reduction.next}</Badge>
       )}
@@ -57,15 +61,16 @@ function SectionHead({ label, path, reduction }: { label: string; path: string[]
 export function CardRow({ row }: { row: TodoRow }) {
   const sections = buildRowSections(row);
   // In a workspace pane the title opens the card in the other pane
-  // (`docs/plans/todos-ui.md`, Track 5); the peek still previews in place.
+  // (`docs/implemented-plans/todos-ui.md`, Track 5); the peek still previews in place.
   const openBeside = useOpenBeside();
   const open = openBeside === null ? undefined : (): void => openBeside(cardTarget(row.card.path));
   return (
     <Stack gap="sm" className="py-3" {...bbxSource("card", row.card.path)}>
       <Row gap="sm" align="start" justify="between" wrap={false}>
-        {/* Title only: The Plate is read by people, and the path was noise (as on the place page). */}
+        {/* Title only: the todo page is read by people, and the path was noise (as on the place page). */}
         <FileEntry summary={row.card} hidePath onOpen={open} onPanel={open} className="flex-1 min-w-0" />
-        <Stack gap="none" align="end" className="flex-shrink-0 pt-1.5">
+        {/* Capped and wrapping: the counts name their set ("7 now · 1 later · …") and must not squeeze the title out. */}
+        <Stack gap="none" align="end" className="max-w-[50%] min-w-0 pt-1.5 text-right">
           <RowReduction reduction={row.reduction} />
           {row.via === "reference" ? (
             <Text material size="xs" tone="muted" italic title="This card is outside the scope; its todos link into it">

@@ -156,7 +156,7 @@ function Composer({ anchor, onCancel, onSubmit, pending }: {
 }
 
 /**
- * Commenting on an exhibit page (`docs/plans/exhibit-comments.md`). Off by
+ * Commenting on an exhibit page (`docs/implemented-plans/exhibit-comments.md`). Off by
  * default, because selecting text is ordinary reading. On, a selection inside
  * `contentRef` opens the composer with the quoted text and the heading above
  * it; "the whole exhibit" opens it with no anchor. The comment goes to the

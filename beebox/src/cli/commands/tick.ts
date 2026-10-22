@@ -17,8 +17,7 @@ import { createCardSchemaMap } from "../../schemas.js";
 import { loadScriptState, loadRunningScripts } from "../../core/schedule/state.js";
 import {
   readScheduleFiles,
-  findBusyBlockers,
-  effectiveBusyBlockers,
+  tickBusyState,
   evaluateSkip,
   executeScript,
 } from "../tick-helpers.js";
@@ -86,20 +85,10 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
   // Load currently running scripts for lock-group conflict detection
   const running = await loadRunningScripts(boxRoot);
 
-  // Bail out if anything else is in flight (see findBusyBlockers). Under
-  // --force, active chats don't defer (see effectiveBusyBlockers); the
-  // housekeeping-commit hazard they guarded is handled at the commit site.
-  const blockers = effectiveBusyBlockers(
-    await findBusyBlockers(boxRoot, running),
-    { force: options.force === true },
-  );
-  if (blockers.length > 0) {
-    if (!options.quiet) {
-      const hint = blockers.every((b) => b.startsWith("chat:"))
-        ? " (bbx tick --script <name> --force runs despite an active chat)"
-        : "";
-      console.log(`Tick deferred — system busy: ${blockers.join(", ")}${hint}`);
-    }
+  // A running script or procedure defers the whole tick; an active chat defers
+  // every card except `notify:` ones (see tickBusyState).
+  const busy = await tickBusyState(boxRoot, { running, options });
+  if (busy === "defer-all") {
     return { ranCount: 0, skipCount: files.length, errorCount: 0, inconclusiveCount: 0, scripts: [] };
   }
 
@@ -116,6 +105,11 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       if (!options.quiet) console.error(`  Error parsing ${file}: ${errorMessage(err)}`);
       errorCount++;
       scripts.push({ name: scriptName, status: "error", error: `parse: ${errorMessage(err)}` });
+      continue;
+    }
+
+    if (busy === "chat" && parsed.action.kind !== "notify") {
+      skipCount++;
       continue;
     }
 

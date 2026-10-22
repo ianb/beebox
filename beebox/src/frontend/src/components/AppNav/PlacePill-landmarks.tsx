@@ -1,10 +1,11 @@
 import { createPortal } from "react-dom";
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { CardSymbolData } from "@shared/card-symbol";
 import { MenuItem } from "../ui/dropdown-menu-item";
 import { TextField } from "../ui/fields/field";
 import { Button } from "../ui/Button";
 import { CardMark } from "../ui/CardMark";
+import { useIsomorphicLayoutEffect } from "../../hooks/use-isomorphic-layout-effect";
 
 /** One landmark row's data — the subset of `chat.byLandmark` this menu reads. */
 export interface SwitchLandmark {
@@ -20,7 +21,7 @@ export interface SwitchLandmark {
 
 function FreshCount({ count }: { count: number }) {
   if (count === 0) return null;
-  return <span className="ml-auto shrink-0 text-xs text-warm-500 tabular-nums">{count}</span>;
+  return <span className="ml-auto shrink-0 text-xs text-warm-700 tabular-nums">{count}</span>;
 }
 
 function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>, {
@@ -121,7 +122,7 @@ export function LandmarkList({
   const { mobileViewport, visibleViewport } = useSearchViewport(searchOpen);
   const searchable = landmarks !== null && landmarks.length > 20;
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!searchOpen) {
       queryRef.current = "";
       setQuery("");
@@ -164,7 +165,7 @@ export function LandmarkList({
 
   if (landmarks === null) {
     if (failed) return <MenuItem id="bbx-switch-menu-landmarks-retry" onClick={onRetry} keepOpen danger>Couldn&rsquo;t load this menu — Retry</MenuItem>;
-    return <div className="px-3 py-2 text-warm-500">Loading…</div>;
+    return <div className="px-3 py-2 text-warm-700">Loading…</div>;
   }
 
   const normalizedQuery = query.trim().toLocaleLowerCase();

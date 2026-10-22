@@ -1,6 +1,6 @@
 /**
  * Per-item checkpoints and the cleanup policies built on them
- * (`docs/plans/agent-field-tests.md`, Track 2).
+ * (`docs/implemented-plans/agent-field-tests.md`, Track 2).
  *
  * Every checklist item ends with a git tag on the run's box, whatever its
  * policy. That is what makes both post-hoc inspection ("what did the box look

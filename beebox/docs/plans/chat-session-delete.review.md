@@ -1,5 +1,7 @@
 # Plan Engineering Review — Chat Session Delete
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Reviewer: Claude Fable, cross-model from Codex, 2026-08-07. Read-only review
 fenced to `chat-session-delete.md`, both linked issues, the installed SDK
 declaration, and the named chat lifecycle/state/UI sources. Ten findings.

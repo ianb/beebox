@@ -12,7 +12,7 @@ generic card until a shape is worth building.
 
 **What it does for you**
 
-- Puts things in as generic records or memos, one card per thing, holding
+- Puts things in as generic records or docs, one card per thing, holding
   the facts you gave in plain words.
 - When the same kind of thing keeps showing up with the same detail, the
   agent proposes a card type with its own fields for it.
@@ -49,7 +49,7 @@ applied automatically or only after you agree to it.
 **Go deeper**
 
 [../reference/cards/record.md](../reference/cards/record.md),
-[../reference/cards/memo.md](../reference/cards/memo.md),
+[../reference/cards/doc.md](../reference/cards/doc.md),
 [../concepts/cards.md](../concepts/cards.md),
 [../dev/adding-a-card-type.md](../dev/adding-a-card-type.md),
 [../dev/migrations.md](../dev/migrations.md),

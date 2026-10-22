@@ -9,8 +9,10 @@ node-arg:
   # boundary reached by child CLI processes before command dispatch. This is a
   # TypeScript preload, so it must follow the tsx loader.
   - --import=./test/helpers/isolate-user-home.ts
-  - --import=agent-doctest/tap
-  - --import=agent-doctest/loader
+  - --import=@ianbicking/tap-check/tap
+  # Compile frontend modules with the React Compiler, as the Vite build does
+  # (src/frontend/test/helpers/react-compiler-hooks.ts).
+  - --import=./src/frontend/test/helpers/react-compiler-register.ts
   # Point BBX_SECRETS_FILE at a throwaway path in every test process, so nothing
   # a test resolves or writes can reach the developer's real
   # ~/.config/bbx/secrets.json. See the module for why this is process-level.
@@ -25,19 +27,19 @@ node-arg:
   # chat, and the plugin installer behind it re-points the GLOBAL `beebox`
   # marketplace at whichever checkout is running. See the module.
   - --import=./test/helpers/isolate-codex-home.ts
+  # Chat-session logs are a server's record; in tests they are noise. See the module.
+  - --import=./test/helpers/quiet-chat-session-log.ts
 include:
   - test/**/*.test.ts
-  - test/**/*.doctest.md
   - src/frontend/test/**/*.test.ts
-  - src/frontend/test/**/*.doctest.md
-  # Root dev-tooling doctests. They lived in test/dev/ until the 2026-09-27
+  # Root dev-tooling tests. They lived in test/dev/ until the 2026-09-27
   # layout moves and still need this file's home and secret isolation, so they
   # run here rather than under a separate root config.
-  - ../bin/test/**/*.doctest.md
+  - ../bin/test/**/*.test.ts
 exclude:
   - test/manual/**
 # Cap parallel test files. tap defaults to one job per core (12 here), but route
-# doctests can call makeTestServer() dozens of times. Each test process builds
+# tests can call makeTestServer() dozens of times. Each test process builds
 # one initialized template box (scaffoldV2Box() plus one shell that initializes
 # and commits its Git repository), then fs.cp()-clones that template per call.
 # A 2026-08 loaded-machine probe measured 1.0s cold boot and 0.39s mean warm

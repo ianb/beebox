@@ -1,9 +1,31 @@
-# Bee Box for Mac
+# Bee Box Desktop (Mac app)
 
-A menu-bar app that runs the beebox Linux image in a lightweight VM through
-Apple's [Containerization](https://github.com/apple/containerization)
-framework (pinned at 0.48.0). Experimental; findings are in
+A menu-bar app around a box. It pairs with boxes (Copy Link (Mac) in a box's
+Settings → Companion Apps, then Pair with a Box… here, or a `beebox://pair`
+link clicked in the browser) and opens them in the browser. It uploads new
+files from watched folders and Photos albums to a box (Preferences → Watched Folders),
+which replaces `scan-uploader`'s launchd agent on this Mac. It can also run a
+box itself, in a lightweight VM through Apple's
+[Containerization](https://github.com/apple/containerization) framework
+(pinned at 0.48.0): Preferences → Box on this Mac → "Run a box on this Mac", off by
+default. With it off the app downloads nothing. Design:
+[mac-app-shell.md](../beebox/docs/plans/mac-app-shell.md); VM findings:
 [phase1-spike-app.md](../research/installable-app/phase1-spike-app.md).
+
+## Code layout
+
+- `Sources/BeeBoxMacCore/`: the logic, with no AppKit and no VM: paired boxes
+  (`BoxStore`), the pairing sheet's model, the hosting setting, the scan-upload
+  client (`Scan/`, a second client of
+  [the scan-upload contract](../beebox/docs/scan-upload-contract.md)), and
+  upload folders, scan tokens and Photos bookkeeping (`Uploads/`).
+- `Sources/BeeBoxMac/`: the app: menu, Preferences, VM runtime, PhotoKit,
+  folder events.
+- `../apple-shared/` (`BeeBoxShared`): code shared with the iOS app: the
+  pairing link, redeem, the http host policy, the Keychain store.
+- Tests: `swift test --disable-swift-testing` here, or `bin/apple-test` from
+  the monorepo root. `LiveScanSweepTests` runs only with
+  `BEEBOX_LIVE_SCAN_URL` and `BEEBOX_LIVE_SCAN_TOKEN` set, against a test box.
 
 Requires macOS 26 on Apple silicon. An older macOS refuses to open the app
 with the system's own "requires macOS 26.0 or later" message
@@ -24,8 +46,8 @@ failure message in the menu.
 Full Xcode is required.
 
 ```sh
-scripts/build-app.sh      # → build/BeeBox.app (ad hoc signed)
-scripts/make-dmg.sh       # → build/BeeBox-<version>.dmg
+scripts/build-app.sh      # → "build/Bee Box Desktop.app" (ad hoc signed)
+scripts/make-dmg.sh       # → build/BeeBoxDesktop-<version>.dmg
 ```
 
 `build-app.sh` reads `VERSION` (also the image tag), `SIGN_IDENTITY`
@@ -44,10 +66,58 @@ to `container build` itself: it recreates the builder from the 2 GB default
 otherwise. Keep VM state under `<worktree>/scratch/`, not the session
 scratchpad.
 
-## Run during development
+## Logs
+
+Every event goes to the unified log (subsystem `run.beebox.mac`) and to
+`~/Library/Application Support/Bee Box/logs/app.log` (about 2 MB, then
+`app.log.1`): launch, Preferences shown and closed (with the window's state),
+pairing results, watched-folder sweeps that sent or failed something, folder
+problems appearing and clearing, scan token mint and revoke (by name), Photos
+and notification permission states, hosting and VM start and stop. Tokens,
+pairing links, and file contents are never logged.
 
 ```sh
-open -n build/BeeBox.app \
+tail -50 ~/Library/"Application Support/Bee Box"/logs/app.log
+log show --last 1h --predicate 'subsystem == "run.beebox.mac"'
+```
+
+The box this app runs writes its server log beside it, `logs/box-<name>.log`.
+
+## Icon and DMG
+
+`scripts/make-art.swift` draws the app icon (the iOS app's paper cube on a
+macOS icon plate) and the DMG background; `build-app.sh` runs it and
+`iconutil` makes `AppIcon.icns`. `make-dmg.sh` lays out the DMG window with
+[dmgbuild](https://github.com/dmgbuild/dmgbuild), pinned and run through
+`uvx`, so it needs `uv` and no Finder automation. The app was named "Bee Box"
+before 0.1.4; its bundle id (`run.beebox.mac`) and data folders did not change,
+so updates and existing boxes carry over. Sparkle updates an installed
+`BeeBox.app` in place under its old file name.
+
+## Entitlements
+
+`BeeBoxMac.entitlements` holds `com.apple.security.virtualization` (the VM)
+and `com.apple.security.personal-information.photos-library` (Photos album
+export). A Developer ID build runs under the hardened runtime, where a
+protected resource without its entitlement is denied silently: no prompt, and
+the app is not listed in System Settings → Privacy & Security. Ad hoc builds
+skip the hardened runtime, so they do not show the problem; check a new
+protected resource with a signed build.
+
+## Run during development
+
+Give a development build its own bundle id and state, so it does not share
+preferences or the paired-box list with an installed Bee Box:
+`BUNDLE_ID=run.beebox.mac.dev scripts/build-app.sh`, then launch with
+`BEEBOX_STATE_DIR` and `BEEBOX_BOXES_DIR` pointing into the worktree's
+`scratch/`. Keychain items use the services `run.beebox.mac.device-token` and
+`run.beebox.mac.scan-token` whatever the bundle id. An ad hoc build has a new
+code signature each time, so macOS asks again for each item the previous build
+made; the app reads each item once per launch. Signing development builds
+with a stable identity (`SIGN_IDENTITY`) avoids the repeat prompts.
+
+```sh
+open -n "build/Bee Box Desktop.app" \
   --env BEEBOX_IMAGE_LAYOUT=$HOME/Library/Caches/beebox-phase0/oci/layout
 ```
 
@@ -90,7 +160,7 @@ By hand, after quitting Bee Box:
 rm -rf ~/Library/"Application Support/Bee Box"
 rm -rf ~/Library/Caches/run.beebox.mac ~/Library/HTTPStorages/run.beebox.mac*
 rm -f ~/Library/Preferences/run.beebox.mac.plist
-# and drag Bee Box.app to the Trash; ~/BeeBox holds your boxes
+# and drag Bee Box Desktop.app (BeeBox.app before 0.1.4) to the Trash; ~/BeeBox holds your boxes
 ```
 
 The app installs no login items or background services, and its VM runs only

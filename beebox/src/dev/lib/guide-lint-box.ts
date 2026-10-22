@@ -3,7 +3,7 @@
  * box: render the guide from the box's inputs (read-only), and measure the
  * always-loaded total `agent-context` would report with that render in place
  * of the box's generated copy. Used by `pnpm lint:guide` and the linter's
- * doctest.
+ * test.
  */
 
 import { readFile } from "node:fs/promises";

@@ -16,7 +16,7 @@ an edit. Small CLI operations are the public interface; triage composes them.
 capture stays open. This implementation unit covers documents already admitted
 to the box. Gmail admission remains required follow-up work, not a delivered
 property of this unit. Searching the issue queue also found
-[handler NUL transport](../../../issues/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md);
+[handler NUL transport](../../../issues/closed/bugs/2026-09-13-triage-items-nul-env-truncates-handler-batch.md);
 it affects later handlers and is not resolved or closed here.
 
 ## Smallest fix and budget

@@ -22,13 +22,12 @@ import { parse } from "yaml";
 import { errorMessage } from "../../../../src/shared/error-guards.ts";
 import { isRecord } from "../../../../src/shared/is-record.ts";
 import { runHealthChecks } from "../../../../src/webapp/trpc/routers/health/router.ts";
-import { assertPreviousRunsReported, allocateRun } from "../provisioning.ts";
+import { JOURNEY_WORK as WORK, assertPreviousRunsReported, allocateRun } from "../provisioning.ts";
 
 const JOURNEYS = resolve(import.meta.dirname, "..");
 const MONO_ROOT = resolve(JOURNEYS, "../../../..");
 const WORKTREE = basename(MONO_ROOT);
 const BOXES_ROOT = join(homedir(), "src", "box-worktrees", WORKTREE);
-const WORK = join(JOURNEYS, "../work/journeys");
 
 interface Asset { file: string, described_as: string }
 interface Journey {
@@ -98,7 +97,7 @@ const content = boxDir;
 // A journey box is built for an agent-driven browser, so it says so: with
 // `agentBrowsing: "owner"` the browse key acts as the box owner and the walker
 // reaches capture, Settings, and every owner-gated procedure
-// (`docs/plans/agent-browsing-owner.md`). This is a disposable fixture setting;
+// (`docs/implemented-plans/agent-browsing-owner.md`). This is a disposable fixture setting;
 // a box a person actually uses must never have it.
 const boxConfigPath = join(content, "_config", "box.json");
 const boxConfig: unknown = existsSync(boxConfigPath) ? JSON.parse(readFileSync(boxConfigPath, "utf8")) : {};

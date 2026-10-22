@@ -1,5 +1,5 @@
 /**
- * In-memory fake for {@link GoogleGmailService} — the mailbox doctests and
+ * In-memory fake for {@link GoogleGmailService} — the mailbox tests and
  * field runs drive instead of the Gmail REST API.
  *
  * Split out of `google-gmail.ts` (which is at its line cap) rather than

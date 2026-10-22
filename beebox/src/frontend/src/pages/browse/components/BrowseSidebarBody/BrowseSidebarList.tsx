@@ -7,6 +7,10 @@
  * `foldListing`'s `lead` tier, then folds `more` behind a single "N more"
  * disclosure, background items dimmed and last. Raw mode ignores prominence
  * entirely — today's flat listing, unchanged.
+ *
+ * The content root (`_content`) ends with a quiet "Whole box" row that opens
+ * the box root, the one way out to the other areas
+ * (`docs/implemented-plans/front-door.md`, Track D).
  */
 
 import { bbxSource } from "../../../../lib/source-tag";
@@ -20,7 +24,7 @@ import { areaDisplayLabel } from "@shared/display-path";
 import { encodePathForUrl } from "../../../../lib/view-url";
 import { foldListing, type FoldEntry } from "@shared/browse-fold";
 import type { BrowseListingMode } from "./hook";
-import type { BrowseMissingKind } from "../../../../lib/browse-card-state";
+import { BROWSE_DEFAULT_DIRECTORY, type BrowseMissingKind } from "../../../../lib/browse-card-state";
 
 type BrowseData = RouterOutput["status"]["browse"];
 type BrowseDirData = BrowseData["dirs"][number];
@@ -56,11 +60,13 @@ function DirRow({
   const target = dirPath ? `${dirPath}/${dir.name}` : dir.name;
   const landmark = showLandmark ? dir.landmark : undefined;
   const label = dirPath === "" ? areaDisplayLabel(dir.name) : (landmark?.label ?? dir.name);
+  // The number counts every card below the folder, subfolders included, so it says so: the listing inside shows fewer.
+  const cardCount = `${String(dir.fileCount)} card${dir.fileCount === 1 ? "" : "s"}, including subfolders`;
   return (
     <button
       {...bbxSource("dir", target)}
       onClick={() => onNavigate(target, "directory")}
-      aria-label={dir.fileCount > 0 ? `${label} directory, ${dir.fileCount} item${dir.fileCount === 1 ? "" : "s"}` : `${label} directory`}
+      aria-label={dir.fileCount > 0 ? `${label} directory, ${cardCount}` : `${label} directory`}
       className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors flex items-center gap-2 border-b border-warm-200 ${dimmed ? "opacity-60" : ""}`}
     >
       <span className="text-primary flex-shrink-0" aria-hidden="true">
@@ -73,7 +79,7 @@ function DirRow({
         )}
       </span>
       <span className="text-warm-900 font-medium text-sm flex-1">{label}/</span>
-      {dir.fileCount > 0 ? <span className="text-xs text-warm-400">{dir.fileCount}</span> : null}
+      {dir.fileCount > 0 ? <span className="text-xs text-warm-400" title={cardCount}>{dir.fileCount}</span> : null}
     </button>
   );
 }
@@ -111,7 +117,7 @@ function CardRow({
             <div className="font-medium text-warm-900 text-sm truncate">{card.name}</div>
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className="text-xs text-warm-500">{card.type}</span>
+            <span className="text-xs text-warm-700">{card.type}</span>
             {card.conflict === true ? <Badge tone="danger" size="sm">conflict</Badge> : null}
           </div>
         </div>
@@ -181,6 +187,20 @@ function FoldRow({
   return <FileRow file={entry.file} dimmed={entry.dimmed} selected={selectedFilePath === entry.file.relativePath} onNavigate={onNavigate} onFileContextMenu={onFileContextMenu} />;
 }
 
+/** The quiet last row of the content root's listing: out to the box root and its areas. */
+function WholeBoxRow({ onNavigate }: { onNavigate: (path: string, kind: BrowseMissingKind) => void }) {
+  return (
+    <button
+      id="bbx-browse-whole-box"
+      data-bbx-does="goes to the whole box"
+      onClick={() => onNavigate("", "directory")}
+      className="w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors"
+    >
+      <Text as="span" size="sm" tone="muted">Whole box</Text>
+    </button>
+  );
+}
+
 function entryKey(entry: Entry): string {
   if (entry.kind === "dir") return `dir:${entry.dir.name}`;
   if (entry.kind === "card") return `card:${entry.card.relativePath}`;
@@ -215,12 +235,16 @@ export function BrowseSidebarList({
   mode,
 }: BrowseSidebarListProps) {
   if (loading) {
-    return <div className="p-4 text-warm-600 text-sm">Loading...</div>;
+    return <div className="p-4 text-warm-700 text-sm">Loading...</div>;
   }
 
   const cards = data.cards.filter((card) => card.relativePath !== omitCardPath);
+  const wholeBox = dirPath === BROWSE_DEFAULT_DIRECTORY ? <WholeBoxRow onNavigate={onNavigate} /> : null;
   if (data.dirs.length === 0 && cards.length === 0 && data.files.length === 0) {
-    return <div className="p-4 text-warm-600 text-sm text-center">Empty directory</div>;
+    return <div>
+      <div className="p-4 text-warm-700 text-sm text-center">Empty directory</div>
+      {wholeBox}
+    </div>;
   }
 
   const row = (entry: Entry, showLandmark: boolean) => (
@@ -241,6 +265,7 @@ export function BrowseSidebarList({
         {data.dirs.map((dir) => <DirRow key={dir.name} dir={dir} dirPath={dirPath} dimmed={false} showLandmark={false} onNavigate={onNavigate} />)}
         {cards.map((card) => <CardRow key={card.relativePath} card={card} dimmed={false} selected={selectedFilePath === card.relativePath} onNavigate={onNavigate} />)}
         {data.files.map((file) => <FileRow key={file.relativePath} file={file} dimmed={false} selected={selectedFilePath === file.relativePath} onNavigate={onNavigate} onFileContextMenu={onFileContextMenu} />)}
+        {wholeBox}
       </div>
     );
   }
@@ -256,6 +281,7 @@ export function BrowseSidebarList({
           </Accordion>
         ) : null)
         : fold.more.map((entry) => row(entry, false))}
+      {wholeBox}
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { invariant } from "../../src/shared/invariant.js";
 const lockPath = process.argv[2];
 invariant(lockPath !== undefined, "file-lock-child requires a lock path argument");
 
-await acquireLock(requestScopedLock(lockPath), { purpose: "file-lock-doctest-child" });
+await acquireLock(requestScopedLock(lockPath), { purpose: "file-lock-test-child" });
 process.stdout.write("acquired\n");
 
 // Hold the lock until we're killed. An empty interval keeps the event loop

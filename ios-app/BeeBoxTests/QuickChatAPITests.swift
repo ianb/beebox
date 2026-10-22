@@ -47,6 +47,23 @@ final class QuickChatAPITests: XCTestCase {
         try XCTAssertJSONEqual(request.httpBody, fixture: "discard-request.json")
     }
 
+    func testRetryRequestMatchesSharedFixture() throws {
+        let request = try api().retryRequest(id: recordID)
+
+        XCTAssertEqual(request.url?.path, "/main/test1/api/trpc/quickChat.retry")
+        XCTAssertEqual(request.httpMethod, "POST")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer secret")
+        XCTAssertEqual(request.timeoutInterval, 60)
+        try XCTAssertJSONEqual(request.httpBody, fixture: "retry-request.json")
+    }
+
+    func testOnlyAMissingProcedureIsAnUnknownProcedure() {
+        XCTAssertTrue(QuickChatAPI.APIError.server(status: 404, message: #"No procedure found on path "quickChat.retry""#).isUnknownProcedure)
+        XCTAssertFalse(QuickChatAPI.APIError.server(status: 404, message: "Quick chat message not found.").isUnknownProcedure)
+        XCTAssertFalse(QuickChatAPI.APIError.server(status: 400, message: "No procedure found on path").isUnknownProcedure)
+        XCTAssertFalse(QuickChatAPI.APIError.invalidResponse.isUnknownProcedure)
+    }
+
     func testHomeIsAnAuthenticatedQueryWithNoInput() {
         let request = api().homeRequest()
 
@@ -60,7 +77,7 @@ final class QuickChatAPITests: XCTestCase {
 
     func testEveryViewFixtureDecodes() throws {
         let views = try MobileContractFixtures.load("quick-chat").filter { $0.name.hasPrefix("view-") }
-        XCTAssertEqual(views.count, 9)
+        XCTAssertEqual(views.count, 10)
         for (name, fixture) in views {
             let view = try QuickChatAPI.decodeView(MobileContractFixtures.jsonData(from: fixture))
             XCTAssertEqual(view.id, recordID, name)
@@ -91,6 +108,11 @@ final class QuickChatAPITests: XCTestCase {
         XCTAssertEqual(noSession.state, .sent)
         XCTAssertNil(noSession.destination?.sessionId)
         XCTAssertEqual(try view("view-discarded").state, .discarded)
+        XCTAssertNil(notDelivered.page)
+
+        let pageOnly = try view("view-sending-page-no-note")
+        XCTAssertEqual(pageOnly.message, "")
+        XCTAssertEqual(pageOnly.page, .init(title: "Cedar raised bed kits", url: "https://example.com/garden/cedar-beds"))
     }
 
     func testHomeFixtureDecodes() throws {

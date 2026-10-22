@@ -9,7 +9,9 @@
  *
  * Exit: 0 green, 1 red, 2 bad arguments, 128+n when killed by signal n.
  *
- * Output is one line per command, then `VERDICT: green|red`. A failing test
+ * Output is a `run` line naming each command and its log before it starts,
+ * a result line when it ends, then `VERDICT: green|red`. The log is written
+ * while the command runs. A failing test
  * file is re-run once in isolation: passing there is a flake by the ledger's
  * definition (fail-then-pass at the same content hash) and is named, not
  * hidden; failing again is real and blocks. The `smoke` command gets no such
@@ -35,7 +37,7 @@ class PreflightFailedError extends Error {
   }
 }
 
-const KINDS: VerificationCommand["kind"][] = ["tests", "typecheck", "lint", "smoke", "site"];
+const KINDS: VerificationCommand["kind"][] = ["tests", "typecheck", "lint", "smoke", "site", "apple", "theme"];
 
 /** A usage mistake: exit 2 with the usage text, and run nothing. */
 class UsageError extends Error {
@@ -167,6 +169,10 @@ function unchangedFromMain(root: string, files: string[]): string[] {
   );
 }
 
+export function formatStart(input: { command: string; outputPath: string }): string {
+  return `run  ${input.command} → ${input.outputPath}`;
+}
+
 export function formatResult(result: CommandResult): string[] {
   const seconds = result.seconds.toFixed(1);
   if (result.ok) return [`ok   ${result.command.command} (${seconds}s)`];
@@ -237,11 +243,11 @@ async function runCommand(input: {
 }): Promise<CommandResult> {
   const { command, root, outDir } = input;
   const cwd = join(root, command.cwd);
-  const started = Date.now();
-  const output = await run({ argv: command.argv, cwd });
-  const seconds = (Date.now() - started) / 1000;
   const outputPath = join(outDir, `${String(input.index)}-${command.kind}.log`);
-  writeFileSync(outputPath, output.text);
+  console.log(formatStart({ command: command.command, outputPath }));
+  const started = Date.now();
+  const output = await run({ argv: command.argv, cwd, logPath: outputPath });
+  const seconds = (Date.now() - started) / 1000;
   if (output.status === 0) {
     return { command, ok: true, seconds, outputPath, files: [], unattributed: false };
   }

@@ -261,7 +261,7 @@ export function chatSendReasonKind(reason: string): ChatSendReasonKind {
   return "other";
 }
 
-/** Test seams for the framework-free doctest. */
+/** Test seams for the framework-free test. */
 export function resetChatSendDiagnostics(): void {
   traces.clear();
 }

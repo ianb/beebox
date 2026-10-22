@@ -135,7 +135,7 @@ export default defineConfig({
     // on the machine-wide fseventsd daemon. When fseventsd is overloaded,
     // events arrive 1-15 s late or not at all. Vite then serves the old code
     // with no error, and a restart does not help (measured 2026-09-25; see
-    // issues/bugs/2026-09-25-worktree-vite-serves-stale-modules-because-fsevents-lags.md).
+    // issues/closed/bugs/2026-09-25-worktree-vite-serves-stale-modules-because-fsevents-lags.md).
     // Polling calls stat() on each watched file, so it does not use fseventsd.
     // At 1 s it adds about 1% of one core per running Vite (100 ms, chokidar's
     // default, adds about 7%).

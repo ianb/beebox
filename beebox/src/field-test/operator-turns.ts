@@ -1,5 +1,5 @@
 /**
- * The operator session's turn state machine (`docs/plans/agent-field-tests.md`,
+ * The operator session's turn state machine (`docs/implemented-plans/agent-field-tests.md`,
  * Track 3) — one message in, one settled turn out, over a single long-lived
  * `ChatBackendRun`.
  *
@@ -134,7 +134,7 @@ export function trackOperatorTurns(options: TurnTrackerOptions): TurnTracker {
     state.pending = null;
     pending.timer.stop();
     pending.resolve({
-      note: (outcome.note ?? null) ?? pending.texts.join("\n\n"),
+      note: outcome.note ?? pending.texts.join("\n\n"),
       turns: pending.turns,
       status: outcome.status,
       error: outcome.error,

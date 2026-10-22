@@ -11,7 +11,7 @@ issues:
 **Parent plan:** none yet. Evidence: the 2026-10-08 journey walks
 ([A-lending](../../test/user-stories/journeys/A-lending/reports/2026-10-08.md),
 [B-inventory](../../test/user-stories/journeys/B-inventory/reports/2026-10-08-2.md),
-[D-chemistry](../../test/user-stories/journeys/D-chemistry/reports/2026-10-08.md)).
+[D-chemistry](../../test/plugins/courseware/journeys/D-chemistry/reports/2026-10-08.md)).
 
 People treat a landmark as a place. Every way they tried to go to one ended in
 an empty chat or in the landmark's configuration. This design says what a

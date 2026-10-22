@@ -1,0 +1,935 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chunks preview</title>
+<style>
+  :root { --bg:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --mute:#a3a29c; --line:#e6e5e0; --blue:#2a78d6; --blue-l:#e3eefb; --orange:#eb6834; --aqua:#1baf7a; --dark:#24221e; }
+  body { margin:0; background:#eceae4; color:var(--ink); font:16px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  .wrap { max-width:1280px; margin:0 auto; padding:28px 16px 80px; }
+  h1 { font-size:1.5em; margin:0 0 .2em; }
+  .lede { color:var(--ink2); max-width:80ch; margin:0 0 1.2em; }
+  .filters { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 20px; }
+  .filters button { font:13px system-ui; padding:6px 12px; border:1px solid var(--line); background:var(--bg); border-radius:999px; cursor:pointer; }
+  .filters button.on { background:var(--dark); color:#fff; border-color:var(--dark); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr)); gap:20px; }
+  .card { background:var(--bg); border-radius:14px; box-shadow:0 2px 14px rgba(0,0,0,.08); padding:18px 20px 16px; display:flex; flex-direction:column; gap:10px; min-height:300px; position:relative; overflow:hidden; }
+  .card.hide { display:none; }
+  .top { display:flex; justify-content:space-between; font:500 11px ui-monospace,Menlo,monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
+  .kind { padding:2px 8px; border-radius:999px; background:var(--line); color:var(--ink2); }
+  .eyebrow { font:500 12px ui-monospace,Menlo,monospace; letter-spacing:.1em; text-transform:uppercase; color:var(--ink2); }
+  h2 { font-size:1.35em; line-height:1.15; margin:0; letter-spacing:-.02em; }
+  .payload { flex:1; display:flex; flex-direction:column; justify-content:center; }
+  .cues { display:flex; flex-wrap:wrap; gap:6px; border-top:1px solid var(--line); padding-top:10px; }
+  .cues span { font-size:12px; color:var(--ink2); background:#f1efe9; padding:2px 8px; border-radius:6px; }
+  .cues span:before { content:"“"; color:var(--mute); } .cues span:after { content:"”"; color:var(--mute); }
+  .with { font-size:12px; color:var(--mute); } .with a { color:var(--blue); text-decoration:none; }
+  code { font:0.92em ui-monospace,Menlo,monospace; background:#f1efe9; padding:0 4px; border-radius:4px; }
+
+  .k-number .kind { background:var(--blue-l); color:var(--blue); }
+  .pairs { display:grid; gap:18px; } .pairs.n2 { grid-template-columns:1fr 1fr; }
+  .big { font-size:clamp(40px, 5vw, 64px); font-weight:700; letter-spacing:-.04em; line-height:1; color:var(--blue); }
+  .pairs .cap { color:var(--ink2); font-size:14px; margin-top:6px; }
+
+  .k-quote { background:var(--dark); color:#f1ede5; } .k-quote .eyebrow, .k-quote .top { color:#a59d90; } .k-quote .kind { background:#3a3732; color:#d3cabb; }
+  .k-quote blockquote { margin:0; font-size:1.25em; line-height:1.3; font-weight:500; position:relative; padding-left:28px; }
+  .k-quote blockquote:before { content:"“"; position:absolute; left:-4px; top:-14px; font-size:64px; color:var(--aqua); line-height:1; }
+  .k-quote .attr { color:#a59d90; font-size:13px; margin-top:12px; padding-left:28px; }
+  .k-quote .cues { border-top-color:#3a3732; } .k-quote .cues span { background:#3a3732; color:#d3cabb; } .k-quote code { background:#3a3732; }
+
+  .k-contrast .kind { background:#fde9e0; color:var(--orange); }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+  .col { padding:12px 14px; } .col:first-child { background:#f1efe9; color:var(--ink2); border-radius:10px 0 0 10px; } .col:last-child { background:var(--blue-l); border-radius:0 10px 10px 0; }
+  .col .lab { font:600 11px ui-monospace,Menlo,monospace; letter-spacing:.1em; text-transform:uppercase; margin-bottom:6px; } .col:last-child .lab { color:var(--blue); }
+  .col p { margin:0; font-size:15px; }
+
+  .k-case .kind { background:#e3f6ee; color:var(--aqua); }
+  table { border-collapse:collapse; width:100%; font-size:14px; } th { text-align:left; font:600 11px ui-monospace,Menlo,monospace; letter-spacing:.08em; text-transform:uppercase; color:var(--ink2); padding:6px 8px; border-bottom:2px solid var(--ink); } td { padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; } td:last-child { color:var(--blue); font-weight:500; }
+
+  .k-rule .kind { background:#eee; color:var(--ink); }
+  pre { margin:0; background:var(--dark); color:#e8e3d8; padding:16px 18px; border-radius:10px; font:13px/1.45 ui-monospace,Menlo,monospace; white-space:pre-wrap; border-left:6px solid var(--orange); }
+
+  .k-timeline .kind { background:#eee8f8; color:#6a4fc0; }
+  .rail { list-style:none; margin:0; padding:0 0 0 14px; border-left:2px solid var(--blue); }
+  .rail li { position:relative; padding:0 0 12px 16px; font-size:14px; } .rail li:last-child { padding-bottom:0; }
+  .rail li:before { content:""; position:absolute; left:-21px; top:6px; width:10px; height:10px; border-radius:50%; background:var(--bg); border:2px solid var(--blue); }
+  .rail time { display:block; font:600 11px ui-monospace,Menlo,monospace; color:var(--blue); letter-spacing:.06em; }
+
+  .k-figure { grid-column: span 2; } .k-figure .kind { background:#fff3d6; color:#9a6a00; }
+  .k-figure img { width:100%; height:auto; display:block; border:1px solid var(--line); border-radius:8px; background:#fff; }
+  .k-figure .cap { color:var(--ink2); font-size:14px; margin-top:8px; }
+  @media (max-width: 820px) { .k-figure { grid-column: span 1; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Chunks preview</h1>
+<p class="lede">103 chunks (number 29 · quote 13 · contrast 27 · case 10 · rule 11 · timeline 7 · figure 6). Each card is one observation in its kind's layout; the phrases at the bottom are the cues a co-presenter matches against speech. Source: the <code>.md</code> files in this directory; rebuilt by <code>build.ts</code>.</p>
+<div class="filters"><button class="on" data-k="all">all</button><button data-k="number">number</button><button data-k="quote">quote</button><button data-k="contrast">contrast</button><button data-k="case">case</button><button data-k="rule">rule</button><button data-k="timeline">timeline</button><button data-k="figure">figure</button></div>
+<div class="grid">
+<article class="card k-rule" id="after-action-verify">
+<div class="top"><span class="kind">rule</span><span class="id">after-action-verify</span></div>
+<div class="eyebrow">Bug reports from test agents</div>
+<h2>The agent playing a user notices. A second pass checks.</h2>
+<div class="payload"><pre>On 2026-08-24, three of the seven bugs a walk reported were ours …
+
+&gt; Nothing from a walk becomes a finding until it has been separately verified.
+&gt; The walker's job is to notice. Yours is to find out what actually happened.</pre></div>
+<div class="cues"><span>three of seven were ours</span><span>check before filing</span><span>its job is to notice</span><span>false bugs</span><span>the review pass</span></div>
+<div class="with">with: <a href="#journey-funnel">journey-funnel</a> · <a href="#walker-props-prompt">walker-props-prompt</a> · <a href="#rogue-walker">rogue-walker</a></div>
+</article>
+<article class="card k-number" id="alerts-peak">
+<div class="top"><span class="kind">number</span><span class="id">alerts-peak</span></div>
+<div class="eyebrow">Automatic warnings</div>
+<h2>Too many warnings, so now I get one summary a day</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">143</div><div class="cap">warnings in September, up from 47 in August; on Sep 18, one 9 a.m. summary</div></div><div class="pair"><div class="big">172 of 229</div><div class="cap">warnings I closed myself</div></div></div></div>
+<div class="cues"><span>too many warnings</span><span>a hundred forty-three</span><span>interrupt me only if it cannot wait a day</span><span>one summary a day</span><span>rules for when to warn</span></div>
+<div class="with">with: <a href="#schedules-at-a-glance">schedules-at-a-glance</a> · <a href="#schedules-produced">schedules-produced</a></div>
+</article>
+<article class="card k-number" id="answer-loop-thin">
+<div class="top"><span class="kind">number</span><span class="id">answer-loop-thin</span></div>
+<div class="eyebrow">Where my answers go</div>
+<h2>Agents ask me questions on a page. I answer in chat.</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">4 / 128</div><div class="cap">pages of screenshots I answered on the page itself</div></div><div class="pair"><div class="big">1 / 65</div><div class="cap">agent sessions that looked for my notes on a document, then cleared them</div></div></div></div>
+<div class="cues"><span>four of a hundred twenty-eight</span><span>nobody answers on the page</span><span>answers come back through chat</span><span>notes on the document</span><span>the return side</span></div>
+<div class="with">with: <a href="#exhibit-one-ask">exhibit-one-ask</a></div>
+</article>
+<article class="card k-number" id="audit-rerun-nine-gaps">
+<div class="top"><span class="kind">number</span><span class="id">audit-rerun-nine-gaps</span></div>
+<div class="eyebrow">Quizzing the agent</div>
+<h2>I quiz the agent to find what nobody told it</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">9 / 217</div><div class="cap">questions showed a real gap in its instructions; all fixed</div></div><div class="pair"><div class="big">31</div><div class="cap">were out of date: the right answer had moved</div></div></div></div>
+<div class="cues"><span>quiz the agent</span><span>did the instructions reach the agent</span><span>the July rerun</span><span>nine real gaps</span><span>the answer had moved</span></div>
+<div class="with">with: <a href="#dev-audit-answer-key">dev-audit-answer-key</a> · <a href="#instruments-and-gates">instruments-and-gates</a></div>
+</article>
+<article class="card k-quote" id="blind-spots-shared">
+<div class="top"><span class="kind">quote</span><span class="id">blind-spots-shared</span></div>
+<div class="eyebrow">Second-model review</div>
+<h2>A different model family reviews every piece of work</h2>
+<div class="payload"><blockquote>A model can't catch the blind spots it shares with itself.</blockquote><div class="attr">From our write-up of how we work</div></div>
+<div class="cues"><span>why another model</span><span>the other model family</span><span>blind spots</span><span>a model reviewing itself</span><span>second reader</span></div>
+<div class="with">with: <a href="#cross-model-catches">cross-model-catches</a> · <a href="#codex-reviewing-codex">codex-reviewing-codex</a></div>
+</article>
+<article class="card k-number" id="browse-indirect-development">
+<div class="top"><span class="kind">number</span><span class="id">browse-indirect-development</span></div>
+<div class="eyebrow">The agents' browser tool</div>
+<h2>Agents fix their own browser tool while doing something else</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">86</div><div class="cap">commits change the browser tool</div></div><div class="pair"><div class="big">21 of 24</div><div class="cap">commits naming a task came from some other task; 7 from scripted walks</div></div></div></div>
+<div class="cues"><span>the browser tool</span><span>I never drive the browser</span><span>fixed in passing</span><span>other tasks</span><span>indirect development</span></div>
+<div class="with">with: <a href="#browse-silent-clicks">browse-silent-clicks</a> · <a href="#tool-user-is-agent">tool-user-is-agent</a></div>
+</article>
+<article class="card k-rule" id="browse-silent-clicks">
+<div class="top"><span class="kind">rule</span><span class="id">browse-silent-clicks</span></div>
+<div class="eyebrow">The agents' browser tool</div>
+<h2>The browser said &quot;done&quot; when the click hit nothing</h2>
+<div class="payload"><pre>… refuse silent clicks, and put ids on every static control
+  agent-browser's click is a box-center mouse event with no preconditions:
+  disabled, covered, off-screen, zero-size ... all report '✓ Done'.
+  A journey walker read those as the app doing nothing.</pre></div>
+<div class="cues"><span>silent clicks</span><span>it said done</span><span>the app doing nothing</span><span>refuse the click</span><span>an id on every control</span></div>
+<div class="with">with: <a href="#browse-indirect-development">browse-indirect-development</a> · <a href="#tool-user-is-agent">tool-user-is-agent</a> · <a href="#after-action-verify">after-action-verify</a></div>
+</article>
+<article class="card k-number" id="calibration-pilot">
+<div class="top"><span class="kind">number</span><span class="id">calibration-pilot</span></div>
+<div class="eyebrow">Shortening a prompt</div>
+<h2>I test a shorter prompt on four models before keeping it</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">4 × 12</div><div class="cap">models × test cases on where a request should go</div></div><div class="pair"><div class="big">5</div><div class="cap">scenarios on who may decide what; every limit set in advance held</div></div></div></div>
+<div class="cues"><span>tested on four models</span><span>did the cut break anything</span><span>which request goes where</span><span>who may decide what</span><span>the only test across models</span></div>
+<div class="with">with: <a href="#prompt-calibration-cut">prompt-calibration-cut</a> · <a href="#example-contamination">example-contamination</a></div>
+</article>
+<article class="card k-rule" id="careful-tier-demoted">
+<div class="top"><span class="kind">rule</span><span class="id">careful-tier-demoted</span></div>
+<div class="eyebrow">Unreliable tests</div>
+<h2>I demote tests that fail at random. Nobody deletes them.</h2>
+<div class="payload"><pre>They are not deleted for being a nuisance; they run less often and more
+carefully.
+
+Membership is a judgment, not an automatic demotion.</pre></div>
+<div class="cues"><span>slow lane</span><span>tests that fail at random</span><span>quarantine</span><span>demoted not deleted</span><span>a judgment call</span></div>
+<div class="with">with: <a href="#flake-single-rerun">flake-single-rerun</a> · <a href="#ledger-flake-load">ledger-flake-load</a></div>
+</article>
+<article class="card k-contrast" id="cluster-is-a-hypothesis">
+<div class="top"><span class="kind">contrast</span><span class="id">cluster-is-a-hypothesis</span></div>
+<div class="eyebrow">Grouping issues</div>
+<h2>Issues that look alike are a guess until you read them</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Without reading</div><p>an agent grouped eight issues by title, decided my live calendar was at risk, and started work</p></div><div class="col"><div class="lab">Now</div><p>a group of similar titles is &quot;a reason to read, not a finding&quot;</p></div></div></div>
+<div class="cues"><span>a group is a guess</span><span>grouped by title</span><span>without reading them</span><span>read every one</span></div>
+<div class="with">with: <a href="#pick-issues-batching">pick-issues-batching</a> · <a href="#sigil-rule-then-refusal">sigil-rule-then-refusal</a></div>
+</article>
+<article class="card k-contrast" id="codex-day-one">
+<div class="top"><span class="kind">contrast</span><span class="id">codex-day-one</span></div>
+<div class="eyebrow">Adding a second agent</div>
+<h2>A second agent means setup can't live inside one tool</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>setup and cleanup ran inside Claude's own scripts; OpenAI's agent ran none, and about ten checkouts piled up on day one</p></div><div class="col"><div class="lab">After</div><p>one shared command creates and cleans up checkouts; OpenAI's agent, timed jobs and a third-party model all use it</p></div></div></div>
+<div class="cues"><span>OpenAI's agent arrived</span><span>checkouts piled up</span><span>no cleanup ran</span><span>one shared command</span><span>the second agent</span></div>
+<div class="with">with: <a href="#the-seam">the-seam</a></div>
+</article>
+<article class="card k-timeline" id="codex-mirrors-timeline">
+<div class="top"><span class="kind">timeline</span><span class="id">codex-mirrors-timeline</span></div>
+<div class="eyebrow">One file, two agents</div>
+<h2>It took three tries to give both agents one instruction file</h2>
+<div class="payload"><ol class="rail"><li><time>05-26</time><span>a stale, partial copy for the second agent removed</span></li><li><time>08-04</time><span>a generator copies every instruction file, uncommitted</span></li><li><time>09-16</time><span>agent definitions copied too</span></li><li><time>10-09</time><span>all 20 files renamed to a name both read</span></li></ol></div>
+<div class="cues"><span>instructions for the other agent</span><span>three designs</span><span>a copy that went stale</span><span>a generated copy</span><span>both agents read it</span></div>
+<div class="with">with: <a href="#prose-rule-then-refusal">prose-rule-then-refusal</a> · <a href="#craft-skills-retired">craft-skills-retired</a></div>
+</article>
+<article class="card k-contrast" id="codex-reviewing-codex">
+<div class="top"><span class="kind">contrast</span><span class="id">codex-reviewing-codex</span></div>
+<div class="eyebrow">Second-model review</div>
+<h2>My second-model review only worked when Claude wrote the code</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>when OpenAI's agent did the work, it reviewed itself: &quot;a same-model self-review wearing the costume of the cross-model check&quot;</p></div><div class="col"><div class="lab">After</div><p>&quot;The reviewer must use the other model family, regardless of the driving model.&quot;</p></div></div></div>
+<div class="cues"><span>OpenAI's agent reviewing itself</span><span>same-model review</span><span>one direction only</span><span>the other model family</span></div>
+<div class="with">with: <a href="#blind-spots-shared">blind-spots-shared</a> · <a href="#cross-model-catches">cross-model-catches</a></div>
+</article>
+<article class="card k-rule" id="could-this-be-simpler">
+<div class="top"><span class="kind">rule</span><span class="id">could-this-be-simpler</span></div>
+<div class="eyebrow">Writing plans</div>
+<h2>Every plan has to say what its complexity buys</h2>
+<div class="payload"><pre>&lt;!-- A gate, not a section. … If you can't
+     name what the complexity buys, shrink the plan. --&gt;</pre></div>
+<div class="cues"><span>could this be simpler</span><span>the plan template</span><span>what does the complexity buy</span><span>shrink the plan</span><span>over-building</span></div>
+<div class="with">with: <a href="#plans-written-and-partial">plans-written-and-partial</a> · <a href="#partial-plan-violation">partial-plan-violation</a></div>
+</article>
+<article class="card k-case" id="craft-skills-retired">
+<div class="top"><span class="kind">case</span><span class="id">craft-skills-retired</span></div>
+<div class="eyebrow">Retiring instruction files</div>
+<h2>Models already know how to debug. They need our steps.</h2>
+<div class="payload"><table><thead><tr><th>Instruction file</th><th>Why</th></tr></thead><tbody><tr><td>debugging, front-end work, testing</td><td>&quot;Current models debug and build UI without a skill&quot;</td></tr><tr><td>code health</td><td>it recommended a code layout our style guide forbids</td></tr><tr><td>kept: landing on main, second-model review, planning, browser driving, filing issues</td><td>among the most used</td></tr></tbody></table></div>
+<div class="cues"><span>teaching instructions</span><span>how to debug</span><span>how to build UI</span><span>current models do this already</span><span>retired into docs</span></div>
+<div class="with">with: <a href="#skills-created-retired">skills-created-retired</a> · <a href="#skill-description-trigger">skill-description-trigger</a> · <a href="#codex-mirrors-timeline">codex-mirrors-timeline</a></div>
+</article>
+<article class="card k-number" id="cross-model-catches">
+<div class="top"><span class="kind">number</span><span class="id">cross-model-catches</span></div>
+<div class="eyebrow">Second-model review</div>
+<h2>The other model family catches more than anything else</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">134</div><div class="cap">commits where the other model's review found something</div></div><div class="pair"><div class="big">55</div><div class="cap">issues it found; 41 closed</div></div></div></div>
+<div class="cues"><span>second-model review</span><span>what the other model found</span><span>OpenAI's agent found it</span><span>review catches</span><span>fifty-five issues</span></div>
+<div class="with">with: <a href="#review-file-audit-trail">review-file-audit-trail</a> · <a href="#blind-spots-shared">blind-spots-shared</a> · <a href="#codex-reviewing-codex">codex-reviewing-codex</a></div>
+</article>
+<article class="card k-number" id="cull-zero-unknown">
+<div class="top"><span class="kind">number</span><span class="id">cull-zero-unknown</span></div>
+<div class="eyebrow">Automatic cleanup</div>
+<h2>Finished checkouts clean themselves up. Nothing goes on a guess.</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">144</div><div class="cap">separate checkouts removed without me</div></div><div class="pair"><div class="big">0</div><div class="cap">times it couldn't tell whether an agent was still there (793 skipped because one was)</div></div></div></div>
+<div class="cues"><span>zero unknown</span><span>it cleans up after itself</span><span>no step for me</span><span>it never deletes on a guess</span><span>a hundred forty-four</span></div>
+<div class="with">with: <a href="#liveness-fail-closed">liveness-fail-closed</a> · <a href="#workstream-not-worktree">workstream-not-worktree</a></div>
+</article>
+<article class="card k-contrast" id="cut-regrow-budget">
+<div class="top"><span class="kind">contrast</span><span class="id">cut-regrow-budget</span></div>
+<div class="eyebrow">Trimming instructions</div>
+<h2>Instructions I trim by hand grow back. The one with a word budget doesn't.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Trimmed by hand</div><p>114 lines back up to 184; 850 words back up to 1,277</p></div><div class="col"><div class="lab">With a budget</div><p>5,555 of 5,595 words, held, and it caught one overrun</p></div></div></div>
+<div class="cues"><span>a cut without a budget does not hold</span><span>it grew back</span><span>the one with a budget held</span><span>word budget</span></div>
+<div class="with">with: <a href="#package-file-line-series">package-file-line-series</a> · <a href="#root-file-words">root-file-words</a> · <a href="#guide-ledger-budget">guide-ledger-budget</a> · <a href="#grows-unless-pruned">grows-unless-pruned</a></div>
+</article>
+<article class="card k-contrast" id="dev-audit-answer-key">
+<div class="top"><span class="kind">contrast</span><span class="id">dev-audit-answer-key</span></div>
+<div class="eyebrow">Quizzing the coding agent</div>
+<h2>My first quiz passed because the agent read the answer key</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>&quot;eight entries … all passing&quot;; the agent could open the answer file and copy from it</p></div><div class="col"><div class="lab">After</div><p>answer files blocked; &quot;Seven of eight passed on the first clean run&quot;</p></div></div></div>
+<div class="cues"><span>the agent read the answer key</span><span>all passing</span><span>seven of eight</span><span>quiz the coding agent</span></div>
+<div class="with">with: <a href="#audit-rerun-nine-gaps">audit-rerun-nine-gaps</a></div>
+</article>
+<article class="card k-timeline" id="doc-check-timeline">
+<div class="top"><span class="kind">timeline</span><span class="id">doc-check-timeline</span></div>
+<div class="eyebrow">Checking the docs</div>
+<h2>Doc checks started as a report. Now they block commits.</h2>
+<div class="payload"><ol class="rail"><li><time>03-04</time><span>a report lists unlinked docs and broken links</span></li><li><time>07-04</time><span>broken links block commits</span></li><li><time>09-13</time><span>a plan's status must match its folder</span></li><li><time>10-07</time><span>every path a doc names must exist; 85 fixed</span></li></ol></div>
+<div class="cues"><span>broken links</span><span>out-of-date paths</span><span>eighty-five references</span><span>docs commits fail</span><span>checking the docs</span></div>
+<div class="with">with: <a href="#guards-keep-no-record">guards-keep-no-record</a> · <a href="#mechanics-into-scripts">mechanics-into-scripts</a></div>
+</article>
+<article class="card k-quote" id="doctest-tap-for-agents">
+<div class="top"><span class="kind">quote</span><span class="id">doctest-tap-for-agents</span></div>
+<div class="eyebrow">Test output</div>
+<h2>I write test output for an agent, not for me</h2>
+<div class="payload"><blockquote>the consumers of test runs are agents reading through a pipe</blockquote><div class="attr">The commit that took the color out of all our test output</div></div>
+<div class="cues"><span>plain test output</span><span>no color</span><span>reading through a pipe</span><span>who reads test output</span></div>
+<div class="with">with: <a href="#doctests-are-most-tests">doctests-are-most-tests</a></div>
+</article>
+<article class="card k-number" id="doctests-are-most-tests">
+<div class="top"><span class="kind">number</span><span class="id">doctests-are-most-tests</span></div>
+<div class="eyebrow">Tests as documents</div>
+<h2>Most of our tests are documents an agent can read</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">1,035 / 142</div><div class="cap">test files written as Markdown documents, against ordinary code test files</div></div><div class="pair"><div class="big">83%</div><div class="cap">of all test lines are in the documents</div></div></div></div>
+<div class="cues"><span>tests are Markdown</span><span>the agent reads and writes the tests</span><span>a thousand test documents</span><span>eighty-three percent</span></div>
+<div class="with">with: <a href="#doctest-tap-for-agents">doctest-tap-for-agents</a> · <a href="#ledger-flake-load">ledger-flake-load</a></div>
+</article>
+<article class="card k-quote" id="evidence-stays-in-tree">
+<div class="top"><span class="kind">quote</span><span class="id">evidence-stays-in-tree</span></div>
+<div class="eyebrow">Keeping the evidence</div>
+<h2>It's all in the project, so I can ask what happened</h2>
+<div class="payload"><blockquote>by putting things like issues in the repository, and plans, and setting up<br>the ability to read sessions, etc., this means I can have good discussions<br>about what happened and how well the system works, and there's evidence<br>left over for all of it.</blockquote><div class="attr">Me, in my notes for this talk</div></div>
+<div class="cues"><span>evidence left over</span><span>it's all in the project</span><span>I can ask what happened</span><span>read the record</span><span>not from memory</span></div>
+<div class="with">with: <a href="#provenance-by-agents">provenance-by-agents</a> · <a href="#old-plans-read">old-plans-read</a> · <a href="#instrument-before-gate">instrument-before-gate</a></div>
+</article>
+<article class="card k-contrast" id="example-contamination">
+<div class="top"><span class="kind">contrast</span><span class="id">example-contamination</span></div>
+<div class="eyebrow">Examples in prompts</div>
+<h2>Give a model an example and it copies the details</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>a worked example of a new session's instructions; models copied its invented details into real ones</p></div><div class="col"><div class="lab">After</div><p>no example, just fill-in fields</p></div></div></div>
+<div class="cues"><span>worked example</span><span>they copied the example</span><span>invented details</span><span>fill-in fields</span></div>
+<div class="with">with: <a href="#calibration-pilot">calibration-pilot</a> · <a href="#prompt-calibration-cut">prompt-calibration-cut</a></div>
+</article>
+<article class="card k-rule" id="exhibit-one-ask">
+<div class="top"><span class="kind">rule</span><span class="id">exhibit-one-ask</span></div>
+<div class="eyebrow">Questions from agents</div>
+<h2>Every page an agent sends me asks exactly one thing</h2>
+<div class="payload"><pre>Every exhibit carries exactly one ask.
+…
+`fyi` is not a dumping ground and a
+real decision tagged `fyi` is a decision that never gets made.</pre></div>
+<div class="cues"><span>exactly one ask</span><span>decide confirm react or for your information</span><span>not a dumping ground</span><span>a decision that never gets made</span></div>
+<div class="with">with: <a href="#answer-loop-thin">answer-loop-thin</a></div>
+</article>
+<article class="card k-number" id="feature-wishes-never-close">
+<div class="top"><span class="kind">number</span><span class="id">feature-wishes-never-close</span></div>
+<div class="eyebrow">Wishes from test walks</div>
+<h2>Agents playing users ask for features. None has closed.</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">7 / 0</div><div class="cap">missing-feature issues, open / closed</div></div><div class="pair"><div class="big">3 / 0</div><div class="cap">issues waiting on my product decision, open / closed</div></div></div></div>
+<div class="cues"><span>feature wishes</span><span>never closed</span><span>seven and zero</span><span>needs a decision</span><span>what the agent wished the app had</span></div>
+<div class="with">with: <a href="#journey-kinds">journey-kinds</a> · <a href="#open-journey-issues">open-journey-issues</a></div>
+</article>
+<article class="card k-number" id="fifteen-re-encounters">
+<div class="top"><span class="kind">number</span><span class="id">fifteen-re-encounters</span></div>
+<div class="eyebrow">Repeat sightings</div>
+<h2>The test walks keep hitting the same bugs</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">15</div><div class="cap">repeats noted in one day, 8 on issues older than the walks</div></div><div class="pair"><div class="big">6</div><div class="cap">issues that went back to me for a decision</div></div></div></div>
+<div class="cues"><span>fifteen times</span><span>hit it again</span><span>the walks keep hitting it</span><span>ask me to decide</span><span>priority may be stale</span></div>
+<div class="with">with: <a href="#re-encounter-rule">re-encounter-rule</a> · <a href="#landmark-chat-never-closes">landmark-chat-never-closes</a></div>
+</article>
+<article class="card k-case" id="filed-vs-closed-by-month">
+<div class="top"><span class="kind">case</span><span class="id">filed-vs-closed-by-month</span></div>
+<div class="eyebrow">Backlog, median age 45 days</div>
+<h2>We file more issues than we close, every month</h2>
+<div class="payload"><table><thead><tr><th>Month</th><th>Filed</th><th>Closed</th></tr></thead><tbody><tr><td>Jul</td><td>336</td><td>112</td></tr><tr><td>Aug</td><td>448</td><td>298</td></tr><tr><td>Sep</td><td>329</td><td>208</td></tr><tr><td>Oct (9 days)</td><td>111</td><td>103</td></tr></tbody></table></div>
+<div class="cues"><span>filing outpaces closing</span><span>more filed than closed</span><span>the backlog keeps growing</span><span>every month</span></div>
+<div class="with">with: <a href="#issue-file-per-tension">issue-file-per-tension</a> · <a href="#provenance-by-agents">provenance-by-agents</a> · <a href="#pick-issues-batching">pick-issues-batching</a></div>
+</article>
+<article class="card k-timeline" id="finish-agent-lines">
+<div class="top"><span class="kind">timeline</span><span class="id">finish-agent-lines</span></div>
+<div class="eyebrow">Instructions for landing work</div>
+<h2>Instructions grow until the mechanics move into scripts</h2>
+<div class="payload"><ol class="rail"><li><time>07-03</time><span>175 lines</span></li><li><time>08-08</time><span>624 lines</span></li><li><time>08-25</time><span>two scripts take over the mechanics</span></li><li><time>08-30</time><span>165 lines</span></li></ol></div>
+<div class="cues"><span>mechanics into scripts</span><span>the landing agent grew</span><span>six hundred lines</span><span>moved into scripts</span></div>
+<div class="with">with: <a href="#mechanics-into-scripts">mechanics-into-scripts</a></div>
+</article>
+<article class="card k-rule" id="flake-single-rerun">
+<div class="top"><span class="kind">rule</span><span class="id">flake-single-rerun</span></div>
+<div class="eyebrow">Unreliable tests</div>
+<h2>A random failure gets one rerun, then it gets named</h2>
+<div class="payload"><pre>A failing test file is re-run once in isolation: passing there is a flake …
+and is named, not hidden; failing again is real and blocks.</pre></div>
+<div class="cues"><span>a test that fails at random</span><span>rerun it</span><span>never rerun to chase green</span><span>rerun once alone</span><span>named not hidden</span></div>
+<div class="with">with: <a href="#ledger-flake-load">ledger-flake-load</a> · <a href="#careful-tier-demoted">careful-tier-demoted</a></div>
+</article>
+<article class="card k-case" id="four-issues-four-fates">
+<div class="top"><span class="kind">case</span><span class="id">four-issues-four-fates</span></div>
+<div class="eyebrow">The message box</div>
+<h2>Four issues, found four ways, settled in one sitting</h2>
+<div class="payload"><table><thead><tr><th>Issue</th><th>Found by</th><th>Outcome</th></tr></thead><tbody><tr><td>attaching in the message box is awkward</td><td>a prototype tried in the field</td><td>landed, waiting for me to try it</td></tr><tr><td>cancelling a batch loses photos</td><td>the other model's review</td><td>landed, waiting for me to try it</td></tr><tr><td>a draft ends up inside another message</td><td>a scripted walk</td><td>implemented</td></tr><tr><td>pasting a WebP image is rejected</td><td>a scripted walk's test files</td><td>won't fix: the premise did not hold</td></tr></tbody></table></div>
+<div class="cues"><span>grouping issues</span><span>issues come from different directions</span><span>one session settles them</span><span>the message box</span></div>
+<div class="with">with: <a href="#pick-issues-batching">pick-issues-batching</a> · <a href="#provenance-by-agents">provenance-by-agents</a> · <a href="#cluster-is-a-hypothesis">cluster-is-a-hypothesis</a></div>
+</article>
+<article class="card k-case" id="full-suite-red-fates">
+<div class="top"><span class="kind">case</span><span class="id">full-suite-red-fates</span></div>
+<div class="eyebrow">871 hourly test runs</div>
+<h2>Running every test hourly: 29 alarms, 11 real breakages</h2>
+<div class="payload"><table><thead><tr><th>Outcome</th><th>Issues</th></tr></thead><tbody><tr><td>fixed: a real breakage</td><td>11</td></tr><tr><td>replaced, mostly from the job blaming its own report</td><td>16</td></tr><tr><td>won't fix</td><td>1</td></tr><tr><td>open</td><td>1</td></tr></tbody></table></div>
+<div class="cues"><span>the hourly test run</span><span>failing on main</span><span>find the commit that broke it</span><span>eleven real breakages</span></div>
+<div class="with">with: <a href="#reporter-blamed-itself">reporter-blamed-itself</a> · <a href="#selection-gate-missed">selection-gate-missed</a> · <a href="#smoke-runs">smoke-runs</a></div>
+</article>
+<article class="card k-rule" id="grows-unless-pruned">
+<div class="top"><span class="kind">rule</span><span class="id">grows-unless-pruned</span></div>
+<div class="eyebrow">Pruning instructions</div>
+<h2>Instructions only grow. Every edit must cut more than it adds.</h2>
+<div class="payload"><pre>Agent and skill files only ever grow unless pruned: when touching one,
+remove more than you add, move mechanics into a script the agent runs,
+keep only rules that need judgment, and give a rewrite a line budget.</pre></div>
+<div class="cues"><span>only ever grow</span><span>remove more than you add</span><span>line budget</span><span>unless pruned</span><span>the files keep growing</span></div>
+<div class="with">with: <a href="#mechanics-into-scripts">mechanics-into-scripts</a> · <a href="#skills-created-retired">skills-created-retired</a> · <a href="#cut-regrow-budget">cut-regrow-budget</a></div>
+</article>
+<article class="card k-contrast" id="guards-keep-no-record">
+<div class="top"><span class="kind">contrast</span><span class="id">guards-keep-no-record</span></div>
+<div class="eyebrow">Checks before every commit</div>
+<h2>My commit checks block things. I don't know how often.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">What they check</div><p>home-folder paths, a personal blocklist (blocks when unsure), the old product name, private keys, broken doc links, file layout</p></div><div class="col"><div class="lab">What they record</div><p>nothing; how many commits they blocked is unknown</p></div></div></div>
+<div class="cues"><span>checks before every commit</span><span>leaked home path</span><span>personal blocklist</span><span>the old product name</span><span>how often did it block</span><span>we don't know</span></div>
+<div class="with">with: <a href="#instrument-before-gate">instrument-before-gate</a> · <a href="#instruments-and-gates">instruments-and-gates</a> · <a href="#doc-check-timeline">doc-check-timeline</a></div>
+</article>
+<article class="card k-number" id="guide-ledger-budget">
+<div class="top"><span class="kind">number</span><span class="id">guide-ledger-budget</span></div>
+<div class="eyebrow">The in-app agent's instructions</div>
+<h2>I gave the instructions a word budget. It holds.</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">11,435 → 5,555</div><div class="cap">words I wrote, then words the agent receives; the budget is 5,595</div></div><div class="pair"><div class="big">5,705</div><div class="cap">words once on main; an agent filed an issue instead of raising the budget</div></div></div></div>
+<div class="cues"><span>the in-app agent's instructions</span><span>a word budget</span><span>the check enforces it</span><span>every rule earns its place</span><span>an agent filed an issue</span></div>
+<div class="with">with: <a href="#cut-regrow-budget">cut-regrow-budget</a> · <a href="#root-file-words">root-file-words</a></div>
+</article>
+<article class="card k-contrast" id="host-memory-ceiling">
+<div class="top"><span class="kind">contrast</span><span class="id">host-memory-ceiling</span></div>
+<div class="eyebrow">Parallel agents, one Mac</div>
+<h2>With nine agents at once, memory runs out before anything else</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>about nine agent sessions at once, and 20 GB of swap (disk used as overflow memory)</p></div><div class="col"><div class="lab">After</div><p>full test and check runs share two slots, and wait while the machine is swapping</p></div></div></div>
+<div class="cues"><span>the machine ran out of memory</span><span>eighteen gigs of swap</span><span>two slots</span><span>the limit moved to the machine</span><span>nine sessions at once</span></div>
+<div class="with">with: <a href="#to-do-database">to-do-database</a> · <a href="#schedules-at-a-glance">schedules-at-a-glance</a></div>
+</article>
+<article class="card k-contrast" id="how-much-to-do-ladder">
+<div class="top"><span class="kind">contrast</span><span class="id">how-much-to-do-ladder</span></div>
+<div class="eyebrow">Four levels of permission</div>
+<h2>&quot;Go ahead&quot; meant four different things. Now it means one.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>I had said &quot;go ahead&quot; in 129 sessions, and each agent guessed whether that meant discuss, plan, build, or ship</p></div><div class="col"><div class="lab">Now</div><p>four named levels (discuss, plan, do, land); when my wording is unclear the agent takes the lowest one and says so</p></div></div></div>
+<div class="cues"><span>go ahead</span><span>what does go ahead mean</span><span>discuss plan do land</span><span>how much to do</span><span>the lowest level the wording supports</span></div>
+<div class="with">with: <a href="#tensions-not-license">tensions-not-license</a> · <a href="#pick-issues-batching">pick-issues-batching</a></div>
+</article>
+<article class="card k-number" id="humans-type-three-skills">
+<div class="top"><span class="kind">number</span><span class="id">humans-type-three-skills</span></div>
+<div class="eyebrow">Who picks the skill</div>
+<h2>I name three skills, reusable instruction files. Agents pick the rest.</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">128</div><div class="cap">sessions in 60 days where I typed &quot;finish&quot; to land the work</div></div><div class="pair"><div class="big">8 / 4</div><div class="cap">times I typed the issue-grouping / issue-triage skill; agents chose all others</div></div></div></div>
+<div class="cues"><span>I only type finish</span><span>nobody types the skill name</span><span>the agent reads the description</span><span>picking issues by hand</span><span>a hundred twenty-eight</span></div>
+<div class="with">with: <a href="#skill-description-trigger">skill-description-trigger</a> · <a href="#skills-created-retired">skills-created-retired</a> · <a href="#skills-review-landed">skills-review-landed</a></div>
+</article>
+<article class="card k-contrast" id="instrument-before-gate">
+<div class="top"><span class="kind">contrast</span><span class="id">instrument-before-gate</span></div>
+<div class="eyebrow">Instruments before gates</div>
+<h2>Count first. Then make the rule.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Counted</div><p>1,915 test runs logged before any policy on random failures; every instruction file's use counted before any was retired</p></div><div class="col"><div class="lab">Then gated</div><p>a one-rerun policy, six files retired, a check on new ones, each pointing at its count</p></div></div></div>
+<div class="cues"><span>measure first</span><span>count before you cut</span><span>the log came first</span><span>no rule yet</span><span>then the rule</span></div>
+<div class="with">with: <a href="#instruments-and-gates">instruments-and-gates</a> · <a href="#ledger-flake-load">ledger-flake-load</a> · <a href="#guards-keep-no-record">guards-keep-no-record</a> · <a href="#skills-review-landed">skills-review-landed</a></div>
+</article>
+<article class="card k-case" id="instruments-and-gates">
+<div class="top"><span class="kind">case</span><span class="id">instruments-and-gates</span></div>
+<div class="eyebrow">Count, then rule</div>
+<h2>Every rule came after a count. Except the commit checks.</h2>
+<div class="payload"><table><thead><tr><th>What I counted</th><th>The rule it led to</th></tr></thead><tbody><tr><td>every test run</td><td>one rerun for a test that fails at random</td></tr><tr><td>tokens the agent is handed in each quiz of what it knows</td><td>a word budget on the in-app agent's instructions</td></tr><tr><td>how often each instruction file is used</td><td>6 files retired, automatic checks on them</td></tr><tr><td>the checks before every commit: nothing</td><td>none; their blocks are not counted</td></tr></tbody></table></div>
+<div class="cues"><span>what was counted first</span><span>which count led to which rule</span><span>count it before you enforce it</span><span>the commit checks count nothing</span></div>
+<div class="with">with: <a href="#instrument-before-gate">instrument-before-gate</a> · <a href="#ledger-flake-load">ledger-flake-load</a> · <a href="#guards-keep-no-record">guards-keep-no-record</a></div>
+</article>
+<article class="card k-contrast" id="issue-file-per-tension">
+<div class="top"><span class="kind">contrast</span><span class="id">issue-file-per-tension</span></div>
+<div class="eyebrow">Keeping track of ideas</div>
+<h2>One file per issue. The folder is the status.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>one ideas file, 39 lines, then 1,681; &quot;some items carried pages of agent research, others were a few words&quot;</p></div><div class="col"><div class="lab">After</div><p>one dated file per issue; the folder is the status, closing is a file move, text search is the query</p></div></div></div>
+<div class="cues"><span>the ideas file</span><span>one big file</span><span>one file per issue</span><span>closing is a file move</span><span>the folder is the status</span></div>
+<div class="with">with: <a href="#tensions-not-license">tensions-not-license</a> · <a href="#filed-vs-closed-by-month">filed-vs-closed-by-month</a></div>
+</article>
+<article class="card k-figure" id="journey-days-to-close">
+<div class="top"><span class="kind">figure</span><span class="id">journey-days-to-close</span></div>
+<div class="eyebrow">Days to close</div>
+<h2>Most bugs simulated users find are fixed the day they're filed</h2>
+<div class="payload"><img src="../../journeys/figures/days-to-close.svg" alt="Days to close"><div class="cap">50 closed issues: 33 the same day, 17 spread out to 31 days</div></div>
+<div class="cues"><span>days to close</span><span>fixed the same day</span><span>stacked at zero</span><span>the long tail</span><span>thirty-one days</span></div>
+<div class="with">with: <a href="#two-closing-speeds">two-closing-speeds</a> · <a href="#journey-stories">journey-stories</a></div>
+</article>
+<article class="card k-contrast" id="journey-definition">
+<div class="top"><span class="kind">contrast</span><span class="id">journey-definition</span></div>
+<div class="eyebrow">Why simulated users</div>
+<h2>The feature list had no people. Walks give the user a reason.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Feature list</div><p>649 lines of &quot;the product can do X&quot;; &quot;It has no notion of a person with a motive.&quot;</p></div><div class="col"><div class="lab">Walk</div><p>&quot;a goal from someone's life with a reason attached, because the reason decides what a good outcome looks like.&quot;</p></div></div></div>
+<div class="cues"><span>what's a walk</span><span>a person with a goal</span><span>the feature list can't see it</span><span>a reason attached</span><span>six hundred forty-nine features</span></div>
+<div class="with">with: <a href="#walker-props-prompt">walker-props-prompt</a> · <a href="#rogue-walker">rogue-walker</a></div>
+</article>
+<article class="card k-figure" id="journey-friction">
+<div class="top"><span class="kind">figure</span><span class="id">journey-friction</span></div>
+<div class="eyebrow">Recurring problems</div>
+<h2>The same complaints come back, round after round</h2>
+<div class="payload"><img src="../../journeys/figures/friction.svg" alt="Recurring frictions"><div class="cap">A badge and chat titles: fixed and confirmed. Rows saying &quot;ran 2 commands&quot;: still there</div></div>
+<div class="cues"><span>keeps coming back</span><span>every round</span><span>same complaint</span><span>the first screen says nothing</span><span>ran two commands</span></div>
+<div class="with">with: <a href="#openers-fixed-then-nothing-here">openers-fixed-then-nothing-here</a> · <a href="#journey-stories">journey-stories</a> · <a href="#walks-grid">walks-grid</a></div>
+</article>
+<article class="card k-figure" id="journey-funnel">
+<div class="top"><span class="kind">figure</span><span class="id">journey-funnel</span></div>
+<div class="eyebrow">From report to fix</div>
+<h2>Most of what the simulated users report never becomes an issue</h2>
+<div class="payload"><img src="../../journeys/figures/funnel.svg" alt="Claim rows to issues to fixes"><div class="cap">1,321 reports, 98 issues, 47 fixed; 100 reports were about the walks themselves</div></div>
+<div class="cues"><span>thirteen hundred reports</span><span>ninety-eight issues</span><span>the funnel</span><span>most reports never become issues</span><span>forty-seven fixed</span></div>
+<div class="with">with: <a href="#after-action-verify">after-action-verify</a> · <a href="#journey-kinds">journey-kinds</a> · <a href="#walks-grid">walks-grid</a></div>
+</article>
+<article class="card k-figure" id="journey-kinds">
+<div class="top"><span class="kind">figure</span><span class="id">journey-kinds</span></div>
+<div class="eyebrow">What kind of issue</div>
+<h2>Bugs get fixed. Wishes and decisions just sit.</h2>
+<div class="payload"><img src="../../journeys/figures/kinds.svg" alt="Issue kinds, closed and open"><div class="cap">98 issues: 29 bugs, 16 closed; 7 feature wishes and 3 decisions, none closed</div></div>
+<div class="cues"><span>what kind of issues</span><span>bugs close</span><span>wishes don't</span><span>decisions don't close</span><span>nine kinds</span></div>
+<div class="with">with: <a href="#feature-wishes-never-close">feature-wishes-never-close</a> · <a href="#journey-funnel">journey-funnel</a> · <a href="#open-journey-issues">open-journey-issues</a></div>
+</article>
+<article class="card k-figure" id="journey-stories">
+<div class="top"><span class="kind">figure</span><span class="id">journey-stories</span></div>
+<div class="eyebrow">The life of an issue</div>
+<h2>Five issues, five different endings</h2>
+<div class="payload"><img src="../../journeys/figures/stories.svg" alt="Five issue lifelines"><div class="cap">Fixed same day; waited 15 days; won't fix; still open; hit six more times, then fixed</div></div>
+<div class="cues"><span>five issues</span><span>whole life</span><span>one fast one slow</span><span>won't fix</span><span>still open</span><span>hit six times</span></div>
+<div class="with">with: <a href="#landmark-chat-never-closes">landmark-chat-never-closes</a> · <a href="#openers-fixed-then-nothing-here">openers-fixed-then-nothing-here</a> · <a href="#journey-days-to-close">journey-days-to-close</a></div>
+</article>
+<article class="card k-timeline" id="landmark-chat-never-closes">
+<div class="top"><span class="kind">timeline</span><span class="id">landmark-chat-never-closes</span></div>
+<div class="eyebrow">A chat stuck in one place</div>
+<h2>One question for me has waited since August</h2>
+<div class="payload"><ol class="rail"><li><time>08-25</time><span>filed with three options, waiting on my decision</span></li><li><time>09-21</time><span>the code is reread: the chat still never moves</span></li><li><time>10-08</time><span>&quot;I lost my chat with the two panels&quot;; I'm asked again</span></li><li><time>10-09</time><span>hit again under the new &quot;Go to Loans&quot; button</span></li></ol></div>
+<div class="cues"><span>still open</span><span>waiting on my decision</span><span>I lost my chat</span><span>since August</span><span>forty-six days</span></div>
+<div class="with">with: <a href="#re-encounter-rule">re-encounter-rule</a> · <a href="#open-journey-issues">open-journey-issues</a> · <a href="#journey-stories">journey-stories</a></div>
+</article>
+<article class="card k-contrast" id="launchd-came-back">
+<div class="top"><span class="kind">contrast</span><span class="id">launchd-came-back</span></div>
+<div class="eyebrow">Retiring old timed jobs</div>
+<h2>I turned off the old timed jobs. They came back at login.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Turned off</div><p>four jobs in the Mac's built-in job scheduler, but their files stayed</p></div><div class="col"><div class="lab">Next login</div><p>they came back, and one job would have run twice a day</p></div></div></div>
+<div class="cues"><span>the Mac's scheduler</span><span>the old jobs</span><span>came back at login</span><span>it ran twice a day</span><span>a false start</span></div>
+<div class="with">with: <a href="#schedules-at-a-glance">schedules-at-a-glance</a> · <a href="#stranded-work">stranded-work</a></div>
+</article>
+<article class="card k-number" id="ledger-flake-load">
+<div class="top"><span class="kind">number</span><span class="id">ledger-flake-load</span></div>
+<div class="eyebrow">Tests that fail at random</div>
+<h2>Logging every test run showed me which tests fail at random</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">717</div><div class="cap">test files have failed at least once, in 1,915 logged runs</div></div><div class="pair"><div class="big">49</div><div class="cap">fail at random; each one gets fixed or deleted</div></div></div></div>
+<div class="cues"><span>every run recorded</span><span>which tests have ever failed</span><span>tests that fail at random</span><span>forty-nine</span><span>fix or delete</span></div>
+<div class="with">with: <a href="#flake-single-rerun">flake-single-rerun</a> · <a href="#careful-tier-demoted">careful-tier-demoted</a> · <a href="#instruments-and-gates">instruments-and-gates</a></div>
+</article>
+<article class="card k-contrast" id="liveness-fail-closed">
+<div class="top"><span class="kind">contrast</span><span class="id">liveness-fail-closed</span></div>
+<div class="eyebrow">Cleaning up finished checkouts</div>
+<h2>Unsure whether an agent is done? Cleanup leaves the work alone.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>cleanup deleted even when unsure; a review by another AI model family caught it</p></div><div class="col"><div class="lab">After</div><p>unsure counts as still working, and nothing overrides that, not even force</p></div></div></div>
+<div class="cues"><span>unknown counts as still working</span><span>fail closed</span><span>force does not override it</span><span>the check that deleted when unsure</span></div>
+<div class="with">with: <a href="#cull-zero-unknown">cull-zero-unknown</a> · <a href="#the-seam">the-seam</a></div>
+</article>
+<article class="card k-number" id="manual-testing-gate">
+<div class="top"><span class="kind">number</span><span class="id">manual-testing-gate</span></div>
+<div class="eyebrow">My catch-up list</div>
+<h2>Code lands faster than I can try it</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">25</div><div class="cap">things waiting for me to try on the real app</div></div><div class="pair"><div class="big">68</div><div class="cap">have ever waited there</div></div></div></div>
+<div class="cues"><span>nobody has tried it yet</span><span>code lands faster than I can try it</span><span>my catch-up list</span><span>twenty-five open</span></div>
+<div class="with">with: <a href="#re-encounter-rule">re-encounter-rule</a> · <a href="#answer-loop-thin">answer-loop-thin</a> · <a href="#open-journey-issues">open-journey-issues</a></div>
+</article>
+<article class="card k-number" id="mechanics-into-scripts">
+<div class="top"><span class="kind">number</span><span class="id">mechanics-into-scripts</span></div>
+<div class="eyebrow">Instructions into scripts</div>
+<h2>If it's a list of steps, it should be a script</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">624 → 165</div><div class="cap">lines of instructions for the agent that lands work on main</div></div><div class="pair"><div class="big">377 → 150</div><div class="cap">lines on getting a review from another AI model family</div></div></div></div>
+<div class="cues"><span>move it into a script</span><span>the landing agent was six hundred lines</span><span>the review instructions halved</span><span>step-by-step prose</span></div>
+<div class="with">with: <a href="#grows-unless-pruned">grows-unless-pruned</a> · <a href="#skills-review-landed">skills-review-landed</a> · <a href="#skills-created-retired">skills-created-retired</a></div>
+</article>
+<article class="card k-quote" id="meta-instruction-first">
+<div class="top"><span class="kind">quote</span><span class="id">meta-instruction-first</span></div>
+<div class="eyebrow">Agents editing their instructions</div>
+<h2>When I correct an agent, it fixes its own instructions</h2>
+<div class="payload"><blockquote>When you get corrected on something … consider whether the correction<br>reveals a gap in these instructions. If the mistake was caused by missing or unclear<br>guidance here, update this file (or the relevant doc) so the next agent<br>doesn't repeat it.</blockquote><div class="attr">The first version, in the app's instruction file</div></div>
+<div class="cues"><span>when you get corrected</span><span>write a rule</span><span>self-improvement</span><span>the agent edits its own instructions</span></div>
+<div class="with">with: <a href="#meta-instruction-routing">meta-instruction-routing</a> · <a href="#package-file-line-series">package-file-line-series</a></div>
+</article>
+<article class="card k-contrast" id="meta-instruction-routing">
+<div class="top"><span class="kind">contrast</span><span class="id">meta-instruction-routing</span></div>
+<div class="eyebrow">Where new rules go</div>
+<h2>A new rule goes where it applies, not into one big file</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>&quot;update this file (or the relevant doc) so the next agent doesn't repeat it&quot;</p></div><div class="col"><div class="lab">After</div><p>&quot;put a short rule at the narrowest accurate owner&quot;: this file, one area's file, style docs, or reference docs</p></div></div></div>
+<div class="cues"><span>narrowest accurate owner</span><span>where does the rule go</span><span>it still writes rules but somewhere else</span><span>not everything in one file</span></div>
+<div class="with">with: <a href="#meta-instruction-first">meta-instruction-first</a> · <a href="#retrospective-evidence-rule">retrospective-evidence-rule</a> · <a href="#package-file-line-series">package-file-line-series</a></div>
+</article>
+<article class="card k-contrast" id="monorepo-one-agent">
+<div class="top"><span class="kind">contrast</span><span class="id">monorepo-one-agent</span></div>
+<div class="eyebrow">Why one repository</div>
+<h2>An agent is equally good in every area at once, so I merged the repositories</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Five repositories</div><p>a person specializes, so the server, the extension, and the phone app each had their own checkout and their own expertise.</p></div><div class="col"><div class="lab">One repository</div><p>the agent has no specialty, so a change that crosses all three is one piece of work. 46 of 154 pieces of work since late August touched more than one package; the phone app with the server is the most common pair.</p></div></div></div>
+<div class="cues"><span>equally good in every area</span><span>why one repository</span><span>cross-repo changes</span><span>five repositories became one</span><span>the phone app and the server together</span></div>
+<div class="with">with: <a href="#cull-zero-unknown">cull-zero-unknown</a> · <a href="#liveness-fail-closed">liveness-fail-closed</a></div>
+</article>
+<article class="card k-number" id="no-disable-lint-rule">
+<div class="top"><span class="kind">number</span><span class="id">no-disable-lint-rule</span></div>
+<div class="eyebrow">Style checks</div>
+<h2>Agents fix the code. Switching off a check needs a reason.</h2>
+<div class="payload"><div class="pairs n1"><div class="pair"><div class="big">172 / 190</div><div class="cap">switched-off style checks that give a written reason</div></div></div></div>
+<div class="cues"><span>don't switch off the check</span><span>fix the code</span><span>suppressions</span><span>the one allowed exception</span><span>give a reason</span></div>
+<div class="with">with: <a href="#prose-rule-then-refusal">prose-rule-then-refusal</a> · <a href="#instrument-before-gate">instrument-before-gate</a></div>
+</article>
+<article class="card k-quote" id="not-verification-ritual">
+<div class="top"><span class="kind">quote</span><span class="id">not-verification-ritual</span></div>
+<div class="eyebrow">Choosing which tests run</div>
+<h2>Running tests that touch nothing isn't verification. It's ritual.</h2>
+<div class="payload"><blockquote>if three quarters of branches touch code no test imports, running 484 tests for<br>them is not verification, it is ritual</blockquote><div class="attr">From my plan to pick tests by what changed</div></div>
+<div class="cues"><span>ritual</span><span>running all the tests anyway</span><span>this code has no tests</span><span>three quarters of branches</span><span>four hundred eighty-four tests</span></div>
+<div class="with">with: <a href="#selection-gate-missed">selection-gate-missed</a> · <a href="#full-suite-red-fates">full-suite-red-fates</a></div>
+</article>
+<article class="card k-quote" id="nothing-here-yet">
+<div class="top"><span class="kind">quote</span><span class="id">nothing-here-yet</span></div>
+<div class="eyebrow">An empty first page</div>
+<h2>A page said &quot;Nothing here yet&quot; to a user with plenty there</h2>
+<div class="payload"><blockquote>If I came back tomorrow and landed on this, I'd think it had lost everything.</blockquote><div class="attr">The agent playing the user, on a page that said &quot;Nothing here yet&quot; while its data was all there</div></div>
+<div class="cues"><span>nothing here yet</span><span>lost everything</span><span>empty page</span><span>came back tomorrow</span><span>the fix introduced it</span></div>
+<div class="with">with: <a href="#openers-fixed-then-nothing-here">openers-fixed-then-nothing-here</a> · <a href="#open-journey-issues">open-journey-issues</a></div>
+</article>
+<article class="card k-number" id="old-plans-read">
+<div class="top"><span class="kind">number</span><span class="id">old-plans-read</span></div>
+<div class="eyebrow">Do old plans matter?</div>
+<h2>Agents keep reading my plans long after the work ships</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">144 / 214</div><div class="cap">shipped plans read at least once</div></div><div class="pair"><div class="big">269 / 479</div><div class="cap">of those reads came a week or more after landing</div></div></div></div>
+<div class="cues"><span>do agents read old plans</span><span>nobody reads the plan</span><span>plans after they ship</span><span>a week later</span></div>
+<div class="with">with: <a href="#evidence-stays-in-tree">evidence-stays-in-tree</a> · <a href="#instrument-before-gate">instrument-before-gate</a></div>
+</article>
+<article class="card k-case" id="open-journey-issues">
+<div class="top"><span class="kind">case</span><span class="id">open-journey-issues</span></div>
+<div class="eyebrow">Why issues stay open</div>
+<h2>48 issues open: 8 wait on me, 28 nobody has touched</h2>
+<div class="payload"><table><thead><tr><th>Reason</th><th>Count</th></tr></thead><tbody><tr><td>Waiting on my decision</td><td>8</td></tr><tr><td>Put off by label or priority</td><td>10</td></tr><tr><td>A problem with the walks themselves</td><td>2</td></tr><tr><td>Nobody has picked it up (24 from October)</td><td>28</td></tr></tbody></table></div>
+<div class="cues"><span>why are they open</span><span>eight wait on me</span><span>nobody picked it up</span><span>forty-eight open</span><span>untriaged</span></div>
+<div class="with">with: <a href="#landmark-chat-never-closes">landmark-chat-never-closes</a> · <a href="#feature-wishes-never-close">feature-wishes-never-close</a> · <a href="#two-closing-speeds">two-closing-speeds</a></div>
+</article>
+<article class="card k-timeline" id="openers-fixed-then-nothing-here">
+<div class="top"><span class="kind">timeline</span><span class="id">openers-fixed-then-nothing-here</span></div>
+<div class="eyebrow">The first screen</div>
+<h2>Fixing the first screen created the next problem</h2>
+<div class="payload"><ol class="rail"><li><time>09-21</time><span>a bug skips the starter suggestions in a new chat</span></li><li><time>10-08</time><span>every walk hits it first; fixed that day</span></li><li><time>10-09</time><span>all six walks: fixed. A page now says &quot;Nothing here yet&quot;</span></li></ol></div>
+<div class="cues"><span>the first screen</span><span>every walk hit it</span><span>fixed and confirmed</span><span>the fix brought the next one</span><span>starter suggestions</span></div>
+<div class="with">with: <a href="#nothing-here-yet">nothing-here-yet</a> · <a href="#journey-friction">journey-friction</a> · <a href="#journey-stories">journey-stories</a></div>
+</article>
+<article class="card k-contrast" id="opus-at-12-04">
+<div class="top"><span class="kind">contrast</span><span class="id">opus-at-12-04</span></div>
+<div class="eyebrow">Watching for new library releases</div>
+<h2>The agent wakes up only on days there's news</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>a Claude Opus session started &quot;every day at 12:04&quot;</p></div><div class="col"><div class="lab">After</div><p>a cheap script checks first, so the session &quot;starts on the days something was actually published&quot;</p></div></div></div>
+<div class="cues"><span>every day at noon</span><span>only when something was published</span><span>a cheap check first</span><span>the agent stays asleep</span></div>
+<div class="with">with: <a href="#run-only-head">run-only-head</a> · <a href="#wrong-at-three">wrong-at-three</a></div>
+</article>
+<article class="card k-number" id="pace-and-size">
+<div class="top"><span class="kind">number</span><span class="id">pace-and-size</span></div>
+<div class="eyebrow">How big it got</div>
+<h2>Just me and the agents, and it kept growing</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">25 → 2,305</div><div class="cap">commits per month, January to August</div></div><div class="pair"><div class="big">11,858 → 390,172</div><div class="cap">non-blank lines of code, February to October</div></div></div></div>
+<div class="cues"><span>the pace curve</span><span>commits per month</span><span>how big it got</span><span>one author</span><span>four hundred thousand lines</span></div>
+<div class="with">with: <a href="#schedules-at-a-glance">schedules-at-a-glance</a></div>
+</article>
+<article class="card k-timeline" id="package-file-line-series">
+<div class="top"><span class="kind">timeline</span><span class="id">package-file-line-series</span></div>
+<div class="eyebrow">The app's instruction file</div>
+<h2>I cut the app's instructions in half. They grew back.</h2>
+<div class="payload"><ol class="rail"><li><time>03-03</time><span>cut from 218 to 118 lines in one day</span></li><li><time>03-06</time><span>114; agents now update it after corrections</span></li><li><time>09-05</time><span>back to 184, one rule per commit</span></li><li><time>09-12</time><span>a planned rewrite cuts it to 67</span></li></ol></div>
+<div class="cues"><span>halved in a day</span><span>it grew back</span><span>one rule per commit</span><span>two hundred eighteen lines</span><span>sixty-seven lines</span></div>
+<div class="with">with: <a href="#root-file-words">root-file-words</a> · <a href="#cut-regrow-budget">cut-regrow-budget</a> · <a href="#meta-instruction-routing">meta-instruction-routing</a></div>
+</article>
+<article class="card k-quote" id="partial-plan-violation">
+<div class="top"><span class="kind">quote</span><span class="id">partial-plan-violation</span></div>
+<div class="eyebrow">Shipping plans</div>
+<h2>Half a plan doesn't ship, even when it feels done</h2>
+<div class="payload"><blockquote>The plan completes, then it ships as one piece … merging a partial plan<br>because &quot;the first part feels done&quot; is the violation.</blockquote><div class="attr">From the instructions agents use to write plans</div></div>
+<div class="cues"><span>the first part feels done</span><span>merge it anyway</span><span>ship half the plan</span><span>partial plans</span><span>ships as one piece</span></div>
+<div class="with">with: <a href="#plans-written-and-partial">plans-written-and-partial</a></div>
+</article>
+<article class="card k-number" id="pick-issues-batching">
+<div class="top"><span class="kind">number</span><span class="id">pick-issues-batching</span></div>
+<div class="eyebrow">Grouping related issues</div>
+<h2>Issues arrive one at a time. I ship them in batches.</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">6</div><div class="cap">groups claimed or closed in the two days after grouping began</div></div><div class="pair"><div class="big">26</div><div class="cap">commits on main that close two or more issues at once</div></div></div></div>
+<div class="cues"><span>grouping issues</span><span>batching</span><span>the backlog builds up</span><span>six groups</span><span>one commit closes several</span></div>
+<div class="with">with: <a href="#four-issues-four-fates">four-issues-four-fates</a> · <a href="#cluster-is-a-hypothesis">cluster-is-a-hypothesis</a> · <a href="#provenance-by-agents">provenance-by-agents</a></div>
+</article>
+<article class="card k-number" id="plans-written-and-partial">
+<div class="top"><span class="kind">number</span><span class="id">plans-written-and-partial</span></div>
+<div class="eyebrow">Plans</div>
+<h2>Most plans ship. Many of the rest are partly done.</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">324 → ~199</div><div class="cap">plans written, then plans implemented</div></div><div class="pair"><div class="big">41 / 71</div><div class="cap">plan status lines that say partial</div></div></div></div>
+<div class="cues"><span>how many plans</span><span>plans get implemented</span><span>partial plans pile up</span><span>three hundred plans</span><span>half done</span></div>
+<div class="with">with: <a href="#partial-plan-violation">partial-plan-violation</a> · <a href="#could-this-be-simpler">could-this-be-simpler</a></div>
+</article>
+<article class="card k-number" id="prompt-calibration-cut">
+<div class="top"><span class="kind">number</span><span class="id">prompt-calibration-cut</span></div>
+<div class="eyebrow">The big rewrite</div>
+<h2>One planned rewrite cut my instructions by more than half</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">2,242 → 850</div><div class="cap">words in the instruction file every agent reads first</div></div><div class="pair"><div class="big">184 → 67</div><div class="cap">lines in the app's instruction file</div></div></div></div>
+<div class="cues"><span>the biggest cut</span><span>remove attempts to convince</span><span>a planned rewrite</span><span>purpose and necessity</span><span>more than half</span></div>
+<div class="with">with: <a href="#calibration-pilot">calibration-pilot</a> · <a href="#root-file-words">root-file-words</a> · <a href="#router-rule-shouting">router-rule-shouting</a></div>
+</article>
+<article class="card k-case" id="prose-rule-then-refusal">
+<div class="top"><span class="kind">case</span><span class="id">prose-rule-then-refusal</span></div>
+<div class="eyebrow">Rules versus checks</div>
+<h2>A written rule doesn't hold. A check does.</h2>
+<div class="payload"><table><thead><tr><th>What I wrote down</th><th>What happened</th><th>What replaced it</th></tr></thead><tbody><tr><td>never put a <code>$name</code> command token in a new agent's instructions</td><td>83 sessions did it anyway</td><td>the tool that starts agents refuses</td></tr><tr><td>keep the second agent's copy of the instructions in sync</td><td>the hand-kept copy rotted</td><td>generated copy, then one shared file</td></tr><tr><td>keep file paths in docs current</td><td>85 stale references</td><td>every path a doc mentions is checked</td></tr><tr><td>use judgment on tests that fail at random</td><td>two files said two different things</td><td>one scripted rerun</td></tr></tbody></table></div>
+<div class="cues"><span>we wrote it down and it didn't work</span><span>they did it anyway</span><span>the copy rotted</span><span>replace the rule with a check</span><span>four times</span></div>
+<div class="with">with: <a href="#sigil-rule-then-refusal">sigil-rule-then-refusal</a> · <a href="#codex-mirrors-timeline">codex-mirrors-timeline</a> · <a href="#instrument-before-gate">instrument-before-gate</a></div>
+</article>
+<article class="card k-number" id="provenance-by-agents">
+<div class="top"><span class="kind">number</span><span class="id">provenance-by-agents</span></div>
+<div class="eyebrow">Where issues come from</div>
+<h2>Agents note where they found a problem. I almost never do.</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">1,018 / 1,036</div><div class="cap">issues filed by agents say where they were found</div></div><div class="pair"><div class="big">4 / 190</div><div class="cap">issues I filed do</div></div></div></div>
+<div class="cues"><span>where it was found</span><span>the agent fills in the field</span><span>I wouldn't have done that by hand</span><span>ninety-eight percent</span><span>four out of a hundred and ninety</span></div>
+<div class="with">with: <a href="#pick-issues-batching">pick-issues-batching</a> · <a href="#four-issues-four-fates">four-issues-four-fates</a> · <a href="#evidence-stays-in-tree">evidence-stays-in-tree</a></div>
+</article>
+<article class="card k-rule" id="provenance-trailer-commit">
+<div class="top"><span class="kind">rule</span><span class="id">provenance-trailer-commit</span></div>
+<div class="eyebrow">A commit message, tagged automatically</div>
+<h2>Every commit names the task and plan that made it</h2>
+<div class="payload"><pre>iOS box screen: drop the box-wide page rows, keep Shortcuts
+
+Issue: 2026-09-25-quick-drop-entry-points
+Co-Authored-By: Claude Opus 5.5 &lt;noreply@anthropic.com&gt;
+Workstream: quick-chat-design
+Plan: box-screen</pre></div>
+<div class="cues"><span>every commit says which task made it</span><span>tags in the commit message</span><span>I don't type those</span><span>the task and the plan</span></div>
+<div class="with">with: <a href="#trailer-coverage">trailer-coverage</a> · <a href="#provenance-by-agents">provenance-by-agents</a></div>
+</article>
+<article class="card k-contrast" id="ratchet-timeline">
+<div class="top"><span class="kind">contrast</span><span class="id">ratchet-timeline</span></div>
+<div class="eyebrow">Automatic style checks</div>
+<h2>Switching off a check hid a thousand problems</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>adopting shared style settings quietly turned 18 rules off; an audit found 1,000 violations</p></div><div class="col"><div class="lab">After</div><p>zero violations the next day, and a standing rule: never switch a check off to pass</p></div></div></div>
+<div class="cues"><span>a thousand violations</span><span>the style rules were quietly off</span><span>zero the next day</span><span>don't turn off a check to pass</span></div>
+<div class="with">with: <a href="#no-disable-lint-rule">no-disable-lint-rule</a> · <a href="#sigil-rule-then-refusal">sigil-rule-then-refusal</a></div>
+</article>
+<article class="card k-contrast" id="re-encounter-rule">
+<div class="top"><span class="kind">contrast</span><span class="id">re-encounter-rule</span></div>
+<div class="eyebrow">Repeat sightings</div>
+<h2>Seeing a bug twice is evidence, not noise</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>a second report was a duplicate to close, and &quot;fixed, awaiting my test&quot; stayed fixed</p></div><div class="col"><div class="lab">Now</div><p>the agent dates the second sighting on the issue, reopens it, and may pull my own &quot;waiting for me to test&quot; tag off it. 15 repeats recorded in one round of walks</p></div></div></div>
+<div class="cues"><span>saw it again</span><span>a repeat is evidence</span><span>reopen it</span><span>write a dated note</span></div>
+<div class="with">with: <a href="#fifteen-re-encounters">fifteen-re-encounters</a> · <a href="#tensions-not-license">tensions-not-license</a> · <a href="#manual-testing-gate">manual-testing-gate</a></div>
+</article>
+<article class="card k-timeline" id="reporter-blamed-itself">
+<div class="top"><span class="kind">timeline</span><span class="id">reporter-blamed-itself</span></div>
+<div class="eyebrow">Finding the commit that broke it</div>
+<h2>My hourly test job kept blaming the wrong commit</h2>
+<div class="payload"><ol class="rail"><li><time>08-25</time><span>every test runs hourly; failures traced to a commit</span></li><li><time>08-26</time><span>one failure files thirteen issues, blaming its own reports</span></li><li><time>09-11</time><span>skip runs when memory is short; load faked failures</span></li><li><time>10-06</time><span>the blamed commit must touch code the test uses</span></li></ol></div>
+<div class="cues"><span>it blamed itself</span><span>thirteen issues overnight</span><span>the machine was overloaded</span><span>which commit broke it</span></div>
+<div class="with">with: <a href="#full-suite-red-fates">full-suite-red-fates</a></div>
+</article>
+<article class="card k-contrast" id="retrospective-evidence-rule">
+<div class="top"><span class="kind">contrast</span><span class="id">retrospective-evidence-rule</span></div>
+<div class="eyebrow">Self-review every three days</div>
+<h2>One bad session is noise. Two is a pattern.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Seen once</div><p>goes on a watch list, nothing changes</p></div><div class="col"><div class="lab">Seen twice, or once plus a matching transcript</div><p>the agent edits the instructions, and must point at the evidence</p></div></div></div>
+<div class="cues"><span>seen once</span><span>two pieces of evidence</span><span>watch list</span><span>it has to happen again</span><span>the retrospective</span></div>
+<div class="with">with: <a href="#instrument-before-gate">instrument-before-gate</a> · <a href="#meta-instruction-routing">meta-instruction-routing</a></div>
+</article>
+<article class="card k-rule" id="review-file-audit-trail">
+<div class="top"><span class="kind">rule</span><span class="id">review-file-audit-trail</span></div>
+<div class="eyebrow">Review by another model, one of 35 kept</div>
+<h2>Another AI model checks each plan. All seven findings were real.</h2>
+<div class="payload"><pre>Every finding was independently verified against source before the plan was
+revised. All seven were real. The plan at `remove-bbx-render.md` has been updated
+to address each; this file is the audit trail, not a to-do list.</pre></div>
+<div class="cues"><span>all seven were real</span><span>a different model reviews the plan</span><span>checked against the code</span><span>not a to-do list</span></div>
+<div class="with">with: <a href="#cross-model-catches">cross-model-catches</a> · <a href="#codex-reviewing-codex">codex-reviewing-codex</a></div>
+</article>
+<article class="card k-quote" id="rogue-walker">
+<div class="top"><span class="kind">quote</span><span class="id">rogue-walker</span></div>
+<div class="eyebrow">Limits of simulated users</div>
+<h2>A simulated user can cheat by leaving the app</h2>
+<div class="payload"><blockquote>After-run review catches most of it inside the box: a step with no screenshot,<br>a box file changed with no matching action. What it cannot see is the walker<br>going outside the box to get its result.</blockquote><div class="attr">From our notes on scripted walks; &quot;the box&quot; is a user's data store</div></div>
+<div class="cues"><span>it could cheat</span><span>goes outside the app</span><span>under test itself</span><span>what the review can't see</span><span>Hugging Face</span></div>
+<div class="with">with: <a href="#walks-grid">walks-grid</a></div>
+</article>
+<article class="card k-number" id="root-file-words">
+<div class="top"><span class="kind">number</span><span class="id">root-file-words</span></div>
+<div class="eyebrow">Instruction file size</div>
+<h2>The file every agent reads first keeps growing back</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">65 → 2,242</div><div class="cap">words, from merging repositories to the September peak</div></div><div class="pair"><div class="big">850 → 1,277</div><div class="cap">words after the September cut, regrown in four weeks</div></div></div></div>
+<div class="cues"><span>sixty-five words</span><span>two thousand words</span><span>it grew back fifty percent</span><span>four weeks later</span></div>
+<div class="with">with: <a href="#package-file-line-series">package-file-line-series</a> · <a href="#cut-regrow-budget">cut-regrow-budget</a> · <a href="#prompt-calibration-cut">prompt-calibration-cut</a></div>
+</article>
+<article class="card k-contrast" id="router-rule-shouting">
+<div class="top"><span class="kind">contrast</span><span class="id">router-rule-shouting</span></div>
+<div class="eyebrow">Shouting in instructions</div>
+<h2>Keep the rule in the file. Move the details out.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>a paragraph on the shared dev server: start-up times, idle shutdown, a bold warning about names</p></div><div class="col"><div class="lab">After</div><p>five sentences, one bold rule, details in a separate doc; another instruction file went 910 → 193 lines that day</p></div></div></div>
+<div class="cues"><span>shouting</span><span>bold warning</span><span>read on every turn</span><span>moved the details out</span><span>nine hundred lines to under two hundred</span></div>
+<div class="with">with: <a href="#prompt-calibration-cut">prompt-calibration-cut</a> · <a href="#mechanics-into-scripts">mechanics-into-scripts</a></div>
+</article>
+<article class="card k-number" id="run-only-head">
+<div class="top"><span class="kind">number</span><span class="id">run-only-head</span></div>
+<div class="eyebrow">Timed jobs</div>
+<h2>Most of my timed jobs never wake an agent</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">7 of 15</div><div class="cap">timed jobs never hand off to an agent</div></div><div class="pair"><div class="big">2,143 of 2,237</div><div class="cap">runs came from those seven, at no agent cost</div></div></div></div>
+<div class="cues"><span>a script decides</span><span>no agent unless there is work</span><span>a cheap script up front</span><span>hourly is affordable</span></div>
+<div class="with">with: <a href="#wrong-at-three">wrong-at-three</a> · <a href="#opus-at-12-04">opus-at-12-04</a> · <a href="#schedules-at-a-glance">schedules-at-a-glance</a></div>
+</article>
+<article class="card k-number" id="schedules-at-a-glance">
+<div class="top"><span class="kind">number</span><span class="id">schedules-at-a-glance</span></div>
+<div class="eyebrow">Timed jobs</div>
+<h2>Fifteen timed jobs work while I'm not watching</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">2,237</div><div class="cap">runs in six weeks</div></div><div class="pair"><div class="big">81</div><div class="cap">agent sessions I never watched</div></div></div></div>
+<div class="cues"><span>fifteen timed jobs</span><span>work nobody is watching</span><span>runs while I sleep</span><span>two thousand runs</span></div>
+<div class="with">with: <a href="#run-only-head">run-only-head</a> · <a href="#schedules-produced">schedules-produced</a> · <a href="#alerts-peak">alerts-peak</a></div>
+</article>
+<article class="card k-case" id="schedules-produced">
+<div class="top"><span class="kind">case</span><span class="id">schedules-produced</span></div>
+<div class="eyebrow">Timed jobs, six weeks</div>
+<h2>What four timed jobs produced while I wasn't watching</h2>
+<div class="payload"><table><thead><tr><th>Timed job</th><th>Runs / agent sessions</th><th>Produced</th></tr></thead><tbody><tr><td>run every test, hourly</td><td>871 / 0</td><td>29 broken merges to main traced, 28 closed</td></tr><tr><td>check for agent library updates, daily</td><td>46 / 36</td><td>23 library updates, 15 issues</td></tr><tr><td>find unused code, weekly</td><td>8 / 7</td><td>19 commits removing it</td></tr><tr><td>disk cleanup, daily</td><td>7 / 0</td><td>caches that had reached 31 GB and 62 GB</td></tr></tbody></table></div>
+<div class="cues"><span>what the timed jobs produced</span><span>the hourly test run</span><span>library updates</span><span>dead code</span><span>disk caches</span></div>
+<div class="with">with: <a href="#schedules-at-a-glance">schedules-at-a-glance</a> · <a href="#run-only-head">run-only-head</a></div>
+</article>
+<article class="card k-contrast" id="selection-gate-missed">
+<div class="top"><span class="kind">contrast</span><span class="id">selection-gate-missed</span></div>
+<div class="eyebrow">Running only the affected tests</div>
+<h2>Picking tests by imports works for about a third of changes</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Target</div><p>50% of real changes, with tests chosen from imports alone</p></div><div class="col"><div class="lab">Measured</div><p>25% at first; since then 414 of 1,217 selections (34%)</p></div></div></div>
+<div class="cues"><span>run only the tests the change touches</span><span>it missed its target</span><span>twenty-five percent</span><span>about a third</span><span>follow the imports</span></div>
+<div class="with">with: <a href="#not-verification-ritual">not-verification-ritual</a> · <a href="#full-suite-red-fates">full-suite-red-fates</a></div>
+</article>
+<article class="card k-contrast" id="sigil-rule-then-refusal">
+<div class="top"><span class="kind">contrast</span><span class="id">sigil-rule-then-refusal</span></div>
+<div class="eyebrow">Command tokens in prompts</div>
+<h2>83 sessions broke my written rule. Now a check refuses.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Written rule</div><p>never put a <code>$name</code> command token, which agents run on sight, in a new agent's instructions</p></div><div class="col"><div class="lab">Then</div><p>83 sessions did it anyway; now a check before every commit refuses them</p></div></div></div>
+<div class="cues"><span>wrote a rule</span><span>they did it anyway</span><span>eighty-three</span><span>the check refuses</span><span>landed on main on its first turn</span></div>
+<div class="with">with: <a href="#cluster-is-a-hypothesis">cluster-is-a-hypothesis</a></div>
+</article>
+<article class="card k-quote" id="skill-description-trigger">
+<div class="top"><span class="kind">quote</span><span class="id">skill-description-trigger</span></div>
+<div class="eyebrow">When skills load</div>
+<h2>An instruction file loads only if its description names the moment</h2>
+<div class="payload"><blockquote>investigate-or-debug instructions appear in 31 sessions and the skill does not fire</blockquote><div class="attr">An issue from Jul 30. A skill is a reusable instruction file; we rewrote descriptions to say when to load one, and when not.</div></div>
+<div class="cues"><span>the skill does not fire</span><span>descriptions are triggers</span><span>symptoms not summaries</span><span>when to load</span></div>
+<div class="with">with: <a href="#humans-type-three-skills">humans-type-three-skills</a> · <a href="#craft-skills-retired">craft-skills-retired</a></div>
+</article>
+<article class="card k-number" id="skills-created-retired">
+<div class="top"><span class="kind">number</span><span class="id">skills-created-retired</span></div>
+<div class="eyebrow">Skills: reusable instruction files</div>
+<h2>A third of my skills are gone; the total is halved</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">31 / 10</div><div class="cap">skills written / retired</div></div><div class="pair"><div class="big">3,766 → 1,841</div><div class="cap">total lines, September peak to Oct 9</div></div></div></div>
+<div class="cues"><span>thirty-one skills</span><span>ten retired</span><span>skills got smaller</span><span>half the lines</span></div>
+<div class="with">with: <a href="#skills-timeline">skills-timeline</a> · <a href="#humans-type-three-skills">humans-type-three-skills</a> · <a href="#grows-unless-pruned">grows-unless-pruned</a></div>
+</article>
+<article class="card k-case" id="skills-review-landed">
+<div class="top"><span class="kind">case</span><span class="id">skills-review-landed</span></div>
+<div class="eyebrow">Reading past sessions</div>
+<h2>Each count from past sessions became a fix within a day</h2>
+<div class="payload"><table><thead><tr><th>What I counted in past sessions</th><th>What changed</th></tr></thead><tbody><tr><td>22 sessions ask whether a deploy is live</td><td>instructions and a script that report it</td></tr><tr><td>104 sessions stuck on a blocked wait command</td><td>a one-line rule</td></tr><tr><td>83 sessions wrote a bare <code>$name</code> command token</td><td>the tool that starts agents refuses</td></tr><tr><td>85 stale file paths in docs</td><td>every path a doc mentions is checked</td></tr></tbody></table></div>
+<div class="cues"><span>counted the transcripts</span><span>what the review found</span><span>landed the next day</span><span>is it deployed</span><span>sleep was blocked</span></div>
+<div class="with">with: <a href="#humans-type-three-skills">humans-type-three-skills</a> · <a href="#mechanics-into-scripts">mechanics-into-scripts</a> · <a href="#instrument-before-gate">instrument-before-gate</a></div>
+</article>
+<article class="card k-contrast" id="skills-timeline">
+<div class="top"><span class="kind">contrast</span><span class="id">skills-timeline</span></div>
+<div class="eyebrow">Skills: reusable instruction files</div>
+<h2>Skills grew for four months, then I measured them and cut</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Growing</div><p>four months of additions, peaking Sep 12 at 24 skills and 3,766 lines</p></div><div class="col"><div class="lab">Measured</div><p>a review of past sessions on Oct 7 retired 6; two days later, 21 live, 1,841 lines</p></div></div></div>
+<div class="cues"><span>four months of adding skills</span><span>the peak</span><span>measured and cut</span><span>skills retired</span></div>
+<div class="with">with: <a href="#skills-created-retired">skills-created-retired</a> · <a href="#skills-review-landed">skills-review-landed</a> · <a href="#craft-skills-retired">craft-skills-retired</a></div>
+</article>
+<article class="card k-number" id="smoke-runs">
+<div class="top"><span class="kind">number</span><span class="id">smoke-runs</span></div>
+<div class="eyebrow">Quick real-app walk</div>
+<h2>Before anything lands, a script clicks through the real app</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">101 / 517</div><div class="cap">walks came back failing</div></div><div class="pair"><div class="big">59 s</div><div class="cap">median walk, no AI model involved</div></div></div></div>
+<div class="cues"><span>smoke test</span><span>starts a real copy of the app</span><span>walks it in a browser</span><span>about a minute</span><span>before every merge</span></div>
+<div class="with">with: <a href="#smoke-three-escapes">smoke-three-escapes</a> · <a href="#full-suite-red-fates">full-suite-red-fates</a></div>
+</article>
+<article class="card k-quote" id="smoke-three-escapes">
+<div class="top"><span class="kind">quote</span><span class="id">smoke-three-escapes</span></div>
+<div class="eyebrow">Why we walk the real app</div>
+<h2>Every check passed while the app was broken</h2>
+<div class="payload"><blockquote>Three escapes on 2026-08-25/26 passed typecheck, lint and their selected<br>tests while the app was broken: the code was right and the state was wrong.</blockquote><div class="attr">The commit message that added the walk</div></div>
+<div class="cues"><span>three escapes</span><span>everything was green and the app was broken</span><span>the state was wrong</span><span>why we walk the real app</span></div>
+<div class="with">with: <a href="#smoke-runs">smoke-runs</a> · <a href="#selection-gate-missed">selection-gate-missed</a></div>
+</article>
+<article class="card k-contrast" id="stranded-work">
+<div class="top"><span class="kind">contrast</span><span class="id">stranded-work</span></div>
+<div class="eyebrow">Agents nobody watches</div>
+<h2>Unwatched agents leave work half-done. Something has to notice.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>an agent started tests in the background and quit; its leftovers blocked merges, commits sat unmerged for weeks</p></div><div class="col"><div class="lab">After</div><p>the job runner sets leftovers aside, lists unmerged commits, can hand off again; long commands run in the foreground</p></div></div></div>
+<div class="cues"><span>it never came back</span><span>ran the tests in the background</span><span>left half-done</span><span>run long commands in the foreground</span></div>
+<div class="with">with: <a href="#launchd-came-back">launchd-came-back</a> · <a href="#schedules-at-a-glance">schedules-at-a-glance</a></div>
+</article>
+<article class="card k-rule" id="tensions-not-license">
+<div class="top"><span class="kind">rule</span><span class="id">tensions-not-license</span></div>
+<div class="eyebrow">What the backlog is for</div>
+<h2>Filing an idea is not permission to build it</h2>
+<div class="payload"><pre>Most items here are **tensions, not resolutions** — half-thought-out design
+ideas, noticed problems whose right fix isn't obvious, … An item being filed
+is *not* license to implement it
+
+Plain bugs mostly don't belong here — if you can just fix it, fix it.</pre></div>
+<div class="cues"><span>filing is not permission</span><span>not license to implement</span><span>half-thought-out ideas</span><span>just fix it</span></div>
+<div class="with">with: <a href="#issue-file-per-tension">issue-file-per-tension</a> · <a href="#how-much-to-do-ladder">how-much-to-do-ladder</a></div>
+</article>
+<article class="card k-contrast" id="the-seam">
+<div class="top"><span class="kind">contrast</span><span class="id">the-seam</span></div>
+<div class="eyebrow">A separate checkout per task</div>
+<h2>One command sets up and cleans up, whoever calls it</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>OpenAI's coding agent faked Claude's messages to set up a checkout; a dashboard button couldn't at all</p></div><div class="col"><div class="lab">After</div><p>both agents, timed jobs and the dashboard call one command; 103 cleanups after the OpenAI agent exited, in 40 days</p></div></div></div>
+<div class="cues"><span>it had to pretend to be Claude</span><span>one command for setup and cleanup</span><span>adding the second agent cost one script</span></div>
+<div class="with">with: <a href="#codex-day-one">codex-day-one</a> · <a href="#three-mirror-designs">three-mirror-designs</a></div>
+</article>
+<article class="card k-case" id="three-mirror-designs">
+<div class="top"><span class="kind">case</span><span class="id">three-mirror-designs</span></div>
+<div class="eyebrow">Claude and OpenAI's coding agent</div>
+<h2>It took three tries to give both agents the same instructions</h2>
+<div class="payload"><table><thead><tr><th>Design</th><th>Ended</th><th>Why</th></tr></thead><tbody><tr><td>a committed copy, edited by find-and-replace</td><td>May 26</td><td>&quot;rotted for a month&quot;</td></tr><tr><td>an exact copy made for each new checkout, never committed</td><td>Oct 9</td><td>still drifted in the main checkout</td></tr><tr><td>one file both agents read, under one shared name</td><td>in use</td><td>a check refuses the old name</td></tr></tbody></table></div>
+<div class="cues"><span>three designs for one need</span><span>the copy rotted</span><span>both read the same file</span><span>the second agent's instructions</span></div>
+<div class="with">with: <a href="#codex-mirrors-timeline">codex-mirrors-timeline</a> · <a href="#the-seam">the-seam</a> · <a href="#codex-day-one">codex-day-one</a></div>
+</article>
+<article class="card k-quote" id="to-do-database">
+<div class="top"><span class="kind">quote</span><span class="id">to-do-database</span></div>
+<div class="eyebrow">Too many open sessions</div>
+<h2>My open agent sessions had become my to-do list</h2>
+<div class="payload"><blockquote>Sessions are currently doing double duty as a to-do database. A worktree stays<br>open until I have verified the work, because the open session is the only<br>record of what still needs checking.<br>Closing a session feels lossy, so ~9 accumulate.</blockquote><div class="attr">Me, in an issue filed Aug 8 and closed six days later</div></div>
+<div class="cues"><span>double duty</span><span>a to-do database</span><span>nine tabs open</span><span>closing a session feels lossy</span></div>
+<div class="with">with: <a href="#workstream-not-worktree">workstream-not-worktree</a> · <a href="#host-memory-ceiling">host-memory-ceiling</a></div>
+</article>
+<article class="card k-quote" id="tool-user-is-agent">
+<div class="top"><span class="kind">quote</span><span class="id">tool-user-is-agent</span></div>
+<div class="eyebrow">Tools for agents</div>
+<h2>The browser tool's real user is the agent, not me</h2>
+<div class="payload"><blockquote>the quality of the result is how well it works for the agent, not for me,<br>and I mostly poke at the agent indirectly to improve things for itself.</blockquote><div class="attr">Me, on the tool agents use to drive a browser</div></div>
+<div class="cues"><span>works for the agent not for me</span><span>poke at the agent</span><span>the tool's user is the agent</span><span>I can't feel it</span></div>
+<div class="with">with: <a href="#browse-indirect-development">browse-indirect-development</a> · <a href="#browse-silent-clicks">browse-silent-clicks</a></div>
+</article>
+<article class="card k-number" id="trailer-coverage">
+<div class="top"><span class="kind">number</span><span class="id">trailer-coverage</span></div>
+<div class="eyebrow">Tagged commits</div>
+<h2>Most commits now name the task that made them</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">2,288</div><div class="cap">commits tagged with a task, across 180 tasks</div></div><div class="pair"><div class="big">81%</div><div class="cap">of non-merge commits since the tagging check, Aug 24</div></div></div></div>
+<div class="cues"><span>eighty-one percent</span><span>a tag naming the task</span><span>which task made it</span><span>where each commit came from</span></div>
+<div class="with">with: <a href="#provenance-trailer-commit">provenance-trailer-commit</a> · <a href="#provenance-by-agents">provenance-by-agents</a></div>
+</article>
+<article class="card k-number" id="two-closing-speeds">
+<div class="top"><span class="kind">number</span><span class="id">two-closing-speeds</span></div>
+<div class="eyebrow">Two speeds, nothing between</div>
+<h2>Bugs the simulated users find get fixed the same day, or they wait weeks</h2>
+<div class="payload"><div class="pairs n2"><div class="pair"><div class="big">33 of 50</div><div class="cap">fixed the same day by the agent that ran the walk</div></div><div class="pair"><div class="big">6 days</div><div class="cap">median for the rest, some out to 31</div></div></div></div>
+<div class="cues"><span>two speeds</span><span>fixed the same day</span><span>waits for a planned task</span><span>median six days</span><span>nothing in between</span></div>
+<div class="with">with: <a href="#journey-days-to-close">journey-days-to-close</a> · <a href="#feature-wishes-never-close">feature-wishes-never-close</a> · <a href="#open-journey-issues">open-journey-issues</a></div>
+</article>
+<article class="card k-rule" id="walker-props-prompt">
+<div class="top"><span class="kind">rule</span><span class="id">walker-props-prompt</span></div>
+<div class="eyebrow">Instructions for a simulated user</div>
+<h2>I tell the simulated user: you are the instrument</h2>
+<div class="payload"><pre>You are **simulating** a person using an app for the first time, …
+The app is the thing under examination. You are the instrument.
+
+- Anything handed to you is a **prop supporting the situation, never the task itself**. The task is
+  what the person wants. …</pre></div>
+<div class="cues"><span>you are the instrument</span><span>simulating a person</span><span>props are not the task</span><span>it stopped when the photos ran out</span></div>
+<div class="with">with: <a href="#journey-definition">journey-definition</a> · <a href="#after-action-verify">after-action-verify</a></div>
+</article>
+<article class="card k-figure" id="walks-grid">
+<div class="top"><span class="kind">figure</span><span class="id">walks-grid</span></div>
+<div class="eyebrow">Simulated-user walks</div>
+<h2>Nineteen simulated-user walks; the last round confirmed every fix</h2>
+<div class="payload"><img src="../../journeys/figures/rounds.svg" alt="Walks grid"><div class="cap">Dot size: how much the simulated user reported; orange: test-setup noise. Rounds Aug 23–25, Sep 20–21, Oct 8, Oct 9.</div></div>
+<div class="cues"><span>four rounds of walks</span><span>nineteen walks</span><span>October spike</span><span>noise from the test setup</span><span>confirmed every fix</span></div>
+<div class="with">with: <a href="#rogue-walker">rogue-walker</a></div>
+</article>
+<article class="card k-contrast" id="workstream-not-worktree">
+<div class="top"><span class="kind">contrast</span><span class="id">workstream-not-worktree</span></div>
+<div class="eyebrow">Tasks versus checkouts</div>
+<h2>The task lasts. Its checkout is disposable.</h2>
+<div class="payload"><div class="cols"><div class="col"><div class="lab">Before</div><p>an open terminal tab was my only record of what needed checking; about nine piled up</p></div><div class="col"><div class="lab">After</div><p>the task holds plan, issues and screenshots; its checkout goes once merged and idle. 155 tasks, 7 live checkouts</p></div></div></div>
+<div class="cues"><span>the open tab was the to-do list</span><span>the task outlives the checkout</span><span>disposable checkout</span><span>cleaned up when merged</span></div>
+<div class="with">with: <a href="#to-do-database">to-do-database</a> · <a href="#cull-zero-unknown">cull-zero-unknown</a> · <a href="#liveness-fail-closed">liveness-fail-closed</a></div>
+</article>
+<article class="card k-quote" id="wrong-at-three">
+<div class="top"><span class="kind">quote</span><span class="id">wrong-at-three</span></div>
+<div class="eyebrow">Unattended jobs</div>
+<h2>The script decides whether to wake the agent. Never why.</h2>
+<div class="payload"><blockquote>A <code>run</code> that reasons about its findings will be wrong at 03:00 with nobody watching.</blockquote><div class="attr">From our guide to timed jobs. The script gathers and compares; the judgment lives in the prompt the agent gets.</div></div>
+<div class="cues"><span>three in the morning</span><span>nobody watching</span><span>the script gathers and the agent judges</span><span>don't reason in the script</span></div>
+<div class="with">with: <a href="#run-only-head">run-only-head</a> · <a href="#opus-at-12-04">opus-at-12-04</a> · <a href="#stranded-work">stranded-work</a></div>
+</article>
+</div>
+</div>
+<script>
+  document.querySelectorAll('.filters button').forEach(function (b) { b.addEventListener('click', function () {
+    document.querySelectorAll('.filters button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    var k = b.dataset.k; document.querySelectorAll('.card').forEach(function (c) { c.classList.toggle('hide', k !== 'all' && !c.classList.contains('k-' + k)); });
+  }); });
+</script>
+</body>
+</html>

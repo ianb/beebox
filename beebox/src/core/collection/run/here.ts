@@ -1,6 +1,6 @@
 /**
  * `here` — the place a collection is asked about, and the only thing that
- * gives a query meaning (`docs/plans/todo-collection.md`, Track 3; the parked
+ * gives a query meaning (`docs/implemented-plans/todo-collection.md`, Track 3; the parked
  * query-cards verdict is that "a standalone query card is a selection with no
  * *here*").
  *
@@ -22,7 +22,7 @@ function hereIsCard(here: string): boolean {
 /**
  * The scope glob `here` implies: the box, the card itself, or the directory's
  * subtree. `here` is a literal path, so its glob metacharacters are escaped:
- * a card named `Draft [2].memo.card` must scope to itself, not to a character
+ * a card named `Draft [2].doc.card` must scope to itself, not to a character
  * class that matches nothing. `glob`'s `escape` leaves braces alone, so a
  * path containing a `{a,b}` group still brace-expands.
  */

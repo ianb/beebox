@@ -7,7 +7,7 @@
  * but does not expand its `@` includes, so the agent guide and the briefing
  * would be missing. This module expands those includes the way the harness
  * would at the box root, for the system prompt (measured 2026-10-10:
- * `issues/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md`).
+ * `issues/closed/bugs/2026-10-09-landmark-chats-exclude-box-root-instructions.md`).
  */
 
 import { join } from "node:path";

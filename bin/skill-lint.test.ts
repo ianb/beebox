@@ -1,7 +1,7 @@
 /**
  * Tests for `bin/skill-lint.ts` against throwaway `.claude/` trees.
  *
- * Note on tier: bin/AGENTS.md prefers doctests for new `bin/` tooling; the
+ * Note on tier: bin/AGENTS.md prefers t.check tests for new `bin/` tooling; the
  * boxholder asked for this file beside the lint, as `bin/schedules-lint.test.ts`
  * sits beside `bin/schedules lint`, and root `pnpm test` runs `bin/*.test.ts`.
  *
@@ -118,7 +118,7 @@ test("backticked repo paths must resolve; src/ and docs/ also resolve under beeb
   const body = [
     "Exists: `bin/real.ts`, `src/core/x.ts:12`, `docs/guide.md#top`, `.claude/skills/alpha/SKILL.md`.",
     "Missing: `bin/gone.ts` and `beebox/docs/gone.md`.",
-    "Skipped: `bin/test/<path>.doctest.md`, `bin/*.ts`, `bin/workstreams`, `beebox/`, `scratch/x.md`.",
+    "Skipped: `bin/test/<path>.test.ts`, `bin/*.ts`, `bin/workstreams`, `beebox/`, `scratch/x.md`.",
     "```sh",
     "cat bin/also-gone.ts `bin/fenced-gone.ts`",
     "```",

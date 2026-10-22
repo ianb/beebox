@@ -33,8 +33,11 @@ export interface FolderSyncDeps {
   visitedFolders: Set<string>;
   /** The pre-pass card scan, used to read each mount's current membership. */
   liveCards: TrackedDriveCard[];
-  /** Folders mirrored so far on this pass, weighed against the per-pass cap. */
-  budget: { foldersMirrored: number };
+  /**
+   * Folders mirrored so far on this pass, weighed against the per-pass cap;
+   * `capped` turns true once a depth or folder cap left part of a tree unmirrored.
+   */
+  budget: { foldersMirrored: number; capped: boolean };
   syncFile(opts: { driveId: string; cardPath: string }): Promise<SyncPaths>;
   /** Drop retained transient hashes before a fresh mount of an old Drive ID. */
   forgetFileState(driveId: string): void;

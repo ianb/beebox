@@ -8,6 +8,8 @@ issues:
 
 # The agent sees the interface and points at controls in it
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 The box agent cannot see the running interface. This plan gives it two things:
 a way to ask what controls are on the user's screen right now, and a way to
 write a tappable reference to one of them inside its answer. It covers web and
@@ -1100,7 +1102,7 @@ highlight — the outcome the issue asks for.
   screen. Neither closes the other.
 - **Fixing discoverability.** `issues/features/2026-08-08-no-visible-search-or-home.md`
   (no visible search, no home surface) and
-  `issues/bugs/2026-08-03-attach-vs-upload-menu-confusing.md` describe an
+  `issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md` describe an
   interface that is hard to navigate. A pointer makes those failures
   survivable; it does not fix them, and it must not be used as an argument that
   they are fixed.
@@ -1239,7 +1241,7 @@ honest native meanings.
   the entry cap.
 - `test/frontend/lib/view-url.doctest.md` (extend) — `control:` classification,
   params, unknown action degrades to `point`, empty id falls through.
-- `test/webapp/routes/chat-ui-routes.doctest.md` (moved to `beebox/test/webapp/routes/chat/ui-routes.doctest.md`) — the four outcomes, the
+- `test/webapp/routes/chat-ui-routes.doctest.md` (moved to `beebox/test/webapp/routes/chat/ui-routes.test.ts`) — the four outcomes, the
   loopback guard 403, the Zod-reject path, and the native-unavailable coverage
   value.
 - A tour assertion in `test/tours/nav-pages.tour.ts` that every `Dropdown`

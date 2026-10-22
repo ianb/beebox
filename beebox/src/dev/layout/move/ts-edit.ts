@@ -3,7 +3,7 @@
  * source's text, located by AST position rather than arbitrary string
  * matching, so only real specifier literals are touched.
  */
-import ts from "typescript";
+import * as ts from "../../../lib/typescript/syntax.js";
 import { parseSourceFile } from "../scan/imports.js";
 
 export interface SpecifierLiteral {
@@ -17,7 +17,7 @@ function literalTextOf(node: ts.Node): string | null {
   return null;
 }
 
-export function specifierLiteralsOf(sourceFile: ts.SourceFile): SpecifierLiteral[] {
+function specifierLiteralsOf(sourceFile: ts.SourceFile): SpecifierLiteral[] {
   const literals: SpecifierLiteral[] = [];
   function record(node: ts.Node): void {
     literals.push({ start: node.getStart(sourceFile), end: node.getEnd(), text: literalTextOf(node) ?? "" });
@@ -37,7 +37,7 @@ export function specifierLiteralsOf(sourceFile: ts.SourceFile): SpecifierLiteral
       const arg = node.arguments[0];
       if ((isDynamicImport || isRequire) && arg !== undefined && literalTextOf(arg) !== null) record(arg);
     }
-    ts.forEachChild(node, visit);
+    node.forEachChild(visit);
   }
   visit(sourceFile);
   return literals;

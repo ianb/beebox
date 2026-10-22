@@ -13,7 +13,7 @@
  * Trash. This integer is what makes that observable.
  *
  * The comparison is deliberately a pure function over two numbers: it is the
- * part that has to be right, so it is the part that is doctest-reachable
+ * part that has to be right, so it is the part that is testable
  * without a server.
  */
 
@@ -27,8 +27,12 @@
  * failure worse than having no mechanism: it reports "current" for a bundle
  * that is genuinely stale. The mitigation is that the bump rides an existing
  * ritual rather than being a new obligation — the contract's own change
- * discipline already requires the doc, both implementations, and the doctests
+ * discipline already requires the doc, both implementations, and the tests
  * to move in one change.
+ *
+ * This number is spelled three times: here, in `beebox/src/core/scan/contract-version.ts`
+ * (the box), and in `mac-app/Sources/BeeBoxMacCore/Scan/ContractVersion.swift`
+ * (the Mac app's upload client). Bump all three in the same change.
  */
 export const SCAN_CONTRACT_VERSION = 1;
 

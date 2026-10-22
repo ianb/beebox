@@ -154,7 +154,7 @@ function ExternalChip({
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="not-italic text-warm-500 hover:text-warm-700 text-xs ml-1 no-underline hover:underline underline-offset-2"
+      className="not-italic text-warm-700 hover:text-warm-900 text-xs ml-1 no-underline hover:underline underline-offset-2"
       title={title}
     >
       [↗ {externalLabel(href)}
@@ -222,7 +222,7 @@ export function makeSourceComponents(linkCtx: SourceLinkContext): {
         <div className="text-warm-800 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0">
           {props.children}
         </div>
-        <figcaption className="text-xs text-warm-500 mt-1">
+        <figcaption className="text-xs text-warm-700 mt-1">
           <Citation {...props} />
         </figcaption>
       </figure>

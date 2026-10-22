@@ -1,6 +1,6 @@
 // Reply in the session and the comment panel in one strip: what a raw
 // index.html exhibit gets when it opts into the control bar (controls.ts).
-// Kept apart from the mount so a doctest can render it without the mount's
+// Kept apart from the mount so a test can render it without the mount's
 // stylesheet import.
 
 import type { ReactNode, RefObject } from "react";

@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-browse/
 .wxt/
 .tap/
 .last-build.log
@@ -7,3 +8,4 @@ dist/
 *.tsbuildinfo
 .claude/session-*
 .thinking/local/
+.last-browse-build.log

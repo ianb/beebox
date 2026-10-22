@@ -1,5 +1,5 @@
 /**
- * The box-relay protocol (Track C of docs/plans/see-as-the-user.md).
+ * The box-relay protocol (Track C of docs/implemented-plans/see-as-the-user.md).
  *
  * Two transports, three message families:
  *  - page <-> content script, over `window.postMessage` (strict origin +

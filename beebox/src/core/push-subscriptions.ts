@@ -3,7 +3,7 @@
  *
  * A browser PushSubscription is bound to its service-worker registration, not
  * to a box — and one SW registration controls every box under the origin (see
- * docs/plans/web-push-notifications.md). So subscriptions are stored ONCE,
+ * docs/implemented-plans/web-push-notifications.md). So subscriptions are stored ONCE,
  * server-wide, keyed by endpoint, with each record carrying the set of box
  * slugs that endpoint opted into. This lives outside any box (never committed,
  * never in box history): `~/.local/share/beebox/push-subscriptions.json`, the same

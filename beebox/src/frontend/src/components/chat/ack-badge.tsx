@@ -102,7 +102,7 @@ function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
                 {ack.ref}
               </button>
             ) : (
-              <div className="mt-1 text-warm-500 break-all font-mono text-[11px]">{ack.ref}</div>
+              <div className="mt-1 text-warm-700 break-all font-mono text-[11px]">{ack.ref}</div>
             )
           ) : null}
         </div>

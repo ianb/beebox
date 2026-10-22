@@ -6,6 +6,8 @@ issues: []
 ---
 # Google owners can administer local member credentials
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 This plan lets an authenticated Google owner create invite and password-reset
 links without first creating a local owner password on the host. Invite
 acceptance can initialize a credential store that contains members and no local
@@ -87,8 +89,8 @@ owner.
 - `src/frontend/src/components/admin/AllowedEmailsSection.tsx:30-49` renders
   the SSH instruction and mismatch error. The plan removes these obsolete
   notices. Existing per-user account badges and reset actions remain.
-- `test/webapp/trpc-admin-box-config.doctest.md:100-117` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.doctest.md`) asserts the current
-  failing precondition. `test/webapp/invite-accept.doctest.md:30-93` (moved to `beebox/test/webapp/routes/auth.invite-accept.doctest.md`) only tests
+- `test/webapp/trpc-admin-box-config.doctest.md:100-117` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.test.ts`) asserts the current
+  failing precondition. `test/webapp/invite-accept.doctest.md:30-93` (moved to `beebox/test/webapp/routes/auth.invite-accept.test.ts`) only tests
   acceptance after a local owner exists. These become the primary regression
   tests.
 
@@ -290,9 +292,9 @@ server credential storage only.
 ## Rollout shape
 
 - Tests land before each production change. Required targeted tests are
-  `test/webapp/local-users.doctest.md`,
-  `test/webapp/invite-accept.doctest.md` (moved to `beebox/test/webapp/routes/auth.invite-accept.doctest.md`),
-  `test/webapp/trpc-admin-box-config.doctest.md` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.doctest.md`), and the password-reset
+  `test/webapp/local-users.test.ts`,
+  `test/webapp/invite-accept.doctest.md` (moved to `beebox/test/webapp/routes/auth.invite-accept.test.ts`),
+  `test/webapp/trpc-admin-box-config.doctest.md` (moved to `beebox/test/webapp/trpc/routers/admin.box-config.test.ts`), and the password-reset
   doctests that cover owner minting and member mutation.
 - The completed branch must pass beebox typecheck, lint, doctests, and the
   full test suite before merge. Browser verification must create an invite as a

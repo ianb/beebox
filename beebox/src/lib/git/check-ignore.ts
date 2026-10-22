@@ -1,5 +1,7 @@
 /** Which paths a repository's ignore rules exclude, asked of git itself. */
 
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { gitWithInput } from "./internal.js";
 import { repoRootOf } from "./repo.js";
 
@@ -27,4 +29,28 @@ export async function ignoredPaths(
     okExitCodes: [NONE_IGNORED_EXIT],
   });
   return new Set(out.split("\0").filter((p) => p !== ""));
+}
+
+/**
+ * The subset of `relPaths` that `git add` can take: not ignored, and either on
+ * disk or tracked. A file that moved out of an ignored folder (a page sent from
+ * the Clerk, docs/implemented-plans/clerk-quick-send.md) has an old path that is neither,
+ * and naming it would make `git add` fail after the move happened.
+ */
+export async function stageablePaths(cwd: string, relPaths: string[]): Promise<string[]> {
+  if (relPaths.length === 0) return [];
+  if ((await repoRootOf(cwd)) === null) return relPaths;
+  const ignored = await ignoredPaths(cwd, relPaths);
+  const listed = await gitWithInput({ cwd, args: ["ls-files", "-z", "--", ...relPaths], input: "" });
+  const tracked = new Set(listed.split("\0").filter((p) => p !== ""));
+  // A directory (a moved `.attach/`) is tracked when any file under it is; its
+  // deletion must still be staged after it left the disk.
+  const hasTracked = (rel: string): boolean => tracked.has(rel) || [...tracked].some((file) => file.startsWith(`${rel}/`));
+  const result: string[] = [];
+  for (const rel of relPaths) {
+    if (hasTracked(rel)) { result.push(rel); continue; }
+    if (ignored.has(rel)) continue;
+    if (await fs.access(path.join(cwd, rel)).then(() => true, () => false)) result.push(rel);
+  }
+  return result;
 }

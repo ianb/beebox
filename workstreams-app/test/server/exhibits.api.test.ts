@@ -1,0 +1,723 @@
+// # Exhibits API: documents, events, captures
+//
+// The three file-backed primitives an exhibit page writes through. They ride the
+// exhibits origin's auth hook, resolve under the store root, and leave ordinary
+// files behind — `data/<key>.json`, `events.jsonl`, `captures/<name>` — because
+// the consumer is an agent reading the directory, not another API.
+
+import { test, type Test } from "tap";
+import "@ianbicking/tap-check/tap";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { buildExhibitsApp } from "../../src/server/exhibits/app/handler.js";
+import type { ExhibitsAssets } from "../../src/server/exhibits/assets.js";
+import { EXHIBITS_COOKIE } from "../../src/server/exhibits/app/auth.js";
+import { STORE_MARKER } from "../../src/server/exhibits/store.js";
+import { CommentsCliError } from "../../src/server/comments-service.js";
+import { MAX_AUDIO_BYTES, TranscriptionNotConfiguredError } from "../../src/server/transcribe-contract.js";
+
+const TOKEN = "exhibits-test-token-0123456789";
+const EXHIBITS_PORT = 3230;
+const authorized = { cookie: `${EXHIBITS_COOKIE}=${TOKEN}` };
+const json = { ...authorized, "content-type": "application/json" };
+
+function fakeAssets(): ExhibitsAssets {
+  return {
+    transformIndexHtml: async (_url, html) => html,
+    preflightModule: async () => {},
+    noticeExhibit: () => {},
+    handle: (_exchange, next) => next(),
+    close: async () => {},
+  };
+}
+
+/** One workstream exhibit; the apps namespace is created by writing to it. */
+async function makeStore(): Promise<string> {
+  // realpath: containment answers in canonical paths, and macOS tmpdir is a symlink.
+  const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "exhibits-api-")));
+  await fs.writeFile(path.join(root, STORE_MARKER), "");
+  await fs.mkdir(path.join(root, "demo-ws/instrument"), { recursive: true });
+  return root;
+}
+
+/** The focus runner is injected; this stub records calls and fails on demand. */
+const focusCalls: string[] = [];
+let focusFailure: string | null = null;
+
+/** So are the comment writer and the transcriber; these record and fail on demand. */
+const commentAdds: unknown[] = [];
+let commentFailure: string | null = null;
+let transcribeFailure: Error | null = null;
+
+async function makeApp(storeRoot: string) {
+  return buildExhibitsApp({
+    storeRoot,
+    appsRoot: path.join(storeRoot, "unused-apps-root"),
+    token: TOKEN,
+    port: EXHIBITS_PORT,
+    runFocus: async (request) => {
+      focusCalls.push(`${request.verb} ${request.name}`);
+      if (focusFailure !== null) throw new Error(focusFailure);
+    },
+    comments: {
+      add: async (input) => {
+        if (commentFailure !== null) throw new CommentsCliError(commentFailure);
+        commentAdds.push(input);
+        return { id: `c-${String(commentAdds.length)}` };
+      },
+    },
+    transcribe: {
+      transcribe: async ({ audio }) => {
+        if (transcribeFailure !== null) throw transcribeFailure;
+        return { text: `heard ${String(audio.byteLength)} bytes` };
+      },
+    },
+    createAssets: async () => fakeAssets(),
+  });
+}
+
+const store = await makeStore();
+const app = await makeApp(store);
+const scope = "/api/demo-ws/instrument";
+
+// ## The API inherits the origin's auth
+//
+// The routes are registered on the exhibits instance, so the same cookie hook that
+// guards pages guards writes. A write surface registered anywhere else would be
+// unauthenticated — that is the whole reason this is a plugin on that instance.
+void test("The routes are registered on the exhibits instance, so the same cookie hook t...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await app.close();
+      await fs.rm(store, { recursive: true, force: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  await checkAuthenticationAndOrigin(t);
+  await checkFocusSession(t);
+  await checkComments(t);
+  await checkTranscription(t);
+  await checkInheritedWorkstreamName(t);
+  await checkDocumentRoundTrip(t);
+  await checkMissingDocument(t);
+  await checkConcurrentWrites(t);
+  await checkEvents(t);
+  await checkEventEnvelope(t);
+  await checkCaptures(t);
+  await checkCaptureKinds(t);
+  await checkSizeCaps(t);
+  await checkCommittedAppData(t);
+});
+
+async function checkAuthenticationAndOrigin(t: Test): Promise<void> {
+  const anonymous = await app.inject({
+    method: "PUT",
+    url: `${scope}/data/settings`,
+    headers: { "content-type": "application/json" },
+    payload: '{"threshold":0.4}',
+  });
+  t.check({ status: anonymous.statusCode, hint: anonymous.body.includes("bin/exhibits url") }, {
+    status: 401,
+    hint: true,
+  });
+
+  // ## A cookie is not enough for a write: the origin must match
+  //
+  // Every loopback port is one "site" to a browser, so `SameSite` does not separate
+  // this origin from any other local server — a page on `http://localhost:5173`
+  // could otherwise drive cookie-authenticated writes here. A mutating request that
+  // declares an `Origin` must declare this one. A request with no `Origin` at all is
+  // a non-browser client (curl, an agent) and is allowed: browsers always send it on
+  // a cross-origin write.
+
+  const foreign = await app.inject({
+    method: "PUT",
+    url: `${scope}/data/settings`,
+    headers: { ...json, origin: "http://localhost:5173" },
+    payload: '{"threshold":0.9}',
+  });
+  const sameOrigin = await app.inject({
+    method: "PUT",
+    url: `${scope}/data/settings`,
+    headers: { ...json, origin: `http://127.0.0.1:${String(EXHIBITS_PORT)}` },
+    payload: '{"threshold":0.4}',
+  });
+  const namedHost = await app.inject({
+    method: "PUT",
+    url: `${scope}/data/settings`,
+    headers: { ...json, origin: `http://localhost:${String(EXHIBITS_PORT)}` },
+    payload: '{"threshold":0.4}',
+  });
+  const opaque = await app.inject({
+    method: "PUT",
+    url: `${scope}/data/settings`,
+    headers: { ...json, origin: "null" },
+    payload: '{"threshold":0.9}',
+  });
+  const noOrigin = await app.inject({
+    method: "PUT",
+    url: `${scope}/data/settings`,
+    headers: json,
+    payload: '{"threshold":0.4}',
+  });
+  // Reading is not a write; a cross-origin GET is still refused a body by the
+  // browser's own rules, so the Origin check does not apply to it.
+  const crossOriginRead = await app.inject({
+    method: "GET",
+    url: `${scope}/data/settings`,
+    headers: { ...authorized, origin: "http://localhost:5173" },
+  });
+  t.check(
+    {
+      foreign: foreign.statusCode,
+      refusalNamesOrigin: foreign.body.includes("http://localhost:5173"),
+      sameOrigin: sameOrigin.statusCode,
+      namedHost: namedHost.statusCode,
+      opaque: opaque.statusCode,
+      noOrigin: noOrigin.statusCode,
+      crossOriginRead: crossOriginRead.statusCode,
+    },
+    {
+    foreign: 403,
+    refusalNamesOrigin: true,
+    sameOrigin: 200,
+    namedHost: 200,
+    opaque: 403,
+    noOrigin: 200,
+    crossOriginRead: 200,
+  },
+  );
+}
+
+async function checkFocusSession(t: Test): Promise<void> {
+  // ## Reply in the session: bring a workstream's terminal tab forward
+  //
+  // `POST /api/<ws>/<exhibit>/focus` runs `bin/workstreams focus <ws>` through the
+  // injected runner. Success is 204. A runner failure is a 409 whose `detail` is the
+  // CLI's last stderr line, so the page can show why there is no live session. The
+  // committed-app namespace and `main` have no session row: they are refused with
+  // 409 before the runner is called. A foreign `Origin` is refused like any write.
+
+  const focused = await app.inject({ method: "POST", url: `${scope}/focus`, headers: authorized });
+  focusFailure = "workstreams focus: no live session for demo-ws — use resume";
+  const noSession = await app.inject({ method: "POST", url: `${scope}/focus`, headers: authorized });
+  focusFailure = null;
+  const callsBeforeRefusals = focusCalls.length;
+  const appsFocus = await app.inject({ method: "POST", url: "/api/apps/story-eval/focus", headers: authorized });
+  const mainFocus = await app.inject({ method: "POST", url: "/api/main/anything/focus", headers: authorized });
+  const unknownFocus = await app.inject({ method: "POST", url: "/api/no-such-ws/nothing/focus", headers: authorized });
+  const foreignFocus = await app.inject({
+    method: "POST",
+    url: `${scope}/focus`,
+    headers: { ...authorized, origin: "http://localhost:5173" },
+  });
+  const anonymousFocus = await app.inject({ method: "POST", url: `${scope}/focus` });
+  t.check(
+    {
+      focused: [focused.statusCode, focused.body],
+      noSession: [noSession.statusCode, noSession.json()],
+      apps: [appsFocus.statusCode, appsFocus.json().detail.startsWith("Committed apps")],
+      main: mainFocus.statusCode,
+      unknown: unknownFocus.statusCode,
+      foreign: foreignFocus.statusCode,
+      anonymous: anonymousFocus.statusCode,
+      calls: focusCalls,
+      refusalsSpawnedNothing: focusCalls.length === callsBeforeRefusals,
+      noAppsDirectoryMade: await fs.stat(path.join(store, "apps")).then(() => false, () => true),
+    },
+    {
+    focused: [
+      204,
+      "",
+    ],
+    noSession: [
+      409,
+      {
+        message: "Could not bring the session forward.",
+        detail: "workstreams focus: no live session for demo-ws — use resume",
+      },
+    ],
+    apps: [
+      409,
+      true,
+    ],
+    main: 409,
+    unknown: 404,
+    foreign: 403,
+    anonymous: 401,
+    calls: [
+      "focus demo-ws",
+      "focus demo-ws",
+    ],
+    refusalsSpawnedNothing: true,
+    noAppsDirectoryMade: true,
+  },
+  );
+}
+
+async function checkComments(t: Test): Promise<void> {
+  // ## A remark on the page goes to the comment store, addressed to the workstream
+  //
+  // `POST /api/<ws>/<exhibit>/comments` writes through the injected comment service
+  // (`bin/comments`, in production) with the exhibit as its target and the
+  // workstream as the comment's recipient — `main` included, since a main-checkout
+  // session reads with `bin/comments list --workstream main`. Fields the page did
+  // not send are absent, not `undefined`. Apps are refused before the store is
+  // touched, so no directory appears; a missing exhibit is 404; a writer failure is
+  // 409 with the CLI's last line.
+
+  const remark = await app.inject({
+    method: "POST",
+    url: `${scope}/comments`,
+    headers: json,
+    payload: { body: "The caption is wrong.", origin: "voice", quoted: "A1 shows", section: "Figures" },
+  });
+  await fs.mkdir(path.join(store, "main/notes"), { recursive: true });
+  const onMain = await app.inject({ method: "POST", url: "/api/main/notes/comments", headers: json, payload: { body: "ok" } });
+  const appsComment = await app.inject({ method: "POST", url: "/api/apps/story-eval/comments", headers: json, payload: { body: "x" } });
+  const noExhibit = await app.inject({ method: "POST", url: "/api/demo-ws/nothing/comments", headers: json, payload: { body: "x" } });
+  const badName = await app.inject({ method: "POST", url: "/api/demo-ws/..%2Fx/comments", headers: json, payload: { body: "x" } });
+  const empty = await app.inject({ method: "POST", url: `${scope}/comments`, headers: json, payload: { body: "" } });
+  commentFailure = "comments: comment store /tmp/x is missing its .dev-comments marker";
+  const unsaved = await app.inject({ method: "POST", url: `${scope}/comments`, headers: json, payload: { body: "x" } });
+  commentFailure = null;
+  const foreignComment = await app.inject({
+    method: "POST",
+    url: `${scope}/comments`,
+    headers: { ...json, origin: "http://localhost:5173" },
+    payload: { body: "x" },
+  });
+  t.check(
+    {
+      remark: [remark.statusCode, remark.json()],
+      recorded: commentAdds[0],
+      onMain: [onMain.statusCode, commentAdds[1]],
+      apps: [appsComment.statusCode, appsComment.json().message],
+      noAppsDirectoryMade: await fs.stat(path.join(store, "apps")).then(() => false, () => true),
+      missing: noExhibit.statusCode,
+      badName: badName.statusCode,
+      empty: [empty.statusCode, empty.json().issues],
+      unsaved: [unsaved.statusCode, unsaved.json()],
+      foreign: foreignComment.statusCode,
+      writes: commentAdds.length,
+    },
+    {
+    remark: [
+      201,
+      {
+        id: "c-1",
+        workstream: "demo-ws",
+      },
+    ],
+    recorded: {
+      target: {
+        exhibit: {
+          workstream: "demo-ws",
+          exhibit: "instrument",
+        },
+      },
+      body: "The caption is wrong.",
+      origin: "voice",
+      workstream: "demo-ws",
+      quoted: "A1 shows",
+      section: "Figures",
+    },
+    onMain: [
+      201,
+      {
+        target: {
+          exhibit: {
+            workstream: "main",
+            exhibit: "notes",
+          },
+        },
+        body: "ok",
+        origin: "typed",
+        workstream: "main",
+      },
+    ],
+    apps: [
+      409,
+      "Apps have no workstream to send a comment to.",
+    ],
+    noAppsDirectoryMade: true,
+    missing: 404,
+    badName: 400,
+    empty: [
+      400,
+      [
+        "body: Too small: expected string to have >=1 characters",
+      ],
+    ],
+    unsaved: [
+      409,
+      {
+        message: "The comment was not saved.",
+        detail: "bin/comments failed: comments: comment store /tmp/x is missing its .dev-comments marker",
+      },
+    ],
+    foreign: 403,
+    writes: 2,
+  },
+  );
+}
+
+async function checkTranscription(t: Test): Promise<void> {
+  // ## A spoken remark is transcribed on this origin
+  //
+  // `POST /api/transcribe` is the dashboard's transcription with the same byte cap:
+  // over the cap is 413 before the service is called, a service with no key is 412,
+  // and the message is the contract's own wording so the page can show it as is.
+
+  const audio = Buffer.from("not really audio").toString("base64");
+  const heard = await app.inject({ method: "POST", url: "/api/transcribe", headers: json, payload: { audio } });
+  const tooBig = await app.inject({
+    method: "POST",
+    url: "/api/transcribe",
+    headers: json,
+    payload: { audio: Buffer.alloc(MAX_AUDIO_BYTES + 1).toString("base64") },
+  });
+  transcribeFailure = new TranscriptionNotConfiguredError();
+  const noKey = await app.inject({ method: "POST", url: "/api/transcribe", headers: json, payload: { audio } });
+  transcribeFailure = null;
+  const notBase64Shape = await app.inject({ method: "POST", url: "/api/transcribe", headers: json, payload: { mimeType: "audio/webm" } });
+  t.check(
+    {
+      heard: [heard.statusCode, heard.json()],
+      tooBig: [tooBig.statusCode, tooBig.json().error.startsWith("That recording is 700 kB")],
+      noKey: [noKey.statusCode, noKey.json().error.startsWith("BBX_OPENAI_API_KEY is not set")],
+      malformed: notBase64Shape.statusCode,
+    },
+    {
+    heard: [
+      200,
+      {
+        text: "heard 16 bytes",
+      },
+    ],
+    tooBig: [
+      413,
+      true,
+    ],
+    noKey: [
+      412,
+      true,
+    ],
+    malformed: 400,
+  },
+  );
+}
+
+async function checkInheritedWorkstreamName(t: Test): Promise<void> {
+  // A workstream named like an `Object.prototype` member is an ordinary workstream:
+  // it reaches the runner rather than hitting an inherited property.
+
+  await fs.mkdir(path.join(store, "constructor/page"), { recursive: true });
+  const inherited = await app.inject({ method: "POST", url: "/api/constructor/page/focus", headers: authorized });
+  t.check({ status: inherited.statusCode, called: focusCalls.at(-1) }, {
+    status: 204,
+    called: "focus constructor",
+  });
+}
+
+async function checkDocumentRoundTrip(t: Test): Promise<void> {
+  // ## Documents round-trip
+  //
+  // `PUT` replaces a whole JSON document; `GET` hands it back. The key names the
+  // document and the server owns the extension, so a page cannot choose what kind of
+  // file it writes.
+
+  const saved = await app.inject({ method: "PUT", url: `${scope}/data/settings`, headers: json, payload: '{"threshold":0.4}' });
+  const loaded = await app.inject({ method: "GET", url: `${scope}/data/settings`, headers: authorized });
+  const onDisk = await fs.readFile(path.join(store, "demo-ws/instrument/data/settings.json"), "utf8");
+  t.check(
+    {
+      saved: saved.statusCode,
+      loaded: loaded.statusCode,
+      type: loaded.headers["content-type"],
+      body: loaded.body,
+      onDisk,
+    },
+    {
+    saved: 200,
+    loaded: 200,
+    type: "application/json; charset=utf-8",
+    body: "{\"threshold\":0.4}",
+    onDisk: "{\"threshold\":0.4}",
+  },
+  );
+}
+
+async function checkMissingDocument(t: Test): Promise<void> {
+  // A document that was never saved is a 404 with a JSON body, so `Storage.load()`
+  // can return `null` without guessing; a body that is not JSON is refused before
+  // anything is written.
+
+  const missing = await app.inject({ method: "GET", url: `${scope}/data/nothing-here`, headers: authorized });
+  const malformed = await app.inject({ method: "PUT", url: `${scope}/data/settings`, headers: json, payload: "{oops" });
+  const unchanged = await fs.readFile(path.join(store, "demo-ws/instrument/data/settings.json"), "utf8");
+  t.check(
+    {
+      missing: missing.statusCode,
+      missingError: JSON.parse(missing.body).error,
+      malformed: malformed.statusCode,
+      malformedError: JSON.parse(malformed.body).error.startsWith("The document body must be valid JSON:"),
+      unchanged,
+    },
+    {
+    missing: 404,
+    missingError: "No document \"nothing-here\" in this exhibit.",
+    malformed: 400,
+    malformedError: true,
+    unchanged: "{\"threshold\":0.4}",
+  },
+  );
+}
+
+async function checkConcurrentWrites(t: Test): Promise<void> {
+  // ## A concurrent writer never publishes half a file
+  //
+  // Writes are temp-file-plus-rename, so a reader either sees the old document or
+  // the new one. Twenty interleaved writes of two different documents leave a file
+  // that parses, and no temp files behind.
+
+  const bodyA = JSON.stringify({ who: "a".repeat(20_000) });
+  const bodyB = JSON.stringify({ who: "b".repeat(20_000) });
+  const bodies = [bodyA, bodyB];
+  await Promise.all(
+    Array.from({ length: 20 }, (_unused, index) =>
+      app.inject({ method: "PUT", url: `${scope}/data/racy`, headers: json, payload: index % 2 === 0 ? bodyA : bodyB })),
+  );
+  const racy = await fs.readFile(path.join(store, "demo-ws/instrument/data/racy.json"), "utf8");
+  const entries = await fs.readdir(path.join(store, "demo-ws/instrument/data"));
+  t.check(
+    {
+      parses: bodies.includes(racy),
+      who: JSON.parse(racy).who.length,
+      entries: entries.toSorted(),
+    },
+    {
+    parses: true,
+    who: 20000,
+    entries: [
+      "racy.json",
+      "settings.json",
+    ],
+  },
+  );
+}
+
+async function checkEvents(t: Test): Promise<void> {
+  // ## Events append, and the server stamps them
+  //
+  // `POST events` appends one JSON line; the server adds `at` so page clocks never
+  // decide the order of a log. The server never reads the file back — agents do,
+  // from disk.
+
+  await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "ratings", data: { figure: "A1" } }) });
+  await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "choices", data: { choice: "A" } }) });
+  await Promise.all(
+    Array.from({ length: 8 }, (_unused, index) =>
+      app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ log: "burst", data: index }) })),
+  );
+  const lines = (await fs.readFile(path.join(store, "demo-ws/instrument/events.jsonl"), "utf8")).trim().split("\n");
+  const parsed = lines.map((line) => JSON.parse(line));
+  t.check(
+    {
+      lines: lines.length,
+      logs: parsed.slice(0, 2).map((entry) => entry.log),
+      data: parsed[0].data,
+      stamped: parsed.every((entry) => typeof entry.at === "string" && !Number.isNaN(Date.parse(entry.at))),
+      burst: parsed.filter((entry) => entry.log === "burst").map((entry) => entry.data).toSorted((a, b) => a - b),
+    },
+    {
+    lines: 10,
+    logs: [
+      "ratings",
+      "choices",
+    ],
+    data: {
+      figure: "A1",
+    },
+    stamped: true,
+    burst: [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+    ],
+  },
+  );
+}
+
+async function checkEventEnvelope(t: Test): Promise<void> {
+  // An envelope that is not `{ log, data }` is refused with the Zod issues, not
+  // silently appended.
+
+  const bad = await app.inject({ method: "POST", url: `${scope}/events`, headers: json, payload: JSON.stringify({ data: 1 }) });
+  t.check({ status: bad.statusCode, body: JSON.parse(bad.body) }, {
+    status: 400,
+    body: {
+      error: "An event is { \"log\": <name>, \"data\": <anything> }.",
+      issues: [
+        "log: Invalid input: expected string, received undefined",
+      ],
+    },
+  });
+}
+
+async function checkCaptures(t: Test): Promise<void> {
+  // ## Captures are records
+  //
+  // Raw bytes land under `captures/`, once. A repeat of the same name is a conflict
+  // rather than a silent replacement, the extension is allowlisted, and the cap is
+  // the capture cap (25 MB) rather than the document cap.
+
+  const first = await app.inject({
+    method: "POST",
+    url: `${scope}/captures/take-01.png`,
+    headers: { ...authorized, "content-type": "image/png" },
+    payload: Buffer.from("PNG-ish bytes"),
+  });
+  const again = await app.inject({
+    method: "POST",
+    url: `${scope}/captures/take-01.png`,
+    headers: { ...authorized, "content-type": "image/png" },
+    payload: Buffer.from("different bytes"),
+  });
+  const bytes = await fs.readFile(path.join(store, "demo-ws/instrument/captures/take-01.png"), "utf8");
+  const big = await app.inject({
+    method: "POST",
+    url: `${scope}/captures/take-02.webm`,
+    headers: { ...authorized, "content-type": "video/webm" },
+    payload: Buffer.alloc(2 * 1024 * 1024, 7),
+  });
+  t.check(
+    {
+      first: first.statusCode,
+      again: again.statusCode,
+      conflict: JSON.parse(again.body).error,
+      bytes,
+      overDocumentCap: big.statusCode,
+    },
+    {
+    first: 201,
+    again: 409,
+    conflict: "Capture \"take-01.png\" already exists; captures are records and are never replaced.",
+    bytes: "PNG-ish bytes",
+    overDocumentCap: 201,
+  },
+  );
+}
+
+async function checkCaptureKinds(t: Test): Promise<void> {
+  // Anything the origin might execute is refused by omission from the allowlist, and
+  // so is anything that is not one path segment.
+
+  const source = await app.inject({ method: "POST", url: `${scope}/captures/page.tsx`, headers: authorized, payload: "export default 1" });
+  const page = await app.inject({ method: "POST", url: `${scope}/captures/evil.html`, headers: authorized, payload: "<script>" });
+  const traversal = await app.inject({ method: "POST", url: `${scope}/captures/..%2f..%2fescape.png`, headers: authorized, payload: "x" });
+  const keyTraversal = await app.inject({ method: "PUT", url: `${scope}/data/..%2f..%2fescape`, headers: json, payload: "{}" });
+  const extension = await app.inject({ method: "PUT", url: `${scope}/data/settings.json`, headers: json, payload: "{}" });
+  t.check(
+    {
+      source: source.statusCode,
+      sourceError: JSON.parse(source.body).error.startsWith('Capture "page.tsx" is not an allowed kind.'),
+      page: page.statusCode,
+      traversal: traversal.statusCode,
+      keyTraversal: keyTraversal.statusCode,
+      extension: extension.statusCode,
+      extensionError: JSON.parse(extension.body).error,
+      escaped: await fs.readdir(path.dirname(store)).then((names) => names.includes("escape.png")),
+    },
+    {
+    source: 400,
+    sourceError: true,
+    page: 400,
+    traversal: 400,
+    keyTraversal: 400,
+    extension: 400,
+    extensionError: "Invalid document key \"settings.json\": keys carry no extension — the server stores <key>.json.",
+    escaped: false,
+  },
+  );
+}
+
+async function checkSizeCaps(t: Test): Promise<void> {
+  // ## Caps name themselves
+  //
+  // A document over 1 MB is refused with the cap in the message, so a page that
+  // outgrew the primitive learns which one it hit.
+
+  const oversize = await app.inject({
+    method: "PUT",
+    url: `${scope}/data/huge`,
+    headers: json,
+    payload: JSON.stringify({ blob: "x".repeat(1024 * 1024) }),
+  });
+  t.check({ status: oversize.statusCode, body: JSON.parse(oversize.body) }, {
+    status: 413,
+    body: {
+      error: "Request body is too large: this route accepts at most 1 MB.",
+    },
+  });
+}
+
+async function checkCommittedAppData(t: Test): Promise<void> {
+  // ## A committed app's data lives in the store
+  //
+  // `/apps/<name>/` serves tracked code from the main checkout, but its writes land
+  // in the reserved `apps/` store namespace — created on first write, since nothing
+  // else creates it. Using an app never dirties a checkout.
+
+  const appWrite = await app.inject({
+    method: "PUT",
+    url: "/api/apps/story-eval/data/state",
+    headers: json,
+    payload: '{"run":"2026-08-15"}',
+  });
+  const appData = await fs.readFile(path.join(store, "apps/story-eval/data/state.json"), "utf8");
+  const unknownExhibit = await app.inject({ method: "PUT", url: "/api/demo-ws/never-created/data/x", headers: json, payload: "{}" });
+  t.check(
+    {
+      status: appWrite.statusCode,
+      appData,
+      unknownExhibit: unknownExhibit.statusCode,
+      unknownError: JSON.parse(unknownExhibit.body).error,
+    },
+    {
+    status: 200,
+    appData: "{\"run\":\"2026-08-15\"}",
+    unknownExhibit: 404,
+    unknownError: "No exhibit at demo-ws/never-created in the store.",
+  },
+  );
+}
+
+// ## An unmarked directory is not a store
+//
+// The API fails closed on the marker for the same reason the page routes do: an
+// unmarked directory is refused rather than adopted.
+void test("The API fails closed on the marker for the same reason the page routes do:", async (t) => {
+  t.teardown(async () => {
+    try {
+      await refusing.close();
+      await fs.rm(unmarked, { recursive: true, force: true });
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const unmarked = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "exhibits-api-unmarked-")));
+  const refusing = await makeApp(unmarked);
+  const refused = await refusing.inject({ method: "PUT", url: "/api/demo-ws/x/data/y", headers: json, payload: "{}" });
+  t.check({ status: refused.statusCode, marker: JSON.parse(refused.body).error.includes(STORE_MARKER) }, {
+    status: 503,
+    marker: true,
+  });
+});

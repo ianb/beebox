@@ -10,7 +10,7 @@
 
 import { setup, assign, enqueueActions } from "xstate";
 import { invariant } from "@shared/invariant";
-import { buildOptimisticContent, mergeAcceptedIntoPending } from "./chat-shared";
+import { buildOptimisticContent, holdInjectedMessage, mergeAcceptedIntoPending } from "./chat-shared";
 import { initialChatContext } from "./chat-machine-context";
 import {
   chatTailSlice,
@@ -23,7 +23,6 @@ import {
   fetchInitialActor,
   fetchHistoryActor,
   streamActor,
-  rollupStreamToEntry,
 } from "./chat-actors";
 import {
   appendQueuedSend,
@@ -36,7 +35,7 @@ import {
   applyStreamError,
   untrackLastSend,
   clearInterrupt, markTurnRefresh, sendInterrupt,
-  reconcilePendingWithDiagnostics,
+  reconcilePendingWithDiagnostics, adoptSession, applyRefreshedHistory,
 } from "./chat-actions";
 
 export { chatTailSlice };
@@ -98,6 +97,16 @@ export const chatMachine = setup({
     OTHER_USER_MESSAGE: {
       actions: assign(appendOtherUserMessage),
     },
+    // Global handler: the box injected a message (a delivered capture or
+    // upload); show it until the transcript has it (holdInjectedMessage).
+    INJECTED_USER_MESSAGE: {
+      actions: assign(({ context, event }) => holdInjectedMessage({
+        messages: context.messages,
+        pendingMessages: context.pendingMessages,
+        message: event.message,
+        timestamp: event.timestamp,
+      })),
+    },
     // Global handler: prepend older messages loaded on demand (bounded — see
     // prependOlderMessages).
     PREPEND_MESSAGES: {
@@ -112,19 +121,14 @@ export const chatMachine = setup({
         : {}),
     },
     // Global handler: backend assigned an id to a session that started as
-    // "new". Lock subsequent sends and history fetches onto the real id so
-    // we don't accidentally start another fresh session, and so refreshing
-    // mid-stream uses the correct sessionInput rather than the "new" branch.
-    SESSION_ASSIGNED: {
-      actions: assign(({ event }) => ({
-        sessionInput: event.sessionId,
-        sessionId: event.sessionId,
-        // Drop the in-memory binding now that the backend has persisted
-        // it to chat-session-history; future resumes look it up there.
-        // (Pending seedFeatures, if any, are now inert: sessionInput is the
-        // real id so they're never re-sent, and toggles go through the server.)
-        contextDir: undefined,
-      })),
+    // "new" (the turn stream's `system/init`). Adopt it so we don't
+    // accidentally start another fresh session, and so refreshing mid-stream
+    // uses the real id rather than the "new" branch.
+    SESSION_ASSIGNED: { actions: assign(({ event }) => adoptSession(event.sessionId)) },
+    // Global handler: a "new" chat's send was accepted as this turn. Held so
+    // a refresh can look up the session id if init never reached us.
+    TURN_ACCEPTED: {
+      actions: assign(({ context, event }) => context.sessionInput === "new" ? { newChatTurnId: event.turnId } : {}),
     },
   },
   states: {
@@ -179,6 +183,12 @@ export const chatMachine = setup({
         msgs: context.messages.length,
         pending: context.pendingMessages.length,
       }),
+      // A REFRESH held during a lost-reply refresh (see `refreshing`): fetch
+      // once more if the warning is still up, else just drop the flag.
+      always: [
+        { guard: ({ context }) => context.refreshAgain && context.replyLost, target: "refreshing", actions: assign({ refreshAgain: false, refreshCause: "resync" as const }) },
+        { guard: ({ context }) => context.refreshAgain, actions: assign({ refreshAgain: false }) },
+      ],
       on: {
         SEND: {
           target: "streaming",
@@ -195,6 +205,7 @@ export const chatMachine = setup({
               return {
                 error: null,
                 interrupting: false,
+                replyLost: false,
                 streamText: "",
                 streamTools: [],
                 liveTurnId: event.messageId, // keys the live bubble across finalize
@@ -207,7 +218,7 @@ export const chatMachine = setup({
             }),
           ],
         },
-        DISMISS_ERROR: { actions: assign({ error: null }) },
+        DISMISS_ERROR: { actions: assign({ error: null, replyLost: false }) },
       },
     },
     streaming: {
@@ -305,6 +316,13 @@ export const chatMachine = setup({
           // response that completed while we were disconnected.
           { target: "refreshing", actions: [assign(markTurnRefresh), assign(applyStreamError)] },
         ],
+        // The live view dropped; the agent may still be running, and its reply
+        // may already be in history. No banner until a refresh settles it.
+        // streamText stays for `refreshing` to swap, as for STREAM_RECOVER.
+        STREAM_LOST: [
+          { guard: ({ context }) => context.interrupting, target: "refreshing", actions: [assign(markTurnRefresh), assign(clearInterrupt)] },
+          { target: "refreshing", actions: [({ event }) => logFsm("stream-lost", { reason: event.reason }), assign(markTurnRefresh), assign({ replyLost: true })] },
+        ],
         INTERRUPT: {
           actions: [
             assign({ interrupting: true }),
@@ -329,44 +347,22 @@ export const chatMachine = setup({
         // already running is authoritative: waitForTranscriptEntry
         // (core/chat/session/transcript-sync.ts) holds `result`/`done` until
         // the turn is durable, and onDone swaps messages in + clears streamText
-        // atomically. See test/frontend/chat-machine-finalize.doctest.md.
-        REFRESH: { actions: () => logFsm("refresh-ignored-refreshing") },
+        // atomically. See src/frontend/test/machines/chatMachine/machine.chat-machine-finalize.test.ts.
+        // Exception: while a dropped reply is unsettled, the in-flight read may
+        // predate the reply, and this `chat-complete` is the last signal that
+        // it landed. Hold it (not restart the fetch); `idle` fetches once more.
+        REFRESH: [
+          { guard: ({ context }) => context.replyLost, actions: [() => logFsm("refresh-held-refreshing"), assign({ refreshAgain: true })] },
+          { actions: () => logFsm("refresh-ignored-refreshing") },
+        ],
         SEND: { actions: { type: "queueSend", params: { from: "refreshing" } } },
       },
       invoke: {
         src: "fetchHistory",
-        input: ({ context }) => ({ sessionInput: context.sessionInput }),
+        input: ({ context }) => ({ sessionInput: context.sessionInput, turnId: context.newChatTurnId }),
         onDone: {
           target: "idle",
-          actions: assign(({ context, event }) => {
-            // "new" session: server has no id yet, so fetchHistory returned
-            // empty. Roll up whatever streamed for this turn into a synthetic
-            // assistant entry so the completed response stays visible — the
-            // chat-session-assigned SSE / URL navigation eventually loads
-            // the authoritative copy and replaces this on remount.
-            if (context.sessionInput === "new") {
-              const synthetic = rollupStreamToEntry(context.streamText, context.streamTools);
-              return {
-                messages: synthetic ? [...context.messages, synthetic] : context.messages,
-                streamText: "",
-                streamTools: [],
-              };
-            }
-            const reconciled = reconcilePendingWithDiagnostics({
-              serverMessages: event.output.entries,
-              pendingMessages: context.pendingMessages,
-            });
-            return {
-              messages: reconciled.messages,
-              pendingMessages: reconciled.pendingMessages,
-              sessionId: event.output.sessionId,
-              totalEntries: event.output.total,
-              processRunning: event.output.running,
-              processBusy: event.output.busy,
-              streamText: "",
-              streamTools: [],
-            };
-          }),
+          actions: assign(({ context, event }) => applyRefreshedHistory({ context, output: event.output })),
         },
         onError: {
           target: "idle",

@@ -2,7 +2,7 @@
  * `bbx todos` — read/query-only surface over the todo collection
  * (`docs/implemented-plans/todo-annotation.md` Track 3).
  *
- * **Superseded by `bbx query todos`** (`docs/plans/todo-collection.md`,
+ * **Superseded by `bbx query todos`** (`docs/implemented-plans/todo-collection.md`,
  * Track 4). It stays for now with its flags and its output unchanged, and is
  * scheduled for removal; the agent guide, the ambient line, and the knowledge
  * audits all teach `bbx query` instead. What changed underneath is that it
@@ -31,7 +31,7 @@ interface TodosCliOptions {
   status?: string;
   assigned?: string;
   glob?: string;
-  onPlate?: boolean;
+  now?: boolean;
   json?: boolean;
 }
 
@@ -40,7 +40,7 @@ export const todosCommand = new Command("todos")
   .option("--status <status>", "Filter by status: open, done, dropped, parked (default: open)")
   .option("--assigned <name>", "Filter by the `assigned` attribute (exact match)")
   .option("--glob <pattern>", "Restrict which cards are scanned (default: every card)")
-  .option("--on-plate", "Only escalated / on-plate todos (excludes quiet)")
+  .option("--now", "Only todos due now: overdue, started, or undated (excludes later)")
   .option("--json", "Full structured records as JSON, `{todos, issues}`")
   .action(async (options: TodosCliOptions) => {
     try {
@@ -54,7 +54,7 @@ export const todosCommand = new Command("todos")
 
 /**
  * The command's logic, taking `boxRoot` directly rather than resolving it
- * from `process.cwd()` — the seam doctests drive (`test/cli/commands/todos.doctest.md`),
+ * from `process.cwd()` — the seam tests drive (`test/cli/commands/todos.test.ts`),
  * same approach as `auth.ts`'s exported `run*` functions.
  */
 export async function runTodosForBox(boxRoot: string, options: TodosCliOptions): Promise<void> {
@@ -77,7 +77,7 @@ export async function runTodosForBox(boxRoot: string, options: TodosCliOptions):
         // (Track 1).
         scope: "all",
         ...(options.assigned !== undefined && { assigned: options.assigned }),
-        ...(options.onPlate === true && { onPlate: true }),
+        ...(options.now === true && { onPlate: true }),
       },
     },
     since: null,
@@ -102,9 +102,9 @@ export async function runTodosForBox(boxRoot: string, options: TodosCliOptions):
 
 /** Section order for the default human listing — only non-empty groups print. */
 const PLATE_GROUPS: { state: TodoPlateState; label: string }[] = [
-  { state: "escalated", label: "ESCALATED" },
-  { state: "on-plate", label: "ON PLATE" },
-  { state: "quiet", label: "QUIET" },
+  { state: "escalated", label: "OVERDUE" },
+  { state: "on-plate", label: "NOW" },
+  { state: "quiet", label: "LATER" },
   { state: "parked", label: "PARKED" },
   { state: "done", label: "DONE" },
   { state: "dropped", label: "DROPPED" },

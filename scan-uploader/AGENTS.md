@@ -26,17 +26,20 @@ macOS-only behaviour (the `trash` disposition, `schedule`, notifications) either
 refuses outright or degrades to a no-op elsewhere — match whichever the
 neighbouring code does rather than inventing a third posture.
 
-## The wire contract is shared with a package that shares no code
+## The wire contract is shared with packages that share no code
 
 [`../beebox/docs/scan-upload-contract.md`](../beebox/docs/scan-upload-contract.md)
 is the only coordination point with the server. Every site here that encodes
 part of it carries `// WIRE CONTRACT (scan-upload): …`. Change both sides, that
-document, and the server's route doctests in one change.
+document, and the server's route tests in one change.
 
 **If you change what a correct client must *do*, bump
-`SCAN_CONTRACT_VERSION`** in `src/cli/contract-version.ts` *and* in
-`beebox/src/core/scan/contract-version.ts` — two spellings of one number, never
-per-side versions. That covers the client obligations (settle gate, identity
+`SCAN_CONTRACT_VERSION`** in `src/cli/contract-version.ts`,
+`beebox/src/core/scan/contract-version.ts`, and the Mac app's
+`mac-app/Sources/BeeBoxMacCore/Scan/ContractVersion.swift` — three spellings
+of one number, never per-side versions. The Mac app is a second client of
+the same contract; change its sweep (`mac-app/Sources/BeeBoxMacCore/Scan/`)
+with this one. That covers the client obligations (settle gate, identity
 snapshot, restat-before-disposition, which responses permit a disposition), the
 check-state vocabulary, a status the client branches on, a limit the client must
 respect, and the hash or path shape. It does *not* cover an additive field, a
@@ -82,8 +85,8 @@ nagging.
 ```bash
 pnpm typecheck
 pnpm lint
-pnpm test                      # tap over test/**/*.doctest.md
-pnpm exec tap test/<name>.doctest.md
+pnpm test                      # tap over test/**/*.test.ts
+pnpm exec tap test/<name>.test.ts
 pnpm build                     # only needed for the copy-the-bundle path
 ```
 
@@ -91,8 +94,5 @@ pnpm build                     # only needed for the copy-the-bundle path
 needs no build. Tests use a fake HTTP server (`test/cli/fake-scan-server.ts`) and
 package-local temp dirs (`test/tmp/`) — never the real network, never `/tmp`.
 
-Doctests here use bare fences (` ``` `, ` ```continue `, ` ```cleanup `), not
-beebox's `ts`-tagged convention. Read
-[`../agent-doctest/docs/syntax.md`](../agent-doctest/docs/syntax.md) first —
-in particular that a `cleanup` block tears down the block it follows, so a
-resource and its teardown belong in one `continue` chain.
+Tests are `.test.ts` files with `t.check` ([reference](../beebox/docs/testing/check.md)).
+Register teardown with `t.teardown(...)` right after you create the resource.

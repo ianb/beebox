@@ -6,7 +6,7 @@
  * The composer's Add menu asks one thing — "Add files…" — and this decides the
  * rest, so the user never has to know two representations exist (the menu used
  * to offer both, under labels that read as synonyms:
- * `issues/features/2026-08-03-attach-vs-upload-menu-confusing.md`). Every entry
+ * `issues/closed/features/2026-08-03-attach-vs-upload-menu-confusing.md`). Every entry
  * point routes through here: the picker, paste, drop, and the screenshot grab.
  *
  * **Both outcomes land in the message the user is writing.** That is the whole
@@ -14,7 +14,7 @@
  * merging the two menu entries also routed every non-image to the full-screen
  * bulk-upload overlay, which seals and sends a message *of its own* — so
  * attaching a PDF to a sentence you were in the middle of became impossible
- * (`issues/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
+ * (`issues/closed/bugs/2026-09-06-add-files-cannot-attach-a-couple-of-files-inline.md`).
  * Routing chooses a representation, never a destination.
  *
  * The two representations:
@@ -24,7 +24,7 @@
  *   turn. Bounded by {@link INLINE_PHOTO_LIMIT}, because this is the one thing
  *   that puts bytes in the send: inlining a camera roll encodes tens of
  *   megabytes into a single request, which is the reported failure
- *   (`issues/bugs/2026-07-30-many-photos-to-chat-fails-ios.md` — 70 photos
+ *   (`issues/closed/bugs/2026-07-30-many-photos-to-chat-fails-ios.md` — 70 photos
  *   failed client-side with no server-side trace at all, because the request
  *   never left the device).
  * - **upload** — everything else: any non-image, and photos over the inline

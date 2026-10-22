@@ -1,0 +1,61 @@
+// # finishJob
+//
+// `finishJob` deletes a completed job card and commits the deletion, pulling
+// the commit-message context (the job's `description:`) and the `Job-Type`
+// trailer from the job card. The description is read from YAML frontmatter — the
+// job wire format — not from a legacy `<description>` element.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { finishJob } from "../../src/core/finish-job.js";
+import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
+import { makeTmpBox } from "../helpers/test-helpers.js";
+import { execSync } from "node:child_process";
+
+const lastCommitMessage = (root: string): string =>
+  execSync("git log -1 --format=%B", { cwd: root, stdio: "pipe" }).toString();
+
+// ## Reads the description from frontmatter into the commit message
+void test("Reads the description from frontmatter into the commit message", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  await box.write(
+    "_bookkeeping/jobs/sweep.intake.job.card",
+    createIntakeJobTemplate({
+      connector: "gmail",
+      description: "Triage 3 inbox items",
+      items: [],
+    }),
+  );
+  box.commitAll("Queue job");
+
+  await finishJob({ boxRoot: box.root, jobRelPath: "_bookkeeping/jobs/sweep.intake.job.card" });
+
+  const msg = lastCommitMessage(box.root);
+
+  // The frontmatter description drives the commit subject, and the job type
+  // (from the filename) is recorded as a trailer.
+  await t.checkText(msg, `Finish job: Triage 3 inbox items
+
+Job-Type: intake`);
+
+  // The job card is gone
+  t.check(await box.list("_bookkeeping/jobs"), "_bookkeeping/jobs/.gitkeep");
+
+  await box.cleanup();
+});
+
+// ## Missing description falls back to a type-only message
+void test("Missing description falls back to a type-only message", async (t) => {
+  const box = await makeTmpBox({ git: true });
+  // A job card whose frontmatter carries no description: field.
+  await box.write("_bookkeeping/jobs/bare.intake.job.card", "---\nstatus: pending\n---\n");
+  box.commitAll("Queue bare job");
+
+  await finishJob({ boxRoot: box.root, jobRelPath: "_bookkeeping/jobs/bare.intake.job.card" });
+
+  await t.checkText(lastCommitMessage(box.root), `Finish intake job
+
+Job-Type: intake`);
+
+  await box.cleanup();
+});

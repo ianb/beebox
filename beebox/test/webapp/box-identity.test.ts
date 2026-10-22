@@ -1,0 +1,188 @@
+// # Box-aware identity: the browse key becomes the owner only where a box says so
+//
+// `resolveBoxIdentity` (`src/webapp/box-identity.ts`) is `resolveRequestIdentity`
+// plus one rung: the machine-wide browse key (`BBX_BROWSE_API_KEY`), on a box whose
+// `_config/box.json` declares `agentBrowsing: "owner"`, resolves to the box owner's
+// identity with `source: "browse"`. Everywhere else the key keeps its old meaning
+// — it clears the auth wall and is nobody.
+//
+// Three facts must all hold for the rung to fire: a valid key, the box's own
+// opt-in, and an owner to act as. Each row below removes one of them.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { str, any } from "@ianbicking/tap-check/check";
+import * as os from "node:os";
+import * as path from "node:path";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { makeTmpBox } from "../helpers/test-helpers.js";
+import { resolveBoxIdentity } from "../../src/webapp/box-identity.js";
+import { COOKIE_NAME, signSession } from "../../src/webapp/auth.js";
+import { createFirstUser } from "../../src/webapp/local-users.js";
+import { resetLocalUserCache } from "../../src/webapp/local-users-cache.js";
+
+const KEY = "browse-key-for-box-identity-test";
+
+// Snapshot every variable this test writes, so it neither inherits an ambient
+// value nor leaks one into whatever runs next in this process.
+const ENV_KEYS = ["BBX_BROWSE_API_KEY", "BBX_OWNER_EMAIL", "BBX_AUTH_FILE", "BBX_AUTH_SCRYPT_N", "BBX_SESSION_SECRET", "BBX_HUB_SECRET"];
+const ORIGINAL_ENV = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
+function restoreEnv() {
+  for (const key of ENV_KEYS) {
+    const value = ORIGINAL_ENV[key];
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+}
+
+process.env.BBX_BROWSE_API_KEY = KEY;
+process.env.BBX_OWNER_EMAIL = "owner@example.com";
+process.env.BBX_AUTH_SCRYPT_N = "1024";
+process.env.BBX_SESSION_SECRET = "test-session-secret-for-box-identity-test";
+delete process.env.BBX_HUB_SECRET; // standalone (non-hub)
+
+// The local user store is GLOBAL (~/.bbx-auth.json) — point it somewhere
+// disposable before anything reads or writes it.
+const authDir = await mkdtemp(path.join(os.tmpdir(), "bbx-box-identity-"));
+process.env.BBX_AUTH_FILE = path.join(authDir, "auth.json");
+await createFirstUser({ email: "owner@example.com", name: "Owner", password: "pw-correct-1" });
+resetLocalUserCache();
+
+const withKey = { headers: { authorization: `Bearer ${KEY}` } };
+const noKey = { headers: {} };
+
+/** Write the box's opt-in field (any value, so a bad one can be tested too). */
+async function setAgentBrowsing(box: { root: string }, value: unknown) {
+  await mkdir(path.join(box.root, "_config"), { recursive: true });
+  await writeFile(path.join(box.root, "_config", "box.json"), JSON.stringify({ agentBrowsing: value }));
+}
+
+// ## The key on an opted-in box is the owner
+//
+// The name comes from the local user record, so an attributed chat message reads
+// as the boxholder rather than as an email string.
+void test("The name comes from the local user record, so an attributed chat message read...", async (t) => {
+  t.teardown(async () => {
+    try {
+      await optedIn.cleanup();
+      await plainBox.cleanup();
+      await badBox.cleanup();
+      await ownerless.cleanup();
+      await rm(authDir, { recursive: true, force: true });
+      restoreEnv();
+      resetLocalUserCache();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const optedIn = await makeTmpBox();
+  await setAgentBrowsing(optedIn, "owner");
+
+  t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: withKey, openAccess: false }), { email: "owner@example.com", name: "Owner", source: "browse" });
+
+  // ## The same key on a box that never opted in is nobody
+  //
+  // This is the fence: one key reaches every box the dev router serves, so a box a
+  // person actually uses must not hand it an identity just because the key is set on
+  // the machine.
+
+  const plainBox = await makeTmpBox();
+
+  t.check(await resolveBoxIdentity({ boxRoot: plainBox.root, request: withKey, openAccess: false }), { email: null, name: null, source: null });
+
+  // ## The field without the key grants nothing
+  //
+  // The opt-in is not a credential — it only says what a credential means here.
+
+  t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: noKey, openAccess: false }), { email: null, name: null, source: null });
+
+  // ## A bad value is treated as absent, and warned once per box
+  //
+  // `_config/box.json` is disk: the value is read as `=== "owner"`, and anything else
+  // is a hand-edit mistake that must fail closed rather than be guessed at. The warn
+  // names the box and the value, and fires once however many requests arrive.
+
+  const badBox = await makeTmpBox();
+  await setAgentBrowsing(badBox, "yes");
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => { warnings.push(args.map(String).join(" ")); };
+  const first = await resolveBoxIdentity({ boxRoot: badBox.root, request: withKey, openAccess: false });
+  await resolveBoxIdentity({ boxRoot: badBox.root, request: withKey, openAccess: false });
+  console.warn = originalWarn;
+
+  t.check(first, { email: null, name: null, source: null });
+  t.check(warnings, [
+    `[box-identity] Ignoring agentBrowsing: "yes" in ${path.join(badBox.root, "_config", "box.json")} — the only supported value is "owner".`,
+  ]);
+
+  // ## An opted-in box with no owner to act as stays unauthenticated
+  //
+  // The rung binds the key to a real person; with no owner there is nobody to be, so
+  // the request keeps the identity it had (a 401 at the gate) and the box is named in
+  // a warning.
+
+  const ownerless = await makeTmpBox();
+  await setAgentBrowsing(ownerless, "owner");
+  delete process.env.BBX_OWNER_EMAIL;
+  process.env.BBX_AUTH_FILE = path.join(authDir, "no-such-auth.json");
+  resetLocalUserCache();
+  const noOwnerWarnings: string[] = [];
+  const warnBefore = console.warn;
+  console.warn = (...args: unknown[]) => { noOwnerWarnings.push(args.map(String).join(" ")); };
+  const ownerlessIdentity = await resolveBoxIdentity({ boxRoot: ownerless.root, request: withKey, openAccess: false });
+  console.warn = warnBefore;
+  process.env.BBX_OWNER_EMAIL = "owner@example.com";
+  process.env.BBX_AUTH_FILE = path.join(authDir, "auth.json");
+  resetLocalUserCache();
+
+  t.check(ownerlessIdentity, { email: null, name: null, source: null });
+  t.check(noOwnerWarnings, [
+    `[box-identity] ${ownerless.root} sets agentBrowsing: "owner", but this deployment has no owner to act as; agent browsing stays unauthenticated.`,
+  ]);
+
+  // ## A real signed-in identity wins over the rung
+  //
+  // The key never overrides a person: a request carrying both a session cookie and
+  // the key is the cookie's owner, `source: "cookie"`, so nothing about who acted is
+  // blurred by which credentials happened to ride along.
+
+  const cookie = signSession({ email: "owner@example.com", name: "Owner" });
+  const both = { headers: { authorization: `Bearer ${KEY}` }, cookies: { [COOKIE_NAME]: cookie } };
+
+  t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: both, openAccess: false }), { email: "owner@example.com", name: "Owner", source: "cookie" });
+
+  // ## `open` is returned as-is
+  //
+  // An open-access box has no wall to clear; the rung must not turn its ambient
+  // openness into a named person.
+
+  t.check(await resolveBoxIdentity({ boxRoot: optedIn.root, request: withKey, openAccess: true }), { email: null, name: null, source: "open" });
+
+  // ## A corrupt credential store is never masked by the key
+  //
+  // `source: "unavailable"` is the fail-closed outcome that answers 503 — the store
+  // is unreadable, so the cookie's revocation generation can't be verified. The key
+  // must not overwrite that with a cheerful owner identity: the whole point of the
+  // distinct source is that a store outage does not silently downgrade to "no
+  // session" (Track D, `webapp/auth.ts`).
+  //
+  // A key-only request never reaches cookie verification, so it cannot produce
+  // `unavailable` at all — the case that exists is a request carrying both, which is
+  // the one below.
+
+  await writeFile(path.join(authDir, "auth.json"), "{not json at all");
+  resetLocalUserCache();
+  // The resolver logs the outage loudly (once per process) — captured here so the
+  // deliberate diagnostic doesn't read as test-run noise.
+  const errors: string[] = [];
+  const originalError = console.error;
+  console.error = (...args: unknown[]) => { errors.push(args.map(String).join(" ")); };
+  const corrupt = await resolveBoxIdentity({ boxRoot: optedIn.root, request: both, openAccess: false });
+  console.error = originalError;
+
+  t.check(corrupt, { email: null, name: null, source: "unavailable" });
+  t.check(errors, [
+    str`[auth] auth store unavailable while verifying a session cookie; failing closed (503): AuthFileCorruptError: Auth file at ${path.join(authDir, "auth.json")} is corrupt: ${any(String)}`,
+  ]);
+});

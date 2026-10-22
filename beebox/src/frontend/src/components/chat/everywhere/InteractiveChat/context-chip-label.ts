@@ -1,7 +1,7 @@
 /**
  * Face-label chooser for the chat header's context chip — a pure function so
- * the `landmarkLabel` × `dir` state space is doctestable without React (see
- * src/frontend/test/components/chat/everywhere/InteractiveChat/context-chip-label.doctest.md).
+ * the `landmarkLabel` × `dir` state space is testable without React (see
+ * src/frontend/test/components/chat/everywhere/InteractiveChat/context-chip-label.test.ts).
  *
  * `dir` is a real tri-state, not "string or absent": `null` means the chat
  * has no context (no bound directory) and `""` means the context IS the box

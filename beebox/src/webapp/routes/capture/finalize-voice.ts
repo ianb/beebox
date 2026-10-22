@@ -1,6 +1,6 @@
 /**
  * `POST /api/capture/sessions/:id/finalize` — the voice-recording branch
- * (`docs/plans/resilient-voice-recording.md`, Track 1). Split out of
+ * (`docs/implemented-plans/resilient-voice-recording.md`, Track 1). Split out of
  * `capture.ts` to keep its route-registration function under the line budget,
  * mirroring `capture-create.ts`.
  *
@@ -31,7 +31,7 @@ import { getBoxTimeISO } from "../../../lib/time.js";
 import type { StagingSession } from "../../../core/capture/staging-store/core.js";
 import { sealVoiceSession, VoiceTransitionRefusedError } from "../../../core/voice-recording/voice-staging/core.js";
 import { runHqJob } from "../../../core/voice-recording/hq-job/core.js";
-import { withoutBoxWork } from "../../../lib/box-maintenance.js";
+import { withoutBoxWork } from "../../../lib/box-maintenance/admission.js";
 
 /** Exported so a contract test can parse the client's real request-body builder with it. */
 export const VoiceFinalizeBodySchema = z.object({

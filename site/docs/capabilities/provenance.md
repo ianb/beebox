@@ -57,6 +57,6 @@ shares; see [enriched markdown](../concepts/enriched-markdown.md).
 [../design/durability-and-provenance.md](../design/durability-and-provenance.md),
 [../concepts/cards.md](../concepts/cards.md),
 [../reference/cards/commentary.md](../reference/cards/commentary.md),
-[../reference/cards/memo.md](../reference/cards/memo.md),
+[../reference/cards/doc.md](../reference/cards/doc.md),
 [web-clipping.md](web-clipping.md),
 [voice.md](voice.md)

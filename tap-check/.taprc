@@ -1,0 +1,16 @@
+plugin:
+  - "!@tapjs/typescript"
+node-arg:
+  - --import=tsx
+  - --import=./src/tap-check/tap.ts
+include:
+  - test/**/*.test.ts
+# Agent-first output: plain machine-readable TAP, no ANSI/cursor codes.
+# See beebox/.taprc for rationale.
+reporter: tap
+color: false
+# Coverage is not a gate here; same setting as cardworks.
+allow-incomplete-coverage: true
+# Per-file timeout. Some tests here spawn a process per case or build
+# TypeScript programs in parallel, which approached tap's 30s default.
+timeout: 120

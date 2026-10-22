@@ -23,6 +23,7 @@ import { normalizeModelId } from "../../../shared/model-ids.js";
 import { resolveHarnessPluginPath } from "../plugin-paths.js";
 import { boxSessionSettings } from "../box-session-settings.js";
 import type { AgentResult, AgentResultBase } from "../types.js";
+import type { Options } from "@anthropic-ai/claude-agent-sdk";
 import { applyEngineUnavailability } from "../engine-unavailability-apply.js";
 
 export interface RunAgentOptions {
@@ -77,7 +78,7 @@ interface RunContext {
 export function buildQueryOptions(
   options: RunAgentOptions,
   context: RunContext,
-): Record<string, unknown> {
+): Options {
   const { env, maxTurns, binaryPath, appendedSystem } = context;
   return {
     cwd: options.cwd ?? options.boxRoot,
@@ -196,7 +197,7 @@ function emitRunBanner(
       ) +
       "\n",
   );
-  if (!isResume && (systemPrompt || tzContext)) {
+  if (systemPrompt || tzContext) {
     onOutput?.(`\n${fmt.dim("System prompt:")}\n${fmt.dim("─".repeat(40))}\n${systemPrompt}${tzContext}\n${fmt.dim("─".repeat(40))}\n\n`);
   }
   onOutput?.(`${fmt.dim("User prompt:")}\n${fmt.dim("─".repeat(40))}\n${options.prompt}\n${fmt.dim("─".repeat(40))}\n\n`);
@@ -254,7 +255,9 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
   const { boxRoot, systemPrompt, prompt, dryRun = false, maxTurns = 20 } = options;
 
   const isResume = options.resumeSessionId !== undefined;
-  const tzContext = isResume ? "" : await buildTimezoneContext(boxRoot);
+  // Sent on resume too: a resumed session must not depend on the SDK having
+  // recorded the first run's append.
+  const tzContext = await buildTimezoneContext(boxRoot);
 
   if (dryRun) {
     return {
@@ -298,7 +301,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
 
   emitRunBanner(options, { isResume, maxTurns, systemPrompt, tzContext });
 
-  const appendedSystem = isResume ? "" : systemPrompt + tzContext;
+  const appendedSystem = systemPrompt + tzContext;
   const binaryPath = resolveClaudeCodeBinary();
 
   const queryOptions = buildQueryOptions(options, {

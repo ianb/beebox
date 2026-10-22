@@ -3,12 +3,13 @@ import { KeywordPattern, type InputMatch } from "../patmatch/keyword-pattern";
 const sendPattern = KeywordPattern.compile(`
   (send | sent | same | deliver | finished | finish | said) (a | the | an)? message
   it's (a | the | an)? message
+  just (a | the | an)? message
   message (done | finished)
   send now
 `);
 
 // Once the deliberate HQ fixup; every send gets the HQ pass now
-// (docs/plans/hq-always.md), so it is a plain send. Kept so the phrase still
+// (docs/implemented-plans/hq-always.md), so it is a plain send. Kept so the phrase still
 // sends, and because native persists the action name.
 const sendHqPattern = KeywordPattern.compile(`
   clean up and send
@@ -104,7 +105,7 @@ const ACTION_TAG_NAMES: Record<KeywordAction, string> = {
  */
 export function stripKeywordTags(text: string): string {
   // Literal alternation of ACTION_TAG_NAMES' values (the lint bans a
-  // constructed RegExp); the doctest strips every action's tag, so a new
+  // constructed RegExp); the test strips every action's tag, so a new
   // action name added without extending this pattern fails there.
   return text.replace(/\s*<(?:send-message|send-close-message|send-checkpoint-message|cancel-message|mic-off|erase-message)\b[^<>]*\/>/g, "").trim();
 }

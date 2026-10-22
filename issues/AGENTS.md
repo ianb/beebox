@@ -101,7 +101,9 @@ updating both this contract and `KNOWN_FRONTMATTER_KEYS` there.
   person's preferred name when known or `agent` for
   an agent-originated finding.
 - `area:` identifies the owning product area (e.g. `beebox`, `router`,
-  `vibe-check`, `clerk`, `docs`). `labels:` is an optional list of
+  `vibe-check`, `clerk`, `docs`). An issue owned by an opt-in plugin uses the
+  plugin's name (e.g. `courseware`), not `beebox`; core and journey work skip
+  those areas unless the developer asks for plugin work. `labels:` is an optional list of
   kebab-case cross-cutting group names; use it instead of inventing schema
   fields. Category, area, and labels are independent; labels are a facet in the
   `workstreams/issues/` browser.
@@ -247,7 +249,7 @@ Close with `git mv` into `closed/<category>/`, preserving the category. Add
 `resolution: implemented`, `wontfix`, or `superseded`, plus a short opening note
 naming the resolving commit, plan, or reason. Open issues must not carry
 `resolution:`. Git history is the archive; periodic maintenance may delete
-long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; they are `AGENTS.md` now. Older documents here keep the old name and carry a naming note.
+long-closed files. Agent instruction files were named `CLAUDE.md` until 2026-10-09, in this repository and in boxes; they are `AGENTS.md` now. Older documents here keep the old name and carry a naming note. Tests were Markdown doctests (`*.doctest.md`, run by the `agent-doctest` package) until 2026-10-18; they are `.test.ts` files with `t.check` now, in the same directory under the same base name, and the package is `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
 
 ## Re-encountering an issue
 

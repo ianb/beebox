@@ -8,8 +8,16 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .bbx-app-nav > div { display: flex; gap: 14px; align-items: center; padding: 10px 18px; min-height: 60px; }
 .brand { color: inherit; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .bbx-app-nav { color: #fff8ec; }
-.by { margin-left: auto; font-size: 12px; }
+.header-github { display: inline-flex; gap: 6px; align-items: center; margin-left: auto; color: inherit; font-size: 13px; text-decoration: none; }
+.header-github:hover { text-decoration: underline; }
+.header-icon { width: 18px; height: 18px; fill: currentColor; }
+.by { font-size: 12px; }
 .by a { color: inherit; }
+.theme-toggle { display: none; place-items: center; width: 44px; height: 44px; margin: -6px -8px -6px 0; padding: 0; border: 0; border-radius: 999px; background: transparent; color: inherit; cursor: pointer; }
+.theme-toggle:hover { background: #ffffff26; }
+.theme-toggle svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+[data-site-appearance] .theme-toggle { display: grid; }
+[data-site-appearance="light"] .theme-sun, [data-site-appearance="dark"] .theme-moon { display: none; }
 .bbx-place-pill { padding: 8px 14px; border: 1px solid; border-radius: 999px; cursor: pointer; list-style: none; }
 .bbx-place-pill::-webkit-details-marker { display: none; }
 .bbx-place-pill span { padding-left: 10px; }
@@ -62,6 +70,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
 @media (max-width: 700px) {
   .by { display: none; }
+  .header-github span { display: none; }
   .bbx-app-nav > div { padding: 10px 12px; }
   #site-workspace { display: block; }
   .pane { height: 100%; padding: 12px 14px 35px; }
@@ -89,8 +98,9 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .bbx-card-content .agent-prompt pre { font: 15px/1.55 "Avenir Next", Avenir, sans-serif; }
 .agent-prompt code { font: inherit; }
 
-/* Model comparisons: a pill per model, a graded verdict, and a sample box. */
-.model-pill { display: inline-block; padding: 0 0.5em; border: 1px solid; border-radius: 999px; font: 700 0.82em/1.6 "Avenir Next", Avenir, sans-serif; white-space: nowrap; vertical-align: 0.05em; }
+/* Model comparisons: a pill per model, a graded verdict, a sample box, and a player.
+   Vendors without their own color keep the neutral pill. */
+.model-pill { display: inline-block; padding: 0 0.5em; border: 1px solid #b9ad94; border-radius: 999px; background: #efe9dc; color: #3b3222; font: 700 0.82em/1.6 "Avenir Next", Avenir, sans-serif; white-space: nowrap; vertical-align: 0.05em; }
 .model-google { background: #dfe8f6; border-color: #9fb4d6; color: #1f3a66; }
 .model-openai { background: #dcefe6; border-color: #93c2ab; color: #1d4a37; }
 .verdict { font: 700 0.78em/1.7 "Avenir Next", Avenir, sans-serif; text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; }
@@ -99,4 +109,5 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px soli
 .verdict-failed { color: #8a2a18; }
 .sample-spec { margin: 0.6rem 0 1rem; padding: 12px 16px; border-left: 4px solid #8a7a5c; border-radius: 4px; background: #f6efe0; color: #3b3222; }
 .sample-spec p { margin: 0.35em 0; }
+.bbx-card-content audio { display: block; width: 100%; max-width: 24rem; height: 2.25rem; margin: 0.25em 0; }
 .sample-title { font: 600 0.8em/1.4 "Avenir Next", Avenir, sans-serif; text-transform: uppercase; letter-spacing: 0.05em; color: #6b5a3a; }

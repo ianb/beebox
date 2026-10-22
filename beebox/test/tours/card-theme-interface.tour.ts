@@ -4,12 +4,12 @@ import { tour } from "./tour-lib/registry.js";
 tour(
   { name: "card-theme-interface", description: "Inspect a card opened from Browse at desktop and phone widths." },
   async (t) => {
-    await t.go("/browse/_content/theme-tour/comparison-paper.memo.card");
+    await t.go("/browse/_content/theme-tour/comparison-paper.doc.card");
     await t.expect.heading("One note, three stocks", { level: 2 });
     await t.checkpoint("browse-card-desk");
     const framed = await t.eval(`(() => {
       // A phone shows one pane; the Browse pane stays mounted but hidden.
-      const desk = document.querySelector('[data-workspace-card="_content/theme-tour/comparison-paper.memo.card"] .bbx-interface-card-desk[aria-hidden="false"]');
+      const desk = document.querySelector('[data-workspace-card="_content/theme-tour/comparison-paper.doc.card"] .bbx-interface-card-desk[aria-hidden="false"]');
       const card = desk?.querySelector(".bbx-card-surface");
       if (!desk || !card) return false;
       const d = desk.getBoundingClientRect(), c = card.getBoundingClientRect();
@@ -19,7 +19,7 @@ tour(
     })()`);
     await t.expect.custom("card has visible desk, one heading, and no horizontal page overflow", () => framed.trim() === "true");
     await t.eval(`(() => {
-      const paragraph = document.querySelector('[data-workspace-card="_content/theme-tour/comparison-paper.memo.card"] .bbx-paragraph');
+      const paragraph = document.querySelector('[data-workspace-card="_content/theme-tour/comparison-paper.doc.card"] .bbx-paragraph');
       if (!paragraph) throw new Error("Workspace card paragraph is missing");
       paragraph.scrollIntoView({ block: "center", behavior: "instant" });
       paragraph.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));

@@ -8,7 +8,7 @@
  * Resolution order:
  *   1. `./scan-uploader.json` (relative to the caller's cwd), if it exists
  *      — keeps hand-maintained repo-local configs, and the existing
- *      doctests that `cd`-equivalent into a tmp dir, working unchanged.
+ *      tests that `cd`-equivalent into a tmp dir, working unchanged.
  *   2. Otherwise `~/.config/scan-uploader.json` — plain `~/.config`,
  *      deliberately no XDG env var lookup.
  *

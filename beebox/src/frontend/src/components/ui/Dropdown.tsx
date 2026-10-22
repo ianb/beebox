@@ -1,8 +1,7 @@
-import { themeComposition } from "@shared/card-theme/catalog";
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useBoxPresentation } from "../themes/BoxPresentationProvider";
 import { cn } from "../../lib/cn";
+import { MaterialContext } from "./material";
 
 // The "first focusable menu item" the open/close focus management below
 // looks for. Deliberately broader than `[role="menuitem"]`: several existing
@@ -162,7 +161,6 @@ function visibleViewport() {
 }
 
 export function Dropdown({ trigger, children, align: alignArg, vertical: verticalArg, width: widthArg, dense: denseArg, className, onClose, panelIndex }: DropdownProps) {
-  const chrome = useBoxPresentation()?.data?.chrome.choice;
   const align = alignArg ?? "right";
   const vertical = verticalArg ?? "below";
   const width = widthArg ?? "w-48";
@@ -329,10 +327,9 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
             <div
               ref={menuRef}
               role="menu"
-              data-theme-composition={themeComposition(chrome?.name)} data-chrome-theme={chrome?.name} data-chrome-stock={chrome?.stock}
               style={coords}
               className={cn(
-                "bbx-themed-menu bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain motion-safe:transition-[width] motion-safe:duration-150 motion-safe:ease-out",
+                "bg-white rounded-lg shadow-lg border border-warm-200 z-[100] text-sm overflow-y-auto overscroll-contain motion-safe:transition-[width] motion-safe:duration-150 motion-safe:ease-out",
                 dense ? "py-0.5" : "py-1",
                 width,
               )}
@@ -350,15 +347,25 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
                   direction === "left" && "motion-safe:animate-dropdown-panel-in-left",
                 )}
               >
-                <DropdownContext.Provider value={ctxValue}>
-                  {children}
-                </DropdownContext.Provider>
+                <MenuPanelScope value={ctxValue}>{children}</MenuPanelScope>
               </div>
             </div>,
             document.body,
           )
         : null}
     </div>
+  );
+}
+
+/**
+ * The open menu's contexts: its Dropdown, and no material. The menu is a
+ * white app panel, so it keeps app ink when its trigger sits in a material.
+ */
+function MenuPanelScope({ value, children }: { value: DropdownContextValue; children: ReactNode }) {
+  return (
+    <MaterialContext.Provider value={false}>
+      <DropdownContext.Provider value={value}>{children}</DropdownContext.Provider>
+    </MaterialContext.Provider>
   );
 }
 

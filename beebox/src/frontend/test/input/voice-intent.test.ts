@@ -1,0 +1,447 @@
+// # VoiceIntent — the pure submit-to-emission mapping
+//
+// `buildVoiceSubmitEmission` (docs/plans/input-extraction.md, chunk 5) is the
+// pure piece of `runKeywordSend`'s submit logic: given the composer context
+// frozen at keyword-fire time (`priorInput`, `selectionsSnapshot`, and the
+// pending image/file attachment snapshots) and the final committed text
+// (after any HQ pass rewrites it), it builds the voice `Emission`. The
+// freeze boundary means composer state added after the snapshot was taken
+// never appears here — it belongs to the next message instead.
+
+import { test } from "tap";
+import "@ianbicking/tap-check/tap";
+import { any, is, not } from "@ianbicking/tap-check/check";
+import { routeComposerSend } from "../../src/components/chat/InteractiveChat-helpers.js";
+import { buildVoiceSubmitEmission, prepareVoiceSubmitEmission, sendKeywordOf } from "../../src/input/voice-intent.js";
+
+/** A minted emission id: the mint time and a random suffix vary between runs. */
+function anyMessageId() {
+  return any(String).matches(/^msg-\d+-[\da-z]+$/);
+}
+
+// ## A live manual send always finalizes audio
+//
+// The desktop and mobile Send buttons share this decision. A live voice segment
+// must enter `submitSegment` whether HQ dictation is enabled or not: finalization
+// is what hands the segment's staged recording to the send, which seals it; HQ
+// is a later, independent decision about what that seal asks the box for. The
+// settled fallback exists only for the narrow race where the segment became idle
+// before the click handler ran.
+void test("The desktop and mobile Send buttons share this decision.", async (t) => {
+  const calls: string[] = [];
+  t.check(
+    routeComposerSend({
+      isTranscribing: true,
+      submitSegment: () => { calls.push("finalize"); return true; },
+      sendTyped: () => calls.push("typed"),
+      sendSettledVoice: () => calls.push("settled"),
+    }),
+    "finalizing",
+  );
+
+  t.check(calls, ["finalize"]);
+
+  const settledCalls: string[] = [];
+  t.check(
+    routeComposerSend({
+      isTranscribing: true,
+      submitSegment: () => false,
+      sendTyped: () => settledCalls.push("typed"),
+      sendSettledVoice: () => settledCalls.push("settled"),
+    }),
+    "settled",
+  );
+
+  t.check(settledCalls, ["settled"]);
+
+  const typedCalls: string[] = [];
+  t.check(
+    routeComposerSend({
+      isTranscribing: false,
+      submitSegment: () => { typedCalls.push("finalize"); return true; },
+      sendTyped: () => typedCalls.push("typed"),
+      sendSettledVoice: () => typedCalls.push("settled"),
+    }),
+    "typed",
+  );
+
+  t.check(typedCalls, ["typed"]);
+});
+
+// ## Prior composer text folds in ahead of the new utterance
+void test("Prior composer text folds in ahead of the new utterance", async (t) => {
+  const e = buildVoiceSubmitEmission({
+    priorInput: "note to self,",
+    finalText: "buy more flour",
+    selectionsSnapshot: [],
+    imagesSnapshot: [],
+    filesSnapshot: [],
+    diarized: false,
+  });
+  t.check(e, {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "note to self, buy more flour",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: false,
+    words: undefined,
+    spokenStart: 14,
+    hqText: undefined,
+    hqService: undefined,
+  });
+});
+
+// ## No prior text: the utterance stands alone
+void test("No prior text: the utterance stands alone", async (t) => {
+  t.check(buildVoiceSubmitEmission({ priorInput: "", finalText: "send message", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false }), {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "send message",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: false,
+    words: undefined,
+    spokenStart: 0,
+    hqText: undefined,
+    hqService: undefined,
+  });
+});
+
+// ## Frozen attachment snapshots ride the emission (a file attached mid-dictation)
+//
+// A file attached while dictating used to be silently dropped from keyword
+// sends; the frozen snapshots now carry pending images and files, as they do
+// selections.
+void test("A file attached while dictating used to be silently dropped from keyword send...", async (t) => {
+  const e3 = buildVoiceSubmitEmission({
+    priorInput: "",
+    finalText: "please summarize the attached report",
+    selectionsSnapshot: [],
+    imagesSnapshot: [{ id: 1, mimeType: "image/png", dataBase64: "aGk=" }],
+    filesSnapshot: [{ id: 1, path: "_tmp/2026-07-19T10-00-00_report.pdf" }],
+    diarized: false,
+  });
+  t.check(e3, {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "please summarize the attached report",
+    images: [
+      {
+        id: 1,
+        mimeType: "image/png",
+        dataBase64: "aGk=",
+      },
+    ],
+    files: [
+      {
+        id: 1,
+        path: "_tmp/2026-07-19T10-00-00_report.pdf",
+      },
+    ],
+    selections: [],
+    diarized: false,
+    words: undefined,
+    spokenStart: 0,
+    hqText: undefined,
+    hqService: undefined,
+  });
+});
+
+// ## Each call mints a distinct emission id (the dedup key)
+void test("Each call mints a distinct emission id (the dedup key)", async (t) => {
+  const a = buildVoiceSubmitEmission({ priorInput: "", finalText: "x", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
+  const b = buildVoiceSubmitEmission({ priorInput: "", finalText: "x", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
+  t.check(a.id, not(b.id));
+});
+
+// ## `words: null` (Voxtral/OpenAI-style — Fix A) never reaches the emission as data
+//
+// A service that never captures confidence (or a segment nothing was
+// finalized for) reports `null`, not an empty array — `buildVoiceSubmitEmission`
+// collapses that onto `undefined` via `resolveEmissionWords`, so the assembler
+// never stamps a false `stt="deepgram"`.
+void test("A service that never captures confidence (or a segment nothing was finalized...", async (t) => {
+  t.check(
+    buildVoiceSubmitEmission({
+      priorInput: "", finalText: "voxtral said this", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
+      words: null,
+    }), {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "voxtral said this",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: false,
+    words: undefined,
+    spokenStart: 0,
+    hqText: undefined,
+    hqService: undefined,
+  });
+});
+
+// Belt-and-braces: an array is present but no entry carries a numeric
+// `confidence` — equally uninformative, equally `undefined`.
+void test("Belt-and-braces:", async (t) => {
+  t.check(
+    buildVoiceSubmitEmission({
+      priorInput: "", finalText: "no scores here", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
+      words: [{ word: "no" }, { word: "scores" }],
+    }), {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "no scores here",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: false,
+    words: undefined,
+    spokenStart: 0,
+    hqText: undefined,
+    hqService: undefined,
+  });
+});
+
+// A real Deepgram capture — even one where every word cleared the
+// threshold — rides straight through, so the assembler still stamps `stt`:
+void test("A real Deepgram capture — even one where every word cleared the threshold — r...", async (t) => {
+  t.check(
+    buildVoiceSubmitEmission({
+      priorInput: "", finalText: "all clear", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false,
+      words: [{ word: "all", confidence: 0.99 }, { word: "clear", confidence: 0.98 }],
+    }), {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "all clear",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: false,
+    words: [
+      {
+        word: "all",
+        confidence: 0.99,
+      },
+      {
+        word: "clear",
+        confidence: 0.98,
+      },
+    ],
+    spokenStart: 0,
+    hqText: undefined,
+    hqService: undefined,
+  });
+});
+
+// ## The HQ outcome replaces the spoken part of the frozen message
+//
+// `prepareVoiceSubmitEmission` builds the dispatched emission from the realtime
+// emission staged when the segment ended and the HQ wait's outcome
+// (`docs/plans/resilient-voice-recording.md`, Track 4). The id and the frozen
+// composer context never change: text typed into the composer during the wait
+// belongs to the next message.
+void test("prepareVoiceSubmitEmission builds the dispatched emission from the realtime e...", async (t) => {
+  const hqIntent = {
+    kind: "submit" as const,
+    text: "rough words <send-message phrase=\"clean up and send\" />",
+    matchedPhrase: "clean up and send",
+    recording: { recordingId: "rec-hq", seal: () => {}, discard: () => {} },
+    closeMic: false,
+    words: [{ word: "rough", confidence: 0.4 }],
+  };
+  const realtime = buildVoiceSubmitEmission({ priorInput: "frozen draft", finalText: hqIntent.text,
+    selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false, words: hqIntent.words });
+  const hq = prepareVoiceSubmitEmission({
+    realtime,
+    outcome: { kind: "hq", result: { text: "clean words", diarized: true, service: "voxtral", pieces: 1 } },
+    keyword: sendKeywordOf(hqIntent),
+  });
+  t.check(hq, {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "frozen draft clean words <send-message phrase=\"clean up and send\" heard=\"live\" />",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: true,
+    words: undefined,
+    spokenStart: 13,
+    hqText: true,
+    hqService: "voxtral",
+  });
+
+  t.check(hq.id, realtime.id);
+
+  // The HQ text replaced the realtime words, so Track 3's HQ-drop rule applies:
+  // no `words` (and no `<unsure>` marks at assemble time).
+  //
+  // ## The keyword the live pass heard, against the HQ text
+  //
+  // The live pass fired the send on its keyword. When the HQ text writes the
+  // command in words the spotter does not match, the HQ text is kept as it came
+  // back, and the tag is appended with `heard="live"` — not both transcripts. The
+  // agent reads the trailing words for sense (docs/plans/hq-always.md):
+
+  t.check(
+    prepareVoiceSubmitEmission({
+      realtime,
+      outcome: { kind: "hq", result: { text: "clean words, cleaned up and sent", diarized: false, service: "whisper", pieces: 1 } },
+      keyword: sendKeywordOf(hqIntent),
+    }), {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "frozen draft clean words, cleaned up and sent <send-message phrase=\"clean up and send\" heard=\"live\" />",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: false,
+    words: undefined,
+    spokenStart: 13,
+    hqText: true,
+    hqService: "whisper",
+  });
+
+  // When the HQ text does contain a recognizable keyword, its own words become the
+  // tag, unmarked:
+
+  t.check(
+    prepareVoiceSubmitEmission({
+      realtime,
+      outcome: { kind: "hq", result: { text: "clean words, send the message", diarized: false, service: "whisper", pieces: 1 } },
+      keyword: sendKeywordOf(hqIntent),
+    }), {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "frozen draft clean words, <send-message phrase=\"send the message\" />",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: false,
+    words: undefined,
+    spokenStart: 13,
+    hqText: true,
+    hqService: "whisper",
+  });
+
+  // A different command in the HQ text never replaces the one that fired. Live
+  // dictation heard "send checkpoint"; the HQ text reads "send message". The
+  // checkpoint tag is kept, marked `heard="live"`, and the HQ words stay as text:
+
+  const checkpointIntent = { ...hqIntent, text: "part one <send-checkpoint-message phrase=\"send checkpoint\" />", matchedPhrase: "send checkpoint" };
+  t.check(
+    prepareVoiceSubmitEmission({
+      realtime,
+      outcome: { kind: "hq", result: { text: "part one, send message", diarized: false, service: "whisper", pieces: 1 } },
+      keyword: sendKeywordOf(checkpointIntent),
+    }), {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "frozen draft part one, send message <send-checkpoint-message phrase=\"send checkpoint\" heard=\"live\" />",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: false,
+    words: undefined,
+    spokenStart: 13,
+    hqText: true,
+    hqService: "whisper",
+  });
+
+  // A blank HQ result is a fallback: it would otherwise erase the spoken words.
+
+  t.check(
+    prepareVoiceSubmitEmission({
+      realtime,
+      outcome: { kind: "hq", result: { text: "  ", diarized: false, service: "whisper", pieces: 1 } },
+      keyword: sendKeywordOf(hqIntent),
+    }),
+    is(realtime),
+  );
+
+  // ## A fallback sends the realtime message
+  //
+  // The budget ran out, the user chose the live text, or HQ failed outright — a
+  // box with no HQ key included: the realtime message goes out as it was staged,
+  // with its realtime words. Without `hqText`, the assembler marks it
+  // `stt="live"`.
+
+  const late = prepareVoiceSubmitEmission({ realtime, outcome: { kind: "fallback", reason: "budget", service: null }, keyword: null });
+  t.check(late, is(realtime));
+
+  t.check(
+    prepareVoiceSubmitEmission({
+      realtime,
+      outcome: { kind: "fallback", reason: { kind: "permanent", code: "missing_api_key", message: "No OpenAI key" }, service: "whisper" },
+      keyword: null,
+    }),
+    is(realtime),
+  );
+});
+
+// ## A segment with no live text still becomes a message
+//
+// Recorded wholly while live text was paused, a segment has no realtime text;
+// when HQ does not arrive, a placeholder body keeps the message (and its
+// `message-id`, which the kept recording answers to):
+void test("Recorded wholly while live text was paused, a segment has no realtime text; w...", async (t) => {
+  const silent = buildVoiceSubmitEmission({ priorInput: "typed first", finalText: "", selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
+  const placeholder = prepareVoiceSubmitEmission({ realtime: silent, outcome: { kind: "fallback", reason: "budget", service: null }, keyword: null });
+  t.check(placeholder, {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "typed first [recording not transcribed]",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: false,
+    words: undefined,
+    spokenStart: 12,
+    hqText: undefined,
+    hqService: undefined,
+  });
+});
+
+// ## Manual stop-and-send HQ routing (empty `matchedPhrase`)
+//
+// A manual stop-and-send (docs/implemented-plans/hq-dictation-switch.md, chunk 2 — the
+// desktop/mobile Send button) synthesizes a
+// "submit" intent with `matchedPhrase: ""`: nothing was spoken to match, unlike
+// a real keyword-fire. When the HQ pass finds no keyword in its own result
+// either, the fallback-tag restoration must NOT fire — there's no trigger
+// phrase to restore, and an empty `<send-message phrase="" />` would be
+// meaningless control markup with no narration-mode guidance to explain it.
+void test("A manual stop-and-send (docs/implemented-plans/hq-dictation-switch.md, chunk...", async (t) => {
+  const manualIntent = {
+    kind: "submit" as const,
+    text: "quick thought before I go",
+    matchedPhrase: "",
+    recording: { recordingId: "rec-manual", seal: () => {}, discard: () => {} },
+    closeMic: true,
+    words: null,
+  };
+  t.check(sendKeywordOf(manualIntent), null);
+
+  const manualRealtime = buildVoiceSubmitEmission({ priorInput: "", finalText: manualIntent.text,
+    selectionsSnapshot: [], imagesSnapshot: [], filesSnapshot: [], diarized: false });
+  const manualPrepared = prepareVoiceSubmitEmission({
+    realtime: manualRealtime,
+    outcome: { kind: "hq", result: { text: "quick thought before I go, corrected", diarized: false, service: "whisper-llm", pieces: 1 } },
+    keyword: sendKeywordOf(manualIntent),
+  });
+  t.check(manualPrepared, {
+    id: anyMessageId(),
+    origin: "voice",
+    text: "quick thought before I go, corrected",
+    images: [],
+    files: [],
+    selections: [],
+    diarized: false,
+    words: undefined,
+    spokenStart: 0,
+    hqText: true,
+    hqService: "whisper-llm",
+  });
+});

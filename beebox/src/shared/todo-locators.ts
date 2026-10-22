@@ -1,7 +1,7 @@
 /**
  * A `{% todo %}` tag's identity within one card's body, and the one pass
  * that assigns it — moved here (from `core/todo/extract-body.ts`,
- * `docs/plans/todos-ui.md` Track 2) so the render path (the frontend's
+ * `docs/implemented-plans/todos-ui.md` Track 2) so the render path (the frontend's
  * `Markdoc.transform`, `Markdown.tsx`) and the collector
  * (`core/todo/extract-body.ts`) number a line's todos with the SAME
  * algorithm. If each walked and counted separately they could disagree
@@ -92,8 +92,8 @@ function bodyLine(node: Node): number {
  * locator rides on the node under a module-private symbol. Source text cannot
  * produce a symbol-keyed property, which is what keeps an author-written
  * `locator=` attribute from ever standing in for one (it is also undeclared,
- * so Markdoc drops it from the transformed attributes). The doctest
- * `src/frontend/test/components/Markdown/Todo.locators-render.doctest.md` pins the clone behaviour, so a
+ * so Markdoc drops it from the transformed attributes). The test
+ * `src/frontend/test/components/Markdown/Todo.locators-render.test.ts` pins the clone behaviour, so a
  * Markdoc upgrade that changes it fails there rather than silently dropping
  * every rendered todo's locator.
  */

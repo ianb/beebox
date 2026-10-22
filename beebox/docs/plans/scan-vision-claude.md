@@ -6,6 +6,8 @@ issues: []
 ---
 # Scan vision: Claude Sonnet default, Gemini opt-in
 
+> **Naming note (2026-10-18):** doctests (`*.doctest.md`) are now `.test.ts` files with `t.check`, in the same directory under the same base name, and `agent-doctest` is now `tap-check/` (`@ianbicking/tap-check`). See `beebox/docs/implemented-plans/retire-doctest.md`.
+
 Switch `bbx scan-import`'s photo-analysis backend from Gemini Flash (required
 `GEMINI_KEY`) to Claude Sonnet 5 via the Claude Agent SDK, behind a
 `ScanVision` service interface. The decision driver is operational
@@ -84,7 +86,7 @@ The numbers cited below are from that report.
   before any files are staged. `src/services/claude-chat.ts:28` (moved to `beebox/src/services/claude-chat/core.ts`) already
   imports `core/sdk-binary-path.js` from services, so the import
   direction is established precedent.
-- `src/shared/model-ids.ts` — `MODEL_ID.sonnet = "claude-sonnet-5"`.
+- `src/shared/model-ids.ts` — `MODEL_ID.sonnet` (now `"claude-sonnet-5-5"`).
   **Reused** for the model id.
 - `src/services/docling.ts:305-383` (moved to `beebox/src/services/docling/core.ts`) + `scan-import-document.ts:37,70`
   (`docling?: DoclingService`, `args.docling ?? createDoclingService()`) —
@@ -575,7 +577,7 @@ cards, that change carries the audit.)
    `assertBatchAlignment`): `ScanVisionService` interface +
    `ScanVisionBatchError`, `GeminiScanVision` wrapper,
    `createFakeScanVision`, backend selection helper, +
-   `test/services/scan-vision.doctest.md`.
+   `test/services/scan-vision.test.ts`.
 2. **Claude backend** — `src/services/scan-vision-claude.ts`
    (normalization, Zod-generated tightened schema, outline note,
    post-conditions incl. slot invariant + legibility→flag folding,

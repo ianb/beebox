@@ -11,7 +11,7 @@ export const WORKSTREAMS_APP_CAPABILITY_HEADER = "x-bbx-workstreams-capability";
 export const WORKSTREAMS_APP_BASE_PATH = "/workstreams";
 
 // The exhibits surface is a SECOND listener in the same supervised process
-// group, on its own origin (docs/plans/workstream-exhibits.md, Track B). The
+// group, on its own origin (docs/implemented-plans/workstream-exhibits.md, Track B). The
 // router never proxies it: exhibit URLs are direct, which is exactly why the
 // supervisor holds the port itself while the child is down — the router's
 // /workstreams/* fallback cannot help a direct-origin URL.

@@ -19,6 +19,7 @@
   },
   "files": [
     "preset.ts",
+    "preset/",
     "types.d.ts",
     "plugin.ts",
     "prettier.config.ts",
@@ -51,10 +52,11 @@
     "eslint-plugin-unicorn": "^63.0.0",
     "patch-package": "^8.0.0",
     "prettier": "^3.5.3",
-    "typescript": ">=5",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.55.0"
   },
   "devDependencies": {
+    "@typescript/native": "npm:typescript@7.0.2",
     "husky": "^9.1.7"
   },
   "license": "MIT",
@@ -62,9 +64,10 @@
   "scripts": {
     "format": "prettier --write \"**/*.{ts,json}\"",
     "format:check": "prettier --check \"**/*.{ts,json}\"",
+    "lint": "eslint --cache --cache-strategy content --cache-location node_modules/.cache/eslint/ .",
     "lint:oxlint": "oxlint -A no-unused-vars",
     "lint:knip": "knip",
-    "lint:circular": "madge --circular --extensions ts,tsx src/",
+    "lint:circular": "madge --circular --extensions ts --ts-config tsconfig.json preset.ts plugin.ts preset/ rules/ bin/",
     "test": "node --test rules/test/*.test.ts",
     "typecheck": "tsc --noEmit"
   }

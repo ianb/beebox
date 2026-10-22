@@ -7,6 +7,8 @@ discovered-in: 2026-07-17 iOS companion review — beebox/docs/plans/ios-compani
 priority: backlog
 ---
 
+**2026-10-17 note (partly resolved):** iOS pairing now goes through the shared `apple-shared` package: one redeem per ticket, and failures are shown to the person. Still open: external-link confirmation on iOS, and the in-memory ticket racing idle-stop. See [the plan](../../beebox/docs/plans/mac-app-shell.md).
+
 Several related weaknesses in the `beebox://pair` deep-link flow, all still open as of the
 2026-07-17 review:
 

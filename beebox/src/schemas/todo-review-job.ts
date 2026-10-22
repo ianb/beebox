@@ -3,7 +3,7 @@
  * (`src/core/todo/review-sweep.ts`, `docs/implemented-plans/todo-annotation.md`
  * Track 5b) used to queue for the wakeup reactor.
  *
- * Since `docs/plans/todos-ui.md` Track 7 nothing writes these cards: the
+ * Since `docs/implemented-plans/todos-ui.md` Track 7 nothing writes these cards: the
  * stock `todo-review` procedure's precheck (`bbx engine todo-review check`)
  * prints the same brief — these item shapes and {@link TODO_REVIEW_INSTRUCTIONS}
  * — straight to its agent, so no card exists for the reactor to pick up too.
@@ -55,8 +55,8 @@ directive to you now.
 
 - \`escalated\` — open, past its \`due\` date. The "oh shit" line.
 - \`stirring\` — open, crossed its \`start\` date since the last sweep. Newly
-  on the plate.
-- \`actionable\` — open, on-plate todos assigned to you. Fresh undated agent
+  due now.
+- \`actionable\` — open todos due now (started or undated) assigned to you. Fresh undated agent
   follow-ups appear here on the next sweep; do the work now if it fits this
   cycle, or set a \`recheck\` and report what remains.
 - \`stale\` — open, no \`start\`/\`due\` at all, sitting untouched for over 45
@@ -74,7 +74,7 @@ A check runs after you and lists every item that ended neither way:
    a quarter for something parked in all but name.
 
 \`recheck\` is the review's bookkeeping, not the boxholder's plan: it never
-changes the plate, the badge, or the order. It is **the one attribute you may
+changes the todo page, the badge, or the order. It is **the one attribute you may
 write on the boxholder's todos** — edit it in place
 (\`{% todo due="2026-07-01" recheck="2026-08-15" %}\`, or \`recheck:\` on a
 frontmatter \`todos:\` entry). The check fails an item whose words, status,
@@ -109,7 +109,7 @@ make yourself, since nobody else took the work on.
 
 export const TodoReviewJobSchema = cardSchema("todo-review-job", {
   brief: "Job surfacing todos to review",
-  description: "A system job surfacing open todos needing attention (escalated, newly on-plate, actionable agent follow-ups, or stale) from the todo-review sweep",
+  description: "A system job surfacing open todos needing attention (overdue, newly started, actionable agent follow-ups, or stale) from the todo-review sweep",
   category: "system",
   searchable: false,
   fields: {
@@ -158,7 +158,7 @@ export function createTodoReviewJobTemplate(options: {
   const { escalated, stirring, actionable = [], stale } = options;
   const parts: string[] = [];
   if (escalated.length > 0) parts.push(`${String(escalated.length)} escalated`);
-  if (stirring.length > 0) parts.push(`${String(stirring.length)} newly on-plate`);
+  if (stirring.length > 0) parts.push(`${String(stirring.length)} newly started`);
   if (actionable.length > 0) parts.push(`${String(actionable.length)} actionable`);
   if (stale.length > 0) parts.push(`${String(stale.length)} stale`);
 

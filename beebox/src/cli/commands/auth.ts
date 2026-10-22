@@ -2,18 +2,18 @@
  * `bbx auth` — manage local username/password accounts (`src/webapp/local-users.ts`).
  *
  * The headless twin of the browser setup flow (plan Track F,
- * `docs/plans/local-password-auth.md`): every subcommand operates directly on
+ * `docs/implemented-plans/local-password-auth.md`): every subcommand operates directly on
  * the auth file, no HTTP involved, so it works over SSH/CI and needs no setup
  * token — running as the file's owner already is the authority.
  *
  * Password input has two paths: `--password-file <path>` (non-interactive —
- * required for scripts/CI/doctests, trailing newline stripped) or an
+ * required for scripts/CI/tests, trailing newline stripped) or an
  * interactive no-echo TTY prompt (raw-mode keystroke capture, no readline
  * private-API reliance) with confirmation on account-creating commands.
  *
  * Each subcommand's body is exported as a plain async function
  * (`runCreateUser`, `runAddUser`, …) separate from the Commander wiring, so
- * `test/cli/commands/auth.doctest.md` calls them directly — the `upgrade.ts`/
+ * `test/cli/commands/auth.test.ts` calls them directly — the `upgrade.ts`/
  * `view.ts` precedent for testing CLI command logic without spawning a
  * subprocess.
  */

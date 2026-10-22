@@ -6,9 +6,9 @@
  * actually a set — members used uniformly through one list, not each
  * imported individually by its own caller. A registry no `module` ever
  * value-imports is the second-list smell: something declared for the check
- * alone, with no reader to keep it honest. Tests don't count: a doctest
+ * alone, with no reader to keep it honest. Tests don't count: a test
  * exercising the registry in isolation is not a production consumer.
- * Rules: docs/plans/file-layout.md, rule 1/4.
+ * Rules: docs/implemented-plans/file-layout.md, rule 1/4.
  */
 import type { Finding, PackageLayout } from "../../../model.js";
 import { modules } from "../../../graph.js";

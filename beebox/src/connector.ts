@@ -4,7 +4,7 @@
  * Kept out of `connectors.ts` (the set's registry) so a connector member's
  * own dependency can use these types and the `ConnectorFatalError` class
  * without importing the registry itself — a set member may not import its
- * registry (rule 1, docs/plans/file-layout.md), and `field-test/fake-gmail-gate.ts`
+ * registry (rule 1, docs/implemented-plans/file-layout.md), and `field-test/fake-gmail-gate.ts`
  * (imported by `connectors/gmail/connector.ts`) needs `ConnectorFatalError`
  * as a real base class, not just a type, so that edge would otherwise be a
  * genuine circular import (a TDZ `ReferenceError` on the class).
