@@ -1,11 +1,14 @@
 ---
 title: "Theme studio has no real app-nav specimen, so nav pill contrast escapes the theme loop"
-workstream: unattached
+workstream: theme-audit
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-theme-audit — system-themes tour contrast findings
+resolution: implemented
 ---
+
+> **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). The studio renders the real nav through shared faces in `components/app-bar-faces/` instead of a copied class list. Remaining nav misses (Rose Trellis) are tracked in `decisions/2026-10-21-rose-trellis-nav-labels-below-aa.md`.
 
 `bin/theme-check` measures what the theme studio renders. The studio's
 navigation sample is three `Button`s on the nav bar; the real nav uses the

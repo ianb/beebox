@@ -1,11 +1,14 @@
 ---
 title: "theme-check's contrast captures paint backdrops at the capture's height, not the screen's"
-workstream: unattached
+workstream: theme-audit
 area: beebox
 filed-by: agent
 discovered-by: codex gpt-6-sol (cross-model review)
 discovered-in: worktree-theme-audit — backdrop audit review
+resolution: implemented
 ---
+
+> **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). The studio has an inner scroller; `bin/theme-check` captures by scroll step with stable `data-bbx-audit-run` ids, and `FIT_STUDIO_SCRIPT` is removed.
 
 `bin/theme-check` captures the studio in one tall viewport (1280×2400 and
 375×4400) so every sample is on screen. The studio's presentation grows to

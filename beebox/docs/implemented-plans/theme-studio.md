@@ -1,12 +1,12 @@
 ---
 title: "Theme studio: show what the app shows, at screen scale"
-status: draft
+status: implemented
 workstream: theme-audit
 issues:
-  - ../../../issues/features/2026-10-21-theme-studio-lacks-app-nav-specimen.md
-  - ../../../issues/code-quality/2026-10-21-theme-check-captures-paint-backdrops-at-capture-height.md
-  - ../../../issues/code-quality/2026-10-21-chat-material-themed-by-utility-class-overrides.md
-  - ../../../issues/code-quality/2026-10-21-base-warm-text-scale-contrast.md
+  - ../../../issues/closed/features/2026-10-21-theme-studio-lacks-app-nav-specimen.md
+  - ../../../issues/closed/code-quality/2026-10-21-theme-check-captures-paint-backdrops-at-capture-height.md
+  - ../../../issues/closed/code-quality/2026-10-21-chat-material-themed-by-utility-class-overrides.md
+  - ../../../issues/closed/code-quality/2026-10-21-base-warm-text-scale-contrast.md
 ---
 # Theme studio: show what the app shows, at screen scale
 

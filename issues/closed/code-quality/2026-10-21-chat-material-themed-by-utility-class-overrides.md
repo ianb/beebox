@@ -1,11 +1,14 @@
 ---
 title: "Chat surfaces are themed by overriding Tailwind utility classes per theme"
-workstream: unattached
+workstream: theme-audit
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-theme-audit — pixel contrast audit of every catalog theme
+resolution: implemented
 ---
+
+> **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). Chat roots now provide MaterialContext, chat text uses the `text-card-*` tokens, and themes set `--bbx-ink`, `--bbx-ink-soft` and `--bbx-pen`. The per-theme utility-class overrides are deleted. No divergence from the proposed direction.
 
 Most dark and textured system themes restyle chat surfaces by matching
 Tailwind utility classes inside them, for example in `themes/deck.css`:
