@@ -1,7 +1,7 @@
 import { startAwakeTimeout } from "../shared/awake-timeout.js";
 import { docsRefreshHasWork, refreshGeneratedDocs } from "./docs-refresh.js";
 import type { Agent } from "./agent/types.js";
-import { repairMigration, runProcedureMigration, finishMigrationRepair, migrationQuestions } from "./migration-repair.js";
+import { repairMigration, runProcedureMigration, finishMigrationRepair, migrationQuestions, redactMigrationQuestions } from "./migration-repair.js";
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
 import { stageAndCommitPaths } from "../lib/git/core/operations.js";
 import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex, migrationOutputBaseline, finishMigrationOutput } from "./migration-recovery.js";
@@ -193,6 +193,8 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
   await step("saving current files");
   const recovery = await captureMigrationSnapshot(boxRoot, migration.name);
   const baseline = await migrationOutputBaseline(boxRoot, recovery);
+  // After the snapshot, so recovery keeps the original and this commit carries the rewrite.
+  await redactMigrationQuestions(boxRoot);
   const manifestBefore = await snapshotManifest(boxRoot);
   let failure = "";
   const verifyManifest = async (): Promise<void> => {

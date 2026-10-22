@@ -106,6 +106,8 @@ export async function changedMigrationPaths(
       return (
         await run([
           "diff-tree",
+          // Box-relative, as every caller stages and resets from boxRoot.
+          "--relative",
           "--no-commit-id",
           "--name-only",
           "--no-renames",

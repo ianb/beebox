@@ -178,7 +178,7 @@ void test("run refreshes the lockfile, and restores both files when that fails",
     failed: {
       code: 1,
       lines: [
-        `engine-link-spec: \`pnpm install --lockfile-only --offline\` failed in ${failing.root} (exit 1); package.json and pnpm-lock.yaml restored, the migration stays pending.`,
+        `engine-link-spec: \`pnpm install --lockfile-only --prefer-offline\` failed in ${failing.root} (exit 1); package.json and pnpm-lock.yaml restored, the migration stays pending.`,
         "ERR_PNPM_NO_OFFLINE_META  Failed to resolve react",
       ],
     },
@@ -237,7 +237,7 @@ void test("run restores both files when the refresh cannot spawn, and a rerun re
   });
   const after = await runEngineLinkSpec({ boxRoot: box.root, mode: "apply" });
   t.check({ spawnFailed: spawnFailed.lines[0], restored, rerunFailed: rerunFailed.code, rerun, after }, {
-    spawnFailed: `engine-link-spec: \`pnpm install --lockfile-only --offline\` failed in ${box.root} (exit 1); package.json and pnpm-lock.yaml restored, the migration stays pending.`,
+    spawnFailed: `engine-link-spec: \`pnpm install --lockfile-only --prefer-offline\` failed in ${box.root} (exit 1); package.json and pnpm-lock.yaml restored, the migration stays pending.`,
     restored: { packageJson: before, lockfile: stale },
     rerunFailed: 1,
     rerun: { code: 0, lines: ["engine-link-spec: refreshed pnpm-lock.yaml for \"link:.beebox/engine\"."] },
@@ -266,7 +266,7 @@ void test("run restores both files when the refreshed lockfile is still not port
     result: {
       code: 1,
       lines: [
-        `engine-link-spec: \`pnpm install --lockfile-only --offline\` failed in ${box.root} (exit 1); package.json and pnpm-lock.yaml restored, the migration stays pending.`,
+        `engine-link-spec: \`pnpm install --lockfile-only --prefer-offline\` failed in ${box.root} (exit 1); package.json and pnpm-lock.yaml restored, the migration stays pending.`,
         "pnpm-lock.yaml still does not record \"beebox\": \"link:.beebox/engine\" after the refresh.",
       ],
     },

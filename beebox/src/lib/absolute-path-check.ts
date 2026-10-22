@@ -45,3 +45,20 @@ export function findAbsoluteMachinePaths(text: string): string[] {
   }
   return found;
 }
+
+/**
+ * `text` with each real absolute machine path's home prefix written as
+ * `~<name>/`, the form the guard above accepts. For card text that quotes host
+ * output, such as a failed migration's error in its question.
+ */
+export function redactAbsoluteMachinePaths(text: string): string {
+  let redacted = "";
+  let from = 0;
+  for (const match of text.matchAll(HOME_PATH)) {
+    const name = match[1];
+    if (name === undefined || ALLOWED_ABSOLUTE_PATH_NAMES.has(name) || insideUrl(text, match.index)) continue;
+    redacted += `${text.slice(from, match.index)}~${name}/`;
+    from = match.index + match[0].length;
+  }
+  return redacted + text.slice(from);
+}
