@@ -126,7 +126,9 @@ export function isWithinBudget(
  * through (`failure`, or `deferred` as recorded before sends skipped the engine
  * classifier) stays due with backoff until its retry window ends, unless the
  * failure was final: no channel was tried, so a retry cannot reach anyone. A
- * `runs:` one-shot gets one attempt: its command may have side effects.
+ * final failure holds only for the `at` it was recorded for: a card edited to
+ * an `at` after that run is a new attempt. A `runs:` one-shot gets one
+ * attempt: its command may have side effects.
  */
 function isAtDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext): boolean {
   const now = ctx.now.getTime();
@@ -135,8 +137,9 @@ function isAtDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext): bool
   const retryEndsAt = reminderRetryEndsAt(script);
   if (retryEndsAt === null || now >= retryEndsAt.getTime()) return false;
   if (ctx.lastResult !== "failure" && ctx.lastResult !== "deferred") return false;
-  if (ctx.lastFailureFinal) return false;
-  return now >= new Date(ctx.lastRun).getTime() + reminderRetryBackoffMs(ctx.consecutiveFailures);
+  const lastRun = new Date(ctx.lastRun).getTime();
+  if (ctx.lastFailureFinal && lastRun >= new Date(script.at).getTime()) return false;
+  return now >= lastRun + reminderRetryBackoffMs(ctx.consecutiveFailures);
 }
 
 function isCronDue(cronExpr: string, ctx: ScheduleCheckContext): boolean {
