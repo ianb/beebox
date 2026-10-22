@@ -45,7 +45,9 @@ the next run converts and exits 2 with `leftover:` lines. The sweep sees
 partial-applied. No agent runs and the leftover output is on no card, which
 breaks the documented contract that the question carries the rerun's output.
 Because the migration is now recorded, the leftover check never runs again. A
-test proved this too.
+test proved this too. Fixed in commit 130469082: an exit 2 behind an open
+question is now `deferred-repair` and records nothing; the stale question still
+hides the new output until it is answered, which the fix above would cover.
 
 ## Proposed fix
 
@@ -55,4 +57,4 @@ migration applied <time>") and commit them with the migration. In
 `runBoundedAttempt`, when the current code or failure text differs from what an
 unanswered question records (at minimum exit 2 against a question written for
 a hard failure), write a new question with the current output instead of
-returning the stale one.
+returning the stale one (the second half is what remains after 130469082).
