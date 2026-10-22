@@ -13,7 +13,7 @@ resolution: implemented
 
 Every production deploy since 2026-10-21T13:44Z failed. On each production box,
 `engine-link-spec-2026-10` stayed pending, and `box-shape-record-2026-10` waited
-behind it. Two defects caused this.
+behind it. Three defects caused this.
 
 1. **The lockfile refresh cannot resolve offline.** The migration ran
    `pnpm install --lockfile-only --offline`
