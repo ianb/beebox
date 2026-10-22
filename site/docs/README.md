@@ -126,11 +126,13 @@ the ones that bear on what the person is asking and open the pages named.
 - **Expressive capture.** A way in suited to each kind of thing, and the
   distinctive ones are long-form voice and mixed voice-and-camera. On an
   iPhone it now also reaches Siri, the Action Button, and the share sheet, not
-  yet tried on a real phone.
+  yet tried on a real phone, and the browser extension can send the page you
+  are on to whichever conversation fits.
   ([voice](capabilities/voice.md), [phone capture](capabilities/phone-capture.md),
   [an inbox for your thoughts](uses/an-inbox-for-your-thoughts.md))
 - **It asks instead of guessing.** Lacking confidence or authority the agent
-  writes a question and waits; the answer becomes a rule it reads next time.
+  writes a question and waits; the answer becomes a rule it reads next time. A
+  new box starts the same way, by asking what you want to keep track of.
   ([questions](capabilities/questions.md), [triage](capabilities/triage.md),
   [how the box is taught](design/teaching.md))
 - **Groups get a box each.** Everyone in a box shares everything in it, and a

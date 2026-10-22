@@ -5,7 +5,8 @@ description: "The mechanism: a box is a directory, cards are markdown, git is th
 
 **A box is a directory.** One directory on disk is a box, kept under version
 control with git (for the curious, it is also structured as a self-contained
-software package, marked by a hidden `.beebox/` folder). Everything lives in
+software package, whose `package.json` says it is a box, so a git clone of a box
+is a box). Everything lives in
 that directory; there is no separate database. The top level is organized
 into a few fixed areas, such as your content, settings, and internal
 bookkeeping (for the curious, these are named with a leading underscore:

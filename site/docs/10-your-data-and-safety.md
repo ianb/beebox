@@ -44,7 +44,10 @@ ungranted avoids it while ordinary chat keeps working. A thought saved through
 Siri on the iPhone, and a voice note or a share with words, takes the same route
 once it reaches the box (a voice note's audio first goes to your transcription
 vendor); a share with no words, such as a saved image or link, starts no chat
-work. Until it uploads, such a capture is held in storage on the phone itself. If you opt in to the judging model for filing documents, the prepared text of
+work; the box's agent files it a couple of minutes later, so its content goes to
+your agent's vendor like any other work the agent does. Until it uploads, such a capture is held in storage on the phone itself. A page sent from the browser extension's Send to box takes the same route,
+and the routing model sees the page's title, address and site and your note, not
+the page's text. If you opt in to the judging model for filing documents, the prepared text of
 each item and your filing rules go the same way, and a record of each decision
 stays in the box. A watch that
 notifies you when something changes in the box sends the text of the changed

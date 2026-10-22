@@ -20,7 +20,11 @@ open, and how it stays quiet when you do.
   active in the last two minutes, a quiet or loud message shows as a banner in
   the open app instead of being pushed.
 - Lets the agent set a reminder for a fixed time, which fires from the
-  schedule with no agent running, and delete itself after it fires.
+  schedule with no agent running, and delete itself after it fires. It goes out
+  on time even while you are chatting, and if the send fails it is retried for
+  a day before the box gives up and shows it as failing in health. The agent
+  makes one with a single command that also checks a channel reaches you at the
+  reminder's loudness before it commits.
 - Lets the agent set up a watch ("tell me when the school emails about the field
   trip"): a schedule looks at what changed in the box since its last run, a
   small judging model decides whether it matters, and only then is a

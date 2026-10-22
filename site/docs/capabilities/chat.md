@@ -38,8 +38,12 @@ box. Chat is the everyday way you talk to it.
 - Lets you pick the model for one chat, from the engines the box has enabled
   or a model the owner added through OpenRouter, and marks a chat running
   above or below the box default.
-- Can set a reminder mid-conversation that wakes the same chat back up
-  later, optionally with a sound or a spoken announcement.
+- Can come back to the same chat later, up to twelve hours out, to check on
+  something ("ring in this chat in 20 minutes"), optionally with a sound or a
+  spoken announcement. For anything further out, or to reach you when the chat
+  is closed, the agent sets a reminder on your phone instead
+  ([notifications.md](notifications.md)), and tells you the time it set so you
+  can correct a misread "next Tuesday".
 
 **What it needs**
 

@@ -44,13 +44,19 @@ or a folder. A card shows
 its content on the front; turning it over shows its properties, such as the
 fields of its type, how it was found, its attachments, and its last change.
 Cards can also carry a card theme and a stock: plain, paper, sticky note, or
-letter set, plus a number of material-led themes (fabric, theatre, gouache, and
-others), so a recipe or a letter looks distinct from a plain note. The
-interface as a whole has its own theme, which also sets the colour of selected
+letter set, so a recipe or a letter looks distinct from a plain note. The
+interface as a whole has its own theme, and besides the plain ones there are
+about a dozen illustrated ones, light and dark (Night Atlas, Goldfish,
+Doodlebit, Tempest, and others), each with its own artwork. The theme also sets the colour of selected
 text, and each interface theme names the card themes that go with it, so a card
 with no theme of its own follows whichever interface theme it is shown under.
 Turning a card over also offers to copy its original text, or for a photo the
-image itself. When you have more than twenty landmarks, the landmark menu
+image itself, and to print the card on its own (the printed page ends with the
+box and the card's path, and, if you tick a box beside Print, a QR code of the
+card's address). A long document, one with four or more headings, gets a
+Contents button that lists them and jumps to one. A code block in a card or
+chat has a Copy button, which is how a message the agent drafted for you gets
+into another app. A search result for a section opens the card at that section. When you have more than twenty landmarks, the landmark menu
 gains a search field.
 
 **On a phone**
@@ -68,11 +74,12 @@ way it edits any other file. See [views.md](views.md).
 
 **Limits**
 
-The navigation bar shows a count of questions waiting for you and of todos on
-your plate, each linking to its list. The badge is still a bare number beside an
-icon, so it can read as a wrong total; the plate page's headline states the
-number and what it covers ("N on your plate, M later, K for the agent"), and
-todos assigned to the agent are left out of the badge. Some card-body
+The navigation bar shows a count of questions waiting for you and of todos
+that are due now, each linking to its list. The badge is still a bare number
+beside an icon, so it can read as a wrong total; the Todos page's headline
+states the number and what it covers ("N now, M later, K for the agent", with
+overdue todos called out separately), and todos assigned to the agent are left
+out of the badge. Some card-body
 links still point at an older internal address rather than the one that
 actually opens, though following one still works. A rotated photo
 occasionally renders upside down or clipped.
