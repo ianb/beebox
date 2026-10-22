@@ -9,11 +9,11 @@ discovered-in: worktree-engine-link-migration-fix — failed production deploys 
 resolution: implemented
 ---
 
-**Closed:** The lockfile refresh uses `--prefer-offline`, and migration questions carry no machine path (this workstream's fix commit).
+**Closed:** The lockfile refresh uses `--prefer-offline`, migration questions carry no machine path (8f636585a), and a path-scoped commit stages only changed files (the follow-up commit).
 
 Every production deploy since 2026-10-21T13:44Z failed. On each production box,
 `engine-link-spec-2026-10` stayed pending, and `box-shape-record-2026-10` waited
-behind it. Two defects caused this.
+behind it. Three defects caused this.
 
 1. **The lockfile refresh cannot resolve offline.** The migration ran
    `pnpm install --lockfile-only --offline`
@@ -34,6 +34,15 @@ behind it. Two defects caused this.
    too and failed the same way. A box whose script then succeeded still could
    not commit (`commit-failed`). The question is now written with `~<user>/`,
    and the sweep rewrites an older migration question before it commits.
+
+3. **A deleted path blocked the commit.** After the first fix deployed, three
+   boxes still failed: the migration's commit paths span every change since
+   its first attempt (`migrationOutputBaseline` in
+   `beebox/src/core/migration-recovery.ts`). Each box had committed a file
+   deletion in between, so `git add` refused the deleted path ("pathspec did
+   not match any files"). `stageAndCommitPaths`
+   (`beebox/src/lib/git/core/operations.ts`) now stages only the files that
+   `git status` reports changed.
 
 The repair agent ran once per box (2026-10-20, 4 to 6 turns each). It did not
 rerun hourly: an unanswered question returns before any agent attempt.
