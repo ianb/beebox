@@ -97,13 +97,13 @@ void test("audits at several scroll positions merge by run and line", (t) => {
   const token: ContrastFailure = { kind: "token", material: 0, theme: "gilt/leaf", fg: "--bbx-ink-soft", bg: "--bbx-paper", ratio: 3.9, required: 4.5 };
   const merged = mergeContrastSteps([
     // Top of the page: run 1 whole; run 2's second line cut by the bottom edge; runs 3 and 5 below.
-    { failures: [text(2, 4.1), token], runs: [1, 2], lines: [{ id: 1, total: 1, whole: [0] }, { id: 2, total: 2, whole: [0] }, { id: 3, total: 3, whole: [] }, { id: 5, total: 1, whole: [] }], unmeasured: [] },
+    { failures: [text(2, 4.1), token], runs: [1, 2], lines: [{ id: 1, label: "p 1", total: 1, whole: [0] }, { id: 2, label: "p 2", total: 2, whole: [0] }, { id: 3, label: "p 3", total: 3, whole: [] }, { id: 5, label: "p 5", total: 1, whole: [] }], unmeasured: [] },
     // One step down: run 2's second line, failing lower; run 3 taller than the screen; run 4 covered.
-    { failures: [text(2, 3.8), token], runs: [2, 3], lines: [{ id: 2, total: 2, whole: [1] }, { id: 3, total: 3, whole: [0, 1] }, { id: 4, total: 1, whole: [] }], unmeasured: [4] },
+    { failures: [text(2, 3.8), token], runs: [2, 3], lines: [{ id: 2, label: "p 2", total: 2, whole: [1] }, { id: 3, label: "p 3", total: 3, whole: [0, 1] }, { id: 4, label: "p 4", total: 1, whole: [] }], unmeasured: [4] },
     // Last step: run 3's last line, so every line of it was seen; run 5 never was.
-    { failures: [], runs: [3], lines: [{ id: 3, total: 3, whole: [2] }, { id: 4, total: 1, whole: [] }], unmeasured: [4] },
+    { failures: [], runs: [3], lines: [{ id: 3, label: "p 3", total: 3, whole: [2] }, { id: 4, label: "p 4", total: 1, whole: [] }], unmeasured: [4] },
   ]);
-  t.check(merged, { failures: [text(2, 3.8), token], runs: 3, offscreen: 1, unmeasured: 1 });
+  t.check(merged, { failures: [text(2, 3.8), token], runs: 3, offscreen: ["p 5"], unmeasured: ["p 4"] });
   t.end();
 });
 

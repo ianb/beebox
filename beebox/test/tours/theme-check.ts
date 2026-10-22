@@ -88,9 +88,9 @@ async function checkContrast(session: BrowseSession, { c, screen, outDir }: { c:
   const result = mergeContrastSteps(steps);
   const lines = result.failures.map((f) => `  ${describeContrastFailure(f)}\n`);
   // Missed coverage counts as a miss: an unmeasured run is not a passing one.
-  if (result.offscreen > 0) lines.push(`  ${String(result.offscreen)} text runs were never wholly in view, so not fully measured\n`);
-  if (result.unmeasured > 0) lines.push(`  ${String(result.unmeasured)} text runs were not measurable (partly covered, or in a faded group over an image)\n`);
-  const misses = result.failures.length + result.offscreen + result.unmeasured;
+  for (const run of result.offscreen) lines.push(`  never wholly in view or always covered, so not measured: ${run}\n`);
+  for (const run of result.unmeasured) lines.push(`  not measurable (partly covered, or in a faded group over an image): ${run}\n`);
+  const misses = result.failures.length + result.offscreen.length + result.unmeasured.length;
   const shots = path.join(outDir, `${caseName(c)}.${screen.name}.{0..${String(steps.length - 1)}}.png`);
   process.stdout.write(`${caseName(c)} ${screen.name}: ${misses === 0 ? "ok" : `${String(misses)} to fix`} (${String(result.runs)} text runs)\n${lines.join("")}  → ${shots}\n`);
   return misses;

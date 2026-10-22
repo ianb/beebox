@@ -33,6 +33,8 @@ export interface TextRun {
 /** A text element's lines, numbered in document order, and which this audit saw whole. */
 export interface RunLines {
   id: number;
+  /** Selector and opening text, to name a run that was never measured. */
+  label: string;
   total: number;
   whole: number[];
 }
@@ -168,6 +170,12 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   };
   const visible = (el, r) => {
     let [l, t, ri, b] = [r.left, r.top, r.right, r.bottom];
+    // An element that clips its own overflow (a truncated label) clips its text too.
+    const own = getComputedStyle(el);
+    if (own.overflowX !== "visible" || own.overflowY !== "visible") {
+      const c = el.getBoundingClientRect();
+      [l, t, ri, b] = [Math.max(l, c.left), Math.max(t, c.top), Math.min(ri, c.right), Math.min(b, c.bottom)];
+    }
     // Only ancestors on the containing-block chain clip: an absolute box
     // escapes overflow until its positioned ancestor, a fixed box escapes all.
     let escaping = getComputedStyle(el).position === "absolute";
@@ -185,7 +193,8 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
       }
     }
     [l, t, ri, b] = [Math.max(l, 0), Math.max(t, 0), Math.min(ri, vw), Math.min(b, vh)];
-    if (ri - l < 2 || b - t < 4) return null;
+    // Clipped away by overflow (truncation) or too thin to hold a glyph: nothing to measure.
+    if (ri - l < 2 || b - t < 4) return "clipped";
     // Text under another element (a menu, a sticky bar, a decoration) is not
     // what the reader sees. Hit testing is on for everything while collecting.
     // A 3×3 grid of probes: all covered drops the box; some covered makes
@@ -244,7 +253,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     const id = runId(el);
     // Number the lines; a line scrolled out of view, wholly or in part, is left for another audit.
     const [top, bottom] = scrollClip(el);
-    const lines = linesOf.get(el) ?? { id, total: 0, whole: [] };
+    const lines = linesOf.get(el) ?? { id, label: describe(el) + ' "' + text.trim().slice(0, 40) + '"', total: 0, whole: [] };
     linesOf.set(el, lines);
     const whole = [];
     for (const r of boxes) {
@@ -256,13 +265,17 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
     const fill = cs.webkitTextFillColor;
     const raw = parse(fill !== "" && fill !== cs.color ? fill : color);
     // Clear text, and lines clipped away by overflow: hidden, have nothing to measure.
-    const seen = raw === null ? [] : whole.map(({ r }) => visible(el, r)).filter((box) => box !== null);
+    const checked = raw === null ? [] : whole.map(({ r, n }) => ({ n, box: visible(el, r) }));
+    const seen = checked.map(({ box }) => box).filter((box) => box !== null && box !== "clipped");
     const { below, group, overImage } = layering(el);
     if (seen.length > 0 && (overImage || seen.some((box) => box.partial))) {
       unmeasurable.add(id);
       return;
     }
-    lines.whole.push(...whole.map(({ n }) => n));
+    // A line counts as measured only when a step scored it; a line wholly
+    // under a menu or overlay waits for a step that shows it. Clear text has
+    // nothing to score, so all its lines count.
+    lines.whole.push(...(raw === null ? whole : checked.filter(({ box }) => box !== null)).map(({ n }) => n));
     if (raw === null || seen.length === 0) return;
     const rects = seen.map(({ x, y, w, h }) => ({ x, y, w, h }));
     let run = byElement.get(el);

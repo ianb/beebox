@@ -98,7 +98,7 @@ async function auditCheckpointContrast(input: CaptureInput & { reportPath: strin
   try {
     const result = mergeContrastSteps([await auditContrast(session, { outline: false })]);
     await writeFile(reportPath, JSON.stringify(result, null, 2), "utf8");
-    const misses = result.failures.length + result.unmeasured;
+    const misses = result.failures.length + result.unmeasured.length;
     if (misses === 0) return;
     const shown = result.failures.slice(0, 6).map((f) => `\n  - ${describeContrastFailure(f)}`).join("");
     const more = misses > 6 ? `\n  - … ${String(misses - 6)} more in ${path.basename(reportPath)}` : "";

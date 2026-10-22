@@ -214,10 +214,10 @@ export interface ContrastStep {
 export interface ContrastResult {
   failures: ContrastFailure[];
   runs: number;
-  /** Runs with a line no audit saw whole. */
-  offscreen: number;
-  /** Runs some audit could not score and whose lines no audit saw all of. */
-  unmeasured: number;
+  /** Runs with a line no audit saw whole, by label. */
+  offscreen: string[];
+  /** Runs some audit could not score and whose lines no audit saw all of, by label. */
+  unmeasured: string[];
 }
 
 function failureKey(f: ContrastFailure): string {
@@ -233,12 +233,14 @@ export function mergeContrastSteps(steps: readonly ContrastStep[]): ContrastResu
   const failures = new Map<string, ContrastFailure>();
   const total = new Map<number, number>();
   const seen = new Map<number, Set<number>>();
+  const labels = new Map<number, string>();
   for (const step of steps) {
     for (const f of step.failures) {
       const known = failures.get(failureKey(f));
       if (known === undefined || f.ratio < known.ratio) failures.set(failureKey(f), f);
     }
-    for (const { id, total: lines, whole } of step.lines) {
+    for (const { id, label, total: lines, whole } of step.lines) {
+      labels.set(id, label);
       total.set(id, Math.max(total.get(id) ?? 0, lines));
       const set = seen.get(id) ?? new Set<number>();
       for (const n of whole) set.add(n);
@@ -247,12 +249,12 @@ export function mergeContrastSteps(steps: readonly ContrastStep[]): ContrastResu
   }
   const missed = [...total].filter(([id, lines]) => (seen.get(id)?.size ?? 0) < lines).map(([id]) => id);
   const unmeasurable = new Set(steps.flatMap((s) => s.unmeasured));
-  const unmeasured = missed.filter((id) => unmeasurable.has(id)).length;
+  const label = (id: number): string => labels.get(id) ?? `run ${String(id)}`;
   return {
     failures: [...failures.values()],
     runs: new Set(steps.flatMap((s) => s.runs)).size,
-    offscreen: missed.length - unmeasured,
-    unmeasured,
+    offscreen: missed.filter((id) => !unmeasurable.has(id)).map(label),
+    unmeasured: missed.filter((id) => unmeasurable.has(id)).map(label),
   };
 }
 
