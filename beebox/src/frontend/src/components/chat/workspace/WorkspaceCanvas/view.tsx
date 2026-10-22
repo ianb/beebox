@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useParams } from "@tanstack/react-router";
 import { VisuallyHidden } from "../../../ui/VisuallyHidden";
+import { MaterialContext } from "../../../ui/material";
 import { FileView } from "../../../FileView/view";
 import { SidecarTabStrip } from "../SidecarTabStrip/view";
 import { useCompanionMaterial } from "../../../../hooks/useCompanionMaterial";
@@ -36,6 +37,13 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
   const { onSelectTab: handleSelectTab, onCloseTab: handleCloseTab, onTogglePin: handleTogglePin } = workspace;
   const workspacePdf = isWorkspacePdf(tab.target.path, tab.target.viewer);
   const themedSurface = cardTypeFromName(tab.target.path) !== undefined || isMarkdownPath(tab.target.path);
+  const fileView = <FileView path={tab.target.path} mode="companion" workspacePdf={workspacePdf} rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState} fragment={tab.target.fragment}
+    canPushViewState={visible}
+    onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
+    onSelectRenderer={(viewer) => workspace.updateTarget({ ...withoutFragment(tab.target), viewer, viewState: null })}
+    onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
+    onNavigate={(target, hint) => { reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
+    onAddSelection={onAddSelection} reportActivity={reportActivity} />;
   return <div ref={material} hidden={!visible} {...(!visible ? { inert: "" } : {})} data-workspace-card={tab.target.path} data-active-card={themedSurface || undefined}
     style={{ gridColumn: workspace.mobile || workspace.state.layout.kind === "focus" ? "1 / -1" : pane === "left" ? "1" : "2", gridRow: 1 }}
     className={visible ? "bbx-companion-desk relative flex flex-col min-w-0 min-h-0" : "hidden"}>
@@ -53,15 +61,10 @@ function WorkspaceCard({ tab, pane, visible, editing, onAddSelection, reportActi
         const node = event.currentTarget;
         reportActivity("scrolled", (node.scrollHeight > node.clientHeight ? Math.round(node.scrollTop / (node.scrollHeight - node.clientHeight) * 10) / 10 : 0).toFixed(1));
       }}>
-      <CardVisibilityProvider visible={visible}><WorkspacePaneContext.Provider value={pane}>
-        <FileView path={tab.target.path} mode="companion" workspacePdf={workspacePdf} rendererName={tab.target.viewer} params={tab.target.params} viewState={tab.target.viewState} fragment={tab.target.fragment}
-          canPushViewState={visible}
-          onViewStateChange={(viewState, method) => workspace.updateTarget({ ...tab.target, viewState }, method)}
-          onSelectRenderer={(viewer) => workspace.updateTarget({ ...withoutFragment(tab.target), viewer, viewState: null })}
-          onMoved={(path) => workspace.retargetCard(tab.target.path, path)}
-          onNavigate={(target, hint) => { reportActivity("navigated", target.path); workspace.open(target, { ...hint, originatingPane: pane }); }}
-          onAddSelection={onAddSelection} reportActivity={reportActivity} />
-      </WorkspacePaneContext.Provider></CardVisibilityProvider>
+      {/* A neutral desk is a material the system theme may ink; a card sets its own. */}
+      <MaterialContext.Provider value={!themedSurface}><CardVisibilityProvider visible={visible}><WorkspacePaneContext.Provider value={pane}>
+        {fileView}
+      </WorkspacePaneContext.Provider></CardVisibilityProvider></MaterialContext.Provider>
     </div>
     {/* Always mounted so a screen reader hears the text appear. Out of flow:
         the tab strip measures its row, and a child there would resize it. */}

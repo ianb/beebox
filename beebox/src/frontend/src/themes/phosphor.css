@@ -26,8 +26,8 @@
 [data-chrome-theme="phosphor"] .bbx-app-nav button:not(#bbx-nav-errors)::after{content:" ]";color:#3baa55;}
 [data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-callout,.bbx-composer-material){color:#82ed91;background:#03130a;border:0;box-shadow:none;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material{background:#03130a;}
-/* Chat material ink, read by text in the reply, pending and meta materials. */
-[data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-pending-material,.bbx-chat-meta-material){--bbx-ink:#82ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#b5ffc0;}
+/* Material ink, read by text in the reply, pending and meta materials and on the neutral file desk. */
+[data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-pending-material,.bbx-chat-meta-material,.bbx-interface-card-desk[data-card-content="neutral"]){--bbx-ink:#82ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#b5ffc0;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material::before{content:"┌─ INCOMING ─────────────────────────────────────────────";display:block;color:#51c468;font:11px/1 monospace;white-space:nowrap;overflow:hidden;margin:0 0 12px;}
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper{color:#a7ffb1;background:#071a0c;border:0;box-shadow:none;}
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper :is(.bbx-chat-user-token,.bbx-chat-user-attachment,.bbx-chat-user-attachment-badge){background:#ffffff1f;}
