@@ -25,3 +25,8 @@ one.
 Re-encountered during the Bloom theme tour on 2026-10-16 at both widths: the
 composer Add menu still reports the same `region` violation. Styling does not
 change its portal or landmark structure.
+
+Re-encountered in weekly tour check run 20261021-221418, at both viewports:
+`new-chat` `add-menu`, and the `bloom-composer-menu`, `deck-composer-menu` and
+`ribbon-composer-menu` checkpoints (`.shadow-lg` target). The priority may be
+stale; the rule is now the most-repeated axe finding across the tours.
