@@ -81,7 +81,9 @@ repointing the link switches `node_modules/.bin/bbx` with no reinstall. With the
 link missing, install exits 0 without `.bin/bbx` and import fails
 `ERR_MODULE_NOT_FOUND`; a reinstall after the link exists restores the bin.
 Today's `link:/opt/beebox/beebox` on a laptop also exits 0 with a dead link.
-After a spec change, `pnpm install --lockfile-only --offline` updates the lockfile.
+After a spec change, `pnpm install --lockfile-only --prefer-offline` updates the lockfile.
+It re-resolves the box's direct dependencies, so `--offline` fails on a server
+whose pnpm cache lacks their metadata (every production box, 2026-10-21).
 Every override row fails open: without the override, the committed `^1.0.0`
 asks the public registry for `beebox`, a name anyone can register.
 
@@ -123,7 +125,7 @@ dependency names `beebox`. `run.ts`: (1) a link target that resolves inside
 the box is `pinned` too: no in-box link target ever; (2) `ensureEngineLink` to
 the old link target, which keeps a usable existing link; a dead target exits 1
 with the repair; (3) write `package.json`; (4) if `pnpm-lock.yaml` exists, `pnpm
-install --lockfile-only --offline`; on failure restore `package.json` and exit 1
+install --lockfile-only --prefer-offline`; on failure restore `package.json` and exit 1
 naming the box and command, so the migration stays pending and the manifest
 never disagrees with the tracked lockfile; (5) verify the spec reads back
 portable and the link is usable. The real install happens at the next install

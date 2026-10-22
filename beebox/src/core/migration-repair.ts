@@ -13,6 +13,7 @@ import { QuestionSchema, createTextQuestionTemplate, questionState } from "../sc
 import { errnoCode } from "../shared/error-guards.js";
 import { getBoxTimeISO } from "../lib/time.js";
 import { withBoxGitLock } from "../lib/git-lock.js";
+import { findAbsoluteMachinePaths, redactAbsoluteMachinePaths } from "../lib/absolute-path-check.js";
 
 
 class MigrationRepairUnavailableError extends Error {
@@ -24,6 +25,13 @@ const schemas = new Map([["question", QuestionSchema]]);
 const outcome = z.object({ status: z.enum(["repaired", "needs-human", "failed"]), reason: z.string() });
 
 
+async function migrationQuestionFiles(boxRoot: string): Promise<string[]> {
+  const names = await readdir(join(boxRoot, directory)).catch((error: unknown) => {
+    if (errnoCode(error) === "ENOENT") return []; throw error;
+  });
+  return names.filter((entry) => entry.startsWith("Migration_") && entry.endsWith(".question.card")).map((name) => `${directory}/${name}`);
+}
+
 async function question(boxRoot: string, file: string) {
   try {
     const content = await readFile(join(boxRoot, file), "utf8");
@@ -32,16 +40,32 @@ async function question(boxRoot: string, file: string) {
 }
 
 export async function migrationQuestions(boxRoot: string): Promise<string[]> {
-  const names = await readdir(join(boxRoot, directory)).catch((error: unknown) => {
-    if (errnoCode(error) === "ENOENT") return []; throw error;
-  });
   const pending: string[] = [];
-  for (const name of names.filter((entry) => entry.startsWith("Migration_") && entry.endsWith(".question.card"))) {
-    const file = `${directory}/${name}`;
+  for (const file of await migrationQuestionFiles(boxRoot)) {
     const existing = await question(boxRoot, file);
     if (existing === null || questionState(existing.fields) !== "answered") pending.push(file);
   }
   return pending;
+}
+
+/**
+ * Rewrite machine paths in unanswered migration questions written before their
+ * failure text was redacted. The box commit lint refuses such a card, so its
+ * commit, and every later commit that carries it, fails. An unanswered card
+ * holds only engine text; an answer is never rewritten. Returns the files rewritten.
+ */
+export async function redactMigrationQuestions(boxRoot: string): Promise<string[]> {
+  const rewritten: string[] = [];
+  for (const file of await migrationQuestions(boxRoot)) {
+    const existing = await question(boxRoot, file);
+    if (existing === null || findAbsoluteMachinePaths(existing.content).length === 0) continue;
+    const { content } = existing;
+    const redacted = redactAbsoluteMachinePaths(content);
+    cardFields(parseCardText(redacted, { source: file, schemas }), QuestionSchema);
+    await writeFile(join(boxRoot, file), redacted);
+    rewritten.push(file);
+  }
+  return rewritten;
 }
 
 export function finishMigrationRepair(boxRoot: string, name: string): Promise<void> {
@@ -104,7 +128,8 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
   }
   const content = createTextQuestionTemplate({
     memo: `Migration ${opts.name} needs attention`, askedAt: getBoxTimeISO(opts.boxRoot),
-    prompt: `${reason}\nMigration: ${opts.name}\nRecovery: ${recoveryRef}\n${failure}`,
+    // Failure output names host paths; the box commit lint refuses them in a card.
+    prompt: redactAbsoluteMachinePaths(`${reason}\nMigration: ${opts.name}\nRecovery: ${recoveryRef}\n${failure}`),
     directive: opts.directive,
   });
   cardFields(parseCardText(content, { source: file, schemas }), QuestionSchema);
