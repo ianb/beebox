@@ -1,7 +1,7 @@
 # Knowledge-audit full rerun — 2026-10-22
 
-All 413 box audits ran with Claude against copies of the `knowledge-audit-refresh`
-worktree's test1 clone, in eight parallel shards. All 11 dev audits ran with
+All 414 box audits ran with Claude against copies of the `knowledge-audit-refresh`
+worktree's test1 clone, in eight parallel shards. All 10 dev audits ran with
 `--dev` (claude-opus-5-5). Codex did not run: the test box has no Codex key.
 Each failure was rerun once to separate noise. The entries carry per-audit
 `Refresh (2026-10-22, Claude)` comments; this page is the summary.
@@ -10,7 +10,7 @@ Each failure was rerun once to separate noise. The entries carry per-audit
 
 | | Box | Dev |
 |---|---|---|
-| First pass | 348 pass, 65 fail | 7 pass, 4 fail |
+| First pass | 349 pass, 65 fail | 6 pass, 4 fail |
 | Passed on rerun (noise or wording luck) | 30 | 3 |
 | Failed twice or more | 35 | 1 |
 | Failing after fixes | 3 (below) | 0 |
@@ -49,4 +49,5 @@ and `speak-outcome-not-mechanics` (2 of 5 runs pass after the fix;
 | `health-inconclusive-meaning` | Agents read `?` as "could not tell whether it ran". | `bbx health` prints `inconclusive: work done, no verdict` (`src/cli/commands/health.ts`). |
 | `gmail-rule-procedure` | Agents built a `bbx changes` watch and missed Gmail rules. | Scheduled-script instructions point at Gmail rules (`src/schemas/scheduled-script/instructions.ts`). |
 | `speak-outcome-not-mechanics` | The opening line announced the build ("I'll build a card type"). | The chat prompt's bookkeeping rule covers the opening and gives an example (`src/core/chat/session/prompts.ts`). Openings are fixed; build-step lines between tool calls remain (issue reopened). |
+| `landmarks-dont-create-quietly` | Asked for a landmark on a folder that did not exist, the agent created an empty folder and chose its label and emoji. Landmark curation covered only landmarks the agent proposes. | `docs/box/landmark-curation.md`: a request settles whether, not where or what; confirm, and do not create an empty folder. 3/3 after. |
 | `dev-design-handoff` | The prompt let a session answer from the skill listing. | The prompt asks what the design opens with. |

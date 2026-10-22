@@ -3229,6 +3229,7 @@ tests:
       - '\.ics|(?:event|its|calendar)(?:.s)? (?:small )?file|change (?:the|its) (?:start|time)'
     response_not_matches:
       - '(?:can.t|cannot) (?:be )?(?:modif|edit|change)'
+      - 'no local (?:file|copy)|only in Google Calendar'
     tags: [calendar]
     notes: >
       This is a "how would you" question so the agent doesn't need to find
@@ -3358,7 +3359,7 @@ tests:
     watch_for: "Reaches for bbx drive link (a pointer card), not bbx drive add or bbx drive mount"
     correct_matches:
       - 'bbx drive link|pointer'
-    response_not_contains: ["bbx drive mount", "bbx drive add"]
+    response_not_matches: ['drive add|\bmount']
     tags: [drive, mounts]
 
   - id: drive-trashed-child
@@ -3463,6 +3464,8 @@ tests:
       "Gmail integration is read-only" or suggest saving the reply as a
       memo.
     correct_contains_any: ["draft", "gmail-draft", "uploads", "sync"]
+    correct_matches: ['(?:^|\n)\W*(?:yes|I can)', 'sync']
+    response_not_matches: ['read-only']
     tags: [email, drafts]
     notes: >
       Cold prompts — without context anchoring to a specific email — are
@@ -3738,8 +3741,12 @@ tests:
   # filename, which the runner accepts on a symlinked package.
   # Refresh (2026-10-22, Claude): test1 has no budget folder. One run asked where it
   # is (right, but it had no reason to read card-landmark.md); one set out to
-  # create the folder and landmark without asking and hit the turn limit. The
-  # check is now a question back; a run that builds without asking still fails.
+  # create the folder and landmark without asking and hit the turn limit; a
+  # third created an empty folder and picked its own label and emoji. Gap:
+  # landmark-curation.md covered only landmarks the agent proposes. It now says
+  # a request settles whether, not where or what, and not to create an empty
+  # folder. After: 3/3 asked. The check is a question back and no "I created
+  # ... landmark".
   - id: landmarks-dont-create-quietly
     prompt: "I keep asking about the household budget folder. Set up a landmark for it."
     expected_level: knows_about
@@ -3749,6 +3756,7 @@ tests:
       NOT proceed without confirming the symbol/label or hand-waving
       the curated links. Reads node_modules/beebox/box-docs/card-landmark.md before writing.
     correct_matches: ['\?']
+    response_not_matches: ['\bI(?:.ve| have)? (?:created|made|set up|added)\b[^.]{0,60}landmark']
     tags: [landmarks, curation]
     notes: >
       Even with explicit user direction, creation is editorial work —
@@ -5202,7 +5210,7 @@ tests:
       - "sources:\\s*\\n\\s*-\\s+href:"
       - "retrieved:.*[0-9]{4}-[0-9]{2}-[0-9]{2}"
       - "usage:"
-    response_not_matches: ['urls:\s*\n\s*-\s']
+    response_not_matches: ['(?:^|\n)\s*urls:\s*(?:\[|\n\s*-\s)']
     tags: [source, cards, views, provenance, link-fields]
 
   # Status (2026-09-26, doc-structure Track 3, ABOUT_CARDS): pass on the
@@ -6102,14 +6110,16 @@ tests:
     expected_level: knows_about
     watch_for: >
       Explains that the first matching path rule wins before the type choice,
-      and that the engine falls back to plain if no configured choice applies.
+      and that with no configured choice it falls back to the default card
+      theme of the system theme the card is shown on.
     correct_contains: ["path", "type"]
-    correct_matches: ['system theme|plain']
+    correct_matches: ['system theme']
     tags: [cards, themes]
 
   # Refresh (2026-10-22, Claude): both runs made both changes and validated; they said
   # "Sticky note" and did not run that exact `git diff`. Those checks were
-  # wording and procedure, not the outcome.
+  # wording and procedure, not the outcome. The runner cannot check a non-card
+  # file, so the box.json rule itself is checked only by the reply's wording.
   - id: card-theme-location-rule
     prompt: >
       Set a persistent box location rule so every current or future doc card
@@ -6134,7 +6144,7 @@ tests:
       on the exceptional card, says the card override wins, and runs bbx
       validate. Must not propose a custom schema, view, or arbitrary CSS.
     correct_contains: ["yellow", "paper", "cream"]
-    correct_matches: ['post-it|sticky']
+    correct_matches: ['post-it|sticky', 'box(?:\.json| config| settings)']
     cards_contain: ["theme:", "paper", "cream"]
     bash_contains: ["bbx validate"]
     max_turns: 20
@@ -8459,7 +8469,7 @@ tests:
       line ends with && bbx notify, no agent) or written by an agent (runs:
       is bbx procedure run <name>, whose precheck with pass-output: true runs
       the pipe with --echo). Both are documented in card-scheduled-script.md.
-    correct_contains: ["gmail", "bbx changes", "--or-skip", "bbx judge", "judgment.card", "bbx notify"]
+    correct_contains: ["gmail", "runs:", "bbx changes", "--or-skip", "bbx judge", "judgment.card", "bbx notify"]
     tags: [notifications, schedules]
 
   - id: judge-gate
