@@ -80,6 +80,14 @@
 .bbx-box-presentation[data-chrome-theme="spectrum"] .bbx-app-nav {
   background-image: linear-gradient(to right, #5e5490, #9b6ba6, #d4845a);
 }
+/* White labels on the light end of the gradient need a darker plate than
+   the shared white tint. */
+.bbx-box-presentation[data-chrome-theme="spectrum"] .bbx-app-nav :is(
+  .bbx-place-pill, #bbx-nav-session, #bbx-nav-voice, #bbx-nav-questions,
+  #bbx-nav-todo, #bbx-nav-profile > span
+) {
+  background-color: #00000059;
+}
 /* One textured bar surface, with raised controls on top. */
 .bbx-box-presentation[data-chrome-theme="paper"] .bbx-system-control {
   background: linear-gradient(165deg, #ffffff20, #00000012), var(--bbx-bar-paper);
