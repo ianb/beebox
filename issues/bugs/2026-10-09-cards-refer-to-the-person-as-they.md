@@ -1,7 +1,7 @@
 ---
 title: "Cards refer to the person as \"they\": \"Their summary\", \"for themselves\""
 workstream: unattached
-area: courseware
+area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-journey-walks-oct — D-chemistry journey walk, 2026-10-09 (report row 36)
@@ -45,3 +45,7 @@ agent to write course cards with they/them for the learner
 instruction at `beebox/src/plugins/courseware/exposition-plan.ts:88`). The
 third person is most likely that instruction carried over. No walk showed
 it in a box without the skill. The fix is in the courseware guidance.
+
+## Re-encounter 2026-10-22 (journey walks): a core-box case
+
+[C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-22.md) (R4): the briefing body gained "They send messages themselves from their phone and are not connecting any accounts" (box commit `efb592f`). The same card's "Reaching me" section speaks as "me". The person can open the briefing from the Box page's "Also here". This is not a courseware card, and the card-write hook (`beebox/src/core/card-lint/third-person.ts`) is core code, so the area is now `beebox`.

@@ -1,0 +1,204 @@
+# A journey is a person with a goal, not a script of steps. Everything here either
+# shapes the world the person arrives in, or is handed to them verbatim.
+#
+# People and places are from docs/example-names.md. All box content below is
+# invented for this journey.
+
+id: H-handover
+title: Holding the fort with someone else's lists
+
+box:
+  base: empty
+  # The only journey that arrives at a box with a past. Tomas has kept the
+  # household's open loops here for about five weeks; the setup writes his
+  # cards and commits them on backdated days, so the box history reads like
+  # his use of it. Only _content/ is committed here; prepare commits the rest.
+  # Heredoc bodies sit at the block's base indent so they reach bash unindented.
+  # Overdue and upcoming todos are written for a walk in the week before Tomas
+  # comes home on Friday 23 October 2026; outside that window the setup refuses
+  # rather than build a different story.
+  setup: |
+    today=$(date +%F)
+    if [[ "$today" < 2026-10-17 || "$today" > 2026-10-22 ]]; then
+      echo "H-handover's history is dated for a walk near 22 October 2026; re-date box.setup and watch_for before walking." >&2
+      exit 1
+    fi
+    cd "$BOX"
+    export GIT_AUTHOR_NAME="Tomas Marlowe" GIT_AUTHOR_EMAIL="tomas@example.com"
+    export GIT_COMMITTER_NAME="Tomas Marlowe" GIT_COMMITTER_EMAIL="tomas@example.com"
+    commit() {
+      git add _content
+      GIT_AUTHOR_DATE="$1T20:15:00" GIT_COMMITTER_DATE="$1T20:15:00" git commit -q -m "$2"
+    }
+    mkdir -p _content/people _content/projects/fence _content/projects/wren-party
+
+    cat > _content/people/Tomas_Marlowe.person.card <<'CARD'
+    ---
+    name: Tomas Marlowe
+    boxholder: true
+    ---
+    Me. Started keeping the house stuff in here in August.
+    CARD
+    cat > _content/House.doc.card <<'CARD'
+    ---
+    title: House
+    ---
+    Running list of house jobs.
+
+    - {% todo created="2026-08-24" status="done" %}Book the chimney sweep{% /todo %} — done 3 Sept, next one in a year
+    - {% todo created="2026-08-24" due="2026-10-15" %}Bleed the radiators before the heating goes on{% /todo %}
+    - {% todo created="2026-08-24" %}Fix the sticking back door{% /todo %}
+    - {% todo created="2026-08-24" status="parked" %}Replace the kitchen tap{% /todo %}
+    CARD
+    # A box used for five weeks has been told what it is for: answer the root
+    # question and record the purpose, as the question's follow-up would have.
+    q=_bookkeeping/questions/what-to-keep-track-of.question.card
+    awk 'NR > 1 && /^---$/ { exit } /^asked-at:/ { print "asked-at: 2026-08-24T19:55:00.000Z"; next } { print }' "$q" > "$q.tmp"
+    printf '%s\n' 'answer:' '  text: House jobs and the family stuff that keeps slipping.' \
+      'answered-at: 2026-08-24T20:10:00.000Z' 'answered-via: web' '---' >> "$q.tmp"
+    mv "$q.tmp" "$q"
+    sed -i '' 's/^purpose: What this box is for\.$/purpose: House jobs and the family stuff that keeps slipping./' _content/briefing.briefing.card
+    git add "$q"
+    commit 2026-08-24 "House jobs list"
+
+    cat > _content/people/Mateo_Duarte.person.card <<'CARD'
+    ---
+    name: Mateo Duarte
+    role: Fencing contractor
+    phone: 555-0187
+    ---
+    Recommended by Saoirse. Came round 1 Sept to measure.
+    CARD
+    cat > _content/people/Saoirse_Flynn.person.card <<'CARD'
+    ---
+    name: Saoirse Flynn
+    role: Next-door neighbour (number 16)
+    ---
+    Shares the back fence with us. Happy to split the cost.
+    CARD
+    printf '%s\n' '---' 'navigation:' '  label: Back fence' '  links:' \
+      '    - ref: /_content/projects/fence/Plan.doc.card' '      label: Plan' \
+      'symbol:' '  glyph: 🪵' '---' > _content/projects/fence/Fence.landmark.card
+    cat > _content/projects/fence/Plan.doc.card <<'CARD'
+    ---
+    title: Back fence
+    ---
+    Three panels blew down in the August storm. Shared with Saoirse at number 16; we split it 50/50.
+
+    ## Quotes
+
+    - Mateo Duarte: $1,850 for six panels and two new posts, can start mid-October. Quote good for 30 days (from 2 Sept).
+    CARD
+    commit 2026-09-02 "Fence: first quote"
+
+    printf '%s\n' '---' 'navigation:' "  label: Wren's party" '  links:' \
+      '    - ref: /_content/projects/wren-party/Plan.doc.card' '      label: Plan' \
+      'symbol:' '  glyph: 🎈' '---' > _content/projects/wren-party/Party.landmark.card
+    cat > _content/projects/wren-party/Plan.doc.card <<'CARD'
+    ---
+    title: Wren's 7th birthday party
+    ---
+    Saturday 7 November, afternoon. Wren wants a pirate party.
+
+    ## Venue
+
+    Larkspur Vale community hall: $120 for 2–5pm. They hold a date for two weeks; after that it goes to whoever pays the deposit.
+
+    - {% todo created="2026-09-12" due="2026-10-16" %}Pay the hall deposit ($40){% /todo %}
+
+    ## Guests
+
+    Whole class is too many. Wren's list so far: Juni (obviously), Pip, Hollis, Calla, the Okafor twins, Bea. Maybe 10 kids max.
+
+    - {% todo created="2026-09-12" due="2026-10-20" %}Send the invitations{% /todo %}
+    - {% todo created="2026-09-12" %}Cake: ask Saoirse if she'd do the ship one again{% /todo %}
+    CARD
+    commit 2026-09-12 "Wren's party plan"
+
+    cat >> _content/projects/fence/Plan.doc.card <<'CARD'
+    - Stonebridge Fencing: $2,300, includes taking away the old panels, earliest start December.
+
+    Saoirse would rather go with Mateo (cheaper, sooner). I lean that way too but haven't told him.
+
+    - {% todo created="2026-09-26" due="2026-10-02" %}Tell Mateo yes before his quote runs out{% /todo %}
+    CARD
+    cat >> _content/House.doc.card <<'CARD'
+    - {% todo created="2026-09-26" due="2026-11-30" start="-6w" %}Renew Juni's passport before the February trip{% /todo %}
+    CARD
+    commit 2026-09-26 "Fence: second quote; passport"
+
+    cat > _content/Before_I_go.doc.card <<'CARD'
+    ---
+    title: Before I go
+    ---
+    Away 30 Sept to 23 Oct for the Porthaven job. Priya is holding the fort.
+
+    - {% todo created="2026-09-29" status="done" %}Leave Priya the spare car key{% /todo %}
+    - {% todo created="2026-09-29" %}Tell Priya the bin day has moved to Wednesdays{% /todo %}
+    - {% todo created="2026-09-29" status="dropped" %}Sort the garage{% /todo %} (not happening before I go)
+    CARD
+    commit 2026-09-29 "Before I go"
+
+assets: []
+
+sittings: 1
+budget_actions: 60
+
+situation: |
+  The friend who set this app up is your partner, Tomas. For the last month or
+  so he has kept the household's loose ends in it — he says everything is in
+  there. He has been away for work for three weeks and is back on Friday, and
+  you have been holding the fort. You have never opened it before tonight.
+
+  You have a nagging feeling things have slipped. There was something about the
+  back fence and the neighbour, Saoirse, and Wren's birthday party is coming up
+  and you are not sure anything has been booked. Tomas is hard to reach on this
+  job; you would rather not ring him with a list of questions.
+
+  Tonight you want to find out what is in here, what is late or about to be,
+  and deal with whatever you can yourself. Some of it you can do from the sofa
+  with your phone; some you can only decide.
+
+closing: |
+  While you are at it, things move. You ring the community hall: the date was
+  not held, but they still have that Saturday free and you pay the deposit
+  over the phone. Saoirse texts that Mateo dropped a note through her door: he
+  can still do the fence for the same price if he hears by Monday. You text
+  Mateo yes yourself.
+
+  Get those in, so that Tomas will see where things stand when he gets back.
+  Then spend the rest of your time on what you would want before Friday: what
+  is still open, what you have done, and anything you think Tomas needs to
+  know or decide.
+
+# For the reader of the notes. Never shown to the walker.
+watch_for: |
+  The only journey that meets a box with a past and a second person. Today
+  (the walk date, about 22 October) the box holds: the hall deposit due
+  16 Oct (overdue), invitations due 20 Oct (overdue), radiators due 15 Oct
+  (overdue), Mateo reply due 2 Oct (overdue, quote expired), passport (due
+  30 Nov, surfacing from 19 Oct), back door and cake (undated, open), the
+  bin-day note (open, aimed at Priya). Done, dropped and parked items should
+  not read as open.
+
+  Can the person find what is open and late without knowing where Tomas
+  wrote it? Landmarks, a todo list, search, or chat — which path works, and
+  does the overdue escalation reach them?
+
+  Whose box is this? The cards are Tomas's and the boxholder person card is
+  his. Does the assistant address the walker as Tomas, or notice it is not
+  him? Do the walker's updates get recorded in a way Tomas can tell apart
+  from his own (who did what, and when)?
+
+  History. Five backdated commits exist. Can the person learn what was
+  added when ("what has Tomas been doing in here")? Does anything use the
+  history?
+
+  Updates close things. Paying the deposit should close that todo, Mateo's
+  yes should close the reply todo and record the decision on the fence plan,
+  not pile a contradicting sentence on top. The "Tell Priya the bin day
+  moved" todo is a note to the person reading it; does it get handled?
+
+  Handover. Does the box offer anything Tomas will see on return — a
+  summary, a note, a message? Record what landed in the box separately from
+  what the assistant said it would do.

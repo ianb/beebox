@@ -24,6 +24,8 @@ export interface AgentTiming {
   totalSeconds: number
   medianSeconds: number
   slowestSeconds: number
+  /** Turns with no assistant text after them: a reply on its way, or an abandoned turn. */
+  waiting: number
 }
 
 interface Entry { timestamp?: string, type?: string, isMeta?: boolean, message?: { content?: unknown } }
@@ -73,6 +75,7 @@ function median(sorted: number[]): number {
 export function agentTiming(boxRoot: string): AgentTiming {
   const intervals: { openedAt: number, seconds: number }[] = [];
   const agentRuns = agentRunSessions(boxRoot);
+  let waiting = 0;
 
   for (const dir of transcriptDirs(boxRoot)) {
     for (const file of readdirSync(dir).filter((f) => f.endsWith(".jsonl"))) {
@@ -104,6 +107,7 @@ export function agentTiming(boxRoot: string): AgentTiming {
           openedAt = null;
         }
       }
+      if (openedAt !== null) waiting += 1;
     }
   }
 
@@ -114,5 +118,6 @@ export function agentTiming(boxRoot: string): AgentTiming {
     totalSeconds: turns.reduce((n, t) => n + t, 0),
     medianSeconds: median(sorted),
     slowestSeconds: sorted.length === 0 ? 0 : (sorted.at(-1) ?? 0),
+    waiting,
   };
 }

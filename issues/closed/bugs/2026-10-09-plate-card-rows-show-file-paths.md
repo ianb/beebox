@@ -39,7 +39,7 @@ place tiles) and a choice of which surfaces keep paths. Where a path is the only
 way to tell two cards with the same title apart, the Plate can show the parent
 folder name instead.
 
-Related: [browse-and-plate-counts-do-not-name-what-they-count](./2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md)
+Related: [browse-and-plate-counts-do-not-name-what-they-count](../../bugs/2026-10-08-browse-and-plate-counts-do-not-name-what-they-count.md)
 (also from the Plate).
 
 Reports: [C-reconnecting](../../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-09.md) R8,

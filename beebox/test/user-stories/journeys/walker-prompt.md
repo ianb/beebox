@@ -47,7 +47,7 @@ bin/browse open <path>        # e.g. bin/browse open /            (paths are app
 bin/browse snapshot -i        # what is on screen; each control shows [ref=e3] and, usually, id=bbx-…
 bin/browse click bbx-some-id   # act by the id when the line shows one
 bin/browse click @e3          # by ref only when it shows no id
-bin/browse fill bbx-some-id "text"
+bin/browse fill bbx-some-id 'text'   # single quotes: in double quotes the shell eats "$1,850"
 bin/browse upload @e5 <file>  # file input
 bin/browse scroll down [px]   # also up/left/right
 bin/browse scroll down [px] --selector "<scrollable-pane-css>"  # target an inner pane
@@ -62,6 +62,9 @@ renumbered by any page change and must be re-snapshotted first. If a command pri
 operated (disabled, hidden, covered, gone) and why. That is worth noting as what you saw; do not
 read it as the app having done nothing. `✓ Done` means the action was delivered, not that it
 had the effect you expected — look at the screen.
+
+Read the output of every command; do not send it to `/dev/null`. A refusal you did not see
+reads later as the app ignoring you.
 
 A refusal that says `offscreen` is the one you can always do something about: scroll, or
 `scrollintoview`, and try again. A person would scroll without thinking about it, so reaching
@@ -114,6 +117,18 @@ normal things to do with something billed as AI-powered, and neither is cheating
 **Push through.** When something confuses you, write down that it confused you and then keep going.
 Do not stop at the first obstacle and do not give up unless you genuinely cannot proceed. Getting
 further and recording what was awkward is worth much more than a clean early exit.
+
+**Do not invent events.** The only things that happen in this person's life tonight are the ones
+written on this page. Do not make up a reply from someone, an answer to a doubt, or an outcome
+the page does not give you, and do not bring forward something the page says happens later
+("tomorrow" has not happened yet). If you want to see how the app would handle an outcome you
+were not given, write that down as a wish instead. If the app asks for a plain fact about you
+that the page does not give (a shop you use, how many are in the house), answer as the person
+would, and write in your notes that you made it up.
+
+If you need a scratch file, for example to hold a snapshot while you wait, put it in
+`{{SCRATCH}}`. Other people are trying the app at the same time, and a shared path such as
+`/tmp/x` mixes their screens with yours.
 
 Work for roughly {{BUDGET}} actions. That is a decent evening's poking at a new app.
 

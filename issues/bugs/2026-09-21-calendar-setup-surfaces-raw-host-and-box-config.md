@@ -40,3 +40,7 @@ Still present. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconn
 ## Re-encounter 2026-10-09 (journey walks)
 
 Seen again in [F](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-09.md) (row 44, shot 15): the Google Calendar text tells the person to set `googleServices.calendar: true` "when the boxholder asks". Same as 2026-10-08 row 62. The priority may be stale given the repeat.
+
+## Re-encounter 2026-10-22 (journey walks)
+
+Still present in [F-newcomer](../../beebox/test/user-stories/journeys/F-newcomer/reports/2026-10-22.md) (row 27). Settings > Google Calendar shows "Set `googleServices.calendar: true` in `_config/box.json` (you may do this when the boxholder asks for Calendar), or enable it in box settings." The text is `serviceNotEnabledMessage` (`beebox/src/google/access.ts:31-37`), written for the agent and shown to the person; "box settings" is the page it appears on. Admin > Google services then says "Not set up on this host". The priority may be stale.
