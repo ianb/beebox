@@ -32,18 +32,29 @@ async function migrationQuestionFiles(boxRoot: string): Promise<string[]> {
   return names.filter((entry) => entry.startsWith("Migration_") && entry.endsWith(".question.card")).map((name) => `${directory}/${name}`);
 }
 
+/**
+ * The card, null when it is absent, or `malformed` when a person or agent
+ * edited it into a shape QuestionSchema refuses. A malformed card is never an
+ * answer; callers report it as an open question so one bad card cannot stop
+ * every sweep.
+ */
 async function question(boxRoot: string, file: string) {
+  let content: string;
   try {
-    const content = await readFile(join(boxRoot, file), "utf8");
-    return { content, fields: cardFields(parseCardText(content, { source: file, schemas }), QuestionSchema) };
+    content = await readFile(join(boxRoot, file), "utf8");
   } catch (error) { if (errnoCode(error) === "ENOENT") return null; throw error; }
+  try {
+    return { content, fields: cardFields(parseCardText(content, { source: file, schemas }), QuestionSchema) };
+  } catch (error) {
+    return { malformed: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export async function migrationQuestions(boxRoot: string): Promise<string[]> {
   const pending: string[] = [];
   for (const file of await migrationQuestionFiles(boxRoot)) {
     const existing = await question(boxRoot, file);
-    if (existing === null || questionState(existing.fields) !== "answered") pending.push(file);
+    if (existing === null || "malformed" in existing || questionState(existing.fields) !== "answered") pending.push(file);
   }
   return pending;
 }
@@ -58,7 +69,7 @@ export async function redactMigrationQuestions(boxRoot: string): Promise<string[
   const rewritten: string[] = [];
   for (const file of await migrationQuestions(boxRoot)) {
     const existing = await question(boxRoot, file);
-    if (existing === null || findAbsoluteMachinePaths(existing.content).length === 0) continue;
+    if (existing === null || "malformed" in existing || findAbsoluteMachinePaths(existing.content).length === 0) continue;
     const { content } = existing;
     const redacted = redactAbsoluteMachinePaths(content);
     cardFields(parseCardText(redacted, { source: file, schemas }), QuestionSchema);
@@ -100,7 +111,7 @@ export async function runBoundedAttempt(opts: BoundedAttempt): Promise<{ code: n
     file = `${directory}/Migration_${opts.name}-${String(attempt)}.question.card`;
     const existing = await question(opts.boxRoot, file);
     if (!existing) break;
-    if (questionState(existing.fields) !== "answered") return { code: opts.code, question: file };
+    if ("malformed" in existing || questionState(existing.fields) !== "answered") return { code: opts.code, question: file };
     answer = `Previous answered question (${file}):\n${existing.content}`;
     attempt += 1;
   }

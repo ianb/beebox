@@ -126,7 +126,8 @@ Exit 2 means per-card partial conversion. A repair-enabled pass can commit the
 successful output together with an unresolved question and continue later
 migrations. Without repair, that migration remains pending and later entries
 wait. Outstanding questions remain attention items even when the registry has
-no pending names. This `attention` result exits zero because the box is ready
+no pending names. A question card edited into an invalid shape counts as
+outstanding, never as an answer. This `attention` result exits zero because the box is ready
 to serve; JSON status and the text warning still identify the questions. Do not
 replay a recorded old migration after later migrations;
 repair the remaining cards against their current schema. A durable
