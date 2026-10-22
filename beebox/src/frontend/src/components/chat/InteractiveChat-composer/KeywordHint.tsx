@@ -32,15 +32,12 @@ export function KeywordHint({ hasText }: { hasText: boolean }) {
   }, [hasText]);
 
   const hints = hasText ? WITH_TEXT_HINTS : EMPTY_HINTS;
-  // Every phrase sits in the one grid cell, the others hidden, so the box
-  // keeps the widest phrase's size as the hint rotates instead of jumping.
+  // The shown phrase and a hidden copy of every phrase share one grid cell,
+  // so the box keeps the widest phrase's size as the hint rotates.
   return (
     <div className="grid text-xs text-warm-700 bg-warm-50 px-1.5 py-0.5 rounded whitespace-nowrap">
-      {hints.map((hint, i) => (
-        <span key={hint} className={i === tick % hints.length ? "col-start-1 row-start-1" : "col-start-1 row-start-1 invisible"} aria-hidden={i === tick % hints.length ? undefined : true}>
-          {hint}
-        </span>
-      ))}
+      <span className="col-start-1 row-start-1">{hints[tick % hints.length]}</span>
+      {hints.map((hint) => <span key={hint} aria-hidden="true" className="col-start-1 row-start-1 invisible">{hint}</span>)}
     </div>
   );
 }

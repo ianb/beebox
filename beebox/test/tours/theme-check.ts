@@ -50,8 +50,8 @@ function catalogCases(): StudioCase[] {
 const CONTRAST_SCREENS = SCREENS.filter((s) => s.name === "laptop" || s.name === "phone");
 /** Each scroll step keeps this much of the last, so a line cut at one edge is whole in the next. */
 const STEP_OVERLAP = 80;
-/** The card contents label shows while its card scrolls, and on load, and rests 1.2s after; audit it at rest. */
-const SETTLE_MS = 1300;
+/** The card contents label shows while its card scrolls, and on load, rests 1.2s after and fades for 0.25s (card-themes.css); audit it at rest. */
+const SETTLE_MS = 1600;
 const SCROLLER = "document.getElementById(\"bbx-theme-studio-scroll\")";
 const GEOMETRY_SCRIPT = `JSON.stringify((() => {
   const s = ${SCROLLER};
