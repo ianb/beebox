@@ -24,6 +24,7 @@ export interface WakeupCheckContext {
 export interface ScheduleCheckContext extends WakeupCheckContext {
   lastResult: ScriptState["lastResult"];
   consecutiveFailures: number;
+  lastFailureFinal: boolean;
 }
 
 /** How long after its `at` a failed `notify:` one-shot keeps retrying. */
@@ -123,8 +124,9 @@ export function isWithinBudget(
 /**
  * A one-shot is due once, at `at`. A `notify:` one-shot whose send did not get
  * through (`failure`, or `deferred` as recorded before sends skipped the engine
- * classifier) stays due with backoff until its retry window ends. A `runs:`
- * one-shot gets one attempt: its command may have side effects.
+ * classifier) stays due with backoff until its retry window ends, unless the
+ * failure was final: no channel was tried, so a retry cannot reach anyone. A
+ * `runs:` one-shot gets one attempt: its command may have side effects.
  */
 function isAtDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext): boolean {
   const now = ctx.now.getTime();
@@ -133,6 +135,7 @@ function isAtDue(script: ParsedScheduledScript, ctx: ScheduleCheckContext): bool
   const retryEndsAt = reminderRetryEndsAt(script);
   if (retryEndsAt === null || now >= retryEndsAt.getTime()) return false;
   if (ctx.lastResult !== "failure" && ctx.lastResult !== "deferred") return false;
+  if (ctx.lastFailureFinal) return false;
   return now >= new Date(ctx.lastRun).getTime() + reminderRetryBackoffMs(ctx.consecutiveFailures);
 }
 

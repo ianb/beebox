@@ -201,7 +201,7 @@ function retryWindowEnded(
   { state, now }: { state: ScriptState; now: Date },
 ): string | null {
   const endsAt = reminderRetryEndsAt(parsed);
-  if (endsAt === null || state.lastResult !== "failure" || now < endsAt) return null;
+  if (endsAt === null || state.lastResult !== "failure" || state.lastFailureFinal === true || now < endsAt) return null;
   return `retry window ended ${formatRetryAt(endsAt.toISOString())}`;
 }
 

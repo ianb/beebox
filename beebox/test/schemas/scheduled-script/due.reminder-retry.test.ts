@@ -37,11 +37,11 @@ function after(ms: number): Date {
 
 /** The state after `failures` failed sends, the last one at `at + lastRunMs`. */
 function failed(failures: number, lastRunMs: number) {
-  return { lastRun: after(lastRunMs).toISOString(), lastResult: "failure" as const, consecutiveFailures: failures };
+  return { lastRun: after(lastRunMs).toISOString(), lastResult: "failure" as const, consecutiveFailures: failures, lastFailureFinal: false };
 }
 
 void test("the first send is due at `at`, not before", async (t) => {
-  const fresh = { lastRun: null, lastResult: null, consecutiveFailures: 0 };
+  const fresh = { lastRun: null, lastResult: null, consecutiveFailures: 0, lastFailureFinal: false };
   t.check(
     [isDue(reminder, { ...fresh, now: after(-1) }), isDue(reminder, { ...fresh, now: after(0) })],
     [false, true],
@@ -86,7 +86,7 @@ void test("retries stop 24 hours after `at`", async (t) => {
 
 void test("a delivered reminder is not due again", async (t) => {
   t.check(
-    isDue(reminder, { lastRun: after(0).toISOString(), lastResult: "success", consecutiveFailures: 0, now: after(10 * MINUTE) }),
+    isDue(reminder, { lastRun: after(0).toISOString(), lastResult: "success", consecutiveFailures: 0, lastFailureFinal: false, now: after(10 * MINUTE) }),
     false,
   );
 });
