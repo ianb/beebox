@@ -6,11 +6,13 @@
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { execFileSync } from "node:child_process";
+import { strict as assert } from "node:assert";
 import type { Agent } from "../../src/core/agent/invoke/core.js";
 import { createFakeAgent } from "./fake-agent.js";
 import { makeTmpBox } from "../helpers/test-helpers.js";
+import { findAbsoluteMachinePaths } from "../../src/lib/absolute-path-check.js";
 import { captureMigrationSnapshot } from "../../src/core/migration-recovery.js";
-import { repairMigration, finishMigrationRepair, migrationQuestions } from "../../src/core/migration-repair.js";
+import { repairMigration, finishMigrationRepair, migrationQuestions, redactMigrationQuestions } from "../../src/core/migration-repair.js";
 
 void test("line 15", async (t) => {
   t.teardown(async () => {
@@ -100,4 +102,49 @@ void test("line 70", async (t) => {
   );
 
   t.check(execFileSync("git", ["for-each-ref", "--format=%(refname)", "refs/bbx/migrations/unavailable/repair-started"], { cwd: box.root }).toString().trim(), "");
+});
+
+// The question quotes the failure, which names host paths (a pnpm cache, the
+// box root). The box commit lint refuses a machine path in a card, so the
+// question is written with `~<name>/` instead; a question written before that
+// is rewritten in place. 2026-10-21: every production box held one it could
+// not commit.
+void test("A migration question carries no machine path", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await makeTmpBox({ git: true });
+  const snapshot = await captureMigrationSnapshot(box.root, "hostpath");
+  const result = await repairMigration({
+    boxRoot: box.root, name: "hostpath", recoveryRef: snapshot.ref, code: 1,
+    failure: "ERR_PNPM_NO_OFFLINE_META in package mirror /home/beebox/.cache/pnpm/typescript.json",
+    retry: async () => 1,
+    agent: createFakeAgent({ name: "repair", act: async () => ({}), structuredResult: () => ({ status: "failed", reason: "Checked /home/beebox/boxes/a." }) }),
+  });
+  assert.ok(result.question !== undefined);
+  const written = await box.read(result.question);
+
+  const old = "_bookkeeping/questions/Migration_older-0.question.card";
+  await box.write(old, written.replaceAll("~beebox/", "/home/beebox/"));
+  const answered = "_bookkeeping/questions/Migration_answered-0.question.card";
+  const answeredText = written.replace("input:\n  type: text\n", "input:\n  type: text\nanswer:\n  text: kept /home/beebox/work/\nanswered-at: 2026-10-21T00:00:00.000Z\n");
+  await box.write(answered, answeredText);
+  const rewritten = await redactMigrationQuestions(box.root);
+  t.check({
+    answeredKept: (await box.read(answered)).includes("kept /home/beebox/work/"),
+    written: { leaks: findAbsoluteMachinePaths(written), quotesCache: written.includes("~beebox/.cache/pnpm/typescript.json") },
+    rewritten,
+    old: findAbsoluteMachinePaths(await box.read(old)),
+    again: await redactMigrationQuestions(box.root),
+  }, {
+    answeredKept: true,
+    written: { leaks: [], quotesCache: true },
+    rewritten: [old],
+    old: [],
+    again: [],
+  });
 });

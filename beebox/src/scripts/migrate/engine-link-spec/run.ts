@@ -9,7 +9,10 @@
  * 2. Link. `.beebox/engine` is pointed at the old link's target, unless it is
  *    already usable. A dead old target exits 1 with the repair, nothing written.
  * 3. Write `package.json`, then refresh a tracked `pnpm-lock.yaml` with
- *    `pnpm install --lockfile-only --offline`. A failed refresh restores both
+ *    `pnpm install --lockfile-only --prefer-offline`. The refresh re-resolves
+ *    the box's direct dependencies, so it fetches registry metadata the pnpm
+ *    cache lacks (`--offline` failed on every production box: the cache held
+ *    no `typescript` metadata). A failed refresh restores both
  *    files and exits 1, so the migration stays pending and the manifest never
  *    disagrees with the tracked lockfile. The real install, which repoints
  *    `node_modules/beebox`, is the next install path's job (deploy, worktree
@@ -34,7 +37,7 @@ export type RunMode = "plan" | "apply";
 /** Refreshes `<boxRoot>/pnpm-lock.yaml` against the rewritten `package.json`. */
 export type RefreshLockfile = (boxRoot: string) => Promise<CollectedChildResult>;
 
-const REFRESH_ARGS = ["install", "--lockfile-only", "--offline"];
+const REFRESH_ARGS = ["install", "--lockfile-only", "--prefer-offline"];
 
 const refreshWithPnpm: RefreshLockfile = (boxRoot) =>
   runCollectedChild({ command: "pnpm", args: REFRESH_ARGS, cwd: boxRoot, env: process.env });
