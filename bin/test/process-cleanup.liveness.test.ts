@@ -33,11 +33,7 @@ const spawned: number[] = [];
 
 /** A long-lived process reported by `ps` under `binPath`, running in `cwd`. */
 async function fakeProcess(binPath: string, cwd: string) {
-  await mkdir(resolve(binPath, ".."), { recursive: true });
-  // A symlink, not a copy: macOS SIGKILLs a copied platform binary (its code
-  // signature no longer verifies), and `ps comm` reports the symlink path
-  // anyway, which is the name the guard matches on.
-  await symlink("/bin/sleep", binPath);
+  await linkSleep(binPath);
   // Its own process group, so the sweep's group-kill lands on it and nothing
   // else, exactly as it would for a real detached daemon.
   const child = spawn(binPath, ["60"], { cwd, detached: true, stdio: "ignore" });
@@ -47,13 +43,41 @@ async function fakeProcess(binPath: string, cwd: string) {
 }
 
 /**
+ * Like `fakeProcess`, but started through a shell that exits at once, so the
+ * process is reparented to pid 1 as a real detached daemon is. The guard spares
+ * any agent-browser that still has another parent as a command in flight.
+ */
+async function fakeDaemon(binPath: string, cwd: string) {
+  await linkSleep(binPath);
+  // The detached shell gives it its own process group, so the sweep's
+  // group-kill lands on it and nothing else.
+  const sh = spawn("/bin/sh", ["-c", "\"$0\" 60 >/dev/null 2>&1 & echo $!", binPath], {
+    cwd, detached: true, stdio: ["ignore", "pipe", "ignore"],
+  });
+  let out = "";
+  sh.stdout.on("data", (d: Buffer) => { out += d.toString(); });
+  await new Promise<void>((done) => { sh.on("close", () => { done(); }); });
+  const pid = Number(out.trim());
+  spawned.push(pid);
+  return pid;
+}
+
+async function linkSleep(binPath: string) {
+  await mkdir(resolve(binPath, ".."), { recursive: true });
+  // A symlink, not a copy: macOS SIGKILLs a copied platform binary (its code
+  // signature no longer verifies), and `ps comm` reports the symlink path
+  // anyway, which is the name the guard matches on.
+  await symlink("/bin/sleep", binPath);
+}
+
+/**
  * An agent-browser daemon owned by <worktreeRoot>/<worktree>. Attribution is by
  * the daemon's binary path, so its cwd is deliberately elsewhere — a real one
  * has detached to PID 1 and its cwd proves nothing.
  */
 let daemonSeq = 0;
 function browserFor(worktree: string) {
-  return fakeProcess(
+  return fakeDaemon(
     join(worktreeRoot, worktree, `node_modules/agent-browser/bin/agent-browser-macos-arm64-${daemonSeq++}`),
     home,
   );
@@ -150,13 +174,13 @@ void test("The guard answers none / launching / live / unknown, and a caller sta
   const old = 3600;
   t.check(
     [
-      classifyAgentBrowser("unknown", { vouched: true, ageSec: old }),
-      classifyAgentBrowser("unknown", { vouched: false, ageSec: old }),
-      classifyAgentBrowser("launching", { vouched: true, ageSec: old }),
-      classifyAgentBrowser("launching", { vouched: false, ageSec: old }),
-      classifyAgentBrowser("live", { vouched: true, ageSec: old }),
-      classifyAgentBrowser("live", { vouched: false, ageSec: old }),
-      classifyAgentBrowser("none", { vouched: true, ageSec: old }),
+      classifyAgentBrowser("unknown", { vouched: true, ageSec: old, ppid: 1 }),
+      classifyAgentBrowser("unknown", { vouched: false, ageSec: old, ppid: 1 }),
+      classifyAgentBrowser("launching", { vouched: true, ageSec: old, ppid: 1 }),
+      classifyAgentBrowser("launching", { vouched: false, ageSec: old, ppid: 1 }),
+      classifyAgentBrowser("live", { vouched: true, ageSec: old, ppid: 1 }),
+      classifyAgentBrowser("live", { vouched: false, ageSec: old, ppid: 1 }),
+      classifyAgentBrowser("none", { vouched: true, ageSec: old, ppid: 1 }),
     ],
     [
     {
@@ -207,10 +231,10 @@ void test("The socket dir's .pid files are the only thing that vouches for a dae
   const young = 5;
   t.check(
     [
-      classifyAgentBrowser("live", { vouched: false, ageSec: young }),
-      classifyAgentBrowser("none", { vouched: false, ageSec: young }),
-      classifyAgentBrowser("live", { vouched: true, ageSec: young }),
-      classifyAgentBrowser("live", { vouched: false, ageSec: 61 }),
+      classifyAgentBrowser("live", { vouched: false, ageSec: young, ppid: 1 }),
+      classifyAgentBrowser("none", { vouched: false, ageSec: young, ppid: 1 }),
+      classifyAgentBrowser("live", { vouched: true, ageSec: young, ppid: 1 }),
+      classifyAgentBrowser("live", { vouched: false, ageSec: 61, ppid: 1 }),
     ],
     [
     {
@@ -230,6 +254,26 @@ void test("The socket dir's .pid files are the only thing that vouches for a dae
       reason: "superseded orphan",
     },
   ],
+  );
+});
+
+// A daemon detaches and is reparented to pid 1; a process with any other parent
+// is a command in flight under a live `bin/browse`. Every `bin/browse` call runs
+// the reaper first, so killing those ended other sessions' slow `snapshot` calls
+// with an empty exit 1 when seven journey walks shared one worktree (2026-10-22).
+void test("A command in flight is spared even when old, unvouched, and nothing is live", async (t) => {
+  const old = 3600;
+  t.check(
+    [
+      classifyAgentBrowser("live", { vouched: false, ageSec: old, ppid: 4242 }),
+      classifyAgentBrowser("none", { vouched: false, ageSec: old, ppid: 4242 }),
+      classifyAgentBrowser("none", { vouched: false, ageSec: old, ppid: 1 }),
+    ],
+    [
+      { kill: false, reason: "in-flight command (parent 4242)" },
+      { kill: false, reason: "in-flight command (parent 4242)" },
+      { kill: true, reason: "no live session" },
+    ],
   );
 });
 
