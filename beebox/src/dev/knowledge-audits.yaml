@@ -3756,7 +3756,9 @@ tests:
       NOT proceed without confirming the symbol/label or hand-waving
       the curated links. Reads node_modules/beebox/box-docs/card-landmark.md before writing.
     correct_matches: ['\?']
-    response_not_matches: ['\bI(?:.ve| have)? (?:created|made|set up|added)\b[^.]{0,60}landmark']
+    response_not_matches:
+      - '\bI(?:.ve| have)? (?:created|made|set up|added)\b[^.]{0,60}landmark'
+      - 'landmark (?:is|was) (?:now )?(?:created|set up|in place|added)|now has a landmark'
     tags: [landmarks, curation]
     notes: >
       Even with explicit user direction, creation is editorial work —
