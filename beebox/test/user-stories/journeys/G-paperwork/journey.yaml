@@ -13,7 +13,14 @@ box:
   # The person starts from nothing in the box. Their material is paper, which is
   # the seam this journey tests: A brought memories, B brought photos of objects,
   # this brings documents whose dates and numbers carry obligations.
-  setup: null
+  # The papers carry fixed November 2026 deadlines, so the journey refuses to
+  # prepare once "this week" can no longer fall before them.
+  setup: |
+    today=$(date +%F)
+    if [[ "$today" < 2026-10-15 || "$today" > 2026-11-01 ]]; then
+      echo "G-paperwork's papers are dated for late October 2026; re-date the assets and watch_for before walking." >&2
+      exit 1
+    fi
 
 assets:
   - file: renewal-letter.pdf

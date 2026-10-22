@@ -83,6 +83,7 @@ if (journey.box.base !== "empty") fail("Only base: empty is supported; use box.s
 const { runDir, boxDir, boxSlug } = allocateRun({ work: WORK, boxes: BOXES_ROOT, id: journey.id });
 mkdirSync(join(runDir, "shots"), { recursive: true });
 mkdirSync(join(runDir, "assets"), { recursive: true });
+mkdirSync(join(runDir, "tmp"), { recursive: true });
 
 // Canonical init creates the package, current one-root layout, annex, templates,
 // validation hooks and initial history. Never clone another person's runtime state.
@@ -166,6 +167,7 @@ const template = readFileSync(join(JOURNEYS, "walker-prompt.md"), "utf8")
   .replaceAll("{{BOX_CONTENT}}", content)
   .replace("{{SHOTS}}", join(runDir, "shots"))
   .replace("{{NOTES}}", join(runDir, "notes.md"))
+  .replace("{{SCRATCH}}", join(runDir, "tmp"))
   .replace("{{CLOSING}}", (journey.closing ?? "").trim());
 writeFileSync(join(runDir, "prompt.md"), template);
 

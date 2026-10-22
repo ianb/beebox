@@ -14,7 +14,14 @@ box:
   # cards and commits them on backdated days, so the box history reads like
   # his use of it. Only _content/ is committed here; prepare commits the rest.
   # Heredoc bodies sit at the block's base indent so they reach bash unindented.
+  # Overdue and upcoming todos are written for a walk on about 22 October 2026;
+  # outside that window the setup refuses rather than build a different story.
   setup: |
+    today=$(date +%F)
+    if [[ "$today" < 2026-10-17 || "$today" > 2026-10-29 ]]; then
+      echo "H-handover's history is dated for a walk near 22 October 2026; re-date box.setup and watch_for before walking." >&2
+      exit 1
+    fi
     cd "$BOX"
     export GIT_AUTHOR_NAME="Tomas Marlowe" GIT_AUTHOR_EMAIL="tomas@example.com"
     export GIT_COMMITTER_NAME="Tomas Marlowe" GIT_COMMITTER_EMAIL="tomas@example.com"

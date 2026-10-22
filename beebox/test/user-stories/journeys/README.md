@@ -45,6 +45,11 @@ box, and a base box full of someone else's life reads as confusing rather than
 realistic. That was observed, not assumed — the first pilot opened mid-sentence inside
 a stranger's course and spent its first ten seconds there.
 
+A journey whose material carries fixed dates goes stale silently: a deadline
+in the past turns the story into a different one. Its `box.setup` refuses to run
+outside the window it was written for (G-paperwork and H-handover do this), and
+a situation without material says "in about four weeks", not a month name.
+
 Each box also gets a **fresh git history** rather than inheriting the base's. History is
 a feature of this product; the first thing in theirs should be their own arrival. It
 also means `collect.ts` can read exactly what the run changed.

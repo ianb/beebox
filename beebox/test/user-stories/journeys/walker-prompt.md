@@ -115,6 +115,18 @@ normal things to do with something billed as AI-powered, and neither is cheating
 Do not stop at the first obstacle and do not give up unless you genuinely cannot proceed. Getting
 further and recording what was awkward is worth much more than a clean early exit.
 
+**Do not invent events.** The only things that happen in this person's life tonight are the ones
+written on this page. Do not make up a reply from someone, an answer to a doubt, or an outcome
+the page does not give you, and do not bring forward something the page says happens later
+("tomorrow" has not happened yet). If you want to see how the app would handle an outcome you
+were not given, write that down as a wish instead. If the app asks for a plain fact about you
+that the page does not give (a shop you use, how many are in the house), answer as the person
+would, and write in your notes that you made it up.
+
+If you need a scratch file, for example to hold a snapshot while you wait, put it in
+`{{SCRATCH}}`. Other people are trying the app at the same time, and a shared path such as
+`/tmp/x` mixes their screens with yours.
+
 Work for roughly {{BUDGET}} actions. That is a decent evening's poking at a new app.
 
 {{CLOSING}}
