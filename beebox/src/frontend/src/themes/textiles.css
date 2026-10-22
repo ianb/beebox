@@ -147,7 +147,7 @@
 
 /* Carry the textile gestures into the chrome, not just the desk. */
 [data-chrome-theme="rose-trellis"] .bbx-app-nav {
-  background: linear-gradient(100deg, #702a48ee, #85334fe6 55%, #823a37e8),
+  background: linear-gradient(100deg, #702a48ee, #933b58d9 55%, #ac574cbd),
     var(--textile-art) center 36% / cover;
   border-bottom: 3px solid #c8ba79;
 }
