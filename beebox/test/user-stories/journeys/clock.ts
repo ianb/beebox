@@ -23,6 +23,11 @@ if (boxContent === undefined) {
 
 const t = agentTiming(boxContent);
 
+// A walker who asks mid-reply must not read "none found" as a broken clock
+// (B-inventory and H-handover, 2026-10-22): name the reply in progress.
+if (t.waiting > 0) {
+  console.log(`A reply is still on its way (${String(t.waiting)} question(s) with no answer text yet); ask again once it has started.`);
+}
 if (t.turns.length === 0) {
   console.log("No completed first-response intervals found in Claude chat transcripts; waiting time is unavailable.");
 } else {
