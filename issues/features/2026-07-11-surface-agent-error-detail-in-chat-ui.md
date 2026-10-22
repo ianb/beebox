@@ -51,3 +51,7 @@ The open question is how much of the SDK result text is safe/useful to show:
 it can contain internal paths or prompt fragments. Likely shape: carry a
 truncated (say 200-char) form of the result text on the turn-failed event and
 render it collapsed/expandable in the error bubble.
+
+## Audit 2026-10-22
+
+Still true. Pointers moved. The `result` case in `adaptSdkMessage` is now `beebox/src/core/chat/session/messages.ts:261-273`, and it still copies `msg.result` only when `subtype === "success"`. `ChatMessageResult` is at `beebox/src/core/chat/message-types.ts:147` and has no `errors` field.

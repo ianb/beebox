@@ -56,3 +56,13 @@ removes the whole category of "worked after I refreshed" ghosts.
   skew is known to break a specific call?
 - Does the same mechanism want to cover the **dev router** (worktree restarts /
   bundle rebuilds), or is that out of scope?
+
+## Audit 2026-10-22
+
+[Stale web bundle detection](../closed/features/2026-08-12-stale-web-bundle-detection.md) was closed into this issue. It adds three points:
+
+- A stale iOS webview made a deployed fix look broken and cost a debugging round. A stale client looks the same as a failed fix.
+- A check on `visibilitychange` or app foreground matches that failure (the app resumes days later). The native shell could also reload a page older than a threshold.
+- A version-mismatch line in the client debug log helps a field probe even with no UI.
+
+The iOS build already stamps its commit (`CBGitCommit` in Info.plist) and logs `[ios] lifecycle: launch build=<sha>`. No web-bundle version handshake exists in `beebox/src` today.

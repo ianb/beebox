@@ -41,3 +41,7 @@ can keep the menu on "used" while the page stays "tree" (its current fixed mode)
   default the menu to **used** (fastest for the common "jump back" case) and the
   page to **tree** (its current behavior), unless a knowledge/UX reason says
   otherwise.
+
+## Audit 2026-10-22
+
+Still unbuilt: neither the menu nor the page offers used, name, or tree ordering. Pointers drifted. The place menu is now `beebox/src/frontend/src/components/AppNav/PlacePill.tsx` with rows in `PlacePill-landmarks.tsx`. It no longer reads the full `chat.byLandmark` payload (see the comment at `PlacePill.tsx:36`). The landmark page is now `beebox/src/frontend/src/components/landmarks/LandmarksList.tsx`, not `pages/landmarks/LandmarksPage.tsx`.

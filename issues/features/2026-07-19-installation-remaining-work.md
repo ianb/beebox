@@ -123,3 +123,7 @@ Harness re-run on today's main (Node 24, Claude Code 2.1.251), 2026-08-29:
 Follow the concrete reproduction or verification steps above. Confirm the
 observed result matches the expected behavior described in this issue before
 clearing the manual-testing flag.
+
+## Audit 2026-10-22
+
+Item 6 is partly done. `.github/workflows/image.yml` publishes the container image to GHCR on `v*` tags (and `:edge` on manual runs), so a clone-free image pull is possible. The install docs under `beebox/docs/install/` do not yet mention the `ghcr.io` image. No npm publish or `bbx onboard` wizard exists. The manual-testing items are unchanged.
