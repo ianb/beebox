@@ -204,7 +204,10 @@ sources. On the iPhone, Siri, the Action Button, a Lock Screen control, and the
 share sheet (with optional instructions) save a thought, a voice note, or
 shared material to a chosen capture-default box, kept on the phone until it
 uploads. Every dictated message also gets the higher-quality transcription
-pass, with the live text as the marked fallback. Quick chat is the other newer
+pass, with the live text as the marked fallback. Shared items with no words are
+filed by the box's agent a couple of minutes after a burst ends, placing and
+titling without acting on them. The browser extension's Send to box routes the
+page you are on through quick chat. Quick chat is the other newer
 path: the box screen, which the iPhone app opens on,
 has one text box, a routing model sends the thought to the fitting
 conversation, and an unclear thought waits for the person to choose.
@@ -231,14 +234,16 @@ than the placement: a question answered becomes a rule it reads next time.
 **How it is expressed.** Question cards with structured answers routed back
 to an agent. A confidence vocabulary in triage that decides what a level
 permits. Corrections that become rules, guides, and beliefs.
+A new box starts with one pending question ("What do you want to keep track of
+here?"), which the empty first chat shows as the agent's opening line.
 How loudly the box reaches you is itself a rule it reads: a question is a
 badge unless it is time-bound, and the "Reaching me" section of the root
 briefing says when to push (`capabilities/notifications.md`).
 
 **Where it is thin.** Rewriting a rule from a single low-confidence answer is
-future work. The nav bar badges the question count and the plate count; the
+future work. The nav bar badges the question count and the count of todos due now; the
 badge is a bare number beside an icon and can read as a wrong total, though
-the plate page's headline now states what it counts.
+the Todos page's headline now states what it counts.
 
 **Pages.** `capabilities/questions.md`, `capabilities/triage.md`,
 `capabilities/notifications.md`, `design/trust.md`, `design/teaching.md`.

@@ -21,6 +21,13 @@ things from your browser into your box.
   control of what actually happens in your browser.
 - Lands a clipped page in a chat you can immediately talk to the agent
   about, rather than only filing it silently.
+- Sends the page you are on, with an optional note, to the box with one
+  "Send to box" button. The box saves the page in an incoming folder that git
+  does not track, and a routing model chooses which conversation it belongs
+  in, the same way as a thought typed on the box screen. When the choice is
+  clear the page is posted there and that chat's agent files it; when it is
+  not, the popup offers up to four destinations. The popup says where it went,
+  with a link to open that chat, and a failed send can be tried again.
 
 **What it needs**
 
@@ -38,6 +45,9 @@ use the extension.
 
 **Limits**
 
+Send to box needs the same OpenRouter key as quick chat; without it the page is
+saved and the popup offers recent chats to choose from. The routing model sees the page's
+title, address and site and your note, not the page text.
 Tab arrangements always land in one fixed destination; only the page/comment
 path lets you choose where it goes. The documentation does not describe a
 non-Chrome browser extension.
