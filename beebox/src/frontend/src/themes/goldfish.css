@@ -30,7 +30,7 @@
 }
 [data-chrome-theme="goldfish"] .bbx-app-nav :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, .bbx-place-pill) {
   color: #f2f5eb;
-  background: #397280;
+  background: #30656f;
   border: 1px solid #8ebfbe;
   border-radius: 18px 18px 14px 14px;
   box-shadow: 0 2px #518d8b24;
