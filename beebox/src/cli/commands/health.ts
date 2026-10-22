@@ -66,6 +66,8 @@ function describeStatus(task: TaskHealth): string {
       // A run that found nothing to do says so ("ok: nothing to do").
       return task.reason === undefined ? "ok" : `ok: ${task.reason}`;
     case "inconclusive":
+      // Read where the agent meets it: the work ran, so it is not redone.
+      return "inconclusive: work done, no verdict";
     case "blocked":
     case "invalid":
     case "disabled":

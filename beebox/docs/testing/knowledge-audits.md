@@ -17,7 +17,7 @@ The harness lives in `src/dev/`:
 
 **When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the right information at the right time. Not for testing system behavior. Run them after touching AGENTS.md, box AGENTS.md, schemas, prompts, or anything
 that changes what an agent should know; the periodic cadence is in
-[maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-07-03.md`.
+[maintenance](../development/maintenance.md). The latest full-corpus rerun record is `docs/reports/knowledge-audit-rerun-2026-10-22.md`.
 
 ## How it works
 
@@ -93,6 +93,19 @@ repeated flags keep only the last. The runner resets and cleans the box between
 tests, so it refuses a box with uncommitted changes. A worktree's test1 clone
 usually has such changes from ordinary dev use (an engine install sync, for
 example). Copy it to a scratch directory, commit there, and audit the copy.
+
+The runner has no box server and no notification channel, and a worktree
+clone's `node_modules/beebox` links to the engine outside the box. Three kinds
+of audit fail for those reasons alone:
+
+- A fixture `AGENTS.md` that imports a package doc (`@node_modules/beebox/box-docs/…`)
+  loads nothing, because Claude Code does not follow an import out of the box.
+  Run those audits on a copy whose `node_modules/beebox` is a real directory
+  holding a copy of `box-docs/`.
+- `bbx remind` refuses without a channel that can reach the person; set
+  `BBX_NOTIFY_FAKE=1` ([notifications](../notifications.md)).
+- `bbx drive` commands need the server (`BBX_SERVER_URL`), so drive audits
+  check the agent's choice, not the command's result.
 
 By default the runner uses the box's configured engine. `--engine` overrides
 that choice for the audit only, so the same definitions can be exercised
