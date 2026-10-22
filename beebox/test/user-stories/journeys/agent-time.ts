@@ -24,7 +24,7 @@ export interface AgentTiming {
   totalSeconds: number
   medianSeconds: number
   slowestSeconds: number
-  /** Turns opened with no assistant text yet: a reply still on its way. */
+  /** Turns with no assistant text after them: a reply on its way, or an abandoned turn. */
   waiting: number
 }
 

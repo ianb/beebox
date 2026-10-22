@@ -186,7 +186,8 @@ writeFileSync(join(runDir, "before.json"), `${JSON.stringify({
   url: `http://localhost:3210/${WORKTREE}/${boxSlug}/`,
   headBefore: head,
   harnessCommit: execFileSync("git", ["-C", MONO_ROOT, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
-  harnessDirty: execFileSync("git", ["-C", MONO_ROOT, "status", "--porcelain", "--", journeyDir], { encoding: "utf8" }).trim() !== "",
+  // The whole journeys tree: the walker prompt and prepare itself shape the run too.
+  harnessDirty: execFileSync("git", ["-C", MONO_ROOT, "status", "--porcelain", "--", JOURNEYS], { encoding: "utf8" }).trim() !== "",
 }, null, 2)}\n`);
 // The spec as it was when this box was built: a journey edited after the walk
 // would otherwise be read against a box it did not make.
