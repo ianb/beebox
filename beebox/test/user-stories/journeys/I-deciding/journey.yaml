@@ -1,0 +1,79 @@
+# A journey is a person with a goal, not a script of steps. Everything here either
+# shapes the world the person arrives in, or is handed to them verbatim.
+#
+# People are from docs/example-names.md.
+
+id: I-deciding
+title: We need to choose a washing machine
+
+box:
+  base: empty
+  # No setup: the person brings constraints and opinions, not material. The
+  # seam is research and a decision made over days with another person, which
+  # none of A, B, C, F or the newer journeys exercise.
+  setup: null
+
+assets: []
+
+sittings: 1
+budget_actions: 60
+
+situation: |
+  The washing machine is dying. It still runs, but it walks across the floor on
+  the spin and the last cycle left everything soaking. You and your partner,
+  Kwame, want to replace it within about two weeks, before it gives up
+  completely.
+
+  What you know:
+
+  It has to fit the gap under the counter: 60 cm wide, 85 cm high, and the
+  doors in the hall mean nothing deeper than about 60 cm gets in. You live in
+  a flat with people below, so it needs to be quiet on the spin. You would like
+  to spend under $900 including delivery and taking the old one away. Your
+  sister swears by her Bosch; you have no idea whether that is still a good
+  brand. Kwame cares about running costs more than you do.
+
+  You hate this kind of research. Last time you had twenty tabs open, could
+  not remember which shop had which price, and bought in a panic. This time
+  you would like to narrow it down to two or three, keep track of what you
+  found and why, and be able to show Kwame something he can weigh in on.
+
+closing: |
+  Once you have a shortlist, life carries on. Kwame looks at it and says he
+  would pay up to $1,000 for a noticeably cheaper-to-run machine, and asks
+  whether any of them can be delivered on a Saturday. Your sister texts that
+  her Bosch is actually the 8 kg one, not the 9 kg.
+
+  Get those in. Then come back to it as you would in a few days: find where
+  you got to, see what is still open, and decide whether you trust what it
+  told you enough to buy.
+
+# For the reader of the notes. Never shown to the walker.
+watch_for: |
+  The first journey where the box must bring in outside facts. Watch where
+  claims come from: does the assistant search the web and cite sources, or
+  state models, prices and dimensions from memory? A confident price, model
+  number or depth that is invented or stale is the failure that matters most,
+  and the walker cannot tell; spot-check a few claims against the sources the
+  box recorded (or note that it recorded none). Record any web access as
+  observed in the box agent's transcript, not from the walker's notes.
+
+  Constraints held. The 60 cm depth limit is easy to drop: many machines are
+  deeper. Does the shortlist respect width, height, depth, noise and budget,
+  and does it say which it could not check?
+
+  What lands. A shortlist in chat is not one Kwame can see later. Does a card
+  or document hold the options, the criteria and the reasons? Can the person
+  find it on return without asking?
+
+  Changing inputs. Kwame's budget change and the sister's correction should
+  update the record, not pile on top of it. The Saturday delivery question is
+  shop-specific; does the box say it does not know rather than guess?
+
+  Another person. Kwame "weighing in" probably means showing him something.
+  Note whether the box offers a way (sharing, a link, a printable page) and
+  whether the walker reaches it; do not count a sharing setup screen as a
+  share. External sending is out of scope.
+
+  Follow-through. The two-week deadline is a natural reminder; note any
+  todo or schedule that landed, separately from what was promised.
