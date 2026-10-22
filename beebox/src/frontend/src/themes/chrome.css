@@ -78,7 +78,7 @@
   --bbx-selection-ink: #fff;
 }
 .bbx-box-presentation[data-chrome-theme="spectrum"] .bbx-app-nav {
-  background-image: linear-gradient(to right, #5e5490, #9b6ba6, #d4845a);
+  background-image: linear-gradient(to right, #5e5490, #6a4870, #6e432e);
 }
 /* One textured bar surface, with raised controls on top. */
 .bbx-box-presentation[data-chrome-theme="paper"] .bbx-system-control {
