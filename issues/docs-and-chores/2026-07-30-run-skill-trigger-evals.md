@@ -85,3 +85,7 @@ still run against current Claude Code, what does a run cost for 16 skills, and
 is a one-off baseline enough or does it want to be a periodic check?
 
 **Update 2026-10-07:** the bbx-debug, bbx-guide-testing, and bbx-frontend skills were retired; their repo-specific content moved to `beebox/docs/testing.md` ("Choosing an instrument", "Reproducing a bug") and `beebox/frontend.md`.
+
+## Audit 2026-10-22
+
+Still open: no trigger eval has run. The checkout now has 22 repository skills in `.claude/skills/`. Only two `bbx-guide-*` skills remain (`bbx-guide-api`, `bbx-guide-schemas`). `.agents/skills/skill-creator/` is still absent, so the harness path above does not exist.
