@@ -22,8 +22,11 @@
          #root's children). If the app never mounts — e.g. its JS bundle fails to
          load — this stays visible, so a failed load reads as a message, not a
          blank white screen. Pure CSS (style-src allows 'unsafe-inline'; script-src
-         does not, so no JS): the "couldn't load" hint fades in only after ~5s, so
-         a normal fast load is replaced before it ever appears. -->
+         does not, so no JS): the "couldn't load" hint fades in only after 30s.
+         A box that is starting, or a cold dev worktree, can take 14s after this
+         HTML arrives (measurements in issues/closed/bugs/
+         2026-10-20-boot-hint-says-load-failed-during-normal-warm-up.md), so the
+         hint stays well past an ordinary slow start. -->
     <style>
       #root .app-boot {
         max-width: 22rem;
@@ -38,15 +41,16 @@
         font-size: 0.8rem;
         color: #9a9a9a;
         opacity: 0;
-        animation: app-boot-hint-in 0s linear 5s forwards;
+        animation: app-boot-hint-in 0s linear 30s forwards;
       }
       @keyframes app-boot-hint-in {
         to {
           opacity: 1;
         }
       }
-      /* Three index cards take turns lifting off the stack: two cycles,
-         finished before the hint appears, so a stuck load stops moving. */
+      /* Three index cards take turns lifting off the stack: 17 cycles, the
+         last ending at 28.6s, before the hint appears, so a stuck load stops
+         moving. Change the count with the hint's delay. */
       #root .app-boot-cards {
         position: relative;
         width: 84px;
@@ -65,7 +69,7 @@
           linear-gradient(#a9c3dd, #a9c3dd) 8px 39px / calc(100% - 16px) 1px no-repeat,
           #fffdf7;
         box-shadow: 0 1px 2px #0000001a;
-        animation: app-boot-riffle 1600ms ease-in-out 2;
+        animation: app-boot-riffle 1600ms ease-in-out 17;
       }
       #root .app-boot-cards i:nth-child(1) { z-index: 3; animation-delay: 300ms; }
       #root .app-boot-cards i:nth-child(2) { z-index: 2; transform: translate(3px, -3px); animation-delay: 830ms; }
@@ -101,7 +105,7 @@
     <div id="root">
       <div class="app-boot">
         <div class="app-boot-cards" aria-hidden="true"><i></i><i></i><i></i></div>
-        Loading Bee Box&hellip;
+        Starting your box&hellip;
         <div class="app-boot-hint">
           If this message stays, the app couldn&rsquo;t load. Try reloading, or sign in again.
         </div>
