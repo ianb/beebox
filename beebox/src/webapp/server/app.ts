@@ -239,7 +239,7 @@ export async function createServer(options?: InternalServerOptions, startup?: Re
 
   // Register each box under its slug prefix
   for (const box of boxes) {
-    // One EventBus per box — shared by main routes and webhook routes. A test
+    // One EventBus per box — shared by every route the box registers. A test
     // may inject its own instance (so it can subscribe to the same in-memory
     // bus the routes emit on); production always mints one here.
     const eventBus = box.eventBus ?? createEventBus(box.boxRoot, { pollInterval: 1000 });

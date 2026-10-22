@@ -1,8 +1,7 @@
 /**
  * Per-box route registration for the web app server.
  *
- * Each box is mounted under its slug prefix (main routes + tRPC + static)
- * and its webhooks are mounted under /webhook/<slug> outside the auth wall.
+ * Each box is mounted under its slug prefix (main routes + tRPC + static).
  * Split out of server.ts to keep that file under its line budget.
  */
 
