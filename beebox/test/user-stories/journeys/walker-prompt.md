@@ -63,6 +63,9 @@ operated (disabled, hidden, covered, gone) and why. That is worth noting as what
 read it as the app having done nothing. `✓ Done` means the action was delivered, not that it
 had the effect you expected — look at the screen.
 
+Read the output of every command; do not send it to `/dev/null`. A refusal you did not see
+reads later as the app ignoring you.
+
 A refusal that says `offscreen` is the one you can always do something about: scroll, or
 `scrollintoview`, and try again. A person would scroll without thinking about it, so reaching
 something that way is not worth a note — but if you scroll to it and it still cannot be used,

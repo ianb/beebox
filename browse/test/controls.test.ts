@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import {
-  annotateSnapshot, applyLiveIds, boxCenter, judgeBox, parseCheckResult, parseTarget, refRenumbered, upstreamSelector,
+  annotateSnapshot, applyLiveIds, boxCenter, judgeBox, parseCheckResult, parseTarget, refRenumbered, TARGET_COMMANDS, upstreamSelector,
 } from "../src/controls.js";
 
 const SNAPSHOT = [
@@ -130,4 +130,11 @@ void test("Geometry: zero-size and off-screen boxes are refused, on-screen passe
   assert.equal(judgeBox({ x: 1084, y: 513, width: 56, height: 56 }, vp).ok, true);
   assert.deepEqual(boxCenter({ x: 1084, y: 513, width: 56, height: 56 }, vp), { x: 1112, y: 541 });
   assert.deepEqual(boxCenter({ x: 1270, y: 790, width: 40, height: 40 }, vp), { x: 1279, y: 799 }, "clamped into the viewport");
+});
+
+// ## Target commands: every element-taking command resolves a bbx- id
+void test("Target commands: scrollintoview takes a bbx- id like click does", async (t) => {
+  // The journey walker prompt teaches `scrollintoview bbx-…`; without this entry the
+  // id reached upstream unresolved and failed "Element not found" (F-newcomer, 2026-10-22).
+  assert.ok(TARGET_COMMANDS.has("scrollintoview"));
 });
