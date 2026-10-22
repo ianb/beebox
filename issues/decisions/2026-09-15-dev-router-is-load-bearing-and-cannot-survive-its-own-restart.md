@@ -93,3 +93,7 @@ question is which of these the boxholder wants, and in what order:
 
 The third is the one that would actually answer the question, and it is a
 decision about how the machine is used rather than a code change.
+
+## Audit 2026-10-22
+
+Still true. `sweepStaleChildren` still kills leftover children and does not adopt them; it is now at `workstreams-app/src/router/server/real-effects.ts:204` (the cited lines 179-193 are stale) and runs at boot from `workstreams-app/src/router/server/listener.ts:420`. No supervisor exists. Nothing recorded on moving the phone's box off the dev router.

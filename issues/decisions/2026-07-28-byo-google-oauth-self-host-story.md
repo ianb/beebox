@@ -80,3 +80,7 @@ redirect_uri registration.
 - [investigate-composio-tool-layer](../exploration/2026-07-09-investigate-composio-tool-layer.md)
   — the managed-broker option.
 - Per-box secret management overlaps how creds are supplied.
+
+## Audit 2026-10-22
+
+The BYO-only decision is not recorded in a doc. `beebox/docs/connectors/google-auth.md` now explains that 7-day refresh-token expiry and revoked unverified-Production grants belong to BYO credentials (around line 123) and documents re-authorization. It still lacks the "unverified app warning is normal, click through" note and the 100-user-cap note (smoothing item 1). The scope table (line 108) lists `drive.file`. No `bbx google setup` helper exists; `beebox/src/cli/commands/google-auth.ts` is the auth command only. Items 3 and 4 remain open.

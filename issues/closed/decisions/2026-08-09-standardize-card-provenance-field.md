@@ -5,12 +5,15 @@ area: beebox
 needs: [decision, design]
 labels: [schemas, provenance]
 priority: important
+resolution: implemented
 ---
+
+> **Closed 2026-10-22 (issue audit):** The shared `sources:` entry won. `beebox/src/cards/sources-entry.ts` defines one typed entry (`ref` or `href`, plus `label`, `retrieved`, `pos`, `usage`, `note`) that the built-in schemas share. Commit c95de7fd9 moved webpage, recipe and record onto it (`beebox/src/schemas/webpage.tsx:43`). The decision is recorded in `beebox/docs/implemented-plans/standard-card-fields.md` (49d94b16e).
 
 A card that came from somewhere should say where, in a shape anything can read
 — so that downloading a paper, freezing a page, or importing a doc all leave the
 same trail. The immediate motivation is
-[bringing a PDF at a URL into the box](../features/2026-08-09-pdf-url-into-the-commentary-path.md):
+[bringing a PDF at a URL into the box](../../features/2026-08-09-pdf-url-into-the-commentary-path.md):
 an ingested document should record the URL it came from.
 
 The catch: this field already exists, **four times, in four shapes.**
@@ -65,7 +68,7 @@ real question is which existing shape wins:
 
 ## Related
 
-- [PDF at a URL into the commentary path](../features/2026-08-09-pdf-url-into-the-commentary-path.md)
+- [PDF at a URL into the commentary path](../../features/2026-08-09-pdf-url-into-the-commentary-path.md)
   — the case that surfaced this; an ingested paper wants to record its origin.
 - `docs/cards/schemas.md` — where a shared field would need documenting.
 - `bbx-migration` skill — any change to an existing card's on-disk shape.
