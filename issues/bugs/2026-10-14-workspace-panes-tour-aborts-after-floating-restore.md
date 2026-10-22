@@ -42,3 +42,13 @@ has the same error text and the same symptom. This page has no canvas.
 - Whether the checkpoint's axe run or screenshot leaves the session in a
   state where the next snapshot fails.
 - Whether a `bin/browse close` between checkpoint and click clears it.
+
+## Re-encounter, 2026-10-21 - weekly tour check run 20261021-221418
+
+Solo `bin/tour workspace-panes`. The desktop pass aborted at
+`conversation-with-floating-restore` with "CDP command timed out:
+DOM.enable" on `snapshot`. The mobile pass aborted at
+`card-beside-conversation` on `screenshot`. The box clone also lacks
+`Theme_Tour.doc.card` ([fixture issue](../docs-and-chores/2026-09-23-test1-lacks-theme-tour-fixtures.md)),
+so the card pane shows "Card not found". Artifacts:
+`beebox/test/tours/.artifacts/workspace-panes/2026-10-22T04-15-21-598Z/`.

@@ -71,3 +71,33 @@ predicts.
 - Artifacts: `beebox/test/tours/.artifacts/expressive-themes/2026-10-15T03-37-01-735Z/`,
   `card-themes/2026-10-15T04-24-51-767Z/` (`markdown-file`, `markdown-workspace`),
   `system-themes/2026-10-15T03-56-42-581Z/` (aborted at "Properties").
+
+## Re-encounter, 2026-10-21 - weekly tour check run 20261021-221418
+
+The drift is now larger. Commit `326c07df3` (retire memo) renamed the
+fixtures to `.doc.card` and moved every tour to the new names, but the
+tour-check worktree's box clone still has the `.memo.card` set. Every
+`_content/theme-tour/*.doc.card` page shows "Card not found". The stock
+`~/src/boxes/test1` has the `.doc.card` set, but it still has no
+`markdown-note.md`, no `Theme_Tour.landmark.card`, and no
+`bloom-inherited.doc.card` or `bloom-explicit.doc.card`.
+
+Tours that miss for this reason, at both viewports:
+
+- `card-themes`: every fixture heading misses; the pass aborts at
+  "Could not resolve button \"Properties\"" on `theme-comparison`.
+- `card-theme-interface`: the `browse-card-desk` claim fails and the pass
+  aborts.
+- `card-theme-previews`: both passes abort before the first checkpoint, so
+  no summary is written
+  ([separate issue](../code-quality/2026-10-21-tour-summary-lost-when-no-checkpoint-ran.md)).
+- `bloom-theme`, `deck-theme`, `ribbon-theme`: the "A little room to grow"
+  and "A note on blue paper" headings and the "unthemed card inherits" and
+  "explicit Paper material stays intact" claims miss. `deck-theme` aborts at
+  `deck-composer-menu`.
+- `system-themes`: aborts at "Properties", as before.
+- `workspace-panes`: "Card themes tour" heading misses.
+
+Artifacts: `beebox/test/tours/.artifacts/<tour>/2026-10-22T03-*` and
+`2026-10-22T04-*`. The priority may be stale: this issue now blocks about
+half of the tours.
