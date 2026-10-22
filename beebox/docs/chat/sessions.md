@@ -85,5 +85,5 @@ deliberate, commented, logged skips, and `assertNever` guards the union so a new
 SDK message type is a compile error rather than a silent drop.
 
 The two classes are **not** yet collapsed into one base class — see
-`issues/code-quality/2026-07-06-chat-session-shared-core.md` (monorepo root) for why (the per-turn bodies
+`issues/closed/code-quality/2026-07-06-chat-session-shared-core.md` (monorepo root) for why (the per-turn bodies
 genuinely diverge: durability + queue draining vs `<chat-response>` extraction).

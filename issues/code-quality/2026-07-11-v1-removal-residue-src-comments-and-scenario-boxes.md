@@ -54,3 +54,7 @@ marker without `shapeVersion >= 2` is a hard `BoxShapeError`, so any command tha
 resolves the shape on these scenarios now throws. They need converting to the v2
 (`content/`-nested, `shapeVersion: 2`) layout. `docs/testing.md` was updated to
 say they need conversion rather than describing them as a supported second shape.
+
+## Audit 2026-10-22
+
+Part 1 is mostly gone. Most listed sites were deleted or moved in the layout moves and later rewrites; a search for the legacy-box wording finds two stale comments: `beebox/src/core/list-cards.ts:95` and `beebox/src/lib/git/core/operations.ts:113`. Part 2 is unverified: the scenario boxes under `~/src/boxes/scenarios/` now use a `box/` subdirectory with a different layout, so re-check them before acting.
