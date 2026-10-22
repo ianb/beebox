@@ -148,7 +148,10 @@ async function runJobs(jobs: readonly Job[], { workers, run }: { workers: number
         const size = `${String(job.screen.width)}×${String(job.screen.height)}`;
         if (size !== viewport) await session.setViewport(job.screen.width, job.screen.height);
         viewport = size;
-        misses += await run(session, job);
+        // Await first: `misses += await …` reads `misses` before the await and
+        // drops counts other sessions add meanwhile.
+        const found = await run(session, job);
+        misses += found;
       }
     } finally {
       await session.close();
