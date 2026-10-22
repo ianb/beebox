@@ -42,7 +42,7 @@ Whether a summary also belongs on the Plate, search, and other lists is the
 broader question in
 [collection-views-are-badly-defined](../../features/2026-08-19-collection-views-are-badly-defined.md).
 
-Related: [structured-card-front-hides-its-facts](../decisions/2026-10-08-structured-card-front-hides-its-facts.md)
+Related: [structured-card-front-hides-its-facts](../../decisions/2026-10-08-structured-card-front-hides-its-facts.md)
 (the same facts hidden on the card's own front).
 [Landmark arrival](../../../beebox/docs/implemented-plans/landmark-arrival.md).
 

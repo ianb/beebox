@@ -119,3 +119,7 @@ In the chat composer:
 ## Re-encounter 2026-10-08 (journey walks)
 
 Walker reaction, not a recurrence. [B-inventory](../../beebox/test/user-stories/journeys/B-inventory/reports/2026-10-08.md) (row 14): the walker found the literal `[image#1] [image#2]` in the message box "programmer-y". This is the item 1 design that stays visible by boxholder decision (2026-08-25), so the manual-testing gate stays. [C-reconnecting](../../beebox/test/user-stories/journeys/C-reconnecting/reports/2026-10-08.md) (row 39) recorded the same for the `[selection#1]` token from "+". B also saw thumbnails listed in order 2, 1 (own issue).
+
+## Re-encounter 2026-10-22 (journey walks)
+
+[G-paperwork](../../beebox/test/user-stories/journeys/G-paperwork/reports/2026-10-22.md) (row 8): after "Add files…" with a PDF and two photos, the composer held "[file#1] [image#1] [image#2]". The walker: "A bit odd-looking but fine." The sent message hid the tokens. This is the behavior that the manual test expects, so manual-testing stays; the tokens are still visible while typing, which item 1 accepts.
