@@ -11,7 +11,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
-import { eventually } from "@ianbicking/tap-check/check";
+import { eventually, oneOf } from "@ianbicking/tap-check/check";
 import { mkdir, readFile, utimes, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { once } from "node:events";
@@ -27,6 +27,7 @@ import {
   titleChatAfterTurn,
   wireAfterTurnTitling,
 } from "../../../../src/core/chat/review/after-turn.js";
+import { acquireChatReviewLease } from "../../../../src/core/chat/review/lock.js";
 import { runChatReview } from "../../../../src/core/chat/review/run/core.js";
 import { loadReviewState } from "../../../../src/core/chat/review/state.js";
 import { ChatSession } from "../../../../src/core/chat/session/run/core.js";
@@ -331,6 +332,79 @@ void test("The nightly run calls the same title pass, so a chat it titles append
     manifestDirty: "",
   },
   );
+});
+
+// ## A busy review lock does not leave the husk uncommitted
+//
+// The nightly run commits only the husks of sessions it reviewed, so a short
+// chat whose only turn finished while the lock was held would stay dirty. The
+// husk commit takes the box git lock, not the review lock, so it runs anyway.
+void test("The husk of a chat is committed even when the review lock is held.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await freshBox();
+  const huskPath = await seed(box, { sessionId: A, entries: [user("b1", "hi there"), agent("b2", "Hello!")] });
+  const release = await acquireChatReviewLease(box.root, "nightly");
+  let outcome;
+  try {
+    outcome = await titleChatAfterTurn(box.root, { sessionId: A, reviewer: fakeReviewer("unused"), now: NOW, ownerEmail: null });
+  } finally {
+    await release();
+  }
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
+  t.check({
+    outcome,
+    files: git("show", "--name-only", "--format=", "HEAD").split("\n"),
+    huskDirty: git("status", "--porcelain", "--", "_content/chat/web"),
+  }, {
+    outcome: { kind: "skipped", reason: "busy" },
+    files: [huskPath],
+    huskDirty: "",
+  });
+});
+
+// ## The nightly run commits only the husks it reviewed
+//
+// A session that goes active again between discovery and its turn is deferred.
+// Its husk stays out of the run's commit.
+void test("A session deferred mid-run keeps its husk out of the run's commit.", async (t) => {
+  t.teardown(async () => {
+    try {
+      await box.cleanup();
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  const box = await freshBox();
+  const talk = "please help me plan a small birthday dinner for saturday, eight people, one vegetarian. ".repeat(4);
+  const entries = [user("n1", talk), agent("n2", REPLY), user("n3", talk), agent("n4", REPLY)];
+  const huskA = await seed(box, { sessionId: A, entries });
+  const huskB = await seed(box, { sessionId: B, entries });
+  const quiet = new Date(NOW.getTime() - 5 * 60 * 60 * 1000);
+  for (const id of [A, B]) await utimes(getSessionLogPath(box.root, id), quiet, quiet);
+  const reviewer = {
+    async review() { throw new Error("unused"); },
+    async title(args: TitleArgs) {
+      // Whichever session is titled first, the other becomes active again.
+      const other = args.sessionId === A ? B : A;
+      await utimes(getSessionLogPath(box.root, other), NOW, NOW);
+      return { title: "Saturday birthday dinner for eight" };
+    },
+  };
+
+  const summary = await runChatReview(box.root, { reviewer, maxSessions: 10, now: NOW, ownerEmail: null });
+
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
+  const committed = git("show", "--name-only", "--format=", "HEAD").split("\n");
+  t.check({ titled: summary.titled, deferredActive: summary.deferredActive }, { titled: 1, deferredActive: 1 });
+  // Whichever session the reviewer titled first is the one committed; the
+  // reactivated one is deferred and its husk stays out of the commit.
+  t.check([huskA, huskB].filter((h) => committed.includes(h)), [oneOf(huskA, huskB)]);
 });
 
 // ## A greeting waits for the second exchange

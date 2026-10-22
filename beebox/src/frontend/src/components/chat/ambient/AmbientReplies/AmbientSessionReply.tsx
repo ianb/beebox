@@ -86,7 +86,6 @@ export function AmbientSessionReply(props: Props) {
           {Boolean(error) && <ErrorText>Could not refresh conversation: {error?.message}</ErrorText>}
           {!loading && !error && !transcript?.entries.length && <Hint>Conversation history is unavailable.</Hint>}
           {Boolean(reply.earlier) && <Hint>Earlier responses in conversation</Hint>}
-          {reply.preview !== "" && <div className="text-sm whitespace-pre-wrap line-clamp-3">{reply.preview}</div>}
           {<CalloutStack callouts={reply.callouts} onZoomView={({ target }) => props.onInspectCard(target)} />}
           {<AckBadgeCluster acks={reply.acks} onZoomView={({ target }) => props.onInspectCard(target)} />}
           <div className="flex gap-2 flex-wrap mt-2">
@@ -96,6 +95,8 @@ export function AmbientSessionReply(props: Props) {
           </div>
         </div>
       </Accordion>
+      {/* Outside the closed-by-default accordion, so a new reply is readable without expanding. */}
+      {reply.preview !== "" && <div className="px-3 pt-1 text-sm whitespace-pre-wrap line-clamp-2">{reply.preview}</div>}
     </section>
   );
 }

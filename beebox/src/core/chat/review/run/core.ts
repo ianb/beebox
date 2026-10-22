@@ -107,7 +107,9 @@ function emptySummary(): RunSummary {
 
 /**
  * Review one session: re-check quiescence, then dispatch to the pass its
- * growth qualified it for.
+ * growth qualified it for. Returns whether the session was reviewed (and so
+ * its husk may have been written), false when it was deferred or its
+ * transcript is missing.
  */
 async function reviewOne(
   session: QualifiedSession,
@@ -117,7 +119,7 @@ async function reviewOne(
     state: ReviewState;
     summary: RunSummary;
   },
-): Promise<void> {
+): Promise<boolean> {
   const { boxRoot, options, state, summary } = args;
 
   // A run spans many model calls, so a session that was quiet at discovery can
@@ -133,16 +135,16 @@ async function reviewOne(
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") throw e;
     summary.missingTranscripts += 1;
-    return;
+    return false;
   }
   if (options.now.getTime() - mtime.getTime() < QUIESCENCE_MS) {
     summary.deferredActive += 1;
-    return;
+    return false;
   }
 
   if (session.needsMetadata) {
     await reviewMetadataSpan(session, { boxRoot, options, state, summary });
-    return;
+    return true;
   }
   await reviewTitleSpan(session, {
     boxRoot,
@@ -153,6 +155,7 @@ async function reviewOne(
     ownerEmail: options.ownerEmail,
     ...(options.freshness === undefined ? {} : { freshness: options.freshness }),
   });
+  return true;
 }
 
 /**
@@ -190,7 +193,6 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
         state,
       });
       const planned = discovery.qualified.slice(0, options.maxSessions);
-      huskPaths.push(...planned.map((session) => session.huskPath));
       const summary = emptySummary();
       summary.overflow = discovery.qualified.length - planned.length;
       // Seeded before the loop, not assigned after it: the per-session steps
@@ -207,7 +209,7 @@ export async function runChatReview(boxRoot: string, options: RunOptions): Promi
       // other sessions, nor the journal advances already earned.
       for (const session of planned) {
         try {
-          await reviewOne(session, { boxRoot, options, state, summary });
+          if (await reviewOne(session, { boxRoot, options, state, summary })) huskPaths.push(session.huskPath);
         } catch (e) {
           console.error(`chat-review: session ${session.sessionId} failed:`, e);
           summary.sessionErrors += 1;
