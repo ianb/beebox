@@ -18,8 +18,9 @@
 [data-chrome-theme="tempest"] .bbx-composer-material > .bbx-composer-mobile-row { background: #10273d; color: #e0eef4; }
 [data-chrome-theme="tempest"] .bbx-chat-user-paper { --bbx-selection: #e0eef4; --bbx-selection-ink: #10273d; }
 [data-chrome-theme="tempest"] .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) { color: #e0eef4; }
-[data-chrome-theme="tempest"] .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) { background: #ffffff45; color: #e0eef4; }
-[data-chrome-theme="tempest"] .bbx-chat-user-attachment:hover { background: #ffffff80; }
+[data-chrome-theme="tempest"] .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) { background: #00000026; color: #e0eef4; }
+[data-chrome-theme="tempest"] .bbx-chat-user-paper .bbx-chat-user-attachment-badge { background: #00000040; }
+[data-chrome-theme="tempest"] .bbx-chat-user-attachment:hover { background: #00000040; }
 [data-chrome-theme="tempest"] .bbx-chat-user-unsure { text-decoration-color: #bacdff; }
 [data-chrome-theme="tempest"] .bbx-chat-reply-material {
   --bbx-edge: #456477;

@@ -30,6 +30,7 @@
   background: #ffffff18;
   color: var(--textile-user-ink);
 }
+.bbx-box-presentation[data-chrome-theme="gold-thread"] .bbx-chat-user-paper .bbx-chat-user-attachment-badge { background: #00000040; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-user-attachment:hover { background: #ffffff30; }
 .bbx-box-presentation:is([data-chrome-theme="rose-trellis"], [data-chrome-theme="gold-thread"]) .bbx-chat-user-unsure { text-decoration-color: var(--textile-user-ink); }
 /* Nested cards supply their own material tokens. */

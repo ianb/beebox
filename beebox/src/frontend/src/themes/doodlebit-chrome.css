@@ -19,6 +19,8 @@
 [data-chrome-theme="doodlebit"] .bbx-chat-user-paper { --bbx-selection: #b9ef38; --bbx-selection-ink: #202020; }
 [data-chrome-theme="doodlebit"] .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) { color: #fff; }
 [data-chrome-theme="doodlebit"] .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) { background: #ffffff45; color: #fff; }
+/* A light badge on the light attachment would stack two tints; a dark one keeps white text legible. */
+[data-chrome-theme="doodlebit"] .bbx-chat-user-paper .bbx-chat-user-attachment-badge { background: #00000040; }
 [data-chrome-theme="doodlebit"] .bbx-chat-user-attachment:hover { background: #ffffff80; }
 [data-chrome-theme="doodlebit"] .bbx-chat-user-unsure { text-decoration-color: #5c42b5; }
 [data-chrome-theme="doodlebit"] .bbx-chat-reply-material {

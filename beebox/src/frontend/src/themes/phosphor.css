@@ -30,6 +30,7 @@
 [data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-pending-material,.bbx-chat-meta-material){--bbx-ink:#82ed91;--bbx-ink-soft:#60bb70;--bbx-pen:#b5ffc0;}
 [data-chrome-theme="phosphor"] .bbx-chat-reply-material::before{content:"┌─ INCOMING ─────────────────────────────────────────────";display:block;color:#51c468;font:11px/1 monospace;white-space:nowrap;overflow:hidden;margin:0 0 12px;}
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper{color:#a7ffb1;background:#071a0c;border:0;box-shadow:none;}
+[data-chrome-theme="phosphor"] .bbx-chat-user-paper :is(.bbx-chat-user-token,.bbx-chat-user-attachment,.bbx-chat-user-attachment-badge){background:#ffffff1f;}
 [data-chrome-theme="phosphor"] .bbx-chat-user-paper::before{content:"> ";color:#44d45d;font-weight:700;}
 [data-chrome-theme="phosphor"] :is(.bbx-chat-reply-material,.bbx-chat-callout) .prose:not(.bbx-card-theme *){color:#82ed91;--tw-prose-body:#82ed91;--tw-prose-bold:#b5ffc0;--tw-prose-headings:#a4ffb0;--tw-prose-links:#b5ffc0;--tw-prose-code:#b5ffc0;font-family:inherit;}
 [data-chrome-theme="phosphor"] .bbx-chat-callout{background:#05170a;}
