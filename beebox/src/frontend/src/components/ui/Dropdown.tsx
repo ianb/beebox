@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
+import { MaterialContext } from "./material";
 
 // The "first focusable menu item" the open/close focus management below
 // looks for. Deliberately broader than `[role="menuitem"]`: several existing
@@ -346,15 +347,25 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
                   direction === "left" && "motion-safe:animate-dropdown-panel-in-left",
                 )}
               >
-                <DropdownContext.Provider value={ctxValue}>
-                  {children}
-                </DropdownContext.Provider>
+                <MenuPanelScope value={ctxValue}>{children}</MenuPanelScope>
               </div>
             </div>,
             document.body,
           )
         : null}
     </div>
+  );
+}
+
+/**
+ * The open menu's contexts: its Dropdown, and no material. The menu is a
+ * white app panel, so it keeps app ink when its trigger sits in a material.
+ */
+function MenuPanelScope({ value, children }: { value: DropdownContextValue; children: ReactNode }) {
+  return (
+    <MaterialContext.Provider value={false}>
+      <DropdownContext.Provider value={value}>{children}</DropdownContext.Provider>
+    </MaterialContext.Provider>
   );
 }
 

@@ -29,6 +29,7 @@ import {
 import { useVoiceCapabilities } from "./capabilities";
 import { VoiceNoticeList, useVoiceNotices } from "./VoiceNotices";
 import { ConversationIcon, SpeakerIcon, FloorIcon } from "./icons";
+import { VoiceChipButtonFace } from "../../app-bar-faces/VoiceChipButtonFace";
 
 // Single-panel submenu pattern (see SessionChip.tsx): the dropdown swaps which
 // set of rows it renders rather than spawning a flyout. Resets to "root"
@@ -70,8 +71,8 @@ export function VoiceChipFace(props: VoiceChipFaceState) {
               spare (`issues/bugs/2026-09-15-mobile-app-bar-crowds-place-label.md`).
               Below `sm:` the same fact is a pulse on the chip; the accessible
               name says "transcribing" at every width either way. */}
-          <span aria-hidden="true" className="sm:hidden w-1.5 h-1.5 rounded-full bg-white/90 animate-pulse" />
-          <span className="hidden sm:inline text-xs opacity-80">transcribing…</span>
+          <span aria-hidden="true" className="sm:hidden w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+          <span className="hidden sm:inline text-xs">transcribing…</span>
         </>
       ) : null}
       {alert === true ? <span aria-hidden="true" className="w-2 h-2 rounded-full bg-warning" /> : null}
@@ -134,14 +135,14 @@ function VoiceChipBody(props: VoiceChipBodyProps): ReactNode {
             <span className="flex justify-between gap-2 w-full">
               <span className="min-w-0">
                 Voice settings
-                <span className="block text-xs text-warm-500 truncate">
+                <span className="block text-xs text-warm-700 truncate">
                   Live: {transcriptionServiceLabel(currentService)}
                 </span>
-                <span className="block text-xs text-warm-500 truncate">
+                <span className="block text-xs text-warm-700 truncate">
                   HQ: {hqTranscriptionServiceLabel(currentHqService)}
                 </span>
               </span>
-              <span className="text-warm-500">›</span>
+              <span className="text-warm-600">›</span>
             </span>
           </MenuItem>
         </>
@@ -245,19 +246,9 @@ export const VoiceChip = memo(function VoiceChip({
       panelIndex={panel === "root" ? 0 : 1}
       onClose={() => setPanel("root")}
       trigger={({ toggle, ariaProps }) => (
-        <button
-          type="button"
-          id="bbx-nav-voice"
-          data-bbx-reveal
-          data-bbx-does="opens the voice menu — mute, narration mode, transcription services"
-          onClick={toggle}
-          className="min-h-[40px] px-2 sm:px-[11px] flex items-center justify-center rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white/80 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-          title={label}
-          aria-label={label}
-          {...ariaProps}
-        >
+        <VoiceChipButtonFace label={label} onClick={toggle} ariaProps={ariaProps}>
           <VoiceChipFace muted={muted} narrationEnabled={narrationEnabled} hqInFlight={hqInFlight} alert={alert} diarizationEnabled={diarizationEnabled} />
-        </button>
+        </VoiceChipButtonFace>
       )}
     >
       <VoiceChipBody

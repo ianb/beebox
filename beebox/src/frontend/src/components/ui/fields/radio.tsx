@@ -153,7 +153,7 @@ function RadioCards({ name, idPrefix, value, options, disabled, onChange }: Radi
             />
             <div className="text-warm-900">{opt.label}</div>
             {opt.description !== undefined ? (
-              <div className="text-xs text-warm-600 mt-1">{opt.description}</div>
+              <div className="text-xs text-warm-700 mt-1">{opt.description}</div>
             ) : null}
           </label>
         );

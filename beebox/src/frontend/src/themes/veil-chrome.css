@@ -8,23 +8,20 @@
   --bbx-chat-user-paper: #e5b2cc;
   --bbx-chat-user-ink: #55213b;
 }
-[data-chrome-theme="veil"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"], .bbx-interface-browse-panel[data-card-content="card"]),
+[data-chrome-theme="veil"] :is(.bbx-conversation-desk, .bbx-companion-desk[data-active-card], .bbx-interface-card-desk[data-card-content="card"]),
 [data-chrome-theme="veil"] .bbx-interface-tabstrip > [role="none"]::before,
 [data-chrome-theme="veil"] .bbx-interface-tabstrip > [role="none"]::after,
 [data-chrome-theme="veil"] .bbx-app-nav > div { background: transparent; }
 [data-chrome-theme="veil"] .bbx-interface-card-desk[data-card-content="neutral"] { background: #fbf5ee; }
 [data-chrome-theme="veil"] .bbx-app-nav :is(button, a):focus-visible { outline: 2px solid #eaf4d9; outline-offset: 2px; }
-[data-chrome-theme="veil"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #eaf4d9; }
-[data-chrome-theme="veil"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r { background: #edf3e4; color: #263f37; }
+[data-chrome-theme="veil"] .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: #eaf4d9; }
+[data-chrome-theme="veil"] .bbx-composer-material > .bbx-composer-mobile-row { background: #edf3e4; color: #263f37; }
 [data-chrome-theme="veil"] .bbx-chat-user-paper { --bbx-selection: #55213b; --bbx-selection-ink: #edf3e4; }
 [data-chrome-theme="veil"] .bbx-chat-user-paper :is(.bbx-chat-user-status, .bbx-chat-user-attachment-summary) { color: #55213b; }
 [data-chrome-theme="veil"] .bbx-chat-user-paper :is(.bbx-chat-user-token, .bbx-chat-user-attachment, .bbx-chat-user-attachment-badge) { background: #ffffff45; color: #55213b; }
 [data-chrome-theme="veil"] .bbx-chat-user-attachment:hover { background: #ffffff80; }
 [data-chrome-theme="veil"] .bbx-chat-user-unsure { text-decoration-color: #8e2b55; }
 [data-chrome-theme="veil"] .bbx-chat-reply-material {
-  --bbx-ink: #263f37;
-  --bbx-ink-soft: #647257;
-  --bbx-pen: #8e2b55;
   --bbx-edge: #8a9b73;
 }
 [data-chrome-theme="veil"] :is(.bbx-chat-reply-material, .bbx-chat-callout) .prose:not(.bbx-card-theme *) {
@@ -42,7 +39,7 @@
 }
 [data-chrome-theme="veil"] :is(.bbx-chat-meta-material, .bbx-chat-pending-material, .bbx-chat-empty-label) { color: #647257; background: #edf3e4; border-radius: 8px; }
 [data-chrome-theme="veil"] :is(.bbx-chat-pending-material, .bbx-chat-empty-label) { padding: 6px 10px; }
-[data-chrome-theme="veil"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) { color: #647257; }
+[data-chrome-theme="veil"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) { --bbx-ink: #263f37; --bbx-ink-soft: #5d6a51; --bbx-pen: #8e2b55; }
 [data-chrome-theme="veil"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) { color: #263f37; }
 [data-chrome-theme="veil"] #bbx-chat-load-older { background: #edf3e4; color: #8e2b55; border-radius: 8px; }
 [data-chrome-theme="veil"] #bbx-chat-load-older:enabled:hover { text-decoration: underline; }

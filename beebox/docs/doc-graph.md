@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-10-21T18:12:20Z
-Total documents: 554
+Generated: 2026-10-22T02:39:01Z
+Total documents: 555
 
 ## Issues
 
@@ -2302,10 +2302,11 @@ References:
 
 #### docs/theme-authoring.md
 
-Title: "Authoring themes" | 77 lines | current reference
+Title: "Authoring themes" | 95 lines | current reference
 
 Referenced by:
 - docs/implemented-plans/theme-contrast-audit.md:54 (mention) — About 850 lines plus docs (theme-authoring.md, bbx-theme skill, tours doc:
+- docs/implemented-plans/theme-studio.md:124 (mention) — `docs/theme-authoring.md`, "chrome hooks").
 - frontend.md:230 (link) — [theme authoring studio](docs/theme-authoring.md).
 - ../.claude/skills/bbx-theme/SKILL.md:8 (mention) — Read `beebox/docs/theme-authoring.md` for the studio and material hooks.
 
@@ -2504,7 +2505,7 @@ Title: "Card themes" | 285 lines | current reference
 Referenced by:
 - docs/cards/schemas.md:80 (link) — - Cards also accept the optional `theme: {name, stock?}` presentation choice. It is catalog-validated against the built-
 - docs/implemented-plans/card-reading-properties.md:409 (mention) — 5. Docs: `docs/box/card-themes.md:12-13`, `docs/cards/schemas.md:79`, the
-- docs/theme-authoring.md:62 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
+- docs/theme-authoring.md:80 (link) — `src/shared/card-theme/catalog.ts` (beebox-relative). See [card themes](box/card-themes.md).
 - frontend.md:13 (link) — Properties; see [`docs/box/card-themes.md`](docs/box/card-themes.md) for the
 
 #### docs/box/history.md
@@ -7188,6 +7189,25 @@ References:
 - → ../issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md (frontmatter)
 - → docs/theme-authoring.md (mention)
 
+#### docs/implemented-plans/theme-studio.md
+
+Title: "Theme studio: show what the app shows, at screen scale" | 389 lines | shipped history | implemented
+
+Referenced by:
+- ../issues/closed/code-quality/2026-10-21-base-warm-text-scale-contrast.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). Direction
+- ../issues/closed/code-quality/2026-10-21-chat-material-themed-by-utility-class-overrides.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). Chat root
+- ../issues/closed/code-quality/2026-10-21-theme-check-captures-paint-backdrops-at-capture-height.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). The studi
+- ../issues/closed/features/2026-10-21-theme-studio-lacks-app-nav-specimen.md:11 (mention) — > **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). The studi
+- ../issues/features/2026-10-21-theme-studio-live-contrast-overlay.md:7 (mention) — discovered-in: worktree-theme-audit — plan theme-studio.md, "NOT in scope"
+
+References:
+- → ../issues/closed/features/2026-10-21-theme-studio-lacks-app-nav-specimen.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-21-theme-check-captures-paint-backdrops-at-capture-height.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-21-chat-material-themed-by-utility-class-overrides.md (frontmatter)
+- → ../issues/closed/code-quality/2026-10-21-base-warm-text-scale-contrast.md (frontmatter)
+- → docs/theme-authoring.md (mention)
+- → docs/testing/tours.md (mention)
+
 #### docs/implemented-plans/todo-annotation.md
 
 Title: "`{% todo %}` — universal todo annotation" | 599 lines | shipped history | implemented
@@ -9876,6 +9896,7 @@ Referenced by:
 - docs/implemented-plans/card-themes.md:84 (mention) — | `docs/tours.md`, Running/Artifacts: `bin/tour`; tours "are still not a test gate" | Reuse the scripted browser tour fr
 - docs/implemented-plans/card-themes.md:564 (link) — exhibit. Check contrast independently because [tours](../testing/tours.md) documents that
 - docs/implemented-plans/doc-structure.md:103 (mention) — `tours.md`, `knowledge-audits.md`, `knowledge-taxonomy.md`,
+- docs/implemented-plans/theme-studio.md:380 (mention) — added), `docs/testing/tours.md` if theme-check output changes.
 - docs/plans/agent-docs.md:383 (mention) — - held back (dev process or internal record): `testing.md`, `tours.md`,
 - docs/plans/agent-points-at-ui.md:135 (mention) — out of `bin/browse snapshot`, and `docs/tours.md:39-50` archives
 - docs/plans/public-site.md:97 (mention) — `docs/tours.md:39-50`) — the future automated-screenshot pipeline if

@@ -29,8 +29,7 @@
 }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(
   .bbx-conversation-desk, .bbx-companion-desk[data-active-card],
-  .bbx-interface-card-desk[data-card-content="card"],
-  .bbx-interface-browse-panel[data-card-content="card"]
+  .bbx-interface-card-desk[data-card-content="card"]
 ) { background: transparent; }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-interface-tabstrip > [role="none"]::before,
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-interface-tabstrip > [role="none"]::after {
@@ -46,7 +45,7 @@
 }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-app-nav :is(
   #bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile,
-  #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat
+  #bbx-nav-todo, #bbx-nav-questions
 ) {
   background-color: #174d53;
   color: #e0f5e9;
@@ -70,7 +69,7 @@
   background: transparent;
   border-top: 0;
 }
-.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material > div.sm\:hidden.bg-gradient-to-r,
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material > .bbx-composer-mobile-row,
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material textarea {
   background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
   color: #e0f5e9;
@@ -78,7 +77,7 @@
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material textarea::placeholder { color: #bfe2d8; }
 /* Enabled sends and the idle mic only; preserve recording and disabled cues. */
 .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled,
-.bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-composer-mic.bg-primary {
+.bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-composer-mic[data-mic="idle"] {
   background-color: #ffd38b;
   color: #174b4d;
   border: 1px solid #5caaa4;
@@ -89,7 +88,7 @@
   color: #e0f5e9;
 }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(#bbx-composer-send, #bbx-composer-send-mobile):enabled:hover,
-.bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-composer-mic.bg-primary:hover {
+.bbx-box-presentation[data-chrome-theme="night-atlas"] #bbx-composer-mic[data-mic="idle"]:hover {
   background-color: #ffe6bc;
 }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-user-paper {
@@ -114,9 +113,6 @@
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-user-unsure { text-decoration-color: #23666a; }
 /* Explicit nested cards reset material variables and keep their own colors. */
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-reply-material {
-  --bbx-ink: #e0f5e9;
-  --bbx-ink-soft: #bfe2d8;
-  --bbx-pen: #ffd38b;
   --bbx-edge: #5caaa4;
   background: linear-gradient(135deg, #24676555, transparent 48%, #0a394633), #124e53;
   color: var(--bbx-ink);
@@ -164,9 +160,12 @@
   border-radius: 12px;
   padding: 6px 10px;
 }
-/* Activity captions need light ink; raw tool details keep light surfaces. */
-.bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) {
-  color: #bfe2d8;
+/* Chat material ink, read by text in the reply, pending and meta materials.
+   Raw tool details are light plates (chrome.css, .bbx-chat-plate). */
+.bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
+  --bbx-ink: #e0f5e9;
+  --bbx-ink-soft: #bfe2d8;
+  --bbx-pen: #ffd38b;
 }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-reply-material summary:hover:not(.bbx-card-theme *) {
   color: #e0f5e9;
@@ -254,7 +253,7 @@
   border-radius: 8px;
   box-shadow: inset 0 1px #b1e9d51a;
 }
-.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-place-pill :is(.text-white, .text-white\/70, .text-white\/80) { color: #174b4d; }
+.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-place-pill :is(#bbx-nav-place, #bbx-nav-here) { color: #174b4d; }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material {
   color-scheme: dark;
   border: 1px solid #5caaa4;
@@ -263,9 +262,6 @@
 .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-composer-material :is(button, textarea):focus-visible {
   outline: 2px solid #ffd38b;
   outline-offset: 2px;
-}
-.bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-reply-material .bg-warm-50:not(.bbx-card-theme *) {
-  color: #302f2d;
 }
 
 
@@ -288,9 +284,11 @@
     color: #000;
   }
   .bbx-card-theme[data-card-theme="night-atlas"] :is(.bbx-blockquote, .bbx-quote-block),
-  .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-callout > .bbx-chat-callout-context,
-  .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) :is(.text-warm-500, .text-warm-600, .text-warm-700, .text-warm-800, .text-primary):not(button):not(.bbx-card-theme *):not(.bg-warm-50):not(.bg-warm-50 *) {
+  .bbx-box-presentation[data-chrome-theme="night-atlas"] .bbx-chat-callout > .bbx-chat-callout-context {
     color: #333; background: transparent; box-shadow: none;
+  }
+  .bbx-box-presentation[data-chrome-theme="night-atlas"] :is(.bbx-chat-reply-material, .bbx-chat-pending-material, .bbx-chat-meta-material) {
+    --bbx-ink: #000; --bbx-ink-soft: #333; --bbx-pen: #000;
   }
 }
 .bbx-box-presentation[data-chrome-theme="night-atlas"] [aria-label="Pane controls"] button {

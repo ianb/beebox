@@ -174,10 +174,14 @@ export function touchesThemeSurface(paths: string[]): boolean {
     "beebox/src/frontend/tailwind.config.js",
     "beebox/src/frontend/src/pages/dev/theme-studio",
     "beebox/src/frontend/src/pages/dev/ThemeStudioPage.tsx",
-    "beebox/src/frontend/src/pages/dev/components/ThemeStudioHarness.tsx",
+    "beebox/src/frontend/src/pages/dev/components/ThemeStudio",
     "beebox/src/shared/card-theme/",
+    "beebox/src/shared/theme-screens.ts",
+    "beebox/src/shared/theme-studio-case.ts",
     "beebox/test/tours/theme-check.ts",
     "beebox/test/tours/tour-lib/contrast",
+    "beebox/test/tours/tour-lib/backdrop",
+    "beebox/test/tours/tour-lib/rules",
     "bin/theme-check",
   ];
   return paths.some((path) => prefixes.some((prefix) => path.startsWith(prefix)));

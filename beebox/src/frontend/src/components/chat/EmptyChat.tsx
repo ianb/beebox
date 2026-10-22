@@ -1,6 +1,7 @@
 import { ChatOpeners } from "../openers/ChatOpeners";
 import type { OpenerSendOutcome } from "../openers/opener-send";
 import { InlineAction } from "../ui/InlineAction";
+import { MaterialContext } from "../ui/material";
 import { moreQuestionsLabel, openQuestionLine, type OpenQuestion } from "./open-question";
 
 /**
@@ -22,17 +23,19 @@ function OpenQuestionLine({ question, onFocusComposer, onNotNow, onOpenQuestions
   return (
     // On the desk, like the "Start a conversation." line: themes dress the
     // pending-material plate, and everything inside takes its ink.
-    <div className="bbx-chat-pending-material flex flex-col items-center gap-1 max-w-md text-center text-warm-900" data-testid="chat-open-question">
-      <button type="button" className="text-left text-lg leading-snug" onClick={onFocusComposer} data-question-path={question.path}>
-        {openQuestionLine(question)}
-      </button>
-      {question.memo === null ? null : <p className="text-sm">{question.memo}</p>}
-      <p className="text-sm">
-        {question.optionsBeyond > 0 ? <><InlineAction intent="quiet" className="underline" onClick={onOpenQuestions}>All the choices</InlineAction>{" · "}</> : null}
-        {more === null ? null : <><InlineAction intent="quiet" className="underline" onClick={onOpenQuestions}>{more}</InlineAction>{" · "}</>}
-        <InlineAction intent="quiet" className="underline" onClick={() => onNotNow(question.path)}>Not now</InlineAction>
-      </p>
-    </div>
+    <MaterialContext.Provider value>
+      <div className="bbx-chat-pending-material flex flex-col items-center gap-1 max-w-md text-center text-card-ink" data-testid="chat-open-question">
+        <button type="button" className="text-left text-lg leading-snug" onClick={onFocusComposer} data-question-path={question.path}>
+          {openQuestionLine(question)}
+        </button>
+        {question.memo === null ? null : <p className="text-sm">{question.memo}</p>}
+        <p className="text-sm">
+          {question.optionsBeyond > 0 ? <><InlineAction intent="quiet" className="underline" onClick={onOpenQuestions}>All the choices</InlineAction>{" · "}</> : null}
+          {more === null ? null : <><InlineAction intent="quiet" className="underline" onClick={onOpenQuestions}>{more}</InlineAction>{" · "}</>}
+          <InlineAction intent="quiet" className="underline" onClick={() => onNotNow(question.path)}>Not now</InlineAction>
+        </p>
+      </div>
+    </MaterialContext.Provider>
   );
 }
 

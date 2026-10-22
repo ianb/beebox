@@ -76,7 +76,7 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
     return (
       <AdminSectionCard id="google-services" description={DESCRIPTION} busy>
         <ArrivalNotice arrival={notice} />
-        <p className="text-sm text-warm-600">Checking status...</p>
+        <p className="text-sm text-warm-700">Checking status...</p>
       </AdminSectionCard>
     );
   }
@@ -85,7 +85,7 @@ export function GoogleServicesSection({ arrival, arrivalReceipt, onArrivalConsum
     return (
       <AdminSectionCard id="google-services" description={DESCRIPTION}>
         <ArrivalNotice arrival={notice} />
-        <p className="text-sm text-warm-600">Google OAuth is not configured on this host.</p>
+        <p className="text-sm text-warm-700">Google OAuth is not configured on this host.</p>
       </AdminSectionCard>
     );
   }

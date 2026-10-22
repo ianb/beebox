@@ -33,7 +33,7 @@ export function RecentFilesPanel({ entries, onPanel }: RecentFilesPanelProps) {
 
   if (files.length === 0) {
     return (
-      <div className="px-3 py-4 text-warm-500 italic flex items-center gap-2">
+      <div className="px-3 py-4 text-warm-700 italic flex items-center gap-2">
         <DirectoryIcon size={16} />
         {isLoading ? "Loading…" : "No recent files yet"}
       </div>

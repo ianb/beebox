@@ -12,5 +12,5 @@ export interface HintProps {
 
 /** Secondary explanatory text under a heading or control. A block paragraph. */
 export function Hint({ children, className, material }: HintProps) {
-  return <p className={cn("text-sm", useMaterial(material) ? "text-card-soft" : "text-warm-500", className)}>{children}</p>;
+  return <p className={cn("text-sm", useMaterial(material) ? "text-card-soft" : "text-warm-700", className)}>{children}</p>;
 }

@@ -92,17 +92,17 @@ function DefaultMiddle({ data, compact, hidePath }: { data: FileSummary<unknown>
       {/* The card type's own second line — a status, a count, a date. It sits
           above `contains:` because the type wrote it about this card. */}
       {data.detail === undefined ? null : (
-        <div className="truncate text-xs text-warm-600" title={data.detail}>
+        <div className="truncate text-xs text-warm-700" title={data.detail}>
           {data.detail}
         </div>
       )}
       {compact || data.contains === undefined ? null : (
-        <div className="truncate text-xs text-warm-600" title={data.contains}>
+        <div className="truncate text-xs text-warm-700" title={data.contains}>
           {data.contains}
         </div>
       )}
       {compact || hidePath ? null : (
-        <div className="truncate text-xs text-warm-500" title={data.path}>
+        <div className="truncate text-xs text-warm-700" title={data.path}>
           {data.path}
         </div>
       )}
@@ -110,7 +110,7 @@ function DefaultMiddle({ data, compact, hidePath }: { data: FileSummary<unknown>
   );
 }
 
-const rightIconClass = "flex-shrink-0 p-1.5 rounded text-warm-500 hover:text-warm-700 hover:bg-warm-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+const rightIconClass = "flex-shrink-0 p-1.5 rounded text-warm-600 hover:text-warm-700 hover:bg-warm-200 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
 function ExpandedControls({
   summary, onCollapse, onPanel,
@@ -156,7 +156,7 @@ function TitleSlot({ summary, compact, hidePath, boxSlug }: { summary: FileSumma
         this is, and the mark says which one it is. Most cards have no mark, so
         most rows still show the type icon — CardMark falls back to it.
       */}
-      <span className="flex-shrink-0 text-warm-500">
+      <span className="flex-shrink-0 text-warm-600">
         <CardMark symbol={summary.symbol ?? null} size="sm" boxSlug={boxSlug} fallback={<Icon size={18} />} />
       </span>
       <div className="flex-1 min-w-0">

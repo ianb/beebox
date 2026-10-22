@@ -57,7 +57,7 @@ function BinaryFilePreview({ file, hash }: { file: DiffFile; hash: string }) {
 
 export function DiffTab({ files, hash }: { files: DiffFile[]; hash: string }) {
   if (files.length === 0) {
-    return <div className="text-sm text-warm-500 italic p-4">No edited files</div>;
+    return <div className="text-sm text-warm-700 italic p-4">No edited files</div>;
   }
 
   return (
@@ -101,7 +101,7 @@ export function DiffTab({ files, hash }: { files: DiffFile[]; hash: string }) {
 
 export function NewFilesTab({ files, hash }: { files: DiffFile[]; hash: string }) {
   if (files.length === 0) {
-    return <div className="text-sm text-warm-500 italic p-4">No new files</div>;
+    return <div className="text-sm text-warm-700 italic p-4">No new files</div>;
   }
 
   return (
@@ -134,7 +134,7 @@ export function NewFilesTab({ files, hash }: { files: DiffFile[]; hash: string }
 
 export function MovedTab({ files }: { files: DiffFile[] }) {
   if (files.length === 0) {
-    return <div className="text-sm text-warm-500 italic p-4">No moved files</div>;
+    return <div className="text-sm text-warm-700 italic p-4">No moved files</div>;
   }
 
   return (
@@ -143,8 +143,8 @@ export function MovedTab({ files }: { files: DiffFile[] }) {
         <div key={fi} className="text-xs text-warm-700 py-0.5">
           {file.move ? (
             <div>
-              <div>{file.move.basename} <span className="text-warm-500">moved</span></div>
-              <div className="text-warm-500 ml-3">
+              <div>{file.move.basename} <span className="text-warm-700">moved</span></div>
+              <div className="text-warm-700 ml-3">
                 {file.move.fromDir} → {file.move.toDir}
               </div>
             </div>
@@ -152,7 +152,7 @@ export function MovedTab({ files }: { files: DiffFile[] }) {
             <div>
               {file.path}
               {file.meta.map((m, mi) => (
-                <span key={mi} className="text-warm-500 ml-1">({m})</span>
+                <span key={mi} className="text-warm-700 ml-1">({m})</span>
               ))}
             </div>
           )}

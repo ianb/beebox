@@ -104,7 +104,6 @@
 .bbx-card-surface[data-card-theme="paper"] > .bbx-card-heading {
   padding-top: 1.875rem;
 }
-.bbx-card-heading h1,
 .bbx-card-heading h2 {
   margin: 0;
   color: var(--bbx-ink);
@@ -113,7 +112,6 @@
   line-height: 1.3;
   overflow-wrap: anywhere;
 }
-.bbx-card-surface[data-card-theme="paper"] > .bbx-card-heading h1,
 .bbx-card-surface[data-card-theme="paper"] > .bbx-card-heading h2 {
   font-size: 1.6rem;
 }
@@ -468,16 +466,17 @@
   text-align: left;
   min-width: 0;
 }
+/* Pressed and hover change the edge only: a light wash under the label would
+   lift a dark back's paper past what its soft ink was chosen for. */
 .bbx-theme-swatch-button[aria-pressed="true"] {
   border-color: var(--bbx-pen);
-  background: #ffffff40;
 }
 .bbx-theme-swatch-button:focus-visible {
   outline: 2px solid var(--bbx-pen);
   outline-offset: 2px;
 }
-.bbx-theme-swatch-button:hover {
-  background: #ffffff50;
+.bbx-theme-swatch-button:not([aria-pressed="true"]):hover {
+  border-color: var(--bbx-rule-strong);
 }
 .bbx-theme-swatch-button:disabled {
   opacity: 0.6;

@@ -37,8 +37,8 @@ export interface TextProps {
 
 const TONE_CLASSES: Record<TextTone, string> = {
   default: "text-warm-900",
-  muted: "text-warm-500",
-  subtle: "text-warm-600",
+  muted: "text-warm-700",
+  subtle: "text-warm-700",
   emphasis: "text-warm-700",
   strong: "text-warm-900",
   danger: "text-danger-dark",

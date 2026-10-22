@@ -29,7 +29,7 @@ export function ClaudeCodeSection() {
   if (isLoading) {
     return (
       <AdminSectionCard id="claude-code" description={DESCRIPTION} busy>
-        <p className="text-sm text-warm-600">Checking status...</p>
+        <p className="text-sm text-warm-700">Checking status...</p>
       </AdminSectionCard>
     );
   }
@@ -50,7 +50,7 @@ export function ClaudeCodeSection() {
         <div className="mb-4 p-3 bg-warm-50 border border-warm-300 rounded text-sm text-warm-700">
           Not authenticated
           {status?.error ? (
-            <span className="text-warm-500 ml-2">({status.error})</span>
+            <span className="text-warm-700 ml-2">({status.error})</span>
           ) : null}
         </div>
       )}

@@ -49,7 +49,7 @@ void test("markUnsureWords now wraps whole PHRASE SPANS, not single words — th
 // raw tag never shows in the message.
 void test("When live dictation heard a send command that the HQ text did not reproduce,...", async (t) => {
   const liveOut = render('<speech stt="whisper-llm-mini">something more like that <send-message phrase="Send message." heard="live" /></speech>');
-  await t.checkText(liveOut, "<span>something more like that </span><span class=\"bbx-chat-user-token inline-flex items-center gap-1 bg-white/20 rounded-full px-2 py-0.5 text-xs font-medium\"><svg class=\"w-3 h-3\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5\"></path></svg>Send message.</span>");
+  await t.checkText(liveOut, "<span>something more like that </span><span class=\"bbx-chat-user-token inline-flex items-center gap-1 bg-black/15 rounded-full px-2 py-0.5 text-xs font-medium\"><svg class=\"w-3 h-3\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5\"></path></svg>Send message.</span>");
 });
 
 // ## No marks at all — message renders unchanged, no pill machinery kicks in

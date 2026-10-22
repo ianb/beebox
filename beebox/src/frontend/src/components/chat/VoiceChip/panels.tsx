@@ -39,7 +39,7 @@ export function capabilityReason(state: ServiceCapability | undefined): string |
  * inventing a second rendering. */
 function CapabilityNote({ needs }: { needs: readonly string[] }) {
   return (
-    <span className="block pl-4 text-xs text-warm-500">
+    <span className="block pl-4 text-xs text-warm-700">
       needs the <code className="font-mono">{formatSecretNeeds(needs)}</code> secret — Admin → Secrets
     </span>
   );
@@ -139,17 +139,17 @@ export function VoicePanel({
   return (
     <>
       <MenuItem id="bbx-voice-settings-back" onClick={onBack} keepOpen>
-        <span className="text-warm-500">‹ Voice settings</span>
+        <span className="text-warm-700">‹ Voice settings</span>
       </MenuItem>
       <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">While you speak</div>
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-700">While you speak</div>
       {TRANSCRIPTION_OPTIONS.map((opt) => (
         <MenuItem key={opt.service} id={`bbx-voice-live-${opt.service}`} onClick={() => onSelectTranscriptionService(opt.service)} keepOpen>
           {currentService === opt.service ? "✓ " : "  "}{opt.label}
         </MenuItem>
       ))}
       <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">Final transcript (after recording)</div>
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-700">Final transcript (after recording)</div>
       {HQ_TRANSCRIPTION_OPTIONS.map((opt) => {
         const isSelected = currentHqService === opt.service;
         const cap = capabilities?.hq[opt.service];
@@ -170,7 +170,7 @@ export function VoicePanel({
         );
       })}
           <MenuDivider />
-      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-500">When the box speaks</div>
+      <div className="px-3 py-1 text-xs font-medium uppercase tracking-wide text-warm-700">When the box speaks</div>
       {TTS_BACKEND_OPTIONS.map((opt) => {
         const isSelected = currentTtsBackend === opt.backend;
         const cap = capabilities?.tts[opt.backend];
@@ -185,7 +185,7 @@ export function VoicePanel({
           >
             <span>
               {isSelected ? "✓ " : "  "}{opt.label}
-              {opt.note !== undefined && <span className="block pl-4 text-xs text-warm-500">{opt.note}</span>}
+              {opt.note !== undefined && <span className="block pl-4 text-xs text-warm-700">{opt.note}</span>}
               {reason !== null && cap !== undefined && <CapabilityNote needs={cap.needs} />}
             </span>
           </MenuItem>

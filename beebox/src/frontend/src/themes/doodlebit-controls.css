@@ -1,6 +1,6 @@
 /* Pixel icons keep normal compact control labels and live recording cues. */
-[data-chrome-theme="doodlebit"] :is(#bbx-composer-add,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic.bg-primary) svg { opacity: 0; }
-[data-chrome-theme="doodlebit"] :is(#bbx-composer-add,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic.bg-primary)::after {
+[data-chrome-theme="doodlebit"] :is(#bbx-composer-add,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic[data-mic="idle"]) svg { opacity: 0; }
+[data-chrome-theme="doodlebit"] :is(#bbx-composer-add,#bbx-composer-send,#bbx-composer-send-mobile,#bbx-composer-mic[data-mic="idle"])::after {
   content: ""; position: absolute; inset: 50% auto auto 50%; width: 24px; height: 24px; transform: translate(-50%,-50%); background: currentColor;
   mask: var(--pixel-icon) center / contain no-repeat;
 }
@@ -10,7 +10,7 @@
 [data-chrome-theme="doodlebit"] :is(#bbx-composer-send,#bbx-composer-send-mobile) {
   --pixel-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M7 1h2v2h2v2h2v2h2v2h-2V7h-2V5H9v10H7V5H5v2H3v2H1V7h2V5h2V3h2z'/%3E%3C/svg%3E");
 }
-[data-chrome-theme="doodlebit"] #bbx-composer-mic.bg-primary {
+[data-chrome-theme="doodlebit"] #bbx-composer-mic[data-mic="idle"] {
   --pixel-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M6 0h4v2h2v6h-2v2H6V8H4V2h2zM1 6h2v4h2v2h6v-2h2V6h2v4h-2v2h-2v2H9v1h3v1H4v-1h3v-1H5v-2H3v-2H1z'/%3E%3C/svg%3E");
 }
 [data-chrome-theme="doodlebit"] .bbx-composer-material textarea { border-radius: 0; border-color: transparent; box-shadow: none; }
@@ -37,13 +37,13 @@
   65% { transform: translateY(-2px) rotate(2deg); }
 }
 @media (prefers-reduced-motion: no-preference) and (hover: hover) {
-  [data-chrome-theme="doodlebit"] :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, #bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary, #bbx-composer-capture, #bbx-composer-keyboard):enabled:hover {
+  [data-chrome-theme="doodlebit"] :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"], #bbx-composer-capture, #bbx-composer-keyboard):enabled:hover {
     animation: doodlebit-control-wiggle 280ms steps(2, end) 1;
     transform: translateY(-2px);
   }
 }
 @media (prefers-reduced-motion: no-preference) {
-  [data-chrome-theme="doodlebit"] :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-nav-todo, #bbx-nav-questions, #bbx-nav-back-to-chat, #bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary, #bbx-composer-capture, #bbx-composer-keyboard):enabled:active {
+  [data-chrome-theme="doodlebit"] :is(#bbx-nav-session, #bbx-nav-voice, #bbx-nav-profile, #bbx-composer-add, #bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"], #bbx-composer-capture, #bbx-composer-keyboard):enabled:active {
     animation: none;
     transform: translate(2px, 2px) scaleY(.94);
     box-shadow: none;

@@ -326,7 +326,7 @@ export function ControlPointer({ id, action, description, unknownAction, childre
         <PointerIcon />
         {children}
       </button>
-      {description === null ? null : <span className="text-warm-600"> — {description}</span>}
+      {description === null ? null : <span className="text-warm-700"> — {description}</span>}
       {ring === null ? null : (
         <ControlRing key={ring.seq} target={ring.element} onDone={() => setRing(null)} />
       )}

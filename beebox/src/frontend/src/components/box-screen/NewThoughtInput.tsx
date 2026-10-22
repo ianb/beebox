@@ -54,7 +54,7 @@ export function NewThoughtInput({ draft, onChange, onSend, sending, status }: {
             {sending ? "Sending…" : "Send"}
           </Button>
         </Row>
-        <p role="status" className="text-sm text-warm-500 empty:hidden">{status}</p>
+        <p role="status" className="text-sm text-warm-700 empty:hidden">{status}</p>
       </div>
     </form>
   );

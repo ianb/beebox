@@ -28,7 +28,7 @@ export interface InlineActionProps {
 
 const INTENT_CLASSES: Record<InlineActionIntent, string> = {
   emphatic: "text-primary hover:text-primary-dark underline",
-  subtle: "text-warm-600 hover:text-warm-900 underline",
+  subtle: "text-warm-700 hover:text-warm-900 underline",
   danger: "text-danger hover:text-danger-dark underline",
   quiet: "text-left hover:underline",
 };

@@ -1,11 +1,14 @@
 ---
 title: "Base secondary text (warm-500/600) is below WCAG AA on light surfaces; move it to warm-700"
-workstream: unattached
+workstream: theme-audit
 area: beebox
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-theme-audit — tour checkpoints now run the pixel contrast audit
+resolution: implemented
 ---
+
+> **Closed:** resolved on `worktree-theme-audit` (plan `theme-studio.md`, landed in the merge of that branch). Direction 2 shipped: `text-warm-500/600` text moved to `warm-700` across about 90 files; icon-only sites moved to `warm-600`. The scale in `tailwind.config.js` is unchanged.
 
 Every tour checkpoint now reports text below WCAG AA. On the plain (Flat)
 app the remaining misses are the base warm scale used as secondary text:

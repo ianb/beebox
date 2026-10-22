@@ -79,7 +79,7 @@ export function buildAudioBadgeSpecs(overlay: AudioOverlayEntry, originalText: s
       label: service ? `Retranscribed — ${service}` : "Retranscribed",
       detail: (
         <>
-          <div className="text-warm-500 text-[10px] uppercase tracking-wide mt-1.5">realtime transcript</div>
+          <div className="text-warm-700 text-[10px] uppercase tracking-wide mt-1.5">realtime transcript</div>
           <div className="mt-0.5 whitespace-pre-wrap">{originalText}</div>
         </>
       ),
@@ -93,7 +93,7 @@ export function buildAudioBadgeSpecs(overlay: AudioOverlayEntry, originalText: s
       label: "This recording was analyzed",
       detail: (
         <>
-          <div className="text-warm-500 text-[10px] uppercase tracking-wide mt-1.5">
+          <div className="text-warm-700 text-[10px] uppercase tracking-wide mt-1.5">
             {questions.length === 1 ? "question asked" : "questions asked"}
           </div>
           {questions.map((q) => (

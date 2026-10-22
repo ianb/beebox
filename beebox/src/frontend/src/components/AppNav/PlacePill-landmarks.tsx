@@ -21,7 +21,7 @@ export interface SwitchLandmark {
 
 function FreshCount({ count }: { count: number }) {
   if (count === 0) return null;
-  return <span className="ml-auto shrink-0 text-xs text-warm-500 tabular-nums">{count}</span>;
+  return <span className="ml-auto shrink-0 text-xs text-warm-700 tabular-nums">{count}</span>;
 }
 
 function handleSearchKeyDown(event: ReactKeyboardEvent<HTMLInputElement>, {
@@ -165,7 +165,7 @@ export function LandmarkList({
 
   if (landmarks === null) {
     if (failed) return <MenuItem id="bbx-switch-menu-landmarks-retry" onClick={onRetry} keepOpen danger>Couldn&rsquo;t load this menu — Retry</MenuItem>;
-    return <div className="px-3 py-2 text-warm-500">Loading…</div>;
+    return <div className="px-3 py-2 text-warm-700">Loading…</div>;
   }
 
   const normalizedQuery = query.trim().toLocaleLowerCase();

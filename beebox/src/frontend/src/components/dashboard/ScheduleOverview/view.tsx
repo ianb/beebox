@@ -46,7 +46,7 @@ function formatDurationMs(ms: number): string {
 
 function BudgetIndicator({ budget }: { budget: { limitMs: number; windowMs: number; usedMs: number } }) {
   const exceeded = budget.usedMs >= budget.limitMs;
-  const cls = exceeded ? "text-danger-dark font-medium" : "text-warm-500";
+  const cls = exceeded ? "text-danger-dark font-medium" : "text-warm-700";
   return (
     <span className={`ml-1 ${cls}`} title={`${formatDurationMs(budget.usedMs)} used of ${formatDurationMs(budget.limitMs)} budget in ${formatDurationMs(budget.windowMs)} window`}>
       [{formatDurationMs(budget.usedMs)}/{formatDurationMs(budget.limitMs)}]
@@ -105,7 +105,7 @@ function ScheduleNameCell({ s }: { s: ScheduleInfo }) {
       <div>
         <span className="font-medium text-warm-900">{s.name}</span>
         {s.description ? (
-          <span className="block text-xs text-warm-600">{s.description}</span>
+          <span className="block text-xs text-warm-700">{s.description}</span>
         ) : null}
         {s.lastSummary === null ? null : s.lastSummary.priority === "attention" ? (
           <span className="block text-xs text-warm-800">
@@ -186,7 +186,7 @@ function ScheduleRow({ s }: { s: ScheduleInfo }) {
 function ScheduleTableHead() {
   return (
     <thead>
-      <tr className="text-left text-xs text-warm-600 border-b">
+      <tr className="text-left text-xs text-warm-700 border-b">
         <th className="pb-2 font-medium">Name</th>
         <th className="pb-2 font-medium">Schedule</th>
         <th className="pb-2 font-medium">Last Run</th>
@@ -229,7 +229,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
     return (
       <Card as="section" aria-label="Schedules" shadow border="none">
         <h2 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h2>
-        <p className="text-sm text-warm-500 animate-pulse">Loading...</p>
+        <p className="text-sm text-warm-700 animate-pulse">Loading...</p>
       </Card>
     );
   }
@@ -247,7 +247,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
     return (
       <Card as="section" aria-label="Schedules" shadow border="none">
         <h2 className="text-sm font-semibold text-warm-700 mb-2">Schedules</h2>
-        <p className="text-sm text-warm-500">No scheduled scripts in _config/schedules/</p>
+        <p className="text-sm text-warm-700">No scheduled scripts in _config/schedules/</p>
       </Card>
     );
   }
@@ -270,7 +270,7 @@ export function ScheduleOverview({ schedules, recentTicks, loading, error }: Sch
           >
             {showTicks ? "Hide" : "Show"} recent ticks ({recentTicks.length})
             {skippedCount > 0 && !showTicks ? (
-              <span className="ml-1 text-warm-500">
+              <span className="ml-1 text-warm-700">
                 &middot; {skippedCount} all-skipped
               </span>
             ) : null}

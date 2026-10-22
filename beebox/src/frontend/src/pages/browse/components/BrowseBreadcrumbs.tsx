@@ -56,7 +56,7 @@ export function BrowseBreadcrumbs({ dirPath, rootPath, onNavigate }: BrowseBread
         return (
           <Fragment key={segPath}>
             <wbr />
-            {i > 0 || !underRoot ? <span className="text-warm-500 px-0.5">/</span> : null}
+            {i > 0 || !underRoot ? <span className="text-warm-700 px-0.5">/</span> : null}
             {isLast ? (
               <span className="text-warm-700 font-medium px-0.5">{label}</span>
             ) : (

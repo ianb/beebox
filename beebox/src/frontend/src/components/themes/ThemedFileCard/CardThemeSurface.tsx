@@ -6,6 +6,7 @@ import type { CardSymbolData } from "@shared/card-symbol";
 import { CardMark } from "../../ui/CardMark";
 import { Text } from "../../ui/Text";
 import { CardContentsMenu } from "../../CardContents/CardContentsMenu";
+import { MaterialContext } from "../../ui/material";
 
 export interface CardThemeSurfaceProps {
   theme: ResolvedCardTheme;
@@ -21,6 +22,8 @@ export interface CardThemeSurfaceProps {
   properties: ReactNode;
   actions?: ReactNode;
   problem?: ReactNode;
+  /** The side shown first; the theme studio shows a back. Default `"front"`. */
+  initialSide?: "front" | "back";
 }
 
 /** Provided around the back face; exported so a test can render the face alone. */
@@ -41,8 +44,8 @@ export function useShowCardFront(): () => void {
 }
 
 /** Front stays mounted while turned over, retaining authored view state. */
-export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, children, properties, actions, problem }: CardThemeSurfaceProps) {
-  const [back, setBack] = useState(false);
+export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, children, properties, actions, problem, initialSide }: CardThemeSurfaceProps) {
+  const [back, setBack] = useState(initialSide === "back");
   const [turn, setTurn] = useState<"out" | "in" | null>(null);
   // React's `useId` spells its values with colons, which the control address
   // grammar has no room for, so the instance key is encoded rather than
@@ -118,7 +121,8 @@ export function CardThemeSurface({ theme, title, detail, symbol, boxSlug, mode, 
         {children}
       </div>
       <section id={backId} className="bbx-card-back" hidden={!back} aria-label="Card properties">
-        {back ? <ShowFrontContext.Provider value={showFront}>{properties}</ShowFrontContext.Provider> : null}
+        {/* The back of the card is its own paper: everything on it sits on the material. */}
+        {back ? <MaterialContext.Provider value><ShowFrontContext.Provider value={showFront}>{properties}</ShowFrontContext.Provider></MaterialContext.Provider> : null}
       </section>
     </article>
   );

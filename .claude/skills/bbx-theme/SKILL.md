@@ -14,10 +14,10 @@ During exploration and implementation for feedback:
   show a labeled exhibit.
 - Do not run tests, tours, change-selected suites, typecheck/lint sweeps,
   knowledge audits, or formal cross-model reviews before showing the result.
-- Do not introduce a plan/review gate for ordinary theme styling. Use existing
-  theme machinery; raise actual architecture changes separately if needed.
+- Do not add a plan/review gate for ordinary theme styling; raise architecture
+  changes separately.
 - Keep drafts in the studio. “Go with this” authorizes promotion of that choice;
-  it does not request landing checks. Leave automated verification for `$finish`.
+  it does not request landing checks.
 - Do not bypass commit hooks. If committing would start deferred checks, leave
   the iteration uncommitted and say so. Never claim deferred checks passed.
 

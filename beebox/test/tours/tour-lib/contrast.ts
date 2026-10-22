@@ -16,7 +16,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import Sharp from "sharp";
-import { COLLECT_SCRIPT, restoreAndMarkScript, type Material, type OverlayMark, type PageRuns, type TextRun } from "./contrast-page.js";
+import { COLLECT_SCRIPT, restoreAndMarkScript, type Material, type OverlayMark, type PageRuns, type RunLines, type TextRun } from "./contrast-page.js";
 
 export interface ContrastPage {
   eval(expression: string): Promise<string>;
@@ -106,10 +106,18 @@ function samplesOf(image: RawImage, { width, run }: { width: number; run: TextRu
   const scale = image.width / width;
   const out: Rgb[] = [];
   for (const rect of run.rects) {
-    const x0 = Math.max(0, Math.floor(rect.x * scale));
-    const y0 = Math.max(0, Math.floor(rect.y * scale));
-    const x1 = Math.min(image.width, Math.ceil((rect.x + rect.w) * scale));
-    const y1 = Math.min(image.height, Math.ceil((rect.y + rect.h) * scale));
+    // Whole pixels only: a pixel the box only partly covers is blended with
+    // its neighbour, such as the edge of a scroller or the panel above it.
+    const inner = (from: number, to: number): [number, number] => {
+      const [a, b] = [Math.ceil(from * scale), Math.floor(to * scale)];
+      return b > a ? [a, b] : [Math.floor(from * scale), Math.ceil(to * scale)];
+    };
+    const [ix0, ix1] = inner(rect.x, rect.x + rect.w);
+    const [iy0, iy1] = inner(rect.y, rect.y + rect.h);
+    const x0 = Math.max(0, ix0);
+    const y0 = Math.max(0, iy0);
+    const x1 = Math.min(image.width, ix1);
+    const y1 = Math.min(image.height, iy1);
     const step = Math.max(1, Math.floor(Math.sqrt(Math.max(1, (x1 - x0) * (y1 - y0)) / MAX_SAMPLES_PER_RECT)));
     for (let y = y0; y < y1; y += step) {
       for (let x = x0; x < x1; x += step) {
@@ -186,7 +194,7 @@ function parseEval(stdout: string): PageRuns {
 function marksFor(failures: readonly ContrastFailure[], page: PageRuns): OverlayMark[] {
   const perMaterial = new Map<number, number>();
   return failures.map((f) => {
-    if (f.kind !== "token") return { rects: page.runs[f.run]?.rects ?? [], label: f.kind === "text" ? `${f.ratio.toFixed(1)}:1` : `surface ${f.bg}` };
+    if (f.kind !== "token") return { rects: page.runs.find((run) => run.id === f.run)?.rects ?? [], label: f.kind === "text" ? `${f.ratio.toFixed(1)}:1` : `surface ${f.bg}` };
     const n = (perMaterial.get(f.material) ?? 0) + 1;
     perMaterial.set(f.material, n);
     const at = page.materials[f.material]?.at ?? { x: 0, y: 0, w: 1, h: 1 };
@@ -194,11 +202,60 @@ function marksFor(failures: readonly ContrastFailure[], page: PageRuns): Overlay
   });
 }
 
+/** One audit of the viewport. Run ids and line numbers are stable across audits of one page load. */
+export interface ContrastStep {
+  failures: ContrastFailure[];
+  /** Ids of the runs scored. */
+  runs: number[];
+  lines: RunLines[];
+  unmeasured: number[];
+}
+
 export interface ContrastResult {
   failures: ContrastFailure[];
   runs: number;
-  offscreen: number;
-  unmeasured: number;
+  /** Runs with a line no audit saw whole, by label. */
+  offscreen: string[];
+  /** Runs some audit could not score and whose lines no audit saw all of, by label. */
+  unmeasured: string[];
+}
+
+function failureKey(f: ContrastFailure): string {
+  return f.kind === "token" ? `token ${f.theme} ${f.fg} ${f.bg}` : `${f.kind} ${String(f.run)}`;
+}
+
+/**
+ * Merge audits of one page at several scroll positions. A failure counts once
+ * (its lowest ratio); a run is fully measured when every line was seen whole
+ * by some audit.
+ */
+export function mergeContrastSteps(steps: readonly ContrastStep[]): ContrastResult {
+  const failures = new Map<string, ContrastFailure>();
+  const total = new Map<number, number>();
+  const seen = new Map<number, Set<number>>();
+  const labels = new Map<number, string>();
+  for (const step of steps) {
+    for (const f of step.failures) {
+      const known = failures.get(failureKey(f));
+      if (known === undefined || f.ratio < known.ratio) failures.set(failureKey(f), f);
+    }
+    for (const { id, label, total: lines, whole } of step.lines) {
+      labels.set(id, label);
+      total.set(id, Math.max(total.get(id) ?? 0, lines));
+      const set = seen.get(id) ?? new Set<number>();
+      for (const n of whole) set.add(n);
+      seen.set(id, set);
+    }
+  }
+  const missed = [...total].filter(([id, lines]) => (seen.get(id)?.size ?? 0) < lines).map(([id]) => id);
+  const unmeasurable = new Set(steps.flatMap((s) => s.unmeasured));
+  const label = (id: number): string => labels.get(id) ?? `run ${String(id)}`;
+  return {
+    failures: [...failures.values()],
+    runs: new Set(steps.flatMap((s) => s.runs)).size,
+    offscreen: missed.filter((id) => !unmeasurable.has(id)).map(label),
+    unmeasured: missed.filter((id) => unmeasurable.has(id)).map(label),
+  };
 }
 
 /**
@@ -206,11 +263,15 @@ export interface ContrastResult {
  * failures stay drawn on the page for the caller's next screenshot; the next
  * audit or navigation removes them.
  */
-export async function auditContrast(page: ContrastPage, { outline }: { outline: boolean }): Promise<ContrastResult> {
+export async function auditContrast(page: ContrastPage, { outline, before }: {
+  outline: boolean;
+  /** Script statements run first in the same call, such as a scroll and a wait for the page to settle. */
+  before?: string;
+}): Promise<ContrastStep> {
   const dir = await mkdtemp(path.join(tmpdir(), "bbx-contrast-"));
   let marks: OverlayMark[] = [];
   try {
-    const runs = parseEval(await page.eval(COLLECT_SCRIPT));
+    const runs = parseEval(await page.eval(before === undefined ? COLLECT_SCRIPT : `(async () => { ${before}\nreturn ${COLLECT_SCRIPT}; })()`));
     const shot = path.join(dir, "background.png");
     await page.screenshot(shot);
     const { data, info } = await Sharp(shot).raw().toBuffer({ resolveWithObject: true });
@@ -219,7 +280,7 @@ export async function auditContrast(page: ContrastPage, { outline }: { outline: 
     }
     const failures = [...scoreRuns({ data, width: info.width, height: info.height, channels: info.channels }, runs), ...scoreMaterials(runs.materials)];
     if (outline) marks = marksFor(failures, runs);
-    return { failures, runs: runs.runs.length, offscreen: runs.offscreen, unmeasured: runs.unmeasured };
+    return { failures, runs: runs.runs.map(({ id }) => id), lines: runs.lines, unmeasured: runs.unmeasured };
   } finally {
     // One round trip: each browse call costs about a second.
     await page.eval(restoreAndMarkScript(marks));

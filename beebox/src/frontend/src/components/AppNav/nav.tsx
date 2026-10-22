@@ -38,7 +38,8 @@ import { useDeferredResync } from "../../hooks/useDeferredResync";
 import { trpc } from "../../lib/trpc/client";
 import { Dropdown } from "../ui/Dropdown";
 import { MenuItem, MenuDivider } from "../ui/dropdown-menu-item";
-import { Avatar } from "../ui/Avatar";
+import { AppNavFace } from "../app-bar-faces/AppNavFace";
+import { ProfileButtonFace } from "../app-bar-faces/ProfileButtonFace";
 import { href } from "../../lib/routing";
 import { withBase } from "../../api";
 import { PlacePill } from "./PlacePill";
@@ -62,30 +63,12 @@ function ProfileMenu({ user, boxSlug, onToggleDebugLog, onToggleSourceView }: { 
   return (
     <Dropdown
       align="right"
-      trigger={({ toggle, ariaProps }) => (
-        <button
-          type="button"
-          id="bbx-nav-profile"
-          data-bbx-reveal
-          data-bbx-does={`opens the profile menu — settings, admin, dashboard, browse, history, storage summary, source view, debug log, reload${user ? ", sign out" : ""}`}
-          onClick={toggle}
-          className="flex items-center gap-1.5 rounded-full hover:ring-2 hover:ring-white/30 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-          title={user ? user.name : "Menu"}
-          {...ariaProps}
-        >
-          <Avatar
-            name={user ? user.name : null}
-            email={user ? user.email : null}
-            picture={user ? user.picture : null}
-            fallbackClassName="bg-white/20 text-white"
-          />
-        </button>
-      )}
+      trigger={({ toggle, ariaProps }) => <ProfileButtonFace user={user} onClick={toggle} ariaProps={ariaProps} />}
     >
       {user ? (
         <div className="px-3 py-2 border-b border-warm-100">
           <div className="font-medium text-warm-900 truncate">{user.name}</div>
-          <div className="bbx-profile-email text-xs text-warm-500 truncate">{user.email}</div>
+          <div className="bbx-profile-email text-xs text-warm-700 truncate">{user.email}</div>
         </div>
       ) : null}
       <MenuItem id="bbx-profile-menu-settings" to={href(`${base}/views/${SYSTEM_CARD_PATHS.settings}`)} active={isOnSettings}>Settings</MenuItem>
@@ -157,16 +140,11 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const place = publishedPlace ?? placeLabel({ pathname: location.pathname, boxSlug: boxSlug ?? "" });
 
   return (
-    <nav aria-label="Primary" className="bbx-app-nav bg-gradient-to-r from-info-dark via-primary to-coral text-white flex-shrink-0 shadow-sm print:hidden">
-      <div className="flex items-center gap-2 px-3 sm:px-4 py-1.5 text-sm">
-        <PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} place={place} />
-        <div className="ml-auto flex items-center gap-2 shrink-0">
-          {/* Chat's session + voice chips portal in here (Track C2). */}
-          <AppBarChipSlot />
-          <AttentionBadges base={base} pendingQuestions={pendingQuestions} onPlateTodos={onPlateTodos} escalatedTodos={escalatedTodos} onToggleDebugLog={onToggleDebugLog} />
-          <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
-        </div>
-      </div>
-    </nav>
+    <AppNavFace pill={<PlacePill boxSlug={boxSlug ?? ""} boxName={boxName} place={place} />}>
+      {/* Chat's session + voice chips portal in here (Track C2). */}
+      <AppBarChipSlot />
+      <AttentionBadges base={base} pendingQuestions={pendingQuestions} onPlateTodos={onPlateTodos} escalatedTodos={escalatedTodos} onToggleDebugLog={onToggleDebugLog} />
+      <ProfileMenu user={currentUser} boxSlug={boxSlug || ""} onToggleDebugLog={onToggleDebugLog} onToggleSourceView={onToggleSourceView} />
+    </AppNavFace>
   );
 }

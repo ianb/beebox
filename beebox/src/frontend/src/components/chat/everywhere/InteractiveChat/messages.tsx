@@ -33,6 +33,7 @@ import { useCaptureAnchor } from "./use-capture-anchor";
 import type { CaptureBubbleModel, CaptureVerbs } from "../../capture-bubble";
 import type { AudioOverlayStore } from "../../audio-overlay-store";
 import type { PendingHq } from "../../../../machines/composerMachine";
+import { LoadOlderHeader } from "../../LoadOlderHeader";
 
 interface LiveTurnState { turnId: string | null; uuid: string | null }
 
@@ -92,25 +93,6 @@ function lastAssistantGroupIndexIn(data: DataItem[]): number {
   return -1;
 }
 
-function LoadOlderHeader({ hasOlder, loadingOlder, onLoadOlder }: {
-  hasOlder: boolean;
-  loadingOlder: boolean;
-  onLoadOlder: () => void;
-}) {
-  if (!hasOlder) return null;
-  return (
-    <div className="text-center py-2">
-      <button
-        id="bbx-chat-load-older"
-        onClick={onLoadOlder}
-        disabled={loadingOlder}
-        className="bbx-chat-meta-material text-sm text-primary hover:text-primary/80 disabled:text-warm-400"
-      >
-        {loadingOlder ? "Loading..." : "Show earlier messages"}
-      </button>
-    </div>
-  );
-}
 
 /**
  * Floating "jump to latest" affordance. Visible whenever the view is away from

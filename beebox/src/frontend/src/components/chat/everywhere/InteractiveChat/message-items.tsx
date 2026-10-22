@@ -311,7 +311,7 @@ export function renderDataItem(item: DataItem, row: { ctx: RenderItemContext; la
   if (item.kind === "marker") {
     return (
       <div className="flex justify-center py-1">
-        <div className="bbx-chat-meta-material text-[11px] text-warm-500 px-2.5 py-0.5 bg-warm-50 border border-warm-200 rounded-full">
+        <div className="bbx-chat-meta-material text-[11px] text-card-soft px-2.5 py-0.5 bg-warm-50 border border-warm-200 rounded-full">
           {item.marker.label}
         </div>
       </div>

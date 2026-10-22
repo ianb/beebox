@@ -106,8 +106,8 @@ function ChatHeader({
     <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-warm-300 bg-warm-50">
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{title ?? displayName(path)}</div>
-        {detail === undefined ? null : <div className="text-xs text-warm-600 truncate" title={detail}>{detail}</div>}
-        <div className="text-xs text-warm-500 truncate" title={toDisplayPath(path)}>{toDisplayPath(path)}</div>
+        {detail === undefined ? null : <div className="text-xs text-warm-700 truncate" title={detail}>{detail}</div>}
+        <div className="text-xs text-warm-700 truncate" title={toDisplayPath(path)}>{toDisplayPath(path)}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact path={path} />
       <CardActions target={target} onTrashed={onTrashed} />
@@ -260,11 +260,11 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
   }, [path, data, binding]);
 
   const pendingLabel = pendingFileViewLabel({ loading, followingMove });
-  if (pendingLabel !== null) return <div className="p-4 text-warm-600">{pendingLabel}</div>;
+  if (pendingLabel !== null) return <div className="p-4 text-warm-700">{pendingLabel}</div>;
   // A missing card is not an error state: it falls through to MissingCardState,
   // which offers to create or close it.
   if (error !== null && !isMissingCardFailure(path, error)) return <FileErrorState path={path} failure={error} onRetry={refresh} />;
-  if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-600">File not found: {toDisplayPath(path)}</div>;
+  if (!data) return isCardPath(path) ? <MissingCardState path={path} onClose={onClose} /> : <div className="p-4 text-warm-700">File not found: {toDisplayPath(path)}</div>;
 
   const hasUserSelection = userSelection?.path === path;
   const requested = hasUserSelection ? userSelection.name : rendererName ?? null;
@@ -275,7 +275,7 @@ export function FileView({ path, mode: modeProp, workspacePdf, rendererName, onS
   const active = (requested ? renderers.find(r => r.name === requested) : undefined) ?? renderers.at(0);
 
   if (!active) {
-    return <div className="p-4 text-warm-600">No renderer available for this file.</div>;
+    return <div className="p-4 text-warm-700">No renderer available for this file.</div>;
   }
   const target = selectedTarget({ path, viewer: requested, params, viewState: ownedViewState });
 

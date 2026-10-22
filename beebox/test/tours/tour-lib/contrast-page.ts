@@ -8,6 +8,7 @@ type Rgba = [number, number, number, number];
 interface Rect { x: number; y: number; w: number; h: number }
 
 export interface TextRun {
+  /** Stable for the element across audits of one page load (`data-bbx-audit-run`). */
   id: number;
   selector: string;
   text: string;
@@ -25,7 +26,17 @@ export interface TextRun {
    * Controls draw their own surfaces by design, so they get -1 too.
    */
   material: number;
+  /** The lines measured: those wholly inside the viewport and its scrolling ancestors. */
   rects: Rect[];
+}
+
+/** A text element's lines, numbered in document order, and which this audit saw whole. */
+export interface RunLines {
+  id: number;
+  /** Selector and opening text, to name a run that was never measured. */
+  label: string;
+  total: number;
+  whole: number[];
 }
 
 /** One themed card's material surfaces, resolved from its tokens. */
@@ -43,10 +54,10 @@ export interface PageRuns {
   height: number;
   runs: TextRun[];
   materials: Material[];
-  /** Text runs (by element) with a line outside the viewport, so not fully measured. */
-  offscreen: number;
-  /** Runs the capture cannot score: in a faded group over an image, or partly covered by another element. */
-  unmeasured: number;
+  /** Every text element's lines, including those scrolled out of view, which another audit may see. */
+  lines: RunLines[];
+  /** Run ids the capture cannot score: in a faded group over an image, or partly covered by another element. */
+  unmeasured: number[];
 }
 
 /**
@@ -65,6 +76,11 @@ export interface PageRuns {
  *   box whose centre hits another element (a menu, a sticky bar) is dropped.
  * - WCAG exempts inactive controls; visually hidden text is clipped to a
  *   pixel. Inputs are measured over their content box.
+ * - Each text element keeps one run id across audits of the page
+ *   (`data-bbx-audit-run`), so audits at several scroll positions merge. A
+ *   line cut by the viewport or a scrolling ancestor is left for the audit
+ *   that sees it whole: its sliver would be scored against the wrong pixels.
+ * - Text that is not rendered (in a closed <details>) is skipped.
  * - Text shadows stay in the capture: a halo is part of what is read against.
  * - Controls draw their own surfaces by design, and a region that sets its
  *   own `--bbx-ink` declares its own material, so neither gets a surface check.
@@ -154,6 +170,12 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   };
   const visible = (el, r) => {
     let [l, t, ri, b] = [r.left, r.top, r.right, r.bottom];
+    // An element that clips its own overflow (a truncated label) clips its text too.
+    const own = getComputedStyle(el);
+    if (own.overflowX !== "visible" || own.overflowY !== "visible") {
+      const c = el.getBoundingClientRect();
+      [l, t, ri, b] = [Math.max(l, c.left), Math.max(t, c.top), Math.min(ri, c.right), Math.min(b, c.bottom)];
+    }
     // Only ancestors on the containing-block chain clip: an absolute box
     // escapes overflow until its positioned ancestor, a fixed box escapes all.
     let escaping = getComputedStyle(el).position === "absolute";
@@ -171,15 +193,21 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
       }
     }
     [l, t, ri, b] = [Math.max(l, 0), Math.max(t, 0), Math.min(ri, vw), Math.min(b, vh)];
-    if (ri - l < 2 || b - t < 4) return null;
+    // Clipped away by overflow (truncation) or too thin to hold a glyph: nothing to measure.
+    if (ri - l < 2 || b - t < 4) return "clipped";
     // Text under another element (a menu, a sticky bar, a decoration) is not
     // what the reader sees. Hit testing is on for everything while collecting.
     // A 3×3 grid of probes: all covered drops the box; some covered makes
     // the run unmeasurable, since the cover's pixels would enter its samples.
     const probes = [l + 1, (l + ri) / 2, ri - 1].flatMap((x) => [t + 1, (t + b) / 2, b - 1].map((y) => [x, y]));
+    // Hit testing on a line snaps a point near a text edge to the adjacent
+    // inline (the next word's span) even when that box lies beside the point,
+    // so a hit counts as cover only when its box contains the point.
     const covered = probes.filter(([x, y]) => {
       const hit = document.elementFromPoint(x, y);
-      return hit !== null && hit !== el && !el.contains(hit) && !hit.contains(el);
+      if (hit === null || hit === el || el.contains(hit) || hit.contains(el)) return false;
+      const box = hit.getBoundingClientRect();
+      return x >= box.left && x <= box.right && y >= box.top && y <= box.bottom;
     }).length;
     if (covered === probes.length) return null;
     return { x: l, y: t, w: ri - l, h: b - t, partial: covered > 0 };
@@ -190,27 +218,65 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   hitAll.id = "bbx-contrast-hit-all";
   hitAll.textContent = "*, *::before, *::after { pointer-events: auto !important; }";
   document.head.append(hitAll);
+  // A line cut by the viewport or a vertically scrolling ancestor is measured
+  // at another scroll position; one clipped by overflow: hidden (truncation)
+  // is not, so only scrolling ancestors count.
+  const scrollClip = (el) => {
+    let [t, b] = [0, vh];
+    if (getComputedStyle(el).position === "fixed") return [t, b];
+    for (let cur = el.parentElement; cur !== null; cur = cur.parentElement) {
+      const cs = getComputedStyle(cur);
+      if (cs.overflowY === "auto" || cs.overflowY === "scroll") {
+        const c = cur.getBoundingClientRect();
+        [t, b] = [Math.max(t, c.top), Math.min(b, c.bottom)];
+      }
+      if (cs.position === "fixed") break;
+    }
+    return [t, b];
+  };
+  const runId = (el) => {
+    const known = el.getAttribute("data-bbx-audit-run");
+    if (known !== null) return Number(known);
+    const next = Number(document.documentElement.dataset.bbxAuditRuns ?? "0");
+    document.documentElement.dataset.bbxAuditRuns = String(next + 1);
+    el.setAttribute("data-bbx-audit-run", String(next));
+    return next;
+  };
   const byElement = new Map();
-  const offscreen = new Set();
+  const linesOf = new Map();
   const unmeasurable = new Set();
   const add = (el, { text, color, boxes }) => {
     const cs = getComputedStyle(el);
-    if (cs.visibility !== "visible" || el.closest(":disabled, [aria-disabled='true'], [inert], .bbx-contrast-overlay") !== null) return;
+    if (cs.visibility !== "visible" || !el.checkVisibility() || el.closest(":disabled, [aria-disabled='true'], [inert], .bbx-contrast-overlay") !== null) return;
     const own = el.getBoundingClientRect();
     if (own.width <= 1 || own.height <= 1) return;
-    // Any line outside the capture is text the audit did not see.
-    if (boxes.some((r) => r.height > 0 && (r.top < -0.5 || r.bottom > vh + 0.5))) offscreen.add(el);
-    if (own.top >= vh || own.bottom <= 0) return;
+    const id = runId(el);
+    // Number the lines; a line scrolled out of view, wholly or in part, is left for another audit.
+    const [top, bottom] = scrollClip(el);
+    const lines = linesOf.get(el) ?? { id, label: describe(el) + ' "' + text.trim().slice(0, 40) + '" [data-bbx-audit-run=' + id + ']', total: 0, whole: [] };
+    linesOf.set(el, lines);
+    const whole = [];
+    for (const r of boxes) {
+      if (r.height <= 0) continue;
+      if (r.top >= top - 0.5 && r.bottom <= bottom + 0.5) whole.push({ r, n: lines.total });
+      lines.total++;
+    }
+    if (whole.length === 0) return;
     const fill = cs.webkitTextFillColor;
     const raw = parse(fill !== "" && fill !== cs.color ? fill : color);
-    if (raw === null) return;
-    const seen = boxes.map((r) => visible(el, r)).filter((r) => r !== null);
-    if (seen.length === 0) return;
+    // Clear text, and lines clipped away by overflow: hidden, have nothing to measure.
+    const checked = raw === null ? [] : whole.map(({ r, n }) => ({ n, box: visible(el, r) }));
+    const seen = checked.map(({ box }) => box).filter((box) => box !== null && box !== "clipped");
     const { below, group, overImage } = layering(el);
-    if (overImage || seen.some((r) => r.partial)) {
-      unmeasurable.add(el);
+    if (seen.length > 0 && (overImage || seen.some((box) => box.partial))) {
+      unmeasurable.add(id);
       return;
     }
+    // A line counts as measured only when a step scored it; a line wholly
+    // under a menu or overlay waits for a step that shows it. Clear text has
+    // nothing to score, so all its lines count.
+    lines.whole.push(...(raw === null ? whole : checked.filter(({ box }) => box !== null)).map(({ n }) => n));
+    if (raw === null || seen.length === 0) return;
     const rects = seen.map(({ x, y, w, h }) => ({ x, y, w, h }));
     let run = byElement.get(el);
     if (run === void 0) {
@@ -221,7 +287,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
       const ownInk = themed !== null && getComputedStyle(el).getPropertyValue("--bbx-ink") !== getComputedStyle(themed).getPropertyValue("--bbx-ink");
       const card = control || ownInk ? null : themed;
       run = {
-        id: byElement.size,
+        id,
         selector: describe(el),
         text: "",
         fg: [raw[0], raw[1], raw[2], raw[3] * below],
@@ -260,7 +326,7 @@ export const COLLECT_SCRIPT = String.raw`JSON.stringify((() => {
   style.id = "bbx-contrast-hide-text";
   style.textContent = "*, *::before, *::after, ::placeholder { color: transparent !important; -webkit-text-fill-color: transparent !important; text-decoration-color: transparent !important; caret-color: transparent !important; }";
   document.head.append(style);
-  return { width: vw, height: vh, runs: [...byElement.values()], materials, offscreen: offscreen.size, unmeasured: unmeasurable.size };
+  return { width: vw, height: vh, runs: [...byElement.values()], materials, lines: [...linesOf.values()], unmeasured: [...unmeasurable] };
 })())`;
 
 export interface OverlayMark {

@@ -97,7 +97,7 @@
 .bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) .bbx-composer-material textarea::placeholder {
   color: var(--textile-soft);
 }
-.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+.bbx-theme-studio :is([data-chrome-theme="rose-trellis-study"], [data-chrome-theme="gold-thread-study"]) :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background: var(--textile-accent);
   color: var(--textile-accent-ink);
 }
@@ -165,7 +165,7 @@
   border-radius: 27px 9px 27px 9px;
   box-shadow: 2px 3px 0 #b37f6a55;
 }
-.bbx-theme-studio [data-chrome-theme="rose-trellis-study"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+.bbx-theme-studio [data-chrome-theme="rose-trellis-study"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background: linear-gradient(135deg, #762c4d, #b84e65 65%, #c37962);
 }
 
@@ -183,7 +183,7 @@
   box-shadow: none;
   padding-inline: 14px;
 }
-.bbx-theme-studio [data-chrome-theme="gold-thread-study"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic.bg-primary):enabled {
+.bbx-theme-studio [data-chrome-theme="gold-thread-study"] :is(#bbx-composer-send, #bbx-composer-send-mobile, #bbx-composer-mic[data-mic="idle"]):enabled {
   background: #486787;
   color: #fff5df;
   border: 1px solid #859bb1;

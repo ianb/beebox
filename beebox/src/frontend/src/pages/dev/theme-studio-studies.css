@@ -179,7 +179,7 @@
   --tw-prose-links: var(--study-ink);
   color: var(--study-ink);
 }
-.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck-study"], [data-chrome-theme="patina-study"]) :is(#bbx-composer-add, #bbx-composer-mic.bg-primary) {
+.bbx-theme-studio :is([data-chrome-theme="undertow"], [data-chrome-theme="deck-study"], [data-chrome-theme="patina-study"]) :is(#bbx-composer-add, #bbx-composer-mic[data-mic="idle"]) {
   background: var(--study-accent);
   color: #173e42;
 }
