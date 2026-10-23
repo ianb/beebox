@@ -1,9 +1,9 @@
 ---
 title: "Chat progress notes fold away when the turn ends"
-status: active
+status: implemented
 workstream: knowledge-audit-refresh
 issues:
-  - ../../../issues/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md
+  - ../../../issues/closed/bugs/2026-10-08-chat-agent-narrates-implementation-steps.md
 ---
 # Chat progress notes fold away when the turn ends
 
