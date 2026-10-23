@@ -25,6 +25,7 @@ import { ExternalLink } from "../ui/ExternalLink";
 import { Row } from "../ui/Row";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
+import { MetaItem } from "../ui/MetaItem";
 import { ErrorText } from "../ui/ErrorText";
 import { Hint } from "../ui/Hint";
 import { Heading } from "../ui/Heading";
@@ -36,15 +37,6 @@ const FIGURE_RENDER_RE = /^figure-(\d{3,})\.(?:avif|webp)$/;
 function dirOf(path: string): string {
   const cut = path.lastIndexOf("/");
   return cut === -1 ? "" : path.slice(0, cut);
-}
-
-function MetaItem({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <Text size="xs" tone="muted">
-      <span className="uppercase tracking-wide">{label}</span>{" "}
-      <span className="text-warm-700">{children}</span>
-    </Text>
-  );
 }
 
 /**
