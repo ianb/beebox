@@ -80,7 +80,9 @@ export function CardFacts({ data, boxSlug, onNavigate }: {
 
 /** Mounted only while Properties is open: no box scan for every visible card. */
 export function CardMentions({ path, onNavigate }: { path: string; onNavigate: (target: ViewTarget, hint?: NavigateHint) => void }) {
-  const query = trpc.card.inboundRefs.useQuery({ path }, { staleTime: 10_000 });
+  // Mounted only while shown, so a change made while closed was never seen:
+  // fetch on every open rather than trust the cache.
+  const query = trpc.card.inboundRefs.useQuery({ path }, { staleTime: 10_000, refetchOnMount: "always" });
   useLiveRefresh({ when: anyFileChange, refresh: () => { void query.refetch(); }, burstMs: 500 });
   const incomplete = (query.data?.errors ?? []).length > 0;
   return <section className="mt-6" aria-label="Mentions">

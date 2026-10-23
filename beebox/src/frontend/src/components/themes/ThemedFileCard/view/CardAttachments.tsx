@@ -1,6 +1,5 @@
 import { attachDirFor } from "@shared/attach-path";
-import { useDirectoryListing } from "../../../../directory-listing";
-import type { RouterOutput } from "../../../../lib/trpc/client";
+import { trpc, type RouterOutput } from "../../../../lib/trpc/client";
 import type { NavigateHint, ViewTarget } from "../../../../lib/view-url";
 import { PropertyLink, PropertyProblem } from "./property-section";
 import { useLiveRefresh } from "../../../../hooks/useLiveRefresh";
@@ -29,7 +28,9 @@ export function attachmentEntries(scope: string, listing: Pick<Listing, "dirs" |
  */
 export function CardAttachments({ path, onNavigate }: { path: string; onNavigate: (target: ViewTarget, hint?: NavigateHint) => void }) {
   const scope = attachDirFor(path);
-  const query = useDirectoryListing(scope);
+  // Mounted only while shown, so a change made while closed was never seen:
+  // fetch on every open rather than trust the cache.
+  const query = trpc.status.browse.useQuery({ path: scope }, { refetchOnMount: "always" });
   useLiveRefresh({ when: anyFileChange, refresh: () => { void query.refetch(); }, burstMs: 500 });
   const entries = query.data ? attachmentEntries(scope, query.data) : null;
   return <section className="mt-6" aria-label="Attachments" data-card-section="attachments">

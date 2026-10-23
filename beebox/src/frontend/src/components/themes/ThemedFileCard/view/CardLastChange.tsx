@@ -14,7 +14,9 @@ import { anyFileChange } from "../../../../lib/live-refresh";
  * Mounted only while Properties is open.
  */
 export function CardLastChange({ path, onNavigate }: { path: string; onNavigate: (target: ViewTarget, hint?: NavigateHint) => void }) {
-  const query = trpc.history.list.useQuery({ filter: { path }, count: 1 }, { staleTime: 10_000 });
+  // Mounted only while shown, so a change made while closed was never seen:
+  // fetch on every open rather than trust the cache.
+  const query = trpc.history.list.useQuery({ filter: { path }, count: 1 }, { staleTime: 10_000, refetchOnMount: "always" });
   useLiveRefresh({ when: anyFileChange, refresh: () => { void query.refetch(); }, burstMs: 500 });
   const now = useBoxNow(60_000);
   const commit = query.data?.commits.at(0);

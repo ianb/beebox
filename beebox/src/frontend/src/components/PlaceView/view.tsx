@@ -207,7 +207,9 @@ export function PlacePage({ cardPath, payload, body, rootCounts, onRetryCounts, 
 
 export function PlaceView({ data, onNavigate, mode }: RendererProps) {
   const cardPath = data.path.replace(/^\//, "");
-  const query = trpc.landmarks.forDir.useQuery({ dir: parentDir(cardPath), expandsAsGroups: true });
+  // Mounted only while shown, so a change made while closed was never seen:
+  // fetch on every open rather than trust the cache.
+  const query = trpc.landmarks.forDir.useQuery({ dir: parentDir(cardPath), expandsAsGroups: true }, { refetchOnMount: "always" });
   useLiveRefresh({ when: anyFileChange, refresh: () => { void query.refetch(); }, burstMs: 500 });
   const boxSlug = useBoxSlug();
   const openLandmarkChat = useOpenLandmarkChat(boxSlug ?? "");
