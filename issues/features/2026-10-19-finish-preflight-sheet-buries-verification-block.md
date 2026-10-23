@@ -22,3 +22,9 @@ flaky-tests/20261019T130712Z-landed.md.
 
 Direction: print the selected-test count and the first few files, with the full
 list in `--json`, and put the verification block before it.
+
+**2026-10-22 (retrospective 20261022-232146):** Two more finish runs hit it:
+one re-ran preflight with `--no-merge` to a file after `tail` truncated it, and
+one named the test list as noise beside the verification block. Coding
+feedback: engine-link-migration-fix/20261022T134911Z-landed.md,
+gmail-404-stuck/20261023T020419Z-landed.md.

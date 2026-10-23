@@ -180,6 +180,8 @@ notify:
     lastCommit: null,
     carry: null,
     lastDeferReason: null,
+    // No channel was tried, so a retry cannot reach anyone: the reminder is not retried.
+    lastFailureFinal: true,
     recentRuns: [{ ts: isoDate(), durationMs: any(Number).int() }],
   });
 

@@ -1792,6 +1792,8 @@ tests:
   # _content/docs/generated/cooking-guide.md that no longer exists in test1 (no
   # cooking.guide.card configured) — restore the guide or retire these two.
   # See docs/reports/knowledge-audit-rerun-2026-07-03.md.
+  # Retired (2026-10-22): cooking-guide-awareness and cooking-follow-recipe-pattern.
+  # The boxholder decided no cooking guidance ships, so they tested nothing.
 
   # Status (2026-09-26, doc-structure Track 3, GUIDES): pass on the test1 clone,
   # 1 reads, 1 searches, 39k ctx.
@@ -1838,20 +1840,6 @@ tests:
       longer required to answer "what would I modify." Substance check replaces the
       old should_read.
 
-  # Refresh (2026-10-22, Claude): fails 2/2 because test1 has no cooking guide (noted
-  # since 2026-07-03). See issue 2026-10-22-cooking-guide-audits-need-a-guide.
-  - id: cooking-guide-awareness
-    prompt: "I want to make pasta tonight. Can you help me cook?"
-    expected_level: knows_about
-    watch_for: "Reads the cooking guide before launching into recipe help"
-    should_read: ["_content/docs/generated/cooking-guide.md"]
-    tags: [guides, cooking]
-    notes: >
-      The agent guide lists the cooking guide with applies-to text about cooking.
-      When cooking comes up in conversation, the agent should read the compiled
-      guide to learn the interaction pattern (step-by-step pacing, two-channel
-      output, ingredient gathering flow).
-
   - id: cooking-recipe-lookup
     prompt: "Do I have any recipes saved? What can I make?"
     expected_level: knows_directly
@@ -1859,22 +1847,7 @@ tests:
     tags: [cooking, recipes]
     notes: >
       This is a simple lookup task. The agent knows recipes live in _content/recipes/
-      from the agent guide directory layout. Reading the cooking guide would be
-      over-doing it here.
-
-  - id: cooking-follow-recipe-pattern
-    prompt: "Walk me through making the carbonara recipe."
-    expected_level: knows_about
-    watch_for: "Reads cooking guide to learn the interaction pattern (plan, ingredients, step-by-step pacing) before searching for the recipe"
-    should_read: ["_content/docs/generated/cooking-guide.md"]
-    tags: [guides, cooking, recipes]
-    notes: >
-      "Walk me through" is an interactive cooking session — exactly what the
-      cooking guide's Follow Recipe action covers. The guide instructs specific
-      pacing behavior (plan first, gather ingredients, step-by-step with two-channel
-      output) that differs from the default "dump everything" approach. The agent
-      should read the guide to know HOW to walk through the recipe, not just
-      find the recipe file.
+      from the agent guide directory layout.
 
   # === Tricks ===
   #
@@ -3937,21 +3910,31 @@ tests:
   # passes do not show whether the rule arrives unprompted. The pre-plan probe
   # (no fixture cue) followed the rule 0/3 with AGENTS.md, 1/3 with CLAUDE.md.
 
-  - id: agents-md-course-entry
+  # Renamed from agents-md-course-entry (2026-10-22): the rule is general, and
+  # a course was a narrow example of it. One run on the course wording answered
+  # "a briefing card"; a plain "add a rule" prompt admits that answer too, so
+  # the prompt names a file that must be pulled in.
+  # Status (2026-10-22, Claude): 3/4 pass; the failure was the CLAUDE.md check
+  # matching "rather than adding a second CLAUDE.md". It now matches only an
+  # instruction to create one; 2/2 pass after.
+  - id: agents-md-scoped-directory
     prompt: >
-      The boxholder wants the course in courses/spanish/ to be run by a chat
-      scoped to that directory. Which instruction file do you create or edit
-      in that directory so the runner instructions load, and what does it
-      contain? Explain only; do not read files, use tools, or change anything.
+      The boxholder keeps watering notes in projects/garden/WATERING.md and
+      wants every chat scoped to projects/garden/ to follow them. Which
+      instruction file do you create or edit in that directory so the notes
+      load, and what does it contain? Explain only; do not read files, use
+      tools, or change anything.
     expected_level: knows_about
     watch_for: >
-      Names `AGENTS.md` in the course directory as the editable file that
-      @-includes the course runner instructions, and does not tell the agent to
-      create a `CLAUDE.md`.
+      Names `AGENTS.md` in projects/garden/ as the editable file, containing an
+      @-import of WATERING.md, and does not tell the agent to create a
+      `CLAUDE.md`.
     correct_contains: ["AGENTS.md"]
+    correct_matches: ['@\s?`?WATERING\.md|@-?(?:import|include)']
     response_not_matches:
-      - '(?:creat|writ|add|edit)\w*\s[^.\n]{0,40}CLAUDE\.md'
-    tags: [courseware, agents-md]
+      - '(?:^|\n|[.:]\s+)(?:create|write|add|edit|make)\w*\s[^.\n]{0,40}CLAUDE\.md'
+      - '@WATERING\.md[^.\n]{0,60}\bin [^.\n]{0,30}CLAUDE\.md|CLAUDE\.md[^.\n]{0,40}@WATERING'
+    tags: [agents-md, landmarks]
     notes: >
       Converted-box check: in a box that has run agents-md-2026-10 the editable
       instruction file is AGENTS.md. In an unconverted box CLAUDE.md is the
@@ -6492,9 +6475,17 @@ tests:
   # should_read was dropped in both (the content match is the real assertion).
   # Run with `--filter courseware`.
 
-  # Refresh (2026-10-22, Claude): courseware is off in test1, so neither the skill nor
-  # the word is available; both runs asked about the learner before building.
+  # Plugin-enabled (2026-10-22, knowledge-audit-plugins plan): these four run
+  # with `plugins: [courseware]`, so the box has the course card docs and the
+  # courseware skill. test1 keeps courseware off for plugins-discover and
+  # plugins-activate. Eight recall entries ("what does a course card hold")
+  # were replaced by the same questions on core card types (section below).
+  # Status (2026-10-22, Claude, plugins: [courseware]): 8/8 runs pass (two per
+  # entry). build-a-course reached for the courseware skill and a probe;
+  # cycles read the generated card-concept-map.md. plugins-discover, run right
+  # after build-a-course in the same shard, still saw courseware off.
   - id: courseware-build-a-course
+    plugins: [courseware]
     prompt: >
       Someone asks you to teach them how chemical reactions work. How do you go
       about building a course for them?
@@ -6502,98 +6493,34 @@ tests:
     watch_for: >
       Reaches for the courseware skill / understands the learner FIRST
       (a phenomenon-anchored, Piagetian probe) rather than writing a course cold.
-    correct_matches:
-      - 'probe|courseware|ask(?:ing)? (?:them |a few )?questions|ask (?:three|a few|some) things|before any content|not (?:by )?(?:writing|build)'
-    tags: [courseware]
+    correct_contains_any: ["probe", "courseware"]
+    response_not_matches: ['no (?:learner )?probe|without (?:asking|probing)|skip (?:the )?probe']
+    tags: [courseware, plugins]
     notes: >
       Building a course starts by understanding the learner, not by generating
-      content. The failure mode is producing a polished course cold.
+      content. The failure mode is producing a polished course cold. With
+      courseware off, the right answer is plugins-discover's instead: notice
+      there is no course type and offer the plugin.
 
-  - id: courseware-course-composition
-    prompt: "What does a course card hold? What are its parts?"
-    expected_level: knows_about
-    should_read_any: ["_content/docs/generated/card-course.md", "node_modules/beebox/src/plugins/courseware/README.md"]
-    watch_for: >
-      Names the concept-map and exposition-plan (embedded), the material/ subdir,
-      and that progress is tracked separately.
-    correct_contains: ["concept-map", "exposition-plan"]
-    tags: [courseware]
-
-  - id: courseware-concept-map-edges
-    prompt: >
-      In a concept-map, two ideas that learners frequently mix up with each
-      other — which edge type connects them?
-    expected_level: knows_about
-    watch_for: "Picks commonly-confused-with from the closed edge set."
-    correct_contains: ["commonly-confused-with"]
-    tags: [courseware]
-    # No should_read: consulting the concept-map docs by grep is as valid as
-    # reading the file — the assertion is naming the right closed-set edge.
-    notes: >
-      Tests the edge-type rubric. Edges carry a required kind from a closed set
-      (no 'other'); the right one for confusable ideas is commonly-confused-with.
-
-  # Refresh (2026-10-22, Claude): courseware is off in test1, so there is no generated
-  # doc; both runs read the plugin's concept-map.ts and answered correctly.
   - id: courseware-concept-map-cycles
+    plugins: [courseware]
     prompt: >
       Can a concept-map have two concepts that each depend on the other — a
       cycle? Or is that an error to fix?
     expected_level: knows_about
-    should_read_any: ["_content/docs/generated/card-concept-map.md", "node_modules/beebox/src/plugins/courseware/README.md", "node_modules/beebox/src/plugins/courseware/concept-map.ts"]
+    should_read_any: ["_content/docs/generated/card-concept-map.md", ".claude/skills/courseware/SKILL.md"]
     watch_for: >
       Says cycles are valid/intended (spirals), often via complements edges —
       NOT an error to fix.
-    correct_contains_any: ["complements", "spiral", "intended", "not an error", "valid"]
-    tags: [courseware]
+    correct_matches: ['complements|spiral|intended|not an error|\bvalid\b']
+    response_not_matches: ['must be acyclic|is an error (?:to fix|you should fix)|cycles? (?:are|is) not valid|cycles? (?:are|is) invalid']
+    tags: [courseware, plugins]
     notes: >
       The graph is deliberately loose; a complements cycle is an honest spiral,
       not a modeling error. Failure mode: insisting the graph be acyclic.
 
-  - id: courseware-progress-evidence
-    prompt: >
-      I'm recording that a learner has 'solid' understanding of a concept. What
-      does that progress entry need to include?
-    expected_level: knows_about
-    should_read_any: ["_content/docs/generated/card-progress.md", "node_modules/beebox/src/plugins/courseware/README.md"]
-    watch_for: >
-      Says every status needs evidence (what the learner said/did) plus a basis —
-      there is no anonymous rating.
-    correct_contains: ["evidence"]
-    correct_contains_any: ["basis", "observed"]
-    tags: [courseware]
-    notes: >
-      The evidence contract is schema-enforced: status + basis + >=1 evidence
-      item. Failure mode: recording a status with no grounding.
-
-  - id: courseware-exposition-plan
-    prompt: "What is an exposition-plan card for, and what should it always keep?"
-    expected_level: knows_about
-    watch_for: >
-      It's the plan for how to PRESENT the material; it keeps the reasoning /
-      rationale in so later adaptation stays coherent.
-    correct_contains_any: ["rationale", "reasoning"]
-    tags: [courseware]
-
-  - id: courseware-lesson-plan
-    prompt: >
-      In a course, where does the ordered plan of what actually happens — which
-      parts are live chat vs a pre-made artifact, and in what order — live?
-    expected_level: knows_about
-    watch_for: >
-      Names the lesson-plan card: an ordered sequence of segments, each tagged
-      interactive (live in chat) or material (uses a pre-made card).
-    correct_contains: ["lesson-plan"]
-    correct_contains_any: ["interactive", "material", "segment"]
-    tags: [courseware]
-    # No should_read: the agent answers this correctly from recall (naming the
-    # lesson-plan + its interactive/material segments) without opening the file —
-    # a stronger result than reading it. The content match is the real assertion.
-    notes: >
-      The lesson-plan is the delivery-flow layer. Failure mode: conflating it
-      with the exposition-plan, or improvising a material/README.
-
   - id: courseware-material-convention
+    plugins: [courseware]
     prompt: >
       You're adding teaching material to a course — a written recap and a figure
       to manipulate. Where, and in what form, do those go?
@@ -6603,61 +6530,14 @@ tests:
       material/README.md or loose prose.
     correct_contains: ["material/"]
     correct_contains_any: ["doc", "figure", "card"]
-    tags: [courseware]
+    response_not_matches: ['(?:put|goes|write|add)\w*[^.\n]{0,40}material/README\.md']
+    tags: [courseware, plugins]
     notes: >
       Material is proper presentational cards under material/, never a stray
       README. Failure mode: dumping prose into material/README.md.
 
-  - id: courseware-lesson-vs-exposition
-    prompt: >
-      A course has both an exposition-plan and a lesson-plan. What's the
-      difference — which one holds what?
-    expected_level: knows_about
-    watch_for: >
-      exposition-plan = how/why to present (rated approaches + presentation rules);
-      lesson-plan = the ordered what-to-do (the interactive-vs-material
-      sequence). The WHY lives in the exposition-plan, not the lesson-plan.
-    correct_contains: ["exposition-plan", "lesson-plan"]
-    correct_contains_any: ["sequence", "order", "flow", "rules"]
-    tags: [courseware]
-    notes: >
-      The one confusion worth auditing. exposition-plan = rules/rationale;
-      lesson-plan = ordered flow. Failure mode: putting rationale in the
-      lesson-plan, or treating the two as the same thing.
-
-  - id: courseware-good-concept-map
-    prompt: >
-      What makes a concept-map well-built, beyond the edges resolving? Name a
-      couple of shape or naming problems to avoid.
-    expected_level: knows_about
-    watch_for: >
-      Names entity (not question) labels, no orphan nodes, avoiding a degenerate
-      straight-line chain (real graphs branch), edges as real relations,
-      right granularity, scoped to fit. Any two or three is a pass.
-    correct_contains_any: ["orphan", "question", "linear", "chain", "branch", "granular"]
-    tags: [courseware]
-    notes: >
-      The construction rules in the concept-map card-rule. The orphan lint
-      catches one class; the rest is authoring discipline + agent self-review.
-
-  - id: courseware-bloom-steers-teaching
-    prompt: >
-      A concept-map node has a `kind` and an optional Bloom `depth`. How do those
-      two together affect how you'd teach it?
-    expected_level: knows_about
-    watch_for: >
-      The (kind, depth) pair is the first cut at approach: e.g. a fact at
-      remember → spaced retrieval; a principle at analyze → contrasting cases;
-      an "understand" target is not served by a passive read. Depth + kind feed
-      the exposition-plan's approach choice.
-    correct_contains_any: ["depth", "Bloom", "retrieval", "contrasting", "approach"]
-    tags: [courseware]
-    notes: >
-      Bloom is used as instruction, not mechanism: the labels are defined in the
-      concept-map rule and referenced in the exposition-plan to differentiate
-      approaches by level.
-
   - id: courseware-run-a-course
+    plugins: [courseware]
     prompt: >
       A course has already been built in the box. How does someone actually run
       it — start a tutoring session where the agent teaches it?
@@ -6667,13 +6547,133 @@ tests:
       landmark (a chat destination); the scoped AGENTS.md (which @-includes the
       runner instructions and holds the presentation rules) auto-loads, and
       the agent follows the lesson-plan and updates progress.
-    correct_contains_any: ["landmark", "tutoring", "chat scoped", "attach"]
-    tags: [courseware]
+    correct_matches:
+      - 'scoped|landmark'
+      - 'AGENTS\.md|lesson-plan|progress'
+    tags: [courseware, plugins]
     notes: >
       The run side, distinct from building. Entry = a landmark chat
       destination that scopes the chat to the course attach dir, where a thin
       AGENTS.md (@course-runner.md, presentation rules) auto-loads. Failure
       mode: thinking a built course just sits there with no way to conduct it.
+
+  # === Card-type recall (2026-10-22) ===
+  # The courseware recall entries asked what a course card type holds. The
+  # boxholder: courses are a bad example of that; use other types. Each entry
+  # below asks the same kind of question about a core card type, and its
+  # expected answer comes from that type's box-docs/card-*.md.
+  # Status (2026-10-22, Claude): 16/16 runs pass (two per entry) after
+  # briefing-parts accepted "Key people" in plain words.
+  - id: briefing-parts
+    prompt: "What does a briefing card hold? What are its parts?"
+    expected_level: knows_about
+    watch_for: >
+      Frontmatter records (key-people, properties) and the purpose field, plus
+      a prose body (including a Corrections section), written in the person's
+      own voice. Replaces courseware-course-composition.
+    correct_contains: ["purpose"]
+    correct_matches:
+      - 'key.people'
+      - 'corrections|voice|first person|their (?:own )?words'
+    tags: [cards, briefing]
+
+  - id: judgment-question-type
+    prompt: >
+      You're writing a judgment card that sorts each new email into "expects a
+      reply", "needs no reply", or "can't tell". Which question type do you
+      use, and what shape do its criteria take?
+    expected_level: knows_about
+    watch_for: >
+      Picks the choice type from the closed set (noul, choice, score); its
+      criteria are a map of option name to description. Replaces
+      courseware-concept-map-edges.
+    correct_matches:
+      - '\bchoice\b'
+      - 'map|each option|option names?|name to'
+    tags: [cards, judgment]
+
+  - id: feedback-voice-answer
+    prompt: >
+      The boxholder answered something the box surfaced by speaking instead of
+      typing. What does the feedback card record, and where is the text of
+      their answer?
+    expected_level: knows_about
+    watch_for: >
+      A feedback card with a target ref to the element answered, via channel
+      voice, and a timestamp; for voice the body may be empty and
+      transcription.text holds the answer. Replaces courseware-progress-evidence.
+    correct_contains: ["transcription", "target"]
+    tags: [cards, feedback]
+
+  - id: glink-purpose
+    prompt: "What is a glink card for, and what goes in its body?"
+    expected_level: knows_about
+    watch_for: >
+      A pointer to a Drive item: nothing is copied into the box, and the
+      frontmatter is stamped by the connector. The body holds purpose notes:
+      what the item is for and why it matters. Replaces courseware-exposition-plan.
+    correct_matches:
+      - 'nothing (?:is )?copied|no (?:local )?copy|pointer'
+      - 'what (?:it|the item) is for|purpose|why (?:it|the item) matters'
+    tags: [cards, drive]
+
+  - id: procedure-run-record
+    prompt: >
+      A procedure ran overnight. Where is the record of what each step did, and
+      what in that record may you edit?
+    expected_level: knows_about
+    watch_for: >
+      The procedure-run card in _bookkeeping/procedure/runs/<name>_<timestamp>/,
+      with a status per step; the engine owns it, and only `expires` may be
+      edited. Replaces courseware-lesson-plan.
+    correct_contains: ["expires"]
+    correct_matches: ['_bookkeeping/procedure/runs|procedure-run']
+    tags: [cards, procedures]
+
+  - id: gdoc-vs-glink
+    prompt: >
+      A mirrored Drive folder in the box holds both .gdoc.card and .glink.card
+      files. What is the difference, and which lets you change the file on
+      Drive?
+    expected_level: knows_about
+    watch_for: >
+      A gdoc is a synced copy: editing its attached markdown pushes to Drive on
+      the next sync. A glink is a pointer with no local copy; nothing pushes
+      back. Replaces courseware-lesson-vs-exposition.
+    correct_matches:
+      - 'gdoc[\s\S]{0,300}(?:sync|push|edit)'
+      - 'glink[\s\S]{0,300}(?:pointer|no (?:local )?copy|nothing)'
+    tags: [cards, drive]
+
+  - id: judgment-well-written
+    prompt: >
+      What makes a judgment card well written? Name two or three things to do
+      or avoid.
+    expected_level: knows_about
+    watch_for: >
+      Any two or three of: say what does NOT count (explicit negatives); the
+      state must carry the body and identity fields; compute numbers and dates
+      before the call; prefer a choice with a counter-category and "cannot
+      tell" over a bare yes/no; one question per thing decided. Replaces
+      courseware-good-concept-map.
+    correct_matches:
+      - 'not count|negative|counter-?category|cannot tell|precomput|compute[\s\S]{0,40}before|identity|one question'
+    tags: [cards, judgment]
+
+  - id: search-card-defaults
+    prompt: >
+      A copied Search card has `paths` and `types` in its frontmatter. Do those
+      limit what the person can find through it, and where does the query they
+      type go?
+    expected_level: knows_about
+    watch_for: >
+      They are durable defaults, not access control; the live view may clear or
+      narrow them. The live query and filters are view state, not card
+      content. Replaces courseware-bloom-steers-teaching.
+    correct_matches:
+      - 'not access control|defaults?|clear|narrow'
+      - 'view state|not (?:saved|stored|written)'
+    tags: [cards, interface]
 
   # === User Location ===
 

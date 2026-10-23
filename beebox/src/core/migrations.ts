@@ -172,4 +172,10 @@ export const MANIFEST_PATH = "_config/migrations.jsonl";
 export interface ManifestEntry {
   readonly name: string;
   readonly "applied-at": string;
+  /**
+   * The question a partial apply (exit 2 after repair) left for the
+   * boxholder. Any other pending `Migration_<name>-N` question for a recorded
+   * migration is from a failed earlier run, superseded by the apply.
+   */
+  readonly question?: string | undefined;
 }

@@ -23,7 +23,8 @@ class ManifestReadError extends Error {
 
 /** A manifest line is a valid {@link ManifestEntry} with string `name` + `applied-at`. */
 function isManifestEntry(value: unknown): value is ManifestEntry {
-  return isRecord(value) && typeof value["name"] === "string" && typeof value["applied-at"] === "string";
+  return isRecord(value) && typeof value["name"] === "string" && typeof value["applied-at"] === "string"
+    && (value["question"] === undefined || typeof value["question"] === "string");
 }
 
 /** Every recorded entry, or null when the box has no manifest at all. */

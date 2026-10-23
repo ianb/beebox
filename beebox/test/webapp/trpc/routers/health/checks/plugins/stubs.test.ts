@@ -9,6 +9,8 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { symlink } from "node:fs/promises";
+import * as path from "node:path";
 import { scanStubImports, stubImportChecks } from "../../../../../../../src/webapp/trpc/routers/health/checks/plugins/stubs.js";
 import type { HealthCheck } from "../../../../../../../src/webapp/trpc/routers/health/router.js";
 import { makeTmpBox } from "../../../../../../helpers/test-helpers.js";
@@ -101,4 +103,17 @@ void test("The regex sees static import/export ...", async (t) => {
     "plugin-stub-inactive:ok",
     "plugin-stub-missing:ok",
   ]);
+});
+
+// ## An unreadable stub file reads as no imports
+//
+// A dangling symlink, or a file removed between the glob and the read, is
+// skipped; the readable stubs are still scanned.
+void test("An unreadable stub file reads as no imports", async (t) => {
+  const box = await makeTmpBox();
+  t.teardown(() => box.cleanup());
+  await box.write("src/schemas/course.ts", 'import courseware from "beebox/plugins/courseware";\n');
+  await symlink(path.join(box.root, "src/schemas/missing.ts"), path.join(box.root, "src/schemas/gone.ts"));
+  // The dangling stub contributes nothing.
+  t.check(await scanStubImports(box.root), [{ file: "src/schemas/course.ts", plugin: "courseware" }]);
 });

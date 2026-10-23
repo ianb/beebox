@@ -16,6 +16,9 @@ import { createScanToken, revokeScanToken } from "../../../../src/core/scan/toke
 import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../../../src/core/mobile/pairing.js";
 import { makeScanAuthPreHandler, scanAuthOf } from "../../../../src/webapp/routes/scan-upload/scan-auth.js";
 import { registerPairingRoutes } from "../../../../src/webapp/routes/pairing.js";
+import { updateBoxConfigFields } from "../../../../src/webapp/box-config-write.js";
+import { appRouter } from "../../../../src/webapp/trpc/routers.js";
+import { trpcContext } from "../../../helpers/trpc-context.js";
 
 const ORIGINAL_HUB_SECRET = process.env.BBX_HUB_SECRET;
 const ORIGINAL_OWNER_EMAIL = process.env.BBX_OWNER_EMAIL;
@@ -49,6 +52,8 @@ void test("The token name is what Track 2 records as scan-upload/<name> provenan
     }
   });
   delete process.env.BBX_HUB_SECRET;
+  // The gate checks that a token's creator can still open the box, so the box needs a known owner.
+  process.env.BBX_OWNER_EMAIL = "owner@example.com";
   const box = await makeTmpBox();
   const scan = await createScanToken(box.root, { name: "laptop-scansnap", createdBy: "owner@example.com" });
   const server = await makeScanServer(box.root);
@@ -193,4 +198,53 @@ void test("On a real auth-on box server the scan token reaches no route at all:"
     401,
     401,
   ]);
+});
+
+// ## A member's scan token works only while the member can still open the box
+//
+// Any member may mint a scan token, so the token must not outlive the member's
+// access. The gate re-checks the token's creator against the box's
+// `allowedEmails` on every request. A token the owner minted is not affected.
+void test("a member's scan token stops working when the member is removed from the box", async (t) => {
+  t.teardown(async () => {
+    try {
+      await server.close();
+      await box.cleanup();
+      if (ORIGINAL_HUB_SECRET === undefined) delete process.env.BBX_HUB_SECRET;
+      else process.env.BBX_HUB_SECRET = ORIGINAL_HUB_SECRET;
+      if (ORIGINAL_OWNER_EMAIL === undefined) delete process.env.BBX_OWNER_EMAIL;
+      else process.env.BBX_OWNER_EMAIL = ORIGINAL_OWNER_EMAIL;
+    } catch (error) {
+      t.error(error);
+    }
+  });
+  delete process.env.BBX_HUB_SECRET;
+  process.env.BBX_OWNER_EMAIL = "owner@example.com";
+  const box = await makeTmpBox({ git: true });
+  // The same write the owner's member settings make.
+  const setAllowedEmails = async (emails: string[]) => {
+    const { commitError } = await updateBoxConfigFields({ boxRoot: box.root, allowedEmails: emails });
+    if (commitError) throw commitError;
+  };
+  await setAllowedEmails(["member@example.com"]);
+  const member = appRouter.createCaller(
+    trpcContext({ boxRoot: box.root, user: { email: "member@example.com", name: "Member" }, isOwner: false }),
+  );
+  const memberToken = await member.scanTokens.create({ name: "member-mac" });
+  const ownerToken = await createScanToken(box.root, { name: "owner-mac", createdBy: "owner@example.com" });
+  const server = await makeScanServer(box.root);
+  const whoami = async (token: string) => {
+    const res = await server.inject({ method: "GET", url: "/api/scan/whoami", headers: { authorization: `Bearer ${token}` } });
+    return res.statusCode === 200 ? res.json<unknown>() : res.statusCode;
+  };
+
+  // While the member is listed, the member's token passes like any other.
+  t.check(await whoami(memberToken.token), { source: "scan-token", tokenName: "member-mac", email: null });
+
+  await setAllowedEmails([]);
+
+  // Removed from the box: the member's token is refused at once, with no revoke step.
+  t.check(await whoami(memberToken.token), 401);
+  // The owner can always open the box, so the owner's token still passes.
+  t.check(await whoami(ownerToken.token), { source: "scan-token", tokenName: "owner-mac", email: null });
 });

@@ -178,6 +178,7 @@ Each entry in `knowledge-audits.yaml` has these fields:
 - `surface` — `box` (default) or `dev`; see Dev-guidance audits.
 - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `additionalDirectories`, mirroring how a chat session bound to a landmark is spawned. Use to audit that the subdirectory's `AGENTS.md` (and its `@MAP.md` import) actually load into the agent's context at session start.
 - `fixture` — map of box-relative path → file content, written before the test and removed afterward. Used to stage an `AGENTS.md` (or any other file) without checking it into the box. Combined with `context_dir`, this lets a single audit set up its own landmark-style scratch directory.
+- `plugins` — plugin names the box must have active for this audit. Before docs generation the runner adds them to `_config/box.json` and writes each missing schema stub; after the audit it resets the box. A fixture cannot do this, because fixtures are written after docs generation. View stubs are not written, so a plugin's card docs and skill load but its views do not render. Mechanics: `src/dev/lib/box-audits/plugins.ts`.
 - `chat_mode` — when true, the agent runs with `CHAT_SYSTEM_PROMPT` instead of the default working-directory prompt. Use for tests that audit chat-mode knowledge — the agent in a chat session sees the chat prompt's tag descriptions (`<speech>`, `<chat-app>`, `<ack>`, `<callout>`, `<schedule>`, etc.), so a non-chat-mode audit can't legitimately expect direct knowledge of those. If the test prompt declares `narration="on"` via a `<chat-app>` snapshot, `NARRATION_OVERLAY` is also appended — mirroring what `ChatSession.resolveSystemPrompt` does when narration is enabled on the session.
 - `response_not_contains` — list of substrings that must NOT appear in the agent's response. Useful for testing prompt overrides: e.g. the narration overlay tells the agent not to emit `<speech>` even when the user spoke; the audit can assert this directly.
 
@@ -199,7 +200,11 @@ tests:
   new entries (`--filter <tag-or-id>`). A never-run audit is unverified in
   both directions: the agent may fail it, or the audit itself may be
   broken (bad `correct_contains`, wrong `should_read` path). Running is
-  part of authoring, not a follow-up.
+  part of authoring, not a follow-up. Before running, test each changed
+  response pattern by hand against a right answer and against one wrong
+  answer that `watch_for` rules out, including a correct negation of the
+  wrong action. A pattern widened only to pass a failing right answer often
+  also passes a wrong one.
 
 ### Prompt style effects
 

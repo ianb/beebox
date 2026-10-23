@@ -1,9 +1,14 @@
+import { execFile } from "node:child_process";
+import { rm } from "node:fs/promises";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import { startAwakeTimeout } from "../shared/awake-timeout.js";
 import { docsRefreshHasWork, refreshGeneratedDocs } from "./docs-refresh.js";
 import type { Agent } from "./agent/types.js";
-import { repairMigration, runProcedureMigration, finishMigrationRepair, migrationQuestions, redactMigrationQuestions } from "./migration-repair.js";
+import { repairMigration, runProcedureMigration, finishMigrationRepair, migrationQuestions, redactMigrationQuestions, supersededMigrationQuestions } from "./migration-repair.js";
 import { checkPendingQuestionsAndNotify } from "./question-alert.js";
 import { stageAndCommitPaths } from "../lib/git/core/operations.js";
+import { withBoxGitLock } from "../lib/git-lock.js";
 import { captureMigrationSnapshot, changedMigrationPaths, restoreMigrationIndex, migrationOutputBaseline, finishMigrationOutput } from "./migration-recovery.js";
 import { acquireBoxMaintenance, boxWorkHolders, peekBoxWork, type BoxMaintenance } from "../lib/box-maintenance/admission.js";
 import { BoxMaintenanceError, type WorkHolder } from "../lib/box-maintenance-error.js";
@@ -166,20 +171,43 @@ async function sweepUnderMaintenance(opts: SweepOptions, owner: Owner): Promise<
   const manifest = await readManifest(boxRoot);
   if (manifest === null) return { status: "no-manifest" };
 
-  const pending = computePending(manifest);
-  if (pending.length === 0) {
-    const questions = await migrationQuestions(boxRoot);
-    return questions.length > 0 ? { status: "attention", questions, applied: [] } : { status: "current" };
-  }
-
   const applied: SweptMigration[] = [];
-  for (const migration of pending) {
+  for (const migration of computePending(manifest)) {
     const result = await applyMigration(opts, { migration, applied, owner });
     if (result) return result;
   }
 
+  await closeSupersededQuestions(opts, owner);
   const questions = await migrationQuestions(boxRoot);
-  return questions.length > 0 ? { status: "attention", questions, applied } : { status: "applied", applied };
+  if (questions.length > 0) return { status: "attention", questions, applied };
+  return applied.length > 0 ? { status: "applied", applied } : { status: "current" };
+}
+
+/**
+ * Delete and commit the pending questions the manifest has overtaken (see
+ * `supersededMigrationQuestions`): left in place, each keeps the box in
+ * `attention`, closes it to work on every yielding pass, and its answer would
+ * run a repair of a migration that has applied.
+ */
+async function closeSupersededQuestions(opts: SweepOptions, owner: Owner): Promise<void> {
+  const { boxRoot } = opts;
+  const superseded = await supersededMigrationQuestions(boxRoot, (await readManifest(boxRoot)) ?? []);
+  if (superseded.length === 0) return;
+  opts.signal?.throwIfAborted();
+  await owner.beginChanges();
+  // A stale owner lock no longer excludes ordinary work; the next pass tries again.
+  if (!(await owner.held())) return;
+  await owner.step("closing superseded questions");
+  for (const file of superseded) await rm(join(boxRoot, file));
+  try {
+    await stageAndCommitPaths(boxRoot, { paths: superseded, message: "Migration questions superseded by the applied migration", trailers: { "Created-By": "migration-sweep" } });
+  } catch (error) {
+    // A refused commit must not leave the cards missing: the next pass would see no question and report the box current.
+    await withBoxGitLock(boxRoot, async () => {
+      await promisify(execFile)("git", ["checkout", "--quiet", "HEAD", "--", ...superseded], { cwd: boxRoot });
+    });
+    throw error;
+  }
 }
 
 async function applyMigration(opts: SweepOptions, { migration, applied, owner }: { migration: Migration; applied: SweptMigration[]; owner: Owner }): Promise<SweepResult | null> {
@@ -242,7 +270,8 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
     return code;
   };
   const code = await convert();
-  if (code === SOFT_FAILURE_EXIT && !repaired?.question) {
+  // An earlier open question does not carry this run's leftovers, so it cannot record the migration.
+  if (code === SOFT_FAILURE_EXIT && (!repaired?.question || repaired.stale === true)) {
     return { status: "deferred-repair", failed: migration.name, recoveryRef: recovery.ref, applied };
   }
   if (code !== 0 && code !== SOFT_FAILURE_EXIT) {
@@ -261,7 +290,8 @@ async function applyMigration(opts: SweepOptions, { migration, applied, owner }:
     const paths = [...new Set([...await changedMigrationPaths(boxRoot, baseline), MANIFEST_PATH])];
     await step("committing");
     try {
-      await appendManifestEntry(boxRoot, { name: migration.name, "applied-at": getBoxTimeISO(boxRoot) });
+      // A partial apply records its question; any other pending question for this migration is superseded.
+      await appendManifestEntry(boxRoot, { name: migration.name, "applied-at": getBoxTimeISO(boxRoot), ...(repaired?.question === undefined ? {} : { question: repaired.question }) });
       await stageAndCommitPaths(boxRoot, {
         paths,
         message: `Apply migration: ${migration.name}\n\nChanged paths may contain earlier edits; recovery preserves the pre-attempt state.`,

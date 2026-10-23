@@ -56,6 +56,37 @@ Where to start: the `Rejected — busy` branch (`beebox/src/core/chat/session/ru
 the `chat-user-message` event and the dedup record are written relative to
 it.
 
+## Re-encounter (2026-10-22, worktree-risky-merge-review)
+
+Defect 2 has a second path that this issue did not name. A send that arrives
+while a turn is streaming is answered `{queued: true}`, and the
+`chat-user-message` event and the dedup claim are written at admission
+(`beebox/src/webapp/routes/chat/user-message-sender.ts:92-95`). The queue lives
+only in memory, and `stop()` in `beebox/src/core/chat/session/run/core.ts`
+clears it (`this.messageQueue = []`). `stop()` runs on server shutdown
+(`registry/shutdown.ts:48`, whose comment says "Stopping clears a session's
+queue"), on the idle sweep (`registry/core.ts:466`), on the LRU cap
+(`registry/cap.ts:37`), and on `resetSession`. A deploy or reload before the
+turn ends therefore drops the queued message. A client retry gets
+`deduplicated: true`, and the chat page shows the message as newest on every
+load. Quick chat marks such a record `state: "sent", queued: true`.
+
+A test proved it: second send `{queued: true}`, recorded, dedup claims for both
+ids, the engine never received it, one run, retry answered `deduplicated`. The
+probe used the fake backend from `send-run.start-failure.test.ts`, queued a
+second send behind a streaming turn, then called `registry.shutdown()`.
+
+Related: a drain refused by `sendReadiness` (a lapsed login) puts the inputs
+back, and nothing triggers another drain until a later turn result, so the next
+new send overtakes them and history order and delivery order disagree. The
+maintenance path (`pauseForMaintenance`) preserves the queue on purpose; a
+restart does not.
+
+The fix is a design choice: persist the queue and replay it on start, or have
+`stop()` mark dropped queued messages undelivered (remove the dedup claim and
+emit an undelivered marker the chat view renders with resend and discard, which
+is defect 2's proposed rendering).
+
 ## Related
 
 - [Reload loses an in-flight question (closed)](../closed/bugs/2026-08-09-reload-loses-in-flight-question.md).

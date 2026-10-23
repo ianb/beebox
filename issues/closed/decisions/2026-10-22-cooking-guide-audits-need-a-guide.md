@@ -4,9 +4,12 @@ workstream: unattached
 area: beebox
 labels: [harness]
 filed-by: agent
+resolution: implemented
 discovered-by: agent
 discovered-in: worktree-knowledge-audit-refresh — full knowledge-audit rerun, 2026-10-22
 ---
+
+> **Closed (2026-10-22):** retired both audits. The boxholder decided no cooking guidance ships, so they tested nothing.
 
 `cooking-guide-awareness` and `cooking-follow-recipe-pattern` in `beebox/src/dev/knowledge-audits.yaml` require a read of `_content/docs/generated/cooking-guide.md`. The test box `test1` has no cooking guide card, so that file does not exist and the agent guide lists no cooking guide. Both audits failed 2/2 on 2026-10-22. The 2026-07-03 rerun noted the same gap (`beebox/docs/reports/knowledge-audit-rerun-2026-07-03.md`).
 

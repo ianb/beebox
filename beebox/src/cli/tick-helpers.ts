@@ -156,7 +156,7 @@ export async function evaluateSkip(ctx: SkipContext): Promise<SkipDecision | nul
 
   if (options.force) {
     if (!parsed.enabled) return say("disabled (enabled: false)");
-  } else if (!isDue(parsed, { lastRun: state.lastRun, lastResult: state.lastResult, consecutiveFailures: state.consecutiveFailures, now })) {
+  } else if (!isDue(parsed, { lastRun: state.lastRun, lastResult: state.lastResult, consecutiveFailures: state.consecutiveFailures, lastFailureFinal: state.lastFailureFinal === true, now })) {
     return { line: "" };
   }
 

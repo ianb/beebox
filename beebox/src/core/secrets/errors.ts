@@ -242,10 +242,13 @@ export class SecretStoreAccessError extends SecretLifecycleError {
 
 /** A test process reached for the boxholder's real store instead of an isolated one. */
 export class RealSecretStoreInTestError extends SecretLifecycleError {
+  readonly storePath: string;
+
   constructor(storePath: string) {
     super(
       `Refusing to use the real secret store (${storePath}) from a test process. Run tests through tap from beebox/ so .taprc isolates the store, or set BBX_SECRETS_FILE.`,
     );
     this.name = "RealSecretStoreInTestError";
+    this.storePath = storePath;
   }
 }
