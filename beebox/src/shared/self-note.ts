@@ -20,6 +20,19 @@ export interface SelfNoteInfo {
   body: string;
 }
 
+/**
+ * Escape a value for a double-quoted XML attribute in an app tag
+ * (`<self-note ref="...">`, `<external-capture source-ref="...">`). The
+ * inverse of {@link decodeXmlAttr}. Single quotes stay as they are.
+ */
+export function escapeXmlAttr(v: string): string {
+  return v
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 /** Decode the five predefined XML entities in an attribute value. */
 export function decodeXmlAttr(v: string): string {
   return v
