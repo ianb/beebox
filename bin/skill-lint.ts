@@ -56,7 +56,7 @@ interface ParsedDoc {
 
 function parseDoc(text: string): ParsedDoc {
   const lines = text.split("\n");
-  if (lines[0] !== "---") {
+  if (!/^\uFEFF?---[\t ]*\r?$/.test(lines[0] ?? "")) {
     return { frontmatter: undefined, body: text, bodyStart: 1, error: "file does not start with a --- frontmatter fence" };
   }
   const close = frontmatterFence(text)?.closingLine ?? -1;

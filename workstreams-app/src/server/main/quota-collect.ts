@@ -35,14 +35,19 @@ interface ClaudeCache {
   quota: Quota | null;
 }
 
+function requestCodexQuota(now: Date, request: () => Promise<CodexRateLimitResult>): Promise<Quota> {
+  const fetchedAt = now.toISOString();
+  return request().then((result) => parseCodexQuota(result, fetchedAt)).catch((error: unknown) => ({
+    provider: "codex" as const, status: "unavailable" as const, fetchedAt, windows: [],
+    message: error instanceof Error ? error.message : String(error),
+  }));
+}
+
+/** The live Codex read, shared through a process-wide cache and one in-flight request. */
 async function collectCodex(now: Date, request: () => Promise<CodexRateLimitResult>): Promise<Quota> {
   if (codexCache && codexCache.expiresAt > now.getTime()) return codexCache.value;
   if (codexPending) return codexPending;
-  const fetchedAt = now.toISOString();
-  codexPending = request().then((result) => parseCodexQuota(result, fetchedAt)).catch((error: unknown) => ({
-    provider: "codex" as const, status: "unavailable" as const, fetchedAt, windows: [],
-    message: error instanceof Error ? error.message : String(error),
-  })).then((value) => {
+  codexPending = requestCodexQuota(now, request).then((value) => {
     codexCache = { expiresAt: now.getTime() + CODEX_CACHE_MS, value };
     return value;
   }).finally(() => { codexPending = null; });
@@ -204,7 +209,10 @@ export async function collectAgentQuotas(options: CollectQuotasOptions): Promise
       cachePath: path.join(stateDir, "claude-rate-limits.json"), fetchedAt, now,
       request: options.claudeRequest ?? (() => requestClaudeUsage(15_000)),
     }),
-    collectCodex(now, options.codexRequest ?? (() => requestCodexRateLimits(5_000, "codex"))),
+    // An injected request (tests) is answered directly, never from the shared cache.
+    options.codexRequest
+      ? requestCodexQuota(now, options.codexRequest)
+      : collectCodex(now, () => requestCodexRateLimits(5_000, "codex")),
     collectGlm(now, glmRequest),
   ]);
   return glm === null ? [claude, codex] : [claude, codex, glm];

@@ -9,8 +9,10 @@ import { storedClockOffsetMs } from "../../../lib/time.js";
  * The offset is read when the watch starts and compared on every poll. An
  * `fs.watchFile` watcher took its first reading asynchronously, so an offset
  * written just after a check-in was armed could become its baseline and never
- * read as a change; reading it here, synchronously, closes that gap. The poll
- * timer is unref'd so it never holds the process open.
+ * read as a change; reading it here, synchronously, closes that gap. What
+ * remains is the instant between a timer reading box time and this read, in
+ * the same synchronous call. The poll timer is unref'd so it never holds the
+ * process open.
  */
 export class ClockWatch {
   private timer: NodeJS.Timeout | null = null;
