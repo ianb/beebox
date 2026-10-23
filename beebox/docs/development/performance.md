@@ -107,7 +107,14 @@ pnpm perf:load --target prod --box <slug>   # production, through the real CDN
 ```
 
 Each run opens a new isolated browser context through CDP (the `bin/browse`
-browser, or `--cdp <ws-url>`). A new context has an empty HTTP cache and no
+browser, or `--cdp <ws-url>`). When the `bin/browse` browser stops answering,
+start a separate one and pass its URL:
+
+```bash
+"$HOME/.agent-browser/browsers/chrome-<version>/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing" \
+  --headless=new --remote-debugging-port=9447 --user-data-dir=<scratch dir> about:blank &
+pnpm perf:load --cdp "$(curl -s http://127.0.0.1:9447/json/version | jq -r .webSocketDebuggerUrl)"
+``` A new context has an empty HTTP cache and no
 cookies. The run sets the session cookie, applies the network profile (`none`,
 `4g`, `slow4g`) and the CPU slowdown (`--cpu`, default 4), and loads the page.
 It waits for a mark (`--until`, default `bbx:history`) and then for one second
