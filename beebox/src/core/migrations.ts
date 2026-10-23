@@ -8,8 +8,9 @@
  * migrations a box thinks it has applied.
  *
  * Every box had applied every entry below as of 2026-10-08, so each one now
- * runs the shared no-op `src/scripts/migrate/retired.ts`; the migrators that
- * did the work are in git history. A retired entry keeps its name and position.
+ * runs the shared tombstone `src/scripts/migrate/retired.ts` (a box that never
+ * applied the entry gets exit 1); the migrators that did the work are in git
+ * history. A retired entry keeps its name and position.
  *
  * Adding an entry here? File the legacy-removal issue too — whatever code now
  * exists only to tolerate the pre-migration shape should be named, with
@@ -53,6 +54,15 @@ export function isProcedureMigration(m: Migration): m is ProcedureMigration {
 }
 
 const RETIRED = "src/scripts/migrate/retired.ts";
+
+/**
+ * A retired entry runs the tombstone, which exits 1: only a box that never
+ * applied the migration reaches it, and an agent cannot repair that. The sweep
+ * asks a human instead of starting a repair attempt.
+ */
+export function isRetiredMigration(m: Migration): boolean {
+  return !isProcedureMigration(m) && m.script === RETIRED;
+}
 
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "attachments", script: RETIRED },
@@ -159,6 +169,12 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // written) on a marker without both fields. Legacy support to remove:
   // issues/deferred/2026-10-20-drop-box-marker-fallback.md.
   { name: "box-shape-record-2026-10", script: "src/scripts/migrate/box-shape-record/run.ts" },
+  // Repairs the seeded root question card: `learning.ref` gains its leading `/`
+  // (the bare form fails `bbx validate`), and a still-pending card's template
+  // proposal "This box is for <what the person said>." becomes a belief
+  // sentence. Touches only lines that match the stock text; an answered,
+  // dismissed, or expired card keeps its proposal.
+  { name: "root-question-2026-10", script: "src/scripts/migrate/root-question/run.ts" },
 ];
 
 export const MANIFEST_PATH = "_config/migrations.jsonl";

@@ -14,7 +14,7 @@ import { isNoResponseOnly, parseAcks, parseCallouts, type AckIndication } from "
 import { hasAssistantSpeech } from "../../../../lib/audio/speech-parsing/parse";
 import type { SessionContentBlock, SessionEntry } from "../../../../api";
 import { buildStreamEntry } from "../../../../lib/stream-entry";
-import { hasProgressUpdate, hasRenderableAssistantContent } from "../../message-parsing";
+import { hasProgressUpdate, hasRenderableAssistantContent } from "../../assistant-parts";
 import type { ModelMarker } from "../../InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel, type CaptureVerbs } from "../../capture-bubble";
 import { invariant } from "@shared/invariant";
@@ -180,9 +180,11 @@ export function buildTailItems(opts: TailItemsInput): DataItem[] {
     // GroupItem/AssistantMessage path as the finalized turn, keyed by liveTurnId
     // so finalize is an in-place update (no remount/flash). chunkOnParagraphs
     // trims to the last safe boundary so half-typed structured tags don't leak.
+    // Text written before a tool call is complete, so it is never trimmed.
+    const done = Math.max(0, ...streamTools.map((tool) => tool.streamTextOffset ?? 0));
     const entry = buildStreamEntry({
       uuid: `live-${liveTurnId ?? "tail"}`,
-      streamText: chunkOnParagraphs(streamText),
+      streamText: streamText.slice(0, done) + chunkOnParagraphs(streamText.slice(done)),
       streamTools,
     });
     if (hasAssistantSurface([entry], { debugView, proseEnabled })) {

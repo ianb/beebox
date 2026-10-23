@@ -212,3 +212,19 @@ export function runProcedureMigration(opts: {
     attempt: async () => ({ code: await opts.run(), reason: "The procedure exited nonzero; its output follows.", failure: opts.output() }),
   });
 }
+
+/**
+ * A retired migration that failed: the box never applied it, and the migrator
+ * is in git history. No agent attempt can succeed, so the question goes to the
+ * boxholder at once; an answer authorizes the next pass to ask again.
+ */
+export function runRetiredMigration(opts: {
+  boxRoot: string; name: string; recoveryRef: string; signal?: AbortSignal | undefined;
+  code: number; failure: string;
+}): ReturnType<typeof runBoundedAttempt> {
+  return runBoundedAttempt({
+    ...opts,
+    directive: `Migration ${opts.name} was retired and this box never applied it. Restore its migrator from git history, run it by hand, and record it in the manifest; no agent attempt is made.`,
+    attempt: () => Promise.resolve({ code: opts.code, reason: "The migration is retired and needs a human; no agent repair was attempted.", failure: opts.failure }),
+  });
+}

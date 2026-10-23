@@ -133,6 +133,9 @@ void test("The cookie carries createdBy, not just the device id — capture-requ
     }
   });
   const box2 = await makeTmpBox();
+  // A paired phone works only while its pairer can open the box.
+  await fs.promises.mkdir(path.join(box2.root, "_config"), { recursive: true });
+  await fs.promises.writeFile(path.join(box2.root, "_config", "box.json"), JSON.stringify({ allowedEmails: ["rosa@example.com"] }));
   const ticket2 = createMobilePairingTicket(box2.root, { createdBy: "rosa@example.com" });
   const device = await redeemMobilePairingTicket(box2.root, { pairingToken: ticket2.token, deviceLabel: "test" });
   if (!device) throw new Error("pairing failed");

@@ -21,6 +21,8 @@ const GmailRuleStateSchema = z.object({
   additionalMatches: z.number().int().nonnegative().optional(),
   unevaluated: z.array(PendingSummarySchema).optional(),
   additionalUnevaluated: z.number().int().nonnegative().optional(),
+  /** When `unevaluated` was re-checked once after the Message-ID guard widened. */
+  unevaluatedRecheckedAt: z.string().datetime({ offset: true }).optional(),
 }).strict();
 
 const GmailHistoryResumeSchema = z.object({

@@ -12,7 +12,8 @@ import { isoDate, str } from "@ianbicking/tap-check/check";
 import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { installRootQuestion, ROOT_QUESTION_PATH } from "../../../../src/core/box/structure/root-question.js";
+import { installRootQuestion } from "../../../../src/core/box/structure/root-question.js";
+import { ROOT_QUESTION_PATH } from "../../../../src/core/box/root-question-path.js";
 import { parseFrontmatterObject } from "../../../../src/cards/frontmatter.js";
 import { questionState } from "../../../../src/schemas/question.js";
 
@@ -43,8 +44,8 @@ input:
   type: text
 learning:
   sink: briefing
-  ref: _content/briefing.briefing.card
-  proposal: This box is for <what the person said>.
+  ref: /_content/briefing.briefing.card
+  proposal: The box does not know yet what it is for.
 directive: Write the purpose into the briefing card in the person's words. Write two or three sentences on the Box page (the root landmark's body, _content/Box.landmark.card) in their words. Replace the stock openers on that landmark with openers for what they said, or remove them. Then reflect back what they said in a sentence and offer two or three things the box could do for that, in their words; nothing about what the box can do before this.
 asked-at: ${isoDate()}
 ---

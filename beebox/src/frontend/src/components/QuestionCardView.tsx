@@ -54,8 +54,7 @@ export function QuestionCardView({ data }: RendererProps) {
     <div className="p-4 max-w-2xl mx-auto">
       <Card padding="md" {...bbxSource("card", data.path)}>
         <Stack gap="sm">
-          <Heading level={2}>{question.name}</Heading>
-          <Text as="p">{question.prompt}</Text>
+          <Heading level={2}>{question.prompt}</Heading>
           {renderQuestionAnswer(question)}
           {question.learning?.proposal !== undefined ? (
             <Card padding="sm" background="info" border="none">

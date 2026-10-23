@@ -1,6 +1,8 @@
 /**
  * bbx validate - Validate cards and markdown against schemas/rules
  */
+import { stat } from "node:fs/promises";
+import * as path from "node:path";
 import { typeFromFilename } from "../../../core/card-io.js";
 import { isSystemCardType } from "../../../shared/system-card-paths.js";
 import { checkSystemCards, checkStagedSystemCards } from "../../../core/system-cards.js";
@@ -31,7 +33,7 @@ import { loadValidationIgnore, type ValidationIgnore } from "../../../core/valid
 import type { LoadCardContext } from "../../../core/card-io.js";
 import { checkLegacyInstructionErrors, checkLegacySchemaPath, checkPresentationErrors, checkReservedSegmentErrors, checkRootStrayErrors, boxSchemaFieldWarnings } from "./box-checks.js";
 import { resolveCliTargetPath } from "../../lib/cli-target-path.js";
-import { canonicalBuckets, checkCommitted, countTotalErrors, printTextResults, useColor } from "./report.js";
+import { canonicalBuckets, checkCommitted, countTotalErrors, printLastUrlCheck, printTextResults, useColor } from "./report.js";
 import { errorMessage } from "../../../shared/error-guards.js";
 
 
@@ -205,8 +207,35 @@ async function collectAllResults({ boxRoot, ctx, ignore, canonical }: CollectArg
   };
 }
 
+/**
+ * Replace each directory with the cards and markdown files under it, using the
+ * whole-box walk and ignore rules (`listBoxCardFiles`, `listBoxMarkdownFiles`,
+ * trash and `.validateignore`). Other paths pass through unchanged.
+ */
+export async function expandDirectories(paths: string[], { boxRoot, ignore }: { boxRoot: string; ignore: ValidationIgnore }): Promise<string[]> {
+  const dirs = new Set<string>();
+  for (const p of paths) {
+    if (await isDirectory(p)) dirs.add(p);
+  }
+  if (dirs.size === 0) return paths;
+  const [cards, markdown] = await Promise.all([listBoxCardFiles(boxRoot), listBoxMarkdownFiles(boxRoot)]);
+  const inDir = (file: string): boolean => [...dirs].some((d) => file.startsWith(d.endsWith(path.sep) ? d : d + path.sep));
+  const under = [...cards.filter((p) => !isTrashedCard(p)), ...markdown].filter((p) => inDir(p) && !ignore.isIgnored(p));
+  return [...paths.filter((p) => !dirs.has(p)), ...under];
+}
+
+async function isDirectory(p: string): Promise<boolean> {
+  try {
+    return (await stat(p)).isDirectory();
+  } catch (_e) {
+    // A missing path falls through to the "not a card or markdown file" error.
+    return false;
+  }
+}
+
 /** Validate an explicit list of card/markdown paths; exit 1 on unknown types. */
-async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): Promise<CollectedResults> {
+async function collectExplicitResults({ boxRoot, ctx, resolved: given, ignore }: CollectArgs): Promise<CollectedResults> {
+  const resolved = await expandDirectories(given, { boxRoot, ignore });
   const cardPaths = resolved.filter(isCardFile);
   const mdPaths = resolved.filter(isMarkdownFile);
   const unknown = resolved.filter((p) => !isCardFile(p) && !isMarkdownFile(p));
@@ -229,7 +258,7 @@ const NO_CANONICAL = { canonicalViewWarnings: [], canonicalDossierWarnings: [] }
 
 export const validateCommand = new Command("validate")
   .description("Validate cards and markdown in the box")
-  .argument("[paths...]", "Files to validate (cards or markdown). Omit to validate everything; pair with --staged to validate staged cards.")
+  .argument("[paths...]", "Files or directories to validate (cards or markdown; a directory validates everything under it). Omit to validate everything; pair with --staged to validate staged cards.")
   .option("--all", "Validate all files in the box (default when no path given)")
   .option("--staged", "Validate the cards currently staged in git")
   .option("--hook", "Hook mode: read a PostToolUse JSON payload from stdin and validate touched files. Warnings use exit 0 with JSON additionalContext on stdout; errors use exit 2 with stderr.")
@@ -325,6 +354,7 @@ export const validateCommand = new Command("validate")
           console.log(JSON.stringify(payload, null, 2));
         } else {
           printTextResults(results);
+          await printLastUrlCheck(boxRoot);
         }
 
         if (options.committed) {

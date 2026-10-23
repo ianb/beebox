@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { AgentBrowserError, getUrl, run, runPassthrough } from "agent-browser-typed";
 import {
   annotateSnapshot, applyLiveIds, boxCenter, CHECKED_COMMANDS, checkScript, GET_TARGET_SUBCOMMANDS, isControlId,
-  isInteractiveRole, judgeBox, parseCheckResult, parseTarget, refRenumbered, upstreamSelector,
+  isInteractiveRole, judgeBox, parseCheckResult, parseTarget, refAfterActionDetail, refRenumbered, upstreamSelector,
 } from "./controls.js";
 import type { Box, CheckResult, Locator, RefRecord, RefTable, ScanEntry, Target } from "./controls.js";
 import { isOwnOrigin } from "./worktree.js";
@@ -28,28 +28,45 @@ function refTablePath(): string {
 interface RefHistory {
   current: RefTable;
   previous: RefTable;
+  /** The page-changing command that last ran after the latest snapshot, or null when none has. */
+  actedSince: string | null;
 }
 
-async function loadRefHistory(): Promise<RefHistory> {
+export async function loadRefHistory(): Promise<RefHistory> {
   try {
     const raw = await readFile(refTablePath(), "utf8");
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed === "object" && parsed !== null && "current" in parsed && "previous" in parsed) {
-      return parsed as RefHistory;
+      const actedSince = (parsed as { actedSince?: unknown }).actedSince;
+      return { ...(parsed as RefHistory), actedSince: typeof actedSince === "string" ? actedSince : null };
     }
   } catch {
     // No history yet.
   }
-  return { current: {}, previous: {} };
+  return { current: {}, previous: {}, actedSince: null };
 }
 
 /** Remembers the last two snapshots' ref tables — what {@link refRenumbered} compares. */
-async function saveRefTable(refs: RefTable): Promise<void> {
+export async function saveRefTable(refs: RefTable): Promise<void> {
   try {
     const history = await loadRefHistory();
-    await writeFile(refTablePath(), JSON.stringify({ current: refs, previous: history.current }));
+    await writeFile(refTablePath(), JSON.stringify({ current: refs, previous: history.current, actedSince: null }));
   } catch (e) {
     process.stderr.write(`browse: could not record snapshot refs (${String(e)}); the renumbering warning is off for the next action\n`);
+  }
+}
+
+/**
+ * Records that a page-changing command ran, so a `@eN` ref from the snapshot
+ * before it is refused until the next snapshot. Best-effort: with no record the
+ * refusal is simply off.
+ */
+export async function noteAction(sub: string): Promise<void> {
+  try {
+    const history = await loadRefHistory();
+    await writeFile(refTablePath(), JSON.stringify({ ...history, actedSince: sub }));
+  } catch {
+    // The refusal stays off until the next snapshot.
   }
 }
 
@@ -153,7 +170,7 @@ export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeCo
     ({ stdout: text } = await run(["snapshot", ...args]));
   } catch (e) {
     if (e instanceof AgentBrowserError) {
-      process.stderr.write(e.stderr === "" ? e.stdout : e.stderr);
+      process.stderr.write(`${failureText(e)}\n`);
       return e.code === -1 ? 1 : e.code;
     }
     throw e;
@@ -207,6 +224,12 @@ export async function annotatedSnapshot(args: readonly string[], ctx: WorktreeCo
   process.stdout.write(finalText);
   await saveRefTable(annotated.refs);
   return 0;
+}
+
+/** What upstream printed, or the cause when it printed nothing or was killed by a signal. */
+function failureText(e: AgentBrowserError): string {
+  const output = (e.stderr === "" ? e.stdout : e.stderr).trim();
+  return e.signal === null && output !== "" ? output : e.report;
 }
 
 /** The ref table a `snapshot --json` payload implies: role and name per ref, no id. */
@@ -272,8 +295,9 @@ async function checkAtBox(selector: string, expectName: string | null): Promise<
  * A target-taking subcommand (`click`, `fill`, …), checked. Resolution order:
  *
  * - `bbx-…` / `#bbx-…`: the in-page precondition check, then upstream with `#id`.
- * - `@eN`: a warning when the number changed hands between the last two
- *   snapshots (what it was, what it is now); if the element carries a `bbx-`
+ * - `@eN`: refused when a page-changing command ran since the latest snapshot;
+ *   a warning when the number changed hands between the last two snapshots
+ *   (what it was, what it is now); if the element carries a `bbx-`
  *   id the action proceeds by id, otherwise it is checked at its box's centre
  *   (geometry, then what is on top there).
  * - anything else: upstream, untouched.
@@ -289,13 +313,16 @@ export async function checkedAction({ sub, args, ctx }: { sub: string; args: rea
   let recorded: RefRecord | undefined;
   if (target.kind === "ref") {
     const history = await loadRefHistory();
+    if (history.actedSince !== null) {
+      return refuse(`${sub} ${raw}`, { ok: false, reason: "stale-ref", detail: refAfterActionDetail(raw, history.actedSince) });
+    }
     recorded = history.current[target.ref];
     let liveId: string | null;
     try {
       liveId = await liveRefId(target.ref);
     } catch (e) {
       // Upstream's own error for an unknown ref is already loud; surface it as-is.
-      const msg = e instanceof AgentBrowserError ? (e.stdout.trim() || e.stderr.trim()) : String(e);
+      const msg = e instanceof AgentBrowserError ? (e.signal === null ? e.stdout.trim() || e.stderr.trim() || e.report : e.report) : String(e);
       process.stdout.write(`${msg}\n`);
       return 1;
     }

@@ -18,11 +18,18 @@
  * - `Cookie: bbx_mobile=<signed>` — the short-lived session. Browser
  *   navigations and WebSocket upgrades use it, because the browser `WebSocket`
  *   API cannot set headers. Verifying it is pure HMAC, so it is the hot path.
+ *
+ * Either credential is valid only while the person who paired the device
+ * (`createdBy`) can still open the box (`canAccessBox`). Removing a member from
+ * `allowedEmails` refuses that member's phones at once, with no revoke step,
+ * exactly as an unknown device is refused. The device record stays.
  */
 
 import { verifyMobileSession, MOBILE_COOKIE_NAME } from "./session.js";
 import { resolveMobileBearerIdentity, type MobileBearerIdentity } from "./pairing.js";
 import { parseCookieHeaderAll } from "../../lib/cookies.js";
+import { canAccessBox } from "../../webapp/box-access.js";
+import { getOwnerEmail } from "../../webapp/auth.js";
 
 /** The credential a request authenticated with, for the caller that cares. */
 export type MobileAuthSource = "bearer" | "cookie";
@@ -42,6 +49,27 @@ export interface MobileAuthHeaders {
 /** Node gives repeated headers as arrays; only a single value can be a credential. */
 function single(value: string | string[] | undefined): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+/** Devices already logged as refused, so a phone that keeps retrying logs once
+ *  per process, not once per request. Keyed by box and device. */
+const loggedRefusals = new Set<string>();
+
+/**
+ * Pass `auth` through only while its pairer can still open the box. A null
+ * `createdBy` (a device paired in open mode, or before the pairer was recorded)
+ * belongs to no member, so there is no membership to lose.
+ */
+async function whilePairerHasAccess(boxRoot: string, auth: MobileRequestAuth): Promise<MobileRequestAuth | null> {
+  const pairer = auth.createdBy;
+  if (pairer === null) return auth;
+  if (await canAccessBox({ boxRoot, email: pairer, ownerEmail: getOwnerEmail() })) return auth;
+  const key = `${boxRoot}#${auth.deviceId}`;
+  if (!loggedRefusals.has(key)) {
+    loggedRefusals.add(key);
+    console.warn(`[mobile-auth] refusing device ${auth.deviceId}: its pairer can no longer open the box at ${boxRoot}`);
+  }
+  return null;
 }
 
 /**
@@ -64,17 +92,19 @@ export async function resolveMobileRequestAuth(
   for (const value of cookies[MOBILE_COOKIE_NAME] ?? []) {
     const session = verifyMobileSession(boxRoot, value);
     if (session) {
-      return {
+      const auth = await whilePairerHasAccess(boxRoot, {
         deviceId: session.deviceId,
         createdBy: session.createdBy,
         source: "cookie",
         expiresAt: session.exp,
-      };
+      });
+      // A refused cookie does not speak for the other credentials on the request.
+      if (auth) return auth;
     }
   }
 
   const bearer = await resolveMobileBearerIdentity(boxRoot, single(headers.authorization));
-  if (bearer) return { ...bearer, source: "bearer", expiresAt: null };
+  if (bearer) return whilePairerHasAccess(boxRoot, { ...bearer, source: "bearer", expiresAt: null });
 
   return null;
 }

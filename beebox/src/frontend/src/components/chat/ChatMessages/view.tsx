@@ -14,7 +14,8 @@ import { splitCalloutParts, type CalloutPart } from "../../../lib/structured-out
 import { CalloutBlock } from "../CalloutBlock";
 import { ActivityGroup } from "./activity-rendering";
 import { MarkdownContent, type OnZoomView } from "../markdown-rendering";
-import { countSpeech, groupIntoParts, type SelfNoteInfo } from "../message-parsing";
+import { countSpeech, type SelfNoteInfo } from "../message-parsing";
+import { groupIntoParts } from "../assistant-parts";
 import type { SpeechSegmentState } from "../../../machines/speech-segment-states";
 
 export interface ReplaySpeechOptions {
@@ -150,7 +151,7 @@ export function AssistantMessage({
   /** When false, untagged prose hides; only callouts and acks render. Default true. */
   proseEnabled?: boolean;
 }) {
-  const grouped = groupIntoParts(entries);
+  const grouped = groupIntoParts(entries, { fold: debugView !== true });
   const allText = entries.flatMap((e) =>
     e.content.filter((b) => b.type === "text").map((b) => b.text ?? "")
   ).join("\n");
@@ -220,7 +221,7 @@ export function AssistantMessage({
                   key={i}
                   text={group.text}
                   indexOffset={groupSpeechOffsets[i] ?? 0}
-                  showProse={showProse}
+                  showProse={showProse ? group.proseHidden !== true : false}
                   activeIndex={activeIndex}
                   segmentStates={segmentStates}
                   segmentFailures={segmentFailures}

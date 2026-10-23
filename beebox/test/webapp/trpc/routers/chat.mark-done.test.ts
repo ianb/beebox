@@ -9,6 +9,7 @@
 
 import { test } from "tap";
 import "@ianbicking/tap-check/tap";
+import { execFileSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { TrpcContext } from "../../../../src/webapp/trpc/context.js";
@@ -71,6 +72,14 @@ done: true
 ---
 «blankline»
 Notes the boxholder wrote.`);
+
+  // The mark is committed with the husk, so the box stays clean (the husk was
+  // untracked until now):
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: box.root, encoding: "utf8" }).trim();
+  t.check(
+    { huskDirty: git("status", "--porcelain", "--", "_content/chat/web/2026-07-28_aaaa1111.chat.card"), source: git("log", "-1", "--format=%(trailers:key=Commit-Source,valueonly)") },
+    { huskDirty: "", source: "chat-husk" },
+  );
 
   t.check(await listed(box.root), [
     "aaaa1111 done",
