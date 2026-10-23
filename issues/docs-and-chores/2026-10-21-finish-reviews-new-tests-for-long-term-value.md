@@ -1,7 +1,6 @@
 ---
 title: "Finish has no step that decides which of a branch's new tests to keep"
 workstream: test-value-research
-needs: [design]
 area: testing
 labels: [tests, finish]
 filed-by: agent
@@ -106,6 +105,8 @@ and the measured accuracy of each mechanical flag are in README sections 4
 and 5 of the research note.
 
 ## Design (2026-10-23): a light review, drawn from the research
+
+Accepted by the boxholder 2026-10-23. The four tasks below are the work.
 
 What the research supports, and so what the step does and does not do:
 
