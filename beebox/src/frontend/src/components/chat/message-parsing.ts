@@ -8,6 +8,7 @@ import type { LightboxImage } from "../ImageLightbox";
 import { resolveImageSrc } from "../../lib/view-url";
 import { isUrlRef } from "@shared/ref-path/core";
 import { bustImageSrc } from "../../lib/file-version";
+import { isImageFileName } from "../../lib/binary-files";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "@shared/chat-tags";
 import { SESSION_MEDIA_ROUTE } from "@shared/session-media";
@@ -311,15 +312,11 @@ export function parseTaskNotification(text: string): TaskNotification | null {
   };
 }
 
-const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".bmp", ".svg", ".ico"]);
-
 export function isImagePath(path: string): boolean {
   // Strip any ?query / #hash before checking the extension, so a cache-busted
   // image (`photo.png?v=1`) is still recognized as an image, not an embed.
   const [clean = ""] = path.split(/[#?]/, 1);
-  const dot = clean.lastIndexOf(".");
-  if (dot <= 0) return false;
-  return IMAGE_EXTS.has(clean.slice(dot).toLowerCase());
+  return isImageFileName(clean);
 }
 
 /**

@@ -19,6 +19,7 @@ import { Accordion } from "../../../../components/ui/Accordion";
 import { Text } from "../../../../components/ui/Text";
 import type { RouterOutput } from "../../../../lib/trpc/client";
 import { apiRawFileUrl, apiRawImageUrl, getApiBase } from "../../../../api";
+import { isImageFileName } from "../../../../lib/binary-files";
 import { attachDirFor } from "@shared/attach-path";
 import { areaDisplayLabel } from "@shared/display-path";
 import { foldListing, type FoldEntry } from "@shared/browse-fold";
@@ -31,12 +32,8 @@ type BrowseCardData = BrowseData["cards"][number];
 type BrowseFileData = BrowseData["files"][number];
 type Entry = FoldEntry<BrowseCardData, BrowseDirData, BrowseFileData>;
 
-const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".bmp", ".svg", ".ico"]);
-
 function imageDataAttrs(relativePath: string, name: string): Record<string, string> | null {
-  const dot = relativePath.lastIndexOf(".");
-  if (dot <= 0) return null;
-  if (!IMAGE_EXTS.has(relativePath.slice(dot).toLowerCase())) return null;
+  if (!isImageFileName(name)) return null;
   return {
     "data-image-src": apiRawFileUrl(getApiBase(), relativePath),
     "data-image-alt": name,
