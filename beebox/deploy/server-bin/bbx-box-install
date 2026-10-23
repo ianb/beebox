@@ -18,8 +18,9 @@
 # every box (issues: per-box reinstall marker, 2026-10-22).
 #
 # One box's failure prints ERROR and the next box proceeds; the exit status is
-# 0 unless the arguments are wrong. Installs run as the beebox user, which owns
-# the box trees.
+# 0 unless the arguments are wrong. Installs and verification run as the beebox
+# user, which owns the box trees and is the account that must be able to run
+# the result; root passes every permission check.
 set -euo pipefail
 
 if [[ $# -ne 2 ]]; then
@@ -29,6 +30,7 @@ fi
 boxes_root="$1"
 engine="$2"
 link_check="$engine/bin/box-engine-link"
+verify_as_beebox() { sudo -u beebox -H bash -lc '"$0" verify "$1"' "$link_check" "$1"; }
 STAMP_NAME=".bbx-install-stamp"
 
 for box in "$boxes_root"/*/; do
@@ -51,18 +53,21 @@ for box in "$boxes_root"/*/; do
     reason="package.json changed since the last install"
   elif [[ "$lock" -nt "$stamp" ]]; then
     reason="pnpm-lock.yaml changed since the last install"
-  elif ! "$link_check" verify "$box" 2>/dev/null; then
+  elif ! verify_as_beebox "$box" 2>/dev/null; then
     reason="the recorded install no longer verifies"
   fi
   # A box with nothing to do already verified above.
   [[ -n "$reason" ]] || continue
   echo "  $name: installing ($reason)..."
-  if ! sudo -u beebox -H bash -lc 'cd "$0" && pnpm install' "$box"; then
+  # CI=true: without it pnpm aborts with no TTY when it decides node_modules
+  # must be recreated (after a Node major upgrade, for one), and the box would
+  # fail the same way on every deploy. The update banner is noise in a log.
+  if ! sudo -u beebox -H bash -lc 'cd "$0" && CI=true npm_config_update_notifier=false pnpm install' "$box"; then
     echo "  ERROR $name: pnpm install exited nonzero; check for real dependency errors above" \
          "(a lone EPERM on .bin linking is a known-harmless pnpm quirk, everything else is not)." >&2
     continue
   fi
-  if ! "$link_check" verify "$box"; then
+  if ! verify_as_beebox "$box"; then
     echo "  ERROR $name: the box has no usable engine after install." >&2
     continue
   fi

@@ -23,12 +23,12 @@ const execFileAsync = promisify(execFile);
 const helper = resolve("deploy/server-bin/bbx-box-install");
 
 const stubs = {
-  // `sudo -u beebox -H <command...>` runs the command as the test user.
-  sudo: "#!/usr/bin/env bash\nshift 3\nexec \"$@\"\n",
-  // `pnpm install` in a box: logs the box, fails when the box asks it to.
-  pnpm: "#!/usr/bin/env bash\necho \"install $(basename \"$PWD\")\" >> \"$BBX_TEST_LOG\"\n[[ -e .fail-install ]] && exit 1\nexit 0\n",
-  // `box-engine-link link|verify <box> ...`: logs the call, fails when the box asks it to.
-  "box-engine-link": "#!/usr/bin/env bash\necho \"$1 $(basename \"$2\")\" >> \"$BBX_TEST_LOG\"\n[[ -e \"$2/.fail-$1\" ]] && exit 1\nexit 0\n",
+  // `sudo -u <user> -H <command...>` runs the command as the test user, naming the requested account.
+  sudo: "#!/usr/bin/env bash\nexport BBX_TEST_AS=\"$2\"\nshift 3\nexec \"$@\"\n",
+  // `pnpm install` in a box: logs the box and whether it runs non-interactively, fails when the box asks it to.
+  pnpm: "#!/usr/bin/env bash\necho \"install $(basename \"$PWD\") ci=${CI:-unset}\" >> \"$BBX_TEST_LOG\"\n[[ -e .fail-install ]] && exit 1\nexit 0\n",
+  // `box-engine-link link|verify <box> ...`: logs the call and the account it ran as, fails when the box asks it to.
+  "box-engine-link": "#!/usr/bin/env bash\necho \"$1 $(basename \"$2\") as=${BBX_TEST_AS:-root}\" >> \"$BBX_TEST_LOG\"\n[[ -e \"$2/.fail-$1\" ]] && exit 1\nexit 0\n",
 };
 
 async function setup() {
@@ -80,12 +80,12 @@ void test("A box with no install on record is installed once and then left alone
   const first = await s.run();
   t.check(
     { code: first.code, calls: first.calls, stamped: (await s.stampAge(a)) !== null },
-    { code: 0, calls: ["link a", "install a", "verify a"], stamped: true },
+    { code: 0, calls: ["link a as=beebox", "install a ci=true", "verify a as=beebox"], stamped: true },
   );
 
   // The stamp is what records the install; a second run finds nothing to do.
   const second = await s.run();
-  t.check({ code: second.code, calls: second.calls, stdout: second.stdout }, { code: 0, calls: ["link a", "verify a"], stdout: "" });
+  t.check({ code: second.code, calls: second.calls, stdout: second.stdout }, { code: 0, calls: ["link a as=beebox", "verify a as=beebox"], stdout: "" });
 });
 
 void test("A manifest or lockfile newer than the stamp reinstalls the box", async (t) => {
@@ -104,7 +104,7 @@ void test("A manifest or lockfile newer than the stamp reinstalls the box", asyn
   t.check(
     { calls: result.calls, stdout: result.stdout },
     {
-      calls: ["link a", "install a", "verify a", "link b", "install b", "verify b"],
+      calls: ["link a as=beebox", "install a ci=true", "verify a as=beebox", "link b as=beebox", "install b ci=true", "verify b as=beebox"],
       stdout: "a: installing (package.json changed since the last install)...\n  b: installing (pnpm-lock.yaml changed since the last install)...",
     },
   );
@@ -135,7 +135,7 @@ void test("A stamp is written only after an install that exited 0 and verified",
 
   // Without a stamp the next deploy tries both again.
   const again = await s.run();
-  t.check(again.calls.filter((c) => c.startsWith("install ")), ["install failing", "install unverified"]);
+  t.check(again.calls.filter((c) => c.startsWith("install ")), ["install failing ci=true", "install unverified ci=true"]);
 });
 
 void test("A recorded install that no longer verifies is reinstalled", async (t) => {
@@ -149,7 +149,7 @@ void test("A recorded install that no longer verifies is reinstalled", async (t)
   const result = await s.run();
   t.check(
     { calls: result.calls, stdout: result.stdout },
-    { calls: ["link a", "verify a", "install a", "verify a"], stdout: "a: installing (the recorded install no longer verifies)..." },
+    { calls: ["link a as=beebox", "verify a as=beebox", "install a ci=true", "verify a as=beebox"], stdout: "a: installing (the recorded install no longer verifies)..." },
   );
 });
 
@@ -164,7 +164,7 @@ void test("A legacy box without a manifest and a box whose link fails are skippe
   const result = await s.run();
   t.check(
     { code: result.code, calls: result.calls, stderr: result.stderr },
-    { code: 0, calls: ["link unlinked", "link z", "install z", "verify z"], stderr: "ERROR unlinked: could not link .beebox/engine; skipping its install." },
+    { code: 0, calls: ["link unlinked as=beebox", "link z as=beebox", "install z ci=true", "verify z as=beebox"], stderr: "ERROR unlinked: could not link .beebox/engine; skipping its install." },
   );
 });
 
