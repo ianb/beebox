@@ -12,6 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../../shared/error-guards.js";
 import { isRecord } from "../../shared/is-record.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 /** The link's path relative to the box root. */
 export const ENGINE_LINK = ".beebox/engine";
@@ -48,12 +49,6 @@ export async function engineRealPath(dir: string): Promise<string | null> {
     return null;
   }
   return isRecord(parsed) && parsed["name"] === "beebox" ? real : null;
-}
-
-/** Whether `child` is `parent` or lies under it (both real paths). */
-export function isWithin(parent: string, child: string): boolean {
-  const rel = path.relative(parent, child);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
 /**

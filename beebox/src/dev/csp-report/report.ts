@@ -44,6 +44,7 @@ import { z } from "zod";
 import { cspReportLogPath } from "../../webapp/routes/api-csp-report.js";
 import { resolveBoxRoot } from "../../lib/box-shape.js";
 import { digestEntries, entriesSince, newestTs, parseCspLog, type CspDigest, type CspEntry } from "./digest.js";
+import { errorMessage } from "../../shared/error-guards.js";
 
 const execFileP = promisify(execFile);
 
@@ -93,10 +94,6 @@ const runnerStateSchema = z.object({
   lastNotifiedHardenReady: z.boolean(),
 });
 type RunnerState = z.infer<typeof runnerStateSchema>;
-
-function errMessage(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
 
 // ── Gather ──────────────────────────────────────────────────────────────
 
@@ -416,5 +413,5 @@ async function main(): Promise<void> {
 main().catch((e: unknown) => {
   // Unattended run: surface to stderr for the LaunchAgent log, but exit 0 so a
   // transient failure doesn't get the agent throttled/disabled by launchd.
-  process.stderr.write(`csp-report failed: ${errMessage(e)}\n`);
+  process.stderr.write(`csp-report failed: ${errorMessage(e)}\n`);
 });

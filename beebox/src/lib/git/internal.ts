@@ -9,6 +9,7 @@
 
 import { spawn } from "node:child_process";
 import { simpleGit } from "simple-git";
+import { errorMessage } from "../../shared/error-guards.js";
 
 /**
  * A git command failed with an error we don't specifically handle (i.e. not an
@@ -21,14 +22,10 @@ export class GitCommandError extends Error {
   /** `message` overrides the cause's own wording — subclasses use it to say
    *  what KIND of failure this is while keeping the original text. */
   constructor(cause: unknown, message?: string) {
-    super(message ?? causeMessage(cause));
+    super(message ?? errorMessage(cause));
     this.name = "GitCommandError";
     this.cause = cause;
   }
-}
-
-function causeMessage(cause: unknown): string {
-  return cause instanceof Error ? cause.message : String(cause);
 }
 
 /**
@@ -74,9 +71,9 @@ export class GitIndexLockError extends GitCommandError {
     super(
       cause,
       staleLockPath === undefined
-        ? `${GIT_CONTENDED_MARKER} another process holds the git index: ${causeMessage(cause)}`
+        ? `${GIT_CONTENDED_MARKER} another process holds the git index: ${errorMessage(cause)}`
         : `${GIT_STALE_LOCK_MARKER} ${staleLockPath} looks abandoned — no git process holds it, ` +
-            `and it did not clear. If no git is running, delete it: ${causeMessage(cause)}`,
+            `and it did not clear. If no git is running, delete it: ${errorMessage(cause)}`,
     );
     this.name = "GitIndexLockError";
   }

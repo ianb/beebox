@@ -44,6 +44,7 @@ import { formatRefSuffix, isExternalRef, parseRef, resolveRefPath } from "../../
 import { formatLinkDestination, htmlLinkPattern, inlineLinkPattern, linkTarget } from "../body-refs.js";
 import { rewriteFrontmatter, type RefTransform } from "./frontmatter-refs.js";
 import { invariant } from "../../shared/invariant.js";
+import { boxRelativeDoc } from "../../lib/box-containment.js";
 
 /**
  * Decide where a resolved target moves to. Receives an absolute path; returns
@@ -68,7 +69,7 @@ function resolveRefToAbs(params: {
 }): string | null {
   const { boxRoot, cardAbsPath, pathPart } = params;
   if (isExternalRef(pathPart)) return null;
-  const fromPath = params.fromPath ?? boxRelativeFrom(boxRoot, cardAbsPath);
+  const fromPath = params.fromPath ?? boxRelativeDoc(boxRoot, cardAbsPath);
   if (fromPath === null) {
     console.warn(`rewrite-card-refs: ${cardAbsPath} is outside ${boxRoot}; leaving its refs unchanged`);
     return null;
@@ -80,16 +81,6 @@ function resolveRefToAbs(params: {
   const resolved = resolveRefPath({ fromPath, ref: pathPart, kind: "card" });
   if (resolved === null) return null;
   return path.resolve(boxRoot, resolved);
-}
-
-/**
- * The referring card's path as the shared algebra wants it: box-relative,
- * forward slashes. `null` when the card lies outside the box.
- */
-function boxRelativeFrom(boxRoot: string, cardAbsPath: string): string | null {
-  const rel = path.relative(path.resolve(boxRoot), path.resolve(cardAbsPath));
-  if (rel === "" || rel === ".." || rel.startsWith(".." + path.sep)) return null;
-  return rel.split(path.sep).join("/");
 }
 
 /**

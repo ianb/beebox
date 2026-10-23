@@ -12,9 +12,11 @@
  * — test economics", mechanism A.
  */
 
-import { execFileSync } from "node:child_process";
 import { closeSync, mkdirSync, openSync, readFileSync, unlinkSync, writeSync } from "node:fs";
 import { join } from "node:path";
+import { errnoCode } from "../beebox/src/shared/error-guards.js";
+import { pidAlive } from "../beebox/src/hub/child-process-utils.js";
+import { bootTimeMs } from "./lib/schedules-store.js";
 
 export type Tier = "ordinary" | "careful";
 
@@ -114,11 +116,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-/** The `code` of a caught filesystem error, when it carries one. */
-function errorCode(e: unknown): string | undefined {
-  return isRecord(e) && typeof e.code === "string" ? e.code : undefined;
-}
-
 /** Parses a lock file's contents; null when it is unreadable or the wrong shape. */
 export function parseLockRecord(raw: string): LockRecord | null {
   let parsed: unknown;
@@ -138,32 +135,6 @@ export function parseLockRecord(raw: string): LockRecord | null {
   return { pid, branch, at, bootTimeMs: boot ?? null };
 }
 
-/** `kill(pid, 0)`: EPERM means it exists and belongs to somebody else. */
-export function isProcessAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (e) {
-    return errorCode(e) === "EPERM";
-  }
-}
-
-/** When this machine booted, from `kern.boottime`; null off macOS or unparseable. */
-export function bootTimeMs(): number | null {
-  if (process.platform !== "darwin") return null;
-  let raw: string;
-  try {
-    raw = execFileSync("/usr/sbin/sysctl", ["-n", "kern.boottime"], { encoding: "utf-8" });
-  } catch (_e) {
-    // No `sysctl` to ask, or a kernel that answers differently. Boot time is an
-    // extra staleness signal, not a required one: the age and pid checks stand.
-    return null;
-  }
-  const match = /sec\s*=\s*(\d+)/u.exec(raw);
-  const seconds = match?.[1];
-  return seconds === undefined ? null : Number(seconds) * 1000;
-}
-
 // ── the I/O shell ───────────────────────────────────────────────────────────
 
 export const lockDir = (gitCommonDir: string): string => join(gitCommonDir, "beebox-test-locks");
@@ -175,7 +146,7 @@ export interface Held {
 }
 
 function probe(): StaleProbe {
-  return { nowMs: Date.now(), bootTimeMs: bootTimeMs(), isProcessAlive };
+  return { nowMs: Date.now(), bootTimeMs: bootTimeMs(), isProcessAlive: pidAlive };
 }
 
 /** Reads one lock file, deleting it when it holds debris. Null means "free". */
@@ -184,7 +155,7 @@ function readLive(path: string, staleProbe: StaleProbe): LockRecord | null {
   try {
     raw = readFileSync(path, "utf-8");
   } catch (e) {
-    if (errorCode(e) === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw e;
   }
   const held = parseLockRecord(raw);
@@ -207,7 +178,7 @@ function claim(path: string, record: LockRecord): boolean {
   } catch (e) {
     // EEXIST is a concurrent claim winning the slot, not a failure: that is the
     // mutex working. Anything else is a real filesystem problem.
-    if (errorCode(e) === "EEXIST") return false;
+    if (errnoCode(e) === "EEXIST") return false;
     throw e;
   }
   try {

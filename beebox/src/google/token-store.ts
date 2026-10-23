@@ -17,8 +17,7 @@ import { writeFileAtomic } from "../lib/atomic-write.js";
 import { errnoCode } from "../shared/error-guards.js";
 import { getBoxDir } from "../lib/paths/core.js";
 import { withCardLock } from "../lib/card-lock.js";
-import { acquireLock, releaseLock, requestScopedLock, LockHeldError } from "../lib/file-lock.js";
-import { setTimeout as sleep } from "node:timers/promises";
+import { requestScopedLock, withFileLock } from "../lib/file-lock.js";
 import { getBoxTimeISO } from "../lib/time.js";
 
 class NoTokenStoragePathError extends Error {
@@ -66,8 +65,7 @@ class GoogleTokenStoreCorruptError extends Error {
   }
 }
 
-const LOCK_RETRIES = 50;
-const LOCK_RETRY_MS = 100;
+const LOCK_WAIT_MS = 5_000;
 
 export interface GoogleTokens {
   refreshToken?: string;
@@ -188,29 +186,22 @@ async function updateGoogleTokens(
   const lock = requestScopedLock(lockPath);
   await withCardLock(targetPath, async () => {
     await fs.mkdir(path.dirname(lockPath), { recursive: true });
-    for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
-      try {
-        await acquireLock(lock, { purpose: "google-tokens" });
-      } catch (e) {
-        if (e instanceof LockHeldError) {
-          // Held by ANOTHER process — withCardLock already serialized ours.
-          await sleep(LOCK_RETRY_MS);
-          continue;
-        }
-        throw e;
-      }
-      try {
+    // A holder here is ANOTHER process: withCardLock already serialized ours.
+    await withFileLock(
+      {
+        lockPath: lock,
+        metadata: { purpose: "google-tokens" },
+        waitMs: LOCK_WAIT_MS,
+        timeoutError: () => new GoogleTokenLockError(lockPath),
+      },
+      async () => {
         const existing = await readTokensForUpdate(targetPath);
         await writeFileAtomic(targetPath, {
           content: JSON.stringify(update(existing), null, 2),
           mode: 0o600,
         });
-        return;
-      } finally {
-        await releaseLock(lock);
-      }
-    }
-    throw new GoogleTokenLockError(lockPath);
+      },
+    );
   });
 }
 

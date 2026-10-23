@@ -11,7 +11,8 @@ import * as path from "node:path";
 import { execa } from "execa";
 
 import { schedulesStoreRoot } from "./schedules.js";
-import { bootTimeMs, isProcessAlive } from "./schedules-store.js";
+import { bootTimeMs } from "./schedules-store.js";
+import { pidAlive } from "../../beebox/src/hub/child-process-utils.js";
 import { osascriptNotify, type RunnerDeps } from "./schedules-alerts.js";
 
 export interface Context {
@@ -46,7 +47,7 @@ export function runnerDeps(context: Context): RunnerDeps {
     mainRoot: context.mainRoot,
     now: () => new Date(),
     pid: process.pid,
-    isProcessAlive,
+    isProcessAlive: pidAlive,
     bootTimeMs,
     // SCHEDULE_NOTIFY=0 keeps the alert record but skips the desktop
     // notification — set by the test suite so fixtures never reach the

@@ -27,7 +27,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
-import { ENGINE_LINK, ENGINE_LINK_SPEC, engineRealPath, ensureEngineLink, isWithin, readBeeBoxSpec } from "../../../core/box/engine-link.js";
+import { ENGINE_LINK, ENGINE_LINK_SPEC, engineRealPath, ensureEngineLink, readBeeBoxSpec } from "../../../core/box/engine-link.js";
+import { isWithin } from "../../../lib/box-containment.js";
 import { runCollectedChild, type CollectedChildResult } from "../../../lib/run-child.js";
 import { errnoCode, errorMessage } from "../../../shared/error-guards.js";
 import { lockfileIsPortable, planEngineSpec } from "./plan.js";

@@ -10,16 +10,14 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { isRecord } from "../../../shared/is-record.js";
 import { router, publicProcedure } from "../procedures.js";
 import { listViews } from "../../views/compiler/compile.js";
 import { resolveContainedRef } from "../../../core/ref-exists.js";
 import { realpathContained } from "../../../lib/box-containment.js";
 import { typeFromFilename } from "../../../core/card-io.js";
-import { splitCardContent } from "../../../cards/frontmatter.js";
 import { titleFromFilename } from "../../../shared/card-name.js";
+import { readCardTitle } from "../../../core/frontmatter-field.js";
 
 export interface ResolvedRef {
   /** Box-relative path the ref resolved to. */
@@ -30,22 +28,6 @@ export interface ResolvedRef {
   type: string;
   /** Whether the target exists on disk inside the box. */
   exists: boolean;
-}
-
-/** Read a card's frontmatter `title`, or null when absent/unparseable. */
-async function frontmatterTitle(absPath: string): Promise<string | null> {
-  try {
-    const content = await fs.readFile(absPath, "utf-8");
-    const { frontmatterText, hasFrontmatter } = splitCardContent(content);
-    if (!hasFrontmatter) return null;
-    const parsed: unknown = parseYaml(frontmatterText);
-    const title = isRecord(parsed) ? parsed["title"] : undefined;
-    return typeof title === "string" && title.trim() !== "" ? title.trim() : null;
-  } catch (_e) {
-    // A card whose frontmatter doesn't parse still resolves by filename; the
-    // broken frontmatter is a separate `bbx validate` concern, not this lookup's.
-    return null;
-  }
 }
 
 export const viewsRouter = router({
@@ -100,7 +82,7 @@ export const viewsRouter = router({
         exists = false;
       }
 
-      const fmTitle = exists ? await frontmatterTitle(abs) : null;
+      const fmTitle = exists ? await readCardTitle(abs) : null;
       return {
         path: relPath,
         title: fmTitle ?? titleFromFilename(refPath),

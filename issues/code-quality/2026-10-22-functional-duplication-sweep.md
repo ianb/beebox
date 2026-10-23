@@ -39,8 +39,7 @@ tests on the canonical one. Merges that change behavior for a caller, or where
 the canonical choice is a design question, get filed instead.
 
 The boxholder suggested it for a later batch of autonomous sessions
-(2026-10-22). The frontend pass ran on 2026-10-23 (below); the backend pass
-runs in `dup-sweep-backend`.
+(2026-10-22). Both passes ran on 2026-10-23 (below).
 
 ## Frontend pass (2026-10-23)
 
@@ -85,3 +84,47 @@ For the backend pass: `shared/` has no parent-directory helper (the frontend
 now has `lib/parent-dir.ts`); `shared/human-bytes.ts` and the frontend
 `lib/format-bytes.ts` disagree (filed above); `shared/card-browse-url.ts` has
 no frontend callers.
+
+## Backend pass (2026-10-23, worktree-dup-sweep-backend)
+
+Scope: everything outside `beebox/src/frontend/`. Inventory by behavior
+found about 40 candidate groups. One commit per merged group; each message
+names the members and the canonical choice.
+
+| Group | Result | Net lines removed |
+|---|---|---|
+| `isRecord` copies (7) | merged onto `shared/is-record.ts` | 16 |
+| lenient `fileExists` (8) | merged onto `lib/file-exists.ts`, test added | 72 |
+| `e instanceof Error ? e.message : String(e)` helpers (11) | merged onto `errorMessage`; named fix: no more `[object Object]` | 37 |
+| errno guards in `bin/` and the workstreams app (5) | merged onto `errnoCode` | 21 |
+| local `sleep`/`delay` (13) | `node:timers/promises` | 30 |
+| hand-rolled lock-retry loops (7) | `withFileLock` with a new `timeoutError` option, test added | 70 |
+| box-relative path (3) and "is within" (4) | `lib/box-containment.ts`, tests added; named fix: `..name` child | 24 |
+| `plural(count, noun)` (8) | new `shared/plural.ts`, test added | 17 |
+| tap-check regex escape (2) | merged | 3 |
+| card title from file (2), husk frontmatter parse (1) | `readCardTitle`, `parseFrontmatterObject`, test added | 48 |
+| XML attribute escape (2) | beside `decodeXmlAttr` in `shared/self-note.ts`, test added | -3 |
+| `hashToken` (2) | merged onto `core/token-store.ts` | 3 |
+| `gitCommonDir`, `gitLsFiles` in `bin/` (2 pairs) | merged | 14 |
+| `pidAlive` (4), `killGroup` (1), `bootTimeMs` (1) in `bin/` | merged onto `hub/child-process-utils.ts`, test added | 72 |
+
+Filed, because a merge changes output or needs a choice:
+[quota collection twice](2026-10-23-agent-quota-collection-exists-twice.md),
+[frontmatter split/parse/write](2026-10-23-frontmatter-read-and-write-have-many-implementations.md),
+[two card filename parsers](2026-10-23-two-card-filename-parsers.md),
+[atomic writes, JSON state loaders, strict exists](2026-10-23-hand-rolled-atomic-writes-and-state-loaders.md),
+[inline path containment](2026-10-23-path-containment-checks-are-inlined.md),
+[bin git, process, and argv helpers](2026-10-23-bin-scripts-reimplement-git-process-and-argv-helpers.md),
+[dates and durations](2026-10-23-date-and-duration-formatting-variants.md),
+[text helpers: truncate, slug, escape, coercion, sha256](2026-10-23-text-helpers-with-diverging-rules.md).
+
+Judged not duplication, or not worth a merge: the dev router's own error,
+`sleep`, `killGroup`, and `pidAlive` copies (the router keeps itself
+self-contained); the courseware plugin's `isRecord` (plugins do not import
+engine internals); the array-accepting `isRecord` guards in `bin/test-*`;
+the strict ENOENT-only existence probes; `dev/layout/default-roots.ts`'s git
+helper (kept apart from the move tool on purpose); `place-cards` `num` and
+`place-mark` `asNumber` (one-line guards in unrelated modules);
+`MissingBaseRefError` in `lint-changed`/`test-select`; the backoff formulas
+(each a different policy); debounce and coalesce timers (different shapes);
+`lockWithRetry` (returns false instead of throwing).

@@ -4,11 +4,11 @@
 
 import { withBoxWork } from "../box-maintenance/admission.js";
 import * as path from "node:path";
-import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
 import { invariant } from "../../shared/invariant.js";
 import { LEGACY_BOX_MARKER, LEGACY_BOX_STATE_DIR, migrateBoxState } from "../state-migration.js";
 import { probeBoxLevel } from "../box-identity.js";
+import { fileExists } from "../file-exists.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
@@ -49,16 +49,6 @@ export function boxLayoutEntry(boxDirsKey: keyof BoxDirs): BoxLayoutEntry {
     throw new UnknownBoxDirsKeyError(boxDirsKey);
   }
   return entry;
-}
-
-async function pathExists(candidate: string): Promise<boolean> {
-  try {
-    await fs.access(candidate);
-    return true;
-  } catch (_e) {
-    // Absent — the only meaningful outcome of access() here.
-    return false;
-  }
 }
 
 /**
@@ -106,7 +96,7 @@ export async function requireBoxRoot(startPath?: string): Promise<string> {
   // State directory names are persisted identity. Migrate before callers
   // construct any per-box path so a first `bbx` invocation cannot split state
   // between the retired and canonical directories.
-  if (await pathExists(path.join(root, LEGACY_BOX_STATE_DIR)) || await pathExists(path.join(root, LEGACY_BOX_MARKER))) {
+  if (await fileExists(path.join(root, LEGACY_BOX_STATE_DIR)) || await fileExists(path.join(root, LEGACY_BOX_MARKER))) {
     await withBoxWork({ boxRoot: root, reason: "state migration" }, () => migrateBoxState(root));
   }
   return root;

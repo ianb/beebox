@@ -1,5 +1,6 @@
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { isRecord } from "../../shared/is-record.js";
 
 const PLAN_RE = /^beebox\/docs\/(plans|implemented-plans|unimplemented-plans)\/([^/]+\.md)$/;
 const ISSUE_CATEGORIES = ["bugs", "features", "code-quality", "docs-and-chores", "decisions", "exploration", "watch"] as const;
@@ -21,10 +22,6 @@ export interface FrontmatterDocument {
   data: Record<string, unknown>;
   body: string;
   lines: number;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function splitFrontmatter(source: string): FrontmatterDocument | null {

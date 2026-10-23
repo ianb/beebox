@@ -15,6 +15,7 @@ import { z } from "zod";
 import { initBox, isValidBox } from "./structure/core.js";
 import { ENGINE_LINK, ENGINE_LINK_SPEC, ensureEngineLink } from "./engine-link.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { fileExists } from "../../lib/file-exists.js";
 
 const EnginePackageJsonSchema = z.object({
   dependencies: z.record(z.string(), z.string()).optional(),
@@ -176,7 +177,7 @@ export async function scaffoldPackageRoot(
   await fs.mkdir(boxRoot, { recursive: true });
 
   const packageJsonPath = path.join(boxRoot, "package.json");
-  if (await pathExists(packageJsonPath)) {
+  if (await fileExists(packageJsonPath)) {
     throw new BoxPackageConflictError(
       `Cannot initialize a beebox package at ${boxRoot}: it already has a ` +
         "package.json. Fresh `bbx engine init` scaffolds a new coding-session package there and " +
@@ -249,7 +250,7 @@ export async function scaffoldPackageRoot(
   if (symlinkBeeBox) {
     if (beeBoxSpec === ENGINE_LINK_SPEC) await ensureEngineLink(boxRoot, PACKAGE_ROOT);
     const nodeModulesDir = path.join(boxRoot, "node_modules");
-    if (!(await pathExists(nodeModulesDir))) {
+    if (!(await fileExists(nodeModulesDir))) {
       await fs.mkdir(nodeModulesDir, { recursive: true });
       // The same relative link `pnpm install` makes for the portable spec.
       const target = beeBoxSpec === ENGINE_LINK_SPEC ? path.join("..", ENGINE_LINK) : PACKAGE_ROOT;
@@ -292,18 +293,6 @@ export async function scaffoldBoxRoot(
   return { boxRoot };
 }
 
-/** Whether `filePath` exists, tolerating (only) the not-found case. */
-async function pathExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch (_e) {
-    // ENOENT is the expected "doesn't exist yet" case — the error carries no
-    // other actionable info.
-    return false;
-  }
-}
-
 /**
  * Write `content` to `filePath` only if nothing is there yet. Used for the
  * package scaffold files that a directory might already have its own
@@ -311,6 +300,6 @@ async function pathExists(filePath: string): Promise<boolean> {
  * conflict, this is fine to leave in place.
  */
 async function writeFileIfAbsent(filePath: string, content: string): Promise<void> {
-  if (await pathExists(filePath)) return;
+  if (await fileExists(filePath)) return;
   await fs.writeFile(filePath, content);
 }

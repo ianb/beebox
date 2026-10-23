@@ -44,6 +44,7 @@ import {
   type SmokeSummary,
   type StepStats,
 } from "./smoke-lib.js";
+import { setTimeout as sleep } from "node:timers/promises";
 
 export const REPO_ROOT = join(import.meta.dirname, "..");
 
@@ -217,8 +218,6 @@ function control(input: {
     request.end();
   });
 }
-
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** A deadline shared by every step, so one slow step cannot eat the whole budget. */
 export class Budget {

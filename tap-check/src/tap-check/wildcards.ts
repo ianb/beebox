@@ -84,6 +84,6 @@ export function compileWildcards(expected: string): { re: RegExp; tokens: Wildca
   return { re: new RegExp(`${pattern}$`), tokens };
 }
 
-function escapeRegex(s: string): string {
+export function escapeRegex(s: string): string {
   return s.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
 }

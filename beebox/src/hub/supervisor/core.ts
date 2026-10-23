@@ -21,7 +21,8 @@ import type { HubConfig, BoxEntry } from "../config.js";
 import { HubState } from "./state.js";
 import { invariant } from "../../shared/invariant.js";
 import type { Endpoint, EndpointProvider } from "../endpoints.js";
-import { killGroup, killAfterGrace, describeError, BOX_KILL_GRACE_MS, waitForExit } from "../child-process-utils.js";
+import { killGroup, killAfterGrace, BOX_KILL_GRACE_MS, waitForExit } from "../child-process-utils.js";
+import { errorMessage } from "../../shared/error-guards.js";
 import { buildChildEnv } from "./child-env.js";
 import { forwardChildOutput } from "./child-output-log.js";
 import { boxHasPendingSchedules } from "./pending-schedules.js";
@@ -442,7 +443,7 @@ export class Supervisor implements EndpointProvider {
       if (this.config.lazy) this.armIdleTimer(box);
     } catch (e) {
       if (box.generation !== generation) return; // superseded mid-startup
-      const message = describeError(e);
+      const message = errorMessage(e);
       box.lastError = message;
       if (e instanceof BoxMaintenanceError) {
         box.status = "stopped";
