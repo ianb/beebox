@@ -50,6 +50,7 @@ import {
 import { renderText } from "./deploy-status-render.js";
 import { errnoCode } from "../beebox/src/shared/error-guards.js";
 import { pidAlive } from "../beebox/src/hub/child-process-utils.js";
+import { gitOrNull } from "./lib/git.js";
 
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -85,8 +86,7 @@ echo "@@section end"
 `;
 
 function git(args: string[]): string | null {
-  const result = spawnSync("git", ["-C", REPO_ROOT, ...args], { encoding: "utf8" });
-  return result.status === 0 ? result.stdout.trim() : null;
+  return gitOrNull(args, { cwd: REPO_ROOT })?.trim() ?? null;
 }
 
 function mainCheckout(): string | null {

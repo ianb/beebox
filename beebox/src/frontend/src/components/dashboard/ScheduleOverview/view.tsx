@@ -18,7 +18,8 @@ import { RunHistory } from "./RunHistory";
 import { RunStrip } from "./RunStrip";
 import { Badge } from "../../ui/Badge";
 import { TickList, quietTickCount } from "../ScheduleTicks";
-import { agoOnClock, formatDuration } from "../../../lib/relative-time";
+import { agoOnClock } from "../../../lib/relative-time";
+import { formatDuration } from "@shared/relative-time";
 
 type ScheduleInfo = RouterOutput["scheduler"]["schedules"]["schedules"][number];
 type SchedulerLogEntry = RouterOutput["scheduler"]["log"]["entries"][number];

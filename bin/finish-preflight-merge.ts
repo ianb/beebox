@@ -21,7 +21,7 @@ import {
   parseHistoryText,
 } from "../beebox/src/dev/lib/context-history.js";
 import { MergeConflictError } from "./finish-preflight-errors.js";
-import { git } from "./test-git.js";
+import { git } from "./lib/git.js";
 
 export interface MergeResult {
   status: "up-to-date" | "merged";
@@ -142,7 +142,7 @@ const REGENERATED: Record<string, string[]> = {
 /** Every path must have a rule that applies, or nothing is written. */
 function resolveConflicts(root: string, conflicted: string[]): string[] | null {
   if (!conflicted.every((path) => path in CONTENT_RULES || path in REGENERATED)) return null;
-  const stage = (n: number, path: string): string => git(["show", `:${String(n)}:${path}`], root);
+  const stage = (n: number, path: string): string => git(["show", `:${String(n)}:${path}`], { cwd: root, onError: "throw" });
   const writes: { path: string; text: string }[] = [];
   for (const path of conflicted) {
     const content = CONTENT_RULES[path];
@@ -165,16 +165,16 @@ function resolveConflicts(root: string, conflicted: string[]): string[] | null {
     const [command = "", ...args] = argv;
     if (spawnSync(command, args, { cwd: root, stdio: "ignore" }).status !== 0) return null;
   }
-  git(["add", "--", ...conflicted], root);
+  git(["add", "--", ...conflicted], { cwd: root, onError: "throw" });
   return conflicted.map((path) => `${path} (${CONTENT_RULES[path]?.name ?? "regenerated"})`);
 }
 
 export function mergeMain(root: string): MergeResult {
-  const before = git(["rev-parse", "HEAD"], root);
+  const before = git(["rev-parse", "HEAD"], { cwd: root, onError: "throw" });
   const result = spawnSync("git", ["merge", "main"], { cwd: root, encoding: "utf-8" });
   let resolved: string[] = [];
   if (result.status !== 0) {
-    const conflicted = git(["diff", "--name-only", "--diff-filter=U"], root)
+    const conflicted = git(["diff", "--name-only", "--diff-filter=U"], { cwd: root, onError: "throw" })
       .split("\n")
       .filter((path) => path !== "");
     const resolution = conflicted.length === 0 ? null : resolveConflicts(root, conflicted);
@@ -191,9 +191,9 @@ export function mergeMain(root: string): MergeResult {
     }
     resolved = resolution;
   }
-  const after = git(["rev-parse", "HEAD"], root);
+  const after = git(["rev-parse", "HEAD"], { cwd: root, onError: "throw" });
   if (before === after) return { status: "up-to-date", broughtPaths: [], resolved };
-  const brought = git(["diff", "--name-only", `${before}..HEAD`], root)
+  const brought = git(["diff", "--name-only", `${before}..HEAD`], { cwd: root, onError: "throw" })
     .split("\n")
     .filter((path) => path !== "");
   return { status: "merged", broughtPaths: brought, resolved };

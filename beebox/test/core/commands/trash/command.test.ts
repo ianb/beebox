@@ -9,7 +9,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { executeTrash, moveCardsToTrash } from "../../../../src/core/commands/trash/command.js";
+import { executeTrash, moveCardsToTrash, withCollisionStamp } from "../../../../src/core/commands/trash/command.js";
 import { rollbackTrashReceipt } from "../../../../src/core/chat/session/delete/trash-recovery.js";
 import { createCollectorContext } from "../../../../src/core/command-runner.js";
 import { makeTmpBox } from "../../../helpers/test-helpers.js";
@@ -177,4 +177,17 @@ void test("Config:box.json (the boxholder's display vocabulary) is rejected with
     success: false,
     error: "`Config:box.json` is the boxholder's display form; write `/_config/box.json`",
   });
+});
+
+// ## A name collision in the trash keeps the card's ending
+//
+// The stamp goes after the attach stem, so a job card still ends in
+// `.job.card` (the reactor finds jobs by that ending) and its attach directory
+// is `<stem>_<stamp>.attach`. A positional card keeps its type.
+void test("withCollisionStamp keeps the card ending for nominal, job, and positional cards", async (t) => {
+  t.check(["Notes.doc.card", "Inbox.intake.job.card", "nav.card"].map((name) => withCollisionStamp(name, "S")), [
+    "Notes_S.doc.card",
+    "Inbox.intake_S.job.card",
+    "nav_S.nav.card",
+  ]);
 });

@@ -10,7 +10,8 @@ import type { RouterOutput } from "../../lib/trpc/client";
 import { bbxSource } from "../../lib/source-tag";
 import { Card } from "../ui/Card";
 import { tickHadActivity } from "./ScheduleTicks";
-import { agoOnClock, formatDuration } from "../../lib/relative-time";
+import { agoOnClock } from "../../lib/relative-time";
+import { formatDuration } from "@shared/relative-time";
 import { useBoxNow } from "../../lib/box-clock";
 
 type LogEntry = RouterOutput["status"]["activity"]["entries"][number];

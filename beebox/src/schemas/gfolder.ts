@@ -13,9 +13,8 @@
  * `.gfolder.card`, and everything else becomes a `.glink.card` pointer.
  */
 
-import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields } from "../exports/cards.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../exports/cards.js";
 
 export const GfolderSchema = cardSchema("gfolder", {
   brief: "A mirrored Google Drive folder",
@@ -113,5 +112,5 @@ export function createGfolderTemplate(options: {
   if (options.name !== undefined) fields["title"] = options.name;
   if (options.lastSync !== undefined) fields["last-sync"] = options.lastSync;
   if (options.error !== undefined) fields["error"] = options.error;
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }

@@ -9,6 +9,7 @@ import { isInBoxNamespace } from "../../../../shared/ref-path/box-namespace.js";
 import { resolveAttachRef } from "../../../../shared/attach-path.js";
 import { resolveBoxNamespacePathOnDisk, verifyBoxNamespaceOnDisk } from "../../../../lib/box-namespace-resolve.js";
 import { isWithin } from "../../../../lib/box-containment.js";
+import { splitCardContent } from "../../../../cards/frontmatter.js";
 
 const BOX_IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif", ".bmp", ".svg"]);
 
@@ -32,18 +33,16 @@ async function resolveImageCard(cardAbs: string): Promise<string | null> {
     return null;
   }
   let ref: string | null = null;
-  if (text.startsWith("---")) {
-    const match = /^---\r?\n([\S\s]*?)\r?\n---/.exec(text);
-    if (match) {
-      let fields: unknown;
-      try {
-        fields = parseYaml(match[1] ?? "");
-      } catch (_error) {
-        fields = null;
-      }
-      if (isRecord(fields) && isRecord(fields.filename) && typeof fields.filename.ref === "string") {
-        ref = fields.filename.ref.startsWith("attach/") ? fields.filename.ref : null;
-      }
+  const split = splitCardContent(text);
+  if (split.hasFrontmatter) {
+    let fields: unknown;
+    try {
+      fields = parseYaml(split.frontmatterText);
+    } catch (_error) {
+      fields = null;
+    }
+    if (isRecord(fields) && isRecord(fields.filename) && typeof fields.filename.ref === "string") {
+      ref = fields.filename.ref.startsWith("attach/") ? fields.filename.ref : null;
     }
   } else {
     ref = /<filename\b[^>]*\bref="(attach\/[^"]+)"/.exec(text)?.[1] ?? null;

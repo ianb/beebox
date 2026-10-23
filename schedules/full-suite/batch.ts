@@ -1,5 +1,5 @@
 /** Reading the batch: what landed on first-parent `main` since the last test. */
-import { gitCommonDir } from "../../bin/test-git.js";
+import { gitCommonDir } from "../../bin/lib/git.js";
 import { readRecords } from "../../bin/test-ledger.js";
 import { ledgerPaths } from "../../bin/test-ledger-lib.js";
 import type { Batch } from "./attribution.js";

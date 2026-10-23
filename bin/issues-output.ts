@@ -7,10 +7,7 @@
 import type { IssueEntry } from "../workstreams-app/src/server/main/issue-search-model.js";
 import type { IndexHit, SearchMode } from "../workstreams-app/src/server/main/issue-index-query.js";
 import type { ParsedValues } from "./issues-args.js";
-
-function truncate(text: string, width: number): string {
-  return text.length <= width ? text : `${text.slice(0, width - 1)}…`;
-}
+import { truncateTitle } from "../beebox/src/core/file-summary.js";
 
 function pad(text: string, width: number): string {
   return text.length >= width ? text : text + " ".repeat(width - text.length);
@@ -26,7 +23,7 @@ export function issueLine(entry: IssueEntry): string {
     pad(entry.date ?? "----------", 10),
     pad(entry.category, 15),
     pad(marks, 3),
-    pad(truncate(entry.title, 58), 58),
+    pad(truncateTitle(entry.title, 58), 58),
     entry.path,
   ].join(" ");
 }

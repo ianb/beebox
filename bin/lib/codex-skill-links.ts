@@ -4,7 +4,6 @@
  * every entry that has no tracked source.
  */
 
-import { execFileSync } from "node:child_process";
 import {
   lstatSync,
   mkdirSync,
@@ -16,14 +15,11 @@ import {
   unlinkSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import { git } from "./git.js";
 
 export function gitLsFiles(checkoutDir: string, ...patterns: string[]): string[] {
-  const out = execFileSync(
-    "git",
-    ["-C", checkoutDir, "ls-files", "--", ...patterns],
-    { encoding: "utf8" },
-  );
-  return out.split("\n").filter((line) => line !== "");
+  return git(["ls-files", "--", ...patterns], { cwd: checkoutDir, onError: "throw" })
+    .split("\n").filter((line) => line !== "");
 }
 
 function lstatIfPresent(

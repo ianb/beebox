@@ -1,3 +1,5 @@
+import { frontmatterFence } from "../beebox/src/cards/frontmatter.js";
+
 export interface ConfirmResult {
   content: string;
   close: boolean;
@@ -49,8 +51,9 @@ export function confirmTestedContent(
   date: string,
 ): ConfirmResult {
   const lines = source.split("\n");
-  const end = lines.indexOf("---", 1);
-  if (lines[0] !== "---" || end === -1) throw new MissingFrontmatterError();
+  const fence = frontmatterFence(source);
+  if (fence === null) throw new MissingFrontmatterError();
+  const end = fence.closingLine;
   const workstream = /^workstream:\s*([\w-]+)\s*$/m.exec(
     lines.slice(1, end).join("\n"),
   )?.[1];
@@ -92,7 +95,7 @@ export function confirmTestedContent(
   } else {
     lines.splice(actualIndex, needsEnd - actualIndex);
   }
-  let frontmatterEnd = lines.indexOf("---", 1);
+  let frontmatterEnd = frontmatterFence(lines.join("\n"))?.closingLine ?? -1;
   if (
     remaining.length === 0 &&
     !lines.slice(1, frontmatterEnd).some((line) => /^resolution:/.test(line))

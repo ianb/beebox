@@ -6,7 +6,10 @@ labels: [code-quality]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
+resolution: implemented
 ---
+
+Closed 2026-10-23 by commit a9e5b9d1c (worktree-dup-sweep-backend): `bin/lib/git.ts` replaces the git wrappers listed below, with the failure mode stated at each call. Decided and left: argument parsing moves to `node:util parseArgs` only when a script is touched for other reasons, and the dev router keeps its own helpers (its comment now says so).
 
 `bin/test-git.ts` has `git`, `gitCommonDir`, and `changedPaths`, and
 `beebox/src/hub/child-process-utils.ts` has `killGroup`, `pidAlive`, and

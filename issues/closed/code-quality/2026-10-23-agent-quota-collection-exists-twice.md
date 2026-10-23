@@ -6,7 +6,10 @@ labels: [code-quality]
 filed-by: agent
 discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
+resolution: implemented
 ---
+
+Closed 2026-10-23 by commit 98ce20b14 (worktree-dup-sweep-backend): the workstreams app's `quota-*` modules own collection; `bin/agent-quotas.ts` is a thin CLI and the bin copies are deleted.
 
 Two modules read the Claude and Codex usage quotas, parse them, and cache the
 Claude result:

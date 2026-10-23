@@ -16,7 +16,8 @@
  *
  * Use it for small state/credential files that are replaced wholesale. It is
  * NOT for append-heavy logs or for files large enough that a full temp copy
- * matters.
+ * matters. The rename replaces the path itself: a symlink at the target is
+ * replaced by a regular file rather than written through.
  */
 
 import { randomBytes } from "node:crypto";

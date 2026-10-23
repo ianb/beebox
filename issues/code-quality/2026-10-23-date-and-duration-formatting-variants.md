@@ -8,6 +8,8 @@ discovered-by: agent
 discovered-in: worktree-dup-sweep-backend — backend pass of the functional-duplication sweep
 ---
 
+Status 2026-10-23 (worktree-dup-sweep-backend): elapsed-time text now uses `beebox/src/shared/relative-time.ts` (commit 1e737840d). Still open: the box-local day implementations and the duration parsers below.
+
 ## Box-local day
 
 Three functions compute "today in the box's timezone":
