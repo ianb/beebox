@@ -8,17 +8,30 @@
  *  - the chat machine rolls the buffers into a synthetic entry on the "new"
  *    session finalize path (`rollupStreamToEntry`).
  *
- * Tools come first, then the text block — matching the streaming layout (text
- * with tools above it). Content may be empty; callers that shouldn't synthesize
- * an empty entry guard on that themselves.
+ * Each tool block carries `streamTextOffset`, the length of `streamText` when it
+ * arrived; the text before that offset goes ahead of the tool, as in the stored
+ * transcript. A block without an offset counts as offset 0 (tools first). The
+ * text may be shorter than an offset (the list trims it to a safe boundary).
+ * Content may be empty; callers that shouldn't synthesize an empty entry guard
+ * on that themselves.
  */
 
 import type { SessionEntry, SessionContentBlock } from "../api";
 
 export function buildStreamEntry(opts: { uuid: string; streamText: string; streamTools: SessionContentBlock[] }): SessionEntry {
   const { uuid, streamText, streamTools } = opts;
-  const content: SessionContentBlock[] = [...streamTools];
-  if (streamText) content.push({ type: "text", text: streamText });
+  const content: SessionContentBlock[] = [];
+  let at = 0;
+  function pushText(end: number) {
+    const slice = streamText.slice(at, end);
+    if (slice.trim()) content.push({ type: "text", text: slice });
+    at = Math.max(at, Math.min(end, streamText.length));
+  }
+  for (const { streamTextOffset, ...tool } of streamTools) {
+    pushText(streamTextOffset ?? 0);
+    content.push(tool);
+  }
+  pushText(streamText.length);
   return {
     uuid,
     type: "assistant",

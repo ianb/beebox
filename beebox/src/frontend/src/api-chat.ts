@@ -60,6 +60,11 @@ export interface SessionContentBlock {
   imageRef?: string;
   /** For thinking blocks: the text is a progress update written for the user. */
   progressUpdate?: true;
+  /**
+   * Live stream only: the length of `streamText` when this block arrived, so
+   * `buildStreamEntry` can put text written before a tool call ahead of it.
+   */
+  streamTextOffset?: number;
 }
 
 /**

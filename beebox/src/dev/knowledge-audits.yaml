@@ -4936,8 +4936,15 @@ tests:
   # runs pass; every run opens with that line, and three add a build-step line
   # ("how this box defines its own card types"). Issue reopened:
   # 2026-10-08-chat-agent-narrates-implementation-steps.
+  # Changed (2026-10-22): the chat now folds text written before a later tool
+  # call into the activity row, so the text checks grade the reply
+  # (`final_reply`). The prompt's bookkeeping rule is back to its earlier text.
+  # Status (2026-10-23, Claude): 3/4 pass with final_reply. The failing run's
+  # reply was clean, but its created-ack text said "its own loan card type";
+  # the chat shows ack text as a badge, so the check stands.
   - id: speak-outcome-not-mechanics
     chat_mode: true
+    final_reply: true
     prompt: >
       <typed user="me">I lend tools to my neighbors and keep forgetting who has
       what. Right now Sam has my drill and Priya has the ladder. Can you set up

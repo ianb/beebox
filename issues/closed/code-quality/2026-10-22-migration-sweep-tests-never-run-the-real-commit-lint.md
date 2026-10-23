@@ -23,7 +23,7 @@ fake lockfile refresh. The real `bbx validate --pre-commit`
 (`beebox/src/cli/commands/validate/pre-commit.ts`) lints every staged card and
 makes an absolute machine path an error unconditionally
 (`beebox/src/core/card-lint/core/lint-cards.ts:319`). This is the gap that let
-[the engine-link question card fail to commit on production](../closed/bugs/2026-10-22-engine-link-spec-migration-fails-on-production.md).
+[the engine-link question card fail to commit on production](../bugs/2026-10-22-engine-link-spec-migration-fails-on-production.md).
 
 The same gap applies to any migration that rewrites or renames cards
 (body-tags, retire-memo, briefing-openers, agents-md). If a card they touch

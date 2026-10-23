@@ -1,0 +1,17 @@
+file,minutes,checks_before,checks_after,lines_before,lines_after,test_result,obstacle
+beebox/test/schemas/scheduled-script.test.ts,2,54,54,356,348,pass,"ran once to read the exclusivity message; zod-vs-ours wording needed a second look"
+beebox/src/frontend/test/machines/composerMachine.composer-machine.test.ts,1,44,39,312,313,pass,"read the machine to list the three regions and their initial states"
+beebox/test/schemas/question.test.ts,2,27,26,356,285,pass,"ran once for the refinement messages"
+beebox/src/frontend/test/components/chat/workspace/history.workspace-pane-navigation.test.ts,0.5,40,40,257,257,pass,-
+beebox/test/shared/attach-path.test.ts,0.25,37,37,167,167,pass,-
+beebox/test/core/box/backup-status.test.ts,0.25,22,22,193,193,pass,-
+beebox/test/core/chat/session/run/lifecycle.test.ts,0.25,18,18,70,70,pass,-
+beebox/test/lib/box-maintenance.test.ts,1,40,40,412,412,pass,"read admission.ts for the status record shape; 17 s run"
+beebox/src/frontend/test/lib/lightbox-gesture-math.test.ts,0.25,54,54,337,337,pass,-
+tap-check/test/lint/plugin.test.ts,0.25,0,0,66,66,pass,"the flags were on string fixtures, not checks"
+beebox/src/frontend/test/components/chat/ambient/projection.ambient-replies.test.ts,1,15,16,83,84,pass,"ran once for the callout shape; read projection.ts for the record fields"
+beebox/test/cli/commands/todo-review.test.ts,2,58,57,662,667,pass,"two 60 s runs: job.file is a basename, not a path"
+beebox/test/core/scan/tokens.test.ts,0.5,32,32,265,265,pass,-
+beebox/src/frontend/test/components/chat/everywhere/InteractiveChat/reconnect-refresh-gate.test.ts,0.25,13,13,175,175,pass,-
+beebox/src/frontend/test/components/openers/ChatOpeners.chat-openers.test.ts,0.25,17,17,132,132,pass,-
+beebox/test/core/migration-sweep.test.ts,2,31,31,616,618,pass,"two 60 s runs for the applied pairs and question list"

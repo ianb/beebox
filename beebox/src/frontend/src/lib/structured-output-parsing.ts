@@ -234,6 +234,7 @@ export function isNoResponseOnly(content: string): boolean {
   const acks = parseAcks(content);
   if (acks.length === 0) return false;
   if (acks.some((a) => a.kind !== "no-response")) return false;
+  if (parseCallouts(content).length > 0) return false;
   // After stripping the structured-output tags, anything that remains
   // (callouts, plain prose) means the response isn't purely no-response.
   return stripStructuredOutputTags(content).trim() === "";

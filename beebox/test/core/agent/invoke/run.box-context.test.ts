@@ -17,6 +17,7 @@ import { test } from "tap";
 import "@ianbicking/tap-check/tap";
 import { buildQueryOptions, type RunAgentOptions } from "../../../../src/core/agent/invoke/run.js";
 import { invariant } from "../../../../src/shared/invariant.js";
+import { boxSessionSettings } from "../../../../src/core/agent/box-session-settings.js";
 
 const CONTEXT = { env: {}, maxTurns: 4, binaryPath: null, appendedSystem: "" };
 const RUN = { boxRoot: "/box", systemPrompt: "", prompt: "hi" };
@@ -71,20 +72,11 @@ void test("The server's Claude login can carry claude.ai connectors (Gmail, Cale
 
 // The same host-account built-ins a chat may not use (scheduling, push, the
 // account's projects and artifacts; `test/services/claude-chat.test.ts` lists
-// them) are off for agent runs too, including runs without box context.
+// them) are off for agent runs too, including runs without box context. The
+// list itself is pinned there; this checks only that a run spreads it.
 void test("The same host-account built-ins a chat may not use (scheduling, push, the acc...", async (t) => {
-  t.check(optionsFor({ loadBoxContext: false }).disallowedTools, [
-    "CronCreate",
-    "CronDelete",
-    "CronList",
-    "ScheduleWakeup",
-    "RemoteTrigger",
-    "PushNotification",
-    "ReadNotifications",
-    "Artifact",
-    "Projects",
-    "ClaudeDesign",
-    "DesignSync",
-    "SendFeedback",
-  ]);
+  t.check(
+    optionsFor({ loadBoxContext: false }).disallowedTools,
+    boxSessionSettings({ boxRoot: "/box", loadBoxContext: false }).disallowedTools,
+  );
 });
