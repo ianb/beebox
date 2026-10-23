@@ -61,3 +61,15 @@ void test("Bytes are written as given", async (t) => {
   await writeFileAtomic(bytesTarget, { content: Uint8Array.from([0, 255, 10, 128]) });
   t.check([...fs.readFileSync(bytesTarget)], [0, 255, 10, 128]);
 });
+
+// ## The mode is exact under a restrictive umask
+//
+// `open()` masks its mode with the umask, so a `0600` cache written under
+// umask `0277` would come out `0400` without an explicit chmod.
+void test("The mode is exact under a restrictive umask", async (t) => {
+  const previous = process.umask(0o277);
+  t.teardown(() => { process.umask(previous); });
+  const cache = path.join(dir, "cache.json");
+  await writeFileAtomic(cache, { content: "{}\n", mode: 0o600 });
+  t.check(fs.statSync(cache).mode & 0o777, 0o600);
+});

@@ -84,8 +84,11 @@ export async function writeFileAtomic(filePath: string, opts: AtomicWriteOptions
   if (opts.createDir !== false) await fs.mkdir(dir, { recursive: true });
   const tmp = `${filePath}.tmp-${String(process.pid)}-${randomBytes(6).toString("hex")}`;
   try {
-    const handle = await fs.open(tmp, "wx", await effectiveMode(filePath, mode));
+    const fileMode = await effectiveMode(filePath, mode);
+    const handle = await fs.open(tmp, "wx", fileMode);
     try {
+      // open()'s mode is masked by the umask; set it exactly.
+      if (fileMode !== undefined) await handle.chmod(fileMode);
       await handle.writeFile(content);
       await handle.sync();
     } finally {

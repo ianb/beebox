@@ -166,7 +166,10 @@ export async function writeNextAction(input: {
       actions.set(input.key, stored);
     }
     const sorted = Object.fromEntries([...actions.entries()].toSorted(([a], [b]) => a.localeCompare(b)));
-    await writeFileAtomic(file, { content: `${JSON.stringify({ version: STORE_VERSION, actions: sorted }, null, 2)}\n` });
+    await writeFileAtomic(file, {
+      content: `${JSON.stringify({ version: STORE_VERSION, actions: sorted }, null, 2)}\n`,
+      createDir: false,
+    });
     return stored;
   });
 }
