@@ -50,6 +50,7 @@ import { InvalidCommentPathError } from "./comments-store-errors.js";
 // canonical lock for the project... Don't add a new lock surface elsewhere —
 // extend or wrap this instead."
 import { withFileLock as withCrossProcessLock } from "../../beebox/src/lib/file-lock.js";
+import { isWithin } from "../../beebox/src/lib/box-containment.js";
 
 /** Written when the store root is created; nothing writes to an unmarked directory. */
 export const STORE_MARKER = ".dev-comments";
@@ -190,7 +191,7 @@ export function commentsFilePath(storeRoot: string, subject: Subject): string {
   const key = subjectKey(subject);
   const resolved = path.resolve(root, key);
   const relative = path.relative(root, resolved);
-  if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+  if (relative === "" || !isWithin(root, resolved)) {
     throw new InvalidCommentPathError({ kind: "outside-store", relPath: key });
   }
   return resolved;

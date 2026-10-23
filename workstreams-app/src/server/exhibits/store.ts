@@ -22,6 +22,7 @@ import {
   exhibitSegmentSchema,
   type ExhibitManifest,
 } from "../../shared/exhibits.js";
+import { isWithin } from "../../../../beebox/src/lib/box-containment.js";
 
 /** Written by bin/lib/exhibits-store.sh when the store root is created. */
 export const STORE_MARKER = ".workstream-exhibits";
@@ -63,13 +64,7 @@ export function defaultStoreRoot(repoRoot: string): string {
 }
 
 function assertContained(options: { root: string; target: string; relPath: string }): void {
-  const relative = path.relative(options.root, options.target);
-  if (
-    relative === "" ||
-    relative === ".." ||
-    relative.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relative)
-  ) {
+  if (path.relative(options.root, options.target) === "" || !isWithin(options.root, options.target)) {
     throw new InvalidExhibitPathError(options.relPath);
   }
 }

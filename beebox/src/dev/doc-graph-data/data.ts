@@ -9,6 +9,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { documentLifecycle, planStatusFromSource, type DocumentLifecycle } from "./document-lifecycle.js";
+import { isWithin } from "../../lib/box-containment.js";
 
 export const ROOT = PACKAGE_ROOT;
 
@@ -116,14 +117,11 @@ export function resolveExternalRef(ref: string, ctx: ExternalResolveContext): [s
   // on-disk relative target without adding that target as another graph source.
   const monoRoot = path.dirname(ROOT);
   const abs = path.resolve(monoRoot, asRelative);
-  const relFromMonoRoot = path.relative(monoRoot, abs);
-  const staysWithin = (relative: string) =>
-    relative !== "" && !relative.startsWith(".." + path.sep) && !path.isAbsolute(relative);
-  if (staysWithin(relFromMonoRoot)) {
+  const staysWithin = (target: string) => target !== monoRoot && isWithin(monoRoot, target);
+  if (staysWithin(abs)) {
     try {
       const real = fs.realpathSync(abs);
-      const realRelative = path.relative(monoRoot, real);
-      if (staysWithin(realRelative) && fs.statSync(real).isFile()) return ["../" + asRelative, true];
+      if (staysWithin(real) && fs.statSync(real).isFile()) return ["../" + asRelative, true];
     } catch (_error) {
       // Missing targets remain unresolved.
     }
@@ -213,7 +211,7 @@ function resolveRef(ref: string, { fromFile, allFiles, basenameLookup }: Resolve
   if (cleaned.startsWith("../")) {
     const monoRoot = path.dirname(ROOT);
     const abs = path.normalize(path.join(ROOT, fromDir, cleaned));
-    if (abs.startsWith(monoRoot + path.sep) && fs.existsSync(abs)) {
+    if (abs !== monoRoot && isWithin(monoRoot, abs) && fs.existsSync(abs)) {
       return ["../" + path.relative(monoRoot, abs), true];
     }
   }

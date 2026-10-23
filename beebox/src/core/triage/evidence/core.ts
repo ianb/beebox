@@ -17,6 +17,7 @@ import { resolveScanVision } from "../../commands/scan-import/session.js";
 import { probePdf, extractPdfText } from "../../pdf/probe.js";
 import { compileInstructionSnapshot, type InstructionSnapshot } from "../snapshot.js";
 import { packEvidence, scanRepresentations } from "./packing.js";
+import { isWithin } from "../../../lib/box-containment.js";
 
 const digestSchema = z.string().regex(/^[a-f0-9]{64}$/u);
 const statusSchema = z.enum(["ready", "partial", "unavailable"]);
@@ -70,8 +71,7 @@ async function listScope(directory: string): Promise<string[]> {
 async function checkedRead({ boxRoot, file }: { boxRoot: string; file: string }): Promise<Buffer> {
   // Annex symlinks may point inside the repository; never follow an arbitrary external link.
   const real = await fs.realpath(file);
-  const relative = path.relative(await fs.realpath(boxRoot), real);
-  invariant(relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative), `Evidence escapes box: ${file}`);
+  invariant(isWithin(await fs.realpath(boxRoot), real), `Evidence escapes box: ${file}`);
   return fs.readFile(real);
 }
 

@@ -10,6 +10,7 @@ import * as path from "node:path";
 import { execa } from "execa";
 
 import type { Subject } from "./comments-store.js";
+import { isWithin } from "../../beebox/src/lib/box-containment.js";
 
 /** Where the repository is, and which worktree we are standing in. */
 export interface Context {
@@ -52,7 +53,7 @@ async function isTracked(repoRoot: string, relPath: string): Promise<boolean> {
 function toRepoRelative(context: Context, input: string): string {
   const absolute = path.isAbsolute(input) ? input : path.resolve(process.cwd(), input);
   const relative = path.relative(context.repoRoot, absolute);
-  if (relative === "" || relative.startsWith("..")) {
+  if (relative === "" || !isWithin(context.repoRoot, absolute)) {
     // Not under this checkout; treat it as already repository-relative.
     return path.normalize(input);
   }

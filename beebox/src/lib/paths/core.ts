@@ -9,6 +9,7 @@ import { invariant } from "../../shared/invariant.js";
 import { LEGACY_BOX_MARKER, LEGACY_BOX_STATE_DIR, migrateBoxState } from "../state-migration.js";
 import { probeBoxLevel } from "../box-identity.js";
 import { fileExists } from "../file-exists.js";
+import { isWithin } from "../box-containment.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
@@ -135,7 +136,7 @@ export function toRelativePath(boxRoot: string, absolutePath: string): string | 
   const resolved = path.resolve(absolutePath);
   const resolvedRoot = path.resolve(boxRoot);
 
-  if (!resolved.startsWith(resolvedRoot + path.sep) && resolved !== resolvedRoot) {
+  if (!isWithin(resolvedRoot, resolved)) {
     return null;
   }
 
