@@ -9,7 +9,6 @@ import {
   serializeViewUrl,
   resolveContentTarget,
   classifyMarkdownHref,
-  isExternalUrl,
   normalizeMarkdownLink,
   resolveImageSrc,
   externalImageProxyUrl,
@@ -19,6 +18,7 @@ import {
 } from "../../src/lib/view-url.js";
 import { apiRawFileUrl } from "../../src/api-core.js";
 import { decideViewHistoryUpdate } from "../../../shared/view-state.js";
+import { isUrlRef } from "../../../shared/ref-path/core.js";
 import type { ViewState } from "../../../shared/view-state.js";
 
 class CustomState { value = "x"; }
@@ -304,16 +304,16 @@ void test("markdown-it percent-encodes every link destination, so a link to <Bea
   );
 });
 
-// ## isExternalUrl
+// ## isUrlRef (shared), the external-URL test view-url uses
 //
 // True for anything with a URL scheme or a protocol-relative `//host` — used to tell an image/external link from an in-box embed path:
 void test("True for anything with a URL scheme or a protocol-relative //host — used to t...", async (t) => {
   t.check(
     [
-      isExternalUrl("https://example.com/x.png"),
-      isExternalUrl("//cdn.example.com/y.jpg"),
-      isExternalUrl("_content/x.figure.card"),
-      isExternalUrl("/_content/x.card"),
+      isUrlRef("https://example.com/x.png"),
+      isUrlRef("//cdn.example.com/y.jpg"),
+      isUrlRef("_content/x.figure.card"),
+      isUrlRef("/_content/x.card"),
     ],
     [
     true,

@@ -1,7 +1,7 @@
 /** Browse is one instrument; directory and selected detail belong to its state. */
 import { toDisplayPath } from "@shared/display-path";
 import { isRecord } from "@shared/is-record";
-import { parseRef, resolveRefPath } from "@shared/ref-path/core";
+import { isUrlRef, parseRef, resolveRefPath } from "@shared/ref-path/core";
 import { validateViewState, type ViewState } from "@shared/view-state";
 import { SYSTEM_CARD_PATHS } from "@shared/system-card-paths";
 import type { ViewTarget } from "./view-url.js";
@@ -25,7 +25,7 @@ function canonicalPath(value: unknown): string | null {
   if (typeof value !== "string") return null;
   if (value === "" || value === "/") return "";
   const ref = parseRef(value);
-  if (ref.query !== undefined || ref.fragment !== undefined || value.startsWith("//") || /^[a-z][\w+.-]*:/i.test(value)) return null;
+  if (ref.query !== undefined || ref.fragment !== undefined || isUrlRef(value)) return null;
   return resolveRefPath({ fromPath: undefined, ref: value, kind: "write-target" });
 }
 
